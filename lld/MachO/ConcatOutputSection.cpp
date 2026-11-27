@@ -300,11 +300,11 @@ void TextOutputSection::finalize() {
       continue;
 
     // Process relocs by ascending address, i.e., ascending offset within isec.
-    // parseRelocations() ensures they are in descending order.
+    // parseRelocations() ensures they are in ascending order.
     assert(is_sorted(isec->relocs, [](Relocation &a, Relocation &b) {
-      return a.offset > b.offset;
+      return a.offset < b.offset;
     }));
-    for (Relocation &r : reverse(isec->relocs)) {
+    for (Relocation &r : isec->relocs) {
       if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
         continue;
       if (isTargetKnownInRange(*isec, r))

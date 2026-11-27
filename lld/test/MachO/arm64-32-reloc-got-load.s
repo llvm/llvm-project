@@ -24,9 +24,9 @@
 
 # DYLIB-LABEL: _main:
 # DYLIB-NEXT:  adrp x8, [[#]] ; 0x[[#%x,GOT:]]
-# DYLIB-NEXT:  ldr  w8, [x8, #4]
-# DYLIB-NEXT:  adrp x8, [[#]] ; 0x[[#GOT]]
 # DYLIB-NEXT:  ldr  w8, [x8]
+# DYLIB-NEXT:  adrp x8, [[#]] ; 0x[[#GOT]]
+# DYLIB-NEXT:  ldr  w8, [x8, #4]
 # DYLIB-NEXT:  ret
 # DYLIB-EMPTY:
 # DYLIB-NEXT:  Sections:

@@ -1730,8 +1730,7 @@ GVNPassImpl::analyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
   if (isa<AllocaInst>(DepInst) || isLifetimeStart(DepInst))
     return AvailableValue::get(UndefValue::get(Load->getType()));
 
-  if (Constant *InitVal =
-          getInitialValueOfAllocation(DepInst, TLI, Load->getType()))
+  if (Constant *InitVal = getInitialValueOfAllocation(DepInst, Load->getType()))
     return AvailableValue::get(InitVal);
 
   if (StoreInst *S = dyn_cast<StoreInst>(DepInst)) {
@@ -2784,9 +2783,14 @@ std::optional<GVNPassImpl::ReachingMemVal> GVNPassImpl::accessMayModifyLocation(
   if (auto *II = dyn_cast<IntrinsicInst>(ClobberI)) {
     if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
       MemoryLocation IIObjLoc = MemoryLocation::getForArgument(II, 0, TLI);
-      if (AA.isMustAlias(IIObjLoc, Loc))
+      AliasResult AR = AA.alias(IIObjLoc, Loc);
+      if (AR == AliasResult::MustAlias)
         return ReachingMemVal::getDef(Loc.Ptr, ClobberI);
-      return std::nullopt;
+      if (AR == AliasResult::NoAlias)
+        return std::nullopt;
+      // Treat lifetime.start that may overlap the location as a clobber.
+      // TODO: Should be possible to treat a PartialAlias overlap as a def too.
+      return ReachingMemVal::getClobber(Loc.Ptr, ClobberI);
     }
   }
 

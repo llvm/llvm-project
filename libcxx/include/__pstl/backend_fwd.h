@@ -240,6 +240,15 @@ struct __inclusive_scan_init;
 //                       _Tp __value) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __inplace_merge;
+// template <class _Policy, class _BidirectionalIterator, class _Compare>
+// optional<__empty>
+// operator()(_Policy&&, _BidirectionalIterator __first,
+//                       _BidirectionalIterator __middle,
+//                       _BidirectionalIterator __last,
+//                       _Compare __compare) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __is_heap;
 // template <class _Policy, class _RandomAccessIterator, class _Comp>
 // optional<bool>
@@ -637,6 +646,13 @@ struct __uninitialized_value_construct_n;
 // template <class _Policy, class _ForwardIterator, class _Size>
 // optional<_ForwardIterator>
 // operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __unique_copy;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
+// optional<_ForwardIterator2>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first, _ForwardIterator1 __last,
+//                                _ForwardIterator2 __result, _BinaryPredicate __predicate) const noexcept;
 
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD

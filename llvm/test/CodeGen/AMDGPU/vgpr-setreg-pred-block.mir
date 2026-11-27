@@ -8,7 +8,6 @@
 
 ---
 name:            implicit_fallthrough_insert_nop
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: implicit_fallthrough_insert_nop
   ; CHECK: bb.0:
@@ -31,7 +30,6 @@ body:             |
 
 ---
 name:            explicit_fallthrough_dont_insert_nop
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: explicit_fallthrough_dont_insert_nop
   ; CHECK: bb.0:
@@ -55,7 +53,6 @@ body:             |
 
 ---
 name:            vgpr_instr_in_second_position_dont_insert_nop
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: vgpr_instr_in_second_position_dont_insert_nop
   ; CHECK: bb.0:
@@ -79,7 +76,6 @@ body:             |
 
 ---
 name:            empty_pred_block_insert_nop
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: empty_pred_block_insert_nop
   ; CHECK: bb.0:
@@ -110,7 +106,6 @@ body:             |
 
 ---
 name:            setreg_on_any_pred_insert_nop
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: setreg_on_any_pred_insert_nop
   ; CHECK: bb.0:
@@ -141,7 +136,6 @@ body:             |
 
 ---
 name:            implicit_fallthrough_coissue_opt_insert_nop
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: implicit_fallthrough_coissue_opt_insert_nop
   ; CHECK: bb.0:

@@ -128,7 +128,6 @@
 
 ---
 name: test_workgroup
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

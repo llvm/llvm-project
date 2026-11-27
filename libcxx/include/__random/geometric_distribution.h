@@ -38,14 +38,12 @@ public:
   public:
     typedef geometric_distribution distribution_type;
 
-    _LIBCPP_HIDE_FROM_ABI explicit param_type(double __p = 0.5) : __p_(__p) {}
+    explicit param_type(double __p = 0.5) : __p_(__p) {}
 
-    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double p() const { return __p_; }
+    [[__nodiscard__]] double p() const { return __p_; }
 
-    friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
-      return __x.__p_ == __y.__p_;
-    }
-    friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
+    friend bool operator==(const param_type& __x, const param_type& __y) { return __x.__p_ == __y.__p_; }
+    friend bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
   };
 
 private:
@@ -54,43 +52,41 @@ private:
 public:
   // constructors and reset functions
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI geometric_distribution() : geometric_distribution(0.5) {}
-  _LIBCPP_HIDE_FROM_ABI explicit geometric_distribution(double __p) : __p_(__p) {}
+  geometric_distribution() : geometric_distribution(0.5) {}
+  explicit geometric_distribution(double __p) : __p_(__p) {}
 #else
-  _LIBCPP_HIDE_FROM_ABI explicit geometric_distribution(double __p = 0.5) : __p_(__p) {}
+  explicit geometric_distribution(double __p = 0.5) : __p_(__p) {}
 #endif
-  _LIBCPP_HIDE_FROM_ABI explicit geometric_distribution(const param_type& __p) : __p_(__p) {}
-  _LIBCPP_HIDE_FROM_ABI void reset() {}
+  explicit geometric_distribution(const param_type& __p) : __p_(__p) {}
+  void reset() {}
 
   // generating functions
   template <class _URNG>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p) {
+  [[__nodiscard__]] result_type operator()(_URNG& __g, const param_type& __p) {
     return negative_binomial_distribution<result_type>(1, __p.p())(__g);
   }
 
   // property functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double p() const { return __p_.p(); }
+  [[__nodiscard__]] double p() const { return __p_.p(); }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
-  _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
+  [[__nodiscard__]] param_type param() const { return __p_; }
+  void param(const param_type& __p) { __p_ = __p; }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return 0; }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return numeric_limits<result_type>::max(); }
+  [[__nodiscard__]] result_type min() const { return 0; }
+  [[__nodiscard__]] result_type max() const { return numeric_limits<result_type>::max(); }
 
-  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const geometric_distribution& __x, const geometric_distribution& __y) {
+  friend bool operator==(const geometric_distribution& __x, const geometric_distribution& __y) {
     return __x.__p_ == __y.__p_;
   }
-  friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const geometric_distribution& __x, const geometric_distribution& __y) {
-    return !(__x == __y);
-  }
+  friend bool operator!=(const geometric_distribution& __x, const geometric_distribution& __y) { return !(__x == __y); }
 };
 
 template <class _CharT, class _Traits, class _IntType>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const geometric_distribution<_IntType>& __x) {
   __save_flags<_CharT, _Traits> __lx(__os);
   typedef basic_ostream<_CharT, _Traits> _OStream;
@@ -99,7 +95,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const geometric_distribution<_I
 }
 
 template <class _CharT, class _Traits, class _IntType>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
+basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, geometric_distribution<_IntType>& __x) {
   typedef geometric_distribution<_IntType> _Eng;
   typedef typename _Eng::param_type param_type;

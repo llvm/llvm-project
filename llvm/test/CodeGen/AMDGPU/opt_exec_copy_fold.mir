@@ -3,7 +3,6 @@
 # GCN-LABEL: name: opt_exec_copy_fold
 # GCN:             %2:vreg_64 = COPY $exec
 name:            opt_exec_copy_fold
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1' }
 body:             |

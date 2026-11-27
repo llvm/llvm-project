@@ -1372,8 +1372,6 @@ void AddDebugInfoPass::runOnOperation() {
     mlir::LLVM::ModuleFlagsOp::create(builder, module.getLoc(),
                                       builder.getArrayAttr(moduleFlags));
   }
-  fir::DebugTypeGenerator typeGen(module, &symbolTable, *dl,
-                                  boundsInStackSlots);
   // We need 2 type of file paths here.
   // 1. Name of the file as was presented to compiler. This can be absolute
   // or relative to 2.
@@ -1437,6 +1435,13 @@ void AddDebugInfoPass::runOnOperation() {
   if (!cuImports.empty())
     cuAttr =
         mlir::cast<mlir::LLVM::DICompileUnitAttr>(cuAttr.withRecId(cuRecId));
+
+  fir::DebugTypeGenerator typeGen(
+      module, &symbolTable, *dl, boundsInStackSlots,
+      [&](llvm::ArrayRef<std::string> modules) -> mlir::LLVM::DIScopeAttr {
+        return getOrCreateModuleAttr(getDebugModuleName(modules), fileAttr,
+                                     cuAttr);
+      });
 
   // Process module globals early.
   // Walk through all DeclareOps in functions and process globals that are

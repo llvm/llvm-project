@@ -1,45 +1,28 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+zfa,+zfh \
-# RUN:     -M no-aliases -show-encoding < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-NO-EXTD %s
-# RUN: not llvm-mc -triple riscv64 -mattr=+zfa,+zfh \
-# RUN:     -M no-aliases -show-encoding < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-NO-EXTD %s
+# RUN: llvm-mc --verify -triple riscv32 -mattr=+zfa,+zfh -M no-aliases -show-encoding < %s
+# RUN: llvm-mc --verify -triple riscv64 -mattr=+zfa,+zfh -M no-aliases -show-encoding < %s
 
-# CHECK-NO-EXTD: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
-fminm.d fa0, fa1, fa2
+fminm.d fa0, fa1, fa2 # expected-error {{instruction requires the following: 'D' (Double-Precision Floating-Point)}}
 
-# CHECK-NO-EXTD: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
-fmaxm.d fs3, fs4, fs5
+fmaxm.d fs3, fs4, fs5 # expected-error {{instruction requires the following: 'D' (Double-Precision Floating-Point)}}
 
-# CHECK-NO-EXTD: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
-fround.d fs1, fs2
+fround.d fs1, fs2 # expected-error {{instruction requires the following: 'D' (Double-Precision Floating-Point)}}
 
-# CHECK-NO-EXTD: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
-fround.d fs1, fs2, dyn
+fround.d fs1, fs2, dyn # expected-error {{instruction requires the following: 'D' (Double-Precision Floating-Point)}}
 
-# CHECK-NO-EXTD: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
-fround.d fs1, fs2, rtz
+fround.d fs1, fs2, rtz # expected-error {{instruction requires the following: 'D' (Double-Precision Floating-Point)}}
 
-# CHECK-NO-EXTD: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
-fround.d fs1, fs2, rne
+fround.d fs1, fs2, rne # expected-error {{instruction requires the following: 'D' (Double-Precision Floating-Point)}}
 
-# CHECK-NO-EXTD: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
-froundnx.d fs1, fs2
+froundnx.d fs1, fs2 # expected-error {{instruction requires the following: 'D' (Double-Precision Floating-Point)}}
 
-# CHECK-NO-EXTD: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
-froundnx.d fs1, fs2, dyn
+froundnx.d fs1, fs2, dyn # expected-error {{instruction requires the following: 'D' (Double-Precision Floating-Point)}}
 
-# CHECK-NO-EXTD: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
-froundnx.d fs1, fs2, rtz
+froundnx.d fs1, fs2, rtz # expected-error {{instruction requires the following: 'D' (Double-Precision Floating-Point)}}
 
-# CHECK-NO-EXTD: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
-froundnx.d fs1, fs2, rne
+froundnx.d fs1, fs2, rne # expected-error {{instruction requires the following: 'D' (Double-Precision Floating-Point)}}
 
-# CHECK-NO-EXTD: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
-fcvtmod.w.d a1, ft1, rtz
+fcvtmod.w.d a1, ft1, rtz # expected-error {{instruction requires the following: 'D' (Double-Precision Floating-Point)}}
 
-# CHECK-NO-EXTD: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
-fltq.d a1, fs1, fs2
+fltq.d a1, fs1, fs2 # expected-error {{instruction requires the following: 'D' (Double-Precision Floating-Point)}}
 
-# CHECK-NO-EXTD: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
-fleq.d a1, ft1, ft2
+fleq.d a1, ft1, ft2 # expected-error {{instruction requires the following: 'D' (Double-Precision Floating-Point)}}

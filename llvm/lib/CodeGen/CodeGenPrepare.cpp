@@ -7462,7 +7462,11 @@ bool CodeGenPrepare::optimizeShiftInst(BinaryOperator *Shift) {
   BinaryOperator::BinaryOps Opcode = Shift->getOpcode();
   Value *NewTVal = Builder.CreateBinOp(Opcode, Shift->getOperand(0), TVal);
   Value *NewFVal = Builder.CreateBinOp(Opcode, Shift->getOperand(0), FVal);
-  Value *NewSel = Builder.CreateSelect(Cond, NewTVal, NewFVal);
+  // The new select has the same condition, so it keeps the profile metadata.
+  Value *NewSel = Builder.CreateSelect(
+      Cond, NewTVal, NewFVal, "",
+      ProfcheckDisableMetadataFixes ? nullptr
+                                    : cast<Instruction>(Shift->getOperand(1)));
   replaceAllUsesWith(Shift, NewSel, FreshBBs, IsHugeFunc);
   Shift->eraseFromParent();
   return true;
@@ -7497,7 +7501,10 @@ bool CodeGenPrepare::optimizeFunnelShift(IntrinsicInst *Fsh) {
   Value *X = Fsh->getOperand(0), *Y = Fsh->getOperand(1);
   Value *NewTVal = Builder.CreateIntrinsic(Opcode, Ty, {X, Y, TVal});
   Value *NewFVal = Builder.CreateIntrinsic(Opcode, Ty, {X, Y, FVal});
-  Value *NewSel = Builder.CreateSelect(Cond, NewTVal, NewFVal);
+  Value *NewSel = Builder.CreateSelect(
+      Cond, NewTVal, NewFVal, "",
+      ProfcheckDisableMetadataFixes ? nullptr
+                                    : cast<Instruction>(Fsh->getOperand(2)));
   replaceAllUsesWith(Fsh, NewSel, FreshBBs, IsHugeFunc);
   Fsh->eraseFromParent();
   return true;
@@ -8722,8 +8729,9 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   if (DL.getTypeStoreSize(ITy) != DL.getPointerSize())
     return false;
 
-  // TODO: Handle offsets from stepvector.
-  if (!match(Start, m_Intrinsic<Intrinsic::stepvector>()))
+  if (!match(Start, m_CombineOr(m_Intrinsic<Intrinsic::stepvector>(),
+                                m_Add(m_Intrinsic<Intrinsic::stepvector>(),
+                                      m_Splat(m_Value())))))
     return false;
 
   Value *LoopStride = nullptr;

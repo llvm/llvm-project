@@ -21,7 +21,6 @@
 ...
 ---
 name: pretty_print_test
-tracksRegLiveness: true
 debugInstrRef: true
 body:  |
   bb.0:
