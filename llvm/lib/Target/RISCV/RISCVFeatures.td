@@ -2172,6 +2172,11 @@ def TuneOptimizedZeroStrideLoad
                       "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load", [], InlineIgnore>;
 
+def TuneOptimizedStrideAccess
+    : SubtargetFeature<"optimized-stride-access", "HasOptimizedStrideAccess",
+                      "true", "Optimized (perform fewer memory operations) "
+                      "strided vector access", [], InlineIgnore>;
+
 def TuneEnableSelectOptimize
     : SubtargetFeature<"enable-select-opt", "EnableSelectOptimize", "true",
                        "Enable the select optimize pass for select loop heuristics",
