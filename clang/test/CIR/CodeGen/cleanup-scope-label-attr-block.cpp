@@ -19,7 +19,6 @@ lbl: {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z18test_labeled_blockv(
-// CIR:         cir.label "lbl"
 // CIR-NEXT:    cir.scope {
 // CIR-NEXT:      %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR-NEXT:      cir.cleanup.scope {

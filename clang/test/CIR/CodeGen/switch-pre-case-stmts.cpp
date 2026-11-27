@@ -14,11 +14,8 @@ void pre_case_label() {
 
 // CIR-LABEL: cir.func{{.*}} @_Z14pre_case_labelv
 // CIR: cir.switch({{.*}} : !s32i) {
-// CIR:    cir.br ^bb1
-// CIR:  ^bb1:
-// CIR:    cir.label "LABEL1"
-// CIR:    cir.case(equal, [#cir.int<1> : !s32i]) {
-// CIR:      cir.yield loc(#loc7)
+// CIR-NEXT:    cir.case(equal, [#cir.int<1> : !s32i]) {
+// CIR:      cir.yield loc(#loc{{[0-9]+}})
 // CIR:    }
 // CIR:    cir.yield
 // CIR:  }
@@ -56,13 +53,7 @@ void multiple_pre_case_labels() {
 
 // CIR-LABEL: cir.func{{.*}} @_Z24multiple_pre_case_labelsv
 // CIR:  cir.switch({{.*}} : !s32i) {
-// CIR:    cir.br ^bb1
-// CIR:  ^bb1:
-// CIR:    cir.label "LABEL1"
-// CIR:    cir.br ^bb2
-// CIR:  ^bb2:
-// CIR:    cir.label "LABEL2"
-// CIR:    cir.case(equal, [#cir.int<1> : !s32i]) {
+// CIR-NEXT:    cir.case(equal, [#cir.int<1> : !s32i]) {
 // CIR:      cir.yield
 // CIR:    }
 // CIR:    cir.yield
@@ -234,19 +225,11 @@ void label_only_switch() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z17label_only_switchv
-// CIR:  cir.switch({{.*}} : !s32i) {
-// CIR:    cir.br ^bb1
-// CIR:  ^bb1:
-// CIR:    cir.label "LABEL"
-// CIR:    cir.yield
-// CIR:  }
-// CIR:}
+// CIR-NEXT:    cir.return
+// CIR-NEXT:  }
 
 // LLVM-LABEL: define{{.*}} @_Z17label_only_switchv
-// LLVM:   switch i32 1, label %[[END:.*]] [
-// LLVM:   ]
-// LLVM: [[LABEL:.*]]:{{.*}}; No predecessors!
-// LLVM:   br label %[[END]]
+// LLVM-NEXT:   ret void
 
 // OGCG-LABEL: define{{.*}} @_Z17label_only_switchv
 // OGCG:   switch i32 1, label %[[END:.*]] [

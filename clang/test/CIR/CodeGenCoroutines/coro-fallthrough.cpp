@@ -682,15 +682,20 @@ l:
 
 // CIR-LABEL: cir.func coroutine {{.*}} @_Z11goto_at_endv(
 // CIR:         }, body : {
-// CIR:             cir.label "l"
-// CIR:             cir.goto "l"
+// CIR:             cir.br ^[[L:bb[0-9]+]]
+// CIR-NEXT:      ^[[L]]:
+// CIR:             cir.br ^[[L]]
 // CIR-NEXT:      ^bb{{[0-9]+}}:  // no predecessors
 // CIR-NEXT:        cir.yield
 // CIR-NOEH-NEXT: }, finalSuspend : {
 // CIR-EH-NEXT:   } catch all
 
 // CIR-FLAT-LABEL: cir.func {{.*}} @_Z11goto_at_endv(
-// CIR-FLAT:         cir.goto "l"
+// CIR-FLAT:         cir.switch.flat
+// CIR-FLAT:       ^bb{{[0-9]+}}:  // 2 preds
+// CIR-FLAT:       ^[[L:bb[0-9]+]]:  // 2 preds: ^bb{{[0-9]+}}, ^[[BACK:bb[0-9]+]]
+// CIR-FLAT:       ^[[BACK]]:
+// CIR-FLAT-NEXT:    cir.br ^[[L]]
 // CIR-FLAT-NEXT:  ^bb{{[0-9]+}}:  // no predecessors
 // CIR-FLAT-NEXT:    cir.br ^[[FALLTHROUGH:bb[0-9]+]]
 // CIR-FLAT-NEXT:  ^[[FALLTHROUGH]]:
@@ -714,20 +719,25 @@ l:
 
 // CIR-LABEL: cir.func coroutine {{.*}} @_Z20goto_after_co_returnv(
 // CIR:         }, body : {
+// CIR:             cir.br ^[[L:bb[0-9]+]]
+// CIR-NEXT:      ^[[L]]:
 // CIR:             cir.call @_ZN4Task12promise_type11return_voidEv(
 // CIR-NEXT:        cir.co_return
 // CIR-NEXT:      ^bb{{[0-9]+}}:  // no predecessors
-// CIR-NEXT:        cir.goto "l"
+// CIR-NEXT:        cir.br ^[[L]]
 // CIR-NEXT:      ^bb{{[0-9]+}}:  // no predecessors
 // CIR-NEXT:        cir.yield
 // CIR-NOEH-NEXT: }, finalSuspend : {
 // CIR-EH-NEXT:   } catch all
 
 // CIR-FLAT-LABEL: cir.func {{.*}} @_Z20goto_after_co_returnv(
+// CIR-FLAT:         cir.switch.flat
+// CIR-FLAT:       ^bb{{[0-9]+}}:  // 2 preds
+// CIR-FLAT:       ^[[L:bb[0-9]+]]:  // 2 preds
 // CIR-FLAT:         cir.call @_ZN4Task12promise_type11return_voidEv(
 // CIR-FLAT-NEXT:    cir.br ^[[FINAL:bb[0-9]+]]
 // CIR-FLAT-NEXT:  ^bb{{[0-9]+}}:  // no predecessors
-// CIR-FLAT-NEXT:    cir.goto "l"
+// CIR-FLAT-NEXT:    cir.br ^[[L]]
 // CIR-FLAT-NEXT:  ^bb{{[0-9]+}}:  // no predecessors
 // CIR-FLAT-NEXT:    cir.br ^[[FINAL]]
 // CIR-FLAT-NEXT:  ^[[FINAL]]:

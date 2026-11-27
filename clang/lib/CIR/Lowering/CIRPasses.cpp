@@ -114,6 +114,7 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
            << "' attribute";
 
   mlir::PassManager pm(&mlirContext);
+  pm.addNestedPass<cir::FuncOp>(mlir::createGotoEliminationPass());
   pm.addPass(mlir::createCIRCanonicalizePass());
 
   if (enableCIRSimplify)
@@ -177,6 +178,9 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
 namespace mlir {
 
 void populateCIRPreLoweringPasses(OpPassManager &pm) {
+  // Also here for input that did not go through runCIRToCIRPasses, such as
+  // -clangir-disable-passes or cir-translate. It is a no-op on its own output.
+  pm.addNestedPass<cir::FuncOp>(createGotoEliminationPass());
   pm.addPass(createHoistAllocasPass());
   pm.addPass(createCIRFlattenCFGPass());
   pm.addPass(createCIREHABILoweringPass());

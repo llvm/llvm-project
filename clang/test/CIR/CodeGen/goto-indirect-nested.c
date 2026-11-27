@@ -23,7 +23,7 @@ done:
 // CIR:       cir.indirect_goto %[[T]] : !cir.ptr<!void>
 // CIR:     }
 // CIR:   }
-// CIR:   cir.label "done"
+// CIR:   cir.label "done" address_taken
 
 // LLVM-LABEL: define dso_local i32 @nested_goto
 // LLVM:   store ptr blockaddress(@nested_goto, %[[DONE:.*]]), ptr %{{.*}}, align 8
@@ -43,7 +43,7 @@ int nested_label(int x) {
 // CIR-LABEL: cir.func {{.*}} @nested_label
 // CIR:   cir.scope {
 // CIR:     cir.if %{{.*}} {
-// CIR:       cir.label "inner"
+// CIR:       cir.label "inner" address_taken
 // CIR:     }
 // CIR:   }
 // CIR:   cir.block_address <@nested_label, "inner"> : !cir.ptr<!void>
@@ -81,7 +81,7 @@ out:
 // CIR:     cir.indirect_goto %[[T]] : !cir.ptr<!void>
 // CIR:   } step {
 // CIR:   }
-// CIR:   cir.label "out"
+// CIR:   cir.label "out" address_taken
 
 // LLVM-LABEL: define dso_local i32 @goto_in_loop
 // LLVM:   store ptr blockaddress(@goto_in_loop, %[[OUT:.*]]), ptr %{{.*}}, align 8
@@ -99,7 +99,7 @@ first:;
 // CIR-LABEL: cir.func {{.*}} @leading_label
 // CIR:   cir.br ^bb1
 // CIR: ^bb1:
-// CIR:   cir.label "first"
+// CIR:   cir.label "first" address_taken
 // CIR:   cir.block_address <@leading_label, "first"> : !cir.ptr<!void>
 // CIR:   cir.indirect_goto %{{.*}} : !cir.ptr<!void>
 

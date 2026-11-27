@@ -154,7 +154,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.func @f() {
     cir.br ^bb1
   ^bb1:
-    cir.label "L"
+    cir.label "L" address_taken
     cir.return
   }
 

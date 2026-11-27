@@ -91,22 +91,18 @@ end2:
   b = b + 2;
 }
 // CIR:  cir.func {{.*}} @_Z19severalLabelsInARowi
-// CIR:    cir.goto "end1"
-// CIR:  ^bb[[#BLK1:]]
-// CIR:    cir.goto "end2"
-// CIR:  ^bb[[#BLK2:]]:
-// CIR:    cir.label "end1"
-// CIR:    cir.br ^bb[[#BLK3:]]
-// CIR:  ^bb[[#BLK3]]:
-// CIR:    cir.label "end2"
+// CIR:    cir.br ^[[END:bb[0-9]+]]
+// CIR:  ^bb{{[0-9]+}}:  // no predecessors
+// CIR:    cir.br ^[[END]]
+// CIR:  ^[[END]]:
+// CIR-NOT:  cir.label
+// CIR:    cir.add nsw
 
 // LLVM: define dso_local void @_Z19severalLabelsInARowi
-// LLVM:   br label %[[END1:.*]]
+// LLVM:   br label %[[END:.*]]
 // LLVM: [[UNRE:.*]]:                                                ; No predecessors!
-// LLVM:   br label %[[END2:.*]]
-// LLVM: [[END1]]:
-// LLVM:   br label %[[END2]]
-// LLVM: [[END2]]:
+// LLVM:   br label %[[END]]
+// LLVM: [[END]]:
 // LLVM:   ret
 
 // OGCG: define dso_local void @_Z19severalLabelsInARowi
@@ -124,11 +120,11 @@ end:
   b = b + 2;
 }
 // CIR:  cir.func {{.*}} @_Z18severalGotosInARowi
-// CIR:    cir.goto "end"
-// CIR:  ^bb[[#BLK1:]]:
-// CIR:    cir.goto "end"
-// CIR:  ^bb[[#BLK2:]]:
-// CIR:    cir.label "end"
+// CIR:    cir.br ^[[END:bb[0-9]+]]
+// CIR:  ^bb{{[0-9]+}}:  // no predecessors
+// CIR-NEXT:    cir.br ^[[END]]
+// CIR:  ^[[END]]:
+// CIR-NEXT:    cir.load
 
 // LLVM: define dso_local void @_Z18severalGotosInARowi
 // LLVM:   br label %[[END:.*]]
@@ -158,19 +154,14 @@ extern "C" void multiple_non_case(int v) {
 // CIR: cir.switch
 // CIR: cir.case(default, []) {
 // CIR: cir.call @action1()
-// CIR: cir.br ^[[BB1:[a-zA-Z0-9]+]]
-// CIR: ^[[BB1]]:
-// CIR: cir.label
-// CIR: cir.call @action2()
-// CIR: cir.break
+// CIR-NEXT: cir.call @action2()
+// CIR-NEXT: cir.break
 
 // LLVM: define dso_local void @multiple_non_case
 // LLVM: [[SWDEFAULT:.*]]:
 // LLVM:   call void @action1()
-// LLVM:   br label %[[L2:.*]]
-// LLVM: [[L2]]:
-// LLVM:   call void @action2()
-// LLVM:   br label %[[BREAK:.*]]
+// LLVM-NEXT:   call void @action2()
+// LLVM-NEXT:   br label %[[BREAK:.*]]
 
 // OGCG: define dso_local void @multiple_non_case
 // OGCG: sw.default:
@@ -258,10 +249,12 @@ extern "C" void default_follow_label(int v) {
 // CIR: cir.case(equal, [#cir.int<2> : !s32i]) {
 // CIR:   cir.call @action1()
 // CIR:   cir.break
-// CIR:   cir.label "label"
+// CIR: ^[[LABEL:bb[0-9]+]]:
 // CIR: cir.case(default, []) {
 // CIR:   cir.call @action2()
-// CIR:   cir.goto "label"
+// CIR:   cir.yield
+// CIR: }
+// CIR: cir.br ^[[LABEL]]
 
 // LLVM: define dso_local void @default_follow_label
 // LLVM:  switch i32 {{.*}}, label %[[SWDEFAULT:.*]] [
@@ -299,10 +292,9 @@ label:
 }
 
 // CIR:  cir.func {{.*}} @_Z2g3v
-// CIR:    cir.br ^bb1
-// CIR:  ^bb1:
-// CIR:    cir.label "label"
-// CIR:    cir.goto "label"
+// CIR:    cir.br ^[[LABEL:bb[0-9]+]]
+// CIR:  ^[[LABEL]]:
+// CIR-NEXT:    cir.br ^[[LABEL]]
 
 // LLVM: define dso_local void @_Z2g3v()
 // LLVM:   br label %1

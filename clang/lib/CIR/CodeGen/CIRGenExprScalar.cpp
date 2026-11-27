@@ -209,6 +209,7 @@ public:
 
   mlir::Value VisitAddrLabelExpr(const AddrLabelExpr *e) {
     auto func = cast<cir::FuncOp>(cgf.curFn);
+    cgf.markLabelAddressTaken(e->getLabel());
     cir::BlockAddrInfoAttr blockInfoAttr = cir::BlockAddrInfoAttr::get(
         &cgf.getMLIRContext(), func.getSymName(), e->getLabel()->getName());
     // GotoSolver collects this cir.block_address op after FlattenCFG to keep

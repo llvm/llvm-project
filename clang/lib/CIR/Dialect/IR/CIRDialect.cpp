@@ -3589,12 +3589,15 @@ mlir::LogicalResult cir::FuncOp::verify() {
   }
 
   llvm::SmallSet<llvm::StringRef, 16> labels;
+  llvm::SmallSet<llvm::StringRef, 16> addressTakenLabels;
   llvm::SmallSet<llvm::StringRef, 16> gotos;
   llvm::SmallSet<llvm::StringRef, 16> blockAddresses;
   bool invalidBlockAddress = false;
   getOperation()->walk([&](mlir::Operation *op) {
     if (auto lab = dyn_cast<cir::LabelOp>(op)) {
       labels.insert(lab.getLabel());
+      if (lab.getAddressTaken())
+        addressTakenLabels.insert(lab.getLabel());
     } else if (auto goTo = dyn_cast<cir::GotoOp>(op)) {
       gotos.insert(goTo.getLabel());
     } else if (auto blkAdd = dyn_cast<cir::BlockAddressOp>(op)) {
@@ -3628,6 +3631,10 @@ mlir::LogicalResult cir::FuncOp::verify() {
       return emitOpError()
              << "expects an existing label target in the referenced function";
   }
+
+  if (!llvm::set_is_subset(blockAddresses, addressTakenLabels))
+    return emitOpError()
+           << "expects the label of a block address to be address_taken";
 
   return success();
 }

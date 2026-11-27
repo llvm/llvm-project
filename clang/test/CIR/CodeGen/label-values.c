@@ -17,7 +17,7 @@ LABEL_A:
 // CIR:    cir.store align(8) [[BLOCK]], [[PTR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:    [[BLOCKADD:%.*]] = cir.load align(8) [[PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:    cir.indirect_goto [[BLOCKADD]] : !cir.ptr<!void>
-// CIR:    cir.label "LABEL_A"
+// CIR:    cir.label "LABEL_A" address_taken
 // CIR:    cir.return
 
 // LLVM: define dso_local void @A()
@@ -52,7 +52,7 @@ LABEL_B:
 // CIR:    [[PTR:%.*]] = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
 // CIR:    cir.br ^bb1
 // CIR:   ^bb1:
-// CIR:    cir.label "LABEL_B"
+// CIR:    cir.label "LABEL_B" address_taken
 // CIR:    [[BLOCK:%.*]] = cir.block_address <@B, "LABEL_B"> : !cir.ptr<!void>
 // CIR:    cir.store align(8) [[BLOCK]], [[PTR]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:    [[BLOCKADD:%.*]] = cir.load align(8) [[PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
@@ -96,9 +96,9 @@ LABEL_B:
 // CIR:    cir.store{{.*}} [[COND]], [[PTR:%.*]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:    [[BLOCKADD:%.*]] = cir.load{{.*}} [[PTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:    cir.indirect_goto [[BLOCKADD]] : !cir.ptr<!void>
-// CIR:    cir.label "LABEL_A"
+// CIR:    cir.label "LABEL_A" address_taken
 // CIR:    cir.return
-// CIR:    cir.label "LABEL_B"
+// CIR:    cir.label "LABEL_B" address_taken
 // CIR:    cir.return
 
 // LLVM: define dso_local void @C
@@ -148,7 +148,7 @@ LABEL_A:
 // CIR:    cir.store align(8) %[[BLK2]], %[[PTR2]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:    %[[BLOCKADD:.*]] = cir.load align(8) %[[PTR2]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:    cir.indirect_goto %[[BLOCKADD]] : !cir.ptr<!void>
-// CIR:    cir.label "LABEL_A"
+// CIR:    cir.label "LABEL_A" address_taken
 // CIR:    %[[BLK3:.*]] = cir.block_address <@D, "LABEL_A"> : !cir.ptr<!void>
 // CIR:    cir.store align(8) %[[BLK3]], %[[PTR3]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR:    cir.return
@@ -219,3 +219,11 @@ LABEL_D:
 // OGCG:   ret void
 // OGCG: indirectgoto:                                     ; No predecessors!
 // OGCG:   indirectbr ptr poison, [label %LABEL_D, label %LABEL_C, label %LABEL_B, label %LABEL_A]
+
+// The label is emitted before its address is taken.
+void *backward(void) {
+LABEL_X:;
+  return &&LABEL_X;
+}
+// CIR-LABEL: cir.func {{.*}} @backward
+// CIR:    cir.label "LABEL_X" address_taken
