@@ -254,6 +254,44 @@ define void @noalias_store(ptr align 8 %p, ptr noalias %q, i32 noundef %a, i32 n
   ret void
 }
 
+; Only the first stored value is known to be defined.
+define void @possibly_poison(ptr align 8 %p, i32 noundef %a, i32 %b) {
+; CHECK-LABEL: define void @possibly_poison(
+; CHECK-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; CHECK-NEXT:    store i32 [[A]], ptr [[P]], align 8
+; CHECK-NEXT:    store i32 [[B]], ptr [[P4]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p4 = getelementptr inbounds i8, ptr %p, i64 4
+  store i32 %a, ptr %p, align 8
+  store i32 %b, ptr %p4, align 4
+  ret void
+}
+
+; The tag and the first three zero bytes fill an aligned word.
+define void @tag_and_zero_bytes(ptr align 16 %p, i8 %tag) {
+; CHECK-LABEL: define void @tag_and_zero_bytes(
+; CHECK-SAME: ptr align 16 [[P:%.*]], i8 [[TAG:%.*]]) {
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
+; CHECK-NEXT:    store i8 0, ptr [[P1]], align 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
+; CHECK-NEXT:    store i16 0, ptr [[P2]], align 2
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; CHECK-NEXT:    store i8 0, ptr [[P4]], align 4
+; CHECK-NEXT:    store i8 [[TAG]], ptr [[P]], align 16
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr inbounds i8, ptr %p, i64 1
+  store i8 0, ptr %p1, align 1
+  %p2 = getelementptr inbounds i8, ptr %p, i64 2
+  store i16 0, ptr %p2, align 2
+  %p4 = getelementptr inbounds i8, ptr %p, i64 4
+  store i8 0, ptr %p4, align 4
+  store i8 %tag, ptr %p, align 16
+  ret void
+}
+
 ; Negative cases.
 
 define void @mayalias_store(ptr align 8 %p, ptr %q, i32 noundef %a, i32 noundef %b, i32 noundef %c) {
@@ -316,20 +354,6 @@ define void @insufficient_alignment(ptr align 4 %p, i32 noundef %a, i32 noundef 
 ;
   %p4 = getelementptr inbounds i8, ptr %p, i64 4
   store i32 %a, ptr %p, align 4
-  store i32 %b, ptr %p4, align 4
-  ret void
-}
-
-define void @possibly_poison(ptr align 8 %p, i32 noundef %a, i32 %b) {
-; CHECK-LABEL: define void @possibly_poison(
-; CHECK-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    store i32 [[A]], ptr [[P]], align 8
-; CHECK-NEXT:    store i32 [[B]], ptr [[P4]], align 4
-; CHECK-NEXT:    ret void
-;
-  %p4 = getelementptr inbounds i8, ptr %p, i64 4
-  store i32 %a, ptr %p, align 8
   store i32 %b, ptr %p4, align 4
   ret void
 }
