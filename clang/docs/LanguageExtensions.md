@@ -4929,7 +4929,7 @@ guarantees not to call any external functions. See LLVM IR [llvm.memcpy.inline](
 for more information.
 
 This is useful to implement a custom version of `memcpy`, implement a
-`libc` memcpy or work around the absence of a `libc`.
+`libc` `memcpy` or work around the absence of a `libc`.
 
 Note that the `size` argument must be a compile time constant.
 
@@ -4955,7 +4955,7 @@ Note that this intrinsic cannot yet be called in a `constexpr` context.
 
 ### `__is_bitwise_cloneable`
 
-A type trait is used to check whether a type can be safely copied by memcpy.
+A type trait is used to check whether a type can be safely copied by `memcpy`.
 
 **Syntax**:
 
@@ -4965,8 +4965,8 @@ bool __is_bitwise_cloneable(Type)
 
 **Description**:
 
-Objects of bitwise cloneable types can be bitwise copied by memcpy/memmove. The
-Clang compiler warrants that this behavior is well defined, and won't be
+Objects of bitwise cloneable types can be bitwise copied by `memcpy`/`memmove`.
+The Clang compiler warrants that this behavior is well defined, and won't be
 broken by compiler optimizations and sanitizers.
 
 For implicit-lifetime types, the lifetime of the new object is implicitly
