@@ -25,7 +25,6 @@
 #include "AArch64PerfectShuffle.h"
 #include "AArch64Subtarget.h"
 #include "GISel/AArch64LegalizerInfo.h"
-#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
@@ -1532,118 +1531,6 @@ private:
 #include "AArch64GenPostLegalizeGILowering.inc"
 #undef GET_GICOMBINER_CLASS_MEMBERS
 };
-
-/// An Advanced SIMD modified immediate, as used by the BIC and ORR immediate
-/// instructions: an 8-bit value shifted left within lanes of EltBits bits.
-struct AdvSIMDModImm {
-  unsigned EltBits;
-  uint64_t Imm8;
-  uint64_t Shift;
-};
-
-/// \returns the bits of the constant vector \p Reg, with lane 0 in the low
-/// bits, or std::nullopt if it isn't a constant vector.
-std::optional<APInt> getConstantVectorBits(Register Reg,
-                                           const MachineRegisterInfo &MRI) {
-  LLT Ty = MRI.getType(Reg);
-  unsigned EltBits = Ty.getScalarSizeInBits();
-  MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
-  // Constant splats may already have been lowered to G_SPLAT_VECTOR.
-  if (Def->getOpcode() == TargetOpcode::G_SPLAT_VECTOR) {
-    auto C =
-        getIConstantVRegValWithLookThrough(Def->getOperand(1).getReg(), MRI);
-    if (!C)
-      return std::nullopt;
-    return APInt::getSplat(Ty.getSizeInBits(), C->Value.zextOrTrunc(EltBits));
-  }
-  auto *BV = dyn_cast<GBuildVector>(Def);
-  if (!BV)
-    return std::nullopt;
-  APInt Bits(Ty.getSizeInBits(), 0);
-  for (unsigned I = 0, E = BV->getNumSources(); I != E; ++I) {
-    auto C = getIConstantVRegValWithLookThrough(BV->getSourceReg(I), MRI);
-    if (!C)
-      return std::nullopt;
-    Bits.insertBits(C->Value.zextOrTrunc(EltBits), I * EltBits);
-  }
-  return Bits;
-}
-
-/// \returns the modified immediate that represents \p Bits, if there is one.
-/// This follows tryAdvSIMDModImm32 and tryAdvSIMDModImm16 in
-/// AArch64ISelLowering.cpp.
-std::optional<AdvSIMDModImm> getAdvSIMDModImm(const APInt &Bits) {
-  // The immediate repeats every 64 bits.
-  if (Bits.getBitWidth() == 128 && Bits.getHiBits(64) != Bits.getLoBits(64))
-    return std::nullopt;
-  uint64_t Value = Bits.zextOrTrunc(64).getZExtValue();
-  if (AArch64_AM::isAdvSIMDModImmType1(Value))
-    return AdvSIMDModImm{32, AArch64_AM::encodeAdvSIMDModImmType1(Value), 0};
-  if (AArch64_AM::isAdvSIMDModImmType2(Value))
-    return AdvSIMDModImm{32, AArch64_AM::encodeAdvSIMDModImmType2(Value), 8};
-  if (AArch64_AM::isAdvSIMDModImmType3(Value))
-    return AdvSIMDModImm{32, AArch64_AM::encodeAdvSIMDModImmType3(Value), 16};
-  if (AArch64_AM::isAdvSIMDModImmType4(Value))
-    return AdvSIMDModImm{32, AArch64_AM::encodeAdvSIMDModImmType4(Value), 24};
-  if (AArch64_AM::isAdvSIMDModImmType5(Value))
-    return AdvSIMDModImm{16, AArch64_AM::encodeAdvSIMDModImmType5(Value), 0};
-  if (AArch64_AM::isAdvSIMDModImmType6(Value))
-    return AdvSIMDModImm{16, AArch64_AM::encodeAdvSIMDModImmType6(Value), 8};
-  return std::nullopt;
-}
-
-/// Match a 64- or 128-bit vector G_AND or G_OR with a constant that the BIC or
-/// ORR immediate instructions can encode, instead of materializing it.
-bool matchVectorBitwiseImm(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           AdvSIMDModImm &MatchInfo) {
-  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-  if (!Ty.isFixedVector() ||
-      (Ty.getSizeInBits() != 64 && Ty.getSizeInBits() != 128))
-    return false;
-  // The BIC and ORR immediate forms overwrite their input. If the input has
-  // other uses, it needs a copy, which costs as much as the constant.
-  if (!MRI.hasOneNonDBGUse(MI.getOperand(1).getReg()))
-    return false;
-  // Constants are canonicalized to the RHS.
-  std::optional<APInt> Bits =
-      getConstantVectorBits(MI.getOperand(2).getReg(), MRI);
-  if (!Bits)
-    return false;
-  // BIC clears the bits that are set in its immediate.
-  if (MI.getOpcode() == TargetOpcode::G_AND)
-    Bits->flipAllBits();
-  // Leave ANDs with all ones and ORs with zero to other combines.
-  if (Bits->isZero())
-    return false;
-  std::optional<AdvSIMDModImm> Imm = getAdvSIMDModImm(*Bits);
-  if (!Imm)
-    return false;
-  MatchInfo = *Imm;
-  return true;
-}
-
-void applyVectorBitwiseImm(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B, const AdvSIMDModImm &Imm) {
-  B.setInstrAndDebugLoc(MI);
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  LLT Ty = MRI.getType(Dst);
-  // The instruction works on lanes of Imm.EltBits bits.
-  LLT ImmTy =
-      LLT::fixed_vector(Ty.getSizeInBits() / Imm.EltBits,
-                        Ty.getElementType().changeElementSize(Imm.EltBits));
-  if (ImmTy != Ty)
-    Src = B.buildBitcast(ImmTy, Src).getReg(0);
-  Register Res = ImmTy == Ty ? Dst : MRI.createGenericVirtualRegister(ImmTy);
-  unsigned Opc =
-      MI.getOpcode() == TargetOpcode::G_AND ? AArch64::G_BICi : AArch64::G_ORRi;
-  auto Imm8 = B.buildConstant(LLT::integer(32), Imm.Imm8);
-  auto Shift = B.buildConstant(LLT::integer(32), Imm.Shift);
-  B.buildInstr(Opc, {Res}, {Src, Imm8, Shift});
-  if (Res != Dst)
-    B.buildBitcast(Dst, Res);
-  MI.eraseFromParent();
-}
 
 #define GET_GICOMBINER_IMPL
 #include "AArch64GenPostLegalizeGILowering.inc"
