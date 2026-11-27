@@ -7301,6 +7301,10 @@ bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
 }
 
 bool ScalarEvolution::isGuaranteedNotToBePoison(const SCEV *Op) {
+  // Use flags only hold where the expression is used, so Op may be poison
+  // elsewhere if it or any of its operands carries them.
+  if (Op->getCanonical() != Op)
+    return false;
   SCEVPoisonCollector PC(/* LookThroughMaybePoisonBlocking */ true);
   visitAll(Op, PC);
   return PC.MaybePoison.empty();

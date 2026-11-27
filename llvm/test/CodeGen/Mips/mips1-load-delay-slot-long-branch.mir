@@ -9,7 +9,6 @@
 ---
 name:            load_delay_slot_long_branch
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; MIPS1-LABEL: name: load_delay_slot_long_branch
   ; MIPS1: bb.0:

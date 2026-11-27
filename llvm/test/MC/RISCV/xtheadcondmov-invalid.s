@@ -1,9 +1,9 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+xtheadcondmov < %s 2>&1 | FileCheck %s
-# RUN: not llvm-mc -triple riscv64 -mattr=+xtheadcondmov < %s 2>&1 | FileCheck %s
+# RUN: llvm-mc --verify -triple riscv32 -mattr=+xtheadcondmov < %s
+# RUN: llvm-mc --verify -triple riscv64 -mattr=+xtheadcondmov < %s
 
-th.mveqz a0,a1        # CHECK: :[[@LINE]]:15: error: too few operands for instruction
-th.mveqz a0,a1,a2,a3  # CHECK: :[[@LINE]]:19: error: unexpected extra operand for instruction
-th.mveqz a0,a1,1      # CHECK: :[[@LINE]]:16: error: register must be a GPR
-th.mvnez a0,a1        # CHECK: :[[@LINE]]:15: error: too few operands for instruction
-th.mvnez a0,a1,a2,a3  # CHECK: :[[@LINE]]:19: error: unexpected extra operand for instruction
-th.mvnez a0,a1,1      # CHECK: :[[@LINE]]:16: error: register must be a GPR
+th.mveqz a0,a1        # expected-error:15 {{too few operands for instruction}}
+th.mveqz a0,a1,a2,a3  # expected-error:19 {{unexpected extra operand for instruction}}
+th.mveqz a0,a1,1      # expected-error:16 {{register must be a GPR}}
+th.mvnez a0,a1        # expected-error:15 {{too few operands for instruction}}
+th.mvnez a0,a1,a2,a3  # expected-error:19 {{unexpected extra operand for instruction}}
+th.mvnez a0,a1,1      # expected-error:16 {{register must be a GPR}}

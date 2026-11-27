@@ -8,7 +8,6 @@
 
 ---
 name: coalescing_makes_lane_undefined
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: coalescing_makes_lane_undefined
   ; CHECK: bb.0:

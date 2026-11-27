@@ -24,7 +24,6 @@
 ---
 name:            alloc_failure_with_split_vregs
 alignment:       1
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         false

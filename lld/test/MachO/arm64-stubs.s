@@ -25,11 +25,11 @@
 # CHECK-NEXT:  ret
 
 # CHECK-LABEL: Contents of (__TEXT,__stubs) section
-# CHECK-NEXT:  [[#BAR]]: adrp x16
-# CHECK-NEXT:            ldr [[REG]], [x16{{.*}}] ; literal pool symbol address: _bar
-# CHECK-NEXT:            br x16
 # CHECK-NEXT:  [[#FOO]]: adrp x16
 # CHECK-NEXT:            ldr [[REG]], [x16{{.*}}] ; literal pool symbol address: _foo
+# CHECK-NEXT:            br x16
+# CHECK-NEXT:  [[#BAR]]: adrp x16
+# CHECK-NEXT:            ldr [[REG]], [x16{{.*}}] ; literal pool symbol address: _bar
 # CHECK-NEXT:            br x16
 
 # CHECK-LABEL: Contents of (__TEXT,__stub_helper) section
@@ -39,12 +39,12 @@
 # CHECK-NEXT:                          adrp x16
 # CHECK-NEXT:                          ldr [[REG]], [x16] ; literal pool symbol address: dyld_stub_binder
 # CHECK-NEXT:                          br x16
-# CHECK-NEXT:                          ldr w16, 0x[[#%x,BAR_BIND_OFF_ADDR:]]
-# CHECK-NEXT:                          b 0x[[#HELPER_HEADER]]
-# CHECK-NEXT:  [[#BAR_BIND_OFF_ADDR]]: udf #0
 # CHECK-NEXT:                          ldr w16, 0x[[#%x,FOO_BIND_OFF_ADDR:]]
 # CHECK-NEXT:                          b 0x[[#HELPER_HEADER]]
-# CHECK-NEXT:  [[#FOO_BIND_OFF_ADDR]]: udf #11
+# CHECK-NEXT:  [[#FOO_BIND_OFF_ADDR]]: udf #0
+# CHECK-NEXT:                          ldr w16, 0x[[#%x,BAR_BIND_OFF_ADDR:]]
+# CHECK-NEXT:                          b 0x[[#HELPER_HEADER]]
+# CHECK-NEXT:  [[#BAR_BIND_OFF_ADDR]]: udf #11
 
 #--- foo.s
 .globl _foo

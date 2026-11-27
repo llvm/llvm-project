@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
@@ -23,6 +24,7 @@ using namespace llvm;
 
 struct LookupTableInfo {
   SmallVector<Constant *> Ptrs;
+  SmallVector<GlobalVariable *> DropUnnamedAddrGVs;
 };
 
 struct LookupTableUse {
@@ -79,9 +81,7 @@ static bool analyzeLookupTableUse(AccessPattern &Pattern,
   return true;
 }
 
-static bool shouldConvertToRelLookupTable(LookupTableInfo &Info,
-                                          SmallVectorImpl<LookupTableUse> &Uses,
-                                          Module &M, GlobalVariable &GV) {
+static bool isEligibleForRelLookupTable(const GlobalVariable &GV) {
   // If the original lookup table does not have local linkage and is
   // not dso_local, do not generate a relative lookup table.
   // This optimization creates a relative lookup table that consists of
@@ -89,30 +89,15 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info,
   // To be able to generate these offsets, relative lookup table and
   // its elements should have internal linkage and be dso_local, which means
   // that they should resolve to symbols within the same linkage unit.
-  if (!GV.hasInitializer() || !GV.isConstant() || !GV.hasLocalLinkage() ||
-      !GV.isDSOLocal() || !GV.isImplicitDSOLocal())
-    return false;
+  return GV.hasInitializer() && GV.isConstant() && GV.hasLocalLinkage() &&
+         GV.isDSOLocal() && GV.isImplicitDSOLocal();
+}
 
-  std::optional<AccessPattern> Pattern;
-  for (User *Usr : GV.users()) {
-    AccessPattern CurPattern;
-    LookupTableUse CurUse;
-    if (!analyzeLookupTableUse(CurPattern, CurUse, Usr))
-      return false;
-
-    // Make sure the access pattern is always the same
-    if (!Pattern)
-      Pattern = CurPattern;
-    else if (*Pattern != CurPattern)
-      return false;
-
-    Uses.push_back(CurUse);
-  }
-  if (!Pattern)
-    return false;
-
-  SmallVector<GlobalVariable *, 4> GVOps;
-  Triple TT = M.getTargetTriple();
+static bool analyzeLookupTable(LookupTableInfo &Info,
+                               const AccessPattern &Pattern,
+                               GlobalVariable &GV) {
+  Module *M = GV.getParent();
+  Triple TT = M->getTargetTriple();
   // FIXME: This should be removed in the future.
   bool ShouldDropUnnamedAddr =
       // Drop unnamed_addr to avoid matching pattern in
@@ -125,13 +110,13 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info,
       // https://github.com/rust-lang/rust/issues/141306.
       || (TT.isX86() && TT.isOSDarwin());
 
-  const DataLayout &DL = M.getDataLayout();
-  APInt Offset(Pattern->Stride.getBitWidth(), 0);
+  const DataLayout &DL = M->getDataLayout();
+  APInt Offset(Pattern.Stride.getBitWidth(), 0);
   uint64_t GVSize = GV.getGlobalSize(DL);
   bool HasNonPoison = false;
-  for (; Offset.ult(GVSize); Offset += Pattern->Stride) {
+  for (; Offset.ult(GVSize); Offset += Pattern.Stride) {
     Constant *C = ConstantFoldLoadFromConst(GV.getInitializer(),
-                                            Pattern->ElemType, Offset, DL);
+                                            Pattern.ElemType, Offset, DL);
     if (!C)
       return false;
 
@@ -173,24 +158,20 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info,
       return false;
 
     if (ShouldDropUnnamedAddr)
-      GVOps.push_back(GlobalVarOp);
+      Info.DropUnnamedAddrGVs.push_back(GlobalVarOp);
 
     HasNonPoison = true;
     Info.Ptrs.push_back(C);
   }
 
-  if (!HasNonPoison)
-    return false;
-
-  if (ShouldDropUnnamedAddr)
-    for (auto *GVOp : GVOps)
-      GVOp->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
-
-  return true;
+  return HasNonPoison;
 }
 
 static GlobalVariable *createRelLookupTable(const LookupTableInfo &Info,
                                             GlobalVariable &LookupTable) {
+  for (auto *GV : Info.DropUnnamedAddrGVs)
+    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+
   Module &M = *LookupTable.getParent();
   ArrayType *IntArrayTy =
       ArrayType::get(Type::getInt32Ty(M.getContext()), Info.Ptrs.size());
@@ -228,43 +209,36 @@ static GlobalVariable *createRelLookupTable(const LookupTableInfo &Info,
   return RelLookupTable;
 }
 
-static void convertToRelLookupTable(const LookupTableInfo &Info,
-                                    ArrayRef<LookupTableUse> Uses,
-                                    GlobalVariable &LookupTable) {
-  // Generate an array that consists of relative offsets.
-  GlobalVariable *RelLookupTable =
-      createRelLookupTable(Info, LookupTable);
+static void convertLookupTableUse(const LookupTableUse &UseInfo) {
+  BasicBlock *BB = UseInfo.GEP->getParent();
+  Module *M = BB->getModule();
+  IRBuilder<> Builder(BB);
 
-  Module &M = *LookupTable.getParent();
-  for (const LookupTableUse &UseInfo : Uses) {
-    BasicBlock *BB = UseInfo.GEP->getParent();
-    IRBuilder<> Builder(BB);
+  // Place new instruction sequence before GEP.
+  Builder.SetInsertPoint(UseInfo.GEP);
+  IntegerType *IntTy = cast<IntegerType>(UseInfo.Index->getType());
+  Value *Offset = Builder.CreateShl(UseInfo.Index, ConstantInt::get(IntTy, 2),
+                                    "reltable.shift");
 
-    // Place new instruction sequence before GEP.
-    Builder.SetInsertPoint(UseInfo.GEP);
-    IntegerType *IntTy = cast<IntegerType>(UseInfo.Index->getType());
-    Value *Offset = Builder.CreateShl(UseInfo.Index, ConstantInt::get(IntTy, 2),
-                                      "reltable.shift");
+  // Insert the call to load.relative intrinsic before LOAD.
+  // GEP might not be immediately followed by a LOAD, like it can be hoisted
+  // outside the loop or another instruction might be inserted them in
+  // between.
+  Builder.SetInsertPoint(UseInfo.Load);
+  Function *LoadRelIntrinsic = llvm::Intrinsic::getOrInsertDeclaration(
+      M, Intrinsic::load_relative, {UseInfo.Index->getType()});
 
-    // Insert the call to load.relative intrinsic before LOAD.
-    // GEP might not be immediately followed by a LOAD, like it can be hoisted
-    // outside the loop or another instruction might be inserted them in
-    // between.
-    Builder.SetInsertPoint(UseInfo.Load);
-    Function *LoadRelIntrinsic = llvm::Intrinsic::getOrInsertDeclaration(
-        &M, Intrinsic::load_relative, {UseInfo.Index->getType()});
+  // Create a call to load.relative intrinsic that computes the target address
+  // by adding base address (lookup table address) and relative offset.
+  Value *Result = Builder.CreateCall(LoadRelIntrinsic,
+                                     {UseInfo.GEP->getPointerOperand(), Offset},
+                                     "reltable.intrinsic");
 
-    // Create a call to load.relative intrinsic that computes the target address
-    // by adding base address (lookup table address) and relative offset.
-    Value *Result = Builder.CreateCall(
-        LoadRelIntrinsic, {RelLookupTable, Offset}, "reltable.intrinsic");
-
-    // Replace load instruction with the new generated instruction sequence.
-    UseInfo.Load->replaceAllUsesWith(Result);
-    // Remove Load and GEP instructions.
-    UseInfo.Load->eraseFromParent();
-    UseInfo.GEP->eraseFromParent();
-  }
+  // Replace load instruction with the new generated instruction sequence.
+  UseInfo.Load->replaceAllUsesWith(Result);
+  // Remove Load and GEP instructions.
+  UseInfo.Load->eraseFromParent();
+  UseInfo.GEP->eraseFromParent();
 }
 
 // Convert lookup tables to relative lookup tables in the module.
@@ -283,20 +257,77 @@ static bool convertToRelativeLookupTables(
   }
 
   bool Changed = false;
+  SmallVector<GlobalVariable *> DeadGVs;
+  auto AnalyzeGlobal = [&](GlobalVariable &GV) {
+    if (!isEligibleForRelLookupTable(GV))
+      return;
 
-  for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals())) {
-    LookupTableInfo Info;
+    SmallMapVector<GlobalVariable *, LookupTableInfo, 4> GVs;
+    GVs.try_emplace(&GV);
+
+    std::optional<AccessPattern> Pattern;
     SmallVector<LookupTableUse> Uses;
-    if (!shouldConvertToRelLookupTable(Info, Uses, M, GV))
-      continue;
+    SmallSetVector<User *, 8> Worklist;
+    Worklist.insert(GV.user_begin(), GV.user_end());
+    for (unsigned I = 0; I < Worklist.size(); ++I) {
+      User *Usr = Worklist[I];
+      if (isa<PHINode, SelectInst>(Usr)) {
+        // Look through phi/select. In that case, make sure that all the
+        // operands are eligible for lookup table conversion and collect them.
+        for (Value *Op : drop_begin(Usr->operands(), isa<SelectInst>(Usr))) {
+          // TODO: This could be extended to handle nested selects/phis.
+          auto *OpGV = dyn_cast<GlobalVariable>(Op);
+          if (!OpGV || !isEligibleForRelLookupTable(*OpGV))
+            return;
 
-    convertToRelLookupTable(Info, Uses, GV);
+          GVs.try_emplace(OpGV);
+          Worklist.insert(OpGV->user_begin(), OpGV->user_end());
+        }
 
-    // Remove the original lookup table.
-    GV.eraseFromParent();
+        Worklist.insert(Usr->user_begin(), Usr->user_end());
+      } else {
+        // Make sure the access pattern is always the same and collect uses.
+        AccessPattern CurPattern;
+        LookupTableUse CurUse;
+        if (!analyzeLookupTableUse(CurPattern, CurUse, Usr))
+          return;
+
+        if (!Pattern)
+          Pattern = CurPattern;
+        else if (*Pattern != CurPattern)
+          return;
+
+        Uses.push_back(CurUse);
+      }
+    }
+
+    if (!Pattern)
+      return;
+
+    for (auto &[GV, Info] : GVs)
+      if (!analyzeLookupTable(Info, *Pattern, *GV))
+        return;
+
+    // Convert the uses, while still referencing the old lookup tables.
+    for (LookupTableUse &UseInfo : Uses)
+      convertLookupTableUse(UseInfo);
+
+    // Replace the actual lookup tables.
+    for (auto &[GV, Info] : GVs) {
+      GlobalVariable *RelLookupTable = createRelLookupTable(Info, *GV);
+      GV->replaceAllUsesWith(RelLookupTable);
+      DeadGVs.push_back(GV);
+    }
 
     Changed = true;
-  }
+  };
+
+  for (GlobalVariable &GV : M.globals())
+    AnalyzeGlobal(GV);
+
+  // Remove the original lookup tables.
+  for (GlobalVariable *DeadGV : DeadGVs)
+    DeadGV->eraseFromParent();
 
   return Changed;
 }

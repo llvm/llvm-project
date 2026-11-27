@@ -1852,6 +1852,62 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
     Builder.SetInsertPoint(End);
     return Result;
   }
+  case MSVCIntrin::_CopyDoubleFromInt64:
+  case MSVCIntrin::_CopyFloatFromInt32:
+  case MSVCIntrin::_CopyInt32FromFloat:
+  case MSVCIntrin::_CopyInt64FromDouble: {
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    llvm::Type *RetTy = ConvertType(E->getType());
+    return Builder.CreateBitCast(Arg, RetTy);
+  }
+  case MSVCIntrin::_CountLeadingOnes:
+  case MSVCIntrin::_CountLeadingZeros: {
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    if (BuiltinID == MSVCIntrin::_CountLeadingOnes)
+      Arg = Builder.CreateNot(Arg);
+    Function *F = CGM.getIntrinsic(Intrinsic::ctlz, Arg->getType());
+    Value *Result = Builder.CreateCall(F, {Arg, Builder.getFalse()});
+    return Builder.CreateTrunc(Result, ConvertType(E->getType()));
+  }
+  case MSVCIntrin::_CountOneBits: {
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    Function *F = CGM.getIntrinsic(Intrinsic::ctpop, Arg->getType());
+    Value *Result = Builder.CreateCall(F, Arg);
+    return Builder.CreateTrunc(Result, ConvertType(E->getType()));
+  }
+  case MSVCIntrin::_CountTrailingZeros: {
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    Function *F = CGM.getIntrinsic(Intrinsic::cttz, Arg->getType());
+    // MSVC leaves 0 undefined; use false for predictable codegen
+    Value *Result = Builder.CreateCall(F, {Arg, Builder.getFalse()});
+    return Builder.CreateTrunc(Result, ConvertType(E->getType()));
+  }
+  case MSVCIntrin::_InterlockedAdd:
+  case MSVCIntrin::_InterlockedAdd_acq:
+  case MSVCIntrin::_InterlockedAdd_rel:
+  case MSVCIntrin::_InterlockedAdd_nf: {
+    AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent;
+    if (BuiltinID == MSVCIntrin::_InterlockedAdd_acq)
+      Ordering = AtomicOrdering::Acquire;
+    else if (BuiltinID == MSVCIntrin::_InterlockedAdd_rel)
+      Ordering = AtomicOrdering::Release;
+    else if (BuiltinID == MSVCIntrin::_InterlockedAdd_nf)
+      Ordering = AtomicOrdering::Monotonic;
+    Address DestAddr = CheckAtomicAlignment(*this, E);
+    Value *Val = EmitScalarExpr(E->getArg(1));
+    AtomicRMWInst *RMWI =
+        Builder.CreateAtomicRMW(AtomicRMWInst::Add, DestAddr, Val, Ordering);
+    // Unlike _InterlockedExchangeAdd, this returns the new value.
+    return Builder.CreateAdd(RMWI, Val);
+  }
+  case MSVCIntrin::__prefetch: {
+    Value *Address = EmitScalarExpr(E->getArg(0));
+    Value *RW = llvm::ConstantInt::get(Int32Ty, 0);
+    Value *Locality = ConstantInt::get(Int32Ty, 3);
+    Value *Data = llvm::ConstantInt::get(Int32Ty, 1);
+    Function *F = CGM.getIntrinsic(Intrinsic::prefetch, Address->getType());
+    return Builder.CreateCall(F, {Address, RW, Locality, Data});
+  }
   case MSVCIntrin::_InterlockedAnd:
     return MakeBinaryAtomicValue(*this, AtomicRMWInst::And, E);
   case MSVCIntrin::_InterlockedExchange:

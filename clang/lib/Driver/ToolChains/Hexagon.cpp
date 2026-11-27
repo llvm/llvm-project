@@ -249,9 +249,12 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   // -mattr=.
   std::vector<StringRef> Features;
   hexagon::getHexagonTargetFeatures(D, HTC.getTriple(), Args, Features);
-  if (!Features.empty())
+  // Keep only the last selection for each feature, matching Clang's target
+  // feature emission instead of forwarding redundant entries to llvm-mc.
+  auto UnifiedFeatures = unifyTargetFeatures(Features);
+  if (!UnifiedFeatures.empty())
     CmdArgs.push_back(
-        Args.MakeArgString("-mattr=" + llvm::join(Features, ",")));
+        Args.MakeArgString("-mattr=" + llvm::join(UnifiedFeatures, ",")));
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
     CmdArgs.push_back(Args.MakeArgString("-gpsize=" + Twine(*G)));

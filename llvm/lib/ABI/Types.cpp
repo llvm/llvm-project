@@ -38,6 +38,7 @@ uint64_t llvm::abi::Type::getABISizeInBits() const {
   }
   case TypeKind::Void:
   case TypeKind::OpaqueFloat8:
+  case TypeKind::SveCount:
   case TypeKind::Atomic:
   case TypeKind::MemberPointer:
   case TypeKind::Pointer:
@@ -50,6 +51,8 @@ uint64_t llvm::abi::Type::getABISizeInBits() const {
 }
 
 bool llvm::abi::Type::isSVESizelessType() const {
+  if (getKind() == TypeKind::SveCount)
+    return true;
   if (getKind() == TypeKind::Vector) {
     const VectorType *VT = static_cast<const VectorType *>(this);
     return VT->isSVEType() && VT->isScalable();

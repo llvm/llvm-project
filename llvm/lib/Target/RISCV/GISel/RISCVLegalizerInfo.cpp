@@ -14,11 +14,13 @@
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -760,13 +762,30 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor(ST.is64Bit(), {{f128, s32}, {f128, s64}}) // FIXME RV32.
       .libcallFor(ST.is64Bit(), {{f32, s128}, {f64, s128}, {f128, s128}});
 
-  // FIXME: We can do custom inline expansion like SelectionDAG.
-  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_FNEARBYINT,
-                               G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
-                               G_INTRINSIC_ROUNDEVEN})
+  // Without Zfa, round by converting to an integer and back, like
+  // SelectionDAG does.
+  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_INTRINSIC_TRUNC,
+                               G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
       .legalFor(ST.hasStdExtZfa(), {f32})
       .legalFor(ST.hasStdExtZfa() && ST.hasStdExtD(), {f64})
       .legalFor(ST.hasStdExtZfa() && ST.hasStdExtZfh(), {f16})
+      .customFor(ST.hasStdExtZfh(), {f16})
+      // Without Zfh there is no fcvt.w.h, so round in f32, which f16 extends
+      // to exactly.
+      .widenScalarIf(typeIs(0, f16), changeTo(0, f32))
+      .customFor(ST.hasStdExtF(), {f32})
+      // Rounding an f64 needs an integer that can hold every value below 2^52.
+      .customFor(ST.is64Bit() && ST.hasStdExtD(), {f64})
+      .libcallFor({f32, f64})
+      .libcallFor(ST.is64Bit(), {f128});
+
+  // G_FNEARBYINT must not raise the inexact exception, which the integer round
+  // trip does, so without Zfa it has to stay a libcall.
+  getActionDefinitionsBuilder(G_FNEARBYINT)
+      .legalFor(ST.hasStdExtZfa(), {f32})
+      .legalFor(ST.hasStdExtZfa() && ST.hasStdExtD(), {f64})
+      .legalFor(ST.hasStdExtZfa() && ST.hasStdExtZfh(), {f16})
+      .widenScalarIf(typeIs(0, f16), changeTo(0, f32))
       .libcallFor({f32, f64})
       .libcallFor(ST.is64Bit(), {f128});
 
@@ -1721,6 +1740,64 @@ static unsigned getRISCVWOpcode(unsigned Opcode) {
   }
 }
 
+bool RISCVLegalizerInfo::legalizeFpRound(
+    MachineInstr &MI, LegalizerHelper &Helper, MachineIRBuilder &MIRBuilder,
+    LostDebugLocObserver &LocObserver) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  LLT Ty = MRI.getType(Src);
+
+  // SelectionDAG keeps the libcall when optimizing for size, but there is no
+  // f16 libcall, so f16 always uses the inline expansion.
+  if (Ty != LLT::float16() && MIRBuilder.getMF().getFunction().hasOptSize())
+    return Helper.libcall(MI, LocObserver) == LegalizerHelper::Legalized;
+
+  RISCVFPRndMode::RoundingMode FRM;
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_FCEIL:
+    FRM = RISCVFPRndMode::RUP;
+    break;
+  case TargetOpcode::G_FFLOOR:
+    FRM = RISCVFPRndMode::RDN;
+    break;
+  case TargetOpcode::G_FRINT:
+    FRM = RISCVFPRndMode::DYN;
+    break;
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+    FRM = RISCVFPRndMode::RTZ;
+    break;
+  case TargetOpcode::G_INTRINSIC_ROUND:
+    FRM = RISCVFPRndMode::RMM;
+    break;
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+    FRM = RISCVFPRndMode::RNE;
+    break;
+  default:
+    llvm_unreachable("Unexpected rounding opcode");
+  }
+
+  // Create an integer the size of the mantissa with the MSB set. This and all
+  // values larger than it have no fractional bits, so emitFROUND passes them
+  // through instead of converting. NaN is passed through as well.
+  const fltSemantics &Sem = getFltSemanticForLLT(Ty);
+  unsigned Precision = APFloat::semanticsPrecision(Sem);
+  APFloat MaxVal(Sem);
+  MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
+                          /*IsSigned=*/false, APFloat::rmNearestTiesToEven);
+  auto Max = MIRBuilder.buildFConstant(Ty, MaxVal);
+
+  // Leave the guarded round trip through the integer domain to emitFROUND, so
+  // the expansion stays shared with SelectionDAG.
+  MIRBuilder
+      .buildInstr(RISCV::G_FROUND, {Dst}, {Src, Max},
+                  MI.getFlags() & MachineInstr::NoFPExcept)
+      .addImm(FRM);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RISCVLegalizerInfo::legalizeCustom(
     LegalizerHelper &Helper, MachineInstr &MI,
     LostDebugLocObserver &LocObserver) const {
@@ -1893,6 +1970,13 @@ bool RISCVLegalizerInfo::legalizeCustom(
     Helper.Observer.changedInstr(MI);
     return true;
   }
+  case TargetOpcode::G_FCEIL:
+  case TargetOpcode::G_FFLOOR:
+  case TargetOpcode::G_FRINT:
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+  case TargetOpcode::G_INTRINSIC_ROUND:
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+    return legalizeFpRound(MI, Helper, MIRBuilder, LocObserver);
   case TargetOpcode::G_READCYCLECOUNTER:
   case TargetOpcode::G_READSTEADYCOUNTER:
     return legalizeReadCounter(MI, MIRBuilder, Helper.Observer);

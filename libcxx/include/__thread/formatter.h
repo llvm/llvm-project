@@ -37,12 +37,12 @@ template <__fmt_char_type _CharT>
 struct formatter<__thread_id, _CharT> {
 public:
   template <class _ParseContext>
-  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+  constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
     return __parser_.__parse(__ctx, __format_spec::__fields_fill_align_width);
   }
 
   template <class _FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(__thread_id __id, _FormatContext& __ctx) const {
+  typename _FormatContext::iterator format(__thread_id __id, _FormatContext& __ctx) const {
     // In __thread/support/pthread.h, __libcpp_thread_id is either a
     // unsigned long long or a pthread_t.
     //

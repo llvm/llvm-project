@@ -6,7 +6,6 @@
 
 ---
 name:            s_mov_b64_sub1_folds_wrong_value_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -32,7 +31,6 @@ body:             |
 
 ---
 name:            v_mov_b64_pseudo_sub1_folds_wrong_value
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr8_vgpr9
@@ -58,7 +56,6 @@ body:             |
 
 ---
 name:            subreg_fold_imm
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9, $vgpr8_vgpr9
@@ -81,7 +78,6 @@ body:             |
 
 ---
 name:            s_mov_b64_into_reg_sequence_user
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -104,7 +100,6 @@ body:             |
 
 ---
 name:            s_mov_b64_into_reg_sequence_user_with_subregs
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -129,7 +124,6 @@ body:             |
 
 ---
 name:            issue139908_wrong_splat_constant_handling
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9
@@ -152,7 +146,6 @@ body:             |
 
 ---
 name:            s_mov_b64_copy_subreg_into_reg_sequence_user
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8, $sgpr9
