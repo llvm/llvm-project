@@ -2377,6 +2377,8 @@ void CGOpenMPRuntime::emitCopyprivateCall(
     ArrayRef<std::pair<llvm::Type *, CharUnits>> VarTypes,
     llvm::function_ref<llvm::Value *(CodeGenFunction &, unsigned)> EmitVarPtr,
     CopyprivateCopyGenTy CopyGen, Address DidIt) {
+  assert(!VarTypes.empty() && "Expected at least one copyprivate variable.");
+  assert(CGF.HaveInsertPoint() && "Expected an active insertion point.");
   ASTContext &C = CGM.getContext();
   llvm::APInt ArraySize(/*unsigned int numBits=*/32, VarTypes.size());
   QualType CopyprivateArrayTy = C.getConstantArrayType(
@@ -2441,6 +2443,8 @@ llvm::Value *CGOpenMPRuntime::emitAllocCall(CodeGenFunction &CGF,
                                             SourceLocation Loc,
                                             llvm::Value *Size,
                                             CharUnits Alignment) {
+  if (!CGF.HaveInsertPoint())
+    return nullptr;
   // Use the default allocator.
   llvm::Value *Args[] = {getThreadID(CGF, Loc), CGM.getSize(Alignment), Size,
                          llvm::ConstantPointerNull::get(CGF.VoidPtrTy)};
@@ -2451,6 +2455,8 @@ llvm::Value *CGOpenMPRuntime::emitAllocCall(CodeGenFunction &CGF,
 
 void CGOpenMPRuntime::emitFreeCall(CodeGenFunction &CGF, SourceLocation Loc,
                                    llvm::Value *Ptr) {
+  if (!CGF.HaveInsertPoint())
+    return;
   llvm::Value *Args[] = {
       getThreadID(CGF, Loc),
       CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(Ptr, CGF.VoidPtrTy),
