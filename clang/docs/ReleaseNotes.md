@@ -1090,6 +1090,15 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
+- Fixed a miscompilation where a runtime `new (std::nothrow) T[N]` with a constant
+  `N` larger than `-fconstexpr-steps` was folded to a null pointer: the allocation
+  function was still called, but its result was thrown away, so every later read
+  of the pointer saw `nullptr` and the block leaked. Reaching the step limit only
+  means the evaluator could not evaluate the bound, which is not the same thing as
+  an erroneous array bound under [expr.new]. Such an allocation in a constant
+  expression is now diagnosed instead of silently evaluating to a null pointer.
+  (#GH246281)
+
 - Fixed lambdas with specifiers or attributes after the capture list being
   misparsed as function declarations in direct-initialization contexts under
   `-fms-extensions` or in HLSL mode.

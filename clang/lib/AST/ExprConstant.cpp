@@ -922,8 +922,25 @@ namespace {
       return false;
     }
 
-    bool CheckArraySize(SourceLocation Loc, unsigned BitWidth,
-                        uint64_t ElemCount, bool Diag) {
+    /// How an array size check turned out. The two failures have to stay
+    /// distinct: only the first one is a property of the expression.
+    enum class ArraySizeResult {
+      /// The array can be built.
+      OK,
+      /// The bound is not representable. [expr.new] calls such a new-expression
+      /// erroneous, which is what lets a non-throwing allocation evaluate to a
+      /// null pointer without calling the allocation function.
+      ErroneousBound,
+      /// The bound is representable, but giving every element an APValue would
+      /// use more memory than we allow (GH63562). This is a limit of the
+      /// evaluator, not a property of the expression, so the evaluation has to
+      /// fail instead of producing a value -- otherwise a new-expression that
+      /// we merely could not fold turns into a null pointer at run time.
+      OverResourceLimit,
+    };
+
+    ArraySizeResult CheckArraySize(SourceLocation Loc, unsigned BitWidth,
+                                   uint64_t ElemCount, bool Diag) {
       // FIXME: GH63562
       // APValue stores array extents as unsigned,
       // so anything that is greater that unsigned would overflow when
@@ -932,7 +949,7 @@ namespace {
           ElemCount > uint64_t(std::numeric_limits<unsigned>::max())) {
         if (Diag)
           FFDiag(Loc, diag::note_constexpr_new_too_large) << ElemCount;
-        return false;
+        return ArraySizeResult::ErroneousBound;
       }
 
       // FIXME: GH63562
@@ -942,14 +959,16 @@ namespace {
       // of each element is likely to take some number of steps anyway.
       uint64_t Limit = getLangOpts().ConstexprStepLimit;
       if (Limit != 0 && ElemCount > Limit) {
-        if (Diag) {
-          FFDiag(Loc, diag::note_constexpr_new_exceeds_limits, 1)
-              << ElemCount << Limit;
-          Note(Loc, diag::note_constexpr_steps);
-        }
-        return false;
+        // Unlike the check above, this one says nothing about the expression,
+        // so even a non-throwing allocation gets to be told why it did not
+        // evaluate. Diagnostics are dropped unless this is a real constant
+        // evaluation, so this stays quiet where we only failed to fold.
+        FFDiag(Loc, diag::note_constexpr_new_exceeds_limits, 1)
+            << ElemCount << Limit;
+        Note(Loc, diag::note_constexpr_steps);
+        return ArraySizeResult::OverResourceLimit;
       }
-      return true;
+      return ArraySizeResult::OK;
     }
 
     std::pair<CallStackFrame *, unsigned>
@@ -3875,9 +3894,9 @@ static bool lifetimeStartedInEvaluation(EvalInfo &Info,
 static bool CheckArraySize(EvalInfo &Info, const ConstantArrayType *CAT,
                            SourceLocation CallLoc = {}) {
   return Info.CheckArraySize(
-      CAT->getSizeExpr() ? CAT->getSizeExpr()->getBeginLoc() : CallLoc,
-      CAT->getNumAddressingBits(Info.Ctx), CAT->getZExtSize(),
-      /*Diag=*/true);
+             CAT->getSizeExpr() ? CAT->getSizeExpr()->getBeginLoc() : CallLoc,
+             CAT->getNumAddressingBits(Info.Ctx), CAT->getZExtSize(),
+             /*Diag=*/true) == EvalInfo::ArraySizeResult::OK;
 }
 
 static bool handleScalarCast(EvalInfo &Info, const FPOptions FPO, const Expr *E,
@@ -7902,9 +7921,13 @@ static bool HandleOperatorNewCall(EvalInfo &Info, const CallExpr *E,
     return false;
   }
 
-  if (!Info.CheckArraySize(E->getBeginLoc(), ByteSize.getActiveBits(),
-                           Size.getZExtValue(), /*Diag=*/!IsNothrow)) {
-    if (IsNothrow) {
+  auto SizeCheck =
+      Info.CheckArraySize(E->getBeginLoc(), ByteSize.getActiveBits(),
+                          Size.getZExtValue(), /*Diag=*/!IsNothrow);
+  if (SizeCheck != EvalInfo::ArraySizeResult::OK) {
+    // A null result stands for an erroneous array bound only; past the
+    // evaluator's own limits we simply do not know what this allocates.
+    if (IsNothrow && SizeCheck == EvalInfo::ArraySizeResult::ErroneousBound) {
       Result.setNull(Info.Ctx, E->getType());
       return true;
     }
@@ -11253,11 +11276,19 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 
     //   -- its value is such that the size of the allocated object would
     //      exceed the implementation-defined limit
-    if (!Info.CheckArraySize(ArraySize.value()->getExprLoc(),
-                             ConstantArrayType::getNumAddressingBits(
-                                 Info.Ctx, AllocType, ArrayBound),
-                             ArrayBound.getZExtValue(), /*Diag=*/!IsNothrow)) {
-      if (IsNothrow)
+    auto SizeCheck =
+        Info.CheckArraySize(ArraySize.value()->getExprLoc(),
+                            ConstantArrayType::getNumAddressingBits(
+                                Info.Ctx, AllocType, ArrayBound),
+                            ArrayBound.getZExtValue(), /*Diag=*/!IsNothrow);
+    if (SizeCheck != EvalInfo::ArraySizeResult::OK) {
+      // This is where the null result of a non-throwing allocation comes from,
+      // and it is only justified for a bound that really is erroneous. A size
+      // that we refuse to build APValues for says nothing about the
+      // new-expression: failing here leaves the allocation to run time, where
+      // it succeeds, rather than folding it to a null pointer that CodeGen
+      // would then use for every later read of the pointer.
+      if (IsNothrow && SizeCheck == EvalInfo::ArraySizeResult::ErroneousBound)
         return ZeroInitialization(E);
       return false;
     }
