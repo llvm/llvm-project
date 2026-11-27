@@ -111,7 +111,7 @@ defm : BoolField<"hexagon-opt-ext-to-64", "false",
   "Enable Optimization of extensions to i64">;
 defm : BoolField<"hexagon-optszext", "false",
   "Enable Optimization of Sign/Zero Extends">;
-defm : BoolField<"hexagon-peephole", "true",
+defm : BoolField<"hexagon-opt-peephole", "true",
   "Enable Peephole Optimization">;
 defm : BoolField<"hexagon-pnotp", "true",
   "Enable Optimization of PNotP">;
@@ -128,7 +128,7 @@ def : AliasOf<"disable-hexagon-dealloc-ret", "hexagon-dealloc-ret=false">;
 def : AliasOf<"disable-hexagon-misched", "hexagon-misched=false">;
 def : AliasOf<"disable-hexagon-opt-ext-to-64", "hexagon-opt-ext-to-64=false">;
 def : AliasOf<"disable-hexagon-optszext", "hexagon-optszext=false">;
-def : AliasOf<"disable-hexagon-peephole", "hexagon-peephole=false">;
+def : AliasOf<"disable-hexagon-peephole", "hexagon-opt-peephole=false">;
 def : AliasOf<"disable-hexagon-pnotp", "hexagon-pnotp=false">;
 def : AliasOf<"enable-bsb-sched", "hexagon-bsb-sched">;
 def : AliasOf<"enable-cur-sched", "hexagon-cur-sched">;

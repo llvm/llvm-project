@@ -624,8 +624,7 @@ HexagonTargetLowering::getPreferredHvxVectorAction(MVT VecTy) const {
       return TargetLoweringBase::TypeSplitVector;
 
     bool HaveThreshold = Subtarget.getCLOpts().hvx_widen.has_value();
-    if (HaveThreshold &&
-        8 * *Subtarget.getCLOpts().hvx_widen <= VecWidth)
+    if (HaveThreshold && 8 * *Subtarget.getCLOpts().hvx_widen <= VecWidth)
       return TargetLoweringBase::TypeWidenVector;
     if (VecWidth >= HwWidth/2 && VecWidth < HwWidth)
       return TargetLoweringBase::TypeWidenVector;
@@ -3300,8 +3299,7 @@ HexagonTargetLowering::ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const {
             getInstr(Hexagon::V6_vconv_h_hf, dl, ResTy, {Op0}, DAG);
         return ConvVec;
       }
-    } else if (Subtarget.getCLOpts().fp_fast_convert &&
-               InpTy == MVT::v32f32) {
+    } else if (Subtarget.getCLOpts().fp_fast_convert && InpTy == MVT::v32f32) {
       // Vd32.w=Vu32.sf same as Q6_Vw_equals_Vsf
       SDValue ConvVec = getInstr(Hexagon::V6_vconv_w_sf, dl, ResTy, {Op0}, DAG);
       return ConvVec;

@@ -108,10 +108,9 @@ public:
   struct BankConflictMutation : public ScheduleDAGMutation {
     void apply(ScheduleDAGInstrs *DAG) override;
   };
-  static bool mayHaveBankConflict(const MachineInstr &MI0,
-                                  const MachineInstr &MI1,
-                                  const HexagonInstrInfo &HII,
-                                  bool IgnoreSameLine = true);
+  bool mayHaveBankConflict(const MachineInstr &MI0, const MachineInstr &MI1,
+                           const HexagonInstrInfo &HII,
+                           bool IgnoreSameLine = true) const;
   struct HLXPseudoMutation : public ScheduleDAGMutation {
     void apply(ScheduleDAGInstrs *DAG) override;
   };

@@ -1737,8 +1737,7 @@ MachineBasicBlock::iterator HexagonFrameLowering::insertCSRSpillsInBlock(
                                                StkOvrFlowEnabled);
     auto &HTM = static_cast<const HexagonTargetMachine&>(MF.getTarget());
     bool IsPIC = HTM.isPositionIndependent();
-    bool LongCalls =
-        HST.useLongCalls() || HST.getCLOpts().save_restore_long;
+    bool LongCalls = HST.useLongCalls() || HST.getCLOpts().save_restore_long;
 
     // Call spill function.
     DebugLoc DL = MI != MBB.end() ? MI->getDebugLoc() : DebugLoc();
@@ -1803,8 +1802,7 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
     const char *RestoreFn = getSpillFunctionFor(MaxR, Kind);
     auto &HTM = static_cast<const HexagonTargetMachine&>(MF.getTarget());
     bool IsPIC = HTM.isPositionIndependent();
-    bool LongCalls =
-        HST.useLongCalls() || HST.getCLOpts().save_restore_long;
+    bool LongCalls = HST.useLongCalls() || HST.getCLOpts().save_restore_long;
 
     // Call spill function.
     DebugLoc DL = MI != MBB.end() ? MI->getDebugLoc()
@@ -1930,8 +1928,7 @@ void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
     return;
   computeVTCMStackOffsets(MF);
   auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
-  if (HST.getCLOpts().save_parent_vsp &&
-      HMFI.getVTCMFrameInfo().getStackSize())
+  if (HST.getCLOpts().save_parent_vsp && HMFI.getVTCMFrameInfo().getStackSize())
     HMFI.setVSPFrameIndex(
         MF.getFrameInfo().CreateSpillStackObject(4, Align(4)));
 }

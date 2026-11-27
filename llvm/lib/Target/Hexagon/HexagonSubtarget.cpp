@@ -639,9 +639,7 @@ static bool haveComparableSyms(const BankAddr &A0, const BankAddr &A1,
 bool HexagonSubtarget::mayHaveBankConflict(const MachineInstr &MI0,
                                            const MachineInstr &MI1,
                                            const HexagonInstrInfo &HII,
-                                           bool IgnoreSameLine) {
-  const auto &CLOpts =
-      MI0.getMF()->getSubtarget<HexagonSubtarget>().getCLOpts();
+                                           bool IgnoreSameLine) const {
   if (!CLOpts.check_bank_conflict)
     return false;
   std::optional<BankAddr> A0 = getBankAddr(MI0, HII);
@@ -683,8 +681,8 @@ bool HexagonSubtarget::mayHaveBankConflict(const MachineInstr &MI0,
 }
 
 void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
-  const auto &CLOpts = DAG->MF.getSubtarget<HexagonSubtarget>().getCLOpts();
-  if (!CLOpts.check_bank_conflict)
+  const auto &HST = DAG->MF.getSubtarget<HexagonSubtarget>();
+  if (!HST.getCLOpts().check_bank_conflict)
     return;
 
   const auto &HII = static_cast<const HexagonInstrInfo&>(*DAG->TII);
@@ -701,8 +699,8 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
       SUnit &S1 = DAG->SUnits[j];
       // Use the conservative check here: the edge only guides the scheduler,
       // and the packetizer decides whether the loads can share a packet.
-      if (!mayHaveBankConflict(*S0.getInstr(), *S1.getInstr(), HII,
-                               /*IgnoreSameLine=*/false))
+      if (!HST.mayHaveBankConflict(*S0.getInstr(), *S1.getInstr(), HII,
+                                   /*IgnoreSameLine=*/false))
         continue;
       // The loads likely conflict: add an artificial edge and set extra
       // latency.
@@ -851,13 +849,9 @@ void HexagonSubtarget::getSMSMutations(
 // Pin the vtable to this file.
 void HexagonSubtarget::anchor() {}
 
-bool HexagonSubtarget::enableMachineScheduler() const {
-  return CLOpts.misched;
-}
+bool HexagonSubtarget::enableMachineScheduler() const { return CLOpts.misched; }
 
-bool HexagonSubtarget::usePredicatedCalls() const {
-  return CLOpts.pred_calls;
-}
+bool HexagonSubtarget::usePredicatedCalls() const { return CLOpts.pred_calls; }
 
 int HexagonSubtarget::updateLatency(MachineInstr &SrcInst,
                                     MachineInstr &DstInst, bool IsArtificial,

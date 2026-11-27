@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon -hexagon-peephole=false < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-opt-peephole=false < %s | FileCheck %s
 ; Old spelling, still accepted as an alias.
 ; RUN: llc -mtriple=hexagon -disable-hexagon-peephole < %s | FileCheck %s
 

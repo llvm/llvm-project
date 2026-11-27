@@ -103,7 +103,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
   DenseMap<unsigned, unsigned> PeepholeMap;
   DenseMap<unsigned, std::pair<unsigned, unsigned> > PeepholeDoubleRegsMap;
 
-  if (!CLOpts.peephole)
+  if (!CLOpts.opt_peephole)
     return false;
 
   // Loop over all of the basic blocks.
@@ -132,8 +132,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
 
       // Look for  %170 = COMBINE_ir_V4 (0, %169)
       // %170:DoublRegs, %169:IntRegs
-      if (CLOpts.opt_ext_to_64 &&
-          MI.getOpcode() == Hexagon::A4_combineir) {
+      if (CLOpts.opt_ext_to_64 && MI.getOpcode() == Hexagon::A4_combineir) {
         assert(MI.getNumOperands() == 3);
         MachineOperand &Dst = MI.getOperand(0);
         MachineOperand &Src1 = MI.getOperand(1);
