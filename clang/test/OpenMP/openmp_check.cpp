@@ -8,9 +8,13 @@
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
 #define p _Pragma("omp parallel")
+#define L (
+#define NESTED_PRAGMA() _Pragma("message(\"escaped\")")
 
 int nested(int a) {
-#pragma omp parallel p // expected-error {{unexpected OpenMP directive}}
+#pragma omp parallel p // expected-error {{nested pragma is not allowed}}
+  ++a;
+#pragma omp parallel NESTED_PRAGMA L ) // expected-warning {{extra tokens at the end of '#pragma omp parallel' are ignored}}
   ++a;
 #pragma omp parallel
   ++a;

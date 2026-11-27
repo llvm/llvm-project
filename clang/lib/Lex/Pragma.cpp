@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Timer.h"
 #include <algorithm>
 #include <cassert>
@@ -162,6 +163,17 @@ struct TokenCollector {
 /// HandlePragmaDirective - The "\#pragma" directive has been parsed.  Lex the
 /// rest of the pragma, passing it to the registered pragma handlers.
 void Preprocessor::HandlePragmaDirective(PragmaIntroducer Introducer) {
+  // _Pragma/__pragma are checked in HandlePragmaOperator before reaching here.
+  if (Introducer.Kind == PIK_HashPragma &&
+      PragmaState != PragmaLexingState::None) {
+    if (PragmaState == PragmaLexingState::Active)
+      Diag(Introducer.Loc, diag::err_nested_pragma);
+    DiscardUntilEndOfDirective();
+    return;
+  }
+
+  llvm::SaveAndRestore RestorePragmaState(PragmaState,
+                                          PragmaLexingState::Active);
   if (Callbacks)
     Callbacks->PragmaDirective(Introducer.Loc, Introducer.Kind);
 
@@ -175,15 +187,61 @@ void Preprocessor::HandlePragmaDirective(PragmaIntroducer Introducer) {
   PragmaHandlers->HandlePragma(*this, Introducer, Tok);
 
   // If the pragma handler didn't read the rest of the line, consume it now.
-  if ((CurTokenLexer && CurTokenLexer->isParsingPreprocessorDirective())
-   || (CurPPLexer && CurPPLexer->ParsingPreprocessorDirective))
+  // Preserve deferred #pragma clang __debug dump/parser_crash token streams.
+  auto IsDeferredDebugAnnotation = [&]() {
+    std::optional<Token> Next = CurTokenLexer->peekNextPPToken();
+    return Next && Next->isOneOf(tok::annot_pragma_dump,
+                                 tok::annot_pragma_parser_crash);
+  };
+  if ((CurTokenLexer && CurTokenLexer->isParsingPreprocessorDirective() &&
+       !IsDeferredDebugAnnotation()) ||
+      (CurPPLexer && CurPPLexer->ParsingPreprocessorDirective))
     DiscardUntilEndOfDirective();
 }
 
-/// Handle_Pragma - Read a _Pragma directive, slice it up, process it, then
-/// return the first token after the directive.  The _Pragma token has just
-/// been read into 'Tok'.
-void Preprocessor::Handle_Pragma(Token &Tok) {
+bool Preprocessor::HandlePragmaOperator(Token &Tok, bool IsMicrosoft) {
+  if (PragmaState == PragmaLexingState::SkippingNested)
+    return true;
+
+  if (PragmaState == PragmaLexingState::Recovering && Tok.isAtStartOfLine())
+    PragmaState = PragmaLexingState::None;
+
+  // During argument pre-expansion the operator is only checked and put
+  // back. Diagnose it later if it survives macro replacement.
+  if ((PragmaState == PragmaLexingState::Active ||
+       PragmaState == PragmaLexingState::Recovering) &&
+      !InMacroArgPreExpansion) {
+    Diag(Tok, diag::err_nested_pragma);
+    // Recover through the operand without executing another pragma. Keep
+    // expanding other macros, which can supply the operand's parentheses.
+    llvm::SaveAndRestore SkipNested(PragmaState,
+                                    PragmaLexingState::SkippingNested);
+    Lex(Tok);
+    if (Tok.isNot(tok::l_paren))
+      return true;
+
+    // Skip through the operand's matching ')', leaving later tokens unread.
+    unsigned Depth = 1;
+    do {
+      Lex(Tok);
+      if (Tok.isOneOf(tok::eod, tok::eof))
+        return true;
+      if (Tok.is(tok::l_paren))
+        ++Depth;
+      else if (Tok.is(tok::r_paren))
+        --Depth;
+    } while (Depth);
+    return false;
+  }
+
+  // Restore the state before lexing past the operator, where another pragma
+  // may immediately follow it.
+  llvm::SaveAndRestore RestorePragmaState(PragmaState,
+                                          PragmaLexingState::Active);
+  return IsMicrosoft ? HandleMicrosoft__pragma(Tok) : Handle_Pragma(Tok);
+}
+
+bool Preprocessor::Handle_Pragma(Token &Tok) {
   // C11 6.10.3.4/3:
   //   all pragma unary operator expressions within [a completely
   //   macro-replaced preprocessing token sequence] are [...] processed [after
@@ -213,32 +271,39 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
   Toks.lex();
   if (Tok.isNot(tok::l_paren)) {
     Diag(PragmaLoc, diag::err__Pragma_malformed);
-    return;
+    return true;
   }
 
   // Read the '"..."'.
   Toks.lex();
+  bool IsRecovering = !InMacroArgPreExpansion;
+  PragmaLexingState RecoveryState =
+      IsRecovering ? PragmaLexingState::Recovering : PragmaState;
   if (!tok::isStringLiteral(Tok.getKind())) {
     Diag(PragmaLoc, diag::err__Pragma_malformed);
     // Skip bad tokens, and the ')', if present.
-    if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::eof) && Tok.isNot(tok::eod))
+    llvm::SaveAndRestore Recover(PragmaState, RecoveryState);
+    if (!Tok.isOneOf(tok::r_paren, tok::eof, tok::eod))
       Lex(Tok);
-    while (Tok.isNot(tok::r_paren) &&
-           !Tok.isAtStartOfLine() &&
-           Tok.isNot(tok::eof) && Tok.isNot(tok::eod))
+    while ((!IsRecovering || PragmaState == PragmaLexingState::Recovering) &&
+           !Tok.isOneOf(tok::r_paren, tok::eof, tok::eod) &&
+           !Tok.isAtStartOfLine())
       Lex(Tok);
-    if (Tok.is(tok::r_paren))
-      Lex(Tok);
-    return;
+    // Recovery ended at a new line-start directive or pragma; deliver Tok
+    // instead of consuming a ')' that belongs to that line.
+    if (IsRecovering && PragmaState != PragmaLexingState::Recovering)
+      return true;
+    return Tok.isNot(tok::r_paren);
   }
 
   if (Tok.hasUDSuffix()) {
     Diag(Tok, diag::err_invalid_string_udl);
     // Skip this token, and the ')', if present.
+    llvm::SaveAndRestore Recover(PragmaState, RecoveryState);
     Lex(Tok);
-    if (Tok.is(tok::r_paren))
-      Lex(Tok);
-    return;
+    if (IsRecovering && PragmaState != PragmaLexingState::Recovering)
+      return true;
+    return Tok.isNot(tok::r_paren);
   }
 
   // Remember the string.
@@ -248,13 +313,13 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
   Toks.lex();
   if (Tok.isNot(tok::r_paren)) {
     Diag(PragmaLoc, diag::err__Pragma_malformed);
-    return;
+    return true;
   }
 
   // If we're expanding a macro argument, put the tokens back.
   if (InMacroArgPreExpansion) {
     Toks.revert();
-    return;
+    return true;
   }
 
   SourceLocation RParenLoc = Tok.getLocation();
@@ -264,7 +329,7 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
   StringRef StrValRef = getSpelling(StrTok, StrVal, &Invalid);
   if (Invalid) {
     Diag(PragmaLoc, diag::err__Pragma_malformed);
-    return;
+    return true;
   }
 
   assert(StrValRef.size() <= StrVal.size());
@@ -296,8 +361,7 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
   // With everything set up, lex this as a #pragma directive.
   HandlePragmaDirective({PIK__Pragma, PragmaLoc});
 
-  // Finally, return whatever came after the pragma directive.
-  return Lex(Tok);
+  return false;
 }
 
 void clang::prepare_PragmaString(SmallVectorImpl<char> &StrVal) {
@@ -352,7 +416,7 @@ void clang::prepare_PragmaString(SmallVectorImpl<char> &StrVal) {
 
 /// HandleMicrosoft__pragma - Like Handle_Pragma except the pragma text
 /// is not enclosed within a string literal.
-void Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
+bool Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
   // During macro pre-expansion, check the syntax now but put the tokens back
   // into the token stream for later consumption. Same as Handle_Pragma.
   TokenCollector Toks = {*this, InMacroArgPreExpansion, {}, Tok};
@@ -364,14 +428,14 @@ void Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
   Toks.lex();
   if (Tok.isNot(tok::l_paren)) {
     Diag(PragmaLoc, diag::err__Pragma_malformed);
-    return;
+    return true;
   }
 
   // Get the tokens enclosed within the __pragma(), as well as the final ')'.
   SmallVector<Token, 32> PragmaToks;
   int NumParens = 0;
   Toks.lex();
-  while (Tok.isNot(tok::eof)) {
+  while (!Tok.isOneOf(tok::eod, tok::eof)) {
     PragmaToks.push_back(Tok);
     if (Tok.is(tok::l_paren))
       NumParens++;
@@ -380,15 +444,15 @@ void Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
     Toks.lex();
   }
 
-  if (Tok.is(tok::eof)) {
+  if (Tok.isOneOf(tok::eod, tok::eof)) {
     Diag(PragmaLoc, diag::err_unterminated___pragma);
-    return;
+    return true;
   }
 
   // If we're expanding a macro argument, put the tokens back.
   if (InMacroArgPreExpansion) {
     Toks.revert();
-    return;
+    return true;
   }
 
   PragmaToks.front().setFlag(Token::LeadingSpace);
@@ -406,8 +470,7 @@ void Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
   // With everything set up, lex this as a #pragma directive.
   HandlePragmaDirective({PIK___pragma, PragmaLoc});
 
-  // Finally, return whatever came after the pragma directive.
-  return Lex(Tok);
+  return false;
 }
 
 /// HandlePragmaOnce - Handle \#pragma once.  OnceTok is the 'once'.
@@ -1113,18 +1176,14 @@ struct PragmaDebugHandler : public PragmaHandler {
       llvm::TimeRegion R(&T);
       if (!PP.getPreprocessorOpts().DisablePragmaDebugCrash)
         LLVM_BUILTIN_TRAP;
-    } else if (II->isStr("parser_crash")) {
-      if (!PP.getPreprocessorOpts().DisablePragmaDebugCrash) {
-        Token Crasher = Token::createAnnotation(tok::annot_pragma_parser_crash,
-                                                Tok.getLocation());
-        PP.EnterToken(Crasher, /*IsReinject*/ false);
-      }
+    } else if (II->isStr("parser_crash") || II->isStr("dump")) {
+      bool IsDump = II->isStr("dump");
+      if (IsDump || !PP.getPreprocessorOpts().DisablePragmaDebugCrash)
+        HandleParserAnnotation(PP, Tok,
+                               IsDump ? tok::annot_pragma_dump
+                                      : tok::annot_pragma_parser_crash);
     } else if (II->isStr("sleep")) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    } else if (II->isStr("dump")) {
-      Token DumpAnnot =
-          Token::createAnnotation(tok::annot_pragma_dump, Tok.getLocation());
-      PP.EnterToken(DumpAnnot, /*IsReinject*/false);
     } else if (II->isStr("diag_mapping")) {
       Token DiagName;
       PP.LexUnexpandedToken(DiagName);
@@ -1268,6 +1327,21 @@ struct PragmaDebugHandler : public PragmaHandler {
     PPCallbacks *Callbacks = PP.getPPCallbacks();
     if (Callbacks)
       Callbacks->PragmaDebug(Tok.getLocation(), II->getName());
+  }
+
+  static void HandleParserAnnotation(Preprocessor &PP, const Token &Command,
+                                     tok::TokenKind Kind) {
+    // Expand the arguments while the pragma is active. The parser consumes
+    // them after the handler returns.
+    SmallVector<Token, 8> Args;
+    Args.push_back(Token::createAnnotation(Kind, Command.getLocation()));
+    do {
+      PP.Lex(Args.emplace_back());
+    } while (!Args.back().isOneOf(tok::eod, tok::eof));
+    auto Tokens = std::make_unique<Token[]>(Args.size());
+    std::copy(Args.begin(), Args.end(), Tokens.get());
+    PP.EnterTokenStream(std::move(Tokens), Args.size(),
+                        /*DisableMacroExpansion=*/true, /*IsReinject=*/false);
   }
 
   void HandleCaptured(Preprocessor &PP) {

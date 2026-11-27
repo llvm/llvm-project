@@ -1591,7 +1591,7 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
           << PragmaLoopHintString(Info->PragmaName, Info->Option);
     Hint.StateLoc = new (Actions.Context) IdentifierLoc(StateLoc, StateInfo);
   } else if (OptionInfo && OptionInfo->getName() == "vectorize_width") {
-    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/false,
+    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
                         /*IsReinject=*/false);
     ConsumeAnnotationToken();
 
@@ -1660,7 +1660,7 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
     }
   } else {
     // Enter constant expression including eof terminator into token stream.
-    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/false,
+    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true,
                         /*IsReinject=*/false);
     ConsumeAnnotationToken();
     ExprResult R = ParseConstantExpression();
@@ -1977,7 +1977,7 @@ void Parser::HandlePragmaAttribute() {
     return;
   }
 
-  PP.EnterTokenStream(Info->Tokens, /*DisableMacroExpansion=*/false,
+  PP.EnterTokenStream(Info->Tokens, /*DisableMacroExpansion=*/true,
                       /*IsReinject=*/false);
   ConsumeAnnotationToken();
 
@@ -2833,7 +2833,7 @@ void PragmaSupportHandler<StartTok, EndTok, UnexpectedDiag>::HandlePragma(
   auto Toks = std::make_unique<Token[]>(Pragma.size());
   std::copy(Pragma.begin(), Pragma.end(), Toks.get());
   PP.EnterTokenStream(std::move(Toks), Pragma.size(),
-                      /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
+                      /*DisableMacroExpansion=*/true, /*IsReinject=*/false);
 }
 
 /// Handle '#pragma pointers_to_members'

@@ -305,6 +305,21 @@ class Preprocessor {
   /// True if we are pre-expanding macro arguments.
   bool InMacroArgPreExpansion;
 
+  /// Tracks pragma lexing state to reject nested pragmas.
+  enum class PragmaLexingState {
+    /// Not lexing a pragma.
+    None,
+    /// Lexing a pragma directive or operator; nested pragmas are rejected.
+    Active,
+    /// Skipping a rejected nested pragma's operand without executing or
+    /// re-diagnosing inner pragmas.
+    SkippingNested,
+    /// Recovering from a malformed _Pragma; same-line operators are rejected,
+    /// while a line-start directive or pragma operator ends recovery.
+    Recovering,
+  };
+  PragmaLexingState PragmaState = PragmaLexingState::None;
+
   /// Mapping/lookup information for all identifiers in
   /// the program, including program keywords.
   mutable IdentifierTable Identifiers;
@@ -2821,14 +2836,21 @@ private:
   /// as a builtin macro, handle it and return the next token as 'Tok'.
   void ExpandBuiltinMacro(Token &Tok);
 
-  /// Read a \c _Pragma directive, slice it up, process it, then
-  /// return the first token after the directive.
+  /// Process a \c _Pragma or Microsoft \c __pragma operator.
+  /// This assumes that the pragma operator token has just been read into
+  /// \p Tok. Returns true if \p Tok holds a token to deliver, or false if
+  /// lexing should continue.
+  bool HandlePragmaOperator(Token &Tok, bool IsMicrosoft);
+
+  /// Read a \c _Pragma directive, slice it up, and process it.
   /// This assumes that the \c _Pragma token has just been read into \p Tok.
-  void Handle_Pragma(Token &Tok);
+  /// Returns true if \p Tok holds a token to deliver, or false if lexing
+  /// should continue.
+  bool Handle_Pragma(Token &Tok);
 
   /// Like Handle_Pragma except the pragma text is not enclosed within
   /// a string literal.
-  void HandleMicrosoft__pragma(Token &Tok);
+  bool HandleMicrosoft__pragma(Token &Tok);
 
   /// Add a lexer to the top of the include stack and
   /// start lexing tokens from it instead of the current buffer.
