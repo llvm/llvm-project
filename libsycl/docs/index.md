@@ -99,10 +99,12 @@ which doesn't currently support Windows.
 
   - `get_info`:
     - Add caching
+    - Change double and half widths to return 0 if the corresponding aspect is absent.
     - Implement missing descriptors:
-      - max_work_item_dimensions
       - max_num_sub_groups
       - sub_group_sizes
+      - preferred_vector_width_long_long
+      - native_vector_width_long_long
       - image_support
       - max_read_image_args
       - max_write_image_args

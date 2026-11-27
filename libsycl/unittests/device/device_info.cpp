@@ -79,79 +79,114 @@ protected:
 } // namespace
 
 TEST_F(DeviceInfoTest, VendorId) {
-  mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_VENDOR_ID, 0x8086);
-  EXPECT_EQ(Device.get_info<info::device::vendor_id>(), 0x8086u);
+  constexpr uint32_t VendorId = 0x8086;
+  mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_VENDOR_ID, VendorId);
+  EXPECT_EQ(Device.get_info<info::device::vendor_id>(), VendorId);
 }
 
 TEST_F(DeviceInfoTest, MaxComputeUnits) {
-  mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_NUM_COMPUTE_UNITS, 96);
-  EXPECT_EQ(Device.get_info<info::device::max_compute_units>(), 96u);
+  constexpr uint32_t ComputeUnits = 96;
+  mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_NUM_COMPUTE_UNITS,
+                           ComputeUnits);
+  EXPECT_EQ(Device.get_info<info::device::max_compute_units>(), ComputeUnits);
+}
+
+TEST_F(DeviceInfoTest, MaxWorkItemDimensions) {
+  EXPECT_EQ(Device.get_info<info::device::max_work_item_dimensions>(), 3u);
 }
 
 TEST_F(DeviceInfoTest, MaxWorkItemSizes) {
+  constexpr uint32_t X = 1024, Y = 512, Z = 64;
   mockDeviceInfo<ol_dimensions_t>(
       getMock(), OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION,
-      ol_dimensions_t{1024, 512, 64});
+      ol_dimensions_t{X, Y, Z});
 
   // SYCL linearizes ranges with the last dimension varying fastest, so the
   // liboffload dimensions should be reversed.
   EXPECT_EQ(Device.get_info<info::device::max_work_item_sizes<1>>(),
-            range<1>(1024));
+            range<1>(X));
   EXPECT_EQ(Device.get_info<info::device::max_work_item_sizes<2>>(),
-            range<2>(512, 1024));
+            range<2>(Y, X));
   EXPECT_EQ(Device.get_info<info::device::max_work_item_sizes<3>>(),
-            range<3>(64, 512, 1024));
+            range<3>(Z, Y, X));
 }
 
 TEST_F(DeviceInfoTest, MaxWorkGroupSize) {
   // liboffload reports uint32_t while SYCL returns size_t.
-  mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE, 1024);
+  constexpr uint32_t WGSize = 1024;
+  mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE,
+                           WGSize);
   auto Result = Device.get_info<info::device::max_work_group_size>();
   static_assert(std::is_same_v<decltype(Result), std::size_t>);
-  EXPECT_EQ(Result, 1024u);
+  EXPECT_EQ(Result, WGSize);
 }
 
 TEST_F(DeviceInfoTest, NativeVectorWidths) {
+  constexpr uint32_t CharWidth = 16;
+  constexpr uint32_t ShortWidth = 8;
+  constexpr uint32_t IntWidth = 4;
+  constexpr uint32_t LongWidth = 2;
+  constexpr uint32_t FloatWidth = 5;
+  constexpr uint32_t DoubleWidth = 1;
+  constexpr uint32_t HalfWidth = 32;
+
   mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR,
-                           16);
+                           CharWidth);
   mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT,
-                           8);
+                           ShortWidth);
   mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT,
-                           4);
+                           IntWidth);
   mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG,
-                           2);
+                           LongWidth);
   mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT,
-                           5);
+                           FloatWidth);
   mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE,
-                           1);
+                           DoubleWidth);
   mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF,
-                           32);
+                           HalfWidth);
 
-  EXPECT_EQ(Device.get_info<info::device::native_vector_width_char>(), 16u);
-  EXPECT_EQ(Device.get_info<info::device::native_vector_width_short>(), 8u);
-  EXPECT_EQ(Device.get_info<info::device::native_vector_width_int>(), 4u);
-  EXPECT_EQ(Device.get_info<info::device::native_vector_width_long>(), 2u);
-  EXPECT_EQ(Device.get_info<info::device::native_vector_width_float>(), 5u);
-  EXPECT_EQ(Device.get_info<info::device::native_vector_width_double>(), 1u);
-  EXPECT_EQ(Device.get_info<info::device::native_vector_width_half>(), 32u);
+  EXPECT_EQ(Device.get_info<info::device::native_vector_width_char>(),
+            CharWidth);
+  EXPECT_EQ(Device.get_info<info::device::native_vector_width_short>(),
+            ShortWidth);
+  EXPECT_EQ(Device.get_info<info::device::native_vector_width_int>(), IntWidth);
+  EXPECT_EQ(Device.get_info<info::device::native_vector_width_long>(),
+            LongWidth);
+  EXPECT_EQ(Device.get_info<info::device::native_vector_width_float>(),
+            FloatWidth);
+  EXPECT_EQ(Device.get_info<info::device::native_vector_width_double>(),
+            DoubleWidth);
+  EXPECT_EQ(Device.get_info<info::device::native_vector_width_half>(),
+            HalfWidth);
 
-  EXPECT_EQ(Device.get_info<info::device::preferred_vector_width_char>(), 16u);
-  EXPECT_EQ(Device.get_info<info::device::preferred_vector_width_short>(), 8u);
-  EXPECT_EQ(Device.get_info<info::device::preferred_vector_width_int>(), 4u);
-  EXPECT_EQ(Device.get_info<info::device::preferred_vector_width_long>(), 2u);
-  EXPECT_EQ(Device.get_info<info::device::preferred_vector_width_float>(), 5u);
-  EXPECT_EQ(Device.get_info<info::device::preferred_vector_width_double>(), 1u);
-  EXPECT_EQ(Device.get_info<info::device::preferred_vector_width_half>(), 32u);
+  EXPECT_EQ(Device.get_info<info::device::preferred_vector_width_char>(),
+            CharWidth);
+  EXPECT_EQ(Device.get_info<info::device::preferred_vector_width_short>(),
+            ShortWidth);
+  EXPECT_EQ(Device.get_info<info::device::preferred_vector_width_int>(),
+            IntWidth);
+  EXPECT_EQ(Device.get_info<info::device::preferred_vector_width_long>(),
+            LongWidth);
+  EXPECT_EQ(Device.get_info<info::device::preferred_vector_width_float>(),
+            FloatWidth);
+  EXPECT_EQ(Device.get_info<info::device::preferred_vector_width_double>(),
+            DoubleWidth);
+  EXPECT_EQ(Device.get_info<info::device::preferred_vector_width_half>(),
+            HalfWidth);
 }
 
 TEST_F(DeviceInfoTest, MaxClockFrequency) {
-  mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY, 2100);
-  EXPECT_EQ(Device.get_info<info::device::max_clock_frequency>(), 2100u);
+  constexpr uint32_t ClockFrequency = 2100;
+  mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY,
+                           ClockFrequency);
+  EXPECT_EQ(Device.get_info<info::device::max_clock_frequency>(),
+            ClockFrequency);
 }
 
 TEST_F(DeviceInfoTest, AddressBits) {
-  mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_ADDRESS_BITS, 64);
-  EXPECT_EQ(Device.get_info<info::device::address_bits>(), 64u);
+  constexpr uint32_t AddressBits = 64;
+  mockDeviceInfo<uint32_t>(getMock(), OL_DEVICE_INFO_ADDRESS_BITS, AddressBits);
+  EXPECT_EQ(Device.get_info<info::device::address_bits>(), AddressBits);
 }
 
 TEST_F(DeviceInfoTest, MemorySizes) {
@@ -171,21 +206,21 @@ TEST_F(DeviceInfoTest, MemorySizes) {
   EXPECT_EQ(Device.get_info<info::device::local_mem_size>(), LocalMem);
 }
 
+constexpr ol_device_fp_capability_flags_t AllOLFPFlags =
+    OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
+    OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
+    OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
+    OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
+    OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN | OL_DEVICE_FP_CAPABILITY_FLAG_DENORM |
+    OL_DEVICE_FP_CAPABILITY_FLAG_FMA | OL_DEVICE_FP_CAPABILITY_FLAG_SOFT_FLOAT;
+
 TEST_F(DeviceInfoTest, FPConfig) {
   mockDeviceInfo<ol_device_fp_capability_flags_t>(
       getMock(), OL_DEVICE_INFO_HALF_FP_CONFIG,
       OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
           OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST);
   mockDeviceInfo<ol_device_fp_capability_flags_t>(
-      getMock(), OL_DEVICE_INFO_SINGLE_FP_CONFIG,
-      OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
-          OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
-          OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
-          OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
-          OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
-          OL_DEVICE_FP_CAPABILITY_FLAG_DENORM |
-          OL_DEVICE_FP_CAPABILITY_FLAG_FMA |
-          OL_DEVICE_FP_CAPABILITY_FLAG_SOFT_FLOAT);
+      getMock(), OL_DEVICE_INFO_SINGLE_FP_CONFIG, AllOLFPFlags);
   mockDeviceInfo<ol_device_fp_capability_flags_t>(
       getMock(), OL_DEVICE_INFO_DOUBLE_FP_CONFIG, 0);
 
@@ -203,18 +238,10 @@ TEST_F(DeviceInfoTest, FPConfig) {
 }
 
 TEST_F(DeviceInfoTest, DoubleFPConfigWithoutCorrectlyRoundedDivideSqrt) {
-  // correctly_rounded_divide_sqrt is only defined for single precision, so it
+  // correctly_rounded_divide_sqrt is not defined for double precision, so it
   // is dropped from double_fp_config even if liboffload reports it.
   mockDeviceInfo<ol_device_fp_capability_flags_t>(
-      getMock(), OL_DEVICE_INFO_DOUBLE_FP_CONFIG,
-      OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
-          OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
-          OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
-          OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
-          OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
-          OL_DEVICE_FP_CAPABILITY_FLAG_DENORM |
-          OL_DEVICE_FP_CAPABILITY_FLAG_FMA |
-          OL_DEVICE_FP_CAPABILITY_FLAG_SOFT_FLOAT);
+      getMock(), OL_DEVICE_INFO_DOUBLE_FP_CONFIG, AllOLFPFlags);
 
   EXPECT_THAT(Device.get_info<info::device::double_fp_config>(),
               UnorderedElementsAre(
@@ -225,13 +252,16 @@ TEST_F(DeviceInfoTest, DoubleFPConfigWithoutCorrectlyRoundedDivideSqrt) {
 }
 
 TEST_F(DeviceInfoTest, Strings) {
-  mockDeviceInfoString(getMock(), OL_DEVICE_INFO_PRODUCT_NAME, "Mock GPU");
-  mockDeviceInfoString(getMock(), OL_DEVICE_INFO_VENDOR, "Mock Vendor");
-  mockDeviceInfoString(getMock(), OL_DEVICE_INFO_DRIVER_VERSION, "1.2.3");
+  constexpr const char *Name = "Mock GPU";
+  constexpr const char *Vendor = "Mock Vendor";
+  constexpr const char *DriverVersion = "1.2.3";
+  mockDeviceInfoString(getMock(), OL_DEVICE_INFO_PRODUCT_NAME, Name);
+  mockDeviceInfoString(getMock(), OL_DEVICE_INFO_VENDOR, Vendor);
+  mockDeviceInfoString(getMock(), OL_DEVICE_INFO_DRIVER_VERSION, DriverVersion);
 
-  EXPECT_EQ(Device.get_info<info::device::name>(), "Mock GPU");
-  EXPECT_EQ(Device.get_info<info::device::vendor>(), "Mock Vendor");
-  EXPECT_EQ(Device.get_info<info::device::driver_version>(), "1.2.3");
+  EXPECT_EQ(Device.get_info<info::device::name>(), Name);
+  EXPECT_EQ(Device.get_info<info::device::vendor>(), Vendor);
+  EXPECT_EQ(Device.get_info<info::device::driver_version>(), DriverVersion);
 }
 
 TEST_F(DeviceInfoTest, Platform) {

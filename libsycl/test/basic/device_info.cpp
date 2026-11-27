@@ -99,6 +99,7 @@ void printDeviceInfo(const device &Dev) {
   PRINT_INFO(device_type);
   PRINT_INFO(vendor_id);
   auto ComputeUnits = PRINT_INFO(max_compute_units);
+  auto WIDims = PRINT_INFO(max_work_item_dimensions);
   auto WISizes1 = PRINT_INFO(max_work_item_sizes<1>);
   auto WISizes2 = PRINT_INFO(max_work_item_sizes<2>);
   auto WISizes3 = PRINT_INFO(max_work_item_sizes<3>);
@@ -132,6 +133,7 @@ void printDeviceInfo(const device &Dev) {
 
   // Basic sanity checks of the reported values.
   assert(ComputeUnits > 0);
+  assert(WIDims == 3);
   assert(WGSize > 0);
   assert(WISizes1[0] > 0);
   assert(WISizes2[0] > 0 && WISizes2[1] > 0);

@@ -89,6 +89,15 @@ device::get_info<info::device::platform>() const {
   return get_platform();
 }
 
+template <>
+_LIBSYCL_EXPORT
+    detail::is_device_info_desc_t<info::device::max_work_item_dimensions>
+    device::get_info<info::device::max_work_item_dimensions>() const {
+  // Liboffload does not provide a query for this, all supported devices
+  // have a maximum of 3 dimensions.
+  return 3;
+}
+
 #define _LIBSYCL_EXPORT_GET_INFO(Desc)                                         \
   template _LIBSYCL_EXPORT detail::is_device_info_desc_t<info::device::Desc>   \
   device::get_info<info::device::Desc>() const;

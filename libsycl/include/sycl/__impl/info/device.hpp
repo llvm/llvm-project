@@ -34,7 +34,7 @@ namespace detail {
 template <typename T>
 using is_device_info_desc_t = typename is_info_desc<T, device>::return_type;
 template <typename DerivedT, typename ReturnT>
-struct DeviceInfoDesc : detail::info_desc_tag<DerivedT, sycl::device> {
+struct DeviceInfoDesc : info_desc_tag<DerivedT, sycl::device> {
   using return_type = ReturnT;
 };
 } // namespace detail
@@ -74,45 +74,48 @@ enum class fp_config : std::uint32_t {
 
 namespace device {
 // SYCL 2020 4.6.4.4. Information descriptors.
-#define __LIBSYCL_DEVICE_INFO_DESC(T, ReturnT)                                 \
+#define _LIBSYCL_DEVICE_INFO_DESC(T, ReturnT)                                  \
   struct T : detail::DeviceInfoDesc<T, ReturnT> {}
 
-__LIBSYCL_DEVICE_INFO_DESC(device_type, sycl::info::device_type);
-__LIBSYCL_DEVICE_INFO_DESC(vendor_id, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(max_compute_units, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(device_type, sycl::info::device_type);
+_LIBSYCL_DEVICE_INFO_DESC(vendor_id, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(max_compute_units, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(max_work_item_dimensions, std::uint32_t);
 template <int Dimensions = 3> struct max_work_item_sizes;
-template <> __LIBSYCL_DEVICE_INFO_DESC(max_work_item_sizes<1>, range<1>);
-template <> __LIBSYCL_DEVICE_INFO_DESC(max_work_item_sizes<2>, range<2>);
-template <> __LIBSYCL_DEVICE_INFO_DESC(max_work_item_sizes<3>, range<3>);
-__LIBSYCL_DEVICE_INFO_DESC(max_work_group_size, std::size_t);
-__LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_char, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_short, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_int, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_long, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_float, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_double, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_half, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(native_vector_width_char, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(native_vector_width_short, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(native_vector_width_int, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(native_vector_width_long, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(native_vector_width_float, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(native_vector_width_double, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(native_vector_width_half, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(max_clock_frequency, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(address_bits, std::uint32_t);
-__LIBSYCL_DEVICE_INFO_DESC(max_mem_alloc_size, std::uint64_t);
-__LIBSYCL_DEVICE_INFO_DESC(half_fp_config, std::vector<info::fp_config>);
-__LIBSYCL_DEVICE_INFO_DESC(single_fp_config, std::vector<info::fp_config>);
-__LIBSYCL_DEVICE_INFO_DESC(double_fp_config, std::vector<info::fp_config>);
-__LIBSYCL_DEVICE_INFO_DESC(global_mem_size, std::uint64_t);
-__LIBSYCL_DEVICE_INFO_DESC(local_mem_size, std::uint64_t);
-__LIBSYCL_DEVICE_INFO_DESC(platform, sycl::platform);
-__LIBSYCL_DEVICE_INFO_DESC(name, std::string);
-__LIBSYCL_DEVICE_INFO_DESC(vendor, std::string);
-__LIBSYCL_DEVICE_INFO_DESC(driver_version, std::string);
+template <> _LIBSYCL_DEVICE_INFO_DESC(max_work_item_sizes<1>, range<1>);
+template <> _LIBSYCL_DEVICE_INFO_DESC(max_work_item_sizes<2>, range<2>);
+template <> _LIBSYCL_DEVICE_INFO_DESC(max_work_item_sizes<3>, range<3>);
+_LIBSYCL_DEVICE_INFO_DESC(max_work_group_size, std::size_t);
+_LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_char, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_short, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_int, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_long, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_long_long, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_float, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_double, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(preferred_vector_width_half, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(native_vector_width_char, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(native_vector_width_short, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(native_vector_width_int, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(native_vector_width_long, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(native_vector_width_long_long, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(native_vector_width_float, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(native_vector_width_double, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(native_vector_width_half, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(max_clock_frequency, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(address_bits, std::uint32_t);
+_LIBSYCL_DEVICE_INFO_DESC(max_mem_alloc_size, std::uint64_t);
+_LIBSYCL_DEVICE_INFO_DESC(half_fp_config, std::vector<info::fp_config>);
+_LIBSYCL_DEVICE_INFO_DESC(single_fp_config, std::vector<info::fp_config>);
+_LIBSYCL_DEVICE_INFO_DESC(double_fp_config, std::vector<info::fp_config>);
+_LIBSYCL_DEVICE_INFO_DESC(global_mem_size, std::uint64_t);
+_LIBSYCL_DEVICE_INFO_DESC(local_mem_size, std::uint64_t);
+_LIBSYCL_DEVICE_INFO_DESC(platform, sycl::platform);
+_LIBSYCL_DEVICE_INFO_DESC(name, std::string);
+_LIBSYCL_DEVICE_INFO_DESC(vendor, std::string);
+_LIBSYCL_DEVICE_INFO_DESC(driver_version, std::string);
 
-#undef __LIBSYCL_DEVICE_INFO_DESC
+#undef _LIBSYCL_DEVICE_INFO_DESC
 } // namespace device
 } // namespace info
 
