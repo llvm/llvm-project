@@ -464,7 +464,7 @@ private:
 /// implicitly associated with a rematerialization point which is the
 /// location of the instruction from which it was formed.
 struct GVNPassImpl::AvailableValue {
-  enum class ValType {
+  enum class ValType : uint8_t {
     SimpleVal, // A simple offsetted value that is accessed.
     LoadVal,   // A value produced by a load.
     MemIntrin, // A memory intrinsic which is loaded from.
@@ -478,14 +478,14 @@ struct GVNPassImpl::AvailableValue {
   Value *Val;
   /// Kind of the live-out value.
   ValType Kind;
+  /// Whether V1/V2 is the result of a dominating load from the select's
+  /// address (as opposed to a value forwarded from a store).
+  bool V1IsLoad = false, V2IsLoad = false;
 
   /// Offset - The byte offset in Val that is interesting for the load query.
   unsigned Offset = 0;
   /// V1, V2 - The dominating non-clobbered values of SelectVal.
   Value *V1 = nullptr, *V2 = nullptr;
-  /// V1IsLoad, V2IsLoad - Whether V1/V2 is the result of a dominating load
-  /// from the select's address (as opposed to a value forwarded from a store).
-  bool V1IsLoad = false, V2IsLoad = false;
 
   static AvailableValue get(Value *V, unsigned Offset = 0) {
     AvailableValue Res;
