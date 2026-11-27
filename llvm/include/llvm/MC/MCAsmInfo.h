@@ -95,6 +95,10 @@ protected:
   /// True if target stack grow up.  Default is false.
   bool StackGrowsUp = false;
 
+  /// Whether a section indicating a (non-)executable stack should be emitted.
+  /// Used by most ELF platforms.
+  bool EmitELFStackSection = false;
+
   /// True if this target has the MachO .subsections_via_symbols directive.
   /// Default is false.
   bool HasSubsectionsViaSymbols = false;
@@ -468,6 +472,8 @@ public:
   /// True if target stack grow up.
   bool isStackGrowthDirectionUp() const { return StackGrowsUp; }
 
+  bool emitELFStackSection() const { return EmitELFStackSection; }
+
   bool hasSubsectionsViaSymbols() const { return HasSubsectionsViaSymbols; }
 
   // Data directive accessors.
@@ -477,13 +483,6 @@ public:
   const char *getData32bitsDirective() const { return Data32bitsDirective; }
   const char *getData64bitsDirective() const { return Data64bitsDirective; }
   bool supportsSignedData() const { return SupportsSignedData; }
-
-  /// Targets can implement this method to specify a section to switch to
-  /// depending on whether the translation unit has any trampolines that require
-  /// an executable stack.
-  virtual MCSection *getStackSection(MCContext &Ctx, bool Exec) const {
-    return nullptr;
-  }
 
   virtual const MCExpr *getExprForPersonalitySymbol(const MCSymbol *Sym,
                                                     unsigned Encoding,

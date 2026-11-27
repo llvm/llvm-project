@@ -73,7 +73,7 @@ void ARMELFMCAsmInfo::anchor() { }
 
 ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
                                  const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TheTriple, Options) {
   if ((TheTriple.getArch() == Triple::armeb) ||
       (TheTriple.getArch() == Triple::thumbeb))
     IsLittleEndian = false;
