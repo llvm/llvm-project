@@ -74,7 +74,7 @@ These instructions were tested with Visual Studio 2019 and Python 3.9.6:
    users for the regression tests and make Python available from the command
    line.
 6. In the second install screen, select (again) **Install for all users** and
-   if you want to develop [lldb](https://lldb.llvm.org/), selecting
+   if you want to develop [lldb](inv:lldb:std:doc#index), selecting
    **Download debug binaries** is useful.
 7. Complete the Python installation.
 8. Run a "Developer Command Prompt for VS 2019" **as administrator**. This command
@@ -99,7 +99,7 @@ These instructions were tested with Visual Studio 2019 and Python 3.9.6:
     ```
 
     The DIA library is required for LLVM PDB tests and
-    [LLDB development](https://lldb.llvm.org/resources/build.html).
+    [LLDB development](inv:lldb:std:doc#resources/build).
 
 11. Install psutil and obtain the LLVM source code:
 
