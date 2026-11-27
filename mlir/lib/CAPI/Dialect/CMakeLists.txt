@@ -158,17 +158,61 @@ add_mlir_upstream_c_api_library(MLIRCAPIGPU
   PARTIAL_SOURCES_INTENDED
   DEPENDS
   MLIRGPUPassIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRGPUTransforms
+  MLIRPass
+)
+
+add_mlir_upstream_c_api_library(MLIRCAPIGPUNVVMPasses
+  GPUNVVMPasses.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  DEPENDS
   MLIRGPUNVVMPassIncGen
-  MLIRGPUROCDLPassIncGen
-  MLIRGPUSPIRVPassIncGen
-  MLIRGPUXeVMPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRGPUNVVMTransforms
+  MLIRPass
+)
+
+add_mlir_upstream_c_api_library(MLIRCAPIGPUROCDLPasses
+  GPUROCDLPasses.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRGPUROCDLPassIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
   MLIRGPUROCDLTransforms
+  MLIRPass
+)
+
+add_mlir_upstream_c_api_library(MLIRCAPIGPUSPIRVPasses
+  GPUSPIRVPasses.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRGPUSPIRVPassIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
   MLIRGPUSPIRVTransforms
-  MLIRGPUTransforms
+  MLIRPass
+)
+
+add_mlir_upstream_c_api_library(MLIRCAPIGPUXeVMPasses
+  GPUXeVMPasses.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  DEPENDS
+  MLIRGPUXeVMPassIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
   MLIRGPUXeVMTransforms
   MLIRPass
 )
