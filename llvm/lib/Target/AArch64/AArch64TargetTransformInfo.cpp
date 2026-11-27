@@ -7906,8 +7906,8 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
         WideMask[I] = (M < (int)NumSrcElts) ? M : (M - NumSrcElts + NumLTElts);
       }
       auto *WideTy = FixedVectorType::get(SrcTy->getScalarType(), NumLTElts);
-      return getShuffleCost(Kind, WideTy, WideTy, CostKind, WideMask, 0,
-                            nullptr, Args, CtxI);
+      return getShuffleCost(Kind, WideTy, WideTy, CostKind, WideMask, Index,
+                            SubTp, Args, CtxI);
     }
   }
 
