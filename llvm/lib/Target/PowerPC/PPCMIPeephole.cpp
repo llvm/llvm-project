@@ -191,8 +191,13 @@ static MachineInstr *getVRegDefOrNull(MachineOperand *Op,
 // starting from the most significant bit.
 static unsigned getKnownLeadingZeroCount(const unsigned Reg,
                                          const PPCInstrInfo *TII,
-                                         const MachineRegisterInfo *MRI) {
+                                         const MachineRegisterInfo *MRI,
+                                         DenseMap<Register, unsigned> &Cache) {
+  if (const auto It = Cache.find(Reg); It != Cache.end())
+    return It->second;
+
   MachineInstr *MI = MRI->getVRegDef(Reg);
+
   unsigned Opcode = MI->getOpcode();
   if (Opcode == PPC::RLDICL || Opcode == PPC::RLDICL_rec ||
       Opcode == PPC::RLDCL || Opcode == PPC::RLDCL_rec)
@@ -237,18 +242,23 @@ static unsigned getKnownLeadingZeroCount(const unsigned Reg,
     return 56;
 
   if (Opcode == PPC::AND || Opcode == PPC::AND8 || Opcode == PPC::AND_rec ||
-      Opcode == PPC::AND8_rec)
-    return std::max(
-        getKnownLeadingZeroCount(MI->getOperand(1).getReg(), TII, MRI),
-        getKnownLeadingZeroCount(MI->getOperand(2).getReg(), TII, MRI));
+      Opcode == PPC::AND8_rec) {
+    return (Cache[Reg] =
+                std::max(getKnownLeadingZeroCount(MI->getOperand(1).getReg(),
+                                                  TII, MRI, Cache),
+                         getKnownLeadingZeroCount(MI->getOperand(2).getReg(),
+                                                  TII, MRI, Cache)));
+  }
 
   if (Opcode == PPC::OR || Opcode == PPC::OR8 || Opcode == PPC::XOR ||
-      Opcode == PPC::XOR8 || Opcode == PPC::OR_rec ||
-      Opcode == PPC::OR8_rec || Opcode == PPC::XOR_rec ||
-      Opcode == PPC::XOR8_rec)
-    return std::min(
-        getKnownLeadingZeroCount(MI->getOperand(1).getReg(), TII, MRI),
-        getKnownLeadingZeroCount(MI->getOperand(2).getReg(), TII, MRI));
+      Opcode == PPC::XOR8 || Opcode == PPC::OR_rec || Opcode == PPC::OR8_rec ||
+      Opcode == PPC::XOR_rec || Opcode == PPC::XOR8_rec) {
+    return (Cache[Reg] =
+                std::min(getKnownLeadingZeroCount(MI->getOperand(1).getReg(),
+                                                  TII, MRI, Cache),
+                         getKnownLeadingZeroCount(MI->getOperand(2).getReg(),
+                                                  TII, MRI, Cache)));
+  }
 
   if (TII->isZeroExtended(Reg, MRI))
     return 32;
@@ -1138,8 +1148,10 @@ bool PPCMIPeephole::simplifyCode() {
         if (!SrcMI->getOperand(0).isReg())
           break;
 
+        DenseMap<Register, unsigned> CacheKnownLeadingZeroCount;
         unsigned KnownZeroCount =
-            getKnownLeadingZeroCount(SrcMI->getOperand(0).getReg(), TII, MRI);
+            getKnownLeadingZeroCount(SrcMI->getOperand(0).getReg(), TII, MRI,
+                                     CacheKnownLeadingZeroCount);
         if (MI.getOperand(3).getImm() <= KnownZeroCount) {
           LLVM_DEBUG(dbgs() << "Removing redundant zero-extension\n");
           BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
