@@ -49,11 +49,11 @@ static SUnit *pickOnlyChoice(SchedBoundary &Zone) {
 }
 
 /// Build MFMA co-exec rules from the first stage at which SALU, memory (DS and
-/// VMEM), VALU and the next MFMA may issue. MFMA slots are cumulative: each
-/// slot allows what the previous one did and possibly more.
+/// VMEM), VALU, the next MFMA and packed F32 VALU may issue. MFMA slots are
+/// cumulative: each slot allows what the previous one did and possibly more.
 static CoExecInfo buildMFMACoExecInfo(unsigned SALU, unsigned Mem,
                                       unsigned VALU, unsigned MFMA,
-                                      unsigned Window) {
+                                      unsigned PkF32, unsigned Window) {
   assert(Window <= MaxCoExecStages && "co-execution window is too long");
   CoExecInfo Res;
   Res.TotalWindow = Window;
@@ -75,6 +75,8 @@ static CoExecInfo buildMFMACoExecInfo(unsigned SALU, unsigned Mem,
       Mask |= CoExecMask::VALU;
     if (I >= MFMA)
       Mask |= CoExecMask::WMMA;
+    if (I >= PkF32)
+      Mask |= CoExecMask::PK_F32;
     Res.Slots[I].Mask = Mask;
   }
   return Res;
@@ -89,75 +91,75 @@ CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode,
   switch (Variant) {
   case MFMAVariant::XDL2x_4Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/2, /*MFMA=*/4,
-                               /*Window=*/8);
+                               /*PkF32=*/7, /*Window=*/8);
   }
   case MFMAVariant::XDL2x_8Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/2, /*MFMA=*/8,
-                               /*Window=*/12);
+                               /*PkF32=*/11, /*Window=*/12);
   }
   case MFMAVariant::XDL2x_F8_8Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/3, /*MFMA=*/8,
-                               /*Window=*/12);
+                               /*PkF32=*/11, /*Window=*/12);
   }
   case MFMAVariant::XDL2x_F8_16Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/3, /*MFMA=*/16,
-                               /*Window=*/20);
+                               /*PkF32=*/19, /*Window=*/20);
   }
   case MFMAVariant::SMFMAC2x_4Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/3, /*MFMA=*/4,
-                               /*Window=*/8);
+                               /*PkF32=*/7, /*Window=*/8);
   }
   case MFMAVariant::SMFMAC2x_8Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/3, /*VALU=*/3, /*MFMA=*/8,
-                               /*Window=*/12);
+                               /*PkF32=*/11, /*Window=*/12);
   }
   case MFMAVariant::XDL_2Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/1, /*MFMA=*/2,
-                               /*Window=*/5);
+                               /*PkF32=*/4, /*Window=*/5);
   }
   case MFMAVariant::XDL_4Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/1, /*MFMA=*/4,
-                               /*Window=*/7);
+                               /*PkF32=*/6, /*Window=*/7);
   }
   case MFMAVariant::XDL_8Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/1, /*MFMA=*/8,
-                               /*Window=*/11);
+                               /*PkF32=*/10, /*Window=*/11);
   }
   case MFMAVariant::XDL_16Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/1, /*MFMA=*/16,
-                               /*Window=*/19);
+                               /*PkF32=*/18, /*Window=*/19);
   }
   case MFMAVariant::SMFMAC_4Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/2, /*MFMA=*/4,
-                               /*Window=*/7);
+                               /*PkF32=*/6, /*Window=*/7);
   }
   case MFMAVariant::SMFMAC_8Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/2, /*MFMA=*/8,
-                               /*Window=*/11);
+                               /*PkF32=*/10, /*Window=*/11);
   }
   case MFMAVariant::SGEMM_2Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/4, /*MFMA=*/2,
-                               /*Window=*/5);
+                               /*PkF32=*/4, /*Window=*/5);
   }
   case MFMAVariant::SGEMM_8Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/10, /*MFMA=*/8,
-                               /*Window=*/11);
+                               /*PkF32=*/10, /*Window=*/11);
   }
   case MFMAVariant::SGEMM_16Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/18, /*MFMA=*/16,
-                               /*Window=*/19);
+                               /*PkF32=*/18, /*Window=*/19);
   }
   case MFMAVariant::DGEMM_4Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/6, /*MFMA=*/4,
-                               /*Window=*/7);
+                               /*PkF32=*/6, /*Window=*/7);
   }
   case MFMAVariant::DGEMM_16x16x4: {
     if (ST.hasGFX950Insts()) {
       return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/18,
-                                 /*MFMA=*/16, /*Window=*/19);
+                                 /*MFMA=*/16, /*PkF32=*/18, /*Window=*/19);
     }
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/10, /*MFMA=*/8,
-                               /*Window=*/11);
+                               /*PkF32=*/10, /*Window=*/11);
   }
   case MFMAVariant::Unknown:
     // No co-execution model: permissive 9-cycle window.
@@ -195,6 +197,18 @@ InstructionFlavor llvm::AMDGPU::classifyFlavor(const MachineInstr &MI,
 
   if (SII.isTRANS(MI))
     return InstructionFlavor::TRANS;
+
+  if (SII.getSubtarget().hasPackedFP32Ops()) {
+    switch (Opc) {
+    case AMDGPU::V_PK_ADD_F32:
+    case AMDGPU::V_PK_FMA_F32:
+    case AMDGPU::V_PK_MOV_B32:
+    case AMDGPU::V_PK_MUL_F32:
+      return InstructionFlavor::PackedF32VALU;
+    default:
+      break;
+    }
+  }
 
   if (SII.isVALU(MI, /*AllowLDSDMA=*/false)) {
     if (SII.getBlockingCycles(MI) > 1)

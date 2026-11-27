@@ -126,3 +126,20 @@ body: |
     %sa15:sgpr_32 = S_ADD_I32 undef $sgpr40, undef $sgpr41, implicit-def $scc
     S_ENDPGM 0, implicit %m0, implicit %m1, implicit %sa0, implicit %sa1, implicit %sa2, implicit %sa3, implicit %sa4, implicit %sa5, implicit %sa6, implicit %sa7, implicit %sa8, implicit %sa9, implicit %sa10, implicit %sa11, implicit %sa12, implicit %sa13, implicit %sa14, implicit %sa15
 ...
+
+---
+name: pk_f32_16x16x32_bf16
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: pk_f32_16x16x32_bf16
+    ; CHECK: %m0:areg_128_align2 = V_MFMA_F32_16X16X32_BF16_e64 undef %s0:vreg_128_align2, undef %t0:vreg_128_align2, undef %acc0:areg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: %a0:vgpr_32 = V_ADD_F32_e32 undef %v0:vgpr_32, undef %w0:vgpr_32, implicit $mode, implicit $exec
+    ; CHECK-NEXT: %p0:vreg_64_align2 = V_PK_ADD_F32 8, undef %x0:vreg_64_align2, 8, undef %y0:vreg_64_align2, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %m0, implicit %p0, implicit %a0
+    %m0:areg_128_align2 = V_MFMA_F32_16X16X32_BF16_e64 undef %s0:vreg_128_align2, undef %t0:vreg_128_align2, undef %acc0:areg_128_align2, 0, 0, 0, implicit $mode, implicit $exec
+    %p0:vreg_64_align2 = V_PK_ADD_F32 8, undef %x0:vreg_64_align2, 8, undef %y0:vreg_64_align2, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %a0:vgpr_32 = V_ADD_F32_e32 undef %v0:vgpr_32, undef %w0:vgpr_32, implicit $mode, implicit $exec
+    S_ENDPGM 0, implicit %m0, implicit %p0, implicit %a0
+...
