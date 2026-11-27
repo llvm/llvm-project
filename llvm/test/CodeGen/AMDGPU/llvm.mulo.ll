@@ -495,29 +495,25 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ; SI-NEXT:    v_mul_hi_u32 v0, s0, v0
 ; SI-NEXT:    v_mul_hi_u32 v3, s0, v1
 ; SI-NEXT:    s_mul_i32 s7, s0, s3
-; SI-NEXT:    s_mul_i32 s6, s1, s2
-; SI-NEXT:    v_readfirstlane_b32 s5, v0
-; SI-NEXT:    v_readfirstlane_b32 s4, v3
-; SI-NEXT:    s_add_u32 s5, s5, s7
-; SI-NEXT:    s_addc_u32 s9, 0, s4
-; SI-NEXT:    s_add_u32 s4, s5, s6
-; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; SI-NEXT:    v_mul_hi_i32 v1, s1, v1
-; SI-NEXT:    v_readfirstlane_b32 s8, v2
-; SI-NEXT:    s_or_b32 s4, s4, s5
-; SI-NEXT:    s_addc_u32 s8, s9, s8
-; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; SI-NEXT:    v_readfirstlane_b32 s9, v1
-; SI-NEXT:    s_or_b32 s4, s4, s5
-; SI-NEXT:    s_addc_u32 s4, s9, 0
-; SI-NEXT:    s_mul_i32 s5, s1, s3
-; SI-NEXT:    s_add_u32 s5, s8, s5
-; SI-NEXT:    s_addc_u32 s4, 0, s4
-; SI-NEXT:    s_sub_u32 s8, s5, s2
-; SI-NEXT:    s_subb_u32 s9, s4, 0
+; SI-NEXT:    v_readfirstlane_b32 s8, v0
+; SI-NEXT:    v_readfirstlane_b32 s5, v3
+; SI-NEXT:    s_add_u32 s8, s8, s7
+; SI-NEXT:    s_mul_i32 s6, s1, s2
+; SI-NEXT:    s_addc_u32 s5, 0, s5
+; SI-NEXT:    v_readfirstlane_b32 s4, v2
+; SI-NEXT:    s_add_u32 s8, s8, s6
+; SI-NEXT:    s_addc_u32 s4, s5, s4
+; SI-NEXT:    v_readfirstlane_b32 s5, v1
+; SI-NEXT:    s_addc_u32 s5, s5, 0
+; SI-NEXT:    s_mul_i32 s8, s1, s3
+; SI-NEXT:    s_add_u32 s4, s4, s8
+; SI-NEXT:    s_addc_u32 s5, 0, s5
+; SI-NEXT:    s_sub_u32 s8, s4, s2
+; SI-NEXT:    s_subb_u32 s9, s5, 0
 ; SI-NEXT:    s_cmp_lt_i32 s1, 0
-; SI-NEXT:    s_cselect_b32 s1, s9, s4
-; SI-NEXT:    s_cselect_b32 s4, s8, s5
+; SI-NEXT:    s_cselect_b32 s4, s8, s4
+; SI-NEXT:    s_cselect_b32 s1, s9, s5
 ; SI-NEXT:    s_sub_u32 s8, s4, s0
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, s7, v0
 ; SI-NEXT:    s_subb_u32 s5, s1, 0

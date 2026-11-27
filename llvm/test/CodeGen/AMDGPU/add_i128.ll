@@ -47,19 +47,13 @@ define amdgpu_kernel void @sgpr_operand(ptr addrspace(1) noalias %out, ptr addrs
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_add_u32 s4, s8, s4
-; GCN-NEXT:    s_cselect_b64 s[12:13], -1, 0
+; GCN-NEXT:    s_addc_u32 s5, s9, s5
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    s_or_b32 s4, s12, s13
-; GCN-NEXT:    s_addc_u32 s8, s9, s5
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    s_or_b32 s4, s4, s5
-; GCN-NEXT:    s_addc_u32 s6, s10, s6
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    s_or_b32 s4, s4, s5
-; GCN-NEXT:    s_addc_u32 s4, s11, s7
-; GCN-NEXT:    v_mov_b32_e32 v1, s8
-; GCN-NEXT:    v_mov_b32_e32 v2, s6
-; GCN-NEXT:    v_mov_b32_e32 v3, s4
+; GCN-NEXT:    s_addc_u32 s4, s10, s6
+; GCN-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-NEXT:    s_addc_u32 s5, s11, s7
+; GCN-NEXT:    v_mov_b32_e32 v2, s4
+; GCN-NEXT:    v_mov_b32_e32 v3, s5
 ; GCN-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
   %foo = load i128, ptr addrspace(1) %in, align 8
@@ -78,19 +72,13 @@ define amdgpu_kernel void @sgpr_operand_reversed(ptr addrspace(1) noalias %out, 
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_add_u32 s4, s4, s8
-; GCN-NEXT:    s_cselect_b64 s[12:13], -1, 0
+; GCN-NEXT:    s_addc_u32 s5, s5, s9
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    s_or_b32 s4, s12, s13
-; GCN-NEXT:    s_addc_u32 s8, s5, s9
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    s_or_b32 s4, s4, s5
-; GCN-NEXT:    s_addc_u32 s6, s6, s10
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    s_or_b32 s4, s4, s5
-; GCN-NEXT:    s_addc_u32 s4, s7, s11
-; GCN-NEXT:    v_mov_b32_e32 v1, s8
-; GCN-NEXT:    v_mov_b32_e32 v2, s6
-; GCN-NEXT:    v_mov_b32_e32 v3, s4
+; GCN-NEXT:    s_addc_u32 s4, s6, s10
+; GCN-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-NEXT:    s_addc_u32 s5, s7, s11
+; GCN-NEXT:    v_mov_b32_e32 v2, s4
+; GCN-NEXT:    v_mov_b32_e32 v3, s5
 ; GCN-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
   %foo = load i128, ptr addrspace(1) %in, align 8
@@ -107,20 +95,14 @@ define amdgpu_kernel void @test_sreg(ptr addrspace(1) noalias %out, i128 %a, i12
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_add_u32 s6, s8, s12
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    s_or_b32 s4, s4, s5
-; GCN-NEXT:    v_mov_b32_e32 v0, s6
-; GCN-NEXT:    s_addc_u32 s6, s9, s13
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    s_or_b32 s4, s4, s5
-; GCN-NEXT:    s_addc_u32 s7, s10, s14
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    s_or_b32 s4, s4, s5
-; GCN-NEXT:    s_addc_u32 s4, s11, s15
-; GCN-NEXT:    v_mov_b32_e32 v1, s6
-; GCN-NEXT:    v_mov_b32_e32 v2, s7
-; GCN-NEXT:    v_mov_b32_e32 v3, s4
+; GCN-NEXT:    s_add_u32 s4, s8, s12
+; GCN-NEXT:    s_addc_u32 s5, s9, s13
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    s_addc_u32 s4, s10, s14
+; GCN-NEXT:    s_addc_u32 s6, s11, s15
+; GCN-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-NEXT:    v_mov_b32_e32 v2, s4
+; GCN-NEXT:    v_mov_b32_e32 v3, s6
 ; GCN-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
   %result = add i128 %a, %b

@@ -11930,6 +11930,21 @@ getSelectConstants(const SIInstrInfo &TII, const MachineRegisterInfo &MRI,
   return std::pair(*A, *B);
 }
 
+/// Return the register whose \p SubIdx half \p MO reads, either directly or
+/// through a COPY, or an invalid register otherwise.
+static Register getHalfSourceReg(const MachineRegisterInfo &MRI,
+                                 const MachineOperand &MO, unsigned SubIdx) {
+  if (!MO.isReg() || !MO.getReg().isVirtual())
+    return Register();
+  if (MO.getSubReg())
+    return MO.getSubReg() == SubIdx ? MO.getReg() : Register();
+  const MachineInstr *Def = MRI.getVRegDef(MO.getReg());
+  if (!Def || Def->getOpcode() != AMDGPU::COPY || !Def->getOperand(1).isReg() ||
+      Def->getOperand(1).getSubReg() != SubIdx)
+    return Register();
+  return Def->getOperand(1).getReg();
+}
+
 static bool setsSCCIfResultIsZero(const MachineInstr &Def, bool &NeedInversion,
                                   unsigned &NewDefOpc) {
   // S_ADD_U32 X, 1 sets SCC on carryout which can only happen if result==0.
@@ -12021,26 +12036,18 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     //    sLo = copy sX.sub0
     //    sHi = copy sX.sub1
     //    sY = s_or_b32 sLo, sHi
+    // The halves may also be read directly, as in s_or_b32 sX.sub0, sX.sub1.
     if (Def->getOpcode() == AMDGPU::S_OR_B32 &&
         MRI->use_nodbg_empty(Def->getOperand(0).getReg())) {
-      const MachineOperand &OrOpnd1 = Def->getOperand(1);
-      const MachineOperand &OrOpnd2 = Def->getOperand(2);
-      if (OrOpnd1.isReg() && OrOpnd2.isReg()) {
-        MachineInstr *Def1 = MRI->getVRegDef(OrOpnd1.getReg());
-        MachineInstr *Def2 = MRI->getVRegDef(OrOpnd2.getReg());
-        if (Def1 && Def1->getOpcode() == AMDGPU::COPY && Def2 &&
-            Def2->getOpcode() == AMDGPU::COPY && Def1->getOperand(1).isReg() &&
-            Def2->getOperand(1).isReg() &&
-            Def1->getOperand(1).getSubReg() == AMDGPU::sub0 &&
-            Def2->getOperand(1).getSubReg() == AMDGPU::sub1 &&
-            Def1->getOperand(1).getReg() == Def2->getOperand(1).getReg()) {
-          if (MachineInstr *Select =
-                  MRI->getVRegDef(Def1->getOperand(1).getReg())) {
-            if (auto Consts = getSelectConstants(*this, *MRI, *Select)) {
-              auto [A, B] = *Consts;
-              if (A == 0 || B == 0)
-                optimizeSCC(Select, Def, /*NeedInversion=*/A == 0);
-            }
+      Register SelReg =
+          getHalfSourceReg(*MRI, Def->getOperand(1), AMDGPU::sub0);
+      if (SelReg && SelReg.isVirtual() &&
+          SelReg == getHalfSourceReg(*MRI, Def->getOperand(2), AMDGPU::sub1)) {
+        if (MachineInstr *Select = MRI->getVRegDef(SelReg)) {
+          if (auto Consts = getSelectConstants(*this, *MRI, *Select)) {
+            auto [A, B] = *Consts;
+            if (A == 0 || B == 0)
+              optimizeSCC(Select, Def, /*NeedInversion=*/A == 0);
           }
         }
       }

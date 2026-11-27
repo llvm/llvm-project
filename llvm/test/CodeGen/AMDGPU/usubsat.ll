@@ -1962,8 +1962,6 @@ define i64 @s_usubsat_i64(i64 inreg %lhs, i64 inreg %rhs) {
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_sub_u32 s6, s16, s18
-; GFX6-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GFX6-NEXT:    s_or_b32 s4, s4, s5
 ; GFX6-NEXT:    s_subb_u32 s7, s17, s19
 ; GFX6-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX6-NEXT:    s_and_b64 s[4:5], s[4:5], exec

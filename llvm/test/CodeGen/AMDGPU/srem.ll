@@ -10157,8 +10157,8 @@ define amdgpu_kernel void @srem_i64_uniform(ptr addrspace(1) %out, i64 %num, i64
 ; TAHITI-NEXT:    s_xor_b64 s[4:5], s[6:7], s[4:5]
 ; TAHITI-NEXT:    v_cvt_f32_u32_e32 v0, s4
 ; TAHITI-NEXT:    v_cvt_f32_u32_e32 v1, s5
-; TAHITI-NEXT:    s_sub_u32 s8, 0, s4
-; TAHITI-NEXT:    s_subb_u32 s9, 0, s5
+; TAHITI-NEXT:    s_sub_u32 s6, 0, s4
+; TAHITI-NEXT:    s_subb_u32 s7, 0, s5
 ; TAHITI-NEXT:    v_madmk_f32 v0, v1, 0x4f800000, v0
 ; TAHITI-NEXT:    v_rcp_f32_e32 v0, v0
 ; TAHITI-NEXT:    v_mul_f32_e32 v0, 0x5f7ffffc, v0
@@ -10167,115 +10167,99 @@ define amdgpu_kernel void @srem_i64_uniform(ptr addrspace(1) %out, i64 %num, i64
 ; TAHITI-NEXT:    v_madmk_f32 v0, v2, 0xcf800000, v0
 ; TAHITI-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; TAHITI-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; TAHITI-NEXT:    v_mul_hi_u32 v2, s8, v0
-; TAHITI-NEXT:    v_readfirstlane_b32 s10, v1
-; TAHITI-NEXT:    s_mul_i32 s6, s8, s10
-; TAHITI-NEXT:    v_readfirstlane_b32 s11, v0
+; TAHITI-NEXT:    v_mul_hi_u32 v2, s6, v0
+; TAHITI-NEXT:    v_readfirstlane_b32 s8, v1
+; TAHITI-NEXT:    s_mul_i32 s9, s6, s8
+; TAHITI-NEXT:    v_readfirstlane_b32 s10, v0
 ; TAHITI-NEXT:    v_readfirstlane_b32 s13, v2
-; TAHITI-NEXT:    s_mul_i32 s7, s9, s11
-; TAHITI-NEXT:    s_mul_i32 s12, s8, s11
-; TAHITI-NEXT:    s_add_i32 s6, s13, s6
+; TAHITI-NEXT:    s_mul_i32 s11, s7, s10
+; TAHITI-NEXT:    s_mul_i32 s12, s6, s10
+; TAHITI-NEXT:    s_add_i32 s9, s13, s9
 ; TAHITI-NEXT:    v_mul_hi_u32 v3, v0, s12
-; TAHITI-NEXT:    s_add_i32 s13, s6, s7
-; TAHITI-NEXT:    v_mul_hi_u32 v0, v0, s13
-; TAHITI-NEXT:    s_mul_i32 s7, s11, s13
-; TAHITI-NEXT:    v_readfirstlane_b32 s6, v3
+; TAHITI-NEXT:    s_add_i32 s9, s9, s11
+; TAHITI-NEXT:    v_mul_hi_u32 v0, v0, s9
 ; TAHITI-NEXT:    v_mul_hi_u32 v4, v1, s12
-; TAHITI-NEXT:    s_add_u32 s6, s6, s7
-; TAHITI-NEXT:    v_readfirstlane_b32 s7, v0
-; TAHITI-NEXT:    s_addc_u32 s14, 0, s7
-; TAHITI-NEXT:    s_mul_i32 s7, s10, s12
-; TAHITI-NEXT:    s_add_u32 s6, s6, s7
-; TAHITI-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; TAHITI-NEXT:    v_mul_hi_u32 v0, v1, s13
-; TAHITI-NEXT:    v_readfirstlane_b32 s12, v4
-; TAHITI-NEXT:    s_or_b32 s6, s6, s7
-; TAHITI-NEXT:    s_addc_u32 s12, s14, s12
-; TAHITI-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; TAHITI-NEXT:    v_readfirstlane_b32 s14, v0
-; TAHITI-NEXT:    s_or_b32 s6, s6, s7
-; TAHITI-NEXT:    s_addc_u32 s6, s14, 0
-; TAHITI-NEXT:    s_mul_i32 s7, s10, s13
-; TAHITI-NEXT:    s_add_u32 s7, s12, s7
-; TAHITI-NEXT:    s_addc_u32 s12, 0, s6
-; TAHITI-NEXT:    s_add_u32 s11, s11, s7
-; TAHITI-NEXT:    v_mov_b32_e32 v1, s11
-; TAHITI-NEXT:    v_mul_hi_u32 v1, s8, v1
-; TAHITI-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; TAHITI-NEXT:    s_or_b32 s6, s6, s7
-; TAHITI-NEXT:    s_addc_u32 s10, s10, s12
-; TAHITI-NEXT:    s_mul_i32 s6, s8, s11
-; TAHITI-NEXT:    s_mul_i32 s8, s8, s10
-; TAHITI-NEXT:    v_readfirstlane_b32 s7, v1
-; TAHITI-NEXT:    s_add_i32 s7, s7, s8
-; TAHITI-NEXT:    s_mul_i32 s9, s9, s11
-; TAHITI-NEXT:    v_mov_b32_e32 v0, s6
-; TAHITI-NEXT:    s_add_i32 s8, s7, s9
-; TAHITI-NEXT:    v_mul_hi_u32 v2, s10, v0
-; TAHITI-NEXT:    v_mov_b32_e32 v1, s8
-; TAHITI-NEXT:    v_mul_hi_u32 v0, s11, v0
-; TAHITI-NEXT:    v_mul_hi_u32 v3, s11, v1
-; TAHITI-NEXT:    s_mul_i32 s7, s11, s8
-; TAHITI-NEXT:    s_mul_i32 s6, s10, s6
+; TAHITI-NEXT:    v_readfirstlane_b32 s11, v3
+; TAHITI-NEXT:    s_mul_i32 s13, s10, s9
+; TAHITI-NEXT:    s_add_u32 s11, s11, s13
 ; TAHITI-NEXT:    v_readfirstlane_b32 s13, v0
-; TAHITI-NEXT:    v_readfirstlane_b32 s12, v3
-; TAHITI-NEXT:    s_add_u32 s7, s13, s7
-; TAHITI-NEXT:    s_addc_u32 s12, 0, s12
-; TAHITI-NEXT:    s_add_u32 s6, s7, s6
-; TAHITI-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; TAHITI-NEXT:    v_mul_hi_u32 v0, s10, v1
-; TAHITI-NEXT:    v_readfirstlane_b32 s9, v2
-; TAHITI-NEXT:    s_or_b32 s6, s6, s7
-; TAHITI-NEXT:    s_addc_u32 s9, s12, s9
-; TAHITI-NEXT:    s_cselect_b64 s[6:7], -1, 0
+; TAHITI-NEXT:    v_mul_hi_u32 v0, v1, s9
+; TAHITI-NEXT:    s_addc_u32 s13, 0, s13
+; TAHITI-NEXT:    s_mul_i32 s12, s8, s12
+; TAHITI-NEXT:    v_readfirstlane_b32 s14, v4
+; TAHITI-NEXT:    s_add_u32 s11, s11, s12
+; TAHITI-NEXT:    s_addc_u32 s11, s13, s14
 ; TAHITI-NEXT:    v_readfirstlane_b32 s12, v0
-; TAHITI-NEXT:    s_or_b32 s6, s6, s7
-; TAHITI-NEXT:    s_addc_u32 s6, s12, 0
-; TAHITI-NEXT:    s_mul_i32 s7, s10, s8
-; TAHITI-NEXT:    s_add_u32 s7, s9, s7
-; TAHITI-NEXT:    s_addc_u32 s8, 0, s6
-; TAHITI-NEXT:    s_add_u32 s9, s11, s7
-; TAHITI-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; TAHITI-NEXT:    s_or_b32 s6, s6, s7
-; TAHITI-NEXT:    s_addc_u32 s10, s10, s8
+; TAHITI-NEXT:    s_addc_u32 s12, s12, 0
+; TAHITI-NEXT:    s_mul_i32 s9, s8, s9
+; TAHITI-NEXT:    s_add_u32 s9, s11, s9
+; TAHITI-NEXT:    s_addc_u32 s11, 0, s12
+; TAHITI-NEXT:    s_add_u32 s9, s10, s9
+; TAHITI-NEXT:    v_mov_b32_e32 v1, s9
+; TAHITI-NEXT:    v_mul_hi_u32 v1, s6, v1
+; TAHITI-NEXT:    s_addc_u32 s8, s8, s11
+; TAHITI-NEXT:    s_mul_i32 s10, s6, s9
+; TAHITI-NEXT:    s_mul_i32 s6, s6, s8
+; TAHITI-NEXT:    v_readfirstlane_b32 s11, v1
+; TAHITI-NEXT:    s_add_i32 s6, s11, s6
+; TAHITI-NEXT:    s_mul_i32 s7, s7, s9
+; TAHITI-NEXT:    v_mov_b32_e32 v0, s10
+; TAHITI-NEXT:    s_add_i32 s6, s6, s7
+; TAHITI-NEXT:    v_mul_hi_u32 v2, s8, v0
+; TAHITI-NEXT:    v_mov_b32_e32 v1, s6
+; TAHITI-NEXT:    v_mul_hi_u32 v0, s9, v0
+; TAHITI-NEXT:    v_mul_hi_u32 v3, s9, v1
+; TAHITI-NEXT:    s_mul_i32 s11, s9, s6
+; TAHITI-NEXT:    s_mul_i32 s10, s8, s10
+; TAHITI-NEXT:    v_readfirstlane_b32 s13, v0
+; TAHITI-NEXT:    v_mul_hi_u32 v0, s8, v1
+; TAHITI-NEXT:    v_readfirstlane_b32 s12, v3
+; TAHITI-NEXT:    s_add_u32 s11, s13, s11
+; TAHITI-NEXT:    s_addc_u32 s12, 0, s12
+; TAHITI-NEXT:    v_readfirstlane_b32 s7, v2
+; TAHITI-NEXT:    s_add_u32 s10, s11, s10
+; TAHITI-NEXT:    s_addc_u32 s7, s12, s7
+; TAHITI-NEXT:    v_readfirstlane_b32 s10, v0
+; TAHITI-NEXT:    s_addc_u32 s10, s10, 0
+; TAHITI-NEXT:    s_mul_i32 s6, s8, s6
+; TAHITI-NEXT:    s_add_u32 s6, s7, s6
+; TAHITI-NEXT:    s_addc_u32 s7, 0, s10
+; TAHITI-NEXT:    s_add_u32 s9, s9, s6
+; TAHITI-NEXT:    s_addc_u32 s8, s8, s7
 ; TAHITI-NEXT:    s_ashr_i32 s6, s3, 31
 ; TAHITI-NEXT:    s_add_u32 s2, s2, s6
 ; TAHITI-NEXT:    s_mov_b32 s7, s6
 ; TAHITI-NEXT:    s_addc_u32 s3, s3, s6
 ; TAHITI-NEXT:    s_xor_b64 s[2:3], s[2:3], s[6:7]
-; TAHITI-NEXT:    v_mov_b32_e32 v2, s9
-; TAHITI-NEXT:    v_mov_b32_e32 v0, s10
-; TAHITI-NEXT:    v_mul_hi_u32 v3, s2, v2
+; TAHITI-NEXT:    v_mov_b32_e32 v0, s8
 ; TAHITI-NEXT:    v_mul_hi_u32 v1, s2, v0
-; TAHITI-NEXT:    s_mul_i32 s8, s2, s10
-; TAHITI-NEXT:    s_mul_i32 s9, s3, s9
-; TAHITI-NEXT:    v_readfirstlane_b32 s12, v3
+; TAHITI-NEXT:    v_mov_b32_e32 v2, s9
+; TAHITI-NEXT:    v_mul_hi_u32 v3, s2, v2
+; TAHITI-NEXT:    s_mul_i32 s10, s2, s8
 ; TAHITI-NEXT:    v_readfirstlane_b32 s11, v1
 ; TAHITI-NEXT:    v_mul_hi_u32 v1, s3, v2
-; TAHITI-NEXT:    s_add_u32 s8, s12, s8
-; TAHITI-NEXT:    s_addc_u32 s11, 0, s11
-; TAHITI-NEXT:    s_add_u32 s8, s8, s9
-; TAHITI-NEXT:    s_cselect_b64 s[8:9], -1, 0
+; TAHITI-NEXT:    v_readfirstlane_b32 s12, v3
 ; TAHITI-NEXT:    v_mul_hi_u32 v0, s3, v0
+; TAHITI-NEXT:    s_add_u32 s10, s12, s10
+; TAHITI-NEXT:    s_addc_u32 s11, 0, s11
+; TAHITI-NEXT:    s_mul_i32 s9, s3, s9
 ; TAHITI-NEXT:    v_readfirstlane_b32 s12, v1
-; TAHITI-NEXT:    s_or_b32 s8, s8, s9
-; TAHITI-NEXT:    s_addc_u32 s11, s11, s12
-; TAHITI-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; TAHITI-NEXT:    v_readfirstlane_b32 s12, v0
-; TAHITI-NEXT:    s_or_b32 s8, s8, s9
-; TAHITI-NEXT:    s_addc_u32 s8, s12, 0
-; TAHITI-NEXT:    s_mul_i32 s9, s3, s10
-; TAHITI-NEXT:    s_add_u32 s9, s11, s9
-; TAHITI-NEXT:    v_mov_b32_e32 v0, s9
-; TAHITI-NEXT:    v_mul_hi_u32 v0, s4, v0
-; TAHITI-NEXT:    s_addc_u32 s8, 0, s8
-; TAHITI-NEXT:    s_mul_i32 s8, s4, s8
+; TAHITI-NEXT:    s_add_u32 s9, s10, s9
+; TAHITI-NEXT:    s_addc_u32 s9, s11, s12
 ; TAHITI-NEXT:    v_readfirstlane_b32 s10, v0
-; TAHITI-NEXT:    s_add_i32 s8, s10, s8
-; TAHITI-NEXT:    s_mul_i32 s10, s5, s9
-; TAHITI-NEXT:    s_add_i32 s10, s8, s10
+; TAHITI-NEXT:    s_addc_u32 s10, s10, 0
+; TAHITI-NEXT:    s_mul_i32 s8, s3, s8
+; TAHITI-NEXT:    s_add_u32 s8, s9, s8
+; TAHITI-NEXT:    v_mov_b32_e32 v0, s8
+; TAHITI-NEXT:    v_mul_hi_u32 v0, s4, v0
+; TAHITI-NEXT:    s_addc_u32 s9, 0, s10
+; TAHITI-NEXT:    s_mul_i32 s9, s4, s9
+; TAHITI-NEXT:    v_readfirstlane_b32 s10, v0
+; TAHITI-NEXT:    s_add_i32 s9, s10, s9
+; TAHITI-NEXT:    s_mul_i32 s10, s5, s8
+; TAHITI-NEXT:    s_add_i32 s10, s9, s10
 ; TAHITI-NEXT:    s_sub_i32 s11, s3, s10
-; TAHITI-NEXT:    s_mul_i32 s8, s4, s9
+; TAHITI-NEXT:    s_mul_i32 s8, s4, s8
 ; TAHITI-NEXT:    s_sub_u32 s2, s2, s8
 ; TAHITI-NEXT:    s_cselect_b64 s[8:9], -1, 0
 ; TAHITI-NEXT:    s_or_b32 s12, s8, s9
@@ -10283,33 +10267,31 @@ define amdgpu_kernel void @srem_i64_uniform(ptr addrspace(1) %out, i64 %num, i64
 ; TAHITI-NEXT:    s_sub_u32 s13, s2, s4
 ; TAHITI-NEXT:    s_cselect_b64 s[8:9], -1, 0
 ; TAHITI-NEXT:    s_or_b32 s8, s8, s9
-; TAHITI-NEXT:    s_subb_u32 s14, s11, 0
-; TAHITI-NEXT:    s_cmp_ge_u32 s14, s5
-; TAHITI-NEXT:    s_cselect_b32 s9, -1, 0
+; TAHITI-NEXT:    s_subb_u32 s9, s11, 0
+; TAHITI-NEXT:    s_cmp_ge_u32 s9, s5
+; TAHITI-NEXT:    s_cselect_b32 s14, -1, 0
 ; TAHITI-NEXT:    s_cmp_ge_u32 s13, s4
 ; TAHITI-NEXT:    s_cselect_b32 s15, -1, 0
-; TAHITI-NEXT:    s_cmp_eq_u32 s14, s5
-; TAHITI-NEXT:    s_cselect_b32 s15, s15, s9
+; TAHITI-NEXT:    s_cmp_eq_u32 s9, s5
+; TAHITI-NEXT:    s_cselect_b32 s14, s15, s14
 ; TAHITI-NEXT:    s_cmp_lg_u32 s8, 0
-; TAHITI-NEXT:    s_subb_u32 s11, s11, s5
-; TAHITI-NEXT:    s_sub_u32 s16, s13, s4
-; TAHITI-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; TAHITI-NEXT:    s_or_b32 s8, s8, s9
-; TAHITI-NEXT:    s_subb_u32 s8, s11, 0
-; TAHITI-NEXT:    s_cmp_lg_u32 s15, 0
-; TAHITI-NEXT:    s_cselect_b32 s9, s16, s13
-; TAHITI-NEXT:    s_cselect_b32 s8, s8, s14
+; TAHITI-NEXT:    s_subb_u32 s8, s11, s5
+; TAHITI-NEXT:    s_sub_u32 s11, s13, s4
+; TAHITI-NEXT:    s_subb_u32 s8, s8, 0
+; TAHITI-NEXT:    s_cmp_lg_u32 s14, 0
+; TAHITI-NEXT:    s_cselect_b32 s11, s11, s13
+; TAHITI-NEXT:    s_cselect_b32 s8, s8, s9
 ; TAHITI-NEXT:    s_cmp_lg_u32 s12, 0
 ; TAHITI-NEXT:    s_subb_u32 s3, s3, s10
 ; TAHITI-NEXT:    s_cmp_ge_u32 s3, s5
-; TAHITI-NEXT:    s_cselect_b32 s10, -1, 0
+; TAHITI-NEXT:    s_cselect_b32 s9, -1, 0
 ; TAHITI-NEXT:    s_cmp_ge_u32 s2, s4
 ; TAHITI-NEXT:    s_cselect_b32 s4, -1, 0
 ; TAHITI-NEXT:    s_cmp_eq_u32 s3, s5
-; TAHITI-NEXT:    s_cselect_b32 s4, s4, s10
+; TAHITI-NEXT:    s_cselect_b32 s4, s4, s9
 ; TAHITI-NEXT:    s_cmp_lg_u32 s4, 0
 ; TAHITI-NEXT:    s_cselect_b32 s3, s8, s3
-; TAHITI-NEXT:    s_cselect_b32 s2, s9, s2
+; TAHITI-NEXT:    s_cselect_b32 s2, s11, s2
 ; TAHITI-NEXT:    s_xor_b64 s[2:3], s[2:3], s[6:7]
 ; TAHITI-NEXT:    s_sub_u32 s4, s2, s6
 ; TAHITI-NEXT:    s_subb_u32 s5, s3, s6
