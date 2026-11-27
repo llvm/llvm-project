@@ -15,6 +15,7 @@
 #include "HexagonFrameLowering.h"
 #include "HexagonMachineFunctionInfo.h"
 #include "HexagonSubtarget.h"
+#include "HexagonTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -39,6 +40,8 @@
 #include "HexagonGenRegisterInfo.inc"
 
 using namespace llvm;
+
+extern cl::opt<QFloatMode> QFloatModeValue;
 
 static cl::opt<unsigned> FrameIndexSearchRange(
     "hexagon-frame-index-search-range", cl::init(32), cl::Hidden,
@@ -244,6 +247,16 @@ HexagonRegisterInfo::getBaseReservedRegs(const MachineFunction &MF) const {
   // them here as well.
   Reserved.set(Hexagon::C8);
   Reserved.set(Hexagon::USR_OVF);
+
+  // For v79, reserve a vector register to store a vector of zeroes if there
+  // are QFloat-generating instructions in the function in legacy mode. For
+  // non-legacy modes, always reserve V30.
+  const HexagonSubtarget &HST = MF.getSubtarget<HexagonSubtarget>();
+  if (HST.useHVXV79OpsOnly()) {
+    if (QFloatModeValue != QFloatMode::Legacy ||
+        HST.getInstrInfo()->hasQFPInstrs(MF))
+      Reserved.set(Hexagon::V30);
+  }
 
   // Leveraging these registers will require more work to recognize
   // the new semantics posed, Hi/LoVec patterns, etc.

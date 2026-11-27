@@ -740,8 +740,10 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   // Record each variant directive. A loop-associated one is later validated
   // against the loop nest that follows the metadirective.
   if (dirId != llvm::omp::Directive::OMPD_metadirective) {
-    metadirectiveLoopVariants_.push_back(
-        {currentWhenSelector_, &x, checkDefaultNoneInAssociatedLoop});
+    if (InExecutionPart()) {
+      metadirectiveLoopVariants_.push_back(
+          {currentWhenSelector_, &x, checkDefaultNoneInAssociatedLoop});
+    }
     // Metadirective is "pure", but its selected variant may not be.
     // Check the variant independently only when metadirective is legal;
     // otherwise, the outer metadirective check already reports the error.
@@ -772,31 +774,85 @@ void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &x) {
-  // Perform semantic checks on declarative variants on this METADIRECTIVE.
-  if (!partStack_.empty() && partStack_.back() == PartKind::SpecificationPart) {
-    OmpVariantMatchContext matchContext{context_};
-    for (const parser::OmpClause &clause : x.v.Clauses().v) {
-      auto *variant{GetDirectiveVariant(clause)};
-      if (!variant) {
-        continue;
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  auto dirName = parser::omp::GetOmpDirectiveName(x);
+  parser::CharBlock hasExecutable, hasDeclarative;
+
+  for (const parser::OmpClause &clause : x.v.Clauses().v) {
+    auto *variant = GetDirectiveVariant(clause);
+    if (!variant) {
+      continue;
+    }
+    parser::OmpDirectiveName varName{variant->DirName()};
+    switch (llvm::omp::getDirectiveCategory(varName.v)) {
+    case llvm::omp::Category::Declarative:
+      if (hasDeclarative.empty()) {
+        hasDeclarative = varName.source;
       }
-      if (!MayVariantBeSelected(
-              GetContextSelector(clause), context_, matchContext)) {
-        continue;
+      break;
+    case llvm::omp::Category::Executable:
+      if (hasExecutable.empty()) {
+        hasExecutable = varName.source;
       }
-      llvm::omp::Directive dirId{variant->DirId()};
-      if (dirId == llvm::omp::Directive::OMPD_declare_reduction) {
-        CheckDeclareReduction(*variant);
-      }
+      break;
+    default:
+      break;
     }
   }
+
+  if (!hasDeclarative.empty() && !hasExecutable.empty()) {
+    if (auto *msg = context_.Warn(common::UsageWarning::OpenMPUsage,
+            dirName.source,
+            "%s directives with both declarative and executable variants are not supported"_warn_en_US,
+            parser::omp::GetUpperName(dirName.v, version))) {
+      (*msg)
+          .Attach(hasDeclarative, "The declarative variant"_because_en_US)
+          .Attach(hasExecutable, "The executable variant"_because_en_US);
+    }
+  }
+  if (InSpecificationPart()) {
+    if (!hasExecutable.empty()) {
+      context_
+          .Say(dirName.source,
+              "A %s in the specification part cannot have executable variants"_err_en_US,
+              parser::omp::GetUpperName(dirName.v, version))
+          .Attach(hasExecutable, "The executable variant"_because_en_US);
+    } else {
+      // The declarative METADIRECTIVE look fine so far, do some checks on any
+      // embedded DECLARE_REDUCTIONs.
+      OmpVariantMatchContext matchContext{context_};
+      for (const parser::OmpClause &clause : x.v.Clauses().v) {
+        if (auto *variant = GetDirectiveVariant(clause)) {
+          if (MayVariantBeSelected(
+                  GetContextSelector(clause), context_, matchContext)) {
+            llvm::omp::Directive dirId{variant->DirId()};
+            if (dirId == llvm::omp::Directive::OMPD_declare_reduction) {
+              CheckDeclareReduction(*variant);
+            }
+          }
+        }
+      }
+      // Warn about declarative METADIRECTIVEs being ignored at the moment.
+      context_.Warn(common::UsageWarning::OpenMPUsage, dirName.source,
+          "The declarative form of the %s directive is not implemented yet and will be ignored"_warn_en_US,
+          parser::omp::GetUpperName(dirName.v, version));
+    }
+  } else if (InExecutionPart()) {
+    if (!hasDeclarative.empty()) {
+      context_
+          .Say(dirName.source,
+              "A %s in the execution part cannot have declarative variants"_err_en_US,
+              parser::omp::GetUpperName(dirName.v, version))
+          .Attach(hasDeclarative, "The declarative variant"_because_en_US);
+    }
+  }
+
   ExitDirectiveNest(MetadirectiveNest);
 }
 
 // Check a loop-associated metadirective's variants against the loop nest they
-// apply to. The nest is not attached to the directive in the parse tree. It is
-// the next executable construct, either a following sibling or the first
-// execution-part construct for a declarative metadirective.
+// apply to. The nest is not attached to the directive in the parse tree, it is
+// the next executable construct.
 void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
   if (metadirectiveLoopVariants_.empty()) {
     return;
@@ -815,8 +871,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
 
   // A loop nest follows. Take the pending variants off the worklist and
   // validate them against it.
-  std::vector<MetadirectiveLoopVariant> variants;
-  variants.swap(metadirectiveLoopVariants_);
+  std::vector<MetadirectiveLoopVariant> variants{TakeMetadirectiveVariants(0)};
 
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   LoopSequence sequence(x, version, /*allowAllLoops=*/true, &context_);
@@ -899,21 +954,31 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
   }
 }
 
+// Remove the pending variants from \p first onward and return them. A
+// construct inside a scope can consume variants recorded before the scope
+// started, such as the replacements of an enclosing BEGIN METADIRECTIVE, so
+// keep every scope start within the remaining variants.
+std::vector<OmpStructureChecker::MetadirectiveLoopVariant>
+OmpStructureChecker::TakeMetadirectiveVariants(std::size_t first) {
+  CHECK(first <= metadirectiveLoopVariants_.size());
+  auto begin{metadirectiveLoopVariants_.begin() + first};
+  std::vector<MetadirectiveLoopVariant> variants(
+      begin, metadirectiveLoopVariants_.end());
+  metadirectiveLoopVariants_.erase(begin, metadirectiveLoopVariants_.end());
+  for (std::size_t &start : metadirectiveVariantScopeStarts_) {
+    start = std::min(start, first);
+  }
+  return variants;
+}
+
 // Diagnose loop-associated metadirective variants that are not followed by a
 // loop nest, either because the metadirective is the last construct in the
 // execution part or because a non-loop construct follows it. Variants that
 // cannot be selected on this target are skipped.
 void OmpStructureChecker::CheckMetadirectiveVariantsWithoutLoop(
     std::size_t firstVariant) {
-  CHECK(firstVariant <= metadirectiveLoopVariants_.size());
-  std::vector<MetadirectiveLoopVariant> variants;
-  if (firstVariant == 0) {
-    variants.swap(metadirectiveLoopVariants_);
-  } else {
-    auto first{metadirectiveLoopVariants_.begin() + firstVariant};
-    variants.assign(first, metadirectiveLoopVariants_.end());
-    metadirectiveLoopVariants_.erase(first, metadirectiveLoopVariants_.end());
-  }
+  std::vector<MetadirectiveLoopVariant> variants{
+      TakeMetadirectiveVariants(firstVariant)};
 
   OmpVariantMatchContext matchContext{context_};
   const auto MsgShouldContainDoOr{

@@ -20,18 +20,18 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __check_tuple_constructor_fail {
-  static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_explicit_default() { return false; }
-  static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_implicit_default() { return false; }
+  static constexpr bool __enable_explicit_default() { return false; }
+  static constexpr bool __enable_implicit_default() { return false; }
   template <class...>
-  static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_explicit() {
+  static constexpr bool __enable_explicit() {
     return false;
   }
   template <class...>
-  static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_implicit() {
+  static constexpr bool __enable_implicit() {
     return false;
   }
   template <class...>
-  static _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_assign() {
+  static constexpr bool __enable_assign() {
     return false;
   }
 };

@@ -188,6 +188,7 @@ public:
 
   // Make a placeholder symbol for a Name that otherwise wouldn't have one.
   // It is not in any scope and always has MiscDetails.
+  Symbol *MakePlaceholder(parser::CharBlock name, MiscDetails::Kind kind);
   void MakePlaceholder(const parser::Name &, MiscDetails::Kind);
 
   template <typename T> common::IfNoLvalue<T, T> FoldExpr(T &&expr) {
@@ -1176,6 +1177,7 @@ public:
   void LegacyDataInitialization(const parser::Name &,
       const std::list<common::Indirection<parser::DataStmtValue>> &values);
   void CheckExplicitInterface(const parser::Name &);
+  void CheckInterfaceNameDeclaredBeforeUse(const parser::Name &);
   void CheckBindings(const parser::TypeBoundProcedureStmt::WithoutInterface &);
 
   const parser::Name *ResolveDesignator(const parser::Designator &);
@@ -2194,6 +2196,22 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
     const parser::OmpClauseList &clauses) {
+  // Even if this directive is invalid or ignored for any reason, there is
+  // still some processing that needs to happen in order for all Name's
+  // embedded in the reduction specifier and the clauses to have symbols.
+  bool ignore{false};
+
+  // Ignore declarative METADIRECTIVEs for now. Those are not handled yet.
+  // Also, the top of the declaratives_ stack can be a nullptr if this
+  // directive is (incorrectly) placed in the execution part.
+  const parser::OpenMPDeclarativeConstruct *ompDecl{declaratives_.back()};
+  auto dirId = ompDecl
+      ? parser::omp::GetOmpDirectiveSpecification(*ompDecl).DirId()
+      : llvm::omp::Directive::OMPD_nothing;
+  if (dirId != llvm::omp::OMPD_declare_reduction) {
+    ignore = true;
+  }
+
   const parser::Name *name{nullptr};
   parser::CharBlock mangledName;
   UserReductionDetails reductionDetailsTemp;
@@ -2224,7 +2242,7 @@ void OmpVisitor::ProcessReductionSpecifier(
   UserReductionDetails *reductionDetails{&reductionDetailsTemp};
   // Use scope-local lookup to avoid false matches from parent scopes.
   Symbol *symbol{FindInScope(currScope(), mangledName)};
-  if (symbol) {
+  if (!ignore && symbol) {
     if (symbol->detailsIf<UseDetails>()) {
       // USE-associated reduction: shadow it with a new local declaration.
       EraseSymbol(*symbol);
@@ -2243,22 +2261,29 @@ void OmpVisitor::ProcessReductionSpecifier(
     }
   }
 
-  reductionDetails->AddDecl(declaratives_.back());
-
   // Do not walk OmpTypeNameList. The types on the list will be visited
-  // during procesing of OmpCombinerExpression.
+  // during procesing of OmpCombinerExpression. The traversal of
+  // OmpCombinerExpression will also create symbols for omp_* variables,
+  // so it has to run regardless of whether this directive is valid
+  // or not.
   Walk(std::get<std::optional<parser::OmpCombinerExpression>>(spec.t));
   Walk(clauses);
 
-  for (auto &type : std::get<parser::OmpTypeNameList>(spec.t).v) {
-    // The declTypeSpec can be null if there is some semantic error.
-    if (type.declTypeSpec) {
-      reductionDetails->AddType(*type.declTypeSpec);
+  if (!ignore) {
+    reductionDetails->AddDecl(declaratives_.back());
+
+    for (auto &type : std::get<parser::OmpTypeNameList>(spec.t).v) {
+      // The declTypeSpec can be null if there is some semantic error.
+      if (type.declTypeSpec) {
+        reductionDetails->AddType(*type.declTypeSpec);
+      }
     }
   }
 
-  if (!symbol) {
-    symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
+  if (ignore || !symbol) {
+    symbol = ignore
+        ? MakePlaceholder(mangledName, MiscDetails::Kind::None)
+        : &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
   }
   if (name) {
     name->symbol = symbol;
@@ -2570,11 +2595,15 @@ template <typename T> void BaseVisitor::Walk(const T &x) {
   parser::Walk(x, *this_);
 }
 
+Symbol *BaseVisitor::MakePlaceholder(
+    parser::CharBlock name, MiscDetails::Kind kind) {
+  return &context_->globalScope().MakeSymbol(name, Attrs{}, MiscDetails{kind});
+}
+
 void BaseVisitor::MakePlaceholder(
     const parser::Name &name, MiscDetails::Kind kind) {
   if (!name.symbol) {
-    name.symbol = &context_->globalScope().MakeSymbol(
-        name.source, Attrs{}, MiscDetails{kind});
+    name.symbol = MakePlaceholder(name.source, kind);
   }
 }
 
@@ -8827,6 +8856,28 @@ void DeclarationVisitor::CheckExplicitInterface(const parser::Name &name) {
   }
 }
 
+// C1515: a name that is declared by a procedure-declaration-stmt may be
+// used as an interface name only after that declaration.
+void DeclarationVisitor::CheckInterfaceNameDeclaredBeforeUse(
+    const parser::Name &name) {
+  if (const Symbol *symbol{name.symbol}) {
+    // A declaration in a different cooked source, such as a module file,
+    // comes from an earlier compilation and cannot follow the use.
+    const parser::CookedSource *cooked{
+        context().allCookedSources().Find(name.source)};
+    if (!context().HasError(*symbol) && symbol->has<ProcEntityDetails>() &&
+        symbol->HasExplicitInterface() && cooked &&
+        cooked->AsCharBlock().Contains(symbol->name()) &&
+        name.source.begin() < symbol->name().begin()) {
+      Say(name,
+          "'%s' must be declared before it is used as a procedure interface"_err_en_US,
+          symbol->name())
+          .Attach(symbol->name(), "Later declaration of '%s'"_en_US,
+              symbol->name());
+    }
+  }
+}
+
 // Create a symbol for a type parameter, component, or procedure binding in
 // the current derived type scope. Return false on error.
 Symbol *DeclarationVisitor::MakeTypeSymbol(
@@ -12022,6 +12073,7 @@ public:
   void Post(const parser::ProcInterface &pi) {
     if (const auto *name{std::get_if<parser::Name>(&pi.u)}) {
       resolver_.CheckExplicitInterface(*name);
+      resolver_.CheckInterfaceNameDeclaredBeforeUse(*name);
     }
   }
   bool Pre(const parser::EntityDecl &decl) {
@@ -12037,7 +12089,9 @@ public:
     return false;
   }
   void Post(const parser::TypeBoundProcedureStmt::WithInterface &tbps) {
-    resolver_.CheckExplicitInterface(std::get<parser::Name>(tbps.t));
+    const auto &name{std::get<parser::Name>(tbps.t)};
+    resolver_.CheckExplicitInterface(name);
+    resolver_.CheckInterfaceNameDeclaredBeforeUse(name);
   }
   void Post(const parser::TypeBoundProcedureStmt::WithoutInterface &tbps) {
     if (outerScope_) {

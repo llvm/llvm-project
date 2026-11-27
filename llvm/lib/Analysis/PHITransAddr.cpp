@@ -242,15 +242,18 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
       return nullptr;
 
     for (User *U : APHIOp->users()) {
-      if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(U))
+      if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(U)) {
+        bool FlagsAreSubset = (GEPI->getNoWrapFlags() &
+                               GEP->getNoWrapFlags()) == GEPI->getNoWrapFlags();
         if (GEPI->getType() == GEP->getType() &&
             GEPI->getSourceElementType() == GEP->getSourceElementType() &&
-            GEPI->getNumOperands() == GEPOps.size() &&
+            GEPI->getNumOperands() == GEPOps.size() && FlagsAreSubset &&
             GEPI->getParent()->getParent() == CurBB->getParent() &&
             (!DT || DT->dominates(GEPI->getParent(), PredBB))) {
           if (std::equal(GEPOps.begin(), GEPOps.end(), GEPI->op_begin()))
             return GEPI;
         }
+      }
     }
     return nullptr;
   }
@@ -296,12 +299,17 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
 
     // Otherwise, see if we have this add available somewhere.
     for (User *U : LHS->users()) {
-      if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U))
-        if (BO->getOpcode() == Instruction::Add &&
-            BO->getOperand(0) == LHS && BO->getOperand(1) == RHS &&
+      if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
+        if (BO->getOpcode() != Instruction::Add)
+          continue;
+        bool FlagsAreSubset = (!BO->hasNoSignedWrap() || isNSW) &&
+                              (!BO->hasNoUnsignedWrap() || isNUW);
+        if (BO->getOperand(0) == LHS && BO->getOperand(1) == RHS &&
+            FlagsAreSubset &&
             BO->getParent()->getParent() == CurBB->getParent() &&
             (!DT || DT->dominates(BO->getParent(), PredBB)))
           return BO;
+      }
     }
 
     return nullptr;

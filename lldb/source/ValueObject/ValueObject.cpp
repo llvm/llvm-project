@@ -516,74 +516,52 @@ void ValueObject::SetNumChildren(uint32_t num_children) {
 ValueObject *ValueObject::CreateChildAtIndex(size_t idx) {
   bool omit_empty_base_classes = true;
   bool ignore_array_bounds = false;
-  std::string child_name;
-  uint32_t child_byte_size = 0;
-  int32_t child_byte_offset = 0;
-  uint32_t child_bitfield_bit_size = 0;
-  uint32_t child_bitfield_bit_offset = 0;
-  bool child_is_base_class = false;
-  bool child_is_deref_of_parent = false;
-  uint64_t language_flags = 0;
   const bool transparent_pointers = true;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
-  auto child_compiler_type_or_err =
-      GetCompilerType().GetChildCompilerTypeAtIndex(
-          &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-          child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, child_is_deref_of_parent, this, language_flags);
-  if (!child_compiler_type_or_err || !child_compiler_type_or_err->IsValid()) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
-                   child_compiler_type_or_err.takeError(),
+  auto child_or_err = GetCompilerType().GetChildAtIndex(
+      &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+      ignore_array_bounds, this);
+  if (!child_or_err || !child_or_err->type.IsValid()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), child_or_err.takeError(),
                    "could not find child: {0}");
     return nullptr;
   }
 
+  const ChildTypeInfo &child = *child_or_err;
   return new ValueObjectChild(
-      *this, *child_compiler_type_or_err, ConstString(child_name),
-      child_byte_size, child_byte_offset, child_bitfield_bit_size,
-      child_bitfield_bit_offset, child_is_base_class, child_is_deref_of_parent,
-      eAddressTypeInvalid, language_flags);
+      *this, child.type, ConstString(child.name), child.byte_size,
+      child.byte_offset, child.bitfield_bit_size, child.bitfield_bit_offset,
+      child.is_base_class, child.is_deref_of_parent, eAddressTypeInvalid,
+      child.language_flags);
 }
 
 ValueObject *ValueObject::CreateSyntheticArrayMember(size_t idx) {
   bool omit_empty_base_classes = true;
   bool ignore_array_bounds = true;
-  std::string child_name;
-  uint32_t child_byte_size = 0;
-  int32_t child_byte_offset = 0;
-  uint32_t child_bitfield_bit_size = 0;
-  uint32_t child_bitfield_bit_offset = 0;
-  bool child_is_base_class = false;
-  bool child_is_deref_of_parent = false;
-  uint64_t language_flags = 0;
   const bool transparent_pointers = false;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
-  auto child_compiler_type_or_err =
-      GetCompilerType().GetChildCompilerTypeAtIndex(
-          &exe_ctx, 0, transparent_pointers, omit_empty_base_classes,
-          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-          child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, child_is_deref_of_parent, this, language_flags);
-  if (!child_compiler_type_or_err) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
-                   child_compiler_type_or_err.takeError(),
+  auto child_or_err = GetCompilerType().GetChildAtIndex(
+      &exe_ctx, 0, transparent_pointers, omit_empty_base_classes,
+      ignore_array_bounds, this);
+  if (!child_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), child_or_err.takeError(),
                    "could not find child: {0}");
     return nullptr;
   }
 
-  if (child_compiler_type_or_err->IsValid()) {
-    child_byte_offset += child_byte_size * idx;
+  if (child_or_err->type.IsValid()) {
+    ChildTypeInfo &child = *child_or_err;
+    child.byte_offset += child.byte_size * idx;
 
     return new ValueObjectChild(
-        *this, *child_compiler_type_or_err, ConstString(child_name),
-        child_byte_size, child_byte_offset, child_bitfield_bit_size,
-        child_bitfield_bit_offset, child_is_base_class,
-        child_is_deref_of_parent, eAddressTypeInvalid, language_flags);
+        *this, child.type, ConstString(child.name), child.byte_size,
+        child.byte_offset, child.bitfield_bit_size, child.bitfield_bit_offset,
+        child.is_base_class, child.is_deref_of_parent, eAddressTypeInvalid,
+        child.language_flags);
   }
 
   // In case of an incomplete type, try to use the ValueObject's
@@ -3848,6 +3826,11 @@ bool ValueObject::CanProvideValue() {
   return (!type.IsValid()) || (0 != (type.GetTypeInfo() & eTypeHasValue));
 }
 
+bool ValueObject::HasNoStorage() {
+  std::optional<uint64_t> size = llvm::expectedToOptional(GetByteSize());
+  return size && *size == 0;
+}
+
 ValueObjectSP ValueObject::Persist() {
   if (!UpdateValueIfNeeded())
     return nullptr;
@@ -3882,12 +3865,13 @@ lldb::ValueObjectSP ValueObject::GetVTable() {
 
 ValueImpl::ValueImpl(lldb::ValueObjectSP in_valobj_sp,
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                     const char *name)
-    : m_use_dynamic(use_dynamic), m_use_synthetic(use_synthetic), m_name(name) {
+                     std::string name)
+    : m_use_dynamic(use_dynamic), m_use_synthetic(use_synthetic),
+      m_name(std::move(name)) {
   if (in_valobj_sp) {
     if ((m_valobj_sp = in_valobj_sp->GetQualifiedRepresentationIfAvailable(
              lldb::eNoDynamicValues, false))) {
-      if (!m_name.IsEmpty())
+      if (!m_name.empty())
         m_valobj_sp->SetName(m_name);
     }
   }
@@ -3967,7 +3951,7 @@ lldb::ValueObjectSP ValueImpl::GetSP(Process::StopLocker &stop_locker,
 
   if (!value_sp)
     error = Status::FromErrorString("invalid value object");
-  if (!m_name.IsEmpty())
+  else if (!m_name.empty())
     value_sp->SetName(m_name);
 
   return value_sp;

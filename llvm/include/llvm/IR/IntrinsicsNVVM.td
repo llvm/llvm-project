@@ -3916,6 +3916,25 @@ foreach shape = ["32x32b", "16x32bx2"] in {
   } // num
 } // shape
 
+// tcgen05.ld{.red}.spcompress intrinsics
+class NVVM_TCGEN05_LD_SPCOMPRESS<bit IsRed> :
+  DefaultAttrsIntrinsicFlags<
+    !listconcat([llvm_anyint_ty,                   // mdata
+                 llvm_any_vector_float_ty],        // cdata
+                !if(IsRed, [llvm_float_ty], [])),  // redval
+    [llvm_tmem_ptr_ty],                            // taddr
+    !listconcat([llvm_i32_ty,                      // row_op
+                 llvm_i1_ty],                      // abs
+                !if(IsRed, [llvm_i1_ty], [])),     // nan
+    !listconcat([IntrConvergent, IntrArgMemOnly, IntrReadMem,
+                 Range<ArgIndex<1>, 0, 2>,
+                 ArgInfo<ArgIndex<1>, [ArgName<"row_op">]>,
+                 ArgInfo<ArgIndex<2>, [ArgName<"abs">]>],
+                !if(IsRed, [ArgInfo<ArgIndex<3>, [ArgName<"nan">]>], []))>;
+
+def int_nvvm_tcgen05_ld_spcompress_32x32b : NVVM_TCGEN05_LD_SPCOMPRESS<false>;
+def int_nvvm_tcgen05_ld_red_spcompress_32x32b : NVVM_TCGEN05_LD_SPCOMPRESS<true>;
+
 //
 // Bulk store intrinsics
 //
@@ -4243,9 +4262,15 @@ foreach space = ["tensor", "shared"] in {
 // tensormap.replace intrinsics
 //
 
+def int_nvvm_tensormap_replace_global_address :
+  DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i64_ty, llvm_i32_ty],
+    [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<0>>,
+     ImmArg<ArgIndex<2>, DefaultValue<0>>,
+     Range<ArgIndex<2>, 0, 3>,
+     ArgInfo<ArgIndex<2>, [ArgName<"alloc_class">,
+                           ImmArgPrinter<"printTensormapAllocClass">]>]>;
+
 let IntrProperties = [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<0>>] in {
-  def int_nvvm_tensormap_replace_global_address :
-    DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i64_ty], []>;
   def int_nvvm_tensormap_replace_rank :
     DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty], []>;
 }
@@ -4290,6 +4315,16 @@ def int_nvvm_tensormap_replace_fill_mode :
      Range<ArgIndex<1>, 0, 2>,
      ArgInfo<ArgIndex<1>, [ArgName<"fill_mode">, 
                            ImmArgPrinter<"printTensormapFillMode">]>]>;
+def int_nvvm_tensormap_replace_alloc_class :
+  DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty],
+    [IntrArgMemOnly, IntrWriteMem, ImmArg<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
+     Range<ArgIndex<1>, 0, 2>,
+     ArgInfo<ArgIndex<1>, [ArgName<"alloc_class">,
+                           ImmArgPrinter<"printTensormapAllocClass">]>]>;
+
+def int_nvvm_tensormap_query_alloc_class_large :
+  DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_anyptr_ty],
+    [IntrArgMemOnly, IntrReadMem, NoCapture<ArgIndex<0>>]>;
 
 //
 // spcompress intrinsics

@@ -9,6 +9,7 @@ unittest("WebAssemblyTests") {
     "//llvm/lib/Support",
     "//llvm/lib/Target/WebAssembly:LLVMWebAssemblyCodeGen",
     "//llvm/lib/Target/WebAssembly:WebAssemblyGenRegisterBank",
+    "//llvm/lib/Target/WebAssembly:WebAssemblyOptions",
     "//llvm/lib/Target/WebAssembly/MCTargetDesc",
     "//llvm/lib/Target/WebAssembly/TargetInfo",
     "//llvm/lib/TargetParser",

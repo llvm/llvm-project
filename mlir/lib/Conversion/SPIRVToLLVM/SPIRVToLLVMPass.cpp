@@ -39,14 +39,14 @@ public:
 
 void ConvertSPIRVToLLVMPass::runOnOperation() {
   MLIRContext *context = &getContext();
-  ModuleOp module = getOperation();
+  ModuleOp moduleOp = getOperation();
 
   LowerToLLVMOptions options(&getContext());
 
   LLVMTypeConverter converter(&getContext(), options);
 
   // Encode global variable's descriptor set and binding if they exist.
-  encodeBindAttribute(module);
+  encodeBindAttribute(moduleOp);
 
   RewritePatternSet patterns(context);
 
@@ -62,7 +62,7 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
 
   if (clientAPI != spirv::ClientAPI::OpenCL &&
       clientAPI != spirv::ClientAPI::Unknown)
-    emitWarning(module.getLoc())
+    emitWarning(moduleOp.getLoc())
         << "address space mapping for client '"
         << spirv::stringifyClientAPI(clientAPI) << "' not implemented";
 
@@ -70,7 +70,7 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   target.addLegalOp<ModuleOp>();
   ConversionConfig config;
   config.allowPatternRollback = allowPatternRollback;
-  if (failed(
-          applyPartialConversion(module, target, std::move(patterns), config)))
+  if (failed(applyPartialConversion(moduleOp, target, std::move(patterns),
+                                    config)))
     signalPassFailure();
 }

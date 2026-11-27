@@ -43,6 +43,10 @@ void emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
                        std::unique_ptr<raw_pwrite_stream> OS,
                        BackendConsumer *BC = nullptr);
 
+/// Passes the -fpass-plugin-arg= values to the loaded pass plugins and the
+/// statically linked extensions. Returns false after reporting an error.
+bool passPluginArguments(CompilerInstance &CI);
+
 void EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
                   llvm::MemoryBufferRef Buf);
 

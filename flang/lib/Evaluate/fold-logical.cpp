@@ -611,13 +611,7 @@ Expr<Type<TypeCategory::Logical>> FoldIntrinsicFunction(FoldingContext &context,
     }
   } else if (name == "is_contiguous") {
     if (args.at(0)) {
-      std::optional<bool> knownContiguous;
-      if (auto *expr{args[0]->UnwrapExpr()}) {
-        knownContiguous = IsContiguous(*expr, context);
-      } else if (auto *assumedType{args[0]->GetAssumedTypeDummy()}) {
-        knownContiguous = IsContiguous(*assumedType, context);
-      }
-      if (knownContiguous) {
+      if (auto knownContiguous{IsContiguous(*args[0], context)}) {
         if (*knownContiguous) {
           if (auto source{args[0]->sourceLocation()}) {
             context.Warn(common::UsageWarning::ConstantIsContiguous, *source,
@@ -795,7 +789,7 @@ Expr<LogicalResult> FoldOperation(
                 return Expr<LogicalResult>{Relational<SomeType>{
                     Relational<T>{opr, std::move(x), std::move(y)}}};
               }})}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(relation)}) {
     bool result{};
@@ -832,7 +826,7 @@ Expr<LogicalResult> FoldOperation(
 Expr<Type<TypeCategory::Logical>> FoldOperation(
     FoldingContext &context, Not &&x) {
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   using Ty = Type<TypeCategory::Logical>;
   const int kind{x.kind()};
@@ -854,7 +848,7 @@ Expr<Type<TypeCategory::Logical>> FoldOperation(
                 return Expr<LOGICAL>{LogicalOperation{
                     logicalOperator, std::move(x), std::move(y)}};
               }})}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(operation)}) {
     bool xt{folded->first.IsTrue()}, yt{folded->second.IsTrue()}, result{};

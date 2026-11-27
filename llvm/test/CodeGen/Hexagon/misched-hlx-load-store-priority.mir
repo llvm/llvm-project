@@ -19,7 +19,6 @@
 ...
 ---
 name:            hlx_load_store_priority
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
   - { reg: '$r1' }

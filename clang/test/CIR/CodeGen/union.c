@@ -74,7 +74,7 @@ int f2(void) {
 }
 
 // CIR:      cir.func{{.*}} @f2() -> !s32i
-// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
 // CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(4) : !cir.ptr<!rec_U1>
 // CIR-NEXT:   %[[I:.*]] = cir.const #cir.int<42> : !s32i
 // CIR-NEXT:   %[[N:.*]] = cir.get_member %[[U]][0] {name = "n"} : !cir.ptr<!rec_U1> -> !cir.ptr<!s32i>
@@ -192,7 +192,7 @@ void f3(union U3 u) {
 // LLVM-NEXT:   store i40 %[[ARG]], ptr %[[COERCE]], align 8
 // LLVM-NEXT:   %[[U:.*]] = alloca %union.U3, align 1
 // LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[U]], ptr align 8 %[[COERCE]], i64 5, i1 false)
-// LLVM-NEXT:   %[[ELEM_PTR:.*]] = getelementptr inbounds [5 x i8], ptr %[[U]], i32 0, i64 2
+// LLVM-NEXT:   %[[ELEM_PTR:.*]] = getelementptr inbounds [5 x i8], ptr %[[U]], i64 0, i64 2
 // LLVM-NEXT:   store i8 0, ptr %[[ELEM_PTR]], align 1
 // LLVM-NEXT:   ret void
 
@@ -226,7 +226,7 @@ void f5(union U4 u) {
 // LLVM-NEXT:   store i64 %[[ARG]], ptr %[[COERCE]], align 8
 // LLVM-NEXT:   %[[U:.*]] = alloca %union.U4, align 4
 // LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[U]], ptr align 8 %[[COERCE]], i64 8, i1 false)
-// LLVM-NEXT:   %[[ELEM_PTR:.*]] = getelementptr inbounds [5 x i8], ptr %[[U]], i32 0, i64 4
+// LLVM-NEXT:   %[[ELEM_PTR:.*]] = getelementptr inbounds [5 x i8], ptr %[[U]], i64 0, i64 4
 // LLVM-NEXT:   store i8 65, ptr %[[ELEM_PTR]], align 4
 // LLVM-NEXT:   ret void
 

@@ -6,7 +6,6 @@
 
 ---
 name:            dead_subreg
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: dead_subreg
@@ -31,7 +30,6 @@ body:             |
 ...
 ---
 name:            live_subreg
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: live_subreg
@@ -56,7 +54,6 @@ body:             |
 ...
 ---
 name:            partially_live_wide_subreg
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: partially_live_wide_subreg
@@ -81,7 +78,6 @@ body:             |
 ...
 ---
 name:            dead_subreg_whole_reg
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; GCN-LABEL: name: dead_subreg_whole_reg

@@ -373,9 +373,9 @@ define void @test_masked_store_success_v16i32(<16 x i32> %x, ptr %ptr, <16 x i1>
 ; SVE-NEXT:    cmpne p3.s, p0/z, z5.s, #0
 ; SVE-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
 ; SVE-NEXT:    mov x8, #12 // =0xc
-; SVE-NEXT:    st1w { z0.s }, p4, [x0]
 ; SVE-NEXT:    st1w { z2.s }, p2, [x0, x9, lsl #2]
 ; SVE-NEXT:    st1w { z3.s }, p3, [x0, x8, lsl #2]
+; SVE-NEXT:    st1w { z0.s }, p4, [x0]
 ; SVE-NEXT:    ret
   %load = load <16 x i32>, ptr %ptr, align 32
   %sel = select <16 x i1> %mask, <16 x i32> %x, <16 x i32> %load
@@ -451,8 +451,8 @@ define void @test_masked_store_success_v32i8(<32 x i8> %x, ptr %ptr, <32 x i1> %
 ; SVE-NEXT:    shl v3.16b, v3.16b, #7
 ; SVE-NEXT:    cmpne p2.b, p0/z, z2.b, #0
 ; SVE-NEXT:    cmpne p1.b, p0/z, z3.b, #0
-; SVE-NEXT:    st1b { z0.b }, p2, [x0]
 ; SVE-NEXT:    st1b { z1.b }, p1, [x0, x8]
+; SVE-NEXT:    st1b { z0.b }, p2, [x0]
 ; SVE-NEXT:    ret
   %load = load <32 x i8>, ptr %ptr, align 32
   %sel = select <32 x i1> %mask, <32 x i8> %x, <32 x i8> %load
@@ -776,10 +776,10 @@ define void @test_masked_store_success_invert_mask_v16i32(<16 x i32> %x, ptr %pt
 ; SVE-NEXT:    cmpge p3.s, p0/z, z5.s, #0
 ; SVE-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
 ; SVE-NEXT:    mov x8, #8 // =0x8
-; SVE-NEXT:    st1w { z0.s }, p4, [x0]
 ; SVE-NEXT:    st1w { z2.s }, p2, [x0, x8, lsl #2]
 ; SVE-NEXT:    mov x8, #12 // =0xc
 ; SVE-NEXT:    st1w { z3.s }, p3, [x0, x8, lsl #2]
+; SVE-NEXT:    st1w { z0.s }, p4, [x0]
 ; SVE-NEXT:    ret
   %load = load <16 x i32>, ptr %ptr, align 32
   %sel = select <16 x i1> %mask, <16 x i32> %load, <16 x i32> %x

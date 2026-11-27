@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -135,7 +136,7 @@ protected:
       std::initializer_list<std::pair<const char *, float>> PhyRegs,
       std::initializer_list<std::pair<const char *, float>> VirtRegs,
       unsigned Dimension = 2) {
-    assert(TII && TRI && MF && "Target info not initialized");
+    assert(TII && TRI && "Target info not initialized");
     VocabMap OpcodeMap, CommonOperandMap, PhyRegMap, VirtRegMap;
     for (const auto &[Name, Value] : Opcodes)
       OpcodeMap[Name] = Embedding(Dimension, Value);
@@ -162,7 +163,7 @@ protected:
 
     return MIRVocabulary::create(
         std::move(OpcodeMap), std::move(CommonOperandMap), std::move(PhyRegMap),
-        std::move(VirtRegMap), *TII, *TRI, MF->getRegInfo());
+        std::move(VirtRegMap), *TII, *TRI);
   }
 };
 
@@ -195,11 +196,10 @@ TEST_P(MIR2VecVocabEmptySectionTestFixture, EmptySectionFailsValidation) {
 
   ASSERT_TRUE(TII != nullptr);
   ASSERT_TRUE(TRI != nullptr);
-  ASSERT_TRUE(MF != nullptr);
 
   auto VocabOrErr = MIRVocabulary::create(
       std::move(OpcodeMap), std::move(CommonOperandMap), std::move(PhyRegMap),
-      std::move(VirtRegMap), *TII, *TRI, MF->getRegInfo());
+      std::move(VirtRegMap), *TII, *TRI);
   EXPECT_FALSE(static_cast<bool>(VocabOrErr))
       << "Factory method should fail when section " << EmptySection
       << " is empty";
@@ -365,8 +365,7 @@ protected:
 
 // Test factory method for creating embedder
 TEST_F(MIR2VecEmbeddingTestFixture, CreateSymbolicEmbedder) {
-  auto VocabOrErr =
-      MIRVocabulary::createDummyVocabForTest(*TII, *TRI, MF->getRegInfo(), 1);
+  auto VocabOrErr = MIRVocabulary::createDummyVocabForTest(*TII, *TRI, 1);
   ASSERT_TRUE(static_cast<bool>(VocabOrErr))
       << "Failed to create vocabulary: " << toString(VocabOrErr.takeError());
   auto &V = *VocabOrErr;
@@ -375,8 +374,7 @@ TEST_F(MIR2VecEmbeddingTestFixture, CreateSymbolicEmbedder) {
 }
 
 TEST_F(MIR2VecEmbeddingTestFixture, CreateInvalidMode) {
-  auto VocabOrErr =
-      MIRVocabulary::createDummyVocabForTest(*TII, *TRI, MF->getRegInfo(), 1);
+  auto VocabOrErr = MIRVocabulary::createDummyVocabForTest(*TII, *TRI, 1);
   ASSERT_TRUE(static_cast<bool>(VocabOrErr))
       << "Failed to create vocabulary: " << toString(VocabOrErr.takeError());
   auto &V = *VocabOrErr;
@@ -501,8 +499,7 @@ TEST_F(MIR2VecEmbeddingTestFixture, EmptyBasicBlock) {
   MF->push_back(MBB);
 
   // Create embedder
-  auto VocabOrErr =
-      MIRVocabulary::createDummyVocabForTest(*TII, *TRI, MF->getRegInfo(), 2);
+  auto VocabOrErr = MIRVocabulary::createDummyVocabForTest(*TII, *TRI, 2);
   ASSERT_TRUE(static_cast<bool>(VocabOrErr))
       << "Failed to create vocabulary: " << toString(VocabOrErr.takeError());
   auto &V = *VocabOrErr;
@@ -674,6 +671,25 @@ TEST_F(MIR2VecEmbeddingTestFixture, InvalidRegisterHandling) {
       << "MOV instruction embedding should match expected embedding";
 }
 
+// Operand types without a vocabulary entry get a zero embedding.
+TEST_F(MIR2VecEmbeddingTestFixture, UnmappedOperandType) {
+  auto VocabOrErr =
+      createTestVocab({{"MOV", 1.0f}}, {{"LaneMask", 0.7f}}, {}, {}, 3);
+  ASSERT_TRUE(static_cast<bool>(VocabOrErr))
+      << "Failed to create vocabulary: " << toString(VocabOrErr.takeError());
+  auto &Vocab = *VocabOrErr;
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  EXPECT_TRUE(
+      Vocab.getOperandEmbedding(MachineOperand::CreateDbgInstrRef(1, 0), MRI)
+          .approximatelyEquals(Embedding(3, 0.0f)));
+  EXPECT_TRUE(
+      Vocab
+          .getOperandEmbedding(MachineOperand::CreateLaneMask(LaneBitmask(2)),
+                               MRI)
+          .approximatelyEquals(Embedding(3, 0.7f * CommonOperandWeight)));
+}
+
 // Test handling of both physical and virtual registers in an instruction
 TEST_F(MIR2VecEmbeddingTestFixture, PhysicalAndVirtualRegisterHandling) {
   float MOVValue = 2.0f;
@@ -736,6 +752,36 @@ TEST_F(MIR2VecEmbeddingTestFixture, PhysicalAndVirtualRegisterHandling) {
   auto ExpectedEmb = ExpectedOpcodeContribution + ExpectedOperandContribution;
   EXPECT_TRUE(InstEmb.approximatelyEquals(ExpectedEmb))
       << "MOV32rr instruction embedding should match expected embedding";
+}
+
+TEST_F(MIR2VecEmbeddingTestFixture, ClasslessRegisterHandling) {
+  auto VocabOrErr = createTestVocab({{"MOV", 1.0f}}, {}, {{"NoRegClass", 0.3f}},
+                                    {{"NoRegClass", 0.7f}}, 2);
+  ASSERT_TRUE(static_cast<bool>(VocabOrErr))
+      << "Failed to create vocabulary: " << toString(VocabOrErr.takeError());
+  auto &Vocab = *VocabOrErr;
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  MCRegister MXCSR;
+  for (unsigned Reg = 1; Reg < TRI->getNumRegs(); ++Reg)
+    if (StringRef(TRI->getName(Reg)) == "MXCSR")
+      MXCSR = Reg;
+  ASSERT_TRUE(MXCSR.isValid()) << "MXCSR register not found";
+  ASSERT_EQ(TRI->getMinimalPhysRegClass(MXCSR), nullptr);
+
+  MachineOperand PhysMO = MachineOperand::CreateReg(MXCSR, /*isDef=*/false);
+  MachineOperand VirtMO = MachineOperand::CreateReg(
+      MRI.createGenericVirtualRegister(LLT::scalar(32)), /*isDef=*/false);
+
+  EXPECT_TRUE(Vocab.getOperandEmbedding(PhysMO, MRI)
+                  .approximatelyEquals(Embedding(2, 0.3f * RegOperandWeight)));
+  EXPECT_TRUE(Vocab.getOperandEmbedding(VirtMO, MRI)
+                  .approximatelyEquals(Embedding(2, 0.7f * RegOperandWeight)));
+
+  EXPECT_EQ(Vocab.getStringKey(Vocab.getEntityIDForMachineOperand(PhysMO, MRI)),
+            "PhyReg_NoRegClass");
+  EXPECT_EQ(Vocab.getStringKey(Vocab.getEntityIDForMachineOperand(VirtMO, MRI)),
+            "VirtReg_NoRegClass");
 }
 
 // Test precise embedding calculation with known operands

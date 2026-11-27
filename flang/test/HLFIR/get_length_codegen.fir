@@ -26,7 +26,7 @@ fir.global linkonce @_QQclX616263 constant : !fir.char<1,3> {
 // CHECK-SAME:      %[[VAL_0:.*]]: !fir.boxchar<1> {fir.bindc_name = "ch"}) -> index {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 3 : index
 // CHECK:           %[[VAL_2:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:           %[[VAL_9:.*]] = arith.addi %[[VAL_1]], %[[VAL_2]]#1 : index
+// CHECK:           %[[VAL_9:.*]] = arith.addi %[[VAL_2]]#1, %[[VAL_1]] : index
 // CHECK:           %[[VAL_33:.*]]:2 = hlfir.declare %[[VAL_31:.*]] typeparams %[[VAL_9]] uniq_name(".tmp") : (!fir.heap<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.heap<!fir.char<1,?>>)
 // CHECK:           return %[[VAL_9]] : index
 // CHECK:         }

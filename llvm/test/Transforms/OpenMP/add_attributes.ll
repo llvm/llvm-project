@@ -469,6 +469,8 @@ declare i32 @__kmpc_cancel_barrier(ptr, i32)
 
 declare void @__kmpc_flush(ptr)
 
+declare void @__kmpc_flush_explicit(ptr, i32, i32)
+
 declare i32 @__kmpc_global_thread_num(ptr)
 
 declare void @__kmpc_fork_call(ptr, i32, ptr, ...)
@@ -993,6 +995,9 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 
 ; CHECK: ; Function Attrs: convergent nounwind
 ; CHECK-NEXT: declare void @__kmpc_flush(ptr)
+
+; CHECK: ; Function Attrs: convergent nounwind
+; CHECK-NEXT: declare void @__kmpc_flush_explicit(ptr, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare i32 @__kmpc_global_thread_num(ptr)
@@ -2302,6 +2307,9 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 
 ; EXT: ; Function Attrs: convergent nounwind
 ; EXT-NEXT: declare void @__kmpc_flush(ptr)
+
+; EXT: ; Function Attrs: convergent nounwind
+; EXT-NEXT: declare void @__kmpc_flush_explicit(ptr, i32 signext, i32 signext)
 
 ; EXT: ; Function Attrs: nounwind
 ; EXT-NEXT: declare signext i32 @__kmpc_global_thread_num(ptr)

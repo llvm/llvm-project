@@ -3356,8 +3356,13 @@ bool TargetLowering::SimplifyDemandedBits(
   }
   case ISD::FABS: {
     SDValue Op0 = Op.getOperand(0);
-    APInt SignMask = APInt::getSignMask(BitWidth);
+    EVT SVT = Op0.getValueType();
 
+    // The position of the sign bit for ppc_fp128 is endian-dependent.
+    if (!APFloat::hasSignBitInMSB(SVT.getFltSemantics()) || SVT == MVT::ppcf128)
+      break;
+
+    APInt SignMask = APInt::getSignMask(BitWidth);
     if (!DemandedBits.intersects(SignMask))
       return TLO.CombineTo(Op, Op0);
 
@@ -3409,6 +3414,13 @@ bool TargetLowering::SimplifyDemandedBits(
   }
   case ISD::FNEG: {
     SDValue Op0 = Op.getOperand(0);
+    EVT SVT = Op0.getValueType();
+
+    // The logic below assumes the sign bit is in the MSB.
+    // ppc_fp128 has two sign bits (at bits 127 and 63).
+    if (!APFloat::hasSignBitInMSB(SVT.getFltSemantics()) || SVT == MVT::ppcf128)
+      break;
+
     APInt SignMask = APInt::getSignMask(BitWidth);
 
     if (!DemandedBits.intersects(SignMask))
@@ -4061,6 +4073,38 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     }
     break;
   }
+  case ISD::VECTOR_SHUFFLE_VAR: {
+    SDValue Src = Op.getOperand(0);
+    SDValue Mask = Op.getOperand(1);
+
+    // Result element i only depends on mask element i, so the elements required
+    // from the mask are the same as the demanded result elements.
+    APInt DemandedMask = DemandedElts;
+    APInt UndefMask, ZeroMask;
+    if (!DemandedMask.isAllOnes() &&
+        SimplifyDemandedVectorElts(Mask, DemandedMask, UndefMask, ZeroMask, TLO,
+                                   Depth + 1))
+      return true;
+
+    // Only those source elements are required which are indexed by the demanded
+    // elements of the mask. So source elements that are not in the range
+    // specified by the following are not required.
+    ConstantRange KnownRange = TLO.DAG.computeConstantRangeIncludingKnownBits(
+        Mask, DemandedMask, /*ForSigned=*/false, Depth + 1);
+    // Indexes >= NumElts produce poison, so they don't require any source
+    // elements.
+    unsigned Lo = KnownRange.getUnsignedMin().getLimitedValue(NumElts);
+    unsigned Hi = KnownRange.getUnsignedMax().getLimitedValue(NumElts - 1) + 1;
+
+    APInt DemandedSrc = APInt::getBitsSet(NumElts, Lo, Hi);
+    APInt UndefSrc, ZeroSrc;
+    if (!DemandedSrc.isAllOnes() &&
+        SimplifyDemandedVectorElts(Src, DemandedSrc, UndefSrc, ZeroSrc, TLO,
+                                   Depth + 1))
+      return true;
+
+    break;
+  }
   case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG: {
@@ -4157,7 +4201,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    Depth + 1))
       return true;
 
-    KnownZero = ZeroLHS & ZeroRHS;
+    // 0.0 / 0.0 and frem(0.0, 0.0) are NaN, not zero.
+    if (Opcode != ISD::FDIV && Opcode != ISD::FREM)
+      KnownZero = ZeroLHS & ZeroRHS;
     KnownUndef = getKnownUndefForVectorBinop(Op, TLO.DAG, UndefLHS, UndefRHS);
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
@@ -6320,7 +6366,7 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         // now; without this it would get ZExt'd later in
         // ScheduleDAGSDNodes::EmitNode, which is very generic.
         bool IsBool = C->getConstantIntValue()->getBitWidth() == 1;
-        BooleanContent BCont = getBooleanContents(MVT::i64);
+        BooleanContent BCont = getBooleanContents(/*isVec=*/false);
         ISD::NodeType ExtOpc =
             IsBool ? getExtendForContent(BCont) : ISD::SIGN_EXTEND;
         int64_t ExtVal =
@@ -7308,14 +7354,14 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   }
   const unsigned SVTBits = SVT.getSizeInBits();
 
-  // Allow i32 to be widened to i64 for uncooperative divisors if i64 MULHU or
-  // UMUL_LOHI is supported.
-  const EVT WideSVT = MVT::i64;
+  // Allow scalars to be widened to twice their size for uncooperative divisors
+  // if MULHU or UMUL_LOHI is supported for the wider type.
+  const EVT WideSVT = EVT::getIntegerVT(*DAG.getContext(), 2 * EltBits);
   const bool HasWideMULHU =
-      VT == MVT::i32 &&
+      VT.isScalarInteger() &&
       isOperationLegalOrCustom(ISD::MULHU, WideSVT, IsAfterLegalization);
   const bool HasWideUMUL_LOHI =
-      VT == MVT::i32 &&
+      VT.isScalarInteger() &&
       isOperationLegalOrCustom(ISD::UMUL_LOHI, WideSVT, IsAfterLegalization);
   const bool AllowWiden = (HasWideMULHU || HasWideUMUL_LOHI);
 
@@ -12667,8 +12713,7 @@ TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr,
   // An out-of-range index only makes the vector operation return poison, but
   // a load/store through the pointer computed below would be immediate UB, so
   // freeze the index before clamping it into range.
-  if (!DAG.isGuaranteedNotToBePoison(Index))
-    Index = DAG.getFreeze(Index);
+  Index = DAG.getFreeze(Index, UndefPoisonKind::PoisonOnly);
 
   EVT IdxVT = Index.getValueType();
   if (SubVecVT.isScalableVector())
@@ -14292,6 +14337,18 @@ SDValue TargetLowering::expandVECTOR_SHUFFLE_VAR(SDNode *Node,
   if (VecVT.isScalableVector())
     reportFatalUsageError(
         "Cannot expand vector_shuffle_var for scalable vectors.");
+
+  if (VecVT.getVectorNumElements() == 2) {
+    // Select between V and V with its lanes swapped.
+    EVT IdxVT = VecVT.changeVectorElementTypeToInteger();
+    SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IdxVT);
+    EVT CCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IdxVT);
+    SDValue Keep =
+        DAG.getSetCC(DL, CCVT, Idx, DAG.getStepVector(DL, IdxVT), ISD::SETEQ);
+    SDValue Swapped = DAG.getVectorShuffle(VecVT, DL, V, V, {1, 0});
+    return DAG.getNode(ISD::VSELECT, DL, VecVT, Keep, V, Swapped);
+  }
 
   // Res[i] = V[Mask[i]]. Out-of-range extracts are undefined, as required.
   MVT IdxVT = getVectorIdxTy(DAG.getDataLayout());

@@ -29,9 +29,9 @@ spirv.func @iaddcarry_scalar(%arg0: i32, %arg1: i32) "None" {
   // CHECK: %[[LOW:.*]] = llvm.extractvalue %[[O]][0] : !llvm.struct<(i32, i1)>
   // CHECK: %[[CARRY:.*]] = llvm.extractvalue %[[O]][1] : !llvm.struct<(i32, i1)>
   // CHECK: %[[CARRYEXT:.*]] = llvm.zext %[[CARRY]] : i1 to i32
-  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<packed (i32, i32)>
-  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<packed (i32, i32)>
-  // CHECK: llvm.insertvalue %[[CARRYEXT]], %[[R0]][1] : !llvm.struct<packed (i32, i32)>
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<(i32, i32)>
+  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<(i32, i32)>
+  // CHECK: llvm.insertvalue %[[CARRYEXT]], %[[R0]][1] : !llvm.struct<(i32, i32)>
   %0 = spirv.IAddCarry %arg0, %arg1 : !spirv.struct<(i32, i32)>
   spirv.Return
 }
@@ -42,9 +42,9 @@ spirv.func @iaddcarry_vector(%arg0: vector<2xi32>, %arg1: vector<2xi32>) "None" 
   // CHECK: %[[LOW:.*]] = llvm.extractvalue %[[O]][0] : !llvm.struct<(vector<2xi32>, vector<2xi1>)>
   // CHECK: %[[CARRY:.*]] = llvm.extractvalue %[[O]][1] : !llvm.struct<(vector<2xi32>, vector<2xi1>)>
   // CHECK: %[[CARRYEXT:.*]] = llvm.zext %[[CARRY]] : vector<2xi1> to vector<2xi32>
-  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<packed (vector<2xi32>, vector<2xi32>)>
-  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<packed (vector<2xi32>, vector<2xi32>)>
-  // CHECK: llvm.insertvalue %[[CARRYEXT]], %[[R0]][1] : !llvm.struct<packed (vector<2xi32>, vector<2xi32>)>
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<(vector<2xi32>, vector<2xi32>)>
+  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<(vector<2xi32>, vector<2xi32>)>
+  // CHECK: llvm.insertvalue %[[CARRYEXT]], %[[R0]][1] : !llvm.struct<(vector<2xi32>, vector<2xi32>)>
   %0 = spirv.IAddCarry %arg0, %arg1 : !spirv.struct<(vector<2xi32>, vector<2xi32>)>
   spirv.Return
 }
@@ -77,9 +77,9 @@ spirv.func @isubborrow_scalar(%arg0: i32, %arg1: i32) "None" {
   // CHECK: %[[LOW:.*]] = llvm.extractvalue %[[O]][0] : !llvm.struct<(i32, i1)>
   // CHECK: %[[BORROW:.*]] = llvm.extractvalue %[[O]][1] : !llvm.struct<(i32, i1)>
   // CHECK: %[[BORROWEXT:.*]] = llvm.zext %[[BORROW]] : i1 to i32
-  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<packed (i32, i32)>
-  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<packed (i32, i32)>
-  // CHECK: llvm.insertvalue %[[BORROWEXT]], %[[R0]][1] : !llvm.struct<packed (i32, i32)>
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<(i32, i32)>
+  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<(i32, i32)>
+  // CHECK: llvm.insertvalue %[[BORROWEXT]], %[[R0]][1] : !llvm.struct<(i32, i32)>
   %0 = spirv.ISubBorrow %arg0, %arg1 : !spirv.struct<(i32, i32)>
   spirv.Return
 }
@@ -90,9 +90,9 @@ spirv.func @isubborrow_vector(%arg0: vector<2xi32>, %arg1: vector<2xi32>) "None"
   // CHECK: %[[LOW:.*]] = llvm.extractvalue %[[O]][0] : !llvm.struct<(vector<2xi32>, vector<2xi1>)>
   // CHECK: %[[BORROW:.*]] = llvm.extractvalue %[[O]][1] : !llvm.struct<(vector<2xi32>, vector<2xi1>)>
   // CHECK: %[[BORROWEXT:.*]] = llvm.zext %[[BORROW]] : vector<2xi1> to vector<2xi32>
-  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<packed (vector<2xi32>, vector<2xi32>)>
-  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<packed (vector<2xi32>, vector<2xi32>)>
-  // CHECK: llvm.insertvalue %[[BORROWEXT]], %[[R0]][1] : !llvm.struct<packed (vector<2xi32>, vector<2xi32>)>
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<(vector<2xi32>, vector<2xi32>)>
+  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<(vector<2xi32>, vector<2xi32>)>
+  // CHECK: llvm.insertvalue %[[BORROWEXT]], %[[R0]][1] : !llvm.struct<(vector<2xi32>, vector<2xi32>)>
   %0 = spirv.ISubBorrow %arg0, %arg1 : !spirv.struct<(vector<2xi32>, vector<2xi32>)>
   spirv.Return
 }
@@ -128,9 +128,9 @@ spirv.func @smulextended_scalar(%arg0: i32, %arg1: i32) "None" {
   // CHECK: %[[C32:.*]] = llvm.mlir.constant(32 : i64) : i64
   // CHECK: %[[SHR:.*]] = llvm.lshr %[[MUL]], %[[C32]] : i64
   // CHECK: %[[HIGH:.*]] = llvm.trunc %[[SHR]] : i64 to i32
-  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<packed (i32, i32)>
-  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<packed (i32, i32)>
-  // CHECK: llvm.insertvalue %[[HIGH]], %[[R0]][1] : !llvm.struct<packed (i32, i32)>
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<(i32, i32)>
+  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<(i32, i32)>
+  // CHECK: llvm.insertvalue %[[HIGH]], %[[R0]][1] : !llvm.struct<(i32, i32)>
   %0 = spirv.SMulExtended %arg0, %arg1 : !spirv.struct<(i32, i32)>
   spirv.Return
 }
@@ -144,9 +144,9 @@ spirv.func @smulextended_vector(%arg0: vector<2xi16>, %arg1: vector<2xi16>) "Non
   // CHECK: %[[C16:.*]] = llvm.mlir.constant(dense<16> : vector<2xi32>) : vector<2xi32>
   // CHECK: %[[SHR:.*]] = llvm.lshr %[[MUL]], %[[C16]] : vector<2xi32>
   // CHECK: %[[HIGH:.*]] = llvm.trunc %[[SHR]] : vector<2xi32> to vector<2xi16>
-  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<packed (vector<2xi16>, vector<2xi16>)>
-  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<packed (vector<2xi16>, vector<2xi16>)>
-  // CHECK: llvm.insertvalue %[[HIGH]], %[[R0]][1] : !llvm.struct<packed (vector<2xi16>, vector<2xi16>)>
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<(vector<2xi16>, vector<2xi16>)>
+  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<(vector<2xi16>, vector<2xi16>)>
+  // CHECK: llvm.insertvalue %[[HIGH]], %[[R0]][1] : !llvm.struct<(vector<2xi16>, vector<2xi16>)>
   %0 = spirv.SMulExtended %arg0, %arg1 : !spirv.struct<(vector<2xi16>, vector<2xi16>)>
   spirv.Return
 }
@@ -164,9 +164,9 @@ spirv.func @umulextended_scalar(%arg0: i32, %arg1: i32) "None" {
   // CHECK: %[[C32:.*]] = llvm.mlir.constant(32 : i64) : i64
   // CHECK: %[[SHR:.*]] = llvm.lshr %[[MUL]], %[[C32]] : i64
   // CHECK: %[[HIGH:.*]] = llvm.trunc %[[SHR]] : i64 to i32
-  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<packed (i32, i32)>
-  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<packed (i32, i32)>
-  // CHECK: llvm.insertvalue %[[HIGH]], %[[R0]][1] : !llvm.struct<packed (i32, i32)>
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<(i32, i32)>
+  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<(i32, i32)>
+  // CHECK: llvm.insertvalue %[[HIGH]], %[[R0]][1] : !llvm.struct<(i32, i32)>
   %0 = spirv.UMulExtended %arg0, %arg1 : !spirv.struct<(i32, i32)>
   spirv.Return
 }
@@ -180,9 +180,9 @@ spirv.func @umulextended_vector(%arg0: vector<2xi32>, %arg1: vector<2xi32>) "Non
   // CHECK: %[[C32:.*]] = llvm.mlir.constant(dense<32> : vector<2xi64>) : vector<2xi64>
   // CHECK: %[[SHR:.*]] = llvm.lshr %[[MUL]], %[[C32]] : vector<2xi64>
   // CHECK: %[[HIGH:.*]] = llvm.trunc %[[SHR]] : vector<2xi64> to vector<2xi32>
-  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<packed (vector<2xi32>, vector<2xi32>)>
-  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<packed (vector<2xi32>, vector<2xi32>)>
-  // CHECK: llvm.insertvalue %[[HIGH]], %[[R0]][1] : !llvm.struct<packed (vector<2xi32>, vector<2xi32>)>
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : !llvm.struct<(vector<2xi32>, vector<2xi32>)>
+  // CHECK: %[[R0:.*]] = llvm.insertvalue %[[LOW]], %[[UNDEF]][0] : !llvm.struct<(vector<2xi32>, vector<2xi32>)>
+  // CHECK: llvm.insertvalue %[[HIGH]], %[[R0]][1] : !llvm.struct<(vector<2xi32>, vector<2xi32>)>
   %0 = spirv.UMulExtended %arg0, %arg1 : !spirv.struct<(vector<2xi32>, vector<2xi32>)>
   spirv.Return
 }
@@ -443,6 +443,20 @@ spirv.func @vector_times_scalar(%vector: vector<4xf32>, %scalar: f32) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.Dot
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @dot
+//  CHECK-SAME: %[[A:.*]]: vector<4xf32>, %[[B:.*]]: vector<4xf32>
+spirv.func @dot(%a: vector<4xf32>, %b: vector<4xf32>) "None" {
+  // CHECK: %[[MUL:.*]] = llvm.fmul %[[A]], %[[B]] : vector<4xf32>
+  // CHECK: %[[START:.*]] = llvm.mlir.constant(-0.000000e+00 : f32) : f32
+  // CHECK: llvm.intr.vector.reduce.fadd(%[[START]], %[[MUL]]) : (f32, vector<4xf32>) -> f32
+  %0 = spirv.Dot %a, %b : vector<4xf32> -> f32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.SNegate
 //===----------------------------------------------------------------------===//
 
@@ -459,5 +473,21 @@ spirv.func @snegate_vector(%arg0: vector<4xi32>) "None" {
   // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(dense<0> : vector<4xi32>) : vector<4xi32>
   // CHECK: llvm.sub %[[ZERO]], %{{.*}} : vector<4xi32>
   %0 = spirv.SNegate %arg0 : vector<4xi32>
+  spirv.Return
+}
+
+// CHECK-LABEL: @snegate_signed_scalar
+spirv.func @snegate_signed_scalar(%arg0: si32) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: llvm.sub %[[ZERO]], %{{.*}} : i32
+  %0 = spirv.SNegate %arg0 : si32
+  spirv.Return
+}
+
+// CHECK-LABEL: @snegate_unsigned_vector
+spirv.func @snegate_unsigned_vector(%arg0: vector<4xui32>) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(dense<0> : vector<4xi32>) : vector<4xi32>
+  // CHECK: llvm.sub %[[ZERO]], %{{.*}} : vector<4xi32>
+  %0 = spirv.SNegate %arg0 : vector<4xui32>
   spirv.Return
 }
