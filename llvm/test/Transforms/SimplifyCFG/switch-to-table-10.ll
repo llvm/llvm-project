@@ -25,7 +25,7 @@ define i8 @test_exra_phi_argument_variable(i1 %c, i64 %i, ptr %p, ptr %q) {
 ; CHECK:       [[LOOKUP]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr @table1, i64 [[I1]]
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [22 x i8], ptr @switch.table.test_exra_phi_argument_variable, i64 0, i64 [[I1]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.test_exra_phi_argument_variable, i64 [[I1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:

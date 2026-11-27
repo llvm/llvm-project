@@ -18,7 +18,7 @@ define i8 @test1(i64 %idx) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @table1, i64 [[IDX]]
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [22 x i8], ptr @switch.table.test1, i64 0, i64 [[IDX]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.test1, i64 [[IDX]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    ret i8 [[SWITCH_LOAD]]
 ;

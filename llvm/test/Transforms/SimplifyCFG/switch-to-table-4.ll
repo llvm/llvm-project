@@ -20,7 +20,7 @@ define i32 @test4(i64 %idx) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr @table1, i64 [[IDX]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [5 x i32], ptr @switch.table.test4, i64 0, i64 [[IDX]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr @switch.table.test4, i64 [[IDX]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ;

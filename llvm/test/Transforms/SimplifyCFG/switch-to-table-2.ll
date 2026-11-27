@@ -21,10 +21,10 @@ define i32 @test2(i64 %idx, ptr %out) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @table1, i64 [[IDX]]
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [22 x i8], ptr @switch.table.test2, i64 0, i64 [[IDX]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.test2, i64 [[IDX]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    [[SWITCH_EXT:%.*]] = zext i8 [[SWITCH_LOAD]] to i32
-; CHECK-NEXT:    [[SWITCH_GEP1:%.*]] = getelementptr inbounds [22 x i8], ptr @switch.table.test2.1, i64 0, i64 [[IDX]]
+; CHECK-NEXT:    [[SWITCH_GEP1:%.*]] = getelementptr inbounds i8, ptr @switch.table.test2.1, i64 [[IDX]]
 ; CHECK-NEXT:    [[SWITCH_LOAD2:%.*]] = load i8, ptr [[SWITCH_GEP1]], align 1
 ; CHECK-NEXT:    [[SWITCH_EXT3:%.*]] = zext i8 [[SWITCH_LOAD2]] to i16
 ; CHECK-NEXT:    [[BZ:%.*]] = zext i16 [[SWITCH_EXT3]] to i32

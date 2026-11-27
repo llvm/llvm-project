@@ -18,7 +18,7 @@ define i8 @off_within_stride(i64 %idx) {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds i32, ptr @table_i32, i64 [[IDX]]
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, ptr [[G]], i64 1
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr @switch.table.off_within_stride, i64 0, i64 [[IDX]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.off_within_stride, i64 [[IDX]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
 ; CHECK-NEXT:    ret i8 [[SWITCH_LOAD]]
 ;
