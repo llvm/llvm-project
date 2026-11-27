@@ -675,11 +675,18 @@ bool XtensaAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
   Reg = Xtensa::NoRegister;
-  StringRef Name = getLexer().getTok().getIdentifier();
 
-  if (!MatchRegisterName(Name) && !MatchRegisterAltName(Name)) {
-    getParser().Lex(); // Eat identifier token.
-    return false;
+  if (Tok.is(AsmToken::Identifier)) {
+    StringRef Name = Tok.getIdentifier();
+
+    Reg = getRegisterByName(Name);
+
+    if (getXtensaMCRegisterClass(Xtensa::ARRegClassID).contains(Reg) ||
+        (getXtensaMCRegisterClass(Xtensa::FPRRegClassID).contains(Reg) &&
+         getSTI().hasFeature(Xtensa::FeatureSingleFloat))) {
+      getParser().Lex(); // Eat identifier token.
+      return false;
+    }
   }
 
   return Error(StartLoc, "invalid register name");
