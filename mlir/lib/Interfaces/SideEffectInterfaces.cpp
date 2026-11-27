@@ -536,10 +536,7 @@ bool mlir::isSpeculatable(Operation *op, AnalysisManager *actx) {
   if (!conditionallySpeculatable)
     return false;
 
-  auto speculation =
-      actx ? conditionallySpeculatable.getSpeculatabilityWithAnalysis(*actx)
-           : conditionallySpeculatable.getSpeculatability();
-  switch (speculation) {
+  switch (conditionallySpeculatable.getSpeculatabilityWithAnalysis(actx)) {
   case Speculation::RecursivelySpeculatable:
     for (Region &region : op->getRegions()) {
       for (Operation &op : region.getOps())

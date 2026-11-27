@@ -165,9 +165,15 @@ TEST(Speculatability, LazyPassAnalysis) {
   arith::DivUIOp fixed = *it++;
   arith::DivUIOp index = *it;
 
+  EXPECT_EQ(cast<ConditionallySpeculatable>(fixed.getOperation())
+                .getSpeculatabilityWithAnalysis(nullptr),
+            Speculation::Speculatable);
   EXPECT_TRUE(isPure(fixed, &actx));
   EXPECT_FALSE(actx.getCachedAnalysis<DataLayoutAnalysis>());
   // The divisor can truncate to zero when the caller supplies no layout.
+  EXPECT_EQ(cast<ConditionallySpeculatable>(index.getOperation())
+                .getSpeculatabilityWithAnalysis(nullptr),
+            Speculation::NotSpeculatable);
   EXPECT_FALSE(isPure(index));
   EXPECT_TRUE(isPure(index, &actx));
   auto cached = actx.getCachedAnalysis<DataLayoutAnalysis>();

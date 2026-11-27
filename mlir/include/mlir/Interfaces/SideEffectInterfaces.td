@@ -139,13 +139,11 @@ def ConditionallySpeculatable : OpInterface<"ConditionallySpeculatable"> {
       }],
       "::mlir::Speculation::Speculatability", "getSpeculatability", (ins)>,
     InterfaceMethod<[{
-        Returns the speculatability of this operation with access to the
-        caller's analyses. Models can use these analyses to prove that the
-        operation is safe to speculate. This hook requires a valid analysis
-        manager. If the caller passes a null manager to `isSpeculatable`,
-        that query calls `getSpeculatability()`.
+        Returns the speculatability of this operation. The analysis manager may
+        be null. In that case, use only facts available without analyses and
+        return `NotSpeculatable` if they are insufficient to prove safety.
       }], "::mlir::Speculation::Speculatability", "getSpeculatabilityWithAnalysis",
-      (ins "::mlir::AnalysisManager &":$actx), [{}], [{
+      (ins "::mlir::AnalysisManager *":$actx), [{}], [{
         if constexpr (ConcreteOp::template hasTrait<
                           ::mlir::ConditionallySpeculatable::Trait>())
           return $_op.getSpeculatability();

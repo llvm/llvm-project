@@ -898,7 +898,7 @@ static std::optional<unsigned> getDivisorIndexBitwidth(AnalysisManager &actx,
 template <typename Op>
 static Speculation::Speculatability getIntegerDivSpeculatability(
     Op op, mlir::detail::constant_int_range_predicate_matcher matcher,
-    AnalysisManager *actx = nullptr) {
+    AnalysisManager *actx) {
   auto getIndexBitwidth = [&](Operation *scope) {
     return actx ? getDivisorIndexBitwidth(*actx, scope) : std::nullopt;
   };
@@ -908,12 +908,12 @@ static Speculation::Speculatability getIntegerDivSpeculatability(
 }
 
 Speculation::Speculatability arith::DivUIOp::getSpeculatability() {
-  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroU());
+  return getSpeculatabilityWithAnalysis(nullptr);
 }
 
 Speculation::Speculatability
-arith::DivUIOp::getSpeculatabilityWithAnalysis(AnalysisManager &actx) {
-  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroU(), &actx);
+arith::DivUIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
+  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroU(), actx);
 }
 
 //===----------------------------------------------------------------------===//
@@ -956,13 +956,13 @@ OpFoldResult arith::DivSIOp::fold(FoldAdaptor adaptor) {
 }
 
 Speculation::Speculatability arith::DivSIOp::getSpeculatability() {
-  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroOrNegOneS());
+  return getSpeculatabilityWithAnalysis(nullptr);
 }
 
 Speculation::Speculatability
-arith::DivSIOp::getSpeculatabilityWithAnalysis(AnalysisManager &actx) {
+arith::DivSIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
   return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroOrNegOneS(),
-                                      &actx);
+                                      actx);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1004,12 +1004,12 @@ OpFoldResult arith::CeilDivUIOp::fold(FoldAdaptor adaptor) {
 }
 
 Speculation::Speculatability arith::CeilDivUIOp::getSpeculatability() {
-  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroU());
+  return getSpeculatabilityWithAnalysis(nullptr);
 }
 
 Speculation::Speculatability
-arith::CeilDivUIOp::getSpeculatabilityWithAnalysis(AnalysisManager &actx) {
-  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroU(), &actx);
+arith::CeilDivUIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
+  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroU(), actx);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1070,13 +1070,13 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
 }
 
 Speculation::Speculatability arith::CeilDivSIOp::getSpeculatability() {
-  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroOrNegOneS());
+  return getSpeculatabilityWithAnalysis(nullptr);
 }
 
 Speculation::Speculatability
-arith::CeilDivSIOp::getSpeculatabilityWithAnalysis(AnalysisManager &actx) {
+arith::CeilDivSIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
   return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroOrNegOneS(),
-                                      &actx);
+                                      actx);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1115,13 +1115,13 @@ OpFoldResult arith::FloorDivSIOp::fold(FoldAdaptor adaptor) {
 }
 
 Speculation::Speculatability FloorDivSIOp::getSpeculatability() {
-  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroOrNegOneS());
+  return getSpeculatabilityWithAnalysis(nullptr);
 }
 
 Speculation::Speculatability
-FloorDivSIOp::getSpeculatabilityWithAnalysis(AnalysisManager &actx) {
+FloorDivSIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
   return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroOrNegOneS(),
-                                      &actx);
+                                      actx);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1157,12 +1157,12 @@ OpFoldResult arith::RemUIOp::fold(FoldAdaptor adaptor) {
 }
 
 Speculation::Speculatability arith::RemUIOp::getSpeculatability() {
-  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroU());
+  return getSpeculatabilityWithAnalysis(nullptr);
 }
 
 Speculation::Speculatability
-arith::RemUIOp::getSpeculatabilityWithAnalysis(AnalysisManager &actx) {
-  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroU(), &actx);
+arith::RemUIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
+  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroU(), actx);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1198,12 +1198,12 @@ OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
 }
 
 Speculation::Speculatability arith::RemSIOp::getSpeculatability() {
-  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroS());
+  return getSpeculatabilityWithAnalysis(nullptr);
 }
 
 Speculation::Speculatability
-arith::RemSIOp::getSpeculatabilityWithAnalysis(AnalysisManager &actx) {
-  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroS(), &actx);
+arith::RemSIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
+  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroS(), actx);
 }
 
 //===----------------------------------------------------------------------===//
