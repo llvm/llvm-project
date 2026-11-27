@@ -9,24 +9,23 @@
 #include "lldb/Interpreter/OptionGroupUUID.h"
 
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-static constexpr OptionDefinition g_option_table[] = {
-    {LLDB_OPT_SET_1, false, "uuid", 'u', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeModuleUUID, "A module UUID value."},
-};
+#define LLDB_OPTIONS_uuid
+#include "InterpreterOptions.inc"
 
 llvm::ArrayRef<OptionDefinition> OptionGroupUUID::GetDefinitions() {
-  return llvm::ArrayRef(g_option_table);
+  return llvm::ArrayRef(g_uuid_options);
 }
 
 Status OptionGroupUUID::SetOptionValue(uint32_t option_idx,
                                        llvm::StringRef option_arg,
                                        ExecutionContext *execution_context) {
   Status error;
-  const int short_option = g_option_table[option_idx].short_option;
+  const int short_option = g_uuid_options[option_idx].short_option;
 
   switch (short_option) {
   case 'u':

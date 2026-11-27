@@ -8,19 +8,17 @@
 
 #include "lldb/Interpreter/OptionGroupArchitecture.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Target/Platform.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-static constexpr OptionDefinition g_option_table[] = {
-    {LLDB_OPT_SET_1, false, "arch", 'a', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeArchitecture,
-     "Specify the architecture for the target."},
-};
+#define LLDB_OPTIONS_architecture
+#include "InterpreterOptions.inc"
 
 llvm::ArrayRef<OptionDefinition> OptionGroupArchitecture::GetDefinitions() {
-  return llvm::ArrayRef(g_option_table);
+  return llvm::ArrayRef(g_architecture_options);
 }
 
 bool OptionGroupArchitecture::GetArchitecture(Platform *platform,
@@ -34,7 +32,7 @@ OptionGroupArchitecture::SetOptionValue(uint32_t option_idx,
                                         llvm::StringRef option_arg,
                                         ExecutionContext *execution_context) {
   Status error;
-  const int short_option = g_option_table[option_idx].short_option;
+  const int short_option = g_architecture_options[option_idx].short_option;
 
   switch (short_option) {
   case 'a':
