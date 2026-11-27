@@ -3663,9 +3663,19 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "expbf16_utils",
+    hdrs = ["expbf16_utils.h"],
+    deps = [
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
     name = "expbf16",
     hdrs = ["expbf16.h"],
     deps = [
+        ":expbf16_utils",
         "//libc/hdr:errno_macros",
         "//libc/hdr:fenv_macros",
         "//libc/src/__support/CPP:array",
@@ -5815,6 +5825,26 @@ libc_support_library(
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:optimization",
         "//libc/src/__support/macros/properties:cpu_features",
+    ],
+)
+
+libc_support_library(
+    name = "expm1bf16",
+    hdrs = ["expm1bf16.h"],
+    deps = [
+        ":expbf16_utils",
+        "//libc/hdr:fenv_macros",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
     ],
 )
 

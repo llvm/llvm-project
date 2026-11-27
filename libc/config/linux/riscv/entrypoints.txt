@@ -1239,6 +1239,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.coshbf16
   libc.src.math.exp2bf16
   libc.src.math.expbf16
+  libc.src.math.expm1bf16
   libc.src.math.fabsbf16
   libc.src.math.fdimbf16
   libc.src.math.floorbf16

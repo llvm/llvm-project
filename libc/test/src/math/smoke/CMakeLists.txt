@@ -4728,6 +4728,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  expm1bf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    expm1bf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.expm1bf16
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.cast
+)
+
+add_fp_unittest(
   log_test
   SUITE
     libc-math-smoke-tests

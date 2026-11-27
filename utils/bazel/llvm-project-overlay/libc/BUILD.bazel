@@ -644,6 +644,7 @@ alias(
         "expm1",
         "expm1f",
         "expm1f16",
+        "expm1bf16",
         "f16add",
         "f16addf",
         "f16addf128",
