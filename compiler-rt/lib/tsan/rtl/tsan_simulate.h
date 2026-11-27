@@ -35,16 +35,25 @@ namespace __tsan {
 
 // Run the simulation: invoke `callback(arg)` for `simulate_iterations`
 // iterations, exploring thread interleavings using the configured scheduler.
+// The callback runs only once if simulate_scheduler is empty (no simulation)
+// or if the first iteration creates no threads.
 // Returns 0 on success, -1 on error.
 //
 // Errors include
 //  - Pre-existing threads when simulation was started
+//  - Nested call while a simulation is running
+//  - Unknown simulate_scheduler
+//  - Invalid simulate_iterations, simulate_start_iteration, or
+//    simulate_schedule_probability
 //  - Race detected
+//  - Thread leak (a thread finished but was never joined or detached)
 //
 // The following errors result in program termination via Die()
 //  - Deadlock detected (all simulated threads were blocked)
 //  - Unsupported interceptor called
 //  - More than simulate_max_depth scheduling points in an iteration
+//  - More than kMaxSimThreads threads, including the callback thread, in an
+//    iteration
 int SimulateRun(void (*callback)(void*), void* arg);
 
 extern bool sim_active;
