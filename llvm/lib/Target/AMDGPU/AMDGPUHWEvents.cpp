@@ -133,7 +133,7 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
       E |= HWEvents::LDS_ACCESS;
 
     if (SIInstrInfo::usesASYNC_CNT(Inst))
-      E |= AMDGPU::isAsyncStore(Inst.getOpcode()) ? HWEvents::ASYNC_STORE
+      E |= AMDGPU::isAsyncStore(Inst.getOpcode()) ? HWEvents::ASYNC_WRITE
                                                   : HWEvents::ASYNC_READ;
 
     return E;

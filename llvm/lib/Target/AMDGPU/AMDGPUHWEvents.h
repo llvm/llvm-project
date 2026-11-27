@@ -53,7 +53,7 @@ public:
 
   enum : value_type {
     NONE = 0,
-#define AMDGPU_HW_EVENT(X, V) X = (static_cast<uint64_t>(1) << V),
+#define AMDGPU_HW_EVENT(X, V) X = (static_cast<value_type>(1) << V),
 #define AMDGPU_LAST_HW_EVENT(X) HWEVENT_LAST_EVENT = X,
 #include "AMDGPUHWEvents.def"
 
@@ -80,7 +80,9 @@ public:
 
     HWEvents operator*() const {
       // Return only rightmost (least significant) bit set.
-      return Cur ? (Cur & (static_cast<uint64_t>(1) << countr_zero(Cur))) : 0;
+      return Cur ? (Cur &
+                    (static_cast<HWEvents::value_type>(1) << countr_zero(Cur)))
+                 : 0;
     }
 
     const_iterator &operator++() {

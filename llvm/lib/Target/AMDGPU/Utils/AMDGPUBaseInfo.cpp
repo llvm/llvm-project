@@ -808,6 +808,30 @@ bool isGenericAtomic(unsigned Opc) {
          Opc == AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG;
 }
 
+bool isAsyncStore(unsigned Opc) {
+  switch (Opc) {
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B8:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx1250:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR_gfx1250:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B32:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B32_gfx1250:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR_gfx1250:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B64:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B64_gfx1250:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR_gfx1250:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B128:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B128_gfx1250:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR:
+  case GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx1250:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool isTensorStore(unsigned Opc) {
   return Opc == TENSOR_STORE_FROM_LDS_d2_gfx1250 ||
          Opc == TENSOR_STORE_FROM_LDS_d4_gfx1250;
@@ -3355,11 +3379,6 @@ struct LDSDMAIntrinsic {
 };
 const LDSDMAIntrinsic *lookupLDSDMAIntrinsic(unsigned Intr);
 
-struct AsyncStoreInfo {
-  unsigned Opcode;
-};
-const AsyncStoreInfo *lookupAsyncStoreInfo(unsigned Opcode);
-
 struct ExponentOnlyScaleIntrinsic {
   unsigned Intr;
   uint8_t ScaleArg;
@@ -3370,7 +3389,6 @@ lookupExponentOnlyScaleIntrinsic(unsigned Intr);
 #define GET_SourcesOfDivergence_IMPL
 #define GET_UniformIntrinsics_IMPL
 #define GET_LDSDMAIntrinsicTable_IMPL
-#define GET_AsyncStoreInfoTable_IMPL
 #define GET_ExponentOnlyScaleIntrinsics_IMPL
 #define GET_Gfx9BufferFormat_IMPL
 #define GET_Gfx10BufferFormat_IMPL
@@ -3410,8 +3428,6 @@ bool isTriviallyUniform(const Use &U) {
 bool isLDSDMAIntrinsic(unsigned IntrID) {
   return lookupLDSDMAIntrinsic(IntrID);
 }
-
-bool isAsyncStore(unsigned Opcode) { return lookupAsyncStoreInfo(Opcode); }
 
 std::optional<unsigned> getExponentOnlyScaleArgIdx(unsigned IntrID) {
   if (const ExponentOnlyScaleIntrinsic *Info =

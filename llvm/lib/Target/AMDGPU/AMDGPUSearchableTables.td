@@ -447,31 +447,6 @@ def LDSDMAIntrinsicTable : GenericTable {
   let PrimaryKeyName = "lookupLDSDMAIntrinsic";
 }
 
-class AsyncStoreInfo<Instruction opc> {
-  Instruction Opcode = opc;
-}
-
-// ASYNC instructions that store to GLOBAL
-def AsyncStoreInfoTable : GenericTable {
-  let FilterClass = "AsyncStoreInfo";
-  let CppTypeName = "AsyncStoreInfo";
-  let Fields = ["Opcode"];
-
-  let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "lookupAsyncStoreInfo";
-}
-
-multiclass AsyncStoreInfoWithSAddr<string prefix> {
-  def : AsyncStoreInfo<!cast<Instruction>(prefix)>;
-  def : AsyncStoreInfo<!cast<Instruction>(prefix#"_gfx1250")>;
-  def : AsyncStoreInfo<!cast<Instruction>(prefix#"_SADDR")>;
-  def : AsyncStoreInfo<!cast<Instruction>(prefix#"_SADDR_gfx1250")>;
-}
-
-foreach size = [8, 32, 64, 128] in {
-  defm : AsyncStoreInfoWithSAddr<"GLOBAL_STORE_ASYNC_FROM_LDS_B"#size>;
-}
-
 def VLdStIdxOpcodeInfoTable : GenericTable {
   let FilterClass = "VLdStIdxOpcodeInfo";
   let CppTypeName = "VLdStIdxOpcodeInfo";
