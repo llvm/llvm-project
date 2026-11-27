@@ -4650,9 +4650,9 @@ errorcode_t security_critical_application(...) {
 Clang provides the following checked arithmetic builtins:
 
 ```c
-bool __builtin_add_overflow   (T x, T y, T *sum);
-bool __builtin_sub_overflow   (T x, T y, T *diff);
-bool __builtin_mul_overflow   (T x, T y, T *prod);
+bool __builtin_add_overflow   (T x, U y, R *sum);
+bool __builtin_sub_overflow   (T x, U y, R *diff);
+bool __builtin_mul_overflow   (T x, U y, R *prod);
 bool __builtin_uadd_overflow  (unsigned x, unsigned y, unsigned *sum);
 bool __builtin_uaddl_overflow (unsigned long x, unsigned long y, unsigned long *sum);
 bool __builtin_uaddll_overflow(unsigned long long x, unsigned long long y, unsigned long long *sum);
