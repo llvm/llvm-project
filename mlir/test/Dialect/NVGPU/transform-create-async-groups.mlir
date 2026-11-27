@@ -175,6 +175,19 @@ builtin.module {
     return
   }
 
+  // The copy size is computed from the memref element type, which must be the
+  // vector element type.
+  // CHECK-LABEL: @negative_load_memref_of_vectors(
+  func.func @negative_load_memref_of_vectors(%a: memref<1024xvector<4xf32>>) {
+    %0 = memref.alloc() : memref<128xvector<4xf32>, #gpu.address_space<workgroup>>
+    %c0 = arith.constant 0 : index
+    // CHECK-NOT: nvgpu.device_async_copy
+    //     CHECK: vector.store
+    %1 = vector.load %a[%c0] : memref<1024xvector<4xf32>>, vector<4xf32>
+    vector.store %1, %0[%c0] : memref<128xvector<4xf32>, #gpu.address_space<workgroup>>, vector<4xf32>
+    return
+  }
+
   // The copy size of a scalable vector is not known at compile time.
   // CHECK-LABEL: @negative_read_scalable(
   func.func @negative_read_scalable(%a: memref<1024x1024xi32>) {

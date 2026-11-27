@@ -153,6 +153,11 @@ static bool resultsInSupportedAsyncCopy(MemRefType memrefType,
   if (vecType.isScalable())
     return false;
 
+  // The copy size is computed from the memref element type, so it must be the
+  // vector element type (this is not the case for a memref of vectors).
+  if (memrefType.getElementType() != vecType.getElementType())
+    return false;
+
   // Condition 1: the copy size must be supported. It is computed from the bit
   // width of the element type, so only 8-, 16-, 32-, 64- and 128-bit integers
   // or floats are supported: sub-byte elements are stored in whole bytes, and
