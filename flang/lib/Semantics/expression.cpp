@@ -4991,13 +4991,19 @@ bool ExpressionAnalyzer::CheckIntrinsicKind(
     return true;
   } else if (foldingContext_.targetCharacteristics().CanSupportType(
                  category, kind)) {
+    const semantics::Scope &scope{
+        context_.FindScope(GetContextualMessages().at())};
     if (const semantics::Scope *modFileScope{
-            semantics::FindModuleFileContaining(
-                context_.FindScope(GetContextualMessages().at()))};
+            semantics::FindModuleFileContaining(scope)};
         modFileScope && modFileScope->parent().IsIntrinsicModules()) {
       // Ignore usage of unsupported intrinsic type kinds in intrinsic module
       // files.  They might be USE'd into a cross-compilation or into a
       // compilation with a disabled REAL kind.
+    } else if (const semantics::Scope *module{
+                   semantics::FindModuleContaining(scope)};
+        module && module->GetName() == "ieee_arithmetic") {
+      // Likewise when building the intrinsic module itself, which declares
+      // specific procedures for all REAL kinds, enabled or not.
     } else {
       Say("%s(KIND=%jd) is not an enabled type for this target"_err_en_US,
           ToUpperCase(EnumToString(category)), kind);

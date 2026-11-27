@@ -1401,7 +1401,10 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
             kind, SelectedCharKind(*charVal->AsStdString(), defaultKind));
       }
     }
-  } else if (name == "selected_int_kind" || name == "selected_unsigned_kind") {
+  } else if (name == "selected_int_kind" || name == "selected_unsigned_kind" ||
+      ((name == "__builtin_selected_int_kind" ||
+           name == "__builtin_selected_unsigned_kind") &&
+          context.moduleFileName())) {
     if (auto p{ToInt64(args[0])}) {
       return MakeConstantExpr<T>(
           kind, context.targetCharacteristics().SelectedIntKind(*p));
@@ -1412,7 +1415,8 @@ Expr<Type<TypeCategory::Integer>> FoldIntrinsicFunction(FoldingContext &context,
           kind, context.targetCharacteristics().SelectedLogicalKind(*p));
     }
   } else if (name == "selected_real_kind" ||
-      name == "__builtin_ieee_selected_real_kind") {
+      name == "__builtin_ieee_selected_real_kind" ||
+      (name == "__builtin_selected_real_kind" && context.moduleFileName())) {
     if (auto p{GetInt64ArgOr(args[0], 0)}) {
       if (auto r{GetInt64ArgOr(args[1], 0)}) {
         if (auto radix{GetInt64ArgOr(args[2], 2)}) {

@@ -639,6 +639,9 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
   if (args.hasArg(clang::options::OPT_fdisable_real_10))
     opts.disabledRealKinds.push_back(10);
 
+  if (args.hasArg(clang::options::OPT_fdisable_real_16))
+    opts.disabledRealKinds.push_back(16);
+
   if (args.hasArg(clang::options::OPT_fdisable_real_3))
     opts.disabledRealKinds.push_back(3);
 

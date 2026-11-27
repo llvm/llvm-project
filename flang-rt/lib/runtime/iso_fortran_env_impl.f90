@@ -6,82 +6,91 @@
 !
 !===------------------------------------------------------------------------===!
 
-! This MODULE implements part of the ISO_FORTRAN_ENV module file, which
-! partially requires linkable symbols for some entities defined
-! (e.g., real_kinds).
+! This MODULE implements part of the ISO_FORTRAN_ENV module file.
 !
-! The runtime symbols are in flang-rt/lib/runtime/iso_fortran_env_impl.cpp and
-! must be kept up-to-date.
+! The available kinds depend on compiler options (e.g. -fdisable-integer-16,
+! -fdisable-real-16) of the compilation that uses this module, so the
+! __builtin_selected_*_kind intrinsics are only folded when the module file is
+! read. For the same reason, the kinds cannot be validated with
+! digits(int(0,kind=...)) etc.; instead, the selected kind is compared with the
+! Flang kind that has the expected number of digits.
+!
+! There is no object file providing linkable symbols for these constants;
+! Flang defines them in the using program from the values folded when reading
+! the module file.
 
 module iso_fortran_env_impl
   implicit none
   private
 
   ! INTEGER types
+  intrinsic :: __builtin_selected_int_kind
   integer, parameter, public :: &
-    selectedInt8 = selected_int_kind(2), &
-    selectedInt16 = selected_int_kind(4), &
-    selectedInt32 = selected_int_kind(9), &
-    selectedInt64 = selected_int_kind(18),&
-    selectedInt128 = selected_int_kind(38), &
-    safeInt8 = merge(selectedInt8, selected_int_kind(0), &
+    selectedInt8 = __builtin_selected_int_kind(2), &
+    selectedInt16 = __builtin_selected_int_kind(4), &
+    selectedInt32 = __builtin_selected_int_kind(9), &
+    selectedInt64 = __builtin_selected_int_kind(18),&
+    selectedInt128 = __builtin_selected_int_kind(38), &
+    safeInt8 = merge(selectedInt8, __builtin_selected_int_kind(0), &
                      selectedInt8 >= 0), &
-    safeInt16 = merge(selectedInt16, selected_int_kind(0), &
+    safeInt16 = merge(selectedInt16, __builtin_selected_int_kind(0), &
                       selectedInt16 >= 0), &
-    safeInt32 = merge(selectedInt32, selected_int_kind(0), &
+    safeInt32 = merge(selectedInt32, __builtin_selected_int_kind(0), &
                       selectedInt32 >= 0), &
-    safeInt64 = merge(selectedInt64, selected_int_kind(0), &
+    safeInt64 = merge(selectedInt64, __builtin_selected_int_kind(0), &
                       selectedInt64 >= 0), &
-    safeInt128 = merge(selectedInt128, selected_int_kind(0), &
+    safeInt128 = merge(selectedInt128, __builtin_selected_int_kind(0), &
                        selectedInt128 >= 0)
 
   integer, parameter, public :: &
     int8 = merge(selectedInt8, merge(-2, -1, selectedInt8 >= 0), &
-                 digits(int(0,kind=safeInt8)) == 7), &
+                 selectedInt8 == 1), &
     int16 = merge(selectedInt16, merge(-2, -1, selectedInt16 >= 0), &
-                  digits(int(0,kind=safeInt16)) == 15), &
+                  selectedInt16 == 2), &
     int32 = merge(selectedInt32, merge(-2, -1, selectedInt32 >= 0), &
-                  digits(int(0,kind=safeInt32)) == 31), &
+                  selectedInt32 == 4), &
     int64 = merge(selectedInt64, merge(-2, -1, selectedInt64 >= 0), &
-                  digits(int(0,kind=safeInt64)) == 63), &
+                  selectedInt64 == 8), &
     int128 = merge(selectedInt128, merge(-2, -1, selectedInt128 >= 0), &
-                   digits(int(0,kind=safeInt128)) == 127)
+                   selectedInt128 == 16)
 
   ! UNSIGNED types
+  intrinsic :: __builtin_selected_unsigned_kind
   integer, parameter, public :: &
-    selectedUInt8 = selected_unsigned_kind(2), &
-    selectedUInt16 = selected_unsigned_kind(4), &
-    selectedUInt32 = selected_unsigned_kind(9), &
-    selectedUInt64 = selected_unsigned_kind(18),&
-    selectedUInt128 = selected_unsigned_kind(38), &
-    safeUInt8 = merge(selectedUInt8, selected_unsigned_kind(0), &
+    selectedUInt8 = __builtin_selected_unsigned_kind(2), &
+    selectedUInt16 = __builtin_selected_unsigned_kind(4), &
+    selectedUInt32 = __builtin_selected_unsigned_kind(9), &
+    selectedUInt64 = __builtin_selected_unsigned_kind(18),&
+    selectedUInt128 = __builtin_selected_unsigned_kind(38), &
+    safeUInt8 = merge(selectedUInt8, __builtin_selected_unsigned_kind(0), &
                      selectedUInt8 >= 0), &
-    safeUInt16 = merge(selectedUInt16, selected_unsigned_kind(0), &
+    safeUInt16 = merge(selectedUInt16, __builtin_selected_unsigned_kind(0), &
                       selectedUInt16 >= 0), &
-    safeUInt32 = merge(selectedUInt32, selected_unsigned_kind(0), &
+    safeUInt32 = merge(selectedUInt32, __builtin_selected_unsigned_kind(0), &
                       selectedUInt32 >= 0), &
-    safeUInt64 = merge(selectedUInt64, selected_unsigned_kind(0), &
+    safeUInt64 = merge(selectedUInt64, __builtin_selected_unsigned_kind(0), &
                       selectedUInt64 >= 0), &
-    safeUInt128 = merge(selectedUInt128, selected_unsigned_kind(0), &
+    safeUInt128 = merge(selectedUInt128, __builtin_selected_unsigned_kind(0), &
                        selectedUInt128 >= 0)
 
   integer, parameter, public :: &
     uint8 = merge(selectedUInt8, merge(-2, -1, selectedUInt8 >= 0), &
-                 digits(uint(0,kind=safeUInt8)) == 8), &
+                 selectedUInt8 == 1), &
     uint16 = merge(selectedUInt16, merge(-2, -1, selectedUInt16 >= 0), &
-                  digits(uint(0,kind=safeUInt16)) == 16), &
+                  selectedUInt16 == 2), &
     uint32 = merge(selectedUInt32, merge(-2, -1, selectedUInt32 >= 0), &
-                  digits(uint(0,kind=safeUInt32)) == 32), &
+                  selectedUInt32 == 4), &
     uint64 = merge(selectedUInt64, merge(-2, -1, selectedUInt64 >= 0), &
-                  digits(uint(0,kind=safeUInt64)) == 64), &
+                  selectedUInt64 == 8), &
     uint128 = merge(selectedUInt128, merge(-2, -1, selectedUInt128 >= 0), &
-                   digits(uint(0,kind=safeUInt128)) == 128)
+                   selectedUInt128 == 16)
 
   integer, parameter, dimension(*), public :: __builtin_integer_kinds = [ &
-      selected_int_kind(0), &
-      [(pack([selected_int_kind(k)], &
-             selected_int_kind(k) >= 0 .and. &
-               selected_int_kind(k) /= selected_int_kind(k-1)), &
+      __builtin_selected_int_kind(0), &
+      [(pack([__builtin_selected_int_kind(k)], &
+             __builtin_selected_int_kind(k) >= 0 .and. &
+               __builtin_selected_int_kind(k) /= &
+                 __builtin_selected_int_kind(k-1)), &
         integer :: k=1, 39)]]
 
   ! LOGICAL TYPES
@@ -96,44 +105,44 @@ module iso_fortran_env_impl
     ]
 
   ! REAL types
+  intrinsic :: __builtin_selected_real_kind
   integer, parameter, public :: &
-    selectedReal16 = selected_real_kind(3, 4), &      ! IEEE half
-    selectedBfloat16 = selected_real_kind(2, 37), &   ! truncated IEEE single
-    selectedReal32 = selected_real_kind(6, 37), &     ! IEEE single
-    selectedReal64 = selected_real_kind(15, 307), &   ! IEEE double
-    selectedReal80 = selected_real_kind(18, 4931), &  ! 80x87 extended
-    selectedReal64x2 = selected_real_kind(31, 307), & ! "double-double"
-    selectedReal128 = selected_real_kind(33, 4931), & ! IEEE quad
-    safeReal16 = merge(selectedReal16, selected_real_kind(0,0), &
+    selectedReal16 = __builtin_selected_real_kind(3, 4), &      ! IEEE half
+    selectedBfloat16 = __builtin_selected_real_kind(2, 37), &   ! truncated IEEE single
+    selectedReal32 = __builtin_selected_real_kind(6, 37), &     ! IEEE single
+    selectedReal64 = __builtin_selected_real_kind(15, 307), &   ! IEEE double
+    selectedReal80 = __builtin_selected_real_kind(18, 4931), &  ! 80x87 extended
+    selectedReal64x2 = __builtin_selected_real_kind(31, 307), & ! "double-double"
+    selectedReal128 = __builtin_selected_real_kind(33, 4931), & ! IEEE quad
+    safeReal16 = merge(selectedReal16, __builtin_selected_real_kind(0,0), &
                        selectedReal16 >= 0), &
-    safeBfloat16 = merge(selectedBfloat16, selected_real_kind(0,0), &
+    safeBfloat16 = merge(selectedBfloat16, __builtin_selected_real_kind(0,0), &
                          selectedBfloat16 >= 0), &
-    safeReal32 = merge(selectedReal32, selected_real_kind(0,0), &
+    safeReal32 = merge(selectedReal32, __builtin_selected_real_kind(0,0), &
                        selectedReal32 >= 0), &
-    safeReal64 = merge(selectedReal64, selected_real_kind(0,0), &
+    safeReal64 = merge(selectedReal64, __builtin_selected_real_kind(0,0), &
                        selectedReal64 >= 0), &
-    safeReal80 = merge(selectedReal80, selected_real_kind(0,0), &
+    safeReal80 = merge(selectedReal80, __builtin_selected_real_kind(0,0), &
                        selectedReal80 >= 0), &
-    safeReal64x2 = merge(selectedReal64x2, selected_real_kind(0,0), &
+    safeReal64x2 = merge(selectedReal64x2, __builtin_selected_real_kind(0,0), &
                          selectedReal64x2 >= 0), &
-    safeReal128 = merge(selectedReal128, selected_real_kind(0,0), &
+    safeReal128 = merge(selectedReal128, __builtin_selected_real_kind(0,0), &
                         selectedReal128 >= 0)
 
   integer, parameter, public :: &
     real16 = merge(selectedReal16, merge(-2, -1, selectedReal16 >= 0), &
-                   digits(real(0,kind=safeReal16)) == 11), &
+                   selectedReal16 == 2), &
     bfloat16 = merge(selectedBfloat16, merge(-2, -1, selectedBfloat16 >= 0), &
-                     digits(real(0,kind=safeBfloat16)) == 8), &
+                     selectedBfloat16 == 3), &
     real32 = merge(selectedReal32, merge(-2, -1, selectedReal32 >= 0), &
-                   digits(real(0,kind=safeReal32)) == 24), &
+                   selectedReal32 == 4), &
     real64 = merge(selectedReal64, merge(-2, -1, selectedReal64 >= 0), &
-                   digits(real(0,kind=safeReal64)) == 53), &
+                   selectedReal64 == 8), &
     real80 = merge(selectedReal80, merge(-2, -1, selectedReal80 >= 0), &
-                   digits(real(0,kind=safeReal80)) == 64), &
-    real64x2 = merge(selectedReal64x2, merge(-2, -1, selectedReal64x2 >= 0), &
-                     digits(real(0,kind=safeReal64x2)) == 106), &
+                   selectedReal80 == 10), &
+    real64x2 = merge(-2, -1, selectedReal64x2 >= 0), & ! no such Flang kind
     real128 = merge(selectedReal128, merge(-2, -1, selectedReal128 >= 0), &
-                    digits(real(0,kind=safeReal128)) == 113)
+                    selectedReal128 == 16)
 
   integer, parameter, dimension(*), public :: __builtin_real_kinds = [ &
       pack([real16], real16 >= 0), &

@@ -40,8 +40,7 @@ module __fortran_builtins
   intrinsic :: sizeof ! extension
   public :: sizeof
 
-  intrinsic :: selected_int_kind
-  integer, parameter :: int64 = selected_int_kind(18)
+  integer, parameter :: int64 = 8
 
   type, bind(c), public :: __builtin_c_ptr
     integer(kind=int64), private :: __address
@@ -114,7 +113,7 @@ module __fortran_builtins
     type(__builtin_c_ptr), private :: info
   end type
 
-  integer, parameter, public :: __builtin_atomic_int_kind = selected_int_kind(18)
+  integer, parameter, public :: __builtin_atomic_int_kind = int64
   integer, parameter, public :: &
     __builtin_atomic_logical_kind = __builtin_atomic_int_kind
 

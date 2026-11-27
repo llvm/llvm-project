@@ -34,6 +34,9 @@ module iso_c_binding
     c_loc, c_null_funptr, c_null_ptr, c_ptr, c_sizeof, f_c_string, &
     operator(==), operator(/=)
 
+  intrinsic :: __builtin_selected_int_kind, __builtin_selected_unsigned_kind, &
+    __builtin_selected_real_kind
+
   ! Table 18.2 (in clause 18.3.1)
   ! TODO: Specialize (via macros?) for alternative targets
   integer, parameter, public :: &
@@ -41,7 +44,7 @@ module iso_c_binding
     c_int16_t = 2, &
     c_int32_t = 4, &
     c_int64_t = 8, &
-    c_int128_t = 16 ! anticipating future addition
+    c_int128_t = merge(16, -1, __builtin_selected_int_kind(38) == 16)
   integer, parameter, public :: &
     c_int = c_int32_t, &
     c_short = c_int16_t, &
@@ -77,15 +80,18 @@ module iso_c_binding
     c_int_least128_t = c_int128_t, &
     c_int_fast128_t = c_int128_t
 
+  logical, parameter :: &
+    hasReal10 = __builtin_selected_real_kind(18, 4931) == 10, &
+    hasReal16 = __builtin_selected_real_kind(33, 4931) == 16
   integer, parameter, public :: &
     c_float = 4, &
     c_double = 8, &
 #if defined(__x86_64__)
-    c_long_double = 10
+    c_long_double = merge(10, merge(-1, -3, hasReal16), hasReal10)
 #elif defined(_WIN32) && defined(__aarch64__)
     c_long_double = 8
 #else
-    c_long_double = 16
+    c_long_double = merge(16, merge(-1, -3, hasReal10), hasReal16)
 #endif
 
   integer, parameter, public :: &
@@ -116,14 +122,14 @@ module iso_c_binding
     c_float16 = 2, &
     c_float16_complex = c_float16
   integer, parameter, public :: &
-    c_float128 = 16, &
+    c_float128 = merge(16, merge(-1, -3, hasReal10), hasReal16), &
     c_float128_complex = c_float128
   integer, parameter, public :: &
     c_uint8_t = 1, &
     c_uint16_t = 2, &
     c_uint32_t = 4, &
     c_uint64_t = 8, &
-    c_uint128_t = 16
+    c_uint128_t = merge(16, -1, __builtin_selected_unsigned_kind(38) == 16)
   integer, parameter, public :: &
     c_unsigned_char = c_uint8_t, &
     c_unsigned_short = c_uint16_t, &
@@ -134,11 +140,7 @@ module iso_c_binding
     c_unsigned_long = c_uint64_t, &
 #endif
     c_unsigned_long_long = c_uint64_t, &
-#if defined(__powerpc__) || defined(_WIN32)
     c_uintmax_t = c_uint64_t
-#else
-    c_uintmax_t = c_uint128_t
-#endif
   integer, parameter, public :: &
     c_uint_fast8_t = c_uint8_t, &
     c_uint_fast16_t = c_uint16_t, &

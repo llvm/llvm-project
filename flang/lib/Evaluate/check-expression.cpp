@@ -646,12 +646,9 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
           return {std::move(folded)};
         }
       } else if (IsNamedConstant(symbol)) {
-        if (symbol.name() == "numeric_storage_size" &&
-            symbol.owner().IsModule() &&
-            DEREF(symbol.owner().symbol()).name() == "iso_fortran_env") {
-          // Very special case: numeric_storage_size is not folded until
-          // it read from the iso_fortran_env module file, as its value
-          // depends on compilation options.
+        if (IsDeferredFoldingAllowed(symbol) && HasDeferredFolding(folded)) {
+          // Very special case: Not folded until read from an intrinsic module
+          // file, as its value depends on compilation options.
           return {std::move(folded)};
         }
         context.messages().Say(
@@ -673,6 +670,58 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
     }
   }
   return std::nullopt;
+}
+
+/// Predicate: true for builtin intrinsic functions whose references are not
+/// folded while compiling an intrinsic module source, but only when the module
+/// file is read, because their values depend on compiler options of the
+/// compilation that uses the module (e.g. -fdefault-real-8, -fdisable-real-16).
+static bool IsDeferredFoldingIntrinsic(std::string_view name) {
+  return name == "__builtin_numeric_storage_size" ||
+      name == "__builtin_selected_int_kind" ||
+      name == "__builtin_selected_unsigned_kind" ||
+      name == "__builtin_selected_real_kind";
+}
+
+namespace {
+struct HasDeferredFoldingHelper : public AnyTraverse<HasDeferredFoldingHelper> {
+  using Base = AnyTraverse<HasDeferredFoldingHelper>;
+  HasDeferredFoldingHelper() : Base{*this} {}
+  using Base::operator();
+  bool operator()(const SpecificIntrinsic &intrinsic) const {
+    return IsDeferredFoldingIntrinsic(intrinsic.name);
+  }
+  bool operator()(const Symbol &symbol) const {
+    return HasDeferredFolding(symbol);
+  }
+};
+} // namespace
+
+bool HasDeferredFolding(const Expr<SomeType> &expr) {
+  return HasDeferredFoldingHelper{}(expr);
+}
+
+bool HasDeferredFolding(const Symbol &symbol) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  if (IsNamedConstant(ultimate)) {
+    if (const auto *object{
+            ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
+      if (const auto &init{object->init()}) {
+        return HasDeferredFolding(*init);
+      }
+    }
+  }
+  return false;
+}
+
+bool IsDeferredFoldingAllowed(const Symbol &symbol) {
+  const semantics::Scope &owner{symbol.GetUltimate().owner()};
+  if (!owner.IsModule()) {
+    return false;
+  }
+  const auto &name{DEREF(owner.symbol()).name()};
+  return name == "iso_fortran_env" || name == "iso_fortran_env_impl" ||
+      name == "iso_c_binding";
 }
 
 // Specification expression validation (10.1.11(2), C1010)
