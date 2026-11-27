@@ -525,10 +525,6 @@ public:
   /// returns true  => .text
   virtual bool shouldOmitSectionDirective(StringRef SectionName) const;
 
-  // Return true if a .align directive should use "optimized nops" to fill
-  // instead of 0s.
-  virtual bool useCodeAlign(const MCSection &Sec) const { return false; }
-
   bool usesSunStyleELFSectionSwitchSyntax() const {
     return SunStyleELFSectionSwitchSyntax;
   }
