@@ -1,6 +1,6 @@
 ! The REAL kind constants of ISO_FORTRAN_ENV reflect the compiler options of
 ! the compilation that uses the module, not those used to build the module.
-! REQUIRES: x86-registered-target
+! REQUIRES: x86-registered-target, flang-supports-f128-math
 ! RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -fdebug-unparse %s 2>&1 | FileCheck %s --check-prefixes=CHECK,ALL
 ! RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -fdebug-unparse -fdisable-real-3 %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NO3
 ! RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -fdebug-unparse -fdisable-real-10 %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NO10
