@@ -1139,19 +1139,19 @@ LogicalResult Tcgen05LdRedSPCompressOp::verify() {
 mlir::NVVM::IDArgPair NVVM::Tcgen05LdRedSPCompressOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::Tcgen05LdRedSPCompressOp>(op);
-  bool isRed = static_cast<bool>(thisOp.getRedVal());
+  llvm::Intrinsic::ID id = llvm::Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b;
 
   llvm::SmallVector<llvm::Value *> args = {
       mt.lookupValue(thisOp.getAddr()),
       // row_op: 0 for min and 1 for max.
       builder.getInt32(thisOp.getOp() == NVVM::ReductionKind::MAX ? 1 : 0),
       builder.getInt1(thisOp.getAbs())};
-  if (isRed)
+  if (thisOp.getRedVal()) {
+    id = llvm::Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b;
     args.push_back(builder.getInt1(thisOp.getNan()));
+  }
 
-  return {isRed ? llvm::Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b
-                : llvm::Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b,
-          args};
+  return {id, args};
 }
 
 #define GET_OP_CLASSES

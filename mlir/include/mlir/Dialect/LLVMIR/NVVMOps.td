@@ -5753,8 +5753,8 @@ def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red",
 // NVVM tcgen05.ld{.red}.spcompress Op
 //===----------------------------------------------------------------------===//
 
-// Reduction kind restricted to min and max.
-defvar ReductionKindMinMaxAttr = ConfinedAttr<ReductionKindAttr,
+// Reduction kinds supported by tcgen05.ld.red.spcompress.
+defvar Tcgen05LdRedKindAttr = ConfinedAttr<ReductionKindAttr,
     [EnumAttrIsOneOf<ReductionKindAttr, [ReductionKindMin, ReductionKindMax]>]>;
 
 // Metadata is a bundle of ceil(num / 32) 32-bit registers: i32 or a vector of
@@ -5772,7 +5772,7 @@ def NVVM_Tcgen05LdRedSPCompressOp : NVVM_Op<"tcgen05.ld.red.spcompress",
       "Tcgen05 tensor memory load and 2:4 sparse compress, with optional reduce";
   let arguments = (ins
     LLVM_PointerTensor:$addr,
-    ReductionKindMinMaxAttr:$op,
+    Tcgen05LdRedKindAttr:$op,
     DefaultValuedAttr<BoolAttr, "false">:$abs,
     DefaultValuedAttr<BoolAttr, "false">:$nan
   );
@@ -5848,17 +5848,12 @@ def NVVM_Tcgen05LdRedSPCompressOp : NVVM_Op<"tcgen05.ld.red.spcompress",
   }];
 
   string llvmBuilder = [{
-    auto [id, args] = NVVM::Tcgen05LdRedSPCompressOp::getIntrinsicIDAndArgs(
-                        *op, moduleTranslation, builder);
-    llvm::Value *result = createTcgen05LdSPCompressCall(
-        id, args, *op, moduleTranslation, builder);
-    $metadata = builder.CreateBitCast(
-        builder.CreateExtractValue(result, {0}),
-        moduleTranslation.convertType(op.getMetadata().getType()));
+    auto [id, args] = NVVM::Tcgen05LdRedSPCompressOp::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
+    llvm::Value *result = createTcgen05LdSPCompressCall(id, args, *op, moduleTranslation, builder);
+    $metadata = builder.CreateBitCast(builder.CreateExtractValue(result, {0}), moduleTranslation.convertType(op.getMetadata().getType()));
     $data = builder.CreateExtractValue(result, {1});
     if (Value redVal = op.getRedVal())
-      moduleTranslation.mapValue(redVal) =
-          builder.CreateExtractValue(result, {2});
+      moduleTranslation.mapValue(redVal) = builder.CreateExtractValue(result, {2});
   }];
 }
 
