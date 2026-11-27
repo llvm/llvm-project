@@ -12,7 +12,6 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 
 namespace llvm {
-class XtensaTargetMachine;
 class XtensaSubtarget;
 class XtensaInstrInfo;
 class XtensaRegisterInfo;

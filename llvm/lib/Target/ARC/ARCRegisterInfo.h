@@ -20,7 +20,6 @@
 
 namespace llvm {
 
-class TargetInstrInfo;
 class ARCSubtarget;
 
 struct ARCRegisterInfo : public ARCGenRegisterInfo {

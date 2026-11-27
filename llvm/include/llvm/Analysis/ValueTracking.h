@@ -33,7 +33,6 @@ class Operator;
 class AddOperator;
 class AssumptionCache;
 class DominatorTree;
-class GEPOperator;
 class WithOverflowInst;
 struct KnownBits;
 class KnownFPClass;

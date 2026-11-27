@@ -23,9 +23,6 @@
 
 namespace llvm {
 class IntrinsicInst;
-class SPIRVSubtarget;
-class MachineFunction;
-class MachineModuleInfo;
 
 namespace SPIRV {
 

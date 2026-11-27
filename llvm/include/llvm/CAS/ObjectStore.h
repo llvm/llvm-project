@@ -25,7 +25,6 @@
 namespace llvm {
 
 class MemoryBuffer;
-template <typename T> class unique_function;
 
 namespace cas {
 

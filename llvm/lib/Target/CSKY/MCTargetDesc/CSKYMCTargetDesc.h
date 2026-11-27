@@ -26,7 +26,6 @@ class MCObjectTargetWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class Target;
-class Triple;
 
 std::unique_ptr<MCObjectTargetWriter> createCSKYELFObjectWriter();
 

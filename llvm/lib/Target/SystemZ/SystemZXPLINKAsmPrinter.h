@@ -22,12 +22,10 @@
 
 namespace llvm {
 class MCStreamer;
-class MCSymbolGOFF;
 class MachineFunction;
 class MachineInstr;
 class MachineOperand;
 class Module;
-class raw_ostream;
 
 class LLVM_LIBRARY_VISIBILITY SystemZXPLINKAsmPrinter
     : public SystemZAsmPrinter {

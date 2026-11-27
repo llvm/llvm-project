@@ -44,15 +44,11 @@ using LVSmall = uint8_t;
 class LVElement;
 class LVLine;
 class LVLocation;
-class LVLocationSymbol;
 class LVObject;
 class LVOperation;
 class LVScope;
 class LVSymbol;
 class LVType;
-
-class LVOptions;
-class LVPatterns;
 
 LLVM_ABI StringRef typeNone();
 LLVM_ABI StringRef typeVoid();

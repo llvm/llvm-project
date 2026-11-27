@@ -30,7 +30,6 @@ class DataLayout;
 namespace sandboxir {
 
 class Context;
-class Function;
 class Value;
 class Instruction;
 class Type;

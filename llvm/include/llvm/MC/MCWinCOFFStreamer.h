@@ -17,13 +17,11 @@ namespace llvm {
 class MCAsmBackend;
 class MCContext;
 class MCCodeEmitter;
-class MCInst;
 class MCSection;
 class MCSubtargetInfo;
 class MCSymbol;
 class StringRef;
 class WinCOFFObjectWriter;
-class raw_pwrite_stream;
 
 class LLVM_ABI MCWinCOFFStreamer : public MCObjectStreamer {
 public:

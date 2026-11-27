@@ -19,7 +19,6 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-class MCExpr;
 class MCStreamer;
 class MachineInstr;
 class Module;

@@ -41,7 +41,6 @@ namespace llvm {
 
 class APInt;
 class AssemblerConstantPools;
-class MCAsmBackend;
 class MCAssembler;
 class MCLFIRewriter;
 class MCContext;

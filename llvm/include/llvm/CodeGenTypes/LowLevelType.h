@@ -39,7 +39,6 @@
 
 namespace llvm {
 
-class Type;
 class raw_ostream;
 
 class LLT {

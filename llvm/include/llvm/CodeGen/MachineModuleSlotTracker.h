@@ -20,7 +20,6 @@ namespace llvm {
 class Function;
 class MachineModuleInfo;
 class MachineFunction;
-class Module;
 
 using MFGetterFnT = function_ref<MachineFunction *(const Function &)>;
 

@@ -25,7 +25,6 @@
 
 namespace llvm {
 class Module;
-class GlobalVariable;
 class DXILResourceTypeMap;
 class DXILResourceMap;
 

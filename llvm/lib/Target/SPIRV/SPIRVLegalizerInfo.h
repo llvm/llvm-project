@@ -18,7 +18,6 @@
 
 namespace llvm {
 
-class LLVMContext;
 class SPIRVSubtarget;
 
 // This class provides the information for legalizing SPIR-V instructions.

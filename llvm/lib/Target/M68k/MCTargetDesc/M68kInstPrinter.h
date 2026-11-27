@@ -19,8 +19,6 @@
 
 namespace llvm {
 
-class TargetMachine;
-
 class M68kInstPrinter : public MCInstPrinter,
                         public M68kMemOperandPrinter<M68kInstPrinter, MCInst> {
   friend class M68kMemOperandPrinter;

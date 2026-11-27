@@ -18,7 +18,6 @@
 
 namespace llvm {
 class MCExpr;
-class MCInst;
 
 class LLVM_ABI MCWasmStreamer : public MCObjectStreamer {
 public:

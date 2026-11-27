@@ -37,7 +37,6 @@ class ELFObjectFileBase;
 class MachOObjectFile;
 class WasmObjectFile;
 class XCOFFObjectFile;
-class DXContainer;
 } // namespace object
 
 namespace objdump {

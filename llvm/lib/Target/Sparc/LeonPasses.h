@@ -16,7 +16,6 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
-class SparcSubtarget;
 
 class LLVM_LIBRARY_VISIBILITY SparcErrataWorkaroundLegacy
     : public MachineFunctionPass {

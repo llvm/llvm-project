@@ -449,8 +449,6 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SourceInfo::Contents::CompressionType)
 
 namespace llvm {
 
-class raw_ostream;
-
 namespace yaml {
 
 template <> struct MappingTraits<DXContainerYAML::VersionTuple> {

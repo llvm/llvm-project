@@ -16,7 +16,6 @@
 
 namespace llvm {
 class DWARFDebugInfoEntry;
-class DWARFDie;
 
 namespace dwarf_linker {
 namespace parallel {

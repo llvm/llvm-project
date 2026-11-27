@@ -19,7 +19,6 @@
 #include "CSKYGenRegisterInfo.inc"
 
 namespace llvm {
-class CSKYInstrInfo;
 
 class CSKYRegisterInfo : public CSKYGenRegisterInfo {
 public:

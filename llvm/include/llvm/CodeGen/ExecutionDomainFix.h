@@ -34,7 +34,6 @@
 namespace llvm {
 
 class MachineInstr;
-class TargetInstrInfo;
 
 /// A DomainValue is a bit like LiveIntervals' ValNo, but it also keeps track
 /// of execution domains.

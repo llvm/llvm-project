@@ -25,7 +25,6 @@ class User;
 class OperandUseIterator;
 class UserUseIterator;
 class CallBase;
-class CallBrInst;
 class PHINode;
 
 // Forward declare instruction wrapper classes so qualified friend

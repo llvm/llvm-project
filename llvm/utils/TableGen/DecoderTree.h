@@ -19,8 +19,6 @@
 
 namespace llvm {
 
-class InstructionEncoding;
-
 using PredicateSet = SetVector<CachedHashString>;
 using DecoderSet = SetVector<CachedHashString>;
 

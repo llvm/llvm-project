@@ -18,7 +18,6 @@
 
 namespace llvm {
 class HexagonTargetMachine;
-class ImmutablePass;
 class ModulePass;
 class PassRegistry;
 class FunctionPass;

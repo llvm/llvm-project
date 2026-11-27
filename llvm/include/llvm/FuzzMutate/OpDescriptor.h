@@ -25,7 +25,6 @@
 #include <functional>
 
 namespace llvm {
-class Instruction;
 namespace fuzzerop {
 
 /// @{

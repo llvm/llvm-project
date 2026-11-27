@@ -19,7 +19,6 @@
 
 namespace llvm {
 
-class TargetLowering;
 class AArch64FunctionInfo;
 class AArch64InstrInfo;
 class AArch64PrologueEmitter;

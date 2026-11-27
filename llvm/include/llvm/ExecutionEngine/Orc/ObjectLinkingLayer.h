@@ -26,11 +26,6 @@
 
 namespace llvm {
 
-namespace jitlink {
-class LinkGraph;
-class Symbol;
-} // namespace jitlink
-
 namespace orc {
 
 /// An ObjectLayer implementation built on JITLink.

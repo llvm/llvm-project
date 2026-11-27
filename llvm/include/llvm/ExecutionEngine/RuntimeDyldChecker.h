@@ -25,9 +25,7 @@
 namespace llvm {
 
 class StringRef;
-class MCDisassembler;
 class MemoryBuffer;
-class MCInstPrinter;
 class RuntimeDyld;
 class RuntimeDyldCheckerImpl;
 class raw_ostream;

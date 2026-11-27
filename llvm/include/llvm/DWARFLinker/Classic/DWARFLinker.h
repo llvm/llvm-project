@@ -196,7 +196,6 @@ public:
   virtual void finish() = 0;
 };
 
-class DwarfStreamer;
 using UnitListTy = std::vector<std::unique_ptr<CompileUnit>>;
 
 /// The core of the Dwarf linking logic.

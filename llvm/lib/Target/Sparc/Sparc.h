@@ -23,10 +23,7 @@
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
-class AsmPrinter;
 class FunctionPass;
-class MCInst;
-class MachineInstr;
 class PassRegistry;
 class SparcTargetMachine;
 

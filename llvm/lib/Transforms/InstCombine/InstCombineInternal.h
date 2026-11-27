@@ -49,11 +49,9 @@ class BlockFrequencyInfo;
 class DataLayout;
 class DominatorTree;
 class GEPOperator;
-class GlobalVariable;
 class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
 class TargetLibraryInfo;
-class User;
 
 /// Enum to specify how shift operations should be evaluated in
 /// canEvaluateShifted.

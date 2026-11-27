@@ -45,7 +45,6 @@ class Constant;
 class ConstantArray;
 class ConstantPtrAuth;
 class DataLayout;
-class DebugHandlerBase;
 class DIE;
 class DIEAbbrev;
 class DwarfDebug;

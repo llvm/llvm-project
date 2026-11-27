@@ -31,7 +31,6 @@ class MCInst;
 class MCInstrInfo;
 class MCOperand;
 class MCSubtargetInfo;
-class raw_ostream;
 
 /// Writes AVR machine code to a stream.
 class AVRMCCodeEmitter : public MCCodeEmitter {

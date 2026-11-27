@@ -24,8 +24,6 @@
 
 namespace llvm {
 class M68kSubtarget;
-class TargetInstrInfo;
-class Type;
 
 class M68kRegisterInfo : public M68kGenRegisterInfo {
   virtual void anchor();

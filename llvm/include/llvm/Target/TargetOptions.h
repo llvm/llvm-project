@@ -23,8 +23,6 @@
 #include <memory>
 
 namespace llvm {
-struct fltSemantics;
-class MachineFunction;
 class MemoryBuffer;
 
 namespace JumpTable {

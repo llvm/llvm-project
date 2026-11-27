@@ -23,7 +23,6 @@ class CodeGenInstruction;
 class CodeGenTarget;
 class Init;
 class Record;
-class RecordVal;
 class VarLenInst;
 
 // Represents a span of bits in the instruction encoding that's based on a span

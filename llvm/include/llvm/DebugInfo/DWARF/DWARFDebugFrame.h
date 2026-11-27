@@ -25,7 +25,6 @@
 namespace llvm {
 
 class raw_ostream;
-class MCRegisterInfo;
 struct DIDumpOptions;
 
 namespace dwarf {

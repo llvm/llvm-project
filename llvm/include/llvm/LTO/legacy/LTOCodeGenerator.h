@@ -57,12 +57,8 @@ template <typename T> class ArrayRef;
 class LLVMContext;
 class DiagnosticInfo;
 class Linker;
-class Mangler;
 class MemoryBuffer;
-class TargetLibraryInfo;
 class TargetMachine;
-class raw_ostream;
-class raw_pwrite_stream;
 
 /// Enable global value internalization in LTO.
 LLVM_ABI extern cl::opt<bool> EnableLTOInternalization;

@@ -31,8 +31,6 @@ namespace llvm {
 
 class AnalysisUsage;
 class LostDebugLocObserver;
-class MachineBasicBlock;
-class BlockFrequencyInfo;
 class GISelValueTracking;
 class MachineFunction;
 class MachineInstr;
@@ -43,11 +41,9 @@ class MachineOptimizationRemarkMissed;
 struct MachinePointerInfo;
 class MachineRegisterInfo;
 class MCInstrDesc;
-class ProfileSummaryInfo;
 class RegisterBankInfo;
 class TargetInstrInfo;
 class TargetLowering;
-class TargetPassConfig;
 class TargetRegisterInfo;
 class MCRegisterClass;
 using TargetRegisterClass = MCRegisterClass;

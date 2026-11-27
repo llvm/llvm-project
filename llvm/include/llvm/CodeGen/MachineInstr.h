@@ -56,7 +56,6 @@ class ModuleSlotTracker;
 class raw_ostream;
 template <typename T> class SmallVectorImpl;
 class SmallBitVector;
-class StringRef;
 class TargetInstrInfo;
 class MCRegisterClass;
 using TargetRegisterClass = MCRegisterClass;

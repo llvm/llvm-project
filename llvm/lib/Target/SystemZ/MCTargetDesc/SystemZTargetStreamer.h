@@ -23,7 +23,6 @@
 #include <utility>
 
 namespace llvm {
-class MCGOFFStreamer;
 class SystemZHLASMAsmStreamer;
 
 class SystemZTargetStreamer : public MCTargetStreamer {

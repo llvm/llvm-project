@@ -62,7 +62,6 @@ namespace llvm {
 
 class Module;
 class raw_ostream;
-class LLVMContext;
 class MIR2VecVocabLegacyAnalysis;
 class TargetInstrInfo;
 

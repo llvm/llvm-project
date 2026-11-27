@@ -39,9 +39,6 @@ struct CodeGenIntrinsic;
 namespace gi {
 
 class CXXPredicateCode;
-class LLTCodeGen;
-class LLTCodeGenOrTempType;
-class RuleMatcher;
 
 //===- PatternType --------------------------------------------------------===//
 

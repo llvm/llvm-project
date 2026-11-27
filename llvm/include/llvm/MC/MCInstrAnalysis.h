@@ -26,7 +26,6 @@
 namespace llvm {
 
 class MCRegisterInfo;
-class Triple;
 
 class LLVM_ABI MCInstrAnalysis {
 protected:

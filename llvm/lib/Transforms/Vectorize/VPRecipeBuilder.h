@@ -17,7 +17,6 @@ namespace llvm {
 
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
-struct HistogramInfo;
 struct VFRange;
 struct CompressedPtrInfo;
 

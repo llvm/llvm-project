@@ -25,7 +25,6 @@
 namespace llvm {
 
 class MCAssembler;
-class MCContext;
 class MCFixup;
 class MCSymbol;
 class MCSymbolELF;

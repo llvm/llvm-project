@@ -39,7 +39,6 @@ bool isCalleePop(CallingConv::ID CallingConv, bool IsVarArg, bool GuaranteeTCO);
 // TargetLowering Implementation
 //===--------------------------------------------------------------------===//
 
-class M68kMachineFunctionInfo;
 class M68kSubtarget;
 
 class M68kTargetLowering : public TargetLowering {

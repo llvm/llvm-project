@@ -16,9 +16,7 @@
 namespace llvm {
 
 class MachineRegisterInfo;
-class GCNSubtarget;
 class GISelValueTracking;
-class LLT;
 class MachineFunction;
 class MachineInstr;
 class MachineIRBuilder;

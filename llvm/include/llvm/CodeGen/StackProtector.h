@@ -28,7 +28,6 @@ namespace llvm {
 class BasicBlock;
 class Function;
 class Module;
-class TargetLoweringBase;
 class TargetMachine;
 
 class SSPLayoutInfo {

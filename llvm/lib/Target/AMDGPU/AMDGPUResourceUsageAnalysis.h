@@ -21,7 +21,6 @@
 
 namespace llvm {
 
-class GCNSubtarget;
 class MachineFunction;
 class GCNTargetMachine;
 

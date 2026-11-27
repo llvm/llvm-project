@@ -19,14 +19,11 @@ namespace llvm {
 class MCAsmInfo;
 class MCAssembler;
 class MCContext;
-class MCFixup;
 class MCFragment;
-class MCSection;
 class MCStreamer;
 class MCSymbol;
 class MCValue;
 class raw_ostream;
-class StringRef;
 class MCSymbolRefExpr;
 
 /// Base class for the full range of assembler expressions which are

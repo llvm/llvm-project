@@ -16,10 +16,6 @@
 #include "llvm/Support/DataExtractor.h"
 
 namespace llvm {
-class DWARFUnit;
-struct DIDumpOptions;
-class MCRegisterInfo;
-class raw_ostream;
 
 class DWARFExpression {
 public:

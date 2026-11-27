@@ -21,7 +21,6 @@
 
 namespace llvm {
 
-class MCAssembler;
 class MCContext;
 struct MCFixupKindInfo;
 

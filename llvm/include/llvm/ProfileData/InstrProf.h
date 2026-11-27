@@ -54,7 +54,6 @@ class GlobalVariable;
 struct InstrProfRecord;
 class InstrProfSymtab;
 class Instruction;
-class MDNode;
 class Module;
 
 // A struct to define how the data stream should be patched. For Indexed

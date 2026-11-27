@@ -18,8 +18,6 @@ class MCContext;
 class MCInst;
 class MCOperand;
 class MachineInstr;
-class MachineFunction;
-class Mangler;
 class AsmPrinter;
 
 /// This class is used to lower an MachineInstr into an MCInst.

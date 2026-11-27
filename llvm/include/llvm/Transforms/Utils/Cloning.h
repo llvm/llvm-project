@@ -38,7 +38,6 @@ class AAResults;
 class AllocaInst;
 class BasicBlock;
 class BlockFrequencyInfo;
-class DebugInfoFinder;
 class DominatorTree;
 class Function;
 class Instruction;

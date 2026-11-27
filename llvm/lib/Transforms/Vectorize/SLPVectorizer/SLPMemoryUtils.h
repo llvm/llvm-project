@@ -28,7 +28,6 @@
 namespace llvm {
 class AssumptionCache;
 class BasicBlock;
-class ConstantInt;
 class DataLayout;
 class DominatorTree;
 class FixedVectorType;
@@ -38,7 +37,6 @@ class ScalarEvolution;
 class TargetLibraryInfo;
 class Type;
 class Value;
-class VectorType;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {

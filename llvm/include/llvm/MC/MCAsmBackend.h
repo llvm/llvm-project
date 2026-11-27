@@ -24,7 +24,6 @@ class MCAssembler;
 class MCContext;
 struct MCDwarfFrameInfo;
 class MCInst;
-class MCObjectStreamer;
 class MCObjectTargetWriter;
 class MCObjectWriter;
 class MCOperand;

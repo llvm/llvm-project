@@ -25,7 +25,6 @@ namespace dwarf_linker {
 namespace parallel {
 
 class TypePool;
-class CompileUnit;
 class TypeEntryBody;
 
 using TypeEntry = StringMapEntry<std::atomic<TypeEntryBody *>>;

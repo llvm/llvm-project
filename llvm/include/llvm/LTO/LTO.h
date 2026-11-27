@@ -42,7 +42,6 @@ class LLVMContext;
 class MemoryBufferRef;
 class Module;
 class PassPlugin;
-class raw_pwrite_stream;
 class ToolOutputFile;
 
 /// Resolve linkage for prevailing symbols in the \p Index. Linkage changes

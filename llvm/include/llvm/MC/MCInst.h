@@ -32,7 +32,6 @@ class MCContext;
 class MCExpr;
 class MCInst;
 class MCInstPrinter;
-class MCRegisterInfo;
 class raw_ostream;
 
 /// Instances of this class represent operands of the MCInst class.

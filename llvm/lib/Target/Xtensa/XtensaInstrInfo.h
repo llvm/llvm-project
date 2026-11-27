@@ -26,7 +26,6 @@
 
 namespace llvm {
 
-class XtensaTargetMachine;
 class XtensaSubtarget;
 class XtensaInstrInfo : public XtensaGenInstrInfo {
   const XtensaRegisterInfo RI;

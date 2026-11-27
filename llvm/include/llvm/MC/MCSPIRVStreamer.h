@@ -19,8 +19,6 @@
 #include "llvm/MC/MCObjectWriter.h"
 
 namespace llvm {
-class MCInst;
-class raw_ostream;
 
 class MCSPIRVStreamer : public MCObjectStreamer {
 public:

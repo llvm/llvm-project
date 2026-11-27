@@ -20,7 +20,6 @@ namespace llvm {
 class MCSymbol;
 class MCSymbolWasm;
 class StringRef;
-class raw_ostream;
 
 /// This represents a section on wasm.
 class MCSectionWasm final : public MCSection {

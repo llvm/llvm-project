@@ -18,9 +18,7 @@
 
 namespace llvm {
 
-class MachineBasicBlock;
 class MachineDominatorTree;
-class MachineInstr;
 
 namespace rdf {
 

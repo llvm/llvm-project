@@ -17,7 +17,6 @@
 
 namespace llvm {
 class DWARFUnit;
-class MCRegisterInfo;
 class raw_ostream;
 class DWARFObject;
 struct DIDumpOptions;

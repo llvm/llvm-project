@@ -27,8 +27,6 @@ class MCCodeEmitter;
 class MCSubtargetInfo;
 class MCExpr;
 class MCAsmBackend;
-class raw_ostream;
-class raw_pwrite_stream;
 
 /// Streaming object file generation interface.
 ///

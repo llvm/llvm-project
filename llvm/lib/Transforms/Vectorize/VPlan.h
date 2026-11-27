@@ -54,7 +54,6 @@
 namespace llvm {
 
 class BasicBlock;
-class DominatorTree;
 struct VPTransformState;
 class raw_ostream;
 class SCEV;

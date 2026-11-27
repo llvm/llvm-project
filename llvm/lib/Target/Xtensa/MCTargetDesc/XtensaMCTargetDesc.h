@@ -25,15 +25,11 @@ class MCCodeEmitter;
 class MCContext;
 class MCInstrInfo;
 class MCObjectTargetWriter;
-class MCObjectWriter;
 class MCRegister;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCTargetOptions;
-class MachineInstr;
-class StringRef;
 class Target;
-class raw_ostream;
 
 extern Target TheXtensaTarget;
 

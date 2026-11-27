@@ -24,7 +24,6 @@ namespace llvm {
 class AAResults;
 class DependenceInfo;
 class Instruction;
-class LPMUpdater;
 class raw_ostream;
 class LoopInfo;
 class Loop;

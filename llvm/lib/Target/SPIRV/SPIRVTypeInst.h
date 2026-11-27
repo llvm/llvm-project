@@ -17,7 +17,6 @@
 
 namespace llvm {
 class MachineInstr;
-class MachineRegisterInfo;
 
 class SPIRVTypeInst {
   const MachineInstr *MI;

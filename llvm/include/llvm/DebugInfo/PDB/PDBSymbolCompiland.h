@@ -15,8 +15,6 @@
 
 namespace llvm {
 
-class raw_ostream;
-
 namespace pdb {
 
 class LLVM_ABI PDBSymbolCompiland : public PDBSymbol {

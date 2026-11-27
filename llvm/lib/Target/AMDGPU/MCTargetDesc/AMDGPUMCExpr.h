@@ -14,8 +14,6 @@
 
 namespace llvm {
 
-class Function;
-
 enum class LitModifier { None, Lit, Lit64 };
 
 /// AMDGPU target specific MCExpr operations.

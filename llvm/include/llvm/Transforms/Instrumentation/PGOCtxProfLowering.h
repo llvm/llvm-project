@@ -14,7 +14,6 @@
 
 #include "llvm/IR/PassManager.h"
 namespace llvm {
-class Type;
 namespace cl {
 class LibraryOptionsContext;
 } // namespace cl

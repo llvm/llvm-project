@@ -15,7 +15,6 @@
 
 namespace llvm {
 class GOFFObjectWriter;
-class MCSymbolGOFF;
 
 class LLVM_ABI MCGOFFStreamer : public MCObjectStreamer {
 

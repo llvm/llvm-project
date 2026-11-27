@@ -22,7 +22,6 @@
 namespace llvm {
 
 class Module;
-class ModuleSummaryIndex;
 
 class FatLtoCleanup : public RequiredPassInfoMixin<FatLtoCleanup> {
 public:

@@ -25,13 +25,8 @@ class MCContext;
 class MCInstrInfo;
 class MCRegisterInfo;
 class MCSubtargetInfo;
-class MCRelocationInfo;
 class MCTargetOptions;
 class Target;
-class Triple;
-class StringRef;
-class raw_ostream;
-class raw_pwrite_stream;
 
 MCAsmBackend *createM68kAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                    const MCRegisterInfo &MRI,

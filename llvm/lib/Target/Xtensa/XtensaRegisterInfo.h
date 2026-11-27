@@ -22,7 +22,6 @@
 namespace llvm {
 class MCRegisterClass;
 using TargetRegisterClass = MCRegisterClass;
-class XtensaInstrInfo;
 class XtensaSubtarget;
 
 class XtensaRegisterInfo : public XtensaGenRegisterInfo {
