@@ -2519,11 +2519,11 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; EG-NEXT:     SETGE_UINT T2.W, T1.W, T0.Z, Pred_sel_zero
 ; EG-NEXT:     SUB_INT * T3.W, T1.W, T0.Z, Pred_sel_zero
 ; EG-NEXT:     CNDE_INT * T1.W, T2.W, T1.W, T3.W, Pred_sel_zero
+; EG-NEXT:     MOV T1.Y, literal.x, Pred_sel_zero
 ; EG-NEXT:     SETGE_UINT T2.W, T1.W, T0.Z, Pred_sel_zero
 ; EG-NEXT:     SUB_INT * T3.W, T1.W, T0.Z, Pred_sel_zero
-; EG-NEXT:     CNDE_INT T1.X, T2.W, T1.W, T3.W, Pred_sel_zero
-; EG-NEXT:     MOV * T1.Y, literal.x, Pred_sel_zero
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT * T1.X, T2.W, T1.W, T3.W, Pred_sel_zero
 ; EG-NEXT:     LSHR * T0.X, T0.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -11065,11 +11065,11 @@ define amdgpu_kernel void @srem_i64_uniform(ptr addrspace(1) %out, i64 %num, i64
 ; EG-NEXT:     SETGE_UINT T3.W, T2.W, T0.W, Pred_sel_zero
 ; EG-NEXT:     SUB_INT * T4.W, T2.W, T0.W, Pred_sel_zero
 ; EG-NEXT:     CNDE_INT * T2.W, T3.W, T2.W, T4.W, Pred_sel_zero
+; EG-NEXT:     MOV T0.Y, literal.x, Pred_sel_zero
 ; EG-NEXT:     SETGE_UINT T3.W, T2.W, T0.W, Pred_sel_zero
 ; EG-NEXT:     SUB_INT * T0.W, T2.W, T0.W, Pred_sel_zero
-; EG-NEXT:     CNDE_INT T0.X, T3.W, T2.W, T0.W, Pred_sel_zero
-; EG-NEXT:     MOV * T0.Y, literal.x, Pred_sel_zero
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT * T0.X, T3.W, T2.W, T0.W, Pred_sel_zero
 ; EG-NEXT:     LSHR * T1.X, T1.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %result = srem i64 %num, %den
