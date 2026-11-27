@@ -2191,8 +2191,20 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
                                                LocationDescriptionKind::Empty);
         // Reset for the next piece.
         eval_ctx.loc_desc_kind = Memory;
-        return llvm::createStringError(
-            "expression stack needs at least 1 item for DW_OP_bit_piece");
+        const uint64_t piece_bit_size = op->getRawOperand(0);
+        std::optional<uint64_t> piece_byte_size = BitsToBytes(piece_bit_size);
+        if (!piece_byte_size ||
+            *piece_byte_size > std::numeric_limits<size_t>::max())
+          return llvm::createStringError("DW_OP_bit_piece size overflow");
+
+        // Match DW_OP_piece's zero-filled placeholder for unavailable bits.
+        Value curr_piece;
+        if (curr_piece.ResizeData(*piece_byte_size) != *piece_byte_size)
+          return llvm::createStringError(
+              "failed to resize DW_OP_bit_piece buffer");
+        if (llvm::Error err =
+                AppendPieceToComposite(eval_ctx, curr_piece, piece_bit_size))
+          return err;
       } else {
         const LocationDescriptionKind piece_locdesc = eval_ctx.loc_desc_kind;
         UpdateValueTypeFromLocationDescription(eval_ctx, piece_locdesc,
