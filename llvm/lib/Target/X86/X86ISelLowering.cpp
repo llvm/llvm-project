@@ -46848,6 +46848,20 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
       return Op0;
     break;
   }
+  case X86ISD::VSRLI: {
+    SDValue Op0 = Op.getOperand(0);
+    unsigned ShAmt = Op.getConstantOperandVal(1);
+    unsigned BitWidth = DemandedBits.getBitWidth();
+
+    // (VSRLI (VSHLI X, C1), C1) ZERO_EXTEND_INREG pattern
+    if (Op0.getOpcode() == X86ISD::VSHLI &&
+        ShAmt == Op0.getConstantOperandVal(1)) {
+      // If none of the extended bits are demanded, skip the shifts.
+      if (DemandedBits.getActiveBits() <= (BitWidth - ShAmt))
+        return Op0.getOperand(0);
+    }
+    break;
+  }
   case X86ISD::VSRAI:
     // iff we only need the sign bit then we can use the source directly.
     // TODO: generalize where we only demand extended signbits.
