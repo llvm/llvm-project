@@ -423,6 +423,7 @@ public:
                        MachineBasicBlock &Block, WaitcntBrackets &ScoreBrackets,
                        MachineInstr *OldWaitcntInstr);
   bool isAlwaysIssuedVALU(const MachineInstr &MI) const;
+  bool mayWriteZeroExec(const MachineInstr &MI) const;
   void updateEventWaitcntAfter(MachineInstr &Inst,
                                WaitcntBrackets *ScoreBrackets);
   bool isNextENDPGM(MachineBasicBlock::instr_iterator It,
@@ -2941,6 +2942,33 @@ bool SIInsertWaitcnts::isAlwaysIssuedVALU(const MachineInstr &MI) const {
   });
 }
 
+// Whether \p MI may turn a nonzero EXEC into zero.
+bool SIInsertWaitcnts::mayWriteZeroExec(const MachineInstr &MI) const {
+  if (!MI.modifiesRegister(AMDGPU::EXEC, &TRI))
+    return false;
+  switch (MI.getOpcode()) {
+  case AMDGPU::S_MOV_B32:
+  case AMDGPU::S_MOV_B64: {
+    const MachineOperand &Src = MI.getOperand(1);
+    return !Src.isImm() || Src.getImm() == 0;
+  }
+  case AMDGPU::S_OR_SAVEEXEC_B32:
+  case AMDGPU::S_OR_SAVEEXEC_B64:
+    return false;
+  case AMDGPU::S_OR_B32:
+  case AMDGPU::S_OR_B64:
+  case AMDGPU::S_WQM_B32:
+  case AMDGPU::S_WQM_B64: {
+    Register Dst = MI.getOperand(0).getReg();
+    return none_of(MI.explicit_uses(), [&](const MachineOperand &Op) {
+      return Op.isReg() && Op.getReg() == Dst;
+    });
+  }
+  default:
+    return true;
+  }
+}
+
 void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
                                                WaitcntBrackets *ScoreBrackets) {
 
@@ -2951,8 +2979,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   if (IsExpertMode) {
     if (isAlwaysIssuedVALU(Inst))
       ScoreBrackets->recordAlwaysIssuedVALU(Inst);
-    // TODO: Only handle instructions that may write 0 to EXEC.
-    if (Inst.modifiesRegister(AMDGPU::EXEC, &TRI))
+    if (mayWriteZeroExec(Inst))
       ScoreBrackets->recordExecWrite();
   }
 
