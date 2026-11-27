@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "mlir/Analysis/AnalysisManager.h"
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/CommonFolders.h"
@@ -25,7 +26,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/APFloat.h"

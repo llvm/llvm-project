@@ -3,8 +3,9 @@ add_mlir_unittest(MLIRInterfacesTests
   DataLayoutInterfacesTest.cpp
   InferIntRangeInterfaceTest.cpp
   MemorySlotUtilsTest.cpp
-  SideEffectInterfacesTest.cpp
   InferTypeOpInterfaceTest.cpp
+
+  PARTIAL_SOURCES_INTENDED
 
   DEPENDS
   MLIRTestInterfaceIncGen
@@ -12,7 +13,6 @@ add_mlir_unittest(MLIRInterfacesTests
 
 mlir_target_link_libraries(MLIRInterfacesTests
   PRIVATE
-  MLIRAnalysisBase
   MLIRArithDialect
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
@@ -23,7 +23,19 @@ mlir_target_link_libraries(MLIRInterfacesTests
   MLIRInferTypeOpInterface
   MLIRMemorySlotUtils
   MLIRParser
-  MLIRPass
   MLIRSideEffectInterfaces
 )
 target_link_libraries(MLIRInterfacesTests PRIVATE MLIRTestDialect)
+
+add_mlir_unittest(MLIRSideEffectInterfacesTests
+  SideEffectInterfacesTest.cpp
+)
+mlir_target_link_libraries(MLIRSideEffectInterfacesTests
+  PRIVATE
+  MLIRAnalysisBase
+  MLIRAnalysisManager
+  MLIRArithDialect
+  MLIRDLTIDialect
+  MLIRParser
+  MLIRSideEffectInterfaces
+)

@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Analysis/AnalysisManager.h"
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Parser/Parser.h"
-#include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/Support/Casting.h"
 #include <gtest/gtest.h>
@@ -146,7 +146,19 @@ TEST(Speculatability, LazyPassAnalysis) {
   )mlir",
                                             &context);
   ASSERT_TRUE(module);
-  ModuleAnalysisManager owner(*module, nullptr);
+  struct LayoutObserver : AnalysisInstrumentation {
+    unsigned starts = 0, finishes = 0;
+
+    void runBeforeAnalysis(StringRef, TypeID id, Operation *) override {
+      EXPECT_EQ(id, TypeID::get<DataLayoutAnalysis>());
+      ++starts;
+    }
+    void runAfterAnalysis(StringRef, TypeID id, Operation *) override {
+      EXPECT_EQ(id, TypeID::get<DataLayoutAnalysis>());
+      ++finishes;
+    }
+  } observer;
+  ModuleAnalysisManager owner(*module, &observer);
   AnalysisManager actx = owner;
   auto divs = module->getOps<arith::DivUIOp>();
   auto it = divs.begin();
@@ -163,4 +175,6 @@ TEST(Speculatability, LazyPassAnalysis) {
   AnalysisManager samePass = owner;
   EXPECT_TRUE(isPure(index, &samePass));
   EXPECT_EQ(&cached->get(), &samePass.getAnalysis<DataLayoutAnalysis>());
+  EXPECT_EQ(observer.starts, 1u);
+  EXPECT_EQ(observer.finishes, 1u);
 }
