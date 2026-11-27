@@ -47,3 +47,30 @@ enum class EConsecutiveExceptLast {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'EConsecutiveExceptLast_size' defined here
   // CHECK-FIXES: EConsecutiveExceptLast_size = 13,
 };
+
+// OK: all enumerators initialized in a class template.
+template <typename T, T V>
+struct TemplateAllInitialized {
+  enum E { A = V, B = V + 1, C = V + 2 };
+};
+template struct TemplateAllInitialized<int, 3>;
+
+// OK: only the first enumerator initialized in a class template.
+template <typename T, T V>
+struct TemplateOnlyFirstInitialized {
+  enum E { A = V, B, C };
+};
+template struct TemplateOnlyFirstInitialized<int, 3>;
+
+// Error: consecutive except last is not allowed by default, also in templates.
+template <typename T, T V>
+struct TemplateConsecutiveExceptLast {
+  enum E {
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initial values in enum 'TemplateConsecutiveExceptLast::E' are not consistent
+    A = V,
+    B = V + 1,
+    Size,
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: note: uninitialized enumerator 'Size' defined here
+  };
+};
+

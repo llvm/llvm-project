@@ -85,3 +85,88 @@ enum class EConsecutiveLastMismatch {
   // CHECK-FIXES: EConsecutiveLastMismatch_c = 2,
   EConsecutiveLastMismatch_last = 10,
 };
+
+// OK: consecutive except last inside a class template.
+template <typename T>
+struct TemplateConsecutive {
+  enum E { A = 0, B = 1, Size };
+};
+template struct TemplateConsecutive<int>;
+
+// OK: value-dependent initializers with consecutive offsets.
+template <typename T, T V>
+struct TemplateDependent {
+  enum E { A = V, B = V + 1, Size };
+};
+template struct TemplateDependent<int, 3>;
+
+// OK: value-dependent initializers with consecutive offsets, alternate forms.
+template <int V>
+struct TemplateDependentForms {
+  enum E { A = V - 1, B = (V), C = 1 + V, D = C + 1, Size };
+};
+template struct TemplateDependentForms<5>;
+
+// Error: the difference between unrelated template parameters is unknown.
+template <int V, int W>
+struct TemplateDependentUnrelated {
+  enum E {
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initial values in enum 'TemplateDependentUnrelated::E' are not consistent
+    A = V,
+    B = W,
+    Size,
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: note: uninitialized enumerator 'Size' defined here
+  };
+};
+
+// Error: value-dependent initializers with non-consecutive offsets.
+template <typename T, T V>
+struct TemplateDependentBreak {
+  enum E {
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initial values in enum 'TemplateDependentBreak::E' are not consistent
+    A = V,
+    B = V + 10,
+    Size,
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: note: uninitialized enumerator 'Size' defined here
+  };
+};
+
+// Error: non-dependent initializers with non-consecutive values in a template.
+template <typename T>
+struct TemplateNonDependentBreak {
+  enum E {
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initial values in enum 'TemplateNonDependentBreak::E' are not consistent
+    A = 0,
+    B = 2,
+    Size,
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: note: uninitialized enumerator 'Size' defined here
+  };
+};
+
+// OK: referencing the previous enumerator with a consecutive offset.
+template <int V>
+struct TemplateReferenceConsecutive {
+  enum E { A = V, B = A + 1, Size };
+};
+
+// Error: an alias is not consecutive, as in a non-template enum.
+template <int V>
+struct TemplateAlias {
+  enum E {
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: initial values in enum 'TemplateAlias::E' are not consistent
+    A = V,
+    B = A,
+    Size,
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: note: uninitialized enumerator 'Size' defined here
+  };
+};
+
+// Error: an alias is not consecutive, non-template counterpart.
+enum EAlias {
+  // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'EAlias' are not consistent
+  EAlias_a = 4,
+  EAlias_b = EAlias_a,
+  EAlias_size,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'EAlias_size' defined here
+  // CHECK-FIXES: EAlias_size = 5,
+};
