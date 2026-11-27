@@ -754,10 +754,16 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.fmed3").getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_append:
   case AMDGPU::BI__builtin_amdgcn_ds_consume: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    llvm::StringRef intrinsicName =
+        builtinId == AMDGPU::BI__builtin_amdgcn_ds_append ? "amdgcn.ds.append"
+                                                          : "amdgcn.ds.consume";
+
+    mlir::Value ptr = emitScalarExpr(expr->getArg(0));
+    mlir::Value isVolatile = builder.getFalse(loc);
+    return builder.emitIntrinsicCallOp(loc, intrinsicName,
+                                       convertType(expr->getType()),
+                                       mlir::ValueRange{ptr, isVolatile});
   }
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
