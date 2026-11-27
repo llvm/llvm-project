@@ -7,15 +7,14 @@ define <4 x i32> @srem_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i1> %m) {
 ; NEON-LABEL: srem_v4i32:
 ; NEON:       // %bb.0:
 ; NEON-NEXT:    ushll v2.4s, v2.4h, #0
+; NEON-NEXT:    movi v3.4s, #1
 ; NEON-NEXT:    fmov w8, s0
 ; NEON-NEXT:    mov w11, v0.s[1]
 ; NEON-NEXT:    mov w14, v0.s[2]
 ; NEON-NEXT:    mov w18, v0.s[3]
 ; NEON-NEXT:    shl v2.4s, v2.4s, #31
 ; NEON-NEXT:    cmlt v2.4s, v2.4s, #0
-; NEON-NEXT:    and v1.16b, v1.16b, v2.16b
-; NEON-NEXT:    mvn v2.16b, v2.16b
-; NEON-NEXT:    sub v1.4s, v1.4s, v2.4s
+; NEON-NEXT:    bif v1.16b, v3.16b, v2.16b
 ; NEON-NEXT:    fmov w9, s1
 ; NEON-NEXT:    mov w12, v1.s[1]
 ; NEON-NEXT:    mov w15, v1.s[2]
@@ -37,13 +36,12 @@ define <4 x i32> @srem_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i1> %m) {
 ; SVE-LABEL: srem_v4i32:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ushll v2.4s, v2.4h, #0
-; SVE-NEXT:    ptrue p0.s, vl4
+; SVE-NEXT:    movi v3.4s, #1
 ; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    shl v2.4s, v2.4s, #31
 ; SVE-NEXT:    cmlt v2.4s, v2.4s, #0
-; SVE-NEXT:    and v1.16b, v1.16b, v2.16b
-; SVE-NEXT:    mvn v2.16b, v2.16b
-; SVE-NEXT:    sub v1.4s, v1.4s, v2.4s
+; SVE-NEXT:    bif v1.16b, v3.16b, v2.16b
 ; SVE-NEXT:    movprfx z2, z0
 ; SVE-NEXT:    sdiv z2.s, p0/m, z2.s, z1.s
 ; SVE-NEXT:    mls v0.4s, v2.4s, v1.4s
@@ -57,13 +55,13 @@ define <2 x i64> @srem_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i1> %m) {
 ; NEON-LABEL: srem_v2i64:
 ; NEON:       // %bb.0:
 ; NEON-NEXT:    ushll v2.2d, v2.2s, #0
-; NEON-NEXT:    fmov x8, d0
+; NEON-NEXT:    mov w8, #1 // =0x1
 ; NEON-NEXT:    mov x11, v0.d[1]
+; NEON-NEXT:    dup v3.2d, x8
+; NEON-NEXT:    fmov x8, d0
 ; NEON-NEXT:    shl v2.2d, v2.2d, #63
 ; NEON-NEXT:    cmlt v2.2d, v2.2d, #0
-; NEON-NEXT:    and v1.16b, v1.16b, v2.16b
-; NEON-NEXT:    mvn v2.16b, v2.16b
-; NEON-NEXT:    sub v1.2d, v1.2d, v2.2d
+; NEON-NEXT:    bif v1.16b, v3.16b, v2.16b
 ; NEON-NEXT:    fmov x9, d1
 ; NEON-NEXT:    mov x12, v1.d[1]
 ; NEON-NEXT:    sdiv x10, x8, x9
@@ -77,13 +75,12 @@ define <2 x i64> @srem_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i1> %m) {
 ; SVE-LABEL: srem_v2i64:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ushll v2.2d, v2.2s, #0
-; SVE-NEXT:    ptrue p0.d, vl2
+; SVE-NEXT:    mov z3.d, #1 // =0x1
 ; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    ptrue p0.d, vl2
 ; SVE-NEXT:    shl v2.2d, v2.2d, #63
 ; SVE-NEXT:    cmlt v2.2d, v2.2d, #0
-; SVE-NEXT:    and v1.16b, v1.16b, v2.16b
-; SVE-NEXT:    mvn v2.16b, v2.16b
-; SVE-NEXT:    sub v1.2d, v1.2d, v2.2d
+; SVE-NEXT:    bif v1.16b, v3.16b, v2.16b
 ; SVE-NEXT:    movprfx z2, z0
 ; SVE-NEXT:    sdiv z2.d, p0/m, z2.d, z1.d
 ; SVE-NEXT:    mls z0.d, p0/m, z2.d, z1.d
@@ -98,8 +95,10 @@ define <4 x i64> @srem_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ; NEON-LABEL: srem_v4i64:
 ; NEON:       // %bb.0:
 ; NEON-NEXT:    ushll v4.4s, v4.4h, #0
-; NEON-NEXT:    mov x8, v1.d[1]
+; NEON-NEXT:    mov w8, #1 // =0x1
 ; NEON-NEXT:    fmov x11, d1
+; NEON-NEXT:    dup v6.2d, x8
+; NEON-NEXT:    mov x8, v1.d[1]
 ; NEON-NEXT:    fmov x15, d0
 ; NEON-NEXT:    mov x18, v0.d[1]
 ; NEON-NEXT:    ushll2 v5.2d, v4.4s, #0
@@ -108,12 +107,8 @@ define <4 x i64> @srem_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ; NEON-NEXT:    shl v1.2d, v1.2d, #63
 ; NEON-NEXT:    cmlt v5.2d, v5.2d, #0
 ; NEON-NEXT:    cmlt v1.2d, v1.2d, #0
-; NEON-NEXT:    and v3.16b, v3.16b, v5.16b
-; NEON-NEXT:    mvn v5.16b, v5.16b
-; NEON-NEXT:    and v2.16b, v2.16b, v1.16b
-; NEON-NEXT:    mvn v1.16b, v1.16b
-; NEON-NEXT:    sub v3.2d, v3.2d, v5.2d
-; NEON-NEXT:    sub v1.2d, v2.2d, v1.2d
+; NEON-NEXT:    bif v3.16b, v6.16b, v5.16b
+; NEON-NEXT:    bsl v1.16b, v2.16b, v6.16b
 ; NEON-NEXT:    mov x9, v3.d[1]
 ; NEON-NEXT:    fmov x12, d3
 ; NEON-NEXT:    fmov x14, d1
@@ -135,29 +130,26 @@ define <4 x i64> @srem_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ; SVE-LABEL: srem_v4i64:
 ; SVE:       // %bb.0:
 ; SVE-NEXT:    ushll v4.4s, v4.4h, #0
-; SVE-NEXT:    ptrue p0.d, vl2
+; SVE-NEXT:    mov z6.d, #1 // =0x1
 ; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    ptrue p0.d, vl2
 ; SVE-NEXT:    ushll2 v5.2d, v4.4s, #0
 ; SVE-NEXT:    ushll v4.2d, v4.2s, #0
 ; SVE-NEXT:    shl v5.2d, v5.2d, #63
 ; SVE-NEXT:    shl v4.2d, v4.2d, #63
 ; SVE-NEXT:    cmlt v5.2d, v5.2d, #0
 ; SVE-NEXT:    cmlt v4.2d, v4.2d, #0
-; SVE-NEXT:    and v3.16b, v3.16b, v5.16b
-; SVE-NEXT:    mvn v5.16b, v5.16b
-; SVE-NEXT:    and v2.16b, v2.16b, v4.16b
-; SVE-NEXT:    mvn v4.16b, v4.16b
-; SVE-NEXT:    sub v3.2d, v3.2d, v5.2d
-; SVE-NEXT:    sub v2.2d, v2.2d, v4.2d
+; SVE-NEXT:    bif v3.16b, v6.16b, v5.16b
+; SVE-NEXT:    bif v2.16b, v6.16b, v4.16b
 ; SVE-NEXT:    movprfx z5, z1
 ; SVE-NEXT:    sdiv z5.d, p0/m, z5.d, z3.d
 ; SVE-NEXT:    movprfx z4, z0
 ; SVE-NEXT:    sdiv z4.d, p0/m, z4.d, z2.d
 ; SVE-NEXT:    mls z1.d, p0/m, z5.d, z3.d
 ; SVE-NEXT:    mls z0.d, p0/m, z4.d, z2.d
-; SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; SVE-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; SVE-NEXT:    ret
   %res = call <4 x i64> @llvm.masked.srem(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m)
   ret <4 x i64> %res
@@ -405,6 +397,7 @@ define <3 x i10> @srem_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; SVE-NEXT:    fmov s1, w3
 ; SVE-NEXT:    ldr w8, [sp]
 ; SVE-NEXT:    fmov s2, w0
+; SVE-NEXT:    movi v3.4h, #1
 ; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    mov v1.h[1], w4
 ; SVE-NEXT:    mov v0.h[0], w6
@@ -416,20 +409,18 @@ define <3 x i10> @srem_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; SVE-NEXT:    mov v0.h[2], w8
 ; SVE-NEXT:    shl v2.4h, v2.4h, #6
 ; SVE-NEXT:    sshr v1.4h, v1.4h, #6
-; SVE-NEXT:    sshr v2.4h, v2.4h, #6
 ; SVE-NEXT:    shl v0.4h, v0.4h, #15
-; SVE-NEXT:    sshll v3.4s, v2.4h, #0
 ; SVE-NEXT:    cmlt v0.4h, v0.4h, #0
-; SVE-NEXT:    and v1.8b, v1.8b, v0.8b
-; SVE-NEXT:    mvn v0.8b, v0.8b
-; SVE-NEXT:    sub v0.4h, v1.4h, v0.4h
-; SVE-NEXT:    sshll v1.4s, v0.4h, #0
-; SVE-NEXT:    sdivr z1.s, p0/m, z1.s, z3.s
-; SVE-NEXT:    xtn v1.4h, v1.4s
-; SVE-NEXT:    mls v2.4h, v1.4h, v0.4h
-; SVE-NEXT:    umov w0, v2.h[0]
-; SVE-NEXT:    umov w1, v2.h[1]
-; SVE-NEXT:    umov w2, v2.h[2]
+; SVE-NEXT:    bsl v0.8b, v1.8b, v3.8b
+; SVE-NEXT:    sshr v1.4h, v2.4h, #6
+; SVE-NEXT:    sshll v3.4s, v1.4h, #0
+; SVE-NEXT:    sshll v2.4s, v0.4h, #0
+; SVE-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
+; SVE-NEXT:    xtn v2.4h, v2.4s
+; SVE-NEXT:    mls v1.4h, v2.4h, v0.4h
+; SVE-NEXT:    umov w0, v1.h[0]
+; SVE-NEXT:    umov w1, v1.h[1]
+; SVE-NEXT:    umov w2, v1.h[2]
 ; SVE-NEXT:    ret
   %res = call <3 x i10> @llvm.masked.srem(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m)
   ret <3 x i10> %res

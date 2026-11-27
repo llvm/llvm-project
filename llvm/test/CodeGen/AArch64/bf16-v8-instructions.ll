@@ -3820,23 +3820,22 @@ define <8 x bfloat> @test_sitofp_i64(<8 x i64> %a) #0 {
 ; CHECK-CVT-NEXT:    mov v4.s[2], v0.s[0]
 ; CHECK-CVT-NEXT:    movi v0.4s, #1
 ; CHECK-CVT-NEXT:    mov v2.s[3], v1.s[0]
-; CHECK-CVT-NEXT:    movi v1.4s, #127, msl #8
 ; CHECK-CVT-NEXT:    mov v4.s[3], v3.s[0]
-; CHECK-CVT-NEXT:    ushr v3.4s, v2.4s, #16
-; CHECK-CVT-NEXT:    add v6.4s, v2.4s, v1.4s
-; CHECK-CVT-NEXT:    ushr v5.4s, v4.4s, #16
-; CHECK-CVT-NEXT:    add v1.4s, v4.4s, v1.4s
-; CHECK-CVT-NEXT:    and v3.16b, v3.16b, v0.16b
-; CHECK-CVT-NEXT:    and v0.16b, v5.16b, v0.16b
+; CHECK-CVT-NEXT:    ushr v1.4s, v2.4s, #16
 ; CHECK-CVT-NEXT:    fcmeq v5.4s, v2.4s, v2.4s
-; CHECK-CVT-NEXT:    orr v2.4s, #64, lsl #16
-; CHECK-CVT-NEXT:    add v3.4s, v3.4s, v6.4s
+; CHECK-CVT-NEXT:    ushr v3.4s, v4.4s, #16
 ; CHECK-CVT-NEXT:    fcmeq v6.4s, v4.4s, v4.4s
+; CHECK-CVT-NEXT:    and v1.16b, v1.16b, v0.16b
+; CHECK-CVT-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-CVT-NEXT:    movi v3.4s, #127, msl #8
+; CHECK-CVT-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-CVT-NEXT:    orr v2.4s, #64, lsl #16
+; CHECK-CVT-NEXT:    add v0.4s, v0.4s, v4.4s
 ; CHECK-CVT-NEXT:    orr v4.4s, #64, lsl #16
-; CHECK-CVT-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-CVT-NEXT:    mov v1.16b, v5.16b
+; CHECK-CVT-NEXT:    add v1.4s, v1.4s, v3.4s
+; CHECK-CVT-NEXT:    add v0.4s, v0.4s, v3.4s
+; CHECK-CVT-NEXT:    bif v1.16b, v2.16b, v5.16b
 ; CHECK-CVT-NEXT:    bif v0.16b, v4.16b, v6.16b
-; CHECK-CVT-NEXT:    bsl v1.16b, v3.16b, v2.16b
 ; CHECK-CVT-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -4044,23 +4043,22 @@ define <8 x bfloat> @test_uitofp_i64(<8 x i64> %a) #0 {
 ; CHECK-CVT-NEXT:    mov v4.s[2], v0.s[0]
 ; CHECK-CVT-NEXT:    movi v0.4s, #1
 ; CHECK-CVT-NEXT:    mov v2.s[3], v1.s[0]
-; CHECK-CVT-NEXT:    movi v1.4s, #127, msl #8
 ; CHECK-CVT-NEXT:    mov v4.s[3], v3.s[0]
-; CHECK-CVT-NEXT:    ushr v3.4s, v2.4s, #16
-; CHECK-CVT-NEXT:    add v6.4s, v2.4s, v1.4s
-; CHECK-CVT-NEXT:    ushr v5.4s, v4.4s, #16
-; CHECK-CVT-NEXT:    add v1.4s, v4.4s, v1.4s
-; CHECK-CVT-NEXT:    and v3.16b, v3.16b, v0.16b
-; CHECK-CVT-NEXT:    and v0.16b, v5.16b, v0.16b
+; CHECK-CVT-NEXT:    ushr v1.4s, v2.4s, #16
 ; CHECK-CVT-NEXT:    fcmeq v5.4s, v2.4s, v2.4s
-; CHECK-CVT-NEXT:    orr v2.4s, #64, lsl #16
-; CHECK-CVT-NEXT:    add v3.4s, v3.4s, v6.4s
+; CHECK-CVT-NEXT:    ushr v3.4s, v4.4s, #16
 ; CHECK-CVT-NEXT:    fcmeq v6.4s, v4.4s, v4.4s
+; CHECK-CVT-NEXT:    and v1.16b, v1.16b, v0.16b
+; CHECK-CVT-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-CVT-NEXT:    movi v3.4s, #127, msl #8
+; CHECK-CVT-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-CVT-NEXT:    orr v2.4s, #64, lsl #16
+; CHECK-CVT-NEXT:    add v0.4s, v0.4s, v4.4s
 ; CHECK-CVT-NEXT:    orr v4.4s, #64, lsl #16
-; CHECK-CVT-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-CVT-NEXT:    mov v1.16b, v5.16b
+; CHECK-CVT-NEXT:    add v1.4s, v1.4s, v3.4s
+; CHECK-CVT-NEXT:    add v0.4s, v0.4s, v3.4s
+; CHECK-CVT-NEXT:    bif v1.16b, v2.16b, v5.16b
 ; CHECK-CVT-NEXT:    bif v0.16b, v4.16b, v6.16b
-; CHECK-CVT-NEXT:    bsl v1.16b, v3.16b, v2.16b
 ; CHECK-CVT-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
 ; CHECK-CVT-NEXT:    ret
 ;
@@ -4160,20 +4158,20 @@ define <8 x bfloat> @test_fptrunc_double(<8 x double> %a) {
 ; CHECK-CVT-SD-NEXT:    fcvtxn2 v2.4s, v3.2d
 ; CHECK-CVT-SD-NEXT:    fcvtxn2 v0.4s, v1.2d
 ; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
-; CHECK-CVT-SD-NEXT:    movi v3.4s, #127, msl #8
-; CHECK-CVT-SD-NEXT:    ushr v4.4s, v2.4s, #16
-; CHECK-CVT-SD-NEXT:    ushr v5.4s, v0.4s, #16
-; CHECK-CVT-SD-NEXT:    add v6.4s, v2.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    add v3.4s, v0.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    and v4.16b, v4.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    and v1.16b, v5.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    ushr v3.4s, v2.4s, #16
+; CHECK-CVT-SD-NEXT:    ushr v4.4s, v0.4s, #16
 ; CHECK-CVT-SD-NEXT:    fcmeq v5.4s, v2.4s, v2.4s
-; CHECK-CVT-SD-NEXT:    orr v2.4s, #64, lsl #16
-; CHECK-CVT-SD-NEXT:    add v4.4s, v4.4s, v6.4s
 ; CHECK-CVT-SD-NEXT:    fcmeq v6.4s, v0.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    and v3.16b, v3.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    and v1.16b, v4.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    movi v4.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    add v3.4s, v3.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    orr v2.4s, #64, lsl #16
 ; CHECK-CVT-SD-NEXT:    orr v0.4s, #64, lsl #16
-; CHECK-CVT-SD-NEXT:    bit v2.16b, v4.16b, v5.16b
+; CHECK-CVT-SD-NEXT:    add v3.4s, v3.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    bit v2.16b, v3.16b, v5.16b
 ; CHECK-CVT-SD-NEXT:    bit v0.16b, v1.16b, v6.16b
 ; CHECK-CVT-SD-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
 ; CHECK-CVT-SD-NEXT:    ret
@@ -4275,20 +4273,20 @@ define <8 x bfloat> @test_fptrunc_double_fast(<8 x double> %a) {
 ; CHECK-CVT-SD-NEXT:    fcvtxn2 v2.4s, v3.2d
 ; CHECK-CVT-SD-NEXT:    fcvtxn2 v0.4s, v1.2d
 ; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
-; CHECK-CVT-SD-NEXT:    movi v3.4s, #127, msl #8
-; CHECK-CVT-SD-NEXT:    ushr v4.4s, v2.4s, #16
-; CHECK-CVT-SD-NEXT:    ushr v5.4s, v0.4s, #16
-; CHECK-CVT-SD-NEXT:    add v6.4s, v2.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    add v3.4s, v0.4s, v3.4s
-; CHECK-CVT-SD-NEXT:    and v4.16b, v4.16b, v1.16b
-; CHECK-CVT-SD-NEXT:    and v1.16b, v5.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    ushr v3.4s, v2.4s, #16
+; CHECK-CVT-SD-NEXT:    ushr v4.4s, v0.4s, #16
 ; CHECK-CVT-SD-NEXT:    fcmeq v5.4s, v2.4s, v2.4s
-; CHECK-CVT-SD-NEXT:    orr v2.4s, #64, lsl #16
-; CHECK-CVT-SD-NEXT:    add v4.4s, v4.4s, v6.4s
 ; CHECK-CVT-SD-NEXT:    fcmeq v6.4s, v0.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v3.4s
+; CHECK-CVT-SD-NEXT:    and v3.16b, v3.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    and v1.16b, v4.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    movi v4.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    add v3.4s, v3.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    orr v2.4s, #64, lsl #16
 ; CHECK-CVT-SD-NEXT:    orr v0.4s, #64, lsl #16
-; CHECK-CVT-SD-NEXT:    bit v2.16b, v4.16b, v5.16b
+; CHECK-CVT-SD-NEXT:    add v3.4s, v3.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v4.4s
+; CHECK-CVT-SD-NEXT:    bit v2.16b, v3.16b, v5.16b
 ; CHECK-CVT-SD-NEXT:    bit v0.16b, v1.16b, v6.16b
 ; CHECK-CVT-SD-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
 ; CHECK-CVT-SD-NEXT:    ret

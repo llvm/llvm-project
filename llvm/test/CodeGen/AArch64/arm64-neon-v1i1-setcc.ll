@@ -112,6 +112,7 @@ define <1 x float> @test_vselect_f32(<1 x float> %i105, <1 x float> %in) {
 ; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    cset w8, vs
 ; CHECK-NEXT:    fmov s2, w8
+; CHECK-NEXT:    mov v2.s[1], w8
 ; CHECK-NEXT:    shl v2.2s, v2.2s, #31
 ; CHECK-NEXT:    cmlt v2.2s, v2.2s, #0
 ; CHECK-NEXT:    bit v0.8b, v1.8b, v2.8b
@@ -159,6 +160,9 @@ define <1 x i16> @test_vselect_f16_i16(<1 x half> %i105, <1 x half> %in, <1 x i1
 ; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    cset w8, vs
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    mov v0.h[1], w8
+; CHECK-NEXT:    mov v0.h[2], w8
+; CHECK-NEXT:    mov v0.h[3], w8
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
 ; CHECK-NEXT:    bsl v0.8b, v2.8b, v3.8b
@@ -189,6 +193,7 @@ define <1 x i32> @test_vselect_f16_i32(<1 x half> %i105, <1 x half> %in, <1 x i3
 ; CHECK-NEXT:    fcmp s0, s0
 ; CHECK-NEXT:    cset w8, vs
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    mov v0.s[1], w8
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
 ; CHECK-NEXT:    bsl v0.8b, v2.8b, v3.8b

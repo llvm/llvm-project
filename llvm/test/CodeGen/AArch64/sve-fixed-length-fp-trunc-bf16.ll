@@ -13,9 +13,9 @@ define void @fcvt_v2f32_v2bf16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-BASE-NEXT:    movi v0.4s, #127, msl #8
 ; CHECK-BASE-NEXT:    ushr v2.4s, v1.4s, #16
 ; CHECK-BASE-NEXT:    fcmeq v3.4s, v1.4s, v1.4s
-; CHECK-BASE-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-BASE-NEXT:    orr v1.4s, #64, lsl #16
 ; CHECK-BASE-NEXT:    and z2.s, z2.s, #0x1
+; CHECK-BASE-NEXT:    add v2.4s, v2.4s, v1.4s
+; CHECK-BASE-NEXT:    orr v1.4s, #64, lsl #16
 ; CHECK-BASE-NEXT:    add v0.4s, v2.4s, v0.4s
 ; CHECK-BASE-NEXT:    bif v0.16b, v1.16b, v3.16b
 ; CHECK-BASE-NEXT:    shrn v0.4h, v0.4s, #16
@@ -41,9 +41,9 @@ define void @fcvt_v4f32_v4bf16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-BASE-NEXT:    movi v0.4s, #127, msl #8
 ; CHECK-BASE-NEXT:    ushr v2.4s, v1.4s, #16
 ; CHECK-BASE-NEXT:    fcmeq v3.4s, v1.4s, v1.4s
-; CHECK-BASE-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-BASE-NEXT:    orr v1.4s, #64, lsl #16
 ; CHECK-BASE-NEXT:    and z2.s, z2.s, #0x1
+; CHECK-BASE-NEXT:    add v2.4s, v2.4s, v1.4s
+; CHECK-BASE-NEXT:    orr v1.4s, #64, lsl #16
 ; CHECK-BASE-NEXT:    add v0.4s, v2.4s, v0.4s
 ; CHECK-BASE-NEXT:    bif v0.16b, v1.16b, v3.16b
 ; CHECK-BASE-NEXT:    shrn v0.4h, v0.4s, #16

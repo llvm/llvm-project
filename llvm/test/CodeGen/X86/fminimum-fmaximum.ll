@@ -1361,12 +1361,13 @@ define <2 x double> @test_fminimum_vector_signed_zero(<2 x double> %x) {
 ; SSE2-LABEL: test_fminimum_vector_signed_zero:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movapd %xmm0, %xmm1
-; SSE2-NEXT:    minpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    cmpunordpd %xmm0, %xmm1
 ; SSE2-NEXT:    movapd %xmm0, %xmm2
-; SSE2-NEXT:    cmpunordpd %xmm0, %xmm2
-; SSE2-NEXT:    andpd %xmm2, %xmm0
-; SSE2-NEXT:    andnpd %xmm1, %xmm2
-; SSE2-NEXT:    orpd %xmm2, %xmm0
+; SSE2-NEXT:    andpd %xmm1, %xmm2
+; SSE2-NEXT:    minpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    andnpd %xmm0, %xmm1
+; SSE2-NEXT:    orpd %xmm2, %xmm1
+; SSE2-NEXT:    movapd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_fminimum_vector_signed_zero:
@@ -1444,14 +1445,15 @@ define <4 x float> @test_fmaximum_vector_signed_zero_first(<4 x float> %x) {
 define <4 x float> @test_fmaximum_vector_zero(<4 x float> %x) {
 ; SSE2-LABEL: test_fmaximum_vector_zero:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:    maxps %xmm1, %xmm2
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
 ; SSE2-NEXT:    cmpunordps %xmm0, %xmm1
-; SSE2-NEXT:    andps %xmm1, %xmm0
-; SSE2-NEXT:    andnps %xmm2, %xmm1
-; SSE2-NEXT:    orps %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm0, %xmm2
+; SSE2-NEXT:    andps %xmm1, %xmm2
+; SSE2-NEXT:    xorps %xmm3, %xmm3
+; SSE2-NEXT:    maxps %xmm3, %xmm0
+; SSE2-NEXT:    andnps %xmm0, %xmm1
+; SSE2-NEXT:    orps %xmm2, %xmm1
+; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX1-LABEL: test_fmaximum_vector_zero:

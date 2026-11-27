@@ -11,11 +11,15 @@ define <4 x i8> @poison_build_vector_known_bits(<4 x i32> %v) {
 ; CHECK-NEXT:    packssdw %xmm0, %xmm0
 ; CHECK-NEXT:    packsswb %xmm0, %xmm0
 ; CHECK-NEXT:    psllw $7, %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-NEXT:    pcmpgtb %xmm0, %xmm1
-; CHECK-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    movd {{.*#+}} xmm2 = [11,11,11,11,0,0,0,0,0,0,0,0,0,0,0,0]
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    pandn %xmm2, %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    por %xmm2, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %icmp = icmp ugt <4 x i32> %v, splat (i32 -9)
   %zext8 = zext <4 x i1> %icmp to <4 x i8>

@@ -41,9 +41,10 @@ define <2 x i32> @trunc_packus_v2i64_v2i32(<2 x i64> %a0) {
 ; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm2
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm1
@@ -161,9 +162,10 @@ define void @trunc_packus_v2i64_v2i32_store(<2 x i64> %a0, ptr %p1) {
 ; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm2
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm1
@@ -299,9 +301,10 @@ define <4 x i32> @trunc_packus_v4i64_v4i32(<4 x i64> %a0) {
 ; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-SSSE3-NEXT:    movdqa %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm3
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm2, %xmm1
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm1
+; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm1
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm3
@@ -309,9 +312,10 @@ define <4 x i32> @trunc_packus_v4i64_v4i32(<4 x i64> %a0) {
 ; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-SSSE3-NEXT:    movdqa %xmm1, %xmm4
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm4
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm2, %xmm1
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm1
+; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm1
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm1, %xmm2
 ; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm0
@@ -548,9 +552,10 @@ define <8 x i32> @trunc_packus_v8i64_v8i32(ptr %p0) "min-legal-vector-width"="25
 ; SSE2-SSSE3-NEXT:    pxor %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    movdqa %xmm1, %xmm4
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm0, %xmm4
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm1
+; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm1
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm1, %xmm4
 ; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm4
@@ -558,20 +563,22 @@ define <8 x i32> @trunc_packus_v8i64_v8i32(ptr %p0) "min-legal-vector-width"="25
 ; SSE2-SSSE3-NEXT:    pxor %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    movdqa %xmm1, %xmm5
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm0, %xmm5
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm6
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[1,1,3,3]
+; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm7
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm5[1,1,3,3]
-; SSE2-SSSE3-NEXT:    por %xmm6, %xmm1
+; SSE2-SSSE3-NEXT:    por %xmm7, %xmm1
 ; SSE2-SSSE3-NEXT:    pand %xmm8, %xmm1
 ; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm4[0,2]
 ; SSE2-SSSE3-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-SSSE3-NEXT:    pxor %xmm0, %xmm4
 ; SSE2-SSSE3-NEXT:    movdqa %xmm4, %xmm5
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm0, %xmm5
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm4
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm4
+; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm4
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm4, %xmm5
 ; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm5
@@ -579,9 +586,10 @@ define <8 x i32> @trunc_packus_v8i64_v8i32(ptr %p0) "min-legal-vector-width"="25
 ; SSE2-SSSE3-NEXT:    pxor %xmm0, %xmm3
 ; SSE2-SSSE3-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm0, %xmm4
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm3
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm3
+; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm3
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm3, %xmm0
 ; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm0
@@ -1106,9 +1114,10 @@ define <4 x i16> @trunc_packus_v4i64_v4i16(<4 x i64> %a0) {
 ; SSE2-SSSE3-NEXT:    pxor %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    movdqa %xmm1, %xmm4
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm4
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm1
+; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm1
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm1, %xmm4
 ; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm4
@@ -1116,9 +1125,10 @@ define <4 x i16> @trunc_packus_v4i64_v4i16(<4 x i64> %a0) {
 ; SSE2-SSSE3-NEXT:    pxor %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    movdqa %xmm1, %xmm5
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm5
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm1
+; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm1
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm5[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm0
@@ -1301,9 +1311,10 @@ define void @trunc_packus_v4i64_v4i16_store(<4 x i64> %a0, ptr%p1) {
 ; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm1
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm0, %xmm1
 ; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm1
@@ -1311,9 +1322,10 @@ define void @trunc_packus_v4i64_v4i16_store(<4 x i64> %a0, ptr%p1) {
 ; SSE2-SSSE3-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    movdqa %xmm0, %xmm4
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm4
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm0
+; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm0, %xmm2
 ; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm2
@@ -1532,9 +1544,10 @@ define <8 x i16> @trunc_packus_v8i64_v8i16(ptr %p0) "min-legal-vector-width"="25
 ; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    movdqa %xmm0, %xmm4
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm4
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm0
+; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm0
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm0, %xmm4
 ; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm4
@@ -1542,20 +1555,22 @@ define <8 x i16> @trunc_packus_v8i64_v8i16(ptr %p0) "min-legal-vector-width"="25
 ; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:    movdqa %xmm0, %xmm5
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm5
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = xmm0[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm6
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm7 = xmm0[1,1,3,3]
+; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm7
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[1,1,3,3]
-; SSE2-SSSE3-NEXT:    por %xmm6, %xmm0
+; SSE2-SSSE3-NEXT:    por %xmm7, %xmm0
 ; SSE2-SSSE3-NEXT:    pand %xmm8, %xmm0
 ; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm4[0,2]
 ; SSE2-SSSE3-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm4
 ; SSE2-SSSE3-NEXT:    movdqa %xmm4, %xmm5
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm5
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm4
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm4
+; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm4
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm4, %xmm5
 ; SSE2-SSSE3-NEXT:    pand %xmm3, %xmm5
@@ -1563,9 +1578,10 @@ define <8 x i16> @trunc_packus_v8i64_v8i16(ptr %p0) "min-legal-vector-width"="25
 ; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm4
+; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = xmm4[0,0,2,2]
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm4, %xmm1
+; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm1
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSE2-SSSE3-NEXT:    por %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm3

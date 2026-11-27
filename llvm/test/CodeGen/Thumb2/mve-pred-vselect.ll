@@ -4,15 +4,24 @@
 define arm_aapcs_vfpcc <4 x i32> @cmpeqz_v4i1(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: cmpeqz_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpt.i32 eq, q1, zr
-; CHECK-NEXT:    vcmpt.i32 ne, q2, zr
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vcmp.i32 eq, q2, zr
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vpt.i32 eq, q0, zr
-; CHECK-NEXT:    vcmpt.i32 eq, q2, zr
+; CHECK-NEXT:    vcmp.i32 eq, q0, zr
 ; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vcmp.i32 eq, q1, zr
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vmrs r2, p0
+; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq <4 x i32> %a, zeroinitializer
@@ -26,15 +35,24 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @cmpeqz_v8i1(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) {
 ; CHECK-LABEL: cmpeqz_v8i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpt.i16 eq, q1, zr
-; CHECK-NEXT:    vcmpt.i16 ne, q2, zr
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vcmp.i16 eq, q2, zr
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vpt.i16 eq, q0, zr
-; CHECK-NEXT:    vcmpt.i16 eq, q2, zr
+; CHECK-NEXT:    vcmp.i16 eq, q0, zr
 ; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vcmp.i16 eq, q1, zr
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vmrs r2, p0
+; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq <8 x i16> %a, zeroinitializer
@@ -48,15 +66,24 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @cmpeqz_v16i1(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) {
 ; CHECK-LABEL: cmpeqz_v16i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpt.i8 eq, q1, zr
-; CHECK-NEXT:    vcmpt.i8 ne, q2, zr
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vcmp.i8 eq, q2, zr
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vpt.i8 eq, q0, zr
-; CHECK-NEXT:    vcmpt.i8 eq, q2, zr
+; CHECK-NEXT:    vcmp.i8 eq, q0, zr
 ; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vcmp.i8 eq, q1, zr
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vmrs r2, p0
+; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq <16 x i8> %a, zeroinitializer
@@ -108,15 +135,24 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @cmpnez_v4i1(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: cmpnez_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpt.i32 ne, q1, zr
-; CHECK-NEXT:    vcmpt.i32 eq, q2, zr
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vcmp.i32 ne, q2, zr
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vpt.i32 ne, q0, zr
-; CHECK-NEXT:    vcmpt.i32 ne, q2, zr
+; CHECK-NEXT:    vcmp.i32 ne, q0, zr
 ; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vcmp.i32 ne, q1, zr
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vmrs r2, p0
+; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp ne <4 x i32> %a, zeroinitializer
@@ -130,15 +166,24 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @cmpnez_v8i1(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) {
 ; CHECK-LABEL: cmpnez_v8i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpt.i16 ne, q1, zr
-; CHECK-NEXT:    vcmpt.i16 eq, q2, zr
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vcmp.i16 ne, q2, zr
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vpt.i16 ne, q0, zr
-; CHECK-NEXT:    vcmpt.i16 ne, q2, zr
+; CHECK-NEXT:    vcmp.i16 ne, q0, zr
 ; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vcmp.i16 ne, q1, zr
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vmrs r2, p0
+; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp ne <8 x i16> %a, zeroinitializer
@@ -152,15 +197,24 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @cmpnez_v16i1(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) {
 ; CHECK-LABEL: cmpnez_v16i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpt.i8 ne, q1, zr
-; CHECK-NEXT:    vcmpt.i8 eq, q2, zr
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vcmp.i8 ne, q2, zr
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vpt.i8 ne, q0, zr
-; CHECK-NEXT:    vcmpt.i8 ne, q2, zr
+; CHECK-NEXT:    vcmp.i8 ne, q0, zr
 ; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vcmp.i8 ne, q1, zr
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vmrs r2, p0
+; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp ne <16 x i8> %a, zeroinitializer
@@ -214,15 +268,24 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @cmpsltz_v4i1(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 ; CHECK-LABEL: cmpsltz_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpt.s32 lt, q1, zr
-; CHECK-NEXT:    vcmpt.s32 ge, q2, zr
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vcmp.s32 lt, q2, zr
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vpt.s32 lt, q0, zr
-; CHECK-NEXT:    vcmpt.s32 lt, q2, zr
+; CHECK-NEXT:    vcmp.s32 lt, q0, zr
 ; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vcmp.s32 lt, q1, zr
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vmrs r2, p0
+; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp slt <4 x i32> %a, zeroinitializer
@@ -236,15 +299,24 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @cmpsltz_v8i1(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) {
 ; CHECK-LABEL: cmpsltz_v8i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpt.s16 lt, q1, zr
-; CHECK-NEXT:    vcmpt.s16 ge, q2, zr
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vcmp.s16 lt, q2, zr
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vpt.s16 lt, q0, zr
-; CHECK-NEXT:    vcmpt.s16 lt, q2, zr
+; CHECK-NEXT:    vcmp.s16 lt, q0, zr
 ; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vcmp.s16 lt, q1, zr
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vmrs r2, p0
+; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp slt <8 x i16> %a, zeroinitializer
@@ -258,15 +330,24 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @cmpsltz_v16i1(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) {
 ; CHECK-LABEL: cmpsltz_v16i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vpt.s8 lt, q1, zr
-; CHECK-NEXT:    vcmpt.s8 ge, q2, zr
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vcmp.s8 lt, q2, zr
+; CHECK-NEXT:    vstr p0, [sp] @ 4-byte Spill
 ; CHECK-NEXT:    vmrs r0, p0
-; CHECK-NEXT:    vpt.s8 lt, q0, zr
-; CHECK-NEXT:    vcmpt.s8 lt, q2, zr
+; CHECK-NEXT:    vcmp.s8 lt, q0, zr
 ; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vcmp.s8 lt, q1, zr
+; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    vmrs r1, p0
+; CHECK-NEXT:    vldr p0, [sp] @ 4-byte Reload
+; CHECK-NEXT:    vpnot
+; CHECK-NEXT:    vmrs r2, p0
+; CHECK-NEXT:    ands r1, r2
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp slt <16 x i8> %a, zeroinitializer

@@ -285,10 +285,10 @@ define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 ; X86-AVX512F-LABEL: select07:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-AVX512F-NEXT:    kmovw %eax, %k0
-; X86-AVX512F-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-AVX512F-NEXT:    kmovw %eax, %k1
-; X86-AVX512F-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-AVX512F-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512F-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-AVX512F-NEXT:    kmovw %edx, %k0
+; X86-AVX512F-NEXT:    kmovw %ecx, %k1
 ; X86-AVX512F-NEXT:    kmovw %eax, %k2
 ; X86-AVX512F-NEXT:    kandnw %k2, %k0, %k2
 ; X86-AVX512F-NEXT:    kandw %k0, %k1, %k0
@@ -312,10 +312,10 @@ define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 ; X86-AVX512BW-LABEL: select07:
 ; X86-AVX512BW:       # %bb.0:
 ; X86-AVX512BW-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-AVX512BW-NEXT:    kmovd %eax, %k0
-; X86-AVX512BW-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-AVX512BW-NEXT:    kmovd %eax, %k1
-; X86-AVX512BW-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-AVX512BW-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512BW-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-AVX512BW-NEXT:    kmovd %edx, %k0
+; X86-AVX512BW-NEXT:    kmovd %ecx, %k1
 ; X86-AVX512BW-NEXT:    kmovd %eax, %k2
 ; X86-AVX512BW-NEXT:    kandnw %k2, %k0, %k2
 ; X86-AVX512BW-NEXT:    kandw %k0, %k1, %k0

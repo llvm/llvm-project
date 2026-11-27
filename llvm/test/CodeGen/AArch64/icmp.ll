@@ -1137,20 +1137,22 @@ define <3 x i64> @v3i64_i64(<3 x i64> %a, <3 x i64> %b, <3 x i64> %d, <3 x i64> 
 ; CHECK-SD-NEXT:    // kill: def $d7 killed $d7 def $q7
 ; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    ldr d16, [sp, #24]
-; CHECK-SD-NEXT:    ldr d17, [sp]
+; CHECK-SD-NEXT:    ldr d16, [sp]
 ; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-SD-NEXT:    ldp d1, d4, [sp, #8]
-; CHECK-SD-NEXT:    mov v1.d[1], v4.d[0]
+; CHECK-SD-NEXT:    ldp d4, d1, [sp, #8]
+; CHECK-SD-NEXT:    ldr d7, [sp, #24]
+; CHECK-SD-NEXT:    mov v4.d[1], v1.d[0]
+; CHECK-SD-NEXT:    mov v2.d[1], v0.d[0]
+; CHECK-SD-NEXT:    mov v5.d[1], v0.d[0]
 ; CHECK-SD-NEXT:    cmgt v0.2d, v3.2d, v0.2d
-; CHECK-SD-NEXT:    bsl v0.16b, v6.16b, v1.16b
+; CHECK-SD-NEXT:    bsl v0.16b, v6.16b, v4.16b
 ; CHECK-SD-NEXT:    cmgt v1.2d, v5.2d, v2.2d
 ; CHECK-SD-NEXT:    mov v2.16b, v1.16b
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    bsl v2.16b, v17.16b, v16.16b
+; CHECK-SD-NEXT:    bsl v2.16b, v16.16b, v7.16b
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1443,20 +1445,22 @@ define <3 x ptr> @v3p0_p0(<3 x ptr> %a, <3 x ptr> %b, <3 x ptr> %d, <3 x ptr> %e
 ; CHECK-NEXT:    // kill: def $d7 killed $d7 def $q7
 ; CHECK-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-NEXT:    ldr d16, [sp, #24]
-; CHECK-NEXT:    ldr d17, [sp]
+; CHECK-NEXT:    ldr d16, [sp]
 ; CHECK-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-NEXT:    ldp d1, d4, [sp, #8]
-; CHECK-NEXT:    mov v1.d[1], v4.d[0]
+; CHECK-NEXT:    ldp d4, d1, [sp, #8]
+; CHECK-NEXT:    ldr d7, [sp, #24]
+; CHECK-NEXT:    mov v4.d[1], v1.d[0]
+; CHECK-NEXT:    mov v2.d[1], v0.d[0]
+; CHECK-NEXT:    mov v5.d[1], v0.d[0]
 ; CHECK-NEXT:    cmgt v0.2d, v3.2d, v0.2d
-; CHECK-NEXT:    bsl v0.16b, v6.16b, v1.16b
+; CHECK-NEXT:    bsl v0.16b, v6.16b, v4.16b
 ; CHECK-NEXT:    cmgt v1.2d, v5.2d, v2.2d
 ; CHECK-NEXT:    mov v2.16b, v1.16b
 ; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    bsl v2.16b, v17.16b, v16.16b
+; CHECK-NEXT:    bsl v2.16b, v16.16b, v7.16b
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-NEXT:    ret
 entry:

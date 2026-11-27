@@ -7,13 +7,12 @@ define <4 x i32> @udiv_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i1> %m) {
 ; NEON-LABEL: udiv_v4i32:
 ; NEON:       // %bb.0:
 ; NEON-NEXT:    ushll v2.4s, v2.4h, #0
+; NEON-NEXT:    movi v3.4s, #1
 ; NEON-NEXT:    fmov w8, s0
 ; NEON-NEXT:    mov w12, v0.s[3]
 ; NEON-NEXT:    shl v2.4s, v2.4s, #31
 ; NEON-NEXT:    cmlt v2.4s, v2.4s, #0
-; NEON-NEXT:    and v1.16b, v1.16b, v2.16b
-; NEON-NEXT:    mvn v2.16b, v2.16b
-; NEON-NEXT:    sub v1.4s, v1.4s, v2.4s
+; NEON-NEXT:    bif v1.16b, v3.16b, v2.16b
 ; NEON-NEXT:    fmov w9, s1
 ; NEON-NEXT:    mov w10, v1.s[1]
 ; NEON-NEXT:    mov w11, v1.s[2]
@@ -49,12 +48,12 @@ define <2 x i64> @udiv_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i1> %m) {
 ; NEON-LABEL: udiv_v2i64:
 ; NEON:       // %bb.0:
 ; NEON-NEXT:    ushll v2.2d, v2.2s, #0
+; NEON-NEXT:    mov w8, #1 // =0x1
+; NEON-NEXT:    dup v3.2d, x8
 ; NEON-NEXT:    fmov x8, d0
 ; NEON-NEXT:    shl v2.2d, v2.2d, #63
 ; NEON-NEXT:    cmlt v2.2d, v2.2d, #0
-; NEON-NEXT:    and v1.16b, v1.16b, v2.16b
-; NEON-NEXT:    mvn v2.16b, v2.16b
-; NEON-NEXT:    sub v1.2d, v1.2d, v2.2d
+; NEON-NEXT:    bif v1.16b, v3.16b, v2.16b
 ; NEON-NEXT:    fmov x9, d1
 ; NEON-NEXT:    mov x10, v1.d[1]
 ; NEON-NEXT:    udiv x8, x8, x9
@@ -84,15 +83,15 @@ define <4 x i64> @udiv_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ; NEON-LABEL: udiv_v4i64:
 ; NEON:       // %bb.0:
 ; NEON-NEXT:    ushll v4.4s, v4.4h, #0
-; NEON-NEXT:    mov x8, v1.d[1]
+; NEON-NEXT:    mov w8, #1 // =0x1
 ; NEON-NEXT:    fmov x11, d0
+; NEON-NEXT:    dup v6.2d, x8
+; NEON-NEXT:    mov x8, v1.d[1]
 ; NEON-NEXT:    mov x12, v0.d[1]
 ; NEON-NEXT:    ushll2 v5.2d, v4.4s, #0
 ; NEON-NEXT:    shl v5.2d, v5.2d, #63
 ; NEON-NEXT:    cmlt v5.2d, v5.2d, #0
-; NEON-NEXT:    and v3.16b, v3.16b, v5.16b
-; NEON-NEXT:    mvn v5.16b, v5.16b
-; NEON-NEXT:    sub v3.2d, v3.2d, v5.2d
+; NEON-NEXT:    bif v3.16b, v6.16b, v5.16b
 ; NEON-NEXT:    mov x9, v3.d[1]
 ; NEON-NEXT:    fmov x10, d3
 ; NEON-NEXT:    udiv x8, x8, x9
@@ -100,9 +99,7 @@ define <4 x i64> @udiv_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ; NEON-NEXT:    ushll v1.2d, v4.2s, #0
 ; NEON-NEXT:    shl v1.2d, v1.2d, #63
 ; NEON-NEXT:    cmlt v1.2d, v1.2d, #0
-; NEON-NEXT:    and v2.16b, v2.16b, v1.16b
-; NEON-NEXT:    mvn v1.16b, v1.16b
-; NEON-NEXT:    sub v1.2d, v2.2d, v1.2d
+; NEON-NEXT:    bsl v1.16b, v2.16b, v6.16b
 ; NEON-NEXT:    udiv x9, x9, x10
 ; NEON-NEXT:    fmov x10, d1
 ; NEON-NEXT:    udiv x10, x11, x10
@@ -339,23 +336,20 @@ define <3 x i10> @udiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; NEON-NEXT:    bic v1.4h, #252, lsl #8
 ; NEON-NEXT:    mov v0.h[2], w8
 ; NEON-NEXT:    bic v2.4h, #252, lsl #8
-; NEON-NEXT:    umov w9, v2.h[0]
+; NEON-NEXT:    umov w8, v2.h[0]
 ; NEON-NEXT:    shl v0.4h, v0.4h, #15
 ; NEON-NEXT:    cmlt v0.4h, v0.4h, #0
 ; NEON-NEXT:    and v1.8b, v1.8b, v0.8b
 ; NEON-NEXT:    mvn v0.8b, v0.8b
 ; NEON-NEXT:    sub v0.4h, v1.4h, v0.4h
-; NEON-NEXT:    umov w8, v0.h[0]
-; NEON-NEXT:    and w8, w8, #0x3ff
-; NEON-NEXT:    udiv w0, w9, w8
-; NEON-NEXT:    umov w8, v0.h[1]
-; NEON-NEXT:    umov w9, v2.h[1]
-; NEON-NEXT:    and w8, w8, #0x3ff
-; NEON-NEXT:    udiv w1, w9, w8
-; NEON-NEXT:    umov w8, v0.h[2]
-; NEON-NEXT:    umov w9, v2.h[2]
-; NEON-NEXT:    and w8, w8, #0x3ff
-; NEON-NEXT:    udiv w2, w9, w8
+; NEON-NEXT:    umov w9, v0.h[0]
+; NEON-NEXT:    udiv w0, w8, w9
+; NEON-NEXT:    umov w8, v2.h[1]
+; NEON-NEXT:    umov w9, v0.h[1]
+; NEON-NEXT:    udiv w1, w8, w9
+; NEON-NEXT:    umov w8, v2.h[2]
+; NEON-NEXT:    umov w9, v0.h[2]
+; NEON-NEXT:    udiv w2, w8, w9
 ; NEON-NEXT:    ret
 ;
 ; SVE-LABEL: udiv_v3i10:
@@ -364,6 +358,7 @@ define <3 x i10> @udiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; SVE-NEXT:    fmov s1, w3
 ; SVE-NEXT:    ldr w8, [sp]
 ; SVE-NEXT:    fmov s2, w0
+; SVE-NEXT:    movi v3.4h, #1
 ; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    mov v1.h[1], w4
 ; SVE-NEXT:    mov v0.h[0], w6
@@ -376,9 +371,7 @@ define <3 x i10> @udiv_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; SVE-NEXT:    bic v2.4h, #252, lsl #8
 ; SVE-NEXT:    shl v0.4h, v0.4h, #15
 ; SVE-NEXT:    cmlt v0.4h, v0.4h, #0
-; SVE-NEXT:    and v1.8b, v1.8b, v0.8b
-; SVE-NEXT:    mvn v0.8b, v0.8b
-; SVE-NEXT:    sub v0.4h, v1.4h, v0.4h
+; SVE-NEXT:    bsl v0.8b, v1.8b, v3.8b
 ; SVE-NEXT:    ushll v1.4s, v2.4h, #0
 ; SVE-NEXT:    ushll v0.4s, v0.4h, #0
 ; SVE-NEXT:    udivr z0.s, p0/m, z0.s, z1.s
