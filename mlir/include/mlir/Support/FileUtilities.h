@@ -44,7 +44,6 @@ openInputFile(llvm::StringRef inputFilename, llvm::Align alignment,
 std::unique_ptr<llvm::ToolOutputFile>
 openOutputFile(llvm::StringRef outputFilename,
                std::string *errorMessage = nullptr, bool isText = false);
-
 } // namespace mlir
 
 #endif // MLIR_SUPPORT_FILEUTILITIES_H_
