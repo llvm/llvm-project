@@ -625,8 +625,6 @@ getEffectsRecursively(Operation *rootOp);
 /// Returns true if the given operation is speculatable, i.e. has no undefined
 /// behavior or other side effects.
 ///
-/// An operation can indicate that it is speculatable by implementing the
-/// getSpeculatability hook in the ConditionallySpeculatable op interface.
 /// Supply the caller's analysis manager to enable proofs that use analyses.
 bool isSpeculatable(Operation *op, AnalysisManager *actx = nullptr);
 

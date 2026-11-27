@@ -907,10 +907,6 @@ static Speculation::Speculatability getIntegerDivSpeculatability(
   return Speculation::NotSpeculatable;
 }
 
-Speculation::Speculatability arith::DivUIOp::getSpeculatability() {
-  return getSpeculatabilityWithAnalysis(nullptr);
-}
-
 Speculation::Speculatability
 arith::DivUIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
   return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroU(), actx);
@@ -955,10 +951,6 @@ OpFoldResult arith::DivSIOp::fold(FoldAdaptor adaptor) {
   return overflowOrDiv0 ? Attribute() : result;
 }
 
-Speculation::Speculatability arith::DivSIOp::getSpeculatability() {
-  return getSpeculatabilityWithAnalysis(nullptr);
-}
-
 Speculation::Speculatability
 arith::DivSIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
   return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroOrNegOneS(),
@@ -1001,10 +993,6 @@ OpFoldResult arith::CeilDivUIOp::fold(FoldAdaptor adaptor) {
       });
 
   return overflowOrDiv0 ? Attribute() : result;
-}
-
-Speculation::Speculatability arith::CeilDivUIOp::getSpeculatability() {
-  return getSpeculatabilityWithAnalysis(nullptr);
 }
 
 Speculation::Speculatability
@@ -1069,10 +1057,6 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
   return overflowOrDiv0 ? Attribute() : result;
 }
 
-Speculation::Speculatability arith::CeilDivSIOp::getSpeculatability() {
-  return getSpeculatabilityWithAnalysis(nullptr);
-}
-
 Speculation::Speculatability
 arith::CeilDivSIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
   return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroOrNegOneS(),
@@ -1114,10 +1098,6 @@ OpFoldResult arith::FloorDivSIOp::fold(FoldAdaptor adaptor) {
   return overflowOrDiv ? Attribute() : result;
 }
 
-Speculation::Speculatability FloorDivSIOp::getSpeculatability() {
-  return getSpeculatabilityWithAnalysis(nullptr);
-}
-
 Speculation::Speculatability
 FloorDivSIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
   return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroOrNegOneS(),
@@ -1156,10 +1136,6 @@ OpFoldResult arith::RemUIOp::fold(FoldAdaptor adaptor) {
   return div0 ? Attribute() : result;
 }
 
-Speculation::Speculatability arith::RemUIOp::getSpeculatability() {
-  return getSpeculatabilityWithAnalysis(nullptr);
-}
-
 Speculation::Speculatability
 arith::RemUIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
   return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroU(), actx);
@@ -1195,10 +1171,6 @@ OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
                                                });
 
   return div0 ? Attribute() : result;
-}
-
-Speculation::Speculatability arith::RemSIOp::getSpeculatability() {
-  return getSpeculatabilityWithAnalysis(nullptr);
 }
 
 Speculation::Speculatability

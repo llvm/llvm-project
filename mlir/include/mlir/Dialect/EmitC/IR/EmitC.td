@@ -397,7 +397,7 @@ def EmitC_MemberCallOpaqueOp : EmitC_Op<"member_call_opaque", [CExpressionInterf
 def EmitC_CastOp : EmitC_Op<"cast",
     [CExpressionInterface,
      DeclareOpInterfaceMethods<CastOpInterface>,
-     DeclareOpInterfaceMethods<ConditionallySpeculatable>,
+     DeclareOpInterfaceMethods<ConditionallySpeculatable, ["getSpeculatability"]>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
     ]> {
   let summary = "Cast operation";

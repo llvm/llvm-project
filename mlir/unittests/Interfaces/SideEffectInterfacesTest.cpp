@@ -165,14 +165,16 @@ TEST(Speculatability, LazyPassAnalysis) {
   arith::DivUIOp fixed = *it++;
   arith::DivUIOp index = *it;
 
-  EXPECT_EQ(cast<ConditionallySpeculatable>(fixed.getOperation())
-                .getSpeculatabilityWithAnalysis(nullptr),
+  auto fixedIface = cast<ConditionallySpeculatable>(fixed.getOperation());
+  EXPECT_EQ(fixedIface.getSpeculatability(), Speculation::Speculatable);
+  EXPECT_EQ(fixedIface.getSpeculatabilityWithAnalysis(nullptr),
             Speculation::Speculatable);
   EXPECT_TRUE(isPure(fixed, &actx));
   EXPECT_FALSE(actx.getCachedAnalysis<DataLayoutAnalysis>());
   // The divisor can truncate to zero when the caller supplies no layout.
-  EXPECT_EQ(cast<ConditionallySpeculatable>(index.getOperation())
-                .getSpeculatabilityWithAnalysis(nullptr),
+  auto indexIface = cast<ConditionallySpeculatable>(index.getOperation());
+  EXPECT_EQ(indexIface.getSpeculatability(), Speculation::NotSpeculatable);
+  EXPECT_EQ(indexIface.getSpeculatabilityWithAnalysis(nullptr),
             Speculation::NotSpeculatable);
   EXPECT_FALSE(isPure(index));
   EXPECT_TRUE(isPure(index, &actx));
@@ -183,4 +185,23 @@ TEST(Speculatability, LazyPassAnalysis) {
   EXPECT_EQ(&cached->get(), &samePass.getAnalysis<DataLayoutAnalysis>());
   EXPECT_EQ(observer.starts, 1u);
   EXPECT_EQ(observer.finishes, 1u);
+}
+
+TEST(Speculatability, ExternalModelWithoutAnalysis) {
+  struct RecursiveModel
+      : ConditionallySpeculatable::ExternalModel<RecursiveModel, ModuleOp> {
+    Speculation::Speculatability getSpeculatability(Operation *) const {
+      return Speculation::RecursivelySpeculatable;
+    }
+  };
+
+  MLIRContext context;
+  ModuleOp::attachInterface<RecursiveModel>(context);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(UnknownLoc::get(&context));
+  ModuleAnalysisManager owner(*module);
+  AnalysisManager actx = owner;
+  auto iface = cast<ConditionallySpeculatable>(module->getOperation());
+  EXPECT_EQ(iface.getSpeculatability(), Speculation::RecursivelySpeculatable);
+  EXPECT_EQ(iface.getSpeculatabilityWithAnalysis(&actx),
+            Speculation::RecursivelySpeculatable);
 }
