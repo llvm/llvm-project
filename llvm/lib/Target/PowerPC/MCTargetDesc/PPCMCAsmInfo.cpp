@@ -204,12 +204,12 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple &T,
   LCOMMDirectiveAlignmentType = LCOMM::ByteAlignment;
 
   initializeAtSpecifiers(elfAtSpecifiers);
-}
 
-void PPCELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                         const MCSpecifierExpr &Expr) const {
-  printExpr(OS, *Expr.getSubExpr());
-  OS << '@' << getSpecifierName(Expr.getSpecifier());
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    OS << '@' << MAI.getSpecifierName(Expr.getSpecifier());
+  };
 }
 
 bool PPCELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
@@ -240,12 +240,12 @@ PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T,
   UsesSetToEquateSymbol = true;
 
   initializeAtSpecifiers(xcoffAtSpecifiers);
-}
 
-void PPCXCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                           const MCSpecifierExpr &Expr) const {
-  printExpr(OS, *Expr.getSubExpr());
-  OS << '@' << getSpecifierName(Expr.getSpecifier());
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    OS << '@' << MAI.getSpecifierName(Expr.getSpecifier());
+  };
 }
 
 bool PPCXCOFFMCAsmInfo::evaluateAsRelocatableImpl(

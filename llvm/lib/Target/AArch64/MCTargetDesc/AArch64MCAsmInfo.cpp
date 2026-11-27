@@ -151,6 +151,14 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
 
   initializeAtSpecifiers(MachOAtSpecifiers);
   UseAtForSpecifier = false;
+
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    if (auto *AE = dyn_cast<AArch64AuthMCExpr>(&Expr))
+      return AE->print(OS, &MAI);
+    OS << AArch64::getSpecifierName(Expr.getSpecifier());
+    MAI.printExpr(OS, *Expr.getSubExpr());
+  };
 }
 
 const MCExpr *AArch64MCAsmInfoDarwin::getExprForPersonalitySymbol(
@@ -180,14 +188,6 @@ void AArch64AuthMCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
   if (hasAddressDiversity())
     OS << ",addr";
   OS << ')';
-}
-
-void AArch64MCAsmInfoDarwin::printSpecifierExpr(
-    raw_ostream &OS, const MCSpecifierExpr &Expr) const {
-  if (auto *AE = dyn_cast<AArch64AuthMCExpr>(&Expr))
-    return AE->print(OS, this);
-  OS << AArch64::getSpecifierName(Expr.getSpecifier());
-  printExpr(OS, *Expr.getSubExpr());
 }
 
 bool AArch64MCAsmInfoDarwin::evaluateAsRelocatableImpl(
@@ -231,19 +231,19 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
 
   // .bss is supported without .section.
   SectionDirectives.insert(".bss");
-}
 
-void AArch64MCAsmInfoELF::printSpecifierExpr(
-    raw_ostream &OS, const MCSpecifierExpr &Expr) const {
-  if (auto *AE = dyn_cast<AArch64AuthMCExpr>(&Expr))
-    return AE->print(OS, this);
-  auto Str = AArch64::getSpecifierName(Expr.getSpecifier());
-  OS << Str;
-  if (!Str.empty() && Str[0] == '%')
-    OS << '(';
-  printExpr(OS, *Expr.getSubExpr());
-  if (!Str.empty() && Str[0] == '%')
-    OS << ')';
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    if (auto *AE = dyn_cast<AArch64AuthMCExpr>(&Expr))
+      return AE->print(OS, &MAI);
+    auto Str = AArch64::getSpecifierName(Expr.getSpecifier());
+    OS << Str;
+    if (!Str.empty() && Str[0] == '%')
+      OS << '(';
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    if (!Str.empty() && Str[0] == '%')
+      OS << ')';
+  };
 }
 
 bool AArch64MCAsmInfoELF::evaluateAsRelocatableImpl(
@@ -268,12 +268,12 @@ AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF(
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 
   initializeAtSpecifiers(COFFAtSpecifiers);
-}
 
-void AArch64MCAsmInfoMicrosoftCOFF::printSpecifierExpr(
-    raw_ostream &OS, const MCSpecifierExpr &Expr) const {
-  OS << AArch64::getSpecifierName(Expr.getSpecifier());
-  printExpr(OS, *Expr.getSubExpr());
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    OS << AArch64::getSpecifierName(Expr.getSpecifier());
+    MAI.printExpr(OS, *Expr.getSubExpr());
+  };
 }
 
 bool AArch64MCAsmInfoMicrosoftCOFF::evaluateAsRelocatableImpl(
@@ -297,12 +297,12 @@ AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF(const MCTargetOptions &Options)
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 
   initializeAtSpecifiers(COFFAtSpecifiers);
-}
 
-void AArch64MCAsmInfoGNUCOFF::printSpecifierExpr(
-    raw_ostream &OS, const MCSpecifierExpr &Expr) const {
-  OS << AArch64::getSpecifierName(Expr.getSpecifier());
-  printExpr(OS, *Expr.getSubExpr());
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    OS << AArch64::getSpecifierName(Expr.getSpecifier());
+    MAI.printExpr(OS, *Expr.getSubExpr());
+  };
 }
 
 bool AArch64MCAsmInfoGNUCOFF::evaluateAsRelocatableImpl(

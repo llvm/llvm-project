@@ -48,6 +48,39 @@ constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
 };
 constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
+static void printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,
+                               const MCSpecifierExpr &Expr) {
+  switch (Expr.getSpecifier()) {
+  default:
+    llvm_unreachable("Invalid kind!");
+  case ARM::S_HI16:
+    OS << ":upper16:";
+    break;
+  case ARM::S_LO16:
+    OS << ":lower16:";
+    break;
+  case ARM::S_HI_8_15:
+    OS << ":upper8_15:";
+    break;
+  case ARM::S_HI_0_7:
+    OS << ":upper0_7:";
+    break;
+  case ARM::S_LO_8_15:
+    OS << ":lower8_15:";
+    break;
+  case ARM::S_LO_0_7:
+    OS << ":lower0_7:";
+    break;
+  }
+
+  const MCExpr *Sub = Expr.getSubExpr();
+  if (Sub->getKind() != MCExpr::SymbolRef)
+    OS << '(';
+  MAI.printExpr(OS, *Sub);
+  if (Sub->getKind() != MCExpr::SymbolRef)
+    OS << ')';
+}
+
 void ARMMCAsmInfoDarwin::anchor() { }
 
 ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple,
@@ -67,6 +100,8 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple,
   MaxInstLength = 6;
 
   initializeAtSpecifiers(atSpecifiers);
+
+  SpecifierExprPrintFn = printSpecifierExpr;
 }
 
 void ARMELFMCAsmInfo::anchor() { }
@@ -104,6 +139,8 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
 
   // .bss is supported without .section.
   SectionDirectives.insert(".bss");
+
+  SpecifierExprPrintFn = printSpecifierExpr;
 }
 
 bool ARMELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
@@ -126,6 +163,8 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft(
   MaxInstLength = 6;
 
   initializeAtSpecifiers(atSpecifiers);
+
+  SpecifierExprPrintFn = printSpecifierExpr;
 }
 
 void ARMCOFFMCAsmInfoGNU::anchor() { }
@@ -148,39 +187,8 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU(const MCTargetOptions &Options)
   initializeAtSpecifiers(atSpecifiers);
   UseAtForSpecifier = false;
   UseParensForSpecifier = true;
-}
 
-void ARM::printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,
-                             const MCSpecifierExpr &Expr) {
-  switch (Expr.getSpecifier()) {
-  default:
-    llvm_unreachable("Invalid kind!");
-  case ARM::S_HI16:
-    OS << ":upper16:";
-    break;
-  case ARM::S_LO16:
-    OS << ":lower16:";
-    break;
-  case ARM::S_HI_8_15:
-    OS << ":upper8_15:";
-    break;
-  case ARM::S_HI_0_7:
-    OS << ":upper0_7:";
-    break;
-  case ARM::S_LO_8_15:
-    OS << ":lower8_15:";
-    break;
-  case ARM::S_LO_0_7:
-    OS << ":lower0_7:";
-    break;
-  }
-
-  const MCExpr *Sub = Expr.getSubExpr();
-  if (Sub->getKind() != MCExpr::SymbolRef)
-    OS << '(';
-  MAI.printExpr(OS, *Sub);
-  if (Sub->getKind() != MCExpr::SymbolRef)
-    OS << ')';
+  SpecifierExprPrintFn = printSpecifierExpr;
 }
 
 const MCSpecifierExpr *ARM::createUpper16(const MCExpr *Expr, MCContext &Ctx) {

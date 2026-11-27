@@ -34,27 +34,27 @@ LanaiMCAsmInfo::LanaiMCAsmInfo(const Triple &T, const MCTargetOptions &Options)
   // Set the instruction alignment. Currently used only for address adjustment
   // in dwarf generation.
   MinInstAlignment = 4;
-}
 
-void LanaiMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                        const MCSpecifierExpr &Expr) const {
-  if (Expr.getSpecifier() == 0) {
-    printExpr(OS, *Expr.getSubExpr());
-    return;
-  }
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    if (Expr.getSpecifier() == 0) {
+      MAI.printExpr(OS, *Expr.getSubExpr());
+      return;
+    }
 
-  switch (Expr.getSpecifier()) {
-  default:
-    llvm_unreachable("Invalid kind!");
-  case Lanai::S_ABS_HI:
-    OS << "hi";
-    break;
-  case Lanai::S_ABS_LO:
-    OS << "lo";
-    break;
-  }
+    switch (Expr.getSpecifier()) {
+    default:
+      llvm_unreachable("Invalid kind!");
+    case Lanai::S_ABS_HI:
+      OS << "hi";
+      break;
+    case Lanai::S_ABS_LO:
+      OS << "lo";
+      break;
+    }
 
-  OS << '(';
-  printExpr(OS, *Expr.getSubExpr());
-  OS << ')';
+    OS << '(';
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    OS << ')';
+  };
 }

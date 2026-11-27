@@ -92,14 +92,14 @@ VEELFMCAsmInfo::VEELFMCAsmInfo(const Triple &TheTriple,
   SupportsDebugInformation = true;
 
   initializeAtSpecifiers(atSpecifiers);
-}
 
-void VEELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                        const MCSpecifierExpr &Expr) const {
-  printExpr(OS, *Expr.getSubExpr());
-  auto specifier = Expr.getSpecifier();
-  if (specifier && specifier != VE::S_REFLONG)
-    OS << '@' << getSpecifierName(specifier);
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    auto specifier = Expr.getSpecifier();
+    if (specifier && specifier != VE::S_REFLONG)
+      OS << '@' << MAI.getSpecifierName(specifier);
+  };
 }
 
 bool VEELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,

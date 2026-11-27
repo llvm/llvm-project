@@ -219,6 +219,9 @@ protected:
   /// True if the target supports the .addrsig directive.
   bool HasAddrsigDirective = true;
 
+  void (*SpecifierExprPrintFn)(const MCAsmInfo &, raw_ostream &,
+                               const MCSpecifierExpr &) = nullptr;
+
   //===--- Data Emission Directives -------------------------------------===//
 
   /// This should be set to the directive used to get some number of zero (and
@@ -743,10 +746,6 @@ public:
   std::optional<uint32_t> getSpecifierForName(StringRef Name) const;
 
   void printExpr(raw_ostream &, const MCExpr &) const;
-  virtual void printSpecifierExpr(raw_ostream &,
-                                  const MCSpecifierExpr &) const {
-    llvm_unreachable("Need to implement hook if target uses MCSpecifierExpr");
-  }
   virtual bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
                                          const MCAssembler *Asm) const;
 
