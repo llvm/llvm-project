@@ -39,21 +39,21 @@ int test1(int x) {
 
 // CHECK-LABEL: define dso_local i32 @test1
 // CHECK: [[X:%[0-9]+]] = load i32, ptr %x.addr
-// CHECK-NEXT: [[V:%[0-9]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1:[0-9]+]]
+// CHECK-NEXT: [[V:%[0-9]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1:[0-9]+]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i32
 // CHECK-NEXT: [[C:%[0-9]+]] = icmp eq i32 [[X]], [[T]]
 // CHECK-NEXT: br i1 [[C]], label %[[BB_A:[0-9a-z.]+]], label %[[D1:[0-9a-z.]+]]
 // CHECK: [[D1]]:
-// CHECK-NEXT: [[V:%[0-9]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
+// CHECK-NEXT: [[V:%[0-9]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i32
 // CHECK-NEXT: [[LO:%[0-9]+]] = icmp sge i32 [[X]], [[T]]
-// CHECK-NEXT: [[V:%[0-9]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
+// CHECK-NEXT: [[V:%[0-9]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i32
 // CHECK-NEXT: [[HI:%[0-9]+]] = icmp sle i32 [[X]], [[T]]
 // CHECK-NEXT: [[C:%[0-9]+]] = and i1 [[LO]], [[HI]]
 // CHECK-NEXT: br i1 [[C]], label %[[BB_BC:[0-9a-z.]+]], label %[[D2:[0-9a-z.]+]]
 // CHECK: [[D2]]:
-// CHECK-NEXT: [[V:%[0-9]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E2:[0-9]+]]
+// CHECK-NEXT: [[V:%[0-9]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E2:[0-9]+]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i8
 // CHECK-NEXT: [[S:%[0-9a-z]+]] = sext i8 [[T]] to i32
 // CHECK-NEXT: [[ADD:%[0-9a-z]+]] = add nsw i32 [[S]], 100
@@ -114,7 +114,7 @@ int test2(int x) {
 }
 
 // CHECK-LABEL: define dso_local i32 @test2
-// CHECK: [[V:%[0-9]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
+// CHECK: [[V:%[0-9]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i32
 // CHECK-NEXT: [[C:%[0-9]+]] = icmp eq i32 4, [[T]]
 // CHECK-NEXT: br i1 [[C]], label %[[BB_B:[0-9a-z.]+]], label %[[D1:[0-9a-z.]+]]
@@ -151,7 +151,7 @@ void test3(long x) {
 
 // CHECK-LABEL: define dso_local void @test3
 // CHECK: [[X:%[0-9]+]] = load i64, ptr %x.addr
-// CHECK-NEXT: [[V:%[0-9]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E2]]
+// CHECK-NEXT: [[V:%[0-9]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E2]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i8
 // CHECK-NEXT: [[S:%[0-9]+]] = sext i8 [[T]] to i64
 // CHECK-NEXT: [[C:%[0-9]+]] = icmp eq i64 [[X]], [[S]]
@@ -215,12 +215,12 @@ int test5(int x) {
 
 // CHECK-LABEL: define dso_local i32 @test5
 // CHECK: [[X:%[0-9]+]] = load i32, ptr %x.addr
-// CHECK-NEXT: [[V:%[0-9]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
+// CHECK-NEXT: [[V:%[0-9]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i32
 // CHECK-NEXT: [[C:%[0-9]+]] = icmp eq i32 [[X]], [[T]]
 // CHECK-NEXT: br i1 [[C]], label %[[BB_A1:[0-9a-z.]+]], label %[[D1:[0-9a-z.]+]]
 // CHECK: [[D1]]:
-// CHECK-NEXT: [[V:%[0-9]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
+// CHECK-NEXT: [[V:%[0-9]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i32
 // CHECK-NEXT: [[C:%[0-9]+]] = icmp eq i32 [[X]], [[T]]
 // CHECK-NEXT: br i1 [[C]], label %[[BB_A2:[0-9a-z.]+]], label %[[D2:[0-9a-z.]+]]

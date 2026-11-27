@@ -32,13 +32,13 @@ int test1(int x) {
 
 // CHECK: define dso_local i32 @test1
 // CHECK: [[X:%[0-9a-z]+]] = load i32, ptr %x.addr
-// CHECK-NEXT: [[V:%[0-9a-z]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @[[E1_C]], i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1:[0-9]+]]
+// CHECK-NEXT: [[V:%[0-9a-z]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @[[E1_C]], i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1:[0-9]+]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i32
 // CHECK-NEXT: icmp eq i32 [[X]], [[T]]
-// CHECK: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @[[E2_A]], i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E2:[0-9]+]]
+// CHECK: call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @[[E2_A]], i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E2:[0-9]+]]
 // CHECK-NOT: @llvm.bpf.preserve.enum.value
 // CHECK: add nsw i32 %{{[0-9a-z]+}}, 5
-// CHECK-NEXT: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @[[E6_A]], i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E6:[0-9]+]]
+// CHECK-NEXT: call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @[[E6_A]], i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E6:[0-9]+]]
 
 // A condition using an enumerator is not folded.
 int test2(int x) {
@@ -48,7 +48,7 @@ int test2(int x) {
 }
 
 // CHECK: define dso_local i32 @test2
-// CHECK: [[V:%[0-9a-z]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
+// CHECK: [[V:%[0-9a-z]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i32
 // CHECK-NEXT: icmp eq i32 [[T]], 10
 
@@ -65,9 +65,9 @@ void test3(void) {
 
 // CHECK: define dso_local void @test3
 // CHECK-NOT: memcpy
-// CHECK: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
+// CHECK: call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
 // CHECK-NOT: memcpy
-// CHECK: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
+// CHECK: call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
 // CHECK-NOT: memcpy
 // CHECK: ret void
 
@@ -117,12 +117,12 @@ int test7(int x) {
 }
 
 // CHECK: define dso_local i32 @test7
-// CHECK: [[V:%[0-9a-z]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
+// CHECK: [[V:%[0-9a-z]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
 // CHECK: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i32
 // CHECK: store i32 [[T]], ptr %k,
 // CHECK: [[K:%[0-9a-z]+]] = load i32, ptr %k,
 // CHECK: add nsw i32 [[K]], 1
-// CHECK: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
+// CHECK: call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
 // CHECK: [[K2:%[0-9a-z]+]] = load i32, ptr %k2,
 // CHECK: icmp eq i32 [[K2]], 11
 // CHECK: load i32, ptr %k,
@@ -138,9 +138,9 @@ int test8(int x) {
 // CHECK: define dso_local i32 @test8
 // CHECK: br i1 %{{[0-9a-z]+}}, label %cond.true, label %cond.false
 // CHECK: cond.true:
-// CHECK-NEXT: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
+// CHECK-NEXT: call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
 // CHECK: cond.false:
-// CHECK-NEXT: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
+// CHECK-NEXT: call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
 // CHECK: cond.end:
 // CHECK-NEXT: phi i32
 // CHECK-NOT: select
@@ -154,7 +154,7 @@ enum e1 *test9(void) {
 }
 
 // CHECK: define dso_local ptr @test9
-// CHECK: [[V:%[0-9a-z]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
+// CHECK: [[V:%[0-9a-z]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i32
 // CHECK-NEXT: [[S:%[0-9a-z]+]] = sext i32 [[T]] to i64
 // CHECK-NEXT: inttoptr i64 [[S]] to ptr
@@ -170,7 +170,7 @@ unsigned long test10(void) {
 // CHECK: define dso_local i64 @test10
 // CHECK: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E5:[0-9]+]]
 // CHECK: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 0), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E2]]
-// CHECK: [[V:%[0-9a-z]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E5]]
+// CHECK: [[V:%[0-9a-z]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E5]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i32
 // CHECK-NEXT: [[S:%[0-9a-z]+]] = sext i32 [[T]] to i64
 // CHECK-NEXT: inttoptr i64 [[S]] to ptr
@@ -187,7 +187,7 @@ long test11(void) {
 }
 
 // CHECK: define dso_local i64 @test11
-// CHECK: [[V:%[0-9a-z]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[C8:[0-9]+]]
+// CHECK: [[V:%[0-9a-z]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[C8:[0-9]+]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i8
 // CHECK-NEXT: [[S:%[0-9a-z]+]] = sext i8 [[T]] to i64
 // CHECK-NEXT: ret i64 [[S]]
@@ -197,7 +197,7 @@ int test12(unsigned long x) {
 }
 
 // CHECK: define dso_local i32 @test12
-// CHECK: [[V:%[0-9a-z]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[U8:[0-9]+]]
+// CHECK: [[V:%[0-9a-z]+]] = call range(i64 0, 4294967296) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[U8:[0-9]+]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i8
 // CHECK-NEXT: [[Z:%[0-9a-z]+]] = zext i8 [[T]] to i64
 // CHECK-NEXT: icmp ult i64 %{{[0-9a-z]+}}, [[Z]]
@@ -210,7 +210,7 @@ unsigned test13(unsigned hash) {
 
 // CHECK: define dso_local i32 @test13
 // CHECK: [[H:%[0-9a-z]+]] = load i32, ptr %hash.addr
-// CHECK-NEXT: [[V:%[0-9a-z]+]] = call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
+// CHECK-NEXT: [[V:%[0-9a-z]+]] = call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E1]]
 // CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i32
 // CHECK-NEXT: urem i32 [[H]], [[T]]
 
@@ -241,9 +241,9 @@ int test15(int x) {
 }
 
 // CHECK: define dso_local i32 @test15
-// CHECK: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E7:[0-9]+]]
-// CHECK: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E8:[0-9]+]]
-// CHECK: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E9:[0-9]+]]
+// CHECK: call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E7:[0-9]+]]
+// CHECK: call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E8:[0-9]+]]
+// CHECK: call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[E9:[0-9]+]]
 // CHECK: ret i32
 
 // The value of a relocated enumerator is not known at compile time, so
@@ -256,6 +256,22 @@ int test16(void) {
 // CHECK-NOT: @llvm.bpf.preserve.enum.value
 // CHECK: ret i32 1
 
+// The call for an enumerator of a type of at most 32 bits has the range of int
+// or unsigned int, so that the backend loads the value with a 32-bit immediate.
+// Here the type is unsigned int. A 64-bit enumerator, as in test5(), and an
+// explicit __builtin_preserve_enum_value() call, as in test10(), get no range.
+enum u32 { U32_A = 0x80000000 } __reloc__;
+
+unsigned long test17(void) {
+  return U32_A;
+}
+
+// CHECK: define dso_local i64 @test17
+// CHECK: [[V:%[0-9a-z]+]] = call range(i64 0, 4294967296) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @{{[0-9]+}}, i64 1), !dbg !{{[0-9]+}}, !llvm.preserve.access.index ![[U32:[0-9]+]]
+// CHECK-NEXT: [[T:%[0-9a-z]+]] = trunc i64 [[V]] to i32
+// CHECK-NEXT: [[Z:%[0-9a-z]+]] = zext i32 [[T]] to i64
+// CHECK-NEXT: ret i64 [[Z]]
+
 // CHECK-DAG: ![[E1]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "e1"
 // CHECK-DAG: ![[E2]] = !DIDerivedType(tag: DW_TAG_typedef, name: "e2"
 // CHECK-DAG: ![[E6]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "e6"
@@ -267,3 +283,4 @@ int test16(void) {
 // CHECK-DAG: ![[E7]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "e7"
 // CHECK-DAG: ![[E8]] = !DIDerivedType(tag: DW_TAG_typedef, name: "e8"
 // CHECK-DAG: ![[E9]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "e9"
+// CHECK-DAG: ![[U32]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "u32"

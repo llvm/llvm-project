@@ -1956,12 +1956,27 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
 
         // Emit "mov ri, <imm>"
         auto [Imm, Reloc] = PatchImms[GVar];
-        if (Reloc == BTF::ENUM_VALUE_EXISTENCE || Reloc == BTF::ENUM_VALUE ||
-            Reloc == BTF::BTF_TYPE_ID_LOCAL || Reloc == BTF::BTF_TYPE_ID_REMOTE)
-          OutMI.setOpcode(BPF::LD_imm64);
-        else
+        Register Reg = MI->getOperand(0).getReg();
+        StringRef Imm32 =
+            GVar->getAttribute(BPFCoreSharedInfo::EnumValueImm32Attr)
+                .getValueAsString();
+        if (Imm32 == "unsigned") {
+          // Emit "w = <imm>", which zero-extends the immediate.
+          OutMI.setOpcode(BPF::MOV_ri_32);
+          Reg = MI->getMF()->getSubtarget().getRegisterInfo()->getSubReg(
+              Reg, BPF::sub_32);
+        } else if (Imm32 == "signed") {
+          // Emit "r = <imm>", which sign-extends the immediate.
           OutMI.setOpcode(BPF::MOV_ri);
-        OutMI.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+        } else if (Reloc == BTF::ENUM_VALUE_EXISTENCE ||
+                   Reloc == BTF::ENUM_VALUE ||
+                   Reloc == BTF::BTF_TYPE_ID_LOCAL ||
+                   Reloc == BTF::BTF_TYPE_ID_REMOTE) {
+          OutMI.setOpcode(BPF::LD_imm64);
+        } else {
+          OutMI.setOpcode(BPF::MOV_ri);
+        }
+        OutMI.addOperand(MCOperand::createReg(Reg));
         OutMI.addOperand(MCOperand::createImm(Imm));
         return true;
       }

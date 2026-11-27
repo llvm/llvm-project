@@ -28,7 +28,7 @@ int test(int x) {
 
 // CHECK-LABEL: define dso_local i32 @test(
 // CHECK: call void asm sideeffect "r0 = $0", "i,~{r0}"(i32 2)
-// CHECK: call i64 @llvm.bpf.preserve.enum.value(
+// CHECK: call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(
 
 // NODBG-LABEL: define dso_local i32 @test(
 // NODBG: icmp eq i32 %{{[0-9a-z]+}}, 2
@@ -42,8 +42,8 @@ int locals(void) {
 
 // CHECK-LABEL: define dso_local i32 @locals(
 // CHECK: call void @llvm.memcpy.{{.*}}(ptr {{.*}}, ptr {{.*}}@__const.locals.a
-// CHECK: call i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @[[E1_A]], i64 1)
-// CHECK-NOT: call i64 @llvm.bpf.preserve.enum.value(
+// CHECK: call range(i64 -2147483648, 2147483648) i64 @llvm.bpf.preserve.enum.value(i32 {{[0-9]+}}, ptr @[[E1_A]], i64 1)
+// CHECK-NOT: @llvm.bpf.preserve.enum.value(
 // CHECK: ret i32
 
 // NODBG-LABEL: define dso_local i32 @locals(

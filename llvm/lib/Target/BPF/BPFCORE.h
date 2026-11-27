@@ -62,6 +62,9 @@ public:
   static constexpr StringRef AmaAttr = "btf_ama";
   /// The attribute attached to globals representing a type id
   static constexpr StringRef TypeIdAttr = "btf_type_id";
+  /// The attribute attached to globals representing an enum value loaded with
+  /// a 32-bit immediate, "signed" for int or "unsigned" for unsigned int
+  static constexpr StringRef EnumValueImm32Attr = "btf_enum_value_imm32";
 
   struct AmaRelocation {
     BTF::PatchableRelocKind Kind;

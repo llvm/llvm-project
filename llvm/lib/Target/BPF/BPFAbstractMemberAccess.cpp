@@ -84,11 +84,13 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsBPF.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
@@ -1062,7 +1064,8 @@ DIType *BPFAbstractMemberAccess::computeTypeAccess(CallInst *Call,
 
 static GlobalVariable *getOrCreateAmaGlobal(Module &M, DIType *Root,
                                             IntegerType *ValueType,
-                                            StringRef RelocSuffix) {
+                                            StringRef RelocSuffix,
+                                            StringRef Imm32) {
   const std::string Prefix = ("llvm." + Root->getName()).str();
   std::string Name = (Twine(Prefix) + RelocSuffix).str();
   for (unsigned N = 1; GlobalValue *Existing = M.getNamedValue(Name); ++N) {
@@ -1070,7 +1073,9 @@ static GlobalVariable *getOrCreateAmaGlobal(Module &M, DIType *Root,
     if (GV && GV->isDeclaration() && GV->hasExternalLinkage() &&
         GV->hasAttribute(BPFCoreSharedInfo::AmaAttr) &&
         GV->getValueType() == ValueType &&
-        GV->getMetadata(LLVMContext::MD_preserve_access_index) == Root)
+        GV->getMetadata(LLVMContext::MD_preserve_access_index) == Root &&
+        GV->getAttribute(BPFCoreSharedInfo::EnumValueImm32Attr)
+                .getValueAsString() == Imm32)
       return GV;
     // Same-named roots and different load widths need distinct globals. Keep
     // the discriminator before the suffix that the backend will decode.
@@ -1080,6 +1085,8 @@ static GlobalVariable *getOrCreateAmaGlobal(Module &M, DIType *Root,
   auto *GV = new GlobalVariable(M, ValueType, false,
                                 GlobalValue::ExternalLinkage, nullptr, Name);
   GV->addAttribute(BPFCoreSharedInfo::AmaAttr);
+  if (!Imm32.empty())
+    GV->addAttribute(BPFCoreSharedInfo::EnumValueImm32Attr, Imm32);
   GV->setMetadata(LLVMContext::MD_preserve_access_index, Root);
   return GV;
 }
@@ -1101,11 +1108,32 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
       return false;
   }
 
+  // Clang gives the call a range when the enum value is converted to a type
+  // of at most 32 bits. Keep the value in the range of int or unsigned int
+  // with a 32-bit immediate, so that the conversion can go away.
+  std::optional<ConstantRange> Range;
+  StringRef Imm32;
+  if (IsFieldInfo && CInfo.AccessIndex == BTF::ENUM_VALUE)
+    if (std::optional<ConstantRange> CallRange = Call->getRange()) {
+      ConstantRange Full32 = ConstantRange::getFull(32);
+      if (Full32.signExtend(64).contains(*CallRange)) {
+        Range = Full32.signExtend(64);
+        Imm32 = "signed";
+      } else if (Full32.zeroExtend(64).contains(*CallRange)) {
+        Range = Full32.zeroExtend(64);
+        Imm32 = "unsigned";
+      }
+    }
+
   BasicBlock *BB = Call->getParent();
   auto *ValueType = IsFieldInfo ? cast<IntegerType>(Call->getType())
                                 : Type::getInt64Ty(Call->getContext());
-  auto *GV = getOrCreateAmaGlobal(*M, Root, ValueType, RelocSuffix);
+  auto *GV = getOrCreateAmaGlobal(*M, Root, ValueType, RelocSuffix, Imm32);
   Instruction *Input = new LoadInst(ValueType, GV, "", Call->getIterator());
+  if (Range)
+    Input->setMetadata(LLVMContext::MD_range,
+                       MDBuilder(Call->getContext())
+                           .createRange(Range->getLower(), Range->getUpper()));
   if (!IsFieldInfo) {
     auto *GEP = GetElementPtrInst::Create(Type::getInt8Ty(Call->getContext()),
                                           Base, Input);
@@ -1157,6 +1185,8 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
   // representing a relocation is used.
   Instruction *PassThroughInst =
       BPFCoreSharedInfo::insertPassThrough(M, BB, Input, Call);
+  if (Range)
+    cast<CallInst>(PassThroughInst)->addRangeRetAttr(*Range);
   Call->replaceAllUsesWith(PassThroughInst);
   Call->eraseFromParent();
 
