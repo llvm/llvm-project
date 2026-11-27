@@ -256,6 +256,9 @@ public:
                                       MachineMemOperand::Flags Flags,
                                       unsigned *Fast) const override;
 
+  bool canMergeStoresTo(unsigned AddrSpace, EVT MemVT,
+                        const MachineFunction &MF) const override;
+
   /// Returns relocation base for the given PIC jumptable.
   SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG)
                                    const override;
