@@ -23,6 +23,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
+#include "llvm/Support/SPIRVAddrSpace.h"
 #include <queue>
 #include <set>
 #include <string>
@@ -181,10 +182,6 @@ void addStringImm(StringRef Str, MachineInstrBuilder &MIB);
 // the reverse of the logic in addStringImm.
 std::string getStringImm(const MachineInstr &MI, unsigned StartIndex);
 
-// Returns the string constant that the register refers to. It is assumed that
-// Reg is a global value that contains a string.
-std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI);
-
 // Add the given numerical immediate to MIB.
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 
@@ -237,33 +234,33 @@ constexpr unsigned
 storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
   switch (SC) {
   case SPIRV::StorageClass::Function:
-    return 0;
+    return SPIRVAS::Function;
   case SPIRV::StorageClass::CrossWorkgroup:
-    return 1;
+    return SPIRVAS::CrossWorkgroup;
   case SPIRV::StorageClass::UniformConstant:
-    return 2;
+    return SPIRVAS::UniformConstant;
   case SPIRV::StorageClass::Workgroup:
-    return 3;
+    return SPIRVAS::Workgroup;
   case SPIRV::StorageClass::Generic:
-    return 4;
+    return SPIRVAS::Generic;
   case SPIRV::StorageClass::DeviceOnlyINTEL:
-    return 5;
+    return SPIRVAS::DeviceOnlyINTEL;
   case SPIRV::StorageClass::HostOnlyINTEL:
-    return 6;
+    return SPIRVAS::HostOnlyINTEL;
   case SPIRV::StorageClass::Input:
-    return 7;
+    return SPIRVAS::Input;
   case SPIRV::StorageClass::Output:
-    return 8;
+    return SPIRVAS::Output;
   case SPIRV::StorageClass::CodeSectionINTEL:
-    return 9;
+    return SPIRVAS::CodeSectionINTEL;
   case SPIRV::StorageClass::Private:
-    return 10;
+    return SPIRVAS::Private;
   case SPIRV::StorageClass::StorageBuffer:
-    return 11;
+    return SPIRVAS::StorageBuffer;
   case SPIRV::StorageClass::Uniform:
-    return 12;
+    return SPIRVAS::Uniform;
   case SPIRV::StorageClass::PushConstant:
-    return 13;
+    return SPIRVAS::PushConstant;
   default:
     report_fatal_error("Unable to get address space id");
   }
@@ -292,9 +289,6 @@ MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
 
 // Get constant integer value of the given ConstReg.
 uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI);
-
-// Get constant integer value of the given ConstReg, sign-extended.
-int64_t getIConstValSext(Register ConstReg, const MachineRegisterInfo *MRI);
 
 // Check if MI is a SPIR-V specific intrinsic call.
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID);
@@ -352,6 +346,13 @@ bool matchPeeledArrayPattern(const StructType *Ty, Type *&OriginalElementType,
 // decorations will be such that there will be no padding after the array when
 // relevant.
 Type *reconstitutePeeledArrayType(Type *Ty);
+
+// SPIR-V encodes memory access alignments as 32-bit literals, but LLVM IR
+// allows up to 2^32. An access may understate its alignment, so clamp to the
+// largest power of two that fits.
+inline uint32_t getMemoryAccessAlignment(Align A) {
+  return std::min(A, Align(1u << 31)).value();
+}
 
 inline bool hasInitializer(const GlobalVariable *GV) {
   if (!GV->hasInitializer())
@@ -511,15 +512,16 @@ bool isVectorType(SPIRVTypeInst SPVTy);
 
 // Per spec: "Vector types must be parameterized only with 2, 3, or
 // 4 components, plus any additional sizes enabled by capabilities.", and
-// we always enable the Vector16 capability.
-inline bool requiresLongVectorEXT(unsigned NumComponents) {
+// we enable the Vector16 capability where available.
+inline bool requiresLongVectorEXT(unsigned NumComponents,
+                                  bool CanUseVector16 = true) {
   return NumComponents != 2 && NumComponents != 3 && NumComponents != 4 &&
-         NumComponents != 8 && NumComponents != 16;
+         (!CanUseVector16 || (NumComponents != 8 && NumComponents != 16));
 }
 
-inline bool isLongVectorEXT(const Type *Ty) {
+inline bool isLongVectorEXT(const Type *Ty, bool CanUseVector16 = true) {
   if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
-    return requiresLongVectorEXT(FVTy->getNumElements());
+    return requiresLongVectorEXT(FVTy->getNumElements(), CanUseVector16);
   return false;
 }
 

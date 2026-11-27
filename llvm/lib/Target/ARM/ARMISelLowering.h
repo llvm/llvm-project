@@ -316,6 +316,8 @@ class VectorType;
     /// Returns how to materialize the specified FP immediate.
     FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
                                bool ForCodeSize = false) const override;
+    FPImmAction getFPImmAction(const APFloat &Imm, LLT Ty,
+                               bool ForCodeSize = false) const override;
 
     void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
                             const CallBase &I, MachineFunction &MF,
@@ -385,15 +387,18 @@ class VectorType;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override;
     TargetLoweringBase::AtomicExpansionKind
-    shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
+    shouldExpandAtomicLoadInIR(const LoadInst *LI) const override;
     TargetLoweringBase::AtomicExpansionKind
-    shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+    shouldExpandAtomicStoreInIR(const StoreInst *SI) const override;
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
     bool useLoadStackGuardNode(const Module &M) const override;
+
+    Value *getIRStackGuard(IRBuilderBase &IRB,
+                           const LibcallLoweringInfo &Libcalls) const override;
 
     void
     insertSSPDeclarations(Module &M,
@@ -579,6 +584,7 @@ class VectorType;
     SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerADDROFRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;

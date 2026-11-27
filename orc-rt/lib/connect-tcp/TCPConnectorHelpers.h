@@ -8,7 +8,7 @@
 //
 // Helpers shared by the "tcp" connectors.
 //
-// Private to orc-rt-connect-tcp, like sys/posix/TCPSocket.h.
+// Private to orc-rt-connect-tcp, like host/posix/TCPSocket.h.
 //
 //===----------------------------------------------------------------------===//
 

@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple spir-unknown-unknown | FileCheck --check-prefix=CHECK --check-prefix=NODIVOPT %s
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple spir-unknown-unknown -cl-fp32-correctly-rounded-divide-sqrt | FileCheck --check-prefix=CHECK --check-prefix=DIVOPT %s
-// RUN: %clang_cc1 %s -emit-llvm -o - -DNOFP16 -DNOFP64 -cl-std=CL1.2 -triple r600-unknown-unknown -target-cpu r600 -pedantic | FileCheck --check-prefix=CHECK-FLT %s
 // RUN: %clang_cc1 %s -emit-llvm -o - -DFP64 -cl-std=CL1.2 -triple spir-unknown-unknown -pedantic | FileCheck --check-prefix=CHECK-DBL %s
 
 #ifndef NOFP16
@@ -81,9 +80,7 @@ float4 elementwise_sqrt_v4f32(float4 a) {
 
 #if __OPENCL_C_VERSION__ >=120
 void printf(constant char* fmt, ...);
-
 void testdbllit(long *val) {
-  // CHECK-FLT: float noundef 2.000000e+01
   // CHECK-DBL: double noundef 2.000000e+01
   printf("%f", 20.0);
 }

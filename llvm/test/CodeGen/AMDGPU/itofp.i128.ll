@@ -190,7 +190,7 @@ define float @sitofp_i128_to_f32(i128 %x) {
 ; GISEL-NEXT:    v_sub_u32_e32 v11, 64, v4
 ; GISEL-NEXT:    v_lshrrev_b64 v[9:10], v4, v[0:1]
 ; GISEL-NEXT:    v_lshlrev_b64 v[11:12], v11, v[2:3]
-; GISEL-NEXT:    v_add_u32_e32 v13, 0xffffffc0, v4
+; GISEL-NEXT:    v_subrev_u32_e32 v13, 64, v4
 ; GISEL-NEXT:    v_or_b32_e32 v11, v9, v11
 ; GISEL-NEXT:    v_or_b32_e32 v12, v10, v12
 ; GISEL-NEXT:    v_lshrrev_b64 v[9:10], v13, v[2:3]
@@ -204,7 +204,7 @@ define float @sitofp_i128_to_f32(i128 %x) {
 ; GISEL-NEXT:    v_cndmask_b32_e32 v4, v10, v1, vcc
 ; GISEL-NEXT:    v_lshrrev_b64 v[9:10], v14, -1
 ; GISEL-NEXT:    v_lshlrev_b64 v[11:12], v11, -1
-; GISEL-NEXT:    v_add_u32_e32 v5, 0xffffffda, v5
+; GISEL-NEXT:    v_subrev_u32_e32 v5, 38, v5
 ; GISEL-NEXT:    v_or_b32_e32 v15, v9, v11
 ; GISEL-NEXT:    v_or_b32_e32 v16, v10, v12
 ; GISEL-NEXT:    v_lshrrev_b64 v[11:12], v5, -1
@@ -444,7 +444,7 @@ define float @uitofp_i128_to_f32(i128 %x) {
 ; GISEL-NEXT:    v_sub_u32_e32 v10, 64, v4
 ; GISEL-NEXT:    v_lshrrev_b64 v[8:9], v4, v[0:1]
 ; GISEL-NEXT:    v_lshlrev_b64 v[10:11], v10, v[2:3]
-; GISEL-NEXT:    v_add_u32_e32 v12, 0xffffffc0, v4
+; GISEL-NEXT:    v_subrev_u32_e32 v12, 64, v4
 ; GISEL-NEXT:    v_or_b32_e32 v10, v8, v10
 ; GISEL-NEXT:    v_or_b32_e32 v11, v9, v11
 ; GISEL-NEXT:    v_lshrrev_b64 v[8:9], v12, v[2:3]
@@ -458,7 +458,7 @@ define float @uitofp_i128_to_f32(i128 %x) {
 ; GISEL-NEXT:    v_cndmask_b32_e32 v4, v9, v1, vcc
 ; GISEL-NEXT:    v_lshrrev_b64 v[8:9], v13, -1
 ; GISEL-NEXT:    v_lshlrev_b64 v[10:11], v10, -1
-; GISEL-NEXT:    v_add_u32_e32 v5, 0xffffffda, v5
+; GISEL-NEXT:    v_subrev_u32_e32 v5, 38, v5
 ; GISEL-NEXT:    v_or_b32_e32 v14, v8, v10
 ; GISEL-NEXT:    v_or_b32_e32 v15, v9, v11
 ; GISEL-NEXT:    v_lshrrev_b64 v[10:11], v5, -1
@@ -736,7 +736,7 @@ define double @sitofp_i128_to_f64(i128 %x) {
 ; GISEL-NEXT:    v_sub_u32_e32 v10, 64, v14
 ; GISEL-NEXT:    v_lshrrev_b64 v[0:1], v14, v[2:3]
 ; GISEL-NEXT:    v_lshlrev_b64 v[10:11], v10, v[4:5]
-; GISEL-NEXT:    v_add_u32_e32 v15, 0xffffffc0, v14
+; GISEL-NEXT:    v_subrev_u32_e32 v15, 64, v14
 ; GISEL-NEXT:    v_lshrrev_b64 v[12:13], v14, v[4:5]
 ; GISEL-NEXT:    v_or_b32_e32 v10, v0, v10
 ; GISEL-NEXT:    v_or_b32_e32 v11, v1, v11
@@ -1019,7 +1019,7 @@ define double @uitofp_i128_to_f64(i128 %x) {
 ; GISEL-NEXT:    v_sub_u32_e32 v9, 64, v13
 ; GISEL-NEXT:    v_lshrrev_b64 v[4:5], v13, v[0:1]
 ; GISEL-NEXT:    v_lshlrev_b64 v[9:10], v9, v[2:3]
-; GISEL-NEXT:    v_add_u32_e32 v14, 0xffffffc0, v13
+; GISEL-NEXT:    v_subrev_u32_e32 v14, 64, v13
 ; GISEL-NEXT:    v_lshrrev_b64 v[11:12], v13, v[2:3]
 ; GISEL-NEXT:    v_or_b32_e32 v9, v4, v9
 ; GISEL-NEXT:    v_or_b32_e32 v10, v5, v10
@@ -1313,7 +1313,7 @@ define half @sitofp_i128_to_f16(i128 %x) {
 ; GISEL-NEXT:    v_sub_u32_e32 v11, 64, v4
 ; GISEL-NEXT:    v_lshrrev_b64 v[9:10], v4, v[0:1]
 ; GISEL-NEXT:    v_lshlrev_b64 v[11:12], v11, v[2:3]
-; GISEL-NEXT:    v_add_u32_e32 v13, 0xffffffc0, v4
+; GISEL-NEXT:    v_subrev_u32_e32 v13, 64, v4
 ; GISEL-NEXT:    v_or_b32_e32 v11, v9, v11
 ; GISEL-NEXT:    v_or_b32_e32 v12, v10, v12
 ; GISEL-NEXT:    v_lshrrev_b64 v[9:10], v13, v[2:3]
@@ -1327,7 +1327,7 @@ define half @sitofp_i128_to_f16(i128 %x) {
 ; GISEL-NEXT:    v_cndmask_b32_e32 v4, v10, v1, vcc
 ; GISEL-NEXT:    v_lshrrev_b64 v[9:10], v14, -1
 ; GISEL-NEXT:    v_lshlrev_b64 v[11:12], v11, -1
-; GISEL-NEXT:    v_add_u32_e32 v5, 0xffffffda, v5
+; GISEL-NEXT:    v_subrev_u32_e32 v5, 38, v5
 ; GISEL-NEXT:    v_or_b32_e32 v15, v9, v11
 ; GISEL-NEXT:    v_or_b32_e32 v16, v10, v12
 ; GISEL-NEXT:    v_lshrrev_b64 v[11:12], v5, -1
@@ -1569,7 +1569,7 @@ define half @uitofp_i128_to_f16(i128 %x) {
 ; GISEL-NEXT:    v_sub_u32_e32 v10, 64, v4
 ; GISEL-NEXT:    v_lshrrev_b64 v[8:9], v4, v[0:1]
 ; GISEL-NEXT:    v_lshlrev_b64 v[10:11], v10, v[2:3]
-; GISEL-NEXT:    v_add_u32_e32 v12, 0xffffffc0, v4
+; GISEL-NEXT:    v_subrev_u32_e32 v12, 64, v4
 ; GISEL-NEXT:    v_or_b32_e32 v10, v8, v10
 ; GISEL-NEXT:    v_or_b32_e32 v11, v9, v11
 ; GISEL-NEXT:    v_lshrrev_b64 v[8:9], v12, v[2:3]
@@ -1583,7 +1583,7 @@ define half @uitofp_i128_to_f16(i128 %x) {
 ; GISEL-NEXT:    v_cndmask_b32_e32 v4, v9, v1, vcc
 ; GISEL-NEXT:    v_lshrrev_b64 v[8:9], v13, -1
 ; GISEL-NEXT:    v_lshlrev_b64 v[10:11], v10, -1
-; GISEL-NEXT:    v_add_u32_e32 v5, 0xffffffda, v5
+; GISEL-NEXT:    v_subrev_u32_e32 v5, 38, v5
 ; GISEL-NEXT:    v_or_b32_e32 v14, v8, v10
 ; GISEL-NEXT:    v_or_b32_e32 v15, v9, v11
 ; GISEL-NEXT:    v_lshrrev_b64 v[10:11], v5, -1

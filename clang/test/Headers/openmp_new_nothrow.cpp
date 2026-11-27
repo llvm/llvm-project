@@ -35,29 +35,17 @@ int* new_stuff_nothrow() {
 // NVPTX-CXX11-NEXT:  entry:
 // NVPTX-CXX11-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 136, ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR7:[0-9]+]]
 // NVPTX-CXX11-NEXT:    ret ptr [[CALL]]
-// NVPTX-CXX03-LABEL: define hidden noundef ptr @_Z23new_array_stuff_nothrowv
-// NVPTX-CXX03-SAME: () #[[ATTR0]] {
-// NVPTX-CXX03-NEXT:  entry:
-// NVPTX-CXX03-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 136, ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR4]]
-// NVPTX-CXX03-NEXT:    ret ptr [[CALL]]
+// NVPTX-LABEL: define hidden noundef ptr @_Z23new_array_stuff_nothrowv
+// NVPTX-SAME: () #[[ATTR0]] {
+// NVPTX-NEXT:  entry:
+// NVPTX-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 136, ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR7:[0-9]+]]
+// NVPTX-NEXT:    ret ptr [[CALL]]
 //
-// NVPTX-NVPTX-CXX11-LABEL: define hidden noundef ptr @_Z23new_array_stuff_nothrowv
-// NVPTX-NVPTX-CXX11-SAME: () #[[ATTR0]] {
-// NVPTX-NVPTX-CXX11-NEXT:  entry:
-// NVPTX-NVPTX-CXX11-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 136, ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR7:[0-9]+]]
-// NVPTX-NVPTX-CXX11-NEXT:    ret ptr [[CALL]]
-//
-// AMDGPU-CXX03-LABEL: define hidden noundef ptr @_Z23new_array_stuff_nothrowv
-// AMDGPU-CXX03-SAME: () #[[ATTR0]] {
-// AMDGPU-CXX03-NEXT:  entry:
-// AMDGPU-CXX03-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 136, ptr noundef nonnull align 1 dereferenceable(1) addrspacecast (ptr addrspace(1) @nothrow to ptr)) #[[ATTR4]]
-// AMDGPU-CXX03-NEXT:    ret ptr [[CALL]]
-//
-// AMDGPU-CXX11-LABEL: define hidden noundef ptr @_Z23new_array_stuff_nothrowv
-// AMDGPU-CXX11-SAME: () #[[ATTR0]] {
-// AMDGPU-CXX11-NEXT:  entry:
-// AMDGPU-CXX11-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 136, ptr noundef nonnull align 1 dereferenceable(1) addrspacecast (ptr addrspace(1) @nothrow to ptr)) #[[ATTR7:[0-9]+]]
-// AMDGPU-CXX11-NEXT:    ret ptr [[CALL]]
+// AMDGPU-LABEL: define hidden noundef ptr @_Z23new_array_stuff_nothrowv
+// AMDGPU-SAME: () #[[ATTR0]] {
+// AMDGPU-NEXT:  entry:
+// AMDGPU-NEXT:    [[CALL:%.*]] = call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 136, ptr noundef nonnull align 1 dereferenceable(1) addrspacecast (ptr addrspace(1) @nothrow to ptr)) #[[ATTR7:[0-9]+]]
+// AMDGPU-NEXT:    ret ptr [[CALL]]
 //
 int* new_array_stuff_nothrow() {
   return new (nothrow) int[34];
@@ -70,7 +58,7 @@ int* new_array_stuff_nothrow() {
 // NVPTX-CXX11-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
 // NVPTX-CXX11-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
 // NVPTX-CXX11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
-// NVPTX-CXX11-NEXT:    call void @_ZdlPvRKSt9nothrow_t(ptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR8:[0-9]+]]
+// NVPTX-CXX11-NEXT:    call void @_ZdlPvRKSt9nothrow_t(ptr allocptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR8:[0-9]+]]
 // NVPTX-CXX11-NEXT:    ret void
 // NVPTX-CXX03-LABEL: define hidden void @_Z20delete_stuff_nothrowPi
 // NVPTX-CXX03-SAME: (ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
@@ -78,7 +66,7 @@ int* new_array_stuff_nothrow() {
 // NVPTX-CXX03-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
 // NVPTX-CXX03-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
 // NVPTX-CXX03-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
-// NVPTX-CXX03-NEXT:    call void @_ZdlPvRKSt9nothrow_t(ptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR6:[0-9]+]]
+// NVPTX-CXX03-NEXT:    call void @_ZdlPvRKSt9nothrow_t(ptr allocptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR6:[0-9]+]]
 // NVPTX-CXX03-NEXT:    ret void
 //
 // NVPTX-NVPTX-CXX11-LABEL: define hidden void @_Z20delete_stuff_nothrowPi
@@ -87,7 +75,7 @@ int* new_array_stuff_nothrow() {
 // NVPTX-NVPTX-CXX11-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
 // NVPTX-NVPTX-CXX11-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
 // NVPTX-NVPTX-CXX11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
-// NVPTX-NVPTX-CXX11-NEXT:    call void @_ZdlPvRKSt9nothrow_t(ptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR8:[0-9]+]]
+// NVPTX-NVPTX-CXX11-NEXT:    call void @_ZdlPvRKSt9nothrow_t(ptr allocptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR8:[0-9]+]]
 // NVPTX-NVPTX-CXX11-NEXT:    ret void
 //
 // AMDGPU-CXX03-LABEL: define hidden void @_Z20delete_stuff_nothrowPi
@@ -97,7 +85,7 @@ int* new_array_stuff_nothrow() {
 // AMDGPU-CXX03-NEXT:    [[PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[PTR_ADDR]] to ptr
 // AMDGPU-CXX03-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR_ASCAST]], align 8
 // AMDGPU-CXX03-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR_ASCAST]], align 8
-// AMDGPU-CXX03-NEXT:    call void @_ZdlPvRKSt9nothrow_t(ptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) addrspacecast (ptr addrspace(1) @nothrow to ptr)) #[[ATTR6:[0-9]+]]
+// AMDGPU-CXX03-NEXT:    call void @_ZdlPvRKSt9nothrow_t(ptr allocptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) addrspacecast (ptr addrspace(1) @nothrow to ptr)) #[[ATTR6:[0-9]+]]
 // AMDGPU-CXX03-NEXT:    ret void
 //
 // AMDGPU-CXX11-LABEL: define hidden void @_Z20delete_stuff_nothrowPi
@@ -107,7 +95,7 @@ int* new_array_stuff_nothrow() {
 // AMDGPU-CXX11-NEXT:    [[PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[PTR_ADDR]] to ptr
 // AMDGPU-CXX11-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR_ASCAST]], align 8
 // AMDGPU-CXX11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR_ASCAST]], align 8
-// AMDGPU-CXX11-NEXT:    call void @_ZdlPvRKSt9nothrow_t(ptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) addrspacecast (ptr addrspace(1) @nothrow to ptr)) #[[ATTR8:[0-9]+]]
+// AMDGPU-CXX11-NEXT:    call void @_ZdlPvRKSt9nothrow_t(ptr allocptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) addrspacecast (ptr addrspace(1) @nothrow to ptr)) #[[ATTR8:[0-9]+]]
 // AMDGPU-CXX11-NEXT:    ret void
 //
 void delete_stuff_nothrow(int* ptr) {
@@ -121,7 +109,7 @@ void delete_stuff_nothrow(int* ptr) {
 // NVPTX-CXX11-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
 // NVPTX-CXX11-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
 // NVPTX-CXX11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
-// NVPTX-CXX11-NEXT:    call void @_ZdaPvRKSt9nothrow_t(ptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR8]]
+// NVPTX-CXX11-NEXT:    call void @_ZdaPvRKSt9nothrow_t(ptr allocptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR8]]
 // NVPTX-CXX11-NEXT:    ret void
 // NVPTX-CXX03-LABEL: define hidden void @_Z26delete_array_stuff_nothrowPi
 // NVPTX-CXX03-SAME: (ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
@@ -129,7 +117,7 @@ void delete_stuff_nothrow(int* ptr) {
 // NVPTX-CXX03-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
 // NVPTX-CXX03-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
 // NVPTX-CXX03-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
-// NVPTX-CXX03-NEXT:    call void @_ZdaPvRKSt9nothrow_t(ptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR6]]
+// NVPTX-CXX03-NEXT:    call void @_ZdaPvRKSt9nothrow_t(ptr allocptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR6]]
 // NVPTX-CXX03-NEXT:    ret void
 //
 // NVPTX-NVPTX-CXX11-LABEL: define hidden void @_Z26delete_array_stuff_nothrowPi
@@ -138,7 +126,7 @@ void delete_stuff_nothrow(int* ptr) {
 // NVPTX-NVPTX-CXX11-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
 // NVPTX-NVPTX-CXX11-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
 // NVPTX-NVPTX-CXX11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
-// NVPTX-NVPTX-CXX11-NEXT:    call void @_ZdaPvRKSt9nothrow_t(ptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR8]]
+// NVPTX-NVPTX-CXX11-NEXT:    call void @_ZdaPvRKSt9nothrow_t(ptr allocptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) @nothrow) #[[ATTR8]]
 // NVPTX-NVPTX-CXX11-NEXT:    ret void
 //
 // AMDGPU-CXX03-LABEL: define hidden void @_Z26delete_array_stuff_nothrowPi
@@ -148,7 +136,7 @@ void delete_stuff_nothrow(int* ptr) {
 // AMDGPU-CXX03-NEXT:    [[PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[PTR_ADDR]] to ptr
 // AMDGPU-CXX03-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR_ASCAST]], align 8
 // AMDGPU-CXX03-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR_ASCAST]], align 8
-// AMDGPU-CXX03-NEXT:    call void @_ZdaPvRKSt9nothrow_t(ptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) addrspacecast (ptr addrspace(1) @nothrow to ptr)) #[[ATTR6]]
+// AMDGPU-CXX03-NEXT:    call void @_ZdaPvRKSt9nothrow_t(ptr allocptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) addrspacecast (ptr addrspace(1) @nothrow to ptr)) #[[ATTR6]]
 // AMDGPU-CXX03-NEXT:    ret void
 //
 // AMDGPU-CXX11-LABEL: define hidden void @_Z26delete_array_stuff_nothrowPi
@@ -158,7 +146,7 @@ void delete_stuff_nothrow(int* ptr) {
 // AMDGPU-CXX11-NEXT:    [[PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[PTR_ADDR]] to ptr
 // AMDGPU-CXX11-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR_ASCAST]], align 8
 // AMDGPU-CXX11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR_ASCAST]], align 8
-// AMDGPU-CXX11-NEXT:    call void @_ZdaPvRKSt9nothrow_t(ptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) addrspacecast (ptr addrspace(1) @nothrow to ptr)) #[[ATTR8]]
+// AMDGPU-CXX11-NEXT:    call void @_ZdaPvRKSt9nothrow_t(ptr allocptr noundef [[TMP0]], ptr noundef nonnull align 1 dereferenceable(1) addrspacecast (ptr addrspace(1) @nothrow to ptr)) #[[ATTR8]]
 // AMDGPU-CXX11-NEXT:    ret void
 //
 void delete_array_stuff_nothrow(int* ptr) {

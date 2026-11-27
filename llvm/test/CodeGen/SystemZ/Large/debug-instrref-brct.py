@@ -9,7 +9,6 @@
 # CHECK-NEXT: BRCL 14, 6, %bb.2
 print(" name: main")
 print(" alignment: 16")
-print(" tracksRegLiveness: true")
 print(" liveins: ")
 print("   - { reg: '$r1d', virtual-reg: '' }")
 print("   - { reg: '$r2d', virtual-reg: '' }")

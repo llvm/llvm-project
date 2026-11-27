@@ -1989,11 +1989,10 @@ define fp128 @libcall2_copysignl() {
 entry:
   %0 = load fp128, ptr @gld0, align 16
   %1 = load fp128, ptr @gld1, align 16
-  %call = tail call fp128 @copysignl(fp128 %0, fp128 %1) nounwind readnone
+  %call = tail call fp128 @llvm.copysign.f128(fp128 %0, fp128 %1)
   ret fp128 %call
 }
 
-declare fp128 @copysignl(fp128, fp128) #1
 
 define fp128 @libcall2_powl() {
 ; C_CC_FMT-LABEL: libcall2_powl:

@@ -1,6 +1,7 @@
 ; Combined logical operations involving complement on z15
 ;
 ; RUN: llc -mcpu=z15 < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc -mcpu=z14 < %s -mtriple=s390x-linux-gnu | FileCheck %s --check-prefix=Z14
 
 ; And-with-complement 32-bit.
 define i32 @f1(i32 %dummy, i32 %a, i32 %b) {
@@ -150,3 +151,25 @@ define i64 @f14(i64 %a) {
   ret i64 %ret
 }
 
+; Bitwise NOT 32-bit.
+define i32 @f15(i32 %dummy, i32 %a) {
+; CHECK-LABEL: f15:
+; CHECK: nork %r2, %r3, %r3
+; CHECK: br %r14
+; Z14-LABEL: f15:
+; Z14: xilf %r2, 4294967295
+  %ret = xor i32 %a, -1
+  ret i32 %ret
+}
+
+; Bitwise NOT 64-bit.
+define i64 @f16(i64 %dummy, i64 %a) {
+; CHECK-LABEL: f16:
+; CHECK: nogrk %r2, %r3, %r3
+; CHECK: br %r14
+; Z14-LABEL: f16:
+; Z14: lcgr
+; Z14: aghi %r2, -1
+  %ret = xor i64 %a, -1
+  ret i64 %ret
+}

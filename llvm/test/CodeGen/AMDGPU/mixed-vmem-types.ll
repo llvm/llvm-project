@@ -10,16 +10,16 @@ define amdgpu_cs void @mixed_vmem_types_sampler_reads(i32 inreg %globalTable, i3
 ; GFX11-NEXT:    s_mov_b32 s0, s3
 ; GFX11-NEXT:    s_mov_b32 s3, s5
 ; GFX11-NEXT:    s_mov_b32 s1, s5
-; GFX11-NEXT:    s_load_b256 s[20:27], s[2:3], 0x40
-; GFX11-NEXT:    s_load_b512 s[4:19], s[0:1], 0x0
-; GFX11-NEXT:    s_load_b512 s[36:51], s[2:3], 0x0
+; GFX11-NEXT:    s_load_b256 s[36:43], s[2:3], 0x40
+; GFX11-NEXT:    s_load_b512 s[16:31], s[0:1], 0x0
+; GFX11-NEXT:    s_load_b512 s[0:15], s[2:3], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0xbc00bc00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    buffer_load_b32 v1, off, s[20:23], 0
-; GFX11-NEXT:    buffer_load_b32 v2, off, s[16:19], 0
-; GFX11-NEXT:    image_sample_lz v3, v0, s[8:15], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
-; GFX11-NEXT:    buffer_load_b32 v4, off, s[40:43], 0
-; GFX11-NEXT:    image_sample_lz v0, v0, s[44:51], s[36:39] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
+; GFX11-NEXT:    buffer_load_b32 v1, off, s[36:39], 0
+; GFX11-NEXT:    buffer_load_b32 v2, off, s[28:31], 0
+; GFX11-NEXT:    image_sample_lz v3, v0, s[20:27], s[16:19] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
+; GFX11-NEXT:    buffer_load_b32 v4, off, s[4:7], 0
+; GFX11-NEXT:    image_sample_lz v0, v0, s[8:15], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
 ; GFX11-NEXT:    s_waitcnt vmcnt(4)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0xac0, v1
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
@@ -38,7 +38,7 @@ define amdgpu_cs void @mixed_vmem_types_sampler_reads(i32 inreg %globalTable, i3
 ; GFX11-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11-NEXT:    buffer_store_b32 v0, off, s[24:27], 0
+; GFX11-NEXT:    buffer_store_b32 v0, off, s[40:43], 0
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: mixed_vmem_types_sampler_reads:
@@ -49,15 +49,15 @@ define amdgpu_cs void @mixed_vmem_types_sampler_reads(i32 inreg %globalTable, i3
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0xbc00bc00
 ; GFX12-NEXT:    s_mov_b32 s3, s5
 ; GFX12-NEXT:    s_mov_b32 s1, s5
-; GFX12-NEXT:    s_load_b256 s[20:27], s[2:3], 0x40
-; GFX12-NEXT:    s_load_b512 s[4:19], s[0:1], 0x0
-; GFX12-NEXT:    s_load_b512 s[36:51], s[2:3], 0x0
+; GFX12-NEXT:    s_load_b256 s[36:43], s[2:3], 0x40
+; GFX12-NEXT:    s_load_b512 s[16:31], s[0:1], 0x0
+; GFX12-NEXT:    s_load_b512 s[0:15], s[2:3], 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_load_b32 v1, off, s[20:23], null
-; GFX12-NEXT:    buffer_load_b32 v2, off, s[16:19], null
-; GFX12-NEXT:    image_sample_lz v3, v0, s[8:15], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
-; GFX12-NEXT:    buffer_load_b32 v4, off, s[40:43], null
-; GFX12-NEXT:    image_sample_lz v0, v0, s[44:51], s[36:39] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
+; GFX12-NEXT:    buffer_load_b32 v1, off, s[36:39], null
+; GFX12-NEXT:    buffer_load_b32 v2, off, s[28:31], null
+; GFX12-NEXT:    image_sample_lz v3, v0, s[20:27], s[16:19] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
+; GFX12-NEXT:    buffer_load_b32 v4, off, s[4:7], null
+; GFX12-NEXT:    image_sample_lz v0, v0, s[8:15], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
 ; GFX12-NEXT:    s_wait_loadcnt 0x2
 ; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0xac0, v1
 ; GFX12-NEXT:    s_wait_loadcnt 0x1
@@ -76,7 +76,7 @@ define amdgpu_cs void @mixed_vmem_types_sampler_reads(i32 inreg %globalTable, i3
 ; GFX12-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    buffer_store_b32 v0, off, s[24:27], null
+; GFX12-NEXT:    buffer_store_b32 v0, off, s[40:43], null
 ; GFX12-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: mixed_vmem_types_sampler_reads:
@@ -335,26 +335,25 @@ define amdgpu_cs void @mixed_vmem_types_bvh_reads(i32 inreg %descTable0, i32 inr
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX12-GISEL-NEXT:    s_cmp_eq_u32 s0, 0xac0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX12-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-GISEL-NEXT:    s_cmp_eq_u32 s0, 0xac0
+; GFX12-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-GISEL-NEXT:    s_cmp_eq_u32 s1, 0xac0
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
-; GFX12-GISEL-NEXT:    s_cmp_eq_u32 s0, 0xac0
-; GFX12-GISEL-NEXT:    v_cmp_eq_f32_e64 s0, 0, v13
-; GFX12-GISEL-NEXT:    s_cselect_b32 s3, exec_lo, 0
+; GFX12-GISEL-NEXT:    s_cmp_eq_u32 s2, 0xac0
+; GFX12-GISEL-NEXT:    s_cselect_b32 s2, vcc_lo, 0
 ; GFX12-GISEL-NEXT:    s_and_b32 s1, s1, 1
-; GFX12-GISEL-NEXT:    s_and_b32 s3, s3, vcc_lo
+; GFX12-GISEL-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0, v13
 ; GFX12-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s1, exec_lo, 0
-; GFX12-GISEL-NEXT:    s_and_b32 s2, s2, 1
-; GFX12-GISEL-NEXT:    s_and_b32 s1, s3, s1
-; GFX12-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
-; GFX12-GISEL-NEXT:    s_cselect_b32 s2, exec_lo, 0
+; GFX12-GISEL-NEXT:    s_and_b32 s0, s0, 1
+; GFX12-GISEL-NEXT:    s_and_b32 s1, s2, s1
+; GFX12-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX12-GISEL-NEXT:    s_cselect_b32 s0, exec_lo, 0
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    s_and_b32 s1, s1, s2
 ; GFX12-GISEL-NEXT:    s_and_b32 s0, s1, s0
+; GFX12-GISEL-NEXT:    s_and_b32 s0, s0, vcc_lo
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX12-GISEL-NEXT:    buffer_store_b32 v0, off, s[8:11], null

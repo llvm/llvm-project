@@ -321,6 +321,17 @@ RangeSet RangeSet::Factory::getRangeSet(Range From) {
   return makePersistent(std::move(Result));
 }
 
+RangeSet RangeSet::Factory::getFullRangeSet(APSIntType Ty) {
+  for (const auto &[CachedTy, Set] : FullRangeSets)
+    if (CachedTy == Ty)
+      return Set;
+
+  RangeSet Result =
+      getRangeSet(ValueFactory.getMinValue(Ty), ValueFactory.getMaxValue(Ty));
+  FullRangeSets.emplace_back(Ty, Result.Impl);
+  return Result;
+}
+
 RangeSet RangeSet::Factory::makePersistent(ContainerType &&From) {
   llvm::FoldingSetNodeID ID;
   llvm::FoldingSetInsertToken InsertToken;
@@ -597,6 +608,15 @@ RangeSet RangeSet::Factory::intersect(RangeSet LHS, RangeSet RHS) {
   if (LHS.isEmpty() || RHS.isEmpty() || LHS.getMaxValue() < RHS.getMinValue() ||
       RHS.getMaxValue() < LHS.getMinValue())
     return getEmptySet();
+
+  // Shortcut: if one set is a single range covering the other set, the result
+  // is the other set.
+  if (RHS.size() == 1 && RHS.getMinValue() <= LHS.getMinValue() &&
+      LHS.getMaxValue() <= RHS.getMaxValue())
+    return LHS;
+  if (LHS.size() == 1 && LHS.getMinValue() <= RHS.getMinValue() &&
+      RHS.getMaxValue() <= LHS.getMaxValue())
+    return RHS;
 
   return intersect(*LHS.Impl, *RHS.Impl);
 }
@@ -911,7 +931,7 @@ namespace {
 ///     to produce non-trivial classes.
 ///     If, at some point, we can assume that two symbols from two distinct
 ///     classes are equal, we can merge these classes.
-class EquivalenceClass : public llvm::FoldingSetNode {
+class EquivalenceClass {
 public:
   /// Find equivalence class for the given symbol in the given state.
   [[nodiscard]] static inline EquivalenceClass find(ProgramStateRef State,
@@ -1307,8 +1327,8 @@ private:
   RangeSet infer(QualType T) {
     // Lazily generate a new RangeSet representing all possible values for the
     // given symbol type.
-    RangeSet Result(RangeFactory, ValueFactory.getMinValue(T),
-                    ValueFactory.getMaxValue(T));
+    RangeSet Result =
+        RangeFactory.getFullRangeSet(ValueFactory.getAPSIntType(T));
 
     // References are known to be non-zero.
     if (T->isReferenceType())
@@ -1943,7 +1963,7 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator(RangeSet LHS,
 //                  Constraint manager implementation details
 //===----------------------------------------------------------------------===//
 
-class RangeConstraintManager : public RangedConstraintManager {
+class RangeConstraintManager final : public RangedConstraintManager {
 public:
   RangeConstraintManager(ExprEngine *EE, SValBuilder &SVB)
       : RangedConstraintManager(EE, SVB), F(getBasicVals()) {}
@@ -2062,7 +2082,7 @@ private:
 /// Derived class can control which types we handle by defining methods of the
 /// following form:
 ///
-///   bool handle${SYMBOL}To${CONSTRAINT}(const SYMBOL *Sym,
+///   bool assign${SYMBOL}To${CONSTRAINT}(const SYMBOL *Sym,
 ///                                       CONSTRAINT Constraint);
 ///
 /// where SYMBOL is the type of the symbol (e.g. SymSymExpr, SymbolCast, etc.)
@@ -2304,7 +2324,6 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
   for (std::pair<EquivalenceClass, ClassSet> DisequalityEntry :
        DisequalityInfo) {
     EquivalenceClass Class = DisequalityEntry.first;
-    ClassSet DisequalClasses = DisequalityEntry.second;
     State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
     if (!State)
       return false;
@@ -2985,7 +3004,6 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
   SymbolSet::Factory &SetFactory = State->get_context<SymbolSet>();
 
   ConstraintRangeTy Constraints = State->get<ConstraintRange>();
-  ConstraintRangeTy NewConstraints = Constraints;
   ConstraintRangeTy::Factory &ConstraintFactory =
       State->get_context<ConstraintRange>();
 
@@ -3047,14 +3065,9 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
   }
 
   // 2. We don't need to track classes for dead symbols.
-  for (std::pair<SymbolRef, EquivalenceClass> SymbolClassPair : Map) {
-    SymbolRef Sym = SymbolClassPair.first;
-
-    if (SymReaper.isDead(Sym)) {
-      ClassMapChanged = true;
-      NewMap = ClassFactory.remove(NewMap, Sym);
-    }
-  }
+  NewMap = ClassFactory.filter(
+      Map, [&](const auto &E) { return !SymReaper.isDead(E.first); });
+  ClassMapChanged = NewMap != Map;
 
   // 3. Remove dead members from classes and remove dead non-trivial classes
   //    and their constraints.

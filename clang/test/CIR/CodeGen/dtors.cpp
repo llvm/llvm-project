@@ -39,7 +39,7 @@ bool test_temp_or() { return make_temp(1) || make_temp(2); }
 // an active flag. B(1) is constructed first, so its cleanup scope is the outer
 // one and B(2) is destroyed first.
 // CIR: cir.func{{.*}} @_Z12test_temp_orv()
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.bool>
 // CIR:   %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
@@ -137,7 +137,7 @@ bool test_temp_and() { return make_temp(1) && make_temp(2); }
 // evaluated right-hand side, so its destructor is guarded by an active flag
 // and lives in the inner scope, which runs first.
 // CIR: cir.func{{.*}} @_Z13test_temp_andv()
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.bool>
 // CIR:   %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
@@ -319,7 +319,7 @@ int test_temp_in_condition(G &obj) {
 }
 
 // CIR: cir.func {{.*}} @_Z22test_temp_in_conditionR1G(%[[ARG0:.*]]: !cir.ptr<!rec_G> {{.*}}) -> (!s32i {{.*}}) {{.*}} {
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[OBJ:.*]] = cir.alloca "obj" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_G>>
 // CIR:   cir.store %[[ARG0]], %[[OBJ]]
 // CIR:   cir.scope {
@@ -379,15 +379,9 @@ int test_temp_in_condition(G &obj) {
 // LLVM:   br label %[[CLEAN_SCOPE_TWO_CLEANUP:.*]]
 // LLVM: [[CLEAN_SCOPE_TWO_CLEANUP]]:
 // LLVM:   call void @_ZN1GD1Ev(ptr {{.*}} %[[REF_TMP1]])
-// LLVM:   br label %[[EXIT_CLEAN_SCOPE_TWO:.*]]
-// LLVM: [[EXIT_CLEAN_SCOPE_TWO]]:
-// LLVM:   br label %[[CLEAN_SCOPE_ONE_CONTINUE:.*]]
-// LLVM: [[CLEAN_SCOPE_ONE_CONTINUE]]:
 // LLVM:   br label %[[CLEAN_SCOPE_ONE_CLEANUP:.*]]
 // LLVM: [[CLEAN_SCOPE_ONE_CLEANUP]]:
 // LLVM:   call void @_ZN1GD1Ev(ptr {{.*}} %[[REF_TMP0]])
-// LLVM:   br label %[[EXIT_CLEAN_SCOPE_ONE:.*]]
-// LLVM: [[EXIT_CLEAN_SCOPE_ONE]]:
 // LLVM:   br label %[[SCOPE_CONTINUE:.*]]
 // LLVM: [[SCOPE_CONTINUE]]:
 // LLVM:   %[[LOAD_RESULT:.*]] = load i8, ptr %[[TMP_RESULT]]
@@ -398,8 +392,6 @@ int test_temp_in_condition(G &obj) {
 // LLVM:   %[[RETVAL:.*]] = load i32, ptr %[[RET_ADDR]]
 // LLVM:   ret i32 %[[RETVAL]]
 // LLVM: [[FALSE_BLOCK]]:
-// LLVM:   br label %[[EXIT_SCOPE:.*]]
-// LLVM: [[EXIT_SCOPE]]:
 // LLVM:   store i32 0, ptr %[[RET_ADDR]]
 // LLVM:   %[[RETVAL:.*]] = load i32, ptr %[[RET_ADDR]]
 // LLVM:   ret i32 %[[RETVAL]]

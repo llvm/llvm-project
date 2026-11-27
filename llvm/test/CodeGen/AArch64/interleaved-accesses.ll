@@ -204,8 +204,8 @@ define <10 x i32> @load_factor3_x25(ptr %ptr) {
 ; NEON-NEXT:    add v1.4s, v1.4s, v2.4s
 ; NEON-NEXT:    add v0.4s, v3.4s, v0.4s
 ; NEON-NEXT:    add v3.4s, v4.4s, v5.4s
-; NEON-NEXT:    str d1, [x8, #32]
 ; NEON-NEXT:    stp q3, q0, [x8]
+; NEON-NEXT:    str d1, [x8, #32]
 ; NEON-NEXT:    ret
 ;
 ; NO_NEON-LABEL: load_factor3_x25:
@@ -617,8 +617,8 @@ define void @store_factor4(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2
 ; NEON-IADISABLED-NEXT:    mov v16.d[1], v5.d[1]
 ; NEON-IADISABLED-NEXT:    mov v4.d[1], v3.d[1]
 ; NEON-IADISABLED-NEXT:    mov v0.d[1], v1.d[1]
-; NEON-IADISABLED-NEXT:    stp q0, q16, [x0]
 ; NEON-IADISABLED-NEXT:    stp q7, q4, [x0, #32]
+; NEON-IADISABLED-NEXT:    stp q0, q16, [x0]
 ; NEON-IADISABLED-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_factor4:
@@ -907,10 +907,10 @@ define void @store_ptrvec_factor4(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %v1, <2 x p
 ; NO_NEON:       // %bb.0:
 ; NO_NEON-NEXT:    ldr x8, [sp, #8]
 ; NO_NEON-NEXT:    stp x3, x5, [x0, #32]
-; NO_NEON-NEXT:    stp x2, x4, [x0]
 ; NO_NEON-NEXT:    stp x7, x8, [x0, #48]
 ; NO_NEON-NEXT:    ldr x8, [sp]
 ; NO_NEON-NEXT:    stp x6, x8, [x0, #16]
+; NO_NEON-NEXT:    stp x2, x4, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_ptrvec_factor4:
@@ -1122,8 +1122,8 @@ define void @store_undef_mask_factor2(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1) {
 ; NO_NEON-LABEL: store_undef_mask_factor2:
 ; NO_NEON:       // %bb.0:
 ; NO_NEON-NEXT:    ldr w8, [sp]
-; NO_NEON-NEXT:    stp w3, w7, [x0, #16]
 ; NO_NEON-NEXT:    stp w4, w8, [x0, #24]
+; NO_NEON-NEXT:    stp w3, w7, [x0, #16]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_undef_mask_factor2:
@@ -1655,8 +1655,8 @@ define void @store_general_mask_factor3(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1
 ; CHECK-GI-NEXT:    mov v2.s[3], v1.s[1]
 ; CHECK-GI-NEXT:    mov v5.s[3], v4.s[3]
 ; CHECK-GI-NEXT:    mov v3.s[3], v0.s[2]
-; CHECK-GI-NEXT:    str q5, [x0, #32]
 ; CHECK-GI-NEXT:    stp q2, q3, [x0]
+; CHECK-GI-NEXT:    str q5, [x0, #32]
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = shufflevector <32 x i32> %v0, <32 x i32> %v1, <12 x i32> <i32 4, i32 32, i32 16, i32 5, i32 33, i32 17, i32 6, i32 34, i32 18, i32 7, i32 35, i32 19>
   store <12 x i32> %interleaved.vec, ptr %ptr, align 4
@@ -2534,13 +2534,13 @@ define void @store_factor2_wide2(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1) {
 ;
 ; CHECK-GI-LABEL: store_factor2_wide2:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    mov v4.16b, v1.16b
+; CHECK-GI-NEXT:    mov v4.16b, v0.16b
 ; CHECK-GI-NEXT:    add x8, x0, #32
-; CHECK-GI-NEXT:    mov v1.16b, v2.16b
-; CHECK-GI-NEXT:    mov v5.16b, v3.16b
-; CHECK-GI-NEXT:    st2 { v0.4s, v1.4s }, [x0]
-; CHECK-GI-NEXT:    st2 { v4.4s, v5.4s }, [x8]
+; CHECK-GI-NEXT:    mov v5.16b, v2.16b
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 def $q1_q2
+; CHECK-GI-NEXT:    mov v2.16b, v3.16b
+; CHECK-GI-NEXT:    st2 { v4.4s, v5.4s }, [x0]
+; CHECK-GI-NEXT:    st2 { v1.4s, v2.4s }, [x8]
 ; CHECK-GI-NEXT:    ret
   %interleaved.vec = shufflevector <8 x i32> %v0, <8 x i32> %v1, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
   store <16 x i32> %interleaved.vec, ptr %ptr, align 4
@@ -2560,11 +2560,11 @@ define void @store_factor2_wide15(ptr %ptr, ptr %p0, ptr %p1) {
 ; NEON-NEXT:    zip1 v1.4s, v1.4s, v4.4s
 ; NEON-NEXT:    ext v5.16b, v4.16b, v5.16b, #8
 ; NEON-NEXT:    rev64 v2.4s, v2.4s
-; NEON-NEXT:    str q1, [x0]
 ; NEON-NEXT:    trn2 v2.4s, v2.4s, v5.4s
 ; NEON-NEXT:    ext v0.16b, v2.16b, v0.16b, #8
 ; NEON-NEXT:    mov v3.d[1], v2.d[0]
 ; NEON-NEXT:    stp q3, q0, [x0, #16]
+; NEON-NEXT:    str q1, [x0]
 ; NEON-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_factor2_wide15:
@@ -2620,8 +2620,8 @@ define void @store_factor2_wide3(ptr %ptr, ptr %p0, ptr %p1) {
 ; NEON-NEXT:    zip2 v4.4s, v3.4s, v5.4s
 ; NEON-NEXT:    zip1 v3.4s, v3.4s, v5.4s
 ; NEON-NEXT:    stp q6, q0, [x0, #32]
-; NEON-NEXT:    stp q3, q4, [x0]
 ; NEON-NEXT:    stp q1, q2, [x0, #64]
+; NEON-NEXT:    stp q3, q4, [x0]
 ; NEON-NEXT:    ret
 ;
 ; NO_NEON-LABEL: store_factor2_wide3:
@@ -2887,7 +2887,6 @@ define void @store_factor4_wide(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32
 ; NO_NEON-NEXT:    str w2, [x0, #16]
 ; NO_NEON-NEXT:    str w8, [x0, #76]
 ; NO_NEON-NEXT:    ldr w8, [sp, #40]
-; NO_NEON-NEXT:    str w1, [x0]
 ; NO_NEON-NEXT:    stp w8, w9, [x0, #68]
 ; NO_NEON-NEXT:    ldr w8, [sp, #160]
 ; NO_NEON-NEXT:    ldr w9, [sp, #96]
@@ -2909,6 +2908,7 @@ define void @store_factor4_wide(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32
 ; NO_NEON-NEXT:    str w8, [x0, #12]
 ; NO_NEON-NEXT:    ldr w8, [sp, #8]
 ; NO_NEON-NEXT:    stp w8, w9, [x0, #4]
+; NO_NEON-NEXT:    str w1, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor4_wide:
@@ -3204,13 +3204,13 @@ define void @store_factor2_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1
 ;
 ; CHECK-GI-LABEL: store_factor2_wide_intrinsic:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    mov v4.16b, v1.16b
+; CHECK-GI-NEXT:    mov v4.16b, v0.16b
 ; CHECK-GI-NEXT:    add x8, x0, #32
-; CHECK-GI-NEXT:    mov v1.16b, v2.16b
-; CHECK-GI-NEXT:    mov v5.16b, v3.16b
-; CHECK-GI-NEXT:    st2 { v0.4s, v1.4s }, [x0]
-; CHECK-GI-NEXT:    st2 { v4.4s, v5.4s }, [x8]
+; CHECK-GI-NEXT:    mov v5.16b, v2.16b
+; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 def $q1_q2
+; CHECK-GI-NEXT:    mov v2.16b, v3.16b
+; CHECK-GI-NEXT:    st2 { v4.4s, v5.4s }, [x0]
+; CHECK-GI-NEXT:    st2 { v1.4s, v2.4s }, [x8]
 ; CHECK-GI-NEXT:    ret
   %interleaved.intrinsic = call <16 x i32> @llvm.vector.interleave2.v16i32(<8 x i32> %v0, <8 x i32> %v1)
   store <16 x i32> %interleaved.intrinsic, ptr %ptr, align 4
@@ -3433,7 +3433,6 @@ define void @store_factor4_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1
 ; NO_NEON-NEXT:    str w2, [x0, #16]
 ; NO_NEON-NEXT:    str w8, [x0, #76]
 ; NO_NEON-NEXT:    ldr w8, [sp, #40]
-; NO_NEON-NEXT:    str w1, [x0]
 ; NO_NEON-NEXT:    stp w8, w9, [x0, #68]
 ; NO_NEON-NEXT:    ldr w8, [sp, #160]
 ; NO_NEON-NEXT:    ldr w9, [sp, #96]
@@ -3455,6 +3454,7 @@ define void @store_factor4_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1
 ; NO_NEON-NEXT:    str w8, [x0, #12]
 ; NO_NEON-NEXT:    ldr w8, [sp, #8]
 ; NO_NEON-NEXT:    stp w8, w9, [x0, #4]
+; NO_NEON-NEXT:    str w1, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_factor4_wide_intrinsic:
@@ -3838,10 +3838,10 @@ define void @store_general_mask_factor4_undefmulti_intrinsic(ptr %ptr, <32 x i32
 ; NO_NEON-NEXT:    .cfi_offset w29, -16
 ; NO_NEON-NEXT:    ldr w8, [sp, #32]
 ; NO_NEON-NEXT:    stp w6, w2, [x0, #16]
-; NO_NEON-NEXT:    stp w5, w1, [x0]
 ; NO_NEON-NEXT:    stp w2, w8, [x0, #24]
 ; NO_NEON-NEXT:    ldr w8, [sp, #24]
 ; NO_NEON-NEXT:    stp w1, w8, [x0, #8]
+; NO_NEON-NEXT:    stp w5, w1, [x0]
 ; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; NO_NEON-NEXT:    ret
 ;
@@ -3929,10 +3929,10 @@ define void @store_ptrvec_factor4_intrinsic(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %
 ; NO_NEON:       // %bb.0:
 ; NO_NEON-NEXT:    ldr x8, [sp, #8]
 ; NO_NEON-NEXT:    stp x3, x5, [x0, #32]
-; NO_NEON-NEXT:    stp x2, x4, [x0]
 ; NO_NEON-NEXT:    stp x7, x8, [x0, #48]
 ; NO_NEON-NEXT:    ldr x8, [sp]
 ; NO_NEON-NEXT:    stp x6, x8, [x0, #16]
+; NO_NEON-NEXT:    stp x2, x4, [x0]
 ; NO_NEON-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: store_ptrvec_factor4_intrinsic:

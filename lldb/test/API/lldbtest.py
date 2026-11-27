@@ -36,7 +36,7 @@ class LLDBTest(TestFormat):
 
     def execute(self, test, litConfig):
         return lldbflakes.execute_with_reruns(
-            lambda: lit.Test.Result(*self._execute_once(test, litConfig))
+            test, lambda: lit.Test.Result(*self._execute_once(test, litConfig))
         )
 
     def _execute_once(self, test, litConfig):
@@ -87,6 +87,11 @@ class LLDBTest(TestFormat):
             timeoutInfo = "Reached timeout of {} seconds".format(
                 test.config.maxIndividualTestTime
             )
+
+        # On Windows, dotest writes CRLF line endings. Normalize them here, as
+        # lit's own text-mode output would otherwise turn them into CRCRLF.
+        out = out.replace("\r\n", "\n") if out else out
+        err = err.replace("\r\n", "\n") if err else err
 
         output = """Script:\n--\n%s\n--\nExit Code: %d\n""" % (" ".join(cmd), exitCode)
         if timeoutInfo is not None:

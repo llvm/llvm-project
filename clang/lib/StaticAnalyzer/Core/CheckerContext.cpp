@@ -12,9 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/Basic/Builtins.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/StringExtras.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 
 using namespace clang;
 using namespace ento;
@@ -48,69 +47,7 @@ StringRef CheckerContext::getDeclDescription(const Decl *D) {
 
 bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
                                         StringRef Name) {
-  // To avoid false positives (Ex: finding user defined functions with
-  // similar names), only perform fuzzy name matching when it's a builtin.
-  // Using a string compare is slow, we might want to switch on BuiltinID here.
-  unsigned BId = FD->getBuiltinID();
-  if (BId != 0) {
-    if (Name.empty())
-      return true;
-    std::string BName = FD->getASTContext().BuiltinInfo.getName(BId);
-    size_t start = BName.find(Name);
-    if (start != StringRef::npos) {
-      // Accept exact match.
-      if (BName.size() == Name.size())
-        return true;
-
-      //    v-- match starts here
-      // ...xxxxx...
-      //   _xxxxx_
-      //   ^     ^ lookbehind and lookahead characters
-
-      const auto MatchPredecessor = [&]() -> bool {
-        return start <= 0 || !llvm::isAlpha(BName[start - 1]);
-      };
-      const auto MatchSuccessor = [&]() -> bool {
-        std::size_t LookbehindPlace = start + Name.size();
-        return LookbehindPlace >= BName.size() ||
-               !llvm::isAlpha(BName[LookbehindPlace]);
-      };
-
-      if (MatchPredecessor() && MatchSuccessor())
-        return true;
-    }
-  }
-
-  const IdentifierInfo *II = FD->getIdentifier();
-  // If this is a special C++ name without IdentifierInfo, it can't be a
-  // C library function.
-  if (!II)
-    return false;
-
-  // C library functions are either declared directly within a TU (the common
-  // case) or they are accessed through the namespace `std` (when they are used
-  // in C++ via headers like <cstdlib>).
-  const DeclContext *DC = FD->getDeclContext()->getRedeclContext();
-  if (!(DC->isTranslationUnit() || DC->isStdNamespace()))
-    return false;
-
-  // If this function is not externally visible, it is not a C library function.
-  // Note that we make an exception for inline functions, which may be
-  // declared in header files without external linkage.
-  if (!FD->isInlined() && !FD->isExternallyVisible())
-    return false;
-
-  if (Name.empty())
-    return true;
-
-  StringRef FName = II->getName();
-  if (FName == Name)
-    return true;
-
-  if (FName.starts_with("__inline") && FName.contains(Name))
-    return true;
-
-  return false;
+  return CLibraryFunctionInfo(FD).isCLibraryFunction(Name);
 }
 
 bool CheckerContext::isHardenedVariantOf(const FunctionDecl *FD,

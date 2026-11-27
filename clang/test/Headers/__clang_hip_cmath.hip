@@ -43,12 +43,12 @@ extern "C" __device__ _Float16 test_fma_f16(_Float16 x, _Float16 y,
 
 // DEFAULT-LABEL: @test_pow_f16(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract noundef half @__ocml_pown_f16(half noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR9:[0-9]+]]
+// DEFAULT-NEXT:    [[CALL_I:%.*]] = tail call contract noundef half @__ocml_pown_f16(half noundef [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR7:[0-9]+]]
 // DEFAULT-NEXT:    ret half [[CALL_I]]
 //
 // FINITEONLY-LABEL: @test_pow_f16(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) half @__ocml_pown_f16(half noundef nofpclass(nan inf) [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR9:[0-9]+]]
+// FINITEONLY-NEXT:    [[CALL_I:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) half @__ocml_pown_f16(half noundef nofpclass(nan inf) [[X:%.*]], i32 noundef [[Y:%.*]]) #[[ATTR7:[0-9]+]]
 // FINITEONLY-NEXT:    ret half [[CALL_I]]
 //
 extern "C" __device__ _Float16 test_pow_f16(_Float16 x, int y) {
@@ -71,12 +71,12 @@ extern "C" __device__ float test_fabs_f32(float x) {
 
 // DEFAULT-LABEL: @test_sin_f32(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I1:%.*]] = tail call contract noundef float @__ocml_sin_f32(float noundef [[X:%.*]]) #[[ATTR10:[0-9]+]]
+// DEFAULT-NEXT:    [[CALL_I1:%.*]] = tail call contract noundef float @__ocml_sin_f32(float noundef [[X:%.*]]) #[[ATTR8:[0-9]+]]
 // DEFAULT-NEXT:    ret float [[CALL_I1]]
 //
 // FINITEONLY-LABEL: @test_sin_f32(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I1:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) float @__ocml_sin_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR10:[0-9]+]]
+// FINITEONLY-NEXT:    [[CALL_I1:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) float @__ocml_sin_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR8:[0-9]+]]
 // FINITEONLY-NEXT:    ret float [[CALL_I1]]
 //
 extern "C" __device__ float test_sin_f32(float x) {
@@ -85,12 +85,12 @@ extern "C" __device__ float test_sin_f32(float x) {
 
 // DEFAULT-LABEL: @test_cos_f32(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CALL_I1:%.*]] = tail call contract noundef float @__ocml_cos_f32(float noundef [[X:%.*]]) #[[ATTR10]]
+// DEFAULT-NEXT:    [[CALL_I1:%.*]] = tail call contract noundef float @__ocml_cos_f32(float noundef [[X:%.*]]) #[[ATTR8]]
 // DEFAULT-NEXT:    ret float [[CALL_I1]]
 //
 // FINITEONLY-LABEL: @test_cos_f32(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[CALL_I1:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) float @__ocml_cos_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR10]]
+// FINITEONLY-NEXT:    [[CALL_I1:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) float @__ocml_cos_f32(float noundef nofpclass(nan inf) [[X:%.*]]) #[[ATTR8]]
 // FINITEONLY-NEXT:    ret float [[CALL_I1]]
 //
 extern "C" __device__ float test_cos_f32(float x) {
@@ -124,12 +124,12 @@ namespace user_namespace {
 // DEFAULT-NEXT:    [[B:%.*]] = alloca [[STRUCT_USER_BFLOAT16]], align 1, addrspace(5)
 // DEFAULT-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
 // DEFAULT-NEXT:    [[B_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B]] to ptr
-// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[A]]) #[[ATTR11:[0-9]+]]
-// DEFAULT-NEXT:    call void @_ZN13user_bfloat16C1Ef(ptr noundef nonnull align 1 dereferenceable(1) [[A_ASCAST]], float noundef 1.000000e+00) #[[ATTR10]]
-// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[B]]) #[[ATTR11]]
-// DEFAULT-NEXT:    call void @_ZN13user_bfloat16C1Ef(ptr noundef nonnull align 1 dereferenceable(1) [[B_ASCAST]], float noundef 2.000000e+00) #[[ATTR10]]
-// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[B]]) #[[ATTR11]]
-// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[A]]) #[[ATTR11]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[A]])
+// DEFAULT-NEXT:    call void @_ZN13user_bfloat16C1Ef(ptr noundef nonnull align 1 dereferenceable(1) [[A_ASCAST]], float noundef 1.000000e+00) #[[ATTR8]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[B]])
+// DEFAULT-NEXT:    call void @_ZN13user_bfloat16C1Ef(ptr noundef nonnull align 1 dereferenceable(1) [[B_ASCAST]], float noundef 2.000000e+00) #[[ATTR8]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[B]])
+// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[A]])
 // DEFAULT-NEXT:    ret void
 //
 // FINITEONLY-LABEL: @_ZN14user_namespace8test_fmaEv(
@@ -138,12 +138,12 @@ namespace user_namespace {
 // FINITEONLY-NEXT:    [[B:%.*]] = alloca [[STRUCT_USER_BFLOAT16]], align 1, addrspace(5)
 // FINITEONLY-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
 // FINITEONLY-NEXT:    [[B_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B]] to ptr
-// FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[A]]) #[[ATTR11:[0-9]+]]
-// FINITEONLY-NEXT:    call void @_ZN13user_bfloat16C1Ef(ptr noundef nonnull align 1 dereferenceable(1) [[A_ASCAST]], float noundef nofpclass(nan inf) 1.000000e+00) #[[ATTR10]]
-// FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[B]]) #[[ATTR11]]
-// FINITEONLY-NEXT:    call void @_ZN13user_bfloat16C1Ef(ptr noundef nonnull align 1 dereferenceable(1) [[B_ASCAST]], float noundef nofpclass(nan inf) 2.000000e+00) #[[ATTR10]]
-// FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[B]]) #[[ATTR11]]
-// FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[A]]) #[[ATTR11]]
+// FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[A]])
+// FINITEONLY-NEXT:    call void @_ZN13user_bfloat16C1Ef(ptr noundef nonnull align 1 dereferenceable(1) [[A_ASCAST]], float noundef nofpclass(nan inf) 1.000000e+00) #[[ATTR8]]
+// FINITEONLY-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[B]])
+// FINITEONLY-NEXT:    call void @_ZN13user_bfloat16C1Ef(ptr noundef nonnull align 1 dereferenceable(1) [[B_ASCAST]], float noundef nofpclass(nan inf) 2.000000e+00) #[[ATTR8]]
+// FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[B]])
+// FINITEONLY-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[A]])
 // FINITEONLY-NEXT:    ret void
 //
   __global__ void test_fma() {
@@ -164,7 +164,7 @@ namespace user_namespace {
 //
 // NO-CORRECT-DIV-SQRT-LABEL: @test_sqrt_f32(
 // NO-CORRECT-DIV-SQRT-NEXT:  entry:
-// NO-CORRECT-DIV-SQRT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[X:%.*]]), !fpmath [[META7:![0-9]+]]
+// NO-CORRECT-DIV-SQRT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[X:%.*]]), !fpmath [[META8:![0-9]+]]
 // NO-CORRECT-DIV-SQRT-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_sqrt_f32(float x) {

@@ -29,11 +29,9 @@ def ApplyPolynomialApproximationPatternsOp : Op<Transform_Dialect,
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Enables polynomial approximations for math functions.
-    Optionally, allows usage of x86 AVX2 intrinsics.
   }];
 
-  let arguments = (ins UnitAttr:$enable_avx2);
-  let assemblyFormat = "(`enable_avx2` $enable_avx2^)? attr-dict";
+  let assemblyFormat = "attr-dict";
 }
 
 #endif // MATH_TRANSFORM_OPS

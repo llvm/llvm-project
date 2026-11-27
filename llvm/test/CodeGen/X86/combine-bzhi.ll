@@ -81,3 +81,25 @@ define i64 @test_bzhi64_range(i64 %arg) nounwind readnone {
   %4 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 30064771240, i64 %3)
   ret i64 %4
 }
+
+; Only the low 8 bits of the index are used, so the zext can be dropped.
+define i32 @test_bzhi32_zext_index_known_bits(i32 %a, i8 %b) nounwind readnone {
+; CHECK-LABEL: test_bzhi32_zext_index_known_bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    bzhil %esi, %edi, %eax
+; CHECK-NEXT:    retq
+  %1 = zext i8 %b to i32
+  %2 = tail call i32 @llvm.x86.bmi.bzhi.32(i32 %a, i32 %1)
+  ret i32 %2
+}
+
+define i64 @test_bzhi64_zext_index_known_bits(i64 %a, i8 %b) nounwind readnone {
+; CHECK-LABEL: test_bzhi64_zext_index_known_bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    bzhiq %rsi, %rdi, %rax
+; CHECK-NEXT:    retq
+  %1 = zext i8 %b to i64
+  %2 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 %a, i64 %1)
+  ret i64 %2
+}

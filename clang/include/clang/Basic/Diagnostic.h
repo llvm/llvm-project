@@ -34,7 +34,6 @@
 #include <cstdint>
 #include <limits>
 #include <list>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -503,7 +502,14 @@ private:
     };
 
     /// The diagnostic states for each file.
-    mutable std::map<FileID, File> Files;
+    mutable llvm::DenseMap<FileID, std::unique_ptr<File>> Files;
+
+    std::pair<File *, bool> getOrInsertFile(FileID ID) const {
+      auto [It, Inserted] = Files.try_emplace(ID);
+      if (Inserted)
+        It->second = std::make_unique<File>();
+      return {It->second.get(), Inserted};
+    }
 
     /// One-entry cache for getFile(): Files gets large, and most
     /// lookups are for the same FileID as the previous one.
@@ -592,10 +598,10 @@ private:
   void *ArgToStringCookie = nullptr;
   ArgToStringFnTy ArgToStringFn;
 
-  /// Whether the diagnostic should be suppressed in FilePath.
-  llvm::unique_function<bool(diag::kind, SourceLocation /*DiagLoc*/,
-                             const SourceManager &) const>
-      DiagSuppressionMapping;
+  /// Decides whether a diagnostic should be suppressed in a file. Null if
+  /// there is no diagnostic suppression mapping.
+  class WarningsSpecialCaseList;
+  std::unique_ptr<WarningsSpecialCaseList> DiagSuppressionMapping;
 
 public:
   /// Returns a cache key representing the diagnostic state at \p Loc.
@@ -612,8 +618,12 @@ public:
   /// True if an active diagnostic suppression mapping makes severity dependent
   /// on the file path.
   bool hasDiagSuppressionMapping() const {
-    return static_cast<bool>(DiagSuppressionMapping);
+    return DiagSuppressionMapping != nullptr;
   }
+
+  /// True if an active diagnostic suppression mapping has a section for
+  /// \p DiagId, so that its severity can depend on the file path.
+  bool hasDiagSuppressionMappingFor(diag::kind DiagId) const;
 
   explicit DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> Diags,
                              DiagnosticOptions &DiagOpts,

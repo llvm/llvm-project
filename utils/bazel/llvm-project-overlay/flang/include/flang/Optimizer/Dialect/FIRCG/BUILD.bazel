@@ -14,6 +14,8 @@ package(
 
 licenses(["notice"])
 
+exports_files(["CGOps.td"])
+
 cc_library(
     name = "FIRCGHeaders",
     hdrs = ["CGOps.h"],

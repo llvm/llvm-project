@@ -265,7 +265,7 @@ void cond(bool c) {
 // CIR-BEFORE:           })
 
 // Only the arm that builds the temporary registers its destruction.
-// LLVM-LABEL: define dso_local void @_Z4condb(i1 noundef zeroext %{{.+}})
+// LLVM-LABEL: define dso_local void @_Z4condb(i1 noundef %{{.+}})
 // LLVM:         call i32 @__cxa_guard_acquire(ptr @_ZGVZ4condbE1r)
 // LLVM:         call void @_ZN10NonTrivialC1Ev(ptr noundef nonnull align 4 dereferenceable(4) @_ZGRZ4condbE1r_)
 // LLVM-NEXT:    call i32 @__cxa_atexit(ptr @_ZN10NonTrivialD1Ev, ptr @_ZGRZ4condbE1r_, ptr @__dso_handle)

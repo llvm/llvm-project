@@ -27,7 +27,7 @@ def ol_device_info_t : Enum {
   list<TaggedEtor> basic_etors =[
     TaggedEtor<"TYPE", "ol_device_type_t", "type of the device">,
     TaggedEtor<"PLATFORM", "ol_platform_handle_t", "the platform associated with the device">,
-    TaggedEtor<"NAME", "char[]", "Device name">,
+    TaggedEtor<"NAME", "char[]", "Device name, typically identifying the device architecture (e.g. `gfx1100`). May be the same as `PRODUCT_NAME`">,
     TaggedEtor<"PRODUCT_NAME", "char[]", "Device user-facing marketing name">,
     TaggedEtor<"UID", "char[]", "Device UID">,
     TaggedEtor<"VENDOR", "char[]", "Device vendor">,
@@ -87,6 +87,16 @@ def ol_device_info_t : Enum {
                   "The backend-native handle of the device, reinterpreted as "
                   "a void pointer. The actual type of the handle is backend "
                   "dependent">,
+        TaggedEtor<"NATIVE_PLATFORM_HANDLE", "void *",
+                  "The backend-native handle of the platform this device "
+                  "belongs to, reinterpreted as a void pointer">,
+       TaggedEtor<"PREFERRED_LOCATION_HOST", "bool",
+                  "Whether the device is best used by accessing host memory "
+                  "directly instead of copying it to device memory">,
+       TaggedEtor<"MAX_DIRECT_WRITE_SIZE", "uint64_t",
+                  "Maximum size, in bytes, of a synchronous host-to-device "
+                  "copy that may be performed as a direct write, or zero if"
+                  "not supported. This is a performance hint, not a guarantee">,
   ];
   let etors = !listconcat(basic_etors, fp_configs, native_vec_widths,
                           fp_support, basic_etors2);

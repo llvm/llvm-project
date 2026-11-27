@@ -29,9 +29,10 @@
 //    - FloatType: define floating point type to be used.
 //    - FPBits: fputil::FPBits<FloatType>.
 //    - StorageType: define bit type for the corresponding floating point type.
-//    - uint64_t check(start, stop, rounding_mode): a method to test in given
-//          range for a given rounding mode, which returns the number of
-//          failures.
+//    - uint64_t check(start, stop, rounding_mode): a method to test the
+//    inclusive
+//          range [start, stop] for a given rounding mode, returning the number
+//          of failures.
 // 2. Use LlvmLibcExhaustiveMathTest<Checker> class
 // 3. Call: test_full_range_<RoundingMode>(start, stop)
 //       or test_full_range_all_roundings(start, stop).
@@ -50,12 +51,12 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
   using StorageType = typename FPBits::StorageType;
 
-  // Check in a range, return the number of failures.
+  // Check the inclusive range [start, stop], returning the number of failures.
   uint64_t check(StorageType start, StorageType stop,
                  LIBC_NAMESPACE::fputil::testing::RoundingMode rounding) {
     LIBC_NAMESPACE::fputil::testing::ForceRoundingMode r(rounding);
     if (!r.success)
-      return (stop > start);
+      return (stop >= start);
 
     StorageType bits = start;
     uint64_t failed = 0;
@@ -151,7 +152,7 @@ struct LlvmLibcExhaustiveMathvecTest
           }
 
           uint64_t failed_in_range =
-              Checker::check(range_begin, range_end, rounding);
+              Checker::check(range_begin, range_end - 1, rounding);
           if (failed_in_range > 0) {
             std::stringstream msg;
             msg << "Test failed for " << std::dec << failed_in_range
@@ -215,16 +216,35 @@ struct LlvmLibcExhaustiveMathvecTest
   static constexpr StorageType STORAGE_MAX =
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
 
-  void test_full_range_RN() { test_full_range_RN(0, STORAGE_MAX); }
+  void test_last_input(LIBC_NAMESPACE::fputil::testing::RoundingMode rounding) {
+    ASSERT_EQ(Checker::check(STORAGE_MAX, STORAGE_MAX, rounding), uint64_t(0));
+  }
 
-  void test_full_range_RU() { test_full_range_RU(0, STORAGE_MAX); }
+  void test_full_range_RN() {
+    test_full_range_RN(0, STORAGE_MAX);
+    test_last_input(LIBC_NAMESPACE::fputil::testing::RoundingMode::Nearest);
+  }
 
-  void test_full_range_RD() { test_full_range_RD(0, STORAGE_MAX); }
+  void test_full_range_RU() {
+    test_full_range_RU(0, STORAGE_MAX);
+    test_last_input(LIBC_NAMESPACE::fputil::testing::RoundingMode::Upward);
+  }
 
-  void test_full_range_RZ() { test_full_range_RZ(0, STORAGE_MAX); }
+  void test_full_range_RD() {
+    test_full_range_RD(0, STORAGE_MAX);
+    test_last_input(LIBC_NAMESPACE::fputil::testing::RoundingMode::Downward);
+  }
+
+  void test_full_range_RZ() {
+    test_full_range_RZ(0, STORAGE_MAX);
+    test_last_input(LIBC_NAMESPACE::fputil::testing::RoundingMode::TowardZero);
+  }
 
   void test_full_range_all_roundings() {
-    test_full_range_all_roundings(0, STORAGE_MAX);
+    test_full_range_RN();
+    test_full_range_RU();
+    test_full_range_RD();
+    test_full_range_RZ();
   }
 };
 

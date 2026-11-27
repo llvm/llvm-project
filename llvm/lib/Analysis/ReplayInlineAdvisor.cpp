@@ -94,8 +94,9 @@ std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdviceImpl(CallBase &CB) {
   Function &Caller = *CB.getCaller();
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
 
-  // Decision not made by replay system
-  if (!hasInlineAdvice(*CB.getFunction())) {
+  // Decision not made by replay system. Remarks only name direct callees, so
+  // there is no replay decision for an indirect call either.
+  if (!hasInlineAdvice(*CB.getFunction()) || !CB.getCalledFunction()) {
     // If there's a registered original advisor, return its decision
     if (OriginalAdvisor)
       return OriginalAdvisor->getAdvice(CB);

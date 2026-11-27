@@ -31,13 +31,13 @@
 // CC1-LA32V1P0-NOT: "-target-feature"
 // CC1-LA32V1P0: "-target-feature" "+32bit" "-target-feature" "+32s"
 // CC1-LA32V1P0-NOT: "-target-feature"
-// CC1-LA32V1P0: "-target-abi" "ilp32d"
+// CC1-LA32V1P0: "-target-abi" "ilp32s"
 
 // CC1-LA32RV1P0: "-target-cpu" "loongarch32"
 // CC1-LA32RV1P0-NOT: "-target-feature"
 // CC1-LA32RV1P0: "-target-feature" "+32bit"
 // CC1-LA32RV1P0-NOT: "-target-feature"
-// CC1-LA32RV1P0: "-target-abi" "ilp32d"
+// CC1-LA32RV1P0: "-target-abi" "ilp32s"
 
 // CC1-LOONGARCH64: "-target-cpu" "loongarch64"
 // CC1-LOONGARCH64-NOT: "-target-feature"

@@ -9,7 +9,7 @@ define half @test1(half %x) {
 ; CHECK-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movl $64512, %ecx # imm = 0xFC00
 ; CHECK-NEXT:    cmoval %eax, %ecx
-; CHECK-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %ecx, %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %cmp2 = fcmp ogt half %x, 0xHFC00

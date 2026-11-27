@@ -53,6 +53,7 @@ void runChecks(
                    "...\n"
                    "---\n"
                    "name: sizes\n"
+                   "tracksRegLiveness: false\n"
                    "jumpTable:\n"
                    "  kind:            block-address\n"
                    "  entries:\n"
@@ -92,7 +93,7 @@ TEST(InstSizes, INLINEASM_BR) {
 
   runChecks(TM.get(), II.get(), "",
             // clang-format off
-            "  INLINEASM_BR &nop, 1 /* sideeffect attdialect */, 13 /* imm */, %jump-table.0\n",
+            "  INLINEASM_BR &nop, sideeffect attdialect, imm, %jump-table.0\n",
             // clang-format on
             [](LoongArchInstrInfo &II, MachineFunction &MF) {
               auto I = MF.begin()->begin();

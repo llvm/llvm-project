@@ -20,10 +20,12 @@
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Filesystem.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Timer.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
@@ -201,6 +203,26 @@ static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
     return true;
   default:
     return ctx.config.machine == mt;
+  }
+}
+
+static llvm::SmallVector<std::string, 3>
+perTargetRuntimeDirForMachineType(MachineTypes mt) {
+  switch (mt) {
+  case ARM64:
+  case ARM64X:
+    return {"aarch64-pc-windows-msvc"};
+  case ARM64EC:
+    return {"arm64ec-pc-windows-msvc", "aarch64-pc-windows-msvc"};
+  case ARMNT:
+    return {"armv7-pc-windows-msvc", "arm-pc-windows-msvc",
+            "thumbv7-pc-windows-msvc"};
+  case AMD64:
+    return {"x86_64-pc-windows-msvc"};
+  case I386:
+    return {"i686-pc-windows-msvc", "i386-pc-windows-msvc"};
+  default:
+    return {};
   }
 }
 
@@ -411,30 +433,43 @@ void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputOpt inputOpt) {
       createFutureForFile(std::string(path), ctx.config.prefetchInputs));
   std::string pathStr = std::string(path);
   enqueueTask([=]() {
-    llvm::TimeTraceScope timeScope("File: ", path);
+    llvm::TimeTraceScope timeScope("File: ", pathStr);
     auto [mb, ec] = future->get();
     if (ec) {
-      // Retry reading the file (synchronously) now that we may have added
-      // winsysroot search paths from SymbolTable::addFile().
-      // Retrying synchronously is important for keeping the order of inputs
-      // consistent.
-      // This makes it so that if the user passes something in the winsysroot
-      // before something we can find with an architecture, we won't find the
-      // winsysroot file.
-      if (std::optional<StringRef> retryPath = findFileIfNew(pathStr)) {
-        auto retryMb = MemoryBuffer::getFile(*retryPath, /*IsText=*/false,
-                                             /*RequiresNullTerminator=*/false);
-        ec = retryMb.getError();
-        if (!ec) {
-          mb = std::move(*retryMb);
-          // Prefetch memory pages in the background as we will need them soon
-          // enough.
-          if (ctx.config.prefetchInputs)
-            mb->willNeedIfMmap();
+      // Retry reading pathStr directly before consulting findFileIfNew: if the
+      // file already existed when findFileIfNew/findLibIfNew ran prior to
+      // enqueuePath, its UniqueID is already in visitedFiles, so findFileIfNew
+      // would return std::nullopt and silently drop the input file on error.
+      auto retryMb = MemoryBuffer::getFile(pathStr, /*IsText=*/false,
+                                           /*RequiresNullTerminator=*/false);
+      ec = retryMb.getError();
+      if (!ec) {
+        mb = std::move(*retryMb);
+        if (ctx.config.prefetchInputs)
+          mb->willNeedIfMmap();
+      } else if (findFile(pathStr) != pathStr) {
+        // Retry reading the file (synchronously) now that we may have added
+        // winsysroot search paths from SymbolTable::addFile().
+        // Retrying synchronously is important for keeping the order of inputs
+        // consistent.
+        // This makes it so that if the user passes something in the winsysroot
+        // before something we can find with an architecture, we won't find the
+        // winsysroot file.
+        if (std::optional<StringRef> retryPath = findFileIfNew(pathStr)) {
+          retryMb = MemoryBuffer::getFile(*retryPath, /*IsText=*/false,
+                                          /*RequiresNullTerminator=*/false);
+          ec = retryMb.getError();
+          if (!ec) {
+            mb = std::move(*retryMb);
+            // Prefetch memory pages in the background as we will need them soon
+            // enough.
+            if (ctx.config.prefetchInputs)
+              mb->willNeedIfMmap();
+          }
+        } else {
+          // We've already handled this file.
+          return;
         }
-      } else {
-        // We've already handled this file.
-        return;
       }
     }
     if (ec) {
@@ -783,6 +818,9 @@ void LinkerDriver::setMachine(MachineTypes machine) {
     ctx.hybridSymtab.emplace(ctx, ARM64);
   }
 
+  if (!ctx.config.mingw)
+    addClangPerTargetRuntimeDirSearchPaths();
+
   addWinSysRootLibSearchPaths();
 }
 
@@ -867,6 +905,7 @@ void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
   SmallString<128> runtimeLibDir(rootDir);
   sys::path::append(runtimeLibDir, "lib", "clang",
                     std::to_string(LLVM_VERSION_MAJOR), "lib");
+  clangRuntimeLibDir = runtimeLibDir.str();
   // Resource dir + osname, which is hardcoded to windows since we are in the
   // COFF driver.
   SmallString<128> runtimeLibDirWithOS(runtimeLibDir);
@@ -875,6 +914,16 @@ void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
   searchPaths.push_back(saver().save(runtimeLibDirWithOS.str()));
   searchPaths.push_back(saver().save(runtimeLibDir.str()));
   searchPaths.push_back(saver().save(libDir.str()));
+}
+
+void LinkerDriver::addClangPerTargetRuntimeDirSearchPaths() {
+  auto machineDirs = perTargetRuntimeDirForMachineType(ctx.config.machine);
+  // Add per-target resource dir library path
+  for (std::string machineDir : machineDirs) {
+    SmallString<128> targetRuntimeDir(clangRuntimeLibDir);
+    sys::path::append(targetRuntimeDir, machineDir);
+    searchPaths.push_back(saver().save(targetRuntimeDir.str()));
+  }
 }
 
 void LinkerDriver::addWinSysRootLibSearchPaths() {
@@ -954,6 +1003,7 @@ static std::string createResponseFile(const opt::InputArgList &args,
     case OPT_INPUT:
       os << quote(rewritePath(arg->getValue())) << "\n";
       break;
+    case OPT_lto_sample_profile:
     case OPT_wholearchive_file:
       os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << "\n";
       break;
@@ -1641,8 +1691,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
   {
     llvm::TimeTraceScope timeScope2("Parse cl::opt");
-    cl::ResetAllOptionOccurrences();
-    cl::parseCommandLineOptions(config->libraryOptions, v);
+    cl::parseCommandLineOptions(config->libraryOptions, getToolOptions(), v);
   }
 
   // Handle /errorlimit early, because error() depends on it.
@@ -1709,6 +1758,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         Err(ctx) << "/linkrepro: failed to open " << *path << ": "
                  << toString(errOrWriter.takeError());
       }
+    }
+
+    // LTO reads the sample profile directly, so collect it explicitly.
+    if (tar) {
+      StringRef ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
+      if (!ltoSampleProfile.empty())
+        takeBuffer(CHECK(MemoryBuffer::getFile(ltoSampleProfile),
+                         "could not open " + ltoSampleProfile));
     }
   }
   // Handle /linkreprofullpathrsp

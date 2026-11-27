@@ -11,9 +11,9 @@
 # Original program, command line 'clang ./test.c -O2 -g -m32 -o out.o -c'
 #
 # long double ext();
-# 
+#
 # long double glob = 1.234;
-# 
+#
 # long double foo(long double a, long double b, long double c) {
 #   a += b;
 #   b += c;
@@ -23,16 +23,16 @@
 #     a += glob;
 #   return a - b;
 # }
-# 
+#
 
 --- |
   ; ModuleID = 'out.ll'
   source_filename = "./test.c"
   target datalayout = "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-f64:32:64-f80:32-n8:16:32-S128"
   target triple = "i386-unknown-linux-gnu"
-  
+
   @glob = dso_local local_unnamed_addr global x86_fp80 0xK3FFF9DF3B645A1CAC000, align 4, !dbg !0
-  
+
   ; Function Attrs: nounwind
   define dso_local x86_fp80 @foo(x86_fp80 %a, x86_fp80 %b, x86_fp80 %c) local_unnamed_addr !dbg !13 {
   entry:
@@ -59,16 +59,16 @@
     %sub = fsub x86_fp80 %a.addr.0, %div, !dbg !30
     ret x86_fp80 %sub, !dbg !31
   }
-  
+
   declare dso_local x86_fp80 @ext(...) local_unnamed_addr
-  
+
   ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  
+
   !llvm.dbg.cu = !{!2}
   !llvm.module.flags = !{!8, !9, !10, !11}
   !llvm.ident = !{!12}
-  
+
   !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
   !1 = distinct !DIGlobalVariable(name: "glob", scope: !2, file: !6, line: 3, type: !7, isLocal: false, isDefinition: true)
   !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5, splitDebugInlining: false, nameTableKind: None)
@@ -106,29 +106,28 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 frameInfo:
   hasCalls:        true
 fixedStack:
-  - { id: 0, type: default, offset: 24, size: 10, alignment: 8, stack-id: default, 
-      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 0, type: default, offset: 24, size: 10, alignment: 8, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 1, type: default, offset: 12, size: 10, alignment: 4, stack-id: default, 
-      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 1, type: default, offset: 12, size: 10, alignment: 4, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 2, type: default, offset: 0, size: 10, alignment: 16, stack-id: default, 
-      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 2, type: default, offset: 0, size: 10, alignment: 16, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 stack:
-  - { id: 0, name: '', type: spill-slot, offset: 0, size: 10, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 0, name: '', type: spill-slot, offset: 0, size: 10, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 1, name: '', type: spill-slot, offset: 0, size: 10, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 1, name: '', type: spill-slot, offset: 0, size: 10, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 2, name: '', type: spill-slot, offset: 0, size: 10, alignment: 4, 
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+  - { id: 2, name: '', type: spill-slot, offset: 0, size: 10, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 callSites:       []
 debugValueSubstitutions: []
