@@ -219,9 +219,10 @@ defm V_MUL_HI_U32 : VOP3Inst <"v_mul_hi_u32", V_MUL_PROF<VOP_I32_I32_I32>, mulhu
 defm V_MUL_HI_I32 : VOP3Inst <"v_mul_hi_i32", V_MUL_PROF<VOP_I32_I32_I32>, mulhs>;
 } // End SchedRW = [WriteIntMul], GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
 
-let SchedRW = [WriteIntMul] in {
+// v_mul_lo_i32 is never selected because it is equivalent to v_mul_lo_u32. It
+// only exists in GFX6, GFX7 and GFX10 before GFX10.3.
+let SubtargetPredicate = isGFX6GFX7GFX10, SchedRW = [WriteIntMul] in
 defm V_MUL_LO_I32 : VOP3Inst <"v_mul_lo_i32", V_MUL_PROF<VOP_I32_I32_I32>>;
-} // End SchedRW = [WriteIntMul]
 
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0, AddedComplexity = 1 in {
 defm V_MINIMUM_F32 : VOP3Inst <"v_minimum_f32", VOP3_Profile<VOP_F32_F32_F32>, fminimum>;
@@ -3122,10 +3123,9 @@ defm V_MAX_F64          : VOP3_Real_vi <0x283>;
 defm V_LDEXP_F64        : VOP3_Real_vi <0x284>;
 defm V_MUL_LO_U32       : VOP3_Real_vi <0x285>;
 
-// removed from VI as identical to V_MUL_LO_U32
-let isAsmParserOnly = 1 in {
-defm V_MUL_LO_I32       : VOP3_Real_vi <0x285>;
-}
+// v_mul_lo_i32 was removed in VI because it is identical to v_mul_lo_u32.
+let AssemblerPredicate = isGFX8GFX9 in
+def : AMDGPUMnemonicAlias<"v_mul_lo_i32", "v_mul_lo_u32">;
 
 defm V_MUL_HI_U32       : VOP3_Real_vi <0x286>;
 defm V_MUL_HI_I32       : VOP3_Real_vi <0x287>;
