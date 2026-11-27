@@ -63,9 +63,12 @@ def A53UnitFPALU  : ProcResGroup<[A53UnitFP0, A53UnitFP1]> {
 // arithmetic and multiply operations that follow them.
 def A53UnitFPDS   : ProcResource<2> { let BufferSize = 0; } // FP Div/Sqrt
 // Some scalar and 64-bit operations issue at most one per cycle, even though
-// they take a single lane: they share A53UnitFPRestricted, which the
-// accumulating operations hold for two cycles (see A53WriteAccD).
+// they take a single lane, and only as the older instruction of a dual-issue
+// pair (BeginGroup): they share A53UnitFPRestricted, which the accumulating
+// operations hold for two cycles (see A53WriteAccD).
 def A53UnitFPRestricted : ProcResource<1> { let BufferSize = 0; }
+// FP compares issue at most one per cycle.
+def A53UnitFPCmp : ProcResource<1> { let BufferSize = 0; }
 
 
 //===----------------------------------------------------------------------===//
@@ -137,14 +140,13 @@ def : WriteRes<WriteF, [A53UnitFPALU]> {
   let Latency = 4;
   let RetireOOO = 1;
 }
-// A compare does not dual-issue with another compare. Taking both lanes keeps
-// that limit, but also stops it from pairing with an unrestricted operation,
-// which the hardware allows.
+// A compare pairs with an independent FP/ASIMD or integer operation, but not
+// with another compare (A53UnitFPCmp).
 // A dependent FCSEL, FCCMP or CSEL reads the NZCV result in the same cycle, so
 // WriteFCmp has no latency. The compare reads its register operands one cycle
 // earlier than the other FP operations (A53ReadFCmpOp).
 def A53ReadFCmpOp : SchedReadAdvance<-1>;
-def : WriteRes<WriteFCmp, [A53UnitFP0, A53UnitFP1]> {
+def : WriteRes<WriteFCmp, [A53UnitFPALU, A53UnitFPCmp]> {
   let Latency = 0;
   let RetireOOO = 1;
 }
@@ -180,21 +182,22 @@ def : WriteRes<WriteFMul, [A53UnitFPALU]> {
   let Latency = 4;
   let RetireOOO = 1;
 }
-// The scalar and 64-bit by-element multiplies issue at most one per cycle, and
-// their Q-forms take both lanes like any other Q-form operation.
+// The scalar and 64-bit by-element multiplies issue at most one per cycle, as
+// the older instruction of a pair, and their Q-forms take both lanes like any
+// other Q-form operation.
 def A53WriteFMulIdx : SchedWriteRes<[A53UnitFPALU, A53UnitFPRestricted]> {
   let Latency = 4;
-  let RetireOOO = 1;
+  let RetireOOO = 1;  let BeginGroup = 1;
 }
 def A53WriteFMulIdxQ : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 4;
   let RetireOOO = 1;
 }
 // The other 4-cycle floating-point operations that issue at most one per
-// cycle.
+// cycle, as the older instruction of a pair.
 def A53WriteVecRst_4 : SchedWriteRes<[A53UnitFPALU, A53UnitFPRestricted]> {
   let Latency = 4;
-  let RetireOOO = 1;
+  let RetireOOO = 1;  let BeginGroup = 1;
 }
 def : WriteRes<WriteFDiv, [A53UnitFPDS, A53UnitFPDS]> {
   let Latency = 33;
@@ -211,7 +214,7 @@ def A53WriteFMAC : SchedWriteRes<[A53UnitFPALU]> {
 }
 def A53WriteFMACIdx : SchedWriteRes<[A53UnitFPALU, A53UnitFPRestricted]> {
   let Latency = 8;
-  let RetireOOO = 1;
+  let RetireOOO = 1;  let BeginGroup = 1;
 }
 // Q-form multiply-accumulate fills the datapath and takes both lanes.
 def A53WriteFMACQ : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
@@ -275,7 +278,7 @@ def A53WriteIMACD : SchedWriteRes<[A53UnitFPALU]> {
 }
 def A53WriteIMACIdx : SchedWriteRes<[A53UnitFPALU, A53UnitFPRestricted]> {
   let Latency = 4;
-  let RetireOOO = 1;
+  let RetireOOO = 1;  let BeginGroup = 1;
 }
 def A53WriteIMACQ : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 4;
@@ -297,10 +300,10 @@ def A53WriteLogicQ : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
 }
 // Scalar floating-point select, and the float-to-float register move. The
 // move reads its source late: FMOV -> FMOV is 1 cycle, FMOV -> FADD 2. The
-// select issues at most one per cycle.
+// select issues at most one per cycle, as the older instruction of a pair.
 def A53WriteFSel : SchedWriteRes<[A53UnitFPALU, A53UnitFPRestricted]> {
   let Latency = 2;
-  let RetireOOO = 1;
+  let RetireOOO = 1;  let BeginGroup = 1;
 }
 def A53WriteFMov : SchedWriteRes<[A53UnitFPALU]> {
   let Latency = 2;
@@ -317,16 +320,17 @@ def A53WriteVecQ_4 : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 4;
   let RetireOOO = 1;
 }
-// The integer operations that issue at most one per cycle:
+// The integer operations that issue at most one per cycle, as the older
+// instruction of a pair:
 // the by-element multiplies, the across-vector reductions and a few more,
 // listed with the InstRWs.
 def A53WriteVecRst_2 : SchedWriteRes<[A53UnitFPALU, A53UnitFPRestricted]> {
   let Latency = 2;
-  let RetireOOO = 1;
+  let RetireOOO = 1;  let BeginGroup = 1;
 }
 def A53WriteVecRst_3 : SchedWriteRes<[A53UnitFPALU, A53UnitFPRestricted]> {
   let Latency = 3;
-  let RetireOOO = 1;
+  let RetireOOO = 1;  let BeginGroup = 1;
 }
 // The accumulating operations (absolute-difference and pairwise accumulate, the
 // rounding shift-accumulates) and the rounding add/subtract-narrow hold
@@ -335,7 +339,7 @@ def A53WriteVecRst_3 : SchedWriteRes<[A53UnitFPALU, A53UnitFPRestricted]> {
 def A53WriteAccD : SchedWriteRes<[A53UnitFPALU, A53UnitFPRestricted]> {
   let Latency = 4;
   let ReleaseAtCycles = [1, 2];
-  let RetireOOO = 1;
+  let RetireOOO = 1;  let BeginGroup = 1;
 }
 def A53WriteAccQ : SchedWriteRes<[A53UnitFP0, A53UnitFP1]> {
   let Latency = 4;
@@ -822,7 +826,8 @@ def : InstRW<[A53WriteVecQ_4, A53ReadLate, A53ReadLate],
 // extract-narrow is two and the add/subtract-high-narrow three. The widening
 // forms take both lanes. The narrows only take one, even when they read 128 bits
 // or write the upper half of a Q register. The scalar SQDMULL/SQDML[AS]L,
-// by-element or not, issue at most one per cycle.
+// by-element or not, issue at most one per cycle, as the older instruction of
+// a pair.
 def : InstRW<[A53WriteVecQ_4],
       (instregex "^[SU]MULLv.*$",
                  "^SQDMULLv[248]i.*$",

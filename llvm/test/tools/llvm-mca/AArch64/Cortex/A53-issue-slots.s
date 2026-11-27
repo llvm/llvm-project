@@ -26,6 +26,12 @@
 #   saba (64-bit) + fadd                1
 #   saba (Q-form) + saba                2
 #   saba (Q-form) + fadd                1.5
+#
+# The by-element multiplies, the across-vector reductions, FCSEL and the other
+# restricted operations above only issue as the older instruction of a pair.
+# An FP compare can be the younger instruction of a pair, and the older one
+# with an integer ALU or a restricted operation, but never pairs with another
+# compare.
 
 # LLVM-MCA-BEGIN fadd-fadd
 fadd s16, s1, s2
@@ -179,12 +185,12 @@ fadd s17, s1, s2
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      204
+# CHECK-NEXT: Total Cycles:      104
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.98
-# CHECK-NEXT: IPC:               0.98
+# CHECK-NEXT: uOps Per Cycle:    1.92
+# CHECK-NEXT: IPC:               1.92
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [3] Code Region - fmulidx-fmulidx
@@ -203,39 +209,27 @@ fadd s17, s1, s2
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      104
+# CHECK-NEXT: Total Cycles:      105
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.92
-# CHECK-NEXT: IPC:               1.92
+# CHECK-NEXT: uOps Per Cycle:    1.90
+# CHECK-NEXT: IPC:               1.90
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [5] Code Region - fcmp-fmulidx
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      204
+# CHECK-NEXT: Total Cycles:      105
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.98
-# CHECK-NEXT: IPC:               0.98
+# CHECK-NEXT: uOps Per Cycle:    1.90
+# CHECK-NEXT: IPC:               1.90
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [6] Code Region - fcmp-fadd-fadd
-
-# CHECK:      Iterations:        100
-# CHECK-NEXT: Instructions:      300
-# CHECK-NEXT: Total Cycles:      204
-# CHECK-NEXT: Total uOps:        300
-
-# CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    1.47
-# CHECK-NEXT: IPC:               1.47
-# CHECK-NEXT: Block RThroughput: 1.5
-
-# CHECK:      [7] Code Region - fmulidx-fadd-fadd
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      300
@@ -245,6 +239,18 @@ fadd s17, s1, s2
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    1.95
 # CHECK-NEXT: IPC:               1.95
+# CHECK-NEXT: Block RThroughput: 1.5
+
+# CHECK:      [7] Code Region - fmulidx-fadd-fadd
+
+# CHECK:      Iterations:        100
+# CHECK-NEXT: Instructions:      300
+# CHECK-NEXT: Total Cycles:      204
+# CHECK-NEXT: Total uOps:        300
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    1.47
+# CHECK-NEXT: IPC:               1.47
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      [8] Code Region - fmlaidx-fmlaidx
@@ -293,7 +299,7 @@ fadd s17, s1, s2
 # CHECK:      Dispatch Width:    2
 # CHECK-NEXT: uOps Per Cycle:    0.99
 # CHECK-NEXT: IPC:               0.99
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [12] Code Region - fmulidxq-fadd
 

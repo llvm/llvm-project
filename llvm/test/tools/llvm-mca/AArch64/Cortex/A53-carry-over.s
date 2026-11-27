@@ -41,24 +41,25 @@ add  w19, w20, w21
 # CHECK-NEXT: [2]   - A53UnitDiv
 # CHECK-NEXT: [3]   - A53UnitFP0
 # CHECK-NEXT: [4]   - A53UnitFP1
-# CHECK-NEXT: [5.0] - A53UnitFPDS
-# CHECK-NEXT: [5.1] - A53UnitFPDS
-# CHECK-NEXT: [6]   - A53UnitFPRestricted
-# CHECK-NEXT: [7]   - A53UnitLdSt
-# CHECK-NEXT: [8]   - A53UnitMAC
+# CHECK-NEXT: [5]   - A53UnitFPCmp
+# CHECK-NEXT: [6.0] - A53UnitFPDS
+# CHECK-NEXT: [6.1] - A53UnitFPDS
+# CHECK-NEXT: [7]   - A53UnitFPRestricted
+# CHECK-NEXT: [8]   - A53UnitLdSt
+# CHECK-NEXT: [9]   - A53UnitMAC
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5.0]  [5.1]  [6]    [7]    [8]
-# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -     4.00    -
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  [7]    [8]    [9]
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -     4.00    -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5.0]  [5.1]  [6]    [7]    [8]    Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -     ldp	w3, w5, [x10], #4
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -     add	w10, w11, w12
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -     add	w13, w14, w15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -     ldp	w7, w8, [x11]
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -     add	w16, w17, w18
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -     add	w19, w20, w21
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  [7]    [8]    [9]    Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -     ldp	w3, w5, [x10], #4
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -     add	w10, w11, w12
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -     add	w13, w14, w15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -     ldp	w7, w8, [x11]
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -     add	w16, w17, w18
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -     add	w19, w20, w21
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     01234567
