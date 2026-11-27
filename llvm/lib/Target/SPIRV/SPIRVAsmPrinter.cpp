@@ -1019,5 +1019,5 @@ PreservedAnalyses SPIRVAsmPrinterEndPass::run(Module &M,
     return MAM.getCachedResult<SPIRVModuleAnalysis>(M);
   };
   AsmPrinter.doFinalization(M);
-  return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
 }
