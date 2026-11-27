@@ -24,24 +24,29 @@ using LIBC_NAMESPACE::detail::stacksize_from_rlimit;
 constexpr size_t PAGE_SIZE = static_cast<size_t>(EXEC_PAGESIZE);
 constexpr size_t PAGE_MASK = PAGE_SIZE - 1;
 constexpr size_t MAX_STACKSIZE = ~PAGE_MASK - PAGE_SIZE;
-constexpr size_t MIN_STACKSIZE = static_cast<size_t>(PTHREAD_STACK_MIN);
-constexpr size_t ALIGNED_MIN_STACKSIZE =
-    (MIN_STACKSIZE + PAGE_MASK) & ~PAGE_MASK;
 
 TEST(LlvmLibcSupportThreadsStackSizeTest, BelowAndAtMinimum) {
-  EXPECT_EQ(stacksize_from_rlimit(0), ALIGNED_MIN_STACKSIZE);
-  EXPECT_EQ(stacksize_from_rlimit(1), ALIGNED_MIN_STACKSIZE);
-  EXPECT_EQ(stacksize_from_rlimit(MIN_STACKSIZE - 1), ALIGNED_MIN_STACKSIZE);
-  EXPECT_EQ(stacksize_from_rlimit(MIN_STACKSIZE), ALIGNED_MIN_STACKSIZE);
+  const size_t min_stacksize = static_cast<size_t>(PTHREAD_STACK_MIN);
+  const size_t aligned_min_stacksize =
+      (min_stacksize + PAGE_MASK) & ~PAGE_MASK;
+
+  EXPECT_EQ(stacksize_from_rlimit(0), aligned_min_stacksize);
+  EXPECT_EQ(stacksize_from_rlimit(1), aligned_min_stacksize);
+  EXPECT_EQ(stacksize_from_rlimit(min_stacksize - 1), aligned_min_stacksize);
+  EXPECT_EQ(stacksize_from_rlimit(min_stacksize), aligned_min_stacksize);
 }
 
 TEST(LlvmLibcSupportThreadsStackSizeTest, PageAlignment) {
-  EXPECT_EQ(stacksize_from_rlimit(ALIGNED_MIN_STACKSIZE + 1),
-            ALIGNED_MIN_STACKSIZE + PAGE_SIZE);
-  EXPECT_EQ(stacksize_from_rlimit(ALIGNED_MIN_STACKSIZE + PAGE_MASK),
-            ALIGNED_MIN_STACKSIZE + PAGE_SIZE);
-  EXPECT_EQ(stacksize_from_rlimit(ALIGNED_MIN_STACKSIZE + PAGE_SIZE),
-            ALIGNED_MIN_STACKSIZE + PAGE_SIZE);
+  const size_t min_stacksize = static_cast<size_t>(PTHREAD_STACK_MIN);
+  const size_t aligned_min_stacksize =
+      (min_stacksize + PAGE_MASK) & ~PAGE_MASK;
+
+  EXPECT_EQ(stacksize_from_rlimit(aligned_min_stacksize + 1),
+            aligned_min_stacksize + PAGE_SIZE);
+  EXPECT_EQ(stacksize_from_rlimit(aligned_min_stacksize + PAGE_MASK),
+            aligned_min_stacksize + PAGE_SIZE);
+  EXPECT_EQ(stacksize_from_rlimit(aligned_min_stacksize + PAGE_SIZE),
+            aligned_min_stacksize + PAGE_SIZE);
 }
 
 TEST(LlvmLibcSupportThreadsStackSizeTest, MaxStacksizeBoundaries) {

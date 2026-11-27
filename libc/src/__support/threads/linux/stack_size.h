@@ -40,12 +40,12 @@ LIBC_INLINE size_t stacksize_from_rlimit(rlim_t rlim_cur) {
   constexpr size_t PAGE_MASK = static_cast<size_t>(EXEC_PAGESIZE) - 1;
   constexpr size_t MAX_STACKSIZE =
       ~PAGE_MASK - static_cast<size_t>(EXEC_PAGESIZE);
-  constexpr size_t MIN_STACKSIZE = static_cast<size_t>(PTHREAD_STACK_MIN);
 
   if (rlim_cur == RLIM_INFINITY || rlim_cur > MAX_STACKSIZE)
     return FALLBACK_STACKSIZE;
 
-  size_t stacksize = cpp::max(static_cast<size_t>(rlim_cur), MIN_STACKSIZE);
+  size_t stacksize = cpp::max(static_cast<size_t>(rlim_cur),
+                              static_cast<size_t>(PTHREAD_STACK_MIN));
   return (stacksize + PAGE_MASK) & ~PAGE_MASK;
 }
 
