@@ -201,6 +201,9 @@ public:
   void DidPoll() override {
     int result = WSAEventSelect(m_socket, WSA_INVALID_EVENT, 0);
     assert(result == 0);
+    u_long nonblocking = 0;
+    result = ioctlsocket(m_socket, FIONBIO, &nonblocking);
+    assert(result == 0);
     UNUSED_IF_ASSERT_DISABLED(result);
   }
 

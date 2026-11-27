@@ -80,6 +80,7 @@ set(hexagon_files
   hexagon_types.h
   hlx_hexagon_protos.h
   hvx_hexagon_protos.h
+  hmx_hexagon_protos.h
   )
 
 set(hip_files
@@ -171,6 +172,7 @@ set(webassembly_files
 
 set(x86_files
 # Intrinsics
+  acev1intrin.h
   adcintrin.h
   adxintrin.h
   ammintrin.h

@@ -189,3 +189,8 @@ string:
   .align 2
 _string:
   .asciz "Hello World\n"
+
+# A section that isn't loaded, which is excluded for the calculation of image
+# base. This plays into the @IMGREL relocations.
+  .section .discard,"Dr"
+  .long 42

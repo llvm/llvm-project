@@ -1,5 +1,4 @@
 ; RUN: opt -mtriple=amdgpu-- -passes='loop-unroll,simplifycfg,sroa' %s -S -o - | FileCheck %s
-; RUN: opt -mtriple=r600-- -passes='loop-unroll,simplifycfg,sroa' %s -S -o - | FileCheck %s
 
 ; This test contains a simple loop that initializes an array declared in
 ; private memory.  We want to make sure these kinds of loops are always

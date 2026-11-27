@@ -152,20 +152,9 @@ public:
     return getLaneFromEnd(VF, 1);
   }
 
-  /// Returns a compile-time known value for the lane index and asserts if the
-  /// lane can only be calculated at runtime.
-  unsigned getKnownLane() const {
-    assert(LaneKind == Kind::First &&
-           "can only get known lane from the beginning");
-    return Lane;
-  }
-
   /// Returns an expression describing the lane index that can be used at
   /// runtime.
   Value *getAsRuntimeExpr(IRBuilderBase &Builder, const ElementCount &VF) const;
-
-  /// Returns the Kind of lane offset.
-  Kind getKind() const { return LaneKind; }
 
   /// Returns true if this is the first lane of the whole vector.
   bool isFirstLane() const { return Lane == 0 && LaneKind == Kind::First; }

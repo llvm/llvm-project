@@ -250,5 +250,10 @@ static bool mergeConstants(Module &M) {
 PreservedAnalyses ConstantMergePass::run(Module &M, ModuleAnalysisManager &) {
   if (!mergeConstants(M))
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none();
+
+  // Only global variables were changed.
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

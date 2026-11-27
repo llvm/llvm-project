@@ -153,7 +153,7 @@ int main(void) {
 #pragma omp atomic read
   cfv = cfx;
 // CHECK: call{{.*}} void @__atomic_load(i64 noundef 16,
-// CHECK: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 // CHECK: store double
 // CHECK: store double
 #pragma omp atomic seq_cst read
@@ -167,7 +167,7 @@ int main(void) {
 #pragma omp atomic read
   cv = bx;
 // CHECK: load atomic i8, ptr {{.*}} seq_cst, align 1
-// CHECK: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 // CHECK: store i8
 #pragma omp atomic read seq_cst
   ucv = cx;
@@ -180,7 +180,7 @@ int main(void) {
 #pragma omp atomic read
   usv = lx;
 // CHECK: load atomic i32, ptr {{.*}} seq_cst, align 4
-// CHECK: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 // CHECK: store i32
 #pragma omp atomic seq_cst, read
   iv = uix;
@@ -314,7 +314,7 @@ int main(void) {
 // CHECK: [[LD:%.+]] = load i8, ptr [[LDTEMP]]
 // CHECK: [[ASHR:%.+]] = ashr i8 [[LD]], 1
 // CHECK: sext i8 [[ASHR]] to i64
-// CHECK: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 // CHECK: store x86_fp80
 #pragma omp atomic read acquire
   ldv = bfx4_packed.b;
@@ -326,7 +326,7 @@ int main(void) {
 #pragma omp atomic read
   ulv = float2x.x;
 // CHECK: call{{.*}} i{{[0-9]+}} @llvm.read_register
-// CHECK: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 // CHECK: store double
 #pragma omp atomic read seq_cst
   dv = rix;

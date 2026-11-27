@@ -69,7 +69,7 @@ jobs:
     # Do not use direct GHAC access even though it is supported by sccache. GHAC rejects
     # frequent small object writes.
     - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+      uses: hendrikmuhs/ccache-action@dbeefd73e8e2ffc1bbc412570072735eb4db3607 # v1.2.25
       with:
         max-size: 1G
         key: libc_overlay_build_v2_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
@@ -88,17 +88,15 @@ jobs:
         brew install ninja
 
     # Use MinSizeRel to reduce the size of the build.
-    # Notice that CMP0141=NEW and MSVC_DEBUG_INFORMATION_FORMAT=Embedded are required
-    # by the sccache tool.
+    # MSVC_DEBUG_INFORMATION_FORMAT=Embedded is required by sccache.
     - name: Configure CMake
       run: >
         cmake -B build
         -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cpp_compiler }}
         -DCMAKE_C_COMPILER=${{ matrix.compiler.c_compiler }}
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -DCMAKE_BUILD_TYPE=MinSizeRel
         -DCMAKE_C_COMPILER_LAUNCHER=sccache
         -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
-        -DCMAKE_POLICY_DEFAULT_CMP0141=NEW
         -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
         -DLIBC_COMPILE_OPTIONS_NATIVE=""
         -DLLVM_ENABLE_RUNTIMES=libc
@@ -160,7 +158,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
+        uses: hendrikmuhs/ccache-action@dbeefd73e8e2ffc1bbc412570072735eb4db3607 # v1.2.25
         with:
           max-size: 1G
           key: libc_qemu_overlay_${{ matrix.arch }}_${{ matrix.c_compiler }}

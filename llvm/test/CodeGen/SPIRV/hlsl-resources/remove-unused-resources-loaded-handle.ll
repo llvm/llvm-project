@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=spirv-remove-unused-resources %s -o - | FileCheck %s
+; RUN: opt -S -passes=spirv-lower-resource-names,spirv-remove-unused-resources %s -o - | FileCheck %s
 
 ; Make sure the handle/global survive the removal pass since they're actually used
 ; Original HLSL:
@@ -15,14 +15,13 @@
 ; }
 
 ; CHECK: @_ZL4data.0 = internal {{.*}}global target("spirv.VulkanBuffer", %Data, 2, 0)
-; CHECK: @.str = private unnamed_addr constant [5 x i8] c"data\00"
 ; CHECK-LABEL: define internal {{.*}}@_Z8readDatav()
 ; CHECK: load target("spirv.VulkanBuffer", %Data, 2, 0), ptr @_ZL4data.0
 ; CHECK-LABEL: define void @main()
 ; CHECK: %[[HANDLE:.*]] = call target("spirv.VulkanBuffer", %Data, 2, 0) @llvm.spv.resource.handlefromimplicitbinding
 ; CHECK-NEXT: store target("spirv.VulkanBuffer", %Data, 2, 0) %[[HANDLE]], ptr @_ZL4data.0
 
-target datalayout = "e-ve-i64:64-n8:16:32:64-G10"
+target datalayout = "e-p:32:32-ve-i64:64-n8:16:32:64-G10"
 target triple = "spirv1.6-unknown-vulkan1.3-pixel"
 
 %Data = type <{ float }>

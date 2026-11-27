@@ -1671,6 +1671,80 @@
 // MIPS-ARCH-I6500:#define __mips_isa_rev 6
 // MIPS-ARCH-I6500:#define __mips_nan2008 1
 
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips-none-none \
+// RUN:            -target-cpu mips1 < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ARCH-1 %s
+//
+// MIPS-ARCH-1:#define _MIPS_ARCH "mips1"
+// MIPS-ARCH-1:#define _MIPS_ARCH_MIPS1 1
+// MIPS-ARCH-1:#define _MIPS_ISA _MIPS_ISA_MIPS1
+// MIPS-ARCH-1:#define __mips 1
+// MIPS-ARCH-1-NOT:#define __mips_isa_rev {{.*}}
+
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips-none-none \
+// RUN:            -target-cpu mips2 < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ARCH-2 %s
+//
+// MIPS-ARCH-2:#define _MIPS_ARCH "mips2"
+// MIPS-ARCH-2:#define _MIPS_ARCH_MIPS2 1
+// MIPS-ARCH-2:#define _MIPS_ISA _MIPS_ISA_MIPS2
+// MIPS-ARCH-2:#define __mips 2
+// MIPS-ARCH-2-NOT:#define __mips_isa_rev {{.*}}
+
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64-none-none \
+// RUN:            -target-cpu mips3 < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ARCH-3 %s
+//
+// MIPS-ARCH-3:#define _MIPS_ARCH "mips3"
+// MIPS-ARCH-3:#define _MIPS_ARCH_MIPS3 1
+// MIPS-ARCH-3:#define _MIPS_ISA _MIPS_ISA_MIPS3
+// MIPS-ARCH-3:#define __mips 3
+// MIPS-ARCH-3:#define __mips64 1
+// MIPS-ARCH-3-NOT:#define __mips_isa_rev {{.*}}
+
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64-none-none \
+// RUN:            -target-cpu mips4 < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ARCH-4 %s
+//
+// MIPS-ARCH-4:#define _MIPS_ARCH "mips4"
+// MIPS-ARCH-4:#define _MIPS_ARCH_MIPS4 1
+// MIPS-ARCH-4:#define _MIPS_ISA _MIPS_ISA_MIPS4
+// MIPS-ARCH-4:#define __mips 4
+// MIPS-ARCH-4:#define __mips64 1
+// MIPS-ARCH-4-NOT:#define __mips_isa_rev {{.*}}
+
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64-none-none \
+// RUN:            -target-cpu mips5 < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ARCH-5 %s
+//
+// MIPS-ARCH-5:#define _MIPS_ARCH "mips5"
+// MIPS-ARCH-5:#define _MIPS_ARCH_MIPS5 1
+// MIPS-ARCH-5:#define _MIPS_ISA _MIPS_ISA_MIPS5
+// MIPS-ARCH-5:#define __mips 5
+// MIPS-ARCH-5:#define __mips64 1
+// MIPS-ARCH-5-NOT:#define __mips_isa_rev {{.*}}
+
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=mipsel-none-none \
+// RUN:            -target-cpu r5900 < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ARCH-R5900 %s
+//
+// MIPS-ARCH-R5900:#define _MIPS_ARCH "r5900"
+// MIPS-ARCH-R5900:#define _MIPS_ARCH_R5900 1
+// MIPS-ARCH-R5900:#define _MIPS_ISA _MIPS_ISA_MIPS3
+// MIPS-ARCH-R5900:#define __mips 3
+// MIPS-ARCH-R5900-NOT:#define __mips_isa_rev {{.*}}
+
+// A MIPS64 CPU with the O32 ABI is still MIPS64.
+//
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64-none-none \
+// RUN:            -target-abi o32 -target-cpu mips64r2 < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ARCH-64R2-O32 %s
+//
+// MIPS-ARCH-64R2-O32:#define _MIPS_ISA _MIPS_ISA_MIPS64
+// MIPS-ARCH-64R2-O32:#define __mips 64
+// MIPS-ARCH-64R2-O32-NOT:#define __mips64 {{.*}}
+// MIPS-ARCH-64R2-O32:#define __mips_isa_rev 2
+
 // Check MIPS float ABI macros
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding \

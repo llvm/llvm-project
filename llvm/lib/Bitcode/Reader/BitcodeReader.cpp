@@ -2190,6 +2190,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoCallback;
   case bitc::ATTR_KIND_NO_DIVERGENCE_SOURCE:
     return Attribute::NoDivergenceSource;
+  case bitc::ATTR_KIND_ALWAYS_UNIFORM:
+    return Attribute::AlwaysUniform;
   case bitc::ATTR_KIND_NO_DUPLICATE:
     return Attribute::NoDuplicate;
   case bitc::ATTR_KIND_NOFREE:
@@ -9044,7 +9046,7 @@ getEnableSplitLTOUnitAndUnifiedFlag(BitstreamCursor &Stream, unsigned ID) {
     case bitc::FS_FLAGS: { // [flags]
       uint64_t Flags = Record[0];
       // Scan flags.
-      assert(Flags <= 0x7ff && "Unexpected bits in flag");
+      assert(Flags <= 0xfff && "Unexpected bits in flag");
 
       bool EnableSplitLTOUnit = Flags & 0x8;
       bool UnifiedLTO = Flags & 0x200;

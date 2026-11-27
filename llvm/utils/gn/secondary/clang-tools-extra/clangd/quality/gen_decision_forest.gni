@@ -39,7 +39,8 @@ template("gen_decision_forest") {
       "//llvm/utils/gn/build:clang_code",
       ":${target_name}Config",
     ]
-    deps = [ ":${target_name}Cpp" ] + extra_deps
+    public_deps = [ ":${target_name}Cpp" ]
+    deps = extra_deps
     include_dirs = [ "." ]
     sources = get_target_outputs(":${target_name}Cpp")
   }

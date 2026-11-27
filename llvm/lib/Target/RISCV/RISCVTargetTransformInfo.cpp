@@ -1723,6 +1723,27 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first * 8;
     break;
   }
+  case Intrinsic::minimum:
+  case Intrinsic::maximum: {
+    // Without Zfa, scalar fminimum/fmaximum are lowered to fmin/fmax plus a
+    // NaN check and select.
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (!LT.second.isVector() && LT.second.isFloatingPoint() &&
+        !TLI->isOperationLegal(ISD::FMINIMUM, LT.second) &&
+        TLI->isOperationLegal(ISD::FMINIMUMNUM, LT.second)) {
+      Type *ScalarTy = RetTy->getScalarType();
+      InstructionCost Cost = 1;
+      if (!ICA.getFlags().noNaNs()) {
+        Type *CondTy = Type::getInt1Ty(RetTy->getContext());
+        Cost += getCmpSelInstrCost(Instruction::FCmp, ScalarTy, CondTy,
+                                   CmpInst::FCMP_UNO, CostKind) +
+                getCmpSelInstrCost(Instruction::Select, ScalarTy, CondTy,
+                                   CmpInst::BAD_FCMP_PREDICATE, CostKind);
+      }
+      return Cost * LT.first;
+    }
+    break;
+  }
   case Intrinsic::umin:
   case Intrinsic::umax:
   case Intrinsic::smin:
@@ -2620,12 +2641,11 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
 
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
-  if (IsUnsigned && Opcode == Instruction::Add &&
-      LT.second.isFixedLengthVectorOf(MVT::i1)) {
-    // Represent vector_reduce_add(ZExt(<n x i1>)) as
-    // ZExtOrTrunc(ctpop(bitcast <n x i1> to in)).
-    return LT.first *
-           getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind);
+  if (IsUnsigned && Opcode == Instruction::Add && LT.first == 1 &&
+      LT.second.isVectorOf(MVT::i1)) {
+    // Represent vector_reduce_add(ZExt(<i1 vector>)) as
+    // ZExtOrTrunc(ctpop(bitcast <i1 vector> to in)).
+    return getRISCVInstructionCost(RISCV::VCPOP_M, LT.second, CostKind);
   }
 
   if (ResTy->getScalarSizeInBits() != 2 * LT.second.getScalarSizeInBits())
@@ -3091,21 +3111,22 @@ RISCVTTIImpl::getCombinedArithmeticInstructionCost(
 InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI,
+    const TargetLibraryInfo *TLibInfo, ArrayRef<const Value *> Scalars) const {
 
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CtxI);
+                                         Args, CtxI, TLibInfo, Scalars);
 
   if (isa<FixedVectorType>(Ty) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CtxI);
+                                         Args, CtxI, TLibInfo, Scalars);
 
   // Skip if scalar size of Ty is bigger than ELEN.
   if (isa<VectorType>(Ty) && Ty->getScalarSizeInBits() > ST->getELen())
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CtxI);
+                                         Args, CtxI, TLibInfo, Scalars);
 
   if (std::optional<InstructionCost> CombinedCost =
           getCombinedArithmeticInstructionCost(Opcode, Ty, CostKind, Op1Info,
@@ -3135,7 +3156,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
         return Entry->Cost * LT.first;
 
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CtxI);
+                                         Args, CtxI, TLibInfo, Scalars);
   }
 
   // f16 with zvfhmin and bf16 will be promoted to f32.
@@ -3228,7 +3249,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     // differentiate them.
     return CastCost + ConstantMatCost +
            BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CtxI);
+                                         Args, CtxI, TLibInfo, Scalars);
   }
 
   InstructionCost InstrCost = getRISCVInstructionCost(Op, LT.second, CostKind);
@@ -3294,9 +3315,14 @@ void RISCVTTIImpl::getUnrollingPreferences(
   // TODO: More tuning on benchmarks and metrics with changes as needed
   //       would apply to all settings below to enable performance.
 
-
   if (ST->enableDefaultUnroll())
     return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP, ORE);
+
+  // Unrolling an outer loop duplicates its inner loops while removing only
+  // the outer backedge. Use the smaller code-growth budget for these loops,
+  // even when aggressive full unrolling is enabled at O3.
+  if (!L->isInnermost())
+    UP.Threshold = std::min(UP.Threshold, UP.PartialThreshold);
 
   // Enable Upper bound unrolling universally, not dependent upon the conditions
   // below.

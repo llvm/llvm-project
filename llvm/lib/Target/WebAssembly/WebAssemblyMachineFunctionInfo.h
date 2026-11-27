@@ -60,6 +60,9 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   // after WebAssemblyExplicitLocals
   unsigned FrameBaseLocal = -1U;
 
+  // The stack object that llvm.swift.async.context.addr points to.
+  std::optional<int> SwiftAsyncContextFrameIdx;
+
   // Function properties.
   bool CFGStackified = false;
 
@@ -116,6 +119,11 @@ public:
     return FrameBaseLocal;
   }
   void setBasePointerVreg(unsigned Reg) { BasePtrVreg = Reg; }
+
+  std::optional<int> getSwiftAsyncContextFrameIdx() const {
+    return SwiftAsyncContextFrameIdx;
+  }
+  void setSwiftAsyncContextFrameIdx(int FI) { SwiftAsyncContextFrameIdx = FI; }
 
   void stackifyVReg(MachineRegisterInfo &MRI, Register VReg) {
     assert(MRI.getUniqueVRegDef(VReg));

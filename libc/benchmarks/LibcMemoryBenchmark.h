@@ -275,9 +275,36 @@ struct ComparisonSetup : public ParameterBatch {
                                parameter.size_bytes);
   }
 
+  inline int call(ParameterType parameter, StrcmpFunction strcmp_func) {
+    return strcmp_func(lhs_buffer + buffer_size - 1 - parameter.size_bytes,
+                       rhs_buffer + buffer_size - 1 - parameter.size_bytes);
+  }
+
 private:
   AlignedBuffer lhs_buffer;
   AlignedBuffer rhs_buffer;
+};
+
+/// Provides source buffer for the Search operation (memchr, strlen) as well as
+/// the associated size distributions.
+struct SearchSetup : public ParameterBatch {
+  SearchSetup();
+
+  inline static const ArrayRef<MemorySizeDistribution> get_distributions() {
+    return getMemcmpSizeDistributions();
+  }
+
+  inline void *call(ParameterType parameter, MemchrFunction memchr_func) {
+    return memchr_func(src_buffer + parameter.offset_bytes, 0,
+                       parameter.size_bytes);
+  }
+
+  inline size_t call(ParameterType parameter, StrlenFunction strlen_func) {
+    return strlen_func(src_buffer + buffer_size - 1 - parameter.size_bytes);
+  }
+
+private:
+  AlignedBuffer src_buffer;
 };
 
 } // namespace libc_benchmarks

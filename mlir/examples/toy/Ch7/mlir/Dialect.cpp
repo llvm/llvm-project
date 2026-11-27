@@ -643,12 +643,9 @@ void ToyDialect::printType(mlir::Type type,
 //===----------------------------------------------------------------------===//
 
 /// Dialect initialization, the instance will be owned by the context. This is
-/// the point of registration of types and operations for the dialect.
+/// the point of registration of types for the dialect; operations are
+/// registered by the generated constructor.
 void ToyDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "toy/Ops.cpp.inc"
-      >();
   addInterfaces<ToyInlinerInterface>();
   addTypes<StructType>();
 }

@@ -423,7 +423,7 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
     return false;
 
   if (auto *CB = dyn_cast<CallBase>(I))
-    if (isRemovableAlloc(CB, TLI))
+    if (isRemovableAlloc(CB))
       return true;
 
   if (!I->willReturn()) {
@@ -498,7 +498,7 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
   }
 
   if (auto *Call = dyn_cast<CallBase>(I)) {
-    if (Value *FreedOp = getFreedOperand(Call, TLI))
+    if (Value *FreedOp = getFreedOperand(Call))
       if (Constant *C = dyn_cast<Constant>(FreedOp))
         return C->isNullValue() || isa<UndefValue>(C);
     if (isMathLibCallNoop(Call, TLI))
@@ -686,9 +686,9 @@ simplifyAndDCEInstruction(Instruction *I,
   if (Value *SimpleV = simplifyInstruction(I, DL)) {
     // Add the users to the worklist. CAREFUL: an instruction can use itself,
     // in the case of a phi node.
-    for (User *U : I->users()) {
+    for (Instruction *U : I->users()) {
       if (U != I) {
-        WorkList.insert(cast<Instruction>(U));
+        WorkList.insert(U);
       }
     }
 
@@ -2704,10 +2704,9 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
   InvokeInst *II =
       InvokeInst::Create(CI->getFunctionType(), CI->getCalledOperand(), Split,
                          UnwindEdge, InvokeArgs, OpBundles, CI->getName(), BB);
-  II->setDebugLoc(CI->getDebugLoc());
   II->setCallingConv(CI->getCallingConv());
   II->setAttributes(CI->getAttributes());
-  II->setMetadata(LLVMContext::MD_prof, CI->getMetadata(LLVMContext::MD_prof));
+  II->copyMetadata(*CI);
 
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, UnwindEdge}});
@@ -3055,13 +3054,14 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(Kind, JMD);
         break;
-      // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
-      // from being removed as unknown metadata. The actual merging is handled
-      // separately below.
+      // Keep empty cases for prof, mmra, memprof, callsite, and pcsections to
+      // prevent them from being removed as unknown metadata. The actual merging
+      // is handled separately below.
       case LLVMContext::MD_prof:
       case LLVMContext::MD_mmra:
       case LLVMContext::MD_memprof:
       case LLVMContext::MD_callsite:
+      case LLVMContext::MD_pcsections:
         break;
       case LLVMContext::MD_callee_type:
         if (!AAOnly) {
@@ -3156,6 +3156,15 @@ static void combineMetadata(Instruction *K, const Instruction *J,
     K->setMetadata(LLVMContext::MD_callsite,
                    MDNode::getMergedCallsiteMetadata(KCallSite, JCallSite));
   }
+
+  // Merge PC sections metadata: the merged instruction stands for both, so it
+  // requests the sections of either. Handled separately to support cases where
+  // only J has the metadata.
+  if (!AAOnly)
+    K->setMetadata(LLVMContext::MD_pcsections,
+                   MDNode::getMergedPCSectionsMetadata(
+                       K->getMetadata(LLVMContext::MD_pcsections),
+                       J->getMetadata(LLVMContext::MD_pcsections)));
 
   // Merge prof metadata.
   // Handle separately to support cases where only one instruction has the
@@ -4081,6 +4090,46 @@ Value *llvm::invertCondition(Value *Condition) {
   else
     Inverted->insertBefore(Parent->getFirstInsertionPt());
   return Inverted;
+}
+
+bool llvm::freezeUsesAfterDef(FreezeInst &FI, DominatorTree &DT,
+                              SmallVectorImpl<User *> *Users) {
+  Value *Op = FI.getOperand(0);
+
+  // Move the freeze directly after the definition of its operand, so that
+  // it dominates the maximum number of uses. Note that it may not dominate
+  // *all* uses if the operand is an invoke and the use is in a phi on
+  // the normal/default destination. This is why the domination check in the
+  // replacement below is still necessary.
+  BasicBlock::iterator MoveBefore;
+  if (isa<Argument>(Op)) {
+    MoveBefore = FI.getFunction()->getEntryBlock().getFirstNonPHIOrAlloca();
+  } else {
+    auto MoveBeforeOpt = cast<Instruction>(Op)->getInsertionPointAfterDef();
+    if (!MoveBeforeOpt)
+      return false;
+    MoveBefore = *MoveBeforeOpt;
+  }
+
+  // Re-point iterator to come after any debug-info records.
+  MoveBefore.setHeadBit(false);
+
+  bool Changed = false;
+  if (&FI != &*MoveBefore) {
+    FI.moveBefore(*MoveBefore->getParent(), MoveBefore);
+    Changed = true;
+  }
+
+  Changed |= Op->replaceUsesWithIf(&FI, [&](Use &U) -> bool {
+    if (!DT.dominates(&FI, U))
+      return false;
+
+    if (Users)
+      Users->push_back(U.getUser());
+    return true;
+  });
+
+  return Changed;
 }
 
 bool llvm::inferAttributesFromOthers(Function &F) {

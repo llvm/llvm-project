@@ -961,8 +961,7 @@ namespace {
   class DeadCodeElimination {
   public:
     DeadCodeElimination(MachineFunction &mf, MachineDominatorTree &mdt)
-      : MF(mf), HII(*MF.getSubtarget<HexagonSubtarget>().getInstrInfo()),
-        MDT(mdt), MRI(mf.getRegInfo()) {}
+        : MDT(mdt), MRI(mf.getRegInfo()) {}
 
     bool run() {
       return runOnNode(MDT.getRootNode());
@@ -972,8 +971,6 @@ namespace {
     bool isDead(unsigned R) const;
     bool runOnNode(MachineDomTreeNode *N);
 
-    MachineFunction &MF;
-    const HexagonInstrInfo &HII;
     MachineDominatorTree &MDT;
     MachineRegisterInfo &MRI;
   };
