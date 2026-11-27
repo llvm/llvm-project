@@ -52,7 +52,6 @@ define float @sitofp_i128_to_f32(i128 %x) {
 ; SDAG-NEXT:  ; %bb.4: ; %LeafBlock
 ; SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 26, v2
 ; SDAG-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; SDAG-NEXT:    s_cbranch_execz .LBB0_6
 ; SDAG-NEXT:  ; %bb.5: ; %itofp-sw-default
 ; SDAG-NEXT:    v_sub_u32_e32 v12, 0x66, v7
 ; SDAG-NEXT:    v_sub_u32_e32 v10, 64, v12
@@ -91,7 +90,7 @@ define float @sitofp_i128_to_f32(i128 %x) {
 ; SDAG-NEXT:    v_or_b32_e32 v8, v15, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v8
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v9
-; SDAG-NEXT:  .LBB0_6: ; %Flow1
+; SDAG-NEXT:  ; %bb.6: ; %Flow1
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; SDAG-NEXT:  .LBB0_7: ; %Flow2
 ; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
@@ -184,7 +183,6 @@ define float @sitofp_i128_to_f32(i128 %x) {
 ; GISEL-NEXT:  ; %bb.4: ; %LeafBlock
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 26, v7
 ; GISEL-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; GISEL-NEXT:    s_cbranch_execz .LBB0_6
 ; GISEL-NEXT:  ; %bb.5: ; %itofp-sw-default
 ; GISEL-NEXT:    v_sub_u32_e32 v4, 0x66, v5
 ; GISEL-NEXT:    v_sub_u32_e32 v11, 64, v4
@@ -227,7 +225,7 @@ define float @sitofp_i128_to_f32(i128 %x) {
 ; GISEL-NEXT:    v_mov_b32_e32 v1, v4
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v5
 ; GISEL-NEXT:    v_mov_b32_e32 v3, v6
-; GISEL-NEXT:  .LBB0_6: ; %Flow1
+; GISEL-NEXT:  ; %bb.6: ; %Flow1
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; GISEL-NEXT:  .LBB0_7: ; %Flow2
 ; GISEL-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
@@ -316,7 +314,6 @@ define float @uitofp_i128_to_f32(i128 %x) {
 ; SDAG-NEXT:  ; %bb.4: ; %LeafBlock
 ; SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 26, v4
 ; SDAG-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; SDAG-NEXT:    s_cbranch_execz .LBB1_6
 ; SDAG-NEXT:  ; %bb.5: ; %itofp-sw-default
 ; SDAG-NEXT:    v_sub_u32_e32 v11, 0x66, v6
 ; SDAG-NEXT:    v_sub_u32_e32 v9, 64, v11
@@ -355,7 +352,7 @@ define float @uitofp_i128_to_f32(i128 %x) {
 ; SDAG-NEXT:    v_or_b32_e32 v7, v14, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v7
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v8
-; SDAG-NEXT:  .LBB1_6: ; %Flow1
+; SDAG-NEXT:  ; %bb.6: ; %Flow1
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; SDAG-NEXT:  .LBB1_7: ; %Flow2
 ; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
@@ -438,7 +435,6 @@ define float @uitofp_i128_to_f32(i128 %x) {
 ; GISEL-NEXT:  ; %bb.4: ; %LeafBlock
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 26, v6
 ; GISEL-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; GISEL-NEXT:    s_cbranch_execz .LBB1_6
 ; GISEL-NEXT:  ; %bb.5: ; %itofp-sw-default
 ; GISEL-NEXT:    v_sub_u32_e32 v4, 0x66, v5
 ; GISEL-NEXT:    v_sub_u32_e32 v10, 64, v4
@@ -481,7 +477,7 @@ define float @uitofp_i128_to_f32(i128 %x) {
 ; GISEL-NEXT:    v_mov_b32_e32 v1, v4
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v5
 ; GISEL-NEXT:    v_mov_b32_e32 v3, v6
-; GISEL-NEXT:  .LBB1_6: ; %Flow1
+; GISEL-NEXT:  ; %bb.6: ; %Flow1
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; GISEL-NEXT:  .LBB1_7: ; %Flow2
 ; GISEL-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
@@ -581,7 +577,6 @@ define double @sitofp_i128_to_f64(i128 %x) {
 ; SDAG-NEXT:  ; %bb.4: ; %LeafBlock
 ; SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 55, v2
 ; SDAG-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; SDAG-NEXT:    s_cbranch_execz .LBB2_6
 ; SDAG-NEXT:  ; %bb.5: ; %itofp-sw-default
 ; SDAG-NEXT:    v_sub_u32_e32 v12, 0x49, v9
 ; SDAG-NEXT:    v_sub_u32_e32 v10, 64, v12
@@ -624,7 +619,7 @@ define double @sitofp_i128_to_f64(i128 %x) {
 ; SDAG-NEXT:    v_mov_b32_e32 v5, v1
 ; SDAG-NEXT:    v_mov_b32_e32 v4, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v7, v11
-; SDAG-NEXT:  .LBB2_6: ; %Flow1
+; SDAG-NEXT:  ; %bb.6: ; %Flow1
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; SDAG-NEXT:  .LBB2_7: ; %Flow2
 ; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
@@ -730,7 +725,6 @@ define double @sitofp_i128_to_f64(i128 %x) {
 ; GISEL-NEXT:  ; %bb.4: ; %LeafBlock
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 55, v7
 ; GISEL-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; GISEL-NEXT:    s_cbranch_execz .LBB2_6
 ; GISEL-NEXT:  ; %bb.5: ; %itofp-sw-default
 ; GISEL-NEXT:    v_sub_u32_e32 v14, 0x49, v9
 ; GISEL-NEXT:    v_sub_u32_e32 v10, 64, v14
@@ -775,7 +769,7 @@ define double @sitofp_i128_to_f64(i128 %x) {
 ; GISEL-NEXT:    v_mov_b32_e32 v3, v10
 ; GISEL-NEXT:    v_mov_b32_e32 v4, v11
 ; GISEL-NEXT:    v_mov_b32_e32 v5, v12
-; GISEL-NEXT:  .LBB2_6: ; %Flow1
+; GISEL-NEXT:  ; %bb.6: ; %Flow1
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; GISEL-NEXT:  .LBB2_7: ; %Flow2
 ; GISEL-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
@@ -877,7 +871,6 @@ define double @uitofp_i128_to_f64(i128 %x) {
 ; SDAG-NEXT:  ; %bb.4: ; %LeafBlock
 ; SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 55, v6
 ; SDAG-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; SDAG-NEXT:    s_cbranch_execz .LBB3_6
 ; SDAG-NEXT:  ; %bb.5: ; %itofp-sw-default
 ; SDAG-NEXT:    v_sub_u32_e32 v11, 0x49, v8
 ; SDAG-NEXT:    v_sub_u32_e32 v9, 64, v11
@@ -920,7 +913,7 @@ define double @uitofp_i128_to_f64(i128 %x) {
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v4
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v5
 ; SDAG-NEXT:    v_mov_b32_e32 v3, v10
-; SDAG-NEXT:  .LBB3_6: ; %Flow1
+; SDAG-NEXT:  ; %bb.6: ; %Flow1
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; SDAG-NEXT:  .LBB3_7: ; %Flow2
 ; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
@@ -1013,7 +1006,6 @@ define double @uitofp_i128_to_f64(i128 %x) {
 ; GISEL-NEXT:  ; %bb.4: ; %LeafBlock
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 55, v6
 ; GISEL-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; GISEL-NEXT:    s_cbranch_execz .LBB3_6
 ; GISEL-NEXT:  ; %bb.5: ; %itofp-sw-default
 ; GISEL-NEXT:    v_sub_u32_e32 v13, 0x49, v8
 ; GISEL-NEXT:    v_sub_u32_e32 v9, 64, v13
@@ -1059,7 +1051,7 @@ define double @uitofp_i128_to_f64(i128 %x) {
 ; GISEL-NEXT:    v_mov_b32_e32 v1, v9
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v10
 ; GISEL-NEXT:    v_mov_b32_e32 v3, v11
-; GISEL-NEXT:  .LBB3_6: ; %Flow1
+; GISEL-NEXT:  ; %bb.6: ; %Flow1
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; GISEL-NEXT:  .LBB3_7: ; %Flow2
 ; GISEL-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
@@ -1174,7 +1166,6 @@ define half @sitofp_i128_to_f16(i128 %x) {
 ; SDAG-NEXT:  ; %bb.4: ; %LeafBlock
 ; SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 26, v2
 ; SDAG-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; SDAG-NEXT:    s_cbranch_execz .LBB4_6
 ; SDAG-NEXT:  ; %bb.5: ; %itofp-sw-default
 ; SDAG-NEXT:    v_sub_u32_e32 v12, 0x66, v7
 ; SDAG-NEXT:    v_sub_u32_e32 v10, 64, v12
@@ -1213,7 +1204,7 @@ define half @sitofp_i128_to_f16(i128 %x) {
 ; SDAG-NEXT:    v_or_b32_e32 v8, v15, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v8
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v9
-; SDAG-NEXT:  .LBB4_6: ; %Flow1
+; SDAG-NEXT:  ; %bb.6: ; %Flow1
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; SDAG-NEXT:  .LBB4_7: ; %Flow2
 ; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
@@ -1307,7 +1298,6 @@ define half @sitofp_i128_to_f16(i128 %x) {
 ; GISEL-NEXT:  ; %bb.4: ; %LeafBlock
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 26, v7
 ; GISEL-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; GISEL-NEXT:    s_cbranch_execz .LBB4_6
 ; GISEL-NEXT:  ; %bb.5: ; %itofp-sw-default
 ; GISEL-NEXT:    v_sub_u32_e32 v4, 0x66, v5
 ; GISEL-NEXT:    v_sub_u32_e32 v11, 64, v4
@@ -1350,7 +1340,7 @@ define half @sitofp_i128_to_f16(i128 %x) {
 ; GISEL-NEXT:    v_mov_b32_e32 v1, v4
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v5
 ; GISEL-NEXT:    v_mov_b32_e32 v3, v6
-; GISEL-NEXT:  .LBB4_6: ; %Flow1
+; GISEL-NEXT:  ; %bb.6: ; %Flow1
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; GISEL-NEXT:  .LBB4_7: ; %Flow2
 ; GISEL-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
@@ -1440,7 +1430,6 @@ define half @uitofp_i128_to_f16(i128 %x) {
 ; SDAG-NEXT:  ; %bb.4: ; %LeafBlock
 ; SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 26, v4
 ; SDAG-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; SDAG-NEXT:    s_cbranch_execz .LBB5_6
 ; SDAG-NEXT:  ; %bb.5: ; %itofp-sw-default
 ; SDAG-NEXT:    v_sub_u32_e32 v11, 0x66, v6
 ; SDAG-NEXT:    v_sub_u32_e32 v9, 64, v11
@@ -1479,7 +1468,7 @@ define half @uitofp_i128_to_f16(i128 %x) {
 ; SDAG-NEXT:    v_or_b32_e32 v7, v14, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v0, v7
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v8
-; SDAG-NEXT:  .LBB5_6: ; %Flow1
+; SDAG-NEXT:  ; %bb.6: ; %Flow1
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; SDAG-NEXT:  .LBB5_7: ; %Flow2
 ; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
@@ -1563,7 +1552,6 @@ define half @uitofp_i128_to_f16(i128 %x) {
 ; GISEL-NEXT:  ; %bb.4: ; %LeafBlock
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 26, v6
 ; GISEL-NEXT:    s_and_saveexec_b64 s[12:13], vcc
-; GISEL-NEXT:    s_cbranch_execz .LBB5_6
 ; GISEL-NEXT:  ; %bb.5: ; %itofp-sw-default
 ; GISEL-NEXT:    v_sub_u32_e32 v4, 0x66, v5
 ; GISEL-NEXT:    v_sub_u32_e32 v10, 64, v4
@@ -1606,7 +1594,7 @@ define half @uitofp_i128_to_f16(i128 %x) {
 ; GISEL-NEXT:    v_mov_b32_e32 v1, v4
 ; GISEL-NEXT:    v_mov_b32_e32 v2, v5
 ; GISEL-NEXT:    v_mov_b32_e32 v3, v6
-; GISEL-NEXT:  .LBB5_6: ; %Flow1
+; GISEL-NEXT:  ; %bb.6: ; %Flow1
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; GISEL-NEXT:  .LBB5_7: ; %Flow2
 ; GISEL-NEXT:    s_andn2_saveexec_b64 s[4:5], s[10:11]
