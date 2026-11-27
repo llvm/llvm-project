@@ -332,12 +332,18 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
 }
 
 // Build an omp.iterator that yields a map entry for one locator.
+//
+// With \p mapViaDescriptor, an ALLOCATABLE or POINTER array base keeps its
+// descriptor in var_ptr and the descriptor's base address in var_ptr_ptr, the
+// shape ordinary lowering gives the data entry of such an array (see
+// MapInfoFinalization::genBaseAddrMap), so that translation can tell the
+// entry describes pointee storage and attach the descriptor to it.
 static mlir::Value buildIteratedMapEntry(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semaCtx, mlir::Location loc,
     llvm::ArrayRef<IteratorRange> iteratorRanges, const omp::Object &object,
     const evaluate::ArrayRef &arrayRef, llvm::StringRef mapperIdName,
-    mlir::omp::ClauseMapFlags mapTypeBits) {
+    mlir::omp::ClauseMapFlags mapTypeBits, bool mapViaDescriptor) {
   mlir::Type ptrTy =
       mlir::LLVM::LLVMPointerType::get(&converter.getMLIRContext());
   mlir::Type iterTy =
@@ -349,6 +355,30 @@ static mlir::Value buildIteratedMapEntry(
         lower::StatementContext iterStmtCtx;
         IteratorMapInfo mapInfo = genIteratorMapInfo(
             converter, builder, semaCtx, iterStmtCtx, object, arrayRef, loc);
+        mlir::FlatSymbolRefAttr mapperId =
+            resolveMapperId(converter, loc, object, mapperIdName, mapTypeBits);
+
+        if (mapViaDescriptor && mapInfo.descriptorAddr) {
+          mlir::Value descriptor = mapInfo.descriptorAddr;
+          mlir::Value baseAddr = fir::BoxOffsetOp::create(
+              builder, loc, descriptor, fir::BoxFieldAttr::base_addr);
+          mlir::Type elementType = mlir::cast<mlir::omp::PointerLikeType>(
+                                       fir::unwrapRefType(baseAddr.getType()))
+                                       .getElementType();
+          if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(elementType))
+            elementType = seqTy.getEleTy();
+          auto mapOp = mlir::omp::MapInfoOp::create(
+              builder, loc, ptrTy, descriptor,
+              mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
+              builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapTypeBits),
+              builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
+                  mlir::omp::VariableCaptureKind::ByRef),
+              baseAddr, mlir::TypeAttr::get(elementType),
+              /*members=*/mlir::ValueRange{},
+              /*members_index=*/mlir::ArrayAttr{}, mapInfo.bounds, mapperId,
+              builder.getStringAttr(""), builder.getBoolAttr(false));
+          return mapOp.getResult();
+        }
 
         // Keep the array base in var_ptr so element and whole-array maps share
         // a base address. Bounds select the data for this iteration; descriptor
@@ -356,8 +386,6 @@ static mlir::Value buildIteratedMapEntry(
         mlir::Value baseAddr = mapInfo.entity.getBase();
         if (mlir::isa<fir::BaseBoxType>(baseAddr.getType()))
           baseAddr = fir::BoxAddrOp::create(builder, loc, baseAddr);
-        mlir::FlatSymbolRefAttr mapperId =
-            resolveMapperId(converter, loc, object, mapperIdName, mapTypeBits);
         mlir::omp::MapInfoOp mapOp = utils::openmp::createMapInfoOp(
             builder, loc, baseAddr, /*varPtrPtr=*/mlir::Value{},
             /*name=*/"", mapInfo.bounds, /*members=*/{},
@@ -2141,26 +2169,79 @@ void ClauseProcessor::processMapObjectsWithIterator(
       if (const auto *symbol{object.sym()};
           symbol && semantics::IsOptional(*symbol))
         TODO(clauseLocation, "iterator modifier with optional locator");
-      // The mapper function is only emitted in host offload compilation; its
-      // per-iteration map entry carries the element's data address only.
-      if (declareMapper && isHostOffloadCompilation(converter.getModuleOp())) {
-        // An ALLOCATABLE or POINTER anywhere on the component path also needs
-        // the descriptor mapped and an attach entry for its base address.
-        if (isMemberOrParentAllocatableOrPointer(object, semaCtx))
-          TODO(clauseLocation, "iterator modifier with ALLOCATABLE or POINTER "
-                               "component in declare mapper");
-        // Element offsets of CHARACTER arrays are computed in bytes without
-        // the character length, so the elements would map at the wrong
-        // addresses.
-        if (const auto *symbol{object.sym()};
-            symbol && symbol->GetType() &&
-            symbol->GetType()->category() == semantics::DeclTypeSpec::Character)
-          TODO(clauseLocation,
-               "iterator modifier with CHARACTER component in declare mapper");
+      // In a declare mapper, the per-iteration map entry carries the element's
+      // data address only; an ALLOCATABLE or POINTER array also needs its
+      // descriptor mapped and attached to the elements. The descriptor map is
+      // iteration-independent, so it is emitted as an ordinary member of the
+      // mapper variable here, and the element entry keeps the descriptor as
+      // its base so translation emits the attachment (see
+      // buildIteratedMapEntry). The ordinary mapper function is only emitted
+      // in host offload compilation.
+      bool mapViaDescriptor = false;
+      if (declareMapper) {
+        mapViaDescriptor =
+            semantics::IsAllocatableOrObjectPointer(object.sym()) &&
+            object.sym()->owner().IsDerivedType();
+        if (isHostOffloadCompilation(converter.getModuleOp())) {
+          // A descriptor higher up the path (v%p%a(i) with p a POINTER) would
+          // need the same for p, with the elements attached through it. The
+          // first base of v%a(i) is v%a itself, the array being iterated.
+          for (std::optional<omp::Object> baseObj =
+                   getBaseObject(object, semaCtx);
+               baseObj; baseObj = getBaseObject(*baseObj, semaCtx))
+            if (baseObj->sym() != object.sym() &&
+                semantics::IsAllocatableOrObjectPointer(baseObj->sym()))
+              TODO(clauseLocation,
+                   "iterator modifier with ALLOCATABLE or POINTER parent "
+                   "component in declare mapper");
+          // Element offsets of CHARACTER arrays are computed in bytes without
+          // the character length, so the elements would map at the wrong
+          // addresses.
+          if (const auto *symbol{object.sym()};
+              symbol && symbol->GetType() &&
+              symbol->GetType()->category() ==
+                  semantics::DeclTypeSpec::Character)
+            TODO(
+                clauseLocation,
+                "iterator modifier with CHARACTER component in declare mapper");
+        }
+      }
+      if (mapViaDescriptor) {
+        // Map the descriptor itself (not its data) the way ordinary lowering
+        // maps a descriptor: always copied to the device. The attachment to
+        // the elements is emitted by translation, so none is requested here.
+        fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+        mlir::Value descriptor =
+            genIteratorMapBaseAddr(converter, firOpBuilder, semaCtx, stmtCtx,
+                                   object, *analysis.arrayRef, clauseLocation);
+        assert(fir::isBoxAddress(descriptor.getType()) &&
+               "expected descriptor address for allocatable or pointer base");
+        mlir::omp::ClauseMapFlags descriptorMapType =
+            mlir::omp::ClauseMapFlags::ref_ptr |
+            mlir::omp::ClauseMapFlags::attach_never |
+            mlir::omp::ClauseMapFlags::to |
+            ((mapTypeBits & mlir::omp::ClauseMapFlags::close) ==
+                     mlir::omp::ClauseMapFlags::close
+                 ? mlir::omp::ClauseMapFlags::close
+                 : mlir::omp::ClauseMapFlags::always);
+        mlir::omp::MapInfoOp descriptorMap = utils::openmp::createMapInfoOp(
+            firOpBuilder, clauseLocation, descriptor,
+            /*varPtrPtr=*/mlir::Value{}, /*name=*/"",
+            /*bounds=*/{}, /*members=*/{}, /*membersIndex=*/mlir::ArrayAttr{},
+            descriptorMapType, mlir::omp::VariableCaptureKind::ByRef,
+            descriptor.getType(), /*partialMap=*/false,
+            /*mapperId=*/mlir::FlatSymbolRefAttr{});
+        omp::ObjectList parentObjects = gatherObjectsOf(object, semaCtx);
+        assert(!parentObjects.empty() &&
+               "could not find parent objects of derived type member");
+        parentMemberIndices.emplace(parentObjects[0],
+                                    OmpMapParentAndMemberData{});
+        parentMemberIndices[parentObjects[0]].addChildIndexAndMapToParent(
+            object, descriptorMap, semaCtx);
       }
       result.mapIterated.push_back(buildIteratedMapEntry(
           converter, semaCtx, clauseLocation, objectRanges, object,
-          *analysis.arrayRef, mapperIdNameRef, mapTypeBits));
+          *analysis.arrayRef, mapperIdNameRef, mapTypeBits, mapViaDescriptor));
       continue;
     }
 

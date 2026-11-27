@@ -23,7 +23,8 @@
 ! RUN:   -fopenmp-is-target-device %t/no-offload.f90 -o - | \
 ! RUN:   FileCheck %t/no-offload.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
-! RUN:   %t/self.f90 -o - | FileCheck %t/self.f90
+! RUN:   -fopenmp-targets=amdgcn-amd-amdhsa %t/self.f90 -o - | \
+! RUN:   FileCheck %t/self.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
 ! RUN:   %t/reconcile.f90 -o - 2>&1 | FileCheck %t/reconcile.f90
 
@@ -125,31 +126,41 @@ end
 ! CHECK:   } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK:   omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
 
+! An ALLOCATABLE array component: its descriptor is mapped as an ordinary
+! member of the mapper variable (descriptor only, always copied, no attach
+! requested from the descriptor map itself), and the per-iteration entry keeps
+! the descriptor in var_ptr with its base address in var_ptr_ptr, so that
+! translation can attach the descriptor to the mapped elements.
 ! CHECK-LABEL: omp.declare_mapper @_QQFdeclare_mapper_allocatablem
 ! CHECK: ^bb0(%[[ARG2:.*]]: !fir.ref<!fir.type<_QFdeclare_mapper_allocatableTt{{.*}}>):
 ! CHECK:   %[[DECL2:.*]]:2 = hlfir.declare %[[ARG2]] uniq_name("_QFdeclare_mapper_allocatableEv")
+! CHECK:   %[[DESC_REF:.*]] = hlfir.designate %[[DECL2]]#0{"a"}{{.*}} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:   %[[DESC_MAP:.*]] = omp.map.info var_ptr(%[[DESC_REF]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, to, attach_never, ref_ptr) capture(ByRef) name("") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:   %[[IT2:.*]] = omp.iterator(%[[IV2:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:     %[[BOX_REF:.*]] = hlfir.designate %[[DECL2]]#0{"a"}{{.*}} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:     %[[BOX:.*]] = fir.load %[[BOX_REF]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:     %[[DIMS0:.*]]:3 = fir.box_dims %[[BOX]], %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:     %[[DIMS1:.*]]:3 = fir.box_dims %[[BOX]], %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:     %[[BOUNDS2:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%[[DIMS1]]#1 : index) stride(%[[DIMS1]]#2 : index) start_idx(%[[DIMS0]]#0 : index) stride_in_bytes(true)
-! CHECK:     %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:     %[[MAP2:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.heap<!fir.array<?xi32>>, i32) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS2]]) name("") -> !llvm.ptr
+! CHECK:     %[[BASE_ADDR:.*]] = fir.box_offset %[[BOX_REF]] base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
+! CHECK:     %[[MAP2:.*]] = omp.map.info var_ptr(%[[BOX_REF]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%[[BOUNDS2]]) name("") -> !llvm.ptr
 ! CHECK:     omp.yield(%[[MAP2]] : !llvm.ptr)
 ! CHECK:   } inclusive -> !omp.iterated<!llvm.ptr>
-! CHECK:   omp.declare_mapper.info map_iterated(%[[IT2]] : !omp.iterated<!llvm.ptr>)
+! CHECK:   %[[PARENT2:.*]] = omp.map.info var_ptr(%[[DECL2]]#1 : {{.*}}) map_clauses(storage) capture(ByRef) members(%[[DESC_MAP]] : [0] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) name("v") partial_map(true)
+! CHECK:   omp.declare_mapper.info map_entries(%[[PARENT2]], %[[DESC_MAP]] : {{.*}}) map_iterated(%[[IT2]] : !omp.iterated<!llvm.ptr>)
 
 ! CHECK-LABEL: omp.declare_mapper @_QQFdeclare_mapper_pointerm
 ! CHECK: ^bb0(%[[ARG:.*]]: !fir.ref<!fir.type<_QFdeclare_mapper_pointerTt{{.*}}>):
 ! CHECK:   %[[DECL:.*]]:2 = hlfir.declare %[[ARG]] uniq_name("_QFdeclare_mapper_pointerEv")
+! CHECK:   %[[DESC_REF:.*]] = hlfir.designate %[[DECL]]#0{"a"}{{.*}} -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK:   %[[DESC_MAP:.*]] = omp.map.info var_ptr(%[[DESC_REF]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(always, to, attach_never, ref_ptr) capture(ByRef) name("")
 ! CHECK:   %[[IT:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}}) {
 ! CHECK:     %[[BOX_REF:.*]] = hlfir.designate %[[DECL]]#0{"a"}{{.*}} -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:     %[[BOX:.*]] = fir.load %[[BOX_REF]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:     %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
-! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.ptr<!fir.array<?xi32>>, i32) map_clauses(tofrom) capture(ByRef) bounds(%{{.*}}) name("") -> !llvm.ptr
+! CHECK:     %[[BASE_ADDR:.*]] = fir.box_offset %[[BOX_REF]] base_addr : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
+! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[BOX_REF]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%{{.*}}) name("") -> !llvm.ptr
 ! CHECK:   } inclusive -> !omp.iterated<!llvm.ptr>
-! CHECK:   omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+! CHECK:   omp.declare_mapper.info map_entries(%{{.*}}, %[[DESC_MAP]] : {{.*}}) map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
 
 ! CHECK-LABEL: omp.declare_mapper @_QQFdeclare_mapper_2dm
 ! CHECK: ^bb0(%[[ARG:.*]]: !fir.ref<!fir.type<_QFdeclare_mapper_2dTt{{.*}}>):
@@ -252,10 +263,10 @@ end
 ! CHECK:     %[[HI_IDX:.*]] = fir.convert %[[HI_I64]] : (i64) -> index
 ! CHECK:     %[[UB:.*]] = arith.subi %[[HI_IDX]], %[[DIMS0]]#0 : index
 ! CHECK:     %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%[[LB]] : index) upper_bound(%[[UB]] : index) extent(%[[DIMS1]]#1 : index) stride(%[[DIMS1]]#2 : index) start_idx(%[[DIMS0]]#0 : index) stride_in_bytes(true)
-! CHECK:     %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.heap<!fir.array<?xi32>>, i32) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) name("") -> !llvm.ptr
+! CHECK:     %[[BASE_ADDR:.*]] = fir.box_offset %[[BOX_REF]] base_addr
+! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[BOX_REF]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[BASE_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%[[BOUNDS]]) name("") -> !llvm.ptr
 ! CHECK:   } inclusive -> !omp.iterated<!llvm.ptr>
-! CHECK:   omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
+! CHECK:   omp.declare_mapper.info map_entries(%{{.*}}, %{{.*}} : {{.*}}) map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
 
 ! CHECK-LABEL: omp.declare_mapper @_QQFdeclare_mapper_nondefault_lbm
 ! CHECK: ^bb0(%[[ARG:.*]]: !fir.ref<!fir.type<_QFdeclare_mapper_nondefault_lbTt{{.*}}>):
@@ -472,7 +483,8 @@ subroutine self_component_mapper()
 end subroutine
 
 ! CHECK-LABEL: omp.declare_mapper @_QQFself_component_mappert_omp_default_mapper
-! CHECK:         omp.map.info {{.*}} map_clauses(tofrom) capture(ByRef) bounds(%{{.*}}) name("") -> !llvm.ptr
+! CHECK:         omp.iterator
+! CHECK:         omp.map.info {{.*}} map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%{{.*}}) bounds(%{{.*}}) name("") -> !llvm.ptr
 
 !--- reconcile.f90
 ! The mapper variable's own map and its iterator-produced members follow the

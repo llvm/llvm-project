@@ -1667,8 +1667,7 @@ IteratorMapObjectAnalysis analyzeIteratorMapObject(const omp::Object &object) {
   return analysis;
 }
 
-// Lower the array base (v%a for v%a(i)) with shape information for bounds.
-static hlfir::Entity getIteratorMapEntity(
+mlir::Value genIteratorMapBaseAddr(
     Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
     Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::StatementContext &stmtCtx, const omp::Object &object,
@@ -1676,43 +1675,57 @@ static hlfir::Entity getIteratorMapEntity(
   const semantics::Symbol *sym = object.sym();
   assert(sym && "expected symbol for iterator object");
 
-  mlir::Value addr;
   if (!sym->owner().IsDerivedType()) {
     // Keep the same base address as ordinary map lowering for non-component
     // objects.
     fir::factory::AddrAndBoundsInfo info =
         Fortran::lower::getDataOperandBaseAddr(converter, builder, *sym, loc,
                                                /*unwrapFirBox=*/false);
-    addr = info.addr;
-  } else {
-    evaluate::ExpressionAnalyzer ea{semaCtx};
-    std::optional<ExprTy> arrayBase;
-    const evaluate::NamedEntity &base = arrayRef.base();
-    // The ordinary base-address helper takes a symbol, which does not identify
-    // the containing object of a component. Lower the component base reference
-    // here, leaving its subscripts for iterator-local map bounds.
-    if (const semantics::SymbolRef *symRef = base.UnwrapSymbolRef())
-      arrayBase = ea.Designate(evaluate::DataRef{*symRef});
-    else if (const evaluate::Component *component = base.UnwrapComponent())
-      arrayBase = ea.Designate(evaluate::DataRef{*component});
-    else
-      llvm_unreachable("unexpected NamedEntity");
-
-    assert(arrayBase);
-    // Mutable-box lowering preserves allocatable and pointer descriptors.
-    fir::ExtendedValue dataExv;
-    if (semantics::IsAllocatableOrPointer(base.GetLastSymbol()))
-      dataExv = converter.genExprMutableBox(loc, *arrayBase);
-    else
-      dataExv = converter.genExprAddr(loc, *arrayBase, stmtCtx);
-    addr = fir::getBase(dataExv);
+    return info.addr;
   }
+
+  evaluate::ExpressionAnalyzer ea{semaCtx};
+  std::optional<ExprTy> arrayBase;
+  const evaluate::NamedEntity &base = arrayRef.base();
+  // The ordinary base-address helper takes a symbol, which does not identify
+  // the containing object of a component. Lower the component base reference
+  // here, leaving its subscripts for iterator-local map bounds.
+  if (const semantics::SymbolRef *symRef = base.UnwrapSymbolRef())
+    arrayBase = ea.Designate(evaluate::DataRef{*symRef});
+  else if (const evaluate::Component *component = base.UnwrapComponent())
+    arrayBase = ea.Designate(evaluate::DataRef{*component});
+  else
+    llvm_unreachable("unexpected NamedEntity");
+
+  assert(arrayBase);
+  // Mutable-box lowering preserves allocatable and pointer descriptors.
+  fir::ExtendedValue dataExv;
+  if (semantics::IsAllocatableOrPointer(base.GetLastSymbol()))
+    dataExv = converter.genExprMutableBox(loc, *arrayBase);
+  else
+    dataExv = converter.genExprAddr(loc, *arrayBase, stmtCtx);
+  return fir::getBase(dataExv);
+}
+
+// Lower the array base (v%a for v%a(i)) with shape information for bounds.
+// For an ALLOCATABLE or POINTER base, \p descriptorAddr receives the address
+// of its descriptor.
+static hlfir::Entity getIteratorMapEntity(
+    Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
+    Fortran::semantics::SemanticsContext &semaCtx,
+    Fortran::lower::StatementContext &stmtCtx, const omp::Object &object,
+    const evaluate::ArrayRef &arrayRef, mlir::Location loc,
+    mlir::Value &descriptorAddr) {
+  mlir::Value addr = genIteratorMapBaseAddr(converter, builder, semaCtx,
+                                            stmtCtx, object, arrayRef, loc);
 
   // Load allocatable and pointer descriptors to access data and shape. Keep
   // the box value until bounds are built; map construction extracts its data
   // address with fir.box_addr.
-  if (fir::isBoxAddress(addr.getType()))
+  if (fir::isBoxAddress(addr.getType())) {
+    descriptorAddr = addr;
     addr = fir::LoadOp::create(builder, loc, addr);
+  }
   return hlfir::Entity{addr};
 }
 
@@ -1814,10 +1827,13 @@ IteratorMapInfo genIteratorMapInfo(
     Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::StatementContext &stmtCtx, const omp::Object &object,
     const evaluate::ArrayRef &arrayRef, mlir::Location loc) {
-  hlfir::Entity entity = getIteratorMapEntity(converter, builder, semaCtx,
-                                              stmtCtx, object, arrayRef, loc);
+  mlir::Value descriptorAddr;
+  hlfir::Entity entity =
+      getIteratorMapEntity(converter, builder, semaCtx, stmtCtx, object,
+                           arrayRef, loc, descriptorAddr);
   return IteratorMapInfo{
-      entity, genIteratorMapBounds(converter, entity, arrayRef, stmtCtx, loc)};
+      entity, genIteratorMapBounds(converter, entity, arrayRef, stmtCtx, loc),
+      descriptorAddr};
 }
 
 } // namespace omp

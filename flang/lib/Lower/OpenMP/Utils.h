@@ -262,6 +262,9 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
 struct IteratorMapInfo {
   hlfir::Entity entity;
   llvm::SmallVector<mlir::Value> bounds;
+  /// Address of the descriptor (!fir.ref<!fir.box<...>>) when the locator's
+  /// array is an ALLOCATABLE or POINTER; null otherwise.
+  mlir::Value descriptorAddr;
 };
 
 /// Properties needed to validate an iterator map locator without lowering it.
@@ -276,6 +279,16 @@ struct IteratorMapObjectAnalysis {
 
 /// Classify a locator and retain its array reference if supported.
 IteratorMapObjectAnalysis analyzeIteratorMapObject(const omp::Object &object);
+
+/// Lower a locator's array base (v%a for v%a(i)) to its address: the
+/// descriptor address (!fir.ref<!fir.box<...>>) for an ALLOCATABLE or POINTER
+/// base, the data address otherwise. \p arrayRef must be the supported
+/// reference returned by locator analysis.
+mlir::Value genIteratorMapBaseAddr(
+    Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
+    Fortran::semantics::SemanticsContext &semaCtx,
+    Fortran::lower::StatementContext &stmtCtx, const omp::Object &object,
+    const evaluate::ArrayRef &arrayRef, mlir::Location loc);
 
 /// Lower a locator to its array base and iterator-dependent map bounds.
 /// \p arrayRef must be the supported reference returned by locator analysis.

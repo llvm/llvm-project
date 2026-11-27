@@ -10867,10 +10867,15 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   //
   // (***) If such an entry already has its own MEMBER_OF bits (e.g. the
   // s1p->x/y entries above), those bits are still shifted by N.
+  //
+  // \p RuntimeMemberOf, when set, is a MEMBER_OF value (already shifted into
+  // the MEMBER_OF field) only known at runtime, added instead of
+  // ShiftedPreviousSize; \p RawType must then carry no MEMBER_OF bits.
   auto pushComponent = [&](Value *CurBaseArg, Value *CurBeginArg,
                            Value *CurSizeArg, Value *CurNameArg,
                            uint64_t RawType, bool HasAttachPtrFlag,
-                           Function *ChildMapperFn) -> BasicBlock * {
+                           Function *ChildMapperFn,
+                           Value *RuntimeMemberOf = nullptr) -> BasicBlock * {
     Value *OriMapType = Builder.getInt64(RawType);
     constexpr uint64_t MemberOfMask =
         static_cast<uint64_t>(OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF);
@@ -10882,7 +10887,12 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
             OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ);
 
     Value *MemberMapType;
-    if (PreserveMemberOfFlags || (RawType & AttachBit) || HasAttachPtrFlag) {
+    if (RuntimeMemberOf) {
+      assert(!(RawType & MemberOfMask) &&
+             "runtime MEMBER_OF with compile-time MEMBER_OF bits");
+      MemberMapType = Builder.CreateNUWAdd(OriMapType, RuntimeMemberOf);
+    } else if (PreserveMemberOfFlags || (RawType & AttachBit) ||
+               HasAttachPtrFlag) {
       if (RawType & MemberOfMask)
         MemberMapType = Builder.CreateNUWAdd(OriMapType, ShiftedPreviousSize);
       else
@@ -11106,6 +11116,36 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   // map clause): push each one individually, from inside a generated loop,
   // via the same __tgt_push_mapper_component call used above.
   for (MapInfosTy::DynamicSegment &Seg : Info->DynamicSegments) {
+    // Pointee storage: group the segment's components under their own parent,
+    // pushed only if the segment contributes any. Its index, and so the
+    // components' MEMBER_OF, is the component count right before the push.
+    Value *RuntimeMemberOf = nullptr;
+    Value *PointeeName = Constant::getNullValue(Builder.getPtrTy());
+    if (Seg.PointeeParentBegin) {
+      assert(Seg.PointeeParentCond && Seg.PointeeParentBase &&
+             Seg.PointeeParentSize && "incomplete pointee parent");
+      Value *NumComponents = createRuntimeFunctionCall(
+          getOrCreateRuntimeFunction(M, OMPRTL___tgt_mapper_num_components),
+          OffloadingArgs);
+      RuntimeMemberOf = Builder.CreateShl(
+          Builder.CreateAdd(NumComponents, Builder.getInt64(1)),
+          Builder.getInt64(getFlagMemberOffset()));
+      BasicBlock *PushBB =
+          BasicBlock::Create(M.getContext(), "omp.pteeparent.push");
+      BasicBlock *ContBB =
+          BasicBlock::Create(M.getContext(), "omp.pteeparent.cont");
+      Builder.CreateCondBr(Seg.PointeeParentCond, PushBB, ContBB);
+      emitBlock(PushBB, MapperFn);
+      pushComponent(
+          Seg.PointeeParentBase, Seg.PointeeParentBegin, Seg.PointeeParentSize,
+          PointeeName,
+          static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+              OpenMPOffloadMappingFlags::OMP_MAP_NONE),
+          /*HasAttachPtrFlag=*/true, /*ChildMapperFn=*/nullptr);
+      Builder.CreateBr(ContBB);
+      emitBlock(ContBB, MapperFn);
+    }
+
     LocationDescription Loc(Builder);
     auto BodyGen = [&](InsertPointTy BodyIP, Value *LinearIV) -> Error {
       Builder.restoreIP(BodyIP);
@@ -11119,7 +11159,7 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
           Constant::getNullValue(Builder.getPtrTy()),
           static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
               Seg.Type),
-          Seg.HasAttachPtr, Seg.ChildMapperFn);
+          Seg.HasAttachPtr, Seg.ChildMapperFn, RuntimeMemberOf);
       return Error::success();
     };
     InsertPointOrErrorTy AfterIP =
@@ -11128,6 +11168,28 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
       return AfterIP.takeError();
     Builder.restoreIP(*AfterIP);
     LastBB = Builder.GetInsertBlock();
+
+    // Attach the pointer to the pointee storage mapped above. The runtime
+    // processes ATTACH entries once every other component of the construct
+    // has been mapped, so the position of this entry does not matter.
+    if (Seg.AttachPtr) {
+      assert(Seg.PointeeParentBegin && Seg.AttachPtrSize &&
+             "attach entry requires a pointee parent");
+      BasicBlock *PushBB =
+          BasicBlock::Create(M.getContext(), "omp.attach.push");
+      BasicBlock *ContBB =
+          BasicBlock::Create(M.getContext(), "omp.attach.cont");
+      Builder.CreateCondBr(Seg.PointeeParentCond, PushBB, ContBB);
+      emitBlock(PushBB, MapperFn);
+      pushComponent(
+          Seg.AttachPtr, Seg.PointeeParentBegin, Seg.AttachPtrSize, PointeeName,
+          static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+              OpenMPOffloadMappingFlags::OMP_MAP_ATTACH),
+          /*HasAttachPtrFlag=*/false, /*ChildMapperFn=*/nullptr);
+      Builder.CreateBr(ContBB);
+      emitBlock(ContBB, MapperFn);
+      LastBB = ContBB;
+    }
   }
 
   // Update the pointer to point to the next element that needs to be mapped,

@@ -664,9 +664,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
 
   // `declare_mapper.info` supports a single-dimension iterator whose region
   // (which may itself span several blocks) yields one member-free omp.map.info
-  // for a locator described by var_ptr + bounds. Descriptor-indirect
-  // (var_ptr_ptr) locators aren't handled yet. Anything else falls back to the
-  // generic (not yet implemented) diagnostic above.
+  // for a locator described by var_ptr + bounds, or by a descriptor in
+  // var_ptr with its base address in var_ptr_ptr + bounds. Anything else
+  // falls back to the generic (not yet implemented) diagnostic above.
   auto checkDeclareMapperMap = [&todo](omp::DeclareMapperInfoOp op,
                                        LogicalResult &result) {
     for (Value iterVal : op.getMapIterated()) {
@@ -679,8 +679,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
           auto mapInfoOp =
               yieldOp.getResults()[0].getDefiningOp<omp::MapInfoOp>();
           supported =
-              mapInfoOp && !mapInfoOp.getVarPtrPtr() &&
-              mapInfoOp.getMembers().empty() &&
+              mapInfoOp && mapInfoOp.getMembers().empty() &&
               mapInfoOp.getMapCaptureType() == omp::VariableCaptureKind::ByRef;
         }
       }
@@ -8901,14 +8900,28 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
     // acts as if the list item were omitted). The parent must precede every
     // other component: the runtime maps components in order and rejects a
     // later one that extends an earlier mapping.
+    //
+    // Elements of an ALLOCATABLE or POINTER array component live in storage
+    // of their own, reached through the component's descriptor. Lowering
+    // gives such an entry the descriptor as var_ptr and its base address as
+    // var_ptr_ptr (the shape of the data entry of an ordinary descriptor map)
+    // and maps the descriptor itself as a static member. Here the elements
+    // get a storage-only parent of their own spanning them, and an ATTACH
+    // entry making the device descriptor point at them, both pushed only
+    // when the iterator has elements (see DynamicSegment::PointeeParentBegin).
     struct IteratedEntryInfo {
       mlir::omp::IteratorOp itersOp;
       mlir::omp::MapInfoOp mapInfoOp;
       llvm::Type *baseLLVMTy;
       llvm::Value *elemSizeVal;
       IteratorInfo iterInfo;
+      /// The entry describes pointee storage of a descriptor (var_ptr_ptr).
+      bool isPointee;
+      /// Size of the descriptor (the attach pointer) for pointee entries.
+      llvm::Value *descriptorSizeVal;
     };
     llvm::SmallVector<IteratedEntryInfo, 2> iteratedEntries;
+    bool hasInVariableEntries = false;
     for (mlir::Value iterVal : declMapperInfoOp.getMapIterated()) {
       auto itersOp = iterVal.getDefiningOp<mlir::omp::IteratorOp>();
       assert(itersOp && "map_iterated value must be defined by omp.iterator");
@@ -8921,16 +8934,26 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
           yieldOp.getResults()[0].getDefiningOp<mlir::omp::MapInfoOp>();
       assert(mapInfoOp && "expected an omp.map.info in the map_iterated body");
 
-      mlir::Type varPtrMlirTy = mapInfoOp.getVarPtrType();
+      bool isPointee = static_cast<bool>(mapInfoOp.getVarPtrPtr());
+      // For pointee storage the data type is the base address's pointee type;
+      // the descriptor is var_ptr.
+      mlir::Type dataMlirTy = isPointee ? mapInfoOp.getVarPtrPtrType().value()
+                                        : mapInfoOp.getVarPtrType();
       // Byte size of one element of the locator's innermost dimension; the
       // bounds supply the (runtime) element count per iteration.
-      uint64_t elemSizeInBits = dl.getTypeSizeInBits(varPtrMlirTy);
-      if (auto arrTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(varPtrMlirTy))
+      uint64_t elemSizeInBits = dl.getTypeSizeInBits(dataMlirTy);
+      if (auto arrTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(dataMlirTy))
         elemSizeInBits = getArrayElementSizeInBits(arrTy, dl);
+      llvm::Value *descriptorSizeVal =
+          isPointee
+              ? builder.getInt64(dl.getTypeSize(mapInfoOp.getVarPtrType()))
+              : nullptr;
+      hasInVariableEntries |= !isPointee;
       iteratedEntries.push_back(
-          {itersOp, mapInfoOp, moduleTranslation.convertType(varPtrMlirTy),
+          {itersOp, mapInfoOp, moduleTranslation.convertType(dataMlirTy),
            builder.getInt64(elemSizeInBits / 8),
-           IteratorInfo(itersOp, moduleTranslation, builder)});
+           IteratorInfo(itersOp, moduleTranslation, builder), isPointee,
+           descriptorSizeVal});
     }
 
     // Emits the (base, begin, size) of the entry for one iteration, given the
@@ -8947,16 +8970,26 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
                                        info.itersOp.getRegion(), b,
                                        moduleTranslation)))
         return llvm::make_error<PreviouslyReportedError>();
-      llvm::Value *base =
-          moduleTranslation.lookupValue(info.mapInfoOp.getVarPtr());
+      // As for a statically-known member, the component's base pointer is the
+      // array base: the descriptor's base address field for pointee storage
+      // (the same address as the descriptor), the array itself otherwise.
+      llvm::Value *base;
+      llvm::Value *data;
+      if (info.isPointee) {
+        base = moduleTranslation.lookupValue(info.mapInfoOp.getVarPtrPtr());
+        data = b.CreateLoad(b.getPtrTy(), base);
+      } else {
+        base = moduleTranslation.lookupValue(info.mapInfoOp.getVarPtr());
+        data = base;
+      }
       bool isByteOffset = false;
       std::vector<llvm::Value *> offsetIdx = calculateBoundsOffset(
           moduleTranslation, b, info.baseLLVMTy->isArrayTy(),
           info.mapInfoOp.getBounds(), isByteOffset);
-      llvm::Value *addr = base;
+      llvm::Value *addr = data;
       if (!offsetIdx.empty())
         addr = b.CreateInBoundsGEP(
-            isByteOffset ? b.getInt8Ty() : info.baseLLVMTy, base, offsetIdx);
+            isByteOffset ? b.getInt8Ty() : info.baseLLVMTy, data, offsetIdx);
       // Size = product over dimensions of (ub - lb + 1), times the element
       // size, the same calculation getSizeInBytes does for static entries.
       llvm::Value *elementCount = b.getInt64(1);
@@ -8973,20 +9006,77 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
       }
       llvm::Value *size = b.CreateMul(elementCount, info.elemSizeVal);
       moduleTranslation.forgetMapping(info.itersOp.getRegion());
-      // The array base is the component's base pointer, as for a
-      // statically-known member; MEMBER_OF ties it to the parent entry.
       return llvm::SmallVector<llvm::Value *, 3>{base, addr, size};
     };
 
-    bool hasIterated = !iteratedEntries.empty();
     std::optional<unsigned> iteratedParentIdx;
-    // Span of the iterated elements, computed when the mapper does not map
-    // the variable whole; null otherwise.
+    // Span of the iterated elements within the variable, computed when the
+    // mapper does not map the variable whole; null otherwise.
     llvm::Value *anyTrips = nullptr;
     llvm::Value *spanBegin = nullptr;
     llvm::Value *spanEnd = nullptr;
     bool hasStaticParent = false;
-    if (hasIterated) {
+    // Slots for the pre-pass loops below: the min begin / max end over one
+    // iterator's elements and their (loop-invariant) base. createIteratorLoop
+    // carries no loop state, so memory is used rather than PHIs; the allocas
+    // end up in the entry block via hoistMapperAllocasToEntry.
+    llvm::Type *i64Ty = builder.getInt64Ty();
+    llvm::Value *beginSlot = nullptr;
+    llvm::Value *endSlot = nullptr;
+    llvm::Value *baseSlot = nullptr;
+    // Runs a pre-pass over `info`'s iterations (the same ones the mapper
+    // pushes later) and returns {hasTrips, begin, end, base} of their span;
+    // base (loop-invariant) is only captured when \p captureBase.
+    auto computeSpan =
+        [&](IteratedEntryInfo &info,
+            bool captureBase) -> llvm::Expected<std::array<llvm::Value *, 4>> {
+      if (!beginSlot) {
+        beginSlot =
+            builder.CreateAlloca(i64Ty, nullptr, "omp.iterparent.begin");
+        endSlot = builder.CreateAlloca(i64Ty, nullptr, "omp.iterparent.end");
+      }
+      if (captureBase && !baseSlot)
+        baseSlot = builder.CreateAlloca(builder.getPtrTy(), nullptr,
+                                        "omp.iterparent.base");
+      llvm::Value *trips = info.iterInfo.getTotalTrips();
+      llvm::Value *hasTrips = builder.CreateICmpNE(trips, builder.getInt64(0));
+      builder.CreateStore(builder.getInt64(~0ULL), beginSlot);
+      builder.CreateStore(builder.getInt64(0), endSlot);
+      auto spanBodyGen = [&](InsertPointTy bodyIP,
+                             llvm::Value *linearIV) -> llvm::Error {
+        builder.restoreIP(bodyIP);
+        llvm::Expected<llvm::SmallVector<llvm::Value *, 3>> entryOrErr =
+            genIteratedEntry(info, builder, linearIV);
+        if (!entryOrErr)
+          return entryOrErr.takeError();
+        llvm::Value *begin = builder.CreatePtrToInt((*entryOrErr)[1], i64Ty);
+        llvm::Value *end = builder.CreateAdd(begin, (*entryOrErr)[2]);
+        builder.CreateStore(builder.CreateBinaryIntrinsic(
+                                llvm::Intrinsic::umin,
+                                builder.CreateLoad(i64Ty, beginSlot), begin),
+                            beginSlot);
+        builder.CreateStore(
+            builder.CreateBinaryIntrinsic(
+                llvm::Intrinsic::umax, builder.CreateLoad(i64Ty, endSlot), end),
+            endSlot);
+        if (captureBase)
+          builder.CreateStore((*entryOrErr)[0], baseSlot);
+        return llvm::Error::success();
+      };
+      llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
+          ompBuilder->createIteratorLoop(
+              llvm::OpenMPIRBuilder::LocationDescription(builder), trips,
+              spanBodyGen, "mapper.iterspan");
+      if (!afterIP)
+        return afterIP.takeError();
+      builder.restoreIP(*afterIP);
+      return std::array<llvm::Value *, 4>{
+          hasTrips, builder.CreateLoad(i64Ty, beginSlot),
+          builder.CreateLoad(i64Ty, endSlot),
+          captureBase ? builder.CreateLoad(builder.getPtrTy(), baseSlot)
+                      : nullptr};
+    };
+    if (hasInVariableEntries) {
       bool mapsWholeVariable = false;
       for (Value mapVar : mapVars) {
         auto mapOp = cast<omp::MapInfoOp>(mapVar.getDefiningOp());
@@ -9002,56 +9092,21 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
           mapsWholeVariable = true;
       }
       if (!mapsWholeVariable) {
-        // Span of all iterated elements as [spanBegin, spanEnd) integers,
-        // meaningful only when anyTrips. A pre-pass loop over each segment's
-        // iterations (the same ones the mapper pushes later) accumulates the
-        // min begin / max end in two slots; createIteratorLoop carries no
-        // loop state, so memory is used rather than PHIs. The allocas end
-        // up in the entry block via hoistMapperAllocasToEntry.
-        llvm::Type *i64Ty = builder.getInt64Ty();
+        // Span of all in-variable iterated elements as [spanBegin, spanEnd)
+        // integers, meaningful only when anyTrips.
         anyTrips = builder.getFalse();
         spanBegin = builder.getInt64(0);
         spanEnd = builder.getInt64(0);
-        llvm::Value *beginSlot =
-            builder.CreateAlloca(i64Ty, nullptr, "omp.iterparent.begin");
-        llvm::Value *endSlot =
-            builder.CreateAlloca(i64Ty, nullptr, "omp.iterparent.end");
         for (IteratedEntryInfo &info : iteratedEntries) {
-          llvm::Value *trips = info.iterInfo.getTotalTrips();
-          llvm::Value *hasTrips =
-              builder.CreateICmpNE(trips, builder.getInt64(0));
-          builder.CreateStore(builder.getInt64(~0ULL), beginSlot);
-          builder.CreateStore(builder.getInt64(0), endSlot);
-          auto spanBodyGen = [&](InsertPointTy bodyIP,
-                                 llvm::Value *linearIV) -> llvm::Error {
-            builder.restoreIP(bodyIP);
-            llvm::Expected<llvm::SmallVector<llvm::Value *, 3>> entryOrErr =
-                genIteratedEntry(info, builder, linearIV);
-            if (!entryOrErr)
-              return entryOrErr.takeError();
-            llvm::Value *begin =
-                builder.CreatePtrToInt((*entryOrErr)[1], i64Ty);
-            llvm::Value *end = builder.CreateAdd(begin, (*entryOrErr)[2]);
-            builder.CreateStore(builder.CreateBinaryIntrinsic(
-                                    llvm::Intrinsic::umin,
-                                    builder.CreateLoad(i64Ty, beginSlot),
-                                    begin),
-                                beginSlot);
-            builder.CreateStore(builder.CreateBinaryIntrinsic(
-                                    llvm::Intrinsic::umax,
-                                    builder.CreateLoad(i64Ty, endSlot), end),
-                                endSlot);
-            return llvm::Error::success();
-          };
-          llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
-              ompBuilder->createIteratorLoop(
-                  llvm::OpenMPIRBuilder::LocationDescription(builder), trips,
-                  spanBodyGen, "mapper.iterspan");
-          if (!afterIP)
-            return afterIP.takeError();
-          builder.restoreIP(*afterIP);
-          llvm::Value *segBegin = builder.CreateLoad(i64Ty, beginSlot);
-          llvm::Value *segEnd = builder.CreateLoad(i64Ty, endSlot);
+          if (info.isPointee)
+            continue;
+          llvm::Expected<std::array<llvm::Value *, 4>> spanOrErr =
+              computeSpan(info, /*captureBase=*/false);
+          if (!spanOrErr)
+            return spanOrErr.takeError();
+          llvm::Value *hasTrips = (*spanOrErr)[0];
+          llvm::Value *segBegin = (*spanOrErr)[1];
+          llvm::Value *segEnd = (*spanOrErr)[2];
           // Fold this segment into the overall span unless it is empty.
           llvm::Value *mergedBegin = builder.CreateSelect(
               anyTrips,
@@ -9092,12 +9147,30 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
       }
     }
 
+    // Pointee storage: one span, parent and attach entry per iterator, as
+    // different iterators may belong to different descriptors.
+    struct PointeeSpan {
+      llvm::Value *hasTrips, *begin, *end, *base;
+    };
+    llvm::SmallVector<PointeeSpan, 2> pointeeSpans(iteratedEntries.size());
+    for (auto [i, info] : llvm::enumerate(iteratedEntries)) {
+      if (!info.isPointee)
+        continue;
+      llvm::Expected<std::array<llvm::Value *, 4>> spanOrErr =
+          computeSpan(info, /*captureBase=*/true);
+      if (!spanOrErr)
+        return spanOrErr.takeError();
+      pointeeSpans[i] = {(*spanOrErr)[0], (*spanOrErr)[1], (*spanOrErr)[2],
+                         (*spanOrErr)[3]};
+      ompBuilder->Builder.restoreIP(builder.saveIP());
+    }
+
     genMapInfos(builder, moduleTranslation, dl, combinedInfo, mapData,
                 targetDirective);
 
     llvm::omp::OpenMPOffloadMappingFlags iteratedMemberOf =
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
-    if (hasIterated) {
+    if (hasInVariableEntries) {
       if (!iteratedParentIdx) {
         // The component genMapInfos emitted for the variable: the whole
         // variable, or the partial parent of its statically mapped members.
@@ -9119,7 +9192,6 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
         // adding a second parent, widen this one to also cover the iterated
         // elements (when there are any).
         unsigned idx = *iteratedParentIdx;
-        llvm::Type *i64Ty = builder.getInt64Ty();
         llvm::Value *parentBegin =
             builder.CreatePtrToInt(combinedInfo.Pointers[idx], i64Ty);
         llvm::Value *parentEnd =
@@ -9142,13 +9214,22 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
         iteratedMemberOf = ompBuilder->getMemberOfFlag(*iteratedParentIdx);
     }
 
-    for (IteratedEntryInfo &info : iteratedEntries) {
+    // Indexed rather than via llvm::enumerate: `info` is captured by the
+    // GenEntry lambda below, and structured bindings cannot be captured
+    // before C++20.
+    for (size_t i = 0, e = iteratedEntries.size(); i != e; ++i) {
+      IteratedEntryInfo &info = iteratedEntries[i];
       llvm::omp::OpenMPOffloadMappingFlags mapType =
           convertClauseMapFlags(info.mapInfoOp.getMapType());
-      ompBuilder->setCorrectMemberOfFlag(mapType, iteratedMemberOf);
+      // Pointee elements are MEMBER_OF a parent of their own whose index is
+      // only known at runtime (see below); in-variable elements are MEMBER_OF
+      // the variable's component.
+      if (!info.isPointee)
+        ompBuilder->setCorrectMemberOfFlag(mapType, iteratedMemberOf);
       bool hasAttachPtr =
+          info.isPointee ||
           (mapType & llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) !=
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+              llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
 
       combinedInfo.DynamicSegments.push_back(MapInfosTy::DynamicSegment{
           info.iterInfo.getTotalTrips(), {}, mapType, hasAttachPtr});
@@ -9157,6 +9238,19 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
                                               llvm::Value *linearIV) {
         return genIteratedEntry(info, b, linearIV);
       };
+      if (info.isPointee) {
+        // Storage-only parent spanning the elements, and the descriptor's
+        // attachment to it. The descriptor address is the elements' base
+        // (the address of its base address field).
+        const PointeeSpan &span = pointeeSpans[i];
+        seg.PointeeParentCond = span.hasTrips;
+        seg.PointeeParentBase = span.base;
+        seg.PointeeParentBegin =
+            builder.CreateIntToPtr(span.begin, builder.getPtrTy());
+        seg.PointeeParentSize = builder.CreateSub(span.end, span.begin);
+        seg.AttachPtr = span.base;
+        seg.AttachPtrSize = info.descriptorSizeVal;
+      }
 
       if (info.mapInfoOp.getMapperId()) {
         auto childMapperOp =

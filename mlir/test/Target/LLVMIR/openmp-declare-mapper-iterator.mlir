@@ -264,3 +264,90 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 // CHECK: omp_mapper.iterator.body:
 // CHECK: add nuw i64 281474976710659, %[[SHIFTED3]]
 // CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, ptr null)
+
+// -----
+
+// Elements of an ALLOCATABLE component, i.e. of pointee storage reached through
+// a descriptor. The iterated entry carries the descriptor in var_ptr and its
+// base address in var_ptr_ptr (the shape of the data entry of an ordinary
+// descriptor map); the descriptor itself is a static member. The elements live
+// outside the variable, so they get a storage-only parent of their own
+// spanning them, whose index is only known at runtime, and an ATTACH entry
+// pointing the device descriptor at them; both are pushed only when the
+// iterator has elements.
+
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  omp.declare_mapper @mapper_allocatable_iterator : !llvm.struct<"s_alloc", (i32, struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>)> {
+  ^bb0(%arg: !llvm.ptr):
+    %c0 = llvm.mlir.constant(0 : i64) : i64
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %c4 = llvm.mlir.constant(4 : i64) : i64
+    %desc = llvm.getelementptr %arg[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"s_alloc", (i32, struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>)>
+    %mdesc = omp.map.info var_ptr(%desc : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(always, to) capture(ByRef) name("") -> !llvm.ptr
+    %parent = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"s_alloc", (i32, struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>)>) map_clauses(storage) capture(ByRef) members(%mdesc : [1] : !llvm.ptr) name("") partial_map(true) -> !llvm.ptr
+    %n = llvm.getelementptr %arg[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"s_alloc", (i32, struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>)>
+    %nval = llvm.load %n : !llvm.ptr -> i32
+    %ub = llvm.sext %nval : i32 to i64
+    %it = omp.iterator(%iv: i64) = (%c0 to %ub step %c1) {
+      %d = llvm.getelementptr %arg[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"s_alloc", (i32, struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>)>
+      %baddr = llvm.getelementptr %d[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
+      %bounds = omp.map.bounds lower_bound(%iv : i64) upper_bound(%iv : i64) extent(%ub : i64) stride(%c4 : i64) start_idx(%c0 : i64) stride_in_bytes(true)
+      %m = omp.map.info var_ptr(%d : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%baddr : !llvm.ptr, i32) bounds(%bounds) name("") -> !llvm.ptr
+      omp.yield(%m : !llvm.ptr)
+    } -> !omp.iterated<!llvm.ptr>
+    omp.declare_mapper.info map_entries(%parent, %mdesc : !llvm.ptr, !llvm.ptr) map_iterated(%it : !omp.iterated<!llvm.ptr>)
+  }
+
+  llvm.func @target_data_allocatable_iterator(%addr : !llvm.ptr) {
+    %map = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"s_alloc", (i32, struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>)>) map_clauses(tofrom) capture(ByRef) mapper(@mapper_allocatable_iterator) name("") -> !llvm.ptr
+    omp.target_data map_entries(%map : !llvm.ptr) {}
+    llvm.return
+  }
+}
+
+// CHECK-LABEL: define internal void @.omp_mapper.mapper_allocatable_iterator
+// CHECK-NEXT: entry:
+// CHECK-NEXT: %omp.iterparent.begin = alloca i64
+// CHECK-NEXT: %omp.iterparent.end = alloca i64
+// CHECK-NEXT: %omp.iterparent.base = alloca ptr
+//
+// Pre-pass: the element address is the descriptor's base address plus the
+// bounds' byte offset; the (loop-invariant) base address field is kept.
+// CHECK: %[[HAS_TRIPS:.*]] = icmp ne i64 %{{.*}}, 0
+// CHECK: omp_mapper.iterspan.body:
+// CHECK: %[[DATA:.*]] = load ptr, ptr %[[BADDR:.*]], align 8
+// CHECK: %[[OFF:.*]] = mul i64 %{{.*}}, 4
+// CHECK: getelementptr inbounds i8, ptr %[[DATA]], i64 %{{.*}}
+// CHECK: call i64 @llvm.umin.i64
+// CHECK: call i64 @llvm.umax.i64
+// CHECK: store ptr %[[BADDR]], ptr %omp.iterparent.base
+//
+// The descriptor is a static component (its 48 bytes, always copied) ...
+// CHECK: omp.it.cont:
+// CHECK: %[[PBASE:.*]] = load ptr, ptr %omp.iterparent.base
+// CHECK: %[[PBEGIN:.*]] = inttoptr i64 %[[PB:.*]] to ptr
+// CHECK: %[[PSIZE:.*]] = sub i64 %{{.*}}, %[[PB]]
+// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %[[DESC:.*]], ptr %[[DESC]], i64 48, i64 %{{.*}}, ptr @{{.*}})
+//
+// ... then the elements' parent: its index is the component count right
+// before the push, giving the elements MEMBER_OF(count + 1).
+// CHECK: %[[NUM:.*]] = call i64 @__tgt_mapper_num_components(ptr %{{.*}})
+// CHECK: %[[IDX:.*]] = add i64 %[[NUM]], 1
+// CHECK: %[[MEMBER_OF:.*]] = shl i64 %[[IDX]], 48
+// CHECK: br i1 %[[HAS_TRIPS]], label %omp.pteeparent.push, label %omp.pteeparent.cont
+// CHECK: omp.pteeparent.push:
+// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %[[PBASE]], ptr %[[PBEGIN]], i64 %[[PSIZE]], i64 %{{.*}}, ptr null)
+// CHECK: omp.pteeparent.cont:
+//
+// The elements, TOFROM (3) with the runtime MEMBER_OF ...
+// CHECK: omp_mapper.iterator.body:
+// CHECK: add nuw i64 3, %[[MEMBER_OF]]
+// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, ptr null)
+//
+// ... and the ATTACH (0x4000) of the descriptor to the elements' span; the
+// outer map's modifiers are not applied to it.
+// CHECK: br i1 %[[HAS_TRIPS]], label %omp.attach.push, label %omp.attach.cont
+// CHECK: omp.attach.push:
+// CHECK: %[[ATTACH_TYPE:.*]] = phi i64 [ 16384, %{{.*}} ], [ 16384, %{{.*}} ], [ 16384, %{{.*}} ], [ 16384, %{{.*}} ]
+// CHECK: call void @__tgt_push_mapper_component(ptr %{{.*}}, ptr %[[PBASE]], ptr %[[PBEGIN]], i64 48, i64 %[[ATTACH_TYPE]], ptr null)
+// CHECK: omp.attach.cont:

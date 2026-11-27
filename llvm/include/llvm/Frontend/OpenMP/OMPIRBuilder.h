@@ -3124,6 +3124,26 @@ public:
       /// underlying map clause carries one (mirrors CustomMapperCB for the
       /// statically-known components above).
       Function *ChildMapperFn = nullptr;
+
+      /// Pointee storage reached through a pointer (e.g. the data of a Fortran
+      /// ALLOCATABLE component, whose descriptor is a statically-known
+      /// component) lives in its own storage block, so its components cannot
+      /// be MEMBER_OF the mapped variable. When PointeeParentBegin is set, a
+      /// storage-only parent spanning [PointeeParentBegin, +PointeeParentSize)
+      /// with base PointeeParentBase is pushed before the loop, if
+      /// PointeeParentCond holds (typically "non-zero trip count"), and this
+      /// segment's components are MEMBER_OF it: their Type must then carry no
+      /// MEMBER_OF bits, the index being only known at runtime. After the
+      /// loop, if AttachPtr is set, an ATTACH entry (AttachPtr,
+      /// PointeeParentBegin, AttachPtrSize) is pushed under the same
+      /// condition so the runtime points the device copy of the pointer (or
+      /// descriptor, for AttachPtrSize > sizeof(void*)) at the device pointee.
+      Value *PointeeParentCond = nullptr;
+      Value *PointeeParentBase = nullptr;
+      Value *PointeeParentBegin = nullptr;
+      Value *PointeeParentSize = nullptr;
+      Value *AttachPtr = nullptr;
+      Value *AttachPtrSize = nullptr;
     };
     SmallVector<DynamicSegment, 0> DynamicSegments;
 
