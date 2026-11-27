@@ -120,18 +120,34 @@ define void @read_word(ptr noalias writable sret(%cell) align 8 %p, ptr noalias 
 }
 
 define void @write_padding(ptr noalias writable sret(%cell) align 8 %p, i32 %word, i8 %bits) {
-; CHECK-LABEL: define void @write_padding(
-; CHECK-SAME: ptr noalias writable sret([[CELL:%.*]]) align 8 [[P:%.*]], i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
-; CHECK-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[PAD_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 5
-; CHECK-NEXT:    store i32 [[WORD]], ptr [[P]], align 4
-; CHECK-NEXT:    store i8 42, ptr [[PAD_PTR]], align 1
-; CHECK-NEXT:    [[OLD:%.*]] = load i8, ptr [[TAG_PTR]], align 4
-; CHECK-NEXT:    [[KEEP:%.*]] = and i8 [[OLD]], -4
-; CHECK-NEXT:    [[INSERT:%.*]] = and i8 [[BITS]], 3
-; CHECK-NEXT:    [[TAG:%.*]] = or disjoint i8 [[KEEP]], [[INSERT]]
-; CHECK-NEXT:    store i8 [[TAG]], ptr [[TAG_PTR]], align 4
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @write_padding(
+; LE-SAME: ptr noalias writable sret([[CELL:%.*]]) align 8 [[P:%.*]], i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
+; LE-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; LE-NEXT:    store i32 [[WORD]], ptr [[P]], align 4
+; LE-NEXT:    [[OLD:%.*]] = load i8, ptr [[TAG_PTR]], align 4
+; LE-NEXT:    [[KEEP:%.*]] = and i8 [[OLD]], -4
+; LE-NEXT:    [[INSERT:%.*]] = and i8 [[BITS]], 3
+; LE-NEXT:    [[TAG:%.*]] = or disjoint i8 [[KEEP]], [[INSERT]]
+; LE-NEXT:    [[TMP1:%.*]] = freeze i8 [[TAG]]
+; LE-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i16
+; LE-NEXT:    [[TMP3:%.*]] = or disjoint i16 [[TMP2]], 10752
+; LE-NEXT:    store i16 [[TMP3]], ptr [[TAG_PTR]], align 4
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @write_padding(
+; BE-SAME: ptr noalias writable sret([[CELL:%.*]]) align 8 [[P:%.*]], i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
+; BE-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; BE-NEXT:    store i32 [[WORD]], ptr [[P]], align 4
+; BE-NEXT:    [[OLD:%.*]] = load i8, ptr [[TAG_PTR]], align 4
+; BE-NEXT:    [[KEEP:%.*]] = and i8 [[OLD]], -4
+; BE-NEXT:    [[INSERT:%.*]] = and i8 [[BITS]], 3
+; BE-NEXT:    [[TAG:%.*]] = or disjoint i8 [[KEEP]], [[INSERT]]
+; BE-NEXT:    [[TMP1:%.*]] = freeze i8 [[TAG]]
+; BE-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i16
+; BE-NEXT:    [[TMP3:%.*]] = shl i16 [[TMP2]], 8
+; BE-NEXT:    [[TMP4:%.*]] = or disjoint i16 [[TMP3]], 42
+; BE-NEXT:    store i16 [[TMP4]], ptr [[TAG_PTR]], align 4
+; BE-NEXT:    ret void
 ;
   %tag.ptr = getelementptr inbounds i8, ptr %p, i64 4
   %pad.ptr = getelementptr inbounds i8, ptr %p, i64 5
@@ -321,17 +337,34 @@ define i64 @pack_before_long_zero_fill(i32 %word, i8 %bits) {
 }
 
 define i8 @observe_tail_before_zero_fill(i32 %word, i8 %bits) {
-; CHECK-LABEL: define i8 @observe_tail_before_zero_fill(
-; CHECK-SAME: i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
-; CHECK-NEXT:    [[P:%.*]] = alloca [8 x i8], align 8
-; CHECK-NEXT:    [[FILL_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 5
-; CHECK-NEXT:    store i8 42, ptr [[FILL_PTR]], align 1
-; CHECK-NEXT:    store i32 [[WORD]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    store i8 [[BITS]], ptr [[TAG_PTR]], align 4
-; CHECK-NEXT:    [[OLD:%.*]] = load i8, ptr [[FILL_PTR]], align 1
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[FILL_PTR]], i8 0, i64 3, i1 false)
-; CHECK-NEXT:    ret i8 [[OLD]]
+; LE-LABEL: define i8 @observe_tail_before_zero_fill(
+; LE-SAME: i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
+; LE-NEXT:    [[P:%.*]] = alloca [8 x i8], align 8
+; LE-NEXT:    [[FILL_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 5
+; LE-NEXT:    store i32 [[WORD]], ptr [[P]], align 8
+; LE-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; LE-NEXT:    [[TMP1:%.*]] = freeze i8 [[BITS]]
+; LE-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i16
+; LE-NEXT:    [[TMP3:%.*]] = or disjoint i16 [[TMP2]], 10752
+; LE-NEXT:    store i16 [[TMP3]], ptr [[TAG_PTR]], align 4
+; LE-NEXT:    [[OLD:%.*]] = load i8, ptr [[FILL_PTR]], align 1
+; LE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[FILL_PTR]], i8 0, i64 3, i1 false)
+; LE-NEXT:    ret i8 [[OLD]]
+;
+; BE-LABEL: define i8 @observe_tail_before_zero_fill(
+; BE-SAME: i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
+; BE-NEXT:    [[P:%.*]] = alloca [8 x i8], align 8
+; BE-NEXT:    [[FILL_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 5
+; BE-NEXT:    store i32 [[WORD]], ptr [[P]], align 8
+; BE-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; BE-NEXT:    [[TMP1:%.*]] = freeze i8 [[BITS]]
+; BE-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i16
+; BE-NEXT:    [[TMP3:%.*]] = shl i16 [[TMP2]], 8
+; BE-NEXT:    [[TMP4:%.*]] = or disjoint i16 [[TMP3]], 42
+; BE-NEXT:    store i16 [[TMP4]], ptr [[TAG_PTR]], align 4
+; BE-NEXT:    [[OLD:%.*]] = load i8, ptr [[FILL_PTR]], align 1
+; BE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[FILL_PTR]], i8 0, i64 3, i1 false)
+; BE-NEXT:    ret i8 [[OLD]]
 ;
   %p = alloca [8 x i8], align 8
   %fill.ptr = getelementptr inbounds i8, ptr %p, i64 5
@@ -371,18 +404,34 @@ define i64 @short_zero_fill(i32 %word, i8 %bits) {
 }
 
 define i64 @gap_before_zero_fill(i32 %word, i8 %bits) {
-; CHECK-LABEL: define i64 @gap_before_zero_fill(
-; CHECK-SAME: i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
-; CHECK-NEXT:    [[P:%.*]] = alloca [9 x i8], align 8
-; CHECK-NEXT:    [[GAP:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 5
-; CHECK-NEXT:    store i8 42, ptr [[GAP]], align 1
-; CHECK-NEXT:    store i32 [[WORD]], ptr [[P]], align 8
-; CHECK-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    store i8 [[BITS]], ptr [[TAG_PTR]], align 4
-; CHECK-NEXT:    [[FILL_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 6
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[FILL_PTR]], i8 0, i64 3, i1 false)
-; CHECK-NEXT:    [[OUT:%.*]] = load i64, ptr [[P]], align 8
-; CHECK-NEXT:    ret i64 [[OUT]]
+; LE-LABEL: define i64 @gap_before_zero_fill(
+; LE-SAME: i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
+; LE-NEXT:    [[P:%.*]] = alloca [9 x i8], align 8
+; LE-NEXT:    store i32 [[WORD]], ptr [[P]], align 8
+; LE-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; LE-NEXT:    [[TMP1:%.*]] = freeze i8 [[BITS]]
+; LE-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i16
+; LE-NEXT:    [[TMP3:%.*]] = or disjoint i16 [[TMP2]], 10752
+; LE-NEXT:    store i16 [[TMP3]], ptr [[TAG_PTR]], align 4
+; LE-NEXT:    [[FILL_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 6
+; LE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[FILL_PTR]], i8 0, i64 3, i1 false)
+; LE-NEXT:    [[OUT:%.*]] = load i64, ptr [[P]], align 8
+; LE-NEXT:    ret i64 [[OUT]]
+;
+; BE-LABEL: define i64 @gap_before_zero_fill(
+; BE-SAME: i32 [[WORD:%.*]], i8 [[BITS:%.*]]) {
+; BE-NEXT:    [[P:%.*]] = alloca [9 x i8], align 8
+; BE-NEXT:    store i32 [[WORD]], ptr [[P]], align 8
+; BE-NEXT:    [[TAG_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; BE-NEXT:    [[TMP1:%.*]] = freeze i8 [[BITS]]
+; BE-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i16
+; BE-NEXT:    [[TMP3:%.*]] = shl i16 [[TMP2]], 8
+; BE-NEXT:    [[TMP4:%.*]] = or disjoint i16 [[TMP3]], 42
+; BE-NEXT:    store i16 [[TMP4]], ptr [[TAG_PTR]], align 4
+; BE-NEXT:    [[FILL_PTR:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 6
+; BE-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[FILL_PTR]], i8 0, i64 3, i1 false)
+; BE-NEXT:    [[OUT:%.*]] = load i64, ptr [[P]], align 8
+; BE-NEXT:    ret i64 [[OUT]]
 ;
   %p = alloca [9 x i8], align 8
   %gap = getelementptr inbounds i8, ptr %p, i64 5

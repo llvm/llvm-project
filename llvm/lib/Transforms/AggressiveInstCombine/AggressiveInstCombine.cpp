@@ -2186,15 +2186,10 @@ struct AdjacentStoreMerge {
 };
 
 static bool canMergeAdjacentStores(ArrayRef<AdjacentIntegerStore> Stores,
-                                   StoreInst &Last, BatchAAResults &AA,
-                                   AssumptionCache &AC, DominatorTree &DT) {
+                                   StoreInst &Last, BatchAAResults &AA) {
   unsigned Remaining = MaxInstrsToScan;
   for (const AdjacentIntegerStore &Part : Stores) {
     StoreInst *Store = Part.Store;
-    // A poison input could turn the entire packed value into poison.
-    if (!isGuaranteedNotToBeUndefOrPoison(Store->getValueOperand(), &AC, Store,
-                                          &DT))
-      return false;
     if (Store == &Last)
       continue;
 
@@ -2279,7 +2274,7 @@ static void selectAdjacentStoreMerges(
         continue;
 
       unsigned Length = J - I + 1;
-      if (canMergeAdjacentStores(Ranges.slice(I, Length), *Last, AA, AC, DT))
+      if (canMergeAdjacentStores(Ranges.slice(I, Length), *Last, AA))
         Best[I] = {NumStores, Length, Last};
     }
   }
@@ -2290,7 +2285,8 @@ static void selectAdjacentStoreMerges(
 }
 
 static void mergeAdjacentIntegerStores(const AdjacentStoreMerge &Merge,
-                                       const DataLayout &DL) {
+                                       const DataLayout &DL,
+                                       AssumptionCache &AC, DominatorTree &DT) {
   ArrayRef<AdjacentIntegerStore> Stores = Merge.Stores;
   const AdjacentIntegerStore &First = Stores.front();
   int64_t Begin = First.Access.Begin;
@@ -2305,7 +2301,11 @@ static void mergeAdjacentIntegerStores(const AdjacentStoreMerge &Merge,
   for (const AdjacentIntegerStore &Part : Stores) {
     unsigned Shift =
         DL.isLittleEndian() ? Part.Access.Begin - Begin : End - Part.Access.End;
-    Value *V = B.CreateZExt(Part.Store->getValueOperand(), Ty);
+    Value *V = Part.Store->getValueOperand();
+    // A poison input could turn the entire packed value into poison.
+    if (!isGuaranteedNotToBeUndefOrPoison(V, &AC, Part.Store, &DT))
+      V = B.CreateFreeze(V);
+    V = B.CreateZExt(V, Ty);
     if (Shift)
       V = B.CreateShl(V, Shift);
     Packed = B.CreateOr(Packed, V, "", /*IsDisjoint=*/true);
@@ -2352,7 +2352,7 @@ static bool foldAdjacentIntegerStores(BasicBlock &BB, const DataLayout &DL,
 
   // Check interference against all the original stores before modifying IR.
   for (const AdjacentStoreMerge &Merge : Merges)
-    mergeAdjacentIntegerStores(Merge, DL);
+    mergeAdjacentIntegerStores(Merge, DL, AC, DT);
   return !Merges.empty();
 }
 

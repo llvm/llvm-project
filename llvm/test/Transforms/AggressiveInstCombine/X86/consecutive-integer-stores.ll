@@ -256,12 +256,25 @@ define void @noalias_store(ptr align 8 %p, ptr noalias %q, i32 noundef %a, i32 n
 
 ; Only the first stored value is known to be defined.
 define void @possibly_poison(ptr align 8 %p, i32 noundef %a, i32 %b) {
-; CHECK-LABEL: define void @possibly_poison(
-; CHECK-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    store i32 [[A]], ptr [[P]], align 8
-; CHECK-NEXT:    store i32 [[B]], ptr [[P4]], align 4
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @possibly_poison(
+; LE-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 [[B:%.*]]) {
+; LE-NEXT:    [[TMP1:%.*]] = zext i32 [[A]] to i64
+; LE-NEXT:    [[TMP2:%.*]] = freeze i32 [[B]]
+; LE-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
+; LE-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 32
+; LE-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[TMP1]], [[TMP4]]
+; LE-NEXT:    store i64 [[TMP5]], ptr [[P]], align 8
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @possibly_poison(
+; BE-SAME: ptr align 8 [[P:%.*]], i32 noundef [[A:%.*]], i32 [[B:%.*]]) {
+; BE-NEXT:    [[TMP1:%.*]] = zext i32 [[A]] to i64
+; BE-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 32
+; BE-NEXT:    [[TMP3:%.*]] = freeze i32 [[B]]
+; BE-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
+; BE-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[TMP2]], [[TMP4]]
+; BE-NEXT:    store i64 [[TMP5]], ptr [[P]], align 8
+; BE-NEXT:    ret void
 ;
   %p4 = getelementptr inbounds i8, ptr %p, i64 4
   store i32 %a, ptr %p, align 8
@@ -271,16 +284,24 @@ define void @possibly_poison(ptr align 8 %p, i32 noundef %a, i32 %b) {
 
 ; The tag and the first three zero bytes fill an aligned word.
 define void @tag_and_zero_bytes(ptr align 16 %p, i8 %tag) {
-; CHECK-LABEL: define void @tag_and_zero_bytes(
-; CHECK-SAME: ptr align 16 [[P:%.*]], i8 [[TAG:%.*]]) {
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
-; CHECK-NEXT:    store i8 0, ptr [[P1]], align 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
-; CHECK-NEXT:    store i16 0, ptr [[P2]], align 2
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    store i8 0, ptr [[P4]], align 4
-; CHECK-NEXT:    store i8 [[TAG]], ptr [[P]], align 16
-; CHECK-NEXT:    ret void
+; LE-LABEL: define void @tag_and_zero_bytes(
+; LE-SAME: ptr align 16 [[P:%.*]], i8 [[TAG:%.*]]) {
+; LE-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; LE-NEXT:    store i8 0, ptr [[P4]], align 4
+; LE-NEXT:    [[TMP1:%.*]] = freeze i8 [[TAG]]
+; LE-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; LE-NEXT:    store i32 [[TMP2]], ptr [[P]], align 16
+; LE-NEXT:    ret void
+;
+; BE-LABEL: define void @tag_and_zero_bytes(
+; BE-SAME: ptr align 16 [[P:%.*]], i8 [[TAG:%.*]]) {
+; BE-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
+; BE-NEXT:    store i8 0, ptr [[P4]], align 4
+; BE-NEXT:    [[TMP1:%.*]] = freeze i8 [[TAG]]
+; BE-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; BE-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP2]], 24
+; BE-NEXT:    store i32 [[TMP3]], ptr [[P]], align 16
+; BE-NEXT:    ret void
 ;
   %p1 = getelementptr inbounds i8, ptr %p, i64 1
   store i8 0, ptr %p1, align 1
