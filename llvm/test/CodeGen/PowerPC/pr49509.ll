@@ -26,12 +26,12 @@ define void @test() {
 ; CHECK-NEXT:    and 5, 4, 5
 ; CHECK-NEXT:    cmpwi 3, 0
 ; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    cmpwi 1, 5, -1
 ; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    bc 12, 2, .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %bb66
 ; CHECK-NEXT:    lis 4, 256
 ; CHECK-NEXT:  .LBB0_5: # %bb66
+; CHECK-NEXT:    cmpwi 1, 5, -1
 ; CHECK-NEXT:    cmpwi 5, 5, -1
 ; CHECK-NEXT:    lis 5, 512
 ; CHECK-NEXT:    beq 5, .LBB0_7

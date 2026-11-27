@@ -321,11 +321,11 @@ define i1 @cmp_issue181504(i128 %0) {
 ; to make sure we don't crash.
 ;
 ; CHECK-LABEL: cmp_issue181504
-; CHECK:      ldi r30, -1
+; CHECK:      ldi r24, -1
 ; CHECK-NEXT: ldi r26, 255
 ; CHECK-NEXT: ldi r27, 255
-; CHECK-NEXT: ldi r31, 1
-; CHECK-NEXT: cp r30, r10
+; CHECK-NEXT: ldi r25, 1
+; CHECK-NEXT: cp r24, r10
 bb0:
   %1 = icmp ugt i128 %0, 18446744073709551615 ; 2^64-1
 

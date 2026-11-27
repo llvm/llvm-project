@@ -521,71 +521,71 @@ define <4 x i32> @test_unsigned_v4i32_v4f32(<4 x float> %f) nounwind {
 ; AVX2-LABEL: test_unsigned_v4i32_v4f32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vcvttss2si %xmm1, %rdx
+; AVX2-NEXT:    vcvttss2si %xmm1, %rcx
 ; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm1
-; AVX2-NEXT:    cmovbl %eax, %edx
+; AVX2-NEXT:    cmovbl %eax, %ecx
 ; AVX2-NEXT:    vmovss {{.*#+}} xmm3 = [4.29496704E+9,0.0E+0,0.0E+0,0.0E+0]
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm1
-; AVX2-NEXT:    movl $-1, %ecx
-; AVX2-NEXT:    cmoval %ecx, %edx
+; AVX2-NEXT:    movl $-1, %edx
+; AVX2-NEXT:    cmoval %edx, %ecx
 ; AVX2-NEXT:    vcvttss2si %xmm0, %rsi
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm0
 ; AVX2-NEXT:    cmovbl %eax, %esi
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm0
-; AVX2-NEXT:    cmoval %ecx, %esi
+; AVX2-NEXT:    cmoval %edx, %esi
 ; AVX2-NEXT:    vmovd %esi, %xmm1
-; AVX2-NEXT:    vpinsrd $1, %edx, %xmm1, %xmm1
+; AVX2-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
 ; AVX2-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; AVX2-NEXT:    vcvttss2si %xmm4, %rdx
+; AVX2-NEXT:    vcvttss2si %xmm4, %rcx
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm4
-; AVX2-NEXT:    cmovbl %eax, %edx
+; AVX2-NEXT:    cmovbl %eax, %ecx
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm4
-; AVX2-NEXT:    cmoval %ecx, %edx
+; AVX2-NEXT:    cmoval %edx, %ecx
 ; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX2-NEXT:    vcvttss2si %xmm0, %rsi
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm0
 ; AVX2-NEXT:    cmovbl %eax, %esi
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm0
-; AVX2-NEXT:    cmoval %ecx, %esi
-; AVX2-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm0
+; AVX2-NEXT:    cmoval %edx, %esi
+; AVX2-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm0
 ; AVX2-NEXT:    vpinsrd $3, %esi, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_unsigned_v4i32_v4f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vcvttss2si %xmm1, %rdx
+; AVX512-NEXT:    vcvttss2si %xmm1, %rcx
 ; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vucomiss %xmm2, %xmm1
-; AVX512-NEXT:    cmovbl %eax, %edx
+; AVX512-NEXT:    cmovbl %eax, %ecx
 ; AVX512-NEXT:    vmovss {{.*#+}} xmm3 = [4.29496704E+9,0.0E+0,0.0E+0,0.0E+0]
 ; AVX512-NEXT:    vucomiss %xmm3, %xmm1
-; AVX512-NEXT:    movl $-1, %ecx
-; AVX512-NEXT:    cmoval %ecx, %edx
+; AVX512-NEXT:    movl $-1, %edx
+; AVX512-NEXT:    cmoval %edx, %ecx
 ; AVX512-NEXT:    vcvttss2si %xmm0, %rsi
 ; AVX512-NEXT:    vucomiss %xmm2, %xmm0
 ; AVX512-NEXT:    cmovbl %eax, %esi
 ; AVX512-NEXT:    vucomiss %xmm3, %xmm0
-; AVX512-NEXT:    cmoval %ecx, %esi
+; AVX512-NEXT:    cmoval %edx, %esi
 ; AVX512-NEXT:    vmovd %esi, %xmm1
-; AVX512-NEXT:    vpinsrd $1, %edx, %xmm1, %xmm1
+; AVX512-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm4 = xmm0[1,0]
-; AVX512-NEXT:    vcvttss2si %xmm4, %rdx
+; AVX512-NEXT:    vcvttss2si %xmm4, %rcx
 ; AVX512-NEXT:    vucomiss %xmm2, %xmm4
-; AVX512-NEXT:    cmovbl %eax, %edx
+; AVX512-NEXT:    cmovbl %eax, %ecx
 ; AVX512-NEXT:    vucomiss %xmm3, %xmm4
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
+; AVX512-NEXT:    cmoval %edx, %ecx
+; AVX512-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
 ; AVX512-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; AVX512-NEXT:    vcvttss2si %xmm0, %rdx
+; AVX512-NEXT:    vcvttss2si %xmm0, %rcx
 ; AVX512-NEXT:    vucomiss %xmm2, %xmm0
-; AVX512-NEXT:    cmovbl %eax, %edx
+; AVX512-NEXT:    cmovbl %eax, %ecx
 ; AVX512-NEXT:    vucomiss %xmm3, %xmm0
-; AVX512-NEXT:    cmoval %ecx, %edx
-; AVX512-NEXT:    vpinsrd $3, %edx, %xmm1, %xmm0
+; AVX512-NEXT:    cmoval %edx, %ecx
+; AVX512-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %x = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> %f)
   ret <4 x i32> %x

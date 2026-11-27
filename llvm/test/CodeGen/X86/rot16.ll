@@ -131,8 +131,8 @@ define i16 @xbar(i16 %x, i16 %y, i16 %z) nounwind {
 ;
 ; X64-LABEL: xbar:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    shldw $5, %di, %ax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shrdw $11, %si, %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 	%t0 = shl i16 %y, 5

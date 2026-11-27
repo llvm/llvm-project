@@ -25,9 +25,8 @@ define i16 @cmov16(i16 %a, i16 %b, i16 %x, ptr %y.ptr) {
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpw %si, %di # encoding: [0x66,0x39,0xf7]
 ; NDD-NEXT:    cmovbel %edx, %edi # EVEX TO LEGACY Compression encoding: [0x0f,0x46,0xfa]
-; NDD-NEXT:    movzwl (%rcx), %eax # encoding: [0x0f,0xb7,0x01]
-; NDD-NEXT:    cmovbew %dx, %ax # encoding: [0x66,0x0f,0x46,0xc2]
-; NDD-NEXT:    addw %di, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x01,0xf8]
+; NDD-NEXT:    cmovaw (%rcx), %dx # encoding: [0x66,0x0f,0x47,0x11]
+; NDD-NEXT:    addw %di, %dx, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x01,0xfa]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: cmov16:

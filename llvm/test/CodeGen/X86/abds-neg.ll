@@ -149,11 +149,11 @@ define i16 @abd_ext_i16_i32(i16 %a, i32 %b) nounwind {
 ;
 ; X64-LABEL: abd_ext_i16_i32:
 ; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    movswl %di, %ecx
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    subl %esi, %eax
-; X64-NEXT:    subl %ecx, %esi
-; X64-NEXT:    cmovgel %esi, %eax
+; X64-NEXT:    subl %esi, %edi
+; X64-NEXT:    subl %ecx, %eax
+; X64-NEXT:    cmovll %edi, %eax
 ; X64-NEXT:    negl %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq

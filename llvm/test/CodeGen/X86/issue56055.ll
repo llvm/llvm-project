@@ -20,7 +20,7 @@ define void @issue56055_vector(<2 x ptr addrspace(270)> %ptr, ptr %out) {
 ; CHECK-LABEL: issue56055_vector:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movdqa (%rcx), %xmm0
-; CHECK-NEXT:    paddd __xmm@00000000000000000000000200000002(%rip), %xmm0
+; CHECK-NEXT:    paddd __xmm@00000000000000000000000200000002(%rip), %xmm0 # [2,2,u,u]
 ; CHECK-NEXT:    movq %xmm0, (%rdx)
 ; CHECK-NEXT:    retq
   %add.ptr = getelementptr inbounds i8, <2 x ptr addrspace(270)> %ptr, <2 x i32> <i32 2, i32 2>
@@ -56,8 +56,8 @@ define void @issue56055_small_idx_vector(<2 x ptr addrspace(270)> %ptr, ptr %out
 define void @issue56055_large_idx(ptr addrspace(270) %ptr, ptr %out, i64 %idx) {
 ; CHECK-LABEL: issue56055_large_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addl %ecx, %r8d
-; CHECK-NEXT:    movl %r8d, (%rdx)
+; CHECK-NEXT:    addl %r8d, %ecx
+; CHECK-NEXT:    movl %ecx, (%rdx)
 ; CHECK-NEXT:    retq
   %add.ptr = getelementptr inbounds i8, ptr addrspace(270) %ptr, i64 %idx
   store ptr addrspace(270) %add.ptr, ptr %out

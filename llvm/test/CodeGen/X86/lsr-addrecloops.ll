@@ -33,16 +33,16 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    jne .LBB0_20
 ; CHECK-NEXT:    jp .LBB0_20
 ; CHECK-NEXT:  # %bb.3: # %vector.body807.preheader
-; CHECK-NEXT:    leaq 1(%rcx), %rdx
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    andl $7, %esi
+; CHECK-NEXT:    leaq 1(%rcx), %rsi
+; CHECK-NEXT:    movl %esi, %edx
+; CHECK-NEXT:    andl $7, %edx
 ; CHECK-NEXT:    cmpq $7, %rcx
 ; CHECK-NEXT:    jae .LBB0_5
 ; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    xorl %r9d, %r9d
 ; CHECK-NEXT:    jmp .LBB0_7
 ; CHECK-NEXT:  .LBB0_5: # %vector.body807.preheader.new
-; CHECK-NEXT:    movq %rdx, %r10
+; CHECK-NEXT:    movq %rsi, %r10
 ; CHECK-NEXT:    andq $-8, %r10
 ; CHECK-NEXT:    xorl %r9d, %r9d
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
@@ -62,7 +62,7 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    cmpq %r9, %r10
 ; CHECK-NEXT:    jne .LBB0_6
 ; CHECK-NEXT:  .LBB0_7: # %.lr.ph373.unr-lcssa
-; CHECK-NEXT:    testq %rsi, %rsi
+; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    je .LBB0_10
 ; CHECK-NEXT:  # %bb.8: # %vector.body807.epil.preheader
 ; CHECK-NEXT:    addq %rdi, %r9
@@ -74,7 +74,7 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    leaq (%r9,%r10), %r11
 ; CHECK-NEXT:    vmovups %ymm0, (%rax,%r11)
 ; CHECK-NEXT:    incq %r10
-; CHECK-NEXT:    cmpq %r10, %rsi
+; CHECK-NEXT:    cmpq %r10, %rdx
 ; CHECK-NEXT:    jne .LBB0_9
 ; CHECK-NEXT:  .LBB0_10: # %.lr.ph373
 ; CHECK-NEXT:    testb $1, %r8b
@@ -84,15 +84,13 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_11: # %vector.body847.preheader
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    andl $7, %esi
 ; CHECK-NEXT:    cmpq $7, %rcx
 ; CHECK-NEXT:    jae .LBB0_13
 ; CHECK-NEXT:  # %bb.12:
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    jmp .LBB0_15
 ; CHECK-NEXT:  .LBB0_13: # %vector.body847.preheader.new
-; CHECK-NEXT:    andq $-8, %rdx
+; CHECK-NEXT:    andq $-8, %rsi
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    .p2align 4
@@ -108,22 +106,22 @@ define void @in4dob_(ptr nocapture writeonly %0, ptr nocapture readonly %1, ptr 
 ; CHECK-NEXT:    vmovups %ymm0, 102(%rax,%r8)
 ; CHECK-NEXT:    vmovups %ymm0, 103(%rax,%r8)
 ; CHECK-NEXT:    addq $8, %rcx
-; CHECK-NEXT:    cmpq %rcx, %rdx
+; CHECK-NEXT:    cmpq %rcx, %rsi
 ; CHECK-NEXT:    jne .LBB0_14
 ; CHECK-NEXT:  .LBB0_15: # %common.ret.loopexit.unr-lcssa
-; CHECK-NEXT:    testq %rsi, %rsi
+; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    je .LBB0_18
 ; CHECK-NEXT:  # %bb.16: # %vector.body847.epil.preheader
 ; CHECK-NEXT:    leaq 96(%rcx,%rdi), %rcx
-; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_17: # %vector.body847.epil
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    leaq (%rcx,%rdx), %rdi
+; CHECK-NEXT:    leaq (%rcx,%rsi), %rdi
 ; CHECK-NEXT:    vmovups %ymm0, (%rax,%rdi)
-; CHECK-NEXT:    incq %rdx
-; CHECK-NEXT:    cmpq %rdx, %rsi
+; CHECK-NEXT:    incq %rsi
+; CHECK-NEXT:    cmpq %rsi, %rdx
 ; CHECK-NEXT:    jne .LBB0_17
 ; CHECK-NEXT:  .LBB0_18: # %common.ret
 ; CHECK-NEXT:    vzeroupper

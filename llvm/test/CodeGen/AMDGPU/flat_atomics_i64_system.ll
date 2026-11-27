@@ -2181,7 +2181,7 @@ define void @flat_atomic_add_i64_noret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB20_2
 ; GCN1-NEXT:  .LBB20_4: ; %atomicrmw.private
@@ -2221,7 +2221,7 @@ define void @flat_atomic_add_i64_noret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB20_2
 ; GCN2-NEXT:  .LBB20_4: ; %atomicrmw.private
@@ -2259,7 +2259,7 @@ define void @flat_atomic_add_i64_noret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB20_2
 ; GCN3-NEXT:  .LBB20_4: ; %atomicrmw.private
@@ -2304,7 +2304,7 @@ define void @flat_atomic_add_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB21_2
 ; GCN1-NEXT:  .LBB21_4: ; %atomicrmw.private
@@ -2346,7 +2346,7 @@ define void @flat_atomic_add_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB21_2
 ; GCN2-NEXT:  .LBB21_4: ; %atomicrmw.private
@@ -2386,7 +2386,7 @@ define void @flat_atomic_add_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB21_2
 ; GCN3-NEXT:  .LBB21_4: ; %atomicrmw.private
@@ -2433,7 +2433,7 @@ define i64 @flat_atomic_add_i64_ret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
 ; GCN1-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB22_2
 ; GCN1-NEXT:  .LBB22_4: ; %atomicrmw.private
@@ -2476,7 +2476,7 @@ define i64 @flat_atomic_add_i64_ret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB22_2
 ; GCN2-NEXT:  .LBB22_4: ; %atomicrmw.private
@@ -2517,7 +2517,7 @@ define i64 @flat_atomic_add_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB22_2
 ; GCN3-NEXT:  .LBB22_4: ; %atomicrmw.private
@@ -2563,7 +2563,7 @@ define i64 @flat_atomic_add_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
 ; GCN1-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB23_2
 ; GCN1-NEXT:  .LBB23_4: ; %atomicrmw.private
@@ -2606,7 +2606,7 @@ define i64 @flat_atomic_add_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB23_2
 ; GCN2-NEXT:  .LBB23_4: ; %atomicrmw.private
@@ -2647,7 +2647,7 @@ define i64 @flat_atomic_add_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB23_2
 ; GCN3-NEXT:  .LBB23_4: ; %atomicrmw.private
@@ -3131,7 +3131,7 @@ define void @flat_atomic_add_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB28_2
 ; GCN1-NEXT:  .LBB28_4: ; %atomicrmw.private
@@ -3173,7 +3173,7 @@ define void @flat_atomic_add_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB28_2
 ; GCN2-NEXT:  .LBB28_4: ; %atomicrmw.private
@@ -3213,7 +3213,7 @@ define void @flat_atomic_add_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB28_2
 ; GCN3-NEXT:  .LBB28_4: ; %atomicrmw.private
@@ -3260,7 +3260,7 @@ define i64 @flat_atomic_add_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
 ; GCN1-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB29_2
 ; GCN1-NEXT:  .LBB29_4: ; %atomicrmw.private
@@ -3303,7 +3303,7 @@ define i64 @flat_atomic_add_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB29_2
 ; GCN2-NEXT:  .LBB29_4: ; %atomicrmw.private
@@ -3344,7 +3344,7 @@ define i64 @flat_atomic_add_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB29_2
 ; GCN3-NEXT:  .LBB29_4: ; %atomicrmw.private
@@ -3410,8 +3410,7 @@ define void @flat_atomic_sub_i64_noret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr2
-; GCN1-NEXT:    ; implicit-def: $vgpr3
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB30_2
 ; GCN1-NEXT:  .LBB30_6: ; %atomicrmw.private
@@ -3469,8 +3468,7 @@ define void @flat_atomic_sub_i64_noret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr2
-; GCN2-NEXT:    ; implicit-def: $vgpr3
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB30_2
 ; GCN2-NEXT:  .LBB30_6: ; %atomicrmw.private
@@ -3523,8 +3521,7 @@ define void @flat_atomic_sub_i64_noret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr2
-; GCN3-NEXT:    ; implicit-def: $vgpr3
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB30_2
 ; GCN3-NEXT:  .LBB30_6: ; %atomicrmw.private
@@ -3587,8 +3584,7 @@ define void @flat_atomic_sub_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr2
-; GCN1-NEXT:    ; implicit-def: $vgpr3
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB31_2
 ; GCN1-NEXT:  .LBB31_6: ; %atomicrmw.private
@@ -3648,8 +3644,7 @@ define void @flat_atomic_sub_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr2
-; GCN2-NEXT:    ; implicit-def: $vgpr3
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB31_2
 ; GCN2-NEXT:  .LBB31_6: ; %atomicrmw.private
@@ -3704,8 +3699,7 @@ define void @flat_atomic_sub_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr2
-; GCN3-NEXT:    ; implicit-def: $vgpr3
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB31_2
 ; GCN3-NEXT:  .LBB31_6: ; %atomicrmw.private
@@ -3762,8 +3756,7 @@ define i64 @flat_atomic_sub_i64_ret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:  ; %bb.3: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr2
-; GCN1-NEXT:    ; implicit-def: $vgpr3
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:  .LBB32_4: ; %Flow3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB32_6
@@ -3820,8 +3813,7 @@ define i64 @flat_atomic_sub_i64_ret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:  ; %bb.3: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr2
-; GCN2-NEXT:    ; implicit-def: $vgpr3
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:  .LBB32_4: ; %Flow3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB32_6
@@ -3881,8 +3873,7 @@ define i64 @flat_atomic_sub_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr2
-; GCN3-NEXT:    ; implicit-def: $vgpr3
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB32_2
 ; GCN3-NEXT:  .LBB32_6: ; %atomicrmw.private
@@ -3946,8 +3937,7 @@ define i64 @flat_atomic_sub_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN1-NEXT:    ; implicit-def: $vgpr2
-; GCN1-NEXT:    ; implicit-def: $vgpr3
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB33_2
 ; GCN1-NEXT:  .LBB33_6: ; %atomicrmw.private
@@ -4008,8 +3998,7 @@ define i64 @flat_atomic_sub_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN2-NEXT:    ; implicit-def: $vgpr2
-; GCN2-NEXT:    ; implicit-def: $vgpr3
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB33_2
 ; GCN2-NEXT:  .LBB33_6: ; %atomicrmw.private
@@ -4065,8 +4054,7 @@ define i64 @flat_atomic_sub_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr2
-; GCN3-NEXT:    ; implicit-def: $vgpr3
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB33_2
 ; GCN3-NEXT:  .LBB33_6: ; %atomicrmw.private
@@ -4758,7 +4746,7 @@ define void @flat_atomic_sub_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB38_2
 ; GCN1-NEXT:  .LBB38_4: ; %atomicrmw.private
@@ -4800,7 +4788,7 @@ define void @flat_atomic_sub_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB38_2
 ; GCN2-NEXT:  .LBB38_4: ; %atomicrmw.private
@@ -4840,7 +4828,7 @@ define void @flat_atomic_sub_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB38_2
 ; GCN3-NEXT:  .LBB38_4: ; %atomicrmw.private
@@ -4887,7 +4875,7 @@ define i64 @flat_atomic_sub_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
 ; GCN1-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB39_2
 ; GCN1-NEXT:  .LBB39_4: ; %atomicrmw.private
@@ -4930,7 +4918,7 @@ define i64 @flat_atomic_sub_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB39_2
 ; GCN2-NEXT:  .LBB39_4: ; %atomicrmw.private
@@ -4971,7 +4959,7 @@ define i64 @flat_atomic_sub_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB39_2
 ; GCN3-NEXT:  .LBB39_4: ; %atomicrmw.private
@@ -5037,8 +5025,7 @@ define void @flat_atomic_and_i64_noret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB40_2
 ; GCN1-NEXT:  .LBB40_6: ; %atomicrmw.private
@@ -5096,8 +5083,7 @@ define void @flat_atomic_and_i64_noret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB40_2
 ; GCN2-NEXT:  .LBB40_6: ; %atomicrmw.private
@@ -5150,8 +5136,7 @@ define void @flat_atomic_and_i64_noret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB40_2
 ; GCN3-NEXT:  .LBB40_6: ; %atomicrmw.private
@@ -5214,8 +5199,7 @@ define void @flat_atomic_and_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB41_2
 ; GCN1-NEXT:  .LBB41_6: ; %atomicrmw.private
@@ -5275,8 +5259,7 @@ define void @flat_atomic_and_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB41_2
 ; GCN2-NEXT:  .LBB41_6: ; %atomicrmw.private
@@ -5331,8 +5314,7 @@ define void @flat_atomic_and_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB41_2
 ; GCN3-NEXT:  .LBB41_6: ; %atomicrmw.private
@@ -5389,8 +5371,7 @@ define i64 @flat_atomic_and_i64_ret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:  ; %bb.3: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:  .LBB42_4: ; %Flow3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB42_6
@@ -5447,8 +5428,7 @@ define i64 @flat_atomic_and_i64_ret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:  ; %bb.3: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:  .LBB42_4: ; %Flow3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB42_6
@@ -5508,8 +5488,7 @@ define i64 @flat_atomic_and_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB42_2
 ; GCN3-NEXT:  .LBB42_6: ; %atomicrmw.private
@@ -5573,8 +5552,7 @@ define i64 @flat_atomic_and_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB43_2
 ; GCN1-NEXT:  .LBB43_6: ; %atomicrmw.private
@@ -5635,8 +5613,7 @@ define i64 @flat_atomic_and_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB43_2
 ; GCN2-NEXT:  .LBB43_6: ; %atomicrmw.private
@@ -5692,8 +5669,7 @@ define i64 @flat_atomic_and_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB43_2
 ; GCN3-NEXT:  .LBB43_6: ; %atomicrmw.private
@@ -6361,7 +6337,7 @@ define void @flat_atomic_and_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB48_2
 ; GCN1-NEXT:  .LBB48_4: ; %atomicrmw.private
@@ -6403,7 +6379,7 @@ define void @flat_atomic_and_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB48_2
 ; GCN2-NEXT:  .LBB48_4: ; %atomicrmw.private
@@ -6443,7 +6419,7 @@ define void @flat_atomic_and_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr3
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB48_2
 ; GCN3-NEXT:  .LBB48_4: ; %atomicrmw.private
@@ -6490,7 +6466,7 @@ define i64 @flat_atomic_and_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
 ; GCN1-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN1-NEXT:    ; implicit-def: $vgpr3
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB49_2
 ; GCN1-NEXT:  .LBB49_4: ; %atomicrmw.private
@@ -6533,7 +6509,7 @@ define i64 @flat_atomic_and_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN2-NEXT:    ; implicit-def: $vgpr3
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB49_2
 ; GCN2-NEXT:  .LBB49_4: ; %atomicrmw.private
@@ -6574,7 +6550,7 @@ define i64 @flat_atomic_and_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr3
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB49_2
 ; GCN3-NEXT:  .LBB49_4: ; %atomicrmw.private
@@ -6642,8 +6618,7 @@ define void @flat_atomic_nand_i64_noret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB50_2
 ; GCN1-NEXT:  .LBB50_6: ; %atomicrmw.private
@@ -6705,8 +6680,7 @@ define void @flat_atomic_nand_i64_noret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB50_2
 ; GCN2-NEXT:  .LBB50_6: ; %atomicrmw.private
@@ -6763,8 +6737,7 @@ define void @flat_atomic_nand_i64_noret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB50_2
 ; GCN3-NEXT:  .LBB50_6: ; %atomicrmw.private
@@ -6831,8 +6804,7 @@ define void @flat_atomic_nand_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB51_2
 ; GCN1-NEXT:  .LBB51_6: ; %atomicrmw.private
@@ -6896,8 +6868,7 @@ define void @flat_atomic_nand_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB51_2
 ; GCN2-NEXT:  .LBB51_6: ; %atomicrmw.private
@@ -6956,8 +6927,7 @@ define void @flat_atomic_nand_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB51_2
 ; GCN3-NEXT:  .LBB51_6: ; %atomicrmw.private
@@ -7018,8 +6988,7 @@ define i64 @flat_atomic_nand_i64_ret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:  ; %bb.3: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:  .LBB52_4: ; %Flow3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB52_6
@@ -7080,8 +7049,7 @@ define i64 @flat_atomic_nand_i64_ret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:  ; %bb.3: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:  .LBB52_4: ; %Flow3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB52_6
@@ -7145,8 +7113,7 @@ define i64 @flat_atomic_nand_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB52_2
 ; GCN3-NEXT:  .LBB52_6: ; %atomicrmw.private
@@ -7214,8 +7181,7 @@ define i64 @flat_atomic_nand_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB53_2
 ; GCN1-NEXT:  .LBB53_6: ; %atomicrmw.private
@@ -7280,8 +7246,7 @@ define i64 @flat_atomic_nand_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB53_2
 ; GCN2-NEXT:  .LBB53_6: ; %atomicrmw.private
@@ -7341,8 +7306,7 @@ define i64 @flat_atomic_nand_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB53_2
 ; GCN3-NEXT:  .LBB53_6: ; %atomicrmw.private
@@ -8080,8 +8044,7 @@ define void @flat_atomic_nand_i64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB58_2
 ; GCN1-NEXT:  .LBB58_6: ; %atomicrmw.private
@@ -8145,8 +8108,7 @@ define void @flat_atomic_nand_i64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB58_2
 ; GCN2-NEXT:  .LBB58_6: ; %atomicrmw.private
@@ -8205,8 +8167,7 @@ define void @flat_atomic_nand_i64_noret_offset__amdgpu_no_remote_memory(ptr %out
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB58_2
 ; GCN3-NEXT:  .LBB58_6: ; %atomicrmw.private
@@ -8275,8 +8236,7 @@ define i64 @flat_atomic_nand_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB59_2
 ; GCN1-NEXT:  .LBB59_6: ; %atomicrmw.private
@@ -8341,8 +8301,7 @@ define i64 @flat_atomic_nand_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB59_2
 ; GCN2-NEXT:  .LBB59_6: ; %atomicrmw.private
@@ -8402,8 +8361,7 @@ define i64 @flat_atomic_nand_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB59_2
 ; GCN3-NEXT:  .LBB59_6: ; %atomicrmw.private
@@ -8471,8 +8429,7 @@ define void @flat_atomic_or_i64_noret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB60_2
 ; GCN1-NEXT:  .LBB60_6: ; %atomicrmw.private
@@ -8530,8 +8487,7 @@ define void @flat_atomic_or_i64_noret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB60_2
 ; GCN2-NEXT:  .LBB60_6: ; %atomicrmw.private
@@ -8584,8 +8540,7 @@ define void @flat_atomic_or_i64_noret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB60_2
 ; GCN3-NEXT:  .LBB60_6: ; %atomicrmw.private
@@ -8648,8 +8603,7 @@ define void @flat_atomic_or_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB61_2
 ; GCN1-NEXT:  .LBB61_6: ; %atomicrmw.private
@@ -8709,8 +8663,7 @@ define void @flat_atomic_or_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB61_2
 ; GCN2-NEXT:  .LBB61_6: ; %atomicrmw.private
@@ -8765,8 +8718,7 @@ define void @flat_atomic_or_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB61_2
 ; GCN3-NEXT:  .LBB61_6: ; %atomicrmw.private
@@ -8823,8 +8775,7 @@ define i64 @flat_atomic_or_i64_ret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:  ; %bb.3: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:  .LBB62_4: ; %Flow3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB62_6
@@ -8881,8 +8832,7 @@ define i64 @flat_atomic_or_i64_ret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:  ; %bb.3: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:  .LBB62_4: ; %Flow3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB62_6
@@ -8942,8 +8892,7 @@ define i64 @flat_atomic_or_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB62_2
 ; GCN3-NEXT:  .LBB62_6: ; %atomicrmw.private
@@ -9007,8 +8956,7 @@ define i64 @flat_atomic_or_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB63_2
 ; GCN1-NEXT:  .LBB63_6: ; %atomicrmw.private
@@ -9069,8 +9017,7 @@ define i64 @flat_atomic_or_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB63_2
 ; GCN2-NEXT:  .LBB63_6: ; %atomicrmw.private
@@ -9126,8 +9073,7 @@ define i64 @flat_atomic_or_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB63_2
 ; GCN3-NEXT:  .LBB63_6: ; %atomicrmw.private
@@ -9795,7 +9741,7 @@ define void @flat_atomic_or_i64_noret_offset__amdgpu_no_remote_memory(ptr %out, 
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB68_2
 ; GCN1-NEXT:  .LBB68_4: ; %atomicrmw.private
@@ -9837,7 +9783,7 @@ define void @flat_atomic_or_i64_noret_offset__amdgpu_no_remote_memory(ptr %out, 
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB68_2
 ; GCN2-NEXT:  .LBB68_4: ; %atomicrmw.private
@@ -9877,7 +9823,7 @@ define void @flat_atomic_or_i64_noret_offset__amdgpu_no_remote_memory(ptr %out, 
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr3
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB68_2
 ; GCN3-NEXT:  .LBB68_4: ; %atomicrmw.private
@@ -9924,7 +9870,7 @@ define i64 @flat_atomic_or_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i64
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
 ; GCN1-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN1-NEXT:    ; implicit-def: $vgpr3
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB69_2
 ; GCN1-NEXT:  .LBB69_4: ; %atomicrmw.private
@@ -9967,7 +9913,7 @@ define i64 @flat_atomic_or_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i64
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN2-NEXT:    ; implicit-def: $vgpr3
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB69_2
 ; GCN2-NEXT:  .LBB69_4: ; %atomicrmw.private
@@ -10008,7 +9954,7 @@ define i64 @flat_atomic_or_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i64
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr3
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB69_2
 ; GCN3-NEXT:  .LBB69_4: ; %atomicrmw.private
@@ -10074,8 +10020,7 @@ define void @flat_atomic_xor_i64_noret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB70_2
 ; GCN1-NEXT:  .LBB70_6: ; %atomicrmw.private
@@ -10133,8 +10078,7 @@ define void @flat_atomic_xor_i64_noret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB70_2
 ; GCN2-NEXT:  .LBB70_6: ; %atomicrmw.private
@@ -10187,8 +10131,7 @@ define void @flat_atomic_xor_i64_noret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB70_2
 ; GCN3-NEXT:  .LBB70_6: ; %atomicrmw.private
@@ -10251,8 +10194,7 @@ define void @flat_atomic_xor_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB71_2
 ; GCN1-NEXT:  .LBB71_6: ; %atomicrmw.private
@@ -10312,8 +10254,7 @@ define void @flat_atomic_xor_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB71_2
 ; GCN2-NEXT:  .LBB71_6: ; %atomicrmw.private
@@ -10368,8 +10309,7 @@ define void @flat_atomic_xor_i64_noret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB71_2
 ; GCN3-NEXT:  .LBB71_6: ; %atomicrmw.private
@@ -10426,8 +10366,7 @@ define i64 @flat_atomic_xor_i64_ret(ptr %ptr, i64 %in) {
 ; GCN1-NEXT:  ; %bb.3: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:  .LBB72_4: ; %Flow3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB72_6
@@ -10484,8 +10423,7 @@ define i64 @flat_atomic_xor_i64_ret(ptr %ptr, i64 %in) {
 ; GCN2-NEXT:  ; %bb.3: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:  .LBB72_4: ; %Flow3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB72_6
@@ -10545,8 +10483,7 @@ define i64 @flat_atomic_xor_i64_ret(ptr %ptr, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB72_2
 ; GCN3-NEXT:  .LBB72_6: ; %atomicrmw.private
@@ -10610,8 +10547,7 @@ define i64 @flat_atomic_xor_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN1-NEXT:  ; %bb.5: ; %Flow
 ; GCN1-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN1-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN1-NEXT:    ; implicit-def: $vgpr3
-; GCN1-NEXT:    ; implicit-def: $vgpr2
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB73_2
 ; GCN1-NEXT:  .LBB73_6: ; %atomicrmw.private
@@ -10672,8 +10608,7 @@ define i64 @flat_atomic_xor_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN2-NEXT:  ; %bb.5: ; %Flow
 ; GCN2-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN2-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN2-NEXT:    ; implicit-def: $vgpr3
-; GCN2-NEXT:    ; implicit-def: $vgpr2
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB73_2
 ; GCN2-NEXT:  .LBB73_6: ; %atomicrmw.private
@@ -10729,8 +10664,7 @@ define i64 @flat_atomic_xor_i64_ret_offset(ptr %out, i64 %in) {
 ; GCN3-NEXT:  ; %bb.5: ; %Flow
 ; GCN3-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr3
-; GCN3-NEXT:    ; implicit-def: $vgpr2
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB73_2
 ; GCN3-NEXT:  .LBB73_6: ; %atomicrmw.private
@@ -11398,7 +11332,7 @@ define void @flat_atomic_xor_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
 ; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN1-NEXT:    ; implicit-def: $vgpr3
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB78_2
 ; GCN1-NEXT:  .LBB78_4: ; %atomicrmw.private
@@ -11440,7 +11374,7 @@ define void @flat_atomic_xor_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN2-NEXT:    ; implicit-def: $vgpr3
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB78_2
 ; GCN2-NEXT:  .LBB78_4: ; %atomicrmw.private
@@ -11480,7 +11414,7 @@ define void @flat_atomic_xor_i64_noret_offset__amdgpu_no_remote_memory(ptr %out,
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN3-NEXT:    ; implicit-def: $vgpr3
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB78_2
 ; GCN3-NEXT:  .LBB78_4: ; %atomicrmw.private
@@ -11527,7 +11461,7 @@ define i64 @flat_atomic_xor_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN1-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN1-NEXT:    buffer_wbinvl1_vol
 ; GCN1-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN1-NEXT:    ; implicit-def: $vgpr3
+; GCN1-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN1-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN1-NEXT:    s_cbranch_execz .LBB79_2
 ; GCN1-NEXT:  .LBB79_4: ; %atomicrmw.private
@@ -11570,7 +11504,7 @@ define i64 @flat_atomic_xor_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN2-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN2-NEXT:    buffer_wbinvl1_vol
 ; GCN2-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN2-NEXT:    ; implicit-def: $vgpr3
+; GCN2-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN2-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN2-NEXT:    s_cbranch_execz .LBB79_2
 ; GCN2-NEXT:  .LBB79_4: ; %atomicrmw.private
@@ -11611,7 +11545,7 @@ define i64 @flat_atomic_xor_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GCN3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN3-NEXT:    buffer_wbinvl1_vol
 ; GCN3-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GCN3-NEXT:    ; implicit-def: $vgpr3
+; GCN3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN3-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN3-NEXT:    s_cbranch_execz .LBB79_2
 ; GCN3-NEXT:  .LBB79_4: ; %atomicrmw.private

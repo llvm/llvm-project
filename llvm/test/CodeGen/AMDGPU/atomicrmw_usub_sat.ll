@@ -187,10 +187,9 @@ define i32 @global_atomic_usub_sat_offset(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_add_co_u32_e32 v3, vcc, 0x1000, v0
-; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], vcc
-; GFX9-SDAG-NEXT:    v_addc_co_u32_e64 v4, s[4:5], 0, v1, s[4:5]
+; GFX9-SDAG-NEXT:    v_addc_co_u32_e32 v4, vcc, 0, v1, vcc
+; GFX9-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0x1000, v0
 ; GFX9-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX9-SDAG-NEXT:    global_load_dword v0, v[0:1], off
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX9-SDAG-NEXT:  .LBB1_1: ; %atomicrmw.start
@@ -427,10 +426,9 @@ define void @global_atomic_usub_sat_offset_nortn(ptr addrspace(1) %ptr, i32 %dat
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_add_co_u32_e32 v3, vcc, 0x1000, v0
-; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], vcc
-; GFX9-SDAG-NEXT:    v_addc_co_u32_e64 v4, s[4:5], 0, v1, s[4:5]
+; GFX9-SDAG-NEXT:    v_addc_co_u32_e32 v4, vcc, 0, v1, vcc
+; GFX9-SDAG-NEXT:    v_add_co_u32_e32 v0, vcc, 0x1000, v0
 ; GFX9-SDAG-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX9-SDAG-NEXT:    global_load_dword v1, v[0:1], off
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX9-SDAG-NEXT:  .LBB3_1: ; %atomicrmw.start

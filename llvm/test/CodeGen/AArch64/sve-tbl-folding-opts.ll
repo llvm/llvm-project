@@ -758,11 +758,11 @@ define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_partial_cov
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    index z7.d, x9, #-4
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    add x9, x1, #8
-; CHECK-NEXT:    add z3.d, z5.d, z1.d
+; CHECK-NEXT:    add z2.d, z5.d, z1.d
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    cntw x10
 ; CHECK-NEXT:    add z5.d, z5.d, z6.d
@@ -778,7 +778,7 @@ define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_partial_cov
 ; CHECK-NEXT:    cmn x8, #2048
 ; CHECK-NEXT:    add x0, x0, x11
 ; CHECK-NEXT:    tbl z25.h, { z24.h }, z7.h
-; CHECK-NEXT:    tbl z26.h, { z24.h }, z3.h
+; CHECK-NEXT:    tbl z26.h, { z24.h }, z2.h
 ; CHECK-NEXT:    tbl z27.h, { z24.h }, z6.h
 ; CHECK-NEXT:    tbl z24.h, { z24.h }, z5.h
 ; CHECK-NEXT:    ucvtf z25.d, p1/m, z25.d
@@ -791,17 +791,17 @@ define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_partial_cov
 ; CHECK-NEXT:    fmul z24.d, z24.d, z28.d
 ; CHECK-NEXT:    fadd z0.d, z0.d, z25.d
 ; CHECK-NEXT:    fadd z4.d, z4.d, z26.d
-; CHECK-NEXT:    fadd z2.d, z2.d, z27.d
+; CHECK-NEXT:    fadd z3.d, z3.d, z27.d
 ; CHECK-NEXT:    fadd z1.d, z1.d, z24.d
 ; CHECK-NEXT:    b.ne .LBB9_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    faddv d0, p1, z0.d
-; CHECK-NEXT:    faddv d3, p1, z4.d
-; CHECK-NEXT:    faddv d2, p1, z2.d
+; CHECK-NEXT:    faddv d2, p1, z4.d
+; CHECK-NEXT:    faddv d3, p1, z3.d
 ; CHECK-NEXT:    faddv d1, p1, z1.d
-; CHECK-NEXT:    mov v0.d[1], v3.d[0]
-; CHECK-NEXT:    mov v2.d[1], v1.d[0]
-; CHECK-NEXT:    stp q0, q2, [x2]
+; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    mov v3.d[1], v1.d[0]
+; CHECK-NEXT:    stp q0, q3, [x2]
 ; CHECK-NEXT:    ret
 entry:
   %vscale = tail call i64 @llvm.vscale.i64()
@@ -871,15 +871,15 @@ define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double_extr
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    mov x9, xzr
-; CHECK-NEXT:    add z2.d, z7.d, z1.d
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    add x10, x1, #8
+; CHECK-NEXT:    add z1.d, z7.d, z1.d
 ; CHECK-NEXT:    add z5.d, z7.d, z5.d
+; CHECK-NEXT:    add x10, x1, #8
 ; CHECK-NEXT:    add z6.d, z7.d, z6.d
-; CHECK-NEXT:    cntw x11
 ; CHECK-NEXT:    add z7.d, z7.d, z24.d
+; CHECK-NEXT:    cntw x11
+; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    rdvl x12, #2
 ; CHECK-NEXT:  .LBB10_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -891,7 +891,7 @@ define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double_extr
 ; CHECK-NEXT:    str z24, [x3]
 ; CHECK-NEXT:    ld1h { z25.h }, p0/z, [x0]
 ; CHECK-NEXT:    add x0, x0, x12
-; CHECK-NEXT:    tbl z26.h, { z25.h }, z2.h
+; CHECK-NEXT:    tbl z26.h, { z25.h }, z1.h
 ; CHECK-NEXT:    tbl z27.h, { z25.h }, z5.h
 ; CHECK-NEXT:    tbl z28.h, { z25.h }, z6.h
 ; CHECK-NEXT:    tbl z25.h, { z25.h }, z7.h
@@ -906,15 +906,15 @@ define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double_extr
 ; CHECK-NEXT:    fadd z0.d, z0.d, z26.d
 ; CHECK-NEXT:    fadd z4.d, z4.d, z27.d
 ; CHECK-NEXT:    fadd z3.d, z3.d, z28.d
-; CHECK-NEXT:    fadd z1.d, z1.d, z24.d
+; CHECK-NEXT:    fadd z2.d, z2.d, z24.d
 ; CHECK-NEXT:    b.ne .LBB10_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    faddv d0, p1, z0.d
-; CHECK-NEXT:    faddv d2, p1, z4.d
+; CHECK-NEXT:    faddv d1, p1, z4.d
 ; CHECK-NEXT:    faddv d3, p1, z3.d
-; CHECK-NEXT:    faddv d1, p1, z1.d
-; CHECK-NEXT:    mov v0.d[1], v2.d[0]
-; CHECK-NEXT:    mov v3.d[1], v1.d[0]
+; CHECK-NEXT:    faddv d2, p1, z2.d
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    mov v3.d[1], v2.d[0]
 ; CHECK-NEXT:    stp q0, q3, [x2]
 ; CHECK-NEXT:    ret
 entry:

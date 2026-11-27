@@ -39,22 +39,23 @@ define arm_aapcs_vfpcc <4 x half> @complex_mul_v4f16(<4 x half> %a, <4 x half> %
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmovx.f16 s8, s0
 ; CHECK-NEXT:    vmovx.f16 s2, s1
+; CHECK-NEXT:    vmov.f32 s12, s4
 ; CHECK-NEXT:    vins.f16 s8, s2
-; CHECK-NEXT:    vmovx.f16 s12, s4
 ; CHECK-NEXT:    vmovx.f16 s2, s5
+; CHECK-NEXT:    vmovx.f16 s4, s4
 ; CHECK-NEXT:    vins.f16 s0, s1
-; CHECK-NEXT:    vins.f16 s12, s2
-; CHECK-NEXT:    vins.f16 s4, s5
-; CHECK-NEXT:    vmul.f16 q4, q3, q0
-; CHECK-NEXT:    vfma.f16 q4, q1, q2
-; CHECK-NEXT:    vmul.f16 q2, q2, q3
-; CHECK-NEXT:    vneg.f16 q2, q2
-; CHECK-NEXT:    vfma.f16 q2, q1, q0
+; CHECK-NEXT:    vins.f16 s4, s2
+; CHECK-NEXT:    vins.f16 s12, s5
+; CHECK-NEXT:    vmul.f16 q4, q1, q0
+; CHECK-NEXT:    vmul.f16 q1, q2, q1
+; CHECK-NEXT:    vfma.f16 q4, q3, q2
+; CHECK-NEXT:    vneg.f16 q1, q1
+; CHECK-NEXT:    vfma.f16 q1, q3, q0
 ; CHECK-NEXT:    vmovx.f16 s0, s16
-; CHECK-NEXT:    vmovx.f16 s9, s8
-; CHECK-NEXT:    vins.f16 s8, s16
-; CHECK-NEXT:    vins.f16 s9, s0
-; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    vmovx.f16 s5, s4
+; CHECK-NEXT:    vins.f16 s4, s16
+; CHECK-NEXT:    vins.f16 s5, s0
+; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:

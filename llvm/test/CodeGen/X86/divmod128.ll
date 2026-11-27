@@ -443,28 +443,29 @@ entry:
 define i128 @urem_i128_12(i128 %x) nounwind {
 ; X86-64-LABEL: urem_i128_12:
 ; X86-64:       # %bb.0: # %entry
-; X86-64-NEXT:    movq %rdi, %rcx
-; X86-64-NEXT:    shrdq $2, %rsi, %rcx
+; X86-64-NEXT:    movq %rdi, %rax
+; X86-64-NEXT:    shrdq $2, %rsi, %rax
 ; X86-64-NEXT:    shrq $2, %rsi
-; X86-64-NEXT:    addq %rsi, %rcx
-; X86-64-NEXT:    adcq $0, %rcx
-; X86-64-NEXT:    movabsq $-6148914691236517205, %rdx # imm = 0xAAAAAAAAAAAAAAAB
-; X86-64-NEXT:    movq %rcx, %rax
-; X86-64-NEXT:    mulq %rdx
+; X86-64-NEXT:    addq %rax, %rsi
+; X86-64-NEXT:    adcq $0, %rsi
+; X86-64-NEXT:    movabsq $-6148914691236517205, %rcx # imm = 0xAAAAAAAAAAAAAAAB
+; X86-64-NEXT:    movq %rsi, %rax
+; X86-64-NEXT:    mulq %rcx
 ; X86-64-NEXT:    shrq %rdx
 ; X86-64-NEXT:    leal (%rdx,%rdx,2), %eax
-; X86-64-NEXT:    subl %eax, %ecx
+; X86-64-NEXT:    subl %eax, %esi
 ; X86-64-NEXT:    andl $3, %edi
-; X86-64-NEXT:    leaq (%rdi,%rcx,4), %rax
+; X86-64-NEXT:    leaq (%rdi,%rsi,4), %rax
 ; X86-64-NEXT:    xorl %edx, %edx
 ; X86-64-NEXT:    retq
 ;
 ; WIN64-LABEL: urem_i128_12:
 ; WIN64:       # %bb.0: # %entry
-; WIN64-NEXT:    movq %rcx, %r8
-; WIN64-NEXT:    shrdq $2, %rdx, %r8
-; WIN64-NEXT:    shrq $2, %rdx
-; WIN64-NEXT:    addq %rdx, %r8
+; WIN64-NEXT:    movq %rdx, %r8
+; WIN64-NEXT:    movq %rcx, %rax
+; WIN64-NEXT:    shrdq $2, %rdx, %rax
+; WIN64-NEXT:    shrq $2, %r8
+; WIN64-NEXT:    addq %rax, %r8
 ; WIN64-NEXT:    adcq $0, %r8
 ; WIN64-NEXT:    movabsq $-6148914691236517205, %rdx # imm = 0xAAAAAAAAAAAAAAAB
 ; WIN64-NEXT:    movq %r8, %rax

@@ -229,26 +229,26 @@ define i128 @fptosi_sat_f16_to_i128(half %a) nounwind {
 ; RV64IZHINX-NEXT:    fle.s s1, a0, s0
 ; RV64IZHINX-NEXT:    mv a0, s0
 ; RV64IZHINX-NEXT:    call __fixsfti
-; RV64IZHINX-NEXT:    li a2, -1
+; RV64IZHINX-NEXT:    li a3, -1
 ; RV64IZHINX-NEXT:    bnez s1, .LBB4_2
 ; RV64IZHINX-NEXT:  # %bb.1:
-; RV64IZHINX-NEXT:    slli a1, a2, 63
+; RV64IZHINX-NEXT:    slli a1, a3, 63
 ; RV64IZHINX-NEXT:  .LBB4_2:
-; RV64IZHINX-NEXT:    lui a3, 520192
-; RV64IZHINX-NEXT:    addi a3, a3, -1
-; RV64IZHINX-NEXT:    flt.s a3, a3, s0
-; RV64IZHINX-NEXT:    beqz a3, .LBB4_4
+; RV64IZHINX-NEXT:    lui a2, 520192
+; RV64IZHINX-NEXT:    addi a2, a2, -1
+; RV64IZHINX-NEXT:    flt.s a2, a2, s0
+; RV64IZHINX-NEXT:    beqz a2, .LBB4_4
 ; RV64IZHINX-NEXT:  # %bb.3:
-; RV64IZHINX-NEXT:    srli a1, a2, 1
+; RV64IZHINX-NEXT:    srli a1, a3, 1
 ; RV64IZHINX-NEXT:  .LBB4_4:
-; RV64IZHINX-NEXT:    feq.s a2, s0, s0
+; RV64IZHINX-NEXT:    feq.s a3, s0, s0
 ; RV64IZHINX-NEXT:    neg a4, s1
 ; RV64IZHINX-NEXT:    and a0, a4, a0
-; RV64IZHINX-NEXT:    neg a3, a3
 ; RV64IZHINX-NEXT:    neg a2, a2
-; RV64IZHINX-NEXT:    or a0, a3, a0
-; RV64IZHINX-NEXT:    and a1, a2, a1
-; RV64IZHINX-NEXT:    and a0, a2, a0
+; RV64IZHINX-NEXT:    neg a3, a3
+; RV64IZHINX-NEXT:    or a0, a2, a0
+; RV64IZHINX-NEXT:    and a1, a3, a1
+; RV64IZHINX-NEXT:    and a0, a3, a0
 ; RV64IZHINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IZHINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IZHINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload

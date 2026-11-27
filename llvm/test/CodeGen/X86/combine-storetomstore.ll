@@ -564,10 +564,10 @@ define void @test_masked_store_success_v16i16(<16 x i16> %x, ptr %ptr, <16 x i1>
 ; AVX-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; AVX-NEXT:    vpsraw $15, %xmm1, %xmm1
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm3
+; AVX-NEXT:    vmovdqa 16(%rdi), %xmm4
 ; AVX-NEXT:    vpblendvb %xmm1, %xmm0, %xmm3, %xmm1
-; AVX-NEXT:    vmovdqa 16(%rdi), %xmm3
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-NEXT:    vpblendvb %xmm2, %xmm0, %xmm3, %xmm0
+; AVX-NEXT:    vpblendvb %xmm2, %xmm0, %xmm4, %xmm0
 ; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX-NEXT:    vmovdqa %xmm0, 16(%rdi)
 ; AVX-NEXT:    vzeroupper

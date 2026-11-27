@@ -170,15 +170,15 @@ define i32 @in32_constmask(i32 %x, i32 %y) {
 define i64 @in64_constmask(i64 %x, i64 %y) {
 ; CHECK-NOBMI-LABEL: in64_constmask:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    movl %esi, %eax
-; CHECK-NOBMI-NEXT:    xorl %edi, %eax
+; CHECK-NOBMI-NEXT:    movq %rdi, %rax
+; CHECK-NOBMI-NEXT:    xorl %esi, %eax
 ; CHECK-NOBMI-NEXT:    xorq %rsi, %rax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: in64_constmask:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    movl %esi, %eax
-; CHECK-BMI-NEXT:    xorl %edi, %eax
+; CHECK-BMI-NEXT:    movq %rdi, %rax
+; CHECK-BMI-NEXT:    xorl %esi, %eax
 ; CHECK-BMI-NEXT:    xorq %rsi, %rax
 ; CHECK-BMI-NEXT:    retq
   %n0 = xor i64 %x, %y

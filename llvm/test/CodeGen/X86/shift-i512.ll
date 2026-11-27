@@ -858,18 +858,17 @@ define i512 @shl_i512_load(ptr %p0, i512 %a1) nounwind {
 ;
 ; AVX512VBMI-LABEL: shl_i512_load:
 ; AVX512VBMI:       # %bb.0:
+; AVX512VBMI-NEXT:    vpbroadcastq %rdx, %zmm0
+; AVX512VBMI-NEXT:    shrl $6, %edx
+; AVX512VBMI-NEXT:    movl $-1, %eax
+; AVX512VBMI-NEXT:    shlxl %edx, %eax, %eax
+; AVX512VBMI-NEXT:    kmovd %eax, %k1
+; AVX512VBMI-NEXT:    vpexpandq (%rsi), %zmm1 {%k1} {z}
 ; AVX512VBMI-NEXT:    movq %rdi, %rax
-; AVX512VBMI-NEXT:    movl %edx, %ecx
-; AVX512VBMI-NEXT:    shrl $6, %ecx
-; AVX512VBMI-NEXT:    movl $-1, %edi
-; AVX512VBMI-NEXT:    shlxl %ecx, %edi, %ecx
-; AVX512VBMI-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI-NEXT:    vpexpandq (%rsi), %zmm0 {%k1} {z}
-; AVX512VBMI-NEXT:    vpbroadcastq %rdx, %zmm1
 ; AVX512VBMI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm2 = zmm2[7],zmm0[0,1,2,3,4,5,6]
-; AVX512VBMI-NEXT:    vpshldvq %zmm1, %zmm2, %zmm0
-; AVX512VBMI-NEXT:    vmovdqu64 %zmm0, (%rax)
+; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm2 = zmm2[7],zmm1[0,1,2,3,4,5,6]
+; AVX512VBMI-NEXT:    vpshldvq %zmm0, %zmm2, %zmm1
+; AVX512VBMI-NEXT:    vmovdqu64 %zmm1, (%rdi)
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
   %a0 = load i512, ptr %p0
@@ -1031,14 +1030,13 @@ define i512 @lshr_i512_load(ptr %p0, i512 %a1) nounwind {
 ; AVX512VBMI-LABEL: lshr_i512_load:
 ; AVX512VBMI:       # %bb.0:
 ; AVX512VBMI-NEXT:    vmovdqu64 (%rsi), %zmm0
-; AVX512VBMI-NEXT:    movq %rdi, %rax
-; AVX512VBMI-NEXT:    movl %edx, %ecx
-; AVX512VBMI-NEXT:    shrl $6, %ecx
-; AVX512VBMI-NEXT:    movl $-1, %esi
-; AVX512VBMI-NEXT:    shlxl %ecx, %esi, %ecx
-; AVX512VBMI-NEXT:    kmovd %ecx, %k1
-; AVX512VBMI-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
 ; AVX512VBMI-NEXT:    vpbroadcastq %rdx, %zmm1
+; AVX512VBMI-NEXT:    shrl $6, %edx
+; AVX512VBMI-NEXT:    movl $-1, %eax
+; AVX512VBMI-NEXT:    shlxl %edx, %eax, %eax
+; AVX512VBMI-NEXT:    kmovd %eax, %k1
+; AVX512VBMI-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
+; AVX512VBMI-NEXT:    movq %rdi, %rax
 ; AVX512VBMI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm2 = zmm0[1,2,3,4,5,6,7],zmm2[0]
 ; AVX512VBMI-NEXT:    vpshrdvq %zmm1, %zmm2, %zmm0
@@ -1231,10 +1229,9 @@ define i512 @ashr_i512_load(ptr %p0, i512 %a1) nounwind {
 ; AVX512VBMI-NEXT:    vpsraq $63, %zmm0, %zmm2
 ; AVX512VBMI-NEXT:    vpermq %zmm2, %zmm1, %zmm1
 ; AVX512VBMI-NEXT:    vpbroadcastq %rdx, %zmm2
-; AVX512VBMI-NEXT:    movl %edx, %ecx
-; AVX512VBMI-NEXT:    shrl $6, %ecx
-; AVX512VBMI-NEXT:    movl $-1, %edx
-; AVX512VBMI-NEXT:    shlxl %ecx, %edx, %ecx
+; AVX512VBMI-NEXT:    shrl $6, %edx
+; AVX512VBMI-NEXT:    movl $-1, %ecx
+; AVX512VBMI-NEXT:    shlxl %edx, %ecx, %ecx
 ; AVX512VBMI-NEXT:    kmovd %ecx, %k1
 ; AVX512VBMI-NEXT:    vmovdqa64 %zmm1, %zmm3
 ; AVX512VBMI-NEXT:    vpcompressq %zmm0, %zmm3 {%k1}

@@ -17,8 +17,8 @@ define void @pr34127() {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    testw %ax, %cx
 ; CHECK-NEXT:    sete %dl
-; CHECK-NEXT:    andl %edx, %ecx
-; CHECK-NEXT:    movq %rcx, var_212(%rip)
+; CHECK-NEXT:    andl %ecx, %edx
+; CHECK-NEXT:    movq %rdx, var_212(%rip)
 ; CHECK-NEXT:    movw $0, (%rax)
 ; CHECK-NEXT:    retq
 entry:

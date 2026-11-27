@@ -215,43 +215,46 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    clrlwi 7, 4, 24
 ; CHECK-NEXT:  .LBB4_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB4_4 Depth 2
+; CHECK-NEXT:    # Child Loop BB4_5 Depth 2
 ; CHECK-NEXT:    srw 9, 8, 3
-; CHECK-NEXT:    andi. 10, 9, 255
-; CHECK-NEXT:    cmplw 1, 10, 7
-; CHECK-NEXT:    cror 20, 2, 5
+; CHECK-NEXT:    andi. 11, 9, 255
 ; CHECK-NEXT:    mr 10, 4
-; CHECK-NEXT:    bc 12, 20, .LBB4_3
+; CHECK-NEXT:    bc 12, 2, .LBB4_4
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.start
 ; CHECK-NEXT:    #
+; CHECK-NEXT:    cmplw 11, 7
+; CHECK-NEXT:    mr 10, 4
+; CHECK-NEXT:    bc 12, 1, .LBB4_4
+; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
+; CHECK-NEXT:    #
 ; CHECK-NEXT:    addi 10, 9, -1
-; CHECK-NEXT:  .LBB4_3: # %atomicrmw.start
+; CHECK-NEXT:  .LBB4_4: # %atomicrmw.start
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    clrlwi 9, 10, 24
 ; CHECK-NEXT:    slw 9, 9, 3
 ; CHECK-NEXT:    and 10, 8, 6
 ; CHECK-NEXT:    or 10, 10, 9
-; CHECK-NEXT:  .LBB4_4: # %cmpxchg.start
+; CHECK-NEXT:  .LBB4_5: # %cmpxchg.start
 ; CHECK-NEXT:    # Parent Loop BB4_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    lwarx 9, 0, 5
 ; CHECK-NEXT:    cmplw 9, 8
-; CHECK-NEXT:    bne- 0, .LBB4_7
-; CHECK-NEXT:  # %bb.5: # %cmpxchg.fencedstore
+; CHECK-NEXT:    bne- 0, .LBB4_8
+; CHECK-NEXT:  # %bb.6: # %cmpxchg.fencedstore
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    stwcx. 10, 0, 5
 ; CHECK-NEXT:    creqv 20, 20, 20
-; CHECK-NEXT:    bne- 0, .LBB4_4
-; CHECK-NEXT:  # %bb.6: # %cmpxchg.end
+; CHECK-NEXT:    bne- 0, .LBB4_5
+; CHECK-NEXT:  # %bb.7: # %cmpxchg.end
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    mr 8, 9
 ; CHECK-NEXT:    bc 4, 20, .LBB4_1
-; CHECK-NEXT:    b .LBB4_8
-; CHECK-NEXT:  .LBB4_7: # %cmpxchg.nostore
+; CHECK-NEXT:    b .LBB4_9
+; CHECK-NEXT:  .LBB4_8: # %cmpxchg.nostore
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    mr 8, 9
 ; CHECK-NEXT:    b .LBB4_1
-; CHECK-NEXT:  .LBB4_8: # %atomicrmw.end
+; CHECK-NEXT:  .LBB4_9: # %atomicrmw.end
 ; CHECK-NEXT:    srw 3, 9, 3
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    blr
@@ -275,43 +278,46 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    clrlwi 7, 4, 16
 ; CHECK-NEXT:  .LBB5_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB5_4 Depth 2
+; CHECK-NEXT:    # Child Loop BB5_5 Depth 2
 ; CHECK-NEXT:    srw 9, 8, 3
-; CHECK-NEXT:    andi. 10, 9, 65535
-; CHECK-NEXT:    cmplw 1, 10, 7
-; CHECK-NEXT:    cror 20, 2, 5
+; CHECK-NEXT:    andi. 11, 9, 65535
 ; CHECK-NEXT:    mr 10, 4
-; CHECK-NEXT:    bc 12, 20, .LBB5_3
+; CHECK-NEXT:    bc 12, 2, .LBB5_4
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.start
 ; CHECK-NEXT:    #
+; CHECK-NEXT:    cmplw 11, 7
+; CHECK-NEXT:    mr 10, 4
+; CHECK-NEXT:    bc 12, 1, .LBB5_4
+; CHECK-NEXT:  # %bb.3: # %atomicrmw.start
+; CHECK-NEXT:    #
 ; CHECK-NEXT:    addi 10, 9, -1
-; CHECK-NEXT:  .LBB5_3: # %atomicrmw.start
+; CHECK-NEXT:  .LBB5_4: # %atomicrmw.start
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    clrlwi 9, 10, 16
 ; CHECK-NEXT:    slw 9, 9, 3
 ; CHECK-NEXT:    and 10, 8, 6
 ; CHECK-NEXT:    or 10, 10, 9
-; CHECK-NEXT:  .LBB5_4: # %cmpxchg.start
+; CHECK-NEXT:  .LBB5_5: # %cmpxchg.start
 ; CHECK-NEXT:    # Parent Loop BB5_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    lwarx 9, 0, 5
 ; CHECK-NEXT:    cmplw 9, 8
-; CHECK-NEXT:    bne- 0, .LBB5_7
-; CHECK-NEXT:  # %bb.5: # %cmpxchg.fencedstore
+; CHECK-NEXT:    bne- 0, .LBB5_8
+; CHECK-NEXT:  # %bb.6: # %cmpxchg.fencedstore
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    stwcx. 10, 0, 5
 ; CHECK-NEXT:    creqv 20, 20, 20
-; CHECK-NEXT:    bne- 0, .LBB5_4
-; CHECK-NEXT:  # %bb.6: # %cmpxchg.end
+; CHECK-NEXT:    bne- 0, .LBB5_5
+; CHECK-NEXT:  # %bb.7: # %cmpxchg.end
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    mr 8, 9
 ; CHECK-NEXT:    bc 4, 20, .LBB5_1
-; CHECK-NEXT:    b .LBB5_8
-; CHECK-NEXT:  .LBB5_7: # %cmpxchg.nostore
+; CHECK-NEXT:    b .LBB5_9
+; CHECK-NEXT:  .LBB5_8: # %cmpxchg.nostore
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    mr 8, 9
 ; CHECK-NEXT:    b .LBB5_1
-; CHECK-NEXT:  .LBB5_8: # %atomicrmw.end
+; CHECK-NEXT:  .LBB5_9: # %atomicrmw.end
 ; CHECK-NEXT:    srw 3, 9, 3
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    blr

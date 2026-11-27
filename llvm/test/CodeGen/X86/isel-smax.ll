@@ -26,12 +26,12 @@ define i8 @smax_i8(i8 %a, i8 %b) nounwind readnone {
 ;
 ; GISEL-X64-LABEL: smax_i8:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    movl %esi, %eax
+; GISEL-X64-NEXT:    movl %edi, %eax
 ; GISEL-X64-NEXT:    xorl %ecx, %ecx
-; GISEL-X64-NEXT:    cmpb %al, %dil
+; GISEL-X64-NEXT:    cmpb %sil, %al
 ; GISEL-X64-NEXT:    setg %cl
 ; GISEL-X64-NEXT:    andl $1, %ecx
-; GISEL-X64-NEXT:    cmovnew %di, %ax
+; GISEL-X64-NEXT:    cmovew %si, %ax
 ; GISEL-X64-NEXT:    # kill: def $al killed $al killed $eax
 ; GISEL-X64-NEXT:    retq
 ;

@@ -142,7 +142,7 @@ private:
   bool visitINSvi64lane(MachineInstr &MI);
   bool visitFMOVDr(MachineInstr &MI);
   bool visitUBFMXri(MachineInstr &MI);
-  bool visitCopy(MachineInstr &MI);
+  bool visitSubReg32Use(MachineOperand &MO);
 };
 
 struct AArch64MIPeepholeOptLegacy : public MachineFunctionPass {
@@ -911,11 +911,12 @@ bool AArch64MIPeepholeOptImpl::visitUBFMXri(MachineInstr &MI) {
 }
 
 // Across a basic-block we might have in i32 extract from a value that only
-// operates on upper bits (for example a sxtw). We can replace the COPY with a
-// new version skipping the sxtw.
-bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
-  Register InputReg = MI.getOperand(1).getReg();
-  if (MI.getOperand(1).getSubReg() != AArch64::sub_32 ||
+// operates on upper bits (for example a sxtw). We can replace the sub_32 use
+// with a new version skipping the sxtw. The use is usually a COPY, but may be
+// any instruction once MachineCSE has propagated the subregister into it.
+bool AArch64MIPeepholeOptImpl::visitSubReg32Use(MachineOperand &MO) {
+  Register InputReg = MO.getReg();
+  if (MO.getSubReg() != AArch64::sub_32 || !InputReg.isVirtual() ||
       !MRI->hasOneNonDBGUse(InputReg))
     return false;
 
@@ -939,7 +940,8 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
       return Register();
     return SrcMI->getOperand(1).getReg();
   };
-  // Look for SUBREG_TO_REG(ORRWrr(WZR, COPY(X.sub_32)))
+  // Look for SUBREG_TO_REG(ORRWrr(WZR, COPY(X.sub_32))) or
+  // SUBREG_TO_REG(ORRWrr(WZR, X.sub_32)).
   auto getUXTWSrcReg = [&](MachineInstr *SrcMI) -> Register {
     if (SrcMI->getOpcode() != AArch64::SUBREG_TO_REG ||
         SrcMI->getOperand(2).getImm() != AArch64::sub_32 ||
@@ -947,10 +949,16 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
       return Register();
     MachineInstr *Orr = MRI->getUniqueVRegDef(SrcMI->getOperand(1).getReg());
     if (!Orr || Orr->getOpcode() != AArch64::ORRWrr ||
-        Orr->getOperand(1).getReg() != AArch64::WZR ||
-        !MRI->hasOneNonDBGUse(Orr->getOperand(2).getReg()))
+        Orr->getOperand(1).getReg() != AArch64::WZR)
       return Register();
-    MachineInstr *Cpy = MRI->getUniqueVRegDef(Orr->getOperand(2).getReg());
+    const MachineOperand &OrrSrc = Orr->getOperand(2);
+    if (OrrSrc.getSubReg() == AArch64::sub_32 && OrrSrc.getReg().isVirtual()) {
+      DeadInstrs.insert(Orr);
+      return OrrSrc.getReg();
+    }
+    if (OrrSrc.getSubReg() || !MRI->hasOneNonDBGUse(OrrSrc.getReg()))
+      return Register();
+    MachineInstr *Cpy = MRI->getUniqueVRegDef(OrrSrc.getReg());
     if (!Cpy || Cpy->getOpcode() != AArch64::COPY ||
         Cpy->getOperand(1).getSubReg() != AArch64::sub_32)
       return Register();
@@ -964,9 +972,11 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
   if (!SrcReg)
     return false;
 
-  MRI->constrainRegClass(SrcReg, MRI->getRegClass(InputReg));
+  if (!MRI->constrainRegClass(SrcReg, MRI->getRegClass(InputReg)))
+    return false;
+  MachineInstr &MI = *MO.getParent();
   LLVM_DEBUG(dbgs() << "Optimizing: " << MI);
-  MI.getOperand(1).setReg(SrcReg);
+  MO.setReg(SrcReg);
   LLVM_DEBUG(dbgs() << "        to: " << MI);
   for (auto *DeadMI : DeadInstrs) {
     LLVM_DEBUG(dbgs() << "  Removing: " << *DeadMI);
@@ -987,6 +997,11 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
+      // Visit uses before the opcode visitors, which may erase MI. Skip PHIs,
+      // whose incoming definitions may follow MI in this block.
+      if (!MI.isPHI() && !MI.isDebugInstr())
+        for (MachineOperand &MO : MI.all_uses())
+          Changed |= visitSubReg32Use(MO);
       switch (MI.getOpcode()) {
       default:
         break;
@@ -1084,9 +1099,6 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
         break;
       case AArch64::UBFMXri:
         Changed |= visitUBFMXri(MI);
-        break;
-      case AArch64::COPY:
-        Changed |= visitCopy(MI);
         break;
       }
     }

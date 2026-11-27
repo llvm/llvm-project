@@ -3585,39 +3585,39 @@ define <4 x i64> @reduce_ctpop_v4i64_buildvector_v4i64(<4 x i64> %a0, <4 x i64> 
 ; X86-AVX2-NEXT:    vpsrlw $4, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vpand %ymm4, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vpshufb %ymm0, %ymm5, %ymm0
-; X86-AVX2-NEXT:    vpaddb %ymm6, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vpxor %xmm6, %xmm6, %xmm6
-; X86-AVX2-NEXT:    vpsadbw %ymm6, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpaddb %ymm6, %ymm0, %ymm6
+; X86-AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vpsadbw %ymm0, %ymm6, %ymm6
 ; X86-AVX2-NEXT:    vpand %ymm4, %ymm1, %ymm7
 ; X86-AVX2-NEXT:    vpshufb %ymm7, %ymm5, %ymm7
 ; X86-AVX2-NEXT:    vpsrlw $4, %ymm1, %ymm1
 ; X86-AVX2-NEXT:    vpand %ymm4, %ymm1, %ymm1
 ; X86-AVX2-NEXT:    vpshufb %ymm1, %ymm5, %ymm1
 ; X86-AVX2-NEXT:    vpaddb %ymm7, %ymm1, %ymm1
-; X86-AVX2-NEXT:    vpsadbw %ymm6, %ymm1, %ymm1
+; X86-AVX2-NEXT:    vpsadbw %ymm0, %ymm1, %ymm1
 ; X86-AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm7
 ; X86-AVX2-NEXT:    vpshufb %ymm7, %ymm5, %ymm7
 ; X86-AVX2-NEXT:    vpsrlw $4, %ymm2, %ymm2
 ; X86-AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm2
 ; X86-AVX2-NEXT:    vpshufb %ymm2, %ymm5, %ymm2
 ; X86-AVX2-NEXT:    vpaddb %ymm7, %ymm2, %ymm2
-; X86-AVX2-NEXT:    vpsadbw %ymm6, %ymm2, %ymm2
+; X86-AVX2-NEXT:    vpsadbw %ymm0, %ymm2, %ymm2
 ; X86-AVX2-NEXT:    vpand %ymm4, %ymm3, %ymm7
 ; X86-AVX2-NEXT:    vpshufb %ymm7, %ymm5, %ymm7
 ; X86-AVX2-NEXT:    vpsrlw $4, %ymm3, %ymm3
 ; X86-AVX2-NEXT:    vpand %ymm4, %ymm3, %ymm3
 ; X86-AVX2-NEXT:    vpshufb %ymm3, %ymm5, %ymm3
 ; X86-AVX2-NEXT:    vpaddb %ymm7, %ymm3, %ymm3
-; X86-AVX2-NEXT:    vpsadbw %ymm6, %ymm3, %ymm3
-; X86-AVX2-NEXT:    vperm2i128 {{.*#+}} ymm4 = ymm0[2,3],ymm2[2,3]
-; X86-AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vpaddq %ymm4, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm1[2,3],ymm3[2,3]
-; X86-AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; X86-AVX2-NEXT:    vpaddq %ymm2, %ymm1, %ymm1
-; X86-AVX2-NEXT:    vpunpckhqdq {{.*#+}} ymm2 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; X86-AVX2-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; X86-AVX2-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpsadbw %ymm0, %ymm3, %ymm0
+; X86-AVX2-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm6[2,3],ymm2[2,3]
+; X86-AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm6, %ymm2
+; X86-AVX2-NEXT:    vpaddq %ymm3, %ymm2, %ymm2
+; X86-AVX2-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm1[2,3],ymm0[2,3]
+; X86-AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; X86-AVX2-NEXT:    vpaddq %ymm3, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpunpckhqdq {{.*#+}} ymm1 = ymm2[1],ymm0[1],ymm2[3],ymm0[3]
+; X86-AVX2-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm2[0],ymm0[0],ymm2[2],ymm0[2]
+; X86-AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    movl %ebp, %esp
 ; X86-AVX2-NEXT:    popl %ebp
 ; X86-AVX2-NEXT:    retl
@@ -5070,33 +5070,33 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; X86-AVX2-NEXT:    vpshufb %ymm2, %ymm4, %ymm2
 ; X86-AVX2-NEXT:    vpaddb %ymm0, %ymm2, %ymm0
 ; X86-AVX2-NEXT:    vmovdqa %ymm0, (%esp) # 32-byte Spill
-; X86-AVX2-NEXT:    vpand %ymm3, %ymm5, %ymm2
-; X86-AVX2-NEXT:    vpshufb %ymm2, %ymm4, %ymm2
+; X86-AVX2-NEXT:    vpand %ymm3, %ymm5, %ymm0
+; X86-AVX2-NEXT:    vpshufb %ymm0, %ymm4, %ymm0
 ; X86-AVX2-NEXT:    vpsrlw $4, %ymm5, %ymm5
 ; X86-AVX2-NEXT:    vpand %ymm3, %ymm5, %ymm5
 ; X86-AVX2-NEXT:    vpshufb %ymm5, %ymm4, %ymm5
-; X86-AVX2-NEXT:    vpaddb %ymm2, %ymm5, %ymm5
-; X86-AVX2-NEXT:    vpand %ymm3, %ymm6, %ymm2
-; X86-AVX2-NEXT:    vpshufb %ymm2, %ymm4, %ymm2
+; X86-AVX2-NEXT:    vpaddb %ymm0, %ymm5, %ymm5
+; X86-AVX2-NEXT:    vpand %ymm3, %ymm6, %ymm0
+; X86-AVX2-NEXT:    vpshufb %ymm0, %ymm4, %ymm0
 ; X86-AVX2-NEXT:    vpsrlw $4, %ymm6, %ymm6
 ; X86-AVX2-NEXT:    vpand %ymm3, %ymm6, %ymm6
 ; X86-AVX2-NEXT:    vpshufb %ymm6, %ymm4, %ymm6
-; X86-AVX2-NEXT:    vpaddb %ymm2, %ymm6, %ymm0
-; X86-AVX2-NEXT:    vmovdqa %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
-; X86-AVX2-NEXT:    vmovdqa 72(%ebp), %ymm2
-; X86-AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm7
+; X86-AVX2-NEXT:    vpaddb %ymm0, %ymm6, %ymm6
+; X86-AVX2-NEXT:    vmovdqa 72(%ebp), %ymm0
+; X86-AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm7
 ; X86-AVX2-NEXT:    vpshufb %ymm7, %ymm4, %ymm7
-; X86-AVX2-NEXT:    vpsrlw $4, %ymm2, %ymm2
-; X86-AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; X86-AVX2-NEXT:    vpshufb %ymm2, %ymm4, %ymm2
-; X86-AVX2-NEXT:    vpaddb %ymm7, %ymm2, %ymm7
-; X86-AVX2-NEXT:    vmovdqa 104(%ebp), %ymm2
-; X86-AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm1
+; X86-AVX2-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpshufb %ymm0, %ymm4, %ymm0
+; X86-AVX2-NEXT:    vpaddb %ymm7, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vmovdqa %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
+; X86-AVX2-NEXT:    vmovdqa 104(%ebp), %ymm0
+; X86-AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm1
 ; X86-AVX2-NEXT:    vpshufb %ymm1, %ymm4, %ymm1
-; X86-AVX2-NEXT:    vpsrlw $4, %ymm2, %ymm2
-; X86-AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; X86-AVX2-NEXT:    vpshufb %ymm2, %ymm4, %ymm2
-; X86-AVX2-NEXT:    vpaddb %ymm1, %ymm2, %ymm6
+; X86-AVX2-NEXT:    vpsrlw $4, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpshufb %ymm0, %ymm4, %ymm0
+; X86-AVX2-NEXT:    vpaddb %ymm1, %ymm0, %ymm7
 ; X86-AVX2-NEXT:    vmovdqa 136(%ebp), %ymm1
 ; X86-AVX2-NEXT:    vpand %ymm3, %ymm1, %ymm0
 ; X86-AVX2-NEXT:    vpsrlw $4, %ymm1, %ymm1
@@ -5109,57 +5109,55 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; X86-AVX2-NEXT:    vpsadbw {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm1 # 32-byte Folded Reload
 ; X86-AVX2-NEXT:    vpsadbw {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm2 # 32-byte Folded Reload
 ; X86-AVX2-NEXT:    vpsadbw (%esp), %ymm0, %ymm3 # 32-byte Folded Reload
-; X86-AVX2-NEXT:    vpsadbw %ymm0, %ymm5, %ymm5
-; X86-AVX2-NEXT:    vpsadbw {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm4 # 32-byte Folded Reload
+; X86-AVX2-NEXT:    vpsadbw %ymm0, %ymm5, %ymm4
+; X86-AVX2-NEXT:    vpsadbw %ymm0, %ymm6, %ymm5
+; X86-AVX2-NEXT:    vpsadbw {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm6 # 32-byte Folded Reload
 ; X86-AVX2-NEXT:    vpsadbw %ymm0, %ymm7, %ymm7
-; X86-AVX2-NEXT:    vpsadbw %ymm0, %ymm6, %ymm6
-; X86-AVX2-NEXT:    vmovdqa %ymm6, (%esp) # 32-byte Spill
+; X86-AVX2-NEXT:    vmovdqa %ymm7, (%esp) # 32-byte Spill
 ; X86-AVX2-NEXT:    vpsadbw {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 32-byte Folded Reload
-; X86-AVX2-NEXT:    vmovdqa %ymm0, {{[-0-9]+}}(%e{{[sb]}}p) # 32-byte Spill
-; X86-AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm0
-; X86-AVX2-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
-; X86-AVX2-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm0
-; X86-AVX2-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
+; X86-AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm7
+; X86-AVX2-NEXT:    vpaddq %xmm7, %xmm1, %xmm1
+; X86-AVX2-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm1
+; X86-AVX2-NEXT:    vpaddq %xmm1, %xmm2, %xmm7
 ; X86-AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm1
-; X86-AVX2-NEXT:    vpaddq %xmm1, %xmm3, %xmm3
-; X86-AVX2-NEXT:    vextracti128 $1, %ymm5, %xmm2
-; X86-AVX2-NEXT:    vpaddq %xmm2, %xmm5, %xmm6
+; X86-AVX2-NEXT:    vpaddq %xmm1, %xmm3, %xmm1
 ; X86-AVX2-NEXT:    vextracti128 $1, %ymm4, %xmm2
-; X86-AVX2-NEXT:    vpaddq %xmm2, %xmm4, %xmm4
-; X86-AVX2-NEXT:    vextracti128 $1, %ymm7, %xmm2
-; X86-AVX2-NEXT:    vpaddq %xmm2, %xmm7, %xmm7
-; X86-AVX2-NEXT:    vmovdqa (%esp), %ymm1 # 32-byte Reload
-; X86-AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; X86-AVX2-NEXT:    vpaddq %xmm2, %xmm1, %xmm1
-; X86-AVX2-NEXT:    vmovdqa %xmm1, (%esp) # 16-byte Spill
-; X86-AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%e{{[sb]}}p), %ymm1 # 32-byte Reload
-; X86-AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; X86-AVX2-NEXT:    vpaddq %xmm2, %xmm1, %xmm2
-; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm5 = xmm0[2,3,2,3]
-; X86-AVX2-NEXT:    vpaddq %xmm5, %xmm0, %xmm1
-; X86-AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm5 = xmm0[2,3,2,3]
-; X86-AVX2-NEXT:    vpaddq %xmm5, %xmm0, %xmm5
-; X86-AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm5[0],xmm1[0],xmm5[1],xmm1[1]
-; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm5 = xmm3[2,3,2,3]
-; X86-AVX2-NEXT:    vpaddq %xmm5, %xmm3, %xmm1
-; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm5 = xmm6[2,3,2,3]
-; X86-AVX2-NEXT:    vpaddq %xmm5, %xmm6, %xmm5
+; X86-AVX2-NEXT:    vpaddq %xmm2, %xmm4, %xmm2
+; X86-AVX2-NEXT:    vextracti128 $1, %ymm5, %xmm3
+; X86-AVX2-NEXT:    vpaddq %xmm3, %xmm5, %xmm3
+; X86-AVX2-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-AVX2-NEXT:    vextracti128 $1, %ymm6, %xmm3
+; X86-AVX2-NEXT:    vpaddq %xmm3, %xmm6, %xmm3
+; X86-AVX2-NEXT:    vmovdqa (%esp), %ymm5 # 32-byte Reload
+; X86-AVX2-NEXT:    vextracti128 $1, %ymm5, %xmm4
+; X86-AVX2-NEXT:    vpaddq %xmm4, %xmm5, %xmm6
+; X86-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm4
+; X86-AVX2-NEXT:    vpaddq %xmm4, %xmm0, %xmm4
+; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm7[2,3,2,3]
+; X86-AVX2-NEXT:    vpaddq %xmm0, %xmm7, %xmm0
+; X86-AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm7 # 16-byte Reload
+; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm5 = xmm7[2,3,2,3]
+; X86-AVX2-NEXT:    vpaddq %xmm5, %xmm7, %xmm5
+; X86-AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm5[0],xmm0[0],xmm5[1],xmm0[1]
+; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm5 = xmm1[2,3,2,3]
+; X86-AVX2-NEXT:    vpaddq %xmm5, %xmm1, %xmm1
+; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
+; X86-AVX2-NEXT:    vpaddq %xmm5, %xmm2, %xmm2
 ; X86-AVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X86-AVX2-NEXT:    vpbroadcastd %xmm5, %xmm5
-; X86-AVX2-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm5[0],xmm1[1],xmm5[1]
+; X86-AVX2-NEXT:    vpbroadcastd %xmm2, %xmm2
+; X86-AVX2-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; X86-AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
-; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm7[2,3,2,3]
-; X86-AVX2-NEXT:    vpaddq %xmm1, %xmm7, %xmm1
-; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm5 = xmm4[2,3,2,3]
-; X86-AVX2-NEXT:    vpaddq %xmm5, %xmm4, %xmm4
-; X86-AVX2-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
-; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm4 = xmm2[2,3,2,3]
-; X86-AVX2-NEXT:    vpaddq %xmm4, %xmm2, %xmm2
-; X86-AVX2-NEXT:    vmovdqa (%esp), %xmm3 # 16-byte Reload
-; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[2,3,2,3]
-; X86-AVX2-NEXT:    vpaddq %xmm4, %xmm3, %xmm3
+; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm3[2,3,2,3]
+; X86-AVX2-NEXT:    vpaddq %xmm1, %xmm3, %xmm1
+; X86-AVX2-NEXT:    vmovdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm3 # 16-byte Reload
+; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm3[2,3,2,3]
+; X86-AVX2-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
+; X86-AVX2-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm4[2,3,2,3]
+; X86-AVX2-NEXT:    vpaddq %xmm2, %xmm4, %xmm2
+; X86-AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm6[2,3,2,3]
+; X86-AVX2-NEXT:    vpaddq %xmm3, %xmm6, %xmm3
 ; X86-AVX2-NEXT:    vpbroadcastd %xmm2, %xmm2
 ; X86-AVX2-NEXT:    vpbroadcastd %xmm3, %xmm3
 ; X86-AVX2-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
@@ -5181,61 +5179,61 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; X64-AVX2-NEXT:    vpsrlw $4, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vpand %ymm0, %ymm8, %ymm0
 ; X64-AVX2-NEXT:    vpshufb %ymm0, %ymm9, %ymm0
-; X64-AVX2-NEXT:    vpaddb %ymm0, %ymm10, %ymm0
-; X64-AVX2-NEXT:    vpxor %xmm10, %xmm10, %xmm10
-; X64-AVX2-NEXT:    vpsadbw %ymm0, %ymm10, %ymm0
+; X64-AVX2-NEXT:    vpaddb %ymm0, %ymm10, %ymm10
+; X64-AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpsadbw %ymm0, %ymm10, %ymm10
 ; X64-AVX2-NEXT:    vpand %ymm1, %ymm8, %ymm11
 ; X64-AVX2-NEXT:    vpshufb %ymm11, %ymm9, %ymm11
 ; X64-AVX2-NEXT:    vpsrlw $4, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vpand %ymm1, %ymm8, %ymm1
 ; X64-AVX2-NEXT:    vpshufb %ymm1, %ymm9, %ymm1
 ; X64-AVX2-NEXT:    vpaddb %ymm1, %ymm11, %ymm1
-; X64-AVX2-NEXT:    vpsadbw %ymm1, %ymm10, %ymm1
+; X64-AVX2-NEXT:    vpsadbw %ymm0, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vpand %ymm2, %ymm8, %ymm11
 ; X64-AVX2-NEXT:    vpshufb %ymm11, %ymm9, %ymm11
 ; X64-AVX2-NEXT:    vpsrlw $4, %ymm2, %ymm2
 ; X64-AVX2-NEXT:    vpand %ymm2, %ymm8, %ymm2
 ; X64-AVX2-NEXT:    vpshufb %ymm2, %ymm9, %ymm2
 ; X64-AVX2-NEXT:    vpaddb %ymm2, %ymm11, %ymm2
-; X64-AVX2-NEXT:    vpsadbw %ymm2, %ymm10, %ymm2
+; X64-AVX2-NEXT:    vpsadbw %ymm0, %ymm2, %ymm2
 ; X64-AVX2-NEXT:    vpand %ymm3, %ymm8, %ymm11
 ; X64-AVX2-NEXT:    vpshufb %ymm11, %ymm9, %ymm11
 ; X64-AVX2-NEXT:    vpsrlw $4, %ymm3, %ymm3
 ; X64-AVX2-NEXT:    vpand %ymm3, %ymm8, %ymm3
 ; X64-AVX2-NEXT:    vpshufb %ymm3, %ymm9, %ymm3
 ; X64-AVX2-NEXT:    vpaddb %ymm3, %ymm11, %ymm3
-; X64-AVX2-NEXT:    vpsadbw %ymm3, %ymm10, %ymm3
+; X64-AVX2-NEXT:    vpsadbw %ymm0, %ymm3, %ymm3
 ; X64-AVX2-NEXT:    vpand %ymm4, %ymm8, %ymm11
 ; X64-AVX2-NEXT:    vpshufb %ymm11, %ymm9, %ymm11
 ; X64-AVX2-NEXT:    vpsrlw $4, %ymm4, %ymm4
 ; X64-AVX2-NEXT:    vpand %ymm4, %ymm8, %ymm4
 ; X64-AVX2-NEXT:    vpshufb %ymm4, %ymm9, %ymm4
 ; X64-AVX2-NEXT:    vpaddb %ymm4, %ymm11, %ymm4
-; X64-AVX2-NEXT:    vpsadbw %ymm4, %ymm10, %ymm4
+; X64-AVX2-NEXT:    vpsadbw %ymm0, %ymm4, %ymm4
 ; X64-AVX2-NEXT:    vpand %ymm5, %ymm8, %ymm11
 ; X64-AVX2-NEXT:    vpshufb %ymm11, %ymm9, %ymm11
 ; X64-AVX2-NEXT:    vpsrlw $4, %ymm5, %ymm5
 ; X64-AVX2-NEXT:    vpand %ymm5, %ymm8, %ymm5
 ; X64-AVX2-NEXT:    vpshufb %ymm5, %ymm9, %ymm5
 ; X64-AVX2-NEXT:    vpaddb %ymm5, %ymm11, %ymm5
-; X64-AVX2-NEXT:    vpsadbw %ymm5, %ymm10, %ymm5
+; X64-AVX2-NEXT:    vpsadbw %ymm0, %ymm5, %ymm5
 ; X64-AVX2-NEXT:    vpand %ymm6, %ymm8, %ymm11
 ; X64-AVX2-NEXT:    vpshufb %ymm11, %ymm9, %ymm11
 ; X64-AVX2-NEXT:    vpsrlw $4, %ymm6, %ymm6
 ; X64-AVX2-NEXT:    vpand %ymm6, %ymm8, %ymm6
 ; X64-AVX2-NEXT:    vpshufb %ymm6, %ymm9, %ymm6
 ; X64-AVX2-NEXT:    vpaddb %ymm6, %ymm11, %ymm6
-; X64-AVX2-NEXT:    vpsadbw %ymm6, %ymm10, %ymm6
+; X64-AVX2-NEXT:    vpsadbw %ymm0, %ymm6, %ymm6
 ; X64-AVX2-NEXT:    vpand %ymm7, %ymm8, %ymm11
 ; X64-AVX2-NEXT:    vpshufb %ymm11, %ymm9, %ymm11
 ; X64-AVX2-NEXT:    vpsrlw $4, %ymm7, %ymm7
 ; X64-AVX2-NEXT:    vpand %ymm7, %ymm8, %ymm7
 ; X64-AVX2-NEXT:    vpshufb %ymm7, %ymm9, %ymm7
 ; X64-AVX2-NEXT:    vpaddb %ymm7, %ymm11, %ymm7
-; X64-AVX2-NEXT:    vpsadbw %ymm7, %ymm10, %ymm7
-; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm8
-; X64-AVX2-NEXT:    vpaddq %xmm0, %xmm8, %xmm0
-; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm8 = xmm0[2,3,2,3]
+; X64-AVX2-NEXT:    vpsadbw %ymm0, %ymm7, %ymm0
+; X64-AVX2-NEXT:    vextracti128 $1, %ymm10, %xmm7
+; X64-AVX2-NEXT:    vpaddq %xmm7, %xmm10, %xmm7
+; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm8 = xmm7[2,3,2,3]
 ; X64-AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm9
 ; X64-AVX2-NEXT:    vpaddq %xmm1, %xmm9, %xmm1
 ; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm9 = xmm1[2,3,2,3]
@@ -5254,10 +5252,10 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; X64-AVX2-NEXT:    vextracti128 $1, %ymm6, %xmm14
 ; X64-AVX2-NEXT:    vpaddq %xmm6, %xmm14, %xmm6
 ; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm14 = xmm6[2,3,2,3]
-; X64-AVX2-NEXT:    vextracti128 $1, %ymm7, %xmm15
-; X64-AVX2-NEXT:    vpaddq %xmm7, %xmm15, %xmm7
-; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm15 = xmm7[2,3,2,3]
-; X64-AVX2-NEXT:    vpaddq %xmm0, %xmm8, %xmm0
+; X64-AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm15
+; X64-AVX2-NEXT:    vpaddq %xmm0, %xmm15, %xmm0
+; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm15 = xmm0[2,3,2,3]
+; X64-AVX2-NEXT:    vpaddq %xmm7, %xmm8, %xmm7
 ; X64-AVX2-NEXT:    vpaddq %xmm1, %xmm9, %xmm1
 ; X64-AVX2-NEXT:    vmovd %xmm1, %eax
 ; X64-AVX2-NEXT:    vpaddq %xmm2, %xmm10, %xmm1
@@ -5269,15 +5267,15 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; X64-AVX2-NEXT:    vmovd %xmm2, %esi
 ; X64-AVX2-NEXT:    vpaddq %xmm6, %xmm14, %xmm2
 ; X64-AVX2-NEXT:    vmovd %xmm2, %edi
-; X64-AVX2-NEXT:    vpaddq %xmm7, %xmm15, %xmm2
-; X64-AVX2-NEXT:    vmovd %xmm2, %r8d
-; X64-AVX2-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vpinsrd $2, %edi, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vpinsrd $3, %r8d, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpaddq %xmm0, %xmm15, %xmm0
+; X64-AVX2-NEXT:    vmovd %xmm0, %r8d
+; X64-AVX2-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm0
+; X64-AVX2-NEXT:    vpinsrd $2, %edi, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpinsrd $3, %r8d, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpinsrd $1, %eax, %xmm7, %xmm1
+; X64-AVX2-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpinsrd $3, %edx, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: reduce_ctpop_v4i64_buildvector_v8i32:

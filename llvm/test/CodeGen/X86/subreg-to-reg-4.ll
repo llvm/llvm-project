@@ -50,8 +50,8 @@ define void @yaks(ptr%x, i64 %y, ptr %z, i64 %u) nounwind readnone {
 ; CHECK-LABEL: yaks:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addl (%rdi), %esi
-; CHECK-NEXT:    xorl %esi, %ecx
-; CHECK-NEXT:    movq %rcx, (%rdx)
+; CHECK-NEXT:    xorl %ecx, %esi
+; CHECK-NEXT:    movq %rsi, (%rdx)
 ; CHECK-NEXT:    retq
 entry:
         %p = load i64, ptr %x
@@ -94,8 +94,8 @@ define void @phe(i64 %x, ptr %z, i64 %u) nounwind readnone {
 ; CHECK-LABEL: phe:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addl $734847, %edi # imm = 0xB367F
-; CHECK-NEXT:    xorl %edi, %edx
-; CHECK-NEXT:    movq %rdx, (%rsi)
+; CHECK-NEXT:    xorl %edx, %edi
+; CHECK-NEXT:    movq %rdi, (%rsi)
 ; CHECK-NEXT:    retq
 entry:
 	%t0 = add i64 %x, 734847
@@ -164,8 +164,8 @@ define void @syaks(ptr%x, i64 %y, ptr %z, i64 %u) nounwind readnone {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    subl %esi, %eax
-; CHECK-NEXT:    xorl %eax, %ecx
-; CHECK-NEXT:    movq %rcx, (%rdx)
+; CHECK-NEXT:    xorl %ecx, %eax
+; CHECK-NEXT:    movq %rax, (%rdx)
 ; CHECK-NEXT:    retq
 entry:
         %p = load i64, ptr %x

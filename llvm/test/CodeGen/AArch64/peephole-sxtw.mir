@@ -143,3 +143,46 @@ body: |
     $w1 = COPY %2
     RET_ReallyLR implicit $w0
 ...
+---
+# The sxtw is also skipped when the sub_32 use is not a COPY.
+name: removeSxtwNonCopyUse
+body: |
+  bb.0.entry:
+    liveins: $x0, $w1
+    ; CHECK-LABEL: name: removeSxtwNonCopyUse
+    ; CHECK: liveins: $x0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[SUBWrr:%[0-9]+]]:gpr32 = SUBWrr [[COPY1]], [[COPY]].sub_32
+    ; CHECK-NEXT: $w0 = COPY [[SUBWrr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr64 = COPY $x0
+    %1:gpr64 = SBFMXri %0:gpr64, 0, 31
+    %2:gpr32 = COPY $w1
+    %3:gpr32 = SUBWrr %2, %1.sub_32
+    $w0 = COPY %3
+    RET_ReallyLR implicit $w0
+...
+---
+# The uxtw is skipped when the ORRWrr reads the sub_32 lane directly.
+name: removeUxtwSubRegOrr
+body: |
+  bb.0.entry:
+    liveins: $x0, $w1
+    ; CHECK-LABEL: name: removeUxtwSubRegOrr
+    ; CHECK: liveins: $x0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[SUBWrr:%[0-9]+]]:gpr32 = SUBWrr [[COPY1]], [[COPY]].sub_32
+    ; CHECK-NEXT: $w0 = COPY [[SUBWrr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr64 = COPY $x0
+    %1:gpr32 = ORRWrr $wzr, %0.sub_32
+    %2:gpr64 = SUBREG_TO_REG %1, %subreg.sub_32
+    %3:gpr32 = COPY $w1
+    %4:gpr32 = SUBWrr %3, %2.sub_32
+    $w0 = COPY %4
+    RET_ReallyLR implicit $w0
+...

@@ -1619,22 +1619,22 @@ define i32 @test_unsigned_short_512(ptr nocapture readonly, ptr nocapture readon
 ; AVX1-NEXT:    vpmulld %xmm4, %xmm6, %xmm4
 ; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm6 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; AVX1-NEXT:    vpmulld %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm6
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
 ; AVX1-NEXT:    vpaddd %xmm6, %xmm2, %xmm2
-; AVX1-NEXT:    vpaddd %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpaddd %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm3, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vpaddd %xmm1, %xmm5, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    addq $16, %rcx
 ; AVX1-NEXT:    cmpq %rcx, %rax
 ; AVX1-NEXT:    jne .LBB10_1
 ; AVX1-NEXT:  # %bb.2: # %middle.block
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
@@ -1873,9 +1873,9 @@ define i32 @test_unsigned_short_1024(ptr nocapture readonly, ptr nocapture reado
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    movl %edx, %eax
 ; AVX1-NEXT:    xorl %ecx, %ecx
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB11_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -1903,36 +1903,36 @@ define i32 @test_unsigned_short_1024(ptr nocapture readonly, ptr nocapture reado
 ; AVX1-NEXT:    vpmulld %xmm10, %xmm12, %xmm10
 ; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm12 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; AVX1-NEXT:    vpmulld %xmm11, %xmm12, %xmm11
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm12
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm12
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm12, %xmm4
-; AVX1-NEXT:    vpaddd %xmm1, %xmm5, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
-; AVX1-NEXT:    vpaddd %xmm4, %xmm6, %xmm4
-; AVX1-NEXT:    vpaddd %xmm0, %xmm7, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm5, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; AVX1-NEXT:    vpaddd %xmm4, %xmm6, %xmm4
+; AVX1-NEXT:    vpaddd %xmm2, %xmm7, %xmm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm8, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm3, %xmm9, %xmm3
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm10, %xmm4
-; AVX1-NEXT:    vpaddd %xmm2, %xmm11, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2
+; AVX1-NEXT:    vpaddd %xmm1, %xmm11, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
 ; AVX1-NEXT:    addq $16, %rcx
 ; AVX1-NEXT:    cmpq %rcx, %rax
 ; AVX1-NEXT:    jne .LBB11_1
 ; AVX1-NEXT:  # %bb.2: # %middle.block
-; AVX1-NEXT:    vpaddd %xmm3, %xmm0, %xmm4
-; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm5
+; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm5
 ; AVX1-NEXT:    vpaddd %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
-; AVX1-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm2
-; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
+; AVX1-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm4, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0

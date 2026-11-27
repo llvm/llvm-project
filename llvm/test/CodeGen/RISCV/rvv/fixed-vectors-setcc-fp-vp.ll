@@ -1057,16 +1057,16 @@ define <128 x i1> @fcmp_oeq_vv_v128f16(<128 x half> %va, <128 x half> %vb, <128 
 ; ZVFHMIN-NEXT:    li a2, 32
 ; ZVFHMIN-NEXT:    addi a3, a0, 128
 ; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; ZVFHMIN-NEXT:    vslidedown.vx v0, v16, a2
+; ZVFHMIN-NEXT:    vslidedown.vx v24, v16, a2
 ; ZVFHMIN-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
-; ZVFHMIN-NEXT:    vle16.v v24, (a3)
+; ZVFHMIN-NEXT:    vle16.v v0, (a3)
 ; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
-; ZVFHMIN-NEXT:    vslidedown.vx v8, v24, a2
+; ZVFHMIN-NEXT:    vslidedown.vx v8, v0, a2
 ; ZVFHMIN-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v0
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v0, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v24
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vmfeq.vv v8, v16, v0
+; ZVFHMIN-NEXT:    vmfeq.vv v8, v16, v24
 ; ZVFHMIN-NEXT:    csrr a3, vlenb
 ; ZVFHMIN-NEXT:    slli a3, a3, 3
 ; ZVFHMIN-NEXT:    add a3, sp, a3
@@ -1076,7 +1076,7 @@ define <128 x i1> @fcmp_oeq_vv_v128f16(<128 x half> %va, <128 x half> %vb, <128 
 ; ZVFHMIN-NEXT:    vl8r.v v16, (a3) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v16
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v24
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v0
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmfeq.vv v24, v8, v16
 ; ZVFHMIN-NEXT:    vs1r.v v24, (a3) # vscale x 8-byte Folded Spill

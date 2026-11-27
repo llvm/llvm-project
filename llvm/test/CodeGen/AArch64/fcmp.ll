@@ -549,11 +549,11 @@ define <3 x fp128> @v3f128_fp128(<3 x fp128> %a, <3 x fp128> %b, <3 x fp128> %d,
 ; CHECK-GI-NEXT:    .cfi_offset w30, -32
 ; CHECK-GI-NEXT:    stp q4, q1, [sp] // 32-byte Folded Spill
 ; CHECK-GI-NEXT:    mov v1.16b, v3.16b
-; CHECK-GI-NEXT:    stp q5, q2, [sp, #32] // 32-byte Folded Spill
+; CHECK-GI-NEXT:    stp q2, q6, [sp, #64] // 32-byte Folded Spill
 ; CHECK-GI-NEXT:    ldr q2, [sp, #192]
 ; CHECK-GI-NEXT:    str q2, [sp, #144] // 16-byte Spill
 ; CHECK-GI-NEXT:    ldr q2, [sp, #208]
-; CHECK-GI-NEXT:    stp q2, q6, [sp, #64] // 32-byte Folded Spill
+; CHECK-GI-NEXT:    stp q5, q2, [sp, #32] // 32-byte Folded Spill
 ; CHECK-GI-NEXT:    ldr q2, [sp, #224]
 ; CHECK-GI-NEXT:    stp q7, q2, [sp, #96] // 32-byte Folded Spill
 ; CHECK-GI-NEXT:    ldr q2, [sp, #240]
@@ -562,21 +562,23 @@ define <3 x fp128> @v3f128_fp128(<3 x fp128> %a, <3 x fp128> %b, <3 x fp128> %d,
 ; CHECK-GI-NEXT:    ldp q1, q0, [sp] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    mov w19, w0
 ; CHECK-GI-NEXT:    bl __lttf2
-; CHECK-GI-NEXT:    ldp q1, q0, [sp, #32] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q0, [sp, #64] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-GI-NEXT:    mov w20, w0
 ; CHECK-GI-NEXT:    bl __lttf2
-; CHECK-GI-NEXT:    ldp q5, q4, [sp, #64] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q4, q7, [sp, #80] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    cmp w19, #0
-; CHECK-GI-NEXT:    ldp q7, q6, [sp, #96] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldr q5, [sp, #48] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr q6, [sp, #112] // 16-byte Reload
 ; CHECK-GI-NEXT:    ldr x30, [sp, #160] // 8-byte Reload
 ; CHECK-GI-NEXT:    mov d0, v4.d[1]
 ; CHECK-GI-NEXT:    mov d1, v5.d[1]
-; CHECK-GI-NEXT:    fcsel d4, d4, d5, mi
 ; CHECK-GI-NEXT:    mov d2, v7.d[1]
 ; CHECK-GI-NEXT:    mov d3, v6.d[1]
-; CHECK-GI-NEXT:    fmov x8, d4
+; CHECK-GI-NEXT:    fcsel d4, d4, d5, mi
 ; CHECK-GI-NEXT:    fcsel d5, d0, d1, mi
 ; CHECK-GI-NEXT:    cmp w20, #0
+; CHECK-GI-NEXT:    fmov x8, d4
 ; CHECK-GI-NEXT:    fcsel d1, d7, d6, mi
 ; CHECK-GI-NEXT:    ldp q7, q0, [sp, #128] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    fcsel d3, d2, d3, mi

@@ -394,8 +394,8 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(ptr nocapture readonly %b, ptr
 ; CHECK-NEXT:    bpl .LBB2_6
 ; CHECK-NEXT:  .LBB2_14: @ %cond.load7
 ; CHECK-NEXT:    @ in Loop: Header=BB2_3 Depth=1
+; CHECK-NEXT:    vmovx.f16 s24, s21
 ; CHECK-NEXT:    vldr.16 s21, [r0, #4]
-; CHECK-NEXT:    vmovx.f16 s24, s0
 ; CHECK-NEXT:    vins.f16 s21, s24
 ; CHECK-NEXT:    lsls r2, r2, #28
 ; CHECK-NEXT:    bmi .LBB2_7
@@ -413,8 +413,8 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(ptr nocapture readonly %b, ptr
 ; CHECK-NEXT:    bpl .LBB2_11
 ; CHECK-NEXT:  .LBB2_17: @ %cond.load20
 ; CHECK-NEXT:    @ in Loop: Header=BB2_3 Depth=1
+; CHECK-NEXT:    vmovx.f16 s28, s25
 ; CHECK-NEXT:    vldr.16 s25, [r1, #4]
-; CHECK-NEXT:    vmovx.f16 s28, s0
 ; CHECK-NEXT:    vins.f16 s25, s28
 ; CHECK-NEXT:    lsls r2, r2, #28
 ; CHECK-NEXT:    bpl.w .LBB2_2

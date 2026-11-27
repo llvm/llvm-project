@@ -107,11 +107,11 @@ define void @masked_scatter_v16i8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q18, q17, [x1]
-; CHECK-NEXT:    cmeq v4.16b, v1.16b, #0
+; CHECK-NEXT:    cmeq v5.16b, v1.16b, #0
 ; CHECK-NEXT:    mov b3, v1.b[0]
 ; CHECK-NEXT:    mov b7, v1.b[2]
 ; CHECK-NEXT:    ldp q21, q20, [x1, #32]
-; CHECK-NEXT:    zip1 v0.8b, v4.8b, v0.8b
+; CHECK-NEXT:    zip1 v0.8b, v5.8b, v0.8b
 ; CHECK-NEXT:    mov v3.b[4], v1.b[1]
 ; CHECK-NEXT:    mov v7.b[4], v1.b[3]
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #8
@@ -120,60 +120,60 @@ define void @masked_scatter_v16i8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    sshll v6.4s, v0.4h, #0
 ; CHECK-NEXT:    sshll v0.2d, v6.2s, #0
 ; CHECK-NEXT:    sshll2 v6.2d, v6.4s, #0
-; CHECK-NEXT:    zip2 v5.8b, v4.8b, v0.8b
+; CHECK-NEXT:    zip2 v4.8b, v5.8b, v0.8b
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    mov d5, v5.d[1]
 ; CHECK-NEXT:    ldp q2, q0, [x1, #96]
-; CHECK-NEXT:    shl v19.4h, v5.4h, #8
-; CHECK-NEXT:    ldp q5, q3, [x1, #64]
+; CHECK-NEXT:    shl v19.4h, v4.4h, #8
+; CHECK-NEXT:    ldp q4, q3, [x1, #64]
 ; CHECK-NEXT:    st1b { z16.d }, p1, [z18.d]
-; CHECK-NEXT:    mov b18, v1.b[4]
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z6.d, #0
-; CHECK-NEXT:    mov d6, v4.d[1]
-; CHECK-NEXT:    ushll v4.2d, v7.2s, #0
+; CHECK-NEXT:    mov b18, v1.b[4]
+; CHECK-NEXT:    ushll v6.2d, v7.2s, #0
 ; CHECK-NEXT:    sshr v16.4h, v19.4h, #8
 ; CHECK-NEXT:    mov v18.b[4], v1.b[5]
 ; CHECK-NEXT:    sshll v7.4s, v16.4h, #0
-; CHECK-NEXT:    st1b { z4.d }, p1, [z17.d]
-; CHECK-NEXT:    zip1 v4.8b, v6.8b, v0.8b
+; CHECK-NEXT:    st1b { z6.d }, p1, [z17.d]
+; CHECK-NEXT:    zip1 v6.8b, v5.8b, v0.8b
 ; CHECK-NEXT:    mov b17, v1.b[6]
 ; CHECK-NEXT:    sshll v16.2d, v7.2s, #0
-; CHECK-NEXT:    zip2 v6.8b, v6.8b, v0.8b
+; CHECK-NEXT:    zip2 v5.8b, v5.8b, v0.8b
+; CHECK-NEXT:    shl v6.4h, v6.4h, #8
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z16.d, #0
 ; CHECK-NEXT:    ushll v16.2d, v18.2s, #0
-; CHECK-NEXT:    shl v18.4h, v4.4h, #8
-; CHECK-NEXT:    mov d4, v1.d[1]
+; CHECK-NEXT:    mov d18, v1.d[1]
 ; CHECK-NEXT:    mov v17.b[4], v1.b[7]
 ; CHECK-NEXT:    sshll2 v1.2d, v7.4s, #0
-; CHECK-NEXT:    shl v6.4h, v6.4h, #8
-; CHECK-NEXT:    sshr v7.4h, v18.4h, #8
+; CHECK-NEXT:    shl v5.4h, v5.4h, #8
+; CHECK-NEXT:    sshr v6.4h, v6.4h, #8
 ; CHECK-NEXT:    st1b { z16.d }, p1, [z21.d]
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
-; CHECK-NEXT:    mov b16, v4.b[0]
+; CHECK-NEXT:    mov b7, v18.b[0]
 ; CHECK-NEXT:    ushll v1.2d, v17.2s, #0
-; CHECK-NEXT:    sshr v6.4h, v6.4h, #8
-; CHECK-NEXT:    sshll v7.4s, v7.4h, #0
+; CHECK-NEXT:    sshr v5.4h, v5.4h, #8
 ; CHECK-NEXT:    sshll v6.4s, v6.4h, #0
-; CHECK-NEXT:    mov v16.b[4], v4.b[1]
+; CHECK-NEXT:    sshll v5.4s, v5.4h, #0
+; CHECK-NEXT:    mov v7.b[4], v18.b[1]
 ; CHECK-NEXT:    st1b { z1.d }, p1, [z20.d]
-; CHECK-NEXT:    sshll v1.2d, v7.2s, #0
-; CHECK-NEXT:    ushll v16.2d, v16.2s, #0
+; CHECK-NEXT:    sshll v1.2d, v6.2s, #0
+; CHECK-NEXT:    ushll v7.2d, v7.2s, #0
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
-; CHECK-NEXT:    mov b1, v4.b[2]
-; CHECK-NEXT:    st1b { z16.d }, p1, [z5.d]
-; CHECK-NEXT:    mov v1.b[4], v4.b[3]
-; CHECK-NEXT:    sshll2 v5.2d, v7.4s, #0
-; CHECK-NEXT:    cmpne p1.d, p0/z, z5.d, #0
-; CHECK-NEXT:    mov b5, v4.b[4]
+; CHECK-NEXT:    mov b1, v18.b[2]
+; CHECK-NEXT:    st1b { z7.d }, p1, [z4.d]
+; CHECK-NEXT:    mov v1.b[4], v18.b[3]
+; CHECK-NEXT:    sshll2 v4.2d, v6.4s, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z4.d, #0
+; CHECK-NEXT:    mov b4, v18.b[4]
 ; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    st1b { z1.d }, p1, [z3.d]
-; CHECK-NEXT:    mov v5.b[4], v4.b[5]
-; CHECK-NEXT:    sshll v1.2d, v6.2s, #0
+; CHECK-NEXT:    mov v4.b[4], v18.b[5]
+; CHECK-NEXT:    sshll v1.2d, v5.2s, #0
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
-; CHECK-NEXT:    mov b1, v4.b[6]
-; CHECK-NEXT:    ushll v3.2d, v5.2s, #0
+; CHECK-NEXT:    mov b1, v18.b[6]
+; CHECK-NEXT:    ushll v3.2d, v4.2s, #0
 ; CHECK-NEXT:    st1b { z3.d }, p1, [z2.d]
-; CHECK-NEXT:    mov v1.b[4], v4.b[7]
-; CHECK-NEXT:    sshll2 v2.2d, v6.4s, #0
+; CHECK-NEXT:    mov v1.b[4], v18.b[7]
+; CHECK-NEXT:    sshll2 v2.2d, v5.4s, #0
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
 ; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
 ; CHECK-NEXT:    st1b { z1.d }, p1, [z0.d]
@@ -283,51 +283,51 @@ define void @masked_scatter_v32i8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov v17.b[4], v2.b[3]
 ; CHECK-NEXT:    sshll2 v16.2d, v21.4s, #0
 ; CHECK-NEXT:    sshr v19.4h, v20.4h, #8
-; CHECK-NEXT:    mov b20, v2.b[6]
+; CHECK-NEXT:    mov d20, v2.d[1]
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z16.d, #0
 ; CHECK-NEXT:    mov b16, v2.b[4]
 ; CHECK-NEXT:    ushll v17.2d, v17.2s, #0
 ; CHECK-NEXT:    sshll v19.4s, v19.4h, #0
-; CHECK-NEXT:    mov v20.b[4], v2.b[7]
 ; CHECK-NEXT:    st1b { z17.d }, p1, [z7.d]
-; CHECK-NEXT:    mov v16.b[4], v2.b[5]
 ; CHECK-NEXT:    sshll v7.2d, v19.2s, #0
+; CHECK-NEXT:    mov v16.b[4], v2.b[5]
 ; CHECK-NEXT:    zip1 v17.8b, v18.8b, v0.8b
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z7.d, #0
-; CHECK-NEXT:    mov d7, v2.d[1]
-; CHECK-NEXT:    sshll2 v2.2d, v19.4s, #0
+; CHECK-NEXT:    mov b7, v2.b[6]
 ; CHECK-NEXT:    ushll v16.2d, v16.2s, #0
 ; CHECK-NEXT:    shl v17.4h, v17.4h, #8
+; CHECK-NEXT:    mov v7.b[4], v2.b[7]
+; CHECK-NEXT:    sshll2 v2.2d, v19.4s, #0
 ; CHECK-NEXT:    st1b { z16.d }, p1, [z6.d]
-; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
-; CHECK-NEXT:    mov b2, v7.b[0]
 ; CHECK-NEXT:    sshr v6.4h, v17.4h, #8
-; CHECK-NEXT:    ushll v16.2d, v20.2s, #0
-; CHECK-NEXT:    sshll v6.4s, v6.4h, #0
-; CHECK-NEXT:    mov v2.b[4], v7.b[1]
-; CHECK-NEXT:    st1b { z16.d }, p1, [z5.d]
-; CHECK-NEXT:    sshll v5.2d, v6.2s, #0
-; CHECK-NEXT:    zip2 v16.8b, v18.8b, v0.8b
-; CHECK-NEXT:    ushll v2.2d, v2.2s, #0
-; CHECK-NEXT:    cmpne p1.d, p0/z, z5.d, #0
-; CHECK-NEXT:    mov b5, v7.b[2]
-; CHECK-NEXT:    shl v16.4h, v16.4h, #8
-; CHECK-NEXT:    st1b { z2.d }, p1, [z4.d]
-; CHECK-NEXT:    mov v5.b[4], v7.b[3]
-; CHECK-NEXT:    sshll2 v2.2d, v6.4s, #0
-; CHECK-NEXT:    sshr v4.4h, v16.4h, #8
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
-; CHECK-NEXT:    mov b2, v7.b[4]
+; CHECK-NEXT:    mov b2, v20.b[0]
+; CHECK-NEXT:    ushll v7.2d, v7.2s, #0
+; CHECK-NEXT:    sshll v6.4s, v6.4h, #0
+; CHECK-NEXT:    st1b { z7.d }, p1, [z5.d]
+; CHECK-NEXT:    mov v2.b[4], v20.b[1]
+; CHECK-NEXT:    sshll v5.2d, v6.2s, #0
+; CHECK-NEXT:    zip2 v7.8b, v18.8b, v0.8b
+; CHECK-NEXT:    cmpne p1.d, p0/z, z5.d, #0
+; CHECK-NEXT:    mov b5, v20.b[2]
+; CHECK-NEXT:    ushll v2.2d, v2.2s, #0
+; CHECK-NEXT:    shl v7.4h, v7.4h, #8
+; CHECK-NEXT:    st1b { z2.d }, p1, [z4.d]
+; CHECK-NEXT:    mov v5.b[4], v20.b[3]
+; CHECK-NEXT:    sshll2 v2.2d, v6.4s, #0
+; CHECK-NEXT:    sshr v4.4h, v7.4h, #8
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; CHECK-NEXT:    mov b2, v20.b[4]
 ; CHECK-NEXT:    ushll v5.2d, v5.2s, #0
 ; CHECK-NEXT:    sshll v4.4s, v4.4h, #0
 ; CHECK-NEXT:    st1b { z5.d }, p1, [z3.d]
-; CHECK-NEXT:    mov v2.b[4], v7.b[5]
+; CHECK-NEXT:    mov v2.b[4], v20.b[5]
 ; CHECK-NEXT:    sshll v3.2d, v4.2s, #0
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
-; CHECK-NEXT:    mov b3, v7.b[6]
+; CHECK-NEXT:    mov b3, v20.b[6]
 ; CHECK-NEXT:    ushll v2.2d, v2.2s, #0
 ; CHECK-NEXT:    st1b { z2.d }, p1, [z1.d]
-; CHECK-NEXT:    mov v3.b[4], v7.b[7]
+; CHECK-NEXT:    mov v3.b[4], v20.b[7]
 ; CHECK-NEXT:    sshll2 v1.2d, v4.4s, #0
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    ushll v1.2d, v3.2s, #0
@@ -427,52 +427,52 @@ define void @masked_scatter_v8i16(ptr %a, ptr %b) #0 {
 define void @masked_scatter_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: masked_scatter_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q3, q0, [x0]
+; CHECK-NEXT:    ldp q2, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q17, q16, [x1]
 ; CHECK-NEXT:    ldp q19, q18, [x1, #64]
-; CHECK-NEXT:    cmeq v4.8h, v3.8h, #0
-; CHECK-NEXT:    ushll v6.4s, v3.4h, #0
-; CHECK-NEXT:    ushll2 v3.4s, v3.8h, #0
+; CHECK-NEXT:    cmeq v3.8h, v2.8h, #0
+; CHECK-NEXT:    ushll v5.4s, v2.4h, #0
+; CHECK-NEXT:    ushll2 v2.4s, v2.8h, #0
 ; CHECK-NEXT:    ldp q21, q20, [x1, #32]
-; CHECK-NEXT:    sshll v5.4s, v4.4h, #0
-; CHECK-NEXT:    ushll v7.2d, v6.2s, #0
-; CHECK-NEXT:    sshll2 v4.4s, v4.8h, #0
-; CHECK-NEXT:    sshll v1.2d, v5.2s, #0
-; CHECK-NEXT:    sshll2 v5.2d, v5.4s, #0
-; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
-; CHECK-NEXT:    ldp q2, q1, [x1, #96]
-; CHECK-NEXT:    st1h { z7.d }, p1, [z17.d]
-; CHECK-NEXT:    cmpne p1.d, p0/z, z5.d, #0
-; CHECK-NEXT:    ushll2 v5.2d, v6.4s, #0
-; CHECK-NEXT:    sshll v6.2d, v4.2s, #0
+; CHECK-NEXT:    sshll v4.4s, v3.4h, #0
+; CHECK-NEXT:    ushll v6.2d, v5.2s, #0
+; CHECK-NEXT:    sshll2 v3.4s, v3.8h, #0
+; CHECK-NEXT:    sshll v1.2d, v4.2s, #0
 ; CHECK-NEXT:    sshll2 v4.2d, v4.4s, #0
-; CHECK-NEXT:    st1h { z5.d }, p1, [z16.d]
-; CHECK-NEXT:    cmpne p1.d, p0/z, z6.d, #0
-; CHECK-NEXT:    ushll v5.2d, v3.2s, #0
-; CHECK-NEXT:    ushll2 v3.2d, v3.4s, #0
-; CHECK-NEXT:    ushll v6.4s, v0.4h, #0
-; CHECK-NEXT:    st1h { z5.d }, p1, [z21.d]
-; CHECK-NEXT:    cmeq v5.8h, v0.8h, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    ldp q7, q1, [x1, #96]
+; CHECK-NEXT:    st1h { z6.d }, p1, [z17.d]
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z4.d, #0
+; CHECK-NEXT:    ushll2 v4.2d, v5.4s, #0
+; CHECK-NEXT:    sshll v5.2d, v3.2s, #0
+; CHECK-NEXT:    sshll2 v3.2d, v3.4s, #0
+; CHECK-NEXT:    st1h { z4.d }, p1, [z16.d]
+; CHECK-NEXT:    cmpne p1.d, p0/z, z5.d, #0
+; CHECK-NEXT:    ushll v4.2d, v2.2s, #0
+; CHECK-NEXT:    ushll2 v2.2d, v2.4s, #0
+; CHECK-NEXT:    ushll v5.4s, v0.4h, #0
+; CHECK-NEXT:    st1h { z4.d }, p1, [z21.d]
+; CHECK-NEXT:    cmeq v4.8h, v0.8h, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
 ; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-NEXT:    sshll v4.4s, v5.4h, #0
-; CHECK-NEXT:    st1h { z3.d }, p1, [z20.d]
-; CHECK-NEXT:    sshll v3.2d, v4.2s, #0
-; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
-; CHECK-NEXT:    ushll v3.2d, v6.2s, #0
-; CHECK-NEXT:    st1h { z3.d }, p1, [z19.d]
-; CHECK-NEXT:    sshll2 v3.2d, v4.4s, #0
-; CHECK-NEXT:    sshll2 v4.4s, v5.8h, #0
-; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
-; CHECK-NEXT:    ushll2 v3.2d, v6.4s, #0
-; CHECK-NEXT:    st1h { z3.d }, p1, [z18.d]
-; CHECK-NEXT:    sshll v3.2d, v4.2s, #0
-; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
-; CHECK-NEXT:    ushll v3.2d, v0.2s, #0
+; CHECK-NEXT:    sshll v3.4s, v4.4h, #0
+; CHECK-NEXT:    st1h { z2.d }, p1, [z20.d]
+; CHECK-NEXT:    sshll v2.2d, v3.2s, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; CHECK-NEXT:    ushll v2.2d, v5.2s, #0
+; CHECK-NEXT:    st1h { z2.d }, p1, [z19.d]
+; CHECK-NEXT:    sshll2 v2.2d, v3.4s, #0
+; CHECK-NEXT:    sshll2 v3.4s, v4.8h, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; CHECK-NEXT:    ushll2 v2.2d, v5.4s, #0
+; CHECK-NEXT:    st1h { z2.d }, p1, [z18.d]
+; CHECK-NEXT:    sshll v2.2d, v3.2s, #0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
+; CHECK-NEXT:    ushll v2.2d, v0.2s, #0
 ; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-NEXT:    st1h { z3.d }, p1, [z2.d]
-; CHECK-NEXT:    sshll2 v2.2d, v4.4s, #0
+; CHECK-NEXT:    st1h { z2.d }, p1, [z7.d]
+; CHECK-NEXT:    sshll2 v2.2d, v3.4s, #0
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z2.d, #0
 ; CHECK-NEXT:    st1h { z0.d }, p1, [z1.d]
 ; CHECK-NEXT:    ret

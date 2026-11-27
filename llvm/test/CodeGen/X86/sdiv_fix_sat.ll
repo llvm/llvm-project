@@ -601,8 +601,8 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    shrq $63, %rbx
-; X64-NEXT:    xorl %ebx, %r14d
-; X64-NEXT:    testb %r14b, %al
+; X64-NEXT:    xorl %r14d, %ebx
+; X64-NEXT:    testb %bl, %al
 ; X64-NEXT:    cmoveq {{[-0-9]+}}(%r{{[sb]}}p), %rbp # 8-byte Folded Reload
 ; X64-NEXT:    cmoveq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Folded Reload
 ; X64-NEXT:    xorl %ecx, %ecx
@@ -651,8 +651,8 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    shrq $63, %rbx
-; X64-NEXT:    xorl %ebx, %r14d
-; X64-NEXT:    testb %r14b, %al
+; X64-NEXT:    xorl %r14d, %ebx
+; X64-NEXT:    testb %bl, %al
 ; X64-NEXT:    cmoveq {{[-0-9]+}}(%r{{[sb]}}p), %rbp # 8-byte Folded Reload
 ; X64-NEXT:    cmoveq (%rsp), %r13 # 8-byte Folded Reload
 ; X64-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
@@ -712,8 +712,8 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    shrq $63, %rbx
-; X64-NEXT:    xorl %ebx, %r14d
-; X64-NEXT:    testb %r14b, %al
+; X64-NEXT:    xorl %r14d, %ebx
+; X64-NEXT:    testb %bl, %al
 ; X64-NEXT:    cmoveq {{[-0-9]+}}(%r{{[sb]}}p), %rbp # 8-byte Folded Reload
 ; X64-NEXT:    cmoveq (%rsp), %r13 # 8-byte Folded Reload
 ; X64-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
@@ -761,8 +761,8 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    orq %rax, %rdx
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    shrq $63, %rbx
-; X64-NEXT:    xorl %ebx, %r14d
-; X64-NEXT:    testb %r14b, %al
+; X64-NEXT:    xorl %r14d, %ebx
+; X64-NEXT:    testb %bl, %al
 ; X64-NEXT:    cmoveq {{[-0-9]+}}(%r{{[sb]}}p), %rbp # 8-byte Folded Reload
 ; X64-NEXT:    cmoveq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Folded Reload
 ; X64-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF

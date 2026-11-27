@@ -286,7 +286,6 @@ define i64 @test_rotl_mul_with_mask_special_case(i64 %i) {
 ; X64-LABEL: test_rotl_mul_with_mask_special_case:
 ; X64:       # %bb.0:
 ; X64-NEXT:    leaq (%rdi,%rdi,8), %rax
-; X64-NEXT:    # kill: def $edi killed $edi killed $rdi def $rdi
 ; X64-NEXT:    shll $7, %edi
 ; X64-NEXT:    leal (%rdi,%rdi,8), %ecx
 ; X64-NEXT:    movzbl %cl, %ecx

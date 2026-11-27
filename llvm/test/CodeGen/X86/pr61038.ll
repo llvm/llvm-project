@@ -27,8 +27,8 @@ define void @test_61038(ptr %tmp_buffer) {
 ; CHECK-BMI-NEXT:    shrq %cl, %rdx
 ; CHECK-BMI-NEXT:    xorl %eax, %eax
 ; CHECK-BMI-NEXT:    cmpq $64, %rcx
-; CHECK-BMI-NEXT:    cmovael %eax, %edx
-; CHECK-BMI-NEXT:    movl %edx, (%rdi)
+; CHECK-BMI-NEXT:    cmovbl %edx, %eax
+; CHECK-BMI-NEXT:    movl %eax, (%rdi)
 ; CHECK-BMI-NEXT:    retq
 entry:
   %0 = tail call i32 @llvm.cttz.i32(i32 poison, i1 false)

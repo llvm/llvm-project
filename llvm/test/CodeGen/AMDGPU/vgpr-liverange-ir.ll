@@ -476,11 +476,12 @@ define amdgpu_kernel void @livevariables_update_missed_block(ptr addrspace(1) %s
   ; SI-NEXT: bb.1.if.then:
   ; SI-NEXT:   successors: %bb.7(0x80000000)
   ; SI-NEXT: {{  $}}
+  ; SI-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE %52, %subreg.sub0, undef %22:vgpr_32, %subreg.sub1
   ; SI-NEXT:   early-clobber %34:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.src1.kernarg.offset, align 4, addrspace 4)
-  ; SI-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %34.sub0, %52, 0, implicit $exec
+  ; SI-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %34.sub0, [[REG_SEQUENCE]].sub0, 0, implicit $exec
   ; SI-NEXT:   [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_ADDC_U32_e64 0, %34.sub1, [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
-  ; SI-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
-  ; SI-NEXT:   [[GLOBAL_LOAD_UBYTE:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE [[REG_SEQUENCE]], 0, 0, implicit $exec :: (load (s8) from %ir.i10, addrspace 1)
+  ; SI-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, [[V_ADDC_U32_e64_]], %subreg.sub1
+  ; SI-NEXT:   [[GLOBAL_LOAD_UBYTE:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_UBYTE [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (load (s8) from %ir.i10, addrspace 1)
   ; SI-NEXT:   [[V_MOV_B:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 0, implicit $exec
   ; SI-NEXT:   GLOBAL_STORE_BYTE [[V_MOV_B]], [[GLOBAL_LOAD_UBYTE]], 0, 0, implicit $exec :: (store (s8) into `ptr addrspace(1) null`, addrspace 1)
   ; SI-NEXT:   S_BRANCH %bb.7

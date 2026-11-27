@@ -1715,6 +1715,22 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   return Next != MBB->instr_end() && Next->isCFIInstruction();
 }
 
+static unsigned convertToNonFlagSettingOpc(const MachineInstr &MI);
+
+/// Analyze a compare with subregister operands. Only the dead-NZCV rewrite in
+/// optimizeCompareInstr, which never reads the source registers, is allowed.
+static bool analyzeSubRegCompare(const MachineInstr &MI, Register &SrcReg,
+                                 Register &SrcReg2, int64_t &CmpMask,
+                                 int64_t &CmpValue) {
+  if (!MI.registerDefIsDead(AArch64::NZCV, /*TRI=*/nullptr) ||
+      convertToNonFlagSettingOpc(MI) == MI.getOpcode())
+    return false;
+  SrcReg = SrcReg2 = Register();
+  CmpMask = ~0;
+  CmpValue = 0;
+  return true;
+}
+
 /// analyzeCompare - For a comparison instruction, return the source registers
 /// in SrcReg and SrcReg2, and the value it compares against in CmpValue.
 /// Return true if the comparison instruction can be analyzed.
@@ -1725,8 +1741,10 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   // register.
   // FIXME: Pass subregisters out of analyzeCompare
   assert(MI.getNumOperands() >= 2 && "All AArch64 cmps should have 2 operands");
-  if (!MI.getOperand(1).isReg() || MI.getOperand(1).getSubReg())
+  if (!MI.getOperand(1).isReg())
     return false;
+  if (MI.getOperand(1).getSubReg())
+    return analyzeSubRegCompare(MI, SrcReg, SrcReg2, CmpMask, CmpValue);
 
   switch (MI.getOpcode()) {
   default:
@@ -1761,7 +1779,7 @@ bool AArch64InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
 
     // FIXME: Pass subregisters out of analyzeCompare
     if (MI.getOperand(2).getSubReg())
-      return false;
+      return analyzeSubRegCompare(MI, SrcReg, SrcReg2, CmpMask, CmpValue);
 
     CmpMask = ~0;
     CmpValue = 0;

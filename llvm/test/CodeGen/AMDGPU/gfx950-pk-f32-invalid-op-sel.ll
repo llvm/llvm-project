@@ -1165,10 +1165,10 @@ define amdgpu_kernel void @fma_swap_src1_vgpr(ptr addrspace(1) %out, ptr addrspa
 ; GFX950-GISEL:       ; %bb.0: ; %entry
 ; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v8, 3, v0
+; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v10, 3, v0
 ; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v8
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v10
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0x8000, v2
@@ -1177,15 +1177,15 @@ define amdgpu_kernel void @fma_swap_src1_vgpr(ptr addrspace(1) %out, ptr addrspa
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0x10000, v2
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    global_load_dwordx2 v[10:11], v[0:1], off
-; GFX950-GISEL-NEXT:    global_load_dwordx2 v[4:5], v8, s[2:3]
-; GFX950-GISEL-NEXT:    global_load_dwordx2 v[6:7], v[2:3], off
+; GFX950-GISEL-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
+; GFX950-GISEL-NEXT:    global_load_dwordx2 v[6:7], v10, s[2:3]
+; GFX950-GISEL-NEXT:    global_load_dwordx2 v[8:9], v[2:3], off
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(2)
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, v11
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, v10
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, v5
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[4:5], v[0:1], v[6:7]
+; GFX950-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[6:7], v[0:1], v[8:9]
 ; GFX950-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
@@ -1255,31 +1255,31 @@ define amdgpu_kernel void @fma_swap_src1_src2_vgpr(ptr addrspace(1) %out, ptr ad
 ; GFX950-GISEL:       ; %bb.0: ; %entry
 ; GFX950-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX950-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v6, 0
+; GFX950-GISEL-NEXT:    v_lshlrev_b32_e32 v8, 3, v0
 ; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v4
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, v0, v8
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v1, vcc
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0x8000, v2
 ; GFX950-GISEL-NEXT:    s_nop 1
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    global_load_dwordx2 v[8:9], v[0:1], off
-; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v0, vcc, 0x10000, v2
-; GFX950-GISEL-NEXT:    s_nop 1
-; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX950-GISEL-NEXT:    global_load_dwordx2 v[10:11], v[0:1], off
-; GFX950-GISEL-NEXT:    global_load_dwordx2 v[2:3], v4, s[2:3]
+; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, 0x10000, v2
+; GFX950-GISEL-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
+; GFX950-GISEL-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
+; GFX950-GISEL-NEXT:    global_load_dwordx2 v[6:7], v8, s[2:3]
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(2)
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, v9
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, v8
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v2, v1
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v4, v11
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v5, v10
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, v5
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[2:3], v[0:1], v[4:5]
-; GFX950-GISEL-NEXT:    global_store_dwordx2 v6, v[0:1], s[0:1]
+; GFX950-GISEL-NEXT:    v_pk_fma_f32 v[0:1], v[6:7], v[2:3], v[0:1]
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v8, v[0:1], s[0:1]
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX90A-LABEL: fma_swap_src1_src2_vgpr:

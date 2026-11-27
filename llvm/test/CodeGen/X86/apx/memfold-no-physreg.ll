@@ -128,8 +128,8 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:  # %bb.14: # %loop_exit
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movq 272(%rbp), %rcx
-; CHECK-NEXT:    addq %rax, %rcx
-; CHECK-NEXT:    andl $1, %r21d, %r25d
+; CHECK-NEXT:    addq %rax, %rcx, %r25
+; CHECK-NEXT:    andl $1, %r21d, %ecx
 ; CHECK-NEXT:    andl $1, %r8d, %edx
 ; CHECK-NEXT:    movq %r20, %rax
 ; CHECK-NEXT:    movq %r27, %r20
@@ -141,8 +141,8 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:    movl %r27d, %r24d
 ; CHECK-NEXT:    movq %r20, %r27
 ; CHECK-NEXT:    movq %rax, %r20
-; CHECK-NEXT:    vmovups %ymm0, (%rcx) {%k2}
-; CHECK-NEXT:    cmpl %edx, %r25d
+; CHECK-NEXT:    vmovups %ymm0, (%r25) {%k2}
+; CHECK-NEXT:    cmpl %edx, %ecx
 ; CHECK-NEXT:    movq 16(%rbx), %rax # 8-byte Reload
 ; CHECK-NEXT:    je .LBB0_6
 ; CHECK-NEXT:  # %bb.15:

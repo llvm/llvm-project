@@ -487,8 +487,8 @@ define i16 @const_shift_i16(i16 %x, i16 %y) nounwind {
 ;
 ; X64-FAST-LABEL: const_shift_i16:
 ; X64-FAST:       # %bb.0:
-; X64-FAST-NEXT:    movl %esi, %eax
-; X64-FAST-NEXT:    shrdw $7, %di, %ax
+; X64-FAST-NEXT:    movl %edi, %eax
+; X64-FAST-NEXT:    shldw $9, %si, %ax
 ; X64-FAST-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-FAST-NEXT:    retq
 ;

@@ -5859,7 +5859,7 @@ define amdgpu_kernel void @idot4_acc32_v256i8(ptr addrspace(1) %src1,
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    s_movk_i32 s0, 0xfc
+; GFX8-NEXT:    s_mov_b64 s[0:1], 0xfc
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, s0, v3
 ; GFX8-NEXT:    v_addc_u32_e32 v3, vcc, 0, v4, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[0:1]

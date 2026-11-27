@@ -32,12 +32,12 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.1.bb103:
-  ; GFX90A-NEXT:   successors: %bb.59(0x40000000), %bb.2(0x40000000)
+  ; GFX90A-NEXT:   successors: %bb.60(0x40000000), %bb.2(0x40000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr30, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr28_sgpr29, $sgpr34_sgpr35, $sgpr38_sgpr39:0x000000000000000F, $sgpr20_sgpr21_sgpr22_sgpr23:0x00000000000000FF, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000FF, $vgpr2_vgpr3:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $sgpr36_sgpr37 = S_MOV_B64 0
   ; GFX90A-NEXT:   renamable $vcc = S_AND_B64 $exec, renamable $sgpr34_sgpr35, implicit-def dead $scc
-  ; GFX90A-NEXT:   S_CBRANCH_VCCNZ %bb.59, implicit $vcc
+  ; GFX90A-NEXT:   S_CBRANCH_VCCNZ %bb.60, implicit $vcc
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.2:
   ; GFX90A-NEXT:   successors: %bb.3(0x80000000)
@@ -51,12 +51,12 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $sgpr30_sgpr31 = S_MOV_B64 0
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.3.Flow13:
-  ; GFX90A-NEXT:   successors: %bb.4(0x40000000), %bb.58(0x40000000)
+  ; GFX90A-NEXT:   successors: %bb.4(0x40000000), %bb.59(0x40000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000FF, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000F, $vgpr20_vgpr21:0x000000000000000F, $vgpr22_vgpr23:0x000000000000000F, $vgpr24_vgpr25:0x000000000000000F, $vgpr26_vgpr27:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $vgpr28 = V_AND_B32_e32 1023, $vgpr31, implicit $exec
   ; GFX90A-NEXT:   renamable $vcc = S_AND_B64 $exec, killed renamable $sgpr36_sgpr37, implicit-def dead $scc
-  ; GFX90A-NEXT:   S_CBRANCH_VCCZ %bb.58, implicit $vcc
+  ; GFX90A-NEXT:   S_CBRANCH_VCCZ %bb.59, implicit $vcc
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.4.bb15:
   ; GFX90A-NEXT:   successors: %bb.35(0x40000000), %bb.5(0x40000000)
@@ -122,12 +122,12 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $vgpr26 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.7.Flow15:
-  ; GFX90A-NEXT:   successors: %bb.63(0x40000000), %bb.8(0x40000000)
+  ; GFX90A-NEXT:   successors: %bb.64(0x40000000), %bb.8(0x40000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr23, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr64_sgpr65, $sgpr66_sgpr67, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000F, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr10_vgpr11:0x0000000000000003, $vgpr12_vgpr13:0x0000000000000003, $vgpr14_vgpr15:0x0000000000000003, $vgpr16_vgpr17:0x0000000000000003, $vgpr18_vgpr19:0x000000000000000F, $vgpr20_vgpr21:0x000000000000000F, $vgpr22_vgpr23:0x000000000000000F, $vgpr24_vgpr25:0x000000000000000F, $vgpr26_vgpr27:0x000000000000000F, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $sgpr38_sgpr39 = S_MOV_B64 0
   ; GFX90A-NEXT:   $sgpr24_sgpr25 = S_AND_SAVEEXEC_B64 $sgpr30_sgpr31, implicit-def $exec, implicit-def $scc, implicit $exec
-  ; GFX90A-NEXT:   S_CBRANCH_EXECNZ %bb.63, implicit $exec
+  ; GFX90A-NEXT:   S_CBRANCH_EXECNZ %bb.64, implicit $exec
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.8.Flow28:
   ; GFX90A-NEXT:   successors: %bb.9(0x40000000), %bb.10(0x40000000)
@@ -460,7 +460,7 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.39.bb34:
   ; GFX90A-NEXT:   successors: %bb.41(0x40000000), %bb.40(0x40000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr18_sgpr19, $sgpr44_sgpr45, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr58_sgpr59, $sgpr60_sgpr61, $sgpr62_sgpr63, $sgpr54_sgpr55, $sgpr64_sgpr65, $sgpr66_sgpr67
+  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr18_sgpr19, $sgpr44_sgpr45, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr60_sgpr61, $sgpr62_sgpr63, $sgpr64_sgpr65, $sgpr58_sgpr59, $sgpr66_sgpr67
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $vgpr0 = FLAT_LOAD_UBYTE renamable $vgpr40_vgpr41, 3072, 0, implicit $exec, implicit $flat_scr :: (load (s8) from %ir.i37)
   ; GFX90A-NEXT:   renamable $vgpr56 = V_ADD_CO_U32_e32 3072, $vgpr40, implicit-def $vcc, implicit $exec
@@ -490,14 +490,14 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.40.Flow19:
   ; GFX90A-NEXT:   successors: %bb.38(0x80000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr23, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr46_sgpr47:0x0000000000000003, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr56_sgpr57, $sgpr58_sgpr59, $sgpr60_sgpr61, $sgpr62_sgpr63, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr10_vgpr11:0x0000000000000003, $vgpr12_vgpr13:0x0000000000000003, $vgpr14_vgpr15:0x0000000000000003, $vgpr16_vgpr17:0x0000000000000003, $vgpr18_vgpr19:0x000000000000000F, $vgpr20_vgpr21:0x0000000000000003, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr23, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr46_sgpr47:0x0000000000000003, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr56_sgpr57, $sgpr60_sgpr61, $sgpr62_sgpr63, $sgpr64_sgpr65, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr10_vgpr11:0x0000000000000003, $vgpr12_vgpr13:0x0000000000000003, $vgpr14_vgpr15:0x0000000000000003, $vgpr16_vgpr17:0x0000000000000003, $vgpr18_vgpr19:0x000000000000000F, $vgpr20_vgpr21:0x0000000000000003, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr40_sgpr41, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr40_sgpr41 = S_XOR_B64 $exec, -1, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr66_sgpr67 = S_AND_B64 killed renamable $sgpr42_sgpr43, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr64_sgpr65 = S_AND_B64 killed renamable $sgpr62_sgpr63, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr54_sgpr55 = S_AND_B64 killed renamable $sgpr60_sgpr61, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr62_sgpr63 = S_AND_B64 killed renamable $sgpr58_sgpr59, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr64_sgpr65 = S_AND_B64 killed renamable $sgpr64_sgpr65, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr54_sgpr55 = S_AND_B64 killed renamable $sgpr62_sgpr63, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr62_sgpr63 = S_AND_B64 killed renamable $sgpr60_sgpr61, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr60_sgpr61 = S_AND_B64 killed renamable $sgpr56_sgpr57, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr58_sgpr59 = S_AND_B64 killed renamable $sgpr52_sgpr53, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr42_sgpr43 = S_AND_B64 killed renamable $sgpr50_sgpr51, $exec, implicit-def dead $scc
@@ -509,18 +509,20 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   S_BRANCH %bb.38
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.41.bb41:
-  ; GFX90A-NEXT:   successors: %bb.47(0x40000000), %bb.42(0x40000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr54_sgpr55, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr56_sgpr57, $sgpr58_sgpr59, $sgpr60_sgpr61, $sgpr64_sgpr65, $sgpr66_sgpr67
+  ; GFX90A-NEXT:   successors: %bb.48(0x40000000), %bb.42(0x40000000)
+  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr58_sgpr59, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr56_sgpr57, $sgpr60_sgpr61, $sgpr62_sgpr63, $sgpr64_sgpr65, $sgpr66_sgpr67
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $vgpr58 = V_ADD_CO_U32_e32 4096, $vgpr40, implicit-def $vcc, implicit $exec
-  ; GFX90A-NEXT:   renamable $vgpr1, dead renamable $sgpr18_sgpr19 = V_ADDC_U32_e64 0, $vgpr41, $vcc, 0, implicit $exec
-  ; GFX90A-NEXT:   renamable $vgpr0 = COPY renamable $vgpr58, implicit $exec
+  ; GFX90A-NEXT:   renamable $sgpr18_sgpr19 = COPY $vcc
+  ; GFX90A-NEXT:   renamable $vgpr0 = V_ADD_CO_U32_e32 4096, $vgpr40, implicit-def $vcc, implicit $exec
+  ; GFX90A-NEXT:   renamable $vgpr1, dead renamable $vcc = V_ADDC_U32_e64 0, $vgpr41, killed $vcc, 0, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr0 = FLAT_LOAD_UBYTE killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s8) from %ir.i44)
-  ; GFX90A-NEXT:   renamable $sgpr18_sgpr19 = S_MOV_B64 0
+  ; GFX90A-NEXT:   renamable $sgpr48_sgpr49 = S_MOV_B64 0
   ; GFX90A-NEXT:   renamable $sgpr44_sgpr45 = S_MOV_B64 -1
-  ; GFX90A-NEXT:   renamable $sgpr48_sgpr49 = COPY renamable $sgpr30_sgpr31
-  ; GFX90A-NEXT:   renamable $vgpr59, dead renamable $vcc = V_ADDC_U32_e64 0, $vgpr41, killed $vcc, 0, implicit $exec
+  ; GFX90A-NEXT:   renamable $sgpr54_sgpr55 = COPY renamable $sgpr30_sgpr31
+  ; GFX90A-NEXT:   renamable $vgpr59, dead renamable $vcc = V_ADDC_U32_e64 0, $vgpr41, killed $sgpr18_sgpr19, 0, implicit $exec
   ; GFX90A-NEXT:   renamable $vcc = V_CMP_EQ_U16_e64 0, killed $vgpr0, implicit $exec
+  ; GFX90A-NEXT:   renamable $sgpr18_sgpr19 = S_MOV_B64 0
   ; GFX90A-NEXT:   renamable $vgpr8_vgpr9 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr32_vgpr33 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr6_vgpr7 = IMPLICIT_DEF
@@ -537,7 +539,7 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $sgpr46 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr20 = IMPLICIT_DEF
   ; GFX90A-NEXT:   $sgpr42_sgpr43 = S_AND_SAVEEXEC_B64 $vcc, implicit-def $exec, implicit-def $scc, implicit $exec
-  ; GFX90A-NEXT:   S_CBRANCH_EXECNZ %bb.47, implicit $exec
+  ; GFX90A-NEXT:   S_CBRANCH_EXECNZ %bb.48, implicit $exec
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.42.Flow20:
   ; GFX90A-NEXT:   successors: %bb.40(0x80000000)
@@ -545,22 +547,22 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr42_sgpr43, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr42_sgpr43 = S_XOR_B64 $exec, -1, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr62_sgpr63 = S_AND_B64 killed renamable $sgpr44_sgpr45, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr64_sgpr65 = S_AND_B64 killed renamable $sgpr44_sgpr45, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr62_sgpr63 = S_AND_B64 killed renamable $sgpr18_sgpr19, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr60_sgpr61 = S_AND_B64 killed renamable $sgpr60_sgpr61, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr58_sgpr59 = S_AND_B64 killed renamable $sgpr58_sgpr59, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr56_sgpr57 = S_AND_B64 killed renamable $sgpr56_sgpr57, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr52_sgpr53 = S_AND_B64 killed renamable $sgpr52_sgpr53, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr50_sgpr51 = S_AND_B64 killed renamable $sgpr50_sgpr51, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr44_sgpr45 = S_AND_B64 killed renamable $sgpr54_sgpr55, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr18_sgpr19 = S_AND_B64 killed renamable $sgpr18_sgpr19, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr44_sgpr45 = S_AND_B64 killed renamable $sgpr58_sgpr59, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr18_sgpr19 = S_AND_B64 killed renamable $sgpr48_sgpr49, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr38_sgpr39 = S_ANDN2_B64 renamable $sgpr30_sgpr31, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr48_sgpr49 = S_AND_B64 killed renamable $sgpr48_sgpr49, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr48_sgpr49 = S_AND_B64 killed renamable $sgpr54_sgpr55, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr48_sgpr49 = S_OR_B64 killed renamable $sgpr38_sgpr39, killed renamable $sgpr48_sgpr49, implicit-def dead $scc
   ; GFX90A-NEXT:   S_BRANCH %bb.40
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.43.bb55:
-  ; GFX90A-NEXT:   successors: %bb.49(0x40000000), %bb.44(0x40000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr44_sgpr45, $sgpr54_sgpr55, $sgpr58_sgpr59, $sgpr56_sgpr57, $sgpr48_sgpr49, $sgpr50_sgpr51
+  ; GFX90A-NEXT:   successors: %bb.50(0x40000000), %bb.44(0x40000000)
+  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr44_sgpr45, $sgpr58_sgpr59, $sgpr56_sgpr57, $sgpr48_sgpr49, $sgpr50_sgpr51
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   S_BITCMP1_B32 renamable $sgpr20, 16, implicit-def $scc
   ; GFX90A-NEXT:   renamable $sgpr62_sgpr63 = S_CSELECT_B64 -1, 0, implicit $scc
@@ -568,20 +570,26 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $vgpr62 = V_ADD_CO_U32_e32 6144, $vgpr40, implicit-def $vcc, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr63, dead renamable $vcc = V_ADDC_U32_e64 0, $vgpr41, killed $vcc, 0, implicit $exec
   ; GFX90A-NEXT:   renamable $vcc = S_AND_B64 $exec, renamable $sgpr46_sgpr47, implicit-def dead $scc
-  ; GFX90A-NEXT:   S_CBRANCH_VCCNZ %bb.49, implicit $vcc
+  ; GFX90A-NEXT:   S_CBRANCH_VCCNZ %bb.50, implicit $vcc
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.44:
   ; GFX90A-NEXT:   successors: %bb.45(0x80000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr59, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8, $sgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $vgpr41, $vgpr42, $sgpr54_sgpr55, $sgpr56_sgpr57, $sgpr58_sgpr59, $sgpr20_sgpr21_sgpr22, $sgpr24_sgpr25_sgpr26, $sgpr26_sgpr27, $vgpr57, $vgpr58, $vgpr2, $vgpr3, $vgpr5, $vgpr47, $vgpr56, $vgpr43, $vgpr44, $vgpr61, $vgpr60, $vgpr62, $vgpr63, $vgpr45, $vgpr46, $vgpr40
+  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr58_sgpr59, $sgpr56_sgpr57, $sgpr48_sgpr49, $sgpr50_sgpr51
   ; GFX90A-NEXT: {{  $}}
+  ; GFX90A-NEXT:   renamable $sgpr54_sgpr55 = S_MOV_B64 0
   ; GFX90A-NEXT:   renamable $sgpr52_sgpr53 = COPY renamable $sgpr30_sgpr31
+  ; GFX90A-NEXT: {{  $}}
+  ; GFX90A-NEXT: bb.45.Flow22:
+  ; GFX90A-NEXT:   successors: %bb.46(0x80000000)
+  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr59, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8, $sgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr56_sgpr57, $sgpr58_sgpr59, $sgpr20_sgpr21_sgpr22, $sgpr24_sgpr25_sgpr26, $sgpr26_sgpr27, $vgpr57, $vgpr58, $vgpr2, $vgpr3, $vgpr5, $vgpr47, $vgpr56, $vgpr43, $vgpr44, $vgpr61, $vgpr60, $vgpr62, $vgpr63, $vgpr45, $vgpr46, $vgpr40, $vgpr41, $vgpr42
+  ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $vgpr8_vgpr9 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr32_vgpr33 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr6_vgpr7 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr0_vgpr1 = IMPLICIT_DEF
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.45.Flow22:
-  ; GFX90A-NEXT:   successors: %bb.46(0x80000000)
+  ; GFX90A-NEXT: bb.46.Flow22:
+  ; GFX90A-NEXT:   successors: %bb.47(0x80000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr59, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8, $sgpr9, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr56_sgpr57, $sgpr58_sgpr59, $sgpr20_sgpr21_sgpr22, $sgpr24_sgpr25_sgpr26, $sgpr26_sgpr27, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr61, $vgpr60, $vgpr62, $vgpr63, $vgpr32, $vgpr33, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $sgpr17 = IMPLICIT_DEF
@@ -594,38 +602,35 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $sgpr46 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr20 = IMPLICIT_DEF
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.46.Flow22:
-  ; GFX90A-NEXT:   successors: %bb.48(0x80000000)
+  ; GFX90A-NEXT: bb.47.Flow22:
+  ; GFX90A-NEXT:   successors: %bb.49(0x80000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr23, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr46_sgpr47:0x0000000000000003, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr56_sgpr57, $sgpr58_sgpr59, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr10_vgpr11:0x0000000000000003, $vgpr12_vgpr13:0x0000000000000003, $vgpr14_vgpr15:0x0000000000000003, $vgpr16_vgpr17:0x0000000000000003, $vgpr18_vgpr19:0x000000000000000F, $vgpr20_vgpr21:0x0000000000000003, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $sgpr60_sgpr61 = S_XOR_B64 $exec, -1, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr70_sgpr71 = S_AND_B64 killed renamable $sgpr44_sgpr45, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr68_sgpr69 = S_AND_B64 killed renamable $sgpr48_sgpr49, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr66_sgpr67 = S_AND_B64 killed renamable $sgpr50_sgpr51, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr66_sgpr67 = S_AND_B64 killed renamable $sgpr44_sgpr45, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr64_sgpr65 = S_AND_B64 killed renamable $sgpr48_sgpr49, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr62_sgpr63 = S_AND_B64 killed renamable $sgpr50_sgpr51, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr50_sgpr51 = S_AND_B64 killed renamable $sgpr56_sgpr57, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr64_sgpr65 = S_AND_B64 killed renamable $sgpr58_sgpr59, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr58_sgpr59 = S_AND_B64 killed renamable $sgpr58_sgpr59, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr48_sgpr49 = S_AND_B64 killed renamable $sgpr54_sgpr55, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr38_sgpr39 = S_ANDN2_B64 renamable $sgpr30_sgpr31, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr44_sgpr45 = S_AND_B64 killed renamable $sgpr52_sgpr53, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr62_sgpr63 = S_OR_B64 killed renamable $sgpr38_sgpr39, killed renamable $sgpr44_sgpr45, implicit-def dead $scc
-  ; GFX90A-NEXT:   S_BRANCH %bb.48
+  ; GFX90A-NEXT:   renamable $sgpr54_sgpr55 = S_OR_B64 killed renamable $sgpr38_sgpr39, killed renamable $sgpr44_sgpr45, implicit-def dead $scc
+  ; GFX90A-NEXT:   S_BRANCH %bb.49
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.47.bb48:
-  ; GFX90A-NEXT:   successors: %bb.43(0x40000000), %bb.48(0x40000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr64_sgpr65, $sgpr50_sgpr51, $sgpr66_sgpr67, $sgpr44_sgpr45, $sgpr54_sgpr55, $sgpr58_sgpr59, $sgpr56_sgpr57
+  ; GFX90A-NEXT: bb.48.bb48:
+  ; GFX90A-NEXT:   successors: %bb.43(0x40000000), %bb.49(0x40000000)
+  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr48_sgpr49, $sgpr58_sgpr59, $sgpr50_sgpr51, $sgpr62_sgpr63, $sgpr64_sgpr65, $sgpr66_sgpr67, $sgpr44_sgpr45, $sgpr56_sgpr57
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $vgpr60 = V_ADD_CO_U32_e32 5120, $vgpr40, implicit-def $vcc, implicit $exec
   ; GFX90A-NEXT:   renamable $sgpr18_sgpr19 = COPY $vcc
   ; GFX90A-NEXT:   renamable $vgpr0 = V_ADD_CO_U32_e32 4096, $vgpr40, implicit-def $vcc, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr1, dead renamable $vcc = V_ADDC_U32_e64 0, $vgpr41, killed $vcc, 0, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr0 = FLAT_LOAD_UBYTE killed renamable $vgpr0_vgpr1, 1024, 0, implicit $exec, implicit $flat_scr :: (load (s8) from %ir.i51)
-  ; GFX90A-NEXT:   renamable $sgpr48_sgpr49 = S_MOV_B64 0
   ; GFX90A-NEXT:   renamable $sgpr60_sgpr61 = S_MOV_B64 -1
-  ; GFX90A-NEXT:   renamable $sgpr62_sgpr63 = COPY renamable $sgpr30_sgpr31
-  ; GFX90A-NEXT:   renamable $sgpr68_sgpr69 = S_MOV_B64 0
+  ; GFX90A-NEXT:   renamable $sgpr54_sgpr55 = COPY renamable $sgpr30_sgpr31
   ; GFX90A-NEXT:   renamable $vgpr61, dead renamable $vcc = V_ADDC_U32_e64 0, $vgpr41, killed $sgpr18_sgpr19, 0, implicit $exec
   ; GFX90A-NEXT:   renamable $vcc = V_CMP_EQ_U16_e64 0, killed $vgpr0, implicit $exec
-  ; GFX90A-NEXT:   renamable $sgpr70_sgpr71 = S_MOV_B64 0
   ; GFX90A-NEXT:   renamable $vgpr8_vgpr9 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr32_vgpr33 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr6_vgpr7 = IMPLICIT_DEF
@@ -643,70 +648,73 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   $sgpr18_sgpr19 = S_AND_SAVEEXEC_B64 $vcc, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX90A-NEXT:   S_CBRANCH_EXECNZ %bb.43, implicit $exec
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.48.Flow21:
+  ; GFX90A-NEXT: bb.49.Flow21:
   ; GFX90A-NEXT:   successors: %bb.42(0x80000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr23, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr46_sgpr47:0x0000000000000003, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr60_sgpr61, $sgpr62_sgpr63, $sgpr64_sgpr65, $sgpr66_sgpr67, $sgpr68_sgpr69, $sgpr70_sgpr71, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr10_vgpr11:0x0000000000000003, $vgpr12_vgpr13:0x0000000000000003, $vgpr14_vgpr15:0x0000000000000003, $vgpr16_vgpr17:0x0000000000000003, $vgpr18_vgpr19:0x000000000000000F, $vgpr20_vgpr21:0x0000000000000003, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
+  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr23, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr46_sgpr47:0x0000000000000003, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr54_sgpr55, $sgpr58_sgpr59, $sgpr60_sgpr61, $sgpr62_sgpr63, $sgpr64_sgpr65, $sgpr66_sgpr67, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr10_vgpr11:0x0000000000000003, $vgpr12_vgpr13:0x0000000000000003, $vgpr14_vgpr15:0x0000000000000003, $vgpr16_vgpr17:0x0000000000000003, $vgpr18_vgpr19:0x000000000000000F, $vgpr20_vgpr21:0x0000000000000003, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr18_sgpr19, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr44_sgpr45 = S_XOR_B64 $exec, -1, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr60_sgpr61 = S_AND_B64 killed renamable $sgpr60_sgpr61, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr58_sgpr59 = S_AND_B64 killed renamable $sgpr70_sgpr71, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr56_sgpr57 = S_AND_B64 killed renamable $sgpr68_sgpr69, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr52_sgpr53 = S_AND_B64 killed renamable $sgpr66_sgpr67, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr18_sgpr19 = S_AND_B64 killed renamable $sgpr60_sgpr61, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr60_sgpr61 = S_AND_B64 killed renamable $sgpr66_sgpr67, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr56_sgpr57 = S_AND_B64 killed renamable $sgpr64_sgpr65, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr52_sgpr53 = S_AND_B64 killed renamable $sgpr62_sgpr63, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr50_sgpr51 = S_AND_B64 killed renamable $sgpr50_sgpr51, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr54_sgpr55 = S_AND_B64 killed renamable $sgpr64_sgpr65, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr18_sgpr19 = S_AND_B64 killed renamable $sgpr48_sgpr49, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr58_sgpr59 = S_AND_B64 killed renamable $sgpr58_sgpr59, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr48_sgpr49 = S_AND_B64 killed renamable $sgpr48_sgpr49, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr38_sgpr39 = S_ANDN2_B64 renamable $sgpr30_sgpr31, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr48_sgpr49 = S_AND_B64 killed renamable $sgpr62_sgpr63, $exec, implicit-def dead $scc
-  ; GFX90A-NEXT:   renamable $sgpr48_sgpr49 = S_OR_B64 killed renamable $sgpr38_sgpr39, killed renamable $sgpr48_sgpr49, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr54_sgpr55 = S_AND_B64 killed renamable $sgpr54_sgpr55, $exec, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr54_sgpr55 = S_OR_B64 killed renamable $sgpr38_sgpr39, killed renamable $sgpr54_sgpr55, implicit-def dead $scc
   ; GFX90A-NEXT:   S_BRANCH %bb.42
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.49.bb63:
-  ; GFX90A-NEXT:   successors: %bb.51(0x40000000), %bb.50(0x40000000)
-  ; GFX90A-NEXT:   liveins: $vcc, $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr46_sgpr47, $sgpr62_sgpr63, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr54_sgpr55, $sgpr58_sgpr59, $sgpr56_sgpr57, $sgpr50_sgpr51, $sgpr48_sgpr49
+  ; GFX90A-NEXT: bb.50.bb63:
+  ; GFX90A-NEXT:   successors: %bb.52(0x40000000), %bb.51(0x40000000)
+  ; GFX90A-NEXT:   liveins: $vcc, $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr46_sgpr47, $sgpr62_sgpr63, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr58_sgpr59, $sgpr56_sgpr57, $sgpr50_sgpr51, $sgpr48_sgpr49
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $sgpr44_sgpr45 = S_MOV_B64 0
-  ; GFX90A-NEXT:   S_CBRANCH_VCCNZ %bb.51, implicit $vcc
+  ; GFX90A-NEXT:   S_CBRANCH_VCCNZ %bb.52, implicit $vcc
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.50:
-  ; GFX90A-NEXT:   successors: %bb.44(0x80000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr54_sgpr55, $sgpr58_sgpr59, $sgpr56_sgpr57, $sgpr50_sgpr51
+  ; GFX90A-NEXT: bb.51:
+  ; GFX90A-NEXT:   successors: %bb.45(0x80000000)
+  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr58_sgpr59, $sgpr56_sgpr57, $sgpr50_sgpr51
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $sgpr48_sgpr49 = S_MOV_B64 -1
-  ; GFX90A-NEXT:   S_BRANCH %bb.44
+  ; GFX90A-NEXT:   renamable $sgpr52_sgpr53 = COPY renamable $sgpr30_sgpr31
+  ; GFX90A-NEXT:   renamable $sgpr54_sgpr55 = S_MOV_B64 0
+  ; GFX90A-NEXT:   S_BRANCH %bb.45
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.51.bb68:
-  ; GFX90A-NEXT:   successors: %bb.55(0x40000000), %bb.52(0x40000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr46_sgpr47, $sgpr62_sgpr63, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr48_sgpr49, $sgpr54_sgpr55, $sgpr58_sgpr59, $sgpr56_sgpr57, $sgpr50_sgpr51
+  ; GFX90A-NEXT: bb.52.bb68:
+  ; GFX90A-NEXT:   successors: %bb.56(0x40000000), %bb.53(0x40000000)
+  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr46_sgpr47, $sgpr62_sgpr63, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr48_sgpr49, $sgpr58_sgpr59, $sgpr56_sgpr57, $sgpr50_sgpr51
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $vgpr0 = nuw nsw V_LSHLREV_B32_e32 3, $vgpr28, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr1 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
   ; GFX90A-NEXT:   renamable $vcc = S_AND_B64 $exec, killed renamable $sgpr46_sgpr47, implicit-def dead $scc
-  ; GFX90A-NEXT:   S_CBRANCH_VCCNZ %bb.55, implicit $vcc
+  ; GFX90A-NEXT:   S_CBRANCH_VCCNZ %bb.56, implicit $vcc
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.52:
-  ; GFX90A-NEXT:   successors: %bb.45(0x80000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr54_sgpr55, $sgpr58_sgpr59, $sgpr56_sgpr57
+  ; GFX90A-NEXT: bb.53:
+  ; GFX90A-NEXT:   successors: %bb.46(0x80000000)
+  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr58_sgpr59, $sgpr56_sgpr57
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $sgpr50_sgpr51 = S_MOV_B64 -1
   ; GFX90A-NEXT:   renamable $sgpr52_sgpr53 = COPY renamable $sgpr30_sgpr31
+  ; GFX90A-NEXT:   renamable $sgpr54_sgpr55 = S_MOV_B64 0
   ; GFX90A-NEXT:   renamable $vgpr8_vgpr9 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr32_vgpr33 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr6_vgpr7 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   S_BRANCH %bb.45
+  ; GFX90A-NEXT:   S_BRANCH %bb.46
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.53.bb80:
-  ; GFX90A-NEXT:   successors: %bb.60(0x40000000), %bb.54(0x40000000)
+  ; GFX90A-NEXT: bb.54.bb80:
+  ; GFX90A-NEXT:   successors: %bb.61(0x40000000), %bb.55(0x40000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr60_sgpr61, $sgpr62_sgpr63, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr6_vgpr7:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   dead renamable $sgpr17 = S_BFE_U32 renamable $sgpr20, 65560, implicit-def $scc
   ; GFX90A-NEXT:   renamable $vgpr8 = V_ADD_CO_U32_e32 4096, $vgpr0, implicit-def $vcc, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr9, dead renamable $sgpr46_sgpr47 = V_ADDC_U32_e64 0, 0, killed $vcc, 0, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr32_vgpr33 = COPY renamable $vgpr8_vgpr9, implicit $exec
-  ; GFX90A-NEXT:   S_CBRANCH_SCC0 %bb.60, implicit $scc
+  ; GFX90A-NEXT:   S_CBRANCH_SCC0 %bb.61, implicit $scc
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.54:
-  ; GFX90A-NEXT:   successors: %bb.62(0x80000000)
+  ; GFX90A-NEXT: bb.55:
+  ; GFX90A-NEXT:   successors: %bb.63(0x80000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr60_sgpr61, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr6_vgpr7:0x000000000000000F, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $sgpr52_sgpr53 = S_MOV_B64 0
@@ -722,16 +730,17 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $vgpr19 = IMPLICIT_DEF implicit-def $vgpr18
   ; GFX90A-NEXT:   renamable $sgpr46 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr20 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   S_BRANCH %bb.62
+  ; GFX90A-NEXT:   S_BRANCH %bb.63
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.55.bb73:
-  ; GFX90A-NEXT:   successors: %bb.53(0x40000000), %bb.56(0x40000000)
-  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr62_sgpr63, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr50_sgpr51, $sgpr54_sgpr55, $sgpr58_sgpr59
+  ; GFX90A-NEXT: bb.56.bb73:
+  ; GFX90A-NEXT:   successors: %bb.54(0x40000000), %bb.57(0x40000000)
+  ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr62_sgpr63, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003F, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr50_sgpr51, $sgpr58_sgpr59
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $vgpr4 = FLAT_LOAD_UBYTE renamable $vgpr0_vgpr1, 2048, 0, implicit $exec, implicit $flat_scr :: (load (s8) from %ir.i76)
   ; GFX90A-NEXT:   renamable $vgpr6 = V_ADD_CO_U32_e32 2048, $vgpr0, implicit-def $vcc, implicit $exec
   ; GFX90A-NEXT:   renamable $sgpr56_sgpr57 = S_MOV_B64 -1
   ; GFX90A-NEXT:   renamable $sgpr52_sgpr53 = COPY renamable $sgpr30_sgpr31
+  ; GFX90A-NEXT:   renamable $sgpr54_sgpr55 = S_MOV_B64 0
   ; GFX90A-NEXT:   renamable $vgpr7, dead renamable $sgpr46_sgpr47 = V_ADDC_U32_e64 0, 0, killed $vcc, 0, implicit $exec
   ; GFX90A-NEXT:   renamable $vcc = V_CMP_EQ_U16_e64 0, killed $vgpr4, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr8_vgpr9 = IMPLICIT_DEF
@@ -746,17 +755,17 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $sgpr46 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr20 = IMPLICIT_DEF
   ; GFX90A-NEXT:   $sgpr60_sgpr61 = S_AND_SAVEEXEC_B64 $vcc, implicit-def $exec, implicit-def $scc, implicit $exec
-  ; GFX90A-NEXT:   S_CBRANCH_EXECNZ %bb.53, implicit $exec
+  ; GFX90A-NEXT:   S_CBRANCH_EXECNZ %bb.54, implicit $exec
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.56.Flow25:
-  ; GFX90A-NEXT:   successors: %bb.46(0x80000000)
+  ; GFX90A-NEXT: bb.57.Flow25:
+  ; GFX90A-NEXT:   successors: %bb.47(0x80000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr23, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr46_sgpr47:0x0000000000000003, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr56_sgpr57, $sgpr58_sgpr59, $sgpr60_sgpr61, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr10_vgpr11:0x0000000000000003, $vgpr12_vgpr13:0x0000000000000003, $vgpr14_vgpr15:0x0000000000000003, $vgpr16_vgpr17:0x0000000000000003, $vgpr18_vgpr19:0x000000000000000F, $vgpr20_vgpr21:0x0000000000000003, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr60_sgpr61, implicit-def dead $scc
-  ; GFX90A-NEXT:   S_BRANCH %bb.46
+  ; GFX90A-NEXT:   S_BRANCH %bb.47
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.57.bb90:
-  ; GFX90A-NEXT:   successors: %bb.61(0x80000000)
+  ; GFX90A-NEXT: bb.58.bb90:
+  ; GFX90A-NEXT:   successors: %bb.62(0x80000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr54_sgpr55, $sgpr60_sgpr61, $sgpr62_sgpr63, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   dead renamable $sgpr46_sgpr47 = S_AND_B64 killed renamable $sgpr62_sgpr63, $exec, implicit-def $scc
@@ -775,9 +784,9 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $sgpr52_sgpr53 = S_XOR_B64 $exec, -1, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr64_sgpr65 = S_OR_B64 renamable $sgpr30_sgpr31, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $vgpr20 = COPY renamable $vgpr10, implicit $exec
-  ; GFX90A-NEXT:   S_BRANCH %bb.61
+  ; GFX90A-NEXT:   S_BRANCH %bb.62
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.58:
+  ; GFX90A-NEXT: bb.59:
   ; GFX90A-NEXT:   successors: %bb.7(0x80000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000F, $vgpr20_vgpr21:0x000000000000000F, $vgpr22_vgpr23:0x000000000000000F, $vgpr24_vgpr25:0x000000000000000F, $vgpr26_vgpr27:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
@@ -813,7 +822,7 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $sgpr34_sgpr35 = S_MOV_B64 0
   ; GFX90A-NEXT:   S_BRANCH %bb.7
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.59.bb105:
+  ; GFX90A-NEXT: bb.60.bb105:
   ; GFX90A-NEXT:   successors: %bb.3(0x80000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr30, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr28_sgpr29, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr20_sgpr21_sgpr22_sgpr23:0x00000000000000FF, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000FF, $vgpr2_vgpr3:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
@@ -830,8 +839,8 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $sgpr30_sgpr31 = S_MOV_B64 -1
   ; GFX90A-NEXT:   S_BRANCH %bb.3
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.60.bb85:
-  ; GFX90A-NEXT:   successors: %bb.57(0x40000000), %bb.61(0x40000000)
+  ; GFX90A-NEXT: bb.61.bb85:
+  ; GFX90A-NEXT:   successors: %bb.58(0x40000000), %bb.62(0x40000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39:0x000000000000000F, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr60_sgpr61, $sgpr62_sgpr63, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $vgpr8 = V_OR_B32_e32 1, $vgpr8, implicit $exec
@@ -849,17 +858,17 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $sgpr46 = IMPLICIT_DEF
   ; GFX90A-NEXT:   renamable $vgpr20 = IMPLICIT_DEF
   ; GFX90A-NEXT:   $sgpr54_sgpr55 = S_AND_SAVEEXEC_B64 $vcc, implicit-def $exec, implicit-def $scc, implicit $exec
-  ; GFX90A-NEXT:   S_CBRANCH_EXECNZ %bb.57, implicit $exec
+  ; GFX90A-NEXT:   S_CBRANCH_EXECNZ %bb.58, implicit $exec
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.61.Flow27:
-  ; GFX90A-NEXT:   successors: %bb.62(0x80000000)
+  ; GFX90A-NEXT: bb.62.Flow27:
+  ; GFX90A-NEXT:   successors: %bb.63(0x80000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr23, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr46_sgpr47:0x0000000000000003, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr60_sgpr61, $sgpr64_sgpr65, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr10_vgpr11:0x0000000000000003, $vgpr12_vgpr13:0x0000000000000003, $vgpr14_vgpr15:0x0000000000000003, $vgpr16_vgpr17:0x0000000000000003, $vgpr18_vgpr19:0x000000000000000F, $vgpr20_vgpr21:0x0000000000000003, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr54_sgpr55, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr38_sgpr39 = S_MOV_B64 0
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.62.Flow26:
-  ; GFX90A-NEXT:   successors: %bb.56(0x80000000)
+  ; GFX90A-NEXT: bb.63.Flow26:
+  ; GFX90A-NEXT:   successors: %bb.57(0x80000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr23, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr30_sgpr31, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr46_sgpr47:0x0000000000000003, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr60_sgpr61, $sgpr64_sgpr65, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr10_vgpr11:0x0000000000000003, $vgpr12_vgpr13:0x0000000000000003, $vgpr14_vgpr15:0x0000000000000003, $vgpr16_vgpr17:0x0000000000000003, $vgpr18_vgpr19:0x000000000000000F, $vgpr20_vgpr21:0x0000000000000003, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $sgpr56_sgpr57 = S_XOR_B64 $exec, -1, implicit-def dead $scc
@@ -868,25 +877,25 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $sgpr38_sgpr39 = S_ANDN2_B64 renamable $sgpr30_sgpr31, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr52_sgpr53 = S_AND_B64 killed renamable $sgpr64_sgpr65, $exec, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr52_sgpr53 = S_OR_B64 killed renamable $sgpr38_sgpr39, killed renamable $sgpr52_sgpr53, implicit-def dead $scc
-  ; GFX90A-NEXT:   S_BRANCH %bb.56
+  ; GFX90A-NEXT:   S_BRANCH %bb.57
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.63.bb140:
-  ; GFX90A-NEXT:   successors: %bb.64(0x40000000), %bb.67(0x40000000)
+  ; GFX90A-NEXT: bb.64.bb140:
+  ; GFX90A-NEXT:   successors: %bb.65(0x40000000), %bb.68(0x40000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr23, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr28_sgpr29, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr64_sgpr65, $sgpr66_sgpr67, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000F, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr10_vgpr11:0x0000000000000003, $vgpr12_vgpr13:0x0000000000000003, $vgpr14_vgpr15:0x0000000000000003, $vgpr16_vgpr17:0x0000000000000003, $vgpr18_vgpr19:0x000000000000000F, $vgpr20_vgpr21:0x000000000000000F, $vgpr22_vgpr23:0x000000000000000F, $vgpr24_vgpr25:0x000000000000000F, $vgpr26_vgpr27:0x000000000000000F, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   dead renamable $sgpr28_sgpr29 = S_AND_B64 killed renamable $sgpr28_sgpr29, $exec, implicit-def $scc
-  ; GFX90A-NEXT:   S_CBRANCH_SCC0 %bb.67, implicit $scc
+  ; GFX90A-NEXT:   S_CBRANCH_SCC0 %bb.68, implicit $scc
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.64.bb159:
-  ; GFX90A-NEXT:   successors: %bb.66(0x40000000), %bb.65(0x40000000)
+  ; GFX90A-NEXT: bb.65.bb159:
+  ; GFX90A-NEXT:   successors: %bb.67(0x40000000), %bb.66(0x40000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr23, $vgpr28, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr64_sgpr65, $sgpr66_sgpr67, $vgpr0_vgpr1:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr12_vgpr13:0x0000000000000003, $vgpr14_vgpr15:0x0000000000000003, $vgpr18_vgpr19:0x000000000000000C, $vgpr20_vgpr21:0x000000000000000C, $vgpr22_vgpr23:0x000000000000000C, $vgpr24_vgpr25:0x000000000000000C, $vgpr26_vgpr27:0x000000000000000C, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $vcc = V_CMP_NE_U32_e64 0, killed $vgpr28, implicit $exec
   ; GFX90A-NEXT:   $sgpr12_sgpr13 = S_AND_SAVEEXEC_B64 $vcc, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX90A-NEXT:   renamable $sgpr12_sgpr13 = S_XOR_B64 $exec, killed renamable $sgpr12_sgpr13, implicit-def dead $scc
-  ; GFX90A-NEXT:   S_CBRANCH_EXECNZ %bb.66, implicit $exec
+  ; GFX90A-NEXT:   S_CBRANCH_EXECNZ %bb.67, implicit $exec
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.65.Flow:
+  ; GFX90A-NEXT: bb.66.Flow:
   ; GFX90A-NEXT:   successors: %bb.8(0x80000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr64_sgpr65, $sgpr66_sgpr67, $vgpr0_vgpr1:0x000000000000000F, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
@@ -895,8 +904,8 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $sgpr38_sgpr39 = COPY $exec
   ; GFX90A-NEXT:   S_BRANCH %bb.8
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.66.bb161:
-  ; GFX90A-NEXT:   successors: %bb.65(0x80000000)
+  ; GFX90A-NEXT: bb.67.bb161:
+  ; GFX90A-NEXT:   successors: %bb.66(0x80000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr23, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr64_sgpr65, $sgpr66_sgpr67, $vgpr0_vgpr1:0x000000000000000F, $vgpr4_vgpr5:0x000000000000000C, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr12_vgpr13:0x0000000000000003, $vgpr14_vgpr15:0x0000000000000003, $vgpr18_vgpr19:0x000000000000000C, $vgpr20_vgpr21:0x000000000000000C, $vgpr22_vgpr23:0x000000000000000C, $vgpr24_vgpr25:0x000000000000000C, $vgpr26_vgpr27:0x000000000000000C, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $vgpr2 = V_OR_B32_e32 killed $vgpr23, killed $vgpr25, implicit $exec
@@ -914,10 +923,10 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   renamable $vgpr2 = V_OR_B32_e32 killed $vgpr2, killed $vgpr12, implicit $exec
   ; GFX90A-NEXT:   renamable $vgpr3 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
   ; GFX90A-NEXT:   DS_WRITE2_B32_gfx9 killed renamable $vgpr3, killed renamable $vgpr2, renamable $vgpr3, 0, 1, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, align 4, addrspace 3)
-  ; GFX90A-NEXT:   S_BRANCH %bb.65
+  ; GFX90A-NEXT:   S_BRANCH %bb.66
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.67.bb174:
-  ; GFX90A-NEXT:   successors: %bb.68(0x40000000), %bb.69(0x40000000)
+  ; GFX90A-NEXT: bb.68.bb174:
+  ; GFX90A-NEXT:   successors: %bb.69(0x40000000), %bb.70(0x40000000)
   ; GFX90A-NEXT:   liveins: $sgpr14, $sgpr15, $sgpr16, $vgpr31, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9:0x000000000000000F, $sgpr10_sgpr11, $sgpr12_sgpr13, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr64_sgpr65, $sgpr66_sgpr67, $sgpr20_sgpr21_sgpr22_sgpr23:0x000000000000003C, $sgpr24_sgpr25_sgpr26_sgpr27:0x00000000000000F0, $vgpr0_vgpr1:0x000000000000000F, $vgpr2_vgpr3:0x000000000000000F, $vgpr4_vgpr5:0x0000000000000003, $vgpr6_vgpr7:0x000000000000000F, $vgpr8_vgpr9:0x000000000000000F, $vgpr10_vgpr11:0x0000000000000003, $vgpr16_vgpr17:0x0000000000000003, $vgpr18_vgpr19:0x0000000000000003, $vgpr20_vgpr21:0x0000000000000003, $vgpr22_vgpr23:0x0000000000000003, $vgpr24_vgpr25:0x0000000000000003, $vgpr26_vgpr27:0x0000000000000003, $vgpr32_vgpr33:0x000000000000000F, $vgpr40_vgpr41:0x000000000000000F, $vgpr42_vgpr43:0x000000000000000F, $vgpr44_vgpr45:0x000000000000000F, $vgpr46_vgpr47:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F, $vgpr62_vgpr63:0x000000000000000F, $sgpr0_sgpr1_sgpr2_sgpr3
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $vgpr12 = V_OR_B32_e32 1, killed $vgpr26, implicit $exec
@@ -930,9 +939,9 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   dead renamable $sgpr28_sgpr29 = S_AND_B64 renamable $sgpr12_sgpr13, $exec, implicit-def $scc
   ; GFX90A-NEXT:   renamable $vgpr18 = V_CNDMASK_B32_e64 0, 0, 0, $vgpr4, killed $sgpr12_sgpr13, implicit $exec
   ; GFX90A-NEXT:   renamable $sgpr38_sgpr39 = COPY $exec
-  ; GFX90A-NEXT:   S_CBRANCH_SCC0 %bb.69, implicit $scc
+  ; GFX90A-NEXT:   S_CBRANCH_SCC0 %bb.70, implicit $scc
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.68.bb186:
+  ; GFX90A-NEXT: bb.69.bb186:
   ; GFX90A-NEXT:   successors: %bb.8(0x80000000)
   ; GFX90A-NEXT:   liveins: $sgpr8, $sgpr9, $sgpr14, $sgpr15, $sgpr16, $sgpr21, $sgpr22, $sgpr26, $sgpr27, $vgpr0, $vgpr1, $vgpr4, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr12, $vgpr14, $vgpr18, $vgpr20, $vgpr22, $vgpr24, $vgpr26, $vgpr31, $vgpr32, $vgpr33, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr10_sgpr11, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr64_sgpr65, $sgpr66_sgpr67, $vgpr2_vgpr3
   ; GFX90A-NEXT: {{  $}}
@@ -962,7 +971,7 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed renamable $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(5) null`, align 8, addrspace 5)
   ; GFX90A-NEXT:   S_BRANCH %bb.8
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.69.bb196:
+  ; GFX90A-NEXT: bb.70.bb196:
   ; GFX90A-NEXT:   successors: %bb.8(0x80000000)
   ; GFX90A-NEXT:   liveins: $sgpr8, $sgpr9, $sgpr14, $sgpr15, $sgpr16, $vgpr0, $vgpr1, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr16, $vgpr18, $vgpr31, $vgpr32, $vgpr33, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr10_sgpr11, $sgpr18_sgpr19, $sgpr24_sgpr25, $sgpr34_sgpr35, $sgpr36_sgpr37, $sgpr38_sgpr39, $sgpr40_sgpr41, $sgpr42_sgpr43, $sgpr44_sgpr45, $sgpr48_sgpr49, $sgpr50_sgpr51, $sgpr52_sgpr53, $sgpr54_sgpr55, $sgpr64_sgpr65, $sgpr66_sgpr67
   ; GFX90A-NEXT: {{  $}}

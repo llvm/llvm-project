@@ -3975,10 +3975,10 @@ define i32 @bextr64_32_b3(i64 %val, i64 %numskipbits, i8 %numlowbits) nounwind {
 ; X64-NOBMI-NEXT:    movq %rsi, %rcx
 ; X64-NOBMI-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NOBMI-NEXT:    shrq %cl, %rdi
-; X64-NOBMI-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
 ; X64-NOBMI-NEXT:    movl $4294967295, %esi # imm = 0xFFFFFFFF
+; X64-NOBMI-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
 ; X64-NOBMI-NEXT:    movl %edx, %ecx
-; X64-NOBMI-NEXT:    shlq %cl, %rsi
+; X64-NOBMI-NEXT:    shlq %cl, %rax
 ; X64-NOBMI-NEXT:    xorl %esi, %eax
 ; X64-NOBMI-NEXT:    andl %edi, %eax
 ; X64-NOBMI-NEXT:    # kill: def $eax killed $eax killed $rax

@@ -269,31 +269,31 @@ define void @store_i16_stride3_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; SSE-NEXT:    shrq $32, %rdx
 ; SSE-NEXT:    movd %edx, %xmm1
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; SSE-NEXT:    movd %eax, %xmm2
-; SSE-NEXT:    movdqa %xmm2, %xmm3
+; SSE-NEXT:    movd %eax, %xmm0
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    psrld $16, %xmm2
+; SSE-NEXT:    movd %esi, %xmm3
+; SSE-NEXT:    movd %edi, %xmm4
+; SSE-NEXT:    movdqa %xmm4, %xmm5
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1],xmm5[2],xmm3[2],xmm5[3],xmm3[3]
 ; SSE-NEXT:    psrld $16, %xmm3
-; SSE-NEXT:    movd %esi, %xmm4
-; SSE-NEXT:    movd %edi, %xmm5
-; SSE-NEXT:    movdqa %xmm5, %xmm0
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
 ; SSE-NEXT:    psrld $16, %xmm4
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
-; SSE-NEXT:    psrld $16, %xmm5
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm4[0]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm0[0],xmm5[1],xmm0[1]
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm5 = xmm5[0],xmm3[0]
 ; SSE-NEXT:    shrq $48, %rdi
 ; SSE-NEXT:    movq %rax, %rdx
 ; SSE-NEXT:    shrq $32, %rdx
-; SSE-NEXT:    movd %edx, %xmm1
-; SSE-NEXT:    pinsrw $1, %edi, %xmm1
+; SSE-NEXT:    movd %edx, %xmm0
+; SSE-NEXT:    pinsrw $1, %edi, %xmm0
 ; SSE-NEXT:    shrq $48, %rsi
-; SSE-NEXT:    pinsrw $2, %esi, %xmm1
+; SSE-NEXT:    pinsrw $2, %esi, %xmm0
 ; SSE-NEXT:    shrq $48, %rax
-; SSE-NEXT:    pinsrw $3, %eax, %xmm1
-; SSE-NEXT:    movq %xmm1, 16(%rcx)
-; SSE-NEXT:    movdqa %xmm0, (%rcx)
+; SSE-NEXT:    pinsrw $3, %eax, %xmm0
+; SSE-NEXT:    movq %xmm0, 16(%rcx)
+; SSE-NEXT:    movdqa %xmm5, (%rcx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: store_i16_stride3_vf4:

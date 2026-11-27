@@ -320,11 +320,11 @@ define <8 x i16> @pext_v8i16(<8 x i16> %val, <8 x i16> %mask) nounwind {
 ; AVX2-NEXT:    vpclmulqdq $0, %ymm3, %ymm7, %ymm7
 ; AVX2-NEXT:    vpunpckldq {{.*#+}} ymm4 = ymm5[0],ymm4[0],ymm5[1],ymm4[1],ymm5[4],ymm4[4],ymm5[5],ymm4[5]
 ; AVX2-NEXT:    vpunpckldq {{.*#+}} ymm5 = ymm7[0],ymm8[0],ymm7[1],ymm8[1],ymm7[4],ymm8[4],ymm7[5],ymm8[5]
-; AVX2-NEXT:    vpunpckldq {{.*#+}} ymm4 = ymm4[0],ymm5[0],ymm4[1],ymm5[1],ymm4[4],ymm5[4],ymm4[5],ymm5[5]
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm5 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
-; AVX2-NEXT:    vpshufb %ymm5, %ymm4, %ymm4
-; AVX2-NEXT:    vpermq {{.*#+}} ymm4 = ymm4[0,2,2,3]
-; AVX2-NEXT:    vpandn %xmm6, %xmm4, %xmm7
+; AVX2-NEXT:    vpunpckldq {{.*#+}} ymm5 = ymm4[0],ymm5[0],ymm4[1],ymm5[1],ymm4[4],ymm5[4],ymm4[5],ymm5[5]
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm4 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15,16,17,20,21,24,25,28,29,24,25,28,29,28,29,30,31]
+; AVX2-NEXT:    vpshufb %ymm4, %ymm5, %ymm5
+; AVX2-NEXT:    vpermq {{.*#+}} ymm5 = ymm5[0,2,2,3]
+; AVX2-NEXT:    vpandn %xmm6, %xmm5, %xmm7
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm6 = xmm7[0],zero,xmm7[1],zero,xmm7[2],zero,xmm7[3],zero,xmm7[4],zero,xmm7[5],zero,xmm7[6],zero,xmm7[7],zero
 ; AVX2-NEXT:    vpclmulqdq $17, %ymm2, %ymm6, %ymm8
 ; AVX2-NEXT:    vpclmulqdq $0, %ymm2, %ymm6, %ymm9
@@ -334,7 +334,7 @@ define <8 x i16> @pext_v8i16(<8 x i16> %val, <8 x i16> %mask) nounwind {
 ; AVX2-NEXT:    vpclmulqdq $0, %ymm3, %ymm6, %ymm6
 ; AVX2-NEXT:    vpunpckldq {{.*#+}} ymm6 = ymm6[0],ymm9[0],ymm6[1],ymm9[1],ymm6[4],ymm9[4],ymm6[5],ymm9[5]
 ; AVX2-NEXT:    vpunpckldq {{.*#+}} ymm6 = ymm8[0],ymm6[0],ymm8[1],ymm6[1],ymm8[4],ymm6[4],ymm8[5],ymm6[5]
-; AVX2-NEXT:    vpshufb %ymm5, %ymm6, %ymm6
+; AVX2-NEXT:    vpshufb %ymm4, %ymm6, %ymm6
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm6 = ymm6[0,2,2,3]
 ; AVX2-NEXT:    vpandn %xmm7, %xmm6, %xmm7
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm8 = xmm7[0],zero,xmm7[1],zero,xmm7[2],zero,xmm7[3],zero,xmm7[4],zero,xmm7[5],zero,xmm7[6],zero,xmm7[7],zero
@@ -346,7 +346,7 @@ define <8 x i16> @pext_v8i16(<8 x i16> %val, <8 x i16> %mask) nounwind {
 ; AVX2-NEXT:    vpclmulqdq $0, %ymm3, %ymm8, %ymm8
 ; AVX2-NEXT:    vpunpckldq {{.*#+}} ymm8 = ymm8[0],ymm10[0],ymm8[1],ymm10[1],ymm8[4],ymm10[4],ymm8[5],ymm10[5]
 ; AVX2-NEXT:    vpunpckldq {{.*#+}} ymm8 = ymm9[0],ymm8[0],ymm9[1],ymm8[1],ymm9[4],ymm8[4],ymm9[5],ymm8[5]
-; AVX2-NEXT:    vpshufb %ymm5, %ymm8, %ymm8
+; AVX2-NEXT:    vpshufb %ymm4, %ymm8, %ymm8
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm8 = ymm8[0,2,2,3]
 ; AVX2-NEXT:    vpandn %xmm7, %xmm8, %xmm7
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm7 = xmm7[0],zero,xmm7[1],zero,xmm7[2],zero,xmm7[3],zero,xmm7[4],zero,xmm7[5],zero,xmm7[6],zero,xmm7[7],zero
@@ -358,9 +358,9 @@ define <8 x i16> @pext_v8i16(<8 x i16> %val, <8 x i16> %mask) nounwind {
 ; AVX2-NEXT:    vpunpckldq {{.*#+}} ymm2 = ymm2[0],ymm9[0],ymm2[1],ymm9[1],ymm2[4],ymm9[4],ymm2[5],ymm9[5]
 ; AVX2-NEXT:    vpunpckldq {{.*#+}} ymm3 = ymm3[0],ymm10[0],ymm3[1],ymm10[1],ymm3[4],ymm10[4],ymm3[5],ymm10[5]
 ; AVX2-NEXT:    vpunpckldq {{.*#+}} ymm2 = ymm2[0],ymm3[0],ymm2[1],ymm3[1],ymm2[4],ymm3[4],ymm2[5],ymm3[5]
-; AVX2-NEXT:    vpshufb %ymm5, %ymm2, %ymm2
+; AVX2-NEXT:    vpshufb %ymm4, %ymm2, %ymm2
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[0,2,2,3]
-; AVX2-NEXT:    vpand %xmm1, %xmm4, %xmm3
+; AVX2-NEXT:    vpand %xmm1, %xmm5, %xmm3
 ; AVX2-NEXT:    vpxor %xmm3, %xmm1, %xmm4
 ; AVX2-NEXT:    vpsrlw $1, %xmm3, %xmm5
 ; AVX2-NEXT:    vpor %xmm5, %xmm4, %xmm4

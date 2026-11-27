@@ -415,23 +415,41 @@ define <8 x i32> @partial_reduce_smla_i8_v8i32(<8 x i32> %acc, <32 x i8> %a, <32
 ; AVXVNNIINT8-NEXT:    vpdpbssd %ymm2, %ymm1, %ymm0
 ; AVXVNNIINT8-NEXT:    retq
 ;
-; AVX512VNNI-LABEL: partial_reduce_smla_i8_v8i32:
-; AVX512VNNI:       # %bb.0:
-; AVX512VNNI-NEXT:    vpmovsxbd %xmm1, %zmm3
-; AVX512VNNI-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; AVX512VNNI-NEXT:    vpmovsxbd %xmm1, %zmm1
-; AVX512VNNI-NEXT:    vpmovsxbd %xmm2, %zmm4
-; AVX512VNNI-NEXT:    vpmulld %zmm4, %zmm3, %zmm3
-; AVX512VNNI-NEXT:    vextracti128 $1, %ymm2, %xmm2
-; AVX512VNNI-NEXT:    vpmovsxbd %xmm2, %zmm2
-; AVX512VNNI-NEXT:    vpmulld %zmm2, %zmm1, %zmm1
-; AVX512VNNI-NEXT:    vpaddd %ymm3, %ymm0, %ymm0
-; AVX512VNNI-NEXT:    vextracti64x4 $1, %zmm3, %ymm2
-; AVX512VNNI-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
-; AVX512VNNI-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
-; AVX512VNNI-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
-; AVX512VNNI-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
-; AVX512VNNI-NEXT:    retq
+; AVX512VNNI-NOVLX-LABEL: partial_reduce_smla_i8_v8i32:
+; AVX512VNNI-NOVLX:       # %bb.0:
+; AVX512VNNI-NOVLX-NEXT:    vpmovsxbd %xmm1, %zmm3
+; AVX512VNNI-NOVLX-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX512VNNI-NOVLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; AVX512VNNI-NOVLX-NEXT:    vpmovsxbd %xmm2, %zmm4
+; AVX512VNNI-NOVLX-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX512VNNI-NOVLX-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VNNI-NOVLX-NEXT:    vpmulld %zmm2, %zmm1, %zmm1
+; AVX512VNNI-NOVLX-NEXT:    vpmulld %zmm4, %zmm3, %zmm2
+; AVX512VNNI-NOVLX-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
+; AVX512VNNI-NOVLX-NEXT:    vextracti64x4 $1, %zmm2, %ymm2
+; AVX512VNNI-NOVLX-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; AVX512VNNI-NOVLX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX512VNNI-NOVLX-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
+; AVX512VNNI-NOVLX-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; AVX512VNNI-NOVLX-NEXT:    retq
+;
+; AVX512VNNI-VLX-LABEL: partial_reduce_smla_i8_v8i32:
+; AVX512VNNI-VLX:       # %bb.0:
+; AVX512VNNI-VLX-NEXT:    vpmovsxbd %xmm1, %zmm3
+; AVX512VNNI-VLX-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX512VNNI-VLX-NEXT:    vpmovsxbd %xmm1, %zmm1
+; AVX512VNNI-VLX-NEXT:    vpmovsxbd %xmm2, %zmm4
+; AVX512VNNI-VLX-NEXT:    vpmulld %zmm4, %zmm3, %zmm3
+; AVX512VNNI-VLX-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX512VNNI-VLX-NEXT:    vpmovsxbd %xmm2, %zmm2
+; AVX512VNNI-VLX-NEXT:    vpmulld %zmm2, %zmm1, %zmm1
+; AVX512VNNI-VLX-NEXT:    vpaddd %ymm3, %ymm0, %ymm0
+; AVX512VNNI-VLX-NEXT:    vextracti64x4 $1, %zmm3, %ymm2
+; AVX512VNNI-VLX-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; AVX512VNNI-VLX-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX512VNNI-VLX-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
+; AVX512VNNI-VLX-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; AVX512VNNI-VLX-NEXT:    retq
 ;
 ; AVX512-VEXVNNI-LABEL: partial_reduce_smla_i8_v8i32:
 ; AVX512-VEXVNNI:       # %bb.0:
@@ -676,8 +694,8 @@ define <16 x i32> @partial_reduce_smla_i8_v16i32(<16 x i32> %acc, <64 x i8> %a, 
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm7 = xmm9[1,1,1,1]
 ; AVX1-NEXT:    vpmovsxbd %xmm7, %xmm13
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm7 = xmm9[3,3,3,3]
-; AVX1-NEXT:    vpmovsxbd %xmm7, %xmm8
-; AVX1-NEXT:    vpmovsxbd %xmm2, %xmm7
+; AVX1-NEXT:    vpmovsxbd %xmm7, %xmm7
+; AVX1-NEXT:    vpmovsxbd %xmm2, %xmm8
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxbd %xmm2, %xmm12
 ; AVX1-NEXT:    vpmovsxbd %xmm9, %xmm11
@@ -698,12 +716,12 @@ define <16 x i32> @partial_reduce_smla_i8_v16i32(<16 x i32> %acc, <64 x i8> %a, 
 ; AVX1-NEXT:    vpmulld %xmm15, %xmm13, %xmm13
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm15 = xmm14[3,3,3,3]
 ; AVX1-NEXT:    vpmovsxbd %xmm15, %xmm15
-; AVX1-NEXT:    vpmulld %xmm15, %xmm8, %xmm8
+; AVX1-NEXT:    vpmulld %xmm15, %xmm7, %xmm7
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm15 = xmm3[3,3,3,3]
 ; AVX1-NEXT:    vpmovsxbd %xmm15, %xmm15
-; AVX1-NEXT:    vpaddd %xmm8, %xmm13, %xmm8
+; AVX1-NEXT:    vpaddd %xmm7, %xmm13, %xmm7
 ; AVX1-NEXT:    vpmovsxbd %xmm4, %xmm13
-; AVX1-NEXT:    vpmulld %xmm13, %xmm7, %xmm7
+; AVX1-NEXT:    vpmulld %xmm13, %xmm8, %xmm8
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm13
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm4[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxbd %xmm4, %xmm4
@@ -750,8 +768,8 @@ define <16 x i32> @partial_reduce_smla_i8_v16i32(<16 x i32> %acc, <64 x i8> %a, 
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm13
 ; AVX1-NEXT:    vpaddd {{[-0-9]+}}(%r{{[sb]}}p), %xmm13, %xmm13 # 16-byte Folded Reload
 ; AVX1-NEXT:    vpaddd %xmm6, %xmm13, %xmm6
-; AVX1-NEXT:    vpaddd %xmm6, %xmm8, %xmm6
-; AVX1-NEXT:    vpaddd %xmm7, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm7, %xmm6, %xmm6
+; AVX1-NEXT:    vpaddd %xmm0, %xmm8, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm11, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm10, %xmm0

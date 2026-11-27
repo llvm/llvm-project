@@ -2266,11 +2266,8 @@ define i8 @to_f8e5m2_from_bf16(bfloat %x) {
 define i8 @to_f8e5m2_from_f64(double %x) {
 ; CHECK-LABEL: to_f8e5m2_from_f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    subq $32, %rsp
+; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    callq frexp@PLT
@@ -2299,11 +2296,10 @@ define i8 @to_f8e5m2_from_f64(double %x) {
 ; CHECK-NEXT:    movq %r9, %r10
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    shrq %cl, %r10
-; CHECK-NEXT:    movl %r10d, %ebx
-; CHECK-NEXT:    orl %r11d, %ebx
+; CHECK-NEXT:    orl %r10d, %r11d
 ; CHECK-NEXT:    movl %edx, %ecx
 ; CHECK-NEXT:    shrq %cl, %r9
-; CHECK-NEXT:    andl %ebx, %r9d
+; CHECK-NEXT:    andl %r11d, %r9d
 ; CHECK-NEXT:    andl $1, %r9d
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpq $1, %rax
@@ -2365,9 +2361,7 @@ define i8 @to_f8e5m2_from_f64(double %x) {
 ; CHECK-NEXT:    movl $126, %eax
 ; CHECK-NEXT:    cmovnpq %rdx, %rax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $rax
-; CHECK-NEXT:    addq $32, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f64(double %x, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)

@@ -31,17 +31,18 @@ define arm_aapcs_vfpcc <4 x half> @complex_add_v4f16(<4 x half> %a, <4 x half> %
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovx.f16 s12, s4
 ; CHECK-NEXT:    vmovx.f16 s2, s5
-; CHECK-NEXT:    vmovx.f16 s8, s0
+; CHECK-NEXT:    vmov.f32 s8, s0
 ; CHECK-NEXT:    vins.f16 s12, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s1
-; CHECK-NEXT:    vins.f16 s0, s1
-; CHECK-NEXT:    vins.f16 s8, s2
+; CHECK-NEXT:    vmovx.f16 s0, s0
+; CHECK-NEXT:    vins.f16 s8, s1
+; CHECK-NEXT:    vins.f16 s0, s2
 ; CHECK-NEXT:    vins.f16 s4, s5
-; CHECK-NEXT:    vadd.f16 q3, q3, q0
-; CHECK-NEXT:    vsub.f16 q0, q1, q2
+; CHECK-NEXT:    vadd.f16 q2, q3, q2
+; CHECK-NEXT:    vsub.f16 q0, q1, q0
 ; CHECK-NEXT:    vmovx.f16 s1, s0
-; CHECK-NEXT:    vmovx.f16 s2, s12
-; CHECK-NEXT:    vins.f16 s0, s12
+; CHECK-NEXT:    vmovx.f16 s2, s8
+; CHECK-NEXT:    vins.f16 s0, s8
 ; CHECK-NEXT:    vins.f16 s1, s2
 ; CHECK-NEXT:    bx lr
 entry:

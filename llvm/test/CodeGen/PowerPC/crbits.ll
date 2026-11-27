@@ -361,15 +361,15 @@ define zeroext i32 @exttest8() #0 {
 ; CHECK-NO-ISEL-LABEL: exttest8:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    ld 3, 0(3)
-; CHECK-NO-ISEL-NEXT:    li 4, 0
 ; CHECK-NO-ISEL-NEXT:    subfic 3, 3, 80
-; CHECK-NO-ISEL-NEXT:    rldicl 3, 3, 63, 1
-; CHECK-NO-ISEL-NEXT:    cmplwi 3, 80
+; CHECK-NO-ISEL-NEXT:    rldicl 4, 3, 63, 1
+; CHECK-NO-ISEL-NEXT:    li 3, 0
+; CHECK-NO-ISEL-NEXT:    cmplwi 4, 80
 ; CHECK-NO-ISEL-NEXT:    bgt 0, .LBB8_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    mr 4, 3
+; CHECK-NO-ISEL-NEXT:    mr 3, 4
 ; CHECK-NO-ISEL-NEXT:  .LBB8_2: # %entry
-; CHECK-NO-ISEL-NEXT:    clrldi 3, 4, 32
+; CHECK-NO-ISEL-NEXT:    clrldi 3, 3, 32
 ; CHECK-NO-ISEL-NEXT:    blr
 ;
 ; CHECK-P10-LABEL: exttest8:

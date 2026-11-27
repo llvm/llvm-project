@@ -14,13 +14,19 @@ define amdgpu_kernel void @s_uaddo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s4, s0
-; SI-NEXT:    s_add_u32 s0, s2, s8
+; SI-NEXT:    s_add_u32 s2, s2, s8
 ; SI-NEXT:    s_mov_b32 s5, s1
-; SI-NEXT:    s_addc_u32 s1, s3, s9
-; SI-NEXT:    s_addc_u32 s0, s0, 0
-; SI-NEXT:    s_addc_u32 s1, s1, 0
-; SI-NEXT:    v_mov_b32_e32 v0, s0
-; SI-NEXT:    v_mov_b32_e32 v1, s1
+; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; SI-NEXT:    s_or_b32 s0, s0, s1
+; SI-NEXT:    s_addc_u32 s3, s3, s9
+; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; SI-NEXT:    s_or_b32 s0, s0, s1
+; SI-NEXT:    s_addc_u32 s2, s2, 0
+; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; SI-NEXT:    s_or_b32 s0, s0, s1
+; SI-NEXT:    s_addc_u32 s0, s3, 0
+; SI-NEXT:    v_mov_b32_e32 v0, s2
+; SI-NEXT:    v_mov_b32_e32 v1, s0
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -452,6 +458,8 @@ define amdgpu_kernel void @s_uaddo_i64(ptr addrspace(1) %out, ptr addrspace(1) %
 ; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_add_u32 s6, s4, s6
+; SI-NEXT:    s_cselect_b64 s[12:13], -1, 0
+; SI-NEXT:    s_or_b32 s4, s12, s13
 ; SI-NEXT:    s_addc_u32 s7, s5, s7
 ; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; SI-NEXT:    s_and_b64 s[4:5], s[4:5], exec

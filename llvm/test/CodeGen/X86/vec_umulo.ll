@@ -2277,17 +2277,17 @@ define <64 x i32> @umulo_v64i8(<64 x i8> %a0, <64 x i8> %a1, ptr %p2) nounwind {
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
 ; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero,xmm3[8],zero,xmm3[9],zero,xmm3[10],zero,xmm3[11],zero,xmm3[12],zero,xmm3[13],zero,xmm3[14],zero,xmm3[15],zero
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
-; AVX512F-NEXT:    vextracti128 $1, %ymm5, %xmm4
-; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm4 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero,xmm4[4],zero,xmm4[5],zero,xmm4[6],zero,xmm4[7],zero,xmm4[8],zero,xmm4[9],zero,xmm4[10],zero,xmm4[11],zero,xmm4[12],zero,xmm4[13],zero,xmm4[14],zero,xmm4[15],zero
-; AVX512F-NEXT:    vpmullw %ymm3, %ymm4, %ymm4
-; AVX512F-NEXT:    vpsrlw $8, %ymm4, %ymm3
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm4
+; AVX512F-NEXT:    vextracti128 $1, %ymm4, %xmm5
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm5 = xmm5[0],zero,xmm5[1],zero,xmm5[2],zero,xmm5[3],zero,xmm5[4],zero,xmm5[5],zero,xmm5[6],zero,xmm5[7],zero,xmm5[8],zero,xmm5[9],zero,xmm5[10],zero,xmm5[11],zero,xmm5[12],zero,xmm5[13],zero,xmm5[14],zero,xmm5[15],zero
+; AVX512F-NEXT:    vpmullw %ymm3, %ymm5, %ymm5
+; AVX512F-NEXT:    vpsrlw $8, %ymm5, %ymm3
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm3 = ymm3[0],zero,ymm3[1],zero,ymm3[2],zero,ymm3[3],zero,ymm3[4],zero,ymm3[5],zero,ymm3[6],zero,ymm3[7],zero,ymm3[8],zero,ymm3[9],zero,ymm3[10],zero,ymm3[11],zero,ymm3[12],zero,ymm3[13],zero,ymm3[14],zero,ymm3[15],zero
 ; AVX512F-NEXT:    vptestmd %zmm3, %zmm3, %k1
 ; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
-; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm3 = xmm5[0],zero,xmm5[1],zero,xmm5[2],zero,xmm5[3],zero,xmm5[4],zero,xmm5[5],zero,xmm5[6],zero,xmm5[7],zero,xmm5[8],zero,xmm5[9],zero,xmm5[10],zero,xmm5[11],zero,xmm5[12],zero,xmm5[13],zero,xmm5[14],zero,xmm5[15],zero
-; AVX512F-NEXT:    vpmullw %ymm2, %ymm3, %ymm5
-; AVX512F-NEXT:    vpsrlw $8, %ymm5, %ymm2
+; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm3 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero,xmm4[4],zero,xmm4[5],zero,xmm4[6],zero,xmm4[7],zero,xmm4[8],zero,xmm4[9],zero,xmm4[10],zero,xmm4[11],zero,xmm4[12],zero,xmm4[13],zero,xmm4[14],zero,xmm4[15],zero
+; AVX512F-NEXT:    vpmullw %ymm2, %ymm3, %ymm4
+; AVX512F-NEXT:    vpsrlw $8, %ymm4, %ymm2
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero,ymm2[8],zero,ymm2[9],zero,ymm2[10],zero,ymm2[11],zero,ymm2[12],zero,ymm2[13],zero,ymm2[14],zero,ymm2[15],zero
 ; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k2
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm2
@@ -2308,9 +2308,9 @@ define <64 x i32> @umulo_v64i8(<64 x i8> %a0, <64 x i8> %a1, ptr %p2) nounwind {
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 {%k3} {z} = -1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 {%k2} {z} = -1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm3 {%k1} {z} = -1
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm5 = ymm5[0],zero,ymm5[1],zero,ymm5[2],zero,ymm5[3],zero,ymm5[4],zero,ymm5[5],zero,ymm5[6],zero,ymm5[7],zero,ymm5[8],zero,ymm5[9],zero,ymm5[10],zero,ymm5[11],zero,ymm5[12],zero,ymm5[13],zero,ymm5[14],zero,ymm5[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm5, 48(%rdi)
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm4 = ymm4[0],zero,ymm4[1],zero,ymm4[2],zero,ymm4[3],zero,ymm4[4],zero,ymm4[5],zero,ymm4[6],zero,ymm4[7],zero,ymm4[8],zero,ymm4[9],zero,ymm4[10],zero,ymm4[11],zero,ymm4[12],zero,ymm4[13],zero,ymm4[14],zero,ymm4[15],zero
-; AVX512F-NEXT:    vpmovdb %zmm4, 48(%rdi)
-; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm4 = ymm5[0],zero,ymm5[1],zero,ymm5[2],zero,ymm5[3],zero,ymm5[4],zero,ymm5[5],zero,ymm5[6],zero,ymm5[7],zero,ymm5[8],zero,ymm5[9],zero,ymm5[10],zero,ymm5[11],zero,ymm5[12],zero,ymm5[13],zero,ymm5[14],zero,ymm5[15],zero
 ; AVX512F-NEXT:    vpmovdb %zmm4, 32(%rdi)
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm4 = ymm6[0],zero,ymm6[1],zero,ymm6[2],zero,ymm6[3],zero,ymm6[4],zero,ymm6[5],zero,ymm6[6],zero,ymm6[7],zero,ymm6[8],zero,ymm6[9],zero,ymm6[10],zero,ymm6[11],zero,ymm6[12],zero,ymm6[13],zero,ymm6[14],zero,ymm6[15],zero
 ; AVX512F-NEXT:    vpmovdb %zmm4, 16(%rdi)

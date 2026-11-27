@@ -453,22 +453,21 @@ define float @test_v8f32(<8 x float> %a0) {
 ; AVX512VL-LABEL: test_v8f32:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX512VL-NEXT:    vmaxps %ymm1, %ymm0, %ymm2
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm2 = ymm2 & (ymm0 | ymm1)
+; AVX512VL-NEXT:    vmaxps %ymm1, %ymm0, %ymm1
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm1 = ymm1 & (ymm0 | ymm2)
 ; AVX512VL-NEXT:    vcmpunordps %ymm0, %ymm0, %k1
-; AVX512VL-NEXT:    vmovaps %ymm0, %ymm2 {%k1}
-; AVX512VL-NEXT:    vshufpd {{.*#+}} xmm0 = xmm2[1,0]
-; AVX512VL-NEXT:    vmaxps %xmm0, %xmm2, %xmm0
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 & (ymm2 | ymm1)
-; AVX512VL-NEXT:    vcmpunordps %ymm2, %ymm2, %k1
-; AVX512VL-NEXT:    vmovaps %ymm2, %ymm0 {%k1}
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    vmaxss %xmm2, %xmm0, %xmm2
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm2 & (xmm1 | xmm0)
-; AVX512VL-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
-; AVX512VL-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512VL-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512VL-NEXT:    vmovaps %ymm0, %ymm1 {%k1}
+; AVX512VL-NEXT:    vshufpd {{.*#+}} xmm0 = xmm1[1,0]
+; AVX512VL-NEXT:    vmaxps %xmm0, %xmm1, %xmm3
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm3 & (ymm1 | ymm2)
+; AVX512VL-NEXT:    vcmpunordps %ymm1, %ymm1, %k1
+; AVX512VL-NEXT:    vmovaps %ymm1, %ymm3 {%k1}
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm3[1,1,3,3]
+; AVX512VL-NEXT:    vmaxss %xmm0, %xmm3, %xmm0
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 & (xmm3 | xmm2)
+; AVX512VL-NEXT:    vcmpunordss %xmm3, %xmm3, %k1
+; AVX512VL-NEXT:    vmovss %xmm3, %xmm0, %xmm0 {%k1}
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
   %1 = call float @llvm.vector.reduce.fmaximum.v8f32(<8 x float> %a0)
@@ -671,27 +670,26 @@ define float @test_v16f32(<16 x float> %a0) {
 ; AVX512VL-LABEL: test_v16f32:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; AVX512VL-NEXT:    vmaxps %zmm1, %zmm0, %zmm2
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm2 = zmm2 & (zmm0 | zmm1)
+; AVX512VL-NEXT:    vmaxps %zmm1, %zmm0, %zmm1
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm1 = zmm1 & (zmm0 | zmm2)
 ; AVX512VL-NEXT:    vcmpunordps %zmm0, %zmm0, %k1
-; AVX512VL-NEXT:    vmovaps %zmm0, %zmm2 {%k1}
-; AVX512VL-NEXT:    vextractf128 $1, %ymm2, %xmm0
-; AVX512VL-NEXT:    vmaxps %zmm0, %zmm2, %zmm0
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 & (zmm2 | zmm1)
-; AVX512VL-NEXT:    vcmpunordps %zmm2, %zmm2, %k1
-; AVX512VL-NEXT:    vmovaps %zmm2, %zmm0 {%k1}
-; AVX512VL-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX512VL-NEXT:    vmaxps %xmm2, %xmm0, %xmm2
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm2 = zmm2 & (zmm0 | zmm1)
+; AVX512VL-NEXT:    vmovaps %zmm0, %zmm1 {%k1}
+; AVX512VL-NEXT:    vextractf128 $1, %ymm1, %xmm0
+; AVX512VL-NEXT:    vmaxps %zmm0, %zmm1, %zmm0
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 & (zmm1 | zmm2)
+; AVX512VL-NEXT:    vcmpunordps %zmm1, %zmm1, %k1
+; AVX512VL-NEXT:    vmovaps %zmm1, %zmm0 {%k1}
+; AVX512VL-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX512VL-NEXT:    vmaxps %xmm1, %xmm0, %xmm1
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm1 = zmm1 & (zmm0 | zmm2)
 ; AVX512VL-NEXT:    vcmpunordps %zmm0, %zmm0, %k1
-; AVX512VL-NEXT:    vmovaps %zmm0, %zmm2 {%k1}
-; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm2[1,1,3,3]
-; AVX512VL-NEXT:    vmaxss %xmm0, %xmm2, %xmm0
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} xmm1 = xmm0 & (xmm1 | xmm2)
-; AVX512VL-NEXT:    vcmpunordss %xmm2, %xmm2, %k1
-; AVX512VL-NEXT:    vmovss %xmm2, %xmm1, %xmm1 {%k1}
-; AVX512VL-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512VL-NEXT:    vmovaps %zmm0, %zmm1 {%k1}
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
+; AVX512VL-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 & (xmm1 | xmm2)
+; AVX512VL-NEXT:    vcmpunordss %xmm1, %xmm1, %k1
+; AVX512VL-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1}
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
   %1 = call float @llvm.vector.reduce.fmaximum.v16f32(<16 x float> %a0)
@@ -879,17 +877,16 @@ define double @test_v4f64(<4 x double> %a0) {
 ; AVX512VL-LABEL: test_v4f64:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX512VL-NEXT:    vmaxpd %xmm1, %xmm0, %xmm2
-; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN]
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} ymm2 = ymm2 & (ymm0 | ymm1)
+; AVX512VL-NEXT:    vmaxpd %xmm1, %xmm0, %xmm1
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN]
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} ymm1 = ymm1 & (ymm0 | ymm2)
 ; AVX512VL-NEXT:    vcmpunordpd %ymm0, %ymm0, %k1
-; AVX512VL-NEXT:    vmovapd %ymm0, %ymm2 {%k1}
-; AVX512VL-NEXT:    vshufpd {{.*#+}} xmm0 = xmm2[1,0]
-; AVX512VL-NEXT:    vmaxsd %xmm0, %xmm2, %xmm0
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm0 & (xmm1 | xmm2)
-; AVX512VL-NEXT:    vcmpunordsd %xmm2, %xmm2, %k1
-; AVX512VL-NEXT:    vmovsd %xmm2, %xmm1, %xmm1 {%k1}
-; AVX512VL-NEXT:    vmovapd %xmm1, %xmm0
+; AVX512VL-NEXT:    vmovapd %ymm0, %ymm1 {%k1}
+; AVX512VL-NEXT:    vshufpd {{.*#+}} xmm0 = xmm1[1,0]
+; AVX512VL-NEXT:    vmaxsd %xmm0, %xmm1, %xmm0
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm0 & (xmm1 | xmm2)
+; AVX512VL-NEXT:    vcmpunordsd %xmm1, %xmm1, %k1
+; AVX512VL-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 {%k1}
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
   %1 = call double @llvm.vector.reduce.fmaximum.v4f64(<4 x double> %a0)
@@ -1056,22 +1053,21 @@ define double @test_v8f64(<8 x double> %a0) {
 ; AVX512VL-LABEL: test_v8f64:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vextractf64x4 $1, %zmm0, %ymm1
-; AVX512VL-NEXT:    vmaxpd %zmm1, %zmm0, %zmm2
-; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} zmm2 = zmm2 & (zmm0 | zmm1)
+; AVX512VL-NEXT:    vmaxpd %zmm1, %zmm0, %zmm1
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm1 & (zmm0 | zmm2)
 ; AVX512VL-NEXT:    vcmpunordpd %zmm0, %zmm0, %k1
-; AVX512VL-NEXT:    vmovapd %zmm0, %zmm2 {%k1}
-; AVX512VL-NEXT:    vextractf128 $1, %ymm2, %xmm0
-; AVX512VL-NEXT:    vmaxpd %xmm0, %xmm2, %xmm0
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 & (zmm2 | zmm1)
-; AVX512VL-NEXT:    vcmpunordpd %zmm2, %zmm2, %k1
-; AVX512VL-NEXT:    vmovapd %zmm2, %zmm0 {%k1}
-; AVX512VL-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX512VL-NEXT:    vmaxsd %xmm2, %xmm0, %xmm2
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm2 & (xmm1 | xmm0)
-; AVX512VL-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
-; AVX512VL-NEXT:    vmovsd %xmm0, %xmm1, %xmm1 {%k1}
-; AVX512VL-NEXT:    vmovapd %xmm1, %xmm0
+; AVX512VL-NEXT:    vmovapd %zmm0, %zmm1 {%k1}
+; AVX512VL-NEXT:    vextractf128 $1, %ymm1, %xmm0
+; AVX512VL-NEXT:    vmaxpd %xmm0, %xmm1, %xmm3
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm3 & (zmm1 | zmm2)
+; AVX512VL-NEXT:    vcmpunordpd %zmm1, %zmm1, %k1
+; AVX512VL-NEXT:    vmovapd %zmm1, %zmm3 {%k1}
+; AVX512VL-NEXT:    vshufpd {{.*#+}} xmm0 = xmm3[1,0]
+; AVX512VL-NEXT:    vmaxsd %xmm0, %xmm3, %xmm0
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm0 & (xmm3 | xmm2)
+; AVX512VL-NEXT:    vcmpunordsd %xmm3, %xmm3, %k1
+; AVX512VL-NEXT:    vmovsd %xmm3, %xmm0, %xmm0 {%k1}
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
   %1 = call double @llvm.vector.reduce.fmaximum.v8f64(<8 x double> %a0)
@@ -1333,27 +1329,26 @@ define double @test_v16f64(<16 x double> %a0) {
 ;
 ; AVX512VL-LABEL: test_v16f64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmaxpd %zmm1, %zmm0, %zmm2
-; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} zmm2 = zmm2 & (zmm0 | zmm1)
+; AVX512VL-NEXT:    vmaxpd %zmm1, %zmm0, %zmm1
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm1 & (zmm0 | zmm2)
 ; AVX512VL-NEXT:    vcmpunordpd %zmm0, %zmm0, %k1
-; AVX512VL-NEXT:    vmovapd %zmm0, %zmm2 {%k1}
-; AVX512VL-NEXT:    vextractf64x4 $1, %zmm2, %ymm0
-; AVX512VL-NEXT:    vmaxpd %zmm0, %zmm2, %zmm0
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 & (zmm2 | zmm1)
-; AVX512VL-NEXT:    vcmpunordpd %zmm2, %zmm2, %k1
-; AVX512VL-NEXT:    vmovapd %zmm2, %zmm0 {%k1}
-; AVX512VL-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX512VL-NEXT:    vmaxpd %xmm2, %xmm0, %xmm2
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} zmm2 = zmm2 & (zmm0 | zmm1)
+; AVX512VL-NEXT:    vmovapd %zmm0, %zmm1 {%k1}
+; AVX512VL-NEXT:    vextractf64x4 $1, %zmm1, %ymm0
+; AVX512VL-NEXT:    vmaxpd %zmm0, %zmm1, %zmm0
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm0 & (zmm1 | zmm2)
+; AVX512VL-NEXT:    vcmpunordpd %zmm1, %zmm1, %k1
+; AVX512VL-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
+; AVX512VL-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX512VL-NEXT:    vmaxpd %xmm1, %xmm0, %xmm1
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm1 & (zmm0 | zmm2)
 ; AVX512VL-NEXT:    vcmpunordpd %zmm0, %zmm0, %k1
-; AVX512VL-NEXT:    vmovapd %zmm0, %zmm2 {%k1}
-; AVX512VL-NEXT:    vshufpd {{.*#+}} xmm0 = xmm2[1,0]
-; AVX512VL-NEXT:    vmaxsd %xmm0, %xmm2, %xmm0
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm0 & (xmm1 | xmm2)
-; AVX512VL-NEXT:    vcmpunordsd %xmm2, %xmm2, %k1
-; AVX512VL-NEXT:    vmovsd %xmm2, %xmm1, %xmm1 {%k1}
-; AVX512VL-NEXT:    vmovapd %xmm1, %xmm0
+; AVX512VL-NEXT:    vmovapd %zmm0, %zmm1 {%k1}
+; AVX512VL-NEXT:    vshufpd {{.*#+}} xmm0 = xmm1[1,0]
+; AVX512VL-NEXT:    vmaxsd %xmm0, %xmm1, %xmm0
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm0 & (xmm1 | xmm2)
+; AVX512VL-NEXT:    vcmpunordsd %xmm1, %xmm1, %k1
+; AVX512VL-NEXT:    vmovsd %xmm1, %xmm0, %xmm0 {%k1}
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
   %1 = call double @llvm.vector.reduce.fmaximum.v16f64(<16 x double> %a0)

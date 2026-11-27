@@ -252,15 +252,20 @@ define <vscale x 8 x i64> @vdot4a_i64_m8(<vscale x 8 x i64> %acc, <vscale x 64 x
 ; NODOT32-NEXT:    slli a1, a1, 4
 ; NODOT32-NEXT:    sub sp, sp, a1
 ; NODOT32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
+; NODOT32-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; NODOT32-NEXT:    vmv8r.v v24, v16
 ; NODOT32-NEXT:    csrr a1, vlenb
 ; NODOT32-NEXT:    slli a1, a1, 3
 ; NODOT32-NEXT:    add a1, sp, a1
 ; NODOT32-NEXT:    addi a1, a1, 16
 ; NODOT32-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; NODOT32-NEXT:    vl8r.v v8, (a0)
-; NODOT32-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; NODOT32-NEXT:    vsext.vf4 v4, v16
-; NODOT32-NEXT:    vsext.vf4 v0, v8
+; NODOT32-NEXT:    vl8r.v v16, (a0)
+; NODOT32-NEXT:    vsext.vf4 v4, v24
+; NODOT32-NEXT:    vmv4r.v v12, v28
+; NODOT32-NEXT:    vmv2r.v v10, v26
+; NODOT32-NEXT:    vmv1r.v v9, v25
+; NODOT32-NEXT:    vmv8r.v v24, v16
+; NODOT32-NEXT:    vsext.vf4 v0, v24
 ; NODOT32-NEXT:    vwmul.vv v24, v4, v0
 ; NODOT32-NEXT:    addi a0, sp, 16
 ; NODOT32-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
@@ -279,12 +284,15 @@ define <vscale x 8 x i64> @vdot4a_i64_m8(<vscale x 8 x i64> %acc, <vscale x 64 x
 ; NODOT32-NEXT:    add a1, sp, a1
 ; NODOT32-NEXT:    addi a1, a1, 16
 ; NODOT32-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
+; NODOT32-NEXT:    vmv4r.v v28, v12
+; NODOT32-NEXT:    vmv2r.v v26, v10
+; NODOT32-NEXT:    vmv1r.v v25, v9
 ; NODOT32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; NODOT32-NEXT:    vsext.vf4 v28, v17
-; NODOT32-NEXT:    vmv4r.v v4, v12
-; NODOT32-NEXT:    vmv2r.v v2, v10
-; NODOT32-NEXT:    vmv1r.v v1, v9
-; NODOT32-NEXT:    vsext.vf4 v24, v9
+; NODOT32-NEXT:    vsext.vf4 v28, v9
+; NODOT32-NEXT:    vmv4r.v v4, v20
+; NODOT32-NEXT:    vmv2r.v v2, v18
+; NODOT32-NEXT:    vmv1r.v v1, v17
+; NODOT32-NEXT:    vsext.vf4 v24, v17
 ; NODOT32-NEXT:    vwmul.vv v0, v28, v24
 ; NODOT32-NEXT:    csrr a1, vlenb
 ; NODOT32-NEXT:    slli a1, a1, 3
@@ -298,10 +306,11 @@ define <vscale x 8 x i64> @vdot4a_i64_m8(<vscale x 8 x i64> %acc, <vscale x 64 x
 ; NODOT32-NEXT:    add a1, sp, a1
 ; NODOT32-NEXT:    addi a1, a1, 16
 ; NODOT32-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
-; NODOT32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; NODOT32-NEXT:    vsext.vf4 v24, v18
-; NODOT32-NEXT:    vmv4r.v v4, v12
 ; NODOT32-NEXT:    vmv2r.v v2, v10
+; NODOT32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; NODOT32-NEXT:    vsext.vf4 v24, v2
+; NODOT32-NEXT:    vmv4r.v v4, v20
+; NODOT32-NEXT:    vmv2r.v v2, v18
 ; NODOT32-NEXT:    vsext.vf4 v28, v2
 ; NODOT32-NEXT:    vwmul.vv v0, v24, v28
 ; NODOT32-NEXT:    csrr a1, vlenb
@@ -317,11 +326,11 @@ define <vscale x 8 x i64> @vdot4a_i64_m8(<vscale x 8 x i64> %acc, <vscale x 64 x
 ; NODOT32-NEXT:    addi a1, a1, 16
 ; NODOT32-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
 ; NODOT32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; NODOT32-NEXT:    vsext.vf4 v24, v19
-; NODOT32-NEXT:    vmv4r.v v4, v12
-; NODOT32-NEXT:    vmv1r.v v3, v11
-; NODOT32-NEXT:    vsext.vf4 v16, v11
-; NODOT32-NEXT:    vwmul.vv v0, v24, v16
+; NODOT32-NEXT:    vsext.vf4 v24, v11
+; NODOT32-NEXT:    vmv4r.v v4, v20
+; NODOT32-NEXT:    vmv1r.v v3, v19
+; NODOT32-NEXT:    vsext.vf4 v28, v19
+; NODOT32-NEXT:    vwmul.vv v0, v24, v28
 ; NODOT32-NEXT:    csrr a1, vlenb
 ; NODOT32-NEXT:    slli a1, a1, 3
 ; NODOT32-NEXT:    add a1, sp, a1
@@ -334,9 +343,10 @@ define <vscale x 8 x i64> @vdot4a_i64_m8(<vscale x 8 x i64> %acc, <vscale x 64 x
 ; NODOT32-NEXT:    add a1, sp, a1
 ; NODOT32-NEXT:    addi a1, a1, 16
 ; NODOT32-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
-; NODOT32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; NODOT32-NEXT:    vsext.vf4 v16, v20
 ; NODOT32-NEXT:    vmv4r.v v28, v12
+; NODOT32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; NODOT32-NEXT:    vsext.vf4 v16, v28
+; NODOT32-NEXT:    vmv4r.v v28, v20
 ; NODOT32-NEXT:    vsext.vf4 v24, v28
 ; NODOT32-NEXT:    vwmul.vv v0, v16, v24
 ; NODOT32-NEXT:    csrr a1, vlenb
@@ -352,8 +362,8 @@ define <vscale x 8 x i64> @vdot4a_i64_m8(<vscale x 8 x i64> %acc, <vscale x 64 x
 ; NODOT32-NEXT:    addi a1, a1, 16
 ; NODOT32-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
 ; NODOT32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; NODOT32-NEXT:    vsext.vf4 v16, v21
-; NODOT32-NEXT:    vsext.vf4 v24, v13
+; NODOT32-NEXT:    vsext.vf4 v16, v13
+; NODOT32-NEXT:    vsext.vf4 v24, v21
 ; NODOT32-NEXT:    vwmul.vv v0, v16, v24
 ; NODOT32-NEXT:    csrr a1, vlenb
 ; NODOT32-NEXT:    slli a1, a1, 3
@@ -367,9 +377,10 @@ define <vscale x 8 x i64> @vdot4a_i64_m8(<vscale x 8 x i64> %acc, <vscale x 64 x
 ; NODOT32-NEXT:    add a1, sp, a1
 ; NODOT32-NEXT:    addi a1, a1, 16
 ; NODOT32-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
-; NODOT32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; NODOT32-NEXT:    vsext.vf4 v16, v22
 ; NODOT32-NEXT:    vmv2r.v v30, v14
+; NODOT32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; NODOT32-NEXT:    vsext.vf4 v16, v30
+; NODOT32-NEXT:    vmv2r.v v30, v22
 ; NODOT32-NEXT:    vsext.vf4 v24, v30
 ; NODOT32-NEXT:    vwmul.vv v0, v16, v24
 ; NODOT32-NEXT:    csrr a1, vlenb
@@ -385,8 +396,8 @@ define <vscale x 8 x i64> @vdot4a_i64_m8(<vscale x 8 x i64> %acc, <vscale x 64 x
 ; NODOT32-NEXT:    addi a1, a1, 16
 ; NODOT32-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
 ; NODOT32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; NODOT32-NEXT:    vsext.vf4 v24, v23
-; NODOT32-NEXT:    vsext.vf4 v28, v15
+; NODOT32-NEXT:    vsext.vf4 v24, v15
+; NODOT32-NEXT:    vsext.vf4 v28, v23
 ; NODOT32-NEXT:    vwmul.vv v16, v24, v28
 ; NODOT32-NEXT:    csrr a1, vlenb
 ; NODOT32-NEXT:    slli a1, a1, 3

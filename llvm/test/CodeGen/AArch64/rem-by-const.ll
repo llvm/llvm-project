@@ -1074,39 +1074,39 @@ define <3 x i8> @uv3i8_7(<3 x i8> %d, <3 x i8> %e) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and w8, w0, #0xff
 ; CHECK-GI-NEXT:    and w9, w1, #0xff
-; CHECK-GI-NEXT:    movi v2.4h, #37
-; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    movi v1.4h, #37
+; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    and w8, w2, #0xff
-; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    mov v1.h[1], w9
-; CHECK-GI-NEXT:    mov v0.h[1], w1
-; CHECK-GI-NEXT:    mov v1.h[2], w8
-; CHECK-GI-NEXT:    mov v0.h[2], w2
-; CHECK-GI-NEXT:    mul v1.4h, v1.4h, v2.4h
-; CHECK-GI-NEXT:    ushr v1.4h, v1.4h, #8
-; CHECK-GI-NEXT:    sub v2.4h, v0.4h, v1.4h
-; CHECK-GI-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
-; CHECK-GI-NEXT:    ushr v2.8b, v2.8b, #1
-; CHECK-GI-NEXT:    mov b3, v2.b[1]
-; CHECK-GI-NEXT:    mov b4, v2.b[2]
-; CHECK-GI-NEXT:    fmov w8, s3
-; CHECK-GI-NEXT:    mov v2.h[1], w8
-; CHECK-GI-NEXT:    fmov w8, s4
-; CHECK-GI-NEXT:    mov v2.h[2], w8
-; CHECK-GI-NEXT:    add v1.4h, v2.4h, v1.4h
+; CHECK-GI-NEXT:    fmov s2, w0
+; CHECK-GI-NEXT:    mov v0.h[1], w9
+; CHECK-GI-NEXT:    mov v2.h[1], w1
+; CHECK-GI-NEXT:    mov v0.h[2], w8
+; CHECK-GI-NEXT:    mov v2.h[2], w2
+; CHECK-GI-NEXT:    mul v0.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    ushr v0.4h, v0.4h, #8
+; CHECK-GI-NEXT:    sub v1.4h, v2.4h, v0.4h
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    ushr v1.8b, v1.8b, #2
-; CHECK-GI-NEXT:    mov b2, v1.b[1]
-; CHECK-GI-NEXT:    mov b3, v1.b[2]
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    movi v2.4h, #7
-; CHECK-GI-NEXT:    mov v1.h[1], w8
+; CHECK-GI-NEXT:    ushr v1.8b, v1.8b, #1
+; CHECK-GI-NEXT:    mov b3, v1.b[1]
+; CHECK-GI-NEXT:    mov b4, v1.b[2]
 ; CHECK-GI-NEXT:    fmov w8, s3
+; CHECK-GI-NEXT:    mov v1.h[1], w8
+; CHECK-GI-NEXT:    fmov w8, s4
 ; CHECK-GI-NEXT:    mov v1.h[2], w8
-; CHECK-GI-NEXT:    mls v0.4h, v1.4h, v2.4h
-; CHECK-GI-NEXT:    umov w0, v0.h[0]
-; CHECK-GI-NEXT:    umov w1, v0.h[1]
-; CHECK-GI-NEXT:    umov w2, v0.h[2]
+; CHECK-GI-NEXT:    add v0.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; CHECK-GI-NEXT:    ushr v0.8b, v0.8b, #2
+; CHECK-GI-NEXT:    mov b1, v0.b[1]
+; CHECK-GI-NEXT:    mov b3, v0.b[2]
+; CHECK-GI-NEXT:    fmov w8, s1
+; CHECK-GI-NEXT:    movi v1.4h, #7
+; CHECK-GI-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NEXT:    fmov w8, s3
+; CHECK-GI-NEXT:    mov v0.h[2], w8
+; CHECK-GI-NEXT:    mls v2.4h, v0.4h, v1.4h
+; CHECK-GI-NEXT:    umov w0, v2.h[0]
+; CHECK-GI-NEXT:    umov w1, v2.h[1]
+; CHECK-GI-NEXT:    umov w2, v2.h[2]
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = urem <3 x i8> %d, <i8 7, i8 7, i8 7>

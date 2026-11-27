@@ -60,16 +60,14 @@ define signext i16 @vecop_uses(ptr %addr) {
 ; CHECK-LABEL: vecop_uses:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 4, 16
-; CHECK-NEXT:    lxvd2x 0, 3, 4
-; CHECK-NEXT:    xxswapd 34, 0
-; CHECK-NEXT:    lxvd2x 0, 0, 3
-; CHECK-NEXT:    xxswapd 35, 0
+; CHECK-NEXT:    lxvd2x 35, 0, 3
+; CHECK-NEXT:    lxvd2x 34, 3, 4
 ; CHECK-NEXT:    vminsh 2, 3, 2
 ; CHECK-NEXT:    xxswapd 35, 34
 ; CHECK-NEXT:    vminsh 2, 2, 3
-; CHECK-NEXT:    xxspltw 35, 34, 2
+; CHECK-NEXT:    xxspltw 35, 34, 0
 ; CHECK-NEXT:    vminsh 2, 2, 3
-; CHECK-NEXT:    vsplth 3, 2, 6
+; CHECK-NEXT:    vsplth 3, 2, 2
 ; CHECK-NEXT:    vminsh 2, 2, 3
 ; CHECK-NEXT:    xxswapd 0, 34
 ; CHECK-NEXT:    mffprd 3, 0

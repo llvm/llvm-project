@@ -126,21 +126,21 @@ define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; NO-ZVBB-NEXT:    li a0, 64
 ; NO-ZVBB-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; NO-ZVBB-NEXT:    vmv.v.i v8, 0
-; NO-ZVBB-NEXT:    vmerge.vim v12, v8, 1, v0
+; NO-ZVBB-NEXT:    vmerge.vim v8, v8, 1, v0
 ; NO-ZVBB-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
-; NO-ZVBB-NEXT:    vid.v v8
+; NO-ZVBB-NEXT:    vid.v v12
 ; NO-ZVBB-NEXT:    csrr a1, vlenb
 ; NO-ZVBB-NEXT:    addi a2, a1, -1
-; NO-ZVBB-NEXT:    vrsub.vx v16, v8, a2
+; NO-ZVBB-NEXT:    vrsub.vx v16, v12, a2
 ; NO-ZVBB-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; NO-ZVBB-NEXT:    vrgatherei16.vv v11, v12, v16
-; NO-ZVBB-NEXT:    vrgatherei16.vv v10, v13, v16
-; NO-ZVBB-NEXT:    vrgatherei16.vv v9, v14, v16
-; NO-ZVBB-NEXT:    vrgatherei16.vv v8, v15, v16
+; NO-ZVBB-NEXT:    vrgatherei16.vv v15, v8, v16
+; NO-ZVBB-NEXT:    vrgatherei16.vv v14, v9, v16
+; NO-ZVBB-NEXT:    vrgatherei16.vv v13, v10, v16
+; NO-ZVBB-NEXT:    vrgatherei16.vv v12, v11, v16
 ; NO-ZVBB-NEXT:    slli a1, a1, 2
 ; NO-ZVBB-NEXT:    addi a1, a1, -64
 ; NO-ZVBB-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; NO-ZVBB-NEXT:    vslidedown.vx v8, v8, a1
+; NO-ZVBB-NEXT:    vslidedown.vx v8, v12, a1
 ; NO-ZVBB-NEXT:    vmsne.vi v0, v8, 0
 ; NO-ZVBB-NEXT:    ret
 ;

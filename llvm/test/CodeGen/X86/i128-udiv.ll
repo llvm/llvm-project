@@ -2636,9 +2636,9 @@ define i128 @rem_by_14(i128 %x) nounwind {
 ; X64-NEXT:    shrq %rdx
 ; X64-NEXT:    leal (,%rdx,8), %eax
 ; X64-NEXT:    subl %eax, %edx
-; X64-NEXT:    addl %edx, %esi
+; X64-NEXT:    addl %esi, %edx
 ; X64-NEXT:    andl $1, %edi
-; X64-NEXT:    leaq (%rdi,%rsi,2), %rax
+; X64-NEXT:    leaq (%rdi,%rdx,2), %rax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    retq
   %rem = urem i128 %x, 14

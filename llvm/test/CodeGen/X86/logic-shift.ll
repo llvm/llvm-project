@@ -872,8 +872,8 @@ define i32 @or_fshl_commute0(i32 %x, i32 %y) {
 define i64 @or_fshl_commute1(i64 %x, i64 %y) {
 ; CHECK-LABEL: or_fshl_commute1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    orl %edi, %eax
 ; CHECK-NEXT:    shldq $35, %rdi, %rax
 ; CHECK-NEXT:    retq
   %or1 = or i64 %y, %x
@@ -886,9 +886,9 @@ define i64 @or_fshl_commute1(i64 %x, i64 %y) {
 define i16 @or_fshl_commute2(i16 %x, i16 %y) {
 ; CHECK-LABEL: or_fshl_commute2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    orl %edi, %esi
-; CHECK-NEXT:    shrdw $14, %si, %ax
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    orl %edi, %eax
+; CHECK-NEXT:    shldw $2, %di, %ax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %or1 = or i16 %x, %y

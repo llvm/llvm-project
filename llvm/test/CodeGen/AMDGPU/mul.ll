@@ -3462,33 +3462,32 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ; GFX12-SSASCHED-NEXT:    s_mov_b32 s7, 0
 ; GFX12-SSASCHED-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
 ; GFX12-SSASCHED-NEXT:    s_mov_b32 s13, s7
-; GFX12-SSASCHED-NEXT:    s_mov_b32 s17, s7
+; GFX12-SSASCHED-NEXT:    s_mov_b32 s15, s7
 ; GFX12-SSASCHED-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SSASCHED-NEXT:    s_mov_b32 s12, s0
+; GFX12-SSASCHED-NEXT:    s_mov_b32 s12, s1
 ; GFX12-SSASCHED-NEXT:    s_mov_b32 s6, s8
-; GFX12-SSASCHED-NEXT:    s_mov_b32 s16, s1
-; GFX12-SSASCHED-NEXT:    s_mul_u64 s[14:15], s[12:13], s[6:7]
-; GFX12-SSASCHED-NEXT:    s_mul_u64 s[18:19], s[16:17], s[6:7]
+; GFX12-SSASCHED-NEXT:    s_mov_b32 s14, s0
+; GFX12-SSASCHED-NEXT:    s_mul_u64 s[18:19], s[12:13], s[6:7]
+; GFX12-SSASCHED-NEXT:    s_mul_u64 s[16:17], s[14:15], s[6:7]
 ; GFX12-SSASCHED-NEXT:    s_mov_b32 s6, s9
 ; GFX12-SSASCHED-NEXT:    s_mul_u64 s[2:3], s[8:9], s[2:3]
-; GFX12-SSASCHED-NEXT:    s_mov_b32 s8, s15
-; GFX12-SSASCHED-NEXT:    s_mov_b32 s9, s7
+; GFX12-SSASCHED-NEXT:    s_mul_u64 s[14:15], s[14:15], s[6:7]
 ; GFX12-SSASCHED-NEXT:    s_mul_u64 s[12:13], s[12:13], s[6:7]
-; GFX12-SSASCHED-NEXT:    s_add_nc_u64 s[8:9], s[18:19], s[8:9]
+; GFX12-SSASCHED-NEXT:    s_mov_b32 s6, s17
 ; GFX12-SSASCHED-NEXT:    s_mul_u64 s[0:1], s[10:11], s[0:1]
-; GFX12-SSASCHED-NEXT:    s_mul_u64 s[10:11], s[16:17], s[6:7]
-; GFX12-SSASCHED-NEXT:    s_mov_b32 s6, s8
+; GFX12-SSASCHED-NEXT:    s_add_nc_u64 s[18:19], s[18:19], s[6:7]
 ; GFX12-SSASCHED-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
-; GFX12-SSASCHED-NEXT:    s_add_nc_u64 s[12:13], s[12:13], s[6:7]
-; GFX12-SSASCHED-NEXT:    s_mov_b32 s6, s9
-; GFX12-SSASCHED-NEXT:    s_mov_b32 s2, s13
+; GFX12-SSASCHED-NEXT:    s_mov_b32 s6, s18
 ; GFX12-SSASCHED-NEXT:    s_mov_b32 s3, s7
-; GFX12-SSASCHED-NEXT:    s_mov_b32 s15, s7
+; GFX12-SSASCHED-NEXT:    s_add_nc_u64 s[8:9], s[14:15], s[6:7]
+; GFX12-SSASCHED-NEXT:    s_mov_b32 s6, s19
+; GFX12-SSASCHED-NEXT:    s_mov_b32 s2, s9
+; GFX12-SSASCHED-NEXT:    s_mov_b32 s17, s7
 ; GFX12-SSASCHED-NEXT:    s_add_nc_u64 s[2:3], s[6:7], s[2:3]
 ; GFX12-SSASCHED-NEXT:    s_mov_b32 s6, s7
-; GFX12-SSASCHED-NEXT:    s_mov_b32 s7, s12
-; GFX12-SSASCHED-NEXT:    s_add_nc_u64 s[2:3], s[10:11], s[2:3]
-; GFX12-SSASCHED-NEXT:    s_or_b64 s[6:7], s[14:15], s[6:7]
+; GFX12-SSASCHED-NEXT:    s_mov_b32 s7, s8
+; GFX12-SSASCHED-NEXT:    s_add_nc_u64 s[2:3], s[12:13], s[2:3]
+; GFX12-SSASCHED-NEXT:    s_or_b64 s[6:7], s[16:17], s[6:7]
 ; GFX12-SSASCHED-NEXT:    s_add_nc_u64 s[0:1], s[2:3], s[0:1]
 ; GFX12-SSASCHED-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
 ; GFX12-SSASCHED-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1

@@ -1074,15 +1074,15 @@ define i64 @narrow_compare(i64 %x, i64 %q) nounwind {
 define i32 @signed_narrow_compare32(i32 %x, i32 %q) nounwind {
 ; X86-LABEL: signed_narrow_compare32:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    cmpw %cx, %ax
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    cmpw %dx, %ax
 ; X86-NEXT:    jl .LBB29_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:  .LBB29_2:
-; X86-NEXT:    subl %edx, %eax
+; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: signed_narrow_compare32:

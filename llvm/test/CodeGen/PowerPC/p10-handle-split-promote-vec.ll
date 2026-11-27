@@ -101,98 +101,98 @@ define i32 @SplitPromoteVectorTest(i32 %Opc) align 2 {
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX-NEXT:    ld 4, L..C0(2) # %const.0
 ; CHECK-AIX-NEXT:    mtvsrws 34, 3
-; CHECK-AIX-NEXT:    li 8, 15
+; CHECK-AIX-NEXT:    li 7, 15
 ; CHECK-AIX-NEXT:    li 5, 11
 ; CHECK-AIX-NEXT:    lxv 35, 0(4)
 ; CHECK-AIX-NEXT:    vcmpequw 3, 2, 3
-; CHECK-AIX-NEXT:    vextublx 4, 8, 3
+; CHECK-AIX-NEXT:    vextublx 4, 7, 3
 ; CHECK-AIX-NEXT:    vextublx 6, 5, 3
 ; CHECK-AIX-NEXT:    clrlwi 4, 4, 31
 ; CHECK-AIX-NEXT:    rlwimi 4, 6, 1, 30, 30
 ; CHECK-AIX-NEXT:    li 6, 7
-; CHECK-AIX-NEXT:    vextublx 7, 6, 3
-; CHECK-AIX-NEXT:    rlwimi 4, 7, 2, 29, 29
-; CHECK-AIX-NEXT:    li 7, 3
-; CHECK-AIX-NEXT:    vextublx 9, 7, 3
+; CHECK-AIX-NEXT:    vextublx 8, 6, 3
+; CHECK-AIX-NEXT:    rlwimi 4, 8, 2, 29, 29
+; CHECK-AIX-NEXT:    li 8, 3
+; CHECK-AIX-NEXT:    vextublx 9, 8, 3
 ; CHECK-AIX-NEXT:    rlwimi 4, 9, 3, 28, 28
 ; CHECK-AIX-NEXT:    ld 9, L..C1(2) # %const.1
 ; CHECK-AIX-NEXT:    lxv 35, 0(9)
 ; CHECK-AIX-NEXT:    vcmpequw 3, 2, 3
-; CHECK-AIX-NEXT:    vextublx 9, 8, 3
+; CHECK-AIX-NEXT:    vextublx 9, 7, 3
 ; CHECK-AIX-NEXT:    rlwimi 4, 9, 4, 27, 27
 ; CHECK-AIX-NEXT:    vextublx 9, 5, 3
 ; CHECK-AIX-NEXT:    rlwimi 4, 9, 5, 26, 26
 ; CHECK-AIX-NEXT:    vextublx 9, 6, 3
 ; CHECK-AIX-NEXT:    rlwimi 4, 9, 6, 25, 25
-; CHECK-AIX-NEXT:    vextublx 9, 7, 3
+; CHECK-AIX-NEXT:    vextublx 9, 8, 3
 ; CHECK-AIX-NEXT:    rlwimi 4, 9, 7, 24, 24
 ; CHECK-AIX-NEXT:    ld 9, L..C2(2) # %const.2
 ; CHECK-AIX-NEXT:    lxv 35, 0(9)
 ; CHECK-AIX-NEXT:    vcmpequw 3, 2, 3
-; CHECK-AIX-NEXT:    vextublx 9, 8, 3
+; CHECK-AIX-NEXT:    vextublx 9, 7, 3
 ; CHECK-AIX-NEXT:    rlwimi 4, 9, 8, 23, 23
 ; CHECK-AIX-NEXT:    vextublx 9, 5, 3
 ; CHECK-AIX-NEXT:    rlwimi 4, 9, 9, 22, 22
 ; CHECK-AIX-NEXT:    vextublx 9, 6, 3
 ; CHECK-AIX-NEXT:    rlwimi 4, 9, 10, 21, 21
-; CHECK-AIX-NEXT:    vextublx 9, 7, 3
+; CHECK-AIX-NEXT:    vextublx 9, 8, 3
 ; CHECK-AIX-NEXT:    rlwimi 4, 9, 11, 20, 20
 ; CHECK-AIX-NEXT:    ld 9, L..C3(2) # %const.3
 ; CHECK-AIX-NEXT:    lxv 35, 0(9)
 ; CHECK-AIX-NEXT:    vcmpequw 3, 2, 3
-; CHECK-AIX-NEXT:    vextublx 9, 8, 3
+; CHECK-AIX-NEXT:    vextublx 9, 7, 3
 ; CHECK-AIX-NEXT:    rlwimi 4, 9, 12, 19, 19
 ; CHECK-AIX-NEXT:    vextublx 9, 5, 3
 ; CHECK-AIX-NEXT:    rlwimi 4, 9, 13, 18, 18
 ; CHECK-AIX-NEXT:    vextublx 9, 6, 3
 ; CHECK-AIX-NEXT:    rlwimi 4, 9, 14, 17, 17
-; CHECK-AIX-NEXT:    vextublx 9, 7, 3
+; CHECK-AIX-NEXT:    vextublx 9, 8, 3
 ; CHECK-AIX-NEXT:    rlwimi 4, 9, 15, 16, 16
 ; CHECK-AIX-NEXT:    ld 9, L..C4(2) # %const.4
 ; CHECK-AIX-NEXT:    lxv 35, 0(9)
 ; CHECK-AIX-NEXT:    vcmpequw 3, 2, 3
+; CHECK-AIX-NEXT:    vextublx 10, 7, 3
+; CHECK-AIX-NEXT:    vextublx 9, 5, 3
+; CHECK-AIX-NEXT:    clrlwi 10, 10, 31
+; CHECK-AIX-NEXT:    rlwimi 10, 9, 1, 30, 30
+; CHECK-AIX-NEXT:    vextublx 9, 6, 3
+; CHECK-AIX-NEXT:    rlwimi 10, 9, 2, 29, 29
 ; CHECK-AIX-NEXT:    vextublx 9, 8, 3
-; CHECK-AIX-NEXT:    vextublx 10, 5, 3
-; CHECK-AIX-NEXT:    clrlwi 9, 9, 31
-; CHECK-AIX-NEXT:    rlwimi 9, 10, 1, 30, 30
-; CHECK-AIX-NEXT:    vextublx 10, 6, 3
-; CHECK-AIX-NEXT:    rlwimi 9, 10, 2, 29, 29
-; CHECK-AIX-NEXT:    vextublx 10, 7, 3
-; CHECK-AIX-NEXT:    rlwimi 9, 10, 3, 28, 28
-; CHECK-AIX-NEXT:    ld 10, L..C5(2) # %const.5
-; CHECK-AIX-NEXT:    lxv 35, 0(10)
+; CHECK-AIX-NEXT:    rlwimi 10, 9, 3, 28, 28
+; CHECK-AIX-NEXT:    ld 9, L..C5(2) # %const.5
+; CHECK-AIX-NEXT:    lxv 35, 0(9)
 ; CHECK-AIX-NEXT:    vcmpequw 3, 2, 3
-; CHECK-AIX-NEXT:    vextublx 10, 8, 3
-; CHECK-AIX-NEXT:    rlwimi 9, 10, 4, 27, 27
-; CHECK-AIX-NEXT:    vextublx 10, 5, 3
-; CHECK-AIX-NEXT:    rlwimi 9, 10, 5, 26, 26
-; CHECK-AIX-NEXT:    vextublx 10, 6, 3
-; CHECK-AIX-NEXT:    rlwimi 9, 10, 6, 25, 25
-; CHECK-AIX-NEXT:    vextublx 10, 7, 3
-; CHECK-AIX-NEXT:    rlwimi 9, 10, 7, 24, 24
-; CHECK-AIX-NEXT:    ld 10, L..C6(2) # %const.6
-; CHECK-AIX-NEXT:    lxv 35, 0(10)
+; CHECK-AIX-NEXT:    vextublx 9, 7, 3
+; CHECK-AIX-NEXT:    rlwimi 10, 9, 4, 27, 27
+; CHECK-AIX-NEXT:    vextublx 9, 5, 3
+; CHECK-AIX-NEXT:    rlwimi 10, 9, 5, 26, 26
+; CHECK-AIX-NEXT:    vextublx 9, 6, 3
+; CHECK-AIX-NEXT:    rlwimi 10, 9, 6, 25, 25
+; CHECK-AIX-NEXT:    vextublx 9, 8, 3
+; CHECK-AIX-NEXT:    rlwimi 10, 9, 7, 24, 24
+; CHECK-AIX-NEXT:    ld 9, L..C6(2) # %const.6
+; CHECK-AIX-NEXT:    lxv 35, 0(9)
 ; CHECK-AIX-NEXT:    vcmpequw 3, 2, 3
-; CHECK-AIX-NEXT:    vextublx 10, 8, 3
-; CHECK-AIX-NEXT:    rlwimi 9, 10, 8, 23, 23
-; CHECK-AIX-NEXT:    vextublx 10, 5, 3
-; CHECK-AIX-NEXT:    rlwimi 9, 10, 9, 22, 22
-; CHECK-AIX-NEXT:    vextublx 10, 6, 3
-; CHECK-AIX-NEXT:    rlwimi 9, 10, 10, 21, 21
-; CHECK-AIX-NEXT:    vextublx 10, 7, 3
-; CHECK-AIX-NEXT:    rlwimi 9, 10, 11, 20, 20
-; CHECK-AIX-NEXT:    ld 10, L..C7(2) # %const.7
-; CHECK-AIX-NEXT:    lxv 35, 0(10)
+; CHECK-AIX-NEXT:    vextublx 9, 7, 3
+; CHECK-AIX-NEXT:    rlwimi 10, 9, 8, 23, 23
+; CHECK-AIX-NEXT:    vextublx 9, 5, 3
+; CHECK-AIX-NEXT:    rlwimi 10, 9, 9, 22, 22
+; CHECK-AIX-NEXT:    vextublx 9, 6, 3
+; CHECK-AIX-NEXT:    rlwimi 10, 9, 10, 21, 21
+; CHECK-AIX-NEXT:    vextublx 9, 8, 3
+; CHECK-AIX-NEXT:    rlwimi 10, 9, 11, 20, 20
+; CHECK-AIX-NEXT:    ld 9, L..C7(2) # %const.7
+; CHECK-AIX-NEXT:    lxv 35, 0(9)
 ; CHECK-AIX-NEXT:    vcmpequw 2, 2, 3
-; CHECK-AIX-NEXT:    vextublx 8, 8, 2
+; CHECK-AIX-NEXT:    vextublx 7, 7, 2
 ; CHECK-AIX-NEXT:    vextublx 5, 5, 2
-; CHECK-AIX-NEXT:    rlwimi 9, 8, 12, 19, 19
-; CHECK-AIX-NEXT:    rlwimi 9, 5, 13, 18, 18
+; CHECK-AIX-NEXT:    rlwimi 10, 7, 12, 19, 19
+; CHECK-AIX-NEXT:    rlwimi 10, 5, 13, 18, 18
 ; CHECK-AIX-NEXT:    vextublx 5, 6, 2
-; CHECK-AIX-NEXT:    rlwimi 9, 5, 14, 17, 17
-; CHECK-AIX-NEXT:    vextublx 5, 7, 2
-; CHECK-AIX-NEXT:    rlwimi 9, 5, 15, 16, 16
-; CHECK-AIX-NEXT:    or 4, 9, 4
+; CHECK-AIX-NEXT:    rlwimi 10, 5, 14, 17, 17
+; CHECK-AIX-NEXT:    vextublx 5, 8, 2
+; CHECK-AIX-NEXT:    rlwimi 10, 5, 15, 16, 16
+; CHECK-AIX-NEXT:    or 4, 10, 4
 ; CHECK-AIX-NEXT:    andi. 4, 4, 65535
 ; CHECK-AIX-NEXT:    iseleq 3, 0, 3
 ; CHECK-AIX-NEXT:    blr

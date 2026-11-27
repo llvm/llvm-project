@@ -59,9 +59,9 @@ define amdgpu_kernel void @simple_read2_f32(ptr addrspace(1) %out) #0 {
 ; CHECK-NEXT:    .loc 1 0 0 is_stmt 0 ; <stdin>:0
 ; CHECK-NEXT:    ds_read2_b32 v[0:1], v2 offset1:8
 ; CHECK-NEXT:  .Ltmp5:
-; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:9 <- undef
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:9 <- $vgpr0
 ; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:11 <- [DW_OP_plus_uconst 32, DW_OP_stack_value] $vgpr2
-; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:12 <- undef
+; CHECK-NEXT:    ;DEBUG_VALUE: simple_read2_f32:12 <- $vgpr1
 ; CHECK-NEXT:    .loc 1 10 1 is_stmt 1 ; <stdin>:10:1
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CHECK-NEXT:  .Ltmp6:

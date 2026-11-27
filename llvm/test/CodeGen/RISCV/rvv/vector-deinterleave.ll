@@ -971,8 +971,8 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vmv2r.v v24, v14
+; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv2r.v v26, v16
 ; CHECK-NEXT:    csrr a1, vlenb
@@ -1012,8 +1012,8 @@ define {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vmv2r.v v24, v14
+; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv2r.v v26, v16
 ; CHECK-NEXT:    csrr a1, vlenb
@@ -1053,8 +1053,8 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vmv2r.v v24, v14
+; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv2r.v v26, v16
 ; CHECK-NEXT:    csrr a1, vlenb
@@ -1094,8 +1094,8 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vmv2r.v v24, v14
+; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv2r.v v26, v16
 ; CHECK-NEXT:    csrr a1, vlenb
@@ -2801,8 +2801,8 @@ define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vmv2r.v v24, v14
+; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv2r.v v26, v16
 ; CHECK-NEXT:    csrr a1, vlenb
@@ -2889,8 +2889,8 @@ define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vs
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vmv2r.v v24, v14
+; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv2r.v v26, v16
 ; CHECK-NEXT:    csrr a1, vlenb
@@ -2977,8 +2977,8 @@ define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscal
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vmv2r.v v24, v14
+; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv2r.v v26, v16
 ; CHECK-NEXT:    csrr a1, vlenb
@@ -3038,8 +3038,8 @@ define {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vs
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vmv2r.v v24, v14
+; CHECK-NEXT:    vmv2r.v v28, v18
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vmv2r.v v26, v16
 ; CHECK-NEXT:    csrr a1, vlenb

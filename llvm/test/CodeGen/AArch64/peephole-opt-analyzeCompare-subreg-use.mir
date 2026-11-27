@@ -16,9 +16,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK-NEXT: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY]].sub_32, [[COPY2]], implicit-def dead $nzcv
+    ; CHECK-NEXT: [[SUBWrr:%[0-9]+]]:gpr32 = SUBWrr [[COPY]].sub_32, [[COPY2]]
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[SUBSWrr]], %subreg.sub_32
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[SUBWrr]], %subreg.sub_32
     ; CHECK-NEXT: [[RORVXr:%[0-9]+]]:gpr64 = RORVXr [[COPY1]], [[INSERT_SUBREG]]
     ; CHECK-NEXT: $x0 = COPY [[RORVXr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
@@ -46,9 +46,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $wzr
-    ; CHECK-NEXT: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr [[COPY2]], [[COPY]].sub_32, implicit-def dead $nzcv
+    ; CHECK-NEXT: [[SUBWrr:%[0-9]+]]:gpr32 = SUBWrr [[COPY2]], [[COPY]].sub_32
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[SUBSWrr]], %subreg.sub_32
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], [[SUBWrr]], %subreg.sub_32
     ; CHECK-NEXT: [[RORVXr:%[0-9]+]]:gpr64 = RORVXr [[COPY1]], [[INSERT_SUBREG]]
     ; CHECK-NEXT: $x0 = COPY [[RORVXr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0

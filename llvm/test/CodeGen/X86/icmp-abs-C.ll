@@ -161,12 +161,12 @@ define i16 @ne_and_with_dom_abs(i16 %x) nounwind {
 ; X86-LABEL: ne_and_with_dom_abs:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movswl %ax, %ecx
-; X86-NEXT:    sarl $15, %ecx
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movswl %dx, %eax
+; X86-NEXT:    sarl $15, %eax
+; X86-NEXT:    xorl %eax, %edx
+; X86-NEXT:    subl %eax, %edx
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    xorl $12312, %eax # imm = 0x3018
 ; X86-NEXT:    movzwl %ax, %esi
 ; X86-NEXT:    xorl %ecx, %ecx

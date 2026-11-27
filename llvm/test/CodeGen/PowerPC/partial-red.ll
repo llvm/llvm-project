@@ -13,14 +13,13 @@
 define dso_local signext range(i32 -262144, 262137) i32 @tuh(ptr noundef readonly captures(none) %a) local_unnamed_addr {
 ; CHECK-LABEL: tuh:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-NEXT:    vspltish v3, 1
+; CHECK-NEXT:    lxvd2x v3, 0, r3
+; CHECK-NEXT:    vspltish v2, 1
 ; CHECK-NEXT:    xxlxor v4, v4, v4
-; CHECK-NEXT:    xxswapd v2, vs0
-; CHECK-NEXT:    vmsumuhm v2, v2, v3, v4
+; CHECK-NEXT:    vmsumuhm v2, v3, v2, v4
 ; CHECK-NEXT:    xxswapd v3, v2
 ; CHECK-NEXT:    vadduwm v2, v2, v3
-; CHECK-NEXT:    xxspltw v3, v2, 2
+; CHECK-NEXT:    xxspltw v3, v2, 0
 ; CHECK-NEXT:    vadduwm v2, v2, v3
 ; CHECK-NEXT:    xxswapd vs0, v2
 ; CHECK-NEXT:    mffprwz r3, f0
@@ -68,15 +67,13 @@ entry:
 define dso_local signext range(i32 -262144, 262137) i32 @tuh2(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b) local_unnamed_addr {
 ; CHECK-LABEL: tuh2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-NEXT:    lxvd2x v2, 0, r3
+; CHECK-NEXT:    lxvd2x v3, 0, r4
 ; CHECK-NEXT:    xxlxor v4, v4, v4
-; CHECK-NEXT:    xxswapd v2, vs0
-; CHECK-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-NEXT:    xxswapd v3, vs0
 ; CHECK-NEXT:    vmsumuhm v2, v2, v3, v4
 ; CHECK-NEXT:    xxswapd v3, v2
 ; CHECK-NEXT:    vadduwm v2, v2, v3
-; CHECK-NEXT:    xxspltw v3, v2, 2
+; CHECK-NEXT:    xxspltw v3, v2, 0
 ; CHECK-NEXT:    vadduwm v2, v2, v3
 ; CHECK-NEXT:    xxswapd vs0, v2
 ; CHECK-NEXT:    mffprwz r3, f0
@@ -127,14 +124,13 @@ entry:
 define dso_local signext range(i32 -262144, 262137) i32 @tsh(ptr noundef readonly captures(none) %a) local_unnamed_addr {
 ; CHECK-LABEL: tsh:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-NEXT:    vspltish v3, 1
+; CHECK-NEXT:    lxvd2x v3, 0, r3
+; CHECK-NEXT:    vspltish v2, 1
 ; CHECK-NEXT:    xxlxor v4, v4, v4
-; CHECK-NEXT:    xxswapd v2, vs0
-; CHECK-NEXT:    vmsumshm v2, v2, v3, v4
+; CHECK-NEXT:    vmsumshm v2, v3, v2, v4
 ; CHECK-NEXT:    xxswapd v3, v2
 ; CHECK-NEXT:    vadduwm v2, v2, v3
-; CHECK-NEXT:    xxspltw v3, v2, 2
+; CHECK-NEXT:    xxspltw v3, v2, 0
 ; CHECK-NEXT:    vadduwm v2, v2, v3
 ; CHECK-NEXT:    xxswapd vs0, v2
 ; CHECK-NEXT:    mffprwz r3, f0
@@ -182,15 +178,13 @@ entry:
 define dso_local signext range(i32 -262144, 262137) i32 @tsh2(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b) local_unnamed_addr {
 ; CHECK-LABEL: tsh2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-NEXT:    lxvd2x v2, 0, r3
+; CHECK-NEXT:    lxvd2x v3, 0, r4
 ; CHECK-NEXT:    xxlxor v4, v4, v4
-; CHECK-NEXT:    xxswapd v2, vs0
-; CHECK-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-NEXT:    xxswapd v3, vs0
 ; CHECK-NEXT:    vmsumshm v2, v2, v3, v4
 ; CHECK-NEXT:    xxswapd v3, v2
 ; CHECK-NEXT:    vadduwm v2, v2, v3
-; CHECK-NEXT:    xxspltw v3, v2, 2
+; CHECK-NEXT:    xxspltw v3, v2, 0
 ; CHECK-NEXT:    vadduwm v2, v2, v3
 ; CHECK-NEXT:    xxswapd vs0, v2
 ; CHECK-NEXT:    mffprwz r3, f0
@@ -241,14 +235,13 @@ entry:
 define dso_local signext range(i32 -262144, 262137) i32 @tub(ptr noundef readonly captures(none) %a) local_unnamed_addr {
 ; CHECK-LABEL: tub:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-NEXT:    vspltisb v3, 1
+; CHECK-NEXT:    lxvd2x v3, 0, r3
+; CHECK-NEXT:    vspltisb v2, 1
 ; CHECK-NEXT:    xxlxor v4, v4, v4
-; CHECK-NEXT:    xxswapd v2, vs0
-; CHECK-NEXT:    vmsumubm v2, v2, v3, v4
+; CHECK-NEXT:    vmsumubm v2, v3, v2, v4
 ; CHECK-NEXT:    xxswapd v3, v2
 ; CHECK-NEXT:    vadduwm v2, v2, v3
-; CHECK-NEXT:    xxspltw v3, v2, 2
+; CHECK-NEXT:    xxspltw v3, v2, 0
 ; CHECK-NEXT:    vadduwm v2, v2, v3
 ; CHECK-NEXT:    xxswapd vs0, v2
 ; CHECK-NEXT:    mffprwz r3, f0
@@ -296,15 +289,13 @@ entry:
 define dso_local signext range(i32 -262144, 262137) i32 @tub2(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b) local_unnamed_addr {
 ; CHECK-LABEL: tub2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-NEXT:    lxvd2x v2, 0, r3
+; CHECK-NEXT:    lxvd2x v3, 0, r4
 ; CHECK-NEXT:    xxlxor v4, v4, v4
-; CHECK-NEXT:    xxswapd v2, vs0
-; CHECK-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-NEXT:    xxswapd v3, vs0
 ; CHECK-NEXT:    vmsumubm v2, v2, v3, v4
 ; CHECK-NEXT:    xxswapd v3, v2
 ; CHECK-NEXT:    vadduwm v2, v2, v3
-; CHECK-NEXT:    xxspltw v3, v2, 2
+; CHECK-NEXT:    xxspltw v3, v2, 0
 ; CHECK-NEXT:    vadduwm v2, v2, v3
 ; CHECK-NEXT:    xxswapd vs0, v2
 ; CHECK-NEXT:    mffprwz r3, f0
@@ -355,14 +346,13 @@ entry:
 define dso_local signext range(i32 -262144, 262137) i32 @tsb(ptr noundef readonly captures(none) %a) local_unnamed_addr {
 ; CHECK-LABEL: tsb:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-NEXT:    vspltisb v3, 1
+; CHECK-NEXT:    lxvd2x v3, 0, r3
+; CHECK-NEXT:    vspltisb v2, 1
 ; CHECK-NEXT:    xxlxor v4, v4, v4
-; CHECK-NEXT:    xxswapd v2, vs0
-; CHECK-NEXT:    vmsummbm v2, v2, v3, v4
+; CHECK-NEXT:    vmsummbm v2, v3, v2, v4
 ; CHECK-NEXT:    xxswapd v3, v2
 ; CHECK-NEXT:    vadduwm v2, v2, v3
-; CHECK-NEXT:    xxspltw v3, v2, 2
+; CHECK-NEXT:    xxspltw v3, v2, 0
 ; CHECK-NEXT:    vadduwm v2, v2, v3
 ; CHECK-NEXT:    xxswapd vs0, v2
 ; CHECK-NEXT:    mffprwz r3, f0
@@ -410,15 +400,13 @@ entry:
 define dso_local signext range(i32 -262144, 262137) i32 @tsb2(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b) local_unnamed_addr {
 ; CHECK-LABEL: tsb2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-NEXT:    lxvd2x v2, 0, r3
+; CHECK-NEXT:    lxvd2x v3, 0, r4
 ; CHECK-NEXT:    xxlxor v4, v4, v4
-; CHECK-NEXT:    xxswapd v2, vs0
-; CHECK-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-NEXT:    xxswapd v3, vs0
 ; CHECK-NEXT:    vmsummbm v2, v2, v3, v4
 ; CHECK-NEXT:    xxswapd v3, v2
 ; CHECK-NEXT:    vadduwm v2, v2, v3
-; CHECK-NEXT:    xxspltw v3, v2, 2
+; CHECK-NEXT:    xxspltw v3, v2, 0
 ; CHECK-NEXT:    vadduwm v2, v2, v3
 ; CHECK-NEXT:    xxswapd vs0, v2
 ; CHECK-NEXT:    mffprwz r3, f0

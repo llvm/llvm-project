@@ -1050,33 +1050,32 @@ define void @vst4_v4f16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ldrd r12, lr, [r0]
 ; CHECK-NEXT:    ldr r0, [r0, #28]
 ; CHECK-NEXT:    ldm r6, {r2, r3, r4, r5, r6}
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r6
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r0
-; CHECK-NEXT:    vmovx.f16 s8, s0
-; CHECK-NEXT:    vins.f16 s0, s2
-; CHECK-NEXT:    vmov q3[2], q3[0], r12, r2
-; CHECK-NEXT:    vmovx.f16 s2, s2
-; CHECK-NEXT:    vins.f16 s8, s2
-; CHECK-NEXT:    vmovx.f16 s7, s1
-; CHECK-NEXT:    vmovx.f16 s2, s3
-; CHECK-NEXT:    vmov q3[3], q3[1], lr, r3
-; CHECK-NEXT:    vins.f16 s7, s2
-; CHECK-NEXT:    vmov.f32 s2, s14
-; CHECK-NEXT:    vmovx.f16 s14, s12
-; CHECK-NEXT:    vins.f16 s12, s2
-; CHECK-NEXT:    vmovx.f16 s2, s2
-; CHECK-NEXT:    vins.f16 s1, s3
-; CHECK-NEXT:    vins.f16 s14, s2
-; CHECK-NEXT:    vmovx.f16 s6, s13
-; CHECK-NEXT:    vins.f16 s13, s15
-; CHECK-NEXT:    vmovx.f16 s2, s15
-; CHECK-NEXT:    vmov.f32 s4, s13
-; CHECK-NEXT:    vins.f16 s6, s2
-; CHECK-NEXT:    vmov.f32 s5, s1
-; CHECK-NEXT:    vmov.f32 s13, s0
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r6
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r0
+; CHECK-NEXT:    vmov.f32 s1, s8
+; CHECK-NEXT:    vmovx.f16 s0, s10
+; CHECK-NEXT:    vmovx.f16 s3, s8
+; CHECK-NEXT:    vmov.f32 s5, s9
+; CHECK-NEXT:    vins.f16 s3, s0
+; CHECK-NEXT:    vins.f16 s1, s10
+; CHECK-NEXT:    vins.f16 s5, s11
+; CHECK-NEXT:    vmovx.f16 s0, s11
+; CHECK-NEXT:    vmovx.f16 s7, s9
+; CHECK-NEXT:    vmov q2[2], q2[0], r12, r2
+; CHECK-NEXT:    vmov q2[3], q2[1], lr, r3
+; CHECK-NEXT:    vins.f16 s7, s0
+; CHECK-NEXT:    vmovx.f16 s4, s10
+; CHECK-NEXT:    vmovx.f16 s2, s8
+; CHECK-NEXT:    vmov.f32 s0, s8
+; CHECK-NEXT:    vins.f16 s2, s4
+; CHECK-NEXT:    vmov.f32 s4, s9
+; CHECK-NEXT:    vmovx.f16 s8, s11
+; CHECK-NEXT:    vmovx.f16 s6, s9
+; CHECK-NEXT:    vins.f16 s0, s10
+; CHECK-NEXT:    vins.f16 s4, s11
+; CHECK-NEXT:    vins.f16 s6, s8
 ; CHECK-NEXT:    vstrh.16 q1, [r1, #16]
-; CHECK-NEXT:    vmov.f32 s15, s8
-; CHECK-NEXT:    vstrh.16 q3, [r1]
+; CHECK-NEXT:    vstrh.16 q0, [r1]
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %l1 = load <4 x half>, ptr %src, align 4
@@ -1164,53 +1163,53 @@ define void @vst4_v8f16_align1(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #32]
-; CHECK-NEXT:    vldrw.u32 q4, [r0, #48]
-; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    vldrw.u32 q5, [r0, #16]
-; CHECK-NEXT:    vmovx.f16 s3, s5
-; CHECK-NEXT:    vmovx.f16 s0, s17
-; CHECK-NEXT:    vins.f16 s3, s0
-; CHECK-NEXT:    vmovx.f16 s2, s9
-; CHECK-NEXT:    vmovx.f16 s0, s21
-; CHECK-NEXT:    vmovx.f16 s15, s4
-; CHECK-NEXT:    vins.f16 s2, s0
-; CHECK-NEXT:    vmovx.f16 s0, s16
-; CHECK-NEXT:    vins.f16 s15, s0
-; CHECK-NEXT:    vmovx.f16 s14, s8
-; CHECK-NEXT:    vmovx.f16 s0, s20
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vldrw.u32 q4, [r0, #16]
+; CHECK-NEXT:    vldrw.u32 q2, [r0, #48]
+; CHECK-NEXT:    vmov.f32 s21, s4
+; CHECK-NEXT:    vmovx.f16 s23, s4
+; CHECK-NEXT:    vmovx.f16 s4, s16
+; CHECK-NEXT:    vmovx.f16 s22, s12
+; CHECK-NEXT:    vins.f16 s22, s4
+; CHECK-NEXT:    vmovx.f16 s4, s11
 ; CHECK-NEXT:    vmovx.f16 s27, s7
-; CHECK-NEXT:    vins.f16 s14, s0
-; CHECK-NEXT:    vmovx.f16 s0, s19
-; CHECK-NEXT:    vins.f16 s27, s0
-; CHECK-NEXT:    vmovx.f16 s26, s11
-; CHECK-NEXT:    vmovx.f16 s0, s23
-; CHECK-NEXT:    vins.f16 s7, s19
-; CHECK-NEXT:    vins.f16 s26, s0
-; CHECK-NEXT:    vmovx.f16 s19, s6
-; CHECK-NEXT:    vmovx.f16 s0, s18
-; CHECK-NEXT:    vins.f16 s5, s17
-; CHECK-NEXT:    vins.f16 s6, s18
-; CHECK-NEXT:    vins.f16 s4, s16
-; CHECK-NEXT:    vins.f16 s8, s20
-; CHECK-NEXT:    vins.f16 s11, s23
-; CHECK-NEXT:    vins.f16 s19, s0
-; CHECK-NEXT:    vmovx.f16 s18, s10
-; CHECK-NEXT:    vins.f16 s10, s22
-; CHECK-NEXT:    vmovx.f16 s0, s22
-; CHECK-NEXT:    vins.f16 s9, s21
-; CHECK-NEXT:    vins.f16 s18, s0
-; CHECK-NEXT:    vmov.f32 s0, s9
-; CHECK-NEXT:    vmov.f32 s1, s5
-; CHECK-NEXT:    vmov.f32 s12, s8
-; CHECK-NEXT:    vstrb.8 q0, [r1, #16]
-; CHECK-NEXT:    vmov.f32 s13, s4
-; CHECK-NEXT:    vmov.f32 s24, s11
-; CHECK-NEXT:    vstrb.8 q3, [r1]
 ; CHECK-NEXT:    vmov.f32 s25, s7
-; CHECK-NEXT:    vmov.f32 s16, s10
+; CHECK-NEXT:    vins.f16 s27, s4
+; CHECK-NEXT:    vmovx.f16 s4, s19
+; CHECK-NEXT:    vmovx.f16 s26, s15
+; CHECK-NEXT:    vins.f16 s25, s11
+; CHECK-NEXT:    vins.f16 s26, s4
+; CHECK-NEXT:    vmovx.f16 s11, s6
+; CHECK-NEXT:    vmovx.f16 s4, s10
+; CHECK-NEXT:    vmovx.f16 s0, s9
+; CHECK-NEXT:    vmovx.f16 s3, s5
+; CHECK-NEXT:    vmov.f32 s1, s5
+; CHECK-NEXT:    vmov.f32 s20, s12
+; CHECK-NEXT:    vins.f16 s3, s0
+; CHECK-NEXT:    vmov.f32 s0, s13
+; CHECK-NEXT:    vins.f16 s21, s8
+; CHECK-NEXT:    vmov.f32 s24, s15
+; CHECK-NEXT:    vmovx.f16 s8, s8
+; CHECK-NEXT:    vins.f16 s6, s10
+; CHECK-NEXT:    vins.f16 s11, s4
+; CHECK-NEXT:    vmovx.f16 s10, s14
+; CHECK-NEXT:    vmovx.f16 s4, s18
+; CHECK-NEXT:    vmovx.f16 s5, s17
+; CHECK-NEXT:    vmovx.f16 s2, s13
+; CHECK-NEXT:    vins.f16 s14, s18
+; CHECK-NEXT:    vins.f16 s1, s9
+; CHECK-NEXT:    vins.f16 s23, s8
+; CHECK-NEXT:    vins.f16 s20, s16
+; CHECK-NEXT:    vins.f16 s24, s19
+; CHECK-NEXT:    vins.f16 s0, s17
+; CHECK-NEXT:    vins.f16 s2, s5
+; CHECK-NEXT:    vins.f16 s10, s4
+; CHECK-NEXT:    vmov.f32 s8, s14
 ; CHECK-NEXT:    vstrb.8 q6, [r1, #48]
-; CHECK-NEXT:    vmov.f32 s17, s6
-; CHECK-NEXT:    vstrb.8 q4, [r1, #32]
+; CHECK-NEXT:    vmov.f32 s9, s6
+; CHECK-NEXT:    vstrb.8 q0, [r1, #16]
+; CHECK-NEXT:    vstrb.8 q2, [r1, #32]
+; CHECK-NEXT:    vstrb.8 q5, [r1]
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    bx lr
 entry:

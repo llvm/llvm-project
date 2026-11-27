@@ -261,9 +261,9 @@ define i16 @unsigned_sat_variable_i16_using_cmp_sum(i16 %x, i16 %y) {
 define i16 @unsigned_sat_variable_i16_using_cmp_notval(i16 %x, i16 %y) {
 ; ANY-LABEL: unsigned_sat_variable_i16_using_cmp_notval:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    addw %di, %si
+; ANY-NEXT:    addw %si, %di
 ; ANY-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; ANY-NEXT:    cmovael %esi, %eax
+; ANY-NEXT:    cmovael %edi, %eax
 ; ANY-NEXT:    # kill: def $ax killed $ax killed $eax
 ; ANY-NEXT:    retq
   %noty = xor i16 %y, -1

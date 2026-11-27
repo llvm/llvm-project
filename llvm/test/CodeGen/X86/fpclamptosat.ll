@@ -49,14 +49,13 @@ entry:
 define i32 @ustest_f64i32(double %x) nounwind {
 ; CHECK-LABEL: ustest_f64i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cvttsd2si %xmm0, %rcx
-; CHECK-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; CHECK-NEXT:    cmpq %rax, %rcx
-; CHECK-NEXT:    cmovlq %rcx, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    cmovlel %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    cvttsd2si %xmm0, %rax
+; CHECK-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    cmovlq %rax, %rcx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testq %rcx, %rcx
+; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    retq
 entry:
   %conv = fptosi double %x to i64
@@ -115,14 +114,13 @@ entry:
 define i32 @ustest_f32i32(float %x) nounwind {
 ; CHECK-LABEL: ustest_f32i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cvttss2si %xmm0, %rcx
-; CHECK-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; CHECK-NEXT:    cmpq %rax, %rcx
-; CHECK-NEXT:    cmovlq %rcx, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    cmovlel %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    cvttss2si %xmm0, %rax
+; CHECK-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    cmovlq %rax, %rcx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testq %rcx, %rcx
+; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    retq
 entry:
   %conv = fptosi float %x to i64
@@ -192,14 +190,13 @@ define i32 @ustest_f16i32(half %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %rcx
-; CHECK-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; CHECK-NEXT:    cmpq %rax, %rcx
-; CHECK-NEXT:    cmovlq %rcx, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    cmovlel %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    cvttss2si %xmm0, %rax
+; CHECK-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    cmovlq %rax, %rcx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testq %rcx, %rcx
+; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 entry:

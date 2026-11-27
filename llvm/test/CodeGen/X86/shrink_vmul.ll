@@ -2146,24 +2146,24 @@ define void @PR34947(ptr %p0, ptr %p1) nounwind {
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX2-NEXT:    vmovdqa (%ecx), %ymm0
-; X86-AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; X86-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm3 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; X86-AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [4.503599627370496E+15,4.503599627370496E+15,4.503599627370496E+15,4.503599627370496E+15]
-; X86-AVX2-NEXT:    vpor %ymm2, %ymm3, %ymm3
-; X86-AVX2-NEXT:    vsubpd %ymm2, %ymm3, %ymm3
-; X86-AVX2-NEXT:    vcvtdq2pd %xmm1, %ymm4
-; X86-AVX2-NEXT:    vdivpd %ymm3, %ymm4, %ymm4
-; X86-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [2.147483648E+9,2.147483648E+9,2.147483648E+9,2.147483648E+9]
-; X86-AVX2-NEXT:    vsubpd %ymm3, %ymm4, %ymm5
+; X86-AVX2-NEXT:    vmovdqa (%ecx), %ymm2
+; X86-AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; X86-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
+; X86-AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4.503599627370496E+15,4.503599627370496E+15,4.503599627370496E+15,4.503599627370496E+15]
+; X86-AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vsubpd %ymm1, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vcvtdq2pd %xmm3, %ymm4
+; X86-AVX2-NEXT:    vdivpd %ymm0, %ymm4, %ymm4
+; X86-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [2.147483648E+9,2.147483648E+9,2.147483648E+9,2.147483648E+9]
+; X86-AVX2-NEXT:    vsubpd %ymm0, %ymm4, %ymm5
 ; X86-AVX2-NEXT:    vcvttpd2dq %ymm5, %xmm5
 ; X86-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm6 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; X86-AVX2-NEXT:    vpor %ymm2, %ymm6, %ymm6
-; X86-AVX2-NEXT:    vsubpd %ymm2, %ymm6, %ymm6
-; X86-AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm7
+; X86-AVX2-NEXT:    vpor %ymm1, %ymm6, %ymm6
+; X86-AVX2-NEXT:    vsubpd %ymm1, %ymm6, %ymm6
+; X86-AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm7
 ; X86-AVX2-NEXT:    vcvtdq2pd %xmm7, %ymm7
 ; X86-AVX2-NEXT:    vdivpd %ymm6, %ymm7, %ymm6
-; X86-AVX2-NEXT:    vsubpd %ymm3, %ymm6, %ymm7
+; X86-AVX2-NEXT:    vsubpd %ymm0, %ymm6, %ymm7
 ; X86-AVX2-NEXT:    vcvttpd2dq %ymm7, %xmm7
 ; X86-AVX2-NEXT:    vinsertf128 $1, %xmm7, %ymm5, %ymm5
 ; X86-AVX2-NEXT:    vcvttpd2dq %ymm4, %xmm4
@@ -2173,24 +2173,24 @@ define void @PR34947(ptr %p0, ptr %p1) nounwind {
 ; X86-AVX2-NEXT:    vandpd %ymm6, %ymm5, %ymm5
 ; X86-AVX2-NEXT:    vorpd %ymm5, %ymm4, %ymm5
 ; X86-AVX2-NEXT:    vmovd {{.*#+}} xmm4 = mem[0],zero,zero,zero
-; X86-AVX2-NEXT:    vpmulld %ymm0, %ymm5, %ymm5
-; X86-AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; X86-AVX2-NEXT:    vpsubd %ymm5, %ymm1, %ymm1
+; X86-AVX2-NEXT:    vpmulld %ymm2, %ymm5, %ymm5
+; X86-AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; X86-AVX2-NEXT:    vpsubd %ymm5, %ymm3, %ymm3
 ; X86-AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm5 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero
-; X86-AVX2-NEXT:    vpor %ymm2, %ymm5, %ymm5
-; X86-AVX2-NEXT:    vsubpd %ymm2, %ymm5, %ymm2
-; X86-AVX2-NEXT:    vcvtdq2pd %xmm0, %ymm5
-; X86-AVX2-NEXT:    vdivpd %ymm2, %ymm5, %ymm2
-; X86-AVX2-NEXT:    vcvttpd2dq %ymm2, %xmm5
-; X86-AVX2-NEXT:    vsubpd %ymm3, %ymm2, %ymm2
-; X86-AVX2-NEXT:    vpsrad $31, %xmm5, %xmm3
-; X86-AVX2-NEXT:    vcvttpd2dq %ymm2, %xmm2
-; X86-AVX2-NEXT:    vandpd %xmm3, %xmm2, %xmm2
-; X86-AVX2-NEXT:    vorpd %xmm2, %xmm5, %xmm2
-; X86-AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [8199,8199,8199,8199,8199,8199,8199,8199]
-; X86-AVX2-NEXT:    vpmulld %ymm3, %ymm1, %ymm1
-; X86-AVX2-NEXT:    vpmulld %xmm4, %xmm2, %xmm2
-; X86-AVX2-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vpor %ymm1, %ymm5, %ymm5
+; X86-AVX2-NEXT:    vsubpd %ymm1, %ymm5, %ymm1
+; X86-AVX2-NEXT:    vcvtdq2pd %xmm2, %ymm5
+; X86-AVX2-NEXT:    vdivpd %ymm1, %ymm5, %ymm1
+; X86-AVX2-NEXT:    vcvttpd2dq %ymm1, %xmm5
+; X86-AVX2-NEXT:    vsubpd %ymm0, %ymm1, %ymm0
+; X86-AVX2-NEXT:    vpsrad $31, %xmm5, %xmm1
+; X86-AVX2-NEXT:    vcvttpd2dq %ymm0, %xmm0
+; X86-AVX2-NEXT:    vandpd %xmm1, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vorpd %xmm0, %xmm5, %xmm0
+; X86-AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [8199,8199,8199,8199,8199,8199,8199,8199]
+; X86-AVX2-NEXT:    vpmulld %ymm1, %ymm3, %ymm1
+; X86-AVX2-NEXT:    vpmulld %xmm4, %xmm0, %xmm0
+; X86-AVX2-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
 ; X86-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX2-NEXT:    vmovdqa %ymm1, (%eax)
 ; X86-AVX2-NEXT:    imull $8199, %eax, %eax # imm = 0x2007

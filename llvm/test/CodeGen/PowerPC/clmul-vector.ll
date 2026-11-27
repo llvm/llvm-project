@@ -2110,7 +2110,7 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    lis 3, -21846
 ; LE-NEXT:    lis 6, 13107
 ; LE-NEXT:    xxswapd 1, 35
-; LE-NEXT:    xxsldwi 3, 35, 35, 3
+; LE-NEXT:    xxsldwi 4, 35, 35, 3
 ; LE-NEXT:    lis 7, 3855
 ; LE-NEXT:    ori 4, 3, 43690
 ; LE-NEXT:    mffprwz 11, 0
@@ -2120,7 +2120,7 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    lis 6, -3856
 ; LE-NEXT:    ori 7, 7, 3855
 ; LE-NEXT:    xxsldwi 2, 34, 34, 1
-; LE-NEXT:    xxswapd 4, 34
+; LE-NEXT:    xxswapd 3, 34
 ; LE-NEXT:    ori 5, 3, 21845
 ; LE-NEXT:    lis 3, -13108
 ; LE-NEXT:    ori 6, 6, 61680
@@ -2137,7 +2137,7 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    and 12, 12, 4
 ; LE-NEXT:    and 11, 11, 5
 ; LE-NEXT:    or 9, 9, 10
-; LE-NEXT:    mffprwz 10, 3
+; LE-NEXT:    mffprwz 10, 4
 ; LE-NEXT:    or 11, 11, 12
 ; LE-NEXT:    slwi 12, 0, 1
 ; LE-NEXT:    srwi 0, 0, 1
@@ -2208,7 +2208,7 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    rlwimi 11, 9, 8, 24, 31
 ; LE-NEXT:    rldicl 9, 11, 0, 32
 ; LE-NEXT:    rldimi 9, 10, 32, 0
-; LE-NEXT:    mtfprd 3, 9
+; LE-NEXT:    mtfprd 4, 9
 ; LE-NEXT:    mffprwz 9, 2
 ; LE-NEXT:    slwi 10, 9, 1
 ; LE-NEXT:    srwi 9, 9, 1
@@ -2229,7 +2229,7 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; LE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; LE-NEXT:    rldicl 9, 10, 0, 32
-; LE-NEXT:    mffprwz 10, 4
+; LE-NEXT:    mffprwz 10, 3
 ; LE-NEXT:    slwi 11, 10, 1
 ; LE-NEXT:    srwi 10, 10, 1
 ; LE-NEXT:    and 11, 11, 4
@@ -2296,7 +2296,7 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    addis 9, 2, .LCPI6_0@toc@ha
 ; LE-NEXT:    mtfprd 0, 10
 ; LE-NEXT:    addi 9, 9, .LCPI6_0@toc@l
-; LE-NEXT:    xxmrghd 1, 3, 1
+; LE-NEXT:    xxmrghd 1, 4, 1
 ; LE-NEXT:    xxland 35, 1, 34
 ; LE-NEXT:    xxmrghd 0, 0, 2
 ; LE-NEXT:    lxvd2x 2, 0, 9

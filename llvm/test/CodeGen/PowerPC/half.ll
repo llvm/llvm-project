@@ -891,17 +891,19 @@ define <4 x float> @test_extend32_vec4(ptr %p) nounwind {
 ; P8-NEXT:    stw r4, 64(r1)
 ; P8-NEXT:    lwz r3, 0(r3)
 ; P8-NEXT:    stw r3, 48(r1)
-; P8-NEXT:    addi r3, r1, 64
-; P8-NEXT:    lxvd2x vs62, 0, r3
 ; P8-NEXT:    addi r3, r1, 48
 ; P8-NEXT:    lxvd2x vs0, 0, r3
+; P8-NEXT:    addi r3, r1, 64
+; P8-NEXT:    lxvd2x vs62, 0, r3
+; P8-NEXT:    xxswapd vs0, vs0
 ; P8-NEXT:    mffprd r30, f0
 ; P8-NEXT:    clrldi r3, r30, 48
 ; P8-NEXT:    clrlwi r3, r3, 16
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
-; P8-NEXT:    mfvsrd r29, vs62
+; P8-NEXT:    xxswapd vs0, vs62
 ; P8-NEXT:    xxlor vs63, f1, f1
+; P8-NEXT:    mffprd r29, f0
 ; P8-NEXT:    clrldi r3, r29, 48
 ; P8-NEXT:    clrlwi r3, r3, 16
 ; P8-NEXT:    bl __extendhfsf2

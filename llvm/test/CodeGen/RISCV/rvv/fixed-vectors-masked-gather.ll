@@ -14586,10 +14586,10 @@ define <8 x i16> @mgather_strided_unaligned(ptr %base) {
 ; RV32-NEXT:    vid.v v8
 ; RV32-NEXT:    vsll.vi v8, v8, 2
 ; RV32-NEXT:    vadd.vx v8, v8, a0
-; RV32-NEXT:    vmv.x.s a3, v8
+; RV32-NEXT:    vmv.x.s a2, v8
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v10, v8, 1
-; RV32-NEXT:    vmv.x.s a2, v10
+; RV32-NEXT:    vmv.x.s a3, v10
 ; RV32-NEXT:    vslidedown.vi v10, v8, 2
 ; RV32-NEXT:    vmv.x.s a1, v10
 ; RV32-NEXT:    vslidedown.vi v10, v8, 3
@@ -14605,43 +14605,43 @@ define <8 x i16> @mgather_strided_unaligned(ptr %base) {
 ; RV32-NEXT:    lbu a7, 1(a4)
 ; RV32-NEXT:    vmv.x.s t0, v8
 ; RV32-NEXT:    lbu a4, 0(a4)
-; RV32-NEXT:    lbu t1, 1(a3)
-; RV32-NEXT:    lbu a3, 0(a3)
+; RV32-NEXT:    lbu t1, 1(a2)
+; RV32-NEXT:    lbu a2, 0(a2)
 ; RV32-NEXT:    slli a7, a7, 8
 ; RV32-NEXT:    lbu t2, 0(a5)
 ; RV32-NEXT:    lbu a5, 1(a5)
 ; RV32-NEXT:    or a4, a7, a4
 ; RV32-NEXT:    slli t1, t1, 8
-; RV32-NEXT:    or a3, t1, a3
+; RV32-NEXT:    or a2, t1, a2
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; RV32-NEXT:    vmv.v.x v8, a4
-; RV32-NEXT:    lbu a4, 0(a2)
-; RV32-NEXT:    lbu a2, 1(a2)
+; RV32-NEXT:    lbu a4, 0(a3)
+; RV32-NEXT:    lbu a3, 1(a3)
 ; RV32-NEXT:    slli a5, a5, 8
-; RV32-NEXT:    vmv.v.x v9, a3
-; RV32-NEXT:    or a3, a5, t2
-; RV32-NEXT:    vslide1down.vx v8, v8, a3
-; RV32-NEXT:    lbu a3, 1(a6)
+; RV32-NEXT:    vmv.v.x v9, a2
+; RV32-NEXT:    or a2, a5, t2
+; RV32-NEXT:    vslide1down.vx v8, v8, a2
+; RV32-NEXT:    lbu a2, 1(a6)
 ; RV32-NEXT:    lbu a5, 0(a6)
-; RV32-NEXT:    slli a2, a2, 8
-; RV32-NEXT:    or a2, a2, a4
-; RV32-NEXT:    vslide1down.vx v9, v9, a2
-; RV32-NEXT:    lbu a2, 1(a1)
-; RV32-NEXT:    lbu a1, 0(a1)
 ; RV32-NEXT:    slli a3, a3, 8
-; RV32-NEXT:    or a3, a3, a5
-; RV32-NEXT:    vslide1down.vx v8, v8, a3
+; RV32-NEXT:    or a3, a3, a4
+; RV32-NEXT:    vslide1down.vx v9, v9, a3
+; RV32-NEXT:    lbu a3, 1(a1)
+; RV32-NEXT:    lbu a1, 0(a1)
 ; RV32-NEXT:    slli a2, a2, 8
-; RV32-NEXT:    lbu a3, 1(t0)
+; RV32-NEXT:    or a2, a2, a5
+; RV32-NEXT:    vslide1down.vx v8, v8, a2
+; RV32-NEXT:    slli a3, a3, 8
+; RV32-NEXT:    lbu a2, 1(t0)
 ; RV32-NEXT:    lbu a4, 0(t0)
-; RV32-NEXT:    or a1, a2, a1
+; RV32-NEXT:    or a1, a3, a1
 ; RV32-NEXT:    vslide1down.vx v9, v9, a1
 ; RV32-NEXT:    lbu a1, 1(a0)
 ; RV32-NEXT:    lbu a0, 0(a0)
-; RV32-NEXT:    slli a3, a3, 8
-; RV32-NEXT:    or a3, a3, a4
+; RV32-NEXT:    slli a2, a2, 8
+; RV32-NEXT:    or a2, a2, a4
 ; RV32-NEXT:    vmv.v.i v0, 15
-; RV32-NEXT:    vslide1down.vx v8, v8, a3
+; RV32-NEXT:    vslide1down.vx v8, v8, a2
 ; RV32-NEXT:    slli a1, a1, 8
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    vslide1down.vx v9, v9, a0

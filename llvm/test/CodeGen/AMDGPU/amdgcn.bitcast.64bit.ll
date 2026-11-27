@@ -1633,8 +1633,7 @@ define <4 x bfloat> @bitcast_i64_to_v4bf16(i64 %a, i32 %b) #0 {
 ; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v0
 ; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v0
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    ; implicit-def: $vgpr1
+; SI-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SI-NEXT:  ; %bb.2: ; %Flow
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; SI-NEXT:  ; %bb.3: ; %cmp.true
@@ -1949,7 +1948,7 @@ define i64 @bitcast_v4bf16_to_i64(<4 x bfloat> %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB22_3: ; %cmp.false
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, v3 :: v_dual_mov_b32 v1, v4
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_vgpr4
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB22_2
 ; GFX11-TRUE16-NEXT:  .LBB22_4: ; %cmp.true
@@ -4823,7 +4822,7 @@ define double @bitcast_v4bf16_to_f64(<4 x bfloat> %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB46_3: ; %cmp.false
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, v3 :: v_dual_mov_b32 v1, v4
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_vgpr4
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB46_2
 ; GFX11-TRUE16-NEXT:  .LBB46_4: ; %cmp.true
@@ -7146,8 +7145,7 @@ define <4 x bfloat> @bitcast_v2i32_to_v4bf16(<2 x i32> %a, i32 %b) #0 {
 ; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v0
 ; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v0
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    ; implicit-def: $vgpr1
+; SI-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SI-NEXT:  ; %bb.2: ; %Flow
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; SI-NEXT:  ; %bb.3: ; %cmp.true
@@ -7456,7 +7454,7 @@ define <2 x i32> @bitcast_v4bf16_to_v2i32(<4 x bfloat> %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB66_3: ; %cmp.false
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, v3 :: v_dual_mov_b32 v1, v4
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_vgpr4
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB66_2
 ; GFX11-TRUE16-NEXT:  .LBB66_4: ; %cmp.true
@@ -9472,8 +9470,7 @@ define <4 x bfloat> @bitcast_v2f32_to_v4bf16(<2 x float> %a, i32 %b) #0 {
 ; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
 ; SI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v0
 ; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v0
-; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    ; implicit-def: $vgpr1
+; SI-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; SI-NEXT:  ; %bb.2: ; %Flow
 ; SI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; SI-NEXT:  ; %bb.3: ; %cmp.true
@@ -9791,7 +9788,7 @@ define <2 x float> @bitcast_v4bf16_to_v2f32(<4 x bfloat> %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ; GFX11-TRUE16-NEXT:  .LBB82_3: ; %cmp.false
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, v3 :: v_dual_mov_b32 v1, v4
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr3_vgpr4
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB82_2
 ; GFX11-TRUE16-NEXT:  .LBB82_4: ; %cmp.true
@@ -12265,9 +12262,9 @@ define <8 x i8> @bitcast_v4i16_to_v8i8(<4 x i16> %a, i32 %b) #0 {
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; VI-NEXT:    v_lshrrev_b32_e32 v6, 16, v1
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; VI-NEXT:    ; implicit-def: $vgpr9
 ; VI-NEXT:    ; implicit-def: $vgpr4
+; VI-NEXT:    ; implicit-def: $vgpr2
 ; VI-NEXT:    ; implicit-def: $vgpr3
 ; VI-NEXT:    ; implicit-def: $vgpr8
 ; VI-NEXT:    ; implicit-def: $vgpr5
@@ -12278,6 +12275,7 @@ define <8 x i8> @bitcast_v4i16_to_v8i8(<4 x i16> %a, i32 %b) #0 {
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[0:1]
 ; VI-NEXT:    v_lshrrev_b32_e32 v7, 24, v1
 ; VI-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; VI-NEXT:    v_lshrrev_b32_e32 v4, 8, v0
 ; VI-NEXT:    v_mov_b32_e32 v9, v0
 ; VI-NEXT:    v_mov_b32_e32 v8, v1
@@ -14000,8 +13998,8 @@ define <8 x i8> @bitcast_v4f16_to_v8i8(<4 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    v_mov_b32_e32 v8, v0
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; VI-NEXT:    v_lshrrev_b32_e32 v6, 16, v9
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v8
 ; VI-NEXT:    ; implicit-def: $vgpr1
+; VI-NEXT:    ; implicit-def: $vgpr2
 ; VI-NEXT:    ; implicit-def: $vgpr3
 ; VI-NEXT:    ; implicit-def: $vgpr5
 ; VI-NEXT:    ; implicit-def: $vgpr7
@@ -14011,6 +14009,7 @@ define <8 x i8> @bitcast_v4f16_to_v8i8(<4 x half> %a, i32 %b) #0 {
 ; VI-NEXT:    v_lshrrev_b64 v[3:4], 24, v[8:9]
 ; VI-NEXT:    v_lshrrev_b32_e32 v7, 24, v9
 ; VI-NEXT:    v_lshrrev_b32_e32 v5, 8, v9
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v8
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 8, v8
 ; VI-NEXT:  ; %bb.2: ; %Flow
 ; VI-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -15136,7 +15135,7 @@ define <8 x i8> @bitcast_v4bf16_to_v8i8(<4 x bfloat> %a, i32 %b) #0 {
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v8.h, v0.h
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v4.h, v1.l
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v9.h, v1.h
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX11-TRUE16-NEXT:  .LBB108_2: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-TRUE16-NEXT:    s_cbranch_execz .LBB108_4

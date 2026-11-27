@@ -99,20 +99,21 @@ define void @vector_interleave_store_nxv16i64_nxv8i64(<vscale x 8 x i64> %a, <vs
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vid.v v6
 ; CHECK-NEXT:    vand.vi v4, v6, 1
-; CHECK-NEXT:    vmv8r.v v24, v8
-; CHECK-NEXT:    vmv4r.v v28, v16
-; CHECK-NEXT:    vmv4r.v v16, v12
+; CHECK-NEXT:    vmv4r.v v24, v12
+; CHECK-NEXT:    vmv4r.v v28, v20
 ; CHECK-NEXT:    vmsne.vi v0, v4, 0
-; CHECK-NEXT:    vsrl.vi v6, v6, 1
+; CHECK-NEXT:    vsrl.vi v12, v6, 1
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 1
-; CHECK-NEXT:    vadd.vx v6, v6, a2, v0.t
+; CHECK-NEXT:    vadd.vx v12, v12, a2, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v8, v16, v6
-; CHECK-NEXT:    vrgatherei16.vv v16, v24, v6
+; CHECK-NEXT:    vrgatherei16.vv v0, v24, v12
+; CHECK-NEXT:    vmv2r.v v24, v12
+; CHECK-NEXT:    vmv4r.v v12, v16
+; CHECK-NEXT:    vrgatherei16.vv v16, v8, v24
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, a0, a1
-; CHECK-NEXT:    vs8r.v v8, (a1)
+; CHECK-NEXT:    vs8r.v v0, (a1)
 ; CHECK-NEXT:    vs8r.v v16, (a0)
 ; CHECK-NEXT:    ret
   %res = call <vscale x 16 x i64> @llvm.vector.interleave2.nxv16i64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %b)

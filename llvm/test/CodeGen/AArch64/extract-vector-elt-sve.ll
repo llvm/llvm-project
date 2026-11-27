@@ -53,7 +53,7 @@ define <vscale x 4 x i32> @insert_vscale_4_i32_zero(<vscale x 4 x i32> %vec, i32
 ;
 ; CHECK-GI-LABEL: insert_vscale_4_i32_zero:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, wzr
+; CHECK-GI-NEXT:    mov x8, xzr
 ; CHECK-GI-NEXT:    index z1.s, #0, #1
 ; CHECK-GI-NEXT:    ptrue p0.s
 ; CHECK-GI-NEXT:    mov z2.s, w8

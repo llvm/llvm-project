@@ -670,23 +670,22 @@ define i256 @f32_to_s256(float %val) nounwind {
 ; CHECK-GI-NEXT:    umulh x12, x8, xzr
 ; CHECK-GI-NEXT:    umulh x11, x10, x8
 ; CHECK-GI-NEXT:    umulh x13, x10, x9
+; CHECK-GI-NEXT:    add x15, x12, x15
 ; CHECK-GI-NEXT:    smull x14, w10, w9
-; CHECK-GI-NEXT:    smull x16, w10, w9
 ; CHECK-GI-NEXT:    smull x0, w10, w8
 ; CHECK-GI-NEXT:    adds x1, x11, x14
-; CHECK-GI-NEXT:    add x14, x12, x15
 ; CHECK-GI-NEXT:    add x12, x12, x13
+; CHECK-GI-NEXT:    add x13, x15, x13
 ; CHECK-GI-NEXT:    cset w11, hs
-; CHECK-GI-NEXT:    adds x12, x12, x16
-; CHECK-GI-NEXT:    add x13, x14, x13
-; CHECK-GI-NEXT:    and x11, x11, #0x1
+; CHECK-GI-NEXT:    adds x12, x12, x14
 ; CHECK-GI-NEXT:    smaddl x9, w10, w9, x13
+; CHECK-GI-NEXT:    and x11, x11, #0x1
 ; CHECK-GI-NEXT:    cset w13, hs
 ; CHECK-GI-NEXT:    adds x2, x12, x11
 ; CHECK-GI-NEXT:    and x8, x13, #0x1
 ; CHECK-GI-NEXT:    cset w10, hs
-; CHECK-GI-NEXT:    and x10, x10, #0x1
 ; CHECK-GI-NEXT:    add x8, x9, x8
+; CHECK-GI-NEXT:    and x10, x10, #0x1
 ; CHECK-GI-NEXT:    add x3, x8, x10
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB4_3: // %fp-to-i-if-exp.large
@@ -1388,23 +1387,22 @@ define i256 @f32_to_s256_sat(float %val) nounwind {
 ; CHECK-GI-NEXT:    umulh x12, x8, xzr
 ; CHECK-GI-NEXT:    umulh x11, x10, x8
 ; CHECK-GI-NEXT:    umulh x13, x10, x9
+; CHECK-GI-NEXT:    add x15, x12, x15
 ; CHECK-GI-NEXT:    smull x14, w10, w9
-; CHECK-GI-NEXT:    smull x16, w10, w9
 ; CHECK-GI-NEXT:    smull x0, w10, w8
 ; CHECK-GI-NEXT:    adds x1, x11, x14
-; CHECK-GI-NEXT:    add x14, x12, x15
 ; CHECK-GI-NEXT:    add x12, x12, x13
+; CHECK-GI-NEXT:    add x13, x15, x13
 ; CHECK-GI-NEXT:    cset w11, hs
-; CHECK-GI-NEXT:    adds x12, x12, x16
-; CHECK-GI-NEXT:    add x13, x14, x13
-; CHECK-GI-NEXT:    and x11, x11, #0x1
+; CHECK-GI-NEXT:    adds x12, x12, x14
 ; CHECK-GI-NEXT:    smaddl x9, w10, w9, x13
+; CHECK-GI-NEXT:    and x11, x11, #0x1
 ; CHECK-GI-NEXT:    cset w13, hs
 ; CHECK-GI-NEXT:    adds x2, x12, x11
 ; CHECK-GI-NEXT:    and x8, x13, #0x1
 ; CHECK-GI-NEXT:    cset w10, hs
-; CHECK-GI-NEXT:    and x10, x10, #0x1
 ; CHECK-GI-NEXT:    add x8, x9, x8
+; CHECK-GI-NEXT:    and x10, x10, #0x1
 ; CHECK-GI-NEXT:    add x3, x8, x10
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB8_5:

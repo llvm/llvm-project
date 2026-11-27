@@ -116,14 +116,14 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v[0:1], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:  .LBB0_3: ; %exit
-; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v1.l, 15, v1.l
+; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v1.h, 15, v1.l
 ; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v0 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, v1.l, 0x8000
+; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, v1.h, 0x8000
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, 0x8000
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v0.h, 0x8000
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v1.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, v1.h, 0x8000
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: vec_8xi16_extract_4xi16:
@@ -668,14 +668,14 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v[0:1], off glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:  .LBB3_3: ; %exit
-; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v1.l, 15, v1.l
+; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v1.h, 15, v1.l
 ; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v0 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, v1.l, 0x8000
+; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, v1.h, 0x8000
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, 0x8000
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v0.h, 0x8000
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v1.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, v1.h, 0x8000
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: vec_16xi16_extract_4xi16:

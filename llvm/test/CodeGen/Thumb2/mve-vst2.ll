@@ -578,31 +578,29 @@ entry:
 define void @vst2_v8f16_align1(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst2_v8f16_align1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #16]
-; CHECK-NEXT:    vmovx.f16 s1, s6
-; CHECK-NEXT:    vmovx.f16 s0, s10
-; CHECK-NEXT:    vins.f16 s1, s0
-; CHECK-NEXT:    vmovx.f16 s3, s7
-; CHECK-NEXT:    vmovx.f16 s0, s11
-; CHECK-NEXT:    vins.f16 s6, s10
-; CHECK-NEXT:    vins.f16 s3, s0
-; CHECK-NEXT:    vmovx.f16 s10, s4
-; CHECK-NEXT:    vmovx.f16 s0, s8
-; CHECK-NEXT:    vins.f16 s7, s11
-; CHECK-NEXT:    vins.f16 s4, s8
-; CHECK-NEXT:    vins.f16 s10, s0
-; CHECK-NEXT:    vmovx.f16 s8, s5
-; CHECK-NEXT:    vins.f16 s5, s9
+; CHECK-NEXT:    vmov.f32 s4, s2
+; CHECK-NEXT:    vmovx.f16 s5, s2
+; CHECK-NEXT:    vmovx.f16 s6, s10
+; CHECK-NEXT:    vmovx.f16 s2, s11
+; CHECK-NEXT:    vmovx.f16 s7, s3
+; CHECK-NEXT:    vmov.f32 s12, s0
+; CHECK-NEXT:    vins.f16 s5, s6
+; CHECK-NEXT:    vmov.f32 s6, s3
+; CHECK-NEXT:    vins.f16 s7, s2
+; CHECK-NEXT:    vmovx.f16 s13, s0
+; CHECK-NEXT:    vmovx.f16 s2, s8
+; CHECK-NEXT:    vmovx.f16 s15, s1
+; CHECK-NEXT:    vins.f16 s1, s9
 ; CHECK-NEXT:    vmovx.f16 s0, s9
-; CHECK-NEXT:    vmov q3, q1
-; CHECK-NEXT:    vins.f16 s8, s0
-; CHECK-NEXT:    vmov.f32 s0, s6
-; CHECK-NEXT:    vmov.f32 s2, s7
-; CHECK-NEXT:    vmov.f32 s13, s10
-; CHECK-NEXT:    vstrb.8 q0, [r1, #16]
-; CHECK-NEXT:    vmov.f32 s14, s5
-; CHECK-NEXT:    vmov.f32 s15, s8
+; CHECK-NEXT:    vins.f16 s4, s10
+; CHECK-NEXT:    vins.f16 s6, s11
+; CHECK-NEXT:    vins.f16 s12, s8
+; CHECK-NEXT:    vins.f16 s13, s2
+; CHECK-NEXT:    vins.f16 s15, s0
+; CHECK-NEXT:    vmov.f32 s14, s1
+; CHECK-NEXT:    vstrb.8 q1, [r1, #16]
 ; CHECK-NEXT:    vstrb.8 q3, [r1]
 ; CHECK-NEXT:    bx lr
 entry:

@@ -685,10 +685,9 @@ define i64 @ctpop_shifted_mask16(i64 %x) nounwind readnone {
 ; X64-NO-POPCOUNT:       # %bb.0:
 ; X64-NO-POPCOUNT-NEXT:    shrq $35, %rdi
 ; X64-NO-POPCOUNT-NEXT:    movzwl %di, %eax
-; X64-NO-POPCOUNT-NEXT:    movl %edi, %ecx
-; X64-NO-POPCOUNT-NEXT:    shrl %ecx
-; X64-NO-POPCOUNT-NEXT:    andl $21845, %ecx # imm = 0x5555
-; X64-NO-POPCOUNT-NEXT:    subl %ecx, %eax
+; X64-NO-POPCOUNT-NEXT:    shrl %edi
+; X64-NO-POPCOUNT-NEXT:    andl $21845, %edi # imm = 0x5555
+; X64-NO-POPCOUNT-NEXT:    subl %edi, %eax
 ; X64-NO-POPCOUNT-NEXT:    movl %eax, %ecx
 ; X64-NO-POPCOUNT-NEXT:    andl $858993459, %ecx # imm = 0x33333333
 ; X64-NO-POPCOUNT-NEXT:    shrl $2, %eax

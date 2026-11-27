@@ -18,7 +18,6 @@ define void @_Z3fooPfS_Pi(ptr noalias nocapture noundef %_a, ptr noalias nocaptu
 ; AIX64-NEXT:    bltlr 0
 ; AIX64-NEXT:  # %bb.1: # %for.body.preheader
 ; AIX64-NEXT:    li 6, 0
-; AIX64-NEXT:    cmplwi 5, 1
 ; AIX64-NEXT:    beq 0, L..BB0_4
 ; AIX64-NEXT:  # %bb.2: # %for.body.preheader.new
 ; AIX64-NEXT:    rlwinm 6, 5, 0, 1, 30
@@ -111,7 +110,6 @@ define void @_Z3fooPfS_Pi(ptr noalias nocapture noundef %_a, ptr noalias nocaptu
 ; LINUX64LE-NEXT:    bltlr 0
 ; LINUX64LE-NEXT:  # %bb.1: # %for.body.preheader
 ; LINUX64LE-NEXT:    li 6, 0
-; LINUX64LE-NEXT:    cmplwi 5, 1
 ; LINUX64LE-NEXT:    beq 0, .LBB0_4
 ; LINUX64LE-NEXT:  # %bb.2: # %for.body.preheader.new
 ; LINUX64LE-NEXT:    rlwinm 6, 5, 0, 1, 30

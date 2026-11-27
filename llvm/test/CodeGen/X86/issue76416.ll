@@ -32,8 +32,8 @@ define dso_local void @vga_load_state() #0 {
 ; CHECK-NEXT:    movslq -{{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    movzbl (%rax,%rcx), %eax
 ; CHECK-NEXT:    movb %al, vga_load_state_data(%rip)
-; CHECK-NEXT:    leal 1(%rcx), %eax
-; CHECK-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    incl %ecx
+; CHECK-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    jmp .LBB0_4
 entry:
   %i = alloca i32, align 4

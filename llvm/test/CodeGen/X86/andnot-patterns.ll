@@ -1274,8 +1274,8 @@ define i64 @andnot_zext_lowmask_i64_i16(i64 %a0, i16 %a1) nounwind {
 ; X64-NOBMI-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NOBMI-NEXT:    shll %cl, %eax
 ; X64-NOBMI-NEXT:    notl %eax
-; X64-NOBMI-NEXT:    andl %eax, %edi
-; X64-NOBMI-NEXT:    movzwl %di, %eax
+; X64-NOBMI-NEXT:    andl %edi, %eax
+; X64-NOBMI-NEXT:    movzwl %ax, %eax
 ; X64-NOBMI-NEXT:    retq
 ;
 ; X64-BMI-LABEL: andnot_zext_lowmask_i64_i16:
@@ -1369,22 +1369,22 @@ define i64 @andnot_zext_lowmask_i64_i32_multiuse_mask(i64 %a0, i32 %a1) nounwind
 ;
 ; X64-NOBMI-LABEL: andnot_zext_lowmask_i64_i32_multiuse_mask:
 ; X64-NOBMI:       # %bb.0:
-; X64-NOBMI-NEXT:    pushq %rbp
+; X64-NOBMI-NEXT:    pushq %r14
 ; X64-NOBMI-NEXT:    pushq %rbx
 ; X64-NOBMI-NEXT:    pushq %rax
 ; X64-NOBMI-NEXT:    movl %esi, %ecx
 ; X64-NOBMI-NEXT:    movq %rdi, %rbx
-; X64-NOBMI-NEXT:    movl $-1, %ebp
+; X64-NOBMI-NEXT:    movl $-1, %r14d
 ; X64-NOBMI-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NOBMI-NEXT:    shll %cl, %ebp
-; X64-NOBMI-NEXT:    notl %ebp
-; X64-NOBMI-NEXT:    movl %ebp, %edi
+; X64-NOBMI-NEXT:    shll %cl, %r14d
+; X64-NOBMI-NEXT:    notl %r14d
+; X64-NOBMI-NEXT:    movl %r14d, %edi
 ; X64-NOBMI-NEXT:    callq use_i32@PLT
-; X64-NOBMI-NEXT:    andl %ebp, %ebx
-; X64-NOBMI-NEXT:    movq %rbx, %rax
+; X64-NOBMI-NEXT:    andl %ebx, %r14d
+; X64-NOBMI-NEXT:    movq %r14, %rax
 ; X64-NOBMI-NEXT:    addq $8, %rsp
 ; X64-NOBMI-NEXT:    popq %rbx
-; X64-NOBMI-NEXT:    popq %rbp
+; X64-NOBMI-NEXT:    popq %r14
 ; X64-NOBMI-NEXT:    retq
 ;
 ; X64-BMI-LABEL: andnot_zext_lowmask_i64_i32_multiuse_mask:
