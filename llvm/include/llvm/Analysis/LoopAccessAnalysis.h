@@ -661,9 +661,10 @@ public:
   /// Information about the pointers that may require checking.
   SmallVector<PointerInfo, 2> Pointers;
 
-  /// Set of unknown dependences that need runtime checks when retrying to
-  /// generate checks.
+  /// DepCands classes erased on retry due to unknown dependences. Pointers in
+  /// the same class only need checking if they are in UnknownDepPtrPairs.
   MemoryDepChecker::DepCandidates UnknownDepCands;
+  /// Pointer pairs with unknown dependences, in both orders.
   DenseSet<std::pair<const Value *, const Value *>> UnknownDepPtrPairs;
 
   /// Holds a partitioning of pointers into "check groups".
