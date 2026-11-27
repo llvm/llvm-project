@@ -47064,6 +47064,7 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
     }
     return DAG.isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
   }
+  case X86ISD::VZEXT_LOAD:
   case X86ISD::VBROADCAST_LOAD:
   case X86ISD::SUBV_BROADCAST_LOAD: {
     // If we're loading from the constant pool, check if the constant
