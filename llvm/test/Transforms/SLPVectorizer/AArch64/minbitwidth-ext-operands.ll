@@ -179,9 +179,8 @@ define void @narrow_operand_drop_wrap_flags(ptr %in, i32 %mask, ptr %out) {
 ; CHECK-LABEL: define void @narrow_operand_drop_wrap_flags(
 ; CHECK-SAME: ptr [[IN:%.*]], i32 [[MASK:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[IN]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i8> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i8> [[TMP3]] to <4 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i64> [[TMP1]], splat (i64 32768)
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <4 x i64> [[TMP2]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i16> [[TMP10]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i16> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i32> [[TMP5]], splat (i32 255)
@@ -238,5 +237,86 @@ define void @narrow_operand_drop_wrap_flags(ptr %in, i32 %mask, ptr %out) {
   store i32 %result2, ptr %out2, align 4
   %out3 = getelementptr i32, ptr %out, i64 3
   store i32 %result3, ptr %out3, align 4
+  ret void
+}
+
+define void @keep_operand_width_for_shared_scalar(
+; CHECK-LABEL: define void @keep_operand_width_for_shared_scalar(
+; CHECK-SAME: ptr [[IN:%.*]], i32 [[MASK:%.*]], ptr [[OUT:%.*]], ptr [[EXTRA:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[IN]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i64> [[TMP1]], splat (i64 32768)
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i64> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[TMP4]], splat (i16 1)
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i16> [[TMP5]] to <4 x i32>
+; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i32> [[TMP6]], splat (i32 255)
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> poison, i32 [[MASK]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = and <4 x i32> [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i16> [[TMP4]], <4 x i16> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = add nuw nsw <2 x i16> [[TMP11]], <i16 0, i16 1>
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc <2 x i16> [[TMP12]] to <2 x i8>
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i8> [[TMP13]], i64 0
+; CHECK-NEXT:    store i8 [[TMP14]], ptr [[EXTRA]], align 1
+; CHECK-NEXT:    [[EXTRA1:%.*]] = getelementptr i8, ptr [[EXTRA]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i8> [[TMP13]], i64 1
+; CHECK-NEXT:    store i8 [[TMP15]], ptr [[EXTRA1]], align 1
+; CHECK-NEXT:    ret void
+;
+  ptr %in, i32 %mask, ptr %out, ptr %extra) {
+  %mask_ext = zext i32 %mask to i64
+
+  %loaded0 = load i64, ptr %in, align 8
+  %or0 = or i64 %loaded0, 32768
+  %truncated0 = trunc i64 %or0 to i16
+  %added0 = add nuw nsw i16 %truncated0, 1
+  %added_ext0 = zext i16 %added0 to i64
+  %masked0 = and i64 %added_ext0, 255
+  %masked_arg0 = and i64 %masked0, %mask_ext
+  %result0 = trunc i64 %masked_arg0 to i32
+
+  %in1 = getelementptr i64, ptr %in, i64 1
+  %loaded1 = load i64, ptr %in1, align 8
+  %or1 = or i64 %loaded1, 32768
+  %truncated1 = trunc i64 %or1 to i16
+  %added1 = add nuw nsw i16 %truncated1, 1
+  %added_ext1 = zext i16 %added1 to i64
+  %masked1 = and i64 %added_ext1, 255
+  %masked_arg1 = and i64 %masked1, %mask_ext
+  %result1 = trunc i64 %masked_arg1 to i32
+
+  %in2 = getelementptr i64, ptr %in, i64 2
+  %loaded2 = load i64, ptr %in2, align 8
+  %or2 = or i64 %loaded2, 32768
+  %truncated2 = trunc i64 %or2 to i16
+  %added2 = add nuw nsw i16 %truncated2, 1
+  %added_ext2 = zext i16 %added2 to i64
+  %masked2 = and i64 %added_ext2, 255
+  %masked_arg2 = and i64 %masked2, %mask_ext
+  %result2 = trunc i64 %masked_arg2 to i32
+
+  %in3 = getelementptr i64, ptr %in, i64 3
+  %loaded3 = load i64, ptr %in3, align 8
+  %or3 = or i64 %loaded3, 32768
+  %truncated3 = trunc i64 %or3 to i16
+  %added3 = add nuw nsw i16 %truncated3, 1
+  %added_ext3 = zext i16 %added3 to i64
+  %masked3 = and i64 %added_ext3, 255
+  %masked_arg3 = and i64 %masked3, %mask_ext
+  %result3 = trunc i64 %masked_arg3 to i32
+
+  store i32 %result0, ptr %out, align 4
+  %out1 = getelementptr i32, ptr %out, i64 1
+  store i32 %result1, ptr %out1, align 4
+  %out2 = getelementptr i32, ptr %out, i64 2
+  store i32 %result2, ptr %out2, align 4
+  %out3 = getelementptr i32, ptr %out, i64 3
+  store i32 %result3, ptr %out3, align 4
+
+  %trunc_external = trunc i16 %truncated0 to i8
+  store i8 %trunc_external, ptr %extra, align 1
+  %added_external = trunc i16 %added0 to i8
+  %extra1 = getelementptr i8, ptr %extra, i64 1
+  store i8 %added_external, ptr %extra1, align 1
   ret void
 }
