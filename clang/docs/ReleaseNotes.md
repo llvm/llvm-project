@@ -407,6 +407,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   be detected by watching the directories or by comparing their modification
   times.
 
+- Added `__builtin_elementwise_mulh`, which returns the high half of
+  an unsigned or signed integer multiplication, and 
+  works on integer scalars, vectors and `_BitInt`.
+  This includes constexpr evaluation support.
+
 ### New Compiler Flags
 
 - Added `-fpch-base-dir-is-cwd` to serialize precompiled header input paths

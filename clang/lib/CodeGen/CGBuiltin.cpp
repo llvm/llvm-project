@@ -4516,6 +4516,20 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+  case Builtin::BI__builtin_elementwise_mulh: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result;
+    assert(Op0->getType()->isIntOrIntVectorTy() && "integer type expected");
+    QualType Ty = E->getArg(0)->getType();
+    if (auto *VecTy = Ty->getAs<VectorType>())
+      Ty = VecTy->getElementType();
+    bool IsSigned = Ty->isSignedIntegerType();
+    unsigned Opc = IsSigned ? Intrinsic::smulh : Intrinsic::umulh;
+    Result = Builder.CreateBinaryIntrinsic(Opc, Op0, Op1, nullptr, "elt.mulh");
+    return RValue::get(Result);
+  }
+
   case Builtin::BI__builtin_elementwise_max: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));

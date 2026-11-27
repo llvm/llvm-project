@@ -5640,6 +5640,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
         });
 
+  case Builtin::BI__builtin_elementwise_mulh:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          return LHS.isSigned() ? llvm::APIntOps::mulhs(LHS, RHS)
+                                : llvm::APIntOps::mulhu(LHS, RHS);
+        });
+
   case Builtin::BI__builtin_elementwise_pdep:
     return interp__builtin_elementwise_int_binop(S, OpPC, Call,
                                                  llvm::APIntOps::pdep);

@@ -1478,6 +1478,37 @@ namespace ElementwisePdep {
                     (vector4uint){0xCCU, 0xAAU, 0x0FU, 0x00U})) == 0x137U);
 }
 
+namespace ElementwiseMulh {
+#if __INT_WIDTH__ == 32
+  static_assert(__builtin_elementwise_mulh(0U, 0U) == 0U);
+  static_assert(__builtin_elementwise_mulh(0xFFFFFFFFU, 2U) == 0x1U);
+  static_assert(__builtin_elementwise_mulh(-1, 2) == -1);
+  static_assert(__builtin_elementwise_mulh(0xFFFFFFFFU, 0xFFFFFFFFU) ==
+                0xFFFFFFFEU);
+  static_assert(__builtin_elementwise_mulh(1 << 30, 8) == 2);
+  static_assert(__builtin_elementwise_mulh((-2147483647 - 1), 
+                                           (-2147483647 - 1)) ==
+                0x40000000);
+
+  static_assert(__builtin_reduce_add(__builtin_elementwise_mulh(
+                    (vector4uint){0xFFFFFFFEU, 0x10000U, 0x05U, 0x40000000U},
+                    (vector4uint){2U, 0x10000U, 0x0FU, 8U})) == 4U);
+
+  static_assert(__builtin_reduce_add(__builtin_elementwise_mulh(
+                    (vector4int){-1, -2147483647 - 1, -(1 << 30), 1 << 30},
+                    (vector4int){2, -2147483647 - 1, 8, 8})) == 0x3FFFFFFF);
+#endif 
+
+#ifndef __AVR__
+  static_assert(__builtin_elementwise_mulh((unsigned _BitInt(31))(1 << 30),
+                                           (unsigned _BitInt(31))8) ==
+                (unsigned _BitInt(31))4);
+  static_assert(__builtin_elementwise_mulh((_BitInt(31))(-1),
+                                           (_BitInt(31))2) ==
+                (_BitInt(31))-1);
+#endif
+}
+
 namespace BuiltinMemcpy {
   constexpr int simple() {
     int a = 12;
