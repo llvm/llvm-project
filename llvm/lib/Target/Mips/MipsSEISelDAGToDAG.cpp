@@ -296,30 +296,46 @@ bool MipsSEDAGToDAGISel::selectAddrFrameIndexOffset(
 
       Offset = CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(Addr),
                                          ValTy);
-      if (Base.getOpcode() == ISD::ADD &&
-          (Subtarget->hasMips1() && !Subtarget->hasMips2())) {
-        // Instead of:
-        //  lui $2, %hi($CPI1_0)
-        //  addiu $2, $2, %lo($CPI1_0)
-        //  lwc1 $f0, 4($2)
-        // Generate:
-        //  lui $2, %hi($CPI1_0)
-        //  lwc1 $f0, %lo($CPI1_0+4)($2)
-        if (Base.getOperand(1).getOpcode() == MipsISD::Lo ||
-            Base.getOperand(1).getOpcode() == MipsISD::GPRel) {
-          SDValue Opnd0 = Base.getOperand(1).getOperand(0);
-          if (isa<ConstantPoolSDNode>(Opnd0) || isa<JumpTableSDNode>(Opnd0))
-            Base = Base.getOperand(0);
-          else if (GlobalAddressSDNode *GA =
-                       dyn_cast<GlobalAddressSDNode>(Opnd0)) {
-            Base = Base.getOperand(0);
-            const GlobalValue *GV = GA->getGlobal();
-            int64_t GAOffset = GA->getOffset();
-            Offset = CurDAG->getTargetGlobalAddress(
-                GV, SDLoc(Addr), MVT::i32, GAOffset + CN->getZExtValue(),
-                MipsII::MO_ABS_LO);
-            return true;
-          }
+      // On MIPS I a double is loaded or stored with two lwc1 or swc1, so fold
+      // the %lo of the address into both. Instead of:
+      //  lui $2, %hi(sym)
+      //  addiu $2, $2, %lo(sym)
+      //  lwc1 $f0, 0($2)
+      //  lwc1 $f1, 4($2)
+      // Generate:
+      //  lui $2, %hi(sym)
+      //  lwc1 $f0, %lo(sym)($2)
+      //  lwc1 $f1, %lo(sym+4)($2)
+      // Only fold an offset within the alignment of the symbol, so %hi(sym)
+      // is also %hi(sym+offset).
+      if (Base.getOpcode() == ISD::ADD && !Subtarget->hasMips2() &&
+          (Base.getOperand(1).getOpcode() == MipsISD::Lo ||
+           Base.getOperand(1).getOpcode() == MipsISD::GPRel)) {
+        SDValue Sym = Base.getOperand(1).getOperand(0);
+        int64_t Off = CN->getSExtValue();
+        SDValue SymOffset;
+        if (auto *GA = dyn_cast<GlobalAddressSDNode>(Sym)) {
+          Align A = commonAlignment(
+              GA->getGlobal()->getPointerAlignment(CurDAG->getDataLayout()),
+              GA->getOffset());
+          if (Off >= 0 && (uint64_t)Off < A.value())
+            SymOffset = CurDAG->getTargetGlobalAddress(
+                GA->getGlobal(), SDLoc(Addr), ValTy, GA->getOffset() + Off,
+                GA->getTargetFlags());
+        } else if (auto *CP = dyn_cast<ConstantPoolSDNode>(Sym)) {
+          Align A = commonAlignment(CP->getAlign(), CP->getOffset());
+          if (Off >= 0 && (uint64_t)Off < A.value())
+            SymOffset = CP->isMachineConstantPoolEntry()
+                            ? CurDAG->getTargetConstantPool(
+                                  CP->getMachineCPVal(), ValTy, CP->getAlign(),
+                                  CP->getOffset() + Off, CP->getTargetFlags())
+                            : CurDAG->getTargetConstantPool(
+                                  CP->getConstVal(), ValTy, CP->getAlign(),
+                                  CP->getOffset() + Off, CP->getTargetFlags());
+        }
+        if (SymOffset) {
+          Base = Base.getOperand(0);
+          Offset = SymOffset;
         }
       }
       return true;
@@ -1370,7 +1386,7 @@ bool MipsSEDAGToDAGISel::SelectInlineAsmMemoryOperand(
   // All memory constraints can at least accept raw pointers.
   case InlineAsm::ConstraintCode::m:
   case InlineAsm::ConstraintCode::o:
-    if (selectAddrRegImm16(Op, Base, Offset)) {
+    if (selectAddrRegImm16(Op, Base, Offset) && isa<ConstantSDNode>(Offset)) {
       OutOps.push_back(Base);
       OutOps.push_back(Offset);
       return false;
@@ -1384,7 +1400,7 @@ bool MipsSEDAGToDAGISel::SelectInlineAsmMemoryOperand(
     // ought to be replaced by other constraints such as 'ZC'.
     // For now, support 9-bit signed offsets which is supportable by all
     // subtargets for all instructions.
-    if (selectAddrRegImm9(Op, Base, Offset)) {
+    if (selectAddrRegImm9(Op, Base, Offset) && isa<ConstantSDNode>(Offset)) {
       OutOps.push_back(Base);
       OutOps.push_back(Offset);
       return false;
@@ -1397,19 +1413,20 @@ bool MipsSEDAGToDAGISel::SelectInlineAsmMemoryOperand(
     // given subtarget.
     if (Subtarget->inMicroMipsMode()) {
       // On microMIPS, they can handle 12-bit offsets.
-      if (selectAddrRegImm12(Op, Base, Offset)) {
+      if (selectAddrRegImm12(Op, Base, Offset) && isa<ConstantSDNode>(Offset)) {
         OutOps.push_back(Base);
         OutOps.push_back(Offset);
         return false;
       }
     } else if (Subtarget->hasMips32r6()) {
       // On MIPS32r6/MIPS64r6, they can only handle 9-bit offsets.
-      if (selectAddrRegImm9(Op, Base, Offset)) {
+      if (selectAddrRegImm9(Op, Base, Offset) && isa<ConstantSDNode>(Offset)) {
         OutOps.push_back(Base);
         OutOps.push_back(Offset);
         return false;
       }
-    } else if (selectAddrRegImm16(Op, Base, Offset)) {
+    } else if (selectAddrRegImm16(Op, Base, Offset) &&
+               isa<ConstantSDNode>(Offset)) {
       // Prior to MIPS32r6/MIPS64r6, they can handle 16-bit offsets.
       OutOps.push_back(Base);
       OutOps.push_back(Offset);
