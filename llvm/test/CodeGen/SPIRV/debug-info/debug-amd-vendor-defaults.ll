@@ -1,10 +1,11 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers,+SPV_KHR_relaxed_extended_instruction --spirv-debug-scope-forward-refs=false %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-OFF --implicit-check-not=OpExtInstWithForwardRefsKHR --implicit-check-not=DebugDeclare
 ; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-ON
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa --spirv-debug-lexical-block-discriminator-scope=false --spirv-debug-scope-forward-refs=false --spirv-debug-declare-untyped-variable=false %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-OFF --implicit-check-not=OpExtInstWithForwardRefsKHR --implicit-check-not=DebugDeclare
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers,+SPV_KHR_relaxed_extended_instruction --spirv-debug-lexical-block-discriminator-scope --spirv-debug-scope-forward-refs --spirv-debug-declare-untyped-variable %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-ON
 
-; The AMD vendor always enables -spirv-debug-lexical-block-discriminator-scope,
+; AMD triples enable -spirv-debug-lexical-block-discriminator-scope,
 ; -spirv-debug-scope-forward-refs and -spirv-debug-declare-untyped-variable by
-; default. 
+; default, but an explicit option still takes precedence.
 ;
 
 ; CHECK-ON:     OpExtension "SPV_KHR_relaxed_extended_instruction"

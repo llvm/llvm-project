@@ -12,6 +12,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/BoolOrDefault.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -208,12 +209,12 @@ SPIRVNonSemanticDebugHandler::SPIRVNonSemanticDebugHandler(AsmPrinter &AP)
 
 void SPIRVNonSemanticDebugHandler::initOptions(const SPIRVTargetMachine &TM) {
   const SPIRVOptions &CLOpts = TM.getCLOpts();
-  bool VendorDefault = TM.getTargetTriple().getVendor() == Triple::AMD;
+  bool AMDDefault = TM.getTargetTriple().getVendor() == Triple::AMD;
   UseLexicalBlockDiscriminatorScope =
-      CLOpts.debug_lexical_block_discriminator_scope || VendorDefault;
-  UseDebugScopeForwardRefs = CLOpts.debug_scope_forward_refs || VendorDefault;
+      valueOr(CLOpts.debug_lexical_block_discriminator_scope, AMDDefault);
+  UseDebugScopeForwardRefs = CLOpts.debug_scope_forward_refs;
   AllowDebugDeclareUntypedVariable =
-      CLOpts.debug_declare_untyped_variable || VendorDefault;
+      valueOr(CLOpts.debug_declare_untyped_variable, AMDDefault);
 }
 
 // Map DWARF source language codes to NonSemantic.Shader.DebugInfo.100 source

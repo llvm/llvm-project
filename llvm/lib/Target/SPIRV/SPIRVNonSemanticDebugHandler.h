@@ -300,8 +300,8 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // analyzeDebugRecords() and only read afterwards.
   DenseMap<const MachineInstr *, SmallVector<DebugRecord>> Records;
 
-  /// Enable each NSDI option when its command-line flag is set or the target
-  /// vendor enables it by default.
+  /// Resolve each NSDI option from its command-line flag, falling back to the
+  /// default for the target triple when the flag is not given.
   void initOptions(const SPIRVTargetMachine &TM);
 
 public:

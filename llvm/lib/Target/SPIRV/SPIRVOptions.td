@@ -36,12 +36,12 @@ defm : EnumListField<"spirv-avoid-capabilities", "SPIRV::Capability::Capability"
 
 // SPIRVNonSemanticDebugHandler.cpp
 // When disabled, unwrap a DILexicalBlockFile to its enclosing scope.
-defm : BoolField<"spirv-debug-lexical-block-discriminator-scope", "false",
-  "Use a DebugLexicalBlockDiscriminator as a DebugScope">;
+defm : OptionalBoolField<"spirv-debug-lexical-block-discriminator-scope",
+  "Use a DebugLexicalBlockDiscriminator as a DebugScope (default: on for AMD triples, off otherwise)">;
 defm : BoolField<"spirv-debug-scope-forward-refs", "true",
   "Forward-reference debug scopes when SPV_KHR_relaxed_extended_instruction is enabled; disable to drop the cycle instead">;
-defm : BoolField<"spirv-debug-declare-untyped-variable", "false",
-  "Accept an OpUntypedVariableKHR as DebugDeclare's Variable operand (not allowed by NonSemantic.Shader.DebugInfo)">;
+defm : OptionalBoolField<"spirv-debug-declare-untyped-variable",
+  "Accept an OpUntypedVariableKHR as DebugDeclare's Variable operand, which NonSemantic.Shader.DebugInfo does not allow (default: on for AMD triples, off otherwise)">;
 
 // SPIRVPrepareFunctions.cpp
 // As with cl::ValueOptional, a bare flag is accepted and allows nothing.
