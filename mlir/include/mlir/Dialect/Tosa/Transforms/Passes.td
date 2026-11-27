@@ -258,6 +258,42 @@ def TosaConvertIntegerTypesBitwidthPass : Pass<"tosa-convert-integer-types-bitwi
   ];
 }
 
+def TosaMaterializePlanarBlockScaledPass
+    : Pass<"tosa-materialize-planar-block-scaled", "mlir::ModuleOp"> {
+  let summary = "Materialize planar data and scale values around block-scaled tensors";
+  let description = [{
+    Inserts tosa.decompose_block_scaled and tosa.compose_block_scaled operations
+    to expose the data and scale components of block-scaled tensors as separate
+    SSA values. This provides a planar interface for subsequent lowering to
+    backends that use separate data and scale tensors. Block-scaled constants
+    are split into data and scale constants.
+  }];
+
+  let options = [
+    Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool",
+           "false", "Replace each block-scaled function argument and result with "
+                    "a data tensor followed by a scale tensor.">
+  ];
+}
+
+def TosaRemovePlanarBlockScaledPass
+    : Pass<"tosa-remove-planar-block-scaled", "mlir::ModuleOp"> {
+  let summary = "Remove planar block-scaled bridge operations";
+  let description = [{
+    Removes tosa.decompose_block_scaled and tosa.compose_block_scaled operations,
+    converting from a planar interface to a packed interface whereby data and
+    scale information are exposed by a single tosa.block_scaled composite type.
+    This provides a TOSA specification compatible interface. Compositions of
+    data and scale constants are folded into a single constant.
+  }];
+
+  let options = [
+    Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool",
+           "false", "Replace data and scale tensor function arguments and results "
+                    "with block-scaled tensors.">
+  ];
+}
+
 def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {
   let summary = "Narrow I64 TOSA operations to I32";
   let description = [{
