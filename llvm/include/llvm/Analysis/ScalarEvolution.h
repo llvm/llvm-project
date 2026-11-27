@@ -239,6 +239,8 @@ struct SCEVFlagsPair {
   /// Returns the flags safe to propagate in folds established based on the
   /// flags in \p CheckedFlags.
   SCEVFlagsPair getFlagsToPropagate(SCEVFlags CheckedFlags) const {
+    assert((getCombinedFlags() & CheckedFlags) == CheckedFlags &&
+           "Expected flag pair to contain CheckedFlags");
     // Drop global flags if only the use-specific flags contain CheckedFlags.
     if ((ExprFlags & CheckedFlags) != CheckedFlags)
       return {SCEVFlags::FlagNone, UseFlags};
