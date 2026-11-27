@@ -146,7 +146,6 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
   CodePointerSize = IsILP32 ? 4 : 8;
 
   AlignmentIsInBytes = false;
-  UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
   UseDataRegionDirectives = true;
 
@@ -229,6 +228,9 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
 
   initializeAtSpecifiers(ELFAtSpecifiers);
   UseAtForSpecifier = false;
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }
 
 void AArch64MCAsmInfoELF::printSpecifierExpr(

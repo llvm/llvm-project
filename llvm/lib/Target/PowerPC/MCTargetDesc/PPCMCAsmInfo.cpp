@@ -190,9 +190,6 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple &T,
 
   CommentString = "#";
 
-  // Uses '.section' before '.bss' directive
-  UsesELFSectionDirectiveForBSS = true;
-
   // Debug Information
   SupportsDebugInformation = true;
 

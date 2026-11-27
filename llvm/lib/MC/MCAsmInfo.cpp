@@ -114,12 +114,6 @@ bool MCAsmInfo::isValidUnquotedName(StringRef Name) const {
   return !getReservedIdentifiers().contains(CachedHashStringRef(Name.lower()));
 }
 
-bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
-  // FIXME: Does .section .bss/.data/.text work everywhere??
-  return SectionName == ".text" || SectionName == ".data" ||
-        (SectionName == ".bss" && !usesELFSectionDirectiveForBSS());
-}
-
 void MCAsmInfo::initializeAtSpecifiers(EnumStrings<AtSpecifierKind, 1> Descs) {
   assert(AtSpecifierToName.empty() && "cannot initialize twice");
   UseAtForSpecifier = true;

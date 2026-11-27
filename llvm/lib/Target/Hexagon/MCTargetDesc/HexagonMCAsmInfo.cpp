@@ -53,7 +53,6 @@ HexagonMCAsmInfo::HexagonMCAsmInfo(const Triple &TT,
   AscizDirective = "\t.string\t";
 
   MinInstAlignment = 4;
-  UsesELFSectionDirectiveForBSS  = true;
   UseLogicalShr = false;
 
   initializeAtSpecifiers(atSpecifiers);

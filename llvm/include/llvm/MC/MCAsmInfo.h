@@ -259,11 +259,6 @@ protected:
   /// .section directives.  Defaults to false.
   bool SunStyleELFSectionSwitchSyntax = false;
 
-  /// This is true if this target uses ELF '.section' directive before the
-  /// '.bss' one. It's used for PPC/Linux which doesn't support the '.bss'
-  /// directive only.  Defaults to false.
-  bool UsesELFSectionDirectiveForBSS = false;
-
   bool NeedsDwarfSectionOffsetDirective = false;
 
   //===--- Alignment Information ----------------------------------------===//
@@ -443,6 +438,13 @@ protected:
   // quoted when used as a symbol name.
   llvm::DenseSet<llvm::CachedHashStringRef> ReservedIdentifiers;
 
+  /// Sections whose name also is supported as a directive without an explicit
+  /// ".section" directive.
+  ///
+  /// not contained => .section .text,#alloc,#execinstr
+  /// contained     => .text
+  SmallDenseSet<StringRef, 8> SectionDirectives;
+
   const MCTargetOptions &TargetOptions;
 
 public:
@@ -515,21 +517,8 @@ public:
   virtual void printSwitchToSection(const MCSection &, uint32_t Subsection,
                                     const Triple &, raw_ostream &) const {}
 
-  /// Return true if the .section directive should be omitted when
-  /// emitting \p SectionName.  For example:
-  ///
-  /// shouldOmitSectionDirective(".text")
-  ///
-  /// returns false => .section .text,#alloc,#execinstr
-  /// returns true  => .text
-  virtual bool shouldOmitSectionDirective(StringRef SectionName) const;
-
   bool usesSunStyleELFSectionSwitchSyntax() const {
     return SunStyleELFSectionSwitchSyntax;
-  }
-
-  bool usesELFSectionDirectiveForBSS() const {
-    return UsesELFSectionDirectiveForBSS;
   }
 
   bool needsDwarfSectionOffsetDirective() const {

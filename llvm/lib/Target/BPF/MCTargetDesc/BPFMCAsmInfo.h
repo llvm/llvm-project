@@ -30,7 +30,6 @@ public:
     InternalSymbolPrefix = ".L";
     WeakRefDirective = "\t.weak\t";
 
-    UsesELFSectionDirectiveForBSS = true;
     HasSingleParameterDotFile = true;
     HasDotTypeDotSizeDirective = true;
     HasIdentDirective = false;

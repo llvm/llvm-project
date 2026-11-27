@@ -249,6 +249,8 @@ LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT,
   CommentString = "#";
   SupportsDebugInformation = true;
   DwarfRegNumForCFI = true;
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }
 
 void LoongArchMCAsmInfo::printSpecifierExpr(raw_ostream &OS,

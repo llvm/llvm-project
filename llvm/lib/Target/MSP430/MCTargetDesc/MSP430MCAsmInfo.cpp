@@ -29,7 +29,6 @@ MSP430MCAsmInfo::MSP430MCAsmInfo(const Triple &TT,
   SeparatorString = "{";
 
   AlignmentIsInBytes = false;
-  UsesELFSectionDirectiveForBSS = true;
 
   SupportsDebugInformation = true;
 }

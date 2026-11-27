@@ -53,7 +53,7 @@ void MCAsmInfoWasm::printSwitchToSection(const MCSection &Section,
                                          uint32_t Subsection, const Triple &T,
                                          raw_ostream &OS) const {
   auto &Sec = static_cast<const MCSectionWasm &>(Section);
-  if (shouldOmitSectionDirective(Sec.getName())) {
+  if (SectionDirectives.contains(Sec.getName())) {
     OS << '\t' << Sec.getName();
     if (Subsection)
       OS << '\t' << Subsection;

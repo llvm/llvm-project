@@ -34,6 +34,9 @@ RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
   // enabled, so we follow binutils in using the R_RISCV_32_PCREL relocation
   // for the FDE initial location.
   DwarfFDERelSymbolSpec = ELF::R_RISCV_32_PCREL;
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }
 
 void RISCVMCAsmInfo::printSpecifierExpr(raw_ostream &OS,

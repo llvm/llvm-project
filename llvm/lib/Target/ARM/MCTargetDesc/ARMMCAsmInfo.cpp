@@ -101,6 +101,9 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
     // See https://sourceware.org/bugzilla/show_bug.cgi?id=16694
     DwarfRegNumForCFI = true;
   }
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }
 
 bool ARMELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {

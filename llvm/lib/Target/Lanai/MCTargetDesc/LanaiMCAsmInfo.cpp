@@ -25,9 +25,6 @@ LanaiMCAsmInfo::LanaiMCAsmInfo(const Triple &T, const MCTargetOptions &Options)
   InternalSymbolPrefix = ".L";
   WeakRefDirective = "\t.weak\t";
 
-  // Lanai assembly requires ".section" before ".bss"
-  UsesELFSectionDirectiveForBSS = true;
-
   // Use '!' as comment string to correspond with old toolchain.
   CommentString = "!";
 
