@@ -149,30 +149,30 @@ body:             |
   bb.0.entry:
     ; RV32-LABEL: name: extract_subvector_nxv32i1_nxv64i1
     ; RV32: [[DEF:%[0-9]+]]:_(<vscale x 64 x i1>) = G_IMPLICIT_DEF
-    ; RV32-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x s8>) = G_BITCAST [[DEF]](<vscale x 64 x i1>)
+    ; RV32-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x i8>) = G_BITCAST [[DEF]](<vscale x 64 x i1>)
     ; RV32-NEXT: [[READ_VLENB:%[0-9]+]]:_(i32) = G_READ_VLENB
     ; RV32-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
     ; RV32-NEXT: [[LSHR:%[0-9]+]]:_(i32) = exact G_LSHR [[READ_VLENB]], [[C]](i32)
     ; RV32-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 -1
     ; RV32-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x i1>) = G_VMSET_VL [[C1]](i32)
-    ; RV32-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-    ; RV32-NEXT: [[VSLIDEDOWN_VL:%[0-9]+]]:_(<vscale x 8 x s8>) = G_VSLIDEDOWN_VL [[DEF1]], [[BITCAST]], [[LSHR]](i32), [[VMSET_VL]](<vscale x 8 x i1>), [[C1]], 3
-    ; RV32-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 4 x i8>) = G_EXTRACT_SUBVECTOR [[VSLIDEDOWN_VL]](<vscale x 8 x s8>), 0
+    ; RV32-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x i8>) = G_IMPLICIT_DEF
+    ; RV32-NEXT: [[VSLIDEDOWN_VL:%[0-9]+]]:_(<vscale x 8 x i8>) = G_VSLIDEDOWN_VL [[DEF1]], [[BITCAST]], [[LSHR]](i32), [[VMSET_VL]](<vscale x 8 x i1>), [[C1]], 3
+    ; RV32-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 4 x i8>) = G_EXTRACT_SUBVECTOR [[VSLIDEDOWN_VL]](<vscale x 8 x i8>), 0
     ; RV32-NEXT: [[BITCAST1:%[0-9]+]]:_(<vscale x 32 x i1>) = G_BITCAST [[EXTRACT_SUBVECTOR]](<vscale x 4 x i8>)
     ; RV32-NEXT: $v8 = COPY [[BITCAST1]](<vscale x 32 x i1>)
     ; RV32-NEXT: PseudoRET implicit $v8
     ;
     ; RV64-LABEL: name: extract_subvector_nxv32i1_nxv64i1
     ; RV64: [[DEF:%[0-9]+]]:_(<vscale x 64 x i1>) = G_IMPLICIT_DEF
-    ; RV64-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x s8>) = G_BITCAST [[DEF]](<vscale x 64 x i1>)
+    ; RV64-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x i8>) = G_BITCAST [[DEF]](<vscale x 64 x i1>)
     ; RV64-NEXT: [[READ_VLENB:%[0-9]+]]:_(i64) = G_READ_VLENB
     ; RV64-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
     ; RV64-NEXT: [[LSHR:%[0-9]+]]:_(i64) = exact G_LSHR [[READ_VLENB]], [[C]](i64)
     ; RV64-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 -1
     ; RV64-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x i1>) = G_VMSET_VL [[C1]](i64)
-    ; RV64-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-    ; RV64-NEXT: [[VSLIDEDOWN_VL:%[0-9]+]]:_(<vscale x 8 x s8>) = G_VSLIDEDOWN_VL [[DEF1]], [[BITCAST]], [[LSHR]](i64), [[VMSET_VL]](<vscale x 8 x i1>), [[C1]], 3
-    ; RV64-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 4 x i8>) = G_EXTRACT_SUBVECTOR [[VSLIDEDOWN_VL]](<vscale x 8 x s8>), 0
+    ; RV64-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x i8>) = G_IMPLICIT_DEF
+    ; RV64-NEXT: [[VSLIDEDOWN_VL:%[0-9]+]]:_(<vscale x 8 x i8>) = G_VSLIDEDOWN_VL [[DEF1]], [[BITCAST]], [[LSHR]](i64), [[VMSET_VL]](<vscale x 8 x i1>), [[C1]], 3
+    ; RV64-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 4 x i8>) = G_EXTRACT_SUBVECTOR [[VSLIDEDOWN_VL]](<vscale x 8 x i8>), 0
     ; RV64-NEXT: [[BITCAST1:%[0-9]+]]:_(<vscale x 32 x i1>) = G_BITCAST [[EXTRACT_SUBVECTOR]](<vscale x 4 x i8>)
     ; RV64-NEXT: $v8 = COPY [[BITCAST1]](<vscale x 32 x i1>)
     ; RV64-NEXT: PseudoRET implicit $v8
@@ -220,8 +220,8 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: extract_subvector_nxv32i1_nxv64i1_zero
     ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 64 x i1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x s8>) = G_BITCAST [[DEF]](<vscale x 64 x i1>)
-    ; CHECK-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 4 x i8>) = G_EXTRACT_SUBVECTOR [[BITCAST]](<vscale x 8 x s8>), 0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x i8>) = G_BITCAST [[DEF]](<vscale x 64 x i1>)
+    ; CHECK-NEXT: [[EXTRACT_SUBVECTOR:%[0-9]+]]:_(<vscale x 4 x i8>) = G_EXTRACT_SUBVECTOR [[BITCAST]](<vscale x 8 x i8>), 0
     ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<vscale x 32 x i1>) = G_BITCAST [[EXTRACT_SUBVECTOR]](<vscale x 4 x i8>)
     ; CHECK-NEXT: $v8 = COPY [[BITCAST1]](<vscale x 32 x i1>)
     ; CHECK-NEXT: PseudoRET implicit $v8

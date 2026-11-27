@@ -266,9 +266,18 @@ define void @disable_realign_align128(i32 %idx) #3 {
 ; GCN-LABEL: disable_realign_align128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_mov_b32 s5, s33
+; GCN-NEXT:    s_mov_b32 s33, s32
+; GCN-NEXT:    s_addk_i32 s32, 0x400
+; GCN-NEXT:    s_add_i32 s4, s32, 0x1fff
+; GCN-NEXT:    s_and_b32 s4, s4, 0xffffe000
+; GCN-NEXT:    s_or_b32 s32, s4, 0x400
 ; GCN-NEXT:    v_mov_b32_e32 v0, 9
-; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32
+; GCN-NEXT:    v_mov_b32_e32 v1, s4
+; GCN-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_mov_b32 s32, s33
+; GCN-NEXT:    s_mov_b32 s33, s5
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %alloca.align = alloca i32, align 128, addrspace(5)
   store volatile i32 9, ptr addrspace(5) %alloca.align, align 128

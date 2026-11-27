@@ -11,7 +11,6 @@
 
 ---
 name: test-block-carried-latency
-tracksRegLiveness: true
 body: |
   ; DEFAULT-LABEL: name: test-block-carried-latency
   ; DEFAULT: bb.0:

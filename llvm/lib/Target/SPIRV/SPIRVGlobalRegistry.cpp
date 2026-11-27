@@ -274,6 +274,12 @@ getTypeDecls(const MachineFunction &MF) {
   return Res;
 }
 
+inline unsigned getAS(SPIRVTypeInst SpvType) {
+  return storageClassToAddressSpace(
+      static_cast<SPIRV::StorageClass::StorageClass>(
+          SpvType->getOperand(1).getImm()));
+}
+
 void SPIRVGlobalRegistry::restoreFromMIR(const MachineFunction &MF) {
   for (const MachineInstr *MI : getTypeDecls(MF))
     assignSPIRVTypeToVReg(MI, getSPIRVTypeID(MI), MF);
@@ -1420,11 +1426,19 @@ SPIRVTypeInst SPIRVGlobalRegistry::restOfCreateSPIRVType(
   if (!(PadTy && PadTy->getName() == "spirv.Padding"))
     SPIRVToLLVMType[SpirvType] = unifyPtrType(Ty);
 
-  if (SpirvType->getOpcode() == SPIRV::OpTypeForwardPointer ||
-      SpirvType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR ||
-      findMI(Ty, false, &MIRBuilder.getMF()) || isSpecialOpaqueType(Ty))
-    return SpirvType;
+  if (SpirvType->getOpcode() != SPIRV::OpTypeForwardPointer &&
+      SpirvType->getOpcode() != SPIRV::OpTypeUntypedPointerKHR &&
+      !isSpecialOpaqueType(Ty))
+    addTypeKey(Ty, ExplicitLayoutRequired, SpirvType, MIRBuilder.getMF());
+  return SpirvType;
+}
 
+void SPIRVGlobalRegistry::addTypeKey(const Type *Ty,
+                                     bool ExplicitLayoutRequired,
+                                     SPIRVTypeInst SpirvType,
+                                     const MachineFunction &MF) {
+  if (findMI(Ty, false, &MF))
+    return;
   if (auto *ExtTy = dyn_cast<TargetExtType>(Ty);
       ExtTy && isTypedPointerWrapper(ExtTy))
     add(ExtTy->getTypeParameter(0), ExtTy->getIntParameter(0), SpirvType);
@@ -1434,9 +1448,8 @@ SPIRVTypeInst SPIRVGlobalRegistry::restOfCreateSPIRVType(
     add(cast<TypedPointerType>(Ty)->getElementType(),
         getPointerAddressSpace(Ty), SpirvType);
   else
-    add(Type::getInt8Ty(MIRBuilder.getMF().getFunction().getContext()),
-        getPointerAddressSpace(Ty), SpirvType);
-  return SpirvType;
+    add(Type::getInt8Ty(Ty->getContext()), getPointerAddressSpace(Ty),
+        SpirvType);
 }
 
 SPIRVTypeInst
@@ -2148,7 +2161,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     const Type *BaseType, MachineIRBuilder &MIRBuilder,
-    SPIRV::StorageClass::StorageClass SC, bool ForceTyped) {
+    SPIRV::StorageClass::StorageClass SC, bool ForceTyped, bool EmitIR) {
   if (BaseType->isFunctionTy() &&
       !cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
            .canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
@@ -2159,10 +2172,9 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
                                   "SPV_INTEL_function_pointers extension",
                                   DebugLoc(), DS_Error));
   }
-  // TODO: Need to check if EmitIr should always be true.
   SPIRVTypeInst SpirvBaseType = getOrCreateSPIRVType(
       BaseType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite,
-      storageClassRequiresExplictLayout(SC), true);
+      storageClassRequiresExplictLayout(SC), EmitIR);
   assert(SpirvBaseType);
   return getOrCreateSPIRVPointerTypeInternal(SpirvBaseType, MIRBuilder, SC,
                                              ForceTyped);
@@ -2183,10 +2195,11 @@ SPIRVTypeInst SPIRVGlobalRegistry::changePointerStorageClass(
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     SPIRVTypeInst BaseType, MachineIRBuilder &MIRBuilder,
-    SPIRV::StorageClass::StorageClass SC) {
+    SPIRV::StorageClass::StorageClass SC, bool EmitIR) {
   const Type *LLVMType = getTypeForSPIRVType(BaseType);
   assert(!storageClassRequiresExplictLayout(SC));
-  SPIRVTypeInst R = getOrCreateSPIRVPointerType(LLVMType, MIRBuilder, SC);
+  SPIRVTypeInst R = getOrCreateSPIRVPointerType(LLVMType, MIRBuilder, SC,
+                                                /*ForceTyped=*/false, EmitIR);
   assert(
       (R->getOpcode() == SPIRV::OpTypeUntypedPointerKHR ||
        getPointeeType(R) == BaseType) &&
@@ -2299,12 +2312,6 @@ SPIRVGlobalRegistry::getRegClass(SPIRVTypeInst SpvType) const {
   }
   }
   return &SPIRV::iIDRegClass;
-}
-
-inline unsigned getAS(SPIRVTypeInst SpvType) {
-  return storageClassToAddressSpace(
-      static_cast<SPIRV::StorageClass::StorageClass>(
-          SpvType->getOperand(1).getImm()));
 }
 
 static LLT getFloatRegType(SPIRVTypeInst FloatType) {

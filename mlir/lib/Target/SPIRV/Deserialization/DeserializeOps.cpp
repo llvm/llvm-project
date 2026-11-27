@@ -105,6 +105,19 @@ Value spirv::Deserializer::getValue(uint32_t id) {
       value = spirv::UndefOp::create(opBuilder, unknownLoc, undef);
     return value;
   }
+  if (auto undefComposite = getUndefComposite(id)) {
+    std::pair<Block *, uint32_t> key = {opBuilder.getInsertionBlock(), id};
+    if (Value value = blockConstantMap.lookup(key))
+      return value;
+    // Recursion may rehash blockConstantMap, so insert last.
+    SmallVector<Value> constituents;
+    for (uint32_t constituentID : undefComposite->second)
+      constituents.push_back(getValue(constituentID));
+    Value value = spirv::CompositeConstructOp::create(
+        opBuilder, unknownLoc, undefComposite->first, constituents);
+    blockConstantMap[key] = value;
+    return value;
+  }
   if (std::optional<spirv::GraphConstantARMOpMaterializationInfo>
           graphConstantARMInfo = getGraphConstantARM(id)) {
     IntegerAttr graphConstantID = graphConstantARMInfo->graphConstantID;
@@ -215,6 +228,12 @@ LogicalResult spirv::Deserializer::processInstruction(
   case spirv::Opcode::OpVariable:
     if (isa<spirv::ModuleOp>(opBuilder.getBlock()->getParentOp())) {
       return processGlobalVariable(operands);
+    }
+    if (operands.size() > 3 && undefCompositeMap.contains(operands[3])) {
+      return emitError(unknownLoc, "OpVariable initializer <id> ")
+             << operands[3]
+             << " has OpUndef constituents, which cannot be represented in "
+                "spirv.Variable";
     }
     break;
   case spirv::Opcode::OpLine:

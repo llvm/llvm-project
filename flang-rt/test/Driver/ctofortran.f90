@@ -4,7 +4,7 @@
 ! RUN: split-file %s %t
 ! RUN: %clang %isysroot -I"%include/flang" -c %t/cfile.c -o %t/cfile.o
 ! RUN: %flang %isysroot -L"%libdir" %t/ffile.f90 %t/cfile.o -o %t/ctofortran
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t/ctofortran | FileCheck %s
+! RUN: %t/ctofortran | FileCheck %s
 
 !--- ffile.f90
 program fmain

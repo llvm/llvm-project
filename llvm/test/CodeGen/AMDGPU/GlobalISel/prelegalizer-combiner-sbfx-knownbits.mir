@@ -6,7 +6,6 @@
 
 ---
 name:            sbfx_i1_width1_unknown
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -34,7 +33,6 @@ body:             |
 ...
 ---
 name:            sbfx_i1_width1_odd
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -58,7 +56,6 @@ body:             |
 ...
 ---
 name:            sbfx_i1_width1_even
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0

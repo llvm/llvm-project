@@ -471,6 +471,7 @@ static const std::vector<std::string> getDefaultSPIRVExtensions() {
       "SPV_INTEL_cache_controls",
       "SPV_INTEL_variable_length_array",
       "SPV_EXT_bfloat16_arithmetic",
+      "SPV_INTEL_subgroups",
   };
 }
 

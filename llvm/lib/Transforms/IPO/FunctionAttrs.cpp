@@ -54,7 +54,6 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -96,10 +95,6 @@ STATISTIC(NumThinLinkNoRecurse,
           "Number of functions marked as norecurse during thinlink");
 STATISTIC(NumThinLinkNoUnwind,
           "Number of functions marked as nounwind during thinlink");
-
-static cl::opt<bool> DisableThinLTOPropagation(
-    "disable-thinlto-funcattrs", cl::init(true), cl::Hidden,
-    cl::desc("Don't propagate function-attrs in thinLTO"));
 
 static void addCapturesStat(CaptureInfo CI) {
   if (capturesNothing(CI))
@@ -410,12 +405,12 @@ static FunctionSummary *calculatePrevailingSummary(
 }
 
 bool llvm::thinLTOPropagateFunctionAttrs(
-    ModuleSummaryIndex &Index,
+    const cl::LibraryOptionsContext &LibraryOptions, ModuleSummaryIndex &Index,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         IsPrevailing) {
   // TODO: implement addNoAliasAttrs once
   // there's more information about the return type in the summary
-  if (DisableThinLTOPropagation)
+  if (!LibraryOptions.get<IPOOptions>().thinlto_funcattrs)
     return false;
 
   DenseMap<ValueInfo, FunctionSummary *> CachedPrevailingSummary;

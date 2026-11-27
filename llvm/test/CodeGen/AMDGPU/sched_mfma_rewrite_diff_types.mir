@@ -12,7 +12,6 @@
 
 ---
 name:            dest_opc_different_class
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'

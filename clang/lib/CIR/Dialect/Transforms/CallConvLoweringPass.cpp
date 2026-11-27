@@ -123,6 +123,13 @@ struct CallConvLoweringPass
 
   void runOnOperation() override;
 
+  /// Build the classifier and the rewrite context the pass options select for
+  /// \p modOp.  Exactly one of `target` and `classificationAttr` must be set.
+  std::pair<std::unique_ptr<CIRABIClassifier>,
+            std::unique_ptr<CIRABIRewriteContext>>
+  createClassifierAndRewriteContext(const DataLayout &dl, ModuleOp modOp,
+                                    bool enableNoundefAttrs) const;
+
   /// The x86_64 flags whose value depends on the target and the requested ABI
   /// compatibility version.  Carried outside the pass options because the
   /// struct has no command-line parser, so a cir-opt run gets the library
@@ -132,49 +139,45 @@ struct CallConvLoweringPass
 
 } // namespace
 
-/// Build the classifier the pass options select.  Exactly one of \p target
-/// and \p classificationAttrName is set, which runOnOperation checks before
-/// calling.
-static std::unique_ptr<CIRABIClassifier>
-createABIClassifier(cir::CallConvTarget target,
-                    StringRef classificationAttrName, const DataLayout &dl,
-                    ModuleOp modOp, const ABIClassifierOptions &options) {
-  if (!classificationAttrName.empty())
-    return createInjectedABIClassifier(dl, classificationAttrName);
+std::pair<std::unique_ptr<CIRABIClassifier>,
+          std::unique_ptr<CIRABIRewriteContext>>
+CallConvLoweringPass::createClassifierAndRewriteContext(
+    const DataLayout &dl, ModuleOp modOp, bool enableNoundefAttrs) const {
+  auto baseRewriteCtx = [&] {
+    return std::make_unique<CIRABIRewriteContext>(modOp, dl,
+                                                  enableNoundefAttrs);
+  };
+  if (!classificationAttr.empty())
+    return {createInjectedABIClassifier(dl, classificationAttr),
+            baseRewriteCtx()};
 
   switch (target) {
   case cir::CallConvTarget::Test:
-    return createTestTargetABIClassifier(dl);
-  case cir::CallConvTarget::X86_64:
-    return createX86_64ABIClassifier(dl, modOp, options);
+    return {createTestTargetABIClassifier(dl), baseRewriteCtx()};
+  case cir::CallConvTarget::X86_64: {
+    ABIClassifierOptions options;
+    options.x86AvxAbiLevel = x86AvxAbiLevel;
+    options.allowsX86TargetAttrAvx = allowsX86TargetAttrAvx;
+    options.x86AbiCompat = x86AbiCompat;
+    return {createX86_64ABIClassifier(dl, modOp, options),
+            createX86_64ABIRewriteContext(modOp, dl, enableNoundefAttrs)};
+  }
   case cir::CallConvTarget::AMDGPU:
-    return createAMDGPUABIClassifier(dl, modOp);
+    return {createAMDGPUABIClassifier(dl, modOp),
+            createAMDGPUABIRewriteContext(modOp, dl, enableNoundefAttrs)};
   case cir::CallConvTarget::SPIRV:
-    return createSPIRVABIClassifier(dl, modOp);
-  case cir::CallConvTarget::AArch64:
-    return createAArch64ABIClassifier(dl, modOp);
+    return {createSPIRVABIClassifier(dl, modOp), baseRewriteCtx()};
+  case cir::CallConvTarget::AArch64: {
+    llvm::abi::AArch64ABIOptions opts = getAArch64ABIOptions(modOp);
+    bool softFloat = opts.Kind == llvm::abi::AArch64ABIKind::AAPCSSoft;
+    return {createAArch64ABIClassifier(dl, modOp, opts),
+            createAArch64ABIRewriteContext(modOp, dl, enableNoundefAttrs,
+                                           softFloat)};
+  }
   case cir::CallConvTarget::None:
     break;
   }
   llvm_unreachable("an unset driver mode is rejected before this point");
-}
-
-static std::unique_ptr<CIRABIRewriteContext>
-createABIRewriteContext(cir::CallConvTarget target, ModuleOp modOp,
-                        const DataLayout &dl, bool enableNoundefAttrs) {
-  switch (target) {
-  case cir::CallConvTarget::X86_64:
-    return createX86_64ABIRewriteContext(modOp, dl, enableNoundefAttrs);
-  case cir::CallConvTarget::AMDGPU:
-    return createAMDGPUABIRewriteContext(modOp, dl, enableNoundefAttrs);
-  case cir::CallConvTarget::None:
-  case cir::CallConvTarget::Test:
-  case cir::CallConvTarget::SPIRV:
-  case cir::CallConvTarget::AArch64:
-    return std::make_unique<CIRABIRewriteContext>(modOp, dl,
-                                                  enableNoundefAttrs);
-  }
-  llvm_unreachable("unhandled CallConvTarget");
 }
 
 namespace {
@@ -238,23 +241,17 @@ void CallConvLoweringPass::runOnOperation() {
   }
 
   DataLayout dl(moduleOp);
-  std::unique_ptr<CIRABIRewriteContext> rewriteCtxOwner =
-      createABIRewriteContext(target, moduleOp, dl, enableNoundefAttrs);
-  CIRABIRewriteContext &rewriteCtx = *rewriteCtxOwner;
+  std::unique_ptr<cir::CIRABIClassifier> classifier;
+  std::unique_ptr<CIRABIRewriteContext> rewriteCtx;
+  std::tie(classifier, rewriteCtx) =
+      createClassifierAndRewriteContext(dl, moduleOp, enableNoundefAttrs);
   // A non-byval indirect parameter's slot outlives the rewrite that retypes
   // the parameter, so that a call forwarding the parameter can still recognize
   // it.  Draining on scope exit collapses those slots whichever way this
   // function returns.
   llvm::scope_exit drainParamSlots(
-      [&] { rewriteCtx.finalizeParameterSlots(); });
+      [&] { rewriteCtx->finalizeParameterSlots(); });
   SymbolTable symbolTable(moduleOp);
-
-  cir::ABIClassifierOptions classifierOptions;
-  classifierOptions.x86AvxAbiLevel = x86AvxAbiLevel;
-  classifierOptions.allowsX86TargetAttrAvx = allowsX86TargetAttrAvx;
-  classifierOptions.x86AbiCompat = x86AbiCompat;
-  std::unique_ptr<cir::CIRABIClassifier> classifier = createABIClassifier(
-      target, classificationAttr, dl, moduleOp, classifierOptions);
 
   // Classify every cir.func up front.  No IR mutation happens here, so
   // later walks can consult any function's classification regardless of
@@ -362,7 +359,7 @@ void CallConvLoweringPass::runOnOperation() {
   // makes the forwarding decision independent of the order the callee and its
   // caller were declared in.
   for (auto &kv : classifications) {
-    if (failed(rewriteCtx.prepareNonByvalParameters(kv.first, kv.second))) {
+    if (failed(rewriteCtx->prepareNonByvalParameters(kv.first, kv.second))) {
       signalPassFailure();
       return;
     }
@@ -393,7 +390,7 @@ void CallConvLoweringPass::runOnOperation() {
   for (auto &kv : classifications) {
     cir::FuncOp func = kv.first;
     const FunctionClassification &fc = kv.second;
-    if (failed(rewriteCtx.rewriteFunctionDefinition(func, fc, builder))) {
+    if (failed(rewriteCtx->rewriteFunctionDefinition(func, fc, builder))) {
       signalPassFailure();
       return;
     }
@@ -408,13 +405,13 @@ void CallConvLoweringPass::runOnOperation() {
       }
       if (hasIndirectSlot(*callFc))
         widenForArgMemory(cast<cir::CIRCallOpInterface>(callOp));
-      if (failed(rewriteCtx.rewriteCallSite(callOp, *callFc, builder))) {
+      if (failed(rewriteCtx->rewriteCallSite(callOp, *callFc, builder))) {
         signalPassFailure();
         return;
       }
     }
     for (cir::GetGlobalOp addrOp : addressTakers.lookup(func))
-      rewriteCtx.rewriteFunctionAddress(addrOp, func, builder);
+      rewriteCtx->rewriteFunctionAddress(addrOp, func, builder);
   }
 
   // Rewrite indirect call sites.  The callee is opaque, so classify from the
@@ -443,7 +440,7 @@ void CallConvLoweringPass::runOnOperation() {
     }
     if (hasIndirectSlot(*fc))
       widenForArgMemory(c);
-    if (failed(rewriteCtx.rewriteCallSite(c.getOperation(), *fc, builder))) {
+    if (failed(rewriteCtx->rewriteCallSite(c.getOperation(), *fc, builder))) {
       signalPassFailure();
       return;
     }
@@ -462,7 +459,7 @@ void CallConvLoweringPass::runOnOperation() {
       signalPassFailure();
       return;
     }
-    if (failed(rewriteCtx.rewriteVAArg(v.getOperation(), *ac, builder))) {
+    if (failed(rewriteCtx->rewriteVAArg(v.getOperation(), *ac, builder))) {
       signalPassFailure();
       return;
     }

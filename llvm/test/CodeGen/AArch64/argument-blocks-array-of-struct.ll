@@ -54,8 +54,8 @@ define [ 9 x double ] @array_9() {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    str xzr, [x8, #64]
-; CHECK-SD-NEXT:    stp q0, q0, [x8]
 ; CHECK-SD-NEXT:    stp q0, q0, [x8, #32]
+; CHECK-SD-NEXT:    stp q0, q0, [x8]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: array_9:
@@ -505,8 +505,8 @@ define %T_IN_MEMORY @return_in_memory() {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    str xzr, [x8, #64]
-; CHECK-SD-NEXT:    stp q0, q0, [x8]
 ; CHECK-SD-NEXT:    stp q0, q0, [x8, #32]
+; CHECK-SD-NEXT:    stp q0, q0, [x8]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: return_in_memory:
@@ -621,8 +621,8 @@ define void @argument_in_memory() {
 ; CHECK-SD-NEXT:    ldr d4, [x8, #64]
 ; CHECK-SD-NEXT:    ldp q2, q3, [x8, #32]
 ; CHECK-SD-NEXT:    str d4, [sp, #64]
-; CHECK-SD-NEXT:    stp q0, q1, [sp]
 ; CHECK-SD-NEXT:    stp q2, q3, [sp, #32]
+; CHECK-SD-NEXT:    stp q0, q1, [sp]
 ; CHECK-SD-NEXT:    bl callee_in_memory
 ; CHECK-SD-NEXT:    ldr x30, [sp, #80] // 8-byte Reload
 ; CHECK-SD-NEXT:    add sp, sp, #96

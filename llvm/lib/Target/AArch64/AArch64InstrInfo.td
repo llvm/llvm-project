@@ -11207,13 +11207,13 @@ def : Pat<(i64 (sext (sra GPR32:$Rn, (i64 imm0_31:$imm)))),
           (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
                    (i64 imm0_31:$imm), 31)>;
 
-def : Pat<(i64 (sext (sra (sext_inreg GPR32:$Rn, i8), (i64 imm0_31:$imm)))),
+def : Pat<(i64 (sext (sra (sext_inreg GPR32:$Rn, i8), (i64 imm0_7:$imm)))),
           (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
-                   (i64 imm0_31:$imm), 7)>;
+                   (i64 imm0_7:$imm), 7)>;
 
-def : Pat<(i64 (sext (sra (sext_inreg GPR32:$Rn, i16), (i64 imm0_31:$imm)))),
+def : Pat<(i64 (sext (sra (sext_inreg GPR32:$Rn, i16), (i64 imm0_15:$imm)))),
           (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
-                   (i64 imm0_31:$imm), 15)>;
+                   (i64 imm0_15:$imm), 15)>;
 
 // To truncate, we can simply extract from a subregister.
 def : Pat<(i32 (trunc GPR64sp:$src)),
