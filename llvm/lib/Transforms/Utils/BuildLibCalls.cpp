@@ -766,6 +766,17 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setRetDoesNotAlias(F);
     Changed |= setWillReturn(F);
     break;
+  case LibFunc_cheriot_heap_allocate:
+    Changed |= setAllocFamily(F, "cheriot_heap_allocate");
+    Changed |= setAllocKind(F, AllocFnKind::Alloc | AllocFnKind::Zeroed);
+    Changed |= setAllocSize(F, 2, std::nullopt);
+    Changed |= setRetDoesNotAlias(F);
+    break;
+  case LibFunc_cheriot_heap_free:
+    Changed |= setAllocFamily(F, "cheriot_heap_allocate");
+    Changed |= setAllocKind(F, AllocFnKind::Free);
+    Changed |= setAllocatedPointerParam(F, 1);
+    break;
   case LibFunc_chmod:
   case LibFunc_chown:
     Changed |= setRetAndArgsNoUndef(F);
@@ -774,6 +785,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_ctermid:
+    Changed |= setRetAndArgsNoUndef(F);
+    Changed |= setDoesNotThrow(F);
+    break;
   case LibFunc_clearerr:
   case LibFunc_closedir:
     Changed |= setRetAndArgsNoUndef(F);

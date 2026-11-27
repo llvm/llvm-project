@@ -2836,6 +2836,10 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                AllocFnKind::Aligned)) != AllocFnKind::Unknown))
       CheckFailed("'allockind(\"free\")' doesn't allow uninitialized, zeroed, "
                   "or aligned modifiers.");
+    if (Type == AllocFnKind::Free && !FT->getReturnType()->isVoidTy() &&
+        !FT->getReturnType()->isIntegerTy())
+      CheckFailed("'allockind(\"free\")' requires a void or integer return "
+                  "type");
     AllocFnKind ZeroedUninit = AllocFnKind::Uninitialized | AllocFnKind::Zeroed;
     if ((K & ZeroedUninit) == ZeroedUninit)
       CheckFailed("'allockind()' can't be both zeroed and uninitialized");

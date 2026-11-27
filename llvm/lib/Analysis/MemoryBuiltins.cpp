@@ -92,8 +92,6 @@ struct AllocFnsTy {
   unsigned NumParams;
   // First and Second size parameters (or -1 if unused)
   int FstParam, SndParam;
-  // Alignment parameter for aligned_alloc and aligned new
-  int AlignParam;
   // Name of default allocator function to group malloc/free calls by family
   MallocFamily Family;
 };
@@ -102,10 +100,10 @@ struct AllocFnsTy {
 // FIXME: certain users need more information. E.g., SimplifyLibCalls needs to
 // know which functions are nounwind, noalias, nocapture parameters, etc.
 static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
-    {LibFunc_strdup,                                          {StrDupLike, 1, -1, -1, -1, MallocFamily::Malloc}},
-    {LibFunc_dunder_strdup,                                   {StrDupLike, 1, -1, -1, -1, MallocFamily::Malloc}},
-    {LibFunc_strndup,                                         {StrDupLike, 2,  1, -1, -1, MallocFamily::Malloc}},
-    {LibFunc_dunder_strndup,                                  {StrDupLike, 2,  1, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_strdup,                                          {StrDupLike, 1, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_dunder_strdup,                                   {StrDupLike, 1, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_strndup,                                         {StrDupLike, 2,  1, -1, MallocFamily::Malloc}},
+    {LibFunc_dunder_strndup,                                  {StrDupLike, 2,  1, -1, MallocFamily::Malloc}},
 };
 // clang-format on
 
@@ -209,8 +207,6 @@ getAllocationSize(const CallBase *CB, const TargetLibraryInfo *TLI) {
   Result.NumParams = CB->arg_size();
   Result.FstParam = Args.first;
   Result.SndParam = Args.second.value_or(-1);
-  // Allocsize has no way to specify an alignment argument
-  Result.AlignParam = -1;
   return Result;
 }
 
@@ -288,12 +284,7 @@ bool llvm::isRemovableAlloc(const CallBase *CB, const TargetLibraryInfo *TLI) {
   return isAllocLikeFn(CB, TLI);
 }
 
-Value *llvm::getAllocAlignment(const CallBase *V,
-                               const TargetLibraryInfo *TLI) {
-  const std::optional<AllocFnsTy> FnData = getAllocationData(V, AnyAlloc, TLI);
-  if (FnData && FnData->AlignParam >= 0) {
-    return V->getOperand(FnData->AlignParam);
-  }
+Value *llvm::getAllocAlignment(const CallBase *V) {
   return V->getArgOperandWithAttribute(Attribute::AllocAlign);
 }
 
@@ -375,19 +366,13 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
   return Size;
 }
 
-Constant *llvm::getInitialValueOfAllocation(const Value *V,
-                                            const TargetLibraryInfo *TLI,
-                                            Type *Ty) {
+Constant *llvm::getInitialValueOfAllocation(const Value *V, Type *Ty) {
   if (isa<AllocaInst>(V))
     return UndefValue::get(Ty);
 
   auto *Alloc = dyn_cast<CallBase>(V);
   if (!Alloc)
     return nullptr;
-
-  // malloc are uninitialized (undef)
-  if (getAllocationData(Alloc, MallocOrOpNewLike, TLI).has_value())
-    return UndefValue::get(Ty);
 
   AllocFnKind AK = getAllocFnKind(Alloc);
   if ((AK & AllocFnKind::Uninitialized) != AllocFnKind::Unknown)
@@ -426,15 +411,27 @@ bool llvm::isFreeLikeFn(const Function *F) {
 }
 
 Value *llvm::getFreedOperand(const CallBase *CB) {
-  // Exit early for functions which don't return void. The allockind("free")
-  // attribute requires this, and it's cheaper to check than the attribute.
-  if (!CB->getType()->isVoidTy())
+  // Exit early for functions which don't return void or an integer. The
+  // allockind("free") attribute requires this, and it's cheaper to check than
+  // the attribute.
+  if (!CB->getType()->isVoidTy() && !CB->getType()->isIntegerTy())
     return nullptr;
 
   if (checkFnAllocKind(CB, AllocFnKind::Free))
     return CB->getArgOperandWithAttribute(Attribute::AllocatedPointer);
 
   return nullptr;
+}
+
+Constant *llvm::getElidedFreeResult(const Value *V) {
+  if (!checkFnAllocKind(V, AllocFnKind::Free))
+    return nullptr;
+
+  if (!V->getType()->isIntegerTy())
+    return nullptr;
+
+  // LangRef requires that 0 be returned on free(alloc()).
+  return Constant::getNullValue(V->getType());
 }
 
 //===----------------------------------------------------------------------===//

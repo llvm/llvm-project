@@ -1,9 +1,11 @@
-static_library("lib") {
+static_library("UBAwareInterpreter") {
   output_name = "LLVMUBAwareInterpreter"
   deps = [
     "//llvm/lib/Analysis",
+    "//llvm/lib/AsmParser",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "Context.cpp",

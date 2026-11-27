@@ -198,8 +198,9 @@ bool doesDeclHaveStorage(const ValueDecl *D) {
   return !D->getType()->isReferenceType();
 }
 
-OriginManager::OriginManager(const AnalysisDeclContext &AC)
-    : AST(AC.getASTContext()) {
+OriginManager::OriginManager(const AnalysisDeclContext &AC,
+                             llvm::BumpPtrAllocator &Alloc)
+    : AST(AC.getASTContext()), ListAllocator(Alloc) {
   collectLifetimeAnnotatedOriginTypes(AC);
   initializeThisOrigins(AC.getDecl());
 }
