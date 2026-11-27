@@ -3727,8 +3727,8 @@ private:
   /// refers to its graph.
   class CandidateState {
     friend class BoUpSLP;
-    friend struct GraphTraits<SLPGraphView *>;
-    friend struct DOTGraphTraits<SLPGraphView *>;
+    friend struct GraphTraits<SLPGraphView>;
+    friend struct DOTGraphTraits<SLPGraphView>;
 
     CandidateState() = default;
     CandidateState(const CandidateState &) = delete;
@@ -4548,8 +4548,8 @@ private:
 #endif
 
   friend struct ::SLPGraphView;
-  friend struct GraphTraits<SLPGraphView *>;
-  friend struct DOTGraphTraits<SLPGraphView *>;
+  friend struct GraphTraits<SLPGraphView>;
+  friend struct DOTGraphTraits<SLPGraphView>;
   friend class ::HorizontalReduction;
 
   /// Contains all scheduling data for a basic block.
@@ -5810,7 +5810,7 @@ struct SLPGraphView {
   const BoUpSLP::CandidateState &Candidate;
 };
 
-template <> struct llvm::GraphTraits<SLPGraphView *> {
+template <> struct llvm::GraphTraits<SLPGraphView> {
   using TreeEntry = BoUpSLP::TreeEntry;
 
   /// NodeRef has to be a pointer per the GraphWriter.
@@ -5833,8 +5833,8 @@ template <> struct llvm::GraphTraits<SLPGraphView *> {
     NodeRef operator*() { return I->UserTE; }
   };
 
-  static NodeRef getEntryNode(SLPGraphView *G) {
-    return &G->Candidate.getRootNode();
+  static NodeRef getEntryNode(const SLPGraphView &G) {
+    return &G.Candidate.getRootNode();
   }
 
   static ChildIteratorType child_begin(NodeRef N) {
@@ -5861,26 +5861,26 @@ template <> struct llvm::GraphTraits<SLPGraphView *> {
     bool operator!=(const nodes_iterator &N2) const { return N2.It != It; }
   };
 
-  static nodes_iterator nodes_begin(SLPGraphView *G) {
-    return nodes_iterator(G->Candidate.VectorizableTree.begin());
+  static nodes_iterator nodes_begin(const SLPGraphView &G) {
+    return nodes_iterator(G.Candidate.VectorizableTree.begin());
   }
 
-  static nodes_iterator nodes_end(SLPGraphView *G) {
-    return nodes_iterator(G->Candidate.VectorizableTree.end());
+  static nodes_iterator nodes_end(const SLPGraphView &G) {
+    return nodes_iterator(G.Candidate.VectorizableTree.end());
   }
 
-  static unsigned size(SLPGraphView *G) {
-    return G->Candidate.VectorizableTree.size();
+  static unsigned size(const SLPGraphView &G) {
+    return G.Candidate.VectorizableTree.size();
   }
 };
 
 template <>
-struct llvm::DOTGraphTraits<SLPGraphView *> : public DefaultDOTGraphTraits {
+struct llvm::DOTGraphTraits<SLPGraphView> : public DefaultDOTGraphTraits {
   using TreeEntry = BoUpSLP::TreeEntry;
 
   DOTGraphTraits(bool IsSimple = false) : DefaultDOTGraphTraits(IsSimple) {}
 
-  std::string getNodeLabel(const TreeEntry *Entry, const SLPGraphView *G) {
+  std::string getNodeLabel(const TreeEntry *Entry, const SLPGraphView &G) {
     std::string Str;
     raw_string_ostream OS(Str);
     OS << Entry->Idx << ".\n";
@@ -5889,7 +5889,7 @@ struct llvm::DOTGraphTraits<SLPGraphView *> : public DefaultDOTGraphTraits {
     for (auto *V : Entry->Scalars) {
       OS << *V;
       if (llvm::any_of(
-              G->R.getExternalUses(),
+              G.R.getExternalUses(),
               [&](const BoUpSLP::ExternalUser &EU) { return EU.Scalar == V; }))
         OS << " <extract>";
       OS << "\n";
@@ -5898,7 +5898,7 @@ struct llvm::DOTGraphTraits<SLPGraphView *> : public DefaultDOTGraphTraits {
   }
 
   static std::string getNodeAttributes(const TreeEntry *Entry,
-                                       const SLPGraphView *) {
+                                       const SLPGraphView &) {
     if (Entry->isGather())
       return "color=red";
     if (Entry->State == TreeEntry::ScatterVectorize ||
@@ -21784,7 +21784,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   LLVM_DEBUG(dbgs() << Str);
   if (Opts.view_slp_tree) {
     SLPGraphView G(*this, Candidate);
-    ViewGraph(&G, "SLP" + F->getName(), false, Str);
+    ViewGraph(G, "SLP" + F->getName(), false, Str);
   }
 #endif
 
