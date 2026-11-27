@@ -1,10 +1,17 @@
-//===-- Shared expm1bf16 function -------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \expm1bf16.h
+/// This file contains the declaration of the Instruction class, which is the
+/// base class for all of the VM instructions.
+///
+//===----------------------------------------------------------------------===//
+
 
 #ifndef LLVM_LIBC_SHARED_MATH_EXPM1BF16_H
 #define LLVM_LIBC_SHARED_MATH_EXPM1BF16_H
