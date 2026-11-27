@@ -545,11 +545,8 @@ public:
   bool hasCOFFAssociativeComdats() const { return HasCOFFAssociativeComdats; }
   bool hasCOFFComdatConstants() const { return HasCOFFComdatConstants; }
 
-  /// Returns the maximum possible encoded instruction size in bytes. If \p STI
-  /// is null, this should be the maximum size for any subtarget.
-  virtual unsigned getMaxInstLength(const MCSubtargetInfo *STI = nullptr) const {
-    return MaxInstLength;
-  }
+  /// Returns the maximum possible encoded instruction size in bytes.
+  unsigned getMaxInstLength() const { return MaxInstLength; }
 
   unsigned getMinInstAlignment() const { return MinInstAlignment; }
   bool getDollarIsPC() const { return DollarIsPC; }
