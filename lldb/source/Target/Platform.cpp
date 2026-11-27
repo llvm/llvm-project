@@ -1402,13 +1402,8 @@ const char *Platform::GetLocalCacheDirectory() {
 #define LLDB_OPTIONS_platform_rsync
 #include "TargetOptions.inc"
 
-static constexpr OptionDefinition g_ssh_option_table[] = {
-    {LLDB_OPT_SET_ALL, false, "ssh", 's', OptionParser::eNoArgument, nullptr,
-     {}, 0, eArgTypeNone, "Enable SSH."},
-    {LLDB_OPT_SET_ALL, false, "ssh-opts", 'S', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeCommandName,
-     "Platform-specific options required for SSH to work."},
-};
+#define LLDB_OPTIONS_platform_ssh
+#include "TargetOptions.inc"
 
 static constexpr OptionDefinition g_caching_option_table[] = {
     {LLDB_OPT_SET_ALL, false, "local-cache-dir", 'c',
@@ -1466,7 +1461,7 @@ Platform::SetThreadCreationBreakpoint(lldb_private::Target &target) {
 }
 
 llvm::ArrayRef<OptionDefinition> OptionGroupPlatformSSH::GetDefinitions() {
-  return llvm::ArrayRef(g_ssh_option_table);
+  return llvm::ArrayRef(g_platform_ssh_options);
 }
 
 void OptionGroupPlatformSSH::OptionParsingStarting(

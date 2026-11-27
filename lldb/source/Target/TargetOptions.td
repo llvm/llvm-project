@@ -15,3 +15,11 @@ let Command = "platform rsync" in {
         Arg<"CommandName">,
         Desc<"Platform-specific rsync prefix put before the remote path.">;
 }
+
+let Command = "platform ssh" in {
+  def platform_ssh_ssh : Option<"ssh", "s">, Desc<"Enable SSH.">;
+  def platform_ssh_ssh_opts
+      : Option<"ssh-opts", "S">,
+        Arg<"CommandName">,
+        Desc<"Platform-specific options required for SSH to work.">;
+}
