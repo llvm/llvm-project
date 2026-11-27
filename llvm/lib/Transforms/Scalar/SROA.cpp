@@ -573,6 +573,7 @@ public:
 
   uint64_t beginOffset() const { return BeginOffset; }
   uint64_t endOffset() const { return EndOffset; }
+  uint64_t size() const { return EndOffset - BeginOffset; }
 
   bool isSplittable() const { return UseAndIsSplittable.getInt(); }
   void makeUnsplittable() { UseAndIsSplittable.setInt(false); }
@@ -5095,7 +5096,7 @@ public:
 static Slice *findOverlappingCopySlice(Slice &S,
                                        InstructionSliceMap &SliceMap) {
   // Single byte slices can't partially overlap anything
-  if (S.endOffset() - S.beginOffset() == 1)
+  if (S.size() == 1)
     return nullptr;
   // The source/destination of this slice needs to be a memory instruction
   // whose slice overlaps this one.
@@ -5248,8 +5249,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         Stores.push_back(SI);
       } else if (auto *MTI = dyn_cast<MemTransferInst>(I)) {
         // Don't pre-split if the slice is too large.
-        if (!MTI->getDataLayout().fitsInLegalInteger(S.endOffset() -
-                                                     S.beginOffset()))
+        if (!MTI->getDataLayout().fitsInLegalInteger(S.size()))
           continue;
         // Both operands of a memory transfer may have a slice, and we want the
         // instruction to only appear once in MemTransfers. Therefore for the
@@ -5290,7 +5290,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
             std::max(S.beginOffset(), CopyOverlap->beginOffset());
         uint64_t OverlapEnd = std::min(S.endOffset(), CopyOverlap->endOffset());
         uint64_t OverlapSize = OverlapEnd - OverlapStart;
-        uint64_t SliceSize = S.endOffset() - S.beginOffset();
+        uint64_t SliceSize = S.size();
         uint64_t NonOverlapSize = SliceSize - OverlapSize;
         if (OverlapSize < NonOverlapSize) {
           // When the overlap area is smaller the middle part is initially and
@@ -5411,7 +5411,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
     SplitLoads.clear();
 
     auto &Offsets = SplitOffsetsMap[LI];
-    unsigned SliceSize = Offsets.S->endOffset() - Offsets.S->beginOffset();
+    unsigned SliceSize = Offsets.S->size();
     assert(LI->getType()->getIntegerBitWidth() % 8 == 0 &&
            "Load must have type size equal to store size");
     assert(LI->getType()->getIntegerBitWidth() / 8 >= SliceSize &&
@@ -5502,7 +5502,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
     assert(StoreSize > 0 && "Cannot have a zero-sized integer store!");
 
     auto &Offsets = SplitOffsetsMap[SI];
-    assert(StoreSize == Offsets.S->endOffset() - Offsets.S->beginOffset() &&
+    assert(StoreSize == Offsets.S->size() &&
            "Slice size should always match load size exactly!");
     uint64_t BaseOffset = Offsets.S->beginOffset();
     assert(BaseOffset + StoreSize > BaseOffset &&
@@ -5586,7 +5586,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
     auto &Offsets = SplitOffsetsMap[MTI];
     Slice *Src = Offsets.S;
     Slice *Dst = MemTransferDest[MTI];
-    unsigned SliceSize = Src->endOffset() - Src->beginOffset();
+    unsigned SliceSize = Src->size();
 
     IRB.SetInsertPoint(MTI);
     SliceSplitter Splitter(IRB, DL, Offsets.Splits, SliceSize);
