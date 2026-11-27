@@ -1,0 +1,32 @@
+// RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering | FileCheck %s
+// REQUIRES: target={{x86_64-.*-linux.*}}
+
+// Inline assembly in a `strictfp` function is a `strictfp` call.
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @strict_asm() attributes {strictfp} {
+    cir.asm(x86_att,
+      out = [],
+      in = [],
+      in_out = [],
+      {"nop" "~{dirflag},~{fpsr},~{flags}"}) side_effects
+    cir.return
+  }
+
+  // CHECK-LABEL: define void @strict_asm(
+  // CHECK:         call void asm sideeffect "nop", "~{dirflag},~{fpsr},~{flags}"() #[[STRICT:[0-9]+]]
+
+  cir.func @plain_asm() {
+    cir.asm(x86_att,
+      out = [],
+      in = [],
+      in_out = [],
+      {"nop" "~{dirflag},~{fpsr},~{flags}"}) side_effects
+    cir.return
+  }
+
+  // CHECK-LABEL: define void @plain_asm(
+  // CHECK:         call void asm sideeffect "nop", "~{dirflag},~{fpsr},~{flags}"(){{$}}
+}
+
+// CHECK: attributes #[[STRICT]] = { strictfp }

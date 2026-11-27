@@ -32,7 +32,8 @@ module attributes {
 // MLIR-LABEL: llvm.func @decl_fn()
 // MLIR-SAME:    passthrough = {{\[}}["no-trapping-math", "true"], ["stack-protector-buffer-size", "16"]]
 // MLIR-LABEL: llvm.func @strictfp_fn()
-// MLIR-SAME:    passthrough = {{\[}}"strictfp", ["stack-protector-buffer-size", "16"]]
+// MLIR-SAME:    passthrough = {{\[}}["stack-protector-buffer-size", "16"]]
+// MLIR-SAME:    strictfp
 // MLIR-LABEL: llvm.func @runtime_fn()
 // MLIR-NOT:     passthrough
 
