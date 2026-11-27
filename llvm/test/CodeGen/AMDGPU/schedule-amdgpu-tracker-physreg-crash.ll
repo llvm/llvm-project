@@ -58,7 +58,7 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
     <7 x i32> %v1,
     i64 %vcc,
     ptr addrspace(5) %alloca1,
-    i32 0) ; use of scc
+    i32 1) ; use of scc
 
   ret void
 }

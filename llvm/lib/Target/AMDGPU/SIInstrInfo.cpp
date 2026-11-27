@@ -5389,11 +5389,17 @@ bool SIInstrInfo::isMaskedByExec(Register Reg, const MachineInstr &Use,
     return true;
 
   // Recurse into an operand, which must be a whole register to say anything
-  // about the whole lane mask.
+  // about the whole lane mask. A constant zero has no bits set for inactive
+  // lanes, so it is trivially masked. Any other immediate may set them.
   auto Recurse = [&](unsigned OpIdx) {
     const MachineOperand &MO = Def->getOperand(OpIdx);
-    return MO.isReg() && !MO.getSubReg() &&
-           isMaskedByExec(MO.getReg(), Use, MRI, Depth + 1);
+    if (MO.isImm())
+      return MO.getImm() == 0;
+    if (!MO.isReg() || MO.getSubReg())
+      return false;
+    if (std::optional<int64_t> Imm = getImmOrMaterializedImm(MRI, MO))
+      return *Imm == 0;
+    return isMaskedByExec(MO.getReg(), Use, MRI, Depth + 1);
   };
 
   unsigned Opc = Def->getOpcode();
@@ -5403,21 +5409,9 @@ bool SIInstrInfo::isMaskedByExec(Register Reg, const MachineInstr &Use,
     return true;
   if (Opc == LMC.AndN2Opc && Recurse(1))
     return true;
-  if ((Opc == LMC.OrOpc || Opc == LMC.XorOpc) && Recurse(1) && Recurse(2))
+  if ((Opc == LMC.OrOpc || Opc == LMC.XorOpc || Opc == LMC.CSelectOpc) &&
+      Recurse(1) && Recurse(2))
     return true;
-  // S_CSELECT x, 0 and S_CSELECT 0, x produce either x or 0. 0 has no bits set
-  // for inactive lanes, so the result is masked iff x is. An immediate x (e.g.
-  // -1) is rejected by Recurse, since it may set bits for inactive lanes.
-  if (Opc == LMC.CSelectOpc) {
-    std::optional<int64_t> FalseImm =
-        getImmOrMaterializedImm(MRI, Def->getOperand(2));
-    if (FalseImm && *FalseImm == 0)
-      return Recurse(1);
-    std::optional<int64_t> TrueImm =
-        getImmOrMaterializedImm(MRI, Def->getOperand(1));
-    if (TrueImm && *TrueImm == 0)
-      return Recurse(2);
-  }
 
   return false;
 }
