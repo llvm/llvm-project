@@ -322,9 +322,30 @@ foo:
   } goto foo;
 }
 // CIR: cir.func{{.*}} @_Z3if3v()
-// CIR: %[[ZERO_BOOL:.*]] = cir.const #false
-// CIR: cir.if %[[ZERO_BOOL]]
-// CIR: cir.call @_Z7if_initv() : () -> (!s32i {llvm.noundef})
+// CIR: %[[SLOT:.*]] = cir.alloca "__goto_dest_slot" {{.*}} goto_dest_slot
+// CIR: ^[[PRE_SCOPE:bb[0-9]+]]:
+// CIR-NEXT: cir.scope {
+// CIR:   %[[DEST:.*]] = cir.load %[[SLOT]]
+// CIR:   cir.switch.flat %[[DEST]] : !s32i, ^[[NORMAL:bb[0-9]+]] [
+// CIR-NEXT: 1: ^[[GOTO:bb[0-9]+]]
+// CIR: ^[[GOTO]]:
+// CIR-NEXT: %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT: cir.br ^[[PRE_IF:bb[0-9]+]](%[[TRUE]] : !cir.bool)
+// CIR: ^[[NORMAL]]:
+// CIR-NEXT: %[[ZERO_BOOL:.*]] = cir.const #false
+// CIR: cir.br ^[[PRE_IF]](%[[ZERO_BOOL]] : !cir.bool)
+// CIR: ^[[PRE_IF]](%[[COND:.*]]: !cir.bool
+// CIR-NEXT: cir.if %[[COND]] {
+// CIR:   %[[DEST2:.*]] = cir.load %[[SLOT]]
+// CIR:   cir.switch.flat %[[DEST2]] : !s32i, ^{{bb[0-9]+}} [
+// CIR-NEXT: 1: ^[[TO_FOO:bb[0-9]+]]
+// CIR: ^[[TO_FOO]]:
+// CIR: cir.br ^[[FOO:bb[0-9]+]]
+// CIR: ^[[FOO]]:
+// CIR-NEXT: cir.call @_Z7if_initv() : () -> (!s32i {llvm.noundef})
+// CIR: %[[FOO_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT: cir.store %[[FOO_ID]], %[[SLOT]]
+// CIR-NEXT: cir.br ^[[PRE_SCOPE]]
 
 // Just making sure we don't lose either of the above 'if' branches because of
 // the label, so just making sure they have the 'call' should be sufficient.

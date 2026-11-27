@@ -162,6 +162,131 @@ cir.func @from_loop_cond(%arg0: !cir.bool) {
   cir.return
 }
 
+// A goto into the then branch of an if passes true to a block right before
+// the if instead of evaluating the condition, and the branch dispatches on
+// the slot at its start.
+// CHECK-LABEL: cir.func @into_then(
+// CHECK:         cir.brcond %arg0 ^[[GOTO:bb[0-9]+]], ^[[NORMAL:bb[0-9]+]]
+// CHECK:       ^[[GOTO]]:
+// CHECK:         cir.store %{{.*}}, %[[SLOT:.*]] :
+// CHECK-NEXT:    %[[TRUE:.*]] = cir.const #true
+// CHECK-NEXT:    cir.br ^[[PRE:bb[0-9]+]](%[[TRUE]] : !cir.bool)
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         %[[C:.*]] = cir.call @cond()
+// CHECK:         cir.br ^[[PRE]](%[[C]] : !cir.bool)
+// CHECK:       ^[[PRE]](%[[ARG:.*]]: !cir.bool):
+// CHECK-NEXT:    cir.if %[[ARG]] {
+// CHECK-NEXT:      %[[ID:.*]] = cir.load %[[SLOT]]
+// CHECK-NEXT:      cir.switch.flat %[[ID]] : !s32i, ^[[REST:bb[0-9]+]] [
+// CHECK-NEXT:        1: ^[[TO_L:bb[0-9]+]]
+// CHECK:         ^[[TO_L]]:
+// CHECK:           cir.br ^[[L:bb[0-9]+]]
+// CHECK:         ^[[L]]:
+// CHECK-NOT:       cir.label
+// CHECK:           cir.call @g()
+cir.func private @cond() -> !cir.bool
+cir.func @into_then(%arg0: !cir.bool) {
+  cir.brcond %arg0 ^bb1, ^bb2
+^bb1:
+  cir.goto "l"
+^bb2:
+  %0 = cir.call @cond() : () -> !cir.bool
+  cir.if %0 {
+    cir.call @g() : () -> ()
+    cir.br ^bb1
+  ^bb1:
+    cir.label "l"
+    cir.call @g() : () -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// A goto into a while loop's body skips the condition: the condition region
+// branches to its final cir.condition with true for the goto.
+// CHECK-LABEL: cir.func @into_while(
+// CHECK:         cir.while {
+// CHECK-NEXT:      %[[ID:.*]] = cir.load
+// CHECK-NEXT:      cir.switch.flat %[[ID]] : !s32i, ^[[EVAL:bb[0-9]+]] [
+// CHECK-NEXT:        1: ^[[ENTER:bb[0-9]+]]
+// CHECK:         ^[[ENTER]]:
+// CHECK-NEXT:      %[[TRUE:.*]] = cir.const #true
+// CHECK-NEXT:      cir.br ^[[COND:bb[0-9]+]](%[[TRUE]] : !cir.bool)
+// CHECK:         ^[[EVAL]]:
+// CHECK:           %[[C:.*]] = cir.call @cond()
+// CHECK-NEXT:      cir.br ^[[COND]](%[[C]] : !cir.bool)
+// CHECK:         ^[[COND]](%[[ARG:.*]]: !cir.bool):
+// CHECK-NEXT:      cir.condition(%[[ARG]])
+// CHECK:         } do {
+// CHECK-NEXT:      cir.load
+// CHECK-NEXT:      cir.switch.flat
+cir.func @into_while(%arg0: !cir.bool) {
+  cir.brcond %arg0 ^bb1, ^bb2
+^bb1:
+  cir.goto "l"
+^bb2:
+  cir.while {
+    %0 = cir.call @cond() : () -> !cir.bool
+    cir.condition(%0)
+  } do {
+    cir.br ^bb1
+  ^bb1:
+    cir.label "l"
+    cir.call @g() : () -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// A goto from one case to another leaves the switch and re-enters it with
+// the target case's value.
+// CHECK-LABEL: cir.func @case_to_case(
+// CHECK:         ^[[PRE:bb[0-9]+]](%[[V:.*]]: !s32i):
+// CHECK-NEXT:    cir.switch(%[[V]] : !s32i) {
+// CHECK:           cir.case(equal, [#cir.int<0> : !s32i]) {
+// CHECK:             cir.break
+// CHECK:           cir.case(equal, [#cir.int<1> : !s32i]) {
+// CHECK-NEXT:        cir.load
+// CHECK-NEXT:        cir.switch.flat
+// CHECK:         %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT:    cir.br ^[[PRE]](%[[ONE]] : !s32i)
+cir.func @case_to_case(%arg0: !s32i) {
+  cir.switch(%arg0 : !s32i) {
+    cir.case(equal, [#cir.int<0> : !s32i]) {
+      cir.goto "l"
+    }
+    cir.case(equal, [#cir.int<1> : !s32i]) {
+      cir.br ^bb1
+    ^bb1:
+      cir.label "l"
+      cir.call @g() : () -> ()
+      cir.break
+    }
+    cir.yield
+  }
+  cir.return
+}
+
+// A label directly in a switch body, before any case, cannot be entered yet:
+// its goto stays.
+// CHECK-LABEL: cir.func @into_switch_body(
+// CHECK:         cir.goto "l"
+// CHECK:         cir.label "l"
+cir.func @into_switch_body(%arg0: !s32i, %arg1: !cir.bool) {
+  cir.brcond %arg1 ^bb1, ^bb2
+^bb1:
+  cir.goto "l"
+^bb2:
+  cir.switch(%arg0 : !s32i) {
+    cir.br ^bb1
+  ^bb1:
+    cir.label "l"
+    cir.call @g() : () -> ()
+    cir.break
+  }
+  cir.return
+}
+
 // A label whose address is taken stays, even with no goto.
 // CHECK-LABEL: cir.func @address_taken(
 // CHECK:         cir.label "taken" address_taken
@@ -181,6 +306,28 @@ cir.func @from_global() {
   cir.br ^bb1
 ^bb1:
   cir.label "entry" address_taken
+  cir.return
+}
+
+// No value enters an empty GNU case range, so a goto into one stays.
+// CHECK-LABEL: cir.func @into_empty_range(
+// CHECK-NOT:     goto_dest_slot
+// CHECK:         cir.goto "l"
+// CHECK:         cir.label "l"
+cir.func @into_empty_range(%arg0: !s32i, %arg1: !cir.bool) {
+  cir.if %arg1 {
+    cir.goto "l"
+  }
+  cir.switch(%arg0 : !s32i) {
+    cir.case(range, [#cir.int<5> : !s32i, #cir.int<3> : !s32i]) {
+      cir.br ^bb1
+    ^bb1:
+      cir.label "l"
+      cir.call @g() : () -> ()
+      cir.break
+    }
+    cir.yield
+  }
   cir.return
 }
 

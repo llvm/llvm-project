@@ -27,7 +27,15 @@
 //
 // Leaving a region the normal way runs exactly what a goto out of it runs:
 // a cleanup scope's normal cleanup, a catch handler's end_catch, a loop's
-// per-iteration cleanup. No structured op is flattened.
+// per-iteration cleanup.
+//
+// From there the goto enters each region between it and the label through
+// that region's entry. The op is steered into the right region without
+// evaluating anything the goto skips: its condition or switch value becomes an
+// argument of a block right before it, which the goto path sets directly, and
+// a while or for loop yields true from its condition without computing it.
+// At the start of the region, after its allocas, a dispatch on the slot sends
+// the goto on toward the label. No structured op is flattened.
 //
 //===----------------------------------------------------------------------===//
 
@@ -102,6 +110,126 @@ static Operation *getRegionOwner(Region &region) {
   return op;
 }
 
+/// Returns the smallest value that no direct case of `switchOp` matches, or
+/// std::nullopt if the cases cover every value of the condition's type.
+static std::optional<APInt> getUnusedCaseValue(cir::SwitchOp switchOp) {
+  auto condType = cast<cir::IntType>(switchOp.getCondition().getType());
+  SmallVector<std::pair<APInt, APInt>> taken;
+  for (Operation &op : switchOp.getBody().getOps()) {
+    auto other = dyn_cast<cir::CaseOp>(op);
+    if (!other)
+      continue;
+    ArrayAttr values = other.getValue();
+    if (other.getKind() == cir::CaseOpKind::Range) {
+      taken.emplace_back(cast<cir::IntAttr>(values[0]).getValue(),
+                         cast<cir::IntAttr>(values[1]).getValue());
+      continue;
+    }
+    for (Attribute value : values) {
+      APInt v = cast<cir::IntAttr>(value).getValue();
+      taken.emplace_back(v, v);
+    }
+  }
+  APInt candidate(condType.getWidth(), 0);
+  for (bool moved = true; moved;) {
+    moved = false;
+    for (auto &[lo, hi] : taken) {
+      bool inside = condType.isSigned()
+                        ? candidate.sge(lo) && candidate.sle(hi)
+                        : candidate.uge(lo) && candidate.ule(hi);
+      if (!inside)
+        continue;
+      if (hi.isAllOnes() || (condType.isSigned() && hi.isMaxSignedValue()))
+        return std::nullopt;
+      candidate = hi + 1;
+      moved = true;
+    }
+  }
+  return candidate;
+}
+
+/// Whether `caseOp` is a GNU range whose upper bound is below its lower one,
+/// which no value matches.
+static bool isEmptyRange(cir::SwitchOp switchOp, cir::CaseOp caseOp) {
+  if (caseOp.getKind() != cir::CaseOpKind::Range)
+    return false;
+  APInt lo = cast<cir::IntAttr>(caseOp.getValue()[0]).getValue();
+  APInt hi = cast<cir::IntAttr>(caseOp.getValue()[1]).getValue();
+  return cast<cir::IntType>(switchOp.getCondition().getType()).isSigned()
+             ? lo.sgt(hi)
+             : lo.ugt(hi);
+}
+
+/// Returns the case value that steers `switchOp` into `caseOp`, or
+/// std::nullopt if there is none: for the default case, a value no other case
+/// matches; for an empty range, none.
+static std::optional<APInt> getSteeringValue(cir::SwitchOp switchOp,
+                                             cir::CaseOp caseOp) {
+  if (isEmptyRange(switchOp, caseOp))
+    return std::nullopt;
+  if (caseOp.getKind() != cir::CaseOpKind::Default)
+    return cast<cir::IntAttr>(caseOp.getValue()[0]).getValue();
+  return getUnusedCaseValue(switchOp);
+}
+
+/// Whether a goto can enter `region` from the op that holds it.
+static bool canEnter(Region &region) {
+  Operation *op = region.getParentOp();
+  if (auto scope = dyn_cast<cir::ScopeOp>(op))
+    return scope->getNumResults() == 0;
+  if (isa<cir::IfOp>(op))
+    return true;
+  if (auto loop = dyn_cast<cir::LoopOpInterface>(op))
+    return &region == &loop.getBody() && !loop.maybeGetCleanup();
+  if (auto cleanup = dyn_cast<cir::CleanupScopeOp>(op))
+    return &region == &cleanup.getBodyRegion();
+  if (auto caseOp = dyn_cast<cir::CaseOp>(op)) {
+    auto switchOp = dyn_cast<cir::SwitchOp>(caseOp->getParentOp());
+    return switchOp && getSteeringValue(switchOp, caseOp);
+  }
+  return false;
+}
+
+/// The operand of `op` that a goto steers, if any.
+static OpOperand *getSteeredOperand(Operation *op) {
+  if (auto ifOp = dyn_cast<cir::IfOp>(op))
+    return &ifOp.getConditionMutable();
+  if (auto switchOp = dyn_cast<cir::SwitchOp>(op))
+    return &switchOp.getConditionMutable();
+  return nullptr;
+}
+
+/// Whether control may reach `op` through a new block right before it
+/// without breaking dominance. That holds unless an op at or after `op` uses
+/// a value, other than an alloca or `op`'s own steered operand, that is
+/// defined in `op`'s region before `op` or in another block of the region.
+static bool canBranchTo(Operation *op) {
+  Region *region = op->getParentRegion();
+  Block *block = op->getBlock();
+  OpOperand *steered = getSteeredOperand(op);
+  auto isSafe = [&](Operation *user, Value value) {
+    if (user == op && steered && value == steered->get())
+      return true;
+    Operation *def = value.getDefiningOp();
+    Block *defBlock =
+        def ? def->getBlock() : cast<BlockArgument>(value).getOwner();
+    if (defBlock->getParent() != region || isa_and_present<cir::AllocaOp>(def))
+      return true;
+    return defBlock == block && def && !def->isBeforeInBlock(op);
+  };
+  for (Operation *at = op; at; at = at->getNextNode()) {
+    WalkResult result = at->walk([&](Operation *user) {
+      for (Value value : user->getOperands())
+        if (!isSafe(user, value))
+          return WalkResult::interrupt();
+      return WalkResult::advance();
+    });
+    if (result.wasInterrupted())
+      return false;
+  }
+  return true;
+}
+
 /// Makes `region` leave only from a final block that does nothing but yield,
 /// as if, scope and try regions must, and returns that block. The region's
 /// yields, which a case region may have in any block, branch to it.
@@ -129,17 +257,19 @@ static Block *sinkYieldsToLastBlock(Region &region, RewriterBase &rewriter) {
 
 namespace {
 
-/// A goto to a label in an enclosing region. It leaves `exitedRegions`,
-/// innermost first.
+/// A goto to a label in another region. It leaves `exitedRegions`, innermost
+/// first, then enters `enteredRegions`, outermost first.
 struct Jump {
   cir::GotoOp gotoOp;
   Block *dest;
   SmallVector<Region *, 4> exitedRegions;
+  SmallVector<Region *, 4> enteredRegions;
 };
 
 /// Routes gotos through a destination slot. Each op a goto leaves is followed
-/// by a dispatch block that loads the slot and switches on it, so gotos to
-/// different labels can share the same op.
+/// by a dispatch block that loads the slot and switches on it, and each region
+/// a goto enters starts with one, so gotos to different labels can share the
+/// same op.
 class GotoRewriter {
 public:
   GotoRewriter(cir::FuncOp func, IRRewriter &rewriter)
@@ -160,8 +290,12 @@ private:
   Value createConstant(Location loc, unsigned value);
   void storeId(Location loc, unsigned id);
   void createExit(Region &region, Location loc);
+  void createEntry(Region &region, Location loc);
   Block *getOrCreateExitBlock(Region &region);
   Dispatch &getOrCreateDispatchAfter(Operation *op);
+  Dispatch &getOrCreateDispatchAtEntry(Region &region);
+  Block *getOrCreatePreBlock(Operation *op);
+  Block *getOrCreateConditionBlock(Region &cond);
   void addCase(Dispatch &dispatch, unsigned id,
                llvm::function_ref<void()> buildCase);
   void buildDispatch(Dispatch &dispatch, Location loc);
@@ -172,6 +306,9 @@ private:
   cir::IntType s32Type;
   cir::AllocaOp slot;
   llvm::MapVector<Operation *, Dispatch> dispatchesAfter;
+  llvm::MapVector<Region *, Dispatch> dispatchesAtEntry;
+  llvm::DenseMap<Operation *, Block *> preBlocks;
+  llvm::DenseMap<Region *, Block *> conditionBlocks;
   llvm::DenseMap<Region *, Block *> exitBlocks;
 };
 
@@ -207,6 +344,25 @@ void GotoRewriter::createExit(Region &region, Location loc) {
   }
 }
 
+void GotoRewriter::createEntry(Region &region, Location loc) {
+  // Branch to the block right before the op that holds `region`, passing
+  // the value that steers the op into `region`.
+  Operation *owner = getRegionOwner(region);
+  SmallVector<Value, 1> steering;
+  if (auto ifOp = dyn_cast<cir::IfOp>(owner)) {
+    bool toThen = &region == &ifOp.getThenRegion();
+    steering.push_back(cir::ConstantOp::create(
+        rewriter, loc, cir::BoolAttr::get(func.getContext(), toThen)));
+  } else if (auto switchOp = dyn_cast<cir::SwitchOp>(owner)) {
+    auto caseOp = cast<cir::CaseOp>(region.getParentOp());
+    APInt value = *getSteeringValue(switchOp, caseOp);
+    steering.push_back(cir::ConstantOp::create(
+        rewriter, loc,
+        cir::IntAttr::get(switchOp.getCondition().getType(), value)));
+  }
+  cir::BrOp::create(rewriter, loc, getOrCreatePreBlock(owner), steering);
+}
+
 GotoRewriter::Dispatch &GotoRewriter::getOrCreateDispatchAfter(Operation *op) {
   auto [it, inserted] = dispatchesAfter.try_emplace(op);
   Dispatch &dispatch = it->second;
@@ -226,6 +382,66 @@ GotoRewriter::Dispatch &GotoRewriter::getOrCreateDispatchAfter(Operation *op) {
   rewriter.setInsertionPointToEnd(block);
   cir::BrOp::create(rewriter, loc, dispatch.dispatchBlock);
   return dispatch;
+}
+
+GotoRewriter::Dispatch &
+GotoRewriter::getOrCreateDispatchAtEntry(Region &region) {
+  auto [it, inserted] = dispatchesAtEntry.try_emplace(&region);
+  Dispatch &dispatch = it->second;
+  if (!inserted)
+    return dispatch;
+
+  // The dispatch goes after the entry block's allocas, so they dominate
+  // everything a goto reaches in the region.
+  Block *entry = &region.front();
+  auto firstNonAlloca = llvm::find_if(
+      *entry, [](Operation &op) { return !isa<cir::AllocaOp>(op); });
+  dispatch.cont = rewriter.splitBlock(entry, firstNonAlloca);
+  dispatch.dispatchBlock = entry;
+  return dispatch;
+}
+
+Block *GotoRewriter::getOrCreatePreBlock(Operation *op) {
+  Block *&pre = preBlocks[op];
+  if (pre)
+    return pre;
+
+  // Normal execution clears the slot and passes the op's own steered operand
+  // on; a goto branches here with the slot set and a constant instead.
+  OpBuilder::InsertionGuard guard(rewriter);
+  Location loc = op->getLoc();
+  Block *block = op->getBlock();
+  pre = rewriter.splitBlock(block, op->getIterator());
+  SmallVector<Value, 1> normalArgs;
+  if (OpOperand *steered = getSteeredOperand(op)) {
+    BlockArgument arg = pre->addArgument(steered->get().getType(), loc);
+    normalArgs.push_back(steered->get());
+    rewriter.modifyOpInPlace(op, [&] { steered->set(arg); });
+  }
+  rewriter.setInsertionPointToEnd(block);
+  storeId(loc, 0);
+  cir::BrOp::create(rewriter, loc, pre, normalArgs);
+  return pre;
+}
+
+Block *GotoRewriter::getOrCreateConditionBlock(Region &cond) {
+  Block *&conditionBlock = conditionBlocks[&cond];
+  if (conditionBlock)
+    return conditionBlock;
+
+  // FlattenCFG expects one cir.condition per loop. Move it into a last block
+  // that takes the condition as an argument, so a goto into the body can pass
+  // true without evaluating the condition.
+  auto condition = cast<cir::ConditionOp>(cond.back().getTerminator());
+  OpBuilder::InsertionGuard guard(rewriter);
+  Location loc = condition.getLoc();
+  Value value = condition.getCondition();
+  conditionBlock =
+      rewriter.createBlock(&cond, cond.end(), value.getType(), loc);
+  cir::ConditionOp::create(rewriter, loc, conditionBlock->getArgument(0));
+  rewriter.setInsertionPoint(condition);
+  rewriter.replaceOpWithNewOp<cir::BrOp>(condition, conditionBlock, value);
+  return conditionBlock;
 }
 
 void GotoRewriter::addCase(Dispatch &dispatch, unsigned id,
@@ -287,24 +503,40 @@ void GotoRewriter::rewrite(MutableArrayRef<Jump> jumps) {
   for (const Jump &jump : jumps)
     ids.try_emplace(jump.dest, ids.size() + 1);
 
+  // Build the structure first: the clearing store before an op a goto leaves
+  // must end up before the block a goto enters through, never inside it.
   for (Jump &jump : jumps)
     for (Region *region : jump.exitedRegions)
       getOrCreateDispatchAfter(getRegionOwner(*region));
+  for (Jump &jump : jumps) {
+    for (Region *region : jump.enteredRegions) {
+      getOrCreatePreBlock(getRegionOwner(*region));
+      getOrCreateDispatchAtEntry(*region);
+      if (auto loop = dyn_cast<cir::LoopOpInterface>(region->getParentOp());
+          loop && !isa<cir::DoWhileOp>(loop))
+        getOrCreateDispatchAtEntry(loop.getCond());
+    }
+  }
 
   for (Jump &jump : jumps) {
     unsigned id = ids.lookup(jump.dest);
     Location loc = jump.gotoOp.getLoc();
     ArrayRef<Region *> exited = jump.exitedRegions;
+    ArrayRef<Region *> entered = jump.enteredRegions;
 
     // Takes the goto on from the closest region holding both it and the
-    // label: clear the slot and branch to the label.
+    // label: into the first entered region, or straight to the label.
     auto continueInward = [&] {
-      storeId(loc, 0);
-      cir::BrOp::create(rewriter, loc, jump.dest);
+      if (entered.empty()) {
+        storeId(loc, 0);
+        cir::BrOp::create(rewriter, loc, jump.dest);
+      } else {
+        createEntry(*entered.front(), loc);
+      }
     };
 
     // After each op the goto leaves, either leave the next region out or go
-    // on to the label.
+    // on inward.
     for (size_t level = 0, e = exited.size(); level != e; ++level) {
       Dispatch &dispatch =
           getOrCreateDispatchAfter(getRegionOwner(*exited[level]));
@@ -316,14 +548,43 @@ void GotoRewriter::rewrite(MutableArrayRef<Jump> jumps) {
       });
     }
 
+    // At the start of each region the goto enters, either enter the next one
+    // or, in the label's region, clear the slot and branch to the label. A
+    // while or for loop first yields true from its condition.
+    for (size_t level = 0, e = entered.size(); level != e; ++level) {
+      Region &region = *entered[level];
+      if (auto loop = dyn_cast<cir::LoopOpInterface>(region.getParentOp());
+          loop && !isa<cir::DoWhileOp>(loop)) {
+        addCase(getOrCreateDispatchAtEntry(loop.getCond()), id, [&] {
+          Value enter = cir::ConstantOp::create(
+              rewriter, loc, cir::BoolAttr::get(func.getContext(), true));
+          cir::BrOp::create(rewriter, loc,
+                            getOrCreateConditionBlock(loop.getCond()), enter);
+        });
+      }
+      addCase(getOrCreateDispatchAtEntry(region), id, [&] {
+        if (level + 1 == e) {
+          storeId(loc, 0);
+          cir::BrOp::create(rewriter, loc, jump.dest);
+        } else {
+          createEntry(*entered[level + 1], loc);
+        }
+      });
+    }
+
     rewriter.setInsertionPoint(jump.gotoOp);
     storeId(loc, id);
-    createExit(*exited.front(), loc);
+    if (exited.empty())
+      continueInward();
+    else
+      createExit(*exited.front(), loc);
     rewriter.eraseOp(jump.gotoOp);
   }
 
   for (auto &[op, dispatch] : dispatchesAfter)
     buildDispatch(dispatch, op->getLoc());
+  for (auto &[region, dispatch] : dispatchesAtEntry)
+    buildDispatch(dispatch, region->getParentOp()->getLoc());
 
   resetInCatchHandlers();
 }
@@ -371,9 +632,8 @@ static bool isInForeignOp(Operation *op) {
   return false;
 }
 
-/// Returns the regions a goto leaves on its way out to the region of its label
-/// `dest`, or std::nullopt if one of them cannot be left yet or the label is
-/// in a region the goto would have to enter.
+/// Returns the regions a goto from `from` to a label in `to` leaves and
+/// enters, or std::nullopt if one of them cannot be left or entered yet.
 static std::optional<Jump> planJump(cir::GotoOp gotoOp, Block *dest) {
   if (isInForeignOp(gotoOp) || isInForeignOp(&dest->front()))
     return std::nullopt;
@@ -387,7 +647,7 @@ static std::optional<Jump> planJump(cir::GotoOp gotoOp, Block *dest) {
       break;
   }
 
-  Jump jump{gotoOp, dest, {}};
+  Jump jump{gotoOp, dest, {}, {}};
   Region *region = gotoOp->getParentRegion();
   auto *common = llvm::find(labelRegions, region);
   while (common == labelRegions.end()) {
@@ -398,7 +658,13 @@ static std::optional<Jump> planJump(cir::GotoOp gotoOp, Block *dest) {
     common = llvm::find(labelRegions, region);
   }
 
-  if (common != labelRegions.begin())
+  for (auto it = std::make_reverse_iterator(common), e = labelRegions.rend();
+       it != e; ++it) {
+    if (!canEnter(**it) || !canBranchTo(getRegionOwner(**it)))
+      return std::nullopt;
+    jump.enteredRegions.push_back(*it);
+  }
+  if (!jump.enteredRegions.empty() && !canBranchTo(&dest->front()))
     return std::nullopt;
   return jump;
 }
@@ -427,7 +693,10 @@ void GotoEliminationPass::runOnOperation() {
     }
     // A goto this cannot route yet is left for GotoSolver.
     if (std::optional<Jump> jump = planJump(gotoOp, dest)) {
-      ++numOutwardGotos;
+      if (jump->enteredRegions.empty())
+        ++numOutwardGotos;
+      else
+        ++numInwardGotos;
       jumps.push_back(std::move(*jump));
     }
   }

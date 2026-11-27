@@ -99,9 +99,13 @@ def GotoElimination : Pass<"cir-goto-elimination", "cir::FuncOp"> {
     each region between it and the closest region that also holds the label
     through its normal exit: `cir.break` out of loops and switches, `cir.yield`
     out of cleanup scopes, and a branch to the final `cir.yield` of if, scope,
-    try and catch regions. After each op the goto leaves, a `cir.switch.flat`
-    on the slot routes it onward. Cleanups and catch handlers run as they
-    would for the goto.
+    try and catch regions. It then enters each region on the way to the label:
+    the op that holds the region is steered by a block right before it that
+    takes the op's condition or switch value as an argument, and a while or for
+    loop yields true from its condition without computing it. After each op the
+    goto leaves, and at the start of each region it enters, a
+    `cir.switch.flat` on the slot routes it onward. Cleanups and catch
+    handlers run as they would for the goto.
 
     Gotos this cannot route yet are left for `cir-goto-solver`. A label that no
     remaining goto names and that is not `address_taken` is erased.
@@ -113,6 +117,8 @@ def GotoElimination : Pass<"cir-goto-elimination", "cir::FuncOp"> {
               "Gotos replaced with a branch in the same region">,
     Statistic<"numOutwardGotos", "outward-gotos",
               "Gotos routed out of enclosing regions to their label">,
+    Statistic<"numInwardGotos", "inward-gotos",
+              "Gotos routed into regions that hold their label">,
     Statistic<"numErasedLabels", "erased-labels",
               "Labels erased because nothing refers to them">,
   ];
@@ -123,13 +129,16 @@ def CIRFoldGotoDispatch
   let summary = "Branch straight to goto destinations on a flat CFG";
   let description = [{
     Folds the dispatches that `cir-goto-elimination` leaves on a goto's way
-    out of regions: a load of the `goto_dest_slot` alloca followed by
+    out of and into regions: a load of the `goto_dest_slot` alloca followed by
     a `cir.switch.flat` on it. A forward dataflow over the slot's constant
     stores gives its value on each edge; on a case edge of FlattenCFG's cleanup
     dispatch, it is the value stored together with that case's cleanup id.
     Each edge into a dispatch whose value is known, looking through blocks
     that only forward to it, is redirected to the block the dispatch would
-    pick. This repeats until nothing changes. Dispatches that
+    pick. An edge that passes a constant to the block before an op a goto
+    enters, which only branches on that argument, goes straight to the branch
+    it would take; once only normal execution reaches that block, it merges
+    into its predecessor. This repeats until nothing changes. Dispatches that
     nothing reaches any more are erased, and so is the slot once nothing loads
     it.
 
