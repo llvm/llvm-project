@@ -86,11 +86,13 @@ CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
   MFMAVariant Variant = Info ? Info->Variant : MFMAVariant::Unknown;
 
   switch (Variant) {
-  case MFMAVariant::XDL2x_4Pass:
-  case MFMAVariant::SMFMAC2x_4Pass:
-  case MFMAVariant::XDL2x_8Pass: {
+  case MFMAVariant::XDL2x_4Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/2, /*MFMA=*/4,
                                /*Window=*/8);
+  }
+  case MFMAVariant::XDL2x_8Pass: {
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/2, /*MFMA=*/8,
+                               /*Window=*/12);
   }
   case MFMAVariant::XDL2x_F8_8Pass: {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/3, /*MFMA=*/8,
@@ -100,12 +102,16 @@ CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
     return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/3, /*MFMA=*/16,
                                /*Window=*/20);
   }
+  case MFMAVariant::SMFMAC2x_4Pass: {
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/3, /*MFMA=*/4,
+                               /*Window=*/8);
+  }
   case MFMAVariant::SMFMAC2x_8Pass: {
-    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/4, /*VALU=*/4, /*MFMA=*/9,
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/3, /*VALU=*/3, /*MFMA=*/8,
                                /*Window=*/12);
   }
   case MFMAVariant::DGEMM_16x16x4: {
-    return buildMFMACoExecInfo(/*SALU=*/0, /*Mem=*/0, /*VALU=*/18, /*MFMA=*/18,
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/1, /*VALU=*/18, /*MFMA=*/16,
                                /*Window=*/19);
   }
   case MFMAVariant::Unknown:

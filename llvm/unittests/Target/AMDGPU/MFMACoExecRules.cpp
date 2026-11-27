@@ -76,3 +76,40 @@ TEST_F(AMDGPUMFMACoExecRules, AllMFMAsHaveVariant) {
     }
   }
 }
+
+static unsigned getFirstStage(const CoExecInfo &Info, CoExecMaskT Mask) {
+  for (unsigned I = 0; I < Info.TotalWindow; ++I) {
+    if ((Info.Slots[I].Mask & Mask) == Mask)
+      return I;
+  }
+  return Info.TotalWindow;
+}
+
+TEST_F(AMDGPUMFMACoExecRules, StartStages) {
+  using Stages = std::array<unsigned, 5>;
+  struct Case {
+    const char *CPU;
+    unsigned Opcode;
+    Stages Expected;
+  };
+  const Case Cases[] = {
+      {"gfx950", V_MFMA_F32_16X16X32_BF16_e64, {1, 2, 2, 4, 8}},
+      {"gfx950", V_MFMA_F32_32X32X16_BF16_e64, {1, 2, 2, 8, 12}},
+      {"gfx950", V_MFMA_F32_16X16X128_F8F6F4_f8_f8_e64, {1, 2, 3, 8, 12}},
+      {"gfx950", V_MFMA_F32_32X32X64_F8F6F4_f8_f8_e64, {1, 2, 3, 16, 20}},
+      {"gfx950", V_SMFMAC_F32_16X16X64_F16_e64, {1, 2, 3, 4, 8}},
+      {"gfx950", V_SMFMAC_F32_32X32X32_F16_e64, {1, 3, 3, 8, 12}},
+      {"gfx950", V_MFMA_F64_16X16X4F64_e64, {1, 1, 18, 16, 19}},
+  };
+  for (const Case &C : Cases) {
+    std::unique_ptr<GCNTargetMachine> TM =
+        createAMDGPUTargetMachine(Triple("amdgpu-amd-amdhsa"), C.CPU, "");
+    CoExecInfo Info = getMFMACoExecInfo(C.Opcode);
+    Stages Actual = {getFirstStage(Info, CoExecMask::SALU),
+                     getFirstStage(Info, CoExecMask::DS | CoExecMask::VMEM),
+                     getFirstStage(Info, CoExecMask::VALU),
+                     getFirstStage(Info, CoExecMask::WMMA), Info.TotalWindow};
+    EXPECT_EQ(Actual, C.Expected)
+        << C.CPU << ": " << TM->getMCInstrInfo()->getName(C.Opcode).str();
+  }
+}
