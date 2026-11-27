@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRTosaTransforms
   TosaMakeBroadcastable.cpp
   TosaOptionalDecompositions.cpp
   TosaReduceReshapes.cpp
+  TosaPlanarBlockScaled.cpp
   TosaReduceTransposes.cpp
   TosaTypeConverters.cpp
   TosaProfileCompliance.cpp
