@@ -53,7 +53,8 @@ public:
   friend bool operator==(const wide_result&, const wide_result&) = default;
   friend constexpr strong_ordering operator<=>(const wide_result& __x, const wide_result& __y) noexcept {
     if constexpr (!is_same_v<_Wide, void>) {
-      auto __to_integer = []<class _Result = _Wide>(_Tp __high, _Tp __low) -> _Result {
+      // Lambda is generic to prevent eager instantiation of return statement.
+      constexpr auto __to_integer = []<class _Result = _Wide>(_Tp __high, _Tp __low) -> _Result {
         constexpr int __width = numeric_limits<_Tp>::digits;
         return (static_cast<_Result>(__high) << __width) | static_cast<_Result>(__low);
       };
