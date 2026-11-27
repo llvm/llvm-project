@@ -2000,7 +2000,7 @@ bool OccInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
   if (GCNSchedStage::shouldRevertScheduling(WavesAfter))
     return true;
 
-  if (mayCauseSpilling(WavesAfter, /*UseLatencyOnTie=*/true))
+  if (shouldRevertInitialSchedule(WavesAfter))
     return true;
 
   return false;
@@ -2065,7 +2065,7 @@ bool PreRARematStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
-  if (mayCauseSpilling(WavesAfter, /*UseLatencyOnTie=*/true))
+  if (shouldRevertInitialSchedule(WavesAfter))
     return true;
 
   return false;
@@ -2073,7 +2073,7 @@ bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
 
 bool MemoryClauseInitialScheduleStage::shouldRevertScheduling(
     unsigned WavesAfter) {
-  return mayCauseSpilling(WavesAfter, /*UseLatencyOnTie=*/true);
+  return shouldRevertInitialSchedule(WavesAfter);
 }
 
 bool LiveIntervalRPStage::initGCNSchedStage() {
@@ -2151,30 +2151,40 @@ void LiveIntervalRPStage::finalizeGCNRegion() {
   GCNSchedStage::finalizeGCNRegion();
 }
 
-bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter,
-                                     bool UseLatencyOnTie) {
-  if (WavesAfter > MFI.getMinWavesPerEU() || !isRegionWithExcessRP())
-    return false;
-
-  if (PressureAfter.less(MF, PressureBefore))
-    return false;
-  if (!UseLatencyOnTie || PressureBefore.less(MF, PressureAfter)) {
+bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
+  if (WavesAfter <= MFI.getMinWavesPerEU() && isRegionWithExcessRP() &&
+      !PressureAfter.less(MF, PressureBefore)) {
     LLVM_DEBUG(dbgs() << "New pressure will result in more spilling.\n");
     return true;
   }
+
+  return false;
+}
+
+bool GCNSchedStage::reducesLatency() {
   if (DAG.SUnits.empty())
     return false;
 
-  // The pressures are equivalent, so keep the new schedule only if it hides
-  // more latency than the old one.
   ScheduleMetrics MBefore = getScheduleMetrics(DAG.SUnits);
   ScheduleMetrics MAfter = getScheduleMetrics(DAG);
-  LLVM_DEBUG(dbgs() << "Equivalent RP. Metric before " << MBefore
-                    << "\tMetric after " << MAfter);
-  if (MAfter.getMetric() >= MBefore.getMetric()) {
-    LLVM_DEBUG(dbgs() << "New schedule does not reduce latency.\n");
+  LLVM_DEBUG(dbgs() << "Metric before " << MBefore << "\tMetric after "
+                    << MAfter);
+  return MAfter.getMetric() < MBefore.getMetric();
+}
+
+bool GCNSchedStage::shouldRevertInitialSchedule(unsigned WavesAfter) {
+  if (!mayCauseSpilling(WavesAfter))
+    return false;
+  if (PressureBefore.less(MF, PressureAfter))
+    return true;
+
+  if (!reducesLatency()) {
+    LLVM_DEBUG(dbgs() << "Equivalent RP, new schedule does not reduce "
+                         "latency.\n");
     return true;
   }
+  LLVM_DEBUG(dbgs() << "Equivalent RP, keeping schedule with better "
+                       "latency.\n");
   return false;
 }
 
