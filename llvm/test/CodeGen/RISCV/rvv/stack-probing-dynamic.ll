@@ -276,12 +276,12 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    slli t1, sp, 51
 ; RV64I-NEXT:    srli t1, t1, 51
-; RV64I-NEXT:    lui t2, 1
+; RV64I-NEXT:    lui t0, 1
 ; RV64I-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sub sp, sp, t2
+; RV64I-NEXT:    sub sp, sp, t0
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    sub t1, t1, t2
-; RV64I-NEXT:    bge t1, t2, .LBB3_1
+; RV64I-NEXT:    sub t1, t1, t0
+; RV64I-NEXT:    bge t1, t0, .LBB3_1
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    sub sp, sp, t1
 ; RV64I-NEXT:    sd zero, 0(sp)
@@ -336,12 +336,12 @@ define void @dynamic_align_8192(i64 %size, ptr %out) #0 {
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    slli t1, sp, 19
 ; RV32I-NEXT:    srli t1, t1, 19
-; RV32I-NEXT:    lui t2, 1
+; RV32I-NEXT:    lui t0, 1
 ; RV32I-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
+; RV32I-NEXT:    sub sp, sp, t0
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    sub t1, t1, t2
-; RV32I-NEXT:    bge t1, t2, .LBB3_1
+; RV32I-NEXT:    sub t1, t1, t0
+; RV32I-NEXT:    bge t1, t0, .LBB3_1
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    sub sp, sp, t1
 ; RV32I-NEXT:    sw zero, 0(sp)
