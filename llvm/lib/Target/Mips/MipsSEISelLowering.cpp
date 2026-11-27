@@ -634,10 +634,8 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::VECTOR_SHUFFLE:
     return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::FP16_TO_FP:
-  case ISD::STRICT_FP16_TO_FP:
     return lowerFP16_TO_FP(Op, DAG);
   case ISD::FP_TO_FP16:
-  case ISD::STRICT_FP_TO_FP16:
     return lowerFP_TO_FP16(Op, DAG);
   case ISD::BITCAST:            return lowerBITCAST(Op, DAG);
   case ISD::FADD:
