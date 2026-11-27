@@ -1,5 +1,6 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers %s -o - | FileCheck %s --implicit-check-not=DebugDeclare
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers --spirv-debug-declare-untyped-variable=true %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-ON
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers %s -o - -filetype=obj | spirv-val %}
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers --spirv-debug-declare-untyped-variable=true %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=VAL-ON %}
 
 ; With untyped pointers a local's storage is an OpUntypedVariableKHR.
@@ -13,6 +14,7 @@
 ; CHECK-DAG: [[LV:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[X]]
 ; CHECK-DAG: [[EXPR:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugExpression{{ *$}}
 ; CHECK: [[VAR:%[0-9]+]] = OpUntypedVariableKHR {{%[0-9]+}} Function
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugFunctionDefinition
 ; CHECK-ON: OpExtInst [[VOID]] [[EXT]] DebugDeclare [[LV]] [[VAR]] [[EXPR]]
 
 ; VAL-ON: error: {{.*}}NonSemantic.Shader.DebugInfo.100 DebugDeclare: expected operand Variable must be a result id of OpVariable or OpFunctionParameter
