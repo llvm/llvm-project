@@ -1720,6 +1720,15 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
   It can be re-enabled with the ``WarnOnLockOrderReversal`` option.
 
+- The analyzer is faster and uses less memory. On a random sample of 20 LLVM
+  and Clang source files, measured on an Apple M2 Max, analysis takes 25% less
+  time and 7% less peak memory on average (geometric mean; 9-40% less time and
+  2-14% less memory per file), with unchanged results. (#GH244626, #GH244655,
+  #GH244659, #GH244748, #GH244771, #GH244841, #GH244843, #GH244845, #GH244848,
+  #GH244849, #GH244863, #GH244865, #GH244866, #GH245070, #GH245071, #GH245166,
+  #GH245167, #GH245630, #GH245674, #GH245795, #GH245798, #GH246072, #GH246313,
+  #GH246433, #GH246441, #GH246446, #GH246458)
+
 #### Moved checkers
 
 The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.UseAfterLifetimeEnd`.
