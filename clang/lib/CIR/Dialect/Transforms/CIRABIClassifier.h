@@ -181,8 +181,14 @@ createSPIRVABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp);
 /// The AArch64 classifier, covering AAPCS64 and DarwinPCS.  The ABI variant,
 /// endianness, data model, and source language come from \p modOp's
 /// attributes.
+/// The AArch64 options used by the classifier.
+llvm::abi::AArch64ABIOptions getAArch64ABIOptions(mlir::ModuleOp modOp);
+
+/// The AArch64 classifier, covering AAPCS64 and DarwinPCS, which classifies
+/// with \p opts.
 std::unique_ptr<CIRABIClassifier>
-createAArch64ABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp);
+createAArch64ABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp,
+                           const llvm::abi::AArch64ABIOptions &opts);
 
 /// Map a CIR calling convention to the llvm::CallingConv the ABI classifier
 /// uses.  Conventions the classifier does not distinguish fall back to C.

@@ -204,10 +204,13 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
   // Only use any non-zero latency for real defs/uses, in contrast to
   // "fake" operands added by regalloc.
   const MCInstrDesc &DefMIDesc = SU->getInstr()->getDesc();
-  bool ImplicitPseudoDef = (OperIdx >= DefMIDesc.getNumOperands() &&
-                            !DefMIDesc.hasImplicitDefOfPhysReg(Reg));
+  // Recognize asm outputs and clobbers by their operand groups, excluding
+  // trailing register bookkeeping operands.
   bool IsInlineAsmDef = SU->getInstr()->isInlineAsm() &&
                         SU->getInstr()->findInlineAsmFlagIdx(OperIdx) >= 0;
+  bool ImplicitPseudoDef = OperIdx >= DefMIDesc.getNumOperands() &&
+                           !DefMIDesc.hasImplicitDefOfPhysReg(Reg) &&
+                           !IsInlineAsmDef;
   for (MCRegUnit Unit : TRI->regunits(Reg)) {
     for (RegUnit2SUnitsMap::iterator I = Uses.find(Unit); I != Uses.end();
          ++I) {
@@ -220,7 +223,6 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
       MachineInstr *UseInstr = nullptr;
       int UseOpIdx = I->OpIdx;
       bool ImplicitPseudoUse = false;
-      bool IsInlineAsmUse = false;
       SDep Dep;
       if (UseOpIdx < 0) {
         Dep = SDep(SU, SDep::Artificial);
@@ -234,16 +236,15 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
         const MCInstrDesc &UseMIDesc = UseInstr->getDesc();
         // Recognize asm inputs by their operand groups, excluding trailing
         // register bookkeeping operands.
-        IsInlineAsmUse = UseInstr->isInlineAsm() &&
-                         UseInstr->findInlineAsmFlagIdx(UseOpIdx) >= 0;
+        bool IsInlineAsmUse = UseInstr->isInlineAsm() &&
+                              UseInstr->findInlineAsmFlagIdx(UseOpIdx) >= 0;
         ImplicitPseudoUse = UseOpIdx >= ((int)UseMIDesc.getNumOperands()) &&
                             !UseMIDesc.hasImplicitUseOfPhysReg(UseReg) &&
                             !IsInlineAsmUse;
 
         Dep = SDep(SU, SDep::Data, UseReg);
       }
-      if ((!ImplicitPseudoDef && !ImplicitPseudoUse) ||
-          (IsInlineAsmDef && IsInlineAsmUse)) {
+      if (!ImplicitPseudoDef && !ImplicitPseudoUse) {
         Dep.setLatency(SchedModel.computeOperandLatency(SU->getInstr(), OperIdx,
                                                         UseInstr, UseOpIdx));
       } else {

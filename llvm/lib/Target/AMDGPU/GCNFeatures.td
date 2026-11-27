@@ -1721,6 +1721,12 @@ defm McastFullMaskBug : AMDGPUGenericAnySubtargetFeature<"mcast-full-mask-bug",
   /*GenPredicate=*/0
 >;
 
+defm DsAtomicAsyncBarrierArriveB64PipeBug : AMDGPUSubtargetFeature<"ds-atomic-async-barrier-arrive-b64-pipe-bug",
+  "DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 must not be in a clause and needs "
+  "s_wait_alu depctr_vm_vsrc(0) before and after it",
+  /*GenPredicate=*/0
+>;
+
 defm WaveMatchInsts : AMDGPUSubtargetFeature<"wave-match-insts",
   "Has v_wave_match_b32 instruction"
 >;
@@ -2643,6 +2649,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
    FeatureMcastFullMaskBug,
@@ -2684,6 +2691,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
    FeatureNoSleepForever,
    FeatureNoMTypeNC,
    FeatureMcastFullMaskBug,
@@ -2729,6 +2737,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
    FeatureNoMTypeNC,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
@@ -2757,6 +2766,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
    FeatureUnusableSAddPCI64,
    FeatureMcastFullMaskBug,
    FeatureTransF16ToPartialVGPRWriteHazard,

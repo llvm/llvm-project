@@ -6,7 +6,6 @@
 
 ---
 name: valu_result
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: valu_result:%bb.0
   ; CHECK: SU(0): {{.*}}V_ADD_U32_e32
@@ -20,7 +19,6 @@ body: |
 
 ---
 name: vmem_result
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: vmem_result:%bb.0
   ; CHECK: SU(0): {{.*}}GLOBAL_LOAD_DWORD
@@ -34,7 +32,6 @@ body: |
 
 ---
 name: mfma_result
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: mfma_result:%bb.0
   ; CHECK: SU(0): {{.*}}V_MFMA_F32_16X16X16F16_vgprcd_e64

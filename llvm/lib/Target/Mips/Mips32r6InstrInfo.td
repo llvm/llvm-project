@@ -203,6 +203,9 @@ class CMP_CONDN_DESC_BASE<string CondStr, string Typestr,
   dag InOperandList = (ins FGROpnd:$fs, FGROpnd:$ft);
   string AsmString = !strconcat("cmp.", CondStr, ".", Typestr, "\t$fd, $fs, $ft");
   bit isCTI = 1;
+  // All conditions signal invalid on a signaling NaN, and the S* conditions
+  // also signal on a quiet NaN.
+  bit mayRaiseFPException = 1;
 }
 
 multiclass CMP_CC_M <FIELD_CMP_FORMAT Format, string Typestr,
@@ -986,6 +989,33 @@ class CmpPat<ValueType VT, dag Pattern, dag Result>
                                 (EXTRACT_SUBREG Result, sub_lo),
                                 (COPY_TO_REGCLASS Result, FGR32))>, HARDFLOAT;
 
+// Constrained compares. These produce the full CMP.S/CMP.D mask so that the
+// compare instruction is the root of the selected pattern and stays on the
+// chain.
+def SDT_MipsStrictFPCmpR6 : SDTypeProfile<1, 3, [SDTCisFP<0>,
+                                                 SDTCisSameAs<0, 1>,
+                                                 SDTCisSameAs<1, 2>,
+                                                 SDTCisVT<3, OtherVT>]>;
+def MipsStrictFPCmpR6 : SDNode<"MipsISD::STRICT_FPCmpR6",
+                               SDT_MipsStrictFPCmpR6, [SDNPHasChain]> {
+  let IsStrictFP = true;
+}
+def MipsStrictFPCmpsR6 : SDNode<"MipsISD::STRICT_FPCmpsR6",
+                                SDT_MipsStrictFPCmpR6, [SDNPHasChain]> {
+  let IsStrictFP = true;
+}
+
+multiclass StrictCmp_Pats<ValueType VT, string Quiet, string Signaling,
+                          CondCode CC, string Suffix> {
+def : MipsPat<(VT (MipsStrictFPCmpR6 VT:$lhs, VT:$rhs, CC)),
+              (!cast<Instruction>("CMP_"#Quiet#"_"#Suffix) VT:$lhs, VT:$rhs)>,
+      HARDFLOAT;
+def : MipsPat<(VT (MipsStrictFPCmpsR6 VT:$lhs, VT:$rhs, CC)),
+              (!cast<Instruction>("CMP_"#Signaling#"_"#Suffix) VT:$lhs,
+               VT:$rhs)>,
+      HARDFLOAT;
+}
+
 multiclass Cmp_Pats<ValueType VT> {
 def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETUO),
       (!cast<Instruction>("CMP_UN_"#NAME) VT:$lhs, VT:$rhs)>;
@@ -1012,6 +1042,18 @@ def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETLT),
       (!cast<Instruction>("CMP_LT_"#NAME) VT:$lhs, VT:$rhs)>;
 def : CmpPat<VT, (MipsR6FCmp VT:$lhs, VT:$rhs, SETLE),
       (!cast<Instruction>("CMP_LE_"#NAME) VT:$lhs, VT:$rhs)>;
+
+// Constrained compares only use the ordered/unordered condition codes. The
+// remaining ones are expanded in the same way as for SETCC. Quiet compares use
+// the cmp.cond.fmt conditions that only signal on a signaling NaN, signaling
+// compares use the cmp.Scond.fmt conditions that also signal on a quiet NaN.
+defm : StrictCmp_Pats<VT, "UN", "SUN", SETUO, NAME>;
+defm : StrictCmp_Pats<VT, "EQ", "SEQ", SETOEQ, NAME>;
+defm : StrictCmp_Pats<VT, "UEQ", "SUEQ", SETUEQ, NAME>;
+defm : StrictCmp_Pats<VT, "LT", "SLT", SETOLT, NAME>;
+defm : StrictCmp_Pats<VT, "ULT", "SULT", SETULT, NAME>;
+defm : StrictCmp_Pats<VT, "LE", "SLE", SETOLE, NAME>;
+defm : StrictCmp_Pats<VT, "ULE", "SULE", SETULE, NAME>;
 }
 
 let AdditionalPredicates = [NotInMicroMips] in {
@@ -1307,34 +1349,22 @@ let AdditionalPredicates = [NotInMicroMips, UseCompactBranches] in {
                 (BGEUC GPR32:$rt, GPR32:$rs, bb:$offset)>, ISA_MIPS32R6;
 }
 
+let isCall = 1, hasDelaySlot = 0, isCTI = 1, Defs = [R31] in
 class JumpLinkR6<Instruction JumpInst, DAGOperand Opnd> :
   PseudoSE<(outs), (ins calltarget:$target), []>,
-  PseudoInstExpansion<(JumpInst Opnd:$target)> {
-  let isCall = 1;
-  let isTerminator = 0;
-  let isReturn = 0;
-  let isBarrier = 0;
-  let hasDelaySlot = 0;
-  let isCTI = 1;
-  list<Register> Defs = [R31];
-}
+  PseudoInstExpansion<(JumpInst Opnd:$target)>;
 
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
+    hasDelaySlot = 0, hasExtraSrcRegAllocReq = 1, isCTI = 1,
+    Defs = [R1] in
 class TailCallR6<Instruction JumpInst, DAGOperand Opnd> :
   PseudoSE<(outs), (ins calltarget:$target), []>,
-  PseudoInstExpansion<(JumpInst Opnd:$target)> {
-  let isCall = 1;
-  let isTerminator = 1;
-  let isReturn = 1;
-  let isBarrier = 1;
-  let hasDelaySlot = 0;
-  let isCTI = 1;
-  list<Register> Defs = [R1];
-}
+  PseudoInstExpansion<(JumpInst Opnd:$target)>;
 
 def JAL_R6 : JumpLinkR6<BALC, brtarget26>, ISA_MIPS32R6;
 def TAILCALL_R6 : TailCallR6<BC, brtarget26>, ISA_MIPS32R6;
 
-let AdditionalPredicates = [NotInMicroMips] in {
+let AdditionalPredicates = [NotInMicroMips, UseCompactBranches] in {
   def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
                 (JAL_R6 texternalsym:$dst)>, ISA_MIPS32R6;
   def : MipsPat<(MipsJmpLink (i32 tglobaladdr:$dst)),

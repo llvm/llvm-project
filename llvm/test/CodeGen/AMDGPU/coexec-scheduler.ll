@@ -375,7 +375,7 @@ define amdgpu_kernel void @ds_wmma_permute(ptr addrspace(3) %base, ptr addrspace
 ; GCN-NEXT:    v_dual_mov_b32 v64, 0 :: v_dual_mov_b32 v65, 0
 ; GCN-NEXT:    s_cselect_b32 s6, -1, 0
 ; GCN-NEXT:    s_mov_b32 s2, 0
-; GCN-NEXT:    s_and_b32 vcc_lo, exec_lo, s6
+; GCN-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
 ; GCN-NEXT:  .LBB1_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_add_co_i32 s6, s0, s2
@@ -714,6 +714,7 @@ define amdgpu_kernel void @ds_wmma_block_carried(ptr addrspace(3) %base, ptr add
 ; GCN-NEXT:    v_dual_mov_b32 v56, 0 :: v_dual_mov_b32 v57, 0
 ; GCN-NEXT:    s_cselect_b32 s3, -1, 0
 ; GCN-NEXT:    s_mov_b32 s8, 0
+; GCN-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
 ; GCN-NEXT:    s_add_co_i32 s0, s2, s1
 ; GCN-NEXT:    s_mov_b32 s9, s8
 ; GCN-NEXT:    s_mov_b32 s10, s8
@@ -722,7 +723,6 @@ define amdgpu_kernel void @ds_wmma_block_carried(ptr addrspace(3) %base, ptr add
 ; GCN-NEXT:    s_mov_b32 s13, s8
 ; GCN-NEXT:    s_mov_b32 s14, s8
 ; GCN-NEXT:    s_mov_b32 s15, s8
-; GCN-NEXT:    s_and_b32 vcc_lo, exec_lo, s3
 ; GCN-NEXT:    s_wait_dscnt 0x0
 ; GCN-NEXT:  .LBB2_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -893,7 +893,7 @@ define amdgpu_kernel void @ds_wmma_loop_carried(ptr addrspace(3) %base, ptr addr
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
 ; COEXEC-NEXT:    v_mov_b32_e32 v24, s2
 ; COEXEC-NEXT:    s_bitcmp1_b32 s0, 0
-; COEXEC-NEXT:    s_cselect_b32 s3, -1, 0
+; COEXEC-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
 ; COEXEC-NEXT:    s_add_co_i32 s0, s2, s1
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[0:3], v24
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[4:7], v24 offset:64

@@ -65,7 +65,6 @@
 
 ---
 name: func
-tracksRegLiveness: true
 machineFunctionInfo:
   explicitKernArgSize: 108
   maxKernArgAlign: 32

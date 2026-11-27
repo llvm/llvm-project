@@ -30,6 +30,7 @@ static_library("InstCombine") {
     "InstCombineSelect.cpp",
     "InstCombineShifts.cpp",
     "InstCombineSimplifyDemanded.cpp",
+    "InstCombineSimplifyDemandedFP.cpp",
     "InstCombineVectorOps.cpp",
     "InstructionCombining.cpp",
   ]

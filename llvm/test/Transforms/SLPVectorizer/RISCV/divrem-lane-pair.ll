@@ -6,11 +6,10 @@ define void @urem_udiv_lane0(ptr %a, ptr %b, ptr %r, ptr %q) {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = urem <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[A0]], [[B0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP3]], i64 0
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void

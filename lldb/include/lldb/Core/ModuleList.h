@@ -93,6 +93,7 @@ static constexpr OptionEnumValueElement g_shared_cache_use_enum_values[] = {
 class ModuleListProperties : public Properties {
   mutable llvm::sys::RWMutex m_symlink_paths_mutex;
   PathMappingList m_symlink_paths;
+  lldb::OptionValuePropertiesSP m_experimental_properties_sp;
 
   void UpdateSymlinkMappings();
 
@@ -103,6 +104,8 @@ public:
   bool SetClangModulesCachePath(const FileSpec &path);
   bool GetEnableExternalLookup() const;
   bool SetEnableExternalLookup(bool new_value);
+  bool GetEnableTypeSystemClike() const;
+  bool SetEnableTypeSystemClike(bool new_value);
   lldb::SymbolSharedCacheUse GetSharedCacheBinaryLoading() const;
   bool GetEnableLLDBIndexCache() const;
   bool SetEnableLLDBIndexCache(bool new_value);

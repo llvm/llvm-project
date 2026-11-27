@@ -91,6 +91,30 @@ define i64 @pat3_swap(i64 %a, i64 %b) nounwind {
   ret i64 %or
 }
 
+;; Prefer inserting the low bits when both complementary masks can be the
+;; destination mask. This avoids shifting the high bits before BSTRINS.
+define i64 @pat3_complementary(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: pat3_complementary:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    bstrins.d $a0, $a1, 31, 0
+; CHECK-NEXT:    ret
+  %high = and i64 %a, -4294967296
+  %low = and i64 %b, 4294967295
+  %or = or i64 %low, %high
+  ret i64 %or
+}
+
+define i64 @pat3_complementary_swap(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: pat3_complementary_swap:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    bstrins.d $a0, $a1, 31, 0
+; CHECK-NEXT:    ret
+  %high = and i64 %a, -4294967296
+  %low = and i64 %b, 4294967295
+  %or = or i64 %high, %low
+  ret i64 %or
+}
+
 ;; Pattern 4
 ;; R = or (and X, mask), (shl Y, shamt)
 ;; =>

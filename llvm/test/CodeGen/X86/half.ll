@@ -2074,9 +2074,9 @@ define void @pr63114() {
 ; BWON-F16C-NEXT:    vpblendw {{.*#+}} xmm6 = xmm6[0,1,2,3,4,5,6],xmm4[7]
 ; BWON-F16C-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3],xmm2[2,0]
 ; BWON-F16C-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2],xmm5[3],xmm0[4,5,6,7]
-; BWON-F16C-NEXT:    vpor %xmm4, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6],xmm4[7]
 ; BWON-F16C-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2],xmm5[3],xmm1[4,5,6,7]
-; BWON-F16C-NEXT:    vpor %xmm4, %xmm1, %xmm1
+; BWON-F16C-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6],xmm4[7]
 ; BWON-F16C-NEXT:    vmovdqu %xmm1, 48
 ; BWON-F16C-NEXT:    vmovdqu %xmm0, 32
 ; BWON-F16C-NEXT:    vmovdqu %xmm6, 0

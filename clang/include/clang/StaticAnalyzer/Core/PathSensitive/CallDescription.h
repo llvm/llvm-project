@@ -27,6 +27,33 @@ class IdentifierInfo;
 
 namespace clang {
 namespace ento {
+/// The properties of a function declaration that determine whether it is a C
+/// library function with a given name. They are computed on first use, so
+/// matching a function against many names computes each at most once.
+class CLibraryFunctionInfo {
+  const FunctionDecl *const FD;
+  std::optional<unsigned> BuiltinID;
+  std::optional<std::string> BuiltinName;
+  std::optional<bool> IsPredefinedLibFunction;
+  std::optional<bool> IsCLibraryDecl;
+
+  unsigned getBuiltinID();
+  /// Must only be called if getBuiltinID() is not 0.
+  StringRef getBuiltinName();
+  /// Returns true if the builtin is a predefined library function (e.g.
+  /// getlogin_r). Must only be called if getBuiltinID() is not 0.
+  bool isPredefinedLibFunction();
+  /// Returns true if the function has an identifier, it is in the top-level
+  /// or the \c std namespace, and it is externally visible or inline.
+  bool isCLibraryDecl();
+
+public:
+  explicit CLibraryFunctionInfo(const FunctionDecl *FD) : FD(FD) {}
+
+  /// Implements CheckerContext::isCLibraryFunction(FD, Name).
+  bool isCLibraryFunction(StringRef Name);
+};
+
 /// A `CallDescription` is a pattern that can be used to _match_ calls
 /// based on the qualified name and the argument/parameter counts.
 class CallDescription {
@@ -79,6 +106,21 @@ private:
   MaybeCount RequiredArgs;
   MaybeCount RequiredParams;
   Mode MatchAs;
+
+  template <typename T> friend class CallDescriptionMap;
+
+  /// The properties of a call that are needed for matching it. They are
+  /// computed once when a call is matched against many CallDescriptions, to
+  /// avoid repeated virtual calls like CallEvent::getDecl().
+  struct Callee {
+    const FunctionDecl *FD = nullptr;
+    size_t ArgCount = 0;
+    size_t ParamCount = 0;
+    bool IsMethod = false;
+
+    explicit Callee(const CallEvent &Call);
+    explicit Callee(const CallExpr &CE);
+  };
 
 public:
   /// Constructs a CallDescription object.
@@ -182,8 +224,7 @@ public:
   /// @}
 
 private:
-  bool matchesImpl(const FunctionDecl *Callee, size_t ArgCount,
-                   size_t ParamCount) const;
+  bool matchesImpl(const Callee &C, CLibraryFunctionInfo &CLib) const;
 
   bool matchNameOnly(const NamedDecl *ND) const;
   bool matchQualifiedNameParts(const Decl *D) const;
@@ -220,13 +261,7 @@ public:
   CallDescriptionMap &operator=(CallDescriptionMap &&) = default;
 
   [[nodiscard]] const T *lookup(const CallEvent &Call) const {
-    // Slow path: linear lookup.
-    // TODO: Implement some sort of fast path.
-    for (const std::pair<CallDescription, T> &I : LinearMap)
-      if (I.first.matches(Call))
-        return &I.second;
-
-    return nullptr;
+    return lookupImpl(CallDescription::Callee(Call));
   }
 
   /// When available, always prefer lookup with a CallEvent! This function
@@ -242,10 +277,20 @@ public:
   /// CallEvent::getNumArgs), the called function if it was called through a
   /// function pointer, and other information not available syntactically.
   [[nodiscard]] const T *lookupAsWritten(const CallExpr &Call) const {
+    return lookupImpl(CallDescription::Callee(Call));
+  }
+
+private:
+  const T *lookupImpl(const CallDescription::Callee &C) const {
+    // Null for ObjC messages, blocks and calls of unknown function pointers.
+    if (!C.FD)
+      return nullptr;
+
+    CLibraryFunctionInfo CLib(C.FD);
     // Slow path: linear lookup.
     // TODO: Implement some sort of fast path.
     for (const std::pair<CallDescription, T> &I : LinearMap)
-      if (I.first.matchesAsWritten(Call))
+      if (I.first.matchesImpl(C, CLib))
         return &I.second;
 
     return nullptr;

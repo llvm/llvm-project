@@ -227,6 +227,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Removed `LiveVariables` analysis
 
+* Removed `MemorySSA::ensureOptimizedUses()`, which no longer had any users.
+  Query `MemorySSAWalker::getClobberingMemoryAccess()` instead; it optimizes
+  each `MemoryUse` on demand and caches the result. `print<memoryssa>` no
+  longer optimizes uses before printing, and its `<no-ensure-optimized-uses>`
+  option is removed; use `print<memoryssa-walker>` to print clobbers.
+
 * `IRBuilder::CreateGEP()` and similar methods will now convert the GEP into a
   ptradd-compatible representation, using a sequence of `getelementptr i8` and
   `getelementptr [N x i8]` instructions. The `disableGEPCanonicalization()`

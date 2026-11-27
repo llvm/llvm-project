@@ -87,7 +87,7 @@ The AMDGPU target defines the following scopes:
 
 - *system scope* (same as LLVM)
 - "agent" scope
-- "cluster" scope
+- "cluster" scope (see {ref}`amdgpu-clusters`)
 - "workgroup" scope
 - "wavefront" scope
 - "singlethread" scope (same as LLVM)
@@ -111,6 +111,8 @@ The two relations *subscope* and *subscope instance* are transitive.
 
 A scope instance `X` *contains* a scope instance `Y` if `Y` is a subset of
 `X`. In particular, every scope instance contains itself.
+
+(amdgpu-inclusive-scopes)=
 
 ### Inclusive Scopes
 

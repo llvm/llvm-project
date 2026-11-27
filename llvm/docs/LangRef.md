@@ -1565,7 +1565,9 @@ Currently, only the following parameter attributes are defined:
 
     Additionally, it is possible to specify that some components are only
     captured in certain locations. Currently only the return value (`ret`)
-    and other (default) locations are supported.
+    and other (default) locations are supported. Components that are captured
+    only through the return value require the function's return type to be a
+    pointer.
 
     The {ref}`pointer capture section <pointercapture>` discusses these semantics
     in more detail.
@@ -2147,7 +2149,9 @@ define void @f() "no-sse" { ... }
       will match that of the `allocptr` argument and the `allocptr`
       argument is invalidated, even if the function returns the same address.
     * "free": the function frees the block of memory specified by `allocptr`.
-      Functions marked as "free" `allockind` must return void.
+      Functions marked as "free" `allockind` must return void or an integer.
+      When it returns an integer, calling the function on the pointer returned
+      by an "alloc" `allockind` call of the matching `alloc-family` must return 0.
     * "uninitialized": Any newly-allocated memory (either a new block from
       a "alloc" function or the enlarged capacity from a "realloc" function)
       will be uninitialized.

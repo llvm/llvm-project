@@ -49,6 +49,13 @@ def SDT_MipsMTC1_D64 : SDTypeProfile<1, 1, [SDTCisVT<0, f64>,
 
 // Floating Point Compare
 def MipsFPCmp : SDNode<"MipsISD::FPCmp", SDT_MipsFPCmp, [SDNPOutGlue]>;
+def MipsStrictFPCmp : SDNode<"MipsISD::STRICT_FPCmp", SDT_MipsFPCmp,
+                             [SDNPHasChain, SDNPOutGlue]> {
+  let IsStrictFP = true;
+}
+def MipsAnyFPCmp : PatFrags<(ops node:$lhs, node:$rhs, node:$cond),
+                            [(MipsStrictFPCmp node:$lhs, node:$rhs, node:$cond),
+                             (MipsFPCmp node:$lhs, node:$rhs, node:$cond)]>;
 
 // Floating Point Conditional Moves
 def MipsCMovFP_T : SDNode<"MipsISD::CMovFP_T", SDT_MipsCMovFP, [SDNPInGlue]>;
@@ -60,6 +67,13 @@ def MipsFPBrcond : SDNode<"MipsISD::FPBrcond", SDT_MipsFPBrcond,
 
 // FP-to-int truncation node.
 def MipsTruncIntFP : SDNode<"MipsISD::TruncIntFP", SDT_MipsTruncIntFP>;
+def MipsStrictTruncIntFP : SDNode<"MipsISD::STRICT_TruncIntFP",
+                                  SDT_MipsTruncIntFP, [SDNPHasChain]> {
+  let IsStrictFP = true;
+}
+def MipsAnyTruncIntFP : PatFrags<(ops node:$src),
+                                 [(MipsStrictTruncIntFP node:$src),
+                                  (MipsTruncIntFP node:$src)]>;
 
 def MipsBuildPairF64 : SDNode<"MipsISD::BuildPairF64", SDT_MipsBuildPairF64>;
 def : GINodeEquiv<G_MERGE_VALUES, MipsBuildPairF64>;
@@ -299,6 +313,9 @@ class CEQS_FT<string typestr, RegisterClass RC,
   let Defs = [FCC0];
   let isCodeGenOnly = 1;
   let hasFCCRegOperand = 1;
+  // All conditions signal invalid on a signaling NaN, and those with cond<3>
+  // set also signal on a quiet NaN.
+  let mayRaiseFPException = 1;
 }
 
 
@@ -820,7 +837,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
               BC1F_FM<1, 1>, ISA_MIPS2_NOT_32R6_64R6;
 
 /// Floating Point Compare
-  def FCMP_S32 : MMRel, CEQS_FT<"s", FGR32, MipsFPCmp>, CEQS_FM<16>,
+  def FCMP_S32 : MMRel, CEQS_FT<"s", FGR32, MipsAnyFPCmp>, CEQS_FM<16>,
                  ISA_MIPS1_NOT_32R6_64R6 {
 
   // FIXME: This is a required to work around the fact that these instructions
@@ -828,7 +845,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
   //        fcc register set is used directly.
   bits<3> fcc = 0;
   }
-  def FCMP_D32 : MMRel, CEQS_FT<"d", AFGR64, MipsFPCmp>, CEQS_FM<17>,
+  def FCMP_D32 : MMRel, CEQS_FT<"d", AFGR64, MipsAnyFPCmp>, CEQS_FM<17>,
                  ISA_MIPS1_NOT_32R6_64R6, FGR_32 {
   // FIXME: This is a required to work around the fact that these instructions
   //        only use $fcc0. Ideally, MipsFPCmp nodes could be removed and the
@@ -837,7 +854,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
   }
 }
 let DecoderNamespace = "MipsFP64" in
-def FCMP_D64 : CEQS_FT<"d", FGR64, MipsFPCmp>, CEQS_FM<17>,
+def FCMP_D64 : CEQS_FT<"d", FGR64, MipsAnyFPCmp>, CEQS_FM<17>,
                ISA_MIPS1_NOT_32R6_64R6, FGR_64 {
   // FIXME: This is a required to work around the fact that thiese instructions
   //        only use $fcc0. Ideally, MipsFPCmp nodes could be removed and the
@@ -1056,12 +1073,12 @@ def : MipsPat<(f32 fpimm0neg), (FNEG_S (MTC1 R0))>, ISA_MIPS1;
 def : MipsPat<(f32 (any_sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_S_W GPR32Opnd:$src)>;
 let Predicates = [IsR5900] in {
-  def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
+  def : MipsPat<(MipsAnyTruncIntFP FGR32Opnd:$src),
                 (CVT_W_S FGR32Opnd:$src)>, ISA_MIPS1;
 }
-def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP FGR32Opnd:$src),
               (TRUNC_W_S FGR32Opnd:$src)>, ISA_MIPS2;
-def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP FGR32Opnd:$src),
               (PseudoTRUNC_W_S_M1 FGR32Opnd:$src)>, ISA_MIPS1_NOT_MIPS2;
 
 def : MipsPat<(MipsMTC1_D64 GPR32Opnd:$src),
@@ -1078,9 +1095,9 @@ def : MipsPat<(setlt (i32 (bitconvert (f32 (fpround FGR64Opnd:$src)))), 0),
 def : MipsPat<(f64 (any_sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_D32_W GPR32Opnd:$src)>, FGR_32;
 let AdditionalPredicates = [NotInMicroMips] in {
-  def : MipsPat<(MipsTruncIntFP AFGR64Opnd:$src),
+  def : MipsPat<(MipsAnyTruncIntFP AFGR64Opnd:$src),
                 (TRUNC_W_D32 AFGR64Opnd:$src)>, ISA_MIPS2, FGR_32;
-  def : MipsPat<(MipsTruncIntFP AFGR64Opnd:$src),
+  def : MipsPat<(MipsAnyTruncIntFP AFGR64Opnd:$src),
                 (PseudoTRUNC_W_D32_M1 AFGR64Opnd:$src)>, ISA_MIPS1_NOT_MIPS2,
         FGR_32;
   def : MipsPat<(f32 (any_fpround AFGR64Opnd:$src)),
@@ -1110,11 +1127,11 @@ def : MipsPat<(f32 (any_sint_to_fp GPR64Opnd:$src)),
 def : MipsPat<(f64 (any_sint_to_fp GPR64Opnd:$src)),
               (PseudoCVT_D64_L GPR64Opnd:$src)>, FGR_64;
 
-def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP FGR64Opnd:$src),
               (TRUNC_W_D64 FGR64Opnd:$src)>, ISA_MIPS2, FGR_64;
-def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP FGR32Opnd:$src),
               (TRUNC_L_S FGR32Opnd:$src)>, ISA_MIPS2, FGR_64;
-def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP FGR64Opnd:$src),
               (TRUNC_L_D64 FGR64Opnd:$src)>, ISA_MIPS2, FGR_64;
 
 let AdditionalPredicates = [NotInMicroMips] in {

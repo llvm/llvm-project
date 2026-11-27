@@ -9,7 +9,6 @@
 name:            sbfx_s32_vii
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -32,7 +31,6 @@ body:             |
 name:            sbfx_s32_vvv
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2

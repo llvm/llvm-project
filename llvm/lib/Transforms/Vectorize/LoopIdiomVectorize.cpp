@@ -1406,7 +1406,6 @@ void LoopIdiomVectorize::transformFindFirstByte(
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   UncondBrInst *PHBranch = cast<UncondBrInst>(Preheader->getTerminator());
   IRBuilder<> Builder(PHBranch);
-  Builder.disableGEPCanonicalization();
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   Builder.SetCurrentDebugLocation(PHBranch->getDebugLoc());
 
