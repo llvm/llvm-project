@@ -13,8 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
@@ -30,6 +28,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <memory>
 #include <string>
 
 using namespace llvm;
@@ -81,29 +80,16 @@ struct ObjectContext {
 static bool ArchAll = false;
 static std::vector<StringRef> ArchFlags;
 static bool ELFCommons;
-static OutputFormatTy OutputFormat;
 static bool DarwinLongFormat;
 static RadixTy Radix = RadixTy::decimal;
 static bool TotalSizes;
-static bool HasMachOFiles = false;
 static bool ExcludePageZero = false;
-
-static std::vector<std::string> InputFilenames;
 
 static std::string ToolName;
 
 // States
 static bool HadError = false;
-static bool BerkeleyHeaderPrinted = false;
 static bool MoreThanOneFile = false;
-static uint64_t TotalObjectText = 0;
-static uint64_t TotalObjectData = 0;
-static uint64_t TotalObjectBss = 0;
-static uint64_t TotalObjectTotal = 0;
-
-// Darwin-specific totals
-static uint64_t TotalObjectObjc = 0;
-static uint64_t TotalObjectOthers = 0;
 
 static void error(const Twine &Message, StringRef File = "") {
   HadError = true;
@@ -181,22 +167,6 @@ static void printRadixNumber(raw_ostream &OS, uint64_t Value, unsigned Width) {
     OS << format("%#*" PRIx64, W, Value);
     break;
   }
-}
-
-// Print a Berkeley summary row (text, data, bss, dec/oct, hex).
-static void printBerkeleyRow(raw_ostream &OS, uint64_t Text, uint64_t Data,
-                             uint64_t Bss, uint64_t Total) {
-  printRadixNumber(OS, Text, 7);
-  OS << '\t';
-  printRadixNumber(OS, Data, 7);
-  OS << '\t';
-  printRadixNumber(OS, Bss, 7);
-  OS << '\t';
-  if (Radix == octal)
-    OS << format("%7" PRIo64 "\t", Total);
-  else
-    OS << format("%7" PRIu64 "\t", Total);
-  OS << format("%7" PRIx64 "\t", Total);
 }
 
 /// Remove unneeded ELF sections from calculation
@@ -282,115 +252,196 @@ static MachOSegmentSizes getMachOSegmentSizes(const MachOObjectFile &MachO) {
   return Sizes;
 }
 
-/// Print the size of each Mach-O segment and section in @p MachO.
-///
-/// This is when used when @c OutputFormat is darwin and produces the same
-/// output as darwin's size(1) -m output.
-static void printDarwinSectionSizes(const MachOObjectFile &MachO) {
-  auto PrintSize = [](raw_ostream &OS, uint64_t Value) {
-    switch (Radix) {
-    case octal:
-      OS << format("%" PRIo64, Value);
-      break;
-    case decimal:
-      OS << format("%" PRIu64, Value);
-      break;
-    case hexadecimal:
-      OS << format("0x%" PRIx64, Value);
-      break;
-    }
-  };
+namespace {
+class SizePrinter {
+protected:
+  raw_ostream &OS;
 
-  uint32_t Filetype = MachO.getHeader().filetype;
-  uint64_t Total = 0;
+public:
+  explicit SizePrinter(raw_ostream &OS) : OS(OS) {}
+  virtual ~SizePrinter() = default;
 
-  auto PrintSegment = [&](const auto &Seg, auto GetSection) {
-    outs() << "Segment " << Seg.segname << ": ";
-    PrintSize(outs(), Seg.vmsize);
-    if (DarwinLongFormat)
-      outs() << " (vmaddr 0x"
-             << format("%" PRIx64, static_cast<uint64_t>(Seg.vmaddr))
-             << " fileoff " << Seg.fileoff << ')';
-    outs() << '\n';
-    Total += Seg.vmsize;
+  virtual void printObject(const ObjectFile &Obj, const ObjectContext &Ctx) = 0;
+  virtual void finish() {}
+};
 
-    uint64_t SecTotal = 0;
-    for (unsigned J = 0; J < Seg.nsects; ++J) {
-      auto Sec = GetSection(J);
-      if (Filetype == MachO::MH_OBJECT)
-        outs() << "\tSection (" << format("%.16s", Sec.segname) << ", "
-               << format("%.16s", Sec.sectname) << "): ";
-      else
-        outs() << "\tSection " << format("%.16s", Sec.sectname) << ": ";
-      PrintSize(outs(), Sec.size);
-      if (DarwinLongFormat)
-        outs() << " (addr 0x"
-               << format("%" PRIx64, static_cast<uint64_t>(Sec.addr))
-               << " offset " << Sec.offset << ')';
-      outs() << '\n';
-      SecTotal += Sec.size;
-    }
-    if (Seg.nsects != 0) {
-      outs() << "\ttotal ";
-      PrintSize(outs(), SecTotal);
-      outs() << '\n';
-    }
-  };
+// Base printer for tabular summary formats (such as Berkeley).
+class SummarySizePrinter : public SizePrinter {
+protected:
+  bool HeaderPrinted = false;
+  uint64_t TotalText = 0;
+  uint64_t TotalData = 0;
+  uint64_t TotalBss = 0;
+  uint64_t TotalSize = 0;
 
-  for (const auto &Load : MachO.load_commands()) {
-    if (Load.C.cmd == MachO::LC_SEGMENT_64) {
-      PrintSegment(MachO.getSegment64LoadCommand(Load),
-                   [&](unsigned J) { return MachO.getSection64(Load, J); });
-    } else if (Load.C.cmd == MachO::LC_SEGMENT) {
-      PrintSegment(MachO.getSegmentLoadCommand(Load),
-                   [&](unsigned J) { return MachO.getSection(Load, J); });
-    }
-  }
-  outs() << "total ";
-  PrintSize(outs(), Total);
-  outs() << '\n';
-}
-
-/// Print the summary sizes of the standard Mach-O segments in @p MachO.
-///
-/// This is when used when @c OutputFormat is berkeley with a Mach-O file and
-/// produces the same output as darwin's size(1) default output.
-static void printDarwinSegmentSizes(const MachOObjectFile &MachO) {
-  MachOSegmentSizes Sizes = getMachOSegmentSizes(MachO);
-  uint64_t Total = Sizes.Text + Sizes.Data + Sizes.Objc + Sizes.Others;
-  HasMachOFiles = true;
-
-  if (TotalSizes) {
-    TotalObjectText += Sizes.Text;
-    TotalObjectData += Sizes.Data;
-    TotalObjectObjc += Sizes.Objc;
-    TotalObjectOthers += Sizes.Others;
-    TotalObjectTotal += Total;
+  virtual SummarySizes getSectionSizes(const ObjectFile &Obj) const = 0;
+  virtual void printHeader() = 0;
+  virtual void printRow(uint64_t Text, uint64_t Data, uint64_t Bss,
+                        uint64_t Total) = 0;
+  virtual void printTotals() {
+    printRow(TotalText, TotalData, TotalBss, TotalSize);
+    OS << "(TOTALS)\n";
   }
 
-  if (!BerkeleyHeaderPrinted) {
-    outs() << "__TEXT\t__DATA\t__OBJC\tothers\tdec\thex\n";
-    BerkeleyHeaderPrinted = true;
+  void printObjectName(const ObjectFile &Obj, const ObjectContext &Ctx) {
+    if (!Ctx.ArchiveName.empty()) {
+      OS << Obj.getFileName() << " (ex " << Ctx.ArchiveName << ")\n";
+    } else {
+      OS << Obj.getFileName();
+      if (!Ctx.ArchName.empty())
+        OS << " (for architecture " << Ctx.ArchName << ')';
+      OS << '\n';
+    }
   }
-  outs() << Sizes.Text << '\t' << Sizes.Data << '\t' << Sizes.Objc << '\t'
-         << Sizes.Others << '\t' << Total << '\t' << format("%" PRIx64, Total)
-         << '\t';
-}
 
-/// Print the size of each section in @p Obj.
-///
-/// The format used is determined by @c OutputFormat and @c Radix.
-static void printObjectSectionSizes(const ObjectFile &Obj) {
-  // If OutputFormat is darwin and we have a MachOObjectFile print as darwin's
-  // size(1) -m output, else if OutputFormat is darwin and not a Mach-O object
-  // let it fall through to OutputFormat berkeley.
-  const auto *MachO = dyn_cast<MachOObjectFile>(&Obj);
-  if (OutputFormat == darwin && MachO) {
-    printDarwinSectionSizes(*MachO);
-  } else if (MachO && OutputFormat == berkeley) {
-    // Print as darwin's default berkeley format for Mach-O files.
-    printDarwinSegmentSizes(*MachO);
-  } else if (OutputFormat == sysv) {
+public:
+  using SizePrinter::SizePrinter;
+
+  void printSummaryRow(const ObjectFile &Obj) {
+    SummarySizes Sizes = getSectionSizes(Obj);
+    if (ELFCommons) {
+      if (Expected<uint64_t> CommonSizeOrErr = getCommonSize(Obj))
+        Sizes.Bss += *CommonSizeOrErr;
+      else {
+        error(CommonSizeOrErr.takeError(), Obj.getFileName());
+        return;
+      }
+    }
+
+    uint64_t Total = Sizes.Text + Sizes.Data + Sizes.Bss;
+    if (TotalSizes) {
+      TotalText += Sizes.Text;
+      TotalData += Sizes.Data;
+      TotalBss += Sizes.Bss;
+      TotalSize += Total;
+    }
+
+    if (!HeaderPrinted) {
+      printHeader();
+      HeaderPrinted = true;
+    }
+
+    printRow(Sizes.Text, Sizes.Data, Sizes.Bss, Total);
+  }
+
+  void printObject(const ObjectFile &Obj, const ObjectContext &Ctx) override {
+    printSummaryRow(Obj);
+    printObjectName(Obj, Ctx);
+  }
+
+  void finish() override {
+    if (TotalSizes)
+      printTotals();
+  }
+};
+
+// Printer for Berkeley output format, including Darwin's default segment
+// summary output for Mach-O files.
+class BerkeleySizePrinter final : public SummarySizePrinter {
+  bool HasMachOFiles = false;
+  uint64_t TotalObjc = 0;
+  uint64_t TotalOthers = 0;
+
+  void printMachOObject(const MachOObjectFile &MachO,
+                        const ObjectContext &Ctx) {
+    MachOSegmentSizes Sizes = getMachOSegmentSizes(MachO);
+    uint64_t Total = Sizes.Text + Sizes.Data + Sizes.Objc + Sizes.Others;
+    HasMachOFiles = true;
+
+    if (TotalSizes) {
+      TotalText += Sizes.Text;
+      TotalData += Sizes.Data;
+      TotalObjc += Sizes.Objc;
+      TotalOthers += Sizes.Others;
+      TotalSize += Total;
+    }
+
+    if (!HeaderPrinted) {
+      OS << "__TEXT\t__DATA\t__OBJC\tothers\tdec\thex\n";
+      HeaderPrinted = true;
+    }
+
+    OS << Sizes.Text << '\t' << Sizes.Data << '\t' << Sizes.Objc << '\t'
+       << Sizes.Others << '\t' << Total << '\t' << format("%" PRIx64, Total)
+       << '\t';
+
+    if (!Ctx.ArchiveName.empty()) {
+      OS << Ctx.ArchiveName << '(' << MachO.getFileName() << ')';
+      if (Ctx.ShowArchInArchive && !Ctx.ArchName.empty())
+        OS << " (for architecture " << Ctx.ArchName << ')';
+    } else if (Ctx.ShowMultiple) {
+      OS << MachO.getFileName();
+      if (!Ctx.ArchName.empty())
+        OS << " (for architecture " << Ctx.ArchName << ')';
+    }
+    OS << '\n';
+  }
+
+protected:
+  SummarySizes getSectionSizes(const ObjectFile &Obj) const override {
+    return getBerkeleySectionSizes(Obj);
+  }
+
+  void printHeader() override {
+    OS << "   text\t"
+          "   data\t"
+          "    bss\t"
+          "    "
+       << (Radix == octal ? "oct" : "dec")
+       << "\t"
+          "    hex\t"
+          "filename\n";
+  }
+
+  void printRow(uint64_t Text, uint64_t Data, uint64_t Bss,
+                uint64_t Total) override {
+    printRadixNumber(OS, Text, 7);
+    OS << '\t';
+    printRadixNumber(OS, Data, 7);
+    OS << '\t';
+    printRadixNumber(OS, Bss, 7);
+    OS << '\t';
+    if (Radix == octal)
+      OS << format("%7" PRIo64 "\t", Total);
+    else
+      OS << format("%7" PRIu64 "\t", Total);
+    OS << format("%7" PRIx64 "\t", Total);
+  }
+
+  void printTotals() override {
+    if (HasMachOFiles) {
+      // Darwin format totals: __TEXT __DATA __OBJC others dec hex
+      OS << TotalText << '\t' << TotalData << '\t' << TotalObjc << '\t'
+         << TotalOthers << '\t' << TotalSize << '\t'
+         << format("%" PRIx64, TotalSize) << "\t(TOTALS)\n";
+    } else {
+      SummarySizePrinter::printTotals();
+    }
+  }
+
+public:
+  using SummarySizePrinter::SummarySizePrinter;
+
+  void printObject(const ObjectFile &Obj, const ObjectContext &Ctx) override {
+    if (const auto *MachO = dyn_cast<MachOObjectFile>(&Obj)) {
+      printMachOObject(*MachO, Ctx);
+      return;
+    }
+    SummarySizePrinter::printObject(Obj, Ctx);
+  }
+};
+
+// Printer for System V output format.
+class SysVSizePrinter final : public SizePrinter {
+public:
+  using SizePrinter::SizePrinter;
+
+  void printObject(const ObjectFile &Obj, const ObjectContext &Ctx) override {
+    if (!Ctx.ArchiveName.empty())
+      OS << Obj.getFileName() << "   (ex " << Ctx.ArchiveName << "):\n";
+    else
+      OS << Obj.getFileName() << "  :\n";
+
     // Run two passes over all sections. The first gets the lengths needed for
     // formatting the output. The second actually does the output.
     uint64_t Total = 0;
@@ -421,9 +472,9 @@ static void printObjectSectionSizes(const ObjectFile &Obj) {
     MaxAddrLen += 2;
 
     // Print header.
-    outs() << left_justify("section", MaxNameLen) << ' '
-           << right_justify("size", MaxSizeLen) << ' '
-           << right_justify("addr", MaxAddrLen) << '\n';
+    OS << left_justify("section", MaxNameLen) << ' '
+       << right_justify("size", MaxSizeLen) << ' '
+       << right_justify("addr", MaxAddrLen) << '\n';
 
     // Print each section.
     for (SectionRef Section : Obj.sections()) {
@@ -436,21 +487,21 @@ static void printObjectSectionSizes(const ObjectFile &Obj) {
         return;
       }
 
-      outs() << left_justify(*NameOrErr, MaxNameLen) << ' ';
-      printRadixNumber(outs(), Section.getSize(), MaxSizeLen);
-      outs() << ' ';
-      printRadixNumber(outs(), Section.getAddress(), MaxAddrLen);
-      outs() << '\n';
+      OS << left_justify(*NameOrErr, MaxNameLen) << ' ';
+      printRadixNumber(OS, Section.getSize(), MaxSizeLen);
+      OS << ' ';
+      printRadixNumber(OS, Section.getAddress(), MaxAddrLen);
+      OS << '\n';
     }
 
     if (ELFCommons) {
       if (Expected<uint64_t> CommonSizeOrErr = getCommonSize(Obj)) {
         Total += *CommonSizeOrErr;
-        outs() << left_justify("*COM*", MaxNameLen) << ' ';
-        printRadixNumber(outs(), *CommonSizeOrErr, MaxSizeLen);
-        outs() << ' ';
-        printRadixNumber(outs(), 0, MaxAddrLen);
-        outs() << '\n';
+        OS << left_justify("*COM*", MaxNameLen) << ' ';
+        printRadixNumber(OS, *CommonSizeOrErr, MaxSizeLen);
+        OS << ' ';
+        printRadixNumber(OS, 0, MaxAddrLen);
+        OS << '\n';
       } else {
         error(CommonSizeOrErr.takeError(), Obj.getFileName());
         return;
@@ -458,101 +509,129 @@ static void printObjectSectionSizes(const ObjectFile &Obj) {
     }
 
     // Print total.
-    outs() << left_justify("Total", MaxNameLen) << ' ';
-    printRadixNumber(outs(), Total, MaxSizeLen);
-    outs() << "\n\n\n";
-  } else {
-    SummarySizes Sizes = getBerkeleySectionSizes(Obj);
-    if (ELFCommons) {
-      if (Expected<uint64_t> CommonSizeOrErr = getCommonSize(Obj))
-        Sizes.Bss += *CommonSizeOrErr;
-      else {
-        error(CommonSizeOrErr.takeError(), Obj.getFileName());
-        return;
+    OS << left_justify("Total", MaxNameLen) << ' ';
+    printRadixNumber(OS, Total, MaxSizeLen);
+    OS << "\n\n\n";
+  }
+};
+
+// Printer for Darwin output format (darwin's size(1) -m output), falling back
+// to Berkeley format for non-Mach-O inputs.
+class DarwinSizePrinter final : public SizePrinter {
+  BerkeleySizePrinter FallbackPrinter;
+
+  static void printSize(raw_ostream &OS, uint64_t Value) {
+    switch (Radix) {
+    case octal:
+      OS << format("%" PRIo64, Value);
+      break;
+    case decimal:
+      OS << format("%" PRIu64, Value);
+      break;
+    case hexadecimal:
+      OS << format("0x%" PRIx64, Value);
+      break;
+    }
+  }
+
+  void printMachOSectionSizes(const MachOObjectFile &MachO) {
+    uint32_t Filetype = MachO.getHeader().filetype;
+    uint64_t Total = 0;
+
+    auto PrintSegment = [&](const auto &Seg, auto GetSection) {
+      OS << "Segment " << Seg.segname << ": ";
+      printSize(OS, Seg.vmsize);
+      if (DarwinLongFormat)
+        OS << " (vmaddr 0x"
+           << format("%" PRIx64, static_cast<uint64_t>(Seg.vmaddr))
+           << " fileoff " << Seg.fileoff << ')';
+      OS << '\n';
+      Total += Seg.vmsize;
+
+      uint64_t SecTotal = 0;
+      for (unsigned J = 0; J < Seg.nsects; ++J) {
+        auto Sec = GetSection(J);
+        if (Filetype == MachO::MH_OBJECT)
+          OS << "\tSection (" << format("%.16s", Sec.segname) << ", "
+             << format("%.16s", Sec.sectname) << "): ";
+        else
+          OS << "\tSection " << format("%.16s", Sec.sectname) << ": ";
+        printSize(OS, Sec.size);
+        if (DarwinLongFormat)
+          OS << " (addr 0x"
+             << format("%" PRIx64, static_cast<uint64_t>(Sec.addr))
+             << " offset " << Sec.offset << ')';
+        OS << '\n';
+        SecTotal += Sec.size;
+      }
+      if (Seg.nsects != 0) {
+        OS << "\ttotal ";
+        printSize(OS, SecTotal);
+        OS << '\n';
+      }
+    };
+
+    for (const auto &Load : MachO.load_commands()) {
+      if (Load.C.cmd == MachO::LC_SEGMENT_64) {
+        PrintSegment(MachO.getSegment64LoadCommand(Load),
+                     [&](unsigned J) { return MachO.getSection64(Load, J); });
+      } else if (Load.C.cmd == MachO::LC_SEGMENT) {
+        PrintSegment(MachO.getSegmentLoadCommand(Load),
+                     [&](unsigned J) { return MachO.getSection(Load, J); });
       }
     }
-
-    uint64_t Total = Sizes.Text + Sizes.Data + Sizes.Bss;
-    if (TotalSizes) {
-      TotalObjectText += Sizes.Text;
-      TotalObjectData += Sizes.Data;
-      TotalObjectBss += Sizes.Bss;
-      TotalObjectTotal += Total;
-    }
-
-    if (!BerkeleyHeaderPrinted) {
-      outs() << "   text\t"
-                "   data\t"
-                "    bss\t"
-                "    "
-             << (Radix == octal ? "oct" : "dec")
-             << "\t"
-                "    hex\t"
-                "filename\n";
-      BerkeleyHeaderPrinted = true;
-    }
-
-    printBerkeleyRow(outs(), Sizes.Text, Sizes.Data, Sizes.Bss, Total);
+    OS << "total ";
+    printSize(OS, Total);
+    OS << '\n';
   }
-}
 
-// Print Obj along with any format-specific prefix or suffix headers described
-// by Ctx.
-static void printObject(const ObjectFile &Obj, const ObjectContext &Ctx) {
-  const auto *MachO = dyn_cast<MachOObjectFile>(&Obj);
-  if (OutputFormat == sysv) {
-    if (!Ctx.ArchiveName.empty())
-      outs() << Obj.getFileName() << "   (ex " << Ctx.ArchiveName << "):\n";
-    else
-      outs() << Obj.getFileName() << "  :\n";
-  } else if (MachO && OutputFormat == darwin) {
+public:
+  explicit DarwinSizePrinter(raw_ostream &OS)
+      : SizePrinter(OS), FallbackPrinter(OS) {}
+
+  void printObject(const ObjectFile &Obj, const ObjectContext &Ctx) override {
+    const auto *MachO = dyn_cast<MachOObjectFile>(&Obj);
+    if (!MachO) {
+      if (Ctx.Slice == SliceKind::None)
+        FallbackPrinter.printObject(Obj, Ctx);
+      else
+        FallbackPrinter.printSummaryRow(Obj);
+      return;
+    }
+
     if (!Ctx.ArchiveName.empty()) {
-      outs() << Ctx.ArchiveName << '(' << MachO->getFileName() << ')';
+      OS << Ctx.ArchiveName << '(' << MachO->getFileName() << ')';
       if (!Ctx.ArchName.empty())
-        outs() << " (for architecture " << Ctx.ArchName << ')';
-      outs() << ":\n";
+        OS << " (for architecture " << Ctx.ArchName << ')';
+      OS << ":\n";
     } else if (Ctx.Slice == SliceKind::AllArchs) {
       if (Ctx.ShowMultiple)
-        outs() << MachO->getFileName() << " (for architecture " << Ctx.ArchName
-               << "):";
-      outs() << '\n';
+        OS << MachO->getFileName() << " (for architecture " << Ctx.ArchName
+           << "):";
+      OS << '\n';
     } else if (Ctx.ShowMultiple) {
-      outs() << MachO->getFileName();
+      OS << MachO->getFileName();
       if (!Ctx.ArchName.empty())
-        outs() << " (for architecture " << Ctx.ArchName << ')';
-      outs() << (Ctx.Slice == SliceKind::ExplicitArch ? ": \n" : ":\n");
+        OS << " (for architecture " << Ctx.ArchName << ')';
+      OS << (Ctx.Slice == SliceKind::ExplicitArch ? ": \n" : ":\n");
     }
-  }
 
-  printObjectSectionSizes(Obj);
+    printMachOSectionSizes(*MachO);
+  }
+};
+} // namespace
 
-  if (!MachO && OutputFormat == darwin && Ctx.Slice == SliceKind::None) {
-    if (!Ctx.ArchiveName.empty())
-      outs() << Obj.getFileName() << " (ex " << Ctx.ArchiveName << ")\n";
-    else
-      outs() << Obj.getFileName() << '\n';
+static std::unique_ptr<SizePrinter> createSizePrinter(OutputFormatTy Format,
+                                                      raw_ostream &OS) {
+  switch (Format) {
+  case berkeley:
+    return std::make_unique<BerkeleySizePrinter>(OS);
+  case sysv:
+    return std::make_unique<SysVSizePrinter>(OS);
+  case darwin:
+    return std::make_unique<DarwinSizePrinter>(OS);
   }
-  if (OutputFormat == berkeley) {
-    if (MachO) {
-      if (!Ctx.ArchiveName.empty()) {
-        outs() << Ctx.ArchiveName << '(' << MachO->getFileName() << ')';
-        if (Ctx.ShowArchInArchive && !Ctx.ArchName.empty())
-          outs() << " (for architecture " << Ctx.ArchName << ')';
-      } else if (Ctx.ShowMultiple) {
-        outs() << MachO->getFileName();
-        if (!Ctx.ArchName.empty())
-          outs() << " (for architecture " << Ctx.ArchName << ')';
-      }
-      outs() << '\n';
-    } else if (!Ctx.ArchiveName.empty()) {
-      outs() << Obj.getFileName() << " (ex " << Ctx.ArchiveName << ")\n";
-    } else {
-      outs() << Obj.getFileName();
-      if (!Ctx.ArchName.empty())
-        outs() << " (for architecture " << Ctx.ArchName << ')';
-      outs() << '\n';
-    }
-  }
+  llvm_unreachable("Unknown output format");
 }
 
 /// Checks to see if the @p Obj ObjectFile is a Mach-O file and if it is and
@@ -583,7 +662,7 @@ static bool checkMachOAndArchFlags(const ObjectFile &Obj, StringRef Filename) {
 
 // Iterate over each member of Archive A and print its sizes.
 static void printArchiveMembers(Archive &A, StringRef File,
-                                const ObjectContext &Ctx,
+                                SizePrinter &Printer, const ObjectContext &Ctx,
                                 StringRef ErrorArchName = StringRef(),
                                 bool CheckArchFlags = false) {
   Error Err = Error::success();
@@ -597,7 +676,7 @@ static void printArchiveMembers(Archive &A, StringRef File,
     if (const auto *Obj = dyn_cast<ObjectFile>(ChildOrErr->get())) {
       if (CheckArchFlags && !checkMachOAndArchFlags(*Obj, File))
         break;
-      printObject(*Obj, Ctx);
+      Printer.printObject(*Obj, Ctx);
     }
   }
   if (Err)
@@ -608,7 +687,8 @@ static void printArchiveMembers(Archive &A, StringRef File,
 // unrecoverable error occurred and processing of the file should stop.
 static bool
 printUniversalSlice(const MachOUniversalBinary::ObjectForArch &Slice,
-                    StringRef File, SliceKind Kind, bool MultipleArchs) {
+                    StringRef File, SizePrinter &Printer, SliceKind Kind,
+                    bool MultipleArchs) {
   std::string ArchName = Slice.getArchFlagName();
   StringRef ErrorArchName = MultipleArchs ? StringRef(ArchName) : StringRef();
   bool ShowMultiple = MoreThanOneFile || MultipleArchs;
@@ -619,7 +699,7 @@ printUniversalSlice(const MachOUniversalBinary::ObjectForArch &Slice,
     Ctx.ArchName = ArchName;
     Ctx.Slice = Kind;
     Ctx.ShowMultiple = ShowMultiple;
-    printObject(**UO, Ctx);
+    Printer.printObject(**UO, Ctx);
     return true;
   }
   if (auto E = isNotObjectErrorInvalidFileType(UO.takeError())) {
@@ -641,14 +721,14 @@ printUniversalSlice(const MachOUniversalBinary::ObjectForArch &Slice,
   Ctx.Slice = Kind;
   Ctx.ShowMultiple = ShowMultiple;
   Ctx.ShowArchInArchive = (Kind == SliceKind::AllArchs) || MultipleArchs;
-  printArchiveMembers(**AOrErr, File, Ctx, ErrorArchName,
+  printArchiveMembers(**AOrErr, File, Printer, Ctx, ErrorArchName,
                       /*CheckArchFlags=*/false);
   return true;
 }
 
 /// Print the section sizes for @p File. If @p File is an archive, print the
 /// section sizes for each archive member.
-static void printFileSectionSizes(StringRef File) {
+static void printFileSectionSizes(StringRef File, SizePrinter &Printer) {
   // Attempt to open the binary.
   Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(File);
   if (!BinaryOrErr) {
@@ -661,7 +741,7 @@ static void printFileSectionSizes(StringRef File) {
     ObjectContext Ctx;
     Ctx.ArchiveName = A->getFileName();
     Ctx.ShowMultiple = MoreThanOneFile;
-    printArchiveMembers(*A, File, Ctx, /*ErrorArchName=*/StringRef(),
+    printArchiveMembers(*A, File, Printer, Ctx, /*ErrorArchName=*/StringRef(),
                         /*CheckArchFlags=*/true);
   } else if (auto *UB = dyn_cast<MachOUniversalBinary>(&Bin)) {
     // If we have a list of architecture flags specified dump only those.
@@ -672,8 +752,8 @@ static void printFileSectionSizes(StringRef File) {
         for (const auto &Slice : UB->objects()) {
           if (ArchFlag == Slice.getArchFlagName()) {
             ArchFound = true;
-            if (!printUniversalSlice(Slice, File, SliceKind::ExplicitArch,
-                                     MultipleArchs))
+            if (!printUniversalSlice(Slice, File, Printer,
+                                     SliceKind::ExplicitArch, MultipleArchs))
               return;
           }
         }
@@ -690,7 +770,7 @@ static void printFileSectionSizes(StringRef File) {
       StringRef HostArchName = MachOObjectFile::getHostArch().getArchName();
       for (const auto &Slice : UB->objects()) {
         if (HostArchName == Slice.getArchFlagName()) {
-          printUniversalSlice(Slice, File, SliceKind::HostArch,
+          printUniversalSlice(Slice, File, Printer, SliceKind::HostArch,
                               /*MultipleArchs=*/false);
           return;
         }
@@ -700,7 +780,7 @@ static void printFileSectionSizes(StringRef File) {
     // and this does not contain the host architecture so dump all the slices.
     bool MoreThanOneArch = UB->getNumberOfObjects() > 1;
     for (const auto &Slice : UB->objects()) {
-      if (!printUniversalSlice(Slice, File, SliceKind::AllArchs,
+      if (!printUniversalSlice(Slice, File, Printer, SliceKind::AllArchs,
                                /*MultipleArchs=*/MoreThanOneArch))
         return;
     }
@@ -709,23 +789,9 @@ static void printFileSectionSizes(StringRef File) {
       return;
     ObjectContext Ctx;
     Ctx.ShowMultiple = MoreThanOneFile;
-    printObject(*Obj, Ctx);
+    Printer.printObject(*Obj, Ctx);
   } else {
     error("unsupported file type", File);
-  }
-}
-
-static void printBerkeleyTotals() {
-  if (HasMachOFiles) {
-    // Darwin format totals: __TEXT __DATA __OBJC others dec hex
-    outs() << TotalObjectText << '\t' << TotalObjectData << '\t'
-           << TotalObjectObjc << '\t' << TotalObjectOthers << '\t'
-           << TotalObjectTotal << '\t' << format("%" PRIx64, TotalObjectTotal)
-           << "\t(TOTALS)\n";
-  } else {
-    printBerkeleyRow(outs(), TotalObjectText, TotalObjectData, TotalObjectBss,
-                     TotalObjectTotal);
-    outs() << "(TOTALS)\n";
   }
 }
 
@@ -758,6 +824,8 @@ int llvm_size_main(int argc, char **argv, const llvm::ToolContext &) {
   DarwinLongFormat = Args.hasArg(OPT_l);
   ExcludePageZero = Args.hasArg(OPT_exclude_pagezero);
   TotalSizes = Args.hasArg(OPT_totals);
+
+  OutputFormatTy OutputFormat = berkeley;
   StringRef V = Args.getLastArgValue(OPT_format_EQ, "berkeley");
   if (V == "berkeley")
     OutputFormat = berkeley;
@@ -793,14 +861,16 @@ int llvm_size_main(int argc, char **argv, const llvm::ToolContext &) {
     }
   }
 
-  InputFilenames = Args.getAllArgValues(OPT_INPUT);
+  std::vector<std::string> InputFilenames = Args.getAllArgValues(OPT_INPUT);
   if (InputFilenames.empty())
     InputFilenames.push_back("a.out");
 
   MoreThanOneFile = InputFilenames.size() > 1;
-  llvm::for_each(InputFilenames, printFileSectionSizes);
-  if (OutputFormat == berkeley && TotalSizes)
-    printBerkeleyTotals();
+  std::unique_ptr<SizePrinter> Printer =
+      createSizePrinter(OutputFormat, outs());
+  for (StringRef File : InputFilenames)
+    printFileSectionSizes(File, *Printer);
+  Printer->finish();
 
   if (HadError)
     return 1;
