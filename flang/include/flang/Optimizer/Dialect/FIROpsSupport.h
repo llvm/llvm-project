@@ -146,6 +146,12 @@ static constexpr llvm::StringRef getHostAssocAttrName() {
   return "fir.host_assoc";
 }
 
+/// Attribute to mark the argument through which a function returns its result,
+/// added when the result is turned into an argument.
+static constexpr llvm::StringRef getResultArgAttrName() {
+  return "fir.result_arg";
+}
+
 /// Attribute to link an internal procedure to its host procedure symbol.
 static constexpr llvm::StringRef getHostSymbolAttrName() {
   return "fir.host_symbol";

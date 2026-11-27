@@ -29,5 +29,5 @@ gpu.module @test {
   }
 }
 
-// CHECK: gpu.func @_QMinterval_mPtest1(%arg0: !fir.ref<!fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}>>, %arg1: !fir.ref<!fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}>>, %arg2: !fir.ref<f32>) {
+// CHECK: gpu.func @_QMinterval_mPtest1(%arg0: !fir.ref<!fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}>> {fir.result_arg}, %arg1: !fir.ref<!fir.type<_QMinterval_mTinterval{inf:f32,sup:f32}>>, %arg2: !fir.ref<f32>) {
 // CHECK: gpu.return{{$}}

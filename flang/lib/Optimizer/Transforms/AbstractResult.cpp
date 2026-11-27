@@ -351,6 +351,9 @@ public:
         fir::hasBindcAttr(func.getOperation()))
       return;
     if (hasAbstractResult(funcTy)) {
+      mlir::DictionaryAttr resultArgAttrs = mlir::DictionaryAttr::get(
+          context, mlir::NamedAttribute(fir::getResultArgAttrName(),
+                                        mlir::UnitAttr::get(context)));
       if (fir::isa_builtin_cptr_type(funcTy.getResult(0))) {
         func.setType(getCPtrFunctionType(funcTy));
         patterns.insert<ReturnOpConversion>(context, mlir::Value{});
@@ -366,7 +369,8 @@ public:
         mlir::OpBuilder rewriter(context);
         auto resultType = funcTy.getResult(0);
         auto argTy = getResultArgumentType(resultType, shouldBoxResult);
-        llvm::LogicalResult res = func.insertArgument(0u, argTy, {}, loc);
+        llvm::LogicalResult res =
+            func.insertArgument(0u, argTy, resultArgAttrs, loc);
         (void)res;
         assert(llvm::succeeded(res) && "failed to insert function argument");
         res = func.eraseResult(0u);
@@ -389,8 +393,7 @@ public:
       } else {
         llvm::SmallVector<mlir::DictionaryAttr> allArgs;
         func.getAllArgAttrs(allArgs);
-        allArgs.insert(allArgs.begin(),
-                       mlir::DictionaryAttr::get(func->getContext()));
+        allArgs.insert(allArgs.begin(), resultArgAttrs);
         func.setType(getNewFunctionType(funcTy, shouldBoxResult));
         func.setAllArgAttrs(allArgs);
       }
