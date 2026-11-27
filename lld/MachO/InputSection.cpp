@@ -27,11 +27,7 @@ using namespace llvm::support;
 using namespace lld;
 using namespace lld::macho;
 
-// Verify ConcatInputSection's size on 64-bit builds. The size of std::vector
-// can differ based on STL debug levels (e.g. iterator debugging on MSVC's STL),
-// so account for that.
-static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) ==
-                                         sizeof(std::vector<Relocation>) + 88,
+static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) == 104,
               "Try to minimize ConcatInputSection's size, we create many "
               "instances of it");
 
@@ -140,7 +136,8 @@ std::string InputSection::getLocation(uint64_t off) const {
       .str();
 }
 
-std::string InputSection::getSourceLocation(uint64_t off) const {
+std::string InputSection::getSourceLocation(uint64_t off,
+                                            StringRef symName) const {
   auto *obj = dyn_cast_or_null<ObjFile>(getFile());
   if (!obj)
     return {};
@@ -170,10 +167,12 @@ std::string InputSection::getSourceLocation(uint64_t off) const {
     return createMsg(li->FileName, li->Line);
 
   // If it failed, look up again as a variable.
-  if (const Defined *sym = getContainingSymbol(off)) {
+  if (symName.empty())
+    if (const Defined *sym = getContainingSymbol(off))
+      symName = sym->getName();
+  if (!symName.empty()) {
     // Symbols are generally prefixed with an underscore, which is not included
     // in the debug information.
-    StringRef symName = sym->getName();
     symName.consume_front("_");
 
     if (std::optional<std::pair<std::string, unsigned>> fileLine =
@@ -271,7 +270,10 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
           !target->hasAttr(r.type, RelocAttrBits::AUTH)) {
         referentVA -= firstTLVDataSection->addr;
       } else if (needsFixup) {
-        writeChainedFixup(loc, referentSym, r.getAddend(), r.getAuthInfo());
+        const AuthInfo *auth = r.getAuthInfo();
+        if (!auth)
+          auth = getImplicitAuthInfo(this, referentSym);
+        writeChainedFixup(loc, referentSym, r.getAddend(), auth);
         continue;
       }
     } else if (auto *referentIsec =
@@ -328,8 +330,8 @@ StringPiece &CStringInputSection::getStringPiece(uint64_t off) {
   if (off >= data.size())
     fatal(toString(this) + ": offset is outside the section");
 
-  auto it =
-      partition_point(pieces, [=](StringPiece p) { return p.inSecOff <= off; });
+  auto it = partition_point(
+      pieces, [=](const StringPiece &p) { return p.inSecOff <= off; });
   return it[-1];
 }
 
@@ -341,8 +343,8 @@ size_t CStringInputSection::getStringPieceIndex(uint64_t off) const {
   if (off >= data.size())
     fatal(toString(this) + ": offset is outside the section");
 
-  auto it =
-      partition_point(pieces, [=](StringPiece p) { return p.inSecOff <= off; });
+  auto it = partition_point(
+      pieces, [=](const StringPiece &p) { return p.inSecOff <= off; });
   return std::distance(pieces.begin(), it) - 1;
 }
 
@@ -370,7 +372,10 @@ WordLiteralInputSection::WordLiteralInputSection(const Section &section,
     llvm_unreachable("invalid literal section type");
   }
 
-  live.resize(data.size() >> power2LiteralSize, !config->deadStrip);
+  size_t numLiterals = data.size() >> power2LiteralSize;
+  live = std::make_unique<std::atomic<bool>[]>(numLiterals);
+  if (!config->deadStrip)
+    std::fill_n(live.get(), numLiterals, true);
 }
 
 uint64_t WordLiteralInputSection::getOffset(uint64_t off) const {
@@ -419,6 +424,18 @@ bool macho::isEhFrameSection(const InputSection *isec) {
 bool macho::usesAuthGot(const InputSection *isec) {
   // arm64e's unwinder expects signed personality pointers.
   return config->arch() == AK_arm64e && isEhFrameSection(isec);
+}
+
+const AuthInfo *macho::getImplicitAuthInfo(const InputSection *isec,
+                                           const Symbol *sym) {
+  // The only pointer bound from a TLV descriptor is its thunk, which TLV
+  // accesses call with blraaz.
+  static constexpr AuthInfo tlvThunk = {/*diversity=*/0, PtrAuthKeyIA,
+                                        /*addrDiv=*/false};
+  if (config->arch() == AK_arm64e && isThreadLocalVariables(isec->getFlags()) &&
+      needsBinding(sym))
+    return &tlvThunk;
+  return nullptr;
 }
 
 bool macho::isGccExceptTabSection(const InputSection *isec) {

@@ -224,6 +224,6 @@ void f(void) {
 // RUN: %clang_cl --target=x86_64-pc-windows -mapxf -### -- 2>&1 %s | FileCheck -check-prefix=APXF %s
 // RUN: %clang_cl --target=x86_64-pc-windows -mapxf -mno-apxf -### -- 2>&1 %s | FileCheck -check-prefix=NO-APXF %s
 // RUN: %clang_cl --target=x86_64-pc-windows -mapx-features=egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu,jmpabs -### -- 2>&1 %s | FileCheck -check-prefix=APXALL %s
-// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+zu" "-target-feature" "+jmpabs"
-// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-zu" "-target-feature" "-jmpabs"
+// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf" "-target-feature" "+zu" "-target-feature" "+jmpabs"
+// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-cf" "-target-feature" "-zu" "-target-feature" "-jmpabs"
 // APXALL: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf" "-target-feature" "+zu" "-target-feature" "+jmpabs"

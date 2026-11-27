@@ -2858,8 +2858,8 @@ define i128 @extract_v2i128_c(<2 x i128> %a, i32 %c) {
 ; CHECK-SD-NEXT:    and x8, x8, #0x3
 ; CHECK-SD-NEXT:    mov v0.d[1], x11
 ; CHECK-SD-NEXT:    mov x11, sp
-; CHECK-SD-NEXT:    stp q1, q0, [sp]
 ; CHECK-SD-NEXT:    stp q1, q0, [sp, #32]
+; CHECK-SD-NEXT:    stp q1, q0, [sp]
 ; CHECK-SD-NEXT:    ldr x0, [x10, x9]
 ; CHECK-SD-NEXT:    ldr x1, [x11, x8, lsl #3]
 ; CHECK-SD-NEXT:    add sp, sp, #64

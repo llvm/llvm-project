@@ -18,6 +18,8 @@
 #define LLVM_OBJECT_OFFLOADBINARY_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -35,11 +37,13 @@ namespace object {
 /// The producer of the associated offloading image.
 enum OffloadKind : uint16_t {
   OFK_None = 0,
+  OFK_FIRST = (1 << 0),
   OFK_OpenMP = (1 << 0),
   OFK_Cuda = (1 << 1),
   OFK_HIP = (1 << 2),
   OFK_SYCL = (1 << 3),
-  OFK_LAST = (1 << 4),
+  OFK_OpenACC = (1 << 4),
+  OFK_LAST = (1 << 5),
 };
 
 /// The type of contents the offloading image contains.
@@ -216,7 +220,23 @@ private:
 /// A handle to a single OffloadBinary.
 class OffloadFile {
 public:
-  using TargetID = std::pair<StringRef, StringRef>;
+  struct TargetID {
+    StringRef Triple;
+    /// The architecture, e.g. "sm_70" or "igca_30r".
+    StringRef Arch;
+    /// The real devices to compile for ahead of time, e.g. "xe-mtl-h,xe-mtl-u".
+    /// Empty if the device image lists none.
+    StringRef Code;
+
+    TargetID() = default;
+    TargetID(StringRef Triple, StringRef Arch, StringRef Code = "")
+        : Triple(Triple), Arch(Arch), Code(Code) {}
+
+    bool operator==(const TargetID &Other) const {
+      return Triple == Other.Triple && Arch == Other.Arch && Code == Other.Code;
+    }
+    bool operator!=(const TargetID &Other) const { return !(*this == Other); }
+  };
 
   OffloadFile() = default;
   OffloadFile(std::unique_ptr<OffloadBinary> Binary)
@@ -235,10 +255,11 @@ public:
     return OffloadFile(std::move((*NewBinaryOrErr)[0]));
   }
 
-  /// We use the Triple and Architecture pair to group linker inputs together.
-  /// This conversion function lets us use these inputs in a hash-map.
+  /// We use the target to group device images together. This conversion
+  /// function lets us use them in a hash-map.
   operator TargetID() const {
-    return std::make_pair(getBinary()->getTriple(), getBinary()->getArch());
+    return {getBinary()->getTriple(), getBinary()->getArch(),
+            getBinary()->getString("code")};
   }
 
 private:
@@ -266,7 +287,8 @@ LLVM_ABI StringRef getOffloadKindName(OffloadKind Name);
 /// code for a request for target \p Requested. This is directional: a
 /// feature-unspecified or generic image serves a more specific request (e.g. a
 /// generic static-archive member pulled into a specific device-image group),
-/// but not vice versa. For AMDGPU a target id is a string conforming to the
+/// but not vice versa. Unless \p Provided is generic, both must also have
+/// identical "code" lists. For AMDGPU a target id is a string conforming to the
 /// following BNF syntax:
 ///
 ///  target-id ::= '<arch> ( : <feature> ( '+' | '-' ) )*'
@@ -278,11 +300,21 @@ LLVM_ABI bool areTargetsCompatible(const OffloadFile::TargetID &Provided,
                                    const OffloadFile::TargetID &Requested);
 
 /// Returns true if \p LHS and \p RHS denote the same logical target, i.e. the
-/// same processor and features.
+/// same processor and features, and identical "code" lists.
 LLVM_ABI bool areTargetsEquivalent(const OffloadFile::TargetID &LHS,
                                    const OffloadFile::TargetID &RHS);
 
 } // namespace object
+
+template <> struct DenseMapInfo<object::OffloadFile::TargetID> {
+  using TargetID = object::OffloadFile::TargetID;
+  static unsigned getHashValue(const TargetID &ID) {
+    return hash_combine(ID.Triple, ID.Arch, ID.Code);
+  }
+  static bool isEqual(const TargetID &LHS, const TargetID &RHS) {
+    return LHS == RHS;
+  }
+};
 
 } // namespace llvm
 #endif

@@ -10,7 +10,6 @@
 ...
 ---
 name: bl_used
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: bl_used
   ; CHECK: renamable $bh = MOV8ri 1
@@ -30,7 +29,6 @@ body: |
 # keeping the value in BH and incurring the cost of saving EBX.
 ---
 name: unused_csr
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: unused_csr
   ; CHECK: CALLpcrel32 @callee

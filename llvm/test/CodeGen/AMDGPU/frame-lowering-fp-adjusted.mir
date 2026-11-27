@@ -13,7 +13,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 liveins:         
   - { reg: '$vgpr0' }
   - { reg: '$sgpr4_sgpr5' }
@@ -47,3 +46,4 @@ body:             |
 
     renamable $vgpr2 = IMPLICIT_DEF
     SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+...

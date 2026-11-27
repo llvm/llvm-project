@@ -147,12 +147,12 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
 static void collectCastInstrs(Loop *TheLoop, Instruction *Exit,
                               Type *RecurrenceType,
                               SmallPtrSetImpl<Instruction *> &Casts,
-                              unsigned &MinWidthCastToRecurTy) {
+                              Type *&MinWidthCastToRecurTy) {
 
   SmallVector<Instruction *, 8> Worklist;
   SmallPtrSet<Instruction *, 8> Visited;
   Worklist.push_back(Exit);
-  MinWidthCastToRecurTy = -1U;
+  MinWidthCastToRecurTy = nullptr;
 
   while (!Worklist.empty()) {
     Instruction *Val = Worklist.pop_back_val();
@@ -170,8 +170,11 @@ static void collectCastInstrs(Loop *TheLoop, Instruction *Exit,
         // casts on its operands. The minimum width is used by the vectorizer
         // when finding the widest type for in-loop reductions without any
         // loads/stores.
-        MinWidthCastToRecurTy = std::min<unsigned>(
-            MinWidthCastToRecurTy, Cast->getSrcTy()->getScalarSizeInBits());
+        Type *SrcTy = Cast->getSrcTy()->getScalarType();
+        if (!MinWidthCastToRecurTy ||
+            SrcTy->getScalarSizeInBits() <
+                MinWidthCastToRecurTy->getScalarSizeInBits())
+          MinWidthCastToRecurTy = SrcTy;
         continue;
       }
     }
@@ -237,6 +240,15 @@ hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK) {
   if (HasRequiredFMF)
     return collectMinMaxFMF(FPOp);
 
+  // Select-based min/max without nnan/nsz require equal non-NaN values to only
+  // differ in the sign of zero, i.e. an IEEE type without flushed denormals.
+  auto *Sel = dyn_cast<SelectInst>(FPOp);
+  Type *Ty = FPOp->getType();
+  if (Sel && (!Ty->isIEEELikeFPTy() ||
+              Sel->getFunction()->getDenormalMode(Ty->getFltSemantics()) !=
+                  DenormalMode::getIEEE()))
+    return std::nullopt;
+
   switch (RK) {
   case RecurKind::FMinimum:
   case RecurKind::FMaximum:
@@ -245,19 +257,17 @@ hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK) {
     break;
 
   case RecurKind::FMax:
-    if (!match(FPOp, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value())))
-      return std::nullopt;
-    RK = RecurKind::FMaxNum;
+    RK = Sel ? RecurKind::FMaxSelectNoFMF : RecurKind::FMaxNum;
     break;
   case RecurKind::FMin:
-    if (!match(FPOp, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
-      return std::nullopt;
-    RK = RecurKind::FMinNum;
+    RK = Sel ? RecurKind::FMinSelectNoFMF : RecurKind::FMinNum;
     break;
   default:
     return std::nullopt;
   }
-  return collectMinMaxFMF(FPOp);
+  // Only use FPOp's flags, as e.g. nsz on the fcmp of a select-based min/max
+  // does not apply to its result.
+  return FPOp->getFastMathFlags();
 }
 
 static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
@@ -502,7 +512,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   // Data used for determining if the recurrence has been type-promoted.
   Type *RecurrenceType = Phi->getType();
   SmallPtrSet<Instruction *, 4> CastInsts;
-  unsigned MinWidthCastToRecurrenceType;
+  Type *MinWidthCastToRecurrenceType = nullptr;
   Instruction *Start = Phi;
   bool IsSigned = false;
 

@@ -50,21 +50,19 @@ public:
 
     // 1+ - This is a node which has this many unprocessed operands.
   };
+
 private:
-
-  /// This is a bitvector that contains two bits for each simple value type,
-  /// where the two bits correspond to the LegalizeAction enum from
-  /// TargetLowering. This can be queried with "getTypeAction(VT)".
-  TargetLowering::ValueTypeActionImpl ValueTypeActions;
-
   /// Return how we should legalize values of this type.
   TargetLowering::LegalizeTypeAction getTypeAction(EVT VT) const {
+    // Simple types only need a table lookup, not the type to transform to.
+    if (VT.isSimple())
+      return TLI.getTypeAction(VT.getSimpleVT());
     return TLI.getTypeAction(*DAG.getContext(), VT);
   }
 
   /// Return true if this type is legal on this target.
   bool isTypeLegal(EVT VT) const {
-    return TLI.getTypeAction(*DAG.getContext(), VT) == TargetLowering::TypeLegal;
+    return getTypeAction(VT) == TargetLowering::TypeLegal;
   }
 
   /// Return true if this is a simple legal type.
@@ -161,9 +159,7 @@ private:
 
 public:
   explicit DAGTypeLegalizer(SelectionDAG &dag)
-    : TLI(dag.getTargetLoweringInfo()), DAG(dag),
-    ValueTypeActions(TLI.getValueTypeActions()) {
-  }
+      : TLI(dag.getTargetLoweringInfo()), DAG(dag) {}
 
   /// This is the main entry point for the type legalizer.  This does a
   /// top-down traversal of the dag, legalizing types as it goes.  Returns
@@ -286,6 +282,7 @@ private:
   SDValue PromoteIntRes_VECTOR_REVERSE(SDNode *N);
   SDValue PromoteIntRes_VECTOR_SHUFFLE(SDNode *N);
   SDValue PromoteIntRes_VECTOR_SPLICE(SDNode *N);
+  SDValue PromoteIntRes_VP_SPLICE(SDNode *N);
   SDValue PromoteIntRes_VECTOR_REPEAT(SDNode *N);
   SDValue PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N);
   SDValue PromoteIntRes_BUILD_VECTOR(SDNode *N);
@@ -403,7 +400,9 @@ private:
   SDValue PromoteIntOp_MSTORE(MaskedStoreSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MLOAD(MaskedLoadSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MSCATTER(MaskedScatterSDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_VP_SCATTER(VPScatterSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MGATHER(MaskedGatherSDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_VP_GATHER(VPGatherSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_VECTOR_COMPRESS(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_VECTOR_SHUFFLE_VAR(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_FRAMERETURNADDR(SDNode *N);
@@ -1149,6 +1148,7 @@ private:
   SDValue WidenVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
   SDValue WidenVecOp_VECTOR_SHUFFLE_VAR(SDNode *N, unsigned OpNo);
   SDValue WidenVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo);
+  SDValue WidenVecOp_PARTIAL_REDUCE_MLA(SDNode *N);
 
   /// Helper function to generate a set of operations to perform
   /// a vector operation for a wider type.

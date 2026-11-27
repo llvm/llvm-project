@@ -6,6 +6,7 @@
 ! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/nonconstant %t/nonconstant/test.f90 2>&1 | FileCheck --check-prefix=ONE --implicit-check-not=NUMERIC_STORAGE_SIZE %s
 ! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/repeated %t/repeated/test.f90 2>&1 | FileCheck --check-prefix=TWO --implicit-check-not=NUMERIC_STORAGE_SIZE %s
 ! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/renamed-twice %t/renamed-twice/test.f90 2>&1 | FileCheck --check-prefix=TWO --implicit-check-not=NUMERIC_STORAGE_SIZE %s
+! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/operands %t/operands/test.f90 2>&1 | FileCheck --check-prefix=OPERANDS --implicit-check-not=NUMERIC_STORAGE_SIZE %s
 ! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/homonym %t/homonym/test.f90 2>&1 | FileCheck --allow-empty --implicit-check-not=NUMERIC_STORAGE_SIZE %s
 ! RUN: not %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/rejected %t/rejected/test.f90 2>&1 | FileCheck --check-prefix=REJECTED --implicit-check-not=NUMERIC_STORAGE_SIZE %s
 ! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/reexport %t/reexport/test.f90 2>&1 | FileCheck --check-prefix=ONE --implicit-check-not=NUMERIC_STORAGE_SIZE %s
@@ -15,6 +16,8 @@
 ! ONE: warning: NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined because compiler options make default INTEGER(KIND=8) and REAL(KIND=4) have different storage sizes (8 and 4 bytes, respectively) [-Wfolding-value-checks]
 ! ONE: USE-associated here
 ! TWO-COUNT-2: warning: NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined because compiler options make default INTEGER(KIND=8) and REAL(KIND=4) have different storage sizes (8 and 4 bytes, respectively) [-Wfolding-value-checks]
+! OPERANDS: test.f90:7:17: warning: NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined
+! OPERANDS: test.f90:8:19: warning: NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined
 ! REJECTED: error: Reference to 'numeric_storage_size' is ambiguous
 
 !--- only-input/test.f90
@@ -67,6 +70,17 @@ subroutine repeated_renamed_import
   use, intrinsic :: iso_fortran_env, only: second_nss => numeric_storage_size
   integer, parameter :: nss = first_nss + second_nss
 end subroutine repeated_renamed_import
+
+!--- operands/test.f90
+subroutine operands_of_longer_expressions(n, a)
+  use, intrinsic :: iso_fortran_env, only: numeric_storage_size
+  implicit none
+  integer :: n
+  ! A specification expression, analyzed during name resolution and visited
+  ! again later, and an operand in the middle of a chain of operations.
+  real :: a(1 + numeric_storage_size + 1)
+  n = n + 1 + 2 + numeric_storage_size + 3 + 4
+end subroutine operands_of_longer_expressions
 
 !--- homonym/test.f90
 module iso_fortran_env

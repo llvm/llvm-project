@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPMEMORYUTILS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPMEMORYUTILS_H
 
+#include "SLPCostAnalysis.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -44,9 +45,8 @@ namespace llvm::slpvectorizer {
 
 /// Caches the results of the expensive analyses that are queried repeatedly
 /// for the same values while the vectorization trees are built and their costs
-/// are estimated. The results may change once the vectorized code is emitted
-/// and the scalars are erased, so the cache is cleared after each successful
-/// vectorizeTree().
+/// are estimated. The results may change once new code replaces the scalars,
+/// so the cache is cleared each time the replaced scalars are erased.
 class SLPAnalysisCache {
 public:
   /// Cached llvm::getPointersDiff(), a miss may require SCEV analysis. The
@@ -81,12 +81,6 @@ bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
                            const TargetLibraryInfo &TLI, unsigned MaxDepth,
                            bool CompareOpcodes = true);
 
-/// Returns \p Stride scaled by the allocation size of \p ScalarTy, negated if
-/// \p IsReverse is set, or nullptr if \p Stride is not a constant.
-ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
-                                      const DataLayout &DL,
-                                      bool IsReverse = false);
-
 /// Casts \p V between the widened strided access type and the entry vector
 /// type \p DstTy.
 Value *createWidenedStridedCast(IRBuilderBase &Builder, Value *V, Type *DstTy,
@@ -119,12 +113,8 @@ bool isMaskedLoadCompress(
     const DominatorTree &DT, const TargetLibraryInfo &TLI,
     const TargetTransformInfo::TargetCostKind CostKind,
     const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
-    bool &IsMasked, unsigned &InterleaveFactor,
-    SmallVectorImpl<int> &CompressMask, VectorType *&LoadVecTy,
-    SLPAnalysisCache &Cache);
+    CompressedLoadInfo &Info, SLPAnalysisCache &Cache);
 
-/// Checks if the \p VL can be transformed to a (masked)load + compress or
-/// (masked) interleaved load.
 bool isMaskedLoadCompress(
     ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
     ArrayRef<unsigned> Order, const TargetTransformInfo &TTI,

@@ -49,6 +49,7 @@
 #include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaM68k.h"
 #include "clang/Sema/SemaMIPS.h"
@@ -352,16 +353,27 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
   if (Sidx == AL.getNumArgs()) {
     // If we don't have any capability arguments, the attribute implicitly
     // refers to 'this'. So we need to make sure that 'this' exists, i.e. we're
-    // a non-static method, and that the class is a (scoped) capability.
-    const auto *MD = dyn_cast<const CXXMethodDecl>(D);
-    if (MD && !MD->isStatic()) {
-      const CXXRecordDecl *RD = MD->getParent();
+    // a non-static method, and that the class is a (scoped) capability. A
+    // function pointer field is likewise called through an object, which the
+    // attribute then refers to.
+    const RecordDecl *RD = nullptr;
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
+      if (!MD->isStatic())
+        RD = MD->getParent();
+    } else if (const auto *FD = dyn_cast<FieldDecl>(D)) {
+      RD = FD->getParent();
+      // Attributes after the record's closing brace aren't applied yet.
+      // ActOnFields checks the field then (CheckFieldCapabilityAttrs).
+      if (RD && !RD->isCompleteDefinition())
+        return;
+    }
+    if (RD) {
       // FIXME -- need to check this again on template instantiation
       if (!checkRecordDeclForAttr<CapabilityAttr>(RD) &&
           !checkRecordDeclForAttr<ScopedLockableAttr>(RD))
         S.Diag(AL.getLoc(),
                diag::warn_thread_attribute_not_on_capability_member)
-            << AL << MD->getParent();
+            << AL << RD << isa<FieldDecl>(D);
     } else {
       S.Diag(AL.getLoc(), diag::warn_thread_attribute_not_on_non_static_member)
           << AL;
@@ -514,6 +526,32 @@ bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A) {
     return true;
 
   return checkThreadSafetyValueDeclIsFunPtr(*this, VD, *A);
+}
+
+template <typename... AttrTypes> static bool isAttrWithoutArgs(const Attr *A) {
+  return (... || [A] {
+    const auto *TA = dyn_cast<AttrTypes>(A);
+    return TA && TA->args_size() == 0;
+  }());
+}
+
+void Sema::CheckFieldCapabilityAttrs(const RecordDecl *Record) {
+  std::optional<bool> IsCapability;
+  for (const FieldDecl *FD : Record->fields()) {
+    for (const Attr *A : FD->attrs()) {
+      // The attributes that may have no capability arguments.
+      if (!isAttrWithoutArgs<AcquireCapabilityAttr, ReleaseCapabilityAttr,
+                             TryAcquireCapabilityAttr, AssertCapabilityAttr>(A))
+        continue;
+      if (!IsCapability)
+        IsCapability = checkRecordDeclForAttr<CapabilityAttr>(Record) ||
+                       checkRecordDeclForAttr<ScopedLockableAttr>(Record);
+      if (!*IsCapability)
+        Diag(A->getLocation(),
+             diag::warn_thread_attribute_not_on_capability_member)
+            << A << Record << /*IsField=*/true;
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -7794,6 +7832,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_BTFDeclTag:
     handleBTFDeclTagAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_HexagonHLXVectorStackLimit:
+    S.Hexagon().handleHLXVectorStackLimitAttr(D, AL);
+    break;
   case ParsedAttr::AT_WebAssemblyExportName:
     S.Wasm().handleWebAssemblyExportNameAttr(D, AL);
     break;
@@ -8303,6 +8344,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLVkExtBuiltinOutput:
     S.HLSL().handleVkExtBuiltinOutputAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLVkBuiltIn:
+    S.HLSL().handleVkBuiltInAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLVkPushConstant:
     S.HLSL().handleVkPushConstantAttr(D, AL);

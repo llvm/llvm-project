@@ -292,6 +292,9 @@ symbols: []
 # RUN: not yaml2obj --docnum=4 %s -o %t 2>&1 | FileCheck %s --check-prefix=CONFLICT
 # RUN: not yaml2obj --docnum=5 %s -o %t 2>&1 | FileCheck %s --check-prefix=CONFLICT
 
+## Check that an explicitly empty SectionData also conflicts with Entries.
+# RUN: not yaml2obj --docnum=3 -DCONTENT= %s -o %t 2>&1 | FileCheck %s --check-prefix=CONFLICT
+
 # CONFLICT: error: Entries can't be used with SectionData, StructuredData or SizeOfRawData
 
 --- !COFF
@@ -301,7 +304,7 @@ sections:
   - Name: .llvm_bb_addr_map
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA ]
     Entries: []
-    SectionData: "00"
+    SectionData: "[[CONTENT=00]]"
 symbols: []
 ...
 

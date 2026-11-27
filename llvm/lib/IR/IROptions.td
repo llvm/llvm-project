@@ -22,6 +22,8 @@ defm : BoolField<"print-inst-debug-locs", "false",
   "Pretty print debug locations of instructions when dumping">;
 defm : BoolField<"print-prof-data", "false",
   "Pretty print perf data (branch weights, etc) when dumping">;
+defm : BoolField<"print-single-flmd-line", "false",
+  "Print the full contents of a function-local context on a single line">;
 
 // AutoUpgrade.cpp
 defm : BoolField<"auto-upgrade-debug-info", "true",

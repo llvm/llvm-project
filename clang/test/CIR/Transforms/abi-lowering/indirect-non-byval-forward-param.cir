@@ -2,6 +2,10 @@
 // RUN:     -cir-call-conv-lowering="classification-attr=test_classify" \
 // RUN:   | FileCheck %s
 
+// Where Big is passed to a non-byval call, it cannot be passed in registers,
+// as for a C++ class with a non-trivial copy constructor, so the call site
+// passes the caller's storage.
+
 !s64i = !cir.int<s, 64>
 !rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
 
@@ -12,7 +16,11 @@
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // A non-byval parameter handed on to another one, as a delegating or
@@ -53,7 +61,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // The reverse declaration order, so the call is reached before the caller's
@@ -92,7 +104,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // Mutual recursion puts each function on both sides of the other, so both
@@ -147,7 +163,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // An Expand parameter ahead of the non-byval one turns into two arguments,
@@ -191,7 +211,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
@@ -238,7 +262,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // The sret pointer takes block argument 0, so the forwarded parameter sits
@@ -249,7 +277,7 @@ module attributes {
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
     cir.call @takes_big_non_byval(%v) : (!rec_Big) -> ()
-    %ret = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %ret = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.store %z, %ret : !rec_Big, !cir.ptr<!rec_Big>
     %r = cir.load %ret : !cir.ptr<!rec_Big>, !rec_Big
@@ -281,7 +309,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // The slot states the alignment CIRGen picked for a local copy, which can be
@@ -321,7 +353,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // Two parameters in one function, forwarded in the opposite order, so a slot
@@ -406,7 +442,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // The parameter is handed on directly, with no load of its slot, which is
@@ -443,7 +483,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // The same with the callee declared first, so the call is reached before
@@ -612,7 +656,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // Two arguments taken from one parameter, one forwarded and one copied, so
@@ -653,7 +701,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // The argument is in a later block, which the spill still dominates.
@@ -742,14 +794,18 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // An sret return prepends a block argument, so the parameter is not at the
   // index its classification sits at once the signature is rewritten.
   cir.func @sret_with_unloaded_param(%arg0: !rec_Big) -> !rec_Big
       requires_call_conv_lowering attributes { test_classify = #sret_and_non_byval } {
-    %ret = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %ret = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_Big>
     %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()
@@ -789,7 +845,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // An Expand parameter ahead of it becomes one block argument per field, so
@@ -935,7 +995,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // The parameter has no spill of its own, so it already names the caller's
@@ -1038,5 +1102,56 @@ module attributes {
 
   cir.func private @takes_big_byval(%arg0: !rec_Big)
       requires_call_conv_lowering attributes { test_classify = #byval_arg }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#non_byval_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
+} {
+
+  cir.func private @takes_big_non_byval(%arg0: !rec_Big)
+      requires_call_conv_lowering attributes { test_classify = #non_byval_arg }
+
+  // The operand is loaded through an address_space cast of a slot that already
+  // has the rewritten parameter's type, so the slot itself is handed on.
+  cir.func @caller_non_byval_through_addrspace(%s: !rec_Big)
+      requires_call_conv_lowering attributes { test_classify = #passthrough } {
+    %raw = cir.alloca "raw" align(8) : !cir.ptr<!rec_Big>
+    %slot = cir.cast address_space %raw
+        : !cir.ptr<!rec_Big> -> !cir.ptr<!rec_Big, target_address_space(5)>
+    cir.store %s, %slot : !rec_Big, !cir.ptr<!rec_Big, target_address_space(5)>
+    %asload = cir.load %slot
+        : !cir.ptr<!rec_Big, target_address_space(5)>, !rec_Big
+    cir.call @takes_big_non_byval(%asload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_non_byval_through_addrspace(%[[S:.*]]: !rec_Big)
+  // CHECK-NEXT:   %[[RAW:.*]] = cir.alloca "raw" align(8) : !cir.ptr<!rec_Big>
+  // CHECK-NEXT:   %[[AS:.*]] = cir.cast address_space %[[RAW]] : !cir.ptr<!rec_Big> -> !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT:   cir.store %[[S]], %[[AS]] : !rec_Big, !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT:   cir.call @takes_big_non_byval(%[[RAW]]) :
+  // CHECK-SAME:     (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 32 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+  // CHECK-NEXT:   cir.return
 
 }

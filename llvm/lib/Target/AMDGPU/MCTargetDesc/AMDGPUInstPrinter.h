@@ -57,6 +57,8 @@ private:
                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printSMEMOffset(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
+  void printSMEMOffsetPCRel(const MCInst *MI, unsigned OpNo,
+                            const MCSubtargetInfo &STI, raw_ostream &O);
   void printSMRDLiteralOffset(const MCInst *MI, unsigned OpNo,
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printCPol(const MCInst *MI, unsigned OpNo,
@@ -68,10 +70,8 @@ private:
                 raw_ostream &O);
   void printR128A16(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                  raw_ostream &O);
-  void printFORMAT(const MCInst *MI, unsigned OpNo,
-                   const MCSubtargetInfo &STI, raw_ostream &O);
-  void printSymbolicFormat(const MCInst *MI,
-                           const MCSubtargetInfo &STI, raw_ostream &O);
+  void printFormat(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                   raw_ostream &O);
   void printRsrcReg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
 

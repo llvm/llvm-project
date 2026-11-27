@@ -1325,7 +1325,6 @@ Module *ModuleMap::createShadowedModule(StringRef Name, bool IsFramework,
   Result->ShadowingModule = ShadowingModule;
   Result->markUnavailable(/*Unimportable*/true);
   ModuleScopeIDs[Result] = CurrentModuleScopeID;
-  ShadowModules.push_back(Result);
 
   return Result;
 }
@@ -1436,7 +1435,7 @@ void ModuleMap::resolveHeaderDirectives(const FileEntry *File) const {
 void ModuleMap::resolveHeaderDirectives(
     Module *Mod, std::optional<const FileEntry *> File) const {
   bool NeedsFramework = false;
-  SmallVector<Module::UnresolvedHeaderDirective, 1> NewHeaders;
+  SmallVector<Module::UnresolvedHeaderDirective, 0> NewHeaders;
   const auto Size = File ? (*File)->getSize() : 0;
   const auto ModTime = File ? (*File)->getModificationTime() : 0;
 

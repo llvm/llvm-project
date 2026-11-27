@@ -30,7 +30,6 @@
   ; CHECK-NEXT:    ret
 ...
 name: fix_restorepoint_p4
-tracksRegLiveness: true
 stack:
   - { id: 0, stack-id: scalable-vector, size: 16, alignment: 16 }
 body:             |
@@ -41,4 +40,3 @@ body:             |
 
   bb.1.entry:
     RET_ReallyLR
----

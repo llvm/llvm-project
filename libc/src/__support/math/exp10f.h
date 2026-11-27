@@ -25,6 +25,10 @@
     (defined(LIBC_MATH_HAS_SMALL_TABLES) ||                                    \
      defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT))
 #define LIBC_MATH_EXP10F_IMPL float_eval
+#elif !defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE) &&                              \
+    defined(LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY) &&                        \
+    defined(LIBC_MATH_HAS_NO_EXCEPT) && defined(LIBC_MATH_HAS_NO_ERRNO)
+#define LIBC_MATH_EXP10F_IMPL integer_eval
 #else
 #define LIBC_MATH_EXP10F_IMPL double_eval
 #endif
@@ -32,6 +36,8 @@
 
 #if LIBC_MATH_IMPL_IS(LIBC_MATH_EXP10F_IMPL, float_eval)
 #include "src/__support/math/exp10f_float_eval.h"
+#elif LIBC_MATH_IMPL_IS(LIBC_MATH_EXP10F_IMPL, integer_eval)
+#include "src/__support/math/exp10f_integer_eval.h"
 #elif LIBC_MATH_IMPL_IS(LIBC_MATH_EXP10F_IMPL, double_eval)
 #include "src/__support/math/exp10f_double_eval.h"
 #else

@@ -46,6 +46,41 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// The masked-off lanes take %c6, so the pad can't be folded into the read.
+
+// CHECK-LABEL: func @negative_pad_and_transfer_read_in_vector_mask
+//   CHECK-DAG:   %[[C6:.*]] = arith.constant 6.0
+//       CHECK:   %[[PAD:.*]] = tensor.pad
+//       CHECK:   vector.mask %{{.*}} { vector.transfer_read %[[PAD]][%{{.*}}, %{{.*}}], %[[C6]]
+func.func @negative_pad_and_transfer_read_in_vector_mask(
+    %arg0: tensor<5x6xf32>, %mask: vector<7x9xi1>) -> vector<7x9xf32> {
+  %c0 = arith.constant 0 : index
+  %c5 = arith.constant 5.0 : f32
+  %c6 = arith.constant 6.0 : f32
+  %0 = tensor.pad %arg0 low[0, 0] high[5, 7] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %c5 : f32
+  } : tensor<5x6xf32> to tensor<10x13xf32>
+  %1 = vector.mask %mask {
+    vector.transfer_read %0[%c0, %c0], %c6
+        : tensor<10x13xf32>, vector<7x9xf32>
+  } : vector<7x9xi1> -> vector<7x9xf32>
+  return %1 : vector<7x9xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.op<"func.func">
+
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.linalg.pad_vectorization
+    } : !transform.op<"func.func">
+    transform.yield
+  }
+}
+
+// -----
+
 ///----------------------------------------------------------------------------------------
 /// [Pattern: PadOpVectorizationWithTransferWritePattern]
 ///----------------------------------------------------------------------------------------

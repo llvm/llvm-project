@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CountlsTest.h"
+#include "test/src/stdfix/CountlsTest.h"
 
 #include "src/stdfix/countlsur.h"
 

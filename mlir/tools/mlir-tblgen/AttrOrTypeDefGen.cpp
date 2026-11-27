@@ -8,6 +8,8 @@
 
 #include "AttrOrTypeFormatGen.h"
 #include "CppGenUtilities.h"
+#include "DialectGenUtilities.h"
+#include "PartitionHelpers.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/Format.h"
@@ -196,10 +198,13 @@ DefGen::DefGen(const AttrOrTypeDef &def)
     : def(def), params(def.getParameters()), defCls(def.getCppClassName()),
       valueType(isa<AttrDef>(def) ? "Attribute" : "Type"),
       defType(isa<AttrDef>(def) ? "Attr" : "Type") {
-  // Check that all parameters have names.
-  for (const AttrOrTypeParameter &param : def.getParameters())
+  // Check that all parameters have names and record the headers declaring
+  // their types.
+  for (const AttrOrTypeParameter &param : def.getParameters()) {
     if (param.isAnonymous())
       llvm::PrintFatalError("all parameters must have a name");
+    llvm::append_range(requiredIncludes, param.getCppIncludes());
+  }
 
   // If a storage class is needed, create one.
   if (def.getNumParameters() > 0)
@@ -845,8 +850,14 @@ namespace {
 /// This struct is the base generator used when processing tablegen interfaces.
 class DefGenerator {
 public:
-  bool emitDecls(StringRef selectedDialect);
-  bool emitDefs(StringRef selectedDialect);
+  /// Emit the declarations or definitions of the defs of `selectedDialect`, or
+  /// only those in partition `selectedPartition` if set. The registration
+  /// hook is named after `registrationName`, or after the dialect class if
+  /// empty.
+  bool emitDecls(StringRef selectedDialect, StringRef registrationName,
+                 StringRef selectedPartition);
+  bool emitDefs(StringRef selectedDialect, StringRef registrationName,
+                StringRef selectedPartition);
 
 protected:
   DefGenerator(ArrayRef<const Record *> defs, raw_ostream &os,
@@ -859,10 +870,53 @@ protected:
     });
   }
 
+  /// If `selectedPartition` is set, removes the defs of other partitions from
+  /// `defs`, assigning them to `otherPartitionDefs` if non-null, and returns
+  /// the names of all partitions, sorted by name.
+  SmallVector<StringRef>
+  selectPartition(StringRef selectedPartition,
+                  SmallVectorImpl<AttrOrTypeDef> &defs,
+                  SmallVectorImpl<AttrOrTypeDef> *otherPartitionDefs = nullptr);
+
   /// Emit the list of def type names.
   void emitTypeDefList(ArrayRef<AttrOrTypeDef> defs);
+
   /// Emit the code to dispatch between different defs during parsing/printing.
-  void emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs);
+  ///
+  /// When partitioning only the `selectedPartition` dispatch functions are
+  /// emitted.
+  /// The partition that comes lexicographically first is additionally elected
+  /// to define the top-level parsing/printing dispatcher that delegates to
+  /// every partitions' dispatcher.
+  void emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs,
+                              StringRef selectedPartition,
+                              ArrayRef<StringRef> partitions);
+
+  /// Emit the dispatch functions under their legacy names, which forward to
+  /// the dispatch functions of `dialect`. Only used without partitions.
+  void emitLegacyParsePrintDispatch(const Dialect &dialect);
+
+  /// Create the functions `parserName` and `printerName` that dispatch parsing
+  /// and printing to the defs.
+  std::pair<Method, Method>
+  createParsePrintDispatch(StringRef parserName, StringRef printerName,
+                           Method::Properties properties) const;
+
+  /// Returns the name of the function that dispatches parsing (`kind` is
+  /// "Parser") or printing (`kind` is "Printer") to the defs of `dialect` in
+  /// `partition`, or to all defs of `dialect` if `partition` is empty.
+  std::string getDispatchName(const Dialect &dialect, StringRef kind,
+                              StringRef partition = "") const;
+
+  /// Returns true if the dialect of `defs` registers them with the generated
+  /// registration hook. Otherwise, no hook is generated.
+  bool hasRegistrationHook(ArrayRef<AttrOrTypeDef> defs) const;
+
+  /// Returns the kind of the defs for their registration hooks.
+  RegistrationKind getRegistrationKind() const {
+    return isAttrGenerator ? RegistrationKind::Attribute
+                           : RegistrationKind::Type;
+  }
 
   /// The set of def records to emit.
   std::vector<const Record *> defRecords;
@@ -902,15 +956,20 @@ static const char *const typeDefDeclHeader = R"(
 namespace mlir {
 class AsmParser;
 class AsmPrinter;
+class OptionalParseResult;
 } // namespace mlir
 )";
 
-bool DefGenerator::emitDecls(StringRef selectedDialect) {
+bool DefGenerator::emitDecls(StringRef selectedDialect,
+                             StringRef registrationName,
+                             StringRef selectedPartition) {
   emitSourceFileHeader((defType + "Def Declarations").str(), os);
   llvm::IfDefEmitter scope(os, "GET_" + defType.upper() + "DEF_CLASSES");
 
-  SmallVector<AttrOrTypeDef, 16> defs;
+  SmallVector<AttrOrTypeDef, 16> defs, otherPartitionDefs;
   collectAllDefs(selectedDialect, defRecords, defs);
+  SmallVector<StringRef> partitions =
+      selectPartition(selectedPartition, defs, &otherPartitionDefs);
 
   // The required includes are only known once all declarations were
   // generated, so buffer the declarations until the includes are emitted.
@@ -928,12 +987,42 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
                                          def.getDescription());
       declOs << "class " << def.getCppClassName() << ";\n";
     }
+    // Forward declare the defs of the other partitions, so that the
+    // declarations can refer to defs of any partition.
+    for (const AttrOrTypeDef &def : otherPartitionDefs)
+      declOs << "class " << def.getCppClassName() << ";\n";
 
     // Emit the declarations.
     for (const AttrOrTypeDef &def : defs) {
       DefGen gen(def);
       gen.emitDecl(declOs);
       llvm::append_range(includes, gen.getRequiredIncludes());
+    }
+
+    if (hasRegistrationHook(defs))
+      emitRegistrationHookDecls(declOs, defs.front().getDialect(),
+                                getRegistrationKind(), registrationName,
+                                llvm::to_vector_of<std::string>(partitions),
+                                "partitions");
+
+    // When generating by partition, declare the parse and print dispatch
+    // functions of the dialect, as well as those of all partitions, which they
+    // call.
+    if (!partitions.empty()) {
+      raw_indented_ostream indentedOs(declOs);
+      Dialect dialect = defs.front().getDialect();
+      auto declareDispatch = [&](StringRef partition) {
+        auto [parser, printer] = createParsePrintDispatch(
+            getDispatchName(dialect, "Parser", partition),
+            getDispatchName(dialect, "Printer", partition), Method::None);
+        parser.writeDeclTo(indentedOs);
+        printer.writeDeclTo(indentedOs);
+      };
+      // An empty partition name declares the functions of the dialect, which
+      // dispatch to every partition.
+      declareDispatch("");
+      for (StringRef partition : partitions)
+        declareDispatch(partition);
     }
   }
   tblgen::emitIncludes(os, includes);
@@ -974,6 +1063,8 @@ void DefGenerator::emitTypeDefList(ArrayRef<AttrOrTypeDef> defs) {
 /// {0}: the dialect fully qualified class name.
 /// {1}: the optional code for the dynamic attribute parser dispatch.
 /// {2}: the optional code for the dynamic attribute printer dispatch.
+/// {3}: the name of the function dispatching to the attribute parsers.
+/// {4}: the name of the function dispatching to the attribute printers.
 static const char *const dialectDefaultAttrPrinterParserDispatch = R"(
 /// Parse an attribute registered to this dialect.
 ::mlir::Attribute {0}::parseAttribute(::mlir::DialectAsmParser &parser,
@@ -982,7 +1073,7 @@ static const char *const dialectDefaultAttrPrinterParserDispatch = R"(
   ::llvm::StringRef attrTag;
   {{
     ::mlir::Attribute attr;
-    auto parseResult = generatedAttributeParser(parser, &attrTag, type, attr);
+    auto parseResult = {3}(parser, &attrTag, type, attr);
     if (parseResult.has_value())
       return attr;
   }
@@ -994,7 +1085,7 @@ static const char *const dialectDefaultAttrPrinterParserDispatch = R"(
 /// Print an attribute registered to this dialect.
 void {0}::printAttribute(::mlir::Attribute attr,
                          ::mlir::DialectAsmPrinter &printer) const {{
-  if (::mlir::succeeded(generatedAttributePrinter(attr, printer)))
+  if (::mlir::succeeded({4}(attr, printer)))
     return;
   {2}
 }
@@ -1023,13 +1114,15 @@ static const char *const dialectDynamicAttrPrinterDispatch = R"(
 /// {0}: the dialect fully qualified class name.
 /// {1}: the optional code for the dynamic type parser dispatch.
 /// {2}: the optional code for the dynamic type printer dispatch.
+/// {3}: the name of the function dispatching to the type parsers.
+/// {4}: the name of the function dispatching to the type printers.
 static const char *const dialectDefaultTypePrinterParserDispatch = R"(
 /// Parse a type registered to this dialect.
 ::mlir::Type {0}::parseType(::mlir::DialectAsmParser &parser) const {{
   ::llvm::SMLoc typeLoc = parser.getCurrentLocation();
   ::llvm::StringRef mnemonic;
   ::mlir::Type genType;
-  auto parseResult = generatedTypeParser(parser, &mnemonic, genType);
+  auto parseResult = {3}(parser, &mnemonic, genType);
   if (parseResult.has_value())
     return genType;
   {1}
@@ -1040,7 +1133,7 @@ static const char *const dialectDefaultTypePrinterParserDispatch = R"(
 /// Print a type registered to this dialect.
 void {0}::printType(::mlir::Type type,
                     ::mlir::DialectAsmPrinter &printer) const {{
-  if (::mlir::succeeded(generatedTypePrinter(type, printer)))
+  if (::mlir::succeeded({4}(type, printer)))
     return;
   {2}
 }
@@ -1096,34 +1189,80 @@ static bool needsLeadingSpace(const AttrOrTypeDef &def) {
   return !llvm::is_contained("<{([`", fmtStr[1]);
 }
 
-/// Emit the dialect printer/parser dispatcher. User's code should call these
-/// functions from their dialect's print/parse methods.
-void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
-  if (llvm::none_of(defs, [](const AttrOrTypeDef &def) {
-        return def.getMnemonic().has_value();
-      })) {
-    return;
-  }
-  // Declare the parser.
+std::pair<Method, Method>
+DefGenerator::createParsePrintDispatch(StringRef parserName,
+                                       StringRef printerName,
+                                       Method::Properties properties) const {
   SmallVector<MethodParameter> params = {{"::mlir::AsmParser &", "parser"},
                                          {"::llvm::StringRef *", "mnemonic"}};
   if (isAttrGenerator)
     params.emplace_back("::mlir::Type", "type");
   params.emplace_back(strfmt("::mlir::{0} &", valueType), "value");
-  Method parse("::mlir::OptionalParseResult",
-               strfmt("generated{0}Parser", valueType), Method::StaticInline,
+  Method parse("::mlir::OptionalParseResult", parserName, properties,
                std::move(params));
-  // Declare the printer.
-  Method printer("::llvm::LogicalResult",
-                 strfmt("generated{0}Printer", valueType), Method::StaticInline,
+  Method printer("::llvm::LogicalResult", printerName, properties,
                  {{strfmt("::mlir::{0}", valueType), "def"},
                   {"::mlir::AsmPrinter &", "printer"}});
+  return {std::move(parse), std::move(printer)};
+}
+
+std::string DefGenerator::getDispatchName(const Dialect &dialect,
+                                          StringRef kind,
+                                          StringRef partition) const {
+  return strfmt("generated{0}{1}{2}{3}", dialect.getCppClassName(), valueType,
+                kind, getPartitionFunctionSuffix(partition));
+}
+
+SmallVector<StringRef> DefGenerator::selectPartition(
+    StringRef selectedPartition, SmallVectorImpl<AttrOrTypeDef> &defs,
+    SmallVectorImpl<AttrOrTypeDef> *otherPartitionDefs) {
+  if (selectedPartition.empty())
+    return {};
+
+  SmallVector<const Record *> records = llvm::map_to_vector(
+      defs, [](const AttrOrTypeDef &def) { return def.getDef(); });
+  verifyPartitions(
+      records, selectedPartition, isAttrGenerator ? "attribute" : "type",
+      isAttrGenerator ? "-attrdef-partition" : "-typedef-partition");
+
+  SmallVector<StringRef> partitions = getPartitionNames(records);
+  tblgen::selectPartition(
+      selectedPartition, defs, otherPartitionDefs,
+      [](const AttrOrTypeDef &def) { return def.getDef(); });
+  return partitions;
+}
+
+/// Emit the dialect printer/parser dispatcher. User's code should call these
+/// functions from their dialect's print/parse methods.
+void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs,
+                                          StringRef selectedPartition,
+                                          ArrayRef<StringRef> partitions) {
+  // The dispatch functions of all partitions are declared, so they are always
+  // emitted when generating by partition.
+  if (selectedPartition.empty() &&
+      llvm::none_of(defs, [](const AttrOrTypeDef &def) {
+        return def.getMnemonic().has_value();
+      })) {
+    return;
+  }
+
+  Dialect dialect = defs.front().getDialect();
+  // Without partitions, the dispatch functions are local to the definitions.
+  // With partitions, they are declared by every partition, so that the
+  // top-level dispatch function of the dialect can call them.
+  bool byPartition = !selectedPartition.empty();
+  auto [parse, printer] = createParsePrintDispatch(
+      getDispatchName(dialect, "Parser", selectedPartition),
+      getDispatchName(dialect, "Printer", selectedPartition),
+      byPartition ? Method::None : Method::StaticInline);
 
   // The parser dispatch uses a KeywordSwitch, matching on the mnemonic and
-  // calling the def's parse function.
+  // calling the def's parse function. The KeywordSwitch only parses the
+  // mnemonic if `*mnemonic` is empty, so that callers can continue with a
+  // mnemonic they already parsed, e.g. in another dispatch function.
   parse.body() << "  return "
                   "::mlir::AsmParser::KeywordSwitch<::mlir::"
-                  "OptionalParseResult>(parser)\n";
+                  "OptionalParseResult>(parser, mnemonic)\n";
   const char *const getValueForMnemonic =
       R"(    .Case({0}::getMnemonic(), [&](llvm::StringRef, llvm::SMLoc) {{
       value = {0}::{1};
@@ -1184,8 +1323,83 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
   printer.body() << "    .Default([](auto) { return ::mlir::failure(); });";
 
   raw_indented_ostream indentedOs(os);
+  if (!byPartition) {
+    {
+      DialectNamespaceEmitter ns(os, dialect);
+      // Note: The functions are inline, therefore only the declarations need
+      // to be emitted.
+      parse.writeDeclTo(indentedOs);
+      printer.writeDeclTo(indentedOs);
+    }
+    emitLegacyParsePrintDispatch(dialect);
+    return;
+  }
+
+  DialectNamespaceEmitter ns(os, dialect);
+  parse.writeDefTo(indentedOs, "");
+  printer.writeDefTo(indentedOs, "");
+
+  // The first partition by name also emits the dispatch functions of the
+  // dialect, which try the dispatch functions of every partition in turn.
+  if (partitions.front() != selectedPartition)
+    return;
+
+  auto [parseAll, printAll] = createParsePrintDispatch(
+      getDispatchName(dialect, "Parser"), getDispatchName(dialect, "Printer"),
+      Method::None);
+  for (StringRef partition : partitions) {
+    parseAll.body() << llvm::formatv(
+        R"(  if (::mlir::OptionalParseResult result = {0}::{1}(parser, mnemonic, {2}value); result.has_value())
+    return result;
+)",
+        dialect.getCppNamespace(),
+        getDispatchName(dialect, "Parser", partition),
+        isAttrGenerator ? "type, " : "");
+    printAll.body() << llvm::formatv(
+        R"(  if (::mlir::succeeded({0}::{1}(def, printer)))
+    return ::mlir::success();
+)",
+        dialect.getCppNamespace(),
+        getDispatchName(dialect, "Printer", partition));
+  }
+  parseAll.body() << "  return std::nullopt;";
+  printAll.body() << "  return ::mlir::failure();";
+  parseAll.writeDefTo(indentedOs, "");
+  printAll.writeDefTo(indentedOs, "");
+}
+
+/// Emit `generatedAttributeParser` and `generatedAttributePrinter` (or
+/// `...Type...`), the former names of the dispatch functions of the dialect
+/// when not generating by partition, which forward to them.
+// TODO: Mark these functions `[[deprecated]]` once all in-tree users call the
+// dispatch functions of the dialect instead, and remove them later.
+void DefGenerator::emitLegacyParsePrintDispatch(const Dialect &dialect) {
+  auto [parse, printer] = createParsePrintDispatch(
+      strfmt("generated{0}Parser", valueType),
+      strfmt("generated{0}Printer", valueType), Method::StaticInline);
+  parse.body() << llvm::formatv(
+      "  return {0}::{1}(parser, mnemonic, {2}value);",
+      dialect.getCppNamespace(), getDispatchName(dialect, "Parser"),
+      isAttrGenerator ? "type, " : "");
+  printer.body() << llvm::formatv("  return {0}::{1}(def, printer);",
+                                  dialect.getCppNamespace(),
+                                  getDispatchName(dialect, "Printer"));
+  // Unlike the dispatch functions of the dialect, which these functions use,
+  // these functions are unused unless called by the dialect.
+  raw_indented_ostream indentedOs(os);
+  os << "/// Kept for compatibility, use `"
+     << getDispatchName(dialect, "Parser") << "` and `"
+     << getDispatchName(dialect, "Printer") << "` instead.\n"
+     << "[[maybe_unused]] ";
   parse.writeDeclTo(indentedOs);
+  os << "[[maybe_unused]] ";
   printer.writeDeclTo(indentedOs);
+}
+
+bool DefGenerator::hasRegistrationHook(ArrayRef<AttrOrTypeDef> defs) const {
+  Dialect dialect = defs.front().getDialect();
+  return isAttrGenerator ? dialect.useDefaultAttributeRegistration()
+                         : dialect.useDefaultTypeRegistration();
 }
 
 /// Headers declaring the C++ constructs used by every generated attribute or
@@ -1203,18 +1417,21 @@ static constexpr StringRef attrOrTypeDefIncludes[] = {
     "mlir/IR/OpImplementation.h",
 };
 
-bool DefGenerator::emitDefs(StringRef selectedDialect) {
+bool DefGenerator::emitDefs(StringRef selectedDialect,
+                            StringRef registrationName,
+                            StringRef selectedPartition) {
   emitSourceFileHeader((defType + "Def Definitions").str(), os);
 
   SmallVector<AttrOrTypeDef, 16> defs;
   collectAllDefs(selectedDialect, defRecords, defs);
+  SmallVector<StringRef> partitions = selectPartition(selectedPartition, defs);
   if (defs.empty())
     return false;
   emitTypeDefList(defs);
 
   llvm::IfDefEmitter scope(os, "GET_" + defType.upper() + "DEF_CLASSES");
   tblgen::emitIncludes(os, attrOrTypeDefIncludes);
-  emitParsePrintDispatch(defs);
+  emitParsePrintDispatch(defs, selectedPartition, partitions);
   for (const AttrOrTypeDef &def : defs) {
     {
       DialectNamespaceEmitter ns(os, def.getDialect());
@@ -1228,19 +1445,40 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
          << ")\n";
   }
 
+  // Registering requires the definitions of the storage classes, so the hooks
+  // are defined alongside the defs.
+  if (hasRegistrationHook(defs)) {
+    Dialect dialect = defs.front().getDialect();
+    DialectNamespaceEmitter ns(os, dialect);
+    emitRegistrationHookDefs(
+        os, dialect, getRegistrationKind(), registrationName, selectedPartition,
+        llvm::to_vector_of<std::string>(partitions),
+        llvm::map_to_vector(defs, [](const AttrOrTypeDef &def) {
+          return def.getCppClassName().str();
+        }));
+  }
+
+  // Only the first partition by name defines the parser/printer of the
+  // dialect.
+  if (!partitions.empty() && partitions.front() != selectedPartition)
+    return false;
+
   Dialect firstDialect = defs.front().getDialect();
+  std::string parserName = getDispatchName(firstDialect, "Parser");
+  std::string printerName = getDispatchName(firstDialect, "Printer");
 
   // Emit the default parser/printer for Attributes if the dialect asked for it.
   if (isAttrGenerator && firstDialect.useDefaultAttributePrinterParser()) {
     DialectNamespaceEmitter nsEmitter(os, firstDialect);
     if (firstDialect.isExtensible()) {
-      os << llvm::formatv(dialectDefaultAttrPrinterParserDispatch,
-                          firstDialect.getCppClassName(),
-                          dialectDynamicAttrParserDispatch,
-                          dialectDynamicAttrPrinterDispatch);
+      os << llvm::formatv(
+          dialectDefaultAttrPrinterParserDispatch,
+          firstDialect.getCppClassName(), dialectDynamicAttrParserDispatch,
+          dialectDynamicAttrPrinterDispatch, parserName, printerName);
     } else {
       os << llvm::formatv(dialectDefaultAttrPrinterParserDispatch,
-                          firstDialect.getCppClassName(), "", "");
+                          firstDialect.getCppClassName(), "", "", parserName,
+                          printerName);
     }
   }
 
@@ -1248,13 +1486,14 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
   if (!isAttrGenerator && firstDialect.useDefaultTypePrinterParser()) {
     DialectNamespaceEmitter nsEmitter(os, firstDialect);
     if (firstDialect.isExtensible()) {
-      os << llvm::formatv(dialectDefaultTypePrinterParserDispatch,
-                          firstDialect.getCppClassName(),
-                          dialectDynamicTypeParserDispatch,
-                          dialectDynamicTypePrinterDispatch);
+      os << llvm::formatv(
+          dialectDefaultTypePrinterParserDispatch,
+          firstDialect.getCppClassName(), dialectDynamicTypeParserDispatch,
+          dialectDynamicTypePrinterDispatch, parserName, printerName);
     } else {
       os << llvm::formatv(dialectDefaultTypePrinterParserDispatch,
-                          firstDialect.getCppClassName(), "", "");
+                          firstDialect.getCppClassName(), "", "", parserName,
+                          printerName);
     }
   }
 
@@ -1365,18 +1604,32 @@ static llvm::cl::opt<std::string>
     attrDialect("attrdefs-dialect",
                 llvm::cl::desc("Generate attributes for this dialect"),
                 llvm::cl::cat(attrdefGenCat), llvm::cl::CommaSeparated);
+static llvm::cl::opt<std::string> attrRegistrationName(
+    "attrdefs-registration-name",
+    llvm::cl::desc("Name the attribute registration hook "
+                   "'register<name>Attributes' instead of using the dialect "
+                   "class name. Required to generate attributes of a dialect "
+                   "in more than one file, e.g. for dialect extensions"),
+    llvm::cl::cat(attrdefGenCat));
+static llvm::cl::opt<std::string> attrPartition(
+    "attrdef-partition",
+    llvm::cl::desc("Only generate the attributes in this partition (see "
+                   "`AttrOrTypeDef::partition`)"),
+    llvm::cl::cat(attrdefGenCat));
 
 static mlir::GenRegistration
     genAttrDefs("gen-attrdef-defs", "Generate AttrDef definitions",
                 [](const RecordKeeper &records, raw_ostream &os) {
                   AttrDefGenerator generator(records, os);
-                  return generator.emitDefs(attrDialect);
+                  return generator.emitDefs(attrDialect, attrRegistrationName,
+                                            attrPartition);
                 });
 static mlir::GenRegistration
     genAttrDecls("gen-attrdef-decls", "Generate AttrDef declarations",
                  [](const RecordKeeper &records, raw_ostream &os) {
                    AttrDefGenerator generator(records, os);
-                   return generator.emitDecls(attrDialect);
+                   return generator.emitDecls(attrDialect, attrRegistrationName,
+                                              attrPartition);
                  });
 
 static mlir::GenRegistration
@@ -1403,18 +1656,32 @@ static llvm::cl::opt<std::string>
     typeDialect("typedefs-dialect",
                 llvm::cl::desc("Generate types for this dialect"),
                 llvm::cl::cat(typedefGenCat), llvm::cl::CommaSeparated);
+static llvm::cl::opt<std::string> typeRegistrationName(
+    "typedefs-registration-name",
+    llvm::cl::desc("Name the type registration hook 'register<name>Types' "
+                   "instead of using the dialect class name. Required to "
+                   "generate types of a dialect in more than one file, e.g. "
+                   "for dialect extensions"),
+    llvm::cl::cat(typedefGenCat));
+static llvm::cl::opt<std::string> typePartition(
+    "typedef-partition",
+    llvm::cl::desc("Only generate the types in this partition (see "
+                   "`AttrOrTypeDef::partition`)"),
+    llvm::cl::cat(typedefGenCat));
 
 static mlir::GenRegistration
     genTypeDefs("gen-typedef-defs", "Generate TypeDef definitions",
                 [](const RecordKeeper &records, raw_ostream &os) {
                   TypeDefGenerator generator(records, os);
-                  return generator.emitDefs(typeDialect);
+                  return generator.emitDefs(typeDialect, typeRegistrationName,
+                                            typePartition);
                 });
 static mlir::GenRegistration
     genTypeDecls("gen-typedef-decls", "Generate TypeDef declarations",
                  [](const RecordKeeper &records, raw_ostream &os) {
                    TypeDefGenerator generator(records, os);
-                   return generator.emitDecls(typeDialect);
+                   return generator.emitDecls(typeDialect, typeRegistrationName,
+                                              typePartition);
                  });
 
 static mlir::GenRegistration

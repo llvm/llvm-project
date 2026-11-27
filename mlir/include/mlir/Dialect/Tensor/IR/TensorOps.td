@@ -1253,7 +1253,7 @@ def Tensor_PadOp : Tensor_Op<"pad", [
     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
       "reifyResultShapes"]>,
     AttrSizedOperandSegments,
-    Pure,
+    RecursiveMemoryEffects,
     SingleBlockImplicitTerminator<"mlir::tensor::YieldOp">]> {
   let summary = "tensor pad operation";
   let description = [{

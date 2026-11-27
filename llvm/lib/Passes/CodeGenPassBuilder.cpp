@@ -167,6 +167,15 @@ CodeGenPassBuilder::CodeGenPassBuilder(TargetMachine &TM,
     Opt.OptimizeRegAlloc =
         Optimized ? cl::boolOrDefault::BOU_TRUE : cl::boolOrDefault::BOU_FALSE;
   }
+
+  // These passes require NoVRegs, which a target keeping virtual registers
+  // never reaches.
+  if (!TM.usesPhysRegsForValues())
+    disablePass<FuncletLayoutPass, ImplicitNullChecksPass,
+                MachineCopyPropagationPass, MachineLateInstrsCleanupPass,
+                PatchableFunctionPass, PostRAMachineSinkingPass,
+                PostRASchedulerPass, RemoveLoadsIntoFakeUsesPass,
+                ShrinkWrapPass, StackMapLivenessPass>();
 }
 
 // Out-of-line to anchor the vtable in this translation unit.
@@ -368,7 +377,7 @@ void CodeGenPassBuilder::addISelPasses(PassManagerWrapper &PMW) {
     addFunctionPass(ObjCARCContractPass(), PMW);
     flushFPMsToMPM(PMW);
   }
-  addModulePass(PreISelIntrinsicLoweringPass(&TM), PMW);
+  addModulePass(PreISelIntrinsicLoweringPass(TM), PMW);
   addFunctionPass(ExpandIRInstsPass(TM, getOptLevel()), PMW);
 
   addIRPasses(PMW);
@@ -724,8 +733,7 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
 
   addMachineFunctionPass(RemoveLoadsIntoFakeUsesPass(), PMW);
   addMachineFunctionPass(StackMapLivenessPass(), PMW);
-  addMachineFunctionPass(LiveDebugValuesPass(TM.shouldEmitDebugEntryValues()),
-                         PMW);
+  addMachineFunctionPass(LiveDebugValuesPass(), PMW);
   addMachineFunctionPass(MachineSanitizerBinaryMetadataPass(), PMW);
 
   if (TM.Options.EnableMachineOutliner &&
@@ -848,8 +856,8 @@ Error CodeGenPassBuilder::addRegAssignAndRewriteFast(PassManagerWrapper &PMW) {
   return Error::success();
 }
 
-Expected<bool>
-CodeGenPassBuilder::addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) {
+Error CodeGenPassBuilder::addRegAssignAndRewriteOptimized(
+    PassManagerWrapper &PMW) {
   // Add the selected register allocation pass.
   addRegAllocPass(PMW, true);
 
@@ -859,15 +867,19 @@ CodeGenPassBuilder::addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) {
   // Finally rewrite virtual registers.
   addMachineFunctionPass(VirtRegRewriterPass(), PMW);
 
-  return true;
+  return Error::success();
 }
 
 /// Add the minimum set of target-independent passes that are required for
 /// register allocation. No coalescing or scheduling.
 Error CodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(PHIEliminationPass(), PMW);
-  if (!TM.enableTiedFastRegAlloc())
+  // RegAllocFast rewrites tied operands itself, but only when it runs.
+  bool RunRegAlloc = TM.usesPhysRegsForValues();
+  if (!RunRegAlloc || !TM.enableTiedFastRegAlloc())
     addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
+  if (!RunRegAlloc)
+    return Error::success();
   return addRegAssignAndRewriteFast(PMW);
 }
 
@@ -912,11 +924,10 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   // PreRA instruction scheduling.
   addMachineFunctionPass(MachineSchedulerPass(&TM), PMW);
 
-  Expected<bool> AddedPasses = addRegAssignAndRewriteOptimized(PMW);
-  if (!AddedPasses)
-    return AddedPasses.takeError();
-  if (!AddedPasses.get())
+  if (!TM.usesPhysRegsForValues())
     return Error::success();
+  if (Error Err = addRegAssignAndRewriteOptimized(PMW))
+    return Err;
 
   addMachineFunctionPass(StackSlotColoringPass(), PMW);
 

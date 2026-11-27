@@ -1,4 +1,5 @@
-# RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 -pipeliner-experimental-cg=true | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 \
+# RUN:   -store-sequencing=false -pipeliner-experimental-cg=true | FileCheck %s
 # REQUIRES: asserts
 
 # Test that loop carried memory dependences are computed correctly.
@@ -72,31 +73,30 @@
 ...
 ---
 name:            f
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     successors: %bb.1, %bb.2
     liveins: $r0, $r1
-  
+
     %8:intregs = COPY $r1
     %7:intregs = COPY $r0
     %9:predregs = C2_cmpgti %8, 2
     J2_jumpf %9, %bb.2, implicit-def dead $pc
     J2_jump %bb.1, implicit-def dead $pc
-  
+
   bb.1.for.body.preheader:
     %0:intregs = A2_addi %8, -2
     %11:intregs = A2_tfrsi 0
     %14:intregs = COPY %0
     J2_loop0r %bb.3, %14, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
     J2_jump %bb.3, implicit-def dead $pc
-  
+
   bb.2.for.cond.cleanup:
     PS_jmpret $r31, implicit-def dead $pc
-  
+
   bb.3.for.body:
     successors: %bb.2, %bb.3
-  
+
     %1:intregs = PHI %7, %bb.1, %6, %bb.3
     %3:intregs = PHI %11, %bb.1, %4, %bb.3
     %12:intregs = L2_loadri_io %1, 40 :: (load (s32) from %ir.cgep, !tbaa !5)

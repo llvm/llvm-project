@@ -20,7 +20,18 @@
 #include "LoopAnnotationImporter.h"
 
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAggregateOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDebugIntrinsicOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMVarArgOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMVectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
@@ -29,6 +40,7 @@
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -573,6 +585,42 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
                           << renderMetadata(current);
   }
   return success();
+}
+
+Attribute ModuleImport::convertTBAAStructMetadata(const llvm::MDNode *node) {
+  // Operands come in conceptual groups of three; anything else is malformed.
+  if (node->getNumOperands() == 0 || node->getNumOperands() % 3 != 0)
+    return {};
+
+  SmallVector<Attribute> fields;
+  fields.reserve(node->getNumOperands() / 3);
+  for (unsigned i = 0, e = node->getNumOperands(); i != e; i += 3) {
+    auto *offset = llvm::mdconst::dyn_extract_or_null<llvm::ConstantInt>(
+        node->getOperand(i));
+    auto *size = llvm::mdconst::dyn_extract_or_null<llvm::ConstantInt>(
+        node->getOperand(i + 1));
+    if (!offset || !size)
+      return {};
+    // Offsets and sizes are uint64_t in the attribute. Read them as APInts:
+    // LLVM compares offsets zero-extended, so a narrow constant with its
+    // high bit set (e.g. i32 0x80000000) must keep its unsigned value
+    // rather than sign-extending. Values using more than 64 bits cannot
+    // be represented and are declined.
+    const APInt &offsetAP = offset->getValue();
+    const APInt &sizeAP = size->getValue();
+    if (offsetAP.getActiveBits() > 64 || sizeAP.getActiveBits() > 64)
+      return {};
+    auto *tagNode = dyn_cast_if_present<llvm::MDNode>(node->getOperand(i + 2));
+    if (!tagNode)
+      return {};
+    auto tag = dyn_cast_if_present<TBAATagAttr>(lookupTBAAAttr(tagNode));
+    if (!tag)
+      return {};
+    fields.push_back(builder.getAttr<TBAAStructFieldAttr>(
+        offsetAP.getZExtValue(), sizeAP.getZExtValue(), tag));
+  }
+
+  return builder.getArrayAttr(fields);
 }
 
 LogicalResult
@@ -1170,6 +1218,30 @@ LogicalResult ModuleImport::convertMetadata() {
       if (aliasAnalysisNodes.TBAA)
         if (failed(processTBAAMetadata(aliasAnalysisNodes.TBAA)))
           return failure();
+      // A `!tbaa.struct` node reaches its own tags, and those tags may appear
+      // nowhere else in the module. Without walking them here the struct
+      // conversion below finds nothing and the node is declined.
+      if (aliasAnalysisNodes.TBAAStruct) {
+        const llvm::MDNode *structNode = aliasAnalysisNodes.TBAAStruct;
+        // Operands come in groups of three: check the count before
+        // walking the tags. The verifier rejects malformed nodes
+        // before CLI import, so this guards direct API use.
+        bool wellFormed = structNode->getNumOperands() % 3 == 0;
+        if (wellFormed) {
+          for (unsigned i = 2, e = structNode->getNumOperands(); i < e; i += 3)
+            if (auto *tag = dyn_cast_if_present<llvm::MDNode>(
+                    structNode->getOperand(i)))
+              if (failed(processTBAAMetadata(tag)))
+                return failure();
+        }
+        // Convert the struct node itself once its tags are in the map. A
+        // node that cannot be modeled is recorded with a null value so it
+        // is not converted again for every instruction carrying it, and is
+        // declined at attach time.
+        if (!tbaaStructMapping.contains(structNode))
+          tbaaStructMapping.insert(
+              {structNode, convertTBAAStructMetadata(structNode)});
+      }
       if (aliasAnalysisNodes.Scope)
         if (failed(processAliasScopeMetadata(aliasAnalysisNodes.Scope)))
           return failure();
@@ -2176,6 +2248,9 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
     if (!mdAttr)
       return emitError(mlirModule.getLoc())
              << "unsupported metadata: " << renderMetadata(md);
+    // The mapped metadata value may also be used in a sibling block.
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(constantInsertionBlock);
     Value result =
         MetadataAsValueOp::create(builder, UnknownLoc::get(context), mdAttr)
             .getRes();
@@ -2228,6 +2303,27 @@ ModuleImport::convertValues(ArrayRef<llvm::Value *> values) {
   return remapped;
 }
 
+FailureOr<ModuleImport::OperandBundles>
+ModuleImport::convertOperandBundles(ArrayRef<llvm::OperandBundleUse> bundles) {
+  SmallVector<Value> operands;
+  SmallVector<int32_t> sizes;
+  SmallVector<Attribute> tags;
+  sizes.reserve(bundles.size());
+  tags.reserve(bundles.size());
+  for (const llvm::OperandBundleUse &bundle : bundles) {
+    auto converted =
+        convertValues(llvm::to_vector_of<llvm::Value *>(bundle.Inputs));
+    if (failed(converted))
+      return failure();
+    llvm::append_range(operands, *converted);
+    sizes.push_back(converted->size());
+    tags.push_back(builder.getStringAttr(bundle.getTagName()));
+  }
+  return OperandBundles{std::move(operands),
+                        builder.getDenseI32ArrayAttr(sizes),
+                        builder.getArrayAttr(tags)};
+}
+
 LogicalResult ModuleImport::convertIntrinsicArguments(
     ArrayRef<llvm::Value *> values, ArrayRef<llvm::OperandBundleUse> opBundles,
     bool requiresOpBundles, ArrayRef<unsigned> immArgPositions,
@@ -2260,33 +2356,15 @@ LogicalResult ModuleImport::convertIntrinsicArguments(
     valuesOut.push_back(*mlirValue);
   }
 
-  SmallVector<int> opBundleSizes;
-  SmallVector<Attribute> opBundleTagAttrs;
   if (requiresOpBundles) {
-    opBundleSizes.reserve(opBundles.size());
-    opBundleTagAttrs.reserve(opBundles.size());
-
-    for (const llvm::OperandBundleUse &bundle : opBundles) {
-      opBundleSizes.push_back(bundle.Inputs.size());
-      opBundleTagAttrs.push_back(StringAttr::get(context, bundle.getTagName()));
-
-      for (const llvm::Use &opBundleOperand : bundle.Inputs) {
-        auto operandMlirValue = convertValue(opBundleOperand.get());
-        if (failed(operandMlirValue))
-          return failure();
-        valuesOut.push_back(*operandMlirValue);
-      }
-    }
-
-    auto opBundleSizesAttr = DenseI32ArrayAttr::get(context, opBundleSizes);
-    auto opBundleSizesAttrNameAttr =
-        StringAttr::get(context, LLVMDialect::getOpBundleSizesAttrName());
-    attrsOut.push_back({opBundleSizesAttrNameAttr, opBundleSizesAttr});
-
-    auto opBundleTagsAttr = ArrayAttr::get(context, opBundleTagAttrs);
-    auto opBundleTagsAttrNameAttr =
-        StringAttr::get(context, LLVMDialect::getOpBundleTagsAttrName());
-    attrsOut.push_back({opBundleTagsAttrNameAttr, opBundleTagsAttr});
+    FailureOr<OperandBundles> bundles = convertOperandBundles(opBundles);
+    if (failed(bundles))
+      return failure();
+    llvm::append_range(valuesOut, bundles->operands);
+    attrsOut.push_back(builder.getNamedAttr(
+        LLVMDialect::getOpBundleSizesAttrName(), bundles->sizes));
+    attrsOut.push_back(builder.getNamedAttr(
+        LLVMDialect::getOpBundleTagsAttrName(), bundles->tags));
   }
 
   return success();
@@ -2618,6 +2696,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
 
     auto callOp = [&]() -> FailureOr<Operation *> {
       if (auto *asmI = dyn_cast<llvm::InlineAsm>(calledOperand)) {
+        if (callInst->hasOperandBundles())
+          emitWarning(loc, "dropping operand bundles on inline assembly");
         Type resultTy = convertType(callInst->getType());
         if (!resultTy)
           return failure();
@@ -2655,6 +2735,15 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
         callee = convertCalleeName(callInst);
       }
       CallOp callOp = CallOp::create(builder, loc, *funcTy, callee, *operands);
+      if (callInst->hasOperandBundles()) {
+        FailureOr<OperandBundles> bundles =
+            convertOperandBundles(llvm::to_vector(callInst->operand_bundles()));
+        if (failed(bundles))
+          return failure();
+        callOp.getOpBundleOperandsMutable().join().assign(bundles->operands);
+        callOp.setOpBundleSizesAttr(bundles->sizes);
+        callOp.setOpBundleTagsAttr(bundles->tags);
+      }
 
       if (failed(convertCallAttributes(callInst, callOp)))
         return failure();
@@ -2752,6 +2841,15 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     auto invokeOp = InvokeOp::create(
         builder, loc, *funcTy, calleeName, *operands, directNormalDest,
         ValueRange(), lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
+    if (invokeInst->hasOperandBundles()) {
+      FailureOr<OperandBundles> bundles =
+          convertOperandBundles(llvm::to_vector(invokeInst->operand_bundles()));
+      if (failed(bundles))
+        return failure();
+      invokeOp.getOpBundleOperandsMutable().join().assign(bundles->operands);
+      invokeOp.setOpBundleSizesAttr(bundles->sizes);
+      invokeOp.setOpBundleTagsAttr(bundles->tags);
+    }
 
     if (failed(convertInvokeAttributes(invokeInst, invokeOp)))
       return failure();

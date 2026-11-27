@@ -7,23 +7,22 @@
 define amdgpu_ps void @global_load_lds_dword_saddr(ptr addrspace(1) inreg nocapture %gptr, ptr addrspace(3) nocapture %lptr) {
 ; GFX942-LABEL: global_load_lds_dword_saddr:
 ; GFX942:       ; %bb.0: ; %main_body
-; GFX942-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX942-NEXT:    s_getpc_b64 s[2:3]
+; GFX942-NEXT:    s_add_u32 s2, s2, G@gotpcrel32@lo+4
+; GFX942-NEXT:    s_addc_u32 s3, s3, G@gotpcrel32@hi+12
+; GFX942-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
+; GFX942-NEXT:    v_readfirstlane_b32 s6, v0
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 0
-; GFX942-NEXT:    s_mov_b32 m0, s2
-; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    s_mov_b32 m0, s6
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; GFX942-NEXT:    global_load_lds_dword v1, s[0:1] offset:32 nt
-; GFX942-NEXT:    s_getpc_b64 s[0:1]
-; GFX942-NEXT:    s_add_u32 s0, s0, G@gotpcrel32@lo+4
-; GFX942-NEXT:    s_addc_u32 s1, s1, G@gotpcrel32@hi+12
-; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_mul_i32 s3, s3, 10
-; GFX942-NEXT:    s_mul_i32 s2, s2, 10
-; GFX942-NEXT:    v_mov_b32_e32 v2, s2
-; GFX942-NEXT:    v_mov_b32_e32 v3, s3
-; GFX942-NEXT:    global_store_dwordx2 v1, v[2:3], s[0:1]
+; GFX942-NEXT:    s_mul_i32 s0, s5, 10
+; GFX942-NEXT:    s_mul_i32 s1, s4, 10
+; GFX942-NEXT:    v_mov_b32_e32 v2, s1
+; GFX942-NEXT:    v_mov_b32_e32 v3, s0
+; GFX942-NEXT:    global_store_dwordx2 v1, v[2:3], s[2:3]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX90A-LABEL: global_load_lds_dword_saddr:

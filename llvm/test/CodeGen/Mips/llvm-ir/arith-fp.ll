@@ -50,6 +50,6 @@ define double @fneg(double %a) {
 ; MM:         neg.d   {{.*}}         # <MCInst #{{[0-9]+}} FNEG_D32_MM
 ; MMFP64:     neg.d   {{.*}}         # <MCInst #{{[0-9]+}} FNEG_D64_MM
 ; MMR6:       neg.d   {{.*}}         # <MCInst #{{[0-9]+}} FNEG_D64_MM
-    %1 = fsub double -0.000000e+00, %a
+    %1 = fneg nnan double %a
     ret double %1
 }

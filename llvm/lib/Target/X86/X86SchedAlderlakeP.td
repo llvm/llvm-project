@@ -150,8 +150,10 @@ def : WriteRes<WriteBitTestSetImmLd, [ADLPPort01]> {
   let Latency = 11;
 }
 defm : X86WriteRes<WriteBitTestSetRegLd, [ADLPPort00_01_05_06_11, ADLPPort00_06, ADLPPort01, ADLPPort01_05_11], 17, [3, 2, 1, 2], 8>;
-defm : ADLPWriteResPair<WriteBlend, [ADLPPort01_05], 1, [1], 1, 7>;
-defm : ADLPWriteResPair<WriteBlendY, [ADLPPort00_01_05], 1, [1], 1, 8>;
+defm : ADLPWriteResPair<WritePBLENDDX, [ADLPPort00_01_05], 1, [1], 1, 7>;
+defm : ADLPWriteResPair<WritePBLENDDY, [ADLPPort00_01_05], 1, [1], 1, 8>;
+defm : ADLPWriteResPair<WritePBLENDWX, [ADLPPort01_05], 1, [1], 1, 7>;
+defm : ADLPWriteResPair<WritePBLENDWY, [ADLPPort01_05], 1, [1], 1, 8>;
 defm : ADLPWriteResPair<WriteCLMul, [ADLPPort05], 3, [1], 1, 7>;
 defm : ADLPWriteResPair<WriteCMOV, [ADLPPort00_06], 1, [1], 1, 6>;
 defm : X86WriteRes<WriteCMPXCHG, [ADLPPort00_01_05_06_11, ADLPPort00_06], 3, [3, 2], 5>;
@@ -374,6 +376,10 @@ def : WriteRes<WriteMicrocoded, [ADLPPort00_01_05_06]> {
 }
 def : WriteRes<WriteMove, [ADLPPort00_01_05_06_11]>;
 defm : X86WriteRes<WriteNop, [], 1, [], 0>;
+defm : ADLPWriteResPair<WritePack,  [ADLPPort05], 4, [2], 2, 8>;
+defm : ADLPWriteResPair<WritePackX, [ADLPPort05], 3, [1], 1, 7>;
+defm : ADLPWriteResPair<WritePackY, [ADLPPort05], 3, [1], 1, 8>;
+defm : X86WriteResPairUnsupported<WritePackZ>;
 defm : X86WriteRes<WritePCmpEStrI, [ADLPPort00, ADLPPort00_01_05, ADLPPort00_06, ADLPPort01, ADLPPort05], 16, [3, 2, 1, 1, 1], 8>;
 defm : X86WriteRes<WritePCmpEStrILd, [ADLPPort00, ADLPPort00_01_05, ADLPPort00_06, ADLPPort01, ADLPPort02_03_10, ADLPPort05], 31, [3, 1, 1, 1, 1, 1], 8>;
 defm : X86WriteRes<WritePCmpEStrM, [ADLPPort00, ADLPPort00_01_05, ADLPPort00_06, ADLPPort01, ADLPPort05], 16, [3, 3, 1, 1, 1], 9>;
@@ -693,8 +699,7 @@ def : InstRW<[ADLPWriteResGroup21], (instregex "^C(DQ|WD)E$",
                                                "^(V?)SHUFP(D|S)rri$",
                                                "^VMOVS(H|L)DUPYrr$",
                                                "^VSHUFP(D|S)Yrri$")>;
-def : InstRW<[ADLPWriteResGroup21], (instrs CBW,
-                                            VPBLENDWYrri)>;
+def : InstRW<[ADLPWriteResGroup21], (instrs CBW)>;
 
 def ADLPWriteResGroup22 : SchedWriteRes<[ADLPPort00_06]>;
 def : InstRW<[ADLPWriteResGroup22], (instregex "^C(DQ|QO)$",
@@ -1350,21 +1355,11 @@ def ADLPWriteResGroup119 : SchedWriteRes<[ADLPPort00, ADLPPort00_01_05]> {
 }
 def : InstRW<[ADLPWriteResGroup119], (instregex "^MMX_MOVQ2(DQ|FR64)rr$")>;
 
-def ADLPWriteResGroup120 : SchedWriteRes<[ADLPPort02_03_10, ADLPPort05]> {
-  let ReleaseAtCycles = [1, 2];
-  let Latency = 12;
-  let NumMicroOps = 3;
-}
-def : InstRW<[ADLPWriteResGroup120, ReadAfterVecLd], (instregex "^MMX_PACKSS(DW|WB)rm$")>;
-def : InstRW<[ADLPWriteResGroup120, ReadAfterVecLd], (instrs MMX_PACKUSWBrm)>;
-
 def ADLPWriteResGroup121 : SchedWriteRes<[ADLPPort05]> {
   let ReleaseAtCycles = [2];
   let Latency = 4;
   let NumMicroOps = 2;
 }
-def : InstRW<[ADLPWriteResGroup121], (instregex "^MMX_PACKSS(DW|WB)rr$")>;
-def : InstRW<[ADLPWriteResGroup121], (instrs MMX_PACKUSWBrr)>;
 def : InstRW<[ADLPWriteResGroup121, ReadDefault, ReadInt2Fpu], (instrs MMX_PINSRWrri)>;
 
 def ADLPWriteResGroup122 : SchedWriteRes<[ADLPPort00_05, ADLPPort02_03_10]> {
@@ -1555,7 +1550,6 @@ def ADLPWriteResGroup151 : SchedWriteRes<[ADLPPort00_01_05]>;
 def : InstRW<[ADLPWriteResGroup151], (instregex "^(V?)MOVS(D|S)rr((_REV)?)$",
                                                 "^(V?)P(ADD|SUB)(B|D|Q|W)rr$",
                                                 "^VP(ADD|SUB)(B|D|Q|W)Yrr$")>;
-def : InstRW<[ADLPWriteResGroup151], (instrs VPBLENDDrri)>;
 
 def ADLPWriteResGroup152 : SchedWriteRes<[ADLPPort00_01_05_06_11, ADLPPort02_03_10, ADLPPort04_09, ADLPPort07_08]> {
   let ReleaseAtCycles = [4, 1, 1, 1];
@@ -1673,15 +1667,12 @@ def ADLPWriteResGroup169 : SchedWriteRes<[ADLPPort02_03_10, ADLPPort05]> {
   let Latency = 10;
   let NumMicroOps = 2;
 }
-def : InstRW<[ADLPWriteResGroup169, ReadAfterVecXLd], (instregex "^(V?)PACK(S|U)S(DW|WB)rm$",
-                                                                 "^(V?)PCMPGTQrm$")>;
+def : InstRW<[ADLPWriteResGroup169, ReadAfterVecXLd], (instregex "^(V?)PCMPGTQrm$")>;
 
 def ADLPWriteResGroup170 : SchedWriteRes<[ADLPPort05]> {
   let Latency = 3;
 }
-def : InstRW<[ADLPWriteResGroup170], (instregex "^(V?)PACK(S|U)S(DW|WB)rr$",
-                                                "^(V?)PCMPGTQrr$",
-                                                "^VPACK(S|U)S(DW|WB)Yrr$")>;
+def : InstRW<[ADLPWriteResGroup170], (instregex "^(V?)PCMPGTQrr$")>;
 def : InstRW<[ADLPWriteResGroup170], (instrs VPCMPGTQYrr)>;
 
 def ADLPWriteResGroup171 : SchedWriteRes<[ADLPPort00_01_05, ADLPPort02_03_10]> {
@@ -1689,7 +1680,6 @@ def ADLPWriteResGroup171 : SchedWriteRes<[ADLPPort00_01_05, ADLPPort02_03_10]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[ADLPWriteResGroup171, ReadAfterVecXLd], (instregex "^(V?)P(ADD|SUB)(B|D|Q|W)rm$")>;
-def : InstRW<[ADLPWriteResGroup171, ReadAfterVecXLd], (instrs VPBLENDDrmi)>;
 
 def ADLPWriteResGroup172 : SchedWriteRes<[ADLPPort02_03_10, ADLPPort05]> {
   let Latency = 8;
@@ -2297,7 +2287,6 @@ def ADLPWriteResGroup263 : SchedWriteRes<[ADLPPort02_03_10, ADLPPort05]> {
   let Latency = 11;
   let NumMicroOps = 2;
 }
-def : InstRW<[ADLPWriteResGroup263, ReadAfterVecYLd], (instregex "^VPACK(S|U)S(DW|WB)Yrm$")>;
 def : InstRW<[ADLPWriteResGroup263, ReadAfterVecYLd], (instrs VPCMPGTQYrm)>;
 def : InstRW<[ADLPWriteResGroup263, ReadAfterVecXLd], (instrs VPCLMULQDQYrmi)>;
 
@@ -2306,7 +2295,6 @@ def ADLPWriteResGroup264 : SchedWriteRes<[ADLPPort01_05, ADLPPort02_03_10]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[ADLPWriteResGroup264, ReadAfterVecYLd], (instregex "^VSHUFP(D|S)Yrmi$")>;
-def : InstRW<[ADLPWriteResGroup264, ReadAfterVecYLd], (instrs VPBLENDWYrmi)>;
 
 def ADLPWriteResGroup266 : SchedWriteRes<[ADLPPort00_01, ADLPPort01_05, ADLPPort02_03_10]> {
   let ReleaseAtCycles = [1, 2, 1];

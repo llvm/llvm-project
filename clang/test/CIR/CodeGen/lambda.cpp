@@ -158,7 +158,7 @@ auto g() {
 }
 
 // CIR: cir.func {{.*}} @_Z1gv() -> !cir.ptr<!void> attributes {{{.*}}nothrow{{.*}}} {
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<![[REC_LAM_G:.*]]>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<![[REC_LAM_G:.*]]>
 // CIR:   %[[I_ADDR:.*]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   %[[TWELVE:.*]] = cir.const #cir.int<12> : !s32i
 // CIR:   cir.store{{.*}} %[[TWELVE]], %[[I_ADDR]] : !s32i, !cir.ptr<!s32i>
@@ -198,7 +198,7 @@ auto g2() {
 
 // Should be same as above because of NRVO
 // CIR: cir.func {{.*}} @_Z2g2v() -> !cir.ptr<!void> attributes {{{.*}}nothrow{{.*}}} {
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} init : !cir.ptr<![[REC_LAM_G2:.*]]>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} init return_slot : !cir.ptr<![[REC_LAM_G2:.*]]>
 // CIR:   %[[I_ADDR:.*]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   %[[TWELVE:.*]] = cir.const #cir.int<12> : !s32i
 // CIR:   cir.store{{.*}} %[[TWELVE]], %[[I_ADDR]] : !s32i, !cir.ptr<!s32i>
@@ -233,7 +233,7 @@ int f() {
 
 // CIR: cir.func {{.*}} @_Z1fv() -> (!s32i{{.*}})
 // CIR:   %[[COERCE:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!cir.ptr<!void>>
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<![[REC_LAM_G2]]>
 // CIR:   %[[G2:.*]] = cir.call @_Z2g2v() : () -> !cir.ptr<!void>
 // CIR:   cir.store %[[G2]], %[[COERCE]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
@@ -245,7 +245,7 @@ int f() {
 // CIR:   cir.return %[[RET]]
 
 // CIR:cir.func {{.*}} lambda alignment(2) internal private dso_local @_ZZ2g2vENK3$_0clEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_G2]]> {{.*}}) -> (!s32i {llvm.noundef})
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<![[REC_LAM_G2]]>>
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
@@ -338,7 +338,7 @@ struct A {
 
 // A::foo()
 // CIR: cir.func {{.*}} @_ZN1A3fooEv(%[[THIS_ARG:.*]]: !cir.ptr<!rec_A> {{.*}}) -> (!s32i {llvm.noundef})
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[LAM_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<![[REC_LAM_A:[^>]*]]>
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
@@ -375,7 +375,7 @@ struct A {
 
 // A::bar()
 // CIR: cir.func {{.*}} @_ZN1A3barEv(%[[THIS_ARG:.*]]: !cir.ptr<!rec_A> {{.*}}) -> (!s32i {llvm.noundef})
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[LAM_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<![[REC_LAM_PTR_A:[^>]*]]>
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
@@ -412,7 +412,7 @@ struct A {
 
 // lambda operator() in foo()
 // CIR: cir.func {{.*}} lambda comdat alignment(2) linkonce_odr @_ZZN1A3fooEvENKUlvE_clEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_A]]> {{.*}})
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<![[REC_LAM_A]]>>
 // CIR:   cir.store{{.*}} %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]
@@ -446,7 +446,7 @@ struct A {
 
 // lambda operator() in bar()
 // CIR: cir.func {{.*}} @_ZZN1A3barEvENKUlvE_clEv(%[[THIS_ARG2:.*]]: !cir.ptr<![[REC_LAM_PTR_A]]> {{.*}}) -> (!s32i {llvm.noundef})
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<![[REC_LAM_PTR_A]]>>
 // CIR:   cir.store{{.*}} %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]

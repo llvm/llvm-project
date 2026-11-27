@@ -4,7 +4,6 @@
 
 ---
 name: multi_else_break
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: multi_else_break
   ; GFX10: bb.0:

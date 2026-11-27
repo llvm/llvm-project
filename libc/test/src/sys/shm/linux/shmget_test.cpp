@@ -14,12 +14,15 @@
 #include "hdr/errno_macros.h"
 #include "hdr/sys_ipc_macros.h"
 #include "hdr/sys_stat_macros.h"
+#include "src/__support/CPP/scope.h"
+#include "src/sys/shm/shmctl.h"
 #include "src/sys/shm/shmget.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LIBC_NAMESPACE::cpp::scope_exit;
 using LlvmLibcShmGetTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcShmGetTest, AllocatesSegment) {
@@ -27,8 +30,9 @@ TEST_F(LlvmLibcShmGetTest, AllocatesSegment) {
   ASSERT_THAT(shmid = LIBC_NAMESPACE::shmget(
                   IPC_PRIVATE, 1, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR),
               returns(GE(0)).with_errno(EQ(0)));
-  // TODO: Clean up the allocated segment with shmctl(shmid, IPC_RMID, nullptr)
-  // once shmctl is implemented.
+  scope_exit cleanup([&] {
+    EXPECT_THAT(LIBC_NAMESPACE::shmctl(shmid, IPC_RMID, nullptr), Succeeds(0));
+  });
 }
 
 TEST_F(LlvmLibcShmGetTest, InvalidSizeReturnsEinval) {

@@ -371,6 +371,35 @@ TEST_F(MainLoopTest, NoSpuriousSocketReads) {
   ASSERT_EQ(1u, callback_count);
 }
 
+TEST_F(MainLoopTest, PolledSocketStaysBlocking) {
+  char X = 'X';
+  size_t len = sizeof(X);
+  ASSERT_THAT_ERROR(socketpair[0]->Write(&X, len).ToError(), llvm::Succeeded());
+
+  MainLoop loop;
+
+  Status error;
+  auto handle = loop.RegisterReadObject(socketpair[1], make_callback(), error);
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  ASSERT_THAT_ERROR(loop.Run().ToError(), llvm::Succeeded());
+  ASSERT_EQ(1u, callback_count);
+
+  ASSERT_THAT_ERROR(socketpair[1]->Read(&X, len).ToError(), llvm::Succeeded());
+  ASSERT_EQ(X, 'X');
+
+  std::future<void> async_writer = std::async(std::launch::async, [&] {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    char Y = 'Y';
+    size_t len = sizeof(Y);
+    EXPECT_THAT_ERROR(socketpair[0]->Write(&Y, len).ToError(),
+                      llvm::Succeeded());
+  });
+
+  len = sizeof(X);
+  EXPECT_THAT_ERROR(socketpair[1]->Read(&X, len).ToError(), llvm::Succeeded());
+  EXPECT_EQ(X, 'Y');
+}
+
 TEST_F(MainLoopTest, TerminatesImmediately) {
   char X = 'X';
   size_t len = sizeof(X);

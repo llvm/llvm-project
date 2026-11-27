@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
+#include "SPIRVSubtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -22,19 +23,16 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "spirv-remove-unused-resources"
 
 using namespace llvm;
 
-static cl::opt<bool> DisableSPIRVRemoveUnusedResources(
-    "disable-spirv-remove-unused-resources",
-    cl::desc("Disable spirv-remove-unused-resources pass"), cl::init(false),
-    cl::Hidden);
-
 static bool removeUnusedResources(Module &M) {
-  if (DisableSPIRVRemoveUnusedResources)
+  if (!M.getContext()
+           .getLibraryOptions()
+           .get<SPIRVOptions>()
+           .enable_remove_unused_resources)
     return false;
 
   SmallVector<IntrinsicInst *> Handles;
@@ -47,8 +45,8 @@ static bool removeUnusedResources(Module &M) {
         switch (II->getIntrinsicID()) {
         default:
           continue;
-        case Intrinsic::spv_resource_handlefrombinding:
-        case Intrinsic::spv_resource_handlefromimplicitbinding:
+        case Intrinsic::spv_resource_handlefrombinding_mdname:
+        case Intrinsic::spv_resource_handlefromimplicitbinding_mdname:
           Handles.push_back(II);
           break;
         case Intrinsic::spv_resource_counterhandlefrombinding:
@@ -62,7 +60,7 @@ static bool removeUnusedResources(Module &M) {
 
   bool Changed = false;
 
-  auto VisitHandle = [&](Instruction *Handle, bool IsCounter) {
+  auto VisitHandle = [&](Instruction *Handle) {
     for (User *U : make_early_inc_range(Handle->users())) {
       auto *SI = dyn_cast<StoreInst>(U);
       if (!SI || SI->isVolatile() || SI->getValueOperand() != Handle)
@@ -75,13 +73,7 @@ static bool removeUnusedResources(Module &M) {
       Changed = true;
     }
 
-    const unsigned ResourceNameOpIndex = 4;
     if (Handle->use_empty()) {
-      if (!IsCounter) {
-        if (auto *Name = dyn_cast<GlobalVariable>(
-                Handle->getOperand(ResourceNameOpIndex)))
-          DeadGlobals.insert(Name);
-      }
       Handle->eraseFromParent();
       Changed = true;
     }
@@ -90,9 +82,9 @@ static bool removeUnusedResources(Module &M) {
   // Visit implicit counters first since they may use other handles
   // that are otherwise dead
   for (auto *Counter : CounterHandles)
-    VisitHandle(Counter, true);
+    VisitHandle(Counter);
   for (auto *Handle : Handles)
-    VisitHandle(Handle, false);
+    VisitHandle(Handle);
 
   for (auto *GV : DeadGlobals) {
     if (GV->user_empty()) {

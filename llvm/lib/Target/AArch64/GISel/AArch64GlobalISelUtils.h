@@ -46,6 +46,12 @@ bool matchEmitBZero(const MachineInstr &MI, const MachineRegisterInfo &MRI,
 /// Replace \p MI with a G_BZERO.
 void applyEmitBZero(MachineInstr &MI, MachineIRBuilder &MIRBuilder);
 
+/// Detect and apply Mul(And(Srl(X, 15), 0x10001), 0xffff) to CMLTz pattern.
+bool matchCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         Register &SrcReg);
+void applyCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B, Register &SrcReg);
+
 /// Analyze a ptrauth discriminator value to try to find the constant integer
 /// and address parts, cracking a ptrauth_blend intrinsic if there is one.
 /// \returns integer/address disc. parts, with NoRegister if no address disc.

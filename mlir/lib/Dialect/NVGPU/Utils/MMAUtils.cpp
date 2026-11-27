@@ -8,7 +8,6 @@
 #include "mlir/Dialect/NVGPU/Utils/MMAUtils.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 using namespace mlir;

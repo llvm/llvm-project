@@ -13,13 +13,8 @@
 
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
-namespace dxil {
-extern cl::opt<bool> PdbInPrivate;
-} // namespace dxil
-
 class AttributeMask;
 class Function;
 class FunctionPass;
@@ -29,10 +24,10 @@ class PassRegistry;
 class raw_ostream;
 
 /// Initializer for dxil writer pass
-void initializeWriteDXILPassPass(PassRegistry &);
+void initializeDXILWriterLegacyPass(PassRegistry &);
 
 /// Initializer for dxil embedder pass
-void initializeEmbedDXILPassPass(PassRegistry &);
+void initializeDXILEmbedderLegacyPass(PassRegistry &);
 
 /// Initializer for DXIL-prepare
 void initializeDXILPrepareModuleLegacyPass(PassRegistry &);

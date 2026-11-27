@@ -13,7 +13,9 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -616,6 +618,15 @@ TEST(CommandLineTest, SetMultiValues) {
   EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args), args, StringRef(),
                                           &llvm::nulls()));
   EXPECT_EQ(Option, 2);
+}
+
+TEST(CommandLineTest, NoResponseFileInSandbox) {
+  cl::ResetCommandLineParser();
+  StackOption<bool> Opt("opt");
+  const char *Args[] = {"prog", "-opt"};
+  auto EnableSandbox = sys::sandbox::scopedEnable();
+  EXPECT_TRUE(cl::ParseCommandLineOptions(2, Args, "", &llvm::nulls()));
+  EXPECT_TRUE(Opt);
 }
 
 TEST(CommandLineTest, SetValueInSubcategories) {
@@ -2340,14 +2351,14 @@ TEST(CommandLineTest, HelpWithEmptyCategory) {
 // Records the arguments it is handed. -library-int takes a separate value and
 // rejects "bad".
 struct TestLibrary final : cl::LibraryOptions {
-  std::vector<std::string> Args;
+  mutable std::vector<std::string> Args;
   void forEachOption(
       function_ref<void(StringRef, StringRef, StringRef)> Fn) const override {
     Fn("library-flag", "", "A flag");
     Fn("library-int", " <int>", "");
   }
   Error parse(void *, ArrayRef<const char *> Argv, unsigned &Consumed,
-              BumpPtrAllocator &) override {
+              BumpPtrAllocator &) const override {
     Consumed = 1;
     Args.push_back(Argv[0]);
     if (StringRef(Argv[0]).ltrim('-') != "library-int")
@@ -2360,42 +2371,47 @@ struct TestLibrary final : cl::LibraryOptions {
       return createStringError("bad value");
     return Error::success();
   }
-  void *global() override { return this; }
   const void *getDefault() const override { return nullptr; }
   void *copyDefault(BumpPtrAllocator &) const override { return nullptr; }
-  void reset() override { Args.clear(); }
 };
 
 TEST(CommandLineTest, LibraryOptions) {
   cl::ResetCommandLineParser();
   TestLibrary L;
   cl::addLibraryOptions(L);
+  cl::LibraryOptionsContext C;
 
   // A library's options suffice to parse.
   const char *Only[] = {"prog", "-library-flag"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Only), Only, StringRef(),
-                                          &llvm::nulls()));
+  EXPECT_TRUE(
+      cl::parseCommandLineOptions(C, Only, StringRef(), &llvm::nulls()));
   EXPECT_THAT(L.Args, testing::ElementsAre("-library-flag"));
-  cl::ResetAllOptionOccurrences();
+  L.Args.clear();
+
+  // ParseCommandLineOptions, which takes no context, does not recognize them.
+  std::string Unknown;
+  raw_string_ostream UnknownOS(Unknown);
+  EXPECT_FALSE(cl::ParseCommandLineOptions(std::size(Only), Only, StringRef(),
+                                           &UnknownOS));
+  EXPECT_THAT(Unknown, testing::HasSubstr(
+                           "Unknown command line argument '-library-flag'"));
   EXPECT_TRUE(L.Args.empty());
 
   StackOption<int> Local("local");
   const char *Args[] = {"prog", "--library-int", "4", "-local=3",
                         "-library-flag"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args), Args, StringRef(),
-                                          &llvm::nulls()));
+  EXPECT_TRUE(
+      cl::parseCommandLineOptions(C, Args, StringRef(), &llvm::nulls()));
   EXPECT_EQ(Local, 3);
   EXPECT_THAT(L.Args,
               testing::ElementsAre("--library-int", "4", "-library-flag"));
-  cl::ResetAllOptionOccurrences();
 
   // A rejected value is still consumed.
   std::string Errs;
   raw_string_ostream OS(Errs);
   const char *Bad[] = {"prog", "-library-int", "bad", "-local=1",
                        "-library-int"};
-  EXPECT_FALSE(
-      cl::ParseCommandLineOptions(std::size(Bad), Bad, StringRef(), &OS));
+  EXPECT_FALSE(cl::parseCommandLineOptions(C, Bad, StringRef(), &OS));
   EXPECT_EQ(Local, 1);
   EXPECT_EQ(Errs, "prog: bad value\nprog: missing value\n");
   cl::ResetCommandLineParser();
@@ -2407,8 +2423,8 @@ TEST(CommandLineTest, LibraryOptionsHelp) {
   cl::addLibraryOptions(L);
   StackOption<int> Local("local", cl::desc("A cl::opt"));
   const char *Args[] = {"prog"};
-  cl::ParseCommandLineOptions(std::size(Args), Args, StringRef(),
-                              &llvm::nulls());
+  cl::LibraryOptionsContext C;
+  cl::parseCommandLineOptions(C, Args, StringRef(), &llvm::nulls());
 
   // Library options are aligned with cl::'s. Options without help text are not
   // listed.
@@ -2428,6 +2444,14 @@ TEST(CommandLineTest, LibraryOptionsHelp) {
   std::string Visible = interceptStdout(
       [] { cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/false); });
   EXPECT_EQ(std::string::npos, Visible.find("Library options")) << Visible;
+
+  // After a parse without a context, which does not recognize them, they are
+  // not listed.
+  cl::ParseCommandLineOptions(std::size(Args), Args, StringRef(),
+                              &llvm::nulls());
+  Hidden = interceptStdout(
+      [] { cl::PrintHelpMessage(/*Hidden=*/true, /*Categorized=*/false); });
+  EXPECT_EQ(std::string::npos, Hidden.find("Library options")) << Hidden;
   cl::ResetCommandLineParser();
 }
 
@@ -2441,8 +2465,9 @@ TEST(CommandLineTest, LibraryOptionsRegisteredWhileParsing) {
                                 }));
 
   const char *Args[] = {"prog", "-load=plugin", "-library-flag"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(Args), Args, StringRef(),
-                                          &llvm::nulls()));
+  cl::LibraryOptionsContext C;
+  EXPECT_TRUE(
+      cl::parseCommandLineOptions(C, Args, StringRef(), &llvm::nulls()));
   EXPECT_THAT(L.Args, testing::ElementsAre("-library-flag"));
   cl::ResetCommandLineParser();
 }
