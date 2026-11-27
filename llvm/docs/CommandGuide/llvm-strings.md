@@ -54,6 +54,10 @@ Specifies the encoding of the input file. Valid arguments are:
 - `s` (ASCII)
 - `S` (current locale's character set)
 - `utf8` (UTF-8)
+- `b` (big endian UTF-16)
+- `l` (little endian UTF-16)
+- `B` (big endian UTF-32)
+- `L` (little endian UTF-32)
 The default is `--encoding=S`, unless a {option}`--unicode` value other than
 `--unicode=locale` is used, in which case the default is `--encoding=utf8`.
 :::
