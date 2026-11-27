@@ -319,6 +319,7 @@ class Preprocessor {
     Recovering,
   };
   PragmaLexingState PragmaState = PragmaLexingState::None;
+  unsigned NumRejectedNestedPragmas = 0;
 
   /// Mapping/lookup information for all identifiers in
   /// the program, including program keywords.
@@ -1320,6 +1321,11 @@ public:
   /// Preprocessor.
   unsigned getNumDirectives() const {
     return NumDirectives;
+  }
+
+  /// Return the number of nested pragmas rejected during preprocessing.
+  unsigned getNumRejectedNestedPragmas() const {
+    return NumRejectedNestedPragmas;
   }
 
   /// True if we are currently preprocessing a #if or #elif directive

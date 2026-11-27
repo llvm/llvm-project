@@ -166,8 +166,10 @@ void Preprocessor::HandlePragmaDirective(PragmaIntroducer Introducer) {
   // _Pragma/__pragma are checked in HandlePragmaOperator before reaching here.
   if (Introducer.Kind == PIK_HashPragma &&
       PragmaState != PragmaLexingState::None) {
-    if (PragmaState == PragmaLexingState::Active)
+    if (PragmaState == PragmaLexingState::Active) {
+      ++NumRejectedNestedPragmas;
       Diag(Introducer.Loc, diag::err_nested_pragma);
+    }
     DiscardUntilEndOfDirective();
     return;
   }
@@ -211,6 +213,7 @@ bool Preprocessor::HandlePragmaOperator(Token &Tok, bool IsMicrosoft) {
   if ((PragmaState == PragmaLexingState::Active ||
        PragmaState == PragmaLexingState::Recovering) &&
       !InMacroArgPreExpansion) {
+    ++NumRejectedNestedPragmas;
     Diag(Tok, diag::err_nested_pragma);
     // Recover through the operand without executing another pragma. Keep
     // expanding other macros, which can supply the operand's parentheses.
