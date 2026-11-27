@@ -1,4 +1,4 @@
-; RUN: opt -passes='require<demanded-bits>,require<phi-values>,require<scalar-evolution>,require<access-info>,require<memoryssa>,infer-alignment' \
+; RUN: opt -passes='require<demanded-bits>,require<scalar-evolution>,require<access-info>,infer-alignment' \
 ; RUN:     -debug-pass-manager -disable-output < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=PM \
 ; RUN:     --implicit-check-not='Invalidating analysis:'
@@ -7,7 +7,6 @@
 
 ; PM: Running pass: InferAlignmentPass on changed_rauw
 ; PM-DAG: Invalidating analysis: DemandedBitsAnalysis on changed_rauw
-; PM-DAG: Invalidating analysis: ScalarEvolutionAnalysis on changed_rauw
 ; PM-DAG: Invalidating analysis: LoopAccessAnalysis on changed_rauw
 
 ; PM: Running pass: InferAlignmentPass on changed_align

@@ -19,9 +19,6 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DomConditionCache.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
-#include "llvm/Analysis/LoopAnalysisManager.h"
-#include "llvm/Analysis/MemorySSA.h"
-#include "llvm/Analysis/PhiValues.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -229,12 +226,8 @@ PreservedAnalyses InferAlignmentPass::run(Function &F,
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<MemorySSAAnalysis>();
-  PA.preserve<PhiValuesAnalysis>();
-  if (!(Changes & InferAlignChanges::Values)) {
-    PA.preserve<ScalarEvolutionAnalysis>();
+  PA.preserve<ScalarEvolutionAnalysis>();
+  if (!(Changes & InferAlignChanges::Values))
     PA.preserve<LoopAccessAnalysis>();
-    PA.preserve<LoopAnalysisManagerFunctionProxy>();
-  }
   return PA;
 }
