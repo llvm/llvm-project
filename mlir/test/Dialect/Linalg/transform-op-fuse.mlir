@@ -899,3 +899,40 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// CHECK-LABEL: func.func @fuse_matmul_through_collapse(
+// CHECK-NOT: linalg.matmul
+// CHECK: scf.for
+// CHECK: %[[INIT:.*]] = linalg.fill
+// CHECK-SAME: -> tensor<1x6xf32>
+// CHECK: %[[MM:.*]] = linalg.matmul
+// CHECK-SAME: outs(%[[INIT]] : tensor<1x6xf32>) -> tensor<1x6xf32>
+// CHECK: %[[FLAT:.*]] = tensor.collapse_shape %[[MM]]
+// CHECK: linalg.generic
+// CHECK-SAME: ins(%[[FLAT]] : tensor<6xf32>)
+// CHECK: tensor.insert_slice
+func.func @fuse_matmul_through_collapse(%a: tensor<6x4xf32>, %b: tensor<4x6xf32>) -> tensor<36xf32> {
+  %zero = arith.constant 0.0 : f32
+  %empty = tensor.empty() : tensor<6x6xf32>
+  %init = linalg.fill ins(%zero : f32) outs(%empty : tensor<6x6xf32>) -> tensor<6x6xf32>
+  %mm = linalg.matmul ins(%a, %b : tensor<6x4xf32>, tensor<4x6xf32>) outs(%init : tensor<6x6xf32>) -> tensor<6x6xf32>
+  %flat = tensor.collapse_shape %mm [[0, 1]] : tensor<6x6xf32> into tensor<36xf32>
+  %out = tensor.empty() : tensor<36xf32>
+  %r = linalg.generic {candidate_root, indexing_maps = [affine_map<(i)->(i)>, affine_map<(i)->(i)>], iterator_types = ["parallel"]}
+  ins(%flat : tensor<36xf32>) outs(%out : tensor<36xf32>) {
+  ^bb0(%v: f32, %old: f32):
+    %v1 = arith.maximumf %v, %zero : f32
+    linalg.yield %v1 : f32
+  } -> tensor<36xf32>
+  return %r : tensor<36xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %f = transform.structured.match attributes{candidate_root} in %root : (!transform.any_op) -> !transform.any_op
+    %t, %l = transform.structured.fuse %f tile_sizes [6] apply_cleanup : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
