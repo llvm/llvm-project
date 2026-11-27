@@ -11165,6 +11165,7 @@ static bool isRenamedInGFX9(int Opcode) {
   case AMDGPU::V_FMA_F16_gfx9_e64:
   case AMDGPU::V_INTERP_P2_F16:
   case AMDGPU::V_MAD_F16_e64:
+  case AMDGPU::V_MAD_F16_gfx9_e64:
   case AMDGPU::V_MAD_U16_e64:
   case AMDGPU::V_MAD_I16_e64:
   case AMDGPU::V_MAD_U16_gfx9_e64:

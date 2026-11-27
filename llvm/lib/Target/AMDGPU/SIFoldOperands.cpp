@@ -1942,8 +1942,9 @@ SIFoldOperandsImpl::getANDMaskRegOperand(MachineInstr &AndMI) const {
   return std::nullopt;
 }
 
-// Operands of an op_sel instruction that are not present in the equivalent
-// legacy instruction, in operand order.
+// Operands of an op_sel instruction that can select the high half of a
+// register, in operand order. The equivalent legacy instruction may not have
+// some or all of them.
 static constexpr AMDGPU::OpName OpSelOnlyOpNames[] = {
     AMDGPU::OpName::src0_modifiers, AMDGPU::OpName::src1_modifiers,
     AMDGPU::OpName::src2_modifiers, AMDGPU::OpName::op_sel};
@@ -1958,6 +1959,9 @@ static unsigned getZeroHi16LegacyOpcode(const GCNSubtarget &ST,
 
   unsigned LegacyOpc;
   switch (MI.getOpcode()) {
+  case AMDGPU::V_MAD_F16_gfx9_e64:
+    LegacyOpc = AMDGPU::V_MAD_F16_e64;
+    break;
   case AMDGPU::V_MAD_U16_gfx9_e64:
     LegacyOpc = AMDGPU::V_MAD_U16_e64;
     break;
@@ -1968,9 +1972,16 @@ static unsigned getZeroHi16LegacyOpcode(const GCNSubtarget &ST,
     return 0;
   }
 
+  // If the legacy opcode also has source modifiers then they can be kept, as
+  // long as they do not use op_sel.
+  const int64_t OpSelMask = SISrcMods::OP_SEL_0 | SISrcMods::OP_SEL_1;
   for (AMDGPU::OpName OpName : OpSelOnlyOpNames) {
-    if (MI.getOperand(AMDGPU::getNamedOperandIdx(MI.getOpcode(), OpName))
-            .getImm() != 0)
+    int64_t Imm =
+        MI.getOperand(AMDGPU::getNamedOperandIdx(MI.getOpcode(), OpName))
+            .getImm();
+    if (AMDGPU::hasNamedOperand(LegacyOpc, OpName))
+      Imm &= OpSelMask;
+    if (Imm != 0)
       return 0;
   }
 
@@ -2036,8 +2047,10 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
 
   if (LegacyOpc) {
     unsigned Opc = ParentMI->getOpcode();
-    for (AMDGPU::OpName OpName : reverse(OpSelOnlyOpNames))
-      ParentMI->removeOperand(AMDGPU::getNamedOperandIdx(Opc, OpName));
+    for (AMDGPU::OpName OpName : reverse(OpSelOnlyOpNames)) {
+      if (!AMDGPU::hasNamedOperand(LegacyOpc, OpName))
+        ParentMI->removeOperand(AMDGPU::getNamedOperandIdx(Opc, OpName));
+    }
     TII->mutateAndCleanupImplicit(*ParentMI, TII->get(LegacyOpc));
   }
 

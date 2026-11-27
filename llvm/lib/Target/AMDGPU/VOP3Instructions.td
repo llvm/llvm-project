@@ -472,6 +472,10 @@ let SubtargetPredicate = Has16BitInsts, isCommutable = 1 in {
 defm V_MAD_U16 : VOP3Inst <"v_mad_u16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CLAMP>>;
 defm V_MAD_I16 : VOP3Inst <"v_mad_i16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CLAMP>>;
 let FPDPRounding = 1 in {
+  // On GFX9 this is the legacy opcode with no op_sel support, so select
+  // V_MAD_F16_gfx9 instead. Set Predicates directly so that the real
+  // instructions do not inherit the GFX8 restriction.
+  let Predicates = [Has16BitInsts, isGFX8Only] in
   defm V_MAD_F16 : VOP3Inst <"v_mad_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, any_fmad>;
   let Uses = [MODE, M0, EXEC] in {
   let OtherPredicates = [isNotGFX90APlus] in
@@ -489,7 +493,7 @@ let FPDPRounding = 1 in {
 } // End FPDPRounding = 1
 
 let SubtargetPredicate = isGFX9Only, FPDPRounding = 1 in {
-  defm V_MAD_F16_gfx9   : VOP3Inst <"v_mad_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>> ;
+  defm V_MAD_F16_gfx9   : VOP3Inst <"v_mad_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, any_fmad>;
 } // End SubtargetPredicate = isGFX9Only, FPDPRounding = 1
 
 let SubtargetPredicate = isGFX9Plus in {
