@@ -103,7 +103,7 @@ body: |
   bb.3.if.else.i.i:
     successors: %bb.1(0x80000000)
 
-    INLINEASM_BR &"", 1 /* sideeffect attdialect */, 13 /* imm */, %bb.5
+    INLINEASM_BR &"", sideeffect attdialect, imm, %bb.5
     LIFETIME_END %stack.0.skip.i.i
     B %bb.1
 

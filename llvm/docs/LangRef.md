@@ -2433,6 +2433,12 @@ define void @f() "no-sse" { ... }
     would normally be considered a source of divergence; setting this attribute
     on a function means that a call to it is not a source of divergence.
 
+`alwaysuniform`
+:   Setting this attribute on a function means that a call to it always returns
+    a {ref}`uniform <convergence-uniformity>` result regardless of the uniformity
+    of the inputs.  If a call to a function with this attribute returns a value
+    that is not uniform, the behavior is undefined.
+
 `noduplicate`
 :   This attribute indicates that calls to the function cannot be
     duplicated. A call to a `noduplicate` function may be moved

@@ -61714,11 +61714,6 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   SDValue Op1 = N->getOperand(1);
   SDLoc DL(N);
 
-  auto IsNonOpaqueConstant = [&](SDValue Op) {
-    return DAG.isConstantIntBuildVectorOrConstantInt(Op,
-                                                     /*AllowOpaques*/ false);
-  };
-
   // sub(0, and(X, 1)) -> ashr(shl(X, SizeInBits - 1), SizeInBits - 1)
   if (VT.isVectorOf(MVT::i16) || VT.isVectorOf(MVT::i32) ||
       VT.isVectorOf(MVT::i64)) {
@@ -61736,14 +61731,21 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   // one use and a constant, invert the immediate, saving one register.
   // However, ignore cases where C1 is 0, as those will become a NEG.
   // sub(C1, xor(X, C2)) -> add(xor(X, ~C2), C1+1)
-  if (Op1.getOpcode() == ISD::XOR && IsNonOpaqueConstant(Op0) &&
-      !isNullConstant(Op0) && IsNonOpaqueConstant(Op1.getOperand(1)) &&
-      Op1->hasOneUse()) {
-    SDValue NewXor = DAG.getNode(ISD::XOR, SDLoc(Op1), VT, Op1.getOperand(0),
-                                 DAG.getNOT(SDLoc(Op1), Op1.getOperand(1), VT));
-    SDValue NewAdd =
-        DAG.getNode(ISD::ADD, DL, VT, Op0, DAG.getConstant(1, DL, VT));
-    return DAG.getNode(ISD::ADD, DL, VT, NewXor, NewAdd);
+  if (Op1.getOpcode() == ISD::XOR && !isNullConstant(Op0) && Op1->hasOneUse()) {
+    // Only do this if ~C2 and C1+1 constant fold. Otherwise (e.g. C2 is a
+    // bitcast of a build vector with undef elements) the generic combines turn
+    // the result back into the original sub and the combiner never terminates.
+    SDLoc XorDL(Op1);
+    if (SDValue NotC2 = DAG.FoldConstantArithmetic(
+            ISD::XOR, XorDL, VT,
+            {Op1.getOperand(1), DAG.getAllOnesConstant(XorDL, VT)})) {
+      if (SDValue C1Plus1 = DAG.FoldConstantArithmetic(
+              ISD::ADD, DL, VT, {Op0, DAG.getConstant(1, DL, VT)})) {
+        SDValue NewXor =
+            DAG.getNode(ISD::XOR, XorDL, VT, Op1.getOperand(0), NotC2);
+        return DAG.getNode(ISD::ADD, DL, VT, NewXor, C1Plus1);
+      }
+    }
   }
 
   if (SDValue V = combineSubABS(VT, DL, Op0, Op1, DAG))
