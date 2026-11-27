@@ -11,6 +11,7 @@
 #include "hdr/time_macros.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/gettid.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/raw_mutex.h"
@@ -327,7 +328,7 @@ struct ThreadGuard {
     if (!LIBC_NAMESPACE::getenv("LIBC_PTHREAD_RWLOCK_TEST_VERBOSE"))
       return;
     pid_t pid = static_cast<pid_t>(LIBC_NAMESPACE::syscall_impl(SYS_getpid));
-    pid_t tid = static_cast<pid_t>(LIBC_NAMESPACE::syscall_impl(SYS_gettid));
+    pid_t tid = LIBC_NAMESPACE::linux_syscalls::gettid();
     io_mutex->lock(LIBC_NAMESPACE::cpp::nullopt, true);
     LIBC_NAMESPACE::printf("process %d thread %d: ", pid, tid);
     for (size_t i = 0; i < cursor; ++i)

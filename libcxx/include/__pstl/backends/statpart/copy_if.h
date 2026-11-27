@@ -51,15 +51,15 @@ _LIBCPP_HIDE_FROM_ABI size_t __count_and_cache_predicate_results(
   size_t __bit_idx        = 0;
   for (; __first != __last; ++__first) {
     bool __pred_val = static_cast<bool>(__pred(*__first));
-    __bits_word |= static_cast<size_t>(__pred_val) << __bit_idx; // Update the current word with this predicate result
+    __bits_word |= static_cast<size_t>(__pred_val) << __bit_idx; // Update the current word with this predicate result.
     if (++__bit_idx == __bitset_view::__bits_per_word_) {
-      __occupied_count += std::__popcount(__bits_word); // Update the total occupancy with this word
-      *__bits_word_ptr++ = __bits_word;                 // Store the collected flags
+      __occupied_count += std::__popcount(__bits_word); // Update the total occupancy with this word.
+      *__bits_word_ptr++ = __bits_word;                 // Store the collected flags.
       __bits_word        = 0;
       __bit_idx          = 0;
     }
   }
-  if (__bit_idx != 0) { // Process any leftovers in the current word
+  if (__bit_idx != 0) { // Process any leftovers in the current word.
     __occupied_count += std::__popcount(__bits_word);
     *__bits_word_ptr = __bits_word;
   }
@@ -93,6 +93,8 @@ struct __copy_if<__statpart_backend_tag, _ExecutionPolicy> {
     if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
+      // Each workers needs a scratch memory to keep the bitflags to avoid calling the user predicate twice per element,
+      // thus the setup callbacks allocates a dynamic bitset with enough storage for every worker.
       auto __setup = [](size_t __max_workers_count, size_t __max_partition_size) {
         return __statpart::__make_sharded_dynamic_bitset(__max_workers_count, __max_partition_size);
       };
@@ -105,23 +107,24 @@ struct __copy_if<__statpart_backend_tag, _ExecutionPolicy> {
               _ForwardIterator1 __chunk_first,
               _ForwardIterator1 __chunk_last,
               __statpart::__decoupled_lookback_partition<size_t>* __optional_lookback_partition) {
-            // Acquire the local scratch memory
+            // Acquire the local scratch memory.
             __statpart::__bitset_view __bitset = __ctx.__shard(__worker_idx);
 
-            // Populate the bitset for each of the elements in the chunk and get the occupancy
+            // Populate the bitset for each of the elements in the chunk and get the occupancy.
             size_t __occupied_count =
                 __statpart::__count_and_cache_predicate_results(__chunk_first, __chunk_last, __pred, __bitset);
 
-            // If we're not the only chunk - publish the final occupancy
+            // If we're not the only chunk - publish the final occupancy.
             if (__optional_lookback_partition != nullptr) {
               __optional_lookback_partition->__construct_inclusive_prefix(__occupied_count);
             }
 
-            // Copy the elements depending on the bitset flags
+            // Copy the elements depending on the bitset flags, but skip the operation in case of zero occupancy.
             _ForwardIterator2 __chunk_result =
-                __statpart::__copy_if_flag_set(__chunk_first, __chunk_last, __result, __bitset);
+                __occupied_count > 0 ? __statpart::__copy_if_flag_set(__chunk_first, __chunk_last, __result, __bitset)
+                                     : __result;
 
-            // If we're the last chunk - also the report the position of the last iterator in the result range
+            // If we're the last chunk - also the report the position of the last iterator in the result range.
             if (__optional_lookback_partition == nullptr) {
               __out_iter = __chunk_result;
             }
@@ -132,28 +135,29 @@ struct __copy_if<__statpart_backend_tag, _ExecutionPolicy> {
                                _ForwardIterator1 __chunk_first,
                                _ForwardIterator1 __chunk_last,
                                __statpart::__decoupled_lookback_partition<size_t>* __lookback_partition) {
-        // Acquire the local scratch memory
+        // Acquire the local scratch memory.
         __statpart::__bitset_view __bitset = __ctx.__shard(__worker_idx);
 
-        // Populate the bitset for each of the elements in the chunk and get the occupancy
+        // Populate the bitset for each of the elements in the chunk and get the occupancy.
         size_t __occupied_count =
             __statpart::__count_and_cache_predicate_results(__chunk_first, __chunk_last, __pred, __bitset);
 
-        // Publish the occupancy as a local aggregate first
+        // Publish the occupancy as a local aggregate first.
         __lookback_partition->__construct_aggregate(__occupied_count);
 
-        // Obtain the exclusive prefix
+        // Obtain the exclusive prefix.
         __statpart::__decoupled_lookback_partition<size_t>* __prev_partition = __lookback_partition - 1;
         size_t __exclusive_prefix =
             (__prev_partition->__acquire_available_status() & __statpart::__decoupled_lookback_status_prefix_available)
                 ? __prev_partition->__inclusive_prefix()
                 : __statpart::__calculate_inclusive_prefix_of_partition(__prev_partition, plus<>{});
 
-        // Publish the final occupancy
+        // Publish the final occupancy.
         __lookback_partition->__construct_inclusive_prefix(__exclusive_prefix + __occupied_count);
 
-        // Copy the elements depending on the bitset flags
-        __statpart::__copy_if_flag_set(__chunk_first, __chunk_last, __result + __exclusive_prefix, __bitset);
+        // Copy the elements depending on the bitset flags if there's non-zero occupancy.
+        if (__occupied_count > 0)
+          __statpart::__copy_if_flag_set(__chunk_first, __chunk_last, __result + __exclusive_prefix, __bitset);
       };
 
       auto __scan_tail = [&](__statpart::__sharded_dynamic_bitset& __ctx,
@@ -161,24 +165,27 @@ struct __copy_if<__statpart_backend_tag, _ExecutionPolicy> {
                              _ForwardIterator1 __chunk_first,
                              _ForwardIterator1 __chunk_last,
                              __statpart::__decoupled_lookback_partition<size_t>* __nonexistent_lookback_partition) {
-        // Acquire the local scratch memory
+        // Acquire the local scratch memory.
         __statpart::__bitset_view __bitset = __ctx.__shard(__worker_idx);
 
-        // Populate the bitset for each of the elements in the chunk and get the occupancy
-        __statpart::__count_and_cache_predicate_results(__chunk_first, __chunk_last, __pred, __bitset);
+        // Populate the bitset for each of the elements in the chunk and get the occupancy.
+        size_t __occupied_count =
+            __statpart::__count_and_cache_predicate_results(__chunk_first, __chunk_last, __pred, __bitset);
 
-        // Obtain the exclusive prefix
+        // Obtain the exclusive prefix.
         __statpart::__decoupled_lookback_partition< size_t >* __prev_partition = __nonexistent_lookback_partition - 1;
         size_t __exclusive_prefix =
             (__prev_partition->__acquire_available_status() & __statpart::__decoupled_lookback_status_prefix_available)
                 ? __prev_partition->__inclusive_prefix()
                 : __statpart::__calculate_inclusive_prefix_of_partition(__prev_partition, plus<>{});
 
-        // Copy the elements depending on the bitset flags
+        // Copy the elements depending on the bitset flags, but skip the operation in case of zero occupancy.
         _ForwardIterator2 __chunk_result =
-            __statpart::__copy_if_flag_set(__chunk_first, __chunk_last, __result + __exclusive_prefix, __bitset);
+            __occupied_count > 0
+                ? __statpart::__copy_if_flag_set(__chunk_first, __chunk_last, __result + __exclusive_prefix, __bitset)
+                : __result + __exclusive_prefix;
 
-        // Report the position of the last iterator in the result range
+        // Report the position of the last iterator in the result range.
         __out_iter = __chunk_result;
       };
 

@@ -9,10 +9,13 @@ add_object_library(
     libc.hdr.limits_macros
     libc.hdr.regex_macros
     libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.blockstore
     libc.src.__support.checked_ptr
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.array
     libc.src.__support.CPP.bitset
+    libc.src.__support.CPP.new
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.span
     libc.src.__support.CPP.unique_ptr
@@ -20,7 +23,7 @@ add_object_library(
     libc.src.__support.error_or
     libc.src.__support.hash
     libc.src.__support.libc_assert
-    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
@@ -43,10 +46,18 @@ add_object_library(
     .regex_expr_pool
     .regex_internal
     libc.hdr.regex_macros
-    libc.src.__support.common
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.checked_ptr
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.new
     libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.unique_ptr
     libc.src.__support.error_or
     libc.src.__support.libc_assert
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
 )
 
 add_object_library(
@@ -60,9 +71,12 @@ add_object_library(
     .regex_expr_pool
     libc.hdr.limits_macros
     libc.hdr.regex_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
     libc.src.__support.checked_ptr
     libc.src.__support.CPP.array
     libc.src.__support.CPP.bitset
+    libc.src.__support.CPP.new
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.span
     libc.src.__support.CPP.string_view
@@ -71,5 +85,4 @@ add_object_library(
     libc.src.__support.error_or
     libc.src.__support.libc_assert
     libc.src.__support.macros.attributes
-    libc.src.__support.macros.config
 )

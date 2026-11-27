@@ -189,12 +189,12 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) nounwind {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = memw(r29+#4)
-; CHECK-NEXT:     r17:16 = memd(r29+#8)
+; CHECK-NEXT:     r1 = memw(r29+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = memw(r29+#0)
+; CHECK-NEXT:     r17:16 = memd(r29+#8)
 ; CHECK-NEXT:     dealloc_return
-; CHECK-NEXT:    }
+; CHECK-NEXT:    } // 8-byte Folded Reload
   %result = call { <2 x half>, <2 x i32> } @llvm.frexp.v2f16.v2i32(<2 x half> %a)
   %result.1 = extractvalue { <2 x half>, <2 x i32> } %result, 1
   ret <2 x i32> %result.1
@@ -414,12 +414,12 @@ define <2 x i32> @test_frexp_v2f32_v2i32_only_use_exp(<2 x float> %a) nounwind {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = memw(r29+#4)
-; CHECK-NEXT:     r17:16 = memd(r29+#8)
+; CHECK-NEXT:     r1 = memw(r29+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = memw(r29+#0)
+; CHECK-NEXT:     r17:16 = memd(r29+#8)
 ; CHECK-NEXT:     dealloc_return
-; CHECK-NEXT:    }
+; CHECK-NEXT:    } // 8-byte Folded Reload
   %result = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> %a)
   %result.1 = extractvalue { <2 x float>, <2 x i32> } %result, 1
   ret <2 x i32> %result.1
@@ -776,12 +776,12 @@ define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) nounwind 
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = memw(r29+#4)
-; CHECK-NEXT:     r17:16 = memd(r29+#8)
+; CHECK-NEXT:     r1 = memw(r29+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = memw(r29+#0)
+; CHECK-NEXT:     r17:16 = memd(r29+#8)
 ; CHECK-NEXT:     dealloc_return
-; CHECK-NEXT:    }
+; CHECK-NEXT:    } // 8-byte Folded Reload
   %result = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %a)
   %result.1 = extractvalue { <2 x double>, <2 x i32> } %result, 1
   ret <2 x i32> %result.1

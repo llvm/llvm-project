@@ -14,7 +14,7 @@
 #include <__configuration/abi.h>
 #include <__cstddef/size_t.h>
 #include <__memory/addressof.h>
-#include <__type_traits/is_trivially_destructible.h>
+#include <__type_traits/is_destructible.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -93,7 +93,7 @@ struct [[__gnu__::__aligned__(_LIBCPP_ALIGNOF(_Tp))]] __arm_array_cookie {
 // [2]: https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms#Handle-C++-differences
 template <class _Tp>
 // Avoid failures when -fsanitize-address-poison-custom-array-cookie is enabled
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie([[__maybe_unused__]] _Tp const* __ptr) {
+_LIBCPP_NO_SANITIZE("address") size_t __get_array_cookie([[__maybe_unused__]] _Tp const* __ptr) {
   static_assert(
       __has_array_cookie_v<_Tp>, "Trying to access the array cookie of a type that is not guaranteed to have one");
 

@@ -9,13 +9,37 @@
 
 #include "lldb/API/SBTraceCursor.h"
 #include "Utils.h"
-#include "lldb/Utility/Instrumentation.h"
 #include "lldb/Target/TraceCursor.h"
+#include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 SBTraceCursor::SBTraceCursor() { LLDB_INSTRUMENT_VA(this); }
+
+SBTraceCursor::SBTraceCursor(const SBTraceCursor &rhs)
+    : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBTraceCursor &SBTraceCursor::operator=(const SBTraceCursor &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  if (this != &rhs)
+    m_opaque_sp = rhs.m_opaque_sp;
+  return *this;
+}
+
+SBTraceCursor::SBTraceCursor(SBTraceCursor &&rhs)
+    : m_opaque_sp(std::move(rhs.m_opaque_sp)) {}
+
+SBTraceCursor &SBTraceCursor::operator=(SBTraceCursor &&rhs) {
+  m_opaque_sp = std::move(rhs.m_opaque_sp);
+  return *this;
+}
+
+SBTraceCursor::~SBTraceCursor() = default;
 
 SBTraceCursor::SBTraceCursor(TraceCursorSP trace_cursor_sp)
     : m_opaque_sp{std::move(trace_cursor_sp)} {
@@ -85,7 +109,7 @@ bool SBTraceCursor::IsError() const {
 const char *SBTraceCursor::GetError() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return ConstString(m_opaque_sp->GetError()).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_sp->GetError());
 }
 
 bool SBTraceCursor::IsEvent() const {
@@ -103,7 +127,8 @@ lldb::TraceEvent SBTraceCursor::GetEventType() const {
 const char *SBTraceCursor::GetEventTypeAsString() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return ConstString(m_opaque_sp->GetEventTypeAsString()).GetCString();
+  return StringPool::GetSystemPool().Intern(
+      m_opaque_sp->GetEventTypeAsString());
 }
 
 bool SBTraceCursor::IsInstruction() const {

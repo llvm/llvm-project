@@ -34,7 +34,6 @@
 ...
 ---
 name:            zext_free
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%4' }
 body:             |

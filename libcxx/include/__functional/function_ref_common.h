@@ -16,7 +16,6 @@
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_trivially_constructible.h>
-#include <__type_traits/is_trivially_destructible.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_pointer.h>
 #include <__utility/constant_wrapper.h>

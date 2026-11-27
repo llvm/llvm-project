@@ -2225,7 +2225,8 @@ Address CodeGenFunction::OMPBuilderCBHelpers::getAddressOfLocalVariable(
   CodeGenModule &CGM = CGF.CGM;
   auto &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
 
-  if (!VD)
+  // Unreachable declaration: nothing can run the allocation.
+  if (!VD || !CGF.HaveInsertPoint())
     return Address::invalid();
   const VarDecl *CVD = VD->getCanonicalDecl();
   if (!isAllocatableDecl(CVD))
@@ -2714,6 +2715,17 @@ void CodeGenFunction::EmitOMPCanonicalLoop(const OMPCanonicalLoop *S) {
   OMPLoopNestStack.push_back(CL);
 }
 
+/// A directive's own source range covers only the pragma, so use the range of
+/// the associated loop, looking through loop transformation directives.
+static SourceRange getAssociatedLoopRange(const OMPExecutableDirective &S) {
+  if (!isa<OMPLoopDirective>(S))
+    return S.getSourceRange();
+  const Stmt *Loop = S.getRawStmt()->IgnoreContainers();
+  while (isa<OMPLoopTransformationDirective>(Loop))
+    Loop = cast<OMPExecutableDirective>(Loop)->getRawStmt()->IgnoreContainers();
+  return Loop->getSourceRange();
+}
+
 void CodeGenFunction::EmitOMPInnerLoop(
     const OMPExecutableDirective &S, bool RequiresCleanup, const Expr *LoopCond,
     const Expr *IncExpr,
@@ -2724,7 +2736,7 @@ void CodeGenFunction::EmitOMPInnerLoop(
   // Start the loop with a block that tests the condition.
   auto CondBlock = createBasicBlock("omp.inner.for.cond");
   EmitBlock(CondBlock);
-  const SourceRange R = S.getSourceRange();
+  const SourceRange R = getAssociatedLoopRange(S);
 
   // If attributes are attached, push to the basic block with them.
   const auto &OMPED = cast<OMPExecutableDirective>(S);
@@ -3599,7 +3611,7 @@ void CodeGenFunction::EmitOMPOuterLoop(
   // Start the loop with a block that tests the condition.
   llvm::BasicBlock *CondBlock = createBasicBlock("omp.dispatch.cond");
   EmitBlock(CondBlock);
-  const SourceRange R = S.getSourceRange();
+  const SourceRange R = getAssociatedLoopRange(S);
   OMPLoopNestStack.clear();
   LoopStack.push(CondBlock, SourceLocToDebugLoc(R.getBegin()),
                  SourceLocToDebugLoc(R.getEnd()));
@@ -6262,18 +6274,40 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
 }
 
 void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
-  llvm::AtomicOrdering AO = S.getSingleClause<OMPFlushClause>()
-                                ? llvm::AtomicOrdering::NotAtomic
-                                : llvm::AtomicOrdering::AcquireRelease;
-  CGM.getOpenMPRuntime().emitFlush(
-      *this,
-      [&S]() -> ArrayRef<const Expr *> {
-        if (const auto *FlushClause = S.getSingleClause<OMPFlushClause>())
-          return llvm::ArrayRef(FlushClause->varlist_begin(),
-                                FlushClause->varlist_end());
-        return {};
-      }(),
-      S.getBeginLoc(), AO);
+  // A flush with no list and no memory-order clause is seq_cst, except in
+  // OpenMP 5.0 (2.17.8), where it behaves as acq_rel. Before 5.0 there were no
+  // memory-order clauses and it was a full flush; from 5.1 (2.19.8) it is
+  // seq_cst again.
+  llvm::AtomicOrdering AO = CGM.getLangOpts().OpenMP == 50
+                                ? llvm::AtomicOrdering::AcquireRelease
+                                : llvm::AtomicOrdering::SequentiallyConsistent;
+  ArrayRef<const Expr *> List;
+  for (const OMPClause *C : S.clauses()) {
+    switch (C->getClauseKind()) {
+    case OMPC_flush: {
+      // A flush with a list is a strong flush.
+      const auto *FC = cast<OMPFlushClause>(C);
+      List = llvm::ArrayRef(FC->varlist_begin(), FC->varlist_end());
+      AO = llvm::AtomicOrdering::NotAtomic;
+      break;
+    }
+    case OMPC_acq_rel:
+      AO = llvm::AtomicOrdering::AcquireRelease;
+      break;
+    case OMPC_acquire:
+      AO = llvm::AtomicOrdering::Acquire;
+      break;
+    case OMPC_release:
+      AO = llvm::AtomicOrdering::Release;
+      break;
+    case OMPC_seq_cst:
+      AO = llvm::AtomicOrdering::SequentiallyConsistent;
+      break;
+    default:
+      llvm_unreachable("unexpected clause on flush");
+    }
+  }
+  CGM.getOpenMPRuntime().emitFlush(*this, List, S.getBeginLoc(), AO);
 }
 
 void CodeGenFunction::EmitOMPDepobjDirective(const OMPDepobjDirective &S) {
@@ -6971,53 +7005,17 @@ static void emitOMPAtomicReadExpr(CodeGenFunction &CGF, llvm::AtomicOrdering AO,
   LValue XLValue = CGF.EmitLValue(X);
   LValue VLValue = CGF.EmitLValue(V);
   RValue Res = emitSimpleAtomicLoad(CGF, AO, XLValue, Loc);
-  // OpenMP, 2.17.7, atomic Construct
-  // If the read or capture clause is specified and the acquire, acq_rel, or
-  // seq_cst clause is specified then the strong flush on exit from the atomic
-  // operation is also an acquire flush.
-  switch (AO) {
-  case llvm::AtomicOrdering::Acquire:
-  case llvm::AtomicOrdering::AcquireRelease:
-  case llvm::AtomicOrdering::SequentiallyConsistent:
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
-                                         llvm::AtomicOrdering::Acquire);
-    break;
-  case llvm::AtomicOrdering::Monotonic:
-  case llvm::AtomicOrdering::Release:
-    break;
-  case llvm::AtomicOrdering::NotAtomic:
-  case llvm::AtomicOrdering::Unordered:
-    llvm_unreachable("Unexpected ordering.");
-  }
   CGF.emitOMPSimpleStore(VLValue, Res, X->getType().getNonReferenceType(), Loc);
   CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, V);
 }
 
 static void emitOMPAtomicWriteExpr(CodeGenFunction &CGF,
                                    llvm::AtomicOrdering AO, const Expr *X,
-                                   const Expr *E, SourceLocation Loc) {
+                                   const Expr *E) {
   // x = expr;
   assert(X->isLValue() && "X of 'omp atomic write' is not lvalue");
   emitSimpleAtomicStore(CGF, AO, CGF.EmitLValue(X), CGF.EmitAnyExpr(E));
   CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, X);
-  // OpenMP, 2.17.7, atomic Construct
-  // If the write, update, or capture clause is specified and the release,
-  // acq_rel, or seq_cst clause is specified then the strong flush on entry to
-  // the atomic operation is also a release flush.
-  switch (AO) {
-  case llvm::AtomicOrdering::Release:
-  case llvm::AtomicOrdering::AcquireRelease:
-  case llvm::AtomicOrdering::SequentiallyConsistent:
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
-                                         llvm::AtomicOrdering::Release);
-    break;
-  case llvm::AtomicOrdering::Acquire:
-  case llvm::AtomicOrdering::Monotonic:
-    break;
-  case llvm::AtomicOrdering::NotAtomic:
-  case llvm::AtomicOrdering::Unordered:
-    llvm_unreachable("Unexpected ordering.");
-  }
 }
 
 static std::pair<bool, RValue> emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X,
@@ -7190,24 +7188,6 @@ static void emitOMPAtomicUpdateExpr(CodeGenFunction &CGF,
   (void)CGF.EmitOMPAtomicSimpleUpdateExpr(
       XLValue, ExprRValue, BOUE->getOpcode(), IsXLHSInRHSPart, AO, Loc, Gen);
   CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, X);
-  // OpenMP, 2.17.7, atomic Construct
-  // If the write, update, or capture clause is specified and the release,
-  // acq_rel, or seq_cst clause is specified then the strong flush on entry to
-  // the atomic operation is also a release flush.
-  switch (AO) {
-  case llvm::AtomicOrdering::Release:
-  case llvm::AtomicOrdering::AcquireRelease:
-  case llvm::AtomicOrdering::SequentiallyConsistent:
-    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
-                                         llvm::AtomicOrdering::Release);
-    break;
-  case llvm::AtomicOrdering::Acquire:
-  case llvm::AtomicOrdering::Monotonic:
-    break;
-  case llvm::AtomicOrdering::NotAtomic:
-  case llvm::AtomicOrdering::Unordered:
-    llvm_unreachable("Unexpected ordering.");
-  }
 }
 
 static RValue convertToType(CodeGenFunction &CGF, RValue Value,
@@ -7302,36 +7282,6 @@ static void emitOMPAtomicCaptureExpr(CodeGenFunction &CGF,
   // Emit post-update store to 'v' of old/new 'x' value.
   CGF.emitOMPSimpleStore(VLValue, NewVVal, NewVValType, Loc);
   CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, V);
-  // OpenMP 5.1 removes the required flush for capture clause.
-  if (CGF.CGM.getLangOpts().OpenMP < 51) {
-    // OpenMP, 2.17.7, atomic Construct
-    // If the write, update, or capture clause is specified and the release,
-    // acq_rel, or seq_cst clause is specified then the strong flush on entry to
-    // the atomic operation is also a release flush.
-    // If the read or capture clause is specified and the acquire, acq_rel, or
-    // seq_cst clause is specified then the strong flush on exit from the atomic
-    // operation is also an acquire flush.
-    switch (AO) {
-    case llvm::AtomicOrdering::Release:
-      CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
-                                           llvm::AtomicOrdering::Release);
-      break;
-    case llvm::AtomicOrdering::Acquire:
-      CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc,
-                                           llvm::AtomicOrdering::Acquire);
-      break;
-    case llvm::AtomicOrdering::AcquireRelease:
-    case llvm::AtomicOrdering::SequentiallyConsistent:
-      CGF.CGM.getOpenMPRuntime().emitFlush(
-          CGF, {}, Loc, llvm::AtomicOrdering::AcquireRelease);
-      break;
-    case llvm::AtomicOrdering::Monotonic:
-      break;
-    case llvm::AtomicOrdering::NotAtomic:
-    case llvm::AtomicOrdering::Unordered:
-      llvm_unreachable("Unexpected ordering.");
-    }
-  }
 }
 
 static void emitOMPAtomicCompareExpr(
@@ -7427,7 +7377,7 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
     emitOMPAtomicReadExpr(CGF, AO, X, V, Loc);
     break;
   case OMPC_write:
-    emitOMPAtomicWriteExpr(CGF, AO, X, E, Loc);
+    emitOMPAtomicWriteExpr(CGF, AO, X, E);
     break;
   case OMPC_unknown:
   case OMPC_update:
@@ -7445,6 +7395,20 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   default:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
+  // OpenMP 4.0 and 4.5 (4.5, 2.13.6 atomic Construct): "Any atomic construct
+  // with a seq_cst clause forces the atomically performed operation to include
+  // an implicit flush operation without a list."  That flush is kept for those
+  // versions.  It could arguably be dropped as well: 1.4.4 allows the ordering
+  // imposed by an implicit flush to be relaxed "when the result is only visible
+  // to programs using non-sequentially consistent atomic directives", and the
+  // note under the sentence gives the intent as the semantics of a
+  // memory_order_seq_cst operation, which the atomic operation already has.
+  // From OpenMP 5.0 on, the flushes implied by an atomic construct are provided
+  // by the memory ordering of the atomic operation itself, and nothing is
+  // emitted here.
+  if (CGF.getLangOpts().OpenMP < 50 &&
+      AO == llvm::AtomicOrdering::SequentiallyConsistent)
+    CGF.CGM.getOpenMPRuntime().emitFlush(CGF, {}, Loc, AO);
 }
 
 void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
@@ -7498,12 +7462,16 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
          Kind == OMPC_capture)) {
       AO = DefaultOrder;
     } else if (DefaultOrder == llvm::AtomicOrdering::AcquireRelease) {
-      if (Kind == OMPC_unknown || Kind == OMPC_update || Kind == OMPC_write) {
+      // A write only releases and a read only acquires.  An update does both
+      // from OpenMP 5.1 on; OpenMP 5.0 did not allow acq_rel on an update and
+      // made it a release.
+      if (Kind == OMPC_write)
         AO = llvm::AtomicOrdering::Release;
-      } else if (Kind == OMPC_read) {
-        assert(Kind == OMPC_read && "Unexpected atomic kind.");
+      else if (Kind == OMPC_read)
         AO = llvm::AtomicOrdering::Acquire;
-      }
+      else if (Kind == OMPC_unknown || Kind == OMPC_update)
+        AO = getLangOpts().OpenMP < 51 ? llvm::AtomicOrdering::Release
+                                       : llvm::AtomicOrdering::AcquireRelease;
     }
   }
 

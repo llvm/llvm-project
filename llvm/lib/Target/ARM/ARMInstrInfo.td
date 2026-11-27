@@ -6761,7 +6761,7 @@ let isPseudo = 1 in {
   def SEH_Nop_Ret : PseudoInst<(outs), (ins i32imm:$wide), NoItinerary, []>, Sched<[]>;
   def SEH_PrologEnd : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
   def SEH_EpilogStart : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
-  let isTerminator = 1 in
+  let isTerminator = 1, isBarrier = 1 in
   def SEH_EpilogEnd : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
 }
 

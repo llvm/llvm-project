@@ -306,6 +306,7 @@ struct Config {
   llvm::SmallVector<llvm::StringRef, 0> auxiliaryList;
   llvm::SmallVector<llvm::StringRef, 0> filterList;
   llvm::SmallVector<llvm::StringRef, 0> passPlugins;
+  llvm::SmallVector<llvm::StringRef, 0> passPluginArgs;
   llvm::SmallVector<llvm::StringRef, 0> searchPaths;
   llvm::SmallVector<llvm::StringRef, 0> symbolOrderingFile;
   llvm::SmallVector<llvm::StringRef, 0> thinLTOModulesToCompile;

@@ -39,6 +39,7 @@ class CallInst;
 class CondBrInst;
 class DIBuilder;
 class DomTreeUpdater;
+class FreezeInst;
 class Function;
 class Instruction;
 class InvokeInst;
@@ -566,6 +567,13 @@ LLVM_ABI bool canReplaceOperandWithVariable(const Instruction *I,
 
 /// Invert the given true/false value, possibly reusing an existing copy.
 LLVM_ABI Value *invertCondition(Value *Condition);
+
+/// Move \p FI right after the definition of its operand, and replace the uses
+/// of the operand that it dominates with \p FI. Users whose operand was
+/// replaced are added to \p Users. Returns whether anything changed, which is
+/// not the case if there is no position to move \p FI to.
+LLVM_ABI bool freezeUsesAfterDef(FreezeInst &FI, DominatorTree &DT,
+                                 SmallVectorImpl<User *> *Users = nullptr);
 
 //===----------------------------------------------------------------------===//
 //  Assorted

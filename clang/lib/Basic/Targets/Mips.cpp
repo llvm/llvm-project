@@ -34,24 +34,6 @@ static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
 #include "clang/Basic/BuiltinsMips.def"
 });
 
-bool MipsTargetInfo::processorSupportsGPR64() const {
-  return llvm::StringSwitch<bool>(CPU)
-      .Case("mips3", true)
-      .Case("mips4", true)
-      .Case("mips5", true)
-      .Case("mips64", true)
-      .Case("mips64r2", true)
-      .Case("mips64r3", true)
-      .Case("mips64r5", true)
-      .Case("mips64r6", true)
-      .Case("octeon", true)
-      .Case("octeon+", true)
-      .Case("r5900", true)
-      .Case("i6400", true)
-      .Case("i6500", true)
-      .Default(false);
-}
-
 static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"mips1"},  {"mips2"},    {"mips3"},    {"mips4"},    {"mips5"},
     {"mips32"}, {"mips32r2"}, {"mips32r3"}, {"mips32r5"}, {"mips32r6"},
@@ -68,14 +50,35 @@ void MipsTargetInfo::fillValidCPUList(
   Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
 }
 
-unsigned MipsTargetInfo::getISARev() const {
-  return llvm::StringSwitch<unsigned>(getCPU())
-      .Cases({"mips32", "mips64"}, 1)
-      .Cases({"mips32r2", "mips64r2", "octeon", "octeon+"}, 2)
-      .Cases({"mips32r3", "mips64r3"}, 3)
-      .Cases({"mips32r5", "mips64r5", "p5600"}, 5)
-      .Cases({"mips32r6", "mips64r6", "i6400", "i6500"}, 6)
-      .Default(0);
+// Clang does not expand the features implied by a CPU feature, so p5600,
+// i6400, i6500 and r5900 are listed with the ISA they imply.
+void MipsTargetInfo::setISAFromFeatures(
+    const std::vector<std::string> &Features) {
+  ISALevel = ISARev = 0;
+  for (const auto &Feature : Features) {
+    auto [Level, Rev] =
+        llvm::StringSwitch<std::pair<unsigned, unsigned>>(Feature)
+            .Case("+mips1", {1, 0})
+            .Case("+mips2", {2, 0})
+            .Cases({"+mips3", "+r5900"}, {3, 0})
+            .Case("+mips4", {4, 0})
+            .Case("+mips5", {5, 0})
+            .Case("+mips32", {32, 1})
+            .Case("+mips32r2", {32, 2})
+            .Case("+mips32r3", {32, 3})
+            .Cases({"+mips32r5", "+p5600"}, {32, 5})
+            .Case("+mips32r6", {32, 6})
+            .Case("+mips64", {64, 1})
+            .Case("+mips64r2", {64, 2})
+            .Case("+mips64r3", {64, 3})
+            .Case("+mips64r5", {64, 5})
+            .Cases({"+mips64r6", "+i6400", "+i6500"}, {64, 6})
+            .Default({0, 0});
+    ISALevel = std::max(ISALevel, Level);
+    ISARev = std::max(ISARev, Rev);
+  }
+  if (!ISALevel)
+    ISALevel = ABI == "o32" ? 32 : 64;
 }
 
 void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -93,20 +96,19 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (Opts.GNUMode)
     Builder.defineMacro("mips");
 
-  if (ABI == "o32") {
-    Builder.defineMacro("__mips", "32");
-    Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_MIPS32");
-  } else {
-    Builder.defineMacro("__mips", "64");
+  // Like GCC, __mips and _MIPS_ISA give the ISA level: 1 to 5 for MIPS I to
+  // MIPS V, and 32 or 64 for any revision of MIPS32 or MIPS64.
+  Builder.defineMacro("__mips", Twine(ISALevel));
+  Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_MIPS" + Twine(ISALevel));
+
+  if (ABI != "o32") {
     Builder.defineMacro("__mips64");
     Builder.defineMacro("__mips64__");
-    Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_MIPS64");
   }
 
-  const std::string ISARev = std::to_string(getISARev());
-
-  if (!ISARev.empty())
-    Builder.defineMacro("__mips_isa_rev", ISARev);
+  // __mips_isa_rev is only defined for MIPS32 and MIPS64.
+  if (ISARev)
+    Builder.defineMacro("__mips_isa_rev", Twine(ISARev));
 
   if (ABI == "o32") {
     Builder.defineMacro("__mips_o32");
@@ -209,7 +211,7 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (StringRef(CPU).starts_with("octeon"))
     Builder.defineMacro("__OCTEON__");
 
-  if (CPU != "mips1") {
+  if (ISALevel != 1) {
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
@@ -272,20 +274,17 @@ bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
     return false;
   }
   // Mips revision 6 and -mfp32 are incompatible
-  if (FPMode != FP64 && FPMode != FPXX &&
-      (CPU == "mips32r6" || CPU == "mips64r6" || CPU == "i6400" ||
-       CPU == "i6500")) {
+  if (FPMode != FP64 && FPMode != FPXX && ISARev == 6) {
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfp32" << CPU;
     return false;
   }
   // Option -mfp64 permitted on Mips32 iff revision 2 or higher is present
-  if (FPMode == FP64 && (CPU == "mips1" || CPU == "mips2" ||
-      getISARev() < 2) && ABI == "o32") {
+  if (FPMode == FP64 && ISARev < 2 && ABI == "o32") {
     Diags.Report(diag::err_mips_fp64_req) << "-mfp64";
     return false;
   }
   // FPXX requires mips2+
-  if (FPMode == FPXX && CPU == "mips1") {
+  if (FPMode == FPXX && ISALevel == 1) {
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mfpxx" << CPU;
     return false;
   }
@@ -296,8 +295,7 @@ bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
     return false;
   }
   // Option -mmsa permitted on Mips32 iff revision 2 or higher is present
-  if (HasMSA && (CPU == "mips1" || CPU == "mips2" || getISARev() < 2) &&
-      ABI == "o32") {
+  if (HasMSA && ISARev < 2 && ABI == "o32") {
     Diags.Report(diag::err_mips_fp64_req) << "-mmsa";
     return false;
   }

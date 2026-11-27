@@ -87,8 +87,6 @@ namespace {
     ORE->emit(createHWLoopAnalysis(ORETag, TheLoop, I) << Msg);
   }
 
-  using TTI = TargetTransformInfo;
-
   class HardwareLoopsLegacy : public FunctionPass {
   public:
     static char ID;
@@ -167,8 +165,7 @@ namespace {
   public:
     HardwareLoop(HardwareLoopInfo &Info, ScalarEvolution &SE,
                  OptimizationRemarkEmitter *ORE, HardwareLoopOptions &Opts)
-        : SE(SE), ORE(ORE), Opts(Opts), L(Info.L),
-          M(L->getHeader()->getModule()), ExitCount(Info.ExitCount),
+        : SE(SE), ORE(ORE), Opts(Opts), L(Info.L), ExitCount(Info.ExitCount),
           CountType(Info.CountType), ExitBranch(Info.ExitBranch),
           LoopDecrement(Info.LoopDecrement), UsePHICounter(Info.CounterInReg),
           UseLoopGuard(Info.PerformEntryTest) {}
@@ -179,8 +176,7 @@ namespace {
     ScalarEvolution &SE;
     OptimizationRemarkEmitter *ORE = nullptr;
     HardwareLoopOptions &Opts;
-    Loop *L                 = nullptr;
-    Module *M               = nullptr;
+    Loop *L = nullptr;
     const SCEV *ExitCount   = nullptr;
     Type *CountType         = nullptr;
     CondBrInst *ExitBranch = nullptr;

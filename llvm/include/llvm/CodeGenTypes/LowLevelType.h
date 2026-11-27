@@ -29,7 +29,6 @@
 #define LLVM_CODEGEN_LOWLEVELTYPE_H
 
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Compiler.h"
@@ -554,7 +553,6 @@ public:
 
   bool operator!=(const LLT &RHS) const { return !(*this == RHS); }
 
-  friend struct DenseMapInfo<LLT>;
   friend class GISelInstProfileBuilder;
 
 private:
@@ -727,14 +725,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const LLT &Ty) {
   Ty.print(OS);
   return OS;
 }
-
-template <> struct DenseMapInfo<LLT> {
-  static inline unsigned getHashValue(const LLT &Ty) {
-    uint64_t Val = Ty.getUniqueRAWLLTData();
-    return DenseMapInfo<uint64_t>::getHashValue(Val);
-  }
-  static bool isEqual(const LLT &LHS, const LLT &RHS) { return LHS == RHS; }
-};
 
 } // namespace llvm
 

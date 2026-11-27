@@ -464,22 +464,10 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
   EmitStackMaps = [this](Module &M) {
     GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
     assert(MI && "AsmPrinter didn't require GCModuleInfo?");
-    bool NeedsDefault = false;
-    if (MI->begin() == MI->end())
-      // No GC strategy, use the default format.
-      NeedsDefault = true;
-    else
-      for (const auto &I : *MI) {
-        if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*I))
-          if (MP->emitStackMaps(SM, *this))
-            continue;
-        // The strategy doesn't have printer or doesn't emit custom stack maps.
-        // Use the default format.
-        NeedsDefault = true;
-      }
-
-    if (NeedsDefault)
-      SM.serializeToStackMapSection();
+    SmallVector<GCStrategy *, 1> Strategies;
+    for (const auto &I : *MI)
+      Strategies.push_back(I.get());
+    emitStackMapsForGCStrategies(Strategies);
   };
   AssertDebugEHFinalized = [&]() {
     assert(!DD && Handlers.size() == NumUserHandlers &&
@@ -1947,6 +1935,16 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
       while (I < Ops.size() && !isa<MDString>(Ops[I]))
         ++I;
       const ArrayRef<MDOperand> Aux = Ops.slice(AuxBegin, I - AuxBegin);
+
+      // Metadata does not keep globals alive, and passes such as ThinLTO
+      // function import do not follow references from metadata, so a constant
+      // may have been dropped (nulled). Omit the records rather than emit them
+      // without their auxiliary data.
+      if (any_of(Aux, [](const MDOperand &MDO) {
+            const auto *AuxMDs = dyn_cast<MDNode>(MDO);
+            return AuxMDs && is_contained(AuxMDs->operands(), nullptr);
+          }))
+        continue;
 
       auto EmitAux = [&] {
         for (const MDOperand &MDO : Aux) {
@@ -5092,6 +5090,27 @@ isBlockOnlyReachableByFallthrough(const MachineBasicBlock *MBB) const {
   return true;
 }
 
+void AsmPrinter::emitStackMapsForGCStrategies(
+    ArrayRef<GCStrategy *> Strategies) {
+  bool NeedsDefault = false;
+  if (Strategies.empty())
+    // No GC strategy, use the default format.
+    NeedsDefault = true;
+  else {
+    for (GCStrategy *S : Strategies) {
+      if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*S))
+        if (MP->emitStackMaps(SM, *this))
+          continue;
+      // The strategy doesn't have printer or doesn't emit custom stack maps.
+      // Use the default format.
+      NeedsDefault = true;
+    }
+  }
+
+  if (NeedsDefault)
+    SM.serializeToStackMapSection();
+}
+
 GCMetadataPrinter *AsmPrinter::getOrCreateGCPrinter(GCStrategy &S) {
   if (!S.usesMetadata())
     return nullptr;
@@ -5484,7 +5503,12 @@ void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
   // TODO(boomanaiden154): Get GC working with the new pass manager.
   AsmPrinter.BeginGCAssembly = [](Module &M) {};
   AsmPrinter.FinishGCAssembly = [](Module &M) {};
-  AsmPrinter.EmitStackMaps = [](Module &M) {};
+  AsmPrinter.EmitStackMaps = [&MAM, &AsmPrinter](Module &M) {
+    SmallVector<GCStrategy *, 1> Strategies;
+    for (auto &[Name, S] : MAM.getResult<CollectorMetadataAnalysis>(M))
+      Strategies.push_back(S.get());
+    AsmPrinter.emitStackMapsForGCStrategies(Strategies);
+  };
   AsmPrinter.AssertDebugEHFinalized = []() {};
 }
 
@@ -5525,7 +5549,13 @@ void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
   // TODO(boomanaiden154): Get GC working with the new pass manager.
   AsmPrinter.BeginGCAssembly = [](Module &M) {};
   AsmPrinter.FinishGCAssembly = [](Module &M) {};
-  AsmPrinter.EmitStackMaps = [](Module &M) {};
+  AsmPrinter.EmitStackMaps = [&MAMProxy, &AsmPrinter](Module &M) {
+    SmallVector<GCStrategy *, 1> Strategies;
+    if (auto *Map = MAMProxy.getCachedResult<CollectorMetadataAnalysis>(M))
+      for (auto &[Name, S] : *Map)
+        Strategies.push_back(S.get());
+    AsmPrinter.emitStackMapsForGCStrategies(Strategies);
+  };
   AsmPrinter.AssertDebugEHFinalized = []() {};
 }
 

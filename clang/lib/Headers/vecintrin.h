@@ -945,8 +945,10 @@ vec_gather_element(__vector signed int __vec,
                    __vector unsigned int __offset,
                    const signed int *__ptr, int __index)
   __constant_range(__index, 0, 3) {
-  __vec[__index] = *(const signed int *)(
-    (const char *)__ptr + __offset[__index]);
+  signed int __elt;
+  __builtin_memcpy(&__elt, (const char *)__ptr + __offset[__index],
+                   sizeof(__elt));
+  __vec[__index] = __elt;
   return __vec;
 }
 
@@ -955,8 +957,10 @@ vec_gather_element(__vector __bool int __vec,
                    __vector unsigned int __offset,
                    const unsigned int *__ptr, int __index)
   __constant_range(__index, 0, 3) {
-  __vec[__index] = *(const unsigned int *)(
-    (const char *)__ptr + __offset[__index]);
+  unsigned int __elt;
+  __builtin_memcpy(&__elt, (const char *)__ptr + __offset[__index],
+                   sizeof(__elt));
+  __vec[__index] = __elt;
   return __vec;
 }
 
@@ -965,8 +969,10 @@ vec_gather_element(__vector unsigned int __vec,
                    __vector unsigned int __offset,
                    const unsigned int *__ptr, int __index)
   __constant_range(__index, 0, 3) {
-  __vec[__index] = *(const unsigned int *)(
-    (const char *)__ptr + __offset[__index]);
+  unsigned int __elt;
+  __builtin_memcpy(&__elt, (const char *)__ptr + __offset[__index],
+                   sizeof(__elt));
+  __vec[__index] = __elt;
   return __vec;
 }
 
@@ -975,8 +981,10 @@ vec_gather_element(__vector signed long long __vec,
                    __vector unsigned long long __offset,
                    const signed long long *__ptr, int __index)
   __constant_range(__index, 0, 1) {
-  __vec[__index] = *(const signed long long *)(
-    (const char *)__ptr + __offset[__index]);
+  signed long long __elt;
+  __builtin_memcpy(&__elt, (const char *)__ptr + __offset[__index],
+                   sizeof(__elt));
+  __vec[__index] = __elt;
   return __vec;
 }
 
@@ -985,8 +993,10 @@ vec_gather_element(__vector __bool long long __vec,
                    __vector unsigned long long __offset,
                    const unsigned long long *__ptr, int __index)
   __constant_range(__index, 0, 1) {
-  __vec[__index] = *(const unsigned long long *)(
-    (const char *)__ptr + __offset[__index]);
+  unsigned long long __elt;
+  __builtin_memcpy(&__elt, (const char *)__ptr + __offset[__index],
+                   sizeof(__elt));
+  __vec[__index] = __elt;
   return __vec;
 }
 
@@ -995,8 +1005,10 @@ vec_gather_element(__vector unsigned long long __vec,
                    __vector unsigned long long __offset,
                    const unsigned long long *__ptr, int __index)
   __constant_range(__index, 0, 1) {
-  __vec[__index] = *(const unsigned long long *)(
-    (const char *)__ptr + __offset[__index]);
+  unsigned long long __elt;
+  __builtin_memcpy(&__elt, (const char *)__ptr + __offset[__index],
+                   sizeof(__elt));
+  __vec[__index] = __elt;
   return __vec;
 }
 
@@ -1006,8 +1018,10 @@ vec_gather_element(__vector float __vec,
                    __vector unsigned int __offset,
                    const float *__ptr, int __index)
   __constant_range(__index, 0, 3) {
-  __vec[__index] = *(const float *)(
-    (const char *)__ptr + __offset[__index]);
+  float __elt;
+  __builtin_memcpy(&__elt, (const char *)__ptr + __offset[__index],
+                   sizeof(__elt));
+  __vec[__index] = __elt;
   return __vec;
 }
 #endif
@@ -1017,8 +1031,10 @@ vec_gather_element(__vector double __vec,
                    __vector unsigned long long __offset,
                    const double *__ptr, int __index)
   __constant_range(__index, 0, 1) {
-  __vec[__index] = *(const double *)(
-    (const char *)__ptr + __offset[__index]);
+  double __elt;
+  __builtin_memcpy(&__elt, (const char *)__ptr + __offset[__index],
+                   sizeof(__elt));
+  __vec[__index] = __elt;
   return __vec;
 }
 
@@ -1029,8 +1045,9 @@ vec_scatter_element(__vector signed int __vec,
                     __vector unsigned int __offset,
                     signed int *__ptr, int __index)
   __constant_range(__index, 0, 3) {
-  *(signed int *)((char *)__ptr + __offset[__index]) =
-    __vec[__index];
+  signed int __elt = __vec[__index];
+  __builtin_memcpy((const char *)__ptr + __offset[__index], &__elt,
+                   sizeof(__elt));
 }
 
 static inline __ATTRS_o_ai void
@@ -1038,8 +1055,9 @@ vec_scatter_element(__vector __bool int __vec,
                     __vector unsigned int __offset,
                     unsigned int *__ptr, int __index)
   __constant_range(__index, 0, 3) {
-  *(unsigned int *)((char *)__ptr + __offset[__index]) =
-    __vec[__index];
+  unsigned int __elt = __vec[__index];
+  __builtin_memcpy((const char *)__ptr + __offset[__index], &__elt,
+                   sizeof(__elt));
 }
 
 static inline __ATTRS_o_ai void
@@ -1047,8 +1065,9 @@ vec_scatter_element(__vector unsigned int __vec,
                     __vector unsigned int __offset,
                     unsigned int *__ptr, int __index)
   __constant_range(__index, 0, 3) {
-  *(unsigned int *)((char *)__ptr + __offset[__index]) =
-    __vec[__index];
+  unsigned int __elt = __vec[__index];
+  __builtin_memcpy((const char *)__ptr + __offset[__index], &__elt,
+                   sizeof(__elt));
 }
 
 static inline __ATTRS_o_ai void
@@ -1056,8 +1075,9 @@ vec_scatter_element(__vector signed long long __vec,
                     __vector unsigned long long __offset,
                     signed long long *__ptr, int __index)
   __constant_range(__index, 0, 1) {
-  *(signed long long *)((char *)__ptr + __offset[__index]) =
-    __vec[__index];
+  signed long long __elt = __vec[__index];
+  __builtin_memcpy((const char *)__ptr + __offset[__index], &__elt,
+                   sizeof(__elt));
 }
 
 static inline __ATTRS_o_ai void
@@ -1065,8 +1085,9 @@ vec_scatter_element(__vector __bool long long __vec,
                     __vector unsigned long long __offset,
                     unsigned long long *__ptr, int __index)
   __constant_range(__index, 0, 1) {
-  *(unsigned long long *)((char *)__ptr + __offset[__index]) =
-    __vec[__index];
+  unsigned long long __elt = __vec[__index];
+  __builtin_memcpy((const char *)__ptr + __offset[__index], &__elt,
+                   sizeof(__elt));
 }
 
 static inline __ATTRS_o_ai void
@@ -1074,8 +1095,9 @@ vec_scatter_element(__vector unsigned long long __vec,
                     __vector unsigned long long __offset,
                     unsigned long long *__ptr, int __index)
   __constant_range(__index, 0, 1) {
-  *(unsigned long long *)((char *)__ptr + __offset[__index]) =
-    __vec[__index];
+  unsigned long long __elt = __vec[__index];
+  __builtin_memcpy((const char *)__ptr + __offset[__index], &__elt,
+                   sizeof(__elt));
 }
 
 #if __ARCH__ >= 12
@@ -1084,8 +1106,9 @@ vec_scatter_element(__vector float __vec,
                     __vector unsigned int __offset,
                     float *__ptr, int __index)
   __constant_range(__index, 0, 3) {
-  *(float *)((char *)__ptr + __offset[__index]) =
-    __vec[__index];
+  float __elt = __vec[__index];
+  __builtin_memcpy((const char *)__ptr + __offset[__index], &__elt,
+                   sizeof(__elt));
 }
 #endif
 
@@ -1094,8 +1117,9 @@ vec_scatter_element(__vector double __vec,
                     __vector unsigned long long __offset,
                     double *__ptr, int __index)
   __constant_range(__index, 0, 1) {
-  *(double *)((char *)__ptr + __offset[__index]) =
-    __vec[__index];
+  double __elt = __vec[__index];
+  __builtin_memcpy((const char *)__ptr + __offset[__index], &__elt,
+                   sizeof(__elt));
 }
 
 /*-- vec_xl -----------------------------------------------------------------*/

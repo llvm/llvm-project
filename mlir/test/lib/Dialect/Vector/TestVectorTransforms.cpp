@@ -157,97 +157,24 @@ struct TestVectorUnrollingPatterns
   TestVectorUnrollingPatterns() = default;
   TestVectorUnrollingPatterns(const TestVectorUnrollingPatterns &pass)
       : PassWrapper(pass) {}
+
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateVectorUnrollPatterns(
-        patterns,
-        UnrollVectorOptions()
-            .setFilterConstraint([](Operation *op) {
-              return success(
-                  isa<arith::AddFOp, vector::FMAOp, vector::MultiDimReductionOp,
-                      vector::BroadcastOp, vector::LoadOp, vector::StoreOp>(
-                      op));
-            }));
-    populateVectorUnrollPatterns(
-        patterns, UnrollVectorOptions()
-                      .setFilterConstraint([](Operation *op) {
-                        return success(isa<vector::ReductionOp>(op));
-                      }));
-    populateVectorUnrollPatterns(patterns,
-                                 UnrollVectorOptions()
-                                     .setFilterConstraint([](Operation *op) {
-                                       return success(isa<vector::StepOp>(op));
-                                     }));
-    populateVectorUnrollPatterns(
-        patterns,
-        UnrollVectorOptions()
-            .setFilterConstraint([](Operation *op) {
-              return success(
-                  isa<vector::CreateMaskOp, vector::ConstantMaskOp>(op));
-            }));
-    populateVectorUnrollPatterns(
-        patterns,
-        UnrollVectorOptions()
-            .setFilterConstraint([](Operation *op) {
-              return success(isa<vector::ShapeCastOp>(op));
-            }));
-    populateVectorUnrollPatterns(
-        patterns, UnrollVectorOptions()
-                      .setFilterConstraint([](Operation *op) {
-                        return success(isa<vector::TransposeOp>(op));
-                      }));
-    populateVectorUnrollPatterns(
-        patterns, UnrollVectorOptions()
-                      .setFilterConstraint([](Operation *op) {
-                        return success(isa<vector::BitCastOp>(op));
-                      }));
-    populateVectorUnrollPatterns(
-        patterns, UnrollVectorOptions()
-                      .setFilterConstraint([](Operation *op) {
-                        return success(isa<vector::InterleaveOp>(op));
-                      }));
-    populateVectorUnrollPatterns(
-        patterns, UnrollVectorOptions()
-                      .setFilterConstraint([](Operation *op) {
-                        return success(isa<vector::DeinterleaveOp>(op));
-                      }));
 
-    if (unrollBasedOnType) {
-      UnrollVectorOptions opts;
-      opts.setFilterConstraint(
-          [](Operation *op) { return success(isa<ContractionOp>(op)); });
-
-      if (!unrollOrder.empty()) {
-        opts.setUnrollTraversalOrderFn(
-            [this](Operation *op) -> std::optional<SmallVector<int64_t>> {
-              vector::ContractionOp contractOp =
-                  cast<vector::ContractionOp>(op);
-              if (contractOp.getIteratorTypes().size() == unrollOrder.size())
-                return SmallVector<int64_t>(unrollOrder.begin(),
-                                            unrollOrder.end());
-              return std::nullopt;
-            });
-      }
-      populateVectorUnrollPatterns(patterns, opts);
-    } else {
-      populateVectorUnrollPatterns(patterns,
-                                   UnrollVectorOptions()
-                                       .setFilterConstraint([](Operation *op) {
-                                         return success(isa<ContractionOp>(op));
-                                       }));
+    UnrollVectorOptions opts;
+    if (!unrollOrder.empty()) {
+      opts.unrollOrderForContractOp =
+          SmallVector<int64_t>(unrollOrder.begin(), unrollOrder.end());
     }
+    populateVectorUnrollPatterns(patterns, opts);
     populateVectorToVectorCanonicalizationPatterns(patterns);
+
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 
   ListOption<int64_t> unrollOrder{*this, "unroll-order",
                                   llvm::cl::desc("set the unroll order")};
-
-  Option<bool> unrollBasedOnType{
-      *this, "unroll-based-on-type",
-      llvm::cl::desc("Set the unroll factor based on type of the operation"),
-      llvm::cl::init(false)};
 };
 
 struct TestVectorTransferUnrollingPatterns
@@ -281,20 +208,7 @@ struct TestVectorTransferUnrollingPatterns
                              vector::GatherOp>(op));
         });
     if (reverseUnrollOrder.getValue()) {
-      opts.setUnrollTraversalOrderFn(
-          [](Operation *op) -> std::optional<SmallVector<int64_t>> {
-            int64_t numLoops = 0;
-            if (auto readOp = dyn_cast<vector::TransferReadOp>(op))
-              numLoops = readOp.getVectorType().getRank();
-            else if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op))
-              numLoops = writeOp.getVectorType().getRank();
-            else if (auto gatherOp = dyn_cast<vector::GatherOp>(op))
-              numLoops = gatherOp.getVectorType().getRank();
-            else
-              return std::nullopt;
-            auto order = llvm::reverse(llvm::seq<int64_t>(0, numLoops));
-            return llvm::to_vector(order);
-          });
+      opts.reverseDefaultTraversalOrder = true;
     }
     populateVectorUnrollPatterns(patterns, opts);
     populateVectorToVectorCanonicalizationPatterns(patterns);

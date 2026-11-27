@@ -1,6 +1,6 @@
 ; Unknown (e.g. indirect) calls returns conservative results from function propagation
 ; RUN: opt -thinlto-bc %s -thin-link-bitcode-file=%t1.thinlink.bc -o %t1.bc
-; RUN: llvm-lto2 run -disable-thinlto-funcattrs=0 %t1.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run -thinlto-funcattrs %t1.bc -o %t.o -save-temps \
 ; RUN:    -r %t1.bc,indirect,px -r %t1.bc,inlineasm,px -r %t1.bc,selectcallee,px -r %t1.bc,f, -r %t1.bc,g, -r %t1.bc,global,
 ; RUN: llvm-dis -o - %t.o.1.3.import.bc | FileCheck %s
 

@@ -1896,6 +1896,8 @@ static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
   if (func.getWillReturnAttr())
     llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
+  if (func.getStrictfp())
+    llvmFunc->addFnAttr(llvm::Attribute::StrictFP);
   if (func.getNoreturnAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoReturn);
   if (func.getOptsizeAttr())

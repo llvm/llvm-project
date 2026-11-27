@@ -69,7 +69,6 @@
 # Without anti-hints: A %0 gets vgpr0-7, first V_ADD %7 gets vgpr0 (overlaps!,
 # 4 V_NOPs)
 name:            war_valu_wmma_bf16_16x16x32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_valu_wmma_bf16_16x16x32
@@ -130,7 +129,6 @@ body:             |
 # Without anti-hints: A %0 gets vgpr0-7, first V_ADD %7 gets vgpr0 (overlaps!,
 # 4 V_NOPs)
 name:            war_valu_wmma_f16_16x16x32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_valu_wmma_f16_16x16x32
@@ -191,7 +189,6 @@ body:             |
 # Without anti-hints: A %0 gets vgpr0-7, first V_ADD %7 gets vgpr0 (overlaps!,
 # 4 V_NOPs)
 name:            war_valu_wmma_f16_dst_16x16x32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_valu_wmma_f16_dst_16x16x32
@@ -252,7 +249,6 @@ body:             |
 # With anti-hints: A %0 gets vgpr0-7, %7 gets vgpr25 (no overlap, no V_NOP)
 # Without anti-hints: A %0 gets vgpr0-7, %7 gets vgpr0 (overlaps!, 1 V_NOP)
 name:            war_valu_wmma_fp8_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_valu_wmma_fp8_16x16x64
@@ -312,7 +308,6 @@ body:             |
 # Without anti-hints: A %0 gets vgpr0-7, first V_ADD %7 gets vgpr0 (overlaps!,
 # 8 V_NOPs)
 name:            war_valu_wmma_iu8_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_valu_wmma_iu8_16x16x64
@@ -401,7 +396,6 @@ body:             |
 # Without anti-hints: A %0 gets vgpr0-15, first V_ADD %7 gets vgpr0 (overlaps!,
 # 4 V_NOPs)
 name:            war_valu_wmma_fp8_16x16x128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_valu_wmma_fp8_16x16x128
@@ -462,7 +456,6 @@ body:             |
 # Without anti-hints: A %0 gets vgpr0-15, first V_ADD %7 gets vgpr0 (overlaps!,
 # 4 V_NOPs)
 name:            war_valu_wmma_f8f6f4_f8_f8
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_valu_wmma_f8f6f4_f8_f8
@@ -523,7 +516,6 @@ body:             |
 # With anti-hints: A %0 gets vgpr0-7, %7 gets vgpr25 (no overlap, no V_NOP)
 # Without anti-hints: A %0 gets vgpr0-7, %7 gets vgpr0 (overlaps!, 1 V_NOP)
 name:            war_valu_wmma_f8f6f4_f4_f4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_valu_wmma_f8f6f4_f4_f4
@@ -583,7 +575,6 @@ body:             |
 # Without anti-hints: A %0 gets vgpr0-15, first V_ADD %7 gets vgpr0 (overlaps!,
 # 4 V_NOPs)
 name:            war_valu_wmma_scale_f8f6f4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_valu_wmma_scale_f8f6f4
@@ -651,7 +642,6 @@ body:             |
 # Without anti-hints: A %0 gets vgpr16-31, first V_ADD %7 gets vgpr16
 # (overlaps!, 4 V_NOPs)
 name:            war_valu_wmma_32x16x128_f4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_valu_wmma_32x16x128_f4
@@ -715,7 +705,6 @@ body:             |
 # (overlaps index!, 2 V_NOPs)
 # Without anti-hints: B %1 gets vgpr0-15, %7 gets vgpr0 (overlaps B!, 2 V_NOPs)
 name:            war_valu_swmmac_bf16_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_valu_swmmac_bf16_16x16x64
@@ -767,7 +756,6 @@ body:             |
 # 2 V_NOPs)
 # Without anti-hints: B %1 gets vgpr0-15, %7 gets vgpr0 (overlaps B!, 2 V_NOPs)
 name:            war_valu_swmmac_f16_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_valu_swmmac_f16_16x16x64
@@ -819,7 +807,6 @@ body:             |
 # 2 V_NOPs)
 # Without anti-hints: B %1 gets vgpr0-15, %7 gets vgpr0 (overlaps B!, 2 V_NOPs)
 name:            war_valu_swmmac_f16_dst_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_valu_swmmac_f16_dst_16x16x64
@@ -871,7 +858,6 @@ body:             |
 # (overlaps index!, 4 V_NOPs)
 # Without anti-hints: B %1 gets vgpr0-15, %7 gets vgpr0 (overlaps B!, 4 V_NOPs)
 name:            war_valu_swmmac_iu8_16x16x128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_valu_swmmac_iu8_16x16x128
@@ -939,7 +925,6 @@ body:             |
 # Both runs: A %0 gets vgpr8_vgpr9, B %1 gets vgpr10_vgpr11, %7-%10 get
 # vgpr8-11 (overlaps, but no hazard and no V_NOP)
 name:            war_valu_wmma_f32_16x16x4_f32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SAME-LABEL: name: war_valu_wmma_f32_16x16x4_f32
@@ -981,7 +966,6 @@ body:             |
 # Without anti-hints: A %0 gets vgpr0-7, first V_ADD %7 gets vgpr0 (overlaps!,
 # 4 V_NOPs)
 name:            war_src0_only_dead
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_src0_only_dead
@@ -1043,7 +1027,6 @@ body:             |
 # Without anti-hints: B %1 gets vgpr8-15, first V_ADD %7 gets vgpr8 (overlaps!,
 # 4 V_NOPs)
 name:            war_src1_only_dead
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_src1_only_dead
@@ -1105,7 +1088,6 @@ body:             |
 # Both runs: WMMA result %6 gets vgpr16-23, first V_ADD %7 gets vgpr16
 # (overlaps the result!, 4 V_NOPs)
 name:            war_tied_dst_only_dead
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SAME-LABEL: name: war_tied_dst_only_dead
@@ -1152,7 +1134,6 @@ body:             |
 # Without anti-hints: A %0 gets vgpr0-7, first V_EXP %7 gets vgpr0 (overlaps!,
 # 4 V_NOPs)
 name:            war_trans_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_trans_def
@@ -1217,7 +1198,6 @@ body:             |
 # Without anti-hints: B %1 gets vgpr8-15, %21 gets vgpr8 (COPY, not checked),
 # first V_ADD %7 gets vgpr9 (overlaps B!, 4 V_NOPs)
 name:            war_copy_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_copy_def
@@ -1274,7 +1254,6 @@ body:             |
 # Without anti-hints: A/B get vgpr0-15, DS_READs get vgpr0-15 (overlaps A and
 # B, no V_NOP)
 name:            war_ds_def_only
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_ds_def_only
@@ -1321,7 +1300,6 @@ body:             |
 # Without anti-hints: DS_READ %7 gets vgpr0-3, first V_ADD %8 gets vgpr4
 # (overlaps A!, 4 V_NOPs)
 name:            war_ds_def_with_valu
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_ds_def_with_valu
@@ -1383,7 +1361,6 @@ body:             |
 # Without anti-hints: A/B get vgpr0-15, first four DS_READs get vgpr0-15
 # (overlaps A and B, no V_NOP)
 name:            war_ds_def_countmask
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_ds_def_countmask
@@ -1435,7 +1412,6 @@ body:             |
 # Without anti-hints: A %0 gets vgpr0-7, loads get vgpr0-3 (overlaps A,
 # no V_NOP)
 name:            war_vmem_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_vmem_def
@@ -1482,7 +1458,6 @@ body:             |
 # Without anti-hints: A %0 gets vgpr0-7, first V_ADD %7 gets vgpr0 (overlaps!,
 # 4 V_NOPs after the S_MOVs)
 name:            war_countmask_salu_between
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_countmask_salu_between
@@ -1555,7 +1530,6 @@ body:             |
 # With anti-hints: %7 gets vgpr25, %8 gets vgpr0 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr0 (overlaps!, 1 V_NOP)
 name:            war_window_expires_fp8_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_window_expires_fp8_16x16x64
@@ -1596,7 +1570,6 @@ body:             |
 # no V_NOP)
 # Without anti-hints: %7 gets vgpr0 (overlaps!, 4 V_NOPs)
 name:            war_window_expires
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_window_expires
@@ -1653,7 +1626,6 @@ body:             |
 # Without anti-hints: first A %0 gets vgpr0-7, %7 gets vgpr0 (overlaps!,
 # 3 V_NOPs)
 name:            war_second_wmma_flushes_family
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_second_wmma_flushes_family
@@ -1717,7 +1689,6 @@ body:             |
 # Without anti-hints: first A %0 gets vgpr0-7, %7 gets vgpr0 (overlaps!,
 # 3 V_NOPs)
 name:            war_non_xdl_wmma_flushes_family
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: war_non_xdl_wmma_flushes_family
@@ -1777,7 +1748,6 @@ body:             |
 # Both runs: A %0 gets vgpr10-17, %7 gets vgpr9, %8 gets vgpr10 (overlaps!,
 # 3 V_NOPs)
 name:            war_cross_block_no_hints
-tracksRegLiveness: true
 body:             |
   ; SAME-LABEL: name: war_cross_block_no_hints
   ; SAME: bb.0:

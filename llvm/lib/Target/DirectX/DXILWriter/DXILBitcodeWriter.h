@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/MC/StringTableBuilder.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <memory>
 #include <vector>
@@ -36,10 +35,6 @@ class BitcodeWriter {
   std::unique_ptr<BitstreamWriter> Stream;
 
   StringTableBuilder StrtabBuilder{StringTableBuilder::RAW};
-
-  // Owns any strings created by the irsymtab writer until we create the
-  // string table.
-  BumpPtrAllocator Alloc;
 
   void writeBlob(unsigned Block, unsigned Record, StringRef Blob);
 

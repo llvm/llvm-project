@@ -20,8 +20,7 @@ using namespace llvm::support;
 using namespace msgpack;
 
 Reader::Reader(MemoryBufferRef InputBuffer)
-    : InputBuffer(InputBuffer), Current(InputBuffer.getBufferStart()),
-      End(InputBuffer.getBufferEnd()) {}
+    : Current(InputBuffer.getBufferStart()), End(InputBuffer.getBufferEnd()) {}
 
 Reader::Reader(StringRef Input) : Reader({Input, "MsgPack"}) {}
 

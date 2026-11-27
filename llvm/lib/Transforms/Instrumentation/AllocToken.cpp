@@ -296,8 +296,7 @@ private:
   shouldInstrumentCall(const CallBase &CB, const TargetLibraryInfo &TLI) const;
 
   /// Returns true for functions that are eligible for instrumentation.
-  bool isInstrumentableLibFunc(LibFunc Func, const CallBase &CB,
-                               const TargetLibraryInfo &TLI) const;
+  bool isInstrumentableLibFunc(LibFunc Func, const CallBase &CB) const;
 
   /// Returns true for isAllocationFn() functions that we should ignore.
   static bool ignoreInstrumentableLibFunc(LibFunc Func);
@@ -405,7 +404,7 @@ AllocToken::shouldInstrumentCall(const CallBase &CB,
   // returning false for nobuiltin calls.
   LibFunc Func = TLI.getLibFunc(*Callee);
   if (Func != NotLibFunc) {
-    if (isInstrumentableLibFunc(Func, CB, TLI))
+    if (isInstrumentableLibFunc(Func, CB))
       return Func;
   } else if (Options.Extended && CB.getMetadata(LLVMContext::MD_alloc_token)) {
     return NotLibFunc;
@@ -414,12 +413,12 @@ AllocToken::shouldInstrumentCall(const CallBase &CB,
   return std::nullopt;
 }
 
-bool AllocToken::isInstrumentableLibFunc(LibFunc Func, const CallBase &CB,
-                                         const TargetLibraryInfo &TLI) const {
+bool AllocToken::isInstrumentableLibFunc(LibFunc Func,
+                                         const CallBase &CB) const {
   if (ignoreInstrumentableLibFunc(Func))
     return false;
 
-  if (isAllocationFn(&CB, &TLI))
+  if (isAllocationFn(&CB))
     return true;
 
   switch (Func) {
@@ -583,14 +582,24 @@ AllocTokenPass::AllocTokenPass(AllocTokenOptions Opts)
 PreservedAnalyses AllocTokenPass::run(Module &M, ModuleAnalysisManager &MAM) {
   const InstrumentationOptions &CLOpts = getInstrumentationOptions(M);
   AllocToken Pass(CLOpts, Options, M, MAM);
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   bool Modified = false;
 
   for (Function &F : M) {
     if (F.empty())
       continue; // declaration
-    Modified |= Pass.instrumentFunction(F);
+    if (Pass.instrumentFunction(F)) {
+      FAM.invalidate(F, PreservedAnalyses::none().preserveSet<CFGAnalyses>());
+      Modified = true;
+    }
   }
 
-  return Modified ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
-                  : PreservedAnalyses::all();
+  if (!Modified)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }

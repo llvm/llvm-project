@@ -1393,7 +1393,8 @@ InstructionCost ARMTTIImpl::getShuffleCost(
 InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI,
+    const TargetLibraryInfo *TLibInfo, ArrayRef<const Value *> Scalars) const {
   int ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   if (ST->isThumb() && CostKind == TTI::TCK_CodeSize && Ty->isIntegerTy(1)) {
     // Make operations on i1 relatively expensive as this often involves
@@ -2336,7 +2337,7 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                           HardwareLoopInfo &HWLoopInfo) const {
   // Low-overhead branches are only supported in the 'low-overhead branch'
   // extension of v8.1-m.
-  if (!ST->hasLOB() || DisableLowOverheadLoops) {
+  if (!ST->hasV8_1MMainlineOps() || !ST->hasLOB() || DisableLowOverheadLoops) {
     LLVM_DEBUG(dbgs() << "ARMHWLoops: Disabled\n");
     return false;
   }

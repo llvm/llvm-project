@@ -13,7 +13,6 @@
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__memory/unique_ptr.h>
-#include <__new/align_val_t.h>
 #include <__new/global_new_delete.h>
 #include <__new/interference_size.h>
 #include <__new/nothrow_t.h>
@@ -82,20 +81,31 @@ struct _LIBCPP_HIDE_FROM_ABI __bitset_view {
 // Upon construction the number of shards and the number of bits per each shard is provided.
 // The bit size of each shard is always rounded up to the cache line, such that they can be used exclusively without
 // false sharing.
-struct _LIBCPP_HIDE_FROM_ABI __sharded_dynamic_bitset {
-  struct _LIBCPP_HIDE_FROM_ABI __deleter {
-    void _LIBCPP_HIDE_FROM_ABI operator()(void* p) const noexcept {
-#  if _LIBCPP_HAS_ALIGNED_ALLOCATION
-      ::operator delete[](p, align_val_t{hardware_destructive_interference_size});
-#  else
-      ::operator delete[](p);
-#  endif
-    }
-  };
+class _LIBCPP_HIDE_FROM_ABI __sharded_dynamic_bitset {
+public:
+  // Produces a view of the specified shard.
+  _LIBCPP_HIDE_FROM_ABI __bitset_view __shard(size_t __shard_idx) const noexcept {
+    _LIBCPP_ASSERT_INTERNAL(__shard_idx < __shards_count_, "__shard_idx must be within bounds");
+    // NB! Reaching for size_ts beyond the bounds of the underlying __aligned_cache_line is technically an UB,
+    // but this is mostly theoretical.
+    return {reinterpret_cast<size_t*>(__bits_.get()) + __shard_idx * __words_per_shard_, __words_per_shard_};
+  }
 
-  unique_ptr<size_t[], __deleter> __bits_;
-  size_t __shards_count_;
-  size_t __words_per_shard_;
+  // Returns the number of bitset shards in the bitset.
+  _LIBCPP_HIDE_FROM_ABI size_t __shards_count() const noexcept { return __shards_count_; }
+
+  // Returns the number of words per shard in the bitset.
+  _LIBCPP_HIDE_FROM_ABI size_t __words_per_shard() const noexcept { return __words_per_shard_; }
+
+private:
+  // Internally __sharded_dynamic_bitset allocates a dynamic array of __aligned_cache_line,
+  // instead of allocating raw "size_t[]" and using an explicit "align_val_t" in the new expression.
+  // This approach meshes better with TMO rewrites and conditional availability of aligned allocation.
+  struct alignas(hardware_destructive_interference_size) __aligned_cache_line {
+    static constexpr size_t __bits_per_cacheline_  = hardware_destructive_interference_size * CHAR_BIT;
+    static constexpr size_t __words_per_cacheline_ = hardware_destructive_interference_size / sizeof(size_t);
+    size_t __words_[__words_per_cacheline_];
+  };
 
   _LIBCPP_HIDE_FROM_ABI __sharded_dynamic_bitset(size_t __shards_count, size_t __shard_size) noexcept
       : __shards_count_(__shards_count) {
@@ -103,21 +113,19 @@ struct _LIBCPP_HIDE_FROM_ABI __sharded_dynamic_bitset {
                   "hardware_destructive_interference_size must be divisible by sizeof(size_t)");
     _LIBCPP_ASSERT_INTERNAL(__shards_count > 0, "number of shards must be positive");
     _LIBCPP_ASSERT_INTERNAL(__shard_size > 0, "shard size must be positive");
-    constexpr size_t __bits_per_cacheline = hardware_destructive_interference_size * CHAR_BIT;
-    size_t __cachelines_per_shard         = (__shard_size + __bits_per_cacheline - 1) / __bits_per_cacheline;
-    __words_per_shard_   = __cachelines_per_shard * (hardware_destructive_interference_size / sizeof(size_t));
-    size_t __total_words = __shards_count * __words_per_shard_;
-#  if _LIBCPP_HAS_ALIGNED_ALLOCATION
-    __bits_.reset(new (align_val_t{hardware_destructive_interference_size}, nothrow) size_t[__total_words]);
-#  else
-    __bits_.reset(new (nothrow) size_t[__total_words]);
-#  endif
+    size_t __cachelines_per_shard =
+        (__shard_size + __aligned_cache_line::__bits_per_cacheline_ - 1) / __aligned_cache_line::__bits_per_cacheline_;
+    size_t __total_cachelines = __shards_count * __cachelines_per_shard;
+    __bits_.reset(new (nothrow) __aligned_cache_line[__total_cachelines]);
+    __words_per_shard_ = __cachelines_per_shard * __aligned_cache_line::__words_per_cacheline_;
   }
 
-  // Produces a view of the specified shard.
-  _LIBCPP_HIDE_FROM_ABI __bitset_view __shard(size_t __shard_idx) const noexcept {
-    return {__bits_.get() + __shard_idx * __words_per_shard_, __words_per_shard_};
-  }
+  unique_ptr<__aligned_cache_line[]> __bits_;
+  size_t __shards_count_;
+  size_t __words_per_shard_;
+
+  friend _LIBCPP_HIDE_FROM_ABI optional<__sharded_dynamic_bitset>
+  __make_sharded_dynamic_bitset(size_t, size_t) noexcept;
 };
 
 // Creates a sharded dynamic bitset with the specified number of shards and capacity of each shard.

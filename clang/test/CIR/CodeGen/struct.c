@@ -202,7 +202,7 @@ char f3(int a) {
 }
 
 // CIR:      cir.func{{.*}} @f3(%[[ARG_A:.*]]: !s32i
-// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" align(1)
+// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "" align(1) return_slot
 // CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca "a" align(4) init
 // CIR-NEXT:   cir.store{{.*}} %[[ARG_A]], %[[A_ADDR]]
 // CIR-NEXT:   %[[A_VAL:.*]] = cir.load{{.*}} %[[A_ADDR]]
@@ -242,7 +242,7 @@ char f4(int a, struct CompleteS *p) {
 }
 
 // CIR:      cir.func{{.*}} @f4(%[[ARG_A:.*]]: !s32i {{.*}}, %[[ARG_P:.*]]: !cir.ptr<!rec_CompleteS>
-// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" align(1)
+// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "" align(1) return_slot
 // CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca "a" align(4) init
 // CIR-NEXT:   %[[P_ADDR:.*]] = cir.alloca "p" align(8) init
 // CIR-NEXT:   cir.store{{.*}} %[[ARG_A]], %[[A_ADDR]]

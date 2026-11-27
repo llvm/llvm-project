@@ -34,7 +34,7 @@ define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) {
 ; TABLE-NEXT:    [[CRC_INDEXER_CAST:%.*]] = trunc i16 [[CRC2]] to i8
 ; TABLE-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i8 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
 ; TABLE-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[CRC_DATA_INDEXER]] to i64
-; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable, i64 [[INDEXER_EXT]]
+; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds [2 x i8], ptr @.crctable, i64 [[INDEXER_EXT]]
 ; TABLE-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; TABLE-NEXT:    [[CRC_LE_SHIFT:%.*]] = lshr i16 [[CRC2]], 8
 ; TABLE-NEXT:    [[CRC_NEXT3]] = xor i16 [[CRC_LE_SHIFT]], [[TBL_LD]]
@@ -100,7 +100,7 @@ define i16 @crc16.le.tc8.udiv(i8 %msg, i16 %checksum) {
 ; TABLE-NEXT:    [[CRC_INDEXER_CAST:%.*]] = trunc i16 [[CRC2]] to i8
 ; TABLE-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i8 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
 ; TABLE-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[CRC_DATA_INDEXER]] to i64
-; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.1, i64 [[INDEXER_EXT]]
+; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds [2 x i8], ptr @.crctable.1, i64 [[INDEXER_EXT]]
 ; TABLE-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; TABLE-NEXT:    [[CRC_LE_SHIFT:%.*]] = lshr i16 [[CRC2]], 8
 ; TABLE-NEXT:    [[CRC_NEXT3]] = xor i16 [[CRC_LE_SHIFT]], [[TBL_LD]]
@@ -167,7 +167,7 @@ define i16 @crc16.le.tc16(i16 %msg, i16 %checksum) {
 ; TABLE-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i16 [[DATA_INDEXER]], [[CRC2]]
 ; TABLE-NEXT:    [[INDEXER_LO:%.*]] = trunc i16 [[CRC_DATA_INDEXER]] to i8
 ; TABLE-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_LO]] to i64
-; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.2, i64 [[INDEXER_EXT]]
+; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds [2 x i8], ptr @.crctable.2, i64 [[INDEXER_EXT]]
 ; TABLE-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; TABLE-NEXT:    [[CRC_LE_SHIFT:%.*]] = lshr i16 [[CRC2]], 8
 ; TABLE-NEXT:    [[CRC_NEXT3]] = xor i16 [[CRC_LE_SHIFT]], [[TBL_LD]]
@@ -298,7 +298,7 @@ define i16 @crc16.be.tc8.crc.init.li(i16 %checksum, i8 %msg) {
 ; TABLE-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC2]], 8
 ; TABLE-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
 ; TABLE-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
-; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.4, i64 [[INDEXER_EXT]]
+; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds [2 x i8], ptr @.crctable.4, i64 [[INDEXER_EXT]]
 ; TABLE-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; TABLE-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
 ; TABLE-NEXT:    [[CRC_NEXT3]] = xor i16 [[CRC_BE_SHIFT]], [[TBL_LD]]
@@ -366,7 +366,7 @@ define i16 @crc16.be.tc8.crc.init.arg(i16 %crc.init) {
 ; TABLE-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC2]], 8
 ; TABLE-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
 ; TABLE-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
-; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.5, i64 [[INDEXER_EXT]]
+; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds [2 x i8], ptr @.crctable.5, i64 [[INDEXER_EXT]]
 ; TABLE-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; TABLE-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
 ; TABLE-NEXT:    [[CRC_NEXT3]] = xor i16 [[CRC_BE_SHIFT]], [[TBL_LD]]
@@ -428,7 +428,7 @@ define i16 @crc16.be.tc8.crc.init.arg.flipped.sb.check(i16 %crc.init) {
 ; TABLE-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC2]], 8
 ; TABLE-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
 ; TABLE-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
-; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.6, i64 [[INDEXER_EXT]]
+; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds [2 x i8], ptr @.crctable.6, i64 [[INDEXER_EXT]]
 ; TABLE-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; TABLE-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
 ; TABLE-NEXT:    [[CRC_NEXT3]] = xor i16 [[CRC_BE_SHIFT]], [[TBL_LD]]
@@ -591,7 +591,7 @@ define i16 @crc16.be.tc8.misalign(i8 %msg, i16 %checksum) {
 ; TABLE-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC2]], 8
 ; TABLE-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
 ; TABLE-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
-; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.8, i64 [[INDEXER_EXT]]
+; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds [2 x i8], ptr @.crctable.8, i64 [[INDEXER_EXT]]
 ; TABLE-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; TABLE-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
 ; TABLE-NEXT:    [[CRC_NEXT3]] = xor i16 [[CRC_BE_SHIFT]], [[TBL_LD]]
@@ -661,7 +661,7 @@ define i16 @crc16.be.tc16(i16 %msg, i16 %checksum) {
 ; TABLE-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC_DATA_INDEXER]], 8
 ; TABLE-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
 ; TABLE-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
-; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.9, i64 [[INDEXER_EXT]]
+; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds [2 x i8], ptr @.crctable.9, i64 [[INDEXER_EXT]]
 ; TABLE-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; TABLE-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
 ; TABLE-NEXT:    [[CRC_NEXT3]] = xor i16 [[CRC_BE_SHIFT]], [[TBL_LD]]
@@ -862,7 +862,7 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ; TABLE-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i32 [[DATA_INDEXER]], [[CRC2]]
 ; TABLE-NEXT:    [[INDEXER_LO:%.*]] = trunc i32 [[CRC_DATA_INDEXER]] to i8
 ; TABLE-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_LO]] to i64
-; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i32, ptr @.crctable.12, i64 [[INDEXER_EXT]]
+; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds [4 x i8], ptr @.crctable.12, i64 [[INDEXER_EXT]]
 ; TABLE-NEXT:    [[TBL_LD:%.*]] = load i32, ptr [[TBL_PTRADD]], align 4
 ; TABLE-NEXT:    [[CRC_LE_SHIFT:%.*]] = lshr i32 [[CRC2]], 8
 ; TABLE-NEXT:    [[CRC_NEXT3]] = xor i32 [[CRC_LE_SHIFT]], [[TBL_LD]]
@@ -992,7 +992,7 @@ define i16 @crc16.be.tc8.zext.data(i8 %msg, i16 %checksum) {
 ; TABLE-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC2]], 8
 ; TABLE-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
 ; TABLE-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
-; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.14, i64 [[INDEXER_EXT]]
+; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds [2 x i8], ptr @.crctable.14, i64 [[INDEXER_EXT]]
 ; TABLE-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
 ; TABLE-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
 ; TABLE-NEXT:    [[CRC_NEXT3]] = xor i16 [[CRC_BE_SHIFT]], [[TBL_LD]]
@@ -1061,7 +1061,7 @@ define i4 @crc4.be.tc8(i8 %msg, i4 %checksum) {
 ; TABLE-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i8 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
 ; TABLE-NEXT:    [[INDEXER_HI:%.*]] = shl i8 [[CRC_DATA_INDEXER]], 4
 ; TABLE-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI]] to i64
-; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i4, ptr @.crctable.15, i64 [[INDEXER_EXT]]
+; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i8, ptr @.crctable.15, i64 [[INDEXER_EXT]]
 ; TABLE-NEXT:    [[TBL_LD]] = load i4, ptr [[TBL_PTRADD]], align 1
 ; TABLE-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; TABLE-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
@@ -1260,7 +1260,7 @@ define i32 @crc.strategy.override.optsize(i32 %checksum, i32 %msg) optsize {
 ; TABLE-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i32 [[DATA_INDEXER]], [[CRC2]]
 ; TABLE-NEXT:    [[INDEXER_LO:%.*]] = trunc i32 [[CRC_DATA_INDEXER]] to i8
 ; TABLE-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_LO]] to i64
-; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i32, ptr @.crctable.16, i64 [[INDEXER_EXT]]
+; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds [4 x i8], ptr @.crctable.16, i64 [[INDEXER_EXT]]
 ; TABLE-NEXT:    [[TBL_LD:%.*]] = load i32, ptr [[TBL_PTRADD]], align 4
 ; TABLE-NEXT:    [[CRC_LE_SHIFT:%.*]] = lshr i32 [[CRC2]], 8
 ; TABLE-NEXT:    [[CRC_NEXT3]] = xor i32 [[CRC_LE_SHIFT]], [[TBL_LD]]

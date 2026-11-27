@@ -1891,3 +1891,13 @@ template<class T> void bar(T baz) {
   baz = baz << foo;
 }
 }
+
+template <typename T> void DeclAssocStmt() {
+  // expected-error@+2 {{statement associated with OpenACC 'atomic' directive is invalid}}
+  // expected-note@+2 {{expected assignment, compound assignment, increment, or decrement expression}}
+#pragma acc atomic
+  int i;
+  i = 42;
+}
+
+void DeclAssocStmtUse() { DeclAssocStmt<int>(); }
