@@ -23,7 +23,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI bool
+_LIBCPP_CONSTEXPR_SINCE_CXX20 inline bool
 operator==(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
   const typename vector<_Tp, _Allocator>::size_type __sz = __x.size();
   return __sz == __y.size() && std::equal(__x.begin(), __x.end(), __y.begin());
@@ -32,34 +32,34 @@ operator==(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __
 #if _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
+inline bool operator!=(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
   return !(__x == __y);
 }
 
 template <class _Tp, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI bool operator<(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
+inline bool operator<(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
   return std::lexicographical_compare(__x.begin(), __x.end(), __y.begin(), __y.end());
 }
 
 template <class _Tp, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI bool operator>(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
+inline bool operator>(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
   return __y < __x;
 }
 
 template <class _Tp, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI bool operator>=(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
+inline bool operator>=(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
   return !(__x < __y);
 }
 
 template <class _Tp, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI bool operator<=(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
+inline bool operator<=(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
   return !(__y < __x);
 }
 
 #else // _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Allocator>
-_LIBCPP_HIDE_FROM_ABI constexpr __synth_three_way_result<_Tp>
+constexpr __synth_three_way_result<_Tp>
 operator<=>(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
   return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }

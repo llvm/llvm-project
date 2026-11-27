@@ -29,7 +29,7 @@ int non_captured() {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z12non_capturedv()
-// CIR:         %[[RV:.*]] = cir.alloca "__retval"
+// CIR:         %[[RV:.*]] = cir.alloca "" {{.*}} return_slot
 // CIR:         %[[N:.*]] = cir.alloca "n"
 // CIR:         %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
 // CIR:         cir.store {{.*}}%[[FOUR]], %[[N]]
@@ -63,7 +63,7 @@ _Complex float complex_var() {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z11complex_varv()
-// CIR:         %[[RV:.*]] = cir.alloca "__retval"
+// CIR:         %[[RV:.*]] = cir.alloca "" {{.*}} return_slot
 // CIR:         %[[Z_ADDR:.*]] = cir.alloca "z"
 // CIR:         cir.store {{.*}}, %[[Z_ADDR]]
 // CIR:         %[[Z:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<0.000000e+00> : !cir.float> : !cir.complex<!cir.float>

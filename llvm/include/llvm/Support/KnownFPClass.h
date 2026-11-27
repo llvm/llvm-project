@@ -431,6 +431,7 @@ public:
 
   /// Apply the canonicalize intrinsic to this value.
   LLVM_ABI static KnownFPClass canonicalize(const KnownFPClass &Src,
+                                            const fltSemantics &Flt,
                                             DenormalMode Mode);
 
   /// Report known values for a bitcast into a float with provided semantics.
@@ -444,6 +445,9 @@ public:
   LLVM_ABI static KnownFPClass fadd(const KnownFPClass &LHS,
                                     const KnownFPClass &RHS, RoundingMode RM,
                                     DenormalMode Mode);
+
+  LLVM_ABI static KnownFPClass fadd(const KnownFPClass &LHS, const APFloat &RHS,
+                                    RoundingMode RM, DenormalMode Mode);
 
   /// Report known values for fadd x, x
   LLVM_ABI static KnownFPClass fadd_self(const KnownFPClass &Src,
@@ -459,14 +463,8 @@ public:
                                     const KnownFPClass &RHS, DenormalMode Mode);
 
   // Special case of fmul x, x.
-  static KnownFPClass square(const KnownFPClass &Src, DenormalMode Mode) {
-    KnownFPClass Known = fmul(Src, Src, Mode);
-
-    // X * X is always non-negative or a NaN.
-    Known.knownNot(fcNegative);
-    Known.propagateNonNaN(Src);
-    return Known;
-  }
+  LLVM_ABI static KnownFPClass square(const KnownFPClass &Src,
+                                      DenormalMode Mode);
 
   LLVM_ABI static KnownFPClass fmul(const KnownFPClass &LHS, const APFloat &RHS,
                                     DenormalMode Mode);
@@ -529,8 +527,16 @@ public:
   /// Report known values for sin
   LLVM_ABI static KnownFPClass sin(const KnownFPClass &Src);
 
+  /// Report known values for sinpi
+  LLVM_ABI static KnownFPClass sinpi(const KnownFPClass &Src,
+                                     bool IsMultiUnitFPType);
+
   /// Report known values for cos
   LLVM_ABI static KnownFPClass cos(const KnownFPClass &Src);
+
+  /// Report known values for cospi
+  LLVM_ABI static KnownFPClass cospi(const KnownFPClass &Src,
+                                     bool IsMultiUnitFPType);
 
   /// Report known values for tan
   LLVM_ABI static KnownFPClass tan(const KnownFPClass &Src);
@@ -629,12 +635,13 @@ public:
   fpext(const KnownFPClass &KnownSrc, const fltSemantics &DstTy,
         const fltSemantics &SrcTy, DenormalMode DstMode, DenormalMode SrcMode);
 
-  /// Propagate known class for fptrunc and fptrunc_round. \p DstMode and
-  /// \p SrcMode are the denormal modes of the destination and source types.
+  /// Propagate known class for fptrunc and fptrunc_round. \p RM is the
+  /// rounding mode of the conversion. \p DstMode and \p SrcMode are the
+  /// denormal modes of the destination and source types.
   LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc,
                                        const fltSemantics &DstTy,
                                        const fltSemantics &SrcTy,
-                                       DenormalMode DstMode,
+                                       RoundingMode RM, DenormalMode DstMode,
                                        DenormalMode SrcMode);
 
   /// Propagate known class for rounding intrinsics (rint, nearbyint, round,

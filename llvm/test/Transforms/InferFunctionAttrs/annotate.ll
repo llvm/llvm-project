@@ -345,7 +345,7 @@ declare x86_fp80 @coshl(x86_fp80)
 ; CHECK: declare x86_fp80 @cosl(x86_fp80) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @cosl(x86_fp80)
 
-; CHECK: declare noundef ptr @ctermid(ptr noundef captures(none)) [[NOFREE_NOUNWIND]]
+; CHECK: declare noundef ptr @ctermid(ptr noundef) [[NOFREE_NOUNWIND]]
 declare ptr @ctermid(ptr)
 
 ; CHECK: declare double @exp(double) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]

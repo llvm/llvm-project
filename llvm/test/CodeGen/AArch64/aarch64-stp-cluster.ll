@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -verify-misched -debug-only=machine-scheduler -aarch64-enable-stp-suppress=false -o - 2>&1 > /dev/null | FileCheck %s
-; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -force-fast-cluster -verify-misched -debug-only=machine-scheduler -aarch64-enable-stp-suppress=false -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=CHECK-FAST
+; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a57 -misched-force-fast-cluster -verify-misched -debug-only=machine-scheduler -aarch64-enable-stp-suppress=false -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=CHECK-FAST
 
 ; CHECK: Current Schedule Region
 ; CHECK-LABEL: stp_i64_scale:%bb.0
@@ -240,5 +240,6 @@ entry:
   store i8 5, ptr %add.ptr, align 1
   %1 = load i32, ptr %add.ptr, align 4
   %add = add nsw i32 %1, %0
+  store i32 %add, ptr %q, align 4
   ret i32 %add
 }

@@ -440,6 +440,7 @@ gpu.module @test_distribution {
   // CHECK: xegpu.store_matrix %[[BCAST]], %[[MEM_DESC]]{{.*}} : vector<1x1xf32>, !xegpu.mem_desc<4x4xf32>
   // CHECK: gpu.barrier
   // CHECK: %[[LOAD_SLM:.*]] = xegpu.load_matrix %[[MEM_DESC]]{{.*}} -> vector<4x4xf32>
+  // CHECK: gpu.barrier
   // CHECK: %[[FINAL:.*]] = vector.multi_reduction <add>, %[[LOAD_SLM]], %{{.*}} [0, 1] : vector<4x4xf32> to f32
   // CHECK: arith.addf %[[FINAL]], %{{.*}} : f32
   gpu.func @vector_reduce_scalar_cross_sg(%src: memref<32x32xf32>) {
@@ -1175,6 +1176,7 @@ gpu.module @test_distribution {
     // CHECK-DAG: %[[LOAD_OFF_Y:.*]] = arith.remui %[[LOAD_MUL_Y]], %[[C128:.*]] : index
     // CHECK-DAG: %[[LOAD_OFF_X:.*]] = arith.remui %[[LOAD_MUL_X]], %[[C256:.*]] : index
     // CHECK-DAG: %[[LOAD_SLM:.*]] = xegpu.load_matrix %[[MDESC]][%[[LOAD_OFF_Y]], %[[LOAD_OFF_X]]] <{layout = #xegpu.layout<inst_data = [16, 16]>}> : !xegpu.mem_desc<128x256xf32>, index, index -> vector<16x32xf32>
+    // CHECK: gpu.barrier
     %0 = xegpu.create_nd_tdesc %arg0 : memref<128x256xf32> -> !xegpu.tensor_desc<128x256xf32>
     %1 = xegpu.load_nd %0[0, 0] <{layout = #xegpu.layout<sg_layout = [4, 16], sg_data = [32, 16], inst_data = [16, 16]>}> : !xegpu.tensor_desc<128x256xf32> -> vector<128x256xf32>
     %2 = xegpu.convert_layout %1 <{input_layout = #xegpu.layout<sg_layout = [4, 16], sg_data = [32, 16], inst_data = [16, 16]>,
@@ -1751,6 +1753,33 @@ gpu.module @test_distribution_fastmath {
         <{
           target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [4, 4], sg_data = [8, 8]>, dims = [0, 1]>
         }> : f32
+    gpu.return
+  }
+}
+
+// -----
+// Two subgroups on the reduced dim, each holding the whole dim, are replicas:
+// each one reduces its tile locally, with no cross-subgroup reduction.
+gpu.module @test_reduce_replicated_dim {
+  // CHECK-LABEL: @vector_reduce_replicated_reduced_dim
+  gpu.func @vector_reduce_replicated_reduced_dim(%src: memref<64x32xf32>) {
+    %cst = arith.constant dense<0.0> : vector<64xf32>
+    %tdesc = xegpu.create_nd_tdesc %src : memref<64x32xf32>
+      -> !xegpu.tensor_desc<64x32xf32>
+    // CHECK: %[[LOAD:.*]] = xegpu.load_nd {{.*}} -> vector<16x32xf32>
+    %load = xegpu.load_nd %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [4, 2], sg_data = [16, 32]>}>
+      : !xegpu.tensor_desc<64x32xf32>
+      -> vector<64x32xf32>
+    // CHECK: vector.multi_reduction <add>, %[[LOAD]], {{.*}} [1] : vector<16x32xf32> to vector<16xf32>
+    // CHECK-NOT: xegpu.store_matrix
+    // CHECK-NOT: gpu.barrier
+    // CHECK-NOT: xegpu.load_matrix
+    // CHECK-NOT: vector.multi_reduction
+    %reduce = vector.multi_reduction <add>, %load, %cst [1]
+      : vector<64x32xf32> to vector<64xf32>
+    %anchor = xegpu.convert_layout %reduce
+      <{target_layout = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2], sg_data = [16, 32]>, dims = [1]>}>
+      : vector<64xf32>
     gpu.return
   }
 }

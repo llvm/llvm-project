@@ -1522,7 +1522,7 @@ int foobar() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z6foobarv
-// CHECK1-SAME: () #[[ATTR2]] {
+// CHECK1-SAME: () #[[ATTR5:[0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[RES:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
@@ -2284,7 +2284,7 @@ int foobar() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z6foobarv
-// CHECK2-SAME: () #[[ATTR2]] {
+// CHECK2-SAME: () #[[ATTR5:[0-9]+]] {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[RES:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
@@ -2646,7 +2646,7 @@ int foobar() {
 //
 //
 // SIMD1-LABEL: define {{[^@]+}}@_Z6foobarv
-// SIMD1-SAME: () #[[ATTR2]] {
+// SIMD1-SAME: () #[[ATTR5:[0-9]+]] {
 // SIMD1-NEXT:  entry:
 // SIMD1-NEXT:    [[RES:%.*]] = alloca i32, align 4
 // SIMD1-NEXT:    [[TMP0:%.*]] = load i32, ptr @_ZN6Static1sE, align 4
@@ -3704,7 +3704,7 @@ int foobar() {
 //
 //
 // CHECK-TLS1-LABEL: define {{[^@]+}}@_Z6foobarv
-// CHECK-TLS1-SAME: () #[[ATTR1]] {
+// CHECK-TLS1-SAME: () #[[ATTR7:[0-9]+]] {
 // CHECK-TLS1-NEXT:  entry:
 // CHECK-TLS1-NEXT:    [[RES:%.*]] = alloca i32, align 4
 // CHECK-TLS1-NEXT:    [[TMP0:%.*]] = call ptr @_ZTWN6Static1sE()
@@ -4229,7 +4229,7 @@ int foobar() {
 //
 //
 // CHECK-TLS2-LABEL: define {{[^@]+}}@_Z6foobarv
-// CHECK-TLS2-SAME: () #[[ATTR1]] {
+// CHECK-TLS2-SAME: () #[[ATTR7:[0-9]+]] {
 // CHECK-TLS2-NEXT:  entry:
 // CHECK-TLS2-NEXT:    [[RES:%.*]] = alloca i32, align 4
 // CHECK-TLS2-NEXT:    [[TMP0:%.*]] = call ptr @_ZTWN6Static1sE()
@@ -5743,7 +5743,7 @@ int foobar() {
 //
 //
 // SIMD3-LABEL: define {{[^@]+}}@_Z6foobarv
-// SIMD3-SAME: () #[[ATTR2]] {
+// SIMD3-SAME: () #[[ATTR5:[0-9]+]] {
 // SIMD3-NEXT:  entry:
 // SIMD3-NEXT:    [[RES:%.*]] = alloca i32, align 4
 // SIMD3-NEXT:    [[TMP0:%.*]] = load i32, ptr @_ZN6Static1sE, align 4

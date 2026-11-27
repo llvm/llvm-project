@@ -55,7 +55,7 @@ typedef union Trivial {
 
 extern "C" Trivial ret_trivial() { return {}; }
   // CIR-LABEL: cir.func {{.*}} @ret_trivial() -> !s32i
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Trivial>
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_Trivial>
   // CIR: %[[GET_A:.*]] = cir.get_member %[[RET_ALLOCA]][0] {name = "a"}
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0>
   // CIR: cir.store{{.*}} %[[ZERO]], %[[GET_A]]

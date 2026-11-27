@@ -13,6 +13,7 @@
 #include "flang/Lower/Bridge.h"
 
 #include "flang/Evaluate/tools.h"
+#include "flang/Evaluate/traverse.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/CallInterface.h"
@@ -84,7 +85,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <set>
 
@@ -159,6 +160,7 @@ struct ConstructContext {
   Fortran::lower::StatementContext &stmtCtx; // construct exit code
   std::optional<hlfir::Entity> selector;     // construct selector, if any.
   bool pushedScope = false; // was a scoped pushed for this construct?
+  fir::LexicalScopeAttr lexicalScope; // scope of the current branch, if any
 };
 
 /// Helper to gather the lower bounds of array components with non deferred
@@ -553,6 +555,25 @@ using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo, 8>;
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+/// Find the first component reference of an expression that designates the
+/// given component symbol.
+struct CUDAComponentFinder
+    : public Fortran::evaluate::AnyTraverse<CUDAComponentFinder> {
+  using Base = Fortran::evaluate::AnyTraverse<CUDAComponentFinder>;
+  explicit CUDAComponentFinder(const Fortran::semantics::Symbol &sym)
+      : Base{*this}, sym{sym} {}
+  using Base::operator();
+  bool operator()(const Fortran::evaluate::Component &component) const {
+    if (&component.GetLastSymbol().GetUltimate() == &sym) {
+      found = &component;
+      return true;
+    }
+    return (*this)(component.base());
+  }
+  const Fortran::semantics::Symbol &sym;
+  mutable const Fortran::evaluate::Component *found{nullptr};
+};
 
 /// Traverse the pre-FIR tree (PFT) to generate the FIR dialect of MLIR.
 class FirConverter : public Fortran::lower::AbstractConverter {
@@ -1238,9 +1259,18 @@ public:
     return mlir::FileLineColLoc::get(&ctx, path.str(), pos.line, pos.column);
   }
 
-  /// Generate a `Location` from the `CharBlock`.
+  /// Generate a `Location` from the `CharBlock`, in the lexical scope of the
+  /// branch being lowered, if any.
   mlir::Location
   genLocation(const Fortran::parser::CharBlock &block) override final {
+    mlir::Location loc = genSourceLocation(block);
+    if (fir::LexicalScopeAttr lexicalScope = getLexicalScope())
+      return mlir::FusedLoc::get(&getMLIRContext(), {loc}, lexicalScope);
+    return loc;
+  }
+
+  /// Generate a `Location` from the `CharBlock`.
+  mlir::Location genSourceLocation(const Fortran::parser::CharBlock &block) {
     mlir::Location mainLocation = genUnknownLocation();
     if (const Fortran::parser::AllCookedSources *cooked =
             bridge.getCookedSource()) {
@@ -2064,6 +2094,29 @@ private:
     activeConstructStack.pop_back();
   }
 
+  /// Start the lexical scope of the branch of the innermost construct that
+  /// begins at the current statement. It lasts until the next branch or the
+  /// end of the construct, and lets debug information make the names that
+  /// the branch associates visible only in the branch.
+  void startLexicalScope() {
+    assert(!activeConstructStack.empty() && "must be inside a construct");
+    ConstructContext &construct = activeConstructStack.back();
+    construct.lexicalScope = {};
+    if (getLoweringOptions().getPreserveUseDebugInfo())
+      construct.lexicalScope = fir::LexicalScopeAttr::get(
+          &getMLIRContext(), genSourceLocation(currentPosition),
+          getLexicalScope());
+  }
+
+  /// Return the lexical scope of the innermost branch being lowered, if any.
+  fir::LexicalScopeAttr getLexicalScope() {
+    for (const ConstructContext &construct :
+         llvm::reverse(activeConstructStack))
+      if (construct.lexicalScope)
+        return construct.lexicalScope;
+    return {};
+  }
+
   //===--------------------------------------------------------------------===//
   // Termination of symbolically referenced execution units
   //===--------------------------------------------------------------------===//
@@ -2141,7 +2194,12 @@ private:
             load = fir::ReboxOp::create(*builder, loc, load.getType(), load,
                                         shiftOp, /*slice=*/mlir::Value{});
           }
-          return load;
+          // The function result type does not carry the volatility of the
+          // result variable, so match it before returning.
+          mlir::Type funcResultType =
+              builder->getFunction().getFunctionType().getResult(0);
+          return builder->createVolatileCast(
+              loc, fir::isa_volatile_type(funcResultType), load);
         },
         [&](const auto &) -> mlir::Value {
           mlir::Value resultRef = resultSymBox.getAddr();
@@ -3935,6 +3993,9 @@ private:
       for (Fortran::lower::pft::Evaluation &e :
            getEval().getNestedEvaluations())
         genFIR(e);
+    // An unstructured acc.loop recorded the DOs whose induction variables it
+    // privatizes; they are all lowered now.
+    Fortran::lower::clearIvPrivatizedDoConstructs(getEval());
 
     if (!isCacheConstruct)
       localSymbols.popScope();
@@ -4037,8 +4098,16 @@ private:
         }
       // The descent lands on the loop the directive takes over, and every
       // level it steps through is one. A construct whose first evaluation is
-      // not a loop takes over none.
-      if (outerDo)
+      // not a loop takes over none. Neither does a DO WHILE lowered
+      // structurally: it has no bounds, so its acc.loop does not iterate, and
+      // the whole loop, condition included, is lowered inside it. The code
+      // below lowers the evaluations nested in curEval; for a loop the
+      // directive takes over, curEval is that loop, so only its body is
+      // lowered. Resetting curEval to the construct's own evaluation lowers
+      // the DO WHILE evaluation itself instead, through genFIR(DoConstruct).
+      if (outerDo && outerDo->IsDoWhile())
+        curEval = &getEval();
+      else if (outerDo)
         absorbedLoop = curEval;
     }
 
@@ -4645,6 +4714,7 @@ private:
         if (eval.lowerAsUnstructured())
           maybeStartBlock(e.block);
         localSymbols.pushScope();
+        startLexicalScope();
         for (const Fortran::parser::Association &assoc :
              std::get<std::list<Fortran::parser::Association>>(stmt->t)) {
           Fortran::semantics::Symbol &sym =
@@ -4876,6 +4946,7 @@ private:
       localSymbols.popScope();
     localSymbols.pushScope();
     activeConstructStack.back().pushedScope = true;
+    startLexicalScope();
     const Fortran::semantics::Symbol &assocEntitySymbol =
         getAssociatingEntitySymbol(
             bridge.getSemanticsContext().FindScope(getEval().position));
@@ -4993,6 +5064,8 @@ private:
     for (Fortran::lower::pft::Evaluation &eval :
          getEval().getNestedEvaluations()) {
       setCurrentPosition(eval.position);
+      if (eval.getIf<Fortran::parser::TypeGuardStmt>())
+        startLexicalScope();
       mlir::Location loc = toLocation();
       if (auto *selectTypeStmt =
               eval.getIf<Fortran::parser::SelectTypeStmt>()) {
@@ -5784,8 +5857,13 @@ private:
     auto transferKindAttr = cuf::DataTransferKindAttr::get(
         builder.getContext(), cuf::DataTransferKind::DeviceHost);
     [[maybe_unused]] unsigned nbDeviceResidentObject = 0;
+    // The attribute of a component hides the one of its base.
+    Fortran::semantics::UnorderedSymbolSet effectiveSymbols{
+        Fortran::evaluate::CollectEffectiveCudaSymbols(assign.rhs)};
     for (const Fortran::semantics::Symbol &sym :
          Fortran::evaluate::CollectSymbols(assign.rhs)) {
+      if (!effectiveSymbols.count(sym.GetUltimate()))
+        continue;
       if (const auto *details =
               sym.GetUltimate()
                   .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
@@ -5794,10 +5872,28 @@ private:
           assert(
               nbDeviceResidentObject <= 1 &&
               "Only one reference to the device resident object is supported");
-          auto addr = getSymbolAddress(sym);
+          // A component has no address of its own: lower the component
+          // reference of the expression, and later override that reference
+          // with the temporary.
+          const Fortran::evaluate::Component *component = nullptr;
+          mlir::Value addr;
+          Fortran::lower::StatementContext stmtCtx;
+          if (sym.GetUltimate().owner().IsDerivedType()) {
+            CUDAComponentFinder finder{sym.GetUltimate()};
+            finder(assign.rhs);
+            component = finder.found;
+            if (!component)
+              continue;
+            addr = Fortran::lower::convertDataRefToHLFIRVariable(
+                       loc, *this, Fortran::evaluate::DataRef{*component},
+                       localSymbols, stmtCtx)
+                       .getBase();
+          } else {
+            addr = getSymbolAddress(sym);
+          }
           mlir::Value baseValue;
-          if (auto declareOp =
-                  llvm::dyn_cast<hlfir::DeclareOp>(addr.getDefiningOp()))
+          if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
+                  addr.getDefiningOp()))
             baseValue = declareOp.getBase();
           else
             baseValue = addr;
@@ -5812,12 +5908,21 @@ private:
             else
               temps.push_back(temp);
           }
-          addSymbol(sym,
-                    hlfir::translateToExtendedValue(loc, builder, temp).first,
-                    /*forced=*/true);
+          if (component) {
+            auto tempVar =
+                mlir::dyn_cast_or_null<fir::FortranVariableOpInterface>(
+                    temp.getDefiningOp());
+            assert(tempVar && "implicit data transfer of a device component");
+            localSymbols.addComponentOverride(*component, tempVar);
+          } else {
+            addSymbol(sym,
+                      hlfir::translateToExtendedValue(loc, builder, temp).first,
+                      /*forced=*/true);
+          }
           cuf::DataTransferOp::create(builder, loc, addr, temp,
                                       /*shape=*/mlir::Value{},
                                       transferKindAttr);
+          stmtCtx.finalizeAndPop();
           ++nbDeviceResidentObject;
         }
       }
@@ -7459,7 +7564,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::lower::LoweringOptions &loweringOptions,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
     const Fortran::common::LanguageFeatureControl &languageFeatures,
-    const llvm::TargetMachine &targetMachine,
+    llvm::StringRef targetFeatures,
     const Fortran::frontend::TargetOptions &targetOpts,
     const Fortran::frontend::CodeGenOptions &cgOpts)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
@@ -7520,18 +7625,17 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   assert(*module && "module was not created");
   fir::setTargetTriple(*module, triple);
   fir::setKindMapping(*module, kindMap);
-  fir::setTargetCPU(*module, targetMachine.getTargetCPU());
+  fir::setTargetCPU(*module, targetOpts.cpu);
   fir::setTuneCPU(*module, targetOpts.cpuToTuneFor);
   fir::setAtomicIgnoreDenormalMode(*module,
                                    targetOpts.atomicIgnoreDenormalMode);
   fir::setAtomicFineGrainedMemory(*module, targetOpts.atomicFineGrainedMemory);
   fir::setAtomicRemoteMemory(*module, targetOpts.atomicRemoteMemory);
-  fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
+  fir::setTargetFeatures(*module, targetFeatures);
   fir::setTargetABI(*module, targetOpts.abi);
   fir::support::setMLIRDataLayout(
       *module,
-      llvm::DataLayout(
-          targetMachine.getTargetTriple().computeDataLayout(targetOpts.abi)));
+      llvm::DataLayout(llvm::Triple(triple).computeDataLayout(targetOpts.abi)));
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   fir::setRelocationModel(*module, cgOpts.getRelocationModel());
   fir::setIsPIE(*module, cgOpts.IsPIE);
@@ -7563,7 +7667,7 @@ Fortran::lower::LoweringBridge::~LoweringBridge() {
 void Fortran::lower::genCleanUpInRegionIfAny(
     mlir::Location loc, fir::FirOpBuilder &builder, mlir::Region &region,
     Fortran::lower::StatementContext &context) {
-  if (!context.hasCode())
+  if (!context.hasCodeInCurrentScope())
     return;
   mlir::OpBuilder::InsertPoint insertPt = builder.saveInsertionPoint();
   if (region.empty())

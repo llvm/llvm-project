@@ -157,3 +157,18 @@ func.func @switch_unsigned_flag(%flag: ui8) {
 ^bb1:
   return
 }
+
+// -----
+
+// 255 and -1 are the same i8 value.
+func.func @switch_duplicate_case_value(%flag : i8) {
+  // expected-error@+1 {{'cf.switch' op case value -1 (unsigned 255) is repeated (cases 0 and 2)}}
+  cf.switch %flag : i8, [
+    default: ^bb1,
+    255: ^bb1,
+    1: ^bb1,
+    -1: ^bb1
+  ]
+^bb1:
+  return
+}

@@ -38,8 +38,15 @@ defm : EnumListField<"spirv-avoid-capabilities", "SPIRV::Capability::Capability"
 // When disabled, unwrap a DILexicalBlockFile to its enclosing scope.
 defm : BoolField<"spirv-debug-lexical-block-discriminator-scope", "false",
   "Use a DebugLexicalBlockDiscriminator as a DebugScope">;
-defm : BoolField<"spirv-debug-scope-forward-refs", "false",
-  "Forward-reference debug scopes when SPV_KHR_relaxed_extended_instruction is enabled">;
+defm : BoolField<"spirv-debug-scope-forward-refs", "true",
+  "Forward-reference debug scopes when SPV_KHR_relaxed_extended_instruction is enabled; disable to drop the cycle instead">;
+
+// SPIRVPrepareFunctions.cpp
+// As with cl::ValueOptional, a bare flag is accepted and allows nothing.
+let Kind = KIND_FLAG_OR_EQ in
+defm : ListField<"spirv-allow-unknown-intrinsics", "StringRef",
+  "Emit unknown intrinsics as calls to external functions. A comma-separated input list of intrinsic prefixes must be provided, and only intrinsics carrying a listed prefix get emitted as described.">,
+  MetaVarName<"intrinsic_prefix_0,intrinsic_prefix_1">, BareValue<"{}">;
 
 // SPIRVRemoveUnusedResources.cpp
 defm : BoolField<"spirv-enable-remove-unused-resources", "true",
@@ -61,4 +68,5 @@ defm : BoolField<"spv-emit-nonsemantic-debug-info", "false",
 // TODO: Remove the old spellings after 2027-05.
 def : AliasOf<"avoid-spirv-capabilities", "spirv-avoid-capabilities">;
 def : AliasOf<"disable-spirv-remove-unused-resources", "spirv-enable-remove-unused-resources=false">;
+def : AliasOf<"spv-allow-unknown-intrinsics", "spirv-allow-unknown-intrinsics">;
 def : AliasOf<"translator-compatibility-mode", "spirv-translator-compatibility-mode">;

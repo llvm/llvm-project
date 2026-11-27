@@ -34,9 +34,7 @@ struct SCFTilingResult;
 
 namespace tensor {
 class InsertSliceOp;
-class PackOp;
 class PadOp;
-class UnPackOp;
 } // namespace tensor
 
 namespace transform {
@@ -52,14 +50,12 @@ class DialectRegistry;
 namespace transform {
 
 /// Implementation of tiling operations using `scf.forall`.
-DiagnosedSilenceableFailure
-tileToForallOpImpl(RewriterBase &rewriter, transform::TransformState &state,
-                   TransformOpInterface transformOp, Operation *target,
-                   ArrayRef<OpFoldResult> mixedNumThreads,
-                   ArrayRef<OpFoldResult> mixedTileSizes,
-                   std::optional<ArrayAttr> mapping,
-                   scf::SCFTilingResult &tilingResult);
-
+DiagnosedSilenceableFailure tileToForallOpImpl(
+    RewriterBase &rewriter, transform::TransformState &state,
+    TransformOpInterface transformOp, Operation *target,
+    ArrayRef<OpFoldResult> mixedNumThreads,
+    ArrayRef<OpFoldResult> mixedTileSizes, std::optional<ArrayAttr> mapping,
+    scf::SCFTilingResult &tilingResult, ArrayRef<bool> scalableSizes = {});
 } // namespace transform
 } // namespace mlir
 

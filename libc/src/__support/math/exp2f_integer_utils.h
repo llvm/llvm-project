@@ -17,8 +17,8 @@
 
 #include "hdr/fenv_macros.h"
 #include "hdr/stdint_proxy.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/frac64.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"

@@ -19,6 +19,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/ParsedAttr.h"
+#include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/APSInt.h"
 #include <optional>
@@ -243,12 +244,23 @@ static QualType getPreserveAIEnumType(ASTContext &Context,
     return QualType();
 
   // libbpf matches relocations by type name, so an anonymous enum needs a
-  // typedef name.
-  if (ED->getDeclName())
-    return Context.getCanonicalTagType(ED);
-  if (const TypedefNameDecl *TD = ED->getTypedefNameForAnonDecl())
-    return Context.getTypeDeclType(TD);
-  return QualType();
+  // typedef name. An enum named by -fbpf-no-enum-reloc= is not relocated.
+  const TypedefNameDecl *TD = nullptr;
+  if (!ED->getDeclName()) {
+    TD = ED->getTypedefNameForAnonDecl();
+    if (!TD)
+      return QualType();
+  }
+  StringRef Name = TD ? TD->getName() : ED->getName();
+  if (llvm::is_contained(Context.getLangOpts().BPFNoEnumRelocs, Name))
+    return QualType();
+  return TD ? Context.getTypeDeclType(TD) : Context.getCanonicalTagType(ED);
+}
+
+static bool isInSwitchCaseLabel(Sema &S) {
+  const sema::FunctionScopeInfo *FSI = S.getCurFunction();
+  return S.currentEvaluationContext().IsCaseExpr && FSI &&
+         !FSI->SwitchStack.empty();
 }
 
 // Return the enumerator reference E, or, if it is relocated, a pseudo-object
@@ -263,9 +275,10 @@ Expr *SemaBPF::BuildPreserveAIEnumeratorRef(DeclRefExpr *E) {
     return E;
 
   // The value cannot be relocated where a constant is required: in a constant
-  // evaluated context, e.g., an array bound or a case label, or outside of a
-  // function, e.g., a global initializer. Warn, and use the enumerator's value.
-  if (SemaRef.isConstantEvaluatedContext() ||
+  // evaluated context, e.g., an array bound, or outside of a function, e.g., a
+  // global initializer. Warn, and use the enumerator's value. A case label is
+  // an exception, see verifyCaseExpr().
+  if ((SemaRef.isConstantEvaluatedContext() && !isInSwitchCaseLabel(SemaRef)) ||
       SemaRef.CurContext->getRedeclContext()->isFileContext()) {
     Diag(E->getExprLoc(),
          diag::warn_preserve_access_index_enumerator_not_relocated)
@@ -334,6 +347,21 @@ bool SemaBPF::isPreserveAIEnumeratorRef(const Expr *E) {
          Call->getBuiltinCallee() == BPF::BI__builtin_preserve_enum_value;
 }
 
+// Return whether S has an enumerator reference built by
+// BuildPreserveAIEnumeratorRef(), or an explicit
+// __builtin_preserve_enum_value() call not in an operand of sizeof or alignof,
+// e.g., a case value kept relocated by verifyCaseExpr().
+bool SemaBPF::hasPreserveEnumValue(const Stmt *S) {
+  if (!S || isa<UnaryExprOrTypeTraitExpr>(S))
+    return false;
+  if (const auto *E = dyn_cast<Expr>(S); E && isPreserveAIEnumeratorRef(E))
+    return true;
+  if (const auto *Call = dyn_cast<CallExpr>(S);
+      Call && Call->getBuiltinCallee() == BPF::BI__builtin_preserve_enum_value)
+    return true;
+  return llvm::any_of(S->children(), hasPreserveEnumValue);
+}
+
 // If a relocated enumerator makes E non-constant, return the constant
 // evaluator's note saying so.
 static std::optional<PartialDiagnosticAt>
@@ -360,6 +388,13 @@ void SemaBPF::notePreserveAIEnumerator(const Expr *E) {
     Diag(Note->first, Note->second);
 }
 
+static void warnEnumeratorNotRelocated(SemaBPF &S, const DeclRefExpr *DRE) {
+  S.Diag(DRE->getExprLoc(),
+         diag::warn_preserve_access_index_enumerator_not_relocated)
+      << DRE->getDecl() << getPreserveAIEnumType(S.getASTContext(), DRE)
+      << DRE->getSourceRange();
+}
+
 // Replace each relocated enumerator in St with its DeclRefExpr, which has the
 // same type and value kind, and warn that it is not relocated.
 static Stmt *keepEnumeratorsConstant(SemaBPF &S, Stmt *St) {
@@ -369,10 +404,7 @@ static Stmt *keepEnumeratorsConstant(SemaBPF &S, Stmt *St) {
       E && SemaBPF::isPreserveAIEnumeratorRef(E)) {
     auto *DRE =
         cast<DeclRefExpr>(cast<PseudoObjectExpr>(E)->getSyntacticForm());
-    S.Diag(DRE->getExprLoc(),
-           diag::warn_preserve_access_index_enumerator_not_relocated)
-        << DRE->getDecl() << getPreserveAIEnumType(S.getASTContext(), DRE)
-        << DRE->getSourceRange();
+    warnEnumeratorNotRelocated(S, DRE);
     return DRE;
   }
   for (Stmt *&Child : St->children())
@@ -400,6 +432,116 @@ Expr *SemaBPF::checkLocalConstantInitializer(const VarDecl *VD, Expr *Init) {
   if (!VD->isLocalVarDecl() || (!VD->isStaticLocal() && !VD->isConstexpr()))
     return Init;
   return keepPreserveAIEnumeratorsConstant(Init);
+}
+
+// Return the local value of an explicit __builtin_preserve_enum_value() call:
+// 1 for BPF_ENUMVAL_EXISTS, the enumerator's value for BPF_ENUMVAL_VALUE.
+static std::optional<llvm::APInt>
+getPreserveEnumValueLocalValue(ASTContext &Context, const CallExpr *Call) {
+  if (Call->getBuiltinCallee() != BPF::BI__builtin_preserve_enum_value ||
+      Call->getNumArgs() != 2 || !Call->getType()->isIntegerType())
+    return std::nullopt;
+  std::optional<llvm::APSInt> Flag =
+      Call->getArg(1)->getIntegerConstantExpr(Context);
+  if (!Flag)
+    return std::nullopt;
+  unsigned Width = Context.getIntWidth(Call->getType());
+  if (*Flag == 0)
+    return llvm::APInt(Width, 1);
+  if (*Flag != 1)
+    return std::nullopt;
+  // The argument is *(<enum_type> *)<enumerator>, see
+  // isValidPreserveEnumValueArg().
+  const auto *UO = dyn_cast<UnaryOperator>(Call->getArg(0)->IgnoreParens());
+  const auto *CE = UO ? dyn_cast<CStyleCastExpr>(UO->getSubExpr()) : nullptr;
+  const auto *DR = CE ? dyn_cast<DeclRefExpr>(CE->getSubExpr()) : nullptr;
+  const auto *ECD = DR ? dyn_cast<EnumConstantDecl>(DR->getDecl()) : nullptr;
+  if (!ECD)
+    return std::nullopt;
+  return ECD->getInitVal().extOrTrunc(Width);
+}
+
+// Replace each relocated enumerator in Slot with its DeclRefExpr, and each
+// explicit __builtin_preserve_enum_value() call with its local value, and
+// record them in Replaced to be restored.
+static void
+replaceEnumeratorRefs(ASTContext &Context, Stmt *&Slot,
+                      SmallVectorImpl<std::pair<Stmt **, Stmt *>> &Replaced) {
+  if (!Slot || isa<UnaryExprOrTypeTraitExpr>(Slot))
+    return;
+  if (auto *E = dyn_cast<Expr>(Slot);
+      E && SemaBPF::isPreserveAIEnumeratorRef(E)) {
+    Replaced.push_back({&Slot, Slot});
+    Slot = cast<PseudoObjectExpr>(E)->getSyntacticForm();
+    return;
+  }
+  if (auto *Call = dyn_cast<CallExpr>(Slot)) {
+    if (std::optional<llvm::APInt> V =
+            getPreserveEnumValueLocalValue(Context, Call)) {
+      Replaced.push_back({&Slot, Slot});
+      Slot = IntegerLiteral::Create(Context, *V, Call->getType(),
+                                    Call->getBeginLoc());
+      return;
+    }
+  }
+  for (Stmt *&Child : Slot->children())
+    replaceEnumeratorRefs(Context, Child, Replaced);
+}
+
+// Verify that the case label value E is an integer constant expression with the
+// local enumerator values. A relocated enumerator in E is kept, so that
+// "case A:" behaves like "if (cond == A)". An explicit
+// __builtin_preserve_enum_value() call is kept in the same way, with its local
+// value, e.g., 1 for bpf_core_enum_value_exists(). Return E in a ConstantExpr
+// with the local value, which is used to check the case values, e.g., for
+// -Wswitch.
+ExprResult SemaBPF::verifyCaseExpr(Expr *E) {
+  ASTContext &Context = getASTContext();
+  SmallVector<std::pair<Stmt **, Stmt *>, 4> Replaced;
+  Stmt *Root = E;
+  replaceEnumeratorRefs(Context, Root, Replaced);
+
+  // Check E with the local enumerator values.
+  auto *ConstE = cast<Expr>(Root);
+  ExprResult ER =
+      SemaRef.VerifyIntegerConstantExpression(ConstE, AllowFoldKind::Allow);
+  if (ER.isInvalid() || Replaced.empty())
+    return ER;
+
+  // Evaluate E with the local enumerator values.
+  Expr::EvalResult Result;
+  if (ConstE->isGLValue() || !ConstE->isIntegerConstantExpr(Context) ||
+      !ConstE->EvaluateAsRValue(Result, Context,
+                                /*InConstantContext=*/true) ||
+      !Result.Val.isInt()) {
+    // The value is not an integer constant expression or not an integer
+    // rvalue, e.g., a compound literal or a side effect in an operand of ?:
+    // that is not evaluated, folded as an extension. Keep the enumerators
+    // constants and warn. An explicit call cannot be kept a constant, so
+    // restore it and report that E is not a constant.
+    bool HasCall = false;
+    for (auto [Slot, Orig] : Replaced)
+      if (isa<CallExpr>(Orig)) {
+        *Slot = Orig;
+        HasCall = true;
+      }
+    if (HasCall)
+      return SemaRef.VerifyIntegerConstantExpression(E, AllowFoldKind::Allow);
+    for (const auto &R : Replaced)
+      warnEnumeratorNotRelocated(*this, cast<DeclRefExpr>(*R.first));
+    return ER;
+  }
+
+  // Restore the relocated enumerators and explicit calls.
+  // ActOnFinishSwitchStmt() looks through a ConstantExpr at the top of a case
+  // value to find its unpromoted type, so put the ConstantExpr in a no-op cast
+  // to keep its value, e.g., NoOp(ConstantExpr(A)) for "case A:".
+  for (auto [Slot, Orig] : Replaced)
+    *Slot = Orig;
+  Expr *CE = ConstantExpr::Create(Context, E, Result.Val);
+  return ImplicitCastExpr::Create(Context, E->getType(), CK_NoOp, CE,
+                                  /*BasePath=*/nullptr, VK_PRValue,
+                                  FPOptionsOverride());
 }
 
 } // namespace clang

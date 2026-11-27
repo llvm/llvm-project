@@ -56,7 +56,6 @@
 ...
 ---
 name: ceph_con_v2_try_read
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%1' }
   - { reg: '$x4', virtual-reg: '%2' }

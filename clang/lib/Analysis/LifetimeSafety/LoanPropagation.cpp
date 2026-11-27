@@ -283,11 +283,12 @@ private:
   }
 
   Lattice setLoans(Lattice L, OriginID OID, LoanSet Loans) {
-    if (isPersistent(OID))
-      return Lattice(OriginLoanMapFactory.add(L.PersistentOrigins, OID, Loans),
-                     L.BlockLocalOrigins);
-    return Lattice(L.PersistentOrigins,
-                   OriginLoanMapFactory.add(L.BlockLocalOrigins, OID, Loans));
+    OriginLoanMap &Map =
+        isPersistent(OID) ? L.PersistentOrigins : L.BlockLocalOrigins;
+    // An origin that is not in the map has no loans, so do not store those.
+    Map = Loans.isEmpty() ? OriginLoanMapFactory.remove(Map, OID)
+                          : OriginLoanMapFactory.add(Map, OID, Loans);
+    return L;
   }
 
   LoanSet getLoans(Lattice L, OriginID OID) const {

@@ -2107,6 +2107,33 @@ func.func @vector_mask_non_empty_mixed_return(%t: tensor<?xf32>, %idx: index,
 
 // -----
 
+func.func @mask_transfer_read_vector_element_memref(
+    %base: memref<4xvector<4xf32>>, %m: vector<4xi1>) -> vector<4x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant dense<0.0> : vector<4xf32>
+  // expected-error@+1 {{does not support masking a transfer operation on a source with vector element type}}
+  %r = vector.mask %m {
+    vector.transfer_read %base[%c0], %pad
+      : memref<4xvector<4xf32>>, vector<4x4xf32>
+  } : vector<4xi1> -> vector<4x4xf32>
+  return %r : vector<4x4xf32>
+}
+
+// -----
+
+func.func @mask_transfer_write_vector_element_memref(
+    %v: vector<4x4xf32>, %base: memref<4xvector<4xf32>>, %m: vector<4xi1>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{does not support masking a transfer operation on a source with vector element type}}
+  vector.mask %m {
+    vector.transfer_write %v, %base[%c0]
+      : vector<4x4xf32>, memref<4xvector<4xf32>>
+  } : vector<4xi1>
+  return
+}
+
+// -----
+
 func.func @vector_mask_already_masked_transfer_read(%base: memref<?xf32>, %c0: index, %pad: f32, %m: vector<4xi1>) -> vector<4xf32> {
   // expected-error@+1 {{doesn't expect a mask operand for the masked transfer operation}}
   %0 = vector.mask %m {

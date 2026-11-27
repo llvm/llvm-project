@@ -51,7 +51,6 @@
 ...
 ---
 name: func
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 16, size: 8, alignment: 8 }
 stack:

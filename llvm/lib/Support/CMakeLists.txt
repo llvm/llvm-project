@@ -223,6 +223,7 @@ add_llvm_component_library(LLVMSupport
   FileUtilities.cpp
   FileOutputBuffer.cpp
   FloatingPointMode.cpp
+  FPFold.cpp
   FoldingSet.cpp
   FormattedStream.cpp
   FormatVariadic.cpp
@@ -260,6 +261,7 @@ add_llvm_component_library(LLVMSupport
   PGOOptions.cpp
   Parallel.cpp
   PluginLoader.cpp
+  PrefixMapper.cpp
   PrettyStackTrace.cpp
   RandomNumberGenerator.cpp
   IntegerInclusiveInterval.cpp

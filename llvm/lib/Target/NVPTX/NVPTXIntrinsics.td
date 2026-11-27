@@ -7369,6 +7369,76 @@ foreach NumSrc = SPNumSrcs in {
 } // NumSrc
 
 //
+// tcgen05.ld{.red}.spcompress
+//
+
+// mdata = ceil(num / 32);
+// cdata = num / 2.
+class Tcgen05LdSPCompressLayout<int RepeatFactor, bit IsRed> {
+  int MetadataSize = SPCeilDiv<RepeatFactor, 32>.Value;
+  int CompressedDataSize = !div(RepeatFactor, 2);
+  int NumResultRegs =
+      !add(MetadataSize, CompressedDataSize, !if(IsRed, 1, 0));
+  // taddr, row_op, abs, [nan]
+  int NumOperands = !if(IsRed, 4, 3);
+}
+
+class Tcgen05LdSPCompressSDNode<int RepeatFactor, bit IsRed,
+                                Tcgen05LdSPCompressLayout Layout>
+    : SDNode<"NVPTXISD::TCGEN05_LD" # !if(IsRed, "_RED", "")
+                 # "_SPCOMPRESS_X" # RepeatFactor,
+             SDTypeProfile<Layout.NumResultRegs, Layout.NumOperands,
+                           !foreach(OpIdx, !range(!add(Layout.NumResultRegs, Layout.NumOperands)),
+                                    SDTCisVT<OpIdx, i32>)>,
+             [SDNPHasChain, SDNPSideEffect, SDNPMemOperand]>;
+
+class Tcgen05LdSPCompressInst<string Red, int RepeatFactor, string RowOp,
+                              string Abs, string Nan>
+    : NVPTXInst<(outs), (ins), "?", []> {
+  defvar IsRed = !not(!empty(Red));
+  defvar Layout = Tcgen05LdSPCompressLayout<RepeatFactor, IsRed>;
+  defvar Results = SPRegList<Layout.NumResultRegs, "r">;
+  defvar Opcode = Tcgen05LdSPCompressSDNode<RepeatFactor, IsRed, Layout>;
+  defvar Args =
+      !listconcat([SPRegList<Layout.MetadataSize, "r">.Asm,
+                   SPRegList<Layout.CompressedDataSize, "r",
+                             Layout.MetadataSize>.Asm],
+                  !if(IsRed, ["$r" # !sub(Layout.NumResultRegs, 1)], []),
+                  ["[$taddr]"]);
+  defvar RowOpVal = !cond(!eq(RowOp, "min") : 0, !eq(RowOp, "max") : 1);
+  defvar AbsVal = !if(!empty(Abs), 0, 1);
+  defvar NanVal = !if(!empty(Nan), 0, 1);
+
+  // The pattern only matches the qualifiers this instruction prints.
+  dag IntrinsicPattern =
+      !con((Opcode i32:$taddr, (i32 RowOpVal), (i32 AbsVal)),
+           !if(IsRed, (Opcode (i32 NanVal)), (Opcode)));
+
+  let OutOperandList = Results.Outs;
+  let InOperandList = (ins B32:$taddr);
+  let AsmString = "tcgen05.ld" # Red
+                  # ".spcompress.sync.aligned.32x32b.x" # RepeatFactor
+                  # "." # RowOp # ".sp::2:4" # Abs # Nan
+                  # ".f32.b2 " # !interleave(Args, ", ") # ";";
+  let Pattern = [!con(Results.Set, (set IntrinsicPattern))];
+  let Predicates = [hasSPCompress];
+}
+
+let isConvergent = true in {
+  foreach Red = ["", ".red"] in {
+    foreach RepeatFactor = [4, 8, 16, 32, 64, 128] in {
+      foreach RowOp = ["min", "max"] in {
+        foreach Abs = ["", ".abs"] in {
+          // .NaN only applies to the reduction.
+          foreach Nan = !if(!empty(Red), [""], ["", ".NaN"]) in
+            def : Tcgen05LdSPCompressInst<Red, RepeatFactor, RowOp, Abs, Nan>;
+        } // Abs
+      } // RowOp
+    } // RepeatFactor
+  } // Red
+} // isConvergent
+
+//
 // tensormap.replace Instructions
 //
 
@@ -7386,14 +7456,32 @@ class TensormapReplaceInst_3<string state_space, string field_name,
     "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # t.PtxType,
     [(IntrinsicInAS<Intrin, as> addr:$addr, i32:$ord, t.Ty:$val)]>;
 
+defvar TensormapAllocClasses = ["alloc_small", "alloc_large", "alloc_same"];
+
+class TensormapReplaceGlobalAddressInst<string state_space,
+  string alloc_class_str, int alloc_class, NVPTXAddressSpace as> :
+  BasicNVPTXInst<(outs),
+    (ins ADDR:$addr, I64RT.RegOrImm:$val),
+    "tensormap.replace.tile.global_address" # alloc_class_str # "." # state_space
+      # ".b1024.b64",
+    [(IntrinsicInAS<int_nvvm_tensormap_replace_global_address, as>
+        addr:$addr, i64:$val, (i32 alloc_class))]>;
+
+class TensormapReplaceAllocClassInst<string state_space, string qualifier,
+  int alloc_class, NVPTXAddressSpace as> :
+  BasicNVPTXInst<(outs), (ins ADDR:$addr),
+    "tensormap.replace.tile" # qualifier # "." # state_space # ".b1024",
+    [(IntrinsicInAS<int_nvvm_tensormap_replace_alloc_class, as>
+        addr:$addr, (i32 alloc_class))]>;
+
 foreach ss = ["GLOBAL", "SHARED_CTA"] in {
   defvar as = !if(!eq(ss, "GLOBAL"), AddrSpaceGlobal, AddrSpaceShared);
   defvar ss_ptx = !tolower(!subst("_", "::", ss));
-  let Predicates = [hasTensormapReplaceSupport] in {
+  let Predicates = [hasTensormapReplaceSupport, PredNot<PTX95>] in
     def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # ss :
-      TensormapReplaceInst_2<ss_ptx, "global_address", I64RT,
-        int_nvvm_tensormap_replace_global_address, as>;
+      TensormapReplaceGlobalAddressInst<ss_ptx, "", 0, as>;
 
+  let Predicates = [hasTensormapReplaceSupport] in {
     foreach field_name = ["INTERLEAVE_LAYOUT", "FILL_MODE", "RANK"] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
       def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss :
@@ -7425,4 +7513,32 @@ foreach ss = ["GLOBAL", "SHARED_CTA"] in {
   def TENSORMAP_REPLACE_SWIZZLE_MODE_ # ss :
     TensormapReplaceInst_2<ss_ptx, "swizzle_mode", I32RT,
       int_nvvm_tensormap_replace_swizzle_mode, as>;
+
+  let Predicates = [hasTensormapAllocClassSupport] in {
+    foreach alloc_class = [0, 1, 2] in {
+      defvar alloc_class_str = TensormapAllocClasses[alloc_class];
+      def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # !toupper(alloc_class_str) # _ # ss :
+        TensormapReplaceGlobalAddressInst<ss_ptx, "." # alloc_class_str, alloc_class, as>;
+    }
+
+    foreach alloc_class = [0, 1] in {
+      defvar alloc_class_str = TensormapAllocClasses[alloc_class];
+      def TENSORMAP_REPLACE_TILE_ # !toupper(alloc_class_str) # _ # ss :
+        TensormapReplaceAllocClassInst<ss_ptx, "." # alloc_class_str, alloc_class, as>;
+    }
+  }
 } // state_space
+
+class TensormapQueryAllocClassLargeInst<NVPTXAddressSpace as>
+  : BasicNVPTXInst<(outs B1:$res), (ins ADDR:$addr),
+      "tensormap.query.alloc_class_large"
+        # !if(!eq(as.Name, "shared"), ".shared::cta", as.Suffix) # ".b1024",
+      [(set i1:$res,
+         (IntrinsicInAS<int_nvvm_tensormap_query_alloc_class_large, as>
+            addr:$addr))]>,
+    Requires<[hasTensormapAllocClassSupport]>;
+
+foreach as = [AddrSpaceGeneric, AddrSpaceGlobal, AddrSpaceShared,
+              AddrSpaceConst, AddrSpaceParam] in
+  def TENSORMAP_QUERY_ALLOC_CLASS_LARGE_ # !toupper(as.Name) :
+    TensormapQueryAllocClassLargeInst<as>;

@@ -189,8 +189,8 @@ define void @test_signed_v16f16_v16i32(ptr %p) {
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.h
 ; CHECK-NEXT:    fcvtzs z1.s, p0/m, z1.h
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0, x8, lsl #2]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ld = load <16 x half>, ptr %p
   %cvt = call <16 x i32> @llvm.fptosi.sat(<16 x half> %ld)

@@ -6,7 +6,7 @@
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
 // CIR-LABEL: cir.func no_inline no_proto dso_local @main() -> !s32i {{.*}}{
-// CIR: [[RETVAL:%.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR: [[RETVAL:%.*]] = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
 // CIR: [[J:%.*]] = cir.alloca "j" align(4) : !cir.ptr<!s32i>
 // CIR:   omp.parallel {
 // CIR:     cir.scope {

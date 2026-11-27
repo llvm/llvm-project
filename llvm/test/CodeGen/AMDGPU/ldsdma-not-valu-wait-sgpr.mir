@@ -8,7 +8,6 @@
 
 ---
 name: ldsdma_not_valu_for_sgpr_hazard
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: ldsdma_not_valu_for_sgpr_hazard

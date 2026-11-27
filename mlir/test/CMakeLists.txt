@@ -149,6 +149,7 @@ if(NOT MLIR_STANDALONE_BUILD)
   list(APPEND MLIR_TEST_DEPENDS
     FileCheck
     count
+    llvm-objdump
     llvm-strings
     not
     split-file
