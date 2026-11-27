@@ -491,7 +491,7 @@ define i32 @load_with_poison_metadata(i1 %c, i32 %b) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 -1, ptr [[A]], align 4
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4, !range [[RNG1:![0-9]+]]
-; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[C:%.*]], i32 [[B:%.*]], i32 [[V]]
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[C:%.*]], i32 [[B:%.*]], i32 -1
 ; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[A]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
