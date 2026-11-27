@@ -5,6 +5,7 @@ add_mlir_unittest(MLIRTargetLLVMTests
   SerializeNVVMTarget.cpp
   SerializeROCDLTarget.cpp
   SerializeToLLVMBitcode.cpp
+  SerializeXeVMTarget.cpp
 DEPENDS
   MLIRRegisterAllDialects
 )
@@ -16,6 +17,7 @@ mlir_target_link_libraries(MLIRTargetLLVMTests
   MLIRDLTIDialect
   MLIRNVVMTarget
   MLIRROCDLTarget
+  MLIRXeVMTarget
   MLIRGPUDialect
   MLIRNVVMDialect
   MLIRLLVMDialect

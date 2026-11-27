@@ -43,8 +43,8 @@ public:
   FailureOr<SmallVector<char, 0>> compileToBinary(StringRef asmStr,
                                                   StringRef inputFormat);
 
-  /// Returns the GPU compiler version info, or an empty string if
-  /// the compiler is not found.
+  /// Returns the GPU compiler version info, or an empty string if the version
+  /// can't be determined.
   static std::string
   getCompilerInfo(const gpu::TargetOptions &targetOptions = {});
 
@@ -67,11 +67,9 @@ protected:
   compileToBinaryViaOclocTool(StringRef asmStr, StringRef inputFormat);
 
   /// Compiles to native code using the `ocloc` shared library API, in-process,
-  /// without temporary files. Only available when the library is linked in.
-#if MLIR_XEVM_OCLOC_LIB_AVAILABLE
+  /// without temporary files. Only defined when the library is linked in.
   FailureOr<SmallVector<char, 0>>
   compileToBinaryViaLibocloc(StringRef asmStr, StringRef inputFormat);
-#endif // MLIR_XEVM_OCLOC_LIB_AVAILABLE
 
   /// GPU compilation target options.
   gpu::TargetOptions targetOptions;

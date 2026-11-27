@@ -40,6 +40,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <mutex>
 
 using namespace mlir;
 using namespace mlir::xevm;
@@ -418,11 +419,14 @@ std::string SerializeGPUModuleBase::getCompilerInfo(
                   &outputNames) != OCLOC_SUCCESS)
     return {};
   for (uint32_t i = 0; i < outputsNum; ++i)
-    if (StringRef(outputNames[i]) == query)
-      return StringRef(reinterpret_cast<char *>(outputs[i]), outputLengths[i])
-          .rtrim('\0')
-          .trim()
-          .str();
+    if (outputNames && outputNames[i] && StringRef(outputNames[i]) == query)
+      return outputs && outputs[i] && outputLengths
+                 ? StringRef(reinterpret_cast<char *>(outputs[i]),
+                             outputLengths[i])
+                       .rtrim('\0')
+                       .trim()
+                       .str()
+                 : std::string();
   return {};
 #else
   std::optional<std::string> oclocPath = findTool("ocloc", targetOptions);
@@ -430,9 +434,15 @@ std::string SerializeGPUModuleBase::getCompilerInfo(
   if (!oclocPath || llvm::sys::fs::createTemporaryFile("ocloc", "query", out))
     return {};
   llvm::FileRemover outRemover(out);
-  llvm::FileRemover queryRemover(query); // Remove the file created by ocloc
+  // ocloc writes the result to a file in the CWD, serialize the queries.
+  static std::mutex queryMutex;
+  std::lock_guard<std::mutex> lock(queryMutex);
+  // Remove the file created by ocloc unless it already existed. ocloc
+  // overwrites an existing file, so only the file is kept, not its content.
+  llvm::FileRemover queryRemover(query,
+                                 /*deleteIt=*/!llvm::sys::fs::exists(query));
   std::optional<StringRef> redirects[] = {std::nullopt, out.str(),
-                                          std::nullopt};
+                                          StringRef("")};
   if (llvm::sys::ExecuteAndWait(*oclocPath, {"ocloc", "query", query},
                                 std::nullopt, redirects))
     return {};
