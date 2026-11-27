@@ -367,6 +367,7 @@ bool MachineCSEImpl::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
     if (I == E)
       return true;
 
+    bool DefinesPhysReg = false;
     for (const MachineOperand &MO : I->operands()) {
       // RegMasks go on instructions like calls that clobber lots of physregs.
       // Don't attempt to CSE across such an instruction.
@@ -375,13 +376,19 @@ bool MachineCSEImpl::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
       if (!MO.isReg() || !MO.isDef())
         continue;
       Register MOReg = MO.getReg();
-      if (MOReg.isVirtual())
+      if (!MOReg || MOReg.isVirtual())
         continue;
+      DefinesPhysReg = true;
       if (PhysRefs.count(MOReg.asMCReg()))
         return false;
     }
 
-    --LookAheadLeft;
+    // Only instructions that define a physical register can clobber the
+    // physregs we are tracking, so only they count against the lookahead
+    // budget. Instructions that define only virtual registers (e.g. the
+    // constant materializations that feed PHIs) are skipped for free.
+    if (DefinesPhysReg)
+      --LookAheadLeft;
     ++I;
   }
 

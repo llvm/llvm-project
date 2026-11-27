@@ -432,11 +432,10 @@ define i32 @fptoui_f64_i32(double %a) nounwind strictfp {
 ; V9-NEXT:    fsubd %f0, %f2, %f0
 ; V9-NEXT:    fdtoi %f0, %f0
 ; V9-NEXT:    st %f0, [%sp+2187]
-; V9-NEXT:    ld [%sp+2187], %o1
-; V9-NEXT:    cmp %o0, 0
-; V9-NEXT:    sethi 2097152, %o0
-; V9-NEXT:    movne %icc, 0, %o0
-; V9-NEXT:    xor %o1, %o0, %o0
+; V9-NEXT:    ld [%sp+2187], %o0
+; V9-NEXT:    sethi 2097152, %o1
+; V9-NEXT:    movne %icc, 0, %o1
+; V9-NEXT:    xor %o0, %o1, %o0
 ; V9-NEXT:    retl
 ; V9-NEXT:    add %sp, 144, %sp
   %r = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %a, metadata !"fpexcept.strict") strictfp
@@ -473,16 +472,15 @@ define i64 @fptoui_f64_i64(double %a) nounwind strictfp {
 ; V9-NEXT:    fsubd %f0, %f2, %f0
 ; V9-NEXT:    fdtox %f0, %f0
 ; V9-NEXT:    std %f0, [%sp+2183]
-; V9-NEXT:    sethi 0, %o1
+; V9-NEXT:    sethi 0, %o0
+; V9-NEXT:    or %o0, 0, %o0
+; V9-NEXT:    sethi 2097152, %o1
 ; V9-NEXT:    or %o1, 0, %o1
-; V9-NEXT:    sethi 2097152, %o2
-; V9-NEXT:    or %o2, 0, %o2
-; V9-NEXT:    sllx %o2, 32, %o2
-; V9-NEXT:    ldx [%sp+2183], %o3
-; V9-NEXT:    or %o2, %o1, %o1
-; V9-NEXT:    cmp %o0, 0
-; V9-NEXT:    movne %icc, 0, %o1
-; V9-NEXT:    xor %o3, %o1, %o0
+; V9-NEXT:    ldx [%sp+2183], %o2
+; V9-NEXT:    sllx %o1, 32, %o1
+; V9-NEXT:    or %o1, %o0, %o0
+; V9-NEXT:    movne %icc, 0, %o0
+; V9-NEXT:    xor %o2, %o0, %o0
 ; V9-NEXT:    retl
 ; V9-NEXT:    add %sp, 144, %sp
   %r = call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %a, metadata !"fpexcept.strict") strictfp

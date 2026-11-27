@@ -621,11 +621,10 @@ define i32 @fptoui_f128_i32(fp128 %a) nounwind strictfp {
 ; HARD-NEXT:    fsubq %f0, %f4, %f0
 ; HARD-NEXT:    fqtoi %f0, %f0
 ; HARD-NEXT:    st %f0, [%sp+2187]
-; HARD-NEXT:    ld [%sp+2187], %o1
-; HARD-NEXT:    cmp %o0, 0
-; HARD-NEXT:    sethi 2097152, %o0
-; HARD-NEXT:    movne %icc, 0, %o0
-; HARD-NEXT:    xor %o1, %o0, %o0
+; HARD-NEXT:    ld [%sp+2187], %o0
+; HARD-NEXT:    sethi 2097152, %o1
+; HARD-NEXT:    movne %icc, 0, %o1
+; HARD-NEXT:    xor %o0, %o1, %o0
 ; HARD-NEXT:    retl
 ; HARD-NEXT:    add %sp, 144, %sp
   %r = call i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128 %a, metadata !"fpexcept.strict") strictfp
