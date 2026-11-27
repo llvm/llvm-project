@@ -20,7 +20,6 @@
 ---
 name:            diamond
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: diamond
   ; CHECK: bb.0:
@@ -67,7 +66,6 @@ body:             |
 ---
 name:            triangle
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: triangle
   ; CHECK: bb.0:
@@ -107,7 +105,6 @@ body:             |
 ---
 name:            diamond_minsize
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: diamond_minsize
   ; CHECK: bb.0:

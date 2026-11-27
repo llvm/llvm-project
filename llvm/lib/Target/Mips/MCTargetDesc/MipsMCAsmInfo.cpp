@@ -12,6 +12,8 @@
 
 #include "MipsMCAsmInfo.h"
 #include "MipsABIInfo.h"
+#include "MipsMCTargetDesc.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/TargetParser/Triple.h"
@@ -22,7 +24,7 @@ void MipsELFMCAsmInfo::anchor() {}
 
 MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
                                    const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TheTriple, Options) {
   IsLittleEndian = TheTriple.isLittleEndian();
 
   MipsABIInfo ABI =
@@ -45,6 +47,9 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
   UseAssignmentForEHBegin = true;
   SupportsDebugInformation = true;
   DwarfRegNumForCFI = true;
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }
 
 void MipsCOFFMCAsmInfo::anchor() {}
@@ -207,6 +212,11 @@ bool MipsELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
                                                  MCValue &Res,
                                                  const MCAssembler *Asm) const {
   return evaluate(Expr, Res, Asm);
+}
+
+bool MipsELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
+  // microMIPS encoding uses compressed intruction byte-order
+  return STI.hasFeature(Mips::FeatureMicroMips);
 }
 
 void MipsCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,

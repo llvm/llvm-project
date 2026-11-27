@@ -51,10 +51,14 @@
 
 namespace llvm {
 
-enum WindowSchedulingFlag {
-  WS_Off,  /// Turn off window algorithm.
-  WS_On,   /// Use window algorithm after SMS algorithm fails.
-  WS_Force /// Use window algorithm instead of SMS algorithm.
+struct CodeGenOptions;
+class MachineDominatorTree;
+
+// On comes first as the zero value is the -window-sched default.
+enum class WindowSchedulingFlag {
+  On,   /// Use window algorithm after SMS algorithm fails.
+  Off,  /// Turn off window algorithm.
+  Force /// Use window algorithm instead of SMS algorithm.
 };
 
 /// TriCloneInfo describes an MI clone in TripleMBB: the original MI it was
@@ -68,6 +72,7 @@ struct TriCloneInfo {
 /// scheduler.
 class LLVM_ABI WindowScheduler {
 protected:
+  const CodeGenOptions &Opts;
   MachineSchedContext *Context = nullptr;
   MachineFunction *MF = nullptr;
   MachineBasicBlock *MBB = nullptr;
@@ -76,6 +81,7 @@ protected:
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
+  MachineDominatorTree *MDT = nullptr;
 
   /// To innovatively identify the dependencies between MIs across two trips, we
   /// construct a DAG for a new MBB, which is created by copying the original
@@ -121,7 +127,8 @@ protected:
   unsigned BaseII = 0;
 
 public:
-  WindowScheduler(MachineSchedContext *C, MachineLoop &ML);
+  WindowScheduler(MachineSchedContext *C, MachineLoop &ML,
+                  MachineDominatorTree *MDT = nullptr);
   virtual ~WindowScheduler() = default;
 
   bool run();

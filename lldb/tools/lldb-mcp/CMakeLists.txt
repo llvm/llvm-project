@@ -5,10 +5,10 @@ add_lldb_tool(lldb-mcp
   LINK_COMPONENTS
     Support
   LINK_LIBS
-    liblldb
     lldbHost
     lldbProtocolMCP
     lldbUtility
+    liblldb
   )
 
 # lldb-mcp hosts debug sessions in its own process. It drives the debug engine

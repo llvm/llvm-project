@@ -146,7 +146,6 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
   CodePointerSize = IsILP32 ? 4 : 8;
 
   AlignmentIsInBytes = false;
-  UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
   UseDataRegionDirectives = true;
 
@@ -198,7 +197,7 @@ bool AArch64MCAsmInfoDarwin::evaluateAsRelocatableImpl(
 
 AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
                                          const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(T, Options) {
   if (T.getArch() == Triple::aarch64_be)
     IsLittleEndian = false;
 
@@ -229,6 +228,9 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
 
   initializeAtSpecifiers(ELFAtSpecifiers);
   UseAtForSpecifier = false;
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }
 
 void AArch64MCAsmInfoELF::printSpecifierExpr(

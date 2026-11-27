@@ -174,7 +174,7 @@ static bool evaluateAsRelocatable(const MCSpecifierExpr &Expr, MCValue &Res,
 
 PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple &T,
                                  const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(T, Options) {
   // FIXME: This is not always needed. For example, it is not needed in the
   // v2 abi.
   NeedsLocalForSize = true;
@@ -189,9 +189,6 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple &T,
   AlignmentIsInBytes = false;
 
   CommentString = "#";
-
-  // Uses '.section' before '.bss' directive
-  UsesELFSectionDirectiveForBSS = true;
 
   // Debug Information
   SupportsDebugInformation = true;

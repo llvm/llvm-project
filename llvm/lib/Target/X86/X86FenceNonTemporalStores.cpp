@@ -33,7 +33,6 @@
 #include "X86TargetMachine.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/BasicBlock.h"
@@ -41,18 +40,16 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-fence-nontemporal-stores"
 
 static bool isNonTemporalStore(const Instruction &I) {
-  return I.mayWriteToMemory() && I.hasMetadata(LLVMContext::MD_nontemporal);
+  return I.hasMetadata(LLVMContext::MD_nontemporal) && I.mayWriteToMemory();
 }
 
 /// Returns true if I is a hardware fence that serializes write-combining

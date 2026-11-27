@@ -24,7 +24,7 @@ void SparcELFMCAsmInfo::anchor() {}
 
 SparcELFMCAsmInfo::SparcELFMCAsmInfo(const Triple &TheTriple,
                                      const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TheTriple, Options) {
   bool isV9 = TheTriple.isSPARC64();
   IsLittleEndian = (TheTriple.getArch() == Triple::sparcel);
 
@@ -39,8 +39,6 @@ SparcELFMCAsmInfo::SparcELFMCAsmInfo(const Triple &TheTriple,
   ZeroDirective = "\t.skip\t";
   CommentString = "!";
   SupportsDebugInformation = true;
-
-  UsesELFSectionDirectiveForBSS = true;
 
   DwarfFDERelSymbolSpec = ELF::R_SPARC_DISP32;
 }

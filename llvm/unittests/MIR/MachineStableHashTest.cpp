@@ -90,7 +90,6 @@ TEST_F(MachineStableHashTest, StableGlobalName) {
 ---
 name:            f1
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16
 machineFunctionInfo: {}
@@ -160,7 +159,6 @@ TEST_F(MachineStableHashTest, ContentName) {
 ---
 name:            f1
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16
 machineFunctionInfo: {}
@@ -228,7 +226,6 @@ TEST_F(MachineStableHashTest, SourceQualifiedLocalGlobals) {
 ---
 name:            f1
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16
 machineFunctionInfo: {}
@@ -256,7 +253,6 @@ body:             |
 ---
 name:            f1
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16
 machineFunctionInfo: {}

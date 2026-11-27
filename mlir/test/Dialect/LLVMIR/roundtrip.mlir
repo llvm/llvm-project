@@ -173,6 +173,9 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: llvm.call @baz() {nobuiltin} : () -> ()
   llvm.call @baz() {nobuiltin} : () -> ()
 
+// CHECK: llvm.call @baz() {strictfp} : () -> ()
+  llvm.call @baz() {strictfp} : () -> ()
+
 // CHECK: llvm.call @baz() {save_reg_params} : () -> ()
   llvm.call @baz() {save_reg_params} : () -> ()
 
@@ -764,6 +767,9 @@ llvm.func @useInlineAsm(%arg0: i32) {
   // CHECK-NEXT:  llvm.inline_asm convergent {{.*}} (i32) -> i8
   %6 = llvm.inline_asm convergent "bswap $0", "=r,r" %arg0 : (i32) -> i8
 
+  // CHECK-NEXT:  llvm.inline_asm strictfp {{.*}} (i32) -> i8
+  %7 = llvm.inline_asm strictfp "bswap $0", "=r,r" %arg0 : (i32) -> i8
+
   llvm.return
 }
 
@@ -1194,6 +1200,24 @@ llvm.func @intrinsic_call_arg_attrs(%arg0: i32) -> i32 {
   llvm.return %0 : i32
 }
 
+// CHECK-LABEL: @invoke_strictfp
+llvm.func @invoke_strictfp() attributes { personality = @__gxx_personality_v0 } {
+  // CHECK: llvm.invoke @baz() to ^{{.*}} unwind ^{{.*}} {strictfp} : () -> ()
+  llvm.invoke @baz() to ^bb1 unwind ^bb2 {strictfp} : () -> ()
+^bb1:
+  llvm.return
+^bb2:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+}
+
+// CHECK-LABEL: intrinsic_call_strictfp
+llvm.func @intrinsic_call_strictfp(%arg0: i32) -> i32 {
+  // CHECK: %{{.*}} = llvm.call_intrinsic "llvm.riscv.sha256sig0"({{.*}}) {strictfp} : (i32) -> i32
+  %0 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) {strictfp} : (i32) -> (i32)
+  llvm.return %0 : i32
+}
+
 // CHECK-LABEL: intrinsic_call_arg_attrs_bundles
 llvm.func @intrinsic_call_arg_attrs_bundles(%arg0: i32) -> i32 {
   // CHECK: %{{.*}} = llvm.call_intrinsic "llvm.riscv.sha256sig0"({{.*}}) ["adazdazd"()] {constant} : (i32 {llvm.signext}) -> i32
@@ -1383,4 +1407,13 @@ llvm.func @switch_result_number(%arg0: i32) -> i32 {
   llvm.return %1 : i32
 ^bb2(%2: i32):
   llvm.return %2 : i32
+}
+
+// CHECK-LABEL: @switch_i8_distinct_signs
+// CHECK: 1: ^bb1
+// CHECK-NEXT: -1: ^bb1
+llvm.func @switch_i8_distinct_signs(%arg0: i8) {
+  llvm.switch %arg0 : i8, ^bb1 [1: ^bb1, -1: ^bb1]
+^bb1:
+  llvm.return
 }

@@ -147,7 +147,6 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
     return false;
   }
   auto Buffer = std::move(BufferOrErr.get());
-  json::Path::Root NullRoot;
   auto Parsed = json::parse(Buffer->getBuffer());
   if (!Parsed) {
     Ctx.diagnose(DiagnosticInfoInstrumentation(
@@ -312,7 +311,8 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
   return true;
 }
 
-bool readConfigPathsFile(StringRef InputFile, cl::list<std::string> &Configs,
+bool readConfigPathsFile(StringRef InputFile,
+                         SmallVectorImpl<std::string> &Configs,
                          LLVMContext &Ctx, vfs::FileSystem &FS) {
   if (InputFile.empty())
     return true;

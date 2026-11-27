@@ -180,16 +180,6 @@ std::string getStringImm(const MachineInstr &MI, unsigned StartIndex) {
   return getSPIRVStringOperand(MI, StartIndex);
 }
 
-std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI) {
-  MachineInstr *Def = getVRegDef(MRI, Reg);
-  assert(Def && Def->getOpcode() == TargetOpcode::G_GLOBAL_VALUE &&
-         "Expected G_GLOBAL_VALUE");
-  const GlobalValue *GV = Def->getOperand(1).getGlobal();
-  Value *V = GV->getOperand(0);
-  const ConstantDataArray *CDA = cast<ConstantDataArray>(V);
-  return CDA->getAsCString().str();
-}
-
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
   const auto Bitwidth = Imm.getBitWidth();
   if (Bitwidth == 1)
@@ -368,37 +358,37 @@ MachineBasicBlock::iterator getInsertPtValidEnd(MachineBasicBlock *MBB) {
 SPIRV::StorageClass::StorageClass
 addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
   switch (AddrSpace) {
-  case 0:
+  case SPIRVAS::Function:
     return SPIRV::StorageClass::Function;
-  case 1:
+  case SPIRVAS::CrossWorkgroup:
     return SPIRV::StorageClass::CrossWorkgroup;
-  case 2:
+  case SPIRVAS::UniformConstant:
     return SPIRV::StorageClass::UniformConstant;
-  case 3:
+  case SPIRVAS::Workgroup:
     return SPIRV::StorageClass::Workgroup;
-  case 4:
+  case SPIRVAS::Generic:
     return SPIRV::StorageClass::Generic;
-  case 5:
+  case SPIRVAS::DeviceOnlyINTEL:
     return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
                ? SPIRV::StorageClass::DeviceOnlyINTEL
                : SPIRV::StorageClass::CrossWorkgroup;
-  case 6:
+  case SPIRVAS::HostOnlyINTEL:
     return STI.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)
                ? SPIRV::StorageClass::HostOnlyINTEL
                : SPIRV::StorageClass::CrossWorkgroup;
-  case 7:
+  case SPIRVAS::Input:
     return SPIRV::StorageClass::Input;
-  case 8:
+  case SPIRVAS::Output:
     return SPIRV::StorageClass::Output;
-  case 9:
+  case SPIRVAS::CodeSectionINTEL:
     return SPIRV::StorageClass::CodeSectionINTEL;
-  case 10:
+  case SPIRVAS::Private:
     return SPIRV::StorageClass::Private;
-  case 11:
+  case SPIRVAS::StorageBuffer:
     return SPIRV::StorageClass::StorageBuffer;
-  case 12:
+  case SPIRVAS::Uniform:
     return SPIRV::StorageClass::Uniform;
-  case 13:
+  case SPIRVAS::PushConstant:
     return SPIRV::StorageClass::PushConstant;
   default:
     report_fatal_error("Unknown address space");
@@ -508,12 +498,6 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
   const MachineInstr *MI = getDefInstrMaybeConstant(ConstReg, MRI);
   assert(MI && MI->getOpcode() == TargetOpcode::G_CONSTANT);
   return MI->getOperand(1).getCImm()->getValue().getZExtValue();
-}
-
-int64_t getIConstValSext(Register ConstReg, const MachineRegisterInfo *MRI) {
-  const MachineInstr *MI = getDefInstrMaybeConstant(ConstReg, MRI);
-  assert(MI && MI->getOpcode() == TargetOpcode::G_CONSTANT);
-  return MI->getOperand(1).getCImm()->getSExtValue();
 }
 
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {

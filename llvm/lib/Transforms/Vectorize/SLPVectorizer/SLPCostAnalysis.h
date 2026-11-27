@@ -19,18 +19,28 @@
 #include "SLPUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/InstructionCost.h"
 
+#include <optional>
 #include <tuple>
 #include <utility>
 
 namespace llvm {
 class APInt;
+class BasicBlock;
+class CallInst;
 class DataLayout;
 class FastMathFlags;
 class FixedVectorType;
+class Function;
 class Instruction;
+class LoadInst;
 class TargetLibraryInfo;
 class Type;
 class User;
@@ -40,6 +50,34 @@ enum class RecurKind;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
+
+/// Returns \p Stride scaled by the allocation size of \p ScalarTy, negated if
+/// \p IsReverse is set
+ConstantInt *getStrideBytesForConstant(ConstantInt *Stride, Type *ScalarTy,
+                                       const DataLayout &DL,
+                                       bool IsReverse = false);
+
+/// Return the cost of a strided load and accompanying bitcast.
+InstructionCost getStridedLoadCost(
+    const TargetTransformInfo &TTI, const DataLayout &DL, Value *StrideVal,
+    Type *StridedLoadTy, Type *VecTy, Type *ScalarTy, Value *Ptr,
+    Align CommonAlignment, TargetTransformInfo::CastContextHint Ctx,
+    TargetTransformInfo::TargetCostKind CostKind, bool IsReverse);
+
+/// Describe a single compressed load for costing and generating the vector
+/// instruction.
+struct CompressedLoadInfo {
+  bool IsMasked = false;
+  unsigned InterleaveFactor = 0;
+  SmallVector<int> CompressMask;
+  VectorType *LoadVecTy = nullptr;
+};
+
+/// Return the cost of a compressed load and accompanying shuffle.
+InstructionCost
+getCompressedLoadCost(const TargetTransformInfo &TTI, const LoadInst *LI0,
+                      const CompressedLoadInfo &Info,
+                      TargetTransformInfo::TargetCostKind CostKind);
 
 /// Returns the cost of the shuffle instructions with the given \p Kind, vector
 /// type \p Tp and optional \p Mask. Adds SLP-specific cost estimation for
@@ -76,6 +114,14 @@ getWidenedStridedCastCost(const TargetTransformInfo &TTI, Type *SrcTy,
                           Type *DstTy, const DataLayout &DL,
                           TargetTransformInfo::CastContextHint CCH,
                           TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of casting a vector of the demoted type to \p VecTy.
+/// \p MinBW is the bit width and signedness of the demoted type.
+InstructionCost
+getDemotedTypeCastCost(const TargetTransformInfo &TTI, VectorType *VecTy,
+                       const std::pair<uint64_t, bool> &MinBW,
+                       TargetTransformInfo::CastContextHint CCH,
+                       TargetTransformInfo::TargetCostKind CostKind);
 
 /// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, checks if
 /// padding to a full register and using the masked div/rem intrinsic is
@@ -177,6 +223,68 @@ getI1ReductionCost(RecurKind Kind, const TargetTransformInfo &TTI,
                    FixedVectorType *VectorTy, Type *ScalarTy,
                    TargetTransformInfo::CastContextHint Ctx,
                    TargetTransformInfo::TargetCostKind CostKind);
+
+/// Builds the arguments types vector for the given call instruction with the
+/// given \p ID for the specified vector factor.
+SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
+                                           const Intrinsic::ID ID,
+                                           const unsigned VF, unsigned MinBW,
+                                           const TargetTransformInfo &TTI);
+
+/// Calculates the costs of vectorized intrinsic (if possible) and vectorized
+/// function (if possible) calls. Returns invalid cost for the corresponding
+/// calls, if they cannot be vectorized/will be scalarized.
+std::pair<InstructionCost, InstructionCost>
+getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo &TTI,
+                   const TargetLibraryInfo &TLI, ArrayRef<Type *> ArgTys,
+                   const TargetTransformInfo::TargetCostKind CostKind);
+
+/// Memoizes opcode / intrinsic / callee kinds already ruled out as seeds.
+struct PoorThroughputOpCache {
+  SmallDenseSet<std::pair<unsigned, unsigned>> CheapOpcodes;
+  SmallDenseSet<std::pair<Intrinsic::ID, unsigned>> CheapIntrinsics;
+  // Keyed on the callee alone: a Function's signature is fixed, so its type
+  // never varies between calls.
+  SmallDenseSet<const Function *> CheapCallees;
+};
+
+/// Returns true if \p I is an expensive scalar op whose vector form is cheaper
+/// per lane (e.g. fdiv, frem, fsqrt). If \p MaxVecRegSize is non-zero, the
+/// widest vector fitting into it is checked too.
+bool isPoorThroughputOp(bool ReVec, Instruction *I,
+                        const TargetTransformInfo &TTI,
+                        const TargetLibraryInfo &TLI,
+                        PoorThroughputOpCache &Cache,
+                        const TargetTransformInfo::TargetCostKind CostKind,
+                        unsigned MaxVecRegSize = 0);
+
+/// \returns true if \p Op is a contractable single-use fmul, which the backend
+/// fuses with its fadd/fsub user \p I: \p Op is in the block of \p I or the
+/// target sinks it there.
+bool isFusableFMulOperand(Value *Op, Instruction *I,
+                          const TargetTransformInfo &TTI);
+
+/// \returns true if more values with the scalar type \p Ty than registers are
+/// live at some point of the block \p BB. The blocks larger than the scheduling
+/// budget \p ScheduleBudget are skipped to save compile time.
+bool hasHighRegisterPressure(unsigned ScheduleBudget, const BasicBlock &BB,
+                             Type *Ty, const TargetTransformInfo &TTI);
+
+/// Selects the gathers of \p GatheredScalars, which fully reverse the bytes of
+/// a scalar and are emitted as a byte swap of the scalar, if it is not more
+/// expensive than the permutation of the bytes. The permutation of the scalar
+/// extracted from a vector folds the extraction, the byte swap does not, so the
+/// byte swaps of the scalars extracted from the same vector are estimated
+/// together with all these extractions. \p GetVectorizedSource returns the key
+/// and the type of the vector the vectorized scalar is extracted from, and its
+/// lane. \returns the mask of the selected gathers.
+SmallBitVector selectBSwapGathers(
+    ArrayRef<SmallVector<Value *>> GatheredScalars, const DataLayout &DL,
+    const TargetTransformInfo &TTI, bool ReVec,
+    TargetTransformInfo::TargetCostKind CostKind,
+    function_ref<std::optional<
+        std::tuple<const void *, FixedVectorType *, unsigned>>(Value *)>
+        GetVectorizedSource);
 
 } // namespace llvm::slpvectorizer
 

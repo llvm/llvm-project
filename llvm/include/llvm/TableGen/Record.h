@@ -1705,7 +1705,9 @@ private:
   SmallVector<SMLoc, 0> ForwardDeclarationLocs;
   mutable SmallVector<SMRange, 0> ReferenceLocs;
   mutable DenseMap<const Init *, SmallVector<SMRange, 0>> ValueReferenceLocs;
-  SmallVector<const Init *, 0> TemplateArgs;
+  // Template arguments, in order.
+  SmallVector<RecordVal, 0> TemplateArgs;
+  // Fields, including the ones inherited from superclasses.
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
   SmallVector<DumpInfo, 0> Dumps;
@@ -1746,7 +1748,8 @@ public:
   Record(const Record &O)
       : Name(O.Name), Locs(O.Locs), ValueReferenceLocs(O.ValueReferenceLocs),
         TemplateArgs(O.TemplateArgs), Values(O.Values),
-        Assertions(O.Assertions), DirectSuperClasses(O.DirectSuperClasses),
+        Assertions(O.Assertions), Dumps(O.Dumps),
+        DirectSuperClasses(O.DirectSuperClasses),
         TrackedRecords(O.TrackedRecords), ID(getNewUID(O.getRecords())),
         Kind(O.Kind) {}
 
@@ -1812,8 +1815,10 @@ public:
 
   bool isAnonymous() const { return Kind == RK_AnonymousDef; }
 
-  ArrayRef<const Init *> getTemplateArgs() const { return TemplateArgs; }
+  /// Return the template arguments of this class or multiclass.
+  ArrayRef<RecordVal> getTemplateArgs() const { return TemplateArgs; }
 
+  /// Return the fields of this record.
   ArrayRef<RecordVal> getValues() const { return Values; }
 
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
@@ -1844,10 +1849,22 @@ public:
     return DirectSuperClasses;
   }
 
-  bool isTemplateArg(const Init *Name) const {
-    return llvm::is_contained(TemplateArgs, Name);
+  /// Return the template argument with the given name, or null if there is
+  /// none.
+  const RecordVal *getTemplateArg(const Init *Name) const {
+    for (const RecordVal &Arg : TemplateArgs)
+      if (Arg.Name == Name)
+        return &Arg;
+    return nullptr;
   }
 
+  RecordVal *getTemplateArg(const Init *Name) {
+    return const_cast<RecordVal *>(
+        static_cast<const Record *>(this)->getTemplateArg(Name));
+  }
+
+  /// Return the field with the given name, or null if there is none. Use
+  /// getTemplateArg() to look up template arguments.
   const RecordVal *getValue(const Init *Name) const {
     for (const RecordVal &Val : Values)
       if (Val.Name == Name) return &Val;
@@ -1868,12 +1885,18 @@ public:
         static_cast<const Record *>(this)->getValue(Name));
   }
 
-  void addTemplateArg(const Init *Name) {
-    assert(!isTemplateArg(Name) && "Template arg already defined!");
-    TemplateArgs.push_back(Name);
+  /// Add a template argument. Return false, without adding it, if there is
+  /// already a template argument with the same name.
+  bool addTemplateArg(const RecordVal &Arg) {
+    assert(Arg.isTemplateArg() && "Not a template argument!");
+    if (getTemplateArg(Arg.getNameInit()))
+      return false;
+    TemplateArgs.push_back(Arg);
+    return true;
   }
 
   void addValue(const RecordVal &RV) {
+    assert(!RV.isTemplateArg() && "Use addTemplateArg for template arguments");
     assert(getValue(RV.getNameInit()) == nullptr && "Value already added!");
     Values.push_back(RV);
   }

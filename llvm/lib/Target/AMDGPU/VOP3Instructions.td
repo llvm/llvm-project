@@ -553,11 +553,11 @@ multiclass Arithmetic_i16_0Hi_TernaryPats <SDPatternOperator op, Instruction ins
   >;
 }
 
-let Predicates = [Has16BitInsts, isGFX8GFX9] in {
+let Predicates = [Has16BitInsts, isGFX8Only] in {
 defm : Arithmetic_i16_0Hi_TernaryPats<imad, V_MAD_U16_e64>;
 }
 
-let Predicates = [Has16BitInsts, isGFX6GFX7GFX8GFX9] in {
+let Predicates = [Has16BitInsts, isGFX8Only] in {
 
 // FIXME: Should be able to just pass imad to the instruction
 // definition pattern, but the implied clamp input interferes.
@@ -570,7 +570,7 @@ multiclass Ternary_i16_Pats <SDPatternOperator op, Instruction inst> {
 
 defm: Ternary_i16_Pats<imad, V_MAD_U16_e64>;
 
-} // End Predicates = [Has16BitInsts, isGFX6GFX7GFX8GFX9]
+} // End Predicates = [Has16BitInsts, isGFX8Only]
 
 multiclass Ternary_i16_Pats_gfx9<SDPatternOperator op1, SDPatternOperator op2,
                                  Instruction inst> {
@@ -589,9 +589,24 @@ let True16Predicate = UseRealTrue16Insts in {
 let True16Predicate = UseFakeTrue16Insts in {
   defm: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_fake16_e64>;
 } // End True16Predicates = UseFakeTrue16Insts
-let OtherPredicates = [isGFX10Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
+let OtherPredicates = [isGFX9Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
   defm: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_e64>;
-} // End OtherPredicates = [isGFX10Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts
+} // End OtherPredicates = [isGFX9Plus, Has16BitInsts], True16Predicate = NotHasTrue16BitInsts
+
+// On GFX9, select the op_sel version with an explicit zero-extension of the
+// result. SIFoldOperands removes the AND by switching back to the legacy
+// v_mad_u16 (renamed v_mad_legacy_u16), which zeros the high 16 bits, if no
+// op_sel bits are set.
+let OtherPredicates = [isGFX9Only, Has16BitInsts] in {
+def : GCNPat <
+  (i32 (zext (add (mul (i16 (VOP3OpSel i16:$src0, i32:$src0_modifiers)),
+                       (i16 (VOP3OpSel i16:$src1, i32:$src1_modifiers))),
+                  (i16 (VOP3OpSel i16:$src2, i32:$src2_modifiers))))),
+  (V_AND_B32_e64 (S_MOV_B32 (i32 0xffff)),
+    (V_MAD_U16_gfx9_e64 $src0_modifiers, $src0, $src1_modifiers, $src1,
+                        $src2_modifiers, $src2, DSTCLAMP.NONE))
+>;
+} // End OtherPredicates = [isGFX9Only, Has16BitInsts]
 
 class ThreeOpFragSDAG<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
   (ops node:$x, node:$y, node:$z),
@@ -807,7 +822,8 @@ defm V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32
 
 // V_LSHL_ADD_U64: D0.u64 = (S0.u64 << S1.u[2:0]) + S2.u64
 // src0 is shifted left by 0-4 (use "0" to get ADD_U64).
-let SubtargetPredicate = HasLshlAddU64Inst, GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true in
+let SubtargetPredicate = HasLshlAddU64Inst, GFX1250BlockingCycles = 2,
+    HasGFX1250BlockingCycles = true, isReMaterializable = 1 in
 defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", V_LSHL_ADD_U64_PROF>;
 
 let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
@@ -1720,6 +1736,30 @@ let OtherPredicates = [HasBitOp3Insts] in {
 
 } // End OtherPredicates = [HasBitOp3Insts]
 
+class UnscaledDivFmasPat<ValueType vt, Instruction inst> : GCNPat<
+  (unscaled_div_fmas
+    (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
+    (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)),
+    (vt (VOP3Mods vt:$src2, i32:$src2_modifiers)), (i1 srcvalue)),
+  (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
+        $src2_modifiers, $src2, 0, 0)
+>;
+
+def : UnscaledDivFmasPat<f32, V_FMA_F32_e64>;
+def : UnscaledDivFmasPat<f64, V_FMA_F64_e64>;
+
+// Each VOP3Mods matcher contributes three more complexity points than
+// VOP3NoMods. Prefer FMAC when no modifiers are needed.
+let OtherPredicates = [HasDLInsts], AddedComplexity = 10 in
+def : GCNPat<
+  (unscaled_div_fmas
+    (f32 (VOP3NoMods f32:$src0)),
+    (f32 (VOP3NoMods f32:$src1)),
+    (f32 (VOP3NoMods f32:$src2)), (i1 srcvalue)),
+  (V_FMAC_F32_e64 SRCMODS.NONE, $src0, SRCMODS.NONE, $src1,
+                  SRCMODS.NONE, $src2)
+>;
+
 class DivFmasPat<ValueType vt, Instruction inst, Register CondReg> : GCNPat<
   (AMDGPUdiv_fmas (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
                   (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)),
@@ -1900,14 +1940,11 @@ let SubtargetPredicate = isGFX1250Plus in {
         defm V_CVT_SCALE_PK8_BF16_BF8  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_bf8",  VOP_V8BF16_V2I32_I32,  int_amdgcn_cvt_scale_pk8_bf16_bf8>;
         defm V_CVT_SCALE_PK8_F32_FP8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_fp8",   VOP_V8F32_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f32_fp8>;
         defm V_CVT_SCALE_PK8_F32_BF8   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_bf8",   VOP_V8F32_V2I32_I32,   int_amdgcn_cvt_scale_pk8_f32_bf8>;
+        defm V_CVT_SCALE_PK8_F16_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_fp4",   VOP_V8F16_I32_I32,     int_amdgcn_cvt_scale_pk8_f16_fp4>;
+        defm V_CVT_SCALE_PK8_BF16_FP4  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_fp4",  VOP_V8BF16_I32_I32,    int_amdgcn_cvt_scale_pk8_bf16_fp4>;
+        defm V_CVT_SCALE_PK8_F32_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_fp4",   VOP_V8F32_I32_I32,     int_amdgcn_cvt_scale_pk8_f32_fp4>;
       } // End WaveSizePredicate = isWave32, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
     } // End Constraints = "@earlyclobber $vdst"
-
-    let WaveSizePredicate = isWave32, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true in {
-      defm V_CVT_SCALE_PK8_F16_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f16_fp4",   VOP_V8F16_I32_I32,     int_amdgcn_cvt_scale_pk8_f16_fp4>;
-      defm V_CVT_SCALE_PK8_BF16_FP4  : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_bf16_fp4",  VOP_V8BF16_I32_I32,    int_amdgcn_cvt_scale_pk8_bf16_fp4>;
-      defm V_CVT_SCALE_PK8_F32_FP4   : VOP3CvtScaleSelInst<"v_cvt_scale_pk8_f32_fp4",   VOP_V8F32_I32_I32,     int_amdgcn_cvt_scale_pk8_f32_fp4>;
-    } // End WaveSizePredicate = isWave32, GFX1250BlockingCycles = 4, HasGFX1250BlockingCycles = true
   } // End ReadsModeReg = 0
 
   let Constraints = "@earlyclobber $vdst" in {
@@ -2120,7 +2157,8 @@ let SubtargetPredicate = HasAshrPkInsts, True16Predicate = UseRealTrue16Insts in
   defm : AshrPkU8Pat<V_ASHR_PK_U8_I32_t16_e64, 0, 255, 1>;
 }
 
-let SubtargetPredicate = HasF32ToFP6BF6ConversionScaleInsts in {
+let SubtargetPredicate = HasF32ToFP6BF6ConversionScaleInsts,
+    Constraints = "@earlyclobber $vdst" in {
   defm V_CVT_SCALEF32_PK32_BF6_F32   : VOP3Inst<"v_cvt_scalef32_pk32_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F32_F32>,  int_amdgcn_cvt_scalef32_pk32_bf6_f32>;
   defm V_CVT_SCALEF32_PK32_FP6_F32   : VOP3Inst<"v_cvt_scalef32_pk32_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F32_F32>,  int_amdgcn_cvt_scalef32_pk32_fp6_f32>;
 }

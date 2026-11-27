@@ -1515,6 +1515,13 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     }
   }
 
+  // (X & (Y << Z)) >>u Z --> (X >>u Z) & Y
+  if (match(Op0, m_OneUse(m_c_And(m_Shl(m_Value(Y), m_Specific(Op1)),
+                                  m_Value(X))))) {
+    Value *NewLshr = Builder.CreateLShr(X, Op1);
+    return BinaryOperator::CreateAnd(NewLshr, Y);
+  }
+
   if (match(Op1, m_APInt(C))) {
     unsigned ShAmtC = C->getZExtValue();
     auto *II = dyn_cast<IntrinsicInst>(Op0);
@@ -1739,18 +1746,6 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
           return BinaryOperator::CreateShl(NewZExt, ShiftDiff);
         }
       }
-    }
-
-    // Reduce add-carry of bools to logic:
-    // ((zext BoolX) + (zext BoolY)) >> 1 --> zext (BoolX && BoolY)
-    Value *BoolX, *BoolY;
-    if (ShAmtC == 1 && match(Op0, m_Add(m_Value(X), m_Value(Y))) &&
-        match(X, m_ZExt(m_Value(BoolX))) && match(Y, m_ZExt(m_Value(BoolY))) &&
-        BoolX->getType()->isIntOrIntVectorTy(1) &&
-        BoolY->getType()->isIntOrIntVectorTy(1) &&
-        (X->hasOneUse() || Y->hasOneUse() || Op0->hasOneUse())) {
-      Value *And = Builder.CreateAnd(BoolX, BoolY);
-      return new ZExtInst(And, Ty);
     }
   }
 

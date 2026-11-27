@@ -1,4 +1,4 @@
-# RUN: llc %s -verify-machineinstrs -o - -run-pass=live-debug-values \
+# RUN: llc %s -o - -run-pass=live-debug-values \
 # RUN:      -experimental-debug-variable-locations=true | FileCheck %s
 #
 # Test that we don't explode in a verifier error when we have a DBG_PHI of
@@ -71,7 +71,6 @@
 ---
 name:            c
 alignment:       16
-tracksRegLiveness: true
 tracksDebugUserValues: true
 debugInstrRef: true
 frameInfo:

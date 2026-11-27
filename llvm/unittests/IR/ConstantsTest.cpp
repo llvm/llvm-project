@@ -378,6 +378,51 @@ TEST(ConstantsTest, GEPReplaceWithConstant) {
   ASSERT_EQ(GEP->getOperand(0), Alias);
 }
 
+TEST(ConstantsTest, MayHaveConstantUsers) {
+  LLVMContext Context;
+  Module M("MyModule", Context);
+
+  Type *IntTy = Type::getInt64Ty(Context);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), false);
+  Function *F = Function::Create(FTy, GlobalValue::InternalLinkage, "f", M);
+  auto *G1 = new GlobalVariable(M, IntTy, false, GlobalValue::ExternalLinkage,
+                                nullptr);
+  auto *G2 = new GlobalVariable(M, IntTy, false, GlobalValue::ExternalLinkage,
+                                nullptr);
+  EXPECT_FALSE(F->mayHaveConstantUsers());
+  EXPECT_FALSE(G1->mayHaveConstantUsers());
+
+  // A global used only by another global's initializer has no constant users
+  // that removeDeadConstantUsers could remove.
+  auto *Ref = new GlobalVariable(M, F->getType(), false,
+                                 GlobalValue::ExternalLinkage, F);
+  EXPECT_FALSE(F->mayHaveConstantUsers());
+
+  // Creating a constant expression marks its global operand.
+  Constant *Int1 = ConstantExpr::getPtrToInt(G1, IntTy);
+  EXPECT_TRUE(G1->mayHaveConstantUsers());
+
+  // Updating a constant in place marks the new operand.
+  auto *Ref2 =
+      new GlobalVariable(M, IntTy, false, GlobalValue::ExternalLinkage, Int1);
+  G1->replaceAllUsesWith(G2);
+  EXPECT_TRUE(G2->mayHaveConstantUsers());
+
+  // A live constant user keeps the flag set.
+  G2->removeDeadConstantUsers();
+  EXPECT_TRUE(G2->mayHaveConstantUsers());
+
+  // Once the constant users are gone, the next walk clears the flag.
+  Ref2->setInitializer(nullptr);
+  G2->removeDeadConstantUsers();
+  EXPECT_TRUE(G2->use_empty());
+  EXPECT_FALSE(G2->mayHaveConstantUsers());
+
+  // DSOLocalEquivalent is not uniqued through ConstantUniqueMap.
+  Ref->setInitializer(DSOLocalEquivalent::get(F));
+  EXPECT_TRUE(F->mayHaveConstantUsers());
+}
+
 TEST(ConstantsTest, DSOLocalEquivalentReplaceWithAlias) {
   LLVMContext Context;
   std::unique_ptr<Module> M(new Module("MyModule", Context));
@@ -1089,6 +1134,57 @@ TEST(ConstantsTest, PtrAddCAPI) {
   EXPECT_EQ(unwrap(LLVMConstPtrAddFromIndices(wrap(&DL), wrap(I32), wrap(Ptr),
                                               Indices2, 1, 0)),
             nullptr);
+}
+
+TEST(ConstantsTest, RelocationInfo) {
+  LLVMContext Context;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  PointerType *PtrTy = PointerType::getUnqual(Context);
+
+  Module M("MyModule", Context);
+  auto *GV1 =
+      new GlobalVariable(M, Int32Ty, false, GlobalValue::ExternalLinkage,
+                         ConstantInt::get(Int32Ty, 1), "g1");
+  auto *GV2 =
+      new GlobalVariable(M, Int32Ty, false, GlobalValue::ExternalLinkage,
+                         ConstantInt::get(Int32Ty, 2), "g2");
+  GV1->setDSOLocal(true);
+  GV2->setDSOLocal(true);
+
+  Constant *Zero = ConstantInt::get(Int32Ty, 0);
+  EXPECT_FALSE(Zero->needsRelocation());
+  EXPECT_FALSE(Zero->needsDynamicRelocation());
+
+  // Relative pointer between two dso_local globals is a LocalRelocation.
+  Constant *LocalReloc =
+      ConstantExpr::getSub(ConstantExpr::getPtrToInt(GV1, Int64Ty),
+                           ConstantExpr::getPtrToInt(GV2, Int64Ty));
+  EXPECT_TRUE(LocalReloc->needsRelocation());
+  EXPECT_FALSE(LocalReloc->needsDynamicRelocation());
+
+  // Direct global reference is a GlobalRelocation.
+  EXPECT_TRUE(GV1->needsRelocation());
+  EXPECT_TRUE(GV1->needsDynamicRelocation());
+
+  Constant *StructLocalFirst =
+      ConstantStruct::getAnon(Context, {LocalReloc, GV1});
+  EXPECT_TRUE(StructLocalFirst->needsRelocation());
+  EXPECT_TRUE(StructLocalFirst->needsDynamicRelocation());
+
+  Constant *StructGlobalFirst =
+      ConstantStruct::getAnon(Context, {GV1, LocalReloc});
+  EXPECT_TRUE(StructGlobalFirst->needsRelocation());
+  EXPECT_TRUE(StructGlobalFirst->needsDynamicRelocation());
+
+  Constant *ArrayInt =
+      ConstantArray::get(ArrayType::get(Int32Ty, 2), {Zero, Zero});
+  EXPECT_FALSE(ArrayInt->needsRelocation());
+  EXPECT_FALSE(ArrayInt->needsDynamicRelocation());
+
+  Constant *ArrayGV = ConstantArray::get(ArrayType::get(PtrTy, 2), {GV1, GV2});
+  EXPECT_TRUE(ArrayGV->needsRelocation());
+  EXPECT_TRUE(ArrayGV->needsDynamicRelocation());
 }
 
 } // end anonymous namespace

@@ -772,19 +772,17 @@ public:
 
   /// \return The opcode of the extension the target wants to use for boolean
   /// values.
-  unsigned getBoolExtOp(bool IsVec, bool IsFP) const;
+  unsigned getBoolExtOp(bool IsVec) const;
 
   // Build and insert \p Res = G_ANYEXT \p Op, \p Res = G_SEXT \p Op, or \p Res
   // = G_ZEXT \p Op depending on how the target wants to extend boolean values.
-  MachineInstrBuilder buildBoolExt(const DstOp &Res, const SrcOp &Op,
-                                   bool IsFP);
+  MachineInstrBuilder buildBoolExt(const DstOp &Res, const SrcOp &Op);
 
   // Build and insert \p Res = G_SEXT_INREG \p Op, 1 or \p Res = G_AND \p Op, 1,
   // or COPY depending on how the target wants to extend boolean values, using
   // the original register size.
   MachineInstrBuilder buildBoolExtInReg(const DstOp &Res, const SrcOp &Op,
-                                        bool IsVector,
-                                        bool IsFP);
+                                        bool IsVector);
 
   /// Build and insert \p Res = G_ZEXT \p Op
   ///
@@ -1190,6 +1188,11 @@ public:
   /// built with G_CONSTANT.
   MachineInstrBuilder buildBuildVectorConstant(const DstOp &Res,
                                                ArrayRef<APInt> Ops);
+
+  /// Build and insert \p Res = G_BUILD_VECTOR \p Op0, ... where each OpN is
+  /// built with G_FCONSTANT.
+  MachineInstrBuilder buildBuildVectorFConstant(const DstOp &Res,
+                                                ArrayRef<APFloat> Ops);
 
   /// Build and insert \p Res = G_BUILD_VECTOR with \p Src replicated to fill
   /// the number of elements

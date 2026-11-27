@@ -27,7 +27,6 @@
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Scalar/DCE.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <map>
@@ -708,12 +707,10 @@ void ShuffleBlockStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   // shuffled.
   auto getAliveChildren = [&AliveInstsLookup](Instruction *I) {
     SmallSetVector<size_t, 8> Children;
-    for (Value *U : I->users()) {
-      if (Instruction *P = dyn_cast<Instruction>(U)) {
-        auto It = AliveInstsLookup.find(P);
-        if (It != AliveInstsLookup.end())
-          Children.insert(It->second);
-      }
+    for (Instruction *P : I->users()) {
+      auto It = AliveInstsLookup.find(P);
+      if (It != AliveInstsLookup.end())
+        Children.insert(It->second);
     }
     return Children;
   };
@@ -761,7 +758,6 @@ std::unique_ptr<Module> llvm::parseModule(const uint8_t *Data, size_t Size,
       StringRef(reinterpret_cast<const char *>(Data), Size), "Fuzzer input",
       /*RequiresNullTerminator=*/false);
 
-  SMDiagnostic Err;
   auto M = parseBitcodeFile(Buffer->getMemBufferRef(), Context);
   if (Error E = M.takeError()) {
     errs() << toString(std::move(E)) << "\n";

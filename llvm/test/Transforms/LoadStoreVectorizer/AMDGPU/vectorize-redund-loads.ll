@@ -134,3 +134,22 @@ define void @vect_zext_bitcast_i8_st4_to_i32_idx(ptr addrspace(1) %arg1, i32 %ba
   %load4 = load i32, ptr addrspace(1) %gep4, align 4
   ret void
 }
+
+; A load that breaks the chain may end before the previous chain's endpoint.
+define void @overlapping_loads_after_chain_break(ptr addrspace(1) %p) {
+; CHECK-LABEL: define void @overlapping_loads_after_chain_break(
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) {
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 2
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P]], i64 4
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr addrspace(1) [[P2]], align 2
+; CHECK-NEXT:    [[B:%.*]] = load i32, ptr addrspace(1) [[P4]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load <2 x i32>, ptr addrspace(1) [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p2 = getelementptr inbounds i8, ptr addrspace(1) %p, i64 2
+  %p4 = getelementptr inbounds i8, ptr addrspace(1) %p, i64 4
+  %a = load i32, ptr addrspace(1) %p2, align 2
+  %b = load i32, ptr addrspace(1) %p4, align 4
+  %v = load <2 x i32>, ptr addrspace(1) %p, align 4
+  ret void
+}

@@ -28,18 +28,30 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include <string>
 
+#define OPTIONS_STRUCT_DECL
+#include "WebAssemblyOptions.inc"
+
 #define GET_SUBTARGETINFO_HEADER
 #include "WebAssemblyGenSubtargetInfo.inc"
 
 namespace llvm {
+class LLVMContext;
+class Module;
+class WebAssemblyTargetMachine;
+
+const WebAssemblyOptions &getWebAssemblyOptions(const LLVMContext &C);
+const WebAssemblyOptions &getWebAssemblyOptions(const Module &M);
 
 class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
+  const WebAssemblyOptions &CLOpts;
+
   enum SIMDEnum {
     NoSIMD,
     SIMD128,
     RelaxedSIMD,
   } SIMDLevel = NoSIMD;
 
+  bool HasAcquireReleaseAtomics = false;
   bool HasAtomics = false;
   bool HasBulkMemory = false;
   bool HasBulkMemoryOpt = false;
@@ -56,7 +68,6 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   bool HasMutableGlobals = false;
   bool HasNontrappingFPToInt = false;
   bool HasReferenceTypes = false;
-  bool HasRelaxedAtomics = false;
   bool HasSignExt = false;
   bool HasTailCall = false;
   bool HasWideArithmetic = false;
@@ -84,7 +95,7 @@ public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
   WebAssemblySubtarget(const Triple &TT, StringRef CPU, StringRef FS,
-                       const TargetMachine &TM, StringRef ABIName);
+                       const WebAssemblyTargetMachine &TM, StringRef ABIName);
 
   const WebAssemblySelectionDAGInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
@@ -101,6 +112,7 @@ public:
   const WebAssemblyRegisterInfo *getRegisterInfo() const override {
     return &getInstrInfo()->getRegisterInfo();
   }
+  const WebAssemblyOptions &getCLOpts() const { return CLOpts; }
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableAtomicExpand() const override;
   bool enableIndirectBrExpand() const override { return true; }
@@ -108,6 +120,7 @@ public:
   bool useAA() const override;
 
   // Predicates used by WebAssemblyInstrInfo.td.
+  bool hasAcquireReleaseAtomics() const { return HasAcquireReleaseAtomics; }
   bool hasAddr64() const { return TargetTriple.isArch64Bit(); }
   bool hasAtomics() const { return HasAtomics; }
   bool hasBulkMemory() const { return HasBulkMemory; }
@@ -127,7 +140,6 @@ public:
   bool hasMutableGlobals() const { return HasMutableGlobals; }
   bool hasNontrappingFPToInt() const { return HasNontrappingFPToInt; }
   bool hasReferenceTypes() const { return HasReferenceTypes; }
-  bool hasRelaxedAtomics() const { return HasRelaxedAtomics; }
   bool hasRelaxedSIMD() const { return SIMDLevel >= RelaxedSIMD; }
   bool hasSignExt() const { return HasSignExt; }
   bool hasSIMD128() const { return SIMDLevel >= SIMD128; }

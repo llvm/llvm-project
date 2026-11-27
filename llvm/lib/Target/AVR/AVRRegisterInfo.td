@@ -142,6 +142,7 @@ def LD8 : RegisterClass<"AVR", [i8], 8,
 def LD8lo : RegisterClass<"AVR", [i8], 8,
                           (add R23, R22, R21, R20, R19, R18, R17, R16)>;
 
+let RenderMethod = "addDREGSRegOperands" in {
 // Main 16-bit pair register class.
 def DREGS : RegisterClass<"AVR", [i16], 8,
                           (// Return value and arguments.
@@ -210,6 +211,7 @@ def PTRDISPREGS : RegisterClass<"AVR", [i16], 8, (add R31R30, R29R28), ptr>;
 // We have a bunch of instructions with an explicit Z register argument. We
 // model this using a register class containing only the Z register.
 def ZREG : RegisterClass<"AVR", [i16], 8, (add R31R30)>;
+} // RenderMethod = "addDREGSRegOperands"
 
 // general registers excluding Z register lo/hi, these are the only
 // registers that are always safe for STDSPQr instructions
@@ -234,10 +236,14 @@ def DREGSNOZ : RegisterClass<"AVR", [i16], 8,
                            R7R6, R5R4, R3R2, R1R0,
                            // Pseudo regs for unaligned 16-bits
                            R26R25, R24R23, R22R21, R20R19, R18R17, R16R15,
-                           R14R13, R12R11, R10R9)>;
+                           R14R13, R12R11, R10R9)> {
+  let RenderMethod = "addDREGSRegOperands";
+}
 
 // Register class used for the stack read pseudo instruction.
-def GPRSP : RegisterClass<"AVR", [i16], 8, (add SP)>;
+def GPRSP : RegisterClass<"AVR", [i16], 8, (add SP)> {
+  let isAllocatable = 0;
+}
 
 // Status register.
 def SREG : AVRReg<14, "FLAGS">, DwarfRegNum<[88]>;

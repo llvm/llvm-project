@@ -21,7 +21,7 @@ using namespace llvm;
 void RISCVMCAsmInfo::anchor() {}
 
 RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TT, Options) {
   IsLittleEndian = TT.isLittleEndian();
   CodePointerSize = CalleeSaveStackSlotSize = TT.isArch64Bit() ? 8 : 4;
   CommentString = "#";
@@ -34,6 +34,9 @@ RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
   // enabled, so we follow binutils in using the R_RISCV_32_PCREL relocation
   // for the FDE initial location.
   DwarfFDERelSymbolSpec = ELF::R_RISCV_32_PCREL;
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }
 
 void RISCVMCAsmInfo::printSpecifierExpr(raw_ostream &OS,

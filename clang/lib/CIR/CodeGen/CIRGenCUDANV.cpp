@@ -101,7 +101,8 @@ public:
                      getDeviceSideName(cast<NamedDecl>(vd)),
                      cir::CUDADeviceVarKind::Variable, isExtern, isConstant,
                      vd->hasAttr<HIPManagedAttr>(),
-                     /*surfTexType=*/0));
+                     /*surfTexType=*/0,
+                     /*normalized=*/false));
     deviceVars.push_back({
         var,
         vd,
@@ -119,7 +120,8 @@ public:
                      getDeviceSideName(cast<NamedDecl>(vd)),
                      cir::CUDADeviceVarKind::Surface, isExtern,
                      /*isConstant=*/false,
-                     /*isManaged=*/false, surfaceType));
+                     /*isManaged=*/false, surfaceType,
+                     /*normalized=*/false));
 
     deviceVars.push_back({
         var,
@@ -128,7 +130,8 @@ public:
     });
   }
 
-  void registerDeviceTex(const VarDecl *vd, cir::GlobalOp &var, bool isExtern) {
+  void registerDeviceTex(const VarDecl *vd, cir::GlobalOp &var, bool isExtern,
+                         int32_t textureType, bool normalized) {
     auto &builder = cgm.getBuilder();
 
     var->setAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic(),
@@ -137,8 +140,7 @@ public:
                      getDeviceSideName(cast<NamedDecl>(vd)),
                      cir::CUDADeviceVarKind::Texture, isExtern,
                      /*isConstant=*/false,
-                     /*isManaged=*/false,
-                     /*surfTexType=*/0));
+                     /*isManaged=*/false, textureType, normalized));
 
     deviceVars.push_back({
         var,
@@ -348,10 +350,16 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
 
 void CIRGenNVCUDARuntime::emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
                                          FunctionArgList &args) {
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  StringRef kernelName = cgm.getMangledName(
+      cgf.curGD.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
+  auto kernelNameAttr = cir::CUDAKernelNameAttr::get(
+      builder.getContext(), builder.getStringAttr(kernelName));
+  fn->setDiscardableAttr(cir::CUDAKernelNameAttr::getMnemonic(),
+                         kernelNameAttr);
 
   if (auto globalOp =
           llvm::dyn_cast<cir::GlobalOp>(kernelHandles[fn.getSymName()])) {
-    CIRGenBuilderTy &builder = cgm.getBuilder();
     mlir::Type fnPtrTy = globalOp.getSymType();
     auto sym = mlir::FlatSymbolRefAttr::get(fn.getSymNameAttr());
     auto gv = cir::GlobalViewAttr::get(fnPtrTy, sym);
@@ -457,10 +465,6 @@ void CIRGenNVCUDARuntime::internalizeDeviceSideVar(
       d->getType()->isCUDADeviceBuiltinTextureType()) {
     linkage = cir::GlobalLinkageKind::InternalLinkage;
   }
-
-  if (d->getType()->isCUDADeviceBuiltinTextureType())
-    cgm.errorNYI(d->getSourceRange(),
-                 "internalizeDeviceSideVar: CUDA Texture support");
 }
 
 std::string CIRGenNVCUDARuntime::getDeviceSideName(const NamedDecl *nd) {
@@ -538,8 +542,20 @@ void CIRGenNVCUDARuntime::handleVarRegistration(const VarDecl *vd,
   } else if (vd->getType()->isCUDADeviceBuiltinTextureType()) {
     // Builtin textures and their template arguments are also registered
     // with CUDA runtime.
+    const auto *td = cast<ClassTemplateSpecializationDecl>(
+        vd->getType()->castAsCXXRecordDecl());
+    const TemplateArgumentList &args = td->getTemplateArgs();
+
+    assert(args.size() == 3 &&
+           "Unexpected number of template arguments of CUDA device "
+           "builtin texture type.");
+
+    llvm::APSInt textureType = args[1].getAsIntegral();
+    llvm::APSInt normalized = args[2].getAsIntegral();
+
     if (!vd->hasExternalStorage())
-      registerDeviceTex(vd, var, !vd->hasDefinition());
+      registerDeviceTex(vd, var, !vd->hasDefinition(),
+                        textureType.getSExtValue(), normalized.getZExtValue());
   }
 }
 

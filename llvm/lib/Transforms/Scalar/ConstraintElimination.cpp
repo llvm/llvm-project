@@ -42,6 +42,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
@@ -55,6 +56,8 @@ using namespace SCEVPatternMatch;
 #define DEBUG_TYPE "constraint-elimination"
 
 STATISTIC(NumCondsRemoved, "Number of instructions removed");
+STATISTIC(NumDoesHoldDepthLimitHit,
+          "Number of doesHold queries cut off by the nesting depth limit");
 DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
               "Controls which conditions are eliminated");
 
@@ -360,15 +363,30 @@ class ConstraintInfo {
 
   const DataLayout &DL;
 
+public:
+  /// Maximum nesting of doesHold queries. Deeper queries conservatively return
+  /// false.
+  static constexpr unsigned MaxDoesHoldDepth = 2;
+
+private:
   /// Decompositions computed against the current state of the systems. Must be
   /// cleared when the system changes.
   DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> DecomposeCache;
+
+  /// Current nesting depth of doesHold.
+  unsigned DoesHoldDepth = 0;
+
+  /// Number of doesHold queries that have been cut off by MaxDoesHoldDepth so
+  /// far.
+  unsigned NumDepthLimitHits = 0;
 
 public:
   DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> &
   getDecomposeCache() {
     return DecomposeCache;
   }
+
+  unsigned getNumDepthLimitHits() const { return NumDepthLimitHits; }
 
   ConstraintInfo(const DataLayout &DL, ArrayRef<Value *> FunctionArgs)
       : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL) {
@@ -404,6 +422,13 @@ public:
 
   bool doesHold(CmpInst::Predicate Pred, Value *A, Value *B);
 
+  /// Returns the result of \p Solve. If it does not return a value, retries
+  /// after adding A == decompose(A) and B == decompose(B) to the system of \p
+  /// C, if needed, and removes them afterwards.
+  std::optional<bool>
+  tryWithLinkRows(Value *A, Value *B, const ConstraintTy &C,
+                  function_ref<std::optional<bool>()> Solve);
+
   /// Returns true if \p V is known to be non-negative, either because the
   /// signed system implies it or because ValueTracking can prove it.
   bool isKnownNonNegative(Value *V);
@@ -411,6 +436,11 @@ public:
   /// Returns true if \p V is known to be positive, either because the signed
   /// system implies it or because ValueTracking can prove it.
   bool isKnownPositive(Value *V);
+
+  /// Returns true if \p V is known to be negative, false if \p V is known to be
+  /// nonnegative, or std::nullopt if neither the signed system nor
+  /// ValueTracking can prove it.
+  std::optional<bool> getKnownSign(Value *V);
 
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
@@ -518,6 +548,46 @@ static bool canUseSExt(ConstantInt *CI) {
   return Val.sgt(MinSignedConstraintValue) && Val.slt(MaxConstraintValue);
 }
 
+/// Returns true if `Op <= MaxVal - Slack` holds in the system for \p Signed, by
+/// scanning it for a row of the form `Op - W <= -Slack`, where W is an integer
+/// variable no wider than \p Op. If \p Upper is false, returns true if
+/// `Op >= MinVal + Slack` holds, using rows of the form `W - Op <= -Slack`.
+static bool hasLimitWitness(const ConstraintInfo &Info, Value *Op,
+                            const APInt &Slack, bool Signed, bool Upper) {
+  if (!Slack.isIntN(63))
+    return false;
+  int64_t RequiredOffset = -static_cast<int64_t>(Slack.getZExtValue());
+
+  const auto &Value2Index = Info.getValue2Index(Signed);
+  unsigned OpIdx = Value2Index.lookup(Op);
+  if (!OpIdx)
+    return false;
+
+  int64_t OpCoefficient = Upper ? 1 : -1;
+  unsigned OpSize = Op->getType()->getScalarSizeInBits();
+
+  for (ArrayRef<Entry> Row : Info.getCS(Signed).getConstraints()) {
+    // Match `OpCoefficient * (Op - W) <= C` with C <= -Slack.
+    if (Row.size() != 3 || Row[0].Id != 0 ||
+        Row[0].Coefficient > RequiredOffset)
+      continue;
+    bool OpFirst = Row[1].Id == OpIdx;
+    const Entry &OpE = Row[OpFirst ? 1 : 2];
+    const Entry &WitnessE = Row[OpFirst ? 2 : 1];
+    if (OpE.Id != OpIdx || OpE.Coefficient != OpCoefficient ||
+        WitnessE.Coefficient != -OpCoefficient)
+      continue;
+
+    auto Witness = find_if(
+        Value2Index, [&](const auto &KV) { return KV.second == WitnessE.Id; });
+    assert(Witness != Value2Index.end() && "row variables must be mapped");
+    Type *WitnessTy = Witness->first->getType();
+    if (WitnessTy->isIntegerTy() && WitnessTy->getIntegerBitWidth() <= OpSize)
+      return true;
+  }
+  return false;
+}
+
 /// Returns true if \p Info implies that \p Op is in \p R, interpreting \p R as
 /// a signed range if \p Signed is set and as an unsigned range otherwise.
 static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
@@ -535,6 +605,8 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
                         : APInt::getMinValue(BitWidth);
   APInt MaxVal = Signed ? APInt::getSignedMaxValue(BitWidth)
                         : APInt::getMaxValue(BitWidth);
+  // What a witness has to bridge; computed before Max is clamped below.
+  APInt UpperSlack = MaxVal - Max;
   // Replace bound too large to be decomposed by the largest usable one.
   if (!Signed && Max.uge(MaxConstraintValue))
     Max = APInt(BitWidth, MaxConstraintValue - 1);
@@ -542,11 +614,13 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
   Type *Ty = Op->getType();
   if (Min != MinVal &&
       !Info.doesHold(Signed ? CmpInst::ICMP_SGE : CmpInst::ICMP_UGE, Op,
-                     ConstantInt::get(Ty, Min)))
+                     ConstantInt::get(Ty, Min)) &&
+      !hasLimitWitness(Info, Op, Min - MinVal, Signed, /*Upper=*/false))
     return false;
   if (Max != MaxVal &&
       !Info.doesHold(Signed ? CmpInst::ICMP_SLE : CmpInst::ICMP_ULE, Op,
-                     ConstantInt::get(Ty, Max)))
+                     ConstantInt::get(Ty, Max)) &&
+      !hasLimitWitness(Info, Op, UpperSlack, Signed, /*Upper=*/true))
     return false;
   return true;
 }
@@ -711,8 +785,12 @@ static Decomposition decompose(Value *V, ConstraintInfo &Info, bool IsSigned,
   if (It != Cache.end())
     return It->second;
 
+  unsigned HitsBefore = Info.getNumDepthLimitHits();
   Decomposition Result = decomposeImpl(V, Info, IsSigned, DL);
-  Info.getDecomposeCache().insert({Key, Result});
+  // If a doesHold query was cut off while decomposing, the result may be less
+  // precise than what a shallower query could compute, so don't cache it.
+  if (Info.getNumDepthLimitHits() == HitsBefore)
+    Info.getDecomposeCache().insert({Key, Result});
   return Result;
 }
 
@@ -1046,10 +1124,62 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
   return std::nullopt;
 }
 
+static RowTy getDecompositionLinkRow(Value *V, const ConstraintTy &C,
+                                     ConstraintInfo &Info,
+                                     const DataLayout &DL);
+
+std::optional<bool>
+ConstraintInfo::tryWithLinkRows(Value *A, Value *B, const ConstraintTy &C,
+                                function_ref<std::optional<bool>()> Solve) {
+  if (std::optional<bool> Res = Solve())
+    return Res;
+  if (C.empty())
+    return std::nullopt;
+
+  auto &CS = getCS(C.IsSigned);
+  unsigned NumVars = getValue2Index(C.IsSigned).size();
+  unsigned NumPushed = 0;
+  for (Value *V : {A, B}) {
+    RowTy Row = getDecompositionLinkRow(V, C, *this, DL);
+    RowTy Negated = ConstraintSystem::negateOrEqual(Row);
+    if (Row.empty() || Negated.empty())
+      continue;
+    NumPushed += CS.addRow(Row, NumVars);
+    NumPushed += CS.addRow(Negated, NumVars);
+  }
+  if (NumPushed == 0)
+    return std::nullopt;
+#ifndef NDEBUG
+  unsigned NumRows = CS.size();
+#endif
+  std::optional<bool> Res = Solve();
+  assert(CS.size() == NumRows && "rows added while link rows are pushed");
+  while (NumPushed--)
+    CS.popLastConstraint();
+  return Res;
+}
+
 bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A, Value *B) {
+  // Decomposing A and B may itself call doesHold, once per level of a chain of
+  // operations. Cut off deep nesting to bound stack usage and compile time.
+  if (DoesHoldDepth >= MaxDoesHoldDepth) {
+    ++NumDoesHoldDepthLimitHit;
+    ++NumDepthLimitHits;
+    return false;
+  }
+  SaveAndRestore DepthScope(DoesHoldDepth, DoesHoldDepth + 1);
+
   auto R = getConstraintForSolving(Pred, A, B);
-  return !R.empty() &&
-         getCS(R.IsSigned).isConditionImpliedInSubSystem(R.Coefficients);
+  if (R.empty())
+    return false;
+  auto &CS = getCS(R.IsSigned);
+  return tryWithLinkRows(A, B, R,
+                         [&]() -> std::optional<bool> {
+                           if (CS.isConditionImpliedInSubSystem(R.Coefficients))
+                             return true;
+                           return std::nullopt;
+                         })
+      .value_or(false);
 }
 
 bool ConstraintInfo::isKnownNonNegative(Value *V) {
@@ -1064,6 +1194,20 @@ bool ConstraintInfo::isKnownPositive(Value *V) {
     return CI->getValue().isStrictlyPositive();
   return ::isKnownPositive(V, DL) ||
          doesHold(CmpInst::ICMP_SGT, V, ConstantInt::get(V->getType(), 0));
+}
+
+std::optional<bool> ConstraintInfo::getKnownSign(Value *V) {
+  KnownBits Known = computeKnownBits(V, DL);
+  if (Known.isNonNegative())
+    return false;
+  if (Known.isNegative())
+    return true;
+  Constant *Zero = ConstantInt::get(V->getType(), 0);
+  if (doesHold(CmpInst::ICMP_SGE, V, Zero))
+    return false;
+  if (doesHold(CmpInst::ICMP_SLT, V, Zero))
+    return true;
+  return std::nullopt;
 }
 
 void ConstraintInfo::transferToOtherSystem(
@@ -1983,33 +2127,10 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   // == decompose(B), if needed.
   auto TryWithLinkedDecomposition =
       [&](const ConstraintTy &C) -> std::optional<bool> {
-    if (C.empty())
-      return std::nullopt;
-
-    auto &CS = Info.getCS(C.IsSigned);
-    unsigned NumVars = Info.getValue2Index(C.IsSigned).size();
-    unsigned NumPushed = 0;
-    for (Value *V : {A, B}) {
-      RowTy Row =
-          getDecompositionLinkRow(V, C, Info, CheckInst->getDataLayout());
-      RowTy Negated = ConstraintSystem::negateOrEqual(Row);
-      if (Row.empty() || Negated.empty())
-        continue;
-      NumPushed += CS.addRow(Row, NumVars);
-      NumPushed += CS.addRow(Negated, NumVars);
-    }
-    if (NumPushed == 0)
-      return std::nullopt;
-
-    std::optional<bool> Res = TryWithConstraint(C);
-    while (NumPushed--)
-      CS.popLastConstraint();
-    return Res;
+    return Info.tryWithLinkRows(A, B, C, [&] { return TryWithConstraint(C); });
   };
 
   auto R = Info.getConstraintForSolving(Pred, A, B);
-  if (auto ImpliedCondition = TryWithConstraint(R))
-    return ImpliedCondition;
   if (auto ImpliedCondition = TryWithLinkedDecomposition(R))
     return ImpliedCondition;
 
@@ -2036,8 +2157,6 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
     auto SR = Info.getConstraint(Pred, A, B, NewVariables,
                                  /*ForceSignedSystem=*/true);
     if (NewVariables.empty()) {
-      if (auto ImpliedCondition = TryWithConstraint(SR))
-        return ImpliedCondition;
       if (auto ImpliedCondition = TryWithLinkedDecomposition(SR))
         return ImpliedCondition;
     }
@@ -2386,23 +2505,22 @@ static bool replaceOverflowUses(WithOverflowInst *II,
   bool Changed = false;
   IRBuilder<> Builder(II->getIterator());
   Value *Res = nullptr;
-  for (User *U : make_early_inc_range(II->users())) {
-    if (match(U, m_ExtractValue<0>(m_Value()))) {
+  for (Instruction *I : make_early_inc_range(II->users())) {
+    if (match(I, m_ExtractValue<0>(m_Value()))) {
       if (!Res)
         Res = Builder.CreateNoWrapBinOp(II->getBinaryOp(), II->getLHS(),
                                         II->getRHS(),
                                         /*IsNUW=*/!II->isSigned(),
                                         /*IsNSW=*/II->isSigned());
-      U->replaceAllUsesWith(Res);
+      I->replaceAllUsesWith(Res);
       Changed = true;
-    } else if (match(U, m_ExtractValue<1>(m_Value()))) {
-      U->replaceAllUsesWith(Builder.getFalse());
+    } else if (match(I, m_ExtractValue<1>(m_Value()))) {
+      I->replaceAllUsesWith(ConstantInt::getFalse(I->getType()));
       Changed = true;
     } else
       continue;
 
-    if (U->use_empty()) {
-      auto *I = cast<Instruction>(U);
+    if (I->use_empty()) {
       ToRemove.push_back(I);
       I->setOperand(0, PoisonValue::get(II->getType()));
       Changed = true;
@@ -2566,12 +2684,26 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         // If samesign is present on the ICmp, simply flip the sign of the
         // predicate, transferring the information from the signed system to the
         // unsigned system, and viceversa.
-        if (Pred.hasSameSign())
+        if (Pred.hasSameSign()) {
           Info.addFact(ICmpInst::getFlippedSignednessPredicate(Pred), A, B,
                        CB.NumIn, CB.NumOut, DFSInStack);
-        else
+          // The operands also have the same sign: if one of them is known to
+          // be non-negative (or negative), so is the other.
+          if (A->getType()->isIntegerTy()) {
+            std::optional<bool> ASign = Info.getKnownSign(A);
+            std::optional<bool> BSign = Info.getKnownSign(B);
+            if (ASign.has_value() != BSign.has_value()) {
+              bool IsNegative = ASign ? *ASign : *BSign;
+              Value *OtherOp = ASign ? B : A;
+              Info.addFact(IsNegative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE,
+                           OtherOp, Constant::getNullValue(A->getType()),
+                           CB.NumIn, CB.NumOut, DFSInStack);
+            }
+          }
+        } else {
           Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut,
                                      DFSInStack);
+        }
       }
 
       // (X | Y) >s -1 implies X >s -1 and Y >s -1, because the sign bit of an

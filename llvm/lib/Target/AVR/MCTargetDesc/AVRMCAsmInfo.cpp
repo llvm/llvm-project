@@ -20,12 +20,11 @@
 using namespace llvm;
 
 AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TT, Options) {
   CodePointerSize = 2;
   CalleeSaveStackSlotSize = 2;
   CommentString = ";";
   SeparatorString = "$";
-  UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
 }
 

@@ -7,11 +7,10 @@ add_mlir_upstream_c_api_library(MLIRCAPITarget
   Core
 
   LINK_LIBS PUBLIC
-  MLIRToLLVMIRTranslationRegistration
   MLIRCAPIIR
-  MLIRLLVMToLLVMIRTranslation
-  MLIRLLVMIRToLLVMTranslation
   MLIRSupport
+  MLIRTargetLLVMIRExport
+  MLIRTargetLLVMIRImport
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIExportSMTLIB

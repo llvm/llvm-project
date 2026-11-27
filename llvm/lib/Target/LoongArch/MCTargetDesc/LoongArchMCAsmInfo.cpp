@@ -238,7 +238,7 @@ void LoongArchMCAsmInfo::anchor() {}
 
 LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT,
                                        const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TT, Options) {
   CodePointerSize = CalleeSaveStackSlotSize = TT.isArch64Bit() ? 8 : 4;
   AlignmentIsInBytes = false;
   Data8bitsDirective = "\t.byte\t";
@@ -249,6 +249,8 @@ LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT,
   CommentString = "#";
   SupportsDebugInformation = true;
   DwarfRegNumForCFI = true;
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }
 
 void LoongArchMCAsmInfo::printSpecifierExpr(raw_ostream &OS,

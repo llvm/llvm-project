@@ -102,7 +102,7 @@ void split_range_for() {
 //
 //
 // CHECK1-LABEL: define linkonce_odr void @_ZN1SC1Ev(
-// CHECK1-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK1-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -112,7 +112,7 @@ void split_range_for() {
 //
 //
 // CHECK1-LABEL: define linkonce_odr void @_ZN1SC2Ev(
-// CHECK1-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK1-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[I2:%.*]] = alloca ptr, align 8
@@ -173,6 +173,8 @@ void split_range_for() {
 // CHECK1-NEXT:    store i32 [[INC10]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK1-NEXT:    br label [[FOR_COND4]], !llvm.loop [[LOOP6:![0-9]+]]
 // CHECK1:       for.end11:
+// CHECK1-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[I2]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK1-NEXT:    store i32 20, ptr [[TMP14]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -1085,6 +1087,8 @@ void split_range_for() {
 // CHECK2-NEXT:    store i32 [[INC10]], ptr [[DOTSPLIT_IV_1_I]], align 4
 // CHECK2-NEXT:    br label [[FOR_COND4]], !llvm.loop [[LOOP6:![0-9]+]]
 // CHECK2:       for.end11:
+// CHECK2-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[I2]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK2-NEXT:    store i32 20, ptr [[TMP14]], align 4
 // CHECK2-NEXT:    ret void
 //
 //

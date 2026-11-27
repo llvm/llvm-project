@@ -118,8 +118,6 @@ private:
   const TargetInstrInfo *TII = nullptr;
   LoopTraversal::TraversalOrder TraversedMBBOrder;
   unsigned NumRegUnits = 0;
-  unsigned NumStackObjects = 0;
-  int ObjectIndexBegin = 0;
   /// Instruction that defined each register, relative to the beginning of the
   /// current basic block.  When a LiveRegsDefInfo is used to represent a
   /// live-out register, this value is relative to the end of the basic block,
@@ -223,7 +221,7 @@ public:
   LLVM_ABI bool isRegDefinedAfter(MachineInstr *MI, Register Reg) const;
 
   /// Provides the clearance - the number of instructions since the closest
-  /// reaching def instuction of Reg that reaches MI.
+  /// reaching def instruction of Reg that reaches MI.
   LLVM_ABI int getClearance(MachineInstr *MI, Register Reg) const;
 
   /// Provides the uses, in the same block as MI, of register that MI defines.

@@ -27,21 +27,21 @@ CFMutableArrayRef provide_cf();
 
 void basic_wrong() {
   RetainPtr<SomeObj> ns1 = [[SomeObj alloc] init];
-  // expected-warning@-1{{Incorrect use of RetainPtr constructor. The argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  // expected-warning@-1{{Incorrect use of RetainPtr constructor; the argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   auto ns2 = adoptNS([ns1.get() next]);
-  // expected-warning@-1{{Incorrect use of adoptNS. The argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  // expected-warning@-1{{Incorrect use of adoptNS; the argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   auto ns3 = adoptNSNullable([ns1.get() next]);
-  // expected-warning@-1{{Incorrect use of adoptNSNullable. The argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  // expected-warning@-1{{Incorrect use of adoptNSNullable; the argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   RetainPtr<CFMutableArrayRef> cf1 = CFArrayCreateMutable(kCFAllocatorDefault, 10);
-  // expected-warning@-1{{Incorrect use of RetainPtr constructor. The argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  // expected-warning@-1{{Incorrect use of RetainPtr constructor; the argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   RetainPtr<CFMutableArrayRef> cf2 = adoptCF(provide_cf());
-  // expected-warning@-1{{Incorrect use of adoptCF. The argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  // expected-warning@-1{{Incorrect use of adoptCF; the argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   RetainPtr<CFTypeRef> cf3 = SecTaskCreateFromSelf(kCFAllocatorDefault);
-  // expected-warning@-1{{Incorrect use of RetainPtr constructor. The argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  // expected-warning@-1{{Incorrect use of RetainPtr constructor; the argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   CFCopyArray(cf1);
   // expected-warning@-1{{The return value is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   RetainPtr<CFMutableArrayRef> cf4 = adoptCFNullable(provide_cf());
-  // expected-warning@-1{{Incorrect use of adoptCFNullable. The argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  // expected-warning@-1{{Incorrect use of adoptCFNullable; the argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
 }
 
 void basic_correct_arc() {
@@ -311,15 +311,15 @@ RetainPtr<CFArrayRef> adopt_make_array() {
 
 -(void)basic_wrong {
   RetainPtr<SomeObj> ns1 = [[SomeObj alloc] init];
-  // expected-warning@-1{{Incorrect use of RetainPtr constructor. The argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  // expected-warning@-1{{Incorrect use of RetainPtr constructor; the argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   auto ns2 = adoptNS([ns1.get() next]);
-  // expected-warning@-1{{Incorrect use of adoptNS. The argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  // expected-warning@-1{{Incorrect use of adoptNS; the argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   RetainPtr<CFMutableArrayRef> cf1 = CFArrayCreateMutable(kCFAllocatorDefault, 10);
-  // expected-warning@-1{{Incorrect use of RetainPtr constructor. The argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  // expected-warning@-1{{Incorrect use of RetainPtr constructor; the argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   RetainPtr<CFMutableArrayRef> cf2 = adoptCF(provide_cf());
-  // expected-warning@-1{{Incorrect use of adoptCF. The argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  // expected-warning@-1{{Incorrect use of adoptCF; the argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   RetainPtr<CFTypeRef> cf3 = SecTaskCreateFromSelf(kCFAllocatorDefault);
-  // expected-warning@-1{{Incorrect use of RetainPtr constructor. The argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  // expected-warning@-1{{Incorrect use of RetainPtr constructor; the argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   CFCopyArray(cf1);
   // expected-warning@-1{{The return value is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
 }
@@ -347,7 +347,7 @@ RetainPtr<CFArrayRef> adopt_make_array() {
   auto *obj = [NSObject alloc];
   // expected-warning@-1{{The return value is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   auto ptr = adoptNS([obj init]);
-  // expected-warning@-1{{Incorrect use of adoptNS. The argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  // expected-warning@-1{{Incorrect use of adoptNS; the argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
 }
 
 -(void)alloc_init_good_order {

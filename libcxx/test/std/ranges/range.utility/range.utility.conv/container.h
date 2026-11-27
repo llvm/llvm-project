@@ -14,7 +14,7 @@
 
 enum class CtrChoice { Invalid, DefaultCtrAndInsert, BeginEndPair, FromRangeT, DirectCtr };
 
-enum class InserterChoice { Invalid, Insert, Emplace, PushBack, EmplaceBack };
+enum class InserterChoice { Invalid, Insert, EmplaceHint, PushBack, EmplaceBack };
 
 // Allows checking that `ranges::to` correctly follows the order of priority of different constructors -- e.g., if
 // 3 constructors are available, the `from_range_t` constructor is chosen in favor of the constructor taking two
@@ -118,10 +118,10 @@ struct Container {
   }
 
   template <class T>
-  constexpr ElementType* emplace(ElementType* where, T val)
-    requires(Inserter >= InserterChoice::Emplace)
+  constexpr ElementType* emplace_hint(ElementType* where, T val)
+    requires(Inserter >= InserterChoice::EmplaceHint)
   {
-    inserter_choice = InserterChoice::Emplace;
+    inserter_choice = InserterChoice::EmplaceHint;
     return __insert_impl(where, val);
   }
 

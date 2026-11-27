@@ -66,11 +66,11 @@ template <typename T> LIBC_INLINE size_t string_length_element(const T *src) {
   return length;
 }
 
-LIBC_INLINE void *find_first_character(const unsigned char *src,
-                                       unsigned char ch, size_t n) {
+LIBC_INLINE const void *find_first_character(const unsigned char *src,
+                                             unsigned char ch, size_t n) {
   for (; n && *src != ch; --n, ++src)
     ;
-  return n ? const_cast<unsigned char *>(src) : nullptr;
+  return n ? src : nullptr;
 }
 } // namespace element
 
@@ -106,7 +106,7 @@ template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
 // high bit set will no longer have it set, narrowing the list of bytes which
 // result in non-zero values to just the zero byte.
 template <typename Word> LIBC_INLINE constexpr bool has_zeroes(Word block) {
-  constexpr unsigned int LOW_BITS = repeat_byte<Word>(0x01);
+  constexpr Word LOW_BITS = repeat_byte<Word>(0x01);
   constexpr Word HIGH_BITS = repeat_byte<Word>(0x80);
   Word subtracted = block - LOW_BITS;
   Word inverted = ~block;
@@ -139,7 +139,7 @@ LIBC_INLINE size_t string_length(const char *src) {
   return static_cast<size_t>(char_ptr - src);
 }
 
-LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE void *
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE const void *
 find_first_character(const unsigned char *src, unsigned char ch,
                      size_t max_strlen = cpp::numeric_limits<size_t>::max()) {
   using Word = unsigned int;
@@ -160,7 +160,7 @@ find_first_character(const unsigned char *src, unsigned char ch,
   for (; cur < n && reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0;
        ++cur, ++char_ptr) {
     if (*char_ptr == ch)
-      return const_cast<unsigned char *>(char_ptr);
+      return char_ptr;
   }
 
   const Word ch_mask = repeat_byte<Word>(ch);
@@ -178,9 +178,9 @@ find_first_character(const unsigned char *src, unsigned char ch,
   }
 
   if (cur >= n || *char_ptr != ch)
-    return static_cast<void *>(nullptr);
+    return nullptr;
 
-  return const_cast<unsigned char *>(char_ptr);
+  return char_ptr;
 }
 
 } // namespace word

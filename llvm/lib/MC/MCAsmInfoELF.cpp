@@ -27,25 +27,18 @@ using namespace llvm;
 
 void MCAsmInfoELF::anchor() {}
 
-MCSection *MCAsmInfoELF::getStackSection(MCContext &Ctx, bool Exec) const {
+MCAsmInfoELF::MCAsmInfoELF(const Triple &TT, const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
   // Solaris doesn't know/doesn't care about .note.GNU-stack sections, so
   // don't emit them.
-  if (Ctx.getTargetTriple().isOSSolaris())
-    return nullptr;
-  return Ctx.getELFSection(".note.GNU-stack", ELF::SHT_PROGBITS,
-                           Exec ? ELF::SHF_EXECINSTR : 0U);
-}
+  EmitELFStackSection = !TT.isOSSolaris();
 
-bool MCAsmInfoELF::useCodeAlign(const MCSection &Sec) const {
-  return static_cast<const MCSectionELF &>(Sec).getFlags() & ELF::SHF_EXECINSTR;
-}
-
-MCAsmInfoELF::MCAsmInfoELF(const MCTargetOptions &Options)
-    : MCAsmInfo(Options) {
   HasIdentDirective = true;
   HasPreferredAlignment = true;
   WeakRefDirective = "\t.weak\t";
   InternalSymbolPrefix = ".L";
+  SectionDirectives.insert(".text");
+  SectionDirectives.insert(".data");
 }
 
 static void printName(raw_ostream &OS, StringRef Name) {
@@ -75,7 +68,7 @@ void MCAsmInfoELF::printSwitchToSection(const MCSection &Section,
                                         uint32_t Subsection, const Triple &T,
                                         raw_ostream &OS) const {
   auto &Sec = static_cast<const MCSectionELF &>(Section);
-  if (!Sec.isUnique() && shouldOmitSectionDirective(Sec.getName())) {
+  if (!Sec.isUnique() && SectionDirectives.contains(Sec.getName())) {
     OS << '\t' << Sec.getName();
     if (Subsection)
       OS << '\t' << Subsection;

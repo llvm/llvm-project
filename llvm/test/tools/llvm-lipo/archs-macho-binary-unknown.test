@@ -4,6 +4,7 @@
 # CHECK: unknown(151,3)
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x00000097

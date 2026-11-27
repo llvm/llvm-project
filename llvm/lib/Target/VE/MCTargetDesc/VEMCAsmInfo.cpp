@@ -78,7 +78,7 @@ void VEELFMCAsmInfo::anchor() {}
 
 VEELFMCAsmInfo::VEELFMCAsmInfo(const Triple &TheTriple,
                                const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TheTriple, Options) {
 
   CodePointerSize = CalleeSaveStackSlotSize = 8;
   MaxInstLength = MinInstAlignment = 8;
@@ -88,10 +88,6 @@ VEELFMCAsmInfo::VEELFMCAsmInfo(const Triple &TheTriple,
   Data16bitsDirective = "\t.2byte\t";
   Data32bitsDirective = "\t.4byte\t";
   Data64bitsDirective = "\t.8byte\t";
-
-  // Uses '.section' before '.bss' directive.  VE requires this although
-  // assembler manual says sinple '.bss' is supported.
-  UsesELFSectionDirectiveForBSS = true;
 
   SupportsDebugInformation = true;
 
