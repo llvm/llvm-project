@@ -30,7 +30,7 @@ LLVM_LIBC_FUNCTION(char *, strncpy,
     LIBC_CRASH_ON_NULLPTR(dest);
     LIBC_CRASH_ON_NULLPTR(src);
   }
-  size_t i = internal::strnlen(src, n);
+  size_t i = internal::strnlen({src, n});
   // Copy up until \0 is found.
   inline_memcpy(dest, src, i);
   // When n>strlen(src), n-strlen(src) \0 are appended.

@@ -9,10 +9,15 @@ add_header_library(
     libc.hdr.limits_macros
     libc.hdr.stdint_proxy
     libc.src.__support.CPP.bitset
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.simd
     libc.src.__support.common
     libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
     libc.src.string.memory_utils.inline_memcpy
 )
 
@@ -248,6 +253,7 @@ add_entrypoint_object(
   DEPENDS
     .string_utils
     libc.include.llvm-libc-types.size_t
+    libc.src.__support.CPP.span
 )
 
 add_entrypoint_object(
@@ -279,8 +285,10 @@ add_entrypoint_object(
   HDRS
     strncat.h
   DEPENDS
+    .memory_utils.inline_memcpy
     .string_utils
     libc.include.llvm-libc-types.size_t
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(

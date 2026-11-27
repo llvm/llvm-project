@@ -324,7 +324,7 @@ LIBC_INLINE void for_each_rtattr(struct rtattr *rta, size_t len, Fn fn) {
 /// null-terminated.
 LIBC_INLINE cpp::string_view parse_ifname(cpp::span<const uint8_t> payload) {
   const char *name = reinterpret_cast<const char *>(payload.data());
-  size_t len = internal::strnlen(name, payload.size());
+  size_t len = internal::strnlen({name, payload.size()});
   // Defensive check: kernel should not be providing us with names that don't
   // fit.
   if (len >= IF_NAMESIZE)

@@ -339,3 +339,15 @@ libc_test(
         "//libc/src/string:utils",
     ],
 )
+
+libc_test(
+    name = "string_utils_test",
+    srcs = ["string_utils_test.cpp"],
+    deps = [
+        "//libc/hdr/types:size_t",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/string:utils",
+    ],
+)

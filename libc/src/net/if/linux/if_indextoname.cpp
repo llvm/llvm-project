@@ -56,8 +56,7 @@ LLVM_LIBC_FUNCTION(char *, if_indextoname,
     return nullptr;
   }
 
-  cpp::string_view k_name(
-      ifr.ifr_name, internal::strnlen(ifr.ifr_name, sizeof(ifr.ifr_name)));
+  cpp::string_view k_name(ifr.ifr_name, internal::strnlen(ifr.ifr_name));
   inline_memcpy(ifname, k_name.data(), k_name.size());
   // Linux kernel does allow network devices exactly IF_NAMESIZE long (it leaves
   // room for the terminating \0). But if that happens, let's not overrun the

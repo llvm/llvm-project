@@ -260,6 +260,7 @@ add_libc_test(
   SRCS
     strndup_test.cpp
   DEPENDS
+    libc.src.__support.CPP.scope
     libc.src.string.strndup
 )
 
@@ -393,6 +394,20 @@ add_libc_test(
   DEPENDS
     libc.src.string.string_length
     libc.hdr.stdint_proxy
+)
+
+add_libc_test(
+  string_utils_test
+  SUITE
+    libc-string-tests
+  SRCS
+    string_utils_test.cpp
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
+    libc.src.string.string_utils
 )
 
 add_libc_multi_impl_test(memcmp libc-string-tests SRCS memcmp_test.cpp)

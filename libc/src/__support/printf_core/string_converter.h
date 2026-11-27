@@ -21,7 +21,7 @@
 #include "src/__support/printf_core/converter_utils.h"
 #include "src/__support/printf_core/core_structs.h"
 #include "src/__support/printf_core/writer.h"
-#include "src/string/string_utils.h" // string_length
+#include "src/string/string_utils.h" // string_length, strnlen
 
 #include <stddef.h>
 
@@ -32,7 +32,6 @@ template <OverflowMode mode>
 LIBC_INLINE int write_char_string_as_chars(Writer<mode, char> *writer,
                                            const FormatSection<char> &to_conv) {
   const char *str_ptr = reinterpret_cast<const char *>(to_conv.conv_val_ptr);
-  size_t string_len = 0;
 
 #ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
   if (str_ptr == nullptr) {
@@ -41,13 +40,10 @@ LIBC_INLINE int write_char_string_as_chars(Writer<mode, char> *writer,
 #endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 
   // If a precision is specified, it doesn't have to be null-terminated.
-  if (to_conv.precision >= 0) {
-    while (string_len < static_cast<size_t>(to_conv.precision) &&
-           str_ptr[string_len] != '\0')
-      string_len++;
-  } else {
-    string_len = internal::string_length(str_ptr);
-  }
+  size_t string_len =
+      to_conv.precision >= 0
+          ? internal::strnlen({str_ptr, static_cast<size_t>(to_conv.precision)})
+          : internal::string_length(str_ptr);
 
   size_t padding_spaces = to_conv.min_width > static_cast<int>(string_len)
                               ? to_conv.min_width - string_len

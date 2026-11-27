@@ -20,13 +20,11 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(char *, strndup, (const char *src, size_t size)) {
   if (src == nullptr)
     return nullptr;
-  size_t len = internal::string_length(src);
-  if (len > size)
-    len = size;
+  size_t len = internal::strnlen({src, size});
   CheckedPtr<char[]> dest = make_unique_for_overwrite<char[]>(len + 1);
   if (!dest)
     return nullptr;
-  inline_memcpy(dest.get(), src, len + 1);
+  inline_memcpy(dest.get(), src, len);
   dest[len] = '\0';
   return dest.release();
 }
