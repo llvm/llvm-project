@@ -1,45 +1,51 @@
 # REQUIRES: x86
 
-# Tests handling of several comdats with "largest" selection type that each
-# has an associative comdat.
+# Test IMAGE_COMDAT_SELECT_LARGEST with multiple associative sections.
+# Only the final largest leader and all of its associative sections must be
+# emitted, independent of input order and section-GC configuration.
 
-# Create obj files.
-# RUN: sed -e s/TYPE/.byte/  -e s/SIZE/1/ %s | llvm-mc -triple x86_64-pc-win32 -filetype=obj -o %t.1.obj
-# RUN: sed -e s/TYPE/.short/ -e s/SIZE/2/ %s | llvm-mc -triple x86_64-pc-win32 -filetype=obj -o %t.2.obj
-# RUN: sed -e s/TYPE/.long/  -e s/SIZE/4/ %s | llvm-mc -triple x86_64-pc-win32 -filetype=obj -o %t.4.obj
+# RUN: sed -e s/TYPE/.byte/ -e s/SIZE/1/ %s | \
+# RUN:   llvm-mc -triple x86_64-pc-win32 -filetype=obj -o %t.1.obj
+# RUN: sed -e s/TYPE/.short/ -e s/SIZE/2/ %s | \
+# RUN:   llvm-mc -triple x86_64-pc-win32 -filetype=obj -o %t.2.obj
+# RUN: sed -e s/TYPE/.long/ -e s/SIZE/4/ %s | \
+# RUN:   llvm-mc -triple x86_64-pc-win32 -filetype=obj -o %t.4.obj
 
-        .section .text$ac, "", associative, symbol
-assocsym:
-        .long SIZE
+        .section .text$aa, "", associative, symbol
+        .byte SIZE, 0xaa, 0xaa, 0xaa
+
+        .section .text$ab, "", associative, symbol
+        .byte SIZE, 0xbb, 0xbb, 0xbb
 
         .section .text$nm, "", largest, symbol
         .globl symbol
 symbol:
         TYPE SIZE
 
-# Pass the obj files in different orders and check that only the associative
-# comdat of the largest obj file makes it into the output, independent of
-# the order of the obj files on the command line.
+# Exercise successive replacements, a losing candidate before a replacement,
+# and the largest candidate arriving first. The default is /opt:ref, so use the
+# two GC modes explicitly instead of testing the default separately.
 
-# FIXME: Make these pass when /opt:noref is passed.
+# RUN: lld-link /opt:ref /include:symbol /dll /noentry /nodefaultlib \
+# RUN:   %t.1.obj %t.2.obj %t.4.obj /out:%t.ref.124.exe
+# RUN: llvm-objdump -s %t.ref.124.exe | FileCheck --check-prefix=LARGEST4 %s
+# RUN: lld-link /opt:noref /include:symbol /dll /noentry /nodefaultlib \
+# RUN:   %t.1.obj %t.2.obj %t.4.obj /out:%t.noref.124.exe
+# RUN: llvm-objdump -s %t.noref.124.exe | FileCheck --check-prefix=LARGEST4 %s
 
-# RUN: lld-link /include:symbol /dll /noentry /nodefaultlib %t.1.obj %t.2.obj %t.4.obj /out:%t.exe
-# RUN: llvm-objdump -s %t.exe | FileCheck --check-prefix=ALL124 %s
-# ALL124: Contents of section .text:
-# ALL124:   180001000 04000000 04000000 ....
+# RUN: lld-link /opt:ref /include:symbol /dll /noentry /nodefaultlib \
+# RUN:   %t.2.obj %t.1.obj %t.4.obj /out:%t.ref.214.exe
+# RUN: llvm-objdump -s %t.ref.214.exe | FileCheck --check-prefix=LARGEST4 %s
+# RUN: lld-link /opt:noref /include:symbol /dll /noentry /nodefaultlib \
+# RUN:   %t.2.obj %t.1.obj %t.4.obj /out:%t.noref.214.exe
+# RUN: llvm-objdump -s %t.noref.214.exe | FileCheck --check-prefix=LARGEST4 %s
 
-# RUN: lld-link /include:symbol /dll /noentry /nodefaultlib %t.4.obj %t.2.obj %t.1.obj /out:%t.exe
-# RUN: llvm-objdump -s %t.exe | FileCheck --check-prefix=ALL421 %s
-# ALL421: Contents of section .text:
-# ALL421:   180001000 04000000 04000000 ....
+# RUN: lld-link /opt:ref /include:symbol /dll /noentry /nodefaultlib \
+# RUN:   %t.4.obj %t.2.obj %t.1.obj /out:%t.ref.421.exe
+# RUN: llvm-objdump -s %t.ref.421.exe | FileCheck --check-prefix=LARGEST4 %s
+# RUN: lld-link /opt:noref /include:symbol /dll /noentry /nodefaultlib \
+# RUN:   %t.4.obj %t.2.obj %t.1.obj /out:%t.noref.421.exe
+# RUN: llvm-objdump -s %t.noref.421.exe | FileCheck --check-prefix=LARGEST4 %s
 
-# RUN: lld-link /include:symbol /dll /noentry /nodefaultlib %t.2.obj %t.4.obj %t.1.obj /out:%t.exe
-# RUN: llvm-objdump -s %t.exe | FileCheck --check-prefix=ALL241 %s
-# ALL241: Contents of section .text:
-# ALL241:   180001000 04000000 04000000 ....
-
-# RUN: lld-link /include:symbol /dll /noentry /nodefaultlib %t.2.obj %t.1.obj /out:%t.exe
-# RUN: llvm-objdump -s %t.exe | FileCheck --check-prefix=JUST21 %s
-# JUST21: Contents of section .text:
-# JUST21:   180001000 02000000 0200 ....
-
+# LARGEST4: Contents of section .text:
+# LARGEST4-NEXT:  180001000 04aaaaaa 04bbbbbb 04000000
