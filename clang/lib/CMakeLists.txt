@@ -1,5 +1,6 @@
-# HAS_WERROR_GLOBAL_CTORS and LLVM_HAS_NOGLOBAL_CTOR_MUTEX are set by
-# llvm/lib/Support/CMakeLists.txt.
+# HAS_WERROR_GLOBAL_CTORS and LLVM_HAS_NOGLOBAL_CTOR_MUTEX are cached by
+# llvm/lib/Support/CMakeLists.txt. They are unset in a standalone build, which
+# skips the check.
 if (HAS_WERROR_GLOBAL_CTORS AND LLVM_HAS_NOGLOBAL_CTOR_MUTEX)
   set(CLANG_LIB_WERROR_GLOBAL_CTORS ON)
   string(APPEND CMAKE_CXX_FLAGS " -Werror=global-constructors")
