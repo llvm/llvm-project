@@ -26,6 +26,19 @@ AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
   CommentString = ";";
   SeparatorString = "$";
   SupportsDebugInformation = true;
+
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    auto &E = static_cast<const AVRMCExpr &>(Expr);
+    assert(E.getSpecifier() != AVR::S_AVR_NONE);
+    OS << E.getName() << '(';
+    if (E.isNegated())
+      OS << '-' << '(';
+    MAI.printExpr(OS, *E.getSubExpr());
+    if (E.isNegated())
+      OS << ')';
+    OS << ')';
+  };
 }
 
 namespace {
@@ -112,19 +125,6 @@ AVR::Fixups AVRMCExpr::getFixupKind() const {
   }
 
   return Kind;
-}
-
-void AVRMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                      const MCSpecifierExpr &Expr) const {
-  auto &E = static_cast<const AVRMCExpr &>(Expr);
-  assert(E.getSpecifier() != AVR::S_AVR_NONE);
-  OS << E.getName() << '(';
-  if (E.isNegated())
-    OS << '-' << '(';
-  printExpr(OS, *E.getSubExpr());
-  if (E.isNegated())
-    OS << ')';
-  OS << ')';
 }
 
 int64_t AVRMCExpr::evaluateAsInt64(int64_t Value) const {

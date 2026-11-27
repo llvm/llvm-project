@@ -251,15 +251,15 @@ LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT,
   DwarfRegNumForCFI = true;
   // .bss is supported without .section.
   SectionDirectives.insert(".bss");
-}
 
-void LoongArchMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                            const MCSpecifierExpr &Expr) const {
-  auto S = Expr.getSpecifier();
-  bool HasSpecifier = S != 0 && S != ELF::R_LARCH_B26;
-  if (HasSpecifier)
-    OS << '%' << getLoongArchSpecifierName(S) << '(';
-  printExpr(OS, *Expr.getSubExpr());
-  if (HasSpecifier)
-    OS << ')';
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    auto S = Expr.getSpecifier();
+    bool HasSpecifier = S != 0 && S != ELF::R_LARCH_B26;
+    if (HasSpecifier)
+      OS << '%' << getLoongArchSpecifierName(S) << '(';
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    if (HasSpecifier)
+      OS << ')';
+  };
 }

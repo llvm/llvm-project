@@ -56,6 +56,29 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
   SupportsDebugInformation = true;
 
   initializeAtSpecifiers(atSpecifiers);
+
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    switch (Expr.getSpecifier()) {
+    case SystemZ::S_None:
+      OS << "AD";
+      break;
+    case SystemZ::S_QCon:
+      OS << "QD";
+      break;
+    case SystemZ::S_RCon:
+      OS << "RD";
+      break;
+    case SystemZ::S_VCon:
+      OS << "VD";
+      break;
+    default:
+      llvm_unreachable("Invalid kind");
+    }
+    OS << '(';
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    OS << ')';
+  };
 }
 
 const MCExpr *SystemZMCAsmInfoGOFF::getDwarfSectionOffsetExpr(
@@ -65,29 +88,6 @@ const MCExpr *SystemZMCAsmInfoGOFF::getDwarfSectionOffsetExpr(
     Expr =
         MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx), Ctx);
   return Expr;
-}
-
-void SystemZMCAsmInfoGOFF::printSpecifierExpr(
-    raw_ostream &OS, const MCSpecifierExpr &Expr) const {
-  switch (Expr.getSpecifier()) {
-  case SystemZ::S_None:
-    OS << "AD";
-    break;
-  case SystemZ::S_QCon:
-    OS << "QD";
-    break;
-  case SystemZ::S_RCon:
-    OS << "RD";
-    break;
-  case SystemZ::S_VCon:
-    OS << "VD";
-    break;
-  default:
-    llvm_unreachable("Invalid kind");
-  }
-  OS << '(';
-  printExpr(OS, *Expr.getSubExpr());
-  OS << ')';
 }
 
 bool SystemZMCAsmInfoGOFF::evaluateAsRelocatableImpl(

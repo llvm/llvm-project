@@ -41,14 +41,14 @@ SparcELFMCAsmInfo::SparcELFMCAsmInfo(const Triple &TheTriple,
   SupportsDebugInformation = true;
 
   DwarfFDERelSymbolSpec = ELF::R_SPARC_DISP32;
-}
 
-void SparcELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                           const MCSpecifierExpr &Expr) const {
-  StringRef S = Sparc::getSpecifierName(Expr.getSpecifier());
-  if (!S.empty())
-    OS << '%' << S << '(';
-  printExpr(OS, *Expr.getSubExpr());
-  if (!S.empty())
-    OS << ')';
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    StringRef S = Sparc::getSpecifierName(Expr.getSpecifier());
+    if (!S.empty())
+      OS << '%' << S << '(';
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    if (!S.empty())
+      OS << ')';
+  };
 }
