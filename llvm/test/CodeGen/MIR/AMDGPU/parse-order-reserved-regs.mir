@@ -14,7 +14,6 @@
 # CHECK: frameOffsetReg:  '$sgpr50'
 # CHECK: renamable $vgpr0 = BUFFER_LOAD_DWORD_OFFEN %stack.0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr50, 4, 0, 0, implicit $exec :: (load (s32), addrspace 5)
 name: reserve_correct_register
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'

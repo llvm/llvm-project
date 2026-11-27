@@ -113,8 +113,8 @@ def IndexType : TypeDef<Test_Dialect, "Index"> {
 // FIRST-NEXT:   return ::mlir::failure();
 // FIRST-NEXT: }
 // FIRST: void registerTestDialectAttributes(TestDialect *dialect) {
-// FIRST-NEXT:   test::registerTestDialectAttributesArith(dialect);
-// FIRST-NEXT:   test::registerTestDialectAttributesMemory(dialect);
+// FIRST-NEXT:   registerTestDialectAttributesArith(dialect);
+// FIRST-NEXT:   registerTestDialectAttributesMemory(dialect);
 // FIRST-NEXT: }
 // FIRST-NEXT: void registerTestDialectAttributesArith(TestDialect *dialect) {
 // FIRST-NEXT:   ::mlir::AbstractAttribute::insert<IntAttr>(*dialect);

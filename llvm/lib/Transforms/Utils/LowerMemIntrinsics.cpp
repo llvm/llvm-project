@@ -1549,6 +1549,31 @@ void llvm::expandMemSetAsLoop(MemSetInst *MemSet,
   expandMemSetAsLoop(MemSet, &TTI);
 }
 
+/// Return the VP (value profiling) memop size data of a bounded memset as
+/// prefix sums sorted by value, dropping values the expansion can't see.
+static SmallVector<InstrProfValueData>
+getBoundedMemSetPrefixSum(const Instruction &MemSet, uint64_t MinLen,
+                          uint64_t MaxLen, uint64_t MinStoreSize) {
+  uint64_t TotalCount = 0;
+  SmallVector<InstrProfValueData> ProfData = getValueProfDataFromInst(
+      MemSet, InstrProfValueKind::IPVK_MemOPSize,
+      /*MaxNumValueData=*/std::numeric_limits<uint32_t>::max(), TotalCount);
+  llvm::sort(ProfData,
+             [](const InstrProfValueData &A, const InstrProfValueData &B) {
+               return A.Value < B.Value;
+             });
+  SmallVector<InstrProfValueData> MemSetPrefixSum;
+  uint64_t TotalSeenWeight = 0;
+  for (const InstrProfValueData &SizeWeight : ProfData) {
+    if (SizeWeight.Value > MaxLen || SizeWeight.Value < MinLen ||
+        (SizeWeight.Value != 0 && SizeWeight.Value < MinStoreSize))
+      continue;
+    TotalSeenWeight = SaturatingAdd(SizeWeight.Count, TotalSeenWeight);
+    MemSetPrefixSum.push_back({SizeWeight.Value, TotalSeenWeight});
+  }
+  return MemSetPrefixSum;
+}
+
 static MDNode *
 getBoundedMemSetBranchWeights(uint64_t Size,
                               ArrayRef<InstrProfValueData> MemSetPrefixSum,
@@ -1643,23 +1668,8 @@ void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
   //     br label %memset_done
   uint64_t TopSize = llvm::bit_floor(MaxLen);
   Instruction *InsertBefore = MemSet;
-  uint64_t TotalCount = 0;
-  SmallVector<InstrProfValueData> ProfData = getValueProfDataFromInst(
-      *MemSet, InstrProfValueKind::IPVK_MemOPSize,
-      /*MaxNumValueData=*/std::numeric_limits<uint32_t>::max(), TotalCount);
-  llvm::sort(ProfData,
-             [](const InstrProfValueData &A, const InstrProfValueData &B) {
-               return A.Value < B.Value;
-             });
-  SmallVector<InstrProfValueData> MemSetPrefixSum;
-  uint64_t TotalSeenWeight = 0;
-  for (const InstrProfValueData &SizeWeight : ProfData) {
-    if (SizeWeight.Value > MaxLen || SizeWeight.Value < MinLen ||
-        (SizeWeight.Value != 0 && SizeWeight.Value < MinStoreSize))
-      continue;
-    TotalSeenWeight = SaturatingAdd(SizeWeight.Count, TotalSeenWeight);
-    MemSetPrefixSum.push_back({SizeWeight.Value, TotalSeenWeight});
-  }
+  SmallVector<InstrProfValueData> MemSetPrefixSum =
+      getBoundedMemSetPrefixSum(*MemSet, MinLen, MaxLen, MinStoreSize);
   for (uint64_t Size = TopSize; Size >= MinStoreSize; Size /= 2) {
     Instruction *StoreBefore = InsertBefore;
     if (MinLen < Size) {

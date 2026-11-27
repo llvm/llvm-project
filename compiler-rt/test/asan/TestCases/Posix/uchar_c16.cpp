@@ -1,6 +1,6 @@
 // Test ASan interception on `mbrtoc16()` and `c16rtomb()`.
 //
-// UNSUPPORTED: darwin, android, netbsd
+// UNSUPPORTED: darwin, android, netbsd, target={{.*(solaris|aix).*}}
 // RUN: %clangxx_asan -O0 -g %s -o %t
 // RUN: %run %t
 // RUN: not %run %t mbrtoc16 2>&1 | FileCheck %s

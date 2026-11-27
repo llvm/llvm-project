@@ -231,10 +231,6 @@ module std_core {
       header "__type_traits/is_nothrow_constructible.h"
       export std_core.type_traits.integral_constant
     }
-    module is_nothrow_destructible {
-      header "__type_traits/is_nothrow_destructible.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_null_pointer {
       header "__type_traits/is_null_pointer.h"
       export std_core.type_traits.integral_constant
@@ -305,10 +301,6 @@ module std_core {
     }
     module is_trivially_copyable {
       header "__type_traits/is_trivially_copyable.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_trivially_destructible {
-      header "__type_traits/is_trivially_destructible.h"
       export std_core.type_traits.integral_constant
     }
     module is_trivially_lexicographically_comparable {
@@ -1944,7 +1936,10 @@ module std {
   }
 
   module ranges {
-    module access                         { header "__ranges/access.h" }
+    module access                         {
+      header "__ranges/access.h"
+      export utility.cpo
+    }
     module adjacent_transform_view        { header "__ranges/adjacent_transform_view.h" }
     module adjacent_view                  { header "__ranges/adjacent_view.h" }
     module all                            {
@@ -1970,6 +1965,7 @@ module std {
     }
     module data {
       header "__ranges/data.h"
+      export utility.cpo
     }
     module drop_view {
       header "__ranges/drop_view.h"
@@ -2271,6 +2267,7 @@ module std {
     module checked_int                     { header "__utility/checked_int.h" }
     module constant_wrapper                { header "__utility/constant_wrapper.h" }
     module convert_to_integral             { header "__utility/convert_to_integral.h" }
+    module cpo                             { header "__utility/cpo.h" }
     module default_three_way_comparator    { header "__utility/default_three_way_comparator.h" }
     module element_count                   { header "__utility/element_count.h" }
     module exception_guard                 { header "__utility/exception_guard.h" }

@@ -9,7 +9,6 @@
 ---
 name:            need_large_tuple_split
 alignment:       1
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_64_xexec, preferred-register: '$vcc' }
   - { id: 1, class: sreg_64, preferred-register: '$vcc' }

@@ -784,6 +784,60 @@ TEST_F(TargetLibraryInfoTest, IsErrnoGlobal) {
   EXPECT_FALSE(TLII(Triple("x86_64-pc-linux")).isErrnoFunctionCall());
 }
 
+TEST(TargetLibraryInfoBSDTest, Availability) {
+  auto Has = [](const char *TT, LibFunc F) {
+    TargetLibraryInfoImpl TLII{Triple(TT)};
+    return TargetLibraryInfo(TLII).has(F);
+  };
+
+  for (const char *TT :
+       {"x86_64-unknown-freebsd", "x86_64-unknown-netbsd",
+        "x86_64-unknown-openbsd", "x86_64-unknown-dragonfly"}) {
+    SCOPED_TRACE(TT);
+    EXPECT_TRUE(Has(TT, LibFunc_getc_unlocked));
+    EXPECT_TRUE(Has(TT, LibFunc_getchar_unlocked));
+    EXPECT_TRUE(Has(TT, LibFunc_putc_unlocked));
+    EXPECT_TRUE(Has(TT, LibFunc_putchar_unlocked));
+    EXPECT_FALSE(Has(TT, LibFunc_fgetc_unlocked));
+    EXPECT_FALSE(Has(TT, LibFunc_fgets_unlocked));
+
+    EXPECT_FALSE(Has(TT, LibFunc_dunder_strndup));
+    EXPECT_FALSE(Has(TT, LibFunc_memccpy_chk));
+    EXPECT_FALSE(Has(TT, LibFunc_strlen_chk));
+    EXPECT_FALSE(Has(TT, LibFunc_fmaximum_num));
+    EXPECT_FALSE(Has(TT, LibFunc_fminimum_numf));
+    EXPECT_FALSE(Has(TT, LibFunc_roundeven));
+    EXPECT_FALSE(Has(TT, LibFunc_roundevenl));
+  }
+
+  // fputc/fputs/fread/fwrite_unlocked are only on FreeBSD and DragonFly.
+  for (const char *TT :
+       {"x86_64-unknown-freebsd", "x86_64-unknown-dragonfly"}) {
+    SCOPED_TRACE(TT);
+    EXPECT_TRUE(Has(TT, LibFunc_fputc_unlocked));
+    EXPECT_TRUE(Has(TT, LibFunc_fputs_unlocked));
+    EXPECT_TRUE(Has(TT, LibFunc_fread_unlocked));
+    EXPECT_TRUE(Has(TT, LibFunc_fwrite_unlocked));
+  }
+  for (const char *TT : {"x86_64-unknown-netbsd", "x86_64-unknown-openbsd"}) {
+    SCOPED_TRACE(TT);
+    EXPECT_FALSE(Has(TT, LibFunc_fputc_unlocked));
+    EXPECT_FALSE(Has(TT, LibFunc_fputs_unlocked));
+    EXPECT_FALSE(Has(TT, LibFunc_fread_unlocked));
+    EXPECT_FALSE(Has(TT, LibFunc_fwrite_unlocked));
+  }
+
+  // __strtok_r and memalign are only on FreeBSD.
+  EXPECT_TRUE(Has("x86_64-unknown-freebsd", LibFunc_dunder_strtok_r));
+  EXPECT_TRUE(Has("x86_64-unknown-freebsd", LibFunc_memalign));
+  for (const char *TT : {"x86_64-unknown-netbsd", "x86_64-unknown-openbsd",
+                         "x86_64-unknown-dragonfly"}) {
+    SCOPED_TRACE(TT);
+    EXPECT_FALSE(Has(TT, LibFunc_dunder_strtok_r));
+    EXPECT_FALSE(Has(TT, LibFunc_memalign));
+  }
+}
+
 namespace {
 
 /// Creates TLI for AArch64 and uses it to get the LibFunc names for the given

@@ -28,7 +28,7 @@ template <class _IntT,
           class _FloatT,
           bool _FloatBigger = (numeric_limits<_FloatT>::digits > numeric_limits<_IntT>::digits),
           int _Bits         = (numeric_limits<_IntT>::digits - numeric_limits<_FloatT>::digits)>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _IntT __max_representable_int_for_float() _NOEXCEPT {
+_LIBCPP_CONSTEXPR _IntT __max_representable_int_for_float() _NOEXCEPT {
   static_assert(is_floating_point<_FloatT>::value, "must be a floating point type");
   static_assert(is_integral<_IntT>::value, "must be an integral type");
   static_assert(numeric_limits<_FloatT>::radix == 2, "FloatT has incorrect radix");
@@ -43,7 +43,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _IntT __max_representable_int_for_float(
 //
 // The behavior is undefined if `__r` is NaN.
 template <class _IntT, class _RealT>
-_LIBCPP_HIDE_FROM_ABI _IntT __clamp_to_integral(_RealT __r) _NOEXCEPT {
+_IntT __clamp_to_integral(_RealT __r) _NOEXCEPT {
   using _IntLim         = numeric_limits<_IntT>;
   using _RealLim        = numeric_limits<_RealT>;
   const _IntT __max_val = std::__max_representable_int_for_float<_IntT, _RealT>();

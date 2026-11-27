@@ -3051,7 +3051,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_FixedPointToBoolean:
     assert(E->getType()->isFixedPointType() &&
            "Expected src type to be fixed point type");
-    assert(DestTy->isBooleanType() && "Expected dest type to be boolean type");
+    assert(hasBoolConversionSemantics(DestTy) &&
+           "Expected dest type to be a boolean type");
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
 
@@ -4723,6 +4724,11 @@ static Value* tryEmitFMulAdd(const BinOpInfo &op,
 
   // Check whether this op is marked as fusable.
   if (!op.FPFeatures.allowFPContractWithinStatement())
+    return nullptr;
+
+  // fmuladd requires all of its operands to have the same type, so an add/sub
+  // with operands of different types can't be fused.
+  if (op.LHS->getType() != op.RHS->getType())
     return nullptr;
 
   Value *LHS = op.LHS;

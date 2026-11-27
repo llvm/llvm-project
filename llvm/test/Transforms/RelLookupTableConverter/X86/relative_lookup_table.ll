@@ -158,6 +158,31 @@ target triple = "x86_64-unknown-linux-gnu"
   ptr @.str.9
 ], align 16
 
+@table.phi.select.1 = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+@table.phi.select.2 = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+@table.phi.select.3 = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+@table.phi.select.4 = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+@table.phi.select.5 = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+@table.phi.select.6 = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
 ;.
 ; CHECK: @.str = private unnamed_addr constant [5 x i8] c"zero\00", align 1
 ; CHECK: @.str.1 = private unnamed_addr constant [4 x i8] c"one\00", align 1
@@ -214,6 +239,12 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @table.multi.use.stride.mismatch = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
 ; CHECK: @table.multi.use.type.mismatch = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
 ; CHECK: @table.multi.use.invalid.use = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.phi.select.1.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.phi.select.1.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.phi.select.1.rel to i64)) to i32)], align 4
+; CHECK: @table.phi.select.2.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.phi.select.2.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.phi.select.2.rel to i64)) to i32)], align 4
+; CHECK: @table.phi.select.3.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.phi.select.3.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.phi.select.3.rel to i64)) to i32)], align 4
+; CHECK: @table.phi.select.4 = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.phi.select.5 = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.phi.select.6 = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
 ;.
 define ptr @external_linkage(i32 %cond) {
 ; CHECK-LABEL: define ptr @external_linkage(
@@ -681,6 +712,131 @@ define ptr @table_multi_use_invalid_use_2(i64 %index) {
 ; CHECK-NEXT:    ret ptr @table.multi.use.invalid.use
 ;
   ret ptr @table.multi.use.invalid.use
+}
+
+; Test lookup table use through phi/select, including multiple uses.
+define ptr @table_phi_select(i32 %x, i1 %c, i64 %index0, i64 %index1, i64 %index2) {
+; CHECK-LABEL: define ptr @table_phi_select(
+; CHECK-SAME: i32 [[X:%.*]], i1 [[C:%.*]], i64 [[INDEX0:%.*]], i64 [[INDEX1:%.*]], i64 [[INDEX2:%.*]]) {
+; CHECK-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
+; CHECK-NEXT:      i32 0, label %[[CASE0:.*]]
+; CHECK-NEXT:      i32 1, label %[[CASE1:.*]]
+; CHECK-NEXT:      i32 2, label %[[CASE2:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[CASE0]]:
+; CHECK-NEXT:    [[RELTABLE_SHIFT2:%.*]] = shl i64 [[INDEX0]], 2
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC1:%.*]] = call ptr @llvm.load.relative.i64(ptr @table.phi.select.1.rel, i64 [[RELTABLE_SHIFT2]])
+; CHECK-NEXT:    br label %[[JOIN:.*]]
+; CHECK:       [[CASE1]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[CASE2]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[DEFAULT]]:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], ptr @table.phi.select.1.rel, ptr @table.phi.select.3.rel
+; CHECK-NEXT:    [[RELTABLE_SHIFT1:%.*]] = shl i64 [[INDEX1]], 2
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC2:%.*]] = call ptr @llvm.load.relative.i64(ptr [[SEL]], i64 [[RELTABLE_SHIFT1]])
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC2]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ @table.phi.select.1.rel, %[[CASE0]] ], [ @table.phi.select.2.rel, %[[CASE1]] ], [ @table.phi.select.2.rel, %[[CASE2]] ]
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i64 [[INDEX2]], 2
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i64(ptr [[PHI]], i64 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
+;
+  switch i32 %x, label %default [
+  i32 0, label %case0
+  i32 1, label %case1
+  i32 2, label %case2
+  ]
+
+case0:
+  %gep0 = getelementptr ptr, ptr @table.phi.select.1, i64 %index0
+  %load0 = load ptr, ptr %gep0
+  br label %join
+
+case1:
+  br label %join
+
+case2:
+  br label %join
+
+default:
+  %sel = select i1 %c, ptr @table.phi.select.1, ptr @table.phi.select.3
+  %gep1 = getelementptr ptr, ptr %sel, i64 %index1
+  %load1 = load ptr, ptr %gep1
+  ret ptr %load1
+
+join:
+  %phi = phi ptr [ @table.phi.select.1, %case0 ], [ @table.phi.select.2, %case1 ], [ @table.phi.select.2, %case2 ]
+  %gep2 = getelementptr ptr, ptr %phi, i64 %index2
+  %load2 = load ptr, ptr %gep2
+  ret ptr %load2
+}
+
+; Not all tables in the phi can be converted into a relative lookup table.
+define ptr @table_phi_select_not_all_valid(i1 %c, i64 %index) {
+; CHECK-LABEL: define ptr @table_phi_select_not_all_valid(
+; CHECK-SAME: i1 [[C:%.*]], i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[JOIN:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ @table.phi.select.4, %[[ENTRY]] ], [ @switch.table.hidden.weak, %[[IF]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[PHI]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi ptr [ @table.phi.select.4, %entry ], [ @switch.table.hidden.weak, %if ]
+  %gep = getelementptr ptr, ptr %phi, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+; @table.phi.select.6 is only reachable from @table.phi.select.5 through the
+; phi, but also has a direct use with a different stride.
+define ptr @table_phi_select_other_use_mismatch_1(i1 %c, i64 %index) {
+; CHECK-LABEL: define ptr @table_phi_select_other_use_mismatch_1(
+; CHECK-SAME: i1 [[C:%.*]], i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[JOIN:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ @table.phi.select.5, %[[ENTRY]] ], [ @table.phi.select.6, %[[IF]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[PHI]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi ptr [ @table.phi.select.5, %entry ], [ @table.phi.select.6, %if ]
+  %gep = getelementptr ptr, ptr %phi, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_phi_select_other_use_mismatch_2(i64 %index) {
+; CHECK-LABEL: define ptr @table_phi_select_other_use_mismatch_2(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x ptr], ptr @table.phi.select.6, i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+  %gep = getelementptr [2 x ptr], ptr @table.phi.select.6, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
 }
 
 !llvm.module.flags = !{!0, !1}

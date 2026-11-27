@@ -31,7 +31,6 @@
 # VGPR4-AGPR0:     s_endpgm
 
 name: stress_regalloc
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

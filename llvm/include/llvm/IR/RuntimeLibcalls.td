@@ -790,23 +790,33 @@ def MEMSET_CHK : RuntimeLibcall<Ptr, [Ptr, Int, SizeT, SizeT]> {
   let ParamAttrs = [[WriteOnly]];
 }
 
-class VoidMemCpyLibcall : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
-  let FnAttrs = CommonFnAttrs;
-  let Memory = ArgMemOnly;
-  let ParamAttrs = [[NoAlias, WriteOnly], [NoAlias, ReadOnly]];
+class PtrAlignAttrs<int alignment> {
+  list<Attr> ret = !if(!gt(alignment, 0), [AlignAttr<alignment>], []<Attr>);
 }
 
-class VoidMemMoveLibcall : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+class VoidMemCpyLibcall<int alignment = 0>
+    : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+  defvar Align = PtrAlignAttrs<alignment>.ret;
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemOnly;
-  let ParamAttrs = [[WriteOnly], [ReadOnly]];
+  let ParamAttrs = [!listconcat([NoAlias, WriteOnly], Align),
+                    !listconcat([NoAlias, ReadOnly], Align)];
 }
 
-class VoidMemSetLibcall<list<FuncArgType> ArgTypes>
+class VoidMemMoveLibcall<int alignment = 0>
+    : RuntimeLibcall<Void, [Ptr, Ptr, SizeT]> {
+  defvar Align = PtrAlignAttrs<alignment>.ret;
+  let FnAttrs = CommonFnAttrs;
+  let Memory = ArgMemOnly;
+  let ParamAttrs = [!listconcat([WriteOnly], Align),
+                    !listconcat([ReadOnly], Align)];
+}
+
+class VoidMemSetLibcall<list<FuncArgType> ArgTypes, int alignment = 0>
     : RuntimeLibcall<Void, ArgTypes> {
   let FnAttrs = CommonFnAttrs;
   let Memory = ArgMemWriteOnly;
-  let ParamAttrs = [[WriteOnly]];
+  let ParamAttrs = [!listconcat([WriteOnly], PtrAlignAttrs<alignment>.ret)];
 }
 
 def UninitAllocKind
@@ -1142,15 +1152,15 @@ def SMEABI_SME_RESTORE : NoUnwindLibcall<Void, [Ptr]>;
 def AEABI_MEMCPY : VoidMemCpyLibcall;
 def AEABI_MEMMOVE : VoidMemMoveLibcall;
 def AEABI_MEMSET : VoidMemSetLibcall<[Ptr, SizeT, Int]>;
-def AEABI_MEMCPY4 : VoidMemCpyLibcall; // Align 4
-def AEABI_MEMCPY8 : VoidMemCpyLibcall; // Align 8
-def AEABI_MEMMOVE4 : VoidMemMoveLibcall;
-def AEABI_MEMMOVE8 : VoidMemMoveLibcall;
-def AEABI_MEMSET4 : VoidMemSetLibcall<[Ptr, SizeT, Int]>;
-def AEABI_MEMSET8 : VoidMemSetLibcall<[Ptr, SizeT, Int]>;
+def AEABI_MEMCPY4 : VoidMemCpyLibcall<4>;
+def AEABI_MEMCPY8 : VoidMemCpyLibcall<8>;
+def AEABI_MEMMOVE4 : VoidMemMoveLibcall<4>;
+def AEABI_MEMMOVE8 : VoidMemMoveLibcall<8>;
+def AEABI_MEMSET4 : VoidMemSetLibcall<[Ptr, SizeT, Int], 4>;
+def AEABI_MEMSET8 : VoidMemSetLibcall<[Ptr, SizeT, Int], 8>;
 def AEABI_MEMCLR : VoidMemSetLibcall<[Ptr, SizeT]>;
-def AEABI_MEMCLR4 : VoidMemSetLibcall<[Ptr, SizeT]>;
-def AEABI_MEMCLR8 : VoidMemSetLibcall<[Ptr, SizeT]>;
+def AEABI_MEMCLR4 : VoidMemSetLibcall<[Ptr, SizeT], 4>;
+def AEABI_MEMCLR8 : VoidMemSetLibcall<[Ptr, SizeT], 8>;
 
 foreach Ty = [Int, LLong] in {
   defvar Suffix = !if(!eq(Ty, Int), "4", "8");
@@ -1171,7 +1181,7 @@ def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : VoidMemCpyLibcall;
 def HEXAGON_VOLATILE_MEMCPY : RuntimeLibcall<Void, [Ptr, Ptr, UInt]>;
 
 // XCore calls
-def MEMCPY_ALIGN_4 : VoidMemCpyLibcall;
+def MEMCPY_ALIGN_4 : VoidMemCpyLibcall<4>;
 
 // Objective-C calls
 def OBJC_AUTORELEASE : RuntimeLibcall<Ptr, [Ptr]>;

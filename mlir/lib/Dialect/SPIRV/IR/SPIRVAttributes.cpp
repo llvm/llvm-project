@@ -117,6 +117,26 @@ struct TargetEnvAttributeStorage : public AttributeStorage {
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
+// EntryPointABIAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+spirv::EntryPointABIAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                 DenseI32ArrayAttr workgroupSize,
+                                 std::optional<int> subgroupSize,
+                                 std::optional<int> targetWidth) {
+  if (!workgroupSize)
+    return success();
+  if (workgroupSize.size() != 3)
+    return emitError() << "expected 3 workgroup size values, but got "
+                       << workgroupSize.size();
+  if (llvm::any_of(workgroupSize.asArrayRef(),
+                   [](int32_t v) { return v <= 0; }))
+    return emitError() << "expected positive workgroup size values";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // InterfaceVarABIAttr
 //===----------------------------------------------------------------------===//
 

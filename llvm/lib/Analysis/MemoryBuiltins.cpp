@@ -92,8 +92,6 @@ struct AllocFnsTy {
   unsigned NumParams;
   // First and Second size parameters (or -1 if unused)
   int FstParam, SndParam;
-  // Alignment parameter for aligned_alloc and aligned new
-  int AlignParam;
   // Name of default allocator function to group malloc/free calls by family
   MallocFamily Family;
 };
@@ -102,10 +100,10 @@ struct AllocFnsTy {
 // FIXME: certain users need more information. E.g., SimplifyLibCalls needs to
 // know which functions are nounwind, noalias, nocapture parameters, etc.
 static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
-    {LibFunc_strdup,                                          {StrDupLike, 1, -1, -1, -1, MallocFamily::Malloc}},
-    {LibFunc_dunder_strdup,                                   {StrDupLike, 1, -1, -1, -1, MallocFamily::Malloc}},
-    {LibFunc_strndup,                                         {StrDupLike, 2,  1, -1, -1, MallocFamily::Malloc}},
-    {LibFunc_dunder_strndup,                                  {StrDupLike, 2,  1, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_strdup,                                          {StrDupLike, 1, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_dunder_strdup,                                   {StrDupLike, 1, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_strndup,                                         {StrDupLike, 2,  1, -1, MallocFamily::Malloc}},
+    {LibFunc_dunder_strndup,                                  {StrDupLike, 2,  1, -1, MallocFamily::Malloc}},
 };
 // clang-format on
 
@@ -209,8 +207,6 @@ getAllocationSize(const CallBase *CB, const TargetLibraryInfo *TLI) {
   Result.NumParams = CB->arg_size();
   Result.FstParam = Args.first;
   Result.SndParam = Args.second.value_or(-1);
-  // Allocsize has no way to specify an alignment argument
-  Result.AlignParam = -1;
   return Result;
 }
 
@@ -288,12 +284,7 @@ bool llvm::isRemovableAlloc(const CallBase *CB, const TargetLibraryInfo *TLI) {
   return isAllocLikeFn(CB, TLI);
 }
 
-Value *llvm::getAllocAlignment(const CallBase *V,
-                               const TargetLibraryInfo *TLI) {
-  const std::optional<AllocFnsTy> FnData = getAllocationData(V, AnyAlloc, TLI);
-  if (FnData && FnData->AlignParam >= 0) {
-    return V->getOperand(FnData->AlignParam);
-  }
+Value *llvm::getAllocAlignment(const CallBase *V) {
   return V->getArgOperandWithAttribute(Attribute::AllocAlign);
 }
 
@@ -375,19 +366,13 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
   return Size;
 }
 
-Constant *llvm::getInitialValueOfAllocation(const Value *V,
-                                            const TargetLibraryInfo *TLI,
-                                            Type *Ty) {
+Constant *llvm::getInitialValueOfAllocation(const Value *V, Type *Ty) {
   if (isa<AllocaInst>(V))
     return UndefValue::get(Ty);
 
   auto *Alloc = dyn_cast<CallBase>(V);
   if (!Alloc)
     return nullptr;
-
-  // malloc are uninitialized (undef)
-  if (getAllocationData(Alloc, MallocOrOpNewLike, TLI).has_value())
-    return UndefValue::get(Ty);
 
   AllocFnKind AK = getAllocFnKind(Alloc);
   if ((AK & AllocFnKind::Uninitialized) != AllocFnKind::Unknown)
@@ -421,25 +406,15 @@ llvm::getAllocationFamily(const Value *I, const TargetLibraryInfo *TLI) {
   return std::nullopt;
 }
 
-/// isLibFreeFunction - Returns true if the function is a builtin free()
-bool llvm::isLibFreeFunction(const Function *F, const LibFunc /*TLIFn*/) {
+bool llvm::isFreeLikeFn(const Function *F) {
   return checkFnAllocKind(F, AllocFnKind::Free);
 }
 
-Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
+Value *llvm::getFreedOperand(const CallBase *CB) {
   // Exit early for functions which don't return void. The allockind("free")
-  // attribute requires this, and it's much cheaper to check that TLI.
+  // attribute requires this, and it's cheaper to check than the attribute.
   if (!CB->getType()->isVoidTy())
     return nullptr;
-
-  if (const Function *Callee = getCalledFunction(CB)) {
-    LibFunc TLIFn = TLI ? TLI->getLibFunc(*Callee) : NotLibFunc;
-    if (TLIFn != NotLibFunc && TLI->has(TLIFn) &&
-        isLibFreeFunction(Callee, TLIFn)) {
-      // All currently supported free functions free the first argument.
-      return CB->getArgOperand(0);
-    }
-  }
 
   if (checkFnAllocKind(CB, AllocFnKind::Free))
     return CB->getArgOperandWithAttribute(Attribute::AllocatedPointer);
