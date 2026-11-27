@@ -1,11 +1,11 @@
 # REQUIRES: hexagon
-# RUN: split-file %s %t
-# RUN: llvm-mc -filetype=obj -triple=hexagon %t/shared.s -o %t/shared.o
-# RUN: ld.lld -shared %t/shared.o -o %t/shared.so
-# RUN: llvm-mc -filetype=obj -triple=hexagon %t/main.s -o %t/main.o
-# RUN: ld.lld %t/main.o %t/shared.so -o %t/main
-# RUN: llvm-readobj -r %t/main | FileCheck %s
-# RUN: llvm-readelf -S -s %t/main | FileCheck --check-prefix=SYM %s
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=hexagon shared.s -o shared.o
+# RUN: ld.lld -shared shared.o -o shared.so
+# RUN: llvm-mc -filetype=obj -triple=hexagon main.s -o main.o
+# RUN: ld.lld main.o shared.so -o main
+# RUN: llvm-readobj -r main | FileCheck %s
+# RUN: llvm-readelf -S -s main | FileCheck --check-prefix=SYM %s
 
 ## Non-PIE references to writable and read-only data exported by a DSO need
 ## COPY relocations so the dynamic loader initializes their executable copies.
