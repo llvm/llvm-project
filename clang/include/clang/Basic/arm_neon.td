@@ -2249,5 +2249,5 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "neon", BigEndianSafe = 1 in {
   // Non-temporal pair load/stores
   def VSTN_X2 : SInst<"vstn_x2", "v(*)(2!)", "QcQsQiQlQUcQUsQUiQUlQhQbQfQdQm">;
-  def VLDN_X2 : SInst<"vldn_x2", "2(c*!)", "QcQsQiQlQUcQUsQUiQUlQhQbQfQdQm">;
+  def VLDN_X2 : SInst<"vldn_x2", "2(c*)", "QcQsQiQlQUcQUsQUiQUlQhQbQfQdQm">;
 }

@@ -12,7 +12,7 @@
 // CHECK-NEXT:    store <32 x i8> [[TMP0]], ptr [[PTR]], align 16, !nontemporal [[META12:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
-void test_vstnq_s8_x2(int8_t *ptr, int8x16_t first, int8x16_t second) {
+void test_vstnq_s8_x2(void *ptr, int8x16_t first, int8x16_t second) {
     int8x16x2_t val = {{first, second}};
     vstnq_s8_x2(ptr, val);
 }
@@ -23,7 +23,7 @@ void test_vstnq_s8_x2(int8_t *ptr, int8x16_t first, int8x16_t second) {
 // CHECK-NEXT:    store <16 x i16> [[TMP0]], ptr [[PTR]], align 16, !nontemporal [[META12]]
 // CHECK-NEXT:    ret void
 //
-void test_vstnq_s16_x2(int16_t *ptr, int16x8_t first, int16x8_t second) {
+void test_vstnq_s16_x2(void *ptr, int16x8_t first, int16x8_t second) {
     int16x8x2_t val = {{first, second}};
     vstnq_s16_x2(ptr, val);
 }
@@ -34,7 +34,7 @@ void test_vstnq_s16_x2(int16_t *ptr, int16x8_t first, int16x8_t second) {
 // CHECK-NEXT:    store <8 x i32> [[TMP0]], ptr [[PTR]], align 16, !nontemporal [[META12]]
 // CHECK-NEXT:    ret void
 //
-void test_vstnq_s32_x2(int32_t *ptr, int32x4_t first, int32x4_t second) {
+void test_vstnq_s32_x2(void *ptr, int32x4_t first, int32x4_t second) {
     int32x4x2_t val = {{first, second}};
     vstnq_s32_x2(ptr, val);
 }
@@ -45,7 +45,7 @@ void test_vstnq_s32_x2(int32_t *ptr, int32x4_t first, int32x4_t second) {
 // CHECK-NEXT:    store <4 x i64> [[TMP0]], ptr [[PTR]], align 16, !nontemporal [[META12]]
 // CHECK-NEXT:    ret void
 //
-void test_vstnq_s64_x2(int64_t *ptr, int64x2_t first, int64x2_t second) {
+void test_vstnq_s64_x2(void *ptr, int64x2_t first, int64x2_t second) {
     int64x2x2_t val = {{first, second}};
     vstnq_s64_x2(ptr, val);
 }
@@ -56,7 +56,7 @@ void test_vstnq_s64_x2(int64_t *ptr, int64x2_t first, int64x2_t second) {
 // CHECK-NEXT:    store <32 x i8> [[TMP0]], ptr [[PTR]], align 16, !nontemporal [[META12]]
 // CHECK-NEXT:    ret void
 //
-void test_vstnq_u8_x2(uint8_t *ptr, uint8x16_t first, uint8x16_t second) {
+void test_vstnq_u8_x2(void *ptr, uint8x16_t first, uint8x16_t second) {
     uint8x16x2_t val = {{first, second}};
     vstnq_u8_x2(ptr, val);
 }
@@ -67,7 +67,7 @@ void test_vstnq_u8_x2(uint8_t *ptr, uint8x16_t first, uint8x16_t second) {
 // CHECK-NEXT:    store <16 x i16> [[TMP0]], ptr [[PTR]], align 16, !nontemporal [[META12]]
 // CHECK-NEXT:    ret void
 //
-void test_vstnq_u16_x2(uint16_t *ptr, uint16x8_t first, uint16x8_t second) {
+void test_vstnq_u16_x2(void *ptr, uint16x8_t first, uint16x8_t second) {
     uint16x8x2_t val = {{first, second}};
     vstnq_u16_x2(ptr, val);
 }
@@ -78,7 +78,7 @@ void test_vstnq_u16_x2(uint16_t *ptr, uint16x8_t first, uint16x8_t second) {
 // CHECK-NEXT:    store <8 x i32> [[TMP0]], ptr [[PTR]], align 16, !nontemporal [[META12]]
 // CHECK-NEXT:    ret void
 //
-void test_vstnq_u32_x2(uint32_t *ptr, uint32x4_t first, uint32x4_t second) {
+void test_vstnq_u32_x2(void *ptr, uint32x4_t first, uint32x4_t second) {
     uint32x4x2_t val = {{first, second}};
     vstnq_u32_x2(ptr, val);
 }
@@ -89,7 +89,7 @@ void test_vstnq_u32_x2(uint32_t *ptr, uint32x4_t first, uint32x4_t second) {
 // CHECK-NEXT:    store <4 x i64> [[TMP0]], ptr [[PTR]], align 16, !nontemporal [[META12]]
 // CHECK-NEXT:    ret void
 //
-void test_vstnq_u64_x2(uint64_t *ptr, uint64x2_t first, uint64x2_t second) {
+void test_vstnq_u64_x2(void *ptr, uint64x2_t first, uint64x2_t second) {
     uint64x2x2_t val = {{first, second}};
     vstnq_u64_x2(ptr, val);
 }
@@ -101,7 +101,7 @@ void test_vstnq_u64_x2(uint64_t *ptr, uint64x2_t first, uint64x2_t second) {
 // CHECK-NEXT:    store <32 x i8> [[TMP0]], ptr [[PTR]], align 16, !nontemporal [[META12]]
 // CHECK-NEXT:    ret void
 //
-void test_vstnq_mf8_x2(mfloat8_t *ptr, mfloat8x16_t first, mfloat8x16_t second) {
+void test_vstnq_mf8_x2(void *ptr, mfloat8x16_t first, mfloat8x16_t second) {
     mfloat8x16x2_t val = {{first, second}};
     vstnq_mf8_x2(ptr, val);
 }
@@ -113,7 +113,7 @@ void test_vstnq_mf8_x2(mfloat8_t *ptr, mfloat8x16_t first, mfloat8x16_t second) 
 // CHECK-NEXT:    store <16 x half> [[TMP0]], ptr [[PTR]], align 16, !nontemporal [[META12]]
 // CHECK-NEXT:    ret void
 //
-void test_vstnq_f16_x2(float16_t *ptr, float16x8_t first, float16x8_t second) {
+void test_vstnq_f16_x2(void *ptr, float16x8_t first, float16x8_t second) {
     float16x8x2_t val = {{first, second}};
     vstnq_f16_x2(ptr, val);
 }
@@ -124,7 +124,7 @@ void test_vstnq_f16_x2(float16_t *ptr, float16x8_t first, float16x8_t second) {
 // CHECK-NEXT:    store <16 x bfloat> [[TMP0]], ptr [[PTR]], align 16, !nontemporal [[META12]]
 // CHECK-NEXT:    ret void
 //
-void test_vstnq_bf16_x2(bfloat16_t *ptr, bfloat16x8_t first, bfloat16x8_t second) {
+void test_vstnq_bf16_x2(void *ptr, bfloat16x8_t first, bfloat16x8_t second) {
     bfloat16x8x2_t val = {{first, second}};
     vstnq_bf16_x2(ptr, val);
 }
@@ -135,7 +135,7 @@ void test_vstnq_bf16_x2(bfloat16_t *ptr, bfloat16x8_t first, bfloat16x8_t second
 // CHECK-NEXT:    store <8 x float> [[TMP0]], ptr [[PTR]], align 16, !nontemporal [[META12]]
 // CHECK-NEXT:    ret void
 //
-void test_vstnq_f32_x2(float32_t *ptr, float32x4_t first, float32x4_t second) {
+void test_vstnq_f32_x2(void *ptr, float32x4_t first, float32x4_t second) {
     float32x4x2_t val = {{first, second}};
     vstnq_f32_x2(ptr, val);
 }
@@ -146,7 +146,7 @@ void test_vstnq_f32_x2(float32_t *ptr, float32x4_t first, float32x4_t second) {
 // CHECK-NEXT:    store <4 x double> [[TMP0]], ptr [[PTR]], align 16, !nontemporal [[META12]]
 // CHECK-NEXT:    ret void
 //
-void test_vstnq_f64_x2(float64_t *ptr, float64x2_t first, float64x2_t second) {
+void test_vstnq_f64_x2(void *ptr, float64x2_t first, float64x2_t second) {
     float64x2x2_t val = {{first, second}};
     vstnq_f64_x2(ptr, val);
 }

@@ -14,7 +14,7 @@
 // CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_INT8X16X2_T]] [[DOTFCA_0_0_INSERT]], <16 x i8> [[RETVAL_SROA_0_16_VEC_EXTRACT]], 0, 1
 // CHECK-NEXT:    ret [[STRUCT_INT8X16X2_T]] [[DOTFCA_0_1_INSERT]]
 //
-int8x16x2_t test_vldnq_s8_x2(const int8_t* ptr) {
+int8x16x2_t test_vldnq_s8_x2(const void* ptr) {
     return vldnq_s8_x2(ptr);
 }
 
@@ -28,7 +28,7 @@ int8x16x2_t test_vldnq_s8_x2(const int8_t* ptr) {
 // CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_INT16X8X2_T]] [[DOTFCA_0_0_INSERT]], <8 x i16> [[RETVAL_SROA_0_16_VEC_EXTRACT]], 0, 1
 // CHECK-NEXT:    ret [[STRUCT_INT16X8X2_T]] [[DOTFCA_0_1_INSERT]]
 //
-int16x8x2_t test_vldnq_s16_x2(const int16_t* ptr) {
+int16x8x2_t test_vldnq_s16_x2(const void* ptr) {
     return vldnq_s16_x2(ptr);
 }
 
@@ -42,7 +42,7 @@ int16x8x2_t test_vldnq_s16_x2(const int16_t* ptr) {
 // CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_INT32X4X2_T]] [[DOTFCA_0_0_INSERT]], <4 x i32> [[RETVAL_SROA_0_16_VEC_EXTRACT]], 0, 1
 // CHECK-NEXT:    ret [[STRUCT_INT32X4X2_T]] [[DOTFCA_0_1_INSERT]]
 //
-int32x4x2_t test_vldnq_s32_x2(const int32_t* ptr) {
+int32x4x2_t test_vldnq_s32_x2(const void* ptr) {
     return vldnq_s32_x2(ptr);
 }
 
@@ -56,7 +56,7 @@ int32x4x2_t test_vldnq_s32_x2(const int32_t* ptr) {
 // CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_INT64X2X2_T]] [[DOTFCA_0_0_INSERT]], <2 x i64> [[RETVAL_SROA_0_16_VEC_EXTRACT]], 0, 1
 // CHECK-NEXT:    ret [[STRUCT_INT64X2X2_T]] [[DOTFCA_0_1_INSERT]]
 //
-int64x2x2_t test_vldnq_s64_x2(const int64_t* ptr) {
+int64x2x2_t test_vldnq_s64_x2(const void* ptr) {
     return vldnq_s64_x2(ptr);
 }
 
@@ -70,7 +70,7 @@ int64x2x2_t test_vldnq_s64_x2(const int64_t* ptr) {
 // CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_UINT8X16X2_T]] [[DOTFCA_0_0_INSERT]], <16 x i8> [[RETVAL_SROA_0_16_VEC_EXTRACT]], 0, 1
 // CHECK-NEXT:    ret [[STRUCT_UINT8X16X2_T]] [[DOTFCA_0_1_INSERT]]
 //
-uint8x16x2_t test_vldnq_u8_x2(const uint8_t* ptr) {
+uint8x16x2_t test_vldnq_u8_x2(const void* ptr) {
     return vldnq_u8_x2(ptr);
 }
 
@@ -84,7 +84,7 @@ uint8x16x2_t test_vldnq_u8_x2(const uint8_t* ptr) {
 // CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_UINT16X8X2_T]] [[DOTFCA_0_0_INSERT]], <8 x i16> [[RETVAL_SROA_0_16_VEC_EXTRACT]], 0, 1
 // CHECK-NEXT:    ret [[STRUCT_UINT16X8X2_T]] [[DOTFCA_0_1_INSERT]]
 //
-uint16x8x2_t test_vldnq_u16_x2(const uint16_t* ptr) {
+uint16x8x2_t test_vldnq_u16_x2(const void* ptr) {
     return vldnq_u16_x2(ptr);
 }
 
@@ -98,7 +98,7 @@ uint16x8x2_t test_vldnq_u16_x2(const uint16_t* ptr) {
 // CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_UINT32X4X2_T]] [[DOTFCA_0_0_INSERT]], <4 x i32> [[RETVAL_SROA_0_16_VEC_EXTRACT]], 0, 1
 // CHECK-NEXT:    ret [[STRUCT_UINT32X4X2_T]] [[DOTFCA_0_1_INSERT]]
 //
-uint32x4x2_t test_vldnq_u32_x2(const uint32_t* ptr) {
+uint32x4x2_t test_vldnq_u32_x2(const void* ptr) {
     return vldnq_u32_x2(ptr);
 }
 
@@ -112,7 +112,7 @@ uint32x4x2_t test_vldnq_u32_x2(const uint32_t* ptr) {
 // CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_UINT64X2X2_T]] [[DOTFCA_0_0_INSERT]], <2 x i64> [[RETVAL_SROA_0_16_VEC_EXTRACT]], 0, 1
 // CHECK-NEXT:    ret [[STRUCT_UINT64X2X2_T]] [[DOTFCA_0_1_INSERT]]
 //
-uint64x2x2_t test_vldnq_u64_x2(const uint64_t* ptr) {
+uint64x2x2_t test_vldnq_u64_x2(const void* ptr) {
     return vldnq_u64_x2(ptr);
 }
 
@@ -126,7 +126,7 @@ uint64x2x2_t test_vldnq_u64_x2(const uint64_t* ptr) {
 // CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_FLOAT16X8X2_T]] [[DOTFCA_0_0_INSERT]], <8 x half> [[RETVAL_SROA_0_16_VEC_EXTRACT]], 0, 1
 // CHECK-NEXT:    ret [[STRUCT_FLOAT16X8X2_T]] [[DOTFCA_0_1_INSERT]]
 //
-float16x8x2_t test_vldnq_f16_x2(const float16_t* ptr) {
+float16x8x2_t test_vldnq_f16_x2(const void* ptr) {
     return vldnq_f16_x2(ptr);
 }
 
@@ -140,7 +140,7 @@ float16x8x2_t test_vldnq_f16_x2(const float16_t* ptr) {
 // CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_BFLOAT16X8X2_T]] [[DOTFCA_0_0_INSERT]], <8 x bfloat> [[RETVAL_SROA_0_16_VEC_EXTRACT]], 0, 1
 // CHECK-NEXT:    ret [[STRUCT_BFLOAT16X8X2_T]] [[DOTFCA_0_1_INSERT]]
 //
-bfloat16x8x2_t test_vldnq_bf16_x2(const bfloat16_t* ptr) {
+bfloat16x8x2_t test_vldnq_bf16_x2(const void* ptr) {
     return vldnq_bf16_x2(ptr);
 }
 
@@ -154,7 +154,7 @@ bfloat16x8x2_t test_vldnq_bf16_x2(const bfloat16_t* ptr) {
 // CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_FLOAT32X4X2_T]] [[DOTFCA_0_0_INSERT]], <4 x float> [[RETVAL_SROA_0_16_VEC_EXTRACT]], 0, 1
 // CHECK-NEXT:    ret [[STRUCT_FLOAT32X4X2_T]] [[DOTFCA_0_1_INSERT]]
 //
-float32x4x2_t test_vldnq_f32_x2(const float32_t* ptr) {
+float32x4x2_t test_vldnq_f32_x2(const void* ptr) {
     return vldnq_f32_x2(ptr);
 }
 
@@ -168,7 +168,7 @@ float32x4x2_t test_vldnq_f32_x2(const float32_t* ptr) {
 // CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_FLOAT64X2X2_T]] [[DOTFCA_0_0_INSERT]], <2 x double> [[RETVAL_SROA_0_16_VEC_EXTRACT]], 0, 1
 // CHECK-NEXT:    ret [[STRUCT_FLOAT64X2X2_T]] [[DOTFCA_0_1_INSERT]]
 //
-float64x2x2_t test_vldnq_f64_x2(const float64_t* ptr) {
+float64x2x2_t test_vldnq_f64_x2(const void* ptr) {
     return vldnq_f64_x2(ptr);
 }
 
@@ -182,7 +182,7 @@ float64x2x2_t test_vldnq_f64_x2(const float64_t* ptr) {
 // CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X2_T]] [[DOTFCA_0_0_INSERT]], <16 x i8> [[RETVAL_SROA_0_16_VEC_EXTRACT]], 0, 1
 // CHECK-NEXT:    ret [[STRUCT_MFLOAT8X16X2_T]] [[DOTFCA_0_1_INSERT]]
 //
-mfloat8x16x2_t test_vldnq_mf8_x2(const mfloat8_t* ptr) {
+mfloat8x16x2_t test_vldnq_mf8_x2(const void* ptr) {
     return vldnq_mf8_x2(ptr);
 }
 //.
