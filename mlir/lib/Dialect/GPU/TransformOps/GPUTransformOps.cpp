@@ -14,12 +14,11 @@
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/Utils.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/GPU/Transforms/ROCDL/Passes.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
@@ -108,21 +107,20 @@ void transform::ApplyGPUToROCDLConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
   amdgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
-  FailureOr<amdgpu::Chipset> maybeChipset =
-      amdgpu::Chipset::parse(getChipset());
-  assert(llvm::succeeded(maybeChipset) && "expected valid chipset");
+  // The verifier has already rejected anything unparseable.
+  FailureOr<ROCDL::TargetInfo> targetInfo =
+      ROCDL::TargetInfo::get(getArch(), getWavesize().value_or(0));
+  assert(llvm::succeeded(targetInfo) && "verifier accepted this target");
   populateGpuToROCDLConversionPatterns(
-      llvmTypeConverter, patterns, mlir::gpu::amd::Runtime::HIP, *maybeChipset);
+      llvmTypeConverter, patterns, mlir::gpu::amd::Runtime::HIP, *targetInfo);
 }
 
 LogicalResult
 transform::ApplyGPUToROCDLConversionPatternsOp::verifyTypeConverter(
     transform::TypeConverterBuilderOpInterface builder) {
-  FailureOr<amdgpu::Chipset> maybeChipset =
-      amdgpu::Chipset::parse(getChipset());
-  if (failed(maybeChipset)) {
-    return emitOpError("Invalid chipset name: " + getChipset());
-  }
+  if (failed(ROCDL::TargetInfo::get(getArch(), getWavesize().value_or(0),
+                                    [&] { return emitOpError(); })))
+    return failure();
   if (builder.getTypeConverterType() != "LLVMTypeConverter")
     return emitOpError("expected LLVMTypeConverter");
   return success();
@@ -138,142 +136,27 @@ void ApplyGPURewritePatternsOp::populatePatterns(RewritePatternSet &patterns) {
 
 void transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  std::optional<StringRef> chipsetName = getChipset();
-  std::optional<amdgpu::Chipset> maybeChipset;
-  if (chipsetName) {
-    FailureOr<amdgpu::Chipset> parsedChipset =
-        amdgpu::Chipset::parse(*chipsetName);
-    assert(llvm::succeeded(parsedChipset) && "expected valid chipset");
-    maybeChipset = parsedChipset;
+  std::optional<StringRef> archName = getArch();
+  std::optional<ROCDL::TargetInfo> targetInfo;
+  if (archName) {
+    // The verifier has already rejected anything unparseable.
+    FailureOr<ROCDL::TargetInfo> parsed = ROCDL::TargetInfo::get(*archName);
+    assert(llvm::succeeded(parsed) && "verifier accepted this target");
+    targetInfo = *parsed;
   }
 
-  populateGpuPromoteShuffleToAMDGPUPatterns(patterns, maybeChipset);
+  populateGpuPromoteShuffleToAMDGPUPatterns(patterns, targetInfo);
 }
 
-//===----------------------------------------------------------------------===//
-// ApplyUnrollVectorsSubgroupMmaOp
-//===----------------------------------------------------------------------===//
+LogicalResult transform::ApplyGPUPromoteShuffleToAMDGPUPatternsOp::verify() {
+  std::optional<StringRef> archName = getArch();
+  if (!archName)
+    return success();
 
-/// Pick an unrolling order that will allow tensorcore operation to reuse LHS
-/// register.
-static std::optional<SmallVector<int64_t>>
-gpuMmaUnrollOrder(vector::ContractionOp contract) {
-  SmallVector<int64_t> order;
-  // First make reduction the outer dimensions.
-  for (auto [index, iter] : llvm::enumerate(contract.getIteratorTypes())) {
-    if (vector::isReductionIterator(iter)) {
-      order.push_back(index);
-    }
-  }
-
-  llvm::SmallDenseSet<int64_t> dims;
-  for (AffineExpr expr : contract.getIndexingMapsArray()[0].getResults()) {
-    dims.insert(cast<AffineDimExpr>(expr).getPosition());
-  }
-  // Then parallel dimensions that are part of Lhs as we want to re-use Lhs.
-  for (auto [index, iter] : llvm::enumerate(contract.getIteratorTypes())) {
-    if (vector::isParallelIterator(iter) && dims.count(index)) {
-      order.push_back(index);
-    }
-  }
-  // Then the remaining parallel loops.
-  for (auto [index, iter] : llvm::enumerate(contract.getIteratorTypes())) {
-    if (vector::isParallelIterator(iter) && !dims.count(index)) {
-      order.push_back(index);
-    }
-  }
-  return order;
-}
-
-/// Returns the target vector size for the target operation based on the native
-/// vector size specified with `m`, `n`, and `k`.
-static std::optional<SmallVector<int64_t>>
-getSubgroupMmaNativeVectorSize(Operation *op, int64_t m, int64_t n, int64_t k) {
-  if (auto contract = dyn_cast<vector::ContractionOp>(op)) {
-    int64_t contractRank = contract.getIteratorTypes().size();
-    if (contractRank < 3)
-      return std::nullopt;
-    SmallVector<int64_t> nativeSize(contractRank - 3, 1);
-    nativeSize.append({m, n, k});
-    return nativeSize;
-  }
-  if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op)) {
-    int64_t writeRank = writeOp.getVectorType().getRank();
-    if (writeRank < 2)
-      return std::nullopt;
-    SmallVector<int64_t> nativeSize(writeRank - 2, 1);
-    nativeSize.append({m, n});
-    return nativeSize;
-  }
-  if (auto readOp = dyn_cast<vector::TransferReadOp>(op)) {
-    // Transfer read ops may need different shapes based on how they are being
-    // used. For simplicity just match the shape used by the extract strided op.
-    VectorType sliceType;
-    for (Operation *users : op->getUsers()) {
-      auto extract = dyn_cast<vector::ExtractStridedSliceOp>(users);
-      if (!extract)
-        return std::nullopt;
-      auto vecType = cast<VectorType>(extract.getResult().getType());
-      if (sliceType && sliceType != vecType)
-        return std::nullopt;
-      sliceType = vecType;
-    }
-    return llvm::to_vector(sliceType.getShape());
-  }
-  if ((OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)) {
-    if (auto vecType = dyn_cast<VectorType>(op->getResultTypes()[0])) {
-      // TODO: The condition for unrolling elementwise should be restricted
-      // only to operations that need unrolling (connected to the contract).
-      if (vecType.getRank() < 2)
-        return std::nullopt;
-
-      // First check whether there is a slice to infer the shape from. This is
-      // required for cases where the accumulator type differs from the input
-      // types, in which case we will see an `arith.ext_` between the contract
-      // and transfer_read which needs to be unrolled.
-      VectorType sliceType;
-      for (Operation *users : op->getUsers()) {
-        auto extract = dyn_cast<vector::ExtractStridedSliceOp>(users);
-        if (!extract)
-          return std::nullopt;
-        auto vecType = cast<VectorType>(extract.getResult().getType());
-        if (sliceType && sliceType != vecType)
-          return std::nullopt;
-        sliceType = vecType;
-      }
-      if (sliceType)
-        return llvm::to_vector(sliceType.getShape());
-
-      // Else unroll for trailing elementwise.
-      SmallVector<int64_t> nativeSize(vecType.getRank() - 2, 1);
-      // Map elementwise ops to the output shape.
-      nativeSize.append({m, n});
-      return nativeSize;
-    }
-  }
-  return std::nullopt;
-}
-
-void transform::ApplyUnrollVectorsSubgroupMmaOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  auto unrollOrder = [](Operation *op) -> std::optional<SmallVector<int64_t>> {
-    auto contract = dyn_cast<vector::ContractionOp>(op);
-    if (!contract)
-      return std::nullopt;
-    return gpuMmaUnrollOrder(contract);
-  };
-
-  int64_t m = getM();
-  int64_t n = getN();
-  int64_t k = getK();
-  auto nativeShapeFn =
-      [m, n, k](Operation *op) -> std::optional<SmallVector<int64_t>> {
-    return getSubgroupMmaNativeVectorSize(op, m, n, k);
-  };
-  vector::populateVectorUnrollPatterns(
-      patterns, vector::UnrollVectorOptions()
-                    .setNativeShapeFn(nativeShapeFn)
-                    .setUnrollTraversalOrderFn(unrollOrder));
+  if (failed(ROCDL::TargetInfo::get(*archName, /*waveSize=*/0,
+                                    [&] { return emitOpError(); })))
+    return failure();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

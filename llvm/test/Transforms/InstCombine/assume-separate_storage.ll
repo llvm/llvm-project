@@ -48,3 +48,31 @@ define void @handles_globals(ptr %a) {
   call void @llvm.assume(i1 1) ["separate_storage"(ptr %a, ptr %derived)]
   ret void
 }
+
+define void @remove_simple_redundant_assumes(ptr %a, ptr %b) {
+; CHECK-LABEL: @remove_simple_redundant_assumes(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "separate_storage"(ptr [[A:%.*]], ptr [[B:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["separate_storage"(ptr %a, ptr %b)]
+  call void @llvm.assume(i1 true) ["separate_storage"(ptr %a, ptr %b)]
+  ret void
+}
+
+define void @remove_simple_redundant_assumes_inverse_args(ptr %a, ptr %b) {
+; CHECK-LABEL: @remove_simple_redundant_assumes_inverse_args(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "separate_storage"(ptr [[B:%.*]], ptr [[A:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["separate_storage"(ptr %a, ptr %b)]
+  call void @llvm.assume(i1 true) ["separate_storage"(ptr %b, ptr %a)]
+  ret void
+}
+
+define void @arguments_with_noalias(ptr noalias %a, ptr noalias %b) {
+; CHECK-LABEL: @arguments_with_noalias(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["separate_storage"(ptr %a, ptr %b)]
+  ret void
+}

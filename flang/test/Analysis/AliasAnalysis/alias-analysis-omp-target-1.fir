@@ -16,9 +16,9 @@
 // CHECK-DAG: targetArrayB#0 <-> targetArrayA#0: NoAlias
 func.func @_QPTestAllocatableArray() {
   %0 = fir.address_of(@_QFEa) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
-  %1:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "ArrayA" } : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %1:2 = hlfir.declare %0 uniq_name("ArrayA") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
   %2 = fir.address_of(@_QFEb) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
-  %3:2 = hlfir.declare %2 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "ArrayB" } : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+  %3:2 = hlfir.declare %2 uniq_name("ArrayB") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
   %4 = fir.load %1#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
@@ -46,8 +46,8 @@ func.func @_QPTestAllocatableArray() {
   %20 = omp.map.info var_ptr(%3#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.box<!fir.heap<!fir.array<?xf64>>>) map_clauses(implicit, tofrom) capture(ByRef) var_ptr_ptr(%19 : !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>, !fir.array<?xf64>) bounds(%18) name("") -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>
   %21 = omp.map.info var_ptr(%3#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.box<!fir.heap<!fir.array<?xf64>>>) map_clauses(implicit, tofrom) capture(ByRef) members(%20 : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>) name("b") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   omp.target kernel_type(generic) map_entries(%11 -> %arg0, %12 -> %arg1, %20 -> %arg2, %21 -> %arg3 : !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xf64>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) {
-    %22:2 = hlfir.declare %arg1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
-    %23:2 = hlfir.declare %arg3 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEb"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+    %22:2 = hlfir.declare %arg1 uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
+    %23:2 = hlfir.declare %arg3 uniq_name("_QFEb") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
     %24 = fir.load %23#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
     %c0_6 = arith.constant 0 : index
     %25 = hlfir.designate %24 (%c0_6) {test.ptr = "targetArrayB"} : (!fir.box<!fir.heap<!fir.array<?xf64>>>, index) -> !fir.ref<f64>

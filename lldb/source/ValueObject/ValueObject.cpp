@@ -516,74 +516,52 @@ void ValueObject::SetNumChildren(uint32_t num_children) {
 ValueObject *ValueObject::CreateChildAtIndex(size_t idx) {
   bool omit_empty_base_classes = true;
   bool ignore_array_bounds = false;
-  std::string child_name;
-  uint32_t child_byte_size = 0;
-  int32_t child_byte_offset = 0;
-  uint32_t child_bitfield_bit_size = 0;
-  uint32_t child_bitfield_bit_offset = 0;
-  bool child_is_base_class = false;
-  bool child_is_deref_of_parent = false;
-  uint64_t language_flags = 0;
   const bool transparent_pointers = true;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
-  auto child_compiler_type_or_err =
-      GetCompilerType().GetChildCompilerTypeAtIndex(
-          &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-          child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, child_is_deref_of_parent, this, language_flags);
-  if (!child_compiler_type_or_err || !child_compiler_type_or_err->IsValid()) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
-                   child_compiler_type_or_err.takeError(),
+  auto child_or_err = GetCompilerType().GetChildAtIndex(
+      &exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+      ignore_array_bounds, this);
+  if (!child_or_err || !child_or_err->type.IsValid()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), child_or_err.takeError(),
                    "could not find child: {0}");
     return nullptr;
   }
 
+  const ChildTypeInfo &child = *child_or_err;
   return new ValueObjectChild(
-      *this, *child_compiler_type_or_err, ConstString(child_name),
-      child_byte_size, child_byte_offset, child_bitfield_bit_size,
-      child_bitfield_bit_offset, child_is_base_class, child_is_deref_of_parent,
-      eAddressTypeInvalid, language_flags);
+      *this, child.type, ConstString(child.name), child.byte_size,
+      child.byte_offset, child.bitfield_bit_size, child.bitfield_bit_offset,
+      child.is_base_class, child.is_deref_of_parent, eAddressTypeInvalid,
+      child.language_flags);
 }
 
 ValueObject *ValueObject::CreateSyntheticArrayMember(size_t idx) {
   bool omit_empty_base_classes = true;
   bool ignore_array_bounds = true;
-  std::string child_name;
-  uint32_t child_byte_size = 0;
-  int32_t child_byte_offset = 0;
-  uint32_t child_bitfield_bit_size = 0;
-  uint32_t child_bitfield_bit_offset = 0;
-  bool child_is_base_class = false;
-  bool child_is_deref_of_parent = false;
-  uint64_t language_flags = 0;
   const bool transparent_pointers = false;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
-  auto child_compiler_type_or_err =
-      GetCompilerType().GetChildCompilerTypeAtIndex(
-          &exe_ctx, 0, transparent_pointers, omit_empty_base_classes,
-          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-          child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, child_is_deref_of_parent, this, language_flags);
-  if (!child_compiler_type_or_err) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
-                   child_compiler_type_or_err.takeError(),
+  auto child_or_err = GetCompilerType().GetChildAtIndex(
+      &exe_ctx, 0, transparent_pointers, omit_empty_base_classes,
+      ignore_array_bounds, this);
+  if (!child_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), child_or_err.takeError(),
                    "could not find child: {0}");
     return nullptr;
   }
 
-  if (child_compiler_type_or_err->IsValid()) {
-    child_byte_offset += child_byte_size * idx;
+  if (child_or_err->type.IsValid()) {
+    ChildTypeInfo &child = *child_or_err;
+    child.byte_offset += child.byte_size * idx;
 
     return new ValueObjectChild(
-        *this, *child_compiler_type_or_err, ConstString(child_name),
-        child_byte_size, child_byte_offset, child_bitfield_bit_size,
-        child_bitfield_bit_offset, child_is_base_class,
-        child_is_deref_of_parent, eAddressTypeInvalid, language_flags);
+        *this, child.type, ConstString(child.name), child.byte_size,
+        child.byte_offset, child.bitfield_bit_size, child.bitfield_bit_offset,
+        child.is_base_class, child.is_deref_of_parent, eAddressTypeInvalid,
+        child.language_flags);
   }
 
   // In case of an incomplete type, try to use the ValueObject's
@@ -966,14 +944,20 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
     if (cstr_address.address == 0 ||
         cstr_address.address == LLDB_INVALID_ADDRESS) {
       if (cstr_address.type == eAddressTypeHost && is_array) {
-        const char *cstr = GetDataExtractor().PeekCStr(0);
+        // The array is not required to be null-terminated, so ask for the
+        // bytes rather than for a C string. Its data can also be shorter than
+        // the array type, as for a DW_AT_const_value string, so clamp the
+        // length to what is really there.
+        DataExtractor &data = GetDataExtractor();
+        const uint8_t *cstr = data.PeekData(0, 1);
         if (cstr == nullptr) {
           s << "<invalid address>";
           error = Status::FromErrorString("invalid address");
           CopyStringDataToBufferSP(s, buffer_sp);
           return {0, was_capped};
         }
-        s << llvm::StringRef(cstr, cstr_len);
+        cstr_len = std::min<uint64_t>(cstr_len, data.GetByteSize());
+        s << llvm::StringRef(reinterpret_cast<const char *>(cstr), cstr_len);
         CopyStringDataToBufferSP(s, buffer_sp);
         return {cstr_len, was_capped};
       } else {
@@ -1014,8 +998,12 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
       // takes care of this
       while ((bytes_read = GetPointeeData(data, offset, k_max_buf_size)) > 0) {
         total_bytes_read += bytes_read;
-        const char *cstr = data.PeekCStr(0);
-        size_t len = strnlen(cstr, k_max_buf_size);
+        // The chunk holds the middle of a string as often as its end, so scan
+        // for a terminator instead of requiring one.
+        const uint8_t *bytes = data.PeekData(0, bytes_read);
+        if (bytes == nullptr)
+          break;
+        size_t len = strnlen(reinterpret_cast<const char *>(bytes), bytes_read);
         if (cstr_len_displayed < 0)
           cstr_len_displayed = len;
 
@@ -1888,6 +1876,14 @@ bool ValueObject::IsUninitializedReference() {
 
 ValueObjectSP ValueObject::GetSyntheticArrayMember(size_t index,
                                                    bool can_create) {
+  // Register values use exact-size host buffers. Do not create array children
+  // that would read beyond the bytes supplied by the register context.
+  uint64_t array_size = 0;
+  if (GetValueType() == eValueTypeRegister &&
+      GetCompilerType().IsArrayType(nullptr, &array_size) &&
+      index >= array_size)
+    return {};
+
   ValueObjectSP synthetic_child_sp;
   if (IsPointerType() || IsArrayType()) {
     std::string index_str = llvm::formatv("[{0}]", index);
@@ -1915,6 +1911,16 @@ ValueObjectSP ValueObject::GetSyntheticArrayMember(size_t index,
 
 ValueObjectSP ValueObject::GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
                                                      bool can_create) {
+  if (from > to)
+    return {};
+  // Register children must stay within the exact bytes supplied by the
+  // register context.
+  if (GetValueType() == eValueTypeRegister) {
+    std::optional<uint64_t> byte_size = llvm::expectedToOptional(GetByteSize());
+    if (!byte_size || to / 8 >= *byte_size)
+      return {};
+  }
+
   ValueObjectSP synthetic_child_sp;
   if (IsScalarType()) {
     std::string index_str = llvm::formatv("[{0}-{1}]", from, to);
@@ -2032,18 +2038,17 @@ ValueObjectSP ValueObject::GetSyntheticBase(uint32_t offset,
 // "looks like" an array, in which case it has a leading [ symbol). while the [
 // is meaningful and should be shown to the user, . and -> are just parser
 // design, but by no means added information for the user.. strip them off
-static const char *SkipLeadingExpressionPathSeparators(const char *expression) {
-  if (!expression || !expression[0])
-    return expression;
-  if (expression[0] == '.')
-    return expression + 1;
-  if (expression[0] == '-' && expression[1] == '>')
-    return expression + 2;
+static llvm::StringRef
+SkipLeadingExpressionPathSeparators(llvm::StringRef expression) {
+  if (expression.starts_with('.'))
+    return expression.drop_front();
+  if (expression.starts_with("->"))
+    return expression.drop_front(2);
   return expression;
 }
 
 ValueObjectSP
-ValueObject::GetSyntheticExpressionPathChild(const char *expression,
+ValueObject::GetSyntheticExpressionPathChild(llvm::StringRef expression,
                                              bool can_create) {
   ValueObjectSP synthetic_child_sp;
   ConstString name_const_string(expression);
@@ -2241,7 +2246,8 @@ void ValueObject::GetExpressionPath(Stream &s,
             if (non_base_class_parent_type_info & eTypeIsPointer) {
               s.PutCString("->");
             } else if ((non_base_class_parent_type_info & eTypeHasChildren) &&
-                       !(non_base_class_parent_type_info & eTypeIsArray)) {
+                       !(non_base_class_parent_type_info &
+                         (eTypeIsArray | eTypeIsVector))) {
               s.PutChar('.');
             }
           }
@@ -2514,6 +2520,13 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
           return ValueObjectSP();
         }
       }
+      if (temp_expression.size() == 1) {
+        *reason_to_stop =
+            ValueObject::eExpressionPathScanEndReasonUnexpectedSymbol;
+        *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
+        return nullptr;
+      }
+
       if (temp_expression[1] ==
           ']') // if this is an unbounded range it only works for arrays
       {
@@ -2558,6 +2571,14 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
         if (bracket_expr.getAsInteger(0, index)) {
           *reason_to_stop =
               ValueObject::eExpressionPathScanEndReasonUnexpectedSymbol;
+          *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
+          return nullptr;
+        }
+        if (root->GetValueType() == eValueTypeRegister &&
+            !root_compiler_type_info.Test(eTypeIsPointer) &&
+            index > UINT32_MAX) {
+          *reason_to_stop =
+              ValueObject::eExpressionPathScanEndReasonNoSuchChild;
           *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
           return nullptr;
         }
@@ -2721,6 +2742,14 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
 
         if (low_index > high_index) // swap indices if required
           std::swap(low_index, high_index);
+
+        if (root->GetValueType() == eValueTypeRegister &&
+            high_index > UINT32_MAX) {
+          *reason_to_stop =
+              ValueObject::eExpressionPathScanEndReasonNoSuchChild;
+          *final_result = ValueObject::eExpressionPathEndResultTypeInvalid;
+          return nullptr;
+        }
 
         if (root_compiler_type_info.Test(
                 eTypeIsScalar)) // expansion only works for scalars
@@ -3281,10 +3310,15 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
           return ValueObjectConstResult::Create(
               exe_ctx.GetBestExecutionContextScope(),
               Status::FromErrorStringWithFormat(
-                  "invalid type cast detected: %s",
-                  llvm::toString(float_value_or_err.takeError()).c_str()));
+                  "invalid cast from float to integer"));
         return ValueObject::CreateValueObjectFromAPInt(exe_ctx, integer, type,
                                                        "result");
+      } else {
+        return ValueObjectConstResult::Create(
+            exe_ctx.GetBestExecutionContextScope(),
+            Status::FromErrorStringWithFormat(
+                "cannot get value as APFloat: %s",
+                llvm::toString(float_value_or_err.takeError()).c_str()));
       }
     }
   }
@@ -3792,6 +3826,11 @@ bool ValueObject::CanProvideValue() {
   return (!type.IsValid()) || (0 != (type.GetTypeInfo() & eTypeHasValue));
 }
 
+bool ValueObject::HasNoStorage() {
+  std::optional<uint64_t> size = llvm::expectedToOptional(GetByteSize());
+  return size && *size == 0;
+}
+
 ValueObjectSP ValueObject::Persist() {
   if (!UpdateValueIfNeeded())
     return nullptr;
@@ -3826,12 +3865,13 @@ lldb::ValueObjectSP ValueObject::GetVTable() {
 
 ValueImpl::ValueImpl(lldb::ValueObjectSP in_valobj_sp,
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                     const char *name)
-    : m_use_dynamic(use_dynamic), m_use_synthetic(use_synthetic), m_name(name) {
+                     std::string name)
+    : m_use_dynamic(use_dynamic), m_use_synthetic(use_synthetic),
+      m_name(std::move(name)) {
   if (in_valobj_sp) {
     if ((m_valobj_sp = in_valobj_sp->GetQualifiedRepresentationIfAvailable(
              lldb::eNoDynamicValues, false))) {
-      if (!m_name.IsEmpty())
+      if (!m_name.empty())
         m_valobj_sp->SetName(m_name);
     }
   }
@@ -3911,7 +3951,7 @@ lldb::ValueObjectSP ValueImpl::GetSP(Process::StopLocker &stop_locker,
 
   if (!value_sp)
     error = Status::FromErrorString("invalid value object");
-  if (!m_name.IsEmpty())
+  else if (!m_name.empty())
     value_sp->SetName(m_name);
 
   return value_sp;

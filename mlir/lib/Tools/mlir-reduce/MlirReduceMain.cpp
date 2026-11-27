@@ -28,11 +28,6 @@ using namespace mlir;
 
 LogicalResult mlir::mlirReduceMain(int argc, char **argv,
                                    MLIRContext &context) {
-  // Override the default '-h' and use the default PrintHelpMessage() which
-  // won't print options in categories.
-  static llvm::cl::opt<bool> help("h", llvm::cl::desc("Alias for -help"),
-                                  llvm::cl::Hidden);
-
   static llvm::cl::OptionCategory mlirReduceCategory("mlir-reduce options");
 
   static llvm::cl::opt<std::string> inputFilename(
@@ -76,18 +71,16 @@ LogicalResult mlir::mlirReduceMain(int argc, char **argv,
   llvm::cl::ParseCommandLineOptions(argc, argv,
                                     "MLIR test case reduction tool.\n");
 
-  if (help) {
-    llvm::cl::PrintHelpMessage();
-    return success();
-  }
   if (allowUnregisteredDialects)
     context.allowUnregisteredDialects();
 
   std::string errorMessage;
 
   auto output = openOutputFile(outputFilename, &errorMessage);
-  if (!output)
+  if (!output) {
+    llvm::errs() << errorMessage << "\n";
     return failure();
+  }
 
   std::unique_ptr<llvm::MemoryBuffer> input =
       openInputFile(inputFilename, &errorMessage);

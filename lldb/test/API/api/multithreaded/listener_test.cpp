@@ -43,16 +43,16 @@ void test(SBDebugger &dbg, std::vector<string> args) {
     if (!breakpoint.IsValid())
       throw Exception("invalid breakpoint");
 
-    std::unique_ptr<char> working_dir(get_working_dir());
+    std::string working_dir = get_working_dir();
 
     SBError error;
     SBProcess process = target.Launch(g_listener, 0, 0, 0, 0, 0,
-                                      working_dir.get(), 0, false, error);
+                                      working_dir.c_str(), 0, false, error);
     if (!error.Success())
       throw Exception("Error launching process.");
 
     /* FIXME: the approach below deadlocks
-    SBProcess process = target.LaunchSimple (0, 0, working_dir.get());
+    SBProcess process = target.LaunchSimple (0, 0, working_dir.c_str());
 
     // get debugger listener (which is attached to process by default)
     g_listener = dbg.GetListener();

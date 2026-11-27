@@ -30,7 +30,11 @@ let Definition = "modulelist", Path = "symbols" in {
   def EnableLLDBIndexCache: Property<"enable-lldb-index-cache", "Boolean">,
     Global,
     DefaultFalse,
-    Desc<"Enable caching for debug sessions in LLDB. LLDB can cache data for each module for improved performance in subsequent debug sessions.">;
+    Desc<"Enable caching for debug sessions in LLDB. LLDB can cache data for each module for improved performance in subsequent debug sessions.  Modules read out of memory are cached (enabled by default) via the symbols.enable-lldb-index-cache-memory-modules setting.">;
+  def EnableLLDBIndexCacheMemoryModules: Property<"enable-lldb-index-cache-memory-modules", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Enable symbol table caching for memory-read binaries. LLDB can cache the symbol table memory-read binaries, for improved performance in subsequent debug sessions.">;
   def LLDBIndexCachePath: Property<"lldb-index-cache-path", "FileSpec">,
     Global,
     DefaultStringValue<"">,
@@ -51,6 +55,17 @@ let Definition = "modulelist", Path = "symbols" in {
     Global,
     DefaultFalse,
     Desc<"Enable on demand symbol loading in LLDB. LLDB will load debug info on demand for each module based on various conditions (e.g. matched breakpoint, resolved stack frame addresses and matched global variables/function symbols in symbol table) to improve performance. Please refer to docs/use/ondemand.rst for details.">;
+  def DemangledNameInfoCacheSize: Property<"demangled-name-info-cache-size", "UInt64">,
+    Global,
+    DefaultUnsignedValue<4096>,
+    Desc<"The maximum number of formatted function names to cache. A value of 0 disables the cache.">;
+}
+
+let Definition = "modulelist_experimental", Path = "symbols.experimental" in {
+  def EnableTypeSystemClike: Property<"enable-typesystem-clike", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"Use TypeSystemClike to model C/C++/Objective-C types in LLDB.">;
 }
 
 let Definition = "diagnostics", Path = "diagnostics" in {
@@ -58,6 +73,10 @@ let Definition = "diagnostics", Path = "diagnostics" in {
     Global,
     DefaultFalse,
     Desc<"When enabled, a diagnostics bundle also collects the main executable, its symbol file, and the core file (when debugging one) to help reproduce the bug. These files can be large and may contain sensitive data (a core file captures process memory), so this is off by default.">;
+  def SuggestBugReport: Property<"suggest-bugreport", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Follow errors that may be bugs in LLDB with a note suggesting the 'bugreport' command.">;
 }
 
 #ifndef NDEBUG
@@ -71,6 +90,13 @@ let Definition = "testing", Path = "testing" in {
                           DefaultStringValue<"">,
                           Desc<"List of paths that LLDB will automatically "
                                "load scripting resources from.">;
+  def DeprecatedSetting : Property<"deprecated-setting", "Boolean">,
+                          Global,
+                          DefaultFalse,
+                          Deprecated<"there is no replacement for this "
+                                     "setting">,
+                          Desc<"Used for testing LLDB only. This setting has "
+                               "no effect.">;
 }
 #endif
 
@@ -206,6 +232,30 @@ let Definition = "debugger", Path = "" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying progress in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the progress message.">;
+  def LabelAnsiPrefix: Property<"label-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.green}${ansi.bold}">,
+    Desc<"When displaying a field label in command output in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the label.">;
+  def LabelAnsiSuffix: Property<"label-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying a field label in command output in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the label.">;
+  def TitleAnsiPrefix: Property<"title-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.fg.cyan}${ansi.bold}">,
+    Desc<"When displaying the title of an entry in a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the title.">;
+  def TitleAnsiSuffix: Property<"title-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying the title of an entry in a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the title.">;
+  def DividerAnsiPrefix: Property<"divider-ansi-prefix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.faint}">,
+    Desc<"When displaying the divider between entries of a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the divider.">;
+  def DividerAnsiSuffix: Property<"divider-ansi-suffix", "String">,
+    Global,
+    DefaultStringValue<"${ansi.normal}">,
+    Desc<"When displaying the divider between entries of a list in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the divider.">;
   def ShowStatusline: Property<"show-statusline", "Boolean">,
     Global,
     DefaultTrue,

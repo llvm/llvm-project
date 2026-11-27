@@ -19,15 +19,18 @@ namespace bolt {
 const char *const AddressMap::AddressSectionName = ".bolt.addr2addr_map";
 const char *const AddressMap::LabelSectionName = ".bolt.label2addr_map";
 
+constexpr size_t MapValueSize = 8;
+constexpr size_t MapEntrySize = 2 * MapValueSize;
+
 static void emitAddress(MCStreamer &Streamer, uint64_t InputAddress,
                         const MCSymbol *OutputLabel) {
-  Streamer.emitIntValue(InputAddress, 8);
-  Streamer.emitSymbolValue(OutputLabel, 8);
+  Streamer.emitIntValue(InputAddress, MapValueSize);
+  Streamer.emitSymbolValue(OutputLabel, MapValueSize);
 }
 
 static void emitLabel(MCStreamer &Streamer, const MCSymbol *OutputLabel) {
-  Streamer.emitIntValue(reinterpret_cast<uint64_t>(OutputLabel), 8);
-  Streamer.emitSymbolValue(OutputLabel, 8);
+  Streamer.emitIntValue(reinterpret_cast<uint64_t>(OutputLabel), MapValueSize);
+  Streamer.emitSymbolValue(OutputLabel, MapValueSize);
 }
 
 void AddressMap::emit(MCStreamer &Streamer, BinaryContext &BC) {
@@ -70,20 +73,22 @@ std::optional<AddressMap> AddressMap::parse(BinaryContext &BC) {
 
   AddressMap Parsed;
 
-  unsigned CodePointerSize = BC.AsmInfo->getCodePointerSize();
-  const size_t EntrySize = 2 * CodePointerSize;
+  // Entries are emitted as pairs of 64-bit values. In the label map, the
+  // first value is an in-process MCSymbol pointer and is independent of the
+  // target code pointer size.
   auto parseSection =
       [&](BinarySection &Section,
           function_ref<void(uint64_t, uint64_t)> InsertCallback) {
         StringRef Buffer = Section.getOutputContents();
-        assert(Buffer.size() % EntrySize == 0 && "Unexpected address map size");
+        assert(Buffer.size() % MapEntrySize == 0 &&
+               "Unexpected address map size");
 
         DataExtractor DE(Buffer, BC.AsmInfo->isLittleEndian());
         DataExtractor::Cursor Cursor(0);
 
         while (Cursor && !DE.eof(Cursor)) {
-          const uint64_t Input = DE.getUnsigned(Cursor, CodePointerSize);
-          const uint64_t Output = DE.getUnsigned(Cursor, CodePointerSize);
+          const uint64_t Input = DE.getUnsigned(Cursor, MapValueSize);
+          const uint64_t Output = DE.getUnsigned(Cursor, MapValueSize);
           InsertCallback(Input, Output);
         }
 
@@ -93,7 +98,7 @@ std::optional<AddressMap> AddressMap::parse(BinaryContext &BC) {
 
   if (AddressMapSection) {
     Parsed.Address2AddressMap.reserve(AddressMapSection->getOutputSize() /
-                                      EntrySize);
+                                      MapEntrySize);
     parseSection(*AddressMapSection, [&](uint64_t Input, uint64_t Output) {
       if (!Parsed.Address2AddressMap.count(Input))
         Parsed.Address2AddressMap.insert({Input, Output});
@@ -101,7 +106,8 @@ std::optional<AddressMap> AddressMap::parse(BinaryContext &BC) {
   }
 
   if (LabelMapSection) {
-    Parsed.Label2AddrMap.reserve(LabelMapSection->getOutputSize() / EntrySize);
+    Parsed.Label2AddrMap.reserve(LabelMapSection->getOutputSize() /
+                                 MapEntrySize);
     parseSection(*LabelMapSection, [&](uint64_t Input, uint64_t Output) {
       assert(!Parsed.Label2AddrMap.count(
                  reinterpret_cast<const MCSymbol *>(Input)) &&

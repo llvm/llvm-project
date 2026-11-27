@@ -24,8 +24,11 @@
 
 #include <cassert>
 #include <concepts>
+#include <cstddef>
 #include <cstdint> // std::uintptr_t
+#include <limits>
 #include <memory>
+#include <new>
 #include <utility>
 
 #include "operator_hijacker.h"
@@ -36,6 +39,28 @@ template <class T, class ...Args>
 concept CanMakeShared = requires(Args&& ...args) {
   { std::make_shared<T>(std::forward<Args>(args)...) } -> std::same_as<std::shared_ptr<T>>;
 };
+
+// Make sure we throw an exception derived from std::bad_alloc when the number of bytes to
+// allocate isn't representable as a std::size_t.
+template <class Array>
+void check_size_overflow([[maybe_unused]] std::size_t n) {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  try {
+    std::shared_ptr<Array> ptr = std::make_shared<Array>(n);
+    assert(false); // expected an exception to be thrown
+  } catch (std::bad_alloc const&) {
+    // expected
+  }
+
+  try {
+    std::remove_extent_t<Array> init{};
+    std::shared_ptr<Array> ptr = std::make_shared<Array>(n, init);
+    assert(false); // expected an exception to be thrown
+  } catch (std::bad_alloc const&) {
+    // expected
+  }
+#endif
+}
 
 int main(int, char**) {
   // Check behavior for a zero-sized array
@@ -432,6 +457,47 @@ int main(int, char**) {
     static_assert( CanMakeShared<T[], std::size_t>);
     static_assert( CanMakeShared<T[], std::size_t, T>);
     static_assert(!CanMakeShared<T[], std::size_t, T, int>); // too many arguments
+  }
+
+  // Check that requesting a number of elements that overflows the computation of the allocation
+  // size is diagnosed instead of leading to an undersized allocation.
+  {
+    constexpr std::size_t max = std::numeric_limits<std::size_t>::max();
+    check_size_overflow<char[]>(max);
+    check_size_overflow<int[]>(max);
+    check_size_overflow<int[]>(max / sizeof(int) + 2);
+    check_size_overflow<int[][3]>(max / sizeof(int[3]) + 2);
+  }
+
+  // Check that we allocate enough memory for large objects
+  {
+    struct Large {
+      char data[1024 * 1024];
+    };
+    constexpr std::size_t n = 2;
+    {
+      std::shared_ptr<Large[]> ptr = std::make_shared<Large[]>(n);
+      assert(ptr != nullptr);
+      for (std::size_t i = 0; i < n; ++i) {
+        assert(ptr[i].data[0] == 0);
+        assert(ptr[i].data[sizeof(Large) - 1] == 0);
+        ptr[i].data[0]                 = 1;
+        ptr[i].data[sizeof(Large) - 1] = 2;
+        assert(ptr[i].data[0] == 1);
+        assert(ptr[i].data[sizeof(Large) - 1] == 2);
+      }
+    }
+    {
+      auto init                     = std::make_unique<Large>();
+      init->data[0]                 = 3;
+      init->data[sizeof(Large) - 1] = 4;
+      std::shared_ptr<Large[]> ptr  = std::make_shared<Large[]>(n, *init);
+      assert(ptr != nullptr);
+      for (std::size_t i = 0; i < n; ++i) {
+        assert(ptr[i].data[0] == 3);
+        assert(ptr[i].data[sizeof(Large) - 1] == 4);
+      }
+    }
   }
 
   return 0;

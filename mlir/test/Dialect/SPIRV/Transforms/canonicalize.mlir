@@ -521,6 +521,18 @@ func.func @smulextended_x_0(%arg0 : i32) -> !spirv.struct<(i32, i32)> {
   return %0 : !spirv.struct<(i32, i32)>
 }
 
+// CHECK-LABEL: @smulextended_x_1
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @smulextended_x_1(%arg0 : i32) -> !spirv.struct<(i32, i32)> {
+  // CHECK: %[[C0:.*]] = spirv.Constant 0
+  // CHECK: %[[RET:.*]] = spirv.CompositeConstruct %[[ARG]], %[[C0]]
+  %c0 = spirv.Constant 1 : i32
+  %0 = spirv.SMulExtended %arg0, %c0 : !spirv.struct<(i32, i32)>
+
+  // CHECK: return %[[RET]]
+  return %0 : !spirv.struct<(i32, i32)>
+}
+
 // CHECK-LABEL: @const_fold_scalar_smulextended
 func.func @const_fold_scalar_smulextended() -> (!spirv.struct<(i32, i32)>, !spirv.struct<(i32, i32)>) {
   %c5 = spirv.Constant 5 : i32
@@ -2539,6 +2551,32 @@ func.func @cannot_canonicalize_selection_op_4(%cond: i1) -> () {
   ^else:
     // CHECK: spirv.Store "Function" %[[DST_VAR]], %[[SRC_VALUE_1]] ["Aligned", 8] : vector<3xi32>
     spirv.Store "Function" %3, %2 ["Aligned", 8] : vector<3xi32>
+    spirv.Branch ^merge
+
+  ^merge:
+    spirv.mlir.merge
+  }
+  spirv.Return
+}
+
+// -----
+
+// CHECK-LABEL: cannot_canonicalize_selection_op_5
+
+// Different value types stored through an untyped pointer.
+func.func @cannot_canonicalize_selection_op_5(%cond: i1, %ptr: !spirv.untyped_ptr<Workgroup>, %f: f32, %i: i32) -> () {
+  // CHECK: spirv.mlir.selection {
+  spirv.mlir.selection {
+    spirv.BranchConditional %cond, ^then, ^else
+
+  ^then:
+    // CHECK: spirv.Store %{{.*}}, %{{.*}} : !spirv.untyped_ptr<Workgroup>, f32
+    spirv.Store %ptr, %f : !spirv.untyped_ptr<Workgroup>, f32
+    spirv.Branch ^merge
+
+  ^else:
+    // CHECK: spirv.Store %{{.*}}, %{{.*}} : !spirv.untyped_ptr<Workgroup>, i32
+    spirv.Store %ptr, %i : !spirv.untyped_ptr<Workgroup>, i32
     spirv.Branch ^merge
 
   ^merge:

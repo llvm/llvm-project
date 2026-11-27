@@ -34,19 +34,19 @@ using namespace lldb_private;
 using namespace lldb_private::formatters;
 
 NSDictionary_Additionals::AdditionalFormatterMatching::Prefix::Prefix(
-    ConstString p)
-    : m_prefix(p) {}
+    std::string p)
+    : m_prefix(std::move(p)) {}
 
 bool NSDictionary_Additionals::AdditionalFormatterMatching::Prefix::Match(
-    ConstString class_name) {
-  return class_name.GetStringRef().starts_with(m_prefix.GetStringRef());
+    llvm::StringRef class_name) {
+  return class_name.starts_with(m_prefix);
 }
 
-NSDictionary_Additionals::AdditionalFormatterMatching::Full::Full(ConstString n)
-    : m_name(n) {}
+NSDictionary_Additionals::AdditionalFormatterMatching::Full::Full(std::string n)
+    : m_name(std::move(n)) {}
 
 bool NSDictionary_Additionals::AdditionalFormatterMatching::Full::Match(
-    ConstString class_name) {
+    llvm::StringRef class_name) {
   return (class_name == m_name);
 }
 
@@ -205,7 +205,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   ValueObjectSP m_pair;
@@ -414,8 +414,7 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
 
   uint64_t value = 0;
 
-  ConstString class_name(descriptor->GetClassName());
-  llvm::StringRef class_name_ref(class_name.GetStringRef());
+  llvm::StringRef class_name(descriptor->GetClassName());
 
   static constexpr llvm::StringLiteral g_DictionaryI("__NSDictionaryI");
   static constexpr llvm::StringLiteral g_DictionaryM("__NSDictionaryM");
@@ -434,11 +433,10 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
   static constexpr llvm::StringLiteral g_ConstantDictionary(
       "NSConstantDictionary");
 
-  if (class_name_ref.empty())
+  if (class_name.empty())
     return false;
 
-  if (class_name_ref == g_DictionaryI ||
-      class_name_ref == g_DictionaryMImmutable) {
+  if (class_name == g_DictionaryI || class_name == g_DictionaryMImmutable) {
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
                                                       ptr_size, 0, error);
@@ -446,15 +444,14 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
       return false;
 
     value &= (is_64bit ? ~0xFC00000000000000UL : ~0xFC000000U);
-  } else if (class_name_ref == g_ConstantDictionary) {
+  } else if (class_name == g_ConstantDictionary) {
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(
         valobj_addr + 2 * ptr_size, ptr_size, 0, error);
     if (error.Fail())
       return false;
-  } else if (class_name_ref == g_DictionaryM ||
-             class_name_ref == g_DictionaryMLegacy ||
-             class_name_ref == g_DictionaryMFrozen) {
+  } else if (class_name == g_DictionaryM || class_name == g_DictionaryMLegacy ||
+             class_name == g_DictionaryMFrozen) {
     AppleObjCRuntime *apple_runtime =
         llvm::dyn_cast_or_null<AppleObjCRuntime>(runtime);
     Status error;
@@ -468,13 +465,12 @@ bool lldb_private::formatters::NSDictionarySummaryProvider(
     }
     if (error.Fail())
       return false;
-  } else if (class_name_ref == g_Dictionary1) {
+  } else if (class_name == g_Dictionary1) {
     value = 1;
-  } else if (class_name_ref == g_Dictionary0) {
+  } else if (class_name == g_Dictionary0) {
     value = 0;
-  } else if (class_name_ref == g_DictionaryCF ||
-             class_name_ref == g_DictionaryNSCF ||
-             class_name_ref == g_DictionaryCFRef) {
+  } else if (class_name == g_DictionaryCF || class_name == g_DictionaryNSCF ||
+             class_name == g_DictionaryCFRef) {
     ExecutionContext exe_ctx(process_sp);
     CFBasicHash cfbh;
     if (!cfbh.Update(valobj_addr, exe_ctx))
@@ -527,8 +523,7 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
   if (!descriptor || !descriptor->IsValid())
     return nullptr;
 
-  ConstString class_name(descriptor->GetClassName());
-  llvm::StringRef class_name_ref(class_name.GetStringRef());
+  llvm::StringRef class_name(descriptor->GetClassName());
 
   static constexpr llvm::StringLiteral g_DictionaryI("__NSDictionaryI");
   static constexpr llvm::StringLiteral g_DictionaryM("__NSDictionaryM");
@@ -544,15 +539,14 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
   static constexpr llvm::StringLiteral g_ConstantDictionary(
       "NSConstantDictionary");
 
-  if (class_name_ref.empty())
+  if (class_name.empty())
     return nullptr;
 
-  if (class_name_ref == g_DictionaryI) {
+  if (class_name == g_DictionaryI) {
     return (new NSDictionaryISyntheticFrontEnd(valobj_sp));
-  } else if (class_name_ref == g_ConstantDictionary) {
+  } else if (class_name == g_ConstantDictionary) {
     return (new NSConstantDictionarySyntheticFrontEnd(valobj_sp));
-  } else if (class_name_ref == g_DictionaryM ||
-             class_name_ref == g_DictionaryMFrozen) {
+  } else if (class_name == g_DictionaryM || class_name == g_DictionaryMFrozen) {
     if (runtime->GetFoundationVersion() >= 1437) {
       return (new Foundation1437::NSDictionaryMSyntheticFrontEnd(valobj_sp));
     } else if (runtime->GetFoundationVersion() >= 1428) {
@@ -560,13 +554,12 @@ lldb_private::formatters::NSDictionarySyntheticFrontEndCreator(
     } else {
       return (new Foundation1100::NSDictionaryMSyntheticFrontEnd(valobj_sp));
     }
-  } else if (class_name_ref == g_DictionaryMLegacy) {
+  } else if (class_name == g_DictionaryMLegacy) {
     return (new Foundation1100::NSDictionaryMSyntheticFrontEnd(valobj_sp));
-  } else if (class_name_ref == g_Dictionary1) {
+  } else if (class_name == g_Dictionary1) {
     return (new NSDictionary1SyntheticFrontEnd(valobj_sp));
-  } else if (class_name_ref == g_DictionaryCF ||
-             class_name_ref == g_DictionaryNSCF ||
-             class_name_ref == g_DictionaryCFRef) {
+  } else if (class_name == g_DictionaryCF || class_name == g_DictionaryNSCF ||
+             class_name == g_DictionaryCFRef) {
     return (new NSCFDictionarySyntheticFrontEnd(valobj_sp));
   } else {
     auto &map(NSDictionary_Additionals::GetAdditionalSynthetics());
@@ -654,13 +647,20 @@ lldb_private::formatters::NSDictionaryISyntheticFrontEnd::GetChildAtIndex(
       ProcessSP process_sp = m_exe_ctx_ref.GetProcessSP();
       if (!process_sp)
         return lldb::ValueObjectSP();
-      Status error;
-      key_at_idx = process_sp->ReadPointerFromMemory(key_at_idx, error);
-      if (error.Fail())
+      llvm::Expected<lldb::addr_t> key =
+          process_sp->ReadPointerFromMemory(key_at_idx);
+      if (!key) {
+        llvm::consumeError(key.takeError());
         return lldb::ValueObjectSP();
-      val_at_idx = process_sp->ReadPointerFromMemory(val_at_idx, error);
-      if (error.Fail())
+      }
+      key_at_idx = *key;
+      llvm::Expected<lldb::addr_t> val =
+          process_sp->ReadPointerFromMemory(val_at_idx);
+      if (!val) {
+        llvm::consumeError(val.takeError());
         return lldb::ValueObjectSP();
+      }
+      val_at_idx = *val;
 
       test_idx++;
 
@@ -757,7 +757,6 @@ lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::GetChildAtIndex(
     if (!process_sp)
       return lldb::ValueObjectSP();
 
-    Status error;
     lldb::addr_t key_at_idx = 0, val_at_idx = 0;
 
     uint32_t tries = 0;
@@ -771,12 +770,20 @@ lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::GetChildAtIndex(
       key_at_idx = m_keys_ptr + (test_idx * m_ptr_size);
       val_at_idx = m_values_ptr + (test_idx * m_ptr_size);
 
-      key_at_idx = process_sp->ReadPointerFromMemory(key_at_idx, error);
-      if (error.Fail())
+      llvm::Expected<lldb::addr_t> key =
+          process_sp->ReadPointerFromMemory(key_at_idx);
+      if (!key) {
+        llvm::consumeError(key.takeError());
         return lldb::ValueObjectSP();
-      val_at_idx = process_sp->ReadPointerFromMemory(val_at_idx, error);
-      if (error.Fail())
+      }
+      key_at_idx = *key;
+      llvm::Expected<lldb::addr_t> val =
+          process_sp->ReadPointerFromMemory(val_at_idx);
+      if (!val) {
+        llvm::consumeError(val.takeError());
         return lldb::ValueObjectSP();
+      }
+      val_at_idx = *val;
 
       test_idx++;
 
@@ -860,15 +867,22 @@ lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::Update() {
       valobj_addr + 2 * m_ptr_size, m_ptr_size, 0, error);
   if (error.Fail())
     return lldb::ChildCacheState::eRefetch;
-  m_keys_ptr =
-      process_sp->ReadPointerFromMemory(valobj_addr + 3 * m_ptr_size, error);
-  if (error.Fail())
+  llvm::Expected<lldb::addr_t> keys_ptr =
+      process_sp->ReadPointerFromMemory(valobj_addr + 3 * m_ptr_size);
+  if (!keys_ptr) {
+    llvm::consumeError(keys_ptr.takeError());
     return lldb::ChildCacheState::eRefetch;
-  m_objects_ptr =
-      process_sp->ReadPointerFromMemory(valobj_addr + 4 * m_ptr_size, error);
+  }
+  m_keys_ptr = *keys_ptr;
+  llvm::Expected<lldb::addr_t> objects_ptr =
+      process_sp->ReadPointerFromMemory(valobj_addr + 4 * m_ptr_size);
+  if (!objects_ptr) {
+    llvm::consumeError(objects_ptr.takeError());
+    return lldb::ChildCacheState::eRefetch;
+  }
+  m_objects_ptr = *objects_ptr;
 
-  return error.Success() ? lldb::ChildCacheState::eReuse
-                         : lldb::ChildCacheState::eRefetch;
+  return lldb::ChildCacheState::eReuse;
 }
 
 lldb::ValueObjectSP lldb_private::formatters::
@@ -886,15 +900,20 @@ lldb::ValueObjectSP lldb_private::formatters::
       return lldb::ValueObjectSP();
 
     for (unsigned int child = 0; child < num_children; ++child) {
-      Status error;
-      key_at_idx = process_sp->ReadPointerFromMemory(
-          m_keys_ptr + child * m_ptr_size, error);
-      if (error.Fail())
+      llvm::Expected<lldb::addr_t> key =
+          process_sp->ReadPointerFromMemory(m_keys_ptr + child * m_ptr_size);
+      if (!key) {
+        llvm::consumeError(key.takeError());
         return lldb::ValueObjectSP();
-      val_at_idx = process_sp->ReadPointerFromMemory(
-          m_objects_ptr + child * m_ptr_size, error);
-      if (error.Fail())
+      }
+      key_at_idx = *key;
+      llvm::Expected<lldb::addr_t> val =
+          process_sp->ReadPointerFromMemory(m_objects_ptr + child * m_ptr_size);
+      if (!val) {
+        llvm::consumeError(val.takeError());
         return lldb::ValueObjectSP();
+      }
+      val_at_idx = *val;
       DictionaryItemDescriptor descriptor = {key_at_idx, val_at_idx,
                                              lldb::ValueObjectSP()};
       m_children.push_back(descriptor);
@@ -940,8 +959,9 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
     NSDictionary1SyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp.get()), m_pair(nullptr) {}
 
-llvm::Expected<size_t> lldb_private::formatters::
-    NSDictionary1SyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
+llvm::Expected<size_t>
+lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
+    GetIndexOfChildWithName(llvm::StringRef name) {
   static constexpr llvm::StringLiteral g_zero("[0]");
   if (name == g_zero)
     return 0;
@@ -978,14 +998,18 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::GetChildAtIndex(
       m_backend.GetValueAsUnsigned(LLDB_INVALID_ADDRESS) + ptr_size;
   lldb::addr_t value_ptr = key_ptr + ptr_size;
 
-  Status error;
-
-  lldb::addr_t value_at_idx = process_sp->ReadPointerFromMemory(key_ptr, error);
-  if (error.Fail())
+  llvm::Expected<lldb::addr_t> value_at_idx =
+      process_sp->ReadPointerFromMemory(key_ptr);
+  if (!value_at_idx) {
+    llvm::consumeError(value_at_idx.takeError());
     return nullptr;
-  lldb::addr_t key_at_idx = process_sp->ReadPointerFromMemory(value_ptr, error);
-  if (error.Fail())
+  }
+  llvm::Expected<lldb::addr_t> key_at_idx =
+      process_sp->ReadPointerFromMemory(value_ptr);
+  if (!key_at_idx) {
+    llvm::consumeError(key_at_idx.takeError());
     return nullptr;
+  }
 
   auto pair_type =
       GetLLDBNSPairType(process_sp->GetTarget().shared_from_this());
@@ -994,12 +1018,12 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::GetChildAtIndex(
 
   if (ptr_size == 8) {
     uint64_t *data_ptr = (uint64_t *)buffer_sp->GetBytes();
-    *data_ptr = key_at_idx;
-    *(data_ptr + 1) = value_at_idx;
+    *data_ptr = *key_at_idx;
+    *(data_ptr + 1) = *value_at_idx;
   } else {
     uint32_t *data_ptr = (uint32_t *)buffer_sp->GetBytes();
-    *data_ptr = key_at_idx;
-    *(data_ptr + 1) = value_at_idx;
+    *data_ptr = *key_at_idx;
+    *(data_ptr + 1) = *value_at_idx;
   }
 
   DataExtractor data(buffer_sp, process_sp->GetByteOrder(), ptr_size);
@@ -1105,13 +1129,20 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<
       ProcessSP process_sp = m_exe_ctx_ref.GetProcessSP();
       if (!process_sp)
         return lldb::ValueObjectSP();
-      Status error;
-      key_at_idx = process_sp->ReadPointerFromMemory(key_at_idx, error);
-      if (error.Fail())
+      llvm::Expected<lldb::addr_t> key =
+          process_sp->ReadPointerFromMemory(key_at_idx);
+      if (!key) {
+        llvm::consumeError(key.takeError());
         return lldb::ValueObjectSP();
-      val_at_idx = process_sp->ReadPointerFromMemory(val_at_idx, error);
-      if (error.Fail())
+      }
+      key_at_idx = *key;
+      llvm::Expected<lldb::addr_t> val =
+          process_sp->ReadPointerFromMemory(val_at_idx);
+      if (!val) {
+        llvm::consumeError(val.takeError());
         return lldb::ValueObjectSP();
+      }
+      val_at_idx = *val;
 
       test_idx++;
 
@@ -1241,13 +1272,20 @@ lldb_private::formatters::Foundation1100::
       ProcessSP process_sp = m_exe_ctx_ref.GetProcessSP();
       if (!process_sp)
         return lldb::ValueObjectSP();
-      Status error;
-      key_at_idx = process_sp->ReadPointerFromMemory(key_at_idx, error);
-      if (error.Fail())
+      llvm::Expected<lldb::addr_t> key =
+          process_sp->ReadPointerFromMemory(key_at_idx);
+      if (!key) {
+        llvm::consumeError(key.takeError());
         return lldb::ValueObjectSP();
-      val_at_idx = process_sp->ReadPointerFromMemory(val_at_idx, error);
-      if (error.Fail())
+      }
+      key_at_idx = *key;
+      llvm::Expected<lldb::addr_t> val =
+          process_sp->ReadPointerFromMemory(val_at_idx);
+      if (!val) {
+        llvm::consumeError(val.takeError());
         return lldb::ValueObjectSP();
+      }
+      val_at_idx = *val;
 
       test_idx++;
 

@@ -16,6 +16,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -101,24 +102,23 @@ void SBModuleSpec::SetSymbolFileSpec(const lldb::SBFileSpec &sb_spec) {
 const char *SBModuleSpec::GetObjectName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_up->GetObjectName().GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_up->GetObjectName());
 }
 
 void SBModuleSpec::SetObjectName(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
 
-  m_opaque_up->GetObjectName().SetCString(name);
+  if (!name)
+    m_opaque_up->SetObjectName(std::string());
+  else
+    m_opaque_up->SetObjectName(name);
 }
 
 const char *SBModuleSpec::GetTriple() {
   LLDB_INSTRUMENT_VA(this);
 
   std::string triple(m_opaque_up->GetArchitecture().GetTriple().str());
-  // Unique the string so we don't run into ownership issues since the const
-  // strings put the string into the string pool once and the strings never
-  // comes out
-  ConstString const_triple(triple);
-  return const_triple.GetCString();
+  return StringPool::GetSystemPool().Intern(triple);
 }
 
 void SBModuleSpec::SetTriple(const char *triple) {

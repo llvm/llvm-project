@@ -43,7 +43,7 @@ class TestStopHooks(TestBase):
         self.interp.HandleCommand(command, result)
         self.assertFalse(result.Succeeded(), "Set the target stop hook")
         self.assertIn(
-            "Abstract method no_handle_stop.handle_stop not implemented",
+            "abstract method no_handle_stop.handle_stop not implemented",
             result.GetError(),
             "Got the right error",
         )
@@ -86,8 +86,14 @@ class TestStopHooks(TestBase):
         self.stop_hooks_scripted(5, "-I false")
 
     def test_stop_hooks_scripted_no_entry(self):
-        """Test that a scripted stop hook works with no specifiers"""
-        self.stop_hooks_scripted(10)
+        """Test that a scripted stop hook with no specifiers doesn't run at the
+        launch's entry stop"""
+        self.stop_hooks_scripted(5)
+
+    def test_stop_hooks_scripted_at_initial_stop(self):
+        """Test that --at-initial-stop true runs the stop hook at the launch's
+        entry stop too"""
+        self.stop_hooks_scripted(10, "-I true")
 
     def test_stop_hooks_scripted_right_func(self):
         """Test that a scripted stop hook fires when there is a function match"""

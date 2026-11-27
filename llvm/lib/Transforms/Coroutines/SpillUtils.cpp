@@ -73,7 +73,7 @@ lowerNonLocalAlloca(CoroAllocaAllocInst *AI, const Shape &Shape,
   IRBuilder<> Builder(AI);
   auto Alloc = Shape.emitAlloc(Builder, AI->getSize(), nullptr);
 
-  for (User *U : AI->users()) {
+  for (Instruction *U : AI->users()) {
     if (isa<CoroAllocaGetInst>(U)) {
       U->replaceAllUsesWith(Alloc);
     } else {
@@ -81,7 +81,7 @@ lowerNonLocalAlloca(CoroAllocaAllocInst *AI, const Shape &Shape,
       Builder.SetInsertPoint(FI);
       Shape.emitDealloc(Builder, Alloc, nullptr);
     }
-    DeadInsts.push_back(cast<Instruction>(U));
+    DeadInsts.push_back(U);
   }
 
   // Push this on last so that it gets deleted after all the others.
@@ -271,6 +271,17 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
     handleAlias(ASC);
   }
 
+  // An integer address taken before CoroBegin must be recomputed from the
+  // frame just like a pointer alias, or it keeps the stack address.
+  void visitPtrToIntInst(PtrToIntInst &I) {
+    Base::visitPtrToIntInst(I);
+    handleAlias(I);
+  }
+
+  // Unlike ptrtoint, ptrtoaddr does not capture provenance, so the alloca
+  // cannot be written through it and it is not an escape.
+  void visitPtrToAddrInst(PtrToAddrInst &I) { handleAlias(I); }
+
   void visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     // The base visitor will adjust Offset accordingly.
     Base::visitGetElementPtrInst(GEPI);
@@ -306,7 +317,8 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
 
   bool getMayWriteBeforeCoroBegin() const { return MayWriteBeforeCoroBegin; }
 
-  DenseMap<Instruction *, std::optional<APInt>> getAliasesCopy() const {
+  SmallMapVector<Instruction *, std::optional<APInt>, 4>
+  getAliasesCopy() const {
     assert(getShouldLiveOnFrame() && "This method should only be called if the "
                                      "alloca needs to live on the frame.");
     for (const auto &P : AliasOffetMap)
@@ -323,7 +335,7 @@ private:
   // All alias to the original AllocaInst, created before CoroBegin and used
   // after CoroBegin. Each entry contains the instruction and the offset in the
   // original Alloca. They need to be recreated after CoroBegin off the frame.
-  DenseMap<Instruction *, std::optional<APInt>> AliasOffetMap{};
+  SmallMapVector<Instruction *, std::optional<APInt>, 4> AliasOffetMap{};
   SmallPtrSet<Instruction *, 4> Users{};
   SmallPtrSet<IntrinsicInst *, 2> LifetimeStarts{};
   SmallVector<BasicBlock *> LifetimeStartBBs{};
@@ -491,9 +503,9 @@ void coro::collectSpillsAndAllocasFromInsts(
       // erasing AI.
       auto Alloc = lowerNonLocalAlloca(AI, Shape, DeadInstructions);
 
-      for (User *U : Alloc->users()) {
+      for (Instruction *U : Alloc->users()) {
         if (Checker.isDefinitionAcrossSuspend(*Alloc, U))
-          Spills[Alloc].push_back(cast<Instruction>(U));
+          Spills[Alloc].push_back(U);
       }
       continue;
     }
@@ -507,13 +519,13 @@ void coro::collectSpillsAndAllocasFromInsts(
       continue;
     }
 
-    for (User *U : I.users())
+    for (Instruction *U : I.users())
       if (Checker.isDefinitionAcrossSuspend(I, U)) {
         // We cannot spill a token.
         if (I.getType()->isTokenTy())
           report_fatal_error(
               "token definition is separated from the use by a suspend point");
-        Spills[&I].push_back(cast<Instruction>(U));
+        Spills[&I].push_back(U);
       }
   }
 }
@@ -562,8 +574,7 @@ void coro::sinkSpillUsesAfterCoroBegin(
   // Recursively collect users before coro.begin.
   while (!Worklist.empty()) {
     auto *Def = Worklist.pop_back_val();
-    for (User *U : Def->users()) {
-      auto Inst = cast<Instruction>(U);
+    for (Instruction *Inst : Def->users()) {
       if (Dom.dominates(CoroBegin, Inst))
         continue;
       if (ToMove.insert(Inst))

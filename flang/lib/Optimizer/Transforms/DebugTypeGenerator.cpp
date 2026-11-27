@@ -12,13 +12,15 @@
 
 #define DEBUG_TYPE "flang-debug-type-generator"
 
-#include "DebugTypeGenerator.h"
+#include "flang/Optimizer/Transforms/DebugTypeGenerator.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace fir {
 
@@ -45,9 +47,13 @@ std::uint64_t getComponentOffset<0>(const mlir::DataLayout &dl,
 
 DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m,
                                        mlir::SymbolTable *symbolTable_,
-                                       const mlir::DataLayout &dl)
+                                       const mlir::DataLayout &dl,
+                                       bool boundsInStackSlots_,
+                                       ModuleScopeFn getModuleScope_)
     : module(m), symbolTable(symbolTable_), dataLayout{&dl},
-      kindMapping(getKindMapping(m)), llvmTypeConverter(m, false, false, dl) {
+      boundsInStackSlots(boundsInStackSlots_), kindMapping(getKindMapping(m)),
+      llvmTypeConverter(m, false, false, dl),
+      getModuleScope(std::move(getModuleScope_)) {
   LLVM_DEBUG(llvm::dbgs() << "DITypeAttr generator\n");
 
   mlir::MLIRContext *context = module.getContext();
@@ -80,23 +86,51 @@ static mlir::LLVM::DITypeAttr genBasicType(mlir::MLIRContext *context,
 
 static mlir::StringAttr getBasicTypeName(mlir::MLIRContext *context,
                                          llvm::StringRef baseName,
-                                         unsigned bitSize) {
+                                         unsigned kind) {
   std::ostringstream oss;
-  oss << baseName.str() << "(kind=" << (bitSize / 8) << ")";
+  oss << baseName.str() << "(kind=" << kind << ")";
   return mlir::StringAttr::get(context, oss.str());
 }
 
 static mlir::LLVM::DITypeAttr genPlaceholderType(mlir::MLIRContext *context) {
-  return genBasicType(context, getBasicTypeName(context, "integer", 32),
+  return genBasicType(context, getBasicTypeName(context, "integer", /*kind=*/4),
                       /*bitSize=*/32, llvm::dwarf::DW_ATE_signed);
 }
 
+/// Return a stack slot holding \p val wherever the variable declared by
+/// \p declOp is visible.
+static fir::AllocaOp createBoundSlot(mlir::Value val,
+                                     fir::cg::XDeclareOp declOp) {
+  // Generate the slot and store with UnknownLoc so that they don't impact the
+  // line table.
+  mlir::OpBuilder builder(declOp);
+  mlir::Location loc = builder.getUnknownLoc();
+  builder.setInsertionPointToStart(
+      fir::getAllocaBlock(*declOp->getParentRegion()));
+  fir::AllocaOp slot = fir::AllocaOp::create(builder, loc, val.getType());
+  builder.setInsertionPoint(declOp);
+  fir::StoreOp::create(builder, loc, val, slot);
+  return slot;
+}
+
+bool DebugTypeGenerator::hasBoundSlot(mlir::Value val,
+                                      fir::cg::XDeclareOp declOp) const {
+  auto it = artificialVars.find({val, declOp});
+  return it != artificialVars.end() && it->second.slot;
+}
+
 // Helper function to create DILocalVariableAttr and DbgValueOp when information
-// about the size or dimension of a variable etc lives in an mlir::Value.
+// about the size or dimension of a variable etc lives in an mlir::Value. If the
+// value is kept in a stack slot, the variable describes the slot instead, which
+// holds the value wherever the variable is visible.
 mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
     mlir::MLIRContext *context, mlir::Value val,
     mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DIScopeAttr scope,
     fir::cg::XDeclareOp declOp) {
+  std::pair<mlir::Value, mlir::Operation *> key{val, declOp};
+  if (auto it = artificialVars.find(key); it != artificialVars.end())
+    return it->second.var;
+
   // There can be multiple artificial variable for a single declOp. To help
   // distinguish them, we pad the name with a counter. The counter is the
   // position of 'val' in the operands of declOp.
@@ -107,8 +141,12 @@ mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
   auto name = mlir::StringAttr::get(context, "." + declOp.getUniqName().str() +
                                                  std::to_string(varID));
   builder.setInsertionPoint(declOp);
-  mlir::Type type = val.getType();
-  if (!mlir::isa<mlir::IntegerType>(type) || !type.isSignlessInteger()) {
+  fir::AllocaOp slot;
+  if (boundsInStackSlots)
+    slot = createBoundSlot(val, declOp);
+  mlir::Type type = slot ? slot.getInType() : val.getType();
+  if (!slot &&
+      (!mlir::isa<mlir::IntegerType>(type) || !type.isSignlessInteger())) {
     type = builder.getIntegerType(64);
     val = fir::ConvertOp::create(builder, declOp.getLoc(), type, val);
   }
@@ -116,8 +154,18 @@ mlir::LLVM::DILocalVariableAttr DebugTypeGenerator::generateArtificialVariable(
   auto lvAttr = mlir::LLVM::DILocalVariableAttr::get(
       context, scope, name, fileAttr, /*line=*/0, /*argNo=*/0,
       /*alignInBits=*/0, Ty, mlir::LLVM::DIFlags::Artificial);
-  mlir::LLVM::DbgValueOp::create(builder, declOp.getLoc(), val, lvAttr,
-                                 nullptr);
+  if (slot)
+    fir::cg::XDeclareOp::create(
+        builder, builder.getFusedLoc({declOp.getLoc()}, lvAttr), slot.getType(),
+        slot, /*shape=*/mlir::ValueRange{},
+        /*shift=*/mlir::ValueRange{}, /*typeparams=*/mlir::ValueRange{},
+        /*dummy_scope=*/mlir::Value{}, /*storage=*/mlir::Value{},
+        /*storage_offset=*/0, name, /*data_attr=*/cuf::DataAttributeAttr{},
+        /*dummy_arg_no=*/mlir::IntegerAttr{});
+  else
+    mlir::LLVM::DbgValueOp::create(builder, declOp.getLoc(), val, lvAttr,
+                                   nullptr);
+  artificialVars[key] = {slot, lvAttr};
   return lvAttr;
 }
 
@@ -405,6 +453,38 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   if (nameKind != fir::NameUniquer::NameKind::DERIVED_TYPE)
     return genPlaceholderType(context);
 
+  // A type defined in a module is scoped in that module.
+  if (getModuleScope && sourceName.procs.empty() && !sourceName.modules.empty())
+    scope = getModuleScope(sourceName.modules);
+
+  // The instances of a parameterized type differ only in their kind values,
+  // so those must be part of the name. A debugger can only look up a name made
+  // of identifier characters. Follow gfortran, which names `pdt(4)` `PDTpdt_4`
+  // so that it cannot take the name of a plain type such as `pdt_4`. A negative
+  // value is spelled as in the uniqued name: `PDTpdt_N1` for `pdt(-1)`.
+  std::string name = sourceName.name;
+  if (!sourceName.kinds.empty()) {
+    name = "PDT" + name;
+    llvm::raw_string_ostream os(name);
+    for (std::int64_t kind : sourceName.kinds) {
+      os << '_';
+      if (kind < 0)
+        os << 'N' << -kind;
+      else
+        os << kind;
+    }
+  }
+
+  // The fir.type_info is at the derived type definition, so it names the file
+  // the type is written in. That is not the file being compiled when the
+  // definition was read through an INCLUDE statement. A type with no
+  // fir.type_info carries no position at all, and keeps the compile unit's
+  // file and a line of 1.
+  fir::TypeInfoOp tiOp = symbolTable->lookup<fir::TypeInfoOp>(Ty.getName());
+  unsigned line = (tiOp) ? getLineFromLoc(tiOp.getLoc()) : 1;
+  if (tiOp)
+    fileAttr = fir::getFileAttrFromLoc(tiOp.getLoc(), fileAttr);
+
   llvm::SmallVector<mlir::LLVM::DINodeAttr> elements;
   // Generate a place holder TypeAttr which will be used if a member
   // references the parent type.
@@ -419,15 +499,17 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   DerivedTypeCache::ActiveLevels nestedRecursions =
       derivedTypeCache.startTranslating(Ty, placeHolder);
 
-  fir::TypeInfoOp tiOp = symbolTable->lookup<fir::TypeInfoOp>(Ty.getName());
-  unsigned line = (tiOp) ? getLineFromLoc(tiOp.getLoc()) : 1;
-
   mlir::OpBuilder builder(context);
   mlir::IntegerType intTy = mlir::IntegerType::get(context, 64);
   std::uint64_t offset = 0;
   for (auto [fieldName, fieldTy] : Ty.getTypeList()) {
     derivedTypeCache.preComponentVisitUpdate();
     auto [byteSize, byteAlign] = getFieldSizeAndAlign(fieldTy);
+    // The components of a packed type are not aligned, but each still takes up
+    // its allocation size.
+    std::uint64_t allocSize = llvm::alignTo(byteSize, byteAlign);
+    if (Ty.isPacked())
+      byteAlign = 1;
     std::optional<llvm::ArrayRef<int64_t>> lowerBounds =
         fir::getComponentLowerBoundsIfNonDefault(Ty, fieldName, module,
                                                  symbolTable);
@@ -468,14 +550,18 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
         /*flags=*/mlir::LLVM::DIFlags::Zero,
         /*extra data=*/nullptr);
     elements.push_back(tyAttr);
-    offset += llvm::alignTo(byteSize, byteAlign);
+    offset += allocSize;
     derivedTypeCache.postComponentVisitUpdate(nestedRecursions);
   }
+  // A debugger steps through an array of the type by its size, so the size
+  // must include the padding that keeps the next element aligned. Take it from
+  // the data layout, as for a component.
+  std::uint64_t typeSize = getFieldSizeAndAlign(Ty).first;
 
   auto finalAttr = mlir::LLVM::DICompositeTypeAttr::get(
       context, recId, /*isRecSelf=*/false, llvm::dwarf::DW_TAG_structure_type,
-      mlir::StringAttr::get(context, sourceName.name), fileAttr, line, scope,
-      /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
+      mlir::StringAttr::get(context, name), fileAttr, line, scope,
+      /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, typeSize * 8,
       /*alignInBits=*/0, /*dataLocation=*/nullptr, /*rank=*/nullptr,
       /*allocated=*/nullptr, /*associated=*/nullptr, /*identifier=*/nullptr,
       /*discriminator=*/nullptr, elements);
@@ -516,11 +602,12 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertTupleType(
     offset += llvm::alignTo(byteSize, byteAlign);
     derivedTypeCache.postComponentVisitUpdate(nestedRecursions);
   }
+  std::uint64_t typeSize = getFieldSizeAndAlign(Ty).first;
 
   auto typeAttr = mlir::LLVM::DICompositeTypeAttr::get(
       context, llvm::dwarf::DW_TAG_structure_type,
       mlir::StringAttr::get(context, ""), fileAttr, /*line=*/0, scope,
-      /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
+      /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, typeSize * 8,
       /*alignInBits=*/0, /*dataLocation=*/nullptr, /*rank=*/nullptr,
       /*allocated=*/nullptr, /*associated=*/nullptr, /*identifier=*/nullptr,
       /*discriminator=*/nullptr, elements);
@@ -652,6 +739,13 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     };
     addOp(llvm::dwarf::DW_OP_push_object_address, {});
     addOp(llvm::dwarf::DW_OP_plus_uconst, {lenOffset});
+    uint64_t charBytes = kindMapping.getCharacterBitsize(charTy.getFKind()) / 8;
+    if (charBytes != 1) {
+      addOp(llvm::dwarf::DW_OP_deref, {});
+      addOp(llvm::dwarf::DW_OP_constu, {charBytes});
+      addOp(llvm::dwarf::DW_OP_div, {});
+      addOp(llvm::dwarf::DW_OP_stack_value, {});
+    }
     lenExpr = mlir::LLVM::DIExpressionAttr::get(context, ops);
     ops.clear();
 
@@ -678,14 +772,19 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(
     }
   }
 
-  // FIXME: Currently the DIStringType in llvm does not have the option to set
-  // type of the underlying character. This restricts out ability to represent
-  // string with non-default characters. Please see issue #95440 for more
-  // details.
+  // Set type of the underlying characters in the string
+  unsigned charBitSize = kindMapping.getCharacterBitsize(charTy.getFKind());
+  mlir::LLVM::DITypeAttr charTypeAttr = genBasicType(
+      context,
+      mlir::StringAttr::get(
+          context,
+          getBasicTypeName(context, "character", charTy.getFKind()).getValue()),
+      charBitSize, encoding);
+
   return mlir::LLVM::DIStringTypeAttr::get(
       context, llvm::dwarf::DW_TAG_string_type,
       mlir::StringAttr::get(context, ""), sizeInBits, /*alignInBits=*/0,
-      /*stringLength=*/varAttr, lenExpr, locExpr, encoding);
+      /*stringLength=*/varAttr, lenExpr, locExpr, encoding, charTypeAttr);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertPointerLikeType(
@@ -727,21 +826,25 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
   mlir::MLIRContext *context = module.getContext();
   if (Ty.isInteger()) {
     unsigned bitWidth = Ty.getIntOrFloatBitWidth();
-    return genBasicType(context, getBasicTypeName(context, "integer", bitWidth),
+    return genBasicType(context,
+                        getBasicTypeName(context, "integer", bitWidth / 8),
                         bitWidth, llvm::dwarf::DW_ATE_signed);
   } else if (mlir::isa<mlir::FloatType>(Ty)) {
     unsigned bitWidth = Ty.getIntOrFloatBitWidth();
-    return genBasicType(context, getBasicTypeName(context, "real", bitWidth),
+    unsigned kind = fir::mlirFloatTypeToKind(Ty).value_or(bitWidth / 8);
+    return genBasicType(context, getBasicTypeName(context, "real", kind),
                         bitWidth, llvm::dwarf::DW_ATE_float);
   } else if (auto logTy = mlir::dyn_cast_if_present<fir::LogicalType>(Ty)) {
     unsigned bitWidth = kindMapping.getLogicalBitsize(logTy.getFKind());
     return genBasicType(
-        context, getBasicTypeName(context, logTy.getMnemonic(), bitWidth),
+        context,
+        getBasicTypeName(context, logTy.getMnemonic(), logTy.getFKind()),
         bitWidth, llvm::dwarf::DW_ATE_boolean);
   } else if (auto cplxTy = mlir::dyn_cast_if_present<mlir::ComplexType>(Ty)) {
     auto floatTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
     unsigned bitWidth = floatTy.getWidth();
-    return genBasicType(context, getBasicTypeName(context, "complex", bitWidth),
+    unsigned kind = fir::mlirFloatTypeToKind(floatTy).value_or(bitWidth / 8);
+    return genBasicType(context, getBasicTypeName(context, "complex", kind),
                         bitWidth * 2, llvm::dwarf::DW_ATE_complex_float);
   } else if (auto seqTy = mlir::dyn_cast_if_present<fir::SequenceType>(Ty)) {
     return convertSequenceType(seqTy, fileAttr, scope, declOp);
@@ -788,7 +891,8 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
     return convertVectorType(vecTy, fileAttr, scope, declOp);
   } else if (mlir::isa<mlir::IndexType>(Ty)) {
     unsigned bitWidth = llvmTypeConverter.getIndexTypeBitwidth();
-    return genBasicType(context, getBasicTypeName(context, "integer", bitWidth),
+    return genBasicType(context,
+                        getBasicTypeName(context, "integer", bitWidth / 8),
                         bitWidth, llvm::dwarf::DW_ATE_signed);
   } else if (auto boxTy = mlir::dyn_cast_if_present<fir::BaseBoxType>(Ty)) {
     auto elTy = boxTy.getEleTy();

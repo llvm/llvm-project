@@ -7,6 +7,10 @@
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
 ; RUN:llc -O3 -mtriple=spirv-- -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=SPIRV-Opt %s
+; RUN:llc -O0 -mtriple=spirv-- -enable-new-pm < %s \
+; RUN:   | FileCheck -check-prefix=SPIRV-NPM %s
+; RUN:llc -O3 -mtriple=spirv-- -enable-new-pm < %s \
+; RUN:   | FileCheck -check-prefix=SPIRV-NPM %s
 ; REQUIRES:asserts
 
 ; SPIRV-O0:Target Library Information
@@ -15,8 +19,8 @@
 ; SPIRV-O0-NEXT:Machine Module Information
 ; SPIRV-O0-NEXT:Target Transform Information
 ; SPIRV-O0-NEXT:Library Function Lowering Analysis
-; SPIRV-O0-NEXT:Create Garbage Collector Module Metadata
 ; SPIRV-O0-NEXT:Assumption Cache Tracker
+; SPIRV-O0-NEXT:Create Garbage Collector Module Metadata
 ; SPIRV-O0-NEXT:Machine Branch Probability Analysis
 ; SPIRV-O0-NEXT:  ModulePass Manager
 ; SPIRV-O0-NEXT:    Pre-ISel Intrinsic Lowering
@@ -29,10 +33,12 @@
 ; SPIRV-O0-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; SPIRV-O0-NEXT:      Scalarize Masked Memory Intrinsics
 ; SPIRV-O0-NEXT:      Expand reduction intrinsics
+; SPIRV-O0-NEXT:    SPIRV Lower Resource Names
 ; SPIRV-O0-NEXT:    Expand variadic functions
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      SPIR-V Regularizer
 ; SPIRV-O0-NEXT:    SPIRV lower ctors and dtors
+; SPIRV-O0-NEXT:    SPIRV lower dynamic local memory
 ; SPIRV-O0-NEXT:    SPIRV prepare functions
 ; SPIRV-O0-NEXT:    SPIRV prepare global variables
 ; SPIRV-O0-NEXT:    FunctionPass Manager
@@ -42,7 +48,7 @@
 ; SPIRV-O0-NEXT:      Natural Loop Information
 ; SPIRV-O0-NEXT:      Canonicalize natural loops
 ; SPIRV-O0-NEXT:      Strip convergence intrinsics and operand bundles
-; SPIRV-O0-NEXT:    SPIRV Legalize Implicit Binding
+; SPIRV-O0-NEXT:    SPIRV Legalize Resource Binding
 ; SPIRV-O0-NEXT:    SPIRV Legalize Zero-Size Arrays
 ; SPIRV-O0-NEXT:    SPIRV CBuffer Access
 ; SPIRV-O0-NEXT:    SPIRV push constant Access
@@ -79,6 +85,7 @@
 ; SPIRV-O0-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-O0-NEXT:      Machine Optimization Remark Emitter
 ; SPIRV-O0-NEXT:      Stack Frame Layout Analysis
+; SPIRV-O0-NEXT:      SPIRV prepare module analysis
 ; SPIRV-O0-NEXT:    SPIRV module analysis
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      Lazy Machine Block Frequency Analysis
@@ -110,33 +117,25 @@
 ; SPIRV-Opt-NEXT:      Expand Atomic instructions
 ; SPIRV-Opt-NEXT:      Dominator Tree Construction
 ; SPIRV-Opt-NEXT:      Basic Alias Analysis (stateless AA impl)
-; SPIRV-Opt-NEXT:      Natural Loop Information
-; SPIRV-Opt-NEXT:      Canonicalize natural loops
-; SPIRV-Opt-NEXT:      Scalar Evolution Analysis
-; SPIRV-Opt-NEXT:      Loop Pass Manager
-; SPIRV-Opt-NEXT:        Canonicalize Freeze Instructions in Loops
-; SPIRV-Opt-NEXT:        Induction Variable Users
-; SPIRV-Opt-NEXT:        Loop Strength Reduction
 ; SPIRV-Opt-NEXT:      Lower Garbage Collection Instructions
 ; SPIRV-Opt-NEXT:      Shadow Stack GC Lowering
 ; SPIRV-Opt-NEXT:      Remove unreachable blocks from the CFG
 ; SPIRV-Opt-NEXT:      Cycle Info Analysis
-; SPIRV-Opt-NEXT:      Post-Dominator Tree Construction
-; SPIRV-Opt-NEXT:      Branch Probability Analysis
-; SPIRV-Opt-NEXT:      Block Frequency Analysis
-; SPIRV-Opt-NEXT:      Constant Hoisting
-; SPIRV-Opt-NEXT:      Replace intrinsics with calls to vector library
 ; SPIRV-Opt-NEXT:      Lazy Branch Probability Analysis
 ; SPIRV-Opt-NEXT:      Lazy Block Frequency Analysis
+; SPIRV-Opt-NEXT:      Constant Hoisting
+; SPIRV-Opt-NEXT:      Replace intrinsics with calls to vector library
 ; SPIRV-Opt-NEXT:      Optimization Remark Emitter
 ; SPIRV-Opt-NEXT:      Partially inline calls to library functions
 ; SPIRV-Opt-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; SPIRV-Opt-NEXT:      Scalarize Masked Memory Intrinsics
 ; SPIRV-Opt-NEXT:      Expand reduction intrinsics
+; SPIRV-Opt-NEXT:    SPIRV Lower Resource Names
 ; SPIRV-Opt-NEXT:    Expand variadic functions
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      SPIR-V Regularizer
 ; SPIRV-Opt-NEXT:    SPIRV lower ctors and dtors
+; SPIRV-Opt-NEXT:    SPIRV lower dynamic local memory
 ; SPIRV-Opt-NEXT:    SPIRV prepare functions
 ; SPIRV-Opt-NEXT:    SPIRV prepare global variables
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
@@ -153,7 +152,7 @@
 ; SPIRV-Opt-NEXT:      Natural Loop Information
 ; SPIRV-Opt-NEXT:      Canonicalize natural loops
 ; SPIRV-Opt-NEXT:      Strip convergence intrinsics and operand bundles
-; SPIRV-Opt-NEXT:    SPIRV Legalize Implicit Binding
+; SPIRV-Opt-NEXT:    SPIRV Legalize Resource Binding
 ; SPIRV-Opt-NEXT:    SPIRV Legalize Zero-Size Arrays
 ; SPIRV-Opt-NEXT:    SPIRV CBuffer Access
 ; SPIRV-Opt-NEXT:    SPIRV push constant Access
@@ -193,11 +192,9 @@
 ; SPIRV-Opt-NEXT:      Remove dead machine instructions
 ; SPIRV-Opt-NEXT:      MachineDominator Tree Construction
 ; SPIRV-Opt-NEXT:      Machine Natural Loop Construction
-; SPIRV-Opt-NEXT:      Machine Cycle Info Analysis
-; SPIRV-Opt-NEXT:      Machine Block Frequency Analysis
+; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Register Class Info Analysis
 ; SPIRV-Opt-NEXT:      Early Machine Loop Invariant Code Motion
-; SPIRV-Opt-NEXT:      MachineDominator Tree Construction
 ; SPIRV-Opt-NEXT:      Machine Cycle Info Analysis
 ; SPIRV-Opt-NEXT:      Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Common Subexpression Elimination
@@ -219,12 +216,20 @@
 ; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Optimization Remark Emitter
 ; SPIRV-Opt-NEXT:      Stack Frame Layout Analysis
+; SPIRV-Opt-NEXT:      SPIRV prepare module analysis
 ; SPIRV-Opt-NEXT:    SPIRV module analysis
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Optimization Remark Emitter
 ; SPIRV-Opt-NEXT:      SPIRV Assembly Printer
 ; SPIRV-Opt-NEXT:      Free MachineFunction
+
+; SPIRV-NPM:OpCapability Linkage
+; SPIRV-NPM:OpName %[[#FN:]] "empty"
+; SPIRV-NPM:%[[#VOID:]] = OpTypeVoid
+; SPIRV-NPM:%[[#FN]] = OpFunction %[[#VOID]] None %[[#]]
+; SPIRV-NPM:OpReturn
+; SPIRV-NPM:OpFunctionEnd
 
 define void @empty() {
   ret void

@@ -75,6 +75,14 @@ struct UnrollVectorOptions {
     traversalOrderCallback = std::move(traversalOrderFn);
     return *this;
   }
+
+  /// Unrolling order for ContractionOp. In general, this could be used by
+  /// any other Op, but in practice it isn't and the name reflects that.
+  /// The user is responsible for making sure that the number of indices
+  /// matches the number of loops to be unrolled.
+  SmallVector<int64_t> unrollOrderForContractOp = {};
+  /// Controls whether to reverse the unrolling order.
+  bool reverseDefaultTraversalOrder = false;
 };
 
 /// Canonicalization of a `vector.contract %a, %b, %c` with row-major matmul
@@ -100,8 +108,13 @@ void populateVectorContractCanonicalizeMatmulToMMT(
 
 /// Collect patterns to convert reduction op to vector.contract and fold
 /// transpose/broadcast ops into the contract.
-void populateVectorReductionToContractPatterns(RewritePatternSet &patterns,
-                                               PatternBenefit benefit = 1);
+///
+/// The new contract keeps only the fast-math flags that both the multiply and
+/// the reduction carry. If `allowFastMathFlagLoss` is false, a multiply and a
+/// reduction with different flags are not converted, so no flag is lost.
+void populateVectorReductionToContractPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit = 1,
+    bool allowFastMathFlagLoss = true);
 
 /// Populate `patterns` with the following patterns.
 ///
@@ -121,7 +134,7 @@ void populateVectorReductionToContractPatterns(RewritePatternSet &patterns,
 ///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view : compatibleMemRefType, index, index
 ///    } else {
-///      // slow path, not in-bounds vector.transfer or linalg.copy.
+///      // slow path, not in-bounds vector.transfer or memref.copy.
 ///      memref.cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4 : compatibleMemRefType, index, index
 //     }
@@ -330,6 +343,12 @@ SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
 
 /// Unrolls 2 or more dimensional `vector.to_elements` ops by unrolling the
 /// outermost dimension of the operand.
+void populateVectorContractUnrollPatterns(RewritePatternSet &patterns,
+                                          const UnrollVectorOptions &options,
+                                          PatternBenefit benefit = 1);
+
+/// Unrolls 2 or more dimensional `vector.to_elements` ops by unrolling the
+/// outermost dimension of the operand.
 void populateVectorToElementsUnrollPatterns(RewritePatternSet &patterns,
                                             PatternBenefit benefit = 1);
 
@@ -443,6 +462,12 @@ void populateVectorTransposeNarrowTypeRewritePatterns(
 /// conversions for linearizing scf/cf/func operations
 void populateForVectorLinearize(TypeConverter &typeConverter,
                                 ConversionTarget &conversionTarget);
+
+/// Extends `conversionTarget` so that ops whose inner-most vector dimension is
+/// at least `targetBitWidth` bits wide (or has `index` elements) stay legal.
+/// Must be called after `populateForVectorLinearize`.
+void populateVectorLinearizeBitWidthTargetRules(
+    ConversionTarget &conversionTarget, unsigned targetBitWidth);
 
 /// Populates `patterns` for ND vector (N >= 2) linearization. This currently
 /// contains patterns for converting ConstantLike, Vectorizable, and

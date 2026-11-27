@@ -375,11 +375,20 @@ This option is `OFF` if this feature is not supported for the platform.
 : Whether to also copy `libomptest.so` into
 [`CMAKE_INSTALL_PREFIX`][CMAKE_INSTALL_PREFIX] during `ninja install`.
 
+**LIBOMPTEST_USE_SYSTEM_GTEST**: BOOL (default: `OFF`)
+: Build ompTest against the GoogleTest found by `find_package(GTest)` instead
+of the copy vendored by LLVM. Only valid with a GoogleTest built against the
+same C++ standard library and RTTI setting as this build.
+
 
 ### Options for `libompd`
 
 **LIBOMP_OMPD_SUPPORT**:BOOL
-: Enable building the libompd library.
+: Enable building the libompd library. The GDB plugin loads `libompd.so` with
+LLVM Support `DynamicLibrary` (not POSIX `dlopen`). On Linux the plugin's
+RUNPATH includes `$ORIGIN` and the relative path to `CMAKE_INSTALL_LIBDIR`
+so GDB can load LLVM Support without extra `LD_LIBRARY_PATH` when LLVM and
+OpenMP share an install prefix.
 
 **LIBOMPD_LD_STD_FLAGS**:STRING
 : Use `-stdlibc++` instead of `-libc++` library for C++.

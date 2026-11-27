@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonRegisterInfo.h"
+#include "HexagonFrameLowering.h"
 #include "HexagonMachineFunctionInfo.h"
 #include "HexagonSubtarget.h"
+#include "HexagonTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -39,14 +41,7 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> FrameIndexSearchRange(
-    "hexagon-frame-index-search-range", cl::init(32), cl::Hidden,
-    cl::desc("Limit on instruction search range in frame index elimination"));
-
-static cl::opt<unsigned> FrameIndexReuseLimit(
-    "hexagon-frame-index-reuse-limit", cl::init(~0), cl::Hidden,
-    cl::desc("Limit on the number of reused registers in frame index "
-    "elimination"));
+extern cl::opt<QFloatMode> QFloatModeValue;
 
 HexagonRegisterInfo::HexagonRegisterInfo(unsigned HwMode)
     : HexagonGenRegisterInfo(Hexagon::R31, 0/*DwarfFlavor*/, 0/*EHFlavor*/,
@@ -128,6 +123,15 @@ HexagonRegisterInfo::getCallerSavedRegs(const MachineFunction *MF,
   return Empty;
 }
 
+// Returns true if MF takes HLX arguments or returns an HLX type.
+static bool hasHLXSignature(const MachineFunction &MF) {
+  const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  const Function &F = MF.getFunction();
+  return HST.isTypeForHLX(F.getReturnType()) ||
+         any_of(F.args(), [&HST](const Argument &A) {
+           return HST.isTypeForHLX(A.getType());
+         });
+}
 
 const MCPhysReg *
 HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
@@ -148,18 +152,55 @@ HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
   bool HasEHReturn = MF->getInfo<HexagonMachineFunctionInfo>()->hasEHReturn();
 
+  if (hasHLXSignature(*MF))
+    return HasEHReturn ? HexagonCSR_HLX_EH_SaveList : HexagonCSR_HLX_SaveList;
   return HasEHReturn ? CalleeSavedRegsV3EHReturn : CalleeSavedRegsV3;
 }
-
 
 const uint32_t *HexagonRegisterInfo::getCallPreservedMask(
       const MachineFunction &MF, CallingConv::ID) const {
   return HexagonCSR_RegMask;
 }
 
+const uint32_t *HexagonRegisterInfo::getHLXCallPreservedMask() const {
+  return HexagonCSR_HLX_RegMask;
+}
 
-BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
-      const {
+BitVector
+HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
+  BitVector Reserved = getBaseReservedRegs(MF);
+  if (Register AP = computeStackAlignBaseRegister(MF, Reserved)) {
+    Reserved.set(AP);
+    markSuperRegs(Reserved, AP);
+  }
+  return Reserved;
+}
+
+Register HexagonRegisterInfo::computeStackAlignBaseRegister(
+    const MachineFunction &MF) const {
+  return computeStackAlignBaseRegister(MF, getBaseReservedRegs(MF));
+}
+
+Register HexagonRegisterInfo::computeStackAlignBaseRegister(
+    const MachineFunction &MF, const BitVector &BaseReservedRegs) const {
+  auto &HFI = *MF.getSubtarget<HexagonSubtarget>().getFrameLowering();
+  if (!HFI.needsAligna(MF))
+    return Register();
+
+  // Reserve the first non-volatile register.
+  Register AP;
+  for (const MCPhysReg *R = getCalleeSavedRegs(&MF); *R; ++R) {
+    if (BaseReservedRegs[*R])
+      continue;
+    AP = *R;
+    break;
+  }
+  assert(AP.isValid() && "Couldn't reserve stack align register");
+  return AP;
+}
+
+BitVector
+HexagonRegisterInfo::getBaseReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   Reserved.set(Hexagon::R29);
   Reserved.set(Hexagon::R30);
@@ -182,14 +223,14 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   Reserved.set(Hexagon::PC);          // C9
   Reserved.set(Hexagon::UGP);         // C10
   Reserved.set(Hexagon::GP);          // C11
-  Reserved.set(Hexagon::CS0);         // C12
-  Reserved.set(Hexagon::CS1);         // C13
   Reserved.set(Hexagon::UPCYCLELO);   // C14
   Reserved.set(Hexagon::UPCYCLEHI);   // C15
   Reserved.set(Hexagon::FRAMELIMIT);  // C16
   Reserved.set(Hexagon::FRAMEKEY);    // C17
   Reserved.set(Hexagon::PKTCOUNTLO);  // C18
   Reserved.set(Hexagon::PKTCOUNTHI);  // C19
+  Reserved.set(Hexagon::VFRAMELIMIT); // C28
+  Reserved.set(Hexagon::VSP);         // C29
   Reserved.set(Hexagon::UTIMERLO);    // C30
   Reserved.set(Hexagon::UTIMERHI);    // C31
   // Out of the control registers, only C8 is explicitly defined in
@@ -197,6 +238,16 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   // them here as well.
   Reserved.set(Hexagon::C8);
   Reserved.set(Hexagon::USR_OVF);
+
+  // For v79, reserve a vector register to store a vector of zeroes if there
+  // are QFloat-generating instructions in the function in legacy mode. For
+  // non-legacy modes, always reserve V30.
+  const HexagonSubtarget &HST = MF.getSubtarget<HexagonSubtarget>();
+  if (HST.useHVXV79OpsOnly()) {
+    if (QFloatModeValue != QFloatMode::Legacy ||
+        HST.getInstrInfo()->hasQFPInstrs(MF))
+      Reserved.set(Hexagon::V30);
+  }
 
   // Leveraging these registers will require more work to recognize
   // the new semantics posed, Hi/LoVec patterns, etc.
@@ -214,11 +265,6 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
   for (MCPhysReg Reg : RRegs)
     if (MF.getSubtarget().isRegisterReservedByUser(Reg))
       Reserved.set(Reg);
-
-  Register AP =
-      MF.getInfo<HexagonMachineFunctionInfo>()->getStackAlignBaseReg();
-  if (AP.isValid())
-    Reserved.set(AP);
 
   for (int x = Reserved.find_first(); x >= 0; x = Reserved.find_next(x))
     markSuperRegs(Reserved, x);
@@ -246,10 +292,33 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Select the base pointer (BP) and calculate the actual offset from BP
   // to the beginning of the object at index FI.
   int Offset = HFI.getFrameIndexReference(MF, FI, BP).getFixed();
-  // Add the offset from the instruction.
-  int RealOffset = Offset + MI.getOperand(FIOp+1).getImm();
-
   unsigned Opc = MI.getOpcode();
+  bool IsBaseOnlyHLX =
+      Opc == Hexagon::LX_L16b_pseudo || Opc == Hexagon::LX_S16b_pseudo;
+  // Add the offset from the instruction.
+  int RealOffset =
+      Offset + (IsBaseOnlyHLX ? 0 : MI.getOperand(FIOp + 1).getImm());
+
+  if (BP == Hexagon::VSP) {
+    auto &MRI = MF.getRegInfo();
+    Register VSPCopy = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    BuildMI(MB, II, MI.getDebugLoc(), HII.get(Hexagon::A2_tfrcrr), VSPCopy)
+        .addReg(BP);
+    BP = VSPCopy;
+
+    // HLX memory operations take a complete scalar address and do not have an
+    // immediate offset operand. Materialize the VTCM address before replacing
+    // their frame index.
+    if (IsBaseOnlyHLX) {
+      Register Addr = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      BuildMI(MB, II, MI.getDebugLoc(), HII.get(Hexagon::A2_addi), Addr)
+          .addReg(BP)
+          .addImm(RealOffset);
+      MI.getOperand(FIOp).ChangeToRegister(Addr, false, false, true);
+      return false;
+    }
+  }
+
   switch (Opc) {
     case Hexagon::PS_fia:
       MI.setDesc(HII.get(Hexagon::A2_addi));
@@ -262,7 +331,7 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       break;
   }
 
-  if (!HII.isValidOffset(Opc, RealOffset, this)) {
+  if (!HII.isValidOffset(Opc, RealOffset)) {
     // If the offset is not valid, calculate the address in a temporary
     // register and use it with offset 0.
     int InstOffset = 0;
@@ -308,8 +377,9 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // This will give us a chance to avoid creating a new register.
     Register ReuseBP;
 
-    if (ReuseCount < FrameIndexReuseLimit) {
-      unsigned SearchCount = 0, SearchRange = FrameIndexSearchRange;
+    if (ReuseCount < HST.getCLOpts().frame_index_reuse_limit) {
+      unsigned SearchCount = 0,
+               SearchRange = HST.getCLOpts().frame_index_search_range;
       SmallSet<Register,2> SeenVRegs;
       bool PassedCall = false;
       LiveRegUnits Defs(*this), Uses(*this);
@@ -438,6 +508,9 @@ Register HexagonRegisterInfo::getStackRegister() const {
   return Hexagon::R29;
 }
 
+Register HexagonRegisterInfo::getVTCMStackRegister() const {
+  return Hexagon::VSP;
+}
 
 unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
       const TargetRegisterClass &RC, unsigned GenIdx) const {
@@ -450,8 +523,10 @@ unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
   switch (RC.getID()) {
     case Hexagon::CtrRegs64RegClassID:
     case Hexagon::DoubleRegsRegClassID:
+    case Hexagon::CircRegsRegClassID:
       return ISub[GenIdx];
     case Hexagon::HvxWRRegClassID:
+    case Hexagon::HlxLLRRegClassID:
       return VSub[GenIdx];
     case Hexagon::HvxVQRRegClassID:
       return WSub[GenIdx];
@@ -467,9 +542,4 @@ unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
 bool HexagonRegisterInfo::useFPForScavengingIndex(const MachineFunction &MF)
       const {
   return MF.getSubtarget<HexagonSubtarget>().getFrameLowering()->hasFP(MF);
-}
-
-const TargetRegisterClass *
-HexagonRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  return &Hexagon::IntRegsRegClass;
 }

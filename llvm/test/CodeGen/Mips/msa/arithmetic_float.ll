@@ -109,9 +109,9 @@ define void @fma_v4f32(ptr %d, ptr %a, ptr %b,
   ; CHECK-DAG: ld.w [[R3:\$w[0-9]+]], 0($7)
   %4 = tail call <4 x float> @llvm.fma.v4f32 (<4 x float> %1, <4 x float> %2,
                                               <4 x float> %3)
-  ; CHECK-DAG: fmadd.w [[R1]], [[R2]], [[R3]]
+  ; CHECK-DAG: fmadd.w [[R3]], [[R1]], [[R2]]
   store <4 x float> %4, ptr %d
-  ; CHECK-DAG: st.w [[R1]], 0($4)
+  ; CHECK-DAG: st.w [[R3]], 0($4)
 
   ret void
   ; CHECK: .size fma_v4f32
@@ -129,9 +129,9 @@ define void @fma_v2f64(ptr %d, ptr %a, ptr %b,
   ; CHECK-DAG: ld.d [[R3:\$w[0-9]+]], 0($7)
   %4 = tail call <2 x double> @llvm.fma.v2f64 (<2 x double> %1, <2 x double> %2,
                                                <2 x double> %3)
-  ; CHECK-DAG: fmadd.d [[R1]], [[R2]], [[R3]]
+  ; CHECK-DAG: fmadd.d [[R3]], [[R1]], [[R2]]
   store <2 x double> %4, ptr %d
-  ; CHECK-DAG: st.d [[R1]], 0($4)
+  ; CHECK-DAG: st.d [[R3]], 0($4)
 
   ret void
   ; CHECK: .size fma_v2f64
@@ -217,7 +217,7 @@ define void @fabs_v4f32(ptr %c, ptr %a) nounwind {
   %1 = load <4 x float>, ptr %a
   ; CHECK-DAG: ld.w [[R1:\$w[0-9]+]], 0($5)
   %2 = tail call <4 x float> @llvm.fabs.v4f32 (<4 x float> %1)
-  ; CHECK-DAG: fmax_a.w [[R3:\$w[0-9]+]], [[R1]], [[R1]]
+  ; CHECK-DAG: bclri.w [[R3:\$w[0-9]+]], [[R1]], 31
   store <4 x float> %2, ptr %c
   ; CHECK-DAG: st.w [[R3]], 0($4)
 
@@ -231,7 +231,7 @@ define void @fabs_v2f64(ptr %c, ptr %a) nounwind {
   %1 = load <2 x double>, ptr %a
   ; CHECK-DAG: ld.d [[R1:\$w[0-9]+]], 0($5)
   %2 = tail call <2 x double> @llvm.fabs.v2f64 (<2 x double> %1)
-  ; CHECK-DAG: fmax_a.d [[R3:\$w[0-9]+]], [[R1]], [[R1]]
+  ; CHECK-DAG: bclri.d [[R3:\$w[0-9]+]], [[R1]], 63
   store <2 x double> %2, ptr %c
   ; CHECK-DAG: st.d [[R3]], 0($4)
 

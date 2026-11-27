@@ -39,13 +39,17 @@ end program
 
 ! CHECK-NEXT: 'func.func' Pipeline
 ! CHECK-NEXT:   CudaHeapAllocPromotion
-! CHECK-NEXT:   MemoryAllocationOpt
+! CHECK-NEXT:   AllocationPlacement
 
 ! CHECK-NEXT: Inliner
 ! CHECK-NEXT: SimplifyRegionLite
 ! CHECK-NEXT: CSE
 ! CHECK-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! CHECK-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
+
+! CHECK-NEXT: 'func.func' Pipeline
+! CHECK-NEXT:   LoopInvariantCodeMotion
+! CHECK-NEXT:   LoopIdiomRecognize
 
 ! CHECK-NEXT: PolymorphicOpConversion
 ! CHECK-NEXT: 'func.func' Pipeline

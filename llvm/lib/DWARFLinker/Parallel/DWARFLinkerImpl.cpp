@@ -29,10 +29,11 @@ DWARFLinkerImpl::DWARFLinkerImpl(MessageHandlerTy ErrorHandler,
 DWARFLinkerImpl::LinkContext::LinkContext(LinkingGlobalData &GlobalData,
                                           DWARFFile &File, uint64_t ObjFileIdx,
                                           StringMap<uint64_t> &ClangModules,
+                                          uint64_t &ModuleUnitIdx,
                                           std::atomic<size_t> &UniqueUnitID)
     : OutputSections(GlobalData), InputDWARFFile(File),
       ObjectFileIdx(ObjFileIdx), ClangModules(ClangModules),
-      UniqueUnitID(UniqueUnitID) {
+      ModuleUnitIdx(ModuleUnitIdx), UniqueUnitID(UniqueUnitID) {
 
   if (File.Dwarf) {
     if (!File.Dwarf->compile_units().empty())
@@ -49,7 +50,8 @@ DWARFLinkerImpl::LinkContext::LinkContext(LinkingGlobalData &GlobalData,
 void DWARFLinkerImpl::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
                                     CompileUnitHandlerTy OnCUDieLoaded) {
   ObjectContexts.emplace_back(std::make_unique<LinkContext>(
-      GlobalData, File, ObjectContexts.size(), ClangModules, UniqueUnitID));
+      GlobalData, File, FirstObjFileIdx + ObjectContexts.size(), ClangModules,
+      ModuleUnitIdx, UniqueUnitID));
 
   if (ObjectContexts.back()->InputDWARFFile.Dwarf) {
     for (const std::unique_ptr<DWARFUnit> &CU :
@@ -287,10 +289,12 @@ Error DWARFLinkerImpl::validateAndUpdateOptions() {
   return Error::success();
 }
 
-/// Resolve the relative path to a build artifact referenced by DWARF by
-/// applying DW_AT_comp_dir.
-static void resolveRelativeObjectPath(SmallVectorImpl<char> &Buf, DWARFDie CU) {
-  sys::path::append(Buf, dwarf::toString(CU.find(dwarf::DW_AT_comp_dir), ""));
+/// Resolve the relative path to a build artifact referenced by DWARF of \p File
+/// by applying DW_AT_comp_dir.
+static void resolveRelativeObjectPath(SmallVectorImpl<char> &Buf, DWARFDie CU,
+                                      const DWARFFile &File) {
+  sys::path::append(
+      Buf, File.remapPath(dwarf::toStringRef(CU.find(dwarf::DW_AT_comp_dir))));
 }
 
 static uint64_t getDwoId(const DWARFDie &CUDie) {
@@ -315,7 +319,8 @@ remapPath(StringRef Path,
 }
 
 static std::string getPCMFile(const DWARFDie &CUDie,
-                              DWARFLinker::ObjectPrefixMapTy *ObjectPrefixMap) {
+                              DWARFLinker::ObjectPrefixMapTy *ObjectPrefixMap,
+                              const DWARFFile &File) {
   std::string PCMFile = dwarf::toString(
       CUDie.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}), "");
 
@@ -325,7 +330,7 @@ static std::string getPCMFile(const DWARFDie &CUDie,
   if (ObjectPrefixMap)
     PCMFile = remapPath(PCMFile, *ObjectPrefixMap);
 
-  return PCMFile;
+  return File.remapPath(PCMFile);
 }
 
 std::pair<bool, bool> DWARFLinkerImpl::LinkContext::isClangModuleRef(
@@ -377,8 +382,8 @@ std::pair<bool, bool> DWARFLinkerImpl::LinkContext::isClangModuleRef(
 bool DWARFLinkerImpl::LinkContext::registerModuleReference(
     const DWARFDie &CUDie, ObjFileLoaderTy Loader,
     CompileUnitHandlerTy OnCUDieLoaded, unsigned Indent) {
-  std::string PCMFile =
-      getPCMFile(CUDie, GlobalData.getOptions().ObjectPrefixMap);
+  std::string PCMFile = getPCMFile(
+      CUDie, GlobalData.getOptions().ObjectPrefixMap, InputDWARFFile);
   std::pair<bool, bool> IsClangModuleRef =
       isClangModuleRef(CUDie, PCMFile, Indent, false);
 
@@ -413,7 +418,7 @@ Error DWARFLinkerImpl::LinkContext::loadClangModule(
   /// Using a SmallString<0> because loadClangModule() is recursive.
   SmallString<0> Path(GlobalData.getOptions().PrependPath);
   if (sys::path::is_relative(PCMFile))
-    resolveRelativeObjectPath(Path, CUDie);
+    resolveRelativeObjectPath(Path, CUDie, InputDWARFFile);
   sys::path::append(Path, PCMFile);
   // Don't use the cached binary holder because we have no thread-safety
   // guarantee and the lifetime is limited.
@@ -427,6 +432,11 @@ Error DWARFLinkerImpl::LinkContext::loadClangModule(
   auto ErrOrObj = Loader(InputDWARFFile.FileName, Path);
   if (!ErrOrObj)
     return Error::success();
+
+  // The module was built by the same build as the object file referencing it,
+  // so the same prefix map applies.
+  if (!ErrOrObj->PrefixMap)
+    ErrOrObj->PrefixMap = InputDWARFFile.PrefixMap;
 
   std::unique_ptr<CompileUnit> Unit;
   for (const auto &CU : ErrOrObj->Dwarf->compile_units()) {
@@ -470,6 +480,12 @@ Error DWARFLinkerImpl::LinkContext::loadClangModule(
   }
 
   if (Unit) {
+    // Incrementing the shared counter needs no synchronization: reaching this
+    // point requires a loader, and only the serial pass over the object files
+    // supplies one.
+    if (Error E = Unit->setPriority(ModuleUnitObjFileIdx, ModuleUnitIdx++))
+      return E;
+
     ModulesCompileUnits.emplace_back(std::move(Unit));
     // Preload line table, as it can't be loaded asynchronously.
     ModulesCompileUnits.back()->loadLineTable();
@@ -486,13 +502,6 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
   // Preload macro tables, as they can't be loaded asynchronously.
   InputDWARFFile.Dwarf->getDebugMacinfo();
   InputDWARFFile.Dwarf->getDebugMacro();
-
-  // Assign deterministic priorities to module CUs for type DIE allocation.
-  uint64_t LocalCUIdx = 0;
-  for (std::unique_ptr<CompileUnit> &Mod : ModulesCompileUnits) {
-    if (Error E = Mod->setPriority(ObjectFileIdx, LocalCUIdx++))
-      return E;
-  }
 
   // Link modules compile units first.
   parallelForEach(ModulesCompileUnits, [&](std::unique_ptr<CompileUnit> &Mod) {
@@ -516,11 +525,12 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
 
   // Create CompileUnit structures to keep information about source
   // DWARFUnit`s, load line tables.
+  uint64_t LocalCUIdx = 0;
   for (const auto &OrigCU : InputDWARFFile.Dwarf->compile_units()) {
     // Load only unit DIE at this stage.
     auto CUDie = OrigCU->getUnitDIE();
-    std::string PCMFile =
-        getPCMFile(CUDie, GlobalData.getOptions().ObjectPrefixMap);
+    std::string PCMFile = getPCMFile(
+        CUDie, GlobalData.getOptions().ObjectPrefixMap, InputDWARFFile);
 
     // The !isClangModuleRef condition effectively skips over fully resolved
     // skeleton units.
@@ -553,12 +563,12 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
     if (Error Err = finiteLoop([&]() -> Expected<bool> {
           HasNewInterconnectedCUs = false;
 
-          // Load inter-connected units.
+          // Load inter-connected units and find their live roots.
           parallelForEach(CompileUnits, [&](std::unique_ptr<CompileUnit> &CU) {
             if (CU->isInterconnectedCU()) {
               CU->maybeResetToLoadedStage();
               linkSingleCompileUnit(*CU, ArtificialTypeUnit,
-                                    CompileUnit::Stage::Loaded);
+                                    CompileUnit::Stage::LiveRootsCollected);
             }
           });
 
@@ -614,6 +624,12 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
     });
   }
 
+  // The input is unloaded next, while the units are only placed once all the
+  // inputs are linked.
+  for (std::unique_ptr<CompileUnit> &CU : CompileUnits)
+    if (CU->getStage() != CompileUnit::Stage::Skipped)
+      CU->saveRelocations();
+
   if (GlobalData.getOptions().UpdateIndexTablesOnly) {
     // Emit Invariant sections.
 
@@ -650,7 +666,12 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
             // registerModuleReferences doesn't do any new work, but it
             // will collect top-level errors, which are suppressed. Module
             // warnings were already displayed in the first iteration.
-            if (registerModuleReference(
+            //
+            // Runs concurrently, so it must stay a no-op: it may only be
+            // entered when the serial pass in addObjectFile() has already
+            // populated the module map.
+            if (!GlobalData.getOptions().UpdateIndexTablesOnly &&
+                registerModuleReference(
                     CU.getOrigUnit().getUnitDIE(), nullptr,
                     [](const DWARFUnit &) {}, 0))
               CU.setStage(CompileUnit::Stage::PatchesUpdated);
@@ -659,7 +680,12 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
           }
         } break;
 
-        case CompileUnit::Stage::Loaded: {
+        case CompileUnit::Stage::Loaded:
+          CU.collectLiveRoots();
+          CU.setStage(CompileUnit::Stage::LiveRootsCollected);
+          break;
+
+        case CompileUnit::Stage::LiveRootsCollected: {
           // Mark all the DIEs that need to be present in the generated output.
           // If ODR requested, build type names.
           if (!CU.resolveDependenciesAndMarkLiveness(InterCUProcessingStarted,
@@ -716,6 +742,13 @@ void DWARFLinkerImpl::LinkContext::linkSingleCompileUnit(
         case CompileUnit::Stage::Cloned:
           // Update DIEs referencies.
           CU.updateDieRefPatchesWithClonedOffsets();
+
+          // Later than cloning, so that the offsets are final, and no later,
+          // because a unit which got this far can no longer be skipped and have
+          // its section dropped from the output.
+          if (CU.isClangModule())
+            CU.noteModuleAnchors();
+
           CU.setStage(CompileUnit::Stage::PatchesUpdated);
           break;
 
@@ -965,6 +998,8 @@ void DWARFLinkerImpl::glueCompileUnitsAndWriteToTheOutput() {
   // Go through all object files, all compile units and assign
   // offsets to them.
   assignOffsets();
+
+  forEachCompileUnit([&](CompileUnit *CU) { CU->reportUnitOffsets(); });
 
   // Patch size/offsets fields according to the assigned CU offsets.
   patchOffsetsAndSizes();

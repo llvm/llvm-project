@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILRemoveUnusedResources.h"
 #include "DirectX.h"
+#include "MCTargetDesc/DirectXMCOptions.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
@@ -24,21 +24,23 @@
 
 #define DEBUG_TYPE "dxil-remove-unused-resources"
 
-// Hidden option to disable the pass to make it easier to test
-// other passes related to DXIL resources using llc.
-static llvm::cl::opt<bool> DisableDXILRemoveUnusedResources(
-    "disable-dxil-remove-unused-resources",
-    llvm::cl::desc("Disable dxil-remove-unused-resources pass"),
-    llvm::cl::init(false), llvm::cl::Hidden);
-
 using namespace llvm;
 
-// Removes all calls to intrinsics dx_resource_handlefrom{implicit}binding that
+static bool isResourceHandleCreation(Intrinsic::ID ID) {
+  return ID == Intrinsic::dx_resource_handlefrombinding ||
+         ID == Intrinsic::dx_resource_handlefromimplicitbinding ||
+         ID == Intrinsic::dx_resource_handlefromheap;
+}
+
+// Removes all calls to resource handle creation intrinsics that
 // either are not used, or their only use is in a store instruction, which
 // stores the initialized handle into a global variable that does not have
 // external linkage and that is not used anywhere else in the module.
 static bool removeUnusedResources(Function &F) {
-  if (DisableDXILRemoveUnusedResources)
+  if (!F.getContext()
+           .getLibraryOptions()
+           .get<DirectXMCOptions>()
+           .remove_unused_resources)
     return false;
 
   SmallVector<Instruction *> DeadInstr;
@@ -46,9 +48,7 @@ static bool removeUnusedResources(Function &F) {
   for (BasicBlock &BB : make_early_inc_range(F)) {
     for (Instruction &I : BB) {
       if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-        if (II->getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding &&
-            II->getIntrinsicID() !=
-                Intrinsic::dx_resource_handlefromimplicitbinding)
+        if (!isResourceHandleCreation(II->getIntrinsicID()))
           continue;
         if (II->user_empty()) {
           // Initialized handle is not used anywhere.
@@ -87,9 +87,10 @@ static bool removeUnusedResources(Function &F) {
 
   for (auto *Instr : DeadInstr) {
     if (auto *II = dyn_cast<IntrinsicInst>(Instr)) {
-      assert(II->getIntrinsicID() == Intrinsic::dx_resource_handlefrombinding ||
-             II->getIntrinsicID() ==
-                 Intrinsic::dx_resource_handlefromimplicitbinding);
+      assert(isResourceHandleCreation(II->getIntrinsicID()));
+      // A heap resource does not have an associated global variable to remove.
+      if (II->getIntrinsicID() == Intrinsic::dx_resource_handlefromheap)
+        continue;
       const unsigned ResourceNameOpIndex = 4;
       GlobalVariable *ResourceName = dyn_cast_or_null<GlobalVariable>(
           II->getArgOperand(ResourceNameOpIndex));
@@ -106,8 +107,8 @@ static bool removeUnusedResources(Function &F) {
   return true;
 }
 
-PreservedAnalyses DXILRemoveUnusedResources::run(Function &F,
-                                                 FunctionAnalysisManager &AM) {
+PreservedAnalyses
+DXILRemoveUnusedResourcesPass::run(Function &F, FunctionAnalysisManager &AM) {
   removeUnusedResources(F);
   return PreservedAnalyses::all();
 }

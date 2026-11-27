@@ -77,6 +77,10 @@ public:
 
   const char *GetCondition();
 
+  void SetConditionMode(lldb::BreakpointConditionMode mode);
+
+  lldb::BreakpointConditionMode GetConditionMode();
+
   void SetAutoContinue(bool auto_continue);
 
   bool GetAutoContinue();
@@ -184,6 +188,10 @@ private:
 class LLDB_API SBBreakpointList {
 public:
   SBBreakpointList(SBTarget &target);
+
+  SBBreakpointList(const lldb::SBBreakpointList &rhs);
+
+  lldb::SBBreakpointList &operator=(const lldb::SBBreakpointList &rhs);
 
   ~SBBreakpointList();
 

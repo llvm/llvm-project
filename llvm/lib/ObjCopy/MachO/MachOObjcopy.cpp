@@ -11,6 +11,7 @@
 #include "MachOReader.h"
 #include "MachOWriter.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/ObjCopy/MultiFormatConfig.h"
@@ -83,11 +84,21 @@ static Error removeSections(const CommonConfig &Config, Object &Obj) {
   return Obj.removeSections(RemovePred);
 }
 
-static void markSymbols(const CommonConfig &, Object &Obj) {
+static void markSymbols(const CommonConfig &Config, Object &Obj) {
   // Symbols referenced from the indirect symbol table must not be removed.
   for (IndirectSymbolEntry &ISE : Obj.IndirectSymTable.Symbols)
     if (ISE.Symbol)
       (*ISE.Symbol)->Referenced = true;
+
+  // --strip-all removes relocations, so their symbols need not be preserved.
+  if (Config.StripAll)
+    return;
+
+  for (const LoadCommand &LC : Obj.LoadCommands)
+    for (const std::unique_ptr<Section> &Sec : LC.Sections)
+      for (const RelocationInfo &R : Sec->Relocations)
+        if (R.Symbol && *R.Symbol)
+          (*R.Symbol)->Referenced = true;
 }
 
 static void updateAndRemoveSymbols(const CommonConfig &Config,
@@ -336,10 +347,15 @@ static Error addSection(const NewSectionInfo &NewSection, Object &Obj) {
       Obj.NewSectionsContents.save(NewSection.SectionData->getBuffer());
   Sec.Size = Sec.Content.size();
 
-  // Add the a section into an existing segment.
+  // Add a section into an existing segment load command. In MH_OBJECT files,
+  // all sections are in a single LC_SEGMENT/LC_SEGMENT_64 load command, and the
+  // segment name in each section header is the segment that the linker puts
+  // the section into. So for MH_OBJECT files, always add the section to the
+  // first segment load command, which should be the only one.
+  const bool IsObject = Obj.Header.FileType == MachO::MH_OBJECT;
   for (LoadCommand &LC : Obj.LoadCommands) {
     std::optional<StringRef> SegName = LC.getSegmentName();
-    if (SegName && SegName == TargetSegName) {
+    if (SegName && (IsObject || SegName == TargetSegName)) {
       uint64_t Addr = *LC.getSegmentVMAddr();
       for (const std::unique_ptr<Section> &S : LC.Sections)
         Addr = std::max(Addr, S->Addr + S->Size);
@@ -454,8 +470,7 @@ static Error handleArgs(const CommonConfig &Config,
     return createFileError(Config.InputFilename, std::move(E));
 
   // Mark symbols to determine which symbols are still needed.
-  if (Config.StripAll)
-    markSymbols(Config, Obj);
+  markSymbols(Config, Obj);
 
   updateAndRemoveSymbols(Config, MachOConfig, Obj);
 

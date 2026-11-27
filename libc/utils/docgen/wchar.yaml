@@ -1,62 +1,129 @@
+standard: c23
+posix: posix-2024
+c-reference-root: string/wide
+types:
+  FILE:
+    in-latest-posix: ''
+  errno_t:
+    c-definition: K.3.9
+    c-reference: error
+  locale_t:
+    in-latest-posix: ''
+  mbstate_t:
+    c-definition: 7.31.1
+    c-reference: string/multibyte/mbstate_t
+    in-latest-posix: ''
+  rsize_t:
+    c-definition: K.3.9
+    c-reference: error
+  size_t:
+    c-definition: 7.31.1
+    c-reference: types/size_t
+    in-latest-posix: ''
+  struct tm:
+    c-definition: 7.31.1
+    c-reference: chrono/tm
+    in-latest-posix: ''
+  va_list:
+    in-latest-posix: ''
+  wchar_t:
+    c-definition: 7.31.1
+    c-reference: types
+    in-latest-posix: ''
+  wctype_t:
+    in-latest-posix: ''
+  wint_t:
+    c-definition: 7.31.1
+    in-latest-posix: ''
 functions:
   btowc:
     c-definition: 7.31.6.2.1
+    c-reference: string/multibyte/btowc
   fgetwc:
     c-definition: 7.31.3.1
+    c-reference: io/fgetwc
   fgetws:
     c-definition: 7.31.3.2
+    c-reference: io/fgetws
   fputwc:
     c-definition: 7.31.3.3
+    c-reference: io/fputwc
   fputws:
     c-definition: 7.31.3.4
+    c-reference: io/fputws
   fwide:
     c-definition: 7.31.3.5
+    c-reference: io/fwide
   fwprintf:
     c-definition: 7.31.2.2
+    c-reference: io/fwprintf
   fwscanf:
     c-definition: 7.31.2.3
+    c-reference: io/fwscanf
   getwc:
     c-definition: 7.31.3.6
+    c-reference: io/fgetwc
   getwchar:
     c-definition: 7.31.3.7
+    c-reference: io/getwchar
   mbrlen:
     c-definition: 7.31.6.4.2
+    c-reference: string/multibyte/mbrlen
   mbrtowc:
     c-definition: 7.31.6.4.3
+    c-reference: string/multibyte/mbrtowc
   mbsinit:
     c-definition: 7.31.6.3.1
+    c-reference: string/multibyte/mbsinit
   mbsrtowcs:
     c-definition: 7.31.6.5.2
+    c-reference: string/multibyte/mbsrtowcs
   putwc:
     c-definition: 7.31.3.8
+    c-reference: io/fputwc
   putwchar:
     c-definition: 7.31.3.9
+    c-reference: io/putwchar
   swprintf:
     c-definition: 7.31.2.4
+    c-reference: io/fwprintf
   swscanf:
     c-definition: 7.31.2.5
+    c-reference: io/fwscanf
   ungetwc:
     c-definition: 7.31.3.10
+    c-reference: io/ungetwc
   vfwprintf:
     c-definition: 7.31.2.6
+    c-reference: io/vfwprintf
   vfwscanf:
     c-definition: 7.31.2.7
+    c-reference: io/vfwscanf
   vswprintf:
     c-definition: 7.31.2.8
+    c-reference: io/vfwprintf
   vswscanf:
     c-definition: 7.31.2.9
+    c-reference: io/vfwscanf
   vwprintf:
     c-definition: 7.31.2.10
+    c-reference: io/vfwprintf
   vwscanf:
     c-definition: 7.31.2.11
+    c-reference: io/vfwscanf
   wcrtomb:
     c-definition: 7.31.6.4.4
+    c-reference: string/multibyte/wcrtomb
   wcscat:
     c-definition: 7.31.4.4.1
   wcschr:
     c-definition: 7.31.4.6.2
   wcscmp:
     c-definition: 7.31.4.5.2
+  wcscasecmp:
+    in-latest-posix: ''
+  wcsncasecmp:
+    in-latest-posix: ''
   wcscoll:
     c-definition: 7.31.4.5.3
   wcscpy:
@@ -65,6 +132,7 @@ functions:
     c-definition: 7.31.4.6.3
   wcsftime:
     c-definition: 7.31.5.1
+    c-reference: chrono/wcsftime
   wcslen:
     c-definition: 7.31.4.7.1
   wcsncat:
@@ -79,18 +147,23 @@ functions:
     c-definition: 7.31.4.6.5
   wcsrtombs:
     c-definition: 7.31.6.5.3
+    c-reference: string/multibyte/wcsrtombs
   wcsspn:
     c-definition: 7.31.4.6.6
   wcsstr:
     c-definition: 7.31.4.6.7
   wcstod:
     c-definition: 7.31.4.2.2
+    c-reference: string/wide/wcstof
   wcstod128:
     c-definition: 7.31.4.2.3
+    c-reference: string/wide/wcstof
   wcstod32:
     c-definition: 7.31.4.2.3
+    c-reference: string/wide/wcstof
   wcstod64:
     c-definition: 7.31.4.2.3
+    c-reference: string/wide/wcstof
   wcstof:
     c-definition: 7.31.4.2.2
   wcstok:
@@ -99,16 +172,20 @@ functions:
     c-definition: 7.31.4.2.4
   wcstold:
     c-definition: 7.31.4.2.2
+    c-reference: string/wide/wcstof
   wcstoll:
     c-definition: 7.31.4.2.4
+    c-reference: string/wide/wcstol
   wcstoul:
     c-definition: 7.31.4.2.4
   wcstoull:
     c-definition: 7.31.4.2.4
+    c-reference: string/wide/wcstoul
   wcsxfrm:
     c-definition: 7.31.4.5.5
   wctob:
     c-definition: 7.31.6.2.2
+    c-reference: string/multibyte/wctob
   wmemchr:
     c-definition: 7.31.4.6.9
   wmemcmp:
@@ -121,11 +198,58 @@ functions:
     c-definition: 7.31.4.7.2
   wprintf:
     c-definition: 7.31.2.12
+    c-reference: io/fwprintf
   wscanf:
     c-definition: 7.31.2.13
+    c-reference: io/fwscanf
+  mbsnrtowcs:
+    in-latest-posix: ''
+  open_wmemstream:
+    in-latest-posix: ''
+  wcpcpy:
+    in-latest-posix: ''
+  wcpncpy:
+    in-latest-posix: ''
+  wcscasecmp_l:
+    in-latest-posix: ''
+  wcscoll_l:
+    in-latest-posix: ''
+  wcsdup:
+    in-latest-posix: ''
+  wcsftime_l:
+    in-latest-posix: ''
+  wcslcat:
+    in-latest-posix: ''
+  wcslcpy:
+    in-latest-posix: ''
+  wcsncasecmp_l:
+    in-latest-posix: ''
+  wcsnlen:
+    in-latest-posix: ''
+  wcsnrtombs:
+    in-latest-posix: ''
+  wcswidth:
+    in-latest-posix: ''
+  wcsxfrm_l:
+    in-latest-posix: ''
+  wcwidth:
+    in-latest-posix: ''
+  wmempcpy:
+    extension: gnu
 macros:
   WEOF:
     c-definition: 7.31.1
+    in-latest-posix: ''
   __STDC_VERSION_WCHAR_H__:
     c-definition: 7.31.1
 
+  'NULL':
+    c-definition: 7.31.1
+    c-reference: types/NULL
+    in-latest-posix: ''
+  WCHAR_MAX:
+    c-definition: 7.31.1
+    in-latest-posix: ''
+  WCHAR_MIN:
+    c-definition: 7.31.1
+    in-latest-posix: ''

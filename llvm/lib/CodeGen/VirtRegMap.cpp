@@ -64,7 +64,6 @@ INITIALIZE_PASS(VirtRegMapWrapperLegacy, "virtregmap", "Virtual Register Map",
 
 void VirtRegMap::init(MachineFunction &mf) {
   MRI = &mf.getRegInfo();
-  TII = mf.getSubtarget().getInstrInfo();
   TRI = mf.getSubtarget().getRegisterInfo();
   MF = &mf;
 
@@ -226,7 +225,7 @@ class VirtRegRewriter {
 
   void rewrite();
   void addMBBLiveIns();
-  bool readsUndefSubreg(const MachineOperand &MO) const;
+  bool readsUndefSubreg(const MachineInstr &MI, const MachineOperand &MO) const;
   void addLiveInsForSubRanges(const LiveInterval &LI, MCRegister PhysReg) const;
   void handleIdentityCopy(MachineInstr &MI);
   void expandCopyBundle(MachineInstr &MI) const;
@@ -271,7 +270,7 @@ char VirtRegRewriterLegacy::ID = 0;
 
 char &llvm::VirtRegRewriterID = VirtRegRewriterLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(VirtRegRewriterLegacy, "virtregrewriter",
+INITIALIZE_PASS_BEGIN(VirtRegRewriterLegacy, "virt-reg-rewriter",
                       "Virtual Register Rewriter", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
@@ -279,7 +278,7 @@ INITIALIZE_PASS_DEPENDENCY(LiveDebugVariablesWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
-INITIALIZE_PASS_END(VirtRegRewriterLegacy, "virtregrewriter",
+INITIALIZE_PASS_END(VirtRegRewriterLegacy, "virt-reg-rewriter",
                     "Virtual Register Rewriter", false, false)
 
 void VirtRegRewriterLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -462,16 +461,17 @@ void VirtRegRewriter::addMBBLiveIns() {
     MBB.sortUniqueLiveIns();
 }
 
-/// Returns true if the given machine operand \p MO only reads undefined lanes.
-/// The function only works for use operands with a subregister set.
-bool VirtRegRewriter::readsUndefSubreg(const MachineOperand &MO) const {
+/// Returns true if the given machine operand \p MO of \p MI only reads
+/// undefined lanes.  The function only works for use operands with a
+/// subregister set.
+bool VirtRegRewriter::readsUndefSubreg(const MachineInstr &MI,
+                                       const MachineOperand &MO) const {
   // Shortcut if the operand is already marked undef.
   if (MO.isUndef())
     return true;
 
   Register Reg = MO.getReg();
   const LiveInterval &LI = LIS->getInterval(Reg);
-  const MachineInstr &MI = *MO.getParent();
   SlotIndex BaseIndex = LIS->getInstructionIndex(MI);
   // This code is only meant to handle reading undefined subregisters which
   // we couldn't properly detect before.
@@ -697,7 +697,7 @@ void VirtRegRewriter::rewrite() {
             }
           } else {
             if (MO.isUse()) {
-              if (readsUndefSubreg(MO))
+              if (readsUndefSubreg(MI, MO))
                 // We need to add an <undef> flag if the subregister is
                 // completely undefined (and we are not adding super-register
                 // defs).

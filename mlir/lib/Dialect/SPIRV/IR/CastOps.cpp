@@ -15,19 +15,34 @@
 #include "SPIRVOpUtils.h"
 #include "SPIRVParsingUtils.h"
 
+#include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir::spirv::AttrNames;
 
 namespace mlir::spirv {
+LogicalResult BitcastExtractEXTOp::verify() {
+  Type baseType = getBase().getType();
+  Type resultType = getResult().getType();
+  auto baseVector = dyn_cast<VectorType>(baseType);
+  auto resultVector = dyn_cast<VectorType>(resultType);
+  if (!baseVector != !resultVector ||
+      (baseVector &&
+       baseVector.getNumElements() != resultVector.getNumElements()))
+    return emitOpError(
+        "base and result must have the same number of components");
 
-static LogicalResult verifyCastOp(Operation *op,
-                                  bool requireSameBitWidth = true,
-                                  bool skipBitWidthCheck = false) {
-  // Some CastOps have no limit on bit widths for result and operand type.
-  if (skipBitWidthCheck)
-    return success();
+  Type baseElement = getElementTypeOrSelf(baseType);
+  Type resultElement = getElementTypeOrSelf(resultType);
+  if (baseElement.getIntOrFloatBitWidth() <=
+      resultElement.getIntOrFloatBitWidth())
+    return emitOpError(
+        "result components must be narrower than base components");
+  return success();
+}
 
+static FailureOr<std::pair<Type, Type>>
+getCastOpOperandAndResultElementType(Operation *op) {
   Type operandType = op->getOperand(0).getType();
   Type resultType = op->getResult(0).getType();
 
@@ -49,8 +64,26 @@ static LogicalResult verifyCastOp(Operation *op,
             return {operandType, resultType};
           });
 
-  if (!operandElemTy || !resultElemTy)
-    return op->emitOpError("incompatible operand and result types");
+  if (!operandElemTy || !resultElemTy) {
+    op->emitOpError("incompatible operand and result types");
+    return failure();
+  }
+
+  return TypePair{operandElemTy, resultElemTy};
+}
+
+static LogicalResult verifyCastOp(Operation *op,
+                                  bool requireSameBitWidth = true,
+                                  bool skipBitWidthCheck = false) {
+  // Some CastOps have no limit on bit widths for result and operand type.
+  if (skipBitWidthCheck)
+    return success();
+
+  FailureOr<std::pair<Type, Type>> elemTypes =
+      getCastOpOperandAndResultElementType(op);
+  if (failed(elemTypes))
+    return failure();
+  auto [operandElemTy, resultElemTy] = *elemTypes;
 
   unsigned operandTypeBitWidth = operandElemTy.getIntOrFloatBitWidth();
   unsigned resultTypeBitWidth = resultElemTy.getIntOrFloatBitWidth();
@@ -304,7 +337,22 @@ LogicalResult ConvertUToFOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::FConvertOp::verify() {
-  return verifyCastOp(*this, /*requireSameBitWidth=*/false);
+  // The SPIR-V spec requires the component type to differ, not the bit
+  // width: "The component type must not equal the component type in Result
+  // Type." (OpFConvert, section 3.42.11). This allows converting between
+  // same-width encodings such as f16 and bf16.
+  FailureOr<std::pair<Type, Type>> elemTypes =
+      getCastOpOperandAndResultElementType(*this);
+  if (failed(elemTypes))
+    return failure();
+  auto [operandElemTy, resultElemTy] = *elemTypes;
+
+  if (operandElemTy == resultElemTy) {
+    return emitOpError("expected different component types for operand type "
+                       "and result type, but provided ")
+           << operandElemTy << " and " << resultElemTy;
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

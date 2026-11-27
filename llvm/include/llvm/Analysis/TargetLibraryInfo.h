@@ -10,6 +10,7 @@
 #define LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -25,6 +26,23 @@
 namespace llvm {
 
 template <typename T> class ArrayRef;
+
+struct VecDescData {
+  ElementCount VectorizationFactor;
+  bool Masked = false;
+  /// Encoded calling convention: 0 means absent (std::nullopt), otherwise
+  /// stores CallingConv::ID + 1 so an explicit C (0) remains representable.
+  /// TODO: Since C++20 standard becomes default in LLVM we can return back to
+  /// use std::optional<CallingConv::ID> instead of unsigned and value_or()
+  /// in default constructor.
+  unsigned CC = 0;
+
+  constexpr VecDescData() {};
+  constexpr VecDescData(ElementCount VectorizationFactor, bool Masked,
+                        std::optional<CallingConv::ID> Conv)
+      : VectorizationFactor(VectorizationFactor), Masked(Masked),
+        CC(Conv ? static_cast<unsigned>(*Conv) + 1u : 0u) {}
+};
 
 /// Provides info so a possible vectorization of a function can be
 /// computed. Function 'VectorFnName' is equivalent to 'ScalarFnName'
@@ -43,28 +61,25 @@ template <typename T> class ArrayRef;
 /// <scalarname> = the name of the scalar function.
 /// <vectorname> = the name of the vector function.
 class VecDesc {
-  StringRef ScalarFnName;
-  StringRef VectorFnName;
-  ElementCount VectorizationFactor;
-  bool Masked;
-  StringRef VABIPrefix;
-  std::optional<CallingConv::ID> CC;
+  // String 0 is ScalarFnName, 1 is VectorFnName, 2 is VABIPrefix.
+  const EnumString<VecDescData, 3> *Data;
 
 public:
-  VecDesc() = delete;
-  VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
-          ElementCount VectorizationFactor, bool Masked, StringRef VABIPrefix,
-          std::optional<CallingConv::ID> Conv)
-      : ScalarFnName(ScalarFnName), VectorFnName(VectorFnName),
-        VectorizationFactor(VectorizationFactor), Masked(Masked),
-        VABIPrefix(VABIPrefix), CC(Conv) {}
+  VecDesc(const EnumString<VecDescData, 3> &Data) : Data(&Data) {}
 
-  StringRef getScalarFnName() const { return ScalarFnName; }
-  StringRef getVectorFnName() const { return VectorFnName; }
-  ElementCount getVectorizationFactor() const { return VectorizationFactor; }
-  bool isMasked() const { return Masked; }
-  StringRef getVABIPrefix() const { return VABIPrefix; }
-  std::optional<CallingConv::ID> getCallingConv() const { return CC; }
+  StringRef getScalarFnName() const { return Data->name(0); }
+  StringRef getVectorFnName() const { return Data->name(1); }
+  ElementCount getVectorizationFactor() const {
+    return Data->value().VectorizationFactor;
+  }
+  bool isMasked() const { return Data->value().Masked; }
+  StringRef getVABIPrefix() const { return Data->name(2); }
+  std::optional<CallingConv::ID> getCallingConv() const {
+    unsigned CC = Data->value().CC;
+    if (CC == 0)
+      return std::nullopt;
+    return static_cast<CallingConv::ID>(CC - 1);
+  }
 
   /// Returns a vector function ABI variant string on the form:
   ///    _ZGV<isa><mask><vlen><vparams>_<scalarname>(<vectorname>)
@@ -179,7 +194,7 @@ public:
 
   /// Add a set of scalar -> vector mappings, queryable via
   /// getVectorizedFunction and getScalarizedFunction.
-  LLVM_ABI void addVectorizableFunctions(ArrayRef<VecDesc> Fns);
+  LLVM_ABI void addVectorizableFunctions(EnumStrings<VecDescData, 3> Fns);
 
   /// Calls addVectorizableFunctions with a known preset of functions for the
   /// given vector library.
@@ -234,10 +249,6 @@ public:
   void setShouldSignExtI32Return(bool Val) {
     ShouldSignExtI32Return = Val;
   }
-
-  /// Returns the size of the wchar_t type in bytes.
-  /// This queries the 'wchar_size' metadata.
-  LLVM_ABI unsigned getWCharSize(const Module &M) const;
 
   /// Returns the size of the size_t type in bits.
   LLVM_ABI unsigned getSizeTSize(const Module &M) const;
@@ -454,32 +465,15 @@ public:
     return Impl->CustomNames.find(F)->second;
   }
 
-  static void initExtensionsForTriple(bool &ShouldExtI32Param,
-                                      bool &ShouldExtI32Return,
-                                      bool &ShouldSignExtI32Param,
-                                      bool &ShouldSignExtI32Return,
-                                      const Triple &T) {
-    ShouldExtI32Param     = ShouldExtI32Return     = false;
-    ShouldSignExtI32Param = ShouldSignExtI32Return = false;
+  LLVM_ABI static void initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                                   bool &ShouldZExtBoolReturn,
+                                                   const Triple &T);
 
-    // PowerPC64, Sparc64, SystemZ need signext/zeroext on i32 parameters and
-    // returns corresponding to C-level ints and unsigned ints.
-    if (T.isPPC64() || T.getArch() == Triple::sparcv9 ||
-        T.getArch() == Triple::systemz) {
-      ShouldExtI32Param = true;
-      ShouldExtI32Return = true;
-    }
-    // LoongArch, Mips, and riscv64, on the other hand, need signext on i32
-    // parameters corresponding to both signed and unsigned ints.
-    if (T.isLoongArch() || T.isMIPS() || T.isRISCV64()) {
-      ShouldSignExtI32Param = true;
-    }
-    // LoongArch and riscv64 need signext on i32 returns corresponding to both
-    // signed and unsigned ints.
-    if (T.isLoongArch() || T.isRISCV64()) {
-      ShouldSignExtI32Return = true;
-    }
-  }
+  LLVM_ABI static void initExtensionsForTriple(bool &ShouldExtI32Param,
+                                               bool &ShouldExtI32Return,
+                                               bool &ShouldSignExtI32Param,
+                                               bool &ShouldSignExtI32Return,
+                                               const Triple &T);
 
   /// Returns extension attribute kind to be used for i32 parameters
   /// corresponding to C-level int or unsigned int.  May be zeroext, signext,
@@ -496,6 +490,18 @@ private:
   }
 
 public:
+  static Attribute::AttrKind getExtAttrForBoolParam(const Triple &T) {
+    bool ShouldZExtBoolParam, ShouldZExtBoolReturn;
+    initBoolExtensionsForTriple(ShouldZExtBoolParam, ShouldZExtBoolReturn, T);
+    return ShouldZExtBoolParam ? Attribute::ZExt : Attribute::None;
+  }
+
+  static Attribute::AttrKind getExtAttrForI8Param(bool Signed = true) {
+    // Return the extension attributes here even though nothing special is
+    // done in case any target needs something different in the future.
+    return Signed ? Attribute::SExt : Attribute::ZExt;
+  }
+
   static Attribute::AttrKind getExtAttrForI32Param(const Triple &T,
                                                    bool Signed = true) {
     bool ShouldExtI32Param, ShouldExtI32Return;
@@ -554,11 +560,6 @@ public:
       if (auto AK = getExtAttrForI32Return(Signed))
         AL = AL.addRetAttribute(*C, AK);
     return AL;
-  }
-
-  /// \copydoc TargetLibraryInfoImpl::getWCharSize()
-  unsigned getWCharSize(const Module &M) const {
-    return Impl->getWCharSize(M);
   }
 
   /// \copydoc TargetLibraryInfoImpl::getSizeTSize()

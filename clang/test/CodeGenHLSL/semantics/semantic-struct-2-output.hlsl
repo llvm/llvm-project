@@ -14,8 +14,8 @@ struct Output {
 
 // Make sure SV_DispatchThreadID translated into dx.thread.id.
 
-// CHECK-DX: define hidden void @_Z3foo5Input(ptr dead_on_unwind noalias writable sret(%struct.Output) align 1 %agg.result, ptr nofree noundef align 1 dead_on_return dereferenceable(8) %input)
-// CHECK-VK: define hidden spir_func void @_Z3foo5Input(ptr dead_on_unwind noalias writable sret(%struct.Output) align 1 %agg.result, ptr nofree noundef align 1 dead_on_return dereferenceable(8) %input)
+// CHECK-DX: define hidden void @_Z3foo5Input(ptr dead_on_unwind noalias writable sret(%struct.Output) align 1 %agg.result, ptr nofreeobj noundef align 1 dead_on_return dereferenceable(8) %input)
+// CHECK-VK: define hidden spir_func void @_Z3foo5Input(ptr dead_on_unwind noalias writable sret(%struct.Output) align 1 %agg.result, ptr nofreeobj noundef align 1 dead_on_return dereferenceable(8) %input)
 
 // CHECK: %Idx = getelementptr inbounds nuw %struct.Input, ptr %input, i32 0, i32 0
 // CHECK: %[[#tmp:]] = load float, ptr %Idx, align 1

@@ -55,7 +55,7 @@ declare void @llvm.coro.end(ptr, i1, token)
 
 declare noalias ptr @malloc(i32) allockind("alloc,uninitialized") "alloc-family"="malloc"
 declare void @print(i32)
-declare void @free(ptr) willreturn allockind("free") "alloc-family"="malloc"
+declare void @free(ptr allocptr) willreturn allockind("free") "alloc-family"="malloc"
 ; CHECK-LABEL: define ptr @f(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -77,7 +77,7 @@ declare void @free(ptr) willreturn allockind("free") "alloc-family"="malloc"
 ; CHECK-NEXT:    store i32 [[X]], ptr [[X_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    call void @print(i32 0)
 ; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 20
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 ;

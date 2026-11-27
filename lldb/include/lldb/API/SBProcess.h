@@ -199,6 +199,13 @@ public:
 
   size_t ReadMemory(addr_t addr, void *buf, size_t size, lldb::SBError &error);
 
+  /// Read memory that may be in a non-default address space.
+  size_t ReadMemory(SBProcessAddress process_addr, void *buf, size_t size,
+                    lldb::SBError &error);
+
+  /// Resolve an address space name to its id, or LLDB_INVALID_ADDRESS_SPACE_ID.
+  lldb::addr_space_t GetAddressSpaceID(const char *name, lldb::SBError &error);
+
   size_t WriteMemory(addr_t addr, const void *buf, size_t size,
                      lldb::SBError &error);
 

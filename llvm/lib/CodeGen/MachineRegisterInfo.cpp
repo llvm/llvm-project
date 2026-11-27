@@ -11,12 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -626,7 +628,8 @@ void MachineRegisterInfo::disableCalleeSavedRegister(MCRegister Reg) {
   if (!IsUpdatedCSRsInitialized) {
     const MCPhysReg *CSR = TRI->getCalleeSavedRegs(MF);
     for (const MCPhysReg *I = CSR; *I; ++I)
-      UpdatedCSRs.push_back(*I);
+      if (!MF->getSubtarget().isRegisterReservedByUser(*I))
+        UpdatedCSRs.push_back(*I);
 
     // Zero value represents the end of the register list
     // (no more registers should be pushed).
@@ -650,7 +653,7 @@ const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
     if (MF->getSubtarget().isRegisterReservedByUser(Regs[I]))
       MF->getRegInfo().disableCalleeSavedRegister(Regs[I]);
 
-  return Regs;
+  return IsUpdatedCSRsInitialized ? UpdatedCSRs.data() : Regs;
 }
 
 void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {

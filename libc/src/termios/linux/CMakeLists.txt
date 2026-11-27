@@ -10,6 +10,8 @@ add_header_library(
   DEPENDS
     libc.hdr.termios_macros
     libc.hdr.types.speed_t
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -161,4 +163,32 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
     libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  tcgetwinsize
+  SRCS
+    tcgetwinsize.cpp
+  HDRS
+    ../tcgetwinsize.h
+  DEPENDS
+    libc.hdr.sys_ioctl_macros
+    libc.hdr.types.struct_winsize
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
+    libc.src.errno.errno
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  tcsetwinsize
+  SRCS
+    tcsetwinsize.cpp
+  HDRS
+    ../tcsetwinsize.h
+  DEPENDS
+    libc.hdr.sys_ioctl_macros
+    libc.hdr.types.struct_winsize
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
+    libc.src.errno.errno
+    libc.src.__support.macros.config
 )

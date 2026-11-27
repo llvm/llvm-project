@@ -57,6 +57,10 @@ public:
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
 
+  void getMachineOpValueRsrcRegOp(const MCInst &MI, unsigned OpNo, APInt &Op,
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const;
+
   /// Use a fixup to encode the simm16 field for SOPP branch
   ///        instructions.
   void getSOPPBrEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
@@ -66,6 +70,11 @@ public:
   void getSMEMOffsetEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
+
+  /// 24-bit PC-relative byte offset for s_prefetch_inst_pc_rel.
+  void getSMEMOffsetPCRelEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const;
 
   void getSDWASrcEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
                           SmallVectorImpl<MCFixup> &Fixups,
@@ -336,6 +345,9 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
     // which does not have f16 support?
     return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
 
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_FP16:
+    return 255;
+
   case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_BF16:
     // We don't actually need to check Inv2Pi here because BF16 instructions can
@@ -410,7 +422,10 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
       // Matrix B scale operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_scale) &&
       // Matrix B reuse operand reuses op_sel_hi.
-      !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_reuse)) {
+      !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_reuse) &&
+      // Some VOP3P instructions have no op_sel_hi field, and SP3 encodes
+      // those bits as zero.
+      !AMDGPU::hasNoOpSelHi(Opcode)) {
     Encoding |= getImplicitOpSelHiEncoding(Opcode);
   }
 
@@ -426,7 +441,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                            AMDGPU::OpName::srsrc);
     assert(vaddr0 >= 0 && srsrc > vaddr0);
     unsigned NumExtraAddrs = srsrc - vaddr0 - 1;
-    unsigned NumPadding = (-NumExtraAddrs) & 3;
+    unsigned NumPadding = ~(NumExtraAddrs - 1u) & 3;
 
     for (unsigned i = 0; i < NumExtraAddrs; ++i) {
       getMachineOpValue(MI, MI.getOperand(vaddr0 + 1 + i), Encoding, Fixups,
@@ -510,6 +525,23 @@ void AMDGPUMCCodeEmitter::getSMEMOffsetEncoding(
   // VI only supports 20-bit unsigned offsets.
   assert(!AMDGPU::isVI(STI) || isUInt<20>(Offset));
   Op = Offset;
+}
+
+void AMDGPUMCCodeEmitter::getSMEMOffsetPCRelEncoding(
+    const MCInst &MI, unsigned OpNo, APInt &Op,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  if (MO.isExpr()) {
+    // Field is Inst[55:32], so the fixup starts at byte 4. PC-relative
+    // evaluation then yields label - (PC + 4); adjustFixupValue subtracts the
+    // remaining 4 bytes to reach the next instruction.
+    addFixup(Fixups, 4, MO.getExpr(), AMDGPU::fixup_si_smem_pcrel, true);
+    Op = APInt::getZero(96);
+    return;
+  }
+
+  getSMEMOffsetEncoding(MI, OpNo, Op, Fixups, STI);
 }
 
 void AMDGPUMCCodeEmitter::getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
@@ -679,6 +711,22 @@ void AMDGPUMCCodeEmitter::getMachineOpValueT16Lo128(
     return;
   }
   getMachineOpValueCommon(MI, MO, OpNo, Op, Fixups, STI);
+}
+
+// Encode an indexed-resource (rsrcidx) operand into the 9-bit srsrc field:
+// bit 8 selects a VGPR (or AGPR) index register, bit 7 selects a 32-bit SGPR
+// index register, and bits 6-0 hold the register index.
+void AMDGPUMCCodeEmitter::getMachineOpValueRsrcRegOp(
+    const MCInst &MI, unsigned OpNo, APInt &Op,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  bool IsSReg32 =
+      MRI.getRegClass(AMDGPU::SReg_32RegClassID).contains(MO.getReg());
+  unsigned Enc = MRI.getEncodingValue(MO.getReg());
+  unsigned Idx = Enc & AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
+  bool IsVGPROrAGPR =
+      Enc & (AMDGPU::HWEncoding::IS_VGPR | AMDGPU::HWEncoding::IS_AGPR);
+  Op = Idx | IsVGPROrAGPR << 8 | IsSReg32 << 7;
 }
 
 void AMDGPUMCCodeEmitter::getMachineOpValueCommon(

@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -517,86 +519,90 @@ void OrcMips32_Base::writeResolverCode(char *ResolverWorkingMem,
 
   const uint32_t ResolverCode[] = {
       // resolver_entry:
-      0x27bdff98,                    // 0x00: addiu $sp,$sp,-104
-      0xafa20000,                    // 0x04: sw $v0,0($sp)
-      0xafa30004,                    // 0x08: sw $v1,4($sp)
-      0xafa40008,                    // 0x0c: sw $a0,8($sp)
-      0xafa5000c,                    // 0x10: sw $a1,12($sp)
-      0xafa60010,                    // 0x14: sw $a2,16($sp)
-      0xafa70014,                    // 0x18: sw $a3,20($sp)
-      0xafb00018,                    // 0x1c: sw $s0,24($sp)
-      0xafb1001c,                    // 0x20: sw $s1,28($sp)
-      0xafb20020,                    // 0x24: sw $s2,32($sp)
-      0xafb30024,                    // 0x28: sw $s3,36($sp)
-      0xafb40028,                    // 0x2c: sw $s4,40($sp)
-      0xafb5002c,                    // 0x30: sw $s5,44($sp)
-      0xafb60030,                    // 0x34: sw $s6,48($sp)
-      0xafb70034,                    // 0x38: sw $s7,52($sp)
-      0xafa80038,                    // 0x3c: sw $t0,56($sp)
-      0xafa9003c,                    // 0x40: sw $t1,60($sp)
-      0xafaa0040,                    // 0x44: sw $t2,64($sp)
-      0xafab0044,                    // 0x48: sw $t3,68($sp)
-      0xafac0048,                    // 0x4c: sw $t4,72($sp)
-      0xafad004c,                    // 0x50: sw $t5,76($sp)
-      0xafae0050,                    // 0x54: sw $t6,80($sp)
-      0xafaf0054,                    // 0x58: sw $t7,84($sp)
-      0xafb80058,                    // 0x5c: sw $t8,88($sp)
-      0xafb9005c,                    // 0x60: sw $t9,92($sp)
-      0xafbe0060,                    // 0x64: sw $fp,96($sp)
-      0xafbf0064,                    // 0x68: sw $ra,100($sp)
+      0x27bdff98, // 0x00: addiu $sp,$sp,-104
+      0xafa20000, // 0x04: sw $v0,0($sp)
+      0xafa30004, // 0x08: sw $v1,4($sp)
+      0xafa40008, // 0x0c: sw $a0,8($sp)
+      0xafa5000c, // 0x10: sw $a1,12($sp)
+      0xafa60010, // 0x14: sw $a2,16($sp)
+      0xafa70014, // 0x18: sw $a3,20($sp)
+      0xafb00018, // 0x1c: sw $s0,24($sp)
+      0xafb1001c, // 0x20: sw $s1,28($sp)
+      0xafb20020, // 0x24: sw $s2,32($sp)
+      0xafb30024, // 0x28: sw $s3,36($sp)
+      0xafb40028, // 0x2c: sw $s4,40($sp)
+      0xafb5002c, // 0x30: sw $s5,44($sp)
+      0xafb60030, // 0x34: sw $s6,48($sp)
+      0xafb70034, // 0x38: sw $s7,52($sp)
+      0xafa80038, // 0x3c: sw $t0,56($sp)
+      0xafa9003c, // 0x40: sw $t1,60($sp)
+      0xafaa0040, // 0x44: sw $t2,64($sp)
+      0xafab0044, // 0x48: sw $t3,68($sp)
+      0xafac0048, // 0x4c: sw $t4,72($sp)
+      0xafad004c, // 0x50: sw $t5,76($sp)
+      0xafae0050, // 0x54: sw $t6,80($sp)
+      0xafaf0054, // 0x58: sw $t7,84($sp)
+      0xafb80058, // 0x5c: sw $t8,88($sp)
+      0xafb9005c, // 0x60: sw $t9,92($sp)
+      0xafbe0060, // 0x64: sw $fp,96($sp)
+      0xafbf0064, // 0x68: sw $ra,100($sp)
 
       // JIT re-entry ctx addr.
-      0x00000000,                    // 0x6c: lui $a0,ctx
-      0x00000000,                    // 0x70: addiu $a0,$a0,ctx
+      0x00000000, // 0x6c: lui $a0,ctx
+      0x00000000, // 0x70: addiu $a0,$a0,ctx
 
-      0x03e02825,                    // 0x74: move $a1, $ra
-      0x24a5ffec,                    // 0x78: addiu $a1,$a1,-20
+      0x03e02825, // 0x74: move $a1, $ra
+      0x24a5ffec, // 0x78: addiu $a1,$a1,-20
 
       // JIT re-entry fn addr:
-      0x00000000,                    // 0x7c: lui $t9,reentry
-      0x00000000,                    // 0x80: addiu $t9,$t9,reentry
+      0x00000000, // 0x7c: lui $t9,reentry
+      0x00000000, // 0x80: addiu $t9,$t9,reentry
 
-      0x0320f809,                    // 0x84: jalr $t9
-      0x00000000,                    // 0x88: nop
-      0x8fbf0064,                    // 0x8c: lw $ra,100($sp)
-      0x8fbe0060,                    // 0x90: lw $fp,96($sp)
-      0x8fb9005c,                    // 0x94: lw $t9,92($sp)
-      0x8fb80058,                    // 0x98: lw $t8,88($sp)
-      0x8faf0054,                    // 0x9c: lw $t7,84($sp)
-      0x8fae0050,                    // 0xa0: lw $t6,80($sp)
-      0x8fad004c,                    // 0xa4: lw $t5,76($sp)
-      0x8fac0048,                    // 0xa8: lw $t4,72($sp)
-      0x8fab0044,                    // 0xac: lw $t3,68($sp)
-      0x8faa0040,                    // 0xb0: lw $t2,64($sp)
-      0x8fa9003c,                    // 0xb4: lw $t1,60($sp)
-      0x8fa80038,                    // 0xb8: lw $t0,56($sp)
-      0x8fb70034,                    // 0xbc: lw $s7,52($sp)
-      0x8fb60030,                    // 0xc0: lw $s6,48($sp)
-      0x8fb5002c,                    // 0xc4: lw $s5,44($sp)
-      0x8fb40028,                    // 0xc8: lw $s4,40($sp)
-      0x8fb30024,                    // 0xcc: lw $s3,36($sp)
-      0x8fb20020,                    // 0xd0: lw $s2,32($sp)
-      0x8fb1001c,                    // 0xd4: lw $s1,28($sp)
-      0x8fb00018,                    // 0xd8: lw $s0,24($sp)
-      0x8fa70014,                    // 0xdc: lw $a3,20($sp)
-      0x8fa60010,                    // 0xe0: lw $a2,16($sp)
-      0x8fa5000c,                    // 0xe4: lw $a1,12($sp)
-      0x8fa40008,                    // 0xe8: lw $a0,8($sp)
-      0x27bd0068,                    // 0xec: addiu $sp,$sp,104
-      0x0300f825,                    // 0xf0: move $ra, $t8
-      0x03200008,                    // 0xf4: jr $t9
-      0x00000000,                    // 0xf8: move $t9, $v0/v1
+      0x0320f809, // 0x84: jalr $t9
+      0x27bdfff0, // 0x88: addiu $sp,$sp,-16 # delay slot
+      0x27bd0010, // 0x8c: addiu $sp,$sp,16
+      0x8fbf0064, // 0x90: lw $ra,100($sp)
+      0x8fbe0060, // 0x94: lw $fp,96($sp)
+      0x8fb9005c, // 0x98: lw $t9,92($sp)
+      0x8fb80058, // 0x9c: lw $t8,88($sp)
+      0x8faf0054, // 0xa0: lw $t7,84($sp)
+      0x8fae0050, // 0xa4: lw $t6,80($sp)
+      0x8fad004c, // 0xa8: lw $t5,76($sp)
+      0x8fac0048, // 0xac: lw $t4,72($sp)
+      0x8fab0044, // 0xb0: lw $t3,68($sp)
+      0x8faa0040, // 0xb4: lw $t2,64($sp)
+      0x8fa9003c, // 0xb8: lw $t1,60($sp)
+      0x8fa80038, // 0xbc: lw $t0,56($sp)
+      0x8fb70034, // 0xc0: lw $s7,52($sp)
+      0x8fb60030, // 0xc4: lw $s6,48($sp)
+      0x8fb5002c, // 0xc8: lw $s5,44($sp)
+      0x8fb40028, // 0xcc: lw $s4,40($sp)
+      0x8fb30024, // 0xd0: lw $s3,36($sp)
+      0x8fb20020, // 0xd4: lw $s2,32($sp)
+      0x8fb1001c, // 0xd8: lw $s1,28($sp)
+      0x8fb00018, // 0xdc: lw $s0,24($sp)
+      0x8fa70014, // 0xe0: lw $a3,20($sp)
+      0x8fa60010, // 0xe4: lw $a2,16($sp)
+      0x8fa5000c, // 0xe8: lw $a1,12($sp)
+      0x8fa40008, // 0xec: lw $a0,8($sp)
+      0x27bd0068, // 0xf0: addiu $sp,$sp,104
+      0x0300f825, // 0xf4: move $ra, $t8
+      0x00000000, // 0xf8: move $t9, $v0/v1
+      0x03200008, // 0xfc: jr $t9
+      0x00000000, // 0x100: nop
   };
 
   const unsigned ReentryFnAddrOffset = 0x7c;   // JIT re-entry fn addr lui
   const unsigned ReentryCtxAddrOffset = 0x6c;  // JIT re-entry context addr lui
-  const unsigned Offsett = 0xf8;
+  const unsigned MoveLandingAddrOffset = 0xf8;
 
+  static_assert(sizeof(ResolverCode) == ResolverCodeSize);
   memcpy(ResolverWorkingMem, ResolverCode, sizeof(ResolverCode));
 
   // Depending on endian return value will be in v0 or v1.
   uint32_t MoveVxT9 = isBigEndian ? 0x0060c825 : 0x0040c825;
-  memcpy(ResolverWorkingMem + Offsett, &MoveVxT9, sizeof(MoveVxT9));
+  memcpy(ResolverWorkingMem + MoveLandingAddrOffset, &MoveVxT9,
+         sizeof(MoveVxT9));
 
   uint32_t ReentryCtxLUi =
       0x3c040000 | (((ReentryCtxAddr.getValue() + 0x8000) >> 16) & 0xFFFF);
@@ -692,89 +698,91 @@ void OrcMips64::writeResolverCode(char *ResolverWorkingMem,
                                   ExecutorAddr ReentryCtxAddr) {
 
   const uint32_t ResolverCode[] = {
-       //resolver_entry:
-      0x67bdff30,                     // 0x00: daddiu $sp,$sp,-208
-      0xffa20000,                     // 0x04: sd v0,0(sp)
-      0xffa30008,                     // 0x08: sd v1,8(sp)
-      0xffa40010,                     // 0x0c: sd a0,16(sp)
-      0xffa50018,                     // 0x10: sd a1,24(sp)
-      0xffa60020,                     // 0x14: sd a2,32(sp)
-      0xffa70028,                     // 0x18: sd a3,40(sp)
-      0xffa80030,                     // 0x1c: sd a4,48(sp)
-      0xffa90038,                     // 0x20: sd a5,56(sp)
-      0xffaa0040,                     // 0x24: sd a6,64(sp)
-      0xffab0048,                     // 0x28: sd a7,72(sp)
-      0xffac0050,                     // 0x2c: sd t0,80(sp)
-      0xffad0058,                     // 0x30: sd t1,88(sp)
-      0xffae0060,                     // 0x34: sd t2,96(sp)
-      0xffaf0068,                     // 0x38: sd t3,104(sp)
-      0xffb00070,                     // 0x3c: sd s0,112(sp)
-      0xffb10078,                     // 0x40: sd s1,120(sp)
-      0xffb20080,                     // 0x44: sd s2,128(sp)
-      0xffb30088,                     // 0x48: sd s3,136(sp)
-      0xffb40090,                     // 0x4c: sd s4,144(sp)
-      0xffb50098,                     // 0x50: sd s5,152(sp)
-      0xffb600a0,                     // 0x54: sd s6,160(sp)
-      0xffb700a8,                     // 0x58: sd s7,168(sp)
-      0xffb800b0,                     // 0x5c: sd t8,176(sp)
-      0xffb900b8,                     // 0x60: sd t9,184(sp)
-      0xffbe00c0,                     // 0x64: sd fp,192(sp)
-      0xffbf00c8,                     // 0x68: sd ra,200(sp)
+      // resolver_entry:
+      0x67bdff30, // 0x00: daddiu $sp,$sp,-208
+      0xffa20000, // 0x04: sd v0,0(sp)
+      0xffa30008, // 0x08: sd v1,8(sp)
+      0xffa40010, // 0x0c: sd a0,16(sp)
+      0xffa50018, // 0x10: sd a1,24(sp)
+      0xffa60020, // 0x14: sd a2,32(sp)
+      0xffa70028, // 0x18: sd a3,40(sp)
+      0xffa80030, // 0x1c: sd a4,48(sp)
+      0xffa90038, // 0x20: sd a5,56(sp)
+      0xffaa0040, // 0x24: sd a6,64(sp)
+      0xffab0048, // 0x28: sd a7,72(sp)
+      0xffac0050, // 0x2c: sd t0,80(sp)
+      0xffad0058, // 0x30: sd t1,88(sp)
+      0xffae0060, // 0x34: sd t2,96(sp)
+      0xffaf0068, // 0x38: sd t3,104(sp)
+      0xffb00070, // 0x3c: sd s0,112(sp)
+      0xffb10078, // 0x40: sd s1,120(sp)
+      0xffb20080, // 0x44: sd s2,128(sp)
+      0xffb30088, // 0x48: sd s3,136(sp)
+      0xffb40090, // 0x4c: sd s4,144(sp)
+      0xffb50098, // 0x50: sd s5,152(sp)
+      0xffb600a0, // 0x54: sd s6,160(sp)
+      0xffb700a8, // 0x58: sd s7,168(sp)
+      0xffb800b0, // 0x5c: sd t8,176(sp)
+      0xffb900b8, // 0x60: sd t9,184(sp)
+      0xffbe00c0, // 0x64: sd fp,192(sp)
+      0xffbf00c8, // 0x68: sd ra,200(sp)
 
       // JIT re-entry ctx addr.
-      0x00000000,                     // 0x6c: lui $a0,heighest(ctx)
-      0x00000000,                     // 0x70: daddiu $a0,$a0,heigher(ctx)
-      0x00000000,                     // 0x74: dsll $a0,$a0,16
-      0x00000000,                     // 0x78: daddiu $a0,$a0,hi(ctx)
-      0x00000000,                     // 0x7c: dsll $a0,$a0,16
-      0x00000000,                     // 0x80: daddiu $a0,$a0,lo(ctx)
+      0x00000000, // 0x6c: lui $a0,heighest(ctx)
+      0x00000000, // 0x70: daddiu $a0,$a0,heigher(ctx)
+      0x00000000, // 0x74: dsll $a0,$a0,16
+      0x00000000, // 0x78: daddiu $a0,$a0,hi(ctx)
+      0x00000000, // 0x7c: dsll $a0,$a0,16
+      0x00000000, // 0x80: daddiu $a0,$a0,lo(ctx)
 
-      0x03e02825,                     // 0x84: move $a1, $ra
-      0x64a5ffdc,                     // 0x88: daddiu $a1,$a1,-36
+      0x03e02825, // 0x84: move $a1, $ra
+      0x64a5ffdc, // 0x88: daddiu $a1,$a1,-36
 
       // JIT re-entry fn addr:
-      0x00000000,                     // 0x8c: lui $t9,reentry
-      0x00000000,                     // 0x90: daddiu $t9,$t9,reentry
-      0x00000000,                     // 0x94: dsll $t9,$t9,
-      0x00000000,                     // 0x98: daddiu $t9,$t9,
-      0x00000000,                     // 0x9c: dsll $t9,$t9,
-      0x00000000,                     // 0xa0: daddiu $t9,$t9,
-      0x0320f809,                     // 0xa4: jalr $t9
-      0x00000000,                     // 0xa8: nop
-      0xdfbf00c8,                     // 0xac: ld ra, 200(sp)
-      0xdfbe00c0,                     // 0xb0: ld fp, 192(sp)
-      0xdfb900b8,                     // 0xb4: ld t9, 184(sp)
-      0xdfb800b0,                     // 0xb8: ld t8, 176(sp)
-      0xdfb700a8,                     // 0xbc: ld s7, 168(sp)
-      0xdfb600a0,                     // 0xc0: ld s6, 160(sp)
-      0xdfb50098,                     // 0xc4: ld s5, 152(sp)
-      0xdfb40090,                     // 0xc8: ld s4, 144(sp)
-      0xdfb30088,                     // 0xcc: ld s3, 136(sp)
-      0xdfb20080,                     // 0xd0: ld s2, 128(sp)
-      0xdfb10078,                     // 0xd4: ld s1, 120(sp)
-      0xdfb00070,                     // 0xd8: ld s0, 112(sp)
-      0xdfaf0068,                     // 0xdc: ld t3, 104(sp)
-      0xdfae0060,                     // 0xe0: ld t2, 96(sp)
-      0xdfad0058,                     // 0xe4: ld t1, 88(sp)
-      0xdfac0050,                     // 0xe8: ld t0, 80(sp)
-      0xdfab0048,                     // 0xec: ld a7, 72(sp)
-      0xdfaa0040,                     // 0xf0: ld a6, 64(sp)
-      0xdfa90038,                     // 0xf4: ld a5, 56(sp)
-      0xdfa80030,                     // 0xf8: ld a4, 48(sp)
-      0xdfa70028,                     // 0xfc: ld a3, 40(sp)
-      0xdfa60020,                     // 0x100: ld a2, 32(sp)
-      0xdfa50018,                     // 0x104: ld a1, 24(sp)
-      0xdfa40010,                     // 0x108: ld a0, 16(sp)
-      0xdfa30008,                     // 0x10c: ld v1, 8(sp)
-      0x67bd00d0,                     // 0x110: daddiu $sp,$sp,208
-      0x0300f825,                     // 0x114: move $ra, $t8
-      0x03200008,                     // 0x118: jr $t9
-      0x0040c825,                     // 0x11c: move $t9, $v0
+      0x00000000, // 0x8c: lui $t9,reentry
+      0x00000000, // 0x90: daddiu $t9,$t9,reentry
+      0x00000000, // 0x94: dsll $t9,$t9,
+      0x00000000, // 0x98: daddiu $t9,$t9,
+      0x00000000, // 0x9c: dsll $t9,$t9,
+      0x00000000, // 0xa0: daddiu $t9,$t9,
+      0x0320f809, // 0xa4: jalr $t9
+      0x00000000, // 0xa8: nop
+      0xdfbf00c8, // 0xac: ld ra, 200(sp)
+      0xdfbe00c0, // 0xb0: ld fp, 192(sp)
+      0xdfb900b8, // 0xb4: ld t9, 184(sp)
+      0xdfb800b0, // 0xb8: ld t8, 176(sp)
+      0xdfb700a8, // 0xbc: ld s7, 168(sp)
+      0xdfb600a0, // 0xc0: ld s6, 160(sp)
+      0xdfb50098, // 0xc4: ld s5, 152(sp)
+      0xdfb40090, // 0xc8: ld s4, 144(sp)
+      0xdfb30088, // 0xcc: ld s3, 136(sp)
+      0xdfb20080, // 0xd0: ld s2, 128(sp)
+      0xdfb10078, // 0xd4: ld s1, 120(sp)
+      0xdfb00070, // 0xd8: ld s0, 112(sp)
+      0xdfaf0068, // 0xdc: ld t3, 104(sp)
+      0xdfae0060, // 0xe0: ld t2, 96(sp)
+      0xdfad0058, // 0xe4: ld t1, 88(sp)
+      0xdfac0050, // 0xe8: ld t0, 80(sp)
+      0xdfab0048, // 0xec: ld a7, 72(sp)
+      0xdfaa0040, // 0xf0: ld a6, 64(sp)
+      0xdfa90038, // 0xf4: ld a5, 56(sp)
+      0xdfa80030, // 0xf8: ld a4, 48(sp)
+      0xdfa70028, // 0xfc: ld a3, 40(sp)
+      0xdfa60020, // 0x100: ld a2, 32(sp)
+      0xdfa50018, // 0x104: ld a1, 24(sp)
+      0xdfa40010, // 0x108: ld a0, 16(sp)
+      0xdfa30008, // 0x10c: ld v1, 8(sp)
+      0x67bd00d0, // 0x110: daddiu $sp,$sp,208
+      0x0300f825, // 0x114: move $ra, $t8
+      0x0040c825, // 0x118: move $t9, $v0
+      0x03200008, // 0x11c: jr $t9
+      0x00000000, // 0x120: nop
   };
 
   const unsigned ReentryFnAddrOffset = 0x8c;   // JIT re-entry fn addr lui
   const unsigned ReentryCtxAddrOffset = 0x6c;  // JIT re-entry ctx addr lui
 
+  static_assert(sizeof(ResolverCode) == ResolverCodeSize);
   memcpy(ResolverWorkingMem, ResolverCode, sizeof(ResolverCode));
 
   uint32_t ReentryCtxLUi =
@@ -1234,6 +1242,168 @@ void OrcLoongArch64::writeIndirectStubsBlock(
     Stub[4 * I + 3] = 0x0;                   // padding
     PointersBlockTargetAddress += PointerSize;
     StubsBlockTargetAddress += StubSize;
+  }
+}
+
+// z10, z196, zEC12 and "generic" lack the vector facility. Any other host CPU
+// name is assumed to have it, since skipping the save on a vector-capable
+// machine would silently corrupt vector arguments.
+static bool hostHasVectorFacility() {
+  static const bool HasVector = [] {
+    StringRef CPU = sys::getHostCPUName();
+    return !(CPU == "z10" || CPU == "z196" || CPU == "zEC12" ||
+             CPU == "generic");
+  }();
+  return HasVector;
+}
+
+void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
+                                   ExecutorAddr ResolverTargetAddress,
+                                   ExecutorAddr ReentryFnAddr,
+                                   ExecutorAddr ReentryCtxAddr) {
+  // Frame: 288 bytes below the incoming %r15.
+  //   0..159(%r15):   outgoing area for the reenter call
+  //   160..287(%r15): vector argument register save area (%v24-%v31)
+  //   304..415(%r15): caller's GPR save area, %r2..%r15  (16 + 288)
+  //   416..447(%r15): caller's FPR save area, %f0/%f2/%f4/%f6 (128 + 288)
+  //
+  // On entry %r1 = trampoline + 8 and %r14 = original caller's return address.
+  // reenter(%r2 = ReentryCtxAddr, %r3 = trampoline address = %r1 - 8).
+  //
+  // The reentry function returns the implementation address in %r2.
+  // Move it to %r1 before restoring the saved registers.
+  //
+  // %r0 and %r1 are scratch and are not saved.
+  //
+  // Lctx is at 0x58 and lgrl is at 0x28: (0x58 - 0x28) / 2 = 0x18.
+  // Lfn  is at 0x60 and lgrl is at 0x2e: (0x60 - 0x2e) / 2 = 0x19.
+
+  // clang-format off
+  const uint8_t ResolverCodeTemplate[] = {
+      0xeb, 0x2f, 0xf0, 0x10, 0x00, 0x24, // 0x00: stmg %r2, %r15, 16(%r15)
+      0xa7, 0xfb, 0xfe, 0xe0,             // 0x06: aghi %r15, -288
+      0x60, 0x00, 0xf1, 0xa0,             // 0x0a: std  %f0, 416(%r15)
+      0x60, 0x20, 0xf1, 0xa8,             // 0x0e: std  %f2, 424(%r15)
+      0x60, 0x40, 0xf1, 0xb0,             // 0x12: std  %f4, 432(%r15)
+      0x60, 0x60, 0xf1, 0xb8,             // 0x16: std  %f6, 440(%r15)
+
+      // 0x1a: vstm %v24, %v31, 160(%r15) OR 6-byte NOP for pre-z13
+      0xe7, 0x8f, 0xf0, 0xa0, 0x0c, 0x3e,
+
+      0xb9, 0x04, 0x00, 0x31,             // 0x20: lgr   %r3, %r1
+      0xa7, 0x3b, 0xff, 0xf8,             // 0x24: aghi  %r3, -8
+      0xc4, 0x28, 0x00, 0x00, 0x00, 0x18, // 0x28: lgrl  %r2, Lctx (disp = 0x18)
+      0xc4, 0x18, 0x00, 0x00, 0x00, 0x19, // 0x2e: lgrl  %r1, Lfn (disp = 0x19)
+      0x0d, 0xe1,                         // 0x34: basr  %r14, %r1
+
+      // 0x36: vlm %v24, %v31, 160(%r15) OR 6-byte NOP for pre-z13
+      0xe7, 0x8f, 0xf0, 0xa0, 0x0c, 0x36,
+
+      0x68, 0x00, 0xf1, 0xa0,             // 0x3c: ld    %f0, 416(%r15)
+      0x68, 0x20, 0xf1, 0xa8,             // 0x40: ld    %f2, 424(%r15)
+      0x68, 0x40, 0xf1, 0xb0,             // 0x44: ld    %f4, 432(%r15)
+      0x68, 0x60, 0xf1, 0xb8,             // 0x48: ld    %f6, 440(%r15)
+      0xb9, 0x04, 0x00, 0x12,             // 0x4c: lgr   %r1, %r2
+      0xeb, 0x2f, 0xf1, 0x30, 0x00, 0x04, // 0x50: lmg   %r2, %r15, 304(%r15)
+      0x07, 0xf1,                         // 0x56: br    %r1
+
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x58: Lctx
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x60: Lfn
+  };
+  // clang-format on
+
+  static_assert(sizeof(ResolverCodeTemplate) == ResolverCodeSize,
+                "ResolverCodeSize does not match template size");
+
+  uint8_t ResolverCode[ResolverCodeSize];
+  memcpy(ResolverCode, ResolverCodeTemplate, ResolverCodeSize);
+
+  // The template assumes the vector facility. Without it, overwrite the two
+  // vector transfers with 6-byte no-ops (BRCL 0, 0).
+  if (!hostHasVectorFacility()) {
+    const uint8_t NopCode[] = {0xc0, 0x04, 0x00, 0x00, 0x00, 0x00};
+    const unsigned VstmOffset = 0x1a;
+    const unsigned VlmOffset = 0x36;
+    memcpy(ResolverCode + VstmOffset, NopCode, sizeof(NopCode));
+    memcpy(ResolverCode + VlmOffset, NopCode, sizeof(NopCode));
+  }
+
+  const unsigned ReentryCtxAddrOffset = 0x58;
+  const unsigned ReentryFnAddrOffset = 0x60;
+
+  memcpy(ResolverWorkingMem, ResolverCode, sizeof(ResolverCode));
+  memcpy(ResolverWorkingMem + ReentryCtxAddrOffset, &ReentryCtxAddr,
+         sizeof(uint64_t));
+  memcpy(ResolverWorkingMem + ReentryFnAddrOffset, &ReentryFnAddr,
+         sizeof(uint64_t));
+}
+
+void OrcSystemZ::writeTrampolines(char *TrampolineBlockWorkingMem,
+                                  ExecutorAddr TrampolineBlockTargetAddress,
+                                  ExecutorAddr ResolverAddr,
+                                  unsigned NumTrampolines) {
+  // Each trampoline is 8 bytes:
+  //   +0: lgrl %r1, Lptr    c4 18 xx xx xx xx
+  //   +6: basr %r1, %r1     0d 11
+  //
+  // basr reads the branch target from %r1 before writing the return address
+  // (trampoline + 8) into %r1. The resolver receives %r1 = trampoline + 8 and
+  // %r14 still holds the original caller's return address.
+  //
+  // lgrl displacement = (Lptr - lgrl_addr) / 2, stored big-endian in +2..+5.
+
+  const unsigned PtrOffset = alignTo(NumTrampolines * TrampolineSize, 8);
+  memcpy(TrampolineBlockWorkingMem + PtrOffset, &ResolverAddr,
+         sizeof(uint64_t));
+
+  uint8_t *Trampolines = reinterpret_cast<uint8_t *>(TrampolineBlockWorkingMem);
+
+  for (unsigned I = 0; I < NumTrampolines; ++I) {
+    uint8_t *T = Trampolines + I * TrampolineSize;
+    int32_t HWOffset = ((int32_t)PtrOffset - (int32_t)(I * TrampolineSize)) / 2;
+
+    T[0] = 0xc4;
+    T[1] = 0x18;
+    T[2] = (HWOffset >> 24) & 0xff;
+    T[3] = (HWOffset >> 16) & 0xff;
+    T[4] = (HWOffset >> 8) & 0xff;
+    T[5] = HWOffset & 0xff;
+    T[6] = 0x0d;
+    T[7] = 0x11;
+  }
+}
+
+void OrcSystemZ::writeIndirectStubsBlock(
+    char *StubsBlockWorkingMem, ExecutorAddr StubsBlockTargetAddress,
+    ExecutorAddr PointersBlockTargetAddress, unsigned NumStubs) {
+  // Each stub is 8 bytes:
+  //   +0: lgrl %r1, ptr_I   c4 18 xx xx xx xx
+  //   +6: br   %r1          07 f1
+  //
+  // lgrl displacement = (ptr_I - stub) / 2, stored big-endian in +2..+5.
+
+  assert(stubAndPointerRangesOk<OrcSystemZ>(
+             StubsBlockTargetAddress, PointersBlockTargetAddress, NumStubs) &&
+         "PointersBlock is out of range");
+
+  uint8_t *Stub = reinterpret_cast<uint8_t *>(StubsBlockWorkingMem);
+
+  for (unsigned I = 0; I < NumStubs; ++I) {
+    uint8_t *S = Stub + I * StubSize;
+    ExecutorAddr LgrlAddr = StubsBlockTargetAddress + I * StubSize;
+    ExecutorAddr PtrAddr = PointersBlockTargetAddress + I * PointerSize;
+    int32_t HWOffset =
+        (int32_t)(((int64_t)PtrAddr.getValue() - (int64_t)LgrlAddr.getValue()) /
+                  2);
+
+    S[0] = 0xc4;
+    S[1] = 0x18;
+    S[2] = (HWOffset >> 24) & 0xff;
+    S[3] = (HWOffset >> 16) & 0xff;
+    S[4] = (HWOffset >> 8) & 0xff;
+    S[5] = HWOffset & 0xff;
+    S[6] = 0x07;
+    S[7] = 0xf1;
   }
 }
 

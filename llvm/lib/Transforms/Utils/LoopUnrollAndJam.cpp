@@ -345,7 +345,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
       !EnableFSDiscriminator)
     for (BasicBlock *BB : L->getBlocks())
       for (Instruction &I : *BB)
-        if (!I.isDebugOrPseudoInst())
+        if (!isa<PseudoProbeInst>(I))
           if (const DILocation *DIL = I.getDebugLoc()) {
             auto NewDIL = DIL->cloneByMultiplyingDuplicationFactor(Count);
             if (NewDIL)
@@ -427,13 +427,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
     }
 
     // Remap all instructions in the most recent iteration
-    remapInstructionsInBlocks(NewBlocks, LastValueMap);
-    for (BasicBlock *NewBlock : NewBlocks) {
-      for (Instruction &I : *NewBlock) {
-        if (auto *II = dyn_cast<AssumeInst>(&I))
-          AC->registerAssumption(II);
-      }
-    }
+    remapInstructionsInBlocks(NewBlocks, LastValueMap, AC);
 
     // Alter the ForeBlocks phi's, pointing them at the latest version of the
     // value from the previous iteration's phis
@@ -948,8 +942,7 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   }
 
   // Check the loop safety info for exceptions.
-  SimpleLoopSafetyInfo LSI;
-  LSI.computeLoopSafetyInfo(L);
+  SimpleLoopSafetyInfo LSI(L);
   if (LSI.anyBlockMayThrow()) {
     LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Something may throw\n");
     return false;

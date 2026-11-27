@@ -24,6 +24,8 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/SemaAMDGPU.h"
+#include "clang/Sema/SemaBPF.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaRISCV.h"
@@ -340,6 +342,10 @@ Sema::BuildCXXNamedCast(SourceLocation OpLoc, tok::TokenKind Kind,
                         SourceRange AngleBrackets, SourceRange Parens) {
   ExprResult Ex = E;
   QualType DestType = DestTInfo->getType();
+  if (DestType.getCanonicalType()->isVariablyModifiedType() &&
+      !CheckVariablyModifiedTypeUse(DestType,
+                                    DestTInfo->getTypeLoc().getBeginLoc()))
+    return ExprError();
 
   // If the type is dependent, we won't do the semantic analysis now.
   bool TypeDependent =
@@ -987,6 +993,11 @@ void CastOperation::CheckDynamicCast() {
     return;
   }
 
+  // Similarly, dynamic_cast is not available in CUDA device code, except for
+  // dynamic_cast to void*.
+  if (Self.getLangOpts().CUDA && !DestPointee->isVoidType())
+    Self.CUDA().checkRTTIUse(OpRange.getBegin(), "dynamic_cast");
+
   // Warns when dynamic_cast is used with RTTI data disabled.
   if (!Self.getLangOpts().RTTIData) {
     bool MicrosoftABI =
@@ -1489,16 +1500,23 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
       SrcExpr = ExprError();
       return TC_Failed;
     }
+    // C++26 [expr.static.cast]p8
+    //   If the enumeration type has a fixed underlying type, the value is
+    //   first converted to that type by integral promotion ([conv.prom]) or
+    //   integral conversion ([conv.integral]), if necessary, and then to the
+    //   enumeration type.
+    const auto *ED = DestType->castAsEnumDecl();
+    bool DestIsFixedBoolean =
+        ED->isFixed() && ED->getIntegerType()->isBooleanType();
     if (SrcType->isIntegralOrEnumerationType()) {
-      // [expr.static.cast]p10 If the enumeration type has a fixed underlying
-      // type, the value is first converted to that type by integral conversion
-      const auto *ED = DestType->castAsEnumDecl();
-      Kind = ED->isFixed() && ED->getIntegerType()->isBooleanType()
-                 ? CK_IntegralToBoolean
-                 : CK_IntegralCast;
+      Kind = DestIsFixedBoolean ? CK_IntegralToBoolean : CK_IntegralCast;
       return TC_Success;
     } else if (SrcType->isRealFloatingType())   {
-      Kind = CK_FloatingToIntegral;
+      // C++26 [expr.static.cast]p8
+      //   A value of floating-point type can also be explicitly converted
+      //   to ... the underlying type of the enumeration ([conv.fpint]), and
+      //   subsequently to the enumeration type.
+      Kind = DestIsFixedBoolean ? CK_FloatingToBoolean : CK_FloatingToIntegral;
       return TC_Success;
     }
   }
@@ -2249,12 +2267,11 @@ static void checkIntToPointerCast(bool CStyle, const SourceRange &OpRange,
   // Not warning on reinterpret_cast, boolean, constant expressions, etc
   // are not explicit design choices, but consistent with GCC's behavior.
   // Feel free to modify them if you've reason/evidence for an alternative.
-  if (CStyle && SrcType->isIntegralType(Self.Context)
-      && !SrcType->isBooleanType()
-      && !SrcType->isEnumeralType()
-      && !SrcExpr->isIntegerConstantExpr(Self.Context)
-      && Self.Context.getTypeSize(DestType) >
-         Self.Context.getTypeSize(SrcType)) {
+  if (CStyle && SrcType->isIntegralType(Self.Context) &&
+      !SrcType->isBooleanType() && !SrcType->isEnumeralType() &&
+      !SrcExpr->isIntegerConstantExpr(Self.Context) &&
+      !SemaBPF::isPreserveAIEnumeratorRef(SrcExpr->IgnoreParens()) &&
+      Self.Context.getTypeSize(DestType) > Self.Context.getTypeSize(SrcType)) {
     // Separate between casts to void* and non-void* pointers.
     // Some APIs use (abuse) void* for something like a user context,
     // and often that value is an integer even if it isn't a pointer itself.
@@ -2605,19 +2622,13 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     // casting the return value of dlsym() and GetProcAddress().
     // FIXME: Conditionally-supported behavior should be configurable in the
     // TargetInfo or similar.
-    Self.Diag(OpRange.getBegin(),
-              Self.getLangOpts().CPlusPlus11 ?
-                diag::warn_cxx98_compat_cast_fn_obj : diag::ext_cast_fn_obj)
-      << OpRange;
+    Self.DiagCompat(OpRange.getBegin(), diag_compat::cast_fn_obj) << OpRange;
     return SuccessResult;
   }
 
   if (DestType->isFunctionPointerType()) {
     // See above.
-    Self.Diag(OpRange.getBegin(),
-              Self.getLangOpts().CPlusPlus11 ?
-                diag::warn_cxx98_compat_cast_fn_obj : diag::ext_cast_fn_obj)
-      << OpRange;
+    Self.DiagCompat(OpRange.getBegin(), diag_compat::cast_fn_obj) << OpRange;
     return SuccessResult;
   }
 
@@ -2965,6 +2976,7 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
       SrcExpr = Self.ImpCastExprToType(
           SrcExpr.get(), MT->getElementType(), CK_HLSLMatrixTruncation,
           SrcExpr.get()->getValueKind(), nullptr, CCK);
+
     // Inserting a scalar cast here allows for a simplified codegen in
     // the case the destTy is a vector
     if (const VectorType *DVT = DestType->getAs<VectorType>())
@@ -2972,7 +2984,26 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
           SrcExpr.get(), DVT->getElementType(),
           Self.PrepareScalarCast(SrcExpr, DVT->getElementType()),
           SrcExpr.get()->getValueKind(), nullptr, CCK);
+
+    // Inserting a scalar cast here allows for a simplified codegen in
+    // the case the destTy is a matrix
+    if (const MatrixType *DMT = DestType->getAs<MatrixType>())
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), DMT->getElementType(),
+          Self.PrepareScalarCast(SrcExpr, DMT->getElementType()),
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
+
     Kind = CK_HLSLAggregateSplatCast;
+    return true;
+  }
+
+  // HLSL includes packed data types that can be converted directly to and from
+  // uint, and with each other
+  if (Self.HLSL().CanPerformPackedTypeCast(SrcExpr.get(), DestType)) {
+    SrcExpr =
+        Self.ImpCastExprToType(SrcExpr.get(), DestType, CK_IntegralCast,
+                               SrcExpr.get()->getValueKind(), nullptr, CCK);
+    Kind = CK_IntegralCast;
     return true;
   }
 
@@ -3466,6 +3497,11 @@ ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
                                      TypeSourceInfo *CastTypeInfo,
                                      SourceLocation RPLoc,
                                      Expr *CastExpr) {
+  if (CastTypeInfo->getType().getCanonicalType()->isVariablyModifiedType() &&
+      !CheckVariablyModifiedTypeUse(CastTypeInfo->getType(),
+                                    CastTypeInfo->getTypeLoc().getBeginLoc()))
+    return ExprError();
+
   CastOperation Op(*this, CastTypeInfo->getType(), CastExpr);
   Op.DestRange = CastTypeInfo->getTypeLoc().getSourceRange();
   Op.OpRange = CastOperation::OpRangeType(LPLoc, LPLoc, CastExpr->getEndLoc());
@@ -3496,6 +3532,11 @@ ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
                                             Expr *CastExpr,
                                             SourceLocation RPLoc) {
   assert(LPLoc.isValid() && "List-initialization shouldn't get here.");
+  if (Type.getCanonicalType()->isVariablyModifiedType() &&
+      !CheckVariablyModifiedTypeUse(Type,
+                                    CastTypeInfo->getTypeLoc().getBeginLoc()))
+    return ExprError();
+
   CastOperation Op(*this, Type, CastExpr);
   Op.DestRange = CastTypeInfo->getTypeLoc().getSourceRange();
   Op.OpRange =

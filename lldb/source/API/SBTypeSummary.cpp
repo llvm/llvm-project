@@ -12,6 +12,7 @@
 #include "lldb/API/SBValue.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "llvm/Support/Casting.h"
 
@@ -162,7 +163,8 @@ SBTypeSummary SBTypeSummary::CreateWithCallback(FormatCallback cb,
           SBTypeSummaryOptions options(opt);
           if (!cb(sb_value, options, stream))
             return false;
-          stm.Write(stream.GetData(), stream.GetSize());
+          llvm::StringRef sdata = stream.GetString();
+          stm.Write(sdata.data(), sdata.size());
           return true;
         },
         description ? description : "callback summary formatter")));
@@ -233,11 +235,12 @@ const char *SBTypeSummary::GetData() {
     const char *fname = script_summary_ptr->GetFunctionName();
     const char *ftext = script_summary_ptr->GetPythonScript();
     if (ftext && *ftext)
-      return ConstString(ftext).GetCString();
-    return ConstString(fname).GetCString();
+      return StringPool::GetSystemPool().Intern(ftext);
+    return StringPool::GetSystemPool().Intern(fname);
   } else if (StringSummaryFormat *string_summary_ptr =
                  llvm::dyn_cast<StringSummaryFormat>(m_opaque_sp.get()))
-    return ConstString(string_summary_ptr->GetSummaryString()).GetCString();
+    return StringPool::GetSystemPool().Intern(
+        string_summary_ptr->GetSummaryString());
   return nullptr;
 }
 
@@ -402,7 +405,7 @@ bool SBTypeSummary::operator!=(lldb::SBTypeSummary &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
-    return !rhs.IsValid();
+    return rhs.IsValid();
   return m_opaque_sp != rhs.m_opaque_sp;
 }
 

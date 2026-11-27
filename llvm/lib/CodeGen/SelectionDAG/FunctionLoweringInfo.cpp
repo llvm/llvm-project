@@ -28,13 +28,16 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 using namespace llvm;
 
@@ -47,8 +50,8 @@ static bool isUsedOutsideOfDefiningBlock(const Instruction *I) {
   if (I->use_empty()) return false;
   if (isa<PHINode>(I)) return true;
   const BasicBlock *BB = I->getParent();
-  for (const User *U : I->users())
-    if (cast<Instruction>(U)->getParent() != BB || isa<PHINode>(U))
+  for (const Instruction *U : I->users())
+    if (U->getParent() != BB || isa<PHINode>(U))
       return true;
 
   return false;
@@ -91,6 +94,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   RegInfo = &MF->getRegInfo();
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
   UA = DAG->getUniformityInfo();
+  ExceptionModel = Fn->getParent()->getExceptionModel();
 
   // Check whether the function can return without sret-demotion.
   SmallVector<ISD::OutputArg, 4> Outs;
@@ -129,17 +133,17 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   // Initialize the mapping of values to registers.  This is only set up for
   // instruction values that are used outside of the block that defines
   // them.
-  const Align StackAlign = TFI->getStackAlign();
+  const Align StackAlign = MF->getFrameInfo().getStackAlign();
   for (const BasicBlock &BB : *Fn) {
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
         Align Alignment = AI->getAlign();
 
         // Static allocas can be folded into the initial stack frame
-        // adjustment. For targets that don't realign the stack, don't
+        // adjustment. If this function can't realign the stack, don't
         // do this if there is an extra alignment requirement.
-        if (AI->isStaticAlloca() &&
-            (TFI->isStackRealignable() || (Alignment <= StackAlign))) {
+        if (AI->isStaticAlloca() && (MF->getFrameInfo().isStackRealignable() ||
+                                     Alignment <= StackAlign)) {
           TypeSize AllocaSize = AI->getAllocationSize(MF->getDataLayout())
                                     .value_or(TypeSize::getZero());
           uint64_t TySize = AllocaSize.getKnownMinValue();
@@ -264,7 +268,8 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         continue;
       }
       if (isa<FuncletPadInst>(PadInst) &&
-          Personality != EHPersonality::Wasm_CXX)
+          Personality != EHPersonality::Wasm_CXX &&
+          Personality != EHPersonality::Wasm_D)
         assert(BB.begin() == PadInst && "WinEHPrepare failed to demote PHIs");
     }
 

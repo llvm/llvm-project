@@ -10,6 +10,11 @@
 
 // -----
 
+// expected-error@below {{attribute 'dlti' failed to satisfy constraint}}
+module <{dlti = 42 : i32}> {}
+
+// -----
+
 // expected-error@below {{'dlti.dl_spec' is expected to be a #dlti.dl_spec attribute}}
 "test.unknown_op"() { dlti.dl_spec = 42 } : () -> ()
 
@@ -164,3 +169,23 @@ module attributes {
     "CPU" = #dlti.target_device_spec<"L1_cache_size_in_bytes" = 4096,
                                      "L1_cache_size_in_bytes" = 8192>
   >} {}
+
+// -----
+
+// expected-error@below {{index bit width must be between 1 and 16777215}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 0 : i32>} {}
+
+// -----
+
+// expected-error@below {{index bit width must be between 1 and 16777215}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 16777216 : i64>} {}
+
+// -----
+
+// expected-error@below {{index bit width must be between 1 and 16777215}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 18446744073709551616 : i128>} {}
+
+// -----
+
+// expected-error@below {{index bit width must be between 1 and 16777215}}
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = -1 : i32>} {}

@@ -8,7 +8,7 @@ func.func @static_array() {
   %c100 = arith.constant 100 : index
   %0 = fir.alloca !fir.array<100xi32> {bindc_name = "a", uniq_name = "_QFEa"}
   %sh = fir.shape %c100 : (index) -> !fir.shape<1>
-  %1 = fir.declare %0(%sh) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
+  %1 = fir.declare %0(%sh) uniq_name("_QFEa") : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
   %2 = acc.copyin varPtr(%1 : !fir.ref<!fir.array<100xi32>>) name("a") -> !fir.ref<!fir.array<100xi32>>
   acc.data dataOperands(%2 : !fir.ref<!fir.array<100xi32>>) {
     cuf.kernel_launch @kernel<<<%c1, %c1, %c1, %c1, %c1, %c1>>>(%1) : (!fir.ref<!fir.array<100xi32>>)
@@ -38,7 +38,7 @@ func.func @array_section() {
   %c3 = arith.constant 3 : index
   %0 = fir.alloca !fir.array<100xi32> {uniq_name = "_QFEa"}
   %sh = fir.shape %c100 : (index) -> !fir.shape<1>
-  %1 = fir.declare %0(%sh) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
+  %1 = fir.declare %0(%sh) uniq_name("_QFEa") : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
   %2 = acc.copyin varPtr(%1 : !fir.ref<!fir.array<100xi32>>) name("a") -> !fir.ref<!fir.array<100xi32>>
   acc.data dataOperands(%2 : !fir.ref<!fir.array<100xi32>>) {
     %3 = fir.array_coor %1(%sh) %c3 : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
@@ -69,7 +69,7 @@ func.func @array_section() {
 func.func @descriptor_array() {
   %c1 = arith.constant 1 : i32
   %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "h", uniq_name = "_QFEh"}
-  %1 = fir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEh"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  %1 = fir.declare %0 uniq_name("_QFEh") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   %2 = acc.create varPtr(%1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) name("h") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   acc.data dataOperands(%2 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
     %3 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -100,7 +100,7 @@ func.func @no_enclosing_data() {
   %c100 = arith.constant 100 : index
   %0 = fir.alloca !fir.array<100xi32> {uniq_name = "_QFEa"}
   %sh = fir.shape %c100 : (index) -> !fir.shape<1>
-  %1 = fir.declare %0(%sh) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
+  %1 = fir.declare %0(%sh) uniq_name("_QFEa") : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
   cuf.kernel_launch @kernel<<<%c1, %c1, %c1, %c1, %c1, %c1>>>(%1) : (!fir.ref<!fir.array<100xi32>>)
   return
 }
@@ -119,9 +119,9 @@ func.func @unmapped_arg() {
   %c100 = arith.constant 100 : index
   %sh = fir.shape %c100 : (index) -> !fir.shape<1>
   %0 = fir.alloca !fir.array<100xi32> {uniq_name = "_QFEa"}
-  %1 = fir.declare %0(%sh) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
+  %1 = fir.declare %0(%sh) uniq_name("_QFEa") : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
   %2 = fir.alloca !fir.array<100xi32> {uniq_name = "_QFEb"}
-  %3 = fir.declare %2(%sh) {uniq_name = "_QFEb"} : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
+  %3 = fir.declare %2(%sh) uniq_name("_QFEb") : (!fir.ref<!fir.array<100xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xi32>>
   %4 = acc.copyin varPtr(%3 : !fir.ref<!fir.array<100xi32>>) name("b") -> !fir.ref<!fir.array<100xi32>>
   acc.data dataOperands(%4 : !fir.ref<!fir.array<100xi32>>) {
     cuf.kernel_launch @kernel<<<%c1, %c1, %c1, %c1, %c1, %c1>>>(%1) : (!fir.ref<!fir.array<100xi32>>)

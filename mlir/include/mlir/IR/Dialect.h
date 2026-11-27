@@ -367,6 +367,8 @@ private:
   /// to provide an implementation for.
   DenseSet<std::pair<TypeID, TypeID>> unresolvedPromisedInterfaces;
 
+  friend class AbstractAttribute;
+  friend class AbstractType;
   friend class DialectRegistry;
   friend class MLIRContext;
 };

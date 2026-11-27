@@ -26,7 +26,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
   fir.type_info @_QMtest_1Tsometype nofinal : !fir.type<_QMtest_1Tsometype{m_array:!fir.array<3xi32>,m_vt1:!fir.box<!fir.heap<!fir.type<_QMtest_1Tt1{name:!fir.char<1,20>,height:f32}>>>,v2:i32,m_alloc:!fir.box<!fir.heap<!fir.array<?xi32>>>,v3:i32,m_first:!fir.box<!fir.heap<!fir.char<1,?>>>,v4:i32,m_p1:!fir.box<!fir.ptr<i32>>,v5:i32,m_p2:!fir.box<!fir.ptr<i32>>,v6:i32,m_p3:!fir.box<!fir.ptr<!fir.array<?xi32>>>,v7:i32}> loc(#loc12)
   func.func @_QQmain() attributes {fir.bindc_name = "test"} {
     %1 = fir.alloca !fir.type<_QFTt_pair{i:i64,x:f64}> {bindc_name = "pair", uniq_name = "_QFEpair"}
-    %2 = fircg.ext_declare %1 {uniq_name = "_QFEpair"} : (!fir.ref<!fir.type<_QFTt_pair{i:i64,x:f64}>>) -> !fir.ref<!fir.type<_QFTt_pair{i:i64,x:f64}>> loc(#loc9)
+    %2 = fircg.ext_declare %1 uniq_name("_QFEpair") : (!fir.ref<!fir.type<_QFTt_pair{i:i64,x:f64}>>) -> !fir.ref<!fir.type<_QFTt_pair{i:i64,x:f64}>> loc(#loc9)
     return
   } loc(#loc10)
 }
@@ -59,7 +59,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
 // CHECK-DAG: #[[ELMD1:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "year", baseType = #[[INT_TY]], sizeInBits = 32, alignInBits = 32>
 // CHECK-DAG: #[[ELMD2:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "month", baseType = #[[INT_TY]], sizeInBits = 32, alignInBits = 32, offsetInBits = 32>
 // CHECK-DAG: #[[ELMD3:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "day", baseType = #[[INT_TY]], sizeInBits = 32, alignInBits = 32, offsetInBits = 64>
-// CHECK-DAG: #[[DATE:.*]] = #llvm.di_composite_type<{{.*}}tag = DW_TAG_structure_type, name = "t_date", file = #di_file, line = 17, scope = #[[MOD]], sizeInBits = 96, elements = #[[ELMD1]], #[[ELMD2]], #[[ELMD3]]>
+// CHECK-DAG: #[[DATE:.*]] = #llvm.di_composite_type<{{.*}}tag = DW_TAG_structure_type, name = "t_date"{{.*}}line = 17, scope = #[[MOD]], sizeInBits = 96, elements = #[[ELMD1]], #[[ELMD2]], #[[ELMD3]]>
 // CHECK-DAG: #[[ELMP1:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "t_address", baseType = #[[ADDR]], sizeInBits = 32, alignInBits = 32>
 // CHECK-DAG: #[[ELMP2:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "name", baseType = #[[STR_TY]], sizeInBits = 160, alignInBits = 8, offsetInBits = 32>
 // CHECK-DAG: #[[PERS:.*]] = #llvm.di_composite_type<{{.*}}tag = DW_TAG_structure_type, name = "t_person"{{.*}}line = 35, scope = #[[MOD]], sizeInBits = 192, elements = #[[ELMP1]], #[[ELMP2]]>
@@ -93,4 +93,4 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
 // CHECK-DAG: #[[E11:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "v6", baseType = #{{.*}}, sizeInBits = 32, alignInBits = 32, offsetInBits = 1664>
 // CHECK-DAG: #[[E12:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "m_p3", baseType = #{{.*}}, sizeInBits = 384, alignInBits = 64, offsetInBits = 1728>
 // CHECK-DAG: #[[E13:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "v7", baseType = #{{.*}}, sizeInBits = 32, alignInBits = 32, offsetInBits = 2112>
-// CHECK-DAG: #llvm.di_composite_type<{{.*}}tag = DW_TAG_structure_type, name = "sometype"{{.*}}sizeInBits = 2144, elements = #[[E1]], #[[E2]], #[[E3]], #[[E4]], #[[E5]], #[[E6]], #[[E7]], #[[E8]], #[[E9]], #[[E10]], #[[E11]], #[[E12]], #[[E13]]>
+// CHECK-DAG: #llvm.di_composite_type<{{.*}}tag = DW_TAG_structure_type, name = "sometype"{{.*}}sizeInBits = 2176, elements = #[[E1]], #[[E2]], #[[E3]], #[[E4]], #[[E5]], #[[E6]], #[[E7]], #[[E8]], #[[E9]], #[[E10]], #[[E11]], #[[E12]], #[[E13]]>

@@ -12,7 +12,9 @@ from lldbsuite.test import lldbutil
 
 
 class Issue11581TestCase(TestBase):
-    @skipIfWindows  # This test is now flaky on windows, see llvm.org/pr24778
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr239769", oslist=["windows"], debug_info="dwarf"
+    )
     def test_11581_commands(self):
         # This is the function to remove the custom commands in order to have a
         # clean slate for the next test case.

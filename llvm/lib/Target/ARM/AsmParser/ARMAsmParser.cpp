@@ -54,7 +54,6 @@
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -7826,6 +7825,14 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
                          /*Writeback*/ true, MnemonicOpsEndInd))
       return true;
     break;
+  case ARM::t2STRi12:
+  case ARM::t2STRi8:
+  case ARM::t2STRs:
+    // Rt == PC is UNPREDICTABLE.
+    if (Inst.getOperand(0).getReg() == ARM::PC)
+      return Error(Operands[MnemonicOpsEndInd]->getStartLoc(),
+                   "operand must be a register in range [r0, r14]");
+    break;
   case ARM::STR_PRE_IMM:
   case ARM::STR_PRE_REG:
   case ARM::t2STR_PRE:
@@ -9302,8 +9309,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     if (isa<MCConstantExpr>(SubExprVal) &&
         Inst.getOperand(0).getReg() != ARM::PC &&
         Inst.getOperand(0).getReg() != ARM::SP) {
-      int64_t Value =
-        (int64_t) (cast<MCConstantExpr>(SubExprVal))->getValue();
+      int64_t Value = (cast<MCConstantExpr>(SubExprVal))->getValue();
       bool UseMov  = true;
       bool MovHasS = true;
       if (Inst.getOpcode() == ARM::LDRConstPool) {
@@ -12320,7 +12326,7 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
   }
 
   assert(Section && "must have section to emit alignment");
-  if (getContext().getAsmInfo().useCodeAlign(*Section))
+  if (Section->isText())
     getStreamer().emitCodeAlignment(Align(2), getSTI());
   else
     getStreamer().emitValueToAlignment(Align(2));
@@ -12518,7 +12524,7 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     // '.align' is target specifically handled to mean 2**2 byte alignment.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
-    if (getContext().getAsmInfo().useCodeAlign(*Section))
+    if (Section->isText())
       getStreamer().emitCodeAlignment(Align(4), getSTI(), 0);
     else
       getStreamer().emitValueToAlignment(Align(4), 0, 1, 0);

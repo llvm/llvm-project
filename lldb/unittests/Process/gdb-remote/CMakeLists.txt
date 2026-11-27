@@ -8,6 +8,7 @@ add_lldb_unittest(ProcessGdbRemoteTests
   ProcessGDBRemoteTest.cpp
 
   LINK_COMPONENTS
+    Option
     Support
   LINK_LIBS
     lldbCore

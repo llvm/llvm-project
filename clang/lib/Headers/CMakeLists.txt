@@ -11,6 +11,7 @@ set(core_files
   inttypes.h
   iso646.h
   limits.h
+  meta
   module.modulemap
   stdalign.h
   stdarg.h
@@ -77,7 +78,9 @@ set(hexagon_files
   hexagon_circ_brev_intrinsics.h
   hexagon_protos.h
   hexagon_types.h
+  hlx_hexagon_protos.h
   hvx_hexagon_protos.h
+  hmx_hexagon_protos.h
   )
 
 set(hip_files
@@ -95,9 +98,11 @@ set(hlsl_subdir_files
   hlsl/hlsl_basic_types.h
   hlsl/hlsl_alias_intrinsics.h
   hlsl/hlsl_compat_overloads.h
+  hlsl/hlsl_debugging.h
   hlsl/hlsl_intrinsic_helpers.h
   hlsl/hlsl_intrinsics.h
   hlsl/hlsl_detail.h
+  hlsl/hlsl_resources.h
   hlsl/hlsl_spirv.h
   )
 set(hlsl_files
@@ -167,6 +172,7 @@ set(webassembly_files
 
 set(x86_files
 # Intrinsics
+  acev1intrin.h
   adcintrin.h
   adxintrin.h
   ammintrin.h
@@ -182,6 +188,8 @@ set(x86_files
   avx10_2_512niintrin.h
   avx10_2_512satcvtdsintrin.h
   avx10_2_512satcvtintrin.h
+  avx10v2aux_512intrin.h
+  avx10v2auxintrin.h
   avx10_2bf16intrin.h
   avx10_2convertintrin.h
   avx10_2copyintrin.h
@@ -824,26 +832,19 @@ install(
   EXCLUDE_FROM_ALL
   COMPONENT gpu-resource-headers)
 
-if(NOT CLANG_ENABLE_HLSL)
-  set(EXCLUDE_HLSL EXCLUDE_FROM_ALL)
-endif()
-
 install(
   FILES ${hlsl_h}
   DESTINATION ${header_install_dir}
-  ${EXCLUDE_HLSL}
   COMPONENT hlsl-resource-headers)
 
 install(
   FILES ${hlsl_subdir_files}
   DESTINATION ${header_install_dir}/hlsl
-  ${EXCLUDE_HLSL}
   COMPONENT hlsl-resource-headers)
 
 install(
   FILES ${hlsl_generated_files}
   DESTINATION ${header_install_dir}/hlsl
-  ${EXCLUDE_HLSL}
   COMPONENT hlsl-resource-headers)
 
 install(

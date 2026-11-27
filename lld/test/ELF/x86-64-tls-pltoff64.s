@@ -15,6 +15,13 @@
 # RUN: llvm-readelf -r out.so | FileCheck %s --check-prefix=SDYN
 # RUN: llvm-objdump -d --no-show-raw-insn --no-print-imm-hex out.so | FileCheck %s --check-prefix=SHARED
 
+## The GD-to-IE optimization reaches the GOT with a 32-bit PC-relative
+## displacement, so it has the same range limit as an unrelaxed GOTTPOFF.
+# RUN: not ld.lld a.o b.so -T lds -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=RANGE --implicit-check-not=error:
+
+# RANGE: error: a.o:(.text+0x19): relocation R_X86_64_TLSGD out of range: 2148532186 is not in [-2147483648, 2147483647]; references 'y'
+
 # SEC:      .got PROGBITS 00000000002023c8
 # SEC:      Relocation section '.rela.dyn' {{.*}} contains 1 entries:
 # SEC-NEXT: Offset
@@ -96,3 +103,9 @@ x2: .zero 4
 .section .tbss,"awT",@nobits
 .globl y
 y:  .zero 4
+
+#--- lds
+SECTIONS {
+  .text 0x100000 : { *(.text) }
+  .got 0x80200000 : { *(.got) }
+}

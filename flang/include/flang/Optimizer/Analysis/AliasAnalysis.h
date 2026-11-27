@@ -25,14 +25,38 @@
 
 namespace fir {
 
+class AliasAnalysisRecursiveEffectsCache;
+
 //===----------------------------------------------------------------------===//
 // AliasAnalysis
 //===----------------------------------------------------------------------===//
 struct AliasAnalysis {
+  AliasAnalysis() = default;
+
+  /// Construct an alias analysis bound to `cache`.
+  explicit AliasAnalysis(AliasAnalysisRecursiveEffectsCache &cache);
+
+  AliasAnalysis(AliasAnalysis &&other) noexcept;
+
+  ~AliasAnalysis();
+
+  AliasAnalysis(const AliasAnalysis &) = delete;
+  AliasAnalysis &operator=(const AliasAnalysis &) = delete;
+  AliasAnalysis &operator=(AliasAnalysis &&) = delete;
+
   // Structures to describe the memory source of a value.
 
   /// Kind of the memory source referenced by a value.
+  ///
+  /// Ordered from a source that designates no object toward an unknown
+  /// source. `alias()` treats `kind >= Indirect` as MayAlias, so any kind
+  /// that can be disambiguated has to stay before `Indirect`.
   ENUM_CLASS(SourceKind,
+             /// A null address. Under the LLVM language reference's pointer
+             /// aliasing rules, a null pointer in the default address space
+             /// is associated with no address:
+             /// https://llvm.org/docs/LangRef.html#pointer-aliasing-rules
+             Null,
              /// Unique memory allocated by an operation, e.g.
              /// by fir::AllocaOp or fir::AllocMemOp.
              Allocate,
@@ -161,9 +185,13 @@ struct AliasAnalysis {
       /// attribute or fir.coordinate_of's field_indices (mapped through the
       /// record type). Null for non-Component steps.
       mlir::StringAttr component;
+      /// For Component steps: the record type that `component` is a field
+      /// of. Null for non-Component steps.
+      mlir::Type recordType;
 
       bool operator==(const PathStep &o) const {
-        return kind == o.kind && component == o.component;
+        return kind == o.kind && component == o.component &&
+               recordType == o.recordType;
       }
       bool operator!=(const PathStep &o) const { return !(*this == o); }
     };
@@ -187,15 +215,29 @@ struct AliasAnalysis {
       /// MustAlias.
       bool isApproximate{false};
 
-      /// Return true if any step is a PointerDeref.
-      bool hasPointerDeref() const {
-        return llvm::any_of(steps, [](const PathStep &s) {
-          return s.kind == PathStep::Kind::PointerDeref;
-        });
+      /// Whether steps may be missing from the start of the path: different
+      /// paths of region branch predecessors are merged into an empty path,
+      /// and the steps after the merge are appended to it.
+      bool isIncomplete{false};
+
+      /// The storage-associated (EQUIVALENCE/COMMON) declaration crossed by
+      /// the path, if any. Objects of the same type may partially overlap
+      /// only through storage association, so component steps are only
+      /// compared between paths crossing the same such declaration.
+      mlir::Operation *storageDecl{nullptr};
+
+      /// Return true if any step is a PointerDeref, or if the path is
+      /// incomplete, since the missing steps may include one.
+      bool mayHavePointerDeref() const {
+        return isIncomplete || llvm::any_of(steps, [](const PathStep &s) {
+                 return s.kind == PathStep::Kind::PointerDeref;
+               });
       }
 
       bool operator==(const AccessPath &o) const {
-        return isApproximate == o.isApproximate && steps == o.steps;
+        return isApproximate == o.isApproximate &&
+               isIncomplete == o.isIncomplete && storageDecl == o.storageDecl &&
+               steps == o.steps;
       }
       bool operator!=(const AccessPath &o) const { return !(*this == o); }
 
@@ -287,6 +329,10 @@ struct AliasAnalysis {
     /// Return true, if Pointer attribute is set.
     bool isPointer() const;
 
+    /// Return true if the source originates at a Fortran variable declaration
+    /// with the ALLOCATABLE attribute.
+    bool isDeclaredAllocatable() const;
+
     /// Return true, if CrayPointer attribute is set.
     bool isCrayPointer() const;
 
@@ -375,6 +421,13 @@ struct AliasAnalysis {
   /// Disable getSource() memoization and drop any cached entries.
   void disableSourceCache();
 
+  /// Do not look up symbols, e.g. procedures or globals, in the enclosing
+  /// symbol table, and assume the worst about them instead. A pass that runs
+  /// on a function must not inspect other operations in the module, such as
+  /// the declaration of a callee, because other passes may modify them at the
+  /// same time.
+  void disableSymbolLookups() { symbolLookupsDisabled = true; }
+
   /// Testing only: number of entries currently held in the getSource() cache.
   std::size_t getSourceCacheSizeForTesting() const {
     return getSourceCache.size();
@@ -401,6 +454,8 @@ struct AliasAnalysis {
   bool functionHasMultipleScopes(mlir::Value v);
 
 private:
+  friend class AliasAnalysisRecursiveEffectsCache;
+
   /// Compute the memory source of a value. This is the uncached
   /// implementation of getSource(); getSource() is a thin wrapper that
   /// memoizes the result when source caching is enabled.
@@ -419,6 +474,23 @@ private:
   /// original-query-as-leaf".
   Source buildSourceAtDeclare(const Source::ScopedOrigin &so);
 
+  /// The part of alias(Source, Source, mlir::Value, mlir::Value) that
+  /// compares the sources. \p lhs and \p rhs are only used to find the
+  /// enclosing symbol table and to recognize derived types with pointer
+  /// components. Their types are not used to tell the address of a
+  /// descriptor from the address of data, so a source may describe the data
+  /// that the descriptor at \p lhs or \p rhs describes.
+  mlir::AliasResult aliasSources(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
+                                 mlir::Value rhs);
+
+  /// Return true if a call may access \p var through its actual argument
+  /// \p arg: \p var is a TARGET or POINTER, which a pointer reachable from
+  /// \p arg may give access to, \p var may alias \p arg or, if \p arg is the
+  /// address of a descriptor, the data that the descriptor describes. Only
+  /// the attributes of \p varSrc, the source of \p var, are used.
+  bool mayAccessThroughArgument(mlir::Value arg, mlir::Value var,
+                                const Source &varSrc);
+
   /// Return the dummy_scope SSA value governing \p declareOp.
   /// Prefers the declare's explicit getDummyScope() operand; otherwise
   /// falls back to the result of the dominating fir.dummy_scope op in
@@ -433,6 +505,8 @@ private:
   /// Return the symbol table nearest to the given operation.
   /// If a SymbolTable has not been cached in symTabMap,
   /// it will be created, which may be expensive.
+  /// Return nullptr if symbol lookups are disabled, see
+  /// disableSymbolLookups().
   const mlir::SymbolTable *getNearestSymbolTable(mlir::Operation *from);
 
   /// Return true if the given symbol may correspond to a Fortran variable
@@ -464,6 +538,9 @@ private:
   /// a few values that are likely not globals.
   /// We can have both modes for different clients.
   llvm::DenseMap<mlir::Operation *, mlir::SymbolTable> symTabMap;
+
+  /// Whether symbol lookups are disabled, see disableSymbolLookups().
+  bool symbolLookupsDisabled = false;
 
   /// Per-function caches used by getDeclarationScope() to map a
   /// fir.declare without an explicit dummy_scope operand to its
@@ -502,6 +579,78 @@ private:
   /// on each getSource() cache hit / miss.
   std::size_t sourceCacheHits = 0;
   std::size_t sourceCacheMisses = 0;
+
+  /// Optional opt-in cache for getModRef on ops with HasRecursiveMemoryEffects.
+  AliasAnalysisRecursiveEffectsCache *cache = nullptr;
+};
+
+/// Opt-in cache that amortizes the cost of repeated AliasAnalysis::getModRef
+/// queries against an op with HasRecursiveMemoryEffects (e.g. a loop).
+class AliasAnalysisRecursiveEffectsCache {
+public:
+  AliasAnalysisRecursiveEffectsCache() = default;
+  ~AliasAnalysisRecursiveEffectsCache() {
+    if (aa)
+      aa->cache = nullptr;
+  }
+
+  AliasAnalysisRecursiveEffectsCache(
+      const AliasAnalysisRecursiveEffectsCache &) = delete;
+  AliasAnalysisRecursiveEffectsCache &
+  operator=(const AliasAnalysisRecursiveEffectsCache &) = delete;
+  AliasAnalysisRecursiveEffectsCache(AliasAnalysisRecursiveEffectsCache &&) =
+      delete;
+  AliasAnalysisRecursiveEffectsCache &
+  operator=(AliasAnalysisRecursiveEffectsCache &&) = delete;
+
+  /// Drop all cached summaries. Call this when the IR inside previously
+  /// summarized ops has been mutated in a way the cache cannot tolerate.
+  void clear() { summaries.clear(); }
+
+  /// Testing only: number of op summaries currently held.
+  std::size_t getSummaryCacheSizeForTesting() const { return summaries.size(); }
+
+  /// Testing only: cumulative summary lookups that were served from an
+  /// existing entry (hits) or required buildSummary() (misses).
+  std::size_t getSummaryCacheHitsForTesting() const { return summaryHits; }
+  std::size_t getSummaryCacheMissesForTesting() const { return summaryMisses; }
+
+private:
+  friend struct AliasAnalysis;
+
+  struct CallInfo {
+    mlir::Operation *op;
+    /// If false, AliasAnalysis::getCallModRef would unconditionally return
+    /// ModAndRef on this call (e.g. runtime call / external procedure), so
+    /// per-query analysis skips it and goes straight to interface-effect
+    /// fall-through.
+    bool isFortranUserProcedure;
+  };
+
+  struct Summary {
+    bool hasUnknownWrite = false;
+    bool hasUnknownRead = false;
+    llvm::SmallVector<mlir::Value, 16> writeLocations;
+    llvm::SmallVector<mlir::Value, 16> readLocations;
+    llvm::SmallVector<CallInfo, 4> calls;
+  };
+
+  /// Populate `out` with the effects of `op` itself and, if op has
+  /// HasRecursiveMemoryEffects, recursively those of every op nested in its
+  /// regions.
+  void buildSummary(mlir::Operation *op, Summary &out);
+  void buildSummary(mlir::Region &region, Summary &out);
+
+  mlir::ModRefResult getModRefFromSummary(mlir::Operation *op,
+                                          mlir::Value location);
+
+  /// Back-pointer to the AliasAnalysis this cache is linked with.
+  AliasAnalysis *aa = nullptr;
+  llvm::DenseMap<mlir::Operation *, Summary> summaries;
+
+  /// Testing-only counters (see getSummaryCacheHitsForTesting()).
+  std::size_t summaryHits = 0;
+  std::size_t summaryMisses = 0;
 };
 
 inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,

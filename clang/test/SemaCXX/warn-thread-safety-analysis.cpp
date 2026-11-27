@@ -7867,7 +7867,7 @@ void testPointerAliasTryLockDubious(int x) {
   }
   ptr->data = 42;            // expected-warning{{writing variable 'data' requires holding mutex 'ptr->mu' exclusively}} \
                              // expected-warning{{mutex 'ptr->mu' is not held on every path through here}} \
-                             // expected-warning{{mutex 'returnsFoo().mu' is not held on every path through here}}
+                             // expected-warning{{mutex 'returnsFoo()->mu' is not held on every path through here}}
   ptr->mu.Unlock();          // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
 }
 
@@ -8147,6 +8147,28 @@ void test3() {
 
 } // namespace WideStringLiteral
 
+namespace PointerToMemberCall {
+
+struct Guarded {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+  Mutex *(Guarded::*mu_of)();
+};
+
+// A call through a pointer to member function has no method declaration; it
+// must not crash when used as a capability expression. The analysis cannot
+// name the callee, so the expression does not resolve to a capability, and
+// calls through different objects are not taken for one capability either.
+void testCallInCapabilityExpr(Guarded *g, Guarded &h) {
+  (g->*g->mu_of)()->Lock(); // expected-warning {{cannot resolve lock expression}}
+  g->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'g->mu' exclusively}}
+  (h.*h.mu_of)()->Lock(); // expected-warning {{cannot resolve lock expression}}
+  (g->*g->mu_of)()->Unlock(); // expected-warning {{cannot resolve lock expression}}
+  (h.*h.mu_of)()->Unlock(); // expected-warning {{cannot resolve lock expression}}
+}
+
+} // namespace PointerToMemberCall
+
 namespace FunctionPointers {
 
 Mutex mu;
@@ -8285,6 +8307,42 @@ void test_attr_refers_to_param(Mutex *m) {
   m->Unlock();
 }
 
+struct Owner {
+  Mutex gmu;
+};
+
+// An attribute on a redeclaration names that redeclaration's parameters.
+extern void (*redecl_cb)(int, Owner *g);
+void (*redecl_cb)(int, Owner *g) EXCLUSIVE_LOCKS_REQUIRED(g->gmu) = nullptr;
+
+void callRedecl(int n, Owner *arg) {
+  redecl_cb(n, arg); // expected-warning {{calling function 'redecl_cb' requires holding mutex 'arg->gmu' exclusively}}
+}
+
+// An instantiated pointee parameter belongs to no function either, not to the
+// lambda's call operator, which has no parameter at that position.
+template <typename T>
+void callInTemplateLambda(T *arg) {
+  auto lam = [&]() {
+    void (*cb)(T *g) EXCLUSIVE_LOCKS_REQUIRED(g->gmu) = nullptr;
+    cb(arg); // expected-warning {{calling function 'cb' requires holding mutex 'arg->gmu' exclusively}}
+  };
+  lam();
+}
+
+void testCallInTemplateLambda(Owner *arg) {
+  callInTemplateLambda(arg); // expected-note {{in instantiation of function template specialization}}
+}
+
+// The attribute on 'mu_of_g' names its sibling 'g', not a parameter of its own
+// prototype, so a call to 'mu_of_g' has no argument for it.
+void (*with_lock)(int n, Owner *g, Mutex *(*mu_of_g)() LOCK_RETURNED(&g->gmu))
+    EXCLUSIVE_LOCKS_REQUIRED(mu_of_g());
+
+void callWithLock(int n, Owner *arg, Mutex *(*fn)()) {
+  with_lock(n, arg, fn); // expected-warning {{calling function 'with_lock' requires holding mutex 'g->gmu' exclusively}}
+}
+
 // Function references name a function to call just like function pointers do.
 void lock_impl(void) EXCLUSIVE_LOCK_FUNCTION(mu);
 void unlock_impl(void) UNLOCK_FUNCTION(mu);
@@ -8370,4 +8428,554 @@ void testDependent(int n) {
   callDependent<void (&)(int)>(callback, n); // expected-note {{in instantiation of function template specialization 'FunctionPointers::callDependent<void (&)(int)>' requested here}}
 }
 
+// On a parameter of a non-static member function, a member names that of the
+// object the function is called on, as on the function itself.
+struct CallbackOwner {
+  Mutex mu;
+  void run(void (*cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n);
+  void runAddr(void (*cb)(int) EXCLUSIVE_LOCKS_REQUIRED(&mu), int n) {
+    cb(n); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+  }
+};
+
+void CallbackOwner::run(void (*cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n) {
+  mu.Lock();
+  cb(n);
+  mu.Unlock();
+}
+
+template <typename T> struct CallbackOwnerT {
+  Mutex mu;
+  void run(void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu), T n) {
+    mu.Lock();
+    cb(n);
+    mu.Unlock();
+  }
+  // A nested prototype's parameters belong to no function, so have no 'this'.
+  void runNested(void (*cb)(T, void (*h)() EXCLUSIVE_LOCKS_REQUIRED(mu))
+                     EXCLUSIVE_LOCKS_REQUIRED(mu),
+                 T n) {
+    mu.Lock();
+    cb(n, nullptr);
+    mu.Unlock();
+  }
+};
+template struct CallbackOwnerT<int>;
+
+// An out-of-line definition is static only if the declaration it defines is,
+// even if another member of its name is static.
+struct CallbackOwnerOverload {
+  Mutex mu;
+  void run(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu));
+  static void run(int, void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu));
+};
+void CallbackOwnerOverload::run(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu)) {
+  mu.Lock();
+  cb();
+  mu.Unlock();
+}
+void CallbackOwnerOverload::run(int, void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu)) {
+  cb(); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+}
+
+template <typename T> struct CallbackOwnerOverloadT {
+  Mutex mu;
+  void run(void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu), T n);
+  static void run(int, void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu), T n);
+};
+template <typename T>
+void CallbackOwnerOverloadT<T>::run(void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu),
+                                    T n) {
+  mu.Lock();
+  cb(n);
+  mu.Unlock();
+}
+template <typename T>
+void CallbackOwnerOverloadT<T>::run(int,
+                                    void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu),
+                                    T n) {
+  cb(n); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+}
+template struct CallbackOwnerOverloadT<int>; // expected-note {{in instantiation of member function 'FunctionPointers::CallbackOwnerOverloadT<int>::run' requested here}}
+
+// In a const member function, 'this' is const for a parameter's attribute too,
+// so both attributes call the const overload.
+struct CallbackOwnerConst {
+  Mutex mu;
+  Mutex &getMu();
+  const Mutex &getMu() const;
+  void run(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(getMu())) const
+      EXCLUSIVE_LOCKS_REQUIRED(getMu()) {
+    cb();
+  }
+  void runOutOfLine(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(getMu())) const
+      EXCLUSIVE_LOCKS_REQUIRED(getMu());
+};
+void CallbackOwnerConst::runOutOfLine(
+    void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(getMu())) const {
+  cb();
+}
+
+// Like the function's own attribute, a parameter's may name a member declared
+// after the function, unless a later parameter shadows it.
+struct CallbackOwnerLater {
+  void run(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu))
+      EXCLUSIVE_LOCKS_REQUIRED(mu) {
+    cb();
+  }
+  void shadow(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu), Mutex *mu)
+      EXCLUSIVE_LOCKS_REQUIRED(mu) {
+    cb();
+  }
+  void shadowOutOfLine(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu), Mutex *mu)
+      EXCLUSIVE_LOCKS_REQUIRED(mu);
+  Mutex mu;
+};
+void CallbackOwnerLater::shadowOutOfLine(
+    void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu), Mutex *mu) {
+  cb();
+}
+
+template <typename T> struct CallbackOwnerLaterT {
+  void run(void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu), T n)
+      EXCLUSIVE_LOCKS_REQUIRED(mu) {
+    cb(n);
+  }
+  Mutex mu;
+};
+template struct CallbackOwnerLaterT<int>;
+
+// A later parameter shadows a global too.
+Mutex shadowedMu;
+void callLaterShadowed(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(shadowedMu),
+                       Mutex *shadowedMu)
+    EXCLUSIVE_LOCKS_REQUIRED(shadowedMu) {
+  cb();
+}
+
+// Explicit template arguments are substituted into the parameters before
+// deduction in the context of the template, so 'this' is that of the template's
+// class whatever the caller's is.
+struct CallbackOwnerExplicit {
+  Mutex mu;
+  template <typename T>
+  void run(void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu), T n) {
+    cb(n); // expected-warning 2 {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+  }
+};
+void callExplicitFree(CallbackOwnerExplicit &o, void (*cb)(int)) {
+  o.run<int>(cb, 0); // expected-note {{in instantiation of function template specialization 'FunctionPointers::CallbackOwnerExplicit::run<int>' requested here}}
+}
+struct CallbackOwnerExplicitOther {
+  int mu;
+  void call(CallbackOwnerExplicit &o, void (*cb)(long)) {
+    o.run<long>(cb, 0); // expected-note {{in instantiation of function template specialization 'FunctionPointers::CallbackOwnerExplicit::run<long>' requested here}}
+  }
+};
+
+// A member function whose type is attributed is instantiated with the
+// parameters of its declaration, which are not those of its type.
+template <typename T> struct CallbackOwnerAttributed {
+  Mutex mu;
+  void run(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu)) [[clang::annotate_type("x")]] {
+    cb(); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+  }
+  void runDependent(void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu), T n) [[clang::annotate_type("x")]] {
+    cb(n); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+  }
+};
+template struct CallbackOwnerAttributed<int>; // expected-note {{in instantiation of member function 'FunctionPointers::CallbackOwnerAttributed<int>::run' requested here}} \
+                                              // expected-note {{in instantiation of member function 'FunctionPointers::CallbackOwnerAttributed<int>::runDependent' requested here}}
+
+// lock_returned on a function pointer or reference.
+struct Guarded {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+};
+Mutex &mu_ref_impl(Guarded &g) LOCK_RETURNED(g.mu);
+Mutex *(*mu_of)(Guarded *g) LOCK_RETURNED(&g->mu);
+// As with the other attributes (see testReassignIncompatible), the initializer
+// is not checked against the attribute: the analysis trusts the declaration.
+Mutex &(&mu_ref_of)(Guarded &g) LOCK_RETURNED(g.mu) = mu_ref_impl;
+
+void testLockReturned(Guarded *g) {
+  mu_of(g)->Lock();
+  g->data = 1;
+  mu_ref_of(*g).Unlock(); // expected-note {{mutex released here}}
+  mu_of(g)->Unlock(); // expected-warning {{releasing mutex 'g->mu' that was not held}}
+}
+
+// A dependent parameter type is classified after instantiation.
+template <typename F>
+void lockReturnedDependent(Guarded *g, F mu_of_g LOCK_RETURNED(&g->mu)) {
+  mu_of_g(g)->Lock();
+  g->data = 1;
+  g->mu.Unlock();
+}
+
+void testLockReturnedDependent(Guarded *g) {
+  lockReturnedDependent<Mutex *(*)(Guarded *)>(g, mu_of);
+}
+
+// A function pointer field may name a sibling member, which is resolved
+// against the object the field was reached through.
+struct GuardedOps {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+  Mutex *(*mu_of)() LOCK_RETURNED(&mu);
+  void (*lock)() EXCLUSIVE_LOCK_FUNCTION(mu);
+  void (*unlock)() UNLOCK_FUNCTION(mu);
+};
+
+void testMemberLockReturned(GuardedOps *g, GuardedOps &h) {
+  g->mu_of()->Lock();
+  g->data = 1;
+  g->unlock();
+  h.lock();
+  h.data = 2;
+  h.mu_of()->Unlock();
+}
+
+void testMemberLockReturnedFail(GuardedOps *g, GuardedOps &h) {
+  h.mu_of()->Lock();
+  g->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'g->mu' exclusively}} \
+               // expected-note {{found near match 'h.mu'}}
+  g->mu_of()->Unlock(); // expected-warning {{releasing mutex 'g->mu' that was not held}}
+  h.unlock();
+}
+
+// The field may also be called through an explicit dereference.
+void testMemberDeref(GuardedOps *g, GuardedOps &h) {
+  (*g->mu_of)()->Lock();
+  g->data = 1;
+  (*g->unlock)();
+  (**h.lock)();
+  h.data = 2;
+  g->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'g->mu' exclusively}} \
+               // expected-note {{found near match 'h.mu'}}
+  (*h.mu_of)()->Unlock();
+}
+
+// Inside a member function, a call through another object must not resolve
+// the sibling against 'this'.
+struct GuardedOpsSelf {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+  void (*lock)() EXCLUSIVE_LOCK_FUNCTION(mu);
+  void (*unlock)() UNLOCK_FUNCTION(mu);
+  void self() {
+    lock();
+    data = 1;
+    (*unlock)();
+  }
+  void other(GuardedOpsSelf *o) {
+    o->lock();
+    o->data = 1;
+    data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'mu' exclusively}} \
+              // expected-note {{found near match 'o->mu'}}
+    o->unlock();
+  }
+};
+
+// Without arguments, an attribute on a function pointer field refers to the
+// object the field is called through, the object 'this' names in it.
+struct LOCKABLE SelfOps {
+  void (*lock)() EXCLUSIVE_LOCK_FUNCTION();
+  void (*unlock)() UNLOCK_FUNCTION();
+  int data GUARDED_BY(this);
+  void self() { lock(); data = 1; unlock(); }
+  struct LOCKABLE {
+    void (*anonLock)() EXCLUSIVE_LOCK_FUNCTION();
+    void (*anonUnlock)() UNLOCK_FUNCTION();
+    int anonData GUARDED_BY(this); // the anonymous object, as for anonLock
+  };
+};
+
+void requiresSelfOps(SelfOps *s) EXCLUSIVE_LOCKS_REQUIRED(s);
+
+void testSelfOps(SelfOps *s, SelfOps *o) {
+  s->lock();
+  s->data = 1;
+  requiresSelfOps(s);
+  o->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'o' exclusively}}
+  s->unlock();
+  s->anonLock();
+  s->anonData = 1;
+  s->anonUnlock();
+}
+
+template <class F> struct LOCKABLE SelfOpsTemplate {
+  F lock EXCLUSIVE_LOCK_FUNCTION();
+  F unlock UNLOCK_FUNCTION();
+  int data GUARDED_BY(this);
+};
+
+void testSelfOpsTemplate(SelfOpsTemplate<void (*)()> *t) {
+  t->lock();
+  t->data = 1;
+  t->unlock();
+}
+
 } // namespace FunctionPointers
+
+namespace AnonymousMembers {
+
+// An attribute on a member of an anonymous struct/union may name a field of
+// the enclosing record, and vice versa.
+struct S {
+  Mutex mu;
+  union {
+    int a GUARDED_BY(mu);
+  };
+  struct Also {
+    int az GUARDED_BY(inner);
+  };
+  struct {
+    Mutex inner;
+    int c GUARDED_BY(inner);
+    Also al;
+  };
+  int e GUARDED_BY(inner);
+  union { Mutex um; };
+  union { int i GUARDED_BY(um); };
+  int j GUARDED_BY(&S::um); // the wildcard, any object's um
+  struct {
+    struct {
+      Mutex deep;
+      int f GUARDED_BY(mu);
+    };
+    int g GUARDED_BY(deep);
+  };
+  int h GUARDED_BY(deep);
+  Mutex after ACQUIRED_AFTER(inner);
+
+  void member() {
+    a = 1; // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    c = 3; // expected-warning {{writing variable 'c' requires holding mutex 'inner' exclusively}}
+    e = 5; // expected-warning {{writing variable 'e' requires holding mutex 'inner' exclusively}}
+    i = 9; // expected-warning {{writing variable 'i' requires holding mutex 'um' exclusively}}
+    j = 10; // expected-warning {{writing variable 'j' requires holding mutex '&AnonymousMembers::S::um' exclusively}}
+    mu.Lock();
+    inner.Lock();
+    um.Lock();
+    a = 1;
+    c = 3;
+    e = 5;
+    i = 9;
+    j = 10;
+    um.Unlock();
+    inner.Unlock();
+    mu.Unlock();
+  }
+};
+
+void test(S *s, S *other) {
+  s->mu.Lock();
+  s->a = 1;
+  s->mu.Unlock();
+  s->inner.Lock();
+  s->c = 3;
+  s->e = 5;
+  s->al.az = 10;
+  s->inner.Unlock();
+  other->mu.Lock();
+  s->a = 1; // expected-warning {{writing variable 'a' requires holding mutex 's->mu' exclusively}} \
+            // expected-note {{found near match 'other->mu'}}
+  s->e = 5; // expected-warning {{writing variable 'e' requires holding mutex 's->inner' exclusively}}
+  s->al.az = 10; // expected-warning {{writing variable 'az' requires holding mutex 's->inner' exclusively}}
+  s->i = 9; // expected-warning {{writing variable 'i' requires holding mutex 's->um' exclusively}}
+  other->um.Lock();
+  s->j = 10;
+  other->um.Unlock();
+  s->mu.Lock();
+  s->f = 6;
+  s->mu.Unlock();
+  s->deep.Lock();
+  s->g = 7;
+  s->h = 8;
+  s->deep.Unlock();
+  s->f = 6; // expected-warning {{writing variable 'f' requires holding mutex 's->mu' exclusively}} \
+            // expected-note {{found near match 'other->mu'}}
+  s->g = 7; // expected-warning {{writing variable 'g' requires holding mutex 's->deep' exclusively}}
+  s->h = 8; // expected-warning {{writing variable 'h' requires holding mutex 's->deep' exclusively}}
+  other->mu.Unlock();
+}
+
+void testValue(S v) {
+  v.deep.Lock();
+  v.g = 7;
+  v.h = 8;
+  v.deep.Unlock();
+  v.h = 8; // expected-warning {{writing variable 'h' requires holding mutex 'v.deep' exclusively}}
+}
+
+void testOrder(S *s) {
+  s->after.Lock();
+  s->inner.Lock(); // expected-warning {{mutex 'inner' must be acquired before 'after'}}
+  s->inner.Unlock();
+  s->after.Unlock();
+}
+
+struct Base {
+  Mutex bmu;
+  union { int ba GUARDED_BY(bmu); };
+};
+
+struct Derived : Base {
+  int da GUARDED_BY(bmu);
+  union { int du GUARDED_BY(bmu); };
+};
+
+void testDerived(Derived *d, Derived *other) {
+  d->bmu.Lock();
+  d->ba = 1;
+  d->da = 2;
+  d->du = 3;
+  d->bmu.Unlock();
+  other->bmu.Lock();
+  d->ba = 1; // expected-warning {{writing variable 'ba' requires holding mutex 'd->bmu' exclusively}} \
+             // expected-note {{found near match 'other->bmu'}}
+  d->da = 2; // expected-warning {{writing variable 'da' requires holding mutex 'd->bmu' exclusively}} \
+             // expected-note {{found near match 'other->bmu'}}
+  d->du = 3; // expected-warning {{writing variable 'du' requires holding mutex 'd->bmu' exclusively}} \
+             // expected-note {{found near match 'other->bmu'}}
+  other->bmu.Unlock();
+}
+
+// A field of a named nested record may be guarded by a field of an enclosing
+// record, resolved on the nearest enclosing object, and vice versa.
+struct NamedNesting {
+  Mutex mu;
+  struct Named {
+    Mutex nmu;
+    int nx GUARDED_BY(nmu);
+    int ny GUARDED_BY(mu);
+    struct NamedIn {
+      int nix GUARDED_BY(nmu);
+    } nin;
+  } n, narr[2], *np, *pa[2];
+  struct Inner {
+    Mutex imu;
+    int w GUARDED_BY(mu);
+  };
+  struct {
+    Inner in;
+  };
+  int y GUARDED_BY(n.nmu);
+  int z GUARDED_BY(in.imu);
+};
+
+void testNamedNesting(NamedNesting *m, NamedNesting *o) {
+  m->mu.Lock();
+  m->n.ny = 1;
+  m->in.w = 2;
+  m->narr[1].ny = 3;
+  m->narr->ny = 3;
+  (&m->n)->ny = 5;
+  m->np->ny = 4; // expected-warning {{writing variable 'ny' requires holding mutex 'm->np->AnonymousMembers::NamedNesting::mu' exclusively}} \
+                 // expected-note {{found near match 'm->mu'}}
+  m->mu.Unlock();
+  o->mu.Lock();
+  m->n.ny = 1; // expected-warning {{writing variable 'ny' requires holding mutex 'm->mu' exclusively}} \
+               // expected-note {{found near match 'o->mu'}}
+  m->in.w = 2; // expected-warning {{writing variable 'w' requires holding mutex 'm->mu' exclusively}} \
+               // expected-note {{found near match 'o->mu'}}
+  o->mu.Unlock();
+  m->n.nmu.Lock();
+  m->in.imu.Lock();
+  m->y = 1;
+  m->z = 2;
+  o->y = 1; // expected-warning {{writing variable 'y' requires holding mutex 'o->n.nmu' exclusively}} \
+            // expected-note {{found near match 'm->n.nmu'}}
+  o->z = 2; // expected-warning {{writing variable 'z' requires holding mutex 'o->in.imu' exclusively}} \
+            // expected-note {{found near match 'm->in.imu'}}
+  m->in.imu.Unlock();
+  m->n.nmu.Unlock();
+}
+
+// An array of records accessed through its decayed pointer is still an object
+// of its element type, whose own field may be named.
+void testNamedNestingArray(NamedNesting *m, NamedNesting::Named narr[2]) {
+  m->narr->nmu.Lock();
+  m->narr->nx = 1;
+  m->narr->nin.nix = 2;
+  m->narr[1].nx = 3; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr[1].nmu' exclusively}} \
+                     // expected-note {{found near match 'm->narr->nmu'}}
+  m->narr->nmu.Unlock();
+  m->narr->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr->nmu' exclusively}}
+  m->narr->nin.nix = 2; // expected-warning {{writing variable 'nix' requires holding mutex 'm->narr->nmu' exclusively}}
+  narr->nmu.Lock();
+  narr->nx = 1;
+  narr->nin.nix = 2;
+  narr->nmu.Unlock();
+  // Pointer arithmetic is spelled as written, and is not a subscript.
+  (m->narr + 1)->nmu.Lock();
+  (m->narr + 1)->nx = 1;
+  m->narr[1].nx = 3; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr[1].nmu' exclusively}} \
+                     // expected-note {{found near match '(m->narr + 1)->nmu'}}
+  (m->narr + 1)->nmu.Unlock();
+  (m->np + 1)->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex '(m->np + 1)->nmu' exclusively}}
+  // An element of an array of pointers is a pointer.
+  m->pa[1]->nmu.Lock();
+  m->pa[1]->nx = 1;
+  m->pa[0]->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex 'm->pa[0]->nmu' exclusively}} \
+                    // expected-note {{found near match 'm->pa[1]->nmu'}}
+  m->pa[1]->nmu.Unlock();
+}
+
+// With only the nested object at hand, its enclosing record's field cannot be
+// reached; the requirement is spelled with the field's record.
+struct Unreachable {
+  Mutex mu;
+  union { Mutex amu; };
+  struct Inner {
+    void f() EXCLUSIVE_LOCKS_REQUIRED(mu);
+    void h() EXCLUSIVE_LOCKS_REQUIRED(amu);
+  } in;
+
+  void g(Inner *inner) EXCLUSIVE_LOCKS_REQUIRED(mu, amu) {
+    in.f();
+    in.h();
+    inner->f(); // expected-warning {{calling function 'f' requires holding mutex 'inner->AnonymousMembers::Unreachable::mu' exclusively}} \
+                // expected-note {{found near match 'mu'}}
+    inner->h(); // expected-warning {{calling function 'h' requires holding mutex 'inner->AnonymousMembers::Unreachable::amu' exclusively}} \
+                // expected-note {{found near match 'amu'}}
+  }
+};
+
+// An unqualified name is the innermost record's field.
+struct Shadowed {
+  Mutex mu;
+  struct Shadowing {
+    Mutex mu;
+    int ny GUARDED_BY(mu);
+    struct Deeper {
+      int dz GUARDED_BY(mu);
+    } d;
+  } n;
+};
+
+void testShadowed(Shadowed *o) {
+  o->mu.Lock();
+  o->n.ny = 1;   // expected-warning {{writing variable 'ny' requires holding mutex 'o->n.mu' exclusively}}
+  o->n.d.dz = 1; // expected-warning {{writing variable 'dz' requires holding mutex 'o->n.mu' exclusively}}
+  o->mu.Unlock();
+  o->n.mu.Lock();
+  o->n.ny = 2;
+  o->n.d.dz = 2;
+  o->n.mu.Unlock();
+}
+
+static union {
+  Mutex gmu;
+  int gx GUARDED_BY(gmu);
+};
+
+void testNamespaceUnion() {
+  gmu.Lock();
+  gx = 1;
+  gmu.Unlock();
+  gx = 2; // expected-warning {{writing variable 'gx' requires holding mutex 'gmu' exclusively}}
+}
+
+} // namespace AnonymousMembers

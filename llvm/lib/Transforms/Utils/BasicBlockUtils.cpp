@@ -119,8 +119,7 @@ void llvm::detachDeadBlocks(ArrayRef<BasicBlock *> BBs,
       if (isa<FuncletPadInst>(I)) {
         UniqueEHRetBlocksToDelete.clear();
 
-        for (User *User : I.users()) {
-          Instruction *ReturnInstr = dyn_cast<Instruction>(User);
+        for (Instruction *ReturnInstr : I.users()) {
           // If we have a cleanupret or catchret block, replace it with just an
           // unreachable. The other alternative, that may use a catchpad is a
           // catchswitch. That does not need special handling for now.
@@ -1349,7 +1348,7 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
     // to be applied to the new latch.
     OldLatch = L->getLoopLatch();
   } else
-    BI->setDebugLoc(BB->getFirstNonPHIOrDbg()->getDebugLoc());
+    BI->setDebugLoc(BB->getFirstNonPHIOrPseudoProbe()->getDebugLoc());
 
   // Move the edges from Preds to point to NewBB instead of BB.
   for (BasicBlock *Pred : Preds) {
@@ -1740,7 +1739,8 @@ void llvm::SplitBlockAndInsertForEachLane(
     ElementCount EC, Type *IndexTy, BasicBlock::iterator InsertBefore,
     std::function<void(IRBuilderBase &, Value *)> Func) {
 
-  IRBuilder<> IRB(InsertBefore->getParent(), InsertBefore);
+  IRBuilder<> IRB(InsertBefore);
+  IRB.disableGEPCanonicalization();
 
   if (EC.isScalable()) {
     Value *NumElements = IRB.CreateElementCount(IndexTy, EC);
@@ -1764,7 +1764,8 @@ void llvm::SplitBlockAndInsertForEachLane(
     Value *EVL, BasicBlock::iterator InsertBefore,
     std::function<void(IRBuilderBase &, Value *)> Func) {
 
-  IRBuilder<> IRB(InsertBefore->getParent(), InsertBefore);
+  IRBuilder<> IRB(InsertBefore);
+  IRB.disableGEPCanonicalization();
   Type *Ty = EVL->getType();
 
   if (!isa<ConstantInt>(EVL)) {
@@ -1888,15 +1889,6 @@ void llvm::InvertBranch(CondBrInst *PBI, IRBuilderBase &Builder) {
 
   PBI->setCondition(NewCond);
   PBI->swapSuccessors();
-}
-
-bool llvm::hasOnlySimpleTerminator(const Function &F) {
-  for (auto &BB : F) {
-    auto *Term = BB.getTerminator();
-    if (!isa<ReturnInst, UnreachableInst, UncondBrInst, CondBrInst>(Term))
-      return false;
-  }
-  return true;
 }
 
 Printable llvm::printBasicBlock(const BasicBlock *BB) {

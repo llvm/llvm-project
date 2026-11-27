@@ -278,15 +278,16 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
     llvm::SmallVector<PrototypeDescriptor> ProtoSeq =
         RVVIntrinsic::computeBuiltinTypes(
             BasicProtoSeq, /*IsMasked=*/false,
-            /*HasMaskedOffOperand=*/false, Record.HasVL, Record.NF,
+            /*HasMaskedOffOperand=*/false,
+            /*MaskedPrototypeHasResultMask=*/false, Record.HasVL, Record.NF,
             UnMaskedPolicyScheme, DefaultPolicy, Record.IsTuple);
 
     llvm::SmallVector<PrototypeDescriptor> ProtoMaskSeq;
     if (Record.HasMasked)
       ProtoMaskSeq = RVVIntrinsic::computeBuiltinTypes(
           BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
-          Record.HasVL, Record.NF, MaskedPolicyScheme, DefaultPolicy,
-          Record.IsTuple);
+          Record.MaskedPrototypeHasResultMask, Record.HasVL, Record.NF,
+          MaskedPolicyScheme, DefaultPolicy, Record.IsTuple);
 
     bool UnMaskedHasPolicy = UnMaskedPolicyScheme != PolicyScheme::SchemeNone;
     bool MaskedHasPolicy = MaskedPolicyScheme != PolicyScheme::SchemeNone;
@@ -332,8 +333,9 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
             llvm::SmallVector<PrototypeDescriptor> PolicyPrototype =
                 RVVIntrinsic::computeBuiltinTypes(
                     BasicProtoSeq, /*IsMasked=*/false,
-                    /*HasMaskedOffOperand=*/false, Record.HasVL, Record.NF,
-                    UnMaskedPolicyScheme, P, Record.IsTuple);
+                    /*HasMaskedOffOperand=*/false,
+                    /*MaskedPrototypeHasResultMask=*/false, Record.HasVL,
+                    Record.NF, UnMaskedPolicyScheme, P, Record.IsTuple);
             std::optional<RVVTypes> PolicyTypes = TypeCache.computeTypes(
                 BaseType, Log2LMUL, Record.NF, PolicyPrototype);
             InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr,
@@ -355,8 +357,8 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
           llvm::SmallVector<PrototypeDescriptor> PolicyPrototype =
               RVVIntrinsic::computeBuiltinTypes(
                   BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
-                  Record.HasVL, Record.NF, MaskedPolicyScheme, P,
-                  Record.IsTuple);
+                  Record.MaskedPrototypeHasResultMask, Record.HasVL, Record.NF,
+                  MaskedPolicyScheme, P, Record.IsTuple);
           std::optional<RVVTypes> PolicyTypes = TypeCache.computeTypes(
               BaseType, Log2LMUL, Record.NF, PolicyPrototype);
           InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr,
@@ -966,6 +968,26 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCV::BI__builtin_riscv_sm4ks:
   case RISCV::BI__builtin_riscv_sm4ed:
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 3);
+  // Check the psati/pusati saturation width.
+  case RISCV::BI__builtin_riscv_psati_i16x2:
+  case RISCV::BI__builtin_riscv_psati_i16x4:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 1, 16);
+  case RISCV::BI__builtin_riscv_psati_i32x2:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 1, 32);
+  case RISCV::BI__builtin_riscv_pusati_u16x2:
+  case RISCV::BI__builtin_riscv_pusati_u16x4:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 15);
+  case RISCV::BI__builtin_riscv_pusati_u32x2:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
+  // Check the sati/usati saturation width.
+  case RISCV::BI__builtin_riscv_sati_i32:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 1, 32);
+  case RISCV::BI__builtin_riscv_sati_i64:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 1, 64);
+  case RISCV::BI__builtin_riscv_usati_u32:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
+  case RISCV::BI__builtin_riscv_usati_u64:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 63);
   // Check if rnum is in [0, 10]
   case RISCV::BI__builtin_riscv_aes64ks1i:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 10);
@@ -1612,7 +1634,7 @@ bool SemaRISCV::isValidRVVBitcast(QualType srcTy, QualType destTy) {
       return false;
 
     const auto *VecTy = SecondType->getAs<VectorType>();
-    return VecTy && VecTy->getVectorKind() == VectorKind::RVVFixedLengthData;
+    return VecTy && isRVVFixedLengthDataVectorKind(VecTy->getVectorKind());
   };
 
   return ValidScalableConversion(srcTy, destTy) ||
@@ -1658,6 +1680,10 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
   if (!AL.checkAtMostNumArgs(SemaRef, 3))
     return;
 
+  bool HasMachine = false;
+  bool HasSupervisor = false;
+  bool HasPreemptible = false;
+  bool HasPushPop = false;
   bool HasSiFiveCLICType = false;
   bool HasUnaryType = false;
   bool ReportedDuplicateType = false;
@@ -1680,20 +1706,28 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
     switch (Type) {
     case RISCVInterruptAttr::machine:
-      // "machine" could be combined with the SiFive CLIC types, or could be
-      // just "machine".
+      // "machine" can be used alone, with ACLIC modifiers, or with SiFive CLIC
+      // types.
+      HasMachine = true;
+      break;
+    case RISCVInterruptAttr::supervisor:
+      HasSupervisor = true;
+      break;
+    case RISCVInterruptAttr::preemptible:
+      HasPreemptible = true;
+      break;
+    case RISCVInterruptAttr::pushpop:
+      HasPushPop = true;
       break;
     case RISCVInterruptAttr::SiFiveCLICPreemptible:
     case RISCVInterruptAttr::SiFiveCLICStackSwap:
       // SiFive-CLIC types can be combined with each other and "machine"
       HasSiFiveCLICType = true;
       break;
-    case RISCVInterruptAttr::supervisor:
     case RISCVInterruptAttr::rnmi:
     case RISCVInterruptAttr::qcinest:
     case RISCVInterruptAttr::qcinonest:
-      // "supervisor", "rnmi" and "qci-(no)nest" cannot be combined with any
-      // other types
+      // "rnmi" and "qci-(no)nest" cannot be combined with any other types.
       HasUnaryType = true;
       break;
     }
@@ -1710,7 +1744,13 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  if (HasUnaryType && HasSiFiveCLICType) {
+  if (HasMachine && HasSupervisor) {
+    Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
+    return;
+  }
+
+  if (HasSiFiveCLICType &&
+      (HasUnaryType || HasSupervisor || HasPreemptible || HasPushPop)) {
     Diag(AL.getLoc(), diag::err_riscv_attribute_interrupt_invalid_combination);
     return;
   }
@@ -1730,6 +1770,34 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
   for (RISCVInterruptAttr::InterruptType Type : Types) {
     switch (Type) {
+    case RISCVInterruptAttr::rnmi: {
+      if (!HasFeature("smrnmi")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Smrnmi";
+        return;
+      }
+    } break;
+    case RISCVInterruptAttr::preemptible: {
+      if (!HasFeature(HasSupervisor ? "experimental-ssnip"
+                                    : "experimental-smnip")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type)
+            << (HasSupervisor ? "Ssnip" : "Smnip");
+        return;
+      }
+    } break;
+    case RISCVInterruptAttr::pushpop: {
+      if (!HasFeature(HasSupervisor ? "experimental-ssip"
+                                    : "experimental-smip")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type)
+            << (HasSupervisor ? "Ssip" : "Smip");
+        return;
+      }
+    } break;
     // The QCI interrupt types require Xqciint
     case RISCVInterruptAttr::qcinest:
     case RISCVInterruptAttr::qcinonest: {
@@ -1748,14 +1816,6 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
              diag::err_riscv_attribute_interrupt_requires_extension)
             << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type)
             << "XSfmclic";
-        return;
-      }
-    } break;
-    case RISCVInterruptAttr::rnmi: {
-      if (!HasFeature("smrnmi")) {
-        Diag(AL.getLoc(),
-             diag::err_riscv_attribute_interrupt_requires_extension)
-            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Smrnmi";
         return;
       }
     } break;

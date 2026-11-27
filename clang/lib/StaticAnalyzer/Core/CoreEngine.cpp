@@ -114,7 +114,7 @@ bool CoreEngine::ExecuteWorkList(const StackFrame *SF, unsigned MaxSteps,
       InitState = ExprEng.getInitialState(SF);
 
     bool IsNew;
-    ExplodedNode *Node = G.getNode(StartLoc, InitState, false, &IsNew);
+    ExplodedNode *Node = G.getNode(StartLoc, InitState.get(), false, &IsNew);
     assert(IsNew);
     G.designateAsRoot(Node);
 
@@ -161,6 +161,7 @@ bool CoreEngine::ExecuteWorkList(const StackFrame *SF, unsigned MaxSteps,
     return MaxSteps - Steps;
   };
   const unsigned STUSteps = ProcessWList(MaxSteps);
+  ExploredAllSTUPaths = !WList->hasWork();
 
   if (CTUWList) {
     NumSTUSteps += STUSteps;
@@ -285,7 +286,7 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
         },
         /*IsPrunable=*/true));
     // Perform the transition.
-    Pred = makeNode(P, Pred->getState(), Pred);
+    Pred = makeNode(P, Pred->getState().get(), Pred);
     if (!Pred)
       return;
   }
@@ -394,7 +395,7 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
         for (const CFGBlock *Succ : B->succs()) {
           if (Succ) {
             BlockEdge BE(B, Succ, Pred->getStackFrame());
-            if (ExplodedNode *N = makeNode(BE, Pred->State, Pred))
+            if (ExplodedNode *N = makeNode(BE, Pred->State.get(), Pred))
               WList->enqueue(N);
           }
         }
@@ -475,7 +476,7 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
          "Blocks with no terminator should have at most 1 successor.");
 
   BlockEdge BE(B, *(B->succ_begin()), Pred->getStackFrame());
-  if (ExplodedNode *N = makeNode(BE, Pred->State, Pred))
+  if (ExplodedNode *N = makeNode(BE, Pred->State.get(), Pred))
     WList->enqueue(N);
 }
 
@@ -559,15 +560,15 @@ void CoreEngine::HandleVirtualBaseBranch(const CFGBlock *B,
 }
 
 ExplodedNode *CoreEngine::makeNode(const ProgramPoint &Loc,
-                                   ProgramStateRef State, ExplodedNode *Pred,
-                                   bool MarkAsSink) const {
-  MarkAsSink = MarkAsSink || State->isPosteriorlyOverconstrained();
+                                   const ProgramState *State,
+                                   ExplodedNode *Pred, bool MarkAsSink) const {
+  bool IsPO = State->isPosteriorlyOverconstrained();
 
   bool IsNew;
-  ExplodedNode *N = G.getNode(Loc, State, MarkAsSink, &IsNew);
+  ExplodedNode *N = G.getNode(Loc, State, MarkAsSink || IsPO, &IsNew);
   N->addPredecessor(Pred, G);
 
-  return IsNew ? N : nullptr;
+  return (IsNew && !IsPO) ? N : nullptr;
 }
 
 void CoreEngine::enqueueStmtNode(ExplodedNode *N,
@@ -613,7 +614,7 @@ void CoreEngine::enqueueStmtNode(ExplodedNode *N,
     return;
   }
 
-  ExplodedNode *Succ = makeNode(Loc, N->getState(), N);
+  ExplodedNode *Succ = makeNode(Loc, N->getState().get(), N);
 
   if (Succ)
     WList->enqueue(Succ, Block, Idx+1);
@@ -647,12 +648,6 @@ void CoreEngine::enqueue(ExplodedNodeSet &Set) {
     WList->enqueue(I);
 }
 
-void CoreEngine::enqueueStmtNodes(ExplodedNodeSet &Set, const CFGBlock *Block,
-                                  unsigned Idx) {
-  for (const auto I : Set)
-    enqueueStmtNode(I, Block, Idx);
-}
-
 void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS) {
   for (ExplodedNode *Node : Set) {
     const StackFrame *SF = Node->getStackFrame();
@@ -661,7 +656,7 @@ void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS
     if (SF->getParent()) {
       // Use the callee stack frame.
       CallExitBegin Loc(SF, RS);
-      if (ExplodedNode *Succ = makeNode(Loc, Node->getState(), Node))
+      if (ExplodedNode *Succ = makeNode(Loc, Node->getState().get(), Node))
         WList->enqueue(Succ);
     } else {
       // TODO: We should run remove dead bindings here.

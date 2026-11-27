@@ -183,7 +183,7 @@ getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
     // be used with logical addressing operations, not physical, and only with
     // non-externally visible shader Storage Classes: Workgroup, CrossWorkgroup,
     // Private, Function, Input, and Output."
-    if (bitWidth == 1)
+    if (bitWidth < 8)
       return std::nullopt;
     return bitWidth / 8;
   }
@@ -261,21 +261,33 @@ getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
   return std::nullopt;
 }
 
-/// Converts a scalar `type` to a suitable type under the given `targetEnv`.
-static Type
-convertScalarType(const spirv::TargetEnv &targetEnv,
-                  const SPIRVConversionOptions &options, spirv::ScalarType type,
-                  std::optional<spirv::StorageClass> storageClass = {}) {
+/// Returns whether the target environment supports a scalar type.
+static bool
+isScalarTypeSupported(const spirv::TargetEnv &targetEnv, spirv::ScalarType type,
+                      std::optional<spirv::StorageClass> storageClass = {}) {
   // Get extension and capability requirements for the given type.
   SmallVector<ArrayRef<spirv::Extension>, 1> extensions;
   SmallVector<ArrayRef<spirv::Capability>, 2> capabilities;
   type.getExtensions(extensions, storageClass);
   type.getCapabilities(capabilities, storageClass);
 
-  // If all requirements are met, then we can accept this type as-is.
-  if (succeeded(checkCapabilityRequirements(type, targetEnv, capabilities)) &&
-      succeeded(checkExtensionRequirements(type, targetEnv, extensions)))
+  return succeeded(
+             checkCapabilityRequirements(type, targetEnv, capabilities)) &&
+         succeeded(checkExtensionRequirements(type, targetEnv, extensions));
+}
+
+/// Converts a scalar `type` to a suitable type under the given `targetEnv`.
+static Type
+convertScalarType(const spirv::TargetEnv &targetEnv,
+                  const SPIRVConversionOptions &options, spirv::ScalarType type,
+                  std::optional<spirv::StorageClass> storageClass = {}) {
+  if (isScalarTypeSupported(targetEnv, type, storageClass))
     return type;
+
+  // These formats need explicit encoding or packing to emulate. Widening them
+  // to a 32-bit scalar would change their representation.
+  if (isa<Float4E2M1FNType, Float6E2M3FNType, Float6E3M2FNType>(type))
+    return nullptr;
 
   // Otherwise we need to adjust the type, which really means adjusting the
   // bitwidth given this is a scalar type.
@@ -682,9 +694,10 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     }
 
     // Note that we currently only support lowering to single element texels
-    // e.g. R32f.
+    // e.g. R32f. Microscaling types have no corresponding image format.
     auto elementType = type.getElementType();
-    if (!isa<spirv::ScalarType>(elementType)) {
+    if (!isa<spirv::ScalarType>(elementType) ||
+        spirv::containsMicroscalingType(elementType)) {
       LLVM_DEBUG(llvm::dbgs() << type << " illegal: cannot lower memref of "
                               << elementType << " to a  SPIR-V Image\n");
       return nullptr;
@@ -1027,14 +1040,10 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
         .setVisibility(
             cast<SymbolOpInterface>(funcOp.getOperation()).getVisibility());
 
-    // Copy over all attributes other than the function name and type.
+    // Copy over the discardable attributes.
     for (NamedAttribute namedAttr :
-         funcOp->getDiscardableAttrDictionary().getValue()) {
-      if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
-          namedAttr.getName() != SymbolTable::getSymbolAttrName())
-        newFuncOp->setDiscardableAttr(namedAttr.getName(),
-                                      namedAttr.getValue());
-    }
+         funcOp->getDiscardableAttrDictionary().getValue())
+      newFuncOp->setDiscardableAttr(namedAttr.getName(), namedAttr.getValue());
 
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
@@ -1107,8 +1116,9 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
       auto origVecType = dyn_cast<VectorType>(origType);
       if (!origVecType) {
         // We need a placeholder for the old argument that will be erased later.
-        Value result = arith::ConstantOp::create(
-            rewriter, loc, origType, rewriter.getZeroAttr(origType));
+        auto castOp = UnrealizedConversionCastOp::create(
+            rewriter, loc, origType, ValueRange());
+        Value result = castOp.getResult(0);
         rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
         tmpOps.insert({result.getDefiningOp(), newInputNo});
         oneToNTypeMapping.addInputs(origInputNo, origType);
@@ -1120,8 +1130,9 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
       auto targetShape = getTargetShape(origVecType);
       if (!targetShape) {
         // We need a placeholder for the old argument that will be erased later.
-        Value result = arith::ConstantOp::create(
-            rewriter, loc, origType, rewriter.getZeroAttr(origType));
+        auto castOp = UnrealizedConversionCastOp::create(
+            rewriter, loc, origType, ValueRange());
+        Value result = castOp.getResult(0);
         rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
         tmpOps.insert({result.getDefiningOp(), newInputNo});
         oneToNTypeMapping.addInputs(origInputNo, origType);
@@ -1324,43 +1335,41 @@ static std::optional<uint64_t> getMaxLinearizedIndex(ArrayRef<int64_t> shape,
   return maxLinearIndex;
 }
 
-static std::optional<uint64_t> getStorageBufferElementCount(Value basePtr) {
+static spirv::ArrayType getStorageBufferArrayType(Value basePtr) {
   auto pointerType = dyn_cast<spirv::PointerType>(basePtr.getType());
   if (!pointerType ||
       pointerType.getStorageClass() != spirv::StorageClass::StorageBuffer)
-    return std::nullopt;
+    return {};
 
   Type pointeeType = pointerType.getPointeeType();
   if (auto structType = dyn_cast<spirv::StructType>(pointeeType)) {
     if (structType.getNumElements() != 1)
-      return std::nullopt;
+      return {};
     pointeeType = structType.getElementType(0);
   }
-  auto arrayType = dyn_cast<spirv::ArrayType>(pointeeType);
-  if (!arrayType)
-    return std::nullopt;
-  return arrayType.getNumElements();
+  return dyn_cast<spirv::ArrayType>(pointeeType);
 }
 
 static bool shouldEmitInBoundsAccessChain(MemRefType baseType, Value basePtr,
                                           ArrayRef<int64_t> strides,
                                           int64_t offset,
                                           uint64_t accessElementCount) {
-  // Sub-16-bit integer memrefs may be stored using a wider SPIR-V array element
-  // than the source element. Keep a plain access chain so later bitwidth
-  // emulation can adjust the final index in storage-element units.
-  if (auto integerType = dyn_cast<IntegerType>(baseType.getElementType()))
-    if (integerType.getWidth() < 16)
-      return false;
-
   std::optional<uint64_t> maxSourceElementIndex =
       getMaxLinearizedIndex(baseType.getShape(), strides, offset);
-  std::optional<uint64_t> storageElementCount =
-      getStorageBufferElementCount(basePtr);
-  if (!maxSourceElementIndex || !storageElementCount)
+  spirv::ArrayType storageArrayType = getStorageBufferArrayType(basePtr);
+  if (!maxSourceElementIndex || !storageArrayType)
     return false;
 
-  if (accessElementCount == 0 || accessElementCount > *storageElementCount)
+  // Source indices and storage element counts use the same units only when
+  // each source element maps to one SPIR-V array element. An i16 or a narrower
+  // memref source may be stored using a wider SPIR-V array element than that
+  // of the source. Keep a plain access chain so later bitwidth emulation can
+  // adjust the final index in storage-element units.
+  if (baseType.getElementType() != storageArrayType.getElementType())
+    return false;
+
+  uint64_t storageElementCount = storageArrayType.getNumElements();
+  if (accessElementCount == 0 || accessElementCount > storageElementCount)
     return false;
 
   // `InBoundsAccessChain` requires the computed pointer to stay within the
@@ -1369,7 +1378,7 @@ static bool shouldEmitInBoundsAccessChain(MemRefType baseType, Value basePtr,
   // rejects widths that cannot fit in the fixed StorageBuffer object at all.
   // The static proof here is that the memref layout's linear index space maps
   // into that same object.
-  return *maxSourceElementIndex < *storageElementCount;
+  return *maxSourceElementIndex < storageElementCount;
 }
 
 } // namespace
@@ -1738,10 +1747,14 @@ SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
   });
 
   addConversion([this](FloatType floatType) -> std::optional<Type> {
+    if (floatType.getWidth() == 8) {
+      if (auto scalarType = dyn_cast<spirv::ScalarType>(floatType);
+          scalarType && isScalarTypeSupported(this->targetEnv, scalarType))
+        return floatType;
+      return convert8BitFloatType(this->options, floatType);
+    }
     if (auto scalarType = dyn_cast<spirv::ScalarType>(floatType))
       return convertScalarType(this->targetEnv, this->options, scalarType);
-    if (floatType.getWidth() == 8)
-      return convert8BitFloatType(this->options, floatType);
     return Type();
   });
 

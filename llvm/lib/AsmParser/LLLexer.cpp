@@ -450,10 +450,14 @@ lltok::Kind LLLexer::LexQuote() {
 }
 
 /// Lex all tokens that start with a ! character.
+///    !!foo
 ///    !foo
 ///    !
 lltok::Kind LLLexer::LexExclaim() {
   // Lex a metadata name as a MetadataVar.
+  bool IsFLMD = CurPtr[0] == '!';
+  if (IsFLMD)
+    ++CurPtr;
   if (isalpha(static_cast<unsigned char>(CurPtr[0])) ||
       CurPtr[0] == '-' || CurPtr[0] == '$' ||
       CurPtr[0] == '.' || CurPtr[0] == '_' || CurPtr[0] == '\\') {
@@ -463,10 +467,15 @@ lltok::Kind LLLexer::LexExclaim() {
            CurPtr[0] == '.' || CurPtr[0] == '_' || CurPtr[0] == '\\')
       ++CurPtr;
 
-    StrVal.assign(TokStart+1, CurPtr);   // Skip !
+    int VarStartOffset = IsFLMD ? 2 : 1;
+    StrVal.assign(TokStart + VarStartOffset, CurPtr); // Skip leading !s
     UnEscapeLexed(StrVal);
-    return lltok::MetadataVar;
+    return IsFLMD ? lltok::FLMDType : lltok::MetadataVar;
   }
+  // If IsFLMD but we didn't see an identifier, then this isn't an FLMDType - so
+  // reverse back and just lex the exclaim token.
+  if (IsFLMD)
+    --CurPtr;
   return lltok::exclaim;
 }
 
@@ -666,6 +675,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(msp430_intrcc);
   KEYWORD(avr_intrcc);
   KEYWORD(avr_signalcc);
+  KEYWORD(avr_builtincc);
   KEYWORD(ptx_kernel);
   KEYWORD(ptx_device);
   KEYWORD(spir_kernel);
@@ -699,6 +709,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(amdgpu_gfx_whole_wave);
   KEYWORD(tailcc);
   KEYWORD(m68k_rtdcc);
+  KEYWORD(wasm_emscripten_invokecc);
   KEYWORD(graalcc);
   KEYWORD(riscv_vector_cc);
   KEYWORD(riscv_vls_cc);
@@ -816,6 +827,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(summaries);
   KEYWORD(flags);
   KEYWORD(blockcount);
+  KEYWORD(cfiFunctionDefs);
+  KEYWORD(cfiFunctionDecls);
   KEYWORD(linkage);
   KEYWORD(visibility);
   KEYWORD(notEligibleToImport);
@@ -848,6 +861,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(critical);
   // Deprecated, keep in order to support old files.
   KEYWORD(relbf);
+  KEYWORD(indirect);
   KEYWORD(variable);
   KEYWORD(vTableFuncs);
   KEYWORD(virtFunc);
@@ -883,6 +897,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(indir);
   KEYWORD(singleImpl);
   KEYWORD(branchFunnel);
+  KEYWORD(speculative);
   KEYWORD(singleImplName);
   KEYWORD(resByArg);
   KEYWORD(byArg);
@@ -900,6 +915,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(versions);
   KEYWORD(memProf);
   KEYWORD(notcold);
+  KEYWORD(ambiguous);
 
 #undef KEYWORD
 
@@ -995,6 +1011,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(cleanuppad,   CleanupPad);
 
   INSTKEYWORD(freeze,       Freeze);
+  INSTKEYWORD(bitinsert, BitInsert);
+  INSTKEYWORD(bitextract, BitExtract);
 
 #undef INSTKEYWORD
 

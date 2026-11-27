@@ -225,12 +225,22 @@ DWARFUnit::ScopedExtractDIEs::operator=(DWARFUnit::ScopedExtractDIEs &&rhs) {
 void DWARFUnit::ExtractDIEsRWLocked() {
   llvm::sys::ScopedWriter first_die_lock(m_first_die_mutex);
 
-  ElapsedTime elapsed(m_dwarf.GetDebugInfoParseTimeRef());
   LLDB_SCOPED_TIMERF(
       "%s",
       llvm::formatv("{0:x16}: DWARFUnit::ExtractDIEsIfNeeded()", GetOffset())
           .str()
           .c_str());
+
+  ExtractDIEsNoDwoRWLocked();
+
+  // The skeleton and its .dwo unit share a parse time counter, so timing the
+  // .dwo unit inside ExtractDIEsNoDwoRWLocked would count it twice.
+  if (m_dwo)
+    m_dwo->ExtractDIEsIfNeeded();
+}
+
+void DWARFUnit::ExtractDIEsNoDwoRWLocked() {
+  ElapsedTime elapsed(m_dwarf.GetDebugInfoParseTimeRef());
 
   // Set the offset to that of the first DIE and calculate the start of the
   // next compilation unit header.
@@ -336,9 +346,6 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   }
 
   m_die_array.shrink_to_fit();
-
-  if (m_dwo)
-    m_dwo->ExtractDIEsIfNeeded();
 }
 
 // This is used when a split dwarf is enabled.
@@ -715,8 +722,8 @@ llvm::StringRef DWARFUnit::PeekDIEName(dw_offset_t die_offset) {
   return llvm::StringRef();
 }
 
-llvm::Expected<std::pair<uint64_t, bool>>
-DWARFUnit::GetDIEBitSizeAndSign(uint64_t relative_die_offset) const {
+llvm::Expected<std::pair<uint64_t, llvm::dwarf::TypeKind>>
+DWARFUnit::GetDIEBitSizeAndEncoding(uint64_t relative_die_offset) const {
   // Retrieve the type DIE that the value is being converted to. This
   // offset is compile unit relative so we need to fix it up.
   const uint64_t abs_die_offset = relative_die_offset + GetOffset();
@@ -734,20 +741,17 @@ DWARFUnit::GetDIEBitSizeAndSign(uint64_t relative_die_offset) const {
     bit_size = die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
   if (!bit_size)
     return llvm::createStringError("unsupported type size");
-  bool sign;
   switch (encoding) {
   case DW_ATE_signed:
   case DW_ATE_signed_char:
-    sign = true;
-    break;
   case DW_ATE_unsigned:
   case DW_ATE_unsigned_char:
-    sign = false;
+  case DW_ATE_float:
     break;
   default:
     return llvm::createStringError("unsupported encoding");
   }
-  return std::pair{bit_size, sign};
+  return std::pair{bit_size, static_cast<TypeKind>(encoding)};
 }
 
 lldb::offset_t

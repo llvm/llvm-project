@@ -13,7 +13,7 @@
 
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
@@ -55,8 +55,10 @@ class FunctionFilteringPass
           omp::DeclareTargetDeviceType::host;
       auto declareTargetOp =
           dyn_cast<omp::DeclareTargetInterface>(funcOp.getOperation());
-      if (declareTargetOp && declareTargetOp.isDeclareTarget())
-        declareType = declareTargetOp.getDeclareTargetDeviceType();
+      omp::DeclareTargetAttr declareTargetAttr =
+          declareTargetOp ? declareTargetOp.getDeclareTarget() : nullptr;
+      if (declareTargetAttr)
+        declareType = declareTargetAttr.getDeviceType();
 
       // Only filter host functions from device modules because the host needs
       // to provide fallback implementations of device code.
@@ -98,7 +100,7 @@ class FunctionFilteringPass
       // marked as such to perform the second stage removal them from the device
       // module, where functions that contain target regions are deleted from
       // the generated LLVM IR.
-      if (declareTargetOp && !declareTargetOp.isDeclareTarget())
+      if (declareTargetOp && !declareTargetAttr)
         declareTargetOp.setDeclareTarget(omp::DeclareTargetDeviceType::host,
                                          omp::DeclareTargetCaptureClause::to,
                                          /*automap=*/false, /*implicit=*/true);

@@ -11,4 +11,5 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/canonicalizebf16.h"
 
-LIST_CANONICALIZE_TESTS(bfloat16, LIBC_NAMESPACE::canonicalizebf16)
+LIST_CANONICALIZE_TESTS(Canonicalizebf16, bfloat16,
+                        LIBC_NAMESPACE::canonicalizebf16)

@@ -21,8 +21,8 @@ include "mlir/IR/EnumAttr.td"
 
 def Shard_Dialect : Dialect {
   let name = "shard";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::shard";
+  let useDefaultOperationRegistration = 1;
 
   let description = [{
     See [Shard dialect documentation](mlir/docs/Dialects/Shard.md).
@@ -32,8 +32,8 @@ def Shard_Dialect : Dialect {
     "arith::ArithDialect" // For materializeConstant()
   ];
 
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
   let hasConstantMaterializer = 1;
 }
 
@@ -62,13 +62,12 @@ def Shard_ReductionKind : I32EnumAttr<"ReductionKind",
   let cppNamespace = "::mlir::shard";
 }
 
-def Shard_ReductionKindAttr : EnumAttr<Shard_Dialect, Shard_ReductionKind, "partial"> {
-  let assemblyFormat = "$value";
-}
+def Shard_ReductionKindAttr : EnumAttr<Shard_Dialect, Shard_ReductionKind, "partial">;
 
 class Shard_Type<string name, string typeMnemonic, list<Trait> traits = [],
                    string baseCppClass = "::mlir::Type">
     : TypeDef<Shard_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/Shard/IR/ShardOps.h"];
   let mnemonic = typeMnemonic;
 }
 

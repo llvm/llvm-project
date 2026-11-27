@@ -178,14 +178,13 @@ public:
   LLVM_ABI void add(const MemoryLocation &Loc);
   LLVM_ABI void add(LoadInst *LI);
   LLVM_ABI void add(StoreInst *SI);
+  LLVM_ABI void addWithoutAATags(StoreInst *SI);
   LLVM_ABI void add(VAArgInst *VAAI);
   LLVM_ABI void add(AnyMemSetInst *MSI);
   LLVM_ABI void add(AnyMemTransferInst *MTI);
   LLVM_ABI void
   add(Instruction *I); // Dispatch to one of the other add methods...
   LLVM_ABI void add(BasicBlock &BB); // Add all instructions in basic block
-  LLVM_ABI void
-  add(const AliasSetTracker &AST); // Add alias relations from another AST
   LLVM_ABI void addUnknown(Instruction *I);
 
   LLVM_ABI void clear();

@@ -9,14 +9,19 @@
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/VectorTypeUtils.h"
 
 #define DEBUG_TYPE "lower-vector-intrinsics"
 
 using namespace llvm;
 
-bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
-  Type *ArgTy = CI->getArgOperand(0)->getType();
-  VectorType *VecTy = cast<VectorType>(ArgTy);
+bool llvm::lowerVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
+  Type *RetTy = CI->getType();
+  auto *StructRetTy = dyn_cast<StructType>(RetTy);
+  unsigned NumResults = StructRetTy ? StructRetTy->getNumElements() : 1;
+  auto *VecTy =
+      cast<VectorType>(StructRetTy ? StructRetTy->getElementType(0) : RetTy);
 
   BasicBlock *PreLoopBB = CI->getParent();
   BasicBlock *PostLoopBB = nullptr;
@@ -38,15 +43,40 @@ bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
 
   PHINode *LoopIndex = LoopBuilder.CreatePHI(IdxTy, 2);
   LoopIndex->addIncoming(ConstantInt::get(IdxTy, 0U), PreLoopBB);
-  PHINode *Vec = LoopBuilder.CreatePHI(VecTy, 2);
-  Vec->addIncoming(CI->getArgOperand(0), PreLoopBB);
 
-  Value *Elem = LoopBuilder.CreateExtractElement(Vec, LoopIndex);
-  Function *Exp = Intrinsic::getOrInsertDeclaration(&M, CI->getIntrinsicID(),
-                                                    VecTy->getElementType());
-  Value *Res = LoopBuilder.CreateCall(Exp, Elem);
-  Value *NewVec = LoopBuilder.CreateInsertElement(Vec, Res, LoopIndex);
-  Vec->addIncoming(NewVec, LoopBB);
+  SmallVector<PHINode *, 2> ResultPhis(NumResults);
+  for (unsigned I = 0; I != NumResults; ++I) {
+    ResultPhis[I] = LoopBuilder.CreatePHI(VecTy, 2);
+    ResultPhis[I]->addIncoming(PoisonValue::get(VecTy), PreLoopBB);
+  }
+
+  unsigned NumArgs = CI->arg_size();
+  SmallVector<Value *, 4> Args(NumArgs);
+  SmallVector<Type *, 4> ArgTys(NumArgs);
+  for (unsigned I = 0; I != NumArgs; ++I) {
+    Value *Arg = CI->getArgOperand(I);
+    if (Arg->getType()->isVectorTy())
+      Arg = LoopBuilder.CreateExtractElement(Arg, LoopIndex);
+    Args[I] = Arg;
+    ArgTys[I] = Arg->getType();
+  }
+  Type *ScalarRetTy = toScalarizedTy(RetTy);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(&M, CI->getIntrinsicID(),
+                                                   ScalarRetTy, ArgTys);
+
+  CallInst *ScalarCall = LoopBuilder.CreateCall(Fn, Args);
+  if (isa<FPMathOperator>(CI))
+    ScalarCall->copyFastMathFlags(CI);
+
+  SmallVector<Value *, 2> NewVecs(NumResults);
+  for (unsigned I = 0; I != NumResults; ++I) {
+    Value *ScalarRes = ScalarCall;
+    if (StructRetTy)
+      ScalarRes = LoopBuilder.CreateExtractValue(ScalarCall, I);
+    NewVecs[I] =
+        LoopBuilder.CreateInsertElement(ResultPhis[I], ScalarRes, LoopIndex);
+    ResultPhis[I]->addIncoming(NewVecs[I], LoopBB);
+  }
 
   Value *One = ConstantInt::get(IdxTy, 1U);
   Value *NextLoopIndex = LoopBuilder.CreateAdd(LoopIndex, One);
@@ -54,9 +84,18 @@ bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
 
   Value *ExitCond =
       LoopBuilder.CreateICmp(CmpInst::ICMP_EQ, NextLoopIndex, LoopEnd);
-  LoopBuilder.CreateCondBr(ExitCond, PostLoopBB, LoopBB);
+  CondBrInst *Br = LoopBuilder.CreateCondBr(ExitCond, PostLoopBB, LoopBB);
+  setExplicitlyUnknownBranchWeightsIfProfiled(*Br, DEBUG_TYPE);
 
-  CI->replaceAllUsesWith(NewVec);
+  Value *Res = NewVecs[0];
+  if (StructRetTy) {
+    IRBuilder<> PostLoopBuilder(CI);
+    Res = PoisonValue::get(RetTy);
+    for (unsigned I = 0; I != NumResults; ++I)
+      Res = PostLoopBuilder.CreateInsertValue(Res, NewVecs[I], I);
+  }
+
+  CI->replaceAllUsesWith(Res);
   CI->eraseFromParent();
   return true;
 }

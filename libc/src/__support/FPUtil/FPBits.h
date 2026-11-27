@@ -127,7 +127,7 @@ template <> struct FPLayout<FPType::IEEE754_Binary128> {
 };
 
 template <> struct FPLayout<FPType::X86_Binary80> {
-#if __SIZEOF_LONG_DOUBLE__ == 12
+#if defined(__SIZEOF_LONG_DOUBLE__) && (__SIZEOF_LONG_DOUBLE__ == 12)
   using StorageType = UInt<__SIZEOF_LONG_DOUBLE__ * CHAR_BIT>;
 #else
   using StorageType = UInt128;
@@ -786,6 +786,9 @@ struct FPRep : public FPRepImpl<fp_type, FPRep<fp_type>> {
 
 } // namespace internal
 
+// Like 'FPBits' but named by 'FPType', so no native C++ type need exist.
+template <FPType fp_type> using FPRep = internal::FPRep<fp_type>;
+
 // Returns the FPType corresponding to C++ type T on the host.
 template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
   using UnqualT = cpp::remove_cv_t<T>;
@@ -816,6 +819,8 @@ template <typename T> LIBC_INLINE static constexpr FPType get_fp_type() {
     return FPType::BFloat16;
   else if constexpr (cpp::is_same_v<UnqualT, Float128>)
     return FPType::IEEE754_Binary128;
+  else if constexpr (cpp::is_same_v<UnqualT, Float80>)
+    return FPType::X86_Binary80;
   else
     static_assert(cpp::always_false<UnqualT>, "Unsupported type");
 }

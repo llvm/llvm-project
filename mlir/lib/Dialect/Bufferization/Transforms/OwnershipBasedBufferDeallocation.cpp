@@ -623,7 +623,10 @@ LogicalResult BufferDeallocation::deallocate(Block *block) {
     }
 
     if (li.getParentRegion()->isProperAncestor(block->getParent())) {
-      Value falseVal = buildBoolValue(builder, li.getLoc(), false);
+      // Create the constant in the block that defines the memref: the regions
+      // in between may not allow other ops (e.g., the region of `vector.mask`).
+      OpBuilder defBuilder = OpBuilder::atBlockBegin(li.getParentBlock());
+      Value falseVal = buildBoolValue(defBuilder, li.getLoc(), false);
       state.updateOwnership(li, falseVal, block);
     }
   }
@@ -674,10 +677,10 @@ Operation *BufferDeallocation::appendOpResults(Operation *op,
   SmallVector<Value> oldResults(op->getResults());
 
   newTypes.append(types.begin(), types.end());
-  auto *newOp = Operation::create(op->getLoc(), op->getName(), newTypes,
-                                  op->getOperands(), op->getAttrDictionary(),
-                                  op->getPropertiesStorage(),
-                                  op->getSuccessors(), op->getNumRegions());
+  auto *newOp = Operation::create(
+      op->getLoc(), op->getName(), newTypes, op->getOperands(),
+      op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
+      op->getSuccessors(), op->getNumRegions());
   for (auto [oldRegion, newRegion] :
        llvm::zip(op->getRegions(), newOp->getRegions()))
     newRegion.takeBody(oldRegion);
@@ -875,7 +878,7 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
       // usually forbidden in the input IR (not supported by the buffer
       // deallocation pass). However, if they are under manual deallocation,
       // they can be safely ignored by the buffer deallocation pass.
-      if (!op->hasAttr(BufferizationDialect::kManualDeallocation))
+      if (!op->hasDiscardableAttr(BufferizationDialect::kManualDeallocation))
         return op->emitError(
             "memory free side-effect on MemRef value not supported!");
 
@@ -913,7 +916,7 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
         continue;
       }
 
-      if (op->hasAttr(BufferizationDialect::kManualDeallocation)) {
+      if (op->hasDiscardableAttr(BufferizationDialect::kManualDeallocation)) {
         // This allocation will be deallocated manually. Assign an ownership of
         // "false", so that it will never be deallocated by the buffer
         // deallocation pass.

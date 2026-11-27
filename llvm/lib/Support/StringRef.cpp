@@ -195,6 +195,32 @@ size_t StringRef::find_insensitive(StringRef Str, size_t From) const {
   return npos;
 }
 
+// Returns the index of the last C in Data[0, End), or npos if it is not found.
+// Written to be vectorizable.
+LLVM_ATTRIBUTE_ALWAYS_INLINE static size_t rfindByte(const char *Data,
+                                                     size_t End, char C) {
+  constexpr size_t VectorWidth = 16;
+  size_t I = End;
+  for (; I >= VectorWidth; I -= VectorWidth) {
+    const char *Chunk = Data + I - VectorWidth;
+    unsigned char Any = 0;
+    for (size_t J = 0; J != VectorWidth; ++J)
+      Any |= Chunk[J] == C;
+    if (Any)
+      break;
+  }
+  while (I) {
+    --I;
+    if (Data[I] == C)
+      return I;
+  }
+  return StringRef::npos;
+}
+
+size_t StringRef::rfind(char C, size_t From) const {
+  return rfindByte(data(), std::min(From, size()), C);
+}
+
 size_t StringRef::rfind_insensitive(char C, size_t From) const {
   From = std::min(From, size());
   size_t i = From;
@@ -211,7 +237,15 @@ size_t StringRef::rfind_insensitive(char C, size_t From) const {
 /// \return - The index of the last occurrence of \arg Str, or npos if not
 /// found.
 size_t StringRef::rfind(StringRef Str) const {
-  return std::string_view(*this).rfind(Str);
+  size_t N = Str.size();
+  if (N > size())
+    return npos;
+  if (N == 0)
+    return size();
+  for (size_t I = size() - N + 1; (I = rfindByte(data(), I, Str[0])) != npos;)
+    if (std::memcmp(data() + I + 1, Str.data() + 1, N - 1) == 0)
+      return I;
+  return npos;
 }
 
 size_t StringRef::rfind_insensitive(StringRef Str) const {
@@ -522,16 +556,17 @@ bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
     return false;
   }
 
-  // (Over-)estimate the required number of bits.
   unsigned Log2Radix = 0;
   while ((1U << Log2Radix) < Radix) Log2Radix++;
   bool IsPowerOf2Radix = ((1U << Log2Radix) == Radix);
 
-  unsigned BitWidth = Log2Radix * Str.size();
-  if (BitWidth < Result.getBitWidth())
-    BitWidth = Result.getBitWidth(); // don't shrink the result
-  else if (BitWidth > Result.getBitWidth())
+  // Initialize Result to a reasonable starting width (at least 64 bits),
+  // but do not shrink it if it was already larger.
+  unsigned BitWidth = std::max(64U, Result.getBitWidth());
+
+  if (Result.getBitWidth() < BitWidth) {
     Result = Result.zext(BitWidth);
+  }
 
   APInt RadixAP, CharAP; // unused unless !IsPowerOf2Radix
   if (!IsPowerOf2Radix) {
@@ -557,6 +592,21 @@ bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
     // invalid.
     if (CharVal >= Radix)
       break;
+
+    // Check if one more digit will overflow, and grow if so.
+    if (Result.getActiveBits() + Log2Radix > Result.getBitWidth()) {
+      unsigned NewWidth = Result.getBitWidth() * 2;
+
+      // Guard against overflow of the NewWidth itself
+      if (NewWidth < Result.getBitWidth())
+        return true;
+
+      Result = Result.zext(NewWidth);
+      if (!IsPowerOf2Radix) {
+        RadixAP = RadixAP.zext(NewWidth);
+        CharAP = CharAP.zext(NewWidth);
+      }
+    }
 
     // Add in this character.
     if (IsPowerOf2Radix) {

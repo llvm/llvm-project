@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DebuggerEvents.h"
@@ -63,9 +62,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Error.h"
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -882,6 +883,11 @@ LanguageRuntime *
 AppleObjCRuntimeV2::GetPreferredLanguageRuntime(ValueObject &in_value) {
   if (auto process_sp = in_value.GetProcessSP()) {
     assert(process_sp.get() == m_process);
+    // A runtime that is preferred for the object because of the code that uses
+    // it comes before the runtime of the language that implements its class.
+    for (LanguageRuntime *runtime : process_sp->GetLanguageRuntimes())
+      if (runtime != this && runtime->IsPreferredLanguageRuntimeFor(in_value))
+        return runtime;
     if (auto descriptor_sp = GetNonKVOClassDescriptor(in_value)) {
       LanguageType impl_lang = descriptor_sp->GetImplementationLanguage();
       if (impl_lang != eLanguageTypeUnknown)
@@ -1441,9 +1447,12 @@ public:
         cursor += unsigned_byte_size;
 
         // void *buckets;
-        m_buckets_ptr = m_process->ReadPointerFromMemory(cursor, err);
+        std::optional<lldb::addr_t> buckets_ptr =
+            llvm::expectedToOptional(m_process->ReadPointerFromMemory(cursor));
+        if (buckets_ptr)
+          m_buckets_ptr = *buckets_ptr;
 
-        success = m_count > 0 && m_buckets_ptr != LLDB_INVALID_ADDRESS;
+        success = m_count > 0 && buckets_ptr.has_value();
       }
     }
 
@@ -1507,25 +1516,29 @@ public:
       size_t map_pair_size = m_parent.m_map_pair_size;
       lldb::addr_t pair_ptr = pairs_ptr + (m_index * map_pair_size);
 
-      Status err;
-
-      lldb::addr_t key =
-          m_parent.m_process->ReadPointerFromMemory(pair_ptr, err);
-      if (!err.Success())
+      llvm::Expected<lldb::addr_t> key =
+          m_parent.m_process->ReadPointerFromMemory(pair_ptr);
+      if (!key) {
+        llvm::consumeError(key.takeError());
         return element();
-      lldb::addr_t value = m_parent.m_process->ReadPointerFromMemory(
-          pair_ptr + m_parent.m_process->GetAddressByteSize(), err);
-      if (!err.Success())
+      }
+      llvm::Expected<lldb::addr_t> value =
+          m_parent.m_process->ReadPointerFromMemory(
+              pair_ptr + m_parent.m_process->GetAddressByteSize());
+      if (!value) {
+        llvm::consumeError(value.takeError());
         return element();
+      }
 
       std::string key_string;
 
-      m_parent.m_process->ReadCStringFromMemory(key, key_string, err);
+      Status err;
+      m_parent.m_process->ReadCStringFromMemory(*key, key_string, err);
       if (!err.Success())
         return element();
 
       return element(ConstString(key_string),
-                     (ObjCLanguageRuntime::ObjCISA)value);
+                     (ObjCLanguageRuntime::ObjCISA)*value);
     }
 
   private:
@@ -1536,19 +1549,19 @@ public:
       const lldb::addr_t pairs_ptr = m_parent.m_buckets_ptr;
       const size_t map_pair_size = m_parent.m_map_pair_size;
       const lldb::addr_t invalid_key = m_parent.m_invalid_key;
-      Status err;
 
       while (m_index--) {
         lldb::addr_t pair_ptr = pairs_ptr + (m_index * map_pair_size);
-        lldb::addr_t key =
-            m_parent.m_process->ReadPointerFromMemory(pair_ptr, err);
+        llvm::Expected<lldb::addr_t> key =
+            m_parent.m_process->ReadPointerFromMemory(pair_ptr);
 
-        if (!err.Success()) {
+        if (!key) {
+          llvm::consumeError(key.takeError());
           m_index = -1;
           return;
         }
 
-        if (key != invalid_key)
+        if (*key != invalid_key)
           return;
       }
     }
@@ -1660,10 +1673,13 @@ AppleObjCRuntimeV2::GetClassDescriptorImpl(ValueObject &valobj,
   if (!process)
     return objc_class_sp;
 
-  Status error;
-  ObjCISA isa = process->ReadPointerFromMemory(isa_pointer, error);
-  if (isa == LLDB_INVALID_ADDRESS)
+  llvm::Expected<lldb::addr_t> isa_or_err =
+      process->ReadPointerFromMemory(isa_pointer);
+  if (!isa_or_err) {
+    llvm::consumeError(isa_or_err.takeError());
     return objc_class_sp;
+  }
+  ObjCISA isa = *isa_or_err;
 
   objc_class_sp = GetClassDescriptorFromISA(isa);
   if (!objc_class_sp) {
@@ -1701,11 +1717,11 @@ lldb::addr_t AppleObjCRuntimeV2::GetTaggedPointerObfuscator() {
     lldb::addr_t g_gdb_obj_obfuscator_ptr =
         symbol->GetLoadAddress(&process->GetTarget());
 
-    if (g_gdb_obj_obfuscator_ptr != LLDB_INVALID_ADDRESS) {
-      Status error;
+    if (g_gdb_obj_obfuscator_ptr != LLDB_INVALID_ADDRESS)
       m_tagged_pointer_obfuscator =
-          process->ReadPointerFromMemory(g_gdb_obj_obfuscator_ptr, error);
-    }
+          llvm::expectedToOptional(
+              process->ReadPointerFromMemory(g_gdb_obj_obfuscator_ptr))
+              .value_or(LLDB_INVALID_ADDRESS);
   }
   // If we don't have a correct value at this point, there must be no
   // obfuscation.
@@ -1732,11 +1748,11 @@ lldb::addr_t AppleObjCRuntimeV2::GetISAHashTablePointer() {
       lldb::addr_t gdb_objc_realized_classes_ptr =
           symbol->GetLoadAddress(&process->GetTarget());
 
-      if (gdb_objc_realized_classes_ptr != LLDB_INVALID_ADDRESS) {
-        Status error;
-        m_isa_hash_table_ptr = process->ReadPointerFromMemory(
-            gdb_objc_realized_classes_ptr, error);
-      }
+      if (gdb_objc_realized_classes_ptr != LLDB_INVALID_ADDRESS)
+        m_isa_hash_table_ptr =
+            llvm::expectedToOptional(
+                process->ReadPointerFromMemory(gdb_objc_realized_classes_ptr))
+                .value_or(LLDB_INVALID_ADDRESS);
     }
   }
   return m_isa_hash_table_ptr;
@@ -1767,19 +1783,22 @@ AppleObjCRuntimeV2::SharedCacheImageHeaders::CreateSharedCacheImageHeaders(
     return nullptr;
   }
 
-  Status error;
-  lldb::addr_t objc_debug_headerInfoRWs_ptr =
-      process->ReadPointerFromMemory(objc_debug_headerInfoRWs_addr, error);
-  if (error.Fail()) {
+  llvm::Expected<lldb::addr_t> objc_debug_headerInfoRWs_ptr_or_err =
+      process->ReadPointerFromMemory(objc_debug_headerInfoRWs_addr);
+  if (!objc_debug_headerInfoRWs_ptr_or_err) {
+    llvm::consumeError(objc_debug_headerInfoRWs_ptr_or_err.takeError());
     LLDB_LOG(log,
              "Failed to read address of 'objc_debug_headerInfoRWs' at {0:x}",
              objc_debug_headerInfoRWs_addr);
     return nullptr;
   }
+  lldb::addr_t objc_debug_headerInfoRWs_ptr =
+      *objc_debug_headerInfoRWs_ptr_or_err;
 
   const size_t metadata_size =
       sizeof(uint32_t) + sizeof(uint32_t); // count + entsize
   DataBufferHeap metadata_buffer(metadata_size, '\0');
+  Status error;
   process->ReadMemory(objc_debug_headerInfoRWs_ptr, metadata_buffer.GetBytes(),
                       metadata_size, error);
   if (error.Fail()) {
@@ -1894,6 +1913,17 @@ uint64_t AppleObjCRuntimeV2::SharedCacheImageHeaders::GetVersion() {
   return m_version;
 }
 
+static lldb::TypeSystemSP GetScratchTypeSystemForObjCRuntime(Target &target) {
+  auto ts_or_err = target.GetScratchTypeSystemForLanguage(lldb::eLanguageTypeC);
+  if (!ts_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Process | LLDBLog::Types),
+                   ts_or_err.takeError(),
+                   "Couldn't get the scratch type system: {0}");
+    return nullptr;
+  }
+  return *ts_or_err;
+}
+
 std::unique_ptr<UtilityFunction>
 AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
     ExecutionContext &exe_ctx, Helper helper, std::string code,
@@ -1902,8 +1932,8 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
 
   LLDB_LOG(log, "Creating utility function {0}", name);
 
-  TypeSystemClangSP scratch_ts_sp =
-      ScratchTypeSystemClang::GetForTarget(exe_ctx.GetTargetRef());
+  lldb::TypeSystemSP scratch_ts_sp =
+      GetScratchTypeSystemForObjCRuntime(exe_ctx.GetTargetRef());
   if (!scratch_ts_sp)
     return {};
 
@@ -1920,7 +1950,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
   CompilerType clang_uint32_t_type =
       scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
   CompilerType clang_void_pointer_type =
-      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicTypeFromAST(eBasicTypeVoid).GetPointerType();
 
   // Make the runner function for our implementation utility function.
   ValueList arguments;
@@ -2043,8 +2073,8 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
   LLDB_LOG(log, "Creating utility function {0}",
            g_get_shared_cache_class_info_name);
 
-  TypeSystemClangSP scratch_ts_sp =
-      ScratchTypeSystemClang::GetForTarget(exe_ctx.GetTargetRef());
+  lldb::TypeSystemSP scratch_ts_sp =
+      GetScratchTypeSystemForObjCRuntime(exe_ctx.GetTargetRef());
   if (!scratch_ts_sp)
     return {};
 
@@ -2085,7 +2115,7 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
   CompilerType clang_uint32_t_type =
       scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
   CompilerType clang_void_pointer_type =
-      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicTypeFromAST(eBasicTypeVoid).GetPointerType();
   CompilerType clang_uint64_t_pointer_type =
       scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 64)
           .GetPointerType();
@@ -2164,8 +2194,8 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
     return DescriptorMapUpdateResult::Retry();
 
   thread_sp->CalculateExecutionContext(exe_ctx);
-  TypeSystemClangSP scratch_ts_sp =
-      ScratchTypeSystemClang::GetForTarget(process->GetTarget());
+  lldb::TypeSystemSP scratch_ts_sp =
+      GetScratchTypeSystemForObjCRuntime(process->GetTarget());
 
   if (!scratch_ts_sp)
     return DescriptorMapUpdateResult::Fail();
@@ -2429,8 +2459,8 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
     return DescriptorMapUpdateResult::Retry();
 
   thread_sp->CalculateExecutionContext(exe_ctx);
-  TypeSystemClangSP scratch_ts_sp =
-      ScratchTypeSystemClang::GetForTarget(process->GetTarget());
+  lldb::TypeSystemSP scratch_ts_sp =
+      GetScratchTypeSystemForObjCRuntime(process->GetTarget());
 
   if (!scratch_ts_sp)
     return DescriptorMapUpdateResult::Fail();
@@ -2873,20 +2903,15 @@ DeclVendor *AppleObjCRuntimeV2::GetDeclVendor() {
   return m_decl_vendor_up.get();
 }
 
-lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
+lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(llvm::StringRef name) {
   lldb::addr_t ret = LLDB_INVALID_ADDRESS;
 
-  const char *name_cstr = name.AsCString(nullptr);
-
-  if (name_cstr) {
-    llvm::StringRef name_strref(name_cstr);
-
+  if (!name.empty()) {
     llvm::StringRef ivar_prefix("OBJC_IVAR_$_");
     llvm::StringRef class_prefix("OBJC_CLASS_$_");
 
-    if (name_strref.starts_with(ivar_prefix)) {
-      llvm::StringRef ivar_skipped_prefix =
-          name_strref.substr(ivar_prefix.size());
+    if (name.starts_with(ivar_prefix)) {
+      llvm::StringRef ivar_skipped_prefix = name.substr(ivar_prefix.size());
       std::pair<llvm::StringRef, llvm::StringRef> class_and_ivar =
           ivar_skipped_prefix.split('.');
 
@@ -2917,9 +2942,8 @@ lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
               ivar_func);
         }
       }
-    } else if (name_strref.starts_with(class_prefix)) {
-      llvm::StringRef class_skipped_prefix =
-          name_strref.substr(class_prefix.size());
+    } else if (name.starts_with(class_prefix)) {
+      llvm::StringRef class_skipped_prefix = name.substr(class_prefix.size());
       const ConstString class_name_cs(class_skipped_prefix);
       ClassDescriptorSP descriptor =
           GetClassDescriptorFromClassName(class_name_cs);
@@ -3212,10 +3236,14 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
     Process *process(m_runtime.GetProcess());
     uintptr_t slot_ptr = slot * process->GetAddressByteSize() +
                          m_objc_debug_taggedpointer_classes;
-    Status error;
-    uintptr_t slot_data = process->ReadPointerFromMemory(slot_ptr, error);
-    if (error.Fail() || slot_data == 0 ||
-        slot_data == uintptr_t(LLDB_INVALID_ADDRESS))
+    llvm::Expected<lldb::addr_t> slot_data_or_err =
+        process->ReadPointerFromMemory(slot_ptr);
+    if (!slot_data_or_err) {
+      llvm::consumeError(slot_data_or_err.takeError());
+      return nullptr;
+    }
+    uintptr_t slot_data = *slot_data_or_err;
+    if (slot_data == 0)
       return nullptr;
     actual_class_descriptor_sp =
         m_runtime.GetClassDescriptorFromISA((ObjCISA)slot_data);
@@ -3308,10 +3336,14 @@ AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
     Process *process(m_runtime.GetProcess());
     uintptr_t slot_ptr = slot * process->GetAddressByteSize() +
                          m_objc_debug_taggedpointer_ext_classes;
-    Status error;
-    uintptr_t slot_data = process->ReadPointerFromMemory(slot_ptr, error);
-    if (error.Fail() || slot_data == 0 ||
-        slot_data == uintptr_t(LLDB_INVALID_ADDRESS))
+    llvm::Expected<lldb::addr_t> slot_data_or_err =
+        process->ReadPointerFromMemory(slot_ptr);
+    if (!slot_data_or_err) {
+      llvm::consumeError(slot_data_or_err.takeError());
+      return nullptr;
+    }
+    uintptr_t slot_data = *slot_data_or_err;
+    if (slot_data == 0)
       return nullptr;
     actual_class_descriptor_sp =
         m_runtime.GetClassDescriptorFromISA((ObjCISA)slot_data);
@@ -3519,11 +3551,8 @@ bool AppleObjCRuntimeV2::GetCFBooleanValuesIfNeeded() {
       return LLDB_INVALID_ADDRESS;
 
     lldb::addr_t addr = symbol->GetLoadAddress(&GetProcess()->GetTarget());
-    Status error;
-    addr = GetProcess()->ReadPointerFromMemory(addr, error);
-    if (error.Fail())
-      return LLDB_INVALID_ADDRESS;
-    return addr;
+    return llvm::expectedToOptional(GetProcess()->ReadPointerFromMemory(addr))
+        .value_or(LLDB_INVALID_ADDRESS);
   };
 
   lldb::addr_t false_addr = get_symbol(g_dunder_kCFBooleanFalse, g_kCFBooleanFalse);
@@ -3589,12 +3618,13 @@ public:
     if (!abi)
       return;
 
-    TypeSystemClangSP scratch_ts_sp =
-        ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
+    lldb::TypeSystemSP scratch_ts_sp =
+        GetScratchTypeSystemForObjCRuntime(process_sp->GetTarget());
     if (!scratch_ts_sp)
       return;
     CompilerType voidstar =
-        scratch_ts_sp->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
+        scratch_ts_sp->GetBasicTypeFromAST(lldb::eBasicTypeVoid)
+            .GetPointerType();
 
     ValueList args;
     Value input_value;
@@ -3644,7 +3674,7 @@ static void RegisterObjCExceptionRecognizer(Process *process) {
 
   process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
       StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
-      ConstString(module.GetFilename()), symbols,
+      module.GetFilename().str(), std::move(symbols),
       Mangled::NamePreference::ePreferDemangled,
       /*first_instruction_only*/ true);
 }

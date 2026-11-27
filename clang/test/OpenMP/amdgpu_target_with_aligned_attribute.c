@@ -199,7 +199,7 @@ void write_to_aligned_array(int *a, int N) {
 //
 //
 // CHECK-AMD-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_write_to_aligned_array_l14_omp_outlined_omp_outlined
-// CHECK-AMD-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], ptr noundef [[APTR:%.*]]) #[[ATTR1]] {
+// CHECK-AMD-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], ptr noundef [[APTR:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-AMD-NEXT:  entry:
 // CHECK-AMD-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -270,9 +270,9 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK-AMD:       omp.inner.for.cond:
 // CHECK-AMD-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-AMD-NEXT:    [[CONV5:%.*]] = sext i32 [[TMP9]] to i64
 // CHECK-AMD-NEXT:    [[TMP10:%.*]] = load i64, ptr [[DOTPREVIOUS_UB__ADDR_ASCAST]], align 8
-// CHECK-AMD-NEXT:    [[CMP6:%.*]] = icmp ule i64 [[CONV5]], [[TMP10]]
+// CHECK-AMD-NEXT:    [[CONV5:%.*]] = trunc i64 [[TMP10]] to i32
+// CHECK-AMD-NEXT:    [[CMP6:%.*]] = icmp sle i32 [[TMP9]], [[CONV5]]
 // CHECK-AMD-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK-AMD:       omp.inner.for.body:
 // CHECK-AMD-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4

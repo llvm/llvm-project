@@ -27,21 +27,20 @@ public:
   static char ID;
 
 private:
-  const MCSubtargetInfo *STI;
-
   LoongArchTargetStreamer &getTargetStreamer() const;
 
 public:
   explicit LoongArchAsmPrinter(TargetMachine &TM,
                                std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID), STI(&TM.getMCSubtargetInfo()) {
-  }
+      : AsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override {
     return "LoongArch Assembly Printer";
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void emitStartOfAsmFile(Module &M) override;
 
   void emitInstruction(const MachineInstr *MI) override;
 

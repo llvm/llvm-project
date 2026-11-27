@@ -28,8 +28,9 @@ namespace {
 struct Lowerer : coro::LowererBase {
   IRBuilder<> Builder;
   Constant *NoopCoro = nullptr;
+  bool ChangedGlobalInitializer = false;
 
-  Lowerer(Module &M) : LowererBase(M), Builder(Context) {}
+  Lowerer(Module &M) : LowererBase(M), Builder(M) {}
   bool lower(Function &F);
 
 private:
@@ -43,7 +44,7 @@ class NoopCoroElider : public PtrUseVisitor<NoopCoroElider> {
   IRBuilder<> Builder;
 
 public:
-  NoopCoroElider(const DataLayout &DL, LLVMContext &C) : Base(DL), Builder(C) {}
+  NoopCoroElider(Module &M) : Base(M.getDataLayout()), Builder(M) {}
 
   void run(IntrinsicInst *II);
 
@@ -95,7 +96,7 @@ bool Lowerer::lower(Function &F) {
   bool IsPrivateAndUnprocessed = F.isPresplitCoroutine() && F.hasLocalLinkage();
   bool Changed = false;
 
-  NoopCoroElider NCE(F.getDataLayout(), F.getContext());
+  NoopCoroElider NCE(*F.getParent());
   SmallPtrSet<Instruction *, 8> DeadInsts{};
   for (Instruction &I : instructions(F)) {
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
@@ -157,6 +158,7 @@ bool Lowerer::lower(Function &F) {
         auto *NewFuncPtrStruct = ConstantStruct::get(
             Target->getType(), TargetRelativeFunOffset, SourceSize);
         Target->replaceAllUsesWith(NewFuncPtrStruct);
+        ChangedGlobalInitializer = true;
         break;
       }
       DeadInsts.insert(II);
@@ -285,16 +287,28 @@ PreservedAnalyses CoroCleanupPass::run(Module &M,
   FunctionPassManager FPM;
   FPM.addPass(SimplifyCFGPass());
 
-  PreservedAnalyses FuncPA;
-  FuncPA.preserveSet<CFGAnalyses>();
-
+  bool Changed = false;
   Lowerer L(M);
   for (auto &F : M) {
     if (L.lower(F)) {
-      FAM.invalidate(F, FuncPA);
+      Changed = true;
+      // Eliding a noop coroutine's resume or destroy invoke changes the CFG.
+      FAM.invalidate(F, PreservedAnalyses::none());
       FPM.run(F, FAM);
     }
   }
 
-  return PreservedAnalyses::none();
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+
+  // Analyses of the lowered functions were already invalidated, and changing a
+  // global initializer does not change the CFG of any function.
+  if (L.ChangedGlobalInitializer)
+    PA.preserveSet<CFGAnalyses>();
+  else
+    PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }

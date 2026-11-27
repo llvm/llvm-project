@@ -1,5 +1,5 @@
 ; RUN: opt < %s -mtriple=x86_64-- -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-NOLINUX,CHECK-OPEN,CHECK-UNKNOWN %s
-; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-NOLINUX,CHECK-OPEN,CHECK-DARWIN %s
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.9.0 -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-NOLINUX,CHECK-OPEN,CHECK-DARWIN %s
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK,CHECK-KNOWN,CHECK-LINUX %s
 ; RUN: opt < %s -mtriple=nvptx -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-NOLINUX,CHECK-NVPTX %s
 ; RUN: opt < %s -mtriple=powerpc64-ibm-aix-xcoff -passes=inferattrs -S | FileCheck --match-full-lines --check-prefixes=CHECK-NOLINUX,CHECK-AIX %s
@@ -86,12 +86,6 @@ declare float @__coshf_finite(float)
 ; CHECK-LINUX: declare x86_fp80 @__coshl_finite(x86_fp80) [[NOFREE]]
 ; CHECK-NOLINUX: declare x86_fp80 @__coshl_finite(x86_fp80)
 declare x86_fp80 @__coshl_finite(x86_fp80)
-
-; CHECK: declare double @__cospi(double)
-declare double @__cospi(double)
-
-; CHECK: declare float @__cospif(float)
-declare float @__cospif(float)
 
 ; CHECK-LINUX: declare double @__exp10_finite(double) [[NOFREE]]
 ; CHECK-NOLINUX: declare double @__exp10_finite(double)
@@ -188,12 +182,6 @@ declare float @__sinhf_finite(float)
 ; CHECK-LINUX: declare x86_fp80 @__sinhl_finite(x86_fp80) [[NOFREE]]
 ; CHECK-NOLINUX: declare x86_fp80 @__sinhl_finite(x86_fp80)
 declare x86_fp80 @__sinhl_finite(x86_fp80)
-
-; CHECK: declare double @__sinpi(double)
-declare double @__sinpi(double)
-
-; CHECK: declare float @__sinpif(float)
-declare float @__sinpif(float)
 
 ; CHECK: declare i32 @abs(i32) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i32 @abs(i32)
@@ -357,7 +345,7 @@ declare x86_fp80 @coshl(x86_fp80)
 ; CHECK: declare x86_fp80 @cosl(x86_fp80) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare x86_fp80 @cosl(x86_fp80)
 
-; CHECK: declare noundef ptr @ctermid(ptr noundef captures(none)) [[NOFREE_NOUNWIND]]
+; CHECK: declare noundef ptr @ctermid(ptr noundef) [[NOFREE_NOUNWIND]]
 declare ptr @ctermid(ptr)
 
 ; CHECK: declare double @exp(double) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
@@ -817,7 +805,7 @@ declare void @perror(ptr)
 ; CHECK: declare noalias noundef ptr @popen(ptr noundef readonly captures(none), ptr noundef readonly captures(none)) [[NOFREE_NOUNWIND]]
 declare ptr @popen(ptr, ptr)
 
-; CHECK: declare i32 @posix_memalign(ptr, i64, i64) [[NOFREE]]
+; CHECK: declare noundef i32 @posix_memalign(ptr noundef writeonly captures(none), i64 noundef, i64 noundef) [[INACCESSIBLEMEMORARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i32 @posix_memalign(ptr, i64, i64)
 
 ; CHECK: declare double @pow(double, double) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
@@ -1053,6 +1041,9 @@ declare i64 @strcspn(ptr, ptr)
 ; CHECK: declare noalias ptr @strdup(ptr readonly captures(none)) [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC:#[0-9]+]]
 declare ptr @strdup(ptr)
 
+; CHECK-LINUX: declare noalias ptr @__strdup(ptr readonly captures(none)) [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]]
+declare ptr @__strdup(ptr)
+
 ; CHECK: declare i64 @strlen(ptr captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
 declare i64 @strlen(ptr)
 
@@ -1070,6 +1061,9 @@ declare ptr @strncpy(ptr, ptr, i64)
 
 ; CHECK: declare noalias ptr @strndup(ptr readonly captures(none), i64 noundef) [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]]
 declare ptr @strndup(ptr, i64)
+
+; CHECK-LINUX: declare noalias ptr @__strndup(ptr readonly captures(none), i64 noundef) [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]]
+declare ptr @__strndup(ptr, i64)
 
 ; CHECK: declare i64 @strnlen(ptr captures(none), i64) [[ARGMEMONLY_NOFREE_NOSYNC_NOUNWIND_READONLY_WILLRETURN]]
 declare i64 @strnlen(ptr, i64)
@@ -1221,6 +1215,30 @@ declare void @sincosf(float, ptr, ptr)
 ; CHECK: declare void @sincosl(x86_fp80, ptr writeonly captures(none), ptr writeonly captures(none)) [[ARGMEMORERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare void @sincosl(x86_fp80, ptr, ptr)
 
+; CHECK-DARWIN: declare double @__cospi(double) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare double @__cospi(double)
+
+; CHECK-DARWIN: declare float @__cospif(float) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare float @__cospif(float)
+
+; CHECK-DARWIN: declare double @__sinpi(double) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare double @__sinpi(double)
+
+; CHECK-DARWIN: declare float @__sinpif(float) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare float @__sinpif(float)
+
+; CHECK-DARWIN: declare { double, double } @__sincos_stret(double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare { double, double } @__sincos_stret(double)
+
+; CHECK-DARWIN: declare <2 x float> @__sincosf_stret(float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare <2 x float> @__sincosf_stret(float)
+
+; CHECK-DARWIN: declare { double, double } @__sincospi_stret(double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare { double, double } @__sincospi_stret(double)
+
+; CHECK-DARWIN: declare <2 x float> @__sincospif_stret(float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+declare <2 x float> @__sincospif_stret(float)
+
 ; memset_pattern{4,8,16} aren't available everywhere.
 ; CHECK-DARWIN: declare void @memset_pattern4(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare void @memset_pattern4(ptr, ptr, i64)
@@ -1249,7 +1267,8 @@ declare void @memset_pattern16(ptr, ptr, i64)
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOSYNC_NOUNWIND]] = { nocallback nofree nosync nounwind memory(argmem: readwrite) }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1) memory(argmem: readwrite, inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE12_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1,2) memory(argmem: readwrite, inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc") memory(argmem: readwrite, inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK-DAG: attributes [[NOFREE_COLD_NORETURN_NOUNWIND]] = { cold nofree noreturn nounwind }
 ; CHECK-DAG: attributes [[NOFREE_COLD_NORETURN]] = { cold nofree noreturn }
 ; CHECK-DAG: attributes [[COLD_NORETURN]] = { cold noreturn }

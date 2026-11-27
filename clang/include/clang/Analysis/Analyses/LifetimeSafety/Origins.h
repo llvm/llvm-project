@@ -21,6 +21,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang::lifetimes::internal {
@@ -53,16 +54,26 @@ struct Origin {
   /// Null for synthetic lvalue origins (e.g., outer origin of DeclRefExpr).
   const Type *Ty;
 
-  Origin(OriginID ID, const clang::ValueDecl *D, const Type *QT)
-      : ID(ID), Ptr(D), Ty(QT) {}
-  Origin(OriginID ID, const clang::Expr *E, const Type *QT)
-      : ID(ID), Ptr(E), Ty(QT) {}
+  /// True if this origin only holds a loan to a declaration named in scope, so
+  /// it can never hold an expired loan. For example, in
+  ///   int s = 42;
+  ///   int t = s;
+  /// the outer origin of the expression `s` holds a loan to `s`, which is alive
+  /// wherever `s` can be named.
+  bool NamesDeclStorage;
+
+  Origin(OriginID ID, const clang::ValueDecl *D, const Type *QT,
+         bool NamesDeclStorage)
+      : ID(ID), Ptr(D), Ty(QT), NamesDeclStorage(NamesDeclStorage) {}
+  Origin(OriginID ID, const clang::Expr *E, const Type *QT,
+         bool NamesDeclStorage)
+      : ID(ID), Ptr(E), Ty(QT), NamesDeclStorage(NamesDeclStorage) {}
 
   const clang::ValueDecl *getDecl() const {
-    return Ptr.dyn_cast<const clang::ValueDecl *>();
+    return dyn_cast<const clang::ValueDecl *>(Ptr);
   }
   const clang::Expr *getExpr() const {
-    return Ptr.dyn_cast<const clang::Expr *>();
+    return dyn_cast<const clang::Expr *>(Ptr);
   }
 };
 
@@ -124,7 +135,7 @@ bool doesDeclHaveStorage(const ValueDecl *D);
 /// variables and expressions.
 class OriginManager {
 public:
-  explicit OriginManager(const AnalysisDeclContext &AC);
+  OriginManager(const AnalysisDeclContext &AC, llvm::BumpPtrAllocator &Alloc);
 
   /// Gets or creates the OriginList for a given ValueDecl.
   ///
@@ -191,11 +202,14 @@ public:
 private:
   OriginID getNextOriginID() { return NextOriginID++; }
 
-  OriginList *createNode(const ValueDecl *D, QualType QT);
-  OriginList *createNode(const Expr *E, QualType QT);
+  OriginList *createNode(const ValueDecl *D, QualType QT,
+                         bool NamesDeclStorage = false);
+  OriginList *createNode(const Expr *E, QualType QT,
+                         bool NamesDeclStorage = false);
 
   template <typename T>
-  OriginList *buildListForType(QualType QT, const T *Node);
+  OriginList *buildListForType(QualType QT, const T *Node,
+                               bool NamesDeclStorage = false);
 
   void initializeThisOrigins(const Decl *D);
 
@@ -210,7 +224,7 @@ private:
   /// TODO(opt): Profile and evaluate the usefulness of small buffer
   /// optimisation.
   llvm::SmallVector<Origin> AllOrigins;
-  llvm::BumpPtrAllocator ListAllocator;
+  llvm::BumpPtrAllocator &ListAllocator;
   llvm::DenseMap<const clang::ValueDecl *, OriginList *> DeclToList;
   llvm::DenseMap<const clang::Expr *, OriginList *> ExprToList;
   std::optional<OriginList *> ThisOrigins;

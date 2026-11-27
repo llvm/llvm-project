@@ -14,6 +14,7 @@
 #define BOLT_UTILS_COMMAND_LINE_OPTS_H
 
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 
 namespace llvm {
 namespace bolt {
@@ -119,6 +120,7 @@ extern llvm::cl::opt<SplitFunctionsStrategy> SplitStrategy;
 enum ProfileFormatKind { PF_Fdata, PF_YAML, PF_PreAgg, PF_PerfScript };
 
 extern llvm::cl::opt<ProfileFormatKind> ProfileFormat;
+extern llvm::cl::list<std::string> ReorderData;
 extern llvm::cl::opt<bool> ShowDensity;
 extern llvm::cl::opt<bool> SplitEH;
 extern llvm::cl::opt<bool> StrictMode;
@@ -170,6 +172,12 @@ enum GadgetKindBitmask : unsigned {
   /// Run all implemented scanners.
   GS_ALL_MASK = GS_PTRAUTH_ALL_MASK,
 };
+
+/// Library options (options of LLVM libraries declared in TableGen, such as
+/// -x86-align-branch) parsed from the BOLT command line. They are only
+/// recognized by cl::parseCommandLineOptions taking a context, and are read
+/// by the MC layer through MCTargetOptions::LibraryOptions.
+extern llvm::cl::LibraryOptionsContext LibraryOptionsCtx;
 
 } // namespace opts
 

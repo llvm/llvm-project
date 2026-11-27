@@ -23,12 +23,33 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cstdint>
+#include <optional>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "PPCGenSubtargetInfo.inc"
 
 // GCC #defines PPC on Linux but we use it as our namespace name
 #undef PPC
+
+namespace llvm::PPC {
+enum class ICmpInGPRType {
+  All,
+  None,
+  I32,
+  I64,
+  NonExtIn,
+  Zext,
+  Sext,
+  ZextI32,
+  SextI32,
+  ZextI64,
+  SextI64
+};
+} // namespace llvm::PPC
+
+#define OPTIONS_STRUCT_DECL
+#include "PPCOptions.inc"
 
 namespace llvm {
 class SelectionDAGTargetInfo;
@@ -77,6 +98,8 @@ public:
   };
 
 protected:
+  const PPCOptions &CLOpts;
+
   /// stackAlignment - The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
   Align StackAlignment;
@@ -93,6 +116,9 @@ protected:
   unsigned CPUDirective;
 
   bool IsLittleEndian;
+
+  /// The selected ABI variant.
+  PPCABI TargetABI = PPC_ABI_UNKNOWN;
 
   POPCNTDKind HasPOPCNTD;
 
@@ -115,7 +141,7 @@ public:
   /// of the specified triple.
   ///
   PPCSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS,
-               const PPCTargetMachine &TM);
+               StringRef ABIName, const PPCTargetMachine &TM);
 
   ~PPCSubtarget() override;
 
@@ -152,6 +178,12 @@ public:
     return &getInstrInfo()->getRegisterInfo();
   }
   const PPCTargetMachine &getTargetMachine() const { return TM; }
+  const PPCOptions &getCLOpts() const { return CLOpts; }
+  /// Paired vector stores (STXVP) are enabled by default for -mcpu=future.
+  bool enableAutoPairedVecSt() const {
+    return valueOr(CLOpts.auto_paired_vec_st,
+                   CPUDirective == PPC::DIR_PWR_FUTURE);
+  }
 
   /// initializeSubtargetDependencies - Initializes using a CPU, a TuneCPU,  and
   /// feature string so that we can use initializer lists for subtarget
@@ -207,6 +239,12 @@ public:
   bool isAIXABI() const { return getTargetTriple().isOSAIX(); }
   bool isSVR4ABI() const { return !isAIXABI(); }
   bool isELFv2ABI() const;
+
+  /// Returns true when the AIX extended Altivec ABI ("vec-extabi") is in
+  /// effect, allowing use of the nonvolatile vector registers.
+  bool isAIXExtendedAltivecABI() const {
+    return TargetABI == PPC_ABI_AIX_EXTABI;
+  }
 
   bool is64BitELFABI() const { return isSVR4ABI() && isPPC64(); }
   bool is32BitELFABI() const { return isSVR4ABI() && !isPPC64(); }

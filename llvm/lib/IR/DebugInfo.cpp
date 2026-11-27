@@ -219,6 +219,7 @@ void DebugInfoFinder::processGlobalVariableExpression(
   auto *GV = GVE->getVariable();
   processScope(GV->getScope());
   processType(GV->getType());
+  processType(GV->getStaticDataMemberDeclaration());
 }
 
 void DebugInfoFinder::processInstruction(const Module &M,
@@ -273,6 +274,8 @@ void DebugInfoFinder::processType(DIType *DT) {
         processType(T);
       else if (auto *SP = dyn_cast<DISubprogram>(D))
         processSubprogram(SP);
+      else if (auto *P = dyn_cast<DIProperty>(D))
+        processType(P->getType());
       else if (auto *SR = dyn_cast_or_null<DISubrange>(D)) {
         auto VisitBound = [&](DISubrange::BoundType Bound) {
           if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound))
@@ -413,6 +416,10 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
       [this](DIImportedEntity *IE) { processImportedEntity(IE); },
       [this](DIType *T) { processType(T); },
       [this](auto *GVE) { return processGlobalVariableExpression(GVE); });
+
+  // Not reached through the scope, type, or retained nodes.
+  if (DISubprogram *Decl = SP->getDeclaration())
+    processSubprogram(Decl);
 }
 
 void DebugInfoFinder::processVariable(const DILocalVariable *DV) {
@@ -678,6 +685,10 @@ bool llvm::stripDebugInfo(Function &F) {
     Changed = true;
     F.setSubprogram(nullptr);
   }
+  if (F.hasMetadata(LLVMContext::MD_flmd)) {
+    Changed = true;
+    F.setFLContext(nullptr);
+  }
 
   DenseMap<MDNode *, MDNode *> LoopIDsMap;
   for (BasicBlock &BB : F) {
@@ -699,6 +710,8 @@ bool llvm::stripDebugInfo(Function &F) {
         I.setMetadata("heapallocsite", nullptr);
         // DIAssignID are debug info metadata primitives.
         I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+        // Call targets point to DISubprograms.
+        I.setMetadata(LLVMContext::MD_call_target, nullptr);
       }
       I.dropDbgRecords();
     }
@@ -854,11 +867,16 @@ private:
   DILocation *getReplacementMDLocation(DILocation *MLD) {
     auto *Scope = map(MLD->getScope());
     auto *InlinedAt = map(MLD->getInlinedAt());
+    // Intermediate-IR layers are line-table data (a line/column in a DIFile),
+    // so they survive the downgrade to line-tables-only.
+    Metadata *IRLayers = map(MLD->getRawIRLayers());
     if (MLD->isDistinct())
-      return DILocation::getDistinct(MLD->getContext(), MLD->getLine(),
-                                     MLD->getColumn(), Scope, InlinedAt);
+      return DILocation::getDistinct(
+          MLD->getContext(), MLD->getLine(), MLD->getColumn(), Scope, InlinedAt,
+          /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0, IRLayers);
     return DILocation::get(MLD->getContext(), MLD->getLine(), MLD->getColumn(),
-                           Scope, InlinedAt);
+                           Scope, InlinedAt, /*ImplicitCode=*/false,
+                           /*AtomGroup=*/0, /*AtomRank=*/0, IRLayers);
   }
 
   /// Create a new generic MDNode, to replace the one given
@@ -889,6 +907,11 @@ private:
       if (auto *CU = dyn_cast<DICompileUnit>(N))
         return getReplacementCU(CU);
       if (isa<DIFile>(N))
+        return N;
+      // Intermediate-IR layer nodes hold only a kind string and a DIFile, so
+      // none of their content is part of the type hierarchy being stripped.
+      // Return them as they are to preserve their node types.
+      if (isa<DILayerLoc>(N) || isa<DILayerLocList>(N))
         return N;
       if (auto *MDLB = dyn_cast<DILexicalBlockBase>(N))
         // Remap to our referenced scope (recursively).
@@ -993,8 +1016,12 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
           MDNode *InlinedAt = DL.getInlinedAt();
           Scope = remap(Scope);
           InlinedAt = remap(InlinedAt);
+          // Layers need no remapping (Mapper maps them to themselves), but they
+          // do need carrying over -- they are line-table data.
           return DILocation::get(M.getContext(), DL.getLine(), DL.getCol(),
-                                 Scope, InlinedAt);
+                                 Scope, InlinedAt, /*ImplicitCode=*/false,
+                                 /*AtomGroup=*/0, /*AtomRank=*/0,
+                                 DL.getRawIRLayers());
         };
 
         if (I.getDebugLoc() != DebugLoc())
@@ -1007,9 +1034,13 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
           return MD;
         });
 
-        // Strip heapallocsite attachments, they point into the DIType system.
-        if (I.hasMetadataOtherThanDebugLoc())
+        // Strip attachments that refer to non-line-table debug info:
+        // heapallocsite points into the DIType system, call_target to a
+        // DISubprogram.
+        if (I.hasMetadataOtherThanDebugLoc()) {
           I.setMetadata("heapallocsite", nullptr);
+          I.setMetadata(LLVMContext::MD_call_target, nullptr);
+        }
 
         // Strip any DbgRecords attached.
         I.dropDbgRecords();
@@ -2019,18 +2050,6 @@ LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata) {
   }
 }
 
-AssignmentInstRange at::getAssignmentInsts(DIAssignID *ID) {
-  assert(ID && "Expected non-null ID");
-  LLVMContext &Ctx = ID->getContext();
-  auto &Map = Ctx.pImpl->AssignmentIDToInstrs;
-
-  auto MapIt = Map.find(ID);
-  if (MapIt == Map.end())
-    return make_range(nullptr, nullptr);
-
-  return make_range(MapIt->second.begin(), MapIt->second.end());
-}
-
 void at::deleteAssignmentMarkers(const Instruction *Inst) {
   for (auto *DVR : getDVRAssignmentMarkers(Inst))
     DVR->eraseFromParent();
@@ -2046,7 +2065,9 @@ void at::RAUW(DIAssignID *Old, DIAssignID *New) {
   for (auto *I : InstVec)
     I->setMetadata(LLVMContext::MD_DIAssignID, New);
 
-  Old->replaceAllUsesWith(New);
+  for (DbgVariableRecord *DVR :
+       SmallVector<DbgVariableRecord *>(Old->getRecords()))
+    DVR->setAssignId(New);
 }
 
 void at::deleteAll(Function *F) {
@@ -2135,7 +2156,7 @@ getAssignmentInfoImpl(const DataLayout &DL, const Value *StoreDest,
   if (OffsetInBytes == UINT64_MAX)
     return std::nullopt;
   if (const auto *Alloca = dyn_cast<AllocaInst>(Base))
-    if (!DL.getTypeSizeInBits(Alloca->getAllocatedType()).isScalable())
+    if (!Alloca->isScalable())
       return AssignmentInfo(DL, Alloca, OffsetInBytes * 8, SizeInBits);
   return std::nullopt;
 }

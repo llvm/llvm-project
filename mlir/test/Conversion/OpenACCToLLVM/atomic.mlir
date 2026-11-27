@@ -140,9 +140,14 @@ module {
 
 // -----
 
+// A simple binop capture uses atomicrmw; the read follows the update, so the
+// captured value is recomputed from the old one.
+
 // CHECK-LABEL: llvm.func @convert_capture_ur
-// CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : !llvm.ptr, i32
-// CHECK: llvm.store %{{.*}}, %{{.*}} : i32, !llvm.ptr
+// CHECK-NOT: llvm.cmpxchg
+// CHECK: %[[OLD:.*]] = llvm.atomicrmw add %{{.*}}, %[[VAL:.*]] monotonic : !llvm.ptr, i32
+// CHECK: %[[NEW:.*]] = llvm.add %[[OLD]], %[[VAL]] : i32
+// CHECK: llvm.store %[[NEW]], %{{.*}} : i32, !llvm.ptr
 
 module {
   func.func @convert_capture_ur(%v: memref<i32>, %x: memref<i32>, %val: i32) {
@@ -150,6 +155,50 @@ module {
       acc.atomic.update %x : memref<i32> {
       ^bb0(%arg: i32):
         %0 = arith.addi %arg, %val : i32
+        acc.yield %0 : i32
+      }
+      acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+    }
+    return
+  }
+}
+
+// -----
+
+// The read precedes the update, so the old value is captured directly.
+
+// CHECK-LABEL: llvm.func @convert_capture_ru_atomicrmw
+// CHECK-NOT: llvm.cmpxchg
+// CHECK: %[[OLD:.*]] = llvm.atomicrmw sub %{{.*}}, %{{.*}} monotonic : !llvm.ptr, i32
+// CHECK: llvm.store %[[OLD]], %{{.*}} : i32, !llvm.ptr
+
+module {
+  func.func @convert_capture_ru_atomicrmw(%v: memref<i32>, %x: memref<i32>, %val: i32) {
+    acc.atomic.capture {
+      acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+      acc.atomic.update %x : memref<i32> {
+      ^bb0(%arg: i32):
+        %0 = arith.subi %arg, %val : i32
+        acc.yield %0 : i32
+      }
+    }
+    return
+  }
+}
+
+// -----
+
+// `expr - x` is not an atomicrmw sub and must keep the cmpxchg loop.
+
+// CHECK-LABEL: llvm.func @convert_capture_sub_rhs
+// CHECK: llvm.cmpxchg
+
+module {
+  func.func @convert_capture_sub_rhs(%v: memref<i32>, %x: memref<i32>, %val: i32) {
+    acc.atomic.capture {
+      acc.atomic.update %x : memref<i32> {
+      ^bb0(%arg: i32):
+        %0 = arith.subi %val, %arg : i32
         acc.yield %0 : i32
       }
       acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
@@ -205,6 +254,39 @@ module {
       %b = arith.addf %re, %im_val : f64
       %result = complex.create %a, %b : complex<f64>
       acc.yield %result : complex<f64>
+    }
+    return
+  }
+}
+
+// -----
+
+// There is no atomic on i1; and/or/xor are applied to the byte it occupies.
+
+// CHECK-LABEL: llvm.func @convert_update_i1
+// CHECK: %[[OR:.*]] = llvm.zext %{{.*}} : i1 to i8
+// CHECK: llvm.atomicrmw _or %{{.*}}, %[[OR]] monotonic : !llvm.ptr, i8
+// CHECK: %[[AND:.*]] = llvm.zext %{{.*}} : i1 to i8
+// CHECK: llvm.atomicrmw _and %{{.*}}, %[[AND]] monotonic : !llvm.ptr, i8
+// CHECK: %[[XOR:.*]] = llvm.zext %{{.*}} : i1 to i8
+// CHECK: llvm.atomicrmw _xor %{{.*}}, %[[XOR]] monotonic : !llvm.ptr, i8
+
+module {
+  func.func @convert_update_i1(%x: memref<i1>, %val: i1) {
+    acc.atomic.update %x : memref<i1> {
+    ^bb0(%arg: i1):
+      %0 = arith.ori %arg, %val : i1
+      acc.yield %0 : i1
+    }
+    acc.atomic.update %x : memref<i1> {
+    ^bb0(%arg: i1):
+      %0 = arith.andi %arg, %val : i1
+      acc.yield %0 : i1
+    }
+    acc.atomic.update %x : memref<i1> {
+    ^bb0(%arg: i1):
+      %0 = arith.xori %arg, %val : i1
+      acc.yield %0 : i1
     }
     return
   }

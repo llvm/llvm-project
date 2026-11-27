@@ -25,6 +25,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/CodeGenUtils/ExprUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -226,8 +227,6 @@ public:
 
   void VisitVAArgExpr(VAArgExpr *E);
   void VisitCXXParenListInitExpr(CXXParenListInitExpr *E);
-  void VisitCXXParenListOrInitListExpr(Expr *ExprToVisit, ArrayRef<Expr *> Args,
-                                       Expr *ArrayFiller);
 
   void EmitInitializationToLValue(Expr *E, LValue Address);
   void EmitNullInitializationToLValue(LValue Address);
@@ -490,29 +489,6 @@ void AggExprEmitter::VisitCXXStdInitializerListExpr(
          "Expected std::initializer_list to only have two fields");
 }
 
-/// Determine if E is a trivial array filler, that is, one that is
-/// equivalent to zero-initialization.
-static bool isTrivialFiller(Expr *E) {
-  if (!E)
-    return true;
-
-  if (isa<ImplicitValueInitExpr>(E))
-    return true;
-
-  if (auto *ILE = dyn_cast<InitListExpr>(E)) {
-    if (ILE->getNumInits())
-      return false;
-    return isTrivialFiller(ILE->getArrayFiller());
-  }
-
-  if (auto *Cons = dyn_cast_or_null<CXXConstructExpr>(E))
-    return Cons->getConstructor()->isDefaultConstructor() &&
-           Cons->getConstructor()->isTrivial();
-
-  // FIXME: Are there other cases where we can avoid emitting an initializer?
-  return false;
-}
-
 // emit an elementwise cast where the RHS is a scalar or vector
 // or emit an aggregate splat cast
 static void EmitHLSLScalarElementwiseAndSplatCasts(CodeGenFunction &CGF,
@@ -698,7 +674,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   }
 
   // Check whether there's a non-trivial array-fill expression.
-  bool hasTrivialFiller = isTrivialFiller(ArrayFiller);
+  bool hasTrivialFiller = CodeGenUtils::isTrivialFiller(ArrayFiller);
 
   // Any remaining elements need to be zero-initialized, possibly
   // using the filler expression.  We can skip this if the we're
@@ -814,9 +790,8 @@ void AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
 
   if (Destruct)
     if (QualType::DestructionKind DtorKind = E->getType().isDestructedType())
-      CGF.pushLifetimeExtendedDestroy(
-          CGF.getCleanupKind(DtorKind), Slot.getAddress(), E->getType(),
-          CGF.getDestroyer(DtorKind), DtorKind & EHCleanup);
+      CGF.pushLifetimeExtendedDestroy(DtorKind, Slot.getAddress(),
+                                      E->getType());
 }
 
 /// Attempt to look through various unimportant expressions to find a
@@ -1322,71 +1297,6 @@ void AggExprEmitter::VisitPointerToDataMemberBinaryOperator(
   EmitFinalDestCopy(E->getType(), LV);
 }
 
-/// Is the value of the given expression possibly a reference to or
-/// into a __block variable?
-static bool isBlockVarRef(const Expr *E) {
-  // Make sure we look through parens.
-  E = E->IgnoreParens();
-
-  // Check for a direct reference to a __block variable.
-  if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
-    const VarDecl *var = dyn_cast<VarDecl>(DRE->getDecl());
-    return (var && var->hasAttr<BlocksAttr>());
-  }
-
-  // More complicated stuff.
-
-  // Binary operators.
-  if (const BinaryOperator *op = dyn_cast<BinaryOperator>(E)) {
-    // For an assignment or pointer-to-member operation, just care
-    // about the LHS.
-    if (op->isAssignmentOp() || op->isPtrMemOp())
-      return isBlockVarRef(op->getLHS());
-
-    // For a comma, just care about the RHS.
-    if (op->getOpcode() == BO_Comma)
-      return isBlockVarRef(op->getRHS());
-
-    // FIXME: pointer arithmetic?
-    return false;
-
-    // Check both sides of a conditional operator.
-  } else if (const AbstractConditionalOperator *op =
-                 dyn_cast<AbstractConditionalOperator>(E)) {
-    return isBlockVarRef(op->getTrueExpr()) ||
-           isBlockVarRef(op->getFalseExpr());
-
-    // OVEs are required to support BinaryConditionalOperators.
-  } else if (const OpaqueValueExpr *op = dyn_cast<OpaqueValueExpr>(E)) {
-    if (const Expr *src = op->getSourceExpr())
-      return isBlockVarRef(src);
-
-    // Casts are necessary to get things like (*(int*)&var) = foo().
-    // We don't really care about the kind of cast here, except
-    // we don't want to look through l2r casts, because it's okay
-    // to get the *value* in a __block variable.
-  } else if (const CastExpr *cast = dyn_cast<CastExpr>(E)) {
-    if (cast->getCastKind() == CK_LValueToRValue)
-      return false;
-    return isBlockVarRef(cast->getSubExpr());
-
-    // Handle unary operators.  Again, just aggressively look through
-    // it, ignoring the operation.
-  } else if (const UnaryOperator *uop = dyn_cast<UnaryOperator>(E)) {
-    return isBlockVarRef(uop->getSubExpr());
-
-    // Look into the base of a field access.
-  } else if (const MemberExpr *mem = dyn_cast<MemberExpr>(E)) {
-    return isBlockVarRef(mem->getBase());
-
-    // Look into the base of a subscript.
-  } else if (const ArraySubscriptExpr *sub = dyn_cast<ArraySubscriptExpr>(E)) {
-    return isBlockVarRef(sub->getBase());
-  }
-
-  return false;
-}
-
 void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   ApplyAtomGroup Grp(CGF.getDebugInfo());
   // For an assignment to work, the value on the right has
@@ -1399,7 +1309,7 @@ void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   // potentially cause a block copy, we need to evaluate the RHS first
   // so that the assignment goes the right place.
   // This is pretty semantically fragile.
-  if (isBlockVarRef(E->getLHS()) &&
+  if (CodeGenUtils::isBlockVarRef(E->getLHS()) &&
       E->getRHS()->HasSideEffects(CGF.getContext())) {
     // Ensure that we have a destination, and evaluate the RHS into that.
     EnsureDest(E->getRHS()->getType());
@@ -1598,145 +1508,11 @@ void AggExprEmitter::VisitImplicitValueInitExpr(ImplicitValueInitExpr *E) {
   EmitNullInitializationToLValue(CGF.MakeAddrLValue(Slot.getAddress(), T));
 }
 
-/// Determine whether the given cast kind is known to always convert values
-/// with all zero bits in their value representation to values with all zero
-/// bits in their value representation.
-static bool castPreservesZero(const CastExpr *CE) {
-  switch (CE->getCastKind()) {
-    // No-ops.
-  case CK_NoOp:
-  case CK_UserDefinedConversion:
-  case CK_ConstructorConversion:
-  case CK_BitCast:
-  case CK_ToUnion:
-  case CK_ToVoid:
-    // Conversions between (possibly-complex) integral, (possibly-complex)
-    // floating-point, and bool.
-  case CK_BooleanToSignedIntegral:
-  case CK_FloatingCast:
-  case CK_FloatingComplexCast:
-  case CK_FloatingComplexToBoolean:
-  case CK_FloatingComplexToIntegralComplex:
-  case CK_FloatingComplexToReal:
-  case CK_FloatingRealToComplex:
-  case CK_FloatingToBoolean:
-  case CK_FloatingToIntegral:
-  case CK_IntegralCast:
-  case CK_IntegralComplexCast:
-  case CK_IntegralComplexToBoolean:
-  case CK_IntegralComplexToFloatingComplex:
-  case CK_IntegralComplexToReal:
-  case CK_IntegralRealToComplex:
-  case CK_IntegralToBoolean:
-  case CK_IntegralToFloating:
-    // Reinterpreting integers as pointers and vice versa.
-  case CK_IntegralToPointer:
-  case CK_PointerToIntegral:
-    // Language extensions.
-  case CK_VectorSplat:
-  case CK_MatrixCast:
-  case CK_NonAtomicToAtomic:
-  case CK_AtomicToNonAtomic:
-  case CK_HLSLVectorTruncation:
-  case CK_HLSLMatrixTruncation:
-  case CK_HLSLElementwiseCast:
-  case CK_HLSLAggregateSplatCast:
-    return true;
-
-  case CK_BaseToDerivedMemberPointer:
-  case CK_DerivedToBaseMemberPointer:
-  case CK_MemberPointerToBoolean:
-  case CK_NullToMemberPointer:
-  case CK_ReinterpretMemberPointer:
-    // FIXME: ABI-dependent.
-    return false;
-
-  case CK_AnyPointerToBlockPointerCast:
-  case CK_BlockPointerToObjCPointerCast:
-  case CK_CPointerToObjCPointerCast:
-  case CK_ObjCObjectLValueCast:
-  case CK_IntToOCLSampler:
-  case CK_ZeroToOCLOpaqueType:
-    // FIXME: Check these.
-    return false;
-
-  case CK_FixedPointCast:
-  case CK_FixedPointToBoolean:
-  case CK_FixedPointToFloating:
-  case CK_FixedPointToIntegral:
-  case CK_FloatingToFixedPoint:
-  case CK_IntegralToFixedPoint:
-    // FIXME: Do all fixed-point types represent zero as all 0 bits?
-    return false;
-
-  case CK_AddressSpaceConversion:
-  case CK_BaseToDerived:
-  case CK_DerivedToBase:
-  case CK_Dynamic:
-  case CK_NullToPointer:
-  case CK_PointerToBoolean:
-    // FIXME: Preserves zeroes only if zero pointers and null pointers have the
-    // same representation in all involved address spaces.
-    return false;
-
-  case CK_ARCConsumeObject:
-  case CK_ARCExtendBlockObject:
-  case CK_ARCProduceObject:
-  case CK_ARCReclaimReturnedObject:
-  case CK_CopyAndAutoreleaseBlockObject:
-  case CK_ArrayToPointerDecay:
-  case CK_FunctionToPointerDecay:
-  case CK_BuiltinFnToFnPtr:
-  case CK_Dependent:
-  case CK_LValueBitCast:
-  case CK_LValueToRValue:
-  case CK_LValueToRValueBitCast:
-  case CK_UncheckedDerivedToBase:
-  case CK_HLSLArrayRValue:
-    return false;
-  }
-  llvm_unreachable("Unhandled clang::CastKind enum");
-}
-
-/// isSimpleZero - If emitting this value will obviously just cause a store of
-/// zero to memory, return true.  This can return false if uncertain, so it just
-/// handles simple cases.
-static bool isSimpleZero(const Expr *E, CodeGenFunction &CGF) {
-  E = E->IgnoreParens();
-  while (auto *CE = dyn_cast<CastExpr>(E)) {
-    if (!castPreservesZero(CE))
-      break;
-    E = CE->getSubExpr()->IgnoreParens();
-  }
-
-  // 0
-  if (const IntegerLiteral *IL = dyn_cast<IntegerLiteral>(E))
-    return IL->getValue() == 0;
-  // +0.0
-  if (const FloatingLiteral *FL = dyn_cast<FloatingLiteral>(E))
-    return FL->getValue().isPosZero();
-  // int()
-  if ((isa<ImplicitValueInitExpr>(E) || isa<CXXScalarValueInitExpr>(E)) &&
-      CGF.getTypes().isZeroInitializable(E->getType()))
-    return true;
-  // (int*)0 - Null pointer expressions.
-  if (const CastExpr *ICE = dyn_cast<CastExpr>(E))
-    return ICE->getCastKind() == CK_NullToPointer &&
-           CGF.getTypes().isPointerZeroInitializable(E->getType()) &&
-           !E->HasSideEffects(CGF.getContext());
-  // '\0'
-  if (const CharacterLiteral *CL = dyn_cast<CharacterLiteral>(E))
-    return CL->getValue() == 0;
-
-  // Otherwise, hard case: conservatively return false.
-  return false;
-}
-
 void AggExprEmitter::EmitInitializationToLValue(Expr *E, LValue LV) {
   QualType type = LV.getType();
   // FIXME: Ignore result?
   // FIXME: Are initializers affected by volatile?
-  if (Dest.isZeroed() && isSimpleZero(E, CGF)) {
+  if (Dest.isZeroed() && CodeGenUtils::isSimpleZero(E, CGF)) {
     // Storing "i32 0" to a zero'd memory location is a noop.
     return;
   } else if (isa<ImplicitValueInitExpr>(E) || isa<CXXScalarValueInitExpr>(E)) {
@@ -2147,69 +1923,6 @@ void AggExprEmitter::VisitDesignatedInitUpdateExpr(
 //                        Entry Points into this File
 //===----------------------------------------------------------------------===//
 
-/// GetNumNonZeroBytesInInit - Get an approximate count of the number of
-/// non-zero bytes that will be stored when outputting the initializer for the
-/// specified initializer expression.
-static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
-  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
-    E = MTE->getSubExpr();
-  E = E->IgnoreParenNoopCasts(CGF.getContext());
-
-  // 0 and 0.0 won't require any non-zero stores!
-  if (isSimpleZero(E, CGF))
-    return CharUnits::Zero();
-
-  // If this is an initlist expr, sum up the size of sizes of the (present)
-  // elements.  If this is something weird, assume the whole thing is non-zero.
-  const InitListExpr *ILE = dyn_cast<InitListExpr>(E);
-  while (ILE && ILE->isTransparent())
-    ILE = dyn_cast<InitListExpr>(ILE->getInit(0));
-  if (!ILE || !CGF.getTypes().isZeroInitializable(ILE->getType()))
-    return CGF.getContext().getTypeSizeInChars(E->getType());
-
-  // InitListExprs for structs have to be handled carefully.  If there are
-  // reference members, we need to consider the size of the reference, not the
-  // referencee.  InitListExprs for unions and arrays can't have references.
-  if (const RecordType *RT = E->getType()->getAsCanonical<RecordType>()) {
-    if (!RT->isUnionType()) {
-      RecordDecl *SD = RT->getDecl()->getDefinitionOrSelf();
-      CharUnits NumNonZeroBytes = CharUnits::Zero();
-
-      unsigned ILEElement = 0;
-      if (auto *CXXRD = dyn_cast<CXXRecordDecl>(SD))
-        while (ILEElement != CXXRD->getNumBases())
-          NumNonZeroBytes +=
-              GetNumNonZeroBytesInInit(ILE->getInit(ILEElement++), CGF);
-      for (const auto *Field : SD->fields()) {
-        // We're done once we hit the flexible array member or run out of
-        // InitListExpr elements.
-        if (Field->getType()->isIncompleteArrayType() ||
-            ILEElement == ILE->getNumInits())
-          break;
-        if (Field->isUnnamedBitField())
-          continue;
-
-        const Expr *E = ILE->getInit(ILEElement++);
-
-        // Reference values are always non-null and have the width of a pointer.
-        if (Field->getType()->isReferenceType())
-          NumNonZeroBytes += CGF.getContext().toCharUnitsFromBits(
-              CGF.getTarget().getPointerWidth(LangAS::Default));
-        else
-          NumNonZeroBytes += GetNumNonZeroBytesInInit(E, CGF);
-      }
-
-      return NumNonZeroBytes;
-    }
-  }
-
-  // FIXME: This overestimates the number of non-zero bytes for bit-fields.
-  CharUnits NumNonZeroBytes = CharUnits::Zero();
-  for (unsigned i = 0, e = ILE->getNumInits(); i != e; ++i)
-    NumNonZeroBytes += GetNumNonZeroBytesInInit(ILE->getInit(i), CGF);
-  return NumNonZeroBytes;
-}
-
 /// CheckAggExprForMemSetUse - If the initializer is large and has a lot of
 /// zeros in it, emit a memset and avoid storing the individual zeros.
 ///
@@ -2237,7 +1950,7 @@ static void CheckAggExprForMemSetUse(AggValueSlot &Slot, const Expr *E,
 
   // Check to see if over 3/4 of the initializer are known to be zero.  If so,
   // we prefer to emit memset + individual stores for the rest.
-  CharUnits NumNonZeroBytes = GetNumNonZeroBytesInInit(E, CGF);
+  CharUnits NumNonZeroBytes = CodeGenUtils::GetNumNonZeroBytesInInit(E, CGF);
   if (NumNonZeroBytes * 4 > Size)
     return;
 
@@ -2343,11 +2056,10 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
 
   if (getLangOpts().CPlusPlus) {
     if (const auto *Record = Ty->getAsCXXRecordDecl()) {
-      assert((Record->hasTrivialCopyConstructor() ||
+      assert((Record->hasTrivialCopyConstructorForCall() ||
               Record->hasTrivialCopyAssignment() ||
-              Record->hasTrivialMoveConstructor() ||
-              Record->hasTrivialMoveAssignment() ||
-              Record->hasAttr<TrivialABIAttr>() || Record->isUnion() ||
+              Record->hasTrivialMoveConstructorForCall() ||
+              Record->hasTrivialMoveAssignment() || Record->isUnion() ||
               // HLSL uses aggregate-copy for user-defined record types.
               (getLangOpts().HLSL && !Record->isHLSLBuiltinRecord())) &&
              "Trying to aggregate-copy a type without a trivial copy/move "

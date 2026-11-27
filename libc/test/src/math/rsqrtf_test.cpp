@@ -9,4 +9,4 @@
 
 #include "src/math/rsqrtf.h"
 
-LIST_RSQRT_TESTS(float, LIBC_NAMESPACE::rsqrtf)
+LIST_RSQRT_TESTS(Rsqrtf, float, LIBC_NAMESPACE::rsqrtf)

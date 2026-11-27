@@ -19,7 +19,6 @@
 #include "flang/Runtime/CUDA/registration.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SmallVector.h"
@@ -54,7 +53,7 @@ static void createSharedMemoryGlobal(fir::FirOpBuilder &builder,
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(gpuMod.getBody());
 
-  mlir::StringAttr linkage = isDynamic ? builder.createExternalLinkage()
+  fir::LinkageAttr linkage = isDynamic ? builder.createExternalLinkage()
                                        : builder.createInternalLinkage();
   llvm::SmallVector<mlir::NamedAttribute> attrs;
   auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),

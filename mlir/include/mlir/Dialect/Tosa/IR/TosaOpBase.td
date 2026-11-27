@@ -50,9 +50,10 @@ def Tosa_Dialect : Dialect {
   let dependentDialects = ["tensor::TensorDialect", "quant::QuantDialect"];
 
   let cppNamespace = "mlir::tosa";
+  let useDefaultOperationRegistration = 1;
   let hasConstantMaterializer = 1;
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -61,6 +62,7 @@ def Tosa_Dialect : Dialect {
 
 class Tosa_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<Tosa_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/Tosa/IR/TosaOps.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -233,9 +235,7 @@ class Tosa_I32Enum<string name, string description, list<I32EnumAttrCase> cases>
 
 class Tosa_I32EnumAttr<string name, string description, string mnemonic,
                          list<I32EnumAttrCase> cases>
-    : EnumAttr<Tosa_Dialect, Tosa_I32Enum<name, description, cases>, mnemonic> {
-   let assemblyFormat = "`<` $value `>`";
-}
+    : EnumAttr<Tosa_Dialect, Tosa_I32Enum<name, description, cases>, mnemonic>;
 
 //===----------------------------------------------------------------------===//
 // TOSA Profiles and extensions
@@ -368,13 +368,13 @@ def Tosa_TargetEnv : Tosa_Attr<"TargetEnv", "target_env"> {
   let parameters = ( ins
     "SpecificationVersion": $specification_version,
     "Level": $level,
-    ArrayRefParameter<"Profile">: $profiles,
-    ArrayRefParameter<"Extension">: $extensions
+    OptionalArrayRefParameter<"Profile">: $profiles,
+    OptionalArrayRefParameter<"Extension">: $extensions
   );
 
   let assemblyFormat = "`<` `specification_version` `=` $specification_version `,` "
-                       "`level` `=` $level `,` `profiles` `=` `[` $profiles `]` `,` "
-                       "`extensions` `=` `[` $extensions `]` `>`";
+                       "`level` `=` $level `,` `profiles` `=` `[` (`]`) : ($profiles^ `]`)? `,` "
+                       "`extensions` `=` `[` (`]`) : ($extensions^ `]`)? `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -486,9 +486,6 @@ class Tosa_InferShapedTypeOp<string mnemonic, list<Trait> traits = []>
 // for multiple zero points in convolution ops.
 class Tosa_ConvOp<string mnemonic, list<Trait> traits = []>
     : Tosa_InferShapedTypeOp<mnemonic, !listconcat(traits,
-      [SameVariadicOperandSize, NoMemoryEffect])> {
-  let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
-}
+      [SameVariadicOperandSize, NoMemoryEffect])> {}
 
 #endif // TOSA_OP_BASE

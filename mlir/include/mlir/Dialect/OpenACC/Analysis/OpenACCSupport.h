@@ -67,6 +67,17 @@
 namespace mlir {
 namespace acc {
 
+/// How the name of a variable is to be rendered.
+struct VariableNameConfig {
+  /// Render the name the source language spells, which is the name a message
+  /// to the user states. When false, the name the variable is emitted under is
+  /// rendered instead - for a global the symbol it is addressed through -
+  /// which is the name it is resolved against the symbols of a binary by. Only
+  /// a language that uniques or mangles the names of its variables spells the
+  /// two differently.
+  bool preferDemangledName = true;
+};
+
 namespace detail {
 /// This class contains internal trait classes used by OpenACCSupport.
 /// It follows the Concept-Model pattern used throughout MLIR (e.g., in
@@ -77,7 +88,7 @@ struct OpenACCSupportTraits {
     virtual ~Concept() = default;
 
     /// Get the variable name for a given MLIR value.
-    virtual std::string getVariableName(Value v) = 0;
+    virtual std::string getVariableName(Value v, VariableNameConfig config) = 0;
 
     /// Get the recipe name for a given kind, type and value.
     virtual std::string getRecipeName(RecipeKind kind, Type type,
@@ -99,7 +110,8 @@ struct OpenACCSupportTraits {
                                   Operation **definingOpPtr) = 0;
 
     /// Check if a value use is legal in an OpenACC region.
-    virtual bool isValidValueUse(Value v, mlir::Region &region) = 0;
+    virtual bool isValidValueUse(Value v, mlir::Region &region,
+                                 SymbolTableCollection *symbolTables) = 0;
 
     /// Get or optionally create a GPU module in the given module.
     virtual std::optional<gpu::GPUModuleOp>
@@ -109,6 +121,10 @@ struct OpenACCSupportTraits {
     virtual std::optional<TypeSizeAndAlignment>
     getTypeSizeAndAlignment(Type ty, ModuleOp module,
                             OpenACCSupport &support) = 0;
+
+    /// Returns true when a call that receives \p v cannot use that address
+    /// after it returns. The default is false: the address may be kept.
+    virtual bool isAddressNotCapturedByCalls(Value v) = 0;
   };
 
   /// SFINAE helpers to detect if implementation has optional methods
@@ -126,8 +142,15 @@ struct OpenACCSupportTraits {
   using isValidValueUse_t =
       decltype(std::declval<ImplT>().isValidValueUse(std::declval<Args>()...));
 
+  /// An implementation may take the symbol table cache or, for compatibility,
+  /// only the value and the region.
   template <typename ImplT>
   using has_isValidValueUse =
+      llvm::is_detected<isValidValueUse_t, ImplT, Value, Region &,
+                        SymbolTableCollection *>;
+
+  template <typename ImplT>
+  using has_isValidValueUseNoSymbolTables =
       llvm::is_detected<isValidValueUse_t, ImplT, Value, Region &>;
 
   template <typename ImplT, typename... Args>
@@ -159,6 +182,15 @@ struct OpenACCSupportTraits {
       llvm::is_detected<getTypeSizeAndAlignment_t, ImplT, Type, ModuleOp,
                         OpenACCSupport &>;
 
+  template <typename ImplT, typename... Args>
+  using isAddressNotCapturedByCalls_t =
+      decltype(std::declval<ImplT>().isAddressNotCapturedByCalls(
+          std::declval<Args>()...));
+
+  template <typename ImplT>
+  using has_isAddressNotCapturedByCalls =
+      llvm::is_detected<isAddressNotCapturedByCalls_t, ImplT, Value>;
+
   /// This class wraps a concrete OpenACCSupport implementation and forwards
   /// interface calls to it. This provides type erasure, allowing different
   /// implementation types to be used interchangeably without inheritance.
@@ -170,8 +202,8 @@ struct OpenACCSupportTraits {
     explicit Model(ImplT &&impl) : impl(std::forward<ImplT>(impl)) {}
     ~Model() override = default;
 
-    std::string getVariableName(Value v) final {
-      return impl.getVariableName(v);
+    std::string getVariableName(Value v, VariableNameConfig config) final {
+      return impl.getVariableName(v, config);
     }
 
     std::string getRecipeName(RecipeKind kind, Type type, Value var) final {
@@ -199,11 +231,14 @@ struct OpenACCSupportTraits {
         return acc::isValidSymbolUse(user, symbol, definingOpPtr);
     }
 
-    bool isValidValueUse(Value v, Region &region) final {
+    bool isValidValueUse(Value v, Region &region,
+                         SymbolTableCollection *symbolTables) final {
       if constexpr (has_isValidValueUse<ImplT>::value)
+        return impl.isValidValueUse(v, region, symbolTables);
+      else if constexpr (has_isValidValueUseNoSymbolTables<ImplT>::value)
         return impl.isValidValueUse(v, region);
       else
-        return acc::isValidValueUse(v, region);
+        return acc::isValidValueUse(v, region, symbolTables);
     }
 
     std::optional<gpu::GPUModuleOp>
@@ -222,6 +257,13 @@ struct OpenACCSupportTraits {
         return impl.getTypeSizeAndAlignment(ty, module, support);
       else
         return acc::getTypeSizeAndAlignment(ty, module, &support);
+    }
+
+    bool isAddressNotCapturedByCalls(Value v) final {
+      if constexpr (has_isAddressNotCapturedByCalls<ImplT>::value)
+        return impl.isAddressNotCapturedByCalls(v);
+      else
+        return false;
     }
 
   private:
@@ -252,11 +294,15 @@ public:
         std::make_unique<Model<AnalysisT>>(std::forward<AnalysisT>(analysis));
   }
 
-  /// Get the variable name for a given value.
+  /// Get the variable name for a given value. Which of the names a variable
+  /// goes by is a question only an implementation that knows the source
+  /// language can answer, so the default implementation returns the one name
+  /// the IR states regardless of \p config.
   ///
   /// \param v The MLIR value to get the variable name for.
+  /// \param config Which of the names of the variable to return.
   /// \return The variable name, or an empty string if unavailable.
-  std::string getVariableName(Value v);
+  std::string getVariableName(Value v, VariableNameConfig config = {});
 
   /// Get the recipe name for a given type and value.
   ///
@@ -324,7 +370,11 @@ public:
   ///
   /// \param v The MLIR value to check for legality.
   /// \param region The MLIR region in which the legality is checked.
-  bool isValidValueUse(Value v, Region &region);
+  /// \param symbolTables Optional cache of symbol tables used to resolve
+  ///        symbols. Pass one when checking many values of the same module:
+  ///        without it each symbol lookup scans the whole module.
+  bool isValidValueUse(Value v, Region &region,
+                       SymbolTableCollection *symbolTables = nullptr);
 
   /// Get or optionally create a GPU module in the given module.
   ///
@@ -345,6 +395,16 @@ public:
       if (auto result = impl->getTypeSizeAndAlignment(ty, module, *this))
         return result;
     return acc::getTypeSizeAndAlignment(ty, module, this);
+  }
+
+  /// Returns true when a call that receives \p v cannot use that address
+  /// after it returns. The default is false: the address may be kept, so a
+  /// caller that tracks the address treats the call as an escape. Only an
+  /// implementation that knows the source language of \p v can return true.
+  bool isAddressNotCapturedByCalls(Value v) {
+    if (impl)
+      return impl->isAddressNotCapturedByCalls(v);
+    return false;
   }
 
   /// Signal that this analysis should always be preserved so that

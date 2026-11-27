@@ -1,13 +1,9 @@
 ; RUN: llc -mtriple=amdgpu8.02-amd-unknown < %s | FileCheck --check-prefix=OSABI-UNK %s
-; RUN: llc -mtriple=amdgpu8.02-amd-unknown < %s | FileCheck --check-prefix=OSABI-UNK %s
 ; RUN: llc -mtriple=amdgpu8.02-amd-unknown -filetype=obj < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-UNK-ELF %s
-; RUN: llc -mtriple=amdgpu8.02-amd-amdhsa < %s| FileCheck --check-prefix=OSABI-HSA %s
 ; RUN: llc -mtriple=amdgpu8.02-amd-amdhsa < %s | FileCheck --check-prefix=OSABI-HSA %s
 ; RUN: llc -mtriple=amdgpu8.02-amd-amdhsa -filetype=obj < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-HSA-ELF %s
 ; RUN: llc -mtriple=amdgpu8.02-amd-amdpal < %s | FileCheck --check-prefix=OSABI-PAL %s
-; RUN: llc -mtriple=amdgpu8.02-amd-amdpal < %s | FileCheck --check-prefix=OSABI-PAL %s
 ; RUN: llc -mtriple=amdgpu8.02-amd-amdpal -filetype=obj < %s | llvm-readelf --notes  - | FileCheck --check-prefix=OSABI-PAL-ELF %s
-; RUN: llc -mtriple=r600 < %s | FileCheck --check-prefix=R600 %s
 
 ; OSABI-UNK-NOT: .hsa_code_object_version
 ; OSABI-UNK-NOT: .hsa_code_object_isa
@@ -74,13 +70,6 @@
 ; OSABI-PAL-ELF:     .registers:
 ; OSABI-PAL-ELF:       11794:           11469504
 ; OSABI-PAL-ELF:       11795:           128
-
-; R600-NOT: .hsa_code_object_version
-; R600-NOT: .hsa_code_object_isa
-; R600-NOT: .amd_amdgpu_isa
-; R600-NOT: .amd_amdgpu_hsa_metadata
-; R600-NOT: .amd_amdgpu_pal_metadata
-
 define amdgpu_kernel void @elf_notes() #0 {
   ret void
 }

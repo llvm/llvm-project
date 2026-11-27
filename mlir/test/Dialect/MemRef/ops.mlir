@@ -130,21 +130,21 @@ func.func @memref_reinterpret_cast(%in: memref<?xf32>)
 }
 
 // CHECK-LABEL: func @memref_reinterpret_cast_static_to_dynamic_sizes
-func.func @memref_reinterpret_cast_static_to_dynamic_sizes(%in: memref<?xf32>)
-    -> memref<10x?xf32, strided<[?, 1], offset: ?>> {
+func.func @memref_reinterpret_cast_static_to_dynamic_sizes(%in: memref<?xf32>, %size: index)
+    -> memref<10x?xf32, strided<[1, 1], offset: 1>> {
   %out = memref.reinterpret_cast %in to
-           offset: [1], sizes: [10, 10], strides: [1, 1]
-           : memref<?xf32> to memref<10x?xf32, strided<[?, 1], offset: ?>>
-  return %out : memref<10x?xf32, strided<[?, 1], offset: ?>>
+           offset: [1], sizes: [10, %size], strides: [1, 1]
+           : memref<?xf32> to memref<10x?xf32, strided<[1, 1], offset: 1>>
+  return %out : memref<10x?xf32, strided<[1, 1], offset: 1>>
 }
 
 // CHECK-LABEL: func @memref_reinterpret_cast_dynamic_offset
 func.func @memref_reinterpret_cast_dynamic_offset(%in: memref<?xf32>, %offset: index)
-    -> memref<10x?xf32, strided<[?, 1], offset: ?>> {
+    -> memref<10x10xf32, strided<[1, 1], offset: ?>> {
   %out = memref.reinterpret_cast %in to
            offset: [%offset], sizes: [10, 10], strides: [1, 1]
-           : memref<?xf32> to memref<10x?xf32, strided<[?, 1], offset: ?>>
-  return %out : memref<10x?xf32, strided<[?, 1], offset: ?>>
+           : memref<?xf32> to memref<10x10xf32, strided<[1, 1], offset: ?>>
+  return %out : memref<10x10xf32, strided<[1, 1], offset: ?>>
 }
 
 // CHECK-LABEL: func @memref_reshape(
@@ -662,4 +662,10 @@ func.func @memref_memory_space_cast(%src : memref<?xf32>) -> memref<?xf32, 1> {
 func.func @memref_transpose_map(%src : memref<?x?xf32>) -> memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>> {
   %dst = memref.transpose %src (i, j) -> (j, i) : memref<?x?xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
   return %dst : memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
+}
+
+// CHECK-LABEL: func @memref_transpose_map_with_memory_space
+func.func @memref_transpose_map_with_memory_space(%src : memref<?x?xf32, 1>) -> memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>, 1> {
+  %dst = memref.transpose %src (i, j) -> (j, i) : memref<?x?xf32, 1> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>, 1>
+  return %dst : memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>, 1>
 }

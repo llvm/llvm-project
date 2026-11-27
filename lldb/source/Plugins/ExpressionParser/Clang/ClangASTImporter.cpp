@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Module.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -209,7 +210,7 @@ public:
   }
 
   ~DeclContextOverride() {
-    for (const std::pair<clang::Decl *, Backup> &backup : m_backups) {
+    for (const auto &backup : m_backups) {
       backup.first->setDeclContext(backup.second.decl_context);
       backup.first->setLexicalDeclContext(backup.second.lexical_decl_context);
     }
@@ -541,8 +542,7 @@ static bool ImportOffsetMap(clang::ASTContext *dest_ctx,
   // DenseMap with a pointer as the key type, this means we cannot simply
   // iterate over the map, as the order will be non-deterministic.  Instead we
   // have to sort by the offset and then insert in sorted order.
-  typedef llvm::DenseMap<const D *, O> MapType;
-  typedef typename MapType::value_type PairType;
+  typedef std::pair<const D *, O> PairType;
   std::vector<PairType> sorted_items;
   sorted_items.reserve(source_map.size());
   sorted_items.assign(source_map.begin(), source_map.end());
@@ -1302,8 +1302,20 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
   }
 
   lldb::user_id_t user_id = LLDB_INVALID_UID;
-  if (std::optional<ClangASTMetadata> metadata = m_main.GetDeclMetadata(from))
+  if (std::optional<ClangASTMetadata> metadata = m_main.GetDeclMetadata(from)) {
     user_id = metadata->GetUserID();
+    lldb::LanguageType lang_type = metadata->GetLanguageType();
+    if (Language::LanguageIsRust(lang_type)) {
+      if (TypeSystemClang *to_ts =
+              TypeSystemClang::GetASTContext(&to->getASTContext())) {
+        ClangASTMetadata to_metadata;
+        if (std::optional<ClangASTMetadata> existing = to_ts->GetMetadata(to))
+          to_metadata = *existing;
+        to_metadata.SetLanguageType(lang_type);
+        to_ts->SetMetadata(to, to_metadata);
+      }
+    }
+  }
 
   if (log) {
     if (NamedDecl *from_named_decl = dyn_cast<clang::NamedDecl>(from)) {

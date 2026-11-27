@@ -182,8 +182,8 @@ static bool tryInterleave(Instruction *Start,
     case Instruction::FPExt:
       if (Exts.count(I))
         continue;
-      for (auto *Use : I->users())
-        Worklist.push_back(cast<Instruction>(Use));
+      for (Instruction *Use : I->users())
+        Worklist.push_back(Use);
       Exts.insert(I);
       break;
 
@@ -248,8 +248,8 @@ static bool tryInterleave(Instruction *Start,
           OtherLeafs.insert(&Op);
       }
 
-      for (auto *Use : I->users())
-        Worklist.push_back(cast<Instruction>(Use));
+      for (Instruction *Use : I->users())
+        Worklist.push_back(Use);
       break;
 
     case Instruction::ShuffleVector:
@@ -376,7 +376,7 @@ static bool tryInterleave(Instruction *Start,
   for (Instruction *I : Truncs) {
     LLVM_DEBUG(dbgs() << "Replacing trunc " << *I << "\n");
 
-    Builder.SetInsertPoint(I->getParent(), ++I->getIterator());
+    Builder.SetInsertPoint(++I->getIterator());
     Value *Shuf = Builder.CreateShuffleVector(I, TruncMask);
     I->replaceAllUsesWith(Shuf);
     cast<Instruction>(Shuf)->setOperand(0, I);

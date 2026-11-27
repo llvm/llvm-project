@@ -234,7 +234,7 @@ public:
 #elif __NR_sched_getaffinity != 204
 #error Wrong code for getaffinity system call.
 #endif /* __NR_sched_getaffinity */
-#elif KMP_ARCH_PPC64
+#elif KMP_ARCH_PPC64 || KMP_ARCH_PPC
 #ifndef __NR_sched_setaffinity
 #define __NR_sched_setaffinity 222
 #elif __NR_sched_setaffinity != 222
@@ -350,7 +350,10 @@ class KMPNativeAffinity : public KMPAffinity {
 
   public:
     mask_t *mask;
-    Mask() { mask = (mask_t *)__kmp_allocate(__kmp_affin_mask_size); }
+    Mask()
+        : mask(__kmp_affin_mask_size == 0
+                   ? nullptr
+                   : (mask_t *)__kmp_allocate(__kmp_affin_mask_size)) {}
     ~Mask() {
       if (mask)
         __kmp_free(mask);

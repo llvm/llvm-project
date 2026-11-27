@@ -14,6 +14,7 @@ include "mlir/IR/OpBase.td"
 def Bufferization_Dialect : Dialect {
   let name = "bufferization";
   let cppNamespace = "::mlir::bufferization";
+  let useDefaultOperationRegistration = 1;
   let description = [{
     Bufferization in MLIR is the process of converting the `tensor` type to the
     `memref` type.
@@ -31,7 +32,6 @@ def Bufferization_Dialect : Dialect {
     "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect",
     "arith::ArithDialect"
   ];
-  let useStrictPropertiesInAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
     /// Verify an attribute from this dialect on the argument at 'argIndex' for

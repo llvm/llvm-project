@@ -2,6 +2,7 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -disable-output -debug-only=loop-vectorize 2>&1 | FileCheck %s --check-prefix=COST
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -use-partial-reductions-by-default -S | FileCheck %s --check-prefix=PARTIALRDX
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -57,6 +58,49 @@ define i64 @predicated_udiv_scalarized_operand(ptr %a, i64 %x) {
 ; CHECK-NEXT:    br label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i64 [[TMP18]]
+;
+; PARTIALRDX-LABEL: define i64 @predicated_udiv_scalarized_operand(
+; PARTIALRDX-SAME: ptr [[A:%.*]], i64 [[X:%.*]]) {
+; PARTIALRDX-NEXT:  [[ENTRY:.*:]]
+; PARTIALRDX-NEXT:    br label %[[VECTOR_PH:.*]]
+; PARTIALRDX:       [[VECTOR_PH]]:
+; PARTIALRDX-NEXT:    br label %[[VECTOR_BODY:.*]]
+; PARTIALRDX:       [[VECTOR_BODY]]:
+; PARTIALRDX-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_UDIV_CONTINUE2:.*]] ]
+; PARTIALRDX-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[PRED_UDIV_CONTINUE2]] ]
+; PARTIALRDX-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
+; PARTIALRDX-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP0]], align 4
+; PARTIALRDX-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i64> [[WIDE_LOAD]], zeroinitializer
+; PARTIALRDX-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
+; PARTIALRDX-NEXT:    br i1 [[TMP2]], label %[[PRED_UDIV_IF:.*]], label %[[PRED_UDIV_CONTINUE:.*]]
+; PARTIALRDX:       [[PRED_UDIV_IF]]:
+; PARTIALRDX-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 0
+; PARTIALRDX-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP3]], [[X]]
+; PARTIALRDX-NEXT:    [[TMP5:%.*]] = udiv i64 [[TMP3]], [[TMP4]]
+; PARTIALRDX-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i64 0
+; PARTIALRDX-NEXT:    br label %[[PRED_UDIV_CONTINUE]]
+; PARTIALRDX:       [[PRED_UDIV_CONTINUE]]:
+; PARTIALRDX-NEXT:    [[TMP7:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[TMP6]], %[[PRED_UDIV_IF]] ]
+; PARTIALRDX-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
+; PARTIALRDX-NEXT:    br i1 [[TMP8]], label %[[PRED_UDIV_IF1:.*]], label %[[PRED_UDIV_CONTINUE2]]
+; PARTIALRDX:       [[PRED_UDIV_IF1]]:
+; PARTIALRDX-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i64 1
+; PARTIALRDX-NEXT:    [[TMP10:%.*]] = add nsw i64 [[TMP9]], [[X]]
+; PARTIALRDX-NEXT:    [[TMP11:%.*]] = udiv i64 [[TMP9]], [[TMP10]]
+; PARTIALRDX-NEXT:    [[TMP12:%.*]] = insertelement <2 x i64> [[TMP7]], i64 [[TMP11]], i64 1
+; PARTIALRDX-NEXT:    br label %[[PRED_UDIV_CONTINUE2]]
+; PARTIALRDX:       [[PRED_UDIV_CONTINUE2]]:
+; PARTIALRDX-NEXT:    [[TMP13:%.*]] = phi <2 x i64> [ [[TMP7]], %[[PRED_UDIV_CONTINUE]] ], [ [[TMP12]], %[[PRED_UDIV_IF1]] ]
+; PARTIALRDX-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i64> [[TMP13]], <2 x i64> [[WIDE_LOAD]]
+; PARTIALRDX-NEXT:    [[PARTIAL_REDUCE]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v2i64(<2 x i64> [[VEC_PHI]], <2 x i64> [[PREDPHI]])
+; PARTIALRDX-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; PARTIALRDX-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; PARTIALRDX-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; PARTIALRDX:       [[MIDDLE_BLOCK]]:
+; PARTIALRDX-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[PARTIAL_REDUCE]])
+; PARTIALRDX-NEXT:    br label %[[FOR_END:.*]]
+; PARTIALRDX:       [[FOR_END]]:
+; PARTIALRDX-NEXT:    ret i64 [[TMP15]]
 ;
 entry:
   br label %for.body

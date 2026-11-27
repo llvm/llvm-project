@@ -1,12 +1,5 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
-cmake_minimum_required(VERSION 3.20.0)
-if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
-  message(WARNING
-    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
-    "minimum version of CMake required to build LLVM will become 3.31.0, and "
-    "using an older CMake will become an error. Please upgrade your CMake to "
-    "at least 3.31.0 now to avoid issues in the future.")
-endif()
+cmake_minimum_required(VERSION 3.31.0)
 
 include(CMakeDependentOption)
 
@@ -116,18 +109,17 @@ Learn more about the options in our documentation at https://llvm.org/docs/CMake
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel" FORCE)
 endif()
 
-# Set default build type for cmake's try_compile module.
-# CMake 3.17 or newer sets CMAKE_DEFAULT_BUILD_TYPE to one of the
-# items from CMAKE_CONFIGURATION_TYPES. Logic below can be further
-# simplified once LLVM's minimum CMake version is updated to 3.17.
+# Set the default build type for CMake's try_compile().
+# For multi-configuration generators we use the default build type if set.
+# Alternatively we use the first configuration from CMAKE_CONFIGURATION_TYPES.
+# Necessary because otherwise try_compile()s simply default to "Debug", which
+# is prone to cause confusion.
 if(CMAKE_DEFAULT_BUILD_TYPE)
   set(CMAKE_TRY_COMPILE_CONFIGURATION ${CMAKE_DEFAULT_BUILD_TYPE})
-else()
-  if(CMAKE_CONFIGURATION_TYPES)
-    list(GET CMAKE_CONFIGURATION_TYPES 0 CMAKE_TRY_COMPILE_CONFIGURATION)
-  elseif(CMAKE_BUILD_TYPE)
-    set(CMAKE_TRY_COMPILE_CONFIGURATION ${CMAKE_BUILD_TYPE})
-  endif()
+elseif(CMAKE_CONFIGURATION_TYPES)
+  list(GET CMAKE_CONFIGURATION_TYPES 0 CMAKE_TRY_COMPILE_CONFIGURATION)
+elseif(CMAKE_BUILD_TYPE)
+  set(CMAKE_TRY_COMPILE_CONFIGURATION ${CMAKE_BUILD_TYPE})
 endif()
 
 # Side-by-side subprojects layout: automatically set the
@@ -144,8 +136,10 @@ set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;cross-project-tests;lld;lldb
 set(LLVM_EXTRA_PROJECTS "flang" "libc" "compiler-rt")
 # List of all known projects in the mono repo
 set(LLVM_KNOWN_PROJECTS "${LLVM_ALL_PROJECTS};${LLVM_EXTRA_PROJECTS}")
-set(LLVM_ENABLE_PROJECTS "" CACHE STRING
+set(LLVM_REQUESTED_PROJECTS "${LLVM_ENABLE_PROJECTS}")
+set(LLVM_ENABLE_PROJECTS "${LLVM_REQUESTED_PROJECTS}" CACHE STRING
     "Semicolon-separated list of projects to build (${LLVM_KNOWN_PROJECTS}), or \"all\".")
+set(LLVM_ENABLE_PROJECTS "${LLVM_REQUESTED_PROJECTS}")
 # Make sure expansion happens first to not handle "all" in rest of the checks.
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
@@ -165,6 +159,8 @@ foreach(proj ${LLVM_ENABLE_PROJECTS})
      MESSAGE(FATAL_ERROR "${proj} isn't a known project: ${LLVM_KNOWN_PROJECTS}. Did you mean to enable it as a runtime in LLVM_ENABLE_RUNTIMES?")
   endif()
 endforeach()
+
+set(LLVM_DEPENDENCY_ONLY_PROJECTS)
 
 # Select the runtimes to build
 #
@@ -187,11 +183,18 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   if (NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
     message(STATUS "Enabling MLIR as a dependency to flang")
     list(APPEND LLVM_ENABLE_PROJECTS "mlir")
+    list(APPEND LLVM_DEPENDENCY_ONLY_PROJECTS "mlir")
   endif()
 
   if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
     message(STATUS "Enabling clang as a dependency to flang")
     list(APPEND LLVM_ENABLE_PROJECTS "clang")
+    # LLDB also consumes Clang libraries, and clang-tools-extra is nested under
+    # Clang. Keep their existing build and install behavior.
+    if(NOT "lldb" IN_LIST LLVM_ENABLE_PROJECTS AND
+       NOT "clang-tools-extra" IN_LIST LLVM_ENABLE_PROJECTS)
+      list(APPEND LLVM_DEPENDENCY_ONLY_PROJECTS "clang")
+    endif()
   endif()
 
   option(FLANG_ENABLE_FLANG_RT "Implicitly add LLVM_ENABLE_RUNTIMES=flang-rt when compiling Flang" ON)
@@ -207,6 +210,14 @@ if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
     list(APPEND LLVM_ENABLE_PROJECTS "clang")
   endif()
 endif ()
+
+option(CLANG_ENABLE_CIR "Build ClangIR support into the compiler" ON)
+if (CLANG_ENABLE_CIR AND "clang" IN_LIST LLVM_ENABLE_PROJECTS AND
+    NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
+  message(STATUS "Enabling MLIR as a dependency of ClangIR")
+  list(APPEND LLVM_ENABLE_PROJECTS "mlir")
+  list(APPEND LLVM_DEPENDENCY_ONLY_PROJECTS "mlir")
+endif()
 
 if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated now, and will "
@@ -293,7 +304,16 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
     string(TOUPPER "${proj}" upper_proj)
     string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
     if ("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
-      message(STATUS "${proj} project is enabled")
+      if ("${proj}" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+        message(STATUS "${proj} project is enabled as a dependency")
+        # Do not cache this default: explicitly enabling the project on a later
+        # configure should restore its normal test defaults.
+        if(NOT DEFINED ${upper_proj}_INCLUDE_TESTS)
+          set(${upper_proj}_INCLUDE_TESTS OFF)
+        endif()
+      else()
+        message(STATUS "${proj} project is enabled")
+      endif()
       set(SHOULD_ENABLE_PROJECT TRUE)
       set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
       if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
@@ -324,63 +344,6 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
   endforeach()
 endif()
 unset(SHOULD_ENABLE_PROJECT)
-
-# Build llvm with ccache if the package is present
-set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
-if(LLVM_CCACHE_BUILD)
-  find_program(CCACHE_PROGRAM ccache)
-  if(CCACHE_PROGRAM)
-    set(LLVM_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
-    set(LLVM_CCACHE_DIR "" CACHE STRING "Directory to keep ccached data")
-    set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros"
-        CACHE STRING "Parameters to pass through to ccache")
-
-    if(NOT CMAKE_HOST_WIN32)
-      set(CCACHE_PROGRAM "${LLVM_CCACHE_PARAMS} ${CCACHE_PROGRAM}")
-      if (LLVM_CCACHE_MAXSIZE)
-        set(CCACHE_PROGRAM "CCACHE_MAXSIZE=${LLVM_CCACHE_MAXSIZE} ${CCACHE_PROGRAM}")
-      endif()
-      if (LLVM_CCACHE_DIR)
-        set(CCACHE_PROGRAM "CCACHE_DIR=${LLVM_CCACHE_DIR} ${CCACHE_PROGRAM}")
-      endif()
-      set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
-
-      if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        # ccache with PCH can lead to false-positives when only a macro
-        # definition changes with non-Clang compilers, because macro definitions
-        # are not compared in preprocessed mode.
-        # See: https://github.com/ccache/ccache/issues/1668
-        if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
-          message(NOTICE "Using ccache with precompiled headers with non-Clang "
-            "compilers is not supported. CMAKE_DISABLE_PRECOMPILE_HEADERS will be set to ON. "
-            "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override this.")
-          set(CMAKE_DISABLE_PRECOMPILE_HEADERS "ON")
-        elseif(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
-          message(WARNING "Using ccache with precompiled headers with non-Clang "
-            "compilers is not supported.")
-        endif()
-      endif()
-    else()
-      # Until a way to reliably configure ccache on Windows is found,
-      # disable precompiled headers for Windows + ccache builds
-      if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
-        message(WARNING "Using ccache with precompiled headers on Windows is currently not supported.
-          CMAKE_DISABLE_PRECOMPILE_HEADERS will be set to ON.")
-        set(CMAKE_DISABLE_PRECOMPILE_HEADERS "ON")
-      endif()
-      if(LLVM_CCACHE_MAXSIZE OR LLVM_CCACHE_DIR OR
-         NOT LLVM_CCACHE_PARAMS MATCHES "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros")
-        message(FATAL_ERROR "Ccache configuration through CMake is not supported on Windows. Please use environment variables.")
-      endif()
-      # RULE_LAUNCH_COMPILE should work with Ninja but currently has issues
-      # with cmd.exe and some MSVC tools other than cl.exe
-      set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
-      set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
-    endif()
-  else()
-    message(FATAL_ERROR "Unable to find the program ccache. Set LLVM_CCACHE_BUILD to OFF")
-  endif()
-endif()
 
 set(LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS "" CACHE STRING
   "Optional arguments for the native tool used in CMake --build invocations for external projects.")
@@ -487,6 +450,7 @@ if(WIN32 AND NOT UNIX)
     set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\cmake\\\\nsis_icon.ico")
     set(CPACK_NSIS_MODIFY_PATH "ON")
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL "ON")
+    set(CPACK_NSIS_MANIFEST_DPI_AWARE "ON")
     if( CMAKE_CL_64 )
       if(NOT DEFINED CPACK_NSIS_INSTALL_ROOT)
         set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
@@ -495,8 +459,21 @@ if(WIN32 AND NOT UNIX)
   endif()
   if(CPACK_GENERATOR STREQUAL "WIX")
     set(CPACK_WIX_PRODUCT_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\cmake\\\\nsis_icon.ico")
-    # The WIX installer needs admin privileges unless we use this flag.
-    set(CPACK_WIX_LIGHT_EXTRA_FLAGS "-sval")
+    # -sval: the WIX installer needs admin privileges unless we use this flag.
+    # -dcl:high: light defaults the cabinet to MSZIP (deflate, 32 KiB window),
+    # which captures almost no redundancy between the payload's binaries.  high
+    # selects LZX with a 21-bit (2 MiB) window instead.  That is the strongest
+    # compression available here: Windows Installer has to be able to read the
+    # cabinet itself, and CAB supports only MSZIP/LZX/Quantum, so an MSI cannot
+    # use LZMA the way the NSIS generator does.
+    set(CPACK_WIX_LIGHT_EXTRA_FLAGS "-sval" "-dcl:high")
+    # Make the LLVM installation available for all users.
+    set(CPACK_WIX_INSTALL_SCOPE "perMachine")
+    # Permanent WiX UpgradeCode for official LLVM MSI packages. Windows Installer
+    # uses this value to recognize related releases and remove an older LLVM
+    # installation during an upgrade. It must remain identical across all future
+    # releases and release branches. DO NOT regenerate or change this GUID.
+    set(CPACK_WIX_UPGRADE_GUID "B08613CD-8BD0-4FB6-8937-621936604DE3")
   endif()
 endif()
 include(CPack)
@@ -575,6 +552,7 @@ set(LLVM_ALL_TARGETS
   ARM
   AVR
   BPF
+  DirectX
   Hexagon
   Lanai
   LoongArch
@@ -595,7 +573,6 @@ set(LLVM_ALL_TARGETS
 set(LLVM_ALL_EXPERIMENTAL_TARGETS
   ARC
   CSKY
-  DirectX
   M68k
   Xtensa
 )
@@ -638,6 +615,8 @@ if (MINGW)
 endif()
 option(LLVM_WINDOWS_PREFER_FORWARD_SLASH "Prefer path names with forward slashes on Windows." ${WINDOWS_PREFER_FORWARD_SLASH_DEFAULT})
 
+option(LLVM_WINDOWS_RESTRICTED_APIS "Use only APIs available in restricted Windows environments, such as binaries whose imports are checked by ApiValidator. Currently this avoids shell32." OFF)
+
 option(LLVM_ENABLE_FFI "Use libffi to call external functions from the interpreter" OFF)
 set(FFI_LIBRARY_DIR "" CACHE PATH "Additional directory, where CMake should search for libffi.so")
 set(FFI_INCLUDE_DIR "" CACHE PATH "Additional directory, where CMake should search for ffi.h or ffi/ffi.h")
@@ -649,11 +628,18 @@ set(LLVM_ENABLE_LIBXML2 "ON" CACHE STRING "Use libxml2 if available. Can be ON, 
 
 set(LLVM_USE_STATIC_LIBXML2 "OFF" CACHE BOOL "Use static version of libxml2. Can be ON, or OFF")
 
-option(LLVM_ENABLE_LIBEDIT "Use libedit if available." ON)
+set(LLVM_ENABLE_LIBEDIT "ON" CACHE STRING "Use libedit if available. Can be ON, OFF, or FORCE_ON")
 
 option(LLVM_ENABLE_LIBPFM "Use libpfm for performance counters if available." ON)
 
-option(LLVM_ENABLE_THREADS "Use threads if available." ON)
+# On z/OS, threads cannot be used because TLS is not supported.
+if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
+  set(LLVM_ENABLE_THREADS_DEFAULT OFF)
+else()
+  set(LLVM_ENABLE_THREADS_DEFAULT ON)
+endif()
+
+option(LLVM_ENABLE_THREADS "Use threads if available." ${LLVM_ENABLE_THREADS_DEFAULT})
 
 set(LLVM_ENABLE_ICU "OFF" CACHE STRING "Use ICU for text encoding conversion support if available. Can be ON, OFF, or FORCE_ON")
 
@@ -669,6 +655,26 @@ set(LLVM_ENABLE_ZLIB "ON" CACHE STRING "Use zlib for compression/decompression i
 set(LLVM_ENABLE_ZSTD "ON" CACHE STRING "Use zstd for compression/decompression if available. Can be ON, OFF, or FORCE_ON")
 
 set(LLVM_USE_STATIC_ZSTD FALSE CACHE BOOL "Use static version of zstd. Can be TRUE, FALSE")
+
+# liblzma is an LLVM dependency now, so temporarily translate LLDB's older
+# LLDB_ENABLE_LZMA; its On meant required, hence FORCE_ON.
+set(LLVM_ENABLE_LZMA_DEFAULT "ON")
+if(DEFINED LLDB_ENABLE_LZMA)
+  string(TOUPPER "${LLDB_ENABLE_LZMA}" lldb_enable_lzma)
+  if(NOT lldb_enable_lzma STREQUAL "AUTO")
+    message(DEPRECATION
+      "LLDB_ENABLE_LZMA is deprecated. Set LLVM_ENABLE_LZMA (ON, OFF or "
+      "FORCE_ON) instead; liblzma is now found by LLVM, not by LLDB.")
+    if(lldb_enable_lzma)
+      set(LLVM_ENABLE_LZMA_DEFAULT "FORCE_ON")
+    else()
+      set(LLVM_ENABLE_LZMA_DEFAULT "OFF")
+    endif()
+  endif()
+  unset(lldb_enable_lzma)
+endif()
+set(LLVM_ENABLE_LZMA "${LLVM_ENABLE_LZMA_DEFAULT}" CACHE STRING "Use liblzma for xz decompression if available. Can be ON, OFF, or FORCE_ON")
+unset(LLVM_ENABLE_LZMA_DEFAULT)
 
 set(LLVM_ENABLE_CURL "OFF" CACHE STRING "Use libcurl for the HTTP client if available. Can be ON, OFF, or FORCE_ON")
 
@@ -726,7 +732,7 @@ set(LLVM_TARGETS_TO_BUILD
    ${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD})
 list(REMOVE_DUPLICATES LLVM_TARGETS_TO_BUILD)
 
-if (NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "OS390")
   option(LLVM_ENABLE_PIC "Build Position-Independent Code" ON)
 endif()
 option(LLVM_ENABLE_MODULES "Compile with C++ modules enabled." OFF)
@@ -961,7 +967,8 @@ else()
 endif()
 
 # Used to test building the llvm shared library with explicit symbol visibility on
-# Windows and Linux. For ELF platforms default symbols visibility is set to hidden.
+# Windows, Linux and macOS. For ELF and Mach-O platforms default symbol visibility
+# is set to hidden.
 set(LLVM_BUILD_LLVM_DYLIB_VIS FALSE CACHE BOOL "")
 mark_as_advanced(LLVM_BUILD_LLVM_DYLIB_VIS)
 
@@ -1228,16 +1235,20 @@ set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBRARY_DIR} )
 set(LLVM_HAVE_TFLITE "" CACHE BOOL "Use tflite")
 
 set(LLVM_MLGO_MODELS "" CACHE STRING "List of MLGO models")
-set(LLVM_MLGO_MLIR_OPT "mlir-opt" CACHE STRING "Path or system binary name for mlir-opt")
-set(LLVM_MLGO_MLIR_TRANSLATE "mlir-translate" CACHE STRING "Path or system binary name for mlir-translate")
-
-set(LLVM_HAVE_MLIR_LOWERING OFF)
-if (NOT LLVM_MLGO_MODELS STREQUAL "")
-  set(LLVM_HAVE_MLIR_LOWERING ON)
+set(LLVM_MLGO_MLIR_OPT "" CACHE STRING "Path or system binary name for mlir-opt")
+set(LLVM_MLGO_MLIR_TRANSLATE "" CACHE STRING "Path or system binary name for mlir-translate")
+if (LLVM_MLGO_MLIR_OPT STREQUAL "mlir-opt")
+  set(LLVM_MLGO_MLIR_OPT "" CACHE STRING "Path or system binary name for mlir-opt" FORCE)
+endif()
+if (LLVM_MLGO_MLIR_TRANSLATE STREQUAL "mlir-translate")
+  set(LLVM_MLGO_MLIR_TRANSLATE "" CACHE STRING "Path or system binary name for mlir-translate" FORCE)
 endif()
 
-if (LLVM_HAVE_MLIR_LOWERING AND LLVM_HAVE_TFLITE)
-  message(FATAL_ERROR "Only one of LLVM_HAVE_TFLITE and LLVM_HAVE_MLIR_LOWERING can be enabled.")
+set(LLVM_HAVE_MLIR_LOWERING OFF)
+if (NOT LLVM_MLGO_MLIR_OPT STREQUAL "" AND NOT LLVM_MLGO_MLIR_TRANSLATE STREQUAL "")
+  set(LLVM_HAVE_MLIR_LOWERING ON)
+elseif (NOT LLVM_MLGO_MLIR_OPT STREQUAL "" OR NOT LLVM_MLGO_MLIR_TRANSLATE STREQUAL "")
+  message(FATAL_ERROR "Both LLVM_MLGO_MLIR_OPT and LLVM_MLGO_MLIR_TRANSLATE must be specified together.")
 endif()
 
 if (LLVM_HAVE_TFLITE)
@@ -1259,9 +1270,10 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   set(TENSORFLOW_AOT_COMPILER
     "${TENSORFLOW_AOT_PATH}/../../../../bin/saved_model_cli"
     CACHE PATH "Path to the Tensorflow AOT compiler")
-  include_directories(${TENSORFLOW_AOT_PATH}/include)
   add_subdirectory(${TENSORFLOW_AOT_PATH}/xla_aot_runtime_src
     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/tf_runtime)
+  target_include_directories(tf_xla_runtime PUBLIC
+    $<BUILD_INTERFACE:${TENSORFLOW_AOT_PATH}/include>)
   install(TARGETS tf_xla_runtime EXPORT LLVMExports
     ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT tf_xla_runtime)
   install(TARGETS tf_xla_runtime EXPORT LLVMDevelopmentExports
@@ -1271,6 +1283,7 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   if (LLVM_HAVE_TF_AOT AND LLVM_HAVE_MLIR_LOWERING)
     message(FATAL_ERROR "Only one of LLVM_HAVE_TF_AOT and LLVM_HAVE_MLIR_LOWERING can be enabled.")
   endif()
+
   # Once we add more modules, we should handle this more automatically.
   if (DEFINED LLVM_OVERRIDE_MODEL_HEADER_INLINERSIZEMODEL)
     set(LLVM_INLINER_MODEL_PATH "none")
@@ -1330,7 +1343,7 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 endif()
 
 # Build with _XOPEN_SOURCE on z/OS.
-if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
   add_compile_definitions(_XOPEN_SOURCE=600)
   add_compile_definitions(_XPLATFORM_SOURCE) # Needed e.g. for O_CLOEXEC.
   add_compile_definitions(_OPEN_SYS) # Needed for process information.
@@ -1363,7 +1376,7 @@ if(LLVM_TARGET_IS_CROSSCOMPILE_HOST)
 endif()
 
 # Special hack for z/OS for missing POSIX functions
-if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
   include_directories(SYSTEM "${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/SystemZ/zos_wrappers" )
 endif()
 

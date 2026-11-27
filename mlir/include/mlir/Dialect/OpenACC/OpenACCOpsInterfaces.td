@@ -22,7 +22,7 @@ def ComputeRegionOpInterface : OpInterface<"ComputeRegionOpInterface"> {
   let methods = [
     InterfaceMethod<"Get alloca block", "::mlir::Block*", "getAllocaBlock",
       (ins), [{
-        return &$_op.getRegion().front();
+        return &$_raw_op->getRegion(0).front();
       }]>,
   ];
 }
@@ -80,7 +80,29 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
     InterfaceMethod<"Get the initialization region (returns nullptr if none)",
       "::mlir::Region*", "getInitRegion", (ins)>,
     InterfaceMethod<"Check if the global variable is device data",
-      "bool", "isDeviceData", (ins), [{
+      "bool", "isDeviceAccessible", (ins), [{
+        return false;
+      }]>,
+    InterfaceMethod<[{
+        Check if the global variable is backed by memory that is residing in 
+        the current device. This is a subset of `isDeviceAccessible`: memory
+        that is accessible from the device but is physically shared with the
+        host (and so may migrate on demand) is accessible but not in device 
+        memory.
+      }],
+      "bool", "isInDeviceMemory", (ins), [{
+        return ::mlir::cast<::mlir::acc::GlobalVariableOpInterface>(*$_raw_op)
+            .isDeviceAccessible();
+      }]>,
+    InterfaceMethod<"Check if the global variable is compiler generated", "bool",
+      "isCompilerGenerated", (ins), [{
+        return false;
+      }]>,
+    InterfaceMethod<[{
+        Check if the global variable has local linkage. This matches LLVM's
+        `hasLocalLinkage`, which is true for private or internal linkage.
+      }],
+      "bool", "hasLocalLinkage", (ins), [{
         return false;
       }]>,
   ];
@@ -181,7 +203,7 @@ def OffloadRegionOpInterface : OpInterface<"OffloadRegionOpInterface"> {
     InterfaceMethod<"Get the offload region", "::mlir::Region&",
       "getOffloadRegion",
       (ins), [{
-        return $_op.getRegion();
+        return $_raw_op->getRegion(0);
       }]>,
   ];
 }

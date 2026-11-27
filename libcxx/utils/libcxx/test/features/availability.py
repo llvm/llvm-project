@@ -22,7 +22,7 @@ features = [
     Feature(
         name="_target-has-llvm-22",
         when=lambda cfg: BooleanExpression.evaluate(
-            "_target-has-llvm-23",
+            r"_target-has-llvm-23 || target={{.+}}-apple-macosx{{27.[0-9](.\d+)?}}",
             cfg.available_features,
         ),
     ),
@@ -179,14 +179,6 @@ features += [
             cfg.available_features,
         ),
     ),
-    # Tests that require support for <print> and std::print in <ostream> in the built library.
-    Feature(
-        name="availability-print-missing",
-        when=lambda cfg: BooleanExpression.evaluate(
-            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-18)",
-            cfg.available_features,
-        ),
-    ),
     # Tests that require time zone database support in the built library
     Feature(
         name="availability-tzdb-missing",
@@ -208,6 +200,14 @@ features += [
         name="availability-te-environment-missing",
         when=lambda cfg: BooleanExpression.evaluate(
             "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-23)",
+            cfg.available_features,
+        ),
+    ),
+    # Tests that require std::is_debugger_present()
+    Feature(
+        name="availability-debugging-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-24)",
             cfg.available_features,
         ),
     ),

@@ -483,6 +483,8 @@ _storebe_i64(void * __P, long long __D) {
 
 #include <amxavx512intrin.h>
 
+#include <acev1intrin.h>
+
 #include <avx512vp2intersectintrin.h>
 
 #include <avx512vlvp2intersectintrin.h>
@@ -501,6 +503,9 @@ _storebe_i64(void * __P, long long __D) {
 #include <avx10_2_512niintrin.h>
 #include <avx10_2_512satcvtdsintrin.h>
 #include <avx10_2_512satcvtintrin.h>
+
+#include <avx10v2aux_512intrin.h>
+#include <avx10v2auxintrin.h>
 
 #include <sm4evexintrin.h>
 

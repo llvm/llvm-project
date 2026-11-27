@@ -69,25 +69,26 @@
 #endif
 
 #if SANITIZER_LINUX
-#include <malloc.h>
-#include <mntent.h>
-#include <netinet/ether.h>
-#include <sys/sysinfo.h>
-#include <sys/vt.h>
-#include <linux/cdrom.h>
-#include <linux/fd.h>
-#include <linux/filter.h>
-#if SANITIZER_ANDROID
-#include <linux/fs.h>
-#endif
-#include <linux/hdreg.h>
-#include <linux/input.h>
-#include <linux/ioctl.h>
-#include <linux/soundcard.h>
-#include <linux/sysctl.h>
-#include <linux/utsname.h>
-#include <linux/posix_types.h>
-#include <net/if_arp.h>
+#    include <ftw.h>
+#    include <linux/cdrom.h>
+#    include <linux/fd.h>
+#    include <linux/filter.h>
+#    include <malloc.h>
+#    include <mntent.h>
+#    include <netinet/ether.h>
+#    include <sys/sysinfo.h>
+#    include <sys/vt.h>
+#    if SANITIZER_ANDROID
+#      include <linux/fs.h>
+#    endif
+#    include <linux/hdreg.h>
+#    include <linux/input.h>
+#    include <linux/ioctl.h>
+#    include <linux/posix_types.h>
+#    include <linux/soundcard.h>
+#    include <linux/sysctl.h>
+#    include <linux/utsname.h>
+#    include <net/if_arp.h>
 #endif
 
 #if SANITIZER_IOS
@@ -308,7 +309,7 @@ namespace __sanitizer {
 #define SIZEOF_STRUCT_USTAT 32
 #    elif defined(__arm__) || defined(__i386__) || defined(__mips__) ||    \
         defined(__powerpc__) || defined(__s390__) || defined(__sparc__) || \
-        defined(__hexagon__) || defined(__alpha__)
+        defined(__hexagon__) || defined(__alpha__) || defined(__hppa__)
 #      define SIZEOF_STRUCT_USTAT 20
 #    elif defined(__loongarch__)
   // Not used. The minimum Glibc version available for LoongArch is 2.36
@@ -1177,7 +1178,7 @@ CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_mask);
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_flags);
 #endif
 #  if SANITIZER_LINUX && (!SANITIZER_ANDROID || !SANITIZER_MIPS32) && \
-      !defined(__alpha__)
+      !defined(__alpha__) && !defined(__hppa__)
 CHECK_STRUCT_SIZE_AND_OFFSET(sigaction, sa_restorer);
 #endif
 
@@ -1239,6 +1240,10 @@ CHECK_SIZE_AND_OFFSET(tm, tm_zone);
 #  endif
 
 #  if SANITIZER_LINUX
+CHECK_TYPE_SIZE(FTW);
+CHECK_SIZE_AND_OFFSET(FTW, base);
+CHECK_SIZE_AND_OFFSET(FTW, level);
+
 CHECK_TYPE_SIZE(mntent);
 CHECK_SIZE_AND_OFFSET(mntent, mnt_fsname);
 CHECK_SIZE_AND_OFFSET(mntent, mnt_dir);

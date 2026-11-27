@@ -36,13 +36,17 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/WindowScheduler.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePipeliner.h"
 #include "llvm/CodeGen/ModuloSchedule.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Target/TargetMachine.h"
@@ -60,51 +64,144 @@ STATISTIC(NumWindowSchedule,
           "Number of loops that we successfully use window scheduling");
 STATISTIC(NumFailAnalyseII,
           "Window scheduling abort due to the failure of the II analysis");
-
-cl::opt<unsigned>
-    WindowSearchNum("window-search-num",
-                    cl::desc("The number of searches per loop in the window "
-                             "algorithm. 0 means no search number limit."),
-                    cl::Hidden, cl::init(6));
-
-cl::opt<unsigned> WindowSearchRatio(
-    "window-search-ratio",
-    cl::desc("The ratio of searches per loop in the window algorithm. 100 "
-             "means search all positions in the loop, while 0 means not "
-             "performing any search."),
-    cl::Hidden, cl::init(40));
-
-cl::opt<unsigned> WindowIICoeff(
-    "window-ii-coeff",
-    cl::desc(
-        "The coefficient used when initializing II in the window algorithm."),
-    cl::Hidden, cl::init(5));
-
-cl::opt<unsigned> WindowRegionLimit(
-    "window-region-limit",
-    cl::desc(
-        "The lower limit of the scheduling region in the window algorithm."),
-    cl::Hidden, cl::init(3));
-
-cl::opt<unsigned> WindowDiffLimit(
-    "window-diff-limit",
-    cl::desc("The lower limit of the difference between best II and base II in "
-             "the window algorithm. If the difference is smaller than "
-             "this lower limit, window scheduling will not be performed."),
-    cl::Hidden, cl::init(2));
 } // namespace
 
-// WindowIILimit serves as an indicator of abnormal scheduling results and could
-// potentially be referenced by the derived target window scheduler.
-static cl::opt<unsigned>
-    WindowIILimit("window-ii-limit",
-                  cl::desc("The upper limit of II in the window algorithm."),
-                  cl::Hidden, cl::init(1000));
+/// Collect the underlying objects and alias metadata for the single memory
+/// operand of MI. Returns false when MI does not have exactly one memory
+/// operand with a known IR value.
+static bool getMemInfo(const MachineInstr *MI, const Value *&MemOpValue,
+                       int64_t &MemOpOffset,
+                       SmallVectorImpl<const Value *> &UnderlyingObjs,
+                       AAMDNodes &AATags, bool &IsAllIdentified) {
+  if (!MI->hasOneMemOperand())
+    return false;
+  MachineMemOperand *MM = *MI->memoperands_begin();
+  if (!MM->getValue())
+    return false;
+  MemOpValue = MM->getValue();
+  MemOpOffset = MM->getOffset();
+  getUnderlyingObjects(MemOpValue, UnderlyingObjs);
+  AATags = MM->getAAInfo();
+  IsAllIdentified = llvm::all_of(UnderlyingObjs, isIdentifiedObject);
+  return true;
+}
 
-WindowScheduler::WindowScheduler(MachineSchedContext *C, MachineLoop &ML)
-    : Context(C), MF(C->MF), MBB(ML.getHeader()), Loop(ML),
-      Subtarget(&MF->getSubtarget()), TII(Subtarget->getInstrInfo()),
-      TRI(Subtarget->getRegisterInfo()), MRI(&MF->getRegInfo()) {
+/// Return true if there is a loop-carried order dependency from memory access
+/// SrcMI to DstMI in loop LoopBB.
+static bool hasLoopCarriedMemDep(const MachineInstr *SrcMI,
+                                 const MachineInstr *DstMI, BatchAAResults &BAA,
+                                 const MachineBasicBlock *LoopBB,
+                                 const MachineRegisterInfo &MRI,
+                                 const TargetInstrInfo *TII) {
+  const Value *SrcVal = nullptr, *DstVal = nullptr;
+  int64_t SrcOffset = 0, DstOffset = 0;
+  SmallVector<const Value *, 4> SrcObjs, DstObjs;
+  AAMDNodes SrcAATags, DstAATags;
+  bool SrcAllIdentified = false, DstAllIdentified = false;
+  bool SrcKnown = getMemInfo(SrcMI, SrcVal, SrcOffset, SrcObjs, SrcAATags,
+                             SrcAllIdentified);
+  bool DstKnown = getMemInfo(DstMI, DstVal, DstOffset, DstObjs, DstAATags,
+                             DstAllIdentified);
+
+  // If all underlying objects are identified and disjoint, the accesses cannot
+  // alias.
+  if (SrcKnown && DstKnown && SrcAllIdentified && DstAllIdentified &&
+      llvm::none_of(SrcObjs, [&](const Value *Obj) {
+        return llvm::is_contained(DstObjs, Obj);
+      }))
+    return false;
+
+  // The overlap helper inspects only the first memory operand. Multi-MMO
+  // instructions could carry an overlap through a later operand, so be
+  // conservative and keep the dependency for them.
+  if (!SrcMI->hasOneMemOperand() || !DstMI->hasOneMemOperand())
+    return true;
+
+  if (!mayOverlapInLaterIter(SrcMI, DstMI, LoopBB, MRI, *TII))
+    return false;
+
+  // The more expensive check that uses alias analysis on the base values.
+  if (!SrcKnown || !DstKnown)
+    return true;
+  if (SrcVal == DstVal && SrcOffset <= DstOffset)
+    return true;
+
+  if (BAA.isNoAlias(MemoryLocation::getBeforeOrAfter(SrcVal, SrcAATags),
+                    MemoryLocation::getBeforeOrAfter(DstVal, DstAATags)))
+    return false;
+
+  // AliasAnalysis sometimes gives up on following the underlying object. In
+  // such a case, separate checks for underlying objects may prove that there
+  // are no aliases between two accesses.
+  for (const Value *SrcObj : SrcObjs)
+    for (const Value *DstObj : DstObjs)
+      if (!BAA.isNoAlias(MemoryLocation::getBeforeOrAfter(SrcObj, SrcAATags),
+                         MemoryLocation::getBeforeOrAfter(DstObj, DstAATags)))
+        return true;
+
+  return false;
+}
+
+namespace {
+/// A DAG mutation that enforces the loop-carried memory dependences discovered
+/// on the original loop while list scheduling each window of TripleMBB.
+///
+/// For each recorded hazard pair (Pred, Succ) we add an artificial order edge
+/// between the clone of Pred and the clone of Succ belonging to a later copy,
+/// so that the iteration-N Pred is kept before the iteration-(N+1) Succ.
+class WindowMemDepMutation : public ScheduleDAGMutation {
+  const DenseSet<std::pair<MachineInstr *, MachineInstr *>> &LoopCarriedMemDeps;
+  const DenseMap<MachineInstr *, TriCloneInfo> &TriToOri;
+  bool &EdgeFailed;
+
+public:
+  WindowMemDepMutation(
+      const DenseSet<std::pair<MachineInstr *, MachineInstr *>> &Deps,
+      const DenseMap<MachineInstr *, TriCloneInfo> &TriToOri, bool &EdgeFailed)
+      : LoopCarriedMemDeps(Deps), TriToOri(TriToOri), EdgeFailed(EdgeFailed) {}
+
+  void apply(ScheduleDAGInstrs *DAG) override {
+    if (LoopCarriedMemDeps.empty())
+      return;
+    for (SUnit &PredSU : DAG->SUnits) {
+      MachineInstr *PredMI = PredSU.getInstr();
+      if (!PredMI || !PredMI->mayLoadOrStore())
+        continue;
+      auto PredIt = TriToOri.find(PredMI);
+      if (PredIt == TriToOri.end())
+        continue;
+      for (SUnit &SuccSU : DAG->SUnits) {
+        MachineInstr *SuccMI = SuccSU.getInstr();
+        if (&PredSU == &SuccSU || !SuccMI || !SuccMI->mayLoadOrStore())
+          continue;
+        auto SuccIt = TriToOri.find(SuccMI);
+        if (SuccIt == TriToOri.end())
+          continue;
+        // Only order a Pred from an earlier copy before a Succ from a later
+        // copy, which models the iteration-N to iteration-(N+1) dependence.
+        if (PredIt->second.Copy >= SuccIt->second.Copy)
+          continue;
+        if (!LoopCarriedMemDeps.contains(
+                {PredIt->second.Ori, SuccIt->second.Ori}))
+          continue;
+        // If the edge would create a cycle, addEdge() returns false and does
+        // not insert it. The required dependence then cannot be enforced in
+        // this window, so mark it to make the caller abandon this window's
+        // schedule.
+        if (!DAG->addEdge(&SuccSU, SDep(&PredSU, SDep::Barrier)))
+          EdgeFailed = true;
+      }
+    }
+  }
+};
+} // end anonymous namespace
+
+WindowScheduler::WindowScheduler(MachineSchedContext *C, MachineLoop &ML,
+                                 MachineDominatorTree *MDT)
+    : Opts(getCodeGenOptions(*C->MF)), Context(C), MF(C->MF),
+      MBB(ML.getHeader()), Loop(ML), Subtarget(&MF->getSubtarget()),
+      TII(Subtarget->getInstrInfo()), TRI(Subtarget->getRegisterInfo()),
+      MRI(&MF->getRegInfo()), MDT(MDT) {
   TripleDAG = std::unique_ptr<ScheduleDAGInstrs>(
       createMachineScheduler(/*OnlyBuildGraph=*/true));
 }
@@ -122,7 +219,22 @@ bool WindowScheduler::run() {
   preProcess();
   // The main window scheduling begins.
   std::unique_ptr<ScheduleDAGInstrs> SchedDAG(createMachineScheduler());
-  auto SearchIndexes = getSearchIndexes(WindowSearchNum, WindowSearchRatio);
+  // A target may decline to provide a scheduler, in which case fall back to the
+  // generic live scheduler so that window scheduling still has one to drive.
+  if (!SchedDAG)
+    SchedDAG.reset(createSchedLive(Context));
+  // Attach the mutation that enforces the loop-carried memory dependences.
+  // This requires the scheduler to support DAG mutations, i.e. to be a
+  // ScheduleDAGMI. Every in-tree target's pre-RA machine scheduler is a
+  // ScheduleDAGMI (or ScheduleDAGMILive), and the generic fallback
+  // createSchedLive() above returns one as well, so the cast below is safe.
+  // The assert documents and guards this invariant.
+  assert(SchedDAG && "Expected a scheduler for window scheduling");
+  auto *SchedDAGMI = static_cast<ScheduleDAGMI *>(SchedDAG.get());
+  SchedDAGMI->addMutation(std::make_unique<WindowMemDepMutation>(
+      LoopCarriedMemDeps, TriToOri, MemDepEdgeFailed));
+  auto SearchIndexes =
+      getSearchIndexes(Opts.window_search_num, Opts.window_search_ratio);
   for (unsigned Idx : SearchIndexes) {
     OriToCycle.clear();
     ++NumTryWindowSearch;
@@ -130,12 +242,19 @@ bool WindowScheduler::run() {
     // be added to Idx.
     unsigned Offset = Idx + SchedPhiNum;
     auto Range = getScheduleRange(Offset, SchedInstrNum);
+    MemDepEdgeFailed = false;
     SchedDAG->startBlock(MBB);
     SchedDAG->enterRegion(MBB, Range.begin(), Range.end(), SchedInstrNum);
     SchedDAG->schedule();
     LLVM_DEBUG(SchedDAG->dump());
+    if (MemDepEdgeFailed) {
+      restoreTripleMBB();
+      LLVM_DEBUG(dbgs() << "Can't enforce a loop-carried memory dependence. "
+                           "Keep searching...\n");
+      continue;
+    }
     unsigned II = analyseII(*SchedDAG, Offset);
-    if (II == WindowIILimit) {
+    if (II == Opts.window_ii_limit) {
       restoreTripleMBB();
       LLVM_DEBUG(dbgs() << "Can't find a valid II. Keep searching...\n");
       ++NumFailAnalyseII;
@@ -239,7 +358,7 @@ bool WindowScheduler::initialize() {
         return false;
       }
   }
-  if (SchedInstrNum <= WindowRegionLimit) {
+  if (SchedInstrNum <= Opts.window_region_limit) {
     LLVM_DEBUG(dbgs() << "There are too few MIs in the window region!\n");
     return false;
   }
@@ -249,6 +368,9 @@ bool WindowScheduler::initialize() {
 void WindowScheduler::preProcess() {
   // Prior to window scheduling, it's necessary to backup the original MBB,
   // generate a new TripleMBB, and build a TripleDAG based on the TripleMBB.
+  // Collect loop-carried memory dependences first, while the original MBB is
+  // still live (see collectLoopCarriedMemDeps() and run()).
+  collectLoopCarriedMemDeps();
   backupMBB();
   generateTripleMBB();
   TripleDAG->startBlock(MBB);
@@ -256,6 +378,38 @@ void WindowScheduler::preProcess() {
       MBB, MBB->begin(), MBB->getFirstTerminator(),
       std::distance(MBB->begin(), MBB->getFirstTerminator()));
   TripleDAG->buildSchedGraph(Context->AA);
+}
+
+void WindowScheduler::collectLoopCarriedMemDeps() {
+  LoopCarriedMemDeps.clear();
+  MachineBasicBlock *LoopBB = MBB;
+
+  // Collect the memory instructions of the original loop in program order.
+  SmallVector<MachineInstr *> MemMIs;
+  for (MachineInstr &MI : *LoopBB)
+    if (MI.mayLoadOrStore() && !MI.isDebugInstr())
+      MemMIs.push_back(&MI);
+
+  // Nothing to do unless there is at least one store to order against.
+  if (llvm::none_of(MemMIs,
+                    [](const MachineInstr *MI) { return MI->mayStore(); }))
+    return;
+
+  BatchAAResults BAA(*Context->AA);
+  BAA.enableCrossIterationMode();
+
+  for (MachineInstr *SrcMI : MemMIs) {
+    for (MachineInstr *DstMI : MemMIs) {
+      if (SrcMI == DstMI)
+        continue;
+      // A loop-carried order edge is only required when at least one of the
+      // accesses stores.
+      if (!SrcMI->mayStore() && !DstMI->mayStore())
+        continue;
+      if (hasLoopCarriedMemDep(SrcMI, DstMI, BAA, LoopBB, *MRI, TII))
+        LoopCarriedMemDeps.insert({SrcMI, DstMI});
+    }
+  }
 }
 
 void WindowScheduler::postProcess() {
@@ -305,7 +459,7 @@ void WindowScheduler::generateTripleMBB() {
     auto *NewMI = MF->CloneMachineInstr(MI);
     MBB->push_back(NewMI);
     TriMIs.push_back(NewMI);
-    TriToOri[NewMI] = MI;
+    TriToOri[NewMI] = {MI, 0};
   }
   // Step 2: Performing the remaining two copies of MBB instructions excluding
   // phis, and the last one contains terminators. At the same time, registers
@@ -365,7 +519,7 @@ void WindowScheduler::generateTripleMBB() {
         DefPairs[NewDef.first] = NewDef.second;
       MBB->push_back(NewMI);
       TriMIs.push_back(NewMI);
-      TriToOri[NewMI] = MI;
+      TriToOri[NewMI] = {MI, static_cast<unsigned>(Cnt)};
     }
   }
   // Step 3: The registers used by phis are updated, and they are generated in
@@ -416,7 +570,7 @@ int WindowScheduler::getEstimatedII(ScheduleDAGInstrs &DAG) {
   unsigned MaxDepth = 1;
   for (auto &SU : DAG.SUnits)
     MaxDepth = std::max(SU.getDepth() + SU.Latency, MaxDepth);
-  return MaxDepth * WindowIICoeff;
+  return MaxDepth * Opts.window_ii_coeff;
 }
 
 int WindowScheduler::calculateMaxCycle(ScheduleDAGInstrs &DAG,
@@ -446,7 +600,7 @@ int WindowScheduler::calculateMaxCycle(ScheduleDAGInstrs &DAG,
       // current MI and the previously inserted MIs.
       while (!RM.canReserveResources(*SU, CurCycle) || CurCycle < ExpectCycle) {
         ++CurCycle;
-        if (CurCycle == (int)WindowIILimit)
+        if (CurCycle == (int)Opts.window_ii_limit)
           return CurCycle;
       }
       RM.reserveResources(*SU, CurCycle);
@@ -508,7 +662,7 @@ int WindowScheduler::calculateStallCycle(unsigned Offset, int MaxCycle) {
       auto *SuccMI = Succ.getSUnit()->getInstr();
       int UseCycle = getOriCycle(SuccMI);
       if (DefCycle < UseCycle)
-        return WindowIILimit;
+        return Opts.window_ii_limit;
       // Get the stall cycle introduced by the register between two trips.
       int StallCycle = DefCycle + (int)Succ.getLatency() - CurrentII - UseCycle;
       MaxStallCycle = std::max(MaxStallCycle, StallCycle);
@@ -521,10 +675,10 @@ int WindowScheduler::calculateStallCycle(unsigned Offset, int MaxCycle) {
 unsigned WindowScheduler::analyseII(ScheduleDAGInstrs &DAG, unsigned Offset) {
   LLVM_DEBUG(dbgs() << "Start analyzing II:\n");
   int MaxCycle = calculateMaxCycle(DAG, Offset);
-  if (MaxCycle == (int)WindowIILimit)
+  if (MaxCycle == (int)Opts.window_ii_limit)
     return MaxCycle;
   int StallCycle = calculateStallCycle(Offset, MaxCycle);
-  if (StallCycle == (int)WindowIILimit)
+  if (StallCycle == (int)Opts.window_ii_limit)
     return StallCycle;
   // The value of II is equal to the maximum execution cycle plus 1.
   return MaxCycle + StallCycle + 1;
@@ -601,7 +755,7 @@ void WindowScheduler::updateScheduleResult(unsigned Offset, unsigned II) {
   }
   // The update will only continue if the II is smaller than BestII and the II
   // is sufficiently small.
-  if ((II >= BestII) || (II + WindowDiffLimit > BaseII))
+  if ((II >= BestII) || (II + Opts.window_diff_limit > BaseII))
     return;
   BestII = II;
   BestOffset = Offset;
@@ -639,7 +793,7 @@ void WindowScheduler::expand() {
   ModuloSchedule MS(*MF, &Loop, std::move(OrderedInsts), std::move(Cycles),
                     std::move(Stages));
   ModuloScheduleExpander MSE(*MF, MS, *Context->LIS,
-                             ModuloScheduleExpander::InstrChangesTy());
+                             ModuloScheduleExpander::InstrChangesTy(), MDT);
   MSE.expand();
   MSE.cleanup();
 }
@@ -668,14 +822,14 @@ WindowScheduler::getScheduleRange(unsigned Offset, unsigned Num) {
 
 int WindowScheduler::getOriCycle(MachineInstr *NewMI) {
   assert(TriToOri.count(NewMI) && "Cannot find original MI!");
-  auto *OriMI = TriToOri[NewMI];
+  auto *OriMI = TriToOri[NewMI].Ori;
   assert(OriToCycle.count(OriMI) && "Cannot find schedule cycle!");
   return OriToCycle[OriMI];
 }
 
 MachineInstr *WindowScheduler::getOriMI(MachineInstr *NewMI) {
   assert(TriToOri.count(NewMI) && "Cannot find original MI!");
-  return TriToOri[NewMI];
+  return TriToOri[NewMI].Ori;
 }
 
 unsigned WindowScheduler::getOriStage(MachineInstr *OriMI, unsigned Offset) {

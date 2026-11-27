@@ -613,7 +613,8 @@ LogicalResult transform::ApplyConversionPatternsOp::verify() {
   }
   if (getNumRegions() == 2) {
     Region &typeConverterRegion = getRegion(1);
-    if (!llvm::hasSingleElement(typeConverterRegion.front()))
+    if (typeConverterRegion.empty() ||
+        !llvm::hasSingleElement(typeConverterRegion.front()))
       return emitOpError()
              << "expected exactly one op in default type converter region";
     Operation *maybeTypeConverter = &typeConverterRegion.front().front();
@@ -2550,8 +2551,8 @@ void transform::NamedSequenceOp::build(OpBuilder &builder,
                                        SequenceBodyBuilderFn bodyBuilder,
                                        ArrayRef<NamedAttribute> attrs,
                                        ArrayRef<DictionaryAttr> argAttrs) {
-  state.addAttribute(SymbolTable::getSymbolAttrName(),
-                     builder.getStringAttr(symName));
+  state.getOrAddProperties<Properties>().sym_name =
+      builder.getStringAttr(symName);
   state.addAttribute(getFunctionTypeAttrName(state.name),
                      TypeAttr::get(FunctionType::get(builder.getContext(),
                                                      rootType, resultTypes)));

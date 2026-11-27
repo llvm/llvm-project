@@ -57,8 +57,6 @@ class EPCIndirectStubsManager : public IndirectStubsManager,
 public:
   EPCIndirectStubsManager(EPCIndirectionUtils &EPCIU) : EPCIU(EPCIU) {}
 
-  Error deallocateStubs();
-
   Error createStub(StringRef StubName, ExecutorAddr StubAddr,
                    JITSymbolFlags StubFlags) override;
 
@@ -264,6 +262,9 @@ EPCIndirectionUtils::Create(ExecutorProcessControl &EPC,
 
   case Triple::riscv64:
     return CreateWithABI<OrcRiscv64>(EPC, MemMgr, MemAccess);
+
+  case Triple::systemz:
+    return CreateWithABI<OrcSystemZ>(EPC, MemMgr, MemAccess);
 
   case Triple::x86_64:
     if (TT.getOS() == Triple::OSType::Win32)

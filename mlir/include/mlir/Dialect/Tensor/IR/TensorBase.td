@@ -13,8 +13,8 @@ include "mlir/IR/OpBase.td"
 
 def Tensor_Dialect : Dialect {
   let name = "tensor";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::tensor";
+  let useDefaultOperationRegistration = 1;
 
   let description = [{
     The `tensor` dialect is intended to hold core tensor creation and

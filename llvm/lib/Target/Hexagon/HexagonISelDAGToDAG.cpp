@@ -365,6 +365,18 @@ bool HexagonDAGToDAGISel::SelectBrevLdIntrinsic(SDNode *IntN) {
   return false;
 }
 
+static SDValue getCircRegister(SelectionDAG &DAG, SDLoc DL, SDNode *N,
+                               unsigned MOp, unsigned CSOp) {
+  SDValue RC = DAG.getTargetConstant(Hexagon::CircRegsRegClassID, DL, MVT::i32);
+  SDValue SubRegCS = DAG.getTargetConstant(Hexagon::isub_lo, DL, MVT::i32);
+  SDValue SubRegM = DAG.getTargetConstant(Hexagon::isub_hi, DL, MVT::i32);
+  const SDValue RegSequenceOps[] = {RC, N->getOperand(MOp), SubRegM,
+                                    N->getOperand(CSOp), SubRegCS};
+  SDNode *M_CS = DAG.getMachineNode(TargetOpcode::REG_SEQUENCE, DL, MVT::i64,
+                                    RegSequenceOps);
+  return SDValue(M_CS, 0);
+}
+
 /// Generate a machine instruction node for the new circular buffer intrinsics.
 /// The new versions use a CSx register instead of the K field.
 bool HexagonDAGToDAGISel::SelectNewCircIntrinsic(SDNode *IntN) {
@@ -400,14 +412,15 @@ bool HexagonDAGToDAGISel::SelectNewCircIntrinsic(SDNode *IntN) {
     if (IntN->getNumOperands() == 6) {
       auto Inc = cast<ConstantSDNode>(IntN->getOperand(3));
       SDValue I = CurDAG->getTargetConstant(Inc->getSExtValue(), DL, MVT::i32);
-      // Operands: { Base, Increment, Modifier, Start, Chain }.
-      Ops = { IntN->getOperand(2), I, IntN->getOperand(4), IntN->getOperand(5),
-              IntN->getOperand(0) };
-    } else
+      SDValue M_CS = getCircRegister(*CurDAG, DL, IntN, 4, 5);
+      // Operands: { Base, Increment, Modifier_Start, Chain }.
+      Ops = {IntN->getOperand(2), I, M_CS, IntN->getOperand(0)};
+    } else {
       // Handle load.*_pcr case which has 5 operands.
-      // Operands: { Base, Modifier, Start, Chain }.
-      Ops = { IntN->getOperand(2), IntN->getOperand(3), IntN->getOperand(4),
-              IntN->getOperand(0) };
+      SDValue M_CS = getCircRegister(*CurDAG, DL, IntN, 3, 4);
+      // Operands: { Base, Modifier_Start, Chain }.
+      Ops = {IntN->getOperand(2), M_CS, IntN->getOperand(0)};
+    }
     MachineSDNode *Res = CurDAG->getMachineNode(FLI->second, DL, RTys, Ops);
     ReplaceUses(SDValue(IntN, 0), SDValue(Res, 0));
     ReplaceUses(SDValue(IntN, 1), SDValue(Res, 1));
@@ -435,14 +448,17 @@ bool HexagonDAGToDAGISel::SelectNewCircIntrinsic(SDNode *IntN) {
     if (IntN->getNumOperands() == 7) {
       auto Inc = cast<ConstantSDNode>(IntN->getOperand(3));
       SDValue I = CurDAG->getTargetConstant(Inc->getSExtValue(), DL, MVT::i32);
-      // Operands: { Base, Increment, Modifier, Value, Start, Chain }.
-      Ops = { IntN->getOperand(2), I, IntN->getOperand(4), IntN->getOperand(5),
-              IntN->getOperand(6), IntN->getOperand(0) };
-    } else
+      SDValue M_CS = getCircRegister(*CurDAG, DL, IntN, 4, 6);
+      // Operands: { Base, Increment, Modifier_Start, Value, Chain }.
+      Ops = {IntN->getOperand(2), I, M_CS, IntN->getOperand(5),
+             IntN->getOperand(0)};
+    } else {
       // Handle store.*_pcr case which has 6 operands.
-      // Operands: { Base, Modifier, Value, Start, Chain }.
-      Ops = { IntN->getOperand(2), IntN->getOperand(3), IntN->getOperand(4),
-              IntN->getOperand(5), IntN->getOperand(0) };
+      SDValue M_CS = getCircRegister(*CurDAG, DL, IntN, 3, 5);
+      // Operands: { Base, Modifier_Start, Value, Chain }.
+      Ops = {IntN->getOperand(2), M_CS, IntN->getOperand(4),
+             IntN->getOperand(0)};
+    }
     MachineSDNode *Res = CurDAG->getMachineNode(FSI->second, DL, RTys, Ops);
     ReplaceUses(SDValue(IntN, 0), SDValue(Res, 0));
     ReplaceUses(SDValue(IntN, 1), SDValue(Res, 1));
@@ -794,6 +810,7 @@ void HexagonDAGToDAGISel::SelectFrameIndex(SDNode *N) {
   } else {
     auto &HMFI = *MF->getInfo<HexagonMachineFunctionInfo>();
     Register AR = HMFI.getStackAlignBaseReg();
+    assert(AR.isValid() && "Missing stack align base register");
     SDValue CH = CurDAG->getEntryNode();
     SDValue Ops[] = { CurDAG->getCopyFromReg(CH, DL, AR, MVT::i32), FI, Zero };
     R = CurDAG->getMachineNode(Hexagon::PS_fia, DL, MVT::i32, Ops);
@@ -1326,6 +1343,9 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
       // Do not generate select for all i1 vector type.
       if (UVT.isVectorOf(MVT::i1))
         continue;
+      // SELECT on HLX vectors needs custom lowering, which has already run.
+      if (HST->isHLXVectorType(UVT))
+        continue;
       if (isMemOPCandidate(N, U))
         continue;
 
@@ -1433,35 +1453,10 @@ void HexagonDAGToDAGISel::emitFunctionEntryCode() {
   if (!HFI.needsAligna(*MF))
     return;
 
-  MachineFrameInfo &MFI = MF->getFrameInfo();
-  MachineBasicBlock *EntryBB = &MF->front();
-  Align EntryMaxA = MFI.getMaxAlign();
-
-  // Reserve the first non-volatile register.
-  Register AP = 0;
   auto &HRI = *HST.getRegisterInfo();
-  BitVector Reserved = HRI.getReservedRegs(*MF);
-  for (const MCPhysReg *R = HRI.getCalleeSavedRegs(MF); *R; ++R) {
-    if (Reserved[*R])
-      continue;
-    AP = *R;
-    break;
-  }
+  Register AP = HRI.computeStackAlignBaseRegister(*MF);
   assert(AP.isValid() && "Couldn't reserve stack align register");
-  BuildMI(EntryBB, DebugLoc(), HII->get(Hexagon::PS_aligna), AP)
-      .addImm(EntryMaxA.value());
   MF->getInfo<HexagonMachineFunctionInfo>()->setStackAlignBaseReg(AP);
-}
-
-void HexagonDAGToDAGISel::updateAligna() {
-  auto &HFI = *MF->getSubtarget<HexagonSubtarget>().getFrameLowering();
-  if (!HFI.needsAligna(*MF))
-    return;
-  auto *AlignaI = const_cast<MachineInstr*>(HFI.getAlignaInstr(*MF));
-  assert(AlignaI != nullptr);
-  unsigned MaxA = MF->getFrameInfo().getMaxAlign().value();
-  if (AlignaI->getOperand(1).getImm() < MaxA)
-    AlignaI->getOperand(1).setImm(MaxA);
 }
 
 // Match a frame index that can be used in an addressing mode.
@@ -1681,6 +1676,230 @@ bool HexagonDAGToDAGISel::DetectUseSxtw(SDValue &N, SDValue &R) {
                                      MVT::i64, Ops);
   R = SDValue(T, 0);
   return true;
+}
+
+bool HexagonDAGToDAGISel::DetectUseSxth(SDValue &N, SDValue &R) {
+  // This (complex pattern) function is meant to detect a sign-extension
+  // i16->i32 or i16->vXi32 on a per-operand basis. This would allow writing
+  // single patterns that would cover a number of combinations of different ways
+  // a sign-extension could be written. For example:
+  //   (sra x (DetectUseSxth y)) -> (LX_shr_w_w x y)
+  // could match either one of these:
+  //   (sra x (sext_inreg y))
+  //   (sra x (sext_inreg y))
+  //   (sra x (sext y))
+  // etc.
+  //
+  // The returned value will have type i32 and will contain the value
+  // being extended. The high bits are not specified.
+  // The returned type is i32 because the original type of N was i32.
+
+  EVT RetTy = N.getValueType();
+  if (RetTy != MVT::i32 &&
+      (!RetTy.isVector() || RetTy.getVectorElementType() != MVT::i32))
+    return false;
+  unsigned Opc = N.getOpcode();
+  switch (Opc) {
+  case ISD::SIGN_EXTEND:
+  case ISD::SIGN_EXTEND_INREG: {
+    // sext_inreg has the source type as a separate operand.
+    EVT T = Opc == ISD::SIGN_EXTEND ? N.getOperand(0).getValueType()
+                                    : cast<VTSDNode>(N.getOperand(1))->getVT();
+    if (T.isVector())
+      T = T.getVectorElementType();
+    unsigned SW = T.getSizeInBits();
+    if (SW > 16)
+      return false;
+    // Only an exactly-16-bit sign_extend_inreg may be unwrapped to its i32
+    // operand.  Consumers of the returned value (e.g. mpy(Rs.l/.h, ..)) read
+    // just the low 16 bits and rely on those bits already holding the fully
+    // sign-extended value, which is true only when the inreg width is 16.
+    // For SW < 16 the high bits of operand 0 are not sign-filled -- e.g.
+    // (sext_inreg X, i8) with X = 0x00000080 is -128, but bits [15:0] of
+    // operand 0 are 0x0080 = +128 -- so the extension must be kept and the
+    // node itself returned.  AssertSext below gates on == 16 for the same
+    // reason.  SIGN_EXTEND always returns the node: its operand is a
+    // narrower type (e.g. i16) that would fail the i32 result-type check.
+    R = (Opc == ISD::SIGN_EXTEND_INREG && SW == 16) ? N.getOperand(0) : N;
+    break;
+  }
+  case ISD::LOAD: {
+    LoadSDNode *L = cast<LoadSDNode>(N);
+    if (L->getExtensionType() != ISD::SEXTLOAD)
+      return false;
+    // All extending loads extend to i32, so even if the value in
+    // memory is shorter than 16 bits, it will be i32 after the load.
+    if (L->getMemoryVT().getSizeInBits() > 16)
+      return false;
+    R = N;
+    break;
+  }
+  case ISD::AssertSext: {
+    EVT T = cast<VTSDNode>(N.getOperand(1))->getVT();
+    if (T.isVector())
+      T = T.getVectorElementType();
+    if (T.getSizeInBits() == 16)
+      R = N.getOperand(0);
+    else
+      return false;
+    break;
+  }
+  default:
+    return false;
+  }
+  EVT RT = R.getValueType();
+  if (RT == MVT::i32 ||
+      (RT.isVector() && RT.getVectorElementType() == MVT::i32))
+    return true;
+  return false;
+}
+
+/// Return the constant value of a node if it is a ConstantSDNode, or if it
+/// is a SPLAT_VECTOR / BUILD_VECTOR whose all elements are the same constant.
+/// Returns true and sets Val on success.
+static bool getConstantSplatValue(SDValue N, uint64_t &Val) {
+  if (auto *C = dyn_cast<ConstantSDNode>(N)) {
+    Val = C->getZExtValue();
+    return true;
+  }
+  if (N.getOpcode() == ISD::SPLAT_VECTOR) {
+    if (auto *C = dyn_cast<ConstantSDNode>(N.getOperand(0))) {
+      Val = C->getZExtValue();
+      return true;
+    }
+    return false;
+  }
+  if (N.getOpcode() == ISD::BUILD_VECTOR) {
+    auto *C0 = dyn_cast<ConstantSDNode>(N.getOperand(0));
+    if (!C0)
+      return false;
+    Val = C0->getZExtValue();
+    for (unsigned I = 1, E = N.getNumOperands(); I != E; ++I) {
+      auto *CI = dyn_cast<ConstantSDNode>(N.getOperand(I));
+      if (!CI || CI->getZExtValue() != Val)
+        return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+bool HexagonDAGToDAGISel::DetectUseZxth(SDValue &N, SDValue &R) {
+  // This (complex pattern) function is meant to detect a zero-extension
+  // i16->i32 or i16->vXi32 on a per-operand basis. This would allow writing
+  // single patterns that would cover a number of combinations of different ways
+  // a zero-extension could be written. For example:
+  //   (srl x (DetectUseZxth y)) -> (LX_shr_uw_uw x y)
+  // could match either one of these:
+  //   (srl x (and y, 0xFFFF))
+  //   (srl x (zext y))
+  //   (srl x (AssertZext y))
+  // etc.
+  //
+  // The returned value will have type i32 and will contain the value
+  // being extended. The high bits are not specified.
+  // The returned type is i32 because the original type of N was i32.
+
+  EVT RetTy = N.getValueType();
+  if (RetTy != MVT::i32 &&
+      (!RetTy.isVector() || RetTy.getVectorElementType() != MVT::i32))
+    return false;
+  unsigned Opc = N.getOpcode();
+  switch (Opc) {
+  case ISD::ZERO_EXTEND: {
+    EVT T = N.getOperand(0).getValueType();
+    if (T.isVector())
+      T = T.getVectorElementType();
+    unsigned SW = T.getSizeInBits();
+    if (SW <= 16)
+      R = N;
+    else
+      return false;
+    break;
+  }
+  case ISD::LOAD: {
+    LoadSDNode *L = cast<LoadSDNode>(N);
+    if (L->getExtensionType() != ISD::ZEXTLOAD)
+      return false;
+    // All extending loads extend to i32, so even if the value in
+    // memory is shorter than 16 bits, it will be i32 after the load.
+    if (L->getMemoryVT().getSizeInBits() > 16)
+      return false;
+    R = N;
+    break;
+  }
+  case ISD::AssertZext: {
+    EVT T = cast<VTSDNode>(N.getOperand(1))->getVT();
+    if (T.isVector())
+      T = T.getVectorElementType();
+    if (T.getSizeInBits() == 16)
+      R = N.getOperand(0);
+    else
+      return false;
+    break;
+  }
+  case ISD::SPLAT_VECTOR:
+  case ISD::BUILD_VECTOR: {
+    // Detect a splat/broadcast of a value that fits in 16 bits.
+    // Case 1: constant splat with value <= 0xFFFF.
+    uint64_t Val = 0;
+    if (getConstantSplatValue(N, Val) && Val <= 0xFFFF) {
+      R = N;
+      break;
+    }
+    // Case 2: splat of a scalar that is itself a 16-bit zero-extension
+    // (e.g. splat_vector(zext i16 x) or splat_vector(AssertZext x, i16)).
+    // Only applies to SPLAT_VECTOR (single scalar operand).
+    if (N.getOpcode() == ISD::SPLAT_VECTOR) {
+      SDValue ScalarOp = N.getOperand(0);
+      unsigned ScalarOpc = ScalarOp.getOpcode();
+      if (ScalarOpc == ISD::ZERO_EXTEND) {
+        EVT T = ScalarOp.getOperand(0).getValueType();
+        if (T.isInteger() && T.getSizeInBits() <= 16) {
+          R = N;
+          break;
+        }
+      } else if (ScalarOpc == ISD::AssertZext) {
+        EVT T = cast<VTSDNode>(ScalarOp.getOperand(1))->getVT();
+        if (T.isInteger() && T.getSizeInBits() <= 16) {
+          R = N;
+          break;
+        }
+      }
+    }
+    return false;
+  }
+  case ISD::AND: {
+    // Detect (and x, 0xFFFF) pattern — works for both scalar and vector
+    // (splat_vector / BUILD_VECTOR of 0xFFFF).
+    uint64_t Mask = 0;
+    if (getConstantSplatValue(N.getOperand(1), Mask) && Mask == 0xFFFF) {
+      R = N.getOperand(0);
+      break;
+    }
+    return false;
+  }
+  case ISD::SRL: {
+    // Detect (srl x, C) where C >= 16: the result fits in 16 bits because
+    // shifting a 32-bit value right by at least 16 positions leaves at most
+    // 16 significant bits.  This covers patterns like (lshr x, splat(16))
+    // that appear in fixed-point polynomial approximations.
+    uint64_t ShiftVal = 0;
+    if (getConstantSplatValue(N.getOperand(1), ShiftVal) && ShiftVal >= 16) {
+      R = N;
+      break;
+    }
+    return false;
+  }
+  default:
+    return false;
+  }
+  EVT RT = R.getValueType();
+  if (RT == MVT::i32 ||
+      (RT.isVector() && RT.getVectorElementType() == MVT::i32)) {
+    return true;
+  }
+  return false;
 }
 
 bool HexagonDAGToDAGISel::keepsLowBits(const SDValue &Val, unsigned NumBits,

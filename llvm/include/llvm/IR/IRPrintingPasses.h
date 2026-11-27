@@ -31,6 +31,11 @@ LLVM_ABI ModulePass *
 createPrintModulePass(raw_ostream &OS, const std::string &Banner = "",
                       bool ShouldPreserveUseListOrder = false);
 
+LLVM_ABI ModulePass *createPrintModulePass(raw_ostream &OS,
+                                           const std::string &Banner,
+                                           bool ShouldPreserveUseListOrder,
+                                           bool ShouldRenumberMetadata);
+
 /// Create and return a pass that prints functions to the specified
 /// \c raw_ostream as they are processed.
 LLVM_ABI FunctionPass *createPrintFunctionPass(raw_ostream &OS,

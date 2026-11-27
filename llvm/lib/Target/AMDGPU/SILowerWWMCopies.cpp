@@ -18,7 +18,6 @@
 #include "SILowerWWMCopies.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -45,7 +44,6 @@ private:
   SlotIndexes *Indexes;
   VirtRegMap *VRM;
   const SIRegisterInfo *TRI;
-  const MachineRegisterInfo *MRI;
   SIMachineFunctionInfo *MFI;
 };
 
@@ -138,7 +136,6 @@ bool SILowerWWMCopies::run(MachineFunction &MF) {
 
   MFI = MF.getInfo<SIMachineFunctionInfo>();
   TRI = ST.getRegisterInfo();
-  MRI = &MF.getRegInfo();
 
   if (!MFI->hasVRegFlags())
     return false;

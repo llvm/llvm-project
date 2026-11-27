@@ -145,6 +145,24 @@ TEST(TypePrinter, TemplateArgumentExpressionFullyQualified) {
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
 }
 
+TEST(TypePrinter, TemplateSpecializationWithDependentSizedArrayType) {
+  llvm::StringLiteral Code = R"cpp(
+    template<typename Container>
+    struct View {};
+
+    template<int Count>
+    struct View<int[Count]> {
+      using Container = int[Count];
+    };
+  )cpp";
+
+  auto Matcher =
+      typeAliasDecl(hasName("Container"), hasType(qualType().bind("id")));
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {}, Matcher, "int[Count]",
+      [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
+}
+
 TEST(TypePrinter, TemplateIdWithNTTP) {
   constexpr char Code[] = R"cpp(
     template <int N>

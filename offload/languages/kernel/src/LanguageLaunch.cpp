@@ -8,30 +8,21 @@
 
 #include "LanguageLaunch.h"
 #include "LanguageUtils.h"
+#include "OffloadErrors.h"
 #include "State.h"
+#include "Stream.h"
 #include <cstdio>
 
-using RuntimeState = llvm::offload::StateTy;
-using ThreadState = llvm::offload::ThreadStateTy;
-
-static constexpr ol_error_struct_t InvalidKernelError = {
-    OL_ERRC_INVALID_NULL_HANDLE, "kernel is not registered"};
-
-static constexpr ol_error_struct_t InvalidDeviceError = {OL_ERRC_INVALID_DEVICE,
-                                                         "invalid device"};
-
-static constexpr ol_error_struct_t InvalidArgumentError = {
-    OL_ERRC_INVALID_ARGUMENT, "invalid argument to kernel launch"};
-
-static constexpr ol_error_struct_t InvalidConfigurationError = {
-    OL_ERRC_INVALID_SIZE, "invalid kernel launch configuration"};
+using namespace llvm::offload;
 
 /// Internal kernel launch implementation
 ol_result_t __llvmLaunchKernelImpl(const char *KernelID, dim3 GridDim,
                                    dim3 BlockDim, void *KernelArgsPtr,
                                    size_t DynamicSharedMem, void *Stream) {
-  ol_device_handle_t Device = ThreadState::getDefaultDevice();
-  ol_symbol_handle_t Kernel = RuntimeState::getKernel(KernelID);
+  StateTy &State = StateTy::get();
+  ThreadStateTy &ThreadState = ThreadStateTy::get();
+  ol_device_handle_t Device = ThreadState.getDefaultDevice();
+  ol_symbol_handle_t Kernel = State.getKernel(KernelID);
   if (!Device)
     return &InvalidDeviceError;
   if (!KernelID || !KernelArgsPtr)
@@ -54,8 +45,8 @@ ol_result_t __llvmLaunchKernelImpl(const char *KernelID, dim3 GridDim,
   LaunchSizeArgs.GroupSize.z = BlockDim.z;
   LaunchSizeArgs.DynSharedMemory = DynamicSharedMem;
 
-  ol_queue_handle_t Queue = Stream ? reinterpret_cast<ol_queue_handle_t>(Stream)
-                                   : ThreadState::getDefaultQueue();
+  ol_queue_handle_t Queue = Stream ? reinterpret_cast<StreamTy *>(Stream)->Queue
+                                   : ThreadState.getDefaultQueue();
 
   struct OffloadKernelArgs {
     void **Args;
@@ -81,7 +72,8 @@ extern "C" {
 /// Push call configuration for kernel launch
 unsigned __llvmPushCallConfiguration(dim3 GridSize, dim3 BlockSize,
                                      size_t SharedMemory, void *Stream) {
-  CallConfigurationTy &CC = ThreadState::getCallConfiguration();
+  ThreadStateTy &ThreadState = ThreadStateTy::get();
+  CallConfigurationTy &CC = ThreadState.getCallConfiguration();
 
   CC.GridSize = GridSize;
   CC.BlockSize = BlockSize;
@@ -93,7 +85,8 @@ unsigned __llvmPushCallConfiguration(dim3 GridSize, dim3 BlockSize,
 /// Pop call configuration for kernel launch
 unsigned __llvmPopCallConfiguration(dim3 *GridSize, dim3 *BlockSize,
                                     size_t *SharedMemory, void **Stream) {
-  CallConfigurationTy &CC = ThreadState::getCallConfiguration();
+  ThreadStateTy &ThreadState = ThreadStateTy::get();
+  CallConfigurationTy &CC = ThreadState.getCallConfiguration();
   *GridSize = CC.GridSize;
   *BlockSize = CC.BlockSize;
   *SharedMemory = CC.SharedMemory;

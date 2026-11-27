@@ -1,8 +1,20 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("VectorizeOptions") {
+  visibility = [
+    ":Vectorize",
+    "//llvm/unittests/Transforms/Vectorize:VectorizeTests",
+  ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 static_library("Vectorize") {
   output_name = "LLVMVectorize"
   deps = [
+    ":VectorizeOptions",
     "//llvm/lib/Analysis",
     "//llvm/lib/IR",
+    "//llvm/lib/Option",
     "//llvm/lib/SandboxIR",
     "//llvm/lib/Support",
     "//llvm/lib/Transforms/Utils",
@@ -16,6 +28,9 @@ static_library("Vectorize") {
     "SLPVectorizer.cpp",
     "SLPVectorizer/SLPCompatibilityAnalysis.cpp",
     "SLPVectorizer/SLPCostAnalysis.cpp",
+    "SLPVectorizer/SLPMemoryUtils.cpp",
+    "SLPVectorizer/SLPReductionUtils.cpp",
+    "SLPVectorizer/SLPTypeUtils.cpp",
     "SLPVectorizer/SLPUtils.cpp",
     "SandboxVectorizer/DependencyGraph.cpp",
     "SandboxVectorizer/InstrMaps.cpp",
@@ -49,6 +64,7 @@ static_library("Vectorize") {
     "VPlanUtils.cpp",
     "VPlanVerifier.cpp",
     "VectorCombine.cpp",
+    "VectorizeOptions.cpp",
     "Vectorize.cpp",
   ]
 }

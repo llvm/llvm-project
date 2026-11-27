@@ -22,41 +22,6 @@ set(LLVM_SUBPROJECT_TITLE "Flang-RT")
 set(FLANG_RT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FLANG_RT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 set(FLANG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../flang")
-
-# CMake 3.24 is the first version of CMake that directly recognizes Flang.
-# LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang.
-if (CMAKE_VERSION VERSION_LESS "3.24")
-  cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
-  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR
-      _Fortran_COMPILER_STEM STREQUAL "flang" OR
-      _Fortran_COMPILER_STEM STREQUAL "fakeflang")
-    include(CMakeForceCompiler)
-    CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
-
-    set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
-    set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
-
-    set(CMAKE_Fortran_SUBMODULE_SEP "-")
-    set(CMAKE_Fortran_SUBMODULE_EXT ".mod")
-
-    set(CMAKE_Fortran_PREPROCESS_SOURCE
-      "<CMAKE_Fortran_COMPILER> -cpp <DEFINES> <INCLUDES> <FLAGS> -E <SOURCE> > <PREPROCESSED_SOURCE>")
-
-    set(CMAKE_Fortran_FORMAT_FIXED_FLAG "-ffixed-form")
-    set(CMAKE_Fortran_FORMAT_FREE_FLAG "-ffree-form")
-
-    set(CMAKE_Fortran_MODDIR_FLAG "-module-dir")
-
-    set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_ON "-cpp")
-    set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_OFF "-nocpp")
-    set(CMAKE_Fortran_POSTPROCESS_FLAG "-ffixed-line-length-72")
-
-    set(CMAKE_Fortran_COMPILE_OPTIONS_TARGET "--target=")
-
-    set(CMAKE_Fortran_LINKER_WRAPPER_FLAG "-Wl,")
-    set(CMAKE_Fortran_LINKER_WRAPPER_FLAG_SEP ",")
-  endif ()
-endif ()
 enable_language(Fortran)
 
 # Try to include the RPC utilities from the `libc` project for GPU I/O support.
@@ -123,7 +88,7 @@ endif ()
 
 # TODO: Support tests for the GPU target.
 set(FLANG_RT_INCLUDE_TESTS_default ${LLVM_INCLUDE_TESTS})
-if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
+if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgpu|^amdgcn|^nvptx")
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
 elseif (NOT FLANG_RT_FORTRAN_MODULES)
   set(FLANG_RT_INCLUDE_TESTS_default OFF)
@@ -290,11 +255,19 @@ endif ()
 # directory ("flang-rt") and delegate it to the runtimes build dir.
 # AddFlangRT will add all non-EXCLUDE_FROM_ALL targets to it.
 add_custom_target(flang-rt)
+add_llvm_install_targets(install-flang-rt DEPENDS flang-rt COMPONENT flang-rt)
 
 
 ###################
 # Build Artifacts #
 ###################
+
+if(FLANG_RT_LIBDIR_SUBDIR)
+  string(APPEND RUNTIMES_OUTPUT_RESOURCE_LIB_DIR "/${FLANG_RT_LIBDIR_SUBDIR}")
+  string(APPEND RUNTIMES_INSTALL_RESOURCE_LIB_PATH "/${FLANG_RT_LIBDIR_SUBDIR}")
+  cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_LIB_DIR)
+  cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_LIB_PATH)
+endif()
 
 add_subdirectory(lib)
 
@@ -314,7 +287,10 @@ endif()
 ###################
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  add_llvm_install_targets(install-flang-rt-headers COMPONENT flang-rt-headers)
+  add_custom_target(flang-rt-headers)
+  add_llvm_install_targets(install-flang-rt-headers
+                           DEPENDS flang-rt-headers
+                           COMPONENT flang-rt-headers)
 
   install(DIRECTORY include/flang-rt/runtime
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang-rt"

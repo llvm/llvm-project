@@ -20,6 +20,23 @@
 
 namespace Fortran::evaluate {
 
+template <typename SCALAR>
+inline void StoreSerialValues(char *dst, llvm::ArrayRef<SCALAR> values,
+    size_t elementSize, bool *changed = nullptr) {
+  for (auto [i, v] : llvm::enumerate(values)) {
+    v.StoreRawBytes(dst + i * elementSize, elementSize, changed);
+  }
+}
+
+template <typename SCALAR>
+inline void LoadSerialValues(int kind, const char *src,
+    llvm::MutableArrayRef<SCALAR> values, size_t stride) {
+  for (auto it : llvm::enumerate(values)) {
+    it.value() = SCALAR::FromRawBytes(
+        kind, src + stride * it.index(), SCALAR::bytesStored(kind));
+  }
+}
+
 class InitialImage {
 public:
   enum Result {
@@ -56,63 +73,17 @@ public:
         return OkNoChange;
       } else {
         // TODO endianness
-        auto *to{&data_.at(offset)};
-        const auto *from{&x.values().at(0)};
-        if (std::memcmp(to, from, bytes) == 0) {
-          return OkNoChange;
-        } else {
-          std::memcpy(to, from, bytes);
-          return Ok;
-        }
+        bool changed{false};
+        StoreSerialValues<Scalar<T>>(&data_.at(offset),
+            llvm::ArrayRef<Scalar<T>>(x.values()), *elementBytes, &changed);
+        return changed ? Ok : OkNoChange;
       }
     }
   }
-  template <int KIND>
-  Result Add(ConstantSubscript offset, std::size_t bytes,
-      const Constant<Type<TypeCategory::Character, KIND>> &x,
-      FoldingContext &) {
-    if (offset < 0 || offset + bytes > data_.size()) {
-      return OutOfRange;
-    } else {
-      auto optElements{TotalElementCount(x.shape())};
-      if (!optElements) {
-        return TooManyElems;
-      }
-      auto elements{*optElements};
-      auto elementBytes{bytes > 0 ? bytes / elements : 0};
-      if (elements * elementBytes != bytes) {
-        return SizeMismatch;
-      } else if (bytes == 0) {
-        return OkNoChange;
-      } else {
-        Result result{OkNoChange};
-        for (auto at{x.lbounds()}; elements-- > 0; x.IncrementSubscripts(at)) {
-          auto scalar{x.At(at)}; // this is a std string; size() in chars
-          auto scalarBytes{scalar.size() * KIND};
-          if (scalarBytes != elementBytes) {
-            result = LengthMismatch;
-          }
-          // Blank padding when short
-          for (; scalarBytes < elementBytes; scalarBytes += KIND) {
-            scalar += ' ';
-          }
-          // TODO endianness
-          auto *to{&data_.at(offset)};
-          const auto *from{scalar.data()};
-          if (std::memcmp(to, from, elementBytes) != 0) {
-            std::memcpy(to, from, elementBytes);
-            if (result == OkNoChange) {
-              result = Ok;
-            }
-          }
-          offset += elementBytes;
-        }
-        return result;
-      }
-    }
-  }
-  Result Add(ConstantSubscript, std::size_t, const Constant<SomeDerived> &,
-      FoldingContext &);
+  Result Add(ConstantSubscript, std::size_t,
+      const Constant<Type<TypeCategory::Character>> &, FoldingContext &);
+  Result Add(ConstantSubscript, std::size_t,
+      const Constant<Type<TypeCategory::Derived>> &, FoldingContext &);
   template <typename T>
   Result Add(ConstantSubscript offset, std::size_t bytes, const Expr<T> &x,
       FoldingContext &c) {

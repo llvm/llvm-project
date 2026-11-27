@@ -1,8 +1,5 @@
 # Clang Linker Wrapper
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -81,16 +78,26 @@ that it can be linked later.
 ## Matching
 
 The linker wrapper will link extracted device code that is compatible with each
-other. Generally, this requires that the target triple and architecture match.
+other. Generally, this requires that the target triple, the architecture and
+the optional `code` list match.
 An exception is made when the architecture is listed as `generic`, which will
-cause it be linked with any other device code with the same target triple.
+cause it to be linked with any other device code with the same target triple.
+The exception only goes one way: device code with a `code` list is not linked
+into `generic` device code.
+
+The `code` list is only needed when the architecture is a virtual one that
+several devices share, and it names the real devices to compile the device code
+for ahead of time.
+Currently, only SYCL device code for Intel GPUs has a `code` list: the
+architecture is an IGCA target, e.g. `igca_30r`, and `code` lists its Intel
+GPUs, e.g. `xe-mtl-u`.
 
 ## Debugging
 
 The linker wrapper performs a lot of steps internally, such as input matching,
 symbol resolution, and image registration. This makes it difficult to debug in
 some scenarios. The behavior of the linker-wrapper is controlled mostly through
-metadata, described in [clang documentation](https://clang.llvm.org/docs/OffloadingDesign.html).
+metadata, described in [Clang documentation](OffloadingDesign.md).
 
 The individual tool invocations the wrapper performs can be printed with the
 `--wrapper-verbose` flag, and the intermediate files they operate on can be

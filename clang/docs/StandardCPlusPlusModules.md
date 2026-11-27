@@ -1,8 +1,5 @@
 # Standard C++ Modules
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -90,6 +87,8 @@ The `global module fragment` (or `GMF`) is the code between the `module;`
 and the module declaration within a module unit.
 
 ### How to build projects using modules
+
+(quick-start)=
 
 #### Quick Start
 
@@ -186,6 +185,15 @@ $ clang++ User.o M-interface_part.o  M-impl_part.o M.o Impl.o -o a.out
 ```
 
 We explain the options in the following sections.
+
+Clang also offers the experimental `-fmodules-driver` flag which allows the Clang
+driver to determine and manage the order in which modules are built.
+See {ref}`Compiling Modules using the Clang Modules-Driver <modules-driver>`
+for more details.
+
+```console
+$ clang++ -std=c++20 -fmodules-driver interface_part.cppm impl_part.cppm M.cppm Impl.cpp User.cpp
+```
 
 #### How to enable standard C++ modules
 
@@ -313,14 +321,14 @@ compiler looks for `M.pcm` in the directories specified by
 `-fprebuilt-module-path`.
 
 The `-fmodule-file=<path/to/BMI>` option causes the compiler to load the
-specified BMI directly. The `-fmodule-file=<module-name>=<path/to/BMI>`
+specified BMI eagerly and directly. The `-fmodule-file=<module-name>=<path/to/BMI>`
 option causes the compiler to load the specified BMI for the module specified
 by `<module-name>` when necessary. The main difference is that
 `-fmodule-file=<path/to/BMI>` will load the BMI eagerly, whereas
 `-fmodule-file=<module-name>=<path/to/BMI>` will only load the BMI lazily,
 as will `-fprebuilt-module-path`. The `-fmodule-file=<path/to/BMI>` option
-for named modules is deprecated and will be removed in a future version of
-Clang.
+for named modules is not suggested unless you know what you're doing as it
+may change the order the compiler handles the code.
 
 When these options are specified in the same invocation of the compiler, the
 `-fmodule-file=<path/to/BMI>` option takes precedence over
@@ -497,6 +505,135 @@ fragment is disabled by default. These checks can be enabled by specifying
 `-Xclang -fno-skip-odr-check-in-gmf` when compiling. If the check is enabled
 and you encounter incorrect or missing diagnostics, please report them via the
 [community issue tracker](https://github.com/llvm/llvm-project/issues/).
+
+(modules-driver)=
+
+#### Compiling Modules using the Clang Modules-Driver
+
+:::{warning}
+The `-fmodules-driver` feature is experimental.
+:::
+
+The `-fmodules-driver` option enables the Clang driver to automatically discover
+module dependencies and manage the entire compilation process for builds using
+Standard C++ named modules. This includes support for importing the C++
+Standard library modules `std` and `std.compat`, which requires libc++ 19 or
+later, or libstdc++ 15 or later.
+
+For Clang modules, see
+{ref}`Driver-managed module builds <modules-driver-clang-modules>`.
+
+##### Examples
+
+Let's use the simple "hello world" example from the
+{ref}`Quick Start <quick-start>` section to demonstrate the usage with
+`-fmodules-driver`.
+Because the C++ Standard library modules can be used in combination with
+`-fmodules-driver`, we import `std` instead of including `<iostream>`:
+
+```c++
+// HelloWorld.cppm
+export module HelloWorld;
+import std;
+
+export void helloWorld() {
+  std::cout << "Hello World!\n";
+}
+
+// use.cpp
+import HelloWorld;
+int main() {
+  helloWorld();
+}
+```
+
+Then, invoke Clang like:
+
+```console
+$ clang++ -std=c++20 -fmodules-driver HelloWorld.cppm use.cpp
+```
+
+For the more complex example from the Quick Start section, invoke Clang like:
+
+```console
+$ clang++ -std=c++20 -fmodules-driver interface_part.cppm impl_part.cppm M.cppm Impl.cpp User.cpp
+```
+
+The build graph for any `-fmodules-driver` invocation can be printed in DOT
+format using the `-Rmodules-driver` remark:
+
+```console
+$ clang++ -std=c++20 -fmodules-driver -Rmodules-driver interface_part.cppm impl_part.cppm M.cppm Impl.cpp User.cpp
+```
+
+In the resulting DOT graph, Standard C++ named modules are labeled just as
+"Named module".
+
+```{graphviz}
+digraph "Module Dependency Graph" {
+     rankdir="BT";
+     label="Module Dependency Graph";
+     node [shape=Mrecord, colorscheme=set23, style=filled];
+
+     "M:interface_part-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Filename: interface_part.cppm | Module type: Named module | Module name: M:interface_part | Triple: x86_64-unknown-linux-gnu }"];
+     "M:impl_part-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Filename: impl_part.cppm | Module type: Named module | Module name: M:impl_part | Triple: x86_64-unknown-linux-gnu }"];
+     "M-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Filename: M.cppm | Module type: Named module | Module name: M | Triple: x86_64-unknown-linux-gnu }"];
+     "Impl.cpp-x86_64-unknown-linux-gnu" [fillcolor=3, label="{ Filename: Impl.cpp | Triple: x86_64-unknown-linux-gnu }"];
+     "User.cpp-x86_64-unknown-linux-gnu" [fillcolor=3, label="{ Filename: User.cpp | Triple: x86_64-unknown-linux-gnu }"];
+
+     "M:interface_part-x86_64-unknown-linux-gnu" -> "M:impl_part-x86_64-unknown-linux-gnu";
+     "M:interface_part-x86_64-unknown-linux-gnu" -> "M-x86_64-unknown-linux-gnu";
+     "M:impl_part-x86_64-unknown-linux-gnu" -> "M-x86_64-unknown-linux-gnu";
+     "M-x86_64-unknown-linux-gnu" -> "Impl.cpp-x86_64-unknown-linux-gnu";
+     "M-x86_64-unknown-linux-gnu" -> "User.cpp-x86_64-unknown-linux-gnu";
+}
+```
+
+##### Implementation
+
+Clang's dependency scanning tooling needs to be invoked on a `-cc1` command line
+for each input. The Clang driver is therefore first run as it would be without
+`-fmodules-driver`, to create these command lines for all user inputs. By
+default, compilation jobs are also created for the C++ Standard library modules,
+because they too need to be scanned for dependencies if imported by any input
+specified on the command line.
+
+The Clang driver then:
+
+1. Scans all inputs for module dependencies.
+   C++ Standard library modules are scanned on demand, only if any user input
+   imports them.
+
+2. Builds the dependency graph, where each node represents one compilation job.
+   This also generates `-cc1` command lines for any discovered Clang modules.
+   The compilation jobs created for C++ Standard library modules are removed if
+   they are not imported.
+   This is the graph printed by `-Rmodules-driver`.
+
+3. Updates each job's command line to explicitly pass in its module
+   dependencies.
+
+4. Runs the jobs in topological order of the dependency graph.
+
+`-fmodules-driver` currently requires Reduced BMIs, which are enabled by
+default. With Reduced BMIs, the BMI of a module unit is emitted as a by-product
+of the job compiling it to an object file, so the driver only needs to add
+`-fmodule-output` instead of creating a separate precompile job.
+
+##### Limitations
+
+- Modules are recompiled on each invocation. Caching support is planned for a
+  future release.
+- Combining Standard C++ named modules and Clang modules in the same
+  compilation is not recommended. For example, using `-fmodules-driver` with
+  `-stdlib=libc++` and `-fmodules` currently doesn't work correctly when
+  importing `std`.
+  See [discussion in PR #193312](https://github.com/llvm/llvm-project/pull/193312).
+- `-fno-modules-reduced-bmi` is not supported.
+- BMIs are always written as temporary files, and flags which influence the
+  output location of BMIs, such as `-fmodule-output=`, are ignored.
+- Flags such as `-fsyntax-only` are not supported when compiling multiple
+  input files. Using such flags would not be supported for the above examples.
 
 ### Privacy Issue
 
@@ -1734,6 +1871,284 @@ For build systems,
 The point of the approach is, the build system can reuse the result of C++20 named modules to manage depencies. So that
 the implementation burden of build systems is largely reduced.
 
+### Tricks for using std modules without changing your code
+
+This section introduces two methods to use std modules in a project without changing
+(too many) the code. It is still better to refactor the code explicitly.
+
+The methods introduced in this section needs build system's support to run stably.
+But even without build system's support, end users can make this experiment to have
+a feeling about the benefits of introduce std module to their projects.
+
+#### Preload the std module
+
+We can assume almost all C++ TU depends on the STL. So we can assume
+it is safe to import std in almost all C++ TUs. And clang have a mechanism
+to load the corresponding module eagerly: `-fmodule-file=<path-to-BMI>`.
+
+So if we built the std module's BMI ahead of time, we can pass
+`-fmodule-file=<path-to-BMI-of-std-module>` so that the code:
+
+```C++
+// hello.cpp
+#include <string>
+#include <iostream>
+int main() {
+  std::string hello = "Hello World.\n";
+  std::cout << hello << std::endl;
+  return 0;
+}
+```
+
+will be effectively equal to:
+
+```C++
+import std;
+#include <string>
+#include <iostream>
+int main() {
+  std::string hello = "Hello World.\n";
+  std::cout << hello << std::endl;
+  return 0;
+}
+```
+
+Let's take a quick measure (the numbers may vary in different environments):
+
+```
+$ time clang++ -std=c++23 hello.cpp -o hello
+
+real    0m1.245s
+user    0m1.154s
+sys     0m0.085s
+```
+
+and let's build the std module first and preload it without changing hello.cpp.
+
+```
+$ clang++ -std=c++23 <path-to-std-module>/std.cppm -c -o std.o -fmodule-output=std.pcm
+$ time clang++ -std=c++23 hello.cpp -o hello -fmodule-file=std.pcm
+
+real    0m0.795s
+user    0m0.707s
+sys     0m0.084s
+```
+
+we should be able to observe a clear compilation reduction.
+
+Clang has some optimizations for the case of import-before-include but also
+the pattern import-before-include may trigger compiler internal issues. But
+bugs are bugs. They should be reported and fixed.
+
+However, it is straight-forward that
+
+```C++
+import std;
+#include <string>
+#include <iostream>
+```
+
+will be slower to be compiled than
+
+```C++
+import std;
+```
+
+And due to compiler internal data structures, the mixed form will be much more slower
+than the pure import style due to the same declration apears in different TU issues
+(see above sections for more discussions).
+
+#### Use Module Map to replace includes to imports
+
+So is there any tricks we can use to replace the includes with the imports without
+changing the source code? Yes, clang has a module map. Although clang's module map
+was invented for clang header module maps, it can be used with named modules as well.
+
+Let's start with a simple example:
+
+```
+// std.modulemap
+module std [system] {
+  requires cplusplus
+
+  header "algorithm"
+  header "bitset"
+  header "complex"
+  header "deque"
+  header "exception"
+  header "fstream"
+  header "functional"
+  header "iomanip"
+  header "ios"
+  header "iosfwd"
+  header "iostream"
+  header "istream"
+  header "iterator"
+  header "limits"
+  header "list"
+  header "locale"
+  header "map"
+  header "memory"
+  header "new"
+  header "numeric"
+  header "ostream"
+  header "queue"
+  header "set"
+  header "sstream"
+  header "stack"
+  header "stdexcept"
+  header "streambuf"
+  header "string"
+  header "typeinfo"
+  header "utility"
+  header "valarray"
+  header "vector"
+  header "array"
+  header "atomic"
+  header "chrono"
+  header "codecvt"
+  header "condition_variable"
+  header "forward_list"
+  header "future"
+  header "initializer_list"
+  header "mutex"
+  header "ratio"
+  header "regex"
+  header "scoped_allocator"
+  header "system_error"
+  header "thread"
+  header "tuple"
+  header "typeindex"
+  header "unordered_map"
+  header "unordered_set"
+  header "optional"
+  header "any"
+  header "variant"
+}
+```
+
+the paths of the files referenced in module map is relative to the module map.
+So they can't be associated with the system headers.
+
+There are two solutions for this. First, we can create the softlinks for the headers:
+
+```
+mkdir -p std-module-map
+cp std.modulemap std-module-map/.
+cd std-module-map
+
+libcxx_dir=...
+
+awk -F '"' '/^[[:space:]]*header[[:space:]]+"/ {print $2}' std.modulemap |
+while IFS= read -r header; do
+  ln -s "$libcxx_dir/$header" "$header"
+done
+```
+
+then
+
+```
+$ time bin/clang++ -std=c++23 hello.cpp std.o -o hello $LIBCXX_FLAGS -fmodule-map-file=std-module-map/std.modulemap -fmodule-file=std=std.pcm  -Rmodule-import
+
+hello.cpp:1:2: remark: importing module 'std' from 'std.pcm' [-Rmodule-import]
+    1 | #include <string>
+      |  ^
+
+real    0m0.171s
+user    0m0.128s
+sys     0m0.043s
+```
+
+We can see the compilation time is highly reduced! 
+
+The flag `-Rmodule-import` tells if the compiler replace headers includes to imports actually.
+
+The other solution to associate the std headers with the module map is to use
+clang's VFS system.
+
+```
+// vfs.yaml
+{
+  'version': 0,
+  'overlay-relative': True,
+  'roots': [
+    {
+      'name': '<path-to-std-headers>',
+      'type': 'directory',
+      'contents': [
+        {
+          'name': 'std.modulemap', 'type': 'file',
+          'external-contents': 'std.modulemap'
+        },
+      ]
+    }
+  ]
+}
+```
+
+then
+
+```
+$ time clang++ -std=c++23 hello.cpp std.o -o hello -fmodule-map-file=<path-to-std-headers>/std.modulemap -fmodule-file=std=std.pcm -ivfsoverlay vfs.yaml -Rmodule-import
+hello.cpp:1:2: remark: importing module 'std' from 'std.pcm' [-Rmodule-import]
+    1 | #include <string>
+      |  ^
+
+real    0m0.172s
+user    0m0.122s
+sys     0m0.049s
+```
+
+the vfs.yaml means to place the std.modulemap file to the directory of std headers virtually.
+
+#### Why not use clang header modules?
+
+Clang header modules have two modes:
+
+- Clang implicit header modules: compiler will manage the modules builds.
+- Clang explicit header modules: build system will manage the modules builds.
+
+Clang implicit header modules sounds nice but it is prety fragile. Users need
+to be careful to manage the headers and builds to make it effective.
+
+Clang explicit header modules are much better. This is the way the inventors
+of clang header modules are using. But they need supports from build systems.
+
+#### Extends to other modules
+
+Extends this to other modules has some problems as:
+
+- Dependency management: we can assume almost all TU needs std module. But we
+  can't assume this for other modules.
+- Preprocessor state management: The use of module map to replace headers includes 
+  to imports of named modules loses the information about macros. We can do this
+  for std module because the 'exported' macro from STL is really limited and
+  centralized. We can exclude the headers which define macros only from the module
+  map. But this may not be true for other modules.
+
+These problems are solvable if we introduce new features. This may be possible
+if the community has more interests.
+
+#### What build systems need to do
+
+Except automating the steps I described above, an important step to manage the
+flags the consumer used. E.g., if they are two TUs, one is using C++20 and the
+other is using C++23, the build system needs to build two BMIs of the std module
+so that the consumers can consume successfully.
+
+#### Summary
+
+This section introduces two tricks to use std modules without changing the source code.
+
+These tricks needs support from build systems to make them smoothy in real cases.
+
+The preload tricks will load the std module to all the TUs. It is relatively slower
+than a clean rewrite (replace #include to imports). And it may trigger more compiler
+internal bugs. But it should be faster than the pure includes.
+
+The module map solution can make the compilation much more faster.
+But it needs more steps.
+ 
 ### Known Issues
 
 The following describes issues in the current implementation of modules. Please
@@ -1806,39 +2221,7 @@ However, the behavior is inconsistent with other compilers. This is tracked by
 
 ODR violations are a common issue when using modules. Clang sometimes produces
 false-positive diagnostics or fails to produce true-positive diagnostics of the
-One Definition Rule. One often-reported example is:
-
-```c++
-// part.cc
-module;
-typedef long T;
-namespace ns {
-inline void fun() {
-    (void)(T)0;
-}
-}
-export module repro:part;
-
-// repro.cc
-module;
-typedef long T;
-namespace ns {
-    using ::T;
-}
-namespace ns {
-inline void fun() {
-    (void)(T)0;
-}
-}
-export module repro;
-export import :part;
-```
-
-Currently the compiler incorrectly diagnoses the inconsistent definition of
-`fun()` in two module units. Because both definitions of `fun()` have the
-same spelling and `T` refers to the same type entity, there is no ODR
-violation. This is tracked by
-[#78850](https://github.com/llvm/llvm-project/issues/78850).
+One Definition Rule.
 
 #### Using TU-local entity in other units
 
@@ -2254,6 +2637,37 @@ Individual command line options can be specified after `--`.
 `clang-scan-deps` will extract the necessary information from the specified
 options. Note that the path to the compiler executable needs to be specified
 explicitly instead of using `clang++` directly.
+
+Module maps can also introduce module dependencies by translating includes to
+imports. For example:
+
+```c++
+// a.modulemap
+module a {
+  header "a.h"
+}
+
+// use.cpp
+#include "a.h"
+```
+
+```console
+$ clang-scan-deps -format=p1689 -- <path-to-compiler-executable>/clang++ \
+    -std=c++20 use.cpp -c -o use.o -fmodule-map-file=a.modulemap
+```
+
+The rule for `use.o` contains a requirement for `a`:
+
+```text
+{
+  "primary-output": "use.o",
+  "requires": [
+    {
+      "logical-name": "a"
+    }
+  ]
+}
+```
 
 Users may want the scanner to get the transitive dependency information for
 headers. Otherwise, the project has to be scanned twice, once for headers and

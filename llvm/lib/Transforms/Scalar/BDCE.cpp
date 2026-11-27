@@ -53,8 +53,7 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
   // Initialize the worklist with eligible direct users.
   SmallPtrSet<Instruction *, 16> Visited;
   SmallVector<Instruction *, 16> WorkList;
-  for (User *JU : I->users()) {
-    auto *J = cast<Instruction>(JU);
+  for (Instruction *J : I->users()) {
     if (J->getType()->isIntOrIntVectorTy()) {
       Visited.insert(J);
       WorkList.push_back(J);
@@ -85,8 +84,7 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
     if (DB.getDemandedBits(J).isAllOnes())
       continue;
 
-    for (User *KU : J->users()) {
-      auto *K = cast<Instruction>(KU);
+    for (Instruction *K : J->users()) {
       if (Visited.insert(K).second && K->getType()->isIntOrIntVectorTy())
         WorkList.push_back(K);
     }
@@ -124,7 +122,9 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
           Demanded.countl_zero() >= (DestBitSize - SrcBitSize)) {
         clearAssumptionsOfUsers(SE, DB);
         IRBuilder<> Builder(SE);
-        I.replaceAllUsesWith(
+        // Leave debug-info users pointing at the old instruction so they can
+        // be salvaged below.
+        I.replaceNonMetadataUsesWith(
             Builder.CreateZExt(SE->getOperand(0), DstTy, SE->getName()));
         Worklist.push_back(SE);
         Changed = true;
@@ -156,7 +156,9 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
           // Avoid incorrect replacement of self-referential values.
           if (CanBeSimplified && BO != BO->getOperand(0)) {
             clearAssumptionsOfUsers(BO, DB);
-            BO->replaceAllUsesWith(BO->getOperand(0));
+            // Leave debug-info users pointing at the old instruction so they
+            // can be salvaged below.
+            BO->replaceNonMetadataUsesWith(BO->getOperand(0));
             Worklist.push_back(BO);
             ++NumSimplified;
             Changed = true;

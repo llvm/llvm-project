@@ -58,12 +58,11 @@ define <vscale x 8 x i16> @urem_nxv8i16(<vscale x 8 x i16> %x, <vscale x 8 x i16
 ; CHECK-NEXT:    uunpklo z4.s, z0.h
 ; CHECK-NEXT:    sel z1.h, p0, z1.h, z2.h
 ; CHECK-NEXT:    uunpkhi z2.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uunpkhi z3.s, z1.h
 ; CHECK-NEXT:    udiv z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    uunpklo z3.s, z1.h
 ; CHECK-NEXT:    udivr z3.s, p0/m, z3.s, z4.s
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uzp1 z2.h, z3.h, z2.h
 ; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
 ; CHECK-NEXT:    ret

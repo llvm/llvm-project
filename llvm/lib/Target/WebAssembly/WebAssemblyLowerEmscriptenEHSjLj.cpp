@@ -135,7 +135,7 @@
 ///    functionInvocationId = alloca(4)
 ///
 ///    Note: the alloca size is not important as this pointer is
-///    merely used for pointer comparisions.
+///    merely used for pointer comparisons.
 ///
 /// 3) Lower
 ///      setjmp(env)
@@ -166,7 +166,7 @@
 ///        label 1: goto post-setjmp BB 1
 ///        label 2: goto post-setjmp BB 2
 ///        ...
-///        default: goto splitted next BB
+///        default: goto split next BB
 ///      }
 ///
 ///    __wasm_setjmp_test examines the jmp buf to see if it was for a matching
@@ -238,7 +238,7 @@
 ///      label 1: goto post-setjmp BB 1
 ///      label 2: goto post-setjmp BB 2
 ///      ...
-///      default: goto splitted next BB
+///      default: goto split next BB
 ///    }
 /// ...
 ///
@@ -263,6 +263,7 @@
 
 #include "WebAssembly.h"
 #include "WebAssemblyTargetMachine.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -275,30 +276,21 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
-#include <set>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-lower-em-ehsjlj"
 
-static cl::list<std::string>
-    EHAllowlist("emscripten-cxx-exceptions-allowed",
-                cl::desc("The list of function names in which Emscripten-style "
-                         "exception handling is enabled (see emscripten "
-                         "EMSCRIPTEN_CATCHING_ALLOWED options)"),
-                cl::CommaSeparated);
-
 namespace {
 class WebAssemblyLowerEmscriptenEHSjLjImpl {
-  bool EnableEmEH;     // Enable Emscripten exception handling
-  bool EnableEmSjLj;   // Enable Emscripten setjmp/longjmp handling
-  bool EnableWasmSjLj; // Enable Wasm setjmp/longjmp handling
-  bool DoSjLj;         // Whether we actually perform setjmp/longjmp handling
+  bool EnableEmEH = false;     // Enable Emscripten exception handling
+  bool EnableEmSjLj = false;   // Enable Emscripten setjmp/longjmp handling
+  bool EnableWasmSjLj = false; // Enable Wasm setjmp/longjmp handling
+  bool DoSjLj = false; // Whether we actually perform setjmp/longjmp handling
 
   GlobalVariable *ThrewGV = nullptr;      // __THREW__ (Emscripten)
   GlobalVariable *ThrewValueGV = nullptr; // __threwValue (Emscripten)
@@ -321,7 +313,7 @@ class WebAssemblyLowerEmscriptenEHSjLjImpl {
   // Map of <function signature string, invoke_ wrappers>
   StringMap<Function *> InvokeWrappers;
   // Set of allowed function names for exception handling
-  std::set<std::string, std::less<>> EHAllowlistSet;
+  DenseSet<StringRef> EHAllowlistSet;
   // Functions that contains calls to setjmp
   SmallPtrSet<Function *, 8> SetjmpUsers;
 
@@ -348,6 +340,8 @@ class WebAssemblyLowerEmscriptenEHSjLjImpl {
                       BasicBlock *&EndBB);
   Function *getInvokeWrapper(CallBase *CI);
 
+  bool canLongjmp(const Value *Callee) const;
+  bool containsLongjmpableCalls(const Function *F) const;
   bool areAllExceptionsAllowed() const { return EHAllowlistSet.empty(); }
   bool supportsException(const Function *F) const {
     return EnableEmEH &&
@@ -359,16 +353,13 @@ class WebAssemblyLowerEmscriptenEHSjLjImpl {
 
 public:
   WebAssemblyLowerEmscriptenEHSjLjImpl(
+      const WebAssemblyOptions &CLOpts,
       std::function<DominatorTree &(Function &F)> GetDominatorTree)
-      : EnableEmEH(WebAssembly::WasmEnableEmEH),
-        EnableEmSjLj(WebAssembly::WasmEnableEmSjLj),
-        EnableWasmSjLj(WebAssembly::WasmEnableSjLj),
-        GetDominatorTree(GetDominatorTree) {
+      : EnableEmSjLj(CLOpts.enable_emscripten_sjlj),
+        EnableWasmSjLj(CLOpts.enable_sjlj), GetDominatorTree(GetDominatorTree) {
     assert(!(EnableEmSjLj && EnableWasmSjLj) &&
            "Two SjLj modes cannot be turned on at the same time");
-    assert(!(EnableEmEH && EnableWasmSjLj) &&
-           "Wasm SjLj should be only used with Wasm EH");
-    EHAllowlistSet.insert(EHAllowlist.begin(), EHAllowlist.end());
+    EHAllowlistSet.insert_range(CLOpts.emscripten_cxx_exceptions_allowed);
   }
 
   bool runOnModule(Module &M);
@@ -402,9 +393,6 @@ ModulePass *llvm::createWebAssemblyLowerEmscriptenEHSjLjLegacyPass() {
 
 static bool canThrow(const Value *V) {
   if (const auto *F = dyn_cast<const Function>(V)) {
-    // Intrinsics cannot throw
-    if (F->isIntrinsic())
-      return false;
     StringRef Name = F->getName();
     // leave setjmp and longjmp (mostly) alone, we process them properly later
     if (Name == "setjmp" || Name == "longjmp" || Name == "emscripten_longjmp")
@@ -420,16 +408,16 @@ static bool canThrow(const Value *V) {
 // link time.
 static GlobalVariable *getGlobalVariable(Module &M, Type *Ty,
                                          const char *Name) {
-  auto *GV = dyn_cast<GlobalVariable>(M.getOrInsertGlobal(Name, Ty));
-  if (!GV)
-    report_fatal_error(Twine("unable to create global: ") + Name);
-
   // Variables created by this function are thread local. If the target does not
   // support TLS, we depend on CoalesceFeaturesAndStripAtomics to downgrade it
   // to non-thread-local ones, in which case we don't allow this object to be
   // linked with other objects using shared memory.
-  GV->setThreadLocalMode(GlobalValue::GeneralDynamicTLSModel);
-  return GV;
+  return M.getOrInsertGlobal(Name, Ty, [&]() {
+    return new GlobalVariable(
+        M, Ty, /*isConstant=*/false, GlobalVariable::ExternalLinkage,
+        /*Initializer=*/nullptr, Name,
+        /*InsertBefore=*/nullptr, GlobalValue::GeneralDynamicTLSModel);
+  });
 }
 
 // Simple function name mangler.
@@ -461,7 +449,7 @@ static void markAsImported(Function *F) {
   // Tell the linker that this function is expected to be imported from the
   // 'env' module. This is necessary for functions that do not have fixed names
   // (e.g. __import_xyz).  These names cannot be provided by any kind of shared
-  // or static library as instead we mark them explictly as imported.
+  // or static library as instead we mark them explicitly as imported.
   if (!F->hasFnAttribute("wasm-import-module")) {
     llvm::AttrBuilder B(F->getParent()->getContext());
     B.addAttribute("wasm-import-module", "env");
@@ -477,7 +465,7 @@ static void markAsImported(Function *F) {
 // Returns an integer type for the target architecture's address space.
 // i32 for wasm32 and i64 for wasm64.
 static Type *getAddrIntType(Module *M) {
-  IRBuilder<> IRB(M->getContext());
+  IRBuilder<> IRB(*M);
   return IRB.getIntNTy(M->getDataLayout().getPointerSizeInBits());
 }
 
@@ -492,7 +480,7 @@ static Type *getAddrPtrType(Module *M) {
 // space. Returns (i32 C) for wasm32 and (i64 C) for wasm64, when C is the
 // integer.
 static Value *getAddrSizeInt(Module *M, uint64_t C) {
-  IRBuilder<> IRB(M->getContext());
+  IRBuilder<> IRB(*M);
   return IRB.getIntN(M->getDataLayout().getPointerSizeInBits(), C);
 }
 
@@ -524,7 +512,7 @@ Function *WebAssemblyLowerEmscriptenEHSjLjImpl::getFindMatchingCatch(
   return F;
 }
 
-// Generate invoke wrapper seqence with preamble and postamble
+// Generate invoke wrapper sequence with preamble and postamble
 // Preamble:
 // __THREW__ = 0;
 // Postamble:
@@ -535,8 +523,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLjImpl::wrapInvoke(CallBase *CI) {
   Module *M = CI->getModule();
   LLVMContext &C = M->getContext();
 
-  IRBuilder<> IRB(C);
-  IRB.SetInsertPoint(CI);
+  IRBuilder<> IRB(CI);
 
   // Pre-invoke
   // __THREW__ = 0;
@@ -566,7 +553,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLjImpl::wrapInvoke(CallBase *CI) {
 
   AttrBuilder FnAttrs(CI->getContext(), InvokeAL.getFnAttrs());
   if (auto Args = FnAttrs.getAllocSizeArgs()) {
-    // The allocsize attribute (if any) referes to parameters by index and needs
+    // The allocsize attribute (if any) refers to parameters by index and needs
     // to be adjusted.
     auto [SizeArg, NEltArg] = *Args;
     SizeArg += 1;
@@ -617,7 +604,8 @@ Function *WebAssemblyLowerEmscriptenEHSjLjImpl::getInvokeWrapper(CallBase *CI) {
   return F;
 }
 
-static bool canLongjmp(const Value *Callee) {
+bool WebAssemblyLowerEmscriptenEHSjLjImpl::canLongjmp(
+    const Value *Callee) const {
   if (auto *CalleeF = dyn_cast<Function>(Callee))
     if (CalleeF->isIntrinsic())
       return false;
@@ -680,7 +668,7 @@ static bool canLongjmp(const Value *Callee) {
   // intentionally treat it as longjmpable to work around this problem. This is
   // a hacky fix but an easy one.
   if (CalleeName == "__cxa_end_catch")
-    return WebAssembly::WasmEnableSjLj;
+    return EnableWasmSjLj;
   if (CalleeName == "__cxa_begin_catch" ||
       CalleeName == "__cxa_allocate_exception" || CalleeName == "__cxa_throw" ||
       CalleeName == "__clang_call_terminate")
@@ -705,7 +693,7 @@ static bool isEmAsmCall(const Value *Callee) {
          CalleeName == "emscripten_asm_const_async_on_main_thread";
 }
 
-// Generate __wasm_setjmp_test function call seqence with preamble and
+// Generate __wasm_setjmp_test function call sequence with preamble and
 // postamble. The code this generates is equivalent to the following
 // JavaScript code:
 // %__threwValue.val = __threwValue;
@@ -729,11 +717,10 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::wrapTestSetjmp(
   Function *F = BB->getParent();
   Module *M = F->getParent();
   LLVMContext &C = M->getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(BB);
   IRB.SetCurrentDebugLocation(DL);
 
   // if (%__THREW__.val != 0 & %__threwValue.val != 0)
-  IRB.SetInsertPoint(BB);
   BasicBlock *ThenBB1 = BasicBlock::Create(C, "if.then1", F);
   BasicBlock *ElseBB1 = BasicBlock::Create(C, "if.else1", F);
   BasicBlock *EndBB1 = BasicBlock::Create(C, "if.end", F);
@@ -813,8 +800,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::rebuildSSA(Function &F) {
           return UserI->isLifetimeStartOrEnd() && !DT.dominates(&I, UserI);
         });
         if (HasNonDominatedLifetimeMarker) {
-          for (User *U : make_early_inc_range(I.users())) {
-            auto *UserI = cast<Instruction>(U);
+          for (Instruction *UserI : make_early_inc_range(I.users())) {
             if (UserI->isLifetimeStartOrEnd())
               UserI->eraseFromParent();
           }
@@ -855,8 +841,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::replaceLongjmpWith(
   assert(NewF == EmLongjmpF || NewF == WasmLongjmpF);
   Module *M = LongjmpF->getParent();
   SmallVector<CallInst *, 8> ToErase;
-  LLVMContext &C = LongjmpF->getParent()->getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(*LongjmpF->getParent());
 
   // For calls to longjmp, replace it with emscripten_longjmp/__wasm_longjmp and
   // cast its first argument (jmp_buf*) appropriately
@@ -886,7 +871,8 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::replaceLongjmpWith(
   }
 }
 
-static bool containsLongjmpableCalls(const Function *F) {
+bool WebAssemblyLowerEmscriptenEHSjLjImpl::containsLongjmpableCalls(
+    const Function *F) const {
   for (const auto &BB : *F)
     for (const auto &I : BB)
       if (const auto *CB = dyn_cast<CallBase>(&I))
@@ -901,7 +887,7 @@ static bool containsLongjmpableCalls(const Function *F) {
 // returns 0 when called directly.
 static void nullifySetjmp(Function *F) {
   Module &M = *F->getParent();
-  IRBuilder<> IRB(M.getContext());
+  IRBuilder<> IRB(M);
   Function *SetjmpF = M.getFunction("setjmp");
   SmallVector<Instruction *, 1> ToErase;
 
@@ -926,8 +912,48 @@ static void nullifySetjmp(Function *F) {
 bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
   LLVM_DEBUG(dbgs() << "********** Lower Emscripten EH & SjLj **********\n");
 
-  LLVMContext &C = M.getContext();
-  IRBuilder<> IRB(C);
+  ExceptionHandling EH = M.getExceptionModel();
+  if (EH != ExceptionHandling::None && EH != ExceptionHandling::Wasm &&
+      EH != ExceptionHandling::Emscripten)
+    reportFatalUsageError(
+        "exception model should be 'none', 'wasm', or 'emscripten'");
+
+  EnableEmEH = EH == ExceptionHandling::Emscripten;
+  // You can't mix Emscripten EH with Wasm SjLj.
+  if (EnableEmEH && EnableWasmSjLj)
+    reportFatalUsageError(
+        "'emscripten' exception model is not allowed with -wasm-enable-sjlj");
+  // You can't mix Wasm EH with Emscripten SjLj.
+  if (EH == ExceptionHandling::Wasm && EnableEmSjLj)
+    reportFatalUsageError(
+        "'wasm' exception model is not allowed with -wasm-enable-sjlj");
+
+  bool Changed = false;
+
+  // Wasm EH keeps invokes, and Emscripten EH transforms them below. With
+  // neither, lower them here, before the setjmp/longjmp handling, which does
+  // not handle invokes or the dead landing pads left behind.
+  if (EH != ExceptionHandling::Wasm && !EnableEmEH) {
+    for (Function &F : M) {
+      bool LoweredInvoke = false;
+      for (BasicBlock &BB : F) {
+        if (auto *II = dyn_cast<InvokeInst>(BB.getTerminator())) {
+          changeToCall(II);
+          LoweredInvoke = true;
+        }
+      }
+
+      if (LoweredInvoke) {
+        EliminateUnreachableBlocks(F);
+        Changed = true;
+      }
+    }
+  }
+
+  if (!EnableEmEH && !EnableEmSjLj && !EnableWasmSjLj)
+    return Changed;
+
+  IRBuilder<> IRB(M);
 
   Function *SetjmpF = M.getFunction("setjmp");
   Function *LongjmpF = M.getFunction("longjmp");
@@ -971,8 +997,6 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
                   "setTempRet0", &M);
   GetTempRet0F->setDoesNotThrow();
   SetTempRet0F->setDoesNotThrow();
-
-  bool Changed = false;
 
   // Function registration for exception handling
   if (EnableEmEH) {
@@ -1123,7 +1147,7 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runOnModule(Module &M) {
 bool WebAssemblyLowerEmscriptenEHSjLjImpl::runEHOnFunction(Function &F) {
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(M);
   bool Changed = false;
   SmallVector<Instruction *, 64> ToErase;
   SmallPtrSet<LandingPadInst *, 32> LandingPads;
@@ -1315,8 +1339,7 @@ static DebugLoc getOrCreateDebugLoc(const Instruction *InsertBefore,
 bool WebAssemblyLowerEmscriptenEHSjLjImpl::runSjLjOnFunction(Function &F) {
   assert(EnableEmSjLj || EnableWasmSjLj);
   Module &M = *F.getParent();
-  LLVMContext &C = F.getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder IRB(M);
   SmallVector<Instruction *, 64> ToErase;
 
   // Setjmp preparation
@@ -1373,7 +1396,7 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runSjLjOnFunction(Function &F) {
     // Add a phi to the tail, which will be the output of setjmp, which
     // indicates if this is the first call or a longjmp back. The phi directly
     // uses the right value based on where we arrive from
-    IRB.SetInsertPoint(Tail, Tail->getFirstNonPHIIt());
+    IRB.SetInsertPoint(Tail->getFirstNonPHIIt());
     PHINode *SetjmpRet = IRB.CreatePHI(IRB.getInt32Ty(), 2, "setjmp.ret");
 
     // setjmp initial call returns 0
@@ -1408,9 +1431,9 @@ bool WebAssemblyLowerEmscriptenEHSjLjImpl::runSjLjOnFunction(Function &F) {
   // For example, in this code,
   // if (x()) { .. setjmp() .. }
   // if (y()) { .. longjmp() .. }
-  // We must split the longjmp block, and it can jump into the block splitted
-  // from setjmp one. But that means that when we split the setjmp block, it's
-  // first part no longer dominates its second part - there is a theoretically
+  // We must split the longjmp block, and it can jump into the block split from
+  // setjmp one. But that means that when we split the setjmp block, it's first
+  // part no longer dominates its second part - there is a theoretically
   // possible control flow path where x() is false, then y() is true and we
   // reach the second part of the setjmp block, without ever reaching the first
   // part. So, we rebuild SSA form here.
@@ -1427,7 +1450,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::
         SmallVectorImpl<PHINode *> &SetjmpRetPHIs) {
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(M);
   SmallVector<Instruction *, 64> ToErase;
 
   // call.em.longjmp BB that will be shared within the function.
@@ -1452,16 +1475,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::
   for (unsigned I = 0; I < BBs.size(); I++) {
     BasicBlock *BB = BBs[I];
     for (Instruction &I : *BB) {
-      if (isa<InvokeInst>(&I)) {
-        std::string S;
-        raw_string_ostream SS(S);
-        SS << "In function " << F.getName()
-           << ": When using Wasm EH with Emscripten SjLj, there is a "
-              "restriction that `setjmp` function call and exception cannot be "
-              "used within the same function:\n";
-        SS << I;
-        report_fatal_error(StringRef(SS.str()));
-      }
+      assert(!isa<InvokeInst>(&I));
       auto *CI = dyn_cast<CallInst>(&I);
       if (!CI)
         continue;
@@ -1622,7 +1636,8 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::handleLongjmpableCallsForWasmSjLj(
     SmallVectorImpl<PHINode *> &SetjmpRetPHIs) {
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
-  IRBuilder<> IRB(C);
+  IRBuilder<> IRB(M);
+  IRB.disableGEPCanonicalization();
 
   // A function with catchswitch/catchpad instruction should have a personality
   // function attached to it. Search for the wasm personality function, and if
@@ -1713,7 +1728,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::handleLongjmpableCallsForWasmSjLj(
   //     label 1: goto post-setjmp BB 1
   //     label 2: goto post-setjmp BB 2
   //     ...
-  //     default: goto splitted next BB
+  //     default: goto split next BB
   //   }
   IRB.SetInsertPoint(SetjmpDispatchBB);
   PHINode *LabelPHI = IRB.CreatePHI(IRB.getInt32Ty(), 2, "label.phi");
@@ -1871,7 +1886,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::handleLongjmpableCallsForWasmSjLj(
 
 bool WebAssemblyLowerEmscriptenEHSjLjLegacy::runOnModule(Module &M) {
   WebAssemblyLowerEmscriptenEHSjLjImpl Impl(
-      [&](Function &F) -> DominatorTree & {
+      getWebAssemblyOptions(M), [&](Function &F) -> DominatorTree & {
         return getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
       });
   return Impl.runOnModule(M);
@@ -1881,7 +1896,7 @@ PreservedAnalyses
 WebAssemblyLowerEmscriptenEHSjLjPass::run(Module &M,
                                           ModuleAnalysisManager &MAM) {
   WebAssemblyLowerEmscriptenEHSjLjImpl Impl(
-      [&](Function &F) -> DominatorTree & {
+      getWebAssemblyOptions(M), [&](Function &F) -> DominatorTree & {
         return MAM.getResult<FunctionAnalysisManagerModuleProxy>(M)
             .getManager()
             .getResult<DominatorTreeAnalysis>(F);

@@ -121,7 +121,8 @@ TransferReadOfExtractSliceOpFolder::matchAndRewriteMaskableOp(
       readOp.getPadding(),
       /*mask=*/Value(), readOp.getInBoundsAttr());
   if (maskOp)
-    newOp = mlir::vector::maskOperation(rewriter, newOp, maskOp.getMask());
+    newOp = mlir::vector::maskOperation(rewriter, newOp, maskOp.getMask(),
+                                        maskOp.getPassthru());
   return newOp->getResults()[0];
 }
 
@@ -222,7 +223,7 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
 
 struct MergeConsecutiveExtractSlice
     : public OpRewritePattern<tensor::ExtractSliceOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tensor::ExtractSliceOp nextOp,
                                 PatternRewriter &rewriter) const override {

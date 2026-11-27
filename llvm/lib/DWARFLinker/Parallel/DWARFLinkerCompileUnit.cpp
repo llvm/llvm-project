@@ -73,8 +73,8 @@ void CompileUnit::maybeResetToLoadedStage() {
   if (getStage() < Stage::Loaded)
     return;
 
-  // Note: We need to do erasing for "Loaded" stage because
-  // if live analysys failed then we will have "Loaded" stage
+  // Note: We need to do erasing for "LiveRootsCollected" stage because
+  // if live analysys failed then we will have "LiveRootsCollected" stage
   // with marking from "LivenessAnalysisDone" stage partially
   // done. That marking should be cleared.
 
@@ -97,6 +97,8 @@ void CompileUnit::maybeResetToLoadedStage() {
   Abbreviations.clear();
   OutUnitDIE = nullptr;
   DebugAddrIndexMap.clear();
+  DebugStringIndexMap.clear();
+  RelocFixups.clear();
   StmtSeqListAttributes.clear();
 
   llvm::fill(OutDieOffsetArray, 0);
@@ -256,6 +258,84 @@ void CompileUnit::cleanupDataAfterClonning() {
   getOrigUnit().clear();
 }
 
+bool CompileUnit::getModulePath(const DWARFDebugInfoEntry *DieEntry,
+                                SmallVectorImpl<char> &Path) {
+  assert(DieEntry->getTag() == dwarf::DW_TAG_module);
+
+  SmallVector<StringRef, 4> Names;
+  for (const DWARFDebugInfoEntry *CurEntry = DieEntry;
+       CurEntry && CurEntry->getTag() == dwarf::DW_TAG_module;
+       CurEntry = getParent(CurEntry).getDebugInfoEntry()) {
+    StringRef Name = dwarf::toStringRef(find(CurEntry, dwarf::DW_AT_name));
+    if (Name.empty())
+      return false;
+    Names.push_back(Name);
+  }
+
+  for (StringRef Name : reverse(Names)) {
+    Path.append(Name.begin(), Name.end());
+    Path.push_back('\0');
+  }
+
+  return true;
+}
+
+void CompileUnit::noteModuleAnchors() {
+  const DWARFDebugInfoEntry *UnitEntry = getUnitDIE().getDebugInfoEntry();
+  assert(UnitEntry && "unit reached cloning without loaded DIEs");
+
+  // Find the root, ignoring the skeletons for the imported module.
+  const DWARFDebugInfoEntry *Root = nullptr;
+  for (const DWARFDebugInfoEntry *CurChild = getFirstChildEntry(UnitEntry);
+       CurChild && CurChild->getAbbreviationDeclarationPtr();
+       CurChild = getSiblingEntry(CurChild)) {
+    if (CurChild->getTag() == dwarf::DW_TAG_module &&
+        dwarf::toStringRef(find(CurChild, dwarf::DW_AT_name)) ==
+            getClangModuleName()) {
+      Root = CurChild;
+      break;
+    }
+  }
+  if (!Root)
+    return;
+
+  SmallString<128> Path;
+
+  // Submodules nest inside the module which declares them, so following the
+  // DW_TAG_module chain down from the root visits every module this unit
+  // describes, without walking the types they contain.
+  SmallVector<const DWARFDebugInfoEntry *, 4> WorkList = {Root};
+  while (!WorkList.empty()) {
+    const DWARFDebugInfoEntry *DieEntry = WorkList.pop_back_val();
+
+    for (const DWARFDebugInfoEntry *CurChild = getFirstChildEntry(DieEntry);
+         CurChild && CurChild->getAbbreviationDeclarationPtr();
+         CurChild = getSiblingEntry(CurChild))
+      if (CurChild->getTag() == dwarf::DW_TAG_module)
+        WorkList.push_back(CurChild);
+
+    Path.clear();
+    if (!getModulePath(DieEntry, Path))
+      continue;
+
+    ModuleAnchor Anchor;
+    Anchor.Priority = getPriority();
+    if (getDIEInfo(DieEntry).needToPlaceInTypeTable())
+      Anchor.TypeName = getDieTypeEntry(DieEntry);
+    if (!Anchor.TypeName) {
+      // Don't create a dangling reference to a DIE without a type entry or
+      // output offset.
+      uint64_t OutOffset = getDieOutOffset(DieEntry);
+      if (!OutOffset)
+        continue;
+      Anchor.Section = &getSectionDescriptor(DebugSectionKind::DebugInfo);
+      Anchor.LocalOffset = OutOffset;
+    }
+
+    getGlobalData().getModulePool().set(Path, Anchor);
+  }
+}
+
 /// Collect references to parseable Swift interfaces in imported
 /// DW_TAG_module blocks.
 void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
@@ -269,11 +349,16 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
       dwarf::toStringRef(find(DieEntry, dwarf::DW_AT_LLVM_include_path));
   if (!Path.ends_with(".swiftinterface"))
     return;
+  // Undo prefix mapping before comparing against the SDK and toolchain.
+  std::string RemappedPath = File.remapPath(Path);
+  Path = RemappedPath;
   // Don't track interfaces that are part of the SDK.
   StringRef SysRoot =
       dwarf::toStringRef(find(DieEntry, dwarf::DW_AT_LLVM_sysroot));
   if (SysRoot.empty())
     SysRoot = getSysRoot();
+  std::string RemappedSysRoot = File.remapPath(SysRoot);
+  SysRoot = RemappedSysRoot;
   if (!SysRoot.empty() && Path.starts_with(SysRoot))
     return;
   // Don't track interfaces that are part of the toolchain.
@@ -292,10 +377,9 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
 
     // The prepend path is applied later when copying.
     SmallString<128> ResolvedPath;
-    if (sys::path::is_relative(Path))
-      sys::path::append(
-          ResolvedPath,
-          dwarf::toString(getUnitDIE().find(dwarf::DW_AT_comp_dir), ""));
+    if (!isPathAbsoluteOnWindowsOrPosix(Path))
+      ResolvedPath = File.remapPath(
+          dwarf::toStringRef(getUnitDIE().find(dwarf::DW_AT_comp_dir)));
     sys::path::append(ResolvedPath, Path);
 
     // Stage the entry. It will be merged into the shared
@@ -364,6 +448,15 @@ void CompileUnit::updateDieRefPatchesWithClonedOffsets() {
     (*DebugInfoSection)
         ->ListDebugULEB128DieRefPatch.forEach(
             [&](DebugULEB128DieRefPatch &Patch) {
+              /// Replace stored DIE indexes with DIE output offsets.
+              Patch.RefDieIdxOrClonedOffset =
+                  Patch.RefCU.getPointer()->getDieOutOffset(
+                      Patch.RefDieIdxOrClonedOffset);
+            });
+
+    (*DebugInfoSection)
+        ->ListDebugDieModuleRefPatch.forEach(
+            [&](DebugDieModuleRefPatch &Patch) {
               /// Replace stored DIE indexes with DIE output offsets.
               Patch.RefDieIdxOrClonedOffset =
                   Patch.RefCU.getPointer()->getDieOutOffset(
@@ -521,10 +614,11 @@ void CompileUnit::emitLocations(DebugSectionKind LocationSectionKind) {
 
         DWARFExpression InputExpression(Data, OrigUnit.getAddressByteSize(),
                                         OrigUnit.getFormParams().Format);
-        cloneDieAttrExpression(InputExpression,
-                               LinkedExpression.Expression.Expr,
-                               OutLocationSection, Patch.AddrAdjustmentValue,
-                               LinkedExpression.Patches);
+        cloneDieAttrExpression(
+            InputExpression, LinkedExpression.Expression.Expr,
+            OutLocationSection, Patch.AddrAdjustmentValue,
+            LinkedExpression.Patches, /*Cloned=*/nullptr,
+            getContainingFile().Addresses->needToSaveValidRelocs());
 
         LinkedLocationExpressions.push_back({LinkedExpression});
       }
@@ -663,9 +757,8 @@ Error CompileUnit::emitDebugAddrSection() {
   if (getVersion() < 5)
     return Error::success();
 
-  if (DebugAddrIndexMap.empty())
-    return Error::success();
-
+  // Every cloned unit root has DW_AT_addr_base, so emit the table even when it
+  // is empty.
   SectionDescriptor &OutAddrSection =
       getOrCreateSectionDescriptor(DebugSectionKind::DebugAddr);
 
@@ -685,6 +778,7 @@ Error CompileUnit::emitDebugAddrSection() {
   OutAddrSection.emitIntVal(0, 1);
 
   // Emit addresses.
+  RelocFixups.setDebugAddrTableOffset(OutAddrSection.OS.tell());
   for (uint64_t AddrValue : DebugAddrIndexMap.getValues())
     OutAddrSection.emitIntVal(AddrValue, getFormParams().AddrSize);
 
@@ -696,6 +790,31 @@ Error CompileUnit::emitDebugAddrSection() {
       OutAddrSection.OS.tell() - OffsetAfterSectionLength);
 
   return Error::success();
+}
+
+void CompileUnit::saveRelocations() {
+  if (RelocFixups.empty())
+    return;
+  SavedRelocsUnitOffset = getOrigUnit().getOffset();
+  RelocFixups.save(*getContainingFile().Addresses, *SavedRelocsUnitOffset,
+                   getFormParams().AddrSize);
+  RelocFixups.clear();
+}
+
+void CompileUnit::reportUnitOffsets() {
+  const DWARFFile::UnitOffsetsCallbackTy &Report =
+      getContainingFile().UnitOffsetsFunc;
+  if (!SavedRelocsUnitOffset || !Report)
+    return;
+
+  uint64_t DebugAddrOffset = 0;
+  std::optional<SectionDescriptor *> DebugAddr =
+      tryGetSectionDescriptor(DebugSectionKind::DebugAddr);
+  if (DebugAddr)
+    DebugAddrOffset = (*DebugAddr)->StartOffset;
+  Report(*SavedRelocsUnitOffset,
+         getSectionDescriptor(DebugSectionKind::DebugInfo).StartOffset,
+         DebugAddrOffset);
 }
 
 Error CompileUnit::cloneAndEmitRanges() {
@@ -1121,14 +1240,47 @@ void CompileUnit::cloneDieAttrExpression(
     const DWARFExpression &InputExpression,
     SmallVectorImpl<uint8_t> &OutputExpression, SectionDescriptor &Section,
     std::optional<int64_t> VarAddressAdjustment,
-    OffsetsPtrVector &PatchesOffsets) {
+    OffsetsPtrVector &PatchesOffsets,
+    RelocationFixups::ClonedExpression *Cloned, bool KeepAddrIndices) {
   using Encoding = DWARFExpression::Operation::Encoding;
 
   DWARFUnit &OrigUnit = getOrigUnit();
   uint8_t OrigAddressByteSize = OrigUnit.getAddressByteSize();
 
+  auto NoteDebugAddrOperand = [&](const DWARFExpression::Operation &Op) {
+    if (!Cloned)
+      return;
+    std::optional<uint64_t> AddrOffset =
+        OrigUnit.getIndexedAddressOffset(Op.getRawOperand(0));
+    if (AddrOffset)
+      Cloned->noteDebugAddrOperand(*AddrOffset, OrigAddressByteSize,
+                                   OutputExpression.size());
+  };
+
+  auto RelocateAddress = [&](const DWARFExpression::Operation &Op,
+                             uint64_t Address) {
+    AddressesMap &Addresses = *getContainingFile().Addresses;
+    std::optional<int64_t> Adjustment =
+        Addresses.getAddrIndexRelocAdjustment(OrigUnit, Op, /*Verbose=*/false);
+    return Address + Adjustment.value_or(VarAddressAdjustment.value_or(0));
+  };
+
   uint64_t OpOffset = 0;
   for (auto &Op : InputExpression) {
+    if (Op.isError()) {
+      // The operation could not be decoded, so neither it nor anything after
+      // it can be located. Its end offset is the offset it started at, so the
+      // slice copied below would be empty and the rest of the expression
+      // would be silently dropped. Preserve the remaining bytes instead.
+      warn("cannot decode a DW_OP, copying the rest of the expression "
+           "unmodified.");
+      StringRef Bytes = InputExpression.getData().substr(OpOffset);
+      if (Cloned)
+        Cloned->noteCopiedBytes(OpOffset, Bytes.size(),
+                                OutputExpression.size());
+      OutputExpression.append(Bytes.begin(), Bytes.end());
+      return;
+    }
     auto Desc = Op.getDescription();
     // DW_OP_const_type is variable-length and has 3
     // operands. Thus far we only support 2.
@@ -1189,6 +1341,23 @@ void CompileUnit::cloneDieAttrExpression(
       assert(RealSize == ULEBsize && "padding failed");
       ArrayRef<uint8_t> ULEBbytes(ULEB, ULEBsize);
       OutputExpression.append(ULEBbytes.begin(), ULEBbytes.end());
+    } else if (KeepAddrIndices && (Op.getCode() == dwarf::DW_OP_addrx ||
+                                   Op.getCode() == dwarf::DW_OP_constx)) {
+      std::optional<object::SectionedAddress> SA =
+          OrigUnit.getAddrOffsetSectionItem(Op.getRawOperand(0));
+      if (SA) {
+        uint64_t Index = getDebugAddrIndex(RelocateAddress(Op, SA->Address));
+        OutputExpression.push_back(Op.getCode());
+        uint8_t ULEB[16];
+        unsigned ULEBSize = encodeULEB128(Index, ULEB);
+        OutputExpression.append(ULEB, ULEB + ULEBSize);
+        std::optional<uint64_t> AddrOffset =
+            OrigUnit.getIndexedAddressOffset(Op.getRawOperand(0));
+        if (AddrOffset)
+          RelocFixups.noteDebugAddrEntry({*AddrOffset, Index});
+      } else
+        warn("cannot read " + dwarf::OperationEncodingString(Op.getCode()) +
+             " operand.");
     } else if (!getGlobalData().getOptions().UpdateIndexTablesOnly &&
                Op.getCode() == dwarf::DW_OP_addrx) {
       if (std::optional<object::SectionedAddress> SA =
@@ -1198,12 +1367,13 @@ void CompileUnit::cloneDieAttrExpression(
         // Argument of DW_OP_addrx should be relocated here as it is not
         // processed by applyValidRelocs.
         OutputExpression.push_back(dwarf::DW_OP_addr);
-        uint64_t LinkedAddress = SA->Address + VarAddressAdjustment.value_or(0);
+        uint64_t LinkedAddress = RelocateAddress(Op, SA->Address);
         if (getEndianness() != llvm::endianness::native)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
             reinterpret_cast<const uint8_t *>(&LinkedAddress),
             OrigAddressByteSize);
+        NoteDebugAddrOperand(Op);
         OutputExpression.append(AddressBytes.begin(), AddressBytes.end());
       } else
         warn("cann't read DW_OP_addrx operand.");
@@ -1234,13 +1404,13 @@ void CompileUnit::cloneDieAttrExpression(
 
         if (OutOperandKind) {
           OutputExpression.push_back(*OutOperandKind);
-          uint64_t LinkedAddress =
-              SA->Address + VarAddressAdjustment.value_or(0);
+          uint64_t LinkedAddress = RelocateAddress(Op, SA->Address);
           if (getEndianness() != llvm::endianness::native)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
               reinterpret_cast<const uint8_t *>(&LinkedAddress),
               OrigAddressByteSize);
+          NoteDebugAddrOperand(Op);
           OutputExpression.append(AddressBytes.begin(), AddressBytes.end());
         }
       } else
@@ -1249,6 +1419,9 @@ void CompileUnit::cloneDieAttrExpression(
       // Copy over everything else unmodified.
       StringRef Bytes =
           InputExpression.getData().slice(OpOffset, Op.getEndOffset());
+      if (Cloned)
+        Cloned->noteCopiedBytes(OpOffset, Bytes.size(),
+                                OutputExpression.size());
       OutputExpression.append(Bytes.begin(), Bytes.end());
     }
     OpOffset = Op.getEndOffset();
@@ -1860,6 +2033,7 @@ CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
 
       std::string FileName = *Name;
       if (isPathAbsoluteOnWindowsOrPosix(FileName)) {
+        FileName = File.remapPath(FileName);
         FileNamesCache::iterator FileData =
             FileNames
                 .insert({FileIdx,
@@ -1915,7 +2089,7 @@ CompileUnit::getDirAndFilenameFromLineTable(uint64_t FileIdx) {
           FileNames
               .insert({FileIdx,
                        std::make_unique<std::pair<std::string, std::string>>(
-                           std::string(FilePath), std::move(FileName))})
+                           File.remapPath(FilePath), std::move(FileName))})
               .first;
       return {{StringRef(FileData->second->first),
                StringRef(FileData->second->second)}};
@@ -1982,10 +2156,16 @@ TypeUnit *CompileUnit::OutputUnitVariantPtr::getAsTypeUnit() {
   return cast<TypeUnit *>(Ptr);
 }
 
-bool CompileUnit::resolveDependenciesAndMarkLiveness(
-    bool InterCUProcessingStarted, std::atomic<bool> &HasNewInterconnectedCUs) {
+void CompileUnit::collectLiveRoots() {
   if (!Dependencies)
     Dependencies.reset(new DependencyTracker(*this));
+
+  Dependencies->collectLiveRoots();
+}
+
+bool CompileUnit::resolveDependenciesAndMarkLiveness(
+    bool InterCUProcessingStarted, std::atomic<bool> &HasNewInterconnectedCUs) {
+  assert(Dependencies.get());
 
   return Dependencies->resolveDependenciesAndMarkLiveness(
       InterCUProcessingStarted, HasNewInterconnectedCUs);

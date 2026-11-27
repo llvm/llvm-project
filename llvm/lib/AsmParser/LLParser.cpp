@@ -31,6 +31,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/FunctionLocalMetadata.h"
 #include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/InlineAsm.h"
@@ -70,6 +71,52 @@ static std::string getTypeString(Type *T) {
   raw_string_ostream Tmp(Result);
   Tmp << *T;
   return Tmp.str();
+}
+
+/// Return whether skipped trivia contains a block comment that crosses the
+/// boundary between two metadata definitions.
+static bool blockCommentCrossesBoundary(SMLoc BeginLoc, SMLoc EndLoc,
+                                        SMLoc BoundaryLoc) {
+  const char *Begin = BeginLoc.getPointer();
+  const char *End = EndLoc.getPointer();
+  const char *Boundary = BoundaryLoc.getPointer();
+  const char *BlockCommentStart = nullptr;
+  bool InLineComment = false;
+
+  for (const char *Ptr = Begin; Ptr < End;) {
+    if (BlockCommentStart) {
+      if (Ptr + 1 < End && Ptr[0] == '*' && Ptr[1] == '/') {
+        Ptr += 2;
+        if (BlockCommentStart < Boundary && Ptr > Boundary)
+          return true;
+        BlockCommentStart = nullptr;
+        continue;
+      }
+      ++Ptr;
+      continue;
+    }
+
+    if (InLineComment) {
+      if (*Ptr == '\n' || *Ptr == '\r')
+        InLineComment = false;
+      ++Ptr;
+      continue;
+    }
+
+    if (*Ptr == ';') {
+      InLineComment = true;
+      ++Ptr;
+      continue;
+    }
+    if (Ptr + 1 < End && Ptr[0] == '/' && Ptr[1] == '*') {
+      BlockCommentStart = Ptr;
+      Ptr += 2;
+      continue;
+    }
+    ++Ptr;
+  }
+
+  return BlockCommentStart && BlockCommentStart < Boundary && End > Boundary;
 }
 
 /// Run: module ::= toplevelentity*
@@ -136,6 +183,43 @@ bool LLParser::parseDIExpressionBodyAtBeginning(MDNode *&Result, unsigned &Read,
   return Status;
 }
 
+bool LLParser::parseMetadataDefinitions(SlotMapping &Slots,
+                                        ArrayRef<SMLoc> DefinitionEnds) {
+  restoreParsingState(&Slots);
+  Lex.Lex();
+
+  for (SMLoc End : DefinitionEnds) {
+    if (Lex.getLoc().getPointer() >= End.getPointer())
+      return error(End, "expected end of metadata definition");
+    if (Lex.getKind() != lltok::exclaim)
+      return tokError("expected a metadata definition");
+    if (parseStandaloneMetadata())
+      return true;
+    if (Lex.getPrevTokEndLoc().getPointer() > End.getPointer() ||
+        (Lex.getKind() != lltok::Eof &&
+         Lex.getLoc().getPointer() < End.getPointer()) ||
+        blockCommentCrossesBoundary(Lex.getPrevTokEndLoc(), Lex.getLoc(), End))
+      return error(End, "expected end of metadata definition");
+  }
+
+  if (Lex.getKind() != lltok::Eof)
+    return tokError("expected end of metadata definitions");
+
+  if (!ForwardRefMDNodes.empty())
+    return error(ForwardRefMDNodes.begin()->second.second,
+                 "use of undefined metadata '!" +
+                     Twine(ForwardRefMDNodes.begin()->first) + "'");
+
+  for (auto &[_, MD] : NumberedMetadata)
+    if (MD && !MD->isResolved())
+      MD->resolveCycles();
+  DISubprogram::cleanupRetainedNodes(NewDistinctSPs);
+  NewDistinctSPs.clear();
+
+  Slots.MetadataNodes = std::move(NumberedMetadata);
+  return false;
+}
+
 void LLParser::restoreParsingState(const SlotMapping *Slots) {
   if (!Slots)
     return;
@@ -192,6 +276,15 @@ void LLParser::dropUnknownMetadataReferences() {
                  [](const auto &E) { return std::get<2>(E)->isTemporary(); });
   llvm::erase_if(PendingDbgInsts,
                  [](const auto &E) { return std::get<2>(E)->isTemporary(); });
+
+  for (auto &[FLContext, TempScopes] : FLForwardRefScopes) {
+    llvm::erase_if(TempScopes,
+                   [](const auto &E) { return std::get<1>(E)->isTemporary(); });
+  }
+  for (auto &[FLContext, TempFLContexts] : FLForwardRefFLMDs) {
+    llvm::erase_if(TempFLContexts,
+                   [](const auto &E) { return std::get<1>(E)->isTemporary(); });
+  }
 
   for (const auto &[ID, Info] : make_early_inc_range(ForwardRefMDNodes)) {
     // Check whether there is only a single use left, which would be in our
@@ -355,6 +448,17 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   }
   PendingDbgInsts.clear();
 
+  // Apply pending scopes/FLContext references.
+  for (auto &[FLContext, TempScopes] : FLForwardRefScopes)
+    for (auto [ScopeIdx, TempScope] : TempScopes)
+      FLContext->Scopes[ScopeIdx].Scope = dyn_cast<DILocalScope>(TempScope);
+  FLForwardRefScopes.clear();
+  for (auto &[FLContext, TempFLContexts] : FLForwardRefFLMDs)
+    for (auto [InlinedCallIdx, TempFLContext] : TempFLContexts)
+      FLContext->InlinedCalls[InlinedCallIdx].InlineeContext =
+          dyn_cast<MDFunctionLocalContext>(TempFLContext);
+  FLForwardRefFLMDs.clear();
+
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     if (StringRef(Name).starts_with("llvm.")) {
       Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(Name);
@@ -455,18 +559,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   DISubprogram::cleanupRetainedNodes(NewDistinctSPs);
   NewDistinctSPs.clear();
 
-  for (auto *Inst : InstsWithTBAATag) {
-    MDNode *MD = Inst->getMetadata(LLVMContext::MD_tbaa);
-    // With incomplete IR, the tbaa metadata may have been dropped.
-    if (!AllowIncompleteIR)
-      assert(MD && "UpgradeInstWithTBAATag should have a TBAA tag");
-    if (MD) {
-      auto *UpgradedMD = UpgradeTBAANode(*MD);
-      if (MD != UpgradedMD)
-        Inst->setMetadata(LLVMContext::MD_tbaa, UpgradedMD);
-    }
-  }
-
   // Look for intrinsic functions and CallInst that need to be upgraded.  We use
   // make_early_inc_range here because we may remove some functions.
   for (Function &F : llvm::make_early_inc_range(*M))
@@ -479,6 +571,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   UpgradeCFIFunctionsMetadata(*M);
   UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
+  UpgradeInstructionMetadata(*M);
   copyModuleAttrToFunctions(*M);
 
   if (!Slots)
@@ -1120,10 +1213,14 @@ bool LLParser::skipModuleSummaryEntry() {
   if (Lex.getKind() != lltok::kw_gv && Lex.getKind() != lltok::kw_module &&
       Lex.getKind() != lltok::kw_typeid &&
       Lex.getKind() != lltok::kw_typeidCompatibleVTable &&
-      Lex.getKind() != lltok::kw_flags && Lex.getKind() != lltok::kw_blockcount)
+      Lex.getKind() != lltok::kw_flags &&
+      Lex.getKind() != lltok::kw_blockcount &&
+      Lex.getKind() != lltok::kw_cfiFunctionDefs &&
+      Lex.getKind() != lltok::kw_cfiFunctionDecls)
     return tokError("Expected 'gv', 'module', 'typeid', "
-                    "'typeidCompatibleVTable', 'flags' or 'blockcount' at the "
-                    "start of summary entry");
+                    "'typeidCompatibleVTable', 'flags', 'blockcount', "
+                    "'cfiFunctionDefs' or 'cfiFunctionDecls' at the start of "
+                    "summary entry");
   if (Lex.getKind() == lltok::kw_flags)
     return parseSummaryIndexFlags();
   if (Lex.getKind() == lltok::kw_blockcount)
@@ -1191,6 +1288,10 @@ bool LLParser::parseSummaryEntry() {
     break;
   case lltok::kw_blockcount:
     result = parseBlockCount();
+    break;
+  case lltok::kw_cfiFunctionDefs:
+  case lltok::kw_cfiFunctionDecls:
+    result = parseCfiFunctions();
     break;
   default:
     result = error(Lex.getLoc(), "unexpected summary kind");
@@ -2276,6 +2377,7 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'msp430_intrcc'
 ///   ::= 'avr_intrcc'
 ///   ::= 'avr_signalcc'
+///   ::= 'avr_builtincc'
 ///   ::= 'ptx_kernel'
 ///   ::= 'ptx_device'
 ///   ::= 'spir_func'
@@ -2305,6 +2407,7 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'amdgpu_kernel'
 ///   ::= 'tailcc'
 ///   ::= 'm68k_rtdcc'
+///   ::= 'wasm_emscripten_invokecc'
 ///   ::= 'graalcc'
 ///   ::= 'riscv_vector_cc'
 ///   ::= 'riscv_vls_cc'
@@ -2341,6 +2444,9 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_msp430_intrcc:  CC = CallingConv::MSP430_INTR; break;
   case lltok::kw_avr_intrcc:     CC = CallingConv::AVR_INTR; break;
   case lltok::kw_avr_signalcc:   CC = CallingConv::AVR_SIGNAL; break;
+  case lltok::kw_avr_builtincc:
+    CC = CallingConv::AVR_BUILTIN;
+    break;
   case lltok::kw_ptx_kernel:     CC = CallingConv::PTX_Kernel; break;
   case lltok::kw_ptx_device:     CC = CallingConv::PTX_Device; break;
   case lltok::kw_spir_kernel:    CC = CallingConv::SPIR_KERNEL; break;
@@ -2383,6 +2489,9 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
     break;
   case lltok::kw_tailcc:         CC = CallingConv::Tail; break;
   case lltok::kw_m68k_rtdcc:     CC = CallingConv::M68k_RTD; break;
+  case lltok::kw_wasm_emscripten_invokecc:
+    CC = CallingConv::WASM_EmscriptenInvoke;
+    break;
   case lltok::kw_graalcc:        CC = CallingConv::GRAAL; break;
   case lltok::kw_riscv_vector_cc:
     CC = CallingConv::RISCV_VectorCall;
@@ -2468,9 +2577,6 @@ bool LLParser::parseInstructionMetadata(Instruction &Inst) {
       PendingDbgInsts.emplace_back(Loc, &Inst, N);
     else
       Inst.setMetadata(MDK, N);
-
-    if (MDK == LLVMContext::MD_tbaa)
-      InstsWithTBAATag.push_back(&Inst);
 
     // If this is the end of the list, we're done.
   } while (EatIfPresent(lltok::comma));
@@ -4833,8 +4939,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
         }
       }
 
-      SmallPtrSet<Type*, 4> Visited;
-      if (!Indices.empty() && !Ty->isSized(&Visited))
+      if (!Indices.empty() && !Ty->isSized())
         return error(ID.Loc, "base element of getelementptr must be sized");
 
       if (!ConstantExpr::isSupportedGetElementPtr(Ty))
@@ -4843,8 +4948,10 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       if (!GetElementPtrInst::getIndexedType(Ty, Indices))
         return error(ID.Loc, "invalid getelementptr indices");
 
+      LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
       ID.ConstantVal =
           ConstantExpr::getGetElementPtr(Ty, Elts[0], Indices, NW, InRange);
+      LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
     } else if (Opc == Instruction::ShuffleVector) {
       if (Elts.size() != 3)
         return error(ID.Loc, "expected three operands to shufflevector");
@@ -5126,6 +5233,13 @@ struct MDField : public MDFieldImpl<Metadata *> {
   bool AllowNull;
 
   MDField(bool AllowNull = true) : ImplTy(nullptr), AllowNull(AllowNull) {}
+};
+
+// Similar to MDField, but will only accept MDNode arguments (!<num>).
+struct MDNodeField : public MDFieldImpl<MDNode *> {
+  bool AllowNull;
+
+  MDNodeField(bool AllowNull = true) : ImplTy(nullptr), AllowNull(AllowNull) {}
 };
 
 struct MDStringField : public MDFieldImpl<MDString *> {
@@ -5586,6 +5700,24 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name, MDBoolField &Result) {
 }
 
 template <>
+bool LLParser::parseMDField(LocTy Loc, StringRef Name, MDNodeField &Result) {
+  if (Lex.getKind() == lltok::kw_null) {
+    if (!Result.AllowNull)
+      return tokError("'" + Name + "' cannot be null");
+    Lex.Lex();
+    Result.assign(nullptr);
+    return false;
+  }
+
+  MDNode *MD;
+  if (parseMDNode(MD))
+    return true;
+
+  Result.assign(MD);
+  return false;
+}
+
+template <>
 bool LLParser::parseMDField(LocTy Loc, StringRef Name, MDField &Result) {
   if (Lex.getKind() == lltok::kw_null) {
     if (!Result.AllowNull)
@@ -5714,7 +5846,9 @@ bool LLParser::parseMDFieldsImplBody(ParserTy ParseField) {
 
 template <class ParserTy>
 bool LLParser::parseMDFieldsImpl(ParserTy ParseField, LocTy &ClosingLoc) {
-  assert(Lex.getKind() == lltok::MetadataVar && "Expected metadata type name");
+  assert((Lex.getKind() == lltok::MetadataVar ||
+          Lex.getKind() == lltok::FLMDType) &&
+         "Expected metadata type name");
   Lex.Lex();
 
   if (parseToken(lltok::lparen, "expected '(' here"))
@@ -5773,6 +5907,151 @@ bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct) {
 #define GET_OR_DISTINCT(CLASS, ARGS)                                           \
   (IsDistinct ? CLASS::getDistinct ARGS : CLASS::get ARGS)
 
+bool LLParser::parseFLMDEntry(LocTy Loc, FLScope &Result, uint32_t Index,
+                              MDFunctionLocalContext *Context) {
+  if (Lex.getKind() != lltok::FLMDType || Lex.getStrVal() != "scope")
+    return tokError("expected !!scope");
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  REQUIRED(scope, MDNodeField, (/* AllowNull */ false));
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+  // If this is a forward reference, track it elsewhere, as FLScope does not use
+  // a tracking metadata ref.
+  if (scope.Val) {
+    FLForwardRefScopes.try_emplace(Context).first->second.emplace_back(
+        Index, scope.Val);
+  }
+  Result = FLScope(nullptr);
+  return false;
+}
+
+bool LLParser::parseFLMDEntry(LocTy Loc, FLSrcLoc &Result, uint32_t Index,
+                              MDFunctionLocalContext *Context) {
+  if (Lex.getKind() != lltok::FLMDType || Lex.getStrVal() != "srcLoc")
+    return tokError("expected !!srcLoc");
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  REQUIRED(line, LineField, );                                                 \
+  OPTIONAL(column, ColumnField, );                                             \
+  REQUIRED(scope, MDUnsignedField, (0, UINT16_MAX - 1));
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+  Result = FLSrcLoc(line.Val, column.Val, scope.Val);
+  return false;
+}
+
+bool LLParser::parseFLMDEntry(LocTy Loc, FLInlinedCall &Result, uint32_t Index,
+                              MDFunctionLocalContext *Context) {
+  if (Lex.getKind() != lltok::FLMDType || Lex.getStrVal() != "inlinedCall")
+    return tokError("expected !!inlinedCall");
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(srcLoc, MDUnsignedField, (0, UINT32_MAX - 1));                      \
+  OPTIONAL(inlinedAt, MDUnsignedField, (0, UINT16_MAX - 1));                   \
+  OPTIONAL(uniquable, MDBoolField, (false));                                   \
+  REQUIRED(inlineeContext, MDNodeField, (/* AllowNull */ false));
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+  // There isn't a valid unsigned default value for FLIndex fields, so manually
+  // check the 'Seen' field to check whether we want to use them.
+  FLIndex<FLSrcLoc> ActualSrcLoc;
+  if (srcLoc.Seen)
+    ActualSrcLoc = FLIndex<FLSrcLoc>(srcLoc.Val);
+  FLIndex<FLInlinedCall> ActualInlinedAt;
+  if (inlinedAt.Seen)
+    ActualInlinedAt = FLIndex<FLInlinedCall>(inlinedAt.Val);
+  if (inlineeContext.Val) {
+    FLForwardRefFLMDs.try_emplace(Context).first->second.emplace_back(
+        Index, inlineeContext.Val);
+  }
+  Result = FLInlinedCall(ActualSrcLoc, ActualInlinedAt, nullptr, uniquable.Val);
+  return false;
+}
+
+template <class FLMDTy>
+bool LLParser::parseFLMDStorage(LocTy Loc, SmallVectorImpl<FLMDTy> &Result,
+                                MDFunctionLocalContext *Context) {
+  if (parseToken(lltok::lsquare, "expected '[' at FLMD storage field"))
+    return true;
+
+  // Empty storage array.
+  if (Lex.getKind() == lltok::rsquare) {
+    Lex.Lex();
+    return false;
+  }
+  uint32_t EntryIndex = 0;
+  FLMDTy NextEntry;
+  if (parseFLMDEntry(Loc, NextEntry, EntryIndex++, Context))
+    return true;
+  Result.push_back(NextEntry);
+  while (Lex.getKind() != lltok::rsquare) {
+    if (parseToken(lltok::comma, "expected ',' between FLMD storage entries"))
+      return true;
+    // For ergonomic reasons, we allow a trailing comma in storage arrays.
+    if (Lex.getKind() == lltok::rsquare)
+      break;
+    if (parseFLMDEntry(Loc, NextEntry, EntryIndex++, Context))
+      return true;
+    Result.push_back(NextEntry);
+  }
+  Lex.Lex();
+  return false;
+}
+
+/// parseMDFunctionLocalContext:
+///   ::= !MDFunctionLocalContext(nonDebug: false, scopes: [...],
+///                               srcLocs: [...], inlinedCalls: [...])
+bool LLParser::parseMDFunctionLocalContext(MDNode *&Result, bool IsDistinct) {
+  if (!IsDistinct)
+    return tokError("missing 'distinct', required for "
+                    "!MDFunctionLocalContext()");
+  // There is an awkward order of operations here: we don't have all the
+  // constructor arguments for MDFunctionLocalContext yet (missing NonDebug),
+  // but the storage field parsing logic is much simpler if we can pass a valid
+  // context to the parser, so we use a deferred approach.
+  MDFunctionLocalContext *FLMD = MDFunctionLocalContext::getDistinct(Context);
+  MDBoolField NonDebug(false);
+  bool SeenScopes = false;
+  SmallVector<FLScope> ScopesStorage;
+  bool SeenSrcLocs = false;
+  SmallVector<FLSrcLoc> SrcLocsStorage;
+  bool SeenInlinedCalls = false;
+  SmallVector<FLInlinedCall> InlinedCallsStorage;
+  auto ParseStorageField = [&](StringRef Name, bool &Seen, auto &Storage) {
+    if (Seen)
+      return tokError("field '" + Name +
+                      "' cannot be specified more than once");
+    Seen = true;
+
+    LocTy Loc = Lex.getLoc();
+    Lex.Lex();
+    return parseFLMDStorage(Loc, Storage, FLMD);
+  };
+  LocTy ClosingLoc;
+  if (parseMDFieldsImpl(
+          [&]() {
+            StringRef Label = Lex.getStrVal();
+            if (Label == "nonDebug")
+              return parseMDField("nonDebug", NonDebug);
+            if (Label == "scopes")
+              return ParseStorageField("scopes", SeenScopes, ScopesStorage);
+            if (Label == "srcLocs")
+              return ParseStorageField("srcLocs", SeenSrcLocs, SrcLocsStorage);
+            if (Label == "inlinedCalls")
+              return ParseStorageField("inlinedCalls", SeenInlinedCalls,
+                                       InlinedCallsStorage);
+            return tokError(Twine("invalid field '") + Label + "'");
+          },
+          ClosingLoc))
+    return true;
+
+  // Write to FLMD fields directly to construct it efficiently.
+  FLMD->setNonDebug(NonDebug.Val);
+  FLMD->SrcLocs.append(SrcLocsStorage);
+  FLMD->Scopes.append(ScopesStorage);
+  FLMD->InlinedCalls.append(InlinedCallsStorage);
+  Result = FLMD;
+  return false;
+}
+
 /// parseDILocationFields:
 ///   ::= !DILocation(line: 43, column: 8, scope: !5, inlinedAt: !6,
 ///   isImplicitCode: true, atomGroup: 1, atomRank: 1)
@@ -5784,13 +6063,49 @@ bool LLParser::parseDILocation(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(inlinedAt, MDField, );                                              \
   OPTIONAL(isImplicitCode, MDBoolField, (false));                              \
   OPTIONAL(atomGroup, MDUnsignedField, (0, UINT64_MAX));                       \
-  OPTIONAL(atomRank, MDUnsignedField, (0, UINT8_MAX));
+  OPTIONAL(atomRank, MDUnsignedField, (0, UINT8_MAX));                         \
+  OPTIONAL(irlayers, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result = GET_OR_DISTINCT(
-      DILocation, (Context, line.Val, column.Val, scope.Val, inlinedAt.Val,
-                   isImplicitCode.Val, atomGroup.Val, atomRank.Val));
+  Result =
+      GET_OR_DISTINCT(DILocation, (Context, line.Val, column.Val, scope.Val,
+                                   inlinedAt.Val, isImplicitCode.Val,
+                                   atomGroup.Val, atomRank.Val, irlayers.Val));
+  return false;
+}
+
+bool LLParser::parseDILayerLoc(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(line, LineField, );                                                 \
+  OPTIONAL(column, ColumnField, );                                             \
+  REQUIRED(file, MDField, (/* AllowNull */ false));                            \
+  REQUIRED(kind, MDStringField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  Result = GET_OR_DISTINCT(DILayerLoc,
+                           (Context, kind.Val, file.Val, line.Val, column.Val));
+  return false;
+}
+
+bool LLParser::parseDILayerLocList(MDNode *&Result, bool IsDistinct) {
+  // ::= !DILayerLocList(!a, !b, ...)
+  Lex.Lex(); // eat the '!DILayerLocList' type name
+  if (parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+  SmallVector<Metadata *, 4> Layers;
+  if (!EatIfPresent(lltok::rparen)) {
+    do {
+      Metadata *MD;
+      if (parseMetadata(MD, nullptr))
+        return true;
+      Layers.push_back(MD);
+    } while (EatIfPresent(lltok::comma));
+    if (parseToken(lltok::rparen, "expected ')' here"))
+      return true;
+  }
+  Result = GET_OR_DISTINCT(DILayerLocList, (Context, Layers));
   return false;
 }
 
@@ -6035,7 +6350,8 @@ bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(stringLocationExpression, MDField, );                               \
   OPTIONAL(size, MDUnsignedOrMDField, (0, UINT64_MAX));                        \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
-  OPTIONAL(encoding, DwarfAttEncodingField, );
+  OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
+  OPTIONAL(charType, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -6043,7 +6359,7 @@ bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
       DIStringType,
       (Context, tag.Val, name.Val, stringLength.Val, stringLengthExpression.Val,
        stringLocationExpression.Val, size.getValueAsMetadata(Context),
-       align.Val, encoding.Val));
+       align.Val, encoding.Val, charType.Val));
   return false;
 }
 
@@ -6697,6 +7013,24 @@ bool LLParser::parseDIObjCProperty(MDNode *&Result, bool IsDistinct) {
   Result = GET_OR_DISTINCT(DIObjCProperty,
                            (Context, name.Val, file.Val, line.Val, getter.Val,
                             setter.Val, attributes.Val, type.Val));
+  return false;
+}
+
+/// parseDIProperty:
+///   ::= !DIProperty(name: "x", file: !1, line: 7, type: !2,
+///                   backing_storage: !3)
+bool LLParser::parseDIProperty(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(name, MDStringField, );                                             \
+  OPTIONAL(file, MDField, );                                                   \
+  OPTIONAL(line, LineField, );                                                 \
+  OPTIONAL(type, MDField, );                                                   \
+  OPTIONAL(backing_storage, MDField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  Result = GET_OR_DISTINCT(DIProperty, (Context, name.Val, file.Val, line.Val,
+                                        type.Val, backing_storage.Val));
   return false;
 }
 
@@ -7769,9 +8103,16 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
       cast<TruncInst>(Inst)->setHasNoSignedWrap(true);
     return false;
   }
+  case lltok::kw_addrspacecast: {
+    bool NonNull = EatIfPresent(lltok::kw_nonnull);
+    if (parseCast(Inst, PFS, KeywordVal))
+      return true;
+    if (NonNull)
+      cast<AddrSpaceCastInst>(Inst)->setNonNull();
+    return false;
+  }
   case lltok::kw_sext:
   case lltok::kw_bitcast:
-  case lltok::kw_addrspacecast:
   case lltok::kw_fptoui:
   case lltok::kw_fptosi:
   case lltok::kw_inttoptr:
@@ -7832,6 +8173,10 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
     return parseLandingPad(Inst, PFS);
   case lltok::kw_freeze:
     return parseFreeze(Inst, PFS);
+  case lltok::kw_bitinsert:
+    return parseBitInsert(Inst, PFS);
+  case lltok::kw_bitextract:
+    return parseBitExtract(Inst, PFS);
   // Call.
   case lltok::kw_call:
     return parseCall(Inst, PFS, CallInst::TCK_None);
@@ -8649,6 +8994,45 @@ bool LLParser::parseInsertElement(Instruction *&Inst, PerFunctionState &PFS) {
   return false;
 }
 
+// parseBitExtract
+// ::= 'bitextract' Type ',' TypeAndValue ',' TypeAndValue
+bool LLParser::parseBitExtract(Instruction *&Inst, PerFunctionState &PFS) {
+  LocTy Loc;
+  Type *Ty = nullptr;
+  Value *Op0, *Op1;
+  if (parseType(Ty, Loc) ||
+      parseToken(lltok::comma, "expected ',' after bitextract type") ||
+      parseTypeAndValue(Op0, Loc, PFS) ||
+      parseToken(lltok::comma, "expected ',' after bitextract source value") ||
+      parseTypeAndValue(Op1, PFS))
+    return true;
+
+  if (const char *Reason = BitExtractInst::areInvalidOperands(Ty, Op0, Op1))
+    return error(Loc, Reason);
+
+  Inst = BitExtractInst::Create(Ty, Op0, Op1);
+  return false;
+}
+
+// parseBitInsert
+// ::= 'bitinsert' TypeAndValue ',' TypeAndValue ',' TypeAndValue
+bool LLParser::parseBitInsert(Instruction *&Inst, PerFunctionState &PFS) {
+  LocTy Loc;
+  Value *Op0, *Op1, *Op2;
+  if (parseTypeAndValue(Op0, Loc, PFS) ||
+      parseToken(lltok::comma, "expected ',' after bitinsert source value") ||
+      parseTypeAndValue(Op1, PFS) ||
+      parseToken(lltok::comma, "expected ',' after bitinsert insert value") ||
+      parseTypeAndValue(Op2, PFS))
+    return true;
+
+  if (const char *Reason = BitInsertInst::areInvalidOperands(Op0, Op1, Op2))
+    return error(Loc, Reason);
+
+  Inst = BitInsertInst::Create(Op0, Op1, Op2);
+  return false;
+}
+
 /// parseShuffleVector
 ///   ::= 'shufflevector' TypeAndValue ',' TypeAndValue ',' TypeAndValue
 bool LLParser::parseShuffleVector(Instruction *&Inst, PerFunctionState &PFS) {
@@ -8948,8 +9332,7 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
   if (Size && !Size->getType()->isIntegerTy())
     return error(SizeLoc, "element count must have integer type");
 
-  SmallPtrSet<Type *, 4> Visited;
-  if (!Alignment && !Ty->isSized(&Visited))
+  if (!Alignment && !Ty->isSized())
     return error(TyLoc, "Cannot allocate unsized type");
   if (!Alignment)
     Alignment = M->getDataLayout().getPrefTypeAlign(Ty);
@@ -9018,8 +9401,7 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
     return error(Loc,
                  "atomic elementwise load cannot be sequentially consistent");
 
-  SmallPtrSet<Type *, 4> Visited;
-  if (!Alignment && !Ty->isSized(&Visited))
+  if (!Alignment && !Ty->isSized())
     return error(ExplicitTypeLoc, "loading unsized types is not allowed");
   if (!Alignment)
     Alignment = M->getDataLayout().getABITypeAlign(Ty);
@@ -9089,8 +9471,7 @@ int LLParser::parseStore(Instruction *&Inst, PerFunctionState &PFS) {
     return error(Loc,
                  "atomic elementwise store cannot be sequentially consistent");
 
-  SmallPtrSet<Type *, 4> Visited;
-  if (!Alignment && !Val->getType()->isSized(&Visited))
+  if (!Alignment && !Val->getType()->isSized())
     return error(Loc, "storing unsized types is not allowed");
   if (!Alignment)
     Alignment = M->getDataLayout().getABITypeAlign(Val->getType());
@@ -9377,14 +9758,8 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
     Indices.push_back(Val);
   }
 
-  SmallPtrSet<Type*, 4> Visited;
-  if (!Indices.empty() && !Ty->isSized(&Visited))
+  if (!Indices.empty() && !Ty->isSized())
     return error(Loc, "base element of getelementptr must be sized");
-
-  auto *STy = dyn_cast<StructType>(Ty);
-  if (STy && STy->isScalableTy())
-    return error(Loc, "getelementptr cannot target structure that contains "
-                      "scalable vector type");
 
   if (!GetElementPtrInst::getIndexedType(Ty, Indices))
     return error(Loc, "invalid getelementptr indices");
@@ -9873,6 +10248,9 @@ bool LLParser::parseWpdRes(WholeProgramDevirtResolution &WPDRes) {
   case lltok::kw_branchFunnel:
     WPDRes.TheKind = WholeProgramDevirtResolution::BranchFunnel;
     break;
+  case lltok::kw_speculative:
+    WPDRes.TheKind = WholeProgramDevirtResolution::Speculative;
+    break;
   default:
     return error(Lex.getLoc(), "unexpected WholeProgramDevirtResolution kind");
   }
@@ -10123,6 +10501,40 @@ bool LLParser::parseBlockCount() {
   if (Index)
     Index->setBlockCount(BlockCount);
   return false;
+}
+
+/// parseCfiFunctions
+///   ::= ('cfiFunctionDefs' | 'cfiFunctionDecls') ':' '(' CfiFunction
+///         [',' CfiFunction]* ')'
+/// CfiFunction ::= '(' 'guid' ':' UInt64 ',' 'name' ':' STRINGCONSTANT ')'
+bool LLParser::parseCfiFunctions() {
+  assert(Lex.getKind() == lltok::kw_cfiFunctionDefs ||
+         Lex.getKind() == lltok::kw_cfiFunctionDecls);
+  CfiFunctionIndex &CfiIndex = Lex.getKind() == lltok::kw_cfiFunctionDefs
+                                   ? Index->cfiFunctionDefs()
+                                   : Index->cfiFunctionDecls();
+  Lex.Lex();
+
+  if (parseToken(lltok::colon, "expected ':' here") ||
+      parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+
+  do {
+    GlobalValue::GUID GUID;
+    std::string Name;
+    if (parseToken(lltok::lparen, "expected '(' here") ||
+        parseToken(lltok::kw_guid, "expected 'guid' here") ||
+        parseToken(lltok::colon, "expected ':' here") || parseUInt64(GUID) ||
+        parseToken(lltok::comma, "expected ',' here") ||
+        parseToken(lltok::kw_name, "expected 'name' here") ||
+        parseToken(lltok::colon, "expected ':' here") ||
+        parseStringConstant(Name) ||
+        parseToken(lltok::rparen, "expected ')' here"))
+      return true;
+    CfiIndex.addSymbolWithThinLTOGUID(Name, GUID);
+  } while (EatIfPresent(lltok::comma));
+
+  return parseToken(lltok::rparen, "expected ')' here");
 }
 
 /// parseGVEntry
@@ -10536,6 +10948,7 @@ bool LLParser::parseOptionalCalls(
     CalleeInfo::HotnessType Hotness = CalleeInfo::HotnessType::Unknown;
     unsigned RelBF = 0;
     unsigned HasTailCall = false;
+    unsigned HasIndirectCall = false;
 
     // parse optional fields
     while (EatIfPresent(lltok::comma)) {
@@ -10556,8 +10969,15 @@ bool LLParser::parseOptionalCalls(
         if (parseToken(lltok::colon, "expected ':'") || parseFlag(HasTailCall))
           return true;
         break;
+      case lltok::kw_indirect:
+        Lex.Lex();
+        if (parseToken(lltok::colon, "expected ':'") ||
+            parseFlag(HasIndirectCall))
+          return true;
+        break;
       default:
-        return error(Lex.getLoc(), "expected hotness, relbf, or tail");
+        return error(Lex.getLoc(),
+                     "expected hotness, relbf, tail, or indirect");
       }
     }
     // Keep track of the Call array index needing a forward reference.
@@ -10565,8 +10985,8 @@ bool LLParser::parseOptionalCalls(
     // can only do so once the std::vector is finalized.
     if (VI.getRef() == FwdVIRef)
       IdToIndexMap[GVId].push_back(std::make_pair(Calls.size(), Loc));
-    Calls.push_back(
-        FunctionSummary::EdgeTy{VI, CalleeInfo(Hotness, HasTailCall)});
+    Calls.push_back(FunctionSummary::EdgeTy{
+        VI, CalleeInfo(Hotness, HasTailCall, HasIndirectCall)});
 
     if (parseToken(lltok::rparen, "expected ')' in call"))
       return true;
@@ -11376,7 +11796,7 @@ bool LLParser::parseMemProfs(std::vector<MIBInfo> &MIBs) {
 }
 
 /// AllocType
-///   := ('none'|'notcold'|'cold'|'hot')
+///   := ('none'|'notcold'|'cold'|'hot'|'ambiguous')
 bool LLParser::parseAllocType(uint8_t &AllocType) {
   switch (Lex.getKind()) {
   case lltok::kw_none:
@@ -11384,6 +11804,12 @@ bool LLParser::parseAllocType(uint8_t &AllocType) {
     break;
   case lltok::kw_notcold:
     AllocType = (uint8_t)AllocationType::NotCold;
+    break;
+  case lltok::kw_ambiguous:
+    // Both not cold and cold: the contexts reaching the allocation could not
+    // be disambiguated.
+    AllocType =
+        (uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold;
     break;
   case lltok::kw_cold:
     AllocType = (uint8_t)AllocationType::Cold;

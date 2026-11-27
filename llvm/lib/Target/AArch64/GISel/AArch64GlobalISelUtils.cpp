@@ -9,6 +9,7 @@
 /// GlobalISel pipeline.
 //===----------------------------------------------------------------------===//
 #include "AArch64GlobalISelUtils.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -17,27 +18,26 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
-std::optional<RegOrConstant>
-AArch64GISelUtils::getAArch64VectorSplat(const MachineInstr &MI,
-                                         const MachineRegisterInfo &MRI) {
-  if (auto Splat = getVectorSplat(MI, MRI))
-    return Splat;
-  if (MI.getOpcode() != AArch64::G_DUP)
-    return std::nullopt;
-  Register Src = MI.getOperand(1).getReg();
-  if (auto ValAndVReg = getAnyConstantVRegValWithLookThrough(
-          Src, MRI, /*LookThroughInstrs=*/true, /*LookThroughAnyExt=*/true))
-    return RegOrConstant(ValAndVReg->Value.getSExtValue());
-  return RegOrConstant(Src);
-}
-
-std::optional<int64_t>
-AArch64GISelUtils::getAArch64VectorSplatScalar(const MachineInstr &MI,
-                                               const MachineRegisterInfo &MRI) {
-  auto Splat = getAArch64VectorSplat(MI, MRI);
-  if (!Splat || Splat->isReg())
-    return std::nullopt;
-  return Splat->getCst();
+bool AArch64GISelUtils::isVShiftRImm(Register Reg,
+                                     const MachineRegisterInfo &MRI, LLT Ty,
+                                     int64_t &Cnt) {
+  assert(Ty.isVector() && "vector shift count is not a vector type");
+  int64_t ElementBits = Ty.getScalarSizeInBits();
+  assert(ElementBits <= 64 && "expected <= 64bit shift type");
+  MachineInstr *MI = MRI.getVRegDef(Reg);
+  std::optional<APInt> C;
+  if (std::optional<Register> Splat = getVectorSplat(*MI, MRI)) {
+    C = getIConstantVRegVal(*Splat, MRI);
+  } else if (auto *BV = dyn_cast<GBuildVector>(MI)) {
+    for (unsigned I = 0, E = BV->getNumSources(); I < E && !C; ++I)
+      C = getIConstantVRegVal(BV->getSourceReg(I), MRI);
+    if (C && !isBuildVectorConstantSplat(Reg, MRI, *C, /*AllowUndef=*/true))
+      return false;
+  }
+  if (!C)
+    return false;
+  Cnt = C->getSExtValue();
+  return Cnt >= 1 && Cnt <= ElementBits;
 }
 
 bool AArch64GISelUtils::isCMN(const MachineInstr *MaybeSub,
@@ -103,6 +103,61 @@ bool AArch64GISelUtils::matchEmitBZero(const MachineInstr &MI,
   return true;
 }
 
+// Combines Mul(And(Srl(X, 15), 0x10001), 0xffff) into CMLTz
+bool AArch64GISelUtils::matchCombineMulCMLT(MachineInstr &MI,
+                                            MachineRegisterInfo &MRI,
+                                            Register &SrcReg) {
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  if (DstTy != LLT::fixed_vector(2, 64) && DstTy != LLT::fixed_vector(2, 32) &&
+      DstTy != LLT::fixed_vector(4, 32) && DstTy != LLT::fixed_vector(4, 16) &&
+      DstTy != LLT::fixed_vector(8, 16))
+    return false;
+
+  auto AndMI = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
+  if (AndMI->getOpcode() != TargetOpcode::G_AND)
+    return false;
+  auto LShrMI = getDefIgnoringCopies(AndMI->getOperand(1).getReg(), MRI);
+  if (LShrMI->getOpcode() != TargetOpcode::G_LSHR)
+    return false;
+
+  // Check the constant splat values
+  auto V1 = isConstantOrConstantSplatVector(MI.getOperand(2).getReg(), MRI);
+  auto V2 = isConstantOrConstantSplatVector(AndMI->getOperand(2).getReg(), MRI);
+  auto V3 =
+      isConstantOrConstantSplatVector(LShrMI->getOperand(2).getReg(), MRI);
+  if (!V1.has_value() || !V2.has_value() || !V3.has_value())
+    return false;
+  unsigned HalfSize = DstTy.getScalarSizeInBits() / 2;
+  if (!V1.value().isMask(HalfSize) || V2.value() != (1ULL | 1ULL << HalfSize) ||
+      V3 != (HalfSize - 1))
+    return false;
+
+  SrcReg = LShrMI->getOperand(1).getReg();
+
+  return true;
+}
+
+void AArch64GISelUtils::applyCombineMulCMLT(MachineInstr &MI,
+                                            MachineRegisterInfo &MRI,
+                                            MachineIRBuilder &B,
+                                            Register &SrcReg) {
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT HalfTy = DstTy.changeElementCount(DstTy.getElementCount() * 2)
+                   .changeElementSize(DstTy.getScalarSizeInBits() / 2);
+
+  Register ZeroVec = B.buildConstant(HalfTy, 0).getReg(0);
+  Register CastReg =
+      B.buildInstr(TargetOpcode::G_BITCAST, {HalfTy}, {SrcReg}).getReg(0);
+  Register CMLTReg =
+      B.buildICmp(CmpInst::Predicate::ICMP_SLT, HalfTy, CastReg, ZeroVec)
+          .getReg(0);
+
+  B.buildInstr(TargetOpcode::G_BITCAST, {DstReg}, {CMLTReg}).getReg(0);
+  MI.eraseFromParent();
+}
+
 std::tuple<uint16_t, Register>
 AArch64GISelUtils::extractPtrauthBlendDiscriminators(Register Disc,
                                                      MachineRegisterInfo &MRI) {
@@ -112,7 +167,7 @@ AArch64GISelUtils::extractPtrauthBlendDiscriminators(Register Disc,
   if (auto ConstDiscVal = getIConstantVRegVal(Disc, MRI)) {
     if (isUInt<16>(ConstDiscVal->getZExtValue())) {
       ConstDisc = ConstDiscVal->getZExtValue();
-      AddrDisc = AArch64::NoRegister;
+      AddrDisc = Register();
     }
     return std::make_tuple(ConstDisc, AddrDisc);
   }

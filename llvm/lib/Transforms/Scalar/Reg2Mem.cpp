@@ -25,7 +25,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -43,8 +42,7 @@ static bool valueEscapes(const Instruction &Inst) {
     return false;
 
   const BasicBlock *BB = Inst.getParent();
-  for (const User *U : Inst.users()) {
-    const Instruction *UI = cast<Instruction>(U);
+  for (const Instruction *UI : Inst.users()) {
     if (UI->getParent() != BB || isa<PHINode>(UI))
       return true;
   }
@@ -135,11 +133,6 @@ public:
   }
 };
 } // namespace
-
-INITIALIZE_PASS_BEGIN(RegToMemWrapperPass, "reg2mem", "", true, true)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
-INITIALIZE_PASS_END(RegToMemWrapperPass, "reg2mem", "", true, true)
 
 char RegToMemWrapperPass::ID = 0;
 

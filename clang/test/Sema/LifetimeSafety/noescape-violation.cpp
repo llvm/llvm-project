@@ -47,7 +47,7 @@ View mixed_noescape_lifetimebound(
 View mixed_only_noescape_escapes(
     const MyObj& a [[clang::noescape]],
     const MyObj& b [[clang::lifetimebound]]) {
-  (void)a;
+  use(a);
   return b;
 }
 
@@ -191,6 +191,43 @@ MyObj& return_ref_from_noescape_ptr(
 int* return_spaced_brackets(int* p [ [clang::noescape] /*some comment*/ ]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
   return p; // expected-note {{returned here}}
 }
+
+struct CaptureByThisNoescape {
+  const int *p;
+  void store(const int &x [[clang::lifetime_capture_by_this]]);
+  void captures_noescape(const int &n [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}} \
+                                                             // expected-note {{escapes to the object}}
+    store(n);
+  }
+};
+
+struct NoescapeBase {
+  const int *p;
+  NoescapeBase(const int *q [[clang::lifetimebound]]) : p(q) {}
+};
+struct NoescapeThroughBaseInit : NoescapeBase {
+  NoescapeThroughBaseInit(const int *q [[clang::noescape]]) // expected-warning {{parameter is marked [[clang::noescape]] but escapes}} \
+                                                            // expected-note {{escapes to the object}}
+      : NoescapeBase(q) {}
+};
+
+struct NoescapeThroughDelegatingInit {
+  const int *p;
+  NoescapeThroughDelegatingInit(const int *q [[clang::lifetimebound]], int) : p(q) {}
+  NoescapeThroughDelegatingInit(const int *q [[clang::noescape]]) // expected-warning {{parameter is marked [[clang::noescape]] but escapes}} \
+                                                                  // expected-note {{escapes to the object}}
+      : NoescapeThroughDelegatingInit(q, 0) {}
+};
+
+struct NoCaptureBase { NoCaptureBase(const int *); };
+struct NoescapeNonCapturingBase : NoCaptureBase {
+  NoescapeNonCapturingBase(const int *q [[clang::noescape]]) : NoCaptureBase(q) {}
+};
+
+struct NoescapeMethodDoesNotCapture {
+  const int *p;
+  void m(const int *q [[clang::noescape]]) { (void)*q; }
+};
 
 namespace callable_wrappers {
 

@@ -31,10 +31,10 @@ COFFLinkGraphBuilder::COFFLinkGraphBuilder(
     SubtargetFeatures Features,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : Obj(Obj),
-      G(std::make_unique<LinkGraph>(Obj.getFileName().str(), std::move(SSP),
-                                    createTripleWithCOFFFormat(std::move(TT)),
-                                    std::move(Features),
-                                    std::move(GetEdgeKindName))) {
+      G(std::make_unique<LinkGraph>(
+          Obj.getFileName().str(), std::move(SSP),
+          createTripleWithCOFFFormat(std::move(TT)), Obj.getBytesInAddress(),
+          std::move(Features), std::move(GetEdgeKindName))) {
   LLVM_DEBUG({
     dbgs() << "Created COFFLinkGraphBuilder for \"" << Obj.getFileName()
            << "\"\n";
@@ -474,9 +474,9 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
   }
 
   if (Symbol.isAbsolute())
-    return &G->addAbsoluteSymbol(SymbolName,
-                                 orc::ExecutorAddr(Symbol.getValue()), 0,
-                                 Linkage::Strong, Scope::Local, false);
+    return &G->addAbsoluteSymbol(
+        SymbolName, orc::ExecutorAddr(Symbol.getValue()), 0, Linkage::Strong,
+        Symbol.isExternal() ? Scope::Default : Scope::Local, false);
 
   if (llvm::COFF::isReservedSectionNumber(Symbol.getSectionNumber()))
     return make_error<JITLinkError>(

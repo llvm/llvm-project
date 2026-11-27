@@ -819,15 +819,17 @@ define void @string_type() !dbg !3 {
 !3 = distinct !DISubprogram(name: "string_type", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !9}
-!6 = !DIStringType(name: "character(*)", stringLength: !7, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !10)
+!6 = !DIStringType(name: "character(*)", stringLength: !7, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !10, charType: !12)
 !7 = !DILocalVariable(scope: !3, name: "string_size", file: !2, type: !11)
 !8 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8)
 !9 = !DIStringType()
 !10 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
 !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!12 = !DIBasicType(name: "character(kind=4)", size: 32, encoding: DW_ATE_UTF)
 
 ; CHECK-DAG: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "string_size"{{.*}}>
-; CHECK-DAG: #[[STR1:.+]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)", sizeInBits = 32, alignInBits = 8, stringLength = #[[VAR]], stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>, stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>
+; CHECK-DAG: #[[CHARTYPE:.+]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "character(kind=4)", sizeInBits = 32, encoding = DW_ATE_UTF>
+; CHECK-DAG: #[[STR1:.+]] = #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)", sizeInBits = 32, alignInBits = 8, stringLength = #[[VAR]], stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>, stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>, charType = #[[CHARTYPE]]>
 ; CHECK-DAG: #[[STR2:.+]] = #llvm.di_string_type<tag = DW_TAG_string_type>
 ; CHECK-DAG: #llvm.di_subroutine_type<types = #[[STR1]], #[[STR2]]>
 
@@ -1084,3 +1086,32 @@ define void @fn_cu_source_language_name() !dbg !3 {
 !3 = distinct !DISubprogram(name: "fn_cu_source_language_name", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
 !4 = !DISubroutineType(types: !5)
 !5 = !{null}
+
+; // -----
+
+; CHECK-LABEL: llvm.func @fn_enum()
+; CHECK: #[[ENUM_COMP:.+]] = #llvm.di_composite_type<{{.*}}elements = #llvm.di_enumerator<name = "zero", value = false>, #llvm.di_enumerator<name = "thirty", value = 30 : i6>, #llvm.di_enumerator<name = "neg_one", value = true>, #llvm.di_enumerator<name = "u64_max", value = -1 : i64, isUnsigned = true>, #llvm.di_enumerator<name = "i128_min", value = -170141183460469231731687303715884105728 : i128>, #llvm.di_enumerator<name = "u132", value = -2722258935367507707706996859454145691648 : i132, isUnsigned = true>, #llvm.di_enumerator<value = false>>
+
+define void @fn_enum() !dbg !3 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "enum.ll", directory: "/")
+!3 = distinct !DISubprogram(name: "fn_enum", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !4)
+!4 = !DISubroutineType(types: !5)
+!5 = !{!6}
+!6 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "Color", file: !2, line: 1, baseType: !7, size: 32, align: 32, elements: !15)
+!7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!8 = !DIEnumerator(name: "zero", value: 0)
+!9 = !DIEnumerator(name: "thirty", value: 30)
+!10 = !DIEnumerator(name: "neg_one", value: -1)
+!11 = !DIEnumerator(name: "u64_max", value: 18446744073709551615, isUnsigned: true)
+!12 = !DIEnumerator(name: "i128_min", value: -170141183460469231731687303715884105728)
+!13 = !DIEnumerator(name: "u132", value: 2722258935367507707706996859454145691648, isUnsigned: true)
+!14 = !DIEnumerator(name: "", value: 0)
+!15 = !{!8, !9, !10, !11, !12, !13, !14}

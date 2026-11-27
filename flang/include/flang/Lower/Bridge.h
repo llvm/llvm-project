@@ -24,11 +24,8 @@
 #include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "llvm/ProfileData/SampleProf.h"
 #include <set>
-
-namespace llvm {
-class TargetMachine;
-} // namespace llvm
 
 namespace Fortran {
 namespace common {
@@ -68,13 +65,13 @@ public:
          const Fortran::lower::LoweringOptions &loweringOptions,
          const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
          const Fortran::common::LanguageFeatureControl &languageFeatures,
-         const llvm::TargetMachine &targetMachine,
+         llvm::StringRef targetFeatures,
          const Fortran::frontend::TargetOptions &targetOptions,
          const Fortran::frontend::CodeGenOptions &codeGenOptions) {
     return LoweringBridge(ctx, semanticsContext, defaultKinds, intrinsics,
                           targetCharacteristics, allCooked, triple, kindMap,
                           loweringOptions, envDefaults, languageFeatures,
-                          targetMachine, targetOptions, codeGenOptions);
+                          targetFeatures, targetOptions, codeGenOptions);
   }
   ~LoweringBridge();
 
@@ -118,6 +115,8 @@ public:
     return languageFeatures;
   }
 
+  const std::string &getModuleNameHash() const { return moduleNameHash; }
+
   /// Create a folding context. Careful: this is very expensive.
   Fortran::evaluate::FoldingContext createFoldingContext();
 
@@ -159,7 +158,7 @@ private:
       const Fortran::lower::LoweringOptions &loweringOptions,
       const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
       const Fortran::common::LanguageFeatureControl &languageFeatures,
-      const llvm::TargetMachine &targetMachine,
+      llvm::StringRef targetFeatures,
       const Fortran::frontend::TargetOptions &targetOptions,
       const Fortran::frontend::CodeGenOptions &codeGenOptions);
   LoweringBridge() = delete;
@@ -180,6 +179,7 @@ private:
   const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults;
   const Fortran::common::LanguageFeatureControl &languageFeatures;
   std::set<std::string> tempNames;
+  std::string moduleNameHash;
   std::optional<mlir::DiagnosticEngine::HandlerID> diagHandlerID;
 };
 

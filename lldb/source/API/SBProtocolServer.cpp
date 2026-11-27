@@ -12,6 +12,7 @@
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/Utility/UriParser.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -156,5 +157,5 @@ const char *SBProtocolServer::GetConnectionURI() {
 
   // A listening socket may report several equivalent URIs (e.g. IPv6 and
   // IPv4 loopback). Return the first, interned so the pointer stays valid.
-  return ConstString(uris.front()).GetCString();
+  return StringPool::GetSystemPool().Intern(uris.front());
 }

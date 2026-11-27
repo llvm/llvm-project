@@ -43,15 +43,15 @@ define i64 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i128 %e, i64 %f, 
 ; CHECK-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; CHECK-NEXT:    bstrpick.d $a2, $a2, 31, 0
 ; CHECK-NEXT:    add.d $a0, $a0, $a1
-; CHECK-NEXT:    add.d $a0, $a0, $a2
-; CHECK-NEXT:    add.d $a0, $a0, $a3
+; CHECK-NEXT:    add.d $a1, $a2, $a3
+; CHECK-NEXT:    add.d $a0, $a0, $a1
 ; CHECK-NEXT:    xor $a1, $a5, $t1
 ; CHECK-NEXT:    xor $a2, $a4, $a7
 ; CHECK-NEXT:    or $a1, $a2, $a1
 ; CHECK-NEXT:    sltui $a1, $a1, 1
-; CHECK-NEXT:    add.d $a0, $a1, $a0
 ; CHECK-NEXT:    add.d $a0, $a0, $a6
 ; CHECK-NEXT:    add.d $a0, $a0, $t0
+; CHECK-NEXT:    add.d $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %a_ext = zext i8 %a to i64
   %b_ext = zext i16 %b to i64
@@ -189,8 +189,8 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; CHECK-NEXT:    ori $a0, $zero, 10
 ; CHECK-NEXT:    st.d $a0, $sp, 32
 ; CHECK-NEXT:    st.d $zero, $sp, 88
-; CHECK-NEXT:    ori $a0, $zero, 8
-; CHECK-NEXT:    st.d $a0, $sp, 64
+; CHECK-NEXT:    vst $vr0, $sp, 72
+; CHECK-NEXT:    ori $t0, $zero, 8
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    ori $a1, $zero, 2
 ; CHECK-NEXT:    ori $a2, $zero, 3
@@ -199,7 +199,7 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; CHECK-NEXT:    ori $a5, $zero, 6
 ; CHECK-NEXT:    ori $a6, $zero, 7
 ; CHECK-NEXT:    addi.d $a7, $sp, 64
-; CHECK-NEXT:    vst $vr0, $sp, 72
+; CHECK-NEXT:    st.d $t0, $sp, 64
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_large_scalars_exhausted_regs)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 104 # 8-byte Folded Reload

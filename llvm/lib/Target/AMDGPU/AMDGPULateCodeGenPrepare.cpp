@@ -24,22 +24,11 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 #define DEBUG_TYPE "amdgpu-late-codegenprepare"
 
 using namespace llvm;
-
-// Scalar load widening needs running after load-store-vectorizer as that pass
-// doesn't handle overlapping cases. In addition, this pass enhances the
-// widening to handle cases where scalar sub-dword loads are naturally aligned
-// only but not dword aligned.
-static cl::opt<bool>
-    WidenLoads("amdgpu-late-codegenprepare-widen-constant-loads",
-               cl::desc("Widen sub-dword constant address space loads in "
-                        "AMDGPULateCodeGenPrepare"),
-               cl::ReallyHidden, cl::init(true));
 
 namespace {
 
@@ -65,11 +54,11 @@ public:
   // whole AccessSize-byte range at Base to be dereferenceable, not just Base
   // itself aligned.
   bool isSafeToWidenLoad(const Value *Base, uint64_t AccessSize,
-                         const Instruction *CxtI) const {
+                         const Instruction *CtxI) const {
     return isDereferenceableAndAlignedPointer(
         Base, Align(4),
         APInt(DL.getIndexTypeSizeInBits(Base->getType()), AccessSize),
-        SimplifyQuery(DL, /*TLI=*/nullptr, /*DT=*/nullptr, AC, CxtI));
+        SimplifyQuery(DL, /*TLI=*/nullptr, /*DT=*/nullptr, AC, CtxI));
   }
 
   bool canWidenScalarExtLoad(LoadInst &LI) const;
@@ -171,15 +160,14 @@ public:
 
     // Check users for profitable conditions (across block user which can
     // natively handle the illegal vector).
-    for (User *V : II->users())
-      if (auto *UseInst = dyn_cast<Instruction>(V))
-        UserList.push_back(UseInst);
+    for (Instruction *UseInst : II->users())
+      UserList.push_back(UseInst);
 
     auto IsLookThru = [](Instruction *II) {
       if (const auto *Intr = dyn_cast<IntrinsicInst>(II))
         return Intr->getIntrinsicID() == Intrinsic::amdgcn_perm;
       return isa<PHINode, ShuffleVectorInst, InsertElementInst,
-                 ExtractElementInst, CastInst>(II);
+                 ExtractElementInst, CastInst, FreezeInst>(II);
     };
 
     while (!UserList.empty()) {
@@ -197,9 +185,8 @@ public:
         return true;
 
       if (IsLookThru(CII))
-        for (User *V : CII->users())
-          if (auto *UseInst = dyn_cast<Instruction>(V))
-            UserList.push_back(UseInst);
+        for (Instruction *UseInst : CII->users())
+          UserList.push_back(UseInst);
     }
     return false;
   }
@@ -261,7 +248,7 @@ Value *LiveRegOptimizer::convertToOptType(Instruction *V,
   TypeSize OriginalSize = DL.getTypeSizeInBits(VTy);
   TypeSize NewSize = DL.getTypeSizeInBits(NewTy);
 
-  IRBuilder<> Builder(V->getParent(), InsertPt);
+  IRBuilder<> Builder(InsertPt);
   // If there is a bitsize match, we can fit the old vector into a new vector of
   // desired type.
   if (OriginalSize == NewSize)
@@ -291,7 +278,7 @@ Value *LiveRegOptimizer::convertFromOptType(Type *ConvertType, Instruction *V,
   TypeSize OriginalSize = DL.getTypeSizeInBits(V->getType());
   TypeSize NewSize = DL.getTypeSizeInBits(NewVTy);
 
-  IRBuilder<> Builder(InsertBB, InsertPt);
+  IRBuilder<> Builder(InsertPt);
   // If there is a bitsize match, we simply convert back to the original type.
   if (OriginalSize == NewSize)
     return Builder.CreateBitCast(V, NewVTy, V->getName() + ".bc");
@@ -359,25 +346,24 @@ bool LiveRegOptimizer::optimizeLiveType(
           return false;
 
         // Collect all other incoming values for coercion.
-        if (IncInst)
+        if (IncInst && !IncInst->isTerminator())
           Defs.insert(IncInst);
       }
     }
 
     // Collect all relevant uses.
-    for (User *V : II->users()) {
+    for (Instruction *UseInst : II->users()) {
       // Repeat the collection process for problematic PHI nodes.
-      if (PHINode *OpPhi = dyn_cast<PHINode>(V)) {
+      if (PHINode *OpPhi = dyn_cast<PHINode>(UseInst)) {
         if (!PhiNodes.count(OpPhi) && !Visited.count(OpPhi))
           Worklist.push_back(OpPhi);
         continue;
       }
 
-      Instruction *UseInst = cast<Instruction>(V);
       // Collect all uses of PHINodes and any use the crosses BB boundaries.
       if (UseInst->getParent() != II->getParent() || isa<PHINode>(II)) {
         Uses.insert(UseInst);
-        if (!isa<PHINode>(II))
+        if (!isa<PHINode>(II) && !II->isTerminator())
           Defs.insert(II);
       }
     }
@@ -434,12 +420,14 @@ bool LiveRegOptimizer::optimizeLiveType(
         if (OriginalPhi != PhiNodes.end())
           ValMap.erase(*OriginalPhi);
 
-        DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
-
         for (User *U : NextDeadValue->users()) {
           if (!VisitedPhis.contains(cast<PHINode>(U)))
             PHIWorklist.push_back(U);
         }
+        NextDeadValue->replaceAllUsesWith(
+            PoisonValue::get(NextDeadValue->getType()));
+
+        DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
       }
     } else {
       DeadInsts.emplace_back(cast<Instruction>(Phi));
@@ -455,7 +443,8 @@ bool LiveRegOptimizer::optimizeLiveType(
             BBUseValMap[U->getParent()].contains(Val))
           NewVal = BBUseValMap[U->getParent()][Val];
         else {
-          BasicBlock::iterator InsertPt = U->getParent()->getFirstNonPHIIt();
+          // Not getFirstNonPHIIt, which would insert in front of a landingpad.
+          BasicBlock::iterator InsertPt = U->getParent()->getFirstInsertionPt();
           // We may pick up ops that were previously converted for users in
           // other blocks. If there is an originally typed definition of the Op
           // already in this block, simply reuse it.
@@ -503,7 +492,7 @@ bool AMDGPULateCodeGenPrepare::canWidenScalarExtLoad(LoadInst &LI) const {
 }
 
 bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
-  if (!WidenLoads)
+  if (!ST.getCLOpts().late_codegenprepare_widen_constant_loads)
     return false;
 
   // Skip if that load is already aligned on DWORD at least as it's handled in

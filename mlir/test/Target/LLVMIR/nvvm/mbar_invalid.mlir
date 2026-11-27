@@ -136,3 +136,140 @@ llvm.func @mbarrier_try_wait_with_timelimit(%barrier: !llvm.ptr<3>, %phase: i32,
   llvm.return
 }
 
+// -----
+
+llvm.func @mbarrier_init_layout_too_large(%barrier: !llvm.ptr<3>, %count: i32) {
+  // expected-error @below {{attribute 'layout' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 0 whose maximum value is 1}}
+  nvvm.mbarrier.init %barrier, %count layout = 2 : !llvm.ptr<3>, i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @mbarrier_init_layout_negative(%barrier: !llvm.ptr<3>, %count: i32) {
+  // expected-error @below {{attribute 'layout' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 0 whose maximum value is 1}}
+  nvvm.mbarrier.init %barrier, %count layout = -1 : !llvm.ptr<3>, i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @mbarrier_check_layout_too_large(%barrier: !llvm.ptr<3>) {
+  // expected-error @below {{attribute 'layout' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 0 whose maximum value is 1}}
+  %0 = nvvm.mbarrier.check_layout %barrier layout = 2 : !llvm.ptr<3> -> i1
+  llvm.return
+}
+
+// -----
+
+llvm.func @mbarrier_check_layout_negative(%barrier: !llvm.ptr<3>) {
+  // expected-error @below {{attribute 'layout' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 0 whose maximum value is 1}}
+  %0 = nvvm.mbarrier.check_layout %barrier layout = -1 : !llvm.ptr<3> -> i1
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_expect_tx_cta(%bar: !llvm.ptr<3>, %count: i32, %mask: i32) {
+  // expected-error @below {{multicast requires shared::cluster address space}}
+  nvvm.mbarrier.expect_tx %bar, %count multicast_mask = %mask : !llvm.ptr<3>, i32, i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_complete_tx_cta(%bar: !llvm.ptr<3>, %count: i32, %mask: i32) {
+  // expected-error @below {{multicast requires shared::cluster address space}}
+  nvvm.mbarrier.complete_tx %bar, %count multicast_mask = %mask : !llvm.ptr<3>, i32, i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_arrive_cta(%bar: !llvm.ptr<3>, %mask: i32) {
+  // expected-error @below {{multicast requires shared::cluster address space}}
+  nvvm.mbarrier.arrive %bar multicast_mask = %mask : !llvm.ptr<3>
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_arrive_generic(%bar: !llvm.ptr, %mask: i32) {
+  // expected-error @below {{multicast requires shared::cluster address space}}
+  nvvm.mbarrier.arrive %bar multicast_mask = %mask : !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_arrive_drop_cta(%bar: !llvm.ptr<3>, %mask: i32) {
+  // expected-error @below {{multicast requires shared::cluster address space}}
+  nvvm.mbarrier.arrive_drop %bar multicast_mask = %mask : !llvm.ptr<3>
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_arrive_drop_generic(%bar: !llvm.ptr, %mask: i32) {
+  // expected-error @below {{multicast requires shared::cluster address space}}
+  nvvm.mbarrier.arrive_drop %bar multicast_mask = %mask : !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_arrive_expect_tx_cta(%bar: !llvm.ptr<3>, %count: i32, %mask: i32) {
+  // expected-error @below {{multicast requires shared::cluster address space}}
+  nvvm.mbarrier.arrive.expect_tx %bar, %count multicast_mask = %mask : !llvm.ptr<3>, i32, i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_arrive_expect_tx_generic(%bar: !llvm.ptr, %count: i32, %mask: i32) {
+  // expected-error @below {{multicast requires shared::cluster address space}}
+  nvvm.mbarrier.arrive.expect_tx %bar, %count multicast_mask = %mask : !llvm.ptr, i32, i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_arrive_drop_expect_tx_cta(%bar: !llvm.ptr<3>, %count: i32, %mask: i32) {
+  // expected-error @below {{multicast requires shared::cluster address space}}
+  nvvm.mbarrier.arrive_drop.expect_tx %bar, %count multicast_mask = %mask : !llvm.ptr<3>, i32, i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_arrive_drop_expect_tx_generic(%bar: !llvm.ptr, %count: i32, %mask: i32) {
+  // expected-error @below {{multicast requires shared::cluster address space}}
+  nvvm.mbarrier.arrive_drop.expect_tx %bar, %count multicast_mask = %mask : !llvm.ptr, i32, i32
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_multicast_predicate(%bar: !llvm.ptr<7>, %count: i32, %mask: i32, %pred: i1) {
+  // expected-error @below {{mbarrier in shared_cluster space is not supported when using predicate}}
+  nvvm.mbarrier.arrive.expect_tx %bar, %count, predicate = %pred multicast_mask = %mask : !llvm.ptr<7>, i32, i32, i1
+  llvm.return
+}
+
+// -----
+
+// expected-note @below {{prior use here}}
+llvm.func @invalid_mask_i16(%bar: !llvm.ptr<7>, %mask: i16) {
+  // expected-error @below {{use of value '%mask' expects different type than prior uses}}
+  nvvm.mbarrier.arrive %bar multicast_mask = %mask : !llvm.ptr<7>
+  llvm.return
+}
+
+// -----
+
+// expected-note @below {{prior use here}}
+llvm.func @invalid_mask_i64(%bar: !llvm.ptr<7>, %mask: i64) {
+  // expected-error @below {{use of value '%mask' expects different type than prior uses}}
+  nvvm.mbarrier.arrive %bar multicast_mask = %mask : !llvm.ptr<7>
+  llvm.return
+}

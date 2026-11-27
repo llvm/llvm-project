@@ -1,4 +1,4 @@
-# RUN: not llc -mtriple=amdgpu9.0a-amd-amdhsa -simplify-mir -start-before=greedy,2 -stress-regalloc=4 -stop-before=virtregrewriter,2 -o - -verify-regalloc %s 2> %t.err | FileCheck %s
+# RUN: not llc -mtriple=amdgpu9.0a-amd-amdhsa -simplify-mir -start-before=greedy,2 -stress-regalloc=4 -stop-before=virt-reg-rewriter,2 -o - -verify-regalloc %s 2> %t.err | FileCheck %s
 # RUN: FileCheck -check-prefix=ERR %s < %t.err
 
 # To allocate the vreg_512_align2, the allocation will attempt to
@@ -55,7 +55,6 @@
 
 ---
 name:            inflated_reg_class_copy_use_after_free
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'
@@ -146,7 +145,6 @@ body:             |
 
 ---
 name:            inflated_reg_class_copy_use_after_free_lane_subset
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'

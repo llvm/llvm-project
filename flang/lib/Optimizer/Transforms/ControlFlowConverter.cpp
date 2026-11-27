@@ -133,7 +133,8 @@ public:
 
     // Copy loop annotations from the do loop to the loop back edge.
     if (auto ann = loop.getLoopAnnotation())
-      backEdge->setAttr("loop_annotation", *ann);
+      backEdge->setDiscardableAttr(mlir::LLVM::getLoopAnnotationAttrName(),
+                                   *ann);
 
     // Conditional block
     rewriter.setInsertionPointToEnd(conditionalBlock);

@@ -14,6 +14,7 @@
 #ifndef LLVM_ANALYSIS_SPARSEPROPAGATION_H
 #define LLVM_ANALYSIS_SPARSEPROPAGATION_H
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
@@ -88,7 +89,7 @@ public:
   /// of executing instruction \p I. Their associated LatticeVals are store in
   /// \p ChangedValues.
   virtual void ComputeInstructionState(
-      Instruction &I, SmallDenseMap<LatticeKey, LatticeVal, 16> &ChangedValues,
+      Instruction &I, SmallMapVector<LatticeKey, LatticeVal, 16> &ChangedValues,
       SparseSolver<LatticeKey, LatticeVal> &SS) = 0;
 
   /// PrintLatticeVal - Render the given LatticeVal to the specified stream.
@@ -400,7 +401,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::visitPHINode(PHINode &PN) {
   // computed from its incoming values.  For example, SSI form stores its sigma
   // functions as PHINodes with a single incoming value.
   if (LatticeFunc->IsSpecialCasedPHI(&PN)) {
-    SmallDenseMap<LatticeKey, LatticeVal, 16> ChangedValues;
+    SmallMapVector<LatticeKey, LatticeVal, 16> ChangedValues;
     LatticeFunc->ComputeInstructionState(PN, ChangedValues, *this);
     for (auto &ChangedValue : ChangedValues)
       if (ChangedValue.second != LatticeFunc->getUntrackedVal())
@@ -455,7 +456,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::visitInst(Instruction &I) {
 
   // Otherwise, ask the transfer function what the result is.  If this is
   // something that we care about, remember it.
-  SmallDenseMap<LatticeKey, LatticeVal, 16> ChangedValues;
+  SmallMapVector<LatticeKey, LatticeVal, 16> ChangedValues;
   LatticeFunc->ComputeInstructionState(I, ChangedValues, *this);
   for (auto &ChangedValue : ChangedValues)
     if (ChangedValue.second != LatticeFunc->getUntrackedVal())

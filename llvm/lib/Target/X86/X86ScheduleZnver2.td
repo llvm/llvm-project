@@ -434,9 +434,16 @@ defm : Zn2WriteResFpuPair<WriteVarShuffle, [Zn2FPU12],   1>;
 defm : Zn2WriteResFpuPair<WriteVarShuffleX,[Zn2FPU12],   1>;
 defm : Zn2WriteResFpuPair<WriteVarShuffleY,[Zn2FPU12],   1>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
-defm : Zn2WriteResFpuPair<WriteBlend,      [Zn2FPU013], 1>;
-defm : Zn2WriteResFpuPair<WriteBlendY,     [Zn2FPU013], 1>;
-defm : X86WriteResPairUnsupported<WriteBlendZ>;
+defm : Zn2WriteResFpuPair<WritePack,       [Zn2FPU12],   1>;
+defm : Zn2WriteResFpuPair<WritePackX,      [Zn2FPU12],   1>;
+defm : Zn2WriteResFpuPair<WritePackY,      [Zn2FPU12],   1>;
+defm : X86WriteResPairUnsupported<WritePackZ>;
+defm : X86WriteRes<WritePBLENDDX,          [Zn2FPU01], 1, [1], 1>;
+defm : X86WriteRes<WritePBLENDDY,          [Zn2FPU01], 1, [1], 2>;
+defm : X86WriteRes<WritePBLENDDXLd,        [Zn2AGU,Zn2FPU01], 8, [1,2], 2>;
+defm : X86WriteRes<WritePBLENDDYLd,        [Zn2AGU,Zn2FPU01], 9, [1,3], 2>;
+defm : Zn2WriteResFpuPair<WritePBLENDWX,   [Zn2FPU013], 1>;
+defm : Zn2WriteResFpuPair<WritePBLENDWY,   [Zn2FPU013], 1>;
 defm : Zn2WriteResFpuPair<WriteVarBlend,   [Zn2FPU0],  1>;
 defm : Zn2WriteResFpuPair<WriteVarBlendY,  [Zn2FPU0],  1>;
 defm : X86WriteResPairUnsupported<WriteVarBlendZ>;
@@ -716,9 +723,34 @@ def : SchedAlias<WriteBitTestSetRegRMW, Zn2WriteBTRSCm>;
 
 // PDEP PEXT.
 // r,r,r.
-def : InstRW<[WriteMicrocoded], (instregex "PDEP(32|64)rr", "PEXT(32|64)rr")>;
 // r,r,m.
-def : InstRW<[WriteMicrocoded], (instregex "PDEP(32|64)rm", "PEXT(32|64)rm")>;
+def Zn2WritePDEP32rr : SchedWriteRes<[Zn2ALU, Zn2Multiplier]> {
+  let Latency = 53;
+  let NumMicroOps = 95;
+  let ReleaseAtCycles = [1, 53];
+}
+def : InstRW<[Zn2WritePDEP32rr], (instrs PDEP32rr, PEXT32rr)>;
+
+def Zn2WritePDEP32rm : SchedWriteRes<[Zn2ALU, Zn2Multiplier, Zn2AGU]> {
+  let Latency = 56;
+  let NumMicroOps = 96;
+  let ReleaseAtCycles = [1, 55, 1];
+}
+def : InstRW<[Zn2WritePDEP32rm], (instrs PDEP32rm, PEXT32rm)>;
+
+def Zn2WritePDEP64rr : SchedWriteRes<[Zn2ALU, Zn2Multiplier]> {
+  let Latency = 86;
+  let NumMicroOps = 165;
+  let ReleaseAtCycles = [1, 86];
+}
+def : InstRW<[Zn2WritePDEP64rr], (instrs PDEP64rr, PEXT64rr)>;
+
+def Zn2WritePDEP64rm : SchedWriteRes<[Zn2ALU, Zn2Multiplier, Zn2AGU]> {
+  let Latency = 89;
+  let NumMicroOps = 166;
+  let ReleaseAtCycles = [1, 89, 1];
+}
+def : InstRW<[Zn2WritePDEP64rm], (instrs PDEP64rm, PEXT64rm)>;
 
 // RCR RCL.
 // m,i.
@@ -894,31 +926,6 @@ def Zn2WriteFPU013m : SchedWriteRes<[Zn2AGU, Zn2FPU013]> {
   let Latency = 8;
   let NumMicroOps = 2;
 }
-
-def Zn2WriteFPU01 : SchedWriteRes<[Zn2FPU01]> ;
-def Zn2WriteFPU01Y : SchedWriteRes<[Zn2FPU01]> {
-  let NumMicroOps = 2;
-}
-
-// VPBLENDD.
-// v,v,v,i.
-def : InstRW<[Zn2WriteFPU01], (instrs VPBLENDDrri)>;
-// ymm
-def : InstRW<[Zn2WriteFPU01Y], (instrs VPBLENDDYrri)>;
-
-// v,v,m,i
-def Zn2WriteFPU01Op2 : SchedWriteRes<[Zn2AGU, Zn2FPU01]> {
-  let NumMicroOps = 2;
-  let Latency = 8;
-  let ReleaseAtCycles = [1, 2];
-}
-def Zn2WriteFPU01Op2Y : SchedWriteRes<[Zn2AGU, Zn2FPU01]> {
-  let NumMicroOps = 2;
-  let Latency = 9;
-  let ReleaseAtCycles = [1, 3];
-}
-def : InstRW<[Zn2WriteFPU01Op2], (instrs VPBLENDDrmi)>;
-def : InstRW<[Zn2WriteFPU01Op2Y], (instrs VPBLENDDYrmi)>;
 
 // MASKMOVQ.
 def : InstRW<[WriteMicrocoded], (instregex "MMX_MASKMOVQ(64)?")>;

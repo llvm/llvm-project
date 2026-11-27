@@ -25,10 +25,11 @@ include "mlir/IR/BuiltinTypes.td"
 
 def X86_Dialect : Dialect {
   let name = "x86";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::x86";
+  let useDefaultOperationRegistration = 1;
 
-  let useDefaultTypePrinterParser = 1;
+  let hasTypes = 1;
+  let hasInitializer = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -693,6 +694,7 @@ def CvtPackedOddIndexedToF32Op
 
 class AMX_Type<string typeName, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<X86_Dialect, "AMX" # typeName, traits> {
+  let cppIncludes = ["mlir/Dialect/X86/X86Dialect.h"];
   let mnemonic = "amx." # typeMnemonic;
 }
 

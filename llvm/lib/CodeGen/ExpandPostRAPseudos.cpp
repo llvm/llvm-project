@@ -15,9 +15,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -27,7 +25,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "postrapseudos"
+#define DEBUG_TYPE "post-ra-pseudos"
 
 namespace {
 struct ExpandPostRA {
@@ -147,8 +145,14 @@ bool ExpandPostRA::run(MachineFunction &MF) {
       case TargetOpcode::SUBREG_TO_REG:
         MadeChange |= LowerSubregToReg(&MI);
         break;
+      case TargetOpcode::FREEZE:
+        // A FREEZE of an undefined value stays a definition until emission.
+        if (MI.getOperand(1).isUndef())
+          continue;
+        MI.setDesc(TII->get(TargetOpcode::COPY));
+        [[fallthrough]];
       case TargetOpcode::COPY:
-        TII->lowerCopy(&MI, TRI);
+        TII->lowerCopy(&MI);
         MadeChange = true;
         break;
       case TargetOpcode::DBG_VALUE:

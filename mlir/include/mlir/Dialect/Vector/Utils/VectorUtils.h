@@ -207,6 +207,29 @@ public:
                             PatternRewriter &rewriter) const = 0;
 };
 
+/// Convenience wrapper for patterns that are only intended for default
+/// contractions, i.e. contractions for which the combining op is an ADD.
+///
+/// When using this wrapper, implement `matchAndRewriteAddContractOp` instead
+/// of plain `matchAndRewrite`.
+struct AddContractionOpRewritePattern : OpRewritePattern<ContractionOp> {
+  using OpRewritePattern<ContractionOp>::OpRewritePattern;
+  using Base = AddContractionOpRewritePattern;
+
+private:
+  LogicalResult matchAndRewrite(vector::ContractionOp sourceOp,
+                                PatternRewriter &rewriter) const final {
+    if (sourceOp.getKind() != vector::CombiningKind::ADD)
+      return rewriter.notifyMatchFailure(sourceOp, "expected ADD contraction");
+    return matchAndRewriteAddContractOp(sourceOp, rewriter);
+  }
+
+public:
+  virtual LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const = 0;
+};
+
 /// Returns true if the input Vector type can be linearized.
 ///
 /// Linearization is meant in the sense of flattening vectors, e.g.:
@@ -219,16 +242,16 @@ bool isLinearizableVector(VectorType type);
 
 /// Creates a TransferReadOp from `source`.
 ///
-/// If the shape of vector to read differs from the shape of the value being
-/// read, masking is used to avoid out-of-bounds accesses. Set
-/// `useInBoundsInsteadOfMasking` to `true` to use the "in_bounds" attribute
-/// instead of explicit masks.
+/// The read is masked unless it is statically in bounds. The mask has a size
+/// of `dim - index` for each `source` dim that `permutationMap` selects (all
+/// dims without a map). Set `useInBoundsInsteadOfMasking` to `true` to use the
+/// "in_bounds" attribute instead of a mask.
 ///
-/// When `permutationMap` is provided the in_bounds attribute is inferred from
-/// it: dimension i is in-bounds when the map result is an AffineDimExpr
-/// pointing to a static memref dimension divisible by the vector size, or an
-/// AffineConstantExpr (broadcast). Custom`indices` must also be supplied in
-/// that case; if `indices` is empty, all offsets default to 0.
+/// In that case, when `permutationMap` is provided the in_bounds attribute is
+/// inferred from it: dimension i is in-bounds when the map result is an
+/// AffineDimExpr pointing to a static memref dimension divisible by the vector
+/// size, or an AffineConstantExpr (broadcast). Custom `indices` must also be
+/// supplied in that case; if `indices` is empty, all offsets default to 0.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              const VectorType &vecToReadTy,
                              std::optional<Value> padValue = std::nullopt,

@@ -379,14 +379,14 @@ func.func @reduce_op_and_body(%arg0 : f32) {
   %res = "gpu.all_reduce"(%arg0) ({
   ^bb(%lhs : f32, %rhs : f32):
     "gpu.yield"(%lhs) : (f32) -> ()
-  }) {op = #gpu<all_reduce_op add>} : (f32) -> (f32)
+  }) {op = #gpu.all_reduce_op<add>} : (f32) -> (f32)
   return
 }
 
 // -----
 
 func.func @reduce_invalid_op(%arg0 : f32) {
-  // expected-error@+1 {{invalid op kind}}
+  // expected-error@+1 {{expected SSA operand}}
   %res = gpu.all_reduce foo %arg0 {} : (f32) -> (f32)
   return
 }
@@ -473,6 +473,22 @@ func.func @reduce_invalid_op_type_minimumf(%arg0 : i32) {
 
 // -----
 
+func.func @reduce_invalid_op_type_minimumnumf(%arg0 : i32) {
+  // expected-error@+1 {{`minimumnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.all_reduce minimumnumf %arg0 {} : (i32) -> (i32)
+  return
+}
+
+// -----
+
+func.func @reduce_invalid_op_type_maximumnumf(%arg0 : i32) {
+  // expected-error@+1 {{`maximumnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.all_reduce maximumnumf %arg0 {} : (i32) -> (i32)
+  return
+}
+
+// -----
+
 func.func @reduce_invalid_op_type_maximumf(%arg0 : i32) {
   // expected-error@+1 {{`maximumf` reduction operation is not compatible with type 'i32'}}
   %res = gpu.all_reduce maximumf %arg0 {} : (i32) -> (i32)
@@ -546,6 +562,22 @@ func.func @subgroup_reduce_invalid_op_type_maxnumf(%arg0 : i32) {
 
 // -----
 
+func.func @subgroup_reduce_invalid_op_type_minimumnumf(%arg0 : i32) {
+  // expected-error@+1 {{`minimumnumf` reduction operation is not compatible with type 'i32'}}
+  %res = gpu.subgroup_reduce minimumnumf %arg0 : (i32) -> (i32)
+  return
+}
+
+// -----
+
+func.func @subgroup_reduce_invalid_op_type_maximumnumf(%arg0 : vector<2xi32>) {
+  // expected-error@+1 {{`maximumnumf` reduction operation is not compatible with type 'vector<2xi32>'}}
+  %res = gpu.subgroup_reduce maximumnumf %arg0 : (vector<2xi32>) -> vector<2xi32>
+  return
+}
+
+// -----
+
 func.func @reduce_incorrect_region_arguments(%arg0 : f32) {
   // expected-error@+1 {{expected two region arguments}}
   %res = gpu.all_reduce %arg0 {
@@ -604,7 +636,7 @@ func.func @reduce_incorrect_yield(%arg0 : f32) {
 
 func.func @shuffle_mismatching_type(%arg0 : f32, %arg1 : i32, %arg2 : i32) {
   // expected-error@+1 {{op failed to verify that all of {value, shuffleResult} have same type}}
-  %shfl, %pred = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = #gpu<shuffle_mode xor> } : (f32, i32, i32) -> (i32, i1)
+  %shfl, %pred = "gpu.shuffle"(%arg0, %arg1, %arg2) { mode = #gpu.shuffle_mode<xor> } : (f32, i32, i32) -> (i32, i1)
   return
 }
 
@@ -898,6 +930,14 @@ func.func @wmmaMmaOp_invalid_operand_order(%A : !gpu.mma_matrix<16x16xf16, "AOp"
 func.func @wmmaMmaOp_invalid_operand_shapes(%A : !gpu.mma_matrix<16x32xf16, "AOp">, %B : !gpu.mma_matrix<16x16xf16, "BOp">, %C : !gpu.mma_matrix<16x16xf16, "COp">) -> () {
     // expected-error @+1 {{operand shapes do not satisfy matmul constraints}}
     %D = gpu.subgroup_mma_compute %A, %B, %C : !gpu.mma_matrix<16x32xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp"> -> !gpu.mma_matrix<16x16xf16, "COp">
+    return
+}
+
+// -----
+
+func.func @wmmaElementwiseOp_mismatched_operand_types(%A : !gpu.mma_matrix<16x16xf16, "COp">, %B : !gpu.mma_matrix<16x16xf32, "COp">) -> () {
+    // expected-error @+1 {{failed to verify that all elements of 'args' have same type}}
+    %C = gpu.subgroup_mma_elementwise addf %A, %B : (!gpu.mma_matrix<16x16xf16, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf16, "COp">
     return
 }
 
@@ -1197,3 +1237,9 @@ func.func @warp_execute_wrong_terminator() {
   }
   return
 }
+
+// -----
+
+// expected-error @+2 {{integer value too large}}
+// expected-error @+1 {{failed to parse GPU_SelectObjectAttr parameter 'priority' which is to be a `uint16_t`}}
+gpu.binary @binary <#gpu.select_object<0, priority = 65536>> [#gpu.object<#nvvm.target, "">]

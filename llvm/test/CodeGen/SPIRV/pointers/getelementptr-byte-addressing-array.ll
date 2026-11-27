@@ -2,7 +2,7 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; CHECK-DAG: %[[#int32:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#int64:]] = OpTypeInt 64 0
+; CHECK-DAG: %[[#int_1:]] = OpConstant %[[#int32]] 1{{$}}
 ; CHECK-DAG: %[[#float:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#vec2:]] = OpTypeVector %[[#float]] 2
 ; CHECK-DAG: %[[#arr3:]] = OpTypeArray %[[#vec2]] %[[#]]
@@ -28,7 +28,6 @@ entry:
   
   ; Dynamic index (stride 8)
   ; CHECK: %[[#idx_dyn:]] = OpLoad %[[#int32]]
-  ; CHECK: %[[#access_dyn10:]] = OpInBoundsAccessChain %[[#ptr_arr5]] %[[#]] %[[#idx_dyn]]
   ; CHECK: %[[#access_dyn:]] = OpInBoundsAccessChain %[[#ptr_vec]] %[[#]] %[[#idx_dyn]]
   ; CHECK: %[[#val_dyn:]] = OpLoad %[[#vec2]] %[[#access_dyn]]
   %gep_dyn = getelementptr inbounds nuw [8 x i8], ptr addrspace(10) @global_arr, i32 %idx
@@ -36,13 +35,14 @@ entry:
   store <2 x float> %val_dyn, ptr addrspace(10) @out_dyn
 
   ; Constant index (index 1 -> offset 8 bytes)
-  ; CHECK: %[[#access_const:]] = OpInBoundsAccessChain %[[#ptr_vec]] %[[#]] %[[#]]
+  ; CHECK: %[[#access_const:]] = OpInBoundsAccessChain %[[#ptr_vec]] %[[#]] %[[#int_1]]
   ; CHECK: %[[#val_const:]] = OpLoad %[[#vec2]] %[[#access_const]]
   %gep_const = getelementptr inbounds nuw [8 x i8], ptr addrspace(10) @global_arr, i32 1
   %val_const = load <2 x float>, ptr addrspace(10) %gep_const
   store <2 x float> %val_const, ptr addrspace(10) @out_const
 
   ; Dynamic index (stride 10)
+  ; CHECK: %[[#access_dyn10:]] = OpInBoundsAccessChain %[[#ptr_arr5]] %[[#]] %[[#idx_dyn]]
   ; CHECK: %[[#val_dyn10:]] = OpLoad %[[#arr5]] %[[#access_dyn10]]
   %gep_dyn10 = getelementptr inbounds nuw [10 x i8], ptr addrspace(10) @global_arr_10, i32 %idx
   %val_dyn10 = load [5 x i16], ptr addrspace(10) %gep_dyn10

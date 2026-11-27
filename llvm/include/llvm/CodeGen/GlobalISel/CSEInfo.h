@@ -76,7 +76,6 @@ class LLVM_ABI GISelCSEInfo : public GISelChangeObserver {
   BumpPtrAllocator UniqueInstrAllocator;
   FoldingSet<UniqueMachineInstr> CSEMap;
   MachineRegisterInfo *MRI = nullptr;
-  MachineFunction *MF = nullptr;
   std::unique_ptr<CSEConfigBase> CSEOpt;
   /// Keep a cache of UniqueInstrs for each MachineInstr. In GISel,
   /// often instructions are mutated (while their ID has completely changed).
@@ -97,22 +96,23 @@ class LLVM_ABI GISelCSEInfo : public GISelChangeObserver {
   void invalidateUniqueMachineInstr(UniqueMachineInstr *UMI);
 
   UniqueMachineInstr *getNodeIfExists(FoldingSetNodeID &ID,
-                                      MachineBasicBlock *MBB, void *&InsertPos);
+                                      MachineBasicBlock *MBB,
+                                      FoldingSetInsertToken &Token);
 
   /// Allocate and construct a new UniqueMachineInstr for MI and return.
   UniqueMachineInstr *getUniqueInstrForMI(const MachineInstr *MI);
 
-  void insertNode(UniqueMachineInstr *UMI, void *InsertPos = nullptr);
+  void insertNode(UniqueMachineInstr *UMI, FoldingSetInsertToken Token = {});
 
   /// Get the MachineInstr(Unique) if it exists already in the CSEMap and the
   /// same MachineBasicBlock.
   MachineInstr *getMachineInstrIfExists(FoldingSetNodeID &ID,
                                         MachineBasicBlock *MBB,
-                                        void *&InsertPos);
+                                        FoldingSetInsertToken &Token);
 
   /// Use this method to allocate a new UniqueMachineInstr for MI and insert it
   /// into the CSEMap. MI should return true for shouldCSE(MI->getOpcode())
-  void insertInstr(MachineInstr *MI, void *InsertPos = nullptr);
+  void insertInstr(MachineInstr *MI, FoldingSetInsertToken Token = {});
 
   bool HandlingRecordedInstrs = false;
 

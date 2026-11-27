@@ -109,25 +109,6 @@ define void @exp_compr_invalid_inputs(i32 %tgt, i32 %en, i1 %bool) {
   ret void
 }
 
-declare i64 @llvm.amdgcn.icmp.i64.i32(i32, i32, i32)
-
-define i64 @invalid_nonconstant_icmp_code(i32 %a, i32 %b, i32 %c) {
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %c
-  ; CHECK-NEXT: %result = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %a, i32 %b, i32 %c)
-  %result = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %a, i32 %b, i32 %c)
-  ret i64 %result
-}
-
-declare i64 @llvm.amdgcn.fcmp.i64.f32(float, float, i32)
-define i64 @invalid_nonconstant_fcmp_code(float %a, float %b, i32 %c) {
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %c
-  ; CHECK-NEXT: %result = call i64 @llvm.amdgcn.fcmp.i64.f32(float %a, float %b, i32 %c)
-  %result = call i64 @llvm.amdgcn.fcmp.i64.f32(float %a, float %b, i32 %c)
-  ret i64 %result
-}
-
 declare { float, i1 } @llvm.amdgcn.div.scale.f32(float, float, i1)
 define amdgpu_kernel void @test_div_scale_f32_val_undef_undef(ptr addrspace(1) %out) {
   ; CHECK: immarg operand has non-immediate parameter

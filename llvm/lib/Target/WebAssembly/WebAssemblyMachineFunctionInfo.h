@@ -60,6 +60,9 @@ class WebAssemblyFunctionInfo final : public MachineFunctionInfo {
   // after WebAssemblyExplicitLocals
   unsigned FrameBaseLocal = -1U;
 
+  // The stack object that llvm.swift.async.context.addr points to.
+  std::optional<int> SwiftAsyncContextFrameIdx;
+
   // Function properties.
   bool CFGStackified = false;
 
@@ -117,6 +120,11 @@ public:
   }
   void setBasePointerVreg(unsigned Reg) { BasePtrVreg = Reg; }
 
+  std::optional<int> getSwiftAsyncContextFrameIdx() const {
+    return SwiftAsyncContextFrameIdx;
+  }
+  void setSwiftAsyncContextFrameIdx(int FI) { SwiftAsyncContextFrameIdx = FI; }
+
   void stackifyVReg(MachineRegisterInfo &MRI, Register VReg) {
     assert(MRI.getUniqueVRegDef(VReg));
     auto I = VReg.virtRegIndex();
@@ -161,7 +169,7 @@ void computeLegalValueVTs(const Function &F, const TargetMachine &TM, Type *Ty,
                           SmallVectorImpl<MVT> &ValueVTs);
 
 // Compute the signature for a given FunctionType (Ty). Note that it's not the
-// signature for ContextFunc (ContextFunc is just used to get varous context)
+// signature for ContextFunc (ContextFunc is just used to get various context)
 void computeSignatureVTs(const FunctionType *Ty, const Function *TargetFunc,
                          const Function &ContextFunc, const TargetMachine &TM,
                          SmallVectorImpl<MVT> &Params,

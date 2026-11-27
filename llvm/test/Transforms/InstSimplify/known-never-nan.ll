@@ -580,7 +580,7 @@ define i1 @issue63316(i64 %arg) {
 ; CHECK-NEXT:    ret i1 [[FCMP]]
 ;
   %sitofp = sitofp i64 %arg to float
-  %fmul = fmul float %sitofp, 0x7FF0000000000000
+  %fmul = fmul float %sitofp, +inf
   %fcmp = fcmp uno float %fmul, 0.000000e+00
   ret i1 %fcmp
 }
@@ -593,7 +593,66 @@ define i1 @issue63316_commute(i64 %arg) {
 ; CHECK-NEXT:    ret i1 [[FCMP]]
 ;
   %sitofp = sitofp i64 %arg to float
-  %fmul = fmul float 0x7FF0000000000000, %sitofp
+  %fmul = fmul float +inf, %sitofp
   %fcmp = fcmp uno float %fmul, 0.000000e+00
+  ret i1 %fcmp
+}
+
+; nofpclass(inf) on the result does not mean the operands are not infinite.
+; +0.0 * +inf is NaN, so the compare must not fold.
+define i1 @fma_ret_noinf_zero_times_inf(i32 %arg) {
+; CHECK-LABEL: @fma_ret_noinf_zero_times_inf(
+; CHECK-NEXT:    [[UITOFP:%.*]] = uitofp i32 [[ARG:%.*]] to double
+; CHECK-NEXT:    [[FMA:%.*]] = call nofpclass(inf) double @llvm.fma.f64(double [[UITOFP]], double +inf, double +inf)
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno double [[FMA]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[FCMP]]
+;
+  %uitofp = uitofp i32 %arg to double
+  %fma = call nofpclass(inf) double @llvm.fma.f64(double %uitofp, double +inf, double +inf)
+  %fcmp = fcmp uno double %fma, 0.000000e+00
+  ret i1 %fcmp
+}
+
+define i1 @fmuladd_ret_noinf_zero_times_inf(i32 %arg) {
+; CHECK-LABEL: @fmuladd_ret_noinf_zero_times_inf(
+; CHECK-NEXT:    [[UITOFP:%.*]] = uitofp i32 [[ARG:%.*]] to double
+; CHECK-NEXT:    [[FMULADD:%.*]] = call nofpclass(inf) double @llvm.fmuladd.f64(double [[UITOFP]], double +inf, double +inf)
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno double [[FMULADD]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[FCMP]]
+;
+  %uitofp = uitofp i32 %arg to double
+  %fmuladd = call nofpclass(inf) double @llvm.fmuladd.f64(double %uitofp, double +inf, double +inf)
+  %fcmp = fcmp uno double %fmuladd, 0.000000e+00
+  ret i1 %fcmp
+}
+
+; fma(+inf, +inf, -inf) and fma(-inf, -inf, -inf) are NaN.
+define i1 @fma_square_ret_noinf_inf_minus_inf(double noundef nofpclass(nan) %arg) {
+; CHECK-LABEL: @fma_square_ret_noinf_inf_minus_inf(
+; CHECK-NEXT:    [[FMA:%.*]] = call nofpclass(inf) double @llvm.fma.f64(double [[ARG:%.*]], double [[ARG]], double -inf)
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno double [[FMA]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[FCMP]]
+;
+  %fma = call nofpclass(inf) double @llvm.fma.f64(double %arg, double %arg, double -inf)
+  %fcmp = fcmp uno double %fma, 0.000000e+00
+  ret i1 %fcmp
+}
+
+; ninf does restrict the operands.
+define i1 @fma_ninf_nonan_srcs(double nofpclass(nan) %arg0, double nofpclass(nan) %arg1, double nofpclass(nan) %arg2) {
+; CHECK-LABEL: @fma_ninf_nonan_srcs(
+; CHECK-NEXT:    ret i1 false
+;
+  %fma = call ninf double @llvm.fma.f64(double %arg0, double %arg1, double %arg2)
+  %fcmp = fcmp uno double %fma, 0.000000e+00
+  ret i1 %fcmp
+}
+
+define i1 @fma_square_ninf_nonan_srcs(double noundef nofpclass(nan) %arg0, double nofpclass(nan) %arg1) {
+; CHECK-LABEL: @fma_square_ninf_nonan_srcs(
+; CHECK-NEXT:    ret i1 false
+;
+  %fma = call ninf double @llvm.fma.f64(double %arg0, double %arg0, double %arg1)
+  %fcmp = fcmp uno double %fma, 0.000000e+00
   ret i1 %fcmp
 }

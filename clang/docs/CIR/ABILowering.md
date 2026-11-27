@@ -1,8 +1,5 @@
 # ClangIR ABI Lowering Design Document
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 
@@ -35,12 +32,11 @@ and MLIR integration layer; FIR can adopt the same infrastructure with minimal
 dialect-specific adaptation (e.g. cdecl when calling C from Fortran). ABI
 compliance will be validated through differential testing against Classic Clang
 CodeGen, and performance overhead should remain under 5% compared to a direct,
-dialect-specific implementation. Variadic calls are lowered on x86_64 by
-classifying each call site from its own operand types, since an argument
-passed through an ellipsis competes for registers with the declared ones.
-An indirect variadic call whose operands already carry their wire form is left
-as written. One that needs an ABI rewrite is deferred, as is variadic
-lowering for other targets.
+dialect-specific implementation. Variadic calls, direct or indirect, are lowered
+on x86_64 by classifying each call site from its own operand types, since an
+argument passed through an ellipsis competes for registers with the declared
+ones. As in Classic Clang CodeGen, the call's function type keeps only the
+declared parameters. Variadic lowering for other targets is deferred.
 
 ## Background and Context
 
@@ -539,12 +535,16 @@ The pass takes one of two driver modes via pass options:
 
 Exactly one of the two options must be set.
 
+Each driver is a `CIRABIClassifier` subclass under
+`clang/lib/CIR/Dialect/Transforms/`. The pass asks the classifier to classify
+each function, each call that passes arguments through an ellipsis, each
+indirect call, and each `cir.va_arg`.
+
 ### Enabling the Pass
 
 `cir-call-conv-lowering` runs by default whenever ClangIR code generation is
-enabled on an x86_64 target. On every other triple the pipeline omits the
-pass, because x86_64 System V is the only classifier implemented so far, and
-signatures reach the LLVM dialect in their high-level form.
+enabled on a target that has a classifier. On other triples the pipeline omits
+the pass, and signatures reach the LLVM dialect in their high-level form.
 
 `-fno-clangir-call-conv-lowering` turns the pass off and
 `-fclangir-call-conv-lowering` turns it back on. The last one on the

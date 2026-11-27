@@ -206,7 +206,7 @@ func.func @test_scalar_in_compute_region() {
     %addr = memref.get_global @global_in_compute_region : memref<f32>
     %load = memref.load %addr[] : memref<f32>
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 

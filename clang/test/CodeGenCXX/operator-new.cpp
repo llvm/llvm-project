@@ -27,5 +27,14 @@ void *f2(long N) {
 }
 
 // ALL: declare noundef nonnull ptr @_Znaj(
-// SANE: attributes [[ATTR]] = { builtin allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) }
-// SANENOT: attributes [[ATTR]] = { builtin allocsize(0) }
+
+void *f3(unsigned long N) {
+  // SANE: call noalias noundef nonnull ptr @_Znwj(i32 noundef {{.*}}) [[ATTR2:#[0-9]+]]
+  // SANENOT: call noundef nonnull ptr @_Znwj(i32 noundef {{.*}}) [[ATTR2:#[0-9]+]]
+  return ::operator new(N);
+}
+
+// SANE: attributes [[ATTR]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_Znam" }
+// SANE: attributes [[ATTR2]] = { allocsize(0) }
+// SANENOT: attributes [[ATTR]] = { builtin allockind("alloc,uninitialized") allocsize(0) "alloc-family"="_Znam" }
+// SANENOT: attributes [[ATTR2]] = { allocsize(0) }

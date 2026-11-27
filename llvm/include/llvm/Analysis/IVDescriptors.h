@@ -30,6 +30,7 @@ class ScalarEvolution;
 class SCEV;
 class SCEVPredicate;
 class StoreInst;
+enum class SCEVFlags;
 
 /// These are the kinds of recurrences that we support.
 enum class RecurKind {
@@ -50,10 +51,14 @@ enum class RecurKind {
   FAddChainWithSubs, ///< A chain of fadds and fsubs.
   FSub,     ///< Subtraction of floats.
   FMul,     ///< Product of floats.
-  FMin,     ///< FP min implemented in terms of select(cmp()).
-  FMax,     ///< FP max implemented in terms of select(cmp()).
+  FMin,     ///< FP min as select(cmp()) with nnan/nsz, or llvm.minnum.
+  FMax,     ///< FP max as select(cmp()) with nnan/nsz, or llvm.maxnum.
   FMinNum,  ///< FP min with llvm.minnum semantics including NaNs.
   FMaxNum,  ///< FP max with llvm.maxnum semantics including NaNs.
+  FMinSelectNoFMF, ///< FMin as select(cmp()) lacking nnan or nsz, on IEEE types
+                   ///< with IEEE denormals.
+  FMaxSelectNoFMF, ///< FMax as select(cmp()) lacking nnan or nsz, on IEEE types
+                   ///< with IEEE denormals.
   FMinimum, ///< FP min with llvm.minimum semantics
   FMaximum, ///< FP max with llvm.maximum semantics
   FMinimumNum, ///< FP min with llvm.minimumnum semantics
@@ -93,7 +98,7 @@ public:
                        RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
                        Type *RT, bool Signed, bool Ordered,
                        SmallPtrSetImpl<Instruction *> &CI,
-                       unsigned MinWidthCastToRecurTy,
+                       Type *MinWidthCastToRecurTy,
                        bool PhiHasUsesOutsideReductionChain = false)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
@@ -263,12 +268,20 @@ public:
     return Kind == RecurKind::FMinNum || Kind == RecurKind::FMaxNum;
   }
 
+  /// Returns true if the recurrence kind is a select-based floating-point
+  /// min/max kind lacking nnan or nsz.
+  static bool isFPMinMaxSelectNoFMFRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::FMinSelectNoFMF ||
+           Kind == RecurKind::FMaxSelectNoFMF;
+  }
+
   /// Returns true if the recurrence kind is a floating-point min/max kind.
   static bool isFPMinMaxRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::FMin || Kind == RecurKind::FMax ||
            Kind == RecurKind::FMinimum || Kind == RecurKind::FMaximum ||
            Kind == RecurKind::FMinimumNum || Kind == RecurKind::FMaximumNum ||
-           isFPMinMaxNumRecurrenceKind(Kind);
+           isFPMinMaxNumRecurrenceKind(Kind) ||
+           isFPMinMaxSelectNoFMFRecurrenceKind(Kind);
   }
 
   /// Returns true if the recurrence kind is any min/max kind.
@@ -307,8 +320,9 @@ public:
   /// recurrence.
   const SmallPtrSet<Instruction *, 8> &getCastInsts() const { return CastInsts; }
 
-  /// Returns the minimum width used by the recurrence in bits.
-  unsigned getMinWidthCastToRecurrenceTypeInBits() const {
+  /// Returns the scalar source type of the narrowest cast to the recurrence
+  /// type, or null if there is no such cast.
+  Type *getMinWidthCastToRecurrenceType() const {
     return MinWidthCastToRecurrenceType;
   }
 
@@ -367,8 +381,8 @@ private:
   bool PhiHasUsesOutsideReductionChain = false;
   // Instructions used for type-promoting the recurrence.
   SmallPtrSet<Instruction *, 8> CastInsts;
-  // The minimum width used by the recurrence.
-  unsigned MinWidthCastToRecurrenceType;
+  // The scalar source type of the narrowest cast to the recurrence type.
+  Type *MinWidthCastToRecurrenceType = nullptr;
 };
 
 /// A struct for saving information about induction variables.
@@ -395,7 +409,7 @@ public:
   InductionKind getKind() const { return IK; }
   const SCEV *getStep() const { return Step; }
   BinaryOperator *getInductionBinOp() const { return InductionBinOp; }
-  LLVM_ABI ConstantInt *getConstIntStepValue() const;
+  LLVM_ABI std::optional<APInt> getConstStepValue() const;
 
   /// Returns true if \p Phi is an induction in the loop \p L. If \p Phi is an
   /// induction, the induction descriptor \p D will contain the data describing
@@ -436,7 +450,7 @@ public:
   /// Returns floating-point induction operator that does not allow
   /// reassociation (transforming the induction requires an override of normal
   /// floating-point rules).
-  Instruction *getExactFPMathInst() {
+  Instruction *getExactFPMathInst() const {
     if (IK == IK_FpInduction && InductionBinOp &&
         !InductionBinOp->hasAllowReassoc())
       return InductionBinOp;
@@ -480,6 +494,74 @@ private:
   SmallVector<Instruction *, 2> RedundantCasts;
   // SCEV predicates checking overflow needed for this induction.
   SmallVector<const SCEVPredicate *, 2> NoWrapPredicates;
+};
+
+/// Describes a conditional induction variable: an induction variable that is
+/// updated only on loop iterations for which a certain predicate is satisfied.
+/// Its step must be loop-invariant.
+class ConditionalInductionDescriptor {
+public:
+  ConditionalInductionDescriptor() = default;
+
+  /// Returns true if \p PN is a conditional induction variable in the loop
+  /// \p L. If it is, \p Desc will contain the data describing the PHI.
+  LLVM_ABI static bool
+  isConditionalInductionPHI(PHINode *PN, const Loop *L,
+                            ConditionalInductionDescriptor &Desc,
+                            ScalarEvolution &SE);
+
+  /// Returns the header PHI described by this descriptor.
+  PHINode *getHeaderPHI() const { return HeaderPHI; }
+
+  /// Returns the backedge PHI that selects between StepInst and the HeaderPHI.
+  PHINode *getBackedgePHI() const { return BackedgePHI; }
+
+  /// Returns the instruction that updates the conditional induction PHI.
+  Instruction *getStepInst() const { return StepInst; }
+
+  /// Returns a SCEV expression for the initial value of the conditional
+  /// induction PHI.
+  const SCEV *getStartSCEV() const { return StartSCEV; }
+
+  /// Returns a SCEV expression for the step of the conditional induction PHI.
+  /// This is the value it increments by when the predicate is satisfied.
+  const SCEV *getStepSCEV() const { return StepSCEV; }
+
+  /// Returns the SCEV no-wrap flags that apply to StepInst.
+  SCEVFlags getSCEVNoWrapFlags() const { return NoWrapFlags; }
+
+  /// Returns an over-approximation of the conditional induction as a SCEVAddRec
+  /// assuming the condition is always true. The loop \p L must be the loop
+  /// containing the conditional induction.
+  LLVM_ABI const SCEV *getUnconditionalAddRec(ScalarEvolution &SE,
+                                              const Loop &L) const;
+
+private:
+  ConditionalInductionDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,
+                                 Instruction *StepInst, const SCEV *StartSCEV,
+                                 const SCEV *StepSCEV, SCEVFlags NoWrapFlags)
+      : HeaderPHI(HeaderPHI), BackedgePHI(BackedgePHI), StepInst(StepInst),
+        StartSCEV(StartSCEV), StepSCEV(StepSCEV), NoWrapFlags(NoWrapFlags) {}
+
+  /// The header PHI (this is the PHI described by the descriptor).
+  PHINode *HeaderPHI = nullptr;
+
+  /// The backedge PHI that selects between StepInst and the HeaderPHI.
+  PHINode *BackedgePHI = nullptr;
+
+  /// The instruction that updates the conditional induction PHI.
+  Instruction *StepInst = nullptr;
+
+  /// SCEV expression representing the start value for the conditional
+  /// induction PHI.
+  const SCEV *StartSCEV = nullptr;
+
+  /// SCEV expression representing the step value for the conditional induction
+  /// PHI.
+  const SCEV *StepSCEV = nullptr;
+
+  /// The SCEV no-wrap flags that apply to StepInst.
+  SCEVFlags NoWrapFlags{};
 };
 
 } // end namespace llvm

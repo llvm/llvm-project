@@ -6,11 +6,11 @@ define amdgpu_kernel void @infer_as_before_atomic(ptr addrspace(4) %arg) #0 {
 ; CHECK-SAME: ptr addrspace(4) [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr addrspace(4) [[ARG]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[LOAD]] to ptr addrspace(1)
-; CHECK-NEXT:    [[V:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP1]], float 1.000000e+00 syncscope("agent-one-as") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META0:![0-9]+]], !amdgpu.ignore.denormal.mode [[META0]]
+; CHECK-NEXT:    [[V:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP1]], float 1.000000e+00 syncscope("agent-one-as") monotonic, align 4, !atomic.ignore.denormal.mode [[META0:![0-9]+]], !amdgpu.no.fine.grained.memory [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %load = load ptr, ptr addrspace(4) %arg
-  %v = atomicrmw fadd ptr %load, float 1.0 syncscope("agent-one-as") monotonic, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %v = atomicrmw fadd ptr %load, float 1.0 syncscope("agent-one-as") monotonic, align 4, !amdgpu.no.fine.grained.memory !0, !atomic.ignore.denormal.mode !0
   ret void
 }
 

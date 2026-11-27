@@ -1881,3 +1881,23 @@ void AtomicCaptureCompound(int LHS, int RHS) {
   }
 
 }
+
+namespace gh226905 {
+template<class T> T &foo();
+template<class T> void bar(T baz) {
+  // expected-error@+2{{statement associated with OpenACC 'atomic' directive is invalid}}
+  // expected-note@+2{{right operand to compound assignment expression must be of scalar type (was '<overloaded function type>')}}
+#pragma acc atomic
+  baz = baz << foo;
+}
+}
+
+template <typename T> void DeclAssocStmt() {
+  // expected-error@+2 {{statement associated with OpenACC 'atomic' directive is invalid}}
+  // expected-note@+2 {{expected assignment, compound assignment, increment, or decrement expression}}
+#pragma acc atomic
+  int i;
+  i = 42;
+}
+
+void DeclAssocStmtUse() { DeclAssocStmt<int>(); }

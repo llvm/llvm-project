@@ -3,7 +3,7 @@
 // RUN: %libomptarget-compileoptxx-generic -fopenmp-version=61
 // RUN: %libomptarget-run-generic | %fcheck-generic
 // REQUIRES: gpu
-// XFAIL: intelgpu
+// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 #include <stdio.h>
@@ -104,6 +104,24 @@ int main() {
     if (!omp_get_dyn_gprivate_size())
       ++Failed;
     if (omp_get_dyn_gprivate_size() != ExceededSize)
+      ++Failed;
+    if (omp_get_dyn_gprivate_memspace() != omp_default_mem_space)
+      ++Failed;
+  }
+
+  // The dynamic size alone fits, but not together with the kernel's static
+  // block memory, e.g., the device runtime's team state.
+  size_t AlmostMaxSize = MaxSize - 1;
+
+// Verify that the fallback(default_mem) also triggers in that case.
+#pragma omp target dyn_groupprivate(fallback(default_mem) : AlmostMaxSize)     \
+    map(tofrom : Failed)
+  {
+    if (!omp_get_dyn_gprivate_ptr(0))
+      ++Failed;
+    if (omp_get_dyn_gprivate_nofb_ptr(0))
+      ++Failed;
+    if (omp_get_dyn_gprivate_size() != AlmostMaxSize)
       ++Failed;
     if (omp_get_dyn_gprivate_memspace() != omp_default_mem_space)
       ++Failed;

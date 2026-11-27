@@ -23,8 +23,8 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 
 def ArmSME_Dialect : Dialect {
   let name = "arm_sme";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::arm_sme";
+  let useDefaultOperationRegistration = 1;
   let summary = "Basic dialect to target Arm SME architectures";
   let description = [{
     This dialect contains the definitions necessary to target Arm SME
@@ -36,8 +36,13 @@ def ArmSME_Dialect : Dialect {
   }];
   let dependentDialects = ["scf::SCFDialect", "vector::VectorDialect",
                            "memref::MemRefDialect"];
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasInitializer = 0;
 }
+
+// The op partitions of the dialect, generated from ArmSMEAllOps.td.
+def ArmSME_CorePartition : Partition<"Core">;
+def ArmSME_IntrinsicPartition : Partition<"Intrinsic">;
 
 //===----------------------------------------------------------------------===//
 // ArmSME type definitions

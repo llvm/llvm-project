@@ -11,12 +11,12 @@
 #include "lldb/API/SBFile.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/StreamFile.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -48,8 +48,8 @@ const char *SBStream::GetData() {
   if (m_is_file || m_opaque_up == nullptr)
     return nullptr;
 
-  return ConstString(static_cast<StreamString *>(m_opaque_up.get())->GetData())
-      .GetCString();
+  return StringPool::GetSystemPool().Intern(
+      static_cast<StreamString *>(m_opaque_up.get())->GetData());
 }
 
 // If this stream is not redirected to a file, it will maintain a local cache
@@ -193,4 +193,15 @@ void SBStream::Clear() {
     else
       static_cast<StreamString *>(m_opaque_up.get())->Clear();
   }
+}
+
+/// Exists so friend classes can use the StringString's data without
+/// putting it in the ConstString pool.
+/// The return value only lives as long as the this SBStream class.
+const char *SBStream::GetString() const {
+  if (m_is_file || m_opaque_up == nullptr)
+    return nullptr;
+
+  const auto *stream_raw = static_cast<StreamString *>(m_opaque_up.get());
+  return stream_raw->GetString().data();
 }

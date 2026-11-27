@@ -48,7 +48,6 @@ class SpillPlacement {
 
   struct Node;
 
-  const MachineFunction *MF = nullptr;
   const EdgeBundles *bundles = nullptr;
   const MachineBlockFrequencyInfo *MBFI = nullptr;
 
@@ -57,9 +56,6 @@ class SpillPlacement {
   // Nodes that are active in the current computation. Owned by the prepare()
   // caller.
   BitVector *ActiveNodes = nullptr;
-
-  // Nodes with active links. Populated by scanActiveBundles.
-  SmallVector<unsigned, 8> Linked;
 
   // Nodes that went positive during the last call to scanActiveBundles or
   // iterate.

@@ -53,10 +53,12 @@ private:
   // Tracks nested DEC structures and fields of that type
   UnorderedSymbolSet emittedDECStructures_, emittedDECFields_;
   UnorderedSymbolSet usedNonIntrinsicModules_;
-  // Modules already re-exported by a plain USE for an operator-less declare
-  // reduction, so the USE is written once even when several such reductions
-  // come from the same module.
-  UnorderedSymbolSet reexportedReductionModules_;
+  // Modules already re-exported by a plain USE (see ClassifyUseItem) for an
+  // operator-less declare reduction or a DEC STRUCTURE, whether USE-associated
+  // directly or as an occurrence of an ambiguous name. The USE is written once
+  // even when several such symbols come from the same module, and an ambiguous
+  // name is written only if one of its modules is in this set.
+  UnorderedSymbolSet reexportedPlainUseModules_;
 
   llvm::raw_string_ostream needs_{needsBuf_};
   llvm::raw_string_ostream uses_{usesBuf_};
@@ -83,11 +85,16 @@ private:
   void PutProcEntity(llvm::raw_ostream &, const Symbol &);
   void PutDerivedType(const Symbol &, const Scope * = nullptr);
   void PutDECStructure(const Symbol &, const Scope * = nullptr);
+  void PutEnumerationType(const Symbol &);
   void PutTypeParam(llvm::raw_ostream &, const Symbol &);
   void PutUserReduction(llvm::raw_ostream &, const Symbol &);
   void PutSubprogram(const Symbol &);
   void PutGeneric(const Symbol &);
   void PutUse(const Symbol &);
+  void PutPlainUse(const Symbol &module);
+  void PutUseOnly(const Symbol &local, const Symbol &use);
+  void PutUseError(const Symbol &);
+  void PutUseErrorPlainUses(const Symbol &);
   void PutUseExtraAttr(Attr, const Symbol &, const Symbol &);
   llvm::raw_ostream &PutAttrs(llvm::raw_ostream &, Attrs,
       const std::string * = nullptr, bool = false, std::string before = ","s,

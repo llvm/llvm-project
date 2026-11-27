@@ -15,8 +15,8 @@ include "mlir/IR/EnumAttr.td"
 
 def MPI_Dialect : Dialect {
   let name = "mpi";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::mpi";
+  let useDefaultOperationRegistration = 1;
   let description = [{
     This dialect models the Message Passing Interface (MPI), version 
     4.0. It is meant to serve as an interfacing dialect that is targeted
@@ -35,8 +35,9 @@ def MPI_Dialect : Dialect {
     [OpenMPI online documentation](https://www.open-mpi.org/doc/current/).
   }];
 
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
+  let hasInitializer = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -212,9 +213,7 @@ def MPI_ErrorClassEnum
   let cppNamespace = "::mlir::mpi";
 }
 
-def MPI_ErrorClassAttr : EnumAttr<MPI_Dialect, MPI_ErrorClassEnum, "errclass"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+def MPI_ErrorClassAttr : EnumAttr<MPI_Dialect, MPI_ErrorClassEnum, "errclass">;
 
 def MPI_OpNull : I32EnumAttrCase<"MPI_OP_NULL", 0, "MPI_OP_NULL">;
 def MPI_OpMax : I32EnumAttrCase<"MPI_MAX", 1, "MPI_MAX">;

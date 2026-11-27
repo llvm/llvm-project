@@ -1,11 +1,11 @@
 # RUN: not --crash llc -o - -mtriple=amdgpu9.00 -run-pass=none %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -o - -mtriple=amdgpu12.00 -run-pass=none %s 2>&1 | FileCheck %s
 
 ---
 name:            test_intrinsic
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
 body:             |
   bb.0:

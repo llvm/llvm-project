@@ -172,7 +172,6 @@ define <vscale x 2 x i32> @signed_wide_add_nxv4i16(<vscale x 2 x i32> %acc, <vsc
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    ptrue p0.s
 ; CHECK-SVE2-NEXT:    sxth z1.s, p0/m, z1.s
-; CHECK-SVE2-NEXT:    ptrue p0.d
 ; CHECK-SVE2-NEXT:    sadalp z0.d, p0/m, z1.s
 ; CHECK-SVE2-NEXT:    ret
 entry:

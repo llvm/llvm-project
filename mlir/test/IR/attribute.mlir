@@ -542,8 +542,31 @@ func.func @allowed_cases_pass() {
 
 // -----
 
+// CHECK-LABEL: func @space_separated_cases_pass
+func.func @space_separated_cases_pass() {
+  // CHECK: test.op_with_bit_enum_space <user group>
+  "test.op_with_bit_enum_space"() {
+    value = #test.bit_enum_space<group user>
+  } : () -> ()
+  // CHECK: test.op_with_bit_enum_space <user group other> tag 1 : i32
+  test.op_with_bit_enum_space <other user group> tag 1 : i32
+  // CHECK: test.op_with_bit_enum_space_directive user other tag 1 : i32
+  test.op_with_bit_enum_space_directive other user tag 1 : i32
+  return
+}
+
+// -----
+
+func.func @space_separated_case_missing() {
+  // expected-error@+2 {{expected one of [none, user, group, other] for a space-separated test bit enum}}
+  // expected-error@+1 {{failed to parse TestBitEnumSpaceAttr}}
+  "test.op_with_bit_enum_space"() {value = #test.bit_enum_space<sticky>} : () -> ()
+}
+
+// -----
+
 func.func @disallowed_case_sticky_fail() {
-  // expected-error@+2 {{expected one of [read, write, execute] for a test bit enum, got: sticky}}
+  // expected-error@+2 {{expected one of [none, read, write, execute] for a test bit enum, got: sticky}}
   // expected-error@+1 {{failed to parse TestBitEnumAttr}}
   "test.op_with_bit_enum"() {value = #test.bit_enum<sticky>} : () -> ()
 }
@@ -591,6 +614,40 @@ func.func @correct_type_pass() {
 func.func @tf32_elements_attr() {
   // CHECK: "foo"() {attr = dense<4.000000e+00> : tensor<tf32>} : () -> ()
   "foo"() {attr = dense<4.0> : tensor<tf32>} : () -> ()
+  return
+}
+
+// -----
+
+// Test MXI8 dense elements at both storage endpoints and around zero.
+
+// CHECK-LABEL: func @mxi8_elements_attr
+func.func @mxi8_elements_attr() {
+  // CHECK: "foo"() {attr = dense<tensor<4xmxi8> : [-128 : i8, -1 : i8, 0 : i8, 127 : i8]>} : () -> ()
+  "foo"() {attr = dense<tensor<4xmxi8> : [-128 : i8, -1 : i8, 0 : i8, 127 : i8]>} : () -> ()
+  // CHECK: "foo"() {attr = dense<tensor<3xmxi8> : 64 : i8>} : () -> ()
+  "foo"() {attr = dense<tensor<3xmxi8> : 64 : i8>} : () -> ()
+  // CHECK: "foo"() {attr = dense<vector<2xmxi8> : [-128 : i8, 127 : i8]>} : () -> ()
+  "foo"() {attr = dense<vector<2xmxi8> : [-128 : i8, 127 : i8]>} : () -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @mxi8_hex_elements_attr
+func.func @mxi8_hex_elements_attr() {
+  // CHECK: "foo"() {attr = dense<tensor<1xmxi8> : -128 : i8>} : () -> ()
+  "foo"() {attr = dense<"0x80"> : tensor<1xmxi8>} : () -> ()
+  // CHECK: "foo"() {attr = dense<tensor<3xmxi8> : 64 : i8>} : () -> ()
+  "foo"() {attr = dense<"0x40"> : tensor<3xmxi8>} : () -> ()
+  // CHECK: "foo"() {attr = dense<tensor<4xmxi8> : [-128 : i8, -1 : i8, 0 : i8, 127 : i8]>} : () -> ()
+  "foo"() {attr = dense<"0x80FF007F"> : tensor<4xmxi8>} : () -> ()
+  // CHECK: "foo"() {attr = dense<vector<2xmxi8> : [-128 : i8, 127 : i8]>} : () -> ()
+  "foo"() {attr = dense<"0x807F"> : vector<2xmxi8>} : () -> ()
+  // CHECK: "foo"() {attr = sparse<0, -128> : tensor<1xmxi8>} : () -> ()
+  "foo"() {attr = sparse<0, "0x80"> : tensor<1xmxi8>} : () -> ()
+  // CHECK: "foo"() {attr = sparse<[0, 2], [-128, 127]> : tensor<3xmxi8>} : () -> ()
+  "foo"() {attr = sparse<[0, 2], "0x807F"> : tensor<3xmxi8>} : () -> ()
   return
 }
 
@@ -946,7 +1003,7 @@ func.func @default_value_printing(%arg0 : i32) {
   // CHECK: test.default_value_print %arg0
   "test.default_value_print"(%arg0) {"value_with_default" = 0 : i32} : (i32) -> ()
   // The attribute SHOULD be printed because it is not equal to the default
-  // CHECK: test.default_value_print {value_with_default = 1 : i32} %arg0
+  // CHECK: test.default_value_print <value_with_default = 1> %arg0
   "test.default_value_print"(%arg0) {"value_with_default" = 1 : i32} : (i32) -> ()
   return
 }

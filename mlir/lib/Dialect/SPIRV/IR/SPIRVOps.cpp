@@ -31,6 +31,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -358,10 +359,10 @@ void spirv::AddressOfOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, var.getType(), SymbolRefAttr::get(var));
 }
 
-LogicalResult spirv::AddressOfOp::verify() {
-  auto varOp = dyn_cast_or_null<spirv::GlobalVariableOp>(
-      SymbolTable::lookupNearestSymbolFrom((*this)->getParentOp(),
-                                           getVariableAttr()));
+LogicalResult
+spirv::AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  auto varOp = symbolTable.lookupNearestSymbolFrom<spirv::GlobalVariableOp>(
+      *this, getVariableAttr());
   if (!varOp) {
     return emitOpError("expected spirv.GlobalVariable symbol");
   }
@@ -422,6 +423,11 @@ LogicalResult spirv::CompositeConstructOp::verify() {
     return emitOpError(
         "expected to return a vector or cooperative matrix when the number of "
         "constituents is less than what the result needs");
+
+  if (constituents.size() < 2)
+    return emitOpError("has incorrect number of operands: expected at least "
+                       "2 for a vector result, but provided ")
+           << constituents.size();
 
   SmallVector<unsigned> sizes;
   for (Value component : constituents) {
@@ -599,7 +605,8 @@ ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
 
 void spirv::ConstantOp::print(OpAsmPrinter &printer) {
   printer << ' ' << getValue();
-  if (isa<spirv::ArrayType, spirv::StructType>(getType()))
+  if (isa<spirv::ArrayType, spirv::StructType>(getType()) &&
+      !isa<spirv::NullAttr>(getValue()))
     printer << " : " << getType();
 }
 
@@ -612,7 +619,11 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
                             "matrix constant, but found ")
              << denseAttr;
   }
-  if (isa<IntegerAttr, FloatAttr>(value)) {
+  if (isa<spirv::NullAttr>(value) &&
+      !isa<spirv::ArrayType, spirv::PointerType, spirv::StructType>(opType))
+    return op.emitOpError("must have spirv.ptr, spirv.array or spirv.struct "
+                          "result type for null value");
+  if (isa<IntegerAttr, FloatAttr, spirv::NullAttr>(value)) {
     auto valueType = cast<TypedAttr>(value).getType();
     if (valueType != opType)
       return op.emitOpError("result type (")
@@ -1105,17 +1116,19 @@ LogicalResult spirv::ExecutionModeIdOp::verify() {
            << schema.numOperands << " value operand(s), got "
            << getValues().size();
 
-  for (Attribute value : getValues()) {
-    auto valueSymbol = dyn_cast<FlatSymbolRefAttr>(value);
-    if (!valueSymbol)
-      return emitOpError("expected value operands to be symbol reference");
-    Operation *valueOp = SymbolTable::lookupNearestSymbolFrom(
-        (*this)->getParentOp(), valueSymbol);
-    if (!valueOp)
+  if (!llvm::all_of(getValues(), llvm::IsaPred<FlatSymbolRefAttr>))
+    return emitOpError("expected value operands to be symbol reference");
+
+  return success();
+}
+
+LogicalResult
+spirv::ExecutionModeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  for (auto valueSymbol : getValues().getAsRange<FlatSymbolRefAttr>()) {
+    if (!symbolTable.lookupNearestSymbolFrom(*this, valueSymbol))
       return emitOpError("cannot find symbol referenced by value operand: ")
              << valueSymbol.getValue();
   }
-
   return success();
 }
 
@@ -1129,9 +1142,11 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &result) {
   SmallVector<Type> resultTypes;
   auto &builder = parser.getBuilder();
 
+  (void)impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   // Parse the name as a symbol.
   StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(result.name),
                              result.attributes))
     return failure();
 
@@ -1173,7 +1188,9 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void spirv::FuncOp::print(OpAsmPrinter &printer) {
   // Print function name, signature, and control.
-  printer << " ";
+  printer << ' ';
+  if (StringAttr visibility = getSymVisibilityAttr())
+    printer << visibility.getValue() << ' ';
   printer.printSymbolName(getSymName());
   auto fnType = getFunctionType();
   function_interface_impl::printFunctionSignature(
@@ -1185,7 +1202,7 @@ void spirv::FuncOp::print(OpAsmPrinter &printer) {
       printer, *this,
       {spirv::attributeName<spirv::FunctionControl>(),
        getFunctionTypeAttrName(), getArgAttrsAttrName(), getResAttrsAttrName(),
-       getFunctionControlAttrName()});
+       getFunctionControlAttrName(), getSymVisibilityAttrName()});
 
   // Print the body if this is not an external function.
   Region &body = this->getBody();
@@ -1317,7 +1334,7 @@ void spirv::FuncOp::build(OpBuilder &builder, OperationState &state,
                           StringRef name, FunctionType type,
                           spirv::FunctionControl control,
                           ArrayRef<NamedAttribute> attrs) {
-  state.addAttribute(SymbolTable::getSymbolAttrName(),
+  state.addAttribute(getSymNameAttrName(state.name),
                      builder.getStringAttr(name));
   state.addAttribute(getFunctionTypeAttrName(state.name), TypeAttr::get(type));
   state.addAttribute(spirv::attributeName<spirv::FunctionControl>(),
@@ -1414,11 +1431,13 @@ void spirv::GlobalVariableOp::build(OpBuilder &builder, OperationState &state,
 
 ParseResult spirv::GlobalVariableOp::parse(OpAsmParser &parser,
                                            OperationState &result) {
+  (void)impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   // Parse variable name.
   StringAttr nameAttr;
   StringRef initializerAttrName =
       spirv::GlobalVariableOp::getInitializerAttrName(result.name);
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(result.name),
                              result.attributes)) {
     return failure();
   }
@@ -1458,8 +1477,11 @@ void spirv::GlobalVariableOp::print(OpAsmPrinter &printer) {
 
   // Print variable name.
   printer << ' ';
+  if (StringAttr visibility = getSymVisibilityAttr())
+    printer << visibility.getValue() << ' ';
   printer.printSymbolName(getSymName());
-  elidedAttrs.push_back(SymbolTable::getSymbolAttrName());
+  elidedAttrs.push_back(getSymNameAttrName());
+  elidedAttrs.push_back(getSymVisibilityAttrName());
 
   StringRef initializerAttrName = this->getInitializerAttrName();
   // Print optional initializer
@@ -1491,6 +1513,12 @@ LogicalResult spirv::GlobalVariableOp::verify() {
            << stringifyStorageClass(storageClass) << "'";
   }
 
+  if (storageClass != spirv::StorageClass::Private &&
+      containsMicroscalingType(
+          cast<spirv::PointerType>(getType()).getPointeeType(),
+          /*subByteOnly=*/true))
+    return emitOpError("FP4 and FP6 types require Function or Private storage");
+
   // SPIR-V spec: "A module-scope OpVariable with an Initializer operand must
   // not be decorated with the Import Linkage Type."
   if (std::optional<spirv::LinkageAttributesAttr> linkage =
@@ -1502,9 +1530,14 @@ LogicalResult spirv::GlobalVariableOp::verify() {
     }
   }
 
+  Type pointeeType = cast<spirv::PointerType>(getType()).getPointeeType();
+  return verifyPhysicalStorageBufferDecorations(getOperation(), pointeeType);
+}
+
+LogicalResult
+spirv::GlobalVariableOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (FlatSymbolRefAttr init = getInitializerAttr()) {
-    Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
-        (*this)->getParentOp(), init.getAttr());
+    Operation *initOp = symbolTable.lookupNearestSymbolFrom(*this, init);
     // TODO: Currently only variable initialization with specialization
     // constants is supported. There could be normal constants in the module
     // scope as well.
@@ -1523,10 +1556,46 @@ LogicalResult spirv::GlobalVariableOp::verify() {
     }
   }
 
-  Type pointeeType = cast<spirv::PointerType>(getType()).getPointeeType();
-  if (failed(
-          verifyPhysicalStorageBufferDecorations(getOperation(), pointeeType)))
-    return failure();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.INTEL.FunctionPointerCall
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::INTELFunctionPointerCallOp::verify() {
+  auto functionType = cast<FunctionType>(
+      cast<spirv::PointerType>(getFunctionPointer().getType())
+          .getPointeeType());
+
+  OperandRange arguments = getArguments();
+  if (functionType.getNumInputs() != arguments.size()) {
+    return emitOpError("has incorrect number of operands for callee: expected ")
+           << functionType.getNumInputs() << ", but provided "
+           << arguments.size();
+  }
+
+  for (auto [i, expected, argument] :
+       llvm::enumerate(functionType.getInputs(), arguments)) {
+    if (argument.getType() != expected) {
+      return emitOpError("operand type mismatch: expected operand type ")
+             << expected << ", but provided " << argument.getType()
+             << " for operand number " << i;
+    }
+  }
+
+  if (functionType.getNumResults() != getNumResults()) {
+    return emitOpError("has incorrect number of results for callee: expected ")
+           << functionType.getNumResults() << ", but provided "
+           << getNumResults();
+  }
+
+  if (getReturnValue() &&
+      getReturnValue().getType() != functionType.getResult(0)) {
+    return emitOpError("result type mismatch: expected ")
+           << functionType.getResult(0) << ", but provided "
+           << getReturnValue().getType();
+  }
 
   return success();
 }
@@ -1571,7 +1640,9 @@ ParseResult spirv::INTELSubgroupBlockWriteOp::parse(OpAsmParser &parser,
 }
 
 void spirv::INTELSubgroupBlockWriteOp::print(OpAsmPrinter &printer) {
-  printer << " " << getPtr() << ", " << getValue() << " : "
+  StringRef sc = stringifyStorageClass(
+      cast<spirv::PointerType>(getPtr().getType()).getStorageClass());
+  printer << " \"" << sc << "\" " << getPtr() << ", " << getValue() << " : "
           << getValue().getType();
 }
 
@@ -1675,7 +1746,7 @@ void spirv::ModuleOp::build(OpBuilder &builder, OperationState &state,
   OpBuilder::InsertionGuard guard(builder);
   builder.createBlock(state.addRegion());
   if (name) {
-    state.attributes.append(mlir::SymbolTable::getSymbolAttrName(),
+    state.attributes.append(getSymNameAttrName(state.name),
                             builder.getStringAttr(*name));
   }
 }
@@ -1695,7 +1766,7 @@ void spirv::ModuleOp::build(OpBuilder &builder, OperationState &state,
   if (vceTriple)
     state.addAttribute(getVCETripleAttrName(), *vceTriple);
   if (name)
-    state.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
+    state.addAttribute(getSymNameAttrName(state.name),
                        builder.getStringAttr(*name));
 }
 
@@ -1703,10 +1774,12 @@ ParseResult spirv::ModuleOp::parse(OpAsmParser &parser,
                                    OperationState &result) {
   Region *body = result.addRegion();
 
+  (void)impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   // If the name is present, parse it.
   StringAttr nameAttr;
   (void)parser.parseOptionalSymbolName(
-      nameAttr, mlir::SymbolTable::getSymbolAttrName(), result.attributes);
+      nameAttr, getSymNameAttrName(result.name), result.attributes);
 
   // Parse attributes
   spirv::AddressingModel addrModel;
@@ -1737,6 +1810,8 @@ ParseResult spirv::ModuleOp::parse(OpAsmParser &parser,
 }
 
 void spirv::ModuleOp::print(OpAsmPrinter &printer) {
+  if (StringAttr visibility = getSymVisibilityAttr())
+    printer << ' ' << visibility.getValue();
   if (std::optional<StringRef> name = getName()) {
     printer << ' ';
     printer.printSymbolName(*name);
@@ -1749,7 +1824,7 @@ void spirv::ModuleOp::print(OpAsmPrinter &printer) {
   auto addressingModelAttrName = spirv::attributeName<spirv::AddressingModel>();
   auto memoryModelAttrName = spirv::attributeName<spirv::MemoryModel>();
   elidedAttrs.assign({addressingModelAttrName, memoryModelAttrName,
-                      mlir::SymbolTable::getSymbolAttrName()});
+                      getSymNameAttrName(), getSymVisibilityAttrName()});
 
   if (std::optional<spirv::VerCapExtAttr> triple = getVceTriple()) {
     printer << " requires " << *triple;
@@ -1834,9 +1909,10 @@ LogicalResult spirv::ModuleOp::verifyRegions() {
 // spirv.mlir.referenceof
 //===----------------------------------------------------------------------===//
 
-LogicalResult spirv::ReferenceOfOp::verify() {
-  auto *specConstSym = SymbolTable::lookupNearestSymbolFrom(
-      (*this)->getParentOp(), getSpecConstAttr());
+LogicalResult
+spirv::ReferenceOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  Operation *specConstSym =
+      symbolTable.lookupNearestSymbolFrom(*this, getSpecConstAttr());
   Type constType;
 
   auto specConstOp = dyn_cast_or_null<spirv::SpecConstantOp>(specConstSym);
@@ -1865,12 +1941,14 @@ LogicalResult spirv::ReferenceOfOp::verify() {
 
 ParseResult spirv::SpecConstantOp::parse(OpAsmParser &parser,
                                          OperationState &result) {
+  (void)impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   StringAttr nameAttr;
   Attribute valueAttr;
   StringRef defaultValueAttrName =
       spirv::SpecConstantOp::getDefaultValueAttrName(result.name);
 
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(result.name),
                              result.attributes))
     return failure();
 
@@ -1892,6 +1970,8 @@ ParseResult spirv::SpecConstantOp::parse(OpAsmParser &parser,
 
 void spirv::SpecConstantOp::print(OpAsmPrinter &printer) {
   printer << ' ';
+  if (StringAttr visibility = getSymVisibilityAttr())
+    printer << visibility.getValue() << ' ';
   printer.printSymbolName(getSymName());
   if (auto specID =
           (*this)->getDiscardableAttrOfType<IntegerAttr>(kSpecIdAttrName))
@@ -1952,8 +2032,10 @@ LogicalResult spirv::VectorShuffleOp::verify() {
 ParseResult spirv::SpecConstantCompositeOp::parse(OpAsmParser &parser,
                                                   OperationState &result) {
 
+  (void)impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   StringAttr compositeName;
-  if (parser.parseSymbolName(compositeName, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(compositeName, getSymNameAttrName(result.name),
                              result.attributes))
     return failure();
 
@@ -1994,7 +2076,9 @@ ParseResult spirv::SpecConstantCompositeOp::parse(OpAsmParser &parser,
 }
 
 void spirv::SpecConstantCompositeOp::print(OpAsmPrinter &printer) {
-  printer << " ";
+  printer << ' ';
+  if (StringAttr visibility = getSymVisibilityAttr())
+    printer << visibility.getValue() << ' ';
   printer.printSymbolName(getSymName());
   printer << " (" << llvm::interleaved(this->getConstituents().getValue())
           << ") : " << getType();
@@ -2015,11 +2099,19 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
            << cType.getNumElements() << ", but provided "
            << constituents.size();
 
+  return success();
+}
+
+LogicalResult spirv::SpecConstantCompositeOp::verifySymbolUses(
+    SymbolTableCollection &symbolTable) {
+  auto cType = cast<spirv::CompositeType>(getType());
+  ArrayRef<Attribute> constituents = getConstituents().getValue();
+
   for (auto index : llvm::seq<uint32_t>(0, constituents.size())) {
     auto constituent = cast<FlatSymbolRefAttr>(constituents[index]);
 
-    Operation *constituentOp = SymbolTable::lookupNearestSymbolFrom(
-        (*this)->getParentOp(), constituent.getAttr());
+    Operation *constituentOp =
+        symbolTable.lookupNearestSymbolFrom(*this, constituent);
 
     if (!constituentOp)
       return emitError("unknown constituent symbol ") << constituent.getAttr();
@@ -2053,13 +2145,15 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
 ParseResult
 spirv::EXTSpecConstantCompositeReplicateOp::parse(OpAsmParser &parser,
                                                   OperationState &result) {
+  (void)impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   StringAttr compositeName;
   FlatSymbolRefAttr specConstRef;
   const char *attrName = "spec_const";
   NamedAttrList attrs;
   Type type;
 
-  if (parser.parseSymbolName(compositeName, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(compositeName, getSymNameAttrName(result.name),
                              result.attributes) ||
       parser.parseLParen() ||
       parser.parseAttribute(specConstRef, Type(), attrName, attrs) ||
@@ -2079,19 +2173,26 @@ spirv::EXTSpecConstantCompositeReplicateOp::parse(OpAsmParser &parser,
 }
 
 void spirv::EXTSpecConstantCompositeReplicateOp::print(OpAsmPrinter &printer) {
-  printer << " ";
+  printer << ' ';
+  if (StringAttr visibility = getSymVisibilityAttr())
+    printer << visibility.getValue() << ' ';
   printer.printSymbolName(getSymName());
   printer << " (" << this->getConstituent() << ") : " << getType();
 }
 
 LogicalResult spirv::EXTSpecConstantCompositeReplicateOp::verify() {
-  auto compositeType = dyn_cast<spirv::CompositeType>(getType());
-  if (!compositeType)
+  if (!isa<spirv::CompositeType>(getType()))
     return emitError("result type must be a composite type, but provided ")
            << getType();
 
-  Operation *constituentOp = SymbolTable::lookupNearestSymbolFrom(
-      (*this)->getParentOp(), this->getConstituent());
+  return success();
+}
+
+LogicalResult spirv::EXTSpecConstantCompositeReplicateOp::verifySymbolUses(
+    SymbolTableCollection &symbolTable) {
+  auto compositeType = cast<spirv::CompositeType>(getType());
+  Operation *constituentOp =
+      symbolTable.lookupNearestSymbolFrom(*this, getConstituent());
   if (!constituentOp)
     return emitError(
         "splat spec constant reference defining constituent not found");
@@ -2264,6 +2365,22 @@ LogicalResult spirv::CLPownOp::verify() {
 LogicalResult spirv::CLRootnOp::verify() {
   return verifyFloatIntegerBuiltin(getOperation(), getX().getType(),
                                    getN().getType());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.sincos
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::CLSincosOp::verify() {
+  auto storageClass =
+      cast<spirv::PointerType>(getCosval().getType()).getStorageClass();
+  if (!llvm::is_contained(
+          {spirv::StorageClass::CrossWorkgroup, spirv::StorageClass::Workgroup,
+           spirv::StorageClass::Function, spirv::StorageClass::Generic},
+          storageClass))
+    return emitOpError("cosval must point to CrossWorkgroup, Workgroup, "
+                       "Function, or Generic storage");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

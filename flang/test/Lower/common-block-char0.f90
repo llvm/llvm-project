@@ -21,16 +21,16 @@ subroutine char0_common
   call use(ii1, zc0, ll1)
 end subroutine
 
-! CHECK: fir.global common @blk_(dense<0> : vector<16xi8>) {alignment = 8 : i64} : !fir.array<16xi8>
+! CHECK: fir.global common @blk_(dense<0> : vector<16xi8>) <{alignment = 8 : i64}> : !fir.array<16xi8>
 
 ! CHECK-LABEL: func.func @_QPchar0_common
 
 ! ii1 at offset 0
 ! CHECK: %[[BASE:.*]] = fir.address_of(@blk_) : !fir.ref<!fir.array<16xi8>>
-! CHECK: hlfir.declare {{.*}} storage(%[[BASE]][0]) {uniq_name = "_QFchar0_commonEii1"}
+! CHECK: hlfir.declare {{.*}} storage(%[[BASE]][0]) uniq_name("_QFchar0_commonEii1")
 
 ! ll1 at offset 8
-! CHECK: hlfir.declare {{.*}} storage(%[[BASE]][8]) {uniq_name = "_QFchar0_commonEll1"}
+! CHECK: hlfir.declare {{.*}} storage(%[[BASE]][8]) uniq_name("_QFchar0_commonEll1")
 
 ! zc0 at offset 8 (not 0) -- key assertion
-! CHECK: hlfir.declare {{.*}} storage(%[[BASE]][8]) {uniq_name = "_QFchar0_commonEzc0"}
+! CHECK: hlfir.declare {{.*}} storage(%[[BASE]][8]) uniq_name("_QFchar0_commonEzc0")

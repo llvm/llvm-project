@@ -8,8 +8,11 @@
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Threading.h"
 #include <memory>
@@ -737,7 +740,7 @@ Value LLVMTypeConverter::promoteOneMemRefDescriptor(Location loc, Value operand,
   // alloca op and so we omit allocating at the entry block.
   auto ptrType = LLVM::LLVMPointerType::get(builder.getContext());
   Value one = LLVM::ConstantOp::create(builder, loc, builder.getI64Type(),
-                                       builder.getIndexAttr(1));
+                                       builder.getI64IntegerAttr(1));
   Value allocated =
       LLVM::AllocaOp::create(builder, loc, ptrType, operand.getType(), one);
   // Store into the alloca'ed descriptor.

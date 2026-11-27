@@ -22,10 +22,8 @@
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/GlobalValue.h"
@@ -43,6 +41,7 @@ public:
   const X86RegisterInfo *TRI = nullptr;
   const X86MachineFunctionInfo *X86FI = nullptr;
   const X86FrameLowering *X86FL = nullptr;
+  bool CFGChanged = false;
 
   bool runOnMachineFunction(MachineFunction &MF);
 
@@ -101,6 +100,7 @@ INITIALIZE_PASS(X86ExpandPseudoLegacy, DEBUG_TYPE, X86_EXPAND_PSEUDO_NAME,
 
 void X86ExpandPseudoImpl::expandICallBranchFunnel(
     MachineBasicBlock *MBB, MachineBasicBlock::iterator MBBI) {
+  CFGChanged = true;
   MachineBasicBlock *JTMBB = MBB;
   MachineInstr *JTInst = &*MBBI;
   MachineFunction *MF = MBB->getParent();
@@ -401,6 +401,18 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     BuildMI(MBB, MBBI, DL,
             TII->get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr), StackPtr)
         .addReg(DestAddr.getReg());
+    if (STI->hasSHSTK()) {
+      unsigned PopOpcode = STI->is64Bit() ? X86::POP64r : X86::POP32r;
+      unsigned JumpOpcode = X86::JMP32r;
+      if (Uses64BitFramePtr)
+        JumpOpcode = STI->isTargetWin64() || STI->isTargetUEFI64()
+                         ? X86::JMP64r_REX
+                         : X86::JMP64r;
+      BuildMI(MBB, MBBI, DL, TII->get(PopOpcode))
+          .addReg(DestAddr.getReg(), RegState::Define);
+      BuildMI(MBB, MBBI, DL, TII->get(JumpOpcode)).addReg(DestAddr.getReg());
+      MBB.erase(MBBI);
+    }
     // The EH_RETURN pseudo is really removed during the MC Lowering.
     return true;
   }
@@ -474,6 +486,7 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
       NewInstr->addOperand(Base);
     for (unsigned Idx = 1 + 1; Idx < 1 + X86::AddrNumOperands; ++Idx)
       NewInstr->addOperand(MBBI->getOperand(Idx));
+    NewInstr->getOperand(7).setIsDead(MBBI->getOperand(11).isDead());
     // Finally, restore the value of RBX.
     TII->copyPhysReg(MBB, MBBI, DL, X86::RBX, SaveRbx,
                      /*SrcIsKill*/ true);
@@ -604,7 +617,19 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
   case X86::PTCVTROWPS2PHLrteV:
   case X86::PTCVTROWPS2PHLrtiV:
   case X86::PTILEMOVROWrteV:
-  case X86::PTILEMOVROWrtiV: {
+  case X86::PTILEMOVROWrtiV:
+  case X86::ACE_PTCVTROWD2PSrteV:
+  case X86::ACE_PTCVTROWD2PSrtiV:
+  case X86::ACE_PTCVTROWPS2BF16HrteV:
+  case X86::ACE_PTCVTROWPS2BF16HrtiV:
+  case X86::ACE_PTCVTROWPS2BF16LrteV:
+  case X86::ACE_PTCVTROWPS2BF16LrtiV:
+  case X86::ACE_PTCVTROWPS2PHHrteV:
+  case X86::ACE_PTCVTROWPS2PHHrtiV:
+  case X86::ACE_PTCVTROWPS2PHLrteV:
+  case X86::ACE_PTCVTROWPS2PHLrtiV:
+  case X86::ACE_PTILEMOVROWrteV:
+  case X86::ACE_PTILEMOVROWrtiV: {
     for (unsigned i = 2; i > 0; --i)
       MI.removeOperand(i);
     unsigned Opc;
@@ -622,39 +647,51 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
       Opc = GET_EGPR_IF_ENABLED(X86::TILELOADDT1);
       break;
     case X86::PTCVTROWD2PSrteV:
+    case X86::ACE_PTCVTROWD2PSrteV:
       Opc = X86::TCVTROWD2PSrte;
       break;
     case X86::PTCVTROWD2PSrtiV:
+    case X86::ACE_PTCVTROWD2PSrtiV:
       Opc = X86::TCVTROWD2PSrti;
       break;
     case X86::PTCVTROWPS2BF16HrteV:
+    case X86::ACE_PTCVTROWPS2BF16HrteV:
       Opc = X86::TCVTROWPS2BF16Hrte;
       break;
     case X86::PTCVTROWPS2BF16HrtiV:
+    case X86::ACE_PTCVTROWPS2BF16HrtiV:
       Opc = X86::TCVTROWPS2BF16Hrti;
       break;
     case X86::PTCVTROWPS2BF16LrteV:
+    case X86::ACE_PTCVTROWPS2BF16LrteV:
       Opc = X86::TCVTROWPS2BF16Lrte;
       break;
     case X86::PTCVTROWPS2BF16LrtiV:
+    case X86::ACE_PTCVTROWPS2BF16LrtiV:
       Opc = X86::TCVTROWPS2BF16Lrti;
       break;
     case X86::PTCVTROWPS2PHHrteV:
+    case X86::ACE_PTCVTROWPS2PHHrteV:
       Opc = X86::TCVTROWPS2PHHrte;
       break;
     case X86::PTCVTROWPS2PHHrtiV:
+    case X86::ACE_PTCVTROWPS2PHHrtiV:
       Opc = X86::TCVTROWPS2PHHrti;
       break;
     case X86::PTCVTROWPS2PHLrteV:
+    case X86::ACE_PTCVTROWPS2PHLrteV:
       Opc = X86::TCVTROWPS2PHLrte;
       break;
     case X86::PTCVTROWPS2PHLrtiV:
+    case X86::ACE_PTCVTROWPS2PHLrtiV:
       Opc = X86::TCVTROWPS2PHLrti;
       break;
     case X86::PTILEMOVROWrteV:
+    case X86::ACE_PTILEMOVROWrteV:
       Opc = X86::TILEMOVROWrte;
       break;
     case X86::PTILEMOVROWrtiV:
+    case X86::ACE_PTILEMOVROWrtiV:
       Opc = X86::TILEMOVROWrti;
       break;
     default:
@@ -701,6 +738,101 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     MI.tieOperands(0, 1);
     return true;
   }
+  case X86::PTOP2BF16PStrrV:
+  case X86::PTOP4BUUDtrrV:
+  case X86::PTOP4BUSDtrrV:
+  case X86::PTOP4BSSDtrrV:
+  case X86::PTOP4BSUDtrrV: {
+    MI.untieRegOperand(3);
+    for (unsigned i = 2; i > 0; --i)
+      MI.removeOperand(i);
+    unsigned Opc = 0;
+    switch (Opcode) {
+    case X86::PTOP2BF16PStrrV:
+      Opc = X86::TOP2BF16PStrr;
+      break;
+    case X86::PTOP4BUUDtrrV:
+      Opc = X86::TOP4BUUDtrr;
+      break;
+    case X86::PTOP4BUSDtrrV:
+      Opc = X86::TOP4BUSDtrr;
+      break;
+    case X86::PTOP4BSSDtrrV:
+      Opc = X86::TOP4BSSDtrr;
+      break;
+    case X86::PTOP4BSUDtrrV:
+      Opc = X86::TOP4BSUDtrr;
+      break;
+    default:
+      llvm_unreachable("Unexpected ACE opcode");
+    }
+    MI.setDesc(TII->get(Opc));
+    MI.tieOperands(0, 1);
+    return true;
+  }
+  case X86::PTOP4MXHF8PStrriV:
+  case X86::PTOP4MXBHF8PStrriV:
+  case X86::PTOP4MXHBF8PStrriV:
+  case X86::PTOP4MXBF8PStrriV:
+  case X86::PTOP4MXBSSPStrriV: {
+    MI.untieRegOperand(4);
+    for (unsigned i = 2; i > 0; --i)
+      MI.removeOperand(i);
+    unsigned ImmVal = MI.getOperand(1).getImm();
+    MI.removeOperand(1);
+    unsigned Opc = 0;
+    switch (Opcode) {
+    case X86::PTOP4MXHF8PStrriV:
+      Opc = X86::TOP4MXHF8PStrri;
+      break;
+    case X86::PTOP4MXBHF8PStrriV:
+      Opc = X86::TOP4MXBHF8PStrri;
+      break;
+    case X86::PTOP4MXHBF8PStrriV:
+      Opc = X86::TOP4MXHBF8PStrri;
+      break;
+    case X86::PTOP4MXBF8PStrriV:
+      Opc = X86::TOP4MXBF8PStrri;
+      break;
+    case X86::PTOP4MXBSSPStrriV:
+      Opc = X86::TOP4MXBSSPStrri;
+      break;
+    default:
+      llvm_unreachable("Unexpected ACE TOP4MX opcode");
+    }
+    MI.setDesc(TII->get(Opc));
+    MI.addOperand(MachineOperand::CreateImm(ImmVal));
+    MI.tieOperands(0, 1);
+    return true;
+  }
+  case X86::PTILEMOVCOLtriV:
+  case X86::PTILEMOVROWtriV:
+  case X86::PTILEMOVCOLtreV:
+  case X86::PTILEMOVROWtreV: {
+    MI.untieRegOperand(3);
+    for (unsigned i = 2; i > 0; --i)
+      MI.removeOperand(i);
+    unsigned Opc;
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Unexpected ACE tile move opcode");
+    case X86::PTILEMOVCOLtriV:
+      Opc = X86::TILEMOVCOLtri;
+      break;
+    case X86::PTILEMOVROWtriV:
+      Opc = X86::TILEMOVROWtri;
+      break;
+    case X86::PTILEMOVCOLtreV:
+      Opc = X86::TILEMOVCOLtre;
+      break;
+    case X86::PTILEMOVROWtreV:
+      Opc = X86::TILEMOVROWtre;
+      break;
+    }
+    MI.setDesc(TII->get(Opc));
+    MI.tieOperands(0, 1);
+    return true;
+  }
   case X86::PTILESTOREDV: {
     for (int i = 1; i >= 0; --i)
       MI.removeOperand(i);
@@ -708,7 +840,8 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     return true;
   }
 #undef GET_EGPR_IF_ENABLED
-  case X86::PTILEZEROV: {
+  case X86::PTILEZEROV:
+  case X86::ACE_PTILEZEROV: {
     for (int i = 2; i > 0; --i) // Remove row, col
       MI.removeOperand(i);
     MI.setDesc(TII->get(X86::TILEZERO));
@@ -927,12 +1060,18 @@ bool X86ExpandPseudoImpl::expandMBB(MachineBasicBlock &MBB) {
 bool X86ExpandPseudoImpl::expandPseudosWhichAffectControlFlow(
     MachineFunction &MF) {
   // Currently pseudo which affects control flow is only
-  // X86::VASTART_SAVE_XMM_REGS which is located in Entry block.
-  // So we do not need to evaluate other blocks.
-  for (MachineInstr &Instr : MF.front().instrs()) {
-    if (Instr.getOpcode() == X86::VASTART_SAVE_XMM_REGS) {
-      expandVastartSaveXmmRegs(&(MF.front()), Instr);
-      return true;
+  // X86::VASTART_SAVE_XMM_REGS. It is created in the entry block, but the
+  // prologue can split that block, e.g. for an inline stack probe loop.
+  if (!X86FI->getHasVAStartSaveXMMRegs())
+    return false;
+
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &Instr : MBB.instrs()) {
+      if (Instr.getOpcode() == X86::VASTART_SAVE_XMM_REGS) {
+        expandVastartSaveXmmRegs(&MBB, Instr);
+        CFGChanged = true;
+        return true;
+      }
     }
   }
 
@@ -972,6 +1111,9 @@ X86ExpandPseudoPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
+  // TODO: We should propagate this info directly once we are done with NewPM
+  // transition.
+  if (!Impl.CFGChanged)
+    PA.preserveSet<CFGAnalyses>();
   return PA;
 }

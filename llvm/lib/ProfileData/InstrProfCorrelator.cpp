@@ -62,7 +62,7 @@ InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
   if (auto Err = CountersSection.takeError())
     return std::move(Err);
   Triple::ObjectFormatType ObjFormat = Obj.getTripleObjectFormat();
-  if (FileKind == InstrProfCorrelator::BINARY) {
+  if (FileKind == ProfCorrelatorKind::Binary) {
     auto DataSection = getInstrProfSection(Obj, IPSK_covdata);
     if (auto Err = DataSection.takeError())
       return std::move(Err);
@@ -155,7 +155,7 @@ InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind,
     EffectiveFilename = *Path;
   }
 
-  if (FileKind == DEBUG_INFO) {
+  if (FileKind == ProfCorrelatorKind::DebugInfo) {
     auto DsymObjectsOrErr =
         object::MachOObjectFile::findDsymObjectMembers(EffectiveFilename);
     if (auto Err = DsymObjectsOrErr.takeError())
@@ -176,18 +176,11 @@ InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind,
 
     return get(std::move(*BufferOrErr), FileKind);
   }
-  if (FileKind == BINARY) {
-    auto BufferOrErr =
-        errorOrToExpected(MemoryBuffer::getFile(EffectiveFilename));
-    if (auto Err = BufferOrErr.takeError())
-      return std::move(Err);
-
-    return get(std::move(*BufferOrErr), FileKind);
-  }
-  return make_error<InstrProfError>(
-      instrprof_error::unable_to_correlate_profile,
-      "unsupported correlation kind (only DWARF debug info and Binary format "
-      "(ELF/COFF) are supported)");
+  auto BufferOrErr =
+      errorOrToExpected(MemoryBuffer::getFile(EffectiveFilename));
+  if (auto Err = BufferOrErr.takeError())
+    return std::move(Err);
+  return get(std::move(*BufferOrErr), FileKind);
 }
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
@@ -249,7 +242,7 @@ llvm::Expected<std::unique_ptr<InstrProfCorrelatorImpl<IntPtrT>>>
 InstrProfCorrelatorImpl<IntPtrT>::get(
     std::unique_ptr<InstrProfCorrelator::Context> Ctx,
     const object::ObjectFile &Obj, ProfCorrelatorKind FileKind) {
-  if (FileKind == DEBUG_INFO) {
+  if (FileKind == ProfCorrelatorKind::DebugInfo) {
     if (Obj.isELF() || Obj.isMachO()) {
       auto DICtx = DWARFContext::create(Obj);
       return std::make_unique<DwarfInstrProfCorrelator<IntPtrT>>(
@@ -383,7 +376,10 @@ bool DwarfInstrProfCorrelator<IntPtrT>::isDIEOfProbe(const DWARFDie &Die,
     return false;
   if (Die.getTag() != dwarf::DW_TAG_variable)
     return false;
-  if (!ParentDie.isSubprogramDIE())
+  // A function without debug info describes its variables at compile unit
+  // scope.
+  if (!ParentDie.isSubprogramDIE() &&
+      ParentDie.getTag() != dwarf::DW_TAG_compile_unit)
     return false;
   if (!Die.hasChildren())
     return false;
@@ -400,7 +396,10 @@ DwarfInstrProfCorrelator<IntPtrT>::addCountersToDataProbe(
   std::optional<const char *> FunctionName;
   std::optional<uint64_t> CFGHash;
   std::optional<uint64_t> CounterPtr = getLocation(Die);
-  auto FnDie = Die.getParent();
+  DWARFDie FnDie = Die.getParent();
+  // A variable at compile unit scope belongs to a function without debug info.
+  if (!FnDie.isSubprogramDIE())
+    FnDie = DWARFDie();
   auto FunctionPtr = dwarf::toAddress(FnDie.find(dwarf::DW_AT_low_pc));
   std::optional<uint64_t> NumCounters;
   for (const DWARFDie &Child : Die.children()) {
@@ -451,7 +450,8 @@ DwarfInstrProfCorrelator<IntPtrT>::addCountersToDataProbe(
     }
     return std::nullopt;
   }
-  if (!FunctionPtr && (UnlimitedWarnings || ++NumSuppressedWarnings < 1)) {
+  if (FnDie && !FunctionPtr &&
+      (UnlimitedWarnings || ++NumSuppressedWarnings < 1)) {
     WithColor::warning() << format("Could not find address of function %s\n",
                                    *FunctionName);
     LLVM_DEBUG(Die.dump(dbgs()));

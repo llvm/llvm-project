@@ -10,7 +10,6 @@
 
 ---
 name: subreg_value_undef
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: subreg_value_undef
   ; CHECK: bb.0:
@@ -22,7 +21,7 @@ body:             |
   ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_128 = S_MOV_B32 -1
   ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, undef [[S_MOV_B32_]].sub0, implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_128 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   S_NOP 0, implicit [[S_MOV_B32_]].sub1
@@ -43,7 +42,6 @@ body:             |
 
 ---
 name: needs_distribute_0
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: needs_distribute_0
   ; CHECK: bb.0:
@@ -55,7 +53,7 @@ body:             |
   ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64_xexec = S_MOV_B32 -1
   ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, [[S_MOV_B32_]].sub0, implicit-def dead $scc
   ; CHECK-NEXT:   dead [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64_xexec = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   bb.0:
@@ -74,7 +72,6 @@ body:             |
 
 ---
 name: needs_distribute_1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: needs_distribute_1
   ; CHECK: bb.0:
@@ -86,7 +83,7 @@ body:             |
   ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64_xexec = S_MOV_B32 -1
   ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, [[S_MOV_B32_]].sub0, implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64_xexec = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   S_NOP 0, implicit [[S_MOV_B32_]].sub1
@@ -107,7 +104,6 @@ body:             |
 
 ---
 name: needs_distribute_2
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: needs_distribute_2
   ; CHECK: bb.0:
@@ -119,7 +115,7 @@ body:             |
   ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64_xexec = S_MOV_B32 -1
   ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, [[S_MOV_B32_]].sub0, implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64_xexec = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   S_NOP 0, implicit [[S_MOV_B32_]]
@@ -140,7 +136,6 @@ body:             |
 
 ---
 name: needs_distribute_3
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: needs_distribute_3
   ; CHECK: bb.0:
@@ -152,7 +147,7 @@ body:             |
   ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64_xexec = S_MOV_B32 -1
   ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, [[S_MOV_B32_]].sub0, implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64_xexec = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   S_NOP 0, implicit [[S_MOV_B32_]].sub0

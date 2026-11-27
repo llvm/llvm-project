@@ -476,12 +476,16 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
   DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
   DeclRefExprBits.NonOdrUseReason = NOUR;
   if (TemplateArgs) {
-    auto Deps = TemplateArgumentDependence::None;
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs, getTrailingObjects<TemplateArgumentLoc>(),
-        Deps);
+        TemplateKWLoc, *TemplateArgs,
+        getTrailingObjects<TemplateArgumentLoc>());
+#ifndef NDEBUG
+    auto Deps = TemplateArgumentDependence::None;
+    for (const TemplateArgumentLoc &Loc : TemplateArgs->arguments())
+      Deps |= Loc.getArgument().getDependence();
     assert(!(Deps & TemplateArgumentDependence::Dependent) &&
            "built a DeclRefExpr with dependent template args");
+#endif
   } else if (TemplateKWLoc.isValid()) {
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
@@ -1407,6 +1411,28 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
   }
 }
 
+UnsignedOrNone StringLiteral::findZeroCodeUnit(unsigned StartIndex) const {
+  unsigned Length = getLength();
+  if (StartIndex > Length)
+    return std::nullopt;
+
+  if (getCharByteWidth() == 1) {
+    StringRef::size_type Pos = getString().substr(StartIndex).find('\0');
+    if (Pos == StringRef::npos)
+      return Length - StartIndex;
+    return Pos;
+  }
+
+  unsigned Result = 0;
+  for (unsigned I = StartIndex; I != Length; ++I) {
+    if (getCodeUnit(I) == 0)
+      break;
+    ++Result;
+  }
+
+  return Result;
+}
+
 /// getOpcodeStr - Turn an Opcode enum value into the punctuation char it
 /// corresponds to, e.g. "sizeof" or "[pre]++".
 StringRef UnaryOperator::getOpcodeStr(Opcode Op) {
@@ -1634,6 +1660,9 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
     return Ctx.DependentTy;
   }
 
+  if (isTypeDependent() && !CalleeType->isFunctionType())
+    return Ctx.DependentTy;
+
   const FunctionType *FnType = CalleeType->castAs<FunctionType>();
   return FnType->getReturnType();
 }
@@ -1744,10 +1773,9 @@ MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
   if (hasFoundDecl())
     *getTrailingObjects<DeclAccessPair>() = FoundDecl;
   if (TemplateArgs) {
-    auto Deps = TemplateArgumentDependence::None;
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
-        TemplateKWLoc, *TemplateArgs, getTrailingObjects<TemplateArgumentLoc>(),
-        Deps);
+        TemplateKWLoc, *TemplateArgs,
+        getTrailingObjects<TemplateArgumentLoc>());
   } else if (TemplateKWLoc.isValid()) {
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
@@ -4251,6 +4279,13 @@ FieldDecl *Expr::getSourceBitField() {
       break;
   }
 
+  if (StmtExpr *SE = dyn_cast<StmtExpr>(E)) {
+    CompoundStmt *CS = SE->getSubStmt();
+    if (ValueStmt *VS = dyn_cast_or_null<ValueStmt>(CS->body_back()))
+      if (Expr *EX = VS->getExprStmt())
+        return EX->getSourceBitField();
+  }
+
   if (MemberExpr *MemRef = dyn_cast<MemberExpr>(E))
     if (FieldDecl *Field = dyn_cast<FieldDecl>(MemRef->getMemberDecl()))
       if (Field->isBitField())
@@ -5416,10 +5451,15 @@ QualType ArraySectionExpr::getBaseOriginalType(const Expr *Base) {
     ++ArraySectionCount;
   }
   Base = Base->IgnoreParenImpCasts();
-  auto OriginalTy = Base->getType();
-  if (auto *DRE = dyn_cast<DeclRefExpr>(Base))
-    if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
-      OriginalTy = PVD->getOriginalType().getNonReferenceType();
+  QualType OriginalTy;
+  if (const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(Base)) {
+    OriginalTy = OAShE->getShapedType();
+  } else {
+    OriginalTy = Base->getType();
+    if (auto *DRE = dyn_cast<DeclRefExpr>(Base))
+      if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
+        OriginalTy = PVD->getOriginalType().getNonReferenceType();
+  }
 
   for (unsigned Cnt = 0; Cnt < ArraySectionCount; ++Cnt) {
     if (OriginalTy->isAnyPointerType())
@@ -5433,12 +5473,7 @@ QualType ArraySectionExpr::getBaseOriginalType(const Expr *Base) {
 }
 
 QualType ArraySectionExpr::getElementType() const {
-  QualType BaseTy = getBase()->IgnoreParenImpCasts()->getType();
-  // We only have to look into the array section exprs, else we will get the
-  // type of the base, which should already be valid.
-  if (auto *ASE = dyn_cast<ArraySectionExpr>(getBase()->IgnoreParenImpCasts()))
-    BaseTy = ASE->getElementType();
-
+  QualType BaseTy = getBaseType();
   if (BaseTy->isAnyPointerType())
     return BaseTy->getPointeeType();
   if (BaseTy->isArrayType())
@@ -5451,12 +5486,15 @@ QualType ArraySectionExpr::getElementType() const {
 }
 
 QualType ArraySectionExpr::getBaseType() const {
+  const Expr *Base = getBase()->IgnoreParenImpCasts();
   // We only have to look into the array section exprs, else we will get the
   // type of the base, which should already be valid.
-  if (auto *ASE = dyn_cast<ArraySectionExpr>(getBase()->IgnoreParenImpCasts()))
+  if (const auto *ASE = dyn_cast<ArraySectionExpr>(Base))
     return ASE->getElementType();
+  if (const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(Base))
+    return OAShE->getShapedType();
 
-  return getBase()->IgnoreParenImpCasts()->getType();
+  return Base->getType();
 }
 
 RecoveryExpr::RecoveryExpr(ASTContext &Ctx, QualType T, SourceLocation BeginLoc,
@@ -5501,27 +5539,28 @@ void OMPArrayShapingExpr::setBracketsRanges(ArrayRef<SourceRange> BR) {
   llvm::copy(BR, getTrailingObjects<SourceRange>());
 }
 
-OMPArrayShapingExpr::OMPArrayShapingExpr(QualType ExprTy, Expr *Op,
-                                         SourceLocation L, SourceLocation R,
+OMPArrayShapingExpr::OMPArrayShapingExpr(QualType ExprTy, QualType ShapedTy,
+                                         Expr *Op, SourceLocation L,
+                                         SourceLocation R,
                                          ArrayRef<Expr *> Dims)
     : Expr(OMPArrayShapingExprClass, ExprTy, VK_LValue, OK_Ordinary), LPLoc(L),
-      RPLoc(R), NumDims(Dims.size()) {
+      RPLoc(R), NumDims(Dims.size()), ShapedType(ShapedTy) {
   setBase(Op);
   setDimensions(Dims);
   setDependence(computeDependence(this));
 }
 
 OMPArrayShapingExpr *
-OMPArrayShapingExpr::Create(const ASTContext &Context, QualType T, Expr *Op,
-                            SourceLocation L, SourceLocation R,
-                            ArrayRef<Expr *> Dims,
+OMPArrayShapingExpr::Create(const ASTContext &Context, QualType T,
+                            QualType ShapedTy, Expr *Op, SourceLocation L,
+                            SourceLocation R, ArrayRef<Expr *> Dims,
                             ArrayRef<SourceRange> BracketRanges) {
   assert(Dims.size() == BracketRanges.size() &&
          "Different number of dimensions and brackets ranges.");
   void *Mem = Context.Allocate(
       totalSizeToAlloc<Expr *, SourceRange>(Dims.size() + 1, Dims.size()),
       alignof(OMPArrayShapingExpr));
-  auto *E = new (Mem) OMPArrayShapingExpr(T, Op, L, R, Dims);
+  auto *E = new (Mem) OMPArrayShapingExpr(T, ShapedTy, Op, L, R, Dims);
   E->setBracketsRanges(BracketRanges);
   return E;
 }

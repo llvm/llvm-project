@@ -26,7 +26,7 @@ int thread_limit_target_parallel_for() {
 // OMP51-NEXT:    [[TMP1:%.*]] = call ptr @__kmpc_omp_task_alloc(ptr @[[GLOB2]], i32 [[TMP0]], i32 1, i64 40, i64 1, ptr @.omp_task_entry.)
 // OMP51-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[STRUCT_KMP_TASK_T_WITH_PRIVATES:%.*]], ptr [[TMP1]], i32 0, i32 0
 // OMP51-NEXT:    call void @__kmpc_omp_task_begin_if0(ptr @[[GLOB2]], i32 [[TMP0]], ptr [[TMP1]])
-// OMP51-NEXT:    [[TMP3:%.*]] = call i32 @.omp_task_entry.(i32 [[TMP0]], ptr [[TMP1]]) #[[ATTR2:[0-9]+]]
+// OMP51-NEXT:    [[TMP3:%.*]] = call i32 @.omp_task_entry.(i32 [[TMP0]], ptr [[TMP1]]) #[[ATTR3:[0-9]+]]
 // OMP51-NEXT:    call void @__kmpc_omp_task_complete_if0(ptr @[[GLOB2]], i32 [[TMP0]], ptr [[TMP1]])
 // OMP51-NEXT:    ret i32 0
 //
@@ -41,7 +41,7 @@ int thread_limit_target_parallel_for() {
 //
 //
 // OMP51-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z32thread_limit_target_parallel_forv_l14.omp_outlined
-// OMP51-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// OMP51-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR2:[0-9]+]] {
 // OMP51-NEXT:  entry:
 // OMP51-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // OMP51-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -101,7 +101,7 @@ int thread_limit_target_parallel_for() {
 //
 //
 // OMP51-LABEL: define internal noundef i32 @.omp_task_entry.
-// OMP51-SAME: (i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
+// OMP51-SAME: (i32 noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
 // OMP51-NEXT:  entry:
 // OMP51-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // OMP51-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca ptr, align 8
@@ -132,6 +132,6 @@ int thread_limit_target_parallel_for() {
 // OMP51-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 8, !noalias [[META13]]
 // OMP51-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTGLOBAL_TID__ADDR_I]], align 4, !noalias [[META13]]
 // OMP51-NEXT:    call void @__kmpc_set_thread_limit(ptr @[[GLOB2]], i32 [[TMP9]], i32 2)
-// OMP51-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z32thread_limit_target_parallel_forv_l14(ptr null) #[[ATTR2]]
+// OMP51-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z32thread_limit_target_parallel_forv_l14(ptr null) #[[ATTR3]]
 // OMP51-NEXT:    ret i32 0
 //

@@ -47,7 +47,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -66,26 +65,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hwloops"
 
-#ifndef NDEBUG
-static cl::opt<int> HWLoopLimit("hexagon-max-hwloop", cl::Hidden, cl::init(-1));
-
-// Option to create preheader only for a specific function.
-static cl::opt<std::string> PHFn("hexagon-hwloop-phfn", cl::Hidden,
-                                 cl::init(""));
-#endif
-
-// Option to create a preheader if one doesn't exist.
-static cl::opt<bool> HWCreatePreheader("hexagon-hwloop-preheader",
-    cl::Hidden, cl::init(true),
-    cl::desc("Add a preheader to a hardware loop if one doesn't exist"));
-
-// Turn it off by default. If a preheader block is not created here, the
-// software pipeliner may be unable to find a block suitable to serve as
-// a preheader. In that case SWP will not run.
-static cl::opt<bool> SpecPreheader("hwloop-spec-preheader", cl::Hidden,
-                                   cl::desc("Allow speculation of preheader "
-                                            "instructions"));
-
 STATISTIC(NumHWLoops, "Number of loops converted to hardware loops");
 
 namespace {
@@ -99,6 +78,7 @@ namespace {
     const HexagonInstrInfo     *TII;
     const HexagonRegisterInfo  *TRI;
     MachineOptimizationRemarkEmitter *MORE;
+    const HexagonOptions *CLOpts = nullptr;
 #ifndef NDEBUG
     static int Counter;
 #endif
@@ -272,6 +252,14 @@ namespace {
     /// value, either directly, or via a register.
     void setImmediate(MachineOperand &MO, int64_t Val);
 
+    /// If DI is a post-increment instruction whose base register is defined
+    /// by Phi and whose incremented address is PhiOpReg (the register feeding
+    /// Phi from the latch), extract the induction register and immediate bump
+    /// into IndReg and IVBump and return true.  Returns false otherwise.
+    bool tryExtractPostIncInduction(MachineInstr *DI, MachineInstr *Phi,
+                                    Register PhiOpReg, Register &IndReg,
+                                    int64_t &IVBump) const;
+
     /// Fix the data flow of the induction variable.
     /// The desired flow is: phi ---> bump -+-> comparison-in-latch.
     ///                                     |
@@ -386,6 +374,7 @@ bool HexagonHardwareLoops::runOnMachineFunction(MachineFunction &MF) {
   const HexagonSubtarget &HST = MF.getSubtarget<HexagonSubtarget>();
   TII = HST.getInstrInfo();
   TRI = HST.getRegisterInfo();
+  CLOpts = &HST.getCLOpts();
 
   MORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
@@ -399,13 +388,43 @@ bool HexagonHardwareLoops::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
+bool HexagonHardwareLoops::tryExtractPostIncInduction(MachineInstr *DI,
+                                                      MachineInstr *Phi,
+                                                      Register PhiOpReg,
+                                                      Register &IndReg,
+                                                      int64_t &IVBump) const {
+  if (!TII->isPostIncWithImmOffset(*DI))
+    return false;
+
+  unsigned BasePos, OffsetPos;
+  if (!TII->getBaseAndOffsetPosition(*DI, BasePos, OffsetPos))
+    return false;
+
+  if (BasePos >= DI->getNumOperands() || OffsetPos >= DI->getNumOperands())
+    return false;
+
+  // A post-increment load also defines the loaded value, which is unrelated
+  // to the base.  Only the incremented address, tied to the base operand, is
+  // "base + offset", so require that it is what feeds the PHI.
+  const MachineOperand &BaseOp = DI->getOperand(BasePos);
+  if (!BaseOp.isReg() || !BaseOp.isTied())
+    return false;
+  if (DI->getOperand(DI->findTiedOperandIdx(BasePos)).getReg() != PhiOpReg)
+    return false;
+
+  IndReg = BaseOp.getReg();
+  IVBump = DI->getOperand(OffsetPos).getImm();
+  return MRI->getVRegDef(IndReg) == Phi;
+}
+
 bool HexagonHardwareLoops::findInductionRegister(MachineLoop *L,
                                                  Register &Reg,
                                                  int64_t &IVBump,
                                                  MachineInstr *&IVOp
                                                  ) const {
   MachineBasicBlock *Header = L->getHeader();
-  MachineBasicBlock *Preheader = MLI->findLoopPreheader(L, SpecPreheader);
+  MachineBasicBlock *Preheader =
+      MLI->findLoopPreheader(L, CLOpts->hwloop_spec_preheader);
   MachineBasicBlock *Latch = L->getLoopLatch();
   MachineBasicBlock *ExitingBlock = L->findLoopControlBlock();
   if (!Header || !Preheader || !Latch || !ExitingBlock)
@@ -449,6 +468,11 @@ bool HexagonHardwareLoops::findInductionRegister(MachineLoop *L,
           Register UpdReg = DI->getOperand(0).getReg();
           IndMap.insert(std::make_pair(UpdReg, std::make_pair(IndReg, V)));
         }
+      } else {
+        Register IndReg;
+        int64_t V;
+        if (tryExtractPostIncInduction(DI, Phi, PhiOpReg, IndReg, V))
+          IndMap.insert(std::make_pair(PhiOpReg, std::make_pair(IndReg, V)));
       }
     }  // for (i)
   }  // for (instr)
@@ -601,7 +625,8 @@ CountValue *HexagonHardwareLoops::getLoopTripCount(MachineLoop *L,
   if (!FoundIV)
     return nullptr;
 
-  MachineBasicBlock *Preheader = MLI->findLoopPreheader(L, SpecPreheader);
+  MachineBasicBlock *Preheader =
+      MLI->findLoopPreheader(L, CLOpts->hwloop_spec_preheader);
 
   MachineOperand *InitialValue = nullptr;
   MachineInstr *IV_Phi = MRI->getVRegDef(IVReg);
@@ -835,7 +860,8 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
   if (!isPowerOf2_64(std::abs(IVBump)))
     return nullptr;
 
-  MachineBasicBlock *PH = MLI->findLoopPreheader(Loop, SpecPreheader);
+  MachineBasicBlock *PH =
+      MLI->findLoopPreheader(Loop, CLOpts->hwloop_spec_preheader);
   assert (PH && "Should have a preheader by now");
   MachineBasicBlock::iterator InsertPos = PH->getFirstTerminator();
   DebugLoc DL;
@@ -1007,7 +1033,10 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
     //   DistCheck = CMP_GT DistR,  0   --> CmpLess
     //   DistCheck = CMP_GT DistR, -1   --> CmpGreater
     Register DistCheckR = MRI->createVirtualRegister(PredRC);
-    const MCInstrDesc &DistCheckD = TII->get(Hexagon::C2_cmpgti);
+    unsigned DistCheckOpc = (CmpLess && Comparison::isUnsigned(Cmp))
+                                ? Hexagon::C2_cmpgtui
+                                : Hexagon::C2_cmpgti;
+    const MCInstrDesc &DistCheckD = TII->get(DistCheckOpc);
     BuildMI(*PH, InsertPos, DL, DistCheckD, DistCheckR)
         .addReg(DistR, {}, DistSR)
         .addImm((CmpLess) ? 0 : -1);
@@ -1207,9 +1236,9 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
 
 #ifndef NDEBUG
   // Stop trying after reaching the limit (if any).
-  int Limit = HWLoopLimit;
+  int Limit = CLOpts->max_hwloop;
   if (Limit >= 0) {
-    if (Counter >= HWLoopLimit)
+    if (Counter >= CLOpts->max_hwloop)
       return false;
     Counter++;
   }
@@ -1227,8 +1256,22 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
   }
 
   MachineBasicBlock *LastMBB = L->findLoopControlBlock();
-  // Don't generate hw loop if the loop has more than one exit.
-  if (!LastMBB) {
+  // Check actual CFG successors: analyzeBranch omits implicit fallthroughs.
+  // Only reject multi-exit loops whose selected exit reaches an unreachable
+  // sink, preserving valid multi-exit loops.
+  SmallVector<MachineBasicBlock *, 2> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  bool HasUnreachableExit = false;
+  if (LastMBB && ExitingBlocks.size() > 1) {
+    for (MachineBasicBlock *Succ : LastMBB->successors()) {
+      if (!L->contains(Succ) && !Succ->empty() && Succ->succ_empty() &&
+          !Succ->isReturnBlock()) {
+        HasUnreachableExit = true;
+        break;
+      }
+    }
+  }
+  if (!LastMBB || HasUnreachableExit) {
     MORE->emit([&]() {
       return MachineOptimizationRemarkMissed(DEBUG_TYPE, "MultipleExits",
                                              L->getStartLoc(), L->getHeader())
@@ -1254,7 +1297,8 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
 
   // Ensure the loop has a preheader: the loop instruction will be
   // placed there.
-  MachineBasicBlock *Preheader = MLI->findLoopPreheader(L, SpecPreheader);
+  MachineBasicBlock *Preheader =
+      MLI->findLoopPreheader(L, CLOpts->hwloop_spec_preheader);
   if (!Preheader) {
     Preheader = createPreheaderForLoop(L);
     if (!Preheader)
@@ -1333,7 +1377,7 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
     // if the immediate fits in the instructions.  Otherwise, we need to
     // create a new virtual register.
     int64_t CountImm = TripCount->getImm();
-    if (!TII->isValidOffset(LOOP_i, CountImm, TRI)) {
+    if (!TII->isValidOffset(LOOP_i, CountImm)) {
       Register CountReg = MRI->createVirtualRegister(&Hexagon::IntRegsRegClass);
       BuildMI(*Preheader, InsertPos, DL, TII->get(Hexagon::A2_tfrsi), CountReg)
         .addImm(CountImm);
@@ -1713,6 +1757,11 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
           Register UpdReg = DI->getOperand(0).getReg();
           IndRegs.insert(std::make_pair(UpdReg, std::make_pair(IndReg, V)));
         }
+      } else {
+        Register IndReg;
+        int64_t V;
+        if (tryExtractPostIncInduction(DI, Phi, PhiReg, IndReg, V))
+          IndRegs.insert(std::make_pair(PhiReg, std::make_pair(IndReg, V)));
       }
     }  // for (i)
   }  // for (instr)
@@ -1884,7 +1933,7 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
       // the immediate to be constant-extended. There are some exceptions
       // though. Make sure the new combination will work.
       if (CmpImmOp->isImm() && !TII->isExtendable(*PredDef) &&
-          !TII->isValidOffset(PredDef->getOpcode(), CmpImm, TRI, false))
+          !TII->isValidOffset(PredDef->getOpcode(), CmpImm, false))
         return false;
 
       // Make sure that the compare happens after the bump.  Otherwise,
@@ -1911,9 +1960,10 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
 /// createPreheaderForLoop - Create a preheader for a given loop.
 MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
       MachineLoop *L) {
-  if (MachineBasicBlock *TmpPH = MLI->findLoopPreheader(L, SpecPreheader))
+  if (MachineBasicBlock *TmpPH =
+          MLI->findLoopPreheader(L, CLOpts->hwloop_spec_preheader))
     return TmpPH;
-  if (!HWCreatePreheader)
+  if (!CLOpts->hwloop_preheader)
     return nullptr;
 
   MachineBasicBlock *Header = L->getHeader();
@@ -1923,7 +1973,7 @@ MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
   DebugLoc DL;
 
 #ifndef NDEBUG
-  if ((!PHFn.empty()) && (PHFn != MF->getName()))
+  if (!CLOpts->hwloop_phfn.empty() && CLOpts->hwloop_phfn != MF->getName())
     return nullptr;
 #endif
 

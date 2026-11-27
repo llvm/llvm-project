@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple riscv64 -filetype obj -o - %s | llvm-readobj --symbols - | FileCheck %s
 // RUN: llvm-mc -triple riscv64 -filetype obj -defsym=OBJ=1 -o - %s | llvm-readelf -s - | FileCheck %s --check-prefix=OBJ
-// RUN: not llvm-mc -triple riscv64 -filetype asm -defsym=ERR=1 -o - %s 2>&1 | FileCheck %s --check-prefix=ERR
+// RUN: llvm-mc --verify -triple riscv64 -filetype asm -defsym=ERR=1 -o - %s
 
 .text
 .variant_cc local
@@ -34,9 +34,8 @@ def2:
 
 .ifdef ERR
 .variant_cc
-// ERR: [[#@LINE-1]]:12: error: expected symbol name
+// expected-error@-1:12 {{expected symbol name}}
 
 .global fox
-.variant_cc fox bar
-// ERR: [[#@LINE-1]]:17: error: expected newline
+.variant_cc fox bar // expected-error:17 {{expected newline}}
 .endif

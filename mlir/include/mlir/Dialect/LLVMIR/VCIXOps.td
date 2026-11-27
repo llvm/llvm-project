@@ -30,8 +30,8 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 def VCIX_Dialect : Dialect {
   let name = "vcix";
   let cppNamespace = "::mlir::vcix";
+  let useDefaultOperationRegistration = 1;
   let dependentDialects = ["LLVM::LLVMDialect"];
-  let useStrictPropertiesInAssemblyFormat = 1;
   let description = [{
      The SiFive Vector Coprocessor Interface (VCIX) provides a flexible mechanism
      to extend application processors with custom coprocessors and

@@ -26,7 +26,6 @@
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
-#include <ctime>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -154,8 +153,7 @@ InstrProfWriter::InstrProfWriter(
     bool Sparse, uint64_t TemporalProfTraceReservoirSize,
     uint64_t MaxTemporalProfTraceLength, bool WritePrevVersion,
     memprof::IndexedVersion MemProfVersionRequested, bool MemProfFullSchema,
-    bool MemprofGenerateRandomHotness,
-    unsigned MemprofGenerateRandomHotnessSeed)
+    bool MemprofGenerateRandomHotness, unsigned RandomSeed)
     : Sparse(Sparse), MaxTemporalProfTraceLength(MaxTemporalProfTraceLength),
       TemporalProfTraceReservoirSize(TemporalProfTraceReservoirSize),
       InfoObj(new InstrProfRecordWriterTrait()),
@@ -163,14 +161,8 @@ InstrProfWriter::InstrProfWriter(
       MemProfVersionRequested(MemProfVersionRequested),
       MemProfFullSchema(MemProfFullSchema),
       MemprofGenerateRandomHotness(MemprofGenerateRandomHotness) {
-  // Set up the random number seed if requested.
-  if (MemprofGenerateRandomHotness) {
-    unsigned seed = MemprofGenerateRandomHotnessSeed
-                        ? MemprofGenerateRandomHotnessSeed
-                        : std::time(nullptr);
-    errs() << "random hotness seed = " << seed << "\n";
-    std::srand(seed);
-  }
+  if (RandomSeed)
+    RNG.seed(RandomSeed);
 }
 
 InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
@@ -259,8 +251,8 @@ void InstrProfWriter::addMemProfRecord(
       // maximum value and the lifetime to 0.
       uint64_t NewTLAD = std::numeric_limits<uint64_t>::max();
       uint64_t NewTL = 0;
-      bool IsCold = std::rand() % 2;
-      if (IsCold) {
+      std::bernoulli_distribution IsCold;
+      if (IsCold(RNG)) {
         // To get a cold context, set the lifetime access density to 0 and the
         // lifetime to the maximum value.
         NewTLAD = 0;
@@ -328,14 +320,14 @@ bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
     MemProfData.Frames = std::move(Incoming.Frames);
   else
     for (const auto &[Id, F] : Incoming.Frames)
-      if (addMemProfFrame(Id, F, Warn))
+      if (!addMemProfFrame(Id, F, Warn))
         return false;
 
   if (MemProfData.CallStacks.empty())
     MemProfData.CallStacks = std::move(Incoming.CallStacks);
   else
     for (const auto &[CSId, CS] : Incoming.CallStacks)
-      if (addMemProfCallStack(CSId, CS, Warn))
+      if (!addMemProfCallStack(CSId, CS, Warn))
         return false;
 
   // Add one record at a time if randomization is requested.
@@ -749,8 +741,8 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
   for (uint64_t Count : Func.Counts)
     OS << Count << "\n";
 
-  if (Func.BitmapBytes.size() > 0) {
-    OS << "# Num Bitmap Bytes:\n$" << Func.BitmapBytes.size() << "\n";
+  OS << "# Num Bitmap Bytes:\n$" << Func.BitmapBytes.size() << "\n";
+  if (!Func.BitmapBytes.empty()) {
     OS << "# Bitmap Byte Values:\n";
     for (uint8_t Byte : Func.BitmapBytes) {
       OS << "0x";

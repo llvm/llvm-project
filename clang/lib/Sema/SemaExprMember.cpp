@@ -394,6 +394,7 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
   // indicating that it is a string of hex values to be used as vector indices.
   bool HexSwizzle = (*compStr == 's' || *compStr == 'S') && compStr[1];
 
+  bool PointAccessor = false;
   bool HasRepeated = false;
   bool HasIndex[16] = {};
 
@@ -406,6 +407,7 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
     HalvingSwizzle = true;
   } else if (!HexSwizzle &&
              (Idx = vecType->getPointAccessorIdx(*compStr)) != -1) {
+    PointAccessor = true;
     bool HasRGBA = IsRGBA(*compStr);
     do {
       // Ensure that xyzw and rgba components don't intermingle.
@@ -442,6 +444,18 @@ CheckExtVectorComponent(Sema &S, QualType baseType, ExprValueKind &VK,
     S.Diag(OpLoc.getLocWithOffset(Offset),
            diag::err_ext_vector_component_name_illegal)
         << StringRef(Fmt, 3) << SourceRange(CompLoc);
+    return QualType();
+  }
+
+  if (S.getLangOpts().HLSL && !PointAccessor) {
+    S.Diag(OpLoc, diag::err_ext_vector_component_name_illegal)
+        << CompName << SourceRange(CompLoc);
+    return QualType();
+  }
+
+  if (S.getLangOpts().HLSL && PointAccessor && vecType->getNumElements() > 4) {
+    S.Diag(OpLoc, diag::err_hlsl_long_vector_swizzle)
+        << CompName << SourceRange(CompLoc);
     return QualType();
   }
 
@@ -1626,9 +1640,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
                                            Member, MemberLoc);
     if (ret.isNull())
       return ExprError();
-    Qualifiers BaseQ =
-        S.Context.getCanonicalType(BaseExpr.get()->getType()).getQualifiers();
-    ret = S.Context.getQualifiedType(ret, BaseQ);
+
+    if (VK != VK_PRValue)
+      ret = S.Context.getQualifiedType(ret, BaseType.getQualifiers());
 
     return new (S.Context)
         ExtVectorElementExpr(ret, VK, BaseExpr.get(), *Member, MemberLoc);

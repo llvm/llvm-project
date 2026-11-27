@@ -595,7 +595,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
 
   // For entries where all PCs in the callstack are discarded, we erase the
   // entry from the stack map.
-  llvm::SmallVector<uint64_t> EntriesToErase;
+  llvm::DenseSet<uint64_t> EntriesToErase;
   // We keep track of all prior discarded entries so that we can avoid invoking
   // the symbolizer for such entries.
   llvm::DenseSet<uint64_t> AllVAddrsToDiscard;
@@ -625,7 +625,13 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
            I++) {
         const auto &DIFrame = DI.getFrame(I);
         const uint64_t Guid = memprof::getGUID(DIFrame.FunctionName);
-        const Frame F(Guid, DIFrame.Line - DIFrame.StartLine, DIFrame.Column,
+        // Compiler generated code, e.g. the forwarding call in a C++
+        // non-virtual thunk, has line 0. Record such frames with offset 0
+        // (matching the compiler side) instead of a wrapped around value.
+        const uint32_t LineOffset = DIFrame.Line >= DIFrame.StartLine
+                                        ? DIFrame.Line - DIFrame.StartLine
+                                        : 0;
+        const Frame F(Guid, LineOffset, DIFrame.Column,
                       // Only the last entry is not an inlined location.
                       I != NumFrames - 1);
         // Here we retain a mapping from the GUID to canonical symbol name
@@ -648,19 +654,22 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
       return AllVAddrsToDiscard.contains(A);
     });
     if (CallStack.empty())
-      EntriesToErase.push_back(Entry.getFirst());
+      EntriesToErase.insert(Entry.getFirst());
   }
 
   // Drop the entries where the callstack is empty.
-  for (const uint64_t Id : EntriesToErase) {
+  for (const uint64_t Id : EntriesToErase)
     StackMap.erase(Id);
-    if (auto It = CallstackProfileData.find(Id);
-        It != CallstackProfileData.end()) {
-      if (It->second.AccessHistogramSize > 0)
-        free((void *)It->second.AccessHistogram);
-      CallstackProfileData.erase(It);
-    }
-  }
+
+  if (!EntriesToErase.empty())
+    CallstackProfileData.remove_if(
+        [&EntriesToErase](const std::pair<uint64_t, MemInfoBlock> &KV) {
+          if (!EntriesToErase.contains(KV.first))
+            return false;
+          if (KV.second.AccessHistogramSize > 0)
+            free((void *)KV.second.AccessHistogram);
+          return true;
+        });
 
   if (StackMap.empty())
     return make_error<InstrProfError>(

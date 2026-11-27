@@ -86,7 +86,6 @@ void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
   }
 
   if (!NoLibc) {
-    CmdArgs.push_back("-lmoldname");
     CmdArgs.push_back("-lmingwex");
     for (auto Lib : Args.getAllArgValues(options::OPT_l)) {
       if (StringRef(Lib).starts_with("msvcr") ||
@@ -377,6 +376,11 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (!Args.hasArg(options::OPT_nostartfiles)) {
       // Add crtfastmath.o if available and fast math is enabled.
       TC.addFastMathRuntimeIfAvailable(Args, CmdArgs);
+
+      if (!Args.hasArg(options::OPT_mdll, options::OPT_shared)) {
+        if (auto O = TC.GetFilePathIfExists("default-manifest.o"))
+          CmdArgs.push_back(Args.MakeArgString(std::move(*O)));
+      }
 
       CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath("crtend.o")));
     }

@@ -117,8 +117,8 @@ static bool extendsConvergenceOutsideLoop(const Instruction &I, const Loop *L) {
     return false;
   if (!isa<ConvergenceControlInst>(I))
     return false;
-  for (const auto *U : I.users()) {
-    if (!L->contains(cast<Instruction>(U)))
+  for (const Instruction *U : I.users()) {
+    if (!L->contains(U))
       return true;
   }
   return false;
@@ -157,13 +157,7 @@ void CodeMetrics::analyzeBasicBlock(
         // for that case.
         if (F == BB->getParent())
           isRecursive = true;
-
-        if (IsLoweredToCall)
-          ++NumCalls;
       } else if (!Call->isInlineAsm()) {
-        // We don't want inline asm to count as a call - that would prevent loop
-        // unrolling. The argument setup cost is still real, though.
-        ++NumCalls;
         // When preparing for LTO, consider indirect calls as potential inline
         // candidates since they may be resolved during post-link LTO
         if (PrepareForLTO && !Call->isNoInline())

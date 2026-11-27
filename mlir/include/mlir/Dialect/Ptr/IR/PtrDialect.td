@@ -20,7 +20,6 @@ include "mlir/IR/OpBase.td"
 
 def Ptr_Dialect : Dialect {
   let name = "ptr";
-  let useStrictPropertiesInAssemblyFormat = 1;
   let summary = "Pointer dialect";
   let description = [{
     The pointer dialect provides types and operations for representing and
@@ -35,8 +34,10 @@ def Ptr_Dialect : Dialect {
     considered a target-specific property.
   }];
   let cppNamespace = "::mlir::ptr";
-  let useDefaultTypePrinterParser = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let useDefaultOperationRegistration = 1;
+  let hasTypes = 1;
+  let hasAttributes = 1;
+  let hasInitializer = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -45,6 +46,7 @@ def Ptr_Dialect : Dialect {
 
 class Ptr_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<Ptr_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/Ptr/IR/PtrTypes.h"];
   let mnemonic = typeMnemonic;
 }
 

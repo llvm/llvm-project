@@ -1,4 +1,4 @@
-//===-- WebAssemblyPeephole.cpp - WebAssembly Peephole Optimiztions -------===//
+//===-- WebAssemblyPeephole.cpp - WebAssembly Peephole Optimizations ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,11 +28,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-peephole"
-
-static cl::opt<bool> DisableWebAssemblyFallthroughReturnOpt(
-    "disable-wasm-fallthrough-return-opt", cl::Hidden,
-    cl::desc("WebAssembly: Disable fallthrough-return optimizations."),
-    cl::init(false));
 
 namespace {
 class WebAssemblyPeepholeLegacy final : public MachineFunctionPass {
@@ -83,8 +78,6 @@ static bool maybeRewriteToFallthrough(MachineInstr &MI, MachineBasicBlock &MBB,
                                       WebAssemblyFunctionInfo &MFI,
                                       MachineRegisterInfo &MRI,
                                       const WebAssemblyInstrInfo &TII) {
-  if (DisableWebAssemblyFallthroughReturnOpt)
-    return false;
   if (&MBB != &MF.back())
     return false;
 
@@ -172,7 +165,8 @@ static bool peephole(MachineFunction &MF, TargetLibraryInfo &LibInfo,
       }
       // Optimize away an explicit void return at the end of the function.
       case WebAssembly::RETURN:
-        Changed |= maybeRewriteToFallthrough(MI, MBB, MF, MFI, MRI, TII);
+        if (Subtarget.getCLOpts().fallthrough_return_opt)
+          Changed |= maybeRewriteToFallthrough(MI, MBB, MF, MFI, MRI, TII);
         break;
       }
 

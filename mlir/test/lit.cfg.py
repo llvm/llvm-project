@@ -5,6 +5,7 @@ import platform
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 
 import lit.formats
@@ -177,6 +178,7 @@ for dirs in tool_dirs:
     llvm_config.with_environment("PATH", dirs, append_path=True)
 
 tools = [
+    "llvm-objdump",
     "llvm-strings",
     "mlir-tblgen",
     "mlir-translate",
@@ -189,6 +191,7 @@ tools = [
     "mlir-capi-pass-test",
     "mlir-capi-pdl-test",
     "mlir-capi-quant-test",
+    "mlir-capi-remarks-test",
     "mlir-capi-rewrite-test",
     "mlir-capi-sparse-tensor-test",
     "mlir-capi-transform-test",
@@ -316,6 +319,23 @@ elif "MLIR_GENERATE_PATTERN_CATALOG" in os.environ:
 else:
     tools.extend(["mlir-opt"])
 
+
+def enable_llc(llc_executable):
+    config.available_features.add("has_llc_binary")
+    tools.extend(
+        [
+            ToolSubst(
+                "%llc-verify",
+                f"{llc_executable} -verify-machineinstrs -o {os.devnull}",
+            ),
+        ]
+    )
+
+
+llc_executable = lit.util.which("llc", config.llvm_tools_dir)
+if llc_executable:
+    enable_llc(llc_executable)
+
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 
@@ -338,6 +358,12 @@ if config.enable_bindings_python:
         ],
         append_path=True,
     )
+
+config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
+
+# Expose the LLVM targets that were built as "<arch>-registered-target".
+for arch in config.targets_to_build.split():
+    config.available_features.add(arch.lower() + "-registered-target")
 
 if config.enable_assertions:
     config.available_features.add("asserts")
@@ -373,12 +399,6 @@ def have_host_jit_feature_support(feature_name):
 
 if have_host_jit_feature_support("jit"):
     config.available_features.add("host-supports-jit")
-
-if config.run_nvptx_tests:
-    config.available_features.add("host-supports-nvptx")
-
-if config.run_rocm_tests:
-    config.available_features.add("host-supports-amdgpu")
 
 if config.arm_emulator_executable:
     config.available_features.add("arm-emulator")

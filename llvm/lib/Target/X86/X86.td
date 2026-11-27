@@ -360,6 +360,15 @@ def FeatureAVX10_2 : SubtargetFeature<"avx10.2", "HasAVX10_2", "true",
 def FeatureAVX10_2_512 : SubtargetFeature<"avx10.2-512", "HasAVX10_2_512", "true",
                                           "Support AVX10.2 instruction",
                                           [FeatureAVX10_2]>;
+def FeatureAVX10_V2_AUX : SubtargetFeature<"avx10v2aux", "HasAVX10_V2_AUX", "true",
+                                           "Support AVX10 V2 AUX instructions",
+                                           [FeatureAVX10_1]>;
+// AMX-TILE is not implied. ACE configures tile palette 2, which supports only
+// LDTILECFG, STTILECFG, TILEZERO and TILERELEASE; those are predicated on
+// HasAMXTILE_Or_ACEV1. A target with both palettes needs -mamx-tile as well.
+def FeatureACEV1 : SubtargetFeature<"acev1", "HasACEV1", "true",
+                                    "Support ACEV1 (AI Compute Extensions v1) instructions",
+                                    [FeatureAVX10_1]>;
 def FeatureEGPR : SubtargetFeature<"egpr", "HasEGPR", "true",
                                    "Support extended general purpose register">;
 def FeaturePush2Pop2 : SubtargetFeature<"push2pop2", "HasPush2Pop2", "true",
@@ -372,9 +381,8 @@ def FeatureCCMP : SubtargetFeature<"ccmp", "HasCCMP", "true",
                                    "Support conditional cmp & test instructions">;
 def FeatureNF : SubtargetFeature<"nf", "HasNF", "true",
                                  "Support status flags update suppression">;
-// FeatureCF is not enabled by default for APXF and targets that support APXF
-// due to performance reason, though it is part of APXF. Users need to enable it
-// manually.
+// Memory-operand CFCMOV (conditional faulting load/store) is only used with
+// TuningPreferCFMemOperand.
 def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
 def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
@@ -501,6 +509,14 @@ def TuningSlowSHLD : SubtargetFeature<"slow-shld", "IsSHLDSlow", "true",
                                        "SHLD instruction is slow",
                                        [], InlineIgnore>;
 
+def TuningSlowPDEP : SubtargetFeature<"slow-pdep", "IsPDEPSlow", "true",
+                                       "PDEP instruction is slow",
+                                       [], InlineIgnore>;
+
+def TuningSlowPEXT : SubtargetFeature<"slow-pext", "IsPEXTSlow", "true",
+                                       "PEXT instruction is slow",
+                                       [], InlineIgnore>;
+
 def TuningSlowPMULLD : SubtargetFeature<"slow-pmulld", "IsPMULLDSlow", "true",
                                         "PMULLD instruction is slow (compared to PMULLW/PMULHW and PMULUDQ)",
                                         [], InlineIgnore>;
@@ -517,6 +533,11 @@ def TuningSlowPMADDWD : SubtargetFeature<"slow-pmaddwd", "IsPMADDWDSlow",
 def TuningSlowVecMaskStore
     : SubtargetFeature<"slow-vec-mask-store", "IsVecMaskStoreSlow", "true",
                         "Vector mask store instruction is slow",
+                        [], InlineIgnore>;
+
+def TuningSlowVecCompressStore
+    : SubtargetFeature<"slow-vec-compress-store", "IsVecCompressStoreSlow", "true",
+                        "Vector compress store instruction is slow",
                         [], InlineIgnore>;
 
 // FIXME: This should not apply to CPUs that do not have SSE.
@@ -892,6 +913,12 @@ def TuningPreferLegacySetCC
     : SubtargetFeature<"prefer-legacy-setcc", "PreferLegacySetCC", "true",
                        "Prefer to emit legacy SetCC.", [], InlineIgnore>;
 
+def TuningPreferCFMemOperand
+    : SubtargetFeature<"prefer-cf-mem-operand", "PreferCFMemOperand", "true",
+                       "Use CFCMOV with memory operands (conditional "
+                       "faulting load/store).",
+                       [], InlineIgnore>;
+
 //===----------------------------------------------------------------------===//
 // X86 CPU Families
 // TODO: Remove these - use general tuning features to determine codegen.
@@ -1012,7 +1039,6 @@ def ProcessorFeatures {
     TuningFastScalarFSQRT,
     TuningFastVectorFSQRT,
     TuningFast15ByteNOP,
-    TuningFastVariableCrossLaneShuffle,
     TuningFastVariablePerLaneShuffle,
     TuningPrefer256Bit,
     TuningFastGather,
@@ -1294,6 +1320,7 @@ def ProcessorFeatures {
                                                   FeaturePPX,
                                                   FeatureNDD,
                                                   FeatureNF,
+                                                  FeatureCF,
                                                   FeatureJMPABS,
                                                   FeatureMOVRS,
                                                   FeatureAMXMOVRS,
@@ -1467,6 +1494,7 @@ def ProcessorFeatures {
                                                   FeaturePush2Pop2,
                                                   FeaturePPX,
                                                   FeatureNF,
+                                                  FeatureCF,
                                                   FeatureNDD,
                                                   FeatureZU,
                                                   FeatureJMPABS,
@@ -1525,7 +1553,6 @@ def ProcessorFeatures {
                                       TuningFastMOVBE,
                                       TuningFastImm16,
                                       TuningSlowPMADDWD];
-  // TODO Add AVX5124FMAPS/AVX5124VNNIW features
   list<SubtargetFeature> KNMFeatures =
     !listconcat(KNLFeatures, [FeatureVPOPCNTDQ]);
 
@@ -1648,7 +1675,10 @@ def ProcessorFeatures {
                                                      FeatureMOVBE,
                                                      FeatureRDRAND,
                                                      FeatureMWAITX];
-  list<SubtargetFeature> BdVer4Tuning = BdVer3Tuning;
+  list<SubtargetFeature> BdVer4AdditionalTuning = [TuningSlowPDEP,
+                                                   TuningSlowPEXT];
+  list<SubtargetFeature> BdVer4Tuning =
+    !listconcat(BdVer3Tuning, BdVer4AdditionalTuning);
   list<SubtargetFeature> BdVer4Features =
     !listconcat(BdVer3Features, BdVer4AdditionalFeatures);
 
@@ -1698,6 +1728,8 @@ def ProcessorFeatures {
                                      TuningFastMOVBE,
                                      TuningFastImm16,
                                      TuningSlowDivide64,
+                                     TuningSlowPDEP,
+                                     TuningSlowPEXT,
                                      TuningSlowSHLD,
                                      TuningSBBDepBreaking,
                                      TuningInsertVZEROUPPER,
@@ -1716,12 +1748,16 @@ def ProcessorFeatures {
                                                   FeatureVAES,
                                                   FeatureVPCLMULQDQ];
   list<SubtargetFeature> ZN3AdditionalTuning = [TuningMacroFusion];
+  list<SubtargetFeature> ZN3RemoveTuning = [TuningSlowPDEP,
+                                            TuningSlowPEXT,
+                                            TuningSlowSHLD];
   list<SubtargetFeature> ZN3Tuning =
-    !listremove(!listconcat(ZN2Tuning, ZN3AdditionalTuning), [TuningSlowSHLD]);
+    !listremove(!listconcat(ZN2Tuning, ZN3AdditionalTuning), ZN3RemoveTuning);
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
 
   list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD,
+                                                TuningSlowVecCompressStore,
                                                 TuningCOMPRESSFalseDeps,
                                                 TuningEXPANDFalseDeps];
   list<SubtargetFeature> ZN4Tuning =
@@ -1748,8 +1784,9 @@ def ProcessorFeatures {
                                                 TuningTZCNTFalseDeps,
                                                 TuningBLSFalseDeps
                                                 ];
+  list<SubtargetFeature> ZN5RemoveTuning = [TuningSlowVecCompressStore];
   list<SubtargetFeature> ZN5Tuning =
-    !listconcat(ZN4Tuning, ZN5AdditionalTuning);
+    !listremove(!listconcat(ZN4Tuning, ZN5AdditionalTuning), ZN5RemoveTuning);
   list<SubtargetFeature> ZN5AdditionalFeatures = [FeatureMOVDIRI,
                                                   FeatureMOVDIR64B,
                                                   FeatureVP2INTERSECT,
@@ -2102,9 +2139,10 @@ def : ProcModel<"alderlake", AlderlakePModel,
 // FIXME: Use Gracemont Schedule Model when it is ready.
 def : ProcModel<"gracemont", AlderlakePModel,
                 ProcessorFeatures.ADLFeatures, ProcessorFeatures.GRTTuning>;
-def : ProcModel<"sierraforest", AlderlakePModel, ProcessorFeatures.SRFFeatures,
-                ProcessorFeatures.GRTTuning>;
-def : ProcessorAlias<"grandridge", "sierraforest">;
+foreach P = ["sierraforest", "grandridge"] in {
+  def : ProcModel<P, AlderlakePModel, ProcessorFeatures.SRFFeatures,
+                  ProcessorFeatures.GRTTuning>;
+}
 def : ProcModel<"raptorlake", AlderlakePModel,
                 ProcessorFeatures.ADLFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"meteorlake", AlderlakePModel,
@@ -2116,9 +2154,10 @@ def : ProcModel<"arrowlake-s", AlderlakePModel,
 def : ProcessorAlias<"arrowlake_s", "arrowlake-s">;
 def : ProcModel<"lunarlake", LunarlakePModel, ProcessorFeatures.ARLSFeatures,
                 ProcessorFeatures.ADLTuning>;
-def : ProcModel<"pantherlake", AlderlakePModel,
-                ProcessorFeatures.PTLFeatures, ProcessorFeatures.ADLTuning>;
-def : ProcessorAlias<"wildcatlake", "pantherlake">;
+foreach P = ["pantherlake", "wildcatlake"] in {
+  def : ProcModel<P, AlderlakePModel, ProcessorFeatures.PTLFeatures,
+                  ProcessorFeatures.ADLTuning>;
+}
 def : ProcModel<"novalake", AlderlakePModel, ProcessorFeatures.NVLFeatures,
                 ProcessorFeatures.NVLTuning>;
 

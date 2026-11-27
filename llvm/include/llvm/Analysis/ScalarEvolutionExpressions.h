@@ -210,19 +210,15 @@ public:
 
   ArrayRef<SCEVUse> operands() const { return ArrayRef(Operands, NumOperands); }
 
-  NoWrapFlags getNoWrapFlags(NoWrapFlags Mask = NoWrapMask) const {
-    return static_cast<NoWrapFlags>(SubclassData) & Mask;
+  SCEVFlags getNoWrapFlags(SCEVFlags Mask = FlagsNoWrapMask) const {
+    return static_cast<SCEVFlags>(SubclassData) & Mask & SCEV::FlagsNoWrapMask;
   }
 
-  bool hasNoUnsignedWrap() const {
-    return getNoWrapFlags(FlagNUW) != FlagAnyWrap;
-  }
+  bool hasNoUnsignedWrap() const { return getNoWrapFlags(FlagNUW) != FlagNone; }
 
-  bool hasNoSignedWrap() const {
-    return getNoWrapFlags(FlagNSW) != FlagAnyWrap;
-  }
+  bool hasNoSignedWrap() const { return getNoWrapFlags(FlagNSW) != FlagNone; }
 
-  bool hasNoSelfWrap() const { return getNoWrapFlags(FlagNW) != FlagAnyWrap; }
+  bool hasNoSelfWrap() const { return getNoWrapFlags(FlagNW) != FlagNone; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) {
@@ -232,7 +228,6 @@ public:
            S->getSCEVType() == scSequentialUMinExpr ||
            S->getSCEVType() == scAddRecExpr;
   }
-  static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
 /// This node is the base class for n'ary commutative operators.
@@ -251,8 +246,11 @@ public:
   }
 
   /// Set flags for a non-recurrence without clearing previously set flags.
-  void setNoWrapFlags(NoWrapFlags Flags) {
+  void setFlags(SCEVFlags Flags) {
     SubclassData |= static_cast<unsigned short>(Flags);
+  }
+  void setNoWrapFlags(SCEVFlags Flags) {
+    setFlags(Flags & SCEV::FlagsNoWrapMask);
   }
 };
 
@@ -277,7 +275,6 @@ class SCEVAddExpr : public SCEVCommutativeExpr {
 public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scAddExpr; }
-  static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
 /// This node represents multiplication of some number of SCEVs.
@@ -290,7 +287,6 @@ class SCEVMulExpr : public SCEVCommutativeExpr {
 public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scMulExpr; }
-  static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
 /// This class represents a binary unsigned division operation.
@@ -350,7 +346,7 @@ public:
     if (isAffine())
       return getOperand(1);
     return SE.getAddRecExpr(SmallVector<SCEVUse, 3>(operands().drop_front()),
-                            getLoop(), FlagAnyWrap);
+                            getLoop(), FlagNone);
   }
 
   /// Return true if this represents an expression A + B*x where A
@@ -369,7 +365,9 @@ public:
   /// Set flags for a recurrence without clearing any previously set flags.
   /// For AddRec, either NUW or NSW implies NW. Keep track of this fact here
   /// to make it easier to propagate flags.
-  void setNoWrapFlags(NoWrapFlags Flags) {
+  void setNoWrapFlags(SCEVFlags Flags) {
+    if (!any(Flags & FlagsNoWrapMask))
+      return;
     if (any(Flags & (FlagNUW | FlagNSW)))
       Flags = ScalarEvolution::setFlags(Flags, FlagNW);
     SubclassData |= static_cast<unsigned short>(Flags);
@@ -382,9 +380,14 @@ public:
 
   /// Return the value of this chain of recurrences at the specified iteration
   /// number. Takes an explicit list of operands to represent an AddRec.
-  LLVM_ABI static const SCEV *evaluateAtIteration(ArrayRef<SCEVUse> Operands,
-                                                  const SCEV *It,
-                                                  ScalarEvolution &SE);
+  LLVM_ABI static SCEVUse
+  evaluateAtIteration(ArrayRef<SCEVUse> Operands, const SCEV *It,
+                      ScalarEvolution &SE, SCEVFlags UseFlags = SCEV::FlagNone);
+
+  /// Return the value of this recurrences when its loop exits, i.e. its value
+  /// at the loop's exact backedge-taken count, or SCEVCouldNotCompute if that
+  /// count cannot be computed.
+  LLVM_ABI SCEVUse getExitValue(ScalarEvolution &SE) const;
 
   /// Return the number of iterations of this loop that produce
   /// values in the specified constant range.  Another way of
@@ -505,8 +508,11 @@ class SCEVSequentialMinMaxExpr : public SCEVNAryExpr {
   }
 
   /// Set flags for a non-recurrence without clearing previously set flags.
-  void setNoWrapFlags(NoWrapFlags Flags) {
+  void setFlags(SCEVFlags Flags) {
     SubclassData |= static_cast<unsigned short>(Flags);
+  }
+  void setNoWrapFlags(SCEVFlags Flags) {
+    setFlags(Flags & SCEV::FlagsNoWrapMask);
   }
 
 protected:
@@ -530,14 +536,9 @@ public:
     }
   }
 
-  SCEVTypes getEquivalentNonSequentialSCEVType() const {
-    return getEquivalentNonSequentialSCEVType(getSCEVType());
-  }
-
   static bool classof(const SCEV *S) {
     return isSequentialMinMaxType(S->getSCEVType());
   }
-  static bool classof(const SCEVUse *U) { return classof(U->getPointer()); }
 };
 
 /// This class represents a sequential/in-order unsigned minimum selection.
@@ -570,10 +571,13 @@ class LLVM_ABI SCEVUnknown final : public SCEV, private CallbackVH {
   /// instances owned by a ScalarEvolution.
   SCEVUnknown *Next;
 
+  /// Deterministic ID used for ordering SCEVUnknowns by their creation time.
+  unsigned OrderID;
+
   SCEVUnknown(const FoldingSetNodeIDRef ID, Value *V, ScalarEvolution *se,
-              SCEVUnknown *next)
-      : SCEV(ID, scUnknown, 1, V->getType()), CallbackVH(V), SE(se),
-        Next(next) {}
+              SCEVUnknown *next, unsigned OrderID)
+      : SCEV(ID, scUnknown, 1, V->getType()), CallbackVH(V), SE(se), Next(next),
+        OrderID(OrderID) {}
 
   // Implement CallbackVH.
   void deleted() override;
@@ -581,6 +585,8 @@ class LLVM_ABI SCEVUnknown final : public SCEV, private CallbackVH {
 
 public:
   Value *getValue() const { return getValPtr(); }
+
+  unsigned getOrderID() const { return OrderID; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scUnknown; }
@@ -789,7 +795,7 @@ bool SCEVExprContains(const SCEV *Root, PredTy Pred) {
 /// The result from each visit is cached, so it will return the same
 /// SCEV for the same input.
 template <typename SC>
-class SCEVRewriteVisitor : public SCEVVisitor<SC, const SCEV *> {
+class SCEVRewriteVisitor : public SCEVUseVisitor<SC, SCEVUse> {
 protected:
   ScalarEvolution &SE;
   // Memoize the result of each visit so that we only compute once for
@@ -797,82 +803,84 @@ protected:
   // a SCEV is referenced by multiple SCEVs. Without memoization, this
   // visit algorithm would have exponential time complexity in the worst
   // case, causing the compiler to hang on certain tests.
-  SmallDenseMap<const SCEV *, const SCEV *> RewriteResults;
+  SmallDenseMap<SCEVUse, SCEVUse, 16> RewriteResults;
 
 public:
   SCEVRewriteVisitor(ScalarEvolution &SE) : SE(SE) {}
 
-  const SCEV *visit(const SCEV *S) {
+  SCEVUse visit(SCEVUse S) {
     auto It = RewriteResults.find(S);
     if (It != RewriteResults.end())
       return It->second;
-    auto *Visited = SCEVVisitor<SC, const SCEV *>::visit(S);
+    SCEVUse Visited = SCEVUseVisitor<SC, SCEVUse>::visit(S);
     auto Result = RewriteResults.try_emplace(S, Visited);
     assert(Result.second && "Should insert a new entry");
     return Result.first->second;
   }
 
-  const SCEV *visitConstant(const SCEVConstant *Constant) { return Constant; }
+  SCEVUse visitConstant(SCEVUseT<const SCEVConstant *> Constant) {
+    return Constant;
+  }
 
-  const SCEV *visitVScale(const SCEVVScale *VScale) { return VScale; }
+  SCEVUse visitVScale(SCEVUseT<const SCEVVScale *> VScale) { return VScale; }
 
-  const SCEV *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
-    const SCEV *Operand = ((SC *)this)->visit(Expr->getOperand());
+  SCEVUse visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> Expr) {
+    SCEVUse Operand = ((SC *)this)->visit(Expr->getOperand());
     return Operand == Expr->getOperand() ? Expr : SE.getPtrToAddrExpr(Operand);
   }
 
-  const SCEV *visitTruncateExpr(const SCEVTruncateExpr *Expr) {
-    const SCEV *Operand = ((SC *)this)->visit(Expr->getOperand());
+  SCEVUse visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> Expr) {
+    SCEVUse Operand = ((SC *)this)->visit(Expr->getOperand());
     return Operand == Expr->getOperand()
                ? Expr
                : SE.getTruncateExpr(Operand, Expr->getType());
   }
 
-  const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {
-    const SCEV *Operand = ((SC *)this)->visit(Expr->getOperand());
+  SCEVUse visitZeroExtendExpr(SCEVUseT<const SCEVZeroExtendExpr *> Expr) {
+    SCEVUse Operand = ((SC *)this)->visit(Expr->getOperand());
     return Operand == Expr->getOperand()
                ? Expr
                : SE.getZeroExtendExpr(Operand, Expr->getType());
   }
 
-  const SCEV *visitSignExtendExpr(const SCEVSignExtendExpr *Expr) {
-    const SCEV *Operand = ((SC *)this)->visit(Expr->getOperand());
+  SCEVUse visitSignExtendExpr(SCEVUseT<const SCEVSignExtendExpr *> Expr) {
+    SCEVUse Operand = ((SC *)this)->visit(Expr->getOperand());
     return Operand == Expr->getOperand()
                ? Expr
                : SE.getSignExtendExpr(Operand, Expr->getType());
   }
 
-  const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
+  SCEVUse visitAddExpr(SCEVUseT<const SCEVAddExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getAddExpr(Operands);
   }
 
-  const SCEV *visitMulExpr(const SCEVMulExpr *Expr) {
+  SCEVUse visitMulExpr(SCEVUseT<const SCEVMulExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getMulExpr(Operands);
   }
 
-  const SCEV *visitUDivExpr(const SCEVUDivExpr *Expr) {
-    auto *LHS = ((SC *)this)->visit(Expr->getLHS());
-    auto *RHS = ((SC *)this)->visit(Expr->getRHS());
+  SCEVUse visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> Expr) {
+    SCEVUse LHS = ((SC *)this)->visit(Expr->getLHS());
+    SCEVUse RHS = ((SC *)this)->visit(Expr->getRHS());
     bool Changed = LHS != Expr->getLHS() || RHS != Expr->getRHS();
     return !Changed ? Expr : SE.getUDivExpr(LHS, RHS);
   }
 
-  const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
+  SCEVUse visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
@@ -881,71 +889,72 @@ public:
                                        Expr->getNoWrapFlags());
   }
 
-  const SCEV *visitSMaxExpr(const SCEVSMaxExpr *Expr) {
+  SCEVUse visitSMaxExpr(SCEVUseT<const SCEVSMaxExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getSMaxExpr(Operands);
   }
 
-  const SCEV *visitUMaxExpr(const SCEVUMaxExpr *Expr) {
+  SCEVUse visitUMaxExpr(SCEVUseT<const SCEVUMaxExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getUMaxExpr(Operands);
   }
 
-  const SCEV *visitSMinExpr(const SCEVSMinExpr *Expr) {
+  SCEVUse visitSMinExpr(SCEVUseT<const SCEVSMinExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getSMinExpr(Operands);
   }
 
-  const SCEV *visitUMinExpr(const SCEVUMinExpr *Expr) {
+  SCEVUse visitUMinExpr(SCEVUseT<const SCEVUMinExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getUMinExpr(Operands);
   }
 
-  const SCEV *visitSequentialUMinExpr(const SCEVSequentialUMinExpr *Expr) {
+  SCEVUse
+  visitSequentialUMinExpr(SCEVUseT<const SCEVSequentialUMinExpr *> Expr) {
     SmallVector<SCEVUse, 2> Operands;
     bool Changed = false;
-    for (const SCEV *Op : Expr->operands()) {
+    for (SCEVUse Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getUMinExpr(Operands, /*Sequential=*/true);
   }
 
-  const SCEV *visitUnknown(const SCEVUnknown *Expr) { return Expr; }
+  SCEVUse visitUnknown(SCEVUseT<const SCEVUnknown *> Expr) { return Expr; }
 
-  const SCEV *visitCouldNotCompute(const SCEVCouldNotCompute *Expr) {
+  SCEVUse visitCouldNotCompute(SCEVUseT<const SCEVCouldNotCompute *> Expr) {
     return Expr;
   }
 };
 
 using ValueToValueMap = DenseMap<const Value *, Value *>;
-using ValueToSCEVMapTy = DenseMap<const Value *, const SCEV *>;
+using ValueToSCEVMapTy = DenseMap<const Value *, SCEVUse>;
 
 /// The SCEVParameterRewriter takes a scalar evolution expression and updates
 /// the SCEVUnknown components following the Map (Value -> SCEV).
 class SCEVParameterRewriter : public SCEVRewriteVisitor<SCEVParameterRewriter> {
 public:
-  static const SCEV *rewrite(const SCEV *Scev, ScalarEvolution &SE,
+  static const SCEV *rewrite(SCEVUse Scev, ScalarEvolution &SE,
                              ValueToSCEVMapTy &Map) {
     SCEVParameterRewriter Rewriter(SE, Map);
     return Rewriter.visit(Scev);
@@ -954,7 +963,7 @@ public:
   SCEVParameterRewriter(ScalarEvolution &SE, ValueToSCEVMapTy &M)
       : SCEVRewriteVisitor(SE), Map(M) {}
 
-  const SCEV *visitUnknown(const SCEVUnknown *Expr) {
+  SCEVUse visitUnknown(SCEVUseT<const SCEVUnknown *> Expr) {
     auto I = Map.find(Expr->getValue());
     if (I == Map.end())
       return Expr;
@@ -965,43 +974,22 @@ private:
   ValueToSCEVMapTy &Map;
 };
 
-using LoopToScevMapT = DenseMap<const Loop *, const SCEV *>;
-
-/// The SCEVLoopAddRecRewriter takes a scalar evolution expression and applies
-/// the Map (Loop -> SCEV) to all AddRecExprs.
-class SCEVLoopAddRecRewriter
-    : public SCEVRewriteVisitor<SCEVLoopAddRecRewriter> {
-public:
-  SCEVLoopAddRecRewriter(ScalarEvolution &SE, LoopToScevMapT &M)
-      : SCEVRewriteVisitor(SE), Map(M) {}
-
-  static const SCEV *rewrite(const SCEV *Scev, LoopToScevMapT &Map,
-                             ScalarEvolution &SE) {
-    SCEVLoopAddRecRewriter Rewriter(SE, Map);
-    return Rewriter.visit(Scev);
+template <typename SCEVPtrT>
+inline SCEVUseT<SCEVPtrT>::SCEVUseT(SCEVPtrT S, SCEVFlags Flags) : Base(S, 0) {
+  assert((Flags & SCEVFlags::FlagsNoWrapMask) == Flags &&
+         "Expected only no-wrap flags");
+  if (any(Flags)) {
+    assert((isa<SCEVAddExpr, SCEVMulExpr, SCEVAddRecExpr>(S)) &&
+           "use flags require an expression that can carry no-wrap flags");
+    // Drop flags already present on S.
+    Flags &= ~cast<SCEVNAryExpr>(S)->getNoWrapFlags();
   }
-
-  const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
-    SmallVector<SCEVUse, 2> Operands;
-    for (SCEVUse Op : Expr->operands())
-      Operands.push_back(visit(Op));
-
-    const Loop *L = Expr->getLoop();
-    auto It = Map.find(L);
-    if (It == Map.end())
-      return SE.getAddRecExpr(Operands, L, Expr->getNoWrapFlags());
-
-    return SCEVAddRecExpr::evaluateAtIteration(Operands, It->second, SE);
-  }
-
-private:
-  LoopToScevMapT &Map;
-};
+  Base::setInt(static_cast<unsigned>(Flags) >> 1);
+}
 
 template <typename SCEVPtrT>
-inline SCEVNoWrapFlags
-SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVNoWrapFlags Mask) const {
-  SCEVNoWrapFlags Flags = SCEVNoWrapFlags::FlagAnyWrap;
+inline SCEVFlags SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVFlags Mask) const {
+  SCEVFlags Flags = SCEVFlags::FlagNone;
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(Base::getPointer()))
     Flags = NAry->getNoWrapFlags();
   return (Flags | getUseNoWrapFlags()) & Mask;

@@ -3,13 +3,13 @@
 # RUN: llvm-mc --triple=loongarch32 --mattr=+f -M numeric %s \
 # RUN:     | FileCheck %s
 # RUN: llvm-mc --triple=loongarch32 --mattr=+f --filetype=obj %s -o %t.32
-# RUN: llvm-objdump -d -M numeric %t.32 | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d -M numeric %t.32 | FileCheck %s
 # RUN: llvm-mc --triple=loongarch64 --mattr=+f --loongarch-numeric-reg %s \
 # RUN:     | FileCheck %s
 # RUN: llvm-mc --triple=loongarch64 --mattr=+f -M numeric %s \
 # RUN:     | FileCheck %s
 # RUN: llvm-mc --triple=loongarch64 --mattr=+f --filetype=obj %s -o %t.64
-# RUN: llvm-objdump -d -M numeric %t.64 | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d -M numeric %t.64 | FileCheck %s
 
 addi.w $zero, $ra, 1
 addi.w $tp, $sp, 1

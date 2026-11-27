@@ -1533,6 +1533,9 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
 
   // We'll manage file buffers ourselves.
   CI->getPreprocessorOpts().RetainRemappedFileBuffers = true;
+  // libclang and other ASTUnit clients query documentation comments after
+  // parsing, so keep them in the AST.
+  CI->getLangOpts().CommentOpts.RetainComments = true;
   CI->getFrontendOpts().DisableFree = false;
   ProcessWarningOptions(AST->getDiagnostics(), CI->getDiagnosticOpts(),
                         AST->getFileManager().getVirtualFileSystem());
@@ -1545,8 +1548,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance>
     CICleanup(Clang.get());
 
-  AST->OriginalSourceFile =
-      std::string(Clang->getFrontendOpts().Inputs[0].getFile());
+  AST->OriginalSourceFile = std::string(AST->getMainFileName());
 
   // Set up diagnostics, capturing any diagnostics that would
   // otherwise be dropped.
@@ -1641,6 +1643,9 @@ bool ASTUnit::LoadFromCompilerInvocation(
 
   // We'll manage file buffers ourselves.
   Invocation->getPreprocessorOpts().RetainRemappedFileBuffers = true;
+  // libclang and other ASTUnit clients query documentation comments after
+  // parsing, so keep them in the AST.
+  Invocation->getLangOpts().CommentOpts.RetainComments = true;
   Invocation->getFrontendOpts().DisableFree = false;
   getDiagnostics().Reset();
   ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts(),
@@ -2077,8 +2082,7 @@ void ASTUnit::CodeComplete(
     CICleanup(Clang.get());
 
   auto &Inv = Clang->getInvocation();
-  OriginalSourceFile =
-      std::string(Clang->getFrontendOpts().Inputs[0].getFile());
+  OriginalSourceFile = std::string(getMainFileName());
 
   // Set up diagnostics, capturing any diagnostics produced.
   Clang->setDiagnostics(Diag);

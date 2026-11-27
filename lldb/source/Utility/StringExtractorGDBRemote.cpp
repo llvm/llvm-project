@@ -317,11 +317,13 @@ StringExtractorGDBRemote::GetServerPacketType() const {
   case 'j':
     if (PACKET_STARTS_WITH("jModulesInfo:"))
       return eServerPacketType_jModulesInfo;
-    if (PACKET_MATCHES("jSignalsInfo"))
-      return eServerPacketType_jSignalsInfo;
     if (PACKET_MATCHES("jThreadsInfo"))
       return eServerPacketType_jThreadsInfo;
+    if (PACKET_MATCHES("jAddressSpacesInfo"))
+      return eServerPacketType_jAddressSpacesInfo;
 
+    if (PACKET_MATCHES("jLLDBSettings"))
+      return eServerPacketType_jLLDBSettings;
     if (PACKET_MATCHES("jLLDBTraceSupported"))
       return eServerPacketType_jLLDBTraceSupported;
     if (PACKET_STARTS_WITH("jLLDBTraceStop:"))
@@ -338,6 +340,10 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       return eServerPacketType_jAcceleratorPluginInitialize;
     if (PACKET_STARTS_WITH("jAcceleratorPluginBreakpointHit:"))
       return eServerPacketType_jAcceleratorPluginBreakpointHit;
+    if (PACKET_STARTS_WITH("jAcceleratorPluginGetDynamicLoaderLibraryInfo:"))
+      return eServerPacketType_jAcceleratorPluginGetDynamicLoaderLibraryInfo;
+    if (PACKET_STARTS_WITH("jThreadExtendedInfo:"))
+      return eServerPacketType_jThreadExtendedInfo;
     break;
 
   case 'v':
@@ -492,6 +498,26 @@ bool StringExtractorGDBRemote::IsNormalResponse() const {
 bool StringExtractorGDBRemote::IsErrorResponse() const {
   return GetResponseType() == eError && isxdigit(m_packet[1]) &&
          isxdigit(m_packet[2]);
+}
+
+bool StringExtractorGDBRemote::IsStopReply(uint32_t mask) const {
+  if (!IsNormalResponse())
+    return false;
+
+  char first_char = m_packet.empty() ? '\0' : m_packet[0];
+  if (mask & Signal && (first_char == 'T' || first_char == 'S'))
+    return true;
+  if (mask & Exited && (first_char == 'w' || first_char == 'W'))
+    return true;
+  if (mask & Terminated && first_char == 'X')
+    return true;
+  if (mask & Output && first_char == 'O')
+    return true;
+  if (mask & NoResumedThreads && first_char == 'N')
+    return true;
+  if (mask & Syscall && first_char == 'F')
+    return true;
+  return false;
 }
 
 uint8_t StringExtractorGDBRemote::GetError() {

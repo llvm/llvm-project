@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
 #include <tuple>
+#include <utility>
 
 namespace mlir {
 class Location;
@@ -98,21 +99,39 @@ LogicalResult coalesceLoops(RewriterBase &rewriter,
 LogicalResult coalescePerfectlyNestedSCFForLoops(scf::ForOp op);
 
 /// Take the ParallelLoop and for each set of dimension indices, combine them
-/// into a single dimension. combinedDimensions must contain each index into
-/// loops exactly once.
-void collapseParallelLoops(RewriterBase &rewriter, scf::ParallelOp loops,
-                           ArrayRef<std::vector<unsigned>> combinedDimensions);
+/// into a single dimension. `combinedDimensions` must contain each index into
+/// `loops` exactly once. Returns the collapsed loop. Reductions on `loops` are
+/// preserved.
+scf::ParallelOp
+collapseParallelLoops(RewriterBase &rewriter, scf::ParallelOp loops,
+                      ArrayRef<std::vector<unsigned>> combinedDimensions);
 
 struct UnrolledLoopInfo {
   std::optional<scf::ForOp> mainLoopOp = std::nullopt;
   std::optional<scf::ForOp> epilogueLoopOp = std::nullopt;
 };
 
+/// Splits `forOp` into two consecutive loops at `splitPoint`:
+///   first:  [lowerBound, splitPoint)
+///   second: [splitPoint, upperBound)
+///
+/// Uses `rewriter` to replace `forOp` and returns the two new loops. Iter-args
+/// are chained from the first loop to the second.
+///
+/// The caller must ensure that `splitPoint` has the same type as the loop
+/// bounds, that the step is positive, and that
+/// `lowerBound <= splitPoint < upperBound`. The split point must also lie on
+/// the loop's iteration lattice: `splitPoint == lowerBound + k * step` for
+/// some non-negative integer `k`. Statically known violations cause failure;
+/// dynamic values are assumed to satisfy these preconditions.
+FailureOr<std::pair<scf::ForOp, scf::ForOp>>
+splitForOpAtPoint(RewriterBase &rewriter, scf::ForOp forOp, Value splitPoint);
+
 /// Unrolls this for operation by the specified unroll factor. Returns the
 /// unrolled main loop and the epilogue loop, if the loop is unrolled. Otherwise
 /// returns failure if the loop cannot be unrolled either due to restrictions or
-/// due to invalid unroll factors. Requires positive loop bounds and step. If
-/// specified, annotates the Ops in each unrolled iteration by applying
+/// due to invalid unroll factors. Requires positive step. If specified,
+//  annotates the Ops in each unrolled iteration by applying
 /// `annotateFn`.
 /// If `shouldPromoteIfSingleIteration` is true, the function will promote the
 /// loop body up if this has turned into a single iteration loop.
@@ -145,7 +164,9 @@ void denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
 
 /// Tile a nest of standard for loops rooted at `rootForOp` by finding such
 /// parametric tile sizes that the outer loops have a fixed number of iterations
-/// as defined in `sizes`.
+/// as defined in `sizes`. Tiling changes the order of the iterations; the
+/// caller must make sure that does not change the result, including the
+/// values carried by iter_args.
 using Loops = SmallVector<scf::ForOp, 8>;
 using TileLoops = std::pair<Loops, Loops>;
 TileLoops extractFixedOuterLoops(scf::ForOp rootFOrOp, ArrayRef<int64_t> sizes);

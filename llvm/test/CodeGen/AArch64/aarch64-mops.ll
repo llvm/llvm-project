@@ -577,7 +577,6 @@ define void @memset_threshold(ptr %dst) {
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memset_threshold:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0:
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    movi v0.2d, #0000000000000000
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0, #32]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0, #64]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0, #96]
@@ -593,12 +592,12 @@ define void @memset_threshold(ptr %dst) {
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0, #416]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0, #448]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0, #480]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
 ;
 ; SDAG-MOPS-O2-LABEL: memset_threshold:
 ; SDAG-MOPS-O2:       // %bb.0:
 ; SDAG-MOPS-O2-NEXT:    movi v0.2d, #0000000000000000
-; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0]
 ; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0, #32]
 ; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0, #64]
 ; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0, #96]
@@ -614,6 +613,7 @@ define void @memset_threshold(ptr %dst) {
 ; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0, #416]
 ; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0, #448]
 ; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0, #480]
+; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
   call void @llvm.memset.p0.i64(ptr align 16 %dst, i8 0, i64 512, i1 false)
   ret void
@@ -2836,5 +2836,199 @@ define void @memmove_inline_300_volatile(ptr %dst, ptr %src, i32 %value) {
 ; SDAG-MOPS-O2-NEXT:    ret
 entry:
   call void @llvm.memmove.inline.p0.p0.i64(ptr align 1 %dst, ptr align 1 %src, i64 300, i1 true)
+  ret void
+}
+
+define void @memset_size_i32(ptr %dst, i32 %size, i32 %value) {
+; GISel-WITHOUT-MOPS-O0-LABEL: memset_size_i32:
+; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O0-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_def_cfa_offset 16
+; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_offset w30, -16
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w8, w1
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w1, w2
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w8, w8
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w2, w8
+; GISel-WITHOUT-MOPS-O0-NEXT:    bl memset
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+;
+; GISel-WITHOUT-MOPS-O3-LABEL: memset_size_i32:
+; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O3-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O3-NEXT:    .cfi_def_cfa_offset 16
+; GISel-WITHOUT-MOPS-O3-NEXT:    .cfi_offset w30, -16
+; GISel-WITHOUT-MOPS-O3-NEXT:    mov w3, w2
+; GISel-WITHOUT-MOPS-O3-NEXT:    mov w2, w1
+; GISel-WITHOUT-MOPS-O3-NEXT:    mov w1, w3
+; GISel-WITHOUT-MOPS-O3-NEXT:    bl memset
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISel-WITHOUT-MOPS-O3-NEXT:    ret
+;
+; GISel-MOPS-O0-LABEL: memset_size_i32:
+; GISel-MOPS-O0:       // %bb.0: // %entry
+; GISel-MOPS-O0-NEXT:    mov w8, w1
+; GISel-MOPS-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-MOPS-O0-NEXT:    // implicit-def: $x9
+; GISel-MOPS-O0-NEXT:    mov w9, w2
+; GISel-MOPS-O0-NEXT:    setp [x0]!, x8!, x9
+; GISel-MOPS-O0-NEXT:    setm [x0]!, x8!, x9
+; GISel-MOPS-O0-NEXT:    sete [x0]!, x8!, x9
+; GISel-MOPS-O0-NEXT:    ret
+;
+; GISel-MOPS-O3-LABEL: memset_size_i32:
+; GISel-MOPS-O3:       // %bb.0: // %entry
+; GISel-MOPS-O3-NEXT:    mov w8, w1
+; GISel-MOPS-O3-NEXT:    // kill: def $w2 killed $w2 def $x2
+; GISel-MOPS-O3-NEXT:    setp [x0]!, x8!, x2
+; GISel-MOPS-O3-NEXT:    setm [x0]!, x8!, x2
+; GISel-MOPS-O3-NEXT:    sete [x0]!, x8!, x2
+; GISel-MOPS-O3-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memset_size_i32:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_def_cfa_offset 16
+; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_offset w30, -16
+; SDAG-WITHOUT-MOPS-O2-NEXT:    mov w8, w2
+; SDAG-WITHOUT-MOPS-O2-NEXT:    mov w2, w1
+; SDAG-WITHOUT-MOPS-O2-NEXT:    mov w1, w8
+; SDAG-WITHOUT-MOPS-O2-NEXT:    bl memset
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memset_size_i32:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    mov w8, w1
+; SDAG-MOPS-O2-NEXT:    // kill: def $w2 killed $w2 def $x2
+; SDAG-MOPS-O2-NEXT:    setp [x0]!, x8!, x2
+; SDAG-MOPS-O2-NEXT:    setm [x0]!, x8!, x2
+; SDAG-MOPS-O2-NEXT:    sete [x0]!, x8!, x2
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  %value_trunc = trunc i32 %value to i8
+  call void @llvm.memset.p0.i32(ptr align 1 %dst, i8 %value_trunc, i32 %size, i1 false)
+  ret void
+}
+
+define void @memcpy_n_i32(ptr %dst, ptr %src, i32 %size) {
+; GISel-WITHOUT-MOPS-O0-LABEL: memcpy_n_i32:
+; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O0-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_def_cfa_offset 16
+; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_offset w30, -16
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w8, w2
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w2, w8
+; GISel-WITHOUT-MOPS-O0-NEXT:    bl memcpy
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+;
+; GISel-WITHOUT-MOPS-O3-LABEL: memcpy_n_i32:
+; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O3-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O3-NEXT:    .cfi_def_cfa_offset 16
+; GISel-WITHOUT-MOPS-O3-NEXT:    .cfi_offset w30, -16
+; GISel-WITHOUT-MOPS-O3-NEXT:    mov w2, w2
+; GISel-WITHOUT-MOPS-O3-NEXT:    bl memcpy
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISel-WITHOUT-MOPS-O3-NEXT:    ret
+;
+; GISel-MOPS-O0-LABEL: memcpy_n_i32:
+; GISel-MOPS-O0:       // %bb.0: // %entry
+; GISel-MOPS-O0-NEXT:    mov w8, w2
+; GISel-MOPS-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-MOPS-O0-NEXT:    cpyfp [x0]!, [x1]!, x8!
+; GISel-MOPS-O0-NEXT:    cpyfm [x0]!, [x1]!, x8!
+; GISel-MOPS-O0-NEXT:    cpyfe [x0]!, [x1]!, x8!
+; GISel-MOPS-O0-NEXT:    ret
+;
+; GISel-MOPS-O3-LABEL: memcpy_n_i32:
+; GISel-MOPS-O3:       // %bb.0: // %entry
+; GISel-MOPS-O3-NEXT:    mov w8, w2
+; GISel-MOPS-O3-NEXT:    cpyfp [x0]!, [x1]!, x8!
+; GISel-MOPS-O3-NEXT:    cpyfm [x0]!, [x1]!, x8!
+; GISel-MOPS-O3-NEXT:    cpyfe [x0]!, [x1]!, x8!
+; GISel-MOPS-O3-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memcpy_n_i32:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_def_cfa_offset 16
+; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_offset w30, -16
+; SDAG-WITHOUT-MOPS-O2-NEXT:    mov w2, w2
+; SDAG-WITHOUT-MOPS-O2-NEXT:    bl memcpy
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memcpy_n_i32:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    mov w8, w2
+; SDAG-MOPS-O2-NEXT:    cpyfp [x0]!, [x1]!, x8!
+; SDAG-MOPS-O2-NEXT:    cpyfm [x0]!, [x1]!, x8!
+; SDAG-MOPS-O2-NEXT:    cpyfe [x0]!, [x1]!, x8!
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 %dst, ptr align 1 %src, i32 %size, i1 false)
+  ret void
+}
+
+define void @memmove_n_i32(ptr %dst, ptr %src, i32 %size) {
+; GISel-WITHOUT-MOPS-O0-LABEL: memmove_n_i32:
+; GISel-WITHOUT-MOPS-O0:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O0-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_def_cfa_offset 16
+; GISel-WITHOUT-MOPS-O0-NEXT:    .cfi_offset w30, -16
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w8, w2
+; GISel-WITHOUT-MOPS-O0-NEXT:    mov w2, w8
+; GISel-WITHOUT-MOPS-O0-NEXT:    bl memmove
+; GISel-WITHOUT-MOPS-O0-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISel-WITHOUT-MOPS-O0-NEXT:    ret
+;
+; GISel-WITHOUT-MOPS-O3-LABEL: memmove_n_i32:
+; GISel-WITHOUT-MOPS-O3:       // %bb.0: // %entry
+; GISel-WITHOUT-MOPS-O3-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISel-WITHOUT-MOPS-O3-NEXT:    .cfi_def_cfa_offset 16
+; GISel-WITHOUT-MOPS-O3-NEXT:    .cfi_offset w30, -16
+; GISel-WITHOUT-MOPS-O3-NEXT:    mov w2, w2
+; GISel-WITHOUT-MOPS-O3-NEXT:    bl memmove
+; GISel-WITHOUT-MOPS-O3-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISel-WITHOUT-MOPS-O3-NEXT:    ret
+;
+; GISel-MOPS-O0-LABEL: memmove_n_i32:
+; GISel-MOPS-O0:       // %bb.0: // %entry
+; GISel-MOPS-O0-NEXT:    mov w8, w2
+; GISel-MOPS-O0-NEXT:    // kill: def $x8 killed $w8
+; GISel-MOPS-O0-NEXT:    cpyp [x0]!, [x1]!, x8!
+; GISel-MOPS-O0-NEXT:    cpym [x0]!, [x1]!, x8!
+; GISel-MOPS-O0-NEXT:    cpye [x0]!, [x1]!, x8!
+; GISel-MOPS-O0-NEXT:    ret
+;
+; GISel-MOPS-O3-LABEL: memmove_n_i32:
+; GISel-MOPS-O3:       // %bb.0: // %entry
+; GISel-MOPS-O3-NEXT:    mov w8, w2
+; GISel-MOPS-O3-NEXT:    cpyp [x0]!, [x1]!, x8!
+; GISel-MOPS-O3-NEXT:    cpym [x0]!, [x1]!, x8!
+; GISel-MOPS-O3-NEXT:    cpye [x0]!, [x1]!, x8!
+; GISel-MOPS-O3-NEXT:    ret
+;
+; SDAG-WITHOUT-MOPS-O2-LABEL: memmove_n_i32:
+; SDAG-WITHOUT-MOPS-O2:       // %bb.0: // %entry
+; SDAG-WITHOUT-MOPS-O2-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_def_cfa_offset 16
+; SDAG-WITHOUT-MOPS-O2-NEXT:    .cfi_offset w30, -16
+; SDAG-WITHOUT-MOPS-O2-NEXT:    mov w2, w2
+; SDAG-WITHOUT-MOPS-O2-NEXT:    bl memmove
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
+;
+; SDAG-MOPS-O2-LABEL: memmove_n_i32:
+; SDAG-MOPS-O2:       // %bb.0: // %entry
+; SDAG-MOPS-O2-NEXT:    mov w8, w2
+; SDAG-MOPS-O2-NEXT:    cpyp [x0]!, [x1]!, x8!
+; SDAG-MOPS-O2-NEXT:    cpym [x0]!, [x1]!, x8!
+; SDAG-MOPS-O2-NEXT:    cpye [x0]!, [x1]!, x8!
+; SDAG-MOPS-O2-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i32(ptr align 1 %dst, ptr align 1 %src, i32 %size, i1 false)
   ret void
 }

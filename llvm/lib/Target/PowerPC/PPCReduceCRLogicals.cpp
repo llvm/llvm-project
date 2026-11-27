@@ -18,6 +18,7 @@
 #include "PPCInstrInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -249,6 +250,11 @@ static bool splitMBB(BlockSplitInfo &BSI) {
     updatePHIs(Succ, ThisMBB, NewMBB, MRI);
   }
   addIncomingValuesToPHIs(NewBRTarget, ThisMBB, NewMBB, MRI);
+
+  // Physical registers (e.g. the carry bit) may be live across the split
+  // point, so NewMBB needs a live-in list.
+  LivePhysRegs LiveRegs;
+  computeAndAddLiveIns(LiveRegs, *NewMBB);
 
   // Set the call frame size on ThisMBB to the new basic blocks.
   // See https://reviews.llvm.org/D156113.
@@ -655,7 +661,7 @@ bool PPCReduceCRLogicals::splitBlockOnBinaryCROp(CRLogicalOpInfo &CRI) {
 
   // Get the branch instruction.
   MachineInstr *Branch =
-    MRI->use_nodbg_begin(CRI.MI->getOperand(0).getReg())->getParent();
+      &*MRI->use_instr_nodbg_begin(CRI.MI->getOperand(0).getReg());
 
   // We want the new block to have no code in it other than the definition
   // of the input to the CR logical and the CR logical itself. So we move

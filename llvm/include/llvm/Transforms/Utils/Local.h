@@ -39,6 +39,7 @@ class CallInst;
 class CondBrInst;
 class DIBuilder;
 class DomTreeUpdater;
+class FreezeInst;
 class Function;
 class Instruction;
 class InvokeInst;
@@ -83,14 +84,6 @@ isInstructionTriviallyDead(Instruction *I,
 LLVM_ABI bool
 wouldInstructionBeTriviallyDead(const Instruction *I,
                                 const TargetLibraryInfo *TLI = nullptr);
-
-/// Return true if the result produced by the instruction has no side effects on
-/// any paths other than where it is used. This is less conservative than
-/// wouldInstructionBeTriviallyDead which is based on the assumption
-/// that the use count will be 0. An example usage of this API is for
-/// identifying instructions that can be sunk down to use(s).
-LLVM_ABI bool wouldInstructionBeTriviallyDeadOnUnusedPaths(
-    Instruction *I, const TargetLibraryInfo *TLI = nullptr);
 
 /// If the specified value is a trivially dead instruction, delete it.
 /// If that makes any of its operands trivially dead, delete them too,
@@ -240,16 +233,16 @@ LLVM_ABI Align tryEnforceAlignment(Value *V, Align PrefAlign,
 /// alignment from the beginning.
 LLVM_ABI Align getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
                                           const DataLayout &DL,
-                                          const Instruction *CxtI = nullptr,
+                                          const Instruction *CtxI = nullptr,
                                           AssumptionCache *AC = nullptr,
                                           const DominatorTree *DT = nullptr);
 
 /// Try to infer an alignment for the specified pointer.
 inline Align getKnownAlignment(Value *V, const DataLayout &DL,
-                               const Instruction *CxtI = nullptr,
+                               const Instruction *CtxI = nullptr,
                                AssumptionCache *AC = nullptr,
                                const DominatorTree *DT = nullptr) {
-  return getOrEnforceKnownAlignment(V, MaybeAlign(), DL, CxtI, AC, DT);
+  return getOrEnforceKnownAlignment(V, MaybeAlign(), DL, CtxI, AC, DT);
 }
 
 /// Create a call that matches the invoke \p II in terms of arguments,
@@ -440,9 +433,10 @@ LLVM_ABI void combineAAMetadata(Instruction *K, const Instruction *J);
 LLVM_ABI void copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source);
 
 /// Patch the replacement so that it is not more restrictive than the value
-/// being replaced. It assumes that the replacement does not get moved from
-/// its original position.
-LLVM_ABI void patchReplacementInstruction(Instruction *I, Value *Repl);
+/// being replaced. Unless DoesKMove is set, it assumes that the replacement
+/// does not get moved from its original position.
+LLVM_ABI void patchReplacementInstruction(Instruction *I, Value *Repl,
+                                          bool DoesKMove = false);
 
 // Replace each use of 'From' with 'To', if that use does not belong to basic
 // block where 'From' is defined. Returns the number of replacements made.
@@ -573,6 +567,13 @@ LLVM_ABI bool canReplaceOperandWithVariable(const Instruction *I,
 
 /// Invert the given true/false value, possibly reusing an existing copy.
 LLVM_ABI Value *invertCondition(Value *Condition);
+
+/// Move \p FI right after the definition of its operand, and replace the uses
+/// of the operand that it dominates with \p FI. Users whose operand was
+/// replaced are added to \p Users. Returns whether anything changed, which is
+/// not the case if there is no position to move \p FI to.
+LLVM_ABI bool freezeUsesAfterDef(FreezeInst &FI, DominatorTree &DT,
+                                 SmallVectorImpl<User *> *Users = nullptr);
 
 //===----------------------------------------------------------------------===//
 //  Assorted

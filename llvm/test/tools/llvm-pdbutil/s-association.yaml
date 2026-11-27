@@ -1,0 +1,77 @@
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil dump --symbols --sym-data %t.pdb | FileCheck --check-prefix=YAML2PDB %s
+
+# RUN: llvm-pdbutil pdb2yaml --module-syms %t.pdb > %t.yaml
+# RUN: FileCheck --input-file=%t.yaml --check-prefix=PDB2YAML %s
+
+# YAML2PDB:       Mod 0000 | `/tmp/test.obj`: 
+# YAML2PDB-NEXT:       4 | S_ASSOCIATION [size = 12]
+# YAML2PDB-NEXT:           kind = coroutine, addr = 0001:0000
+# YAML2PDB-NEXT:           bytes (
+# YAML2PDB-NEXT:             0000: 01000000 00000100                                                        |........|
+# YAML2PDB-NEXT:           )
+# YAML2PDB-NEXT:      16 | S_ASSOCIATION [size = 12]
+# YAML2PDB-NEXT:           kind = unknown (987), addr = 0002:1234
+# YAML2PDB-NEXT:           bytes (
+# YAML2PDB-NEXT:             0000: DB03D204 00000200                                                        |........|
+# YAML2PDB-NEXT:           )
+# YAML2PDB-NEXT:      28 | S_ASSOCIATION [size = 12]
+# YAML2PDB-NEXT:           kind = none, addr = 1234:0042
+# YAML2PDB-NEXT:           bytes (
+# YAML2PDB-NEXT:             0000: 00002A00 0000D204                                                        |..*.....|
+# YAML2PDB-NEXT:           )
+
+# PDB2YAML:      DbiStream:
+# PDB2YAML:        Modules:
+# PDB2YAML:          - Module:          '/tmp/test.obj'
+# PDB2YAML:            Modi:
+# PDB2YAML-NEXT:         Signature:       4
+# PDB2YAML-NEXT:         Records:
+# PDB2YAML-NEXT:           - Kind:            S_ASSOCIATION
+# PDB2YAML-NEXT:             AssociationSym:
+# PDB2YAML-NEXT:               AssociationKind: Coroutine
+# PDB2YAML-NEXT:               Segment:         1
+# PDB2YAML-NEXT:               Offset:          0
+# PDB2YAML-NEXT:           - Kind:            S_ASSOCIATION
+# PDB2YAML-NEXT:             AssociationSym:
+# PDB2YAML-NEXT:               AssociationKind: 0x3DB
+# PDB2YAML-NEXT:               Segment:         2
+# PDB2YAML-NEXT:               Offset:          1234
+# PDB2YAML-NEXT:           - Kind:            S_ASSOCIATION
+# PDB2YAML-NEXT:             AssociationSym:
+# PDB2YAML-NEXT:               AssociationKind: None
+# PDB2YAML-NEXT:               Segment:         1234
+# PDB2YAML-NEXT:               Offset:          42
+
+---
+DbiStream:
+  VerHeader:       V70
+  Age:             1
+  BuildNumber:     36363
+  PdbDllVersion:   0
+  PdbDllRbld:      0
+  Flags:           0
+  MachineType:     Amd64
+  Modules:
+    - Module:          '/tmp/test.obj'
+      ObjFile:         '/tmp/test.obj'
+      SourceFiles:
+        - '/tmp/test.cpp'
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_ASSOCIATION
+            AssociationSym:
+              AssociationKind: Coroutine
+              Segment:         1
+              Offset:          0
+          - Kind:            S_ASSOCIATION
+            AssociationSym:
+              AssociationKind: 987
+              Segment:         2
+              Offset:          1234
+          - Kind:            S_ASSOCIATION
+            AssociationSym:
+              AssociationKind: 0
+              Segment:         1234
+              Offset:          42

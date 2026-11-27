@@ -68,7 +68,7 @@ module attributes {gpu.container_module} {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.yield
-    } {kernel_func_name = @test_worker_routine_kernel, kernel_module_name = @cuda_device_mod, origin = "acc.parallel"}
+    } <{kernel_func_name = @test_worker_routine_kernel, kernel_module_name = @cuda_device_mod, origin = "acc.parallel"}>
     return
   }
 }

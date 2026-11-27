@@ -2901,6 +2901,33 @@ define <4 x i32> @PR41545(<4 x i32> %a0, <16 x i8> %a1) {
   ret <4 x i32> %15
 }
 
+define <8 x float> @PR244568(ptr %p) {
+; SSE2-LABEL: PR244568:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR244568:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR244568:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    xorps %xmm1, %xmm1
+; SSE41-NEXT:    blendps {{.*#+}} xmm1 = mem[0,1],xmm1[2],mem[3]
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: PR244568:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4,5],ymm0[6,7]
+; AVX-NEXT:    retq
+  %v = load <8 x float>, ptr %p
+  %r = shufflevector <8 x float> %v, <8 x float> <float poison, float poison, float poison, float poison, float poison, float poison, float poison, float 0.0>, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 4, i32 poison, i32 15, i32 poison>
+  ret <8 x float> %r
+}
+
 define <8 x i16> @shuffle_extract_insert(<8 x i16> %a) {
 ; SSE-LABEL: shuffle_extract_insert:
 ; SSE:       # %bb.0:
@@ -3215,7 +3242,7 @@ define void @PR43024() {
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovss %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  store <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x0, float 0x0>, ptr undef, align 16
+  store <4 x float> <float +qnan, float +qnan, float 0x0, float 0x0>, ptr undef, align 16
   %1 = load <4 x float>, ptr undef, align 16
   %2 = fmul <4 x float> %1, <float 0x0, float 0x0, float 0x0, float 0x0>
   %3 = shufflevector <4 x float> %2, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -3288,7 +3315,7 @@ define void @PR43024_strictfp() strictfp {
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovss %xmm0, (%rax)
 ; AVX-NEXT:    retq
-  store <4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x0, float 0x0>, ptr undef, align 16
+  store <4 x float> <float +qnan, float +qnan, float 0x0, float 0x0>, ptr undef, align 16
   %1 = load <4 x float>, ptr undef, align 16
   %2 = call <4 x float> @llvm.experimental.constrained.fmul.v4f32(<4 x float> %1, <4 x float> zeroinitializer, metadata !"round.dynamic", metadata !"fpexcept.strict")
   %3 = shufflevector <4 x float> %2, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
@@ -3758,7 +3785,7 @@ entry:
   %8 = shufflevector <2 x float> %6, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %9 = shufflevector <4 x float> undef, <4 x float> %8, <4 x i32> <i32 0, i32 4, i32 5, i32 undef>
   %10 = insertelement <4 x float> %9, float %7, i32 3
-  %11 = insertelement <4 x float> %2, float 0x7FF8000000000000, i32 1
+  %11 = insertelement <4 x float> %2, float +qnan, i32 1
   %12 = insertelement <4 x float> %11, float undef, i32 0
   %13 = insertelement <4 x float> %12, float undef, i32 2
   %14 = fadd <4 x float> %10, %13
@@ -3779,9 +3806,9 @@ define void @autogen_SD25931() {
 ; CHECK-LABEL: autogen_SD25931:
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB145_1: # %CF242
+; CHECK-NEXT:  .LBB146_1: # %CF242
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    jmp .LBB145_1
+; CHECK-NEXT:    jmp .LBB146_1
 BB:
   %Cmp16 = icmp uge <2 x i1> zeroinitializer, zeroinitializer
   %Shuff19 = shufflevector <2 x i1> zeroinitializer, <2 x i1> %Cmp16, <2 x i32> <i32 3, i32 1>
@@ -3829,4 +3856,56 @@ define <8 x i32> @PR215111(i256 %a0) {
   %bc = bitcast i256 %a0 to <8 x i32>
   %shuf = shufflevector <8 x i32> %bc, <8 x i32> zeroinitializer, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 3, i32 poison>
   ret <8 x i32> %shuf
+}
+
+define <2 x i64> @vzext_movl_xor_shl_v2i64(ptr %p) {
+; SSE-LABEL: vzext_movl_xor_shl_v2i64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa (%rdi), %xmm1
+; SSE-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    psllq $7, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: vzext_movl_xor_shl_v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    vpsllq $7, %xmm0, %xmm1
+; AVX-NEXT:    vpxor %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %v = load <16 x i8>, ptr %p, align 16
+  %hi = shufflevector <16 x i8> %v, <16 x i8> zeroinitializer, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+  %c = bitcast <16 x i8> %hi to <2 x i64>
+  %s = shl <2 x i64> %c, <i64 7, i64 7>
+  %x = xor <2 x i64> %s, %c
+  %r = and <2 x i64> %x, <i64 -1, i64 0>
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @vzext_movl_xor_srl_v2i64(ptr %p) {
+; SSE-LABEL: vzext_movl_xor_srl_v2i64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movdqa (%rdi), %xmm1
+; SSE-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    psrlq $7, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: vzext_movl_xor_srl_v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    vpsrlq $7, %xmm0, %xmm1
+; AVX-NEXT:    vpxor %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %v = load <16 x i8>, ptr %p, align 16
+  %hi = shufflevector <16 x i8> %v, <16 x i8> zeroinitializer, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+  %c = bitcast <16 x i8> %hi to <2 x i64>
+  %s = lshr <2 x i64> %c, <i64 7, i64 7>
+  %x = xor <2 x i64> %s, %c
+  %r = and <2 x i64> %x, <i64 -1, i64 0>
+  ret <2 x i64> %r
 }

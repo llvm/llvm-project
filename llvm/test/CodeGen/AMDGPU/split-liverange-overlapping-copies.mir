@@ -8,13 +8,12 @@
 #       %0.sub3 = COPY ...
 #     }
 # but the following bundle isn't desirable as the overlap of the copies can make
-# virtregrewriter fail due to cycles in the copy bundle.
+# virt-reg-rewriter fail due to cycles in the copy bundle.
 #     %0.sub1_sub2 = COPY ... {
 #       %0.sub2_sub3 = COPY ...
 #     }
 ---
 name: split_liverange_copy_overlap_31
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   stackPtrOffsetReg: '$sgpr32'
@@ -90,7 +89,6 @@ body:             |
 ...
 ---
 name: split_liverange_copy_overlap_30
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   stackPtrOffsetReg: '$sgpr32'

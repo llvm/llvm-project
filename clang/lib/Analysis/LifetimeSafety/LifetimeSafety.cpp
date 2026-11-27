@@ -24,7 +24,6 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -70,9 +69,9 @@ void LifetimeSafetyAnalysis::run() {
     return;
   }
 
-  FactMgr = std::make_unique<FactManager>(AC, Cfg);
+  FactMgr = std::make_unique<FactManager>(AC, Cfg, Allocator);
 
-  FactsGenerator FactGen(*FactMgr, AC);
+  FactsGenerator FactGen(*FactMgr, AC, LSOpts);
   FactGen.run();
 
   /// TODO(opt): Consider optimizing individual blocks before running the

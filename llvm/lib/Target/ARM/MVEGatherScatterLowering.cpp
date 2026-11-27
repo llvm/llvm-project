@@ -417,10 +417,7 @@ Instruction *MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
   lookThroughBitcast(Ptr);
   assert(Ptr->getType()->isVectorTy() && "Unexpected pointer type");
 
-  IRBuilder<> Builder(I->getContext());
-  Builder.SetInsertPoint(I);
-  Builder.SetCurrentDebugLocation(I->getDebugLoc());
-
+  IRBuilder<> Builder(I);
   Instruction *Root = I;
 
   Instruction *Load = tryCreateIncrementingGatScat(I, Ptr, Builder);
@@ -592,10 +589,7 @@ Instruction *MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
   lookThroughBitcast(Ptr);
   assert(Ptr->getType()->isVectorTy() && "Unexpected pointer type");
 
-  IRBuilder<> Builder(I->getContext());
-  Builder.SetInsertPoint(I);
-  Builder.SetCurrentDebugLocation(I->getDebugLoc());
-
+  IRBuilder<> Builder(I);
   Instruction *Store = tryCreateIncrementingGatScat(I, Ptr, Builder);
   if (!Store)
     Store = tryCreateMaskedScatterOffset(I, Ptr, Builder);
@@ -948,18 +942,15 @@ static bool hasAllGatScatUsers(Instruction *I, const DataLayout &DL) {
     return false;
   }
   bool Gatscat = true;
-  for (User *U : I->users()) {
-    if (!isa<Instruction>(U))
-      return false;
+  for (Instruction *U : I->users()) {
     if (isa<GetElementPtrInst>(U) ||
         isGatherScatter(dyn_cast<IntrinsicInst>(U))) {
       return Gatscat;
     } else {
-      unsigned OpCode = cast<Instruction>(U)->getOpcode();
+      unsigned OpCode = U->getOpcode();
       if ((OpCode == Instruction::Add || OpCode == Instruction::Mul ||
-           OpCode == Instruction::Shl ||
-           isAddLikeOr(cast<Instruction>(U), DL)) &&
-          hasAllGatScatUsers(cast<Instruction>(U), DL)) {
+           OpCode == Instruction::Shl || isAddLikeOr(U, DL)) &&
+          hasAllGatScatUsers(U, DL)) {
         continue;
       }
       return false;
@@ -1051,17 +1042,9 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
   // If the phi is not used by anything else, we can just adapt it when
   // replacing the instruction; if it is, we'll have to duplicate it
   PHINode *NewPhi;
-  if (Phi->hasNUses(2)) {
+  if (Phi->hasNUses(2) && IncInstruction->hasOneUse()) {
     // No other users -> reuse existing phi (One user is the instruction
     // we're looking at, the other is the phi increment)
-    if (!IncInstruction->hasOneUse()) {
-      // If the incrementing instruction does have more users than
-      // our phi, we need to copy it
-      IncInstruction = BinaryOperator::Create(
-          Instruction::BinaryOps(IncInstruction->getOpcode()), Phi,
-          IncrementPerRound, "LoopIncrement", IncInstruction->getIterator());
-      Phi->setIncomingValue(IncrementingBlock, IncInstruction);
-    }
     NewPhi = Phi;
   } else {
     // There are other users -> create a new phi
@@ -1077,8 +1060,7 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
     IncrementingBlock = 1;
   }
 
-  IRBuilder<> Builder(BB->getContext());
-  Builder.SetInsertPoint(Phi);
+  IRBuilder<> Builder(Phi);
   Builder.SetCurrentDebugLocation(Offs->getDebugLoc());
 
   switch (Offs->getOpcode()) {
@@ -1139,7 +1121,8 @@ static Value *CheckAndCreateOffsetAdd(Value *X, unsigned ScaleX, Value *Y,
   } else if (YElType && !XElType) {
     FixSummands(YElType, X);
     XElType = cast<FixedVectorType>(X->getType());
-  }
+  } else if (!XElType && !YElType)
+    return nullptr;
   assert(XElType && YElType && "Unknown vector types");
   // Check that the summands are of compatible types
   if (XElType != YElType) {
@@ -1216,9 +1199,7 @@ bool MVEGatherScatterLowering::optimiseAddress(Value *Address, BasicBlock *BB,
     return false;
   bool Changed = false;
   if (GEP->hasOneUse() && isa<GetElementPtrInst>(GEP->getPointerOperand())) {
-    IRBuilder<> Builder(GEP->getContext());
-    Builder.SetInsertPoint(GEP);
-    Builder.SetCurrentDebugLocation(GEP->getDebugLoc());
+    IRBuilder<> Builder(GEP);
     Value *Offsets;
     unsigned Scale;
     Value *Base = foldGEP(GEP, Offsets, Scale, Builder);

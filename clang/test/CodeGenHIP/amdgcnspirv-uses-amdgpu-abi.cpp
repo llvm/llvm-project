@@ -3,6 +3,10 @@
 // RUN:   -o - %s | FileCheck --check-prefix=AMDGCNSPIRV %s
 // RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -O3 \
 // RUN:   -o - %s | FileCheck --check-prefix=AMDGPU %s
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -O3 \
+// RUN:   -fexperimental-abi-lowering -o - %s | FileCheck --check-prefix=AMDGCNSPIRV %s
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -O3 \
+// RUN:   -fexperimental-abi-lowering -o - %s | FileCheck --check-prefix=AMDGPU %s
 
 #define __global__ __attribute__((global))
 #define __device__ __attribute__((device))
@@ -16,7 +20,7 @@ struct SingleElement { unsigned x; };
 struct ByRef { unsigned  x[17]; };
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k0s(
-// AMDGCNSPIRV-SAME: i16 noundef [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0:[0-9]+]] !max_work_group_size [[META8:![0-9]+]] {
+// AMDGCNSPIRV-SAME: i16 noundef [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0:[0-9]+]] !max_work_group_size [[META9:![0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -28,7 +32,7 @@ struct ByRef { unsigned  x[17]; };
 __global__ void k0(short) { }
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k1j(
-// AMDGCNSPIRV-SAME: i32 noundef [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META8]] {
+// AMDGCNSPIRV-SAME: i32 noundef [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -40,7 +44,7 @@ __global__ void k0(short) { }
 __global__ void k1(unsigned) { }
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k2d(
-// AMDGCNSPIRV-SAME: double noundef [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META8]] {
+// AMDGCNSPIRV-SAME: double noundef [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -52,7 +56,7 @@ __global__ void k1(unsigned) { }
 __global__ void k2(double) { }
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k311Transparent(
-// AMDGCNSPIRV-SAME: i32 [[DOTCOERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META8]] {
+// AMDGCNSPIRV-SAME: i32 [[DOTCOERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -64,7 +68,7 @@ __global__ void k2(double) { }
 __global__ void k3(Transparent) { }
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k413SingleElement(
-// AMDGCNSPIRV-SAME: i32 [[DOTCOERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META8]] {
+// AMDGCNSPIRV-SAME: i32 [[DOTCOERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -76,7 +80,7 @@ __global__ void k3(Transparent) { }
 __global__ void k4(SingleElement) { }
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k55ByRef(
-// AMDGCNSPIRV-SAME: ptr addrspace(2) nofree noundef readnone byref([[STRUCT_BYREF:%.*]]) align 4 captures(none) [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META8]] {
+// AMDGCNSPIRV-SAME: ptr addrspace(2) nofree noundef readnone byref([[STRUCT_BYREF:%.*]]) align 4 captures(none) [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -88,7 +92,7 @@ __global__ void k4(SingleElement) { }
 __global__ void k5(ByRef) { }
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k6Dv1_jDv2_jDv3_jDv4_j(
-// AMDGCNSPIRV-SAME: <1 x i32> noundef [[TMP0:%.*]], <2 x i32> noundef [[TMP1:%.*]], <3 x i32> noundef [[TMP2:%.*]], <4 x i32> noundef [[TMP3:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META8]] {
+// AMDGCNSPIRV-SAME: <1 x i32> noundef [[TMP0:%.*]], <2 x i32> noundef [[TMP1:%.*]], <3 x i32> noundef [[TMP2:%.*]], <4 x i32> noundef [[TMP3:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -100,7 +104,7 @@ __global__ void k5(ByRef) { }
 __global__ void k6(V1, V2, V3, V4) { }
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k7Pj(
-// AMDGCNSPIRV-SAME: ptr addrspace(1) nofree noundef readnone captures(none) [[DOTCOERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META8]] {
+// AMDGCNSPIRV-SAME: ptr addrspace(1) nofree noundef readnone captures(none) [[DOTCOERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -110,6 +114,17 @@ __global__ void k6(V1, V2, V3, V4) { }
 // AMDGPU-NEXT:    ret void
 //
 __global__ void k7(unsigned*) { }
+// AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k8U7_AtomicPj(
+// AMDGCNSPIRV-SAME: ptr addrspace(1) nofree readnone captures(none) [[DOTCOERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
+// AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
+// AMDGCNSPIRV-NEXT:    ret void
+//
+// AMDGPU-LABEL: define dso_local amdgpu_kernel void @_Z2k8U7_AtomicPj(
+// AMDGPU-SAME: ptr addrspace(1) nofree readnone captures(none) [[DOTCOERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AMDGPU-NEXT:  [[ENTRY:.*:]]
+// AMDGPU-NEXT:    ret void
+//
+__global__ void k8(_Atomic(unsigned*)) { }
 
 // AMDGCNSPIRV-LABEL: define spir_func void @_Z2f0s(
 // AMDGCNSPIRV-SAME: i16 noundef signext [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
@@ -316,6 +331,121 @@ __device__ V3 f15() { return {}; }
 // AMDGPU-NEXT:    ret <4 x i32> zeroinitializer
 //
 __device__ V4 f16() { return {}; }
+
+extern "C" __device__ void variadic(int, ...);
+// AMDGCNSPIRV-LABEL: define spir_func void @_Z3f175ByRef(
+// AMDGCNSPIRV-SAME: ptr nofree noundef readonly byref([[STRUCT_BYREF:%.*]]) align 4 captures(none) [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR3:[0-9]+]] {
+// AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
+// AMDGCNSPIRV-NEXT:    [[B_SROA_0_0_COPYLOAD:%.*]] = load i32, ptr [[TMP0]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_2_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_2_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_3_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 8
+// AMDGCNSPIRV-NEXT:    [[B_SROA_3_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_3_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_4_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 12
+// AMDGCNSPIRV-NEXT:    [[B_SROA_4_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_4_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_5_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
+// AMDGCNSPIRV-NEXT:    [[B_SROA_5_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_5_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_6_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 20
+// AMDGCNSPIRV-NEXT:    [[B_SROA_6_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_6_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_7_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 24
+// AMDGCNSPIRV-NEXT:    [[B_SROA_7_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_7_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_8_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 28
+// AMDGCNSPIRV-NEXT:    [[B_SROA_8_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_8_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_9_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 32
+// AMDGCNSPIRV-NEXT:    [[B_SROA_9_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_9_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_10_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 36
+// AMDGCNSPIRV-NEXT:    [[B_SROA_10_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_10_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_11_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 40
+// AMDGCNSPIRV-NEXT:    [[B_SROA_11_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_11_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_12_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 44
+// AMDGCNSPIRV-NEXT:    [[B_SROA_12_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_12_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_13_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 48
+// AMDGCNSPIRV-NEXT:    [[B_SROA_13_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_13_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_14_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 52
+// AMDGCNSPIRV-NEXT:    [[B_SROA_14_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_14_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_15_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 56
+// AMDGCNSPIRV-NEXT:    [[B_SROA_15_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_15_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_16_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 60
+// AMDGCNSPIRV-NEXT:    [[B_SROA_16_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_16_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[B_SROA_17_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 64
+// AMDGCNSPIRV-NEXT:    [[B_SROA_17_0_COPYLOAD:%.*]] = load i32, ptr [[B_SROA_17_0__SROA_IDX]], align 4
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] poison, i32 [[B_SROA_0_0_COPYLOAD]], 0, 0
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_0_INSERT]], i32 [[B_SROA_2_0_COPYLOAD]], 0, 1
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_2_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_1_INSERT]], i32 [[B_SROA_3_0_COPYLOAD]], 0, 2
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_3_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_2_INSERT]], i32 [[B_SROA_4_0_COPYLOAD]], 0, 3
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_4_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_3_INSERT]], i32 [[B_SROA_5_0_COPYLOAD]], 0, 4
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_5_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_4_INSERT]], i32 [[B_SROA_6_0_COPYLOAD]], 0, 5
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_6_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_5_INSERT]], i32 [[B_SROA_7_0_COPYLOAD]], 0, 6
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_7_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_6_INSERT]], i32 [[B_SROA_8_0_COPYLOAD]], 0, 7
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_8_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_7_INSERT]], i32 [[B_SROA_9_0_COPYLOAD]], 0, 8
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_9_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_8_INSERT]], i32 [[B_SROA_10_0_COPYLOAD]], 0, 9
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_10_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_9_INSERT]], i32 [[B_SROA_11_0_COPYLOAD]], 0, 10
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_11_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_10_INSERT]], i32 [[B_SROA_12_0_COPYLOAD]], 0, 11
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_12_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_11_INSERT]], i32 [[B_SROA_13_0_COPYLOAD]], 0, 12
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_13_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_12_INSERT]], i32 [[B_SROA_14_0_COPYLOAD]], 0, 13
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_14_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_13_INSERT]], i32 [[B_SROA_15_0_COPYLOAD]], 0, 14
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_15_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_14_INSERT]], i32 [[B_SROA_16_0_COPYLOAD]], 0, 15
+// AMDGCNSPIRV-NEXT:    [[DOTFCA_0_16_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_15_INSERT]], i32 [[B_SROA_17_0_COPYLOAD]], 0, 16
+// AMDGCNSPIRV-NEXT:    tail call spir_func addrspace(4) void (i32, ...) @variadic(i32 noundef 1, [[STRUCT_BYREF]] [[DOTFCA_0_16_INSERT]]) #[[ATTR5:[0-9]+]]
+// AMDGCNSPIRV-NEXT:    ret void
+//
+// AMDGPU-LABEL: define dso_local void @_Z3f175ByRef(
+// AMDGPU-SAME: ptr addrspace(5) nofree noundef readonly byref([[STRUCT_BYREF:%.*]]) align 4 captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
+// AMDGPU-NEXT:  [[ENTRY:.*:]]
+// AMDGPU-NEXT:    [[B_SROA_0_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[TMP0]], align 4
+// AMDGPU-NEXT:    [[B_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 4
+// AMDGPU-NEXT:    [[B_SROA_2_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_2_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_3_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 8
+// AMDGPU-NEXT:    [[B_SROA_3_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_3_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_4_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 12
+// AMDGPU-NEXT:    [[B_SROA_4_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_4_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_5_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 16
+// AMDGPU-NEXT:    [[B_SROA_5_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_5_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_6_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 20
+// AMDGPU-NEXT:    [[B_SROA_6_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_6_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_7_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 24
+// AMDGPU-NEXT:    [[B_SROA_7_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_7_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_8_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 28
+// AMDGPU-NEXT:    [[B_SROA_8_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_8_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_9_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 32
+// AMDGPU-NEXT:    [[B_SROA_9_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_9_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_10_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 36
+// AMDGPU-NEXT:    [[B_SROA_10_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_10_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_11_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 40
+// AMDGPU-NEXT:    [[B_SROA_11_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_11_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_12_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 44
+// AMDGPU-NEXT:    [[B_SROA_12_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_12_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_13_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 48
+// AMDGPU-NEXT:    [[B_SROA_13_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_13_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_14_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 52
+// AMDGPU-NEXT:    [[B_SROA_14_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_14_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_15_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 56
+// AMDGPU-NEXT:    [[B_SROA_15_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_15_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_16_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 60
+// AMDGPU-NEXT:    [[B_SROA_16_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_16_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[B_SROA_17_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[TMP0]], i32 64
+// AMDGPU-NEXT:    [[B_SROA_17_0_COPYLOAD:%.*]] = load i32, ptr addrspace(5) [[B_SROA_17_0__SROA_IDX]], align 4
+// AMDGPU-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] poison, i32 [[B_SROA_0_0_COPYLOAD]], 0, 0
+// AMDGPU-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_0_INSERT]], i32 [[B_SROA_2_0_COPYLOAD]], 0, 1
+// AMDGPU-NEXT:    [[DOTFCA_0_2_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_1_INSERT]], i32 [[B_SROA_3_0_COPYLOAD]], 0, 2
+// AMDGPU-NEXT:    [[DOTFCA_0_3_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_2_INSERT]], i32 [[B_SROA_4_0_COPYLOAD]], 0, 3
+// AMDGPU-NEXT:    [[DOTFCA_0_4_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_3_INSERT]], i32 [[B_SROA_5_0_COPYLOAD]], 0, 4
+// AMDGPU-NEXT:    [[DOTFCA_0_5_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_4_INSERT]], i32 [[B_SROA_6_0_COPYLOAD]], 0, 5
+// AMDGPU-NEXT:    [[DOTFCA_0_6_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_5_INSERT]], i32 [[B_SROA_7_0_COPYLOAD]], 0, 6
+// AMDGPU-NEXT:    [[DOTFCA_0_7_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_6_INSERT]], i32 [[B_SROA_8_0_COPYLOAD]], 0, 7
+// AMDGPU-NEXT:    [[DOTFCA_0_8_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_7_INSERT]], i32 [[B_SROA_9_0_COPYLOAD]], 0, 8
+// AMDGPU-NEXT:    [[DOTFCA_0_9_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_8_INSERT]], i32 [[B_SROA_10_0_COPYLOAD]], 0, 9
+// AMDGPU-NEXT:    [[DOTFCA_0_10_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_9_INSERT]], i32 [[B_SROA_11_0_COPYLOAD]], 0, 10
+// AMDGPU-NEXT:    [[DOTFCA_0_11_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_10_INSERT]], i32 [[B_SROA_12_0_COPYLOAD]], 0, 11
+// AMDGPU-NEXT:    [[DOTFCA_0_12_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_11_INSERT]], i32 [[B_SROA_13_0_COPYLOAD]], 0, 12
+// AMDGPU-NEXT:    [[DOTFCA_0_13_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_12_INSERT]], i32 [[B_SROA_14_0_COPYLOAD]], 0, 13
+// AMDGPU-NEXT:    [[DOTFCA_0_14_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_13_INSERT]], i32 [[B_SROA_15_0_COPYLOAD]], 0, 14
+// AMDGPU-NEXT:    [[DOTFCA_0_15_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_14_INSERT]], i32 [[B_SROA_16_0_COPYLOAD]], 0, 15
+// AMDGPU-NEXT:    [[DOTFCA_0_16_INSERT:%.*]] = insertvalue [[STRUCT_BYREF]] [[DOTFCA_0_15_INSERT]], i32 [[B_SROA_17_0_COPYLOAD]], 0, 16
+// AMDGPU-NEXT:    tail call void (i32, ...) @variadic(i32 noundef 1, [[STRUCT_BYREF]] [[DOTFCA_0_16_INSERT]]) #[[ATTR6:[0-9]+]]
+// AMDGPU-NEXT:    ret void
+//
+__device__ void f17(ByRef b) { variadic(1, b); }
 //.
-// AMDGCNSPIRV: [[META8]] = !{i32 1024, i32 1, i32 1}
+// AMDGCNSPIRV: [[META9]] = !{i32 1024, i32 1, i32 1}
 //.

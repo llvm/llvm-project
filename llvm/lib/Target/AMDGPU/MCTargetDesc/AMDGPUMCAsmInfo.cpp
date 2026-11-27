@@ -59,7 +59,12 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   UsesCFIWithoutEH = true;
   DwarfRegNumForCFI = true;
 
-  UseIntegratedAssembler = false;
+  // MCAsmInfoELF enables this, and with the integrated assembler AsmPrinter
+  // then emits the preferred function alignment as .prefalign, which reduces
+  // the alignment of small functions. Keep emitting it as a plain .p2align so
+  // that enabling the integrated assembler does not change code layout.
+  HasPreferredAlignment = false;
+
   initializeAtSpecifiers(atSpecifiers);
 }
 
@@ -68,24 +73,4 @@ bool AMDGPUMCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
          SectionName == ".hsadata_global_program" ||
          SectionName == ".hsarodata_readonly_agent" ||
          MCAsmInfo::shouldOmitSectionDirective(SectionName);
-}
-
-unsigned AMDGPUMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {
-  if (!STI || STI->getTargetTriple().getArch() == Triple::r600)
-    return MaxInstLength;
-
-  // Maximum for NSA encoded images
-  if (STI->hasFeature(AMDGPU::FeatureNSAEncoding))
-    return 20;
-
-  // VOP3PX/VOP3PX2 encoding.
-  if (STI->hasFeature(AMDGPU::FeatureGFX950Insts) ||
-      STI->hasFeature(AMDGPU::FeatureGFX1250Insts))
-    return 16;
-
-  // 64-bit instruction with 32-bit literal.
-  if (STI->hasFeature(AMDGPU::FeatureVOP3Literal))
-    return 12;
-
-  return 8;
 }

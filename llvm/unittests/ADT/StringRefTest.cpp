@@ -552,6 +552,26 @@ TEST(StringRefTest, Find) {
   EXPECT_EQ(0U, Str.rfind("hello"));
   EXPECT_EQ(1U, Str.rfind("ello"));
   EXPECT_EQ(StringRef::npos, Str.rfind("zz"));
+  EXPECT_EQ(10U, Str.rfind(""));
+  EXPECT_EQ(0U, StringRef().rfind(""));
+  EXPECT_EQ(StringRef::npos, StringRef().rfind("a"));
+  EXPECT_EQ(4U, StringRef("aaaaaa").rfind("aa"));
+  EXPECT_EQ(StringRef::npos, StringRef("abcabcab").rfind("abd"));
+  EXPECT_EQ(StringRef::npos, StringRef("foo.llvm").rfind(".llvm."));
+
+  // Test a few longer haystacks to exercise the vectorized paths.
+  EXPECT_EQ(28U,
+            StringRef("_ZN4llvm9StringRef5rfindES0_.llvm.123").rfind(".llvm."));
+  EXPECT_EQ(
+      3U,
+      StringRef("foo.llvm.0123456789abcdef0123456789abcdef").rfind(".llvm."));
+  EXPECT_EQ(
+      3U, StringRef("foo.llvm.bar.baz.qux.quux.corge.grault").rfind(".llvm."));
+  EXPECT_EQ(StringRef::npos,
+            StringRef("foo_bar_baz_qux_quux_corge_grault").rfind(".llvm."));
+  EXPECT_EQ(
+      StringRef::npos,
+      StringRef("foo_bar_baz_qux_quux_corge_grault.llvm").rfind(".llvm."));
 
   EXPECT_EQ(8U, Str.rfind_insensitive('l'));
   EXPECT_EQ(8U, Str.rfind_insensitive('L'));
@@ -965,6 +985,65 @@ TEST(StringRefTest, consumeIntegerSigned) {
     ASSERT_FALSE(S64Success);
     EXPECT_EQ(S64, ConsumeSigned[i].Expected);
     EXPECT_EQ(Str, ConsumeSigned[i].Leftover);
+  }
+}
+
+TEST(StringRefTest, consumeIntegerAPIntBitWidth) {
+  // Decimal large number (12535824225335233)
+  // Fits in 64 bits, so should not grow beyond initial 64 bits.
+  {
+    APInt U;
+    StringRef Str = "12535824225335233";
+    bool Success = Str.consumeInteger(10, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getZExtValue(), 12535824225335233ULL);
+    EXPECT_EQ(U.getBitWidth(), 64U);
+  }
+
+  // Hex version of same number (2c894405eaf7c1)
+  // Fits in 64 bits, so should not grow beyond initial 64 bits.
+  {
+    APInt U;
+    StringRef Str = "2c894405eaf7c1";
+    bool Success = Str.consumeInteger(16, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getZExtValue(), 12535824225335233ULL);
+    EXPECT_EQ(U.getBitWidth(), 64U);
+  }
+
+  // A very large decimal number (100 digits)
+  // Needs 333 bits. Started at 64, doubled to 128, 256, 512.
+  {
+    APInt U;
+    std::string LargeDec(100, '9');
+    StringRef Str = LargeDec;
+    bool Success = Str.consumeInteger(10, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getBitWidth(), 512U);
+  }
+
+  // Trailing garbage should not trigger growth or failure.
+  {
+    APInt U;
+    StringRef Str = "123g";
+    bool Success = Str.consumeInteger(10, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getZExtValue(), 123ULL);
+    EXPECT_EQ(U.getBitWidth(), 64U);
+    EXPECT_EQ(Str, "g");
+  }
+
+  // Very long trailing garbage should also not trigger growth or failure.
+  {
+    APInt U;
+    std::string LongGarbage = "1";
+    LongGarbage.append(10000, 'g');
+    StringRef Str = LongGarbage;
+    bool Success = Str.consumeInteger(10, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getZExtValue(), 1ULL);
+    EXPECT_EQ(U.getBitWidth(), 64U);
+    EXPECT_EQ(Str.size(), 10000U);
   }
 }
 

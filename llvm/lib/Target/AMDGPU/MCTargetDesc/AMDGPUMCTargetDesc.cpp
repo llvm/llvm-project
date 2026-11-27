@@ -176,12 +176,32 @@ void AMDGPUMCInstrAnalysis::updateState(const MCInst &Inst,
   if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_MSB_gfx12)
     VgprMSBs = Inst.getOperand(0).getImm() & 0xff;
   else if (Inst.getOpcode() == AMDGPU::S_SETREG_IMM32_B32_gfx12 &&
-           STI->hasFeature(AMDGPU::Feature1024AddressableVGPRs)) {
+           STI->hasFeature(AMDGPU::FeatureVGPRMSBs)) {
     VgprMSBs = AMDGPU::convertSetRegImmToVgprMSBs(
                    Inst, STI->hasFeature(AMDGPU::FeatureSetregVGPRMSBFixup))
                    .value_or(0);
   } else if (isTerminator(Inst))
     VgprMSBs = 0;
+}
+
+unsigned getMaxInstLength(const MCSubtargetInfo &STI) {
+  if (STI.getTargetTriple().getArch() == Triple::r600)
+    return 16;
+
+  // Maximum for NSA encoded images
+  if (STI.hasFeature(AMDGPU::FeatureNSAEncoding))
+    return 20;
+
+  // VOP3PX/VOP3PX2 encoding.
+  if (STI.hasFeature(AMDGPU::FeatureGFX950Insts) ||
+      STI.hasFeature(AMDGPU::FeatureGFX1250Insts))
+    return 16;
+
+  // 64-bit instruction with 32-bit literal.
+  if (STI.hasFeature(AMDGPU::FeatureVOP3Literal))
+    return 12;
+
+  return 8;
 }
 
 } // end namespace AMDGPU
@@ -216,6 +236,8 @@ LLVMInitializeAMDGPUTargetMC() {
                                         createR600MCCodeEmitter);
   TargetRegistry::RegisterObjectTargetStreamer(
       getTheR600Target(), createAMDGPUObjectTargetStreamer);
+  TargetRegistry::RegisterNullTargetStreamer(getTheR600Target(),
+                                             createAMDGPUNullTargetStreamer);
 
   // GCN specific registration
   for (Target *T : {&getTheGCNTarget(), &getTheGCNLegacyTarget()}) {

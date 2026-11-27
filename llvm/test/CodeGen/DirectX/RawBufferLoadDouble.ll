@@ -71,6 +71,29 @@ define void @loadv2f64(i32 %index) {
   ret void
 }
 
+define void @loadv4f64_byte(i32 %index) {
+  ; CHECK: [[B:%.*]] = call target("dx.RawBuffer", i8, 0, 0)
+  ; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0t(
+  ; CHECK-SAME: i32 0, i32 0, i32 1, i32 0, ptr null)
+  %buffer = call target("dx.RawBuffer", i8, 0, 0)
+      @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0t(
+          i32 0, i32 0, i32 1, i32 0, ptr null)
+
+  ; CHECK63: call { <4 x double>, i1 } @llvm.dx.resource.load.rawbuffer
+  ; CHECK63-SAME: target("dx.RawBuffer", i8, 0, 0) [[B]], i32 %index, i32 poison)
+
+  ; CHECK62: [[LOW:%.*]] = call { <4 x i32>, i1 } @llvm.dx.resource.load.rawbuffer
+  ; CHECK62-SAME: target("dx.RawBuffer", i8, 0, 0) [[B]], i32 %index, i32 poison)
+  ; CHECK62: [[NEXTINDEX:%.*]] = add i32 %index, 16
+  ; CHECK62: [[HIGH:%.*]] = call { <4 x i32>, i1 } @llvm.dx.resource.load.rawbuffer
+  ; CHECK62-SAME: target("dx.RawBuffer", i8, 0, 0) [[B]], i32 [[NEXTINDEX]], i32 poison)
+  %load0 = call { <4 x double>, i1 } @llvm.dx.resource.load.rawbuffer(
+      target("dx.RawBuffer", i8, 0, 0) %buffer, i32 %index, i32 poison)
+
+  %data0 = extractvalue { <4 x double>, i1 } %load0, 0
+  ret void
+}
+
 ; show we properly handle extracting the check bit
 define void @loadf64WithCheckBit(i32 %index) {
   ; check the handle from binding is unchanged

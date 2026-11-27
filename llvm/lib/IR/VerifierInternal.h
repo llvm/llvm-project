@@ -100,6 +100,13 @@ private:
   void Write(const Metadata *MD) {
     if (!MD)
       return;
+    // MDFunctionLocalContext has a very large print volume; prefer the short
+    // form for verifier errors.
+    if (auto *FLCtx = dyn_cast<MDFunctionLocalContext>(MD)) {
+      FLCtx->printShort(*OS, MST, &M);
+      *OS << '\n';
+      return;
+    }
     MD->print(*OS, MST, &M);
     *OS << '\n';
   }
@@ -219,12 +226,21 @@ void verifyAMDGPUModuleFlag(VerifierSupport &VS, const MDString *ID,
 
 void verifyAMDGPUFunctionMetadata(VerifierSupport &VS, const Function &F);
 
+void verifyAMDGPUGlobalVariable(VerifierSupport &VS, const GlobalVariable &GV);
+
 void verifyAMDGPUAlloca(VerifierSupport &VS, const AllocaInst &AI);
 
 void verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
                                CallBase &Call);
 
 bool isAMDGPUCallBrIntrinsic(Intrinsic::ID ID);
+
+//==============================================================================
+
+// NVVM-specific verification functions
+
+void verifyNVVMIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
+                             CallBase &Call);
 
 //==============================================================================
 

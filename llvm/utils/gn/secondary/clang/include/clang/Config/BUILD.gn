@@ -3,7 +3,14 @@ import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/version.gni")
 
+write_cmake_config("clang-config") {
+  input = "clang-config.h.cmake"
+  output = "$target_gen_dir/clang-config.h"
+  values = [ "CLANG_ENABLE_CLANG_EXPORT_ANNOTATIONS=" ]
+}
+
 write_cmake_config("Config") {
+  public_deps = [ ":clang-config" ]
   input = "config.h.cmake"
   output = "$target_gen_dir/config.h"
   values = [
@@ -44,12 +51,14 @@ write_cmake_config("Config") {
     values += [
       "CLANG_HAVE_DLADDR=1",
       "CLANG_HAVE_DLFCN_H=1",
+      "CLANG_HAVE_EMUTLS_GET_ADDRESS=1",
       "CLANG_HAVE_RLIMITS=1",
     ]
   } else {
     values += [
       "CLANG_HAVE_DLADDR=",
       "CLANG_HAVE_DLFCN_H=",
+      "CLANG_HAVE_EMUTLS_GET_ADDRESS=",
       "CLANG_HAVE_RLIMITS=",
     ]
   }

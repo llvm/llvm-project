@@ -661,13 +661,18 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   std::vector<StringRef> Features;
   getAMDGPUTargetFeatures(C.getDriver(), getToolChain().getEffectiveTriple(),
                           Args, Features);
-  if (!Features.empty()) {
-    CmdArgs.push_back(
-        Args.MakeArgString("-plugin-opt=-mattr=" + llvm::join(Features, ",")));
+  // Keep only the last selection for each feature so the linker receives the
+  // same normalized list as Clang's target feature emission.
+  auto UnifiedFeatures = unifyTargetFeatures(Features);
+  if (!UnifiedFeatures.empty()) {
+    CmdArgs.push_back(Args.MakeArgString("-plugin-opt=-mattr=" +
+                                         llvm::join(UnifiedFeatures, ",")));
   }
 
   getToolChain().addProfileRTLibs(Args, CmdArgs);
-  addSanitizerRuntimes(getToolChain(), Args, CmdArgs);
+  // FIXME: Device ASan is provided by the ROCm device library, not compiler-rt.
+  if (!getToolChain().getSanitizerArgs(Args).needsAsanRt())
+    addSanitizerRuntimes(getToolChain(), Args, CmdArgs, C);
 
   if (Args.hasArg(options::OPT_stdlib))
     CmdArgs.append({"-lc", "-lm"});
@@ -1388,15 +1393,22 @@ SanitizerMask AMDGPUToolChain::getSupportedSanitizers(
       ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
 
   // Address sanitizer is potentially supported, but depends on the exact target
-  // arch xnack support.
-  if (!BA || isXnackAvailable(getTriple(), BA.ArchName))
+  // arch XNACK support; for SPIR-V, the availability of XNACK is known at
+  // finalisation time.
+  if (!BA ||
+      (isXnackAvailable(getTriple(), BA.ArchName) || getTriple().isSPIRV()))
     SupportedMask |= SanitizerKind::Address;
+  // Watchpoint probes do not require xnack, but the runtime requires HSA.
+  if (getTriple().getOS() == llvm::Triple::AMDHSA)
+    SupportedMask |= SanitizerKind::Concurrency;
 
   return SupportedMask;
 }
 
 StringRef AMDGPUToolChain::getSanitizerRequirement(SanitizerMask Kinds,
                                                    BoundArch BA) const {
+  if (getTriple().isSPIRV())
+    return {};
   // Address sanitizer requires xnack+ feature
   if ((Kinds & SanitizerKind::Address) && BA &&
       !isXnackAvailable(getTriple(), BA.ArchName)) {

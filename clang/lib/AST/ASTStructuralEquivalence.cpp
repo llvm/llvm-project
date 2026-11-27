@@ -720,6 +720,15 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
            P1->getIndex() == P2->getIndex();
   }
 
+  case TemplateName::PackIndexingTemplate: {
+    PackIndexingTemplateStorage *P1 = N1.getAsPackIndexingTemplate(),
+                                *P2 = N2.getAsPackIndexingTemplate();
+    return IsStructurallyEquivalent(Context, P1->getPattern(),
+                                    P2->getPattern()) &&
+           IsStructurallyEquivalent(Context, P1->getIndexExpr(),
+                                    P2->getIndexExpr());
+  }
+
    case TemplateName::Template:
    case TemplateName::QualifiedTemplate:
    case TemplateName::SubstTemplateTemplateParm:
@@ -1655,13 +1664,14 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return false;
   }
 
-  if ((Field1->isBitField() || Field2->isBitField()) &&
-      !IsStructurallyEquivalent(Context, Field1->getBitWidth(),
-                                Field2->getBitWidth())) {
+  if ((Field1->isBitField() || Field2->isBitField())) {
     // Two bit-fields can be structurally unequivalent but still be okay for
     // the purposes of C where they simply need to have the same values, not
     // the same token sequences.
-    bool Diagnose = true;
+    bool Diagnose = false;
+    if (!IsStructurallyEquivalent(Context, Field1->getBitWidth(),
+                                  Field2->getBitWidth()))
+      Diagnose = true;
     if (Context.LangOpts.C23 && Field1->isBitField() && Field2->isBitField())
       Diagnose = Field1->getBitWidthValue() != Field2->getBitWidthValue();
 
@@ -1686,7 +1696,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       DiagNote(Field2, &StructuralEquivalenceContext::Diag2);
       DiagNote(Field1, &StructuralEquivalenceContext::Diag1);
     }
-    return false;
+    if (Diagnose)
+      return false;
   }
 
   return true;

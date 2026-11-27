@@ -1,7 +1,6 @@
 include(MLIRCheckHardwareFeatures)
 
 add_subdirectory(CAPI)
-add_subdirectory(lib)
 
 if (MLIR_ENABLE_BINDINGS_PYTHON)
   add_subdirectory(python)
@@ -69,9 +68,7 @@ endif()
 
 llvm_canonicalize_cmake_booleans(
   LLVM_BUILD_EXAMPLES
-  LLVM_HAS_NVPTX_TARGET
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
-  LLVM_HAS_AMDGPU_TARGET
   MLIR_ENABLE_BINDINGS_PYTHON
   MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   MLIR_ENABLE_PYTHON_STABLE_ABI
@@ -125,8 +122,10 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-ir-test
   mlir-capi-irdl-test
   mlir-capi-llvm-test
+  mlir-capi-openacc-test
   mlir-capi-pass-test
   mlir-capi-quant-test
+  mlir-capi-remarks-test
   mlir-capi-rewrite-test
   mlir-capi-smt-test
   mlir-capi-sparse-tensor-test
@@ -148,6 +147,7 @@ if(NOT MLIR_STANDALONE_BUILD)
   list(APPEND MLIR_TEST_DEPENDS
     FileCheck
     count
+    llvm-objdump
     llvm-strings
     not
     split-file
@@ -170,8 +170,13 @@ set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
 # useless binaries.
 if(LLVM_ENABLE_PIC AND TARGET ${LLVM_NATIVE_ARCH})
   list(APPEND MLIR_TEST_DEPENDS
-    mlir-runner
     llc
+  )
+endif()
+# The native target may be available but the execution engine may not.
+if(LLVM_ENABLE_PIC AND MLIR_ENABLE_EXECUTION_ENGINE)
+  list(APPEND MLIR_TEST_DEPENDS
+    mlir-runner
     mlir_async_runtime
     mlir-capi-execution-engine-test
     mlir-capi-global-constructors-test
