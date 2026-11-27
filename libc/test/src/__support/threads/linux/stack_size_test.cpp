@@ -27,8 +27,7 @@ constexpr size_t MAX_STACKSIZE = ~PAGE_MASK - PAGE_SIZE;
 
 TEST(LlvmLibcSupportThreadsStackSizeTest, BelowAndAtMinimum) {
   const size_t min_stacksize = static_cast<size_t>(PTHREAD_STACK_MIN);
-  const size_t aligned_min_stacksize =
-      (min_stacksize + PAGE_MASK) & ~PAGE_MASK;
+  const size_t aligned_min_stacksize = (min_stacksize + PAGE_MASK) & ~PAGE_MASK;
 
   EXPECT_EQ(stacksize_from_rlimit(0), aligned_min_stacksize);
   EXPECT_EQ(stacksize_from_rlimit(1), aligned_min_stacksize);
@@ -38,8 +37,7 @@ TEST(LlvmLibcSupportThreadsStackSizeTest, BelowAndAtMinimum) {
 
 TEST(LlvmLibcSupportThreadsStackSizeTest, PageAlignment) {
   const size_t min_stacksize = static_cast<size_t>(PTHREAD_STACK_MIN);
-  const size_t aligned_min_stacksize =
-      (min_stacksize + PAGE_MASK) & ~PAGE_MASK;
+  const size_t aligned_min_stacksize = (min_stacksize + PAGE_MASK) & ~PAGE_MASK;
 
   EXPECT_EQ(stacksize_from_rlimit(aligned_min_stacksize + 1),
             aligned_min_stacksize + PAGE_SIZE);
