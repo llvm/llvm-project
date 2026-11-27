@@ -746,73 +746,42 @@ define i64 @cttz_v64i8_too_many_lanes(<64 x i8> %v) {
 ; CHECK-LE-NEXT:    and v2.16b, v2.16b, v4.16b
 ; CHECK-LE-NEXT:    and v1.16b, v1.16b, v4.16b
 ; CHECK-LE-NEXT:    and v0.16b, v0.16b, v4.16b
-; CHECK-LE-NEXT:    addp v3.16b, v3.16b, v3.16b
-; CHECK-LE-NEXT:    addp v2.16b, v2.16b, v2.16b
-; CHECK-LE-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-LE-NEXT:    addp v2.16b, v2.16b, v3.16b
+; CHECK-LE-NEXT:    addp v0.16b, v0.16b, v1.16b
+; CHECK-LE-NEXT:    addp v0.16b, v0.16b, v2.16b
 ; CHECK-LE-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-LE-NEXT:    addp v3.16b, v3.16b, v3.16b
-; CHECK-LE-NEXT:    addp v2.16b, v2.16b, v2.16b
-; CHECK-LE-NEXT:    addp v1.16b, v1.16b, v1.16b
-; CHECK-LE-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-LE-NEXT:    addp v3.16b, v3.16b, v3.16b
-; CHECK-LE-NEXT:    addp v2.16b, v2.16b, v2.16b
-; CHECK-LE-NEXT:    addp v1.16b, v1.16b, v1.16b
-; CHECK-LE-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-LE-NEXT:    umov w8, v3.h[0]
-; CHECK-LE-NEXT:    umov w9, v2.h[0]
-; CHECK-LE-NEXT:    umov w10, v1.h[0]
-; CHECK-LE-NEXT:    umov w11, v0.h[0]
-; CHECK-LE-NEXT:    bfi w9, w8, #16, #16
-; CHECK-LE-NEXT:    bfi w11, w10, #16, #16
-; CHECK-LE-NEXT:    orr x8, x11, x9, lsl #32
+; CHECK-LE-NEXT:    fmov x8, d0
 ; CHECK-LE-NEXT:    rbit x8, x8
 ; CHECK-LE-NEXT:    clz x0, x8
 ; CHECK-LE-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: cttz_v64i8_too_many_lanes:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECK-BE-NEXT:    rev64 v3.16b, v3.16b
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECK-BE-NEXT:    adrp x8, .LCPI22_0
 ; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI22_0
-; CHECK-BE-NEXT:    rev64 v2.16b, v2.16b
 ; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
+; CHECK-BE-NEXT:    rev64 v2.16b, v2.16b
 ; CHECK-BE-NEXT:    ld1 { v4.16b }, [x8]
-; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-BE-NEXT:    cmlt v0.16b, v0.16b, #0
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
 ; CHECK-BE-NEXT:    cmlt v3.16b, v3.16b, #0
-; CHECK-BE-NEXT:    cmlt v1.16b, v1.16b, #0
+; CHECK-BE-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-BE-NEXT:    cmlt v2.16b, v2.16b, #0
-; CHECK-BE-NEXT:    and v0.16b, v0.16b, v4.16b
+; CHECK-BE-NEXT:    cmlt v1.16b, v1.16b, #0
 ; CHECK-BE-NEXT:    and v3.16b, v3.16b, v4.16b
-; CHECK-BE-NEXT:    and v1.16b, v1.16b, v4.16b
+; CHECK-BE-NEXT:    and v0.16b, v0.16b, v4.16b
 ; CHECK-BE-NEXT:    and v2.16b, v2.16b, v4.16b
+; CHECK-BE-NEXT:    and v1.16b, v1.16b, v4.16b
+; CHECK-BE-NEXT:    addp v2.16b, v2.16b, v3.16b
+; CHECK-BE-NEXT:    addp v0.16b, v0.16b, v1.16b
+; CHECK-BE-NEXT:    addp v0.16b, v0.16b, v2.16b
 ; CHECK-BE-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-BE-NEXT:    addp v3.16b, v3.16b, v3.16b
-; CHECK-BE-NEXT:    addp v1.16b, v1.16b, v1.16b
-; CHECK-BE-NEXT:    addp v2.16b, v2.16b, v2.16b
-; CHECK-BE-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-BE-NEXT:    addp v3.16b, v3.16b, v3.16b
-; CHECK-BE-NEXT:    addp v1.16b, v1.16b, v1.16b
-; CHECK-BE-NEXT:    addp v2.16b, v2.16b, v2.16b
-; CHECK-BE-NEXT:    addp v0.16b, v0.16b, v0.16b
-; CHECK-BE-NEXT:    addp v3.16b, v3.16b, v3.16b
-; CHECK-BE-NEXT:    addp v1.16b, v1.16b, v1.16b
-; CHECK-BE-NEXT:    addp v2.16b, v2.16b, v2.16b
-; CHECK-BE-NEXT:    rev16 v0.16b, v0.16b
-; CHECK-BE-NEXT:    rev16 v3.16b, v3.16b
-; CHECK-BE-NEXT:    rev16 v1.16b, v1.16b
-; CHECK-BE-NEXT:    rev16 v2.16b, v2.16b
-; CHECK-BE-NEXT:    umov w8, v0.h[0]
-; CHECK-BE-NEXT:    umov w11, v3.h[0]
-; CHECK-BE-NEXT:    umov w9, v1.h[0]
-; CHECK-BE-NEXT:    umov w10, v2.h[0]
-; CHECK-BE-NEXT:    bfi w9, w8, #16, #16
-; CHECK-BE-NEXT:    bfi w11, w10, #16, #16
-; CHECK-BE-NEXT:    orr x8, x11, x9, lsl #32
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    fmov x8, d0
 ; CHECK-BE-NEXT:    rbit x8, x8
 ; CHECK-BE-NEXT:    clz x0, x8
 ; CHECK-BE-NEXT:    ret

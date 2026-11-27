@@ -1417,6 +1417,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::v2i16, Custom);
     setOperationAction(ISD::BITCAST, MVT::v4i8, Custom);
 
+    // Pack wide predicates before type legalization splits them.
+    setOperationAction({ISD::BITCAST, ISD::STORE}, {MVT::v32i1, MVT::v64i1},
+                       Custom);
+
     setLoadExtAction(ISD::EXTLOAD, MVT::v2i32, MVT::v2i8, Custom);
     setLoadExtAction(ISD::SEXTLOAD, MVT::v2i32, MVT::v2i8, Custom);
     setLoadExtAction(ISD::ZEXTLOAD, MVT::v2i32, MVT::v2i8, Custom);
@@ -5777,10 +5781,16 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
   return DAG.getExtractSubvector(DL, VT, Mask, 0);
 }
 
+static SDValue lowerWidePredicateToBitmask(SDValue Predicate,
+                                           SelectionDAG &DAG);
+
 SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
                                             SelectionDAG &DAG) const {
   EVT OpVT = Op.getValueType();
   EVT ArgVT = Op.getOperand(0).getValueType();
+
+  if ((ArgVT == MVT::v32i1 || ArgVT == MVT::v64i1) && OpVT.isScalarInteger())
+    return lowerWidePredicateToBitmask(Op.getOperand(0), DAG);
 
   if (useSVEForFixedLengthVectorVT(OpVT))
     return LowerFixedLengthBitcastToSVE(Op, DAG);
@@ -8025,6 +8035,13 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
 
   EVT VT = Value.getValueType();
   EVT MemVT = StoreNode->getMemoryVT();
+
+  if ((VT == MVT::v32i1 || VT == MVT::v64i1) && ISD::isNormalStore(StoreNode)) {
+    if (SDValue Bits = lowerWidePredicateToBitmask(Value, DAG))
+      return DAG.getStore(StoreNode->getChain(), Dl, Bits,
+                          StoreNode->getBasePtr(), StoreNode->getMemOperand());
+    return SDValue();
+  }
 
   if (StoreNode->isNonTemporal()) {
     if (auto MaybeSTNP = LowerNTStore(StoreNode, VT, MemVT, Dl, DAG))
@@ -27745,6 +27762,59 @@ static bool getBoolVectorBitcastCompare(SDValue Vec, SDValue RHS,
   return true;
 }
 
+// Pack a byte from each group of eight mask lanes. ADDP adds adjacent
+// lanes in each input and concatenates the two sets of sums, so the first
+// two levels can also bring together bytes from different NEON registers.
+static SDValue packNEONByteMask(SDValue Bytes, SelectionDAG &DAG) {
+  SDLoc DL(Bytes);
+  unsigned NumElts = Bytes.getValueType().getVectorNumElements();
+  assert((NumElts == 16 || NumElts == 32 || NumElts == 64) &&
+         "expected one, two or four byte vectors");
+
+  SmallVector<SDValue, 16> Weights;
+  bool IsLE = DAG.getDataLayout().isLittleEndian();
+  for (unsigned I = 0; I != 16; ++I) {
+    unsigned Bit = IsLE ? I % 8 : 7 - I % 8;
+    Weights.push_back(DAG.getConstant(1u << Bit, DL, MVT::i32));
+  }
+  SDValue Mask = DAG.getBuildVector(MVT::v16i8, DL, Weights);
+  auto Weighted = [&](unsigned FirstLane) {
+    SDValue Part = DAG.getExtractSubvector(DL, MVT::v16i8, Bytes, FirstLane);
+    return DAG.getNode(ISD::AND, DL, MVT::v16i8, Part, Mask);
+  };
+  auto AddPairs = [&](SDValue A, SDValue B) {
+    return DAG.getNode(AArch64ISD::ADDP, DL, MVT::v16i8, A, B);
+  };
+
+  // Each byte contributes a distinct bit within its group, so the sums
+  // cannot carry. Duplicate a partial result once all registers are paired.
+  SDValue First = Weighted(0);
+  SDValue Pairs = AddPairs(First, NumElts >= 32 ? Weighted(16) : First);
+  SDValue OtherPairs =
+      NumElts == 64 ? AddPairs(Weighted(32), Weighted(48)) : Pairs;
+  SDValue Quads = AddPairs(Pairs, OtherPairs);
+  SDValue Octets = AddPairs(Quads, Quads);
+  MVT EltVT = MVT::getIntegerVT(NumElts);
+  SDValue Packed =
+      DAG.getBitcast(MVT::getVectorVT(EltVT, 128 / NumElts), Octets);
+  // Extract narrow integer lanes into a legal GPR type.
+  return DAG.getExtractVectorElt(DL, NumElts == 64 ? MVT::i64 : MVT::i32,
+                                 Packed, 0);
+}
+
+static SDValue lowerWidePredicateToBitmask(SDValue Predicate,
+                                           SelectionDAG &DAG) {
+  if (!DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable() ||
+      !tryGetOriginalBoolVectorType(Predicate).isSimple())
+    return SDValue();
+
+  // A byte of all zeros or ones represents a lane of any comparison width.
+  MVT ByteVT = Predicate.getSimpleValueType().changeVectorElementType(MVT::i8);
+  SDValue Bytes =
+      DAG.getNode(ISD::SIGN_EXTEND, SDLoc(Predicate), ByteVT, Predicate);
+  return packNEONByteMask(Bytes, DAG);
+}
+
 // When converting a <N x iX> vector to <N x i1> to store or use as a scalar
 // iN, we can use a trick that extracts the i^th bit from the i^th element and
 // then performs a vector add to get a scalar bitmask. This requires that each
@@ -27788,37 +27858,12 @@ static SDValue vectorToScalarBitmask(SDValue ComparisonResult,
   // Ensure that all elements' bits are either 0s or 1s.
   ComparisonResult = DAG.getSExtOrTrunc(ComparisonResult, DL, VecVT);
 
+  if (DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable() &&
+      VecVT == MVT::v16i8)
+    return packNEONByteMask(ComparisonResult, DAG);
+
   bool IsLE = DAG.getDataLayout().isLittleEndian();
   SmallVector<SDValue, 16> MaskConstants;
-  if (DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable() &&
-      VecVT == MVT::v16i8) {
-    // v16i8 is a special case: we have 16 entries but only 8 positional bits
-    // per i16 of bitmask. ANDing with a mask whose two 8-byte halves both
-    // hold the powers-of-two 1,2,...,128 leaves at most one bit set per byte
-    // lane within each 8-byte group, so pairwise addition equals OR and
-    // cannot carry. Three levels of ADDP then losslessly pack the 16
-    // per-lane bits into the low i16 of the result vector.
-    for (unsigned Half = 0; Half < 2; ++Half) {
-      for (unsigned I = 0; I < 8; ++I) {
-        // On big-endian targets, the lane order in sub-byte vector elements
-        // gets reversed, so we need to flip the bit index.
-        unsigned MaskBit = IsLE ? (1u << I) : (1u << (7 - I));
-        MaskConstants.push_back(DAG.getConstant(MaskBit, DL, MVT::i32));
-      }
-    }
-    SDValue Mask = DAG.getNode(ISD::BUILD_VECTOR, DL, VecVT, MaskConstants);
-    SDValue RepresentativeBits =
-        DAG.getNode(ISD::AND, DL, VecVT, ComparisonResult, Mask);
-
-    SDValue V = RepresentativeBits;
-    V = DAG.getNode(AArch64ISD::ADDP, DL, VecVT, V, V);
-    V = DAG.getNode(AArch64ISD::ADDP, DL, VecVT, V, V);
-    V = DAG.getNode(AArch64ISD::ADDP, DL, VecVT, V, V);
-    V = DAG.getNode(ISD::BITCAST, DL, MVT::v8i16, V);
-    return DAG.getExtractVectorElt(DL, MVT::i32, V, 0);
-  }
-
-  // All other vector sizes.
   unsigned NumEl = VecVT.getVectorNumElements();
   for (unsigned I = 0; I < NumEl; ++I) {
     unsigned MaskBit = IsLE ? (1u << I) : (1u << (NumEl - 1 - I));
