@@ -337,9 +337,6 @@ static bool getPotentialCopiesOfMemoryValue(
   SmallSetVector<Value *, 8> NewCopies;
   SmallSetVector<Instruction *, 8> NewCopyOrigins;
 
-  const auto *TLI =
-      A.getInfoCache().getTargetLibraryInfoForFunction(*I.getFunction());
-
   auto Pred = [&](Value &Obj) {
     LLVM_DEBUG(dbgs() << "Visit underlying object " << Obj << "\n");
     if (isa<UndefValue>(&Obj))
@@ -358,7 +355,7 @@ static bool getPotentialCopiesOfMemoryValue(
     }
     // TODO: Use assumed noalias return.
     if (!isa<AllocaInst>(&Obj) && !isa<GlobalVariable>(&Obj) &&
-        !(IsLoad ? isAllocationFn(&Obj, TLI) : isNoAliasCall(&Obj))) {
+        !(IsLoad ? isAllocationFn(&Obj) : isNoAliasCall(&Obj))) {
       LLVM_DEBUG(dbgs() << "Underlying object is not supported yet: " << Obj
                         << "\n";);
       return false;

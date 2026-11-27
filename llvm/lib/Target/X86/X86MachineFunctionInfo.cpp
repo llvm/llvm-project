@@ -10,12 +10,13 @@
 #include "X86RegisterInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 
 using namespace llvm;
 
 yaml::X86MachineFunctionInfo::X86MachineFunctionInfo(
     const llvm::X86MachineFunctionInfo &MFI)
-    : AMXProgModel(MFI.getAMXProgModel()),
+    : AMXProgModel(MFI.getAMXProgModel()), ACEProgModel(MFI.getACEProgModel()),
       HasVAStartSaveXMMRegs(MFI.getHasVAStartSaveXMMRegs()) {}
 
 void yaml::X86MachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
@@ -32,10 +33,27 @@ MachineFunctionInfo *X86MachineFunctionInfo::clone(
 void X86MachineFunctionInfo::initializeBaseYamlFields(
     const yaml::X86MachineFunctionInfo &YamlMFI) {
   AMXProgModel = YamlMFI.AMXProgModel;
+  ACEProgModel = YamlMFI.ACEProgModel;
   HasVAStartSaveXMMRegs = YamlMFI.HasVAStartSaveXMMRegs;
 }
 
 void X86MachineFunctionInfo::anchor() { }
+
+void X86MachineFunctionInfo::setACEProgModel(const MachineFunction *MF,
+                                             ACEProgModelEnum Model) {
+  // The two models configure the same tiles differently, so reject a mix once.
+  if (ACEProgModel != ACEProgModelEnum::ACE_None && ACEProgModel != Model) {
+    if (!ReportedACEProgModelMix) {
+      ReportedACEProgModelMix = true;
+      const Function &F = MF->getFunction();
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F, "ACE tile operations mix the macro and the managed programming "
+             "model; a function can use only one of them"));
+    }
+    return;
+  }
+  ACEProgModel = Model;
+}
 
 void X86MachineFunctionInfo::setRestoreBasePointer(const MachineFunction *MF) {
   if (!RestoreBasePointerOffset) {

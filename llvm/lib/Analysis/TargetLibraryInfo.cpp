@@ -25,10 +25,12 @@ using namespace llvm;
 #include "llvm/Analysis/TargetLibraryInfo.inc"
 
 std::string VecDesc::getVectorFunctionABIVariantString() const {
-  assert(!VectorFnName.empty() && "Vector function name must not be empty.");
+  assert(!getVectorFnName().empty() &&
+         "Vector function name must not be empty.");
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
-  Out << VABIPrefix << "_" << ScalarFnName << "(" << VectorFnName << ")";
+  Out << getVABIPrefix() << "_" << getScalarFnName() << "(" << getVectorFnName()
+      << ")";
   return std::string(Out.str());
 }
 
@@ -1290,7 +1292,8 @@ static bool compareWithScalarFnName(const VecDesc &LHS, StringRef S) {
   return LHS.getScalarFnName() < S;
 }
 
-void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
+void TargetLibraryInfoImpl::addVectorizableFunctions(
+    EnumStrings<VecDescData, 3> Fns) {
   llvm::append_range(VectorDescs, Fns);
   llvm::sort(VectorDescs, compareByScalarFnName);
 
@@ -1298,95 +1301,111 @@ void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
   llvm::sort(ScalarDescs, compareByVectorFnName);
 }
 
-// The VecDesc tables should be constant-initialized to avoid compilation
-// regression. Now VecDesc (see class definition) intentionally keeps trivially
-// constructable/destructable, so the tables land in .rdata and do not run
-// through CRT dynamic init (which can overflow small stack on MSVC Debug
-// DLL loads). When LLVM requires C++20 mark them constinit to enforce this
-// at compile time.
-static constexpr VecDesc VecFuncs_Accelerate[] = {
+// The VecDesc tables should be constant-initialized and not contain any
+// pointers to avoid startup cost through global ctors or dynamic relocations.
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_Accelerate[] = {
 #define TLI_DEFINE_ACCELERATE_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_ACCELERATE_VECFUNCS
 };
+constexpr auto VecFuncs_Accelerate = BUILD_ENUM_STRINGS(VecFuncDefs_Accelerate);
 
-static constexpr VecDesc VecFuncs_DarwinLibSystemM[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_DarwinLibSystemM[] = {
 #define TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
 };
+constexpr auto VecFuncs_DarwinLibSystemM =
+    BUILD_ENUM_STRINGS(VecFuncDefs_DarwinLibSystemM);
 
-static constexpr VecDesc VecFuncs_LIBMVEC_X86[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_LIBMVEC_X86[] = {
 #define TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 };
+constexpr auto VecFuncs_LIBMVEC_X86 =
+    BUILD_ENUM_STRINGS(VecFuncDefs_LIBMVEC_X86);
 
-static constexpr VecDesc VecFuncs_LIBMVEC_AARCH64[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_LIBMVEC_AARCH64[] = {
 #define TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
+  {{SCAL, VEC, VABI_PREFIX}, {VF, MASK, CC}},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
 };
+constexpr auto VecFuncs_LIBMVEC_AARCH64 =
+    BUILD_ENUM_STRINGS(VecFuncDefs_LIBMVEC_AARCH64);
 
-static constexpr VecDesc VecFuncs_MASSV[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_MASSV[] = {
 #define TLI_DEFINE_MASSV_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_MASSV_VECFUNCS
 };
+constexpr auto VecFuncs_MASSV = BUILD_ENUM_STRINGS(VecFuncDefs_MASSV);
 
-static constexpr VecDesc VecFuncs_SVML[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_SVML[] = {
 #define TLI_DEFINE_SVML_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SVML_VECFUNCS
 };
+constexpr auto VecFuncs_SVML = BUILD_ENUM_STRINGS(VecFuncDefs_SVML);
 
-static constexpr VecDesc VecFuncs_SLEEFGNUABI_VF2[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_SLEEFGNUABI_VF2[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
-  {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX, /* CC = */ std::nullopt},
+  {{SCAL, VEC, VABI_PREFIX}, {VF, /*MASK=*/false, /*CC=*/std::nullopt}},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 };
-static constexpr VecDesc VecFuncs_SLEEFGNUABI_VF4[] = {
+constexpr auto VecFuncs_SLEEFGNUABI_VF2 =
+    BUILD_ENUM_STRINGS(VecFuncDefs_SLEEFGNUABI_VF2);
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_SLEEFGNUABI_VF4[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
-  {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX, /* CC = */ std::nullopt},
+  {{SCAL, VEC, VABI_PREFIX}, {VF, /*MASK=*/false, /*CC=*/std::nullopt}},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 };
-static constexpr VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
+constexpr auto VecFuncs_SLEEFGNUABI_VF4 =
+    BUILD_ENUM_STRINGS(VecFuncDefs_SLEEFGNUABI_VF4);
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_SLEEFGNUABI_VFScalable[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
+  {{SCAL, VEC, VABI_PREFIX}, {VF, MASK, /*CC=*/std::nullopt}},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 };
+constexpr auto VecFuncs_SLEEFGNUABI_VFScalable =
+    BUILD_ENUM_STRINGS(VecFuncDefs_SLEEFGNUABI_VFScalable);
 
-static constexpr VecDesc VecFuncs_SLEEFGNUABI_VFScalableRISCV[] = {
+constexpr EnumStringDef<VecDescData, 3>
+    VecFuncDefs_SLEEFGNUABI_VFScalableRISCV[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
+  {{SCAL, VEC, VABI_PREFIX}, {VF, MASK, /*CC=*/std::nullopt}},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
 };
+constexpr auto VecFuncs_SLEEFGNUABI_VFScalableRISCV =
+    BUILD_ENUM_STRINGS(VecFuncDefs_SLEEFGNUABI_VFScalableRISCV);
 
-static constexpr VecDesc VecFuncs_ArmPL[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_ArmPL[] = {
 #define TLI_DEFINE_ARMPL_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
+  {{SCAL, VEC, VABI_PREFIX}, {VF, MASK, CC}},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_ARMPL_VECFUNCS
 };
+constexpr auto VecFuncs_ArmPL = BUILD_ENUM_STRINGS(VecFuncDefs_ArmPL);
 
-constexpr VecDesc VecFuncs_AMDLIBM[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_AMDLIBM[] = {
 #define TLI_DEFINE_AMDLIBM_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
+  {{SCAL, VEC, VABI_PREFIX}, {VF, MASK, /*CC=*/std::nullopt}},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_AMDLIBM_VECFUNCS
 };
+constexpr auto VecFuncs_AMDLIBM = BUILD_ENUM_STRINGS(VecFuncDefs_AMDLIBM);
 
 void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     enum VectorLibrary VecLib, const llvm::Triple &TargetTriple) {

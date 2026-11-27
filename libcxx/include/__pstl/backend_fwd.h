@@ -38,6 +38,31 @@ _LIBCPP_PUSH_MACROS
 // frontend, the frontend will turn that into a call to `std::__throw_bad_alloc();` to report the internal failure to
 // the user.
 //
+// Backends
+// ========
+//
+// There are currently 3 different backends:
+// - `default` ("one-liners") backend (`backends/default.h`).
+//   It only reframes the calls in terms of other more general functions, e.g. `std::generate(std::execution::par, ...)`
+//   is reframed in terms of `std::for_each(std::execution::par, ...)`.
+// - `serial` backend (`backends/serial.h`).
+//   This backend only delegates the calls to the serial implementations of the algorithms. For example,
+//   `std::set_symmetric_difference(std::execution::par, ...)` will be forwarded to
+//   `std::set_symmetric_difference(...)`.
+// - `statpart` backend (`backends/statpart.h`).
+//   This backend provides real parallel implementations of the algorithms and uses an underlying parallelism provider
+//   to run them. While implementations in this backend vary a lot depending on the nature of the algorithm, they share
+//   a common approach of statically partitioning the input range up front.
+//
+// Configurations
+// ==============
+//
+// There are 2 backend configurations. Backends are listed in priority order: an algorithm is dispatched to the first
+// backend in the list that implements it.
+// - On platforms with support for threading:
+//   `statpart`, `default`, `serial`.
+// - Otherwise, when threading is not available:
+//   `serial`, `default`.
 
 #if _LIBCPP_STD_VER >= 17
 

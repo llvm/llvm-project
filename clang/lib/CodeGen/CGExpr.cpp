@@ -5500,6 +5500,22 @@ static Address emitOMPArraySectionBase(CodeGenFunction &CGF, const Expr *Base,
     return Address(CGF.Builder.CreateLoad(BaseLVal.getAddress()),
                    CGF.ConvertTypeForMem(ElTy), Align);
   }
+  if (auto *OAShE =
+          dyn_cast<OMPArrayShapingExpr>(Base->IgnoreParenImpCasts())) {
+    // The shaped pointer is the address of the array; capture the variable
+    // dimensions of the shape first.
+    QualType ShapedTy = OAShE->getShapedType();
+    if (ShapedTy->isVariablyModifiedType())
+      CGF.EmitVariablyModifiedType(ShapedTy);
+    LValueBaseInfo TypeBaseInfo;
+    TBAAAccessInfo TypeTBAAInfo;
+    CharUnits Align =
+        CGF.CGM.getNaturalTypeAlignment(ElTy, &TypeBaseInfo, &TypeTBAAInfo);
+    BaseInfo.mergeForCast(TypeBaseInfo);
+    TBAAInfo = CGF.CGM.mergeTBAAInfoForCast(TBAAInfo, TypeTBAAInfo);
+    return Address(CGF.EmitScalarExpr(OAShE->getBase()),
+                   CGF.ConvertTypeForMem(ElTy), Align);
+  }
   return CGF.EmitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo);
 }
 

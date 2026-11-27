@@ -322,6 +322,7 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
   } else {
     mergedPath = {};
     mergedPath.isApproximate = true;
+    mergedPath.isIncomplete = true;
     for (const fir::AliasAnalysis::Source &s : sources)
       if (!mergedPath.storageDecl)
         mergedPath.storageDecl = s.accessPath.storageDecl;
@@ -401,6 +402,8 @@ namespace fir {
 
 void AliasAnalysis::Source::AccessPath::print(llvm::raw_ostream &os) const {
   os << "[";
+  if (isIncomplete)
+    os << (steps.empty() ? "..." : "..., ");
   for (auto it = steps.begin(); it != steps.end(); ++it) {
     if (it != steps.begin())
       os << ", ";
@@ -515,6 +518,18 @@ bool AliasAnalysis::Source::isFortranUserVariable() const {
       .Default([&](auto op) { return false; });
 }
 
+/// Return true if \p ty, the type of the address of data or of a descriptor
+/// value, gives access to data that may contain a descriptor: a derived type
+/// object with a descriptor component (see fir::isRecordWithDescriptorMember),
+/// an array of them, or a polymorphic object, whose dynamic type may have such
+/// components.
+static bool mayContainDescriptor(mlir::Type ty) {
+  if (mlir::isa<fir::ClassType>(ty))
+    return true;
+  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
+  return eleTy && fir::isRecordWithDescriptorMember(eleTy);
+}
+
 bool AliasAnalysis::Source::mayBeDummyArgOrHostAssoc() const {
   return kind != SourceKind::Null && kind != SourceKind::Allocate &&
          kind != SourceKind::Global;
@@ -540,11 +555,20 @@ bool AliasAnalysis::Source::mayBeActualArgWithPtr(
   // Must not be local.
   if (!mayBeActualArg())
     return false;
+  // Must not be part of a dummy arg with neither TARGET nor POINTER, unless
+  // it may be reached through a pointer: only the dummy arg may change such a
+  // part, and if it does, only the dummy arg may reference it (F2023
+  // 15.5.2.14).  A Pointer attribute without access steps may be that of the
+  // dummy arg itself.
+  if (kind == SourceKind::Argument && !isTarget() &&
+      !accessPath.mayHavePointerDeref() &&
+      !(isPointer() && accessPath.steps.empty()))
+    return false;
   // Can be address *of* (not *in*) a pointer.
   if (attributes.test(Attribute::Pointer) && !isData())
     return true;
   // Can be address of a composite with a pointer component.
-  if (isRecordWithPointerComponent(val->getType()))
+  if (mayContainDescriptor(val->getType()))
     return true;
   return false;
 }
@@ -650,7 +674,8 @@ componentsAreDisjoint(const fir::AliasAnalysis::Source::PathStep &lhs,
 /// disjoint, while [Component("a"), Component("x")] and
 /// [Component("a"), Component("y")] are disjoint at their second steps.
 /// Paths crossing different storage-associated declarations are not
-/// compared.
+/// compared, nor are incomplete paths, whose missing steps may reach other
+/// objects.
 ///
 /// A PointerDeref or AllocDeref step reaches another object, whose type may
 /// be related to the type of the root variable (e.g. an allocatable
@@ -676,7 +701,8 @@ static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
                                     const fir::AliasAnalysis::Source &rhsSrc,
                                     GetParentTypeFn getParentType) {
   using PathStep = fir::AliasAnalysis::Source::PathStep;
-  if (lhsSrc.accessPath.storageDecl != rhsSrc.accessPath.storageDecl)
+  if (lhsSrc.accessPath.storageDecl != rhsSrc.accessPath.storageDecl ||
+      lhsSrc.accessPath.isIncomplete || rhsSrc.accessPath.isIncomplete)
     return false;
   llvm::ArrayRef<PathStep> lhsSteps = lhsSrc.accessPath.steps;
   llvm::ArrayRef<PathStep> rhsSteps = rhsSrc.accessPath.steps;
@@ -713,6 +739,33 @@ static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
     }
   }
   return false;
+}
+
+/// Return true if the descriptor addressed by \p descSrc may be part of the
+/// data addressed by \p dataSrc, which has the same origin value. The data is
+/// reached through the descriptor if its access path continues the path of the
+/// descriptor with a dereference. Such data contains the descriptor only if a
+/// pointer on the way may be associated with an object containing the
+/// descriptor: without a pointer, the data belongs to the allocatable the
+/// descriptor describes, and a whole local or global variable is not part of
+/// any object. Incomplete paths are not compared, since their missing steps
+/// are unknown.
+static bool descriptorMayBeInData(const fir::AliasAnalysis::Source &descSrc,
+                                  const fir::AliasAnalysis::Source &dataSrc) {
+  using PathStep = fir::AliasAnalysis::Source::PathStep;
+  using SourceKind = fir::AliasAnalysis::SourceKind;
+  if (descSrc.accessPath.isIncomplete || dataSrc.accessPath.isIncomplete)
+    return true;
+  llvm::ArrayRef<PathStep> descSteps = descSrc.accessPath.steps;
+  llvm::ArrayRef<PathStep> dataSteps = dataSrc.accessPath.steps;
+  if (dataSteps.size() <= descSteps.size() ||
+      dataSteps.take_front(descSteps.size()) != descSteps ||
+      dataSteps[descSteps.size()].kind == PathStep::Kind::Component)
+    return true;
+  if (!dataSrc.accessPath.mayHavePointerDeref())
+    return false;
+  return !descSteps.empty() || (descSrc.kind != SourceKind::Allocate &&
+                                descSrc.kind != SourceKind::Global);
 }
 
 /// Walk backward from \p val through FortranObjectViewOpInterface ops
@@ -902,8 +955,10 @@ AliasResult AliasAnalysis::aliasSources(Source lhsSrc, Source rhsSrc,
   // does not introduce cross-variable aliasing, so this check is skipped
   // (the normal same-origin logic handles that case).
   if (lhsSrc.origin.u != rhsSrc.origin.u &&
-      ((lhsSrc.accessPath.hasPointerDeref() && rhsSrc.isTargetOrPointer()) ||
-       (rhsSrc.accessPath.hasPointerDeref() && lhsSrc.isTargetOrPointer()))) {
+      ((lhsSrc.accessPath.mayHavePointerDeref() &&
+        rhsSrc.isTargetOrPointer()) ||
+       (rhsSrc.accessPath.mayHavePointerDeref() &&
+        lhsSrc.isTargetOrPointer()))) {
     LLVM_DEBUG(llvm::dbgs()
                << "  aliasing because pointer dereference may reach "
                << "target/pointer\n");
@@ -969,19 +1024,18 @@ AliasResult AliasAnalysis::aliasSources(Source lhsSrc, Source rhsSrc,
     // can affect a load from the other, so the result should be MayAlias.  To
     // catch this case, we conservatively return MayAlias when one value is the
     // address of a composite, the other value is non-data, and they have the
-    // same origin value.
+    // same origin value.  The composite may be an array, and its address may be
+    // a descriptor value (see mayContainDescriptor).  Composites that cannot
+    // contain the descriptor are excluded (see descriptorMayBeInData).
     //
     // TODO: That logic does not check that the latter is actually a component
     // of the former, so it can return MayAlias when unnecessary.  For example,
     // they might both be addresses of components of a larger composite.
-    //
-    // FIXME: Actually, we should generalize from isRecordWithPointerComponent
-    // to any composite because a component with !isData() is not always a
-    // pointer.  However, Source::isRecordWithPointerComponent currently doesn't
-    // actually check for pointer components, so it's fine for now.
     if (lhsSrc.origin.u == rhsSrc.origin.u &&
-        ((isRecordWithPointerComponent(lhs.getType()) && !rhsSrc.isData()) ||
-         (isRecordWithPointerComponent(rhs.getType()) && !lhsSrc.isData()))) {
+        ((mayContainDescriptor(lhs.getType()) && !rhsSrc.isData() &&
+          descriptorMayBeInData(rhsSrc, lhsSrc)) ||
+         (mayContainDescriptor(rhs.getType()) && !lhsSrc.isData() &&
+          descriptorMayBeInData(lhsSrc, rhsSrc)))) {
       if (pathsDivergeAtComponent(lhsSrc, rhsSrc, getParentType)) {
         LLVM_DEBUG(llvm::dbgs()
                    << "  no alias: different components of same origin\n");
@@ -1084,8 +1138,9 @@ AliasResult AliasAnalysis::aliasSources(Source lhsSrc, Source rhsSrc,
   // The address of a pointer dummy arg (but not a pointer component of a dummy
   // arg) may alias the address of either (1) a non-local pointer or (2) thus a
   // non-local composite with a pointer component.  A non-local might be a
-  // global or another dummy arg.  The following is an example of the global
-  // composite case:
+  // global or another dummy arg, but not a part of a dummy arg with neither
+  // TARGET nor POINTER (see mayBeActualArgWithPtr).  The following is an
+  // example of the global composite case:
   //
   // module m
   //   type t
@@ -1952,6 +2007,7 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
               accessPath.steps.push_back(pathSteps[i]);
             accessPath.isApproximate =
                 boxSrc.accessPath.isApproximate || approximateSource;
+            accessPath.isIncomplete = boxSrc.accessPath.isIncomplete;
             setStorageDecl(boxSrc.accessPath.storageDecl);
             accessPath.storageDecl = storageDecl;
             accessPathFinalized = true;

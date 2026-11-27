@@ -2621,7 +2621,7 @@ public:
 
   LLVM_ABI CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
                                                ArrayRef<Value *> Args,
-                                               StringRef Name = "");
+                                               const Twine &Name = "");
 
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
   LLVM_ABI Constant *getOrCreateSrcLocStr(StringRef LocStr,

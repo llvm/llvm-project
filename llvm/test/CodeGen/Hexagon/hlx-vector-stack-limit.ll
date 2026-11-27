@@ -1,14 +1,14 @@
-; Check the HLX vector stack limit set with -hlx-vector-stack-limit and the
+; Check the HLX vector stack limit set with -hexagon-hlx-vector-stack-limit and the
 ; "hlx-vector-stack-limit" function attribute, which overrides the option.
 ; Each function with allocas needs a 4096-byte vector stack frame.
 
 ; RUN: not llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx -filetype=null \
 ; RUN:   < %s 2>&1 | FileCheck %s --implicit-check-not=error:
 ; RUN: not llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx -filetype=null \
-; RUN:   -hlx-vector-stack-limit=4096 < %s 2>&1 \
+; RUN:   -hexagon-hlx-vector-stack-limit=4096 < %s 2>&1 \
 ; RUN:   | FileCheck %s --implicit-check-not=error:
 ; RUN: not llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx -filetype=null \
-; RUN:   -hlx-vector-stack-limit=4095 < %s 2>&1 \
+; RUN:   -hexagon-hlx-vector-stack-limit=4095 < %s 2>&1 \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,LIMIT --implicit-check-not=error:
 
 ; LIMIT: error: {{.*}}HLX vector stack size (4096) exceeds limit (4095) in function 'no_attr'

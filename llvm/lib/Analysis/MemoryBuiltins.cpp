@@ -70,40 +70,21 @@ enum AllocType : uint8_t {
   AllocLike          = MallocOrOpNewLike | StrDupLike,
   AnyAlloc           = AllocLike
 };
-
-enum class MallocFamily {
-  Malloc,
-  VecMalloc,
-};
 // clang-format on
-
-static StringRef mangledNameForMallocFamily(const MallocFamily &Family) {
-  switch (Family) {
-  case MallocFamily::Malloc:
-    return "malloc";
-  case MallocFamily::VecMalloc:
-    return "vec_malloc";
-  }
-  llvm_unreachable("missing an alloc family");
-}
 
 struct AllocFnsTy {
   AllocType AllocTy;
   unsigned NumParams;
   // First and Second size parameters (or -1 if unused)
   int FstParam, SndParam;
-  // Name of default allocator function to group malloc/free calls by family
-  MallocFamily Family;
 };
 
 // clang-format off
-// FIXME: certain users need more information. E.g., SimplifyLibCalls needs to
-// know which functions are nounwind, noalias, nocapture parameters, etc.
 static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
-    {LibFunc_strdup,                                          {StrDupLike, 1, -1, -1, MallocFamily::Malloc}},
-    {LibFunc_dunder_strdup,                                   {StrDupLike, 1, -1, -1, MallocFamily::Malloc}},
-    {LibFunc_strndup,                                         {StrDupLike, 2,  1, -1, MallocFamily::Malloc}},
-    {LibFunc_dunder_strndup,                                  {StrDupLike, 2,  1, -1, MallocFamily::Malloc}},
+    {LibFunc_strdup,                                          {StrDupLike, 1, -1, -1}},
+    {LibFunc_dunder_strdup,                                   {StrDupLike, 1, -1, -1}},
+    {LibFunc_strndup,                                         {StrDupLike, 2,  1, -1}},
+    {LibFunc_dunder_strndup,                                  {StrDupLike, 2,  1, -1}},
 };
 // clang-format on
 
@@ -168,23 +149,6 @@ getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
 }
 
 static std::optional<AllocFnsTy>
-getAllocationData(const Value *V, AllocType AllocTy,
-                  const TargetLibraryInfo *TLI) {
-  if (const Function *Callee = getCalledFunction(V))
-    return getAllocationDataForFunction(Callee, AllocTy, TLI);
-  return std::nullopt;
-}
-
-static std::optional<AllocFnsTy>
-getAllocationData(const Value *V, AllocType AllocTy,
-                  function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
-  if (const Function *Callee = getCalledFunction(V))
-    return getAllocationDataForFunction(
-        Callee, AllocTy, &GetTLI(const_cast<Function &>(*Callee)));
-  return std::nullopt;
-}
-
-static std::optional<AllocFnsTy>
 getAllocationSize(const CallBase *CB, const TargetLibraryInfo *TLI) {
   if (const Function *Callee = getCalledFunction(CB)) {
     // Prefer to use existing information over allocsize. This will give us an
@@ -234,31 +198,20 @@ static bool checkFnAllocKind(const Function *F, AllocFnKind Wanted) {
 /// Tests if a value is a call or invoke to a library function that
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
 /// like).
-bool llvm::isAllocationFn(const Value *V, const TargetLibraryInfo *TLI) {
+bool llvm::isAllocationFn(const Value *V) {
   // Allocation calls must return ptr. Exit early if this doesn't.
   if (!V->getType()->isPointerTy())
     return false;
-  return getAllocationData(V, AnyAlloc, TLI).has_value() ||
-         checkFnAllocKind(V, AllocFnKind::Alloc | AllocFnKind::Realloc);
-}
-bool llvm::isAllocationFn(
-    const Value *V,
-    function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
-  // Allocation calls must return ptr. Exit early if this doesn't.
-  if (!V->getType()->isPointerTy())
-    return false;
-  return getAllocationData(V, AnyAlloc, GetTLI).has_value() ||
-         checkFnAllocKind(V, AllocFnKind::Alloc | AllocFnKind::Realloc);
+  return checkFnAllocKind(V, AllocFnKind::Alloc | AllocFnKind::Realloc);
 }
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates memory (either malloc, calloc, or strdup like).
-bool llvm::isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
+bool llvm::isAllocLikeFn(const Value *V) {
   // Allocation calls must return ptr. Exit early if this doesn't.
   if (!V->getType()->isPointerTy())
     return false;
-  return getAllocationData(V, AllocLike, TLI).has_value() ||
-         checkFnAllocKind(V, AllocFnKind::Alloc);
+  return checkFnAllocKind(V, AllocFnKind::Alloc);
 }
 
 /// Tests if a functions is a call or invoke to a library function that
@@ -273,7 +226,7 @@ Value *llvm::getReallocatedOperand(const CallBase *CB) {
   return nullptr;
 }
 
-bool llvm::isRemovableAlloc(const CallBase *CB, const TargetLibraryInfo *TLI) {
+bool llvm::isRemovableAlloc(const CallBase *CB) {
   // Note: Removability is highly dependent on the source language.  For
   // example, recent C++ requires direct calls to the global allocation
   // [basic.stc.dynamic.allocation] to be observable unless part of a new
@@ -281,7 +234,7 @@ bool llvm::isRemovableAlloc(const CallBase *CB, const TargetLibraryInfo *TLI) {
 
   // Historically we've treated the C family allocation routines and operator
   // new as removable
-  return isAllocLikeFn(CB, TLI);
+  return isAllocLikeFn(CB);
 }
 
 Value *llvm::getAllocAlignment(const CallBase *V) {
@@ -383,20 +336,7 @@ Constant *llvm::getInitialValueOfAllocation(const Value *V, Type *Ty) {
   return nullptr;
 }
 
-std::optional<StringRef>
-llvm::getAllocationFamily(const Value *I, const TargetLibraryInfo *TLI) {
-  if (const Function *Callee = getCalledFunction(I)) {
-    LibFunc TLIFn = TLI ? TLI->getLibFunc(*Callee) : NotLibFunc;
-    if (TLIFn != NotLibFunc && TLI->has(TLIFn)) {
-      // Callee is some known library function.
-      const auto AllocData =
-          getAllocationDataForFunction(Callee, AnyAlloc, TLI);
-      if (AllocData)
-        return mangledNameForMallocFamily(AllocData->Family);
-    }
-  }
-
-  // Callee isn't a known library function, still check attributes.
+std::optional<StringRef> llvm::getAllocationFamily(const Value *I) {
   if (checkFnAllocKind(I, AllocFnKind::Free | AllocFnKind::Alloc |
                               AllocFnKind::Realloc)) {
     Attribute Attr = cast<CallBase>(I)->getFnAttr("alloc-family");

@@ -962,11 +962,6 @@ public:
 
   void VisitAddedToCluster(const MemRegion *baseR, const ClusterBindings &C) {}
   void VisitCluster(const MemRegion *baseR, const ClusterBindings *C) {}
-
-  void VisitCluster(const MemRegion *BaseR, const ClusterBindings *C,
-                    bool Flag) {
-    static_cast<DERIVED*>(this)->VisitCluster(BaseR, C);
-  }
 };
 }
 

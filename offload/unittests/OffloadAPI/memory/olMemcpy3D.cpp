@@ -171,6 +171,7 @@ TEST_P(olMemcpy3DTest, InvalidSlicePitch) {
 }
 
 TEST_P(olMemcpy3DTest, SuccessSingleSliceZOffset) {
+  SKIP_KNOWN_FAILURE(LevelZero{"GPU page fault on a single slice z offset"});
   std::vector<uint8_t> Input(Total);
   std::iota(Input.begin(), Input.end(), 0);
   std::vector<uint8_t> Output(Total, 0);

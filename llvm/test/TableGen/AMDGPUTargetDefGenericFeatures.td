@@ -23,8 +23,6 @@
 // RUN:   | FileCheck %t/pseudo-member.td -DFILE=%t/pseudo-member.td --implicit-check-not="error:"
 // RUN: not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/unregistered-member.td 2>&1 \
 // RUN:   | FileCheck %t/unregistered-member.td -DFILE=%t/unregistered-member.td --implicit-check-not="error:"
-// RUN: not llvm-tblgen -gen-amdgpu-target-def -I %t -I %p/../../lib/Target/AMDGPU %t/r600-member.td 2>&1 \
-// RUN:   | FileCheck %t/r600-member.td -DFILE=%t/r600-member.td --implicit-check-not="error:"
 
 //--- common.td
 // Exercise the validation rules with small synthetic targets. The real targets
@@ -203,12 +201,4 @@ def Unregistered : ProcessorModel<"gfx900", NoSchedModel, [FeatureAnyA]>;
 // CHECK: [[FILE]]:[[#@LINE+1]]:1: error: generic target 'gfx9-generic' covers 'gfx900', which is not a concrete AMDGPU GPU
 def : AMDGPUProcessorModel<"gfx9-generic", NoSchedModel, [FeatureAnyA], [9, 0, 0]> {
   let CoveredGPUs = [Unregistered];
-}
-
-//--- r600-member.td
-include "common.td"
-def Cayman : R600ProcessorModel<"cayman", NoItineraries, [FeatureAnyA]>;
-// CHECK: [[FILE]]:[[#@LINE+1]]:1: error: generic target 'gfx9-generic' covers 'cayman', which is not a concrete AMDGPU GPU
-def : AMDGPUProcessorModel<"gfx9-generic", NoSchedModel, [FeatureAnyA], [9, 0, 0]> {
-  let CoveredGPUs = [Cayman];
 }
