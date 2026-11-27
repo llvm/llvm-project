@@ -71,6 +71,7 @@ public:
   void ThreadWillResume() override;
   bool ThreadDidStop() override;
   bool NotifyException(MachException::Data &exc) override;
+  bool StepNotComplete() override;
 
   static DNBArchProtocol *Create(MachThread *thread);
   static const uint8_t *SoftwareBreakpointOpcode(nub_size_t byte_size);
@@ -281,6 +282,7 @@ public:
   virtual bool ReenableHardwareWatchpoint(uint32_t hw_break_index);
   virtual bool ReenableHardwareWatchpoint_helper(uint32_t hw_break_index);
   uint32_t GetHardwareWatchpointHit(nub_addr_t &addr) override;
+  bool IsDisabledWatchpointHit(nub_addr_t addr);
 
   class disabled_watchpoint {
   public:
@@ -316,6 +318,11 @@ private:
   int32_t m_watchpoint_hw_index;
   bool m_watchpoint_did_occur;
   bool m_watchpoint_resume_single_step_enabled;
+
+  // We are resuming after hitting a stale watchpoint.
+  bool m_resume_after_stale_watchpoint = false;
+  // Number of consecutive stale watchpoint hits that were not reported.
+  uint32_t m_stale_watchpoint_hits = 0;
 
   typedef std::map<uint32_t, Context> SaveRegisterStates;
   SaveRegisterStates m_saved_register_states;
