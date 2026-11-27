@@ -68,11 +68,28 @@ static bool IsSpace(char c) {
   return c == ' ' || c == '\t' || c == '\n' || c == '\r';
 }
 
+/// XML 1.0 [2] Char: tab, LF, CR and any Unicode scalar value from U+0020,
+/// excluding the surrogates (U+D800-U+DFFF) and the noncharacters U+FFFE and
+/// U+FFFF.
 static bool IsChar(uint32_t c) {
   return c == 0x9 || c == 0xA || c == 0xD || (c >= 0x20 && c <= 0xD7FF) ||
          (c >= 0xE000 && c <= 0xFFFD) || (c >= 0x10000 && c <= 0x10FFFF);
 }
 
+/// XML 1.0 [4] NameStartChar. Outside ASCII, the gaps between the ranges
+/// exclude:
+///   U+0080-U+00BF              C1 controls, Latin-1 punctuation and symbols
+///   U+00D7 and U+00F7          multiplication and division signs
+///   U+0300-U+036F              combining diacritical marks
+///   U+037E                     Greek question mark
+///   U+2000-U+206F              spaces and general punctuation, except
+///                              U+200C-U+200D (zero width (non-)joiner)
+///   U+2190-U+2BFF              arrows, mathematical and technical symbols
+///   U+2FF0-U+3000              ideographic description characters and space
+///   U+D800-U+F8FF              surrogates and private use area
+///   U+FDD0-U+FDEF              noncharacters
+///   U+FFFE-U+FFFF              noncharacters
+///   U+F0000-U+10FFFF           private use planes
 static bool IsNameStartChar(uint32_t c) {
   return c == ':' || (c >= 'A' && c <= 'Z') || c == '_' ||
          (c >= 'a' && c <= 'z') || (c >= 0xC0 && c <= 0xD6) ||
@@ -84,6 +101,9 @@ static bool IsNameStartChar(uint32_t c) {
          (c >= 0x10000 && c <= 0xEFFFF);
 }
 
+/// XML 1.0 [4a] NameChar: NameStartChar plus '-', '.', digits, U+00B7 (middle
+/// dot), U+0300-U+036F (combining diacritical marks) and U+203F-U+2040
+/// (undertie and character tie).
 static bool IsNameChar(uint32_t c) {
   return IsNameStartChar(c) || c == '-' || c == '.' || (c >= '0' && c <= '9') ||
          c == 0xB7 || (c >= 0x300 && c <= 0x36F) ||
