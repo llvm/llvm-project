@@ -9,6 +9,7 @@
 #include <OffloadAPI.h>
 #include <OffloadPrint.hpp>
 #include <algorithm>
+#include <atomic>
 #include <gtest/gtest.h>
 #include <optional>
 #include <string>
@@ -161,7 +162,7 @@ struct ManuallyTriggeredTask {
   std::mutex M;
   std::condition_variable CV;
   bool Flag = false;
-  ol_event_handle_t CompleteEvent;
+  ol_event_handle_t CompleteEvent = nullptr;
 
   ol_result_t enqueue(ol_queue_handle_t Queue) {
     if (auto Err = olLaunchHostFunction(
@@ -181,13 +182,30 @@ struct ManuallyTriggeredTask {
     EXPECT_TRUE(Flag);
   }
 
+  /// Unblocks the host task without waiting for it to finish.
+  void release() {
+    {
+      std::lock_guard<std::mutex> Lock(M);
+      Flag = true;
+    }
+    CV.notify_all();
+  }
+
   ol_result_t trigger() {
-    Flag = true;
-    CV.notify_one();
+    release();
 
     return olSyncEvent(CompleteEvent);
   }
 };
+
+/// Enqueues a host function on \p Queue that sets \p Flag.
+inline ol_result_t enqueueSetFlag(ol_queue_handle_t Queue,
+                                  std::atomic<bool> &Flag) {
+  return olLaunchHostFunction(
+      Queue,
+      [](void *Data) { static_cast<std::atomic<bool> *>(Data)->store(true); },
+      &Flag);
+}
 
 struct OffloadTest : ::testing::Test {
   ol_device_handle_t Host = TestEnvironment::getHostDevice();

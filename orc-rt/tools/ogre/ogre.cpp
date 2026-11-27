@@ -12,10 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt-internal/tools/OptionParser.h"
-#include "orc-rt/bedrock/NativeDylibManager.h"
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/bedrock/ThreadPoolRunner.h"
-#include "orc-rt/bedrock/sps/AllSPSCI.h"
 #include "orc-rt/connect-socket/SocketConnector.h"
 #include "orc-rt/connect-tcp/TCPConnector.h"
 #include "orc-rt/connect/ConnectionSpec.h"
@@ -113,26 +111,8 @@ static Expected<Session::DispatchFn> makeDispatcher() noexcept {
   };
 }
 
-/// Adds the services a host executor provides (JIT memory management and dylib
-/// loading), publishing their entry points in BI for the controller.
-static Error addHostServices(Session &S, BootstrapInfo &BI) noexcept {
-
-  // Add controller interfaces for calling functions, reading/writing memory,
-  // registering metadata, creating JIT memory managers, etc.
-  if (auto Err = sps::ci::addAll(BI.symbols()))
-    return Err;
-
-  // Adds NativeDylibManager, through which the controller can load and search
-  // dylibs.
-  if (auto Err =
-          S.tryCreateService<NativeDylibManager>(S, BI.symbols()).takeError())
-    return Err;
-
-  return Error::success();
-}
-
-/// Creates a Session for this process, adds the host services to it, and
-/// connects it to the controller described by Opts.ConnSpec.
+/// Creates a Session for this process and connects it to the controller
+/// described by Opts.ConnSpec.
 static Expected<std::unique_ptr<Session>>
 makeSession(const Options &Opts) noexcept {
   // ExecutorProcessInfo describes the executing process: target triple, page
@@ -163,16 +143,12 @@ makeSession(const Options &Opts) noexcept {
   // The BootstrapInfo struct defines the data sent over to the controller when
   // it connects: the executor process info, bootstrap symbols (entry points the
   // controller can call), and the bootstrap value map. CreateDefault adds the
-  // Session's own symbol, the SPS controller-interface functions, and the
-  // CPU-features value.
+  // Session's own symbol, the SPS controller-interface functions (for calling
+  // functions, reading/writing memory, registering metadata, creating JIT
+  // memory managers and dylib managers, etc.), and the CPU-features value.
   auto BI = BootstrapInfo::CreateDefault(*S);
   if (!BI)
     return BI.takeError();
-
-  // Services add their entry points to the bootstrap symbols, so they must be
-  // created before connecting.
-  if (auto Err = addHostServices(*S, *BI))
-    return Err;
 
   // Connectors establish the connection to the controller for a particular
   // transport. ogre is a testing tool, so it registers "tcp:listen" as well as

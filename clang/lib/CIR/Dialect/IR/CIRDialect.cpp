@@ -100,7 +100,6 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
 } // namespace
 
 void cir::CIRDialect::initialize() {
-  registerCIRDialectOperations(this);
   addInterfaces<CIROpAsmDialectInterface>();
   detail::addBytecodeInterface(this);
 }
@@ -976,10 +975,11 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
 
   if (isa<cir::ZeroAttr>(attrType)) {
     if (isa<cir::RecordType, cir::ArrayType, cir::MatrixType, cir::VectorType,
-            cir::ComplexType>(opType))
+            cir::ComplexType>(opType) ||
+        cir::isAnyOpaqueFloatingPointType(opType))
       return success();
-    return op->emitOpError(
-        "zero expects struct, array, vector, or complex type");
+    return op->emitOpError("zero expects struct, array, vector, complex, or "
+                           "opaque floating-point type");
   }
 
   if (mlir::isa<cir::UndefAttr>(attrType)) {
@@ -4573,12 +4573,13 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
-  // Do not fold when fenv is present.
-  // TODO(cir): This is overly conservative. We could fold comparisons as long
-  //            as we can prove that the operation wouldn't raise exceptions or
-  //            when the fenv attribute does not require strict exception
-  //            semantics.
-  if (getFenvAttr())
+  // Folding drops the exceptions the comparison would raise, such as invalid
+  // for a signaling NaN, or for any NaN in a signaling comparison, so a
+  // constrained comparison folds only when it can ignore exceptions. The
+  // rounding mode does not affect a comparison.
+  // TODO(cir): This is still conservative. We could also fold when we can
+  //            prove that the operation wouldn't raise exceptions.
+  if (cir::FenvAttr fenv = getFenvAttr(); fenv && !fenv.canIgnoreExceptions())
     return {};
 
   cir::FCmpOpKind kind = getKind();

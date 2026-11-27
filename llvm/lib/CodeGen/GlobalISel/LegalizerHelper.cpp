@@ -4246,7 +4246,8 @@ LegalizerHelper::bitcastExtractSubvector(MachineInstr &MI, unsigned TypeIdx,
     return UnableToLegalize;
 
   Idx /= AdjustAmt;
-  SrcTy = LLT::vector(SrcTyEC.divideCoefficientBy(AdjustAmt), AdjustAmt);
+  SrcTy = LLT::vector(SrcTyEC.divideCoefficientBy(AdjustAmt),
+                      CastTy.getElementType());
   auto CastVec = MIRBuilder.buildBitcast(SrcTy, Src);
   auto PromotedES = MIRBuilder.buildExtractSubvector(CastTy, CastVec, Idx);
   MIRBuilder.buildBitcast(Dst, PromotedES);
@@ -4314,8 +4315,10 @@ LegalizerHelper::bitcastInsertSubvector(MachineInstr &MI, unsigned TypeIdx,
     return UnableToLegalize;
 
   Idx /= AdjustAmt;
-  BigVecTy = LLT::vector(BigVecTyEC.divideCoefficientBy(AdjustAmt), AdjustAmt);
-  SubVecTy = LLT::vector(SubVecTyEC.divideCoefficientBy(AdjustAmt), AdjustAmt);
+  BigVecTy = LLT::vector(BigVecTyEC.divideCoefficientBy(AdjustAmt),
+                         CastTy.getElementType());
+  SubVecTy = LLT::vector(SubVecTyEC.divideCoefficientBy(AdjustAmt),
+                         CastTy.getElementType());
   auto CastBigVec = MIRBuilder.buildBitcast(BigVecTy, BigVec);
   auto CastSubVec = MIRBuilder.buildBitcast(SubVecTy, SubVec);
   auto PromotedIS =

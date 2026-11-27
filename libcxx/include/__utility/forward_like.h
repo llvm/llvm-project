@@ -35,8 +35,7 @@ template <class _Ap, class _Bp>
 using _ForwardLike _LIBCPP_NODEBUG = _OverrideRef<_Ap&&, _CopyConst<remove_reference_t<_Ap>, remove_reference_t<_Bp>>>;
 
 template <class _Tp, class _Up>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto
-forward_like(_LIBCPP_LIFETIMEBOUND _Up&& __ux) noexcept -> _ForwardLike<_Tp, _Up> {
+[[nodiscard]] constexpr auto forward_like(_LIBCPP_LIFETIMEBOUND _Up&& __ux) noexcept -> _ForwardLike<_Tp, _Up> {
   return static_cast<_ForwardLike<_Tp, _Up>>(__ux);
 }
 
@@ -50,8 +49,7 @@ forward_like(_LIBCPP_LIFETIMEBOUND _Up&& __ux) noexcept -> _ForwardLike<_Tp, _Up
 //     }
 //   };
 template <class _Tp, class _As, class _Up>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _ForwardLike<_Tp, _As>
-__forward_as(_LIBCPP_LIFETIMEBOUND _Up&& __val) noexcept {
+[[nodiscard]] constexpr _ForwardLike<_Tp, _As> __forward_as(_LIBCPP_LIFETIMEBOUND _Up&& __val) noexcept {
   static_assert(is_base_of_v<_As, remove_reference_t<_Up>>);
   return static_cast<_ForwardLike<_Tp, _As>>(__val);
 }

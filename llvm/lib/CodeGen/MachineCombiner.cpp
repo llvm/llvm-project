@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/MachineCombiner.h"
 #include "CodeGenOptions.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
@@ -477,6 +478,28 @@ insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
   // Otherwise the constant pool entry created for InsInstrs will not be deleted
   // even if InsInstrs is not the better pattern.
   TII->finalizeInsInstrs(MI, Pattern, InsInstrs);
+
+  if (Pattern == MachineCombinerPattern::FMA_CHAIN) {
+    // Moved links are emitted at MI, so physical registers they read stay live
+    // past the instructions they move over.
+    assert(!DelInstrs.empty() && DelInstrs.back() == &MI &&
+           "expected moved chain ending at root");
+    const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
+    SmallSet<Register, 2> PhysUses;
+    auto NextDel = DelInstrs.begin();
+    for (MachineInstr &I :
+         llvm::make_range((*NextDel)->getIterator(), MI.getIterator())) {
+      if (NextDel != DelInstrs.end() && &I == *NextDel) {
+        ++NextDel;
+        for (const MachineOperand &MO : I.all_uses())
+          if (MO.getReg().isPhysical() && !MO.isUndef())
+            PhysUses.insert(MO.getReg());
+        continue;
+      }
+      for (Register Reg : PhysUses)
+        I.clearRegisterKills(Reg, TRI);
+    }
+  }
 
   for (auto *InstrPtr : InsInstrs)
     MBB->insert((MachineBasicBlock::iterator)&MI, InstrPtr);

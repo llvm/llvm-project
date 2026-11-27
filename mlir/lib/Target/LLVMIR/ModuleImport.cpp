@@ -2712,7 +2712,9 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
                    AsmDialectAttr::get(
                        mlirModule.getContext(),
                        convertAsmDialectFromLLVM(asmI->getDialect())),
-                   operandAttrs)
+                   operandAttrs,
+                   callInst->getAttributes().hasFnAttr(
+                       llvm::Attribute::StrictFP))
             .getOperation();
       }
       bool isIncompatibleCall;
@@ -3100,6 +3102,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("optsize"),
     StringLiteral("returns_twice"),
     StringLiteral("save-reg-params"),
+    StringLiteral("strictfp"),
     StringLiteral("target-features"),
     StringLiteral("trap-func-name"),
     StringLiteral("sample-profile-suffix-elision-policy"),
@@ -3197,6 +3200,8 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setNoUnwind(true);
   if (func->hasFnAttribute(llvm::Attribute::WillReturn))
     funcOp.setWillReturn(true);
+  if (func->hasFnAttribute(llvm::Attribute::StrictFP))
+    funcOp.setStrictfp(true);
   if (func->hasFnAttribute(llvm::Attribute::NoReturn))
     funcOp.setNoreturn(true);
   if (func->hasFnAttribute(llvm::Attribute::OptimizeForSize))
@@ -3430,6 +3435,7 @@ void ModuleImport::convertArgAndResultAttrs(
 template <typename Op>
 static LogicalResult convertCallBaseAttributes(llvm::CallBase *inst, Op op) {
   op.setCConv(convertCConvFromLLVM(inst->getCallingConv()));
+  op.setStrictfp(inst->getAttributes().hasFnAttr(llvm::Attribute::StrictFP));
   return success();
 }
 

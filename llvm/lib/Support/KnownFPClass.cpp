@@ -1200,8 +1200,44 @@ KnownFPClass KnownFPClass::sin(const KnownFPClass &KnownSrc) {
   return Known;
 }
 
+KnownFPClass KnownFPClass::sinpi(const KnownFPClass &KnownSrc,
+                                 bool IsMultiUnitFPType) {
+  KnownFPClass Known;
+
+  Known.propagateNonSNaN(KnownSrc);
+
+  // Return NaN on infinite inputs.
+  Known.knownNot(fcInf);
+  if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity())
+    Known.knownNot(fcNan);
+
+  // sinpi is only subnormal if x is subnormal, except for PPCDoubleDouble.
+  if (KnownSrc.isKnownNeverSubnormal() && !IsMultiUnitFPType)
+    Known.knownNot(fcSubnormal);
+
+  return Known;
+}
+
 KnownFPClass KnownFPClass::cos(const KnownFPClass &KnownSrc) {
   return sin(KnownSrc);
+}
+
+KnownFPClass KnownFPClass::cospi(const KnownFPClass &KnownSrc,
+                                 bool IsMultiUnitFPType) {
+  KnownFPClass Known;
+
+  Known.propagateNonSNaN(KnownSrc);
+
+  // Return NaN on infinite inputs.
+  Known.knownNot(fcInf);
+  if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity())
+    Known.knownNot(fcNan);
+
+  // cospi is never subnormal, except for PPCDoubleDouble.
+  if (!IsMultiUnitFPType)
+    Known.knownNot(fcSubnormal);
+
+  return Known;
 }
 
 KnownFPClass KnownFPClass::tan(const KnownFPClass &KnownSrc) {

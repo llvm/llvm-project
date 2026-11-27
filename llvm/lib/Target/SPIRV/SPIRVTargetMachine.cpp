@@ -60,6 +60,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVPreLegalizerCombinerLegacyPass(PR);
   initializeSPIRVLegalizePointerCastLegacyPass(PR);
   initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PR);
+  initializeSPIRVLowerDynamicLocalMemoryLegacyPass(PR);
   initializeSPIRVRegularizerLegacyPass(PR);
   initializeSPIRVPreLegalizerLegacyPass(PR);
   initializeSPIRVPostLegalizerLegacyPass(PR);
@@ -259,6 +260,11 @@ void SPIRVPassConfig::addIRPasses() {
 
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVCtorDtorLoweringLegacyPass());
+  // LowerDynamicLocalMemoryPass must run after ctor/dtor lowering:
+  // the kernels CtorDtorLowering creates also need the trailing dynamic local
+  // memory argument, since runtimes pass it to every kernel of a module using
+  // such memory.
+  addPass(createSPIRVLowerDynamicLocalMemoryPass(TM));
   addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVPrepareGlobalsPass());
 }

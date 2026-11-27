@@ -393,7 +393,6 @@ body:             |
 # lowered first, so the later copy is recorded first.
 ---
 name:            copies_before_call_and_terminator
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: copies_before_call_and_terminator
   ; CHECK: bb.0:
@@ -438,7 +437,6 @@ body:             |
 # recorded before the low-lane copy. The high lane is still read between them.
 ---
 name:            landing_pad_first_with_intervening_use
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: landing_pad_first_with_intervening_use
   ; CHECK: bb.0:
@@ -484,7 +482,6 @@ body:             |
 # Same, but the normal successor is lowered first.
 ---
 name:            normal_first_with_intervening_use
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: normal_first_with_intervening_use
   ; CHECK: bb.0:

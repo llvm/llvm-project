@@ -1323,6 +1323,11 @@ public:
     return isAArch64() || (isAndroid() && isRISCV64()) || isOSFuchsia();
   }
 
+  /// Tests whether the target's math library may set errno. Targets where
+  /// math_errhandling never includes MATH_ERRNO, or which have no errno, return
+  /// false.
+  LLVM_ABI bool supportsMathErrno() const;
+
   /// Tests whether the target uses -data-sections as default.
   bool hasDefaultDataSections() const {
     return isOSBinFormatXCOFF() || isWasm();

@@ -213,6 +213,33 @@ def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
 }
 
 //===----------------------------------------------------------------------===//
+// OpaqueFloatType
+//===----------------------------------------------------------------------===//
+
+// A floating-point type with a fixed width and no fixed format. The format of
+// a value is determined at run time, so these types have no float semantics
+// and do not implement CIR_FPTypeInterface.
+class CIR_OpaqueFloatType<string name, string mnemonic, int width>
+    : CIR_Type<name, mnemonic, [
+  DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+  DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+]> {
+  let extraClassDeclaration = [{
+    /// Returns the bit width of this type.
+    unsigned getWidth() const { return }] # !cast<string>(width) # [{; }
+  }];
+}
+
+def CIR_MFloat8 : CIR_OpaqueFloatType<"MFloat8", "mfp8", 8> {
+  let summary = "CIR AArch64 modal 8-bit float type";
+  let description = [{
+    An 8-bit floating-point type whose format is selected at run time by the
+    AArch64 FPMR register, and is either E5M2 or E4M3. It represents the type
+    `__mfp8` (`mfloat8_t`) in C and C++.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ComplexType
 //===----------------------------------------------------------------------===//
 
@@ -523,7 +550,7 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     ```
     vector-type ::= !cir.vector<size x element-type (`,` kind)?>
     size ::= (decimal-literal | `[` decimal-literal `]`)
-    element-type ::= float-type | integer-type | bool-type
+    element-type ::= float-type | opaque-float-type | integer-type | bool-type
     kind ::= `sve_data` | `sve_predicate`
     ```
 
@@ -554,7 +581,8 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     length by `arm_sve_vector_bits`:
 
     - An `sve_data` vector has 8-, 16-, 32-, or 64-bit integer elements or
-      `!cir.f16`, `!cir.bf16`, `!cir.float`, or `!cir.double` elements.
+      `!cir.mfp8`, `!cir.f16`, `!cir.bf16`, `!cir.float`, or `!cir.double`
+      elements.
     - A scalable `sve_predicate` vector has `!cir.int<u, 1>` elements. A
       fixed-length `sve_predicate` vector holds the predicate one bit per lane
       in `!cir.int<u, 8>` elements.
@@ -642,6 +670,23 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
   let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SveCountType
+//===----------------------------------------------------------------------===//
+
+def CIR_SveCountType : CIR_Type<"SveCount", "sve_count", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+]> {
+  let summary = "AArch64 SVE predicate-as-counter type";
+  let description = [{
+    `!cir.sve_count` represents the AArch64 `__SVCount_t` (`svcount_t`) type.
+    Such a value contains information about the number of active lanes, the
+    element width and a bit that indicates whether the generated mask should be
+    inverted. It lowers to the LLVM type `target("aarch64.svcount")`.
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1347,10 +1392,10 @@ def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
-  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_MatrixType,
-  CIR_IntType, CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
-  CIR_UnionType, CIR_BitFieldType,
-  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceSurfaceType,
+  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_SveCountType,
+  CIR_MatrixType, CIR_IntType, CIR_AnyFloatType, CIR_AnyOpaqueFloatType,
+  CIR_PointerType, CIR_FuncType, CIR_StructType, CIR_UnionType,
+  CIR_BitFieldType, CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceSurfaceType,
   CIR_CUDADeviceTextureType,
   CIR_DataMemberType, CIR_MethodType,
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType

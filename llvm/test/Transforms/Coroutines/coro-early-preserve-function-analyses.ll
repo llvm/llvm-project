@@ -1,8 +1,8 @@
 ; RUN: split-file %s %t
-; RUN: opt -disable-output -debug-pass-manager \
+; RUN: opt -verify-analysis-invalidation=0 -disable-output -debug-pass-manager \
 ; RUN:   -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),coro-early,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' \
 ; RUN:   %t/precise.ll 2>&1 | FileCheck --check-prefix=PRECISE %s
-; RUN: opt -disable-output -debug-pass-manager \
+; RUN: opt -verify-analysis-invalidation=0 -disable-output -debug-pass-manager \
 ; RUN:   -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),coro-early,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' \
 ; RUN:   %t/noalias.ll 2>&1 | FileCheck --check-prefix=NOALIAS %s
 

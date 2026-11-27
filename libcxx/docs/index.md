@@ -39,6 +39,7 @@ TestingLibcxx
 ImplementationDefinedBehavior
 Modules
 Hardening
+PSTL
 Status/Cxx17
 Status/Cxx20
 Status/Cxx23
@@ -205,7 +206,6 @@ DesignDocs/FeatureTestMacros
 DesignDocs/FileTimeType
 DesignDocs/HeaderRemovalPolicy
 DesignDocs/NoexceptPolicy
-DesignDocs/PSTLIntegration
 DesignDocs/ThreadingSupportAPI
 DesignDocs/UniquePtrTrivialAbi
 DesignDocs/UnspecifiedBehaviorRandomization

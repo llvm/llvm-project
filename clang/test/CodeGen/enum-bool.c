@@ -90,3 +90,8 @@ void o(_Atomic(enum E) *p) { ++*p; }
 // CHECK-LABEL: define{{.*}} void @o(
 // CHECK-NOT: atomicrmw add
 // CHECK: store atomic i8 1, ptr %{{.*}} seq_cst
+
+enum E r(_Accum x) { return (enum E)x; }
+// CHECK-LABEL: define{{.*}} zeroext i1 @r(
+// CHECK: %tobool = icmp ne i32 %{{.*}}, 0
+// CHECK: ret i1 %tobool

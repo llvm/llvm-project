@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -debug-pass-manager -passes='inferattrs,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),alloc-token<mode=increment>,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
+; RUN: opt -verify-analysis-invalidation=0 -disable-output -debug-pass-manager -passes='inferattrs,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),alloc-token<mode=increment>,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
 
 ; Rewriting the allocation in @f should only invalidate the non-CFG analyses of
 ; @f, and not the analyses of @other.

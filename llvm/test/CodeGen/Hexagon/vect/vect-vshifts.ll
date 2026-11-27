@@ -9,28 +9,28 @@ define void @foo(ptr nocapture %buf, ptr nocapture %dest, i32 %offset, i32 %oddB
 ; CHECK-LABEL: foo:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     r29 = add(r29,#-24)
 ; CHECK-NEXT:     r2 = sub(r2,r3)
-; CHECK-NEXT:     r3 = sub(#31,r4)
 ; CHECK-NEXT:     p0 = cmp.eq(r3,#0)
 ; CHECK-NEXT:     r5 = memw(r0+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r5 = asr(r5,r4)
-; CHECK-NEXT:     r29 = add(r29,#-24)
-; CHECK-NEXT:     r9:8 = combine(#-1,#-1)
-; CHECK-NEXT:     memw(r0+#0) = r5.new
-; CHECK-NEXT:    }
+; CHECK-NEXT:     r3 = sub(#31,r4)
+; CHECK-NEXT:     memd(r29+#16) = r17:16
+; CHECK-NEXT:     memd(r29+#8) = r19:18
+; CHECK-NEXT:    } // 8-byte Folded Spill
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r5 = and(r2,#7)
 ; CHECK-NEXT:     r2 = r3
-; CHECK-NEXT:     memd(r29+#8) = r19:18
-; CHECK-NEXT:     memd(r29+#16) = r17:16
+; CHECK-NEXT:     memd(r29+#0) = r21:20
+; CHECK-NEXT:     memw(r0+#0) = r5
 ; CHECK-NEXT:    } // 8-byte Folded Spill
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r7:6 = vaslw(r3:2,#1)
 ; CHECK-NEXT:     if (p0) r5 = add(r5,#1)
-; CHECK-NEXT:     memd(r29+#0) = r21:20
-; CHECK-NEXT:    } // 8-byte Folded Spill
+; CHECK-NEXT:     r9:8 = combine(#-1,#-1)
+; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = addasl(r1,r5,#2)
 ; CHECK-NEXT:     r7:6 = vaddw(r7:6,r9:8)

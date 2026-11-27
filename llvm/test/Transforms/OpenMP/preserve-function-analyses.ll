@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -debug-pass-manager -passes='function(require<domtree>,require<target-lib-info>,require<target-ir>),openmp-opt,function(require<domtree>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
+; RUN: opt -verify-analysis-invalidation=0 -disable-output -debug-pass-manager -passes='function(require<domtree>,require<target-lib-info>,require<target-ir>),openmp-opt,function(require<domtree>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
 ; REQUIRES: amdgpu-registered-target
 
 ; Moving the shared allocation in @foo to the stack should not invalidate

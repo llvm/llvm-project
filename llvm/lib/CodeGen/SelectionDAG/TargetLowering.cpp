@@ -3356,8 +3356,13 @@ bool TargetLowering::SimplifyDemandedBits(
   }
   case ISD::FABS: {
     SDValue Op0 = Op.getOperand(0);
-    APInt SignMask = APInt::getSignMask(BitWidth);
+    EVT SVT = Op0.getValueType();
 
+    // The position of the sign bit for ppc_fp128 is endian-dependent.
+    if (!APFloat::hasSignBitInMSB(SVT.getFltSemantics()) || SVT == MVT::ppcf128)
+      break;
+
+    APInt SignMask = APInt::getSignMask(BitWidth);
     if (!DemandedBits.intersects(SignMask))
       return TLO.CombineTo(Op, Op0);
 
@@ -3409,6 +3414,13 @@ bool TargetLowering::SimplifyDemandedBits(
   }
   case ISD::FNEG: {
     SDValue Op0 = Op.getOperand(0);
+    EVT SVT = Op0.getValueType();
+
+    // The logic below assumes the sign bit is in the MSB.
+    // ppc_fp128 has two sign bits (at bits 127 and 63).
+    if (!APFloat::hasSignBitInMSB(SVT.getFltSemantics()) || SVT == MVT::ppcf128)
+      break;
+
     APInt SignMask = APInt::getSignMask(BitWidth);
 
     if (!DemandedBits.intersects(SignMask))
@@ -4059,6 +4071,38 @@ bool TargetLowering::SimplifyDemandedVectorElts(
           KnownZero.setBit(i);
       }
     }
+    break;
+  }
+  case ISD::VECTOR_SHUFFLE_VAR: {
+    SDValue Src = Op.getOperand(0);
+    SDValue Mask = Op.getOperand(1);
+
+    // Result element i only depends on mask element i, so the elements required
+    // from the mask are the same as the demanded result elements.
+    APInt DemandedMask = DemandedElts;
+    APInt UndefMask, ZeroMask;
+    if (!DemandedMask.isAllOnes() &&
+        SimplifyDemandedVectorElts(Mask, DemandedMask, UndefMask, ZeroMask, TLO,
+                                   Depth + 1))
+      return true;
+
+    // Only those source elements are required which are indexed by the demanded
+    // elements of the mask. So source elements that are not in the range
+    // specified by the following are not required.
+    ConstantRange KnownRange = TLO.DAG.computeConstantRangeIncludingKnownBits(
+        Mask, DemandedMask, /*ForSigned=*/false, Depth + 1);
+    // Indexes >= NumElts produce poison, so they don't require any source
+    // elements.
+    unsigned Lo = KnownRange.getUnsignedMin().getLimitedValue(NumElts);
+    unsigned Hi = KnownRange.getUnsignedMax().getLimitedValue(NumElts - 1) + 1;
+
+    APInt DemandedSrc = APInt::getBitsSet(NumElts, Lo, Hi);
+    APInt UndefSrc, ZeroSrc;
+    if (!DemandedSrc.isAllOnes() &&
+        SimplifyDemandedVectorElts(Src, DemandedSrc, UndefSrc, ZeroSrc, TLO,
+                                   Depth + 1))
+      return true;
+
     break;
   }
   case ISD::ANY_EXTEND_VECTOR_INREG:
@@ -14002,6 +14046,20 @@ void TargetLowering::expandVectorInterleave(SDNode *Node,
   unsigned Factor = Node->getNumOperands();
   SDLoc DL(Node);
 
+  // Convert interleave of two lane operands to paired shuffles
+  if (VT.isFixedLengthVector() && VT.getVectorNumElements() == 2) {
+    for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx) {
+      unsigned FirstEltIdx = 2 * ResultIdx;
+      int FirstMaskIdx = FirstEltIdx / Factor;
+      int SecondMaskIdx = (FirstEltIdx + 1) / Factor + 2;
+      Results.push_back(
+          DAG.getVectorShuffle(VT, DL, Node->getOperand(FirstEltIdx % Factor),
+                               Node->getOperand((FirstEltIdx + 1) % Factor),
+                               {FirstMaskIdx, SecondMaskIdx}));
+    }
+    return;
+  }
+
   if (Factor > 2 && Factor % 2 == 0) {
     SmallVector<EVT> HalfVTs(Factor / 2, VT);
     SmallVector<SDValue, 8> LOps, ROps;
@@ -14060,6 +14118,19 @@ void TargetLowering::expandVectorDeinterleave(SDNode *Node,
   EVT VT = Node->getValueType(0);
   unsigned Factor = Node->getNumOperands();
   SDLoc DL(Node);
+
+  // Convert deinterleave of two lane operands to paired shuffles
+  if (VT.isFixedLengthVector() && VT.getVectorNumElements() == 2) {
+    for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx) {
+      int FirstMaskIdx = ResultIdx % 2;
+      int SecondMaskIdx = (ResultIdx + Factor) % 2 + 2;
+      Results.push_back(
+          DAG.getVectorShuffle(VT, DL, Node->getOperand(ResultIdx / 2),
+                               Node->getOperand((ResultIdx + Factor) / 2),
+                               {FirstMaskIdx, SecondMaskIdx}));
+    }
+    return;
+  }
 
   if (Factor > 2 && Factor % 2 == 0) {
     SmallVector<SDValue, 8> Ops(Node->ops());

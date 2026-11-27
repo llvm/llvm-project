@@ -204,6 +204,8 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
       fn, moduleTranslation.lookupValues(op.getArgs()),
       convertOperandBundles(op.getOpBundleOperands(), op.getOpBundleTags(),
                             moduleTranslation));
+  if (op.getStrictfp())
+    inst->addFnAttr(llvm::Attribute::StrictFP);
 
   if (failed(moduleTranslation.convertArgAndResultAttrs(op, inst)))
     return failure();
@@ -543,6 +545,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::Builtin);
     if (callOp.getNobuiltinAttr())
       call->addFnAttr(llvm::Attribute::NoBuiltin);
+    if (callOp.getStrictfp())
+      call->addFnAttr(llvm::Attribute::StrictFP);
     if (callOp.getReturnsTwiceAttr())
       call->addFnAttr(llvm::Attribute::ReturnsTwice);
     if (callOp.getColdAttr())
@@ -668,6 +672,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         inlineAsmOp.getTailCallKindAttr().getTailCallKind()));
     if (inlineAsmOp.getConvergent())
       inst->addFnAttr(llvm::Attribute::Convergent);
+    if (inlineAsmOp.getStrictfp())
+      inst->addFnAttr(llvm::Attribute::StrictFP);
     if (auto maybeOperandAttrs = inlineAsmOp.getOperandAttrs()) {
       llvm::AttributeList attrList = inst->getAttributes();
       for (const auto &it : llvm::enumerate(*maybeOperandAttrs)) {
@@ -732,6 +738,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     if (invOp.getUniformWorkGroupSizeAttr())
       result->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
                                              "uniform-work-group-size"));
+    if (invOp.getStrictfp())
+      result->addFnAttr(llvm::Attribute::StrictFP);
     moduleTranslation.convertFunctionAttrCollection(
         invOp.getDefaultFuncAttrsAttr(), result,
         ModuleTranslation::convertDefaultFuncAttr);

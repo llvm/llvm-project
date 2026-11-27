@@ -48,27 +48,26 @@ class ref_view : public view_interface<ref_view<_Range>> {
 public:
   template <class _Tp>
     requires __different_from<_Tp, ref_view> && convertible_to<_Tp, _Range&> && requires { __fun(std::declval<_Tp>()); }
-  _LIBCPP_HIDE_FROM_ABI constexpr ref_view(_Tp&& __t)
-      : __range_(std::addressof(static_cast<_Range&>(std::forward<_Tp>(__t)))) {}
+  constexpr ref_view(_Tp&& __t) : __range_(std::addressof(static_cast<_Range&>(std::forward<_Tp>(__t)))) {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Range& base() const { return *__range_; }
+  [[nodiscard]] constexpr _Range& base() const { return *__range_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Range> begin() const { return ranges::begin(*__range_); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr sentinel_t<_Range> end() const { return ranges::end(*__range_); }
+  [[nodiscard]] constexpr iterator_t<_Range> begin() const { return ranges::begin(*__range_); }
+  [[nodiscard]] constexpr sentinel_t<_Range> end() const { return ranges::end(*__range_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const
+  [[nodiscard]] constexpr bool empty() const
     requires requires { ranges::empty(*__range_); }
   {
     return ranges::empty(*__range_);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] constexpr auto size() const
     requires sized_range<_Range>
   {
     return ranges::size(*__range_);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto data() const
+  [[nodiscard]] constexpr auto data() const
     requires contiguous_range<_Range>
   {
     return ranges::data(*__range_);

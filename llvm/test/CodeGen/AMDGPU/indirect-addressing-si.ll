@@ -6137,10 +6137,10 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; VI-NEXT:    flat_load_dword v14, v[1:2] glc
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v2, s18
-; VI-NEXT:    v_mov_b32_e32 v3, s19
 ; VI-NEXT:    ;;#ASMSTART
 ; VI-NEXT:    v_mov_b32_e32 v1, 62
 ; VI-NEXT:    ;;#ASMEND
+; VI-NEXT:    v_mov_b32_e32 v3, s19
 ; VI-NEXT:    v_mov_b32_e32 v4, s12
 ; VI-NEXT:    v_mov_b32_e32 v5, s13
 ; VI-NEXT:    v_mov_b32_e32 v6, s14
