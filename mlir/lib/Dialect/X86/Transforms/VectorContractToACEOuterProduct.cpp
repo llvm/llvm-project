@@ -841,7 +841,7 @@ static int caseValue(vector::ContractionOp contractOp) {
   if (isLhsTransposed && isRhsTransposed)
     return 6;
 
-  return 6;
+  return 0;
 }
 
 // Implements the ACE tiled outer-product for a sequence of register-blocked
