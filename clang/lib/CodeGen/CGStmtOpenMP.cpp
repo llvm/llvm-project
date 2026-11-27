@@ -4016,13 +4016,16 @@ struct ScheduleKindModifiersTy {
 };
 } // namespace
 
-/// Return the for-init of a lastprivate loop counter. Empty loops still run
-/// that init in sequential code. Skip collapse nests and
-/// distribute: their empty lastprivate values are not a single init store.
+/// If the loop counter is lastprivate, return its init (e.g. 'i = 0').
+/// A loop with no iterations still runs this init, but it skips the lastprivate
+/// copy-back. So the no-iteration path must store the init itself.
+/// Not handled yet: collapse nests and distribute.
 static const Expr *getEmptyLoopLastprivateInit(const OMPLoopDirective &S) {
   if (S.counters().size() != 1 ||
       isOpenMPDistributeDirective(S.getDirectiveKind()))
     return nullptr;
+  // There is one init per counter, so this is the init of the only counter.
+  assert(S.inits().size() == 1 && "Expected one init per loop counter");
   const Decl *CounterVD =
       cast<DeclRefExpr>(S.counters().front())->getDecl()->getCanonicalDecl();
   for (const auto *C : S.getClausesOfKind<OMPLastprivateClause>()) {
@@ -4066,6 +4069,7 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
     const Expr *EmptyLoopInit = getEmptyLoopLastprivateInit(S);
     if (ConstantFoldsToSimpleInteger(S.getPreCond(), CondConstant)) {
       if (!CondConstant) {
+        // No iterations: store the lastprivate counter init.
         if (EmptyLoopInit)
           EmitIgnoredExpr(EmptyLoopInit);
         return false;
@@ -4073,12 +4077,14 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
     } else {
       llvm::BasicBlock *ThenBlock = createBasicBlock("omp.precond.then");
       ContBlock = createBasicBlock("omp.precond.end");
-      llvm::BasicBlock *EmptyBlock =
+      // No iterations: branch to the end. If the counter init must be stored,
+      // branch to a block that stores it first.
+      llvm::BasicBlock *FalseBlock =
           EmptyLoopInit ? createBasicBlock("omp.precond.empty") : ContBlock;
-      emitPreCond(*this, S, S.getPreCond(), ThenBlock, EmptyBlock,
+      emitPreCond(*this, S, S.getPreCond(), ThenBlock, FalseBlock,
                   getProfileCount(&S));
       if (EmptyLoopInit) {
-        EmitBlock(EmptyBlock);
+        EmitBlock(FalseBlock);
         EmitIgnoredExpr(EmptyLoopInit);
         EmitBranch(ContBlock);
       }
@@ -5269,7 +5275,8 @@ void CodeGenFunction::EmitOMPParallelForDirective(
       OMPLoopScope LoopScope(CGF, S);
       return CGF.EmitScalarExpr(S.getNumIterations());
     };
-    bool IsInscan = llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
+    bool IsInscan =
+        llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
                      [](const OMPReductionClause *C) {
                        return C->getModifier() == OMPC_REDUCTION_inscan;
                      });
@@ -5303,7 +5310,8 @@ void CodeGenFunction::EmitOMPParallelForSimdDirective(
       OMPLoopScope LoopScope(CGF, S);
       return CGF.EmitScalarExpr(S.getNumIterations());
     };
-    bool IsInscan = llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
+    bool IsInscan =
+        llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
                      [](const OMPReductionClause *C) {
                        return C->getModifier() == OMPC_REDUCTION_inscan;
                      });
@@ -8268,8 +8276,8 @@ void CodeGenFunction::EmitOMPUseDeviceAddrClause(
     // correct mapping, since the pointer to the data was passed to the runtime.
     if (isa<DeclRefExpr>(Ref->IgnoreParenImpCasts()) ||
         MatchingVD->getType()->isArrayType()) {
-      QualType PtrTy = getContext().getPointerType(
-          OrigVD->getType().getNonReferenceType());
+      QualType PtrTy =
+          getContext().getPointerType(OrigVD->getType().getNonReferenceType());
       PrivAddr =
           EmitLoadOfPointer(PrivAddr.withElementType(ConvertTypeForMem(PtrTy)),
                             PtrTy->castAs<PointerType>());
