@@ -76,4 +76,42 @@ define float @test_fsqrt_nnan_ninf(float %a) {
   ret float %result
 }
 
+; Constrained operations always use the libcalls.
+define float @test_strict_fadd(float %a, float %b) #0 {
+; CHECK-LABEL: test_strict_fadd:
+; CHECK: jal __addsf3
+  %result = call float @llvm.experimental.constrained.fadd.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
+define float @test_strict_fsub(float %a, float %b) #0 {
+; CHECK-LABEL: test_strict_fsub:
+; CHECK: jal __subsf3
+  %result = call float @llvm.experimental.constrained.fsub.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
+define float @test_strict_fmul(float %a, float %b) #0 {
+; CHECK-LABEL: test_strict_fmul:
+; CHECK: jal __mulsf3
+  %result = call float @llvm.experimental.constrained.fmul.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
+define float @test_strict_fdiv(float %a, float %b) #0 {
+; CHECK-LABEL: test_strict_fdiv:
+; CHECK: jal __divsf3
+  %result = call float @llvm.experimental.constrained.fdiv.f32(float %a, float %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
+define float @test_strict_fsqrt(float %a) #0 {
+; CHECK-LABEL: test_strict_fsqrt:
+; CHECK: jal sqrtf
+  %result = call float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
 declare float @llvm.sqrt.f32(float)
+
+attributes #0 = { strictfp }

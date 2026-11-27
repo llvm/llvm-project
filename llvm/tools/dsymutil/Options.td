@@ -172,6 +172,7 @@ def threads: Separate<["--", "-"], "num-threads">,
   HelpText<"Specifies the maximum number of simultaneous threads to use when linking multiple architectures.">,
   Group<grp_general>;
 def: Separate<["-"], "j">,
+  Alias<threads>,
   MetaVarName<"<threads>">,
   HelpText<"Alias for --num-threads">,
   Group<grp_general>;

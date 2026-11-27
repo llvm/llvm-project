@@ -345,16 +345,16 @@ define void @interleave_wide_ptr_factor2(ptr %ptr, <8 x ptr> %l, <8 x ptr> %r) {
 ; NEON-LABEL: interleave_wide_ptr_factor2:
 ; NEON:       // %bb.0:
 ; NEON-NEXT:    // kill: def $q7 killed $q7 killed $q6_q7 def $q6_q7
+; NEON-NEXT:    // kill: def $q4 killed $q4 killed $q3_q4 def $q3_q4
 ; NEON-NEXT:    mov v17.16b, v6.16b
-; NEON-NEXT:    // kill: def $q5 killed $q5 killed $q4_q5 def $q4_q5
-; NEON-NEXT:    mov v19.16b, v4.16b
 ; NEON-NEXT:    add x8, x0, #64
 ; NEON-NEXT:    mov v6.16b, v3.16b
+; NEON-NEXT:    mov v3.16b, v0.16b
 ; NEON-NEXT:    mov v16.16b, v2.16b
+; NEON-NEXT:    st2 { v3.2d, v4.2d }, [x0], #32
+; NEON-NEXT:    // kill: def $q5 killed $q5 def $q4_q5
 ; NEON-NEXT:    mov v4.16b, v1.16b
-; NEON-NEXT:    mov v18.16b, v0.16b
 ; NEON-NEXT:    st2 { v16.2d, v17.2d }, [x8], #32
-; NEON-NEXT:    st2 { v18.2d, v19.2d }, [x0], #32
 ; NEON-NEXT:    st2 { v6.2d, v7.2d }, [x8]
 ; NEON-NEXT:    st2 { v4.2d, v5.2d }, [x0]
 ; NEON-NEXT:    ret
@@ -363,20 +363,20 @@ define void @interleave_wide_ptr_factor2(ptr %ptr, <8 x ptr> %l, <8 x ptr> %r) {
 ; SVE-FIXED:       // %bb.0:
 ; SVE-FIXED-NEXT:    // kill: def $q7 killed $q7 killed $z6_z7 def $z6_z7
 ; SVE-FIXED-NEXT:    mov z17.d, z6.d
-; SVE-FIXED-NEXT:    // kill: def $q5 killed $q5 killed $z4_z5 def $z4_z5
-; SVE-FIXED-NEXT:    mov z19.d, z4.d
+; SVE-FIXED-NEXT:    mov z19.d, z5.d
 ; SVE-FIXED-NEXT:    mov x8, #12 // =0xc
 ; SVE-FIXED-NEXT:    mov z6.d, z3.d
 ; SVE-FIXED-NEXT:    mov z16.d, z2.d
+; SVE-FIXED-NEXT:    // kill: def $q4 killed $q4 def $z3_z4
 ; SVE-FIXED-NEXT:    ptrue p0.d, vl2
-; SVE-FIXED-NEXT:    mov z4.d, z1.d
-; SVE-FIXED-NEXT:    mov z18.d, z0.d
+; SVE-FIXED-NEXT:    mov z18.d, z1.d
+; SVE-FIXED-NEXT:    mov z3.d, z0.d
 ; SVE-FIXED-NEXT:    st2d { z6.d, z7.d }, p0, [x0, x8, lsl #3]
 ; SVE-FIXED-NEXT:    mov x8, #8 // =0x8
 ; SVE-FIXED-NEXT:    st2d { z16.d, z17.d }, p0, [x0, x8, lsl #3]
 ; SVE-FIXED-NEXT:    mov x8, #4 // =0x4
-; SVE-FIXED-NEXT:    st2d { z4.d, z5.d }, p0, [x0, x8, lsl #3]
-; SVE-FIXED-NEXT:    st2d { z18.d, z19.d }, p0, [x0]
+; SVE-FIXED-NEXT:    st2d { z18.d, z19.d }, p0, [x0, x8, lsl #3]
+; SVE-FIXED-NEXT:    st2d { z3.d, z4.d }, p0, [x0]
 ; SVE-FIXED-NEXT:    ret
   %interleave = tail call <16 x ptr> @llvm.vector.interleave2.v16p0(<8 x ptr> %l, <8 x ptr> %r)
   store <16 x ptr> %interleave, ptr %ptr, align 4

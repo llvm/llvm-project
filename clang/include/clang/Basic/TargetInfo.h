@@ -1039,7 +1039,7 @@ public:
   /// Returns target-specific min and max values VScale_Range.
   virtual std::optional<std::pair<unsigned, unsigned>>
   getVScaleRange(const LangOptions &LangOpts, ArmStreamingKind Mode,
-                 llvm::StringMap<bool> *FeatureMap = nullptr) const {
+                 const llvm::StringMap<bool> *FeatureMap = nullptr) const {
     return std::nullopt;
   }
   /// The __builtin_clz* and __builtin_ctz* built-in

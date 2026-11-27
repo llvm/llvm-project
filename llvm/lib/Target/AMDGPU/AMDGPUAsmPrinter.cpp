@@ -475,6 +475,36 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
                               Ctx);
 }
 
+// Diagnoses an "amdgpu-waves-per-eu" request that the final occupancy does not
+// meet. Returns true if a diagnostic was emitted.
+static bool diagnoseUnmetWavesPerEU(const Function &F,
+                                    const SIMachineFunctionInfo &MFI,
+                                    uint64_t Occupancy) {
+  const auto [MinWEU, MaxWEU] =
+      AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", {0, 0}, true);
+  std::string Desired;
+  if (Occupancy < MinWEU) {
+    Desired = std::to_string(MinWEU);
+  } else if (MaxWEU != 0 && Occupancy > MaxWEU &&
+             MFI.getMaxWavesPerEU() > MaxWEU) {
+    // The requested maximum was not applied: a request whose minimum is below
+    // what the workgroup size requires is ignored in favor of the default
+    // range. An applied maximum always caps the effective maximum, so this
+    // does not fire when the occupancy merely exceeds a requested maximum that
+    // register usage cannot enforce.
+    Desired = "at most " + std::to_string(MaxWEU);
+  } else {
+    return false;
+  }
+  DiagnosticInfoOptimizationFailure Diag(
+      F, F.getSubprogram(),
+      "failed to meet occupancy target given by 'amdgpu-waves-per-eu' in '" +
+          F.getName() + "': desired occupancy was " + Desired +
+          ", final occupancy is " + Twine(Occupancy));
+  F.getContext().diagnose(Diag);
+  return true;
+}
+
 void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
   if (F.isDeclaration() || !AMDGPU::isModuleEntryFunctionCC(F.getCallingConv()))
     return;
@@ -579,20 +609,9 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
           MCConstantExpr::create(NumVGPRsForWavesPerEU, OutContext),
           MFI.getDynamicVGPRBlockSize(), STM, OutContext);
       uint64_t Occupancy;
-
-      const auto [MinWEU, MaxWEU] = AMDGPU::getIntegerPairAttribute(
-          F, "amdgpu-waves-per-eu", {0, 0}, true);
-
-      if (TryGetMCExprValue(OccupancyExpr, Occupancy) && Occupancy < MinWEU) {
-        DiagnosticInfoOptimizationFailure Diag(
-            F, F.getSubprogram(),
-            "failed to meet occupancy target given by 'amdgpu-waves-per-eu' in "
-            "'" +
-                F.getName() + "': desired occupancy was " + Twine(MinWEU) +
-                ", final occupancy is " + Twine(Occupancy));
-        F.getContext().diagnose(Diag);
+      if (TryGetMCExprValue(OccupancyExpr, Occupancy) &&
+          diagnoseUnmetWavesPerEU(F, MFI, Occupancy))
         return;
-      }
     }
   }
 }
@@ -1559,18 +1578,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       ProgInfo.NumSGPRsForWavesPerEU, ProgInfo.NumVGPRsForWavesPerEU,
       MFI->getDynamicVGPRBlockSize(), STM, Ctx);
 
-  const auto [MinWEU, MaxWEU] =
-      AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", {0, 0}, true);
   uint64_t Occupancy;
-  if (TryGetMCExprValue(ProgInfo.Occupancy, Occupancy) && Occupancy < MinWEU) {
-    DiagnosticInfoOptimizationFailure Diag(
-        F, F.getSubprogram(),
-        "failed to meet occupancy target given by 'amdgpu-waves-per-eu' in "
-        "'" +
-            F.getName() + "': desired occupancy was " + Twine(MinWEU) +
-            ", final occupancy is " + Twine(Occupancy));
-    F.getContext().diagnose(Diag);
-  }
+  if (TryGetMCExprValue(ProgInfo.Occupancy, Occupancy))
+    diagnoseUnmetWavesPerEU(F, *MFI, Occupancy);
 }
 
 static unsigned getRsrcReg(CallingConv::ID CallConv) {

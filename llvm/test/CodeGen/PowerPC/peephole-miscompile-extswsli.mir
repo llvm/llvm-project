@@ -4,7 +4,6 @@
 ---
 name:            poc
 alignment:       16
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: poc
   ; CHECK: bb.0.entry:

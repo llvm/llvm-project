@@ -6,7 +6,6 @@
 ---
 # the COPY can be coalesced based on subregister liveness
 name:            subrange_coalesce_liveout
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: subrange_coalesce_liveout
   ; GCN: bb.0:
@@ -51,7 +50,6 @@ body:             |
 ---
 # early-clobber stops the coalescer from coalescing the COPY
 name:            subrange_coalesce_early_clobber
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: subrange_coalesce_early_clobber
   ; GCN: bb.0:
@@ -97,7 +95,6 @@ body:             |
 ---
 # non-conflict lane(sub1) was redefined, coalescable
 name:            subrange_coalesce_unrelated_sub_redefined
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: subrange_coalesce_unrelated_sub_redefined
   ; GCN: bb.0:
@@ -145,7 +142,6 @@ body:             |
 # Another complex example showing the capability of resolving lane conflict
 # based on subranges.
 name:            subrange_coalesce_complex_pattern
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: subrange_coalesce_complex_pattern
   ; GCN: bb.0:

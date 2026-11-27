@@ -2494,6 +2494,8 @@ are detected:
   operation. Some functions (like `ferror`, `clearerr`, `fseek`) are
   allowed in this state.
 - Invalid 3rd ("`whence`") argument to `fseek`.
+- Alternating read and write at a stream (opened in read-write mode) without set of file position in between.
+  The functions `fread`, `fgetc`, `fscanf`, `getdelim`, `getline` and similar are considered as "read operations", `fwrite`, `fputc`, `fprintf` and similar as write operations. A read after a write is allowed only if one of `fsetpos`, `fseek`, `rewind` is called in between (additionally `fflush` for the write-read case). This corresponds to CERT rule FIO39-C "[Do not alternately input and output from a stream without an intervening flush or positioning call](https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/input-output-fio/fio39-c/)".
 
 The stream operations are by this checker usually split into two cases, a success
 and a failure case.
@@ -2562,6 +2564,20 @@ void test6() {
     fgetc(p); // warn: file position may be indeterminate after I/O error
 
   fclose(p);
+}
+
+void getc_putc() {
+  FILE *F = fopen("file.txt", "a+");
+  if (F == NULL)
+    return;
+
+  fgetc(F);
+  if (ferror(F) || feof(F)) {
+    fclose(F);
+    return;
+  }
+  fputc('a', F); // warn: write following a read without set of file position in between
+  fclose(F);
 }
 ```
 

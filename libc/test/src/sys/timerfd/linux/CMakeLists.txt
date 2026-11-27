@@ -21,3 +21,29 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_test(
+  timerfd_gettime_test
+  SUITE
+    libc-sys-timerfd-tests
+  SRCS
+    timerfd_gettime_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.sys_timerfd_macros
+    libc.hdr.time_macros
+    libc.hdr.types.ssize_t
+    libc.hdr.types.struct_itimerspec
+    libc.hdr.types.struct_timespec
+    libc.hdr.types.time_t
+    libc.src.__support.CPP.scope
+    libc.src.__support.time.clock_gettime
+    libc.src.sys.timerfd.timerfd_create
+    libc.src.sys.timerfd.timerfd_gettime
+    libc.src.sys.timerfd.timerfd_settime
+    libc.src.unistd.close
+    libc.src.unistd.read
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

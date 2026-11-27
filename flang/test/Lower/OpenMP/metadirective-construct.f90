@@ -2,6 +2,16 @@
 
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 %s -o - | FileCheck %s
 
+! A SIMD selector without properties requires an enclosing SIMD construct.
+! CHECK-LABEL: func.func @_QPtest_construct_simd_absent()
+! CHECK-NOT:     omp.barrier
+! CHECK:         omp.taskyield
+! CHECK-NOT:     omp.barrier
+! CHECK:         return
+subroutine test_construct_simd_absent()
+  !$omp metadirective when(construct={simd}: barrier) default(taskyield)
+end subroutine
+
 ! CHECK-LABEL: func.func @_QPtest_construct_parallel()
 ! CHECK:         omp.parallel
 ! CHECK:           omp.barrier

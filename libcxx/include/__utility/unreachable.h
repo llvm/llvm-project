@@ -18,14 +18,14 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-[[__noreturn__]] _LIBCPP_HIDE_FROM_ABI inline void __libcpp_unreachable() {
+[[__noreturn__]] inline void __libcpp_unreachable() {
   _LIBCPP_ASSERT_INTERNAL(false, "std::unreachable() was reached");
   __builtin_unreachable();
 }
 
 #if _LIBCPP_STD_VER >= 23
 
-[[noreturn]] _LIBCPP_HIDE_FROM_ABI inline void unreachable() { __libcpp_unreachable(); }
+[[noreturn]] inline void unreachable() { __libcpp_unreachable(); }
 
 #endif
 

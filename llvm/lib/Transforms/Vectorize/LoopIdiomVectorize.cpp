@@ -117,9 +117,6 @@ private:
   /// \name Countable Loop Idiom Handling
   /// @{
 
-  bool runOnLoopBlock(BasicBlock *BB, const SCEV *BECount,
-                      SmallVectorImpl<BasicBlock *> &ExitBlocks);
-
   bool recognizeByteCompare();
 
   Value *expandFindMismatch(IRBuilder<> &Builder, DomTreeUpdater &DTU,
@@ -1409,7 +1406,6 @@ void LoopIdiomVectorize::transformFindFirstByte(
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   UncondBrInst *PHBranch = cast<UncondBrInst>(Preheader->getTerminator());
   IRBuilder<> Builder(PHBranch);
-  Builder.disableGEPCanonicalization();
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   Builder.SetCurrentDebugLocation(PHBranch->getDebugLoc());
 

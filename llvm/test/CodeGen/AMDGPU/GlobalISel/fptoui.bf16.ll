@@ -611,8 +611,6 @@ define amdgpu_ps <3 x i16> @fptoui_v3bf16_v3i16_v(<3 x bfloat> %a) {
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_or_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX9-NEXT:    v_lshlrev_b32_e64 v2, 16, s0
-; GFX9-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX9-NEXT:    ; return to shader part epilog

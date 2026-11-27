@@ -18,6 +18,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -145,19 +146,19 @@ private:
   bool processReturn(ReturnInst *RI);
 
   // Helpers.
-  Constant *getConstantAt(Value *V, Instruction *At);
+  Constant *getConstantAt(Value *V, Instruction *At, const Use *U = nullptr);
   bool simplifyCommonValuePhi(PHINode *P);
   bool constantFoldCmp(CmpInst *Cmp);
   bool willNotOverflow(BinaryOpIntrinsic *BO);
-  Value *getValueOnEdge(Value *Incoming, BasicBlock *From, BasicBlock *To,
-                        Instruction *CtxI);
+  Value *getValueOnEdge(const Use &IncomingUse, BasicBlock *From,
+                        BasicBlock *To, Instruction *CtxI);
   NoWrapFlags inferNoWrapFromUses(BinaryOperator *BinOp, bool WantNSW,
                                   bool WantNUW);
 };
 } // end anonymous namespace
 
-Constant *CVPImpl::getConstantAt(Value *V, Instruction *At) {
-  if (Constant *C = LVI->getConstant(V, At))
+Constant *CVPImpl::getConstantAt(Value *V, Instruction *At, const Use *U) {
+  if (Constant *C = LVI->getConstant(V, At, U))
     return C;
 
   // TODO: The following really should be sunk inside LVI's core algorithm, or
@@ -244,10 +245,20 @@ bool CVPImpl::simplifyCommonValuePhi(PHINode *P) {
   // We have a phi with exactly 1 variable incoming value and 1 or more constant
   // incoming values. See if all constant incoming values can be mapped back to
   // the same incoming variable value.
+  const DataLayout &DL = P->getDataLayout();
   for (auto &IncomingConstant : IncomingConstants) {
     Constant *C = IncomingConstant.first;
-    BasicBlock *IncomingBB = P->getIncomingBlock(IncomingConstant.second);
-    if (C != LVI->getConstantOnEdge(CommonValue, IncomingBB, ToBB, P))
+    unsigned Idx = IncomingConstant.second;
+    BasicBlock *IncomingBB = P->getIncomingBlock(Idx);
+    // Is CommonValue equal to the incoming constant on this edge?
+    Constant *Res = LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, CommonValue, C,
+                                            IncomingBB, ToBB, P);
+    if (!Res || !Res->isOneValue())
+      return false;
+
+    // The constant incoming pointer may not be freely substituted with
+    // CommonValue if their provenance differs.
+    if (!canReplacePointersInUseIfEqual(P->getOperandUse(Idx), CommonValue, DL))
       return false;
   }
 
@@ -265,9 +276,11 @@ bool CVPImpl::simplifyCommonValuePhi(PHINode *P) {
   return true;
 }
 
-Value *CVPImpl::getValueOnEdge(Value *Incoming, BasicBlock *From,
+Value *CVPImpl::getValueOnEdge(const Use &IncomingUse, BasicBlock *From,
                                BasicBlock *To, Instruction *CtxI) {
-  if (Constant *C = LVI->getConstantOnEdge(Incoming, From, To, CtxI))
+  Value *Incoming = IncomingUse.get();
+  if (Constant *C =
+          LVI->getConstantOnEdge(Incoming, From, To, CtxI, &IncomingUse))
     return C;
 
   // Look if the incoming value is a select with a scalar condition for which
@@ -318,11 +331,11 @@ bool CVPImpl::processPHI(PHINode *P) {
 
   BasicBlock *BB = P->getParent();
   for (unsigned I = 0, E = P->getNumIncomingValues(); I < E; ++I) {
-    Value *Incoming = P->getIncomingValue(I);
-    if (isa<Constant>(Incoming))
+    const Use &IncomingUse = P->getOperandUse(I);
+    if (isa<Constant>(IncomingUse.get()))
       continue;
 
-    Value *V = getValueOnEdge(Incoming, P->getIncomingBlock(I), BB, P);
+    Value *V = getValueOnEdge(IncomingUse, P->getIncomingBlock(I), BB, P);
     if (V) {
       P->setIncomingValue(I, V);
       Changed = true;
@@ -680,6 +693,33 @@ bool CVPImpl::processMinMaxIntrinsic(MinMaxIntrinsic *MM) {
     return true;
   }
 
+  // A select condition that may be undef still constrains an operand if the
+  // operand is frozen, so that the condition and the min/max observe the same
+  // value:
+  //   select (m < 0), (shl x, (sub 0, smin(m, 0))), 0
+  //     --> m.fr = freeze m
+  //         select (m.fr < 0), (shl x, (sub 0, m.fr)), 0
+  auto TryFoldWithFreeze = [&](unsigned OpIdx,
+                               const ConstantRange &OtherRange) {
+    ConstantRange FrozenRange = LVI->getConstantRangeAtUse(
+        MM->getOperandUse(OpIdx),
+        /*UndefAllowed*/ false, /*DebugUsers*/ nullptr, /*AssumeFrozen*/ true);
+    if (!FrozenRange.icmp(Pred, OtherRange))
+      return false;
+    Value *Op = MM->getOperand(OpIdx);
+    auto *FI = new FreezeInst(Op, Op->getName() + ".fr", MM->getIterator());
+    if (!freezeUsesAfterDef(*FI, *DT)) {
+      FI->eraseFromParent();
+      return false;
+    }
+    ++NumMinMax;
+    MM->replaceAllUsesWith(FI);
+    MM->eraseFromParent();
+    return true;
+  };
+  if (TryFoldWithFreeze(0, RRange) || TryFoldWithFreeze(1, LRange))
+    return true;
+
   if (MM->isSigned() &&
       ConstantRange::areInsensitiveToSignednessOfICmpPredicate(LRange,
                                                                RRange)) {
@@ -785,7 +825,7 @@ bool CVPImpl::processCallSite(CallBase &CB) {
       if (V->getType()->isVectorTy()) continue;
       if (isa<Constant>(V)) continue;
 
-      Constant *C = LVI->getConstant(V, &CB);
+      Constant *C = LVI->getConstant(V, &CB, &U);
       if (!C) continue;
       U.set(C);
       Changed = true;
@@ -1403,7 +1443,7 @@ bool CVPImpl::processReturn(ReturnInst *RI) {
 
   if (isa<Constant>(RetVal))
     return false; // nothing to do
-  if (Constant *C = getConstantAt(RetVal, RI)) {
+  if (Constant *C = getConstantAt(RetVal, RI, &RI->getOperandUse(0))) {
     ++NumReturns;
     RI->replaceUsesOfWith(RetVal, C);
     return true;

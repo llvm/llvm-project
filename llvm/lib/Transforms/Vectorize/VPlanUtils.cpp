@@ -70,7 +70,7 @@ bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
 
 bool vputils::onlyFirstPartUsed(const VPValue *Def) {
   return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->usesFirstPartOnly(Def); });
+                [](const VPUser *U) { return U->usesFirstPartOnly(); });
 }
 
 bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
@@ -513,7 +513,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
            all_of(WidenR->operands(), isSingleScalar);
   }
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
-    return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
+    return VPI->doesGenerateSingleScalar() || VPI->isVectorToScalar() ||
            (preservesUniformity(VPI->getOpcode()) &&
             all_of(VPI->operands(), isSingleScalar));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
@@ -575,7 +575,7 @@ static bool isUniformAcrossVFsAndUFsImpl(
         return false;
       })
       .Case([&](const VPInstruction *VPI) {
-        if (!VPI->isSingleScalar() && !VPI->isVectorToScalar() &&
+        if (!VPI->doesGenerateSingleScalar() && !VPI->isVectorToScalar() &&
             !preservesUniformity(VPI->getOpcode()))
           return false;
         AddToWorklist(VPI->operands());
@@ -953,13 +953,15 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
 }
 
 /// Try to find a loop-invariant IR value for \p S in the plan's entry block
-/// that can be reused. Returns the corresponding live-in VPValue, or nullptr
-/// if no reusable IR value is found.
+/// that can be reused. Returns the corresponding live-in VPValue, an in-IR
+/// VPExpandSCEVRecipe if reuse requires dropping flags, or nullptr if no
+/// reusable IR value is found.
 VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
   if (isa<SCEVConstant, SCEVUnknown>(S))
     return nullptr;
   VPlan &Plan = Builder.getPlan();
   BasicBlock *PH = cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
+  bool ReuseNeedsDrop = false;
   for (Value *V : SE.getSCEVValues(S)) {
     // Only reuse instructions in the plan's entry block, or, when a
     // DominatorTree is available, any instruction that dominates it.
@@ -975,10 +977,13 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
     SmallVector<Instruction *> DropPoisonGeneratingInsts;
     if (!SE.canReuseInstruction(S, I, DropPoisonGeneratingInsts))
       continue;
-    for (Instruction *DropI : DropPoisonGeneratingInsts)
-      SCEVExpander::dropPoisonGeneratingAnnotationsAndReinfer(SE, DropI);
-    return Plan.getOrAddLiveIn(V);
+    if (DropPoisonGeneratingInsts.empty())
+      return Plan.getOrAddLiveIn(V);
+    ReuseNeedsDrop = true;
   }
+  // Leave dropping flags to SCEVExpander, as the plan may be discarded.
+  if (ReuseNeedsDrop)
+    return vputils::getOrCreateVPValueForSCEVExpr(Plan, S, /*ExpandInIR=*/true);
   return nullptr;
 }
 

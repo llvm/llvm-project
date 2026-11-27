@@ -46,6 +46,7 @@ class StepOverBreakpointsTestCase(TestBase):
 
         self.breakpoint4 = self.target.BreakpointCreateByLocation(src, self.line4)
 
+    @skipIfWasm  # instruction steps overshoot the next breakpoint
     def test_step_instruction(self):
         # Count instructions between breakpoint_1 and breakpoint_4
         contextList = self.target.FindFunctions("main", lldb.eFunctionNameTypeAuto)

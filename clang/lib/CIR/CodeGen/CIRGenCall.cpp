@@ -16,7 +16,7 @@
 #include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/Attributes.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CIR/ABIArgInfo.h"
@@ -258,7 +258,7 @@ static void addTrivialDefaultFunctionAttributes(
                 cir::FramePointerKindAttr::get(mlirCtx, *kind));
 
     // TODO(cir): a number of other attribute 1-offs based on codegen/lang opts
-    // should be done here: less-recise-fpmad null-pointer-is-valid
+    // should be done here: null-pointer-is-valid
     // various inf/nan/nsz/etc work here.
     //
     // no-trapping-math and stack-protector-buffer-size are TU-wide, so they

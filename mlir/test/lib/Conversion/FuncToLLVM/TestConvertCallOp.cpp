@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestOpsConversion.h"
-#include "TestTypes.h"
+#include "TestTypesCore.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;

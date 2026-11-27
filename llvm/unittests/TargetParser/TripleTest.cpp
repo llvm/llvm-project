@@ -1795,10 +1795,10 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
   EXPECT_EQ(
       LongDoubleFormat::IEEEquad,
       Triple("aarch64_32-unknown-linux-gnu").getDefaultLongDoubleFormat());
-  // ... except on Windows and Darwin, which use IEEE double.
+  // ... except on Windows, UEFI and Darwin, which use IEEE double.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("aarch64-pc-windows-msvc").getDefaultLongDoubleFormat());
-  EXPECT_EQ(LongDoubleFormat::IEEEquad,
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("aarch64-unknown-uefi").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("arm64-apple-macosx").getDefaultLongDoubleFormat());
@@ -1859,14 +1859,20 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("wasm64-unknown-unknown").getDefaultLongDoubleFormat());
 
-  // 64-bit MIPS uses IEEE quad; 32-bit MIPS uses IEEE double. Both are
-  // independent of the environment.
+  // 64-bit MIPS uses IEEE quad, except on FreeBSD; 32-bit MIPS uses IEEE
+  // double. Both are independent of the environment.
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("mips64-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("mips64-unknown-linux").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEquad,
             Triple("mips64el-unknown-linux-gnu").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mips64-unknown-freebsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mips64el-unknown-freebsd").getDefaultLongDoubleFormat());
+  EXPECT_EQ(LongDoubleFormat::IEEEdouble,
+            Triple("mipsisa64r6-unknown-freebsd").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("mips-unknown-linux-gnu").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
@@ -3353,7 +3359,6 @@ TEST(TripleTest, FileFormat) {
 
   EXPECT_EQ(Triple::ELF, Triple("amdgcn-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::ELF, Triple("amdgpu-apple-macosx").getObjectFormat());
-  EXPECT_EQ(Triple::ELF, Triple("r600-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv32-apple-macosx").getObjectFormat());
   EXPECT_EQ(Triple::SPIRV, Triple("spirv64-apple-macosx").getObjectFormat());
@@ -3382,6 +3387,45 @@ TEST(TripleTest, SupportsDebugEntryValues) {
       Triple("powerpc64le-unknown-linux-gnu").supportsDebugEntryValues());
   EXPECT_FALSE(Triple("s390x-unknown-linux-gnu").supportsDebugEntryValues());
   EXPECT_FALSE(Triple("").supportsDebugEntryValues());
+}
+
+TEST(TripleTest, SupportsMathErrno) {
+  EXPECT_TRUE(Triple("x86_64-unknown-linux-gnu").supportsMathErrno());
+  EXPECT_TRUE(Triple("aarch64-unknown-linux-gnu").supportsMathErrno());
+  EXPECT_TRUE(Triple("x86_64-pc-windows-msvc").supportsMathErrno());
+  EXPECT_TRUE(Triple("x86_64-w64-windows-gnu").supportsMathErrno());
+  EXPECT_TRUE(Triple("powerpc64-ibm-aix").supportsMathErrno());
+  EXPECT_TRUE(Triple("s390x-ibm-zos").supportsMathErrno());
+  EXPECT_TRUE(Triple("x86_64-unknown-netbsd").supportsMathErrno());
+  EXPECT_TRUE(Triple("x86_64-unknown-dragonfly").supportsMathErrno());
+  EXPECT_TRUE(Triple("x86_64-unknown-haiku").supportsMathErrno());
+  EXPECT_TRUE(Triple("x86_64-scei-ps4").supportsMathErrno());
+  EXPECT_TRUE(Triple("armv7-none-eabi").supportsMathErrno());
+  EXPECT_TRUE(Triple("wasm32-unknown-unknown").supportsMathErrno());
+  EXPECT_TRUE(Triple("").supportsMathErrno());
+
+  EXPECT_FALSE(Triple("x86_64-apple-macosx").supportsMathErrno());
+  EXPECT_FALSE(Triple("arm64-apple-ios").supportsMathErrno());
+  EXPECT_FALSE(Triple("aarch64-unknown-linux-android").supportsMathErrno());
+  EXPECT_FALSE(Triple("x86_64-unknown-linux-musl").supportsMathErrno());
+  EXPECT_FALSE(Triple("armv7-unknown-linux-musleabihf").supportsMathErrno());
+  EXPECT_FALSE(Triple("aarch64-unknown-linux-ohos").supportsMathErrno());
+  EXPECT_FALSE(Triple("x86_64-unknown-fuchsia").supportsMathErrno());
+  EXPECT_FALSE(Triple("x86_64-unknown-freebsd").supportsMathErrno());
+  EXPECT_FALSE(Triple("x86_64-unknown-openbsd").supportsMathErrno());
+  EXPECT_FALSE(Triple("wasm32-unknown-wasip1").supportsMathErrno());
+  EXPECT_FALSE(Triple("wasm32-unknown-wasi").supportsMathErrno());
+  EXPECT_FALSE(Triple("wasm32-unknown-wasip2").supportsMathErrno());
+  EXPECT_FALSE(Triple("wasm32-unknown-wasip3").supportsMathErrno());
+  EXPECT_FALSE(Triple("wasm32-unknown-emscripten").supportsMathErrno());
+  EXPECT_FALSE(Triple("amdgpu-amd-amdhsa").supportsMathErrno());
+  EXPECT_FALSE(Triple("nvptx64-nvidia-cuda").supportsMathErrno());
+  EXPECT_FALSE(Triple("nvptx-nvidia-cuda").supportsMathErrno());
+  EXPECT_FALSE(Triple("spirv64-unknown-unknown").supportsMathErrno());
+  EXPECT_FALSE(Triple("spir64-unknown-unknown").supportsMathErrno());
+  EXPECT_FALSE(Triple("spir-unknown-unknown").supportsMathErrno());
+  EXPECT_FALSE(Triple("spirv-unknown-unknown").supportsMathErrno());
+  EXPECT_FALSE(Triple("spirv32-unknown-unknown").supportsMathErrno());
 }
 
 TEST(TripleTest, DefaultExceptionHandling) {
@@ -4050,9 +4094,6 @@ TEST(TripleTest, Merge) {
 
   // The subarch merge does not fire when only the receiver is amdgcn but the
   // other triple is a different.
-  EXPECT_EQ("r600-amd-amdhsa",
-            Triple(Triple::normalize("amdgpu9-amd-amdhsa"))
-                .merge(Triple(Triple::normalize("r600-amd-amdhsa"))));
   EXPECT_EQ("x86_64-amd-amdhsa",
             Triple(Triple::normalize("amdgpu9-amd-amdhsa"))
                 .merge(Triple(Triple::normalize("x86_64-amd-amdhsa"))));
@@ -4137,6 +4178,15 @@ TEST(DataLayoutTest, PowerPC64FreeBSD) {
   EXPECT_EQ(Triple("powerpc64le-unknown-freebsd").computeDataLayout(),
             "e-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512");
   EXPECT_EQ(Triple("powerpc64-unknown-freebsd").computeDataLayout(),
+            "E-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512");
+}
+
+TEST(DataLayoutTest, PowerPC64OpenBSD) {
+  // OpenBSD uses the ELFv2 ABI on big-endian powerpc64 and shares the
+  // 16-byte stack alignment and the vector alignment of Linux.
+  EXPECT_EQ(Triple("powerpc64-unknown-openbsd").computeDataLayout(),
+            Triple("powerpc64-unknown-freebsd").computeDataLayout());
+  EXPECT_EQ(Triple("powerpc64-unknown-openbsd").computeDataLayout(),
             "E-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512");
 }
 
