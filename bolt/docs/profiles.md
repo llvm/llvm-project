@@ -201,10 +201,12 @@ Example:
 
 #### Non-brstack mode format
 
-Requires `no_lbr` header followed by an optional event name:
+Use `no_brstack` for basic-sample profiles, the legacy `no_lbr` header
+is also accepted. The header may be followed by zero or more
+space-separated event names.
 
 ```
-no_lbr <event_name>
+no_brstack [<event_name> ...]
 <is_sym> <sym> <off> <count>
 ```
 
@@ -238,6 +240,9 @@ binary changes and supports stale profile matching.
 
 #### Schema
 
+`brstack` is emitted for the branch-profile flag. The legacy `lbr` flag is
+also accepted and can be read.
+
 Defined in `ProfileYAMLMapping.h`:
 
 ```yaml
@@ -245,7 +250,7 @@ header:
   profile-version: <uint32>
   binary-name: <string>
   binary-build-id: <string>        # optional
-  profile-flags: [lbr|sample|memevent]
+  profile-flags: [brstack|sample|memevent]
   profile-origin: <string>         # optional, how profile was obtained
   profile-events: <string>         # optional, event names
   dfs-order: <bool>                # optional, default true
