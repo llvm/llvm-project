@@ -163,9 +163,9 @@ static void emitOption(const CommandOption &O, raw_ostream &OS) {
 
   // Add the description if there is any.
   if (!O.Description.empty()) {
-    OS << "\"";
-    llvm::printEscapedString(O.Description, OS);
-    OS << "\"";
+    OS << '"';
+    OS.write_escaped(O.Description);
+    OS << '"';
   } else
     OS << "\"\"";
   OS << "},\n";
