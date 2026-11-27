@@ -145,6 +145,8 @@ long lroundf(float __a);
 long lroundl(long double __a);
 double modf(double __a, double *__b);
 float modff(float __a, float *__b);
+float nanf(const char *__a);
+double nan(const char *__a);
 double nearbyint(double __a);
 float nearbyintf(float __a);
 long double nearbyintl(long double __a);
