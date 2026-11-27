@@ -2039,6 +2039,10 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
       // breaks the frame chain.
       if (hasFP(MF) && CSReg == RISCV::X8_X9)
         CombineToSuperReg = false;
+      if (RVFI->useQCIInterrupt(MF) &&
+          llvm::is_contained(llvm::make_first_range(FixedCSRFIQCIInterruptMap),
+                             EvenReg))
+        CombineToSuperReg = false;
     } else {
       auto SubRegs = TRI.subregs(CSReg);
       CombineToSuperReg =
