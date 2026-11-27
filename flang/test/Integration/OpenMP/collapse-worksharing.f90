@@ -163,15 +163,8 @@ end subroutine
 ! VIRTUAL: [[INNER_IV:%[^ ]+]] = phi i32 [ %omp_collapsed.row.start.1.0,
 ! VIRTUAL: [[JSTEP:%[^ ]+]] = mul nsw i32 [[INNER_IV]], 1{{(,|$)}}
 ! VIRTUAL: [[JSOURCE:%[^ ]+]] = add nsw i32 [[JSTEP]], 1{{(,|$)}}
-! VIRTUAL: [[COPYBACK:omp[.]loop_nest[.]region[0-9]+]]:{{ *}}; preds = %omp.loop_nest.region{{$}}
-! VIRTUAL: store i32 [[INEXT:%[^, ]+]], ptr [[IPRIVATE:%[^, ]+]],
-! VIRTUAL: store i32 [[JNEXT:%[^, ]+]], ptr [[JPRIVATE:%[^, ]+]],
-! VIRTUAL: [[I:%[^ ]+]] = load i32, ptr [[IPRIVATE]],
-! VIRTUAL: store i32 [[I]], ptr [[ILAST:%[^, ]+]],
-! VIRTUAL: [[J:%[^ ]+]] = load i32, ptr [[JPRIVATE]],
-! VIRTUAL: store i32 [[J]], ptr [[JLAST:%[^, ]+]],
-! VIRTUAL: store i32 [[ISOURCE]], ptr [[IPRIVATE]],
-! VIRTUAL: store i32 [[JSOURCE]], ptr [[JPRIVATE]],
+! VIRTUAL: store i32 [[ISOURCE]], ptr [[IPRIVATE:%[^, ]+]],
+! VIRTUAL: store i32 [[JSOURCE]], ptr [[JPRIVATE:%[^, ]+]],
 ! VIRTUAL: [[SEEDCOPY:%[^ ]+]] = load i32, ptr [[SEEDPRIVATE]],
 ! VIRTUAL: [[IBODY:%[^ ]+]] = load i32, ptr [[IPRIVATE]],
 ! VIRTUAL: [[ITEN:%[^ ]+]] = mul i32 [[IBODY]], 10{{(,|$)}}
@@ -183,12 +176,19 @@ end subroutine
 ! VIRTUAL: [[TERM:%[^ ]+]] = load i32, ptr [[TPRIVATE]],
 ! VIRTUAL: [[NEXT:%[^ ]+]] = add i32 [[ACC]], [[TERM]]{{(,|$)}}
 ! VIRTUAL: store i32 [[NEXT]], ptr [[REDUCTION]],
-! VIRTUAL: [[INEXT]] = add i32 [[ISOURCE]], 1{{(,|$)}}
+! VIRTUAL: [[INEXT:%[^, ]+]] = add i32 [[ISOURCE]], 1{{(,|$)}}
 ! VIRTUAL: [[ILASTITER:%[^ ]+]] = icmp sgt i32 [[INEXT]], 2{{(,|$)}}
-! VIRTUAL: [[JNEXT]] = add i32 [[JSOURCE]], 1{{(,|$)}}
+! VIRTUAL: [[JNEXT:%[^, ]+]] = add i32 [[JSOURCE]], 1{{(,|$)}}
 ! VIRTUAL: [[JLASTITER:%[^ ]+]] = icmp sgt i32 [[JNEXT]], 3{{(,|$)}}
 ! VIRTUAL: [[LAST:%[^ ]+]] = and i1 [[ILASTITER]], [[JLASTITER]]{{(,|$)}}
-! VIRTUAL: br i1 [[LAST]], label %[[COPYBACK]],
+! VIRTUAL: br i1 [[LAST]], label %[[COPYBACK:omp[.]loop_nest[.]region[0-9]+]],
+! VIRTUAL: [[COPYBACK]]:{{ *}}; preds = %omp.loop_nest.region{{$}}
+! VIRTUAL: store i32 [[INEXT]], ptr [[IPRIVATE]],
+! VIRTUAL: store i32 [[JNEXT]], ptr [[JPRIVATE]],
+! VIRTUAL: [[I:%[^ ]+]] = load i32, ptr [[IPRIVATE]],
+! VIRTUAL: store i32 [[I]], ptr [[ILAST:%[^, ]+]],
+! VIRTUAL: [[J:%[^ ]+]] = load i32, ptr [[JPRIVATE]],
+! VIRTUAL: store i32 [[J]], ptr [[JLAST:%[^, ]+]],
 ! VIRTUAL: omp_collapsed.row.done:
 ! VIRTUAL-NEXT: br i1 %omp_collapsed.row.is_final, label %[[EXIT:omp_loop.exit]], label %omp_loop.inc{{(,|$)}}
 ! VIRTUAL: [[EXIT]]:
@@ -230,26 +230,26 @@ end subroutine
 ! VIRTUAL: [[INNER_IV:%[^ ]+]] = phi i64 [ %omp_collapsed.row.start.1.0,
 ! VIRTUAL: [[JSTEP:%[^ ]+]] = mul nsw i64 [[INNER_IV]], -4{{(,|$)}}
 ! VIRTUAL: [[JSOURCE:%[^ ]+]] = add nsw i64 [[JSTEP]], 9{{(,|$)}}
-! VIRTUAL: [[COPYBACK:omp[.]loop_nest[.]region[0-9]+]]:{{ *}}; preds = %omp.loop_nest.region{{$}}
-! VIRTUAL: store i64 [[INEXT:%[^, ]+]], ptr [[IPRIVATE:%[^, ]+]],
-! VIRTUAL: store i64 [[JNEXT:%[^, ]+]], ptr [[JPRIVATE:%[^, ]+]],
-! VIRTUAL: [[I:%[^ ]+]] = load i64, ptr [[IPRIVATE]],
-! VIRTUAL: store i64 [[I]], ptr [[ILAST:%[^, ]+]],
-! VIRTUAL: [[J:%[^ ]+]] = load i64, ptr [[JPRIVATE]],
-! VIRTUAL: store i64 [[J]], ptr [[JLAST:%[^, ]+]],
-! VIRTUAL: store i64 [[ISOURCE]], ptr [[IPRIVATE]],
-! VIRTUAL: store i64 [[JSOURCE]], ptr [[JPRIVATE]],
+! VIRTUAL: store i64 [[ISOURCE]], ptr [[IPRIVATE:%[^, ]+]],
+! VIRTUAL: store i64 [[JSOURCE]], ptr [[JPRIVATE:%[^, ]+]],
 ! VIRTUAL: [[IBODY:%[^ ]+]] = load i64, ptr [[IPRIVATE]],
 ! VIRTUAL: [[ITERM:%[^ ]+]] = mul i64 [[IBODY]], 100{{(,|$)}}
 ! VIRTUAL: [[JBODY:%[^ ]+]] = load i64, ptr [[JPRIVATE]],
 ! VIRTUAL: [[VALUE:%[^ ]+]] = add i64 [[ITERM]], [[JBODY]]{{(,|$)}}
 ! VIRTUAL: store i64 [[VALUE]], ptr %{{[^, ]+}},
-! VIRTUAL: [[INEXT]] = add i64 [[ISOURCE]], 2{{(,|$)}}
+! VIRTUAL: [[INEXT:%[^, ]+]] = add i64 [[ISOURCE]], 2{{(,|$)}}
 ! VIRTUAL: [[ILASTITER:%[^ ]+]] = icmp sgt i64 [[INEXT]], 6{{(,|$)}}
-! VIRTUAL: [[JNEXT]] = add i64 [[JSOURCE]], -4{{(,|$)}}
+! VIRTUAL: [[JNEXT:%[^, ]+]] = add i64 [[JSOURCE]], -4{{(,|$)}}
 ! VIRTUAL: [[JLASTITER:%[^ ]+]] = icmp slt i64 [[JNEXT]], 1{{(,|$)}}
 ! VIRTUAL: [[LAST:%[^ ]+]] = and i1 [[ILASTITER]], [[JLASTITER]]{{(,|$)}}
-! VIRTUAL: br i1 [[LAST]], label %[[COPYBACK]],
+! VIRTUAL: br i1 [[LAST]], label %[[COPYBACK:omp[.]loop_nest[.]region[0-9]+]],
+! VIRTUAL: [[COPYBACK]]:{{ *}}; preds = %omp.loop_nest.region{{$}}
+! VIRTUAL: store i64 [[INEXT]], ptr [[IPRIVATE]],
+! VIRTUAL: store i64 [[JNEXT]], ptr [[JPRIVATE]],
+! VIRTUAL: [[I:%[^ ]+]] = load i64, ptr [[IPRIVATE]],
+! VIRTUAL: store i64 [[I]], ptr [[ILAST:%[^, ]+]],
+! VIRTUAL: [[J:%[^ ]+]] = load i64, ptr [[JPRIVATE]],
+! VIRTUAL: store i64 [[J]], ptr [[JLAST:%[^, ]+]],
 ! VIRTUAL: omp_collapsed.row.done:
 ! VIRTUAL-NEXT: br i1 %omp_collapsed.row.is_final, label %[[EXIT:omp_loop.exit]], label %omp_loop.inc{{(,|$)}}
 ! VIRTUAL: [[EXIT]]:
