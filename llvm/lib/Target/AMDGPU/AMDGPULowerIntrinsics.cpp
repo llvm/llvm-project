@@ -46,6 +46,7 @@ private:
   bool visitMonitorSleep(IntrinsicInst &I);
   bool visitCvtScale(IntrinsicInst &I);
   bool visitUnscaledWMMA(IntrinsicInst &I);
+  bool visitF4WMMA(IntrinsicInst &I);
   bool visitMcastLoad(IntrinsicInst &I);
 };
 
@@ -116,6 +117,11 @@ bool AMDGPULowerIntrinsicsImpl::run() {
     case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4:
       forEachCall(
           F, [&](IntrinsicInst *II) { Changed |= visitUnscaledWMMA(*II); });
+      break;
+    case Intrinsic::amdgcn_wmma_f32_32x16x128_f4:
+    case Intrinsic::amdgcn_wmma_scale_f32_32x16x128_f4:
+    case Intrinsic::amdgcn_wmma_scale16_f32_32x16x128_f4:
+      forEachCall(F, [&](IntrinsicInst *II) { Changed |= visitF4WMMA(*II); });
       break;
     case Intrinsic::amdgcn_cluster_load_b32:
     case Intrinsic::amdgcn_cluster_load_b64:
@@ -352,6 +358,75 @@ bool AMDGPULowerIntrinsicsImpl::visitUnscaledWMMA(IntrinsicInst &I) {
   I.replaceAllUsesWith(NewI);
   NewI->copyMetadata(I);
   NewI->takeName(&I);
+  I.eraseFromParent();
+
+  return true;
+}
+
+bool AMDGPULowerIntrinsicsImpl::visitF4WMMA(IntrinsicInst &I) {
+  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*I.getFunction());
+  if (!ST.hasGFX1250_STRICT())
+    return false;
+
+  Intrinsic::ID ID = I.getIntrinsicID();
+  Intrinsic::ID NewID =
+      ID == Intrinsic::amdgcn_wmma_scale16_f32_32x16x128_f4
+          ? Intrinsic::amdgcn_wmma_scale16_f32_16x16x128_f8f6f4
+          : Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4;
+
+  IRBuilder<> B(&I);
+  Value *A = I.getArgOperand(0);
+  Value *BMat = I.getArgOperand(1);
+  Value *CMod = I.getArgOperand(2);
+  Value *C = I.getArgOperand(3);
+
+  Value *AScaleFmt, *AScale, *BScaleFmt, *BScale;
+  if (ID == Intrinsic::amdgcn_wmma_f32_32x16x128_f4) {
+    AScaleFmt = BScaleFmt = B.getInt32(AMDGPU::WMMA::MATRIX_SCALE_FMT_E8);
+    AScale = BScale = B.getInt32(0);
+  } else {
+    AScaleFmt = I.getArgOperand(5);
+    AScale = I.getArgOperand(6);
+    BScaleFmt = I.getArgOperand(8);
+    BScale = I.getArgOperand(9);
+  }
+
+  auto *ATy = cast<FixedVectorType>(A->getType());
+  auto *CTy = cast<FixedVectorType>(C->getType());
+  unsigned AHalf = ATy->getNumElements() / 2;
+  unsigned CHalf = CTy->getNumElements() / 2;
+  Type *HalfTy = FixedVectorType::get(CTy->getElementType(), CHalf);
+  Value *FP4 = B.getInt32(AMDGPU::WMMA::MATRIX_FMT_FP4);
+
+  Value *Res[2];
+  for (unsigned Half = 0; Half < 2; ++Half) {
+    Value *AH =
+        B.CreateShuffleVector(A, createSequentialMask(Half * AHalf, AHalf, 0));
+    Value *CH =
+        B.CreateShuffleVector(C, createSequentialMask(Half * CHalf, CHalf, 0));
+    Value *Args[] = {FP4,
+                     AH,
+                     FP4,
+                     BMat,
+                     CMod,
+                     CH,
+                     B.getInt32(AMDGPU::WMMA::MATRIX_SCALE_ROW0 + Half),
+                     AScaleFmt,
+                     AScale,
+                     B.getInt32(AMDGPU::WMMA::MATRIX_SCALE_ROW0),
+                     BScaleFmt,
+                     BScale,
+                     B.getFalse(),
+                     B.getFalse()};
+    CallInst *NewI = B.CreateIntrinsicWithoutFolding(HalfTy, NewID, Args);
+    NewI->copyMetadata(I);
+    Res[Half] = NewI;
+  }
+
+  Value *D = B.CreateShuffleVector(Res[0], Res[1],
+                                   createSequentialMask(0, 2 * CHalf, 0));
+  D->takeName(&I);
+  I.replaceAllUsesWith(D);
   I.eraseFromParent();
 
   return true;
