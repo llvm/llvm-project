@@ -449,6 +449,13 @@ def TCRETURNri8 : PPCEmitTimePseudo<(outs), (ins CTRRC8:$dst, i32imm:$offset),
                  "#TC_RETURNr8 $dst $offset",
                  []>;
 
+// 64-bit version of TCRETURNri_GPR, expanded into MTCTR8 + TCRETURNri8.
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [RM] in
+def TCRETURNri8_GPR : PPCCustomInserterPseudo<(outs),
+                                              (ins g8rc:$dst, i32imm:$offset),
+                                              "#TC_RETURNri8_GPR $dst $offset",
+                                              []>;
+
 let hasSideEffects = 0 in {
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, isBranch = 1,
     isIndirectBranch = 1, isCall = 1, isReturn = 1, Uses = [CTR8, RM] in
@@ -476,8 +483,8 @@ def : Pat<(PPCtc_return (i64 tglobaladdr:$dst),  imm:$imm),
 def : Pat<(PPCtc_return (i64 texternalsym:$dst), imm:$imm),
           (TCRETURNdi8 texternalsym:$dst, imm:$imm)>;
 
-def : Pat<(PPCtc_return CTRRC8:$dst, imm:$imm),
-          (TCRETURNri8 CTRRC8:$dst, imm:$imm)>;
+def : Pat<(PPCtc_return_indirect i64:$dst, imm:$imm),
+          (TCRETURNri8_GPR $dst, imm:$imm)>;
 
 
 // 64-bit CR instructions

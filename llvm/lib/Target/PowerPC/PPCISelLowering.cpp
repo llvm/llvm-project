@@ -5620,14 +5620,11 @@ static void prepareOutOfLineGlueCall(SelectionDAG &DAG, SDValue &Callee,
   Glue = MoveToPhysicalReg.getValue(1);
 }
 
-static void
-buildCallOperands(SmallVectorImpl<SDValue> &Ops,
-                  PPCTargetLowering::CallFlags CFlags, const SDLoc &dl,
-                  SelectionDAG &DAG,
-                  SmallVector<std::pair<unsigned, SDValue>, 8> &RegsToPass,
-                  SDValue Glue, SDValue Chain, SDValue &Callee, int SPDiff,
-                  const PPCSubtarget &Subtarget) {
-  const bool IsPPC64 = Subtarget.isPPC64();
+static void buildCallOperands(
+    SmallVectorImpl<SDValue> &Ops, PPCTargetLowering::CallFlags CFlags,
+    const SDLoc &dl, SelectionDAG &DAG,
+    SmallVector<std::pair<unsigned, SDValue>, 8> &RegsToPass, SDValue Glue,
+    SDValue Chain, SDValue &Callee, int SPDiff, const PPCSubtarget &Subtarget) {
   // MVT for a general purpose register.
   const MVT RegVT = Subtarget.getScalarIntVT();
 
@@ -5669,10 +5666,13 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
       Ops.push_back(DAG.getRegister(Subtarget.getEnvironmentPointerRegister(),
                                     RegVT));
 
-
-    // Add CTR register as callee so a bctr can be emitted later.
-    if (CFlags.IsTailCall)
-      Ops.push_back(DAG.getRegister(IsPPC64 ? PPC::CTR8 : PPC::CTR, RegVT));
+    // For tail calls, pass the callee address. It is only moved into CTR
+    // after ISel, see TCRETURNri_GPR.
+    if (CFlags.IsTailCall) {
+      assert(!Subtarget.usesFunctionDescriptors() &&
+             "Indirect tail calls through function descriptors unsupported");
+      Ops.push_back(Callee);
+    }
   }
 
   // If this is a tail call add stack pointer delta.
@@ -5735,7 +5735,9 @@ SDValue PPCTargetLowering::FinishCall(
       prepareDescriptorIndirectCall(DAG, Callee, Glue, Chain, CallSeqStart, CB,
                                     dl, CFlags.HasNest, Subtarget);
     }
-  } else {
+  } else if (!CFlags.IsTailCall) {
+    // Indirect tail calls take the callee address in a GPR. The move into CTR
+    // is only emitted after ISel, see TCRETURNri_GPR.
     prepareIndirectCall(DAG, Callee, Glue, Chain, dl);
   }
 
@@ -5760,6 +5762,8 @@ SDValue PPCTargetLowering::FinishCall(
     // PC Relative calls also use TC_RETURN as the way to mark tail calls.
     assert(CallOpc == PPCISD::TC_RETURN &&
            "Unexpected call opcode for a tail call.");
+    if (CFlags.IsIndirect)
+      CallOpc = PPCISD::TC_RETURN_INDIRECT;
     DAG.getMachineFunction().getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(CallOpc, dl, MVT::Other, Ops);
     DAG.addNoMergeSiteInfo(Ret.getNode(), CFlags.NoMerge);
@@ -15019,6 +15023,20 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addImm(0)
         .addReg(Ptr);
     break;
+  }
+  case PPC::TCRETURNri_GPR:
+  case PPC::TCRETURNri8_GPR: {
+    // Now that ISel is done, move the callee address into CTR and switch to
+    // the regular CTR-based tail call pseudo. Importantly, this happens after
+    // stack protector splitting.
+    bool Is64 = MI.getOpcode() == PPC::TCRETURNri8_GPR;
+    BuildMI(*BB, MI, MI.getDebugLoc(),
+            TII->get(Is64 ? PPC::MTCTR8 : PPC::MTCTR))
+        .add(MI.getOperand(0));
+    MI.setDesc(TII->get(Is64 ? PPC::TCRETURNri8 : PPC::TCRETURNri));
+    MI.getOperand(0).ChangeToRegister(Is64 ? PPC::CTR8 : PPC::CTR,
+                                      /*isDef=*/false);
+    return BB;
   }
   default:
     llvm_unreachable("Unexpected instr type to insert");
