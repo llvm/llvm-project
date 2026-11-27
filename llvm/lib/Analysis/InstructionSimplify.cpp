@@ -8100,9 +8100,9 @@ static bool replaceAndRecursivelySimplifyImpl(
   // If we have an explicit value to collapse to, do that round of the
   // simplification loop by hand initially.
   if (SimpleV) {
-    for (User *U : I->users())
+    for (Instruction *U : I->users())
       if (U != I)
-        Worklist.insert(cast<Instruction>(U));
+        Worklist.insert(U);
 
     // Replace the instruction with its simplified value.
     I->replaceAllUsesWith(SimpleV);
@@ -8130,8 +8130,8 @@ static bool replaceAndRecursivelySimplifyImpl(
     // Stash away all the uses of the old instruction so we can check them for
     // recursive simplifications after a RAUW. This is cheaper than checking all
     // uses of To on the recursive step in most cases.
-    for (User *U : I->users())
-      Worklist.insert(cast<Instruction>(U));
+    for (Instruction *U : I->users())
+      Worklist.insert(U);
 
     // Replace the instruction with its simplified value.
     I->replaceAllUsesWith(SimpleV);

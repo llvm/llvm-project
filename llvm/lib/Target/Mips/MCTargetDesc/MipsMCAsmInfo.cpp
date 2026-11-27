@@ -24,7 +24,7 @@ void MipsELFMCAsmInfo::anchor() {}
 
 MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
                                    const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TheTriple, Options) {
   IsLittleEndian = TheTriple.isLittleEndian();
 
   MipsABIInfo ABI =

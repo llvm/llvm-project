@@ -4722,8 +4722,7 @@ static void PushDefUseChildren(Instruction *I,
                                SmallVectorImpl<Instruction *> &Worklist,
                                SmallPtrSetImpl<Instruction *> &Visited) {
   // Push the def-use children onto the Worklist stack.
-  for (User *U : I->users()) {
-    auto *UserInsn = cast<Instruction>(U);
+  for (Instruction *UserInsn : I->users()) {
     if (Visited.insert(UserInsn).second)
       Worklist.push_back(UserInsn);
   }

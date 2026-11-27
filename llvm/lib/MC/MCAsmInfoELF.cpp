@@ -27,17 +27,12 @@ using namespace llvm;
 
 void MCAsmInfoELF::anchor() {}
 
-MCSection *MCAsmInfoELF::getStackSection(MCContext &Ctx, bool Exec) const {
+MCAsmInfoELF::MCAsmInfoELF(const Triple &TT, const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
   // Solaris doesn't know/doesn't care about .note.GNU-stack sections, so
   // don't emit them.
-  if (Ctx.getTargetTriple().isOSSolaris())
-    return nullptr;
-  return Ctx.getELFSection(".note.GNU-stack", ELF::SHT_PROGBITS,
-                           Exec ? ELF::SHF_EXECINSTR : 0U);
-}
+  EmitELFStackSection = !TT.isOSSolaris();
 
-MCAsmInfoELF::MCAsmInfoELF(const MCTargetOptions &Options)
-    : MCAsmInfo(Options) {
   HasIdentDirective = true;
   HasPreferredAlignment = true;
   WeakRefDirective = "\t.weak\t";

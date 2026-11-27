@@ -32,7 +32,7 @@ constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
                                  const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TT, Options) {
   CodePointerSize = (TT.isAMDGCN()) ? 8 : 4;
   StackGrowsUp = true;
   HasSingleParameterDotFile = false;

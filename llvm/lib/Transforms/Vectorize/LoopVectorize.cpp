@@ -4381,18 +4381,16 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
     // If there are direct memory op users of the newly scalarized load,
     // their cost may have changed because there's no scalarization
     // overhead for the operand. Update it.
-    for (User *U : LI->users()) {
+    for (Instruction *U : LI->users()) {
       if (!isa<LoadInst, StoreInst>(U))
         continue;
-      if (getWideningDecision(cast<Instruction>(U), VF) != CM_Scalarize)
+      if (getWideningDecision(U, VF) != CM_Scalarize)
         continue;
-      auto UI = cast<Instruction>(U);
       LLVM_DEBUG(
           dbgs() << "LV: Memory widening: updating decision for load user "
-                 << *UI << '\n');
-      setWideningDecision(
-          UI, VF, CM_Scalarize,
-          getMemInstScalarizationCost(cast<Instruction>(U), VF));
+                 << *U << '\n');
+      setWideningDecision(U, VF, CM_Scalarize,
+                          getMemInstScalarizationCost(U, VF));
     }
   };
   for (auto *I : AddrDefs) {

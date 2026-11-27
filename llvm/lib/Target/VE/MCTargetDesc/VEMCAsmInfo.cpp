@@ -78,7 +78,7 @@ void VEELFMCAsmInfo::anchor() {}
 
 VEELFMCAsmInfo::VEELFMCAsmInfo(const Triple &TheTriple,
                                const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TheTriple, Options) {
 
   CodePointerSize = CalleeSaveStackSlotSize = 8;
   MaxInstLength = MinInstAlignment = 8;

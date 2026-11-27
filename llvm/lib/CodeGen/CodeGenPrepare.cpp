@@ -927,8 +927,7 @@ bool CodeGenPrepare::canMergeBlocks(const BasicBlock *BB,
   // the successor.  If there are more complex condition (e.g. preheaders),
   // don't mess around with them.
   for (const PHINode &PN : BB->phis()) {
-    for (const User *U : PN.users()) {
-      const Instruction *UI = cast<Instruction>(U);
+    for (const Instruction *UI : PN.users()) {
       if (UI->getParent() != DestBB || !isa<PHINode>(UI))
         return false;
       // If User is inside DestBB block and it is a PHINode then check
@@ -2217,9 +2216,7 @@ static bool sinkAndCmp0Expression(Instruction *AndI, const TargetLowering &TLI,
       AndI->getOperand(0)->hasOneUse() && AndI->getOperand(1)->hasOneUse())
     return false;
 
-  for (auto *U : AndI->users()) {
-    Instruction *User = cast<Instruction>(U);
-
+  for (Instruction *User : AndI->users()) {
     // Only sink 'and' feeding icmp with 0.
     if (!isa<ICmpInst>(User))
       return false;
@@ -7113,9 +7110,7 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
     return false;
 
   bool DefIsLiveOut = false;
-  for (User *U : I->users()) {
-    Instruction *UI = cast<Instruction>(U);
-
+  for (Instruction *UI : I->users()) {
     // Figure out which BB this ext is used in.
     BasicBlock *UserBB = UI->getParent();
     if (UserBB == DefBB)
@@ -7242,8 +7237,8 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
   SmallPtrSet<Instruction *, 16> Visited;
   SmallVector<Instruction *, 8> AndsToMaybeRemove;
   SmallVector<Instruction *, 8> DropFlags;
-  for (auto *U : Load->users())
-    WorkList.push_back(cast<Instruction>(U));
+  for (Instruction *U : Load->users())
+    WorkList.push_back(U);
 
   EVT LoadResultVT = TLI->getValueType(*DL, Load->getType());
   unsigned BitWidth = LoadResultVT.getSizeInBits();
@@ -7263,8 +7258,8 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
 
     // For a PHI node, push all of its users.
     if (auto *Phi = dyn_cast<PHINode>(I)) {
-      for (auto *U : Phi->users())
-        WorkList.push_back(cast<Instruction>(U));
+      for (Instruction *U : Phi->users())
+        WorkList.push_back(U);
       continue;
     }
 
@@ -8544,15 +8539,11 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
   std::vector<GetElementPtrInst *> UGEPIs;
   // Check each user of GEPIOp to check if unmerging would make GEPIOp not alive
   // on IndirectBr edges.
-  for (User *Usr : GEPIOp->users()) {
+  for (Instruction *Usr : GEPIOp->users()) {
     if (Usr == GEPI)
       continue;
-    // Check if Usr is an Instruction. If not, give up.
-    if (!isa<Instruction>(Usr))
-      return false;
-    auto *UI = cast<Instruction>(Usr);
     // Check if Usr in the same block as GEPIOp, which is fine, skip.
-    if (UI->getParent() == SrcBlock)
+    if (Usr->getParent() == SrcBlock)
       continue;
     // Check if Usr is also a constant ptradd with GEPIOp as pointer operand.
     // If so, record it in the vector. If not, give up.

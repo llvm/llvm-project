@@ -326,8 +326,8 @@ bool LoopIdiomVectorize::recognizeByteCompare() {
   for (BasicBlock *BB : LoopBlocks)
     for (Instruction &I : *BB)
       if (&I != PN && &I != Index)
-        for (User *U : I.users())
-          if (!CurLoop->contains(cast<Instruction>(U)))
+        for (Instruction *U : I.users())
+          if (!CurLoop->contains(U))
             return false;
 
   // Match the branch instruction for the header
@@ -1010,8 +1010,8 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
   for (BasicBlock *BB : LoopBlocks)
     for (Instruction &I : *BB)
       if (&I != IndPhi)
-        for (User *U : I.users())
-          if (!CurLoop->contains(cast<Instruction>(U)))
+        for (Instruction *U : I.users())
+          if (!CurLoop->contains(U))
             return false;
 
   // Match the branch instruction in the header. We are expecting an
@@ -1044,8 +1044,8 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
     return false;
 
   // We expect outside uses of `IndPhi' in ExitSucc (and only there).
-  for (User *U : IndPhi->users())
-    if (!CurLoop->contains(cast<Instruction>(U))) {
+  for (Instruction *U : IndPhi->users())
+    if (!CurLoop->contains(U)) {
       auto *PN = dyn_cast<PHINode>(U);
       if (!PN || PN->getParent() != ExitSucc)
         return false;

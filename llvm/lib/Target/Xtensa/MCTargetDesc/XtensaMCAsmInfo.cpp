@@ -26,7 +26,7 @@ constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 XtensaMCAsmInfo::XtensaMCAsmInfo(const Triple &TT,
                                  const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TT, Options) {
   CodePointerSize = 4;
   CalleeSaveStackSlotSize = 4;
   InternalSymbolPrefix = ".L";
