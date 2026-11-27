@@ -1,17 +1,19 @@
-; RUN: opt -passes='require<demanded-bits>,infer-alignment' -debug-pass-manager \
-; RUN:     -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PM \
-; RUN:     --implicit-check-not='Invalidating analysis: DominatorTreeAnalysis'
+; RUN: opt -passes='require<demanded-bits>,require<phi-values>,require<scalar-evolution>,require<access-info>,require<memoryssa>,infer-alignment' \
+; RUN:     -debug-pass-manager -disable-output < %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=PM \
+; RUN:     --implicit-check-not='Invalidating analysis:'
 ; RUN: opt -passes='instcombine,infer-alignment,instcombine' -S < %s \
 ; RUN:     | FileCheck %s --check-prefix=IC
 
 ; PM: Running pass: InferAlignmentPass on changed_rauw
-; PM: Invalidating analysis: DemandedBitsAnalysis on changed_rauw
+; PM-DAG: Invalidating analysis: DemandedBitsAnalysis on changed_rauw
+; PM-DAG: Invalidating analysis: ScalarEvolutionAnalysis on changed_rauw
+; PM-DAG: Invalidating analysis: LoopAccessAnalysis on changed_rauw
 
 ; PM: Running pass: InferAlignmentPass on changed_align
 ; PM: Invalidating analysis: DemandedBitsAnalysis on changed_align
 
 ; PM: Running pass: InferAlignmentPass on unchanged
-; PM-NOT: Invalidating analysis: {{.*}} on unchanged
 
 define i64 @changed_rauw(ptr %p) {
 ; IC-LABEL: define i64 @changed_rauw(ptr %p) {

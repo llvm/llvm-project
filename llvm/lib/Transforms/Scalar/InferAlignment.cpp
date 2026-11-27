@@ -13,10 +13,16 @@
 
 #include "llvm/Transforms/Scalar/InferAlignment.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/DomConditionCache.h"
+#include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/PhiValues.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instruction.h"
@@ -31,7 +37,18 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
-static bool tryToImproveAlign(
+namespace {
+enum class InferAlignChanges : unsigned {
+  None = 0,
+  // Refined alignment on a memory op, alloca, global, or intrinsic arg.
+  Align = 1 << 0,
+  // Updated instruction operands.
+  Values = 1 << 1,
+  LLVM_MARK_AS_BITMASK_ENUM(Values)
+};
+} // namespace
+
+static InferAlignChanges tryToImproveAlign(
     const DataLayout &DL, Instruction *I,
     function_ref<Align(Value *PtrOp, Align OldAlign, Align PrefAlign)> Fn) {
 
@@ -42,7 +59,7 @@ static bool tryToImproveAlign(
     Align NewAlign = Fn(PtrOp, OldAlign, PrefAlign);
     if (NewAlign > OldAlign) {
       setLoadStoreAlignment(I, NewAlign);
-      return true;
+      return InferAlignChanges::Align;
     }
   }
 
@@ -52,32 +69,32 @@ static bool tryToImproveAlign(
     Align ActualAlign = Fn(PtrOp, Align(1), Align(1));
     if (Const->ult(ActualAlign.value())) {
       I->replaceAllUsesWith(Constant::getNullValue(I->getType()));
-      return true;
+      return InferAlignChanges::Values;
     }
     if (Const->uge(
             APInt::getBitsSetFrom(Const->getBitWidth(), Log2(ActualAlign)))) {
       I->replaceAllUsesWith(I->getOperand(0));
-      return true;
+      return InferAlignChanges::Values;
     }
   }
   if (match(I, m_Trunc(m_PtrToIntOrAddr(m_Value(PtrOp))))) {
     Align ActualAlign = Fn(PtrOp, Align(1), Align(1));
     if (Log2(ActualAlign) >= I->getType()->getScalarSizeInBits()) {
       I->replaceAllUsesWith(Constant::getNullValue(I->getType()));
-      return true;
+      return InferAlignChanges::Values;
     }
   }
 
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
   if (!II)
-    return false;
+    return InferAlignChanges::None;
 
   if (!isa<MemIntrinsic>(II) &&
       II->getIntrinsicID() != Intrinsic::masked_load &&
       II->getIntrinsicID() != Intrinsic::masked_store)
-    return false;
+    return InferAlignChanges::None;
 
-  bool Changed = false;
+  InferAlignChanges Changes = InferAlignChanges::None;
   for (unsigned ArgNo = 0; ArgNo != II->arg_size(); ++ArgNo) {
     Value *Arg = II->getArgOperand(ArgNo);
     if (!Arg->getType()->isPointerTy())
@@ -94,9 +111,9 @@ static bool tryToImproveAlign(
 
     II->addParamAttr(ArgNo,
                      Attribute::getWithAlignment(II->getContext(), NewAlign));
-    Changed = true;
+    Changes |= InferAlignChanges::Align;
   }
-  return Changed;
+  return Changes;
 }
 
 using ScopedHT =
@@ -112,9 +129,10 @@ struct AlignmentScope {
       : BB(N->getBlock()), Iter(N->begin()), End(N->end()), Scope(Table) {}
 };
 
-bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
+static InferAlignChanges inferAlignment(Function &F, AssumptionCache &AC,
+                                        DominatorTree &DT) {
   const DataLayout &DL = F.getDataLayout();
-  bool Changed = false;
+  InferAlignChanges Changes = InferAlignChanges::None;
 
   DomConditionCache DC;
   // Register all conditions before querying known bits, because function block
@@ -127,7 +145,7 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
   // pass first, because it may improve the alignments we infer below.
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
-      Changed |= tryToImproveAlign(
+      Changes |= tryToImproveAlign(
           DL, &I, [&](Value *PtrOp, Align OldAlign, Align PrefAlign) {
             if (PrefAlign > OldAlign)
               return std::max(OldAlign,
@@ -183,7 +201,7 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
     AlignmentScope &Top = Stack.back();
     if (Top.BB) {
       for (Instruction &I : *Top.BB) {
-        Changed |= tryToImproveAlign(
+        Changes |= tryToImproveAlign(
             DL, &I, [&](Value *PtrOp, Align OldAlign, Align PrefAlign) {
               return std::max(InferFromKnownBits(I, PtrOp),
                               InferFromBasePointer(PtrOp, OldAlign));
@@ -198,17 +216,25 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
       Stack.pop_back();
   }
 
-  return Changed;
+  return Changes;
 }
 
 PreservedAnalyses InferAlignmentPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  if (!inferAlignment(F, AC, DT))
+  InferAlignChanges Changes = inferAlignment(F, AC, DT);
+  if (!Changes)
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MemorySSAAnalysis>();
+  PA.preserve<PhiValuesAnalysis>();
+  if (!(Changes & InferAlignChanges::Values)) {
+    PA.preserve<ScalarEvolutionAnalysis>();
+    PA.preserve<LoopAccessAnalysis>();
+    PA.preserve<LoopAnalysisManagerFunctionProxy>();
+  }
   return PA;
 }
