@@ -49,6 +49,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringSet.h"
 
 using namespace mlir;
 
@@ -669,9 +670,222 @@ static std::optional<Jump> planJump(cir::GotoOp gotoOp, Block *dest) {
   return jump;
 }
 
+/// Returns a label name not yet used in the function.
+static std::string getFreshLabel(llvm::StringSet<> &labelNames,
+                                 unsigned &nextLabel, llvm::StringRef prefix) {
+  std::string name;
+  do
+    name = (prefix + "." + llvm::Twine(nextLabel++)).str();
+  while (!labelNames.insert(name).second);
+  return name;
+}
+
+/// Splits `op`'s block before `op`, starts the new block with a fresh label,
+/// and returns the label.
+static std::string labelBefore(Operation *op, IRRewriter &rewriter,
+                               llvm::StringSet<> &labelNames,
+                               unsigned &nextLabel, llvm::StringRef prefix) {
+  std::string name = getFreshLabel(labelNames, nextLabel, prefix);
+  OpBuilder::InsertionGuard guard(rewriter);
+  Block *block = op->getBlock();
+  Block *labelBlock = rewriter.splitBlock(block, op->getIterator());
+  rewriter.setInsertionPointToEnd(block);
+  cir::BrOp::create(rewriter, op->getLoc(), labelBlock);
+  rewriter.setInsertionPointToStart(labelBlock);
+  cir::LabelOp::create(rewriter, op->getLoc(), name);
+  return name;
+}
+
+/// Moves the code a switch body has before its first case out of the switch
+/// when that code holds a label: only gotos reach it, so it can live in the
+/// enclosing region off the normal path. Where it would fall into the first
+/// case it jumps to a label at the start of that case; where it would leave
+/// the switch (a break, or the end of a switch without cases) it jumps to a
+/// label after the switch. Allocas it declares move before the switch, since
+/// the cases may use them. Its labels are then ordinary labels of the
+/// enclosing region.
+static void hoistPreCaseCode(cir::FuncOp func, IRRewriter &rewriter,
+                             llvm::StringSet<> &labelNames,
+                             unsigned &nextLabel) {
+  SmallVector<cir::SwitchOp> switches;
+  func.walk([&](cir::SwitchOp switchOp) { switches.push_back(switchOp); });
+
+  for (cir::SwitchOp switchOp : switches) {
+    Region &body = switchOp.getBody();
+    cir::CaseOp firstCase;
+    for (Block &block : body) {
+      auto cases = block.getOps<cir::CaseOp>();
+      if (!cases.empty()) {
+        firstCase = *cases.begin();
+        break;
+      }
+    }
+
+    // The blocks before the first case, and the ops before it in its block.
+    SmallVector<Block *> preBlocks;
+    for (Block &block : body) {
+      if (firstCase && &block == firstCase->getBlock())
+        break;
+      preBlocks.push_back(&block);
+    }
+    SmallVector<Operation *> preOps;
+    if (firstCase)
+      for (Operation *op = &firstCase->getBlock()->front(); op != firstCase;
+           op = op->getNextNode())
+        preOps.push_back(op);
+
+    bool hasLabel = false, blocked = false;
+    auto inspect = [&](Operation *op) {
+      op->walk([&](Operation *nested) {
+        hasLabel |= isa<cir::LabelOp>(nested);
+        // Cases of inner switches move along with them; a case of this
+        // switch cannot leave it.
+        if (auto caseOp = dyn_cast<cir::CaseOp>(nested))
+          blocked |= caseOp->getParentOfType<cir::SwitchOp>() == switchOp;
+        if (auto alloca = dyn_cast<cir::AllocaOp>(nested))
+          blocked |= alloca.isDynamic();
+      });
+    };
+    for (Block *block : preBlocks)
+      for (Operation &op : *block)
+        inspect(&op);
+    for (Operation *op : preOps)
+      inspect(op);
+    if (!hasLabel || blocked)
+      continue;
+
+    Location loc = switchOp.getLoc();
+    // Normal execution goes around the hoisted code, straight to the switch,
+    // and on to a label after it.
+    Block *before = switchOp->getBlock();
+    Block *switchBlock = rewriter.splitBlock(before, switchOp->getIterator());
+    rewriter.setInsertionPointToEnd(before);
+    cir::BrOp::create(rewriter, loc, switchBlock);
+    std::string exitLabel = labelBefore(switchOp->getNextNode(), rewriter,
+                                        labelNames, nextLabel, "__switch.exit");
+
+    // The ops before the first case become a block of their own.
+    std::string caseLabel;
+    if (firstCase) {
+      Block *caseBlock = firstCase->getBlock();
+      rewriter.splitBlock(caseBlock, firstCase->getIterator());
+      preBlocks.push_back(caseBlock);
+      Region &caseRegion = firstCase.getCaseRegion();
+      Block &entry = caseRegion.front();
+      Operation *firstNonAlloca = &*llvm::find_if(
+          entry, [](Operation &op) { return !isa<cir::AllocaOp>(op); });
+      caseLabel = labelBefore(firstNonAlloca, rewriter, labelNames, nextLabel,
+                              "__case.entry");
+    }
+
+    // Leaving the switch from the hoisted code goes to the exit label; falling
+    // off its end goes into the first case.
+    for (Block *block : preBlocks) {
+      block->walk<WalkOrder::PreOrder>([&](Operation *op) {
+        if (isa<cir::LoopOpInterface, cir::SwitchOp>(op))
+          return WalkResult::skip();
+        if (isa<cir::BreakOp>(op) ||
+            (isa<cir::YieldOp>(op) && op->getParentRegion() == &body)) {
+          rewriter.setInsertionPoint(op);
+          rewriter.replaceOpWithNewOp<cir::GotoOp>(op, exitLabel);
+          return WalkResult::skip();
+        }
+        return WalkResult::advance();
+      });
+    }
+    if (firstCase) {
+      rewriter.setInsertionPointToEnd(preBlocks.back());
+      cir::GotoOp::create(rewriter, loc, caseLabel);
+    }
+
+    // Allocas move ahead of the switch, then the blocks out of it.
+    for (Block *block : preBlocks)
+      for (auto alloca :
+           llvm::make_early_inc_range(block->getOps<cir::AllocaOp>()))
+        rewriter.moveOpBefore(alloca, before->getTerminator());
+    for (Block *block : preBlocks)
+      rewriter.moveBlockBefore(block, switchBlock);
+    if (body.empty()) {
+      rewriter.createBlock(&body);
+      cir::YieldOp::create(rewriter, loc);
+    }
+  }
+}
+
+/// Returns the block at the end of `switchOp`'s body that holds the direct
+/// cases added for nested ones. Nothing falls into it: where the body used to
+/// fall off its end, it now leaves the switch first.
+static Block *getOrCreateCaseTail(cir::SwitchOp switchOp, IRRewriter &rewriter,
+                                  llvm::DenseMap<Operation *, Block *> &tails) {
+  Block *&tail = tails[switchOp];
+  if (tail)
+    return tail;
+  OpBuilder::InsertionGuard guard(rewriter);
+  Region &body = switchOp.getBody();
+  Location loc = switchOp.getLoc();
+  Block *last = &body.back();
+  if (auto yield = dyn_cast<cir::YieldOp>(last->getTerminator())) {
+    rewriter.setInsertionPoint(yield);
+    rewriter.replaceOpWithNewOp<cir::BreakOp>(yield);
+  }
+  tail = rewriter.createBlock(&body, body.end());
+  cir::YieldOp::create(rewriter, loc);
+  return tail;
+}
+
+/// Gives each case that is not a direct child of its switch (as in Duff's
+/// device) a direct case instead. Where the case was, a fresh label starts a
+/// block and the case's body becomes a scope, which normal execution still
+/// runs. A new direct case with the same values, first in the switch body
+/// where nothing falls into it, jumps to that label; that goto is then
+/// routed like any other.
+static void normalizeNestedCases(cir::FuncOp func, IRRewriter &rewriter,
+                                 llvm::StringSet<> &labelNames,
+                                 unsigned &nextLabel) {
+  llvm::DenseMap<Operation *, Block *> caseTails;
+  SmallVector<cir::CaseOp> nested;
+  func.walk([&](cir::CaseOp caseOp) {
+    if (!isa<cir::SwitchOp>(caseOp->getParentOp()))
+      nested.push_back(caseOp);
+  });
+
+  for (cir::CaseOp caseOp : nested) {
+    auto switchOp = caseOp->getParentOfType<cir::SwitchOp>();
+    Location loc = caseOp.getLoc();
+
+    // The label and the scope take the case's place.
+    std::string name =
+        labelBefore(caseOp, rewriter, labelNames, nextLabel, "__case");
+    rewriter.setInsertionPoint(caseOp);
+    auto scope =
+        cir::ScopeOp::create(rewriter, loc, [](OpBuilder &, Location) {});
+    rewriter.eraseBlock(&scope.getScopeRegion().front());
+    rewriter.inlineRegionBefore(caseOp.getCaseRegion(), scope.getScopeRegion(),
+                                scope.getScopeRegion().end());
+    sinkYieldsToLastBlock(scope.getScopeRegion(), rewriter);
+
+    // The direct case jumps there.
+    rewriter.setInsertionPoint(
+        getOrCreateCaseTail(switchOp, rewriter, caseTails)->getTerminator());
+    OpBuilder::InsertPoint caseBody;
+    cir::CaseOp::create(rewriter, loc, caseOp.getValue(), caseOp.getKind(),
+                        caseBody);
+    rewriter.restoreInsertionPoint(caseBody);
+    cir::GotoOp::create(rewriter, loc, name);
+    rewriter.eraseOp(caseOp);
+  }
+}
+
 void GotoEliminationPass::runOnOperation() {
   cir::FuncOp func = getOperation();
   IRRewriter rewriter(func.getContext());
+  {
+    llvm::StringSet<> labelNames;
+    func.walk([&](cir::LabelOp label) { labelNames.insert(label.getLabel()); });
+    unsigned nextLabel = 0;
+    normalizeNestedCases(func, rewriter, labelNames, nextLabel);
+    hoistPreCaseCode(func, rewriter, labelNames, nextLabel);
+  }
 
   llvm::DenseMap<StringAttr, cir::LabelOp> labels;
   SmallVector<cir::GotoOp> gotos;

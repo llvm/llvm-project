@@ -267,11 +267,27 @@ cir.func @case_to_case(%arg0: !s32i) {
   cir.return
 }
 
-// A label directly in a switch body, before any case, cannot be entered yet:
-// its goto stays.
+// Code before a switch's first case is reached only through its labels, so
+// it moves out of the switch, off the normal path. Its break leaves through a
+// label after the switch, and the goto becomes a branch.
 // CHECK-LABEL: cir.func @into_switch_body(
-// CHECK:         cir.goto "l"
-// CHECK:         cir.label "l"
+// CHECK:         cir.brcond %arg1 ^[[GOTO:bb[0-9]+]], ^[[NORMAL:bb[0-9]+]]
+// CHECK:       ^[[GOTO]]:
+// CHECK-NEXT:    cir.br ^[[CODE:bb[0-9]+]]
+// CHECK:       ^[[NORMAL]]:
+// CHECK-NEXT:    cir.br ^[[SWITCH:bb[0-9]+]]
+// CHECK:       ^[[CODE]]:
+// CHECK-NEXT:    cir.call @g()
+// CHECK-NEXT:    cir.br ^[[EXIT:bb[0-9]+]]
+// CHECK:       ^[[SWITCH]]:
+// CHECK-NEXT:    cir.switch(%arg0 : !s32i) {
+// CHECK-NEXT:      cir.yield
+// CHECK-NEXT:    }
+// CHECK-NEXT:    cir.br ^[[EXIT]]
+// CHECK:       ^[[EXIT]]:
+// CHECK-NEXT:    cir.return
+// CHECK-NOT:     cir.goto
+// CHECK-NOT:     cir.label
 cir.func @into_switch_body(%arg0: !s32i, %arg1: !cir.bool) {
   cir.brcond %arg1 ^bb1, ^bb2
 ^bb1:
@@ -283,6 +299,70 @@ cir.func @into_switch_body(%arg0: !s32i, %arg1: !cir.bool) {
     cir.label "l"
     cir.call @g() : () -> ()
     cir.break
+  }
+  cir.return
+}
+
+// A break in a loop inside hoisted pre-case code still leaves only the loop.
+// CHECK-LABEL: cir.func @pre_case_loop_break(
+// CHECK:         cir.call @g()
+// CHECK:         cir.while {
+// CHECK:         } do {
+// CHECK-NEXT:      cir.break
+// CHECK-NEXT:    }
+// CHECK-NOT:     cir.goto
+cir.func @pre_case_loop_break(%arg0: !s32i, %arg1: !cir.bool) {
+  cir.brcond %arg1 ^bb1, ^bb2
+^bb1:
+  cir.goto "l"
+^bb2:
+  cir.switch(%arg0 : !s32i) {
+    cir.br ^bb1
+  ^bb1:
+    cir.label "l"
+    cir.call @g() : () -> ()
+    cir.while {
+      cir.condition(%arg1)
+    } do {
+      cir.break
+    }
+    cir.break
+  }
+  cir.return
+}
+
+// A case nested below its switch becomes a label where it was, its body a
+// scope, and a direct case in a block at the end of the switch, which nothing
+// falls into, jumps there: out of the switch and back in through case 0.
+// CHECK-LABEL: cir.func @nested_case(
+// CHECK:       ^[[PRE:bb[0-9]+]](%[[V:.*]]: !s32i):
+// CHECK-NEXT:    cir.switch(%[[V]] : !s32i) {
+// CHECK-NEXT:      cir.case(equal, [#cir.int<0> : !s32i]) {
+// CHECK:             cir.scope {
+// CHECK:               cir.scope {
+// CHECK-NEXT:            cir.call @g()
+// CHECK:         ^{{bb[0-9]+}}:  // no predecessors
+// CHECK-NEXT:      cir.case(equal, [#cir.int<1> : !s32i]) {
+// CHECK-NEXT:        %[[ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT:        cir.store %[[ID]]
+// CHECK-NEXT:        cir.break
+// CHECK:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK-NEXT:    cir.br ^[[PRE]](%[[ZERO]] : !s32i)
+// CHECK-NOT:     cir.goto
+// CHECK-NOT:     cir.label
+cir.func @nested_case(%arg0: !s32i) {
+  cir.switch(%arg0 : !s32i) {
+    cir.case(equal, [#cir.int<0> : !s32i]) {
+      cir.scope {
+        cir.case(equal, [#cir.int<1> : !s32i]) {
+          cir.call @g() : () -> ()
+          cir.yield
+        }
+        cir.yield
+      }
+      cir.break
+    }
+    cir.yield
   }
   cir.return
 }

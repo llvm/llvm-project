@@ -12,24 +12,29 @@ void pre_case_label() {
   }
 }
 
+// The code before the case holds a label, so it moves out of the switch, off
+// the normal path, and enters the switch through the case.
 // CIR-LABEL: cir.func{{.*}} @_Z14pre_case_labelv
-// CIR: cir.switch({{.*}} : !s32i) {
+// CIR: %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
+// CIR: cir.br ^[[SWITCH_BB:bb[0-9]+]](%{{.*}} : !s32i)
+// CIR: ^{{bb[0-9]+}}:  // no predecessors
+// CIR: %[[ENTRY_ID:.*]] = cir.const #cir.int<[[CASE_ENTRY:[0-9]+]]> : !s32i
+// CIR: cir.store %[[ENTRY_ID]], %[[SLOT]]
+// CIR: %[[CASE_VAL:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: cir.br ^[[SWITCH_BB]](%[[CASE_VAL]] : !s32i)
+// CIR: ^[[SWITCH_BB]](%[[COND:.*]]: !s32i
+// CIR-NEXT: cir.switch(%[[COND]] : !s32i) {
 // CIR-NEXT:    cir.case(equal, [#cir.int<1> : !s32i]) {
+// CIR:      cir.switch.flat %{{.*}} : !s32i, ^{{bb[0-9]+}} [
+// CIR-NEXT:   [[CASE_ENTRY]]: ^{{bb[0-9]+}}
 // CIR:      cir.yield loc(#loc{{[0-9]+}})
 // CIR:    }
 // CIR:    cir.yield
 // CIR:  }
 
+// Nothing jumps to the label, so the switch on a constant folds away.
 // LLVM-LABEL: define{{.*}} void @_Z14pre_case_labelv
-// LLVM: switch i32 1, label %[[END:.*]] [
-// LLVM:   i32 1, label %[[CASE1:.*]]
-// LLVM: ]
-// LLVM: [[LABEL:.*]]:{{.*}}; No predecessors!
-// LLVM:   br label %[[CASE1]]
-// CIR inserts a bunch of 'empty' blocks all over the place that just jump to
-// the next, so unifying these check blocks/checking more is pretty
-// awful/doesn't result in good checks.
-// LLVM: [[END]]:
+// LLVM-NOT: switch
 // LLVM:   ret void
 
 // OGCG-LABEL: define{{.*}} void @_Z14pre_case_labelv
@@ -52,7 +57,14 @@ void multiple_pre_case_labels() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z24multiple_pre_case_labelsv
-// CIR:  cir.switch({{.*}} : !s32i) {
+// CIR: %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
+// CIR: cir.br ^[[SWITCH_BB:bb[0-9]+]](%{{.*}} : !s32i)
+// CIR: ^{{bb[0-9]+}}:  // no predecessors
+// CIR: cir.store %{{.*}}, %[[SLOT]]
+// CIR: %[[CASE_VAL:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: cir.br ^[[SWITCH_BB]](%[[CASE_VAL]] : !s32i)
+// CIR: ^[[SWITCH_BB]](%[[COND:.*]]: !s32i
+// CIR-NEXT:  cir.switch(%[[COND]] : !s32i) {
 // CIR-NEXT:    cir.case(equal, [#cir.int<1> : !s32i]) {
 // CIR:      cir.yield
 // CIR:    }
@@ -60,15 +72,8 @@ void multiple_pre_case_labels() {
 // CIR:  }
 
 // LLVM-LABEL: define{{.*}} @_Z24multiple_pre_case_labelsv
-// LLVM:   switch i32 1, label %[[END:.*]] [
-// LLVM:     i32 1, label %[[CASE1:.*]]
-// LLVM:   ]
-// LLVM: [[LABEL1:.*]]:
-// LLVM:   br label %[[CASE1]]
-// LLVM: [[CASE1]]:
-// LLVM:   br label %[[END]]
-// LLVM: [[END]]:
-// LLVM:   ret void
+// LLVM-NOT:   switch
+// LLVM:       ret void
 
 // OGCG-LABEL: define{{.*}} @_Z24multiple_pre_case_labelsv
 // OGCG:   switch i32 1, label %[[END:.*]] [
@@ -262,34 +267,51 @@ void external_goto_into_pre_case(int cond) {
   case 1:;
   }
 }
+// The label's code moves out of the switch, where the goto reaches it; it enters
+// the switch through the case.
 // CIR-LABEL: cir.func{{.*}} @_Z27external_goto_into_pre_casei
+// CIR: %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
 // CIR: cir.if {{.*}} {
-// CIR:   cir.goto "LABEL"
-// CIR: cir.switch({{.*}} : !s32i) {
-// CIR:   cir.br ^bb1
-// CIR: ^bb1:
-// CIR:   cir.label "LABEL"
-// CIR:   cir.case(equal, [#cir.int<1> : !s32i]) {
+// CIR:   %[[LABEL_ID:.*]] = cir.const #cir.int<[[LABEL:[0-9]+]]> : !s32i
+// CIR:   cir.store %[[LABEL_ID]], %[[SLOT]]
+// CIR: }
+// CIR: cir.scope {
+// CIR:   cir.switch.flat %{{.*}} : !s32i, ^[[NORMAL:bb[0-9]+]] [
+// CIR-NEXT:  [[LABEL]]: ^[[TO_LABEL:bb[0-9]+]]
+// CIR: ^[[TO_LABEL]]:
+// CIR:   cir.br ^[[LABEL_BB:bb[0-9]+]]
+// CIR: ^[[NORMAL]]:
+// CIR:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:   cir.br ^[[SWITCH_BB:bb[0-9]+]](%[[ONE]] : !s32i)
+// CIR: ^[[LABEL_BB]]:
+// CIR:   %[[ENTRY_ID:.*]] = cir.const #cir.int<[[CASE_ENTRY:[0-9]+]]> : !s32i
+// CIR:   cir.store %[[ENTRY_ID]], %[[SLOT]]
+// CIR:   %[[CASE_VAL:.*]] = cir.const #cir.int<1> : !s32i
+// CIR:   cir.br ^[[SWITCH_BB]](%[[CASE_VAL]] : !s32i)
+// CIR: ^[[SWITCH_BB]](%[[COND:.*]]: !s32i
+// CIR-NEXT: cir.switch(%[[COND]] : !s32i) {
+// CIR-NEXT:   cir.case(equal, [#cir.int<1> : !s32i]) {
+// CIR:     cir.switch.flat %{{.*}} : !s32i, ^{{bb[0-9]+}} [
+// CIR-NEXT:  [[CASE_ENTRY]]: ^{{bb[0-9]+}}
 // CIR:     cir.yield
 // CIR:   }
 // CIR:   cir.yield
 // CIR: }
 
+// Both ways into the switch pass the constant 1, so the switch folds away.
 // LLVM-LABEL: define{{.*}} @_Z27external_goto_into_pre_casei
 // LLVM: br i1 %{{.*}}, label %[[TRUE:.*]], label %[[FALSE:.*]]
+// LLVM-NOT: switch
+// LLVM: [[FALSE]]:
+// LLVM:   br label %[[NORMAL:.*]]
 // LLVM: [[TRUE]]:
 // LLVM:   br label %[[LABEL:.*]]
-// LLVM: [[FALSE]]:
-// Some empty blocks that just do jumps removed here.
-// LLVM: switch i32 1, label %[[END:.*]] [
-// LLVM:   i32 1, label %[[CASE1:.*]]
-// LLVM: ]
-// LLVM: [[ENTRY:.*]]:{{.*}}; No predecessors!
-// LLVM:   br label %[[LABEL]]
 // LLVM: [[LABEL]]:
-// LLVM: br label %[[CASE1]]
+// LLVM:   br label %[[CASE1:.*]]
+// LLVM: [[NORMAL]]:
+// LLVM:   br label %[[CASE1]]
 // LLVM: [[CASE1]]:
-// LLVM: [[END]]:
+// LLVM:   ret void
 
 // OGCG-LABEL: define{{.*}} @_Z27external_goto_into_pre_casei
 // OGCG: br i1 %{{.*}}, label %[[TRUE:.*]], label %[[FALSE:.*]]
@@ -312,28 +334,34 @@ void external_goto_into_pre_case_empty(int cond) {
   LABEL:;
   }
 }
+// The label's code moves out of the switch and leaves it through the switch
+// exit; the switch, now empty, folds away.
 // CIR-LABEL: cir.func{{.*}} @_Z33external_goto_into_pre_case_emptyi
+// CIR: %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
 // CIR: cir.if {{.*}} {
-// CIR:   cir.goto "LABEL"
-// CIR: cir.switch({{.*}} : !s32i) {
-// CIR:   cir.br ^bb1
-// CIR: ^bb1:
-// CIR:   cir.label "LABEL"
-// CIR:   cir.yield
+// CIR:   %[[LABEL_ID:.*]] = cir.const #cir.int<[[LABEL:[0-9]+]]> : !s32i
+// CIR:   cir.store %[[LABEL_ID]], %[[SLOT]]
 // CIR: }
+// CIR: cir.scope {
+// CIR:   cir.switch.flat %{{.*}} : !s32i, ^[[NORMAL:bb[0-9]+]] [
+// CIR-NEXT:  [[LABEL]]: ^[[TO_LABEL:bb[0-9]+]]
+// CIR: ^[[TO_LABEL]]:
+// CIR:   cir.br ^[[LABEL_BB:bb[0-9]+]]
+// CIR: ^[[NORMAL]]:
+// CIR:   cir.br ^[[EXIT:bb[0-9]+]]
+// CIR: ^[[LABEL_BB]]:
+// CIR:   cir.br ^[[EXIT]]
+// CIR: ^[[EXIT]]:
+// CIR:   cir.yield
+// CIR-NOT: cir.switch(
 
 // LLVM-LABEL: define{{.*}} @_Z33external_goto_into_pre_case_emptyi
 // LLVM: br i1 %{{.*}}, label %[[TRUE:.*]], label %[[FALSE:.*]]
-// LLVM: [[TRUE]]:
-// LLVM:   br label %[[LABEL:.*]]
+// LLVM-NOT: switch
 // LLVM: [[FALSE]]:
-// Some empty blocks that just do jumps removed here.
-// LLVM: switch i32 1, label %[[END:.*]] [
-// LLVM: ]
-// LLVM: [[ENTRY:.*]]:{{.*}}; No predecessors!
-// LLVM:   br label %[[LABEL]]
-// LLVM: [[LABEL]]:
-// LLVM: br label %[[END]]
+// LLVM:   br label %[[END:.*]]
+// LLVM: [[TRUE]]:
+// LLVM:   br label %[[END]]
 // LLVM: [[END]]:
 
 // OGCG-LABEL: define{{.*}} @_Z33external_goto_into_pre_case_emptyi

@@ -366,12 +366,36 @@ void if4(int a) {
 // CIR: cir.func{{.*}} @_Z3if4i(%[[ARG:.*]]: !s32i {{.*}})
 // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR:  %[[LOAD_ARG:.*]] = cir.load align(4) %[[ARG_ALLOCA]] : !cir.ptr<!s32i>, !s32i
-// CIR:  cir.switch(%[[LOAD_ARG]] : !s32i) {
+// CIR:  cir.br ^[[SWITCH_BB:bb[0-9]+]](%[[LOAD_ARG]] : !s32i)
+// CIR:  ^[[SWITCH_BB]](%[[COND:.*]]: !s32i
+// CIR:  cir.switch(%[[COND]] : !s32i) {
 // CIR:  cir.case(equal, [#cir.int<0> : !s32i]) {
 // CIR:    cir.scope {
+// CIR:      %[[DEST0:.*]] = cir.load %[[SLOT:.*]] : !cir.ptr<!s32i>, !s32i
+// CIR:      cir.switch.flat %[[DEST0]] : !s32i, ^[[NOT_CASE1:bb[0-9]+]] [
+// CIR-NEXT:   [[CASE1_ID:[0-9]+]]: ^[[TO_CASE1:bb[0-9]+]]
+// CIR:    ^[[TO_CASE1]]:
+// CIR:      %[[TRUE:.*]] = cir.const #true
+// CIR:      cir.br ^[[IF_BB:bb[0-9]+]](%[[TRUE]] : !cir.bool)
+// CIR:    ^[[NOT_CASE1]]:
 // CIR:      %[[ZERO_BOOL:.*]] = cir.const #false
-// CIR:      cir.if %[[ZERO_BOOL]]
-// CIR:        cir.call @_Z3if0b(
+// CIR:      cir.br ^[[IF_BB]](%[[ZERO_BOOL]] : !cir.bool)
+// CIR:    ^[[IF_BB]](%[[IF_COND:.*]]: !cir.bool
+// CIR:      cir.if %[[IF_COND]]
+// CIR:        cir.scope {
+// CIR:          cir.call @_Z3if0b(
+// CIR:  cir.break
+// CIR-NEXT: ^{{bb[0-9]+}}:
+// CIR-NEXT:  cir.case(equal, [#cir.int<1> : !s32i]) {
+// CIR-NEXT:    %[[ID1:.*]] = cir.const #cir.int<[[CASE1_ID]]> : !s32i
+// CIR-NEXT:    cir.store %[[ID1]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:    cir.break
+// CIR:  %[[DEST:.*]] = cir.load %[[SLOT]] : !cir.ptr<!s32i>, !s32i
+// CIR:  cir.switch.flat %[[DEST]] : !s32i, ^{{bb[0-9]+}} [
+// CIR-NEXT: [[CASE1_ID]]: ^[[REENTER:bb[0-9]+]]
+// CIR:  ^[[REENTER]]:
+// CIR:    %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR:    cir.br ^[[SWITCH_BB]](%[[ZERO]] : !s32i)
 
 // LLVM: define{{.*}} void @_Z3if4i(i32 noundef %[[ARG:.*]])
 // LLVM: switch i32
