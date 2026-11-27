@@ -16,6 +16,7 @@
 
 #include "polly/DeLICM.h"
 #include "polly/Options.h"
+#include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLOStream.h"
@@ -26,8 +27,6 @@
 
 #include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-delicm"
-
-extern llvm::cl::opt<bool> PollyVectorizeMetadata;
 
 using namespace polly;
 using namespace llvm;
@@ -50,19 +49,18 @@ cl::opt<bool> DelicmOverapproximateWrites(
         "Do more PHI writes than necessary in order to avoid partial accesses"),
     cl::init(false), cl::Hidden, cl::cat(PollyCategory));
 
-cl::opt<bool> DelicmPartialWrites(
+cl::opt<cl::boolOrDefault> DelicmPartialWrites(
     "polly-delicm-partial-writes",
-    cl::desc("Allow partial writes (Disable for PHIs with "
-             "-polly-annotate-metadata-vectorize unless passed explicitly)"),
-    cl::init(true), cl::Hidden, cl::cat(PollyCategory));
+    cl::desc("Allow partial writes (default: true; false with "
+             "-polly-optimize-for-vectorization)"),
+    cl::init(cl::boolOrDefault::BOU_UNSET), cl::Hidden, cl::cat(PollyCategory));
 
 /// Partial PHI writes become conditional stores reloaded in the next iteration,
-/// which the LoopVectorizer cannot vectorize. Disable them in vectorize mode
-/// unless -polly-delicm-partial-writes is passed explicitly.
+/// which the LoopVectorizer cannot vectorize.
 static bool allowPartialPHIWrites() {
-  if (DelicmPartialWrites.getNumOccurrences() > 0)
-    return DelicmPartialWrites;
-  return !PollyVectorizeMetadata;
+  if (DelicmPartialWrites != cl::boolOrDefault::BOU_UNSET)
+    return DelicmPartialWrites == cl::boolOrDefault::BOU_TRUE;
+  return !PollyOptimizeForVectorization;
 }
 
 cl::opt<bool>

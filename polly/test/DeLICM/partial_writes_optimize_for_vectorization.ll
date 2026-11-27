@@ -1,10 +1,10 @@
 ; RUN: opt %loadNPMPolly '-passes=polly-custom<prepare;delicm>' -plugin-arg=Polly,-polly-print-delicm -disable-output < %s | FileCheck %s --check-prefix=PARTIAL
-; RUN: opt %loadNPMPolly '-passes=polly-custom<prepare;delicm>' -plugin-arg=Polly,-polly-print-delicm -plugin-arg=Polly,-polly-annotate-metadata-vectorize -disable-output < %s | FileCheck %s --check-prefix=NOPARTIAL
-; RUN: opt %loadNPMPolly '-passes=polly-custom<prepare;delicm>' -plugin-arg=Polly,-polly-print-delicm -plugin-arg=Polly,-polly-annotate-metadata-vectorize -plugin-arg=Polly,-polly-delicm-partial-writes=true -disable-output < %s | FileCheck %s --check-prefix=PARTIAL
+; RUN: opt %loadNPMPolly '-passes=polly-custom<prepare;delicm>' -plugin-arg=Polly,-polly-print-delicm -plugin-arg=Polly,-polly-optimize-for-vectorization -disable-output < %s | FileCheck %s --check-prefix=NOPARTIAL
+; RUN: opt %loadNPMPolly '-passes=polly-custom<prepare;delicm>' -plugin-arg=Polly,-polly-print-delicm -plugin-arg=Polly,-polly-optimize-for-vectorization -plugin-arg=Polly,-polly-delicm-partial-writes=true -disable-output < %s | FileCheck %s --check-prefix=PARTIAL
 ;
-; Mapping x to off[i+1] needs a partial PHI write (the last iteration's x has
-; no element). The resulting conditional store prevents loop vectorization, so
-; it is not done with -polly-annotate-metadata-vectorize unless requested.
+; Check that the partial PHI write mapping x to off[i+1] is not done with
+; -polly-optimize-for-vectorization, unless -polly-delicm-partial-writes is
+; passed explicitly.
 ;
 ;    void func(int n, int *off, int *base, int stride) {
 ;      int x = base[0];
