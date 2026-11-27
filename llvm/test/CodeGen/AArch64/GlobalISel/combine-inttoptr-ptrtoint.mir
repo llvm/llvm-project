@@ -45,7 +45,9 @@ body:             |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK-NEXT: $x0 = COPY [[COPY]](p0)
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(i16) = G_PTRTOINT [[COPY]](p0)
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[PTRTOINT]](i16)
+    ; CHECK-NEXT: $x0 = COPY [[INTTOPTR]](p0)
     %0:_(p0) = COPY $x0
     %1:_(i16) = G_PTRTOINT %0
     %2:_(p0) = G_INTTOPTR %1
@@ -77,7 +79,9 @@ body:             |
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $q0
-    ; CHECK-NEXT: $q0 = COPY [[COPY]](<2 x p0>)
+    ; CHECK-NEXT: [[PTRTOINT:%[0-9]+]]:_(<2 x i32>) = G_PTRTOINT [[COPY]](<2 x p0>)
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(<2 x p0>) = G_INTTOPTR [[PTRTOINT]](<2 x i32>)
+    ; CHECK-NEXT: $q0 = COPY [[INTTOPTR]](<2 x p0>)
     %0:_(<2 x p0>) = COPY $q0
     %1:_(<2 x i32>) = G_PTRTOINT %0
     %2:_(<2 x p0>) = G_INTTOPTR %1
