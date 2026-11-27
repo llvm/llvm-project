@@ -10,25 +10,22 @@
 
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-static constexpr OptionDefinition g_default_option_definitions[] = {
-    {LLDB_OPT_SET_1, false, "format", 'f', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeFormat,
-     "Specify a format to be used for display."},
-    {LLDB_OPT_SET_2, false, "gdb-format", 'G', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeGDBFormat,
-     "Specify a format using a GDB format specifier string."},
-    {LLDB_OPT_SET_3, false, "size", 's', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeByteSize,
-     "The size in bytes to use when displaying with the selected format."},
-    {LLDB_OPT_SET_4, false, "count", 'c', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeCount,
-     "The number of total items to display."},
+#define LLDB_OPTIONS_format
+#include "InterpreterOptions.inc"
+
+enum {
+  eCountOption = 0,
+  eFormatOption = 1,
+  eGDBFormatOption = 2,
+  eSizeOption = 3,
 };
 
 OptionGroupFormat::OptionGroupFormat(
@@ -39,17 +36,18 @@ OptionGroupFormat::OptionGroupFormat(
       m_count(default_count, default_count), m_prev_gdb_format('x'),
       m_prev_gdb_size('w'), m_has_gdb_format(false) {
   // Copy the default option definitions.
-  std::copy(std::begin(g_default_option_definitions),
-            std::end(g_default_option_definitions),
-            std::begin(m_option_definitions));
+  static_assert(sizeof(m_option_definitions) == sizeof(g_format_options));
+  llvm::copy(g_format_options, std::begin(m_option_definitions));
 
   for (auto usage_text_tuple : usage_text_vector) {
     switch (std::get<0>(usage_text_tuple)) {
     case eArgTypeFormat:
-      m_option_definitions[0].usage_text = std::get<1>(usage_text_tuple);
+      m_option_definitions[eFormatOption].usage_text =
+          std::get<1>(usage_text_tuple);
       break;
     case eArgTypeByteSize:
-      m_option_definitions[2].usage_text = std::get<1>(usage_text_tuple);
+      m_option_definitions[eSizeOption].usage_text =
+          std::get<1>(usage_text_tuple);
       break;
     default:
       llvm_unreachable("Unimplemented option");
@@ -59,20 +57,26 @@ OptionGroupFormat::OptionGroupFormat(
 
 llvm::ArrayRef<OptionDefinition> OptionGroupFormat::GetDefinitions() {
   auto result = llvm::ArrayRef(m_option_definitions);
+  static_assert(g_format_options[eCountOption].short_option == 'c' &&
+                    g_format_options[eFormatOption].short_option == 'f' &&
+                    g_format_options[eGDBFormatOption].short_option == 'G' &&
+                    g_format_options[eSizeOption].short_option == 's',
+                "unexpected order of format options");
   if (m_byte_size.GetDefaultValue() < UINT64_MAX) {
     if (m_count.GetDefaultValue() < UINT64_MAX)
       return result;
-    else
-      return result.take_front(3);
+    // Omit --count.
+    return result.drop_front();
   }
-  return result.take_front(2);
+  // Omit --count and --size.
+  return result.slice(eFormatOption, 2);
 }
 
 Status OptionGroupFormat::SetOptionValue(uint32_t option_idx,
                                          llvm::StringRef option_arg,
                                          ExecutionContext *execution_context) {
   Status error;
-  const int short_option = m_option_definitions[option_idx].short_option;
+  const int short_option = GetDefinitions()[option_idx].short_option;
 
   switch (short_option) {
   case 'f':
