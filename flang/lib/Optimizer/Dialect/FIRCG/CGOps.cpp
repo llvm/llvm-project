@@ -15,19 +15,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 
-/// FIR codegen dialect constructor.
-fir::FIRCodeGenDialect::FIRCodeGenDialect(mlir::MLIRContext *ctx)
-    : mlir::Dialect("fircg", ctx, mlir::TypeID::get<FIRCodeGenDialect>()) {
-  addOperations<
-#define GET_OP_LIST
-#include "flang/Optimizer/Dialect/FIRCG/CGOps.cpp.inc"
-      >();
-}
-
-// anchor the class vtable to this compilation unit
-fir::FIRCodeGenDialect::~FIRCodeGenDialect() {
-  // do nothing
-}
+#include "flang/Optimizer/Dialect/FIRCodeGenDialect.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "flang/Optimizer/Dialect/FIRCG/CGOps.cpp.inc"

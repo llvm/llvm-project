@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=hexagon  -O2 -spill-func-threshold=2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon  -O2 -hexagon-spill-func-threshold=2 < %s | FileCheck %s
 
 declare i32 @f0(i32, i32, i32, i32, i32, i32)
 

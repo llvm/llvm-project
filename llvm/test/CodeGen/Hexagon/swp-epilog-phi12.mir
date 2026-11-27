@@ -44,43 +44,6 @@ selected:        false
 failedISel:      false
 isOutlined:      false
 failsVerification: false
-registers:
-  - { id: 0, class: doubleregs, preferred-register: '' }
-  - { id: 1, class: doubleregs, preferred-register: '' }
-  - { id: 2, class: intregs, preferred-register: '' }
-  - { id: 3, class: intregs, preferred-register: '' }
-  - { id: 4, class: intregs, preferred-register: '' }
-  - { id: 5, class: intregs, preferred-register: '' }
-  - { id: 6, class: intregs, preferred-register: '' }
-  - { id: 7, class: intregs, preferred-register: '' }
-  - { id: 8, class: intregs, preferred-register: '' }
-  - { id: 9, class: intregs, preferred-register: '' }
-  - { id: 10, class: intregs, preferred-register: '' }
-  - { id: 11, class: doubleregs, preferred-register: '' }
-  - { id: 12, class: doubleregs, preferred-register: '' }
-  - { id: 13, class: intregs, preferred-register: '' }
-  - { id: 14, class: intregs, preferred-register: '' }
-  - { id: 15, class: intregs, preferred-register: '' }
-  - { id: 16, class: intregs, preferred-register: '' }
-  - { id: 17, class: intregs, preferred-register: '' }
-  - { id: 18, class: doubleregs, preferred-register: '' }
-  - { id: 19, class: intregs, preferred-register: '' }
-  - { id: 20, class: intregs, preferred-register: '' }
-  - { id: 21, class: doubleregs, preferred-register: '' }
-  - { id: 22, class: doubleregs, preferred-register: '' }
-  - { id: 23, class: intregs, preferred-register: '' }
-  - { id: 24, class: doubleregs, preferred-register: '' }
-  - { id: 25, class: intregs, preferred-register: '' }
-  - { id: 26, class: intregs, preferred-register: '' }
-  - { id: 27, class: intregs, preferred-register: '' }
-  - { id: 28, class: doubleregs, preferred-register: '' }
-  - { id: 29, class: intregs, preferred-register: '' }
-  - { id: 30, class: intregs, preferred-register: '' }
-  - { id: 31, class: doubleregs, preferred-register: '' }
-  - { id: 32, class: intregs, preferred-register: '' }
-  - { id: 33, class: intregs, preferred-register: '' }
-  - { id: 34, class: intregs, preferred-register: '' }
-  - { id: 35, class: predregs, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }

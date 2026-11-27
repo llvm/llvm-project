@@ -205,6 +205,10 @@ def load_pass_plugins : Separate<["--"], "load-pass-plugin">, Group<grp_lld>;
 def load_pass_plugins_eq : Joined<["--"], "load-pass-plugin=">,
     Alias<!cast<Separate>(load_pass_plugins)>,
     HelpText<"Load passes from plugin library">, Group<grp_lld>;
+def pass_plugin_arg : Separate<["--"], "pass-plugin-arg">, Group<grp_lld>;
+def pass_plugin_arg_eq : Joined<["--"], "pass-plugin-arg=">,
+    Alias<!cast<Separate>(pass_plugin_arg)>, MetaVarName<"<plugin>,<arg>">,
+    HelpText<"Pass <arg> to the pass plugin named <plugin>">, Group<grp_lld>;
 def codegen_data_generate_path : Separate<["--"], "codegen-data-generate-path">, Group<grp_lld>;
 def codegen_data_generate_path_eq : Joined<["--"], "codegen-data-generate-path=">,
     Alias<!cast<Separate>(codegen_data_generate_path)>, MetaVarName<"<cgdata>">,

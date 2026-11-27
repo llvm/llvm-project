@@ -117,8 +117,8 @@ createGlobalVarForGraphEntryPoint(OpBuilder &builder, spirv::GraphARMOp graphOp,
 static LogicalResult
 getInterfaceVariables(mlir::FunctionOpInterface funcOp,
                       SmallVectorImpl<Attribute> &interfaceVars) {
-  auto module = funcOp->getParentOfType<spirv::ModuleOp>();
-  if (!module) {
+  auto moduleOp = funcOp->getParentOfType<spirv::ModuleOp>();
+  if (!moduleOp) {
     return failure();
   }
   spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(funcOp);
@@ -130,8 +130,8 @@ getInterfaceVariables(mlir::FunctionOpInterface funcOp,
   // call graph and collect all the interfaces. For now, just traverse the
   // instructions in this function.
   funcOp.walk([&](spirv::AddressOfOp addressOfOp) {
-    auto var =
-        module.lookupSymbol<spirv::GlobalVariableOp>(addressOfOp.getVariable());
+    auto var = moduleOp.lookupSymbol<spirv::GlobalVariableOp>(
+        addressOfOp.getVariable());
     // Per SPIR-V spec: "Before version 1.4, the interface's
     // storage classes are limited to the Input and Output storage classes.
     // Starting with version 1.4, the interface's storage classes are all
@@ -400,12 +400,12 @@ LogicalResult ProcessGraphInterfaceVarABI::matchAndRewrite(
 void LowerABIAttributesPass::runOnOperation() {
   // Uses the signature conversion methodology of the dialect conversion
   // framework to implement the conversion.
-  spirv::ModuleOp module = getOperation();
+  spirv::ModuleOp moduleOp = getOperation();
   MLIRContext *context = &getContext();
 
-  spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(module);
+  spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(moduleOp);
   if (!targetEnvAttr) {
-    module->emitOpError("missing SPIR-V target env attribute");
+    moduleOp->emitOpError("missing SPIR-V target env attribute");
     return signalPassFailure();
   }
   spirv::TargetEnv targetEnv(targetEnvAttr);
@@ -450,7 +450,7 @@ void LowerABIAttributesPass::runOnOperation() {
     return op->getDialect()->getNamespace() ==
            spirv::SPIRVDialect::getDialectNamespace();
   });
-  if (failed(applyPartialConversion(module, target, std::move(patterns))))
+  if (failed(applyPartialConversion(moduleOp, target, std::move(patterns))))
     return signalPassFailure();
 
   // Walks over all the FuncOps in spirv::ModuleOp to lower the entry point
@@ -458,7 +458,7 @@ void LowerABIAttributesPass::runOnOperation() {
   OpBuilder builder(context);
   SmallVector<spirv::FuncOp, 1> entryPointFns;
   auto entryPointAttrName = spirv::getEntryPointABIAttrName();
-  module.walk([&](spirv::FuncOp funcOp) {
+  moduleOp.walk([&](spirv::FuncOp funcOp) {
     if (funcOp->getDiscardableAttrOfType<spirv::EntryPointABIAttr>(
             entryPointAttrName)) {
       entryPointFns.push_back(funcOp);

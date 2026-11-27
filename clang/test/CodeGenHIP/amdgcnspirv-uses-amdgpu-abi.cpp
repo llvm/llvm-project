@@ -3,6 +3,10 @@
 // RUN:   -o - %s | FileCheck --check-prefix=AMDGCNSPIRV %s
 // RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -O3 \
 // RUN:   -o - %s | FileCheck --check-prefix=AMDGPU %s
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -O3 \
+// RUN:   -fexperimental-abi-lowering -o - %s | FileCheck --check-prefix=AMDGCNSPIRV %s
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -O3 \
+// RUN:   -fexperimental-abi-lowering -o - %s | FileCheck --check-prefix=AMDGPU %s
 
 #define __global__ __attribute__((global))
 #define __device__ __attribute__((device))
@@ -16,7 +20,7 @@ struct SingleElement { unsigned x; };
 struct ByRef { unsigned  x[17]; };
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k0s(
-// AMDGCNSPIRV-SAME: i16 noundef [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0:[0-9]+]] !max_work_group_size [[META8:![0-9]+]] {
+// AMDGCNSPIRV-SAME: i16 noundef [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0:[0-9]+]] !max_work_group_size [[META9:![0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -28,7 +32,7 @@ struct ByRef { unsigned  x[17]; };
 __global__ void k0(short) { }
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k1j(
-// AMDGCNSPIRV-SAME: i32 noundef [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META8]] {
+// AMDGCNSPIRV-SAME: i32 noundef [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -40,7 +44,7 @@ __global__ void k0(short) { }
 __global__ void k1(unsigned) { }
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k2d(
-// AMDGCNSPIRV-SAME: double noundef [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META8]] {
+// AMDGCNSPIRV-SAME: double noundef [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -52,7 +56,7 @@ __global__ void k1(unsigned) { }
 __global__ void k2(double) { }
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k311Transparent(
-// AMDGCNSPIRV-SAME: i32 [[DOTCOERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META8]] {
+// AMDGCNSPIRV-SAME: i32 [[DOTCOERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -64,7 +68,7 @@ __global__ void k2(double) { }
 __global__ void k3(Transparent) { }
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k413SingleElement(
-// AMDGCNSPIRV-SAME: i32 [[DOTCOERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META8]] {
+// AMDGCNSPIRV-SAME: i32 [[DOTCOERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -76,7 +80,7 @@ __global__ void k3(Transparent) { }
 __global__ void k4(SingleElement) { }
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k55ByRef(
-// AMDGCNSPIRV-SAME: ptr addrspace(2) nofree noundef readnone byref([[STRUCT_BYREF:%.*]]) align 4 captures(none) [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META8]] {
+// AMDGCNSPIRV-SAME: ptr addrspace(2) nofree noundef readnone byref([[STRUCT_BYREF:%.*]]) align 4 captures(none) [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -88,7 +92,7 @@ __global__ void k4(SingleElement) { }
 __global__ void k5(ByRef) { }
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k6Dv1_jDv2_jDv3_jDv4_j(
-// AMDGCNSPIRV-SAME: <1 x i32> noundef [[TMP0:%.*]], <2 x i32> noundef [[TMP1:%.*]], <3 x i32> noundef [[TMP2:%.*]], <4 x i32> noundef [[TMP3:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META8]] {
+// AMDGCNSPIRV-SAME: <1 x i32> noundef [[TMP0:%.*]], <2 x i32> noundef [[TMP1:%.*]], <3 x i32> noundef [[TMP2:%.*]], <4 x i32> noundef [[TMP3:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -100,7 +104,7 @@ __global__ void k5(ByRef) { }
 __global__ void k6(V1, V2, V3, V4) { }
 
 // AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k7Pj(
-// AMDGCNSPIRV-SAME: ptr addrspace(1) nofree noundef readnone captures(none) [[DOTCOERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META8]] {
+// AMDGCNSPIRV-SAME: ptr addrspace(1) nofree noundef readnone captures(none) [[DOTCOERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // AMDGCNSPIRV-NEXT:    ret void
 //
@@ -110,6 +114,17 @@ __global__ void k6(V1, V2, V3, V4) { }
 // AMDGPU-NEXT:    ret void
 //
 __global__ void k7(unsigned*) { }
+// AMDGCNSPIRV-LABEL: define spir_kernel void @_Z2k8U7_AtomicPj(
+// AMDGCNSPIRV-SAME: ptr addrspace(1) nofree readnone captures(none) [[DOTCOERCE:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] !max_work_group_size [[META9]] {
+// AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
+// AMDGCNSPIRV-NEXT:    ret void
+//
+// AMDGPU-LABEL: define dso_local amdgpu_kernel void @_Z2k8U7_AtomicPj(
+// AMDGPU-SAME: ptr addrspace(1) nofree readnone captures(none) [[DOTCOERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AMDGPU-NEXT:  [[ENTRY:.*:]]
+// AMDGPU-NEXT:    ret void
+//
+__global__ void k8(_Atomic(unsigned*)) { }
 
 // AMDGCNSPIRV-LABEL: define spir_func void @_Z2f0s(
 // AMDGCNSPIRV-SAME: i16 noundef signext [[TMP0:%.*]]) local_unnamed_addr addrspace(4) #[[ATTR0]] {
@@ -432,5 +447,5 @@ extern "C" __device__ void variadic(int, ...);
 //
 __device__ void f17(ByRef b) { variadic(1, b); }
 //.
-// AMDGCNSPIRV: [[META8]] = !{i32 1024, i32 1, i32 1}
+// AMDGCNSPIRV: [[META9]] = !{i32 1024, i32 1, i32 1}
 //.

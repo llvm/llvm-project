@@ -201,6 +201,10 @@ loadStoreFromTransfer(PatternRewriter &rewriter,
                       TypedValue<x86::amx::TileType> tileToStore = nullptr) {
   if (!xferOp || !isa<vector::TransferReadOp, vector::TransferWriteOp>(xferOp))
     return nullptr;
+  // AMX tile loads and stores cannot honor a mask.
+  if (xferOp.getMask() ||
+      cast<vector::MaskableOpInterface>(xferOp.getOperation()).isMasked())
+    return nullptr;
   if (xferOp.hasOutOfBoundsDim() ||
       !xferOp.getPermutationMap().isMinorIdentity())
     return nullptr;

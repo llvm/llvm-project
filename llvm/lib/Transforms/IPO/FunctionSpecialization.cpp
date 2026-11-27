@@ -933,8 +933,9 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                    << (CodeSizeSavings * 100 / FuncSize) << "%)}\n");
 
         // Minimum codesize savings.
-        if (CodeSizeSavings <
-            Opts.funcspec_min_codesize_savings * FuncSize / 100)
+        if (static_cast<uint64_t>(CodeSizeSavings) * 100 <
+            static_cast<uint64_t>(Opts.funcspec_min_codesize_savings) *
+                FuncSize)
           return false;
 
         // Lazily compute the Latency, to avoid unnecessarily computing BFI.
@@ -947,7 +948,8 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                    << (LatencySavings * 100 / FuncSize) << "%)}\n");
 
         // Minimum latency savings.
-        if (LatencySavings < Opts.funcspec_min_latency_savings * FuncSize / 100)
+        if (static_cast<uint64_t>(LatencySavings) * 100 <
+            static_cast<uint64_t>(Opts.funcspec_min_latency_savings) * FuncSize)
           return false;
         // Maximum codesize growth.
         if ((FunctionGrowth[F] + SpecSize) / FuncSize >
@@ -1104,9 +1106,9 @@ bool FunctionSpecializer::isArgumentInteresting(Argument *A) {
        (!Ty->isIntegerTy() && !Ty->isFloatingPointTy() && !Ty->isStructTy())))
     return false;
 
-  // SCCP solver does not record an argument that will be constructed on
-  // stack.
-  if (A->hasByValAttr() && !A->getParent()->onlyReadsMemory())
+  // SCCP solver does not propagate byval arguments, as they are implicitly
+  // copied onto the callee's stack.
+  if (A->hasByValAttr())
     return false;
 
   // For non-argument-tracked functions every argument is overdefined.

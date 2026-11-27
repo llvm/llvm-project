@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=spirv-remove-unused-resources %s -o - | FileCheck %s
+; RUN: opt -S -passes=spirv-lower-resource-names,spirv-remove-unused-resources %s -o - | FileCheck %s
 ;
 ; When using entry point main, eliminate the unused buffer handle and
 ; it's associated counter handle
@@ -22,12 +22,12 @@
 ; CHECK-NOT: @.str =
 ; CHECK-LABEL: define void @main()
 ; CHECK-NOT: call target("spirv.VulkanBuffer",
-; CHECK: %[[USED:.*]] = call target("spirv.Image", {{.*}}) @llvm.spv.resource.handlefromimplicitbinding{{.*}}(i32 2, i32 0, i32 1, i32 0, ptr @.str.2)
+; CHECK: %[[USED:.*]] = call target("spirv.Image", {{.*}}) @llvm.spv.resource.handlefromimplicitbinding.mdname{{.*}}(i32 2, i32 0, i32 1, i32 0, metadata
 ; CHECK: @llvm.spv.resource.getpointer{{.*}}(target("spirv.Image", {{.*}}) %[[USED]], i32 0)
 ; CHECK: store float 1.000000e+00
 ; CHECK: ret void
 
-target datalayout = "e-ve-i64:64-n8:16:32:64-G10"
+target datalayout = "e-p:32:32-ve-i64:64-n8:16:32:64-G10"
 target triple = "spirv1.6-unknown-vulkan1.3-compute"
 
 @_ZL6unused.0 = internal unnamed_addr global target("spirv.VulkanBuffer", [0 x float], 12, 1) poison, align 8

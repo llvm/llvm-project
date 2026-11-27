@@ -74,7 +74,7 @@ bool __rtsan::IsStackTraceSuppressed(const StackTrace &stack) {
 
   Symbolizer *symbolizer = Symbolizer::GetOrInit();
   for (uptr i = 0; i < stack.size && stack.trace[i]; i++) {
-    const uptr addr = stack.trace[i];
+    const uptr addr = StackTrace::GetPreviousInstructionPc(stack.trace[i]);
 
     SymbolizedStackHolder symbolized_stack(symbolizer->SymbolizePC(addr));
     const SymbolizedStack *frames = symbolized_stack.get();

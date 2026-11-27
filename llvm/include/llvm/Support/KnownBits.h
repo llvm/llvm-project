@@ -551,6 +551,9 @@ public:
   /// Compute known bits for the absolute value.
   LLVM_ABI KnownBits abs(bool IntMinIsPoison = false) const;
 
+  /// Compute known bits for the count of leading zeros.
+  LLVM_ABI KnownBits ctlz(bool ZeroIsPoison = false) const;
+
   /// Compute known bits for horizontal add for a vector with NumElts
   /// elements, where each element has the known bits represented by this
   /// object.

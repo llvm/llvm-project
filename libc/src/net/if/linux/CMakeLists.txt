@@ -51,18 +51,18 @@ add_header_library(
     libc.hdr.errno_macros
     libc.hdr.net_if_macros
     libc.hdr.sys_socket_macros
-    libc.hdr.types.socklen_t
-    libc.hdr.types.ssize_t
     libc.hdr.types.struct_if_nameindex
     libc.src.__support.CPP.new
+    libc.src.__support.CPP.optional
     libc.src.__support.CPP.scope
     libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
     libc.src.__support.alloc_checker
     libc.src.__support.blockstore
     libc.src.__support.common
     libc.src.__support.error_or
+    libc.src.__support.net.linux.netlink
     libc.src.string.memory_utils.inline_memcpy
-    libc.src.string.string_utils
 )
 
 add_entrypoint_object(

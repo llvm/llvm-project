@@ -76,7 +76,7 @@ class TestDAP_attach(DAPTestCaseBase):
         self.do_attach_waitFor(use_basename=False)
 
     @expectedFailureWindows
-    @skipIfWindowsAndLLDBServer
+    @skipIfWindowsAndLLDBServer()
     def test_by_basename_waitFor(self):
         """
         Tests waiting for and attaching to a process by the process base name
@@ -128,7 +128,7 @@ class TestDAP_attach(DAPTestCaseBase):
         return pending
 
     @expectedFailureWindows
-    @skipIfWindowsAndLLDBServer
+    @skipIfWindowsAndLLDBServer()
     def test_waitFor_cancel(self):
         """
         Tests that a cancel request ends an attach that is still waiting for
@@ -143,7 +143,7 @@ class TestDAP_attach(DAPTestCaseBase):
         pending.error("expects attach response.")
 
     @expectedFailureWindows
-    @skipIfWindowsAndLLDBServer
+    @skipIfWindowsAndLLDBServer()
     def test_waitFor_disconnect(self):
         """
         Tests that a disconnect request alone ends an attach that is still

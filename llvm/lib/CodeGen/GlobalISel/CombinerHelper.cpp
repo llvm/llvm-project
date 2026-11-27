@@ -1739,11 +1739,8 @@ void CombinerHelper::applyOptBrCondByInvertingCond(
   MachineBasicBlock *BrTarget = MI.getOperand(0).getMBB();
   Builder.setInstrAndDebugLoc(*BrCond);
   LLT Ty = MRI.getType(BrCond->getOperand(0).getReg());
-  // FIXME: Does int/fp matter for this? If so, we might need to restrict
-  // this to i1 only since we might not know for sure what kind of
-  // compare generated the condition value.
-  auto True = Builder.buildConstant(
-      Ty, getICmpTrueVal(getTargetLowering(), false, false));
+  auto True =
+      Builder.buildConstant(Ty, getICmpTrueVal(getTargetLowering(), false));
   auto Xor = Builder.buildXor(Ty, BrCond->getOperand(0), True);
 
   auto *FallthroughBB = BrCond->getOperand(1).getMBB();
@@ -2120,7 +2117,7 @@ bool CombinerHelper::matchLshrOfTruncOfLshr(MachineInstr &MI,
 
     if ((N001C + OpSizeInBits) == InnerShiftSize)
       return true;
-    if (MRI.hasOneUse(N0) && MRI.hasOneUse(InnerShift)) {
+    if (MRI.hasOneNonDBGUse(N0) && MRI.hasOneNonDBGUse(InnerShift)) {
       MatchInfo.Mask = true;
       MatchInfo.MaskVal = APInt(N1C.getBitWidth(), OpSizeInBits) - N1C;
       return true;
@@ -2961,8 +2958,9 @@ bool CombinerHelper::matchCombineInsertVecElts(
   unsigned NumElts = DstTy.getNumElements();
   // If this MI is part of a sequence of insert_vec_elts, then
   // don't do the combine in the middle of the sequence.
-  if (MRI.hasOneUse(DstReg) && MRI.use_instr_begin(DstReg)->getOpcode() ==
-                                   TargetOpcode::G_INSERT_VECTOR_ELT)
+  if (MRI.hasOneNonDBGUse(DstReg) &&
+      MRI.use_nodbg_instructions(DstReg).begin()->getOpcode() ==
+          TargetOpcode::G_INSERT_VECTOR_ELT)
     return false;
   MachineInstr *CurrInst = &MI;
   MachineInstr *TmpInst;
@@ -3370,10 +3368,10 @@ bool CombinerHelper::matchRedundantSExtInReg(MachineInstr &MI) const {
 }
 
 static bool isConstValidTrue(const TargetLowering &TLI, unsigned ScalarSizeBits,
-                             int64_t Cst, bool IsVector, bool IsFP) {
+                             int64_t Cst, bool IsVector) {
   // For i1, Cst will always be -1 regardless of boolean contents.
   return (ScalarSizeBits == 1 && Cst == -1) ||
-         isConstTrueVal(TLI, Cst, IsVector, IsFP);
+         isConstTrueVal(TLI, Cst, IsVector);
 }
 
 // This pattern aims to match the following shape to avoid extra mov
@@ -3642,12 +3640,12 @@ bool CombinerHelper::matchNotCmp(
     int64_t SplatCst;
     if (!mi_match(CstReg, MRI, m_ICstOrSplat(SplatCst)))
       return false;
-    if (!isConstValidTrue(TLI, Ty.getScalarSizeInBits(), SplatCst, true, IsFP))
+    if (!isConstValidTrue(TLI, Ty.getScalarSizeInBits(), SplatCst, true))
       return false;
   } else {
     if (!mi_match(CstReg, MRI, m_ICst(Cst)))
       return false;
-    if (!isConstValidTrue(TLI, Ty.getSizeInBits(), Cst, false, IsFP))
+    if (!isConstValidTrue(TLI, Ty.getSizeInBits(), Cst, false))
       return false;
   }
 
@@ -4548,8 +4546,7 @@ bool CombinerHelper::matchICmpToTrueFalseKnownBits(MachineInstr &MI,
       *KnownVal
           ? getICmpTrueVal(getTargetLowering(),
                            /*IsVector = */
-                           MRI.getType(MI.getOperand(0).getReg()).isVector(),
-                           /* IsFP = */ false)
+                           MRI.getType(MI.getOperand(0).getReg()).isVector())
           : 0;
   return true;
 }
@@ -4574,8 +4571,7 @@ bool CombinerHelper::matchICmpToLHSKnownBits(
     return false;
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
-  if (getICmpTrueVal(getTargetLowering(), DstTy.isVector(),
-                     /* IsFP = */ false) != 1)
+  if (getICmpTrueVal(getTargetLowering(), DstTy.isVector()) != 1)
     return false;
   int64_t OneOrZero = Pred == CmpInst::ICMP_EQ;
   if (!mi_match(MI.getOperand(3).getReg(), MRI, m_SpecificICst(OneOrZero)))
@@ -5529,6 +5525,19 @@ MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
   unsigned KnownLeadingZeros =
       VT ? VT->getKnownBits(LHS).countMinLeadingZeros() : 0;
 
+  // Allow scalars to be widened to twice their size for divisors whose magic
+  // number needs one more bit, if G_UMULH is legal for the wider type, as
+  // SelectionDAG does. For even divisors, only do it if the zero-extension is
+  // free.
+  LLT WideTy = Ty.changeElementSize(EltBits * 2);
+  LLVMContext &Ctx = MI.getMF()->getFunction().getContext();
+  const bool AllowWiden =
+      Ty.isScalar() && isLegal({TargetOpcode::G_UMULH, {WideTy}});
+  const bool AllowEvenToWiden =
+      AllowWiden && getTargetLowering().isZExtFree(Ty, WideTy, Ctx);
+  bool UseWiden = false;
+  APInt WideMagic;
+
   bool UseNPQ = false;
   SmallVector<Register, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
   auto BuildUDIVPattern = [&](const Constant *C) {
@@ -5548,7 +5557,17 @@ MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
       // in the dividend exceeds the leading zeros for the divisor.
       UnsignedDivisionByConstantInfo magics =
           UnsignedDivisionByConstantInfo::get(
-              Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()));
+              Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()),
+              /*AllowEvenDivisorOptimization=*/!AllowEvenToWiden,
+              /*AllowWidenOptimization=*/AllowWiden);
+
+      // The widened magic number has the shift folded in, so the quotient is
+      // just the high half of the 64-bit product.
+      if (magics.Widen) {
+        UseWiden = true;
+        WideMagic = magics.Magic;
+        return true;
+      }
 
       Magic = std::move(magics.Magic);
 
@@ -5580,6 +5599,19 @@ MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
   bool Matched = matchUnaryPredicate(MRI, RHS, BuildUDIVPattern);
   (void)Matched;
   assert(Matched && "Expected unary predicate match to succeed");
+
+  if (UseWiden) {
+    // Compute (s64(x) * WideMagic) >> 64, and truncate it back to s32.
+    auto WideX = MIB.buildZExt(WideTy, LHS);
+    auto High =
+        MIB.buildUMulH(WideTy, WideX, MIB.buildConstant(WideTy, WideMagic));
+    auto Quotient = MIB.buildTrunc(Ty, High);
+    if (Opcode == TargetOpcode::G_UREM) {
+      auto Prod = MIB.buildMul(Ty, Quotient, RHS);
+      return MIB.buildSub(Ty, LHS, Prod);
+    }
+    return Quotient;
+  }
 
   Register PreShift, PostShift, MagicFactor, NPQFactor;
   auto *RHSDef = getOpcodeDef<GBuildVector>(RHS, MRI);
@@ -5724,9 +5756,16 @@ bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
   if (LI) {
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
       return false;
-    if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
-        !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
+    if (isPreLegalize()) {
+      // The legalizer can still split a vector G_SMULH or lower it through a
+      // wider G_MUL.
+      if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
+          !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
+        return false;
+    } else if (!isLegal({TargetOpcode::G_SMULH, {DstTy}})) {
+      // After legalization nothing will fix up an illegal G_SMULH.
       return false;
+    }
     if (Opcode == TargetOpcode::G_SREM &&
         !isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy, DstTy}}))
       return false;
@@ -7227,16 +7266,19 @@ bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) const {
       !mi_match(RHS, MRI, m_MInstr(RHSDef)))
     return false;
 
-  if (!getIConstantVRegVal(LHS, MRI)) {
-    // Skip commuting if LHS is not a constant. But, LHS may be a
-    // G_CONSTANT_FOLD_BARRIER. If so we commute as long as we don't already
-    // have a constant on the RHS.
+  if (!isConstantOrConstantVector(*LHSDef, MRI, /*AllowFP=*/false,
+                                  /*AllowOpaqueConstants=*/false)) {
+    // Skip commuting if LHS is not a constant or a vector of constants. But,
+    // LHS may be a G_CONSTANT_FOLD_BARRIER. If so we commute as long as we
+    // don't already have a constant on the RHS.
     if (LHSDef->getOpcode() != TargetOpcode::G_CONSTANT_FOLD_BARRIER)
       return false;
   }
-  // Commute as long as RHS is not a constant or G_CONSTANT_FOLD_BARRIER.
+  // Commute as long as RHS is not a constant, a vector of constants or
+  // G_CONSTANT_FOLD_BARRIER.
   return RHSDef->getOpcode() != TargetOpcode::G_CONSTANT_FOLD_BARRIER &&
-         !getIConstantVRegVal(RHS, MRI);
+         !isConstantOrConstantVector(*RHSDef, MRI, /*AllowFP=*/false,
+                                     /*AllowOpaqueConstants=*/false);
 }
 
 bool CombinerHelper::matchCommuteFPConstantToRHS(MachineInstr &MI) const {
@@ -7914,10 +7956,9 @@ bool CombinerHelper::tryFoldLogicOfFCmps(GLogicalBinOp *Logic,
         B.buildZExtOrTrunc(DestReg, False);
       } else if (Pred == FCmpInst::FCMP_TRUE &&
                  isConstantLegalOrBeforeLegalizer(CmpTy)) {
-        auto True =
-            B.buildConstant(CmpTy, getICmpTrueVal(getTargetLowering(),
-                                                  CmpTy.isVector() /*isVector*/,
-                                                  true /*isFP*/));
+        auto True = B.buildConstant(
+            CmpTy,
+            getICmpTrueVal(getTargetLowering(), CmpTy.isVector() /*isVector*/));
         B.buildZExtOrTrunc(DestReg, True);
       } else { // We take the predicate without predicate optimizations.
         auto Cmp = B.buildFCmp(Pred, CmpTy, LHS0, LHS1, Flags);
@@ -8417,6 +8458,15 @@ static void commuteMask(MutableArrayRef<int> Mask, const unsigned NumElems) {
   }
 }
 
+bool CombinerHelper::isZeroOrOneVector(Register Reg) const {
+  if (!MRI.getType(Reg).isFixedVector())
+    return false;
+  return matchUnaryPredicate(MRI, Reg, [](const Constant *C) {
+    auto *CI = dyn_cast_or_null<ConstantInt>(C);
+    return CI && (CI->isZero() || CI->isOne());
+  });
+}
+
 bool CombinerHelper::matchShuffleDisjointMask(MachineInstr &MI,
                                               BuildFnTy &MatchInfo) const {
 
@@ -8509,8 +8559,7 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
       MatchInfo = [=](MachineIRBuilder &B) {
         B.buildSub(Dst, LHS, RHS);
         B.buildConstant(Carry, getICmpTrueVal(getTargetLowering(),
-                                              /*isVector=*/CarryTy.isVector(),
-                                              /*isFP=*/false));
+                                              /*isVector=*/CarryTy.isVector()));
       };
       return true;
     }
@@ -8534,8 +8583,7 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
     MatchInfo = [=](MachineIRBuilder &B) {
       B.buildSub(Dst, LHS, RHS);
       B.buildConstant(Carry, getICmpTrueVal(getTargetLowering(),
-                                            /*isVector=*/CarryTy.isVector(),
-                                            /*isFP=*/false));
+                                            /*isVector=*/CarryTy.isVector()));
     };
     return true;
   }

@@ -50,7 +50,6 @@
 ...
 ---
 name:            spill_single
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
   - { reg: '$r1' }

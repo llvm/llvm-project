@@ -354,6 +354,7 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   case Triple::mipsel:
   case Triple::mips64:
   case Triple::mips64el:
+  case Triple::nanomips:
     // We cannot use DW_EH_PE_sdata8 for the large PositionIndependent case
     // since there is no R_MIPS_PC64 relocation (only a 32-bit version).
     // In fact DW_EH_PE_sdata4 is enough for us now, and GNU ld doesn't
@@ -1408,7 +1409,8 @@ MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName,
     auto Flags = S->getFlags() | ELF::SHF_GROUP;
     return Ctx->getELFSection(
         S->getName(), S->getType(), Flags, S->getEntrySize(),
-        S->getName() + "_" + FuncName + "." + Twine::utohexstr(FuncHash),
+        (S->getName() + "_" + FuncName + "." + Twine::utohexstr(FuncHash))
+            .str(),
         /*IsComdat=*/true);
   } else if (ObjFileType == MCContext::IsCOFF) {
     auto *S = static_cast<MCSectionCOFF *>(PseudoProbeDescSection);

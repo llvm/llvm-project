@@ -2,6 +2,7 @@
 architecture and/or the platform dependent nature of the tests. """
 
 # System modules
+import functools
 import itertools
 import json
 import re
@@ -302,7 +303,7 @@ def getLLDBArchitecture():
             "file " + lldbtest_config.lldbExec,
         ]
 
-        output = subprocess.check_output(command)
+        output = subprocess.check_output(command, stderr=subprocess.PIPE)
         str = output.decode()
 
         for line in str.splitlines():
@@ -320,17 +321,24 @@ def getCompiler():
     return module.getCompiler()
 
 
-def getCompilerVersion():
-    """Returns a string that represents the compiler version.
-    Supports: llvm, clang.
-    """
+# The compiler version doesn't change during a test run.
+@functools.lru_cache(maxsize=None)
+def _getCompilerVersionImpl(compiler):
+    """Returns the version string of the given compiler."""
     version_output = subprocess.check_output(
-        [getCompiler(), "--version"], errors="replace"
+        [compiler, "--version"], stderr=subprocess.PIPE, errors="replace"
     )
     m = re.search("version ([0-9.]+)", version_output)
     if m:
         return m.group(1)
     return "unknown"
+
+
+def getCompilerVersion():
+    """Returns a string that represents the compiler version.
+    Supports: llvm, clang.
+    """
+    return _getCompilerVersionImpl(getCompiler())
 
 
 def getWindowsVersion():

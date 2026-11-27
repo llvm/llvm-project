@@ -2,7 +2,8 @@
 
 REQUIRES: system-linux
 
-RUN: %clang %cflags %p/Inputs/hello.c -o %t -Wl,-q
+RUN: %clang %cflags %p/Inputs/hello.c %p/Inputs/stub.c \
+RUN:   -o %t -Wl,-q -nostdlib -Wl,-e,main
 RUN: llvm-bolt %t -o %t.bolt --strict | FileCheck %s
 
 CHECK: rewriting .eh_frame in-place

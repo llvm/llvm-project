@@ -40,6 +40,7 @@
 #include "lldb/API/SBFrameList.h"
 #include "lldb/API/SBFunction.h"
 #include "lldb/API/SBHostOS.h"
+#include "lldb/API/SBInitializationOptions.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBLanguageRuntime.h"

@@ -18,6 +18,7 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 def ROCDL_Dialect : Dialect {
   let name = "rocdl";
   let cppNamespace = "::mlir::ROCDL";
+  let useDefaultOperationRegistration = 1;
   let dependentDialects = ["LLVM::LLVMDialect"];
   let summary = "Dialect for wrapping LLVM AMDGPU backend intrinsics and attributes";
   let hasOperationAttrVerify = 1;
@@ -174,7 +175,7 @@ def ROCDL_Dialect : Dialect {
      "::mlir::UnitAttr":$ignore_denormal_mode
   );
 
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 #endif // ROCDLIR_DIALECT

@@ -83,7 +83,12 @@ void MappingTraits<MachOYAML::FileHeader>::mapping(
   IO.mapRequired("magic", FileHdr.magic);
   IO.mapRequired("cputype", FileHdr.cputype);
   IO.mapRequired("cpusubtype", FileHdr.cpusubtype);
-  IO.mapRequired("filetype", FileHdr.filetype);
+
+  MachO::HeaderFileType FileType =
+      static_cast<MachO::HeaderFileType>(uint32_t(FileHdr.filetype));
+  IO.mapRequired("filetype", FileType);
+  FileHdr.filetype = FileType;
+
   IO.mapRequired("ncmds", FileHdr.ncmds);
   IO.mapRequired("sizeofcmds", FileHdr.sizeofcmds);
   IO.mapRequired("flags", FileHdr.flags);

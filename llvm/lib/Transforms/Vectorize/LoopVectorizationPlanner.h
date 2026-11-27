@@ -433,7 +433,8 @@ public:
                                   const VPIRMetadata &Metadata = {}) {
     return tryInsertInstruction(new VPInstruction(
         Opcode, Op, Flags.value_or(VPIRFlags::getDefaultFlags(Opcode)),
-        Metadata, DL, "", ResultTy));
+        Metadata, DL, "", ResultTy, /*Attrs=*/{},
+        /*GeneratesSingleScalar=*/true));
   }
 
   /// Create a scalar call to the intrinsic \p IntrinsicID with \p Operands, and
@@ -500,7 +501,8 @@ public:
     if (Instruction::isCast(Opcode)) {
       assert(!Mask && "Cast cannot be predicated");
       auto *VPI = new VPInstruction(Opcode, Operands, Flags, Metadata, DL,
-                                    UV->getName(), ResultTy);
+                                    UV->getName(), ResultTy, /*Attrs=*/{},
+                                    /*GeneratesSingleScalar=*/true);
       VPI->setUnderlyingValue(UV);
       return VPI;
     }
@@ -552,6 +554,15 @@ public:
     Type *StrideTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
     VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
     return createVectorPointer(Ptr, SourceElementTy, StrideOne, Flags, DL);
+  }
+
+  VPWidenIntrinsicRecipe *
+  createWidenIntrinsic(Intrinsic::ID VectorIntrinsicID,
+                       ArrayRef<VPValue *> CallArguments, Type *Ty,
+                       const VPIRFlags &Flags = {}, const VPIRMetadata &MD = {},
+                       DebugLoc DL = DebugLoc::getUnknown()) {
+    return tryInsertInstruction(new VPWidenIntrinsicRecipe(
+        VectorIntrinsicID, CallArguments, Ty, Flags, MD, DL));
   }
 
   VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(

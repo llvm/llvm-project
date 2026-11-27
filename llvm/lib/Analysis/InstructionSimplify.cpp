@@ -922,7 +922,7 @@ static Value *simplifyMulInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
        match(Op1, m_Exact(m_IDiv(m_Value(X), m_Specific(Op0)))))) // Y * (X / Y)
     return X;
 
-   if (Op0->getType()->isIntOrIntVectorTy(1)) {
+  if (Op0->getType()->isIntOrIntVectorTy(1)) {
     // mul i1 nsw is a special-case because -1 * -1 is poison (+1 is not
     // representable). All other cases reduce to 0, so just return 0.
     if (IsNSW)
@@ -2771,7 +2771,6 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
                                     const SimplifyQuery &Q) {
   assert(LHS->getType() == RHS->getType() && "Must have same types");
   const DataLayout &DL = Q.DL;
-  const TargetLibraryInfo *TLI = Q.TLI;
 
   // We fold equality and unsigned predicates on pointer comparisons, but forbid
   // signed predicates since a GEP with inbounds could cross the sign boundary.
@@ -2861,9 +2860,9 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
     // the other operand can not be based on the alloc - if it were, then
     // the cmp itself would be a capture.
     Value *MI = nullptr;
-    if (isAllocLikeFn(LHS, TLI) && llvm::isKnownNonZero(RHS, Q))
+    if (isAllocLikeFn(LHS) && llvm::isKnownNonZero(RHS, Q))
       MI = LHS;
-    else if (isAllocLikeFn(RHS, TLI) && llvm::isKnownNonZero(LHS, Q))
+    else if (isAllocLikeFn(RHS) && llvm::isKnownNonZero(LHS, Q))
       MI = RHS;
     if (MI) {
       // FIXME: This is incorrect, see PR54002. While we can assume that the
@@ -4858,7 +4857,8 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   if (!match(CondVal, m_ICmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS))))
     return nullptr;
 
-  if (Value *V = simplifyCmpSelOfMaxMin(CmpLHS, CmpRHS, Pred, TrueVal, FalseVal))
+  if (Value *V =
+          simplifyCmpSelOfMaxMin(CmpLHS, CmpRHS, Pred, TrueVal, FalseVal))
     return V;
 
   // Canonicalize ne to eq predicate.
@@ -5629,16 +5629,35 @@ Value *llvm::simplifyExtractElementInst(Value *Vec, Value *Idx,
 /// type SrcTy is poison.
 static bool isPoisonBitRange(Value *Offset, Type *Ty, Type *SrcTy,
                              const SimplifyQuery &Q) {
+  Constant *C = dyn_cast<Constant>(Offset);
+  if (!C)
+    return false;
+
   // A poison offset makes the result poison. An undef offset can be chosen to
   // be out of range, which also makes the result poison.
-  if (isa<PoisonValue>(Offset) || Q.isUndefValue(Offset))
+  if (isa<PoisonValue>(C) || Q.isUndefValue(C))
     return true;
 
-  // Accessing bits past the end of the value is poison.
+  // Accessing bits past the end of the value is poison. This covers scalars and
+  // fixed/scalable vectors with splat constants.
   uint64_t Off;
-  return match(Offset, m_ConstantInt(Off)) &&
-         Off + Q.DL.getTypeSizeInBits(Ty->getScalarType()).getFixedValue() >
-             Q.DL.getTypeSizeInBits(SrcTy->getScalarType()).getFixedValue();
+  if (match(C, m_ConstantInt(Off)) &&
+      Off + Q.DL.getTypeSizeInBits(Ty->getScalarType()).getFixedValue() >
+          Q.DL.getTypeSizeInBits(SrcTy->getScalarType()).getFixedValue())
+    return true;
+
+  // Try harder for fixed-length vectors:
+  // If every lane's offset is out of range or poison, the result is poison.
+  if (isa<ConstantVector, ConstantDataVector>(C)) {
+    for (unsigned I = 0,
+                  E = cast<FixedVectorType>(C->getType())->getNumElements();
+         I != E; ++I)
+      if (!isPoisonBitRange(C->getAggregateElement(I), Ty, SrcTy, Q))
+        return false;
+    return true;
+  }
+
+  return false;
 }
 
 /// Given operands for a BitInsertInst, see if we can fold the result.
@@ -6204,9 +6223,13 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
 
   // fsub -0.0, (fsub -0.0, X) ==> X
   // fsub -0.0, (fneg X) ==> X
+  // With strict/constrained FP, round toward negative (or dynamic rounding,
+  // which may select it) can change the sign of a zero result. Preserve the
+  // operation unless signed zeros are ignored with the nsz flag.
   Value *X;
-  if (canIgnoreSNaN(ExBehavior, FMF))
-    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (canIgnoreSNaN(ExBehavior, FMF) &&
+      (!canRoundingModeBe(Rounding, RoundingMode::TowardNegative) ||
+       FMF.noSignedZeros()))
     if (match(Op0, m_NegZeroFP()) &&
         match(Op1, m_FNegOrFSubNegZero(m_Value(X))))
       return X;
@@ -6484,7 +6507,7 @@ static Value *simplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
     return simplifyAddInst(LHS, RHS, /* IsNSW */ false, /* IsNUW */ false, Q,
                            MaxRecurse);
   case Instruction::Sub:
-    return simplifySubInst(LHS, RHS,  /* IsNSW */ false, /* IsNUW */ false, Q,
+    return simplifySubInst(LHS, RHS, /* IsNSW */ false, /* IsNUW */ false, Q,
                            MaxRecurse);
   case Instruction::Mul:
     return simplifyMulInst(LHS, RHS, /* IsNSW */ false, /* IsNUW */ false, Q,
@@ -8011,7 +8034,8 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
   case Instruction::Call:
     return simplifyCall(
         cast<CallInst>(I), NewOps.back(),
-        NewOps.drop_back(1 + cast<CallInst>(I)->getNumTotalBundleOperands()), Q);
+        NewOps.drop_back(1 + cast<CallInst>(I)->getNumTotalBundleOperands()),
+        Q);
   case Instruction::Freeze:
     return llvm::simplifyFreezeInst(NewOps[0], Q);
 #define HANDLE_CAST_INST(num, opc, clas) case Instruction::opc:

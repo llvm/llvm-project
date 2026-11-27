@@ -36,7 +36,6 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Pass.h"
 
 using namespace llvm;
@@ -48,7 +47,6 @@ namespace {
 class GCNRewritePartialRegUsesImpl {
   MachineRegisterInfo *MRI;
   const SIRegisterInfo *TRI;
-  const TargetInstrInfo *TII;
   LiveIntervals *LIS;
 
   /// Rewrite partially used register Reg by shifting all its subregisters to
@@ -435,7 +433,6 @@ bool GCNRewritePartialRegUsesImpl::rewriteReg(Register Reg) const {
 bool GCNRewritePartialRegUsesImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = static_cast<const SIRegisterInfo *>(MRI->getTargetRegisterInfo());
-  TII = MF.getSubtarget().getInstrInfo();
   bool Changed = false;
   for (size_t I = 0, E = MRI->getNumVirtRegs(); I < E; ++I) {
     Changed |= rewriteReg(Register::index2VirtReg(I));

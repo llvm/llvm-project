@@ -55,6 +55,6 @@ void test_most_a(void) {
 void test_pointers(void) {
   // CHECK-LABEL: define{{.*}} void @test_pointers()
   void *a[] = {&use, &use, &use, &use, &use, &use};
-  // CHECK: call void @llvm.memcpy.{{.*}}
+  // CHECK: call void @llvm.memset.{{.*}}
   use(a);
 }
