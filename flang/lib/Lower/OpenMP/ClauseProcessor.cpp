@@ -2234,8 +2234,6 @@ void ClauseProcessor::processMapObjectsWithIterator(
         omp::ObjectList parentObjects = gatherObjectsOf(object, semaCtx);
         assert(!parentObjects.empty() &&
                "could not find parent objects of derived type member");
-        parentMemberIndices.emplace(parentObjects[0],
-                                    OmpMapParentAndMemberData{});
         parentMemberIndices[parentObjects[0]].addChildIndexAndMapToParent(
             object, descriptorMap, semaCtx);
       }
