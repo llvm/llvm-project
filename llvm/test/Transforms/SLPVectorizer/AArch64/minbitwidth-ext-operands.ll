@@ -116,9 +116,8 @@ define void @narrow_positive_zext_test(ptr %in, ptr %out) {
 ; CHECK-LABEL: define void @narrow_positive_zext_test(
 ; CHECK-SAME: ptr [[IN:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[IN]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], splat (i32 255)
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i32> [[TMP2]], splat (i32 1)
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i32> [[TMP3]] to <2 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i8> [[TMP2]], splat (i8 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i8> [[TMP4]], splat (i8 123)
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i8> [[TMP5]] to <2 x i64>
 ; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[OUT]], align 2
@@ -147,9 +146,9 @@ define void @narrow_positive_test_sext_neg_values(ptr %in, ptr %out) {
 ; CHECK-LABEL: define void @narrow_positive_test_sext_neg_values(
 ; CHECK-SAME: ptr [[IN:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[IN]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> [[TMP1]], <i32 -128, i32 -123>
-; CHECK-NEXT:    [[TMP3:%.*]] = ashr <2 x i32> [[TMP2]], splat (i32 1)
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i32> [[TMP3]] to <2 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i8> [[TMP2]], <i8 -128, i8 -123>
+; CHECK-NEXT:    [[TMP4:%.*]] = ashr <2 x i8> [[TMP3]], splat (i8 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i8> [[TMP4]], <i8 11, i8 13>
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext <2 x i8> [[TMP5]] to <2 x i64>
 ; CHECK-NEXT:    store <2 x i64> [[TMP6]], ptr [[OUT]], align 2
@@ -180,9 +179,10 @@ define void @narrow_operand_drop_wrap_flags(ptr %in, i32 %mask, ptr %out) {
 ; CHECK-LABEL: define void @narrow_operand_drop_wrap_flags(
 ; CHECK-SAME: ptr [[IN:%.*]], i32 [[MASK:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[IN]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i64> [[TMP1]], splat (i64 32768)
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <4 x i64> [[TMP2]] to <4 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw <4 x i16> [[TMP3]], splat (i16 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i8> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i8> [[TMP3]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i16> [[TMP10]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i16> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i32> [[TMP5]], splat (i32 255)
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[MASK]], i64 0

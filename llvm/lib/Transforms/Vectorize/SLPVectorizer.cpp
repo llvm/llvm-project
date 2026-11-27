@@ -30183,7 +30183,12 @@ bool BoUpSLP::collectValuesToDemote(
 
   unsigned OrigBitWidth =
       DL->getTypeSizeInBits(E.Scalars.front()->getType()->getScalarType());
-  if (OrigBitWidth == BitWidth) {
+
+  // For zext/sext instructions we include the operands,
+  // so the OrigBitWidth can be less than the candidate bitwidth.
+  // We stop the recursion early here and don't change the bitwidth.
+  // That bitwidth might still be required.
+  if (OrigBitWidth <= BitWidth) {
     MaxDepthLevel = 1;
     return true;
   }
@@ -30360,8 +30365,14 @@ bool BoUpSLP::collectValuesToDemote(
             return true;
           if (!ProcessOperands(Operands, NeedToExit))
             return false;
-          if (NeedToExit)
+          if (NeedToExit) {
+            unsigned Opc = E.getOpcode();
+            // Ignore widening shuffles, this may produce worse code.
+            if (!E.isAltShuffle() &&
+                (Opc == Instruction::ZExt || Opc == Instruction::SExt))
+              ToDemote.push_back(E.Idx);
             return true;
+          }
         }
 
         ++MaxDepthLevel;
@@ -30423,7 +30434,7 @@ bool BoUpSLP::collectValuesToDemote(
         E.UserTreeIndex.UserTE->getMainOp()->getType()->isFPOrFPVectorTy())
       return false;
     IsProfitableToDemote = true;
-    return TryProcessInstruction(BitWidth);
+    return TryProcessInstruction(BitWidth, GetOperandEntries());
 
   // Demote binary ops when all operands can be demoted (may be >2 operands).
   case Instruction::Add:
@@ -31083,7 +31094,14 @@ void BoUpSLP::computeMinimumValueSizes() {
       TreeEntry *TE = Candidate.VectorizableTree[Idx].get();
       if (Candidate.MinBWs.contains(TE))
         continue;
-      Candidate.MinBWs.try_emplace(TE, MaxBitWidth, IsSignedEntry(*TE));
+      // A later operand may increase the MaxBitWidth after an
+      // earlier entry is collected. Do not widen TreeEntries beyond
+      // their original width. Widening those operations can change wrapping
+      // semantics.
+      unsigned OriginalWidth =
+          TE->Scalars.front()->getType()->getScalarSizeInBits();
+      Candidate.MinBWs.try_emplace(TE, std::min(OriginalWidth, MaxBitWidth),
+                                   IsSignedEntry(*TE));
     }
   }
 }
