@@ -2143,3 +2143,26 @@ void bar() {
 }
 } // namespace N2
 }
+
+namespace GH246501 {
+
+template<auto... Vs>
+concept Two = sizeof...(Vs) == 2; // #GH246501_Two
+
+template<auto... Vs>
+  requires Two<Vs...> // #GH246501_Use
+struct S {};
+
+S<1> s;
+// expected-error@-1 {{not satisfied}}
+// expected-note@#GH246501_Use {{does not satisfy}}
+// expected-note@#GH246501_Two {{false}}
+
+S<1, 2> s2;
+
+S<1, 2, 3> s3;
+// expected-error@-1 {{not satisfied}}
+// expected-note@#GH246501_Use {{evaluated to false}}
+// expected-note@#GH246501_Two {{false}}
+
+}
