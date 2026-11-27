@@ -21,6 +21,7 @@
 #include "LegalizeTypes.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -2904,12 +2905,19 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_XINT_TO_FP(SDNode *N) {
   EVT OVT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
   SDLoc dl(N);
-  EVT SVT = N->getOperand(N->isStrictFPOpcode() ? 1 : 0).getValueType();
+  SDValue Src = N->getOperand(N->isStrictFPOpcode() ? 1 : 0);
+  bool IsUnsigned = N->getOpcode() == ISD::UINT_TO_FP ||
+                    N->getOpcode() == ISD::STRICT_UINT_TO_FP;
+  unsigned ActiveBits = IsUnsigned
+                            ? DAG.computeKnownBits(Src).countMaxActiveBits()
+                            : DAG.ComputeMaxSignificantBits(Src);
   bool UseF64 = isTypeLegal(MVT::f64);
-  unsigned Width = SVT.getScalarSizeInBits();
+  EVT F64VT = MVT::f64;
+  unsigned NVTPrec = APFloat::semanticsPrecision(NVT.getFltSemantics());
+  unsigned F64Prec = APFloat::semanticsPrecision(F64VT.getFltSemantics());
 
-  if (OVT == MVT::bf16 && Width > 23 && Width <= 53 && UseF64 &&
-      !N->getFlags().hasApproximateFuncs())
+  if (OVT == MVT::bf16 && ActiveBits > NVTPrec && ActiveBits <= F64Prec &&
+      UseF64 && !N->getFlags().hasApproximateFuncs())
     NVT = MVT::f64;
   if (N->isStrictFPOpcode()) {
     SDValue Op = DAG.getNode(N->getOpcode(), dl, {NVT, MVT::Other},
