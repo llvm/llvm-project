@@ -223,14 +223,14 @@ def psra_s_i16x4 : RISCVBuiltin<"_Vector<4, short>(_Vector<4, short>, unsigned i
 def psra_s_i32x2 : RISCVBuiltin<"_Vector<2, int>(_Vector<2, int>, unsigned int)">;
 
 // Packed Absolute Value and Absolute Difference (32-bit)
-def pabd_i8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, signed char>, _Vector<4, signed char>)">;
-def pabd_i16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, short>, _Vector<2, short>)">;
+def pabd_u8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, signed char>, _Vector<4, signed char>)">;
+def pabd_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, short>, _Vector<2, short>)">;
 def pabdu_u8x4 : RISCVBuiltin<"_Vector<4, unsigned char>(_Vector<4, unsigned char>, _Vector<4, unsigned char>)">;
 def pabdu_u16x2 : RISCVBuiltin<"_Vector<2, unsigned short>(_Vector<2, unsigned short>, _Vector<2, unsigned short>)">;
 
 // Packed Absolute Value and Absolute Difference (64-bit)
-def pabd_i8x8 : RISCVBuiltin<"_Vector<8, unsigned char>(_Vector<8, signed char>, _Vector<8, signed char>)">;
-def pabd_i16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, short>, _Vector<4, short>)">;
+def pabd_u8x8 : RISCVBuiltin<"_Vector<8, unsigned char>(_Vector<8, signed char>, _Vector<8, signed char>)">;
+def pabd_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, short>, _Vector<4, short>)">;
 def pabdu_u8x8 : RISCVBuiltin<"_Vector<8, unsigned char>(_Vector<8, unsigned char>, _Vector<8, unsigned char>)">;
 def pabdu_u16x4 : RISCVBuiltin<"_Vector<4, unsigned short>(_Vector<4, unsigned short>, _Vector<4, unsigned short>)">;
 
@@ -287,6 +287,18 @@ def sati_i64 : RISCVBuiltin<"int64_t(int64_t, _Constant unsigned int)">;
 def usati_u64 : RISCVBuiltin<"uint64_t(int64_t, _Constant unsigned int)">;
 } // Features = "experimental-p,64bit"
 
+// Scalar Saturating and Rounding Shift
+def ssha_i32 : RISCVBuiltin<"int32_t(int32_t, int)">;
+def sshar_i32 : RISCVBuiltin<"int32_t(int32_t, int)">;
+def sshl_u32 : RISCVBuiltin<"uint32_t(uint32_t, int)">;
+def sshlr_u32 : RISCVBuiltin<"uint32_t(uint32_t, int)">;
+let Features = "experimental-p,64bit" in {
+def sha_i64 : RISCVBuiltin<"int64_t(int64_t, int)">;
+def shar_i64 : RISCVBuiltin<"int64_t(int64_t, int)">;
+def shl_u64 : RISCVBuiltin<"uint64_t(uint64_t, int)">;
+def shlr_u64 : RISCVBuiltin<"uint64_t(uint64_t, int)">;
+} // Features = "experimental-p,64bit"
+
 // Scalar Narrowing Clip
 def nclipu_u32  : RISCVBuiltin<"uint32_t(uint64_t, unsigned int)">;
 def nclipru_u32 : RISCVBuiltin<"uint32_t(uint64_t, unsigned int)">;
@@ -309,6 +321,11 @@ def mhaccu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t, uint32_t)">;
 def mhraccu_u32 : RISCVBuiltin<"uint32_t(uint32_t, uint32_t, uint32_t)">;
 def mhaccsu_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, uint32_t)">;
 def mhraccsu_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, uint32_t)">;
+
+def mhacc_h0_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, _Vector<2, short>)">;
+def mhacc_h1_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, _Vector<2, short>)">;
+def mhaccsu_h0_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, _Vector<2, unsigned short>)">;
+def mhaccsu_h1_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t, _Vector<2, unsigned short>)">;
 
 // Scalar "Q-format" Multiplication
 def mulq_i32 : RISCVBuiltin<"int32_t(int32_t, int32_t)">;

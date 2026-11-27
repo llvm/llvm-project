@@ -450,6 +450,20 @@ static void ProcessThreadRegistry(Frontier *frontier) {
   }
 }
 
+#    if !SANITIZER_ANDROID
+static bool IsDTLSAccessible(uptr beg, uptr end) {
+  // A dlclose()-d module's DTLS block may be freed and unmapped lazily without
+  // updating dtv. A small block is checked whole with a single write; for a
+  // larger one only the ends are probed.
+  // FIXME: A freed but still mapped block is scanned too, which may hide leaks.
+  // Clearing dtv entries on free would fix this.
+  uptr size = end - beg;
+  if (size <= GetPageSizeCached())
+    return IsAccessibleMemoryRange(beg, size);
+  return IsAccessibleMemoryRange(beg, 1) && IsAccessibleMemoryRange(end - 1, 1);
+}
+#    endif
+
 // Scans thread data (stacks and TLS) for heap pointers.
 template <class Accessor>
 static void ProcessThread(ThreadID os_id, uptr sp,
@@ -547,10 +561,17 @@ static void ProcessThread(ThreadID os_id, uptr sp,
         uptr dtls_beg = dtv.beg;
         uptr dtls_end = dtls_beg + dtv.size;
         if (dtls_beg < dtls_end) {
-          LOG_THREADS("DTLS %d at %p-%p.\n", id, (void *)dtls_beg,
-                      (void *)dtls_end);
-          ScanForPointers(dtls_beg, dtls_end, frontier, "DTLS", kReachable,
-                          accessor);
+          if (IsDTLSAccessible(dtls_beg, dtls_end)) {
+            LOG_THREADS("DTLS %d at %p-%p.\n", id, (void*)dtls_beg,
+                        (void*)dtls_end);
+            ScanForPointers(dtls_beg, dtls_end, frontier, "DTLS", kReachable,
+                            accessor);
+          } else {
+            // A dlclose()-d module's DTLS block might have been lazily freed
+            // and unmapped without updating dtv, leaving an inaccessible range.
+            LOG_THREADS("DTLS %d at %p-%p is not accessible.\n", id,
+                        (void*)dtls_beg, (void*)dtls_end);
+          }
         }
       });
     } else {

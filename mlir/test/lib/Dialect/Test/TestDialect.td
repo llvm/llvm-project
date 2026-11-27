@@ -14,6 +14,7 @@ include "mlir/IR/OpBase.td"
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "::test";
+  let useDefaultOperationRegistration = 1;
   let hasCanonicalizer = 1;
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
@@ -21,8 +22,9 @@ def Test_Dialect : Dialect {
   let hasRegionResultAttrVerify = 1;
   let hasOperationInterfaceFallback = 1;
   let hasNonDefaultDestructor = 1;
+  let hasTypes = 1;
   let useDefaultTypePrinterParser = 0;
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
   let isExtensible = 1;
   let dependentDialects = [
     "::mlir::DLTIDialect",
@@ -37,7 +39,6 @@ def Test_Dialect : Dialect {
     void registerAttributes();
     void registerInterfaces();
     void registerTypes();
-    void registerOpsSyntax();
 
     // Provides a custom printing/parsing for some operations.
     ::std::optional<ParseOpHook>

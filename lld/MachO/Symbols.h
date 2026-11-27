@@ -141,8 +141,6 @@ public:
   // from `getFile()` if the symbol originated from a bitcode file.
   ObjFile *getObjectFile() const;
 
-  std::string getSourceLocation();
-
   // Get the canonical InputSection of the symbol.
   InputSection *isec() const;
 

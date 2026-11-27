@@ -473,6 +473,9 @@ public:
 
   void decodePseudoProbe();
 
+  const cl::LibraryOptionsContext &getLibraryOptions() const {
+    return LibraryOptions;
+  }
   StringRef getPath() const { return Path; }
   StringRef getName() const { return llvm::sys::path::filename(Path); }
   const Triple &getTriple() const { return TheTriple; }

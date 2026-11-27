@@ -107,7 +107,6 @@ class WebAssemblyFastISel final : public FastISel {
   /// Keep a pointer to the WebAssemblySubtarget around so that we can make the
   /// right decision when generating code for different targets.
   const WebAssemblySubtarget *Subtarget;
-  LLVMContext *Context;
 
 private:
   // Utility helper routines
@@ -201,7 +200,6 @@ public:
       : FastISel(FuncInfo, LibInfo, LibcallLowering,
                  /*SkipTargetIndependentISel=*/true) {
     Subtarget = &FuncInfo.MF->getSubtarget<WebAssemblySubtarget>();
-    Context = &FuncInfo.Fn->getContext();
   }
 
   bool fastSelectInstruction(const Instruction *I) override;

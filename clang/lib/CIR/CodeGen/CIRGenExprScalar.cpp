@@ -151,18 +151,18 @@ public:
       return {};
 
     if (mlir::Attribute result = ConstantEmitter(cgf).tryEmitConstantExpr(e)) {
-      if (e->isGLValue()) {
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "ScalarExprEmitter: constant expr GL Value");
-        return {};
-      }
-
-      return builder.getConstant(cgf.getLoc(e->getSourceRange()),
-                                 mlir::cast<mlir::TypedAttr>(result));
+      mlir::Value val = builder.getConstant(
+          cgf.getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(result));
+      // This was already converted to an rvalue when it was constant evaluated.
+      if (!e->isGLValue() ||
+          (e->hasAPValueResult() && !e->getAPValueResult().isLValue()))
+        return val;
+      return cgf.emitLoadOfScalar(
+          cgf.makeNaturalAlignPointeeAddrLValue(val, e->getType()),
+          e->getExprLoc());
     }
 
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: constant expr");
-    return {};
+    return Visit(e->getSubExpr());
   }
 
   mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {
@@ -668,6 +668,7 @@ public:
         auto xchg = cir::AtomicXchgOp::create(
             builder, loc, intAddr.getPointer(), one,
             cir::MemOrder::SequentiallyConsistent, cir::SyncScopeKind::System,
+            builder.getI64IntegerAttr(intAddr.getAlignment().getQuantity()),
             lv.isVolatileQualified());
         return builder.createCast(cir::CastKind::int_to_bool, xchg.getResult(),
                                   builder.getBoolTy());
@@ -688,6 +689,7 @@ public:
         auto rmw = cir::AtomicFetchOp::create(
             builder, loc, lv.getPointer(), one, kind,
             cir::MemOrder::SequentiallyConsistent, cir::SyncScopeKind::System,
+            builder.getI64IntegerAttr(lv.getAlignment().getQuantity()),
             lv.isVolatileQualified(), /*fetch_first=*/true);
         mlir::Value oldVal = rmw->getResult(0);
         // Prefix returns new value; postfix returns old value.
@@ -709,6 +711,7 @@ public:
           auto rmw = cir::AtomicFetchOp::create(
               builder, loc, lv.getPointer(), amt, kind,
               cir::MemOrder::SequentiallyConsistent, cir::SyncScopeKind::System,
+              builder.getI64IntegerAttr(lv.getAlignment().getQuantity()),
               lv.isVolatileQualified(), /*fetch_first=*/true);
           mlir::Value oldVal = rmw->getResult(0);
           if (isPre)
@@ -887,8 +890,11 @@ public:
 
     mlir::Location loc = cgf.getLoc(e->getSourceRange().getBegin());
 
-    if (cir::isFPOrVectorOfFPType(operand.getType()))
-      return builder.createOrFold<cir::FNegOp>(loc, operand);
+    if (cir::isFPOrVectorOfFPType(operand.getType())) {
+      CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+      return builder.createOrFold<cir::FNegOp>(loc, operand,
+                                               builder.getFastMathFlagsAttr());
+    }
 
     // Saturated negation must saturate (-min for signed, any nonzero value for
     // unsigned), as in classic codegen.
@@ -1289,6 +1295,26 @@ public:
       llvm_unreachable("unsupported comparison kind for cir.cmp");
     }
   }
+  /// Returns <Signaling, Kind>.
+  std::pair<bool, cir::FCmpOpKind>
+  clangCmpToCIRFCmp(clang::BinaryOperatorKind clangCmp) {
+    switch (clangCmp) {
+    case BO_LT:
+      return std::make_pair(/*Signaling=*/true, cir::FCmpOpKind::olt);
+    case BO_GT:
+      return std::make_pair(/*Signaling=*/true, cir::FCmpOpKind::ogt);
+    case BO_LE:
+      return std::make_pair(/*Signaling=*/true, cir::FCmpOpKind::ole);
+    case BO_GE:
+      return std::make_pair(/*Signaling=*/true, cir::FCmpOpKind::oge);
+    case BO_EQ:
+      return std::make_pair(/*Signaling=*/false, cir::FCmpOpKind::oeq);
+    case BO_NE:
+      return std::make_pair(/*Signaling=*/false, cir::FCmpOpKind::une);
+    default:
+      llvm_unreachable("unsupported comparison kind");
+    }
+  }
 
   mlir::Value emitCmp(const BinaryOperator *e) {
     ignoreResultAssign = false;
@@ -1317,9 +1343,19 @@ public:
         } else {
           // Other kinds of vectors. Element-wise comparison returning
           // a vector.
-          result = cir::VecCmpOp::create(builder, cgf.getLoc(boInfo.loc),
-                                         cgf.convertType(boInfo.fullType), kind,
-                                         boInfo.lhs, boInfo.rhs);
+          auto resultTy =
+              mlir::cast<cir::VectorType>(cgf.convertType(boInfo.fullType));
+          if (cir::isFPOrVectorOfFPType(lhs.getType())) {
+            std::pair<bool, cir::FCmpOpKind> fpInfo =
+                clangCmpToCIRFCmp(e->getOpcode());
+            CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+            result = builder.createVecFCompare(cgf.getLoc(boInfo.loc), resultTy,
+                                               fpInfo.second, lhs, rhs,
+                                               fpInfo.first);
+          } else {
+            result = builder.createVecCompare(cgf.getLoc(boInfo.loc), resultTy,
+                                              kind, lhs, rhs);
+          }
         }
       } else if (boInfo.isFixedPointOp()) {
         result = emitFixedPointBinOp(boInfo);
@@ -1754,7 +1790,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
   // 'An assignment expression has the value of the left operand after the
   // assignment...'.
   if (lhsLV.isBitField())
-    cgf.emitStoreThroughBitfieldLValue(RValue::get(result), lhsLV);
+    result = cgf.emitStoreThroughBitfieldLValue(RValue::get(result), lhsLV);
   else
     cgf.emitStoreThroughLValue(RValue::get(result), lhsLV);
 
@@ -2129,9 +2165,9 @@ static mlir::Value buildFMulAdd(mlir::Location addLoc, cir::FMulOp mulOp,
 
   // Carry the mul's fenv attribute so a constrained fmul yields a constrained
   // fmuladd; the builder is under the add's FP options, not the mul's.
-  mlir::Value fmuladd =
-      cir::FMulAddOp::create(builder, loc, addend.getType(), mulOp0, mulOp1,
-                             addend, mulOp.getFenvAttr());
+  mlir::Value fmuladd = cir::FMulAddOp::create(
+      builder, loc, addend.getType(), mulOp0, mulOp1, addend,
+      mulOp.getFenvAttr(), builder.getFastMathFlagsAttr());
   mulOp.erase();
   return fmuladd;
 }
@@ -2973,9 +3009,42 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
       std::iota(mask.begin(), mask.end(), 0);
       return builder.createVecShuffle(loc, vec, mask);
     }
-    return builder.createExtractElement(loc, vec, /*idx=*/0);
+    mlir::Value idx = builder.getConstInt(loc, cgf.sizeTy, 0);
+    return cir::VecExtractOp::create(builder, loc, vec, idx);
   }
 
+  case CK_HLSLMatrixTruncation: {
+    assert((destTy->isMatrixType() || destTy->isBuiltinType()) &&
+           "Destination type must be a matrix or builtin type.");
+    mlir::Value matrix = Visit(subExpr);
+    mlir::Location loc = cgf.getLoc(subExpr->getSourceRange());
+    if (const auto *matTy = destTy->getAs<ConstantMatrixType>()) {
+      llvm::SmallVector<int64_t> mask(matTy->getNumElementsFlattened());
+      unsigned numCols = matTy->getNumColumns();
+      unsigned numRows = matTy->getNumRows();
+
+      auto *srcMatTy = subExpr->getType()->getAs<ConstantMatrixType>();
+      assert(srcMatTy && "Source type must be a matrix type.");
+      assert(numRows <= srcMatTy->getNumRows());
+      assert(numCols <= srcMatTy->getNumColumns());
+
+      for (unsigned row = 0; row < numRows; row++)
+        for (unsigned column = 0; column < numCols; column++)
+          mask[matTy->getColumnMajorFlattenedIndex(row, column)] =
+              srcMatTy->getColumnMajorFlattenedIndex(row, column);
+
+      auto elementTy =
+          mlir::cast<cir::MatrixType>(matrix.getType()).getElementType();
+      auto resultTy = cir::MatrixType::get(builder.getContext(), elementTy,
+                                           numRows, numCols);
+      return builder.createVecShuffle(loc, matrix, resultTy, mask);
+    }
+
+    cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
+                                   "ScalarExprEmitter::VisitCastExpr: HLSL "
+                                   "Matrix truncation with non-matrix dest");
+    return {};
+  }
   default:
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
                                    "CastExpr: ", ce->getCastKindName());

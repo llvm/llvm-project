@@ -13,6 +13,7 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/OptionGroupBoolean.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
+#include "lldb/Interpreter/OptionGroupLanguageExpression.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Target/Target.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -44,6 +45,10 @@ public:
     bool ShouldSuppressResult(
         const OptionGroupValueObjectDisplay &display_opts) const;
 
+    /// Appends the options that language plugins add to the commands that
+    /// evaluate expressions to \p group.
+    void AppendLanguageOptions(OptionGroupOptions &group);
+
     bool top_level;
     bool unwind_on_error;
     bool ignore_breakpoints;
@@ -57,7 +62,10 @@ public:
     LanguageRuntimeDescriptionDisplayVerbosity m_verbosity;
     LazyBool auto_apply_fixits;
     LazyBool suppress_persistent_result;
-    bool cpp_ignore_context_qualifiers;
+
+  private:
+    std::vector<std::shared_ptr<OptionGroupLanguageExpression>>
+        m_language_options;
   };
 
   CommandObjectExpression(CommandInterpreter &interpreter);

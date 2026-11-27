@@ -49,7 +49,7 @@ enum class __poll_with_backoff_results : unsigned char {
 //   the polling loop will return __poll_with_backoff_results::__timeout to report a timeout.
 
 template <class _Poll, class _Backoff>
-_LIBCPP_HIDE_FROM_ABI __poll_with_backoff_results __libcpp_thread_poll_with_backoff(
+__poll_with_backoff_results __libcpp_thread_poll_with_backoff(
     _Poll&& __poll, _Backoff&& __backoff, chrono::nanoseconds __max_elapsed = chrono::nanoseconds::zero()) {
   auto const __start = chrono::high_resolution_clock::now();
   for (int __count = 0;;) {
@@ -76,7 +76,7 @@ _LIBCPP_HIDE_FROM_ABI __poll_with_backoff_results __libcpp_thread_poll_with_back
 // so this should most likely only be used on single-threaded systems where there
 // are no other threads to compete with.
 struct __spinning_backoff_policy {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __backoff_results operator()(chrono::nanoseconds const&) const {
+  _LIBCPP_CONSTEXPR __backoff_results operator()(chrono::nanoseconds const&) const {
     return __backoff_results::__continue_poll;
   }
 };

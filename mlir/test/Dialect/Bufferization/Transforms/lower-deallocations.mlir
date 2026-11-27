@@ -195,3 +195,18 @@ module @conversion_nest_module_dealloc_helper {
 // CHECK:           call @dealloc_helper
 // CHECK:         func.func private @dealloc_helper
 // CHECK:       func.func private @dealloc_helper
+
+// -----
+
+// A dealloc of a buffer-like value that is not a memref is not lowered to the
+// memref dialect.
+
+func.func @conversion_buffer_like_dealloc(%arg0: !test.test_memref<[4], f32>,
+                                          %arg1: i1,
+                                          %arg2: !test.test_memref<[4], f32>)
+    -> i1 {
+  // expected-error@+1 {{failed to legalize operation 'bufferization.dealloc' that was explicitly marked illegal}}
+  %0 = bufferization.dealloc (%arg0 : !test.test_memref<[4], f32>) if (%arg1)
+    retain (%arg2 : !test.test_memref<[4], f32>)
+  return %0 : i1
+}

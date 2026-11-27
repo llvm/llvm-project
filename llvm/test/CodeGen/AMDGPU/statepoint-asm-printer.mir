@@ -6,7 +6,6 @@
 
 ---
 name:            test_statepoint
-tracksRegLiveness: true
 frameInfo:
   stackSize:       16
   maxAlignment:    4

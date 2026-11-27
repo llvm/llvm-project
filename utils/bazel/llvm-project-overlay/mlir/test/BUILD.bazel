@@ -150,19 +150,9 @@ td_library(
     ],
 )
 
-gentbl_cc_library(
+alias(
     name = "TestOpsSyntaxIncGen",
-    strip_include_prefix = "lib/Dialect/Test",
-    tbl_outs = {
-        "lib/Dialect/Test/TestOpsSyntax.cpp.inc": ["-gen-op-defs"],
-        "lib/Dialect/Test/TestOpsSyntax.h.inc": ["-gen-op-decls"],
-    },
-    tblgen = "//mlir:mlir-tblgen",
-    td_file = "lib/Dialect/Test/TestOpsSyntax.td",
-    test = True,
-    deps = [
-        ":TestOpTdFiles",
-    ],
+    actual = ":TestOpsIncGen",
 )
 
 gentbl_cc_library(
@@ -226,6 +216,14 @@ gentbl_cc_library(
             "-gen-op-decls",
             "-op-partition=Properties",
         ],
+        "lib/Dialect/Test/TestOpsSyntax.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=Syntax",
+        ],
+        "lib/Dialect/Test/TestOpsSyntax.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=Syntax",
+        ],
         "lib/Dialect/Test/TestOpsTraits.cpp.inc": [
             "-gen-op-defs",
             "-op-partition=Traits",
@@ -267,13 +265,25 @@ gentbl_cc_library(
     name = "TestAttrDefsIncGen",
     strip_include_prefix = "lib/Dialect/Test",
     tbl_outs = {
-        "lib/Dialect/Test/TestAttrDefs.cpp.inc": [
+        "lib/Dialect/Test/TestAttributesCore.cpp.inc": [
             "-gen-attrdef-defs",
-            "--attrdefs-dialect=test",
+            "-attrdefs-dialect=test",
+            "-attrdef-partition=Core",
         ],
-        "lib/Dialect/Test/TestAttrDefs.h.inc": [
+        "lib/Dialect/Test/TestAttributesCore.h.inc": [
             "-gen-attrdef-decls",
-            "--attrdefs-dialect=test",
+            "-attrdefs-dialect=test",
+            "-attrdef-partition=Core",
+        ],
+        "lib/Dialect/Test/TestAttributesSyntax.cpp.inc": [
+            "-gen-attrdef-defs",
+            "-attrdefs-dialect=test",
+            "-attrdef-partition=Syntax",
+        ],
+        "lib/Dialect/Test/TestAttributesSyntax.h.inc": [
+            "-gen-attrdef-decls",
+            "-attrdefs-dialect=test",
+            "-attrdef-partition=Syntax",
         ],
     },
     tblgen = "//mlir:mlir-tblgen",
@@ -303,13 +313,25 @@ gentbl_cc_library(
     name = "TestTypeDefsIncGen",
     strip_include_prefix = "lib/Dialect/Test",
     tbl_outs = {
-        "lib/Dialect/Test/TestTypeDefs.cpp.inc": [
+        "lib/Dialect/Test/TestTypesCore.cpp.inc": [
             "-gen-typedef-defs",
-            "--typedefs-dialect=test",
+            "-typedefs-dialect=test",
+            "-typedef-partition=Core",
         ],
-        "lib/Dialect/Test/TestTypeDefs.h.inc": [
+        "lib/Dialect/Test/TestTypesCore.h.inc": [
             "-gen-typedef-decls",
-            "--typedefs-dialect=test",
+            "-typedefs-dialect=test",
+            "-typedef-partition=Core",
+        ],
+        "lib/Dialect/Test/TestTypesSyntax.cpp.inc": [
+            "-gen-typedef-defs",
+            "-typedefs-dialect=test",
+            "-typedef-partition=Syntax",
+        ],
+        "lib/Dialect/Test/TestTypesSyntax.h.inc": [
+            "-gen-typedef-decls",
+            "-typedefs-dialect=test",
+            "-typedef-partition=Syntax",
         ],
     },
     tblgen = "//mlir:mlir-tblgen",
@@ -453,7 +475,6 @@ cc_library(
         ":TestEnumDefsIncGen",
         ":TestInterfacesIncGen",
         ":TestOpsIncGen",
-        ":TestOpsSyntaxIncGen",
         ":TestTypeDefsIncGen",
         "//llvm:Core",
         "//llvm:IRReader",
