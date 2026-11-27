@@ -25,6 +25,7 @@ namespace llvm {
   class BitVector;
   class CalleeSavedInfo;
   class MachineFunction;
+  class RegisterClassInfo;
   class RegScavenger;
 
 namespace TargetStackID {
@@ -400,6 +401,14 @@ public:
   /// interface outside PEI is getCalleeSaves.
   virtual void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                                     RegScavenger *RS = nullptr) const;
+
+  /// Called immediately before determineCalleeSaves with the shared
+  /// RegisterClassInfo from the pass manager. Default is a no-op.
+  /// Required since adding to determineCalleeSaves would require modifying
+  /// every target override.
+  virtual void
+  processFunctionBeforeCalleeSaves(MachineFunction &MF, RegScavenger *RS,
+                                   const RegisterClassInfo &RCI) const {}
 
   /// processFunctionBeforeFrameFinalized - This method is called immediately
   /// before the specified function's frame layout (MF.getFrameInfo()) is
