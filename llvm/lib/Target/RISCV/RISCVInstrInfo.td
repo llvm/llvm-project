@@ -84,6 +84,10 @@ def riscv_mnret_glue : RVSDNode<"MNRET_GLUE", SDTNone,
                                 [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_mileaveret_glue : RVSDNode<"QC_C_MILEAVERET_GLUE", SDTNone,
                                      [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mipopret_glue : RVSDNode<"MIPOPRET_GLUE", SDTNone,
+                                   [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_sipopret_glue : RVSDNode<"SIPOPRET_GLUE", SDTNone,
+                                   [SDNPHasChain, SDNPOptInGlue]>;
 
 // Select with condition operator - This selects between a true value and
 // a false value (ops #3 and #4) based on the boolean result of comparing

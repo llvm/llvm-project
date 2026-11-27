@@ -375,6 +375,11 @@ This option is `OFF` if this feature is not supported for the platform.
 : Whether to also copy `libomptest.so` into
 [`CMAKE_INSTALL_PREFIX`][CMAKE_INSTALL_PREFIX] during `ninja install`.
 
+**LIBOMPTEST_USE_SYSTEM_GTEST**: BOOL (default: `OFF`)
+: Build ompTest against the GoogleTest found by `find_package(GTest)` instead
+of the copy vendored by LLVM. Only valid with a GoogleTest built against the
+same C++ standard library and RTTI setting as this build.
+
 
 ### Options for `libompd`
 

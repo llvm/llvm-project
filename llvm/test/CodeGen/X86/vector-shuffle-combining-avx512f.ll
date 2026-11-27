@@ -1372,4 +1372,19 @@ define double @max_splat1_v8f64(<8 x double> %v) nounwind #0 {
   ret double %r
 }
 
+define <16 x i8> @splat_add_trunc_v8i64_v16i8(<8 x i64> %a, <16 x i8> %c) {
+; CHECK-LABEL: splat_add_trunc_v8i64_v16i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovqb %zmm0, %xmm0
+; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpbroadcastb %xmm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %t = trunc <8 x i64> %a to <8 x i8>
+  %w = shufflevector <8 x i8> %t, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s = add <16 x i8> %w, %c
+  %r = shufflevector <16 x i8> %s, <16 x i8> poison, <16 x i32> zeroinitializer
+  ret <16 x i8> %r
+}
+
 attributes #0 = { "target-cpu"="skylake-avx512" }

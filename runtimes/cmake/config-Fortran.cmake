@@ -39,57 +39,14 @@
 # a compiler introspection environment, see
 # https://gitlab.kitware.com/cmake/cmake/-/issues/27419
 function (check_fortran_builtins_available)
-  if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang" AND
-      (CMAKE_Fortran_COMPILER_FORCED OR CMAKE_VERSION VERSION_LESS "3.28"))
-    # CMake's check_fortran_source_compiles/try_compile does not take a
-    # user-defined CMAKE_Fortran_PREPROCESS_SOURCE into account. Instead of
-    # test-compiling, ask Flang directly for the builtin module files.
-    # CMAKE_Fortran_PREPROCESS_SOURCE is defined for CMake < 3.24 because it
-    # does not natively recognize Flang (see below). Once we bump the required
-    # CMake version, and because setting CMAKE_Fortran_PREPROCESS_SOURCE has
-    # been deprecated by CMake, this workaround can be removed.
-    #
-    # The same path is taken for CMake 3.24 to 3.27, which do recognize Flang
-    # but do not pass --target= to try_compile. Setting
-    # CMAKE_Fortran_COMPILE_OPTIONS_TARGET ourselves (see below) does not help:
-    # CMake sets it in CMakeFortranCompiler.cmake, whose scope try_compile
-    # inherits, while ours is only a directory-scope variable. The probe would
-    # therefore compile for the host and report the host's modules.
-    if (NOT DEFINED FORTRAN_HAS_ISO_C_BINDING_MOD)
-      message(STATUS "Performing Test ISO_C_BINDING_PATH")
-      # Flang's intrinsic modules are per-target; probe for the target we are
-      # compiling for. Empty for compilers without such an option (e.g. GNU).
-      set(_fortran_target_flag "")
-      if (CMAKE_Fortran_COMPILER_TARGET AND CMAKE_Fortran_COMPILE_OPTIONS_TARGET)
-        set(_fortran_target_flag "${CMAKE_Fortran_COMPILE_OPTIONS_TARGET}${CMAKE_Fortran_COMPILER_TARGET}")
-      endif ()
-      execute_process(
-        COMMAND ${CMAKE_Fortran_COMPILER} ${_fortran_target_flag} ${CMAKE_Fortran_FLAGS} "-print-file-name=iso_c_binding.mod"
-        OUTPUT_VARIABLE ISO_C_BINDING_PATH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-      )
-      set(FORTRAN_HAS_ISO_C_BINDING_MOD "")
-      if (EXISTS "${ISO_C_BINDING_PATH}")
-        message(STATUS "Performing Test ISO_C_BINDING_PATH -- Success")
-        set(FORTRAN_HAS_ISO_C_BINDING_MOD TRUE CACHE INTERNAL "Existence result of ${CMAKE_Fortran_COMPILER} -print-file-name=iso_c_binding.mod")
-      else ()
-        message(STATUS "Performing Test ISO_C_BINDING_PATH -- Failed")
-        set(FORTRAN_HAS_ISO_C_BINDING_MOD FALSE CACHE INTERNAL "Existence result of ${CMAKE_Fortran_COMPILER} -print-file-name=iso_c_binding.mod")
-      endif ()
-    endif ()
-  else ()
-    cmake_push_check_state(RESET)
-    set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
-    # CMake 3.28 and later pass --target= to try_compile themselves, so nothing
-    # to add here. Do not pass it a second time.
-    check_fortran_source_compiles("
-      subroutine testroutine
-        use iso_c_binding
-      end subroutine
-      " FORTRAN_HAS_ISO_C_BINDING_MOD SRC_EXT F90)
-    cmake_pop_check_state()
-  endif ()
+  cmake_push_check_state(RESET)
+  set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
+  check_fortran_source_compiles("
+    subroutine testroutine
+      use iso_c_binding
+    end subroutine
+    " FORTRAN_HAS_ISO_C_BINDING_MOD SRC_EXT F90)
+  cmake_pop_check_state()
   set(HAVE_FORTRAN_INTRINSIC_MODS "${FORTRAN_HAS_ISO_C_BINDING_MOD}" PARENT_SCOPE)
 endfunction ()
 
@@ -102,61 +59,7 @@ add_library(fortran-compile-options INTERFACE)
 add_library(fortran-compile-depends INTERFACE)
 target_link_libraries(fortran-compile-depends INTERFACE fortran-compile-options)
 
-if (CMAKE_Fortran_COMPILER)
-  # Workarounds for older versions of CMake not recognizing FLang. Hence, we
-  # cannot use CMAKE_Fortran_COMPILER_ID.
-  cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
-  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR
-      _Fortran_COMPILER_STEM STREQUAL "flang" OR
-      _Fortran_COMPILER_STEM STREQUAL "fakeflang")
-    # CMake 3.24 is the first version of CMake that directly recognizes Flang.
-    # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
-    if (CMAKE_VERSION VERSION_LESS "3.24")
-      include(CMakeForceCompiler)
-      CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
-
-      set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
-      set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
-
-      set(CMAKE_Fortran_SUBMODULE_SEP "-")
-      set(CMAKE_Fortran_SUBMODULE_EXT ".mod")
-
-      set(CMAKE_Fortran_PREPROCESS_SOURCE
-          "<CMAKE_Fortran_COMPILER> -cpp <DEFINES> <INCLUDES> <FLAGS> -E <SOURCE> > <PREPROCESSED_SOURCE>")
-
-      set(CMAKE_Fortran_FORMAT_FIXED_FLAG "-ffixed-form")
-      set(CMAKE_Fortran_FORMAT_FREE_FLAG "-ffree-form")
-
-      set(CMAKE_Fortran_MODDIR_FLAG "-J")
-
-      set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_ON "-cpp")
-      set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_OFF "-nocpp")
-      set(CMAKE_Fortran_POSTPROCESS_FLAG "-ffixed-line-length-72")
-
-      set(CMAKE_Fortran_LINKER_WRAPPER_FLAG "-Wl,")
-      set(CMAKE_Fortran_LINKER_WRAPPER_FLAG_SEP ",")
-
-      set(CMAKE_Fortran_VERBOSE_FLAG "-v")
-
-      set(CMAKE_Fortran_LINK_MODE DRIVER)
-    endif ()
-
-    # Optimization flags are only passed after CMake 3.27.4
-    # https://gitlab.kitware.com/cmake/cmake/-/commit/1140087adea98bd8d8974e4c18979f4949b52c34
-    if (CMAKE_VERSION VERSION_LESS "3.27.4")
-      string(APPEND CMAKE_Fortran_FLAGS_DEBUG_INIT " -O0 -g")
-      string(APPEND CMAKE_Fortran_FLAGS_RELWITHDEBINFO_INIT " -O2 -g")
-      string(APPEND CMAKE_Fortran_FLAGS_RELEASE_INIT " -O3")
-    endif ()
-
-    # Only CMake 3.28+ pass --target= to Flang. But for cross-compiling, including
-    # to nvptx amd amdgpu targets, passing the target triple is essential.
-    # https://gitlab.kitware.com/cmake/cmake/-/commit/e9af7b968756e72553296ecdcde6f36606a0babf
-    if (CMAKE_VERSION VERSION_LESS "3.28")
-      set(CMAKE_Fortran_COMPILE_OPTIONS_TARGET "--target=")
-    endif ()
-  endif ()
-else ()
+if (NOT CMAKE_Fortran_COMPILER)
   # Do not enable Fortran support unless a Fortran compiler is passed, i.e.
   # compilation of Fortran is explicitly intended.
   # The automatically detected C/C++ and Fortran compiler may not play together.

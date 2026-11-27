@@ -5,7 +5,12 @@
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # DEFINE: %{profile-split} = --data=%t.fdata --funcs=_start,foo \
 # DEFINE:   --split-functions --split-all-cold --hot-functions-at-end --align-text=0x8000000
-# RUN: llvm-bolt %t -o %t.bolt %{profile-split} --keep-nops 2>&1 | FileCheck %s
+## Put .text.cold at 0x18000000 and thus .text at the next 128MiB boundary,
+## 0x20000000. --use-gnu-stack keeps the new program header table from
+## preceding .text.cold. The call to foo then needs a long stub, and the
+## branch to the cold fragment of _start a direct stub within 128MiB.
+# RUN: llvm-bolt %t -o %t.bolt %{profile-split} --keep-nops \
+# RUN:   --use-gnu-stack --custom-allocation-vma=0x18000000 2>&1 | FileCheck %s
 
 ## Disable relocation mode to keep the cold fragment at its original address.
 # DEFINE: %{range-split} = --relocs=0 --funcs=foo --split-functions --split-strategy=all

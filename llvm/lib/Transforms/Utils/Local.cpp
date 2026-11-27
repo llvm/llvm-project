@@ -423,7 +423,7 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
     return false;
 
   if (auto *CB = dyn_cast<CallBase>(I))
-    if (isRemovableAlloc(CB, TLI))
+    if (isRemovableAlloc(CB))
       return true;
 
   if (!I->willReturn()) {
