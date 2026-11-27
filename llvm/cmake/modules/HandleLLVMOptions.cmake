@@ -33,6 +33,23 @@ endif()
 
 set(LLVM_ENABLE_LTO OFF CACHE STRING "Build LLVM with LTO. May be specified as Thin or Full to use a particular kind of LTO")
 string(TOUPPER "${LLVM_ENABLE_LTO}" uppercase_LLVM_ENABLE_LTO)
+include(CheckIPOSupported)
+check_ipo_supported(RESULT LLVM_CMAKE_SUPPORT_INTERPROCEDURAL_OPTIMIZATION)
+if(NOT LLVM_CMAKE_SUPPORT_INTERPROCEDURAL_OPTIMIZATION)
+  message(WARNING "This toolchain doesn't support LTO!")
+  set(uppercase_LLVM_ENABLE_LTO OFF)
+elseif(LLVM_CMAKE_SUPPORT_INTERPROCEDURAL_OPTIMIZATION AND
+  uppercase_LLVM_ENABLE_LTO MATCHES "THIN|FULL" AND
+  (NOT CMAKE_C_COMPILER_ID MATCHES "Clang" OR
+   NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+  message(WARNING "Thin/Full LTO are only supported by LLVM toolchain! "
+                  "Fallback to LLVM_ENABLE_LTO=ON.")
+  set(uppercase_LLVM_ENABLE_LTO ON)
+endif()
+define_property(TARGET
+  PROPERTY LLVM_LTO
+  BRIEF_DOCS "Enable LTO for Relase and MinSizeRel config for target."
+)
 
 option(LLVM_ENABLE_FATLTO "Build LLVM with -ffat-lto-objects." OFF)
 
@@ -1567,53 +1584,6 @@ if(LLVM_CCACHE_BUILD)
 endif()
 
 set(LLVM_THINLTO_CACHE_PATH "${PROJECT_BINARY_DIR}/lto.cache" CACHE STRING "Set ThinLTO cache path. This can be used when building LLVM from several different directiories.")
-
-if(LLVM_ENABLE_LTO AND WIN32 AND NOT LINKER_IS_LLD_LINK AND NOT MINGW)
-  message(FATAL_ERROR "When compiling for Windows, LLVM_ENABLE_LTO requires using lld as the linker (point CMAKE_LINKER at lld-link.exe)")
-endif()
-if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
-  append("-flto=thin" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
-  if(NOT LINKER_IS_LLD_LINK)
-    append("-flto=thin" CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-  endif()
-  # If the linker supports it, enable the lto cache. This improves initial build
-  # time a little since we re-link a lot of the same objects, and significantly
-  # improves incremental build time.
-  # FIXME: We should move all this logic into the clang driver.
-  if(APPLE)
-    append("-Wl,-cache_path_lto,${LLVM_THINLTO_CACHE_PATH}"
-           CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-  elseif("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
-    append("-bplugin_opt:-legacy-thinlto-cache-dir=${LLVM_THINLTO_CACHE_PATH}"
-           CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-  elseif((UNIX OR MINGW) AND LLVM_USE_LINKER STREQUAL "lld")
-    append("-Wl,--thinlto-cache-dir=${LLVM_THINLTO_CACHE_PATH}"
-           CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-  elseif(LLVM_USE_LINKER STREQUAL "gold")
-    append("-Wl,--plugin-opt,cache-dir=${LLVM_THINLTO_CACHE_PATH}"
-           CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-  elseif(LINKER_IS_LLD_LINK)
-    append("/lldltocache:${LLVM_THINLTO_CACHE_PATH}"
-           CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-  endif()
-elseif(uppercase_LLVM_ENABLE_LTO STREQUAL "FULL")
-  append("-flto=full" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
-  if(NOT LINKER_IS_LLD_LINK)
-    append("-flto=full" CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-  endif()
-elseif(LLVM_ENABLE_LTO)
-  append("-flto" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
-  if(NOT LINKER_IS_LLD_LINK)
-    append("-flto" CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-  endif()
-endif()
-
-if(LLVM_ENABLE_FATLTO AND ((UNIX AND NOT APPLE) OR FUCHSIA))
-  append("-ffat-lto-objects" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  if(NOT LINKER_IS_LLD_LINK)
-    append("-ffat-lto-objects" CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS)
-  endif()
-endif()
 
 # Set an AIX default for LLVM_EXPORT_SYMBOLS_FOR_PLUGINS based on whether we are
 # doing dynamic linking (see below).
