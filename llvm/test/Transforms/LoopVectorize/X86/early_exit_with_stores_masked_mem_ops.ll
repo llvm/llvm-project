@@ -2,22 +2,26 @@
 ; RUN: opt -p loop-vectorize -mtriple=x86_64-- -mattr=+avx2 -enable-early-exit-vectorization-with-side-effects -S %s | FileCheck %s --check-prefixes=AVX2
 ; RUN: opt -p loop-vectorize -mtriple=x86_64-- -mattr=+avx512f,+avx512bw,+avx512vl -enable-early-exit-vectorization-with-side-effects -S %s | FileCheck %s --check-prefixes=AVX512
 
-; AVX2 has no masked i16 loads and stores, AVX512 does.
+; AVX512 has masked i16 loads and stores, so it uses them. AVX2 does not, so it
+; guards the loads and stores with a "no lane early exits" condition, bailing
+; out to the scalar loop otherwise.
+; TODO: Adds should be vectorized instead of being replicated.
 define void @load_store_i16(ptr noalias %a, ptr align 2 dereferenceable(2000) %ee.src) {
 ; AVX2-LABEL: define void @load_store_i16(
 ; AVX2-SAME: ptr noalias [[A:%.*]], ptr align 2 dereferenceable(2000) [[EE_SRC:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX2-NEXT:  [[ENTRY:.*:]]
-; AVX2-NEXT:    br label %[[LOOP_HEADER:.*]]
-; AVX2:       [[LOOP_HEADER]]:
+; AVX2-NEXT:    br label %[[VECTOR_PH:.*]]
+; AVX2:       [[VECTOR_PH]]:
 ; AVX2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX2:       [[VECTOR_BODY]]:
-; AVX2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP_HEADER]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH2:.*]] ]
+; AVX2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH2:.*]] ]
 ; AVX2-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds nuw i16, ptr [[EE_SRC]], i64 [[IV]]
 ; AVX2-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i16>, ptr [[EE_ADDR]], align 2
 ; AVX2-NEXT:    [[TMP1:%.*]] = icmp sgt <16 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; AVX2-NEXT:    [[TMP2:%.*]] = freeze <16 x i1> [[TMP1]]
 ; AVX2-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP2]])
-; AVX2-NEXT:    br i1 [[TMP3]], label %[[LOOP_LATCH2]], label %[[VECTOR_BODY_SKIPPABLE:.*]]
+; AVX2-NEXT:    [[TMP58:%.*]] = xor i1 [[TMP3]], true
+; AVX2-NEXT:    br i1 [[TMP58]], label %[[VECTOR_BODY_SKIPPABLE:.*]], label %[[LOOP_LATCH2]]
 ; AVX2:       [[VECTOR_BODY_SKIPPABLE]]:
 ; AVX2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[IV]]
 ; AVX2-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x i16>, ptr [[TMP4]], align 2
@@ -82,8 +86,8 @@ define void @load_store_i16(ptr noalias %a, ptr align 2 dereferenceable(2000) %e
 ; AVX2-NEXT:    [[TMP57:%.*]] = icmp eq i64 [[TMP56]], 1000
 ; AVX2-NEXT:    br i1 [[TMP57]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
 ; AVX2:       [[SCALAR_PH]]:
-; AVX2-NEXT:    br label %[[LOOP_HEADER1:.*]]
-; AVX2:       [[LOOP_HEADER1]]:
+; AVX2-NEXT:    br label %[[LOOP_HEADER:.*]]
+; AVX2:       [[LOOP_HEADER]]:
 ; AVX2-NEXT:    [[IV1:%.*]] = phi i64 [ [[TMP56]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; AVX2-NEXT:    [[EE_ADDR1:%.*]] = getelementptr inbounds nuw i16, ptr [[EE_SRC]], i64 [[IV1]]
 ; AVX2-NEXT:    [[EE_VAL:%.*]] = load i16, ptr [[EE_ADDR1]], align 2
@@ -96,7 +100,7 @@ define void @load_store_i16(ptr noalias %a, ptr align 2 dereferenceable(2000) %e
 ; AVX2-NEXT:    store i16 [[INC]], ptr [[A_ADDR]], align 2
 ; AVX2-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; AVX2-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
-; AVX2-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[LOOP_HEADER1]], !llvm.loop [[LOOP3:![0-9]+]]
+; AVX2-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; AVX2:       [[EXIT]]:
 ; AVX2-NEXT:    ret void
 ;
@@ -169,23 +173,25 @@ exit:
   ret void
 }
 
-; AVX2 can mask the i32 load but not the i16 store. The unmasked add and trunc
-; should still be widened.
+; AVX2 can mask the i32 load but not the i16 store, so both are placed unmasked
+; under the "no lane early exits" condition.
+; TODO: The unmasked add and trunc should be widened.
 define void @load_i32_store_i16(ptr noalias %a, ptr noalias %b, ptr align 2 dereferenceable(2000) %ee.src) {
 ; AVX2-LABEL: define void @load_i32_store_i16(
 ; AVX2-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr align 2 dereferenceable(2000) [[EE_SRC:%.*]]) #[[ATTR0]] {
 ; AVX2-NEXT:  [[ENTRY:.*:]]
-; AVX2-NEXT:    br label %[[LOOP_HEADER:.*]]
-; AVX2:       [[LOOP_HEADER]]:
+; AVX2-NEXT:    br label %[[VECTOR_PH:.*]]
+; AVX2:       [[VECTOR_PH]]:
 ; AVX2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX2:       [[VECTOR_BODY]]:
-; AVX2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP_HEADER]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH2:.*]] ]
+; AVX2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH2:.*]] ]
 ; AVX2-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds nuw i16, ptr [[EE_SRC]], i64 [[IV]]
 ; AVX2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[EE_ADDR]], align 2
 ; AVX2-NEXT:    [[TMP8:%.*]] = icmp sgt <8 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; AVX2-NEXT:    [[TMP9:%.*]] = freeze <8 x i1> [[TMP8]]
 ; AVX2-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP9]])
-; AVX2-NEXT:    br i1 [[TMP10]], label %[[LOOP_LATCH2]], label %[[VECTOR_BODY_SKIPPABLE:.*]]
+; AVX2-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP10]], true
+; AVX2-NEXT:    br i1 [[TMP4]], label %[[VECTOR_BODY_SKIPPABLE:.*]], label %[[LOOP_LATCH2]]
 ; AVX2:       [[VECTOR_BODY_SKIPPABLE]]:
 ; AVX2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[IV]]
 ; AVX2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i32>, ptr [[TMP11]], align 4
@@ -235,8 +241,8 @@ define void @load_i32_store_i16(ptr noalias %a, ptr noalias %b, ptr align 2 dere
 ; AVX2-NEXT:    [[TMP48:%.*]] = icmp eq i64 [[TMP47]], 1000
 ; AVX2-NEXT:    br i1 [[TMP48]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
 ; AVX2:       [[SCALAR_PH]]:
-; AVX2-NEXT:    br label %[[LOOP_HEADER1:.*]]
-; AVX2:       [[LOOP_HEADER1]]:
+; AVX2-NEXT:    br label %[[LOOP_HEADER:.*]]
+; AVX2:       [[LOOP_HEADER]]:
 ; AVX2-NEXT:    [[IV1:%.*]] = phi i64 [ [[TMP47]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; AVX2-NEXT:    [[EE_ADDR1:%.*]] = getelementptr inbounds nuw i16, ptr [[EE_SRC]], i64 [[IV1]]
 ; AVX2-NEXT:    [[EE_VAL:%.*]] = load i16, ptr [[EE_ADDR1]], align 2
@@ -251,7 +257,7 @@ define void @load_i32_store_i16(ptr noalias %a, ptr noalias %b, ptr align 2 dere
 ; AVX2-NEXT:    store i16 [[INC_TRUNC]], ptr [[A_ADDR]], align 2
 ; AVX2-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; AVX2-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
-; AVX2-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[LOOP_HEADER1]], !llvm.loop [[LOOP5:![0-9]+]]
+; AVX2-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
 ; AVX2:       [[EXIT]]:
 ; AVX2-NEXT:    ret void
 ;
@@ -346,7 +352,8 @@ define void @load_store_i16_pseudoprobe(ptr noalias %a, ptr align 2 dereferencea
 ; AVX2-NEXT:    [[TMP16:%.*]] = icmp sgt <16 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; AVX2-NEXT:    [[TMP17:%.*]] = freeze <16 x i1> [[TMP16]]
 ; AVX2-NEXT:    [[TMP18:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP17]])
-; AVX2-NEXT:    br i1 [[TMP18]], label %[[LOOP_LATCH1]], label %[[VECTOR_BODY_SKIPPABLE:.*]]
+; AVX2-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP18]], true
+; AVX2-NEXT:    br i1 [[TMP4]], label %[[VECTOR_BODY_SKIPPABLE:.*]], label %[[LOOP_LATCH1]]
 ; AVX2:       [[VECTOR_BODY_SKIPPABLE]]:
 ; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)
 ; AVX2-NEXT:    call void @llvm.pseudoprobe(i64 123, i64 1, i32 0, i64 -1)

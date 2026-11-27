@@ -10,18 +10,19 @@ define void @store_in_header(ptr noalias %a, ptr align 2 dereferenceable(40) %pr
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_IF:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH1:.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:       [[PRED_STORE_CONTINUE]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = xor i1 [[TMP4]], true
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[VECTOR_BODY_SKIPPABLE:.*]], label %[[LOOP_LATCH1]]
+; CHECK:       [[VECTOR_BODY_SKIPPABLE]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP5]], align 2
-; CHECK-NEXT:    br label %[[PRED_STORE_IF]]
-; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    br label %[[LOOP_LATCH1]]
+; CHECK:       [[LOOP_LATCH1]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP4]], [[TMP16]]
@@ -78,21 +79,22 @@ define void @invariant_load(ptr noalias %a, ptr %src, ptr align 2 dereferenceabl
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_IF:.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH1:.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:       [[PRED_STORE_CONTINUE]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = xor i1 [[TMP4]], true
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[VECTOR_BODY_SKIPPABLE:.*]], label %[[LOOP_LATCH1]]
+; CHECK:       [[VECTOR_BODY_SKIPPABLE]]:
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i16, ptr [[SRC]], align 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[TMP16]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i16> [[BROADCAST_SPLAT]], ptr [[TMP11]], align 2
-; CHECK-NEXT:    br label %[[PRED_STORE_IF]]
-; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    br label %[[LOOP_LATCH1]]
+; CHECK:       [[LOOP_LATCH1]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
 ; CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[TMP4]], [[TMP20]]
@@ -142,7 +144,7 @@ exit:
   ret void
 }
 
-; Speculatable call without nounwind/willreturn kept in the header, as its
+; Speculatable call without nounwind/willreturn hoisted to the header, as its
 ; result is used outside the loop.
 define i64 @speculatable_call_live_out(ptr noalias %a, ptr align 8 dereferenceable(160) %pred) {
 ; CHECK-LABEL: define i64 @speculatable_call_live_out(
@@ -160,7 +162,8 @@ define i64 @speculatable_call_live_out(ptr noalias %a, ptr align 8 dereferenceab
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i64> @vspec(<4 x i64> [[VEC_IND]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[LOOP_LATCH1]], label %[[VECTOR_BODY_SKIPPABLE:.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[TMP7]], true
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[VECTOR_BODY_SKIPPABLE:.*]], label %[[LOOP_LATCH1]]
 ; CHECK:       [[VECTOR_BODY_SKIPPABLE]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i64> [[TMP6]], ptr [[TMP8]], align 8

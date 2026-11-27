@@ -3344,9 +3344,6 @@ static VPValue *skipAccessesIfAnyLaneExits(VPBasicBlock *Header,
                                            VPBasicBlock::iterator AfterExitCond,
                                            const VFSelectionContext &Config,
                                            OptimizationRemarkEmitter *ORE) {
-  if (Header->getSingleSuccessor() != Latch)
-    return nullptr;
-
   VPlan &Plan = *Header->getPlan();
   auto IsMaskableLoadOrStore = [&](VPRecipeBase &R) {
     auto *MemI = dyn_cast<VPInstruction>(&R);
@@ -3368,6 +3365,14 @@ static VPValue *skipAccessesIfAnyLaneExits(VPBasicBlock *Header,
              IsMaskableLoadOrStore))
     return nullptr;
 
+  if (Header->getSingleSuccessor() != Latch) {
+    reportVectorizationInfo(
+        "Internal control flow prevents bailing to scalar on early exit; "
+        "masking instead",
+        "EarlyExitSideEffectsControlFlow", ORE, Config.getLoop());
+    return nullptr;
+  }
+
   // Collect the recipes after the exit condition in the header and before the
   // latch terminator, to be moved to a block that is bypassed if any lane
   // exits. Recipes with users outside ToSkip (e.g. the IV increment, or
@@ -3382,9 +3387,11 @@ static VPValue *skipAccessesIfAnyLaneExits(VPBasicBlock *Header,
           return !ToSkip.contains(cast<VPRecipeBase>(U));
         })) {
       if (R.mayReadOrWriteMemory()) {
+        // TODO: Support loads with users outside the skipped code.
         reportVectorizationInfo(
-            "Cannot skip memory operations after the early exit with users "
-            "outside the skipped code; masking instead",
+            "Loads with users outside the skipped code cannot be skipped if "
+            "any lane exits early; masking memory operations with the "
+            "early-exit mask instead",
             "EarlyExitSideEffectsCannotSkip", ORE, Config.getLoop(),
             dyn_cast_if_present<Instruction>(Def->getUnderlyingValue()));
         return nullptr;
@@ -3400,6 +3407,8 @@ static VPValue *skipAccessesIfAnyLaneExits(VPBasicBlock *Header,
   VPBasicBlock *SkippedVPBB = Plan.createVPBasicBlock("vector.body.skippable");
   VPBlockUtils::connectBlocks(Header, SkippedVPBB);
   VPBlockUtils::connectBlocks(SkippedVPBB, Latch);
+  // Make the skipped block the first successor, so the latch stays last.
+  Header->swapSuccessors();
   // ToSkip is in reverse program order, so prepending restores it.
   for (VPRecipeBase *R : ToSkip)
     R->moveBefore(SkippedVPBB->begin());
@@ -3408,7 +3417,9 @@ static VPValue *skipAccessesIfAnyLaneExits(VPBasicBlock *Header,
   while (&Latch->front() != Latch->getTerminator())
     Latch->front().moveBefore(Header->end());
   VPValue *AnyOfEarlyExit = Latch->getTerminator()->getOperand(0);
-  VPBuilder(Header).createNaryOp(VPInstruction::BranchOnCond, AnyOfEarlyExit);
+  VPBuilder Builder(Header);
+  Builder.createNaryOp(VPInstruction::BranchOnCond,
+                       Builder.createNot(AnyOfEarlyExit));
   return AnyOfEarlyExit;
 }
 
@@ -3456,8 +3467,9 @@ static VPValue *skipAccessesIfAnyLaneExits(VPBasicBlock *Header,
 ///   EMIT ir<%indvars.iv.next> = add nuw nsw ir<%indvars.iv>, ir<1>
 ///   EMIT ir<%exitcond.not> = icmp eq ir<%indvars.iv.next>, ir<10000>
 ///   EMIT vp<%3> = any-of vp<%freeze>
-///   EMIT branch-on-cond vp<%3>
-/// Successor(s): if.end, vector.body.skippable
+///   EMIT vp<%4> = not vp<%3>
+///   EMIT branch-on-cond vp<%4>
+/// Successor(s): vector.body.skippable, if.end
 ///
 /// vector.body.skippable:
 ///   EMIT ir<%arrayidx3> = getelementptr inbounds nuw ir<@src>, ir<%indvars.iv>
@@ -3641,6 +3653,8 @@ static bool handleUncountableExitsWithSideEffects(
   VPValue *ExitIV = MiddleBuilder.createAdd(
       MiddleBuilder.createScalarZExtOrTrunc(ScalarIV, TCTy, DebugLoc()),
       NumCompletedLanes);
+  // TODO: When bailing to scalar, simplify to !AnyExit && the original middle
+  // block condition.
   VPValue *FullTC =
       MiddleBuilder.createICmp(CmpInst::ICMP_EQ, ExitIV, Plan.getTripCount());
   MiddleVPBB->getTerminator()->setOperand(0, FullTC);

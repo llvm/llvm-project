@@ -412,18 +412,19 @@ void VPPredicator::run() {
   auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
 
   // Predicate and linearize the single-entry single-exit region from Entry to
-  // Exit, by default the whole loop body. A uniform AnyOf branch from the
-  // header to the latch is kept, bypassing the region in between.
+  // Exit, by default the whole loop body. A uniform branch on !AnyOf in the
+  // header is kept, branching directly to the latch if any lane is set and
+  // bypassing the region in between.
   VPBasicBlock *Entry = Header;
   VPBasicBlock *Exit = Blocks.back();
   if (Header->getNumSuccessors() == 2 &&
-      match(Header->getTerminator(), m_BranchOnCond(m_AnyOf()))) {
+      match(Header->getTerminator(), m_BranchOnCond(m_Not(m_AnyOf())))) {
     VPBasicBlock *Latch = Exit;
-    assert(Header->getSuccessors()[0] == Latch &&
+    assert(Header->getSuccessors()[1] == Latch &&
            Latch->getNumPredecessors() == 2 &&
            Latch->getPredecessors()[0] == Header && Latch->phis().empty() &&
            "Kept branch must skip to the latch, which must not have phis");
-    Entry = cast<VPBasicBlock>(Header->getSuccessors()[1]);
+    Entry = cast<VPBasicBlock>(Header->getSuccessors()[0]);
     Exit = cast<VPBasicBlock>(Latch->getPredecessors()[1]);
   }
   auto Region = to_vector(make_filter_range(Blocks, [&](VPBasicBlock *VPBB) {

@@ -22,7 +22,8 @@ define void @store_in_header(ptr noalias %a, ptr align 2 dereferenceable(40) %pr
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <vscale x 4 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <vscale x 4 x i1> [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP4]])
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[LOOP_LATCH1]], label %[[VECTOR_BODY_SKIPPABLE:.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP6]], true
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[VECTOR_BODY_SKIPPABLE:.*]], label %[[LOOP_LATCH1]]
 ; CHECK:       [[VECTOR_BODY_SKIPPABLE]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 4 x i16> zeroinitializer, ptr [[TMP7]], align 2

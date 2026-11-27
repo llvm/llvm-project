@@ -7,7 +7,7 @@
 ; Check that predication preserves the branch around the skipped accesses and
 ; that the scalar loop resumes at the first incomplete iteration.
 
-; Store before the early-exit check.
+; Store before the early-exit check gets sunk after it to be skipped.
 define void @store_in_header(ptr noalias %a, ptr align 2 dereferenceable(40) %pred) {
 ; CHECK-LABEL: VPlan for loop in 'store_in_header'
 ; CHECK:  VPlan ' for UF>=1' {
@@ -34,37 +34,38 @@ define void @store_in_header(ptr noalias %a, ptr align 2 dereferenceable(40) %pr
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%counted.cond> = icmp eq ir<%iv.next>, ir<20>
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = any-of vp<[[VP4]]>
-; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP5]]>
-; CHECK-NEXT:    Successor(s): loop.latch, vector.body.skippable
-; CHECK-EMPTY:
-; CHECK-NEXT:    loop.latch:
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
-; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP5]]>, vp<[[VP7]]>
-; CHECK-NEXT:    No successors
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = not vp<[[VP5]]>
+; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP6]]>
+; CHECK-NEXT:    Successor(s): vector.body.skippable, loop.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body.skippable:
 ; CHECK-NEXT:      EMIT ir<%a.addr> = getelementptr inbounds nuw ir<%a>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<0>, ir<%a.addr>
 ; CHECK-NEXT:    Successor(s): loop.latch
+; CHECK-EMPTY:
+; CHECK-NEXT:    loop.latch:
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP5]]>, vp<[[VP8]]>
+; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<20>, vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP5]]>, ir<0>, vp<[[VP1]]>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = add vp<[[VP11]]>, vp<[[VP10]]>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = icmp eq vp<[[VP12]]>, ir<20>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP13]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = select vp<[[VP5]]>, ir<0>, vp<[[VP1]]>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = add vp<[[VP12]]>, vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = icmp eq vp<[[VP13]]>, ir<20>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP14]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP12]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP13]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.header>:
@@ -117,38 +118,39 @@ define void @store_reverse(ptr noalias %a, ptr align 2 dereferenceable(40) %pred
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%counted.cond> = icmp eq ir<%iv.next>, ir<20>
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = any-of vp<[[VP4]]>
-; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP5]]>
-; CHECK-NEXT:    Successor(s): loop.latch, vector.body.skippable
-; CHECK-EMPTY:
-; CHECK-NEXT:    loop.latch:
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
-; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP5]]>, vp<[[VP7]]>
-; CHECK-NEXT:    No successors
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = not vp<[[VP5]]>
+; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP6]]>
+; CHECK-NEXT:    Successor(s): vector.body.skippable, loop.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body.skippable:
 ; CHECK-NEXT:      EMIT ir<%rev> = sub nuw nsw ir<19>, ir<%iv>
 ; CHECK-NEXT:      EMIT ir<%a.addr> = getelementptr inbounds nuw ir<%a>, ir<%rev>
 ; CHECK-NEXT:      EMIT store ir<0>, ir<%a.addr>
 ; CHECK-NEXT:    Successor(s): loop.latch
+; CHECK-EMPTY:
+; CHECK-NEXT:    loop.latch:
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP5]]>, vp<[[VP8]]>
+; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<20>, vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP5]]>, ir<0>, vp<[[VP1]]>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = add vp<[[VP11]]>, vp<[[VP10]]>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = icmp eq vp<[[VP12]]>, ir<20>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP13]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = select vp<[[VP5]]>, ir<0>, vp<[[VP1]]>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = add vp<[[VP12]]>, vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = icmp eq vp<[[VP13]]>, ir<20>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP14]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP12]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP13]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.header>:
@@ -176,6 +178,8 @@ exit:
 }
 
 ; A load before the early-exit check feeds a strided store after it.
+; The load is sunk after the early-exit check, joining the strided store in
+; vector.body.skippable, to avoid speculative loads.
 define void @load_in_header_strided_store_in_latch(ptr noalias %a, ptr noalias %b, ptr align 2 dereferenceable(40) %pred) {
 ; CHECK-LABEL: VPlan for loop in 'load_in_header_strided_store_in_latch'
 ; CHECK:  VPlan ' for UF>=1' {
@@ -202,14 +206,9 @@ define void @load_in_header_strided_store_in_latch(ptr noalias %a, ptr noalias %
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%counted.cond> = icmp eq ir<%iv.next>, ir<20>
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = any-of vp<[[VP4]]>
-; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP5]]>
-; CHECK-NEXT:    Successor(s): loop.latch, vector.body.skippable
-; CHECK-EMPTY:
-; CHECK-NEXT:    loop.latch:
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
-; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP5]]>, vp<[[VP7]]>
-; CHECK-NEXT:    No successors
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = not vp<[[VP5]]>
+; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP6]]>
+; CHECK-NEXT:    Successor(s): vector.body.skippable, loop.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body.skippable:
 ; CHECK-NEXT:      EMIT ir<%a.addr> = getelementptr inbounds nuw ir<%a>, ir<%iv>
@@ -218,24 +217,30 @@ define void @load_in_header_strided_store_in_latch(ptr noalias %a, ptr noalias %
 ; CHECK-NEXT:      EMIT ir<%b.addr> = getelementptr inbounds nuw ir<%b>, ir<%idx>
 ; CHECK-NEXT:      EMIT store ir<%a.val>, ir<%b.addr>
 ; CHECK-NEXT:    Successor(s): loop.latch
+; CHECK-EMPTY:
+; CHECK-NEXT:    loop.latch:
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP5]]>, vp<[[VP8]]>
+; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<20>, vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP5]]>, ir<0>, vp<[[VP1]]>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = add vp<[[VP11]]>, vp<[[VP10]]>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = icmp eq vp<[[VP12]]>, ir<20>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP13]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = select vp<[[VP5]]>, ir<0>, vp<[[VP1]]>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = add vp<[[VP12]]>, vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = icmp eq vp<[[VP13]]>, ir<20>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP14]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP12]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP13]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.header>:
@@ -292,37 +297,38 @@ define void @store_uses_iv_next(ptr noalias %a, ptr align 2 dereferenceable(40) 
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%counted.cond> = icmp eq ir<%iv.next>, ir<20>
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = any-of vp<[[VP4]]>
-; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP5]]>
-; CHECK-NEXT:    Successor(s): loop.latch, vector.body.skippable
-; CHECK-EMPTY:
-; CHECK-NEXT:    loop.latch:
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
-; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP5]]>, vp<[[VP7]]>
-; CHECK-NEXT:    No successors
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = not vp<[[VP5]]>
+; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP6]]>
+; CHECK-NEXT:    Successor(s): vector.body.skippable, loop.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body.skippable:
 ; CHECK-NEXT:      EMIT ir<%a.addr> = getelementptr inbounds nuw ir<%a>, ir<%iv.next>
 ; CHECK-NEXT:      EMIT store ir<0>, ir<%a.addr>
 ; CHECK-NEXT:    Successor(s): loop.latch
+; CHECK-EMPTY:
+; CHECK-NEXT:    loop.latch:
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP5]]>, vp<[[VP8]]>
+; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<20>, vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP5]]>, ir<0>, vp<[[VP1]]>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = add vp<[[VP11]]>, vp<[[VP10]]>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = icmp eq vp<[[VP12]]>, ir<20>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP13]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = select vp<[[VP5]]>, ir<0>, vp<[[VP1]]>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = add vp<[[VP12]]>, vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = icmp eq vp<[[VP13]]>, ir<20>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP14]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP12]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP13]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.header>:
@@ -348,7 +354,8 @@ exit:
   ret void
 }
 
-; A value defined after the early-exit check is live out.
+; A value defined after the early-exit check is live-out and hoisted to the
+; header.
 define ptr @gep_live_out(ptr noalias %a, ptr align 2 dereferenceable(40) %pred) {
 ; CHECK-LABEL: VPlan for loop in 'gep_live_out'
 ; CHECK:  VPlan ' for UF>=1' {
@@ -376,39 +383,40 @@ define ptr @gep_live_out(ptr noalias %a, ptr align 2 dereferenceable(40) %pred) 
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%counted.cond> = icmp eq ir<%iv.next>, ir<20>
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = any-of vp<[[VP4]]>
-; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP5]]>
-; CHECK-NEXT:    Successor(s): loop.latch, vector.body.skippable
-; CHECK-EMPTY:
-; CHECK-NEXT:    loop.latch:
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
-; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
-; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP5]]>, vp<[[VP7]]>
-; CHECK-NEXT:    No successors
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = not vp<[[VP5]]>
+; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP6]]>
+; CHECK-NEXT:    Successor(s): vector.body.skippable, loop.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body.skippable:
 ; CHECK-NEXT:      EMIT store ir<0>, ir<%a.addr>
 ; CHECK-NEXT:    Successor(s): loop.latch
+; CHECK-EMPTY:
+; CHECK-NEXT:    loop.latch:
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP5]]>, vp<[[VP8]]>
+; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = extract-last-part ir<%a.addr>
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-lane vp<[[VP10]]>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part ir<%a.addr>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-lane vp<[[VP11]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<20>, vp<[[VP2]]>
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = select vp<[[VP5]]>, ir<0>, vp<[[VP1]]>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = add vp<[[VP13]]>, vp<[[VP12]]>
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = icmp eq vp<[[VP14]]>, ir<20>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP15]]>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = select vp<[[VP5]]>, ir<0>, vp<[[VP1]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-lane ir<0>, ir<%iv>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = add vp<[[VP14]]>, vp<[[VP13]]>
+; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = icmp eq vp<[[VP15]]>, ir<20>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP16]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %res = phi ptr [ null, %loop.header ], [ %a.addr, %loop.latch ] (extra operand: vp<[[VP11]]> from middle.block)
+; CHECK-NEXT:    IR   %res = phi ptr [ null, %loop.header ], [ %a.addr, %loop.latch ] (extra operand: vp<[[VP12]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP14]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP15]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.header>:
@@ -435,7 +443,7 @@ exit:
   ret ptr %res
 }
 
-; A live-out load prevents bailing to scalar.
+; A live-out load must be masked rather than skipped with a bail to scalar.
 define i16 @load_live_out(ptr noalias %a, ptr align 2 dereferenceable(40) %pred) {
 ; CHECK-LABEL: VPlan for loop in 'load_live_out'
 ; CHECK:  VPlan ' for UF>=1' {
@@ -523,7 +531,8 @@ exit:
   ret i16 %res
 }
 
-; Internal control flow prevents bailing to scalar.
+; Internal control flow must be masked rather than skipped with a bail to
+; scalar.
 define void @internal_control_flow(ptr noalias %a, ptr align 2 dereferenceable(40) %pred, i1 %c) {
 ; CHECK-LABEL: VPlan for loop in 'internal_control_flow'
 ; CHECK:  VPlan ' for UF>=1' {
