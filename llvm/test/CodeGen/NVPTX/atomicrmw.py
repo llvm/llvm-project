@@ -234,4 +234,7 @@ if __name__ == "__main__":
                             llvm_scope,
                         )
 
-                print("\n; Native atomic instruction tests exclude thread-private local memory.\n!999 = !{i32 5, i32 6}", file=fp)
+                print(
+                    "\n; Native atomic instruction tests exclude thread-private local memory.\n!999 = !{i32 5, i32 6}",
+                    file=fp,
+                )
