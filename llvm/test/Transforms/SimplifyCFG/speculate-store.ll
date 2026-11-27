@@ -482,6 +482,36 @@ ret.end:
   ret void
 }
 
+; load below has a poison-generating metadata. If reuse it as the value of the
+; speculated store when `%c` is false then we need to drop the metadata, or we
+; just don't use as the value of `%a` when `%c` is false.
+define i32 @load_with_poison_metadata(i1 %c, i32 %b) {
+; CHECK-LABEL: @load_with_poison_metadata(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 -1, ptr [[A]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4, !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[C:%.*]], i32 [[B:%.*]], i32 [[V]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[A]], align 4
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %a = alloca i32, align 4
+  store i32 -1, ptr %a, align 4
+  %v = load i32, ptr %a, align 4, !range !1
+  br i1 %c, label %then, label %end
+
+then:
+  store i32 %b, ptr %a, align 4
+  br label %end
+
+end:
+  %r = load i32, ptr %a, align 4
+  ret i32 %r
+}
+
 ; CHECK: !0 = !{!"branch_weights", i32 3, i32 5}
 !0 = !{!"branch_weights", i32 3, i32 5}
+!1 = !{i32 0, i32 128}
 
