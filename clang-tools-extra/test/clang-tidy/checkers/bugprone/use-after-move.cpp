@@ -1998,3 +1998,75 @@ void callPartialForwardTemplate(Derived &&d) {
   partialForwardTemplate<Derived>(std::forward<Derived>(d));
 }
 } // namespace GH63202
+
+namespace GH236015 {
+
+struct Pair {
+  std::string a;
+  std::string b;
+  void method();
+};
+
+void take(std::string, std::string);
+
+template <typename T>
+void forwardMember(T &&p) {
+  take(p.a, std::forward<T>(p).b);
+}
+
+void callForwardMember(Pair &p) {
+  forwardMember(p);
+  forwardMember(std::move(p));
+}
+
+void moveMemberOtherField(Pair p) {
+  std::string s = std::move(p).b;
+  p.a.size();
+}
+
+void moveMemberParens(Pair p) {
+  std::string s = (std::move(p)).b;
+  p.a.size();
+}
+
+void moveMemberSameField(Pair p) {
+  std::string s = std::move(p).b;
+  p.b.size();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'p' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:32: note: move occurred here
+}
+
+void moveMemberWholeObject(Pair p) {
+  std::string s = std::move(p).b;
+  Pair other = p;
+  // CHECK-NOTES: [[@LINE-1]]:16: warning: 'p' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:32: note: move occurred here
+}
+
+void moveMemberThenMethod(Pair p) {
+  std::string s = std::move(p).b;
+  p.method();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'p' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:32: note: move occurred here
+}
+
+void moveFieldsOneByOne(Pair p) {
+  std::string a = std::move(p).a;
+  std::string b = std::move(p).b;
+}
+
+void moveSameFieldTwice(Pair p) {
+  std::string a = std::move(p).a;
+  std::string b = std::move(p).a;
+  // CHECK-NOTES: [[@LINE-1]]:29: warning: 'p' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:32: note: move occurred here
+}
+
+void forwardMemberSameField(Pair &&p) {
+  std::string s = std::forward<Pair>(p).b;
+  p.b.size();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'p' used after it was forwarded
+  // CHECK-NOTES: [[@LINE-3]]:41: note: forward occurred here
+}
+
+} // namespace GH236015
