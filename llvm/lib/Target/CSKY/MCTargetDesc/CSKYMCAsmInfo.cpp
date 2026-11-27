@@ -30,7 +30,7 @@ void CSKYMCAsmInfo::anchor() {}
 
 CSKYMCAsmInfo::CSKYMCAsmInfo(const Triple &TargetTriple,
                              const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TargetTriple, Options) {
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
   CommentString = "#";

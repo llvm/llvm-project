@@ -25,7 +25,7 @@ constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT,
                                          const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TT, Options) {
   AssemblerDialect = AD_GNU;
   CalleeSaveStackSlotSize = 8;
   CodePointerSize = 8;
