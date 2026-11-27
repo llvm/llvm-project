@@ -47,6 +47,9 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
   UseAssignmentForEHBegin = true;
   SupportsDebugInformation = true;
   DwarfRegNumForCFI = true;
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }
 
 void MipsCOFFMCAsmInfo::anchor() {}

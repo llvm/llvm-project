@@ -48,9 +48,6 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   InlineAsmEnd = ";#ASMEND";
   UsesSetToEquateSymbol = true;
 
-  //===--- Data Emission Directives -------------------------------------===//
-  UsesELFSectionDirectiveForBSS = true;
-
   //===--- Global Variable Emission Directives --------------------------===//
   COMMDirectiveAlignmentIsInBytes = false;
   HasNoDeadStrip = true;
@@ -65,12 +62,10 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   // that enabling the integrated assembler does not change code layout.
   HasPreferredAlignment = false;
 
-  initializeAtSpecifiers(atSpecifiers);
-}
+  SectionDirectives.insert(".hsatext");
+  SectionDirectives.insert(".hsadata_global_agent");
+  SectionDirectives.insert(".hsadata_global_program");
+  SectionDirectives.insert(".hsarodata_readonly_agent");
 
-bool AMDGPUMCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
-  return SectionName == ".hsatext" || SectionName == ".hsadata_global_agent" ||
-         SectionName == ".hsadata_global_program" ||
-         SectionName == ".hsarodata_readonly_agent" ||
-         MCAsmInfo::shouldOmitSectionDirective(SectionName);
+  initializeAtSpecifiers(atSpecifiers);
 }

@@ -20,7 +20,6 @@ ARCMCAsmInfo::ARCMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
   ZeroDirective = "\t.space\t";
   CommentString = ";";
 
-  UsesELFSectionDirectiveForBSS = true;
   AllowAtInName = true;
   HiddenVisibilityAttr = MCSA_Invalid;
   HiddenDeclarationVisibilityAttr = MCSA_Invalid;

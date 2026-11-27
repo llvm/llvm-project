@@ -34,7 +34,6 @@ XtensaMCAsmInfo::XtensaMCAsmInfo(const Triple &TT,
   ZeroDirective = "\t.space\t";
   Data64bitsDirective = "\t.quad\t";
   GlobalDirective = "\t.global\t";
-  UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
   AlignmentIsInBytes = false;
 

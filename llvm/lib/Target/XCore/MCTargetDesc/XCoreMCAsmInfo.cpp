@@ -30,4 +30,7 @@ XCoreMCAsmInfo::XCoreMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
   DwarfRegNumForCFI = true;
 
   UseIntegratedAssembler = false;
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }

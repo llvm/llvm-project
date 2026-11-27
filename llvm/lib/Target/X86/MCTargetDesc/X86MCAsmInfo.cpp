@@ -114,6 +114,9 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T,
   SupportsDebugInformation = true;
 
   initializeAtSpecifiers(atSpecifiers);
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }
 
 const MCExpr *

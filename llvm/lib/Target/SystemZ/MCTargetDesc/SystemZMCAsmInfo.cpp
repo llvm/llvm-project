@@ -33,7 +33,6 @@ SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT,
   IsLittleEndian = false;
   MaxInstLength = 6;
   SupportsDebugInformation = true;
-  UsesELFSectionDirectiveForBSS = true;
   ZeroDirective = "\t.space\t";
 
   initializeAtSpecifiers(atSpecifiers);

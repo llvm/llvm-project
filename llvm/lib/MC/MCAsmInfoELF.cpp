@@ -42,6 +42,8 @@ MCAsmInfoELF::MCAsmInfoELF(const MCTargetOptions &Options)
   HasPreferredAlignment = true;
   WeakRefDirective = "\t.weak\t";
   InternalSymbolPrefix = ".L";
+  SectionDirectives.insert(".text");
+  SectionDirectives.insert(".data");
 }
 
 static void printName(raw_ostream &OS, StringRef Name) {
@@ -71,7 +73,7 @@ void MCAsmInfoELF::printSwitchToSection(const MCSection &Section,
                                         uint32_t Subsection, const Triple &T,
                                         raw_ostream &OS) const {
   auto &Sec = static_cast<const MCSectionELF &>(Section);
-  if (!Sec.isUnique() && shouldOmitSectionDirective(Sec.getName())) {
+  if (!Sec.isUnique() && SectionDirectives.contains(Sec.getName())) {
     OS << '\t' << Sec.getName();
     if (Subsection)
       OS << '\t' << Subsection;

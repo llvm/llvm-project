@@ -89,10 +89,6 @@ VEELFMCAsmInfo::VEELFMCAsmInfo(const Triple &TheTriple,
   Data32bitsDirective = "\t.4byte\t";
   Data64bitsDirective = "\t.8byte\t";
 
-  // Uses '.section' before '.bss' directive.  VE requires this although
-  // assembler manual says sinple '.bss' is supported.
-  UsesELFSectionDirectiveForBSS = true;
-
   SupportsDebugInformation = true;
 
   initializeAtSpecifiers(atSpecifiers);

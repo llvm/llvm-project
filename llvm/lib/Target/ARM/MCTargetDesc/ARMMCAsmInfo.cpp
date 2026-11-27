@@ -93,6 +93,9 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
   // foo(plt) instead of foo@plt
   UseAtForSpecifier = false;
   UseParensForSpecifier = true;
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }
 
 void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {

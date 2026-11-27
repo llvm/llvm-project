@@ -25,7 +25,6 @@ AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
   CalleeSaveStackSlotSize = 2;
   CommentString = ";";
   SeparatorString = "$";
-  UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
 }
 

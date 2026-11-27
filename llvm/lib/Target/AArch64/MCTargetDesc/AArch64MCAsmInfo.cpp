@@ -146,7 +146,6 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
   CodePointerSize = IsILP32 ? 4 : 8;
 
   AlignmentIsInBytes = false;
-  UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
   UseDataRegionDirectives = true;
 
