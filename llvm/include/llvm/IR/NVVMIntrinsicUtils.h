@@ -222,7 +222,8 @@ enum class MBarrierLayout : uint8_t {
 };
 
 enum class CompareAndSetOp : uint8_t {
-  UEQ = 0,
+  First = 0,
+  UEQ = First,
   UNE = 1,
   UGT = 2,
   UGE = 3,
@@ -234,6 +235,7 @@ enum class CompareAndSetOp : uint8_t {
   SGE = 9,
   SLT = 10,
   SLE = 11,
+  Last = SLE,
 };
 
 inline StringRef getCompareAndSetOpName(CompareAndSetOp Op) {

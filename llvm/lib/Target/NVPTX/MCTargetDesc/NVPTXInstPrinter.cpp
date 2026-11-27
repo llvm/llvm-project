@@ -603,8 +603,8 @@ void NVPTXInstPrinter::printCompareAndSetOp(const MCInst *MI, int OpNum,
                                             const MCSubtargetInfo &,
                                             raw_ostream &O) {
   const int64_t Imm = MI->getOperand(OpNum).getImm();
-  assert(Imm >= static_cast<int64_t>(nvvm::CompareAndSetOp::UEQ) &&
-         Imm <= static_cast<int64_t>(nvvm::CompareAndSetOp::SLE) &&
+  assert(Imm >= static_cast<int64_t>(nvvm::CompareAndSetOp::First) &&
+         Imm <= static_cast<int64_t>(nvvm::CompareAndSetOp::Last) &&
          "Invalid compare and set operator");
   // The name is <u|s><cmpOp>, which PTX emits as .<cmpOp>.<u|s>.
   const StringRef Name =
