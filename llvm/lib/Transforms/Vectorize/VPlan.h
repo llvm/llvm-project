@@ -1523,22 +1523,25 @@ public:
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
 
-  /// Return the cost of an AnyOf (OR-reduction) over the mask vector type
-  /// \p MaskTy. Static helper so callers can price the operation without
-  /// constructing a recipe.
-  static InstructionCost computeAnyOfCost(VectorType *MaskTy,
+  /// Return the cost of an AnyOf (OR-reduction) over a mask of \p VF elements
+  /// of type \p MaskEltTy. Static helper so callers can price the operation
+  /// without constructing a recipe.
+  static InstructionCost computeAnyOfCost(Type *MaskEltTy, ElementCount VF,
                                           VPCostContext &Ctx);
 
-  /// Return the cost of extracting a single element from vector type \p VecTy.
-  /// Static helper so callers can price the operation without constructing a
-  /// recipe.
-  static InstructionCost computeExtractElementCost(VectorType *VecTy,
+  /// Return the cost of extracting a single element of type \p ScalarTy from a
+  /// vector with \p VF elements. Static helper so callers can price the
+  /// operation without constructing a recipe.
+  static InstructionCost computeExtractElementCost(Type *ScalarTy,
+                                                   ElementCount VF,
                                                    VPCostContext &Ctx);
 
-  /// Return the cost of a shuffle of kind \p Kind over vector type \p VecTy.
-  /// \p Kind is a TargetTransformInfo::ShuffleKind. Static helper so callers
-  /// can price the operation without constructing a recipe.
-  static InstructionCost computeShuffleCost(unsigned Kind, VectorType *VecTy,
+  /// Return the cost of a shuffle of kind \p Kind over a vector of \p VF
+  /// elements of type \p ScalarTy. \p Kind is a
+  /// TargetTransformInfo::ShuffleKind. Static helper so callers can price the
+  /// operation without constructing a recipe.
+  static InstructionCost computeShuffleCost(unsigned Kind, Type *ScalarTy,
+                                            ElementCount VF,
                                             VPCostContext &Ctx);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3853,12 +3856,12 @@ public:
   InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) const;
 
   /// Return the cost of a masked widened memory operation with opcode \p Opcode
-  /// (Load or Store), vectorized data type \p DataTy, alignment \p Alignment
-  /// and address space \p AS. This is a static helper so callers can price a
-  /// masked memory access without first constructing a recipe.
-  static InstructionCost computeMaskedCost(unsigned Opcode, Type *DataTy,
-                                           Align Alignment, unsigned AS,
-                                           VPCostContext &Ctx);
+  /// (Load or Store) of scalar type \p ScalarTy widened by \p VF, alignment
+  /// \p Alignment and address space \p AS. This is a static helper so callers
+  /// can price a masked memory access without first constructing a recipe.
+  static InstructionCost computeMaskedCost(unsigned Opcode, Type *ScalarTy,
+                                           ElementCount VF, Align Alignment,
+                                           unsigned AS, VPCostContext &Ctx);
 
   Instruction &getIngredient() const { return Ingredient; }
 };
