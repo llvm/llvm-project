@@ -2672,7 +2672,7 @@ LegalizerHelper::widenScalarAddSubOverflow(MachineInstr &MI, unsigned TypeIdx,
   }
 
   if (TypeIdx == 1) {
-    unsigned BoolExtOp = MIRBuilder.getBoolExtOp(WideTy.isVector(), false);
+    unsigned BoolExtOp = MIRBuilder.getBoolExtOp(WideTy.isVector());
 
     Observer.changingInstr(MI);
     if (CarryIn)
@@ -3177,7 +3177,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     } else {
       bool IsVec = MRI.getType(MI.getOperand(1).getReg()).isVector();
       // Explicit extension is required here since high bits affect the result.
-      widenScalarSrc(MI, WideTy, 1, MIRBuilder.getBoolExtOp(IsVec, false));
+      widenScalarSrc(MI, WideTy, 1, MIRBuilder.getBoolExtOp(IsVec));
     }
     Observer.changedInstr(MI);
     return Legalized;
@@ -3347,7 +3347,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   }
   case TargetOpcode::G_BRCOND:
     Observer.changingInstr(MI);
-    widenScalarSrc(MI, WideTy, 0, MIRBuilder.getBoolExtOp(false, false));
+    widenScalarSrc(MI, WideTy, 0, MIRBuilder.getBoolExtOp(false));
     Observer.changedInstr(MI);
     return Legalized;
 
@@ -4246,7 +4246,8 @@ LegalizerHelper::bitcastExtractSubvector(MachineInstr &MI, unsigned TypeIdx,
     return UnableToLegalize;
 
   Idx /= AdjustAmt;
-  SrcTy = LLT::vector(SrcTyEC.divideCoefficientBy(AdjustAmt), AdjustAmt);
+  SrcTy = LLT::vector(SrcTyEC.divideCoefficientBy(AdjustAmt),
+                      CastTy.getElementType());
   auto CastVec = MIRBuilder.buildBitcast(SrcTy, Src);
   auto PromotedES = MIRBuilder.buildExtractSubvector(CastTy, CastVec, Idx);
   MIRBuilder.buildBitcast(Dst, PromotedES);
@@ -4314,8 +4315,10 @@ LegalizerHelper::bitcastInsertSubvector(MachineInstr &MI, unsigned TypeIdx,
     return UnableToLegalize;
 
   Idx /= AdjustAmt;
-  BigVecTy = LLT::vector(BigVecTyEC.divideCoefficientBy(AdjustAmt), AdjustAmt);
-  SubVecTy = LLT::vector(SubVecTyEC.divideCoefficientBy(AdjustAmt), AdjustAmt);
+  BigVecTy = LLT::vector(BigVecTyEC.divideCoefficientBy(AdjustAmt),
+                         CastTy.getElementType());
+  SubVecTy = LLT::vector(SubVecTyEC.divideCoefficientBy(AdjustAmt),
+                         CastTy.getElementType());
   auto CastBigVec = MIRBuilder.buildBitcast(BigVecTy, BigVec);
   auto CastSubVec = MIRBuilder.buildBitcast(SubVecTy, SubVec);
   auto PromotedIS =
@@ -7538,6 +7541,66 @@ LegalizerHelper::narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
   return Legalized;
 }
 
+/// Compute the high half of the product of two values that are split into
+/// narrow parts, adding the partial products row by row with carry chains
+/// instead of summing zero-extended carries.
+static void buildMulHighWithCarries(MachineIRBuilder &B, LLT NarrowTy,
+                                    ArrayRef<Register> Src1Parts,
+                                    ArrayRef<Register> Src2Parts,
+                                    SmallVectorImpl<Register> &HighParts) {
+  LLT CarryTy = LLT::integer(1);
+  unsigned NumParts = Src1Parts.size();
+  assert(Src2Parts.size() == NumParts && "Expected the same number of parts");
+  assert(NumParts > 1 && "Expected at least two parts");
+  auto Zero = B.buildConstant(NarrowTy, 0);
+
+  // The running sum of the product, one narrow part per element.
+  SmallVector<Register, 8> Acc(2 * NumParts);
+  for (unsigned I = 0; I != NumParts; ++I) {
+    // Build the row Src1Parts[I] * Src2, which takes NumParts + 1 parts.
+    SmallVector<Register, 8> Row;
+    Row.reserve(NumParts + 1);
+    // The low part of the first row is the lowest part of the full product,
+    // which the high half doesn't need, so don't build it.
+    Row.push_back(
+        I == 0 ? Register()
+               : B.buildMul(NarrowTy, Src1Parts[I], Src2Parts[0]).getReg(0));
+    Register Carry;
+    for (unsigned J = 1; J != NumParts; ++J) {
+      auto Lo = B.buildMul(NarrowTy, Src1Parts[I], Src2Parts[J]);
+      auto Hi = B.buildUMulH(NarrowTy, Src1Parts[I], Src2Parts[J - 1]);
+      auto Sum = J == 1 ? B.buildUAddo(NarrowTy, CarryTy, Lo, Hi)
+                        : B.buildUAdde(NarrowTy, CarryTy, Lo, Hi, Carry);
+      Row.push_back(Sum.getReg(0));
+      Carry = Sum.getReg(1);
+    }
+    // The top part of the row cannot overflow.
+    auto HiTop = B.buildUMulH(NarrowTy, Src1Parts[I], Src2Parts[NumParts - 1]);
+    Row.push_back(
+        B.buildUAdde(NarrowTy, CarryTy, HiTop, Zero, Carry).getReg(0));
+
+    if (I == 0) {
+      llvm::copy(Row, Acc.begin());
+      continue;
+    }
+
+    // Add the row into the running sum, starting at part I. The part above
+    // the row is still zero, so the top addition cannot overflow.
+    auto Sum = B.buildUAddo(NarrowTy, CarryTy, Acc[I], Row[0]);
+    Acc[I] = Sum.getReg(0);
+    Carry = Sum.getReg(1);
+    for (unsigned K = 1; K != NumParts; ++K) {
+      Sum = B.buildUAdde(NarrowTy, CarryTy, Acc[I + K], Row[K], Carry);
+      Acc[I + K] = Sum.getReg(0);
+      Carry = Sum.getReg(1);
+    }
+    Acc[I + NumParts] =
+        B.buildUAdde(NarrowTy, CarryTy, Row[NumParts], Zero, Carry).getReg(0);
+  }
+
+  HighParts.append(Acc.begin() + NumParts, Acc.end());
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
   auto [DstReg, Src1, Src2] = MI.getFirst3Regs();
@@ -7554,16 +7617,26 @@ LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
   unsigned NumParts = Size / NarrowSize;
   bool IsMulHigh = MI.getOpcode() == TargetOpcode::G_UMULH ||
                    MI.getOpcode() == TargetOpcode::G_SMULH;
-  unsigned DstTmpParts = NumParts * (IsMulHigh ? 2 : 1);
 
   SmallVector<Register, 2> Src1Parts, Src2Parts;
-  SmallVector<Register, 2> DstTmpRegs(DstTmpParts);
   extractParts(Src1, NarrowTy, NumParts, Src1Parts, MIRBuilder, MRI);
   extractParts(Src2, NarrowTy, NumParts, Src2Parts, MIRBuilder, MRI);
-  multiplyRegisters(DstTmpRegs, Src1Parts, Src2Parts, NarrowTy);
 
-  // Take only high half of registers if this is high mul.
-  ArrayRef<Register> DstRegs(&DstTmpRegs[DstTmpParts - NumParts], NumParts);
+  SmallVector<Register, 2> DstTmpRegs;
+  LLT CarryTy = LLT::integer(1);
+  if (IsMulHigh && NumParts > 1 &&
+      LI.isLegal({TargetOpcode::G_UADDO, {NarrowTy, CarryTy}}) &&
+      LI.isLegal({TargetOpcode::G_UADDE, {NarrowTy, CarryTy}})) {
+    // Chain the carries directly when add-with-carry is available.
+    buildMulHighWithCarries(MIRBuilder, NarrowTy, Src1Parts, Src2Parts,
+                            DstTmpRegs);
+  } else {
+    unsigned DstTmpParts = NumParts * (IsMulHigh ? 2 : 1);
+    DstTmpRegs.resize(DstTmpParts);
+    multiplyRegisters(DstTmpRegs, Src1Parts, Src2Parts, NarrowTy);
+  }
+  // Take only the high half of the registers if this is a high mul.
+  ArrayRef<Register> DstRegs = ArrayRef(DstTmpRegs).take_back(NumParts);
 
   if (MI.getOpcode() == TargetOpcode::G_SMULH) {
     Register UnsignedHigh = MRI.createGenericVirtualRegister(Ty);
@@ -7967,7 +8040,7 @@ LegalizerHelper::narrowScalarCTLS(MachineInstr &MI, unsigned TypeIdx,
   auto ShAmt = B.buildConstant(NarrowTy, NarrowSize - 1);
   auto Sign = B.buildAShr(NarrowTy, Hi, ShAmt);
 
-  auto HiIsSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), Hi, Sign);
+  auto HiIsSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::integer(1), Hi, Sign);
 
   // Invert Lo if Hi is negative. Then count the leading zeros. If there are no
   // leading zeros, then the MSB of Lo is different than the MSB of Hi.
@@ -9335,7 +9408,7 @@ LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
                                    Cmp->getRHSReg());
 
   auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
-  auto BC = TLI.getBooleanContents(DstTy.isVector(), /*isFP=*/false);
+  auto BC = TLI.getBooleanContents(DstTy.isVector());
   if (TLI.preferSelectsOverBooleanArithmetic(
           getApproximateEVTForLLT(SrcTy, Ctx)) ||
       BC == TargetLowering::UndefinedBooleanContent) {
@@ -9349,8 +9422,7 @@ LegalizerHelper::lowerThreewayCompare(MachineInstr &MI) {
       std::swap(IsGT, IsLT);
     // Extend boolean results to DstTy, which is at least i2, before subtracting
     // them.
-    unsigned BoolExtOp =
-        MIRBuilder.getBoolExtOp(DstTy.isVector(), /*isFP=*/false);
+    unsigned BoolExtOp = MIRBuilder.getBoolExtOp(DstTy.isVector());
     IsGT = MIRBuilder.buildInstr(BoolExtOp, {DstTy}, {IsGT});
     IsLT = MIRBuilder.buildInstr(BoolExtOp, {DstTy}, {IsLT});
     MIRBuilder.buildSub(Dst, IsGT, IsLT);
@@ -10932,7 +11004,7 @@ LegalizerHelper::lowerAbsDiffToSelect(MachineInstr &MI) {
   CmpInst::Predicate Pred = (MI.getOpcode() == TargetOpcode::G_ABDS)
                                 ? CmpInst::ICMP_SGT
                                 : CmpInst::ICMP_UGT;
-  auto ICmp = MIRBuilder.buildICmp(Pred, LLT::scalar(1), LHS, RHS);
+  auto ICmp = MIRBuilder.buildICmp(Pred, LLT::integer(1), LHS, RHS);
   MIRBuilder.buildSelect(DstReg, ICmp, LHSSub, RHSSub);
 
   MI.eraseFromParent();

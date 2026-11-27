@@ -25,9 +25,9 @@ define void @vec_reduce_xor_v16i8(ptr %src, ptr %dst) nounwind {
 define void @vec_reduce_xor_v8i8(ptr %src, ptr %dst) nounwind {
 ; LA32-LABEL: vec_reduce_xor_v8i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    fld.s $fa0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vbsrl.v $vr1, $vr0, 4
 ; LA32-NEXT:    vxor.v $vr0, $vr1, $vr0
 ; LA32-NEXT:    vbsrl.v $vr1, $vr0, 2
@@ -105,9 +105,9 @@ define void @vec_reduce_xor_v8i16(ptr %src, ptr %dst) nounwind {
 define void @vec_reduce_xor_v4i16(ptr %src, ptr %dst) nounwind {
 ; LA32-LABEL: vec_reduce_xor_v4i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    fld.s $fa0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vbsrl.v $vr1, $vr0, 4
 ; LA32-NEXT:    vxor.v $vr0, $vr1, $vr0
 ; LA32-NEXT:    vbsrl.v $vr1, $vr0, 2

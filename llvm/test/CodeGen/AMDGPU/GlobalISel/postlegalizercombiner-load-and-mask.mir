@@ -4,7 +4,6 @@
 # Post-legalizer should not generate illegal extending loads
 ---
 name: zextload_from_load_and_mask
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:

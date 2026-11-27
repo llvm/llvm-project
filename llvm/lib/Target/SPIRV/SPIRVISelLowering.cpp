@@ -226,7 +226,7 @@ static SPIRVTypeInst createNewPtrType(SPIRVGlobalRegistry &GR, MachineInstr &I,
       ReuseType ? ResType
                 : GR.getOrCreateSPIRVType(
                       ResTy, MIB, SPIRV::AccessQualifier::ReadWrite, false);
-  return GR.getOrCreateSPIRVPointerType(NewBaseType, MIB, SC);
+  return GR.getOrCreateSPIRVPointerType(NewBaseType, MIB, SC, false);
 }
 
 // Insert a bitcast before the instruction to keep SPIR-V code valid
@@ -337,7 +337,7 @@ static void validatePtrUnwrapStructField(const SPIRVSubtarget &STI,
           OpType->getOperand(1).getImm());
   MachineIRBuilder MIB(I);
   SPIRVTypeInst NewPtrType =
-      GR.getOrCreateSPIRVPointerType(MemberType, MIB, SC);
+      GR.getOrCreateSPIRVPointerType(MemberType, MIB, SC, false);
   doInsertBitcast(STI, MRI, GR, I, OpReg, OpIdx, NewPtrType);
 }
 
@@ -517,9 +517,6 @@ static void validateVec1Ops(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
 // TODO: the logic of inserting additional bitcast's is to be moved
 // to pre-IRTranslation passes eventually
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
-  if (MF.getRegInfo().reservedRegsFrozen())
-    return;
-
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   SPIRVGlobalRegistry &GR = *STI.getSPIRVGlobalRegistry();
   GR.setCurrentFunc(MF);

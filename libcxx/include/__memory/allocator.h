@@ -55,7 +55,7 @@ struct __non_trivially_default_constructible_if {};
 
 template <class _Unique>
 struct __non_trivially_default_constructible_if<true, _Unique> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __non_trivially_default_constructible_if() {}
+  _LIBCPP_CONSTEXPR __non_trivially_default_constructible_if() {}
 };
 
 // TODO(LLVM 26): Remove these wrappers and call them unconditionally in `allocator::allocate` and
@@ -90,12 +90,12 @@ public:
   _LIBCPP_DEPRECATED_IN_CXX23 typedef true_type is_always_equal;
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator() _NOEXCEPT = default;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator() _NOEXCEPT = default;
 
   template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator(const allocator<_Up>&) _NOEXCEPT {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator(const allocator<_Up>&) _NOEXCEPT {}
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* allocate(size_t __n) {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* allocate(size_t __n) {
     static_assert(sizeof(_Tp) >= 0, "cannot allocate memory for an incomplete type");
     if (__n > allocator_traits<allocator>::max_size(*this))
       std::__throw_bad_array_new_length();
@@ -109,7 +109,7 @@ public:
   }
 
 #if _LIBCPP_STD_VER >= 23
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr allocation_result<_Tp*> allocate_at_least(size_t __n) {
+  [[nodiscard]] constexpr allocation_result<_Tp*> allocate_at_least(size_t __n) {
     static_assert(sizeof(_Tp) >= 0, "cannot allocate memory for an incomplete type");
     return {allocate(__n), __n};
   }
@@ -121,7 +121,6 @@ public:
 #  define _LIBCPP_ONLY_IF_SIZED_DEALLOCATION(...) /* nothing */
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX20 void deallocate(_Tp* __p, [[__maybe_unused__]] size_t __n) _NOEXCEPT {
     if (__libcpp_is_constant_evaluated())
       return ::operator delete(__p);
@@ -147,41 +146,37 @@ public:
     typedef allocator<_Up> other;
   };
 
-  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI pointer address(reference __x) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 pointer address(reference __x) const _NOEXCEPT {
     return std::addressof(__x);
   }
-  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI const_pointer
-  address(const_reference __x) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 const_pointer address(const_reference __x) const _NOEXCEPT {
     return std::addressof(__x);
   }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17 _Tp* allocate(size_t __n, const void*) {
-    return allocate(__n);
-  }
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _Tp* allocate(size_t __n, const void*) { return allocate(__n); }
 
-  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_DEPRECATED_IN_CXX17 size_type max_size() const _NOEXCEPT {
     return size_type(~0) / sizeof(_Tp);
   }
 
   template <class _Up, class... _Args>
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI void construct(_Up* __p, _Args&&... __args) {
+  _LIBCPP_DEPRECATED_IN_CXX17 void construct(_Up* __p, _Args&&... __args) {
     ::new ((void*)__p) _Up(std::forward<_Args>(__args)...);
   }
 
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI void destroy(pointer __p) { __p->~_Tp(); }
+  _LIBCPP_DEPRECATED_IN_CXX17 void destroy(pointer __p) { __p->~_Tp(); }
 #endif
 };
 
 template <class _Tp, class _Up>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-operator==(const allocator<_Tp>&, const allocator<_Up>&) _NOEXCEPT {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool operator==(const allocator<_Tp>&, const allocator<_Up>&) _NOEXCEPT {
   return true;
 }
 
 #if _LIBCPP_STD_VER <= 17
 
 template <class _Tp, class _Up>
-inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const allocator<_Tp>&, const allocator<_Up>&) _NOEXCEPT {
+inline bool operator!=(const allocator<_Tp>&, const allocator<_Up>&) _NOEXCEPT {
   return false;
 }
 

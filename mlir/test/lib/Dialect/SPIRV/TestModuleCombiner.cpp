@@ -48,8 +48,8 @@ void TestModuleCombinerPass::runOnOperation() {
   OwningOpRef<spirv::ModuleOp> combinedModule =
       spirv::combine(modules, combinedModuleBuilder, listener);
 
-  for (spirv::ModuleOp module : modules)
-    module.erase();
+  for (spirv::ModuleOp moduleOp : modules)
+    moduleOp.erase();
   combinedModule.release();
 }
 

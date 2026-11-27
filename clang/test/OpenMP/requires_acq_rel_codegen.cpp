@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -triple x86_64-apple-darwin10 -x c++ -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp %s -triple x86_64-apple-darwin10 -x c++ -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,OMP51
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s -triple x86_64-apple-darwin10
-// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -verify %s -triple x86_64-apple-darwin10 -x c++ -emit-llvm -o -| FileCheck %s
+// RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -verify %s -triple x86_64-apple-darwin10 -x c++ -emit-llvm -o -| FileCheck %s --check-prefixes=CHECK,OMP51
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 %s -triple x86_64-apple-darwin10 -x c++ -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,OMP50
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -x c++ -emit-llvm -triple x86_64-apple-darwin10 -o -| FileCheck %s --check-prefix SIMD-ONLY0
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s -triple x86_64-apple-darwin10
@@ -22,10 +23,14 @@ void foo() {
 // CHECK: store atomic i32 {{.*}} release, align 4
 #pragma omp atomic write
   a = b;
-// CHECK: atomicrmw add ptr {{.*}} release, align 4
+// An update releases and acquires from OpenMP 5.1 on; OpenMP 5.0 did not allow
+// acq_rel on an update and made it a release.
+// OMP51: atomicrmw add ptr {{.*}} acq_rel, align 4
+// OMP50: atomicrmw add ptr {{.*}} release, align 4
 #pragma omp atomic
   a += 1;
-// CHECK: atomicrmw add ptr {{.*}} release, align 4
+// OMP51: atomicrmw add ptr {{.*}} acq_rel, align 4
+// OMP50: atomicrmw add ptr {{.*}} release, align 4
 #pragma omp atomic update
   a += 1;
 // CHECK: atomicrmw add ptr {{.*}} acq_rel, align 4

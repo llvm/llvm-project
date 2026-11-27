@@ -81,6 +81,7 @@ cc_library(
         "//mlir:OpenMPDialect",
         "//mlir:Pass",
         "//mlir:SCFDialect",
+        "//mlir:SideEffectInterfaces",
         "//mlir:Support",
         "//mlir:TransformUtils",
         "//mlir:Transforms",

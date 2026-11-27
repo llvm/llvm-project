@@ -23,7 +23,6 @@
 ...
 ---
 name: debug_scan_budget
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

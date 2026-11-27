@@ -100,7 +100,6 @@
 ...
 ---
 name: func
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: true
   isReturnAddressTaken: true

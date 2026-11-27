@@ -33,7 +33,7 @@ union Union toUnionAssign() {
   // LLVM-LABEL: define dso_local i32 @toUnionAssign()
   // OGCG-LABEL: define dso_local i32 @toUnionAssign()
   //
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Union>
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_Union>
   // LLVM: %[[RET_ALLOCA:.*]] = alloca %union.Union
   // OGCG: %[[RET_ALLOCA:.*]] = alloca %union.Union
   union Union u;

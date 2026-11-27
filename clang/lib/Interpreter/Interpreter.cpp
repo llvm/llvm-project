@@ -184,19 +184,17 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
                                    "Initialization failed. "
                                    "Unable to flush diagnostics");
 
-  // FIXME: Merge with CompilerInstance::ExecuteAction.
-  llvm::MemoryBuffer *MB = llvm::MemoryBuffer::getMemBuffer("").release();
-  Clang->getPreprocessorOpts().addRemappedFile("<<< inputs >>>", MB);
+  // The driver passes "<<< inputs >>>" as a placeholder main file; the real
+  // input arrives later as input_line_N buffers.
+  for (FrontendInputFile &Input : Clang->getFrontendOpts().Inputs)
+    if (Input.isFile() && Input.getFile() == "<<< inputs >>>")
+      Input = FrontendInputFile(llvm::MemoryBufferRef("", "<<< inputs >>>"),
+                                Input.getKind());
 
-  Clang->setTarget(TargetInfo::CreateTargetInfo(
-      Clang->getDiagnostics(), Clang->getInvocation().getTargetOpts()));
-  if (!Clang->hasTarget())
+  if (!Clang->createTarget())
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Initialization failed. "
                                    "Target is missing");
-
-  Clang->getTarget().adjust(Clang->getDiagnostics(), Clang->getLangOpts(),
-                            Clang->getAuxTarget());
 
   // Don't clear the AST before backend codegen since we do codegen multiple
   // times, reusing the same AST.

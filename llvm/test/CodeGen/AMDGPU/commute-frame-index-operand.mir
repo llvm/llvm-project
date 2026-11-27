@@ -6,7 +6,6 @@
 
 ---
 name: commute_frame_index__v_add_co_u32_e32__sgpr_fi
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 8, alignment: 4, local-offset: 0 }
 body:             |
@@ -27,7 +26,6 @@ body:             |
 
 ---
 name: commute_frame_index__v_add_co_u32_e64__fi_sgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 8, alignment: 4, local-offset: 0 }
 body:             |
@@ -48,7 +46,6 @@ body:             |
 
 ---
 name: commute_frame_index__v_add_co_u32__vgpr_fi
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 8, alignment: 4, local-offset: 0 }
 body:             |
@@ -69,7 +66,6 @@ body:             |
 
 ---
 name: commute_frame_index__v_add_co_u32__fi_vgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 8, alignment: 4, local-offset: 0 }
 body:             |
@@ -90,7 +86,6 @@ body:             |
 
 ---
 name: commute_frame_index__v_add_co_u32_e32__fi_fi
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 8, alignment: 4, local-offset: 0 }
   - { id: 1, size: 8, alignment: 4, local-offset: 0 }

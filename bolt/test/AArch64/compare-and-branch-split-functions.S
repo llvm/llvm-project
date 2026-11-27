@@ -1,26 +1,19 @@
-# This test checks that splitting functions which contain short range
-# conditional branches works in compact code model without relying on
-# relocations.
+# Check that function splitting handles short range conditional
+# branches without requiring a corresponding relocation type.
 
 # REQUIRES: system-linux, asserts
 
-# RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=0 -DRESERVE_SPACE=0
+# RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=0
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
-# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions --compact-code-model
+# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s
 
-# RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=256 -DRESERVE_SPACE=0
+# RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=256
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
-# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions --compact-code-model --keep-nops
+# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions --keep-nops
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s
-
-# RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=0 -DRESERVE_SPACE=1
-# RUN: link_fdata --no-lbr %s %t %t.fdata
-# RUN: llvm-strip --strip-unneeded %t
-# RUN: not llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions --compact-code-model 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=BEYOND-128MB
 
   .globl foo
   .type foo, %function
@@ -42,10 +35,6 @@ large_function:
   .endr
     ret
 
-.if RESERVE_SPACE
-.space 0x8000000
-.endif
-
 ## Force relocation mode.
 .reloc 0, R_AARCH64_NONE
 
@@ -61,5 +50,3 @@ large_function:
 # CHECK: <foo.cold.0>:
 # CHECK-NEXT: [[ADDR1]]: {{.*}} mov x0, #0x1 // =1
 # CHECK-NEXT: [[ADDR2]]: {{.*}} ret
-
-# BEYOND-128MB: BOLT-ERROR: JITLink failed: In graph in-memory object file, section .text: relocation target {{0x[0-9a-f]+}} (<anonymous symbol>) is out of range of Branch26PCRel fixup at address {{0x[0-9a-f]+}}

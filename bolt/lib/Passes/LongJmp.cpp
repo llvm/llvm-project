@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
+#include <limits>
 
 #define DEBUG_TYPE "longjmp"
 
@@ -36,10 +37,14 @@ static cl::opt<bool> GroupStubs("group-stubs",
                                 cl::desc("share stubs across functions"),
                                 cl::init(true), cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-    ExperimentalRelaxation("relax-exp",
-                           cl::desc("run experimental relaxation pass"),
-                           cl::init(false), cl::cat(BoltOptCategory));
+static cl::opt<cl::boolOrDefault> RelaxWithClusters(
+    "relax-with-clusters",
+    cl::desc("run clustered relaxation pass (default=autodetect)"),
+    cl::init(cl::boolOrDefault::BOU_UNSET), cl::cat(BoltOptCategory));
+
+static cl::alias RelaxExp("relax-exp",
+                          cl::desc("alias for --relax-with-clusters"),
+                          cl::aliasopt(RelaxWithClusters), cl::Hidden);
 
 static cl::opt<unsigned long long> MaxClusterSize(
     "max-cluster-size",
@@ -104,13 +109,6 @@ static BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
 }
 
 static bool mayNeedStub(const BinaryContext &BC, const MCInst &Inst) {
-  if (BC.isAArch64() && BC.MIB->isShortRangeBranch(Inst) &&
-      !opts::CompactCodeModel) {
-    BC.errs() << "BOLT-ERROR: short range branch not supported"
-              << " outside compact code model\n";
-    BC.printInstruction(BC.errs(), Inst);
-    exit(1);
-  }
   return (BC.MIB->isBranch(Inst) || BC.MIB->isCall(Inst)) &&
          !BC.MIB->isIndirectBranch(Inst) && !BC.MIB->isIndirectCall(Inst);
 }
@@ -359,118 +357,169 @@ void LongJmpPass::tentativeBBLayout(const BinaryFunction &Func) {
   }
 }
 
-uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
-    const BinaryContext &BC, BinaryFunctionListType &SortedFunctions,
-    uint64_t DotAddress) {
-  DotAddress =
-      alignTo(DotAddress, std::max<uint64_t>(BC.AlignFunctions,
-                                             BC.MaxColdCodeAlignment.load()));
-  for (BinaryFunction *Func : SortedFunctions) {
-    if (!Func->isSplit())
-      continue;
-    DotAddress = alignTo(DotAddress, Func->getMinAlignment());
-    uint64_t Pad =
-        offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
-    if (Pad <= Func->getMaxColdAlignmentBytes())
-      DotAddress += Pad;
-    ColdAddresses[Func] = DotAddress;
-    LLVM_DEBUG(dbgs() << Func->getPrintName() << " cold tentative: "
-                      << Twine::utohexstr(DotAddress) << "\n");
-    DotAddress += Func->estimateColdSize();
-    if (uint64_t IslandSize = Func->estimateConstantIslandSize()) {
-      DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
-      DotAddress += IslandSize;
-    }
-  }
-  return DotAddress;
-}
-
-uint64_t
-LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
-                                      BinaryFunctionListType &SortedFunctions,
-                                      uint64_t DotAddress) {
-  // Compute hot cold frontier
-  int64_t LastHotIndex = -1u;
-  uint32_t CurrentIndex = 0;
-  if (opts::HotFunctionsAtEnd) {
-    for (BinaryFunction *BF : SortedFunctions) {
-      if (BF->hasValidIndex()) {
-        LastHotIndex = CurrentIndex;
-        break;
-      }
-
-      ++CurrentIndex;
-    }
-  } else {
-    for (BinaryFunction *BF : SortedFunctions) {
-      if (!BF->hasValidIndex()) {
-        LastHotIndex = CurrentIndex;
-        break;
-      }
-
-      ++CurrentIndex;
-    }
-  }
-
-  // Hot
-  CurrentIndex = 0;
-  bool ColdLayoutDone = false;
-  auto runColdLayout = [&]() {
-    // Mirror the extra hugify alignment inserted by final section allocation
-    // after the last non-cold section. Account for it before assigning cold
-    // fragment addresses so range checks see the hot-to-cold gap.
-    if (opts::Hugify && !BC.HasFixedLoadAddress && !opts::HotFunctionsAtEnd)
-      DotAddress = alignTo(DotAddress, BC.AlignText);
-    DotAddress = tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
-    ColdLayoutDone = true;
-    if (opts::HotFunctionsAtEnd)
-      DotAddress = alignTo(DotAddress, BC.AlignText);
+void LongJmpPass::tentativeLayoutRelocMode(
+    const BinaryContext &BC, BinaryFunctionListType &SortedFunctions) {
+  // Like the emitter, place each function fragment in its code section in the
+  // order of SortedFunctions.
+  struct OutputFragment {
+    BinaryFunction *BF;
+    bool IsCold;
+    uint64_t Offset;
   };
+  struct OutputSection {
+    SmallString<32> Name;
+    SmallVector<OutputFragment, 0> Fragments;
+    uint64_t Alignment{0};
+    uint64_t Size{0};
+    uint64_t Address{0};
+  };
+  SmallVector<OutputSection, 4> Sections;
+  StringMap<size_t> SectionIndices;
+  auto addFragment = [&](BinaryFunction &BF, bool IsCold) {
+    SmallString<32> Name = BF.getCodeSectionName(IsCold ? FragmentNum::cold()
+                                                        : FragmentNum::main());
+    auto [It, Inserted] = SectionIndices.try_emplace(Name, Sections.size());
+    if (Inserted)
+      Sections.push_back({std::move(Name), {}});
+    Sections[It->second].Fragments.push_back({&BF, IsCold, 0});
+  };
+
   for (BinaryFunction *Func : SortedFunctions) {
     if (!BC.shouldEmit(*Func)) {
       HotAddresses[Func] = Func->getAddress();
       continue;
     }
 
-    if (!ColdLayoutDone && CurrentIndex >= LastHotIndex)
-      runColdLayout();
-
-    DotAddress = alignTo(DotAddress, Func->getMinAlignment());
-    uint64_t Pad =
-        offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
-    if (Pad <= Func->getMaxAlignmentBytes())
-      DotAddress += Pad;
-    HotAddresses[Func] = DotAddress;
-    LLVM_DEBUG(dbgs() << Func->getPrintName() << " tentative: "
-                      << Twine::utohexstr(DotAddress) << "\n");
-    if (!Func->isSplit())
-      DotAddress += Func->estimateSize();
-    else
-      DotAddress += Func->estimateHotSize();
-
-    if (uint64_t IslandSize = Func->estimateConstantIslandSize()) {
-      DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
-      DotAddress += IslandSize;
+    // Patch functions are allocated at their pre-assigned addresses.
+    if (Func->isPatch()) {
+      HotAddresses[Func] = Func->getOutputAddress();
+      continue;
     }
-    ++CurrentIndex;
+
+    addFragment(*Func, /*IsCold=*/false);
+    if (Func->isSplit())
+      addFragment(*Func, /*IsCold=*/true);
   }
 
-  // Ensure that tentative code layout always runs for cold blocks.
-  if (!ColdLayoutDone)
-    runColdLayout();
+  llvm::stable_sort(Sections,
+                    [&](const OutputSection &A, const OutputSection &B) {
+                      return BC.compareSectionNames(A.Name, B.Name);
+                    });
+
+  // A code section is aligned to at least BC.AlignFunctions and to the maximum
+  // alignment of the objects emitted into it.
+  auto getSectionAlignment = [&](const OutputSection &Section) {
+    uint64_t Alignment = BC.AlignFunctions;
+    if (Section.Name == BC.getMainCodeSectionName())
+      return std::max<uint64_t>(
+          {Alignment, BC.AlignText, BC.MaxMainCodeAlignment.load()});
+    if (Section.Name == BC.getColdCodeSectionName())
+      return std::max<uint64_t>(Alignment, BC.MaxColdCodeAlignment.load());
+    for (const OutputFragment &Fragment : Section.Fragments) {
+      Alignment = std::max<uint64_t>(Alignment, Fragment.BF->getAlignment());
+      if (Fragment.BF->hasIslandsInfo())
+        Alignment = std::max<uint64_t>(
+            Alignment, Fragment.BF->getConstantIslandAlignment());
+    }
+    return Alignment;
+  };
+
+  // Lay out the fragments of each section relative to the section start.
+  for (OutputSection &Section : Sections) {
+    Section.Alignment = getSectionAlignment(Section);
+    uint64_t Offset = 0;
+    for (OutputFragment &Fragment : Section.Fragments) {
+      BinaryFunction &Func = *Fragment.BF;
+      Offset = alignTo(Offset, Func.getMinAlignment());
+      uint64_t Pad =
+          offsetToAlignment(Offset, llvm::Align(Func.getAlignment()));
+      if (Pad <= (Fragment.IsCold ? Func.getMaxColdAlignmentBytes()
+                                  : Func.getMaxAlignmentBytes()))
+        Offset += Pad;
+      Fragment.Offset = Offset;
+      if (Fragment.IsCold)
+        Offset += Func.estimateColdSize();
+      else
+        Offset += Func.isSplit() ? Func.estimateHotSize() : Func.estimateSize();
+
+      if (uint64_t IslandSize = Func.estimateConstantIslandSize()) {
+        Offset = alignTo(Offset, Func.getConstantIslandAlignment());
+        Offset += IslandSize;
+      }
+    }
+    Section.Size = Offset;
+  }
+
+  // Allocate the sections the way RewriteInstance::mapCodeSections() does.
+  const StringRef LastNonColdSectionName = BC.HasWarmSection
+                                               ? BC.getWarmCodeSectionName()
+                                               : BC.getMainCodeSectionName();
+  auto allocateAt = [&](uint64_t Address) {
+    const OutputSection *TextSection = nullptr;
+    for (OutputSection &Section : Sections) {
+      Address = alignTo(Address, Section.Alignment);
+      Section.Address = Address;
+      Address += Section.Size;
+      if (Section.Name == LastNonColdSectionName) {
+        TextSection = &Section;
+        if (opts::Hugify && !BC.HasFixedLoadAddress)
+          Address = alignTo(Address, Section.Alignment);
+      }
+    }
+    if (opts::HotText && TextSection)
+      Address =
+          std::max(Address, alignTo(TextSection->Address + TextSection->Size,
+                                    BC.PageAlign));
+    return Address;
+  };
+  auto allocateBefore = [&](uint64_t Address) -> uint64_t {
+    for (OutputSection &Section : llvm::reverse(Sections)) {
+      if (Section.Size > Address)
+        return 0;
+      Address = alignDown(Address - Section.Size, Section.Alignment);
+      Section.Address = Address;
+    }
+    return Address;
+  };
+
+  bool UseOldText = false;
+  if (opts::UseOldText) {
+    uint64_t StartAddress;
+    uint64_t EndAddress;
+    if (opts::HotFunctionsAtEnd) {
+      EndAddress = BC.OldTextSectionAddress + BC.OldTextSectionSize;
+      StartAddress = allocateBefore(EndAddress);
+    } else {
+      StartAddress = BC.OldTextSectionAddress;
+      EndAddress = allocateAt(StartAddress);
+    }
+    UseOldText = EndAddress - StartAddress <= BC.OldTextSectionSize;
+  }
+  if (!UseOldText)
+    allocateAt(BC.LayoutStartAddress);
+
+  for (const OutputSection &Section : Sections) {
+    for (const auto [Func, IsCold, Offset] : Section.Fragments) {
+      const uint64_t Address = Section.Address + Offset;
+      if (IsCold)
+        ColdAddresses[Func] = Address;
+      else
+        HotAddresses[Func] = Address;
+      LLVM_DEBUG(dbgs() << Func->getPrintName()
+                        << (IsCold ? " cold tentative: " : " tentative: ")
+                        << Twine::utohexstr(Address) << "\n");
+    }
+  }
 
   // BBs
   for (BinaryFunction *Func : SortedFunctions)
     tentativeBBLayout(*Func);
-
-  return DotAddress;
 }
 
 void LongJmpPass::tentativeLayout(const BinaryContext &BC,
                                   BinaryFunctionListType &SortedFunctions) {
-  uint64_t DotAddress = BC.LayoutStartAddress;
-
   if (!BC.HasRelocations) {
+    uint64_t DotAddress = BC.LayoutStartAddress;
     for (BinaryFunction *Func : SortedFunctions) {
       HotAddresses[Func] = Func->getAddress();
       DotAddress = alignTo(DotAddress, ColdFragAlign);
@@ -483,28 +532,7 @@ void LongJmpPass::tentativeLayout(const BinaryContext &BC,
     return;
   }
 
-  // Relocation mode
-  uint64_t EstimatedTextSize = 0;
-  if (opts::UseOldText) {
-    EstimatedTextSize = tentativeLayoutRelocMode(BC, SortedFunctions, 0);
-
-    // Initial padding
-    if (EstimatedTextSize <= BC.OldTextSectionSize) {
-      DotAddress = BC.OldTextSectionAddress;
-      uint64_t Pad = offsetToAlignment(DotAddress, llvm::Align(BC.AlignText));
-      if (Pad + EstimatedTextSize <= BC.OldTextSectionSize) {
-        DotAddress += Pad;
-      }
-    }
-  }
-
-  if (!EstimatedTextSize || EstimatedTextSize > BC.OldTextSectionSize) {
-    uint64_t TextAlign =
-        std::max<uint64_t>(BC.AlignText, BC.MaxMainCodeAlignment.load());
-    DotAddress = alignTo(BC.LayoutStartAddress, TextAlign);
-  }
-
-  tentativeLayoutRelocMode(BC, SortedFunctions, DotAddress);
+  tentativeLayoutRelocMode(BC, SortedFunctions);
 }
 
 bool LongJmpPass::usesStub(const BinaryFunction &Func,
@@ -658,6 +686,13 @@ Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
     for (MCInst &Inst : BB) {
       if (BC.MIB->isPseudo(Inst))
         continue;
+
+      if (BC.isAArch64() && BC.MIB->isShortRangeBranch(Inst)) {
+        BC.errs() << "BOLT-ERROR: short range branch not supported by the "
+                     "stub-insertion pass\n";
+        BC.printInstruction(BC.errs(), Inst);
+        exit(1);
+      }
 
       if (!mayNeedStub(BC, Inst)) {
         DotAddress += InsnSize;
@@ -1081,13 +1116,17 @@ bool LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
 namespace {
 class ClusteredRelaxation {
 public:
-  ClusteredRelaxation(BinaryContext &BC,
-                      BinaryFunctionListType &OutputFunctions)
-      : BC(BC), OutputFunctions(OutputFunctions) {}
+  explicit ClusteredRelaxation(BinaryContext &BC)
+      : BC(BC), OutputFunctions(BC.getOutputBinaryFunctions()) {}
 
-  bool run();
+  /// Relax calls and direct unconditional branches, then install the output
+  /// function list. Returns true if any thunks were created.
+  Expected<bool> run();
 
 private:
+  template <typename T>
+  static constexpr T MaxValue = std::numeric_limits<T>::max();
+
   static constexpr uint64_t ShortThunkSize = 4;
   static constexpr uint64_t LongThunkSize = 12;
 
@@ -1116,8 +1155,8 @@ private:
     /// The indices of the first and last functions contributing fragments to
     /// this cluster. Used as insertion points for adding thunks to the output
     /// function list.
-    size_t FirstFunctionIndex = -1;
-    size_t LastFunctionIndex = -1;
+    size_t FirstFunctionIndex = MaxValue<size_t>;
+    size_t LastFunctionIndex = MaxValue<size_t>;
 
     /// Thunks located after this cluster.
     BinaryFunctionListType ForwardThunkList;
@@ -1160,7 +1199,7 @@ private:
   static unsigned getClusterDistance(unsigned A, unsigned B);
   static uint64_t estimateFragmentSize(const BinaryFunction &BF,
                                        const FunctionFragment &FF);
-  void buildLayout();
+  Error buildLayout();
   void printStats() const;
   void collectOutOfRangeReferences();
   const MCSymbol *getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
@@ -1168,14 +1207,19 @@ private:
   void relaxCalls();
   void relaxUnconditionalBranches();
   void insertThunks();
+  void applyBTIFixups();
 
   BinaryContext &BC;
-  BinaryFunctionListType &OutputFunctions;
+  BinaryFunctionListType OutputFunctions;
 
   /// Estimated cluster layout and source/target position maps.
   SmallVector<FragmentCluster, 4> Clusters;
   DenseMap<const BinaryBasicBlock *, Position> BBLayout;
   DenseMap<const MCSymbol *, Position> SymLayout;
+  DenseMap<const MCSymbol *, BinaryBasicBlock *> SymbolToBB;
+
+  /// Long thunks whose out-of-layout targets need BTI fixups.
+  SmallVector<std::pair<BinaryFunction *, const MCSymbol *>> PendingBTIFixups;
 
   /// Out-of-range calls and branches grouped for relaxation.
   SmallVector<OutOfRangeRef> OutOfLayoutCalls;
@@ -1216,7 +1260,7 @@ uint64_t ClusteredRelaxation::estimateFragmentSize(const BinaryFunction &BF,
   return Size;
 }
 
-void ClusteredRelaxation::buildLayout() {
+Error ClusteredRelaxation::buildLayout() {
   struct OutputFragment {
     const FunctionFragment *FF;
     size_t FunctionIndex;
@@ -1248,8 +1292,16 @@ void ClusteredRelaxation::buildLayout() {
       if (FF.empty() && !BF->hasConstantIsland())
         continue;
 
-      addOrderedFragment({&FF, I, BF->getCodeSectionName(FF.getFragmentNum()),
-                          estimateFragmentSize(*BF, FF)});
+      const uint64_t Size = estimateFragmentSize(*BF, FF);
+      if (Size > opts::MaxClusterSize)
+        return createFatalBOLTError(
+            "fragment " + Twine(FF.getFragmentNum().get()) + " of " +
+            BF->getPrintName() + " is estimated to have " + Twine(Size) +
+            " bytes, exceeding --max-cluster-size=" +
+            Twine(opts::MaxClusterSize));
+
+      addOrderedFragment(
+          {&FF, I, BF->getCodeSectionName(FF.getFragmentNum()), Size});
     }
   }
 
@@ -1327,20 +1379,35 @@ void ClusteredRelaxation::buildLayout() {
     ++FC.NumFragments;
 
     // Map primary entry points.
-    if (FF.isMainFragment())
-      for (const MCSymbol *Symbol : BF.getSymbols())
+    if (FF.isMainFragment()) {
+      BinaryBasicBlock *BB = FF.empty() ? nullptr : FF.front();
+      for (const MCSymbol *Symbol : BF.getSymbols()) {
         SymLayout[Symbol] = {ClusterNum, FragmentOffset};
+        // Function symbols are emitted before the first block's alignment,
+        // so they may point to padding instead of the block's BTI landing.
+        // Not a concern for block labels or secondary entry symbols,
+        // since they are emitted after alignment.
+        if (BC.usesBTI() && BB && !BC.shouldEmitBlockAlignment(*BB))
+          SymbolToBB[Symbol] = BB;
+      }
+    }
 
     uint64_t BBOffset = FragmentOffset;
-    for (const BinaryBasicBlock *BB : FF) {
+    for (BinaryBasicBlock *BB : FF) {
       BBLayout[BB] = {ClusterNum, BBOffset};
       // Map the local BB label.
-      if (const MCSymbol *Label = BB->getLabel())
+      if (const MCSymbol *Label = BB->getLabel()) {
         SymLayout[Label] = {ClusterNum, BBOffset};
+        if (BC.usesBTI())
+          SymbolToBB[Label] = BB;
+      }
       // Map the secondary entry point, which can differ from the BB label.
       if (MCSymbol *Label = BF.getLabelAtOffset(BB->getOffset()))
-        if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(Label))
+        if (MCSymbol *EntrySymbol = BF.getSecondaryEntryPointSymbol(Label)) {
           SymLayout[EntrySymbol] = {ClusterNum, BBOffset};
+          if (BC.usesBTI())
+            SymbolToBB[EntrySymbol] = BB;
+        }
 
       BBOffset += BB->estimateSize();
     }
@@ -1355,11 +1422,11 @@ void ClusteredRelaxation::buildLayout() {
       addFragmentToCluster(*OrderedFragments[I]);
   }
 
-  if (Clusters.empty())
-    return;
+  if (!Clusters.empty())
+    LLVM_DEBUG(dbgs() << "LongJmp: estimated code size : " << LayoutOffset
+                      << '\n');
 
-  LLVM_DEBUG(dbgs() << "LongJmp: estimated code size : " << LayoutOffset
-                    << '\n');
+  return Error::success();
 }
 
 void ClusteredRelaxation::printStats() const {
@@ -1442,7 +1509,9 @@ void ClusteredRelaxation::collectOutOfRangeReferences() {
         auto TargetIt = SymLayout.find(TargetSymbol);
         const bool Found = TargetIt != SymLayout.end();
         // Unmapped targets use maximum offset and are treated as out of range.
-        const Position Target = Found ? TargetIt->second : Position{-1u, -1ULL};
+        const Position Target =
+            Found ? TargetIt->second
+                  : Position{MaxValue<unsigned>, MaxValue<uint64_t>};
 
         // References within the same cluster do not need relaxation.
         if (Source.Cluster == Target.Cluster)
@@ -1564,7 +1633,7 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
     if (ThunkClusters.size() == MaxThunks)
       return nullptr;
 
-    unsigned BestHop = -1u;
+    unsigned BestHop = MaxValue<unsigned>;
     for (unsigned Hop = NextHop; Hop < NumHops; ++Hop) {
       const unsigned Cluster = getClusterAtHop(Hop);
       if (!isWithinClusterRange(CurrentOffset, getThunkOffset(Cluster)))
@@ -1572,7 +1641,7 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
       BestHop = Hop;
     }
 
-    if (BestHop == -1u)
+    if (BestHop == MaxValue<unsigned>)
       return nullptr;
 
     const unsigned BestCluster = getClusterAtHop(BestHop);
@@ -1593,6 +1662,16 @@ ClusteredRelaxation::getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
 }
 
 void ClusteredRelaxation::relaxCalls() {
+  auto hasBTILanding = [&](const MCSymbol *Symbol) {
+    BinaryBasicBlock *BB = SymbolToBB.lookup(Symbol);
+    if (!BB)
+      return false;
+    MCInst *First = BB->getFirstNonPseudoInstr();
+    return First && (BC.MIB->isBTILandingPad(*First, BTIKind::C) ||
+                     BC.MIB->isBTILandingPad(*First, BTIKind::J) ||
+                     BC.MIB->isBTILandingPad(*First, BTIKind::JC));
+  };
+
   auto createLongThunk = [&](const MCSymbol *TargetSymbol, bool IsForward) {
     BinaryFunction *Thunk = nullptr;
     const size_t ThunkNumber = NumLongThunks++;
@@ -1647,6 +1726,9 @@ void ClusteredRelaxation::relaxCalls() {
     }
 
     BinaryFunction *Thunk = createLongThunk(TargetSymbol, IsForward);
+    // Defer out-of-layout fixups until the output function list is installed.
+    if (BC.usesBTI() && Call.TargetCluster == MaxValue<unsigned>)
+      PendingBTIFixups.emplace_back(Thunk, TargetSymbol);
 
     Thunk->setCodeSectionName(FC.getThunkSectionName(IsForward));
     BinaryFunctionListType &ThunkList =
@@ -1670,9 +1752,13 @@ void ClusteredRelaxation::relaxCalls() {
   // Process known targets from farthest to nearest for maximizing thunk reuse.
   for (auto &Calls : llvm::reverse(CallsByDistance)) {
     for (OutOfRangeRef &Call : Calls) {
+      const bool BTICompatible =
+          !BC.usesBTI() || hasBTILanding(Call.TargetSymbol);
+      const unsigned MaxThunks =
+          BTICompatible ? opts::MaxThunkChainLength : MaxValue<unsigned>;
       // Attempt a branch thunk chain if length is below threshold.
       if (const MCSymbol *Target =
-              getOrCreateBranchThunkChain(Call, opts::MaxThunkChainLength)) {
+              getOrCreateBranchThunkChain(Call, MaxThunks)) {
         // Skip already in-range calls that do not need relaxation.
         if (Target == Call.TargetSymbol)
           continue;
@@ -1680,6 +1766,7 @@ void ClusteredRelaxation::relaxCalls() {
         ++NumShortThunkCalls;
         continue;
       }
+      assert(BTICompatible && "long thunk target lacks a BTI landing pad");
       // Otherwise fall back to a long thunk.
       ++NumLongThunkCalls;
       relaxCallWithLongThunk(Call);
@@ -1690,7 +1777,7 @@ void ClusteredRelaxation::relaxCalls() {
 void ClusteredRelaxation::relaxUnconditionalBranches() {
   for (const OutOfRangeRef &Branch : Branches) {
     const MCSymbol *Target =
-        getOrCreateBranchThunkChain(Branch, /*MaxThunks=*/-1u);
+        getOrCreateBranchThunkChain(Branch, MaxValue<unsigned>);
     assert(Target && "expected branch thunk chain");
     // Skip already in-range branches that do not need relaxation.
     if (Target == Branch.TargetSymbol)
@@ -1734,8 +1821,16 @@ void ClusteredRelaxation::insertThunks() {
         Insertion.ThunkList->begin(), Insertion.ThunkList->end());
 }
 
-bool ClusteredRelaxation::run() {
-  buildLayout();
+void ClusteredRelaxation::applyBTIFixups() {
+  for (const auto &[Thunk, TargetSymbol] : PendingBTIFixups)
+    BC.MIB->applyBTIFixupToSymbol(BC, TargetSymbol,
+                                  *Thunk->front().getLastNonPseudoInstr());
+}
+
+Expected<bool> ClusteredRelaxation::run() {
+  if (Error E = buildLayout())
+    return std::move(E);
+
   if (Clusters.empty())
     return false;
 
@@ -1761,26 +1856,36 @@ bool ClusteredRelaxation::run() {
   LLVM_DEBUG(dbgs() << "\nFunction layout with thunks:\n";
              for (const auto *BF : OutputFunctions) { dbgs() << *BF << '\n'; });
 
+  BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
+  applyBTIFixups();
   return true;
 }
 
-void LongJmpPass::relaxWithClusters(BinaryContext &BC) {
-  BinaryFunctionListType OutputFunctions = BC.getOutputBinaryFunctions();
-  ClusteredRelaxation Relaxation(BC, OutputFunctions);
-  if (!Relaxation.run())
-    return;
-
-  BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
-}
-
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
+  const bool RelaxWithClusters =
+      BC.HasRelocations &&
+      opts::RelaxWithClusters != cl::boolOrDefault::BOU_FALSE;
 
-  assert((opts::CompactCodeModel || opts::ExperimentalRelaxation ||
+  if (!BC.HasRelocations) {
+    if (opts::RelaxWithClusters == cl::boolOrDefault::BOU_TRUE)
+      return createFatalBOLTError(
+          "clustered relaxation requires code relocations; "
+          "link with --emit-relocs or pass --relax-with-clusters=false");
+    if (opts::RelaxWithClusters == cl::boolOrDefault::BOU_UNSET)
+      BC.errs()
+          << "BOLT-WARNING: clustered relaxation requires code relocations; "
+             "falling back to "
+          << (opts::CompactCodeModel ? "local branch relaxation"
+                                     : "the stub-insertion pass")
+          << '\n';
+  }
+
+  assert((opts::CompactCodeModel || RelaxWithClusters ||
           opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit) &&
          "LongJmp cannot work with functions split in more than two fragments");
 
   // Reserve at least one huge page of headroom for text-section alignment.
-  if (opts::ExperimentalRelaxation &&
+  if (RelaxWithClusters &&
       opts::MaxClusterSize > LongestJumpSpan - BinaryContext::HugePageSize)
     return createFatalBOLTError("--max-cluster-size must be at most 126 MiB");
 
@@ -1805,7 +1910,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
     return It == BranchLiveness.end() ? nullptr : &It->second;
   };
 
-  if (opts::CompactCodeModel || opts::ExperimentalRelaxation) {
+  if (opts::CompactCodeModel || RelaxWithClusters) {
     BC.outs()
         << "BOLT-INFO: relaxing branches for compact code model (<128MB)\n";
 
@@ -1828,12 +1933,11 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
     if (HasFatal)
       return createFatalBOLTError("branch relaxation failure");
 
-    if (!opts::ExperimentalRelaxation)
+    if (!RelaxWithClusters)
       return Error::success();
 
-    BC.outs() << "BOLT-INFO: starting experimental relaxation pass\n";
-    relaxWithClusters(BC);
-    return Error::success();
+    BC.outs() << "BOLT-INFO: starting clustered relaxation pass\n";
+    return ClusteredRelaxation(BC).run().takeError();
   }
 
   BC.outs() << "BOLT-INFO: Starting stub-insertion pass\n";

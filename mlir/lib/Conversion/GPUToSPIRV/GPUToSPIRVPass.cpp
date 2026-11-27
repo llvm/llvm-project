@@ -80,18 +80,19 @@ GPUToSPIRVPass::lookupTargetEnvOrDefault(gpu::GPUModuleOp moduleOp) {
 
 void GPUToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
-  ModuleOp module = getOperation();
+  ModuleOp moduleOp = getOperation();
 
   SmallVector<Operation *, 1> gpuModules;
   OpBuilder builder(context);
 
-  auto targetEnvSupportsKernelCapability = [this](gpu::GPUModuleOp moduleOp) {
-    auto targetAttr = lookupTargetEnvOrDefault(moduleOp);
-    spirv::TargetEnv targetEnv(targetAttr);
-    return targetEnv.allows(spirv::Capability::Kernel);
-  };
+  auto targetEnvSupportsKernelCapability =
+      [this](gpu::GPUModuleOp gpuModuleOp) {
+        auto targetAttr = lookupTargetEnvOrDefault(gpuModuleOp);
+        spirv::TargetEnv targetEnv(targetAttr);
+        return targetEnv.allows(spirv::Capability::Kernel);
+      };
 
-  module.walk([&](gpu::GPUModuleOp moduleOp) {
+  moduleOp.walk([&](gpu::GPUModuleOp gpuModuleOp) {
     // Clone each GPU kernel module for conversion, given that the GPU
     // launch op still needs the original GPU kernel module.
     // For Vulkan Shader capabilities, we insert the newly converted SPIR-V
@@ -100,12 +101,12 @@ void GPUToSPIRVPass::runOnOperation() {
     // For OpenCL Kernel capabilities, we insert the newly converted SPIR-V
     // module inside the original GPU module, as that's the expectaion of the
     // normal GPU compilation pipeline.
-    if (targetEnvSupportsKernelCapability(moduleOp)) {
-      builder.setInsertionPointToStart(moduleOp.getBody());
+    if (targetEnvSupportsKernelCapability(gpuModuleOp)) {
+      builder.setInsertionPointToStart(gpuModuleOp.getBody());
     } else {
-      builder.setInsertionPoint(moduleOp.getOperation());
+      builder.setInsertionPoint(gpuModuleOp.getOperation());
     }
-    gpuModules.push_back(builder.clone(*moduleOp.getOperation()));
+    gpuModules.push_back(builder.clone(*gpuModuleOp.getOperation()));
   });
 
   // Run conversion for each module independently as they can have different
@@ -167,9 +168,9 @@ void GPUToSPIRVPass::runOnOperation() {
   // For OpenCL, the gpu.func op in the original gpu.module op needs to be
   // replaced with an empty func.func op with the same arguments as the gpu.func
   // op. The func.func op needs gpu.kernel attribute set.
-  module.walk([&](gpu::GPUModuleOp moduleOp) {
-    if (targetEnvSupportsKernelCapability(moduleOp)) {
-      moduleOp.walk([&](gpu::GPUFuncOp funcOp) {
+  moduleOp.walk([&](gpu::GPUModuleOp gpuModuleOp) {
+    if (targetEnvSupportsKernelCapability(gpuModuleOp)) {
+      gpuModuleOp.walk([&](gpu::GPUFuncOp funcOp) {
         builder.setInsertionPoint(funcOp);
         auto newFuncOp =
             func::FuncOp::create(builder, funcOp.getLoc(), funcOp.getName(),

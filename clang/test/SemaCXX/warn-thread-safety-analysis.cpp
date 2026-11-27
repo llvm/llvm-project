@@ -8428,6 +8428,165 @@ void testDependent(int n) {
   callDependent<void (&)(int)>(callback, n); // expected-note {{in instantiation of function template specialization 'FunctionPointers::callDependent<void (&)(int)>' requested here}}
 }
 
+// On a parameter of a non-static member function, a member names that of the
+// object the function is called on, as on the function itself.
+struct CallbackOwner {
+  Mutex mu;
+  void run(void (*cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n);
+  void runAddr(void (*cb)(int) EXCLUSIVE_LOCKS_REQUIRED(&mu), int n) {
+    cb(n); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+  }
+};
+
+void CallbackOwner::run(void (*cb)(int) EXCLUSIVE_LOCKS_REQUIRED(mu), int n) {
+  mu.Lock();
+  cb(n);
+  mu.Unlock();
+}
+
+template <typename T> struct CallbackOwnerT {
+  Mutex mu;
+  void run(void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu), T n) {
+    mu.Lock();
+    cb(n);
+    mu.Unlock();
+  }
+  // A nested prototype's parameters belong to no function, so have no 'this'.
+  void runNested(void (*cb)(T, void (*h)() EXCLUSIVE_LOCKS_REQUIRED(mu))
+                     EXCLUSIVE_LOCKS_REQUIRED(mu),
+                 T n) {
+    mu.Lock();
+    cb(n, nullptr);
+    mu.Unlock();
+  }
+};
+template struct CallbackOwnerT<int>;
+
+// An out-of-line definition is static only if the declaration it defines is,
+// even if another member of its name is static.
+struct CallbackOwnerOverload {
+  Mutex mu;
+  void run(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu));
+  static void run(int, void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu));
+};
+void CallbackOwnerOverload::run(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu)) {
+  mu.Lock();
+  cb();
+  mu.Unlock();
+}
+void CallbackOwnerOverload::run(int, void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu)) {
+  cb(); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+}
+
+template <typename T> struct CallbackOwnerOverloadT {
+  Mutex mu;
+  void run(void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu), T n);
+  static void run(int, void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu), T n);
+};
+template <typename T>
+void CallbackOwnerOverloadT<T>::run(void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu),
+                                    T n) {
+  mu.Lock();
+  cb(n);
+  mu.Unlock();
+}
+template <typename T>
+void CallbackOwnerOverloadT<T>::run(int,
+                                    void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu),
+                                    T n) {
+  cb(n); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+}
+template struct CallbackOwnerOverloadT<int>; // expected-note {{in instantiation of member function 'FunctionPointers::CallbackOwnerOverloadT<int>::run' requested here}}
+
+// In a const member function, 'this' is const for a parameter's attribute too,
+// so both attributes call the const overload.
+struct CallbackOwnerConst {
+  Mutex mu;
+  Mutex &getMu();
+  const Mutex &getMu() const;
+  void run(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(getMu())) const
+      EXCLUSIVE_LOCKS_REQUIRED(getMu()) {
+    cb();
+  }
+  void runOutOfLine(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(getMu())) const
+      EXCLUSIVE_LOCKS_REQUIRED(getMu());
+};
+void CallbackOwnerConst::runOutOfLine(
+    void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(getMu())) const {
+  cb();
+}
+
+// Like the function's own attribute, a parameter's may name a member declared
+// after the function, unless a later parameter shadows it.
+struct CallbackOwnerLater {
+  void run(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu))
+      EXCLUSIVE_LOCKS_REQUIRED(mu) {
+    cb();
+  }
+  void shadow(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu), Mutex *mu)
+      EXCLUSIVE_LOCKS_REQUIRED(mu) {
+    cb();
+  }
+  void shadowOutOfLine(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu), Mutex *mu)
+      EXCLUSIVE_LOCKS_REQUIRED(mu);
+  Mutex mu;
+};
+void CallbackOwnerLater::shadowOutOfLine(
+    void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu), Mutex *mu) {
+  cb();
+}
+
+template <typename T> struct CallbackOwnerLaterT {
+  void run(void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu), T n)
+      EXCLUSIVE_LOCKS_REQUIRED(mu) {
+    cb(n);
+  }
+  Mutex mu;
+};
+template struct CallbackOwnerLaterT<int>;
+
+// A later parameter shadows a global too.
+Mutex shadowedMu;
+void callLaterShadowed(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(shadowedMu),
+                       Mutex *shadowedMu)
+    EXCLUSIVE_LOCKS_REQUIRED(shadowedMu) {
+  cb();
+}
+
+// Explicit template arguments are substituted into the parameters before
+// deduction in the context of the template, so 'this' is that of the template's
+// class whatever the caller's is.
+struct CallbackOwnerExplicit {
+  Mutex mu;
+  template <typename T>
+  void run(void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu), T n) {
+    cb(n); // expected-warning 2 {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+  }
+};
+void callExplicitFree(CallbackOwnerExplicit &o, void (*cb)(int)) {
+  o.run<int>(cb, 0); // expected-note {{in instantiation of function template specialization 'FunctionPointers::CallbackOwnerExplicit::run<int>' requested here}}
+}
+struct CallbackOwnerExplicitOther {
+  int mu;
+  void call(CallbackOwnerExplicit &o, void (*cb)(long)) {
+    o.run<long>(cb, 0); // expected-note {{in instantiation of function template specialization 'FunctionPointers::CallbackOwnerExplicit::run<long>' requested here}}
+  }
+};
+
+// A member function whose type is attributed is instantiated with the
+// parameters of its declaration, which are not those of its type.
+template <typename T> struct CallbackOwnerAttributed {
+  Mutex mu;
+  void run(void (*cb)() EXCLUSIVE_LOCKS_REQUIRED(mu)) [[clang::annotate_type("x")]] {
+    cb(); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+  }
+  void runDependent(void (*cb)(T) EXCLUSIVE_LOCKS_REQUIRED(mu), T n) [[clang::annotate_type("x")]] {
+    cb(n); // expected-warning {{calling function 'cb' requires holding mutex 'mu' exclusively}}
+  }
+};
+template struct CallbackOwnerAttributed<int>; // expected-note {{in instantiation of member function 'FunctionPointers::CallbackOwnerAttributed<int>::run' requested here}} \
+                                              // expected-note {{in instantiation of member function 'FunctionPointers::CallbackOwnerAttributed<int>::runDependent' requested here}}
+
 // lock_returned on a function pointer or reference.
 struct Guarded {
   Mutex mu;
@@ -8517,6 +8676,45 @@ struct GuardedOpsSelf {
     o->unlock();
   }
 };
+
+// Without arguments, an attribute on a function pointer field refers to the
+// object the field is called through, the object 'this' names in it.
+struct LOCKABLE SelfOps {
+  void (*lock)() EXCLUSIVE_LOCK_FUNCTION();
+  void (*unlock)() UNLOCK_FUNCTION();
+  int data GUARDED_BY(this);
+  void self() { lock(); data = 1; unlock(); }
+  struct LOCKABLE {
+    void (*anonLock)() EXCLUSIVE_LOCK_FUNCTION();
+    void (*anonUnlock)() UNLOCK_FUNCTION();
+    int anonData GUARDED_BY(this); // the anonymous object, as for anonLock
+  };
+};
+
+void requiresSelfOps(SelfOps *s) EXCLUSIVE_LOCKS_REQUIRED(s);
+
+void testSelfOps(SelfOps *s, SelfOps *o) {
+  s->lock();
+  s->data = 1;
+  requiresSelfOps(s);
+  o->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'o' exclusively}}
+  s->unlock();
+  s->anonLock();
+  s->anonData = 1;
+  s->anonUnlock();
+}
+
+template <class F> struct LOCKABLE SelfOpsTemplate {
+  F lock EXCLUSIVE_LOCK_FUNCTION();
+  F unlock UNLOCK_FUNCTION();
+  int data GUARDED_BY(this);
+};
+
+void testSelfOpsTemplate(SelfOpsTemplate<void (*)()> *t) {
+  t->lock();
+  t->data = 1;
+  t->unlock();
+}
 
 } // namespace FunctionPointers
 

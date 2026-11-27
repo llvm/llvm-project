@@ -8,7 +8,7 @@
 module {
   cir.func dso_local @_Z11test_allocam(%arg0: !u64i) -> !cir.ptr<!void> {
     %0 = cir.alloca "n" align(8) init : !cir.ptr<!u64i>
-    %1 = cir.alloca "__retval" align(8) : !cir.ptr<!cir.ptr<!void>>
+    %1 = cir.alloca "" align(8) return_slot : !cir.ptr<!cir.ptr<!void>>
     cir.store %arg0, %0 : !u64i, !cir.ptr<!u64i>
     %2 = cir.load align(8) %0 : !cir.ptr<!u64i>, !u64i
     // Dynamically sized alloca
@@ -21,7 +21,7 @@ module {
 
   // CHECK: cir.func dso_local @_Z11test_allocam(%arg0: !u64i) -> !cir.ptr<!void> {
   // CHECK:   %0 = cir.alloca "n" align(8) init : !cir.ptr<!u64i>
-  // CHECK:   %1 = cir.alloca "__retval" align(8) : !cir.ptr<!cir.ptr<!void>>
+  // CHECK:   %1 = cir.alloca "" align(8) return_slot : !cir.ptr<!cir.ptr<!void>>
   // CHECK:   cir.store %arg0, %0 : !u64i, !cir.ptr<!u64i>
   // CHECK:   %2 = cir.load align(8) %0 : !cir.ptr<!u64i>, !u64i
   // CHECK:   %3 = cir.alloca "bi_alloca" align(16) size(%2) : !cir.ptr<!u8i>
@@ -47,8 +47,11 @@ module {
     // cleanup_dest_slot only
     %4 = cir.alloca "e" align(4) cleanup_dest_slot : !cir.ptr<!s32i>
 
+    // return_slot only
+    %5 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+
     // all flags
-    %6 = cir.alloca "f" align(4) init const cleanup_dest_slot : !cir.ptr<!s32i>
+    %6 = cir.alloca "f" align(4) init const cleanup_dest_slot return_slot : !cir.ptr<!s32i>
 
     // dynamic size, no flags
     %sz = cir.const #cir.int<4> : !u64i
@@ -65,7 +68,8 @@ module {
   // CHECK:   cir.alloca "c" align(4) const : !cir.ptr<!s32i>
   // CHECK:   cir.alloca "d" align(4) init const : !cir.ptr<!s32i>
   // CHECK:   cir.alloca "e" align(4) cleanup_dest_slot : !cir.ptr<!s32i>
-  // CHECK:   cir.alloca "f" align(4) init const cleanup_dest_slot : !cir.ptr<!s32i>
+  // CHECK:   cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+  // CHECK:   cir.alloca "f" align(4) init const cleanup_dest_slot return_slot : !cir.ptr<!s32i>
   // CHECK:   cir.alloca "h" align(16) size(%{{.*}}) : !cir.ptr<!u8i>
   // CHECK:   cir.alloca "i" align(16) init size(%{{.*}}) : !cir.ptr<!u8i>
 }

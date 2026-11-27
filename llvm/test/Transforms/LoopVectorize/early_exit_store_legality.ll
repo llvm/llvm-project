@@ -1167,6 +1167,36 @@ exit:
   ret i64 %rdx.next
 }
 
+define i16 @uncountable_exit_with_reduction_phi_before_iv(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) !dbg !80 {
+; CHECK-DEBUG-LABEL: LV: Checking a loop in 'uncountable_exit_with_reduction_phi_before_iv'
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: Not vectorizing: Early exit loop with side effects contains unsupported reductions, inductions or recurrences.
+; CHECK-REMARK:      foo.c:360:3: loop not vectorized: Early exit loop with side effects contains unsupported reductions, inductions or recurrences
+entry:
+  br label %for.body, !dbg !81
+
+for.body:
+  %rdx = phi i16 [ 0, %entry ], [ %rdx.next, %for.inc ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  store i16 0, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc, !dbg !81
+
+for.inc:
+  %rdx.next = add i16 %rdx, %data
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body, !dbg !81
+
+exit:
+  %res = phi i16 [ 0, %for.body ], [ %rdx.next, %for.inc ]
+  ret i16 %res
+}
+
 declare void @init_mem(ptr, i64);
 declare i64 @get_an_unknown_offset();
 
@@ -1236,4 +1266,6 @@ declare i64 @get_an_unknown_offset();
 !77 = !DILocation(line: 340, column: 3, scope: !76)
 !78 = distinct !DISubprogram(name: "uncountable_exit_with_extra_induction", scope: !2, file: !2, line: 350, type: !3, isLocal: false, isDefinition: true, scopeLine: 350, flags: DIFlagPrototyped, isOptimized: true, unit: !1000, retainedNodes: !4)
 !79 = !DILocation(line: 350, column: 3, scope: !78)
+!80 = distinct !DISubprogram(name: "uncountable_exit_with_reduction_phi_before_iv", scope: !2, file: !2, line: 360, type: !3, isLocal: false, isDefinition: true, scopeLine: 360, flags: DIFlagPrototyped, isOptimized: true, unit: !1000, retainedNodes: !4)
+!81 = !DILocation(line: 360, column: 3, scope: !80)
 !1000 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang", file: !2, isOptimized: true, flags: "-O2", splitDebugFilename: "abc.debug", emissionKind: 2)

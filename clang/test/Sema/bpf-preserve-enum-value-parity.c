@@ -10,6 +10,7 @@
 // constant is required, it is kept a constant with a single error naming the
 // attribute (attr-error) instead of the error for the call (explicit-error).
 // A builtin argument error gets an extra note naming the attribute (attr-note).
+// Both are accepted in a case label, where they are relocated.
 #ifdef EXPLICIT
 enum E { A = 4 };
 #define X __builtin_preserve_enum_value(*(enum E *)A, 1)
@@ -39,12 +40,6 @@ void h(int);
 int rejected(int v, void *p) {
   static int s = X; // explicit-error {{initializer element is not a compile-time constant}} attr-error {{enumerator 'A' is not relocated where a constant is required, although 'enum E' has the 'preserve_access_index' attribute}}
   int a[8] = {[X] = 1}; // explicit-error {{expression is not an integer constant expression}} attr-error {{enumerator 'A' is not relocated where a constant is required, although 'enum E' has the 'preserve_access_index' attribute}}
-  switch (v) {
-  case X: // explicit-error {{expression is not an integer constant expression}} attr-error {{enumerator 'A' is not relocated where a constant is required, although 'enum E' has the 'preserve_access_index' attribute}}
-    return 1;
-  case 5 ... X + 2: // explicit-error {{expression is not an integer constant expression}} attr-error {{enumerator 'A' is not relocated where a constant is required, although 'enum E' has the 'preserve_access_index' attribute}}
-    return 2;
-  }
 #pragma unroll X // explicit-error {{expression is not an integer constant expression}} attr-error {{enumerator 'A' is not relocated where a constant is required, although 'enum E' has the 'preserve_access_index' attribute}}
   for (int i = 0; i < 8; i++)
     h(i);
@@ -76,6 +71,12 @@ unsigned long accepted(int v, int *p, void *d, const void *s) {
   switch (X) {
   case 4:
     v++;
+  }
+  switch (v) {
+  case X:
+    return 1;
+  case 5 ... X + 2:
+    return 2;
   }
   v += p[X] + (v == X) + (v && X ? X : 0) + (v << X) + k;
   v += __builtin_bswap32(X) + __builtin_expect(v, X);

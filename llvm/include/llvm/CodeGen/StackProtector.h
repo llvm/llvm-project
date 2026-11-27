@@ -46,10 +46,6 @@ class SSPLayoutInfo {
   /// AllocaInst triggers a stack protector.
   SSPLayoutMap Layout;
 
-  /// The minimum size of buffers that will receive stack smashing
-  /// protection when -fstack-protection is used.
-  unsigned SSPBufferSize = DefaultSSPBufferSize;
-
   bool RequireStackProtector = false;
 
   // A prologue is generated.

@@ -49,6 +49,7 @@ def Test_PatternsPartition : Partition<"Patterns">;
 def Test_ConversionPartition : Partition<"Conversion">;
 def Test_InterfacesPartition : Partition<"Interfaces">;
 def Test_PropertiesPartition : Partition<"Properties">;
+def Test_SyntaxPartition : Partition<"Syntax">;
 
 // Ops are in partition `Core`, unless they are in a
 // `let partition = ... in { ... }` block. Since TableGen rejects `let` of a
@@ -516,10 +517,12 @@ def PromisedInterfacesOp : TEST_AttrOp<"promised_interfaces"> {
 //===----------------------------------------------------------------------===//
 
 // Define the enum attribute.
+let partition = Test_AttrTypeCorePartition in {
 def TestEnumAttr : EnumAttr<Test_Dialect, TestEnum, "enum">;
 
 def TestPrettyEnumAttr
     : EnumAttr<Test_Dialect, TestPrettyEnum, "pretty_enum">;
+} // let partition = Test_AttrTypeCorePartition
 
 // Define an op that contains the enum attribute.
 def OpWithEnum : TEST_AttrOp<"op_with_enum"> {
@@ -610,17 +613,22 @@ def OpWithSimpleEnum16Prop : TEST_AttrOp<"op_with_simple_enum_16_prop"> {
 // Test Bit Enum Attributes
 //===----------------------------------------------------------------------===//
 
-// Define the enum attribute.
+// Define the enum attributes.
+let partition = Test_AttrTypeCorePartition in {
 def TestBitEnumAttr : EnumAttr<Test_Dialect, TestBitEnum, "bit_enum">;
+
+def TestBitEnumVerticalBarAttr
+    : EnumAttr<Test_Dialect, TestBitEnumVerticalBar, "bit_enum_vbar">;
+
+def TestBitEnumSpaceAttr
+    : EnumAttr<Test_Dialect, TestBitEnumSpace, "bit_enum_space">;
+} // let partition = Test_AttrTypeCorePartition
 
 // Define an op that contains the enum attribute.
 def OpWithBitEnum : TEST_AttrOp<"op_with_bit_enum"> {
   let arguments = (ins TestBitEnumAttr:$value, OptionalAttr<AnyAttr>:$tag);
   let assemblyFormat = "$value (`tag` $tag^)? attr-dict";
 }
-
-def TestBitEnumVerticalBarAttr
-    : EnumAttr<Test_Dialect, TestBitEnumVerticalBar, "bit_enum_vbar">;
 
 // Define an op that contains the enum attribute.
 def OpWithBitEnumVerticalBar : TEST_AttrOp<"op_with_bit_enum_vbar"> {
@@ -639,9 +647,6 @@ def OpWithBitEnumVerticalBarDirective
   let arguments = (ins TestBitEnumVerticalBarAttr:$value);
   let assemblyFormat = "enum($value) attr-dict";
 }
-
-def TestBitEnumSpaceAttr
-    : EnumAttr<Test_Dialect, TestBitEnumSpace, "bit_enum_space">;
 
 def OpWithBitEnumSpace : TEST_Op<"op_with_bit_enum_space"> {
   let arguments = (ins TestBitEnumSpaceAttr:$value,
@@ -997,6 +1002,28 @@ def OperandRankEqualsResultSize :
                       "operand rank equals result size">]> {
   let arguments = (ins AnyShaped:$operand);
   let results = (outs AnyShaped:$result);
+}
+
+def VariadicOperandsHaveSameElementType :
+    TEST_Op<"variadic_operands_have_same_element_type",
+            [VariadicAllElementTypesMatch<"xs">]> {
+  let arguments = (ins AnyType:$first, Variadic<AnyType>:$xs);
+}
+
+def VariadicOperandsHaveSameRank :
+    TEST_Op<"variadic_operands_have_same_rank", [VariadicAllRanksMatch<"xs">]> {
+  let arguments = (ins Variadic<AnyShaped>:$xs);
+}
+
+def VariadicOperandsHaveSameShape :
+    TEST_Op<"variadic_operands_have_same_shape",
+            [VariadicAllShapesMatch<"xs">]> {
+  let arguments = (ins Variadic<AnyShaped>:$xs);
+}
+
+def VariadicOperandsHaveSameType :
+    TEST_Op<"variadic_operands_have_same_type", [VariadicAllTypesMatch<"xs">]> {
+  let arguments = (ins Variadic<AnyType>:$xs);
 }
 
 def IfFirstOperandIsNoneThenSoIsSecond :
@@ -5072,5 +5099,7 @@ def CallWithSegmentsOp : TEST_Op<"call_with_segments",
   }];
 }
 
+// The ops for testing the custom assembly syntax are in partition `Syntax`.
+include "TestOpsSyntax.td"
 
 #endif // TEST_OPS

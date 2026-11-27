@@ -17,8 +17,8 @@
 ; CHECK: Bye
 ; BOTH:      Bye: somefunk
 ; BOTH-NEXT: See,you: somefunk
-; NOCOMMA: expected <plugin>,<arg> in -plugin-arg=Bye{{$}}
-; UNKNOWN: no pass plugin named 'Nope' is loaded, in -plugin-arg=Nope,-x
+; NOCOMMA: expected <plugin>,<arg>, got 'Bye'{{$}}
+; UNKNOWN: no pass plugin named 'Nope' is loaded{{$}}
 ; DUP: multiple pass plugins are named 'Bye'{{$}}
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

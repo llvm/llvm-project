@@ -17,6 +17,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/TargetParser/SparcTargetParser.h"
 
 using namespace llvm;
 
@@ -35,9 +36,8 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(
     StringRef CPU, StringRef TuneCPU, StringRef FS) {
   const Triple &TT = getTargetTriple();
   // Determine default and user specified characteristics
-  std::string CPUName = std::string(CPU);
-  if (CPUName.empty())
-    CPUName = TT.isSPARC64() ? "v9" : "v8";
+  std::string CPUName =
+      std::string(Sparc::getNormalizedSparcTargetCPU(TT, CPU));
 
   if (TuneCPU.empty())
     TuneCPU = CPUName;

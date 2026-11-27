@@ -128,3 +128,50 @@ entry:
   store i32 %r3, ptr %q3, align 4
   ret void
 }
+
+; The fadd vector holds the copyable lane %copy_lane + -0.0, which flushes the
+; denormals. The select operand takes only the exact fadd lanes from it and
+; %copy_lane from the fadd operand.
+define void @inexact_fp_copyable_lane_not_shuffled(float %x0, float %x1, float %x2, float %copy_lane, float %y0, float %y1, float %y2, i1 %cond, ptr %out) #0 {
+; CHECK-LABEL: define void @inexact_fp_copyable_lane_not_shuffled(
+; CHECK-SAME: float [[X0:%.*]], float [[X1:%.*]], float [[X2:%.*]], float [[COPY_LANE:%.*]], float [[Y0:%.*]], float [[Y1:%.*]], float [[Y2:%.*]], i1 [[COND:%.*]], ptr [[OUT:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> poison, float [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[X1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[X2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[COPY_LANE]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float -0.000000e+00>, float [[Y0]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[Y1]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[Y2]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x float> [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x float> [[TMP7]], splat (float 2.000000e+00)
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i1> poison, i1 [[COND]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i1> [[TMP9]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP10]], <4 x float> [[TMP8]], <4 x float> [[TMP11]]
+; CHECK-NEXT:    store <4 x float> [[TMP12]], ptr [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a0 = fadd float %x0, %y0
+  %a1 = fadd float %x1, %y1
+  %a2 = fadd float %x2, %y2
+  %m0 = fmul float %a0, 2.0
+  %m1 = fmul float %a1, 2.0
+  %m2 = fmul float %a2, 2.0
+  %m3 = fmul float %copy_lane, 2.0
+  %s0 = select i1 %cond, float %m0, float %a0
+  %s1 = select i1 %cond, float %m1, float %a1
+  %s2 = select i1 %cond, float %m2, float %a2
+  %s3 = select i1 %cond, float %m3, float %copy_lane
+  store float %s0, ptr %out, align 4
+  %o1 = getelementptr inbounds float, ptr %out, i64 1
+  store float %s1, ptr %o1, align 4
+  %o2 = getelementptr inbounds float, ptr %out, i64 2
+  store float %s2, ptr %o2, align 4
+  %o3 = getelementptr inbounds float, ptr %out, i64 3
+  store float %s3, ptr %o3, align 4
+  ret void
+}
+
+attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }

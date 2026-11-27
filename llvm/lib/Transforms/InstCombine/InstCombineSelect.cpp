@@ -1140,6 +1140,10 @@ static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
                           : (FalseValI->getOperand(1) == Y ? 1 : 2),
                       FrY);
   }
+  // Drop poison-generating annotations (e.g. range) on calls, but preserve
+  // flags on mul/idiv since 0*y cannot overflow and 0/y remains exact.
+  if (isa<CallBase>(FalseValI))
+    FalseValI->dropPoisonGeneratingAnnotations();
   return IC.replaceInstUsesWith(SI, FalseValI);
 }
 
@@ -2471,6 +2475,11 @@ static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
                                   m_OneUse(m_Intrinsic<Intrinsic::usub_sat>(
                                       m_Value(B), m_APInt(Constant2))))),
                     m_Zero())))
+    return nullptr;
+
+  // The new instructions have the type of the usub.sat operands, so they can
+  // only replace a select of the same type.
+  if (SI.getType() != A->getType())
     return nullptr;
 
   Value *TrueVal = SI.getTrueValue();
