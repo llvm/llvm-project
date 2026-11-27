@@ -39,6 +39,34 @@ AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
       OS << ')';
     OS << ')';
   };
+  SpecifierExprEvaluateFn = [](const MCSpecifierExpr &Expr, MCValue &Result,
+                               const MCAssembler *Asm) {
+    auto &E = static_cast<const AVRMCExpr &>(Expr);
+    MCValue Value;
+    bool isRelocatable = E.getSubExpr()->evaluateAsRelocatable(Value, Asm);
+    if (!isRelocatable)
+      return false;
+
+    if (Value.isAbsolute()) {
+      Result = MCValue::get(E.evaluateAsInt64(Value.getConstant()));
+    } else {
+      if (!Asm || !Asm->hasLayout())
+        return false;
+
+      auto Spec = AVR::S_None;
+      if (Value.getSpecifier())
+        return false;
+      assert(!Value.getSubSym());
+      if (E.getSpecifier() == AVR::S_PM)
+        Spec = AVR::S_PM;
+
+      // TODO: Don't attach specifier to MCSymbolRefExpr.
+      Result =
+          MCValue::get(Value.getAddSym(), nullptr, Value.getConstant(), Spec);
+    }
+
+    return true;
+  };
 }
 
 namespace {
@@ -173,38 +201,6 @@ int64_t AVRMCExpr::evaluateAsInt64(int64_t Value) const {
     llvm_unreachable("Uninitialized expression.");
   }
   return static_cast<uint64_t>(Value) & 0xff;
-}
-
-// bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
-//                                           const MCAssembler *Asm) const {
-bool AVRMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
-                                             MCValue &Result,
-                                             const MCAssembler *Asm) const {
-  auto &E = static_cast<const AVRMCExpr &>(Expr);
-  MCValue Value;
-  bool isRelocatable = E.getSubExpr()->evaluateAsRelocatable(Value, Asm);
-  if (!isRelocatable)
-    return false;
-
-  if (Value.isAbsolute()) {
-    Result = MCValue::get(E.evaluateAsInt64(Value.getConstant()));
-  } else {
-    if (!Asm || !Asm->hasLayout())
-      return false;
-
-    auto Spec = AVR::S_None;
-    if (Value.getSpecifier())
-      return false;
-    assert(!Value.getSubSym());
-    if (E.getSpecifier() == AVR::S_PM)
-      Spec = AVR::S_PM;
-
-    // TODO: Don't attach specifier to MCSymbolRefExpr.
-    Result =
-        MCValue::get(Value.getAddSym(), nullptr, Value.getConstant(), Spec);
-  }
-
-  return true;
 }
 
 bool AVRMCExpr::evaluateAsConstant(int64_t &Result) const {

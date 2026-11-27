@@ -25,8 +25,6 @@ class Triple;
 class AVRMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options);
-  bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
-                                 const MCAssembler *Asm) const override;
 };
 
 namespace AVR {

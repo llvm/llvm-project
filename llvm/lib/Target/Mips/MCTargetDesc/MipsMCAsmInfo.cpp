@@ -116,6 +116,28 @@ static void printImpl(const MCAsmInfo &MAI, raw_ostream &OS,
   OS << ')';
 }
 
+static bool evaluate(const MCSpecifierExpr &Expr, MCValue &Res,
+                     const MCAssembler *Asm) {
+  // Look for the %hi(%neg(%gp_rel(X))) and %lo(%neg(%gp_rel(X)))
+  // special cases.
+  if (Mips::isGpOff(Expr)) {
+    const MCExpr *SubExpr =
+        cast<MCSpecifierExpr>(
+            cast<MCSpecifierExpr>(Expr.getSubExpr())->getSubExpr())
+            ->getSubExpr();
+    if (!SubExpr->evaluateAsRelocatable(Res, Asm))
+      return false;
+
+    Res.setSpecifier(Mips::S_Special);
+    return true;
+  }
+
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+  Res.setSpecifier(Expr.getSpecifier());
+  return !Res.getSubSym();
+}
+
 void MipsELFMCAsmInfo::anchor() {}
 
 MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
@@ -148,6 +170,7 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
   SectionDirectives.insert(".bss");
 
   SpecifierExprPrintFn = printImpl;
+  SpecifierExprEvaluateFn = evaluate;
 }
 
 void MipsCOFFMCAsmInfo::anchor() {}
@@ -161,6 +184,7 @@ MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo(const MCTargetOptions &Options)
   AllowAtInName = true;
 
   SpecifierExprPrintFn = printImpl;
+  SpecifierExprEvaluateFn = evaluate;
 }
 
 const MCSpecifierExpr *Mips::createGpOff(const MCExpr *Expr, Mips::Specifier S,
@@ -185,40 +209,7 @@ bool Mips::isGpOff(const MCSpecifierExpr &E) {
   return false;
 }
 
-static bool evaluate(const MCSpecifierExpr &Expr, MCValue &Res,
-                     const MCAssembler *Asm) {
-  // Look for the %hi(%neg(%gp_rel(X))) and %lo(%neg(%gp_rel(X)))
-  // special cases.
-  if (Mips::isGpOff(Expr)) {
-    const MCExpr *SubExpr =
-        cast<MCSpecifierExpr>(
-            cast<MCSpecifierExpr>(Expr.getSubExpr())->getSubExpr())
-            ->getSubExpr();
-    if (!SubExpr->evaluateAsRelocatable(Res, Asm))
-      return false;
-
-    Res.setSpecifier(Mips::S_Special);
-    return true;
-  }
-
-  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-  Res.setSpecifier(Expr.getSpecifier());
-  return !Res.getSubSym();
-}
-
-bool MipsELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
-                                                 MCValue &Res,
-                                                 const MCAssembler *Asm) const {
-  return evaluate(Expr, Res, Asm);
-}
-
 bool MipsELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
   // microMIPS encoding uses compressed intruction byte-order
   return STI.hasFeature(Mips::FeatureMicroMips);
-}
-
-bool MipsCOFFMCAsmInfo::evaluateAsRelocatableImpl(
-    const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
-  return evaluate(Expr, Res, Asm);
 }

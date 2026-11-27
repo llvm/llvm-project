@@ -30,26 +30,18 @@ struct AArch64MCAsmInfoDarwin : public MCAsmInfoDarwin {
   const MCExpr *
   getExprForPersonalitySymbol(const MCSymbol *Sym, unsigned Encoding,
                               MCStreamer &Streamer) const override;
-  bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
-                                 const MCAssembler *Asm) const override;
 };
 
 struct AArch64MCAsmInfoELF : public MCAsmInfoELF {
   explicit AArch64MCAsmInfoELF(const Triple &T, const MCTargetOptions &Options);
-  bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
-                                 const MCAssembler *Asm) const override;
 };
 
 struct AArch64MCAsmInfoMicrosoftCOFF : public MCAsmInfoMicrosoft {
   explicit AArch64MCAsmInfoMicrosoftCOFF(const MCTargetOptions &Options);
-  bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
-                                 const MCAssembler *Asm) const override;
 };
 
 struct AArch64MCAsmInfoGNUCOFF : public MCAsmInfoGNUCOFF {
   explicit AArch64MCAsmInfoGNUCOFF(const MCTargetOptions &Options);
-  bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
-                                 const MCAssembler *Asm) const override;
 };
 
 namespace AArch64 {
