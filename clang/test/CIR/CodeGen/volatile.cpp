@@ -182,3 +182,26 @@ int A::get_x() volatile {
 // OGCG: define {{.*}} i32 @_ZNV1A5get_xEv
 // OGCG:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.A, ptr %{{.*}}, i32 0, i32 0
 // OGCG:   %{{.*}} = load volatile i32, ptr %[[MEMBER_ADDR]]
+
+struct VolatileRef {
+  int &r;
+};
+
+int test_load_volatile_reference(volatile VolatileRef *ptr) {
+  return ptr->r;
+}
+
+// CIR: cir.func {{.*}} @_Z28test_load_volatile_referencePV11VolatileRef
+// CIR:   %[[MEMBER_ADDR:.*]] = cir.get_member %{{.*}}[0] {name = "r"}
+// CIR:   %[[REF_ADDR:.*]] = cir.load volatile align(8) %[[MEMBER_ADDR]]
+// CIR:   cir.load align(4) %[[REF_ADDR]]
+
+// LLVM: define {{.*}} i32 @_Z28test_load_volatile_referencePV11VolatileRef
+// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.VolatileRef, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[REF_ADDR:.*]] = load volatile ptr, ptr %[[MEMBER_ADDR]]
+// LLVM:   %{{.*}} = load i32, ptr %[[REF_ADDR]]
+
+// OGCG: define {{.*}} i32 @_Z28test_load_volatile_referencePV11VolatileRef
+// OGCG:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.VolatileRef, ptr %{{.*}}, i32 0, i32 0
+// OGCG:   %[[REF_ADDR:.*]] = load volatile ptr, ptr %[[MEMBER_ADDR]]
+// OGCG:   %{{.*}} = load i32, ptr %[[REF_ADDR]]
