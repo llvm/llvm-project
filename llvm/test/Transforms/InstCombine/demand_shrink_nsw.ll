@@ -7,13 +7,7 @@
 define i32 @foo(i32 %arg) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[V33:%.*]] = and i32 [[ARG:%.*]], 223
-; CHECK-NEXT:    [[V34:%.*]] = xor i32 [[V33]], 29
-; CHECK-NEXT:    [[V35:%.*]] = add nuw nsw i32 [[V34]], 1362915575
-; CHECK-NEXT:    [[V40:%.*]] = shl nuw nsw i32 [[V34]], 1
-; CHECK-NEXT:    [[V41:%.*]] = and i32 [[V40]], 290
-; CHECK-NEXT:    [[V42:%.*]] = sub nuw nsw i32 [[V35]], [[V41]]
-; CHECK-NEXT:    [[V43:%.*]] = add nuw i32 [[V42]], 1533579450
-; CHECK-NEXT:    [[V45:%.*]] = xor i32 [[V43]], 749011377
+; CHECK-NEXT:    [[V45:%.*]] = xor i32 [[V33]], -2147483619
 ; CHECK-NEXT:    ret i32 [[V45]]
 ;
   %v33 = and i32 %arg, 223

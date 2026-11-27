@@ -2892,6 +2892,35 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     return BinaryOperator::CreateAnd(
         Op0, Builder.CreateNot(Y, Y->getName() + ".not"));
 
+  // X ^ C == X + C - 2 * (X & C), so subtracting the doubled masked value is
+  // a bit flip followed by a constant offset:
+  // X - ((X << 1) & MaskC) --> (X ^ C) + -C, where C = MaskC u>> 1
+  // X - ((X & C) << 1)     --> (X ^ C) + -C
+  // A constant already added to X is merged into the new offset:
+  // (X + C2) - ((X << 1) & MaskC) --> (X ^ C) + (C2 - C)
+  if (Op1->hasOneUse()) {
+    auto MatchDoubledMask = [&](Value *X) -> Constant * {
+      Constant *C;
+      if (match(Op1, m_And(m_Shl(m_Specific(X), m_One()), m_ImmConstant(C))))
+        return ConstantFoldBinaryOpOperands(
+            Instruction::LShr, C, ConstantInt::get(I.getType(), 1), DL);
+      if (match(Op1, m_Shl(m_And(m_Specific(X), m_ImmConstant(C)), m_One())))
+        return C;
+      return nullptr;
+    };
+    Value *X = Op0;
+    Constant *Offset = nullptr;
+    Constant *C = MatchDoubledMask(X);
+    if (!C && match(Op0, m_Add(m_Value(X), m_ImmConstant(Offset))))
+      C = MatchDoubledMask(X);
+    if (C) {
+      Constant *NewOffset = ConstantExpr::getNeg(C);
+      if (Offset)
+        NewOffset = ConstantExpr::getAdd(Offset, NewOffset);
+      return BinaryOperator::CreateAdd(Builder.CreateXor(X, C), NewOffset);
+    }
+  }
+
   // ~X - Min/Max(~X, Y) -> ~Min/Max(X, ~Y) - X
   // ~X - Min/Max(Y, ~X) -> ~Min/Max(X, ~Y) - X
   // Min/Max(~X, Y) - ~X -> X - ~Min/Max(X, ~Y)
