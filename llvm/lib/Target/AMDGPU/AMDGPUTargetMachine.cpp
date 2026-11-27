@@ -454,13 +454,14 @@ StringRef llvm::AMDGPU::getSchedStrategy(const AMDGPUOptions &CLOpts,
 static void
 diagnoseUnsupportedCoExecSchedulerSelection(const Function &F,
                                             const GCNSubtarget &ST) {
-  if (ST.hasGFX1250Insts() || ST.hasGFX950Insts())
+  if (ST.hasGFX1250Insts() || ST.hasGFX940Insts())
     return;
 
-  F.getContext().diagnose(DiagnosticInfoUnsupported(
-      F,
-      "'amdgpu-sched-strategy'='coexec' is only supported for gfx1250/gfx950",
-      DiagnosticLocation(), DS_Warning));
+  F.getContext().diagnose(
+      DiagnosticInfoUnsupported(F,
+                                "'amdgpu-sched-strategy'='coexec' is only "
+                                "supported for gfx1250/gfx950/gfx942",
+                                DiagnosticLocation(), DS_Warning));
 }
 
 static bool useNoopPostScheduler(const AMDGPUOptions &CLOpts,
