@@ -1,3 +1,7 @@
+lldb_tablegen(StructuredDataDarwinLogOptions.inc -gen-lldb-option-defs
+  SOURCE StructuredDataDarwinLogOptions.td
+  TARGET LLDBPluginStructuredDataDarwinLogOptionsGen)
+
 lldb_tablegen(StructuredDataDarwinLogProperties.inc -gen-lldb-property-defs
   SOURCE StructuredDataDarwinLogProperties.td
   TARGET LLDBPluginStructuredDataDarwinLogPropertiesGen)
@@ -22,5 +26,6 @@ add_lldb_library(lldbPluginStructuredDataDarwinLog PLUGIN
   )
 
 add_dependencies(lldbPluginStructuredDataDarwinLog
+  LLDBPluginStructuredDataDarwinLogOptionsGen
   LLDBPluginStructuredDataDarwinLogPropertiesGen
   LLDBPluginStructuredDataDarwinLogPropertiesEnumGen)

@@ -821,6 +821,7 @@ enum CommandArgumentType {
   eArgTypeBreakpointResolverMask,
   eArgTypeScriptedExtension,
   eArgTypeDynamicValueType,
+  eArgTypeDarwinLogFilter,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
