@@ -561,26 +561,57 @@ l:
 }
 
 // CIR-LABEL: cir.func coroutine {{.*}} @_Z21label_after_co_returnb(
+// CIR:         %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
 // CIR:         }, body : {
-// CIR:             cir.goto "l"
-// CIR:             cir.call @_ZN4Task12promise_type11return_voidEv(%[[PROMISE:[0-9]+]])
-// CIR-NEXT:        cir.co_return
-// CIR-NEXT:      ^bb1:  // no predecessors
-// CIR-NEXT:        cir.label "l"
-// CIR-NEXT:        cir.call @live()
-// CIR-NEXT:        cir.call @_ZN4Task12promise_type11return_voidEv(%[[PROMISE]])
-// CIR-NEXT:        cir.co_return
+// CIR:             cir.if {{.*}} {
+// CIR:               %[[ID:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:          cir.store %[[ID]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:        }
+// CIR:             cir.switch.flat %{{.+}} : !s32i, ^[[SCOPE_EXIT:bb[0-9]+]] [
+// CIR-NEXT:          1: ^[[LEAVE_SCOPE:bb[0-9]+]]
+// CIR:           ^[[LEAVE_SCOPE]]:
+// CIR-NEXT:        cir.br ^[[SCOPE_EXIT]]
+// CIR:           }
+// CIR:             cir.switch.flat %{{.+}} : !s32i, ^[[CONT:bb[0-9]+]] [
+// CIR-NEXT:          1: ^[[GOTO_DEST:bb[0-9]+]]
+// CIR-NEXT:        ]
+// CIR-NEXT:      ^[[GOTO_DEST]]:
+// CIR:             cir.store %{{.+}}, %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NOEH-NEXT:   cir.br ^[[L:bb[0-9]+]]
+// CIR-NOEH-NEXT: ^[[CONT]]:
+// CIR-NOEH-NEXT:   cir.call @_ZN4Task12promise_type11return_voidEv(%[[PROMISE:[0-9]+]])
+// CIR-NOEH-NEXT:   cir.co_return
+// CIR-NOEH-NEXT: ^[[L]]:
+// CIR-NOEH-NEXT:   cir.call @live()
+// CIR-NOEH-NEXT:   cir.call @_ZN4Task12promise_type11return_voidEv(%[[PROMISE]])
+// CIR-NOEH-NEXT:   cir.co_return
 // CIR-NOEH-NEXT: }, finalSuspend : {
-// CIR-EH-NEXT:   ^bb2:  // no predecessors
+// CIR-EH-NEXT:     cir.call @live()
+// CIR-EH-NEXT:     cir.call @_ZN4Task12promise_type11return_voidEv(%[[PROMISE:[0-9]+]])
+// CIR-EH-NEXT:     cir.co_return
+// CIR-EH-NEXT:   ^[[CONT]]:
+// CIR-EH-NEXT:     cir.call @_ZN4Task12promise_type11return_voidEv(%[[PROMISE]])
+// CIR-EH-NEXT:     cir.co_return
+// CIR-EH-NEXT:   ^bb{{[0-9]+}}:  // no predecessors
 // CIR-EH-NEXT:     cir.yield
 // CIR-EH-NEXT:   } catch all
 
 // CIR-FLAT-LABEL: cir.func {{.*}} @_Z21label_after_co_returnb(
-// CIR-FLAT:         cir.goto "l"
-// CIR-FLAT:         cir.call @_ZN4Task12promise_type11return_voidEv(
+// CIR-FLAT:         %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
+// CIR-FLAT:         %[[ID:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-FLAT-NEXT:    cir.store %[[ID]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-FLAT:         cir.switch.flat %{{.+}} : !s32i, ^[[SCOPE_EXIT:bb[0-9]+]] [
+// CIR-FLAT:       ^[[SCOPE_EXIT]]:
+// CIR-FLAT:         cir.switch.flat %{{.+}} : !s32i, ^[[CONT:bb[0-9]+]] [
+// CIR-FLAT-NEXT:      1: ^[[GOTO_DEST:bb[0-9]+]]
+// CIR-FLAT-NEXT:    ]
+// CIR-FLAT-NEXT:  ^[[GOTO_DEST]]:
+// CIR-FLAT:         cir.store %{{.+}}, %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-FLAT-NEXT:    cir.br ^[[L:bb[0-9]+]]
+// CIR-FLAT-NEXT:  ^[[CONT]]:
+// CIR-FLAT-NEXT:    cir.call @_ZN4Task12promise_type11return_voidEv(
 // CIR-FLAT-NEXT:    cir.br ^[[FINAL:bb[0-9]+]]
-// CIR-FLAT-NEXT:  ^bb{{[0-9]+}}:  // no predecessors
-// CIR-FLAT-NEXT:    cir.label "l"
+// CIR-FLAT-NEXT:  ^[[L]]:
 // CIR-FLAT-NEXT:    cir.call @live()
 // CIR-FLAT-NEXT:    cir.call @_ZN4Task12promise_type11return_voidEv(
 // CIR-FLAT-NEXT:    cir.br ^[[FINAL]]
@@ -630,13 +661,29 @@ l:;
 }
 
 // CIR-LABEL: cir.func coroutine {{.*}} @_Z27empty_label_after_co_returnb(
+// CIR:         %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
 // CIR:         }, body : {
-// CIR:             cir.call @_ZN4Task12promise_type11return_voidEv(%[[PROMISE:[0-9]+]])
+// CIR:             cir.if {{.*}} {
+// CIR:               %[[ID:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:          cir.store %[[ID]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR:             cir.switch.flat %{{.+}} : !s32i, ^[[SCOPE_EXIT:bb[0-9]+]] [
+// CIR:           ^[[SCOPE_EXIT]]:
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      }
+// CIR-NEXT:      %{{.+}} = cir.load %[[SLOT]]
+// CIR-NEXT:      cir.switch.flat %{{.+}} : !s32i, ^{{bb[0-9]+}} [
+// CIR-NEXT:        1: ^[[GOTO_DEST:bb[0-9]+]]
+// CIR-NEXT:      ]
+// CIR-NEXT:    ^[[GOTO_DEST]]:
+// CIR:           cir.store %{{.+}}, %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NOEH-NEXT: cir.br ^[[L:bb[0-9]+]]
+// CIR-NOEH:    ^[[L]]:
+// CIR-NEXT:        cir.call @_ZN4Task12promise_type11return_voidEv(%[[PROMISE:[0-9]+]])
 // CIR-NEXT:        cir.co_return
-// CIR-NEXT:      ^bb1:  // no predecessors
-// CIR-NEXT:        cir.label "l"
-// CIR-NEXT:        cir.call @_ZN4Task12promise_type11return_voidEv(%[[PROMISE]])
-// CIR-NEXT:        cir.co_return
+// CIR-NOEH-NEXT: }, finalSuspend : {
+// CIR-EH-NEXT:   ^bb{{[0-9]+}}:  // pred
+// CIR-EH-NEXT:     cir.call @_ZN4Task12promise_type11return_voidEv(%[[PROMISE]])
+// CIR-EH-NEXT:     cir.co_return
 
 // OGCG-LABEL: define {{.*}} @_Z27empty_label_after_co_returnb(
 // OGCG:       {{^}}l:
@@ -655,13 +702,33 @@ l:
 }
 
 // CIR-LABEL: cir.func coroutine {{.*}} @_Z21co_return_after_labelb(
+// CIR:         %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
 // CIR:         }, body : {
-// CIR:             cir.label "l"
+// CIR:             cir.if {{.*}} {
+// CIR:               %[[ID:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:          cir.store %[[ID]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR:             cir.switch.flat %{{.+}} : !s32i, ^[[SCOPE_EXIT:bb[0-9]+]] [
+// CIR:           ^[[SCOPE_EXIT]]:
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      }
+// CIR-NEXT:      %{{.+}} = cir.load %[[SLOT]]
+// CIR-NEXT:      cir.switch.flat %{{.+}} : !s32i, ^{{bb[0-9]+}} [
+// CIR-NEXT:        1: ^[[GOTO_DEST:bb[0-9]+]]
+// CIR-NEXT:      ]
+// CIR-NEXT:    ^[[GOTO_DEST]]:
+// CIR:           cir.store %{{.+}}, %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NOEH-NEXT: cir.br ^[[L:bb[0-9]+]]
+// CIR-NOEH:    ^[[L]]:
 // CIR-NEXT:        cir.call @live()
 // CIR-NEXT:        cir.call @_ZN4Task12promise_type11return_voidEv(
 // CIR-NEXT:        cir.co_return
-// CIR-NOT:         @_ZN4Task12promise_type11return_voidEv
-// CIR:         }, finalSuspend : {
+// CIR-NOEH-NEXT: }, finalSuspend : {
+// CIR-EH-NEXT:   ^bb{{[0-9]+}}:  // pred
+// CIR-EH-NEXT:     cir.call @_ZN4Task12promise_type11return_voidEv(
+// CIR-EH-NEXT:     cir.co_return
+// CIR-EH-NEXT:   ^bb{{[0-9]+}}:  // no predecessors
+// CIR-EH-NEXT:     cir.yield
+// CIR-EH-NEXT:   } catch all
 
 // OGCG-LABEL: define {{.*}} @_Z21co_return_after_labelb(
 // OGCG:       {{^}}l:

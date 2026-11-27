@@ -856,18 +856,8 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
   if (it != entryBlock.end())
     return mlir::cast<cir::AllocaOp>(*it);
 
-  // Create a new cleanup dest slot at the start of the entry block.
-  mlir::OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPointToStart(&entryBlock);
-  cir::IntType s32Type =
-      cir::IntType::get(rewriter.getContext(), 32, /*isSigned=*/true);
-  cir::CIRDataLayout dataLayout(funcOp->getParentOfType<mlir::ModuleOp>());
-  cir::PointerType ptrToS32Type = cir::PointerType::get(
-      s32Type, dataLayout.getAllocaAddrSpace(rewriter.getContext()));
-  uint64_t alignment = dataLayout.getAlignment(s32Type, true).value();
-  auto allocaOp = cir::AllocaOp::create(
-      rewriter, loc, ptrToS32Type, "__cleanup_dest_slot",
-      /*alignment=*/rewriter.getI64IntegerAttr(alignment));
+  auto allocaOp =
+      cir::createDestSlot(funcOp, rewriter, loc, "__cleanup_dest_slot");
   allocaOp.setCleanupDestSlot(true);
   return allocaOp;
 }

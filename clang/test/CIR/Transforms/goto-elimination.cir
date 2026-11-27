@@ -37,15 +37,39 @@ cir.func @backward() {
   cir.goto "again"
 }
 
-// A goto nested in a region keeps its label; the label's other same-region
-// goto still becomes a branch.
-// CHECK-LABEL: cir.func @cross_region(
+// A goto out of an if inside a scope stores the label's id, leaves each
+// region through its yield, and is routed after each op by a dispatch on the
+// slot. The same-region goto to the label becomes a branch.
+// CHECK-LABEL: cir.func @out_of_if_in_scope(
+// CHECK:         %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
+// CHECK:         cir.store %{{.*}}, %[[SLOT]]
 // CHECK:         cir.scope {
-// CHECK:           cir.goto "out"
-// CHECK:         cir.br ^[[L:bb[0-9]+]]
-// CHECK:       ^[[L]]:
-// CHECK-NEXT:    cir.label "out"
-cir.func @cross_region(%arg0: !cir.bool) {
+// CHECK:           cir.if %{{.*}} {
+// CHECK-NEXT:        %[[ID:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT:        cir.store %[[ID]], %[[SLOT]]
+// CHECK-NEXT:        cir.br ^[[EXIT:bb[0-9]+]]
+// CHECK-NEXT:      ^[[EXIT]]:
+// CHECK-NEXT:        cir.yield
+// CHECK-NEXT:      }
+// CHECK-NEXT:      cir.br ^[[D1:bb[0-9]+]]
+// CHECK:         ^[[D1]]:
+// CHECK-NEXT:      %[[V1:.*]] = cir.load %[[SLOT]]
+// CHECK-NEXT:      cir.switch.flat %[[V1]] : !s32i, ^{{bb[0-9]+}} [
+// CHECK-NEXT:        1: ^{{bb[0-9]+}}
+// CHECK:           cir.yield
+// CHECK:         }
+// CHECK:         %[[V2:.*]] = cir.load %[[SLOT]]
+// CHECK-NEXT:    cir.switch.flat %[[V2]] : !s32i, ^[[CONT:bb[0-9]+]] [
+// CHECK-NEXT:      1: ^[[TO_OUT:bb[0-9]+]]
+// CHECK:       ^[[TO_OUT]]:
+// CHECK:         cir.store %{{.*}}, %[[SLOT]]
+// CHECK-NEXT:    cir.br ^[[OUT:bb[0-9]+]]
+// CHECK:       ^[[CONT]]:
+// CHECK-NEXT:    cir.br ^[[OUT]]
+// CHECK:       ^[[OUT]]:
+// CHECK-NOT:     cir.label
+// CHECK:         cir.return
+cir.func @out_of_if_in_scope(%arg0: !cir.bool) {
   cir.scope {
     cir.if %arg0 {
       cir.goto "out"
@@ -53,6 +77,86 @@ cir.func @cross_region(%arg0: !cir.bool) {
     cir.yield
   }
   cir.goto "out"
+^bb1:
+  cir.label "out"
+  cir.return
+}
+
+// A goto out of a loop body leaves it with cir.break.
+// CHECK-LABEL: cir.func @out_of_loop(
+// CHECK:         cir.while {
+// CHECK:         } do {
+// CHECK:           cir.store %{{.*}}, %[[SLOT:.*]] :
+// CHECK-NEXT:      cir.break
+// CHECK:         }
+// CHECK:         cir.switch.flat
+cir.func @out_of_loop(%arg0: !cir.bool) {
+  cir.while {
+    cir.condition(%arg0)
+  } do {
+    cir.goto "out"
+  }
+  cir.br ^bb1
+^bb1:
+  cir.label "out"
+  cir.return
+}
+
+// A goto out of a cleanup scope body yields in place, so the cleanup runs.
+// CHECK-LABEL: cir.func @out_of_cleanup(
+// CHECK:         cir.cleanup.scope {
+// CHECK:           cir.store %{{.*}}, %{{.*}} :
+// CHECK-NEXT:      cir.yield
+// CHECK:         } cleanup normal {
+// CHECK-NEXT:      cir.call @g()
+// CHECK:         cir.switch.flat
+cir.func @out_of_cleanup(%arg0: !cir.bool) {
+  cir.cleanup.scope {
+    cir.goto "out"
+  } cleanup normal {
+    cir.call @g() : () -> ()
+    cir.yield
+  }
+  cir.br ^bb1
+^bb1:
+  cir.label "out"
+  cir.return
+}
+
+// The exit of a region that ends with code before its yield is a new block
+// holding only the yield, so the goto skips that code.
+// CHECK-LABEL: cir.func @exit_block_skips_code(
+// CHECK:         cir.scope {
+// CHECK:           cir.br ^[[EXIT:bb[0-9]+]]
+// CHECK:           cir.call @g()
+// CHECK-NEXT:      cir.br ^[[EXIT]]
+// CHECK-NEXT:    ^[[EXIT]]:
+// CHECK-NEXT:      cir.yield
+cir.func @exit_block_skips_code(%arg0: !cir.bool) {
+  cir.scope {
+    cir.goto "out"
+  ^bb1:
+    cir.call @g() : () -> ()
+    cir.yield
+  }
+  cir.br ^bb1
+^bb1:
+  cir.label "out"
+  cir.return
+}
+
+// A goto out of a loop's condition region is not handled yet: it stays, with
+// its label.
+// CHECK-LABEL: cir.func @from_loop_cond(
+// CHECK:         cir.goto "out"
+// CHECK:         cir.label "out"
+cir.func @from_loop_cond(%arg0: !cir.bool) {
+  cir.while {
+    cir.goto "out"
+  } do {
+    cir.yield
+  }
+  cir.br ^bb1
 ^bb1:
   cir.label "out"
   cir.return
@@ -77,5 +181,29 @@ cir.func @from_global() {
   cir.br ^bb1
 ^bb1:
   cir.label "entry" address_taken
+  cir.return
+}
+
+// The function's slot can't be shared with an OpenMP region, which may run
+// on several threads or be isolated from the function, so a goto inside one
+// stays unless it targets its own region.
+// CHECK-LABEL: cir.func @in_omp_parallel(
+// CHECK-NOT:     goto_dest_slot
+// CHECK:         cir.goto "l"
+// CHECK:         cir.label "l"
+cir.func @in_omp_parallel(%arg0: !cir.bool) {
+  omp.parallel {
+    cir.scope {
+      cir.if %arg0 {
+        cir.goto "l"
+      }
+      cir.call @g() : () -> ()
+      cir.br ^bb1
+    ^bb1:
+      cir.label "l"
+      cir.yield
+    }
+    omp.terminator
+  }
   cir.return
 }
