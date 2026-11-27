@@ -122,7 +122,7 @@ struct FieldParser<std::optional<char>> {
 
   static FailureOr<std::optional<char>> parse(AsmParser &parser) {
     std::string str;
-    auto loc = parser.getCurrentLocation();
+    SMLoc loc = parser.getCurrentLocation();
     if (failed(parser.parseOptionalKeywordOrString(&str)))
       return {std::nullopt};
     if (str.size() != 1)
@@ -137,7 +137,7 @@ template <>
 struct FieldParser<char> {
   static FailureOr<char> parse(AsmParser &parser) {
     std::string str;
-    auto loc = parser.getCurrentLocation();
+    SMLoc loc = parser.getCurrentLocation();
     if (failed(parser.parseKeywordOrString(&str)))
       return failure();
     if (str.size() != 1)
