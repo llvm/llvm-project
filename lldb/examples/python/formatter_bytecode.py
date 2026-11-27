@@ -158,6 +158,8 @@ define_selector(0x24, "clone")
 define_selector(0x25, "get_pointee_type")
 define_selector(0x26, "get_byte_size")
 define_selector(0x27, "create_child_at_offset")
+define_selector(0x28, "get_byte_stride")
+define_selector(0x29, "create_value_from_address")
 
 define_selector(0x40, "read_memory_byte")
 define_selector(0x41, "read_memory_uint32")
@@ -818,12 +820,21 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
             elif sel == sel_get_byte_size:
                 sbtype = data.pop()
                 data.append(sbtype.GetByteSize())
+            elif sel == sel_get_byte_stride:
+                sbtype = data.pop()
+                data.append(sbtype.GetByteStride())
             elif sel == sel_create_child_at_offset:
                 sbtype = data.pop()
                 offset = data.pop()
                 name = data.pop()
                 valobj = data.pop()
                 data.append(valobj.CreateChildAtOffset(name, offset, sbtype))
+            elif sel == sel_create_value_from_address:
+                sbtype = data.pop()
+                address = data.pop()
+                name = data.pop()
+                valobj = data.pop()
+                data.append(valobj.CreateValueFromAddress(name, address, sbtype))
             elif sel == sel_strlen:
                 s = data.pop()
                 data.append(len(s) if s else 0)
@@ -866,7 +877,9 @@ _BUILTINS = {
     "Cast": "@cast",
     "Clone": "@clone",
     "CreateChildAtOffset": "@create_child_at_offset",
+    "CreateValueFromAddress": "@create_value_from_address",
     "GetByteSize": "@get_byte_size",
+    "GetByteStride": "@get_byte_stride",
     "GetChildAtIndex": "@get_child_at_index",
     "GetChildMemberWithName": "@get_child_with_name",
     "GetIndexOfChildWithName": "@get_child_index",
@@ -1771,6 +1784,30 @@ if __name__ == "__main__":
             )
             self.assertEqual(interpret(methods["get_child_index"], [], [{}, "x"]), -1)
             self.assertEqual(interpret(methods["get_num_children"], [], [{}]), 5)
+
+        def test_byte_stride(self):
+            methods = self.compile_methods(
+                """
+                class Synthetic:
+                    def __init__(self, valobj, _):
+                        self.valobj = valobj
+
+                    def num_children(self):
+                        return self.valobj.GetType().GetByteStride()
+                """
+            )
+
+            class FakeType:
+                def GetByteStride(self):
+                    return 8
+
+            class FakeTypedValue:
+                def GetType(self):
+                    return FakeType()
+
+            self_dict = {}
+            interpret(methods["init"], [], [self_dict, FakeTypedValue()])
+            self.assertEqual(interpret(methods["get_num_children"], [], [self_dict]), 8)
 
         def test_boolean(self):
             def run(expr, *args, valobj=None):

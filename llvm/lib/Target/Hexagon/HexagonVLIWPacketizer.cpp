@@ -58,6 +58,14 @@ using namespace llvm;
 cl::opt<bool> DisablePacketizer("disable-packetizer", cl::Hidden,
                                 cl::desc("Disable Hexagon packetizer pass"));
 
+cl::opt<bool> OneFloatPerPacket(
+    "single-float-packet", cl::Hidden,
+    cl::desc("Allow only one single floating point instruction in a packet"));
+
+cl::opt<bool> OneComplexPerPacket(
+    "single-complex-packet", cl::Hidden,
+    cl::desc("Allow only one complex instruction in a packet"));
+
 static cl::opt<bool> Slot1Store("slot1-store-slot0-load", cl::Hidden,
                                 cl::init(true),
                                 cl::desc("Allow slot1 store and slot0 load"));
@@ -102,7 +110,6 @@ namespace {
 
   private:
     const HexagonInstrInfo *HII = nullptr;
-    const HexagonRegisterInfo *HRI = nullptr;
     const bool Minimal = false;
   };
 
@@ -129,6 +136,7 @@ HexagonPacketizerList::HexagonPacketizerList(MachineFunction &MF,
 
   addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
+  addMutation(std::make_unique<HexagonSubtarget::HMXActivateWeightMutation>());
   addMutation(std::make_unique<HexagonSubtarget::BankConflictMutation>());
   addMutation(std::make_unique<HexagonSubtarget::HLXPseudoMutation>());
 }
@@ -198,7 +206,6 @@ bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
 
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();
-  HRI = HST.getRegisterInfo();
   auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto *MBPI =
@@ -851,9 +858,9 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
   if (PI.isInlineAsm())
     return false;
 
-  // IMPLICIT_DEFs won't materialize as real instructions, so .new makes no
-  // sense.
-  if (PI.isImplicitDef())
+  // IMPLICIT_DEFs and FREEZEs won't materialize as real instructions, so .new
+  // makes no sense.
+  if (PI.isImplicitDef() || PI.getOpcode() == TargetOpcode::FREEZE)
     return false;
 
   // If dependency is through an implicitly defined register, we should not
@@ -1041,7 +1048,7 @@ bool HexagonPacketizerList::ignorePseudoInstruction(const MachineInstr &MI,
   if (MI.isInlineAsm())
     return false;
 
-  if (MI.isImplicitDef())
+  if (MI.isImplicitDef() || MI.getOpcode() == TargetOpcode::FREEZE)
     return false;
 
   // We check if MI has any functional units mapped to it. If it doesn't,
@@ -1095,6 +1102,11 @@ bool HexagonPacketizerList::isSoloInstruction(const MachineInstr &MI) {
 // since every test would need to be repeated with the MI and MJ reversed.
 static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
       const HexagonInstrInfo &HII) {
+  if (OneFloatPerPacket && HII.isFloat(MI) && HII.isFloat(MJ))
+    return true;
+  if (OneComplexPerPacket && HII.isComplex(MI) && HII.isComplex(MJ))
+    return true;
+
   const MachineFunction *MF = MI.getParent()->getParent();
   if (MF->getSubtarget<HexagonSubtarget>().hasV60OpsOnly() &&
       HII.isHVXMemWithAIndirect(MI, MJ))
@@ -1116,6 +1128,23 @@ static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
   // New-value stores cannot coexist with any other stores.
   if (HII.isNewValueStore(MI) && MJ.mayStore())
     return true;
+
+  const auto &MID = MI.getDesc();
+  const auto &MJD = MJ.getDesc();
+  bool isHVXVS3SRC = HexagonII::getTSFlag(MID, HexagonII::isHVXVS3SRCPos);
+  if (isHVXVS3SRC) {
+    bool HVXALU2SRC = HexagonII::getTSFlag(MJD, HexagonII::isHVXALU2SRCPos);
+    if (HVXALU2SRC) // Checking for a Non Unary HVX ALU Operation.
+      return true;
+    const uint64_t V = HII.getType(MJ);
+    // HVX permute instruction cannot be paired with 3 source shift.
+    if (V == HexagonII::TypeCVI_VP)
+      return true;
+    // v79 onwards, a packet can have two HVX shift instructions.
+    // But an HVX shift instruction cannot be paired with 3 source shift.
+    if (V == HexagonII::TypeCVI_VS)
+      return true;
+  }
 
   // An HLX instruction with a 64-bit scalar source cannot be paired with
   // another HLX instruction using a scalar or immediate source. Loads and
@@ -1553,6 +1582,16 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       // J is first, I is second.
       bool LoadJ = J.mayLoad(), StoreJ = J.mayStore();
       bool LoadI = I.mayLoad(), StoreI = I.mayStore();
+
+      // BankConflictMutation adds an artificial edge between loads that
+      // likely map to the same bank. Other passes add artificial edges too,
+      // so re-check the condition before keeping the loads apart.
+      if (SUJ->Succs[i].isArtificial() &&
+          MF.getSubtarget<HexagonSubtarget>().mayHaveBankConflict(J, I, *HII)) {
+        FoundSequentialDependence = true;
+        break;
+      }
+
       bool NVStoreJ = HII->isNewValueStore(J);
       bool NVStoreI = HII->isNewValueStore(I);
       bool IsVecJ = HII->isHVXVec(J) || HII->isHLXVec(J);
@@ -1745,13 +1784,40 @@ HexagonPacketizerList::addToPacket(MachineInstr &MI) {
   PacketStalls |= producesStall(MI);
   PacketStallCycles = std::max(PacketStallCycles, calcStall(MI));
 
-  if (MI.isImplicitDef()) {
+  if (MI.isImplicitDef() || MI.getOpcode() == TargetOpcode::FREEZE) {
     // Add to the packet to allow subsequent instructions to be checked
     // properly.
     CurrentPacketMIs.push_back(&MI);
     return MII;
   }
   assert(ResourceTracker->canReserveResources(MI));
+
+  MachineBasicBlock::iterator nextMII = MII;
+  if (std::next(MII) != MI.getParent()->end()) {
+    MachineInstr &nextMI = *++nextMII;
+    if (HII->isActivateWeightPair(MI, nextMI)) {
+      for (auto J : CurrentPacketMIs) {
+        MachineInstr &JMI = *J;
+        if (HII->isDependent(JMI, MI) || HII->isDependent(JMI, nextMI)) {
+          endPacket(MBB, MI);
+          break;
+        }
+      }
+      ResourceTracker->reserveResources(MI);
+      if (ResourceTracker->canReserveResources(nextMI))
+        ResourceTracker->reserveResources(nextMI);
+      else {
+        endPacket(MBB, MI);
+        assert(ResourceTracker->canReserveResources(MI));
+        ResourceTracker->reserveResources(MI);
+        assert(ResourceTracker->canReserveResources(nextMI));
+        ResourceTracker->reserveResources(nextMI);
+      }
+      CurrentPacketMIs.push_back(&MI);
+      CurrentPacketMIs.push_back(&nextMI);
+      return nextMII;
+    }
+  }
 
   bool ExtMI = HII->isExtended(MI) || HII->isConstExtended(MI);
   bool Good = true;

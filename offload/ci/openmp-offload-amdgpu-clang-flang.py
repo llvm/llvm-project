@@ -34,6 +34,7 @@ with worker.run(
                 "-DFLANG_RUNTIME_F128_MATH_LIB=libquadmath",
                 "-DCMAKE_CXX_STANDARD=17",
                 "-DLIBOMPTARGET_PLUGINS_TO_BUILD=amdgpu;host",
+                "-DLIBOMPTEST_BUILD_UNITTESTS=ON",
             ]
         )
 
@@ -41,14 +42,10 @@ with worker.run(
         w.run_ninja(builddir=llvmbuilddir, ccache_stats=True)
 
     with w.step("test-openmp"):
-        w.run_ninja(
-            ["check-openmp"], add_env={"HSA_ENABLE_SDMA": "0"}, builddir=llvmbuilddir
-        )
+        w.run_ninja(["check-openmp"], builddir=llvmbuilddir)
 
     with w.step("Add check check-offload"):
-        w.run_ninja(
-            ["check-offload"], add_env={"HSA_ENABLE_SDMA": "0"}, builddir=llvmbuilddir
-        )
+        w.run_ninja(["check-offload"], builddir=llvmbuilddir)
 
     with w.step("LLVM: Install", halt_on_fail=True):
         w.run_ninja(["install"], builddir=llvmbuilddir)

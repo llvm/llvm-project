@@ -75,6 +75,9 @@ inline bool isNamedBitField(RecordMemberKind kind) {
 /// void, or abstract types.
 bool isSized(mlir::Type ty);
 
+/// Returns true if the type is a `cir::IntType` representing a _BitInt.
+bool isBitIntType(mlir::Type ty);
+
 /// Returns the CIR floating-point type for the given semantics, or a null
 /// type if CIR has no type for it (e.g. PPCDoubleDouble or a Float8 format).
 /// Mirrors llvm::Type::getFloatingPointTy.

@@ -1122,8 +1122,6 @@ void SelectionDAGBuilder::init(GCFunctionInfo *gfi, BatchAAResults *aa,
   LPadToCallSiteMap.clear();
   this->TTI = &TTI;
   SL->init(DAG.getTargetLoweringInfo(), TM, DAG.getDataLayout());
-  AssignmentTrackingEnabled = isAssignmentTrackingEnabled(
-      *DAG.getMachineFunction().getFunction().getParent());
   CanDescribeGlobalAddressInLocationList =
       canDescribeGlobalAddressInLocationList(DAG.getMachineFunction());
 }
@@ -2683,11 +2681,10 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   // is.
   Value *BrCond = I.getCondition();
   auto ShouldCountInsn = [&RhsDeps, &BrCond](const Instruction *Ins) {
-    for (const auto *U : Ins->users()) {
+    for (const Instruction *UIns : Ins->users()) {
       // If user is independent of RHS calculation we don't need to count it.
-      if (auto *UIns = dyn_cast<Instruction>(U))
-        if (UIns != BrCond && !RhsDeps.contains(UIns))
-          return false;
+      if (UIns != BrCond && !RhsDeps.contains(UIns))
+        return false;
     }
     return true;
   };
@@ -5480,49 +5477,7 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
 
 void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   SDLoc dl = getCurSDLoc();
-  ISD::NodeType NT;
-  switch (I.getOperation()) {
-  default: llvm_unreachable("Unknown atomicrmw operation");
-  case AtomicRMWInst::Xchg: NT = ISD::ATOMIC_SWAP; break;
-  case AtomicRMWInst::Add:  NT = ISD::ATOMIC_LOAD_ADD; break;
-  case AtomicRMWInst::Sub:  NT = ISD::ATOMIC_LOAD_SUB; break;
-  case AtomicRMWInst::And:  NT = ISD::ATOMIC_LOAD_AND; break;
-  case AtomicRMWInst::Nand: NT = ISD::ATOMIC_LOAD_NAND; break;
-  case AtomicRMWInst::Or:   NT = ISD::ATOMIC_LOAD_OR; break;
-  case AtomicRMWInst::Xor:  NT = ISD::ATOMIC_LOAD_XOR; break;
-  case AtomicRMWInst::Max:  NT = ISD::ATOMIC_LOAD_MAX; break;
-  case AtomicRMWInst::Min:  NT = ISD::ATOMIC_LOAD_MIN; break;
-  case AtomicRMWInst::UMax: NT = ISD::ATOMIC_LOAD_UMAX; break;
-  case AtomicRMWInst::UMin: NT = ISD::ATOMIC_LOAD_UMIN; break;
-  case AtomicRMWInst::FAdd: NT = ISD::ATOMIC_LOAD_FADD; break;
-  case AtomicRMWInst::FSub: NT = ISD::ATOMIC_LOAD_FSUB; break;
-  case AtomicRMWInst::FMax: NT = ISD::ATOMIC_LOAD_FMAX; break;
-  case AtomicRMWInst::FMin: NT = ISD::ATOMIC_LOAD_FMIN; break;
-  case AtomicRMWInst::FMaximum:
-    NT = ISD::ATOMIC_LOAD_FMAXIMUM;
-    break;
-  case AtomicRMWInst::FMinimum:
-    NT = ISD::ATOMIC_LOAD_FMINIMUM;
-    break;
-  case AtomicRMWInst::FMaximumNum:
-    NT = ISD::ATOMIC_LOAD_FMAXIMUMNUM;
-    break;
-  case AtomicRMWInst::FMinimumNum:
-    NT = ISD::ATOMIC_LOAD_FMINIMUMNUM;
-    break;
-  case AtomicRMWInst::UIncWrap:
-    NT = ISD::ATOMIC_LOAD_UINC_WRAP;
-    break;
-  case AtomicRMWInst::UDecWrap:
-    NT = ISD::ATOMIC_LOAD_UDEC_WRAP;
-    break;
-  case AtomicRMWInst::USubCond:
-    NT = ISD::ATOMIC_LOAD_USUB_COND;
-    break;
-  case AtomicRMWInst::USubSat:
-    NT = ISD::ATOMIC_LOAD_USUB_SAT;
-    break;
-  }
+  ISD::NodeType NT = getAtomicRMWOpcode(I.getOperation());
   AtomicOrdering Ordering = I.getOrdering();
   SyncScope::ID SSID = I.getSyncScopeID();
 
@@ -6437,7 +6392,7 @@ static SDValue expandDivFix(unsigned Opcode, const SDLoc &DL,
 // bitcasted, or split argument. Returns a list of <Register, size in bits>
 static void
 getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
-                     const SDValue &N) {
+                     const SDValue &N, const DataLayout &DL) {
   switch (N.getOpcode()) {
   case ISD::CopyFromReg: {
     SDValue Op = N.getOperand(1);
@@ -6449,13 +6404,21 @@ getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
   case ISD::AssertZext:
   case ISD::AssertSext:
   case ISD::TRUNCATE:
-    getUnderlyingArgRegs(Regs, N.getOperand(0));
+    getUnderlyingArgRegs(Regs, N.getOperand(0), DL);
     return;
   case ISD::BUILD_PAIR:
+    // Fragment offsets count from the lowest-addressed byte, so on
+    // big-endian targets the high half (operand 1) comes first.
+    if (DL.isBigEndian()) {
+      getUnderlyingArgRegs(Regs, N.getOperand(1), DL);
+      getUnderlyingArgRegs(Regs, N.getOperand(0), DL);
+      return;
+    }
+    [[fallthrough]];
   case ISD::BUILD_VECTOR:
   case ISD::CONCAT_VECTORS:
     for (SDValue Op : N->op_values())
-      getUnderlyingArgRegs(Regs, Op);
+      getUnderlyingArgRegs(Regs, Op, DL);
     return;
   default:
     return;
@@ -6583,7 +6546,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
 
   SmallVector<std::pair<Register, TypeSize>, 8> ArgRegsAndSizes;
   if (!Op && N.getNode()) {
-    getUnderlyingArgRegs(ArgRegsAndSizes, N);
+    getUnderlyingArgRegs(ArgRegsAndSizes, N, DAG.getDataLayout());
     Register Reg;
     if (ArgRegsAndSizes.size() == 1)
       Reg = ArgRegsAndSizes.front().first;

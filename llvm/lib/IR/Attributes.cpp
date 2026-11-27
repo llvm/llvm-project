@@ -1033,11 +1033,11 @@ AttributeSet AttributeSet::removeAttribute(LLVMContext &C,
 
 AttributeSet AttributeSet::removeAttributes(LLVMContext &C,
                                             const AttributeMask &Attrs) const {
-  AttrBuilder B(C, *this);
   // If there is nothing to remove, directly return the original set.
-  if (!B.overlaps(Attrs))
+  if (none_of(*this, [&](Attribute A) { return Attrs.contains(A); }))
     return *this;
 
+  AttrBuilder B(C, *this);
   B.remove(Attrs);
   return get(C, B);
 }
@@ -2880,4 +2880,16 @@ void AttributeFuncs::updateMinLegalVectorWidthAttr(Function &Fn,
     if (Width > OldWidth)
       Fn.addFnAttr("min-legal-vector-width", llvm::utostr(Width));
   }
+}
+
+AttributeSet AttributeFuncs::dropRetOnlyCaptureComponents(
+    LLVMContext &C, AttributeSet ParamAttrs, Type *RetTy) {
+  if (RetTy->isPointerTy())
+    return ParamAttrs;
+  CaptureInfo CI = ParamAttrs.getCaptureInfo();
+  if (capturesNothing(CI.getRetComponents() & ~CI.getOtherComponents()))
+    return ParamAttrs;
+  AttrBuilder B(C, ParamAttrs);
+  B.addCapturesAttr(CaptureInfo(CI.getOtherComponents()));
+  return AttributeSet::get(C, B);
 }

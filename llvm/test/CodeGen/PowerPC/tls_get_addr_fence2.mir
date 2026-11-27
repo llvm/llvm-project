@@ -4,9 +4,9 @@
 --- |
   target datalayout = "e-m:e-i64:64-n32:64"
   target triple = "powerpc64le-unknown-linux-gnu"
-  
+
   @tls_var = external thread_local local_unnamed_addr global i32
-  
+
   define i32 @tls_func() local_unnamed_addr {
   entry:
     %0 = load i32, ptr @tls_var
@@ -21,10 +21,9 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-liveins:         
+liveins:
   - { reg: '$x2' }
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -41,9 +40,9 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   savePoint:       []
   restorePoint:    []
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0.entry:
     liveins: $x2

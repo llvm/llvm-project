@@ -60,7 +60,7 @@ struct T load_atomic_struct() {
 }
 
 // CIR: %[[RET_ADDR:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_T>
-// CIR: %[[RET_VAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_T>
+// CIR: %[[RET_VAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_T>
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_anon_struct>
 // CIR: %[[NON_ATOMIC_TMP_ADDR:.*]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!rec_anon_struct>
 // CIR: %[[A_U32:.*]] = cir.cast bitcast %[[A_ADDR]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u32i>

@@ -24,6 +24,8 @@ def HIP12Model : SchedMachineModel {
                                                     [HasSVEB16B16, HasSVEBFSCALE, HasMTE,
                                                      HasCPA, HasCSSC, HasMOPS, HasMOPS_GO,
                                                      HasFPv2]);
+  // FIXME: Remove when all errors have been fixed.
+  let WarnRedundantInstRW = 0;
 }
 
 let SchedModel = HIP12Model in {

@@ -6,7 +6,6 @@
 // RUN: %clang_cc1 -triple x86_64 -verify=x86_64 -fsyntax-only %s
 // RUN: %clang_cc1 -triple nvptx64-unknown-cuda -fcuda-is-device -x cuda -verify=ignored -fsyntax-only %s
 // RUN: %clang_cc1 -triple amdgpu -verify=ignored -fsyntax-only %s
-// RUN: %clang_cc1 -triple r600 -verify=ignored -fsyntax-only %s
 // RUN: %clang_cc1 -triple spirv-linux-vulkan-library -verify=ignored -fsyntax-only %s
 // RUN: %clang_cc1 -triple spirv32-unknown-unknown -verify=ignored -fsyntax-only %s
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -verify=ignored -fsyntax-only %s
@@ -58,7 +57,7 @@ void __attribute((model("extreme"))) h() {} // unsupported-warning {{unknown att
 
 #if !defined(__CUDA__) || !defined(__CUDA_ARCH__)
 // if we are compiling for non-cuda host, or host mode in a CUDA compile
-#if !defined(__AMDGCN__) && !defined(__R600__) && !defined(__SPIRV__)
+#if !defined(__AMDGCN__) && !defined(__SPIRV__)
 // for all non-cuda hosts, above targets don't support thread_local
 thread_local
 #endif

@@ -89,6 +89,7 @@ static_library("LLVMARMCodeGen") {
   sources = [
     "A15SDOptimizer.cpp",
     "ARMAsmPrinter.cpp",
+    "ARMAvoidTrailingCall.cpp",
     "ARMBaseInstrInfo.cpp",
     "ARMBaseRegisterInfo.cpp",
     "ARMBasicBlockInfo.cpp",

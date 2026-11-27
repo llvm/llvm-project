@@ -180,7 +180,18 @@ namespace {
 
       // OptFor[Min]Size are used in pattern predicates that isel is matching.
       OptForMinSize = MF.getFunction().hasMinSize();
-      return SelectionDAGISel::runOnMachineFunction(MF);
+      bool Changed = SelectionDAGISel::runOnMachineFunction(MF);
+
+      // The models arrive in any order, so check for a mix after selection.
+      const X86MachineFunctionInfo *MFI = MF.getInfo<X86MachineFunctionInfo>();
+      bool HasAMX = MFI->getAMXProgModel() != AMXProgModelEnum::None;
+      bool HasACE = MFI->getACEProgModel() != ACEProgModelEnum::ACE_None;
+      if ((MFI->getAMXProgModel() == AMXProgModelEnum::ManagedRA && HasACE) ||
+          (MFI->getACEProgModel() == ACEProgModelEnum::ACE_ManagedRA && HasAMX))
+        MF.getFunction().getContext().emitError(
+            MF.getName() + ": Failed to config tile register, AMX and ACE "
+                           "tiles need different configurations");
+      return Changed;
     }
 
     void emitFunctionEntryCode() override;
@@ -822,7 +833,7 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
   if (Root->getOpcode() == ISD::INSERT_SUBVECTOR &&
       isNullConstant(Root->getOperand(2)) &&
       (Root->getOperand(0).isUndef() ||
-       ISD::isBuildVectorAllZeros(Root->getOperand(0).getNode())))
+       ISD::isBuildVectorAllZeros(Root->getOperand(0))))
     return false;
 
   return true;
@@ -1076,7 +1087,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         N->getSimpleValueType(0).isVector() && !mayPreventLoadFold()) {
       APInt SplatVal;
       if (!ISD::isBuildVectorOfConstantSDNodes(
-              peekThroughBitcasts(N->getOperand(0)).getNode()) &&
+              peekThroughBitcasts(N->getOperand(0))) &&
           X86::isConstantSplat(N->getOperand(1), SplatVal) &&
           SplatVal.isOne()) {
         SDLoc DL(N);
@@ -5103,7 +5114,7 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   // Identify and (optionally) peel an outer NOT that wraps a pure logic tree
   auto tryPeelOuterNotWrappingLogic = [&](SDNode *Op) {
     if (Op->getOpcode() == ISD::XOR && Op->hasOneUse() &&
-        ISD::isBuildVectorAllOnes(Op->getOperand(1).getNode())) {
+        ISD::isBuildVectorAllOnes(Op->getOperand(1))) {
       SDValue InnerOp = getFoldableLogicOp(Op->getOperand(0));
 
       if (!InnerOp)
@@ -5157,7 +5168,7 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   // TODO: There may be a bitcast before the xor that we should peek through.
   auto PeekThroughNot = [](SDValue &Op, SDNode *&Parent, uint8_t &Magic) {
     if (Op.getOpcode() == ISD::XOR && Op.hasOneUse() &&
-        ISD::isBuildVectorAllOnes(Op.getOperand(1).getNode())) {
+        ISD::isBuildVectorAllOnes(Op.getOperand(1))) {
       Magic = ~Magic;
       Parent = Op.getNode();
       Op = Op.getOperand(0);
@@ -5353,11 +5364,11 @@ bool X86DAGToDAGISel::tryVPTESTM(SDNode *Root, SDValue Setcc,
   SDValue SetccOp1 = Setcc.getOperand(1);
 
   // Canonicalize the all zero vector to the RHS.
-  if (ISD::isBuildVectorAllZeros(SetccOp0.getNode()))
+  if (ISD::isBuildVectorAllZeros(SetccOp0))
     std::swap(SetccOp0, SetccOp1);
 
   // See if we're comparing against zero.
-  if (!ISD::isBuildVectorAllZeros(SetccOp1.getNode()))
+  if (!ISD::isBuildVectorAllZeros(SetccOp1))
     return false;
 
   SDValue N0 = SetccOp0;
@@ -5554,6 +5565,60 @@ bool X86DAGToDAGISel::tryMatchBitSelect(SDNode *N) {
                         Ternlog.getNode(), A, B, C, 0xCA);
 }
 
+// Record which programming model the function drives its ACE tiles with, for
+// the tile configuration passes. The AMX intrinsics do the same below.
+static void recordACEProgModel(SelectionDAG *DAG, unsigned IntNo) {
+  ACEProgModelEnum Model;
+  switch (IntNo) {
+  default:
+    return;
+  case Intrinsic::x86_acev1_tilezero:
+  case Intrinsic::x86_acev1_tilemovrowextract:
+  case Intrinsic::x86_acev1_tcvtrowd2ps:
+  case Intrinsic::x86_acev1_tcvtrowps2bf16h:
+  case Intrinsic::x86_acev1_tcvtrowps2bf16l:
+  case Intrinsic::x86_acev1_tcvtrowps2phh:
+  case Intrinsic::x86_acev1_tcvtrowps2phl:
+  // The row and column inserts are custom lowered, so they never get here and
+  // record their model in LowerINTRINSIC_W_CHAIN instead.
+  case Intrinsic::x86_acev1_top2bf16ps:
+  case Intrinsic::x86_acev1_top4buud:
+  case Intrinsic::x86_acev1_top4busd:
+  case Intrinsic::x86_acev1_top4bssd:
+  case Intrinsic::x86_acev1_top4bsud:
+  case Intrinsic::x86_acev1_top4mxhf8ps:
+  case Intrinsic::x86_acev1_top4mxbhf8ps:
+  case Intrinsic::x86_acev1_top4mxhbf8ps:
+  case Intrinsic::x86_acev1_top4mxbf8ps:
+  case Intrinsic::x86_acev1_top4mxbssps:
+    Model = ACEProgModelEnum::ACE_DirectReg;
+    break;
+  case Intrinsic::x86_acev1_tilezero_internal:
+  case Intrinsic::x86_acev1_tilemovrowextract_internal:
+  case Intrinsic::x86_acev1_tcvtrowd2ps_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2bf16h_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2bf16l_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2phh_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2phl_internal:
+  case Intrinsic::x86_acev1_tilemovcolinsert_internal:
+  case Intrinsic::x86_acev1_tilemovrowinsert_internal:
+  case Intrinsic::x86_acev1_top2bf16ps_internal:
+  case Intrinsic::x86_acev1_top4buud_internal:
+  case Intrinsic::x86_acev1_top4busd_internal:
+  case Intrinsic::x86_acev1_top4bssd_internal:
+  case Intrinsic::x86_acev1_top4bsud_internal:
+  case Intrinsic::x86_acev1_top4mxhf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbhf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxhbf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbssps_internal:
+    Model = ACEProgModelEnum::ACE_ManagedRA;
+    break;
+  }
+  MachineFunction &MF = DAG->getMachineFunction();
+  MF.getInfo<X86MachineFunctionInfo>()->setACEProgModel(&MF, Model);
+}
+
 void X86DAGToDAGISel::Select(SDNode *Node) {
   MVT NVT = Node->getSimpleValueType(0);
   unsigned Opcode = Node->getOpcode();
@@ -5569,6 +5634,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   default: break;
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned IntNo = Node->getConstantOperandVal(1);
+    recordACEProgModel(CurDAG, IntNo);
     switch (IntNo) {
     default: break;
     case Intrinsic::x86_encodekey128:
@@ -5654,6 +5720,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::INTRINSIC_VOID: {
     unsigned IntNo = Node->getConstantOperandVal(1);
+    recordACEProgModel(CurDAG, IntNo);
     switch (IntNo) {
     default: break;
     case Intrinsic::x86_sse3_monitor:

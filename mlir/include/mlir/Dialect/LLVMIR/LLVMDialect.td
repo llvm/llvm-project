@@ -14,9 +14,12 @@ include "mlir/IR/DialectBase.td"
 def LLVM_Dialect : Dialect {
   let name = "llvm";
   let cppNamespace = "::mlir::LLVM";
+  let useDefaultOperationRegistration = 1;
 
   let hasConstantMaterializer = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
+  let useDefaultTypePrinterParser = 0;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
   let hasOperationAttrVerify = 1;
@@ -125,16 +128,10 @@ def LLVM_Dialect : Dialect {
                                            Type paramType,
                                            NamedAttribute paramAttr);
 
-    /// Register all types.
-    void registerTypes();
-
     /// A cache storing compatible LLVM types that have been verified. This
     /// can save us lots of verification time if there are many occurrences
     /// of some deeply-nested aggregate types in the program.
     ThreadLocalCache<DenseSet<Type>> compatibleTypes;
-
-    /// Register the attributes of this dialect.
-    void registerAttributes();
   }];
 }
 

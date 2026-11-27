@@ -1,0 +1,32 @@
+// RUN: cir-opt %s -inline -o - | FileCheck %s
+
+// The inliner builds a call graph, which asks every call for its callee. An
+// indirect call has to answer with its function pointer operand, not with an
+// empty callable.
+
+!fty = !cir.func<(!cir.double) -> !cir.double>
+
+module {
+  cir.func @sq(%x: !cir.double) -> !cir.double {
+    %y = cir.fmul %x, %x : !cir.double
+    cir.return %y : !cir.double
+  }
+
+  cir.func @apply(%fp: !cir.ptr<!fty>, %x: !cir.double) -> !cir.double {
+    %r = cir.call %fp(%x) : (!cir.ptr<!fty>, !cir.double) -> !cir.double
+    cir.return %r : !cir.double
+  }
+
+  cir.func @g(%x: !cir.double) -> !cir.double {
+    %a = cir.call @sq(%x) : (!cir.double) -> !cir.double
+    cir.return %a : !cir.double
+  }
+}
+
+// CHECK-LABEL: cir.func @apply(
+// CHECK-SAME:    %[[FP:.*]]: !cir.ptr<!cir.func<(!cir.double) -> !cir.double>>, %[[X:.*]]: !cir.double)
+// CHECK:         %[[R:.*]] = cir.call %[[FP]](%[[X]])
+// CHECK:         cir.return %[[R]]
+
+// CHECK-LABEL: cir.func @g(
+// CHECK:         cir.call @sq(

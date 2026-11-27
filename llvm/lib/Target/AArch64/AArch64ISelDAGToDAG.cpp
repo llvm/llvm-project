@@ -667,7 +667,7 @@ static std::optional<APInt> DecodeNEONSplat(SDValue N,
     if (auto *Const = dyn_cast<ConstantSDNode>(N->getOperand(0)))
       return Const->getAPIntValue().trunc(SplatWidth);
   APInt SplatVal;
-  if (ISD::isConstantSplatVector(N.getNode(), SplatVal))
+  if (ISD::isConstantSplatVector(N, SplatVal))
     return SplatVal.trunc(SplatWidth);
   // TODO: Recognize more splat-like NEON operations. See ConstantBuildVector
   // in AArch64ISelLowering.
@@ -1178,6 +1178,113 @@ bool AArch64DAGToDAGISel::isWorthFoldingALU(SDValue V, bool LSL) const {
   return false;
 }
 
+static bool isSeveralBitsExtractOpFromShr(SDNode *N, unsigned &Opc,
+                                          SDValue &Opd0, unsigned &LSB,
+                                          unsigned &MSB) {
+  // We are looking for the following pattern which basically extracts several
+  // continuous bits from the source value and places it from the LSB of the
+  // destination value, all other bits of the destination value or set to zero:
+  //
+  // Value2 = AND Value, MaskImm
+  // SRL Value2, ShiftImm
+  //
+  // with MaskImm >> ShiftImm to search for the bit width.
+  //
+  // This gets selected into a single UBFM:
+  //
+  // UBFM Value, ShiftImm, Log2_64(MaskImm)
+  //
+
+  if (N->getOpcode() != ISD::SRL)
+    return false;
+
+  uint64_t AndMask = 0;
+  if (!isOpcWithIntImmediate(N->getOperand(0).getNode(), ISD::AND, AndMask))
+    return false;
+
+  Opd0 = N->getOperand(0).getOperand(0);
+
+  uint64_t SrlImm = 0;
+  if (!isIntImmediate(N->getOperand(1), SrlImm))
+    return false;
+
+  // Check whether we really have several bits extract here.
+  if (!isMask_64(AndMask >> SrlImm))
+    return false;
+
+  Opc = N->getValueType(0) == MVT::i32 ? AArch64::UBFMWri : AArch64::UBFMXri;
+  LSB = SrlImm;
+  MSB = llvm::Log2_64(AndMask);
+  return true;
+}
+
+static bool isBitfieldExtractOpFromShr(SDNode *N, unsigned &Opc, SDValue &Opd0,
+                                       unsigned &Immr, unsigned &Imms,
+                                       bool BiggerPattern) {
+  assert((N->getOpcode() == ISD::SRA || N->getOpcode() == ISD::SRL) &&
+         "N must be a SHR/SRA operation to call this function");
+
+  EVT VT = N->getValueType(0);
+
+  // Here we can test the type of VT and return false when the type does not
+  // match, but since it is done prior to that call in the current context
+  // we turned that into an assert to avoid redundant code.
+  assert((VT == MVT::i32 || VT == MVT::i64) &&
+         "Type checking must have been done before calling this function");
+
+  // Check for AND + SRL doing several bits extract.
+  if (isSeveralBitsExtractOpFromShr(N, Opc, Opd0, Immr, Imms))
+    return true;
+
+  // We're looking for a shift of a shift.
+  uint64_t ShlImm = 0;
+  uint64_t TruncBits = 0;
+  if (isOpcWithIntImmediate(N->getOperand(0).getNode(), ISD::SHL, ShlImm)) {
+    Opd0 = N->getOperand(0).getOperand(0);
+  } else if (VT == MVT::i32 && N->getOpcode() == ISD::SRL &&
+             N->getOperand(0).getNode()->getOpcode() == ISD::TRUNCATE) {
+    // We are looking for a shift of truncate. Truncate from i64 to i32 could
+    // be considered as setting high 32 bits as zero. Our strategy here is to
+    // always generate 64bit UBFM. This consistency will help the CSE pass
+    // later find more redundancy.
+    Opd0 = N->getOperand(0).getOperand(0);
+    TruncBits = Opd0->getValueType(0).getSizeInBits() - VT.getSizeInBits();
+    VT = Opd0.getValueType();
+    assert(VT == MVT::i64 && "the promoted type should be i64");
+  } else if (BiggerPattern) {
+    // Let's pretend a 0 shift left has been performed.
+    // FIXME: Currently we limit this to the bigger pattern case,
+    // because some optimizations expect AND and not UBFM
+    Opd0 = N->getOperand(0);
+  } else
+    return false;
+
+  // Missing combines/constant folding may have left us with strange
+  // constants.
+  if (ShlImm >= VT.getSizeInBits()) {
+    LLVM_DEBUG(
+        (dbgs() << N
+                << ": Found large shift immediate, this should not happen\n"));
+    return false;
+  }
+
+  uint64_t SrlImm = 0;
+  if (!isIntImmediate(N->getOperand(1), SrlImm))
+    return false;
+
+  assert(SrlImm > 0 && SrlImm < VT.getSizeInBits() &&
+         "bad amount in shift node!");
+  int immr = SrlImm - ShlImm;
+  Immr = immr < 0 ? immr + VT.getSizeInBits() : immr;
+  Imms = VT.getSizeInBits() - ShlImm - TruncBits - 1;
+  // SRA requires a signed extraction
+  if (VT == MVT::i32)
+    Opc = N->getOpcode() == ISD::SRA ? AArch64::SBFMWri : AArch64::UBFMWri;
+  else
+    Opc = N->getOpcode() == ISD::SRA ? AArch64::SBFMXri : AArch64::UBFMXri;
+  return true;
+}
+
 /// SelectShiftedRegister - Select a "shifted register" operand.  If the value
 /// is not shifted, set the Shift operand to default of "LSL 0".  The logical
 /// instructions allow the shifted register to be rotated, but the arithmetic
@@ -1193,6 +1300,20 @@ bool AArch64DAGToDAGISel::SelectShiftedRegister(SDValue N, bool AllowROR,
     return false;
   if (!AllowROR && ShType == AArch64_AM::ROR)
     return false;
+
+  // Don't match if the SRA/SRL can be folded with an SHL or AND to form a
+  // SBFM/UBFM.
+  if (N.getOpcode() == ISD::SRA || N.getOpcode() == ISD::SRL) {
+    SDValue Inner = N.getOperand(0);
+    unsigned Opc, Immr, Imms;
+    SDValue Opd0;
+    if ((Inner.getOpcode() == ISD::SHL ||
+         (Inner.getOpcode() == ISD::AND &&
+          !isBitwiseNot(Inner.getOperand(0)))) &&
+        Inner.hasOneUse() &&
+        isBitfieldExtractOpFromShr(N.getNode(), Opc, Opd0, Immr, Imms, false))
+      return false;
+  }
 
   if (ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
     unsigned BitSize = N.getValueSizeInBits();
@@ -2836,6 +2957,10 @@ void AArch64DAGToDAGISel::SelectLoadLane(SDNode *N, unsigned NumVecs,
     ReplaceUses(SDValue(N, i), NV);
   }
 
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
+
   ReplaceUses(SDValue(N, NumVecs), SDValue(Ld, 1));
   CurDAG->RemoveDeadNode(N);
 }
@@ -2888,6 +3013,10 @@ void AArch64DAGToDAGISel::SelectPostLoadLane(SDNode *N, unsigned NumVecs,
       ReplaceUses(SDValue(N, i), NV);
     }
   }
+
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
 
   // Update the Chain
   ReplaceUses(SDValue(N, NumVecs + 1), SDValue(Ld, 2));
@@ -3079,113 +3208,6 @@ static bool isBitfieldExtractOpFromSExtInReg(SDNode *N, unsigned &Opc,
   Opd0 = Op.getOperand(0);
   Immr = ShiftImm;
   Imms = ShiftImm + Width - 1;
-  return true;
-}
-
-static bool isSeveralBitsExtractOpFromShr(SDNode *N, unsigned &Opc,
-                                          SDValue &Opd0, unsigned &LSB,
-                                          unsigned &MSB) {
-  // We are looking for the following pattern which basically extracts several
-  // continuous bits from the source value and places it from the LSB of the
-  // destination value, all other bits of the destination value or set to zero:
-  //
-  // Value2 = AND Value, MaskImm
-  // SRL Value2, ShiftImm
-  //
-  // with MaskImm >> ShiftImm to search for the bit width.
-  //
-  // This gets selected into a single UBFM:
-  //
-  // UBFM Value, ShiftImm, Log2_64(MaskImm)
-  //
-
-  if (N->getOpcode() != ISD::SRL)
-    return false;
-
-  uint64_t AndMask = 0;
-  if (!isOpcWithIntImmediate(N->getOperand(0).getNode(), ISD::AND, AndMask))
-    return false;
-
-  Opd0 = N->getOperand(0).getOperand(0);
-
-  uint64_t SrlImm = 0;
-  if (!isIntImmediate(N->getOperand(1), SrlImm))
-    return false;
-
-  // Check whether we really have several bits extract here.
-  if (!isMask_64(AndMask >> SrlImm))
-    return false;
-
-  Opc = N->getValueType(0) == MVT::i32 ? AArch64::UBFMWri : AArch64::UBFMXri;
-  LSB = SrlImm;
-  MSB = llvm::Log2_64(AndMask);
-  return true;
-}
-
-static bool isBitfieldExtractOpFromShr(SDNode *N, unsigned &Opc, SDValue &Opd0,
-                                       unsigned &Immr, unsigned &Imms,
-                                       bool BiggerPattern) {
-  assert((N->getOpcode() == ISD::SRA || N->getOpcode() == ISD::SRL) &&
-         "N must be a SHR/SRA operation to call this function");
-
-  EVT VT = N->getValueType(0);
-
-  // Here we can test the type of VT and return false when the type does not
-  // match, but since it is done prior to that call in the current context
-  // we turned that into an assert to avoid redundant code.
-  assert((VT == MVT::i32 || VT == MVT::i64) &&
-         "Type checking must have been done before calling this function");
-
-  // Check for AND + SRL doing several bits extract.
-  if (isSeveralBitsExtractOpFromShr(N, Opc, Opd0, Immr, Imms))
-    return true;
-
-  // We're looking for a shift of a shift.
-  uint64_t ShlImm = 0;
-  uint64_t TruncBits = 0;
-  if (isOpcWithIntImmediate(N->getOperand(0).getNode(), ISD::SHL, ShlImm)) {
-    Opd0 = N->getOperand(0).getOperand(0);
-  } else if (VT == MVT::i32 && N->getOpcode() == ISD::SRL &&
-             N->getOperand(0).getNode()->getOpcode() == ISD::TRUNCATE) {
-    // We are looking for a shift of truncate. Truncate from i64 to i32 could
-    // be considered as setting high 32 bits as zero. Our strategy here is to
-    // always generate 64bit UBFM. This consistency will help the CSE pass
-    // later find more redundancy.
-    Opd0 = N->getOperand(0).getOperand(0);
-    TruncBits = Opd0->getValueType(0).getSizeInBits() - VT.getSizeInBits();
-    VT = Opd0.getValueType();
-    assert(VT == MVT::i64 && "the promoted type should be i64");
-  } else if (BiggerPattern) {
-    // Let's pretend a 0 shift left has been performed.
-    // FIXME: Currently we limit this to the bigger pattern case,
-    // because some optimizations expect AND and not UBFM
-    Opd0 = N->getOperand(0);
-  } else
-    return false;
-
-  // Missing combines/constant folding may have left us with strange
-  // constants.
-  if (ShlImm >= VT.getSizeInBits()) {
-    LLVM_DEBUG(
-        (dbgs() << N
-                << ": Found large shift immediate, this should not happen\n"));
-    return false;
-  }
-
-  uint64_t SrlImm = 0;
-  if (!isIntImmediate(N->getOperand(1), SrlImm))
-    return false;
-
-  assert(SrlImm > 0 && SrlImm < VT.getSizeInBits() &&
-         "bad amount in shift node!");
-  int immr = SrlImm - ShlImm;
-  Immr = immr < 0 ? immr + VT.getSizeInBits() : immr;
-  Imms = VT.getSizeInBits() - ShlImm - TruncBits - 1;
-  // SRA requires a signed extraction
-  if (VT == MVT::i32)
-    Opc = N->getOpcode() == ISD::SRA ? AArch64::SBFMWri : AArch64::UBFMWri;
-  else
-    Opc = N->getOpcode() == ISD::SRA ? AArch64::SBFMXri : AArch64::UBFMXri;
   return true;
 }
 
@@ -4965,8 +4987,8 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
     }
 
     APInt ShlAmt, ShrAmt;
-    if (!ISD::isConstantSplatVector(N0.getOperand(2).getNode(), ShlAmt) ||
-        !ISD::isConstantSplatVector(N1.getOperand(2).getNode(), ShrAmt))
+    if (!ISD::isConstantSplatVector(N0.getOperand(2), ShlAmt) ||
+        !ISD::isConstantSplatVector(N1.getOperand(2), ShrAmt))
       return false;
 
     if (ShlAmt + ShrAmt != VT.getScalarSizeInBits())

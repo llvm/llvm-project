@@ -1,9 +1,7 @@
 ; RUN: opt -mtriple=amdgpu-- -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -mtriple=r600-- -passes=aa-eval -aa-pipeline=amdgpu-aa -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: Function: test
 ; CHECK: NoAlias:      i8 addrspace(5)* %p, i8 addrspace(1)* %p1
-
 define void @test(ptr addrspace(5) %p, ptr addrspace(1) %p1) {
   load i8, ptr addrspace(5) %p
   load i8, ptr addrspace(1) %p1
@@ -12,7 +10,6 @@ define void @test(ptr addrspace(5) %p, ptr addrspace(1) %p1) {
 
 ; CHECK-LABEL: Function: test_constant_vs_global
 ; CHECK: MayAlias:      i8 addrspace(4)* %p, i8 addrspace(1)* %p1
-
 define void @test_constant_vs_global(ptr addrspace(4) %p, ptr addrspace(1) %p1) {
   load i8, ptr addrspace(4) %p
   load i8, ptr addrspace(1) %p1
@@ -20,7 +17,6 @@ define void @test_constant_vs_global(ptr addrspace(4) %p, ptr addrspace(1) %p1) 
 }
 
 ; CHECK: MayAlias:      i8 addrspace(1)* %p, i8 addrspace(4)* %p1
-
 define void @test_global_vs_constant(ptr addrspace(1) %p, ptr addrspace(4) %p1) {
   load i8, ptr addrspace(1) %p
   load i8, ptr addrspace(4) %p1
@@ -28,7 +24,6 @@ define void @test_global_vs_constant(ptr addrspace(1) %p, ptr addrspace(4) %p1) 
 }
 
 ; CHECK: MayAlias:      i8 addrspace(6)* %p, i8 addrspace(1)* %p1
-
 define void @test_constant_32bit_vs_global(ptr addrspace(6) %p, ptr addrspace(1) %p1) {
   load i8, ptr addrspace(6) %p
   load i8, ptr addrspace(1) %p1
@@ -36,7 +31,6 @@ define void @test_constant_32bit_vs_global(ptr addrspace(6) %p, ptr addrspace(1)
 }
 
 ; CHECK: MayAlias:      i8 addrspace(6)* %p, i8 addrspace(4)* %p1
-
 define void @test_constant_32bit_vs_constant(ptr addrspace(6) %p, ptr addrspace(4) %p1) {
   load i8, ptr addrspace(6) %p
   load i8, ptr addrspace(4) %p1
@@ -372,5 +366,39 @@ entry:
   %acast = addrspacecast ptr addrspace(3) %arg.plus.4 to ptr
   %arg2 = getelementptr inbounds i8, ptr %acast, i64 -4
   %load3 = load i32, ptr %arg2, align 4
+  ret void
+}
+
+; Reserved address spaces may alias anything.
+
+; CHECK-LABEL: Function: test_10_3
+; CHECK: MayAlias:	i8 addrspace(10)* %p, i8 addrspace(3)* %p1
+define void @test_10_3(ptr addrspace(10) %p, ptr addrspace(3) %p1) {
+  load i8, ptr addrspace(10) %p
+  load i8, ptr addrspace(3) %p1
+  ret void
+}
+
+; CHECK-LABEL: Function: test_5_11
+; CHECK: MayAlias:	i8 addrspace(5)* %p, i8 addrspace(11)* %p1
+define void @test_5_11(ptr addrspace(5) %p, ptr addrspace(11) %p1) {
+  load i8, ptr addrspace(5) %p
+  load i8, ptr addrspace(11) %p1
+  ret void
+}
+
+; CHECK-LABEL: Function: test_14_15
+; CHECK: MayAlias:	i8 addrspace(14)* %p, i8 addrspace(15)* %p1
+define void @test_14_15(ptr addrspace(14) %p, ptr addrspace(15) %p1) {
+  load i8, ptr addrspace(14) %p
+  load i8, ptr addrspace(15) %p1
+  ret void
+}
+
+; CHECK-LABEL: Function: test_12_12
+; CHECK: MayAlias:	i8 addrspace(12)* %p, i8 addrspace(12)* %p1
+define void @test_12_12(ptr addrspace(12) %p, ptr addrspace(12) %p1) {
+  load i8, ptr addrspace(12) %p
+  load i8, ptr addrspace(12) %p1
   ret void
 }

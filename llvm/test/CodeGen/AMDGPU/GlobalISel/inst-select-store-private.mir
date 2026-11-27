@@ -11,7 +11,6 @@
 name: function_store_private_s32_to_4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -59,7 +58,6 @@ body: |
 name: function_store_private_s32_to_2
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -107,7 +105,6 @@ body: |
 name: function_store_private_s32_to_1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -155,7 +152,6 @@ body: |
 name: function_store_private_v2s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -203,7 +199,6 @@ body: |
 name: function_store_private_p3
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -251,7 +246,6 @@ body: |
 name: function_store_private_p5
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -299,7 +293,6 @@ body: |
 name: function_store_private_s32_to_1_fi_offset_4095
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -338,7 +331,6 @@ body: |
 name: function_store_private_s32_to_1_constant_4095
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -377,7 +369,6 @@ body: |
 name: function_store_private_s32_to_1_constant_4096
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -418,7 +409,6 @@ body: |
 name: kernel_store_private_s32_to_4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -465,7 +455,6 @@ body: |
 name: kernel_store_private_s32_to_2
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -512,7 +501,6 @@ body: |
 name: kernel_store_private_s32_to_1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -559,7 +547,6 @@ body: |
 name: kernel_store_private_v2s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -607,7 +594,6 @@ body: |
 name: kernel_store_private_p3
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -654,7 +640,6 @@ body: |
 name: kernel_store_private_p5
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -701,7 +686,6 @@ body: |
 name: kernel_store_private_s32_to_1_fi_offset_4095
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -748,7 +732,6 @@ body: |
 name: kernel_store_private_s32_to_1_constant_4095
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -795,7 +778,6 @@ body: |
 name: kernel_store_private_s32_to_1_constant_4096
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -843,7 +825,6 @@ body: |
 name: function_store_private_s32_to_4_wave_address
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -889,7 +870,6 @@ body: |
 name: function_store_private_s32_to_4_wave_address_offset_copy_constant_4095
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -940,7 +920,6 @@ body: |
 name: function_store_private_s32_to_4_wave_address_offset_4095
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
@@ -989,7 +968,6 @@ body: |
 name: function_store_private_s32_to_4_wave_address_offset_copy_constant_4096
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: false
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3

@@ -19,6 +19,7 @@
 #include "mlir/IR/PatternMatch.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUBase.h"
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.h.inc"
@@ -213,6 +214,13 @@ inline bool isAccRoutine(mlir::Operation *op) {
 inline bool isSpecializedAccRoutine(mlir::Operation *op) {
   return op &&
          op->hasDiscardableAttr(mlir::acc::getSpecializedRoutineAttrName());
+}
+
+/// Attribute on global symbols that are associated with device-side symbols of
+/// the same name. The LLVM IR translation emits entries to be registered with
+/// the runtime.
+static constexpr StringLiteral getOffloadEntryAttrName() {
+  return StringLiteral("acc.offload_entry");
 }
 
 static constexpr StringLiteral getFromDefaultClauseAttrName() {

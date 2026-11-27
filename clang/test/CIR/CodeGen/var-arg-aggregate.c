@@ -63,7 +63,7 @@ struct Big varargs_aggregate_memory(int count, ...) {
 // CIR-LABEL: cir.func {{.*}} @varargs_aggregate_mixed_pair(
 // CIR-SAME: -> !rec_anon_struct{{[0-9]*}}
 // CIR:   %[[COERCE:.+]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_anon_struct{{[0-9]*}}>
-// CIR:   %[[RET_ADDR:.+]] = cir.alloca "__retval" {{.*}} init : !cir.ptr<!rec_Bar>
+// CIR:   %[[RET_ADDR:.+]] = cir.alloca "" {{.*}} init return_slot : !cir.ptr<!rec_Bar>
 // CIR:   %[[VAAREA:.+]] = cir.alloca "args" {{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
 // CIR:   %[[TMP_ADDR:.+]] = cir.alloca "vaarg.tmp" {{.*}} : !cir.ptr<!rec_Bar>
 // CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>

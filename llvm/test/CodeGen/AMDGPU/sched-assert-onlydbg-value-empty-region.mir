@@ -13,7 +13,6 @@
 
 ---
 name:            only_dbg_value_sched_region
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   waveLimiter:     true

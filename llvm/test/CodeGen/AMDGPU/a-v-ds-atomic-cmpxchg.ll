@@ -139,10 +139,10 @@ define void @ds_atomic_cmpxchg_i32_ret_v_a__v(ptr addrspace(3) %ptr) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v1
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
 ; CHECK-NEXT:    ds_cmpst_rtn_b32 v0, v0, v1, v2 offset:40
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -165,10 +165,10 @@ define void @ds_atomic_cmpxchg_i32_ret_a_v__v(ptr addrspace(3) %ptr) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v1
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
 ; CHECK-NEXT:    ds_cmpst_rtn_b32 v0, v0, v2, v1 offset:40
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -278,10 +278,10 @@ define void @ds_atomic_cmpxchg_i32_ret_a_av__av(ptr addrspace(3) %ptr) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v1
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
 ; CHECK-NEXT:    ds_cmpst_rtn_b32 v0, v0, v2, v1 offset:40
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART

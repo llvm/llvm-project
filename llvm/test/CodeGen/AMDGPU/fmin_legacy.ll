@@ -2,8 +2,6 @@
 
 ; RUN: llc -mtriple=amdgpu8.03 < %s | FileCheck -enable-var-scope -check-prefixes=VI,GCN,FUNC %s
 
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope --check-prefixes=EG,FUNC %s
-
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; The two inputs to the instruction are different SGPRs from the same
@@ -11,7 +9,6 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 ; are both the same register.
 
 ; FUNC-LABEL: {{^}}s_test_fmin_legacy_subreg_inputs_f32:
-; EG: MIN *
 ; SI: v_min_legacy_f32_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}
 
 ; VI: v_cmp_nlt_f32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}

@@ -1362,12 +1362,9 @@ static uint16_t getChainedFixupsPointerFormat() {
 }
 
 static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
-  const Arg *arg = args.getLastArg(OPT_objc_relative_method_lists,
-                                   OPT_no_objc_relative_method_lists);
-  if (arg && arg->getOption().getID() == OPT_objc_relative_method_lists)
-    return true;
-  if (arg && arg->getOption().getID() == OPT_no_objc_relative_method_lists)
-    return false;
+  if (const Arg *arg = args.getLastArg(OPT_objc_relative_method_lists,
+                                       OPT_no_objc_relative_method_lists))
+    return arg->getOption().matches(OPT_objc_relative_method_lists);
 
   // If no flag is specified, enable this on newer versions by default.
   // The min versions is taken from
@@ -2305,6 +2302,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (const Arg *arg = args.getLastArg(OPT_static, OPT_dynamic))
     config->staticLink = (arg->getOption().getID() == OPT_static);
+  config->preload = args.hasArg(OPT_preload);
 
   if (const Arg *arg =
           args.getLastArg(OPT_flat_namespace, OPT_twolevel_namespace))
@@ -2515,6 +2513,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     }
 
     config->passPlugins = args::getStrings(args, OPT_load_pass_plugins);
+    config->passPluginArgs = args::getStrings(args, OPT_pass_plugin_arg);
 
     createSyntheticSections();
     createSyntheticSymbols();

@@ -1078,3 +1078,7 @@ def PopMSVCCE : SuccessOpcode;
 def GetStringPtr : SuccessOpcode {
   let Args = [ArgExpr];
 }
+
+def InvalidAccessIndexAttr : Opcode {
+  let Args = [ArgValueDecl, ArgTypePtr];
+}

@@ -47,17 +47,18 @@ static bool isOnlyCopiedFromConstantMemory(
   // quickly eliminate the markers.
 
   using ValueAndIsOffset = PointerIntPair<Value *, 1, bool>;
-  SmallVector<ValueAndIsOffset, 32> Worklist;
-  SmallPtrSet<ValueAndIsOffset, 32> Visited;
-  Worklist.emplace_back(V, false);
-  while (!Worklist.empty()) {
-    ValueAndIsOffset Elem = Worklist.pop_back_val();
-    if (!Visited.insert(Elem).second)
-      continue;
-    if (Visited.size() > MaxUsers)
-      return false;
-
-    const auto [Value, IsOffset] = Elem;
+  SmallSetVector<ValueAndIsOffset, 32> Worklist;
+  // Check the limit as soon as a value is added, rather than when it is
+  // visited. Otherwise an alloca with many GEP users has all of them scanned
+  // on every visit, which makes repeated visits of the alloca quadratic.
+  auto Push = [&](Value *Val, bool IsOffset) {
+    Worklist.insert(ValueAndIsOffset(Val, IsOffset));
+    return Worklist.size() <= MaxUsers;
+  };
+  if (!Push(V, false))
+    return false;
+  for (unsigned Idx = 0; Idx != Worklist.size(); ++Idx) {
+    const auto [Value, IsOffset] = Worklist[Idx];
     for (auto &U : Value->uses()) {
       auto *I = cast<Instruction>(U.getUser());
 
@@ -71,18 +72,21 @@ static bool isOnlyCopiedFromConstantMemory(
         // We set IsOffset=true, to forbid the memcpy from occurring after the
         // phi: If one of the phi operands is not based on the alloca, we
         // would incorrectly omit a write.
-        Worklist.emplace_back(I, true);
+        if (!Push(I, true))
+          return false;
         continue;
       }
       if (isa<BitCastInst, AddrSpaceCastInst>(I)) {
         // If uses of the bitcast are ok, we are ok.
-        Worklist.emplace_back(I, IsOffset);
+        if (!Push(I, IsOffset))
+          return false;
         continue;
       }
       if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
         // If the GEP has all zero indices, it doesn't offset the pointer. If it
         // doesn't, it does.
-        Worklist.emplace_back(I, IsOffset || !GEP->hasAllZeroIndices());
+        if (!Push(I, IsOffset || !GEP->hasAllZeroIndices()))
+          return false;
         continue;
       }
 
@@ -265,10 +269,9 @@ bool PointerReplacer::collectUsers() {
   SmallSetVector<Instruction *, 32> ValuesToRevisit;
 
   auto PushUsersToWorklist = [&](Instruction *Inst) {
-    for (auto *U : Inst->users())
-      if (auto *I = dyn_cast<Instruction>(U))
-        if (!isAvailable(I) && !ValuesToRevisit.contains(I))
-          Worklist.emplace_back(I);
+    for (Instruction *I : Inst->users())
+      if (!isAvailable(I) && !ValuesToRevisit.contains(I))
+        Worklist.emplace_back(I);
   };
 
   auto TryPushInstOperand = [&](Instruction *InstOp) {
@@ -380,8 +383,7 @@ void PointerReplacer::replacePointer(Value *V) {
     // If I has not been processed before, push each of its
     // replacable users into the worklist.
     if (Visited.insert(I).second) {
-      for (auto *U : I->users()) {
-        auto *UserInst = cast<Instruction>(U);
+      for (Instruction *UserInst : I->users()) {
         if (UsersToReplace.contains(UserInst) && !Visited.contains(UserInst))
           Worklist.push_back(UserInst);
       }
@@ -1813,6 +1815,12 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   // If the two stores had access groups, intersect them.
   NewSI->setMetadata(LLVMContext::MD_access_group,
                      intersectAccessGroups(&SI, OtherStore));
+
+  // The merged store stands for both, so it requests the PC sections of either.
+  NewSI->setMetadata(LLVMContext::MD_pcsections,
+                     MDNode::getMergedPCSectionsMetadata(
+                         SI.getMetadata(LLVMContext::MD_pcsections),
+                         OtherStore->getMetadata(LLVMContext::MD_pcsections)));
 
   // Nuke the old stores.
   eraseInstFromFunction(SI);

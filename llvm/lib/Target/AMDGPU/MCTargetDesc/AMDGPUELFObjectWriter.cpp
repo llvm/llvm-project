@@ -11,6 +11,7 @@
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCValue.h"
 
 using namespace llvm;
@@ -78,13 +79,29 @@ unsigned AMDGPUELFObjectWriter::getRelocType(const MCFixup &Fixup,
     return IsPCRel ? ELF::R_AMDGPU_REL64 : ELF::R_AMDGPU_ABS64;
   }
 
-  if (Fixup.getKind() == AMDGPU::fixup_si_sopp_br) {
+  if (Fixup.getKind() == AMDGPU::fixup_si_sopp_br ||
+      Fixup.getKind() == AMDGPU::fixup_si_smem_pcrel) {
     const auto *SymA = Target.getAddSym();
-    assert(SymA);
+    if (!SymA) {
+      reportError(Fixup.getLoc(), "expected a label");
+      return ELF::R_AMDGPU_NONE;
+    }
 
     if (SymA->isUndefined()) {
       reportError(Fixup.getLoc(),
                   Twine("undefined label '") + SymA->getName() + "'");
+      return ELF::R_AMDGPU_NONE;
+    }
+    // No ELF relocation describes the 24-bit field at bits [55:32].
+    // A PC-relative fixup is left unresolved for a non-local symbol and for a
+    // local symbol defined in another section.
+    if (Fixup.getKind() == AMDGPU::fixup_si_smem_pcrel) {
+      const auto *SymELF = static_cast<const MCSymbolELF *>(SymA);
+      reportError(
+          Fixup.getLoc(),
+          SymELF->getBinding() == ELF::STB_LOCAL
+              ? "pc-relative prefetch target must be in the same section"
+              : "pc-relative prefetch target must be a local label");
       return ELF::R_AMDGPU_NONE;
     }
     return ELF::R_AMDGPU_REL16;

@@ -310,8 +310,7 @@ void SjLjEHPrepareImpl::lowerAcrossUnwindEdges(Function &F,
 
       // Avoid iterator invalidation by copying users to a temporary vector.
       SmallVector<Instruction *, 16> Users;
-      for (User *U : Inst.users()) {
-        Instruction *UI = cast<Instruction>(U);
+      for (Instruction *UI : Inst.users()) {
         if (UI->getParent() != &BB || isa<PHINode>(UI))
           Users.push_back(UI);
       }

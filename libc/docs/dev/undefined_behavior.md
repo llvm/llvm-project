@@ -3,11 +3,13 @@
 # Defining Undefined Behavior
 
 The C standard leaves behavior undefined or implementation defined in many
-places. Undefined behavior is behavior that the standards leave up to the
-implementation. As an implementation, LLVM's libc must provide a result for any
-input, including inputs for which the result is undefined. This page provides
-examples of how these situations are handled in existing code, followed by
-guidelines to help determine the right approach for new situations.
+places. Undefined behavior is behavior for which the standard imposes no
+requirements, and implementation-defined behavior is behavior that each
+implementation chooses and documents. As an implementation, LLVM's libc must
+provide a result for any input, including inputs for which the result is
+undefined. This page provides examples of how these situations are handled in
+existing code, followed by guidelines to help determine the right approach for
+new situations.
 
 ## Guidelines
 
@@ -174,8 +176,8 @@ For LLVM-libc, `tdelete` returns bit-casted `uintptr_t`'s maximum value.
 ### `twalk/twalk_r/tdestroy` with Null Function Pointer
 
 The standard requires that `twalk`, `twalk_r`, and `tdestroy`
-to be used with a valid function pointer. LLVM-libc follows the behavior of
-configured via the `LIBC_ADD_NULL_CHECKS` option.
+to be used with a valid function pointer. LLVM-libc's behavior for a null
+function pointer is configured via the `LIBC_ADD_NULL_CHECKS` option.
 
 ### Invalid Thread Joining Behavior
 

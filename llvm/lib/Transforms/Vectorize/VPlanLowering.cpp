@@ -445,7 +445,7 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
   Index = StepTy->isIntegerTy()
               ? Builder.createScalarZExtOrTrunc(
                     Index, StepTy, DebugLoc::getCompilerGenerated())
-              : Builder.createScalarCast(Instruction::SIToFP, Index, StepTy,
+              : Builder.createScalarCast(Instruction::UIToFP, Index, StepTy,
                                          DebugLoc::getCompilerGenerated());
   VPIRFlags::WrapFlagsTy Flags = R->getNoWrapFlags();
   switch (R->getInductionKind()) {
@@ -1072,7 +1072,10 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
                     ->getIRBasicBlock()
                     ->getTerminator()
                     ->getDebugLoc();
-  VPSCEVExpander Expander(Builder, SE, DL);
+  // SCEVs may come from loop code that does not always execute, so expanding
+  // them in the entry block must not introduce a division by zero.
+  VPSCEVExpander Expander(Builder, SE, DL, /*HoistOutOf=*/nullptr,
+                          /*SafeUDivMode=*/true);
 
   // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander.
   for (VPExpandSCEVRecipe &ExpSCEV :
@@ -1095,9 +1098,9 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
 DenseMap<const SCEV *, Value *>
 VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   // The IR SCEVExpander may expand expressions early, where they may cause UB.
-  // Use SafeUDivMode.
+  // Use SafeDivisorMode.
   SCEVExpander Expander(SE, "induction", /*PreserveLCSSA=*/false,
-                        /*SafeUDivMode=*/true);
+                        /*SafeDivisorMode=*/true);
 
   auto *Entry = cast<VPIRBasicBlock>(Plan.getEntry());
   BasicBlock *EntryBB = Entry->getIRBasicBlock();

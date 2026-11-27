@@ -32,13 +32,13 @@ body:             |
     G_BRINDIRECT %0(p0)
 
   bb.2:
-    %4:gprb(s64) = G_CONSTANT i64 0
-    $x10 = COPY %4(s64)
+    %4:gprb(i64) = G_CONSTANT i64 0
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 
   bb.3:
-    %2:gprb(s64) = G_CONSTANT i64 1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_CONSTANT i64 1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...

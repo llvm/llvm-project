@@ -304,11 +304,7 @@ bool BPFAdjustOptImpl::avoidSpeculation(Instruction &I) {
   //     ... var ...
   bool isCandidate = false;
   SmallVector<PassThroughInfo, 4> Candidates;
-  for (User *U : I.users()) {
-    Instruction *Inst = dyn_cast<Instruction>(U);
-    if (!Inst)
-      continue;
-
+  for (Instruction *Inst : I.users()) {
     // May cover a little bit more than the
     // above pattern.
     if (auto *Icmp1 = dyn_cast<ICmpInst>(Inst)) {

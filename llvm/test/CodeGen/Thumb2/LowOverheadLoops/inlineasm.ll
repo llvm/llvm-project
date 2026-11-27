@@ -11,9 +11,9 @@ define i32 @test(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n) {
 ; CHECK-NEXT:    blt .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrh r3, [r1], #2
-; CHECK-NEXT:    subs r2, #1
 ; CHECK-NEXT:    ldrh r12, [r0], #2
+; CHECK-NEXT:    subs r2, #1
+; CHECK-NEXT:    ldrh r3, [r1], #2
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    add r3, r12
 ; CHECK-NEXT:    @NO_APP
@@ -57,9 +57,9 @@ define i32 @testlr(ptr nocapture readonly %x, ptr nocapture readonly %y, i32 %n)
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:  .LBB1_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrh r4, [r1], #2
-; CHECK-NEXT:    subs r2, #1
 ; CHECK-NEXT:    ldrh r12, [r0], #2
+; CHECK-NEXT:    subs r2, #1
+; CHECK-NEXT:    ldrh r4, [r1], #2
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    add r4, r12
 ; CHECK-NEXT:    @NO_APP

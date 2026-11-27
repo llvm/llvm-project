@@ -1187,7 +1187,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   // MemsetArg is the number of bytes for the memset libcall, and the number
   // of pattern repetitions if the memset.pattern intrinsic is being used.
   Value *MemsetArg;
-  std::optional<int64_t> BytesWritten;
+  std::optional<uint64_t> BytesWritten;
   uint64_t PatternRepsPerTrip = 0;
 
   if (PatternValue &&
@@ -1234,10 +1234,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   AAMDNodes AATags = TheStore->getAAMetadata();
   for (Instruction *Store : Stores)
     AATags = AATags.merge(Store->getAAMetadata());
-  if (BytesWritten)
-    AATags = AATags.extendTo(BytesWritten.value());
-  else
-    AATags = AATags.extendTo(-1);
+  AATags = AATags.extendTo(BytesWritten);
 
   CallInst *NewCall;
   if (SplatValue) {
@@ -1548,10 +1545,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   AAMDNodes AATags = TheLoad->getAAMetadata();
   AAMDNodes StoreAATags = TheStore->getAAMetadata();
   AATags = AATags.merge(StoreAATags);
-  if (auto CI = dyn_cast<ConstantInt>(NumBytes))
-    AATags = AATags.extendTo(CI->getZExtValue());
-  else
-    AATags = AATags.extendTo(-1);
+  AATags = AATags.extendTo(NumBytes);
 
   CallInst *NewCall = nullptr;
   // Check whether to generate an unordered atomic memcpy:
@@ -1962,7 +1956,6 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     };
 
     IRBuilder<> Builder(CurLoop->getHeader()->getFirstNonPHIIt());
-    Builder.disableGEPCanonicalization();
 
     // Create the CRC PHI, and initialize its incoming value to the initial
     // value of CRC.
@@ -2596,8 +2589,8 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
 
       // Check if the result of the instruction is live of the loop.
       bool LiveOutLoop = false;
-      for (User *U : Inst.users()) {
-        if ((cast<Instruction>(U))->getParent() != LoopEntry) {
+      for (Instruction *U : Inst.users()) {
+        if (U->getParent() != LoopEntry) {
           LiveOutLoop = true;
           break;
         }
@@ -2756,14 +2749,14 @@ bool LoopIdiomRecognize::insertFFSIfProfitable(Intrinsic::ID IntrinID,
                                                PHINode *CntPhi,
                                                Instruction *CntInst) {
   bool IsCntPhiUsedOutsideLoop = false;
-  for (User *U : CntPhi->users())
-    if (!CurLoop->contains(cast<Instruction>(U))) {
+  for (Instruction *U : CntPhi->users())
+    if (!CurLoop->contains(U)) {
       IsCntPhiUsedOutsideLoop = true;
       break;
     }
   bool IsCntInstUsedOutsideLoop = false;
-  for (User *U : CntInst->users())
-    if (!CurLoop->contains(cast<Instruction>(U))) {
+  for (Instruction *U : CntInst->users())
+    if (!CurLoop->contains(U)) {
       IsCntInstUsedOutsideLoop = true;
       break;
     }
@@ -2859,8 +2852,8 @@ bool LoopIdiomRecognize::recognizeShiftUntilLessThan() {
     return false;
 
   // Abort if CntPhi is used outside of the loop.
-  for (User *U : CntPhi->users())
-    if (!CurLoop->contains(cast<Instruction>(U)))
+  for (Instruction *U : CntPhi->users())
+    if (!CurLoop->contains(U))
       return false;
 
   // It is safe to assume Preheader exist as it was checked in

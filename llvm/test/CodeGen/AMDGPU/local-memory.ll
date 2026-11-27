@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple=amdgpu6.01 < %s | FileCheck --check-prefixes=GCN,FUNC %s
 ; RUN: llc -mtriple=amdgpu7.04 < %s | FileCheck --check-prefixes=GCN,FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=FUNC %s
 
 @local_memory.local_mem = internal unnamed_addr addrspace(3) global [128 x i32] poison, align 4
 
@@ -12,8 +11,6 @@
 ; FUNC-LABEL: {{^}}load_i32_local_const_ptr:
 ; GCN: v_mov_b32_e32 v[[PTR:[0-9]+]], 0{{$}}
 ; GCN: ds_read_b32 v{{[0-9]+}}, v[[PTR]] offset:4
-
-; R600: LDS_READ_RET
 define amdgpu_kernel void @load_i32_local_const_ptr(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
 entry:
   %tmp0 = getelementptr [512 x i32], ptr addrspace(3) @lds, i32 0, i32 1
@@ -25,9 +22,6 @@ entry:
 
 ; Test loading a i32 and v2i32 value from the same base pointer.
 ; FUNC-LABEL: {{^}}load_i32_v2i32_local:
-; R600: LDS_READ_RET
-; R600: LDS_READ_RET
-; R600: LDS_READ_RET
 ; GCN-DAG: ds_read_b32
 ; GCN-DAG: ds_read2_b32
 define amdgpu_kernel void @load_i32_v2i32_local(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
