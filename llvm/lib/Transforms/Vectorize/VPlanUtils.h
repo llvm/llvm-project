@@ -318,8 +318,9 @@ class VPSCEVExpander {
 
 public:
   VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL,
-                 const Loop *HoistOutOf = nullptr)
-      : Builder(Builder), SE(SE), DL(DL), HoistOutOf(HoistOutOf) {}
+                 const Loop *HoistOutOf = nullptr, bool SafeUDivMode = false)
+      : Builder(Builder), SE(SE), DL(DL), SafeUDivMode(SafeUDivMode),
+        HoistOutOf(HoistOutOf) {}
 
   /// Expand \p S into recipes and live-ins using the builder.
   VPValue *expand(const SCEV *S);

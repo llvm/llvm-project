@@ -193,11 +193,11 @@ bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
   return InstanceInfoAA && InstanceInfoAA->isAssumedUniqueForAnalysis();
 }
 
-Constant *
-AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
-                          Value &Obj, Type &Ty, const TargetLibraryInfo *TLI,
-                          const DataLayout &DL, AA::RangeTy *RangePtr) {
-  if (Constant *Init = getInitialValueOfAllocation(&Obj, TLI, &Ty))
+Constant *AA::getInitialValueForObj(Attributor &A,
+                                    const AbstractAttribute &QueryingAA,
+                                    Value &Obj, Type &Ty, const DataLayout &DL,
+                                    AA::RangeTy *RangePtr) {
+  if (Constant *Init = getInitialValueOfAllocation(&Obj, &Ty))
     return Init;
   auto *GV = dyn_cast<GlobalVariable>(&Obj);
   if (!GV)
@@ -337,9 +337,6 @@ static bool getPotentialCopiesOfMemoryValue(
   SmallSetVector<Value *, 8> NewCopies;
   SmallSetVector<Instruction *, 8> NewCopyOrigins;
 
-  const auto *TLI =
-      A.getInfoCache().getTargetLibraryInfoForFunction(*I.getFunction());
-
   auto Pred = [&](Value &Obj) {
     LLVM_DEBUG(dbgs() << "Visit underlying object " << Obj << "\n");
     if (isa<UndefValue>(&Obj))
@@ -358,7 +355,7 @@ static bool getPotentialCopiesOfMemoryValue(
     }
     // TODO: Use assumed noalias return.
     if (!isa<AllocaInst>(&Obj) && !isa<GlobalVariable>(&Obj) &&
-        !(IsLoad ? isAllocationFn(&Obj, TLI) : isNoAliasCall(&Obj))) {
+        !(IsLoad ? isAllocationFn(&Obj) : isNoAliasCall(&Obj))) {
       LLVM_DEBUG(dbgs() << "Underlying object is not supported yet: " << Obj
                         << "\n";);
       return false;
@@ -499,8 +496,8 @@ static bool getPotentialCopiesOfMemoryValue(
 
     if (IsLoad && !HasBeenWrittenTo && !Range.isUnassigned()) {
       const DataLayout &DL = A.getDataLayout();
-      Value *InitialValue = AA::getInitialValueForObj(
-          A, QueryingAA, Obj, *I.getType(), TLI, DL, &Range);
+      Value *InitialValue = AA::getInitialValueForObj(A, QueryingAA, Obj,
+                                                      *I.getType(), DL, &Range);
       if (!InitialValue) {
         LLVM_DEBUG(dbgs() << "Could not determine required initial value of "
                              "underlying object, abort!\n");

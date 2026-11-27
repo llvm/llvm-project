@@ -32,8 +32,7 @@ public:
                               std::shared_ptr<orc::SymbolStringPool> SSP,
                               SubtargetFeatures Features)
       : MachOLinkGraphBuilder(Obj, std::move(SSP), getObjectTriple(Obj),
-                              std::move(Features), aarch64::getEdgeKindName),
-        NumSymbols(Obj.getSymtabLoadCommand().nsyms) {}
+                              std::move(Features), aarch64::getEdgeKindName) {}
 
 private:
   enum MachOARM64RelocationKind : Edge::Kind {
@@ -548,8 +547,6 @@ private:
       return getGenericEdgeKindName(R);
     }
   }
-
-  unsigned NumSymbols = 0;
 };
 
 } // namespace

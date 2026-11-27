@@ -8729,8 +8729,9 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   if (DL.getTypeStoreSize(ITy) != DL.getPointerSize())
     return false;
 
-  // TODO: Handle offsets from stepvector.
-  if (!match(Start, m_Intrinsic<Intrinsic::stepvector>()))
+  if (!match(Start, m_CombineOr(m_Intrinsic<Intrinsic::stepvector>(),
+                                m_Add(m_Intrinsic<Intrinsic::stepvector>(),
+                                      m_Splat(m_Value())))))
     return false;
 
   Value *LoopStride = nullptr;

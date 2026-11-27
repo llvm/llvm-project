@@ -41,7 +41,6 @@ public:
   };
 
 private:
-  Kind K;
   /// A unique identifier for this symbol.
   ///
   /// It is useful for SymbolData to easily differentiate multiple symbols, but
@@ -54,7 +53,7 @@ private:
   const SymbolID Sym;
 
 protected:
-  SymExpr(Kind k, SymbolID Sym) : K(k), Sym(Sym) {}
+  SymExpr(Kind k, SymbolID Sym) : Sym(Sym), K(k) {}
 
   static bool isValidTypeForSymbol(QualType T) {
     // FIXME: Depending on whether we choose to deprecate structural symbols,
@@ -64,10 +63,15 @@ protected:
 
   mutable unsigned Complexity = 0;
 
+private:
+  // Declared last so that subclasses can put small fields into tail padding.
+  LLVM_PREFERRED_TYPE(Kind)
+  unsigned K : 8;
+
 public:
   virtual ~SymExpr() = default;
 
-  Kind getKind() const { return K; }
+  Kind getKind() const { return static_cast<Kind>(K); }
 
   /// Get a unique identifier for this symbol.
   /// The ID is unique across all SymExprs in a SymbolManager.
