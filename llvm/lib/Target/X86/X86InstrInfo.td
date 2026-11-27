@@ -88,6 +88,9 @@ include "X86InstrAMX.td"
 // AVX10 V2 AUX instructions
 include "X86InstrAVX10_V2_AUX.td"
 
+// ACE instructions
+include "X86InstrACE.td"
+
 // RAO-INT instructions
 include "X86InstrRAOINT.td"
 

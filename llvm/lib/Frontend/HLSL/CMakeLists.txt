@@ -3,6 +3,7 @@ add_llvm_component_library(LLVMFrontendHLSL
   HLSLBinding.cpp
   HLSLResource.cpp
   HLSLRootSignature.cpp
+  HLSLUtils.cpp
   RootSignatureMetadata.cpp
   RootSignatureValidations.cpp
   SemanticSignaturePacking.cpp

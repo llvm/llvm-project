@@ -18,7 +18,6 @@ class LLVM_ABI MCAsmInfoELF : public MCAsmInfo {
   MCSection *getStackSection(MCContext &Ctx, bool Exec) const override;
   void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
                             raw_ostream &) const final;
-  bool useCodeAlign(const MCSection &Sec) const final;
 
 protected:
   MCAsmInfoELF(const MCTargetOptions &Options);

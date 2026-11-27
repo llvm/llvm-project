@@ -100,9 +100,6 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
 } // namespace
 
 void cir::CIRDialect::initialize() {
-  registerTypes();
-  registerAttributes();
-  registerCIRDialectOperations(this);
   addInterfaces<CIROpAsmDialectInterface>();
   detail::addBytecodeInterface(this);
 }
@@ -328,6 +325,19 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
     return cir::ConstArrayAttr::verify([&] { return op->emitOpError(); },
                                        arrayTy, bytes,
                                        /*trailingZerosNum=*/0);
+  }
+
+  if (attrName == getCUDAOffloadEntriesAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError() << "expects '" << getCUDAOffloadEntriesAttrName()
+                               << "' attribute to be attached to '"
+                               << mlir::ModuleOp::getOperationName() << "'";
+    auto entries = mlir::dyn_cast<mlir::ArrayAttr>(attr.getValue());
+    if (!entries ||
+        !llvm::all_of(entries, llvm::IsaPred<cir::CUDAOffloadEntryAttr>))
+      return op->emitOpError() << "expects '" << getCUDAOffloadEntriesAttrName()
+                               << "' to be an array of #cir.cu.offload_entry";
+    return success();
   }
 
   if (attrName == getTripleAttrName()) {
@@ -965,10 +975,11 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
 
   if (isa<cir::ZeroAttr>(attrType)) {
     if (isa<cir::RecordType, cir::ArrayType, cir::MatrixType, cir::VectorType,
-            cir::ComplexType>(opType))
+            cir::ComplexType>(opType) ||
+        cir::isAnyOpaqueFloatingPointType(opType))
       return success();
-    return op->emitOpError(
-        "zero expects struct, array, vector, or complex type");
+    return op->emitOpError("zero expects struct, array, vector, complex, or "
+                           "opaque floating-point type");
   }
 
   if (mlir::isa<cir::UndefAttr>(attrType)) {
@@ -2264,6 +2275,11 @@ LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
   if (!isa<cir::YieldOp>(bodyBlock.getTerminator()))
     return failure();
 
+  // A cir.label must start its block, and inlining could put it behind other
+  // operations, so keep a body that starts with one.
+  if (isa<cir::LabelOp>(bodyBlock.front()))
+    return failure();
+
   Operation *yield = bodyBlock.getTerminator();
   rewriter.inlineBlockBefore(&bodyBlock, op);
   rewriter.eraseOp(yield);
@@ -2320,6 +2336,13 @@ LogicalResult cir::BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
   // Don't merge blocks that start with LabelOp or IndirectBrOp.
   // This is to avoid merging blocks that have an indirect predecessor.
   if (isa<cir::LabelOp, cir::IndirectBrOp>(dst->front()))
+    return failure();
+
+  // The merged block takes the source's place in the region. Keep a region
+  // exit in the last block, where CFG flattening and the cir.await verifier
+  // expect it.
+  if (src->getNextNode() != dst && dst == &dst->getParent()->back() &&
+      isa<RegionBranchTerminatorOpInterface>(dst->getTerminator()))
     return failure();
 
   // An operand that is an argument of the destination itself (possible in an
@@ -4550,12 +4573,13 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
-  // Do not fold when fenv is present.
-  // TODO(cir): This is overly conservative. We could fold comparisons as long
-  //            as we can prove that the operation wouldn't raise exceptions or
-  //            when the fenv attribute does not require strict exception
-  //            semantics.
-  if (getFenvAttr())
+  // Folding drops the exceptions the comparison would raise, such as invalid
+  // for a signaling NaN, or for any NaN in a signaling comparison, so a
+  // constrained comparison folds only when it can ignore exceptions. The
+  // rounding mode does not affect a comparison.
+  // TODO(cir): This is still conservative. We could also fold when we can
+  //            prove that the operation wouldn't raise exceptions.
+  if (cir::FenvAttr fenv = getFenvAttr(); fenv && !fenv.canIgnoreExceptions())
     return {};
 
   cir::FCmpOpKind kind = getKind();

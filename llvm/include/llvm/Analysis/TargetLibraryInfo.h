@@ -10,6 +10,7 @@
 #define LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -25,6 +26,23 @@
 namespace llvm {
 
 template <typename T> class ArrayRef;
+
+struct VecDescData {
+  ElementCount VectorizationFactor;
+  bool Masked = false;
+  /// Encoded calling convention: 0 means absent (std::nullopt), otherwise
+  /// stores CallingConv::ID + 1 so an explicit C (0) remains representable.
+  /// TODO: Since C++20 standard becomes default in LLVM we can return back to
+  /// use std::optional<CallingConv::ID> instead of unsigned and value_or()
+  /// in default constructor.
+  unsigned CC = 0;
+
+  constexpr VecDescData() {};
+  constexpr VecDescData(ElementCount VectorizationFactor, bool Masked,
+                        std::optional<CallingConv::ID> Conv)
+      : VectorizationFactor(VectorizationFactor), Masked(Masked),
+        CC(Conv ? static_cast<unsigned>(*Conv) + 1u : 0u) {}
+};
 
 /// Provides info so a possible vectorization of a function can be
 /// computed. Function 'VectorFnName' is equivalent to 'ScalarFnName'
@@ -43,34 +61,21 @@ template <typename T> class ArrayRef;
 /// <scalarname> = the name of the scalar function.
 /// <vectorname> = the name of the vector function.
 class VecDesc {
-  StringRef ScalarFnName;
-  StringRef VectorFnName;
-  ElementCount VectorizationFactor;
-  bool Masked;
-  StringRef VABIPrefix;
-  /// Encoded calling convention: 0 means absent (std::nullopt), otherwise
-  /// stores CallingConv::ID + 1 so an explicit C (0) remains representable.
-  /// TODO: Since C++20 standard becomes default in LLVM we can return back to
-  /// use std::optional<CallingConv::ID> instead of unsigned and value_or()
-  /// in default constructor.
-  unsigned CC;
+  // String 0 is ScalarFnName, 1 is VectorFnName, 2 is VABIPrefix.
+  const EnumString<VecDescData, 3> *Data;
 
 public:
-  VecDesc() = delete;
-  constexpr VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
-                    ElementCount VectorizationFactor, bool Masked,
-                    StringRef VABIPrefix, std::optional<CallingConv::ID> Conv)
-      : ScalarFnName(ScalarFnName), VectorFnName(VectorFnName),
-        VectorizationFactor(VectorizationFactor), Masked(Masked),
-        VABIPrefix(VABIPrefix),
-        CC(Conv ? static_cast<unsigned>(*Conv) + 1u : 0u) {}
+  VecDesc(const EnumString<VecDescData, 3> &Data) : Data(&Data) {}
 
-  StringRef getScalarFnName() const { return ScalarFnName; }
-  StringRef getVectorFnName() const { return VectorFnName; }
-  ElementCount getVectorizationFactor() const { return VectorizationFactor; }
-  bool isMasked() const { return Masked; }
-  StringRef getVABIPrefix() const { return VABIPrefix; }
+  StringRef getScalarFnName() const { return Data->name(0); }
+  StringRef getVectorFnName() const { return Data->name(1); }
+  ElementCount getVectorizationFactor() const {
+    return Data->value().VectorizationFactor;
+  }
+  bool isMasked() const { return Data->value().Masked; }
+  StringRef getVABIPrefix() const { return Data->name(2); }
   std::optional<CallingConv::ID> getCallingConv() const {
+    unsigned CC = Data->value().CC;
     if (CC == 0)
       return std::nullopt;
     return static_cast<CallingConv::ID>(CC - 1);
@@ -189,7 +194,7 @@ public:
 
   /// Add a set of scalar -> vector mappings, queryable via
   /// getVectorizedFunction and getScalarizedFunction.
-  LLVM_ABI void addVectorizableFunctions(ArrayRef<VecDesc> Fns);
+  LLVM_ABI void addVectorizableFunctions(EnumStrings<VecDescData, 3> Fns);
 
   /// Calls addVectorizableFunctions with a known preset of functions for the
   /// given vector library.

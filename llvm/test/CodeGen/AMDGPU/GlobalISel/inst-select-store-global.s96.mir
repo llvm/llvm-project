@@ -13,7 +13,6 @@
 
 name: store_global_v3s32
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -65,7 +64,6 @@ body: |
 
 name: store_global_s96
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |
@@ -112,7 +110,6 @@ body: |
 
 name: store_global_v6s16
 legalized:       true
-tracksRegLiveness: true
 regBankSelected: true
 
 body: |

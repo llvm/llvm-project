@@ -74,6 +74,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -1516,9 +1517,8 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
   // that the result of the allocation is pointer equal to the load ptr.
   if (isa<AllocaInst>(DepInst)) {
     return createConstantExpression(UndefValue::get(LoadType));
-  } else if (auto *InitVal =
-                 getInitialValueOfAllocation(DepInst, TLI, LoadType))
-      return createConstantExpression(InitVal);
+  } else if (auto *InitVal = getInitialValueOfAllocation(DepInst, LoadType))
+    return createConstantExpression(InitVal);
 
   return nullptr;
 }
@@ -1592,7 +1592,8 @@ NewGVN::performSymbolicPredicateInfoEvaluation(BitCastInst *I) const {
     AdditionallyUsedValue = CmpOp1;
   }
 
-  if (Predicate == CmpInst::ICMP_EQ)
+  if (Predicate == CmpInst::ICMP_EQ &&
+      canReplacePointersIfEqual(I, FirstOp, DL))
     return ExprResult::some(createVariableOrConstant(FirstOp),
                             AdditionallyUsedValue, PI);
 

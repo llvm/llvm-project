@@ -1730,8 +1730,7 @@ GVNPassImpl::analyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
   if (isa<AllocaInst>(DepInst) || isLifetimeStart(DepInst))
     return AvailableValue::get(UndefValue::get(Load->getType()));
 
-  if (Constant *InitVal =
-          getInitialValueOfAllocation(DepInst, TLI, Load->getType()))
+  if (Constant *InitVal = getInitialValueOfAllocation(DepInst, Load->getType()))
     return AvailableValue::get(InitVal);
 
   if (StoreInst *S = dyn_cast<StoreInst>(DepInst)) {
@@ -2784,9 +2783,14 @@ std::optional<GVNPassImpl::ReachingMemVal> GVNPassImpl::accessMayModifyLocation(
   if (auto *II = dyn_cast<IntrinsicInst>(ClobberI)) {
     if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
       MemoryLocation IIObjLoc = MemoryLocation::getForArgument(II, 0, TLI);
-      if (AA.isMustAlias(IIObjLoc, Loc))
+      AliasResult AR = AA.alias(IIObjLoc, Loc);
+      if (AR == AliasResult::MustAlias)
         return ReachingMemVal::getDef(Loc.Ptr, ClobberI);
-      return std::nullopt;
+      if (AR == AliasResult::NoAlias)
+        return std::nullopt;
+      // Treat lifetime.start that may overlap the location as a clobber.
+      // TODO: Should be possible to treat a PartialAlias overlap as a def too.
+      return ReachingMemVal::getClobber(Loc.Ptr, ClobberI);
     }
   }
 
@@ -3550,10 +3554,22 @@ bool GVNPassImpl::propagateEquality(
 
     // Now try to deduce additional equalities from this one. For example, if
     // the known equality was "(A != B)" == "false" then it follows that A and B
-    // are equal in the scope. Only boolean equalities with an explicit true or
-    // false RHS are currently supported.
+    // are equal in the scope.
+
+    // If a bitwise OR is zero, both operands are zero. If a bitwise AND is
+    // all ones, both operands are all ones.
+    Value *A, *B;
+    if ((match(RHS, m_ZeroInt()) && match(LHS, m_Or(m_Value(A), m_Value(B)))) ||
+        (match(RHS, m_AllOnes()) &&
+         match(LHS, m_And(m_Value(A), m_Value(B))))) {
+      Worklist.emplace_back(A, RHS);
+      Worklist.emplace_back(B, RHS);
+      continue;
+    }
+
+    // The remaining deductions require a boolean equality with an explicit
+    // true or false RHS.
     if (!RHS->getType()->isIntegerTy(1))
-      // Not a boolean equality - bail out.
       continue;
     ConstantInt *CI = dyn_cast<ConstantInt>(RHS);
     if (!CI)
@@ -3565,7 +3581,6 @@ bool GVNPassImpl::propagateEquality(
 
     // If "A && B" is known true then both A and B are known true.  If "A || B"
     // is known false then both A and B are known false.
-    Value *A, *B;
     if ((IsKnownTrue && match(LHS, m_LogicalAnd(m_Value(A), m_Value(B)))) ||
         (IsKnownFalse && match(LHS, m_LogicalOr(m_Value(A), m_Value(B))))) {
       Worklist.push_back(std::make_pair(A, RHS));

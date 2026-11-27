@@ -4,7 +4,6 @@
 
 ---
 name:            narrow_shl_s64_32_s64amt
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -25,7 +24,6 @@ body:             |
 
 ---
 name:            narrow_shl_s64_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -46,7 +44,6 @@ body:             |
 
 ---
 name:            narrow_shl_s64_33
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -69,7 +66,6 @@ body:             |
 
 ---
 name:            narrow_shl_s64_31
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -89,7 +85,6 @@ body:             |
 
 ---
 name:            narrow_shl_s64_63
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -112,7 +107,6 @@ body:             |
 
 ---
 name:            narrow_shl_s64_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -130,7 +124,6 @@ body:             |
 
 ---
 name:            narrow_shl_s64_65
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -148,7 +141,6 @@ body:             |
 
 ---
 name:            narrow_shl_s32_16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -168,7 +160,6 @@ body:             |
 
 ---
 name:            narrow_shl_s32_17
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -188,7 +179,6 @@ body:             |
 
 ---
 name:            narrow_shl_v2s32_17
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1

@@ -12,7 +12,6 @@
 
 ---
 name:            dead_superreg_live_subreg
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       6
   vgprForAGPRCopy: '$vgpr39'

@@ -1,22 +1,40 @@
 ! RUN: %python %S/test_modfile.py %s %flang_fc1
-! References to __builtin_selected_real_kind, and named constants depending on
-! them, are not folded in the intrinsic modules until the module file is read.
-module iso_fortran_env_impl
-  intrinsic :: __builtin_selected_real_kind
-  integer, parameter :: k = __builtin_selected_real_kind(6, 37)
-  integer, parameter :: safe = merge(k, -1, k >= 0)
-  integer, parameter :: kinds(*) = [pack([k], k >= 0)]
-  integer, parameter :: folded = selected_real_kind(6, 37)
-end
+! Test that a module re-exporting a DEC STRUCTURE writes a parseable module
+! file (use m1 rather than use m1,only:/s/).
 
-!Expect: iso_fortran_env_impl.mod
-!module iso_fortran_env_impl
-!intrinsic::__builtin_selected_real_kind
-!integer(4),parameter::k=__builtin_selected_real_kind(6_4,37_4)
-!integer(4),parameter::safe=merge(k,-1_4,k>=0_4)
-!intrinsic::merge
-!integer(4),parameter::kinds(1_8:*)=[INTEGER(4)::pack([INTEGER(4)::k],k>=0_4)]
-!intrinsic::pack
-!integer(4),parameter::folded=4_4
-!intrinsic::selected_real_kind
+module m1
+  structure /s/
+    integer :: i
+  end structure
+  structure /t/
+    real :: r
+  end structure
+end module
+
+module m2
+  use m1
+end module
+
+!Expect: m1.mod
+!module m1
+!structure /s/
+!integer(4)::i
+!end structure
+!structure /t/
+!real(4)::r
+!end structure
+!end
+
+!Expect: m2.mod
+!module m2
+!use m1
+!end
+
+module m3
+  use m1
+  private
+end module
+
+!Expect: m3.mod
+!module m3
 !end

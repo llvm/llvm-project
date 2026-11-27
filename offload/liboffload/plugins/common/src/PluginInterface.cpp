@@ -30,8 +30,7 @@
 #include <cstdint>
 
 using namespace llvm;
-using namespace omp;
-using namespace target;
+using namespace offload;
 using namespace plugin;
 using namespace error;
 using namespace llvm::offload::debug;
@@ -699,6 +698,18 @@ Error GenericDeviceTy::dataMemcpy(void *DstPtr, const void *SrcPtr,
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
   auto Err = dataMemcpyImpl(DstPtr, SrcPtr, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
+Error GenericDeviceTy::dataMemcpy3D(const Copy3DDescTy &Copy,
+                                    __tgt_async_info *AsyncInfo) {
+  if (Copy.Extent[0] == 0 || Copy.Extent[1] == 0 || Copy.Extent[2] == 0)
+    return Plugin::success();
+
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = dataMemcpy3DImpl(Copy, AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }

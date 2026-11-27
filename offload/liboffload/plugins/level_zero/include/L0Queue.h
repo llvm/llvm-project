@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
-#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
+#ifndef OFFLOAD_PLUGIN_LEVEL_ZERO_L0QUEUE_H
+#define OFFLOAD_PLUGIN_LEVEL_ZERO_L0QUEUE_H
 
 #include "L0Event.h"
 #include "PluginInterface.h"
@@ -22,7 +22,7 @@
 #include "L0CmdListManager.h"
 #include "L0Options.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 class L0DeviceTy;
 class LevelZeroPluginContextTy;
@@ -70,6 +70,14 @@ public:
       return Plugin::success();
 
     return memoryCopyImpl(Dst, Src, Size);
+  }
+
+  Error memoryCopy3D(void *Dst, const ze_copy_region_t &DstRegion,
+                     uint32_t DstPitch, uint32_t DstSlicePitch, const void *Src,
+                     const ze_copy_region_t &SrcRegion, uint32_t SrcPitch,
+                     uint32_t SrcSlicePitch) {
+    return memoryCopy3DImpl(Dst, DstRegion, DstPitch, DstSlicePitch, Src,
+                            SrcRegion, SrcPitch, SrcSlicePitch);
   }
 
   Error dataRetrieve(void *HstPtr, const void *TgtPtr, int64_t Size) {
@@ -138,6 +146,11 @@ public:
   virtual Expected<bool> hasPendingWorkImpl() = 0;
   virtual bool hasPendingMemoryCopies() { return false; }
   virtual Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) = 0;
+  virtual Error memoryCopy3DImpl(void *Dst, const ze_copy_region_t &DstRegion,
+                                 uint32_t DstPitch, uint32_t DstSlicePitch,
+                                 const void *Src,
+                                 const ze_copy_region_t &SrcRegion,
+                                 uint32_t SrcPitch, uint32_t SrcSlicePitch) = 0;
   virtual Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
                                  int64_t Size) {
     return memoryCopy(HstPtr, TgtPtr, Size);
@@ -185,6 +198,10 @@ public:
   Error synchronizeImpl() override;
   Expected<bool> hasPendingWorkImpl() override;
   Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) override;
+  Error memoryCopy3DImpl(void *Dst, const ze_copy_region_t &DstRegion,
+                         uint32_t DstPitch, uint32_t DstSlicePitch,
+                         const void *Src, const ze_copy_region_t &SrcRegion,
+                         uint32_t SrcPitch, uint32_t SrcSlicePitch) override;
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
   Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
@@ -204,6 +221,10 @@ public:
   Error synchronizeImpl() override { return Plugin::success(); }
   Expected<bool> hasPendingWorkImpl() override { return false; }
   Error memoryCopyImpl(void *Dst, const void *Src, size_t Size) override;
+  Error memoryCopy3DImpl(void *Dst, const ze_copy_region_t &DstRegion,
+                         uint32_t DstPitch, uint32_t DstSlicePitch,
+                         const void *Src, const ze_copy_region_t &SrcRegion,
+                         uint32_t SrcPitch, uint32_t SrcSlicePitch) override;
   Error launchKernelImpl(ze_kernel_handle_t Kernel,
                          L0LaunchEnvTy &KEnv) override;
   Error hostCallImpl(void (*Callback)(void *), void *UserData) override;
@@ -224,5 +245,5 @@ public:
   Error deinit();
 };
 
-} // namespace llvm::omp::target::plugin
-#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_ASYNCQUEUE_H
+} // namespace llvm::offload::plugin
+#endif // OFFLOAD_PLUGIN_LEVEL_ZERO_L0QUEUE_H

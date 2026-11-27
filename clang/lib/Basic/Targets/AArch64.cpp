@@ -507,8 +507,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (Opts.UnsafeFPMath)
     Builder.defineMacro("__ARM_FP_FAST", "1");
 
-  Builder.defineMacro("__ARM_SIZEOF_WCHAR_T",
-                      Twine(Opts.WCharSize ? Opts.WCharSize : 4));
+  Builder.defineMacro("__ARM_SIZEOF_WCHAR_T", Twine(getWCharWidth() / 8));
 
   Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM", Opts.ShortEnums ? "1" : "4");
 
@@ -839,10 +838,9 @@ AArch64TargetInfo::getTargetBuiltins() const {
   };
 }
 
-std::optional<std::pair<unsigned, unsigned>>
-AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts,
-                                  ArmStreamingKind Mode,
-                                  llvm::StringMap<bool> *FeatureMap) const {
+std::optional<std::pair<unsigned, unsigned>> AArch64TargetInfo::getVScaleRange(
+    const LangOptions &LangOpts, ArmStreamingKind Mode,
+    const llvm::StringMap<bool> *FeatureMap) const {
   if (Mode == ArmStreamingKind::NotStreaming &&
       (LangOpts.VScaleMin || LangOpts.VScaleMax))
     return std::pair<unsigned, unsigned>(

@@ -104,6 +104,14 @@ else()
   set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES)
 endif()
 
+if (ORC_RT_TARGET_POSIX)
+  set(ORC_RT_BEDROCK_TEST_POSIX_SOURCES
+    bedrock/host/posix/DlfcnHostTest.cpp
+    )
+else()
+  set(ORC_RT_BEDROCK_TEST_POSIX_SOURCES)
+endif()
+
 # Each library's tests link that library and the ones beneath it, and nothing
 # else. A dependency on a library above shows up as a link error rather than
 # going unnoticed.
@@ -131,6 +139,10 @@ add_orc_rt_unittest(BedrockTests
   bedrock/host/CPUFeaturesTest.cpp
   bedrock/host/TargetTripleTest.cpp
 
+  bedrock/sys/posix/DlfcnLoaderAdapterCTest.c
+  bedrock/sys/posix/DlfcnLoaderAdapterTest.cpp
+
+  ${ORC_RT_BEDROCK_TEST_POSIX_SOURCES}
   ${ORC_RT_BEDROCK_TEST_APPLE_SOURCES}
 
   LINK_LIBS orc-rt-bedrock-objects orc-rt-support-objects
@@ -176,18 +188,10 @@ if (ORC_RT_TARGET_POSIX)
     )
 endif()
 
-# Build a shared library for NativeDylibManager tests.
-add_library(NativeDylibManagerTestLib SHARED
-  Inputs/NativeDylibManagerTestLib.cpp)
-set_target_properties(NativeDylibManagerTestLib PROPERTIES
-  PREFIX ""
-  DEFINE_SYMBOL ORC_RT_TEST_DLL_EXPORTS
-  FOLDER "orc-rt/Tests")
-target_compile_options(NativeDylibManagerTestLib PRIVATE
-  ${ORC_RT_COMPILE_FLAGS})
+# The shared test library, built in test/Inputs.
 target_compile_definitions(BedrockTests PRIVATE
-  "NDM_TEST_LIB_PATH=\"$<TARGET_FILE:NativeDylibManagerTestLib>\"")
-add_dependencies(BedrockTests NativeDylibManagerTestLib)
+  "ORC_RT_TEST_DYLIB_PATH=\"$<TARGET_FILE:orc-rt-test-dylib>\"")
+add_dependencies(BedrockTests orc-rt-test-dylib)
 
 # Build a shared library for RTTICrossDylibTest. It links its own copy of the
 # runtime objects, giving it a LibraryID distinct from SupportTests's, so the

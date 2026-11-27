@@ -163,6 +163,7 @@ public:
                            const CGPassBuilderOption &Opts,
                            PassInstrumentationCallbacks *PIC);
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addCodeGenPrepare(PassManagerWrapper &PMW) override;
   void addPreISel(PassManagerWrapper &PMW) override;
@@ -183,8 +184,7 @@ public:
   void addPostRegAlloc(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
   Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) override;
-  Expected<bool>
-  addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
+  Error addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
   Error addFastRegAlloc(PassManagerWrapper &PMW) override;
   Error addOptimizedRegAlloc(PassManagerWrapper &PMW) override;
@@ -221,6 +221,8 @@ public:
   WWMRegisterRegAlloc(const char *N, const char *D, FunctionPassCtor C)
       : RegisterRegAllocBase(N, D, C) {}
 };
+
+} // anonymous namespace
 
 static bool onlyAllocateSGPRs(const TargetRegisterInfo &TRI,
                               const MachineRegisterInfo &MRI,
@@ -425,7 +427,6 @@ static bool isLTOPreLink(ThinOrFullLTOPhase Phase) {
   return Phase == ThinOrFullLTOPhase::FullLTOPreLink ||
          Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
 }
-} // anonymous namespace
 
 static cl::opt<bool, true> EnableObjectLinking(
     "amdgpu-enable-object-linking",
@@ -536,6 +537,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUInsertDelayAluLegacyPass(*PR);
   initializeAMDGPULowerVGPREncodingLegacyPass(*PR);
   initializeSIInsertHardClausesLegacyPass(*PR);
+  initializeSIInsertAsyncBarrierArriveWorkaroundLegacyPass(*PR);
   initializeSIInsertWaitcntsLegacyPass(*PR);
   initializeSIModeRegisterLegacyPass(*PR);
   initializeSIWholeQuadModeLegacyPass(*PR);
@@ -743,18 +745,6 @@ bool AMDGPUTargetMachine::EnableObjectLinking = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
-
-StringRef AMDGPUTargetMachine::getGPUName(const Function &F) const {
-  Attribute GPUAttr = F.getFnAttribute("target-cpu");
-  return GPUAttr.isValid() ? GPUAttr.getValueAsString() : getTargetCPU();
-}
-
-StringRef AMDGPUTargetMachine::getFeatureString(const Function &F) const {
-  Attribute FSAttr = F.getFnAttribute("target-features");
-
-  return FSAttr.isValid() ? FSAttr.getValueAsString()
-                          : getTargetFeatureString();
-}
 
 llvm::ScheduleDAGInstrs *
 AMDGPUTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
@@ -1322,8 +1312,8 @@ public:
   FunctionPass *createWWMRegAllocPass(bool Optimized);
   FunctionPass *createRegAllocPass(bool Optimized) override;
 
-  bool addRegAssignAndRewriteFast() override;
-  bool addRegAssignAndRewriteOptimized() override;
+  void addRegAssignAndRewriteFast() override;
+  void addRegAssignAndRewriteOptimized() override;
 
   bool addPreRewrite() override;
   void addPostRegAlloc() override;
@@ -1764,7 +1754,7 @@ static const char RegAllocOptNotSupportedMessage[] =
     "-regalloc not supported with amdgcn. Use -sgpr-regalloc, -wwm-regalloc, "
     "and -vgpr-regalloc";
 
-bool GCNPassConfig::addRegAssignAndRewriteFast() {
+void GCNPassConfig::addRegAssignAndRewriteFast() {
   if (!usingDefaultRegAlloc())
     reportFatalUsageError(RegAllocOptNotSupportedMessage);
 
@@ -1786,11 +1776,9 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
 
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(false));
-
-  return true;
 }
 
-bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
+void GCNPassConfig::addRegAssignAndRewriteOptimized() {
   if (!usingDefaultRegAlloc())
     reportFatalUsageError(RegAllocOptNotSupportedMessage);
 
@@ -1830,8 +1818,6 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createRegAllocScoringPass());
 
   addPass(&AMDGPUMarkLastScratchLoadID);
-
-  return true;
 }
 
 void GCNPassConfig::addPostRegAlloc() {
@@ -1847,12 +1833,21 @@ void GCNPassConfig::addPreSched2() {
   addPass(&SIPostRABundlerLegacyID);
 }
 
+static bool mayNeedAsyncBarrierArriveWorkaround(const Triple &TT) {
+  Triple::SubArchType SubArch = TT.getSubArch();
+  return SubArch == Triple::NoSubArch ||
+         SubArch == Triple::AMDGPUSubArch1250S ||
+         AMDGPU::getMajorSubArch(SubArch) == Triple::AMDGPUSubArch12_5;
+}
+
 void GCNPassConfig::addPreEmitPass() {
   if (isPassEnabled(CLOpts.enable_vopd, CodeGenOptLevel::Less))
     addPass(&GCNCreateVOPDID);
   addPass(createSIMemoryLegalizerPass());
   if (getOptLevel() > CodeGenOptLevel::None)
     addPass(&SIPostRA16BitMovFoldingLegacyID);
+  if (mayNeedAsyncBarrierArriveWorkaround(TM->getTargetTriple()))
+    addPass(createSIInsertAsyncBarrierArriveWorkaroundPass());
   addPass(createSIInsertWaitcntsPass());
 
   addPass(createSIModeRegisterPass());
@@ -2529,7 +2524,7 @@ void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
     addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
 }
 
-Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
+Error AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
     PassManagerWrapper &PMW) {
   if (auto Err = validateRegAllocOptions())
     return Err;
@@ -2580,7 +2575,7 @@ Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
   addMachineFunctionPass(VirtRegRewriterPass(true), PMW);
 
   addMachineFunctionPass(AMDGPUMarkLastScratchLoadPass(), PMW);
-  return true;
+  return Error::success();
 }
 
 void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
@@ -2610,6 +2605,8 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   addMachineFunctionPass(SIMemoryLegalizerPass(), PMW);
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addMachineFunctionPass(SIPostRA16BitMovFoldingPass(), PMW);
+  if (mayNeedAsyncBarrierArriveWorkaround(TM.getTargetTriple()))
+    addMachineFunctionPass(SIInsertAsyncBarrierArriveWorkaroundPass(), PMW);
   addMachineFunctionPass(SIInsertWaitcntsPass(), PMW);
 
   addMachineFunctionPass(SIModeRegisterPass(), PMW);

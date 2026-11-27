@@ -3407,9 +3407,8 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
             mergeInStatus(Dependence::isSafeForVectorization(Type));
 
             // Gather dependences unless we accumulated -max-dependences
-            // dependences.  In that case return as soon as we find the first
-            // unsafe dependence.  This puts a limit on this quadratic
-            // algorithm.
+            // dependences. After that, keep checking without recording until a
+            // dependence is Unsafe.
             if (RecordDependences) {
               if (Type != Dependence::NoDep)
                 Dependences.emplace_back(A.second, B.second, Type);
@@ -3421,7 +3420,8 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
                            << "Too many dependences, stopped recording\n");
               }
             }
-            if (!RecordDependences && !isSafeForVectorization())
+            if (!RecordDependences &&
+                Status == VectorizationSafetyStatus::Unsafe)
               return false;
           }
         ++OI;
@@ -4035,7 +4035,13 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   if (!StrideExpr)
     return;
 
-  if (match(StrideExpr, m_scev_UndefOrPoison()))
+  const SCEV *StrideOp = StrideExpr;
+  if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(StrideOp))
+    StrideOp = C->getOperand();
+  const auto *StrideBase = cast<SCEVUnknown>(StrideOp);
+  // Don't version undef/poison strides: users of the map replace uses of the
+  // stride value, but undef/poison don't have use-lists.
+  if (match(StrideBase, m_scev_UndefOrPoison()))
     return;
 
   LLVM_DEBUG(dbgs() << "LAA: Found a strided access that is a candidate for "
@@ -4088,14 +4094,9 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   }
   LLVM_DEBUG(dbgs() << "LAA: Found a strided access that we can version.\n");
 
-  // Strip back off the integer cast, and check that our result is a
-  // SCEVUnknown as we expect.
-  const SCEV *StrideBase = StrideExpr;
-  if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(StrideBase))
-    StrideBase = C->getOperand();
   assert(SE->isLoopInvariant(StrideBase, TheLoop) &&
          "users of the map rely on the stride being loop invariant");
-  SymbolicStrides[Ptr] = cast<SCEVUnknown>(StrideBase);
+  SymbolicStrides[Ptr] = StrideBase;
 }
 
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,

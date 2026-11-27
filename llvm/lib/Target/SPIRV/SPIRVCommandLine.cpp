@@ -116,6 +116,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_INTEL_bindless_images},
     {"SPV_EXT_bfloat16_arithmetic",
      SPIRV::Extension::Extension::SPV_EXT_bfloat16_arithmetic},
+    {"SPV_INTEL_bfloat16_arithmetic",
+     SPIRV::Extension::Extension::SPV_INTEL_bfloat16_arithmetic},
     {"SPV_INTEL_bfloat16_conversion",
      SPIRV::Extension::Extension::SPV_INTEL_bfloat16_conversion},
     {"SPV_KHR_subgroup_rotate",

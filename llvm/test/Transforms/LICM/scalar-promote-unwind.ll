@@ -545,6 +545,42 @@ fun.ret:
   ret void
 }
 
+define void @promote_load_icf_invalidation(ptr %p, i1 %c) {
+; CHECK-LABEL: @promote_load_icf_invalidation(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[FP:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[FP_PROMOTED:%.*]] = load ptr, ptr [[FP]], align 8
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[CALLEE1:%.*]] = phi ptr [ @boo_willreturn_nounwind, [[LATCH:%.*]] ], [ [[FP_PROMOTED]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    call void @boo_willreturn_nounwind()
+; CHECK-NEXT:    store i8 0, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[CALLEE1_LCSSA:%.*]] = phi ptr [ [[CALLEE1]], [[LOOP]] ]
+; CHECK-NEXT:    store ptr [[CALLEE1_LCSSA]], ptr [[FP]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %fp = alloca ptr, align 8
+  br label %loop
+
+loop:
+  br i1 %c, label %exit, label %latch
+
+latch:
+  store ptr @boo_willreturn_nounwind, ptr %fp, align 8
+  %callee = load ptr, ptr %fp, align 8
+  call void %callee()
+  store i8 0, ptr %p, align 1
+  br label %loop
+
+exit:
+  ret void
+}
+
 ; Function Attrs: nounwind
 declare noalias ptr @malloc(i64)
 
@@ -567,3 +603,5 @@ declare void @__cxa_end_catch()
 declare i32 @llvm.eh.typeid.for.p0(ptr)
 
 declare void @f() uwtable
+
+declare void @boo_willreturn_nounwind() nounwind willreturn memory(none)

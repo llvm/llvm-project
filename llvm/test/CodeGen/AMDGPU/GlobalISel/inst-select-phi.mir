@@ -5,7 +5,6 @@
 name:            g_phi_s32_ss_sbranch
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   ; GCN-LABEL: name: g_phi_s32_ss_sbranch
@@ -58,7 +57,6 @@ body:             |
 name:            g_phi_s32_vv_sbranch
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   ; GCN-LABEL: name: g_phi_s32_vv_sbranch
@@ -112,7 +110,6 @@ body:             |
 name:            g_phi_s32_sv_sbranch
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   ; GCN-LABEL: name: g_phi_s32_sv_sbranch
@@ -165,7 +162,6 @@ body:             |
 name:            g_phi_s32_vs_sbranch
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   ; GCN-LABEL: name: g_phi_s32_vs_sbranch
@@ -219,7 +215,6 @@ body:             |
 name:            g_phi_s64_ss_sbranch
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   ; GCN-LABEL: name: g_phi_s64_ss_sbranch
@@ -271,7 +266,6 @@ body:             |
 name:            g_phi_v2s16_vv_sbranch
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   ; GCN-LABEL: name: g_phi_v2s16_vv_sbranch
@@ -325,7 +319,6 @@ body:             |
 name:            phi_s32_ss_sbranch
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   ; GCN-LABEL: name: phi_s32_ss_sbranch
@@ -378,7 +371,6 @@ body:             |
 name:            phi_s32_vv_sbranch
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   ; GCN-LABEL: name: phi_s32_vv_sbranch

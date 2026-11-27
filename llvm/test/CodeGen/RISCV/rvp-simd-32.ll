@@ -4496,3 +4496,41 @@ define <2 x i16> @merge_v2i16(<2 x i16> %m, <2 x i16> %a, <2 x i16> %b) {
   %r = or <2 x i16> %x, %y
   ret <2 x i16> %r
 }
+
+define i8 @PR244552(i1 %cond) {
+; RV32-LABEL: PR244552:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    addi a1, sp, 12
+; RV32-NEXT:    andi a0, a0, 1
+; RV32-NEXT:    sh1add a0, a0, a1
+; RV32-NEXT:    pli.h a1, 255
+; RV32-NEXT:    li a2, 4
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sh a2, 0(a0)
+; RV32-NEXT:    lhu a0, 14(sp)
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: PR244552:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NEXT:    addi a1, sp, 8
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    sh2add a0, a0, a1
+; RV64-NEXT:    pli.w a1, 255
+; RV64-NEXT:    li a2, 4
+; RV64-NEXT:    sd a1, 8(sp)
+; RV64-NEXT:    sw a2, 0(a0)
+; RV64-NEXT:    lwu a0, 12(sp)
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    ret
+  %idx = zext i1 %cond to i32
+  %vec = insertelement <2 x i8> <i8 poison, i8 -1>, i8 4, i32 %idx
+  %res = extractelement <2 x i8> %vec, i32 1
+  ret i8 %res
+}

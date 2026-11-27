@@ -7,7 +7,6 @@
 name:            test_success1
 # CHECK: test_success1
 
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
@@ -32,7 +31,6 @@ body:             |
 ---
 name:            test_fail_clobber
 # CHECK: test_fail_clobber
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
@@ -58,7 +56,6 @@ body:             |
 ---
 name:            test_fail_use_in_loop
 # CHECK: test_fail_use_in_loop
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
@@ -84,7 +81,6 @@ body:             |
 ---
 name:            test_fail_call_in_preheader_after_mtctr
 # CHECK: test_fail_call_in_preheader_after_mtctr
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
@@ -110,7 +106,6 @@ body:             |
 ---
 name:            test_succ_call_in_preheader_before_mtctr
 # CHECK: test_succ_call_in_preheader_before_mtctr
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
@@ -136,7 +131,6 @@ body:             |
 ---
 name:            test_fail_call_in_loop
 # CHECK: test_fail_call_in_loop
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
@@ -162,7 +156,6 @@ body:             |
 ---
 name:            test_fail_indirect_call_in_loop
 # CHECK: test_fail_indirect_call_in_loop
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x3, $x4
@@ -192,7 +185,6 @@ body:             |
 ---
 name:            test_fail_livein_preheader
 # CHECK: test_fail_livein_preheader
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $ctr8
@@ -218,7 +210,6 @@ body:             |
 ---
 name:            test_fail_def_preheader
 # CHECK: test_fail_def_preheader
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
@@ -244,7 +235,6 @@ body:             |
 ---
 name:            test_success_only_use_preheader
 # CHECK: test_success_only_use_preheader
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
@@ -270,7 +260,6 @@ body:             |
 ---
 name:            test_fail_use_after_mtctr
 # CHECK: test_fail_use_after_mtctr
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
@@ -296,7 +285,6 @@ body:             |
 ---
 name:            test_fail_def_after_mtctr
 # CHECK: test_fail_def_after_mtctr
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
@@ -322,7 +310,6 @@ body:             |
 ---
 name:            test_success_def_after_loop
 # CHECK: test_success_def_after_loop
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
@@ -348,7 +335,6 @@ body:             |
 ---
 name:            test_fail_dead_def_in_preheader
 # CHECK: test_fail_dead_def_in_preheader
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
