@@ -57,8 +57,6 @@ void cxx_rewritten_binary_operator_complex_expr() {
 // CIR: %[[R_ADDR:.*]] = cir.alloca "r" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_SpaceshipComplexResult>
 // CIR: cir.call @_ZNK11ComplexItemssERKS_(%[[A_ADDR]], %[[B_ADDR]]) : (!cir.ptr<!rec_ComplexItem> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!rec_ComplexItem> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> ()
-// CIR: %[[POISON:.*]] = cir.const #cir.poison : !rec_SpaceshipComplexResult
-// CIR: cir.store {{.*}} %[[POISON]], %[[TMP_ADDR]] : !rec_SpaceshipComplexResult, !cir.ptr<!rec_SpaceshipComplexResult>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
 // CIR: %[[RESULT:.*]] = cir.call @_ZNK22SpaceshipComplexResultltEi(%[[TMP_ADDR]], %[[CONST_0]]) : (!cir.ptr<!rec_SpaceshipComplexResult> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.noundef}) -> (!u64i {llvm.noundef})
 // CIR: cir.store %[[RESULT]], %[[R_SLOT:.*]] : !u64i, !cir.ptr<!u64i>
@@ -116,8 +114,6 @@ void cxx_rewritten_binary_operator_aggr_expr() {
 // CIR: %[[R_ADDR:.*]] = cir.alloca "r" {{.*}} init : !cir.ptr<!rec_Result>
 // CIR: %[[TMP_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_SpaceshipResult>
 // CIR: cir.call @_ZNK4ItemssERKS_(%[[A_ADDR]], %[[B_ADDR]]) : (!cir.ptr<!rec_Item> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!rec_Item> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> ()
-// CIR: %[[OP_RESULT:.*]] = cir.const #cir.poison : !rec_SpaceshipResult
-// CIR: cir.store {{.*}} %[[OP_RESULT]], %[[TMP_ADDR]] : !rec_SpaceshipResult, !cir.ptr<!rec_SpaceshipResult>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
 // CIR: %[[RESULT:.*]] = cir.call @_ZNK15SpaceshipResultltEi(%[[TMP_ADDR]], %[[CONST_0]]) : (!cir.ptr<!rec_SpaceshipResult> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.noundef}) -> !s32i
 // CIR: cir.store %[[RESULT]], %[[R_SLOT:.*]] : !s32i, !cir.ptr<!s32i>
@@ -129,7 +125,6 @@ void cxx_rewritten_binary_operator_aggr_expr() {
 // LLVM: %[[R_ADDR:.*]] = alloca %struct.Result, align 4
 // LLVM: %[[TMP_ADDR:.*]] = alloca %struct.SpaceshipResult, align 1
 // LLVM: call void @_ZNK4ItemssERKS_(ptr noundef nonnull align 1 dereferenceable(1) %[[A_ADDR]], ptr noundef nonnull align 1 dereferenceable(1) %[[B_ADDR]])
-// LLVM: store %struct.SpaceshipResult poison, ptr %[[TMP_ADDR]], align 1
 // LLVM: %[[RESULT:.*]] = call i32 @_ZNK15SpaceshipResultltEi(ptr noundef nonnull align 1 dereferenceable(1) %[[TMP_ADDR]], i32 noundef 0)
 // LLVM: store i32 %[[RESULT]], ptr %[[R_SLOT:.*]], align 4
 // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[R_ADDR]], ptr align 4 %[[R_SLOT]], i64 4, i1 false)
@@ -162,9 +157,6 @@ void cxx_rewritten_binary_operator_lvalue_expr() {
 // CIR: %[[REF_ADDR:.*]] = cir.alloca "ref" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[TMP_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_SpaceshipLValueResult>
 // CIR: cir.call @_ZNK10LValueItemssERKS_(%[[A_ADDR]], %[[B_ADDR]]) : (!cir.ptr<!rec_LValueItem> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!rec_LValueItem> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> ()
-// FIXME: CIR stores a poison aggregate into the temporary due to empty-record-return behavior; OGCG omits this store.
-// CIR: %[[OP_RESULT:.*]] = cir.const #cir.poison : !rec_SpaceshipLValueResult
-// CIR: cir.store {{.*}} %[[OP_RESULT]], %[[TMP_ADDR]] : !rec_SpaceshipLValueResult, !cir.ptr<!rec_SpaceshipLValueResult>
 // CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
 // CIR: %[[RESULT:.*]] = cir.call @_ZNK21SpaceshipLValueResultltEi(%[[TMP_ADDR]], %[[CONST_0]]) : (!cir.ptr<!rec_SpaceshipLValueResult> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.noundef}) -> (!cir.ptr<!s32i> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nonnull, llvm.noundef})
 // CIR: cir.store {{.*}} %[[RESULT]], %[[REF_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
@@ -174,8 +166,6 @@ void cxx_rewritten_binary_operator_lvalue_expr() {
 // LLVM: %[[REF_ADDR:.*]] = alloca ptr, align 8
 // LLVM: %[[TMP_ADDR:.*]] = alloca %struct.SpaceshipLValueResult, align 1
 // LLVM: call void @_ZNK10LValueItemssERKS_(ptr noundef nonnull align 1 dereferenceable(1) %[[A_ADDR]], ptr noundef nonnull align 1 dereferenceable(1) %[[B_ADDR]])
-// FIXME: CIR stores a poison aggregate into the temporary due to empty-record-return behavior; OGCG omits this store.
-// LLVM: store %struct.SpaceshipLValueResult poison, ptr %[[TMP_ADDR]], align 1
 // LLVM: %[[RESULT:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZNK21SpaceshipLValueResultltEi(ptr noundef nonnull align 1 dereferenceable(1) %[[TMP_ADDR]], i32 noundef 0)
 // LLVM: store ptr %[[RESULT]], ptr %[[REF_ADDR]], align 8
 

@@ -105,17 +105,12 @@ VoidTask silly_task() {
 
 // Call promise.get_return_object() to retrieve the task object.
 
-// Empty records are ignored, so calls returning one return nothing and the
-// slot takes a poison placeholder.
-
 // CIR: cir.coroutine initialSuspend : {
 
 // CIR:   cir.call @_ZN5folly4coro4TaskIvE12promise_type17get_return_objectEv(%[[VoidPromisseAddr]]) nothrow : {{.*}} -> ()
-// CIR:   %[[RetObj:.*]] = cir.const #cir.poison : ![[VoidTask]]
-// CIR:   cir.store{{.*}} %[[RetObj]], %[[VoidTaskAddr]] : ![[VoidTask]]
+// CIR-NOT: cir.store{{.*}} : ![[VoidTask]]
 
 // LLVM: call void @_ZN5folly4coro4TaskIvE12promise_type17get_return_objectEv(ptr noundef nonnull align 1 dereferenceable(1) %[[VoidPromisseAddr]])
-// LLVM: store %[[VoidTask]] poison, ptr %[[VoidTaskAddr]]
 
 // OGCG: call void @llvm.lifetime.start.p0(ptr %[[VoidPromisseAddr]])
 // OGCG: call void @_ZN5folly4coro4TaskIvE12promise_type17get_return_objectEv(ptr noundef nonnull align 1 dereferenceable(1) %[[VoidPromisseAddr]])
@@ -128,11 +123,8 @@ VoidTask silly_task() {
 // the suspend_always struct to use for cir.await.
 
 // CIR:   cir.call @_ZN5folly4coro4TaskIvE12promise_type15initial_suspendEv(%[[VoidPromisseAddr]])
-// CIR:   %[[Tmp0:.*]] = cir.const #cir.poison : ![[SuspendAlways]]
-// CIR:   cir.store{{.*}} %[[Tmp0]], %[[SuspendAlwaysAddr]]
 
 // LLVM: call void @_ZN5folly4coro4TaskIvE12promise_type15initial_suspendEv(ptr noundef nonnull align 1 dereferenceable(1) %[[VoidPromisseAddr]])
-// LLVM: store %[[SuspendAlways]] poison, ptr %[[SuspendAlwaysAddr]]
 
 // OGCG: call void @_ZN5folly4coro4TaskIvE12promise_type15initial_suspendEv(ptr noundef nonnull align 1 dereferenceable(1) %[[VoidPromisseAddr]])
 
@@ -165,8 +157,6 @@ VoidTask silly_task() {
 
 // CIR-NEXT:   }, suspend : {
 // CIR-NEXT:     cir.call @_ZNSt16coroutine_handleIN5folly4coro4TaskIvE12promise_typeEE12from_addressEPv(%[[CoroFrameAddr]])
-// CIR-NEXT:     %[[FromAddrRes:.*]] = cir.const #cir.poison : ![[CoroHandlePromiseVoid]]
-// CIR-NEXT:     cir.store{{.*}} %[[FromAddrRes]], %[[CoroHandlePromiseAddr]] : ![[CoroHandlePromiseVoid]]
 // CIR-NEXT:     %[[CoroHandlePromiseReload:.*]] = cir.load{{.*}} %[[CoroHandlePromiseAddr]]
 // CIR-NEXT:     cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(%[[CoroHandleVoidAddr]])
 // CIR-NEXT:     %[[CoroHandleVoidReload:.*]] = cir.load{{.*}} %[[CoroHandleVoidAddr]] : !cir.ptr<![[CoroHandleVoid]]>, ![[CoroHandleVoid]]
@@ -494,18 +484,12 @@ folly::coro::Task<int> byRef(const std::string& s) {
 
 // CIR:    cir.coroutine initialSuspend : {
 // CIR:     cir.call @_ZN5folly4coro4TaskIiE12promise_type17get_return_objectEv(%[[IntPromisseAddr]]) nothrow : {{.*}} -> ()
-// CIR:     %[[RetObj:.*]] = cir.const #cir.poison : ![[IntTask]]
-// CIR:     cir.store {{.*}} %[[RetObj]], %[[IntTaskAddr]] : ![[IntTask]]
 // CIR:     cir.call @_ZN5folly4coro4TaskIiE12promise_type15initial_suspendEv(%[[IntPromisseAddr]])
-// CIR:     %[[Tmp0:.*]] = cir.const #cir.poison : ![[SuspendAlways]]
-// CIR:     cir.store{{.*}} %[[Tmp0]], %[[SuspendAlwaysAddr]]
 // CIR:     cir.await(init, ready : {
 // CIR:       %[[TmpCallRes:.*]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[SuspendAlwaysAddr]])
 // CIR:       cir.condition(%[[TmpCallRes]])
 // CIR:     }, suspend : {
 // CIR:       cir.call @_ZNSt16coroutine_handleIN5folly4coro4TaskIiE12promise_typeEE12from_addressEPv(%[[CoroFrameAddr:.*]])
-// CIR:       %[[FromAddrRes:.*]] = cir.const #cir.poison : ![[CoroHandlePromiseInt]]
-// CIR:       cir.store{{.*}} %[[FromAddrRes]], %[[CoroHandlePromiseAddr]] : ![[CoroHandlePromiseInt]]
 // CIR:       %[[CoroHandlePromiseReload:.*]] = cir.load{{.*}} %[[CoroHandlePromiseAddr]]
 // CIR:       cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIiE12promise_typeEEES_IT_E(%[[CoroHandleVoidAddr]])
 // CIR:       %[[CoroHandleVoidReload:.*]] = cir.load{{.*}} %[[CoroHandleVoidAddr]] : !cir.ptr<![[CoroHandleVoid]]>, ![[CoroHandleVoid]]
@@ -669,15 +653,11 @@ folly::coro::Task<void> yield1() {
 // CIR: cir.coroutine initialSuspend : {
 // initial_suspend + await(init)
 // CIR:   cir.call @_ZN5folly4coro4TaskIvE12promise_type15initial_suspendEv(%[[PROMISE]]){{.*}}
-// CIR:   %[[INIT_SUSP:.*]] = cir.const #cir.poison : ![[SuspendAlways]]
-// CIR:   cir.store{{.*}} %[[INIT_SUSP]], %[[SUSP0]]
 // CIR:   cir.await(init, ready : {
 // CIR:     %[[READY0:.*]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[SUSP0]]){{.*}}
 // CIR:     cir.condition(%[[READY0]])
 // CIR:   }, suspend : {
 // CIR:     cir.call @_ZNSt16coroutine_handleIN5folly4coro4TaskIvE12promise_typeEE12from_addressEPv(%{{.*}}){{.*}}
-// CIR:     %[[FROMADDR0:.*]] = cir.const #cir.poison : ![[CoroHandlePromiseVoid]]
-// CIR:     cir.store{{.*}} %[[FROMADDR0]], %[[CH_PROM0]]
 // CIR:     %[[PROM_RELOAD0:.*]] = cir.load{{.*}} %[[CH_PROM0]]
 // CIR:     cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(%[[CH_VOID0]]){{.*}}
 // CIR:     %[[VOID_RELOAD0:.*]] = cir.load{{.*}} %[[CH_VOID0]]
@@ -692,19 +672,13 @@ folly::coro::Task<void> yield1() {
 // yield_value + await(yield)
 // CIR: }, body : {
 // CIR:    cir.call @_Z5yieldv(){{.*}}
-// CIR:    %[[YIELD_TASK:.*]] = cir.const #cir.poison : ![[VoidTask]]
-// CIR:    cir.store{{.*}} %[[YIELD_TASK]], %[[T_ADDR]]
 // CIR:    %[[AWAITER:.*]] = cir.load{{.*}} %[[AWAITER_COPY_ADDR]]
 // CIR:    cir.call @_ZN5folly4coro4TaskIvE12promise_type11yield_valueES2_(%[[PROMISE]]){{.*}}
-// CIR:    %[[YIELD_SUSP:.*]] = cir.const #cir.poison : ![[SuspendAlways]]
-// CIR:    cir.store{{.*}} %[[YIELD_SUSP]], %[[SUSP1]]
 // CIR:    cir.await(yield, ready : {
 // CIR:      %[[READY1:.*]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[SUSP1]]){{.*}}
 // CIR:      cir.condition(%[[READY1]])
 // CIR:    }, suspend : {
 // CIR:      cir.call @_ZNSt16coroutine_handleIN5folly4coro4TaskIvE12promise_typeEE12from_addressEPv(%{{.*}}){{.*}}
-// CIR:      %[[FROMADDR1:.*]] = cir.const #cir.poison : ![[CoroHandlePromiseVoid]]
-// CIR:      cir.store{{.*}} %[[FROMADDR1]], %[[CH_PROM1]]
 // CIR:      %[[PROM_RELOAD1:.*]] = cir.load{{.*}} %[[CH_PROM1]]
 // CIR:      cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(%[[CH_VOID1]]){{.*}}
 // CIR:      %[[VOID_RELOAD1:.*]] = cir.load{{.*}} %[[CH_VOID1]]
@@ -720,15 +694,11 @@ folly::coro::Task<void> yield1() {
 
 // return_void + await(final)
 // CIR:   cir.call @_ZN5folly4coro4TaskIvE12promise_type13final_suspendEv(%[[PROMISE]]){{.*}}
-// CIR:   %[[FINAL_SUSP:.*]] = cir.const #cir.poison : ![[SuspendAlways]]
-// CIR:   cir.store{{.*}} %[[FINAL_SUSP]], %[[SUSP2]]
 // CIR:   cir.await(final, ready : {
 // CIR:     %[[READY2:.*]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[SUSP2]]){{.*}}
 // CIR:     cir.condition(%[[READY2]])
 // CIR:   }, suspend : {
 // CIR:     cir.call @_ZNSt16coroutine_handleIN5folly4coro4TaskIvE12promise_typeEE12from_addressEPv(%{{.*}}){{.*}}
-// CIR:     %[[FROMADDR2:.*]] = cir.const #cir.poison : ![[CoroHandlePromiseVoid]]
-// CIR:     cir.store{{.*}} %[[FROMADDR2]], %[[CH_PROM2]]
 // CIR:     %[[PROM_RELOAD2:.*]] = cir.load{{.*}} %[[CH_PROM2]]
 // CIR:     cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(%[[CH_VOID2]]){{.*}}
 // CIR:     %[[VOID_RELOAD2:.*]] = cir.load{{.*}} %[[CH_VOID2]]
@@ -851,8 +821,6 @@ folly::coro::Task<int> go1() {
 // CIR:   %[[One:.*]] = cir.const #cir.int<1> : !s32i
 // CIR:   cir.store{{.*}} %[[One]], %[[OneAddr]] : !s32i, !cir.ptr<!s32i>
 // CIR:   cir.call @_Z2goRKi(%[[OneAddr]]) : (!cir.ptr<!s32i>{{.*}}) -> ()
-// CIR:   %[[IntTaskTmp:.*]] = cir.const #cir.poison : ![[IntTask]]
-// CIR:   cir.store{{.*}} %[[IntTaskTmp]], %[[IntTaskAddr]] : ![[IntTask]], !cir.ptr<![[IntTask]]>
 
 // CIR:   cir.await(user, ready : {
 // CIR:   }, suspend : {
@@ -1126,11 +1094,9 @@ folly::coro::Task<int> go4() {
 
 // CIR: %[[FN_LOWERED:.*]] = cir.cast bitcast %[[FN]] : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>> -> !cir.ptr<!cir.func<(!cir.ptr<!s32i>)>>
 // CIR: cir.call %[[FN_LOWERED]](%[[ARG]]) : (!cir.ptr<!cir.func<(!cir.ptr<!s32i>)>>, !cir.ptr<!s32i> {{.*}}) -> ()
-// CIR: %[[CALLRES:.*]] = cir.const #cir.poison : ![[IntTask]]
-// CIR: cir.store{{.*}} %[[CALLRES]], %[[TASK_ADDR:.*]] : ![[IntTask]], !cir.ptr<![[IntTask]]>
 
 // CIR:  cir.await(user, ready : {
-// CIR:    = cir.call @_ZN5folly4coro4TaskIiE11await_readyEv(%[[TASK_ADDR]])
+// CIR:    = cir.call @_ZN5folly4coro4TaskIiE11await_readyEv(%{{.+}})
 // CIR:    cir.condition(
 // CIR:  }, suspend : {
 // CIR:    cir.coro.suspend_point
@@ -2445,8 +2411,6 @@ folly::coro::Task<int __complex__> complex_co_await() noexcept {
 
 // CIR: }, body : {
 // CIR:     cir.call @_Z9fetchDatav() nothrow : () -> ()
-// CIR:     %[[CALL:.*]] = cir.const #cir.poison : !rec_folly3A3Acoro3A3ATask3C_Complex_int3E
-// CIR:     cir.store {{.*}} %[[CALL]], %[[COMPLEX_ADDR]] : !rec_folly3A3Acoro3A3ATask3C_Complex_int3E, !cir.ptr<!rec_folly3A3Acoro3A3ATask3C_Complex_int3E>
 
 // CIR:     cir.await(user, ready : {
 // CIR:     }, suspend : {

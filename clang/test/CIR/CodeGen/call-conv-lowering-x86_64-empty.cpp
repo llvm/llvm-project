@@ -543,3 +543,50 @@ int caller(int k) {
 // CIR:   cir.call @_Z9takeEmpty5Emptyi(%{{[0-9]+}}) : (!s32i {llvm.noundef}) -> (!s32i {llvm.noundef})
 // LLVM: define dso_local noundef i32 @_Z6calleri(i32 noundef %{{[^,]+}})
 // LLVM:   call noundef i32 @_Z9takeEmpty5Emptyi(i32 noundef %{{[^,]+}})
+
+Empty makeEmpty();
+struct NuaHolder { char x; [[no_unique_address]] Empty e; };
+static_assert(sizeof(NuaHolder) == 1);
+
+int initNuaHolder() {
+  NuaHolder h{42, makeEmpty()};
+  return h.x;
+}
+
+// CIR: cir.func {{.*}}@_Z13initNuaHolderv()
+// CIR:   cir.store {{.*}} : !s8i, !cir.ptr<!s8i>
+// CIR:   cir.call @_Z9makeEmptyv() : () -> ()
+// CIR-NOT: cir.store
+// CIR:   cir.load {{.*}} : !cir.ptr<!s8i>, !s8i
+// LLVM: define dso_local noundef i32 @_Z13initNuaHolderv()
+// LLVM:   store i8 42, ptr %{{.+}}
+// LLVM:   call void @_Z9makeEmptyv()
+// LLVM-NOT: store
+// LLVM:   load i8, ptr %{{.+}}
+
+struct NonTrivialEmpty {
+  NonTrivialEmpty();
+  NonTrivialEmpty(const NonTrivialEmpty &);
+};
+NonTrivialEmpty makeNonTrivialEmpty();
+void initNonTrivialEmpty() { NonTrivialEmpty n = makeNonTrivialEmpty(); }
+
+// LLVM: define dso_local void @_Z19initNonTrivialEmptyv()
+// LLVM:   %[[N:.+]] = alloca %struct.NonTrivialEmpty
+// LLVM:   call void @_Z19makeNonTrivialEmptyv(ptr {{.*}}sret(%struct.NonTrivialEmpty) {{.*}}%[[N]])
+
+struct alignas(128) [[clang::trivial_abi]] AlignedEmpty {
+  AlignedEmpty();
+  ~AlignedEmpty();
+};
+AlignedEmpty makeAlignedEmpty();
+void initAlignedEmpty() { AlignedEmpty a = makeAlignedEmpty(); }
+
+// CIR: cir.func {{.*}}@_Z16initAlignedEmptyv()
+// CIR:   %[[A:.+]] = cir.alloca "a"
+// CIR:   cir.call @_Z16makeAlignedEmptyv(%[[A]])
+// CIR:   cir.call @_ZN12AlignedEmptyD1Ev(%[[A]])
+// LLVM: define dso_local void @_Z16initAlignedEmptyv()
+// LLVM:   %[[A:.+]] = alloca %struct.AlignedEmpty, align 128
+// LLVM:   call void @_Z16makeAlignedEmptyv(ptr {{.*}}sret(%struct.AlignedEmpty) align 128 %[[A]])
+// LLVM:   call void @_ZN12AlignedEmptyD1Ev(ptr {{.*}}%[[A]])
