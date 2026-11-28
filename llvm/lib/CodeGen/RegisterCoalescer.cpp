@@ -3368,6 +3368,7 @@ void JoinVals::pruneSubRegValues(
     SmallVectorImpl<std::pair<LaneBitmask, SlotIndex>> &PHIKills) {
   // Look for values being erased.
   bool DidPrune = false;
+  SmallPtrSet<LiveInterval::SubRange *, 4> RemovedValNos;
   for (unsigned i = 0, e = LR.getNumValNums(); i != e; ++i) {
     Val &V = Vals[i];
     // We should trigger in all cases in which eraseInstrs() does something.
@@ -3401,9 +3402,11 @@ void JoinVals::pruneSubRegValues(
         SmallVector<SlotIndex, 8> EndPoints;
         LIS->pruneValue(S, Def, &EndPoints);
         DidPrune = true;
-        // Mark value number as unused.
-        if (ValueOut->def == Def)
-          ValueOut->markUnused();
+        // Remove the value number.
+        if (ValueOut->def == Def) {
+          S.removeValNo(ValueOut);
+          RemovedValNos.insert(&S);
+        }
 
         if (V.Identical && S.Query(OtherDef).valueOutOrDead()) {
           // If V is identical to V.OtherVNI (and S was live at OtherDef),
@@ -3436,6 +3439,10 @@ void JoinVals::pruneSubRegValues(
       }
     }
   }
+
+  for (LiveInterval::SubRange *S : RemovedValNos)
+    S->RenumberValues();
+
   if (DidPrune)
     LI.removeEmptySubRanges();
 }
