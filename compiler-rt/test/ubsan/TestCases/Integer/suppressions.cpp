@@ -31,7 +31,8 @@
 
 // Test case for max file length suppression file (256MiB).
 // RUN: %python -c "import sys; s = b'unsigned-integer-overflow:do_overflow\n#'; open(sys.argv[1], 'wb').write(s + b'a' * ((1 << 28) - len(s)))" %t.maxlen-supp
-// RUN: %env_ubsan_opts=suppressions='"%t.maxlen-supp"' %run %t
+// RUN: %env_ubsan_opts=halt_on_error=1:suppressions='"%t.maxlen-supp"' %run %t
+// RUN: rm -f %t.maxlen-supp
 
 #include <stdint.h>
 
