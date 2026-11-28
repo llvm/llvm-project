@@ -387,8 +387,11 @@ struct SimplifyCFGPass : public OptionalPassInfoMixin<SimplifyCFGPass> {
 
 // Selects the tutorial version with -plugin-arg=SimplifyCFG,v1 (or v2, v3).
 static Error parseArguments(ArrayRef<const char *> Args) {
+  // No arguments resets to the default
   std::optional<TutorialVersion> V;
-  if (Args.size() == 1)
+  if (Args.empty())
+    V = V1;
+  else if (Args.size() == 1)
     V = StringSwitch<std::optional<TutorialVersion>>(Args[0])
             .Case("v1", V1)
             .Case("v2", V2)
@@ -396,7 +399,7 @@ static Error parseArguments(ArrayRef<const char *> Args) {
             .Default(std::nullopt);
   if (!V)
     return createStringError(
-        "SimplifyCFG: expected one argument, v1, v2 or v3");
+        "SimplifyCFG: expected a single argument: v1, v2 or v3");
   Version = *V;
   return Error::success();
 }

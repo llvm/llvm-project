@@ -85,7 +85,7 @@ struct PassPluginLibraryInfo {
                              IntrusiveRefCntPtr<vfs::FileSystem> VFS) = nullptr;
 
   /// Callback receiving the arguments given to the plugin, e.g. by
-  /// -plugin-arg=<PluginName>,<arg>, in order.
+  /// -plugin-arg=<PluginName>,<arg>, in order (or empty).
   Error (*ParseArguments)(ArrayRef<const char *> Args) = nullptr;
 };
 }
