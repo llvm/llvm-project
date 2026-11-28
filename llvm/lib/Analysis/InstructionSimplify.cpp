@@ -4774,6 +4774,15 @@ static Value *simplifyCmpSelOfMaxMin(Value *CmpLHS, Value *CmpRHS,
       !match(FVal, m_c_MaxOrMin(m_Specific(X), m_Specific(Y))))
     return nullptr;
 
+  // The min/max call may carry a range attribute on its result or operands.
+  // That attribute is only known to hold on the path where the select picks
+  // the call. Reusing the call for the whole select would propagate poison
+  // that the select was keeping off the live path.
+  if (MMI->hasRetAttr(Attribute::Range) ||
+      MMI->paramHasAttr(0, Attribute::Range) ||
+      MMI->paramHasAttr(1, Attribute::Range))
+    return nullptr;
+
   // (X >  Y) ? X : max(X, Y) --> max(X, Y)
   // (X >= Y) ? X : max(X, Y) --> max(X, Y)
   // (X <  Y) ? X : min(X, Y) --> min(X, Y)

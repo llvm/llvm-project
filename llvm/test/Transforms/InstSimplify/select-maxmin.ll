@@ -2143,3 +2143,58 @@ define i8 @select_umin_with_icmp_zero(i8 %x, i8 %y) {
   %sel = select i1 %cmp, i8 %min, i8 0
   ret i8 %sel
 }
+
+; The range attribute on the min/max call is only known to hold on the path
+; where the select picks the call, so the call must not replace the select.
+
+define i8 @ult_xy_umin_fval_range_ret(i8 %x, i8 %y) {
+; CHECK-LABEL: @ult_xy_umin_fval_range_ret(
+; CHECK-NEXT:    [[I:%.*]] = icmp ult i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call range(i8 10, 21) i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %i = icmp ult i8 %x, %y
+  %m = call range(i8 10, 21) i8 @llvm.umin.i8(i8 %x, i8 %y)
+  %r = select i1 %i, i8 %x, i8 %m
+  ret i8 %r
+}
+
+define i8 @ult_xy_umin_fval_range_arg0(i8 %x, i8 %y) {
+; CHECK-LABEL: @ult_xy_umin_fval_range_arg0(
+; CHECK-NEXT:    [[I:%.*]] = icmp ult i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 range(i8 10, 21) [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %i = icmp ult i8 %x, %y
+  %m = call i8 @llvm.umin.i8(i8 range(i8 10, 21) %x, i8 %y)
+  %r = select i1 %i, i8 %x, i8 %m
+  ret i8 %r
+}
+
+define i8 @ult_xy_umin_fval_range_arg1(i8 %x, i8 %y) {
+; CHECK-LABEL: @ult_xy_umin_fval_range_arg1(
+; CHECK-NEXT:    [[I:%.*]] = icmp ult i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 range(i8 10, 21) [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %i = icmp ult i8 %x, %y
+  %m = call i8 @llvm.umin.i8(i8 %x, i8 range(i8 10, 21) %y)
+  %r = select i1 %i, i8 %x, i8 %m
+  ret i8 %r
+}
+
+define i8 @eq_xy_umin_fval_range_ret(i8 %x, i8 %y) {
+; CHECK-LABEL: @eq_xy_umin_fval_range_ret(
+; CHECK-NEXT:    [[I:%.*]] = icmp eq i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call range(i8 10, 21) i8 @llvm.umin.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[I]], i8 [[X]], i8 [[M]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %i = icmp eq i8 %x, %y
+  %m = call range(i8 10, 21) i8 @llvm.umin.i8(i8 %x, i8 %y)
+  %r = select i1 %i, i8 %x, i8 %m
+  ret i8 %r
+}
