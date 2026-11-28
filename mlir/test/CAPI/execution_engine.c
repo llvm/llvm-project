@@ -120,11 +120,12 @@ void testOmpCreation(void) {
   lowerModuleToLLVM(ctx, module);
 
   // At this point all operations in the MLIR module have been lowered to the
-  // 'llvm' dialect except 'omp' operations. The goal of this test is
-  // guaranteeing that the execution engine C binding has registered OpenMP
-  // translations and therefore does not fail when it encounters 'omp' ops.
-  // We don't attempt to run the engine, since that would force us to link
-  // against the OpenMP library.
+  // 'llvm' dialect except 'omp' operations. The execution engine only
+  // registers the builtin and LLVM dialect translations itself, so the caller
+  // has to register the OpenMP translation. This test checks that an engine
+  // can be created for 'omp' ops once it has. We don't attempt to run the
+  // engine, since that would force us to link against the OpenMP library.
+  mlirRegisterAllLLVMTranslations(ctx);
   MlirExecutionEngine jit = mlirExecutionEngineCreate(
       module, /*optLevel=*/2, /*numPaths=*/0, /*sharedLibPaths=*/NULL,
       /*enableObjectDump=*/false, /*enablePIC=*/false);
