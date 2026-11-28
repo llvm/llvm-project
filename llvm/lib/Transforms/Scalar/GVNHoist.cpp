@@ -249,7 +249,7 @@ private:
   BBSideEffectsSet BBSideEffects;
   DenseSet<const BasicBlock *> HoistBarrier;
   unsigned NumFuncArgs;
-  const bool HoistingGeps = false;
+  const bool HoistingGeps = true;
 
   enum InsKind { Unknown, Scalar, Load, Store };
 

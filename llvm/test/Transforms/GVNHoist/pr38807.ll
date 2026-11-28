@@ -15,8 +15,8 @@ bb0:
 
 ;CHECK: bb1:
 ;CHECK:   %call264 = call zeroext i1 @bar
-;CHECK:   store i32 %call.idx.val.i, ptr %arg
 ;CHECK:   %0 = getelementptr inbounds %S, ptr %arg, i64 0, i32 0, i32 1
+;CHECK:   store i32 %call.idx.val.i, ptr %arg
 ;CHECK:   store i64 undef, ptr %0
 ;CHECK:   br i1 %call264, label %bb2, label %bb3
 

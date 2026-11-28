@@ -1,10 +1,9 @@
 ; RUN: opt -S -passes=gvn-hoist < %s | FileCheck %s 
 
 define dso_local void @func(i32 noundef %a, ptr noundef %b) !dbg !10 {
-; Check the merged debug location of hoisted GEP
+; Check that the hoisted GEP does not keep the debug location of either branch
 ; CHECK: entry
-; CHECK: %{{[a-zA-Z0-9_]*}} = getelementptr {{.*}} !dbg [[MERGED_DL:![0-9]+]]
-; CHECK: [[MERGED_DL]] = !DILocation(line: 0, scope: !{{[0-9]+}})
+; CHECK: %{{[a-zA-Z0-9_]*}} = getelementptr inbounds i32, ptr %b, i64 1{{$}}
 entry:
   tail call void @llvm.dbg.value(metadata i32 %a, metadata !16, metadata !DIExpression()), !dbg !17
   tail call void @llvm.dbg.value(metadata ptr %b, metadata !18, metadata !DIExpression()), !dbg !17
