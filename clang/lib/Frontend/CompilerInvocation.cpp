@@ -62,6 +62,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -504,6 +505,36 @@ static void denormalizeStringVector(ArgumentConsumer Consumer,
     llvm_unreachable("Cannot denormalize an option with option class "
                      "incompatible with string vector denormalization.");
   }
+}
+
+// Parse an alignment in bytes and store it with llvm::encode, which keeps 0
+// free to mean "not specified" while still allowing an alignment of 1.
+static std::optional<unsigned>
+normalizeEncodedAlignment(OptSpecifier Opt, int, const ArgList &Args,
+                          DiagnosticsEngine &Diags) {
+  auto *Arg = Args.getLastArg(Opt);
+  if (!Arg)
+    return std::nullopt;
+  unsigned Value;
+  if (StringRef(Arg->getValue()).getAsInteger(10, Value) || Value > 65536) {
+    Diags.Report(diag::err_drv_invalid_int_value)
+        << Arg->getAsString(Args) << Arg->getValue();
+    return std::nullopt;
+  }
+  if (!llvm::isPowerOf2_32(Value)) {
+    Diags.Report(diag::err_drv_alignment_not_power_of_two)
+        << Arg->getAsString(Args);
+    return std::nullopt;
+  }
+  return llvm::encode(llvm::Align(Value));
+}
+
+static void denormalizeEncodedAlignment(ArgumentConsumer Consumer,
+                                        unsigned SpellingOffset,
+                                        Option::OptionClass OptClass,
+                                        unsigned TableIndex, unsigned Value) {
+  denormalizeString(Consumer, SpellingOffset, OptClass, TableIndex,
+                    llvm::decodeMaybeAlign(Value)->value());
 }
 
 static std::optional<std::string> normalizeTriple(OptSpecifier Opt,
