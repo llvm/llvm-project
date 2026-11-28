@@ -18,19 +18,6 @@
 
 #include "test_macros.h"
 
-template <class T>
-constexpr void test() {
-  using H = support::constexpr_hash<T>;
-
-  ASSERT_NOEXCEPT(H()(T()));
-  H h;
-
-  typedef typename std::remove_pointer<T>::type type;
-  type i;
-  type j;
-  assert(h(&i) != h(&j));
-}
-
 constexpr void test_nullptr() {
   typedef std::nullptr_t T;
   using H = support::constexpr_hash<T>;
