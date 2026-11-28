@@ -16,6 +16,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -1438,6 +1439,164 @@ TEST_F(CloneModule, GlobalWithBlockAddressesInitializer) {
   auto *ClonedBa = cast<BlockAddress>(
       NewM->getGlobalVariable("blockaddr")->getInitializer());
   ASSERT_NE(OriginalBa->getBasicBlock(), ClonedBa->getBasicBlock());
+}
+
+TEST(CloneFunction, OriginallyIndirectCallsPrunedDeadBlock) {
+  StringRef Assembly = R"(
+    define void @callee(i32 %sel, ptr %fn) {
+    entry:
+      br label %dispatch
+
+    dispatch:
+      %phi = phi i32 [ %sel, %entry ]
+      switch i32 %phi, label %live [
+        i32 1, label %dead
+      ]
+
+    dead:
+      call void %fn()
+      ret void
+
+    live:
+      ret void
+    }
+
+    define void @caller(ptr %fn) {
+    entry:
+      ret void
+    }
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  ASSERT_TRUE(M != nullptr);
+  Function *Callee = M->getFunction("callee");
+  Function *Caller = M->getFunction("caller");
+  ASSERT_TRUE(Callee != nullptr);
+  ASSERT_TRUE(Caller != nullptr);
+
+  ValueToValueMapTy VMap;
+  VMap[Callee->getArg(0)] = ConstantInt::get(Type::getInt32Ty(Context), 0);
+  VMap[Callee->getArg(1)] = Caller->getArg(0);
+
+  SmallVector<ReturnInst *, 8> Returns;
+  ClonedCodeInfo CCI;
+  CloneAndPruneFunctionInto(Caller, Callee, VMap, /*ModuleLevelChanges=*/false,
+                            Returns, ".i", CCI);
+
+  // The dead block containing the indirect call was pruned by DeleteDeadBlocks;
+  // WeakTrackingVH must have nulled its entry instead of leaving a dangling
+  // pointer.
+  ASSERT_EQ(CCI.OriginallyIndirectCalls.size(), 1u);
+  EXPECT_EQ(static_cast<Value *>(CCI.OriginallyIndirectCalls[0]), nullptr);
+  for (const Instruction &I : instructions(Caller))
+    EXPECT_FALSE(isa<CallBase>(I));
+}
+
+TEST(CloneFunction, OriginallyIndirectCallsPrunedDeadBlockUsedNonVoid) {
+  StringRef Assembly = R"(
+    define i32 @callee(i32 %sel, ptr %fn) {
+    entry:
+      br label %dispatch
+
+    dispatch:
+      %phi = phi i32 [ %sel, %entry ]
+      switch i32 %phi, label %live [
+        i32 1, label %dead1
+      ]
+
+    dead1:
+      %r = call i32 %fn()
+      br label %dead2
+
+    dead2:
+      ret i32 %r
+
+    live:
+      ret i32 0
+    }
+
+    define i32 @caller(ptr %fn) {
+    entry:
+      ret i32 0
+    }
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  ASSERT_TRUE(M != nullptr);
+  Function *Callee = M->getFunction("callee");
+  Function *Caller = M->getFunction("caller");
+  ASSERT_TRUE(Callee != nullptr);
+  ASSERT_TRUE(Caller != nullptr);
+
+  ValueToValueMapTy VMap;
+  VMap[Callee->getArg(0)] = ConstantInt::get(Type::getInt32Ty(Context), 0);
+  VMap[Callee->getArg(1)] = Caller->getArg(0);
+
+  SmallVector<ReturnInst *, 8> Returns;
+  ClonedCodeInfo CCI;
+  CloneAndPruneFunctionInto(Caller, Callee, VMap, /*ModuleLevelChanges=*/false,
+                            Returns, ".i", CCI);
+
+  // emptyAndDetachBlock replaces used instructions with PoisonValue before
+  // removal; WeakTrackingVH must point to PoisonValue rather than a CallBase.
+  ASSERT_EQ(CCI.OriginallyIndirectCalls.size(), 1u);
+  EXPECT_TRUE(isa_and_present<PoisonValue>(
+      static_cast<Value *>(CCI.OriginallyIndirectCalls[0])));
+  EXPECT_EQ(dyn_cast_or_null<CallBase>(CCI.OriginallyIndirectCalls[0]),
+            nullptr);
+  for (const Instruction &I : instructions(Caller))
+    EXPECT_FALSE(isa<CallBase>(I));
+}
+
+TEST(CloneFunction, OriginallyIndirectCallsErasedTriviallyDead) {
+  StringRef Assembly = R"(
+    define i32 @callee(ptr %fn) {
+    entry:
+      br label %bb
+
+    bb:
+      %phi = phi ptr [ %fn, %entry ]
+      %r = call i32 %phi() memory(none) nounwind willreturn
+      ret i32 %r
+    }
+
+    define i32 @caller() {
+    entry:
+      ret i32 0
+    }
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  ASSERT_TRUE(M != nullptr);
+  Function *Callee = M->getFunction("callee");
+  Function *Caller = M->getFunction("caller");
+  ASSERT_TRUE(Callee != nullptr);
+  ASSERT_TRUE(Caller != nullptr);
+
+  ValueToValueMapTy VMap;
+  VMap[Callee->getArg(0)] =
+      ConstantPointerNull::get(PointerType::get(Context, 0));
+
+  SmallVector<ReturnInst *, 8> Returns;
+  ClonedCodeInfo CCI;
+  CloneAndPruneFunctionInto(Caller, Callee, VMap, /*ModuleLevelChanges=*/false,
+                            Returns, ".i", CCI);
+
+  // The indirect call simplified to poison and was erased as trivially dead;
+  // OriginallyIndirectCalls must hold PoisonValue and Caller must have no call.
+  ASSERT_EQ(CCI.OriginallyIndirectCalls.size(), 1u);
+  EXPECT_TRUE(isa_and_present<PoisonValue>(
+      static_cast<Value *>(CCI.OriginallyIndirectCalls[0])));
+  EXPECT_EQ(dyn_cast_or_null<CallBase>(CCI.OriginallyIndirectCalls[0]),
+            nullptr);
+  for (const Instruction &I : instructions(Caller))
+    EXPECT_FALSE(isa<CallBase>(I));
 }
 
 } // namespace

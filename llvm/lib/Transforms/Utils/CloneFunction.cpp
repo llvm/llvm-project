@@ -609,7 +609,7 @@ void PruningFunctionCloner::CloneBlock(
     }
 
     if (auto *CB = dyn_cast<CallBase>(II); CB && CB->isIndirectCall())
-      CodeInfo.OriginallyIndirectCalls.insert(NewInst);
+      CodeInfo.OriginallyIndirectCalls.push_back(NewInst);
 
     if (II->hasName())
       NewInst->setName(II->getName() + NameSuffix);
