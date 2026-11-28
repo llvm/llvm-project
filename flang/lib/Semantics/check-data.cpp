@@ -269,9 +269,15 @@ void DataChecker::Leave(const parser::EntityDecl &decl) {
       // A procedure name is not a data-stmt-object (F2023 C880, R842), but
       // procedure pointer initialization is supported as an extension, so
       // exclude procedure pointers here.
-      if (IsProcedure(*name) && !IsProcedurePointer(*name)) {
+      if (const char *whyNot{IsProcedure(*name) && !IsProcedurePointer(*name)
+                  ? "Procedure"
+                  : IsDummy(*name)          ? "Dummy argument"
+                  : IsFunctionResult(*name) ? "Function result"
+                  : IsAutomatic(*name)      ? "Automatic variable"
+                  : IsAllocatable(*name)    ? "Allocatable"
+                                            : nullptr}) {
         exprAnalyzer_.context().Say(std::get<parser::Name>(decl.t).source,
-            "Procedure '%s' may not have a DATA-style initializer"_err_en_US,
+            "%s '%s' may not have a DATA-style initializer"_err_en_US, whyNot,
             name->name());
       } else {
         AccumulateDataInitializations(inits_, exprAnalyzer_, *name, *list);
