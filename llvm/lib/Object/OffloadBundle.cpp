@@ -502,7 +502,8 @@ CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
   assert(identify_magic(Blob) == file_magic::offload_bundle_compressed);
 
   RawCompressedBundleHeader Header;
-  std::memcpy(&Header, Blob.data(), std::min(Blob.size(), sizeof(Header)));
+  llvm::copy(Blob.take_front(sizeof(Header)),
+             reinterpret_cast<char *>(&Header));
 
   CompressedBundleHeader Normalized;
   Normalized.Version = Header.Common.Version;
