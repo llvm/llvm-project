@@ -3652,6 +3652,89 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   return SDValue();
 }
 
+/// Lower \p Elts to [X]VREPLVE Src, Idx if each 128-bit lane L is a splat of
+/// (extract_vector_elt Src, Idx + L * N), where N is the number of elements
+/// per lane. For 256-bit vectors, Idx must be known to be less than N.
+static SDValue
+lowerSplatOfExtractAsVREPLVE(const SDLoc &DL, MVT VT, ArrayRef<SDValue> Elts,
+                             SelectionDAG &DAG,
+                             const LoongArchSubtarget &Subtarget) {
+  unsigned NumElts = Elts.size();
+  unsigned NumLanes = VT.getSizeInBits() / 128;
+  unsigned NumLaneElts = NumElts / NumLanes;
+  SDValue Src, Idx;
+
+  for (unsigned L = 0; L < NumLanes; ++L) {
+    SDValue LaneElt;
+    for (SDValue Elt : Elts.slice(L * NumLaneElts, NumLaneElts)) {
+      if (!Elt || Elt.isUndef())
+        continue;
+      if (!LaneElt)
+        LaneElt = Elt;
+      else if (LaneElt != Elt)
+        return SDValue();
+    }
+
+    if (!LaneElt || LaneElt.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return SDValue();
+    SDValue Vec = LaneElt.getOperand(0);
+    SDValue EltIdx = LaneElt.getOperand(1);
+    if (isa<ConstantSDNode>(EltIdx))
+      return SDValue();
+
+    if (L == 0) {
+      EVT SrcVT = Vec.getValueType();
+      if (SrcVT.getSizeInBits() != VT.getSizeInBits() ||
+          SrcVT.getVectorNumElements() != NumElts)
+        return SDValue();
+      Src = Vec;
+      Idx = EltIdx;
+      continue;
+    }
+
+    // Must select the same position within the lane.
+    if (Vec != Src || !DAG.isADDLike(EltIdx) || EltIdx.getOperand(0) != Idx)
+      return SDValue();
+    auto *Offset = dyn_cast<ConstantSDNode>(EltIdx.getOperand(1));
+    if (!Offset || Offset->getZExtValue() != L * NumLaneElts)
+      return SDValue();
+  }
+
+  if (NumLanes > 1 && DAG.computeKnownBits(Idx).getMaxValue().uge(NumLaneElts))
+    return SDValue();
+
+  MVT IntVT = VT.changeVectorElementTypeToInteger();
+  Idx = DAG.getZExtOrTrunc(Idx, DL, Subtarget.getGRLenVT());
+  SDValue Res = DAG.getNode(LoongArchISD::VREPLVE, DL, IntVT,
+                            DAG.getBitcast(IntVT, Src), Idx);
+  return DAG.getBitcast(VT, Res);
+}
+
+/// Lower a VECTOR_SHUFFLE of BUILD_VECTORs to [X]VREPLVE.
+static SDValue
+lowerVECTOR_SHUFFLE_VREPLVE(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
+                            SDValue V1, SDValue V2, SelectionDAG &DAG,
+                            const LoongArchSubtarget &Subtarget) {
+  int NumElts = Mask.size();
+  SmallVector<SDValue, 32> Elts;
+  for (int M : Mask) {
+    if (M < 0) {
+      Elts.push_back(SDValue());
+      continue;
+    }
+    SDValue V = M < NumElts ? V1 : V2;
+    if (V.isUndef()) {
+      Elts.push_back(SDValue());
+      continue;
+    }
+    if (V.getOpcode() != ISD::BUILD_VECTOR)
+      return SDValue();
+    Elts.push_back(V.getOperand(M % NumElts));
+  }
+
+  return lowerSplatOfExtractAsVREPLVE(DL, VT, Elts, DAG, Subtarget);
+}
+
 SDValue LoongArchTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
                                                      SelectionDAG &DAG) const {
   ShuffleVectorSDNode *SVOp = cast<ShuffleVectorSDNode>(Op);
@@ -3691,6 +3774,10 @@ SDValue LoongArchTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   assert(llvm::all_of(OrigMask,
                       [&](int M) { return -1 <= M && M < MaskUpperLimit; }) &&
          "Out of bounds shuffle index");
+
+  if (SDValue Result =
+          lowerVECTOR_SHUFFLE_VREPLVE(DL, OrigMask, VT, V1, V2, DAG, Subtarget))
+    return Result;
 
   // For each vector width, delegate to a specialized lowering routine.
   if (VT.is128BitVector())
@@ -3923,6 +4010,11 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
     return Result;
   }
+
+  // Lower per-lane splat of a variable-index extract to [X]VREPLVE.
+  if (SDValue Result = lowerSplatOfExtractAsVREPLVE(
+          DL, VT, SmallVector<SDValue>(Node->op_values()), DAG, Subtarget))
+    return Result;
 
   if (DAG.isSplatValue(Op, /*AllowUndefs=*/false))
     return Op;
@@ -8969,6 +9061,22 @@ performSPLIT_PAIR_F64Combine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+/// Do target-specific dag combines on LoongArchISD::VREPLVE nodes.
+static SDValue performVREPLVECombine(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     const LoongArchSubtarget &Subtarget) {
+  // [X]VREPLVE only uses the low log2(N) bits of the index, where N is the
+  // number of elements per 128-bit lane.
+  SDValue Idx = N->getOperand(1);
+  unsigned NumLaneElts = 128 / N->getSimpleValueType(0).getScalarSizeInBits();
+  APInt DemandedBits =
+      APInt::getLowBitsSet(Idx.getValueSizeInBits(), Log2_32(NumLaneElts));
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLI.SimplifyDemandedBits(Idx, DemandedBits, DCI))
+    return SDValue(N, 0);
+  return SDValue();
+}
+
 /// Do target-specific dag combines on LoongArchISD::VANDN nodes.
 static SDValue performVANDNCombine(SDNode *N, SelectionDAG &DAG,
                                    TargetLowering::DAGCombinerInfo &DCI,
@@ -9873,6 +9981,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performSPLIT_PAIR_F64Combine(N, DAG, DCI, Subtarget);
   case LoongArchISD::VANDN:
     return performVANDNCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::VREPLVE:
+    return performVREPLVECombine(N, DAG, DCI, Subtarget);
   case ISD::CONCAT_VECTORS:
     return performCONCAT_VECTORSCombine(N, DAG, DCI, Subtarget);
   case ISD::VSELECT:
