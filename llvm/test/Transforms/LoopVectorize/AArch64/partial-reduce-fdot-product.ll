@@ -20,7 +20,7 @@ define float @fdot_f16_f32(ptr %a, ptr %b) #0 {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> splat (float -0.000000e+00), float 0.000000e+00, i64 0), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> splat (float -0.000000e+00), float -0.000000e+00, i64 0), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x float> [ splat (float -0.000000e+00), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [2 x i8], ptr [[TMP3]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP3]], align 1
@@ -237,7 +237,7 @@ define float @fdot_f16_f32_interleave2(ptr %a, ptr %b) #0 {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> splat (float -0.000000e+00), float 0.000000e+00, i64 0), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> splat (float -0.000000e+00), float -0.000000e+00, i64 0), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x float> [ splat (float -0.000000e+00), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [2 x i8], ptr [[TMP3]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP3]], align 1
@@ -292,11 +292,10 @@ define fp128 @not_fdot_f64_f128(ptr %a, ptr %b, fp128 %zero) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x fp128> splat (fp128 -0.000000e+00), fp128 [[ZERO]], i64 0
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x fp128> [ [[TMP0]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x fp128> [ splat (fp128 -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x double> [[WIDE_LOAD]] to <2 x fp128>
@@ -310,9 +309,10 @@ define fp128 @not_fdot_f64_f128(ptr %a, ptr %b, fp128 %zero) #0 {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call reassoc contract fp128 @llvm.vector.reduce.fadd.v2f128(fp128 -0.000000e+00, <2 x fp128> [[TMP6]])
+; CHECK-NEXT:    [[RDX_START:%.*]] = fadd reassoc contract fp128 [[TMP8]], [[ZERO]]
 ; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
 ; CHECK:       [[FOR_EXIT]]:
-; CHECK-NEXT:    ret fp128 [[TMP8]]
+; CHECK-NEXT:    ret fp128 [[RDX_START]]
 ;
 entry:
   br label %for.body
@@ -440,11 +440,10 @@ define fp128 @not_fdot_f64_f128_nosve(ptr %a, ptr %b, fp128 %zero) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x fp128> splat (fp128 -0.000000e+00), fp128 [[ZERO]], i64 0
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x fp128> [ [[TMP0]], %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x fp128> [ splat (fp128 -0.000000e+00), %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x double> [[WIDE_LOAD]] to <2 x fp128>
@@ -458,9 +457,10 @@ define fp128 @not_fdot_f64_f128_nosve(ptr %a, ptr %b, fp128 %zero) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = call reassoc contract fp128 @llvm.vector.reduce.fadd.v2f128(fp128 -0.000000e+00, <2 x fp128> [[TMP6]])
+; CHECK-NEXT:    [[RDX_START:%.*]] = fadd reassoc contract fp128 [[TMP8]], [[ZERO]]
 ; CHECK-NEXT:    br label %[[FOR_EXIT:.*]]
 ; CHECK:       [[FOR_EXIT]]:
-; CHECK-NEXT:    ret fp128 [[TMP8]]
+; CHECK-NEXT:    ret fp128 [[RDX_START]]
 ;
 entry:
   br label %for.body
@@ -1076,8 +1076,8 @@ define float @reduce_fsub_fadd_chain_without_mul(ptr %a, ptr noalias %b) #0 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> splat (float -0.000000e+00), float -0.000000e+00, i64 0), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x float> [ insertelement (<vscale x 4 x float> splat (float -0.000000e+00), float -0.000000e+00, i64 0), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x float> [ splat (float -0.000000e+00), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE6:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x float> [ splat (float -0.000000e+00), %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [2 x i8], ptr [[TMP3]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x half>, ptr [[TMP3]], align 1

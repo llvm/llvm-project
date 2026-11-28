@@ -461,6 +461,15 @@ public:
 
   bool enableOrderedReductions() const override { return true; }
 
+  bool preferReductionStartAfterLoop() const override {
+    // In-order cores cannot issue past the reduction's dependency chain, so
+    // applying the start value after the loop only adds an instruction.
+    // -mcpu=generic uses an in-order scheduling model but does not target
+    // in-order cores only.
+    return ST->getProcFamily() == AArch64Subtarget::Generic ||
+           ST->getSchedModel().isOutOfOrder();
+  }
+
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,

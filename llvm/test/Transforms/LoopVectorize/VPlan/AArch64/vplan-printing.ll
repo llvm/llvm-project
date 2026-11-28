@@ -41,7 +41,7 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) "target-features"="+neon,+do
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP8]]>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add) ir<0>, vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<1024>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -135,7 +135,7 @@ define i32 @print_partial_reduction_predication(ptr %a, ptr %b, i64 %N) "target-
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP10]]>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = compute-reduction-result (add) ir<0>, vp<[[VP10]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
@@ -218,7 +218,7 @@ define i32 @print_partial_reduction_ext_mul(ptr %a, ptr %b) "target-features"="+
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP8]]>
+; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (add) ir<0>, vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<1024>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph

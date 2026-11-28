@@ -426,9 +426,11 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   // in the vector loop, not the middle block, since EVL tail folding can have
   // tail elements in the penultimate iteration.
   assert(all_of(*Plan.getMiddleBlock(), [&Plan, HeaderMask](VPRecipeBase &R) {
-    if (match(&R, m_ComputeReductionResult(m_Select(m_Specific(HeaderMask),
-                                                    m_VPValue(), m_VPValue()))))
-      return R.getOperand(0)->getDefiningRecipe()->getRegion() ==
+    VPValue *Sel;
+    if (match(&R, m_ComputeReductionResult(
+                      m_VPValue(Sel, m_Select(m_Specific(HeaderMask),
+                                              m_VPValue(), m_VPValue())))))
+      return Sel->getDefiningRecipe()->getRegion() ==
              Plan.getVectorLoopRegion();
     return true;
   }));

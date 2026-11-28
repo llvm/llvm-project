@@ -1348,8 +1348,8 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   }
 
   VPIRValue *IRV;
-  if (Def->getNumOperands() == 1 &&
-      match(Def, m_ComputeReductionResult(m_VPIRValue(IRV))))
+  if (match(Def, m_ComputeReductionResult(m_VPIRValue(IRV))) &&
+      !cast<VPInstruction>(Def)->getAppliedStartValue())
     return IRV;
 
   if (match(Def, m_VPInstruction<VPInstruction::WideIVStep>(m_VPValue(A),
@@ -5146,9 +5146,11 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                     FastMathFlags());
     DebugLoc ExitDL = RdxResult->getDebugLoc();
     VPBuilder MiddleBuilder(RdxResult);
+    VPValue *Iden = Plan.getOrAddLiveIn(VPInstruction::getNeutralStartValue(
+        MinMaxKind, NewFindLastSelect->getScalarType(), FastMathFlags()));
     VPValue *ReducedIV =
         MiddleBuilder.createNaryOp(VPInstruction::ComputeReductionResult,
-                                   NewFindLastSelect, Flags, ExitDL);
+                                   {Iden, NewFindLastSelect}, Flags, ExitDL);
 
     // If IVOfExpressionToSink is an expression to sink, sink it now.
     VPValue *VectorRegionExitingVal = ReducedIV;
@@ -5680,7 +5682,7 @@ getScaledReductionChain(VPReductionPHIRecipe *RedPhiR) {
   auto *RdxResult = vputils::findComputeReductionResult(RedPhiR);
   if (!RdxResult)
     return std::nullopt;
-  VPValue *ExitValue = RdxResult->getOperand(0);
+  VPValue *ExitValue = *RdxResult->getReductionParts().begin();
   match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
 
   // Each link is lowered to a partial add reduction, so only recurrences made
@@ -5782,6 +5784,11 @@ static void updatePartialReductionPhiAndResult(VPlan &Plan,
   // Replace reduction_result by 'sub (startval, reductionresult)'.
   VPInstruction *RdxResult = vputils::findComputeReductionResult(Phi);
   assert(RdxResult && "Could not find reduction result");
+  // Move an applied start value into the subtraction; leave the identity.
+  if (VPValue *Start = RdxResult->getAppliedStartValue()) {
+    OldStartValue = Start;
+    RdxResult->setOperand(0, StartInst->getOperand(1));
+  }
 
   VPBuilder Builder = VPBuilder::getToInsertAfter(RdxResult);
   unsigned SubOpc = RK == RecurKind::FSub ? Instruction::BinaryOps::FSub

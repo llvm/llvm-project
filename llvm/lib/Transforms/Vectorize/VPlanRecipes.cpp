@@ -679,6 +679,9 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
          "Set flags not supported for the provided opcode");
   assert(hasRequiredFlagsForOpcode(getOpcode(), getScalarType()) &&
          "Opcode requires specific flags to be set");
+  assert((Opcode != VPInstruction::ComputeReductionResult ||
+          getNumOperands() > 1) &&
+         "Expected a start operand and a part to reduce");
   assert((getNumOperandsForOpcode() == -1u ||
           getNumOperandsForOpcode() == getNumOperands() ||
           (isMasked() && getNumOperandsForOpcode() + 1 == getNumOperands())) &&
@@ -1011,6 +1014,10 @@ Value *VPInstruction::generate(VPTransformState &State,
     ElementCount VF = State.VF.divideCoefficientBy(
         cast<VPConstantInt>(getOperand(2))->getZExtValue());
     auto *Iden = Builder.CreateVectorSplat(VF, State.get(getOperand(1), true));
+    // A start value equal to the identity needs only the splat; inserting it
+    // is not folded for scalable vectors.
+    if (getOperand(0) == getOperand(1))
+      return Iden;
     return Builder.CreateInsertElement(Iden, State.get(getOperand(0), true),
                                        Builder.getInt64(0));
   }
@@ -1024,10 +1031,10 @@ Value *VPInstruction::generate(VPTransformState &State,
            "FindIV should use min/max reduction kinds");
 
     // The recipe may have multiple operands to be reduced together.
-    unsigned NumOperandsToReduce = getNumOperands();
-    SmallVector<Value *, 2> RdxParts(NumOperandsToReduce);
-    for (unsigned Part = 0; Part < NumOperandsToReduce; ++Part)
-      RdxParts[Part] = State.get(getOperand(Part), IsInLoop);
+    SmallVector<Value *, 2> RdxParts;
+    for (VPValue *Op : getReductionParts())
+      RdxParts.push_back(State.get(Op, IsInLoop));
+    unsigned NumOperandsToReduce = RdxParts.size();
 
     IRBuilderBase::FastMathFlagGuard FMFG(Builder);
     Builder.setFastMathFlags(getFastMathFlagsOrNone());
@@ -1063,7 +1070,8 @@ Value *VPInstruction::generate(VPTransformState &State,
       // descriptor.
       ReducedPartRdx = createSimpleReduction(Builder, ReducedPartRdx, RK);
     }
-
+    assert(!getAppliedStartValue() &&
+           "start value must be applied by convertToConcreteRecipes");
     return ReducedPartRdx;
   }
   case VPInstruction::ExtractLastLane:
@@ -1841,6 +1849,25 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   }
 }
 
+Value *VPInstruction::getNeutralStartValue(RecurKind RK, Type *Ty,
+                                           FastMathFlags FMF) {
+  // FindIV and FindLast have no identity; their results are replaced before
+  // codegen.
+  if (RecurrenceDescriptor::isFindRecurrenceKind(RK))
+    return PoisonValue::get(Ty);
+  return getRecurrenceIdentity(RK, Ty, FMF);
+}
+
+VPValue *VPInstruction::getAppliedStartValue() const {
+  VPValue *Start = getStartOperand();
+  Value *Neutral = getNeutralStartValue(getRecurKind(), Start->getScalarType(),
+                                        getFastMathFlagsOrNone());
+  auto *IRV = dyn_cast<VPIRValue>(Start);
+  if (IRV && IRV->getValue() == Neutral)
+    return nullptr;
+  return Start;
+}
+
 bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
   if (vputils::propagatesFirstLaneUse(this, Op))
@@ -1855,6 +1882,8 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return Op == getOperand(1) || Op == getOperand(2);
   case VPInstruction::ExtractLastActive:
     return Op == getOperand(0);
+  case VPInstruction::ComputeReductionResult:
+    return Op == getStartOperand();
   case Instruction::PHI:
   case Instruction::Load:
   case VPInstruction::ActiveLaneMask:

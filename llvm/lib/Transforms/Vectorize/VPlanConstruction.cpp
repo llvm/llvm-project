@@ -2028,8 +2028,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     }
 
     auto *NewSel = MiddleBuilder.createSelect(AnyNaNLane, RedPhiR,
-                                              RdxResult->getOperand(0));
-    RdxResult->setOperand(0, NewSel);
+                                              RdxResult->getOperand(1));
+    RdxResult->setOperand(1, NewSel);
     assert(!RdxResults.contains(RdxResult) && "RdxResult already used");
     RdxResults.insert(RdxResult);
   }
@@ -2342,17 +2342,18 @@ static bool handleFirstArgMinOrMax(
   //                          vp<%scaled.idx>
 
   VPBuilder Builder(FindIVRdxResult);
-  VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(0);
+  VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(1);
   auto *FinalMinOrMaxCmp =
       Builder.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult);
-  VPValue *LastIVExiting = FindIVRdxResult->getOperand(0);
+  VPValue *LastIVExiting = FindIVRdxResult->getOperand(1);
   VPValue *MaxIV =
       Plan.getConstantInt(APInt::getMaxValue(Ty->getIntegerBitWidth()));
   auto *FinalIVSelect =
       Builder.createSelect(FinalMinOrMaxCmp, LastIVExiting, MaxIV);
   VPIRFlags RdxFlags(RecurKind::UMin, false, false, FastMathFlags());
+  // MaxIV is the identity of the UMin reduction.
   VPSingleDefRecipe *FinalCanIV = Builder.createNaryOp(
-      VPInstruction::ComputeReductionResult, {FinalIVSelect}, RdxFlags,
+      VPInstruction::ComputeReductionResult, {MaxIV, FinalIVSelect}, RdxFlags,
       FindIVRdxResult->getDebugLoc());
 
   // If we used a new wide canonical IV convert the reduction result back to the
@@ -2610,16 +2611,16 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // vp<%find.iv.result> = select vp<%cmp>, vp<%iv.rdx>, ir<0>
     //
     VPBuilder B(FindIVRdxResult);
-    VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(0);
+    VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(1);
     auto *FinalMinOrMaxCmp =
         (RecurrenceDescriptor::isIntegerRecurrenceKind(RdxKind))
             ? B.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult)
             : B.createFCmp(CmpInst::FCMP_OEQ, MinOrMaxExiting, MinOrMaxResult);
     VPValue *Sentinel = FindIVCmp->getOperand(1);
-    VPValue *LastIVExiting = FindIVRdxResult->getOperand(0);
+    VPValue *LastIVExiting = FindIVRdxResult->getOperand(1);
     auto *FinalIVSelect =
         B.createSelect(FinalMinOrMaxCmp, LastIVExiting, Sentinel);
-    FindIVRdxResult->setOperand(0, FinalIVSelect);
+    FindIVRdxResult->setOperand(1, FinalIVSelect);
   }
   return true;
 }

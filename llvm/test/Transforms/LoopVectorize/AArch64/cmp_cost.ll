@@ -36,7 +36,7 @@ define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK:  Cost of 0 for VF 2: IR %ec = icmp eq i32 %iv.next, %n
 ; CHECK:  Cost of 2 for VF 2: EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP6]]>, ir<%max>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP11]]> = select vp<[[VP6]]>, vp<[[VP3]]>, vp<[[VP2]]>
-; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP12]]> = compute-reduction-result (fmaxnum) vp<[[VP10]]>
+; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP12]]> = compute-reduction-result (fmaxnum) ir<-qnan>, vp<[[VP10]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP13:%[0-9]+]]> = not vp<[[VP6]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP14:%[0-9]+]]> = and vp<%cmp.n>, vp<[[VP13]]>
@@ -67,7 +67,7 @@ define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK:  Cost of 0 for VF 4: IR %ec = icmp eq i32 %iv.next, %n
 ; CHECK:  Cost of 2 for VF 4: EMIT vp<[[VP10]]> = select vp<[[VP6]]>, ir<%max>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP11]]> = select vp<[[VP6]]>, vp<[[VP3]]>, vp<[[VP2]]>
-; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP12]]> = compute-reduction-result (fmaxnum) vp<[[VP10]]>
+; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP12]]> = compute-reduction-result (fmaxnum) ir<-qnan>, vp<[[VP10]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP13]]> = not vp<[[VP6]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP14]]> = and vp<%cmp.n>, vp<[[VP13]]>
@@ -119,7 +119,7 @@ define double @fmaxnum_reduction_f64(double %base, i64 %n) {
 ; CHECK:  Cost of 0 for VF 2: IR %ec = icmp eq i64 %iv.next, %n
 ; CHECK:  Cost of 2 for VF 2: EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP6]]>, ir<%max>, ir<%max.next>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP11]]> = select vp<[[VP6]]>, vp<[[VP3]]>, vp<[[VP2]]>
-; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP12]]> = compute-reduction-result (fmaxnum) vp<[[VP10]]>
+; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP12]]> = compute-reduction-result (fmaxnum) ir<-qnan>, vp<[[VP10]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP13:%[0-9]+]]> = not vp<[[VP6]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP14:%[0-9]+]]> = and vp<%cmp.n>, vp<[[VP13]]>
@@ -200,7 +200,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 2: IR %gep = getelementptr i8, ptr %s, i64 %iv
 ; CHECK:  Cost of 0 for VF 2: IR %l = load i8, ptr %gep, align 1
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP3]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
-; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP39]]> = compute-reduction-result (add) ir<%c.next>
+; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP39]]> = compute-reduction-result (add) ir<0>, ir<%c.next>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost of 0 for VF 2: IR %c.next.lcssa = phi i32 [ %c.next, %loop.latch ] (extra operand: vp<[[VP39]]> from middle.block)
@@ -256,7 +256,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 4: IR %gep = getelementptr i8, ptr %s, i64 %iv
 ; CHECK:  Cost of 0 for VF 4: IR %l = load i8, ptr %gep, align 1
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP3]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
-; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP39]]> = compute-reduction-result (add) ir<%c.next>
+; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP39]]> = compute-reduction-result (add) ir<0>, ir<%c.next>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost of 0 for VF 4: IR %c.next.lcssa = phi i32 [ %c.next, %loop.latch ] (extra operand: vp<[[VP39]]> from middle.block)
@@ -312,7 +312,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 8: IR %gep = getelementptr i8, ptr %s, i64 %iv
 ; CHECK:  Cost of 0 for VF 8: IR %l = load i8, ptr %gep, align 1
 ; CHECK:  Cost of 0 for VF 8: EMIT vp<[[VP3]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
-; CHECK:  Cost of 0 for VF 8: EMIT vp<[[VP39]]> = compute-reduction-result (add) ir<%c.next>
+; CHECK:  Cost of 0 for VF 8: EMIT vp<[[VP39]]> = compute-reduction-result (add) ir<0>, ir<%c.next>
 ; CHECK:  Cost of 1 for VF 8: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 8: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost of 0 for VF 8: IR %c.next.lcssa = phi i32 [ %c.next, %loop.latch ] (extra operand: vp<[[VP39]]> from middle.block)
@@ -368,7 +368,7 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 0 for VF 16: IR %gep = getelementptr i8, ptr %s, i64 %iv
 ; CHECK:  Cost of 0 for VF 16: IR %l = load i8, ptr %gep, align 1
 ; CHECK:  Cost of 0 for VF 16: EMIT vp<[[VP3]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
-; CHECK:  Cost of 0 for VF 16: EMIT vp<[[VP39]]> = compute-reduction-result (add) ir<%c.next>
+; CHECK:  Cost of 0 for VF 16: EMIT vp<[[VP39]]> = compute-reduction-result (add) ir<0>, ir<%c.next>
 ; CHECK:  Cost of 1 for VF 16: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 16: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost of 0 for VF 16: IR %c.next.lcssa = phi i32 [ %c.next, %loop.latch ] (extra operand: vp<[[VP39]]> from middle.block)

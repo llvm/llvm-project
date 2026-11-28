@@ -490,10 +490,12 @@ m_ExtractLastActive(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return m_VPInstruction<VPInstruction::ExtractLastActive>(Op0, Op1, Op2);
 }
 
+/// Match a ComputeReductionResult whose single reduction part matches \p Op0,
+/// ignoring its start operand.
 template <typename Op0_t>
-inline VPInstruction_match<VPInstruction::ComputeReductionResult, Op0_t>
-m_ComputeReductionResult(const Op0_t &Op0) {
-  return m_VPInstruction<VPInstruction::ComputeReductionResult>(Op0);
+inline auto m_ComputeReductionResult(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ComputeReductionResult>(m_VPValue(),
+                                                                Op0);
 }
 
 /// Match FindIV result pattern:

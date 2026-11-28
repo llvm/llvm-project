@@ -6584,6 +6584,18 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   return Plan;
 }
 
+/// Makes \p RdxResult apply \p Start after the reduction, unless it is
+/// in-loop or reduces in a narrower type. Returns true if it did.
+static bool applyStartInReductionResult(VPInstruction *RdxResult,
+                                        VPValue *Start) {
+  if (RdxResult->getOpcode() != VPInstruction::ComputeReductionResult ||
+      RdxResult->isReductionInLoop() ||
+      RdxResult->getScalarType() != Start->getScalarType())
+    return false;
+  RdxResult->setOperand(0, Start);
+  return true;
+}
+
 void LoopVectorizationPlanner::addReductionResultComputation(
     VPlanPtr &Plan, ElementCount MinVF, LoopVectorizationCostModel &PlanCM) {
   using namespace VPlanPatternMatch;
@@ -6648,6 +6660,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // even for in-loop reductions, until the reduction resume value handling is
     // also modeled in VPlan.
     VPInstruction *FinalReductionResult;
+    SmallVector<VPInstruction *, 2> RdxResults;
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(IP);
     // For AnyOf reductions, find the select among PhiR's users and convert
@@ -6755,8 +6768,14 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
                       PhiR->getFastMathFlagsOrNone());
       auto CreateResult = [&](VPValue *V) {
+        // The start operand is neutral while the start is in the phi.
+        VPValue *Neutral =
+            Plan->getOrAddLiveIn(VPInstruction::getNeutralStartValue(
+                RecurrenceKind, V->getScalarType(),
+                PhiR->getFastMathFlagsOrNone()));
         VPInstruction *Res = Builder.createNaryOp(
-            VPInstruction::ComputeReductionResult, {V}, Flags, ExitDL);
+            VPInstruction::ComputeReductionResult, {Neutral, V}, Flags, ExitDL);
+        RdxResults.push_back(Res);
         if (ExtendOpc != Instruction::CastOpsEnd)
           Res = Builder.createScalarCast(ExtendOpc, Res, PhiTy, {});
         return Res;
@@ -6826,10 +6845,22 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       VPBuilder PHBuilder(Plan->getVectorPreheader());
       VPValue *Iden = Plan->getOrAddLiveIn(
           getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlagsOrNone()));
+      VPValue *Start = PhiR->getStartValue();
+      // Constant start values are available early, so keep them in the start
+      // vector. With VF 1, seeding each part with the identity can let SLP
+      // vectorize the loop anyway.
+      if (TTI.preferReductionStartAfterLoop() && MinVF.isVector() &&
+          !isa<VPConstant>(Start) &&
+          applyStartInReductionResult(FinalReductionResult, Start)) {
+        // The results for early exits apply the start value too.
+        for (VPInstruction *RdxResult : RdxResults)
+          RdxResult->setOperand(0, Start);
+        Start = Iden;
+      }
       auto *ScaleFactorVPV = Plan->getConstantInt(32, 1);
-      VPValue *StartV = PHBuilder.createNaryOp(
-          VPInstruction::ReductionStartVector,
-          {PhiR->getStartValue(), Iden, ScaleFactorVPV}, *PhiR);
+      VPValue *StartV =
+          PHBuilder.createNaryOp(VPInstruction::ReductionStartVector,
+                                 {Start, Iden, ScaleFactorVPV}, *PhiR);
       PhiR->setOperand(0, StartV);
     }
   }
@@ -7394,11 +7425,18 @@ static void preparePlanForEpilogueVectorLoop(
                  "(or negative zero)");
 
           Sub->setOperand(0, ResumeVPV);
+        } else if (RdxResult->getAppliedStartValue()) {
+          RdxResult->setOperand(0, ResumeVPV);
         } else {
+          // The original start may be a constant, but the resume value is not.
+          VPValue *NewStartV = ResumeVPV;
+          if (Config.getTTI().preferReductionStartAfterLoop() &&
+              applyStartInReductionResult(RdxResult, ResumeVPV))
+            NewStartV = VPI->getOperand(1);
           // The start vector may be shared by multiple reductions, so create
-          // a new one using the resume.
+          // a new one.
           auto *NewStart = cast<VPInstruction>(VPI->clone());
-          NewStart->setOperand(0, ResumeVPV);
+          NewStart->setOperand(0, NewStartV);
           NewStart->insertBefore(VPI);
           ReductionPhi->setStartValue(NewStart);
         }

@@ -397,7 +397,7 @@ define i32 @add_reduction_used_on_early_exit(ptr align 4 dereferenceable(4096) %
 ; CHECK-NEXT:  Successor(s): vector.early.exit, middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add) ir<%red.next>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = compute-reduction-result (add) ir<0>, ir<%red.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<1024>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
@@ -412,7 +412,7 @@ define i32 @add_reduction_used_on_early_exit(ptr align 4 dereferenceable(4096) %
 ; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = wide active lane mask ir<0>, vp<[[VP13]]>, ir<1>
 ; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = extract-vector-for-part vp<[[VP14]]>, ir<0>
 ; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = select vp<[[VP15]]>, ir<%red.next>, ir<%red>
-; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = compute-reduction-result (add) vp<[[VP16]]>
+; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = compute-reduction-result (add) ir<0>, vp<[[VP16]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<early.exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<early.exit>:

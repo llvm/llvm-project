@@ -1603,6 +1603,10 @@ bool TargetTransformInfo::preferPredicatedReductionSelect() const {
   return TTIImpl->preferPredicatedReductionSelect();
 }
 
+bool TargetTransformInfo::preferReductionStartAfterLoop() const {
+  return TTIImpl->preferReductionStartAfterLoop();
+}
+
 bool TargetTransformInfo::preferEpilogueVectorization(
     ElementCount Iters) const {
   return TTIImpl->preferEpilogueVectorization(Iters);
