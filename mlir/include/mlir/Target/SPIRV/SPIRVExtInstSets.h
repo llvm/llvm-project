@@ -44,6 +44,19 @@ constexpr bool isValidGraphDebugInfoExtInst(uint32_t opcode) {
       opcode);
 }
 
+/// Extension set names for non-semantic shader debug info.
+constexpr llvm::StringLiteral extShaderDebugInfo100{
+    "NonSemantic.Shader.DebugInfo.100"};
+constexpr llvm::StringLiteral extShaderDebugInfo200{
+    "NonSemantic.Shader.DebugInfo.200"};
+
+/// Line info opcodes in the NonSemantic.Shader.DebugInfo extended instruction
+/// sets.
+enum class ShaderDebugInfoExtInst : uint32_t {
+  DebugSource = 35,
+  DebugLine = 103,
+  DebugNoLine = 104,
+};
 } // namespace mlir::spirv
 
 #endif // MLIR_TARGET_SPIRV_SPIRVEXTINSTSETS_H
