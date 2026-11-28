@@ -4715,6 +4715,10 @@ def SPIRV_OC_OpBitFieldSExtract               : I32EnumAttrCase<"OpBitFieldSExtr
 def SPIRV_OC_OpBitFieldUExtract               : I32EnumAttrCase<"OpBitFieldUExtract", 203>;
 def SPIRV_OC_OpBitReverse                     : I32EnumAttrCase<"OpBitReverse", 204>;
 def SPIRV_OC_OpBitCount                       : I32EnumAttrCase<"OpBitCount", 205>;
+def SPIRV_OC_OpDPdxFine                       : I32EnumAttrCase<"OpDPdxFine", 210>;
+def SPIRV_OC_OpDPdyFine                       : I32EnumAttrCase<"OpDPdyFine", 211>;
+def SPIRV_OC_OpDPdxCoarse                     : I32EnumAttrCase<"OpDPdxCoarse", 213>;
+def SPIRV_OC_OpDPdyCoarse                     : I32EnumAttrCase<"OpDPdyCoarse", 214>;
 def SPIRV_OC_OpEmitVertex                     : I32EnumAttrCase<"OpEmitVertex", 218>;
 def SPIRV_OC_OpEndPrimitive                   : I32EnumAttrCase<"OpEndPrimitive", 219>;
 def SPIRV_OC_OpControlBarrier                 : I32EnumAttrCase<"OpControlBarrier", 224>;
@@ -4910,6 +4914,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpBitwiseOr, SPIRV_OC_OpBitwiseXor, SPIRV_OC_OpBitwiseAnd,
       SPIRV_OC_OpNot, SPIRV_OC_OpBitFieldInsert, SPIRV_OC_OpBitFieldSExtract,
       SPIRV_OC_OpBitFieldUExtract, SPIRV_OC_OpBitReverse, SPIRV_OC_OpBitCount,
+      SPIRV_OC_OpDPdxFine, SPIRV_OC_OpDPdyFine, SPIRV_OC_OpDPdxCoarse,
+      SPIRV_OC_OpDPdyCoarse,
       SPIRV_OC_OpEmitVertex, SPIRV_OC_OpEndPrimitive, SPIRV_OC_OpControlBarrier,
       SPIRV_OC_OpMemoryBarrier, SPIRV_OC_OpAtomicLoad, SPIRV_OC_OpAtomicStore,
       SPIRV_OC_OpAtomicExchange,

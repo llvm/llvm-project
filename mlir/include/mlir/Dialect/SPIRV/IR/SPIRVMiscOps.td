@@ -129,4 +129,35 @@ def SPIRV_UndefOp : SPIRV_Op<"Undef", [Pure]> {
 
 // -----
 
+class SPIRV_DerivativeOp<string mnemonic> :
+    SPIRV_Op<mnemonic, [SameOperandsAndResultType]> {
+  let availability = [
+    MinVersion<SPIRV_V_1_0>, MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>, Capability<[SPIRV_C_DerivativeControl]>
+  ];
+
+  let arguments = (ins SPIRV_ScalarOrVectorOf<SPIRV_Float32>:$p);
+  let results = (outs SPIRV_ScalarOrVectorOf<SPIRV_Float32>:$result);
+  let assemblyFormat = "$p attr-dict `:` type($p)";
+  let hasVerifier = 0;
+}
+
+def SPIRV_DPdxFineOp : SPIRV_DerivativeOp<"DPdxFine"> {
+  let summary = "Partial derivative of P with respect to window x using local differencing.";
+}
+
+def SPIRV_DPdyFineOp : SPIRV_DerivativeOp<"DPdyFine"> {
+  let summary = "Partial derivative of P with respect to window y using local differencing.";
+}
+
+def SPIRV_DPdxCoarseOp : SPIRV_DerivativeOp<"DPdxCoarse"> {
+  let summary = "Partial derivative of P with respect to window x using coarse differencing.";
+}
+
+def SPIRV_DPdyCoarseOp : SPIRV_DerivativeOp<"DPdyCoarse"> {
+  let summary = "Partial derivative of P with respect to window y using coarse differencing.";
+}
+
+// -----
+
 #endif // MLIR_DIALECT_SPIRV_IR_MISC_OPS
