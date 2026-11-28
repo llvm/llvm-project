@@ -2966,10 +2966,9 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
   return BF;
 }
 
-BinaryFunction *
-BinaryContext::createInstructionPatch(uint64_t Address,
-                                      const InstructionListType &Instructions,
-                                      const Twine &Name) {
+BinaryFunction *BinaryContext::createInstructionPatch(
+    uint64_t Address, const InstructionListType &Instructions,
+    const Twine &Name, BinaryFunction *Function) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot get section for patching");
   assert(Section->hasSectionRef() && Section->isText() &&
@@ -3000,7 +2999,43 @@ BinaryContext::createInstructionPatch(uint64_t Address,
   if (Name.str().empty())
     PBF->setAnonymous(true);
 
+  if (Function)
+    PatchEntries[Function].push_back({PBF});
   return PBF;
+}
+
+void BinaryContext::markPatchEntriesForRemoval(BinaryFunction &Function) {
+  auto It = PatchEntries.find(&Function);
+  if (It == PatchEntries.end())
+    return;
+
+  for (RegisteredPatchEntry &Entry : It->second)
+    Entry.ShouldRemove = true;
+}
+
+void BinaryContext::removePatchEntries() {
+  SmallPtrSet<BinaryFunction *, 4> RemovedPatches;
+  PatchEntries.remove_if([&](const auto &FunctionPatches) {
+    const auto &Entries = FunctionPatches.second;
+    // Entry patch groups are nonempty and marked for removal as a whole.
+    if (!Entries.front().ShouldRemove)
+      return false;
+    for (const RegisteredPatchEntry &Entry : Entries)
+      RemovedPatches.insert(Entry.PatchBinaryFunction);
+    return true;
+  });
+  if (RemovedPatches.empty())
+    return;
+
+  auto IsRemoved = [&](BinaryFunction *Patch) {
+    return RemovedPatches.contains(Patch);
+  };
+  llvm::erase_if(InjectedBinaryFunctions, IsRemoved);
+  llvm::erase_if(OutputFunctions, IsRemoved);
+  for (BinaryFunction *Patch : RemovedPatches) {
+    SymbolToFunctionMap.erase(Patch->getSymbol());
+    delete Patch;
+  }
 }
 
 BinaryFunction *

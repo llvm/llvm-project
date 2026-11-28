@@ -3350,6 +3350,9 @@ void BinaryFunction::setIgnored() {
   if (CurrentState == State::Empty)
     return;
 
+  // Mark registered entry patches for later removal to preserve the
+  // original instructions for ignored functions.
+  BC.markPatchEntriesForRemoval(*this);
   resetState();
 
   // Fix external references in the original function body.
