@@ -2457,6 +2457,9 @@ module std {
         module mismatch {
           header "__pstl/backends/statpart/mismatch.h"
         }
+        module partition_copy {
+          header "__pstl/backends/statpart/partition_copy.h"
+        }
         module reverse {
           header "__pstl/backends/statpart/reverse.h"
         }
