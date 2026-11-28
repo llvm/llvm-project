@@ -220,7 +220,8 @@ define void @loop2(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-IAENABLED-NEXT:    cmp w8, #2
 ; CHECK-IAENABLED-NEXT:    b.ls .LBB1_3
 ; CHECK-IAENABLED-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-IAENABLED-NEXT:    ubfiz x9, x8, #1, #32
+; CHECK-IAENABLED-NEXT:    sub w9, w2, #1
+; CHECK-IAENABLED-NEXT:    ubfiz x9, x9, #1, #32
 ; CHECK-IAENABLED-NEXT:    add x9, x9, #2
 ; CHECK-IAENABLED-NEXT:    add x10, x0, x9
 ; CHECK-IAENABLED-NEXT:    add x9, x1, x9, lsl #2
@@ -297,7 +298,8 @@ define void @loop2(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-IADISABLED-NEXT:    cmp w8, #2
 ; CHECK-IADISABLED-NEXT:    b.ls .LBB1_3
 ; CHECK-IADISABLED-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-IADISABLED-NEXT:    ubfiz x9, x8, #1, #32
+; CHECK-IADISABLED-NEXT:    sub w9, w2, #1
+; CHECK-IADISABLED-NEXT:    ubfiz x9, x9, #1, #32
 ; CHECK-IADISABLED-NEXT:    add x9, x9, #2
 ; CHECK-IADISABLED-NEXT:    add x10, x0, x9
 ; CHECK-IADISABLED-NEXT:    add x9, x1, x9, lsl #2
@@ -553,7 +555,8 @@ define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-IAENABLED-NEXT:    cmp w8, #2
 ; CHECK-IAENABLED-NEXT:    b.ls .LBB2_3
 ; CHECK-IAENABLED-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-IAENABLED-NEXT:    add x9, x8, w8, uxtw #1
+; CHECK-IAENABLED-NEXT:    sub w9, w2, #1
+; CHECK-IAENABLED-NEXT:    add x9, x9, w9, uxtw #1
 ; CHECK-IAENABLED-NEXT:    add x9, x9, #3
 ; CHECK-IAENABLED-NEXT:    add x10, x0, x9
 ; CHECK-IAENABLED-NEXT:    add x9, x1, x9, lsl #2
@@ -649,7 +652,8 @@ define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-IADISABLED-NEXT:    cmp w8, #2
 ; CHECK-IADISABLED-NEXT:    b.ls .LBB2_3
 ; CHECK-IADISABLED-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-IADISABLED-NEXT:    add x9, x8, w8, uxtw #1
+; CHECK-IADISABLED-NEXT:    sub w9, w2, #1
+; CHECK-IADISABLED-NEXT:    add x9, x9, w9, uxtw #1
 ; CHECK-IADISABLED-NEXT:    add x9, x9, #3
 ; CHECK-IADISABLED-NEXT:    add x10, x0, x9
 ; CHECK-IADISABLED-NEXT:    add x9, x1, x9, lsl #2
@@ -993,7 +997,8 @@ define void @loop4(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-IAENABLED-NEXT:    cmp w8, #2
 ; CHECK-IAENABLED-NEXT:    b.ls .LBB3_3
 ; CHECK-IAENABLED-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-IAENABLED-NEXT:    ubfiz x9, x8, #2, #32
+; CHECK-IAENABLED-NEXT:    sub w9, w2, #1
+; CHECK-IAENABLED-NEXT:    ubfiz x9, x9, #2, #32
 ; CHECK-IAENABLED-NEXT:    add x9, x9, #4
 ; CHECK-IAENABLED-NEXT:    add x10, x0, x9
 ; CHECK-IAENABLED-NEXT:    add x9, x1, x9, lsl #2
@@ -1097,7 +1102,8 @@ define void @loop4(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-IADISABLED-NEXT:    cmp w8, #2
 ; CHECK-IADISABLED-NEXT:    b.ls .LBB3_3
 ; CHECK-IADISABLED-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-IADISABLED-NEXT:    ubfiz x9, x8, #2, #32
+; CHECK-IADISABLED-NEXT:    sub w9, w2, #1
+; CHECK-IADISABLED-NEXT:    ubfiz x9, x9, #2, #32
 ; CHECK-IADISABLED-NEXT:    add x9, x9, #4
 ; CHECK-IADISABLED-NEXT:    add x10, x0, x9
 ; CHECK-IADISABLED-NEXT:    add x9, x1, x9, lsl #2
@@ -1457,7 +1463,8 @@ define void @loop2_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:    cmp w8, #2
 ; CHECK-NEXT:    b.ls .LBB4_3
 ; CHECK-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-NEXT:    ubfiz x9, x8, #1, #32
+; CHECK-NEXT:    sub w9, w2, #1
+; CHECK-NEXT:    ubfiz x9, x9, #1, #32
 ; CHECK-NEXT:    add x9, x9, #2
 ; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    add x9, x1, x9, lsl #2
@@ -1713,7 +1720,8 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:    cmp w8, #2
 ; CHECK-NEXT:    b.ls .LBB5_3
 ; CHECK-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-NEXT:    add x9, x8, w8, uxtw #1
+; CHECK-NEXT:    sub w9, w2, #1
+; CHECK-NEXT:    add x9, x9, w9, uxtw #1
 ; CHECK-NEXT:    add x9, x9, #3
 ; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    add x9, x1, x9, lsl #2
@@ -1816,7 +1824,8 @@ define void @loop3_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-GI-NEXT:    cmp w8, #2
 ; CHECK-GI-NEXT:    b.ls .LBB5_3
 ; CHECK-GI-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-GI-NEXT:    add x9, x8, w8, uxtw #1
+; CHECK-GI-NEXT:    sub w9, w2, #1
+; CHECK-GI-NEXT:    add x9, x9, w9, uxtw #1
 ; CHECK-GI-NEXT:    add x9, x9, #3
 ; CHECK-GI-NEXT:    add x10, x0, x9
 ; CHECK-GI-NEXT:    add x9, x1, x9, lsl #2
@@ -2033,7 +2042,8 @@ define void @loop4_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:    cmp w8, #2
 ; CHECK-NEXT:    b.ls .LBB6_3
 ; CHECK-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-NEXT:    ubfiz x9, x8, #2, #32
+; CHECK-NEXT:    sub w9, w2, #1
+; CHECK-NEXT:    ubfiz x9, x9, #2, #32
 ; CHECK-NEXT:    add x9, x9, #4
 ; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    add x9, x1, x9, lsl #2
@@ -2141,7 +2151,8 @@ define void @loop4_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-GI-NEXT:    cmp w8, #2
 ; CHECK-GI-NEXT:    b.ls .LBB6_3
 ; CHECK-GI-NEXT:  // %bb.2: // %vector.memcheck
-; CHECK-GI-NEXT:    ubfiz x9, x8, #2, #32
+; CHECK-GI-NEXT:    sub w9, w2, #1
+; CHECK-GI-NEXT:    ubfiz x9, x9, #2, #32
 ; CHECK-GI-NEXT:    add x9, x9, #4
 ; CHECK-GI-NEXT:    add x10, x0, x9
 ; CHECK-GI-NEXT:    add x9, x1, x9, lsl #2
