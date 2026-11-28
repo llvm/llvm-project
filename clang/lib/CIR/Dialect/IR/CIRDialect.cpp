@@ -1810,6 +1810,37 @@ void cir::CallOp::print(mlir::OpAsmPrinter &p) {
                   getArgAttrsAttr(), getResAttrsAttr());
 }
 
+static LogicalResult verifyResultExtensionAttrs(Operation *op, Type resultType,
+                                                ArrayAttr resAttrs) {
+  if (!resAttrs || resAttrs.empty())
+    return success();
+
+  auto attrs = cast<DictionaryAttr>(resAttrs[0]);
+  bool hasSignExt = static_cast<bool>(attrs.get("llvm.signext"));
+  bool hasZeroExt = static_cast<bool>(attrs.get("llvm.zeroext"));
+
+  if (!hasSignExt && !hasZeroExt)
+    return success();
+
+  if (hasSignExt && hasZeroExt)
+    return op->emitOpError(
+        "result cannot have both llvm.signext and llvm.zeroext");
+
+  auto intType = dyn_cast<cir::IntType>(resultType);
+  if (!intType)
+    return success();
+
+  if (hasSignExt && intType.isUnsigned())
+    return op->emitOpError(
+        "llvm.signext is incompatible with an unsigned result type");
+
+  if (hasZeroExt && intType.isSigned())
+    return op->emitOpError(
+        "llvm.zeroext is incompatible with a signed result type");
+
+  return success();
+}
+
 static LogicalResult
 verifyCallCommInSymbolUses(mlir::Operation *op,
                            SymbolTableCollection &symbolTable) {
@@ -1877,7 +1908,12 @@ verifyCallCommInSymbolUses(mlir::Operation *op,
            << op->getResult(0).getType();
   }
 
-  return mlir::success();
+  if (op->getNumResults() == 1)
+    return verifyResultExtensionAttrs(
+        op, op->getResult(0).getType(),
+        op->getAttrOfType<ArrayAttr>(CIRDialect::getResAttrsAttrName()));
+
+  return success();
 }
 
 LogicalResult
@@ -3571,6 +3607,11 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 }
 
 mlir::LogicalResult cir::FuncOp::verify() {
+
+  if (failed(verifyResultExtensionAttrs(getOperation(),
+                                        getFunctionType().getReturnType(),
+                                        getResAttrsAttr())))
+    return failure();
 
   if (!isDeclaration() && getCoroutineKind() == cir::CoroutineKind::Coroutine) {
     int coroutineOpCount = 0;

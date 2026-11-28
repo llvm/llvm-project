@@ -1,0 +1,33 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s8i = !cir.int<s, 8>
+module {
+  // expected-error@+1 {{llvm.zeroext is incompatible with a signed result type}}
+  cir.func private @bad_signed() -> (!s8i {llvm.zeroext})
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+module {
+  // expected-error@+1 {{llvm.signext is incompatible with an unsigned result type}}
+  cir.func private @bad_unsigned() -> (!u8i {llvm.signext})
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+module {
+  // expected-error@+1 {{result cannot have both llvm.signext and llvm.zeroext}}
+  cir.func private @both_extensions() -> (!s8i {llvm.signext, llvm.zeroext})
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!u8i = !cir.int<u, 8>
+module {
+  cir.func private @valid_signed() -> (!s8i {llvm.signext})
+  cir.func private @valid_unsigned() -> (!u8i {llvm.zeroext})
+  cir.func private @valid_bool() -> (!cir.bool {llvm.zeroext})
+}
