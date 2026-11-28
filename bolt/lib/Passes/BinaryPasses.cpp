@@ -1499,6 +1499,7 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   uint64_t InferredSampleCount = 0;
   std::vector<const BinaryFunction *> ProfiledFunctions;
   std::vector<std::pair<double, uint64_t>> FuncDensityList;
+  std::vector<std::pair<double, uint64_t>> FuncInstDensityList;
   const char *StaleFuncsHeader = "BOLT-INFO: Functions with stale profile:\n";
   for (auto &BFI : BC.getBinaryFunctions()) {
     const BinaryFunction &Function = BFI.second;
@@ -1572,6 +1573,26 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
                            << Function.getSampleCountInBytes() << ", size (b) "
                            << Size << ", density " << Density
                            << ", sample count " << SampleCount << '\n');
+
+      // Block counts are finalized in postProcessProfile, which is not run in
+      // aggregation mode.
+      if (Function.hasCFG() && !opts::AggregateOnly) {
+        uint64_t ExecutedInsts = 0;
+        uint64_t NumInsts = 0;
+        for (const BinaryBasicBlock &BB : Function) {
+          const uint64_t BBInsts = BB.getNumNonPseudos();
+          ExecutedInsts += BB.getKnownExecutionCount() * BBInsts;
+          NumInsts += BBInsts;
+        }
+        if (NumInsts) {
+          const double InstDensity = (double)ExecutedInsts / NumInsts;
+          FuncInstDensityList.emplace_back(InstDensity, SampleCount);
+          LLVM_DEBUG(BC.outs()
+                     << Function << ": executed instructions " << ExecutedInsts
+                     << ", size (insts) " << NumInsts
+                     << ", instruction density " << InstDensity << '\n');
+        }
+      }
     }
   }
   BC.NumProfiledFuncs = ProfiledFunctions.size();
@@ -1839,28 +1860,34 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   }
 
   if (opts::ShowDensity) {
-    double Density = 0.0;
-    llvm::sort(FuncDensityList);
-
-    uint64_t AccumulatedSamples = 0;
     assert(opts::ProfileDensityCutOffHot <= 1000000 &&
            "The cutoff value is greater than 1000000(100%)");
-    // Subtract samples in zero-density functions (no fall-throughs) from
-    // TotalSampleCount (not used anywhere below).
-    for (const auto [CurDensity, CurSamples] : FuncDensityList) {
-      if (CurDensity != 0.0)
-        break;
-      TotalSampleCount -= CurSamples;
-    }
-    const uint64_t CutoffSampleCount =
-        1.f * TotalSampleCount * opts::ProfileDensityCutOffHot / 1000000;
-    // Process functions in decreasing density order
-    for (const auto [CurDensity, CurSamples] : llvm::reverse(FuncDensityList)) {
-      if (AccumulatedSamples >= CutoffSampleCount)
-        break;
-      AccumulatedSamples += CurSamples;
-      Density = CurDensity;
-    }
+    // Return the lowest density among the densest functions accounting for the
+    // cutoff share of samples in non-zero-density functions.
+    auto getDensityAtCutoff =
+        [&](std::vector<std::pair<double, uint64_t>> &List) -> double {
+      llvm::sort(List);
+      // Exclude samples in zero-density functions (no fall-throughs).
+      uint64_t TotalSamples = 0;
+      for (const auto [CurDensity, CurSamples] : List)
+        if (CurDensity != 0.0)
+          TotalSamples += CurSamples;
+      const uint64_t CutoffSampleCount =
+          1.f * TotalSamples * opts::ProfileDensityCutOffHot / 1000000;
+      double Density = 0.0;
+      uint64_t AccumulatedSamples = 0;
+      for (const auto [CurDensity, CurSamples] : llvm::reverse(List)) {
+        if (AccumulatedSamples >= CutoffSampleCount)
+          break;
+        AccumulatedSamples += CurSamples;
+        Density = CurDensity;
+      }
+      return Density;
+    };
+    const double CutoffPct =
+        static_cast<double>(opts::ProfileDensityCutOffHot) / 10000;
+
+    const double Density = getDensityAtCutoff(FuncDensityList);
     if (Density == 0.0) {
       BC.errs() << "BOLT-WARNING: the output profile is empty or the "
                    "--profile-density-cutoff-hot option is "
@@ -1875,10 +1902,13 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
 
     BC.outs() << "BOLT-INFO: Functions with density >= "
               << format("%.1f", Density) << " account for "
-              << format("%.2f",
-                        static_cast<double>(opts::ProfileDensityCutOffHot) /
-                            10000)
-              << "% total sample counts.\n";
+              << format("%.2f", CutoffPct) << "% total sample counts.\n";
+
+    // Not checked against -profile-density-threshold: not calibrated yet.
+    if (const double InstDensity = getDensityAtCutoff(FuncInstDensityList))
+      BC.outs() << "BOLT-INFO: Functions with instruction density >= "
+                << format("%.1f", InstDensity) << " account for "
+                << format("%.2f", CutoffPct) << "% total sample counts.\n";
   }
   return Error::success();
 }
