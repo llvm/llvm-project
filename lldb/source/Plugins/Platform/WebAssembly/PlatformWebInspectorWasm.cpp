@@ -11,6 +11,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/StringExtras.h"
@@ -73,12 +74,13 @@ llvm::Error PlatformWebInspectorWasm::LaunchPlatformServer() {
                                     kServerBinary);
 
   // Find two free TCP ports.
-  llvm::Expected<uint16_t> expected_platform_port = FindFreeTCPPort();
+  llvm::Expected<uint16_t> expected_platform_port = TCPSocket::FindFreePort();
   if (!expected_platform_port)
     return expected_platform_port.takeError();
   uint16_t platform_port = *expected_platform_port;
 
-  llvm::Expected<uint16_t> expected_debugserver_port = FindFreeTCPPort();
+  llvm::Expected<uint16_t> expected_debugserver_port =
+      TCPSocket::FindFreePort();
   if (!expected_debugserver_port)
     return expected_debugserver_port.takeError();
   uint16_t debugserver_port = *expected_debugserver_port;

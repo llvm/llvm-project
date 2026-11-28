@@ -78,6 +78,13 @@ llvm::Expected<TCPSocket::Pair> TCPSocket::CreatePair() {
       std::unique_ptr<TCPSocket>(static_cast<TCPSocket *>(accept_socket)));
 }
 
+llvm::Expected<uint16_t> TCPSocket::FindFreePort() {
+  TCPSocket sock(/*should_close=*/true);
+  if (Status error = sock.Listen("localhost:0", /*backlog=*/5); error.Fail())
+    return error.takeError();
+  return sock.GetLocalPortNumber();
+}
+
 bool TCPSocket::IsValid() const {
   return m_socket != kInvalidSocketValue || m_listen_sockets.size() != 0;
 }

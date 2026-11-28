@@ -122,14 +122,6 @@ PlatformSP PlatformWasm::CreateInstance(bool force, const ArchSpec *arch) {
   return create ? PlatformSP(new PlatformWasm()) : PlatformSP();
 }
 
-llvm::Expected<uint16_t> PlatformWasm::FindFreeTCPPort() {
-  TCPSocket sock(/*should_close=*/true);
-  Status status = sock.Listen("localhost:0", /*backlog=*/5);
-  if (status.Fail())
-    return status.takeError();
-  return sock.GetLocalPortNumber();
-}
-
 std::vector<ArchSpec>
 PlatformWasm::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
   return {ArchSpec("wasm32"), ArchSpec("wasm64")};
@@ -196,7 +188,7 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
     return nullptr;
   }
 
-  llvm::Expected<uint16_t> expected_port = FindFreeTCPPort();
+  llvm::Expected<uint16_t> expected_port = TCPSocket::FindFreePort();
   if (!expected_port) {
     error = Status::FromError(expected_port.takeError());
     return nullptr;
