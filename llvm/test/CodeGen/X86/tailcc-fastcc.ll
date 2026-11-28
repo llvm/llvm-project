@@ -18,10 +18,14 @@ define fastcc i32 @tailcaller1(i32 %in1, i32 %in2) nounwind {
 ;
 ; UEFI64-LABEL: tailcaller1:
 ; UEFI64:       # %bb.0: # %entry
-; UEFI64-NEXT:    subq	$40, %rsp
+; UEFI64-NEXT:    pushq %rbp
+; UEFI64-NEXT:    subq $48, %rsp
+; UEFI64-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
 ; UEFI64-NEXT:    movl %ecx, %r8d
 ; UEFI64-NEXT:    movl %edx, %r9d
 ; UEFI64-NEXT:    callq tailcallee1
+; UEFI64-NEXT:    addq $8, %rsp
+; UEFI64-NEXT:    popq %rbp
 ; UEFI64-NEXT:    retq $40
 ;
 ; X86-LABEL: tailcaller1:
@@ -48,10 +52,14 @@ define tailcc i32 @tailcaller2(i32 %in1, i32 %in2) nounwind {
 ;
 ; UEFI64-LABEL: tailcaller2:
 ; UEFI64:       # %bb.0: # %entry
-; UEFI64-NEXT:    subq	$40, %rsp
+; UEFI64-NEXT:    pushq %rbp
+; UEFI64-NEXT:    subq $48, %rsp
+; UEFI64-NEXT:    leaq {{[0-9]+}}(%rsp), %rbp
 ; UEFI64-NEXT:    movl %ecx, %r8d
 ; UEFI64-NEXT:    movl %edx, %r9d
 ; UEFI64-NEXT:    callq tailcallee2
+; UEFI64-NEXT:    addq $8, %rsp
+; UEFI64-NEXT:    popq %rbp
 ; UEFI64-NEXT:    retq $40
 ;
 ; X86-LABEL: tailcaller2:
