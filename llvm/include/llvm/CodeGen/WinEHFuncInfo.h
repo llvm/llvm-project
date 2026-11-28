@@ -112,6 +112,7 @@ struct WinEHFuncInfo {
   int EHRegNodeEndOffset = std::numeric_limits<int>::max();
   int EHGuardFrameIndex = std::numeric_limits<int>::max();
   int SEHSetFrameOffset = std::numeric_limits<int>::max();
+  int SEHFrameAlignMask = -1;
 
   LLVM_ABI WinEHFuncInfo();
 };
