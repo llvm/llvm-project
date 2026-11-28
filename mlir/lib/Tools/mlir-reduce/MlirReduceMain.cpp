@@ -42,12 +42,12 @@ LogicalResult mlir::mlirReduceMain(int argc, char **argv,
       "no-implicit-module",
       llvm::cl::desc(
           "Disable implicit addition of a top-level module op during parsing"),
-      llvm::cl::init(false)};
+      llvm::cl::init(false), llvm::cl::cat(mlirReduceCategory)};
 
   static llvm::cl::opt<bool> allowUnregisteredDialects(
       "allow-unregistered-dialect",
       llvm::cl::desc("Allow operation with no registered dialects"),
-      llvm::cl::init(false));
+      llvm::cl::init(false), llvm::cl::cat(mlirReduceCategory));
 
   static llvm::cl::opt<std::string> splitInputFile(
       "split-input-file", llvm::cl::ValueOptional,
@@ -59,7 +59,7 @@ LogicalResult mlir::mlirReduceMain(int argc, char **argv,
       }),
       llvm::cl::desc("Split the input file into chunks using the given or "
                      "default marker and process each chunk independently"),
-      llvm::cl::init(""));
+      llvm::cl::init(""), llvm::cl::cat(mlirReduceCategory));
 
   llvm::cl::HideUnrelatedOptions(mlirReduceCategory);
 
