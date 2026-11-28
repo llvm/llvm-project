@@ -349,6 +349,20 @@ protected:
       m_options.attach_info.SetScriptedMetadata(metadata_sp);
     }
 
+    // Without a pid, name, or target executable to fall back on, let the user
+    // pick a process interactively.
+    if (!m_options.attach_info.ProcessInfoSpecified() &&
+        !target->GetExecutableModule() && m_class_options.GetName().empty() &&
+        GetDebugger().GetInputFile().GetIsRealTerminal()) {
+      llvm::Expected<lldb::pid_t> pid =
+          PickProcessToAttach(GetDebugger(), *platform_sp, result);
+      if (!pid) {
+        result.SetError(pid.takeError());
+        return;
+      }
+      m_options.attach_info.SetProcessID(*pid);
+    }
+
     // Record the old executable module, we want to issue a warning if the
     // process of attaching changed the current executable (like somebody said
     // "file foo" then attached to a PID whose executable was bar.)
