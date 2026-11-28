@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPFRegisterBankInfo.h"
+#include "BPFSubtarget.h"
 
 #define DEBUG_TYPE "bpf-reg-bank-info"
 

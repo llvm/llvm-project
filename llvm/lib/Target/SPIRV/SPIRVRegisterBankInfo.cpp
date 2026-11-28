@@ -13,6 +13,7 @@
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVRegisterInfo.h"
 #include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 
 #define GET_REGINFO_ENUM
 #include "SPIRVGenRegisterInfo.inc"
