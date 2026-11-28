@@ -2653,6 +2653,7 @@ public:
   /// the erased instrs.
   void eraseInstrs(SmallPtrSetImpl<MachineInstr *> &ErasedInstrs,
                    SmallVectorImpl<Register> &ShrinkRegs,
+                   SmallVectorImpl<SlotIndex> &EndPoints,
                    LiveInterval *LI = nullptr);
 
   /// Remove liverange defs at places where implicit defs will be removed.
@@ -3478,6 +3479,7 @@ void JoinVals::removeImplicitDefs() {
 
 void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr *> &ErasedInstrs,
                            SmallVectorImpl<Register> &ShrinkRegs,
+                           SmallVectorImpl<SlotIndex> &EndPoints,
                            LiveInterval *LI) {
   for (unsigned i = 0, e = LR.getNumValNums(); i != e; ++i) {
     // Get the def location before markUnused() below invalidates it.
@@ -3538,8 +3540,11 @@ void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr *> &ErasedInstrs,
         // was live across Def.
         if (LE.isValid()) {
           LiveRange::iterator S = LR.find(Def);
-          if (S != LR.begin())
+          // Don't extend a LR over a pruned gap, delay repair until after join
+          if (S != LR.begin() && std::prev(S)->end == Def)
             std::prev(S)->end = NewEnd;
+          else
+            EndPoints.push_back(NewEnd);
         }
       }
       LLVM_DEBUG({
@@ -3763,8 +3768,8 @@ RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
   // Erase COPY and IMPLICIT_DEF instructions. This may cause some external
   // registers to require trimming.
   SmallVector<Register, 8> ShrinkRegs;
-  LHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs, &LHS);
-  RHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs);
+  LHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs, EndPoints, &LHS);
+  RHSVals.eraseInstrs(ErasedInstrs, ShrinkRegs, EndPoints);
   while (!ShrinkRegs.empty())
     shrinkToUses(&LIS->getInterval(ShrinkRegs.pop_back_val()));
 
