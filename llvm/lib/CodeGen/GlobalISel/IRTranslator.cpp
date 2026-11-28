@@ -4749,6 +4749,30 @@ void IRTranslatorImpl::translateDbgValueListRecord(
   auto GetLocationOperand = [&](Value *V) -> std::optional<MachineOperand> {
     if (!V || isa<UndefValue>(V))
       return std::nullopt;
+    if (auto *VTy = dyn_cast<FixedVectorType>(V->getType());
+        VTy && isa<Constant>(V)) {
+      // Pack the elements into one integer using the vector's memory layout.
+      unsigned NumElts = VTy->getNumElements();
+      unsigned EltBits = VTy->getScalarSizeInBits();
+      APInt Packed(NumElts * EltBits, 0);
+      for (unsigned I = 0; I != NumElts; ++I) {
+        Constant *Elt = cast<Constant>(V)->getAggregateElement(I);
+        APInt EltVal;
+        if (auto *EltCI = dyn_cast_or_null<ConstantInt>(Elt))
+          EltVal = EltCI->getValue();
+        else if (auto *EltCFP = dyn_cast_or_null<ConstantFP>(Elt))
+          EltVal = EltCFP->getValueAPF().bitcastToAPInt();
+        else
+          return std::nullopt;
+        unsigned Pos =
+            MIRBuilder.getDataLayout().isBigEndian() ? NumElts - 1 - I : I;
+        Packed.insertBits(EltVal, Pos * EltBits);
+      }
+      if (Packed.getBitWidth() > 64)
+        return MachineOperand::CreateCImm(
+            ConstantInt::get(V->getContext(), Packed));
+      return MachineOperand::CreateImm(Packed.getZExtValue());
+    }
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
       if (CI->getBitWidth() > 64)
         return MachineOperand::CreateCImm(CI);
