@@ -2541,10 +2541,10 @@ let SVETargetGuard = "sve2,fp8fma", SMETargetGuard = "ssve-fp8fma" in {
   def SVFMLALLTT_N : SInst<"svmlalltt[_n_f32_mf8]", "dd~!>", "f", MergeNone, "aarch64_sve_fp8_fmlalltt", [VerifyRuntimeMode]>;
 
   // 8-bit floating-point multiply-add long long to single-precision (indexed, all top/bottom variants)
-  def SVFMLALLBB_LANE : SInst<"svmlallbb_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlallbb_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
-  def SVFMLALLBT_LANE : SInst<"svmlallbt_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlallbt_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
-  def SVFMLALLTB_LANE : SInst<"svmlalltb_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlalltb_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
-  def SVFMLALLTT_LANE : SInst<"svmlalltt_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlalltt_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_7>]>;
+  def SVFMLALLBB_LANE : SInst<"svmlallbb_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlallbb_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVFMLALLBT_LANE : SInst<"svmlallbt_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlallbt_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVFMLALLTB_LANE : SInst<"svmlalltb_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlalltb_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_15>]>;
+  def SVFMLALLTT_LANE : SInst<"svmlalltt_lane[_f32_mf8]", "dd~~i>", "f", MergeNone, "aarch64_sve_fp8_fmlalltt_lane", [VerifyRuntimeMode], [ImmCheck<3, ImmCheck0_15>]>;
 }
 
 let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2p2" in {

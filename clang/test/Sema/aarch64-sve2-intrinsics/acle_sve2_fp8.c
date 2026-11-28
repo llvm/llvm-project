@@ -93,11 +93,11 @@ void test_imm_range(svmfloat8_t zn, svmfloat8_t zm, fpm_t fpm) {
  svmlalt_lane_f16_mf8_fpm(svundef_f16(), zn, zm, -1, fpm);
  // expected-error@-1 {{argument value 18446744073709551615 is outside the valid range [0, 15]}}
  svmlallbb_lane_f32_mf8_fpm(svundef_f32(), zn, zm, -1, fpm);
- // expected-error@-1 {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+ // expected-error@-1 {{argument value 18446744073709551615 is outside the valid range [0, 15]}}
  svmlallbt_lane_f32_mf8_fpm(svundef_f32(), zn, zm, -1, fpm);
- // expected-error@-1 {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+ // expected-error@-1 {{argument value 18446744073709551615 is outside the valid range [0, 15]}}
  svmlalltb_lane_f32_mf8_fpm(svundef_f32(), zn, zm, -1, fpm);
- // expected-error@-1 {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+ // expected-error@-1 {{argument value 18446744073709551615 is outside the valid range [0, 15]}}
  svmlalltt_lane_f32_mf8_fpm(svundef_f32(), zn, zm, -1, fpm);
- // expected-error@-1 {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+ // expected-error@-1 {{argument value 18446744073709551615 is outside the valid range [0, 15]}}
 }
