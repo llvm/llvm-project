@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=OBJDUMP %s
 ; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa < %s | FileCheck --check-prefix=ASM %s
+; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -global-isel -verify-machineinstrs -filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=OBJDUMP %s
+; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -global-isel -verify-machineinstrs < %s | FileCheck --check-prefix=ASM %s
 ; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -filetype=obj < %s | llvm-objdump -s -j .rodata - | FileCheck --check-prefix=GFX1250-OBJDUMP %s
 ; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa < %s | FileCheck --check-prefix=GFX1250-ASM %s
 
