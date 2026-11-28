@@ -3795,9 +3795,6 @@ llvm.func @omp_taskgroup_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 // CHECK:         %[[omp_global_thread_num:.+]] = call i32 @__kmpc_global_thread_num(ptr @{{.+}})
 // CHECK:         call void @__kmpc_taskgroup(ptr @{{.+}}, i32 %[[omp_global_thread_num]])
 // CHECK:         br label %[[omp_taskgroup_region:[^,]+]]
-// CHECK:       [[omp_taskgroup_region1:.+]]:
-// CHECK:         call void @foo()
-// CHECK:         br label %[[omp_region_cont:[^,]+]]
 // CHECK:       [[omp_taskgroup_region]]:
 // CHECK:         %{{.+}} = alloca i8, align 1
 // CHECK:         br label %[[omp_private_init:[^,]+]]
@@ -3805,6 +3802,9 @@ llvm.func @omp_taskgroup_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 // CHECK:         br label %[[omp_private_copy:[^,]+]]
 // CHECK:       [[omp_private_copy]]:
 // CHECK:         br label %[[omp_task_start:[^,]+]]
+// CHECK:       [[omp_taskgroup_region1:.+]]:
+// CHECK:         call void @foo()
+// CHECK:         br label %[[omp_region_cont:[^,]+]]
 
 // CHECK:       [[omp_region_cont:[^,]+]]:
 // CHECK:         br label %[[taskgroup_exit:[^,]+]]

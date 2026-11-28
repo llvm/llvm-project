@@ -58,18 +58,18 @@ module {
 // CHECK:         %[[VAL_7:.*]] = getelementptr { { ptr, i64, i32, i8, i8, i8, i8 }, { ptr, i64, i32, i8, i8, i8, i8 } }, ptr %[[VAL_5]], i32 0, i32 1
 // ...
 // CHECK:         br label %[[VAL_9:.*]]
-// CHECK:       omp.private.init4:                                ; preds = %[[VAL_10:.*]], %[[VAL_11:.*]]
-// CHECK:         br label %[[VAL_12:.*]]
-// CHECK:       omp.private.init3:                                ; preds = %[[VAL_9]]
-// CHECK:         br label %[[VAL_13:.*]]
-// CHECK:       omp.private.init2:                                ; preds = %[[VAL_9]]
-// CHECK:         br label %[[VAL_13]]
 // CHECK:       omp.private.init1:                                ; preds = %[[VAL_4]]
 // CHECK:         %[[VAL_14:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, align 8
 // CHECK:         call void @llvm.memcpy.p0.p0.i32(ptr %[[VAL_14]], ptr %[[VAL_0]], i32 24, i1 false)
 // CHECK:         %[[VAL_15:.*]] = ptrtoint ptr %[[VAL_0]] to i64
 // CHECK:         %[[VAL_16:.*]] = icmp eq i64 %[[VAL_15]], 0
-// CHECK:         br i1 %[[VAL_16]], label %[[VAL_10]], label %[[VAL_11]]
+// CHECK:         br i1 %[[VAL_16]], label %[[VAL_10:.*]], label %[[VAL_11:.*]]
+// CHECK:       omp.private.init2:                                ; preds = %[[VAL_9]]
+// CHECK:         br label %[[VAL_13:.*]]
+// CHECK:       omp.private.init3:                                ; preds = %[[VAL_9]]
+// CHECK:         br label %[[VAL_13]]
+// CHECK:       omp.private.init4:                                ; preds = %[[VAL_10]], %[[VAL_11]]
+// CHECK:         br label %[[VAL_12:.*]]
 // CHECK:       omp.region.cont:                                  ; preds = %[[VAL_13]]
 // CHECK:         %[[VAL_17:.*]] = phi ptr [ %[[VAL_7]], %[[VAL_13]] ]
 // CHECK:         br label %[[VAL_18:.*]]

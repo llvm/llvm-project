@@ -78,13 +78,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
 // CHECK: define internal void @"{{.*}}$reduction$reduction_func"(ptr noundef %0, ptr noundef %1) #0 {
 // CHECK:     br label %omp.reduction.nonatomic.body
 
-// CHECK:   [[BODY_2ND_BB:.*]]:
-// CHECK:     call void @baz()
-// CHECK:     br label %omp.region.cont
-
-
 // CHECK: omp.reduction.nonatomic.body:
 // CHECK:   call void @bar()
-// CHECK:     br label %[[BODY_2ND_BB]]
+// CHECK:     br label %[[BODY_2ND_BB:.*]]
+
+// CHECK:   [[BODY_2ND_BB]]:
+// CHECK:     call void @baz()
+// CHECK:     br label %omp.region.cont
 
 // CHECK: }

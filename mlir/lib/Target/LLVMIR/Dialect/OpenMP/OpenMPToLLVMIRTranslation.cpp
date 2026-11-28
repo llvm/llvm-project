@@ -908,7 +908,7 @@ static llvm::Expected<llvm::BasicBlock *> convertOmpOpRegions(
   for (Block &bb : region) {
     llvm::BasicBlock *llvmBB = llvm::BasicBlock::Create(
         llvmContext, blockName, builder.GetInsertBlock()->getParent(),
-        builder.GetInsertBlock()->getNextNode());
+        continuationBlock);
     moduleTranslation.mapBlock(&bb, llvmBB);
   }
 

@@ -45,16 +45,16 @@ module attributes {omp.is_target_device = false, omp.is_gpu = false, omp.version
   // CHECK-LABEL: define void @test_dispatch_runtime_novariants(
   // CHECK-SAME: i1 %[[COND:[^ )]+]])
   // CHECK: br label %[[ENTRY:[a-zA-Z0-9._]+]]
-  // CHECK: [[MERGE:[a-zA-Z0-9._]+]]:
-  // CHECK-NEXT: br label %[[CONT:[a-zA-Z0-9._]+]]
-  // CHECK: [[VARIANT:[a-zA-Z0-9._]+]]:
+  // CHECK: [[ENTRY]]:
+  // CHECK-NEXT: br i1 %[[COND]], label %[[BASE:[a-zA-Z0-9._]+]], label %[[VARIANT:[a-zA-Z0-9._]+]]
+  // CHECK: [[BASE]]:
+  // CHECK-NEXT: call void @_QMfuncsPfoo_dispatch()
+  // CHECK-NEXT: br label %[[MERGE:[a-zA-Z0-9._]+]]
+  // CHECK: [[VARIANT]]:
   // CHECK-NEXT: call void @_QMfuncsPfoo_variant()
   // CHECK-NEXT: br label %[[MERGE]]
-  // CHECK: [[BASE:[a-zA-Z0-9._]+]]:
-  // CHECK-NEXT: call void @_QMfuncsPfoo_dispatch()
-  // CHECK-NEXT: br label %[[MERGE]]
-  // CHECK: [[ENTRY]]:
-  // CHECK-NEXT: br i1 %[[COND]], label %[[BASE]], label %[[VARIANT]]
+  // CHECK: [[MERGE]]:
+  // CHECK-NEXT: br label %[[CONT:[a-zA-Z0-9._]+]]
   // CHECK: [[CONT]]:
   // CHECK-NEXT: ret void
   llvm.func @test_dispatch_runtime_novariants(%cond : i1) {
