@@ -1835,24 +1835,78 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
       }
     }
 
+    bool SaveTemporaryReg = false;
     if (TemporaryReg == RISCV::NoRegister) {
+      // Step RS to MBBI to skip terminators like PseudoTAIL, whose RegMask
+      // marks caller-saved GPRs clobbered.
+      assert(RS && "RegScavenger is required to zero vector registers");
       RS->enterBasicBlockEnd(MBB);
-      TemporaryReg = RS->scavengeRegisterBackwards(RISCV::GPRRegClass, MBBI,
-                                                   /*RestoreAfter=*/false,
-                                                   /*SPAdj=*/0);
+      RS->backward(MBBI);
+      TemporaryReg = RS->FindUnusedReg(&RISCV::GPRRegClass);
+
+      if (TemporaryReg == RISCV::NoRegister) {
+        // No free GPR at MBBI; save and restore one on the stack around
+        // VSETVLI.
+        const MachineRegisterInfo &MRI = MF.getRegInfo();
+        for (MCPhysReg Reg : RISCV::GPRRegClass) {
+          if (Reg != RISCV::X0 && Reg != SPReg && !MRI.isReserved(Reg)) {
+            TemporaryReg = Reg;
+            SaveTemporaryReg = true;
+            break;
+          }
+        }
+        if (TemporaryReg == RISCV::NoRegister)
+          report_fatal_error(
+              "No non-reserved GPR available to zero vector registers");
+      }
     }
 
-    if (MBB.getParent()
-            ->getFunction()
-            .getFnAttribute("zero-call-used-regs")
-            .getValueAsString() == "used")
-      FinalRegsToZero.set(TemporaryReg.id());
+    auto EmitVSetVLI = [&]() {
+      BuildMI(MBB, MBBI, DL, TII.get(RISCV::VSETVLI), TemporaryReg)
+          .addReg(RISCV::X0)
+          .addImm(VTypeImm)
+          .addReg(RISCV::VL, RegState::ImplicitDefine)
+          .addReg(RISCV::VTYPE, RegState::ImplicitDefine);
+    };
 
-    BuildMI(MBB, MBBI, DL, TII.get(RISCV::VSETVLI), TemporaryReg)
-        .addReg(RISCV::X0)
-        .addImm(VTypeImm)
-        .addReg(RISCV::VL, RegState::ImplicitDefine)
-        .addReg(RISCV::VTYPE, RegState::ImplicitDefine);
+    if (SaveTemporaryReg) {
+      int64_t SlotSize = alignTo(TRI.getSpillSize(RISCV::GPRRegClass),
+                                 getStackAlign().value());
+      int64_t BaseCFAOffset =
+          MF.getInfo<RISCVMachineFunctionInfo>()->getQCIInterruptStackSize();
+      unsigned StoreOpc = STI.is64Bit() ? RISCV::SD : RISCV::SW;
+      unsigned LoadOpc = STI.is64Bit() ? RISCV::LD : RISCV::LW;
+
+      TRI.adjustReg(MBB, MBBI, DL, SPReg, SPReg,
+                    StackOffset::getFixed(-SlotSize), MachineInstr::NoFlags,
+                    getStackAlign());
+      if (needsDwarfCFI(MF))
+        CFIInstBuilder(MBB, MBBI, MachineInstr::NoFlags)
+            .buildDefCFAOffset(SlotSize + BaseCFAOffset);
+      BuildMI(MBB, MBBI, DL, TII.get(StoreOpc))
+          .addReg(TemporaryReg)
+          .addReg(SPReg)
+          .addImm(0);
+      EmitVSetVLI();
+      BuildMI(MBB, MBBI, DL, TII.get(LoadOpc), TemporaryReg)
+          .addReg(SPReg)
+          .addImm(0);
+      TRI.adjustReg(MBB, MBBI, DL, SPReg, SPReg,
+                    StackOffset::getFixed(SlotSize), MachineInstr::NoFlags,
+                    getStackAlign());
+      if (needsDwarfCFI(MF))
+        CFIInstBuilder(MBB, MBBI, MachineInstr::NoFlags)
+            .buildDefCFAOffset(BaseCFAOffset);
+    } else {
+      StringRef ZeroCallUsedRegsKind =
+          MF.getFunction()
+              .getFnAttribute("zero-call-used-regs")
+              .getValueAsString();
+      if (ZeroCallUsedRegsKind == "used" || ZeroCallUsedRegsKind == "all")
+        FinalRegsToZero.set(TemporaryReg.id());
+
+      EmitVSetVLI();
+    }
   }
 
   for (MCRegister Reg : FinalRegsToZero.set_bits())
