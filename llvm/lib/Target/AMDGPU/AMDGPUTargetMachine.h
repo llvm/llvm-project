@@ -41,6 +41,7 @@ public:
   static bool EnableFunctionCalls;
   static bool EnableObjectLinking;
   static bool EnableLowerModuleLDS;
+  static bool EnableHotBlockRemat;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, const TargetOptions &Options,
