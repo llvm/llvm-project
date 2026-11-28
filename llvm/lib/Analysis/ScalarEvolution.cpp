@@ -12122,6 +12122,26 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     if (FoundLHS == FoundRHS)
       return CmpInst::isFalseWhenEqual(FoundPred);
 
+  // For a non-zero constant C, X + C u< X and X + C u<= X are equivalent to
+  // X u>= -C. For example, a guard x != 0 proves (x - 1) u< x. The new query
+  // compares against a constant, so this recurses at most once.
+  {
+    CmpPredicate P = Pred;
+    SCEVUse L = LHS, R = RHS;
+    if (P == ICmpInst::ICMP_UGT || P == ICmpInst::ICMP_UGE) {
+      std::swap(L, R);
+      P = ICmpInst::getSwappedCmpPredicate(P);
+    }
+    const APInt *C;
+    if ((P == ICmpInst::ICMP_ULT || P == ICmpInst::ICMP_ULE) &&
+        R->getType()->isIntegerTy() &&
+        match(L, m_scev_Add(m_scev_APInt(C), m_scev_Specific(R))) &&
+        !C->isZero() &&
+        isImpliedCondBalancedTypes(ICmpInst::ICMP_UGE, R, getConstant(-*C),
+                                   FoundPred, FoundLHS, FoundRHS, CtxI))
+      return true;
+  }
+
   // Check to see if we can make the LHS or RHS match.
   if (LHS == FoundRHS || RHS == FoundLHS) {
     if (isa<SCEVConstant>(RHS)) {
