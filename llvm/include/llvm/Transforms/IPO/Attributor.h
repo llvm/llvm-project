@@ -1586,11 +1586,14 @@ struct Attributor {
                                  const AbstractAttribute *QueryingAA,
                                  DepClassTy DepClass, bool ForceUpdate = false,
                                  bool UpdateAfterInit = true) {
+    if (!isAllowed<AAType>())
+      return nullptr;
+
     if (!shouldPropagateCallBaseContext(IRP))
       IRP = IRP.stripCallBaseContext();
 
-    if (AAType *AAPtr = lookupAAFor<AAType>(IRP, QueryingAA, DepClass,
-                                            /* AllowInvalidState */ true)) {
+    if (AAType *AAPtr = lookupAAForImpl<AAType>(IRP, QueryingAA, DepClass,
+                                                /* AllowInvalidState */ true)) {
       if (ForceUpdate && Phase == AttributorPhase::UPDATE)
         updateAA(*AAPtr);
       return AAPtr;
@@ -1668,6 +1671,18 @@ struct Attributor {
                       const AbstractAttribute *QueryingAA = nullptr,
                       DepClassTy DepClass = DepClassTy::OPTIONAL,
                       bool AllowInvalidState = false) {
+    // Attributes of a kind that is not allowed are never created.
+    if (!isAllowed<AAType>())
+      return nullptr;
+    return lookupAAForImpl<AAType>(IRP, QueryingAA, DepClass,
+                                   AllowInvalidState);
+  }
+
+  /// Like lookupAAFor, but for a kind that is known to be allowed.
+  template <typename AAType>
+  AAType *lookupAAForImpl(const IRPosition &IRP,
+                          const AbstractAttribute *QueryingAA,
+                          DepClassTy DepClass, bool AllowInvalidState) {
     static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
                   "Cannot query an attribute with a type not derived from "
                   "'AbstractAttribute'!");
@@ -1689,6 +1704,11 @@ struct Attributor {
     if (!AllowInvalidState && !AA->getState().isValidState())
       return nullptr;
     return AA;
+  }
+
+  /// Return true if abstract attributes of type \p AAType may be created.
+  template <typename AAType> bool isAllowed() const {
+    return !Configuration.Allowed || Configuration.Allowed->contains<AAType>();
   }
 
   /// Allows a query AA to request an update if a new query was received.
@@ -1804,9 +1824,6 @@ struct Attributor {
   template <typename AAType>
   bool shouldInitialize(const IRPosition &IRP, bool &ShouldUpdateAA) {
     if (!AAType::isValidIRPositionForInit(*this, IRP))
-      return false;
-
-    if (Configuration.Allowed && !Configuration.Allowed->contains<AAType>())
       return false;
 
     // For now we skip anything in naked and optnone functions.
