@@ -22,6 +22,8 @@
 #include <cstdint>
 
 namespace mlir {
+class AnalysisManager;
+
 namespace SideEffects {
 //===----------------------------------------------------------------------===//
 // Effects
@@ -623,16 +625,14 @@ getEffectsRecursively(Operation *rootOp);
 /// Returns true if the given operation is speculatable, i.e. has no undefined
 /// behavior or other side effects.
 ///
-/// An operation can indicate that it is speculatable by implementing the
-/// getSpeculatability hook in the ConditionallySpeculatable op interface.
-bool isSpeculatable(Operation *op);
+/// Supply the caller's analysis manager to enable proofs that use analyses.
+bool isSpeculatable(Operation *op, AnalysisManager *actx = nullptr);
 
 /// Returns true if the given operation is pure, i.e., is speculatable that does
 /// not touch memory.
 ///
 /// This function is the C++ equivalent of the `Pure` trait.
-bool isPure(Operation *op);
-
+bool isPure(Operation *op, AnalysisManager *actx = nullptr);
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//

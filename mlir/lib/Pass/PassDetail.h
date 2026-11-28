@@ -10,6 +10,7 @@
 
 #include "mlir/IR/Action.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassInstrumentation.h"
 #include "mlir/Pass/PassManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -29,7 +30,7 @@ public:
   OpToOpPassAdaptor(const OpToOpPassAdaptor &rhs) = default;
 
   /// Run the held pipeline over all operations.
-  void runOnOperation(bool verifyPasses);
+  void runOnOperation(bool verifyPasses, PassInstrumentor *instrumentor);
   void runOnOperation() override;
 
   /// Try to merge the current pass adaptor into 'rhs'. This will try to append
@@ -60,17 +61,19 @@ public:
 
 private:
   /// Run this pass adaptor synchronously.
-  void runOnOperationImpl(bool verifyPasses);
+  void runOnOperationImpl(bool verifyPasses, PassInstrumentor *instrumentor);
 
   /// Run this pass adaptor asynchronously.
-  void runOnOperationAsyncImpl(bool verifyPasses);
+  void runOnOperationAsyncImpl(bool verifyPasses,
+                               PassInstrumentor *instrumentor);
 
   /// Run the given operation and analysis manager on a single pass.
   /// `parentInitGeneration` is the initialization generation of the parent pass
   /// manager, and is used to initialize any dynamic pass pipelines run by the
   /// given pass.
   static LogicalResult run(Pass *pass, Operation *op, AnalysisManager am,
-                           bool verifyPasses, unsigned parentInitGeneration);
+                           bool verifyPasses, unsigned parentInitGeneration,
+                           PassInstrumentor *instrumentor);
 
   /// Run the given operation and analysis manager on a provided op pass
   /// manager. `parentInitGeneration` is the initialization generation of the
@@ -78,7 +81,7 @@ private:
   /// run by the given passes.
   static LogicalResult runPipeline(
       OpPassManager &pm, Operation *op, AnalysisManager am, bool verifyPasses,
-      unsigned parentInitGeneration, PassInstrumentor *instrumentor = nullptr,
+      unsigned parentInitGeneration, PassInstrumentor *instrumentor,
       const PassInstrumentation::PipelineParentInfo *parentInfo = nullptr);
 
   /// A set of adaptors to run.

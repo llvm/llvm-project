@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Pass/AnalysisManager.h"
+#include "mlir/Analysis/AnalysisManager.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -40,7 +40,7 @@ TEST(AnalysisManagerTest, FineGrainModuleAnalysisPreservation) {
 
   // Test fine grain invalidation of the module analysis manager.
   OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
-  ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
+  ModuleAnalysisManager mam(*module);
   AnalysisManager am = mam;
 
   // Query two different analyses, but only preserve one before invalidating.
@@ -69,7 +69,7 @@ TEST(AnalysisManagerTest, FineGrainFunctionAnalysisPreservation) {
   module->push_back(func1);
 
   // Test fine grain invalidation of the function analysis manager.
-  ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
+  ModuleAnalysisManager mam(*module);
   AnalysisManager am = mam;
   AnalysisManager fam = am.nest(func1);
 
@@ -100,7 +100,7 @@ TEST(AnalysisManagerTest, FineGrainChildFunctionAnalysisPreservation) {
 
   // Test fine grain invalidation of a function analysis from within a module
   // analysis manager.
-  ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
+  ModuleAnalysisManager mam(*module);
   AnalysisManager am = mam;
 
   // Check that the analysis cache is initially empty.
@@ -140,7 +140,7 @@ TEST(AnalysisManagerTest, CustomInvalidation) {
 
   // Create a function and a module.
   OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
-  ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
+  ModuleAnalysisManager mam(*module);
   AnalysisManager am = mam;
 
   detail::PreservedAnalyses pa;
@@ -162,7 +162,7 @@ TEST(AnalysisManagerTest, OpSpecificAnalysis) {
 
   // Create a module.
   OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
-  ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
+  ModuleAnalysisManager mam(*module);
   AnalysisManager am = mam;
 
   // Query the op specific analysis for the module and verify that its cached.
@@ -188,7 +188,7 @@ TEST(AnalysisManagerTest, DependentAnalysis) {
 
   // Create a module.
   OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
-  ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
+  ModuleAnalysisManager mam(*module);
   AnalysisManager am = mam;
 
   am.getAnalysis<AnalysisWithDependency>();
@@ -221,7 +221,7 @@ TEST(AnalysisManagerTest, NestedDependentAnalysis) {
 
   // Create a module.
   OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
-  ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
+  ModuleAnalysisManager mam(*module);
   AnalysisManager am = mam;
 
   am.getAnalysis<AnalysisWithNestedDependency>();
@@ -256,7 +256,7 @@ TEST(AnalysisManagerTest, DependentAnalysis2Ctors) {
 
   // Create a module.
   OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
-  ModuleAnalysisManager mam(*module, /*passInstrumentor=*/nullptr);
+  ModuleAnalysisManager mam(*module);
   AnalysisManager am = mam;
 
   auto &an = am.getAnalysis<AnalysisWith2Ctors>();

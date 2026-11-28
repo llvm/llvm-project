@@ -548,7 +548,8 @@ llvm::hash_code OpPassManager::hash() {
 
 LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
                                      AnalysisManager am, bool verifyPasses,
-                                     unsigned parentInitGeneration) {
+                                     unsigned parentInitGeneration,
+                                     PassInstrumentor *pi) {
   LDBG() << "Running pass '" << pass->getName() << "' on operation '"
          << OpWithFlags(op, OpPrintingFlags().skipRegions()) << "' at "
          << op->getLoc();
@@ -569,7 +570,6 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
 
   // Initialize the pass state with a callback for the pass to dynamically
   // execute a pipeline on the currently visited operation.
-  PassInstrumentor *pi = am.getPassInstrumentor();
   PassInstrumentation::PipelineParentInfo parentInfo = {llvm::get_threadid(),
                                                         pass};
   auto dynamicPipelineCallback = [&](OpPassManager &pipeline,
@@ -610,7 +610,7 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
         [&]() {
           // Invoke the virtual runOnOperation method.
           if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass))
-            adaptor->runOnOperation(verifyPasses);
+            adaptor->runOnOperation(verifyPasses, pi);
           else
             pass->runOnOperation();
           passFailed = pass->passState->irAndPassFailed.getInt();
@@ -671,8 +671,6 @@ LogicalResult OpToOpPassAdaptor::runPipeline(
        << " pipeline: ";
     pm.printAsTextualPipeline(os, /*pretty=*/false);
   });
-  assert((!instrumentor || parentInfo) &&
-         "expected parent info if instrumentor is provided");
   llvm::scope_exit scopeExit([&] {
     // Clear out any computed operation analyses. These analyses won't be used
     // any more in this pipeline, and this helps reduce the current working set
@@ -682,13 +680,14 @@ LogicalResult OpToOpPassAdaptor::runPipeline(
   });
 
   // Run the pipeline over the provided operation.
-  if (instrumentor) {
+  if (instrumentor && parentInfo) {
     instrumentor->runBeforePipeline(pm.getOpName(*op->getContext()),
                                     *parentInfo);
   }
 
   for (Pass &pass : pm.getPasses()) {
-    if (failed(run(&pass, op, am, verifyPasses, parentInitGeneration))) {
+    if (failed(run(&pass, op, am, verifyPasses, parentInitGeneration,
+                   instrumentor))) {
       LDBG() << "Pipeline failed for pass '" << pass.getName()
              << "' on operation '"
              << OpWithFlags(op, OpPrintingFlags().skipRegions()) << "'";
@@ -696,7 +695,7 @@ LogicalResult OpToOpPassAdaptor::runPipeline(
     }
   }
 
-  if (instrumentor) {
+  if (instrumentor && parentInfo) {
     instrumentor->runAfterPipeline(pm.getOpName(*op->getContext()),
                                    *parentInfo);
   }
@@ -847,15 +846,17 @@ void OpToOpPassAdaptor::runOnOperation() {
 }
 
 /// Run the held pipeline over all nested operations.
-void OpToOpPassAdaptor::runOnOperation(bool verifyPasses) {
+void OpToOpPassAdaptor::runOnOperation(bool verifyPasses,
+                                       PassInstrumentor *instrumentor) {
   if (getContext().isMultithreadingEnabled())
-    runOnOperationAsyncImpl(verifyPasses);
+    runOnOperationAsyncImpl(verifyPasses, instrumentor);
   else
-    runOnOperationImpl(verifyPasses);
+    runOnOperationImpl(verifyPasses, instrumentor);
 }
 
 /// Run this pass adaptor synchronously.
-void OpToOpPassAdaptor::runOnOperationImpl(bool verifyPasses) {
+void OpToOpPassAdaptor::runOnOperationImpl(bool verifyPasses,
+                                           PassInstrumentor *instrumentor) {
   LDBG_OS([&](raw_ostream &os) {
     os << "Running pass adaptor synchronously on operation '"
        << OpWithFlags(getOperation(), OpPrintingFlags().skipRegions())
@@ -867,7 +868,6 @@ void OpToOpPassAdaptor::runOnOperationImpl(bool verifyPasses) {
   auto am = getAnalysisManager();
   PassInstrumentation::PipelineParentInfo parentInfo = {llvm::get_threadid(),
                                                         this};
-  auto *instrumentor = am.getPassInstrumentor();
 
   unsigned processedOps = 0;
   for (auto &region : getOperation()->getRegions()) {
@@ -913,7 +913,8 @@ static bool hasSizeMismatch(ArrayRef<OpPassManager> lhs,
 }
 
 /// Run this pass adaptor synchronously.
-void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
+void OpToOpPassAdaptor::runOnOperationAsyncImpl(
+    bool verifyPasses, PassInstrumentor *instrumentor) {
   LDBG_OS([&](raw_ostream &os) {
     os << "Running pass adaptor asynchronously on operation '"
        << OpWithFlags(getOperation(), OpPrintingFlags().skipRegions())
@@ -985,7 +986,6 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
   // Get the current thread for this adaptor.
   PassInstrumentation::PipelineParentInfo parentInfo = {llvm::get_threadid(),
                                                         this};
-  auto *instrumentor = am.getPassInstrumentor();
 
   // Each parallel task owns an executor for its entire lifetime. A worker
   // index belongs to the task, rather than the thread: nested waits may run
@@ -1122,75 +1122,8 @@ void PassManager::addInstrumentation(std::unique_ptr<PassInstrumentation> pi) {
 LogicalResult PassManager::runPasses(Operation *op, AnalysisManager am) {
   LDBG(2) << "Executing passes using OpToOpPassAdaptor pipeline";
   return OpToOpPassAdaptor::runPipeline(*this, op, am, verifyPasses,
-                                        impl->initializationGeneration);
-}
-
-//===----------------------------------------------------------------------===//
-// AnalysisManager
-//===----------------------------------------------------------------------===//
-
-/// Get an analysis manager for the given operation, which must be a proper
-/// descendant of the current operation represented by this analysis manager.
-AnalysisManager AnalysisManager::nest(Operation *op) {
-  Operation *currentOp = impl->getOperation();
-  assert(currentOp->isProperAncestor(op) &&
-         "expected valid descendant operation");
-
-  // Check for the base case where the provided operation is immediately nested.
-  if (currentOp == op->getParentOp())
-    return nestImmediate(op);
-
-  // Otherwise, we need to collect all ancestors up to the current operation.
-  SmallVector<Operation *, 4> opAncestors;
-  do {
-    opAncestors.push_back(op);
-    op = op->getParentOp();
-  } while (op != currentOp);
-
-  AnalysisManager result = *this;
-  for (Operation *op : llvm::reverse(opAncestors))
-    result = result.nestImmediate(op);
-  return result;
-}
-
-/// Get an analysis manager for the given immediately nested child operation.
-AnalysisManager AnalysisManager::nestImmediate(Operation *op) {
-  assert(impl->getOperation() == op->getParentOp() &&
-         "expected immediate child operation");
-
-  auto [it, inserted] = impl->childAnalyses.try_emplace(op);
-  if (inserted)
-    it->second = std::make_unique<NestedAnalysisMap>(op, impl);
-  return {it->second.get()};
-}
-
-/// Invalidate any non preserved analyses.
-void detail::NestedAnalysisMap::invalidate(
-    const detail::PreservedAnalyses &pa) {
-  // If all analyses were preserved, then there is nothing to do here.
-  if (pa.isAll())
-    return;
-
-  // Invalidate the analyses for the current operation directly.
-  analyses.invalidate(pa);
-
-  // If no analyses were preserved, then just simply clear out the child
-  // analysis results.
-  if (pa.isNone()) {
-    childAnalyses.clear();
-    return;
-  }
-
-  // Otherwise, invalidate each child analysis map.
-  SmallVector<NestedAnalysisMap *, 8> mapsToInvalidate(1, this);
-  while (!mapsToInvalidate.empty()) {
-    auto *map = mapsToInvalidate.pop_back_val();
-    for (auto &analysisPair : map->childAnalyses) {
-      analysisPair.second->invalidate(pa);
-      if (!analysisPair.second->childAnalyses.empty())
-        mapsToInvalidate.push_back(analysisPair.second.get());
-    }
-  }
+                                        impl->initializationGeneration,
+                                        instrumentor.get());
 }
 
 //===----------------------------------------------------------------------===//

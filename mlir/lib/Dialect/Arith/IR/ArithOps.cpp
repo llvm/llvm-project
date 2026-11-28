@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "mlir/Analysis/AnalysisManager.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/UB/IR/UBMatchers.h"
@@ -22,6 +24,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 
@@ -882,17 +885,31 @@ OpFoldResult arith::DivUIOp::fold(FoldAdaptor adaptor) {
   return div0 ? Attribute() : result;
 }
 
-/// Returns whether an unsigned division by `divisor` is speculatable.
-static Speculation::Speculatability getDivUISpeculatability(Value divisor) {
-  // X / 0 => UB
-  if (matchPattern(divisor, m_IntRangeWithoutZeroU()))
-    return Speculation::Speculatable;
+static std::optional<unsigned> getDivisorIndexBitwidth(AnalysisManager &actx,
+                                                       Operation *scope) {
+  const DataLayout &layout =
+      actx.getAnalysis<DataLayoutAnalysis>().getAtOrAbove(scope);
+  auto index = IndexType::get(scope->getContext());
+  if (!layout.hasExactTypeEntry(index))
+    return std::nullopt;
+  return layout.getTypeSizeInBits(index).getFixedValue();
+}
 
+template <typename Op>
+static Speculation::Speculatability getIntegerDivSpeculatability(
+    Op op, mlir::detail::constant_int_range_predicate_matcher matcher,
+    AnalysisManager *actx) {
+  auto getIndexBitwidth = [&](Operation *scope) {
+    return actx ? getDivisorIndexBitwidth(*actx, scope) : std::nullopt;
+  };
+  if (matcher.match(op.getRhs(), op, getIndexBitwidth))
+    return Speculation::Speculatable;
   return Speculation::NotSpeculatable;
 }
 
-Speculation::Speculatability arith::DivUIOp::getSpeculatability() {
-  return getDivUISpeculatability(getRhs());
+Speculation::Speculatability
+arith::DivUIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
+  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroU(), actx);
 }
 
 //===----------------------------------------------------------------------===//
@@ -934,21 +951,10 @@ OpFoldResult arith::DivSIOp::fold(FoldAdaptor adaptor) {
   return overflowOrDiv0 ? Attribute() : result;
 }
 
-/// Returns whether a signed division by `divisor` is speculatable. This
-/// function conservatively assumes that all signed division by -1 are not
-/// speculatable.
-static Speculation::Speculatability getDivSISpeculatability(Value divisor) {
-  // X / 0 => UB
-  // INT_MIN / -1 => UB
-  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
-      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
-    return Speculation::Speculatable;
-
-  return Speculation::NotSpeculatable;
-}
-
-Speculation::Speculatability arith::DivSIOp::getSpeculatability() {
-  return getDivSISpeculatability(getRhs());
+Speculation::Speculatability
+arith::DivSIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
+  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroOrNegOneS(),
+                                      actx);
 }
 
 //===----------------------------------------------------------------------===//
@@ -989,8 +995,9 @@ OpFoldResult arith::CeilDivUIOp::fold(FoldAdaptor adaptor) {
   return overflowOrDiv0 ? Attribute() : result;
 }
 
-Speculation::Speculatability arith::CeilDivUIOp::getSpeculatability() {
-  return getDivUISpeculatability(getRhs());
+Speculation::Speculatability
+arith::CeilDivUIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
+  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroU(), actx);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1050,8 +1057,10 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
   return overflowOrDiv0 ? Attribute() : result;
 }
 
-Speculation::Speculatability arith::CeilDivSIOp::getSpeculatability() {
-  return getDivSISpeculatability(getRhs());
+Speculation::Speculatability
+arith::CeilDivSIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
+  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroOrNegOneS(),
+                                      actx);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1089,15 +1098,10 @@ OpFoldResult arith::FloorDivSIOp::fold(FoldAdaptor adaptor) {
   return overflowOrDiv ? Attribute() : result;
 }
 
-Speculation::Speculatability FloorDivSIOp::getSpeculatability() {
-  // Division by zero is UB.
-  // Signed division overflow (INT_MIN / -1) is also UB.
-  Value divisor = getRhs();
-  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
-      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
-    return Speculation::Speculatable;
-
-  return Speculation::NotSpeculatable;
+Speculation::Speculatability
+FloorDivSIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
+  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroOrNegOneS(),
+                                      actx);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1132,8 +1136,9 @@ OpFoldResult arith::RemUIOp::fold(FoldAdaptor adaptor) {
   return div0 ? Attribute() : result;
 }
 
-Speculation::Speculatability arith::RemUIOp::getSpeculatability() {
-  return getDivUISpeculatability(getRhs());
+Speculation::Speculatability
+arith::RemUIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
+  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroU(), actx);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1168,13 +1173,9 @@ OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
   return div0 ? Attribute() : result;
 }
 
-Speculation::Speculatability arith::RemSIOp::getSpeculatability() {
-  // X % 0 => UB
-  // X % -1 is well-defined (always 0), unlike X / -1 which can overflow.
-  if (matchPattern(getRhs(), m_IntRangeWithoutZeroS()))
-    return Speculation::Speculatable;
-
-  return Speculation::NotSpeculatable;
+Speculation::Speculatability
+arith::RemSIOp::getSpeculatabilityWithAnalysis(AnalysisManager *actx) {
+  return getIntegerDivSpeculatability(*this, m_IntRangeWithoutZeroS(), actx);
 }
 
 //===----------------------------------------------------------------------===//

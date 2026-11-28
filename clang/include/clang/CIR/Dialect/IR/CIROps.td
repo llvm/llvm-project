@@ -215,6 +215,9 @@ def SameOperandsPointeeType : PredOpTrait<
 //===----------------------------------------------------------------------===//
 
 def CIR_FenvOpTrait : NativeOpTrait<"FenvOpTrait"> {
+  let extraConcreteClassDeclaration = [{
+    using FenvOpTrait::getSpeculatability;
+  }];
   let cppNamespace = "::cir";
 }
 

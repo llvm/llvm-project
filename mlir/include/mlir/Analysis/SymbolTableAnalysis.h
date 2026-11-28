@@ -9,8 +9,8 @@
 #ifndef MLIR_ANALYSIS_SYMBOLTABLEANALYSIS_H
 #define MLIR_ANALYSIS_SYMBOLTABLEANALYSIS_H
 
+#include "mlir/Analysis/AnalysisManager.h"
 #include "mlir/IR/SymbolTable.h"
-#include "mlir/Pass/AnalysisManager.h"
 
 namespace mlir {
 /// This is a simple analysis that contains a symbol table collection and, for

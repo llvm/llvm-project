@@ -594,8 +594,11 @@ def Arith_MulUIExtendedOp : Arith_Op<"mului_extended", [Pure, Commutative,
 // DivUIOp
 //===----------------------------------------------------------------------===//
 
+defvar Arith_DivSpeculation = DeclareOpInterfaceMethods<
+    ConditionallySpeculatable, ["getSpeculatabilityWithAnalysis"]>;
+
 def Arith_DivUIOp : Arith_IntBinaryOpWithExactFlag<"divui",
-    [ConditionallySpeculatable,
+    [Arith_DivSpeculation,
      DeclareOpInterfaceMethods<InferIntDivisibilityOpInterface>]> {
   let summary = "unsigned integer division operation";
   let description = [{
@@ -627,11 +630,6 @@ def Arith_DivUIOp : Arith_IntBinaryOpWithExactFlag<"divui",
     ```
   }];
 
-  let extraClassDeclaration = [{
-    /// Interface method for ConditionallySpeculatable.
-    Speculation::Speculatability getSpeculatability();
-  }];
-
   let hasFolder = 1;
 }
 
@@ -640,7 +638,7 @@ def Arith_DivUIOp : Arith_IntBinaryOpWithExactFlag<"divui",
 //===----------------------------------------------------------------------===//
 
 def Arith_DivSIOp : Arith_IntBinaryOpWithExactFlag<"divsi",
-                                                   [ConditionallySpeculatable]> {
+                                                   [Arith_DivSpeculation]> {
   let summary = "signed integer division operation";
   let description = [{
     Signed integer division. Rounds towards zero. Treats the leading bit as
@@ -671,11 +669,6 @@ def Arith_DivSIOp : Arith_IntBinaryOpWithExactFlag<"divsi",
     ```
   }];
 
-  let extraClassDeclaration = [{
-    /// Interface method for ConditionallySpeculatable.
-    Speculation::Speculatability getSpeculatability();
-  }];
-
   let hasFolder = 1;
 }
 
@@ -684,7 +677,7 @@ def Arith_DivSIOp : Arith_IntBinaryOpWithExactFlag<"divsi",
 //===----------------------------------------------------------------------===//
 
 def Arith_CeilDivUIOp : Arith_IntBinaryOp<"ceildivui",
-                                          [ConditionallySpeculatable]> {
+                                          [Arith_DivSpeculation]> {
   let summary = "unsigned ceil integer division operation";
   let description = [{
     Unsigned integer division. Rounds towards positive infinity. Treats the
@@ -703,11 +696,6 @@ def Arith_CeilDivUIOp : Arith_IntBinaryOp<"ceildivui",
     ```
   }];
 
-  let extraClassDeclaration = [{
-    /// Interface method for ConditionallySpeculatable.
-    Speculation::Speculatability getSpeculatability();
-  }];
-
   let hasFolder = 1;
 }
 
@@ -716,7 +704,7 @@ def Arith_CeilDivUIOp : Arith_IntBinaryOp<"ceildivui",
 //===----------------------------------------------------------------------===//
 
 def Arith_CeilDivSIOp : Arith_IntBinaryOp<"ceildivsi",
-                                          [ConditionallySpeculatable]> {
+                                          [Arith_DivSpeculation]> {
   let summary = "signed ceil integer division operation";
   let description = [{
     Signed integer division. Rounds towards positive infinity, i.e. `7 / -2 = -3`.
@@ -734,11 +722,6 @@ def Arith_CeilDivSIOp : Arith_IntBinaryOp<"ceildivsi",
     ```
   }];
 
-  let extraClassDeclaration = [{
-    /// Interface method for ConditionallySpeculatable.
-    Speculation::Speculatability getSpeculatability();
-  }];
-
   let hasFolder = 1;
 }
 
@@ -747,7 +730,7 @@ def Arith_CeilDivSIOp : Arith_IntBinaryOp<"ceildivsi",
 //===----------------------------------------------------------------------===//
 
 def Arith_FloorDivSIOp
-    : Arith_IntBinaryOp<"floordivsi", [ConditionallySpeculatable]> {
+    : Arith_IntBinaryOp<"floordivsi", [Arith_DivSpeculation]> {
   let summary = "signed floor integer division operation";
   let description = [{
     Signed integer division. Rounds towards negative infinity, i.e. `5 / -2 = -3`.
@@ -765,10 +748,7 @@ def Arith_FloorDivSIOp
 
     ```
   }];
-  let extraClassDeclaration = [{
-    /// Interface method for ConditionallySpeculatable.
-    Speculation::Speculatability getSpeculatability();
-  }];
+
   let hasFolder = 1;
 }
 
@@ -777,7 +757,7 @@ def Arith_FloorDivSIOp
 //===----------------------------------------------------------------------===//
 
 def Arith_RemUIOp : Arith_IntBinaryOp<"remui",
-                                      [ConditionallySpeculatable]> {
+                                      [Arith_DivSpeculation]> {
   let summary = "unsigned integer division remainder operation";
   let description = [{
     Unsigned integer division remainder. Treats the leading bit as the most
@@ -801,11 +781,6 @@ def Arith_RemUIOp : Arith_IntBinaryOp<"remui",
     ```
   }];
 
-  let extraClassDeclaration = [{
-    /// Interface method for ConditionallySpeculatable.
-    Speculation::Speculatability getSpeculatability();
-  }];
-
   let hasFolder = 1;
 }
 
@@ -814,7 +789,7 @@ def Arith_RemUIOp : Arith_IntBinaryOp<"remui",
 //===----------------------------------------------------------------------===//
 
 def Arith_RemSIOp : Arith_IntBinaryOp<"remsi",
-                                      [ConditionallySpeculatable]> {
+                                      [Arith_DivSpeculation]> {
   let summary = "signed integer division remainder operation";
   let description = [{
     Signed integer division remainder. Treats the leading bit as sign, i.e. `6 %
@@ -836,11 +811,6 @@ def Arith_RemSIOp : Arith_IntBinaryOp<"remsi",
     // Tensor element-wise integer division remainder.
     %x = arith.remsi %y, %z : tensor<4x?xi8>
     ```
-  }];
-
-  let extraClassDeclaration = [{
-    /// Interface method for ConditionallySpeculatable.
-    Speculation::Speculatability getSpeculatability();
   }];
 
   let hasFolder = 1;

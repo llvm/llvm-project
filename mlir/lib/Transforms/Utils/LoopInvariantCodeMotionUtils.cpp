@@ -111,15 +111,16 @@ size_t mlir::moveLoopInvariantCode(
   return numMoved;
 }
 
-size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike) {
+size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike,
+                                   AnalysisManager *actx) {
   size_t numMoved = moveLoopInvariantCode(
       loopLike.getLoopRegions(),
       [&](Value value, Region *) {
         return loopLike.isDefinedOutsideOfLoop(value);
       },
-      [&](Operation *op, Region *) { return isPure(op); },
+      [&](Operation *op, Region *) { return isPure(op, actx); },
       [&](Operation *op, Region *) { loopLike.moveOutOfLoop(op); });
-  return numMoved + moveLoopInvariantCodeFromNestedRegions(loopLike);
+  return numMoved + moveLoopInvariantCodeFromNestedRegions(loopLike, actx);
 }
 
 /// Hoists pure loop-invariant ops out of the control-flow regions nested in
@@ -128,7 +129,7 @@ size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike) {
 /// the loop itself. Returns the number of ops moved.
 static size_t hoistFromNestedRegions(Region &region,
                                      LoopLikeOpInterface loopLike,
-                                     bool isNested) {
+                                     bool isNested, AnalysisManager *actx) {
   if (region.empty())
     return 0;
   size_t numMoved = 0;
@@ -139,7 +140,7 @@ static size_t hoistFromNestedRegions(Region &region,
   // blocks are visited in an order in which definitions precede their uses.
   for (Block *block : llvm::depth_first(&region.front())) {
     for (Operation &op : llvm::make_early_inc_range(*block)) {
-      if (isNested && isPure(&op) && canBeHoisted(&op, definedOutside)) {
+      if (isNested && isPure(&op, actx) && canBeHoisted(&op, definedOutside)) {
         LDBG() << "Moving loop-invariant op: "
                << OpWithFlags(&op, OpPrintingFlags().skipRegions());
         loopLike.moveOutOfLoop(&op);
@@ -151,17 +152,20 @@ static size_t hoistFromNestedRegions(Region &region,
       if (!isa<RegionBranchOpInterface>(op) || isa<LoopLikeOpInterface>(op))
         continue;
       for (Region &nested : op.getRegions())
-        numMoved += hoistFromNestedRegions(nested, loopLike, /*isNested=*/true);
+        numMoved +=
+            hoistFromNestedRegions(nested, loopLike, /*isNested=*/true, actx);
     }
   }
   return numMoved;
 }
 
 size_t
-mlir::moveLoopInvariantCodeFromNestedRegions(LoopLikeOpInterface loopLike) {
+mlir::moveLoopInvariantCodeFromNestedRegions(LoopLikeOpInterface loopLike,
+                                             AnalysisManager *actx) {
   size_t numMoved = 0;
   for (Region *region : loopLike.getLoopRegions())
-    numMoved += hoistFromNestedRegions(*region, loopLike, /*isNested=*/false);
+    numMoved +=
+        hoistFromNestedRegions(*region, loopLike, /*isNested=*/false, actx);
   return numMoved;
 }
 

@@ -108,6 +108,9 @@ def RecursiveMemoryEffects : NativeOpTrait<"HasRecursiveMemoryEffects"> {
 // this directly.
 def RecursivelySpeculatableImplTrait
   : NativeOpTrait<"RecursivelySpeculatableImplTrait"> {
+  let extraConcreteClassDeclaration = [{
+    using RecursivelySpeculatableImplTrait::getSpeculatability;
+  }];
   let cppIncludes = ["mlir/Interfaces/SideEffectInterfaces.h"];
 }
 
@@ -115,18 +118,17 @@ def RecursivelySpeculatableImplTrait
 // this directly.
 def AlwaysSpeculatableImplTrait
   : NativeOpTrait<"AlwaysSpeculatableImplTrait"> {
+  let extraConcreteClassDeclaration = [{
+    using AlwaysSpeculatableImplTrait::getSpeculatability;
+  }];
   let cppIncludes = ["mlir/Interfaces/SideEffectInterfaces.h"];
 }
 
-// This op interface enables Op authors to inject custom logic to determine
-// whether an Operation can be speculatively executed.  Ops that implement this
-// interface need to implement the custom logic in the `getSpeculatability` method.
-// For instance, the `getSpeculatability` for a specific op may check the attributes
-// or input types to determine whether that specific Operation is speculatable.
 def ConditionallySpeculatable : OpInterface<"ConditionallySpeculatable"> {
   let description = [{
-    An interface used to query information about the speculability of an
-    operation.
+    Models must implement either `getSpeculatability()` or
+    `getSpeculatabilityWithAnalysis(AnalysisManager *)`. Implement the latter
+    when the proof can use analyses from the caller.
   }];
   let cppNamespace = "::mlir";
   let cppIncludes = ["mlir/Interfaces/SideEffectInterfaces.h"];
@@ -137,7 +139,23 @@ def ConditionallySpeculatable : OpInterface<"ConditionallySpeculatable"> {
         be speculatively executed.  Please see the documentation on the
         Speculatability enum to know how to interpret the return value.
       }],
-      "::mlir::Speculation::Speculatability", "getSpeculatability", (ins)>
+      "::mlir::Speculation::Speculatability", "getSpeculatability", (ins), [{}], [{
+        return ::llvm::cast<::mlir::ConditionallySpeculatable>(
+            $_op.getOperation()).getSpeculatabilityWithAnalysis(nullptr);
+      }]>,
+    InterfaceMethod<[{
+        Returns the speculatability of this operation. The analysis manager may
+        be null. In that case, use only facts available without analyses and
+        return `NotSpeculatable` if they are insufficient to prove safety.
+      }], "::mlir::Speculation::Speculatability", "getSpeculatabilityWithAnalysis",
+      (ins "::mlir::AnalysisManager *":$actx), [{}], [{
+        if constexpr (ConcreteOp::template hasTrait<
+                          ::mlir::ConditionallySpeculatable::Trait>())
+          return $_op.getSpeculatability();
+        else
+          return ::llvm::cast<::mlir::ConditionallySpeculatable>(
+              $_op.getOperation()).getSpeculatability();
+      }]>
   ];
 }
 

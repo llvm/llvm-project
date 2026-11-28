@@ -7,6 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Analysis/AnalysisManager.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/Support/Casting.h"
 #include <gtest/gtest.h>
@@ -125,4 +131,77 @@ TEST(SideEffectResourceTest, DisjointnessAndGetParent) {
       TestChildResource::get()->isSubresourceOf(TestRootResource::get()));
   EXPECT_FALSE(
       TestRootResource::get()->isSubresourceOf(TestChildResource::get()));
+}
+
+TEST(Speculatability, LazyPassAnalysis) {
+  MLIRContext context;
+  context.loadDialect<arith::ArithDialect, DLTIDialect>();
+  auto module = parseSourceString<ModuleOp>(R"mlir(
+    module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
+      %i = arith.constant 2 : i32
+      %x = arith.constant 4294967296 : index
+      %a = arith.divui %i, %i : i32
+      %b = arith.divui %x, %x : index
+    }
+  )mlir",
+                                            &context);
+  ASSERT_TRUE(module);
+  struct LayoutObserver : AnalysisInstrumentation {
+    unsigned starts = 0, finishes = 0;
+
+    void runBeforeAnalysis(StringRef, TypeID id, Operation *) override {
+      EXPECT_EQ(id, TypeID::get<DataLayoutAnalysis>());
+      ++starts;
+    }
+    void runAfterAnalysis(StringRef, TypeID id, Operation *) override {
+      EXPECT_EQ(id, TypeID::get<DataLayoutAnalysis>());
+      ++finishes;
+    }
+  } observer;
+  ModuleAnalysisManager owner(*module, &observer);
+  AnalysisManager actx = owner;
+  auto divs = module->getOps<arith::DivUIOp>();
+  auto it = divs.begin();
+  arith::DivUIOp fixed = *it++;
+  arith::DivUIOp index = *it;
+
+  auto fixedIface = cast<ConditionallySpeculatable>(fixed.getOperation());
+  EXPECT_EQ(fixedIface.getSpeculatability(), Speculation::Speculatable);
+  EXPECT_EQ(fixedIface.getSpeculatabilityWithAnalysis(nullptr),
+            Speculation::Speculatable);
+  EXPECT_TRUE(isPure(fixed, &actx));
+  EXPECT_FALSE(actx.getCachedAnalysis<DataLayoutAnalysis>());
+  // The divisor can truncate to zero when the caller supplies no layout.
+  auto indexIface = cast<ConditionallySpeculatable>(index.getOperation());
+  EXPECT_EQ(indexIface.getSpeculatability(), Speculation::NotSpeculatable);
+  EXPECT_EQ(indexIface.getSpeculatabilityWithAnalysis(nullptr),
+            Speculation::NotSpeculatable);
+  EXPECT_FALSE(isPure(index));
+  EXPECT_TRUE(isPure(index, &actx));
+  auto cached = actx.getCachedAnalysis<DataLayoutAnalysis>();
+  ASSERT_TRUE(cached);
+  AnalysisManager samePass = owner;
+  EXPECT_TRUE(isPure(index, &samePass));
+  EXPECT_EQ(&cached->get(), &samePass.getAnalysis<DataLayoutAnalysis>());
+  EXPECT_EQ(observer.starts, 1u);
+  EXPECT_EQ(observer.finishes, 1u);
+}
+
+TEST(Speculatability, ExternalModelWithoutAnalysis) {
+  struct RecursiveModel
+      : ConditionallySpeculatable::ExternalModel<RecursiveModel, ModuleOp> {
+    Speculation::Speculatability getSpeculatability(Operation *) const {
+      return Speculation::RecursivelySpeculatable;
+    }
+  };
+
+  MLIRContext context;
+  ModuleOp::attachInterface<RecursiveModel>(context);
+  OwningOpRef<ModuleOp> module = ModuleOp::create(UnknownLoc::get(&context));
+  ModuleAnalysisManager owner(*module);
+  AnalysisManager actx = owner;
+  auto iface = cast<ConditionallySpeculatable>(module->getOperation());
+  EXPECT_EQ(iface.getSpeculatability(), Speculation::RecursivelySpeculatable);
+  EXPECT_EQ(iface.getSpeculatabilityWithAnalysis(&actx),
+            Speculation::RecursivelySpeculatable);
 }

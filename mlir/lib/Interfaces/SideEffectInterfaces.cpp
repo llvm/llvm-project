@@ -531,16 +531,16 @@ mlir::getEffectsRecursively(Operation *rootOp) {
   return effects;
 }
 
-bool mlir::isSpeculatable(Operation *op) {
+bool mlir::isSpeculatable(Operation *op, AnalysisManager *actx) {
   auto conditionallySpeculatable = dyn_cast<ConditionallySpeculatable>(op);
   if (!conditionallySpeculatable)
     return false;
 
-  switch (conditionallySpeculatable.getSpeculatability()) {
+  switch (conditionallySpeculatable.getSpeculatabilityWithAnalysis(actx)) {
   case Speculation::RecursivelySpeculatable:
     for (Region &region : op->getRegions()) {
       for (Operation &op : region.getOps())
-        if (!isSpeculatable(&op))
+        if (!isSpeculatable(&op, actx))
           return false;
     }
     return true;
@@ -557,6 +557,6 @@ bool mlir::isSpeculatable(Operation *op) {
 
 /// The implementation of this function replicates the `def Pure : TraitList`
 /// in `SideEffectInterfaces.td` and has to be kept in sync manually.
-bool mlir::isPure(Operation *op) {
-  return isSpeculatable(op) && isMemoryEffectFree(op);
+bool mlir::isPure(Operation *op, AnalysisManager *actx) {
+  return isSpeculatable(op, actx) && isMemoryEffectFree(op);
 }

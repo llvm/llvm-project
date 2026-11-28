@@ -1837,3 +1837,229 @@ func.func @tensor_pad_region_not_hoisted(
 // CHECK: tensor.pad
 // CHECK: arith.divsi
 // CHECK: tensor.yield
+
+// -----
+
+// 7 fits in 32 bits and is nonzero, so LICM can hoist the unsigned division.
+// CHECK-LABEL: @index_div_32_7(
+// CHECK: arith.divui
+// CHECK: scf.for
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>} {
+  func.func @index_div_32_7(%a: index, %n: index) -> index {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d = arith.constant 7 : index
+    %r = scf.for %i = %c0 to %n step %c1 iter_args(%acc = %c0) -> (index) {
+      %q = arith.divui %a, %d : index
+      scf.yield %q : index
+    }
+    return %r : index
+  }
+}
+
+// -----
+
+// 2^32 truncates to zero at 32 bits. Hoisting would divide by zero even when
+// the loop executes zero times.
+// CHECK-LABEL: @index_div_32_4294967296(
+// CHECK: scf.for
+// CHECK: arith.divui
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>} {
+  func.func @index_div_32_4294967296(%a: index, %n: index) -> index {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d = arith.constant 4294967296 : index
+    %r = scf.for %i = %c0 to %n step %c1 iter_args(%acc = %c0) -> (index) {
+      %q = arith.divui %a, %d : index
+      scf.yield %q : index
+    }
+    return %r : index
+  }
+}
+
+// -----
+
+// At 64 bits, 2^32 stays nonzero, so LICM can hoist the unsigned division.
+// CHECK-LABEL: @index_div_64_4294967296(
+// CHECK: arith.divui
+// CHECK: scf.for
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
+  func.func @index_div_64_4294967296(%a: index, %n: index) -> index {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d = arith.constant 4294967296 : index
+    %r = scf.for %i = %c0 to %n step %c1 iter_args(%acc = %c0) -> (index) {
+      %q = arith.divui %a, %d : index
+      scf.yield %q : index
+    }
+    return %r : index
+  }
+}
+
+// -----
+
+// 7 is odd, so its low bit stays set at every index width. LICM can hoist
+// the unsigned division without knowing the width.
+// CHECK-LABEL: @index_div_unknown_7(
+// CHECK: arith.divui
+// CHECK: scf.for
+module {
+  func.func @index_div_unknown_7(%a: index, %n: index) -> index {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d = arith.constant 7 : index
+    %r = scf.for %i = %c0 to %n step %c1 iter_args(%acc = %c0) -> (index) {
+      %q = arith.divui %a, %d : index
+      scf.yield %q : index
+    }
+    return %r : index
+  }
+}
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>} {
+  // CHECK-LABEL: @index_ceildiv_32(
+  // At 32 bits, 2^32 becomes zero and 2^32 - 1 becomes signed -1.
+  // Hoisting could divide by zero or overflow even if the loop never runs.
+  // CHECK: scf.for
+  // CHECK: arith.ceildivui
+  // CHECK: arith.ceildivsi
+  func.func @index_ceildiv_32(%a: index, %n: index) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %u = arith.constant 4294967296 : index
+    %s = arith.constant 4294967295 : index
+    scf.for %i = %c0 to %n step %c1 {
+      %uq = arith.ceildivui %a, %u : index
+      %sq = arith.ceildivsi %a, %s : index
+    }
+    return
+  }
+}
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
+  // CHECK-LABEL: @index_ceildiv_64(
+  // Both divisors stay positive at 64 bits, so LICM can hoist both divisions.
+  // CHECK-DAG: arith.ceildivui
+  // CHECK-DAG: arith.ceildivsi
+  // CHECK: scf.for
+  func.func @index_ceildiv_64(%a: index, %n: index) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %u = arith.constant 4294967296 : index
+    %s = arith.constant 4294967295 : index
+    scf.for %i = %c0 to %n step %c1 {
+      %uq = arith.ceildivui %a, %u : index
+      %sq = arith.ceildivsi %a, %s : index
+    }
+    return
+  }
+}
+
+// -----
+
+// The signed range excludes zero and includes -1. Signed remainder can hoist
+// because a remainder by -1 is zero even when the dividend is INT_MIN.
+// CHECK-LABEL: @remsi_negative_range(
+// CHECK: arith.remsi
+// CHECK: scf.for
+func.func @remsi_negative_range(%a: i8, %lb: index, %ub: index, %step: index) {
+  %d = test.with_bounds <smin = -8 : i8, smax = -1 : i8, umin = 0 : i8, umax = 255 : i8> : i8
+  scf.for %i = %lb to %ub step %step {
+    %r = arith.remsi %a, %d : i8
+  }
+  return
+}
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>} {
+  // The inferred divisor is 2^32 or 2^32 + 1. The first value truncates to
+  // zero at 32 bits, so the division must stay in the loop.
+  // CHECK-LABEL: @index_div_inferred_32(
+  // CHECK: scf.for
+  // CHECK: arith.divui
+  func.func @index_div_inferred_32(%a: index, %x: index, %n: index) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d = affine.apply affine_map<(d0) -> (d0 mod 2 + 4294967296)>(%x)
+    scf.for %i = %c0 to %n step %c1 {
+      %q = arith.divui %a, %d : index
+    }
+    return
+  }
+}
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
+  // Both inferred divisors are nonzero at 64 bits, so LICM can hoist.
+  // CHECK-LABEL: @index_div_inferred_64(
+  // CHECK: arith.divui
+  // CHECK: scf.for
+  func.func @index_div_inferred_64(%a: index, %x: index, %n: index) {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d = affine.apply affine_map<(d0) -> (d0 mod 2 + 4294967296)>(%x)
+    scf.for %i = %c0 to %n step %c1 {
+      %q = arith.divui %a, %d : index
+    }
+    return
+  }
+}
+
+// -----
+
+// Both branches yield loop-invariant values. At 64 bits the divisor is
+// nonzero, so LICM can hoist the entire scf.if, including the division.
+// CHECK-LABEL: @index_div_recursive(
+// CHECK: scf.if
+// CHECK: arith.divui
+// CHECK: scf.for
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
+  func.func @index_div_recursive(%a: index, %n: index, %cond: i1) -> index {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d = arith.constant 4294967296 : index
+    %r = scf.for %i = %c0 to %n step %c1 iter_args(%acc = %c0) -> (index) {
+      %v = scf.if %cond -> (index) {
+        %q = arith.divui %a, %d : index
+        scf.yield %q : index
+      } else {
+        scf.yield %a : index
+      }
+      scf.yield %v : index
+    }
+    return %r : index
+  }
+}
+
+// -----
+
+// The condition depends on the induction variable. LICM can still use the
+// enclosing layout to hoist the division from the then region.
+// CHECK-LABEL: @index_div_nested_region(
+// CHECK: arith.divui
+// CHECK: scf.for
+// CHECK: scf.if
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
+  func.func @index_div_nested_region(%a: index, %n: index) -> index {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d = arith.constant 4294967296 : index
+    %r = scf.for %i = %c0 to %n step %c1 iter_args(%acc = %c0) -> (index) {
+      %cond = arith.cmpi eq, %i, %a : index
+      %v = scf.if %cond -> (index) {
+        %q = arith.divui %a, %d : index
+        scf.yield %q : index
+      } else {
+        scf.yield %acc : index
+      }
+      scf.yield %v : index
+    }
+    return %r : index
+  }
+}

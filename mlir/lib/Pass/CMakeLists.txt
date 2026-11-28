@@ -14,5 +14,6 @@ add_mlir_library(MLIRPass
   mlir-generic-headers
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisManager
   MLIRIR
   )

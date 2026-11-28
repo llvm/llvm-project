@@ -219,6 +219,11 @@ public:
     return true;
   }
 
+  Speculation::Speculatability
+  getSpeculatabilityWithAnalysis(Operation *op, AnalysisManager *) const {
+    return getSpeculatability(op);
+  }
+
   Speculation::Speculatability getSpeculatability(Operation *op) const {
     assert(callbacks.getSpeculatability &&
            "getSpeculatability callback not set");
@@ -266,7 +271,7 @@ MlirSpeculatability mlirConditionallySpeculatableOpInterfaceGetSpeculatability(
   auto iface = dyn_cast<ConditionallySpeculatable>(unwrap(operation));
   assert(iface && "operation does not implement ConditionallySpeculatable");
 
-  switch (iface.getSpeculatability()) {
+  switch (iface.getSpeculatabilityWithAnalysis(nullptr)) {
   case Speculation::NotSpeculatable:
     return MlirSpeculatabilityNotSpeculatable;
   case Speculation::Speculatable:
