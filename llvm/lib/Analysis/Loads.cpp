@@ -328,6 +328,28 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     const SCEV *PtrSCEV, Align Alignment, const SCEV *EltSizeSCEV, Loop *L,
     ScalarEvolution &SE, DominatorTree &DT, AssumptionCache *AC,
     SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+  // A loop-invariant address, as handled by the LoadInst overload: check the
+  // underlying object at the loop header.
+  if (SE.isLoopInvariant(PtrSCEV, L)) {
+    const auto *Base = dyn_cast<SCEVUnknown>(SE.getPointerBase(PtrSCEV));
+    const auto *Offset =
+        Base ? dyn_cast<SCEVConstant>(SE.getMinusSCEV(PtrSCEV, Base)) : nullptr;
+    const auto *Size = dyn_cast<SCEVConstant>(EltSizeSCEV);
+    if (Offset && Size && !Offset->getAPInt().isNegative() &&
+        Offset->getAPInt().urem(Alignment.value()) == 0) {
+      bool Overflow = false;
+      APInt End = Offset->getAPInt().uadd_ov(
+          Size->getAPInt().zextOrTrunc(Offset->getAPInt().getBitWidth()),
+          Overflow);
+      if (!Overflow &&
+          isDereferenceableAndAlignedPointer(
+              Base->getValue(), Alignment, End,
+              SimplifyQuery(L->getHeader()->getDataLayout(), &DT, AC,
+                            &*L->getHeader()->getFirstNonPHIIt())))
+        return true;
+    }
+    return false;
+  }
   auto *AddRec = dyn_cast<SCEVAddRecExpr>(PtrSCEV);
 
   // Check to see if we have a repeating access pattern and it's possible
