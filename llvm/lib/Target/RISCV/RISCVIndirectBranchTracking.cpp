@@ -72,16 +72,11 @@ static bool runIndirectBranchTracking(MachineFunction &MF) {
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
   const Align LpadAlign = Align(4);
 
-  if (!MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch())
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  if (!RVFI->hasCFProtectionBranch())
     return false;
-
-  uint32_t FixedLabel = 0;
-  if (std::optional<uint32_t> Label = Subtarget.getCLOpts().landing_pad_label) {
-    if (!isUInt<20>(*Label))
-      report_fatal_error("riscv-landing-pad-label=<val>, <val> needs to fit in "
-                         "unsigned 20-bits");
-    FixedLabel = *Label;
-  }
+  uint32_t FnEntryLabel = RVFI->getZicfilpFnEntryLabel();
+  uint32_t LocalJumpLabel = RVFI->getZicfilpLocalJumpLabel();
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
@@ -92,16 +87,18 @@ static bool runIndirectBranchTracking(MachineFunction &MF) {
         continue;
 
       if (F.hasAddressTaken() || !F.hasLocalLinkage()) {
-        emitLpad(MBB, TII, FixedLabel);
+        emitLpad(MBB, TII, FnEntryLabel);
         if (MF.getAlignment() < LpadAlign)
           MF.setAlignment(LpadAlign);
         Changed = true;
       }
+      // Function Entry Blocks must not have predecessors, and so can never be
+      // adress-taken.
       continue;
     }
 
     if (MBB.hasAddressTaken()) {
-      emitLpad(MBB, TII, FixedLabel);
+      emitLpad(MBB, TII, LocalJumpLabel);
       if (MBB.getAlignment() < LpadAlign)
         MBB.setAlignment(LpadAlign);
       Changed = true;

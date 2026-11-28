@@ -37,7 +37,7 @@ define i32 @_ZNK2cv12LMSolverImpl3runERKNS_17_InputOutputArrayE(i1 %cmp436) {
   ; CHECK-NEXT:   $x15 = COPY [[COPY3]]
   ; CHECK-NEXT:   $x16 = COPY [[COPY3]]
   ; CHECK-NEXT:   $x17 = COPY [[COPY3]]
-  ; CHECK-NEXT:   PseudoCALLIndirect [[COPY3]], csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x2, implicit-def $x10
+  ; CHECK-NEXT:   PseudoCALLIndirect [[COPY3]], 0, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x2, implicit-def $x10
   ; CHECK-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def dead $x2, implicit $x2
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   PseudoBR %bb.1
