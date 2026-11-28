@@ -2129,6 +2129,13 @@ private:
   /// SCEV+Loop pair.
   SCEVUse computeSCEVAtScope(const SCEV *S, const Loop *L);
 
+  /// Infer the no-wrap flags (nsw/nuw/nw) of \p AR. A nested call - one made
+  /// while another inference is already on the stack - is dropped and replayed
+  /// by the outermost call: proving these flags needs the addrec's loop trip
+  /// count, and computing a count builds SCEVs, so inferring at every level
+  /// would recurse once per unrolled loop copy.
+  void inferNoWrapFlagsOrDrop(const SCEVAddRecExpr *AR);
+
   /// Return the BackedgeTakenInfo for the given loop, lazily computing new
   /// values if the loop hasn't been analyzed yet. The returned result is
   /// guaranteed not to be predicated.
@@ -2631,6 +2638,17 @@ private:
 
   /// This maps loops to a list of addrecs that directly use said loop.
   DenseMap<const Loop *, SmallVector<const SCEVAddRecExpr *, 4>> LoopUsers;
+
+  /// Addrecs whose no-wrap flag inference was dropped because another
+  /// inference was already on the stack. The outermost inferNoWrapFlagsOrDrop()
+  /// replays them, so this is empty whenever no inference is running: it holds
+  /// no per-loop state, and so needs no invalidation.
+  SmallVector<const SCEVAddRecExpr *, 8> DroppedWrapFlagInference;
+
+  /// True while a no-wrap flag inference is on the stack: an addrec built as a
+  /// side effect of it goes to DroppedWrapFlagInference instead of starting a
+  /// nested inference that would ask for the count being computed.
+  bool IsInferringNoWrapFlags = false;
 
   /// Cache tentative mappings from UnknownSCEVs in a Loop, to a SCEV expression
   /// they can be rewritten into under certain predicates.
