@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t.ll %s
 
+// RUN: FileCheck --check-prefix=CIR-EXTERNAL --input-file=%t.cir %s
+// RUN: FileCheck --check-prefix=LLVM-EXTERNAL --input-file=%t-cir.ll %s
+
 struct Inner {
   int Inner::*p;
 };
@@ -91,3 +94,31 @@ void runtime_agg(int x) {
   Outer o = {.b = x};
   (void)o;
 }
+
+// Referencing an external pointer-to-data-member with no initializer must not
+// crash CXXABILowering.
+struct Base {};
+struct Derived : Base {};
+
+extern int Derived::*external_member_ptr;
+
+void use_external_member_ptr() {
+  external_member_ptr;
+}
+
+// CIR-EXTERNAL: cir.global "private" external @external_member_ptr : !s64i
+// LLVM-EXTERNAL: @external_member_ptr = external global i64, align 8
+struct MethodOwner {
+  void method();
+};
+
+using MethodPointer = void (MethodOwner::*)();
+
+extern MethodPointer external_method_ptr;
+
+void use_external_method_ptr() {
+  external_method_ptr;
+}
+
+// CIR-EXTERNAL: cir.global "private" external @external_method_ptr
+// LLVM-EXTERNAL: @external_method_ptr = external global
