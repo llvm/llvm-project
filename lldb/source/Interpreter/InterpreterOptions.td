@@ -13,6 +13,29 @@ let Command = "architecture" in {
                           Desc<"Specify the architecture for the target.">;
 }
 
+// OptionGroupFormat::GetDefinitions() returns a slice of these options and
+// relies on them being sorted as: count, format, gdb-format, size.
+let Command = "format" in {
+  def format_count : Option<"count", "c">,
+                     Group<4>,
+                     Arg<"Count">,
+                     Desc<"The number of total items to display.">;
+  def format_format : Option<"format", "f">,
+                      Group<1>,
+                      Arg<"Format">,
+                      Desc<"Specify a format to be used for display.">;
+  def format_gdb_format
+      : Option<"gdb-format", "G">,
+        Group<2>,
+        Arg<"GDBFormat">,
+        Desc<"Specify a format using a GDB format specifier string.">;
+  def format_size : Option<"size", "s">,
+                    Group<3>,
+                    Arg<"ByteSize">,
+                    Desc<"The size in bytes to use when displaying with the "
+                         "selected format.">;
+}
+
 // OptionGroupMemoryTag picks one of the two variants below.
 let Command = "memory tag" in {
   def memory_tag_show_tags : Option<"show-tags", "\\x02">,
