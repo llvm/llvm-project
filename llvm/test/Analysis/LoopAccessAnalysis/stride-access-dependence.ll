@@ -643,3 +643,40 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp = icmp slt i64 %indvars.iv.next, 1024
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 }
+
+define void @odd_byte_stride(ptr %base, i64 %n) {
+; CHECK-LABEL: 'odd_byte_stride'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %v = load i32, ptr %p, align 4 ->
+; CHECK-NEXT:            store i32 %sum, ptr %p, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%base,+,1}<%loop> Added Flags: <nusw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %p = phi ptr [ %base, %entry ], [ %p.next, %loop ]
+  %v = load i32, ptr %p
+  %sum = add i32 %v, 1
+  store i32 %sum, ptr %p
+  %p.next = getelementptr i8, ptr %p, i64 1
+  %iv.next = add i64 %iv, 1
+  %ec = icmp ult i64 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}

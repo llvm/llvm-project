@@ -19,6 +19,7 @@ define void @predicated_stores_same_ptr_non_constant_stride(ptr %dst, i64 %s, i6
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%dst,+,(4 * %s * %s)}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
