@@ -155,11 +155,11 @@ void DirectIvarAssignment::checkASTDecl(const ObjCImplementationDecl *D,
 }
 
 static bool isAnnotatedToAllowDirectAssignment(const Decl *D) {
-  for (const auto *Ann : D->specific_attrs<AnnotateAttr>())
-    if (Ann->getAnnotation() ==
-        "objc_allow_direct_instance_variable_assignment")
-      return true;
-  return false;
+  auto IsAllowAnnotation = [](const AnnotateAttr *Ann) {
+    return Ann->getAnnotation() ==
+           "objc_allow_direct_instance_variable_assignment";
+  };
+  return llvm::any_of(D->specific_attrs<AnnotateAttr>(), IsAllowAnnotation);
 }
 
 void DirectIvarAssignment::MethodCrawler::VisitBinaryOperator(
@@ -210,10 +210,11 @@ void DirectIvarAssignment::MethodCrawler::VisitBinaryOperator(
 // Register the checker that checks for direct accesses in functions annotated
 // with __attribute__((annotate("objc_no_direct_instance_variable_assignment"))).
 static bool AttrFilter(const ObjCMethodDecl *M) {
-  for (const auto *Ann : M->specific_attrs<AnnotateAttr>())
-    if (Ann->getAnnotation() == "objc_no_direct_instance_variable_assignment")
-      return false;
-  return true;
+  auto IsNoAssignAnnotation = [](const AnnotateAttr *Ann) {
+    return Ann->getAnnotation() ==
+           "objc_no_direct_instance_variable_assignment";
+  };
+  return llvm::none_of(M->specific_attrs<AnnotateAttr>(), IsNoAssignAnnotation);
 }
 
 // Register the checker that checks for direct accesses in all functions,
