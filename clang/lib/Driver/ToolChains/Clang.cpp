@@ -1415,6 +1415,14 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
                      : Args.getLastArg(options::OPT_mbranch_protection_EQ);
   const Arg *HardenPACRetArg = Args.getLastArg(options::OPT_mharden_pac_ret_EQ);
   const Driver &D = TC.getDriver();
+  // Fuchsia (like Android and OpenBSD) enables BTI by default only on AArch64;
+  // 32-bit Armv8-A is not compatible with BTI (which in 32-bit ARM only exists
+  // on Armv8.1-M M-profile).
+  const bool DefaultIndirectBranches =
+      (Triple.isOSOpenBSD() || Triple.isAndroid() || Triple.isOSFuchsia()) &&
+      isAArch64;
+  const bool DefaultPACNonLeafKeyA =
+      (Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64;
 
   if (HardenPACRetArg) {
     if (!isAArch64) {
@@ -1455,14 +1463,13 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
   };
 
   if (!A) {
-    if ((Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64) {
+    if (DefaultPACNonLeafKeyA) {
       CmdArgs.push_back("-msign-return-address=non-leaf");
       CmdArgs.push_back("-msign-return-address-key=a_key");
-      CmdArgs.push_back("-mbranch-target-enforce");
-      RenderHardenPACRet("non-leaf");
-    } else {
-      RenderHardenPACRet("none");
     }
+    if (DefaultIndirectBranches)
+      CmdArgs.push_back("-mbranch-target-enforce");
+    RenderHardenPACRet(DefaultPACNonLeafKeyA ? "non-leaf" : "none");
     return;
   }
 
@@ -1481,8 +1488,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     // This spelling cannot express a key, and AArch64 Windows and UEFI only
     // support B-key, so default to it there as parseBranchProtection() does.
     Key = isAArch64 && Triple.isOSWindowsOrUEFI() ? "b_key" : "a_key";
-    IndirectBranches =
-        (Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64;
+    IndirectBranches = DefaultIndirectBranches;
     BranchProtectionPAuthLR = false;
     GuardedControlStack = false;
   } else {
@@ -7543,19 +7549,36 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
     CmdArgs.push_back("--no-offloadlib");
 
+  bool CFProtectionBranch = false;
   if (Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ)) {
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine("-fcf-protection=") + A->getValue()));
-
-    if (Arg *SA = Args.getLastArg(options::OPT_mcf_branch_label_scheme_EQ))
-      CmdArgs.push_back(Args.MakeArgString(Twine("-mcf-branch-label-scheme=") +
-                                           SA->getValue()));
+    StringRef Val = A->getValue();
+    CmdArgs.push_back(Args.MakeArgString(Twine("-fcf-protection=") + Val));
+    CFProtectionBranch = Val == "branch" || Val == "full";
   } else if (Triple.isOSOpenBSD() && Triple.getArch() == llvm::Triple::x86_64) {
     // Emit IBT endbr64 instructions by default
     CmdArgs.push_back("-fcf-protection=branch");
     // jump-table can generate indirect jumps, which are not permitted
     CmdArgs.push_back("-fno-jump-tables");
+  } else if (Triple.isOSFuchsia() &&
+             (Triple.getArch() == llvm::Triple::x86_64 ||
+              Triple.getArch() == llvm::Triple::riscv64)) {
+    // Emit IBT endbr64 / Zicfilp lpad instructions by default.
+    CmdArgs.push_back("-fcf-protection=branch");
+    CFProtectionBranch = true;
   }
+  if (CFProtectionBranch || Args.hasArg(options::OPT_fcf_protection_EQ)) {
+    if (Arg *SA = Args.getLastArg(options::OPT_mcf_branch_label_scheme_EQ))
+      CmdArgs.push_back(Args.MakeArgString(Twine("-mcf-branch-label-scheme=") +
+                                           SA->getValue()));
+  }
+  // On x86-64 with -fcf-protection=branch, jump tables emit `notrack jmp`
+  // rather than `endbr64` on target blocks. On Fuchsia x86-64, disable jump
+  // tables by default when branch protection is enabled so `notrack` indirect
+  // branches are avoided unless `-fjump-tables` is passed explicitly.
+  if (CFProtectionBranch && Triple.isOSFuchsia() &&
+      Triple.getArch() == llvm::Triple::x86_64 &&
+      !Args.hasArg(options::OPT_fjump_tables, options::OPT_fno_jump_tables))
+    CmdArgs.push_back("-fno-jump-tables");
 
   if (Arg *A = Args.getLastArg(options::OPT_mfunction_return_EQ))
     CmdArgs.push_back(
