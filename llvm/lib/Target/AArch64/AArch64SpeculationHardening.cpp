@@ -612,12 +612,13 @@ bool AArch64SpeculationHardening::lowerSpeculationSafeValuePseudos(
   // the use of a masked register), in the hope that that will reduce the
   // total number of CSDBs in a block when there are multiple masked registers
   // in the block.
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
+  //
+  // Debug instructions are skipped so that they do not change where the CSDB
+  // is placed.
   DebugLoc DL;
-  while (MBBI != E) {
-    MachineInstr &MI = *MBBI;
+  for (MachineInstr &MI :
+       make_early_inc_range(instructionsWithoutDebug(MBB.begin(), MBB.end()))) {
     DL = MI.getDebugLoc();
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
 
     // First check if a CSDB needs to be inserted due to earlier registers
     // that were masked and that are used by the next instruction.
@@ -633,16 +634,14 @@ bool AArch64SpeculationHardening::lowerSpeculationSafeValuePseudos(
         }
 
     if (NeedToEmitBarrier && !UsesFullSpeculationBarrier)
-      Modified |= insertCSDB(MBB, MBBI, DL);
+      Modified |= insertCSDB(MBB, MI.getIterator(), DL);
 
-    Modified |=
-        expandSpeculationSafeValue(MBB, MBBI, UsesFullSpeculationBarrier);
-
-    MBBI = NMBBI;
+    Modified |= expandSpeculationSafeValue(MBB, MI.getIterator(),
+                                           UsesFullSpeculationBarrier);
   }
 
   if (RegsNeedingCSDBBeforeUse.any() && !UsesFullSpeculationBarrier)
-    Modified |= insertCSDB(MBB, MBBI, DL);
+    Modified |= insertCSDB(MBB, MBB.end(), DL);
 
   return Modified;
 }
