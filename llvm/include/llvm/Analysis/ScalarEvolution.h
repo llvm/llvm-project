@@ -2022,12 +2022,17 @@ private:
   /// Memoized results from getRange
   DenseMap<const SCEV *, ConstantRange> SignedRanges;
 
+  /// The last range computed for a non-canonical use, which is not memoized.
+  std::optional<ConstantRange> UseRange;
+
   /// Used to parameterize getRange
   enum RangeSignHint { HINT_RANGE_UNSIGNED, HINT_RANGE_SIGNED };
 
   /// Set the memoized range for the given SCEV.
-  const ConstantRange &setRange(const SCEV *S, RangeSignHint Hint,
+  const ConstantRange &setRange(SCEVUse S, RangeSignHint Hint,
                                 ConstantRange CR) {
+    if (!S.isCanonical())
+      return UseRange.emplace(std::move(CR));
     DenseMap<const SCEV *, ConstantRange> &Cache =
         Hint == HINT_RANGE_UNSIGNED ? UnsignedRanges : SignedRanges;
 
@@ -2036,10 +2041,16 @@ private:
   }
 
   /// Determine the range for a particular SCEV.
-  /// NOTE: This returns a reference to an entry in a cache. It must be
-  /// copied if its needed for longer.
-  LLVM_ABI const ConstantRange &getRangeRef(const SCEV *S, RangeSignHint Hint,
-                                            unsigned Depth = 0);
+  const ConstantRange &getRangeRef(const SCEV *S, RangeSignHint Hint,
+                                   unsigned Depth = 0) {
+    return getRangeForUse(S->getCanonical(), Hint, Depth);
+  }
+
+  /// Determine the range for the use \p S, which only hold where \p S is used.
+  /// NOTE: For non-canonical uses, to UseRange, which is overwritten by the
+  /// next such query. It must be copied if its needed for longer.
+  LLVM_ABI const ConstantRange &getRangeForUse(SCEVUse S, RangeSignHint Hint,
+                                               unsigned Depth = 0);
 
   /// Determine the range for a particular SCEV, but evaluates ranges for
   /// operands iteratively first.
@@ -2575,7 +2586,7 @@ private:
   /// * the induction variable is assumed not to overflow (i.e. either it
   ///   actually doesn't, or we'd have to immediately execute UB)
   /// We *don't* assert these preconditions so please be careful.
-  const SCEV *computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
+  const SCEV *computeMaxBECountForLT(SCEVUse Start, const SCEV *Stride,
                                      const SCEV *End, unsigned BitWidth,
                                      bool IsSigned, bool Invert);
 

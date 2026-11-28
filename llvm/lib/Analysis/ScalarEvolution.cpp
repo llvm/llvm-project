@@ -6554,8 +6554,8 @@ const APInt *ScalarEvolution::getConstantAPIntOrNull(const SCEV *S) {
 /// Determine the range for a particular SCEV.  If SignHint is
 /// HINT_RANGE_UNSIGNED (resp. HINT_RANGE_SIGNED) then getRange prefers ranges
 /// with a "cleaner" unsigned (resp. signed) representation.
-const ConstantRange &ScalarEvolution::getRangeRef(
-    const SCEV *S, ScalarEvolution::RangeSignHint SignHint, unsigned Depth) {
+const ConstantRange &ScalarEvolution::getRangeForUse(
+    SCEVUse S, ScalarEvolution::RangeSignHint SignHint, unsigned Depth) {
   DenseMap<const SCEV *, ConstantRange> &Cache =
       SignHint == ScalarEvolution::HINT_RANGE_UNSIGNED ? UnsignedRanges
                                                        : SignedRanges;
@@ -6564,7 +6564,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
                                                        : ConstantRange::Signed;
 
   // See if we've computed this range already.
-  auto I = Cache.find(S);
+  auto I = S.isCanonical() ? Cache.find(S) : Cache.end();
   if (I != Cache.end())
     return I->second;
 
@@ -6606,28 +6606,28 @@ const ConstantRange &ScalarEvolution::getRangeRef(
     return setRange(S, SignHint, getVScaleRange(&F, BitWidth));
   case scTruncate: {
     const SCEVTruncateExpr *Trunc = cast<SCEVTruncateExpr>(S);
-    ConstantRange X = getRangeRef(Trunc->getOperand(), SignHint, Depth + 1);
+    ConstantRange X = getRangeForUse(Trunc->getOperand(), SignHint, Depth + 1);
     return setRange(
         Trunc, SignHint,
         ConservativeResult.intersectWith(X.truncate(BitWidth), RangeType));
   }
   case scZeroExtend: {
     const SCEVZeroExtendExpr *ZExt = cast<SCEVZeroExtendExpr>(S);
-    ConstantRange X = getRangeRef(ZExt->getOperand(), SignHint, Depth + 1);
+    ConstantRange X = getRangeForUse(ZExt->getOperand(), SignHint, Depth + 1);
     return setRange(
         ZExt, SignHint,
         ConservativeResult.intersectWith(X.zeroExtend(BitWidth), RangeType));
   }
   case scSignExtend: {
     const SCEVSignExtendExpr *SExt = cast<SCEVSignExtendExpr>(S);
-    ConstantRange X = getRangeRef(SExt->getOperand(), SignHint, Depth + 1);
+    ConstantRange X = getRangeForUse(SExt->getOperand(), SignHint, Depth + 1);
     return setRange(
         SExt, SignHint,
         ConservativeResult.intersectWith(X.signExtend(BitWidth), RangeType));
   }
   case scPtrToAddr: {
     const SCEVCastExpr *Cast = cast<SCEVCastExpr>(S);
-    ConstantRange X = getRangeRef(Cast->getOperand(), SignHint, Depth + 1);
+    ConstantRange X = getRangeForUse(Cast->getOperand(), SignHint, Depth + 1);
     return setRange(Cast, SignHint, X);
   }
   case scAddExpr: {
@@ -6641,30 +6641,30 @@ const ConstantRange &ScalarEvolution::getRangeRef(
       ConservativeResult =
           ConservativeResult.intersectWith(LHSRange.urem(RHSRange), RangeType);
     }
-    ConstantRange X = getRangeRef(Add->getOperand(0), SignHint, Depth + 1);
+    ConstantRange X = getRangeForUse(Add->getOperand(0), SignHint, Depth + 1);
     unsigned WrapType = OBO::AnyWrap;
-    if (Add->hasNoSignedWrap())
+    if (hasFlags(S.getNoWrapFlags(), SCEV::FlagNSW))
       WrapType |= OBO::NoSignedWrap;
-    if (Add->hasNoUnsignedWrap())
+    if (hasFlags(S.getNoWrapFlags(), SCEV::FlagNUW))
       WrapType |= OBO::NoUnsignedWrap;
-    for (const SCEV *Op : drop_begin(Add->operands()))
-      X = X.addWithNoWrap(getRangeRef(Op, SignHint, Depth + 1), WrapType,
+    for (SCEVUse Op : drop_begin(Add->operands()))
+      X = X.addWithNoWrap(getRangeForUse(Op, SignHint, Depth + 1), WrapType,
                           RangeType);
-    return setRange(Add, SignHint,
+    return setRange(S, SignHint,
                     ConservativeResult.intersectWith(X, RangeType));
   }
   case scMulExpr: {
     const SCEVMulExpr *Mul = cast<SCEVMulExpr>(S);
-    ConstantRange X = getRangeRef(Mul->getOperand(0), SignHint, Depth + 1);
-    for (const SCEV *Op : drop_begin(Mul->operands()))
-      X = X.multiply(getRangeRef(Op, SignHint, Depth + 1));
+    ConstantRange X = getRangeForUse(Mul->getOperand(0), SignHint, Depth + 1);
+    for (SCEVUse Op : drop_begin(Mul->operands()))
+      X = X.multiply(getRangeForUse(Op, SignHint, Depth + 1));
     return setRange(Mul, SignHint,
                     ConservativeResult.intersectWith(X, RangeType));
   }
   case scUDivExpr: {
     const SCEVUDivExpr *UDiv = cast<SCEVUDivExpr>(S);
-    ConstantRange X = getRangeRef(UDiv->getLHS(), SignHint, Depth + 1);
-    ConstantRange Y = getRangeRef(UDiv->getRHS(), SignHint, Depth + 1);
+    ConstantRange X = getRangeForUse(UDiv->getLHS(), SignHint, Depth + 1);
+    ConstantRange Y = getRangeForUse(UDiv->getRHS(), SignHint, Depth + 1);
     return setRange(UDiv, SignHint,
                     ConservativeResult.intersectWith(X.udiv(Y), RangeType));
   }
@@ -6777,10 +6777,15 @@ const ConstantRange &ScalarEvolution::getRangeRef(
     }
 
     const auto *NAry = cast<SCEVNAryExpr>(S);
-    ConstantRange X = getRangeRef(NAry->getOperand(0), SignHint, Depth + 1);
-    for (unsigned i = 1, e = NAry->getNumOperands(); i != e; ++i)
-      X = X.intrinsic(
-          ID, {X, getRangeRef(NAry->getOperand(i), SignHint, Depth + 1)});
+    ConstantRange X = getRangeForUse(NAry->getOperand(0), SignHint, Depth + 1);
+    for (unsigned i = 1, e = NAry->getNumOperands(); i != e; ++i) {
+      // Operands of a sequential min after the first may not be evaluated, so
+      // their use flags may not hold.
+      SCEVUse Op = NAry->getOperand(i);
+      if (isa<SCEVSequentialMinMaxExpr>(NAry))
+        Op = Op.getCanonical();
+      X = X.intrinsic(ID, {X, getRangeForUse(Op, SignHint, Depth + 1)});
+    }
     return setRange(S, SignHint,
                     ConservativeResult.intersectWith(X, RangeType));
   }
@@ -13203,7 +13208,7 @@ const SCEV *ScalarEvolution::getUDivCeilSCEV(const SCEV *N, const SCEV *D) {
 }
 
 const SCEV *
-ScalarEvolution::computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
+ScalarEvolution::computeMaxBECountForLT(SCEVUse Start, const SCEV *Stride,
                                         const SCEV *End, unsigned BitWidth,
                                         bool IsSigned, bool Invert) {
   // The logic in this function assumes we can represent a positive stride.
@@ -13220,7 +13225,12 @@ ScalarEvolution::computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
   // Calculate the maximum backedge count based on the range of values
   // permitted by Start, End, and Stride. If Invert is true, both Start and End
   // need inverting. Stride was already negated by the caller.
-  APInt MinStart = getRangeMin(Start, IsSigned, Invert);
+  ConstantRange StartRange =
+      getRangeForUse(Start, IsSigned ? HINT_RANGE_SIGNED : HINT_RANGE_UNSIGNED);
+  if (Invert)
+    StartRange = StartRange.binaryNot();
+  APInt MinStart =
+      IsSigned ? StartRange.getSignedMin() : StartRange.getUnsignedMin();
 
   APInt MinStride =
       IsSigned ? getSignedRangeMin(Stride) : getUnsignedRangeMin(Stride);
@@ -13251,8 +13261,8 @@ ScalarEvolution::computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
 
   // Try to refine Delta in case End - Start (or Start - End if Invert) gives a
   // tighter bound after folding.
-  const SCEV *DeltaExpr =
-      Invert ? getMinusSCEV(Start, End) : getMinusSCEV(End, Start);
+  const SCEV *DeltaExpr = Invert ? getMinusSCEV(Start.getPointer(), End)
+                                 : getMinusSCEV(End, Start.getPointer());
   Delta = APIntOps::umin(Delta, getUnsignedRangeMax(DeltaExpr));
 
   return getUDivCeilSCEV(getConstant(Delta), getConstant(StrideForMaxBECount));
@@ -13480,7 +13490,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   //      before any possible exit.
   // Note that we have not yet proved RHS invariant (in general).
 
-  const SCEV *Start = IV->getStart();
+  SCEVUse Start = IV->getStart();
 
   // Preserve pointer-typed Start/RHS to pass to isLoopEntryGuardedByCond.
   // If we convert to integers, isLoopEntryGuardedByCond will miss some cases.
@@ -13614,7 +13624,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         // Inverted: "Start - End <= Stride * N <= Start - MIN <= UMAX", same.
         return false;
       }
-      if (!Invert && (Start == Stride || Start == getMinusSCEV(Stride, One))) {
+      if (!Invert && (SCEVUse::getCommon(Start, Stride) ||
+                      SCEVUse::getCommon(Start, getMinusSCEV(Stride, One)))) {
         // If Start is equal to Stride, (End - Start) + (Stride - 1) == End
         // - 1. If !IsSigned, 0 <u Stride == Start <=u End; so 0 <u End - 1
         // <u End. If IsSigned, 0 <s Stride == Start <=s End; so 0 <s End -
