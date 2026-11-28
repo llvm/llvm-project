@@ -9,14 +9,13 @@ define void @cp_async_bulk_g2s_cta_validate_data(ptr addrspace(1) %src, ptr addr
 ; CHECK-LABEL: cp_async_bulk_g2s_cta_validate_data(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [cp_async_bulk_g2s_cta_validate_data_param_0];
 ; CHECK-NEXT:    ld.param::func.b64 %rd2, [cp_async_bulk_g2s_cta_validate_data_param_1];
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [cp_async_bulk_g2s_cta_validate_data_param_2];
 ; CHECK-NEXT:    ld.param::func.b32 %r1, [cp_async_bulk_g2s_cta_validate_data_param_3];
-; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_cta_validate_data_param_4];
 ; CHECK-NEXT:    cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes [%rd3], [%rd1], %r1, [%rd2];
 ; CHECK-NEXT:    cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes.mbarrier::report::validity::per_16bytes::80000000 [%rd3], [%rd1], %r1, [%rd2];
 ; CHECK-NEXT:    cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes.mbarrier::report::validity::per_16bytes::8000 [%rd3], [%rd1], %r1, [%rd2];

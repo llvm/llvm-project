@@ -17,10 +17,10 @@ define void @cp_async_bulk_g2s_validate_data(ptr addrspace(1) %src, ptr addrspac
 ; CHECK-NEXT:    ld.param::func.b64 %rd2, [cp_async_bulk_g2s_validate_data_param_1];
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [cp_async_bulk_g2s_validate_data_param_2];
 ; CHECK-NEXT:    ld.param::func.b32 %r1, [cp_async_bulk_g2s_validate_data_param_3];
-; CHECK-NEXT:    ld.param::func.b16 %rs1, [cp_async_bulk_g2s_validate_data_param_4];
-; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_validate_data_param_5];
 ; CHECK-NEXT:    cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%rd3], [%rd1], %r1, [%rd2];
 ; CHECK-NEXT:    cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes.mbarrier::report::validity::per_16bytes::80000000 [%rd3], [%rd1], %r1, [%rd2];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [cp_async_bulk_g2s_validate_data_param_4];
+; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_validate_data_param_5];
 ; CHECK-NEXT:    cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes.mbarrier::report::validity::per_16bytes::8000.multicast::cluster.L2::cache_hint [%rd3], [%rd1], %r1, [%rd2], %rs1, %rd4;
 ; CHECK-NEXT:    cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes.mbarrier::report::validity::per_16bytes::80.multicast::cluster [%rd3], [%rd1], %r1, [%rd2], %rs1;
 ; CHECK-NEXT:    cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes.mbarrier::report::validity::per_16bytes::8.L2::cache_hint [%rd3], [%rd1], %r1, [%rd2], %rd4;
@@ -38,7 +38,6 @@ define void @cp_async_bulk_g2s_validate_data(ptr addrspace(1) %src, ptr addrspac
 define void @cp_async_bulk_g2s_relaxed_validate_data(ptr addrspace(1) %src, ptr addrspace(3) %bar, ptr addrspace(7) %dst, i32 %size, i16 %mc, i64 %ch) {
 ; CHECK-LABEL: cp_async_bulk_g2s_relaxed_validate_data(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
@@ -47,9 +46,8 @@ define void @cp_async_bulk_g2s_relaxed_validate_data(ptr addrspace(1) %src, ptr 
 ; CHECK-NEXT:    ld.param::func.b64 %rd2, [cp_async_bulk_g2s_relaxed_validate_data_param_1];
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [cp_async_bulk_g2s_relaxed_validate_data_param_2];
 ; CHECK-NEXT:    ld.param::func.b32 %r1, [cp_async_bulk_g2s_relaxed_validate_data_param_3];
-; CHECK-NEXT:    ld.param::func.b16 %rs1, [cp_async_bulk_g2s_relaxed_validate_data_param_4];
-; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_relaxed_validate_data_param_5];
 ; CHECK-NEXT:    cp.async.bulk.relaxed.cta.shared::cluster.global.mbarrier::complete_tx::bytes.mbarrier::report::validity::per_16bytes::8.b128 [%rd3], [%rd1], %r1, [%rd2];
+; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_relaxed_validate_data_param_5];
 ; CHECK-NEXT:    cp.async.bulk.relaxed.cta.shared::cluster.global.mbarrier::complete_tx::bytes.mbarrier::report::validity::per_16bytes::8.L2::cache_hint.b128 [%rd3], [%rd1], %r1, [%rd2], %rd4;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster.relaxed.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 false, i1 false, i32 0, i32 4)

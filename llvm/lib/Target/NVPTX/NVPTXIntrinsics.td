@@ -531,19 +531,29 @@ class CpAsyncBulkStr<bits<2> mc, bit ch, bit mask = 0, bit is_relaxed = 0,
 }
 
 multiclass CP_ASYNC_BULK_S2G_INTR<bit has_ch> {
-  def "" : NVPTXInst<(outs), (ins ADDR:$dst, ADDR:$src, B32:$size, B64:$ch),
-      !if(has_ch,
-          CpAsyncBulkStr<0, 1>.S2G # " [$dst], [$src], $size, $ch;",
-          CpAsyncBulkStr<0, 0>.S2G # " [$dst], [$src], $size;"),
-      [(int_nvvm_cp_async_bulk_shared_cta_to_global addr:$dst, addr:$src, i32:$size, i64:$ch, !if(has_ch, -1, 0))]>,
-      Requires<[PTX80, SM90]>;
+  defvar intr = int_nvvm_cp_async_bulk_shared_cta_to_global;
+  defvar intr_bm = int_nvvm_cp_async_bulk_shared_cta_to_global_bytemask;
 
-  def _BM : NVPTXInst<(outs), (ins ADDR:$dst, ADDR:$src, B32:$size, B64:$ch, B16:$mask),
-      !if(has_ch,
-          CpAsyncBulkStr<0, 1, 1>.S2G # " [$dst], [$src], $size, $ch, $mask;",
-          CpAsyncBulkStr<0, 0, 1>.S2G # " [$dst], [$src], $size, $mask;"),
-      [(int_nvvm_cp_async_bulk_shared_cta_to_global_bytemask addr:$dst, addr:$src, i32:$size, i64:$ch, !if(has_ch, -1, 0), i16:$mask)]>,
-      Requires<[SM100]>;
+  defvar ins_dag = !con((ins ADDR:$dst, ADDR:$src, B32:$size),
+                        !if(has_ch, (ins B64:$ch), (ins)));
+  defvar ins_dag_bm = !con((ins ADDR:$dst, ADDR:$src, B32:$size),
+                           !if(has_ch, (ins B64:$ch), (ins)),
+                           (ins B16:$mask));
+  
+  defvar asm = CpAsyncBulkStr<0, has_ch>.S2G # " [$dst], [$src], $size"
+               # !if(has_ch, ", $ch", "") # ";";
+  defvar asm_bm = CpAsyncBulkStr<0, has_ch, 1>.S2G # " [$dst], [$src], $size"
+                  # !if(has_ch, ", $ch", "") # ", $mask;";
+  
+  defvar pattern = !con((intr addr:$dst, addr:$src, i32:$size),
+                        !if(has_ch, (intr i64:$ch, -1), (intr (i64 srcvalue), 0)));
+  defvar pattern_bm = !con((intr_bm addr:$dst, addr:$src, i32:$size),
+                           !if(has_ch, (intr_bm i64:$ch, -1), (intr_bm (i64 srcvalue), 0)),
+                           (intr_bm i16:$mask));
+
+  def "" : NVPTXInst<(outs), ins_dag, asm, [pattern]>, Requires<[PTX80, SM90]>;
+
+  def _BM : NVPTXInst<(outs), ins_dag_bm, asm_bm, [pattern_bm]>, Requires<[SM100]>;
 }
 defm CP_ASYNC_BULK_S2G    : CP_ASYNC_BULK_S2G_INTR<has_ch = 0>;
 defm CP_ASYNC_BULK_S2G_CH : CP_ASYNC_BULK_S2G_INTR<has_ch = 1>;
@@ -567,66 +577,71 @@ def MemScopeFlags : Operand<i32> {
 // Matches flag_scope values 0-3 (cta/cluster/gpu/sys) for relaxed memory ordering semantics.
 def async_bulk_scope_imm : TImmLeaf<i32, [{ return Imm >= 0 && Imm <= 3; }]>;
 
-multiclass CP_ASYNC_BULK_G2S_INTR<bit has_ch, bit is_relaxed,
-                                  list<Predicate> preds = [hasCpAsyncBulkClusterSupport]> {
+multiclass CP_ASYNC_BULK_G2S_INTR<bit has_mc, bit has_ch, bit is_relaxed> {
+  defvar preds = !if(is_relaxed,
+                     [hasCpAsyncBulkRelaxedSupport],
+                     [hasCpAsyncBulkClusterSupport]);
+
   defvar Intr =
     !cast<Intrinsic>("int_nvvm_cp_async_bulk_global_to_shared_cluster" #
                      !if(is_relaxed, "_relaxed", ""));
 
-  defvar asm_nomc = CpAsyncBulkStr<0, has_ch, 0, is_relaxed>.G2S;
-  defvar asm_mc16 = CpAsyncBulkStr<1, has_ch, 0, is_relaxed>.G2S;
-  defvar asm_mc32 = CpAsyncBulkStr<2, has_ch, 0, is_relaxed>.G2S;
+  defvar asm_mc16 = CpAsyncBulkStr<!if(has_mc, 1, 0), has_ch, 0, is_relaxed>.G2S;
+  defvar asm_mc32 = CpAsyncBulkStr<!if(has_mc, 2, 0), has_ch, 0, is_relaxed>.G2S;
 
   // Relaxed form carries the extra flag_scope operand.
   defvar ins_tail = !if(is_relaxed,
       (ins MemScopeFlags:$flag_scope, TMAValidateDataFlags:$flag_valid_pattern),
       (ins TMAValidateDataFlags:$flag_valid_pattern));
-  defvar ins_i16 = !con((ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size,
-                         B16:$mask, B64:$ch), ins_tail);
-  defvar ins_i32 = !con((ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size,
-                         B32:$mask, B64:$ch), ins_tail);
+  defvar ins_i16 = !con((ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size),
+                        !if(has_mc, (ins B16:$mask), (ins)),
+                        !if(has_ch, (ins B64:$ch), (ins)), ins_tail);
+  defvar ins_i32 = !con((ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size),
+                        !if(has_mc, (ins B32:$mask), (ins)),
+                        !if(has_ch, (ins B64:$ch), (ins)), ins_tail);
 
   // Relaxed form carries the extra flag_scope operand.
   defvar p_tail = !if(is_relaxed,
       (Intr async_bulk_scope_imm:$flag_scope, tma_validate_data_imm:$flag_valid_pattern),
       (Intr tma_validate_data_imm:$flag_valid_pattern));
-  defvar p_no_mc16 = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size,
-      i16:$mask, i64:$ch, 0, !if(has_ch, -1, 0)), p_tail);
-  defvar p_mc16    = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size,
-      i16:$mask, i64:$ch, -1, !if(has_ch, -1, 0)), p_tail);
-  defvar p_no_mc32 = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size,
-      i32:$mask, i64:$ch, 0, !if(has_ch, -1, 0)), p_tail);
-  defvar p_mc32    = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size,
-      i32:$mask, i64:$ch, -1, !if(has_ch, -1, 0)), p_tail);
+  defvar p_mc16 = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size),
+                       !if(has_mc, (Intr i16:$mask), (Intr (i16 srcvalue))),
+                       !if(has_ch, (Intr i64:$ch), (Intr (i64 srcvalue))),
+                       (Intr !if(has_mc, -1, 0), !if(has_ch, -1, 0)), p_tail);
+  defvar p_mc32 = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size),
+                       !if(has_mc, (Intr i32:$mask), (Intr (i32 srcvalue))),
+                       !if(has_ch, (Intr i64:$ch), (Intr (i64 srcvalue))),
+                       (Intr !if(has_mc, -1, 0), !if(has_ch, -1, 0)), p_tail);
 
+  defvar args_mc = !if(has_mc, ", $mask", "");
   defvar args_ch = !if(has_ch, ", $ch", "");
 
   // 16-bit multicast mask variants
-  def "" : NVPTXInst<(outs), ins_i16,
-      asm_nomc # " [$dst], [$src], $size, [$mbar]" # args_ch # ";",
-      [p_no_mc16]>, Requires<preds>;
-  def _MC : NVPTXInst<(outs), ins_i16,
-      asm_mc16 # " [$dst], [$src], $size, [$mbar], $mask" # args_ch # ";",
+  def _MC16 : NVPTXInst<(outs), ins_i16,
+      asm_mc16 # " [$dst], [$src], $size, [$mbar]" # args_mc # args_ch # ";",
       [p_mc16]>, Requires<preds>;
 
   // 32-bit multicast mask variants
   let Predicates = [hasRubinFamilySupport] in {
-    def _NO_MC32 : NVPTXInst<(outs), ins_i32,
-        asm_nomc # " [$dst], [$src], $size, [$mbar]" # args_ch # ";",
-        [p_no_mc32]>;
     def _MC32 : NVPTXInst<(outs), ins_i32,
-        asm_mc32 # " [$dst], [$src], $size, [$mbar], $mask" # args_ch # ";",
+        asm_mc32 # " [$dst], [$src], $size, [$mbar]" # args_mc # args_ch # ";",
         [p_mc32]>;
   }
 }
+defm CP_ASYNC_BULK_G2S_NO            : CP_ASYNC_BULK_G2S_INTR</*has_mc=*/0, /*has_ch=*/0, /*is_relaxed=*/0>;
+defm CP_ASYNC_BULK_G2S_CH_NO         : CP_ASYNC_BULK_G2S_INTR</*has_mc=*/0, /*has_ch=*/1, /*is_relaxed=*/0>;
+defm CP_ASYNC_BULK_G2S_RELAXED_NO    : CP_ASYNC_BULK_G2S_INTR</*has_mc=*/0, /*has_ch=*/0, /*is_relaxed=*/1>;
+defm CP_ASYNC_BULK_G2S_RELAXED_CH_NO : CP_ASYNC_BULK_G2S_INTR</*has_mc=*/0, /*has_ch=*/1, /*is_relaxed=*/1>;
+defm CP_ASYNC_BULK_G2S               : CP_ASYNC_BULK_G2S_INTR</*has_mc=*/1, /*has_ch=*/0, /*is_relaxed=*/0>;
+defm CP_ASYNC_BULK_G2S_CH            : CP_ASYNC_BULK_G2S_INTR</*has_mc=*/1, /*has_ch=*/1, /*is_relaxed=*/0>;
+defm CP_ASYNC_BULK_G2S_RELAXED       : CP_ASYNC_BULK_G2S_INTR</*has_mc=*/1, /*has_ch=*/0, /*is_relaxed=*/1>;
+defm CP_ASYNC_BULK_G2S_RELAXED_CH    : CP_ASYNC_BULK_G2S_INTR</*has_mc=*/1, /*has_ch=*/1, /*is_relaxed=*/1>;
 
-defm CP_ASYNC_BULK_G2S            : CP_ASYNC_BULK_G2S_INTR</*has_ch=*/0, /*is_relaxed=*/0>;
-defm CP_ASYNC_BULK_G2S_CH         : CP_ASYNC_BULK_G2S_INTR</*has_ch=*/1, /*is_relaxed=*/0>;
-defm CP_ASYNC_BULK_G2S_RELAXED    : CP_ASYNC_BULK_G2S_INTR</*has_ch=*/0, /*is_relaxed=*/1, [hasCpAsyncBulkRelaxedSupport]>;
-defm CP_ASYNC_BULK_G2S_RELAXED_CH : CP_ASYNC_BULK_G2S_INTR</*has_ch=*/1, /*is_relaxed=*/1, [hasCpAsyncBulkRelaxedSupport]>;
+multiclass CP_ASYNC_BULK_G2S_CTA_INTR<bit has_ch, bit is_relaxed> {
+  defvar preds = !if(is_relaxed,
+                     [hasCpAsyncBulkRelaxedSupport],
+                     [hasCpAsyncBulkCTASupport]);
 
-multiclass CP_ASYNC_BULK_G2S_CTA_INTR<bit has_ch, bit is_relaxed,
-                                      list<Predicate> preds = [hasCpAsyncBulkCTASupport]> {
   defvar Intr =
     !cast<Intrinsic>("int_nvvm_cp_async_bulk_global_to_shared_cta" #
                      !if(is_relaxed, "_relaxed", ""));
@@ -639,20 +654,22 @@ multiclass CP_ASYNC_BULK_G2S_CTA_INTR<bit has_ch, bit is_relaxed,
       (ins MemScopeFlags:$flag_scope, TMAValidateDataFlags:$flag_valid_pattern),
       (ins TMAValidateDataFlags:$flag_valid_pattern));
 
-  defvar ins_dag = !con((ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size,
-                          B64:$ch), ins_tail);
-  defvar ins_oob_dag   = !con((ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size,
-                           B32:$ibl, B32:$ibr, B64:$ch), ins_tail);
+  defvar ins_dag = !con((ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size),
+                        !if(has_ch, (ins B64:$ch), (ins)), ins_tail);
+  defvar ins_oob_dag = !con((ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size, B32:$ibl, B32:$ibr),
+                            !if(has_ch, (ins B64:$ch), (ins)), ins_tail);
 
   // flag_ch/flag_oob are matched with bare constants (0 = false, -1 = true);
   // flag_valid_pattern must be forwarded, hence the bindable TImmLeaf.
   defvar p_tail = !if(is_relaxed,
       (Intr async_bulk_scope_imm:$flag_scope, tma_validate_data_imm:$flag_valid_pattern),
       (Intr tma_validate_data_imm:$flag_valid_pattern));
-  defvar p     = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size,
-      (i32 srcvalue), (i32 srcvalue), i64:$ch, !if(has_ch, -1, 0), 0), p_tail);
-  defvar p_oob = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size,
-      i32:$ibl, i32:$ibr, i64:$ch, !if(has_ch, -1, 0), -1), p_tail);
+  defvar p = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size, (i32 srcvalue), (i32 srcvalue)),
+                  !if(has_ch, (Intr i64:$ch, -1), (Intr (i64 srcvalue), 0)),
+                  (Intr 0), p_tail);
+  defvar p_oob = !con((Intr addr:$dst, addr:$mbar, addr:$src, i32:$size, i32:$ibl, i32:$ibr),
+                      !if(has_ch, (Intr i64:$ch, -1), (Intr (i64 srcvalue), 0)),
+                      (Intr -1), p_tail);
 
   defvar args_ch = !if(has_ch, ", $ch", "");
 
@@ -667,8 +684,8 @@ multiclass CP_ASYNC_BULK_G2S_CTA_INTR<bit has_ch, bit is_relaxed,
 
 defm CP_ASYNC_BULK_G2S_CTA            : CP_ASYNC_BULK_G2S_CTA_INTR</*has_ch=*/0, /*is_relaxed=*/0>;
 defm CP_ASYNC_BULK_G2S_CTA_CH         : CP_ASYNC_BULK_G2S_CTA_INTR</*has_ch=*/1, /*is_relaxed=*/0>;
-defm CP_ASYNC_BULK_G2S_CTA_RELAXED    : CP_ASYNC_BULK_G2S_CTA_INTR</*has_ch=*/0, /*is_relaxed=*/1, [hasCpAsyncBulkRelaxedSupport]>;
-defm CP_ASYNC_BULK_G2S_CTA_RELAXED_CH : CP_ASYNC_BULK_G2S_CTA_INTR</*has_ch=*/1, /*is_relaxed=*/1, [hasCpAsyncBulkRelaxedSupport]>;
+defm CP_ASYNC_BULK_G2S_CTA_RELAXED    : CP_ASYNC_BULK_G2S_CTA_INTR</*has_ch=*/0, /*is_relaxed=*/1>;
+defm CP_ASYNC_BULK_G2S_CTA_RELAXED_CH : CP_ASYNC_BULK_G2S_CTA_INTR</*has_ch=*/1, /*is_relaxed=*/1>;
 
 def CP_ASYNC_BULK_CTA_TO_CLUSTER : NVPTXInst<(outs),
   (ins ADDR:$dst, ADDR:$mbar, ADDR:$src, B32:$size),
@@ -677,12 +694,19 @@ def CP_ASYNC_BULK_CTA_TO_CLUSTER : NVPTXInst<(outs),
   Requires<[PTX80, SM90]>;
 
 multiclass CP_ASYNC_BULK_PREFETCH_INTR<bit has_ch> {
-  def "" : NVPTXInst<(outs), (ins ADDR:$src, B32:$size, B64:$ch),
-      !if(has_ch,
-          "cp.async.bulk.prefetch.L2.global.L2::cache_hint" # " [$src], $size, $ch;",
-          "cp.async.bulk.prefetch.L2.global" # " [$src], $size;"),
-      [(int_nvvm_cp_async_bulk_prefetch_L2 addr:$src, i32:$size, i64:$ch, !if(has_ch, -1, 0))]>,
-      Requires<[PTX80, SM90]>;
+  defvar Intr = int_nvvm_cp_async_bulk_prefetch_L2;
+  
+  defvar ins_dag = !con((ins ADDR:$src, B32:$size), !if(has_ch, (ins B64:$ch), (ins)));
+  
+  defvar asm = "cp.async.bulk.prefetch.L2.global" 
+               # !if(has_ch, ".L2::cache_hint", "")
+               # " [$src], $size"
+               # !if(has_ch, ", $ch", "")
+               # ";";
+  
+  defvar pattern = !con((Intr addr:$src, i32:$size), !if(has_ch, (Intr i64:$ch, -1), (Intr (i64 srcvalue), 0)));
+  
+  def "" : NVPTXInst<(outs), ins_dag, asm, [pattern]>, Requires<[PTX80, SM90]>;
 }
 defm CP_ASYNC_BULK_PREFETCH    : CP_ASYNC_BULK_PREFETCH_INTR<has_ch = 0>;
 defm CP_ASYNC_BULK_PREFETCH_CH : CP_ASYNC_BULK_PREFETCH_INTR<has_ch = 1>;
@@ -1353,14 +1377,17 @@ multiclass TMA_TENSOR_PREFETCH_INTR<int dim, string mode,
   defvar intr = !cast<Intrinsic>(
                   "int_nvvm_cp_async_bulk_tensor_prefetch_" # intr_suffix);
 
-  defvar ins_dag  = !con((ins  B64:$tmap),
+  defvar ins_dag  = !con((ins B64:$tmap),
                          dims_dag,
-                         im2col_dag,
-                         (ins B64:$ch));
+                         im2col_dag);
+  defvar ins_dag_ch = !con((ins  B64:$tmap),
+                           dims_dag,
+                           im2col_dag,
+                           (ins B64:$ch));
   defvar intr_dag = !con((intr B64:$tmap),
                          !setdagop(dims_dag, intr),
                          !setdagop(im2col_dag, intr),
-                         (intr B64:$ch, 0));
+                         (intr (i64 srcvalue), 0));
   defvar intr_dag_with_ch = !con((intr B64:$tmap),
                                  !setdagop(dims_dag, intr),
                                  !setdagop(im2col_dag, intr),
@@ -1370,7 +1397,7 @@ multiclass TMA_TENSOR_PREFETCH_INTR<int dim, string mode,
              inst_name # asm_str # ";",
              [intr_dag]>,
              Requires<pred>;
-  def _CH : NVPTXInst<(outs), ins_dag,
+  def _CH : NVPTXInst<(outs), ins_dag_ch,
               inst_name # ".L2::cache_hint" # asm_str # ", $ch;",
               [intr_dag_with_ch]>,
               Requires<pred>;
