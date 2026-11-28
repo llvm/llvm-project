@@ -161,6 +161,14 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, GRLenVT, Expand);
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
   setOperationAction(ISD::SELECT_CC, GRLenVT, Expand);
+  // LoongArch has no single setcc instruction for these condition codes.
+  // Expand them into a setlt/setult/setgt/setugt plus an inversion, so the
+  // resulting (xor (setcc ...), 1) form can be folded with the immediate when
+  // possible, matching what RISC-V does.
+  setCondCodeAction(ISD::SETGE, GRLenVT, Expand);
+  setCondCodeAction(ISD::SETLE, GRLenVT, Expand);
+  setCondCodeAction(ISD::SETUGE, GRLenVT, Expand);
+  setCondCodeAction(ISD::SETULE, GRLenVT, Expand);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
   setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, GRLenVT, Expand);
 
@@ -7121,11 +7129,23 @@ static SDValue combineSubOfBoolean(SDNode *N, SelectionDAG &DAG) {
   if (!N0C)
     return SDValue();
 
-  // (sub 0, X) is a negation, not a constant materialization; rewriting it
-  // as (add (setcc inv), -1) changes the condition code and can duplicate a
-  // compare, without saving any instruction.
-  if (N0C->isZero() && !N->hasOneUse())
-    return SDValue();
+  // (sub 0, X) is a negation, not a constant materialization.  Rewriting it
+  // as (add (setcc inv), -1) changes the condition code; keep it only when
+  // the compare has no non-zero constant (so the inverted form still uses an
+  // immediate or $zero) and the result has a single user.
+  if (N0C->isZero()) {
+    if (!N->hasOneUse())
+      return SDValue();
+    SDValue Cmp = N1;
+    if (Cmp.getOpcode() == ISD::XOR && isOneConstant(Cmp.getOperand(1)))
+      Cmp = Cmp.getOperand(0);
+    if (Cmp.getOpcode() == ISD::SETCC) {
+      auto *C0 = dyn_cast<ConstantSDNode>(Cmp.getOperand(0));
+      auto *C1 = dyn_cast<ConstantSDNode>(Cmp.getOperand(1));
+      if ((C0 && !C0->isZero()) || (C1 && !C1->isZero()))
+        return SDValue();
+    }
+  }
 
   // The result of this fold is only folded into an ADDI when it is used
   // directly.  When it feeds an extend, the original (sub C, X) form usually
@@ -7662,6 +7682,68 @@ Retry2:
 
 static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
                                  const LoongArchSubtarget &Subtarget) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  // Fold (xor (setcc constant, y, setlt), 1) -> (setcc y, constant + 1, setlt).
+  // After SETGE/SETLE/SETUGE/SETULE are expanded into an inverted SETLT, this
+  // re-folds the inversion back into a single slti/sltui when the constant ends
+  // up on the left hand side of the comparison.
+  // The setcc may be wrapped in an any_extend/truncate (e.g. a zext whose
+  // upper bits are known to be zero), as in the SIGN_EXTEND_INREG combine.
+  SDValue Cmp = N0;
+  if (Cmp.getOpcode() == ISD::ANY_EXTEND ||
+      Cmp.getOpcode() == ISD::ZERO_EXTEND || Cmp.getOpcode() == ISD::TRUNCATE)
+    Cmp = Cmp.getOperand(0);
+  // A xor with 1 produces a normalized 0/1 value, but xor with -1 only
+  // inverts the low bit; only fold the latter when the xor feeds a sign
+  // extension, which consumes just that bit.
+  bool IsNot = isAllOnesConstant(N1);
+  if (IsNot) {
+    if (!N->hasOneUse())
+      return SDValue();
+    SDNode *User = N->use_begin()->getUser();
+    if (User->getOpcode() != ISD::SIGN_EXTEND_INREG)
+      return SDValue();
+    // The xor -1 only flips the low bit, so it can be folded only when the
+    // sign extension consumes a single bit.  A wider SIGN_EXTEND_INREG (e.g.
+    // from i2) observes the other bits produced by the xor.
+    EVT ExtVT = cast<VTSDNode>(User->getOperand(1))->getVT();
+    if (ExtVT != MVT::i1)
+      return SDValue();
+  }
+
+  if (Cmp.getOpcode() == ISD::SETCC && (isOneConstant(N1) || IsNot) &&
+      Cmp.hasOneUse()) {
+    ISD::CondCode CC = cast<CondCodeSDNode>(Cmp.getOperand(2))->get();
+    EVT VT = N->getValueType(0);
+    EVT CmpVT = Cmp.getOperand(0).getValueType();
+    SDLoc DL(N);
+    if (auto *CLHS = dyn_cast<ConstantSDNode>(Cmp.getOperand(0))) {
+      // (xor (setcc C, y, setlt), 1) -> (setcc y, C + 1, setlt)
+      APInt C = CLHS->getAPIntValue();
+      // C == INT_MAX would wrap C + 1 and change the result.
+      if (CC == ISD::SETLT && C != APInt::getSignedMaxValue(C.getBitWidth()) &&
+          (C + 1).isSignedIntN(12))
+        return DAG.getSetCC(DL, VT, Cmp.getOperand(1),
+                            DAG.getConstant(C + 1, DL, CmpVT), ISD::SETLT);
+    } else if (auto *CRHS = dyn_cast<ConstantSDNode>(Cmp.getOperand(1))) {
+      APInt C = CRHS->getAPIntValue();
+      APInt C1 = C + 1;
+      // (xor (setcc x, C, setgt), 1) -> (setcc x, C + 1, setlt)
+      // Even when C + 1 does not fit simm12 the compare can materialize the
+      // constant, which is still better than materializing C and emitting an
+      // extra xori.  Exclude C == INT_MAX (the increment would wrap).
+      if (CC == ISD::SETGT && C != APInt::getSignedMaxValue(C.getBitWidth()))
+        return DAG.getSetCC(DL, VT, Cmp.getOperand(0),
+                            DAG.getConstant(C1, DL, CmpVT), ISD::SETLT);
+      // (xor (setcc x, C, setugt), 1) -> (setcc x, C + 1, setult)
+      if (CC == ISD::SETUGT && !C.isAllOnes())
+        return DAG.getSetCC(DL, VT, Cmp.getOperand(0),
+                            DAG.getConstant(C1, DL, CmpVT), ISD::SETULT);
+    }
+  }
+
   EVT VT = N->getValueType(0);
   // LA64 promotes i32 integer operations to GPR-width operations during
   // legalization. Match the idiom before that promotion as well as after
@@ -9779,6 +9861,11 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     // otherwise dead.  Inverting a shared compare duplicates it (e.g. an FP
     // compare used by a zext as well).
     if (!XorOp.hasOneUse())
+      return SDValue();
+
+    // A constant on the left-hand side cannot use the slti/sltui immediate
+    // forms; leave it for the generic combiner to canonicalize.
+    if (isa<ConstantSDNode>(XorOp.getOperand(0)))
       return SDValue();
 
     // A constant compare with a greater-than style condition code cannot use
