@@ -29962,8 +29962,14 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
         EVT N00VT = N0.getOperand(0).getValueType();
         if (VT.getScalarSizeInBits() <= N00VT.getScalarSizeInBits() &&
             VT.isInteger() && N00VT.isInteger()) {
-          EVT InVT =
-              TLI.getTypeToTransformTo(*DAG.getContext(), VT.getScalarType());
+          EVT SVT = VT.getScalarType();
+          EVT InVT = TLI.getTypeToTransformTo(*DAG.getContext(), SVT);
+          // This won't happen after type legalization. Since VT is legal, SVT
+          // is expected to have a power-of-two bit size. If legalization of
+          // SVT is expand, then since N00's operand is at least as wide as
+          // SVT, its type should also be illegal, but N00's operand is legal.
+          if (InVT.bitsLT(SVT))
+            InVT = SVT;
           SDValue Op = DAG.getZExtOrTrunc(N0.getOperand(0).getOperand(0),
                                           SDLoc(N), InVT);
           return DAG.getSplatBuildVector(VT, SDLoc(N), Op);
