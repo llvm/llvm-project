@@ -1,4 +1,5 @@
 ## Check that BOLT counters are LLVM statistics, printed by -stats/-stats-json.
+REQUIRES: asserts
 
 RUN: yaml2obj %p/Inputs/blarge_new.yaml &> %t.exe
 RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/blarge_new.preagg.txt \
