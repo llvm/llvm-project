@@ -402,7 +402,7 @@ bool GlobalValue::isNoipaFnDef() const {
   const Function *F = dyn_cast<Function>(this);
   if (!F || F->isDeclaration())
     return false;
-  return F->hasFnAttribute(Attribute::NoIPA);
+  return F->isNoIPA();
 }
 
 bool GlobalValue::isDeclaration() const {
