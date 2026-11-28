@@ -2006,6 +2006,12 @@ TEST_F(FormatTestJS, ImportWrapping) {
   verifyFormat("import {VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying,"
                " VeryLongImportsAreAnnoying, VeryLongImportsAreAnnoying"
                "} from 'some/module.js';");
+
+  FormatStyle NoWrapStyle = getGoogleJSStyleWithColumns(0);
+  NoWrapStyle.JavaScriptWrapImports = false;
+  verifyFormat("import {aaa, bbb, ccc} from 'abc';",
+               "import {aaa, bbb, ccc} from 'abc';", NoWrapStyle);
+
   FormatStyle Style = getGoogleJSStyleWithColumns(80);
   Style.JavaScriptWrapImports = true;
   verifyFormat("import {\n"
