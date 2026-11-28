@@ -448,14 +448,14 @@ void SymbolFileBreakpad::FindFunctions(const RegularExpression &regex,
   // TODO
 }
 
-void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
+bool SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
   Log *log = GetLog(LLDBLog::Symbols);
   Module &module = *m_objfile_sp->GetModule();
   addr_t base = GetBaseFileAddress();
   if (base == LLDB_INVALID_ADDRESS) {
     LLDB_LOG(log, "Unable to fetch the base address of object file. Skipping "
                   "symtab population.");
-    return;
+    return false;
   }
 
   const SectionList &list = *module.GetSectionList();
@@ -495,6 +495,7 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
   for (Symbol &symbol : symbols)
     symtab.AddSymbol(std::move(symbol));
   symtab.Finalize();
+  return !symbols.empty();
 }
 
 llvm::Expected<lldb::addr_t>
