@@ -1,13 +1,16 @@
-; RUN: opt -passes=loop-vectorize -mtriple=x86_64-linux-gnu -mcpu=x86-64 -S %s | FileCheck %s
-; RUN: opt -passes=loop-vectorize -mtriple=x86_64-linux-gnu -mcpu=x86-64-v2 -S %s | FileCheck %s
-; RUN: opt -passes=loop-vectorize -mtriple=x86_64-linux-gnu -mcpu=x86-64-v3 -S %s | FileCheck %s
-; RUN: opt -passes=loop-vectorize -mtriple=x86_64-linux-gnu -mcpu=x86-64-v4 -S %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple=x86_64-linux-gnu -mcpu=x86-64 -S %s | FileCheck %s --check-prefixes=CHECK,V1
+; RUN: opt -passes=loop-vectorize -mtriple=x86_64-linux-gnu -mcpu=x86-64-v2 -S %s | FileCheck %s --check-prefixes=CHECK,V2
+; RUN: opt -passes=loop-vectorize -mtriple=x86_64-linux-gnu -mcpu=x86-64-v3 -S %s | FileCheck %s --check-prefixes=CHECK,V3
+; RUN: opt -passes=loop-vectorize -mtriple=x86_64-linux-gnu -mcpu=x86-64-v4 -S %s | FileCheck %s --check-prefixes=CHECK,V4
 
 ; Test case for https://github.com/llvm/llvm-project/issues/217019.
 
 define i32 @satd8_derived(ptr nofree noundef readonly captures(none) %src1, i64 noundef %stride1, ptr nofree noundef readonly captures(none) %src2, i64 noundef %stride2) local_unnamed_addr {
 ; CHECK-LABEL: define i32 @satd8_derived(
-; CHECK-NOT: vector.body:
+; V1-NOT: vector.body:
+; V2-NOT: vector.body:
+; V3: vector.body:
+; V4: vector.body:
 ;
 entry:
   br label %.preheader

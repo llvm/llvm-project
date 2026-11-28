@@ -3958,47 +3958,27 @@ bool LoopAccessInfo::isInvariant(Value *V) const {
   return SE->isLoopInvariant(S, TheLoop);
 }
 
-/// If \p Ptr is a GEP, which has a loop-variant operand, return that operand.
-/// Otherwise, return \p Ptr.
-static Value *getLoopVariantGEPOperand(Value *Ptr, ScalarEvolution *SE,
-                                       Loop *Lp) {
-  auto *GEP = dyn_cast<GetElementPtrInst>(Ptr);
-  if (!GEP)
-    return Ptr;
+/// Return a stride to speculate to unit, for both consecutive and
+/// non-consecutive memory accesses of type \p AccessTy.
+static const SCEV *getStrideToSpeculate(Value *Ptr, ScalarEvolution *SE,
+                                        Loop *Lp, Type *AccessTy) {
+  assert(Ptr->getType()->isPointerTy() && "Pointer type expected");
 
-  Value *V = Ptr;
-  for (const Use &U : GEP->operands()) {
-    if (!SE->isLoopInvariant(SE->getSCEV(U), Lp)) {
-      if (V == Ptr)
-        V = U;
-      else
-        // There must be exactly one loop-variant operand.
-        return Ptr;
-    }
-  }
-  return V;
-}
-
-/// Get the stride of a pointer access in a loop. Looks for symbolic
-/// strides "a[i*stride]". Returns the symbolic stride, or null otherwise.
-static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *Lp) {
-  auto *PtrTy = dyn_cast<PointerType>(Ptr->getType());
-  if (!PtrTy)
+  const DataLayout &DL = SE->getDataLayout();
+  TypeSize AllocSz = DL.getTypeAllocSize(AccessTy);
+  if (AllocSz.isScalable())
     return nullptr;
 
-  // Try to remove a gep instruction to make the pointer (actually index at this
-  // point) easier analyzable. If OrigPtr is equal to Ptr we are analyzing the
-  // pointer, otherwise, we are analyzing the index.
-  Value *OrigPtr = Ptr;
+  // Get the stride of the GEP, stripping any scaling factors and casts.
+  const SCEV *V = SE->removePointerBase(SE->getSCEV(Ptr));
+  match(V, m_scev_IntegralCast(m_SCEV(V)));
+  APInt One(V->getType()->getIntegerBitWidth(), 1);
+  const APInt *GEPStride;
+  if (!match(V, m_scev_Mul(m_scev_APInt(GEPStride),
+                           m_scev_IntegralCastOrSelf(m_SCEV(V)))))
+    GEPStride = &One;
 
-  Ptr = getLoopVariantGEPOperand(Ptr, SE, Lp);
-  const SCEV *V = SE->getSCEV(Ptr);
-
-  if (Ptr != OrigPtr)
-    // Strip off casts.
-    while (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
-      V = C->getOperand();
-
+  // The stride to speculate must be the AddRec's step.
   if (!match(V, m_scev_AffineAddRec(m_SCEV(), m_SCEV(V), m_SpecificLoop(Lp))))
     return nullptr;
 
@@ -4007,17 +3987,19 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
   if (!SE->isLoopInvariant(V, Lp))
     return nullptr;
 
-  // Look for the loop invariant symbolic value.
-  if (isa<SCEVUnknown>(V))
-    return V;
+  // Do not speculate when the access is fundamentally impossible to handle, as
+  // a consecutive or non-consecutive access.
+  if (APInt(GEPStride->getBitWidth(), AllocSz.getFixedValue())
+          .urem(*GEPStride) != 0)
+    return nullptr;
 
-  // Look through multiplies that scale a stride by a constant.
-  match(V, m_scev_Mul(m_SCEVConstant(), m_SCEV(V)));
-  if (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
-    if (isa<SCEVUnknown>(C->getOperand()))
-      return V;
+  // Let the caller handle the integral cast.
+  if (match(V, m_scev_Mul(m_SCEVConstant(),
+                          m_scev_IntegralCastOrSelf(m_SCEVUnknown()))))
+    return cast<SCEVMulExpr>(V)->getOperand(1);
 
-  return nullptr;
+  // Again, let the caller handle the integral cast.
+  return match(V, m_scev_IntegralCastOrSelf(m_SCEVUnknown())) ? V : nullptr;
 }
 
 void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
@@ -4031,7 +4013,8 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // computation of an interesting IV - but we chose not to as we
   // don't have a cost model here, and broadening the scope exposes
   // far too many unprofitable cases.
-  const SCEV *StrideExpr = getStrideFromPointer(Ptr, PSE->getSE(), TheLoop);
+  const SCEV *StrideExpr = getStrideToSpeculate(Ptr, PSE->getSE(), TheLoop,
+                                                getLoadStoreType(MemAccess));
   if (!StrideExpr)
     return;
 
