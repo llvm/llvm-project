@@ -573,6 +573,7 @@ public:
 
   uint64_t beginOffset() const { return BeginOffset; }
   uint64_t endOffset() const { return EndOffset; }
+  uint64_t size() const { return EndOffset - BeginOffset; }
 
   bool isSplittable() const { return UseAndIsSplittable.getInt(); }
   void makeUnsplittable() { UseAndIsSplittable.setInt(false); }
@@ -1053,6 +1054,8 @@ class AllocaSlices::SliceBuilder : public PtrUseVisitor<SliceBuilder> {
   const uint64_t AllocSize;
   AllocaSlices &AS;
 
+  /// Map from a MemTransferInst to the index of the slice we created the
+  /// previous time we visited it.
   SmallDenseMap<Instruction *, unsigned> MemTransferSliceMap;
   SmallDenseMap<Instruction *, uint64_t> PHIOrSelectSizes;
 
@@ -1255,34 +1258,12 @@ private:
       return insertUse(II, Offset, Size, /*IsSplittable=*/false);
     }
 
-    // If we have seen both source and destination for a mem transfer, then
-    // they both point to the same alloca.
-    bool Inserted;
-    SmallDenseMap<Instruction *, unsigned>::iterator MTPI;
-    std::tie(MTPI, Inserted) =
-        MemTransferSliceMap.insert(std::make_pair(&II, AS.Slices.size()));
-    unsigned PrevIdx = MTPI->second;
-    if (!Inserted) {
-      Slice &PrevP = AS.Slices[PrevIdx];
+    // Record the index of the slice we're about to insert, so we can find it if
+    // we visit this instruction a second time for the other operand.
+    MemTransferSliceMap[&II] = AS.Slices.size();
 
-      // Check if the begin offsets match and this is a non-volatile transfer.
-      // In that case, we can completely elide the transfer.
-      if (!II.isVolatile() && PrevP.beginOffset() == RawOffset) {
-        PrevP.kill();
-        return markAsDead(II);
-      }
-
-      // Otherwise we have an offset transfer within the same alloca. We can't
-      // split those.
-      PrevP.makeUnsplittable();
-    }
-
-    // Insert the use now that we've fixed up the splittable nature.
-    insertUse(II, Offset, Size, /*IsSplittable=*/Inserted && Length);
-
-    // Check that we ended up with a valid index in the map.
-    assert(AS.Slices[PrevIdx].getUse()->getUser() == &II &&
-           "Map index doesn't point back to a slice with this user.");
+    // Memory transfers with known length are splittable
+    insertUse(II, Offset, Size, /*IsSplittable=*/Length);
   }
 
   // Disable SRoA for any intrinsics except for lifetime invariants.
@@ -5046,13 +5027,22 @@ public:
   LoadInst *createLoad(Value *BasePtr, Iterator &It, Instruction *SplitI) {
     Type *PartTy = Type::getIntNTy(SplitI->getContext(), It.getSize() * 8);
     Type *PartPtrTy = BasePtr->getType();
-    unsigned AS = getLoadStoreAddressSpace(SplitI);
+    unsigned AS;
+    Align AdjustedAlign;
+    if (auto *MTI = dyn_cast<MemTransferInst>(SplitI)) {
+      AS = MTI->getSourceAddressSpace();
+      AdjustedAlign =
+          commonAlignment(MTI->getSourceAlign().valueOrOne(), It.getOffset());
+    } else {
+      AS = getLoadStoreAddressSpace(SplitI);
+      AdjustedAlign = getAdjustedAlignment(SplitI, It.getOffset());
+    }
     LoadInst *PLoad = IRB.CreateAlignedLoad(
         PartTy,
         getAdjustedPtr(IRB, DL, BasePtr,
                        APInt(DL.getIndexSizeInBits(AS), It.getOffset()),
                        PartPtrTy, BasePtr->getName() + "."),
-        getAdjustedAlignment(SplitI, It.getOffset()),
+        AdjustedAlign,
         /*IsVolatile*/ false, SplitI->getName());
     PLoad->copyMetadata(*SplitI, {LLVMContext::MD_mem_parallel_loop_access,
                                   LLVMContext::MD_access_group});
@@ -5062,13 +5052,22 @@ public:
   StoreInst *createStore(Value *StoreVal, Value *BasePtr, Iterator &It,
                          Instruction *SplitI) {
     Type *PartPtrTy = BasePtr->getType();
-    unsigned AS = getLoadStoreAddressSpace(SplitI);
+    unsigned AS;
+    Align AdjustedAlign;
+    if (auto *MTI = dyn_cast<MemTransferInst>(SplitI)) {
+      AS = MTI->getDestAddressSpace();
+      AdjustedAlign =
+          commonAlignment(MTI->getDestAlign().valueOrOne(), It.getOffset());
+    } else {
+      AS = getLoadStoreAddressSpace(SplitI);
+      AdjustedAlign = getAdjustedAlignment(SplitI, It.getOffset());
+    }
     StoreInst *PStore = IRB.CreateAlignedStore(
         StoreVal,
         getAdjustedPtr(IRB, DL, BasePtr,
                        APInt(DL.getIndexSizeInBits(AS), It.getOffset()),
                        PartPtrTy, BasePtr->getName() + "."),
-        getAdjustedAlignment(SplitI, It.getOffset()),
+        AdjustedAlign,
         /*IsVolatile*/ false);
     PStore->copyMetadata(*SplitI, {LLVMContext::MD_mem_parallel_loop_access,
                                    LLVMContext::MD_access_group,
@@ -5108,7 +5107,7 @@ public:
 static Slice *findOverlappingCopySlice(Slice &S,
                                        InstructionSliceMap &SliceMap) {
   // Single byte slices can't partially overlap anything
-  if (S.endOffset() - S.beginOffset() == 1)
+  if (S.size() == 1)
     return nullptr;
   // The source/destination of this slice needs to be a memory instruction
   // whose slice overlaps this one.
@@ -5122,6 +5121,9 @@ static Slice *findOverlappingCopySlice(Slice &S,
     J = dyn_cast<Instruction>(SI->getValueOperand());
     if (!J || !J->hasOneUser())
       return nullptr;
+  } else if (isa<MemTransferInst>(I)) {
+    // If we have an overlap it will be with the other operand
+    J = I;
   } else {
     return nullptr;
   }
@@ -5171,6 +5173,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   // actually split.
   SmallVector<LoadInst *, 4> Loads;
   SmallVector<StoreInst *, 4> Stores;
+  SmallVector<MemTransferInst *, 4> MemTransfers;
 
   // We need to accumulate the splits required of each load or store where we
   // can find them via a direct lookup. This is important to cross-check loads
@@ -5181,6 +5184,11 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
     std::vector<uint64_t> Splits;
   };
   SmallDenseMap<Instruction *, SplitOffsets, 8> SplitOffsetsMap;
+
+  // A memory transfer will have one slice for the source operand and another
+  // for the destination. The source is stored in SplitOffsetsMap, so we need
+  // another map to store the destination.
+  SmallDenseMap<MemTransferInst *, Slice *, 8> MemTransferDest;
 
   // Track loads out of this alloca which cannot, for any reason, be pre-split.
   // This is important as we also cannot pre-split stores of those loads!
@@ -5250,6 +5258,22 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         assert(!SI->isVolatile() && "Cannot split volatile stores!");
 
         Stores.push_back(SI);
+      } else if (auto *MTI = dyn_cast<MemTransferInst>(I)) {
+        // Don't pre-split if the slice is too large.
+        if (!MTI->getDataLayout().fitsInLegalInteger(S.size() * 8))
+          continue;
+        // Both operands of a memory transfer may have a slice, and we want the
+        // instruction to only appear once in MemTransfers. Therefore for the
+        // source slice we record the instruction in MemTransfers and add the
+        // slice to SplitOffsetsMap, and for the destination slice we just
+        // record it in MemTransferDest then continue to the next slice.
+        if (*S.getUse() == MTI->getRawDestUse()) {
+          MemTransferDest[MTI] = &S;
+          continue;
+        }
+        assert(*S.getUse() == MTI->getRawSourceUse() &&
+               "MemTransferInst slice must be source or dest");
+        MemTransfers.push_back(MTI);
       } else {
         // Other uses cannot be pre-split.
         continue;
@@ -5277,7 +5301,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
             std::max(S.beginOffset(), CopyOverlap->beginOffset());
         uint64_t OverlapEnd = std::min(S.endOffset(), CopyOverlap->endOffset());
         uint64_t OverlapSize = OverlapEnd - OverlapStart;
-        uint64_t SliceSize = S.endOffset() - S.beginOffset();
+        uint64_t SliceSize = S.size();
         uint64_t NonOverlapSize = SliceSize - OverlapSize;
         if (OverlapSize < NonOverlapSize) {
           // When the overlap area is smaller the middle part is initially and
@@ -5360,10 +5384,15 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   llvm::erase_if(Loads, [&UnsplittableLoads](LoadInst *LI) {
     return UnsplittableLoads.count(LI);
   });
+  // Filter out memory transfers where we don't have both the source and
+  // destination slice.
+  llvm::erase_if(MemTransfers, [&MemTransferDest](MemTransferInst *MTI) {
+    return !MemTransferDest.contains(MTI);
+  });
 
   // If no loads or stores are left, there is no pre-splitting to be done for
   // this alloca.
-  if (Loads.empty() && Stores.empty())
+  if (Loads.empty() && Stores.empty() && MemTransfers.empty())
     return false;
 
   // From here on, we can't fail and will be building new accesses, so rig up
@@ -5393,7 +5422,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
     SplitLoads.clear();
 
     auto &Offsets = SplitOffsetsMap[LI];
-    unsigned SliceSize = Offsets.S->endOffset() - Offsets.S->beginOffset();
+    unsigned SliceSize = Offsets.S->size();
     assert(LI->getType()->getIntegerBitWidth() % 8 == 0 &&
            "Load must have type size equal to store size");
     assert(LI->getType()->getIntegerBitWidth() / 8 >= SliceSize &&
@@ -5484,7 +5513,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
     assert(StoreSize > 0 && "Cannot have a zero-sized integer store!");
 
     auto &Offsets = SplitOffsetsMap[SI];
-    assert(StoreSize == Offsets.S->endOffset() - Offsets.S->beginOffset() &&
+    assert(StoreSize == Offsets.S->size() &&
            "Slice size should always match load size exactly!");
     uint64_t BaseOffset = Offsets.S->beginOffset();
     assert(BaseOffset + StoreSize > BaseOffset &&
@@ -5560,6 +5589,32 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
     }
     DeadInsts.push_back(SI);
     Offsets.S->kill();
+  }
+
+  // For memory transfers we create a load of each slice followed by a store
+  // of the corresponding load slice.
+  for (MemTransferInst *MTI : MemTransfers) {
+    auto &Offsets = SplitOffsetsMap[MTI];
+    Slice *Src = Offsets.S;
+    Slice *Dst = MemTransferDest[MTI];
+    unsigned SliceSize = Src->size();
+
+    IRB.SetInsertPoint(MTI);
+    SliceSplitter Splitter(IRB, DL, Offsets.Splits, SliceSize);
+    for (auto Part : Splitter) {
+      LoadInst *PLoad = Splitter.createLoad(MTI->getSource(), Part, MTI);
+      StoreInst *PStore =
+          Splitter.createStore(PLoad, MTI->getDest(), Part, MTI);
+      PStore->moveAfter(MTI);
+      NewSlices.push_back(
+          Splitter.createSlice(PLoad, Src->beginOffset(), Part));
+      NewSlices.push_back(
+          Splitter.createSlice(PStore, Dst->beginOffset(), Part));
+    }
+
+    Src->kill();
+    Dst->kill();
+    DeadInsts.push_back(MTI);
   }
 
   // Remove the killed slices that have ben pre-split.
@@ -6153,9 +6208,25 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
     }
   }
 
+  SmallDenseMap<Instruction *, Slice *> MemTransferSlices;
+
   for (Slice &S : AS) {
     if (!S.isSplittable())
       continue;
+
+    // If we have two slices for the same MemTransferInst then that means they
+    // correspond to the source and destination and so the transfer is within
+    // the same alloca. Such slices are always unsplittable.
+    auto *MTI = dyn_cast<MemTransferInst>(S.getUse()->getUser());
+    if (MTI) {
+      auto [Iter, DidInsert] = MemTransferSlices.insert({MTI, &S});
+      if (!DidInsert) {
+        S.makeUnsplittable();
+        Iter->second->makeUnsplittable();
+        IsSorted = false;
+        continue;
+      }
+    }
 
     if ((S.beginOffset() > AllocaSize ||
          SplittableOffset.test(S.beginOffset())) &&
