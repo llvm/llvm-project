@@ -20138,7 +20138,8 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
 // (add C1, (MAT_PCREL_ADDR GlobalAddr+C2)) to
 // (MAT_PCREL_ADDR GlobalAddr+(C1+C2))
 // In this case both C1 and C2 must be known constants.
-// C1+C2 must fit into a 34 bit signed integer.
+// C1+C2 must fit into a 34 bit signed integer and stay within the bounds of
+// the global.
 static SDValue combineADDToMAT_PCREL_ADDR(SDNode *N, SelectionDAG &DAG,
                                           const PPCSubtarget &Subtarget) {
   if (!Subtarget.isUsingPCRelativeCalls())
@@ -20170,11 +20171,20 @@ static SDValue combineADDToMAT_PCREL_ADDR(SDNode *N, SelectionDAG &DAG,
   if (!isInt<34>(NewOffset))
     return SDValue();
 
+  // The relocation holds GlobalAddr+Offset-PC, which also has to fit in 34
+  // bits. The code model only guarantees that for addresses inside the
+  // referenced object, so an offset outside of it can overflow at link time.
+  // Keep those as a separate add.
+  const GlobalValue *GV = GSDN->getGlobal();
+  Type *T = GV->getValueType();
+  if (NewOffset < 0 || !T->isSized() ||
+      (uint64_t)NewOffset > GV->getDataLayout().getTypeAllocSize(T))
+    return SDValue();
+
   // The new global address is a copy of the old global address except
   // that it has the updated Offset.
-  SDValue GA =
-      DAG.getTargetGlobalAddress(GSDN->getGlobal(), DL, GSDN->getValueType(0),
-                                 NewOffset, GSDN->getTargetFlags());
+  SDValue GA = DAG.getTargetGlobalAddress(GV, DL, GSDN->getValueType(0),
+                                          NewOffset, GSDN->getTargetFlags());
   SDValue MatPCRel =
       DAG.getNode(PPCISD::MAT_PCREL_ADDR, DL, GSDN->getValueType(0), GA);
   return MatPCRel;
