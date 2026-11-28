@@ -452,24 +452,111 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
   endif()
 endif()
 
+function(_add_lto_opts tgt)
+  if (NOT uppercase_LLVM_ENABLE_LTO)
+    return()
+  endif()
+
+  set_target_properties(${tgt}
+    PROPERTIES LLVM_LTO ${uppercase_LLVM_ENABLE_LTO}
+  )
+
+  set(lto_option "")
+  if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
+    set(lto_option -flto=thin)
+  elseif(uppercase_LLVM_ENABLE_LTO STREQUAL "FULL")
+    set(lto_option -flto=full)
+  else()
+    set_target_properties(${tgt} PROPERTIES
+      INTERPROCEDURAL_OPTIMIZATION_RELEASE ON
+      INTERPROCEDURAL_OPTIMIZATION_MINSIZEREAL ON
+    )
+  endif()
+  set(lto_genex $<$<CONFIG:Relase,MinSizeRel>:${lto_option}>)
+  target_compile_options(${tgt}
+    PRIVATE
+      ${lto_genex}
+  )
+  get_target_property(linker_lang ${tgt} LINKER_LANGUAGE)
+  if(NOT linker_lang)
+    set(linker_lang C)
+  endif()
+  get_target_property(linker_type ${tgt} LINKER_TYPE)
+  if(NOT linker_type)
+    set(linker_type DEFAULT)
+  endif()
+  if(CMAKE_${linker_lang}_COMPILER_LINKER_FRONTEND_VARIANT STREQUAL "GNU")
+    target_link_options(${tgt}
+      PRIVATE
+        ${lto_genex}
+    )
+  endif()
+  
+
+  # If the linker supports it, enable the lto cache. This improves initial build
+  # time a little since we re-link a lot of the same objects, and significantly
+  # improves incremental build time.
+  # FIXME: We should move all this logic into the clang driver.
+  set(lto_cache_ld64 "LINKER:-cache_path_lto,${LLVM_THINLTO_CACHE_PATH}")
+  set(lto_cache_lld "LINKER:--thinlto-cache-dir=${LLVM_THINLTO_CACHE_PATH}")
+  set(lto_cache_gold "LINKER:--plugin-opt,cache-dir=${LLVM_THINLTO_CACHE_PATH}")
+  set(lto_cache_lld_link "/lldltocache:${LLVM_THINLTO_CACHE_PATH}")
+  set(ld64_candidates AppleClang)
+  set(lld_candidates "")
+  set(gold_candidates GOLD)
+  set(lld_link_candidates "")
+
+  if(CMAKE_${linker_lang}_COMPILER_LINKER_FRONTEND_VARIANT STREQUAL "GNU"
+      AND CMAKE_${linker_lang}_COMPILER_LINKER_ID STREQUAL "LLD")
+    list(APPEND lld_candidates DEFAULT)
+  elseif(CMAKE_${linker_lang}_COMPILER_LINKER_FRONTEND_VARIANT STREQUAL "MSVC"
+      AND CMAKE_${linker_lang}_COMPILER_LINKER_ID STREQUAL "LLD")
+    list(APPEND lld_link_candidates DEFAULT)
+  elseif(CMAKE_${linker_lang}_COMPILER_LINKER_ID STREQUAL "AppleClang")
+    list(APPEND ld64_candidates DEFAULT)
+  elseif(CMAKE_${linker_lang}_COMPILER_LINKER_ID STREQUAL "GNUgold")
+    list(APPEND gold_candidates DEFAULT)
+  endif()
+
+  if(APPLE)
+    list(APPEND ld64_candidates SYSTEM)
+  elseif(MSVC)
+    list(APPEND lld_link_candidates LLD)
+  elseif(CMAKE_${linker_lang}_COMPILER_LINKER_FRONTEND_VARIANT STREQUAL "GNU")
+    list(APPEND lld_candidates LLD)
+  endif()
+
+  set(lto_cache_xl "-bplugin_opt:-legacy-thinlto-cache-dir=${LLVM_THINLTO_CACHE_PATH}>")
+  target_link_options(${tgt}
+    PRIVATE
+      "$<$<IN_LIST:${linker_type},${ld64_candidates}>:${lto_cache_ld64}>"
+      "$<$<IN_LIST:${linker_type},${lld_candidates}>:${lto_cache_lld}>"
+      "$<$<IN_LIST:${linker_type},${lld_link_candidates}>:${lto_cache_lld_link}>"
+      "$<$<IN_LIST:${linker_type},${gold_candidates}>:${lto_cache_gold}>"
+      "$<$<${linker_lang}_COMPILER_ID:XL,VisualAge,zOS,XLClang>:${lto_cache_xl}>"
+  )
+
+  if(LLVM_ENABLE_FATLTO AND
+      CMAKE_${linker_lang}_COMPILER_LINKER_FRONTEND_VARIANT STREQUAL "GNU")
+    target_compile_options(${tgt}
+      PRIVATE
+        -ffat-lto-objects
+    )
+    target_link_options(${tgt}
+      PRIVATE
+        -ffat-lto-objects
+    )
+  endif()
+endfunction()
+
 function(add_link_opts target_name)
   include(CheckLinkerFlag)
   get_llvm_distribution(${target_name} in_distribution in_distribution_var)
-  if(NOT in_distribution)
+  if(in_distribution)
     # Don't LTO optimize targets that aren't part of any distribution.
-    if (LLVM_ENABLE_LTO)
-      # We may consider avoiding LTO altogether by using -fembed-bitcode
-      # and teaching the linker to select machine code from .o files, see
-      # https://lists.llvm.org/pipermail/llvm-dev/2021-April/149843.html
-      if((UNIX OR MINGW) AND LINKER_IS_LLD)
-        target_link_options(${target_name} PRIVATE "LINKER:--lto-O0")
-      elseif(LINKER_IS_LLD_LINK)
-        target_link_options(${target_name} PRIVATE "LINKER:/opt:lldlto=0")
-      elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
-        target_link_options(${target_name} PRIVATE "LINKER:-mllvm,-O0")
-      endif()
-    endif()
+    _add_lto_opts(${target_name})
   endif()
+
 
   # Don't use linker optimizations in debug builds since it slows down the
   # linker in a context where the optimizations are not important.
@@ -2896,12 +2983,14 @@ function(llvm_externalize_debuginfo name)
       set(output_path "-o=${output_name}")
     endif()
 
-    if(CMAKE_CXX_FLAGS MATCHES "-flto"
-      OR CMAKE_CXX_FLAGS_${uppercase_CMAKE_BUILD_TYPE} MATCHES "-flto")
+    get_target_property(enable_lto ${name} LLVM_LTO)
+    if(enable_lto)
 
       set(lto_object ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${name}-lto.o)
-      set_property(TARGET ${name} APPEND_STRING PROPERTY
-        LINK_FLAGS " -Wl,-object_path_lto,${lto_object}")
+      target_link_options(${name}
+        PRIVATE
+          "LINKER:-object_path_lto,${lto_object}"
+      )
     endif()
     if(NOT CMAKE_DSYMUTIL)
       set(CMAKE_DSYMUTIL xcrun dsymutil)
