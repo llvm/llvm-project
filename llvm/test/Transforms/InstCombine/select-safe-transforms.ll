@@ -194,6 +194,37 @@ define i1 @andn_or_cmp_2_logical(i16 %a, i16 %b, i1 %y) {
   ret i1 %and
 }
 
+define <2 x i1> @andn_or_cmp_2_logical_vec(<2 x i16> %a, <2 x i16> %b, <2 x i1> %y) {
+; CHECK-LABEL: @andn_or_cmp_2_logical_vec(
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt <2 x i16> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i1> [[X_INV]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[AND]]
+;
+  %x = icmp sge <2 x i16> %a, %b
+  %x_inv = icmp slt <2 x i16> %a, %b
+  %or = select <2 x i1> %y, <2 x i1> splat (i1 true), <2 x i1> %x
+  %and = select <2 x i1> %or, <2 x i1> %x_inv, <2 x i1> zeroinitializer
+  ret <2 x i1> %and
+}
+
+; Negative test: the false arm is not a full false constant, so replacing the
+; condition would select the poison lane where the original selected %x_inv.
+
+define <2 x i1> @andn_or_cmp_2_logical_vec_poison(<2 x i16> %a, <2 x i16> %b, <2 x i1> %y) {
+; CHECK-LABEL: @andn_or_cmp_2_logical_vec_poison(
+; CHECK-NEXT:    [[X:%.*]] = icmp sge <2 x i16> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt <2 x i16> [[A]], [[B]]
+; CHECK-NEXT:    [[Y:%.*]] = select <2 x i1> [[Y1:%.*]], <2 x i1> splat (i1 true), <2 x i1> [[X]]
+; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[Y]], <2 x i1> [[X_INV]], <2 x i1> <i1 poison, i1 false>
+; CHECK-NEXT:    ret <2 x i1> [[AND]]
+;
+  %x = icmp sge <2 x i16> %a, %b
+  %x_inv = icmp slt <2 x i16> %a, %b
+  %or = select <2 x i1> %y, <2 x i1> splat (i1 true), <2 x i1> %x
+  %and = select <2 x i1> %or, <2 x i1> %x_inv, <2 x i1> <i1 poison, i1 false>
+  ret <2 x i1> %and
+}
+
 define i1 @andn_or_cmp_2_partial_logical(i16 %a, i16 %b, i1 %y) {
 ; CHECK-LABEL: @andn_or_cmp_2_partial_logical(
 ; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt i16 [[A:%.*]], [[B:%.*]]
@@ -733,6 +764,37 @@ define i1 @orn_and_cmp_2_logical(i16 %a, i16 %b, i1 %y) {
   %and = select i1 %y, i1 %x, i1 false
   %or = select i1 %and, i1 true, i1 %x_inv
   ret i1 %or
+}
+
+define <2 x i1> @orn_and_cmp_2_logical_vec(<2 x i16> %a, <2 x i16> %b, <2 x i1> %y) {
+; CHECK-LABEL: @orn_and_cmp_2_logical_vec(
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt <2 x i16> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i1> splat (i1 true), <2 x i1> [[X_INV]]
+; CHECK-NEXT:    ret <2 x i1> [[OR]]
+;
+  %x = icmp sge <2 x i16> %a, %b
+  %x_inv = icmp slt <2 x i16> %a, %b
+  %and = select <2 x i1> %y, <2 x i1> %x, <2 x i1> zeroinitializer
+  %or = select <2 x i1> %and, <2 x i1> splat (i1 true), <2 x i1> %x_inv
+  ret <2 x i1> %or
+}
+
+; Negative test: the true arm is not a full true constant, so replacing the
+; condition would select the poison lane where the original selected %x_inv.
+
+define <2 x i1> @orn_and_cmp_2_logical_vec_poison(<2 x i16> %a, <2 x i16> %b, <2 x i1> %y) {
+; CHECK-LABEL: @orn_and_cmp_2_logical_vec_poison(
+; CHECK-NEXT:    [[X:%.*]] = icmp sge <2 x i16> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp slt <2 x i16> [[A]], [[B]]
+; CHECK-NEXT:    [[Y:%.*]] = select <2 x i1> [[Y1:%.*]], <2 x i1> [[X]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[Y]], <2 x i1> <i1 poison, i1 true>, <2 x i1> [[X_INV]]
+; CHECK-NEXT:    ret <2 x i1> [[OR]]
+;
+  %x = icmp sge <2 x i16> %a, %b
+  %x_inv = icmp slt <2 x i16> %a, %b
+  %and = select <2 x i1> %y, <2 x i1> %x, <2 x i1> zeroinitializer
+  %or = select <2 x i1> %and, <2 x i1> <i1 poison, i1 true>, <2 x i1> %x_inv
+  ret <2 x i1> %or
 }
 
 define i1 @orn_and_cmp_2_partial_logical(i16 %a, i16 %b, i1 %y) {
