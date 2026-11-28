@@ -15,6 +15,7 @@
 #include "LoongArchTargetMachine.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetOptions.h"
@@ -43,6 +44,7 @@ public:
   bool detectAndFoldOffset(MachineInstr &Hi20, MachineInstr &Lo12,
                            MachineInstr *&Lo20, MachineInstr *&Hi12,
                            MachineInstr *&Last);
+  void salvageDebugUsers(Register Reg, int64_t Offset);
   void foldOffset(MachineInstr &Hi20, MachineInstr &Lo12, MachineInstr *&Lo20,
                   MachineInstr *&Hi12, MachineInstr *&Last, MachineInstr &Tail,
                   int64_t Offset);
@@ -267,6 +269,23 @@ bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
   return true;
 }
 
+// Reg is about to hold its current value plus Offset. Rewrite the expressions
+// of its debug users to subtract Offset again so that they keep describing the
+// same value.
+void LoongArchMergeBaseOffsetOpt::salvageDebugUsers(Register Reg,
+                                                    int64_t Offset) {
+  SmallVector<uint64_t, 3> UndoOffset;
+  DIExpression::appendOffset(UndoOffset, -Offset);
+  for (MachineOperand &MO : MRI->use_operands(Reg)) {
+    MachineInstr &DbgMI = *MO.getParent();
+    if (!DbgMI.isDebugValue())
+      continue;
+    DbgMI.getDebugExpressionOp().setMetadata(
+        DIExpression::appendOpsToArg(DbgMI.getDebugExpression(), UndoOffset,
+                                     DbgMI.getDebugOperandIndex(&MO)));
+  }
+}
+
 // Update the offset in Hi20, (Add), Lo12, (Lo20 and Hi12) instructions.
 // Delete the tail instruction and update all the uses to use the
 // output from Last.
@@ -274,6 +293,11 @@ void LoongArchMergeBaseOffsetOpt::foldOffset(
     MachineInstr &Hi20, MachineInstr &Lo12, MachineInstr *&Lo20,
     MachineInstr *&Hi12, MachineInstr *&Last, MachineInstr &Tail,
     int64_t Offset) {
+  // Salvage the debug users of the base address by subtracting the offset
+  // again, since the register will now hold the address plus Offset.
+  MachineInstr *Def = Last ? Last : &Lo12;
+  salvageDebugUsers(Def->getOperand(0).getReg(), Offset);
+
   // Put the offset back in Hi and the Lo
   MachineOperand &Lo12Op2 = Lo12.getOperand(2);
   Hi20.getOperand(1).setOffset(Offset);
@@ -291,7 +315,6 @@ void LoongArchMergeBaseOffsetOpt::foldOffset(
     Add->getOperand(3).setOffset(Offset);
 
   // Delete the tail instruction.
-  MachineInstr *Def = Last ? Last : &Lo12;
   MRI->constrainRegClass(Def->getOperand(0).getReg(),
                          MRI->getRegClass(Tail.getOperand(0).getReg()));
   MRI->replaceRegWith(Tail.getOperand(0).getReg(), Def->getOperand(0).getReg());
@@ -478,11 +501,11 @@ bool LoongArchMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi20,
   // We might be able to remove the arithmetic instructions by folding the
   // offset into the PCAXXU12I+(ADDI/ADDI+LU32I+LU52I) or
   // LU12I_W+PseudoAddTPRel+ADDI.
-  if (!MRI->hasOneUse(DestReg))
+  if (!MRI->hasOneNonDBGUse(DestReg))
     return false;
 
-  // DestReg has only one use.
-  MachineInstr &Tail = *MRI->use_instr_begin(DestReg);
+  // DestReg has only one non-debug use.
+  MachineInstr &Tail = *MRI->use_instr_nodbg_begin(DestReg);
   switch (Tail.getOpcode()) {
   default:
     LLVM_DEBUG(dbgs() << "Don't know how to get offset from this instr:"
@@ -501,15 +524,20 @@ bool LoongArchMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi20,
 
     // We might have two ADDIs in a row.
     Register TailDestReg = Tail.getOperand(0).getReg();
-    if (MRI->hasOneUse(TailDestReg)) {
-      MachineInstr &TailTail = *MRI->use_instr_begin(TailDestReg);
+    if (MRI->hasOneNonDBGUse(TailDestReg)) {
+      MachineInstr &TailTail = *MRI->use_instr_nodbg_begin(TailDestReg);
       if (ST->is64Bit() && TailTail.getOpcode() == LoongArch::ADDI_W)
         return false;
       if (TailTail.getOpcode() == LoongArch::ADDI_W ||
           TailTail.getOpcode() == LoongArch::ADDI_D) {
-        Offset += TailTail.getOperand(2).getImm();
+        int64_t TailTailOffset = TailTail.getOperand(2).getImm();
+        Offset += TailTailOffset;
         LLVM_DEBUG(dbgs() << "  Offset Instrs: " << Tail << TailTail);
         foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailTail, Offset);
+        // The register now holds the value of TailTail, so describe the
+        // debug users of Tail relative to it.
+        salvageDebugUsers(TailDestReg, TailTailOffset);
+        MRI->replaceRegWith(TailDestReg, DestReg);
         Tail.eraseFromParent();
         return true;
       }
