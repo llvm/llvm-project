@@ -2041,18 +2041,26 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
   }
 
   Value *Y;
-  // -X / -Y --> X / Y, unless X == INT_MIN and Y == -1.
+  // -X / -Y --> X / Y
   if (Value *NegOp0 = dyn_castNegVal(Op0))
-    if (Value *NegOp1 = dyn_castNegVal(Op1))
-      if (!computeKnownBits(NegOp0, &I)
-               .getSignedMinValue()
-               .isMinSignedValue() ||
-          (match(Op0, m_NSWNeg(m_Value())) &&
-           !computeKnownBits(NegOp1, &I).Zero.isZero())) {
+    if (Value *NegOp1 = dyn_castNegVal(Op1)) {
+      // -X has the wrong sign if X is INT_MIN, unless -X is nsw (then the
+      // source is poison). A poison X also makes the source poison.
+      bool XNotIntMin =
+          !computeKnownBits(NegOp0, &I).getSignedMinValue().isMinSignedValue();
+      bool SignOK = XNotIntMin || match(Op0, m_NSWNeg(m_Value()));
+      // X / Y is UB if Y is -1 and X is INT_MIN or poison, so known bits rule
+      // out INT_MIN here only if X is not poison.
+      bool YNotMinusOne = !computeKnownBits(NegOp1, &I).Zero.isZero();
+      bool NoUB =
+          YNotMinusOne ||
+          (XNotIntMin && isGuaranteedNotToBePoison(NegOp0, SQ.AC, &I, SQ.DT));
+      if (SignOK && NoUB) {
         auto *BO = BinaryOperator::CreateSDiv(NegOp0, NegOp1);
         BO->setIsExact(I.isExact());
         return BO;
       }
+    }
 
   // -X / Y --> -(X / Y)
   if (match(&I, m_SDiv(m_OneUse(m_NSWNeg(m_Value(X))), m_Value(Y))))

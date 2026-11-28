@@ -163,10 +163,56 @@ define i32 @sdiv_neg_neg_unknown(i32 %x, i32 %y) {
 define i32 @sdiv_neg_neg_x_not_signmask(i32 %a, i32 %y) {
 ; CHECK-LABEL: @sdiv_neg_neg_x_not_signmask(
 ; CHECK-NEXT:    [[X:%.*]] = and i32 [[A:%.*]], 2147483647
+; CHECK-NEXT:    [[Y:%.*]] = sub nsw i32 0, [[Y1:%.*]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SDIV1:%.*]] = sub nsw i32 0, [[SDIV]]
+; CHECK-NEXT:    ret i32 [[SDIV1]]
+;
+  %x = and i32 %a, 2147483647
+  %neg.x = sub nsw i32 0, %x
+  %neg.y = sub nsw i32 0, %y
+  %sdiv = sdiv i32 %neg.x, %neg.y
+  ret i32 %sdiv
+}
+
+define i32 @sdiv_neg_neg_x_not_signmask_noundef(i32 noundef %a, i32 %y) {
+; CHECK-LABEL: @sdiv_neg_neg_x_not_signmask_noundef(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[A:%.*]], 2147483647
 ; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[SDIV]]
 ;
   %x = and i32 %a, 2147483647
+  %neg.x = sub nsw i32 0, %x
+  %neg.y = sub nsw i32 0, %y
+  %sdiv = sdiv i32 %neg.x, %neg.y
+  ret i32 %sdiv
+}
+
+; X may be poison, but Y cannot be -1. InstCombine infers nsw on -X before
+; visiting the sdiv.
+define i32 @sdiv_neg_neg_x_not_signmask_y_not_allones(i32 %a, i32 %b) {
+; CHECK-LABEL: @sdiv_neg_neg_x_not_signmask_y_not_allones(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[A:%.*]], 2147483647
+; CHECK-NEXT:    [[Y:%.*]] = and i32 [[B:%.*]], -2
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[X]], [[Y]]
+; CHECK-NEXT:    ret i32 [[SDIV]]
+;
+  %x = and i32 %a, 2147483647
+  %y = and i32 %b, -2
+  %neg.x = sub i32 0, %x
+  %neg.y = sub i32 0, %y
+  %sdiv = sdiv i32 %neg.x, %neg.y
+  ret i32 %sdiv
+}
+
+; X is not poison, but may be INT_MIN with Y == -1.
+define i32 @sdiv_neg_neg_noundef(i32 noundef %x, i32 %y) {
+; CHECK-LABEL: @sdiv_neg_neg_noundef(
+; CHECK-NEXT:    [[NEG_Y:%.*]] = sub nsw i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[SDIV1:%.*]] = sdiv i32 [[X:%.*]], [[NEG_Y]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sub nsw i32 0, [[SDIV1]]
+; CHECK-NEXT:    ret i32 [[SDIV]]
+;
   %neg.x = sub nsw i32 0, %x
   %neg.y = sub nsw i32 0, %y
   %sdiv = sdiv i32 %neg.x, %neg.y
@@ -206,6 +252,78 @@ define <2 x i32> @sdiv_neg_neg_vec(<2 x i32> %x, <2 x i32> %b) {
 ; CHECK-NEXT:    ret <2 x i32> [[SDIV]]
 ;
   %y = and <2 x i32> %b, splat (i32 -2)
+  %neg.x = sub nsw <2 x i32> zeroinitializer, %x
+  %neg.y = sub nsw <2 x i32> zeroinitializer, %y
+  %sdiv = sdiv <2 x i32> %neg.x, %neg.y
+  ret <2 x i32> %sdiv
+}
+
+define <2 x i32> @sdiv_neg_neg_x_not_signmask_vec(<2 x i32> %a, <2 x i32> %y) {
+; CHECK-LABEL: @sdiv_neg_neg_x_not_signmask_vec(
+; CHECK-NEXT:    [[X:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 2147483647)
+; CHECK-NEXT:    [[NEG_Y:%.*]] = sub nsw <2 x i32> zeroinitializer, [[Y:%.*]]
+; CHECK-NEXT:    [[SDIV1:%.*]] = sdiv <2 x i32> [[X]], [[NEG_Y]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sub nsw <2 x i32> zeroinitializer, [[SDIV1]]
+; CHECK-NEXT:    ret <2 x i32> [[SDIV]]
+;
+  %x = and <2 x i32> %a, splat (i32 2147483647)
+  %neg.x = sub nsw <2 x i32> zeroinitializer, %x
+  %neg.y = sub nsw <2 x i32> zeroinitializer, %y
+  %sdiv = sdiv <2 x i32> %neg.x, %neg.y
+  ret <2 x i32> %sdiv
+}
+
+define <2 x i32> @sdiv_neg_neg_x_not_signmask_noundef_vec(<2 x i32> noundef %a, <2 x i32> %y) {
+; CHECK-LABEL: @sdiv_neg_neg_x_not_signmask_noundef_vec(
+; CHECK-NEXT:    [[X:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 2147483647)
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv <2 x i32> [[X]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[SDIV]]
+;
+  %x = and <2 x i32> %a, splat (i32 2147483647)
+  %neg.x = sub nsw <2 x i32> zeroinitializer, %x
+  %neg.y = sub nsw <2 x i32> zeroinitializer, %y
+  %sdiv = sdiv <2 x i32> %neg.x, %neg.y
+  ret <2 x i32> %sdiv
+}
+
+; Lane 1 of X may be INT_MIN.
+define <2 x i32> @sdiv_neg_neg_x_not_signmask_noundef_vec_nonsplat(<2 x i32> noundef %a, <2 x i32> %y) {
+; CHECK-LABEL: @sdiv_neg_neg_x_not_signmask_noundef_vec_nonsplat(
+; CHECK-NEXT:    [[X:%.*]] = and <2 x i32> [[A:%.*]], <i32 2147483647, i32 -1>
+; CHECK-NEXT:    [[NEG_Y:%.*]] = sub nsw <2 x i32> zeroinitializer, [[Y:%.*]]
+; CHECK-NEXT:    [[SDIV1:%.*]] = sdiv <2 x i32> [[X]], [[NEG_Y]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sub nsw <2 x i32> zeroinitializer, [[SDIV1]]
+; CHECK-NEXT:    ret <2 x i32> [[SDIV]]
+;
+  %x = and <2 x i32> %a, <i32 2147483647, i32 -1>
+  %neg.x = sub nsw <2 x i32> zeroinitializer, %x
+  %neg.y = sub nsw <2 x i32> zeroinitializer, %y
+  %sdiv = sdiv <2 x i32> %neg.x, %neg.y
+  ret <2 x i32> %sdiv
+}
+
+define <2 x i32> @sdiv_neg_neg_x_not_signmask_y_not_allones_vec(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @sdiv_neg_neg_x_not_signmask_y_not_allones_vec(
+; CHECK-NEXT:    [[X:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 2147483647)
+; CHECK-NEXT:    [[Y:%.*]] = and <2 x i32> [[B:%.*]], splat (i32 -2)
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv <2 x i32> [[X]], [[Y]]
+; CHECK-NEXT:    ret <2 x i32> [[SDIV]]
+;
+  %x = and <2 x i32> %a, splat (i32 2147483647)
+  %y = and <2 x i32> %b, splat (i32 -2)
+  %neg.x = sub <2 x i32> zeroinitializer, %x
+  %neg.y = sub <2 x i32> zeroinitializer, %y
+  %sdiv = sdiv <2 x i32> %neg.x, %neg.y
+  ret <2 x i32> %sdiv
+}
+
+define <2 x i32> @sdiv_neg_neg_noundef_vec(<2 x i32> noundef %x, <2 x i32> %y) {
+; CHECK-LABEL: @sdiv_neg_neg_noundef_vec(
+; CHECK-NEXT:    [[NEG_Y:%.*]] = sub nsw <2 x i32> zeroinitializer, [[Y:%.*]]
+; CHECK-NEXT:    [[SDIV1:%.*]] = sdiv <2 x i32> [[X:%.*]], [[NEG_Y]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sub nsw <2 x i32> zeroinitializer, [[SDIV1]]
+; CHECK-NEXT:    ret <2 x i32> [[SDIV]]
+;
   %neg.x = sub nsw <2 x i32> zeroinitializer, %x
   %neg.y = sub nsw <2 x i32> zeroinitializer, %y
   %sdiv = sdiv <2 x i32> %neg.x, %neg.y
