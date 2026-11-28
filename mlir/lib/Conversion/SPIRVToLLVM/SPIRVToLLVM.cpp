@@ -1017,20 +1017,32 @@ public:
   }
 };
 
-/// Converts `spirv.ExecutionMode` into a global struct constant that holds
-/// execution mode information.
-class ExecutionModePattern
-    : public SPIRVToLLVMConversion<spirv::ExecutionModeOp> {
+/// Converts `spirv.ExecutionMode` and `spirv.ExecutionModeId` into a global
+/// struct constant that holds execution mode information.
+template <typename SPIRVOp>
+class ExecutionModePattern : public SPIRVToLLVMConversion<SPIRVOp> {
 public:
-  using SPIRVToLLVMConversion<spirv::ExecutionModeOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(spirv::ExecutionModeOp op, OpAdaptor adaptor,
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    ArrayRef<Attribute> values = op.getValues().getValue();
+    std::string targetTypeSuffix;
+    if constexpr (std::is_same_v<SPIRVOp, spirv::ExecutionModeIdOp>) {
+      if (op.getExecutionMode() != spirv::ExecutionMode::FPFastMathDefault)
+        return rewriter.notifyMatchFailure(op, "unsupported execution mode");
+      // Name the global after the Target Type, an entry point may have one
+      // FPFastMathDefault per float type.
+      llvm::raw_string_ostream(targetTypeSuffix)
+          << "_" << cast<TypeAttr>(values.front()).getValue();
+      values = values.drop_front();
+    }
+
     // First, create the global struct's name that would be associated with
     // this entry point's execution mode. We set it to be:
     //   __spv__{SPIR-V module name}_{function name}_execution_mode_info_{mode}
-    ModuleOp moduleOp = op->getParentOfType<ModuleOp>();
+    ModuleOp moduleOp = op->template getParentOfType<ModuleOp>();
     spirv::ExecutionModeAttr executionModeAttr = op.getExecutionModeAttr();
     std::string moduleName;
     if (moduleOp.getName().has_value())
@@ -1038,8 +1050,9 @@ public:
     else
       moduleName = "";
     std::string executionModeInfoName = llvm::formatv(
-        "__spv_{0}_{1}_execution_mode_info_{2}", moduleName, op.getFn().str(),
-        static_cast<uint32_t>(executionModeAttr.getValue()));
+        "__spv_{0}_{1}_execution_mode_info_{2}{3}", moduleName,
+        op.getFn().str(), static_cast<uint32_t>(executionModeAttr.getValue()),
+        targetTypeSuffix);
 
     MLIRContext *context = rewriter.getContext();
     OpBuilder::InsertionGuard guard(rewriter);
@@ -1053,7 +1066,6 @@ public:
     auto llvmI32Type = IntegerType::get(context, 32);
     SmallVector<Type, 2> fields;
     fields.push_back(llvmI32Type);
-    ArrayAttr values = op.getValues();
     if (!values.empty()) {
       auto arrayType = LLVM::LLVMArrayType::get(llvmI32Type, values.size());
       fields.push_back(arrayType);
@@ -1082,7 +1094,7 @@ public:
 
     // Insert extra operands if they exist into execution mode info struct.
     for (unsigned i = 0, e = values.size(); i < e; ++i) {
-      auto attr = values.getValue()[i];
+      auto attr = values[i];
       Value entry = LLVM::ConstantOp::create(rewriter, loc, llvmI32Type, attr);
       structValue = LLVM::InsertValueOp::create(
           rewriter, loc, structValue, entry, ArrayRef<int64_t>({1, i}));
@@ -2805,7 +2817,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       SelectionPattern, ErasePattern<spirv::MergeOp>,
 
       // Entry points and execution mode are handled separately.
-      ErasePattern<spirv::EntryPointOp>, ExecutionModePattern,
+      ErasePattern<spirv::EntryPointOp>,
+      ExecutionModePattern<spirv::ExecutionModeOp>,
+      ExecutionModePattern<spirv::ExecutionModeIdOp>,
 
       // GLSL extended instruction set ops
       DirectConversionPattern<spirv::GLCeilOp, LLVM::FCeilOp>,
