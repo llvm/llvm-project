@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -2452,7 +2453,7 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
     // on poison, and the last extract (and hence all previous ones)
     // are guaranteed to execute if Ext executes.  If so, we do not
     // need to insert a freeze.
-    SmallDenseSet<ConstantInt *, 8> ExtractedLanes;
+    SmallBitVector ExtractedLanes(DstTy->getNumElements());
     bool AllExtractsTriggerUB = true;
     ExtractElementInst *LastExtract = nullptr;
     BasicBlock *ExtBB = Ext->getParent();
@@ -2462,12 +2463,12 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
         AllExtractsTriggerUB = false;
         break;
       }
-      ExtractedLanes.insert(cast<ConstantInt>(Extract->getIndexOperand()));
+      ExtractedLanes.set(
+          cast<ConstantInt>(Extract->getIndexOperand())->getZExtValue());
       if (!LastExtract || LastExtract->comesBefore(Extract))
         LastExtract = Extract;
     }
-    if (ExtractedLanes.size() != DstTy->getNumElements() ||
-        !AllExtractsTriggerUB ||
+    if (!ExtractedLanes.all() || !AllExtractsTriggerUB ||
         !isGuaranteedToTransferExecutionToSuccessor(Ext->getIterator(),
                                                     LastExtract->getIterator()))
       ScalarV = Builder.CreateFreeze(ScalarV);
