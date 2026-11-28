@@ -19,6 +19,7 @@
 #include "llvm/AsmParser/NumberedValues.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/DebugLocConversion.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -189,6 +190,12 @@ namespace llvm {
     SmallVector<std::tuple<LocTy, Instruction *, TrackingMDNodeRef>>
         PendingDbgInsts;
 
+    /// An FLMD attachment to an instruction/record (currently just !!dbgLoc, in
+    /// its normal or expanded forms).
+    using FLMDAttachment = std::variant<std::nullopt_t, FLDebugLoc>;
+
+    SmallVector<std::tuple<Instruction *, TrackingMDNodeRef>> SeenInstLoops;
+
     DenseMap<MDFunctionLocalContext *,
              SmallVector<std::pair<uint32_t, TrackingMDNodeRef>>>
         FLForwardRefScopes;
@@ -198,6 +205,42 @@ namespace llvm {
 
     bool SeenNewDbgInfoFormat = false;
     bool SeenOldDbgInfoFormat = false;
+
+    // Lazily-constructed conversion map.
+    std::unique_ptr<DebugLocReadConversionMap> DLConversion;
+    DebugLocReadConversionMap &getDLConversionMap() {
+      if (!DLConversion)
+        DLConversion.reset(new DebugLocReadConversionMap(M));
+      return *DLConversion.get();
+    }
+
+    SmallVector<std::tuple<LocTy, Function *, FLDebugLoc>, 0>
+        SeenFLDebugLocAttachments;
+    SmallVector<std::tuple<LocTy, DIDbgLoc *>, 0> SeenDIDbgLocNodes;
+    SmallVector<std::tuple<LocTy, MDFunctionLocalContext *>, 0>
+        SeenFunctionLocalContexts;
+    LocTy FirstSeenDILocations;
+    LocTy FirstSeenFLDebugLocs;
+
+    // For now, this is just used to track whether we've seen any DILocations or
+    // !dbg attachments to instructions/records, to check for mixed DebugLoc
+    // types. Later, when we start storing
+    void addSeenDbgMDAttachment(LocTy Loc, Instruction *I, MDNode *Dbg) {
+      if (!FirstSeenDILocations.isValid())
+        FirstSeenDILocations = Loc;
+      PendingDbgInsts.emplace_back(Loc, I, Dbg);
+    }
+    void addSeenDbgMDAttachment(LocTy Loc, DbgRecord *DR, MDNode *Dbg) {
+      if (!FirstSeenDILocations.isValid())
+        FirstSeenDILocations = Loc;
+      PendingDbgRecords.emplace_back(Loc, DR, Dbg);
+    }
+    void addSeenDILocation(LocTy Loc) {
+      if (!FirstSeenDILocations.isValid())
+        FirstSeenDILocations = Loc;
+    }
+
+    bool needsDLConversion() const { return FirstSeenFLDebugLocs.isValid(); }
 
     std::string SourceFileName;
 
@@ -627,6 +670,7 @@ namespace llvm {
     bool parseMDNodeTail(MDNode *&N);
     bool parseMDNodeVector(SmallVectorImpl<Metadata *> &Elts);
     bool parseMetadataAttachment(unsigned &Kind, MDNode *&MD);
+    bool parseFLMDAttachment(FLMDAttachment &FLMD);
     bool parseDebugRecord(DbgRecord *&DR, PerFunctionState &PFS);
     bool parseInstructionMetadata(Instruction &Inst);
     bool parseGlobalObjectMetadataAttachment(GlobalObject &GO);
