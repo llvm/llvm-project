@@ -5801,7 +5801,7 @@ def mstackrealign : Flag<["-"], "mstackrealign">, Group<m_Group>,
 def mstack_alignment : Joined<["-"], "mstack-alignment=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the stack alignment">,
-  MarshallingInfoInt<CodeGenOpts<"StackAlignment">>;
+  MarshallingInfoInt<TargetOpts<"StackAlignmentOverride">, "0">;
 def mstack_probe_size : Joined<["-"], "mstack-probe-size=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the stack probe size">,

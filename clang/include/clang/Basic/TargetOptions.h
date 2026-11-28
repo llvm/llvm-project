@@ -114,6 +114,12 @@ public:
   // architectures.
   uint64_t LargeDataThreshold;
 
+  /// Non-default stack alignment override (in bytes) from -mstack-alignment=,
+  /// or 0 if unset.
+  // TODO: Reject nonsensical/out-of-range -mstack-alignment= values (such as 0
+  // or alignments below the target's minimum) in the driver.
+  uint32_t StackAlignmentOverride = 0;
+
   /// The version of the SDK which was used during the compilation.
   /// The option is used for two different purposes:
   /// * on darwin the version is propagated to LLVM where it's used

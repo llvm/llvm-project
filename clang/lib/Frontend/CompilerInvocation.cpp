@@ -572,6 +572,7 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
 
   CodeGenOpts.CodeModel = TargetOpts.CodeModel;
   CodeGenOpts.LargeDataThreshold = TargetOpts.LargeDataThreshold;
+  CodeGenOpts.StackAlignment = TargetOpts.StackAlignmentOverride;
 
   if (CodeGenOpts.getExceptionHandling() !=
           CodeGenOptions::ExceptionHandlingKind::Default &&
