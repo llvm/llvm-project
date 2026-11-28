@@ -2353,6 +2353,24 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
           foldSelectWithExtremeEqCond(CmpLHS, CmpRHS, TrueVal, FalseVal))
     return Res;
 
+  // X & C ? (X - C): (X | C) -> X ^ C
+  // C is a power of 2
+  if (ICI->hasOneUse() || TrueVal->hasOneUse() || FalseVal->hasOneUse()) {
+    Value *X;
+    const APInt *C1, *C2;
+    if (match(CmpLHS, m_c_And(m_Value(X), m_Power2(C1))) &&
+        match(CmpRHS, m_APInt(C2))) {
+      if (C2->isOne()) {
+        std::swap(TrueVal, FalseVal);
+      }
+      if (match(TrueVal, m_c_Or(m_Specific(X), m_SpecificInt(*C1))) &&
+          match(FalseVal, m_c_Add(m_Specific(X), m_SpecificInt(-*C1)))) {
+        return BinaryOperator::CreateXor(
+            X, ConstantInt::get(TrueVal->getType(), *C1));
+      }
+    }
+  }
+
   return nullptr;
 }
 
