@@ -12247,6 +12247,18 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return EmitLowered__chkstk(MI, BB);
   case ARM::WIN__DBZCHK:
     return EmitLowered__dbzchk(MI, BB);
+  case ARM::CATCHRET: {
+    // The runtime takes the continuation address in r0. Load it here, before
+    // PEI adds the epilogue, so that r0 stays live through the epilogue.
+    assert(isThumb2 && "Windows on Arm is Thumb-2 only");
+    MachineBasicBlock *TargetMBB = MI.getOperand(0).getMBB();
+    BuildMI(*BB, MI, dl, TII->get(ARM::t2MOVi32imm), ARM::R0)
+        .addSym(TargetMBB->getSymbol());
+    TargetMBB->setMachineBlockAddressTaken();
+    MI.addOperand(MachineOperand::CreateReg(ARM::R0, /*isDef=*/false,
+                                            /*isImp=*/true));
+    return BB;
+  }
   }
 }
 
@@ -22738,6 +22750,10 @@ Register ARMTargetLowering::getExceptionSelectorRegister(
   // via the personality function.
   return EH == ExceptionHandling::SjLj ? Register() : ARM::R1;
 }
+
+// Frames with C++ EH funclets are never realigned (see ARMWinEHFrame), so
+// catch objects can be ordinary stack objects.
+bool ARMTargetLowering::needsFixedCatchObjects() const { return false; }
 
 void ARMTargetLowering::initializeSplitCSR(MachineBasicBlock *Entry) const {
   // Update IsSplitCSR in ARMFunctionInfo.

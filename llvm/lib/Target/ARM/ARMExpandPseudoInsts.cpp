@@ -2264,8 +2264,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       return true;
     }
 
-    case ARM::CLEANUPRET:
-    case ARM::CATCHRET: {
+    case ARM::CLEANUPRET: {
       unsigned RetOpcode = STI->isThumb() ? ARM::tBX_RET : ARM::BX_RET;
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(RetOpcode))
           .add(predOps(ARMCC::AL));

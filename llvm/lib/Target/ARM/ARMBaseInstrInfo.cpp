@@ -108,7 +108,8 @@ static const ARM_MLxEntry ARM_MLxTable[] = {
 
 ARMBaseInstrInfo::ARMBaseInstrInfo(const ARMSubtarget &STI,
                                    const ARMBaseRegisterInfo &TRI)
-    : ARMGenInstrInfo(STI, TRI, ARM::ADJCALLSTACKDOWN, ARM::ADJCALLSTACKUP),
+    : ARMGenInstrInfo(STI, TRI, ARM::ADJCALLSTACKDOWN, ARM::ADJCALLSTACKUP,
+                      ARM::CATCHRET),
       Subtarget(STI) {
   for (unsigned i = 0, e = std::size(ARM_MLxTable); i != e; ++i) {
     if (!MLxEntryMap.insert(std::make_pair(ARM_MLxTable[i].MLxOpc, i)).second)
@@ -619,6 +620,7 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::BUNDLE:
     return getInstBundleSize(MI);
   case TargetOpcode::COPY:
+  case ARM::CATCHRET:
     if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
       return 4;
     else

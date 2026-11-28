@@ -2048,6 +2048,13 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(MI->getOperand(3).getReg()));
     return;
   }
+  case ARM::CATCHRET:
+    // Lowered only here because FuncletLayout needs to see it.
+    assert(AFI->isThumbFunction() && "Windows on Arm is Thumb only");
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(ARM::tBX).addReg(ARM::LR).addImm(ARMCC::AL).addReg(0));
+    return;
   // Darwin call instructions are just normal call instructions with different
   // clobber semantics (they clobber R9).
   case ARM::BX_CALL: {

@@ -55,6 +55,10 @@ public:
                                              int FI) const override;
   int ResolveFrameIndexReference(const MachineFunction &MF, int FI,
                                  Register &FrameReg, int SPAdj) const;
+  StackOffset
+  getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,
+                                 Register &FrameReg,
+                                 bool IgnoreSPUpdates) const override;
 
   void getCalleeSaves(const MachineFunction &MF,
                       BitVector &SavedRegs) const override;

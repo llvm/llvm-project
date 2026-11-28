@@ -361,6 +361,8 @@ class VectorType;
     getExceptionSelectorRegister(ExceptionHandling EH,
                                  const Constant *PersonalityFn) const override;
 
+    bool needsFixedCatchObjects() const override;
+
     Instruction *makeDMB(IRBuilderBase &Builder, ARM_MB::MemBOpt Domain) const;
     Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
                           AtomicOrdering Ord) const override;

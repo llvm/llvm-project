@@ -395,6 +395,9 @@ Makes programs 10x faster by doing Special New Thing.
   than Armv8, where it is undefined. This is required by the Arm semihosting
   specification v2.0 and supported in GNU binutils since v2.33.
 
+* C++ exception handling with `__CxxFrameHandler3` now works on Windows on
+  Arm.
+
 ### Changes to the AVR Backend
 
 ### Changes to the BPF Backend
