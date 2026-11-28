@@ -2295,6 +2295,26 @@ define void @f() "no-sse" { ... }
     runtime check to execute the call through the emulator if the thunk has
     been patched.
 
+`"inline-large-stack-frame"="<size>"`
+:   This attribute sets the combined caller and callee static stack frame size
+    threshold (in bytes) above which the inliner restricts stack frame growth
+    when inlining into the attributed function. It takes one required
+    non-negative integer value. When the combined caller and callee static stack
+    size exceeds `<size>`, inlining a callee with non-zero static stack
+    allocations is prevented if the callee grows the caller's static stack size
+    by more than `"inline-large-stack-frame-growth"` percent (or if the caller
+    has zero static stack allocations). If `"inline-large-stack-frame-growth"`
+    is not specified, it defaults to `1000` (1000%). Callees marked
+    `alwaysinline` are unaffected.
+
+`"inline-large-stack-frame-growth"="<percent>"`
+:   This attribute sets the maximum allowed percentage growth of the caller's
+    static stack frame when inlining into the attributed function and the
+    combined caller and callee static stack size exceeds
+    `"inline-large-stack-frame"`. It takes one required non-negative integer
+    value. If `"inline-large-stack-frame"` is not specified, it defaults to
+    `256` bytes. Callees marked `alwaysinline` are unaffected.
+
 `inlinehint`
 :   This attribute indicates that the source code contained a hint that
     inlining this function is desirable (such as the "inline" keyword in
