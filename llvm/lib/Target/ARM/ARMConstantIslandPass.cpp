@@ -2077,6 +2077,19 @@ static bool isSimpleIndexCalc(MachineInstr &I, unsigned EntryReg,
   return true;
 }
 
+/// Mark debug uses of Reg as unavailable until its next definition.
+static void setDebugUsesUndef(Register Reg, MachineBasicBlock::iterator Begin,
+                              MachineBasicBlock::iterator End) {
+  for (MachineInstr &MI : make_range(Begin, End)) {
+    if (MI.isDebugValue() && MI.hasDebugOperandForReg(Reg)) {
+      MI.setDebugValueUndef();
+      continue;
+    }
+    if (MI.definesRegister(Reg, /*TRI=*/nullptr))
+      break;
+  }
+}
+
 /// While trying to form a TBB/TBH instruction, we may (if the table
 /// doesn't immediately follow the BR_JT) need access to the start of the
 /// jump-table. We know one instruction that produces such a register; this
@@ -2115,6 +2128,8 @@ bool ARMConstantIslands::preserveBaseRegister(MachineInstr *JumpMI,
   MachineInstr *RemovableAdd = nullptr;
   MachineBasicBlock::iterator I(LEAMI);
   for (++I; &*I != JumpMI; ++I) {
+    if (I->isDebugInstr())
+      continue;
     if (isSimpleIndexCalc(*I, EntryReg, BaseReg)) {
       RemovableAdd = &*I;
       break;
@@ -2138,6 +2153,8 @@ bool ARMConstantIslands::preserveBaseRegister(MachineInstr *JumpMI,
   // Check the add really is removable, and that nothing else in the block
   // clobbers BaseReg.
   for (++I; &*I != JumpMI; ++I) {
+    if (I->isDebugInstr())
+      continue;
     for (const MachineOperand &MO : I->operands()) {
       if (!MO.isReg() || !MO.getReg())
         continue;
@@ -2149,6 +2166,8 @@ bool ARMConstantIslands::preserveBaseRegister(MachineInstr *JumpMI,
   }
 
   if (RemovableAdd) {
+    setDebugUsesUndef(EntryReg, std::next(RemovableAdd->getIterator()),
+                      JumpMI->getIterator());
     RemovableAdd->eraseFromParent();
     DeadSize += isThumb2 ? 4 : 2;
   } else if (BaseReg == EntryReg) {
@@ -2197,6 +2216,8 @@ static void RemoveDeadAddBetweenLEAAndJT(MachineInstr *LEAMI,
   // Ensure EntryReg is not clobbered or used.
   MachineBasicBlock::iterator J(RemovableAdd);
   for (++J; &*J != JumpMI; ++J) {
+    if (J->isDebugInstr())
+      continue;
     for (const MachineOperand &MO : J->operands()) {
       if (!MO.isReg() || !MO.getReg())
         continue;
@@ -2208,6 +2229,8 @@ static void RemoveDeadAddBetweenLEAAndJT(MachineInstr *LEAMI,
   }
 
   LLVM_DEBUG(dbgs() << "Removing Dead Add: " << *RemovableAdd);
+  setDebugUsesUndef(EntryReg, std::next(RemovableAdd->getIterator()),
+                    JumpMI->getIterator());
   RemovableAdd->eraseFromParent();
   DeadSize += 4;
 }
@@ -2369,9 +2392,13 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
       NewJTMI->getOperand(0).setIsKill(false);
 
       if (CanDeleteLEA) {
-        if (isThumb2)
+        if (isThumb2) {
           RemoveDeadAddBetweenLEAAndJT(User.MI, MI, DeadSize);
 
+          Register BaseReg = User.MI->getOperand(0).getReg();
+          setDebugUsesUndef(BaseReg, std::next(User.MI->getIterator()),
+                            MI->getIterator());
+        }
         User.MI->eraseFromParent();
         DeadSize += isThumb2 ? 4 : 2;
 
