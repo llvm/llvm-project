@@ -24,6 +24,7 @@
 #include "clang/AST/DependenceFlags.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/LambdaCapture.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Reflection.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
