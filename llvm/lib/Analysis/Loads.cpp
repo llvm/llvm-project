@@ -388,26 +388,28 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     if (MinAdd->getNumOperands() != 2)
       return false;
 
-    const auto *Offset = dyn_cast<SCEVConstant>(MinAdd->getOperand(0));
-    const auto *NewBase = dyn_cast<SCEVUnknown>(MinAdd->getOperand(1));
-    if (!Offset || !NewBase)
+    const auto *NewBase = dyn_cast<SCEVUnknown>(SE.getPointerBase(MinAdd));
+    if (!NewBase)
       return false;
+    const SCEV *Offset = SE.getMinusSCEV(MinAdd, NewBase);
 
     // The following code below assumes the offset is unsigned, but GEP
     // offsets are treated as signed so we can end up with a signed value
     // here too. For example, suppose the initial PHI value is (i8 255),
     // the offset will be treated as (i8 -1) and sign-extended to (i64 -1).
-    if (Offset->getAPInt().isNegative())
+    const ConstantRange OffsetRange =
+        SE.getSignedRange(SE.applyLoopGuards(Offset, LoopGuards));
+    if (OffsetRange.getSignedMin().isNegative())
       return false;
 
     // For the moment, restrict ourselves to the case where the offset is a
     // multiple of the requested alignment and the base is aligned.
     // TODO: generalize if a case found which warrants
-    if (Offset->getAPInt().urem(Alignment.value()) != 0)
+    if (SE.getMinTrailingZeros(Offset) < Log2_64(Alignment.value()))
       return false;
 
     bool Overflow = false;
-    AccessSize = MaxPtrDiff.uadd_ov(Offset->getAPInt(), Overflow);
+    AccessSize = MaxPtrDiff.uadd_ov(OffsetRange.getSignedMax(), Overflow);
     if (Overflow)
       return false;
     AccessSizeSCEV = SE.getAddExpr(PtrDiff, Offset);
