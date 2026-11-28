@@ -9,3 +9,8 @@ void sum_vector(unsigned int A[], unsigned int B[], unsigned int sum[]) {
     sum[k] = A[k] + 3 * B[k];
   }
 }
+
+void missing_second_argument() {
+#pragma clang loop vectorize_width(4,) // expected-error {{vectorize_width loop hint malformed}}
+  for (;;) {}
+}
