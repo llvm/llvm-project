@@ -1216,6 +1216,9 @@ LogicalResult
 LaunchFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   LaunchFuncOp launchOp = *this;
   Operation *table = SymbolTable::getNearestSymbolTable(launchOp);
+  // No known symbol table (unregistered ancestor op): nothing to verify.
+  if (!table)
+    return success();
   // GPU modules cannot be nested within each other, escape to resolve the name.
   if (isa<GPUModuleOp>(table))
     table = SymbolTable::getNearestSymbolTable(table->getParentOp());

@@ -297,6 +297,18 @@ module attributes {gpu.container_module} {
     return
   }
 
+  // The unregistered op may be a symbol table, so the launch is not resolved.
+  // CHECK-LABEL: func @launch_func_in_unregistered_region
+  func.func @launch_func_in_unregistered_region() {
+    %cst = arith.constant 8 : index
+    // CHECK: "unregistered_region"() ({
+    // CHECK: gpu.launch_func @kernels::@kernel_2 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})
+    "unregistered_region"() ({
+      gpu.launch_func @kernels::@kernel_2 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
+    }) : () -> ()
+    return
+  }
+
   gpu.module @gpu_funcs {
     // CHECK-LABEL: gpu.func @kernel_1({{.*}}: f32)
     gpu.func @kernel_1(%arg0: f32)
