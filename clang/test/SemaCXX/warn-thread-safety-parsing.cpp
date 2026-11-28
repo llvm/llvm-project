@@ -1870,3 +1870,15 @@ DependentFPFields<GoodLockFn> dependent_fp_fields_ok;
 DependentFPFields<int> dependent_fp_fields_bad; // expected-note {{in instantiation of template class 'FunctionPointers::DependentFPFields<int>' requested here}}
 
 }  // namespace FunctionPointers
+
+#if __cplusplus >= 201103L
+// The late-parsed attributes of a defaulted or deleted definition are parsed
+// too.
+namespace DefaultedDeleted {
+void deleted() EXCLUSIVE_LOCKS_REQUIRED(no_such_lock_x) = delete; // expected-error {{use of undeclared identifier 'no_such_lock_x'}}
+struct S {
+  S();
+};
+S::S() EXCLUSIVE_LOCKS_REQUIRED(no_such_lock_y) = default; // expected-error {{use of undeclared identifier 'no_such_lock_y'}}
+} // namespace DefaultedDeleted
+#endif
