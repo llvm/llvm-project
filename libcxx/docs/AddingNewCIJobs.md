@@ -2,9 +2,6 @@
 
 # Adding New CI Jobs
 
-:::{contents}
-:local: true
-:::
 
 ## Adding The Job
 

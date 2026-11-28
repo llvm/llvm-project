@@ -2,9 +2,6 @@
 
 # libc++ Coding Guidelines
 
-```{contents}
-:local: true
-```
 
 ## Use `__ugly_names` for implementation details
 
