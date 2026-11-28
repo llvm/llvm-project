@@ -412,6 +412,9 @@ public:
   LLVM_ABI void applyCombineShlOfExtend(MachineInstr &MI,
                                         const RegisterImmPair &MatchData) const;
 
+  LLVM_ABI bool matchNarrowShlToHalf(MachineInstr &MI,
+                                     BuildFnTy &MatchInfo) const;
+
   /// Reduce a shift by a constant to an unmerge and a shift on a half sized
   /// type. This will not produce a shift smaller than \p TargetShiftSize.
   LLVM_ABI bool matchCombineShiftToUnmerge(MachineInstr &MI,
