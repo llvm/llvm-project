@@ -92,7 +92,7 @@ class UnsequencedAccessChecker
 
     bool checkAncestors(int Common, AccessStmt A, const StmtVec& AVec,
                         AccessStmt B, const StmtVec& BVec,
-                        const LangOptions& Opts) const;
+                        const LangOptions& Opts, ProgramStateRef State) const;
 
     std::pair<const Stmt*, const StackFrame*>
     findHighestUnsequencedStmt(const Stmt* CurrentS,
@@ -108,6 +108,7 @@ class UnsequencedAccessChecker
     ProgramStateRef resetState(ProgramStateRef S) const;
 
     void checkAccess(SVal *L, SVal *V, const Stmt *S, CheckerContext &C) const;
+    const BinaryOperator* findAssignExpr(const StmtVec& V) const;
 
     BugType BT{this, "Unsequenced-access", categories::LogicError};
 
@@ -397,7 +398,7 @@ void UnsequencedAccessChecker::checkAgainstSet(
         assert(CommonIdx != -1);
 
         if(checkAncestors(CommonIdx, OtherAccess, OtherAncestors, CurrentAccess,
-                          Ancestors, C.getLangOpts())) {
+                          Ancestors, C.getLangOpts(), C.getState())) {
 
             const Stmt* CommonS =
                 Ancestors[Ancestors.size() - CommonIdx].getPointer();
@@ -429,14 +430,53 @@ int UnsequencedAccessChecker::findCommonAncestorIdx(const StmtVec& A,
     return (I - 1);
 }
 
+const BinaryOperator* UnsequencedAccessChecker::findAssignExpr(
+        const StmtVec& V) const {
+    int L = V.size();
+    for (int I = 1; I < L; I++) {
+        const AncestorStmt AS = V[I];
+        if (const auto* Op = dyn_cast<BinaryOperator>(AS.getPointer())) {
+            if (Op->isAssignmentOp()) {
+                return Op;
+            }
+            return nullptr;
+        }
+
+        if (!isa<ParenExpr>(AS.getPointer()) ||
+                !isa<CastExpr>(AS.getPointer())) {
+            return nullptr;
+        }
+    }
+
+    return nullptr;
+}
+
 bool UnsequencedAccessChecker::checkAncestors(
         int CommonIdx, AccessStmt A, const StmtVec& AVec, AccessStmt B,
-        const StmtVec& BVec, const LangOptions& Opts) const {
+        const StmtVec& BVec, const LangOptions& Opts,
+        ProgramStateRef State) const {
 
     const Stmt* CommonS = AVec[AVec.size() - CommonIdx].getPointer();
 
     bool IsAIndeterminate = AVec[AVec.size() - CommonIdx].getInt();
     bool IsBIndeterminate = BVec[BVec.size() - CommonIdx].getInt();
+
+    if (IsAIndeterminate && IsBIndeterminate && A.isStore() && B.isStore()) {
+        const BinaryOperator* AStoreE = findAssignExpr(AVec);
+        const BinaryOperator* BStoreE = findAssignExpr(BVec);
+
+        if (AStoreE && BStoreE) {
+            SVal AV = State->getSVal(AStoreE->getRHS(), A.getFrame());
+            SVal BV = State->getSVal(BStoreE->getRHS(), B.getFrame());
+
+            const llvm::APSInt* AI = AV.getAsInteger();
+            const llvm::APSInt* BI = BV.getAsInteger();
+
+            if (AI && BI && *AI == *BI) {
+                return false;
+            }
+        }
+    }
 
     if (const auto* BO = dyn_cast<BinaryOperator>(CommonS)) {
         if (BO->isLogicalOp() || BO->isCommaOp() || BO->isPtrMemOp())
