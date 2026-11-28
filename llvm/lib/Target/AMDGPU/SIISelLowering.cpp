@@ -19104,6 +19104,46 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
       SDValue RHSLo = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, RHS);
       return DAG.getSetCC(SL, N->getValueType(0), LHSLo, RHSLo, NewCC);
     }
+
+    // For 64-bit uniform relational comparisons convert:
+    //   X>=(2^N)   =>  (X>>N)!=0
+    //   X< (2^N)   =>  (X>>N)==0
+    //   X> (2^N-1) =>  (X>>N)!=0
+    //   X<=(2^N-1) =>  (X>>N)==0
+    // Without these conversions the comparison would be done in VALU
+    // since SALU does not have 64-bit relational comparisons.
+    // The shift instruction sets SCC, which can be used directly.
+    if (Subtarget->hasScalarCompareEq64() && RHSKnown.isConstant() &&
+        !LHS->isDivergent()) {
+      uint64_t RHSVal = RHSKnown.getConstant().getZExtValue();
+
+      ISD::CondCode NewCC = ISD::SETCC_INVALID;
+      unsigned ShiftAmt;
+
+      if (isPowerOf2_64(RHSVal)) {
+        ShiftAmt = Log2_64(RHSVal);
+        if (CC == ISD::SETUGE) {
+          NewCC = ISD::SETNE;
+        } else if (CC == ISD::SETULT) {
+          NewCC = ISD::SETEQ;
+        }
+      } else if (isMask_64(RHSVal) && RHSVal != UINT64_MAX) {
+        ShiftAmt = Log2_64(RHSVal + 1);
+        if (CC == ISD::SETUGT) {
+          NewCC = ISD::SETNE;
+        } else if (CC == ISD::SETULE) {
+          NewCC = ISD::SETEQ;
+        }
+      }
+
+      if (NewCC != ISD::SETCC_INVALID) {
+        SDValue Shift =
+            DAG.getNode(ISD::SRL, SL, MVT::i64, LHS,
+                        DAG.getShiftAmountConstant(ShiftAmt, MVT::i64, SL));
+        SDValue Zero = DAG.getConstant(0, SL, MVT::i64);
+        return DAG.getSetCC(SL, N->getValueType(0), Shift, Zero, NewCC);
+      }
+    }
   }
 
   // Eliminate setcc by using carryout from add/sub instruction
