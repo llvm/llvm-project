@@ -20767,18 +20767,19 @@ static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
       (VT.isFixedLengthVector() || (VT == MVT::i32 && !Subtarget.is64Bit())))
     return combinePExtTruncate(N, DAG, Subtarget);
 
-  // Pre-promote (i1 (truncate (srl X, Y))) on RV64 with Zbs without zero
-  // extending X. This is safe since we only need the LSB after the shift and
-  // shift amounts larger than 31 would produce poison. If we wait until
-  // type legalization, we'll create RISCVISD::SRLW and we can't recover it
-  // to use a BEXT instruction.
-  if (Subtarget.is64Bit() && Subtarget.hasStdExtZbs() && VT == MVT::i1 &&
-      N0.getValueType() == MVT::i32 && N0.getOpcode() == ISD::SRL &&
+  // Pre-promote low-bit extraction from narrow scalars with Zbs without zero
+  // extending X. Only the low bit is needed, and shifts by at least the
+  // original width produce poison. Extending to XLEN before legalization
+  // avoids unnecessary input masking and, on RV64, an intervening SRLW.
+  EVT NarrowVT = N0.getValueType();
+  MVT XLenVT = Subtarget.getXLenVT();
+  if (Subtarget.hasStdExtZbs() && VT == MVT::i1 && NarrowVT.isScalarInteger() &&
+      NarrowVT.bitsLT(XLenVT) && N0.getOpcode() == ISD::SRL &&
       !isa<ConstantSDNode>(N0.getOperand(1)) && N0.hasOneUse()) {
     SDLoc DL(N0);
-    SDValue Op0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N0.getOperand(0));
-    SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N0.getOperand(1));
-    SDValue Srl = DAG.getNode(ISD::SRL, DL, MVT::i64, Op0, Op1);
+    SDValue Op0 = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, N0.getOperand(0));
+    SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, N0.getOperand(1));
+    SDValue Srl = DAG.getNode(ISD::SRL, DL, XLenVT, Op0, Op1);
     return DAG.getNode(ISD::TRUNCATE, SDLoc(N), VT, Srl);
   }
 
@@ -20934,22 +20935,22 @@ static SDValue performANDCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDValue N0 = N->getOperand(0);
 
-  // Pre-promote (i32 (and (srl X, Y), 1)) on RV64 with Zbs without zero
-  // extending X. This is safe since we only need the LSB after the shift and
-  // shift amounts larger than 31 would produce poison. If we wait until
-  // type legalization, we'll create RISCVISD::SRLW and we can't recover it
-  // to use a BEXT instruction.
-  if (Subtarget.is64Bit() && Subtarget.hasStdExtZbs() &&
-      N->getValueType(0) == MVT::i32 && isOneConstant(N->getOperand(1)) &&
+  // Pre-promote low-bit extraction from narrow scalars with Zbs without zero
+  // extending X. Shifts by at least the original width produce poison, so
+  // input bits above that width cannot affect the extracted bit.
+  EVT NarrowVT = N->getValueType(0);
+  MVT XLenVT = Subtarget.getXLenVT();
+  if (Subtarget.hasStdExtZbs() && NarrowVT.isScalarInteger() &&
+      NarrowVT.bitsLT(XLenVT) && isOneConstant(N->getOperand(1)) &&
       N0.getOpcode() == ISD::SRL && !isa<ConstantSDNode>(N0.getOperand(1)) &&
       N0.hasOneUse()) {
     SDLoc DL(N);
-    SDValue Op0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N0.getOperand(0));
-    SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N0.getOperand(1));
-    SDValue Srl = DAG.getNode(ISD::SRL, DL, MVT::i64, Op0, Op1);
-    SDValue And = DAG.getNode(ISD::AND, DL, MVT::i64, Srl,
-                              DAG.getConstant(1, DL, MVT::i64));
-    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, And);
+    SDValue Op0 = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, N0.getOperand(0));
+    SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, XLenVT, N0.getOperand(1));
+    SDValue Srl = DAG.getNode(ISD::SRL, DL, XLenVT, Op0, Op1);
+    SDValue And =
+        DAG.getNode(ISD::AND, DL, XLenVT, Srl, DAG.getConstant(1, DL, XLenVT));
+    return DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, And);
   }
 
   if (SDValue V = combineNarrowableShiftedLoad(N, DAG))
