@@ -1,0 +1,43 @@
+posix: posix-2024
+macros:
+  MM_APPL:
+    in-latest-posix: ''
+  MM_CONSOLE:
+    in-latest-posix: ''
+  MM_ERROR:
+    in-latest-posix: ''
+  MM_FIRM:
+    in-latest-posix: ''
+  MM_HALT:
+    in-latest-posix: ''
+  MM_HARD:
+    in-latest-posix: ''
+  MM_INFO:
+    in-latest-posix: ''
+  MM_NOCON:
+    in-latest-posix: ''
+  MM_NOMSG:
+    in-latest-posix: ''
+  MM_NOSEV:
+    in-latest-posix: ''
+  MM_NOTOK:
+    in-latest-posix: ''
+  MM_NRECOV:
+    in-latest-posix: ''
+  MM_OK:
+    in-latest-posix: ''
+  MM_OPSYS:
+    in-latest-posix: ''
+  MM_PRINT:
+    in-latest-posix: ''
+  MM_RECOVER:
+    in-latest-posix: ''
+  MM_SOFT:
+    in-latest-posix: ''
+  MM_UTIL:
+    in-latest-posix: ''
+  MM_WARNING:
+    in-latest-posix: ''
+functions:
+  fmtmsg:
+    in-latest-posix: ''

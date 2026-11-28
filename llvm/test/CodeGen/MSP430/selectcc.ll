@@ -4,7 +4,8 @@
 
 define i16 @select_to_shifts_i16(i16 %a, i16 %b) {
 ; CHECK-LABEL: select_to_shifts_i16:
-; CHECK:       ; %bb.0:
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    mov r12, r14
 ; CHECK-NEXT:    clr r12
 ; CHECK-NEXT:    bit #2, r14
@@ -21,7 +22,8 @@ define i16 @select_to_shifts_i16(i16 %a, i16 %b) {
 
 define i32 @select_to_shifts_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: select_to_shifts_i32:
-; CHECK:       ; %bb.0:
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    mov r12, r11
 ; CHECK-NEXT:    and #2, r11
 ; CHECK-NEXT:    clr r13
@@ -44,4 +46,25 @@ define i32 @select_to_shifts_i32(i32 %a, i32 %b) {
   %tobool = icmp eq i32 %and, 0
   %select = select i1 %tobool, i32 0, i32 %b
   ret i32 %select
+}
+
+define ptr @select_zext_nneg_load_i8(ptr %p, ptr %q) {
+; CHECK-LABEL: select_zext_nneg_load_i8:
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0:
+; CHECK-NEXT:    mov.b 0(r12), r14
+; CHECK-NEXT:    cmp.b #6, r14
+; CHECK-NEXT:    jge .LBB2_2
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    mov r13, r12
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:    add r14, r12
+; CHECK-NEXT:    ret
+  %v = load i8, ptr %p, align 1
+  %c = icmp sgt i8 %v, 5
+  %z = zext nneg i8 %v to i64
+  %a = getelementptr i8, ptr %p, i64 %z
+  %r = select i1 %c, ptr %a, ptr %q
+  ret ptr %r
 }

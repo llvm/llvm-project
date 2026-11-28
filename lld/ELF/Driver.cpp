@@ -41,7 +41,9 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Parallel.h"
 #include "lld/Common/Strings.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -1360,7 +1362,8 @@ static void parseClangOption(Ctx &ctx, StringRef opt, const Twine &msg) {
   const char *argv[] = {ctx.arg.progName.data(), opt.data()};
   // Called after initLLVM() to ensure target-specific RegisterLibraryOptions
   // have been called.
-  if (cl::parseCommandLineOptions(ctx.arg.libraryOptions, argv, "", &os))
+  if (cl::parseCommandLineOptions(ctx.arg.libraryOptions, getToolOptions(),
+                                  argv, "", &os))
     return;
   ErrAlways(ctx) << msg << ": " << StringRef(err).trim();
 }
@@ -1431,7 +1434,11 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.dependencyFile = args.getLastArgValue(OPT_dependency_file);
   ctx.arg.dependentLibraries =
       args.hasFlag(OPT_dependent_libraries, OPT_no_dependent_libraries, true);
+#ifdef NDEBUG
+  ctx.arg.disableVerify = true;
+#else
   ctx.arg.disableVerify = args.hasArg(OPT_disable_verify);
+#endif
   ctx.arg.discard = getDiscard(args);
   ctx.arg.dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor_eq);
   ctx.arg.dtltoDistributorArgs =
@@ -1673,7 +1680,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zKeepTextSectionPrefix = getZFlag(
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
-      getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
+      getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", true);
   ctx.arg.zMarkPlt = getZFlag(args, "mark-plt", "nomark-plt", false);
   ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
   ctx.arg.zNodefaultlib = hasZOption(args, "nodefaultlib");
@@ -1841,8 +1848,6 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  cl::ResetAllOptionOccurrences();
-
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
     parseClangOption(ctx, ctx.saver.save("-mcpu=" + StringRef(arg->getValue())),
@@ -1864,6 +1869,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
 
   ctx.arg.passPlugins = args::getStrings(args, OPT_load_pass_plugins);
+  ctx.arg.passPluginArgs = args::getStrings(args, OPT_pass_plugin_arg);
 
   // Parse -mllvm options.
   for (const auto *arg : args.filtered(OPT_mllvm)) {
@@ -2496,15 +2502,15 @@ static void handleUndefinedGlob(Ctx &ctx, StringRef arg) {
     return;
   }
 
-  // Calling sym->extract() in the loop is not safe because it may add new
-  // symbols to the symbol table, invalidating the current iterator.
-  SmallVector<Symbol *, 0> syms;
-  for (Symbol *sym : ctx.symtab->getSymbols())
-    if (!sym->isPlaceholder() && pat->match(sym->getName()))
-      syms.push_back(sym);
-
-  for (Symbol *sym : syms)
-    handleUndefined(ctx, sym, "--undefined-glob");
+  ArrayRef<Symbol *> syms = ctx.symtab->getSymbols();
+  SmallVector<uint8_t, 0> matched(syms.size());
+  parallelFor(0, syms.size(), [&](size_t i) {
+    matched[i] = !syms[i]->isPlaceholder() && pat->match(syms[i]->getName());
+  });
+  // handleUndefined may append to the symbol table, invalidating syms.
+  for (size_t i : llvm::seq(matched.size()))
+    if (matched[i])
+      handleUndefined(ctx, ctx.symtab->getSymbols()[i], "--undefined-glob");
 }
 
 static void handleLibcall(Ctx &ctx, StringRef name) {
@@ -2670,7 +2676,7 @@ static void replaceCommonSymbols(Ctx &ctx) {
       auto *bss = make<BssSection>(ctx, "COMMON", s->size, s->alignment);
       bss->file = s->file;
       ctx.inputSections.push_back(bss);
-      Defined(ctx, s->file, StringRef(), s->binding, s->stOther, s->type,
+      Defined(s->file, StringRef(), s->binding, s->stOther, s->type,
               /*value=*/0, s->size, bss)
           .overwrite(*s);
     }
@@ -2750,7 +2756,8 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   }
 }
 
-static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
+void elf::markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
+  llvm::TimeTraceScope timeScope("Mark buffers as dontneed");
   // With --thinlto-index-only, all buffers are nearly unused from now on
   // (except symbol/section names used by infrequent passes). Mark input file
   // buffers as MADV_DONTNEED so that these pages can be reused by the expensive
@@ -2803,8 +2810,18 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   // Compile bitcode files and replace bitcode symbols.
   lto.reset(new BitcodeCompiler(ctx));
   lto->setBitcodeLibFuncs(bitcodeLibFuncs);
-  for (BitcodeFile *file : ctx.bitcodeFiles)
+  DenseMap<const char *, MemoryBuffer *> bitcodeBufs;
+  if (skipLinkedOutput && !ctx.bitcodeFiles.empty()) {
+    bitcodeBufs.reserve(ctx.memoryBuffers.size());
+    for (MemoryBuffer &mb : llvm::make_pointee_range(ctx.memoryBuffers))
+      bitcodeBufs.try_emplace(mb.getBufferStart(), &mb);
+  }
+  for (BitcodeFile *file : ctx.bitcodeFiles) {
+    const char *bufStart = file->mb.getBufferStart();
     lto->add(*file);
+    if (MemoryBuffer *mb = bitcodeBufs.lookup(bufStart))
+      mb->dontNeedIfMmap();
+  }
 
   if (!ctx.bitcodeFiles.empty())
     markBuffersAsDontNeed(ctx, skipLinkedOutput);
@@ -3016,8 +3033,6 @@ static void readSecurityNotes(Ctx &ctx) {
       ctx.arg.emachine != EM_AARCH64 && ctx.arg.emachine != EM_RISCV)
     return;
 
-  ctx.arg.andFeatures = -1;
-
   StringRef referenceFileName;
   if (ctx.arg.emachine == EM_AARCH64) {
     auto it = llvm::find_if(ctx.objectFiles, [](const ELFFileBase *f) {
@@ -3039,6 +3054,14 @@ static void readSecurityNotes(Ctx &ctx) {
       return {ctx, DiagLevel::None};
     return {ctx, toDiagLevel(policy)};
   };
+
+  // We start with a mask with all bits set, unless we have no true object
+  // file like in ld -b binary invocations.
+  if (!ctx.objectFiles.empty())
+    ctx.arg.andFeatures = -1;
+  else
+    ctx.arg.andFeatures = 0;
+
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
 
@@ -3200,44 +3223,6 @@ static void readSecurityNotes(Ctx &ctx) {
           << "dependencies have the GCS marking.";
 }
 
-static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
-  switch (file->ekind) {
-  case ELF32LEKind:
-    cast<ObjFile<ELF32LE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF32BEKind:
-    cast<ObjFile<ELF32BE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF64LEKind:
-    cast<ObjFile<ELF64LE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  case ELF64BEKind:
-    cast<ObjFile<ELF64BE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
-    break;
-  default:
-    llvm_unreachable("");
-  }
-}
-
-static void postParseObjectFile(ELFFileBase *file) {
-  switch (file->ekind) {
-  case ELF32LEKind:
-    cast<ObjFile<ELF32LE>>(file)->postParse();
-    break;
-  case ELF32BEKind:
-    cast<ObjFile<ELF32BE>>(file)->postParse();
-    break;
-  case ELF64LEKind:
-    cast<ObjFile<ELF64LE>>(file)->postParse();
-    break;
-  case ELF64BEKind:
-    cast<ObjFile<ELF64BE>>(file)->postParse();
-    break;
-  default:
-    llvm_unreachable("");
-  }
-}
-
 // Objects that support Dynamic Debugging contain an ELF Dynamic Debugging
 // section that embeds an unoptimized ELF file with debug information. We
 // extract these embedded ELF files to make a consolidated unoptimized
@@ -3325,8 +3310,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     handleUndefined(ctx, sym, "--entry");
 
   // Handle the `--undefined-glob <pattern>` options.
-  for (StringRef pat : args::getStrings(args, OPT_undefined_glob))
-    handleUndefinedGlob(ctx, pat);
+  {
+    llvm::TimeTraceScope timeScope("Handle undefined glob");
+    for (StringRef pat : args::getStrings(args, OPT_undefined_glob))
+      handleUndefinedGlob(ctx, pat);
+  }
 
   // After potential archive member extraction involving ENTRY and
   // -u/--undefined-glob, check whether PROVIDE symbols should be defined (the
@@ -3372,10 +3360,15 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // No more lazy bitcode can be extracted at this point. Do post parse work
   // like checking duplicate symbols.
-  parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
-    initSectionsAndLocalSyms(file, /*ignoreComdats=*/false);
-  });
-  parallelForEach(ctx.objectFiles, postParseObjectFile);
+  {
+    llvm::TimeTraceScope timeScope("Initialize sections");
+    parallelForEachFineGrained(ctx.objectFiles, [](ELFFileBase *file) {
+      cast<ObjFile<ELFT>>(file)->initSectionsAndLocalSyms();
+    });
+    parallelForEachFineGrained(ctx.objectFiles, [](ELFFileBase *file) {
+      cast<ObjFile<ELFT>>(file)->postParse();
+    });
+  }
   parallelForEach(ctx.bitcodeFiles,
                   [](BitcodeFile *file) { file->postParse(); });
   for (auto &it : ctx.nonPrevailingSyms) {
@@ -3466,10 +3459,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // compileBitcodeFiles may have produced lto.tmp object files. After this, no
   // more file will be added.
   auto newObjectFiles = ArrayRef(ctx.objectFiles).slice(numObjsBeforeLTO);
-  parallelForEach(newObjectFiles, [](ELFFileBase *file) {
-    initSectionsAndLocalSyms(file, /*ignoreComdats=*/true);
+  parallelForEachFineGrained(newObjectFiles, [](ELFFileBase *file) {
+    cast<ObjFile<ELFT>>(file)->initSectionsAndLocalSyms();
   });
-  parallelForEach(newObjectFiles, postParseObjectFile);
+  parallelForEachFineGrained(newObjectFiles, [](ELFFileBase *file) {
+    cast<ObjFile<ELFT>>(file)->postParse();
+  });
   for (const DuplicateSymbol &d : ctx.duplicates)
     reportDuplicate(ctx, *d.sym, d.file, d.section, d.value);
 
@@ -3652,4 +3647,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Write the result to the file.
   writeResult<ELFT>(ctx);
+
+  // Linux unmaps serially at exit, so drop input file mappings in parallel.
+  if (ctx.e.exitEarly && ctx.arg.threadCount > 1) {
+    parallelForEach(ctx.memoryBuffers, [](std::unique_ptr<MemoryBuffer> &mb) {
+      mb->dontNeedIfMmap();
+    });
+  }
 }

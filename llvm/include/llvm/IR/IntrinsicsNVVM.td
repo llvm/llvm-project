@@ -1828,8 +1828,6 @@ let TargetPrefix = "nvvm" in {
   //
   // Fma
   //
-  // TODO: Add tests for commutativity along with missing mixed precision 
-  // patterns.
   foreach ftz = ["", "_ftz"] in
     foreach variant = ["", "_sat", "_relu"] in
       def int_nvvm_fma # ftz # variant :
@@ -2497,9 +2495,23 @@ foreach op = ["expect_tx", "complete_tx"] in {
       defvar mbar_addr_ty = !if(!eq(space, "space_cta"),
                             llvm_shared_ptr_ty, llvm_shared_cluster_ptr_ty);
 
+      // The shared::cluster form additionally carries a 32-bit CTA mask and a
+      // constant is-multicast flag.
+      defvar args_ty = !if(!eq(space, "space_cta"),
+                           [mbar_addr_ty,  // mbar_address_ptr
+                            llvm_i32_ty],  // tx-count
+                           [mbar_addr_ty,  // mbar_address_ptr
+                            llvm_i32_ty,   // tx-count
+                            llvm_i32_ty,   // cta-mask
+                            llvm_i1_ty]);  // is-multicast
+      defvar mc_props = !if(!eq(space, "space_cta"),
+                            []<IntrinsicProperty>,
+                            [ImmArg<ArgIndex<3>>]);
+
       def int_nvvm_mbarrier_ # suffix :
-          Intrinsic<[], [mbar_addr_ty, llvm_i32_ty],
-          [IntrConvergent, IntrArgMemOnly, IntrNoCallback]>;
+          Intrinsic<[], args_ty,
+          !listconcat([IntrConvergent, IntrArgMemOnly, IntrNoCallback],
+                      mc_props)>;
     } // space
   } // scope
 } // op
@@ -2513,19 +2525,31 @@ foreach op = ["arrive", "arrive_expect_tx",
       defvar suffix = StrJoin<"_", [scope, space]>.ret;
       defvar mbar_addr_ty = !if(!eq(space, "space_cta"),
                             llvm_shared_ptr_ty, llvm_shared_cluster_ptr_ty);
-      defvar args_ty = [mbar_addr_ty, // mbar_address_ptr
-                        llvm_i32_ty]; // tx-count
 
       // mbarriers in shared_cluster space cannot return any value.
       defvar mbar_ret_ty = !if(!eq(space, "space_cta"),
                               [llvm_i64_ty], []<LLVMType>);
 
+      // The shared::cluster form additionally carries a 32-bit CTA mask and a
+      // constant is-multicast flag.
+      defvar args_ty = !if(!eq(space, "space_cta"),
+                           [mbar_addr_ty,  // mbar_address_ptr
+                            llvm_i32_ty],  // count
+                           [mbar_addr_ty,  // mbar_address_ptr
+                            llvm_i32_ty,   // count
+                            llvm_i32_ty,   // cta-mask
+                            llvm_i1_ty]);  // is-multicast
+      defvar mc_props = !if(!eq(space, "space_cta"),
+                            []<IntrinsicProperty>,
+                            [ImmArg<ArgIndex<3>>]);
+
       def int_nvvm_mbarrier_ # op # "_" # suffix:
           Intrinsic<mbar_ret_ty, args_ty,
-          [IntrConvergent, IntrNoCallback]>;
+          !listconcat([IntrConvergent, IntrNoCallback], mc_props)>;
       def int_nvvm_mbarrier_ # op # "_relaxed_" # suffix :
           Intrinsic<mbar_ret_ty, args_ty,
-          [IntrConvergent, IntrArgMemOnly, IntrNoCallback]>;
+          !listconcat([IntrConvergent, IntrArgMemOnly, IntrNoCallback],
+                      mc_props)>;
     } // space
   } // scope
 } // op
@@ -2553,6 +2577,34 @@ foreach op = ["test_wait", "try_wait"] in {
              IntrArgMemOnly, IntrReadMem]>;
       } // tl
     } // parity
+  } // scope
+} // op
+
+foreach op = ["test_wait", "try_wait"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach phase = ["primary", "conditional"] in {
+      foreach parity = !if(!eq(phase, "conditional"), [true], [true, false]) in {
+        foreach time_limit = !if(!eq(op, "try_wait"), [true, false], [false]) in {
+          defvar base_args = [llvm_shared_ptr_ty];
+          defvar state_args = !if(parity, [llvm_i32_ty], [llvm_i64_ty]);
+          defvar tl_args = !if(time_limit, [llvm_i32_ty], []<LLVMType>);
+          defvar args = !listconcat(base_args, state_args, tl_args);
+          defvar ret = !if(!eq(phase, "primary"),
+                          [llvm_i1_ty, llvm_i1_ty, llvm_i32_ty], [llvm_i1_ty]);
+          defvar name = StrJoin<"_", [op,
+                            !if(parity, "parity", ""),
+                            !if(time_limit, "tl", ""), phase]>.ret;
+          defvar suffix = scope # "_space_cta";
+          def int_nvvm_mbarrier_ # name # "_" # suffix :
+              Intrinsic<ret, args,
+              [IntrConvergent, IntrNoCallback, NoCapture<ArgIndex<0>>]>;
+          def int_nvvm_mbarrier_ # name # "_relaxed_" # suffix :
+              Intrinsic<ret, args,
+              [IntrConvergent, IntrNoCallback, NoCapture<ArgIndex<0>>,
+               IntrArgMemOnly, IntrReadMem]>;
+        } // time_limit
+      } // parity
+    } // phase
   } // scope
 } // op
 
@@ -3892,6 +3944,25 @@ foreach shape = ["32x32b", "16x32bx2"] in {
   } // num
 } // shape
 
+// tcgen05.ld{.red}.spcompress intrinsics
+class NVVM_TCGEN05_LD_SPCOMPRESS<bit IsRed> :
+  DefaultAttrsIntrinsicFlags<
+    !listconcat([llvm_anyint_ty,                   // mdata
+                 llvm_any_vector_float_ty],        // cdata
+                !if(IsRed, [llvm_float_ty], [])),  // redval
+    [llvm_tmem_ptr_ty],                            // taddr
+    !listconcat([llvm_i32_ty,                      // row_op
+                 llvm_i1_ty],                      // abs
+                !if(IsRed, [llvm_i1_ty], [])),     // nan
+    !listconcat([IntrConvergent, IntrArgMemOnly, IntrReadMem,
+                 Range<ArgIndex<1>, 0, 2>,
+                 ArgInfo<ArgIndex<1>, [ArgName<"row_op">]>,
+                 ArgInfo<ArgIndex<2>, [ArgName<"abs">]>],
+                !if(IsRed, [ArgInfo<ArgIndex<3>, [ArgName<"nan">]>], []))>;
+
+def int_nvvm_tcgen05_ld_spcompress_32x32b : NVVM_TCGEN05_LD_SPCOMPRESS<false>;
+def int_nvvm_tcgen05_ld_red_spcompress_32x32b : NVVM_TCGEN05_LD_SPCOMPRESS<true>;
+
 //
 // Bulk store intrinsics
 //
@@ -4219,9 +4290,15 @@ foreach space = ["tensor", "shared"] in {
 // tensormap.replace intrinsics
 //
 
+def int_nvvm_tensormap_replace_global_address :
+  DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i64_ty, llvm_i32_ty],
+    [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<0>>,
+     ImmArg<ArgIndex<2>, DefaultValue<0>>,
+     Range<ArgIndex<2>, 0, 3>,
+     ArgInfo<ArgIndex<2>, [ArgName<"alloc_class">,
+                           ImmArgPrinter<"printTensormapAllocClass">]>]>;
+
 let IntrProperties = [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<0>>] in {
-  def int_nvvm_tensormap_replace_global_address :
-    DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i64_ty], []>;
   def int_nvvm_tensormap_replace_rank :
     DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty], []>;
 }
@@ -4266,6 +4343,16 @@ def int_nvvm_tensormap_replace_fill_mode :
      Range<ArgIndex<1>, 0, 2>,
      ArgInfo<ArgIndex<1>, [ArgName<"fill_mode">, 
                            ImmArgPrinter<"printTensormapFillMode">]>]>;
+def int_nvvm_tensormap_replace_alloc_class :
+  DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty],
+    [IntrArgMemOnly, IntrWriteMem, ImmArg<ArgIndex<1>>, NoCapture<ArgIndex<0>>,
+     Range<ArgIndex<1>, 0, 2>,
+     ArgInfo<ArgIndex<1>, [ArgName<"alloc_class">,
+                           ImmArgPrinter<"printTensormapAllocClass">]>]>;
+
+def int_nvvm_tensormap_query_alloc_class_large :
+  DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_anyptr_ty],
+    [IntrArgMemOnly, IntrReadMem, NoCapture<ArgIndex<0>>]>;
 
 //
 // spcompress intrinsics

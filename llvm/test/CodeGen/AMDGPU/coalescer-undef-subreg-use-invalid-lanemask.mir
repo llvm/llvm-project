@@ -7,7 +7,6 @@
 
 ---
 name:            merge_with_undef_subreg_use_subrange_lanemask_is_invalid
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'

@@ -208,6 +208,16 @@ define void @test_swifterror_3() sanitize_address {
   ret void
 }
 
+; CHECK-LABEL: @test_swift_async_context_addr
+; CHECK-NOT: __asan_report
+; CHECK: ret void
+define void @test_swift_async_context_addr() sanitize_address {
+  %addr = call ptr @llvm.swift.async.context.addr()
+  %ctx = load ptr, ptr %addr
+  store ptr %ctx, ptr %addr
+  ret void
+}
+
 ;; ctor/dtor have the nounwind attribute. See uwtable.ll, they additionally have
 ;; the uwtable attribute with the module flag "uwtable".
 ; CHECK: define internal void @asan.module_ctor() #[[#ATTR:]] comdat {

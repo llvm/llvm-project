@@ -9,6 +9,8 @@
 #include "clang/CodeGen/CodeGenAction.h"
 #include "BackendConsumer.h"
 #include "CGCall.h"
+#include "CGDebugInfo.h"
+#include "CodeGenCLOptions.h"
 #include "CodeGenModule.h"
 #include "CoverageMappingGen.h"
 #include "MacroPPCallbacks.h"
@@ -248,6 +250,8 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
       DiagConsumer.addFunctionSourceLocation(F.getName(), Loc);
     }
   }
+  if (CodeGen::CGDebugInfo *DI = Gen->CGM().getModuleDebugInfo())
+    DiagConsumer.setDIFileSources(DI->getDIFileSources());
 
   if (CodeGenOpts.ClearASTBeforeBackend) {
     LLVM_DEBUG(llvm::dbgs() << "Clearing AST...\n");
@@ -388,7 +392,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   // Add the preprocessor callback only when the coverage mapping is generated.
   if (CI.getCodeGenOpts().CoverageMapping)
     CoverageInfo = CodeGen::CoverageMappingModuleGen::setUpCoverageCallbacks(
-        CI.getPreprocessor());
+        CodeGen::getCodeGenCLOptions(*VMContext), CI.getPreprocessor());
 
   std::unique_ptr<BackendConsumer> Result(new BackendConsumer(
       CI, BA, CI.getVirtualFileSystemPtr(), *VMContext, std::move(LinkModules),

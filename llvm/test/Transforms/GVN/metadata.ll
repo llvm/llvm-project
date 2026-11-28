@@ -542,6 +542,88 @@ define i64 @test_mem_cache_hint_diff(ptr %p) {
   ret i64 %c
 }
 
+; Load of a pointer select replaced by a select of two dominating loads: the
+; reused loads' metadata did not constrain the replaced load and must be
+; combined with it, or the new select could be poison where the load was not.
+
+define i32 @load_of_select_range_dropped(ptr %a, ptr %b, i1 %c) {
+; CHECK-LABEL: define i32 @load_of_select_range_dropped
+; CHECK-SAME: (ptr [[A:%.*]], ptr [[B:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[B]], align 4
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[A]], ptr [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], i32 [[L1]], i32 [[L2]]
+; CHECK-NEXT:    [[UNUSED:%.*]] = add i32 [[L1]], [[L2]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %l1 = load i32, ptr %a, align 4, !range !18
+  %l2 = load i32, ptr %b, align 4
+  %p = select i1 %c, ptr %a, ptr %b
+  %r = load i32, ptr %p, align 4
+  %unused = add i32 %l1, %l2
+  ret i32 %r
+}
+
+define i32 @load_of_select_range_merged(ptr %a, ptr %b, i1 %c) {
+; CHECK-LABEL: define i32 @load_of_select_range_merged
+; CHECK-SAME: (ptr [[A:%.*]], ptr [[B:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4, !range [[RNG15:![0-9]+]]
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[B]], align 4, !range [[RNG15]]
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[A]], ptr [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], i32 [[L1]], i32 [[L2]]
+; CHECK-NEXT:    [[UNUSED:%.*]] = add i32 [[L1]], [[L2]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %l1 = load i32, ptr %a, align 4, !range !18
+  %l2 = load i32, ptr %b, align 4, !range !18
+  %p = select i1 %c, ptr %a, ptr %b
+  %r = load i32, ptr %p, align 4, !range !19
+  %unused = add i32 %l1, %l2
+  ret i32 %r
+}
+
+; The false side is forwarded from a store; only the load side is affected.
+define i32 @load_of_select_range_dropped_store_side(ptr noalias %a, ptr noalias %b, i1 %c, i32 %v) {
+; CHECK-LABEL: define i32 @load_of_select_range_dropped_store_side
+; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i1 [[C:%.*]], i32 [[V:%.*]]) {
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    store i32 [[V]], ptr [[B]], align 4
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[A]], ptr [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], i32 [[L1]], i32 [[V]]
+; CHECK-NEXT:    [[UNUSED:%.*]] = add i32 [[L1]], 1
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %l1 = load i32, ptr %a, align 4, !range !18
+  store i32 %v, ptr %b, align 4
+  %p = select i1 %c, ptr %a, ptr %b
+  %r = load i32, ptr %p, align 4
+  %unused = add i32 %l1, 1
+  ret i32 %r
+}
+
+; The false side is forwarded from a store whose value happens to be a load of
+; an unrelated address. That load is not a CSE of the replaced load, so its
+; metadata is left alone.
+define i32 @load_of_select_store_of_load_kept(ptr noalias %a, ptr noalias %b, ptr noalias %q, i1 %c) {
+; CHECK-LABEL: define i32 @load_of_select_store_of_load_kept
+; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[Q:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[Q]], align 4, !range [[RNG16:![0-9]+]]
+; CHECK-NEXT:    store i32 [[X]], ptr [[B]], align 4
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[A]], ptr [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], i32 [[L1]], i32 [[X]]
+; CHECK-NEXT:    [[UNUSED:%.*]] = add i32 [[L1]], 1
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %l1 = load i32, ptr %a, align 4
+  %x = load i32, ptr %q, align 4, !range !18
+  store i32 %x, ptr %b, align 4
+  %p = select i1 %c, ptr %a, ptr %b
+  %r = load i32, ptr %p, align 4
+  %unused = add i32 %l1, 1
+  ret i32 %r
+}
+
 !0 = !{i32 0, i32 2}
 !1 = !{i32 3, i32 5}
 !2 = !{i32 2, i32 5}
@@ -560,6 +642,8 @@ define i64 @test_mem_cache_hint_diff(ptr %p) {
 !15 = !{ !"nvvm.prefetch_bytes", i32 128 }
 !16 = !{ i32 0, !17 }
 !17 = !{ !"nvvm.l1_eviction", !"last" }
+!18 = !{i32 0, i32 10}
+!19 = !{i32 20, i32 30}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { memory(none) }
 ;.
@@ -578,4 +662,6 @@ define i64 @test_mem_cache_hint_diff(ptr %p) {
 ; CHECK: [[META12]] = !{!"nvvm.l1_eviction", !"first"}
 ; CHECK: [[META13]] = !{i32 0, [[META14:![0-9]+]]}
 ; CHECK: [[META14]] = !{!"nvvm.prefetch_bytes", i32 128}
+; CHECK: [[RNG15]] = !{i32 0, i32 10, i32 20, i32 30}
+; CHECK: [[RNG16]] = !{i32 0, i32 10}
 ;.

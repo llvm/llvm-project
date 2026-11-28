@@ -423,7 +423,7 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
     return false;
 
   if (auto *CB = dyn_cast<CallBase>(I))
-    if (isRemovableAlloc(CB, TLI))
+    if (isRemovableAlloc(CB))
       return true;
 
   if (!I->willReturn()) {
@@ -498,7 +498,7 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
   }
 
   if (auto *Call = dyn_cast<CallBase>(I)) {
-    if (Value *FreedOp = getFreedOperand(Call, TLI))
+    if (Value *FreedOp = getFreedOperand(Call))
       if (Constant *C = dyn_cast<Constant>(FreedOp))
         return C->isNullValue() || isa<UndefValue>(C);
     if (isMathLibCallNoop(Call, TLI))
@@ -686,9 +686,9 @@ simplifyAndDCEInstruction(Instruction *I,
   if (Value *SimpleV = simplifyInstruction(I, DL)) {
     // Add the users to the worklist. CAREFUL: an instruction can use itself,
     // in the case of a phi node.
-    for (User *U : I->users()) {
+    for (Instruction *U : I->users()) {
       if (U != I) {
-        WorkList.insert(cast<Instruction>(U));
+        WorkList.insert(U);
       }
     }
 
@@ -841,6 +841,25 @@ static bool CanMergeValues(Value *First, Value *Second) {
   return First == Second || isa<UndefValue>(First) || isa<UndefValue>(Second);
 }
 
+/// Return true if one of \p BBPreds may branch to \p Succ. At most 16
+/// successors are inspected; beyond that, this conservatively returns true, so
+/// the check stays cheap even if a predecessor ends in a large switch.
+static bool
+mayHaveSharedPredecessor(BasicBlock *Succ,
+                         const SmallPtrSetImpl<BasicBlock *> &BBPreds) {
+  unsigned Budget = 16;
+  for (BasicBlock *Pred : BBPreds) {
+    const Instruction *TI = Pred->getTerminator();
+    unsigned NumSuccs = TI->getNumSuccessors();
+    if (NumSuccs > Budget)
+      return true;
+    Budget -= NumSuccs;
+    if (is_contained(successors(TI), Succ))
+      return true;
+  }
+  return false;
+}
+
 /// Return true if we can fold BB, an almost-empty BB ending in an unconditional
 /// branch to Succ, into Succ.
 ///
@@ -935,22 +954,13 @@ static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
   return OldVal;
 }
 
-/// Create a map from block to value for the operands of a
-/// given phi.
+/// Update a block-to-value map with the non-undef values found in a phi.
+/// Only blocks that are already in the map are updated.
 ///
-/// This function initializes the map with UndefValue for all predecessors
-/// in BBPreds, and then updates the map with concrete non-undef values
-/// found in the PHI node.
-///
-/// \param PN The phi we are collecting the map for.
-/// \param BBPreds The list of all predecessor blocks to initialize with Undef.
-/// \param IncomingValues [out] The map from block to value for this phi.
+/// \param PN The phi we are collecting the values of.
+/// \param IncomingValues [in,out] The map from block to value for this phi.
 static void gatherIncomingValuesToPhi(PHINode *PN,
-                                      const PredBlockVector &BBPreds,
                                       IncomingValueMap &IncomingValues) {
-  for (BasicBlock *Pred : BBPreds)
-    IncomingValues[Pred] = nullptr;
-
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
     Value *V = PN->getIncomingValue(i);
     if (isa<UndefValue>(V))
@@ -961,6 +971,27 @@ static void gatherIncomingValuesToPhi(PHINode *PN,
     if (It != IncomingValues.end())
       It->second = V;
   }
+}
+
+/// If the incoming values of a phi at \p UndefOps are a mix of undef and
+/// poison, replace the poison values with undef.
+///
+/// \param PN The phi whose incoming values are replaced.
+/// \param UndefOps The indices of incoming values that are undef or poison.
+static void replacePoisonWithUndefIfMixed(PHINode *PN,
+                                          ArrayRef<unsigned> UndefOps) {
+  // If there are both undef and poison values incoming, then convert those
+  // values to undef. It is invalid to have different values for the same
+  // incoming block.
+  unsigned PoisonCount = count_if(UndefOps, [&](unsigned I) {
+    return isa<PoisonValue>(PN->getIncomingValue(I));
+  });
+
+  if (PoisonCount == 0 || PoisonCount == UndefOps.size())
+    return;
+
+  for (unsigned I : UndefOps)
+    PN->setIncomingValue(I, UndefValue::get(PN->getType()));
 }
 
 /// Replace the incoming undef values to a phi with the values
@@ -995,16 +1026,7 @@ static void replaceUndefValuesInPhi(PHINode *PN,
     PN->setIncomingValue(i, It->second);
   }
 
-  // If there are both undef and poison values incoming, then convert those
-  // values to undef. It is invalid to have different values for the same
-  // incoming block.
-  unsigned PoisonCount = count_if(TrueUndefOps, [&](unsigned i) {
-    return isa<PoisonValue>(PN->getIncomingValue(i));
-  });
-  if (PoisonCount != 0 && PoisonCount != TrueUndefOps.size()) {
-    for (unsigned i : TrueUndefOps)
-      PN->setIncomingValue(i, UndefValue::get(PN->getType()));
-  }
+  replacePoisonWithUndefIfMixed(PN, TrueUndefOps);
 }
 
 // Only when they shares a single common predecessor, return true.
@@ -1076,15 +1098,21 @@ static bool introduceTooManyPhiEntries(BasicBlock *BB, BasicBlock *Succ) {
 /// \param BBPreds The predecessors of BB.
 /// \param PN The phi that we are updating.
 /// \param CommonPred The common predecessor of BB and PN's BasicBlock
+/// \param HasSharedPreds Whether BB and PN's BasicBlock may share a
+/// predecessor.
 static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
                                                 const PredBlockVector &BBPreds,
                                                 PHINode *PN,
-                                                BasicBlock *CommonPred) {
+                                                BasicBlock *CommonPred,
+                                                bool HasSharedPreds) {
+  assert((HasSharedPreds || !CommonPred) && "Unexpected CommonPred!");
   Value *OldVal = PN->removeIncomingValue(BB, false);
   assert(OldVal && "No entry in PHI for Pred BB!");
 
   // Map BBPreds to defined values or nullptr (representing undefined values).
   IncomingValueMap IncomingValues;
+  for (BasicBlock *Pred : BBPreds)
+    IncomingValues[Pred] = nullptr;
 
   // We are merging two blocks - BB, and the block containing PN - and
   // as a result we need to redirect edges from the predecessors of BB
@@ -1094,8 +1122,11 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   // and where some of those common predecessors might have undef
   // values flowing into PN, we want to rewrite those values to be
   // consistent with the non-undef values.
+  // Without shared predecessors, PN has no incoming values from BBPreds yet.
+  if (HasSharedPreds)
+    gatherIncomingValuesToPhi(PN, IncomingValues);
 
-  gatherIncomingValuesToPhi(PN, BBPreds, IncomingValues);
+  SmallVector<unsigned> NewUndefOps;
 
   // If this incoming value is one of the PHI nodes in BB, the new entries
   // in the PHI node are the entries from the old PHI.
@@ -1118,6 +1149,8 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
 
       // And add a new incoming value for this predecessor for the
       // newly retargeted branch.
+      if (!HasSharedPreds && isa<UndefValue>(Selected))
+        NewUndefOps.push_back(PN->getNumIncomingValues());
       PN->addIncoming(Selected, PredBB);
     }
     if (CommonPred)
@@ -1135,13 +1168,18 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
 
       // And add a new incoming value for this predecessor for the
       // newly retargeted branch.
+      if (!HasSharedPreds && isa<UndefValue>(Selected))
+        NewUndefOps.push_back(PN->getNumIncomingValues());
       PN->addIncoming(Selected, PredBB);
     }
     if (CommonPred)
       PN->addIncoming(OldVal, BB);
   }
 
-  replaceUndefValuesInPhi(PN, IncomingValues);
+  if (HasSharedPreds)
+    replaceUndefValuesInPhi(PN, IncomingValues);
+  else
+    replacePoisonWithUndefIfMixed(PN, NewUndefOps);
 }
 
 bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
@@ -1159,7 +1197,12 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   // The single common predecessor of BB and Succ when BB cannot be killed
   BasicBlock *CommonPred = nullptr;
 
-  bool BBKillable = CanPropagatePredecessorsForPHIs(BB, Succ, BBPreds);
+  // Without a predecessor shared with Succ, folding BB can't create conflicting
+  // phi entries, so the checks below can be skipped.
+  bool HasSharedPreds = mayHaveSharedPredecessor(Succ, BBPreds);
+
+  bool BBKillable =
+      !HasSharedPreds || CanPropagatePredecessorsForPHIs(BB, Succ, BBPreds);
 
   // Even if we can not fold BB into Succ, we may be able to redirect the
   // predecessors of BB to Succ.
@@ -1289,8 +1332,9 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // All predecessors of BB (except the common predecessor) will be moved to
     // Succ.
     Updates.reserve(Updates.size() + 2 * pred_size(BB) + 1);
-    SmallPtrSet<BasicBlock *, 16> SuccPreds(llvm::from_range,
-                                            predecessors(Succ));
+    SmallPtrSet<BasicBlock *, 16> SuccPreds;
+    if (HasSharedPreds)
+      SuccPreds.insert_range(predecessors(Succ));
     for (auto *PredOfBB : predecessors(BB)) {
       // Do not modify those common predecessors of BB and Succ
       if (!SuccPreds.contains(PredOfBB))
@@ -1319,7 +1363,8 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // Loop over all of the PHI nodes in the successor of BB.
     for (BasicBlock::iterator I = Succ->begin(); isa<PHINode>(I); ++I) {
       PHINode *PN = cast<PHINode>(I);
-      redirectValuesFromPredecessorsToPhi(BB, BBPreds, PN, CommonPred);
+      redirectValuesFromPredecessorsToPhi(BB, BBPreds, PN, CommonPred,
+                                          HasSharedPreds);
     }
   }
 
@@ -2659,10 +2704,9 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
   InvokeInst *II =
       InvokeInst::Create(CI->getFunctionType(), CI->getCalledOperand(), Split,
                          UnwindEdge, InvokeArgs, OpBundles, CI->getName(), BB);
-  II->setDebugLoc(CI->getDebugLoc());
   II->setCallingConv(CI->getCallingConv());
   II->setAttributes(CI->getAttributes());
-  II->setMetadata(LLVMContext::MD_prof, CI->getMetadata(LLVMContext::MD_prof));
+  II->copyMetadata(*CI);
 
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, UnwindEdge}});
@@ -3010,13 +3054,14 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(Kind, JMD);
         break;
-      // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
-      // from being removed as unknown metadata. The actual merging is handled
-      // separately below.
+      // Keep empty cases for prof, mmra, memprof, callsite, and pcsections to
+      // prevent them from being removed as unknown metadata. The actual merging
+      // is handled separately below.
       case LLVMContext::MD_prof:
       case LLVMContext::MD_mmra:
       case LLVMContext::MD_memprof:
       case LLVMContext::MD_callsite:
+      case LLVMContext::MD_pcsections:
         break;
       case LLVMContext::MD_callee_type:
         if (!AAOnly) {
@@ -3111,6 +3156,15 @@ static void combineMetadata(Instruction *K, const Instruction *J,
     K->setMetadata(LLVMContext::MD_callsite,
                    MDNode::getMergedCallsiteMetadata(KCallSite, JCallSite));
   }
+
+  // Merge PC sections metadata: the merged instruction stands for both, so it
+  // requests the sections of either. Handled separately to support cases where
+  // only J has the metadata.
+  if (!AAOnly)
+    K->setMetadata(LLVMContext::MD_pcsections,
+                   MDNode::getMergedPCSectionsMetadata(
+                       K->getMetadata(LLVMContext::MD_pcsections),
+                       J->getMetadata(LLVMContext::MD_pcsections)));
 
   // Merge prof metadata.
   // Handle separately to support cases where only one instruction has the
@@ -4036,6 +4090,46 @@ Value *llvm::invertCondition(Value *Condition) {
   else
     Inverted->insertBefore(Parent->getFirstInsertionPt());
   return Inverted;
+}
+
+bool llvm::freezeUsesAfterDef(FreezeInst &FI, DominatorTree &DT,
+                              SmallVectorImpl<User *> *Users) {
+  Value *Op = FI.getOperand(0);
+
+  // Move the freeze directly after the definition of its operand, so that
+  // it dominates the maximum number of uses. Note that it may not dominate
+  // *all* uses if the operand is an invoke and the use is in a phi on
+  // the normal/default destination. This is why the domination check in the
+  // replacement below is still necessary.
+  BasicBlock::iterator MoveBefore;
+  if (isa<Argument>(Op)) {
+    MoveBefore = FI.getFunction()->getEntryBlock().getFirstNonPHIOrAlloca();
+  } else {
+    auto MoveBeforeOpt = cast<Instruction>(Op)->getInsertionPointAfterDef();
+    if (!MoveBeforeOpt)
+      return false;
+    MoveBefore = *MoveBeforeOpt;
+  }
+
+  // Re-point iterator to come after any debug-info records.
+  MoveBefore.setHeadBit(false);
+
+  bool Changed = false;
+  if (&FI != &*MoveBefore) {
+    FI.moveBefore(*MoveBefore->getParent(), MoveBefore);
+    Changed = true;
+  }
+
+  Changed |= Op->replaceUsesWithIf(&FI, [&](Use &U) -> bool {
+    if (!DT.dominates(&FI, U))
+      return false;
+
+    if (Users)
+      Users->push_back(U.getUser());
+    return true;
+  });
+
+  return Changed;
 }
 
 bool llvm::inferAttributesFromOthers(Function &F) {

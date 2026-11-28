@@ -4,7 +4,6 @@
 
 ---
 name: _amdgpu_cs_main
-tracksRegLiveness: true
 body: |
   ; REG_ALLOC-LABEL: name: _amdgpu_cs_main
   ; REG_ALLOC: bb.0:

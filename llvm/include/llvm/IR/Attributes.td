@@ -192,6 +192,9 @@ def NoCreateUndefOrPoison
 /// Function is not a source of divergence.
 def NoDivergenceSource : EnumAttr<"nodivergencesource", IntersectAnd, [FnAttr]>;
 
+/// Function always returns a uniform value.
+def AlwaysUniform : EnumAttr<"alwaysuniform", IntersectAnd, [FnAttr]>;
+
 /// Call cannot be duplicated.
 def NoDuplicate : EnumAttr<"noduplicate", IntersectPreserve, [FnAttr]>;
 
@@ -215,6 +218,9 @@ def DeadOnReturn : IntAttr<"dead_on_return", IntersectMin, [ParamAttr]>;
 def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
 
 /// inline=never.
+/// Note: optnone implies noinline (unless alwaysinline is also present). Use
+/// Function::isNoInline() or CallBase::isNoInline() rather than querying this
+/// attribute directly.
 def NoInline : EnumAttr<"noinline", IntersectPreserve, [FnAttr]>;
 
 /// Function is likely only referenced from the current module.
@@ -438,7 +444,6 @@ def AllowDirectAccessInHotPatchFunction
     : StrBoolAttr<"allow_direct_access_in_hot_patch_function">;
 
 /// Target-independent string attributes.
-def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoSignedZerosFPMath : StrBoolAttr<"no-signed-zeros-fp-math">;
 def NoJumpTables : StrBoolAttr<"no-jump-tables">;
 def NoInlineLineTables : StrBoolAttr<"no-inline-line-tables">;
@@ -453,18 +458,18 @@ def LoaderReplaceable : StrBoolAttr<"loader-replaceable">;
 // CompatRuleStrAttr takes the compare function and the string attribute for
 // checking compatibility for inline substitution.
 class CompatRule<string F> {
-  // The function's signature must match "bool(const Function&, const
-  // Function&)", where the first parameter is the reference to the caller and
-  // the second parameter is the reference to the callee. It must return false
-  // if the attributes of the caller and callee are incompatible, and true
-  // otherwise.
+  // The function's signature must match "bool(AttributeSet, AttributeSet)",
+  // where the first parameter is the function attributes of the caller and
+  // the second parameter is the function attributes of the callee. It must
+  // return false if the attributes of the caller and callee are incompatible,
+  // and true otherwise.
   string CompatFunc = F;
   string AttrName = "";
 }
 
 class CompatRuleStrAttr<string F, string Attr> : CompatRule<F> {
   // The checker function is extended with an third argument as the function
-  // attribute string "bool(const Function&, const Function&, const StringRef&)".
+  // attribute string "bool(AttributeSet, AttributeSet, StringRef)".
   string AttrName = Attr;
 }
 
@@ -498,7 +503,6 @@ class MergeRule<string F> {
   string MergeFunc = F;
 }
 
-def : MergeRule<"setAND<LessPreciseFPMADAttr>">;
 def : MergeRule<"setAND<NoSignedZerosFPMathAttr>">;
 def : MergeRule<"setOR<NoImplicitFloatAttr>">;
 def : MergeRule<"setOR<NoJumpTablesAttr>">;

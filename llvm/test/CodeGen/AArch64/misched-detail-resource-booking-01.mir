@@ -36,21 +36,6 @@
 ---
 name:            umull_and_v8i32
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr128 }
-  - { id: 1, class: fpr128 }
-  - { id: 2, class: fpr128 }
-  - { id: 3, class: fpr128 }
-  - { id: 4, class: fpr64 }
-  - { id: 5, class: fpr64 }
-  - { id: 6, class: fpr128 }
-  - { id: 7, class: fpr128 }
-  - { id: 8, class: fpr128 }
-  - { id: 9, class: fpr64 }
-  - { id: 10, class: fpr128 }
-  - { id: 11, class: fpr64 }
-  - { id: 12, class: fpr128 }
 liveins:
   - { reg: '$q0', virtual-reg: '%0' }
   - { reg: '$q1', virtual-reg: '%1' }
@@ -90,15 +75,15 @@ body:             |
 # CHECK-NEXT:   %1:fpr128 = COPY $q1
 # CHECK-NEXT:   %0:fpr128 = COPY $q0
 # CHECK-NEXT:   %3:fpr128 = EXTv16i8 %0:fpr128, %0:fpr128, 8
-# CHECK-NEXT:   %6:fpr128 = MOVIv2d_ns 17
-# CHECK-NEXT:   %7:fpr128 = ANDv16i8 %2:fpr128, %6:fpr128
-# CHECK-NEXT:   %8:fpr128 = ANDv16i8 %1:fpr128, %6:fpr128
-# CHECK-NEXT:   %9:fpr64 = XTNv4i16 %8:fpr128
-# CHECK-NEXT:   %10:fpr128 = UMULLv4i16_v4i32 %0.dsub:fpr128, %9:fpr64
-# CHECK-NEXT:   %11:fpr64 = XTNv4i16 %7:fpr128
-# CHECK-NEXT:   %12:fpr128 = UMULLv4i16_v4i32 %3.dsub:fpr128, %11:fpr64
-# CHECK-NEXT:   $q0 = COPY %10:fpr128
-# CHECK-NEXT:   $q1 = COPY %12:fpr128
+# CHECK-NEXT:   %4:fpr128 = MOVIv2d_ns 17
+# CHECK-NEXT:   %5:fpr128 = ANDv16i8 %2:fpr128, %4:fpr128
+# CHECK-NEXT:   %6:fpr128 = ANDv16i8 %1:fpr128, %4:fpr128
+# CHECK-NEXT:   %7:fpr64 = XTNv4i16 %6:fpr128
+# CHECK-NEXT:   %8:fpr128 = UMULLv4i16_v4i32 %0.dsub:fpr128, %7:fpr64
+# CHECK-NEXT:   %9:fpr64 = XTNv4i16 %5:fpr128
+# CHECK-NEXT:   %10:fpr128 = UMULLv4i16_v4i32 %3.dsub:fpr128, %9:fpr64
+# CHECK-NEXT:   $q0 = COPY %8:fpr128
+# CHECK-NEXT:   $q1 = COPY %10:fpr128
 # CHECK-NEXT:   RET_ReallyLR implicit $q0, implicit $q1
 # CHECK-EMPTY:
 # CHECK-NEXT: # End machine code for function umull_and_v8i32.
@@ -157,7 +142,7 @@ body:             |
 # CHECK-NEXT:   Successors:
 # CHECK-NEXT:     SU(10): Data Latency=4 Reg=%3
 # CHECK-NEXT:   Single Issue       : false;
-# CHECK-NEXT: SU(4) [TopReadyCycle = 0, BottomReadyCycle = 0]:   %6:fpr128 = MOVIv2d_ns 17
+# CHECK-NEXT: SU(4) [TopReadyCycle = 0, BottomReadyCycle = 0]:   %4:fpr128 = MOVIv2d_ns 17
 # CHECK-NEXT:   # preds left       : 0
 # CHECK-NEXT:   # succs left       : 2
 # CHECK-NEXT:   # rdefs left       : 0
@@ -165,10 +150,10 @@ body:             |
 # CHECK-NEXT:   Depth              : 0
 # CHECK-NEXT:   Height             : 14
 # CHECK-NEXT:   Successors:
-# CHECK-NEXT:     SU(6): Data Latency=4 Reg=%6
-# CHECK-NEXT:     SU(5): Data Latency=4 Reg=%6
+# CHECK-NEXT:     SU(6): Data Latency=4 Reg=%4
+# CHECK-NEXT:     SU(5): Data Latency=4 Reg=%4
 # CHECK-NEXT:   Single Issue       : false;
-# CHECK-NEXT: SU(5) [TopReadyCycle = 0, BottomReadyCycle = 0]:   %7:fpr128 = ANDv16i8 %2:fpr128, %6:fpr128
+# CHECK-NEXT: SU(5) [TopReadyCycle = 0, BottomReadyCycle = 0]:   %5:fpr128 = ANDv16i8 %2:fpr128, %4:fpr128
 # CHECK-NEXT:   # preds left       : 2
 # CHECK-NEXT:   # succs left       : 1
 # CHECK-NEXT:   # rdefs left       : 0
@@ -176,12 +161,12 @@ body:             |
 # CHECK-NEXT:   Depth              : 4
 # CHECK-NEXT:   Height             : 10
 # CHECK-NEXT:   Predecessors:
-# CHECK-NEXT:     SU(4): Data Latency=4 Reg=%6
+# CHECK-NEXT:     SU(4): Data Latency=4 Reg=%4
 # CHECK-NEXT:     SU(0): Data Latency=3 Reg=%2
 # CHECK-NEXT:   Successors:
-# CHECK-NEXT:     SU(9): Data Latency=1 Reg=%7
+# CHECK-NEXT:     SU(9): Data Latency=1 Reg=%5
 # CHECK-NEXT:   Single Issue       : false;
-# CHECK-NEXT: SU(6) [TopReadyCycle = 0, BottomReadyCycle = 0]:   %8:fpr128 = ANDv16i8 %1:fpr128, %6:fpr128
+# CHECK-NEXT: SU(6) [TopReadyCycle = 0, BottomReadyCycle = 0]:   %6:fpr128 = ANDv16i8 %1:fpr128, %4:fpr128
 # CHECK-NEXT:   # preds left       : 2
 # CHECK-NEXT:   # succs left       : 1
 # CHECK-NEXT:   # rdefs left       : 0
@@ -189,12 +174,12 @@ body:             |
 # CHECK-NEXT:   Depth              : 4
 # CHECK-NEXT:   Height             : 10
 # CHECK-NEXT:   Predecessors:
-# CHECK-NEXT:     SU(4): Data Latency=4 Reg=%6
+# CHECK-NEXT:     SU(4): Data Latency=4 Reg=%4
 # CHECK-NEXT:     SU(1): Data Latency=3 Reg=%1
 # CHECK-NEXT:   Successors:
-# CHECK-NEXT:     SU(7): Data Latency=1 Reg=%8
+# CHECK-NEXT:     SU(7): Data Latency=1 Reg=%6
 # CHECK-NEXT:   Single Issue       : false;
-# CHECK-NEXT: SU(7) [TopReadyCycle = 0, BottomReadyCycle = 0]:   %9:fpr64 = XTNv4i16 %8:fpr128
+# CHECK-NEXT: SU(7) [TopReadyCycle = 0, BottomReadyCycle = 0]:   %7:fpr64 = XTNv4i16 %6:fpr128
 # CHECK-NEXT:   # preds left       : 1
 # CHECK-NEXT:   # succs left       : 1
 # CHECK-NEXT:   # rdefs left       : 0
@@ -202,11 +187,11 @@ body:             |
 # CHECK-NEXT:   Depth              : 5
 # CHECK-NEXT:   Height             : 9
 # CHECK-NEXT:   Predecessors:
-# CHECK-NEXT:     SU(6): Data Latency=1 Reg=%8
+# CHECK-NEXT:     SU(6): Data Latency=1 Reg=%6
 # CHECK-NEXT:   Successors:
-# CHECK-NEXT:     SU(8): Data Latency=2 Reg=%9
+# CHECK-NEXT:     SU(8): Data Latency=2 Reg=%7
 # CHECK-NEXT:   Single Issue       : false;
-# CHECK-NEXT: SU(8) [TopReadyCycle = 0, BottomReadyCycle = 0]:   %10:fpr128 = UMULLv4i16_v4i32 %0.dsub:fpr128, %9:fpr64
+# CHECK-NEXT: SU(8) [TopReadyCycle = 0, BottomReadyCycle = 0]:   %8:fpr128 = UMULLv4i16_v4i32 %0.dsub:fpr128, %7:fpr64
 # CHECK-NEXT:   # preds left       : 2
 # CHECK-NEXT:   # succs left       : 1
 # CHECK-NEXT:   # rdefs left       : 0
@@ -214,12 +199,12 @@ body:             |
 # CHECK-NEXT:   Depth              : 7
 # CHECK-NEXT:   Height             : 7
 # CHECK-NEXT:   Predecessors:
-# CHECK-NEXT:     SU(7): Data Latency=2 Reg=%9
+# CHECK-NEXT:     SU(7): Data Latency=2 Reg=%7
 # CHECK-NEXT:     SU(2): Data Latency=3 Reg=%0
 # CHECK-NEXT:   Successors:
-# CHECK-NEXT:     SU(11): Data Latency=4 Reg=%10
+# CHECK-NEXT:     SU(11): Data Latency=4 Reg=%8
 # CHECK-NEXT:   Single Issue       : false;
-# CHECK-NEXT: SU(9) [TopReadyCycle = 0, BottomReadyCycle = 0]:   %11:fpr64 = XTNv4i16 %7:fpr128
+# CHECK-NEXT: SU(9) [TopReadyCycle = 0, BottomReadyCycle = 0]:   %9:fpr64 = XTNv4i16 %5:fpr128
 # CHECK-NEXT:   # preds left       : 1
 # CHECK-NEXT:   # succs left       : 1
 # CHECK-NEXT:   # rdefs left       : 0
@@ -227,11 +212,11 @@ body:             |
 # CHECK-NEXT:   Depth              : 5
 # CHECK-NEXT:   Height             : 9
 # CHECK-NEXT:   Predecessors:
-# CHECK-NEXT:     SU(5): Data Latency=1 Reg=%7
+# CHECK-NEXT:     SU(5): Data Latency=1 Reg=%5
 # CHECK-NEXT:   Successors:
-# CHECK-NEXT:     SU(10): Data Latency=2 Reg=%11
+# CHECK-NEXT:     SU(10): Data Latency=2 Reg=%9
 # CHECK-NEXT:   Single Issue       : false;
-# CHECK-NEXT: SU(10) [TopReadyCycle = 0, BottomReadyCycle = 0]:   %12:fpr128 = UMULLv4i16_v4i32 %3.dsub:fpr128, %11:fpr64
+# CHECK-NEXT: SU(10) [TopReadyCycle = 0, BottomReadyCycle = 0]:   %10:fpr128 = UMULLv4i16_v4i32 %3.dsub:fpr128, %9:fpr64
 # CHECK-NEXT:   # preds left       : 2
 # CHECK-NEXT:   # succs left       : 1
 # CHECK-NEXT:   # rdefs left       : 0
@@ -239,12 +224,12 @@ body:             |
 # CHECK-NEXT:   Depth              : 7
 # CHECK-NEXT:   Height             : 7
 # CHECK-NEXT:   Predecessors:
-# CHECK-NEXT:     SU(9): Data Latency=2 Reg=%11
+# CHECK-NEXT:     SU(9): Data Latency=2 Reg=%9
 # CHECK-NEXT:     SU(3): Data Latency=4 Reg=%3
 # CHECK-NEXT:   Successors:
-# CHECK-NEXT:     SU(12): Data Latency=4 Reg=%12
+# CHECK-NEXT:     SU(12): Data Latency=4 Reg=%10
 # CHECK-NEXT:   Single Issue       : false;
-# CHECK-NEXT: SU(11) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $q0 = COPY %10:fpr128
+# CHECK-NEXT: SU(11) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $q0 = COPY %8:fpr128
 # CHECK-NEXT:   # preds left       : 2
 # CHECK-NEXT:   # succs left       : 1
 # CHECK-NEXT:   # rdefs left       : 0
@@ -252,12 +237,12 @@ body:             |
 # CHECK-NEXT:   Depth              : 11
 # CHECK-NEXT:   Height             : 3
 # CHECK-NEXT:   Predecessors:
-# CHECK-NEXT:     SU(8): Data Latency=4 Reg=%10
+# CHECK-NEXT:     SU(8): Data Latency=4 Reg=%8
 # CHECK-NEXT:     SU(2): Anti Latency=0
 # CHECK-NEXT:   Successors:
 # CHECK-NEXT:     ExitSU: Ord  Latency=3 Artificial
 # CHECK-NEXT:   Single Issue       : false;
-# CHECK-NEXT: SU(12) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $q1 = COPY %12:fpr128
+# CHECK-NEXT: SU(12) [TopReadyCycle = 0, BottomReadyCycle = 0]:   $q1 = COPY %10:fpr128
 # CHECK-NEXT:   # preds left       : 2
 # CHECK-NEXT:   # succs left       : 1
 # CHECK-NEXT:   # rdefs left       : 0
@@ -265,7 +250,7 @@ body:             |
 # CHECK-NEXT:   Depth              : 11
 # CHECK-NEXT:   Height             : 3
 # CHECK-NEXT:   Predecessors:
-# CHECK-NEXT:     SU(10): Data Latency=4 Reg=%12
+# CHECK-NEXT:     SU(10): Data Latency=4 Reg=%10
 # CHECK-NEXT:     SU(1): Anti Latency=0
 # CHECK-NEXT:   Successors:
 # CHECK-NEXT:     ExitSU: Ord  Latency=3 Artificial
@@ -399,7 +384,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.A: SU(12) SU(11)
 # CHECK-NEXT:   Cand SU(12) FIRST
 # CHECK-NEXT: Pick Bot Cand SU(12) FIRST
-# CHECK-NEXT: Scheduling SU(12) $q1 = COPY %12:fpr128
+# CHECK-NEXT: Scheduling SU(12) $q1 = COPY %10:fpr128
 # CHECK-NEXT:   Ready @3c
 # CHECK-NEXT:   CortexA55UnitALU +1x1u
 # CHECK-NEXT:   Resource booking (@3c):
@@ -478,7 +463,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.P: SU(10)
 # CHECK-NEXT: Queue BotQ.A: SU(11)
 # CHECK-NEXT: Pick Bot Cand SU(11) ONLY1      [pre-RA]
-# CHECK-NEXT: Scheduling SU(11) $q0 = COPY %10:fpr128
+# CHECK-NEXT: Scheduling SU(11) $q0 = COPY %8:fpr128
 # CHECK-NEXT:   Ready @3c
 # CHECK-NEXT:   CortexA55UnitALU +1x1u
 # CHECK-NEXT:   Resource booking (@3c):
@@ -584,7 +569,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.A: SU(10) SU(8)
 # CHECK-NEXT:   Cand SU(10) FIRST
 # CHECK-NEXT: Pick Bot Cand SU(10) FIRST
-# CHECK-NEXT: Scheduling SU(10) %12:fpr128 = UMULLv4i16_v4i32 %3.dsub:fpr128, %11:fpr64
+# CHECK-NEXT: Scheduling SU(10) %10:fpr128 = UMULLv4i16_v4i32 %3.dsub:fpr128, %9:fpr64
 # CHECK-NEXT:   Ready @7c
 # CHECK-NEXT:   CortexA55UnitFPALU +2x1u
 # CHECK-NEXT:   Resource booking (@7c):
@@ -669,7 +654,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.P: SU(9) SU(3)
 # CHECK-NEXT: Queue BotQ.A: SU(8)
 # CHECK-NEXT: Pick Bot Cand SU(8) ONLY1      [pre-RA]
-# CHECK-NEXT: Scheduling SU(8) %10:fpr128 = UMULLv4i16_v4i32 %0.dsub:fpr128, %9:fpr64
+# CHECK-NEXT: Scheduling SU(8) %8:fpr128 = UMULLv4i16_v4i32 %0.dsub:fpr128, %7:fpr64
 # CHECK-NEXT:   Ready @8c
 # CHECK-NEXT:   CortexA55UnitFPALU +2x1u
 # CHECK-NEXT:   Resource booking (@8c):
@@ -772,7 +757,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.P: SU(7) SU(3)
 # CHECK-NEXT: Queue BotQ.A: SU(9)
 # CHECK-NEXT: Pick Bot Cand SU(9) ONLY1      [pre-RA]
-# CHECK-NEXT: Scheduling SU(9) %11:fpr64 = XTNv4i16 %7:fpr128
+# CHECK-NEXT: Scheduling SU(9) %9:fpr64 = XTNv4i16 %5:fpr128
 # CHECK-NEXT:   Ready @9c
 # CHECK-NEXT:   CortexA55UnitFPALU +1x1u
 # CHECK-NEXT:   Resource booking (@9c):
@@ -875,7 +860,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.A: SU(7) SU(5)
 # CHECK-NEXT:   Cand SU(7) FIRST
 # CHECK-NEXT: Pick Bot Cand SU(7) FIRST
-# CHECK-NEXT: Scheduling SU(7) %9:fpr64 = XTNv4i16 %8:fpr128
+# CHECK-NEXT: Scheduling SU(7) %7:fpr64 = XTNv4i16 %6:fpr128
 # CHECK-NEXT:   Ready @10c
 # CHECK-NEXT:   CortexA55UnitFPALU +1x1u
 # CHECK-NEXT:   Resource booking (@10c):
@@ -952,7 +937,7 @@ body:             |
 # CHECK-NEXT: Queue BotQ.P: SU(3) SU(6)
 # CHECK-NEXT: Queue BotQ.A: SU(5)
 # CHECK-NEXT: Pick Bot Cand SU(5) ONLY1      [pre-RA]
-# CHECK-NEXT: Scheduling SU(5) %7:fpr128 = ANDv16i8 %2:fpr128, %6:fpr128
+# CHECK-NEXT: Scheduling SU(5) %5:fpr128 = ANDv16i8 %2:fpr128, %4:fpr128
 # CHECK-NEXT:   Ready @10c
 # CHECK-NEXT:   CortexA55UnitFPALU +2x1u
 # CHECK-NEXT:   *** Critical resource CortexA55UnitFPALU: 4c
@@ -1099,7 +1084,7 @@ body:             |
 # CHECK-NEXT:   Cand SU(3) FIRST
 # CHECK-NEXT:   Cand SU(6) ORDER
 # CHECK-NEXT: Pick Bot Cand SU(6) ORDER
-# CHECK-NEXT: Scheduling SU(6) %8:fpr128 = ANDv16i8 %1:fpr128, %6:fpr128
+# CHECK-NEXT: Scheduling SU(6) %6:fpr128 = ANDv16i8 %1:fpr128, %4:fpr128
 # CHECK-NEXT:   Ready @12c
 # CHECK-NEXT:   CortexA55UnitFPALU +2x1u
 # CHECK-NEXT:   Resource booking (@12c):
@@ -1491,7 +1476,7 @@ body:             |
 # CHECK-NEXT:   Cand SU(2) FIRST
 # CHECK-NEXT:   Cand SU(4) PHYS-REG
 # CHECK-NEXT: Pick Bot Cand SU(4) PHYS-REG
-# CHECK-NEXT: Scheduling SU(4) %6:fpr128 = MOVIv2d_ns 17
+# CHECK-NEXT: Scheduling SU(4) %4:fpr128 = MOVIv2d_ns 17
 # CHECK-NEXT:   Ready @16c
 # CHECK-NEXT:   CortexA55UnitFPALU +2x1u
 # CHECK-NEXT:   Resource booking (@16c):
@@ -1658,18 +1643,18 @@ body:             |
 # CHECK-NEXT: SU(12)             |    |    |    |    |    |    |    |    |    |    |    |    |    |    | i  |
 # CHECK-NEXT:   CortexA55UnitALU |    |    |    |    |    |    |    |    |    |    |    |    |    |    | x  |
 # CHECK-NEXT: SU(2) [TopReadyCycle = 0, BottomReadyCycle = 17]:   %0:fpr128 = COPY $q0
-# CHECK-NEXT: SU(4) [TopReadyCycle = 0, BottomReadyCycle = 16]:   %6:fpr128 = MOVIv2d_ns 17
+# CHECK-NEXT: SU(4) [TopReadyCycle = 0, BottomReadyCycle = 16]:   %4:fpr128 = MOVIv2d_ns 17
 # CHECK-NEXT: SU(1) [TopReadyCycle = 0, BottomReadyCycle = 15]:   %1:fpr128 = COPY $q1
 # CHECK-NEXT: SU(0) [TopReadyCycle = 0, BottomReadyCycle = 14]:   %2:fpr128 = COPY $q2
 # CHECK-NEXT: SU(3) [TopReadyCycle = 0, BottomReadyCycle = 13]:   %3:fpr128 = EXTv16i8 %0:fpr128, %0:fpr128, 8
-# CHECK-NEXT: SU(6) [TopReadyCycle = 0, BottomReadyCycle = 12]:   %8:fpr128 = ANDv16i8 %1:fpr128, %6:fpr128
-# CHECK-NEXT: SU(5) [TopReadyCycle = 0, BottomReadyCycle = 10]:   %7:fpr128 = ANDv16i8 %2:fpr128, %6:fpr128
-# CHECK-NEXT: SU(7) [TopReadyCycle = 0, BottomReadyCycle = 10]:   %9:fpr64 = XTNv4i16 %8:fpr128
-# CHECK-NEXT: SU(9) [TopReadyCycle = 0, BottomReadyCycle = 9]:   %11:fpr64 = XTNv4i16 %7:fpr128
-# CHECK-NEXT: SU(8) [TopReadyCycle = 0, BottomReadyCycle = 8]:   %10:fpr128 = UMULLv4i16_v4i32 %0.dsub:fpr128, %9:fpr64
-# CHECK-NEXT: SU(10) [TopReadyCycle = 0, BottomReadyCycle = 7]:   %12:fpr128 = UMULLv4i16_v4i32 %3.dsub:fpr128, %11:fpr64
-# CHECK-NEXT: SU(11) [TopReadyCycle = 0, BottomReadyCycle = 3]:   $q0 = COPY %10:fpr128
-# CHECK-NEXT: SU(12) [TopReadyCycle = 0, BottomReadyCycle = 3]:   $q1 = COPY %12:fpr128
+# CHECK-NEXT: SU(6) [TopReadyCycle = 0, BottomReadyCycle = 12]:   %6:fpr128 = ANDv16i8 %1:fpr128, %4:fpr128
+# CHECK-NEXT: SU(5) [TopReadyCycle = 0, BottomReadyCycle = 10]:   %5:fpr128 = ANDv16i8 %2:fpr128, %4:fpr128
+# CHECK-NEXT: SU(7) [TopReadyCycle = 0, BottomReadyCycle = 10]:   %7:fpr64 = XTNv4i16 %6:fpr128
+# CHECK-NEXT: SU(9) [TopReadyCycle = 0, BottomReadyCycle = 9]:   %9:fpr64 = XTNv4i16 %5:fpr128
+# CHECK-NEXT: SU(8) [TopReadyCycle = 0, BottomReadyCycle = 8]:   %8:fpr128 = UMULLv4i16_v4i32 %0.dsub:fpr128, %7:fpr64
+# CHECK-NEXT: SU(10) [TopReadyCycle = 0, BottomReadyCycle = 7]:   %10:fpr128 = UMULLv4i16_v4i32 %3.dsub:fpr128, %9:fpr64
+# CHECK-NEXT: SU(11) [TopReadyCycle = 0, BottomReadyCycle = 3]:   $q0 = COPY %8:fpr128
+# CHECK-NEXT: SU(12) [TopReadyCycle = 0, BottomReadyCycle = 3]:   $q1 = COPY %10:fpr128
 # CHECK-EMPTY:
 # CHECK-NEXT: ********** INTERVALS **********
 # CHECK-NEXT: B0 [0B,48r:0)[272r,304r:1) 0@0B-phi 1@272r
@@ -1691,13 +1676,13 @@ body:             |
 # CHECK-NEXT: %1 [96r,160r:0) 0@96r  weight:0.000000e+00
 # CHECK-NEXT: %2 [112r,176r:0) 0@112r  weight:0.000000e+00
 # CHECK-NEXT: %3 [128r,256r:0) 0@128r  weight:0.000000e+00
-# CHECK-NEXT: %6 [80r,176r:0) 0@80r  weight:0.000000e+00
-# CHECK-NEXT: %7 [176r,224r:0) 0@176r  weight:0.000000e+00
-# CHECK-NEXT: %8 [160r,192r:0) 0@160r  weight:0.000000e+00
-# CHECK-NEXT: %9 [192r,240r:0) 0@192r  weight:0.000000e+00
-# CHECK-NEXT: %10 [240r,272r:0) 0@240r  weight:0.000000e+00
-# CHECK-NEXT: %11 [224r,256r:0) 0@224r  weight:0.000000e+00
-# CHECK-NEXT: %12 [256r,288r:0) 0@256r  weight:0.000000e+00
+# CHECK-NEXT: %4 [80r,176r:0) 0@80r  weight:0.000000e+00
+# CHECK-NEXT: %5 [176r,224r:0) 0@176r  weight:0.000000e+00
+# CHECK-NEXT: %6 [160r,192r:0) 0@160r  weight:0.000000e+00
+# CHECK-NEXT: %7 [192r,240r:0) 0@192r  weight:0.000000e+00
+# CHECK-NEXT: %8 [240r,272r:0) 0@240r  weight:0.000000e+00
+# CHECK-NEXT: %9 [224r,256r:0) 0@224r  weight:0.000000e+00
+# CHECK-NEXT: %10 [256r,288r:0) 0@256r  weight:0.000000e+00
 # CHECK-NEXT: RegMasks:
 # CHECK-NEXT: ********** MACHINEINSTRS **********
 # CHECK-NEXT: # Machine code for function umull_and_v8i32: IsSSA, NoPHIs, TracksLiveness
@@ -1706,18 +1691,18 @@ body:             |
 # CHECK-NEXT: 0B	bb.0.entry:
 # CHECK-NEXT: 	  liveins: $q0, $q1, $q2
 # CHECK-NEXT: 48B	  %0:fpr128 = COPY $q0
-# CHECK-NEXT: 80B	  %6:fpr128 = MOVIv2d_ns 17
+# CHECK-NEXT: 80B	  %4:fpr128 = MOVIv2d_ns 17
 # CHECK-NEXT: 96B	  %1:fpr128 = COPY $q1
 # CHECK-NEXT: 112B	  %2:fpr128 = COPY $q2
 # CHECK-NEXT: 128B	  %3:fpr128 = EXTv16i8 %0:fpr128, %0:fpr128, 8
-# CHECK-NEXT: 160B	  %8:fpr128 = ANDv16i8 %1:fpr128, %6:fpr128
-# CHECK-NEXT: 176B	  %7:fpr128 = ANDv16i8 %2:fpr128, %6:fpr128
-# CHECK-NEXT: 192B	  %9:fpr64 = XTNv4i16 %8:fpr128
-# CHECK-NEXT: 224B	  %11:fpr64 = XTNv4i16 %7:fpr128
-# CHECK-NEXT: 240B	  %10:fpr128 = UMULLv4i16_v4i32 %0.dsub:fpr128, %9:fpr64
-# CHECK-NEXT: 256B	  %12:fpr128 = UMULLv4i16_v4i32 %3.dsub:fpr128, %11:fpr64
-# CHECK-NEXT: 272B	  $q0 = COPY %10:fpr128
-# CHECK-NEXT: 288B	  $q1 = COPY %12:fpr128
+# CHECK-NEXT: 160B	  %6:fpr128 = ANDv16i8 %1:fpr128, %4:fpr128
+# CHECK-NEXT: 176B	  %5:fpr128 = ANDv16i8 %2:fpr128, %4:fpr128
+# CHECK-NEXT: 192B	  %7:fpr64 = XTNv4i16 %6:fpr128
+# CHECK-NEXT: 224B	  %9:fpr64 = XTNv4i16 %5:fpr128
+# CHECK-NEXT: 240B	  %8:fpr128 = UMULLv4i16_v4i32 %0.dsub:fpr128, %7:fpr64
+# CHECK-NEXT: 256B	  %10:fpr128 = UMULLv4i16_v4i32 %3.dsub:fpr128, %9:fpr64
+# CHECK-NEXT: 272B	  $q0 = COPY %8:fpr128
+# CHECK-NEXT: 288B	  $q1 = COPY %10:fpr128
 # CHECK-NEXT: 304B	  RET_ReallyLR implicit $q0, implicit $q1
 # CHECK-EMPTY:
 # CHECK-NEXT: # End machine code for function umull_and_v8i32.

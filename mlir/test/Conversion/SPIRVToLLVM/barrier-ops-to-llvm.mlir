@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-spirv-to-llvm -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -convert-spirv-to-llvm='allow-pattern-rollback=0' -split-input-file %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.ControlBarrierOp
@@ -44,5 +45,27 @@ spirv.func @split_barrier() "None" {
   // CHECK:         [[SEMANTICS:%.*]] = llvm.mlir.constant(256 : i32) : i32
   // CHECK:         llvm.call spir_funccc @_Z31__spirv_ControlBarrierWaitINTELiii([[EXECUTION]], [[MEMORY]], [[SEMANTICS]]) {convergent, no_unwind, will_return} : (i32, i32, i32) -> ()
   spirv.INTEL.ControlBarrierWait <Workgroup> <Workgroup> <WorkgroupMemory>
+  spirv.Return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.MemoryBarrier
+//===----------------------------------------------------------------------===//
+
+// CHECK:           llvm.func spir_funccc @_Z21__spirv_MemoryBarrierii(i32, i32) attributes {no_unwind, will_return}
+
+// CHECK-LABEL: @memory_barrier
+spirv.func @memory_barrier() "None" {
+  // CHECK:         [[MEMORY:%.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK:         [[SEMANTICS:%.*]] = llvm.mlir.constant(68 : i32) : i32
+  // CHECK:         llvm.call spir_funccc @_Z21__spirv_MemoryBarrierii([[MEMORY]], [[SEMANTICS]]) {no_unwind, will_return} : (i32, i32) -> ()
+  spirv.MemoryBarrier <Device>, <Release|UniformMemory>
+
+  // CHECK:         [[MEMORY:%.*]] = llvm.mlir.constant(3 : i32) : i32
+  // CHECK:         [[SEMANTICS:%.*]] = llvm.mlir.constant(136 : i32) : i32
+  // CHECK:         llvm.call spir_funccc @_Z21__spirv_MemoryBarrierii([[MEMORY]], [[SEMANTICS]]) {no_unwind, will_return} : (i32, i32) -> ()
+  spirv.MemoryBarrier <Subgroup>, <AcquireRelease|SubgroupMemory>
   spirv.Return
 }

@@ -464,22 +464,10 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
   EmitStackMaps = [this](Module &M) {
     GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
     assert(MI && "AsmPrinter didn't require GCModuleInfo?");
-    bool NeedsDefault = false;
-    if (MI->begin() == MI->end())
-      // No GC strategy, use the default format.
-      NeedsDefault = true;
-    else
-      for (const auto &I : *MI) {
-        if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*I))
-          if (MP->emitStackMaps(SM, *this))
-            continue;
-        // The strategy doesn't have printer or doesn't emit custom stack maps.
-        // Use the default format.
-        NeedsDefault = true;
-      }
-
-    if (NeedsDefault)
-      SM.serializeToStackMapSection();
+    SmallVector<GCStrategy *, 1> Strategies;
+    for (const auto &I : *MI)
+      Strategies.push_back(I.get());
+    emitStackMapsForGCStrategies(Strategies);
   };
   AssertDebugEHFinalized = [&]() {
     assert(!DD && Handlers.size() == NumUserHandlers &&
@@ -1254,6 +1242,15 @@ void AsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
   OutStreamer->addBlankLine();
 }
 
+static void emitFreeze(const MachineInstr *MI, AsmPrinter &AP) {
+  AP.OutStreamer->getCommentOS()
+      << "freeze: "
+      << printReg(MI->getOperand(0).getReg(),
+                  AP.MF->getSubtarget().getRegisterInfo())
+      << '\n';
+  AP.OutStreamer->addBlankLine();
+}
+
 static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
   std::string Str;
   raw_string_ostream OS(Str);
@@ -1909,64 +1906,88 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
     OutStreamer->switchSection(S);
     Prev = Sec;
   };
-  // Emit symbols into sections and data as specified in the pcsections MDNode.
+  // Emit records into sections as specified in the pcsections MDNode. A record
+  // is the PC of an instruction, or the start and size of a function, followed
+  // by the auxiliary data of the section.
   auto EmitForMD = [&](const MDNode &MD, ArrayRef<const MCSymbol *> Syms,
-                       bool Deltas) {
+                       bool IsFunction) {
     // Expect the first operand to be a section name. After that, a tuple of
     // constants may appear, which will simply be emitted into the current
     // section (the user of MD_pcsections decides the format of encoded data).
     assert(isa<MDString>(MD.getOperand(0)) && "first operand not a string");
-    bool ConstULEB128 = false;
-    for (const MDOperand &MDO : MD.operands()) {
-      if (auto *S = dyn_cast<MDString>(MDO)) {
-        // Found string, start of new section!
-        // Find options for this section "<section>!<opts>" - supported options:
-        //   C = Compress constant integers of size 2-8 bytes as ULEB128.
-        const StringRef SecWithOpt = S->getString();
-        const size_t OptStart = SecWithOpt.find('!'); // likely npos
-        const StringRef Sec = SecWithOpt.substr(0, OptStart);
-        const StringRef Opts = SecWithOpt.substr(OptStart); // likely empty
-        ConstULEB128 = Opts.contains('C');
+    const ArrayRef<MDOperand> Ops = MD.operands();
+    for (size_t I = 0; I < Ops.size();) {
+      // Found string, start of new section!
+      // Find options for this section "<section>!<opts>" - supported options:
+      //   C = Compress constant integers of size 2-8 bytes as ULEB128.
+      const StringRef SecWithOpt = cast<MDString>(Ops[I++])->getString();
+      const size_t OptStart = SecWithOpt.find('!'); // likely npos
+      const StringRef Sec = SecWithOpt.substr(0, OptStart);
+      const StringRef Opts = SecWithOpt.substr(OptStart); // likely empty
+      const bool ConstULEB128 = Opts.contains('C');
 #ifndef NDEBUG
-        for (char O : Opts)
-          assert((O == '!' || O == 'C') && "Invalid !pcsections options");
+      for (char O : Opts)
+        assert((O == '!' || O == 'C') && "Invalid !pcsections options");
 #endif
-        SwitchSection(Sec);
-        const MCSymbol *Prev = Syms.front();
-        for (const MCSymbol *Sym : Syms) {
-          if (Sym == Prev || !Deltas) {
-            // Use the entry itself as the base of the relative offset.
-            MCSymbol *Base = MF.getContext().createTempSymbol("pcsection_base");
-            OutStreamer->emitLabel(Base);
-            // Emit relative relocation `addr - base`, which avoids a dynamic
-            // relocation in the final binary. User will get the address with
-            // `base + addr`.
-            emitLabelDifference(Sym, Base, RelativeRelocSize);
-          } else {
-            // Emit delta between symbol and previous symbol.
-            if (ConstULEB128)
-              emitLabelDifferenceAsULEB128(Sym, Prev);
-            else
-              emitLabelDifference(Sym, Prev, 4);
-          }
-          Prev = Sym;
-        }
-      } else {
-        // Emit auxiliary data after PC.
-        assert(isa<MDNode>(MDO) && "expecting either string or tuple");
-        const auto *AuxMDs = cast<MDNode>(MDO);
-        for (const MDOperand &AuxMDO : AuxMDs->operands()) {
-          assert(isa<ConstantAsMetadata>(AuxMDO) && "expecting a constant");
-          const Constant *C = cast<ConstantAsMetadata>(AuxMDO)->getValue();
-          const DataLayout &DL = F.getDataLayout();
-          const uint64_t Size = DL.getTypeStoreSize(C->getType());
+      // The auxiliary data of this section are the tuples up to the next
+      // section name.
+      const size_t AuxBegin = I;
+      while (I < Ops.size() && !isa<MDString>(Ops[I]))
+        ++I;
+      const ArrayRef<MDOperand> Aux = Ops.slice(AuxBegin, I - AuxBegin);
 
-          if (auto *CI = dyn_cast<ConstantInt>(C);
-              CI && ConstULEB128 && Size > 1 && Size <= 8) {
-            emitULEB128(CI->getZExtValue());
-          } else {
-            emitGlobalConstant(DL, C);
+      // Metadata does not keep globals alive, and passes such as ThinLTO
+      // function import do not follow references from metadata, so a constant
+      // may have been dropped (nulled). Omit the records rather than emit them
+      // without their auxiliary data.
+      if (any_of(Aux, [](const MDOperand &MDO) {
+            const auto *AuxMDs = dyn_cast<MDNode>(MDO);
+            return AuxMDs && is_contained(AuxMDs->operands(), nullptr);
+          }))
+        continue;
+
+      auto EmitAux = [&] {
+        for (const MDOperand &MDO : Aux) {
+          assert(isa<MDNode>(MDO) && "expecting either string or tuple");
+          for (const MDOperand &AuxMDO : cast<MDNode>(MDO)->operands()) {
+            assert(isa<ConstantAsMetadata>(AuxMDO) && "expecting a constant");
+            const Constant *C = cast<ConstantAsMetadata>(AuxMDO)->getValue();
+            const DataLayout &DL = F.getDataLayout();
+            const uint64_t Size = DL.getTypeStoreSize(C->getType());
+
+            if (auto *CI = dyn_cast<ConstantInt>(C);
+                CI && ConstULEB128 && Size > 1 && Size <= 8) {
+              emitULEB128(CI->getZExtValue());
+            } else {
+              emitGlobalConstant(DL, C);
+            }
           }
+        }
+      };
+      // Emit the address of Sym relative to the entry itself, which avoids a
+      // dynamic relocation in the final binary. User will get the address with
+      // `base + addr`.
+      auto EmitRelativePC = [&](const MCSymbol *Sym) {
+        MCSymbol *Base = MF.getContext().createTempSymbol("pcsection_base");
+        OutStreamer->emitLabel(Base);
+        emitLabelDifference(Sym, Base, RelativeRelocSize);
+      };
+
+      SwitchSection(Sec);
+      if (IsFunction) {
+        // One record: function start, function size, auxiliary data.
+        assert(Syms.size() == 2 && "expecting function begin and end");
+        EmitRelativePC(Syms[0]);
+        if (ConstULEB128)
+          emitLabelDifferenceAsULEB128(Syms[1], Syms[0]);
+        else
+          emitLabelDifference(Syms[1], Syms[0], 4);
+        EmitAux();
+      } else {
+        // One record per instruction: PC, auxiliary data.
+        for (const MCSymbol *Sym : Syms) {
+          EmitRelativePC(Sym);
+          EmitAux();
         }
       }
     }
@@ -2266,6 +2287,12 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::INIT_UNDEF:
         // This is only used to influence register allocation behavior, no
         // actual initialization is needed.
+        break;
+      case TargetOpcode::FREEZE:
+        // Only a FREEZE of an undefined value is left. Whatever the register
+        // holds is a valid frozen value.
+        if (isVerbose())
+          emitFreeze(&MI, *this);
         break;
       case TargetOpcode::RELOC_NONE: {
         // Generate a temporary label for the current PC.
@@ -3213,12 +3240,14 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   // If we don't have any trampolines, then we don't require stack memory
   // to be executable. Some targets have a directive to declare this.
-  Function *InitTrampolineIntrinsic = M.getFunction("llvm.init.trampoline");
-  bool HasTrampolineUses =
-      InitTrampolineIntrinsic && !InitTrampolineIntrinsic->use_empty();
-  MCSection *S = MAI.getStackSection(OutContext, /*Exec=*/HasTrampolineUses);
-  if (S)
-    OutStreamer->switchSection(S);
+  if (MAI.emitELFStackSection()) {
+    Function *InitTrampolineIntrinsic = M.getFunction("llvm.init.trampoline");
+    bool HasTrampolineUses =
+        InitTrampolineIntrinsic && !InitTrampolineIntrinsic->use_empty();
+    OutStreamer->switchSection(
+        OutContext.getELFSection(".note.GNU-stack", ELF::SHT_PROGBITS,
+                                 HasTrampolineUses ? ELF::SHF_EXECINSTR : 0U));
+  }
 
   if (TM.Options.EmitAddrsig && MAI.hasAddrsigDirective()) {
     // Emit address-significance attributes for all globals.
@@ -3924,10 +3953,8 @@ void AsmPrinter::emitLabelDifferenceAsULEB128(const MCSymbol *Hi,
 void AsmPrinter::emitLabelPlusOffset(const MCSymbol *Label, uint64_t Offset,
                                      unsigned Size,
                                      bool IsSectionRelative) const {
-  if (MAI.needsDwarfSectionOffsetDirective() && IsSectionRelative) {
-    OutStreamer->emitCOFFSecRel32(Label, Offset);
-    if (Size > 4)
-      OutStreamer->emitZeros(Size - 4);
+  if (IsSectionRelative) {
+    OutStreamer->emitDwarfSectionOffset(Label, Offset, Size);
     return;
   }
 
@@ -5065,6 +5092,27 @@ isBlockOnlyReachableByFallthrough(const MachineBasicBlock *MBB) const {
   return true;
 }
 
+void AsmPrinter::emitStackMapsForGCStrategies(
+    ArrayRef<GCStrategy *> Strategies) {
+  bool NeedsDefault = false;
+  if (Strategies.empty())
+    // No GC strategy, use the default format.
+    NeedsDefault = true;
+  else {
+    for (GCStrategy *S : Strategies) {
+      if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*S))
+        if (MP->emitStackMaps(SM, *this))
+          continue;
+      // The strategy doesn't have printer or doesn't emit custom stack maps.
+      // Use the default format.
+      NeedsDefault = true;
+    }
+  }
+
+  if (NeedsDefault)
+    SM.serializeToStackMapSection();
+}
+
 GCMetadataPrinter *AsmPrinter::getOrCreateGCPrinter(GCStrategy &S) {
   if (!S.usesMetadata())
     return nullptr;
@@ -5457,7 +5505,12 @@ void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
   // TODO(boomanaiden154): Get GC working with the new pass manager.
   AsmPrinter.BeginGCAssembly = [](Module &M) {};
   AsmPrinter.FinishGCAssembly = [](Module &M) {};
-  AsmPrinter.EmitStackMaps = [](Module &M) {};
+  AsmPrinter.EmitStackMaps = [&MAM, &AsmPrinter](Module &M) {
+    SmallVector<GCStrategy *, 1> Strategies;
+    for (auto &[Name, S] : MAM.getResult<CollectorMetadataAnalysis>(M))
+      Strategies.push_back(S.get());
+    AsmPrinter.emitStackMapsForGCStrategies(Strategies);
+  };
   AsmPrinter.AssertDebugEHFinalized = []() {};
 }
 
@@ -5498,7 +5551,13 @@ void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
   // TODO(boomanaiden154): Get GC working with the new pass manager.
   AsmPrinter.BeginGCAssembly = [](Module &M) {};
   AsmPrinter.FinishGCAssembly = [](Module &M) {};
-  AsmPrinter.EmitStackMaps = [](Module &M) {};
+  AsmPrinter.EmitStackMaps = [&MAMProxy, &AsmPrinter](Module &M) {
+    SmallVector<GCStrategy *, 1> Strategies;
+    if (auto *Map = MAMProxy.getCachedResult<CollectorMetadataAnalysis>(M))
+      for (auto &[Name, S] : *Map)
+        Strategies.push_back(S.get());
+    AsmPrinter.emitStackMapsForGCStrategies(Strategies);
+  };
   AsmPrinter.AssertDebugEHFinalized = []() {};
 }
 

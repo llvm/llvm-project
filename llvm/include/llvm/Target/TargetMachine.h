@@ -297,7 +297,7 @@ public:
 
   /// NOTE: There are targets that still do not support the debug entry values
   /// production.
-  bool shouldEmitDebugEntryValues() const;
+  bool shouldEmitDebugEntryValues(DebuggerKind Tuning) const;
 
   /// Whether the fast register allocator lowers tied operands itself instead
   /// of running TwoAddressInstructionPass. AMDGPU anchors passes on
@@ -563,7 +563,9 @@ public:
   /// machines. If true, all vregs must be allocated before PEI. If false, then
   /// callee-save register spilling and scavenging are not needed or used. If
   /// false, implicitly defined registers will still be assumed to be physical
-  /// registers, except that variadic defs will be allocated vregs.
+  /// registers, except that variadic defs will be allocated vregs. If false,
+  /// the CodeGen pipeline runs no register allocator and omits machine passes
+  /// that require NoVRegs.
   virtual bool usesPhysRegsForValues() const { return true; }
 
   /// True if the target wants to use interprocedural register allocation by

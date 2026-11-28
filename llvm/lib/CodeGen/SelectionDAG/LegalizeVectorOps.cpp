@@ -141,6 +141,7 @@ class VectorLegalizer {
   SDValue ExpandSELECT(SDNode *Node);
   std::pair<SDValue, SDValue> ExpandLoad(SDNode *N);
   SDValue ExpandStore(SDNode *N);
+  SDValue ExpandSubByteInsertExtractVectorElt(SDNode *Node);
   SDValue ExpandFNEG(SDNode *Node);
   SDValue ExpandFABS(SDNode *Node);
   SDValue ExpandFCOPYSIGN(SDNode *Node);
@@ -309,6 +310,17 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     if (StVT.isVector() && ST->isTruncatingStore())
       Action = TLI.getTruncStoreAction(ValVT, StVT, ST->getAlign(),
                                        ST->getAddressSpace());
+    break;
+  }
+  case ISD::EXTRACT_VECTOR_ELT:
+  case ISD::INSERT_VECTOR_ELT: {
+    // Expanding a variable index through the stack cannot address elements
+    // narrower than a byte. Constant indices are left to LegalizeDAG.
+    EVT VecVT = Node->getOperand(0).getValueType();
+    SDValue Idx = Node->getOperand(Node->getNumOperands() - 1);
+    if (!VecVT.getVectorElementType().isByteSized() &&
+        !isa<ConstantSDNode>(Idx))
+      Action = TLI.getOperationAction(Node->getOpcode(), VecVT);
     break;
   }
   case ISD::MERGE_VALUES:
@@ -482,6 +494,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FP_TO_UINT_SAT:
   case ISD::MGATHER:
   case ISD::VECTOR_COMPRESS:
+  case ISD::VECTOR_SHUFFLE_VAR:
   case ISD::SCMP:
   case ISD::UCMP:
   case ISD::GET_ACTIVE_LANE_MASK:
@@ -958,6 +971,27 @@ std::pair<SDValue, SDValue> VectorLegalizer::ExpandLoad(SDNode *N) {
   return TLI.scalarizeVectorLoad(LD, DAG);
 }
 
+SDValue VectorLegalizer::ExpandSubByteInsertExtractVectorElt(SDNode *Node) {
+  SDLoc DL(Node);
+  LLVMContext &Ctx = *DAG.getContext();
+  SDValue Vec = Node->getOperand(0);
+  EVT VecVT = Vec.getValueType();
+  EVT EltVT = VecVT.getVectorElementType().getRoundIntegerType(Ctx);
+  EVT WideVT = VecVT.changeElementType(Ctx, EltVT);
+  Vec = DAG.getNode(ISD::ANY_EXTEND, DL, WideVT, Vec);
+
+  if (Node->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vec,
+                              Node->getOperand(1));
+    return DAG.getAnyExtOrTrunc(Elt, DL, Node->getValueType(0));
+  }
+
+  SDValue Elt = DAG.getAnyExtOrTrunc(Node->getOperand(1), DL, EltVT);
+  SDValue Ins = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, WideVT, Vec, Elt,
+                            Node->getOperand(2));
+  return DAG.getNode(ISD::TRUNCATE, DL, VecVT, Ins);
+}
+
 SDValue VectorLegalizer::ExpandStore(SDNode *N) {
   StoreSDNode *ST = cast<StoreSDNode>(N);
   SDValue TF = TLI.scalarizeVectorStore(ST, DAG);
@@ -978,6 +1012,10 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::MERGE_VALUES:
     for (unsigned i = 0, e = Node->getNumValues(); i != e; ++i)
       Results.push_back(Node->getOperand(i));
+    return;
+  case ISD::EXTRACT_VECTOR_ELT:
+  case ISD::INSERT_VECTOR_ELT:
+    Results.push_back(ExpandSubByteInsertExtractVectorElt(Node));
     return;
   case ISD::VECTOR_INTERLEAVE:
     TLI.expandVectorInterleave(Node, Results, DAG);
@@ -1336,6 +1374,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   }
   case ISD::VECTOR_COMPRESS:
     Results.push_back(TLI.expandVECTOR_COMPRESS(Node, DAG));
+    return;
+  case ISD::VECTOR_SHUFFLE_VAR:
+    Results.push_back(TLI.expandVECTOR_SHUFFLE_VAR(Node, DAG));
     return;
   case ISD::CTTZ_ELTS:
   case ISD::CTTZ_ELTS_ZERO_POISON:
@@ -1750,7 +1791,8 @@ SDValue VectorLegalizer::ExpandVP_MERGE(SDNode *Node) {
   SDValue EVLMask =
       DAG.getSetCC(DL, MaskVT, StepVec, SplatEVL, ISD::CondCode::SETULT);
 
-  SDValue FullMask = DAG.getNode(ISD::AND, DL, MaskVT, Mask, EVLMask);
+  SDValue FullMask =
+      DAG.getNode(ISD::AND, DL, MaskVT, DAG.getFreeze(Mask), EVLMask);
   return DAG.getSelect(DL, Node->getValueType(0), FullMask, Op1, Op2);
 }
 

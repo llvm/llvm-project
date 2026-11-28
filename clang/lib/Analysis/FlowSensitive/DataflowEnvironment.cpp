@@ -326,6 +326,7 @@ private:
       return *V_L == *V_R;
     }
     }
+    llvm_unreachable("fully covered switch");
   }
 
   // Updates atom assignments under the assumption that subformula `F`

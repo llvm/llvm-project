@@ -32,7 +32,6 @@
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -49,7 +48,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
-
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
@@ -694,7 +692,6 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // be be replaced with undef. Loop invariant values will still be available.
     // Move dbg.values out the loop so that earlier location ranges are still
     // terminated and loop invariant assignments are preserved.
-    DIBuilder DIB(*ExitBlock->getModule());
     BasicBlock::iterator InsertDbgValueBefore =
         ExitBlock->getFirstInsertionPt();
     assert(InsertDbgValueBefore != ExitBlock->end() &&
@@ -1142,9 +1139,11 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
     return Intrinsic::vector_reduce_umin;
   case RecurKind::FMax:
   case RecurKind::FMaxNum:
+  case RecurKind::FMaxSelectNoFMF:
     return Intrinsic::vector_reduce_fmax;
   case RecurKind::FMin:
   case RecurKind::FMinNum:
+  case RecurKind::FMinSelectNoFMF:
     return Intrinsic::vector_reduce_fmin;
   case RecurKind::FMaximum:
     return Intrinsic::vector_reduce_fmaximum;
@@ -1270,9 +1269,11 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
     return Intrinsic::smax;
   case RecurKind::FMin:
   case RecurKind::FMinNum:
+  case RecurKind::FMinSelectNoFMF:
     return Intrinsic::minnum;
   case RecurKind::FMax:
   case RecurKind::FMaxNum:
+  case RecurKind::FMaxSelectNoFMF:
     return Intrinsic::maxnum;
   case RecurKind::FMinimum:
     return Intrinsic::minimum;
@@ -1339,6 +1340,7 @@ Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
   Type *Ty = Left->getType();
   if (Ty->isIntOrIntVectorTy() ||
       (RK == RecurKind::FMinNum || RK == RecurKind::FMaxNum ||
+       RK == RecurKind::FMinSelectNoFMF || RK == RecurKind::FMaxSelectNoFMF ||
        RK == RecurKind::FMinimum || RK == RecurKind::FMaximum ||
        RK == RecurKind::FMinimumNum || RK == RecurKind::FMaximumNum)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RK);
@@ -1573,6 +1575,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   case RecurKind::FMin:
   case RecurKind::FMinNum:
   case RecurKind::FMaxNum:
+  case RecurKind::FMinSelectNoFMF:
+  case RecurKind::FMaxSelectNoFMF:
   case RecurKind::FMinimum:
   case RecurKind::FMaximum:
   case RecurKind::FMinimumNum:
@@ -1754,8 +1758,7 @@ static bool hasHardUserWithinLoop(const Loop *L, const Instruction *I) {
     if (Curr->mayHaveSideEffects())
       return true;
     // Otherwise, add all its users to worklist.
-    for (const auto *U : Curr->users()) {
-      auto *UI = cast<Instruction>(U);
+    for (const Instruction *UI : Curr->users()) {
       if (Visited.insert(UI).second)
         WorkList.push_back(UI);
     }
@@ -1763,25 +1766,32 @@ static bool hasHardUserWithinLoop(const Loop *L, const Instruction *I) {
   return false;
 }
 
+// Exit values of an instruction's loop-variant operands, indexed by operand
+// number.
+using OperandExitValueList = SmallVector<std::pair<unsigned, SCEVUse>, 2>;
+
 // Collect information about PHI nodes which can be transformed in
 // rewriteLoopExitValues.
 struct RewritePhi {
-  PHINode *PN;               // For which PHI node is this replacement?
-  unsigned Ith;              // For which incoming value?
-  SCEVUse ExpansionSCEV;     // The SCEV of the incoming value we are rewriting.
+  PHINode *PN;           // For which PHI node is this replacement?
+  unsigned Ith;          // For which incoming value?
+  SCEVUse ExpansionSCEV; // The SCEV of the incoming value we are rewriting.
+  OperandExitValueList OperandExitValues;
   Instruction *ExpansionPoint; // Where we'd like to expand that SCEV?
   bool HighCost;               // Is this expansion a high-cost?
 
   RewritePhi(PHINode *P, unsigned I, SCEVUse Val, Instruction *ExpansionPt,
-             bool H)
-      : PN(P), Ith(I), ExpansionSCEV(Val), ExpansionPoint(ExpansionPt),
+             bool H, OperandExitValueList OpExitValues = {})
+      : PN(P), Ith(I), ExpansionSCEV(Val),
+        OperandExitValues(std::move(OpExitValues)), ExpansionPoint(ExpansionPt),
         HighCost(H) {}
 };
 
 // Check whether it is possible to delete the loop after rewriting exit
 // value. If it is possible, ignore ReplaceExitValue and do rewriting
 // aggressively.
-static bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet) {
+static bool canLoopBeDeleted(Loop *L,
+                             SmallVector<RewritePhi, 8> &RewritePhiSet) {
   BasicBlock *Preheader = L->getLoopPreheader();
   // If there is no preheader, the loop will not be deleted.
   if (!Preheader)
@@ -1844,6 +1854,31 @@ static bool checkIsIndPhi(PHINode *Phi, Loop *L, ScalarEvolution *SE,
   if (Phi->getParent() != L->getHeader())
     return false;
   return InductionDescriptor::isInductionPHI(Phi, L, SE, ID);
+}
+
+static bool collectOperandExitValues(Instruction *Inst, Loop *L,
+                                     BasicBlock *ExitingBlock,
+                                     ScalarEvolution *SE,
+                                     SCEVExpander &Rewriter,
+                                     OperandExitValueList &ExitValues) {
+  BasicBlock *Preheader = L->getLoopPreheader();
+  if (!Preheader || !isa<ICmpInst>(Inst))
+    return false;
+
+  for (const auto &[Idx, Op] : enumerate(Inst->operands())) {
+    // Operands defined outside the loop already dominate the preheader.
+    if (L->isLoopInvariant(Op))
+      continue;
+    if (!SE->isSCEVable(Op->getType()))
+      return false;
+    SCEVUse ExitValue = SE->getSCEVAtExit(Op, L, ExitingBlock);
+    if (isa<SCEVCouldNotCompute>(ExitValue) ||
+        !SE->isLoopInvariant(ExitValue, L) ||
+        !Rewriter.isSafeToExpandAt(ExitValue, Preheader->getTerminator()))
+      return false;
+    ExitValues.emplace_back(Idx, ExitValue);
+  }
+  return !ExitValues.empty();
 }
 
 int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
@@ -1943,10 +1978,16 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         // expressions which are true for all exits (so as to maximize
         // expression reuse by the SCEVExpander), but resort to per-exit
         // evaluation if that fails.
-        SCEVUse ExitValue = SE->getSCEVAtExit(Inst, L, PN->getIncomingBlock(i));
+        BasicBlock *ExitingBlock = PN->getIncomingBlock(i);
+        SCEVUse ExitValue = SE->getSCEVAtExit(Inst, L, ExitingBlock);
+        OperandExitValueList OperandExitValues;
         if (!SE->isLoopInvariant(ExitValue, L) ||
-            !Rewriter.isSafeToExpand(ExitValue))
-          continue;
+            !Rewriter.isSafeToExpandAt(
+                ExitValue, L->getLoopPreheader()->getTerminator())) {
+          if (!collectOperandExitValues(Inst, L, ExitingBlock, SE, Rewriter,
+                                        OperandExitValues))
+            continue;
+        }
 
         // Computing the value outside of the loop brings no benefit if it is
         // definitely used inside the loop in a way which can not be optimized
@@ -1958,8 +1999,10 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
           continue;
 
         // Check if expansions of this SCEV would count as being high cost.
-        bool HighCost = Rewriter.isHighCostExpansion(
-            ExitValue.getPointer(), L, SCEVCheapExpansionBudget, TTI, Inst);
+        bool HighCost =
+            !OperandExitValues.empty() ||
+            Rewriter.isHighCostExpansion(ExitValue.getPointer(), L,
+                                         SCEVCheapExpansionBudget, TTI, Inst);
 
         // Note that we must not perform expansions until after
         // we query *all* the costs, because if we perform temporary expansion
@@ -1968,10 +2011,9 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         // and next SCEV may errneously get smaller cost.
 
         // Collect all the candidate PHINodes to be rewritten.
-        Instruction *InsertPt =
-          (isa<PHINode>(Inst) || isa<LandingPadInst>(Inst)) ?
-          &*Inst->getParent()->getFirstInsertionPt() : Inst;
-        RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost);
+        Instruction *InsertPt = L->getLoopPreheader()->getTerminator();
+        RewritePhiSet.emplace_back(PN, i, ExitValue, InsertPt, HighCost,
+                                   std::move(OperandExitValues));
       }
     }
   }
@@ -1995,12 +2037,25 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         !LoopCanBeDel && Phi.HighCost)
       continue;
 
-    Value *ExitVal = Rewriter.expandCodeFor(
-        Phi.ExpansionSCEV, Phi.PN->getType(), Phi.ExpansionPoint);
+    Instruction *Inst = cast<Instruction>(PN->getIncomingValue(Phi.Ith));
+    Value *ExitVal;
+    if (Phi.OperandExitValues.empty()) {
+      ExitVal = Rewriter.expandCodeFor(Phi.ExpansionSCEV, Phi.PN->getType(),
+                                       Phi.ExpansionPoint);
+    } else {
+      Instruction *Clone = Inst->clone();
+      Clone->setName(Inst->getName() + ".exit");
+      for (auto [Idx, ExitSCEV] : Phi.OperandExitValues)
+        Clone->setOperand(Idx, Rewriter.expandCodeFor(
+                                   ExitSCEV, Inst->getOperand(Idx)->getType(),
+                                   Phi.ExpansionPoint));
+      Clone->insertBefore(Phi.ExpansionPoint->getIterator());
+      ExitVal = Clone;
+    }
 
     LLVM_DEBUG(dbgs() << "rewriteLoopExitValues: AfterLoopVal = " << *ExitVal
                       << '\n'
-                      << "  LoopVal = " << *(Phi.ExpansionPoint) << "\n");
+                      << "  LoopVal = " << *Inst << "\n");
 
 #ifndef NDEBUG
     // If we reuse an instruction from a loop which is neither L nor one of
@@ -2013,7 +2068,6 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 #endif
 
     NumReplaced++;
-    Instruction *Inst = cast<Instruction>(PN->getIncomingValue(Phi.Ith));
     PN->setIncomingValue(Phi.Ith, ExitVal);
     // It's necessary to tell ScalarEvolution about this explicitly so that
     // it can walk the def-use list and forget all SCEVs, as it may not be
@@ -2121,6 +2175,24 @@ struct PointerBounds {
   Value *StrideToCheck;
 };
 
+/// Return a SCEV expression representing a common step if all of \p Exprs are
+/// affine AddRecs of \p L with the same step, and nullptr otherwise.
+static const SCEV *getCommonAffineStep(ArrayRef<const SCEV *> Exprs,
+                                       const Loop *L) {
+  using namespace SCEVPatternMatch;
+  const SCEV *Step = nullptr;
+  for (const SCEV *S : Exprs) {
+    const SCEV *CurrentStep;
+    if (!match(S, m_scev_AffineAddRec(m_SCEV(), m_SCEV(CurrentStep),
+                                      m_SpecificLoop(L))) ||
+        (Step && Step != CurrentStep))
+      return nullptr;
+
+    Step = CurrentStep;
+  }
+  return Step;
+}
+
 RuntimeCheckBounds
 llvm::getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG,
                             const Loop *TheLoop, ScalarEvolution &SE,
@@ -2137,34 +2209,27 @@ llvm::getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG,
   // whereas using a restricted range check could have allowed us to enter at
   // least once. This is why the behaviour is not currently the default and is
   // controlled by the parameter 'HoistRuntimeChecks'.
-  if (HoistRuntimeChecks && TheLoop->getParentLoop() &&
-      isa<SCEVAddRecExpr>(High) && isa<SCEVAddRecExpr>(Low)) {
-    auto *HighAR = cast<SCEVAddRecExpr>(High);
-    auto *LowAR = cast<SCEVAddRecExpr>(Low);
-    const Loop *OuterLoop = TheLoop->getParentLoop();
-    const SCEV *Recur = LowAR->getStepRecurrence(SE);
-    if (Recur == HighAR->getStepRecurrence(SE) &&
-        HighAR->getLoop() == OuterLoop && LowAR->getLoop() == OuterLoop) {
+  const Loop *OuterLoop = TheLoop->getParentLoop();
+  if (HoistRuntimeChecks && OuterLoop) {
+    if (const SCEV *Recur = getCommonAffineStep({Low, High}, OuterLoop)) {
       BasicBlock *OuterLoopLatch = OuterLoop->getLoopLatch();
       const SCEV *OuterExitCount = SE.getExitCount(OuterLoop, OuterLoopLatch);
       if (!isa<SCEVCouldNotCompute>(OuterExitCount) &&
           OuterExitCount->getType()->isIntegerTy()) {
         const SCEV *NewHigh =
             cast<SCEVAddRecExpr>(High)->evaluateAtIteration(OuterExitCount, SE);
-        if (!isa<SCEVCouldNotCompute>(NewHigh)) {
-          LLVM_DEBUG(dbgs() << "LAA: Expanded RT check for range to include "
-                               "outer loop in order to permit hoisting\n");
-          High = NewHigh;
-          Low = cast<SCEVAddRecExpr>(Low)->getStart();
-          // If there is a possibility that the stride is negative then we have
-          // to generate extra checks to ensure the stride is positive.
-          if (!SE.isKnownNonNegative(
-                  SE.applyLoopGuards(Recur, HighAR->getLoop()))) {
-            Stride = Recur;
-            LLVM_DEBUG(dbgs() << "LAA: ... but need to check stride is "
-                                 "positive: "
-                              << *Stride << '\n');
-          }
+        assert(!isa<SCEVCouldNotCompute>(NewHigh));
+        LLVM_DEBUG(dbgs() << "LAA: Expanded RT check for range to include "
+                             "outer loop in order to permit hoisting\n");
+        High = NewHigh;
+        Low = cast<SCEVAddRecExpr>(Low)->getStart();
+        // If there is a possibility that the stride is negative then we have
+        // to generate extra checks to ensure the stride is positive.
+        if (!SE.isKnownNonNegative(SE.applyLoopGuards(Recur, OuterLoop))) {
+          Stride = Recur;
+          LLVM_DEBUG(dbgs() << "LAA: ... but need to check stride is "
+                               "positive: "
+                            << *Stride << '\n');
         }
       }
     }
@@ -2228,8 +2293,8 @@ Value *llvm::addRuntimeChecks(
   auto ExpandedChecks =
       expandBounds(PointerChecks, TheLoop, Loc, Exp, HoistRuntimeChecks);
 
-  IRBuilder ChkBuilder(Loc->getIterator(),
-                       InstSimplifyFolder(Loc->getDataLayout()));
+  const DataLayout &DL = Loc->getDataLayout();
+  IRBuilder ChkBuilder(Loc->getIterator(), InstSimplifyFolder(DL));
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
   SmallPtrSet<Value *, 4> CheckedStrides;
@@ -2238,11 +2303,13 @@ Value *llvm::addRuntimeChecks(
     // Check if two pointers (A and B) conflict where conflict is computed as:
     // start(A) <= end(B) && start(B) <= end(A)
 
-    assert((A.Start->getType()->getPointerAddressSpace() ==
-            B.End->getType()->getPointerAddressSpace()) &&
-           (B.Start->getType()->getPointerAddressSpace() ==
-            A.End->getType()->getPointerAddressSpace()) &&
-           "Trying to bounds check pointers with different address spaces");
+    // Compare B's bounds in A's address space; LAA ensures casts are no-ops.
+    Type *PtrTy = A.Start->getType();
+    assert(DL.getPointerTypeSizeInBits(PtrTy) ==
+               DL.getPointerTypeSizeInBits(B.Start->getType()) &&
+           "Expected bounds with the same pointer size");
+    Value *BStart = ChkBuilder.CreateAddrSpaceCast(B.Start, PtrTy);
+    Value *BEnd = ChkBuilder.CreateAddrSpaceCast(B.End, PtrTy);
 
     // [A|B].Start points to the first accessed byte under base [A|B].
     // [A|B].End points to the last accessed byte, plus one.
@@ -2252,8 +2319,8 @@ Value *llvm::addRuntimeChecks(
     // bound0 = (B.Start < A.End)
     // bound1 = (A.Start < B.End)
     //  IsConflict = bound0 & bound1
-    Value *Cmp0 = ChkBuilder.CreateICmpULT(A.Start, B.End, "bound0");
-    Value *Cmp1 = ChkBuilder.CreateICmpULT(B.Start, A.End, "bound1");
+    Value *Cmp0 = ChkBuilder.CreateICmpULT(A.Start, BEnd, "bound0");
+    Value *Cmp1 = ChkBuilder.CreateICmpULT(BStart, A.End, "bound1");
     Value *IsConflict = ChkBuilder.CreateAnd(Cmp0, Cmp1, "found.conflict");
     if (A.StrideToCheck && CheckedStrides.insert(A.StrideToCheck).second) {
       Value *IsNegativeStride = ChkBuilder.CreateICmpSLT(

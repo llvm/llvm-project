@@ -1548,8 +1548,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance>
     CICleanup(Clang.get());
 
-  AST->OriginalSourceFile =
-      std::string(Clang->getFrontendOpts().Inputs[0].getFile());
+  AST->OriginalSourceFile = std::string(AST->getMainFileName());
 
   // Set up diagnostics, capturing any diagnostics that would
   // otherwise be dropped.
@@ -2083,8 +2082,7 @@ void ASTUnit::CodeComplete(
     CICleanup(Clang.get());
 
   auto &Inv = Clang->getInvocation();
-  OriginalSourceFile =
-      std::string(Clang->getFrontendOpts().Inputs[0].getFile());
+  OriginalSourceFile = std::string(getMainFileName());
 
   // Set up diagnostics, capturing any diagnostics produced.
   Clang->setDiagnostics(Diag);

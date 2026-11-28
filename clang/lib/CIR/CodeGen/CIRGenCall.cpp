@@ -16,7 +16,7 @@
 #include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/Attributes.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CIR/ABIArgInfo.h"
@@ -258,13 +258,13 @@ static void addTrivialDefaultFunctionAttributes(
                 cir::FramePointerKindAttr::get(mlirCtx, *kind));
 
     // TODO(cir): a number of other attribute 1-offs based on codegen/lang opts
-    // should be done here: less-recise-fpmad null-pointer-is-valid
-    // no-trapping-math
+    // should be done here: null-pointer-is-valid
     // various inf/nan/nsz/etc work here.
     //
-    // TODO(cir): set stack-protector buffer size attribute (sorted oddly in
-    // classic compiler inside of the above region, but should be done on its
-    // own).
+    // no-trapping-math and stack-protector-buffer-size are TU-wide, so they
+    // live in #cir.lowering_options and LowerToLLVM adds them to every
+    // function not marked as a runtime function.
+
     // TODO(cir): other attributes here:
     // reciprocal estimates, prefer-vector-width, stackrealign, backchain,
     // split-stack, speculative-load-hardening.
@@ -913,9 +913,6 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl gd) {
                                ? astContext.VoidPtrTy
                                : astContext.VoidTy;
 
-  assert(!theCXXABI.hasThisReturn(gd) &&
-         "Please send PR with a test and remove this");
-
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
 
@@ -1051,13 +1048,18 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
                               : RequiredArgs::All;
 
   GlobalDecl gd(d, ctorKind);
-  if (theCXXABI.hasThisReturn(gd))
-    cgm.errorNYI(d->getSourceRange(),
-                 "arrangeCXXConstructorCall: hasThisReturn");
+
+  // TODO: hasMostDerivedReturn isn't implemented or tested yet, but the below
+  // init of 'resultType' should be enough once it is thoroughly
+  // tested/implemented everywhere else.
   if (theCXXABI.hasMostDerivedReturn(gd))
     cgm.errorNYI(d->getSourceRange(),
                  "arrangeCXXConstructorCall: hasMostDerivedReturn");
-  CanQualType resultType = astContext.VoidTy;
+
+  CanQualType resultType = theCXXABI.hasThisReturn(gd) ? argTypes.front()
+                           : theCXXABI.hasMostDerivedReturn(gd)
+                               ? astContext.VoidPtrTy
+                               : astContext.VoidTy;
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
@@ -1372,6 +1374,11 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
       assert(!cir::MissingFeatures::lowerAggregateLoadStore());
       cirCallArgs[argNo] = builder.createLoad(argLoc, src);
     }
+
+    if (CodeGenUtils::isArgumentMaybeUndef(
+            targetDecl, funcInfo.getNumRequiredArgs(), argNo))
+      cirCallArgs[argNo] =
+          cir::FreezeOp::create(builder, loc, cirCallArgs[argNo]);
   }
 
   const CIRGenCallee &concreteCallee = callee.prepareConcreteCallee(*this);

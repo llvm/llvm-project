@@ -567,6 +567,64 @@ exit:
   ret i32 0
 }
 
+; The pointers of the jumbled loads are vectorized, the first load is not the
+; main op of the node.
+define i64 @jumbled_vectorized_ptrs(ptr %b, ptr noalias %dst, i1 %c) {
+; CHECK-LABEL: define i64 @jumbled_vectorized_ptrs(
+; CHECK-SAME: ptr [[B:%.*]], ptr noalias [[DST:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> poison, ptr [[B]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x ptr> [[TMP0]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, <4 x ptr> [[TMP1]], <4 x i64> <i64 16, i64 8, i64 24, i64 32>
+; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 8
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 24
+; CHECK-NEXT:    [[L2:%.*]] = load i64, ptr [[G2]], align 8
+; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint <4 x ptr> [[TMP2]] to <4 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i64>, ptr [[G0]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> poison, <4 x i32> <i32 1, i32 0, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[TMP5]], [[TMP3]]
+; CHECK-NEXT:    store <4 x i64> [[TMP6]], ptr [[DST]], align 8
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[L2]], %[[ENTRY]] ], [ 0, %[[BB]] ]
+; CHECK-NEXT:    ret i64 [[R]]
+;
+entry:
+  %g0 = getelementptr inbounds i8, ptr %b, i64 8
+  %g1 = getelementptr inbounds i8, ptr %b, i64 16
+  %g2 = getelementptr inbounds i8, ptr %b, i64 24
+  %g3 = getelementptr inbounds i8, ptr %b, i64 32
+  %l2 = load i64, ptr %g2, align 8
+  br i1 %c, label %bb, label %exit
+
+bb:
+  %l1 = load i64, ptr %g1, align 8
+  %l0 = load i64, ptr %g0, align 8
+  %l3 = load i64, ptr %g3, align 8
+  %p1 = ptrtoint ptr %g1 to i64
+  %p0 = ptrtoint ptr %g0 to i64
+  %p2 = ptrtoint ptr %g2 to i64
+  %p3 = ptrtoint ptr %g3 to i64
+  %s1 = add i64 %l1, %p1
+  %s0 = add i64 %l0, %p0
+  %s2 = add i64 %l2, %p2
+  %s3 = add i64 %l3, %p3
+  %d1 = getelementptr inbounds i64, ptr %dst, i64 1
+  %d2 = getelementptr inbounds i64, ptr %dst, i64 2
+  %d3 = getelementptr inbounds i64, ptr %dst, i64 3
+  store i64 %s1, ptr %dst, align 8
+  store i64 %s0, ptr %d1, align 8
+  store i64 %s2, ptr %d2, align 8
+  store i64 %s3, ptr %d3, align 8
+  br label %exit
+
+exit:
+  %r = phi i64 [ %l2, %entry ], [ 0, %bb ]
+  ret i64 %r
+}
+
 !0 = !{!1, !1, i64 0}
 !1 = !{!"int", !2, i64 0}
 !2 = !{!"omnipotent char", !4, i64 0}

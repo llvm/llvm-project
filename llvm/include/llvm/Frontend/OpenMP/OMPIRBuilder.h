@@ -28,8 +28,10 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualFileSystemFwd.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
+#include <functional>
 #include <map>
 #include <optional>
 
@@ -526,7 +528,9 @@ public:
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
       : M(M), Builder(M), OffloadInfoManager(this), T(M.getTargetTriple()),
-        IsFinalized(false) {}
+        IsFinalized(false) {
+    Builder.disableGEPCanonicalization();
+  }
   LLVM_ABI ~OpenMPIRBuilder();
 
   class AtomicInfo : public llvm::AtomicInfo {
@@ -1035,7 +1039,7 @@ public:
   ///
   /// Virtual shares DivMod's type and trip-count limits. Intervening code stays
   /// at its level, once per range touching that row; empty ranges skip it.
-  /// Two constant-count loops and direct body-to-preheader/after-to-latch edges
+  /// Two loops and direct body-to-preheader/after-to-latch edges
   /// are required. Controls must retain form and be unobserved after the nest.
   /// Only host static worksharing without chunk or ordered is supported.
   /// SIMD, transforms of the result and logical body/IV access are unsupported.
@@ -1553,18 +1557,14 @@ public:
   /// needing the CanonicalLoopInfo allows more efficient code generation by
   /// deferring the actual unrolling to the LoopUnrollPass using loop metadata.
   /// A loop-associated directive applied to the unrolled loop needs to know the
-  /// new trip count which means that if using a heuristically determined unroll
-  /// factor (\p Factor == 0), that factor must be computed immediately. We are
-  /// using the same logic as the LoopUnrollPass to derived the unroll factor,
-  /// but which assumes that some canonicalization has taken place (e.g.
-  /// Mem2Reg, LICM, GVN, Inlining, etc.). That is, the heuristic will perform
-  /// better when the unrolled loop's CanonicalLoopInfo is not needed.
+  /// new trip count, so if the CanonicalLoopInfo is requested with \p Factor ==
+  /// 0, omp::DefaultPartialUnrollFactor is used.
   ///
   /// \param DL          Debug location for instructions added by unrolling.
   /// \param Loop        The loop to unroll. The loop will be invalidated.
   /// \param Factor      The factor to unroll the loop by. A factor of 0
-  ///                    indicates that a heuristic should be used to determine
-  ///                    the unroll-factor.
+  ///                    leaves the choice of unroll-factor to the
+  ///                    implementation.
   /// \param UnrolledCLI If non-null, receives the CanonicalLoopInfo of the
   ///                    partially unrolled loop. Otherwise, uses loop metadata
   ///                    to defer unrolling to the LoopUnrollPass.
@@ -1593,7 +1593,13 @@ public:
   /// Generator for '#omp flush'
   ///
   /// \param Loc The location where the flush directive was encountered
-  LLVM_ABI void createFlush(const LocationDescription &Loc);
+  /// \param AO The memory ordering of the flush. NotAtomic is a flush with a
+  /// list, which is treated as seq_cst.
+  /// \param Scope The memory scope of the flush.
+  LLVM_ABI void
+  createFlush(const LocationDescription &Loc,
+              AtomicOrdering AO = AtomicOrdering::SequentiallyConsistent,
+              AtomicScope Scope = AtomicScope::Device);
 
   /// Generate a call to the runtime to emit the diagnostic of an OpenMP
   /// `error` directive with `at(execution)`.
@@ -2615,7 +2621,7 @@ public:
 
   LLVM_ABI CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
                                                ArrayRef<Value *> Args,
-                                               StringRef Name = "");
+                                               const Twine &Name = "");
 
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
   LLVM_ABI Constant *getOrCreateSrcLocStr(StringRef LocStr,
@@ -2686,10 +2692,16 @@ public:
                                           Value *NumThreads, Value *HostPtr,
                                           ArrayRef<Value *> KernelArgs);
 
-  /// Generate a flush runtime call.
+  /// Generate a flush: a fence on a GPU, and a runtime call otherwise.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
-  LLVM_ABI void emitFlush(const LocationDescription &Loc);
+  /// \param AO The memory ordering of the flush. NotAtomic is a flush with a
+  /// list, which is treated as seq_cst.
+  /// \param Scope The memory scope of the flush.
+  LLVM_ABI void
+  emitFlush(const LocationDescription &Loc,
+            AtomicOrdering AO = AtomicOrdering::SequentiallyConsistent,
+            AtomicScope Scope = AtomicScope::Device);
 
   /// The finalization stack made up of finalize callbacks currently in-flight,
   /// wrapped into FinalizationInfo objects that reference also the finalization
@@ -2896,6 +2908,15 @@ public:
     /// runtime library for debugging
     Value *MapNamesArray = nullptr;
 
+    struct NonContiguousDescriptor {
+      /// The entry in PointersArray that refers to this descriptor.
+      unsigned MapIndex;
+      AllocaInst *Storage;
+    };
+    /// Descriptors referenced by PointersArray need their own task-private
+    /// copies when the runtime call is deferred.
+    SmallVector<NonContiguousDescriptor, 2> NonContiguousDescriptors;
+
     explicit TargetDataRTArgs() = default;
     explicit TargetDataRTArgs(Value *BasePointersArray, Value *PointersArray,
                               Value *SizesArray, Value *MapTypesArray,
@@ -3091,6 +3112,44 @@ public:
     MapHasAttachPtrArrayTy HasAttachPtr;
     StructNonContiguousInfo NonContigInfo;
 
+    /// Represents a group of mapper sub-components produced by an `iterator`
+    /// modifier on a `declare mapper`'s map clause: the component count is
+    /// only known at runtime, so these are pushed one at a time via
+    /// __tgt_push_mapper_component from inside a generated loop, rather than
+    /// being added to the arrays above. Only consumed by
+    /// emitUserDefinedMapper; emitOffloadingArrays ignores this field.
+    struct DynamicSegment {
+      /// Runtime (i64) trip count for this segment.
+      Value *Count = nullptr;
+      /// Emits the code computing one iteration's (BasePointer, Pointer,
+      /// Size) triple, given the loop's linear induction variable (0-based,
+      /// i64). Owning (not function_ref): the callable is typically a
+      /// lambda temporary assigned in after construction, which would
+      /// otherwise dangle by the time this is invoked. Returns an Error if the
+      /// entry could not be computed, e.g. on region conversion failure.
+      std::function<Expected<SmallVector<Value *, 3>>(IRBuilderBase &, Value *)>
+          GenEntry;
+      /// Map type/HasAttachPtr, constant across the segment.
+      omp::OpenMPOffloadMappingFlags Type =
+          omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+      bool HasAttachPtr = false;
+      /// User-defined mapper to invoke for this segment's component, if the
+      /// underlying map clause carries one (mirrors CustomMapperCB for the
+      /// statically-known components above).
+      Function *ChildMapperFn = nullptr;
+    };
+    SmallVector<DynamicSegment, 0> DynamicSegments;
+
+    /// When set, the first statically-known component is a parent synthesized
+    /// only to group the DynamicSegments' components (via MEMBER_OF): it
+    /// spans the range those components cover and is pushed only if this i1
+    /// condition holds at runtime, typically "some segment has a non-zero
+    /// trip count". Skipping it when no component would be grouped under it
+    /// keeps the mapped variable from becoming device-present for an iterator
+    /// that expands to nothing. Consumed by emitUserDefinedMapper only; not
+    /// merged by append().
+    Value *LeadingParentCond = nullptr;
+
     /// Append arrays in \a CurInfo.
     void append(MapInfosTy &CurInfo) {
       BasePointers.append(CurInfo.BasePointers.begin(),
@@ -3111,6 +3170,8 @@ public:
                                   CurInfo.NonContigInfo.Counts.end());
       NonContigInfo.Strides.append(CurInfo.NonContigInfo.Strides.begin(),
                                    CurInfo.NonContigInfo.Strides.end());
+      DynamicSegments.append(CurInfo.DynamicSegments.begin(),
+                             CurInfo.DynamicSegments.end());
     }
   };
   using MapInfosOrErrorTy = Expected<MapInfosTy &>;
@@ -3793,11 +3854,12 @@ public:
   ///       // Map-type-modifying bits (ALWAYS, DELETE, CLOSE) from the outer
   ///       // map clause are propagated to each component, except ATTACH
   ///       // entries (ATTACH|ALWAYS is reserved for attach(always), and other
-  ///       // modifier bits have no meaning for ATTACH). PRESENT is
-  ///       // additionally propagated to components with HasAttachPtr (the
-  ///       // pointee data) when PropagatePresentToPointee is set
-  ///       // (OpenMP >= 6.0).
-  ///       present_bit = (PropagatePresentToPointee && c.hasAttachPtr())
+  ///       // modifier bits have no meaning for ATTACH). PRESENT propagation is
+  ///       // controlled independently for pointee and non-pointee storage.
+  ///       present_bit = (!(c.isAttach() || c.isPtrAndObj()) &&
+  ///                      (c.hasAttachPtr() ? PropagatePresentToPointeeStorage
+  ///                                        :
+  ///                                        PropagatePresentToNonPointeeStorage))
   ///                         ? PRESENT : 0;
   ///       imported_modifier_bits = type & (ALWAYS | DELETE | CLOSE |
   ///                                        present_bit);
@@ -3825,18 +3887,23 @@ public:
   /// \param FuncName Optional param to specify mapper function name.
   /// \param CustomMapperCB Optional callback to generate code related to
   /// custom mappers.
-  /// \param PropagatePresentToPointee If true, the PRESENT map-type modifier
-  /// from the outer clause is propagated to the pointee entries the mapper
-  /// inserts, i.e. those with HasAttachPtr. Callers set this only for
+  /// \param PropagatePresentToPointeeStorage If true, the PRESENT map-type
+  /// modifier from the outer clause is propagated to the pointee entries the
+  /// mapper inserts, i.e. those with HasAttachPtr. Callers set this only for
   /// OpenMP >= 6.0; at earlier versions the present modifier is treated as not
   /// applying to the pointee.
+  /// \param PropagatePresentToNonPointeeStorage If true, the PRESENT map-type
+  /// modifier from the outer clause is propagated to eligible mapper entries
+  /// describing non-pointee storage, i.e. those without HasAttachPtr.
+  /// ATTACH and PTR_AND_OBJ entries are not eligible for PRESENT propagation.
   LLVM_ABI Expected<Function *> emitUserDefinedMapper(
       function_ref<MapInfosOrErrorTy(
           InsertPointTy CodeGenIP, llvm::Value *PtrPHI, llvm::Value *BeginArg)>
           PrivAndGenMapInfoCB,
       llvm::Type *ElemTy, StringRef FuncName,
       CustomMapperCallbackTy CustomMapperCB, bool PreserveMemberOfFlags = false,
-      bool PropagatePresentToPointee = false);
+      bool PropagatePresentToPointeeStorage = false,
+      bool PropagatePresentToNonPointeeStorage = false);
 
   /// Generator for '#omp target data'
   ///
@@ -4070,18 +4137,6 @@ private:
       const function_ref<Expected<Value *>(Value *XOld, IRBuilder<> &IRB)>;
 
 private:
-  enum AtomicKind { Read, Write, Update, Capture, Compare };
-
-  /// Determine whether to emit flush or not
-  ///
-  /// \param Loc    The insert and source location description.
-  /// \param AO     The required atomic ordering
-  /// \param AK     The OpenMP atomic operation kind used.
-  ///
-  /// \returns		wether a flush was emitted or not
-  bool checkAndEmitFlushAfterAtomic(const LocationDescription &Loc,
-                                    AtomicOrdering AO, AtomicKind AK);
-
   /// Emit atomic update for constructs: X = X BinOp Expr ,or X = Expr BinOp X
   /// For complex Operations: X = UpdateOp(X) => CmpExch X, old_X, UpdateOp(X)
   /// Only Scalar data types.

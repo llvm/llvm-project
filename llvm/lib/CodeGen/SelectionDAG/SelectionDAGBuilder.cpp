@@ -81,6 +81,7 @@
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -1121,8 +1122,6 @@ void SelectionDAGBuilder::init(GCFunctionInfo *gfi, BatchAAResults *aa,
   LPadToCallSiteMap.clear();
   this->TTI = &TTI;
   SL->init(DAG.getTargetLoweringInfo(), TM, DAG.getDataLayout());
-  AssignmentTrackingEnabled = isAssignmentTrackingEnabled(
-      *DAG.getMachineFunction().getFunction().getParent());
   CanDescribeGlobalAddressInLocationList =
       canDescribeGlobalAddressInLocationList(DAG.getMachineFunction());
 }
@@ -2682,11 +2681,10 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   // is.
   Value *BrCond = I.getCondition();
   auto ShouldCountInsn = [&RhsDeps, &BrCond](const Instruction *Ins) {
-    for (const auto *U : Ins->users()) {
+    for (const Instruction *UIns : Ins->users()) {
       // If user is independent of RHS calculation we don't need to count it.
-      if (auto *UIns = dyn_cast<Instruction>(U))
-        if (UIns != BrCond && !RhsDeps.contains(UIns))
-          return false;
+      if (UIns != BrCond && !RhsDeps.contains(UIns))
+        return false;
     }
     return true;
   };
@@ -4299,7 +4297,7 @@ void SelectionDAGBuilder::visitBitInsert(const User &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc dl = getCurSDLoc();
 
-  assert(BaseVT.getSizeInBits() >= ValVT.getSizeInBits() &&
+  assert(BaseVT.getScalarSizeInBits() >= ValVT.getScalarSizeInBits() &&
          "bitinsert val wider than base should be rejected by verifier");
 
   // If Val is a float, cast it to an integer of the same bitwidth
@@ -4337,7 +4335,7 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
   EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   SDLoc dl = getCurSDLoc();
 
-  assert(ResultVT.getSizeInBits() <= SrcVT.getSizeInBits() &&
+  assert(ResultVT.getScalarSizeInBits() <= SrcVT.getScalarSizeInBits() &&
          "bitextract result wider than source should be rejected by verifier");
 
   // Legalize shift amount to the target's shift amount type.
@@ -4928,7 +4926,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   Align Alignment = I.getAlign();
   AAMDNodes AAInfo = I.getAAMetadata();
   const MDNode *Ranges = getRangeMetadata(I);
-  const MDNode *MemCacheHint = getMemCacheHintMetadata(I);
+  const MDNode *MemCacheHint = getMemCacheHint(I);
   bool isVolatile = I.isVolatile();
   MachineMemOperand::Flags MMOFlags =
       TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
@@ -5118,8 +5116,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   SDLoc dl = getCurSDLoc();
   Align Alignment = I.getAlign();
   AAMDNodes AAInfo = I.getAAMetadata();
-  const MDNode *MemCacheHint =
-      getMemCacheHintMetadata(I, I.getPointerOperandIndex());
+  const MDNode *MemCacheHint = getMemCacheHint(I, I.getPointerOperandIndex());
 
   auto MMOFlags = TLI.getStoreMemOperandFlags(I, DAG.getDataLayout());
 
@@ -5178,7 +5175,7 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
   if (I.hasMetadata(LLVMContext::MD_nontemporal))
     MMOFlags |= MachineMemOperand::MONonTemporal;
 
-  const MDNode *MemCacheHint = getMemCacheHintMetadata(I, /*OperandNo=*/1);
+  const MDNode *MemCacheHint = getMemCacheHint(I, /*OperandNo=*/1);
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
@@ -5325,7 +5322,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   EVT VT = Src0.getValueType();
   AAMDNodes AAInfo = I.getAAMetadata();
   const MDNode *Ranges = getRangeMetadata(I);
-  const MDNode *MemCacheHint = getMemCacheHintMetadata(I, /*OperandNo=*/0);
+  const MDNode *MemCacheHint = getMemCacheHint(I, /*OperandNo=*/0);
 
   // Do not serialize masked loads of constant memory with anything.
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
@@ -5460,7 +5457,7 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
   auto Flags = TLI.getAtomicMemOperandFlags(I, DAG.getDataLayout());
 
   MachineFunction &MF = DAG.getMachineFunction();
-  const MDNode *MemCacheHint = getMemCacheHintMetadata(I);
+  const MDNode *MemCacheHint = getMemCacheHint(I);
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
       I.getAlign(), MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr, MemCacheHint),
@@ -5480,49 +5477,7 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
 
 void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   SDLoc dl = getCurSDLoc();
-  ISD::NodeType NT;
-  switch (I.getOperation()) {
-  default: llvm_unreachable("Unknown atomicrmw operation");
-  case AtomicRMWInst::Xchg: NT = ISD::ATOMIC_SWAP; break;
-  case AtomicRMWInst::Add:  NT = ISD::ATOMIC_LOAD_ADD; break;
-  case AtomicRMWInst::Sub:  NT = ISD::ATOMIC_LOAD_SUB; break;
-  case AtomicRMWInst::And:  NT = ISD::ATOMIC_LOAD_AND; break;
-  case AtomicRMWInst::Nand: NT = ISD::ATOMIC_LOAD_NAND; break;
-  case AtomicRMWInst::Or:   NT = ISD::ATOMIC_LOAD_OR; break;
-  case AtomicRMWInst::Xor:  NT = ISD::ATOMIC_LOAD_XOR; break;
-  case AtomicRMWInst::Max:  NT = ISD::ATOMIC_LOAD_MAX; break;
-  case AtomicRMWInst::Min:  NT = ISD::ATOMIC_LOAD_MIN; break;
-  case AtomicRMWInst::UMax: NT = ISD::ATOMIC_LOAD_UMAX; break;
-  case AtomicRMWInst::UMin: NT = ISD::ATOMIC_LOAD_UMIN; break;
-  case AtomicRMWInst::FAdd: NT = ISD::ATOMIC_LOAD_FADD; break;
-  case AtomicRMWInst::FSub: NT = ISD::ATOMIC_LOAD_FSUB; break;
-  case AtomicRMWInst::FMax: NT = ISD::ATOMIC_LOAD_FMAX; break;
-  case AtomicRMWInst::FMin: NT = ISD::ATOMIC_LOAD_FMIN; break;
-  case AtomicRMWInst::FMaximum:
-    NT = ISD::ATOMIC_LOAD_FMAXIMUM;
-    break;
-  case AtomicRMWInst::FMinimum:
-    NT = ISD::ATOMIC_LOAD_FMINIMUM;
-    break;
-  case AtomicRMWInst::FMaximumNum:
-    NT = ISD::ATOMIC_LOAD_FMAXIMUMNUM;
-    break;
-  case AtomicRMWInst::FMinimumNum:
-    NT = ISD::ATOMIC_LOAD_FMINIMUMNUM;
-    break;
-  case AtomicRMWInst::UIncWrap:
-    NT = ISD::ATOMIC_LOAD_UINC_WRAP;
-    break;
-  case AtomicRMWInst::UDecWrap:
-    NT = ISD::ATOMIC_LOAD_UDEC_WRAP;
-    break;
-  case AtomicRMWInst::USubCond:
-    NT = ISD::ATOMIC_LOAD_USUB_COND;
-    break;
-  case AtomicRMWInst::USubSat:
-    NT = ISD::ATOMIC_LOAD_USUB_SAT;
-    break;
-  }
+  ISD::NodeType NT = getAtomicRMWOpcode(I.getOperation());
   AtomicOrdering Ordering = I.getOrdering();
   SyncScope::ID SSID = I.getSyncScopeID();
 
@@ -5533,7 +5488,7 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   auto Flags = TLI.getAtomicMemOperandFlags(I, DAG.getDataLayout());
 
   MachineFunction &MF = DAG.getMachineFunction();
-  const MDNode *MemCacheHint = getMemCacheHintMetadata(I);
+  const MDNode *MemCacheHint = getMemCacheHint(I);
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
       I.getAlign(), MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr, MemCacheHint),
@@ -5581,7 +5536,7 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   auto Flags = TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
 
   const MDNode *Ranges = getRangeMetadata(I);
-  const MDNode *MemCacheHint = getMemCacheHintMetadata(I);
+  const MDNode *MemCacheHint = getMemCacheHint(I);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
       I.getAlign(), MMOMetadata(AAMDNodes(), Ranges, MemCacheHint), SSID,
@@ -5619,8 +5574,7 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
   auto Flags = TLI.getStoreMemOperandFlags(I, DAG.getDataLayout());
 
   MachineFunction &MF = DAG.getMachineFunction();
-  const MDNode *MemCacheHint =
-      getMemCacheHintMetadata(I, I.getPointerOperandIndex());
+  const MDNode *MemCacheHint = getMemCacheHint(I, I.getPointerOperandIndex());
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
       I.getAlign(), MMOMetadata(AAMDNodes(), /*Ranges=*/nullptr, MemCacheHint),
@@ -6438,7 +6392,7 @@ static SDValue expandDivFix(unsigned Opcode, const SDLoc &DL,
 // bitcasted, or split argument. Returns a list of <Register, size in bits>
 static void
 getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
-                     const SDValue &N) {
+                     const SDValue &N, const DataLayout &DL) {
   switch (N.getOpcode()) {
   case ISD::CopyFromReg: {
     SDValue Op = N.getOperand(1);
@@ -6450,13 +6404,21 @@ getUnderlyingArgRegs(SmallVectorImpl<std::pair<Register, TypeSize>> &Regs,
   case ISD::AssertZext:
   case ISD::AssertSext:
   case ISD::TRUNCATE:
-    getUnderlyingArgRegs(Regs, N.getOperand(0));
+    getUnderlyingArgRegs(Regs, N.getOperand(0), DL);
     return;
   case ISD::BUILD_PAIR:
+    // Fragment offsets count from the lowest-addressed byte, so on
+    // big-endian targets the high half (operand 1) comes first.
+    if (DL.isBigEndian()) {
+      getUnderlyingArgRegs(Regs, N.getOperand(1), DL);
+      getUnderlyingArgRegs(Regs, N.getOperand(0), DL);
+      return;
+    }
+    [[fallthrough]];
   case ISD::BUILD_VECTOR:
   case ISD::CONCAT_VECTORS:
     for (SDValue Op : N->op_values())
-      getUnderlyingArgRegs(Regs, Op);
+      getUnderlyingArgRegs(Regs, Op, DL);
     return;
   default:
     return;
@@ -6584,7 +6546,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
 
   SmallVector<std::pair<Register, TypeSize>, 8> ArgRegsAndSizes;
   if (!Op && N.getNode()) {
-    getUnderlyingArgRegs(ArgRegsAndSizes, N);
+    getUnderlyingArgRegs(ArgRegsAndSizes, N, DAG.getDataLayout());
     Register Reg;
     if (ArgRegsAndSizes.size() == 1)
       Reg = ArgRegsAndSizes.front().first;
@@ -8834,6 +8796,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(1)),
                              getValue(I.getArgOperand(2)), Flags));
     return;
+  case Intrinsic::vector_shuffle:
+    setValue(&I, DAG.getNode(ISD::VECTOR_SHUFFLE_VAR, sdl,
+                             TLI.getValueType(DAG.getDataLayout(), I.getType()),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
   case Intrinsic::experimental_convergence_anchor:
   case Intrinsic::experimental_convergence_entry:
   case Intrinsic::experimental_convergence_loop:
@@ -9958,19 +9926,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         if (visitMemCmpBCmpCall(I))
           return;
         break;
-      case LibFunc_copysign:
-      case LibFunc_copysignf:
-      case LibFunc_copysignl:
-        // We already checked this call's prototype; verify it doesn't modify
-        // errno.
-        if (I.onlyReadsMemory()) {
-          SDValue LHS = getValue(I.getArgOperand(0));
-          SDValue RHS = getValue(I.getArgOperand(1));
-          setValue(&I, DAG.getNode(ISD::FCOPYSIGN, getCurSDLoc(),
-                                   LHS.getValueType(), LHS, RHS));
-          return;
-        }
-        break;
       case LibFunc_sin:
       case LibFunc_sinf:
       case LibFunc_sinl:
@@ -10056,12 +10011,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_exp10f:
       case LibFunc_exp10l:
         if (visitUnaryFloatCall(I, ISD::FEXP10))
-          return;
-        break;
-      case LibFunc_ldexp:
-      case LibFunc_ldexpf:
-      case LibFunc_ldexpl:
-        if (visitBinaryFloatCall(I, ISD::FLDEXP))
           return;
         break;
       case LibFunc_strstr:
@@ -10714,10 +10663,21 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
           auto *R = cast<RegisterSDNode>(Info.AsmNodeOperands[CurOp + 1]);
           Register TiedReg = R->getReg();
           MVT RegVT = R->getSimpleValueType(0);
-          const TargetRegisterClass *RC =
-              TiedReg.isVirtual()     ? MRI.getRegClass(TiedReg)
-              : RegVT != MVT::Untyped ? TLI.getRegClassFor(RegVT)
-                                      : TRI.getMinimalPhysRegClass(TiedReg);
+          const TargetRegisterClass *RC;
+          if (TiedReg.isVirtual()) {
+            RC = MRI.getRegClass(TiedReg);
+          } else if (RegVT == MVT::Untyped) {
+            RC = TRI.getMinimalPhysRegClass(TiedReg);
+          } else {
+            RC = TLI.getRegClassFor(RegVT);
+            if (!RC->contains(TiedReg)) {
+              const TargetRegisterClass *PhysRC =
+                  TRI.getMinimalPhysRegClass(TiedReg);
+              if (PhysRC->isAllocatable())
+                RC = PhysRC;
+            }
+          }
+
           for (unsigned I = 0, E = Flag.getNumOperandRegisters(); I != E; ++I)
             Regs.push_back(MRI.createVirtualRegister(RC));
 
@@ -10781,8 +10741,14 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         assert((OpInfo.isIndirect ||
                 OpInfo.ConstraintType != TargetLowering::C_Memory) &&
                "Operand must be indirect to be a mem!");
+
         assert(InOperandVal.getValueType() ==
-                   TLI.getPointerTy(DAG.getDataLayout()) &&
+                   TLI.getPointerTy(
+                       DAG.getDataLayout(),
+                       OpInfo.CallOperandVal
+                           ? cast<PointerType>(OpInfo.CallOperandVal->getType())
+                                 ->getAddressSpace()
+                           : 0) &&
                "Memory operands expect pointer values");
 
         const InlineAsm::ConstraintCode ConstraintID =

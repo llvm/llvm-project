@@ -26,9 +26,11 @@
 #include "llvm/CodeGen/VLIWMachineScheduler.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Transforms/Scalar.h"
 #include <optional>
 
@@ -187,8 +189,11 @@ static ScheduleDAGInstrs *createVLIWMachineSched(MachineSchedContext *C) {
       C, std::make_unique<HexagonConvergingVLIWScheduler>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::UsrOverflowMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::HVXMemLatencyMutation>());
+  DAG->addMutation(
+      std::make_unique<HexagonSubtarget::HMXActivateWeightMutation>());
   DAG->addMutation(std::make_unique<HexagonSubtarget::CallMutation>());
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII));
+  DAG->addMutation(std::make_unique<HexagonSubtarget::HLXPseudoMutation>());
   return DAG;
 }
 
@@ -204,6 +209,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeHexagonTarget() {
   // Register the target.
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
+  static opt::RegisterLibraryOptions<HexagonOptions> O;
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeHexagonAlignGlobalArraysPass(PR);
@@ -216,10 +222,14 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonGenMemAbsolutePass(PR);
   initializeHexagonGenMuxPass(PR);
   initializeHexagonGlobalSchedulerPass(PR);
+  initializeHLXExpandPseudosPass(PR);
   initializeHexagonLiveVariablesPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
   initializeHexagonHVXSaveRemarkPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
+  initializeHexagonLowerHLXPairAllocasPass(PR);
+  initializeHexagonMergeActivateWeightPass(PR);
+  initializeHexagonMergeActivateWeight2Pass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
   initializeHexagonPacketizerPass(PR);
@@ -265,6 +275,8 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small),
                                (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
+      CLOpts(cl::LibraryOptionsContext::get<HexagonOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(std::make_unique<HexagonTargetObjectFile>()),
       Subtarget(Triple(TT), CPU, FS, *this) {
   initAsmInfo();
@@ -272,18 +284,27 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
 
 const HexagonSubtarget *
 HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
-  AttributeList FnAttrs = F.getAttributes();
-  Attribute CPUAttr = FnAttrs.getFnAttr("target-cpu");
-  Attribute FSAttr = FnAttrs.getFnAttr("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const HexagonSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+
+  if (const HexagonSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
 
   std::string CPU =
-      CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString().str() : TargetCPU;
   std::string FS =
-      FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString().str() : TargetFS;
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I)
     I = std::make_unique<HexagonSubtarget>(TargetTriple, CPU, FS, *this);
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
@@ -369,6 +390,7 @@ public:
   }
 
   void addIRPasses() override;
+  bool addPreISel() override;
   bool addInstSelector() override;
   bool addILPOpts() override;
   void addMachineSSAOptimization() override;
@@ -422,6 +444,13 @@ void HexagonPassConfig::addIRPasses() {
     if (EnableGenExtract)
       addPass(createHexagonGenExtract());
   }
+}
+
+bool HexagonPassConfig::addPreISel() {
+  // Functions can enable HLX through target-features, so the pass filters
+  // individual functions instead of being gated by the default subtarget.
+  addPass(createHexagonLowerHLXPairAllocas());
+  return false;
 }
 
 bool HexagonPassConfig::addInstSelector() {
@@ -495,6 +524,14 @@ void HexagonPassConfig::addMachineSSAOptimization() {
 }
 
 void HexagonPassConfig::addPreRegAlloc() {
+  // HMX activation/weight pairs must be adjacent before register allocation.
+  // With optimized register allocation, run after the machine scheduler,
+  // which may separate the pairs.
+  if (getOptimizeRegAlloc())
+    insertPass(&MachineSchedulerID, &HexagonMergeActivateWeightID);
+  else
+    insertPass(&PHIEliminationID, &HexagonMergeActivateWeightID);
+
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableExpandCondsets)
       insertPass(&RegisterCoalescerID, &HexagonExpandCondsetsID);
@@ -555,12 +592,18 @@ void HexagonPassConfig::addPreEmitPass() {
       addPass(&HexagonLiveVariablesID);
   }
 
+  addPass(createHexagonMergeActivateWeight2());
+
   // Emit KCFI checks for indirect calls. Must run before packetization so
   // the check and call can be bundled together into a VLIW packet.
   addPass(createKCFIPass());
 
   // Packetization is mandatory: it handles gather/scatter at all opt levels.
   addPass(createHexagonPacketizer(NoOpt));
+
+  // Expand HLX load/store pseudos into their final bundled form. This must run
+  // after packetization so the resulting bundles are not seen by the scheduler.
+  addPass(createHLXExpandPseudos());
 
   if (!NoOpt) {
     // Global pull-up scheduler

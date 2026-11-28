@@ -15,6 +15,7 @@
 #include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPCELFStreamer.h"
 #include "PPCMCAsmInfo.h"
+#include "PPCMCOptions.h"
 #include "PPCTargetStreamer.h"
 #include "PPCXCOFFStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
@@ -40,6 +41,7 @@
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -58,6 +60,9 @@ using namespace llvm;
 
 #define GET_REGINFO_MC_DESC
 #include "PPCGenRegisterInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "PPCMCOptions.inc"
 
 /// stripRegisterPrefix - This method strips the character prefix from a
 /// register name so that only the number is left.  Used by for linux asm.
@@ -472,6 +477,7 @@ static MCInstrAnalysis *createPPCMCInstrAnalysis(const MCInstrInfo *Info) {
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializePowerPCTargetMC() {
+  static opt::RegisterLibraryOptions<PPCMCOptions> O;
   for (Target *T : {&getThePPC32Target(), &getThePPC32LETarget(),
                     &getThePPC64Target(), &getThePPC64LETarget()}) {
     // Register the MC asm info.

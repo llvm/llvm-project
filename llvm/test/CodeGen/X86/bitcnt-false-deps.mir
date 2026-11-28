@@ -17,8 +17,6 @@
 # RUN: llc -mcpu=znver6 -mtriple=x86_64-unknown-unknown -run-pass=break-false-deps %s -o - | FileCheck %s --check-prefixes=FAST_POPCNT,FAST_LZCNT,FAST_TZCNT,ALL
 ---
 name:            popcnt32_rr
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $edi, $eax
@@ -39,8 +37,6 @@ body:             |
 ...
 ---
 name:            popcnt64_rr
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -61,8 +57,6 @@ body:             |
 ...
 ---
 name:            popcnt32_rm
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -83,8 +77,6 @@ body:             |
 ...
 ---
 name:            popcnt64_rm
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -105,8 +97,6 @@ body:             |
 ...
 ---
 name:            lzcnt32_rr
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $edi, $eax
@@ -127,8 +117,6 @@ body:             |
 ...
 ---
 name:            lzcnt64_rr
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -149,8 +137,6 @@ body:             |
 ...
 ---
 name:            lzcnt32_rm
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -171,8 +157,6 @@ body:             |
 ...
 ---
 name:            lzcnt64_rm
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -193,8 +177,6 @@ body:             |
 ...
 ---
 name:            tzcnt32_rr
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $edi, $eax
@@ -215,8 +197,6 @@ body:             |
 ...
 ---
 name:            tzcnt64_rr
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -237,8 +217,6 @@ body:             |
 ...
 ---
 name:            tzcnt32_rm
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -259,8 +237,6 @@ body:             |
 ...
 ---
 name:            tzcnt64_rm
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi, $rax
@@ -281,8 +257,6 @@ body:             |
 ...
 ---
 name:            no_break_popcnt32_rr
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $edi
@@ -298,8 +272,6 @@ body:             |
 ...
 ---
 name:            no_break_popcnt64_rr
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -315,8 +287,6 @@ body:             |
 ...
 ---
 name:            no_break_popcnt32_rm
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -330,8 +300,6 @@ body:             |
 ...
 ---
 name:            no_break_popcnt64_rm
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -345,8 +313,6 @@ body:             |
 ...
 ---
 name:            no_break_lzcnt32_rr
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $edi
@@ -362,8 +328,6 @@ body:             |
 ...
 ---
 name:            no_break_lzcnt64_rr
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -379,8 +343,6 @@ body:             |
 ...
 ---
 name:            no_break_lzcnt32_rm
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -394,8 +356,6 @@ body:             |
 ...
 ---
 name:            no_break_lzcnt64_rm
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -409,8 +369,6 @@ body:             |
 ...
 ---
 name:            no_break_tzcnt32_rr
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $edi
@@ -426,8 +384,6 @@ body:             |
 ...
 ---
 name:            no_break_tzcnt64_rr
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -443,8 +399,6 @@ body:             |
 ...
 ---
 name:            no_break_tzcnt32_rm
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi
@@ -458,8 +412,6 @@ body:             |
 ...
 ---
 name:            no_break_tzcnt64_rm
-tracksRegLiveness: true
-registers:       []
 body:             |
   bb.0:
     liveins: $rdi

@@ -13,6 +13,7 @@
 #include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
 #include "orc-rt/bedrock/NativeDylibManager.h"
 #include "orc-rt/bedrock/Session.h"
+#include "orc-rt/support/sps/SPSSymbolLookupResult.h"
 #include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 #include "orc-rt/support/sps/SPSWrapperFunction.h"
 
@@ -42,9 +43,8 @@ constexpr auto Weak = SymbolLookupFlags::WeaklyReferencedSymbol;
 #define MANGLED(name) name
 #endif
 
-#ifndef NDM_TEST_LIB_PATH
-#error                                                                         \
-    "NDM_TEST_LIB_PATH must be defined to the path of the test shared library"
+#ifndef ORC_RT_TEST_DYLIB_PATH
+#error "ORC_RT_TEST_DYLIB_PATH must be defined to the path of the test dylib"
 #endif
 
 static DirectCaller caller(orc_rt_WrapperFunction Fn) { return {nullptr, Fn}; }
@@ -54,9 +54,7 @@ protected:
   void SetUp() override {
     S = std::make_unique<Session>(mockExecutorProcessInfo(), noDispatch,
                                   noErrors);
-    auto NDMOrErr = NativeDylibManager::Create(*S, CI);
-    ASSERT_THAT_EXPECTED(NDMOrErr, Succeeded());
-    NDM = std::move(*NDMOrErr);
+    NDM = std::make_unique<NativeDylibManager>(*S);
   }
 
   template <typename OnCompleteFn>
@@ -69,7 +67,7 @@ protected:
 
   template <typename OnCompleteFn>
   void spsLookup(OnCompleteFn &&OnComplete, void *Handle,
-                 SymbolLookupSet Symbols) {
+                 RemoteSymbolLookupSet Symbols) {
     using SPSSig = SPSExpected<SPSSequence<SPSOptional<SPSExecutorAddr>>>(
         SPSExecutorAddr, SPSExecutorAddr, SPSSymbolLookupSet);
     SPSWrapperFunction<SPSSig>::call(
@@ -78,12 +76,16 @@ protected:
         std::move(Symbols));
   }
 
-  SimpleSymbolTable CI;
   std::unique_ptr<Session> S;
   std::unique_ptr<NativeDylibManager> NDM;
 };
 
-TEST_F(NativeDylibManagerSPSCITest, Registration) {
+TEST(NativeDylibManagerSPSCIRegistrationTest, Registration) {
+  SimpleSymbolTable CI;
+  ASSERT_THAT_ERROR(sps::ci::addNativeDylibManager(CI), Succeeded());
+
+  EXPECT_TRUE(
+      CI.count(SymbolNameSpec::c("orc_rt_ci_sps_NativeDylibManager_create")));
   EXPECT_TRUE(
       CI.count(SymbolNameSpec::c("orc_rt_ci_sps_NativeDylibManager_load")));
   EXPECT_TRUE(
@@ -92,7 +94,7 @@ TEST_F(NativeDylibManagerSPSCITest, Registration) {
 
 TEST_F(NativeDylibManagerSPSCITest, Load) {
   std::future<Expected<Expected<void *>>> LoadResult;
-  spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);
+  spsLoad(waitFor(LoadResult), ORC_RT_TEST_DYLIB_PATH);
   auto HandleOrErr = LoadResult.get();
   ASSERT_THAT_EXPECTED(HandleOrErr, Succeeded());
   EXPECT_THAT_EXPECTED(*HandleOrErr, HasValue(Ne(nullptr)));
@@ -129,14 +131,14 @@ TEST_F(NativeDylibManagerSPSCITest, LoadEmptyPathReturnsGlobalHandle) {
 
 TEST_F(NativeDylibManagerSPSCITest, LookupSingleSymbol) {
   std::future<Expected<Expected<void *>>> LoadResult;
-  spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);
+  spsLoad(waitFor(LoadResult), ORC_RT_TEST_DYLIB_PATH);
   auto Handle = LoadResult.get();
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
   ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
   std::future<Expected<Expected<SymbolLookupResult>>> LookupResult;
   spsLookup(waitFor(LookupResult), **Handle,
-            {{MANGLED("NativeDylibManagerTestFunc"), Req}});
+            {{MANGLED("orc_rt_test_dylib_return42"), Req}});
   auto AddrsOrErr = LookupResult.get();
   ASSERT_THAT_EXPECTED(AddrsOrErr, Succeeded());
   ASSERT_THAT_EXPECTED(*AddrsOrErr, Succeeded());
@@ -151,15 +153,15 @@ TEST_F(NativeDylibManagerSPSCITest, LookupSingleSymbol) {
 
 TEST_F(NativeDylibManagerSPSCITest, LookupMultipleSymbols) {
   std::future<Expected<Expected<void *>>> LoadResult;
-  spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);
+  spsLoad(waitFor(LoadResult), ORC_RT_TEST_DYLIB_PATH);
   auto Handle = LoadResult.get();
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
   ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
   std::future<Expected<Expected<SymbolLookupResult>>> LookupResult;
   spsLookup(waitFor(LookupResult), **Handle,
-            {{MANGLED("NativeDylibManagerTestFunc"), Req},
-             {MANGLED("NativeDylibManagerTestFunc2"), Req}});
+            {{MANGLED("orc_rt_test_dylib_return42"), Req},
+             {MANGLED("orc_rt_test_dylib_return7"), Req}});
   auto AddrsOrErr = LookupResult.get();
   ASSERT_THAT_EXPECTED(AddrsOrErr, Succeeded());
   ASSERT_THAT_EXPECTED(*AddrsOrErr, Succeeded());
@@ -178,7 +180,7 @@ TEST_F(NativeDylibManagerSPSCITest, LookupMultipleSymbols) {
 
 TEST_F(NativeDylibManagerSPSCITest, LookupWeakMissingSymbol) {
   std::future<Expected<Expected<void *>>> LoadResult;
-  spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);
+  spsLoad(waitFor(LoadResult), ORC_RT_TEST_DYLIB_PATH);
   auto Handle = LoadResult.get();
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
   ASSERT_THAT_EXPECTED(*Handle, Succeeded());
@@ -198,7 +200,7 @@ TEST_F(NativeDylibManagerSPSCITest, LookupWeakMissingSymbol) {
 
 TEST_F(NativeDylibManagerSPSCITest, LookupRequiredMissingSymbol) {
   std::future<Expected<Expected<void *>>> LoadResult;
-  spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);
+  spsLoad(waitFor(LoadResult), ORC_RT_TEST_DYLIB_PATH);
   auto Handle = LoadResult.get();
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
   ASSERT_THAT_EXPECTED(*Handle, Succeeded());
@@ -217,14 +219,14 @@ TEST_F(NativeDylibManagerSPSCITest, LookupRequiredMissingSymbol) {
 
 TEST_F(NativeDylibManagerSPSCITest, LookupMixedRequiredAndWeak) {
   std::future<Expected<Expected<void *>>> LoadResult;
-  spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);
+  spsLoad(waitFor(LoadResult), ORC_RT_TEST_DYLIB_PATH);
   auto Handle = LoadResult.get();
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
   ASSERT_THAT_EXPECTED(*Handle, Succeeded());
 
   std::future<Expected<Expected<SymbolLookupResult>>> LookupResult;
   spsLookup(waitFor(LookupResult), **Handle,
-            {{MANGLED("NativeDylibManagerTestFunc"), Req},
+            {{MANGLED("orc_rt_test_dylib_return42"), Req},
              {MANGLED("no_such_symbol"), Weak}});
   auto AddrsOrErr = LookupResult.get();
   ASSERT_THAT_EXPECTED(AddrsOrErr, Succeeded());
@@ -236,5 +238,40 @@ TEST_F(NativeDylibManagerSPSCITest, LookupMixedRequiredAndWeak) {
   ASSERT_TRUE(Addrs[1].has_value())
       << "weak-missing symbol should be reported as a present optional";
   EXPECT_EQ(*Addrs[1], nullptr);
+}
+TEST(NativeDylibManagerSPSCICreateTest, CreatedInstanceIsUsable) {
+  // Check that the create entrypoint returns a usable instance: one that can
+  // load a dylib and look up symbols in it via the operation wrappers.
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+
+  std::future<Expected<Expected<void *>>> CreateResult;
+  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>()>::call(
+      DirectCaller(wrap(&S), orc_rt_ci_sps_NativeDylibManager_create),
+      waitFor(CreateResult));
+  auto Instance = CreateResult.get();
+  ASSERT_THAT_EXPECTED(Instance, Succeeded());
+  ASSERT_THAT_EXPECTED(*Instance, HasValue(Ne(nullptr)));
+
+  std::future<Expected<Expected<void *>>> LoadResult;
+  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString)>::
+      call(caller(orc_rt_ci_sps_NativeDylibManager_load), waitFor(LoadResult),
+           **Instance, std::string(ORC_RT_TEST_DYLIB_PATH));
+  auto Handle = LoadResult.get();
+  ASSERT_THAT_EXPECTED(Handle, Succeeded());
+  ASSERT_THAT_EXPECTED(*Handle, Succeeded());
+
+  std::future<Expected<Expected<SymbolLookupResult>>> LookupResult;
+  SPSWrapperFunction<SPSExpected<SPSSequence<SPSOptional<SPSExecutorAddr>>>(
+      SPSExecutorAddr, SPSExecutorAddr, SPSSymbolLookupSet)>::
+      call(caller(orc_rt_ci_sps_NativeDylibManager_lookup),
+           waitFor(LookupResult), **Instance, **Handle,
+           RemoteSymbolLookupSet{{MANGLED("orc_rt_test_dylib_return42"), Req}});
+  auto AddrsOrErr = LookupResult.get();
+  ASSERT_THAT_EXPECTED(AddrsOrErr, Succeeded());
+  ASSERT_THAT_EXPECTED(*AddrsOrErr, Succeeded());
+  auto &Addrs = **AddrsOrErr;
+  ASSERT_EQ(Addrs.size(), 1U);
+  ASSERT_TRUE(Addrs[0].has_value());
+  EXPECT_NE(*Addrs[0], nullptr);
 }
 #endif

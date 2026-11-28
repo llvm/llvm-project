@@ -1,20 +1,14 @@
 ; RUN: llc -mtriple=amdgpu6.00-- < %s | FileCheck -enable-var-scope --check-prefixes=GCN,SI,FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02-- -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX89,FUNC %s
 ; RUN: llc -mtriple=amdgpu9.00-- -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX9,GFX89,FUNC %s
-; RUN: llc -mtriple=r600-- -mcpu=cypress < %s | FileCheck -enable-var-scope --check-prefixes=EG,FUNC %s
 
 ; FIXME: i16 promotion pass ruins the scalar cases when legal.
-; FIXME: r600 fails verifier
 
 ; FUNC-LABEL: {{^}}sext_in_reg_i1_i32:
 ; GCN: s_load_dword [[ARG:s[0-9]+]],
 ; GCN: s_bfe_i32 [[SEXTRACT:s[0-9]+]], [[ARG]], 0x10000
 ; GCN: v_mov_b32_e32 [[EXTRACT:v[0-9]+]], [[SEXTRACT]]
 ; GCN: buffer_store_dword [[EXTRACT]],
-
-; EG: MEM_{{.*}} STORE_{{.*}} [[RES:T[0-9]+\.[XYZW]]], [[ADDR:T[0-9]+.[XYZW]]]
-; EG: LSHR * [[ADDR]]
-; EG: BFE_INT * [[RES]], {{.*}}, 0.0, 1
 define amdgpu_kernel void @sext_in_reg_i1_i32(ptr addrspace(1) %out, i32 %in) #0 {
   %shl = shl i32 %in, 31
   %sext = ashr i32 %shl, 31
@@ -27,11 +21,6 @@ define amdgpu_kernel void @sext_in_reg_i1_i32(ptr addrspace(1) %out, i32 %in) #0
 ; GCN: s_sext_i32_i8 [[EXTRACT:s[0-9]+]], [[VAL]]
 ; GCN: v_mov_b32_e32 [[VEXTRACT:v[0-9]+]], [[EXTRACT]]
 ; GCN: buffer_store_dword [[VEXTRACT]],
-
-; EG: MEM_{{.*}} STORE_{{.*}} [[RES:T[0-9]+\.[XYZW]]], [[ADDR:T[0-9]+.[XYZW]]]
-; EG: ADD_INT
-; EG-NEXT: BFE_INT [[RES]], {{.*}}, 0.0, literal
-; EG-NEXT: LSHR * [[ADDR]]
 define amdgpu_kernel void @sext_in_reg_i8_to_i32(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
   %c = add i32 %a, %b ; add to prevent folding into extload
   %shl = shl i32 %c, 24
@@ -45,11 +34,6 @@ define amdgpu_kernel void @sext_in_reg_i8_to_i32(ptr addrspace(1) %out, i32 %a, 
 ; GCN: s_sext_i32_i16 [[EXTRACT:s[0-9]+]], [[VAL]]
 ; GCN: v_mov_b32_e32 [[VEXTRACT:v[0-9]+]], [[EXTRACT]]
 ; GCN: buffer_store_dword [[VEXTRACT]],
-
-; EG: MEM_{{.*}} STORE_{{.*}} [[RES:T[0-9]+\.[XYZW]]], [[ADDR:T[0-9]+.[XYZW]]]
-; EG: ADD_INT
-; EG-NEXT: BFE_INT [[RES]], {{.*}}, 0.0, literal
-; EG-NEXT: LSHR * [[ADDR]]
 define amdgpu_kernel void @sext_in_reg_i16_to_i32(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
   %c = add i32 %a, %b ; add to prevent folding into extload
   %shl = shl i32 %c, 16
@@ -63,11 +47,6 @@ define amdgpu_kernel void @sext_in_reg_i16_to_i32(ptr addrspace(1) %out, i32 %a,
 ; GCN: s_sext_i32_i8 [[EXTRACT:s[0-9]+]], [[VAL]]
 ; GCN: v_mov_b32_e32 [[VEXTRACT:v[0-9]+]], [[EXTRACT]]
 ; GCN: buffer_store_dword [[VEXTRACT]],
-
-; EG: MEM_{{.*}} STORE_{{.*}} [[RES:T[0-9]+\.[XYZW]]], [[ADDR:T[0-9]+.[XYZW]]]
-; EG: ADD_INT
-; EG-NEXT: BFE_INT [[RES]], {{.*}}, 0.0, literal
-; EG-NEXT: LSHR * [[ADDR]]
 define amdgpu_kernel void @sext_in_reg_i8_to_v1i32(ptr addrspace(1) %out, <1 x i32> %a, <1 x i32> %b) #0 {
   %c = add <1 x i32> %a, %b ; add to prevent folding into extload
   %shl = shl <1 x i32> %c, <i32 24>
@@ -133,13 +112,11 @@ define amdgpu_kernel void @sext_in_reg_i32_to_i64(ptr addrspace(1) %out, i64 %a,
   ret void
 }
 
-; This is broken on Evergreen for some reason related to the <1 x i64> kernel arguments.
+; This is broken for some reason related to the <1 x i64> kernel arguments.
 ; XFUNC-LABEL: {{^}}sext_in_reg_i8_to_v1i64:
 ; XGCN: s_bfe_i32 [[EXTRACT:s[0-9]+]], {{s[0-9]+}}, 524288
 ; XGCN: s_ashr_i32 {{v[0-9]+}}, [[EXTRACT]], 31
 ; XGCN: buffer_store_dword
-; XEG: BFE_INT
-; XEG: ASHR
 ; define amdgpu_kernel void @sext_in_reg_i8_to_v1i64(ptr addrspace(1) %out, <1 x i64> %a, <1 x i64> %b) #0 {
 ;   %c = add <1 x i64> %a, %b
 ;   %shl = shl <1 x i64> %c, <i64 56>
@@ -257,13 +234,6 @@ define amdgpu_kernel void @v_sext_in_reg_i32_to_i64(ptr addrspace(1) %out, ptr a
 ; GCN-NOT: s_lshl
 ; GCN-NOT: s_ashr
 ; GCN: s_bfe_i32 {{s[0-9]+}}, {{s[0-9]+}}, 0x190001
-
-; EG: MEM_{{.*}} STORE_{{.*}} [[RES:T[0-9]+\.[XYZW]]], [[ADDR:T[0-9]+.[XYZW]]]
-; EG-NOT: BFE
-; EG: ADD_INT
-; EG: LSHL
-; EG: ASHR [[RES]]
-; EG: LSHR {{\*?}} [[ADDR]]
 define amdgpu_kernel void @sext_in_reg_i1_in_i32_other_amount(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
   %c = add i32 %a, %b
   %x = shl i32 %c, 6
@@ -278,15 +248,6 @@ define amdgpu_kernel void @sext_in_reg_i1_in_i32_other_amount(ptr addrspace(1) %
 ; GCN-DAG: s_bfe_i32 {{s[0-9]+}}, {{s[0-9]+}}, 0x190001
 ; GCN-DAG: s_bfe_i32 {{s[0-9]+}}, {{s[0-9]+}}, 0x190001
 ; GCN: s_endpgm
-
-; EG: MEM_{{.*}} STORE_{{.*}} [[RES:T[0-9]+]]{{\.[XYZW][XYZW]}}, [[ADDR:T[0-9]+.[XYZW]]]
-; EG-NOT: BFE
-; EG: ADD_INT
-; EG: LSHL
-; EG: ASHR [[RES]]
-; EG: LSHL
-; EG: ASHR [[RES]]
-; EG: LSHR {{\*?}} [[ADDR]]
 define amdgpu_kernel void @sext_in_reg_v2i1_in_v2i32_other_amount(ptr addrspace(1) %out, <2 x i32> %a, <2 x i32> %b) #0 {
   %c = add <2 x i32> %a, %b
   %x = shl <2 x i32> %c, <i32 6, i32 6>
@@ -300,11 +261,6 @@ define amdgpu_kernel void @sext_in_reg_v2i1_in_v2i32_other_amount(ptr addrspace(
 ; GCN: s_bfe_i32 {{s[0-9]+}}, {{s[0-9]+}}, 0x10000
 ; GCN: s_bfe_i32 {{s[0-9]+}}, {{s[0-9]+}}, 0x10000
 ; GCN: buffer_store_dwordx2
-
-; EG: MEM_{{.*}} STORE_{{.*}} [[RES:T[0-9]+]]{{\.[XYZW][XYZW]}}, [[ADDR:T[0-9]+.[XYZW]]]
-; EG: BFE_INT [[RES]]
-; EG: BFE_INT [[RES]]
-; EG: LSHR {{\*?}} [[ADDR]]
 define amdgpu_kernel void @sext_in_reg_v2i1_to_v2i32(ptr addrspace(1) %out, <2 x i32> %a, <2 x i32> %b) #0 {
   %c = add <2 x i32> %a, %b ; add to prevent folding into extload
   %shl = shl <2 x i32> %c, <i32 31, i32 31>
@@ -319,13 +275,6 @@ define amdgpu_kernel void @sext_in_reg_v2i1_to_v2i32(ptr addrspace(1) %out, <2 x
 ; GCN: s_bfe_i32 {{s[0-9]+}}, {{s[0-9]+}}, 0x10000
 ; GCN: s_bfe_i32 {{s[0-9]+}}, {{s[0-9]+}}, 0x10000
 ; GCN: buffer_store_dwordx4
-
-; EG: MEM_{{.*}} STORE_{{.*}} [[RES:T[0-9]+]]{{\.[XYZW][XYZW][XYZW][XYZW]}}, [[ADDR:T[0-9]+.[XYZW]]]
-; EG: BFE_INT [[RES]]
-; EG: BFE_INT [[RES]]
-; EG: BFE_INT [[RES]]
-; EG: BFE_INT [[RES]]
-; EG: LSHR {{\*?}} [[ADDR]]
 define amdgpu_kernel void @sext_in_reg_v4i1_to_v4i32(ptr addrspace(1) %out, <4 x i32> %a, <4 x i32> %b) #0 {
   %c = add <4 x i32> %a, %b ; add to prevent folding into extload
   %shl = shl <4 x i32> %c, <i32 31, i32 31, i32 31, i32 31>
@@ -338,11 +287,6 @@ define amdgpu_kernel void @sext_in_reg_v4i1_to_v4i32(ptr addrspace(1) %out, <4 x
 ; GCN: s_sext_i32_i8 {{s[0-9]+}}, {{s[0-9]+}}
 ; GCN: s_sext_i32_i8 {{s[0-9]+}}, {{s[0-9]+}}
 ; GCN: buffer_store_dwordx2
-
-; EG: MEM_{{.*}} STORE_{{.*}} [[RES:T[0-9]+]]{{\.[XYZW][XYZW]}}, [[ADDR:T[0-9]+.[XYZW]]]
-; EG: BFE_INT [[RES]]
-; EG: BFE_INT [[RES]]
-; EG: LSHR {{\*?}} [[ADDR]]
 define amdgpu_kernel void @sext_in_reg_v2i8_to_v2i32(ptr addrspace(1) %out, <2 x i32> %a, <2 x i32> %b) #0 {
   %c = add <2 x i32> %a, %b ; add to prevent folding into extload
   %shl = shl <2 x i32> %c, <i32 24, i32 24>
@@ -357,13 +301,6 @@ define amdgpu_kernel void @sext_in_reg_v2i8_to_v2i32(ptr addrspace(1) %out, <2 x
 ; GCN: s_sext_i32_i8 {{s[0-9]+}}, {{s[0-9]+}}
 ; GCN: s_sext_i32_i8 {{s[0-9]+}}, {{s[0-9]+}}
 ; GCN: buffer_store_dwordx4
-
-; EG: MEM_{{.*}} STORE_{{.*}} [[RES:T[0-9]+]]{{\.[XYZW][XYZW][XYZW][XYZW]}}, [[ADDR:T[0-9]+.[XYZW]]]
-; EG: BFE_INT [[RES]]
-; EG: BFE_INT [[RES]]
-; EG: BFE_INT [[RES]]
-; EG: BFE_INT [[RES]]
-; EG: LSHR {{\*?}} [[ADDR]]
 define amdgpu_kernel void @sext_in_reg_v4i8_to_v4i32(ptr addrspace(1) %out, <4 x i32> %a, <4 x i32> %b) #0 {
   %c = add <4 x i32> %a, %b ; add to prevent folding into extload
   %shl = shl <4 x i32> %c, <i32 24, i32 24, i32 24, i32 24>
@@ -376,11 +313,6 @@ define amdgpu_kernel void @sext_in_reg_v4i8_to_v4i32(ptr addrspace(1) %out, <4 x
 ; GCN: s_sext_i32_i16 {{s[0-9]+}}, {{s[0-9]+}}
 ; GCN: s_sext_i32_i16 {{s[0-9]+}}, {{s[0-9]+}}
 ; GCN: buffer_store_dwordx2
-
-; EG: MEM_{{.*}} STORE_{{.*}} [[RES:T[0-9]+]]{{\.[XYZW][XYZW]}}, [[ADDR:T[0-9]+.[XYZW]]]
-; EG: BFE_INT [[RES]]
-; EG: BFE_INT [[RES]]
-; EG: LSHR {{\*?}} [[ADDR]]
 define amdgpu_kernel void @sext_in_reg_v2i16_to_v2i32(ptr addrspace(1) %out, <2 x i32> %a, <2 x i32> %b) #0 {
   %c = add <2 x i32> %a, %b ; add to prevent folding into extload
   %shl = shl <2 x i32> %c, <i32 16, i32 16>

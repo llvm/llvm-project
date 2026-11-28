@@ -44,7 +44,6 @@ getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
 // reg class after instruction-select, don't search for all of them.
 class IntrinsicLaneMaskAnalyzer {
   SmallDenseSet<Register, 8> S32S64LaneMask;
-  MachineRegisterInfo &MRI;
 
 public:
   IntrinsicLaneMaskAnalyzer(MachineFunction &MF);

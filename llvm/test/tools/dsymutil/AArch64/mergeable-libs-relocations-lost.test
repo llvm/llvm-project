@@ -1,0 +1,25 @@
+dsymutil warns when none of the relocations of an object file is saved to the
+relocation map, as merging the library would then drop its debug info.
+
+The inputs are those of mergeable-libs-relocation-map.test. Moving all the
+relocations of libbar to offset 0, in the header of its unit, makes them miss
+its DIEs.
+
+RUN: rm -rf %t && mkdir -p %t
+RUN: dsymutil -oso-prepend-path=%p/.. %p/../Inputs/mergeable-libs/dwarf4/libfoo.dylib \
+RUN:   -o %t/libfoo.dylib.dSYM
+RUN: dsymutil -oso-prepend-path=%p/.. %p/../Inputs/mergeable-libs/dwarf4/libbar.dylib \
+RUN:   -o %t/libbar.dylib.dSYM
+RUN: %python -c "import re, sys; p = sys.argv[1]; t = open(p).read(); \
+RUN:   open(p, 'w').write(re.sub(r'offset: 0x[0-9A-F]+', 'offset: 0x0', t))" \
+RUN:   %t/libbar.dylib.dSYM/Contents/Resources/Relocations/aarch64/libbar.dylib.yml
+
+RUN: dsymutil --linker classic -oso-prepend-path=%p/.. -D %t \
+RUN:   %p/../Inputs/mergeable-libs/dwarf4/libclient.dylib -o %t/classic.dSYM 2>&1 \
+RUN:   | FileCheck %s --implicit-check-not=warning
+RUN: dsymutil --linker parallel -oso-prepend-path=%p/.. -D %t \
+RUN:   %p/../Inputs/mergeable-libs/dwarf4/libclient.dylib -o %t/parallel.dSYM 2>&1 \
+RUN:   | FileCheck %s --implicit-check-not=warning
+
+CHECK: warning: none of the 3 valid relocations was saved to the relocation map, so merging the library would drop this debug info
+CHECK-NEXT: note: while processing {{.*}}libbar.dylib.dSYM{{[/\\]}}Contents{{[/\\]}}Resources{{[/\\]}}DWARF{{[/\\]}}libbar.dylib

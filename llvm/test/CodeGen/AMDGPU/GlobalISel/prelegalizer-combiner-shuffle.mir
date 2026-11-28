@@ -3,7 +3,6 @@
 
 ---
 name: shuffle_vector_to_extract
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -29,7 +28,6 @@ body:             |
 
 ---
 name: shuffle_vector_to_extract2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -56,7 +54,6 @@ body:             |
 
 ---
 name: shuffle_vector_to_extract_odd_elements
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -83,7 +80,6 @@ body:             |
 
 ---
 name: shuffle_vector_to_extract_minus_1_no_conversion
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -110,7 +106,6 @@ body:             |
 
 ---
 name: shuffle_vector_to_extract_across_vectors_no_conversion
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -138,7 +133,6 @@ body:             |
 
 ---
 name: shuffle_vector_to_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -149,7 +143,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p3) = COPY $vgpr1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p3) = G_PTR_ADD [[COPY]], [[C]](s32)
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD]](p3) :: (load (s16), addrspace 3)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD]](p3) :: (load (s16) from unknown-address + 8, align 8, addrspace 3)
     ; CHECK-NEXT: G_STORE [[LOAD]](s16), [[COPY1]](p3) :: (store (s16), addrspace 3)
     ; CHECK-NEXT: SI_RETURN
     %0:_(p3) = COPY $vgpr0

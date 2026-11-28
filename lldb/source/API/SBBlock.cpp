@@ -19,6 +19,7 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-types.h"
 
@@ -84,7 +85,8 @@ const char *SBBlock::GetInlinedName() const {
     const InlineFunctionInfo *inlined_info =
         m_opaque_ptr->GetInlinedFunctionInfo();
     if (inlined_info) {
-      return inlined_info->GetName().AsCString(nullptr);
+      return StringPool::GetSystemPool().InternNonEmpty(
+          inlined_info->GetName());
     }
   }
   return nullptr;

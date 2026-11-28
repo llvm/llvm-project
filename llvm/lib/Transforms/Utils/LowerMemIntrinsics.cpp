@@ -1157,7 +1157,7 @@ static Value *createBoundedMemSetSplat(IRBuilderBase &B, Value *SetValue,
 static void
 createMemSetLoopKnownSize(Instruction *InsertBefore, Value *DstAddr,
                           ConstantInt *Len, Value *SetValue, Align DstAlign,
-                          bool IsVolatile, const TargetTransformInfo *TTI,
+                          bool IsVolatile, const TargetTransformInfo &TTI,
                           std::optional<uint64_t> AverageTripCount) {
   // No need to expand zero length memsets.
   if (Len->isZero())
@@ -1174,13 +1174,10 @@ createMemSetLoopKnownSize(Instruction *InsertBefore, Value *DstAddr,
   Type *Int8Type = Type::getInt8Ty(Ctx);
   assert(SetValue->getType() == Int8Type && "Can only set bytes");
 
-  Type *LoopOpType = Int8Type;
-  if (TTI) {
-    // Use the same memory access type as for a memcpy with the same Dst and Src
-    // alignment and address space.
-    LoopOpType = TTI->getMemcpyLoopLoweringType(
-        Ctx, Len, DstAS, DstAS, DstAlign, DstAlign, std::nullopt);
-  }
+  // Use the same memory access type as for a memcpy with the same Dst and Src
+  // alignment and address space.
+  Type *LoopOpType = TTI.getMemcpyLoopLoweringType(
+      Ctx, Len, DstAS, DstAS, DstAlign, DstAlign, std::nullopt);
   TypeSize LoopOpSize = DL.getTypeStoreSize(LoopOpType);
   assert(LoopOpSize.isFixed() && "LoopOpType cannot be a scalable vector type");
 
@@ -1223,11 +1220,10 @@ createMemSetLoopKnownSize(Instruction *InsertBefore, Value *DstAddr,
 
   IRBuilder<> RBuilder(InsertBefore);
 
-  assert(TTI && "there cannot be a residual loop without TTI");
   SmallVector<Type *, 5> RemainingOps;
-  TTI->getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
-                                         DstAS, DstAS, DstAlign, DstAlign,
-                                         std::nullopt);
+  TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
+                                        DstAS, DstAS, DstAlign, DstAlign,
+                                        std::nullopt);
 
   Type *PreviousOpTy = nullptr;
   Value *SplatSetValue = nullptr;
@@ -1256,7 +1252,7 @@ createMemSetLoopKnownSize(Instruction *InsertBefore, Value *DstAddr,
 static void
 createMemSetLoopUnknownSize(Instruction *InsertBefore, Value *DstAddr,
                             Value *Len, Value *SetValue, Align DstAlign,
-                            bool IsVolatile, const TargetTransformInfo *TTI,
+                            bool IsVolatile, const TargetTransformInfo &TTI,
                             std::optional<uint64_t> AverageTripCount) {
   BasicBlock *PreLoopBB = InsertBefore->getParent();
   Function *ParentFunc = PreLoopBB->getParent();
@@ -1268,11 +1264,8 @@ createMemSetLoopUnknownSize(Instruction *InsertBefore, Value *DstAddr,
   Type *Int8Type = Type::getInt8Ty(Ctx);
   assert(SetValue->getType() == Int8Type && "Can only set bytes");
 
-  Type *LoopOpType = Int8Type;
-  if (TTI) {
-    LoopOpType = TTI->getMemcpyLoopLoweringType(
-        Ctx, Len, DstAS, DstAS, DstAlign, DstAlign, std::nullopt);
-  }
+  Type *LoopOpType = TTI.getMemcpyLoopLoweringType(
+      Ctx, Len, DstAS, DstAS, DstAlign, DstAlign, std::nullopt);
   TypeSize LoopOpSize = DL.getTypeStoreSize(LoopOpType);
   assert(LoopOpSize.isFixed() && "LoopOpType cannot be a scalable vector type");
 
@@ -1317,7 +1310,7 @@ createMemSetLoopUnknownSize(Instruction *InsertBefore, Value *DstAddr,
 static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
                                     Value *Len, Value *SetValue, Align DstAlign,
                                     bool IsVolatile,
-                                    const TargetTransformInfo *TTI,
+                                    const TargetTransformInfo &TTI,
                                     std::optional<uint64_t> AverageTripCount) {
   // No need to expand zero length memset.pattern.
   if (auto *CLen = dyn_cast<ConstantInt>(Len))
@@ -1331,11 +1324,8 @@ static void createMemSetPatternLoop(Instruction *InsertBefore, Value *DstAddr,
 
   unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
 
-  Type *PreferredLoopOpType = SetValue->getType();
-  if (TTI) {
-    PreferredLoopOpType = TTI->getMemcpyLoopLoweringType(
-        Ctx, Len, DstAS, DstAS, DstAlign, DstAlign, std::nullopt);
-  }
+  Type *PreferredLoopOpType = TTI.getMemcpyLoopLoweringType(
+      Ctx, Len, DstAS, DstAS, DstAlign, DstAlign, std::nullopt);
   TypeSize PreferredLoopOpStoreSize = DL.getTypeStoreSize(PreferredLoopOpType);
   assert(PreferredLoopOpStoreSize.isFixed() &&
          "PreferredLoopOpType cannot be a scalable vector type");
@@ -1519,7 +1509,7 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
 }
 
 void llvm::expandMemSetAsLoop(MemSetInst *Memset,
-                              const TargetTransformInfo *TTI) {
+                              const TargetTransformInfo &TTI) {
   auto AverageTripCount = getAverageMemOpLoopTripCount(*Memset);
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Memset->getLength())) {
     createMemSetLoopKnownSize(
@@ -1544,9 +1534,60 @@ void llvm::expandMemSetAsLoop(MemSetInst *Memset,
   }
 }
 
-void llvm::expandMemSetAsLoop(MemSetInst *MemSet,
-                              const TargetTransformInfo &TTI) {
-  expandMemSetAsLoop(MemSet, &TTI);
+/// Return the VP (value profiling) memop size data of a bounded memset as
+/// prefix sums sorted by value, dropping values the expansion can't see.
+static SmallVector<InstrProfValueData>
+getBoundedMemSetPrefixSum(const Instruction &MemSet, uint64_t MinLen,
+                          uint64_t MaxLen, uint64_t MinStoreSize) {
+  uint64_t TotalCount = 0;
+  SmallVector<InstrProfValueData> ProfData = getValueProfDataFromInst(
+      MemSet, InstrProfValueKind::IPVK_MemOPSize,
+      /*MaxNumValueData=*/std::numeric_limits<uint32_t>::max(), TotalCount);
+  llvm::sort(ProfData,
+             [](const InstrProfValueData &A, const InstrProfValueData &B) {
+               return A.Value < B.Value;
+             });
+  SmallVector<InstrProfValueData> MemSetPrefixSum;
+  uint64_t TotalSeenWeight = 0;
+  for (const InstrProfValueData &SizeWeight : ProfData) {
+    if (SizeWeight.Value > MaxLen || SizeWeight.Value < MinLen ||
+        (SizeWeight.Value != 0 && SizeWeight.Value < MinStoreSize))
+      continue;
+    TotalSeenWeight = SaturatingAdd(SizeWeight.Count, TotalSeenWeight);
+    MemSetPrefixSum.push_back({SizeWeight.Value, TotalSeenWeight});
+  }
+  return MemSetPrefixSum;
+}
+
+static MDNode *
+getBoundedMemSetBranchWeights(uint64_t Size,
+                              ArrayRef<InstrProfValueData> MemSetPrefixSum,
+                              LLVMContext &Context, Function &F) {
+  if (MemSetPrefixSum.empty() || ProfcheckDisableMetadataFixes)
+    return getExplicitlyUnknownBranchWeightsIfProfiled(F, DEBUG_TYPE);
+  auto *LowerBound = lower_bound(
+      MemSetPrefixSum, Size,
+      [&](const InstrProfValueData &A, uint64_t B) { return A.Value < B; });
+  uint64_t LowerBoundCount = 0;
+  if (LowerBound != MemSetPrefixSum.begin()) {
+    --LowerBound;
+    LowerBoundCount = LowerBound->Count;
+  }
+  auto *UpperBound = lower_bound(
+      MemSetPrefixSum, Size * 2,
+      [](const InstrProfValueData &A, uint64_t B) { return A.Value < B; });
+  uint64_t UpperBoundCount = 0;
+  if (UpperBound != MemSetPrefixSum.begin()) {
+    --UpperBound;
+    UpperBoundCount = UpperBound->Count;
+  }
+  uint64_t TrueWeight = UpperBoundCount - LowerBoundCount;
+  uint64_t FalseWeight = LowerBoundCount;
+  if (TrueWeight == 0 && FalseWeight == 0)
+    return getExplicitlyUnknownBranchWeightsIfProfiled(F, DEBUG_TYPE);
+  MDNode *BranchWeights = MDBuilder(Context).createBranchWeights(
+      fitWeights({TrueWeight, FalseWeight}));
+  return BranchWeights;
 }
 
 void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
@@ -1612,21 +1653,23 @@ void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
   //     br label %memset_done
   uint64_t TopSize = llvm::bit_floor(MaxLen);
   Instruction *InsertBefore = MemSet;
-  MDNode *Weights = getExplicitlyUnknownBranchWeightsIfProfiled(
-      *MemSet->getFunction(), DEBUG_TYPE);
+  SmallVector<InstrProfValueData> MemSetPrefixSum =
+      getBoundedMemSetPrefixSum(*MemSet, MinLen, MaxLen, MinStoreSize);
   for (uint64_t Size = TopSize; Size >= MinStoreSize; Size /= 2) {
     Instruction *StoreBefore = InsertBefore;
     if (MinLen < Size) {
       IRBuilder<> B(InsertBefore);
       Value *Cond = B.CreateICmpUGE(Len, ConstantInt::get(LenTy, Size),
                                     "len.ge" + Twine(Size));
+      MDNode *BranchWeights = getBoundedMemSetBranchWeights(
+          Size, MemSetPrefixSum, B.getContext(), *MemSet->getFunction());
       if (Size == MinStoreSize) {
         StoreBefore =
-            SplitBlockAndInsertIfThen(Cond, InsertBefore, false, Weights);
+            SplitBlockAndInsertIfThen(Cond, InsertBefore, false, BranchWeights);
       } else {
         Instruction *ElseTerm;
         SplitBlockAndInsertIfThenElse(Cond, InsertBefore, &StoreBefore,
-                                      &ElseTerm, Weights);
+                                      &ElseTerm, BranchWeights);
         ElseTerm->getParent()->setName("memset_lt" + Twine(Size));
         InsertBefore = ElseTerm;
       }
@@ -1655,7 +1698,7 @@ void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
 }
 
 void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset,
-                                     const TargetTransformInfo *TTI) {
+                                     const TargetTransformInfo &TTI) {
   createMemSetPatternLoop(
       /*InsertBefore=*/Memset,
       /*DstAddr=*/Memset->getRawDest(),
@@ -1665,11 +1708,6 @@ void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset,
       /*IsVolatile=*/Memset->isVolatile(),
       /*TTI=*/TTI,
       /*AverageTripCount=*/getAverageMemOpLoopTripCount(*Memset));
-}
-
-void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *MemSet,
-                                     const TargetTransformInfo &TTI) {
-  expandMemSetPatternAsLoop(MemSet, &TTI);
 }
 
 void llvm::expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemcpy,

@@ -2942,8 +2942,9 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
     }
   }
 
-  // Emit tilerelease for AMX kernel.
-  if (X86FI->getAMXProgModel() == AMXProgModelEnum::ManagedRA)
+  // Emit tilerelease for AMX/ACE kernel.
+  if (X86FI->getAMXProgModel() == AMXProgModelEnum::ManagedRA ||
+      X86FI->getACEProgModel() == ACEProgModelEnum::ACE_ManagedRA)
     BuildMI(MBB, Terminator, DL, TII.get(X86::TILERELEASE));
 
   if (NeedsWin64CFI && MF.hasWinCFI())
@@ -4028,11 +4029,11 @@ bool X86FrameLowering::adjustStackWithPops(MachineBasicBlock &MBB,
   if (NumPops != 1 && NumPops != 2)
     return false;
 
-  // Handle only the trivial case where the adjustment directly follows
-  // a call. This is the most common one, anyway.
+  // Handle only the trivial case where the adjustment follows a call, ignoring
+  // debug instructions. This is the most common one, anyway.
   if (MBBI == MBB.begin())
     return false;
-  MachineBasicBlock::iterator Prev = std::prev(MBBI);
+  MachineBasicBlock::iterator Prev = prev_nodbg(MBBI, MBB.begin());
   if (!Prev->isCall() || !Prev->getOperand(1).isRegMask())
     return false;
 

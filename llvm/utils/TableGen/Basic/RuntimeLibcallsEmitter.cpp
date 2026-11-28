@@ -594,22 +594,31 @@ const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
         "}\n";
 }
 
-using AttrNames = std::vector<StringRef>;
+using AttrExprs = std::vector<std::string>;
 using ArgAttrEntry = std::tuple<unsigned, unsigned, StringRef, bool>;
 
-static AttrNames getAttrNames(const Record *R, const ListInit *L,
+static AttrExprs getAttrExprs(const Record *R, const ListInit *L,
                               StringRef Kind) {
   const Record *KindDef = R->getRecords().getDef(Kind);
-  AttrNames Names;
+  AttrExprs Exprs;
   for (const Init *I : L->getElements()) {
     const Record *A = cast<DefInit>(I)->getDef();
     if (!is_contained(A->getValueAsListOfDefs("Properties"), KindDef))
       PrintFatalError(R, "'" + A->getName() + "' is not a valid " + Kind);
-    Names.push_back(A->getName());
+
+    if (A->isSubClassOf("ValueAttr")) {
+      Exprs.push_back(A->getValueAsString("Expr").str());
+    } else if (A->isSubClassOf("EnumAttr")) {
+      Exprs.push_back(
+          formatv("Attribute::get(C, Attribute::{})", A->getName()).str());
+    } else {
+      PrintFatalError(R, "'" + A->getName() +
+                             "' requires a value; use a ValueAttr");
+    }
   }
 
-  sort(Names);
-  return Names;
+  sort(Exprs);
+  return Exprs;
 }
 
 static ModRefInfo getModRefInfo(const Record *R, StringRef Field) {
@@ -621,7 +630,8 @@ static ModRefInfo getModRefInfo(const Record *R, StringRef Field) {
       .Case("ModRef", ModRefInfo::ModRef);
 }
 
-static std::optional<uint32_t> getMemoryEffects(const Record *R) {
+static std::optional<uint32_t> getMemoryEffects(const Record *R,
+                                                bool MathErrno) {
   const Record *Memory = R->getValueAsDef("Memory");
   static constexpr std::pair<IRMemLocation, StringRef> Locations[] = {
       {IRMemLocation::ArgMem, "ArgMem"},
@@ -635,6 +645,8 @@ static std::optional<uint32_t> getMemoryEffects(const Record *R) {
   MemoryEffects ME = MemoryEffects::none();
   for (auto [Loc, Field] : Locations)
     ME = ME.getWithModRef(Loc, getModRefInfo(Memory, Field));
+  if (MathErrno && R->getValueAsBit("MathErrno"))
+    ME |= MemoryEffects::errnoMemOnly(ModRefInfo::Mod);
   if (ME == MemoryEffects::unknown())
     return std::nullopt;
   return ME.toIntValue();
@@ -650,7 +662,7 @@ static StringRef getMinimalUIntType(size_t MaxValue) {
 
 namespace {
 struct FnAttrSet {
-  AttrNames Attrs;
+  AttrExprs Attrs;
   std::optional<uint32_t> Memory;
 
   bool operator<(const FnAttrSet &RHS) const {
@@ -661,9 +673,9 @@ struct FnAttrSet {
 };
 } // namespace
 
-static void printAttributes(raw_ostream &OS, const AttrNames &Names) {
-  for (StringRef Name : Names)
-    OS.indent(6) << formatv("Attribute::get(C, Attribute::{}),\n", Name);
+static void printAttributes(raw_ostream &OS, const AttrExprs &Exprs) {
+  for (StringRef Expr : Exprs)
+    OS.indent(6) << Expr << ",\n";
 }
 
 static void printFnAttributes(raw_ostream &OS, const FnAttrSet &FnAttrs) {
@@ -678,11 +690,12 @@ static void printFnAttributes(raw_ostream &OS, const FnAttrSet &FnAttrs) {
 void RuntimeLibcallEmitter::emitRuntimeLibcallAttributes(
     raw_ostream &OS) const {
   AttributeSetTable<FnAttrSet> FnAttrSets;
-  AttributeSetTable<AttrNames> ArgAttrSets;
+  AttributeSetTable<AttrExprs> ArgAttrSets;
   AttributeSequenceTable<ArgAttrEntry> ArgAttrSeqs;
-  std::vector<std::pair<unsigned, unsigned>> ImplAttrIDs;
+  std::vector<std::tuple<unsigned, unsigned, unsigned, unsigned>> ImplAttrIDs;
 
   FnAttrSets.add({});
+  ArgAttrSets.add({});
   ArgAttrSeqs.add({});
 
   for (const RuntimeLibcallImpl &LibCallImpl :
@@ -708,15 +721,20 @@ void RuntimeLibcallEmitter::emitRuntimeLibcallAttributes(
                              Twine(ArgTypes.size()) + " arguments");
     }
 
-    unsigned FnAttrSetID = FnAttrSets.add(
-        {getAttrNames(R, R->getValueAsListInit("FnAttrs"), "FnAttr"),
-         getMemoryEffects(R)});
+    AttrExprs FnAttrExprs =
+        getAttrExprs(R, R->getValueAsListInit("FnAttrs"), "FnAttr");
+    unsigned FnAttrSetID =
+        FnAttrSets.add({FnAttrExprs, getMemoryEffects(R, /*MathErrno=*/true)});
+    unsigned NoMathErrnoFnAttrSetID =
+        FnAttrSets.add({FnAttrExprs, getMemoryEffects(R, /*MathErrno=*/false)});
+    unsigned RetAttrSetID = ArgAttrSets.add(
+        getAttrExprs(R, R->getValueAsListInit("RetAttrs"), "RetAttr"));
 
     AttributeSequenceTable<ArgAttrEntry>::Sequence ArgAttrSeq;
     for (unsigned ArgNo = 0, E = ArgTypes.size(); ArgNo != E; ++ArgNo) {
-      AttrNames Attrs;
+      AttrExprs Attrs;
       if (ArgNo < ParamAttrs->size()) {
-        Attrs = getAttrNames(R, cast<ListInit>(ParamAttrs->getElement(ArgNo)),
+        Attrs = getAttrExprs(R, cast<ListInit>(ParamAttrs->getElement(ArgNo)),
                              "ParamAttr");
       }
 
@@ -740,7 +758,7 @@ void RuntimeLibcallEmitter::emitRuntimeLibcallAttributes(
                               !PointeeType.empty() && AlignToElement);
     }
 
-    ImplAttrIDs.emplace_back(FnAttrSetID,
+    ImplAttrIDs.emplace_back(FnAttrSetID, NoMathErrnoFnAttrSetID, RetAttrSetID,
                              ArgAttrSeqs.add(std::move(ArgAttrSeq)));
   }
 
@@ -792,13 +810,19 @@ void RuntimeLibcallEmitter::emitRuntimeLibcallAttributes(
 
   OS << "static constexpr struct {\n"
      << "  " << getMinimalUIntType(FnAttrSets.size()) << " FnAttrSetID;\n"
+     << "  " << getMinimalUIntType(FnAttrSets.size())
+     << " NoMathErrnoFnAttrSetID;\n"
+     << "  " << getMinimalUIntType(ArgAttrSets.size()) << " RetAttrSetID;\n"
      << "  " << getMinimalUIntType(ArgAttrSeqs.numSequences())
      << " ArgAttrSeqID;\n"
      << "} LibcallImplAttrIDs[] = {\n"
-        "  {0, 0}, // RTLIB::Unsupported\n";
+        "  {0, 0, 0, 0}, // RTLIB::Unsupported\n";
   for (auto [LibCallImpl, IDs] :
        zip_equal(Libcalls.getRuntimeLibcallImplDefList(), ImplAttrIDs)) {
-    OS << formatv("  {{{}, {}}, // ", IDs.first, IDs.second);
+    auto [FnAttrSetID, NoMathErrnoFnAttrSetID, RetAttrSetID, ArgAttrSeqID] =
+        IDs;
+    OS << formatv("  {{{}, {}, {}, {}}, // ", FnAttrSetID,
+                  NoMathErrnoFnAttrSetID, RetAttrSetID, ArgAttrSeqID);
     LibCallImpl.emitEnumEntry(OS);
     OS << '\n';
   }
@@ -806,9 +830,15 @@ void RuntimeLibcallEmitter::emitRuntimeLibcallAttributes(
   OS << "};\n\n";
 
   OS << "static AttributeSet getLibcallImplFnAttributes(LLVMContext &C,\n"
+        "    RTLIB::LibcallImpl Impl, bool MathErrno) {\n"
+        "  return getLibcallFnAttributeSet(C, MathErrno\n"
+        "      ? LibcallImplAttrIDs[Impl].FnAttrSetID\n"
+        "      : LibcallImplAttrIDs[Impl].NoMathErrnoFnAttrSetID);\n"
+        "}\n\n"
+        "static AttributeSet getLibcallImplRetAttributes(LLVMContext &C,\n"
         "    RTLIB::LibcallImpl Impl) {\n"
-        "  return getLibcallFnAttributeSet(C, "
-        "LibcallImplAttrIDs[Impl].FnAttrSetID);\n"
+        "  return getLibcallArgAttributeSet(C, "
+        "LibcallImplAttrIDs[Impl].RetAttrSetID);\n"
         "}\n\n"
         "static ArrayRef<LibcallArgAttrs>\n"
         "getLibcallImplArgAttributes(RTLIB::LibcallImpl Impl) {\n"

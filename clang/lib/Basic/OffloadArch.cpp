@@ -70,9 +70,12 @@ const char *OffloadArchToVirtualArchString(OffloadArch A) {
     return "unknown";
   case OffloadArch::TargetArch::IntelIGCA:
     return llvm::IntelGPU::getIGCATargetName(A.igcaTarget()).data();
+  case OffloadArch::TargetArch::IntelGPU:
+    return llvm::IntelGPU::getIGCATargetName(
+               llvm::IntelGPU::getIGCATarget(A.intelGPUKind()))
+        .data();
   case OffloadArch::TargetArch::Unused:
   case OffloadArch::TargetArch::IntelCPU:
-  case OffloadArch::TargetArch::IntelGPU:
   case OffloadArch::TargetArch::Generic:
     return "";
   }

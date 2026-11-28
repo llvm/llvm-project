@@ -487,6 +487,10 @@ declare cc85 void @f.cc85()
 ; CHECK: declare avr_signalcc void @f.cc85()
 declare avr_signalcc void @f.avr_signalcc()
 ; CHECK: declare avr_signalcc void @f.avr_signalcc()
+declare cc86 void @f.cc86()
+; CHECK: declare avr_builtincc void @f.cc86()
+declare avr_builtincc void @f.avr_builtincc()
+; CHECK: declare avr_builtincc void @f.avr_builtincc()
 declare cc87 void @f.cc87()
 ; CHECK: declare amdgpu_vs void @f.cc87()
 declare amdgpu_vs void @f.amdgpu_vs()
@@ -1641,6 +1645,18 @@ define void @instructions.byteops(b32 %v32, b64 %v64, i8 %v8, i16 %v16, i32 %off
   ; CHECK: bitextract i16, b32 %v32, i32 %off
   bitextract i8, b64 %v64, i32 0
   ; CHECK: bitextract i8, b64 %v64, i32 0
+  ret void
+}
+
+define void @instructions.byteops.vector(<2 x b32> %v32, <2 x i8> %v8, <2 x i32> %off) {
+  bitinsert <2 x b32> %v32, <2 x i8> %v8, <2 x i32> splat (i32 8)
+  ; CHECK: bitinsert <2 x b32> %v32, <2 x i8> %v8, <2 x i32> splat (i32 8)
+  bitinsert <2 x b32> %v32, <2 x i8> %v8, <2 x i32> %off
+  ; CHECK: bitinsert <2 x b32> %v32, <2 x i8> %v8, <2 x i32> %off
+  bitextract <2 x i8>, <2 x b32> %v32, <2 x i32> <i32 0, i32 24>
+  ; CHECK: bitextract <2 x i8>, <2 x b32> %v32, <2 x i32> <i32 0, i32 24>
+  bitextract <2 x i8>, <2 x b32> %v32, <2 x i32> %off
+  ; CHECK: bitextract <2 x i8>, <2 x b32> %v32, <2 x i32> %off
   ret void
 }
 

@@ -279,10 +279,8 @@ const char *SBAttachInfo::GetScriptedProcessClassName() const {
   if (!metadata_sp || !*metadata_sp)
     return nullptr;
 
-  // Constify this string so that it is saved in the string pool.  Otherwise it
-  // would be freed when this function goes out of scope.
-  ConstString class_name(metadata_sp->GetClassName());
-  return class_name.AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      metadata_sp->GetClassName());
 }
 
 void SBAttachInfo::SetScriptedProcessClassName(const char *class_name) {

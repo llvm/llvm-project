@@ -21,9 +21,9 @@ define bfloat @fp128_to_bf16(fp128 %x) {
 ; BF16-NEXT:    fmov s8, s0
 ; BF16-NEXT:    bl __extendsftf2
 ; BF16-NEXT:    ldrb w8, [sp, #47]
-; BF16-NEXT:    str q0, [sp, #48]
-; BF16-NEXT:    mov v1.16b, v0.16b
 ; BF16-NEXT:    str q0, [sp] // 16-byte Spill
+; BF16-NEXT:    mov v1.16b, v0.16b
+; BF16-NEXT:    str q0, [sp, #48]
 ; BF16-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; BF16-NEXT:    and w8, w8, #0x7f
 ; BF16-NEXT:    strb w8, [sp, #47]
@@ -71,9 +71,9 @@ define bfloat @fp128_to_bf16(fp128 %x) {
 ; NOBF16-NEXT:    fmov s8, s0
 ; NOBF16-NEXT:    bl __extendsftf2
 ; NOBF16-NEXT:    ldrb w8, [sp, #47]
-; NOBF16-NEXT:    str q0, [sp, #48]
-; NOBF16-NEXT:    mov v1.16b, v0.16b
 ; NOBF16-NEXT:    str q0, [sp] // 16-byte Spill
+; NOBF16-NEXT:    mov v1.16b, v0.16b
+; NOBF16-NEXT:    str q0, [sp, #48]
 ; NOBF16-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; NOBF16-NEXT:    and w8, w8, #0x7f
 ; NOBF16-NEXT:    strb w8, [sp, #47]
@@ -137,9 +137,9 @@ define void @fp128_to_bf16_memory(ptr %src, ptr %dst) {
 ; BF16-NEXT:    fmov s8, s0
 ; BF16-NEXT:    bl __extendsftf2
 ; BF16-NEXT:    ldrb w8, [sp, #47]
-; BF16-NEXT:    str q0, [sp, #48]
-; BF16-NEXT:    mov v1.16b, v0.16b
 ; BF16-NEXT:    str q0, [sp] // 16-byte Spill
+; BF16-NEXT:    mov v1.16b, v0.16b
+; BF16-NEXT:    str q0, [sp, #48]
 ; BF16-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; BF16-NEXT:    and w8, w8, #0x7f
 ; BF16-NEXT:    strb w8, [sp, #47]
@@ -191,9 +191,9 @@ define void @fp128_to_bf16_memory(ptr %src, ptr %dst) {
 ; NOBF16-NEXT:    fmov s8, s0
 ; NOBF16-NEXT:    bl __extendsftf2
 ; NOBF16-NEXT:    ldrb w8, [sp, #47]
-; NOBF16-NEXT:    str q0, [sp, #48]
-; NOBF16-NEXT:    mov v1.16b, v0.16b
 ; NOBF16-NEXT:    str q0, [sp] // 16-byte Spill
+; NOBF16-NEXT:    mov v1.16b, v0.16b
+; NOBF16-NEXT:    str q0, [sp, #48]
 ; NOBF16-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; NOBF16-NEXT:    and w8, w8, #0x7f
 ; NOBF16-NEXT:    strb w8, [sp, #47]

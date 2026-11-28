@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple=riscv64 -filetype=obj %s | llvm-readobj -r - | FileCheck %s --check-prefixes=CHECK,RV64
 # RUN: llvm-mc -triple=riscv32 -filetype=obj %s | llvm-readobj -r - | FileCheck %s --check-prefixes=CHECK,RV32
 
-# RUN: not llvm-mc -triple=riscv64 -filetype=obj %s --defsym ERR=1 -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+# RUN: llvm-mc --verify -triple=riscv64 -filetype=obj %s --defsym ERR=1 -o /dev/null
 
 .globl g
 g:
@@ -28,21 +28,15 @@ data1:
 .word %gotpcrel(extern+4), %gotpcrel(extern-5)
 
 .ifdef ERR
-# ERR: [[#@LINE+1]]:8: error: %pltpcrel can only be used in a .word directive
-.quad %pltpcrel(g)
+.quad %pltpcrel(g) # expected-error:8 {{%pltpcrel can only be used in a .word directive}}
 
-# ERR: [[#@LINE+1]]:8: error: expected relocatable expression
-.word %pltpcrel(g-.)
+.word %pltpcrel(g-.) # expected-error:8 {{expected relocatable expression}}
 
-# ERR: [[#@LINE+1]]:8: error: expected relocatable expression
-.word %pltpcrel(extern - und)
+.word %pltpcrel(extern - und) # expected-error:8 {{expected relocatable expression}}
 
-# ERR: [[#@LINE+1]]:8: error: %gotpcrel can only be used in a .word directive
-.quad %gotpcrel(g)
+.quad %gotpcrel(g) # expected-error:8 {{%gotpcrel can only be used in a .word directive}}
 
-# ERR: [[#@LINE+1]]:8: error: expected relocatable expression
-.word %gotpcrel(extern - .)
+.word %gotpcrel(extern - .) # expected-error:8 {{expected relocatable expression}}
 
-# ERR: [[#@LINE+1]]:8: error: expected relocatable expression
-.word %gotpcrel(extern - und)
+.word %gotpcrel(extern - und) # expected-error:8 {{expected relocatable expression}}
 .endif

@@ -20,53 +20,6 @@
 
 using namespace llvm;
 
-void MipsELFMCAsmInfo::anchor() {}
-
-MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
-                                   const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
-  IsLittleEndian = TheTriple.isLittleEndian();
-
-  MipsABIInfo ABI =
-      MipsABIInfo::computeTargetABI(TheTriple, Options.getABIName());
-
-  if (TheTriple.isMIPS64() && !ABI.IsN32())
-    CodePointerSize = CalleeSaveStackSlotSize = 8;
-
-  if (ABI.IsO32())
-    InternalSymbolPrefix = "$";
-  else if (ABI.IsN32() || ABI.IsN64())
-    InternalSymbolPrefix = ".L";
-
-  AlignmentIsInBytes          = false;
-  Data16bitsDirective         = "\t.2byte\t";
-  Data32bitsDirective         = "\t.4byte\t";
-  Data64bitsDirective         = "\t.8byte\t";
-  CommentString               = "#";
-  ZeroDirective               = "\t.space\t";
-  UseAssignmentForEHBegin = true;
-  SupportsDebugInformation = true;
-  DwarfRegNumForCFI = true;
-}
-
-void MipsCOFFMCAsmInfo::anchor() {}
-
-MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo(const MCTargetOptions &Options)
-    : MCAsmInfoGNUCOFF(Options) {
-  HasSingleParameterDotFile = true;
-  WinEHEncodingType = WinEH::EncodingType::Itanium;
-
-  InternalSymbolPrefix = ".L";
-  AllowAtInName = true;
-}
-
-const MCSpecifierExpr *Mips::createGpOff(const MCExpr *Expr, Mips::Specifier S,
-                                         MCContext &Ctx) {
-  Expr = MCSpecifierExpr::create(Expr, Mips::S_GPREL, Ctx);
-  Expr = MCSpecifierExpr::create(Expr, Mips::S_NEG, Ctx);
-  return MCSpecifierExpr::create(Expr, S, Ctx);
-}
-
 static void printImpl(const MCAsmInfo &MAI, raw_ostream &OS,
                       const MCSpecifierExpr &Expr) {
   int64_t AbsVal;
@@ -163,6 +116,60 @@ static void printImpl(const MCAsmInfo &MAI, raw_ostream &OS,
   OS << ')';
 }
 
+void MipsELFMCAsmInfo::anchor() {}
+
+MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
+                                   const MCTargetOptions &Options)
+    : MCAsmInfoELF(TheTriple, Options) {
+  IsLittleEndian = TheTriple.isLittleEndian();
+
+  MipsABIInfo ABI =
+      MipsABIInfo::computeTargetABI(TheTriple, Options.getABIName());
+
+  if (TheTriple.isMIPS64() && !ABI.IsN32())
+    CodePointerSize = CalleeSaveStackSlotSize = 8;
+
+  if (ABI.IsO32())
+    InternalSymbolPrefix = "$";
+  else if (ABI.IsN32() || ABI.IsN64())
+    InternalSymbolPrefix = ".L";
+
+  AlignmentIsInBytes = false;
+  Data16bitsDirective = "\t.2byte\t";
+  Data32bitsDirective = "\t.4byte\t";
+  Data64bitsDirective = "\t.8byte\t";
+  CommentString = "#";
+  ZeroDirective = "\t.space\t";
+  UseAssignmentForEHBegin = true;
+  SupportsDebugInformation = true;
+  DwarfRegNumForCFI = true;
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
+
+  SpecifierExprPrintFn = printImpl;
+}
+
+void MipsCOFFMCAsmInfo::anchor() {}
+
+MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo(const MCTargetOptions &Options)
+    : MCAsmInfoGNUCOFF(Options) {
+  HasSingleParameterDotFile = true;
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
+
+  InternalSymbolPrefix = ".L";
+  AllowAtInName = true;
+
+  SpecifierExprPrintFn = printImpl;
+}
+
+const MCSpecifierExpr *Mips::createGpOff(const MCExpr *Expr, Mips::Specifier S,
+                                         MCContext &Ctx) {
+  Expr = MCSpecifierExpr::create(Expr, Mips::S_GPREL, Ctx);
+  Expr = MCSpecifierExpr::create(Expr, Mips::S_NEG, Ctx);
+  return MCSpecifierExpr::create(Expr, S, Ctx);
+}
+
 bool Mips::isGpOff(const MCSpecifierExpr &E) {
   if (E.getSpecifier() == Mips::S_HI || E.getSpecifier() == Mips::S_LO) {
     if (const auto *S1 = dyn_cast<const MCSpecifierExpr>(E.getSubExpr())) {
@@ -200,11 +207,6 @@ static bool evaluate(const MCSpecifierExpr &Expr, MCValue &Res,
   return !Res.getSubSym();
 }
 
-void MipsELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                          const MCSpecifierExpr &Expr) const {
-  printImpl(*this, OS, Expr);
-}
-
 bool MipsELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
                                                  MCValue &Res,
                                                  const MCAssembler *Asm) const {
@@ -214,11 +216,6 @@ bool MipsELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
 bool MipsELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
   // microMIPS encoding uses compressed intruction byte-order
   return STI.hasFeature(Mips::FeatureMicroMips);
-}
-
-void MipsCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                           const MCSpecifierExpr &Expr) const {
-  printImpl(*this, OS, Expr);
 }
 
 bool MipsCOFFMCAsmInfo::evaluateAsRelocatableImpl(

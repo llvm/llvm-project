@@ -18,11 +18,13 @@
 using namespace mlir;
 
 /// Return "true" if the given vector transfer op is contiguous and suitable
-/// for replacement with an async copy.
+/// for replacement with an async copy. An op masked by an enclosing
+/// vector.mask is not: replacing it would drop the mask and leave non-maskable
+/// ops inside the vector.mask region.
 template <typename OpTy>
 static bool isContiguousXferOp(OpTy op) {
-  return op.getPermutationMap().isMinorIdentity() && op.isDimInBounds(0) &&
-         op.hasPureBufferSemantics() &&
+  return !op.isMasked() && op.getPermutationMap().isMinorIdentity() &&
+         op.isDimInBounds(0) && op.hasPureBufferSemantics() &&
          cast<MemRefType>(nvgpu::getMemrefOperand(op).getType())
              .isLastDimUnitStride();
 }
@@ -89,11 +91,27 @@ static Value buildNumReadElements(OpBuilder &b, Location loc,
   if (!transferMask->createMaskOp)
     return Value();
 
+  // vector.create_mask treats a negative size as 0 and a size larger than the
+  // dimension as the dimension size. The async copy must not read more
+  // elements than it writes, so clamp the size of the "ones" segment in the
+  // same way.
+  auto clampToDimSize = [&](Value size) -> Value {
+    int64_t dimSize =
+        transferMask->createMaskOp.getVectorType().getShape().back();
+    if (std::optional<int64_t> cst = getConstantIntValue(size))
+      return arith::ConstantIndexOp::create(
+          b, loc, std::clamp(*cst, int64_t(0), dimSize));
+    Value zero = arith::ConstantIndexOp::create(b, loc, 0);
+    Value dim = arith::ConstantIndexOp::create(b, loc, dimSize);
+    Value nonNegative = arith::MaxSIOp::create(b, loc, size, zero);
+    return arith::MinSIOp::create(b, loc, nonNegative, dim);
+  };
+
   // No extract: return size of "ones" segment in the mask.
   if (transferMask->extractPosition.empty()) {
     assert(transferMask->createMaskOp.getNumOperands() == 1 &&
            "expected single operand");
-    return transferMask->createMaskOp.getOperand(0);
+    return clampToDimSize(transferMask->createMaskOp.getOperand(0));
   }
 
   // vector.extract(vector.create_mask).
@@ -118,7 +136,8 @@ static Value buildNumReadElements(OpBuilder &b, Location loc,
     cond = arith::AndIOp::create(b, loc, cmp, cond);
   }
   return arith::SelectOp::create(
-      b, loc, cond, transferMask->createMaskOp->getOperands().back(),
+      b, loc, cond,
+      clampToDimSize(transferMask->createMaskOp->getOperands().back()),
       arith::ConstantIndexOp::create(b, loc, 0));
 }
 

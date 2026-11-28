@@ -813,7 +813,7 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   // changed when RV32E/ILP32E is ratified.
   int NeededArgGPRs = 1;
   if (!IsFixed && NeededAlign == 2 * XLen)
-    NeededArgGPRs = 2 + (EABI && XLen == 32 ? 0 : (ArgGPRsLeft % 2));
+    NeededArgGPRs = 2 + (EABI ? 0 : (ArgGPRsLeft % 2));
   else if (Size > XLen && Size <= 2 * XLen)
     NeededArgGPRs = 2;
 
@@ -909,10 +909,11 @@ RValue RISCVABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
   // TODO: To be compatible with GCC's behaviors, we force arguments with
   // 2×XLEN-bit alignment and size at most 2×XLEN bits like `long long`,
-  // `unsigned long long` and `double` to have 4-byte alignment. This
-  // behavior may be changed when RV32E/ILP32E is ratified.
-  if (EABI && XLen == 32)
-    TInfo.Align = std::min(TInfo.Align, CharUnits::fromQuantity(4));
+  // `unsigned long long`, `double` and `__int128` to have XLEN-byte alignment
+  // for ILP32E and LP64E. This behavior may be changed when RV32E/ILP32E is
+  // ratified.
+  if (EABI)
+    TInfo.Align = std::min(TInfo.Align, SlotSize);
 
   // Arguments bigger than 2*Xlen bytes are passed indirectly.
   bool IsIndirect = TInfo.Width > 2 * SlotSize;
@@ -1139,7 +1140,9 @@ public:
     if (!Attr)
       return;
 
-    StringRef Kind = "machine";
+    std::string Kind = "machine";
+    bool HasPreemptible = false;
+    bool HasPushPop = false;
     bool HasSiFiveCLICPreemptible = false;
     bool HasSiFiveCLICStackSwap = false;
     for (RISCVInterruptAttr::InterruptType type : Attr->interrupt()) {
@@ -1153,6 +1156,12 @@ public:
         break;
       case RISCVInterruptAttr::rnmi:
         Kind = "rnmi";
+        break;
+      case RISCVInterruptAttr::preemptible:
+        HasPreemptible = true;
+        break;
+      case RISCVInterruptAttr::pushpop:
+        HasPushPop = true;
         break;
       case RISCVInterruptAttr::qcinest:
         Kind = "qci-nest";
@@ -1177,6 +1186,10 @@ public:
       }
     }
 
+    if (HasPreemptible)
+      Kind += "-preemptible";
+    if (HasPushPop)
+      Kind += "-push-pop";
     Fn->addFnAttr("interrupt", Kind);
   }
 };

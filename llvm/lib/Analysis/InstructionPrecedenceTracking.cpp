@@ -66,16 +66,23 @@ void InstructionPrecedenceTracking::validate(const BasicBlock *BB) const {
   if (It == FirstSpecialInsts.end())
     return;
 
-  for (const Instruction &Insn : *BB)
-    if (isSpecialInstruction(&Insn)) {
-      assert(It->second == &Insn &&
-             "Cached first special instruction is wrong!");
-      return;
-    }
+  const Instruction *Cached = It->second;
+  assert((!Cached || Cached->getParent() == BB) &&
+         "Cached first special instruction is not in the block!");
 
-  assert(It->second == nullptr &&
-         "Block is marked as having special instructions but in fact it  has "
-         "none!");
+  // The cache is allowed to be conservative: the cached instruction may be
+  // earlier than the actual first special instruction (e.g. if an instruction
+  // stopped being special after a RAUW of one of its operands), but it must
+  // never be later than it.
+  for (const Instruction &Insn : *BB) {
+    if (&Insn == Cached)
+      return;
+    if (isSpecialInstruction(&Insn)) {
+      assert(Cached && "Block is marked as having no special instructions but "
+                       "in fact it has some!");
+      llvm_unreachable("Cached first special instruction is too late!");
+    }
+  }
 }
 
 void InstructionPrecedenceTracking::validateAll() const {
@@ -100,10 +107,8 @@ void InstructionPrecedenceTracking::removeInstruction(const Instruction *Inst) {
 }
 
 void InstructionPrecedenceTracking::removeUsersOf(const Instruction *Inst) {
-  for (const auto *U : Inst->users()) {
-    if (const auto *UI = dyn_cast<Instruction>(U))
-      removeInstruction(UI);
-  }
+  for (const Instruction *U : Inst->users())
+    removeInstruction(U);
 }
 
 void InstructionPrecedenceTracking::clear() {

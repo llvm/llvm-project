@@ -117,6 +117,26 @@ struct TargetEnvAttributeStorage : public AttributeStorage {
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
+// EntryPointABIAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+spirv::EntryPointABIAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                 DenseI32ArrayAttr workgroupSize,
+                                 std::optional<int> subgroupSize,
+                                 std::optional<int> targetWidth) {
+  if (!workgroupSize)
+    return success();
+  if (workgroupSize.size() != 3)
+    return emitError() << "expected 3 workgroup size values, but got "
+                       << workgroupSize.size();
+  if (llvm::any_of(workgroupSize.asArrayRef(),
+                   [](int32_t v) { return v <= 0; }))
+    return emitError() << "expected positive workgroup size values";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // InterfaceVarABIAttr
 //===----------------------------------------------------------------------===//
 
@@ -589,19 +609,24 @@ static Attribute parseTargetEnvAttr(DialectAsmParser &parser) {
 
 Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
                                        Type type) const {
-  // SPIR-V attributes are dictionaries so they do not have type.
-  if (type) {
-    parser.emitError(parser.getNameLoc(), "unexpected type");
-    return {};
-  }
-
   // Parse the kind keyword first.
   StringRef attrKind;
   Attribute attr;
   OptionalParseResult result =
       generatedAttributeParser(parser, &attrKind, type, attr);
-  if (result.has_value())
+  if (result.has_value()) {
+    if (type && attr && !isa<TypedAttr>(attr)) {
+      parser.emitError(parser.getNameLoc(), "unexpected type");
+      return {};
+    }
     return attr;
+  }
+
+  // The remaining SPIR-V attributes are dictionaries so they do not have type.
+  if (type) {
+    parser.emitError(parser.getNameLoc(), "unexpected type");
+    return {};
+  }
 
   if (attrKind == spirv::TargetEnvAttr::getKindName())
     return parseTargetEnvAttr(parser);
@@ -682,8 +707,4 @@ void SPIRVDialect::printAttribute(Attribute attr,
 
 void spirv::SPIRVDialect::registerAttributes() {
   addAttributes<InterfaceVarABIAttr, TargetEnvAttr, VerCapExtAttr>();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.cpp.inc"
-      >();
 }

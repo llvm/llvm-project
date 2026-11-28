@@ -8,6 +8,9 @@ void f() {
 typedef auto PR25449(); // expected-error {{'auto' not allowed in typedef}}
 
 thread_local auto x; // expected-error {{requires an initializer}}
+#ifdef __MVS__
+// expected-error@-2 {{thread-local storage is not supported for the current target}}
+#endif
 
 void g() {
   [](auto){}(0);
