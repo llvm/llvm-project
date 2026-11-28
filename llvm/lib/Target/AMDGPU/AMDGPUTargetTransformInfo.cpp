@@ -1565,6 +1565,24 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   return false;
 }
 
+SmallVector<unsigned, 8> GCNTTIImpl::getAddressSpaces() const {
+  // Address spaces reserved for downstream use are intentionally omitted.
+  using namespace AMDGPUAS;
+  return {FLAT_ADDRESS,
+          GLOBAL_ADDRESS,
+          REGION_ADDRESS,
+          LOCAL_ADDRESS,
+          CONSTANT_ADDRESS,
+          PRIVATE_ADDRESS,
+          CONSTANT_ADDRESS_32BIT,
+          BUFFER_FAT_POINTER,
+          BUFFER_RESOURCE,
+          BUFFER_STRIDED_POINTER,
+          VGPR,
+          BARRIER,
+          STREAMOUT_REGISTER};
+}
+
 bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                             Intrinsic::ID IID) const {
   switch (IID) {
