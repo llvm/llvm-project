@@ -17,6 +17,7 @@
 #include "GISel/BPFLegalizerInfo.h"
 #include "GISel/BPFRegisterBankInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
@@ -48,6 +49,13 @@ static cl::opt<bool> Disable_gotox("disable-gotox", cl::Hidden, cl::init(false),
 static cl::opt<bool>
     Disable_hmul("disable-hmul", cl::Hidden, cl::init(false),
                  cl::desc("Disable high-half multiply (UHMUL/SHMUL) insns"));
+
+static cl::opt<int>
+    BPFStackSizeOption("bpf-stack-size",
+                       cl::desc("Specify the BPF stack size limit"),
+                       cl::init(512));
+
+int BPFSubtarget::getStackSizeLimit() const { return BPFStackSizeOption; }
 
 void BPFSubtarget::anchor() {}
 
