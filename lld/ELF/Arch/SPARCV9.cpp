@@ -142,7 +142,9 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
       expr = R_ABS;
       break;
 
-    // PLT-generating relocations:
+    // PLT-generating relocations. Non-PIC code uses R_SPARC_WDISP30 for a
+    // call, so it may need a PLT entry as R_SPARC_WPLT30 does.
+    case R_SPARC_WDISP30:
     case R_SPARC_WPLT30:
       rs.processR_PLT_PC(type, offset, addend, sym);
       continue;
@@ -157,7 +159,6 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_SPARC_WDISP16:
     case R_SPARC_WDISP19:
     case R_SPARC_WDISP22:
-    case R_SPARC_WDISP30:
       rs.processR_PC(type, offset, addend, sym);
       continue;
 
