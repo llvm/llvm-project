@@ -568,6 +568,42 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::f64, Subtarget.hasAVX512() ? &X86::FR64XRegClass
                                                      : &X86::FR64RegClass);
 
+    if (Subtarget.hasDQI()) {
+      // AVX512DQ for 512-bit
+      for (auto VT : {MVT::v8f64, MVT::v16f32})
+        setOperationAction(ISD::FMODF, VT, Custom);
+      // 128/512-bit vectors + scalar require VLX
+      if (Subtarget.hasVLX()) {
+        for (auto VT : {MVT::f64, MVT::v2f64, MVT::v4f64, MVT::f32, MVT::v4f32, MVT::v8f32})
+          setOperationAction(ISD::FMODF, VT, Custom);
+      }
+    }
+
+    // f16 Vectors
+    if (Subtarget.hasFP16()) {
+      setOperationAction(ISD::FMODF, MVT::v32f16, Custom);
+      if (Subtarget.hasVLX())
+        for (auto VT : {MVT::v8f16, MVT::v16f16})
+          setOperationAction(ISD::FMODF, VT, Custom);
+      }else if(Subtarget.hasAVX512())
+      {
+          setOperationAction(ISD::FMODF, MVT::v32f16, Custom);
+          if (Subtarget.hasVLX())
+          for (auto VT : {MVT::v8f16, MVT::v16f16})
+            setOperationAction(ISD::FMODF, VT, Custom);
+        }
+    // bf16 Vectors
+    if (Subtarget.hasAVX10_2()) {
+      for (auto VT : {MVT::v8bf16, MVT::v16bf16, MVT::v32bf16})        
+        setOperationAction(ISD::FMODF, VT, Custom);
+    }
+    else if(Subtarget.hasBF16())
+    {
+        setOperationAction(ISD::FMODF, MVT::v32bf16, Custom);
+          if (Subtarget.hasVLX())
+        for(auto VT:{MVT::v8bf16,MVT::v16bf16,MVT::v32bf16})
+          setOperationAction(ISD::FMODF,VT,Custom);
+      }
     // Disable f32->f64 extload as we can only generate this in one instruction
     // under optsize. So its easier to pattern match (fpext (load)) for that
     // case instead of needing to emit 2 instructions for extload in the
@@ -25589,7 +25625,59 @@ getX86XALUOOp(X86::CondCode &Cond, SDValue Op, SelectionDAG &DAG) {
 
   return std::make_pair(Value, Overflow);
 }
+// Lower ISD::FMODF to AVX512 vround/vreduce sequence
+// modf(x) -> {copysign(vreduce(x,11),x),ftrunc(x)}
+// Immediate 11=Round to Zero (3) | Suppress Exceptions (8).
+static SDValue LowerFMODF(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  SDValue Num = Op.getOperand(0);
+  MVT VT = Num.getSimpleValueType();
+    const X86Subtarget &STI =
+      DAG.getMachineFunction().getSubtarget<X86Subtarget>();
 
+  // f16/bf16 without native VREDUCE support: promote to f32, lower
+  // there, and round the results back. AVX512F provides
+  // VCVTPH2PS/VCVTPS2PH; AVX512_BF16 provides VCVTNEBF162PS/VCVTNEPS2BF16.
+  MVT EltVT = VT.getScalarType();
+  bool NativeReduce = (EltVT != MVT::f16 && EltVT != MVT::bf16) ||
+                      (EltVT == MVT::f16 && STI.hasFP16()) ||
+                      (EltVT == MVT::bf16 && STI.hasAVX10_2());
+  if (!NativeReduce) {
+    MVT F32VT = VT.isVector()
+                    ? MVT::getVectorVT(MVT::f32, VT.getVectorNumElements())
+                    : MVT::f32;
+    SDValue Ext = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, Num);
+    SDValue Rec = DAG.getNode(ISD::FMODF, DL, {F32VT, F32VT}, Ext);
+    SDValue Frac = DAG.getNode(ISD::FP_ROUND, DL, VT, Rec.getValue(0),
+                               DAG.getConstant(0, DL, MVT::i32));
+    SDValue Int = DAG.getNode(ISD::FP_ROUND, DL, VT, Rec.getValue(1),
+                              DAG.getConstant(0, DL, MVT::i32));
+    return DAG.getMergeValues({Frac, Int}, DL);
+  }
+  // Integer Part:FTRUNC (round towards 0)
+  SDValue IntPart = DAG.getNode(ISD::FTRUNC, DL, VT, Num);
+
+  // Fractional Part: VREDUCE
+  SDValue FracPart;
+  if (VT.isVector()) {
+    SDValue Imm = DAG.getTargetConstant(11, DL, MVT::i32);
+    FracPart = DAG.getNode(X86ISD::VREDUCE, DL, VT, Num, Imm);
+  } else {
+    MVT VecVT = VT == MVT::f32  ? MVT::v4f32
+          : VT == MVT::f64  ? MVT::v2f64
+          : VT == MVT::f16  ? MVT::v8f16
+                            : MVT::v8bf16;
+    SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, Num);
+    SDValue Imm = DAG.getTargetConstant(11, DL, MVT::i32);
+    SDValue VecResult = DAG.getNode(X86ISD::VREDUCE, DL, VecVT, Vec, Imm);
+    FracPart = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, VecResult,
+                           DAG.getConstant(0, DL, MVT::i32));
+  }
+  // Sign Restoration
+  SDValue ResultFrac = DAG.getNode(ISD::FCOPYSIGN, DL, VT, FracPart, Num);
+
+  return DAG.getMergeValues({ResultFrac, IntPart}, DL);
+}
 static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
   // Lower the "add/sub/mul with overflow" instruction into a regular ins plus
   // a "setcc" instruction that checks the overflow flag. The "brcond" lowering
@@ -35260,6 +35348,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
                                 return LowerPARTIAL_REDUCE_MLA(Op, Subtarget, DAG);
   case ISD::PARTIAL_REDUCE_FMLA:
                                 return LowerPARTIAL_REDUCE_FMLA(Op, Subtarget, DAG);
+  case ISD::FMODF:                       return LowerFMODF(Op, DAG);
     // clang-format on
   }
 }
