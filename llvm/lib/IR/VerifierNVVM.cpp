@@ -260,6 +260,19 @@ static void verifyFPArith(VerifierSupport &VS, Intrinsic::ID ID,
         &Call);
 }
 
+static void verifyCompareAndSet(VerifierSupport &VS, CallBase &Call) {
+  Type *Ty = Call.getType();
+  const auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  const bool IsValid =
+      VTy &&
+      ((VTy->getNumElements() == 4 && VTy->getElementType()->isIntegerTy(8)) ||
+       (VTy->getNumElements() == 2 && VTy->getElementType()->isIntegerTy(16)));
+  Check(IsValid,
+        formatv("{} only supports <4 x i8> and <2 x i16> operand types, got {}",
+                Intrinsic::getBaseName(Intrinsic::nvvm_compare_and_set), *Ty),
+        &Call);
+}
+
 void llvm::verifyNVVMIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
                                    CallBase &Call) {
   switch (ID) {
@@ -290,6 +303,9 @@ void llvm::verifyNVVMIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
   case Intrinsic::nvvm_fmul_sat:
   case Intrinsic::nvvm_fmul_ftz_sat:
     verifyFPArith(VS, ID, Call);
+    return;
+  case Intrinsic::nvvm_compare_and_set:
+    verifyCompareAndSet(VS, Call);
     return;
   }
 }

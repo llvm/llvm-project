@@ -599,6 +599,19 @@ void NVPTXInstPrinter::printMemScope(const MCInst *MI, int OpNum,
   O << "." << nvvm::getMemScopeName(static_cast<nvvm::MemScope>(MO.getImm()));
 }
 
+void NVPTXInstPrinter::printCompareAndSetOp(const MCInst *MI, int OpNum,
+                                            const MCSubtargetInfo &,
+                                            raw_ostream &O) {
+  const int64_t Imm = MI->getOperand(OpNum).getImm();
+  assert(Imm >= static_cast<int64_t>(nvvm::CompareAndSetOp::First) &&
+         Imm <= static_cast<int64_t>(nvvm::CompareAndSetOp::Last) &&
+         "Invalid compare and set operator");
+  // The name is <u|s><cmpOp>, which PTX emits as .<cmpOp>.<u|s>.
+  const StringRef Name =
+      nvvm::getCompareAndSetOpName(static_cast<nvvm::CompareAndSetOp>(Imm));
+  O << '.' << Name.drop_front() << '.' << Name.front();
+}
+
 void NVPTXInstPrinter::printEvictPolicy(const MCInst *MI, int OpNum,
                                         const MCSubtargetInfo &, raw_ostream &O,
                                         StringRef Modifier) {

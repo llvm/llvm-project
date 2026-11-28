@@ -2994,6 +2994,24 @@ foreach mode = ["wrap", "clamp"] in {
 }
 
 //
+// COMPARE AND SET
+//
+def CompareAndSetOpnd : Operand<i32> {
+  let PrintMethod = "printCompareAndSetOp";
+}
+
+let Predicates = [hasCompareAndSetSupport] in {
+  foreach ty = ["v4i8", "v2i16"] in {
+    defvar vt = !cast<ValueType>(ty);
+    defvar lanes = !if(!eq(ty, "v4i8"), "8x4", "16x2");
+    def COMPARE_AND_SET_#!toupper(ty)
+        : BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b), (ins CompareAndSetOpnd:$cmpOp),
+                              "set${cmpOp}"#lanes,
+                              [(set vt:$dst, (int_nvvm_compare_and_set vt:$a, vt:$b, timm:$cmpOp))]>;
+  }
+}
+
+//
 // Convert
 //
 

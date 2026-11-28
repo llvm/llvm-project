@@ -1962,6 +1962,14 @@ let TargetPrefix = "nvvm" in {
       PureIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty]>;
 
   //
+  // Compare and set intrinsics.
+  //
+  def int_nvvm_compare_and_set :
+      PureIntrinsic<[llvm_any_vector_int_ty], [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
+                    [ImmArg<ArgIndex<2>>, Range<ArgIndex<2>, 0, 12>,
+                     ArgInfo<ArgIndex<2>, [ArgName<"cmpOp">, ImmArgPrinter<"printCompareAndSetOp">]>]>;
+
+  //
   // FNS - Find the n-th set bit
   //
   def int_nvvm_fns : NVVMBuiltin,

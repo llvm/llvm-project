@@ -221,9 +221,57 @@ enum class MBarrierLayout : uint8_t {
   V1 = 1,
 };
 
+enum class CompareAndSetOp : uint8_t {
+  First = 0,
+  UEQ = First,
+  UNE = 1,
+  UGT = 2,
+  UGE = 3,
+  ULT = 4,
+  ULE = 5,
+  SEQ = 6,
+  SNE = 7,
+  SGT = 8,
+  SGE = 9,
+  SLT = 10,
+  SLE = 11,
+  Last = SLE,
+};
+
+inline StringRef getCompareAndSetOpName(CompareAndSetOp Op) {
+  switch (Op) {
+  case CompareAndSetOp::UEQ:
+    return "ueq";
+  case CompareAndSetOp::UNE:
+    return "une";
+  case CompareAndSetOp::UGT:
+    return "ugt";
+  case CompareAndSetOp::UGE:
+    return "uge";
+  case CompareAndSetOp::ULT:
+    return "ult";
+  case CompareAndSetOp::ULE:
+    return "ule";
+  case CompareAndSetOp::SEQ:
+    return "seq";
+  case CompareAndSetOp::SNE:
+    return "sne";
+  case CompareAndSetOp::SGT:
+    return "sgt";
+  case CompareAndSetOp::SGE:
+    return "sge";
+  case CompareAndSetOp::SLT:
+    return "slt";
+  case CompareAndSetOp::SLE:
+    return "sle";
+  }
+  llvm_unreachable("invalid compare and set operator");
+}
 LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printMBarrierLayout(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printCompareAndSetOp(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printEvictPolicyType(raw_ostream &OS, const Constant *ImmArgVal);
 

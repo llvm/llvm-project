@@ -1940,6 +1940,53 @@ supported combinations are:
      - None
 ```
 
+### Comparison and Selection Intrinsics
+
+#### '`llvm.nvvm.compare.and.set.*`' Intrinsics
+
+##### Syntax:
+
+```llvm
+declare <4 x i8>  @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, i32 immarg %cmp_flag)
+declare <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, i32 immarg %cmp_flag)
+```
+
+##### Overview:
+
+The '`llvm.nvvm.compare.and.set.*`' intrinsics compare the packed integer
+elements of `%a` and `%b` using the comparison operator selected by `%cmp_flag`.
+Each element of the result is set to all ones if the comparison is true for the
+corresponding elements of `%a` and `%b`, and to zero otherwise. These intrinsics
+require `sm_107f` and PTX 9.4 or later.
+
+The last argument to these intrinsics is an `i32` flag indicating the
+comparison operator. This flag argument must be a compile-time constant. The
+supported values are:
+
+| Value | Name  | Comparison                     |
+| ----- | ----- | ------------------------------ |
+| `0`   | `ueq` | unsigned equal                 |
+| `1`   | `une` | unsigned not equal             |
+| `2`   | `ugt` | unsigned greater than          |
+| `3`   | `uge` | unsigned greater than or equal |
+| `4`   | `ult` | unsigned less than             |
+| `5`   | `ule` | unsigned less than or equal    |
+| `6`   | `seq` | signed equal                   |
+| `7`   | `sne` | signed not equal               |
+| `8`   | `sgt` | signed greater than            |
+| `9`   | `sge` | signed greater than or equal   |
+| `10`  | `slt` | signed less than               |
+| `11`  | `sle` | signed less than or equal      |
+
+##### Semantics:
+
+These are overloaded intrinsics. The overloaded type is the packed integer
+vector type of the operands and the result, and only the 32-bit vector types
+`<4 x i8>` and `<2 x i16>` are supported.
+
+For more information, refer to the
+[PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#comparison-and-selection-instructions-set).
+
 ### Bit Manipulation Intrinsics
 
 #### '`llvm.nvvm.fshl.clamp.*`' Intrinsic
