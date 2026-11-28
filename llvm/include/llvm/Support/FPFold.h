@@ -58,17 +58,19 @@ LLVM_ABI std::optional<APFloat> getFPValue(std::optional<FPFoldResult> Res);
 ///
 /// Returns std::nullopt when the modes do not specify one result. In
 /// particular, this occurs when a dynamic denormal mode could change an input
-/// or output value.
-LLVM_ABI std::optional<FPFoldResult>
-tryFoldFP(FPOp Opcode, ArrayRef<APFloat> Args, DenormalMode Denorms);
+/// or output value. If AvoidFoldingToNaN is true, NaN results are not folded.
+LLVM_ABI std::optional<FPFoldResult> tryFoldFP(FPOp Opcode,
+                                               ArrayRef<APFloat> Args,
+                                               DenormalMode Denorms,
+                                               bool AvoidFoldingToNaN = false);
 
 /// Try to evaluate a floating-point operation with an explicit rounding mode.
 /// Dynamic is evaluated using RN, but folding is declined if evaluation is
 /// inexact. Fixed-rounding operations still select their own rounding mode.
-LLVM_ABI std::optional<FPFoldResult> tryFoldFPWithRM(FPOp Opcode,
-                                                     ArrayRef<APFloat> Args,
-                                                     RoundingMode RM,
-                                                     DenormalMode Denorms);
+/// If AvoidFoldingToNaN is true, NaN results are not folded.
+LLVM_ABI std::optional<FPFoldResult>
+tryFoldFPWithRM(FPOp Opcode, ArrayRef<APFloat> Args, RoundingMode RM,
+                DenormalMode Denorms, bool AvoidFoldingToNaN = false);
 
 /// Try to compare two floating-point values.
 ///

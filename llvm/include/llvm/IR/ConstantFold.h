@@ -23,13 +23,27 @@
 
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/FPFold.h"
 #include <optional>
 
 namespace llvm {
 template <typename T> class ArrayRef;
 class Value;
 class Constant;
+class ConstantFP;
 class Type;
+
+/// Try to fold a floating-point operation to a constant, or return null.
+LLVM_ABI ConstantFP *tryFoldFPConst(Type *Ty, FPOp Opcode,
+                                    ArrayRef<APFloat> Args,
+                                    DenormalMode Denorms,
+                                    bool AvoidFoldingToNaN = false);
+
+/// Try to fold a floating-point operation with an explicit rounding mode.
+LLVM_ABI ConstantFP *tryFoldFPConstWithRM(Type *Ty, FPOp Opcode,
+                                          ArrayRef<APFloat> Args,
+                                          RoundingMode RM, DenormalMode Denorms,
+                                          bool AvoidFoldingToNaN = false);
 
 // Constant fold various types of instruction...
 LLVM_ABI Constant *

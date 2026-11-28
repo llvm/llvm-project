@@ -33,6 +33,20 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
+ConstantFP *llvm::tryFoldFPConst(Type *Ty, FPOp Opcode, ArrayRef<APFloat> Args,
+                                 DenormalMode Denorms, bool AvoidFoldingToNaN) {
+  auto Result = tryFoldFP(Opcode, Args, Denorms, AvoidFoldingToNaN);
+  return Result ? ConstantFP::get(Ty, Result->Value) : nullptr;
+}
+
+ConstantFP *llvm::tryFoldFPConstWithRM(Type *Ty, FPOp Opcode,
+                                       ArrayRef<APFloat> Args, RoundingMode RM,
+                                       DenormalMode Denorms,
+                                       bool AvoidFoldingToNaN) {
+  auto Result = tryFoldFPWithRM(Opcode, Args, RM, Denorms, AvoidFoldingToNaN);
+  return Result ? ConstantFP::get(Ty, Result->Value) : nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 //                ConstantFold*Instruction Implementations
 //===----------------------------------------------------------------------===//
