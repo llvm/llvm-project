@@ -1802,6 +1802,198 @@ export struct TypeFromModule {};
   EXPECT_TRUE(HasToken("export", HighlightingKind::Modifier));
 }
 
+TEST_F(PrerequisiteModulesTests, DetectsStaleTransitivePrerequisite) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+export inline constexpr int a = 1;
+)cpp");
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+import A;
+export inline constexpr int m = a + 1;
+)cpp");
+
+  CDB.addFile("Use.cpp", R"cpp(
+import M;
+int use() { return m; }
+)cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  auto Info = Builder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
+  ASSERT_TRUE(Info);
+
+  auto Inputs = getInputs("Use.cpp", CDB);
+  auto Invocation = buildCompilerInvocation(Inputs, DiagConsumer);
+  ASSERT_TRUE(Invocation);
+
+  auto VFS = FS.view(TestDir);
+
+  // Initially, all prerequisite modules are valid.
+  EXPECT_TRUE(Info->canReuse(*Invocation, VFS));
+
+  // Repeated checks should not change the result.
+  EXPECT_TRUE(Info->canReuse(*Invocation, VFS));
+  EXPECT_TRUE(Info->canReuse(*Invocation, VFS));
+
+  // Change the transitive prerequisite without changing M or Use.cpp.
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+export inline constexpr int a = 42;
+)cpp");
+
+  // The existing prerequisite information must not be reused if
+  // A's module file is now stale, even if M's own AST is readable.
+  EXPECT_FALSE(Info->canReuse(*Invocation, VFS));
+
+  // Rebuild the prerequisite information and check that it is reusable
+  // again after the module dependency graph has been refreshed.
+  auto RefreshedInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
+  ASSERT_TRUE(RefreshedInfo);
+  EXPECT_TRUE(RefreshedInfo->canReuse(*Invocation, VFS));
+
+  // M depends on A, which was rebuilt, so M must be rebuilt too rather than
+  // reusing its stale cached module file.
+  HeaderSearchOptions OldHSOpts, NewHSOpts;
+  Info->adjustHeaderSearchOptions(OldHSOpts);
+  RefreshedInfo->adjustHeaderSearchOptions(NewHSOpts);
+  ASSERT_EQ(OldHSOpts.PrebuiltModuleFiles.count("M"), 1u);
+  ASSERT_EQ(NewHSOpts.PrebuiltModuleFiles.count("M"), 1u);
+  EXPECT_NE(OldHSOpts.PrebuiltModuleFiles["M"],
+            NewHSOpts.PrebuiltModuleFiles["M"]);
+
+  // An unrelated module must not invalidate Use.cpp's prerequisites.
+  CDB.addFile("Unrelated.cppm", R"cpp(
+export module Unrelated;
+export inline constexpr int unrelated = 100;
+)cpp");
+
+  EXPECT_TRUE(RefreshedInfo->canReuse(*Invocation, VFS));
+}
+
+TEST_F(PrerequisiteModulesTests,
+       RebuiltDependencyInvalidatesDependentAcrossFiles) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+export inline constexpr int a = 1;
+)cpp");
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+import A;
+export inline constexpr int m = a + 1;
+)cpp");
+
+  CDB.addFile("UseA.cpp", R"cpp(
+import A;
+int useA() { return a; }
+)cpp");
+
+  CDB.addFile("UseM.cpp", R"cpp(
+import M;
+int useM() { return m; }
+)cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  auto InfoM = Builder.buildPrerequisiteModulesFor(getFullPath("UseM.cpp"), FS);
+  ASSERT_TRUE(InfoM);
+  HeaderSearchOptions OldHSOpts;
+  InfoM->adjustHeaderSearchOptions(OldHSOpts);
+  ASSERT_EQ(OldHSOpts.PrebuiltModuleFiles.count("M"), 1u);
+
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+export inline constexpr int a = 42;
+)cpp");
+
+  // Opening a file that only imports A rebuilds A, but not M.
+  auto InfoA = Builder.buildPrerequisiteModulesFor(getFullPath("UseA.cpp"), FS);
+  ASSERT_TRUE(InfoA);
+
+  // M's cached file was built against the old A, so it must be rebuilt.
+  auto RefreshedInfoM =
+      Builder.buildPrerequisiteModulesFor(getFullPath("UseM.cpp"), FS);
+  ASSERT_TRUE(RefreshedInfoM);
+  HeaderSearchOptions NewHSOpts;
+  RefreshedInfoM->adjustHeaderSearchOptions(NewHSOpts);
+  ASSERT_EQ(NewHSOpts.PrebuiltModuleFiles.count("M"), 1u);
+  EXPECT_NE(OldHSOpts.PrebuiltModuleFiles["M"],
+            NewHSOpts.PrebuiltModuleFiles["M"]);
+}
+
+// C++20 named modules don't record the signatures of the modules they import,
+// so a persistent BMI of M built against an old A must be detected as stale by
+// clangd itself, even from a fresh builder (e.g. a new clangd process).
+TEST_F(PrerequisiteModulesTests,
+       PersistentModuleCacheRebuildsDependentOfRebuiltModuleAcrossBuilders) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+export inline int a() { return 1; }
+)cpp");
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+import A;
+export inline int m() { return a() + 1; }
+)cpp");
+
+  CDB.addFile("Use.cpp", R"cpp(
+import M;
+int use() { return m(); }
+)cpp");
+
+  auto ReadModuleFile = [](const PrerequisiteModules &Info,
+                           llvm::StringRef ModuleName) -> std::string {
+    HeaderSearchOptions HS;
+    Info.adjustHeaderSearchOptions(HS);
+    auto It = HS.PrebuiltModuleFiles.find(ModuleName.str());
+    if (It == HS.PrebuiltModuleFiles.end())
+      return "";
+    auto Buf = llvm::MemoryBuffer::getFile(It->second);
+    return Buf ? (*Buf)->getBuffer().str() : "";
+  };
+
+  // Keep the first builder's module files alive so their contents can be
+  // compared with the second builder's.
+  ModulesBuilder FirstBuilder(CDB);
+  auto FirstInfo =
+      FirstBuilder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
+  ASSERT_TRUE(FirstInfo);
+  std::string FirstM = ReadModuleFile(*FirstInfo, "M");
+  ASSERT_FALSE(FirstM.empty());
+
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+export inline int a() { return 42; }
+)cpp");
+
+  ModulesBuilder SecondBuilder(CDB);
+  auto SecondInfo =
+      SecondBuilder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
+  ASSERT_TRUE(SecondInfo);
+  std::string SecondM = ReadModuleFile(*SecondInfo, "M");
+  ASSERT_FALSE(SecondM.empty());
+
+  // A reused M would be a byte-for-byte copy of the first published BMI.
+  EXPECT_NE(FirstM, SecondM);
+
+  // With nothing changed, a third builder reuses the persistent M.
+  ModulesBuilder ThirdBuilder(CDB);
+  auto ThirdInfo =
+      ThirdBuilder.buildPrerequisiteModulesFor(getFullPath("Use.cpp"), FS);
+  ASSERT_TRUE(ThirdInfo);
+  EXPECT_EQ(SecondM, ReadModuleFile(*ThirdInfo, "M"));
+}
+
 } // namespace
 } // namespace clang::clangd
 
