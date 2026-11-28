@@ -161,6 +161,12 @@ infrastructure are described first, followed by tool-specific sections.
 
   Warns about inconsistent macro usage in preprocessor conditions.
 
+- New {doc}`bugprone-unsafe-format-string
+  <clang-tidy/checks/bugprone/unsafe-format-string>` check.
+
+  Detects usage of vulnerable `printf` and `scanf`-like format string
+  functions with unbounded `%s` specifiers that can cause buffer overflows.
+
 - New {doc}`llvm-invalid-regex-pattern
   <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
 
@@ -249,7 +255,7 @@ infrastructure are described first, followed by tool-specific sections.
 
 - Improved {doc}`bugprone-redundant-branch-condition
   <clang-tidy/checks/bugprone/redundant-branch-condition>` check:
-  
+
     - Fixed false positives when the condition variable is changed later in a loop that
       encloses the inner `if`.
 
