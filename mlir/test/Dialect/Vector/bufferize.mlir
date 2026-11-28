@@ -64,5 +64,17 @@ func.func @gather(%base: tensor<?x?xf32>, %v: vector<16xi32>, %mask: vector<16xi
   return %0 : vector<16xf32>
 }
 
-// TODO: Add test case for vector.mask. The masked op can currently not
-// bufferize out-of-place, so the only test case is in one-shot-bufferize.mlir.
+// -----
+
+// CHECK-LABEL: func @mask(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>, %[[val:.*]]: vector<16xf32>, %[[idx:.*]]: index, %[[m0:.*]]: vector<16xi1>)
+//       CHECK:   %[[m:.*]] = bufferization.to_buffer %[[t]] : tensor<?xf32> to memref<?xf32>
+//       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) {{.*}} : memref<?xf32>
+//       CHECK:   memref.copy %[[m]], %[[alloc]]
+//       CHECK:   vector.mask %[[m0]] { vector.transfer_write %[[val]], %[[alloc]][%[[idx]]] : vector<16xf32>, memref<?xf32> } : vector<16xi1>
+//       CHECK:   %[[r:.*]] = bufferization.to_tensor %[[alloc]] : memref<?xf32>
+//       CHECK:   return %[[r]]
+func.func @mask(%t: tensor<?xf32>, %val: vector<16xf32>, %idx: index, %m0: vector<16xi1>) -> tensor<?xf32> {
+  %0 = vector.mask %m0 { vector.transfer_write %val, %t[%idx] : vector<16xf32>, tensor<?xf32> } : vector<16xi1> -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
