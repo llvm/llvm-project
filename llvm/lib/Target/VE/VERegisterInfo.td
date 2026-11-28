@@ -76,7 +76,9 @@ foreach I = 0-14 in
 def MISC : RegisterClass<"VE", [i64], 64,
                          (add USRCC, PSW, SAR, PMMR,
                               (sequence "PMCR%u", 0, 3),
-                              (sequence "PMC%u", 0, 14))>;
+                              (sequence "PMC%u", 0, 14))> {
+  let RenderMethod = "addMISCRegOperands";
+}
 
 //-----------------------------------------------------------------------------
 // Instruction Counter Register
@@ -168,22 +170,28 @@ foreach I = 1-7 in
 //
 // The register order is defined in terms of the preferred
 // allocation order.
-def I32 : RegisterClass<"VE", [i32], 32,
-                        (add (sequence "SW%u", 0, 7),
-                             (sequence "SW%u", 34, 63),
-                             (sequence "SW%u", 8, 33))>;
 def I64 : RegisterClass<"VE", [i64, f64], 64,
                         (add (sequence "SX%u", 0, 7),
                              (sequence "SX%u", 34, 63),
                              (sequence "SX%u", 8, 33))>;
+def I32 : RegisterClass<"VE", [i32], 32,
+                        (add (sequence "SW%u", 0, 7),
+                             (sequence "SW%u", 34, 63),
+                             (sequence "SW%u", 8, 33))> {
+  let CoerceFromRegClass = I64;
+}
 def F32 : RegisterClass<"VE", [f32], 32,
                         (add (sequence "SF%u", 0, 7),
                              (sequence "SF%u", 34, 63),
-                             (sequence "SF%u", 8, 33))>;
+                             (sequence "SF%u", 8, 33))> {
+  let CoerceFromRegClass = I64;
+}
 def F128 : RegisterClass<"VE", [f128], 128,
                         (add (sequence "Q%u", 0, 3),
                              (sequence "Q%u", 17, 31),
-                             (sequence "Q%u", 4, 16))>;
+                             (sequence "Q%u", 4, 16))> {
+  let CoerceFromRegClass = I64;
+}
 
 def V64 : RegisterClass<"VE",
                         [v256f64, // default type for vector registers
@@ -194,4 +202,6 @@ def V64 : RegisterClass<"VE",
 
 // vm0 is reserved for always true
 def VM : RegisterClass<"VE", [v256i1], 64, (sequence "VM%u", 0, 15)>;
-def VM512 : RegisterClass<"VE", [v512i1], 64, (sequence "VMP%u", 0, 7)>;
+def VM512 : RegisterClass<"VE", [v512i1], 64, (sequence "VMP%u", 0, 7)> {
+  let CoerceFromRegClass = VM;
+}
