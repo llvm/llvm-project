@@ -86,3 +86,40 @@ define half @fminimum(half %a, half %b) {
   %c = call half @llvm.minimum.f16(half %a, half %b)
   ret half %c
 }
+
+define half @fli_one() {
+; CHECK-LABEL: fli_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.h fa0, 1.0
+; CHECK-NEXT:    ret
+  ret half 1.0
+}
+
+define half @fli_negone() {
+; CHECK-LABEL: fli_negone:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.h fa0, -1.0
+; CHECK-NEXT:    ret
+  ret half -1.0
+}
+
+; Not directly in the FLI table, so it needs fli + fneg.
+define half @fli_neghalf() {
+; CHECK-LABEL: fli_neghalf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.h fa5, 0.5
+; CHECK-NEXT:    fneg.h fa0, fa5
+; CHECK-NEXT:    ret
+  ret half -0.5
+}
+
+; Not representable by FLI at all.
+define half @no_fli() {
+; CHECK-LABEL: no_fli:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 4
+; CHECK-NEXT:    addi a0, a0, 584
+; CHECK-NEXT:    fmv.h.x fa0, a0
+; CHECK-NEXT:    ret
+  ret half 3.14159
+}
