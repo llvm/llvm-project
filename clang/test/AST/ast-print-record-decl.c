@@ -103,14 +103,14 @@ struct B {};
 void defFirst(void) {
   // PRINT-NEXT: [[KW]]
   // PRINT-DAG:  __attribute__((aligned(16)))
-  // PRINT-DAG:  __attribute__((deprecated("")))
+  // PRINT-DAG:  __attribute__((deprecated))
   // PRINT-NOT:  __attribute__
   // PRINT-SAME: T[[BASES]] {
   // PRINT-NEXT:   int i;
   // PRINT-NEXT: } *p0;
   // expected-warning@+2 {{'T' is deprecated}}
   // expected-note@+1 2 {{'T' has been explicitly marked deprecated here}}
-  KW __attribute__((aligned(16))) __attribute__((deprecated(""))) T BASES {
+  KW __attribute__((aligned(16))) __attribute__((deprecated)) T BASES {
     int i;
   } *p0;
 
@@ -128,12 +128,12 @@ void defLast(void) {
   // PRINT-NEXT: [[KW]] __attribute__((aligned(16))) T *p0;
   KW __attribute__((aligned(16))) T *p0;
 
-  // PRINT-NEXT: [[KW]] __attribute__((deprecated(""))) T[[BASES]] {
+  // PRINT-NEXT: [[KW]] __attribute__((deprecated)) T[[BASES]] {
   // PRINT-NEXT:   int i;
   // PRINT-NEXT: } *p1;
   // expected-warning@+2 {{'T' is deprecated}}
   // expected-note@+1 {{'T' has been explicitly marked deprecated here}}
-  KW __attribute__((deprecated(""))) T BASES { int i; } *p1;
+  KW __attribute__((deprecated)) T BASES { int i; } *p1;
 
   // LLVM: store i64 16
   long s0 = sizeof *p0;
@@ -143,10 +143,10 @@ void defLast(void) {
 
 // CHECK-LABEL: defMiddle
 void defMiddle(void) {
-  // PRINT-NEXT: [[KW]] __attribute__((deprecated(""))) T *p0;
+  // PRINT-NEXT: [[KW]] __attribute__((deprecated)) T *p0;
   // expected-warning@+2 {{'T' is deprecated}}
   // expected-note@+1 3 {{'T' has been explicitly marked deprecated here}}
-  KW __attribute__((deprecated(""))) T *p0;
+  KW __attribute__((deprecated)) T *p0;
 
   // PRINT-NEXT: [[KW]] __attribute__((aligned(16))) T[[BASES]] {
   // PRINT-NEXT:   int i;
@@ -166,10 +166,10 @@ void defMiddle(void) {
 
 // CHECK-LABEL: defSelfRef
 void defSelfRef(void) {
-  // PRINT-NEXT: [[KW]] __attribute__((deprecated(""))) T *p0;
+  // PRINT-NEXT: [[KW]] __attribute__((deprecated)) T *p0;
   // expected-warning@+2 {{'T' is deprecated}}
   // expected-note@+1 2 {{'T' has been explicitly marked deprecated here}}
-  KW __attribute__((deprecated(""))) T *p0;
+  KW __attribute__((deprecated)) T *p0;
 
   // PRINT-NEXT:  [[KW]] __attribute__((aligned(64))) T[[BASES]] {
   // PRINT-NEXT:    int i;
@@ -211,10 +211,10 @@ void declsOnly(void) {
   // PRINT-NEXT: [[KW]] T *p2;
   KW T *p2;
 
-  // PRINT-NEXT: [[KW]] __attribute__((deprecated(""))) T *p3;
+  // PRINT-NEXT: [[KW]] __attribute__((deprecated)) T *p3;
   // expected-warning@+2 {{'T' is deprecated}}
   // expected-note@+1 2 {{'T' has been explicitly marked deprecated here}}
-  KW __attribute__((deprecated(""))) T *p3;
+  KW __attribute__((deprecated)) T *p3;
 
   // PRINT-NEXT: [[KW]] T *p4;
   KW T *p4; // expected-warning {{'T' is deprecated}}

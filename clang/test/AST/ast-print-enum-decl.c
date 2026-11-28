@@ -17,14 +17,14 @@
 void defFirst(void) {
   // PRINT-NEXT: enum
   // PRINT-DAG:  __attribute__((aligned(16)))
-  // PRINT-DAG:  __attribute__((deprecated("")))
+  // PRINT-DAG:  __attribute__((deprecated))
   // PRINT-SAME: T {
   // PRINT-NEXT:   E0,
   // PRINT-NEXT:   E1
   // PRINT-NEXT: } *p0;
   // expected-warning@+2 {{'T' is deprecated}}
   // expected-note@+1 2 {{'T' has been explicitly marked deprecated here}}
-  enum __attribute__((aligned(16))) __attribute__((deprecated(""))) T {
+  enum __attribute__((aligned(16))) __attribute__((deprecated)) T {
     E0, E1
   } *p0;
 
@@ -37,21 +37,21 @@ void defLast(void) {
   // PRINT-NEXT: enum __attribute__((aligned(16))) T *p0;
   enum __attribute__((aligned(16))) T *p0;
 
-  // PRINT-NEXT: enum __attribute__((deprecated(""))) T {
+  // PRINT-NEXT: enum __attribute__((deprecated)) T {
   // PRINT-NEXT:   E0,
   // PRINT-NEXT:   E1
   // PRINT-NEXT: } *p1;
   // expected-warning@+2 {{'T' is deprecated}}
   // expected-note@+1 {{'T' has been explicitly marked deprecated here}}
-  enum __attribute__((deprecated(""))) T { E0, E1 } *p1;
+  enum __attribute__((deprecated)) T { E0, E1 } *p1;
 }
 
 // CHECK-LABEL: defMiddle
 void defMiddle(void) {
-  // PRINT-NEXT: enum __attribute__((deprecated(""))) T *p0;
+  // PRINT-NEXT: enum __attribute__((deprecated)) T *p0;
   // expected-warning@+2 {{'T' is deprecated}}
   // expected-note@+1 3 {{'T' has been explicitly marked deprecated here}}
-  enum __attribute__((deprecated(""))) T *p0;
+  enum __attribute__((deprecated)) T *p0;
 
   // PRINT-NEXT: enum __attribute__((aligned(16))) T {
   // PRINT-NEXT:   E0
@@ -78,7 +78,7 @@ void declsOnly(void) {
   enum T *p2;
 
   // PRINT-NEXT: enum T *p3;
-  enum __attribute__((deprecated(""))) T *p3;
+  enum __attribute__((deprecated)) T *p3;
 
   // PRINT-NEXT: enum T *p4;
   enum T *p4;
