@@ -1065,7 +1065,7 @@ ErfcPolynomialApproximation::matchAndRewrite(math::ErfcOp op,
   Value neg4 = bcast(floatCst(builder, -4.0f, et));
   Value neg2 = bcast(floatCst(builder, -2.0f, et));
   Value pos2 = bcast(floatCst(builder, 2.0f, et));
-  Value posInf = bcast(floatCst(builder, INFINITY, et));
+  Value maxFinite = bcast(f32FromBits(builder, 0x7f7fffffu));
   Value clampVal = bcast(floatCst(builder, 10.0546875f, et));
 
   Value a = math::AbsFOp::create(builder, x);
@@ -1115,11 +1115,13 @@ ErfcPolynomialApproximation::matchAndRewrite(math::ErfcOp op,
       builder, r, e,
       arith::MulFOp::create(builder, arith::MulFOp::create(builder, r, e), t));
 
-  Value isNotLessThanInf = arith::XOrIOp::create(
+  // a <= maxFinite is equivalent to a < +inf for IEEE floating-point values,
+  // including NaN and infinity, without introducing a non-finite constant.
+  Value isNonFinite = arith::XOrIOp::create(
       builder,
-      arith::CmpFOp::create(builder, arith::CmpFPredicate::OLT, a, posInf),
+      arith::CmpFOp::create(builder, arith::CmpFPredicate::OLE, a, maxFinite),
       trueValue);
-  r = arith::SelectOp::create(builder, isNotLessThanInf,
+  r = arith::SelectOp::create(builder, isNonFinite,
                               arith::AddFOp::create(builder, x, x), r);
   Value isGreaterThanClamp =
       arith::CmpFOp::create(builder, arith::CmpFPredicate::OGT, a, clampVal);
