@@ -29,7 +29,7 @@ tls1:
   .globl  _start
 _start:
   .functype _start () -> ()
-  i32.const tls1@TLSREL
+  global.get tls1@GOT@TLS
   drop
   end_function
 
