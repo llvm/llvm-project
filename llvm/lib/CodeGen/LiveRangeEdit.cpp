@@ -161,6 +161,8 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   // Update the call info.
   if (UseMI->shouldUpdateAdditionalCallInfo())
     UseMI->getMF()->moveAdditionalCallInfo(UseMI, FoldMI);
+  if (TheDelegate)
+    TheDelegate->LRE_WillEraseInstruction(UseMI);
   UseMI->eraseFromParent();
   DefMI->addRegisterDead(LI->reg(), nullptr);
   Dead.push_back(DefMI);
