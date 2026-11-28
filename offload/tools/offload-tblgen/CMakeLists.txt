@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS Support)
 
 add_tablegen(offload-tblgen OFFLOAD
   EXPORT OFFLOAD
+  AccGen.cpp
   APIGen.cpp
   DocGen.cpp
   EntryPointGen.cpp

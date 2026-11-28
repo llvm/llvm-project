@@ -25,3 +25,13 @@ void EmitOffloadExports(const llvm::RecordKeeper &Records,
 void EmitOffloadErrcodes(const llvm::RecordKeeper &Records,
                          llvm::raw_ostream &OS);
 void EmitOffloadInfo(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+
+void EmitAccFModule(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitAccCEnums(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitAccExports(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitAccPrintEnums(const llvm::RecordKeeper &Records,
+                       llvm::raw_ostream &OS);
+void EmitAccFEntries(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitAccFImplDecls(const llvm::RecordKeeper &Records,
+                       llvm::raw_ostream &OS);
+void EmitAccFImpls(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);

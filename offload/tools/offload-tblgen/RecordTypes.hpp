@@ -10,6 +10,7 @@
 
 #include <string>
 
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Record.h"
 
 namespace llvm {
