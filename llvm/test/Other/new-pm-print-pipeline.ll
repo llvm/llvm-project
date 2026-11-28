@@ -115,6 +115,9 @@
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='globaldce<vfe-linkage-unit-visibility>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-35
 ; CHECK-35: globaldce<vfe-linkage-unit-visibility>
 
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='globaldce<drop-assumes;vfe-linkage-unit-visibility>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-GLOBALDCE-BOTH
+; CHECK-GLOBALDCE-BOTH: globaldce<vfe-linkage-unit-visibility;drop-assumes>
+
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='speculative-execution<only-if-divergent-target>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-36
 ; CHECK-36: function(speculative-execution<only-if-divergent-target>)
 
