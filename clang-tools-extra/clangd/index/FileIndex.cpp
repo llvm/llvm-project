@@ -374,12 +374,10 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
   llvm::sort(AllRelations);
   AllRelations.erase(llvm::unique(AllRelations), AllRelations.end());
 
+  // Only the storage built here counts towards the index's estimated size: the
+  // slabs are shared with FileSymbols, and profile() reports them.
   size_t StorageSize =
       RefsStorage.size() * sizeof(Ref) + SymsStorage.size() * sizeof(Symbol);
-  for (const auto &Slab : SymbolSlabs)
-    StorageSize += Slab->bytes();
-  for (const auto &RefSlab : RefSlabs)
-    StorageSize += RefSlab->bytes();
 
   // Index must keep the slabs and contiguous ranges alive.
   switch (Type) {
