@@ -21,9 +21,7 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 // LLVM: define{{.*}} i8 @_Z15cxxstaticcast_0j(i32 {{.*}} %{{[0-9]+}})
 // LLVM: %[[LOAD:[0-9]+]] = load i32, ptr %{{[0-9]+}}, align 4
 // LLVM: %[[TRUNC:[0-9]+]] = trunc i32 %[[LOAD]] to i8
-// LLVM: store i8 %[[TRUNC]], ptr %[[RV:[0-9]+]], align 1
-// LLVM: %[[R:[0-9]+]] = load i8, ptr %[[RV]], align 1
-// LLVM: ret i8 %[[R]]
+// LLVM: ret i8 %[[TRUNC]]
 
 int cStyleCasts_0(unsigned x1, int x2, float x3, short x4, double x5) {
 // CIR: cir.func{{.*}} @_Z13cStyleCasts_0jifsd
@@ -96,7 +94,6 @@ bool cptr(void *d) {
 // CIR:   %{{[0-9]+}} = cir.cast ptr_to_bool %[[DVAL]] : !cir.ptr<!void> -> !cir.bool
 
 // LLVM-LABEL: define{{.*}} i1 @_Z4cptrPv(ptr {{.*}} %0)
-// LLVM:         %[[RETVAL:.*]] = alloca i8, 
 // LLVM:         %[[ARG_STORAGE:.*]] = alloca ptr, 
 // LLVM:         %[[X_STORAGE:.*]] = alloca i8, 
 // LLVM:         store ptr %0, ptr %[[ARG_STORAGE]]

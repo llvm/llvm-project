@@ -25,10 +25,7 @@ int main(void) {
 // CIR:         cir.return implicit %[[LOAD]] : !s32i
 
 // LLVM-LABEL: define{{.*}} i32 @main(
-// LLVM:         %[[RET:.*]] = alloca i32
-// LLVM:         store i32 0, ptr %[[RET]]
-// LLVM:         %[[LOAD:.*]] = load i32, ptr %[[RET]]
-// LLVM:         ret i32 %[[LOAD]]
+// LLVM:         ret i32 0
 
 // OGCG-LABEL: define{{.*}} i32 @main(
 // OGCG:         ret i32 0

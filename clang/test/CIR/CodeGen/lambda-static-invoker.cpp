@@ -49,7 +49,6 @@ int g3() {
 // CIR:   cir.return %[[RET]]
 
 // LLVM: define dso_local {{.*}}i32 @_Z2g3v(){{.*}} {
-// LLVM:   %[[RETVAL:.*]] = alloca i32
 // LLVM:   %[[FN_PTR:.*]] = alloca ptr
 // LLVM:   %[[LAM_ALLOCA:.*]] = alloca %[[REC_LAM_G3:[^,]*]],
 // LLVM:   %[[TASK:.*]] = alloca i32
@@ -61,19 +60,14 @@ int g3() {
 // LLVM:   %[[RESULT:.*]] = call {{.*}}i32 %[[FN]](ptr {{.*}} %[[REF_TMP1]])
 // LLVM:   store i32 %[[RESULT]], ptr %[[TASK]]
 // LLVM:   %[[TMP:.*]] = load i32, ptr %[[TASK]]
-// LLVM:   store i32 %[[TMP]], ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
-// LLVM:   ret i32 %[[RET]]
+// LLVM:   ret i32 %[[TMP]]
 
 // lambda operator int (*)(int const&)()
 // LLVM: define internal {{.*}}ptr @"_ZZ2g3vENK3$_0cvPFiRKiEEv"(ptr {{.*}} %[[THIS_ARG:.*]]){{.*}} {
-// LLVM:  %[[RETVAL:.*]] = alloca ptr
 // LLVM:  %[[THIS_ALLOCA:.*]] = alloca ptr
 // LLVM:  store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
 // LLVM:  %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
-// LLVM:  store ptr @"_ZZ2g3vEN3$_08__invokeERKi", ptr %[[RETVAL]]
-// LLVM:  %[[RET:.*]] = load ptr, ptr %[[RETVAL]]
-// LLVM:  ret ptr %[[RET]]
+// LLVM:  ret ptr @"_ZZ2g3vEN3$_08__invokeERKi"
 
 // OGCG: define dso_local noundef i32 @_Z2g3v()
 // OGCG:   %[[FN_PTR:.*]] = alloca ptr
@@ -172,29 +166,22 @@ void use_void_lambda() {
 
 // lambda operator void (*)(int)()
 // LLVM: define internal noundef ptr @"_ZZ15use_void_lambdavENK3$_0cvPFDaT_EIiEEv"(ptr {{.*}} %[[THIS_ARG:.*]])
-// LLVM:   %[[RETVAL:.*]] = alloca ptr
 // LLVM:   %[[THIS_ALLOCA:.*]] = alloca ptr
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
-// LLVM:   store ptr @"_ZZ15use_void_lambdavEN3$_08__invokeIiEEDaT_", ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]]
-// LLVM:   ret ptr %[[RET]]
+// LLVM:   ret ptr @"_ZZ15use_void_lambdavEN3$_08__invokeIiEEDaT_"
 
 // lambda invoker
 // LLVM: define internal {{.*}}i32 @"_ZZ2g3vEN3$_08__invokeERKi"(ptr {{.*}} %[[REF_I_ARG:.*]]){{.*}} {
-// LLVM:   %[[RETVAL:.*]] = alloca i32
 // LLVM:   %[[REF_I_ALLOCA:.*]] = alloca ptr
 // LLVM:   %[[LAM_ALLOCA:.*]] = alloca %[[REC_LAM_G3]],
 // LLVM:   store ptr %[[REF_I_ARG]], ptr %[[REF_I_ALLOCA]]
 // LLVM:   %[[REF_I:.*]] = load ptr, ptr %[[REF_I_ALLOCA]]
 // LLVM:   %[[LAM_RESULT:.*]] = call {{.*}}i32 @"_ZZ2g3vENK3$_0clERKi"(ptr {{.*}} %[[LAM_ALLOCA]], ptr {{.*}} %[[REF_I]])
-// LLVM:   store i32 %[[LAM_RESULT]], ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
-// LLVM:   ret i32 %[[RET]]
+// LLVM:   ret i32 %[[LAM_RESULT]]
 
 // lambda operator()
 // LLVM: define internal {{.*}}i32 @"_ZZ2g3vENK3$_0clERKi"(ptr {{.*}} %[[THIS_ARG:.*]], ptr {{.*}} %[[REF_I_ARG:.*]]){{.*}} {
-// LLVM:   %[[RETVAL:.*]] = alloca i32
 // LLVM:   %[[THIS_ALLOCA:.*]] = alloca ptr
 // LLVM:   %[[REF_I_ALLOCA:.*]] = alloca ptr
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
@@ -202,9 +189,7 @@ void use_void_lambda() {
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
 // LLVM:   %[[REF_I:.*]] = load ptr, ptr %[[REF_I_ALLOCA]]
 // LLVM:   %[[I:.*]] = load i32, ptr %[[REF_I]]
-// LLVM:   store i32 %[[I]], ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
-// LLVM:   ret i32 %[[RET]]
+// LLVM:   ret i32 %[[I]]
 
 // lambda invoker
 // LLVM: define internal void @"_ZZ15use_void_lambdavEN3$_08__invokeIiEEDaT_"(i32 {{.*}} %[[X_ARG:.*]])

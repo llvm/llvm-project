@@ -26,15 +26,12 @@ int x(int y) {
 
 // LLVM-LABEL: define{{.*}} i32 @_Z1xi(
 // LLVM-SAME: i32 {{.*}} %[[ARG0:.+]])
-// LLVM: %[[RETVAL:.*]] = alloca i32
 // LLVM: %[[Y:.*]] = alloca i32
 // LLVM: store i32 %[[ARG0]], ptr %[[Y]]
 // LLVM: %[[YVAL:.*]] = load i32, ptr %[[Y]]
 // LLVM: %[[CMP:.*]] = icmp sgt i32 %[[YVAL]], 0
 // LLVM: %[[SELECT:.*]] = select i1 %[[CMP]], i32 3, i32 5
-// LLVM: store i32 %[[SELECT]], ptr %[[RETVAL]]
-// LLVM: %[[RESULT:.*]] = load i32, ptr %[[RETVAL]]
-// LLVM: ret i32 %[[RESULT]]
+// LLVM: ret i32 %[[SELECT]]
 
 // OGCG-LABEL: define{{.*}} i32 @_Z1xi(
 // OGCG-SAME: i32 {{.*}} %[[ARG0:.+]])
@@ -225,9 +222,7 @@ int& test_cond_lvalue_ref(bool cond, int x, int y) {
 // LLVM:   %[[PHI:.*]] = phi ptr [ %[[Y]], %[[FALSE_BB]] ], [ %[[X]], %[[TRUE_BB]] ]
 // LLVM:   br label %[[CONT:.*]]
 // LLVM: [[CONT]]:
-// LLVM:   store ptr %[[PHI]]
-// LLVM:   %[[RET:.*]] = load ptr
-// LLVM:   ret ptr %[[RET]]
+// LLVM:   ret ptr %[[PHI]]
 
 // OGCG-LABEL: define{{.*}} ptr @_Z20test_cond_lvalue_refbii(
 // OGCG: %[[COND:.*]] = alloca i8

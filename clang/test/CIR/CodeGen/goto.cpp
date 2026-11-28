@@ -71,7 +71,7 @@ err:
 // LLVM: [[IFEND]]:
 // LLVM:   br label %[[ERR]]
 // LLVM: [[ERR]]:
-// LLVM:   ret i32 [[RET:%.*]]
+// LLVM:   ret i32 -1
 
 // OGCG: define dso_local noundef i32 @_Z15shouldGenBranchi
 // OGCG: if.then:

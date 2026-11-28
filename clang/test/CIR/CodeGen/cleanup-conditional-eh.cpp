@@ -447,7 +447,6 @@ int test_false_positive_conditional(bool c) {
 
 // LLVM-LABEL: define dso_local noundef i32 @_Z31test_false_positive_conditionalb(
 // LLVM-SAME: personality ptr @__gxx_personality_v0
-// LLVM:         %[[RETVAL:.*]] = alloca i32
 // LLVM:         %[[TMP:.*]] = alloca %struct.S
 // The constructor is call — no active EH cleanup yet.
 // LLVM:         call void @_ZN1SC1Ev({{.*}} %[[TMP]])
@@ -457,7 +456,6 @@ int test_false_positive_conditional(bool c) {
 // LLVM:       [[GET_CONT]]:
 // LLVM:         %[[CMP:.*]] = icmp ne i32 %[[VAL]], 0
 // LLVM:         %[[SEL:.*]] = select i1 %[[CMP]], i32 1, i32 2
-// LLVM:         store i32 %[[SEL]], ptr %[[RETVAL]]
 // Normal path: unconditional destructor.
 // LLVM:         call void @_ZN1SD1Ev({{.*}} %[[TMP]])
 // EH path: landingpad + unconditional destructor + resume.
@@ -466,8 +464,7 @@ int test_false_positive_conditional(bool c) {
 // LLVM-NEXT:            cleanup
 // LLVM:         call void @_ZN1SD1Ev({{.*}} %[[TMP]])
 // LLVM:         resume { ptr, i32 }
-// LLVM:         %[[RET:.*]] = load i32, ptr %[[RETVAL]]
-// LLVM:         ret i32 %[[RET]]
+// LLVM:         ret i32 %[[SEL]]
 
 // OGCG-LABEL: define dso_local noundef i32 @_Z31test_false_positive_conditionalb(
 // OGCG-SAME: personality ptr @__gxx_personality_v0

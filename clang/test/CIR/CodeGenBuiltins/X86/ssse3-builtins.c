@@ -3,8 +3,8 @@
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +ssse3 -fclangir -emit-llvm -o %t.ll -Wall -Werror
 // RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=OGCG
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=OGCG
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=LLVM
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=LLVM
 
 #include <immintrin.h>
 
@@ -15,8 +15,6 @@ __m128i mm_alignr_epi8_imm2(__m128i a, __m128i b) {
   // LLVM-LABEL: mm_alignr_epi8_imm2
   // LLVM: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17>
 
-  // OGCG-LABEL: mm_alignr_epi8_imm2
-  // OGCG: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17>
   return _mm_alignr_epi8(a, b, 2);
 }
 
@@ -27,8 +25,6 @@ __m128i mm_alignr_epi8_imm16(__m128i a, __m128i b) {
   // LLVM-LABEL: mm_alignr_epi8_imm16
   // LLVM: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 
-  // OGCG-LABEL: mm_alignr_epi8_imm16
-  // OGCG: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   return _mm_alignr_epi8(a, b, 16);
 }
 
@@ -39,8 +35,6 @@ __m128i mm_alignr_epi8_imm17(__m128i a, __m128i b) {
   // LLVM-LABEL: mm_alignr_epi8_imm17
   // LLVM: shufflevector <16 x i8> %{{.*}}, <16 x i8> zeroinitializer, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>
 
-  // OGCG-LABEL: mm_alignr_epi8_imm17
-  // OGCG: shufflevector <16 x i8> %{{.*}}, <16 x i8> zeroinitializer, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>
   return _mm_alignr_epi8(a, b, 17);
 }
 
@@ -49,9 +43,7 @@ __m128i mm_alignr_epi8_imm32(__m128i a, __m128i b) {
   // CIR: cir.const #cir.zero : !cir.vector<16 x !s8i>
 
   // LLVM-LABEL: mm_alignr_epi8_imm32
-  // LLVM: store <2 x i64> zeroinitializer
+  // LLVM: ret <2 x i64> zeroinitializer
 
-  // OGCG-LABEL: mm_alignr_epi8_imm32
-  // OGCG: ret <2 x i64> zeroinitializer
   return _mm_alignr_epi8(a, b, 32);
 }

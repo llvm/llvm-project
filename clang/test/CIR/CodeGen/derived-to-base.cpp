@@ -81,7 +81,6 @@ Base *returnBaseFromDerived(Derived* derived) {
 // CIR:   cir.return %[[BASE]] : !cir.ptr<!rec_Base>
 
 // LLVM: define {{.*}} ptr @_Z21returnBaseFromDerivedP7Derived(ptr {{.*}} %[[DERIVED_ARG:.*]])
-// LLVM:   %[[BASE_ADDR:.*]] = alloca ptr
 // LLVM:   %[[DERIVED_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[DERIVED_ARG]], ptr %[[DERIVED_ADDR]]
 // LLVM:   %[[DERIVED:.*]] = load ptr, ptr %[[DERIVED_ADDR]]

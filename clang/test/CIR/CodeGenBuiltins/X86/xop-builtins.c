@@ -18,10 +18,10 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -fclangir -emit-llvm -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=OGCG
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=OGCG
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=OGCG
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=OGCG
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=LLVM
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=LLVM
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=LLVM
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s -check-prefix=LLVM
 
 #include <x86intrin.h>
 
@@ -37,9 +37,6 @@ __m128i test_mm_roti_epi8(__m128i a) {
   // LLVM: %[[CASTED_VAR:.*]] = bitcast <2 x i64> %{{.*}} to <16 x i8>
   // LLVM: call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %[[CASTED_VAR]], <16 x i8> %[[CASTED_VAR]], <16 x i8> splat (i8 1))
   
-  // OGCG-LABEL: test_mm_roti_epi8
-  // OGCG: %[[CASTED_VAR:.*]] = bitcast <2 x i64> %{{.*}} to <16 x i8>
-  // OGCG: call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %[[CASTED_VAR]], <16 x i8> %[[CASTED_VAR]], <16 x i8> splat (i8 1))
   return _mm_roti_epi8(a, 1);
 }
 
@@ -52,9 +49,6 @@ __m128i test_mm_roti_epi16(__m128i a) {
   // LLVM: %[[CASTED_VAR:.*]] = bitcast <2 x i64> %{{.*}} to <8 x i16>
   // LLVM: call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %[[CASTED_VAR]], <8 x i16> %[[CASTED_VAR]], <8 x i16> splat (i16 50))
   
-  // OGCG-LABEL: test_mm_roti_epi16
-  // OGCG: %[[CASTED_VAR:.*]] = bitcast <2 x i64> %{{.*}} to <8 x i16>
-  // OGCG: call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %[[CASTED_VAR]], <8 x i16> %[[CASTED_VAR]], <8 x i16> splat (i16 50))
   return _mm_roti_epi16(a, 50);
  }
 
@@ -67,9 +61,6 @@ __m128i test_mm_roti_epi32(__m128i a) {
   // LLVM: %[[CASTED_VAR:.*]] = bitcast <2 x i64> %{{.*}} to <4 x i32>
   // LLVM: call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %[[CASTED_VAR]], <4 x i32> %[[CASTED_VAR]], <4 x i32> splat (i32 226))
   
-  // OGCG-LABEL: test_mm_roti_epi32
-  // OGCG: %[[CASTED_VAR:.*]] = bitcast <2 x i64> %{{.*}} to <4 x i32>
-  // OGCG: call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %[[CASTED_VAR]], <4 x i32> %[[CASTED_VAR]], <4 x i32> splat (i32 226))
   return _mm_roti_epi32(a, -30);
  }
 
@@ -82,9 +73,6 @@ __m128i test_mm_roti_epi64(__m128i a) {
   // LLVM: %[[VAR:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
   // LLVM: call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %[[VAR]], <2 x i64> %[[VAR]], <2 x i64> splat (i64 100))
   
-  // OGCG-LABEL: test_mm_roti_epi64
-  // OGCG: %[[VAR:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
-  // OGCG: call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %[[VAR]], <2 x i64> %[[VAR]], <2 x i64> splat (i64 100))
   return _mm_roti_epi64(a, 100);
  }
 
@@ -98,10 +86,6 @@ __m128i test_mm_com_epu8(__m128i a, __m128i b) {
   // LLVM: %[[RES:.*]] = sext <16 x i1> %[[CMP]] to <16 x i8>
   // LLVM: %{{.*}} = bitcast <16 x i8> %[[RES]] to <2 x i64>
 
-  // OGCG-LABEL: test_mm_com_epu8
-  // OGCG: %[[CMP:.*]] = icmp ult <16 x i8> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES:.*]] = sext <16 x i1> %[[CMP]] to <16 x i8>
-  // OGCG: %{{.*}} = bitcast <16 x i8> %[[RES]] to <2 x i64>
   return _mm_com_epu8(a, b, 0);
 }
 
@@ -117,10 +101,6 @@ __m128i test_mm_com_epu16(__m128i a, __m128i b) {
   // LLVM: %[[RES:.*]] = sext <8 x i1> %[[CMP]] to <8 x i16>
   // LLVM: %{{.*}} = bitcast <8 x i16> %[[RES]] to <2 x i64>
 
-  // OGCG-LABEL: test_mm_com_epu16
-  // OGCG: %[[CMP:.*]] = icmp ult <8 x i16> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES:.*]] = sext <8 x i1> %[[CMP]] to <8 x i16>
-  // OGCG: %{{.*}} = bitcast <8 x i16> %[[RES]] to <2 x i64>
   return _mm_com_epu16(a, b, 0);
 }
 
@@ -136,10 +116,6 @@ __m128i test_mm_com_epu32(__m128i a, __m128i b) {
   // LLVM: %[[RES:.*]] = sext <4 x i1> %[[CMP]] to <4 x i32>
   // LLVM: %{{.*}} = bitcast <4 x i32> %[[RES]] to <2 x i64>
 
-  // OGCG-LABEL: test_mm_com_epu32
-  // OGCG: %[[CMP:.*]] = icmp ult <4 x i32> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES:.*]] = sext <4 x i1> %[[CMP]] to <4 x i32>
-  // OGCG: %{{.*}} = bitcast <4 x i32> %[[RES]] to <2 x i64>
   return _mm_com_epu32(a, b, 0);
 }
 
@@ -153,9 +129,6 @@ __m128i test_mm_com_epu64(__m128i a, __m128i b) {
   // LLVM: %[[CMP:.*]] = icmp ult <2 x i64> %{{.*}}, %{{.*}}
   // LLVM: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
 
-  // OGCG-LABEL: test_mm_com_epu64
-  // OGCG: %[[CMP:.*]] = icmp ult <2 x i64> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
   a = _mm_com_epu64(a, b, 0);
 
   // CIR: %[[VAL1:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
@@ -165,8 +138,6 @@ __m128i test_mm_com_epu64(__m128i a, __m128i b) {
   // LLVM: %[[CMP:.*]] = icmp ule <2 x i64> %{{.*}}, %{{.*}}
   // LLVM: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
 
-  // OGCG: %[[CMP:.*]] = icmp ule <2 x i64> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
   a = _mm_com_epu64(a, b, 1);
 
   // CIR: %[[VAL1:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
@@ -176,8 +147,6 @@ __m128i test_mm_com_epu64(__m128i a, __m128i b) {
   // LLVM: %[[CMP:.*]] = icmp ugt <2 x i64> %{{.*}}, %{{.*}}
   // LLVM: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
 
-  // OGCG: %[[CMP:.*]] = icmp ugt <2 x i64> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
   a = _mm_com_epu64(a, b, 2);
 
   // CIR: %[[VAL1:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
@@ -187,8 +156,6 @@ __m128i test_mm_com_epu64(__m128i a, __m128i b) {
   // LLVM: %[[CMP:.*]] = icmp uge <2 x i64> %{{.*}}, %{{.*}}
   // LLVM: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
 
-  // OGCG: %[[CMP:.*]] = icmp uge <2 x i64> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
   a = _mm_com_epu64(a, b, 3);
 
   // CIR: %[[VAL1:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
@@ -198,8 +165,6 @@ __m128i test_mm_com_epu64(__m128i a, __m128i b) {
   // LLVM: %[[CMP:.*]] = icmp eq <2 x i64> %{{.*}}, %{{.*}}
   // LLVM: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
 
-  // OGCG: %[[CMP:.*]] = icmp eq <2 x i64> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
   a = _mm_com_epu64(a, b, 4);
 
   // CIR: %[[VAL1:.*]] = cir.cast bitcast %{{.*}} : !cir.vector<2 x !s64i> -> !cir.vector<2 x !u64i>
@@ -209,8 +174,6 @@ __m128i test_mm_com_epu64(__m128i a, __m128i b) {
   // LLVM: %[[CMP:.*]] = icmp ne <2 x i64> %{{.*}}, %{{.*}}
   // LLVM: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
 
-  // OGCG: %[[CMP:.*]] = icmp ne <2 x i64> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
   return _mm_com_epu64(a, b, 5);
 }
 
@@ -224,10 +187,6 @@ __m128i test_mm_com_epi8(__m128i a, __m128i b) {
   // LLVM: %[[RES:.*]] = sext <16 x i1> %[[CMP]] to <16 x i8>
   // LLVM: %{{.*}} = bitcast <16 x i8> %[[RES]] to <2 x i64>
 
-  // OGCG-LABEL: test_mm_com_epi8
-  // OGCG: %[[CMP:.*]] = icmp slt <16 x i8> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES:.*]] = sext <16 x i1> %[[CMP]] to <16 x i8>
-  // OGCG: %{{.*}} = bitcast <16 x i8> %[[RES]] to <2 x i64>
   return _mm_com_epi8(a, b, 0);
 }
 
@@ -241,10 +200,6 @@ __m128i test_mm_com_epi16(__m128i a, __m128i b) {
   // LLVM: %[[RES:.*]] = sext <8 x i1> %[[CMP]] to <8 x i16>
   // LLVM: %{{.*}} = bitcast <8 x i16> %[[RES]] to <2 x i64>
 
-  // OGCG-LABEL: test_mm_com_epi16
-  // OGCG: %[[CMP:.*]] = icmp slt <8 x i16> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES:.*]] = sext <8 x i1> %[[CMP]] to <8 x i16>
-  // OGCG: %{{.*}} = bitcast <8 x i16> %[[RES]] to <2 x i64>
   return _mm_com_epi16(a, b, 0);
 }
 
@@ -258,10 +213,6 @@ __m128i test_mm_com_epi32(__m128i a, __m128i b) {
   // LLVM: %[[RES:.*]] = sext <4 x i1> %[[CMP]] to <4 x i32>
   // LLVM: %{{.*}} = bitcast <4 x i32> %[[RES]] to <2 x i64>
 
-  // OGCG-LABEL: test_mm_com_epi32
-  // OGCG: %[[CMP:.*]] = icmp slt <4 x i32> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES:.*]] = sext <4 x i1> %[[CMP]] to <4 x i32>
-  // OGCG: %{{.*}} = bitcast <4 x i32> %[[RES]] to <2 x i64>
   return _mm_com_epi32(a, b, 0);
 }
 
@@ -273,9 +224,6 @@ __m128i test_mm_com_epi64(__m128i a, __m128i b) {
   // LLVM: %[[CMP:.*]] = icmp slt <2 x i64> %{{.*}}, %{{.*}}
   // LLVM: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
 
-  // OGCG-LABEL: test_mm_com_epi64
-  // OGCG: %[[CMP:.*]] = icmp slt <2 x i64> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES:.*]] = sext <2 x i1> %[[CMP]] to <2 x i64>
   a = _mm_com_epi64(a, b, 0);
 
   // CIR: %[[CMP1:.*]] = cir.vec.cmp(le, %{{.*}}, %{{.*}}) : !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>
@@ -283,8 +231,6 @@ __m128i test_mm_com_epi64(__m128i a, __m128i b) {
   // LLVM: %[[CMP1:.*]] = icmp sle <2 x i64> %{{.*}}, %{{.*}}
   // LLVM: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
 
-  // OGCG: %[[CMP1:.*]] = icmp sle <2 x i64> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
   a = _mm_com_epi64(a, b, 1);
 
   // CIR: %[[CMP1:.*]] = cir.vec.cmp(gt, %{{.*}}, %{{.*}}) : !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>
@@ -292,8 +238,6 @@ __m128i test_mm_com_epi64(__m128i a, __m128i b) {
   // LLVM: %[[CMP1:.*]] = icmp sgt <2 x i64> %{{.*}}, %{{.*}}
   // LLVM: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
 
-  // OGCG: %[[CMP1:.*]] = icmp sgt <2 x i64> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
   a = _mm_com_epi64(a, b, 2);
 
   // CIR: %[[CMP1:.*]] = cir.vec.cmp(ge, %{{.*}}, %{{.*}}) : !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>
@@ -301,8 +245,6 @@ __m128i test_mm_com_epi64(__m128i a, __m128i b) {
   // LLVM: %[[CMP1:.*]] = icmp sge <2 x i64> %{{.*}}, %{{.*}}
   // LLVM: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
 
-  // OGCG: %[[CMP1:.*]] = icmp sge <2 x i64> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
   a = _mm_com_epi64(a, b, 3);
 
   // CIR: %[[CMP1:.*]] = cir.vec.cmp(eq, %{{.*}}, %{{.*}}) : !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>
@@ -310,8 +252,6 @@ __m128i test_mm_com_epi64(__m128i a, __m128i b) {
   // LLVM: %[[CMP1:.*]] = icmp eq <2 x i64> %{{.*}}, %{{.*}}
   // LLVM: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
 
-  // OGCG: %[[CMP1:.*]] = icmp eq <2 x i64> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
   a = _mm_com_epi64(a, b, 4);
 
   // CIR: %[[CMP1:.*]] = cir.vec.cmp(ne, %{{.*}}, %{{.*}}) : !cir.vector<2 x !s64i>, !cir.vector<2 x !s64i>
@@ -319,8 +259,6 @@ __m128i test_mm_com_epi64(__m128i a, __m128i b) {
   // LLVM: %[[CMP1:.*]] = icmp ne <2 x i64> %{{.*}}, %{{.*}}
   // LLVM: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
 
-  // OGCG: %[[CMP1:.*]] = icmp ne <2 x i64> %{{.*}}, %{{.*}}
-  // OGCG: %[[RES1:.*]] = sext <2 x i1> %[[CMP1]] to <2 x i64>
   return _mm_com_epi64(a, b, 5);
 }
 
@@ -330,12 +268,8 @@ __m128i test_mm_com_epi32_false(__m128i a, __m128i b) {
   // CIR: %{{.*}} = cir.cast bitcast %[[ZERO]] : !cir.vector<4 x !s32i> -> !cir.vector<2 x !s64i>
 
   // LLVM-LABEL: test_mm_com_epi32_false
-  // LLVM: store <2 x i64> zeroinitializer, ptr %[[A:.*]], align 16
-  // LLVM: %[[ZERO:.*]] = load <2 x i64>, ptr %[[A]], align 16
-  // LLVM: ret <2 x i64> %[[ZERO]]
+  // LLVM: ret <2 x i64> zeroinitializer
 
-  // OGCG-LABEL: test_mm_com_epi32_false
-  // OGCG: ret <2 x i64> zeroinitializer
   return _mm_com_epi32(a, b, 6);
 }
 
@@ -345,12 +279,8 @@ __m128i test_mm_com_epu32_false(__m128i a, __m128i b) {
   // CIR: %{{.*}} = cir.cast bitcast %[[ZERO]] : !cir.vector<4 x !s32i> -> !cir.vector<2 x !s64i>
 
   // LLVM-LABEL: test_mm_com_epu32_false
-  // LLVM: store <2 x i64> zeroinitializer, ptr %[[A:.*]], align 16
-  // LLVM: %[[ZERO:.*]] = load <2 x i64>, ptr %[[A]], align 16
-  // LLVM: ret <2 x i64> %[[ZERO]]
+  // LLVM: ret <2 x i64> zeroinitializer
 
-  // OGCG-LABEL: test_mm_com_epu32_false
-  // OGCG: ret <2 x i64> zeroinitializer
   return _mm_com_epu32(a, b, 6);
 }
 
@@ -361,12 +291,8 @@ __m128i test_mm_com_epi32_true(__m128i a, __m128i b) {
   // CIR: %{{.*}} = cir.cast bitcast %[[SPLAT]] : !cir.vector<4 x !s32i> -> !cir.vector<2 x !s64i>
 
   // LLVM-LABEL: test_mm_com_epi32_true
-  // LLVM: store <2 x i64> splat (i64 -1), ptr %[[VAL:.*]], align 16
-  // LLVM: %[[SPLAT:.*]] = load <2 x i64>, ptr %[[VAL]], align 16
-  // LLVM: ret <2 x i64> %[[SPLAT]]
+  // LLVM: ret <2 x i64> splat (i64 -1)
 
-  // OGCG-LABEL: test_mm_com_epi32_true
-  // OGCG: ret <2 x i64> splat (i64 -1)
   return _mm_com_epi32(a, b, 7);
 }
 
@@ -377,11 +303,7 @@ __m128i test_mm_com_epu32_true(__m128i a, __m128i b) {
   // CIR: %{{.*}} = cir.cast bitcast %[[SPLAT]] : !cir.vector<4 x !s32i> -> !cir.vector<2 x !s64i>
 
   // LLVM-LABEL: test_mm_com_epu32_true
-  // LLVM: store <2 x i64> splat (i64 -1), ptr %[[VAL:.*]], align 16
-  // LLVM: %[[SPLAT:.*]] = load <2 x i64>, ptr %[[VAL]], align 16
-  // LLVM: ret <2 x i64> %[[SPLAT]]
+  // LLVM: ret <2 x i64> splat (i64 -1)
 
-  // OGCG-LABEL: test_mm_com_epu32_true
-  // OGCG: ret <2 x i64> splat (i64 -1)
   return _mm_com_epu32(a, b, 7);
 }

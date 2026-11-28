@@ -34,11 +34,7 @@ int get_x() { return m.x; }
 // CIR: cir.store %[[ONE]], %[[RET_ALLOCA]] : !s32i, !cir.ptr<!s32i>
 //
 // LLVM-BOTH-LABEL: define {{.*}}@_Z5get_xIXtl6HasMemLi1EEEEiv()
-// LLVM: %[[RET_ALLOCA:.*]] = alloca i32
-// LLVM: store i32 1, ptr %[[RET_ALLOCA]]
-// LLVM: %[[LOAD_RET:.*]] = load i32, ptr %[[RET_ALLOCA]]
-// LLVM: ret i32 %[[LOAD_RET]]
-// OGCG: ret i32 1
+// LLVM-BOTH: ret i32 1
 
 template<HasMem m>
 HasMem get_m() { return m; }

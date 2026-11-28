@@ -27,7 +27,6 @@ __m128 test_cmpnleps(__m128 A, __m128 B) {
 
   // LLVM-LABEL: define dso_local <4 x float> @test_cmpnleps(
   // LLVM-SAME: <4 x float> noundef [[TMP0:%.*]], <4 x float> noundef [[TMP1:%.*]]) #{{[0-9]+}} {
-  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <4 x float>, align 16
   // LLVM-NEXT:    [[TMP3:%.*]] = alloca <4 x float>, align 16
   // LLVM-NEXT:    [[TMP4:%.*]] = alloca <4 x float>, align 16
   // LLVM-NEXT:    store <4 x float> [[TMP0]], ptr [[TMP3]], align 16
@@ -37,9 +36,7 @@ __m128 test_cmpnleps(__m128 A, __m128 B) {
   // LLVM-NEXT:    [[TMP8:%.*]] = fcmp ugt <4 x float> [[TMP6]], [[TMP7]]
   // LLVM-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i32>
   // LLVM-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP9]] to <4 x float>
-  // LLVM-NEXT:    store <4 x float> [[TMP11]], ptr [[TMP5]], align 16
-  // LLVM-NEXT:    [[TMP12:%.*]] = load <4 x float>, ptr [[TMP5]], align 16
-  // LLVM-NEXT:    ret <4 x float> [[TMP12]]
+  // LLVM-NEXT:    ret <4 x float> [[TMP11]]
 
   // OGCG-LABEL: define dso_local <4 x float> @test_cmpnleps(
   // OGCG-SAME: <4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) #{{[0-9]+}} {
@@ -76,7 +73,6 @@ __m128d test_cmpnlepd(__m128d A, __m128d B) {
 
   // LLVM-LABEL: define dso_local <2 x double> @test_cmpnlepd(
   // LLVM-SAME: <2 x double> noundef [[TMP0:%.*]], <2 x double> noundef [[TMP1:%.*]]) #{{[0-9]+}} {
-  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <2 x double>, align 16
   // LLVM-NEXT:    [[TMP3:%.*]] = alloca <2 x double>, align 16
   // LLVM-NEXT:    [[TMP4:%.*]] = alloca <2 x double>, align 16
   // LLVM-NEXT:    store <2 x double> [[TMP0]], ptr [[TMP3]], align 16
@@ -86,9 +82,7 @@ __m128d test_cmpnlepd(__m128d A, __m128d B) {
   // LLVM-NEXT:    [[TMP8:%.*]] = fcmp ugt <2 x double> [[TMP6]], [[TMP7]]
   // LLVM-NEXT:    [[TMP9:%.*]] = sext <2 x i1> [[TMP8]] to <2 x i64>
   // LLVM-NEXT:    [[TMP11:%.*]] = bitcast <2 x i64> [[TMP9]] to <2 x double>
-  // LLVM-NEXT:    store <2 x double> [[TMP11]], ptr [[TMP5]], align 16
-  // LLVM-NEXT:    [[TMP12:%.*]] = load <2 x double>, ptr [[TMP5]], align 16
-  // LLVM-NEXT:    ret <2 x double> [[TMP12]]
+  // LLVM-NEXT:    ret <2 x double> [[TMP11]]
 
   // OGCG-LABEL: define dso_local <2 x double> @test_cmpnlepd(
   // OGCG-SAME: <2 x double> noundef [[A:%.*]], <2 x double> noundef [[B:%.*]]) #{{[0-9]+}} {
@@ -125,7 +119,6 @@ __m128 test_cmpnltps(__m128 A, __m128 B) {
 
   // LLVM-LABEL: define dso_local <4 x float> @test_cmpnltps(
   // LLVM-SAME: <4 x float> noundef [[TMP0:%.*]], <4 x float> noundef [[TMP1:%.*]]) #{{[0-9]+}} {
-  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <4 x float>, align 16
   // LLVM-NEXT:    [[TMP3:%.*]] = alloca <4 x float>, align 16
   // LLVM-NEXT:    [[TMP4:%.*]] = alloca <4 x float>, align 16
   // LLVM-NEXT:    store <4 x float> [[TMP0]], ptr [[TMP3]], align 16
@@ -135,9 +128,7 @@ __m128 test_cmpnltps(__m128 A, __m128 B) {
   // LLVM-NEXT:    [[TMP8:%.*]] = fcmp uge <4 x float> [[TMP6]], [[TMP7]]
   // LLVM-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP8]] to <4 x i32>
   // LLVM-NEXT:    [[TMP11:%.*]] = bitcast <4 x i32> [[TMP9]] to <4 x float>
-  // LLVM-NEXT:    store <4 x float> [[TMP11]], ptr [[TMP5]], align 16
-  // LLVM-NEXT:    [[TMP12:%.*]] = load <4 x float>, ptr [[TMP5]], align 16
-  // LLVM-NEXT:    ret <4 x float> [[TMP12]]
+  // LLVM-NEXT:    ret <4 x float> [[TMP11]]
 
   // OGCG-LABEL: define dso_local <4 x float> @test_cmpnltps(
   // OGCG-SAME: <4 x float> noundef [[A:%.*]], <4 x float> noundef [[B:%.*]]) #{{[0-9]+}} {
@@ -174,7 +165,6 @@ __m128d test_cmpnltpd(__m128d A, __m128d B) {
 
   // LLVM-LABEL: define dso_local <2 x double> @test_cmpnltpd(
   // LLVM-SAME: <2 x double> noundef [[TMP0:%.*]], <2 x double> noundef [[TMP1:%.*]]) #{{[0-9]+}} {
-  // LLVM-NEXT:    [[TMP5:%.*]] = alloca <2 x double>, align 16
   // LLVM-NEXT:    [[TMP3:%.*]] = alloca <2 x double>, align 16
   // LLVM-NEXT:    [[TMP4:%.*]] = alloca <2 x double>, align 16
   // LLVM-NEXT:    store <2 x double> [[TMP0]], ptr [[TMP3]], align 16
@@ -184,9 +174,7 @@ __m128d test_cmpnltpd(__m128d A, __m128d B) {
   // LLVM-NEXT:    [[TMP8:%.*]] = fcmp uge <2 x double> [[TMP6]], [[TMP7]]
   // LLVM-NEXT:    [[TMP9:%.*]] = sext <2 x i1> [[TMP8]] to <2 x i64>
   // LLVM-NEXT:    [[TMP11:%.*]] = bitcast <2 x i64> [[TMP9]] to <2 x double>
-  // LLVM-NEXT:    store <2 x double> [[TMP11]], ptr [[TMP5]], align 16
-  // LLVM-NEXT:    [[TMP12:%.*]] = load <2 x double>, ptr [[TMP5]], align 16
-  // LLVM-NEXT:    ret <2 x double> [[TMP12]]
+  // LLVM-NEXT:    ret <2 x double> [[TMP11]]
 
   // OGCG-LABEL: define dso_local <2 x double> @test_cmpnltpd(
   // OGCG-SAME: <2 x double> noundef [[A:%.*]], <2 x double> noundef [[B:%.*]]) #{{[0-9]+}} {

@@ -97,9 +97,7 @@ int check_load(st1 *s1) {
 // LLVM:  [[LOADVOL:%.*]] = load volatile i32, ptr [[MEMBER]], align 4
 // LLVM:  [[LSHR:%.*]] = lshr i32 [[LOADVOL]], 9
 // LLVM:  [[CLEAR:%.*]] = and i32 [[LSHR]], 1
-// LLVM:  store i32 [[CLEAR]], ptr [[RETVAL:%.*]], align 4
-// LLVM:  [[RET:%.*]] = load i32, ptr [[RETVAL]], align 4
-// LLVM:  ret i32 [[RET]]
+// LLVM:  ret i32 [[CLEAR]]
 
 // OGCG: define dso_local i32 @check_load
 // OGCG:   [[LOAD:%.*]] = load ptr, ptr {{.*}}, align 8
@@ -132,9 +130,7 @@ int check_load_exception(st3 *s3) {
 // LLVM:  [[LOADVOL:%.*]] = load volatile i8, ptr [[MEMBER]], align 4
 // LLVM:  [[CLEAR:%.*]] = and i8 [[LOADVOL]], 31
 // LLVM:  [[CAST:%.*]] = zext i8 [[CLEAR]] to i32
-// LLVM:  store i32 [[CAST]], ptr [[RETVAL:%.*]], align 4
-// LLVM:  [[RET:%.*]] = load i32, ptr [[RETVAL]], align 4
-// LLVM:  ret i32 [[RET]]
+// LLVM:  ret i32 [[CAST]]
 
 // OGCG: define dso_local i32 @check_load_exception
 // OGCG:   [[LOAD:%.*]] = load ptr, ptr {{.*}}, align 8
@@ -167,9 +163,7 @@ int clip_load_exception2(clip *c) {
 // LLVM:  [[MEMBER:%.*]] = getelementptr inbounds nuw %struct.clip, ptr [[LOAD]], i32 0, i32 0
 // LLVM:  [[LOADVOL:%.*]] = load volatile i24, ptr [[MEMBER]], align 4
 // LLVM:  [[CAST:%.*]] = sext i24 [[LOADVOL]] to i32
-// LLVM:  store i32 [[CAST]], ptr [[RETVAL:%.*]], align 4
-// LLVM:  [[RET:%.*]] = load i32, ptr [[RETVAL]], align 4
-// LLVM:  ret i32 [[RET]]
+// LLVM:  ret i32 [[CAST]]
 
 // OGCG: define dso_local i32 @clip_load_exception2
 // OGCG:   [[LOAD:%.*]] = load ptr, ptr {{.*}}, align 8

@@ -54,9 +54,7 @@ unsigned char test_BitScanForward(unsigned LONG *Index, unsigned LONG Mask) {
 // LLVMCIR:       [[END_FWD]]:
 // LLVMCIR:   [[NOT_ZERO_BOOL_FWD:%.*]] = xor i1 [[COND_FWD]], true
 // LLVMCIR:   [[RETVAL_FWD:%.*]] = zext i1 [[NOT_ZERO_BOOL_FWD]] to i8
-// LLVMCIR:   store i8 [[RETVAL_FWD]], ptr [[RET_SLOT_FWD:%.*]], align 1
-// LLVMCIR:   [[RETURN_FWD:%.*]] = load i8, ptr [[RET_SLOT_FWD]], align 1
-// LLVMCIR:   ret i8 [[RETURN_FWD]]
+// LLVMCIR:   ret i8 [[RETVAL_FWD]]
 
 // OGCG:     br i1 [[COND_FWD]], label %[[END_FWD:.*]], label %[[NOT_ZERO_FWD:.*]]
 // OGCG:       [[END_FWD]]:
@@ -98,9 +96,7 @@ unsigned char test_BitScanReverse(unsigned LONG *Index, unsigned LONG Mask) {
 // LLVMCIR:       [[END_REV]]:
 // LLVMCIR:   [[NOT_ZERO_BOOL_REV:%.*]] = xor i1 [[COND_REV]], true
 // LLVMCIR:   [[RETVAL_REV:%.*]] = zext i1 [[NOT_ZERO_BOOL_REV]] to i8
-// LLVMCIR:   store i8 [[RETVAL_REV]], ptr [[RET_SLOT_REV:%.*]], align 1
-// LLVMCIR:   [[RETURN_REV:%.*]] = load i8, ptr [[RET_SLOT_REV]], align 1
-// LLVMCIR:   ret i8 [[RETURN_REV]]
+// LLVMCIR:   ret i8 [[RETVAL_REV]]
 
 // OGCG:     br i1 [[COND_REV]], label %[[END_REV:.*]], label %[[NOT_ZERO_REV:.*]]
 // OGCG:       [[END_REV]]:
@@ -143,9 +139,7 @@ unsigned char test_BitScanForward64(unsigned LONG *Index, unsigned __int64 Mask)
 // LLVMCIR:       [[END_FWD64]]:
 // LLVMCIR:   [[NOT_ZERO_BOOL_FWD64:%.*]] = xor i1 [[COND_FWD64]], true
 // LLVMCIR:   [[RETVAL_FWD64:%.*]] = zext i1 [[NOT_ZERO_BOOL_FWD64]] to i8
-// LLVMCIR:   store i8 [[RETVAL_FWD64]], ptr [[RET_SLOT_FWD64:%.*]], align 1
-// LLVMCIR:   [[RETURN_FWD64:%.*]] = load i8, ptr [[RET_SLOT_FWD64]], align 1
-// LLVMCIR:   ret i8 [[RETURN_FWD64]]
+// LLVMCIR:   ret i8 [[RETVAL_FWD64]]
 
 // OGCG:     br i1 [[COND_FWD64]], label %[[END_FWD64:.*]], label %[[NOT_ZERO_FWD64:.*]]
 // OGCG:       [[END_FWD64]]:
@@ -190,9 +184,7 @@ unsigned char test_BitScanReverse64(unsigned LONG *Index, unsigned __int64 Mask)
 // LLVMCIR:       [[END_REV64]]:
 // LLVMCIR:   [[NOT_ZERO_BOOL_REV64:%.*]] = xor i1 [[COND_REV64]], true
 // LLVMCIR:   [[RETVAL_REV64:%.*]] = zext i1 [[NOT_ZERO_BOOL_REV64]] to i8
-// LLVMCIR:   store i8 [[RETVAL_REV64]], ptr [[RET_SLOT_REV64:%.*]], align 1
-// LLVMCIR:   [[RETURN_REV64:%.*]] = load i8, ptr [[RET_SLOT_REV64]], align 1
-// LLVMCIR:   ret i8 [[RETURN_REV64]]
+// LLVMCIR:   ret i8 [[RETVAL_REV64]]
 
 // OGCG:     br i1 [[COND_REV64]], label %[[END_REV64:.*]], label %[[NOT_ZERO_REV64:.*]]
 // OGCG:       [[END_REV64]]:

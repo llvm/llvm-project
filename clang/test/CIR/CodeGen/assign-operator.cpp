@@ -91,7 +91,6 @@ void copy_c(C &c1, C &c2) {
 // CIR:   cir.return %[[RET_VAL]]
 
 // LLVM: define {{.*}} ptr @_ZN1CaSERKS_(ptr {{.*}} %[[THIS:.*]], ptr {{.*}} %[[ARG:.*]])
-// LLVM:   %[[RETVAL_ADDR:.*]] = alloca ptr
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM:   %[[ARG_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[THIS]], ptr %[[THIS_ADDR]]

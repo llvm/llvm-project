@@ -17,11 +17,8 @@ unsigned long vla_with_array_element_type_with_const_size() {
 // CIR: %[[RET_VAL:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!u64i>, !u64i
 // CIR: cir.return %[[RET_VAL]] : !u64i
 
-// LLVM: %[[RET_ADDR:.*]] = alloca i64, align 8
 // LLVM: %[[SIZE_ADDR:.*]] = alloca i64, align 8
-// LLVM: store i64 5, ptr %[[RET_ADDR]], align 8
-// LLVM: %[[RET_VAL:.*]] = load i64, ptr %[[RET_ADDR]], align 8
-// LLVM: ret i64 %[[RET_VAL]]
+// LLVM: ret i64 5
 
 // OGCG: %[[SIZE_ADDR:.*]] = alloca i64, align 8
 // OGCG: ret i64 5
@@ -39,12 +36,9 @@ unsigned long vla_with_array_element_type_non_const_size() {
 // CIR: %[[TMP_RET:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!u64i>, !u64i
 // CIR: cir.return %[[TMP_RET]] : !u64i
 
-// LLVM: %[[RET_ADDR:.*]] = alloca i64, align 8
 // LLVM: %[[SIZE_ADDR:.*]] = alloca i64, align 8
 // LLVM: %[[TMP_SIZE:.*]] = load i64, ptr %[[SIZE_ADDR]], align 8
-// LLVM: store i64 %[[TMP_SIZE]], ptr %[[RET_ADDR]], align 8
-// LLVM: %[[TMP_RET:.*]] = load i64, ptr %[[RET_ADDR]], align 8
-// LLVM: ret i64 %[[TMP_RET]]
+// LLVM: ret i64 %[[TMP_SIZE]]
 
 // OGCG: %[[SIZE_ADDR:.*]] = alloca i64, align 8
 // OGCG: %[[TMP_SIZE:.*]] = load i64, ptr %[[SIZE_ADDR]], align 8

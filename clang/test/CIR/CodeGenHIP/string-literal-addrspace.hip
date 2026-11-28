@@ -114,13 +114,13 @@ __device__ void call_take() { take("hi"); }
 // CIR-GCN: cir.cast address_space %[[G]] : !cir.ptr<!cir.array<!s8i x 3>, target_address_space(4)> -> !cir.ptr<!cir.array<!s8i x 3>>
 
 // LLVM-SPV-LABEL: define{{.*}} ptr addrspace(4) @_Z3retv
-// LLVM-SPV: store ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str to ptr addrspace(4))
+// LLVM-SPV: ret ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str to ptr addrspace(4))
 
 // OGCG-SPV-LABEL: define{{.*}} ptr addrspace(4) @_Z3retv
 // OGCG-SPV: ret ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str to ptr addrspace(4))
 
 // LLVM-GCN-LABEL: define{{.*}} ptr @_Z3retv
-// LLVM-GCN: store ptr addrspacecast (ptr addrspace(4) @.str to ptr)
+// LLVM-GCN: ret ptr addrspacecast (ptr addrspace(4) @.str to ptr)
 
 // OGCG-GCN-LABEL: define{{.*}} ptr @_Z3retv
 // OGCG-GCN: ret ptr addrspacecast (ptr addrspace(4) @.str to ptr)
@@ -213,13 +213,13 @@ __device__ const char *static_local() { static const char *p = "st"; return p; }
 // CIR-GCN: cir.cast address_space %[[G]] : !cir.ptr<!cir.array<!s32i x 2>, target_address_space(4)> -> !cir.ptr<!cir.array<!s32i x 2>>
 
 // LLVM-SPV-LABEL: define{{.*}} ptr addrspace(4) @_Z4widev
-// LLVM-SPV: store ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str.4 to ptr addrspace(4))
+// LLVM-SPV: ret ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str.4 to ptr addrspace(4))
 
 // OGCG-SPV-LABEL: define{{.*}} ptr addrspace(4) @_Z4widev
 // OGCG-SPV: ret ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str.4 to ptr addrspace(4))
 
 // LLVM-GCN-LABEL: define{{.*}} ptr @_Z4widev
-// LLVM-GCN: store ptr addrspacecast (ptr addrspace(4) @.str.4 to ptr)
+// LLVM-GCN: ret ptr addrspacecast (ptr addrspace(4) @.str.4 to ptr)
 
 // OGCG-GCN-LABEL: define{{.*}} ptr @_Z4widev
 // OGCG-GCN: ret ptr addrspacecast (ptr addrspace(4) @.str.4 to ptr)

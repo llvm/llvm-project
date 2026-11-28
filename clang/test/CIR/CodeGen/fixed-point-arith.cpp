@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM,LLVMCIR
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM,OGCG
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -ffixed-point -fpadding-on-unsigned-fixed-point -fclangir -emit-cir %s -o %t-pad.cir
@@ -24,8 +24,6 @@ extern "C" {
 
 // LLVM-LABEL: define {{.*}}i32 @add(
 // OGCG-NEXT: entry:
-// Classic codegen doesn't alloca for a return slot.
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -53,7 +51,6 @@ _Accum add(_Accum a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @add2(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -80,7 +77,6 @@ _Accum add2(int a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @sub(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -108,7 +104,6 @@ _Accum sub(_Accum a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @sub2(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -136,7 +131,6 @@ _Accum sub2(_Accum a, short f) {
 
 // LLVM-LABEL: define {{.*}}i32 @mul(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -166,7 +160,6 @@ _Accum mul(_Accum a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @mul2(i16 
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[S:.*]] = alloca i16, align 2
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_S:.*]] = load i16, ptr %[[S]], align 2
@@ -195,7 +188,6 @@ _Accum mul2(unsigned short s, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @div(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -223,7 +215,6 @@ _Accum div(_Accum a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @div2(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca float, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -249,7 +240,6 @@ _Accum div2(_Accum a, float f) {
 
 // LLVM-LABEL: define {{.*}}i32 @umul(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[B:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -271,7 +261,6 @@ unsigned _Accum umul(unsigned _Accum a, unsigned _Accum b) {
 
 // LLVM-LABEL: define {{.*}}i1 @cmp(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i8, align 1
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -294,7 +283,6 @@ bool cmp(_Accum a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i1 @cmp2(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i8, align 1
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -317,7 +305,6 @@ bool cmp2(_Accum a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i1 @cmp3(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i8, align 1
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -338,7 +325,6 @@ bool cmp3(_Accum a, _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @shl(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
 // LLVM-NEXT: %[[SHIFT:.*]] = shl i32 %[[LOAD_A]], 2
@@ -358,7 +344,6 @@ _Accum shl(_Accum a) {
 
 // LLVM-LABEL: define {{.*}}i32 @shl2(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[C:.*]] = alloca i8, align 1
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -381,7 +366,6 @@ _Accum shl2(_Accum a, unsigned char c) {
 
 // LLVM-LABEL: define {{.*}}i16 @shl3(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM-NEXT: %[[C:.*]] = alloca i8, align 1
 // LLVM:      %[[LOAD_F:.*]] = load i16, ptr %[[F]], align 2
@@ -403,7 +387,6 @@ _Fract shl3(_Fract f, unsigned char c) {
 
 // LLVM-LABEL: define {{.*}}i32 @shr(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
 // LLVM-NEXT: %[[SHIFT:.*]] = ashr i32 %[[LOAD_A]], 2
@@ -422,7 +405,6 @@ _Accum shr(_Accum a) {
 
 // LLVM-LABEL: define {{.*}}i32 @shr2(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[U:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -443,7 +425,6 @@ _Accum shr2(_Accum a, unsigned u) {
 
 // LLVM-LABEL: define {{.*}}i16 @shr3(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM-NEXT: %[[U:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_F:.*]] = load i16, ptr %[[F]], align 2
@@ -467,7 +448,6 @@ _Fract shr3(_Fract f, unsigned u) {
 
 // LLVM-LABEL: define {{.*}}i32 @inc(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
 // LLVM-NEXT: %[[INC:.*]] = sub i32 %[[LOAD_A]], -32768
@@ -488,7 +468,6 @@ _Accum inc(_Accum a) {
 
 // LLVM-LABEL: define {{.*}}i16 @inc2(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[A:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i16, ptr %[[A]], align 2
 // LLVM-NEXT: %[[INC:.*]] = sub i16 %[[LOAD_A]], -32768
@@ -509,7 +488,6 @@ _Fract inc2(_Fract f) {
 
 // LLVM-LABEL: define {{.*}}i32 @dec(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
 // LLVM-NEXT: %[[DEC:.*]] = add i32 %[[LOAD_A]], -32768
@@ -530,7 +508,6 @@ _Accum dec(_Accum a) {
 
 // LLVM-LABEL: define {{.*}}i16 @dec2(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[A:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i16, ptr %[[A]], align 2
 // LLVM-NEXT: %[[DEC:.*]] = add i16 %[[LOAD_A]], -32768
@@ -549,7 +526,6 @@ _Fract dec2(_Fract a) {
 
 // LLVM-LABEL: define {{.*}}i32 @satAdd(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[B:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -570,7 +546,6 @@ _Sat _Accum satAdd(_Sat _Accum a, _Accum b) {
 
 // LLVM-LABEL: define {{.*}}i32 @satSub(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[B:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -592,7 +567,6 @@ _Sat _Accum satSub(_Sat _Accum a, _Sat _Accum b) {
 
 // LLVM-LABEL: define {{.*}}i32 @satMul(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[B:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -614,7 +588,6 @@ _Sat _Accum satMul(_Sat _Accum a, _Sat _Accum b) {
 
 // LLVM-LABEL: define {{.*}}i32 @satDiv(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[B:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
@@ -634,7 +607,6 @@ _Sat _Accum satDiv(_Sat _Accum a, _Sat _Accum b) {
 
 // LLVM-LABEL: define {{.*}}i32 @satShl(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
 // LLVM-NEXT: %[[SHIFT:.*]] = call i32 @llvm.sshl.sat.i32(i32 %[[LOAD_A]], i32 2)
@@ -656,7 +628,6 @@ _Sat _Accum satShl(_Sat _Accum a) {
 
 // LLVM-LABEL: define {{.*}}i16 @satShl2(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM-NEXT: %[[C:.*]] = alloca i8, align 1
 // LLVM:      %[[LOAD_F:.*]] = load i16, ptr %[[F]], align 2
@@ -678,7 +649,6 @@ _Sat _Fract satShl2(_Sat _Fract a, char c) {
 
 // LLVM-LABEL: define {{.*}}i32 @satShr(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
 // LLVM-NEXT: %[[SHIFT:.*]] = ashr i32 %[[LOAD_A]], 2
@@ -697,7 +667,6 @@ _Sat _Accum satShr(_Sat _Accum a) {
 
 // LLVM-LABEL: define {{.*}}i16 @satShr2(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM-NEXT: %[[I:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_F:.*]] = load i16, ptr %[[F]], align 2
@@ -729,7 +698,6 @@ _Sat _Fract satShr2(_Sat _Fract f, int i) {
 
 // LLVM-LABEL: define {{.*}}i32 @satInc(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i32, align 4
 // LLVM-NEXT: %[[A:.*]] = alloca i32, align 4
 // LLVM:      %[[LOAD_A:.*]] = load i32, ptr %[[A]], align 4
 // LLVM-NEXT: %[[ADD:.*]] = call i32 @llvm.ssub.sat.i32(i32 %[[LOAD_A]], i32 -32768)
@@ -758,7 +726,6 @@ _Sat _Accum satInc(_Sat _Accum a) {
 
 // LLVM-LABEL: define {{.*}}i16 @satDec(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[F:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_F:.*]] = load i16, ptr %[[F]], align 2
 // LLVM-NEXT: %[[ADD:.*]] = call i16 @llvm.sadd.sat.i16(i16 %[[LOAD_F]], i16 -32768)
@@ -788,7 +755,6 @@ _Sat _Fract satDec(_Sat _Fract f) {
 
 // LLVM-LABEL: define {{.*}}i16 @satIncUFract(
 // OGCG-NEXT: entry:
-// LLVMCIR-NEXT: %{{.+}} = alloca i16, align 2
 // LLVM-NEXT: %[[A:.*]] = alloca i16, align 2
 // LLVM:      %[[LOAD_A:.*]] = load i16, ptr %[[A]], align 2
 // LLVM-NEXT: %[[ADD:.*]] = call i16 @llvm.uadd.sat.i16(i16 %[[LOAD_A]], i16 -1)

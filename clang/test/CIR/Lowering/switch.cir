@@ -168,7 +168,7 @@ module {
     cir.return %4 : !s32i
   }
   // CHECK:  llvm.func @shouldLowerNestedBreak
-  // CHECK:    llvm.switch %6 : i32, ^[[DEFAULT_BB:.+]] [
+  // CHECK:    llvm.switch %4 : i32, ^[[DEFAULT_BB:.+]] [
   // CHECK:      0: ^[[ZERO_BB:.+]]
   // CHECK:    ]
   // CHECK:  ^[[ZERO_BB]]:

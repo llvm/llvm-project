@@ -35,7 +35,6 @@ float function() {
 // CIR:  cir.return %[[RET]] : !cir.float
 
 // LLVM-LABEL: define dso_local noundef float @_Z8functionv()
-// LLVM:  %[[RETVAL:.+]] = alloca float, 
 // LLVM:  %[[STRUCT:.+]] = alloca %struct.some_struct, 
 // LLVM:  call void @llvm.memcpy{{.*}}(ptr align 4 %[[STRUCT]], ptr align 4 @[[FUNC_CONST]], i64 8, i1 false)
 // LLVM:  %[[GEP_A:.+]] = getelementptr inbounds nuw %struct.some_struct, ptr %[[STRUCT]], i32 0, i32 0
@@ -44,9 +43,7 @@ float function() {
 // LLVM:  %[[GEP_B:.+]] = getelementptr inbounds nuw %struct.some_struct, ptr %[[STRUCT]], i32 0, i32 1
 // LLVM:  %[[LOAD_B:.+]] = load float, ptr %[[GEP_B]]
 // LLVM:  %[[ADD:.+]] = fadd float %[[CAST_A]], %[[LOAD_B]]
-// LLVM:  store float %[[ADD]], ptr %[[RETVAL]]
-// LLVM:  %[[RET:.+]] = load float, ptr %[[RETVAL]]
-// LLVM:  ret float %[[RET]]
+// LLVM:  ret float %[[ADD]]
 
 // OGCG: @__const._Z8functionv.{{.*}} = private unnamed_addr constant %struct.some_struct { i32 1, float 2.000000e+00 }
 // OGCG-LABEL: define dso_local noundef float @_Z8functionv()

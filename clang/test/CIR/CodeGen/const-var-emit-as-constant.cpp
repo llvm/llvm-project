@@ -38,8 +38,7 @@ int non_captured() {
 
 // LLVM-OGCG-LABEL: define {{.*}}i32 @_Z12non_capturedv()
 // LLVM-OGCG:         store i32 4, ptr %{{.*}}
-// LLVM:              store i32 4, ptr %{{.*}}
-// OGCG:              ret i32 4
+// LLVM-OGCG:         ret i32 4
 
 int constexpr_var() {
   constexpr int c = 7;
@@ -54,8 +53,7 @@ int constexpr_var() {
 // CIR:         cir.mul nsw %[[SEVEN]], %[[TWO]] : !s32i
 
 // LLVM-OGCG-LABEL: define {{.*}}i32 @_Z13constexpr_varv()
-// LLVM:              store i32 14, ptr %{{.*}}
-// OGCG:              ret i32 14
+// LLVM-OGCG:         ret i32 14
 
 _Complex float complex_var() {
   const _Complex float z = 1.0f;
@@ -199,8 +197,7 @@ float static_member(S s) { return s.kf; }
 
 // LLVM-OGCG-LABEL: define {{.*}}float @_Z13static_member1S(
 // LLVM-OGCG-NOT:     load float
-// LLVM:              store float 1.500000e+00
-// OGCG:              ret float 1.500000e+00
+// LLVM-OGCG:         ret float 1.500000e+00
 
 // Negative cases: the value is loaded from the variable.
 

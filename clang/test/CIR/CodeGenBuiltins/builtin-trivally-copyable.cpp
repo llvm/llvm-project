@@ -31,9 +31,7 @@ int test_trivially_copyable_as_bool() {
 // CIR:   cir.return %[[RET:.*]] : !s32i
 
 // LLVMCIR: define{{.*}} i32 @_Z31test_trivially_copyable_as_boolv()
-// LLVMCIR:   store i32 0, ptr %[[RETVAL:.*]]
-// LLVMCIR:   %[[RET:.*]] = load i32, ptr %[[RETVAL:.*]]
-// LLVMCIR:   ret i32 %[[RET:.*]]
+// LLVMCIR:   ret i32 0
 
 // OGCG: define{{.*}} i32 @_Z31test_trivially_copyable_as_boolv()
 // OGCG:   ret i32 0

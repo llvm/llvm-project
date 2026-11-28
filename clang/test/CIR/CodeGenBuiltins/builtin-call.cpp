@@ -1,27 +1,24 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefixes=LLVM,LLVMCIR
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=LLVM,OGCG
 
 constexpr extern int cx_var = __builtin_is_constant_evaluated();
 
 // CIR: cir.global {{.*}} @cx_var = #cir.int<1> : !s32i
 // LLVM: @cx_var = {{.*}} i32 1
-// OGCG: @cx_var = {{.*}} i32 1
 
 constexpr extern float cx_var_single = __builtin_huge_valf();
 
 // CIR: cir.global {{.*}} @cx_var_single = #cir.fp<0x7F800000> : !cir.float
 // LLVM: @cx_var_single = {{.*}} float +inf
-// OGCG: @cx_var_single = {{.*}} float +inf
 
 constexpr extern long double cx_var_ld = __builtin_huge_vall();
 
 // CIR: cir.global {{.*}} @cx_var_ld = #cir.fp<0x7FFF8000000000000000> : !cir.long_double<!cir.f80>
 // LLVM: @cx_var_ld = {{.*}} x86_fp80 +inf
-// OGCG: @cx_var_ld = {{.*}} x86_fp80 +inf
 
 bool is_constant_evaluated() {
   return __builtin_is_constant_evaluated();
@@ -31,16 +28,8 @@ bool is_constant_evaluated() {
 // CIR: %[[FALSE:.+]] = cir.const #false
 
 // LLVM: define {{.*}}i1 @_Z21is_constant_evaluatedv()
-// LLVM: %[[MEM:.+]] = alloca i8
-// LLVM: store i8 0, ptr %[[MEM]]
-// LLVM: %[[RETVAL:.+]] = load i8, ptr %[[MEM]]
-// LLVM: %[[BOOL:.+]] = trunc i8 %[[RETVAL]] to i1
-// LLVM: ret i1 %[[BOOL]]
+// LLVM: ret i1 false
 // LLVM: }
-
-// OGCG: define {{.*}}i1 @_Z21is_constant_evaluatedv()
-// OGCG: ret i1 false
-// OGCG: }
 
 long double constant_fp_builtin_ld() {
   return __builtin_fabsl(-0.1L);
@@ -50,15 +39,8 @@ long double constant_fp_builtin_ld() {
 // CIR: %[[PONE:.+]] = cir.const #cir.fp<1.000000e-01> : !cir.long_double<!cir.f80>
 
 // LLVM: define {{.*}}x86_fp80 @_Z22constant_fp_builtin_ldv()
-// LLVM: %[[MEM:.+]] = alloca x86_fp80
-// LLVM: store x86_fp80 1.000000e-01, ptr %[[MEM]]
-// LLVM: %[[RETVAL:.+]] = load x86_fp80, ptr %[[MEM]]
-// LLVM: ret x86_fp80 %[[RETVAL]]
+// LLVM: ret x86_fp80 1.000000e-01
 // LLVM: }
-
-// OGCG: define {{.*}}x86_fp80 @_Z22constant_fp_builtin_ldv()
-// OGCG: ret x86_fp80 1.000000e-01
-// OGCG: }
 
 float constant_fp_builtin_single() {
   return __builtin_fabsf(-0.1f);
@@ -68,15 +50,8 @@ float constant_fp_builtin_single() {
 // CIR: %[[PONE:.+]] = cir.const #cir.fp<1.000000e-01> : !cir.float
 
 // LLVM: define {{.*}}float @_Z26constant_fp_builtin_singlev()
-// LLVM: %[[MEM:.+]] = alloca float
-// LLVM: store float 1.000000e-01, ptr %[[MEM]]
-// LLVM: %[[RETVAL:.+]] = load float, ptr %[[MEM]]
-// LLVM: ret float %[[RETVAL]]
+// LLVM: ret float 1.000000e-01
 // LLVM: }
-
-// OGCG: define {{.*}}float @_Z26constant_fp_builtin_singlev()
-// OGCG: ret float 1.000000e-01
-// OGCG: }
 
 void library_builtins() {
   __builtin_printf(nullptr);
@@ -92,10 +67,6 @@ void library_builtins() {
 // LLVM: call i32 (ptr, ...) @printf(ptr noundef null)
 // LLVM: call void @abort()
 
-// OGCG: define{{.*}} void @_Z16library_builtinsv()
-// OGCG: call i32 (ptr, ...) @printf(ptr noundef null)
-// OGCG: call void @abort()
-
 void assume(bool arg) {
   __builtin_assume(arg);
 }
@@ -107,10 +78,6 @@ void assume(bool arg) {
 // LLVM: define {{.*}}void @_Z6assumeb
 // LLVM:   call void @llvm.assume(i1 %{{.+}})
 // LLVM: }
-
-// OGCG: define {{.*}}void @_Z6assumeb
-// OGCG:   call void @llvm.assume(i1 %{{.+}})
-// OGCG: }
 
 void *assume_aligned(void *ptr) {
   return __builtin_assume_aligned(ptr, 16);
@@ -124,10 +91,6 @@ void *assume_aligned(void *ptr) {
 // LLVM:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16) ]
 // LLVM: }
 
-// OGCG: @_Z14assume_alignedPv
-// OGCG:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16) ]
-// OGCG: }
-
 void *assume_aligned_misalignment(void *ptr, unsigned misalignment) {
   return __builtin_assume_aligned(ptr, 16, misalignment);
 }
@@ -139,10 +102,6 @@ void *assume_aligned_misalignment(void *ptr, unsigned misalignment) {
 // LLVM: @_Z27assume_aligned_misalignmentPvj
 // LLVM:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16, i64 %{{.+}}) ]
 // LLVM: }
-
-// OGCG: @_Z27assume_aligned_misalignmentPvj
-// OGCG:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16, i64 %{{.+}}) ]
-// OGCG: }
 
 void assume_separate_storage(void *p1, void *p2) {
   __builtin_assume_separate_storage(p1, p2);
@@ -156,10 +115,6 @@ void assume_separate_storage(void *p1, void *p2) {
 // LLVM:   call void @llvm.assume(i1 true) [ "separate_storage"(ptr %{{.+}}, ptr %{{.+}}) ]
 // LLVM: }
 
-// OGCG: define {{.*}}void @_Z23assume_separate_storagePvS_
-// OGCG:   call void @llvm.assume(i1 true) [ "separate_storage"(ptr %{{.+}}, ptr %{{.+}}) ]
-// OGCG: }
-
 void assume_dereferenceable(void *p, unsigned long n) {
   __builtin_assume_dereferenceable(p, n);
 }
@@ -171,10 +126,6 @@ void assume_dereferenceable(void *p, unsigned long n) {
 // LLVM: define {{.*}}void @_Z22assume_dereferenceablePvm
 // LLVM:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
 // LLVM: }
-
-// OGCG: define {{.*}}void @_Z22assume_dereferenceablePvm
-// OGCG:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
-// OGCG: }
 
 void assume_dereferenceable_const(void *p) {
   __builtin_assume_dereferenceable(p, 16);
@@ -188,10 +139,6 @@ void assume_dereferenceable_const(void *p) {
 // LLVM:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 16) ]
 // LLVM: }
 
-// OGCG: define {{.*}}void @_Z28assume_dereferenceable_constPv
-// OGCG:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 16) ]
-// OGCG: }
-
 void assume_dereferenceable_narrow_size(void *p, unsigned n) {
   __builtin_assume_dereferenceable(p, n);
 }
@@ -203,10 +150,6 @@ void assume_dereferenceable_narrow_size(void *p, unsigned n) {
 // LLVM: define {{.*}}void @_Z34assume_dereferenceable_narrow_sizePvj
 // LLVM:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
 // LLVM: }
-
-// OGCG: define {{.*}}void @_Z34assume_dereferenceable_narrow_sizePvj
-// OGCG:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
-// OGCG: }
 
 void expect(int x, int y) {
   __builtin_expect(x, y);
@@ -222,10 +165,6 @@ void expect(int x, int y) {
 // LLVM-NOT:     call i64 @llvm.expect
 // LLVM:       }
 
-// OGCG-LABEL: define{{.*}} void @_Z6expectii
-// OGCG-NOT:     call i64 @llvm.expect
-// OGCG:       }
-
 void expect_prob(int x, int y) {
   __builtin_expect_with_probability(x, y, 0.25);
 }
@@ -237,10 +176,6 @@ void expect_prob(int x, int y) {
 // LLVM-LABEL: define{{.*}} void @_Z11expect_probii
 // LLVM-NOT:     call i64 @llvm.expect
 // LLVM:       }
-
-// OGCG-LABEL: define{{.*}} void @_Z11expect_probii
-// OGCG-NOT:     call i64 @llvm.expect
-// OGCG:       }
 
 void unreachable() {
   __builtin_unreachable();
@@ -254,10 +189,6 @@ void unreachable() {
 // LLVM:         unreachable
 // LLVM:       }
 
-// OGCG-LABEL: @_Z11unreachablev
-// OGCG:         unreachable
-// OGCG:       }
-
 void f1();
 void unreachable2() {
   __builtin_unreachable();
@@ -270,11 +201,11 @@ void unreachable2() {
 // CIR-NEXT:    cir.call @_Z2f1v() : () -> ()
 // CIR:       }
 
-// LLVM-LABEL: @_Z12unreachable2v
-// LLVM:         unreachable
-// LLVM:       {{.+}}:
-// LLVM-NEXT:    call void @_Z2f1v()
-// LLVM:       }
+// LLVMCIR-LABEL: @_Z12unreachable2v
+// LLVMCIR:         unreachable
+// LLVMCIR:       {{.+}}:
+// LLVMCIR-NEXT:    call void @_Z2f1v()
+// LLVMCIR:       }
 
 // OGCG-LABEL: @_Z12unreachable2v
 // OGCG:         unreachable
@@ -291,10 +222,6 @@ void trap() {
 // LLVM:         call void @llvm.trap()
 // LLVM:       }
 
-// OGCG-LABEL: @_Z4trapv
-// OGCG:         call void @llvm.trap()
-// OGCG:       }
-
 void trap2() {
   __builtin_trap();
   f1();
@@ -306,12 +233,12 @@ void trap2() {
 // CIR-NEXT:    cir.call @_Z2f1v() : () -> ()
 // CIR:       }
 
-// LLVM-LABEL: @_Z5trap2v
-// LLVM:         call void @llvm.trap()
-// LLVM-NEXT:    unreachable
-// LLVM:       {{.+}}:
-// LLVM-NEXT:    call void @_Z2f1v()
-// LLVM:       }
+// LLVMCIR-LABEL: @_Z5trap2v
+// LLVMCIR:         call void @llvm.trap()
+// LLVMCIR-NEXT:    unreachable
+// LLVMCIR:       {{.+}}:
+// LLVMCIR-NEXT:    call void @_Z2f1v()
+// LLVMCIR:       }
 
 // OGCG-LABEL: define{{.*}} void @_Z5trap2v
 // OGCG:         call void @llvm.trap()
@@ -328,9 +255,6 @@ void *test_alloca(unsigned long n) {
 // LLVM-LABEL: @_Z11test_allocam(
 // LLVM:         alloca i8, i64 %{{.+}}
 
-// OGCG-LABEL: @_Z11test_allocam(
-// OGCG:         alloca i8, i64 %{{.+}}
-
 bool test_multiple_allocas(unsigned long n) {
   void *a = __builtin_alloca(n);
   void *b = __builtin_alloca(n);
@@ -345,6 +269,3 @@ bool test_multiple_allocas(unsigned long n) {
 // LLVM:         alloca i8, i64 %{{.+}}
 // LLVM:         alloca i8, i64 %{{.+}}
 
-// OGCG-LABEL: @_Z21test_multiple_allocasm(
-// OGCG:         alloca i8, i64 %{{.+}}
-// OGCG:         alloca i8, i64 %{{.+}}

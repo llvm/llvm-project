@@ -25,7 +25,6 @@ int f19(void) {
 // CIR:   cir.return %[[RES]] : !s32i
 
 // LLVM: define dso_local i32 @f19()
-// LLVM:   %[[VAR1:.+]] = alloca i32, 
 // LLVM:   %[[VAR2:.+]] = alloca i32, 
 // LLVM:   br label %[[LBL3:.+]]
 // LLVM: [[LBL3]]:
@@ -33,9 +32,7 @@ int f19(void) {
 // LLVM:     br label %[[LBL4:.+]]
 // LLVM: [[LBL4]]:
 // LLVM:     %[[V1:.+]] = load i32, ptr %[[VAR2]]
-// LLVM:     store i32 %[[V1]], ptr %[[VAR1]]
-// LLVM:     %[[RES:.+]] = load i32, ptr %[[VAR1]]
-// LLVM:     ret i32 %[[RES]]
+// LLVM:     ret i32 %[[V1]]
 
 // OGCG: define dso_local i32 @f19()
 // OGCG: entry:
@@ -243,7 +240,6 @@ int test3() { return ({ struct S s = {1}; s; }).x; }
 // CIR:   cir.return %[[RES]] : !s32i
 
 // LLVM: define dso_local i32 @test3()
-// LLVM:   %[[VAR2:.+]] = alloca i32, 
 // LLVM:   %[[VAR3:.+]] = alloca %struct.S, 
 // LLVM:   %[[VAR4:.+]] = alloca %struct.S, 
 // LLVM:   %[[VAR1:.+]] = alloca %struct.S, 
@@ -255,9 +251,7 @@ int test3() { return ({ struct S s = {1}; s; }).x; }
 // LLVM: [[LBL6]]:
 // LLVM:     %[[GEP_VAR3:.+]] = getelementptr inbounds nuw %struct.S, ptr %[[VAR3]], i32 0, i32 0
 // LLVM:     %[[LOAD_X:.+]] = load i32, ptr %[[GEP_VAR3]]
-// LLVM:     store i32 %[[LOAD_X]], ptr %[[VAR2]]
-// LLVM:     %[[RES:.+]] = load i32, ptr %[[VAR2]]
-// LLVM:     ret i32 %[[RES]]
+// LLVM:     ret i32 %[[LOAD_X]]
 
 // OGCG: define dso_local i32 @test3()
 // OGCG: entry:

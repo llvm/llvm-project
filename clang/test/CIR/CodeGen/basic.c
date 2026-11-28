@@ -45,14 +45,11 @@ int f1(int i) {
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define{{.*}} i32 @f1(i32 noundef %[[IP:.*]])
-// LLVM-NEXT:   %[[RV:.*]] = alloca i32, align 4
 // LLVM-NEXT:   %[[I_PTR:.*]] = alloca i32, align 4
 // LLVM-NEXT:   store i32 %[[IP]], ptr %[[I_PTR]], align 4
 // LLVM-NEXT:   %[[I_IGNORED:.*]] = load i32, ptr %[[I_PTR]], align 4
 // LLVM-NEXT:   %[[I:.*]] = load i32, ptr %[[I_PTR]], align 4
-// LLVM-NEXT:   store i32 %[[I]], ptr %[[RV]], align 4
-// LLVM-NEXT:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
-// LLVM-NEXT:   ret i32 %[[R]]
+// LLVM-NEXT:   ret i32 %[[I]]
 
 //      OGCG: define{{.*}} i32 @f1(i32 noundef %[[I:.*]])
 // OGCG-NEXT: entry:
@@ -72,10 +69,7 @@ int f2(void) { return 3; }
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define{{.*}} i32 @f2()
-// LLVM-NEXT:   %[[RV:.*]] = alloca i32, align 4
-// LLVM-NEXT:   store i32 3, ptr %[[RV]], align 4
-// LLVM-NEXT:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
-// LLVM-NEXT:   ret i32 %[[R]]
+// LLVM-NEXT:   ret i32 3
 
 //      OGCG: define{{.*}} i32 @f2()
 // OGCG-NEXT: entry:
@@ -97,13 +91,10 @@ int f3(void) {
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define{{.*}} i32 @f3()
-// LLVM-NEXT:   %[[RV:.*]] = alloca i32, align 4
 // LLVM-NEXT:   %[[I_PTR:.*]] = alloca i32, align 4
 // LLVM-NEXT:   store i32 3, ptr %[[I_PTR]], align 4
 // LLVM-NEXT:   %[[I:.*]] = load i32, ptr %[[I_PTR]], align 4
-// LLVM-NEXT:   store i32 %[[I]], ptr %[[RV]], align 4
-// LLVM-NEXT:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
-// LLVM-NEXT:   ret i32 %[[R]]
+// LLVM-NEXT:   ret i32 %[[I]]
 
 //      OGCG: define{{.*}} i32 @f3
 // OGCG-NEXT: entry:
@@ -178,11 +169,8 @@ int f6(void) {
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 // LLVM:      define{{.*}} i32 @f6()
-// LLVM-NEXT:   %[[RV_PTR:.*]] = alloca i32, align 4
 // LLVM-NEXT:   %[[GV:.*]] = load i32, ptr @gv, align 4
-// LLVM-NEXT:   store i32 %[[GV]], ptr %[[RV_PTR]], align 4
-// LLVM-NEXT:   %[[RV:.*]] = load i32, ptr %[[RV_PTR]], align 4
-// LLVM-NEXT:   ret i32 %[[RV]]
+// LLVM-NEXT:   ret i32 %[[GV]]
 
 // OGCG:      define{{.*}} i32 @f6()
 // OGCG-NEXT: entry:
@@ -204,7 +192,6 @@ int f7(int a, int b, int c) {
 // CIR:  %[[RETVAL:.*]] = cir.add nsw %[[A]], %[[B_PLUS_C]] : !s32i
 
 // LLVM: define{{.*}} i32 @f7
-// LLVM:   %[[RV:.*]] = alloca i32, align 4
 // LLVM:   %[[A_PTR:.*]] = alloca i32, align 4
 // LLVM:   %[[B_PTR:.*]] = alloca i32, align 4
 // LLVM:   %[[C_PTR:.*]] = alloca i32, align 4
@@ -297,7 +284,7 @@ size_type max_size(void) {
 // CIR:   %[[RESULT:.*]] = cir.div %[[NOT_ZERO]], %[[SIZE_OF_TP]] : !u64i
 
 // LLVM: define{{.*}} i64 @max_size()
-// LLVM:   store i64 2305843009213693951, ptr
+// LLVM:   ret i64 2305843009213693951
 
 // OGCG: define{{.*}} i64 @max_size()
 // OGCG:   ret i64 2305843009213693951

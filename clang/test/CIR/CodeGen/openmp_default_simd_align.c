@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 enum e0 { E0 };
 struct s0 {
@@ -20,9 +20,5 @@ int f0(void) {
 // CIR: %[[TMP_RET:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return %[[TMP_RET]] : !s32i
 
-// LLVM: %[[RET_ADDR:.*]] = alloca i32
-// LLVM: store i32 16, ptr %[[RET_ADDR]], align 4
-// LLVM: %[[TMP_RET:.*]] = load i32, ptr %[[RET_ADDR]], align 4
-// LLVM: ret i32 %[[TMP_RET]]
+// LLVM: ret i32 16
 
-// OGCG: ret i32 16

@@ -25,7 +25,6 @@ extern "C" long double do_pre_inc(long double d) {
   // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.long_double<![[LDTY]]>>
   //
   // LLVM-LABEL: @do_pre_inc(
-  // LLVMCIR: %[[RET_ALLOCA:.*]] = alloca [[LDTY]]
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca [[LDTY]]
 
   return ++d;
@@ -40,10 +39,7 @@ extern "C" long double do_pre_inc(long double d) {
   // LLVM: %[[ARG_LOAD:.*]] = load [[LDTY]], ptr %[[ARG_ALLOCA]]
   // LLVM: %[[ARG_INC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], 1.000000e+00
   // LLVM: store [[LDTY]] %[[ARG_INC]], ptr %[[ARG_ALLOCA]]
-  // LLVMCIR: store [[LDTY]] %[[ARG_INC]], ptr %[[RET_ALLOCA]]
-  // LLVMCIR: %[[LOAD_RET:.*]] = load [[LDTY]], ptr %[[RET_ALLOCA]]
-  // LLVMCIR: ret [[LDTY]] %[[LOAD_RET]]
-  // OGCG: ret [[LDTY]] %[[ARG_INC]]
+  // LLVM: ret [[LDTY]] %[[ARG_INC]]
 }
 extern "C" long double do_post_inc(long double d) {
   // CIR-LABEL: @do_post_inc(
@@ -51,7 +47,6 @@ extern "C" long double do_post_inc(long double d) {
   // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.long_double<![[LDTY]]>>
   //
   // LLVM-LABEL: @do_post_inc(
-  // LLVMCIR: %[[RET_ALLOCA:.*]] = alloca [[LDTY]]
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca [[LDTY]]
 
   return d++;
@@ -66,10 +61,7 @@ extern "C" long double do_post_inc(long double d) {
   // LLVM: %[[ARG_LOAD:.*]] = load [[LDTY]], ptr %[[ARG_ALLOCA]]
   // LLVM: %[[ARG_INC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], 1.000000e+00
   // LLVM: store [[LDTY]] %[[ARG_INC]], ptr %[[ARG_ALLOCA]]
-  // LLVMCIR: store [[LDTY]] %[[ARG_LOAD]], ptr %[[RET_ALLOCA]]
-  // LLVMCIR: %[[LOAD_RET:.*]] = load [[LDTY]], ptr %[[RET_ALLOCA]]
-  // LLVMCIR: ret [[LDTY]] %[[LOAD_RET]]
-  // OGCG: ret [[LDTY]] %[[ARG_LOAD]]
+  // LLVM: ret [[LDTY]] %[[ARG_LOAD]]
 }
 
 extern "C" long double do_pre_dec(long double d) {
@@ -78,7 +70,6 @@ extern "C" long double do_pre_dec(long double d) {
   // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.long_double<![[LDTY]]>>
   //
   // LLVM-LABEL: @do_pre_dec(
-  // LLVMCIR: %[[RET_ALLOCA:.*]] = alloca [[LDTY]]
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca [[LDTY]]
 
   return --d;
@@ -94,10 +85,7 @@ extern "C" long double do_pre_dec(long double d) {
   // LLVMCIR: %[[ARG_DEC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], -1.000000e+00
   // OGCG: %[[ARG_DEC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], -1.000000e+00
   // LLVM: store [[LDTY]] %[[ARG_DEC]], ptr %[[ARG_ALLOCA]]
-  // LLVMCIR: store [[LDTY]] %[[ARG_DEC]], ptr %[[RET_ALLOCA]]
-  // LLVMCIR: %[[LOAD_RET:.*]] = load [[LDTY]], ptr %[[RET_ALLOCA]]
-  // LLVMCIR: ret [[LDTY]] %[[LOAD_RET]]
-  // OGCG: ret [[LDTY]] %[[ARG_DEC]]
+  // LLVM: ret [[LDTY]] %[[ARG_DEC]]
 }
 extern "C" long double do_post_dec(long double d) {
   // CIR-LABEL: @do_post_dec(
@@ -105,7 +93,6 @@ extern "C" long double do_post_dec(long double d) {
   // CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.long_double<![[LDTY]]>>
   //
   // LLVM-LABEL: @do_post_dec(
-  // LLVMCIR: %[[RET_ALLOCA:.*]] = alloca [[LDTY]]
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca [[LDTY]]
 
   return d--;
@@ -121,8 +108,5 @@ extern "C" long double do_post_dec(long double d) {
   // LLVMCIR: %[[ARG_DEC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], -1.000000e+00
   // OGCG: %[[ARG_DEC:.*]] = fadd [[LDTY]] %[[ARG_LOAD]], -1.000000e+00
   // LLVM: store [[LDTY]] %[[ARG_DEC]], ptr %[[ARG_ALLOCA]]
-  // LLVMCIR: store [[LDTY]] %[[ARG_LOAD]], ptr %[[RET_ALLOCA]]
-  // LLVMCIR: %[[LOAD_RET:.*]] = load [[LDTY]], ptr %[[RET_ALLOCA]]
-  // LLVMCIR: ret [[LDTY]] %[[LOAD_RET]]
-  // OGCG: ret [[LDTY]] %[[ARG_LOAD]]
+  // LLVM: ret [[LDTY]] %[[ARG_LOAD]]
 }

@@ -381,7 +381,6 @@ int test_false_positive_conditional(bool c) {
 // CIR:   }
 
 // LLVMCIR-LABEL: define dso_local noundef i32 @_Z31test_false_positive_conditionalb(
-// LLVMCIR:         %[[RETVAL:.*]] = alloca i32
 // LLVMCIR:         %[[TMP:.*]] = alloca %struct.S
 // LLVMCIR:         call void @_ZN1SC1Ev({{.*}} %[[TMP]])
 // LLVMCIR:         br label %[[BODY:.*]]
@@ -389,14 +388,12 @@ int test_false_positive_conditional(bool c) {
 // LLVMCIR:         %[[VAL:.*]] = call {{.*}} i32 @_ZN1S3getEv({{.*}} %[[TMP]])
 // LLVMCIR:         %[[CMP:.*]] = icmp ne i32 %[[VAL]], 0
 // LLVMCIR:         %[[SEL:.*]] = select i1 %[[CMP]], i32 1, i32 2
-// LLVMCIR:         store i32 %[[SEL]], ptr %[[RETVAL]]
 // LLVMCIR:         br label %[[DTOR:.*]]
 // LLVMCIR:       [[DTOR]]:
 // LLVMCIR:         call void @_ZN1SD1Ev({{.*}} %[[TMP]])
 // LLVMCIR:         br label %[[EXIT:.*]]
 // LLVMCIR:       [[EXIT]]:
-// LLVMCIR:         %[[RET:.*]] = load i32, ptr %[[RETVAL]]
-// LLVMCIR:         ret i32 %[[RET]]
+// LLVMCIR:         ret i32 %[[SEL]]
 
 // OGCG-LABEL: define dso_local noundef i32 @_Z31test_false_positive_conditionalb(
 // OGCG:         call void @_ZN1SC1Ev({{.*}} %[[TMP:.*]])

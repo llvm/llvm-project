@@ -17,11 +17,10 @@ vptr vptr_add(vptr p) {
   // CIR: cir.store {{.*}}%[[STRIDE]], %[[RET]]
 
   // LLVM-LABEL: vptr_add
-  // LLVM_CIR: %[[RET:.*]] = alloca ptr
   // LLVM: %[[ARG:.*]] = alloca ptr
   // LLVM: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG]]
   // LLVM: %[[STRIDE:.*]] = getelementptr {{.*}}i8, ptr %[[ARG_LOAD]], i64 3
-  // LLVM_CIR: store ptr %[[STRIDE:.*]], ptr %[[RET]]
+  // LLVM_CIR: ret ptr %[[STRIDE]]
   // LLVM_OG: ret ptr %[[STRIDE]]
   return p + 3;
 }
@@ -36,11 +35,10 @@ vptr vptr_sub(vptr p) {
   // CIR: cir.store {{.*}}%[[STRIDE]], %[[RET]]
 
   // LLVM-LABEL: vptr_sub
-  // LLVM_CIR: %[[RET:.*]] = alloca ptr
   // LLVM: %[[ARG:.*]] = alloca ptr
   // LLVM: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG]]
   // LLVM: %[[STRIDE:.*]] = getelementptr {{.*}}i8, ptr %[[ARG_LOAD]], i64 -2
-  // LLVM_CIR: store ptr %[[STRIDE:.*]], ptr %[[RET]]
+  // LLVM_CIR: ret ptr %[[STRIDE]]
   // LLVM_OG: ret ptr %[[STRIDE]]
   return p - 2;
 }
@@ -55,11 +53,10 @@ vptr vptr_inc(vptr p) {
   // CIR: cir.store {{.*}}%[[STRIDE]], %[[ARG]]
 
   // LLVM-LABEL: vptr_inc
-  // LLVM_CIR: %[[RET:.*]] = alloca ptr
   // LLVM: %[[ARG:.*]] = alloca ptr
   // LLVM: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG]]
   // LLVM: %[[STRIDE:.*]] = getelementptr {{.*}}i8, ptr %[[ARG_LOAD]], {{.*}} 1
-  // LLVM_CIR: store ptr %[[STRIDE:.*]], ptr %[[RET]]
+  // LLVM_CIR: store ptr %[[STRIDE]], ptr %[[ARG]]
   // LLVM_OG: store ptr %[[STRIDE]], ptr %[[ARG]]
   return p ++;
 }
@@ -73,11 +70,10 @@ vptr vptr_dec(vptr p) {
   // CIR: cir.store {{.*}}%[[STRIDE]], %[[RET]]
 
   // LLVM-LABEL: vptr_dec
-  // LLVM_CIR: %[[RET:.*]] = alloca ptr
   // LLVM: %[[ARG:.*]] = alloca ptr
   // LLVM: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG]]
   // LLVM: %[[STRIDE:.*]] = getelementptr {{.*}}i8, ptr %[[ARG_LOAD]], {{.*}} -1
-  // LLVM_CIR: store ptr %[[STRIDE:.*]], ptr %[[RET]]
+  // LLVM_CIR: ret ptr %[[STRIDE]]
   // LLVM_OG: ret ptr %[[STRIDE]]
   return --p;
 }
@@ -92,11 +88,10 @@ fptr fptr_add(fptr p) {
   // CIR: cir.store {{.*}}%[[STRIDE]], %[[RET]]
 
   // LLVM-LABEL: fptr_add
-  // LLVM_CIR: %[[RET:.*]] = alloca ptr
   // LLVM: %[[ARG:.*]] = alloca ptr
   // LLVM: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG]]
   // LLVM: %[[STRIDE:.*]] = getelementptr {{.*}}i8, ptr %[[ARG_LOAD]], i64 3
-  // LLVM_CIR: store ptr %[[STRIDE:.*]], ptr %[[RET]]
+  // LLVM_CIR: ret ptr %[[STRIDE]]
   // LLVM_OG: ret ptr %[[STRIDE]]
   return p + 3;
 }
@@ -111,11 +106,10 @@ fptr fptr_sub(fptr p) {
   // CIR: cir.store {{.*}}%[[STRIDE]], %[[RET]]
 
   // LLVM-LABEL: fptr_sub
-  // LLVM_CIR: %[[RET:.*]] = alloca ptr
   // LLVM: %[[ARG:.*]] = alloca ptr
   // LLVM: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG]]
   // LLVM: %[[STRIDE:.*]] = getelementptr {{.*}}i8, ptr %[[ARG_LOAD]], i64 -2
-  // LLVM_CIR: store ptr %[[STRIDE:.*]], ptr %[[RET]]
+  // LLVM_CIR: ret ptr %[[STRIDE]]
   // LLVM_OG: ret ptr %[[STRIDE]]
   return p - 2;
 }
@@ -130,10 +124,9 @@ fptr fptr_inc(fptr p) {
   // CIR: cir.store {{.*}}%[[STRIDE]], %[[ARG]]
 
   // LLVM-LABEL: fptr_inc
-  // LLVM_CIR: %[[RET:.*]] = alloca ptr
   // LLVM: %[[ARG:.*]] = alloca ptr
   // LLVM: %[[STRIDE:.*]] = getelementptr {{.*}}i8, ptr %[[ARG_LOAD]], {{.*}} 1
-  // LLVM_CIR: store ptr %[[STRIDE:.*]], ptr %[[RET]]
+  // LLVM_CIR: store ptr %[[STRIDE]], ptr %[[ARG]]
   // LLVM_OG: store ptr %[[STRIDE]], ptr %[[ARG]]
   return p ++;
 }
@@ -147,10 +140,9 @@ fptr fptr_dec(fptr p) {
   // CIR: cir.store {{.*}}%[[STRIDE]], %[[RET]]
 
   // LLVM-LABEL: fptr_dec
-  // LLVM_CIR: %[[RET:.*]] = alloca ptr
   // LLVM: %[[ARG:.*]] = alloca ptr
   // LLVM: %[[STRIDE:.*]] = getelementptr {{.*}}i8, ptr %[[ARG_LOAD]], {{.*}} -1
-  // LLVM_CIR: store ptr %[[STRIDE:.*]], ptr %[[RET]]
+  // LLVM_CIR: ret ptr %[[STRIDE]]
   // LLVM_OG: ret ptr %[[STRIDE]]
   return --p;
 }

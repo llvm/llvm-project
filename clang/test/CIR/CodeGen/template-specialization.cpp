@@ -48,7 +48,7 @@ void test_double() {
 // LLVM:   call{{.*}} i32 @_ZN1XIdE1fEv
 //
 // LLVM: define{{.*}} i32 @_ZN1XIdE1fEv
-// LLVM:   store i32 0
+// LLVM:   ret i32 0
 
 // OGCG: define{{.*}} void @_Z11test_doublev()
 // OGCG:   call{{.*}} i32 @_ZN1XIdE1fEv
@@ -71,7 +71,7 @@ void test_int() {
 // LLVM:   call{{.*}} i32 @_ZN1XIiE1fEv
 //
 // LLVM: define{{.*}} i32 @_ZN1XIiE1fEv
-// LLVM:   store i32 1
+// LLVM:   ret i32 1
 
 // OGCG: define{{.*}} void @_Z8test_intv()
 // OGCG:   call{{.*}} i32 @_ZN1XIiE1fEv
@@ -94,7 +94,7 @@ void test_short() {
 // LLVM:   call{{.*}} i32 @_ZN1XIsE1fEv
 //
 // LLVM: define{{.*}} i32 @_ZN1XIsE1fEv
-// LLVM: store i32 0
+// LLVM: ret i32 0
 
 // OGCG: define{{.*}} void @_Z10test_shortv()
 // OGCG:   call{{.*}} i32 @_ZN1XIsE1fEv

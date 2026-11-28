@@ -5,16 +5,16 @@
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
 // RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
-// RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR --input-file=%t.ll %s
 
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -fclangir -emit-llvm -o %t.ll -Wall -Werror -Wsign-conversion
-// RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s --check-prefix=OGCG
-// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bw -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s --check-prefixes=OGCG
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s --check-prefixes=LLVM,OGCG
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bw -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s --check-prefixes=LLVM,OGCG
 
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s --check-prefix=OGCG
-// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bw -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s --check-prefixes=OGCG
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-unknown-linux -target-feature +avx512bw -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s --check-prefixes=LLVM,OGCG
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bw -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s --check-prefixes=LLVM,OGCG
 
 // This test mimics clang/test/CodeGen/X86/avx512bw-builtins.c, which eventually
 // CIR shall be able to support fully.
@@ -31,9 +31,6 @@ __mmask32 test_kshiftli_mask32(__mmask32 A) {
   // LLVM: [[VAL:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
   // LLVM: [[RES:%.*]] = shufflevector <32 x i1> zeroinitializer, <32 x i1> [[VAL]], <32 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32>
 
-  // OGCG-LABEL: test_kshiftli_mask32
-  // OGCG: [[VAL:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // OGCG: [[RES:%.*]] = shufflevector <32 x i1> zeroinitializer, <32 x i1> [[VAL]], <32 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32>
   return _kshiftli_mask32(A, 31);
 }
 
@@ -47,9 +44,6 @@ __mmask32 test_kshiftri_mask32(__mmask32 A) {
   // LLVM: [[VAL:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
   // LLVM: [[RES:%.*]] = shufflevector <32 x i1> [[VAL]], <32 x i1> zeroinitializer, <32 x i32> <i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62>
 
-  // OGCG-LABEL: test_kshiftri_mask32
-  // OGCG: [[VAL:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // OGCG: [[RES:%.*]] = shufflevector <32 x i1> [[VAL]], <32 x i1> zeroinitializer, <32 x i32> <i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62>
   return _kshiftri_mask32(A, 31);
 }
 
@@ -63,9 +57,6 @@ __mmask64 test_kshiftli_mask64(__mmask64 A) {
   // LLVM: [[VAL:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
   // LLVM: [[RES:%.*]] = shufflevector <64 x i1> zeroinitializer, <64 x i1> [[VAL]], <64 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 72, i32 73, i32 74, i32 75, i32 76, i32 77, i32 78, i32 79, i32 80, i32 81, i32 82, i32 83, i32 84, i32 85, i32 86, i32 87, i32 88, i32 89, i32 90, i32 91, i32 92, i32 93, i32 94, i32 95>
 
-  // OGCG-LABEL: test_kshiftli_mask64
-  // OGCG: [[VAL:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // OGCG: [[RES:%.*]] = shufflevector <64 x i1> zeroinitializer, <64 x i1> [[VAL]], <64 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 72, i32 73, i32 74, i32 75, i32 76, i32 77, i32 78, i32 79, i32 80, i32 81, i32 82, i32 83, i32 84, i32 85, i32 86, i32 87, i32 88, i32 89, i32 90, i32 91, i32 92, i32 93, i32 94, i32 95>
   return _kshiftli_mask64(A, 32);
 }
 
@@ -79,9 +70,6 @@ __mmask64 test_kshiftri_mask64(__mmask64 A) {
   // LLVM: [[VAL:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
   // LLVM: [[RES:%.*]] = shufflevector <64 x i1> [[VAL]], <64 x i1> zeroinitializer, <64 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 72, i32 73, i32 74, i32 75, i32 76, i32 77, i32 78, i32 79, i32 80, i32 81, i32 82, i32 83, i32 84, i32 85, i32 86, i32 87, i32 88, i32 89, i32 90, i32 91, i32 92, i32 93, i32 94, i32 95>
 
-  // OGCG-LABEL: test_kshiftri_mask64
-  // OGCG: [[VAL:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // OGCG: [[RES:%.*]] = shufflevector <64 x i1> [[VAL]], <64 x i1> zeroinitializer, <64 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 72, i32 73, i32 74, i32 75, i32 76, i32 77, i32 78, i32 79, i32 80, i32 81, i32 82, i32 83, i32 84, i32 85, i32 86, i32 87, i32 88, i32 89, i32 90, i32 91, i32 92, i32 93, i32 94, i32 95>
   return _kshiftri_mask64(A, 32);
 }
 
@@ -93,12 +81,7 @@ __mmask32 test_kshiftli_mask32_out_of_range(__mmask32 A) {
   // CIR: cir.return [[RES]] : !u32i
 
   // LLVM-LABEL: test_kshiftli_mask32_out_of_range
-  // LLVM: store i32 0, ptr [[VAL:%.*]], align 4
-  // LLVM: [[RES:%.*]] = load i32, ptr [[VAL]], align 4
-  // LLVM: ret i32 [[RES]]
-
-  // OGCG-LABEL: test_kshiftli_mask32_out_of_range
-  // OGCG: ret i32 0
+  // LLVM: ret i32 0
 
   return _kshiftli_mask32(A, 33);
 }
@@ -111,12 +94,7 @@ __mmask32 test_kshiftri_mask32_out_of_range(__mmask32 A) {
   // CIR: cir.return [[RES]] : !u32i
 
   // LLVM-LABEL: test_kshiftri_mask32_out_of_range
-  // LLVM: store i32 0, ptr [[VAL:%.*]], align 4
-  // LLVM: [[RES:%.*]] = load i32, ptr [[VAL]], align 4
-  // LLVM: ret i32 [[RES]]
-
-  // OGCG-LABEL: test_kshiftri_mask32_out_of_range
-  // OGCG: ret i32 0
+  // LLVM: ret i32 0
 
   return _kshiftri_mask32(A, 33);
 }
@@ -128,11 +106,11 @@ __mmask32 test_kadd_mask32(__mmask32 A, __mmask32 B) {
   // CIR: cir.call_llvm_intrinsic "x86.avx512.kadd.d"
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
-  // LLVM-LABEL: _kadd_mask32
-  // LLVM: [[L:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: [[R:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: [[RES:%.*]] = call <32 x i1> @llvm.x86.avx512.kadd.d(<32 x i1> [[L]], <32 x i1> [[R]])
-  // LLVM: bitcast <32 x i1> [[RES]] to i32
+  // LLVMCIR-LABEL: _kadd_mask32
+  // LLVMCIR: [[L:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: [[R:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: [[RES:%.*]] = call <32 x i1> @llvm.x86.avx512.kadd.d(<32 x i1> [[L]], <32 x i1> [[R]])
+  // LLVMCIR: bitcast <32 x i1> [[RES]] to i32
 
   // OGCG-LABEL: _kadd_mask32
   // OGCG: bitcast i32 %{{.*}} to <32 x i1>
@@ -149,11 +127,11 @@ __mmask64 test_kadd_mask64(__mmask64 A, __mmask64 B) {
   // CIR: cir.call_llvm_intrinsic "x86.avx512.kadd.q"
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
-  // LLVM-LABEL: _kadd_mask64
-  // LLVM: [[L:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: [[R:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: [[RES:%.*]] = call <64 x i1> @llvm.x86.avx512.kadd.q(<64 x i1> [[L]], <64 x i1> [[R]])
-  // LLVM: bitcast <64 x i1> [[RES]] to i64
+  // LLVMCIR-LABEL: _kadd_mask64
+  // LLVMCIR: [[L:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: [[R:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: [[RES:%.*]] = call <64 x i1> @llvm.x86.avx512.kadd.q(<64 x i1> [[L]], <64 x i1> [[R]])
+  // LLVMCIR: bitcast <64 x i1> [[RES]] to i64
 
   // OGCG-LABEL: _kadd_mask64
   // OGCG: bitcast i64 %{{.*}} to <64 x i1>
@@ -170,11 +148,11 @@ __mmask32 test_kand_mask32(__mmask32 A, __mmask32 B) {
   // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
-  // LLVM-LABEL: _kand_mask32
-  // LLVM: [[L:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: [[R:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: [[RES:%.*]] = and <32 x i1> [[L]], [[R]]
-  // LLVM: bitcast <32 x i1> [[RES]] to i32
+  // LLVMCIR-LABEL: _kand_mask32
+  // LLVMCIR: [[L:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: [[R:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: [[RES:%.*]] = and <32 x i1> [[L]], [[R]]
+  // LLVMCIR: bitcast <32 x i1> [[RES]] to i32
 
   // OGCG-LABEL: _kand_mask32
   // OGCG: bitcast i32 %{{.*}} to <32 x i1>
@@ -191,11 +169,11 @@ __mmask64 test_kand_mask64(__mmask64 A, __mmask64 B) {
   // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
-  // LLVM-LABEL: _kand_mask64
-  // LLVM: [[L:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: [[R:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: [[RES:%.*]] = and <64 x i1> [[L]], [[R]]
-  // LLVM: bitcast <64 x i1> [[RES]] to i64
+  // LLVMCIR-LABEL: _kand_mask64
+  // LLVMCIR: [[L:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: [[R:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: [[RES:%.*]] = and <64 x i1> [[L]], [[R]]
+  // LLVMCIR: bitcast <64 x i1> [[RES]] to i64
 
   // OGCG-LABEL: _kand_mask64
   // OGCG: bitcast i64 %{{.*}} to <64 x i1>
@@ -213,12 +191,12 @@ __mmask32 test_kandn_mask32(__mmask32 A, __mmask32 B) {
   // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
-  // LLVM-LABEL: _kandn_mask32
-  // LLVM: [[L:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: [[R:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: xor <32 x i1> [[L]], splat (i1 true)
-  // LLVM: and <32 x i1>
-  // LLVM: bitcast <32 x i1> {{.*}} to i32
+  // LLVMCIR-LABEL: _kandn_mask32
+  // LLVMCIR: [[L:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: [[R:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: xor <32 x i1> [[L]], splat (i1 true)
+  // LLVMCIR: and <32 x i1>
+  // LLVMCIR: bitcast <32 x i1> {{.*}} to i32
 
   // OGCG-LABEL: _kandn_mask32
   // OGCG: bitcast i32 %{{.*}} to <32 x i1>
@@ -237,12 +215,12 @@ __mmask64 test_kandn_mask64(__mmask64 A, __mmask64 B) {
   // CIR: cir.and {{.*}}, {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
-  // LLVM-LABEL: _kandn_mask64
-  // LLVM: [[L:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: [[R:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: xor <64 x i1> [[L]], splat (i1 true)
-  // LLVM: and <64 x i1>
-  // LLVM: bitcast <64 x i1> {{.*}} to i64
+  // LLVMCIR-LABEL: _kandn_mask64
+  // LLVMCIR: [[L:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: [[R:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: xor <64 x i1> [[L]], splat (i1 true)
+  // LLVMCIR: and <64 x i1>
+  // LLVMCIR: bitcast <64 x i1> {{.*}} to i64
 
   // OGCG-LABEL: _kandn_mask64
   // OGCG: bitcast i64 %{{.*}} to <64 x i1>
@@ -260,11 +238,11 @@ __mmask32 test_kor_mask32(__mmask32 A, __mmask32 B) {
   // CIR: cir.or {{.*}}, {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
-  // LLVM-LABEL: _kor_mask32
-  // LLVM: [[L:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: [[R:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: or <32 x i1> [[L]], [[R]]
-  // LLVM: bitcast <32 x i1> {{.*}} to i32
+  // LLVMCIR-LABEL: _kor_mask32
+  // LLVMCIR: [[L:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: [[R:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: or <32 x i1> [[L]], [[R]]
+  // LLVMCIR: bitcast <32 x i1> {{.*}} to i32
 
   // OGCG-LABEL: _kor_mask32
   // OGCG: bitcast i32 %{{.*}} to <32 x i1>
@@ -281,11 +259,11 @@ __mmask64 test_kor_mask64(__mmask64 A, __mmask64 B) {
   // CIR: cir.or {{.*}}, {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
-  // LLVM-LABEL: _kor_mask64
-  // LLVM: [[L:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: [[R:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: or <64 x i1> [[L]], [[R]]
-  // LLVM: bitcast <64 x i1> {{.*}} to i64
+  // LLVMCIR-LABEL: _kor_mask64
+  // LLVMCIR: [[L:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: [[R:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: or <64 x i1> [[L]], [[R]]
+  // LLVMCIR: bitcast <64 x i1> {{.*}} to i64
 
   // OGCG-LABEL: _kor_mask64
   // OGCG: bitcast i64 %{{.*}} to <64 x i1>
@@ -302,11 +280,11 @@ __mmask32 test_kxor_mask32(__mmask32 A, __mmask32 B) {
   // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
-  // LLVM-LABEL: _kxor_mask32
-  // LLVM: [[L:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: [[R:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: xor <32 x i1> [[L]], [[R]]
-  // LLVM: bitcast <32 x i1> {{.*}} to i32
+  // LLVMCIR-LABEL: _kxor_mask32
+  // LLVMCIR: [[L:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: [[R:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: xor <32 x i1> [[L]], [[R]]
+  // LLVMCIR: bitcast <32 x i1> {{.*}} to i32
 
   // OGCG-LABEL: _kxor_mask32
   // OGCG: bitcast i32 %{{.*}} to <32 x i1>
@@ -323,11 +301,11 @@ __mmask64 test_kxor_mask64(__mmask64 A, __mmask64 B) {
   // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
-  // LLVM-LABEL: _kxor_mask64
-  // LLVM: [[L:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: [[R:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: xor <64 x i1> [[L]], [[R]]
-  // LLVM: bitcast <64 x i1> {{.*}} to i64
+  // LLVMCIR-LABEL: _kxor_mask64
+  // LLVMCIR: [[L:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: [[R:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: xor <64 x i1> [[L]], [[R]]
+  // LLVMCIR: bitcast <64 x i1> {{.*}} to i64
 
   // OGCG-LABEL: _kxor_mask64
   // OGCG: bitcast i64 %{{.*}} to <64 x i1>
@@ -345,12 +323,12 @@ __mmask32 test_kxnor_mask32(__mmask32 A, __mmask32 B) {
   // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<32 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
-  // LLVM-LABEL: _kxnor_mask32
-  // LLVM: [[L:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: [[R:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: [[NOT:%.*]] = xor <32 x i1> [[L]], splat (i1 true)
-  // LLVM: [[RES:%.*]] = xor <32 x i1> [[NOT]], [[R]]
-  // LLVM: bitcast <32 x i1> [[RES]] to i32
+  // LLVMCIR-LABEL: _kxnor_mask32
+  // LLVMCIR: [[L:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: [[R:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: [[NOT:%.*]] = xor <32 x i1> [[L]], splat (i1 true)
+  // LLVMCIR: [[RES:%.*]] = xor <32 x i1> [[NOT]], [[R]]
+  // LLVMCIR: bitcast <32 x i1> [[RES]] to i32
 
   // OGCG-LABEL: _kxnor_mask32
   // OGCG: bitcast i32 %{{.*}} to <32 x i1>
@@ -370,12 +348,12 @@ __mmask64 test_kxnor_mask64(__mmask64 A, __mmask64 B) {
   // CIR: cir.xor {{.*}}, {{.*}} : !cir.vector<64 x !cir.int<s, 1>>
   // CIR: cir.cast bitcast {{.*}} : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
-  // LLVM-LABEL: _kxnor_mask64
-  // LLVM: [[L:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: [[R:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: [[NOT:%.*]] = xor <64 x i1> [[L]], splat (i1 true)
-  // LLVM: [[RES:%.*]] = xor <64 x i1> [[NOT]], [[R]]
-  // LLVM: bitcast <64 x i1> [[RES]] to i64
+  // LLVMCIR-LABEL: _kxnor_mask64
+  // LLVMCIR: [[L:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: [[R:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: [[NOT:%.*]] = xor <64 x i1> [[L]], splat (i1 true)
+  // LLVMCIR: [[RES:%.*]] = xor <64 x i1> [[NOT]], [[R]]
+  // LLVMCIR: bitcast <64 x i1> [[RES]] to i64
 
   // OGCG-LABEL: _kxnor_mask64
   // OGCG: bitcast i64 %{{.*}} to <64 x i1>
@@ -386,7 +364,6 @@ __mmask64 test_kxnor_mask64(__mmask64 A, __mmask64 B) {
 
   return _kxnor_mask64(A, B);
 }
-
 
 __mmask32 test_knot_mask32(__mmask32 A) {
   // CIR-LABEL: _knot_mask32
@@ -399,10 +376,6 @@ __mmask32 test_knot_mask32(__mmask32 A) {
   // LLVM: xor <32 x i1>
   // LLVM: bitcast <32 x i1> {{.*}} to i32
 
-  // OGCG-LABEL: _knot_mask32
-  // OGCG: bitcast i32 %{{.*}} to <32 x i1>
-  // OGCG: xor <32 x i1>
-  // OGCG: bitcast <32 x i1> {{.*}} to i32
   return _knot_mask32(A);
 }
 
@@ -417,10 +390,6 @@ __mmask64 test_knot_mask64(__mmask64 A) {
   // LLVM: xor <64 x i1>
   // LLVM: bitcast <64 x i1> {{.*}} to i64
 
-  // OGCG-LABEL: _knot_mask64
-  // OGCG: bitcast i64 %{{.*}} to <64 x i1>
-  // OGCG: xor <64 x i1>
-  // OGCG: bitcast <64 x i1> {{.*}} to i64
   return _knot_mask64(A);
 }
 
@@ -440,10 +409,6 @@ __mmask32 test_kmov_d(__mmask32 A) {
   // LLVM: bitcast i32 %{{.*}} to <32 x i1>
   // LLVM: bitcast <32 x i1> {{.*}} to i32
 
-  // OGCG-LABEL: test_kmov_d
-  // OGCG: bitcast i32 %{{.*}} to <32 x i1>
-  // OGCG: bitcast <32 x i1> {{.*}} to i32
-
   return __builtin_ia32_kmovd(A);
 }
 
@@ -462,10 +427,6 @@ __mmask64 test_kmov_q(__mmask64 A) {
   // LLVM-LABEL: test_kmov_q
   // LLVM: bitcast i64 %{{.*}} to <64 x i1>
   // LLVM: bitcast <64 x i1> {{.*}} to i64
-
-  // OGCG-LABEL: test_kmov_q
-  // OGCG: bitcast i64 %{{.*}} to <64 x i1>
-  // OGCG: bitcast <64 x i1> {{.*}} to i64
 
   return __builtin_ia32_kmovq(A);
 }
@@ -487,13 +448,6 @@ __mmask32 test_mm512_kunpackw(__mmask32 A, __mmask32 B) {
   // LLVM: [[RES:%.*]] = shufflevector <16 x i1> [[B_HALF]], <16 x i1> [[A_HALF]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   // LLVM: bitcast <32 x i1> [[RES]] to i32
 
-  // OGCG-LABEL: _mm512_kunpackw
-  // OGCG: [[A_VEC:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // OGCG: [[B_VEC:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // OGCG: [[A_HALF:%.*]] = shufflevector <32 x i1> [[A_VEC]], <32 x i1> [[A_VEC]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  // OGCG: [[B_HALF:%.*]] = shufflevector <32 x i1> [[B_VEC]], <32 x i1> [[B_VEC]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  // OGCG: [[RES:%.*]] = shufflevector <16 x i1> [[B_HALF]], <16 x i1> [[A_HALF]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  // OGCG: bitcast <32 x i1> [[RES]] to i32
   return _mm512_kunpackw(A, B);
 }
 
@@ -514,13 +468,6 @@ __mmask64 test_mm512_kunpackd(__mmask64 A, __mmask64 B) {
   // LLVM: [[RES:%.*]] = shufflevector <32 x i1> [[B_HALF]], <32 x i1> [[A_HALF]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
   // LLVM: bitcast <64 x i1> [[RES]] to i64
 
-  // OGCG-LABEL: _mm512_kunpackd
-  // OGCG: [[A_VEC:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // OGCG: [[B_VEC:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // OGCG: [[A_HALF:%.*]] = shufflevector <64 x i1> [[A_VEC]], <64 x i1> [[A_VEC]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  // OGCG: [[B_HALF:%.*]] = shufflevector <64 x i1> [[B_VEC]], <64 x i1> [[B_VEC]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  // OGCG: [[RES:%.*]] = shufflevector <32 x i1> [[B_HALF]], <32 x i1> [[A_HALF]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-  // OGCG: bitcast <64 x i1> [[RES]] to i64
   return _mm512_kunpackd(A, B);
 }
 
@@ -531,8 +478,6 @@ __m512i test_mm512_shufflelo_epi16(__m512i __A) {
   // LLVM-LABEL: test_mm512_shufflelo_epi16
   // LLVM: shufflevector <32 x i16> %{{.*}}, <32 x i16> poison, <32 x i32> <i32 1, i32 1, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7, i32 9, i32 9, i32 8, i32 8, i32 12, i32 13, i32 14, i32 15, i32 17, i32 17, i32 16, i32 16, i32 20, i32 21, i32 22, i32 23, i32 25, i32 25, i32 24, i32 24, i32 28, i32 29, i32 30, i32 31>
 
-  // OGCG-LABEL: test_mm512_shufflelo_epi16
-  // OGCG: shufflevector <32 x i16> %{{.*}}, <32 x i16> poison, <32 x i32> <i32 1, i32 1, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7, i32 9, i32 9, i32 8, i32 8, i32 12, i32 13, i32 14, i32 15, i32 17, i32 17, i32 16, i32 16, i32 20, i32 21, i32 22, i32 23, i32 25, i32 25, i32 24, i32 24, i32 28, i32 29, i32 30, i32 31>
   return _mm512_shufflelo_epi16(__A, 5);
 }
 
@@ -543,8 +488,6 @@ __m512i test_mm512_shufflehi_epi16(__m512i __A) {
   // LLVM-LABEL: test_mm512_shufflehi_epi16
   // LLVM: shufflevector <32 x i16> %{{.*}}, <32 x i16> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 5, i32 4, i32 4, i32 8, i32 9, i32 10, i32 11, i32 13, i32 13, i32 12, i32 12, i32 16, i32 17, i32 18, i32 19, i32 21, i32 21, i32 20, i32 20, i32 24, i32 25, i32 26, i32 27, i32 29, i32 29, i32 28, i32 28>
 
-  // OGCG-LABEL: test_mm512_shufflehi_epi16
-  // OGCG: shufflevector <32 x i16> %{{.*}}, <32 x i16> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 5, i32 4, i32 4, i32 8, i32 9, i32 10, i32 11, i32 13, i32 13, i32 12, i32 12, i32 16, i32 17, i32 18, i32 19, i32 21, i32 21, i32 20, i32 20, i32 24, i32 25, i32 26, i32 27, i32 29, i32 29, i32 28, i32 28>
   return _mm512_shufflehi_epi16(__A, 5);
 }
 
@@ -568,14 +511,6 @@ unsigned char test_kortestc_mask32_u8(__mmask32 __A, __mmask32 __B) {
   // LLVM: %[[ZEXT:.*]] = zext i1 %[[CMP]] to i32
   // LLVM: trunc i32 %[[ZEXT]] to i8
 
-  // OGCG-LABEL: _kortestc_mask32_u8
-  // OGCG: %[[LHS:.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // OGCG: %[[RHS:.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // OGCG: %[[OR:.*]]  = or <32 x i1> %[[LHS]], %[[RHS]]
-  // OGCG: %[[CAST:.*]] = bitcast <32 x i1> %[[OR]] to i32
-  // OGCG: %[[CMP:.*]] = icmp eq i32 %[[CAST]], -1
-  // OGCG: %[[ZEXT:.*]] = zext i1 %[[CMP]] to i32
-  // OGCG: trunc i32 %[[ZEXT]] to i8
   return _kortestc_mask32_u8(__A, __B);
 }
 
@@ -599,14 +534,6 @@ unsigned char test_kortestc_mask64_u8(__mmask64 __A, __mmask64 __B) {
   // LLVM: %[[ZEXT:.*]] = zext i1 %[[CMP]] to i32
   // LLVM: trunc i32 %[[ZEXT]] to i8
 
-  // OGCG-LABEL: _kortestc_mask64_u8
-  // OGCG: %[[LHS:.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // OGCG: %[[RHS:.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // OGCG: %[[OR:.*]]  = or <64 x i1> %[[LHS]], %[[RHS]]
-  // OGCG: %[[CAST:.*]] = bitcast <64 x i1> %[[OR]] to i64
-  // OGCG: %[[CMP:.*]] = icmp eq i64 %[[CAST]], -1
-  // OGCG: %[[ZEXT:.*]] = zext i1 %[[CMP]] to i32
-  // OGCG: trunc i32 %[[ZEXT]] to i8
   return _kortestc_mask64_u8(__A, __B);
 }
 
@@ -630,14 +557,6 @@ unsigned char test_kortestz_mask32_u8(__mmask32 __A, __mmask32 __B) {
   // LLVM: %[[ZEXT:.*]] = zext i1 %[[CMP]] to i32
   // LLVM: trunc i32 %[[ZEXT]] to i8
 
-  // OGCG-LABEL: _kortestz_mask32_u8
-  // OGCG: %[[LHS:.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // OGCG: %[[RHS:.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // OGCG: %[[OR:.*]]  = or <32 x i1> %[[LHS]], %[[RHS]]
-  // OGCG: %[[CAST:.*]] = bitcast <32 x i1> %[[OR]] to i32
-  // OGCG: %[[CMP:.*]] = icmp eq i32 %[[CAST]], 0
-  // OGCG: %[[ZEXT:.*]] = zext i1 %[[CMP]] to i32
-  // OGCG: trunc i32 %[[ZEXT]] to i8
   return _kortestz_mask32_u8(__A, __B);
 }
 
@@ -661,14 +580,6 @@ unsigned char test_kortestz_mask64_u8(__mmask64 __A, __mmask64 __B) {
   // LLVM: %[[ZEXT:.*]] = zext i1 %[[CMP]] to i32
   // LLVM: trunc i32 %[[ZEXT]] to i8
 
-  // OGCG-LABEL: _kortestz_mask64_u8
-  // OGCG: %[[LHS:.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // OGCG: %[[RHS:.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // OGCG: %[[OR:.*]]  = or <64 x i1> %[[LHS]], %[[RHS]]
-  // OGCG: %[[CAST:.*]] = bitcast <64 x i1> %[[OR]] to i64
-  // OGCG: %[[CMP:.*]] = icmp eq i64 %[[CAST]], 0
-  // OGCG: %[[ZEXT:.*]] = zext i1 %[[CMP]] to i32
-  // OGCG: trunc i32 %[[ZEXT]] to i8
   return _kortestz_mask64_u8(__A, __B);
 }
 
@@ -679,11 +590,11 @@ unsigned char test_ktestc_mask32_u8(__mmask32 A, __mmask32 B) {
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.ktestc.d"
   // CIR: cir.cast integral %[[RES]] : {{.*}} -> !u8i
 
-  // LLVM-LABEL: _ktestc_mask32_u8
-  // LLVM: %[[LHS:.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: %[[RHS:.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestc.d(<32 x i1> %[[LHS]], <32 x i1> %[[RHS]])
-  // LLVM: trunc i32 %[[RES]] to i8
+  // LLVMCIR-LABEL: _ktestc_mask32_u8
+  // LLVMCIR: %[[LHS:.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: %[[RHS:.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestc.d(<32 x i1> %[[LHS]], <32 x i1> %[[RHS]])
+  // LLVMCIR: trunc i32 %[[RES]] to i8
 
   // OGCG-LABEL: _ktestc_mask32_u8
   // OGCG: %[[LHS:.*]] = bitcast i32 %{{.*}} to <32 x i1>
@@ -700,11 +611,11 @@ unsigned char test_ktestz_mask32_u8(__mmask32 A, __mmask32 B) {
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.ktestz.d"
   // CIR: cir.cast integral %[[RES]] : {{.*}} -> !u8i
 
-  // LLVM-LABEL: _ktestz_mask32_u8
-  // LLVM: %[[LHS:.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: %[[RHS:.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestz.d(<32 x i1> %[[LHS]], <32 x i1> %[[RHS]])
-  // LLVM: trunc i32 %[[RES]] to i8
+  // LLVMCIR-LABEL: _ktestz_mask32_u8
+  // LLVMCIR: %[[LHS:.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: %[[RHS:.*]] = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestz.d(<32 x i1> %[[LHS]], <32 x i1> %[[RHS]])
+  // LLVMCIR: trunc i32 %[[RES]] to i8
 
   // OGCG-LABEL: _ktestz_mask32_u8
   // OGCG: %[[LHS:.*]] = bitcast i32 %{{.*}} to <32 x i1>
@@ -721,11 +632,11 @@ unsigned char test_ktestc_mask64_u8(__mmask64 A, __mmask64 B) {
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.ktestc.q"
   // CIR: cir.cast integral %[[RES]] : {{.*}} -> !u8i
 
-  // LLVM-LABEL: _ktestc_mask64_u8
-  // LLVM: %[[LHS:.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: %[[RHS:.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestc.q(<64 x i1> %[[LHS]], <64 x i1> %[[RHS]])
-  // LLVM: trunc i32 %[[RES]] to i8
+  // LLVMCIR-LABEL: _ktestc_mask64_u8
+  // LLVMCIR: %[[LHS:.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: %[[RHS:.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestc.q(<64 x i1> %[[LHS]], <64 x i1> %[[RHS]])
+  // LLVMCIR: trunc i32 %[[RES]] to i8
 
   // OGCG-LABEL: _ktestc_mask64_u8
   // OGCG: %[[LHS:.*]] = bitcast i64 %{{.*}} to <64 x i1>
@@ -742,11 +653,11 @@ unsigned char test_ktestz_mask64_u8(__mmask64 A, __mmask64 B) {
   // CIR: %[[RES:.*]] = cir.call_llvm_intrinsic "x86.avx512.ktestz.q"
   // CIR: cir.cast integral %[[RES]] : {{.*}} -> !u8i
 
-  // LLVM-LABEL: _ktestz_mask64_u8
-  // LLVM: %[[LHS:.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: %[[RHS:.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // LLVM: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestz.q(<64 x i1> %[[LHS]], <64 x i1> %[[RHS]])
-  // LLVM: trunc i32 %[[RES]] to i8
+  // LLVMCIR-LABEL: _ktestz_mask64_u8
+  // LLVMCIR: %[[LHS:.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: %[[RHS:.*]] = bitcast i64 %{{.*}} to <64 x i1>
+  // LLVMCIR: %[[RES:.*]] = call i32 @llvm.x86.avx512.ktestz.q(<64 x i1> %[[LHS]], <64 x i1> %[[RHS]])
+  // LLVMCIR: trunc i32 %[[RES]] to i8
 
   // OGCG-LABEL: _ktestz_mask64_u8
   // OGCG: %[[LHS:.*]] = bitcast i64 %{{.*}} to <64 x i1>
@@ -761,9 +672,9 @@ __m512i test_mm512_movm_epi16(__mmask32 __A) {
   // CIR: %{{.*}} = cir.cast bitcast %{{.*}} : !u32i -> !cir.vector<32 x !cir.int<s, 1>>
   // CIR: %{{.*}} = cir.cast integral %{{.*}} : !cir.vector<32 x !cir.int<s, 1>> -> !cir.vector<32 x !s16i>
 
-  // LLVM-LABEL: test_mm512_movm_epi16
-  // LLVM:  %{{.*}} = bitcast i32 %{{.*}} to <32 x i1>
-  // LLVM:  %{{.*}} = sext <32 x i1> %{{.*}} to <32 x i16>
+  // LLVMCIR-LABEL: test_mm512_movm_epi16
+  // LLVMCIR:  %{{.*}} = bitcast i32 %{{.*}} to <32 x i1>
+  // LLVMCIR:  %{{.*}} = sext <32 x i1> %{{.*}} to <32 x i16>
 
   // OGCG-LABEL: {{.*}}movm_epi16{{.*}}(
   // OGCG:  %{{.*}} = bitcast i32 %{{.*}} to <32 x i1>
@@ -777,9 +688,9 @@ __mmask64 test_mm512_movepi8_mask(__m512i __A) {
   // CIR: [[CMP:%.*]] = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<64 x !s8i>, !cir.vector<64 x !cir.int<s, 1>>
   // CIR: %{{.*}} = cir.cast bitcast [[CMP]] : !cir.vector<64 x !cir.int<s, 1>> -> !u64i
 
-  // LLVM-LABEL: test_mm512_movepi8_mask
-  // LLVM: [[CMP:%.*]] = icmp slt <64 x i8> %{{.*}}, zeroinitializer
-  // LLVM: bitcast <64 x i1> [[CMP]] to i64
+  // LLVMCIR-LABEL: test_mm512_movepi8_mask
+  // LLVMCIR: [[CMP:%.*]] = icmp slt <64 x i8> %{{.*}}, zeroinitializer
+  // LLVMCIR: bitcast <64 x i1> [[CMP]] to i64
 
   // OGCG-LABEL: {{.*}}movepi8_mask{{.*}}(
   // OGCG: [[CMP:%.*]] = icmp slt <64 x i8> %{{.*}}, zeroinitializer
@@ -793,9 +704,9 @@ __mmask32 test_mm512_movepi16_mask(__m512i __A) {
   // CIR: [[CMP:%.*]] = cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<32 x !s16i>, !cir.vector<32 x !cir.int<s, 1>>
   // CIR: %{{.*}} = cir.cast bitcast [[CMP]] : !cir.vector<32 x !cir.int<s, 1>> -> !u32i
 
-  // LLVM-LABEL: test_mm512_movepi16_mask
-  // LLVM: [[CMP:%.*]] = icmp slt <32 x i16> %{{.*}}, zeroinitializer
-  // LLVM: bitcast <32 x i1> [[CMP]] to i32
+  // LLVMCIR-LABEL: test_mm512_movepi16_mask
+  // LLVMCIR: [[CMP:%.*]] = icmp slt <32 x i16> %{{.*}}, zeroinitializer
+  // LLVMCIR: bitcast <32 x i1> [[CMP]] to i32
 
   // OGCG-LABEL: {{.*}}movepi16_mask{{.*}}(
   // OGCG: [[CMP:%.*]] = icmp slt <32 x i16> %{{.*}}, zeroinitializer
@@ -815,9 +726,6 @@ __m256i test_mm512_cvtepi16_epi8(__m512i __A) {
   // LLVM: %[[TRUNC:.*]] = trunc <32 x i16> %{{.*}} to <32 x i8>
   // LLVM: bitcast <32 x i8> %[[TRUNC]] to <4 x i64>
   
-  // OGCG-LABEL: test_mm512_cvtepi16_epi8
-  // OGCG: %[[TRUNC:.*]] = trunc <32 x i16> %{{.*}} to <32 x i8>
-  // OGCG: bitcast <32 x i8> %[[TRUNC]] to <4 x i64>
   return _mm512_cvtepi16_epi8(__A);
 }
 
@@ -837,11 +745,6 @@ __m256i test_mm512_mask_cvtepi16_epi8(__m256i __O, __mmask32 __M, __m512i __A) {
   // LLVM: %[[SEL:.*]] = select <32 x i1> %[[MASK_VEC]], <32 x i8> %[[TRUNC]], <32 x i8> %{{.*}}
   // LLVM: bitcast <32 x i8> %[[SEL]] to <4 x i64>
   
-  // OGCG-LABEL: test_mm512_mask_cvtepi16_epi8
-  // OGCG: %[[TRUNC:.*]] = trunc <32 x i16> %{{.*}} to <32 x i8>
-  // OGCG: %[[MASK_VEC:.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // OGCG: %[[SEL:.*]] = select <32 x i1> %[[MASK_VEC]], <32 x i8> %[[TRUNC]], <32 x i8> %{{.*}}
-  // OGCG: bitcast <32 x i8> %[[SEL]] to <4 x i64>
   return _mm512_mask_cvtepi16_epi8(__O, __M, __A);
 }
 
@@ -858,11 +761,6 @@ __m256i test_mm512_maskz_cvtepi16_epi8(__mmask32 __M, __m512i __A) {
   // LLVM: %[[SEL:.*]] = select <32 x i1> %[[MASK_VEC]], <32 x i8> %[[TRUNC]], <32 x i8> {{.*}}
   // LLVM: bitcast <32 x i8> %[[SEL]] to <4 x i64>
   
-  // OGCG-LABEL: test_mm512_maskz_cvtepi16_epi8
-  // OGCG: %[[TRUNC:.*]] = trunc <32 x i16> %{{.*}} to <32 x i8>
-  // OGCG: %[[MASK_VEC:.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // OGCG: %[[SEL:.*]] = select <32 x i1> %[[MASK_VEC]], <32 x i8> %[[TRUNC]], <32 x i8> {{.*}}
-  // OGCG: bitcast <32 x i8> %[[SEL]] to <4 x i64>
   return _mm512_maskz_cvtepi16_epi8(__M, __A);
 }
 
@@ -873,8 +771,6 @@ __m512i test_mm512_mulhi_epi16(__m512i __A, __m512i __B) {
   // LLVM-LABEL: test_mm512_mulhi_epi16
   // LLVM: call <32 x i16> @llvm.smulh.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}})
 
-  // OGCG-LABEL: test_mm512_mulhi_epi16
-  // OGCG: call <32 x i16> @llvm.smulh.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}})
   return _mm512_mulhi_epi16(__A, __B);
 }
 
@@ -885,8 +781,6 @@ __m512i test_mm512_mulhi_epu16(__m512i __A, __m512i __B) {
   // LLVM-LABEL: test_mm512_mulhi_epu16
   // LLVM: call <32 x i16> @llvm.umulh.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}})
 
-  // OGCG-LABEL: test_mm512_mulhi_epu16
-  // OGCG: call <32 x i16> @llvm.umulh.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}})
   return _mm512_mulhi_epu16(__A, __B);
 }
 
@@ -897,8 +791,6 @@ __m512i test_mm512_alignr_epi8(__m512i __A,__m512i __B) {
   // LLVM-LABEL: test_mm512_alignr_epi8
   // LLVM: shufflevector <64 x i8> %{{.*}}, <64 x i8> %{{.*}}, <64 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 80, i32 81, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 96, i32 97, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 112, i32 113>
 
-  // OGCG-LABEL: test_mm512_alignr_epi8
-  // OGCG: shufflevector <64 x i8> %{{.*}}, <64 x i8> %{{.*}}, <64 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 80, i32 81, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 96, i32 97, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 112, i32 113>
   return _mm512_alignr_epi8(__A, __B, 2);
 }
 
@@ -911,8 +803,6 @@ __m512i test_mm512_bslli_epi128(__m512i __A) {
   // LLVM-LABEL: test_mm512_bslli_epi128
   // LLVM: shufflevector <64 x i8> zeroinitializer, <64 x i8> %{{.*}}, <64 x i32> <i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 72, i32 73, i32 74, i32 27, i32 28, i32 29, i32 30, i32 31, i32 80, i32 81, i32 82, i32 83, i32 84, i32 85, i32 86, i32 87, i32 88, i32 89, i32 90, i32 43, i32 44, i32 45, i32 46, i32 47, i32 96, i32 97, i32 98, i32 99, i32 100, i32 101, i32 102, i32 103, i32 104, i32 105, i32 106, i32 59, i32 60, i32 61, i32 62, i32 63, i32 112, i32 113, i32 114, i32 115, i32 116, i32 117, i32 118, i32 119, i32 120, i32 121, i32 122>
 
-  // OGCG-LABEL: test_mm512_bslli_epi128
-  // OGCG: shufflevector <64 x i8> zeroinitializer, <64 x i8> %{{.*}}, <64 x i32> <i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 72, i32 73, i32 74, i32 27, i32 28, i32 29, i32 30, i32 31, i32 80, i32 81, i32 82, i32 83, i32 84, i32 85, i32 86, i32 87, i32 88, i32 89, i32 90, i32 43, i32 44, i32 45, i32 46, i32 47, i32 96, i32 97, i32 98, i32 99, i32 100, i32 101, i32 102, i32 103, i32 104, i32 105, i32 106, i32 59, i32 60, i32 61, i32 62, i32 63, i32 112, i32 113, i32 114, i32 115, i32 116, i32 117, i32 118, i32 119, i32 120, i32 121, i32 122>
   return _mm512_bslli_epi128(__A, 5);
 }
 
@@ -925,7 +815,5 @@ __m512i test_mm512_bsrli_epi128(__m512i __A) {
   // LLVM-LABEL: test_mm512_bsrli_epi128
   // LLVM: shufflevector <64 x i8> %{{.*}}, <64 x i8> zeroinitializer, <64 x i32> <i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 66, i32 67, i32 68, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 80, i32 81, i32 82, i32 83, i32 84, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 96, i32 97, i32 98, i32 99, i32 100, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 112, i32 113, i32 114, i32 115, i32 116>
 
-  // OGCG-LABEL: test_mm512_bsrli_epi128
-  // OGCG: shufflevector <64 x i8> %{{.*}}, <64 x i8> zeroinitializer, <64 x i32> <i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 64, i32 65, i32 66, i32 67, i32 68, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 80, i32 81, i32 82, i32 83, i32 84, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 96, i32 97, i32 98, i32 99, i32 100, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63, i32 112, i32 113, i32 114, i32 115, i32 116>
   return _mm512_bsrli_epi128(__A, 5);
 }
