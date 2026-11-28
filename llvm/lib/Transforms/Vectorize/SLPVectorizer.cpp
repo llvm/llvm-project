@@ -27527,7 +27527,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // dominator tree is updated for the rest of the run.
   versionBlocksForRuntimeChecks();
 
-  // Clear wrap flags before emmiting vector code
+  // Clear wrap flags before emitting vector code
   for (Instruction *I : Candidate.WrapFlagUsers) {
     assert(isa<OverflowingBinaryOperator>(I) &&
            "Expected overflowing binary operator");
