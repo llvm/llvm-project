@@ -8,8 +8,7 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr null, align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 0, 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 false, i32 0, i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i8> zeroinitializer, zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc <4 x i8> [[TMP8]] to <4 x i1>
+; CHECK-NEXT:    [[TMP9:%.*]] = or <4 x i1> zeroinitializer, zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i1> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[TMP13]])

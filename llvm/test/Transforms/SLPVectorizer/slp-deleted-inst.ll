@@ -6,10 +6,9 @@ define void @foo() {
 ; CHECK-NEXT:  [[BB:.*]]:
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ [[TMP11:%.*]], %[[BB3:.*]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i1> [ [[TMP11:%.*]], %[[BB3:.*]] ], [ zeroinitializer, %[[BB]] ]
 ; CHECK-NEXT:    br label %[[BB3]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i32> [[TMP0]] to <2 x i1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <2 x i1> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i1> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and <2 x i1> [[TMP3]], zeroinitializer
@@ -20,18 +19,18 @@ define void @foo() {
 ; CHECK-NEXT:    [[I22:%.*]] = or i32 [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[I22]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i32> [[TMP9]], zeroinitializer
-; CHECK-NEXT:    [[TMP11]] = select <2 x i1> [[TMP10]], <2 x i32> zeroinitializer, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP11]] = select <2 x i1> [[TMP10]], <2 x i1> zeroinitializer, <2 x i1> zeroinitializer
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
 bb:
-  br label %bb1
+  br label %loop
 
-bb1:                                              ; preds = %bb3, %bb
-  %i = phi i32 [ %i26, %bb3 ], [ 0, %bb ]
-  %i2 = phi i32 [ %i24, %bb3 ], [ 0, %bb ]
-  br label %bb3
+loop:                                              ; preds = %body, %bb
+  %i = phi i32 [ %i26, %body ], [ 0, %bb ]
+  %i2 = phi i32 [ %i24, %body ], [ 0, %bb ]
+  br label %body
 
-bb3:                                              ; preds = %bb1
+body:                                              ; preds = %loop
   %i4 = zext i32 %i2 to i64
   %i5 = mul i64 %i4, 0
   %i10 = or i64 0, %i5
@@ -47,5 +46,5 @@ bb3:                                              ; preds = %bb1
   %i24 = select i1 %i23, i32 0, i32 0
   %i25 = icmp ult i32 0, 0
   %i26 = select i1 %i25, i32 0, i32 0
-  br label %bb1
+  br label %loop
 }

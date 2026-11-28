@@ -3876,6 +3876,10 @@ private:
     /// its original width.
     SmallDenseMap<const TreeEntry *, std::pair<uint64_t, bool>> MinBWs;
 
+    // A set to determine if the wrap flags for users of I need to be removed
+    // during the minbitwidth analysis.
+    SmallPtrSet<Instruction *, 8> WrapFlagUsers;
+
     /// Final size of the reduced vector, if the current graph represents the
     /// input for the reduction and it was possible to narrow the size of the
     /// reduction.
@@ -3987,6 +3991,7 @@ private:
       CompressEntryToData.clear();
       PairedDivisions.clear();
       MinBWs.clear();
+      WrapFlagUsers.clear();
       ReductionBitWidth = 0;
       BaseGraphSize = 1;
       CastMaxMinBWSizes.reset();
@@ -27538,6 +27543,13 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   // dominator tree is updated for the rest of the run.
   versionBlocksForRuntimeChecks();
 
+  // Clear wrap flags before emitting vector code
+  for (Instruction *I : Candidate.WrapFlagUsers) {
+    assert(isa<OverflowingBinaryOperator>(I) &&
+           "Expected overflowing binary operator");
+    I->dropPoisonGeneratingAnnotations();
+  }
+
   if (ReductionRoot)
     Builder.SetInsertPoint(ReductionRoot->getIterator());
   else
@@ -27939,6 +27951,8 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
               Ex = EE;
             } else {
               auto *CloneInst = Inst->clone();
+              if (Candidate.WrapFlagUsers.contains(Inst))
+                Candidate.WrapFlagUsers.insert(CloneInst);
               CloneInst->insertBefore(Inst->getIterator());
               if (Inst->hasName())
                 CloneInst->takeName(Inst);
@@ -28098,6 +28112,14 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
             isReductionTree() && none_of(Scalar->users(), [&](llvm::User *U) {
               return Candidate.UserIgnoreSet.contains(U);
             });
+        for (llvm::User *U : Scalar->users()) {
+          auto *UI = dyn_cast<Instruction>(U);
+          if (!UI || !isa<OverflowingBinaryOperator>(UI))
+            continue;
+          if (!Candidate.WrapFlagUsers.contains(UI))
+            continue;
+          UI->dropPoisonGeneratingAnnotations();
+        }
         Scalar->replaceAllUsesWith(NewInst);
         if (NeedsProtection)
           if (auto *I = dyn_cast<Instruction>(NewInst))
@@ -28221,12 +28243,19 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
           User->replaceAllUsesWith(NewInst);
           eraseInstruction(cast<Instruction>(User));
         } else {
+          if (isa<OverflowingBinaryOperator>(UserI) &&
+              Candidate.WrapFlagUsers.contains(UserI))
+            UserI->dropPoisonGeneratingAnnotations();
           User->replaceUsesOfWith(Scalar, NewInst);
         }
       }
     } else {
       Builder.SetInsertPoint(F->getEntryBlock().begin());
       Value *NewInst = ExtractAndExtendIfNeeded(Vec);
+      if (auto *UserI = dyn_cast<Instruction>(User);
+          UserI && isa<OverflowingBinaryOperator>(UserI) &&
+          Candidate.WrapFlagUsers.contains(UserI))
+        UserI->dropPoisonGeneratingAnnotations();
       User->replaceUsesOfWith(Scalar, NewInst);
     }
 
@@ -30199,7 +30228,12 @@ bool BoUpSLP::collectValuesToDemote(
 
   unsigned OrigBitWidth =
       DL->getTypeSizeInBits(E.Scalars.front()->getType()->getScalarType());
-  if (OrigBitWidth == BitWidth) {
+
+  // For zext/sext instructions we include the operands,
+  // so the OrigBitWidth can be less than the candidate bitwidth.
+  // We stop the recursion early here and don't change the bitwidth.
+  // That bitwidth might still be required.
+  if (OrigBitWidth <= BitWidth) {
     MaxDepthLevel = 1;
     return true;
   }
@@ -30376,8 +30410,14 @@ bool BoUpSLP::collectValuesToDemote(
             return true;
           if (!ProcessOperands(Operands, NeedToExit))
             return false;
-          if (NeedToExit)
+          if (NeedToExit) {
+            unsigned Opc = E.getOpcode();
+            // Ignore widening shuffles, this may produce worse code.
+            if (!E.isAltShuffle() &&
+                (Opc == Instruction::ZExt || Opc == Instruction::SExt))
+              ToDemote.push_back(E.Idx);
             return true;
+          }
         }
 
         ++MaxDepthLevel;
@@ -30439,7 +30479,7 @@ bool BoUpSLP::collectValuesToDemote(
         E.UserTreeIndex.UserTE->getMainOp()->getType()->isFPOrFPVectorTy())
       return false;
     IsProfitableToDemote = true;
-    return TryProcessInstruction(BitWidth);
+    return TryProcessInstruction(BitWidth, GetOperandEntries());
 
   // Demote binary ops when all operands can be demoted (may be >2 operands).
   case Instruction::Add:
@@ -30975,6 +31015,29 @@ void BoUpSLP::computeMinimumValueSizes() {
         return !isKnownNonNegative(R, SimplifyQuery(*DL));
       });
     };
+    auto WillWrapFlagsBeDroppedFor = [&](Instruction *I) -> bool {
+      if (!isa<OverflowingBinaryOperator>(I))
+        return false;
+      if (!I->getType()->isIntegerTy())
+        return false;
+      const auto &Entries = getTreeEntries(I);
+      if (Entries.empty())
+        return false;
+      if (any_of(Entries, [&](TreeEntry *E) {
+            return E->isGather() || Shared.TransformedToGatherNodes.contains(E);
+          }))
+        return false;
+      // PropagateIRFlags skips nuw/nsw for entries in MinBWs.
+      // Check all entries for Instruction I, because I can appear in multiple
+      // TreeEntries.
+      return all_of(Entries, [&](const TreeEntry *TE) {
+        auto It = Candidate.MinBWs.find(TE);
+        return It != Candidate.MinBWs.end();
+      });
+    };
+    // Record users of I with nuw/nsw flags, we may have to drop them for
+    // correctness.
+    SmallPtrSet<Instruction *, 8> PendingWrapFlagUsers;
     // The extension of a demoted scalar, which does not fit into the demoted
     // type, restores only its demanded bits. Keep the original bitwidth if the
     // users, not demoted with the scalar, may depend on the other bits via
@@ -30996,12 +31059,18 @@ void BoUpSLP::computeMinimumValueSizes() {
         for (Instruction *UI : Worklist.pop_back_val()->users()) {
           if (++NumUsers > UsesLimit)
             return true;
+          if (isa<OverflowingBinaryOperator>(UI) &&
+              UI->hasPoisonGeneratingFlags() && IsDemotedUser(UI))
+            PendingWrapFlagUsers.insert(UI);
           if (Candidate.UserIgnoreSet.contains(UI) ||
               !UI->getType()->isIntOrIntVectorTy() ||
               !Visited.insert(UI).second || IsDemotedUser(UI))
             continue;
-          if (UI->hasPoisonGeneratingAnnotations())
-            return true;
+          if (UI->hasPoisonGeneratingAnnotations()) {
+            if (!WillWrapFlagsBeDroppedFor(UI))
+              return true;
+            PendingWrapFlagUsers.insert(UI);
+          }
           if (!DB->getDemandedBits(UI).isAllOnes())
             Worklist.push_back(UI);
         }
@@ -31099,8 +31168,16 @@ void BoUpSLP::computeMinimumValueSizes() {
       TreeEntry *TE = Candidate.VectorizableTree[Idx].get();
       if (Candidate.MinBWs.contains(TE))
         continue;
-      Candidate.MinBWs.try_emplace(TE, MaxBitWidth, IsSignedEntry(*TE));
+      // A later operand may increase the MaxBitWidth after an
+      // earlier entry is collected. Do not widen TreeEntries beyond
+      // their original width. Widening those operations can change wrapping
+      // semantics.
+      unsigned OriginalWidth =
+          TE->Scalars.front()->getType()->getScalarSizeInBits();
+      Candidate.MinBWs.try_emplace(TE, std::min(OriginalWidth, MaxBitWidth),
+                                   IsSignedEntry(*TE));
     }
+    Candidate.WrapFlagUsers.insert_range(PendingWrapFlagUsers);
   }
 }
 

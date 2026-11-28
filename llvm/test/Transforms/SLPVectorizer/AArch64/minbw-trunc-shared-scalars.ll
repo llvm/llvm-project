@@ -233,8 +233,7 @@ define void @test_shared_partial_demote(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i16> [[TMP11]], <4 x i16> [[TMP13]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP15:%.*]] = sub <4 x i16> [[TMP9]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = and <4 x i16> [[TMP15]], splat (i16 7)
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc <4 x i16> [[TMP16]] to <4 x i8>
-; CHECK-NEXT:    [[TMP18:%.*]] = zext <4 x i8> [[TMP17]] to <4 x i32>
+; CHECK-NEXT:    [[TMP18:%.*]] = zext <4 x i16> [[TMP16]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp slt <4 x i32> [[TMP4]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = and <4 x i8> [[TMP2]], splat (i8 1)
 ; CHECK-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP19]], <4 x i8> [[TMP20]], <4 x i8> zeroinitializer

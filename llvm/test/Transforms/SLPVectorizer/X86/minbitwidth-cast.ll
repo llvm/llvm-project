@@ -5,10 +5,8 @@ define ptr @test(i8 %0) {
 ; CHECK-LABEL: define ptr @test(
 ; CHECK-SAME: i8 [[TMP0:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV12_I:%.*]] = zext i8 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[CONV12_I]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <2 x i32> [[TMP2]] to <2 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> <i8 0, i8 poison>, i8 [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i8> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[TMP4]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX50_I:%.*]] = getelementptr i8, ptr null, i64 [[TMP5]]

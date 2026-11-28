@@ -10,9 +10,9 @@ define i64 @wombat() {
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[BB:%.*]] ], [ 0, [[BB1:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[PHI]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i1>
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[PHI]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i1> poison, i1 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP2]], i64 1

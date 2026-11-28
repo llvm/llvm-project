@@ -55,30 +55,19 @@ define i32 @cmp_bitcast(ptr %p) {
 define i128 @shl_zext_bitcast(ptr %p) {
 ; CHECK-LABEL: define i128 @shl_zext_bitcast(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 3
-; CHECK-NEXT:    [[A0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[A1:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[A2:%.*]] = load i8, ptr [[P2]], align 1
-; CHECK-NEXT:    [[A3:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[E0:%.*]] = zext i8 [[A0]] to i32
-; CHECK-NEXT:    [[E1:%.*]] = zext i8 [[A1]] to i32
-; CHECK-NEXT:    [[E2:%.*]] = zext i8 [[A2]] to i32
-; CHECK-NEXT:    [[E3:%.*]] = zext i8 [[A3]] to i32
-; CHECK-NEXT:    [[L0:%.*]] = shl i32 [[E0]], 0
-; CHECK-NEXT:    [[L1:%.*]] = shl i32 [[E1]], 8
-; CHECK-NEXT:    [[L2:%.*]] = shl i32 [[E2]], 16
-; CHECK-NEXT:    [[L3:%.*]] = shl i32 [[E3]], 24
-; CHECK-NEXT:    [[O0:%.*]] = or disjoint i32 [[L0]], [[L1]]
-; CHECK-NEXT:    [[O1:%.*]] = or disjoint i32 [[L2]], [[L3]]
-; CHECK-NEXT:    [[W0:%.*]] = zext i32 [[O0]] to i64
-; CHECK-NEXT:    [[W1:%.*]] = zext i32 [[O1]] to i64
-; CHECK-NEXT:    [[M0:%.*]] = and i64 [[W0]], 4294967295
-; CHECK-NEXT:    [[M1:%.*]] = and i64 [[W1]], 4294967295
-; CHECK-NEXT:    [[Z0:%.*]] = zext i64 [[M0]] to i128
-; CHECK-NEXT:    [[Z1:%.*]] = zext i64 [[M1]] to i128
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i8> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i8> [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = shl <2 x i32> [[TMP3]], <i32 0, i32 16>
+; CHECK-NEXT:    [[TMP7:%.*]] = shl <2 x i32> [[TMP5]], <i32 8, i32 24>
+; CHECK-NEXT:    [[TMP8:%.*]] = or disjoint <2 x i32> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP8]], i64 0
+; CHECK-NEXT:    [[Z0:%.*]] = zext i32 [[TMP9]] to i128
 ; CHECK-NEXT:    call void @use128(i128 [[Z0]])
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP8]], i64 1
+; CHECK-NEXT:    [[Z1:%.*]] = zext i32 [[TMP11]] to i128
 ; CHECK-NEXT:    call void @use128(i128 [[Z1]])
 ; CHECK-NEXT:    [[R:%.*]] = or disjoint i128 [[Z0]], [[Z1]]
 ; CHECK-NEXT:    ret i128 [[R]]
@@ -115,27 +104,20 @@ define i128 @shl_zext_bitcast(ptr %p) {
 define i128 @bit_pack(i32 %x) {
 ; CHECK-LABEL: define i128 @bit_pack(
 ; CHECK-SAME: i32 [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[S0:%.*]] = lshr i32 [[X]], 0
-; CHECK-NEXT:    [[S1:%.*]] = lshr i32 [[X]], 8
-; CHECK-NEXT:    [[S2:%.*]] = lshr i32 [[X]], 16
-; CHECK-NEXT:    [[S3:%.*]] = lshr i32 [[X]], 24
-; CHECK-NEXT:    [[B0:%.*]] = and i32 [[S0]], 255
-; CHECK-NEXT:    [[B1:%.*]] = and i32 [[S1]], 255
-; CHECK-NEXT:    [[B2:%.*]] = and i32 [[S2]], 255
-; CHECK-NEXT:    [[B3:%.*]] = and i32 [[S3]], 255
-; CHECK-NEXT:    [[L0:%.*]] = shl nuw i32 [[B0]], 0
-; CHECK-NEXT:    [[L1:%.*]] = shl nuw i32 [[B1]], 8
-; CHECK-NEXT:    [[L2:%.*]] = shl nuw i32 [[B2]], 16
-; CHECK-NEXT:    [[L3:%.*]] = shl nuw i32 [[B3]], 24
-; CHECK-NEXT:    [[O0:%.*]] = or i32 [[L0]], [[L1]]
-; CHECK-NEXT:    [[O1:%.*]] = or i32 [[L2]], [[L3]]
-; CHECK-NEXT:    [[W0:%.*]] = zext i32 [[O0]] to i64
-; CHECK-NEXT:    [[W1:%.*]] = zext i32 [[O1]] to i64
-; CHECK-NEXT:    [[M0:%.*]] = and i64 [[W0]], 4294967295
-; CHECK-NEXT:    [[M1:%.*]] = and i64 [[W1]], 4294967295
-; CHECK-NEXT:    [[Z0:%.*]] = zext i64 [[M0]] to i128
-; CHECK-NEXT:    [[Z1:%.*]] = zext i64 [[M1]] to i128
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i32> [[TMP2]], <i32 0, i32 16>
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i32> [[TMP2]], <i32 8, i32 24>
+; CHECK-NEXT:    [[TMP5:%.*]] = and <2 x i32> [[TMP3]], splat (i32 255)
+; CHECK-NEXT:    [[TMP6:%.*]] = and <2 x i32> [[TMP4]], splat (i32 255)
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw <2 x i32> [[TMP5]], <i32 0, i32 16>
+; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw <2 x i32> [[TMP6]], <i32 8, i32 24>
+; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i32> [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP9]], i64 0
+; CHECK-NEXT:    [[Z0:%.*]] = zext i32 [[TMP10]] to i128
 ; CHECK-NEXT:    call void @use128(i128 [[Z0]])
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[TMP9]], i64 1
+; CHECK-NEXT:    [[Z1:%.*]] = zext i32 [[TMP12]] to i128
 ; CHECK-NEXT:    call void @use128(i128 [[Z1]])
 ; CHECK-NEXT:    [[R:%.*]] = or i128 [[Z0]], [[Z1]]
 ; CHECK-NEXT:    ret i128 [[R]]
