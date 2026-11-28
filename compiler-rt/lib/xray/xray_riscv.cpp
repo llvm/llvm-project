@@ -144,7 +144,7 @@ static inline bool patchSled(const bool Enable, const uint32_t FuncId,
 #elif __riscv_xlen == 32
     // We typecast the Tracing Hook to a 32 bit value for RV32
     uint32_t LoTracingHookAddr = lo12(reinterpret_cast<uint32_t>(TracingHook));
-    uint32_t HiTracingHookAddr = hi20((reinterpret_cast<uint32_t>(TracingHook));
+    uint32_t HiTracingHookAddr = hi20(reinterpret_cast<uint32_t>(TracingHook));
 #endif
     uint32_t LoFunctionID = lo12(FuncId);
     uint32_t HiFunctionID = hi20(FuncId);
