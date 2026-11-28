@@ -1392,6 +1392,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `__type_pack_element` or `__make_integer_seq` were used as template
   template arguments of emitted entities. (#GH232739)
 
+- Fixed a crash when processing Microsoft `__pragma(mark ...)` expressions
+  without a character lexer.
+
 - Fixed a crash in preprocessor conditionals containing `_Pragma`.
 - Fixed a crash when Microsoft extensions were enabled and an unterminated
   `__identifier` expression reached the end of a preprocessing directive or
