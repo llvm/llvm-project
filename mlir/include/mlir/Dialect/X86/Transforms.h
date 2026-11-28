@@ -127,6 +127,13 @@ void populateVectorContractMultiLevelUnrollForAMXPatterns(
 // dimension to be a multiple of 8.
 void populateMathRsqrtApproximationPatterns(RewritePatternSet &patterns);
 
+// A set of patterns for lowering 32-bit packed vector contraction operations
+// to their corresponding packed-type tiled outer-product operations, using
+// ACE ultimately targeting the relevant x86 ACE LLVM intrinsics (e.g., BF16 and
+// Int8).
+void populateVectorContractToACEOuterProductPatterns(
+    RewritePatternSet &patterns);
+
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:
 ///   - clang/lib/Headers/avxintrin.h

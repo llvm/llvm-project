@@ -75,6 +75,11 @@ void mlir::transform::ApplyMathRsqrtApproximationPatternsOp::populatePatterns(
   x86::populateMathRsqrtApproximationPatterns(patterns);
 }
 
+void mlir::transform::ApplyVectorContractToACEOuterProductPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  x86::populateVectorContractToACEOuterProductPatterns(patterns);
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//
