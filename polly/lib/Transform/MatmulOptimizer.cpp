@@ -749,10 +749,16 @@ getMacroKernelParams(const llvm::TargetTransformInfo *TTI,
                             "operands should be greater than zero.");
   int Kc = (Car * FirstCacheLevelSize) /
            (MicroKernelParams.Mr * FirstCacheLevelAssociativity * ElementSize);
+  if (Kc <= 0)
+    return {1, 1, 1};
+
   double Cac =
       static_cast<double>(Kc * ElementSize * SecondCacheLevelAssociativity) /
       SecondCacheLevelSize;
   int Mc = floor((SecondCacheLevelAssociativity - 2) / Cac);
+  if (Mc <= 0)
+    return {1, 1, 1};
+
   int Nc = PollyPatternMatchingNcQuotient * MicroKernelParams.Nr;
 
   assert(Mc > 0 && Nc > 0 && Kc > 0 &&
