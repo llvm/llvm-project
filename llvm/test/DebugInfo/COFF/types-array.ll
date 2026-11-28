@@ -53,8 +53,8 @@
 ; CHECK:       PtrEnd: 0x0
 ; CHECK:       PtrNext: 0x0
 ; CHECK:       CodeSize: 0x39
-; CHECK:       DbgStart: 0x0
-; CHECK:       DbgEnd: 0x0
+; CHECK:       DbgStart: 0x9
+; CHECK:       DbgEnd: 0x34
 ; CHECK:       FunctionType: f (0x1002)
 ; CHECK:       CodeOffset: ?f@@YAXXZ+0x0
 ; CHECK:       Segment: 0x0

@@ -1188,9 +1188,17 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.AddComment("Code size");
     OS.emitAbsoluteSymbolDiff(FI.End, Fn, 4);
     OS.AddComment("Offset after prologue");
-    OS.emitInt32(0);
+    if (FI.PrologEnd)
+      OS.emitAbsoluteSymbolDiff(FI.PrologEnd, Fn, 4);
+    else
+      OS.emitInt32(0);
     OS.AddComment("Offset before epilogue");
-    OS.emitInt32(0);
+    if (FI.EpilogBegin)
+      OS.emitAbsoluteSymbolDiff(FI.EpilogBegin, Fn, 4);
+    else if (FI.PrologEnd)
+      OS.emitAbsoluteSymbolDiff(FI.End, Fn, 4);
+    else
+      OS.emitInt32(0);
     OS.AddComment("Function type index");
     OS.emitInt32(getFuncIdForSubprogram(GV->getSubprogram()).getIndex());
     OS.AddComment("Function section relative address");
@@ -1502,6 +1510,43 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
   }
 }
 
+void CodeViewDebug::findPrologueAndEpilogue(const MachineFunction &MF) {
+  // The offsets are relative to the start of the function.
+  const MachineBasicBlock &Entry = MF.front();
+
+  // The prologue ends at the first instruction that has a location and isn't
+  // part of the frame setup, which is also where the line table starts the
+  // function body.
+  for (const MachineBasicBlock &MBB : MF) {
+    if (!MBB.sameSection(&Entry))
+      continue;
+    auto It = llvm::find_if(MBB, [](const MachineInstr &MI) {
+      return !MI.isMetaInstruction() && !MI.getFlag(MachineInstr::FrameSetup) &&
+             MI.getDebugLoc();
+    });
+    if (It != MBB.end()) {
+      CurFn->PrologEndInst = &*It;
+      break;
+    }
+  }
+  if (!CurFn->PrologEndInst)
+    return;
+
+  for (const MachineBasicBlock &MBB : llvm::reverse(MF)) {
+    if (!MBB.isReturnBlock() || !MBB.sameSection(&Entry))
+      continue;
+    for (const MachineInstr &MI : MBB) {
+      if (MI.isMetaInstruction())
+        continue;
+      if (MI.getFlag(MachineInstr::FrameDestroy) || MI.isReturn()) {
+        CurFn->EpilogBeginInst = &MI;
+        break;
+      }
+    }
+    break;
+  }
+}
+
 void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
   const TargetSubtargetInfo &TSI = MF->getSubtarget();
   const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
@@ -1611,6 +1656,8 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
     DebugLoc FnStartDL = PrologEndLoc.getFnDebugLoc();
     maybeRecordLocation(FnStartDL, MF);
   }
+
+  findPrologueAndEpilogue(*MF);
 
   // Find heap alloc sites and emit labels around them.
   for (const auto &MBB : *MF) {
@@ -3172,6 +3219,18 @@ static bool isUsableDebugLoc(DebugLoc DL) {
 
 void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   DebugHandlerBase::beginInstruction(MI);
+
+  // Named labels, so that they don't renumber the other temporary labels.
+  if (CurFn && MI == CurFn->PrologEndInst) {
+    MCSymbol *Label = MMI->getContext().createNamedTempSymbol("prologue_end");
+    Asm->OutStreamer->emitLabel(Label);
+    CurFn->PrologEnd = Label;
+  }
+  if (CurFn && MI == CurFn->EpilogBeginInst) {
+    MCSymbol *Label = MMI->getContext().createNamedTempSymbol("epilogue_begin");
+    Asm->OutStreamer->emitLabel(Label);
+    CurFn->EpilogBegin = Label;
+  }
 
   // Ignore DBG_VALUE and DBG_LABEL locations and function prologue.
   if (!Asm || !CurFn || MI->isDebugInstr() ||

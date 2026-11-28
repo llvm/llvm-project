@@ -216,8 +216,8 @@
 ; CHECK:   Subsection [
 ; CHECK:     SubSectionType: Symbols (0xF1)
 ; CHECK:     {{.*}}Proc{{.*}}Sym {
-; CHECK:       DbgStart: 0x0
-; CHECK:       DbgEnd: 0x0
+; CHECK:       DbgStart: 0x21
+; CHECK:       DbgEnd: 0x99
 ; CHECK:       FunctionType: f (0x1002)
 ; CHECK:       CodeOffset: ?f@@YAXMN_J@Z+0x0
 ; CHECK:       Segment: 0x0

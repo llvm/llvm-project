@@ -155,8 +155,8 @@
 ; OBJ:     PtrEnd: 0x0
 ; OBJ:     PtrNext: 0x0
 ; OBJ:     CodeSize: 0x35
-; OBJ:     DbgStart: 0x0
-; OBJ:     DbgEnd: 0x0
+; OBJ:     DbgStart: 0x1
+; OBJ:     DbgEnd: 0x33
 ; OBJ:     FunctionType: baz (0x1004)
 ; OBJ:     CodeOffset: ?baz@@YAXXZ+0x0
 ; OBJ:     Segment: 0x0
