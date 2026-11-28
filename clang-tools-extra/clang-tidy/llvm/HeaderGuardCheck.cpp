@@ -45,7 +45,7 @@ std::string LLVMHeaderGuardCheck::getHeaderGuard(StringRef Filename,
     Guard = Guard.replace(PosLLVMProject, LLVMProject.size(), "/llvm/");
 
   // The remainder is LLVM_FULL_PATH_TO_HEADER_H
-  const size_t PosLLVM = Guard.rfind("llvm/");
+  const size_t PosLLVM = Guard.find("llvm/");
   if (PosLLVM != StringRef::npos)
     Guard = Guard.substr(PosLLVM);
 

@@ -248,6 +248,17 @@ TEST(LLVMHeaderGuardCheckTest, FixHeaderGuards) {
                 "", "/llvm-project/clang-tools-extra/clangd/foo.h",
                 StringRef("header is missing header guard")));
 
+  EXPECT_EQ(
+      "#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_HEADERGUARDCHECK_H\n"
+      "#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_HEADERGUARDCHECK_H\n"
+      "\n"
+      "\n"
+      "#endif\n",
+      runHeaderGuardCheck(
+          "",
+          "/llvm-project/clang-tools-extra/clang-tidy/llvm/HeaderGuardCheck.h",
+          StringRef("header is missing header guard")));
+
   // Substitution of characters should not result in a header guard starting
   // with "_".
   EXPECT_EQ("#ifndef BAR_H\n"

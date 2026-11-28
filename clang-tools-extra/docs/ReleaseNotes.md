@@ -289,6 +289,10 @@ infrastructure are described first, followed by tool-specific sections.
   diagnostics are still emitted at the class name for implicitly declared
   destructors.
 
+- Improved {doc}`llvm-header-guard <clang-tidy/checks/llvm/header-guard>` check
+  by no longer stripping leading path components when the header's path
+  contains a directory named `llvm` below the repository root.
+
 - Improved {doc}`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check:
 
