@@ -4046,14 +4046,34 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     return BinaryOperator::CreateNot(NewSI);
   }
 
+  auto ReplaceWithInnerCond = [&](Value *Cond) -> Instruction * {
+    if (!ProfcheckDisableMetadataFixes) {
+      MDNode *Weights = nullptr;
+      MDNode *Unpredictable = nullptr;
+      // Reuse the inner select's metadata if it executes exactly as often
+      // as SI. Its condition is the new condition of SI.
+      if (auto *InnerSel = dyn_cast<SelectInst>(CondVal)) {
+        if (InnerSel->getParent() == SI.getParent()) {
+          Weights = InnerSel->getMetadata(LLVMContext::MD_prof);
+          Unpredictable = InnerSel->getMetadata(LLVMContext::MD_unpredictable);
+        }
+      }
+      SI.setMetadata(LLVMContext::MD_prof, Weights);
+      SI.setMetadata(LLVMContext::MD_unpredictable, Unpredictable);
+      if (!Weights)
+        setExplicitlyUnknownBranchWeightsIfProfiled(SI, DEBUG_TYPE);
+    }
+    return replaceOperand(SI, 0, Cond);
+  };
+
   // select (select a, true, b), true, b -> select a, true, b
   if (match(CondVal, m_Select(m_Value(A), m_One(), m_Value(B))) &&
       match(TrueVal, m_One()) && match(FalseVal, m_Specific(B)))
-    return replaceOperand(SI, 0, A);
+    return ReplaceWithInnerCond(A);
   // select (select a, b, false), b, false -> select a, b, false
   if (match(CondVal, m_Select(m_Value(A), m_Value(B), m_Zero())) &&
       match(TrueVal, m_Specific(B)) && match(FalseVal, m_Zero()))
-    return replaceOperand(SI, 0, A);
+    return ReplaceWithInnerCond(A);
 
   // ~(A & B) & (A | B) --> A ^ B
   if (match(&SI, m_c_LogicalAnd(m_Not(m_LogicalAnd(m_Value(A), m_Value(B))),
@@ -4118,7 +4138,7 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       match(FalseVal, m_Zero())) {
     std::optional<bool> Res = isImpliedCondition(TrueVal, B, DL);
     if (Res && *Res == false)
-      return replaceOperand(SI, 0, A);
+      return ReplaceWithInnerCond(A);
   }
   if (match(TrueVal, m_LogicalOr(m_Value(A), m_Value(B))) &&
       match(FalseVal, m_Zero())) {
@@ -4139,7 +4159,7 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       match(TrueVal, m_One())) {
     std::optional<bool> Res = isImpliedCondition(FalseVal, B, DL, false);
     if (Res && *Res == true)
-      return replaceOperand(SI, 0, A);
+      return ReplaceWithInnerCond(A);
   }
 
   if (match(TrueVal, m_One())) {
