@@ -29,11 +29,9 @@ InterpFrame::InterpFrame(InterpState &S)
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
     : Caller(Caller), S(S), Func(Func), RetPC(RetPC),
-      Args(static_cast<char *>(S.Stk.top())), ArgSize(ArgSize) {
+      Args(static_cast<char *>(S.Stk.top())), ArgSize(ArgSize),
+      FrameOffset(S.Stk.size()) {
   assert(Func);
-#ifndef NDEBUG
-  FrameOffset = S.Stk.size();
-#endif
 
   FuncFlags |= Func->hasRVO() * HasRVOFlag;
   FuncFlags |= Func->hasThisPointer() * HasThisFlag;

@@ -28,6 +28,7 @@ class QualType;
 
 namespace interp {
 
+template <class Emitter> class CatchExceptionScope;
 template <class Emitter> class LocalScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
@@ -108,7 +109,7 @@ struct VarCreationState {
   bool notCreated() const { return !S; }
 };
 
-enum class ScopeKind { Block, FullExpression, Call };
+enum class ScopeKind { Block, FullExpression, Call, Try, Catch };
 
 /// Compilation context for expressions.
 template <class Emitter>
@@ -356,8 +357,9 @@ protected:
   UnsignedOrNone allocateTemporary(const Expr *E);
 
 private:
-  friend class VariableScope<Emitter>;
+  friend class CatchExceptionScope<Emitter>;
   friend class LocalScope<Emitter>;
+  friend class VariableScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class InitLinkScope<Emitter>;
   friend class InitStackScope<Emitter>;
@@ -461,14 +463,29 @@ private:
     return emitHLSLConstructAggregate(DestType, Elements, ElemIdx, E);
   }
 
-  bool compileConstructor(const CXXConstructorDecl *Ctor);
-  bool compileDestructor(const CXXDestructorDecl *Dtor);
+  bool compileConstructor(const CXXConstructorDecl *Ctor,
+                          const Stmt *Body = nullptr);
+  bool compileConstructorBody(const CXXConstructorDecl *Ctor, const Stmt *Body);
+  bool compileTryConstructor(const CXXConstructorDecl *Ctor);
+
+  bool compileDestructor(const CXXDestructorDecl *Dtor,
+                         const Stmt *Body = nullptr);
+  bool compileDestructorBody(const CXXDestructorDecl *Dtor, const Stmt *Body);
+  bool compileTryDestructor(const CXXDestructorDecl *Dtor);
   bool compileUnionAssignmentOperator(const CXXMethodDecl *MD);
 
   bool checkLiteralType(const Expr *E);
   bool maybeEmitDeferredVarInit(const VarDecl *VD);
 
   bool refersToUnion(const Expr *E);
+
+  bool emitFunctionReturn(const FunctionDecl *FD, OptPrimType ReturnType);
+
+  bool call(const Function *Func, SourceInfo Loc);
+  // Exception stuff.
+  bool emitCallCatchEpilog(SourceInfo Loc, bool DestroyScopes = true);
+  bool emitCatchHandlers(const CXXTryStmt *S, unsigned TryBlockStart,
+                         unsigned TryBlockEnd, bool IsFunctionTryBlock = false);
 
 protected:
   /// Variable to storage mapping.
