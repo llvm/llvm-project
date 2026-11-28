@@ -2091,3 +2091,6 @@ def AvailableVisibleAMDGPU : DiagGroup<"amdgpu-av">;
 def DynamicDebugging : DiagGroup<"dynamic-debugging">;
 
 def BPFEnumNotRelocated : DiagGroup<"bpf-enum-not-relocated">;
+
+// Warnings about Nintendo toolchain setup
+def NintendoToolChain : DiagGroup<"nintendo-toolchain">;

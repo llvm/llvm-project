@@ -223,6 +223,7 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::LiteOS:
   case llvm::Triple::Managarm:
   case llvm::Triple::NetBSD:
+  case llvm::Triple::NintendoOS:
   case llvm::Triple::OpenBSD:
   case llvm::Triple::PS4:
   case llvm::Triple::PS5:
