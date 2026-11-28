@@ -86,6 +86,15 @@ public:
     if constexpr (common::HasMember<const N *, ConstructNode>) {
       context_.PushConstruct(node);
     }
+    if constexpr (std::is_same_v<decltype(Enter(node)), bool>) {
+      if (Enter(node)) {
+        return true;
+      }
+      if constexpr (common::HasMember<const N *, ConstructNode>) {
+        context_.PopConstruct();
+      }
+      return false;
+    }
     Enter(node);
     return true;
   }
