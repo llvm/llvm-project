@@ -1,0 +1,38 @@
+# RUN: llc -mtriple=amdgpu6.00 \
+# RUN:   -amdgpu-exec-mask-opt-ssa-mode -amdgpu-opt-exec-mask-pre-ra=false \
+# RUN:   -run-pass si-optimize-exec-masking-pre-ra %s -o - | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name:            kill_phi_at_merge
+# GCN:      bb.0:
+# GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+# GCN:        S_CBRANCH_EXECZ %bb.2, implicit $exec
+# GCN:      bb.1:
+# GCN-NEXT:   successors: %bb.3(0x80000000)
+# GCN:        S_BRANCH %bb.3
+# GCN:      bb.2:
+# GCN-NEXT:   successors: %bb.3(0x80000000)
+# GCN:        S_BRANCH %bb.3
+# GCN:      bb.3:
+# GCN-NEXT:   S_ENDPGM 0
+---
+name: kill_phi_at_merge
+isSSA:           true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+
+  bb.1:
+    successors: %bb.3
+    %0:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    %1:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    %2:vgpr_32 = PHI %0:vgpr_32, %bb.1, %1:vgpr_32, %bb.2
+    S_ENDPGM 0
+...
