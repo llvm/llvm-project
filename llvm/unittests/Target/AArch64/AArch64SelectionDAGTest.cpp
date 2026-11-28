@@ -1501,6 +1501,36 @@ TEST_F(AArch64SelectionDAGTest, Combine_EXTRACT_VECTOR_ELT_ExtLoad) {
   EXPECT_EQ(Scalar->getPointerInfo().Offset, 4);
 }
 
+// Integer BUILD_VECTOR operands may be wider than the vector element type and
+// are implicitly truncated. The extension combine must leave the vector
+// unchanged when the extension source and vector element have the same width.
+TEST_F(AArch64SelectionDAGTest, Combine_BUILD_VECTOR_ImplicitTruncation) {
+  FunctionLoweringInfo FLI;
+  FLI.MBB = MF->CreateMachineBasicBlock(&F->getEntryBlock());
+  MF->push_back(FLI.MBB);
+  DAG->setFunctionLoweringInfo(&FLI);
+
+  SDLoc Loc;
+  SDValue Lo = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                   Register::index2VirtReg(0), MVT::i32);
+  SDValue Hi = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                   Register::index2VirtReg(1), MVT::i32);
+
+  for (unsigned Opcode : {ISD::ANY_EXTEND, ISD::ZERO_EXTEND}) {
+    SCOPED_TRACE(Opcode);
+    SDValue Ops[] = {DAG->getNode(Opcode, Loc, MVT::i64, Lo),
+                     DAG->getNode(Opcode, Loc, MVT::i64, Hi)};
+    SDValue Original = DAG->getBuildVector(MVT::v2i32, Loc, Ops);
+    HandleSDNode BV(Original);
+
+    // The extension combine runs after type or vector-operation legalization.
+    DAG->Combine(AfterLegalizeTypes, /*BatchAA=*/nullptr,
+                 CodeGenOptLevel::Default);
+
+    EXPECT_EQ(BV.getValue(), Original);
+  }
+}
+
 TEST_F(AArch64SelectionDAGTest,
        computeKnownBits_AVGFLOORU_AVGFLOORS_AVGCEILU_AVGCEILS) {
   SDLoc Loc;
