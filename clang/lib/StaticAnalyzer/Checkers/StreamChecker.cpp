@@ -812,14 +812,13 @@ protected:
     using namespace clang::ast_matchers;
 
     auto Matches = match(findAll(callExpr().bind("call")), *Body, ACtx);
-    for (BoundNodes Match : Matches) {
-      if (const auto *Call = Match.getNodeAs<CallExpr>("call"))
-        if (isClosingCallAsWritten(*Call))
-          return true;
-    }
+    auto IsClosingCallAsWritten = [this](const BoundNodes &Match) {
+      const auto *Call = Match.getNodeAs<CallExpr>("call");
+      return Call && isClosingCallAsWritten(*Call);
+    };
     // TODO: Ownership might change with an attempt to store stream object, not
     // only through closing it. Check for attempted stores as well.
-    return false;
+    return llvm::any_of(Matches, IsClosingCallAsWritten);
   }
 
   bool hasResourceStateChanged(ProgramStateRef CallEnterState,

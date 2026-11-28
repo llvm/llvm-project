@@ -1170,11 +1170,8 @@ public:
 
     // scanReachableSymbols is expensive, so we use a single visitor for all
     // roots
-    SmallVector<const MemRegion *, 10> Regions;
+    SmallVector<const MemRegion *, 10> Regions = llvm::to_vector<10>(Roots);
     EscapeTrackedCallback Visitor(State);
-    for (const MemRegion *R : Roots) {
-      Regions.push_back(R);
-    }
     State->scanReachableSymbols(Regions, Visitor);
     return Visitor.State;
   }
@@ -1230,11 +1227,11 @@ bool MallocChecker::isFreeingOwnershipAttrCall(const CallEvent &Call) {
 
 bool MallocChecker::isFreeingOwnershipAttrCall(const FunctionDecl *Func) {
   if (Func->hasAttrs()) {
-    for (const auto *I : Func->specific_attrs<OwnershipAttr>()) {
+    auto IsFreeing = [](const OwnershipAttr *I) {
       OwnershipAttr::OwnershipKind OwnKind = I->getOwnKind();
-      if (OwnKind == OwnershipAttr::Takes || OwnKind == OwnershipAttr::Holds)
-        return true;
-    }
+      return OwnKind == OwnershipAttr::Takes || OwnKind == OwnershipAttr::Holds;
+    };
+    return llvm::any_of(Func->specific_attrs<OwnershipAttr>(), IsFreeing);
   }
   return false;
 }
@@ -1253,12 +1250,10 @@ bool MallocChecker::isAllocatingOwnershipAttrCall(const CallEvent &Call) {
 }
 
 bool MallocChecker::isAllocatingOwnershipAttrCall(const FunctionDecl *Func) {
-  for (const auto *I : Func->specific_attrs<OwnershipAttr>()) {
-    if (I->getOwnKind() == OwnershipAttr::Returns)
-      return true;
-  }
-
-  return false;
+  auto IsAllocating = [](const OwnershipAttr *I) {
+    return I->getOwnKind() == OwnershipAttr::Returns;
+  };
+  return llvm::any_of(Func->specific_attrs<OwnershipAttr>(), IsAllocating);
 }
 
 bool MallocChecker::isMemCall(const CallEvent &Call) const {
