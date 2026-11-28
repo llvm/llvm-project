@@ -875,8 +875,14 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       return nullptr;
   }
 
-  if (getLangOpts().OpenCL && funcDecl->hasAttr<DeviceKernelAttr>())
-    cgm.emitOpenCLKernelArgMetadata(fn, funcDecl);
+  if (funcDecl->hasAttr<DeviceKernelAttr>() ||
+      funcDecl->hasAttr<CUDAGlobalAttr>()) {
+    if (getLangOpts().OpenCL)
+      cgm.emitOpenCLKernelArgMetadata(fn, funcDecl);
+    if (getLangOpts().OpenCL ||
+        (getLangOpts().CUDA && cgm.getTriple().isSPIRV()))
+      cgm.emitOpenCLKernelExecutionMetadata(fn, funcDecl);
+  }
 
   eraseEmptyAndUnusedBlocks(fn);
   return fn;
