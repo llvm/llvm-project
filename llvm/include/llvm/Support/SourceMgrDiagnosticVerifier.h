@@ -83,7 +83,9 @@ public:
     unsigned numExpected = 1;
     /// The number of matching diagnostics seen so far.
     unsigned numSeen = 0;
-    /// The substring that is expected to be within the diagnostic.
+    /// Whether the text must match the whole message instead of a substring.
+    bool matchFullMessage = false;
+    /// The text that is expected to match the diagnostic message.
     StringRef substring;
     /// An optional regex matcher, if the expected diagnostic substring was a
     /// regex string.
@@ -91,9 +93,12 @@ public:
   };
 
   /// Recognizes directives starting with any of \p prefixes (e.g.
-  /// 'expected-error').
-  explicit SourceMgrDiagnosticVerifier(ArrayRef<StringRef> prefixes = {
-                                           "expected"});
+  /// 'expected-error'). If \p matchFullMessage is true, the text of a
+  /// directive must match the whole diagnostic message rather than a
+  /// substring of it.
+  explicit SourceMgrDiagnosticVerifier(
+      ArrayRef<StringRef> prefixes = {"expected"},
+      bool matchFullMessage = false);
 
   SourceMgrDiagnosticVerifier(const SourceMgrDiagnosticVerifier &) = delete;
   SourceMgrDiagnosticVerifier &
@@ -143,6 +148,9 @@ public:
 private:
   /// Regex used to recognize '<prefix>-<kind>' comments.
   Regex expected;
+
+  /// Whether directives must match the whole diagnostic message.
+  bool matchFullMessage;
 
   /// The expected diagnostics for each buffer that has been scanned so far.
   DenseMap<const MemoryBuffer *, SmallVector<ExpectedDiag, 2>>
