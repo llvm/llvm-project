@@ -1,8 +1,8 @@
 libc++ Documentation
 ====================
 
-The libc++ documentation is written using the Sphinx documentation generator. It is
-currently tested with Sphinx 1.1.3.
+The libc++ documentation is written using the Sphinx documentation generator. The
+required Python packages are listed in llvm/docs/requirements.txt.
 
 To build the documents into html configure libc++ with the following cmake options:
 

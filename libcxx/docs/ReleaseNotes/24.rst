@@ -77,7 +77,7 @@ Potentially breaking changes
   macro that was provided in LLVM 23 to ease the transition has been removed in this release.
 
 - Unused objects of containers are now diagnosed. To ease the transition ``_LIBCPP_DISABLE_UNUSED_STRUCT_WARNINGS`` can
-  be defined as an escape hatch. This escape hatch will be removed in LLVM 24.
+  be defined as an escape hatch. This escape hatch will be removed in LLVM 25.
 
 - libc++ no longer depends on msvcprt/libcpmt in the MSVC mode.
 
