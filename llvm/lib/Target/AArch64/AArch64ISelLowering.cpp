@@ -11184,10 +11184,23 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     assert((Key == AArch64PACKey::IA || Key == AArch64PACKey::IB) &&
            "Invalid auth call key");
 
-    // Split the discriminator into address/integer components.
+    // Split the discriminator into address/integer components. When SLS BLR
+    // hardening is enabled, keep any non-zero discriminator in a register so
+    // it is materialized into a GPR64noip before register allocation rather
+    // than into x17 during AsmPrinter (linkers may clobber x16/x17 on BL).
     SDValue AddrDisc, IntDisc;
-    std::tie(IntDisc, AddrDisc) =
-        extractPtrauthBlendDiscriminators(CLI.PAI->Discriminator, &DAG);
+    if (!IsTailCall && Opc != AArch64ISD::CALL_RVMARKER &&
+        Subtarget->hardenSlsBlr()) {
+      IntDisc = DAG.getTargetConstant(0, DL, MVT::i64);
+      const auto *ConstDisc = dyn_cast<ConstantSDNode>(CLI.PAI->Discriminator);
+      if (ConstDisc && ConstDisc->isZero())
+        AddrDisc = DAG.getRegister(Register(), MVT::i64);
+      else
+        AddrDisc = CLI.PAI->Discriminator;
+    } else {
+      std::tie(IntDisc, AddrDisc) =
+          extractPtrauthBlendDiscriminators(CLI.PAI->Discriminator, &DAG);
+    }
 
     if (Opc == AArch64ISD::CALL_RVMARKER)
       Opc = AArch64ISD::AUTH_CALL_RVMARKER;

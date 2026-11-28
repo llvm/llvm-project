@@ -1149,7 +1149,9 @@ static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
     assert(IsIndirect && "Direct call should not be authenticated");
     assert((PAI->Key == AArch64PACKey::IA || PAI->Key == AArch64PACKey::IB) &&
            "Invalid auth call key");
-    return AArch64::BLRA;
+    return CallerF.getSubtarget<AArch64Subtarget>().hardenSlsBlr()
+               ? AArch64::BLRANoIP
+               : AArch64::BLRA;
   }
 
   if (!IsIndirect)
@@ -1512,7 +1514,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   Mask = getMaskForArgs(OutArgs, Info, *TRI, MF);
 
-  if (Opc == AArch64::BLRA || Opc == AArch64::BLRA_RVMARKER) {
+  if (Opc == AArch64::BLRA || Opc == AArch64::BLRANoIP ||
+      Opc == AArch64::BLRA_RVMARKER) {
     assert((Info.PAI->Key == AArch64PACKey::IA ||
             Info.PAI->Key == AArch64PACKey::IB) &&
            "Invalid auth call key");
@@ -1520,16 +1523,24 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
     Register AddrDisc = 0;
     uint16_t IntDisc = 0;
-    std::tie(IntDisc, AddrDisc) =
-        extractPtrauthBlendDiscriminators(Info.PAI->Discriminator, MRI);
+    if (Opc == AArch64::BLRANoIP) {
+      auto ConstVal =
+          getIConstantVRegValWithLookThrough(Info.PAI->Discriminator, MRI);
+      if (!ConstVal || ConstVal->Value != 0)
+        AddrDisc = Info.PAI->Discriminator;
+    } else {
+      std::tie(IntDisc, AddrDisc) =
+          extractPtrauthBlendDiscriminators(Info.PAI->Discriminator, MRI);
+    }
 
     MIB.addImm(IntDisc);
     MIB.addUse(AddrDisc);
     if (AddrDisc.isValid()) {
-      constrainOperandRegClass(MF, *TRI, MRI, *MF.getSubtarget().getInstrInfo(),
-                               *MF.getSubtarget().getRegBankInfo(), *MIB,
-                               MIB->getDesc(), MIB->getOperand(CalleeOpNo + 3),
-                               CalleeOpNo + 3);
+      MIB->getOperand(CalleeOpNo + 3)
+          .setReg(constrainOperandRegClass(
+              MF, *TRI, MRI, *MF.getSubtarget().getInstrInfo(),
+              *MF.getSubtarget().getRegBankInfo(), *MIB, MIB->getDesc(),
+              MIB->getOperand(CalleeOpNo + 3), CalleeOpNo + 3));
     }
   }
 

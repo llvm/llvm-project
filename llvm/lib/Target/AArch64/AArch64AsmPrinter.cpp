@@ -697,9 +697,11 @@ void AArch64AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
 
 void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   Register AddrReg = MI.getOperand(0).getReg();
-  assert(std::next(MI.getIterator())->isCall() &&
-         "KCFI_CHECK not followed by a call instruction");
-  assert(std::next(MI.getIterator())->getOperand(0).getReg() == AddrReg &&
+  [[maybe_unused]] const MachineInstr &Call = *std::next(MI.getIterator());
+  assert(Call.isCall() && "KCFI_CHECK not followed by a call instruction");
+  assert((Call.getOpcode() == AArch64::BL
+              ? Call.readsRegister(AddrReg, /*TRI=*/nullptr)
+              : Call.getOperand(0).getReg() == AddrReg) &&
          "KCFI_CHECK call target doesn't match call operand");
 
   // Default to using the intra-procedure-call temporary registers for
@@ -2555,7 +2557,8 @@ void AArch64AsmPrinter::emitPtrauthSign(const MachineInstr *MI) {
 }
 
 void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
-  bool IsCall = MI->getOpcode() == AArch64::BLRA;
+  bool IsCall =
+      MI->getOpcode() == AArch64::BLRA || MI->getOpcode() == AArch64::BLRANoIP;
   unsigned BrTarget = MI->getOperand(0).getReg();
 
   auto Key = (AArch64PACKey::ID)MI->getOperand(1).getImm();
@@ -3718,6 +3721,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case AArch64::BRA:
   case AArch64::BLRA:
+  case AArch64::BLRANoIP:
     emitPtrauthBranch(MI);
     return;
 

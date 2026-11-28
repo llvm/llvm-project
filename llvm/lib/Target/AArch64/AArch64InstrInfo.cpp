@@ -122,6 +122,7 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     return 12;
   case AArch64::BRA:
   case AArch64::BLRA:
+  case AArch64::BLRANoIP:
     // Up to 2 instructions to materialize the discriminator (mov + movk),
     // followed by an authenticated branch/call that expands to 3 instructions
     // (authenticate + guard + branch).

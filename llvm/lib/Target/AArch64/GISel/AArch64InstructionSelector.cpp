@@ -3827,8 +3827,10 @@ bool AArch64InstructionSelector::selectTLSGlobalValueMachO(
       MIB.buildInstr(AArch64::LOADgot, {&AArch64::GPR64commonRegClass}, {})
           .addGlobalAddress(&GV, 0, AArch64II::MO_TLS);
 
-  auto Load = MIB.buildInstr(AArch64::LDRXui, {&AArch64::GPR64commonRegClass},
-                             {LoadGOT.getReg(0)})
+  const TargetRegisterClass *CalleeRC = STI.hardenSlsBlr()
+                                            ? &AArch64::GPR64noipRegClass
+                                            : &AArch64::GPR64commonRegClass;
+  auto Load = MIB.buildInstr(AArch64::LDRXui, {CalleeRC}, {LoadGOT.getReg(0)})
                   .addImm(0);
 
   MIB.buildCopy(Register(AArch64::X0), LoadGOT.getReg(0));
@@ -3839,7 +3841,7 @@ bool AArch64InstructionSelector::selectTLSGlobalValueMachO(
 
   // With ptrauth-calls, the tlv access thunk pointer is authenticated (IA, 0).
   if (MF->getFunction().hasFnAttribute("ptrauth-calls")) {
-    assert(Opcode == AArch64::BLR);
+    assert(Opcode == AArch64::BLR || Opcode == AArch64::BLRNoIP);
     Opcode = AArch64::BLRAAZ;
   }
 

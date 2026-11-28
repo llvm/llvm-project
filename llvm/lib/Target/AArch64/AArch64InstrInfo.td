@@ -2231,8 +2231,7 @@ let Predicates = [HasPAuth] in {
   // the kernel, notably on Darwin.
   def BLRA : Pseudo<(outs), (ins GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
                                  GPR64:$AddrDisc),
-                    [(AArch64authcall GPR64noip:$Rn, timm:$Key, timm:$Disc,
-                                      GPR64:$AddrDisc)]>, Sched<[]> {
+                    []>, Sched<[]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
@@ -2242,6 +2241,29 @@ let Predicates = [HasPAuth] in {
     let Defs = [X16,X17,LR];
     let Uses = [SP];
   }
+
+  def BLRANoIP : Pseudo<(outs), (ins GPR64noip:$Rn, i32imm:$Key, i64imm:$Disc,
+                                     GPR64noip:$AddrDisc),
+                        []>, Sched<[]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let isCall = 1;
+    let Size = 12; // 4 fixed + 8 variable, to compute discriminator.
+    let Defs = [X16,X17,LR];
+    let Uses = [SP];
+  }
+
+  def : Pat<(AArch64authcall GPR64noip:$Rn, timm:$Key, timm:$Disc,
+                             GPR64:$AddrDisc),
+            (BLRA GPR64noip:$Rn, timm:$Key, timm:$Disc, GPR64:$AddrDisc)>,
+        Requires<[NoSLSBLRMitigation]>;
+  def : Pat<(AArch64authcall GPR64noip:$Rn, timm:$Key, timm:$Disc,
+                             GPR64noip:$AddrDisc),
+            (BLRANoIP GPR64noip:$Rn, timm:$Key, timm:$Disc,
+                      GPR64noip:$AddrDisc)>,
+        Requires<[SLSBLRMitigation]>;
 
   def BLRA_RVMARKER : Pseudo<
         (outs), (ins i64imm:$rvfunc, i32imm:$withmarker, GPR64noip:$Rn,

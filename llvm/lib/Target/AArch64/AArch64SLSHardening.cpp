@@ -177,8 +177,8 @@ const ThunkKind ThunkKind::BRABZ = {ThunkBRABZ, "abz_", /*HasXmOperand=*/false,
                                     /*NeedsPAuth=*/true, AArch64::BRABZ};
 
 // Returns thunk kind to emit, or nullptr if not a BLR* instruction.
-static const ThunkKind *getThunkKind(unsigned OriginalOpcode) {
-  switch (OriginalOpcode) {
+static const ThunkKind *getThunkKind(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
   case AArch64::BLR:
   case AArch64::BLRNoIP:
     return &ThunkKind::BR;
@@ -190,12 +190,29 @@ static const ThunkKind *getThunkKind(unsigned OriginalOpcode) {
     return &ThunkKind::BRAAZ;
   case AArch64::BLRABZ:
     return &ThunkKind::BRABZ;
+  case AArch64::BLRA:
+  case AArch64::BLRANoIP: {
+    auto Key = static_cast<AArch64PACKey::ID>(MI.getOperand(1).getImm());
+    uint64_t Disc = MI.getOperand(2).getImm();
+    Register AddrDisc = MI.getOperand(3).getReg();
+    if (MI.getOpcode() == AArch64::BLRANoIP) {
+      assert(Disc == 0 && "Expected discriminator materialized before SLS");
+    } else if (Disc != 0 || AddrDisc == AArch64::X16 ||
+               AddrDisc == AArch64::X17 || AddrDisc == AArch64::LR) {
+      return nullptr;
+    }
+    bool IsZeroDisc = !AddrDisc.isValid() || AddrDisc == AArch64::XZR;
+    if (Key == AArch64PACKey::IA)
+      return IsZeroDisc ? &ThunkKind::BRAAZ : &ThunkKind::BRAA;
+    assert(Key == AArch64PACKey::IB && "Invalid auth call key");
+    return IsZeroDisc ? &ThunkKind::BRABZ : &ThunkKind::BRAB;
+  }
   }
   return nullptr;
 }
 
 static bool isBLR(const MachineInstr &MI) {
-  return getThunkKind(MI.getOpcode()) != nullptr;
+  return getThunkKind(MI) != nullptr;
 }
 
 unsigned ThunksSet::indexOfXReg(Register Reg) {
@@ -423,13 +440,17 @@ void SLSHardeningInserter::convertBLRToBL(
 
   MachineInstr &BLR = *MBBI;
   assert(isBLR(BLR));
-  const ThunkKind &Kind = *getThunkKind(BLR.getOpcode());
+  const ThunkKind &Kind = *getThunkKind(BLR);
 
-  unsigned NumRegOperands = Kind.HasXmOperand ? 2 : 1;
-  assert(BLR.getNumExplicitOperands() == NumRegOperands &&
-         "Expected one or two register inputs");
+  bool IsBLRAPseudo =
+      BLR.getOpcode() == AArch64::BLRA || BLR.getOpcode() == AArch64::BLRANoIP;
+  unsigned XmOpIdx = IsBLRAPseudo ? 3 : 1;
+  if (!IsBLRAPseudo)
+    assert(BLR.getNumExplicitOperands() == (Kind.HasXmOperand ? 2u : 1u) &&
+           "Expected one or two register inputs");
   Register Xn = BLR.getOperand(0).getReg();
-  Register Xm = Kind.HasXmOperand ? BLR.getOperand(1).getReg() : Register();
+  Register Xm =
+      Kind.HasXmOperand ? BLR.getOperand(XmOpIdx).getReg() : Register();
 
   DebugLoc DL = BLR.getDebugLoc();
 
@@ -479,11 +500,14 @@ void SLSHardeningInserter::convertBLRToBL(
   MF.moveAdditionalCallInfo(&BLR, BL);
   // Also add the register operands of the original BLR* instruction
   // as being used in the called thunk.
-  for (unsigned OpIdx = 0; OpIdx < NumRegOperands; ++OpIdx) {
+  auto AddImpRegUse = [&](unsigned OpIdx) {
     MachineOperand &Op = BLR.getOperand(OpIdx);
     BL->addOperand(MachineOperand::CreateReg(Op.getReg(), /*isDef=*/false,
                                              /*isImp=*/true, Op.isKill()));
-  }
+  };
+  AddImpRegUse(0);
+  if (Kind.HasXmOperand)
+    AddImpRegUse(XmOpIdx);
   // Remove BLR instruction
   MBB.erase(MBBI);
 }
