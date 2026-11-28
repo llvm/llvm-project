@@ -7,11 +7,9 @@
 define signext i32 @udiv_10000(i32 signext %x) {
 ; CHECK-LABEL: udiv_10000:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; CHECK-NEXT:    lu12i.w $a1, -189583
 ; CHECK-NEXT:    ori $a1, $a1, 1881
-; CHECK-NEXT:    lu32i.d $a1, 0
-; CHECK-NEXT:    mul.d $a0, $a0, $a1
+; CHECK-NEXT:    mulw.d.wu $a0, $a0, $a1
 ; CHECK-NEXT:    srli.d $a0, $a0, 45
 ; CHECK-NEXT:    ret
   %r = udiv i32 %x, 10000
@@ -21,11 +19,9 @@ define signext i32 @udiv_10000(i32 signext %x) {
 define signext i32 @urem_10000(i32 signext %x) {
 ; CHECK-LABEL: urem_10000:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.d $a1, $a0, 31, 0
-; CHECK-NEXT:    lu12i.w $a2, -189583
-; CHECK-NEXT:    ori $a2, $a2, 1881
-; CHECK-NEXT:    lu32i.d $a2, 0
-; CHECK-NEXT:    mul.d $a1, $a1, $a2
+; CHECK-NEXT:    lu12i.w $a1, -189583
+; CHECK-NEXT:    ori $a1, $a1, 1881
+; CHECK-NEXT:    mulw.d.wu $a1, $a0, $a1
 ; CHECK-NEXT:    srli.d $a1, $a1, 45
 ; CHECK-NEXT:    lu12i.w $a2, 2
 ; CHECK-NEXT:    ori $a2, $a2, 1808
@@ -39,11 +35,9 @@ define signext i32 @urem_10000(i32 signext %x) {
 define signext i32 @udiv_3(i32 signext %x) {
 ; CHECK-LABEL: udiv_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; CHECK-NEXT:    lu12i.w $a1, -349526
 ; CHECK-NEXT:    ori $a1, $a1, 2731
-; CHECK-NEXT:    lu32i.d $a1, 0
-; CHECK-NEXT:    mul.d $a0, $a0, $a1
+; CHECK-NEXT:    mulw.d.wu $a0, $a0, $a1
 ; CHECK-NEXT:    srli.d $a0, $a0, 33
 ; CHECK-NEXT:    ret
   %r = udiv i32 %x, 3
@@ -53,10 +47,9 @@ define signext i32 @udiv_3(i32 signext %x) {
 define signext i32 @udiv_100(i32 signext %x) {
 ; CHECK-LABEL: udiv_100:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; CHECK-NEXT:    lu12i.w $a1, 335544
 ; CHECK-NEXT:    ori $a1, $a1, 1311
-; CHECK-NEXT:    mul.d $a0, $a0, $a1
+; CHECK-NEXT:    mulw.d.wu $a0, $a0, $a1
 ; CHECK-NEXT:    srli.d $a0, $a0, 37
 ; CHECK-NEXT:    ret
   %r = udiv i32 %x, 100
@@ -66,11 +59,9 @@ define signext i32 @udiv_100(i32 signext %x) {
 define i64 @mul_zext_const(i32 signext %x) {
 ; CHECK-LABEL: mul_zext_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; CHECK-NEXT:    lu12i.w $a1, -400521
 ; CHECK-NEXT:    ori $a1, $a1, 2489
-; CHECK-NEXT:    lu32i.d $a1, 0
-; CHECK-NEXT:    mul.d $a0, $a0, $a1
+; CHECK-NEXT:    mulw.d.wu $a0, $a0, $a1
 ; CHECK-NEXT:    ret
   %z = zext i32 %x to i64
   %r = mul i64 %z, 2654435769
@@ -81,10 +72,9 @@ define i64 @mul_zext_const(i32 signext %x) {
 define i64 @mul_zext_const_bit31_clear(i32 signext %x) {
 ; CHECK-LABEL: mul_zext_const_bit31_clear:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; CHECK-NEXT:    lu12i.w $a1, 400520
 ; CHECK-NEXT:    ori $a1, $a1, 1607
-; CHECK-NEXT:    mul.d $a0, $a0, $a1
+; CHECK-NEXT:    mulw.d.wu $a0, $a0, $a1
 ; CHECK-NEXT:    ret
   %z = zext i32 %x to i64
   %r = mul i64 %z, 1640531527
