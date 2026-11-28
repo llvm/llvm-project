@@ -383,7 +383,9 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
 }
 
 Error BitstreamCursor::ReadAbbrevRecord() {
-  auto Abbv = std::make_shared<BitCodeAbbrev>();
+  // Collect the operands first, so that the abbreviation's operand list is
+  // allocated with the exact size.
+  SmallVector<BitCodeAbbrevOp, 32> Ops;
   Expected<uint32_t> MaybeNumOpInfo = ReadVBR(5);
   if (!MaybeNumOpInfo)
     return MaybeNumOpInfo.takeError();
@@ -397,7 +399,7 @@ Error BitstreamCursor::ReadAbbrevRecord() {
       Expected<uint64_t> MaybeOp = ReadVBR64(8);
       if (!MaybeOp)
         return MaybeOp.takeError();
-      Abbv->Add(BitCodeAbbrevOp(MaybeOp.get()));
+      Ops.push_back(BitCodeAbbrevOp(MaybeOp.get()));
       continue;
     }
 
@@ -420,7 +422,7 @@ Error BitstreamCursor::ReadAbbrevRecord() {
       // a slow path in Read() to have to handle reading zero bits.
       if ((E == BitCodeAbbrevOp::Fixed || E == BitCodeAbbrevOp::VBR) &&
           Data == 0) {
-        Abbv->Add(BitCodeAbbrevOp(0));
+        Ops.push_back(BitCodeAbbrevOp(0));
         continue;
       }
 
@@ -428,14 +430,14 @@ Error BitstreamCursor::ReadAbbrevRecord() {
           Data > MaxChunkSize)
         return error("Fixed or VBR abbrev record with size > MaxChunkData");
 
-      Abbv->Add(BitCodeAbbrevOp(E, Data));
+      Ops.push_back(BitCodeAbbrevOp(E, Data));
     } else
-      Abbv->Add(BitCodeAbbrevOp(E));
+      Ops.push_back(BitCodeAbbrevOp(E));
   }
 
-  if (Abbv->getNumOperandInfos() == 0)
+  if (Ops.empty())
     return error("Abbrev record with no operands");
-  CurAbbrevs.push_back(std::move(Abbv));
+  CurAbbrevs.push_back(std::make_shared<BitCodeAbbrev>(ArrayRef(Ops)));
 
   return Error::success();
 }
