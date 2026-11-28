@@ -2682,6 +2682,10 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::VECREDUCE_UMIN, VT, Default);
   setOperationAction(ISD::VECREDUCE_XOR, VT, Default);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Default);
+  // For two lane interleaves shuffle is better
+  if (VT.getVectorNumElements() != 2)
+    setVectorInterleaveAction(
+        {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2}, VT, Default);
   setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Default);
   setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Default);
   setOperationAction(ISD::VSELECT, VT, Default);
@@ -35958,6 +35962,40 @@ AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
   if (OpVT == MVT::v1i64 || OpVT == MVT::v1f64)
     return DAG.getMergeValues({Op.getOperand(0), Op.getOperand(1)}, DL);
 
+  if (useSVEForFixedLengthVectorVT(OpVT, !Subtarget->isNeonAvailable())) {
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, OpVT);
+    SDValue First = convertToScalableVector(DAG, ContainerVT, Op.getOperand(0));
+    SDValue Second =
+        convertToScalableVector(DAG, ContainerVT, Op.getOperand(1));
+
+    if (Subtarget->getSVEVectorSizeInBits() == OpVT.getFixedSizeInBits()) {
+      SDValue Even =
+          DAG.getNode(AArch64ISD::UZP1, DL, ContainerVT, First, Second);
+      SDValue Odd =
+          DAG.getNode(AArch64ISD::UZP2, DL, ContainerVT, First, Second);
+      return DAG.getMergeValues({convertFromScalableVector(DAG, OpVT, Even),
+                                 convertFromScalableVector(DAG, OpVT, Odd)},
+                                DL);
+    }
+
+    EVT PredVT =
+        ContainerVT.changeVectorElementType(*DAG.getContext(), MVT::i1);
+    auto PredPattern =
+        getSVEPredPatternFromNumElements(OpVT.getVectorNumElements() / 2);
+    assert(PredPattern && "Unexpected element count for SVE predicate");
+    SDValue Pg = getPTrue(DAG, DL, PredVT, *PredPattern);
+    SmallVector<SDValue, 2> Results;
+
+    for (unsigned Opc : {AArch64ISD::UZP1, AArch64ISD::UZP2}) {
+      SDValue FirstPart = DAG.getNode(Opc, DL, ContainerVT, First, First);
+      SDValue SecondPart = DAG.getNode(Opc, DL, ContainerVT, Second, Second);
+      SDValue Result = DAG.getNode(AArch64ISD::SPLICE, DL, ContainerVT, Pg,
+                                   FirstPart, SecondPart);
+      Results.push_back(convertFromScalableVector(DAG, OpVT, Result));
+    }
+    return DAG.getMergeValues(Results, DL);
+  }
+
   SDValue Even = DAG.getNode(AArch64ISD::UZP1, DL, OpVT, Op.getOperand(0),
                              Op.getOperand(1));
   SDValue Odd = DAG.getNode(AArch64ISD::UZP2, DL, OpVT, Op.getOperand(0),
@@ -36081,6 +36119,29 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
 
   if (OpVT == MVT::v1i64 || OpVT == MVT::v1f64)
     return DAG.getMergeValues({Op.getOperand(0), Op.getOperand(1)}, DL);
+
+  if (useSVEForFixedLengthVectorVT(OpVT, !Subtarget->isNeonAvailable())) {
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, OpVT);
+    SDValue First = convertToScalableVector(DAG, ContainerVT, Op.getOperand(0));
+    SDValue Second =
+        convertToScalableVector(DAG, ContainerVT, Op.getOperand(1));
+    SDValue Lo = DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT, First, Second);
+    SDValue Hi;
+    if (Subtarget->getSVEVectorSizeInBits() == OpVT.getFixedSizeInBits()) {
+      Hi = DAG.getNode(AArch64ISD::ZIP2, DL, ContainerVT, First, Second);
+    } else {
+      SDValue Offset =
+          DAG.getConstant(OpVT.getVectorNumElements() / 2, DL, MVT::i64);
+      First = DAG.getNode(ISD::VECTOR_SPLICE_LEFT, DL, ContainerVT, First,
+                          First, Offset);
+      Second = DAG.getNode(ISD::VECTOR_SPLICE_LEFT, DL, ContainerVT, Second,
+                           Second, Offset);
+      Hi = DAG.getNode(AArch64ISD::ZIP1, DL, ContainerVT, First, Second);
+    }
+    return DAG.getMergeValues({convertFromScalableVector(DAG, OpVT, Lo),
+                               convertFromScalableVector(DAG, OpVT, Hi)},
+                              DL);
+  }
 
   SDValue Lo = DAG.getNode(AArch64ISD::ZIP1, DL, OpVT, Op.getOperand(0),
                            Op.getOperand(1));
