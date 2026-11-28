@@ -210,6 +210,13 @@ def SameOperandsPointeeType : PredOpTrait<
   }]>
 >;
 
+// Like `AllElementCountsMatch`, for `!cir.vector` operands and results, which
+// are not shaped types. A fixed and a scalable element count do not match.
+class CIR_AllElementCountsMatch<list<string> names>
+    : AllMatchSameOperatorTrait<names,
+        "::mlir::cast<::cir::VectorType>($_self.getType()).getSize()",
+        "element count">;
+
 //===----------------------------------------------------------------------===//
 // Floating-Point Environment Traits
 //===----------------------------------------------------------------------===//
@@ -2691,6 +2698,10 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
 // CmpOp
 //===----------------------------------------------------------------------===//
 
+// The comparison kinds that apply to floating-point operands only.
+def CIR_CmpOpKindOne : I32EnumCase<"one", 6>;
+def CIR_CmpOpKindUno : I32EnumCase<"uno", 7>;
+
 def CIR_CmpOpKind : CIR_I32Enum<"CmpOpKind", "compare operation kind", [
   I32EnumCase<"lt", 0>,
   I32EnumCase<"le", 1>,
@@ -2698,11 +2709,16 @@ def CIR_CmpOpKind : CIR_I32Enum<"CmpOpKind", "compare operation kind", [
   I32EnumCase<"ge", 3>,
   I32EnumCase<"eq", 4>,
   I32EnumCase<"ne", 5>,
-  I32EnumCase<"one", 6>,
-  I32EnumCase<"uno", 7>
+  CIR_CmpOpKindOne,
+  CIR_CmpOpKindUno
 ]>;
 
 def CIR_CmpOpKindAttr : CIR_EnumAttr<CIR_CmpOpKind, "cmp">;
+
+// A comparison kind of integer or boolean operands.
+def CIR_IntCmpOpKindAttr : ConfinedAttr<CIR_CmpOpKindAttr, [
+  EnumAttrIsNoneOf<CIR_CmpOpKindAttr, [CIR_CmpOpKindOne, CIR_CmpOpKindUno]>
+]>;
 
 def CIR_CmpOp : CIR_FenvOp<"cmp", [SameTypeOperands]> {
   let summary = "Compare two values and produce a boolean result";
@@ -6971,13 +6987,18 @@ def CIR_VecReduceFMulOp : CIR_VecReduceAccFPOp<"fmul", "vector_reduce_fmul">;
 // VecCmpOp
 //===----------------------------------------------------------------------===//
 
-def CIR_VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
+def CIR_VecCmpOp : CIR_Op<"vec.cmp", [
+  Pure, SameTypeOperands, CIR_AllElementCountsMatch<["lhs", "result"]>
+]> {
   let summary = "Compare two vectors";
   let description = [{
     The `cir.vec.cmp` operation does an element-wise comparison of two vectors
-    of the same non-fp type. The result is a vector of the same size as the operands
-    whose element type is the signed integral type that is the same size as the
-    element type of the operands. The values in the result are 0 or -1.
+    of the same non-fp type. The comparison kind is any but `one` and `uno`,
+    which apply to floating-point operands only. The result is a vector with as
+    many elements as the operands, whose element type is an integral or boolean
+    type. It is usually the signed integral type that is the same size as the
+    element type of the operands. Each element of an integral result has all
+    bits clear or all bits set.
 
     ```
     %eq = cir.vec.cmp(eq, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
@@ -6986,12 +7007,12 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
   }];
 
   let arguments = (ins
-    CIR_CmpOpKindAttr:$kind,
+    CIR_IntCmpOpKindAttr:$kind,
     CIR_VectorOfIntOrBoolType:$lhs,
     CIR_VectorOfIntOrBoolType:$rhs
   );
 
-  let results = (outs CIR_VectorType:$result);
+  let results = (outs CIR_VectorOfIntOrBoolType:$result);
 
   let assemblyFormat = [{
     `(` enum($kind) `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
@@ -7005,13 +7026,15 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
 // VecFCmpOp
 //===----------------------------------------------------------------------===//
 
-def CIR_VecFCmpOp : CIR_FenvOp<"vec.fcmp", [SameTypeOperands]> {
+def CIR_VecFCmpOp : CIR_FenvOp<"vec.fcmp", [
+  SameTypeOperands, CIR_AllElementCountsMatch<["lhs", "result"]>
+]> {
   let summary = "Compare two floating point vectors";
   let description = [{
     The `cir.vec.fcmp` operation does an element-wise comparison of two vectors
-    of the same floating type. The result is a vector of the same size as the
-    operands whose element type is signed integral type. The values in the
-    result are 0 or -1.
+    of the same floating type. The result is a vector with as many elements as
+    the operands, whose element type is an integral or boolean type. Each
+    element of an integral result has all bits clear or all bits set.
 
     The optional `fenv` attribute describes constraints on the floating-point
     handling of the operation.
@@ -7033,7 +7056,7 @@ def CIR_VecFCmpOp : CIR_FenvOp<"vec.fcmp", [SameTypeOperands]> {
     UnitAttr:$signaling
   );
 
-  let results = (outs CIR_VectorType:$result);
+  let results = (outs CIR_VectorOfIntOrBoolType:$result);
 
   let assemblyFormat = [{
     `(` enum($kind) `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`

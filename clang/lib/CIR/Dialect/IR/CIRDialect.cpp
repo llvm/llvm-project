@@ -4403,6 +4403,27 @@ LogicalResult cir::InsertMemberOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// Vector folding helpers
+//===----------------------------------------------------------------------===//
+
+/// Whether every element of \p vec is an \p AttrTy literal. A constant vector
+/// can hold any element of the vector's element type, such as undef or poison,
+/// which the folders do not evaluate.
+template <typename AttrTy>
+static bool hasOnlyLiteralElements(cir::ConstVectorAttr vec) {
+  return llvm::all_of(vec.getElts(), llvm::IsaPred<AttrTy>);
+}
+
+/// The element a vector comparison folds to. A true result is all bits set
+/// (-1 in two's complement), and a false result is all bits clear. For a 1-bit
+/// element type these are the same bit pattern as 1 and 0, respectively.
+static cir::IntAttr getVecCmpResultElement(cir::IntType ty, bool cmpResult) {
+  unsigned width = ty.getWidth();
+  return cir::IntAttr::get(ty, cmpResult ? llvm::APInt::getAllOnes(width)
+                                         : llvm::APInt::getZero(width));
+}
+
+//===----------------------------------------------------------------------===//
 // VecCreateOp
 //===----------------------------------------------------------------------===//
 
@@ -4495,6 +4516,15 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
   if (!IntTy)
     return {};
 
+  // FIXME: Fold to a vector of bool too?
+  auto resultElemTy = mlir::dyn_cast<cir::IntType>(getType().getElementType());
+  if (!resultElemTy)
+    return {};
+
+  if (!hasOnlyLiteralElements<cir::IntAttr>(lhsVecAttr) ||
+      !hasOnlyLiteralElements<cir::IntAttr>(rhsVecAttr))
+    return {};
+
   cir::CmpOpKind opKind = adaptor.getKind();
   mlir::ArrayAttr lhsVecElhs = lhsVecAttr.getElts();
   mlir::ArrayAttr rhsVecElhs = rhsVecAttr.getElts();
@@ -4557,11 +4587,7 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     }
 
-    // A true result is all bits set (-1 in two's complement), and a false
-    // result is all bits clear. For a 1-bit element type these are the same
-    // bit pattern as 1 and 0, respectively.
-    elements[i] =
-        cir::IntAttr::get(getType().getElementType(), cmpResult ? -1LL : 0LL);
+    elements[i] = getVecCmpResultElement(resultElemTy, cmpResult);
   }
 
   return cir::ConstVectorAttr::get(
@@ -4582,11 +4608,19 @@ OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
   if (cir::FenvAttr fenv = getFenvAttr(); fenv && !fenv.canIgnoreExceptions())
     return {};
 
+  // FIXME: Fold to a vector of bool too?
+  auto resultElemTy = mlir::dyn_cast<cir::IntType>(getType().getElementType());
+  if (!resultElemTy)
+    return {};
+
   cir::FCmpOpKind kind = getKind();
   if (kind == cir::FCmpOpKind::_true || kind == cir::FCmpOpKind::_false) {
+    // A scalable vector cannot be a constant vector.
+    if (getType().isScalable())
+      return {};
+
     mlir::Attribute elt =
-        cir::IntAttr::get(getType().getElementType(),
-                          (kind == cir::FCmpOpKind::_true) ? -1LL : 0LL);
+        getVecCmpResultElement(resultElemTy, kind == cir::FCmpOpKind::_true);
     SmallVector<mlir::Attribute, 16> elements(getType().getFixedSize(), elt);
     return cir::ConstVectorAttr::get(
         getType(), mlir::ArrayAttr::get(getContext(), elements));
@@ -4597,6 +4631,10 @@ OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
   auto rhsVecAttr =
       mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getRhs());
   if (!lhsVecAttr || !rhsVecAttr)
+    return {};
+
+  if (!hasOnlyLiteralElements<cir::FPAttr>(lhsVecAttr) ||
+      !hasOnlyLiteralElements<cir::FPAttr>(rhsVecAttr))
     return {};
 
   mlir::ArrayAttr lhsElts = lhsVecAttr.getElts();
@@ -4662,11 +4700,7 @@ OpFoldResult cir::VecFCmpOp::fold(FoldAdaptor adaptor) {
       llvm_unreachable("Op kind have been handled already");
     }
 
-    // A true result is all bits set (-1 in two's complement), and a false
-    // result is all bits clear. For a 1-bit element type these are the same
-    // bit pattern as 1 and 0, respectively.
-    elements.push_back(
-        cir::IntAttr::get(getType().getElementType(), cmpResult ? -1LL : 0LL));
+    elements.push_back(getVecCmpResultElement(resultElemTy, cmpResult));
   }
 
   return cir::ConstVectorAttr::get(
@@ -4759,6 +4793,8 @@ OpFoldResult cir::VecShuffleDynamicOp::fold(FoldAdaptor adaptor) {
       mlir::isa_and_nonnull<cir::ConstVectorAttr>(indices)) {
     auto vecAttr = mlir::cast<cir::ConstVectorAttr>(vec);
     auto indicesAttr = mlir::cast<cir::ConstVectorAttr>(indices);
+    if (!hasOnlyLiteralElements<cir::IntAttr>(indicesAttr))
+      return {};
 
     mlir::ArrayAttr vecElts = vecAttr.getElts();
     mlir::ArrayAttr indicesElts = indicesAttr.getElts();
@@ -4772,6 +4808,10 @@ OpFoldResult cir::VecShuffleDynamicOp::fold(FoldAdaptor adaptor) {
     for (const auto &idxAttr : indicesElts.getAsRange<cir::IntAttr>()) {
       uint64_t idxValue = idxAttr.getUInt();
       uint64_t newIdx = idxValue & maskBits;
+      // The mask rounds the element count up to a power of two, so a masked
+      // index can still be out of range.
+      if (newIdx >= numElements)
+        return {};
       elements.push_back(vecElts[newIdx]);
     }
 
@@ -4821,6 +4861,9 @@ OpFoldResult cir::VecTernaryOp::fold(FoldAdaptor adaptor) {
   auto condVec = mlir::cast<cir::ConstVectorAttr>(cond);
   auto lhsVec = mlir::cast<cir::ConstVectorAttr>(lhs);
   auto rhsVec = mlir::cast<cir::ConstVectorAttr>(rhs);
+  // FIXME: Fold a vector of bool condition too?
+  if (!hasOnlyLiteralElements<cir::IntAttr>(condVec))
+    return {};
 
   mlir::ArrayAttr condElts = condVec.getElts();
 

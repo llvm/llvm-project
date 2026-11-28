@@ -26,6 +26,31 @@ module {
   // CHECK: cir.func{{.*}} @fold_shuffle_dynamic_vector_op_test_2() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[NEW_VEC:.*]] = cir.const #cir.const_vector<[#cir.int<4> : !s32i, #cir.int<3> : !s32i, #cir.int<2> : !s32i, #cir.int<1> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[NEW_VEC:.*]] : !cir.vector<4 x !s32i>
+
+  cir.func @no_fold_shuffle_dynamic_undef_index_test() -> !cir.vector<4 x !s32i> {
+    %vec = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+    %indices = cir.const #cir.const_vector<[#cir.undef : !s32i, #cir.int<2> : !s32i, #cir.int<1> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<4 x !s32i>
+    %new_vec = cir.vec.shuffle.dynamic %vec : !cir.vector<4 x !s32i>, %indices : !cir.vector<4 x !s32i>
+    cir.return %new_vec : !cir.vector<4 x !s32i>
+  }
+
+  // An undef index is not evaluated, so the shuffle stays.
+  // CHECK-LABEL: cir.func{{.*}} @no_fold_shuffle_dynamic_undef_index_test() -> !cir.vector<4 x !s32i> {
+  // CHECK: %[[NEW_VEC:.*]] = cir.vec.shuffle.dynamic %{{.*}} : !cir.vector<4 x !s32i>, %{{.*}} : !cir.vector<4 x !s32i>
+  // CHECK-NEXT: cir.return %[[NEW_VEC]] : !cir.vector<4 x !s32i>
+
+  cir.func @no_fold_shuffle_dynamic_out_of_range_index_test() -> !cir.vector<3 x !s32i> {
+    %vec = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.vector<3 x !s32i>
+    %indices = cir.const #cir.const_vector<[#cir.int<3> : !s32i, #cir.int<0> : !s32i, #cir.int<1> : !s32i]> : !cir.vector<3 x !s32i>
+    %new_vec = cir.vec.shuffle.dynamic %vec : !cir.vector<3 x !s32i>, %indices : !cir.vector<3 x !s32i>
+    cir.return %new_vec : !cir.vector<3 x !s32i>
+  }
+
+  // The index mask for 3 elements is 3, so index 3 stays out of range and
+  // the shuffle is not folded.
+  // CHECK-LABEL: cir.func{{.*}} @no_fold_shuffle_dynamic_out_of_range_index_test() -> !cir.vector<3 x !s32i> {
+  // CHECK: %[[NEW_VEC:.*]] = cir.vec.shuffle.dynamic %{{.*}} : !cir.vector<3 x !s32i>, %{{.*}} : !cir.vector<3 x !s32i>
+  // CHECK-NEXT: cir.return %[[NEW_VEC]] : !cir.vector<3 x !s32i>
 }
 
 
