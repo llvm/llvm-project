@@ -49,7 +49,6 @@ class MCSectionWasm final : public MCSection {
 
   // The storage of Name is owned by MCContext's WasmUniquingMap.
   friend class MCContext;
-  friend class MCAsmInfoWasm;
   MCSectionWasm(StringRef Name, SectionKind K, unsigned SegmentFlags,
                 const MCSymbolWasm *Group, unsigned UniqueID, MCSymbol *Begin)
       : MCSection(Name, K.isText(), /*IsVirtual=*/false, Begin),

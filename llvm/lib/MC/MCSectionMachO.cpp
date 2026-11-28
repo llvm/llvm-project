@@ -106,9 +106,10 @@ MCSectionMachO::MCSectionMachO(StringRef Segment, StringRef Section,
   }
 }
 
-void MCAsmInfoDarwin::printSwitchToSection(const MCSection &Section, uint32_t,
-                                           const Triple &T,
-                                           raw_ostream &OS) const {
+void MCAsmInfoDarwin::printSwitchToSectionImpl(const MCAsmInfo &MAI,
+                                               const MCSection &Section,
+                                               uint32_t, const Triple &T,
+                                               raw_ostream &OS) {
   auto &Sec = static_cast<const MCSectionMachO &>(Section);
   OS << "\t.section\t" << Sec.getSegmentName() << ',' << Sec.getName();
 
@@ -137,8 +138,8 @@ void MCAsmInfoDarwin::printSwitchToSection(const MCSection &Section, uint32_t,
   if (SectionAttrs == 0) {
     // If we have a S_SYMBOL_STUBS size specified, print it along with 'none' as
     // the attribute specifier.
-    if (Sec.Reserved2 != 0)
-      OS << ",none," << Sec.Reserved2;
+    if (unsigned StubSize = Sec.getStubSize())
+      OS << ",none," << StubSize;
     OS << '\n';
     return;
   }
@@ -166,8 +167,8 @@ void MCAsmInfoDarwin::printSwitchToSection(const MCSection &Section, uint32_t,
   assert(SectionAttrs == 0 && "Unknown section attributes!");
 
   // If we have a S_SYMBOL_STUBS size specified, print it.
-  if (Sec.Reserved2 != 0)
-    OS << ',' << Sec.Reserved2;
+  if (unsigned StubSize = Sec.getStubSize())
+    OS << ',' << StubSize;
   OS << '\n';
 }
 

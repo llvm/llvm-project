@@ -267,6 +267,10 @@ protected:
 
   bool NeedsDwarfSectionOffsetDirective = false;
 
+  void (*PrintSwitchToSectionFn)(const MCAsmInfo &, const MCSection &,
+                                 uint32_t Subsection, const Triple &,
+                                 raw_ostream &);
+
   //===--- Alignment Information ----------------------------------------===//
 
   /// If this is true (the default) then the asmprinter emits ".align N"
@@ -520,8 +524,15 @@ public:
     return ReservedIdentifiers;
   }
 
-  virtual void printSwitchToSection(const MCSection &, uint32_t Subsection,
-                                    const Triple &, raw_ostream &) const {}
+  bool isSectionDirective(StringRef SecName) const {
+    return SectionDirectives.contains(SecName);
+  }
+
+  void printSwitchToSection(const MCSection &Sec, uint32_t Subsection,
+                            const Triple &T, raw_ostream &OS) const {
+    if (PrintSwitchToSectionFn)
+      PrintSwitchToSectionFn(*this, Sec, Subsection, T, OS);
+  }
 
   bool usesSunStyleELFSectionSwitchSyntax() const {
     return SunStyleELFSectionSwitchSyntax;
