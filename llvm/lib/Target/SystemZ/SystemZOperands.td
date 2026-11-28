@@ -670,6 +670,42 @@ let EncoderMethod = "getImmOpValue<SystemZ::FK_390_S20Imm>",
   def disp20imm64 : DispOp<i64, [{ return Imm.isSignedIntN(20); }]>;
 }
 
+def disp20scaled0 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i32);
+}]>;
+def disp20scaled1 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() >> 1, SDLoc(N), MVT::i32);
+}]>;
+def disp20scaled2 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() >> 2, SDLoc(N), MVT::i32);
+}]>;
+def disp20scaled3 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() >> 3, SDLoc(N), MVT::i32);
+}]>;
+def disp20scaled4 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() >> 4, SDLoc(N), MVT::i32);
+}]>;
+
+def disp20imm64scaled1 : PatLeaf<(i64 imm), [{
+  int64_t Val = N->getSExtValue();
+  return (Val & 1) == 0 && isInt<20>(Val >> 1);
+}], disp20scaled1>;
+
+def disp20imm64scaled2 : PatLeaf<(i64 imm), [{
+  int64_t Val = N->getSExtValue();
+  return (Val & 3) == 0 && isInt<20>(Val >> 2);
+}], disp20scaled2>;
+
+def disp20imm64scaled3 : PatLeaf<(i64 imm), [{
+  int64_t Val = N->getSExtValue();
+  return (Val & 7) == 0 && isInt<20>(Val >> 3);
+}], disp20scaled3>;
+
+def disp20imm64scaled4 : PatLeaf<(i64 imm), [{
+  int64_t Val = N->getSExtValue();
+  return (Val & 15) == 0 && isInt<20>(Val >> 4);
+}], disp20scaled4>;
+
 def BDAddr32Disp12      : AddressAsmOperand<"BDAddr",   "32", "12">;
 def BDAddr32Disp20      : AddressAsmOperand<"BDAddr",   "32", "20">;
 def BDAddr64Disp12      : AddressAsmOperand<"BDAddr",   "64", "12">;

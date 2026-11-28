@@ -96,3 +96,15 @@ define dso_local i64 @f7(i32 %idx) {
   ret i64 %idxprom
 }
 
+; LLXAB with base and index (implied extension) and displacement.
+define dso_local ptr @f8(ptr %ptr, i32 zeroext %idx) {
+; CHECK-LABEL: f8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    llxab %r2, 100(%r3,%r2)
+; CHECK-NEXT:    br %r14
+  %idxprom = zext i32 %idx to i64
+  %idxoff = add i64 %idxprom, 100
+  %arrayidx = getelementptr inbounds i8, ptr %ptr, i64 %idxoff
+  ret ptr %arrayidx
+}
+
