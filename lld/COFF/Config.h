@@ -156,6 +156,11 @@ struct Configuration {
   llvm::SmallString<128> pdbSourcePath;
   std::vector<llvm::StringRef> argv;
 
+  bool emitFixupStream() const {
+    return debug && !pdbPath.empty() &&
+           (debugTypes & static_cast<unsigned>(DebugType::Fixup));
+  }
+
   // Symbols in this set are considered as live by the garbage collector.
   std::vector<Symbol *> gcroot;
 

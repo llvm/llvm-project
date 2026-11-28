@@ -24,6 +24,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -112,6 +113,22 @@ public:
       // lowest 4 bytes usually being the timestamp in little-endian order).
       // Consider storing the full 8 bytes computed by xxh3_64bits here.
       fillEntry(d, COFF::IMAGE_DEBUG_TYPE_REPRO, 0, 0, 0);
+    }
+  }
+
+  void getFixups(MachineTypes machine,
+                 std::vector<pdb::FixupRecord> &out) const override {
+    uint32_t entryRVA = getRVA();
+    for (auto [type, payload] : records) {
+      if (type == COFF::IMAGE_DEBUG_TYPE_CODEVIEW) {
+        // FIXUP records describe image addresses, so record AddressOfRawData
+        // rather than PointerToRawData, which is a file offset.
+        uint32_t siteRVA =
+            entryRVA + offsetof(debug_directory, AddressOfRawData);
+        out.emplace_back(getAddr32NBRelocType(machine), 0, siteRVA,
+                         payload->getRVA());
+      }
+      entryRVA += sizeof(debug_directory);
     }
   }
 
@@ -2751,9 +2768,45 @@ void Writer::sortExceptionTable(ChunkRange &exceptionTable) {
                << " is not a multiple of " << sizeof(T);
   }
 
-  parallelSort(MutableArrayRef<T>(reinterpret_cast<T *>(begin),
-                                  reinterpret_cast<T *>(end)),
-               [](const T &a, const T &b) { return a.begin < b.begin; });
+  auto compareByBegin = [](const T &a, const T &b) {
+    return a.begin < b.begin;
+  };
+
+  // If the FIXUP stream isn't requested, sort in place to avoid allocating
+  // a copy and a permutation map. The FIXUP stream needs that map to describe
+  // the final RVAs of relocations within .pdata entries.
+  if (!ctx.config.emitFixupStream()) {
+    parallelSort(MutableArrayRef<T>(reinterpret_cast<T *>(begin),
+                                    reinterpret_cast<T *>(end)),
+                 compareByBegin);
+    return;
+  }
+
+  // Entries can share a begin address, so carry their identities through
+  // the sort rather than matching them by address afterward.
+  MutableArrayRef<T> entries(reinterpret_cast<T *>(begin),
+                             (end - begin) / sizeof(T));
+  struct IndexedEntry {
+    T entry;
+    uint32_t oldIndex;
+  };
+  std::vector<IndexedEntry> sorted;
+  sorted.reserve(entries.size());
+  for (auto [i, entry] : llvm::enumerate(entries))
+    sorted.push_back({entry, static_cast<uint32_t>(i)});
+
+  parallelSort(sorted.begin(), sorted.end(),
+               [&](const IndexedEntry &a, const IndexedEntry &b) {
+                 return compareByBegin(a.entry, b.entry);
+               });
+
+  COFFLinkerContext::PdataSortMap map{exceptionTable.first->getRVA(), sizeof(T),
+                                      std::vector<uint32_t>(entries.size())};
+  for (auto [i, entry] : llvm::enumerate(sorted)) {
+    entries[i] = entry.entry;
+    map.oldToNew[entry.oldIndex] = static_cast<uint32_t>(i);
+  }
+  ctx.pdataSortMaps.push_back(std::move(map));
 }
 
 // Sort .pdata section contents according to PE/COFF spec 5.5.

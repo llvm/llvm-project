@@ -394,6 +394,11 @@ Dump section contributions.
 Dump image section headers.
 :::
 
+:::{option} -fixups
+Dump the PDB FIXUP stream, including the site and target RVAs, relocation type,
+and classification flags for each record.
+:::
+
 :::{option} -dxcontainer
 Dump a summary of the DXContainer stored in the PDB file's DXContainer stream.
 Shader companion PDB files produced by the DirectX backend store debug-related

@@ -1,0 +1,56 @@
+# Verify that /debugtype:fixup populates the dbgtypeFixup substream of the
+# DBI stream, and that omitting it suppresses the substream. Also verify
+# that the substream is correctly gated on /debug (it must not appear when
+# /debug is absent, even if /debugtype:fixup is requested).
+
+# RUN: yaml2obj %p/Inputs/pdb1.yaml -o %t1.obj
+# RUN: yaml2obj %p/Inputs/pdb2.yaml -o %t2.obj
+# RUN: rm -f %t-with.pdb %t-with.dll %t-without.pdb %t-without.dll \
+# RUN:       %t-nodebug.pdb %t-nodebug.dll
+
+# With /debugtype:cv,fixup -> stream is present, has a nonzero size that is
+# a multiple of the 12-byte PEFIXUP record, and the records carry the
+# expected XFIXUP_* spare classifications.
+# RUN: lld-link /debug /debugtype:cv,fixup /pdb:%t-with.pdb /dll \
+# RUN:   /out:%t-with.dll /entry:main /nodefaultlib %t1.obj %t2.obj
+# RUN: llvm-pdbutil dump --summary --streams %t-with.pdb | FileCheck %s --check-prefix=WITH
+# RUN: llvm-pdbutil dump --fixups %t-with.pdb | FileCheck %s --check-prefix=FIXUPS
+
+# /profile enables FIXUP when producing a PDB, without an explicit /debugtype.
+# RUN: lld-link /debug /profile /pdb:%t-profile.pdb /dll \
+# RUN:   /out:%t-profile.dll /entry:main /nodefaultlib %t1.obj %t2.obj
+# RUN: llvm-pdbutil dump --fixups %t-profile.pdb | FileCheck %s --check-prefix=FIXUPS
+
+# Without /debugtype:fixup (default cv only) -> no Fixup stream.
+# RUN: lld-link /debug /pdb:%t-without.pdb /dll \
+# RUN:   /out:%t-without.dll /entry:main /nodefaultlib %t1.obj %t2.obj
+# RUN: llvm-pdbutil dump --summary --streams %t-without.pdb | FileCheck %s --check-prefix=WITHOUT
+# RUN: llvm-pdbutil dump --fixups %t-without.pdb | FileCheck %s --check-prefix=NOSTREAM
+
+# /debugtype:fixup without /debug -> link succeeds, no PDB is emitted at all,
+# so there is nothing for the fixup writer to attach to. This must not crash
+# or warn.
+# RUN: lld-link /WX /debugtype:fixup /dll /out:%t-nodebug.dll /entry:main \
+# RUN:   /nodefaultlib %t1.obj %t2.obj
+# RUN: not ls %t-nodebug.pdb
+
+# WITH:        Stream {{ *[0-9]+}} ({{ *}}60 bytes): [Fixup Data]
+# WITHOUT-NOT: Fixup Data
+
+# Records: 5 entries for the pdb1/pdb2 inputs:
+#   one call-site reloc (REL32, target is the function entry  -> FUNCTION)
+#   the CodeView debug-directory RVA                          -> DATA
+#   three .pdata ADDR32NB relocs:
+#     BeginAddr+EndAddr both point at the function entry       -> FUNCTION,
+#     UnwindInfo points at .xdata (non-code data)              -> DATA.
+# FIXUPS:      Fixup Data
+# FIXUPS:      Records: 5
+# FIXUPS:      | Type | Flags  | Tag
+# FIXUPS-NEXT: |    4 | 0x8000 | FUNCTION
+# FIXUPS-NEXT: | .rdata {{.*}} | .rdata | 3 | 0x0000 | DATA
+# FIXUPS-NEXT: |    3 | 0x8000 | FUNCTION
+# FIXUPS-NEXT: |    3 | 0x8000 | FUNCTION
+# FIXUPS-NEXT: |    3 | 0x0000 | DATA
+
+# NOSTREAM:    Fixup Data
+# NOSTREAM:    Fixup stream not present

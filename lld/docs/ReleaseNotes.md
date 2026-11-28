@@ -41,6 +41,11 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### COFF Improvements
 
+* `lld-link` now emits the PDB FIXUP stream when linking with
+  `/debug /debugtype:cv,fixup` or `/debug /profile`. The stream is present even
+  when there are no fixup records, and can be inspected with
+  `llvm-pdbutil dump --fixups`.
+
 ### MinGW Improvements
 
 ### MachO Improvements

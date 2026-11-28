@@ -37,6 +37,7 @@
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTableBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
@@ -128,6 +129,8 @@ public:
 
   /// Add the section map and section contributions to the PDB.
   void addSections(ArrayRef<uint8_t> sectionTable);
+
+  void addFixupSubstream();
 
   /// Write the PDB to disk and store the Guid generated for it in *Guid.
   void commit(codeview::GUID *guid);
@@ -1608,6 +1611,7 @@ void lld::coff::createPDB(COFFLinkerContext &ctx,
     pdb.addObjectsToPDB();
     pdb.addImportFilesToPDB();
     pdb.addSections(sectionTable);
+    pdb.addFixupSubstream();
     pdb.addNatvisFiles();
     pdb.addNamedStreams();
     pdb.addPublicsToPDB();
@@ -1701,6 +1705,160 @@ void PDBLinker::addSections(ArrayRef<uint8_t> sectionTable) {
   // Add COFF section header stream.
   exitOnErr(
       dbiBuilder.addDbgStream(pdb::DbgHeaderType::SectionHdr, sectionTable));
+}
+
+static bool relocEmitsFixup(Triple::ArchType arch, uint16_t type) {
+  // ABSOLUTE is a no-op, and section-relative and paired helper relocations
+  // do not describe independent image address fixups.
+  if (type == 0)
+    return false;
+  switch (arch) {
+  case Triple::x86_64:
+    switch (type) {
+    case COFF::IMAGE_REL_AMD64_SECTION:
+    case COFF::IMAGE_REL_AMD64_SECREL:
+    case COFF::IMAGE_REL_AMD64_SECREL7:
+    case COFF::IMAGE_REL_AMD64_TOKEN:
+    case COFF::IMAGE_REL_AMD64_SREL32:
+    case COFF::IMAGE_REL_AMD64_PAIR:
+    case COFF::IMAGE_REL_AMD64_SSPAN32:
+      return false;
+    }
+    break;
+  case Triple::x86:
+    switch (type) {
+    case COFF::IMAGE_REL_I386_SECTION:
+    case COFF::IMAGE_REL_I386_SECREL:
+    case COFF::IMAGE_REL_I386_SECREL7:
+    case COFF::IMAGE_REL_I386_TOKEN:
+      return false;
+    }
+    break;
+  case Triple::aarch64:
+    switch (type) {
+    case COFF::IMAGE_REL_ARM64_SECTION:
+    case COFF::IMAGE_REL_ARM64_SECREL:
+    case COFF::IMAGE_REL_ARM64_SECREL_LOW12A:
+    case COFF::IMAGE_REL_ARM64_SECREL_HIGH12A:
+    case COFF::IMAGE_REL_ARM64_SECREL_LOW12L:
+    case COFF::IMAGE_REL_ARM64_TOKEN:
+      return false;
+    }
+    break;
+  case Triple::thumb:
+    switch (type) {
+    case COFF::IMAGE_REL_ARM_SECTION:
+    case COFF::IMAGE_REL_ARM_SECREL:
+    case COFF::IMAGE_REL_ARM_TOKEN:
+    case COFF::IMAGE_REL_ARM_PAIR:
+      return false;
+    }
+    break;
+  default:
+    llvm_unreachable("unsupported image architecture");
+  }
+  return true;
+}
+
+void PDBLinker::addFixupSubstream() {
+  if (!ctx.config.emitFixupStream())
+    return;
+
+  llvm::TimeTraceScope timeScope("PDB fixup substream");
+  using pdb::FixupRecord;
+
+  DenseSet<uint32_t> functionEntryRVAs;
+  for (ObjFile *file : ctx.objFileInstances) {
+    for (Symbol *s : file->getSymbols()) {
+      auto *d = dyn_cast_or_null<DefinedRegular>(s);
+      if (d && d->getChunk() && d->getChunk()->live &&
+          d->getCOFFSymbol().isFunctionDefinition())
+        functionEntryRVAs.insert(static_cast<uint32_t>(d->getRVA()));
+    }
+  }
+  ctx.forEachActiveSymtab([&](SymbolTable &symtab) {
+    symtab.forEachSymbol([&](Symbol *s) {
+      auto *thunk = dyn_cast<DefinedImportThunk>(s);
+      if (thunk && ctx.getOutputSection(thunk->getChunk()))
+        functionEntryRVAs.insert(static_cast<uint32_t>(thunk->getRVA()));
+    });
+  });
+
+  // The writer sorts .pdata in place after chunk layout. Remap each FIXUP
+  // site to its entry's final RVA, preserving the offset within the entry.
+  auto remapPdataSite = [&](uint32_t rva) {
+    for (const auto &map : ctx.pdataSortMaps) {
+      if (rva < map.baseRVA)
+        continue;
+      uint32_t off = rva - map.baseRVA;
+      uint32_t entry = off / map.entrySize;
+      if (entry < map.oldToNew.size())
+        return map.baseRVA + map.oldToNew[entry] * map.entrySize +
+               off % map.entrySize;
+    }
+    return rva;
+  };
+  auto isGuest = [](MachineTypes machine) {
+    return machine == ARM64EC || machine == AMD64;
+  };
+
+  std::vector<FixupRecord> records;
+  for (OutputSection *os : ctx.outputSections) {
+    for (Chunk *c : os->chunks) {
+      if (auto *synthetic = dyn_cast<NonSectionChunk>(c)) {
+        synthetic->getFixups(ctx.config.machine, records);
+        continue;
+      }
+      auto *sc = cast<SectionChunk>(c);
+      if (!sc->hasData)
+        continue;
+      // Hybrid images can contain several input architectures.
+      Triple::ArchType arch = sc->getArch();
+      for (const coff_relocation &r : sc->getRelocs()) {
+        if (!relocEmitsFixup(arch, r.Type))
+          continue;
+        auto *d =
+            dyn_cast_or_null<Defined>(sc->file->getSymbol(r.SymbolTableIndex));
+        if (!d || isa<DefinedAbsolute>(d) || !d->getChunk())
+          continue;
+        Chunk *targetChunk = d->getChunk();
+        OutputSection *targetOS = ctx.getOutputSection(targetChunk);
+        if (!targetOS)
+          continue;
+
+        uint32_t targetRVA = static_cast<uint32_t>(d->getRVA());
+        uint16_t flags = 0;
+        if (targetOS->header.Characteristics & COFF::IMAGE_SCN_CNT_CODE)
+          flags = functionEntryRVAs.contains(targetRVA) ? FixupRecord::Function
+                                                        : FixupRecord::Code;
+        else if (targetOS->name == ".tls")
+          flags = FixupRecord::TLS;
+        if (ctx.config.machine == ARM64X &&
+            (isGuest(sc->getMachine()) || isGuest(targetChunk->getMachine())))
+          flags |= FixupRecord::Guest;
+
+        records.push_back({r.Type, flags,
+                           remapPdataSite(sc->getRVA() + r.VirtualAddress),
+                           targetRVA});
+      }
+    }
+  }
+
+  // Remapping .pdata sites can change the order in which they were collected.
+  llvm::stable_sort(records, [](const FixupRecord &a, const FixupRecord &b) {
+    return a.Rva < b.Rva;
+  });
+
+  ArrayRef<uint8_t> data;
+  if (!records.empty()) {
+    // DbiStreamBuilder retains the buffer until commit().
+    auto storage = ArrayRef(records).copy(bAlloc());
+    data = ArrayRef(reinterpret_cast<const uint8_t *>(storage.data()),
+                    storage.size() * sizeof(FixupRecord));
+  }
+  ExitOnError exitOnErr;
+  exitOnErr(
+      builder.getDbiBuilder().addDbgStream(pdb::DbgHeaderType::Fixup, data));
 }
 
 void PDBLinker::commit(codeview::GUID *guid) {
