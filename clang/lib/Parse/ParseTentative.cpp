@@ -1201,6 +1201,11 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   }
 
   case tok::coloncolon: {    // ::foo::bar
+    // '::' cannot start a declaration outside C++, and outside C++ it cannot be
+    // annotated as a scope specifier either, so recursing below would never
+    // advance.
+    if (!getLangOpts().CPlusPlus)
+      return TPResult::False;
     const Token &Next = NextToken();
     if (Next.isOneOf(tok::kw_new,       // ::new
                      tok::kw_delete))   // ::delete
