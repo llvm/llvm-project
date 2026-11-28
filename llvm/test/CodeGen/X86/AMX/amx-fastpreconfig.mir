@@ -7,17 +7,6 @@
 ---
 name:            main
 alignment:       16
-registers:
-  - { id: 0, class: gr64_nosp }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr16 }
-  - { id: 3, class: gr16 }
-  - { id: 4, class: tile }
-  - { id: 5, class: tile }
-  - { id: 6, class: tile }
-  - { id: 7, class: tile }
-  - { id: 8, class: gr32 }
-  - { id: 9, class: vr512 }
 frameInfo:
   maxAlignment:    16
 stack:
@@ -70,13 +59,6 @@ legalized:       true
 regBankSelected: true
 selected:        true
 failedISel:      false
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-  - { id: 1, class: gr64_with_sub_8bit, preferred-register: '' }
-  - { id: 2, class: gr64, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
-  - { id: 4, class: gr64, preferred-register: '' }
-  - { id: 5, class: gr8, preferred-register: '' }
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
   - { reg: '$rsi', virtual-reg: '' }

@@ -17,6 +17,7 @@
 
 #include "XtensaSubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include <optional>
 
 namespace llvm {
@@ -51,6 +52,18 @@ public:
 
 protected:
   mutable StringMap<std::unique_ptr<XtensaSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, FS;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && FS == RHS.FS;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<XtensaSubtarget, SubtargetAttrs> LastSubtarget;
 };
 } // end namespace llvm
 

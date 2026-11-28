@@ -77,7 +77,6 @@ body: |
 
 ---
 name: build_vector_v2s32_aa
-tracksRegLiveness: true
 legalized: true
 
 body: |
@@ -99,7 +98,6 @@ body: |
 
 ---
 name: build_vector_v2s32_va
-tracksRegLiveness: true
 legalized: true
 
 body: |
@@ -121,7 +119,6 @@ body: |
 
 ---
 name: build_vector_v2s32_av
-tracksRegLiveness: true
 legalized: true
 
 body: |
@@ -143,7 +140,6 @@ body: |
 
 ---
 name: build_vector_v2s32_sa
-tracksRegLiveness: true
 legalized: true
 
 body: |
@@ -166,7 +162,6 @@ body: |
 
 ---
 name: build_vector_v2s32_as
-tracksRegLiveness: true
 legalized: true
 
 body: |
@@ -189,7 +184,6 @@ body: |
 
 ---
 name: build_vector_v3s32_aaa
-tracksRegLiveness: true
 legalized: true
 
 body: |
@@ -213,7 +207,6 @@ body: |
 
 ---
 name: build_vector_v4s32_aaaa
-tracksRegLiveness: true
 legalized: true
 
 body: |
@@ -239,7 +232,6 @@ body: |
 
 ---
 name: build_vector_v8s32_aaaaaaaa
-tracksRegLiveness: true
 legalized: true
 
 body: |
@@ -273,7 +265,6 @@ body: |
 
 ---
 name: build_vector_v16s32_aaaaaaaaaaaaaaaa
-tracksRegLiveness: true
 legalized: true
 
 body: |

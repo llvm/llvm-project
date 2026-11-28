@@ -148,3 +148,15 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.4, [Shader, Linkage], []> {
     spirv.Return
   }
 }
+
+// -----
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.4, [Addresses, Kernel, Linkage], []> {
+  spirv.func @ptr_compare(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: !spirv.ptr<f32, CrossWorkgroup>) "None" {
+    // CHECK: spirv.PtrEqual %{{.*}}, %{{.*}} : !spirv.ptr<f32, CrossWorkgroup>
+    %0 = spirv.PtrEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+    // CHECK: spirv.PtrNotEqual %{{.*}}, %{{.*}} : !spirv.ptr<f32, CrossWorkgroup>
+    %1 = spirv.PtrNotEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+    spirv.Return
+  }
+}

@@ -18,8 +18,6 @@
 namespace llvm {
 class Mips16RegisterInfo : public MipsRegisterInfo {
 public:
-  explicit Mips16RegisterInfo(const MipsSubtarget &STI);
-
   bool requiresRegisterScavenging(const MachineFunction &MF) const override;
 
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;

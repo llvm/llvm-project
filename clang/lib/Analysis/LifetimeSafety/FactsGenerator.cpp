@@ -269,8 +269,16 @@ void FactsGenerator::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *DIE) {
 void FactsGenerator::handleCXXCtorInitializer(const CXXCtorInitializer *CII) {
   // Flows origins from the initializer expression to the field.
   // Example: `MyObj(std::string s) : view(s) {}`
-  if (const FieldDecl *FD = CII->getAnyMember())
+  if (const FieldDecl *FD = CII->getAnyMember()) {
     killAndFlowOrigin(*FD, *CII->getInit());
+    return;
+  }
+  // A base or delegating initializer initializes the object itself.
+  // Example: `Derived(std::string s) : BaseView(s) {}`
+  if (OriginList *InitList = getOriginsList(*CII->getInit()))
+    CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+        (*FactMgr.getOriginMgr().getThisOrigins())->getOuterOriginID(),
+        InitList->getOuterOriginID(), /*KillDest=*/false));
 }
 
 void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
@@ -282,6 +290,13 @@ void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
     handleFunctionCall(MCE, /*IsGslConstruction=*/true);
     return;
   }
+  // `a.operator=(b)` is `a = b`. For `p->operator=(b)` the object is `*p`.
+  if (const auto *ME = dyn_cast<MemberExpr>(MCE->getCallee());
+      ME && !ME->isArrow() &&
+      MCE->getMethodDecl()->getOverloadedOperator() == OO_Equal &&
+      handleAssignmentOperatorCall(MCE, MCE->getImplicitObjectArgument(),
+                                   MCE->getArg(0)))
+    return;
   handleFunctionCall(MCE, /*IsGslConstruction=*/false);
 }
 
@@ -334,9 +349,6 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
     // points to), not the outer origin (the pointer's storage location).
     flow(Dest, readValue(SubExpr), /*Kill=*/true);
     return;
-  case CK_Dynamic:
-    handleAccess(SubExpr);
-    return;
   case CK_NullToPointer:
     // TODO: Flow into them a null origin.
     return;
@@ -345,6 +357,10 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
   case CK_UserDefinedConversion:
     flow(Dest, Src, /*Kill=*/true);
     return;
+  case CK_Dynamic:
+    // Reads the object's dynamic type.
+    handleAccess(SubExpr);
+    [[fallthrough]];
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase:
   case CK_BaseToDerived:
@@ -596,34 +612,41 @@ void FactsGenerator::VisitAbstractConditionalOperator(
          FBPred);
 }
 
+bool FactsGenerator::handleAssignmentOperatorCall(const CallExpr *CE,
+                                                  const Expr *LHSExpr,
+                                                  const Expr *RHSExpr) {
+  QualType LHSTy = LHSExpr->getType();
+  if (!hasOrigins(LHSTy))
+    return false;
+  // Pointer-like types: assignment inherently propagates origins.
+  if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy) ||
+      isGslOwnerType(LHSTy)) {
+    handleAssignment(CE, LHSExpr, RHSExpr);
+    return true;
+  }
+  // Standard library callable wrappers (e.g., std::function) can propagate
+  // the stored lambda's origins.
+  if (const auto *RD = LHSTy->getAsCXXRecordDecl();
+      RD && isStdCallableWrapperType(RD)) {
+    handleAssignment(CE, LHSExpr, RHSExpr);
+    return true;
+  }
+  // Other tracked types: only defaulted operator= propagates origins.
+  // User-defined operator= has opaque semantics, so don't handle them now.
+  if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(CE->getDirectCallee());
+      MD && MD->isDefaulted()) {
+    handleAssignment(CE, LHSExpr, RHSExpr);
+    return true;
+  }
+  return false;
+}
+
 void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
   // Assignment operators have special "kill-then-propagate" semantics
   // and are handled separately.
   if (OCE->getOperator() == OO_Equal && OCE->getNumArgs() == 2 &&
-      hasOrigins(OCE->getArg(0)->getType())) {
-    // Pointer-like types: assignment inherently propagates origins.
-    QualType LHSTy = OCE->getArg(0)->getType();
-    if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy) ||
-        isGslOwnerType(LHSTy)) {
-      handleAssignment(OCE, OCE->getArg(0), OCE->getArg(1));
-      return;
-    }
-    // Standard library callable wrappers (e.g., std::function) can propagate
-    // the stored lambda's origins.
-    if (const auto *RD = LHSTy->getAsCXXRecordDecl();
-        RD && isStdCallableWrapperType(RD)) {
-      handleAssignment(OCE, OCE->getArg(0), OCE->getArg(1));
-      return;
-    }
-    // Other tracked types: only defaulted operator= propagates origins.
-    // User-defined operator= has opaque semantics, so don't handle them now.
-    if (const auto *MD =
-            dyn_cast_or_null<CXXMethodDecl>(OCE->getDirectCallee());
-        MD && MD->isDefaulted()) {
-      handleAssignment(OCE, OCE->getArg(0), OCE->getArg(1));
-      return;
-    }
-  }
+      handleAssignmentOperatorCall(OCE, OCE->getArg(0), OCE->getArg(1)))
+    return;
 
   handleFunctionCall(OCE);
 }
@@ -932,6 +955,21 @@ void FactsGenerator::handleExitBlock() {
       ThisOrigins && !IsDestructor)
     EscapesInCurrentBlock.push_back(FactMgr.createFact<ThisEscapeFact>(
         (*ThisOrigins)->getOuterOriginID(), AC.getDecl()->getEndLoc()));
+
+  // Storage reachable through a reference parameter, i.e. every origin of the
+  // parameter but the outermost, is visible to the caller. A pointer parameter
+  // can be pointed at local storage, so stores through it are not necessarily
+  // visible to the caller.
+  if (const auto *Fn = dyn_cast_if_present<FunctionDecl>(AC.getDecl()))
+    for (const ParmVarDecl *PVD : Fn->parameters()) {
+      OriginList *List = getOriginsList(*PVD);
+      if (!List || !PVD->getType()->isReferenceType())
+        continue;
+      for (OriginList *Inner = List->peelOuterOrigin(); Inner;
+           Inner = Inner->peelOuterOrigin())
+        EscapesInCurrentBlock.push_back(FactMgr.createFact<ParamEscapeFact>(
+            Inner->getOuterOriginID(), PVD));
+    }
 }
 
 void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
@@ -1061,19 +1099,25 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
   if (!ClassDecl)
     return;
 
-  const auto UseFields = [&](const CXXRecordDecl *RD) {
-    for (const auto *Field : RD->fields())
-      if (auto *FieldList = getOriginsList(*Field))
-        CurrentBlockFacts.push_back(
-            FactMgr.createFact<UseFact>(*Call, FieldList));
-  };
+  // Walking the fields visits every member declaration of the class and its
+  // bases, so do it once per class.
+  auto [It, Inserted] = ImplicitObjectFieldLists.try_emplace(ClassDecl);
+  llvm::SmallVectorImpl<OriginList *> &FieldLists = It->second;
+  if (Inserted) {
+    const auto CollectFields = [&](const CXXRecordDecl *RD) {
+      for (const auto *Field : RD->fields())
+        if (auto *FieldList = getOriginsList(*Field))
+          FieldLists.push_back(FieldList);
+    };
+    CollectFields(ClassDecl);
+    ClassDecl->forallBases([&](const CXXRecordDecl *Base) {
+      CollectFields(Base);
+      return true;
+    });
+  }
 
-  UseFields(ClassDecl);
-
-  ClassDecl->forallBases([&](const CXXRecordDecl *Base) {
-    UseFields(Base);
-    return true;
-  });
+  for (OriginList *FieldList : FieldLists)
+    CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(*Call, FieldList));
 }
 
 void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,

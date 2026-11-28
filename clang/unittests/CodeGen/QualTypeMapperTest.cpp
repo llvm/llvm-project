@@ -58,6 +58,12 @@ protected:
     return dyn_cast<llvm::abi::OpaqueFloat8Type>(Mapper.convertType(QT));
   }
 
+  /// Maps \p QT and returns it as an ABI svcount_t type, or null if it did
+  /// not map to one.
+  const llvm::abi::SveCountType *mapToSveCount(QualType QT) {
+    return dyn_cast<llvm::abi::SveCountType>(Mapper.convertType(QT));
+  }
+
   /// Returns the underlying type of the file-scope typedef named \p Name.
   QualType lookupTypedef(StringRef Name) {
     for (Decl *D : context().getTranslationUnitDecl()->decls())
@@ -253,18 +259,16 @@ TEST_F(QualTypeMapperSVETest, MFloat8VectorUsesIntegerElement) {
   EXPECT_FALSE(Elt->isSigned());
 }
 
-// __SVCount_t is opaque, and is given the shape of svbool_t because it
-// occupies a predicate register.
-TEST_F(QualTypeMapperSVETest, SVECount) {
-  const llvm::abi::VectorType *SVCount = mapToVector(context().SveCountTy);
+// __SVCount_t is opaque rather than a vector. It occupies a predicate
+// register, so its size is that of svbool_t.
+TEST_F(QualTypeMapperSVETest, SveCount) {
+  const llvm::abi::SveCountType *SVCount = mapToSveCount(context().SveCountTy);
   ASSERT_NE(SVCount, nullptr);
 
-  EXPECT_EQ(SVCount->getVectorKind(), llvm::abi::VectorKind::SVECount);
-  EXPECT_TRUE(SVCount->isSVEType());
-  EXPECT_FALSE(SVCount->isSVEPredicate());
-  EXPECT_TRUE(SVCount->isScalable());
+  EXPECT_TRUE(SVCount->isSveCount());
+  EXPECT_FALSE(SVCount->isVector());
   EXPECT_FALSE(SVCount->isTuple());
-  EXPECT_EQ(SVCount->getNumElements(), llvm::ElementCount::getScalable(16));
+  EXPECT_TRUE(SVCount->isSVESizelessType());
   EXPECT_EQ(SVCount->getSizeInBits(), llvm::TypeSize::getScalable(16));
   EXPECT_EQ(SVCount->getAlignment(), llvm::Align(2));
 }

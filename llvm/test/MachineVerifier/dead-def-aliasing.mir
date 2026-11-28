@@ -9,7 +9,6 @@
 # partial use pattern and must not be reported.
 ---
 name: dead_super_live_sub_ok
-tracksRegLiveness: true
 body: |
   bb.0:
     dead $eax = MOV32ri 0, implicit-def $al
@@ -19,7 +18,6 @@ body: |
 # as the sub-register.
 ---
 name: dead_super_live_sub_same_units_ok
-tracksRegLiveness: true
 body: |
   bb.0:
     dead $rax = MOV64ri 1, implicit-def $eax
@@ -29,7 +27,6 @@ body: |
 # sub-register defs.
 ---
 name: dead_super_live_subs_cover_ok
-tracksRegLiveness: true
 body: |
   bb.0:
     dead $ax = MOV16ri 0, implicit-def $al, implicit-def $ah
@@ -39,7 +36,6 @@ body: |
 # instruction is fine.
 ---
 name: independent_dead_def_ok
-tracksRegLiveness: true
 body: |
   bb.0:
     $ecx = MOV32ri 0, implicit-def dead $eax
@@ -49,7 +45,6 @@ body: |
 # other part of the super-register is used.
 ---
 name: live_super_dead_sub_ok
-tracksRegLiveness: true
 body: |
   bb.0:
     $eax = MOV32ri 0, implicit-def dead $al
@@ -58,7 +53,6 @@ body: |
 # Two overlapping dead defs are redundant but not contradictory.
 ---
 name: redundant_dead_defs_ok
-tracksRegLiveness: true
 body: |
   bb.0:
     dead $eax = MOV32ri 0, implicit-def dead $al
@@ -67,7 +61,6 @@ body: |
 # Dead and live def of the same register.
 ---
 name: dead_flag_contradiction_bad
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK: Bad machine code: Dead def has a live def of the same register on the same instruction

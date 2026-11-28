@@ -204,6 +204,19 @@ if(LIBC_BENCHMARKS_HAS_LLVM_SUPPORT)
   # Benchmarking tool
   #==============================================================================
 
+  function(add_libc_benchmark name fq_config_name)
+    set(benchmark_name ${fq_config_name}_benchmark)
+    add_executable(${benchmark_name}
+      EXCLUDE_FROM_ALL
+      LibcMemoryBenchmarkMain.cpp
+    )
+    get_target_property(entrypoint_object_file ${fq_config_name} "OBJECT_FILE_RAW")
+    target_link_libraries(${benchmark_name} PUBLIC json ${entrypoint_object_file})
+    string(TOUPPER ${name} name_upper)
+    target_compile_definitions(${benchmark_name} PRIVATE "-DLIBC_BENCHMARK_FUNCTION_${name_upper}=LIBC_NAMESPACE::${name}" "-DLIBC_BENCHMARK_FUNCTION_NAME=\"${fq_config_name}\"")
+    llvm_update_compile_flags(${benchmark_name})
+  endfunction()
+
   # Benchmark all implementations that can run on the target CPU.
   function(add_libc_multi_impl_benchmark name)
     get_property(fq_implementations GLOBAL PROPERTY ${name}_implementations)
@@ -211,16 +224,7 @@ if(LIBC_BENCHMARKS_HAS_LLVM_SUPPORT)
       get_target_property(required_cpu_features ${fq_config_name} REQUIRE_CPU_FEATURES)
       cpu_supports(can_run "${required_cpu_features}")
       if(can_run)
-        set(benchmark_name ${fq_config_name}_benchmark)
-        add_executable(${benchmark_name}
-          EXCLUDE_FROM_ALL
-          LibcMemoryBenchmarkMain.cpp
-        )
-        get_target_property(entrypoint_object_file ${fq_config_name} "OBJECT_FILE_RAW")
-        target_link_libraries(${benchmark_name} PUBLIC json ${entrypoint_object_file})
-        string(TOUPPER ${name} name_upper)
-        target_compile_definitions(${benchmark_name} PRIVATE "-DLIBC_BENCHMARK_FUNCTION_${name_upper}=LIBC_NAMESPACE::${name}" "-DLIBC_BENCHMARK_FUNCTION_NAME=\"${fq_config_name}\"")
-        llvm_update_compile_flags(${benchmark_name})
+        add_libc_benchmark(${name} ${fq_config_name})
       else()
         message(STATUS "Skipping benchmark for '${fq_config_name}' insufficient host cpu features '${required_cpu_features}'")
       endif()
@@ -233,6 +237,15 @@ if(LIBC_BENCHMARKS_HAS_LLVM_SUPPORT)
   add_libc_multi_impl_benchmark(memcpy)
   add_libc_multi_impl_benchmark(memmove)
   add_libc_multi_impl_benchmark(memset)
+  if(TARGET libc.src.string.memchr)
+    add_libc_benchmark(memchr libc.src.string.memchr)
+  endif()
+  if(TARGET libc.src.string.strlen)
+    add_libc_benchmark(strlen libc.src.string.strlen)
+  endif()
+  if(TARGET libc.src.string.strcmp)
+    add_libc_benchmark(strcmp libc.src.string.strcmp)
+  endif()
 endif()
 
 #==============================================================================
@@ -256,6 +269,9 @@ target_link_libraries(libc.benchmarks.memory_functions.opt_host
     libc.src.string.memset_opt_host.__internal__
     libc.src.strings.bcmp_opt_host.__internal__
     libc.src.strings.bzero_opt_host.__internal__
+    libc.src.string.memchr.__internal__
+    libc.src.string.strlen.__internal__
+    libc.src.string.strcmp.__internal__
     benchmark_main
 )
 llvm_update_compile_flags(libc.benchmarks.memory_functions.opt_host)

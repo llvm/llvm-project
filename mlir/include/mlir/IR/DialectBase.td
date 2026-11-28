@@ -82,17 +82,50 @@ class Dialect {
   // If this dialect overrides the hook for op interface fallback.
   bit hasOperationInterfaceFallback = 0;
 
+  // If this dialect has an `initialize` method, which the generated dialect
+  // constructor calls after registering the attributes, types and operations.
+  // Dialects without further initialization can set this to 0, in which case
+  // `initialize` is neither declared nor called.
+  bit hasInitializer = 1;
+
+  // If this dialect has attributes defined in ODS. Provides the default of
+  // `useDefaultAttributeRegistration` and `useDefaultAttributePrinterParser`.
+  bit hasAttributes = 0;
+
+  // If this dialect has types defined in ODS. Provides the default of
+  // `useDefaultTypeRegistration` and `useDefaultTypePrinterParser`.
+  bit hasTypes = 0;
+
+  // If the generated dialect constructor should register the attributes defined
+  // in ODS by calling `register<DialectClass>Attributes`.
+  // The definition is usually provided by the attribute definitions
+  // generator (`-gen-attrdef-defs`).
+  bit useDefaultAttributeRegistration = hasAttributes;
+
+  // If the generated dialect constructor should register the types defined in
+  // ODS by calling `register<DialectClass>Types`.
+  // The definition is usually provided by the type definitions generator
+  // (`-gen-typedef-defs`).
+  bit useDefaultTypeRegistration = hasTypes;
+
+  // If the generated dialect constructor should register the operations
+  // defined in ODS by calling `register<DialectClass>Operations`.
+  // The definition is provided by the op definitions generator
+  // (`-gen-op-defs`), which only generates the registration hooks if this is
+  // set. The operations must then not be registered again in `initialize`.
+  bit useDefaultOperationRegistration = 0;
+
   // If this dialect should use default generated attribute parser boilerplate.
   // When set, ODS will generate declarations for the attribute parsing and
   // printing hooks in the dialect and default implementations that dispatch to
   // each individual attribute directly.
-  bit useDefaultAttributePrinterParser = 0;
+  bit useDefaultAttributePrinterParser = hasAttributes;
 
   // If this dialect should use default generated type parser boilerplate:
   // When set, ODS will generate declarations for the type parsing and printing
   // hooks in the dialect and default implementations that dispatch to each
   // individual type directly.
-  bit useDefaultTypePrinterParser = 0;
+  bit useDefaultTypePrinterParser = hasTypes;
 
   // If this dialect overrides the hook for canonicalization patterns.
   bit hasCanonicalizer = 0;
@@ -102,7 +135,8 @@ class Dialect {
 }
 
 // A partition of the definitions of a dialect, for "logical sharding" of their
-// generated declarations and definitions. See `Op::partition`.
+// generated declarations and definitions. See `Op::partition` and
+// `AttrOrTypeDef::partition`.
 class Partition<string name> {
   // The name of the partition, a C++ identifier. Generators select a partition
   // by this name, e.g. `-gen-op-decls` and `-gen-op-defs` with

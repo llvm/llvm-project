@@ -51,7 +51,6 @@ struct CSKYOperand;
 
 class CSKYAsmParser : public MCTargetAsmParser {
   const CSKYMCOptions &CLOpts;
-  const MCRegisterInfo *MRI;
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
@@ -128,9 +127,6 @@ public:
         CLOpts(CSKY_MC::getCLOpts(Parser.getContext().getTargetOptions())) {
 
     MCAsmParserExtension::Initialize(Parser);
-
-    // Cache the MCRegisterInfo.
-    MRI = getContext().getRegisterInfo();
 
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
     if (CLOpts.add_build_attributes)
@@ -638,11 +634,6 @@ public:
 #define GET_MATCHER_IMPLEMENTATION
 #define GET_MNEMONIC_SPELL_CHECKER
 #include "CSKYGenAsmMatcher.inc"
-
-static MCRegister convertFPR32ToFPR64(MCRegister Reg) {
-  assert(Reg >= CSKY::F0_32 && Reg <= CSKY::F31_32 && "Invalid register");
-  return Reg - CSKY::F0_32 + CSKY::F0_64;
-}
 
 static std::string CSKYMnemonicSpellCheck(StringRef S, const FeatureBitset &FBS,
                                           unsigned VariantID = 0);
@@ -1618,27 +1609,11 @@ unsigned CSKYAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
   MCRegister Reg = Op.getReg();
 
-  if (getCSKYMCRegisterClass(CSKY::FPR32RegClassID).contains(Reg)) {
-    // As the parser couldn't differentiate an FPR64 from an FPR32, coerce the
-    // register from FPR32 to FPR64 if necessary.
-    if (Kind == MCK_FPR64 || Kind == MCK_sFPR64) {
-      Op.Reg.RegNum = convertFPR32ToFPR64(Reg);
-      if (Kind == MCK_sFPR64 &&
-          (Op.Reg.RegNum < CSKY::F0_64 || Op.Reg.RegNum > CSKY::F15_64))
-        return Match_InvalidRegOutOfRange;
-      if (Kind == MCK_FPR64 &&
-          (Op.Reg.RegNum < CSKY::F0_64 || Op.Reg.RegNum > CSKY::F31_64))
-        return Match_InvalidRegOutOfRange;
-      return Match_Success;
-    }
-  }
-
-  if (getCSKYMCRegisterClass(CSKY::GPRRegClassID).contains(Reg)) {
-    if (Kind == MCK_GPRPair) {
-      Op.Reg.RegNum = MRI->getEncodingValue(Reg) + CSKY::R0_R1;
-      return Match_Success;
-    }
-  }
+  // FPR32 registers are coerced to FPR64/sFPR64 by the generated matcher, so
+  // this only sees fr16-fr31 used as an sFPR64 operand.
+  if (Kind == MCK_sFPR64 &&
+      getCSKYMCRegisterClass(CSKY::FPR32RegClassID).contains(Reg))
+    return Match_InvalidRegOutOfRange;
 
   return Match_InvalidOperand;
 }

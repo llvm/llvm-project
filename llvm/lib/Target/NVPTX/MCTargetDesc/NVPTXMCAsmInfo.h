@@ -22,17 +22,6 @@ class NVPTXMCAsmInfo : public MCAsmInfo {
 public:
   explicit NVPTXMCAsmInfo(const Triple &TheTriple,
                           const MCTargetOptions &Options);
-
-  /// Return true if the .section directive should be omitted when
-  /// emitting \p SectionName.  For example:
-  ///
-  /// shouldOmitSectionDirective(".text")
-  ///
-  /// returns false => .section .text,#alloc,#execinstr
-  /// returns true  => .text
-  bool shouldOmitSectionDirective(StringRef SectionName) const override {
-    return true;
-  }
 };
 } // namespace llvm
 

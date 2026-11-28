@@ -28,8 +28,10 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualFileSystemFwd.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
+#include <functional>
 #include <map>
 #include <optional>
 
@@ -1037,7 +1039,7 @@ public:
   ///
   /// Virtual shares DivMod's type and trip-count limits. Intervening code stays
   /// at its level, once per range touching that row; empty ranges skip it.
-  /// Two constant-count loops and direct body-to-preheader/after-to-latch edges
+  /// Two loops and direct body-to-preheader/after-to-latch edges
   /// are required. Controls must retain form and be unobserved after the nest.
   /// Only host static worksharing without chunk or ordered is supported.
   /// SIMD, transforms of the result and logical body/IV access are unsupported.
@@ -1591,7 +1593,13 @@ public:
   /// Generator for '#omp flush'
   ///
   /// \param Loc The location where the flush directive was encountered
-  LLVM_ABI void createFlush(const LocationDescription &Loc);
+  /// \param AO The memory ordering of the flush. NotAtomic is a flush with a
+  /// list, which is treated as seq_cst.
+  /// \param Scope The memory scope of the flush.
+  LLVM_ABI void
+  createFlush(const LocationDescription &Loc,
+              AtomicOrdering AO = AtomicOrdering::SequentiallyConsistent,
+              AtomicScope Scope = AtomicScope::Device);
 
   /// Generate a call to the runtime to emit the diagnostic of an OpenMP
   /// `error` directive with `at(execution)`.
@@ -2613,7 +2621,7 @@ public:
 
   LLVM_ABI CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
                                                ArrayRef<Value *> Args,
-                                               StringRef Name = "");
+                                               const Twine &Name = "");
 
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
   LLVM_ABI Constant *getOrCreateSrcLocStr(StringRef LocStr,
@@ -2684,10 +2692,16 @@ public:
                                           Value *NumThreads, Value *HostPtr,
                                           ArrayRef<Value *> KernelArgs);
 
-  /// Generate a flush runtime call.
+  /// Generate a flush: a fence on a GPU, and a runtime call otherwise.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
-  LLVM_ABI void emitFlush(const LocationDescription &Loc);
+  /// \param AO The memory ordering of the flush. NotAtomic is a flush with a
+  /// list, which is treated as seq_cst.
+  /// \param Scope The memory scope of the flush.
+  LLVM_ABI void
+  emitFlush(const LocationDescription &Loc,
+            AtomicOrdering AO = AtomicOrdering::SequentiallyConsistent,
+            AtomicScope Scope = AtomicScope::Device);
 
   /// The finalization stack made up of finalize callbacks currently in-flight,
   /// wrapped into FinalizationInfo objects that reference also the finalization
@@ -3098,6 +3112,44 @@ public:
     MapHasAttachPtrArrayTy HasAttachPtr;
     StructNonContiguousInfo NonContigInfo;
 
+    /// Represents a group of mapper sub-components produced by an `iterator`
+    /// modifier on a `declare mapper`'s map clause: the component count is
+    /// only known at runtime, so these are pushed one at a time via
+    /// __tgt_push_mapper_component from inside a generated loop, rather than
+    /// being added to the arrays above. Only consumed by
+    /// emitUserDefinedMapper; emitOffloadingArrays ignores this field.
+    struct DynamicSegment {
+      /// Runtime (i64) trip count for this segment.
+      Value *Count = nullptr;
+      /// Emits the code computing one iteration's (BasePointer, Pointer,
+      /// Size) triple, given the loop's linear induction variable (0-based,
+      /// i64). Owning (not function_ref): the callable is typically a
+      /// lambda temporary assigned in after construction, which would
+      /// otherwise dangle by the time this is invoked. Returns an Error if the
+      /// entry could not be computed, e.g. on region conversion failure.
+      std::function<Expected<SmallVector<Value *, 3>>(IRBuilderBase &, Value *)>
+          GenEntry;
+      /// Map type/HasAttachPtr, constant across the segment.
+      omp::OpenMPOffloadMappingFlags Type =
+          omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+      bool HasAttachPtr = false;
+      /// User-defined mapper to invoke for this segment's component, if the
+      /// underlying map clause carries one (mirrors CustomMapperCB for the
+      /// statically-known components above).
+      Function *ChildMapperFn = nullptr;
+    };
+    SmallVector<DynamicSegment, 0> DynamicSegments;
+
+    /// When set, the first statically-known component is a parent synthesized
+    /// only to group the DynamicSegments' components (via MEMBER_OF): it
+    /// spans the range those components cover and is pushed only if this i1
+    /// condition holds at runtime, typically "some segment has a non-zero
+    /// trip count". Skipping it when no component would be grouped under it
+    /// keeps the mapped variable from becoming device-present for an iterator
+    /// that expands to nothing. Consumed by emitUserDefinedMapper only; not
+    /// merged by append().
+    Value *LeadingParentCond = nullptr;
+
     /// Append arrays in \a CurInfo.
     void append(MapInfosTy &CurInfo) {
       BasePointers.append(CurInfo.BasePointers.begin(),
@@ -3118,6 +3170,8 @@ public:
                                   CurInfo.NonContigInfo.Counts.end());
       NonContigInfo.Strides.append(CurInfo.NonContigInfo.Strides.begin(),
                                    CurInfo.NonContigInfo.Strides.end());
+      DynamicSegments.append(CurInfo.DynamicSegments.begin(),
+                             CurInfo.DynamicSegments.end());
     }
   };
   using MapInfosOrErrorTy = Expected<MapInfosTy &>;
@@ -4083,18 +4137,6 @@ private:
       const function_ref<Expected<Value *>(Value *XOld, IRBuilder<> &IRB)>;
 
 private:
-  enum AtomicKind { Read, Write, Update, Capture, Compare };
-
-  /// Determine whether to emit flush or not
-  ///
-  /// \param Loc    The insert and source location description.
-  /// \param AO     The required atomic ordering
-  /// \param AK     The OpenMP atomic operation kind used.
-  ///
-  /// \returns		wether a flush was emitted or not
-  bool checkAndEmitFlushAfterAtomic(const LocationDescription &Loc,
-                                    AtomicOrdering AO, AtomicKind AK);
-
   /// Emit atomic update for constructs: X = X BinOp Expr ,or X = Expr BinOp X
   /// For complex Operations: X = UpdateOp(X) => CmpExch X, old_X, UpdateOp(X)
   /// Only Scalar data types.

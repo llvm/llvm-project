@@ -73,7 +73,7 @@ lowerNonLocalAlloca(CoroAllocaAllocInst *AI, const Shape &Shape,
   IRBuilder<> Builder(AI);
   auto Alloc = Shape.emitAlloc(Builder, AI->getSize(), nullptr);
 
-  for (User *U : AI->users()) {
+  for (Instruction *U : AI->users()) {
     if (isa<CoroAllocaGetInst>(U)) {
       U->replaceAllUsesWith(Alloc);
     } else {
@@ -81,7 +81,7 @@ lowerNonLocalAlloca(CoroAllocaAllocInst *AI, const Shape &Shape,
       Builder.SetInsertPoint(FI);
       Shape.emitDealloc(Builder, Alloc, nullptr);
     }
-    DeadInsts.push_back(cast<Instruction>(U));
+    DeadInsts.push_back(U);
   }
 
   // Push this on last so that it gets deleted after all the others.
@@ -503,9 +503,9 @@ void coro::collectSpillsAndAllocasFromInsts(
       // erasing AI.
       auto Alloc = lowerNonLocalAlloca(AI, Shape, DeadInstructions);
 
-      for (User *U : Alloc->users()) {
+      for (Instruction *U : Alloc->users()) {
         if (Checker.isDefinitionAcrossSuspend(*Alloc, U))
-          Spills[Alloc].push_back(cast<Instruction>(U));
+          Spills[Alloc].push_back(U);
       }
       continue;
     }
@@ -519,13 +519,13 @@ void coro::collectSpillsAndAllocasFromInsts(
       continue;
     }
 
-    for (User *U : I.users())
+    for (Instruction *U : I.users())
       if (Checker.isDefinitionAcrossSuspend(I, U)) {
         // We cannot spill a token.
         if (I.getType()->isTokenTy())
           report_fatal_error(
               "token definition is separated from the use by a suspend point");
-        Spills[&I].push_back(cast<Instruction>(U));
+        Spills[&I].push_back(U);
       }
   }
 }
@@ -574,8 +574,7 @@ void coro::sinkSpillUsesAfterCoroBegin(
   // Recursively collect users before coro.begin.
   while (!Worklist.empty()) {
     auto *Def = Worklist.pop_back_val();
-    for (User *U : Def->users()) {
-      auto Inst = cast<Instruction>(U);
+    for (Instruction *Inst : Def->users()) {
       if (Dom.dominates(CoroBegin, Inst))
         continue;
       if (ToMove.insert(Inst))

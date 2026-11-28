@@ -65,6 +65,7 @@ class LLVM_ABI ELFObjectFileBase : public ObjectFile {
   SubtargetFeatures getHexagonFeatures() const;
   Expected<SubtargetFeatures> getRISCVFeatures() const;
   SubtargetFeatures getLoongArchFeatures() const;
+  SubtargetFeatures getSparcFeatures() const;
 
   StringRef getAMDGPUCPUName() const;
   StringRef getNVPTXCPUName() const;
@@ -1323,6 +1324,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return "elf32-loongarch";
     case ELF::EM_XTENSA:
       return "elf32-xtensa";
+    case ELF::EM_NANOMIPS:
+      return "elf32-nanomips";
     default:
       return "elf32-unknown";
     }
@@ -1455,6 +1458,9 @@ template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
 
   case ELF::EM_XTENSA:
     return Triple::xtensa;
+
+  case ELF::EM_NANOMIPS:
+    return Triple::nanomips;
 
   default:
     return Triple::UnknownArch;

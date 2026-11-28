@@ -51,6 +51,47 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
         return res;
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return a default target shape for unrolling, or std::nullopt if no
+        default is available.
+
+        This hook provides a fallback when the caller does not specify a target
+        shape. It is intended primarily for testing. Default shapes should have
+        nonzero rank and be representative of a target supported in-tree.
+
+        No default shape is optimal for every target. Callers should provide
+        an explicit target shape when performance matters.
+      }],
+      /*retTy=*/"::std::optional<::llvm::SmallVector<int64_t>>",
+      /*methodName=*/"getDefaultUnrollTargetShape",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        // We use this default implementation for elementwise Ops.
+        return SmallVector<int64_t>{2, 2};
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+          Returns the dimension indices in the order used for vector unrolling.
+
+          By default, dimensions are ordered from the outermost (slowest-varying)
+          to the innermost (fastest-varying), i.e. [0, 1, ..., rank - 1].
+          Setting `reverseOrder` to `true` reverses this order.
+      }],
+      /*retTy=*/"::llvm::SmallVector<int64_t>",
+      /*methodName=*/"getUnrollOrder",
+      /*args=*/(ins "bool":$reverseOrder),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        int64_t numLoops = $_op.getIterationShapeToUnroll().value().size();
+        auto order = llvm::seq<int64_t>(0, numLoops);
+        if (reverseOrder)
+          return llvm::to_vector(llvm::reverse(order));
+        return llvm::to_vector(order);
+      }]
+    >,
   ];
 }
 

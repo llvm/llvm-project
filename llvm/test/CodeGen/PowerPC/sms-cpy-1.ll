@@ -70,12 +70,12 @@ define void @print_res(ptr %p) nounwind {
 ; CHECK-NEXT:    std 5, 120(1)
 ; CHECK-NEXT:    li 5, 3
 ; CHECK-NEXT:    clrldi 4, 4, 32
-; CHECK-NEXT:    std 4, 104(1)
-; CHECK-NEXT:    li 4, 3
 ; CHECK-NEXT:    li 7, 0
 ; CHECK-NEXT:    li 8, 3
 ; CHECK-NEXT:    li 10, 0
 ; CHECK-NEXT:    std 5, 96(1)
+; CHECK-NEXT:    std 4, 104(1)
+; CHECK-NEXT:    li 4, 3
 ; CHECK-NEXT:    li 5, 0
 ; CHECK-NEXT:    bl printf
 ; CHECK-NEXT:    nop

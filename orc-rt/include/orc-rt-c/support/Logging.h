@@ -63,6 +63,7 @@ typedef enum {
   orc_rt_log_Category_General,
   orc_rt_log_Category_ControllerAccess,
   orc_rt_log_Category_Session,
+  orc_rt_log_Category_LoaderAPIs,
 
   /*
    * Count is the number of defined categories; it is not itself a valid

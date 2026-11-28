@@ -73,6 +73,7 @@ struct GlobalVariableModel
   bool isDeviceAccessible(mlir::Operation *op) const;
   bool isInDeviceMemory(mlir::Operation *op) const;
   bool isCompilerGenerated(mlir::Operation *op) const;
+  bool hasLocalLinkage(mlir::Operation *op) const;
 };
 
 template <typename Op>

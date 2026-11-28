@@ -8,6 +8,7 @@
 
 #include "lldb/API/SBTypeNameSpecifier.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBType.h"
@@ -65,7 +66,7 @@ const char *SBTypeNameSpecifier::GetName() {
   if (!IsValid())
     return nullptr;
 
-  return ConstString(m_opaque_sp->GetName()).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_sp->GetName());
 }
 
 SBType SBTypeNameSpecifier::GetType() {
@@ -146,7 +147,7 @@ bool SBTypeNameSpecifier::operator!=(lldb::SBTypeNameSpecifier &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
-    return !rhs.IsValid();
+    return rhs.IsValid();
   return m_opaque_sp != rhs.m_opaque_sp;
 }
 

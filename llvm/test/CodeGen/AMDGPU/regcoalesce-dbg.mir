@@ -24,7 +24,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%0' }
   - { reg: '$vgpr0', virtual-reg: '%3' }

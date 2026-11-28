@@ -17,6 +17,7 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -121,9 +122,11 @@ public:
   }
 
   std::string VisitSymbolConjured(const SymbolConjured *S) {
-    return "symbol of type '" + S->getType().getAsString() +
-           "' conjured at CFG element '" +
-           printCFGElementRef(S->getCFGElementRef()) + "'";
+    std::optional<ConstCFGElementRef> Elt = S->getCFGElementRef();
+    std::string Res = "symbol of type '" + S->getType().getAsString() + "'";
+    if (Elt)
+      Res += " conjured at CFG element '" + printCFGElementRef(*Elt) + "'";
+    return Res;
   }
 
   std::string VisitSymbolDerived(const SymbolDerived *S) {

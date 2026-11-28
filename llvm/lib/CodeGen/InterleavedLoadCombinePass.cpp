@@ -1159,8 +1159,8 @@ bool InterleavedLoadCombineImpl::combine(ArrayRef<VectorInfo *> InterleavedLoad,
 
     // If there are users outside the set to be eliminated, we abort the
     // transformation. No gain can be expected.
-    for (auto *U : I->users()) {
-      if (Is.find(dyn_cast<Instruction>(U)) == Is.end())
+    for (Instruction *U : I->users()) {
+      if (Is.find(U) == Is.end())
         return false;
     }
   }

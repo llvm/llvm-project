@@ -859,6 +859,93 @@ When this wait returns true, the following ordering guarantees hold:
 - No ordering guarantee exists for memory accesses by the same thread
   between an `mbarrier.arrive` and this wait.
 
+#### '`llvm.nvvm.mbarrier.test.wait.{primary,conditional}`'
+
+##### Syntax:
+
+```llvm
+declare {i1, i1, i32} @llvm.nvvm.mbarrier.test.wait.primary{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
+declare {i1, i1, i32} @llvm.nvvm.mbarrier.test.wait.primary{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
+declare {i1, i1, i32} @llvm.nvvm.mbarrier.test.wait.parity.primary{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+declare {i1, i1, i32} @llvm.nvvm.mbarrier.test.wait.parity.primary{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+declare i1 @llvm.nvvm.mbarrier.test.wait.parity.conditional{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+declare i1 @llvm.nvvm.mbarrier.test.wait.parity.conditional{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+```
+
+##### Overview:
+
+The `@llvm.nvvm.mbarrier.test.wait.{primary,conditional}` intrinsics test for
+the completion of the primary or the conditional phase of the mbarrier
+object at `%addr`. The `.primary` and `.conditional` suffixes select the phase
+to observe and correspond to the `.phase_type::primary` and
+`.phase_type::conditional` qualifiers of the PTX instruction; these
+intrinsics are therefore referred to as phase-qualified, in contrast to the
+phase-unqualified `llvm.nvvm.mbarrier.test.wait.*` intrinsics described
+above. These intrinsics require `sm_90` or higher and PTX ISA 9.3 or later.
+
+Every mbarrier object has a primary phase and a conditional phase. The
+primary phase completes when both the pending arrival count and the
+`tx-count` of the mbarrier object have reached zero, as described in the
+[MBarrier family of Intrinsics](#mbarrier-family-of-intrinsics) overview. A
+`layout::v1` mbarrier object additionally stores a payload report for each
+primary phase, and its conditional phase completes together with the
+primary phase only if the payload report of the completing phase is zero,
+that is, if no operation tracked by that phase performed a report-on
+operation. Payload reports are produced by features such as
+[TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting),
+and consist of a report predicate and a report value.
+
+Completion can be tested in the same two ways as for the phase-unqualified
+`test.wait` intrinsics described above: with the `%state` operand returned
+by an `llvm.nvvm.mbarrier.arrive.*` intrinsic on the same mbarrier object,
+or with the phase parity of the requested phase. The `.primary` variants
+accept both forms, while the `.conditional` variants are phase-parity-only and
+take no `%state` operand.
+
+The `.primary` variants return `{i1, i1, i32}`, in this fixed order:
+
+- `waitComplete`: whether the requested primary phase has completed.
+- `reportSeen`: whether the completed phase recorded a nonzero payload
+  report. It is only defined when `waitComplete` is true.
+- `reportValue`: the 8-bit payload report of the completed phase,
+  zero-extended to `i32`. It is only defined when `waitComplete` is true.
+
+The `.conditional` variants return only `waitComplete`, a wait on
+the conditional phase does not report a payload.
+
+`reportSeen` is **not** a success predicate. In TMA data-validity reporting
+it indicates that a tracked copy matched the sentinel pattern, so the
+copied data must not be consumed; in general a nonzero payload report can
+describe an error, a warning, or other information. The primary phase can
+therefore complete without the conditional phase advancing. In a typical
+pattern, the thread that issues the copy waits on the primary phase,
+inspects `reportSeen` and `reportValue`, and re-issues the operation if
+needed, while the threads that consume the data wait on the conditional
+phase, whose parity does not change until an attempt completes with a zero
+payload report.
+
+For `layout::v0` mbarrier objects the payload report is always zero, so the
+primary and conditional phases always advance together. The
+phase-unqualified `llvm.nvvm.mbarrier.test.wait.*` intrinsics described
+above observe the primary phase and do not expose the payload report.
+
+##### Semantics:
+
+The `.scope.{cta/cluster}` qualifier denotes the set of threads that the
+`test_wait` operation can directly synchronize with. The mbarrier object
+must be located in `shared::cta` space for either scope; otherwise the
+behavior of these intrinsics is undefined.
+
+These intrinsics have `acquire` semantics by default and provide the
+ordering guarantees described for the phase-unqualified `test.wait`
+intrinsics above, at the specified CTA or cluster scope. Their `.relaxed`
+variants provide no memory ordering or visibility guarantees.
+
+These intrinsics are non-blocking: they return the completion status
+immediately, without suspending the executing thread.
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait).
+
 #### '`llvm.nvvm.mbarrier.try.wait`'
 
 ##### Syntax:
@@ -888,6 +975,49 @@ when the phase completes or the time limit elapses. This time limit is
 configurable through the `.tl` variants of these intrinsics, where the
 `%timelimit` operand (an unsigned integer) specifies the limit in
 nanoseconds. Other semantics are identical to those of the `test.wait`
+intrinsics described above.
+
+#### '`llvm.nvvm.mbarrier.try.wait.{primary,conditional}`'
+
+##### Syntax:
+
+```llvm
+declare {i1, i1, i32} @llvm.nvvm.mbarrier.try.wait.primary{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
+declare {i1, i1, i32} @llvm.nvvm.mbarrier.try.wait.primary{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
+declare {i1, i1, i32} @llvm.nvvm.mbarrier.try.wait.parity.primary{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+declare {i1, i1, i32} @llvm.nvvm.mbarrier.try.wait.parity.primary{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+declare {i1, i1, i32} @llvm.nvvm.mbarrier.try.wait.tl.primary{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state, i32 %timelimit)
+declare {i1, i1, i32} @llvm.nvvm.mbarrier.try.wait.tl.primary{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state, i32 %timelimit)
+declare {i1, i1, i32} @llvm.nvvm.mbarrier.try.wait.parity.tl.primary{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
+declare {i1, i1, i32} @llvm.nvvm.mbarrier.try.wait.parity.tl.primary{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.conditional{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.conditional{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl.conditional{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl.conditional{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
+```
+
+##### Overview:
+
+The `@llvm.nvvm.mbarrier.try.wait.{primary,conditional}` intrinsics test for
+the completion of the primary or the conditional phase of the mbarrier
+object at `%addr`, with the same phase selection as the phase-qualified
+`test.wait` intrinsics described above.
+
+Unlike a `test.wait`, which only tests for completion, a `try.wait` may
+block the executing thread: if the requested phase is not yet complete, the
+thread is suspended and resumes execution when the phase completes or when
+a system-dependent time limit elapses. The `.tl` variants accept an unsigned
+32-bit `%timelimit` operand that specifies that time limit in nanoseconds,
+in place of the system-dependent value.
+
+A single `try.wait` performs one such attempt, so it can return with
+`waitComplete` false when the time limit elapses before the requested phase
+completes. A caller that must wait for the completion of the phase has to
+invoke the intrinsic again, for example in a loop.
+
+All other semantics, including the primary and conditional phase model, the
+payload report results, the memory ordering guarantees and the target
+requirements, are identical to those of the phase-qualified `test.wait`
 intrinsics described above.
 
 ### Electing a thread
@@ -1232,6 +1362,63 @@ a position in its target group.
 
 For more information, see the
 [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-spdecompress).
+
+#### '`llvm.nvvm.tcgen05.ld.spcompress.32x32b`' and '`llvm.nvvm.tcgen05.ld.red.spcompress.32x32b`' Intrinsics
+
+##### Syntax:
+
+```llvm
+declare {MDataTy, CDataTy} @llvm.nvvm.tcgen05.ld.spcompress.32x32b(
+    ptr addrspace(6) %taddr, i32 immarg %row_op, i1 immarg %abs)
+
+declare {MDataTy, CDataTy, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b(
+    ptr addrspace(6) %taddr, i32 immarg %row_op, i1 immarg %abs,
+    i1 immarg %nan)
+```
+
+##### Overview:
+
+These intrinsics model the PTX `tcgen05.ld.spcompress` and
+`tcgen05.ld.red.spcompress` instructions. They load `32x32b.num` `f32`
+elements from the Tensor Memory at `%taddr`, collectively across all threads
+of the warp, and compress them in-line using 2:4 structured sparsity
+(`.sp::2:4`). Of every four loaded elements, two are returned in `cdata`
+and their 2-bit indices (`.b2`) are returned in `mdata`. They require PTX ISA
+9.4 and `sm_107a`.
+
+`MDataTy` is `i32` or `<N x i32>`, and `CDataTy` is `<N x float>`. The actual
+intrinsic names include the corresponding LLVM overload suffixes. The repeat
+factor `num` is inferred from `CDataTy`, and the number of 32-bit registers in
+each bundle is:
+
+| Bundle  | Register count                       |
+| ------- | ------------------------------------ |
+| `cdata` | `num / 2`                            |
+| `mdata` | `ceil(num / 32)`                     |
+
+`num` is one of `x4`, `x8`, `x16`, `x32`, `x64`, or `x128`. Each selected
+element has a 2-bit index (`.b2`) in `mdata`.
+
+The immediate qualifiers have the following encodings:
+
+| Argument    | Values               | PTX qualifiers   |
+| ----------- | -------------------- | ---------------- |
+| `%row_op`   | `0`: min, `1`: max   | `.min`, `.max`   |
+| `%abs`      | `0`, `1`             | `.abs`           |
+| `%nan`      | `0`, `1`             | `.NaN`           |
+
+`%row_op`, together with `%abs`, selects the two elements of every group of
+four. `llvm.nvvm.tcgen05.ld.red.spcompress.32x32b` also reduces the loaded
+elements with the same `%row_op` and `%abs` and returns the result as the third
+value. `%nan` only applies to that reduction; the compression always preserves
+NaN elements.
+
+All the threads in the warp must specify the same value of `%taddr`, which
+must be the base address of the collective load operation. Otherwise, the
+behavior is undefined.
+
+For more information, see the
+[PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-ld).
 
 ### Narrow Floating-Point Conversion intrinsics
 
@@ -3616,14 +3803,34 @@ For more information, refer to the
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.tensormap.replace.global.address.p1(ptr addrspace(1) %addr, i64 %new_value)
-declare void @llvm.nvvm.tensormap.replace.global.address.p3(ptr addrspace(3) %addr, i64 %new_value)
+declare void @llvm.nvvm.tensormap.replace.global.address.p1(ptr addrspace(1) %addr, i64 %new_value, i32 immarg %alloc_class)
+declare void @llvm.nvvm.tensormap.replace.global.address.p3(ptr addrspace(3) %addr, i64 %new_value, i32 immarg %alloc_class)
 ```
 
 ##### Overview:
 
 The '`@llvm.nvvm.tensormap.replace.global.address.*`' intrinsics replace the
 `global_address` field of the tensor-map object with `%new_value`.
+
+The `%alloc_class` argument sets the tensor allocation class of the tensor-map
+object along with the new address. This argument must be a compile-time
+constant and defaults to `0` (`.alloc_small`) when omitted.
+
+##### Semantics:
+
+The following table shows the PTX qualifier emitted for each value of
+`%alloc_class`. The values `1` and `2` require PTX ISA 9.5. For the value `0`,
+the `.alloc_small` qualifier is emitted for PTX ISA 9.5 and above, and ignored
+for earlier versions.
+
+|  Alloc Class   | Value |
+| -------------- | ----- |
+| `.alloc_small` | 0     |
+| `.alloc_large` | 1     |
+| `.alloc_same`  | 2     |
+
+The `.alloc_same` qualifier leaves the allocation class of the tensor-map
+object unchanged.
 
 #### '`llvm.nvvm.tensormap.replace.rank`'
 
@@ -3842,6 +4049,55 @@ The following table shows the mapping of `%new_value` to the actual fill mode:
 | -------------- | ----- |
 | `Zero fill`    | 0     |
 | `OOB-NaN fill` | 1     |
+
+#### '`llvm.nvvm.tensormap.replace.alloc.class`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.tensormap.replace.alloc.class.p1(ptr addrspace(1) %addr, i32 immarg %alloc_class)
+declare void @llvm.nvvm.tensormap.replace.alloc.class.p3(ptr addrspace(3) %addr, i32 immarg %alloc_class)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.tensormap.replace.alloc.class.*`' intrinsics set the tensor
+allocation class of the tensor-map object to the class specified by
+`%alloc_class`.
+
+##### Semantics:
+
+The following table shows the PTX qualifier emitted for each value of
+`%alloc_class`:
+
+|  Alloc Class   | Value |
+| -------------- | ----- |
+| `.alloc_small` | 0     |
+| `.alloc_large` | 1     |
+
+### Tensormap Query Intrinsics
+
+#### '`llvm.nvvm.tensormap.query.alloc.class.large`'
+
+##### Syntax:
+
+```llvm
+declare i1 @llvm.nvvm.tensormap.query.alloc.class.large.p0(ptr %addr)
+declare i1 @llvm.nvvm.tensormap.query.alloc.class.large.p1(ptr addrspace(1) %addr)
+declare i1 @llvm.nvvm.tensormap.query.alloc.class.large.p3(ptr addrspace(3) %addr)
+declare i1 @llvm.nvvm.tensormap.query.alloc.class.large.p4(ptr addrspace(4) %addr)
+declare i1 @llvm.nvvm.tensormap.query.alloc.class.large.p101(ptr addrspace(101) %addr)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.tensormap.query.alloc.class.large.*`' intrinsics return `true`
+only if the tensor allocation class of the tensor-map object at `%addr` has been
+set to large. The address space of `%addr` selects the state space of the
+instruction: generic, `.global`, `.shared::cta`, `.const`, or `.param`.
+
+For more information, refer to the
+[PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-query-alloc-class-large).
 
 ### TCGEN05 family of Intrinsics
 

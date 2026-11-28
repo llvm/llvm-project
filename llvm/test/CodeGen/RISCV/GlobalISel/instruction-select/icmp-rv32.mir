@@ -16,10 +16,10 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(ult), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = G_ICMP intpred(ult), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -39,10 +39,10 @@ body:             |
     ; CHECK-NEXT: [[SLT:%[0-9]+]]:gpr = SLT [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[SLT]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(slt), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = G_ICMP intpred(slt), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -62,10 +62,10 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(ugt), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = G_ICMP intpred(ugt), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -85,10 +85,10 @@ body:             |
     ; CHECK-NEXT: [[SLT:%[0-9]+]]:gpr = SLT [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[SLT]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(sgt), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = G_ICMP intpred(sgt), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -109,10 +109,10 @@ body:             |
     ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[XOR]], 1
     ; CHECK-NEXT: $x10 = COPY [[SLTIU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(eq), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = G_ICMP intpred(eq), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -133,10 +133,10 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU $x0, [[XOR]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(ne), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = G_ICMP intpred(ne), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -157,10 +157,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTU]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(ule), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = G_ICMP intpred(ule), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -181,10 +181,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLT]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(sle), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = G_ICMP intpred(sle), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -205,10 +205,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTU]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(uge), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = G_ICMP intpred(uge), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -229,10 +229,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLT]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(sge), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = G_ICMP intpred(sge), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -254,8 +254,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(ult), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(ult), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -277,8 +277,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(slt), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(slt), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -300,8 +300,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(ugt), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(ugt), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -323,8 +323,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(sgt), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(sgt), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -347,8 +347,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(eq), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(eq), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -371,8 +371,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(ne), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(ne), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -395,8 +395,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(ule), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(ule), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -419,8 +419,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(sle), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(sle), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -443,8 +443,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(uge), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(uge), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -467,8 +467,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s32) = G_ICMP intpred(sge), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(sge), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -487,10 +487,10 @@ body:             |
     ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[COPY]], 10
     ; CHECK-NEXT: $x10 = COPY [[SLTIU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 10
-    %2:gprb(s32) = G_ICMP intpred(ult), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CONSTANT i32 10
+    %2:gprb(i32) = G_ICMP intpred(ult), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -509,10 +509,10 @@ body:             |
     ; CHECK-NEXT: [[SLTI:%[0-9]+]]:gpr = SLTI [[COPY]], -10
     ; CHECK-NEXT: $x10 = COPY [[SLTI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 -10
-    %2:gprb(s32) = G_ICMP intpred(slt), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CONSTANT i32 -10
+    %2:gprb(i32) = G_ICMP intpred(slt), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -532,10 +532,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTIU]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 10
-    %2:gprb(s32) = G_ICMP intpred(ugt), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CONSTANT i32 10
+    %2:gprb(i32) = G_ICMP intpred(ugt), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -555,10 +555,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTI]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 -10
-    %2:gprb(s32) = G_ICMP intpred(sgt), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CONSTANT i32 -10
+    %2:gprb(i32) = G_ICMP intpred(sgt), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -578,10 +578,10 @@ body:             |
     ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[ADDI]], 1
     ; CHECK-NEXT: $x10 = COPY [[SLTIU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 10
-    %2:gprb(s32) = G_ICMP intpred(eq), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CONSTANT i32 10
+    %2:gprb(i32) = G_ICMP intpred(eq), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -601,10 +601,10 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU $x0, [[ADDI]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 -10
-    %2:gprb(s32) = G_ICMP intpred(ne), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CONSTANT i32 -10
+    %2:gprb(i32) = G_ICMP intpred(ne), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -623,10 +623,10 @@ body:             |
     ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[COPY]], 11
     ; CHECK-NEXT: $x10 = COPY [[SLTIU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 10
-    %2:gprb(s32) = G_ICMP intpred(ule), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CONSTANT i32 10
+    %2:gprb(i32) = G_ICMP intpred(ule), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -645,10 +645,10 @@ body:             |
     ; CHECK-NEXT: [[SLTI:%[0-9]+]]:gpr = SLTI [[COPY]], -9
     ; CHECK-NEXT: $x10 = COPY [[SLTI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 -10
-    %2:gprb(s32) = G_ICMP intpred(sle), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CONSTANT i32 -10
+    %2:gprb(i32) = G_ICMP intpred(sle), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -668,10 +668,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTIU]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 10
-    %2:gprb(s32) = G_ICMP intpred(uge), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CONSTANT i32 10
+    %2:gprb(i32) = G_ICMP intpred(uge), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -691,10 +691,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTI]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 -10
-    %2:gprb(s32) = G_ICMP intpred(sge), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CONSTANT i32 -10
+    %2:gprb(i32) = G_ICMP intpred(sge), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -716,8 +716,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 10
-    %2:gprb(s32) = G_ICMP intpred(ult), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(ult), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -739,8 +739,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 -10
-    %2:gprb(s32) = G_ICMP intpred(slt), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(slt), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -762,8 +762,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 10
-    %2:gprb(s32) = G_ICMP intpred(ugt), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(ugt), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -785,8 +785,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 -10
-    %2:gprb(s32) = G_ICMP intpred(sgt), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(sgt), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -809,8 +809,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 10
-    %2:gprb(s32) = G_ICMP intpred(eq), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(eq), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -833,8 +833,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 -10
-    %2:gprb(s32) = G_ICMP intpred(ne), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(ne), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -857,8 +857,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 10
-    %2:gprb(s32) = G_ICMP intpred(ule), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(ule), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -881,8 +881,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 -10
-    %2:gprb(s32) = G_ICMP intpred(sle), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(sle), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -905,8 +905,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 10
-    %2:gprb(s32) = G_ICMP intpred(uge), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(uge), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -929,8 +929,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 -10
-    %2:gprb(s32) = G_ICMP intpred(sge), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(sge), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -949,10 +949,10 @@ body:             |
     ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[COPY]], 1
     ; CHECK-NEXT: $x10 = COPY [[SLTIU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 0
-    %2:gprb(s32) = G_ICMP intpred(eq), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CONSTANT i32 0
+    %2:gprb(i32) = G_ICMP intpred(eq), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -973,8 +973,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 0
-    %2:gprb(s32) = G_ICMP intpred(eq), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(eq), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -993,10 +993,10 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU $x0, [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 0
-    %2:gprb(s32) = G_ICMP intpred(ne), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CONSTANT i32 0
+    %2:gprb(i32) = G_ICMP intpred(ne), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -1017,8 +1017,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 0
-    %2:gprb(s32) = G_ICMP intpred(ne), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(ne), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -1038,10 +1038,10 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU [[ADDI]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CONSTANT i32 -1
-    %2:gprb(s32) = G_ICMP intpred(ugt), %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CONSTANT i32 -1
+    %2:gprb(i32) = G_ICMP intpred(ugt), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -1063,8 +1063,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i32 -1
-    %2:gprb(s32) = G_ICMP intpred(ugt), %0, %1
-    $x10 = COPY %2(s32)
+    %2:gprb(i32) = G_ICMP intpred(ugt), %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...

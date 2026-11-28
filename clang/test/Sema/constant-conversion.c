@@ -69,10 +69,17 @@ void test5(void) {
   a.b = 100;
 }
 
+int take_uchar(unsigned char);
+
 void test6(void) {
   // Test that unreachable code doesn't trigger the truncation warning.
   unsigned char x = 0 ? 65535 : 1; // no-warning
   unsigned char y = 1 ? 65535 : 1; // expected-warning {{changes value}}
+
+  // The same holds inside the argument of __builtin_constant_p, as in the
+  // Linux kernel's ilog2().
+  int z = __builtin_constant_p(0 ? take_uchar(65535) : 1); // no-warning
+  int w = __builtin_constant_p(1 ? take_uchar(65535) : 1); // expected-warning {{changes value}}
 }
 
 void test7(void) {

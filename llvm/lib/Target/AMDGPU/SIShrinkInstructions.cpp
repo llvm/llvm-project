@@ -29,7 +29,6 @@ namespace {
 enum ChangeKind { None, UpdateHint, UpdateInst };
 
 class SIShrinkInstructions {
-  MachineFunction *MF;
   MachineRegisterInfo *MRI;
   const GCNSubtarget *ST;
   const SIInstrInfo *TII;
@@ -880,8 +879,6 @@ bool SIShrinkInstructions::tryReplaceDeadSDST(MachineInstr &MI) const {
 }
 
 bool SIShrinkInstructions::run(MachineFunction &MF) {
-
-  this->MF = &MF;
   MRI = &MF.getRegInfo();
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();

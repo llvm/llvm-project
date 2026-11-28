@@ -337,6 +337,9 @@ private:
                        unsigned Abbrev);
   void writeDILayerLocList(const DILayerLocList *N,
                            SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeMDFunctionLocalContext(const MDFunctionLocalContext *N,
+                                   SmallVectorImpl<uint64_t> &Record,
+                                   unsigned &Abbrev);
   unsigned createGenericDINodeAbbrev();
   void writeGenericDINode(const GenericDINode *N,
                           SmallVectorImpl<uint64_t> &Record, unsigned &Abbrev);
@@ -876,6 +879,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_CALLBACK;
   case Attribute::NoDivergenceSource:
     return bitc::ATTR_KIND_NO_DIVERGENCE_SOURCE;
+  case Attribute::AlwaysUniform:
+    return bitc::ATTR_KIND_ALWAYS_UNIFORM;
   case Attribute::NoDuplicate:
     return bitc::ATTR_KIND_NO_DUPLICATE;
   case Attribute::NoFree:
@@ -1907,6 +1912,12 @@ void ModuleBitcodeWriter::writeMDTuple(const MDTuple *N,
                                     : bitc::METADATA_NODE,
                     Record, Abbrev);
   Record.clear();
+}
+
+void ModuleBitcodeWriter::writeMDFunctionLocalContext(
+    const MDFunctionLocalContext *N, SmallVectorImpl<uint64_t> &Record,
+    unsigned &Abbrev) {
+  report_fatal_error("!MDFunctionLocalContext bitcode not yet implemented");
 }
 
 unsigned ModuleBitcodeWriter::createDILocationAbbrev(bool WithIRLayers) {

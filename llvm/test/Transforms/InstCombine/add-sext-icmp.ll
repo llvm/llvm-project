@@ -104,11 +104,9 @@ define i32 @add_sext_icmp_multi_use_sext(i32 %A) {
 define i32 @add_sext_icmp_multi_use_icmp(i32 %A) {
 ; CHECK-LABEL: define i32 @add_sext_icmp_multi_use_icmp(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], 1
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[A]], 0
 ; CHECK-NEXT:    call void @use(i1 [[ICMP]])
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[ICMP]] to i32
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[SEXT]]
+; CHECK-NEXT:    [[ADD2:%.*]] = call i32 @llvm.umax.i32(i32 [[A]], i32 1)
 ; CHECK-NEXT:    ret i32 [[ADD2]]
 ;
   %add1 = add i32 %A, 1
@@ -135,5 +133,44 @@ define i32 @add_sext_icmp_multi_use_add1(i32 %A) {
   ret i32 %add2
 }
 
+define i32 @add_sext_icmp_multi_use_add1_icmp(i32 %A) {
+; CHECK-LABEL: define i32 @add_sext_icmp_multi_use_add1_icmp(
+; CHECK-SAME: i32 [[A:%.*]]) {
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[A]], 1
+; CHECK-NEXT:    call void @use(i32 [[ADD1]])
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[A]], 0
+; CHECK-NEXT:    call void @use(i1 [[ICMP]])
+; CHECK-NEXT:    [[ADD2:%.*]] = call i32 @llvm.umax.i32(i32 [[A]], i32 1)
+; CHECK-NEXT:    ret i32 [[ADD2]]
+;
+  %add1 = add i32 %A, 1
+  call void @use(i32 %add1)
+  %icmp = icmp ne i32 %A, 0
+  call void @use(i1 %icmp)
+  %sext = sext i1 %icmp to i32
+  %add2 = add i32 %add1, %sext
+  ret i32 %add2
+}
+
+define i64 @add_umin_multi_use_umin(i64 %A, ptr %p) {
+; CHECK-LABEL: define i64 @add_umin_multi_use_umin(
+; CHECK-SAME: i64 [[A:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i64 [[A]], 0
+; CHECK-NEXT:    [[SUB:%.*]] = call i64 @llvm.umax.i64(i64 [[A]], i64 1)
+; CHECK-NEXT:    [[OFF:%.*]] = select i1 [[DOTNOT]], i64 0, i64 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[OFF]]
+; CHECK-NEXT:    call void @use.ptr(ptr [[GEP]])
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %umin = call i64 @llvm.umin.i64(i64 %A, i64 1)
+  %add = add i64 %A, 1
+  %sub = sub i64 %add, %umin
+  %off = shl i64 %umin, 2
+  %gep = getelementptr i8, ptr %p, i64 %off
+  call void @use.ptr(ptr %gep)
+  ret i64 %sub
+}
+
 declare void @use(i32)
+declare void @use.ptr(ptr)
 
