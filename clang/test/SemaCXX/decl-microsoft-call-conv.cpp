@@ -111,6 +111,30 @@ void            S::member_variadic_cdecl(int x, ...) { (void)x; }
 void __cdecl    S::static_member_variadic_default(int x, ...) { (void)x; }
 void            S::static_member_variadic_cdecl(int x, ...) { (void)x; }
 
+// The MS ABI also ignores a calling convention on an out-of-line constructor
+// definition that follows a declaration without one.
+struct StructorRedecl {
+  StructorRedecl();        // #StructorRedecl-default
+  StructorRedecl(int);     // #StructorRedecl-int
+  StructorRedecl(char);    // #StructorRedecl-char
+  void member();           // #StructorRedecl-member
+};
+#ifdef MSABI
+__stdcall  StructorRedecl::StructorRedecl() {}
+__cdecl    StructorRedecl::StructorRedecl(int) {} // expected-warning {{cdecl calling convention is not supported on constructor/destructor}}
+__fastcall StructorRedecl::StructorRedecl(char) {} // expected-warning {{fastcall calling convention is not supported on constructor/destructor}}
+#else
+__stdcall  StructorRedecl::StructorRedecl() {}    // expected-error {{function declared 'stdcall' here was previously declared without calling convention}}
+                                                  // expected-note@#StructorRedecl-default {{previous declaration is here}}
+__cdecl    StructorRedecl::StructorRedecl(int) {} // expected-error {{function declared 'cdecl' here was previously declared without calling convention}}
+                                                  // expected-note@#StructorRedecl-int {{previous declaration is here}}
+__fastcall StructorRedecl::StructorRedecl(char) {} // expected-error {{function declared 'fastcall' here was previously declared without calling convention}}
+                                                  // expected-note@#StructorRedecl-char {{previous declaration is here}}
+#endif
+// Other member functions still have to match.
+__stdcall void StructorRedecl::member() {}        // expected-error {{function declared 'stdcall' here was previously declared without calling convention}}
+                                                  // expected-note@#StructorRedecl-member {{previous declaration is here}}
+
 // Declare a template using a calling convention.
 template <class CharT> inline int __cdecl mystrlen(const CharT *str) {
   int i;
