@@ -117,7 +117,7 @@ MovedLoansAnalysis::MovedLoansAnalysis(
     const LiveOriginsAnalysis &LiveOrigins, const LoanManager &LoanMgr,
     MovedLoansMap::Factory &MovedLoansMapFactory) {
   // Without moves, no loan is ever moved.
-  if (!F.hasMovedOriginFacts())
+  if (!F.hasFactKind(Fact::Kind::MovedOrigin))
     return;
   PImpl = std::make_unique<Impl>(C, AC, F, LoanPropagation, LiveOrigins,
                                  LoanMgr, MovedLoansMapFactory);

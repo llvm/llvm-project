@@ -22,6 +22,12 @@
 
 namespace clang::lifetimes::internal {
 
+/// Whether the checker can emit a diagnostic or infer an annotation given
+/// the kinds of facts produced for this function.
+bool shouldRunLifetimeChecker(const FactManager &Facts,
+                              const LifetimeSafetyOpts &Opts,
+                              const LangOptions &LangOpts);
+
 /// Runs the lifetime checker, which detects use-after-free errors by
 /// examining loan expiration points and checking if any live origins hold
 /// the expired loan.

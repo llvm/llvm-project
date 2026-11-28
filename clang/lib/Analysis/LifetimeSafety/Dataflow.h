@@ -204,6 +204,8 @@ private:
       return D->transfer(In, *F->getAs<InvalidateOriginFact>());
     case Fact::Kind::KillOrigin:
       return D->transfer(In, *F->getAs<KillOriginFact>());
+    case Fact::Kind::NumKinds:
+      break;
     }
     llvm_unreachable("Unknown fact kind");
   }

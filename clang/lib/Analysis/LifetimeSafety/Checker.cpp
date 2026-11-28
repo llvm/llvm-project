@@ -99,6 +99,54 @@ private:
     }
     llvm_unreachable("unhandled causing fact in PointerUnion");
   }
+  struct Check {
+    using ReportFn = void (LifetimeChecker::*)();
+
+    bool Eligible;
+    ReportFn Report;
+
+    void run(LifetimeChecker *Checker) const {
+      if (Eligible)
+        std::invoke(Report, Checker);
+    }
+  };
+
+  // Use the same list to decide whether to build dataflow and to run checks.
+  // Only add a fact prerequisite when its absence rules out the check.
+  static auto getChecks(const FactManager &Facts,
+                        const LifetimeSafetyOpts &Opts,
+                        const LangOptions &LangOpts) {
+    using Kind = Fact::Kind;
+    const bool HasLoan = Facts.hasFactKind(Kind::Issue);
+    const bool MayEscape = HasLoan && Facts.hasFactKind(Kind::OriginEscapes);
+    const bool MayDangle =
+        HasLoan && Facts.hasAnyFactKind(Kind::Use, Kind::OriginEscapes) &&
+        Facts.hasAnyFactKind(Kind::Expire, Kind::InvalidateOrigin);
+    return std::array{
+        Check{MayDangle, &LifetimeChecker::issuePendingWarnings},
+        Check{MayEscape && Opts.SuggestAnnotations,
+              &LifetimeChecker::suggestAnnotations},
+        Check{MayEscape && Opts.CheckFieldOriginEscape,
+              &LifetimeChecker::reportFieldOriginEscapes},
+        Check{MayEscape && Opts.CheckNoescapeViolations,
+              &LifetimeChecker::reportNoescapeViolations},
+        // A missing escape can itself be a violation.
+        Check{Opts.CheckLifetimeboundViolations,
+              &LifetimeChecker::reportLifetimeboundViolations},
+        Check{MayEscape && Opts.CheckCaptureByViolations,
+              &LifetimeChecker::reportCaptureByViolations},
+        Check{Opts.CheckMisplacedLifetimebound,
+              &LifetimeChecker::reportMisplacedLifetimebound},
+        Check{Opts.CheckInapplicableLifetimebound,
+              &LifetimeChecker::reportInapplicableLifetimebound},
+        Check{MayEscape && LangOpts.EnableLifetimeSafetyInference,
+              &LifetimeChecker::inferAnnotations},
+    };
+  }
+
+  friend bool clang::lifetimes::internal::shouldRunLifetimeChecker(
+      const FactManager &Facts, const LifetimeSafetyOpts &Opts,
+      const LangOptions &LangOpts);
 
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
@@ -119,25 +167,8 @@ public:
           checkInvalidation(IOF);
         else if (const auto *OEF = F->getAs<OriginEscapesFact>())
           checkAnnotations(OEF);
-    issuePendingWarnings();
-    suggestAnnotations();
-    if (LSOpts.CheckFieldOriginEscape)
-      reportFieldOriginEscapes();
-    if (LSOpts.CheckNoescapeViolations)
-      reportNoescapeViolations();
-    if (LSOpts.CheckLifetimeboundViolations)
-      reportLifetimeboundViolations();
-    if (LSOpts.CheckCaptureByViolations)
-      reportCaptureByViolations();
-    if (LSOpts.CheckMisplacedLifetimebound)
-      reportMisplacedLifetimebound();
-    if (LSOpts.CheckInapplicableLifetimebound)
-      reportInapplicableLifetimebound();
-    //  Annotation inference is currently guarded by a frontend flag. In the
-    //  future, this might be replaced by a design that differentiates between
-    //  explicit and inferred findings with separate warning groups.
-    if (AST.getLangOpts().EnableLifetimeSafetyInference)
-      inferAnnotations();
+    for (const Check &C : getChecks(FactMgr, LSOpts, AST.getLangOpts()))
+      C.run(this);
   }
 
   /// Checks if an escaping origin holds a placeholder loan, indicating a
@@ -562,8 +593,6 @@ public:
   void suggestAnnotations() {
     if (!SemaHelper)
       return;
-    if (!LSOpts.SuggestAnnotations)
-      return;
     llvm::TimeTraceScope TimeTrace("SuggestAnnotations");
     for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
       if (const auto *PVD = dyn_cast<const ParmVarDecl *>(Target))
@@ -722,6 +751,13 @@ public:
   }
 };
 } // namespace
+
+bool shouldRunLifetimeChecker(const FactManager &Facts,
+                              const LifetimeSafetyOpts &Opts,
+                              const LangOptions &LangOpts) {
+  return llvm::any_of(LifetimeChecker::getChecks(Facts, Opts, LangOpts),
+                      [](const auto &C) { return C.Eligible; });
+}
 
 void runLifetimeChecker(const LoanPropagationAnalysis &LP,
                         const MovedLoansAnalysis &MovedLoans,
