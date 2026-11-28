@@ -83,6 +83,27 @@
 ; RUN: echo 'h 0:111111111111111g 1:ffffffffffffffff' >> %t17
 ; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t17 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR17
 ; CHECK-ERROR17: LLVM ERROR: invalid profile {{.*}} at line 5: unsigned integer expected in hex format: '111111111111111g'
+;;
+;; Error handling for version 1, function GUIDs.
+; RUN: echo 'v1' > %t18
+; RUN: echo 'u 1234 5678' >> %t18
+; RUN: echo 'f dummy1' >> %t18
+; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t18 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR18
+; CHECK-ERROR18: LLVM ERROR: invalid profile {{.*}} at line 2: invalid function GUID value: '1234 5678'
+; RUN: echo 'v1' > %t19
+; RUN: echo 'u 0x1234' >> %t19
+; RUN: echo 'f dummy1' >> %t19
+; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t19 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR19
+; CHECK-ERROR19: LLVM ERROR: invalid profile {{.*}} at line 2: unsigned integer expected in hex format: '0x1234'
+;; Multiple profiles for the same function with the matching GUID. @dummy3 has
+;; local linkage and its GUID (0x1234) is assigned in metadata.
+; RUN: echo 'v1' > %t20
+; RUN: echo 'u 1234' >> %t20
+; RUN: echo 'f dummy3' >> %t20
+; RUN: echo 'u 1234' >> %t20
+; RUN: echo 'f dummy3' >> %t20
+; RUN: not --crash llc < %s -O0 -mtriple=x86_64 -function-sections -basic-block-sections=%t20 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR20
+; CHECK-ERROR20: LLVM ERROR: invalid profile {{.*}} at line 5: duplicate profile for function 'dummy3'
 
 
 define i32 @dummy1(i32 %x, i32 %y, i32 %z) {
@@ -99,6 +120,13 @@ define i32 @dummy2(i32 %x, i32 %y, i32 %z) !dbg !4 {
     ret i32 %tmp2
 }
 
+define internal i32 @dummy3(i32 %x, i32 %y, i32 %z) !guid !7 {
+  entry:
+    %tmp = mul i32 %x, %y
+    %tmp2 = add i32 %tmp, %z
+    ret i32 %tmp2
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}
 
@@ -109,3 +137,4 @@ define i32 @dummy2(i32 %x, i32 %y, i32 %z) !dbg !4 {
 !4 = distinct !DISubprogram(name: "dummy1", scope: !1, unit: !0, type: !5)
 !5 = !DISubroutineType(types: !6)
 !6 = !{null}
+!7 = !{i64 4660}

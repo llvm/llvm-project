@@ -182,6 +182,12 @@ private:
   // empty string if no debug info is available.
   StringMap<SmallString<128>> FunctionNameToDIFilename;
 
+  // Map from the name of every function with local linkage in the module to
+  // its GUID. This is the GUID which is emitted in the SHT_LLVM_BB_ADDR_MAP
+  // section with `-basic-block-address-map-emit-func-guid` and is written in
+  // the profile by the function GUID specifier ('u').
+  StringMap<GlobalValue::GUID> LocalFunctionNameToGUID;
+
   // This map contains the optimization profile for each function in the
   // program. A function's optimization profile consists of CFG data (node and
   // edge counts) and layout directives such as basic block clustering and
