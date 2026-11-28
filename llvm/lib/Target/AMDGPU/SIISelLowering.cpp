@@ -16467,6 +16467,26 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
                                MaxDepth - 1);
       return false;
     }
+    case Intrinsic::amdgcn_permlane16_swap:
+    case Intrinsic::amdgcn_permlane32_swap: {
+      enum PermlaneSwapOperand {
+        OldDst = 1,
+        OldSrc = 2,
+        FetchInactive = 3,
+        BoundCtrl = 4,
+      };
+
+      if (QueryVT != MVT::f32 || Op.getConstantOperandVal(FetchInactive) ||
+          Op.getConstantOperandVal(BoundCtrl))
+        return false;
+
+      // A lane can retain its old value or receive a value from the other
+      // input.
+      return isCanonicalized(DAG, Op.getOperand(OldDst), QueryVT, UserFlags,
+                             MaxDepth - 1) &&
+             isCanonicalized(DAG, Op.getOperand(OldSrc), QueryVT, UserFlags,
+                             MaxDepth - 1);
+    }
     case Intrinsic::amdgcn_cvt_pkrtz:
     case Intrinsic::amdgcn_cubeid:
     case Intrinsic::amdgcn_frexp_mant:
