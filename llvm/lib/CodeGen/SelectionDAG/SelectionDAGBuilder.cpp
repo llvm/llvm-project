@@ -10968,7 +10968,7 @@ static SDValue getInlineAsmOutput(const TargetLowering::AsmOperandInfo &OpInfo,
   case TargetLowering::C_Address:
     break; // Silence warning.
   case TargetLowering::C_Unknown:
-    assert(false && "Unexpected unknown constraint");
+    llvm_unreachable("Unexpected unknown constraint");
   }
   return SDValue();
 }
