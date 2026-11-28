@@ -12601,6 +12601,7 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
                         TargetRegionEntryInfo>,
               16>
       OrderedEntries(OffloadInfoManager.size());
+  SmallVector<MDNode *, 16> OrderedMetadata(OffloadInfoManager.size());
 
   // Auxiliary methods to create metadata values and strings.
   auto &&GetMDInt = [this](unsigned V) {
@@ -12612,7 +12613,7 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
   // Create the offloading info metadata node.
   NamedMDNode *MD = M.getOrInsertNamedMetadata("omp_offload.info");
   auto &&TargetRegionMetadataEmitter =
-      [&C, MD, &OrderedEntries, &GetMDInt, &GetMDString](
+      [&C, &OrderedMetadata, &OrderedEntries, &GetMDInt, &GetMDString](
           const TargetRegionEntryInfo &EntryInfo,
           const OffloadEntriesInfoManager::OffloadEntryInfoTargetRegion &E) {
         // Generate metadata for target regions. Each entry of this metadata
@@ -12635,15 +12636,14 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
         // Save this entry in the right position of the ordered entries array.
         OrderedEntries[E.getOrder()] = std::make_pair(&E, EntryInfo);
 
-        // Add metadata to the named metadata node.
-        MD->addOperand(MDNode::get(C, Ops));
+        OrderedMetadata[E.getOrder()] = MDNode::get(C, Ops);
       };
 
   OffloadInfoManager.actOnTargetRegionEntriesInfo(TargetRegionMetadataEmitter);
 
   // Create function that emits metadata for each device global variable entry;
   auto &&DeviceGlobalVarMetadataEmitter =
-      [&C, &OrderedEntries, &GetMDInt, &GetMDString, MD](
+      [&C, &OrderedMetadata, &OrderedEntries, &GetMDInt, &GetMDString](
           StringRef MangledName,
           const OffloadEntriesInfoManager::OffloadEntryInfoDeviceGlobalVar &E) {
         // Generate metadata for global variables. Each entry of this metadata
@@ -12660,12 +12660,16 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
         TargetRegionEntryInfo varInfo(MangledName, 0, 0, 0);
         OrderedEntries[E.getOrder()] = std::make_pair(&E, varInfo);
 
-        // Add metadata to the named metadata node.
-        MD->addOperand(MDNode::get(C, Ops));
+        OrderedMetadata[E.getOrder()] = MDNode::get(C, Ops);
       };
 
   OffloadInfoManager.actOnDeviceGlobalVarEntriesInfo(
       DeviceGlobalVarMetadataEmitter);
+
+  for (MDNode *Node : OrderedMetadata) {
+    assert(Node && "All ordered metadata entries must exist!");
+    MD->addOperand(Node);
+  }
 
   for (const auto &E : OrderedEntries) {
     assert(E.first && "All ordered entries must exist!");
