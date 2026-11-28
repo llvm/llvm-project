@@ -2697,6 +2697,11 @@ DIExpression::constantFold(const ConstantInt *CI) {
       continue;
     }
     }
+    // Folding loses the constant's DWARF stack type. Only allow trailing
+    // location markers that do not depend on that type.
+    if (Op.getOp() != dwarf::DW_OP_stack_value &&
+        Op.getOp() != dwarf::DW_OP_LLVM_fragment)
+      return {this, CI};
     Op.appendToVector(Ops);
   }
   if (!Changed)
