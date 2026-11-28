@@ -427,11 +427,9 @@ public:
   size_t addString(StringRef S) { return StringTable.addString(S); }
 
   /// Get the type id for a particular DIType.
-  uint32_t getTypeId(const DIType *Ty) {
+  uint32_t getTypeId(const DIType *Ty) const {
     assert(Ty && "Invalid null Type");
-    assert(DIToIdMap.find(Ty) != DIToIdMap.end() &&
-           "DIType not added in the BDIToIdMap");
-    return DIToIdMap[Ty];
+    return DIToIdMap.at(Ty);
   }
 
   /// Process beginning of an instruction.
