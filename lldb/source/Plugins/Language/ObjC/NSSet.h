@@ -12,7 +12,6 @@
 
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
 
@@ -27,10 +26,10 @@ SyntheticChildrenFrontEnd *NSSetSyntheticFrontEndCreator(CXXSyntheticChildren *,
 
 class NSSet_Additionals {
 public:
-  static std::map<ConstString, CXXFunctionSummaryFormat::Callback> &
+  static llvm::StringMap<CXXFunctionSummaryFormat::Callback> &
   GetAdditionalSummaries();
 
-  static std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback> &
+  static llvm::StringMap<CXXSyntheticChildren::CreateFrontEndCallback> &
   GetAdditionalSynthetics();
 };
 } // namespace formatters

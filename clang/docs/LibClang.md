@@ -54,7 +54,7 @@ int main(){
 
 ```cmake
 # CMakeLists.txt
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.31.0)
 project(my_clang_tool VERSION 0.1.0)
 
 # This will find the default system installation of Clang; if you want to
@@ -361,7 +361,7 @@ int main(){
 
 ```cmake
 # CMakeLists.txt
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.31.0)
 project(my_clang_tool VERSION 0.1.0)
 
 # This will find the default system installation of Clang; if you want to

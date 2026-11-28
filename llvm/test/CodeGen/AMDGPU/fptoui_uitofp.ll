@@ -180,6 +180,25 @@ entry:
   ret void
 }
 
+define half @fptoui_f16_to_i1_to_f16(half %x) {
+; GFX6-LABEL: fptoui_f16_to_i1_to_f16:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_cvt_f32_f16_e64 v0, |v0|
+; GFX6-NEXT:    v_trunc_f32_e32 v0, v0
+; GFX6-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: fptoui_f16_to_i1_to_f16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_trunc_f16_e64 v0, |v0|
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %i = fptoui half %x to i1
+  %fp = uitofp i1 %i to half
+  ret half %fp
+}
+
 define amdgpu_kernel void @fptoui_f64_to_i16_to_f64(ptr addrspace(1) %out, double %x) {
 ; GFX6-LABEL: fptoui_f64_to_i16_to_f64:
 ; GFX6:       ; %bb.0: ; %entry
@@ -274,4 +293,23 @@ entry:
   %fp = uitofp i64 %ui to double
   store double %fp, ptr addrspace(1) %out
   ret void
+}
+
+define double @fptoui_f64_to_i1_to_f64(double %x) {
+; GFX6-LABEL: fptoui_f64_to_i1_to_f64:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_cmp_eq_f64_e32 vcc, 1.0, v[0:1]
+; GFX6-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX6-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: fptoui_f64_to_i1_to_f64:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_trunc_f64_e64 v[0:1], |v[0:1]|
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+  %i = fptoui double %x to i1
+  %fp = uitofp i1 %i to double
+  ret double %fp
 }

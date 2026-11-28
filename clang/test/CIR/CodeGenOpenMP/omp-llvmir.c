@@ -6,7 +6,7 @@
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
 // CIR-LABEL: cir.func no_inline no_proto dso_local @main() -> !s32i {{.*}}{
-// CIR: [[RETVAL:%.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR: [[RETVAL:%.*]] = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
 // CIR: [[J:%.*]] = cir.alloca "j" align(4) : !cir.ptr<!s32i>
 // CIR:   omp.parallel {
 // CIR:     cir.scope {
@@ -88,9 +88,6 @@
 // LLVM: br i1 %[[CMP]], label %[[PAR_REGION4:.*]], label %[[PAR_REGION6:.*]]
 
 // LLVM: [[PAR_REGION6]]:
-// LLVM: br label %[[PAR_REGION7:.*]]
-
-// LLVM: [[PAR_REGION7]]:
 // LLVM: br label %[[REGION_CONT:.*]]
 
 // LLVM: [[REGION_CONT]]:

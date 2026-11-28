@@ -94,6 +94,8 @@ public:
     return CIRGenCallee(abstractInfo, funcPtr);
   }
 
+  bool isInvalid() const { return kindOrFunctionPtr == SpecialKind::Invalid; }
+
   bool isBuiltin() const { return kindOrFunctionPtr == SpecialKind::Builtin; }
 
   const clang::FunctionDecl *getBuiltinDecl() const {

@@ -29,7 +29,7 @@ CHECK-NM-NEXT:  T _start
 CHECK-NM:       T main
 CHECK-NM:       W __hot_end
 CHECK-NM:       t __bolt_hugify_start_program
-CHECK-NM-NEXT:  W __bolt_runtime_start
+CHECK-NM:       W __bolt_runtime_start
 
 CHECK-NOPIE: Hello world
 

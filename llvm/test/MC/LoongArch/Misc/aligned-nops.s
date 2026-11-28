@@ -1,5 +1,5 @@
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 < %s \
-# RUN:     | llvm-objdump -d - | FileCheck %s
+# RUN:     | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 # func1 and func2 are 8 byte alignment but the func1's size is 4.
 # So assembler will insert a nop to make sure 8 byte alignment.

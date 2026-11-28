@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FxDiviTest.h"
+#include "test/src/stdfix/FxDiviTest.h"
 
-#include "llvm-libc-macros/stdfix-macros.h"
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/stdfix/ulrdivi.h"
 
 LIST_FXDIVI_TESTS(ulr, unsigned long fract, unsigned long int,

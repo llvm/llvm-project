@@ -21,15 +21,12 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolFuncDebugEnd.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolFuncDebugStart.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolLabel.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolThunk.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolUnknown.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolUsingNamespace.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;

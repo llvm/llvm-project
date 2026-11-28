@@ -3443,6 +3443,35 @@ int testOperationIsAncestor(MlirContext ctx) {
   return 0;
 }
 
+/// Parses source text through a string reference that is not followed by a
+/// null terminator. The text ends inside a token, so a lexer that reads past
+/// the end of the reference lexes `i32garbage` instead of `i32`.
+int testParseUnterminated(MlirContext ctx) {
+  // CHECK-LABEL: @parseUnterminated
+  fprintf(stderr, "@parseUnterminated\n");
+
+  // The source is the text before "garbage"; the bytes after it are not a
+  // terminator, so a parser reading past the end sees "i32garbage".
+  const char *text = "func.func private @f() -> i32garbage";
+  MlirStringRef source =
+      mlirStringRefCreate(text, strlen(text) - strlen("garbage"));
+
+  MlirModule module = mlirModuleCreateParse(ctx, source);
+  // CHECK: module parsed: 1
+  fprintf(stderr, "module parsed: %d\n", !mlirModuleIsNull(module));
+  if (!mlirModuleIsNull(module))
+    mlirModuleDestroy(module);
+
+  MlirOperation op = mlirOperationCreateParse(
+      ctx, source, mlirStringRefCreateFromCString("unterminated"));
+  // CHECK: operation parsed: 1
+  fprintf(stderr, "operation parsed: %d\n", !mlirOperationIsNull(op));
+  if (!mlirOperationIsNull(op))
+    mlirOperationDestroy(op);
+
+  return mlirModuleIsNull(module) || mlirOperationIsNull(op);
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -3505,6 +3534,8 @@ int main(void) {
     return 22;
   if (testOperationIsAncestor(ctx))
     return 23;
+  if (testParseUnterminated(ctx))
+    return 24;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob

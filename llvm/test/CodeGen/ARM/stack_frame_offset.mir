@@ -32,7 +32,6 @@
 ...
 ---
 name:            testpos
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -84,7 +83,6 @@ body:             |
 ...
 ---
 name:            testneg4
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
@@ -136,7 +134,6 @@ body:             |
 ...
 ---
 name:            testneg8
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false

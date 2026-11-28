@@ -12,8 +12,6 @@
 #include "Target.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
-#include <algorithm>
-#include <cmath>
 
 #define DEBUG_TYPE "exegesis-latency-benchmarkrunner"
 

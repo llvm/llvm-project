@@ -503,6 +503,8 @@ define i1 @test84(half %arg1, half %arg2, half %arg3) {
 ; GCN-FAKE16-LABEL: test84:
 ; GCN-FAKE16:       ; %bb.0:
 ; GCN-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GCN-FAKE16-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GCN-FAKE16-NEXT:    v_min_f16_e32 v0, v0, v1
 ; GCN-FAKE16-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v0, v2
 ; GCN-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -595,6 +597,8 @@ define i1 @test87(half %arg1, half %arg2, half %arg3) {
 ; GCN-FAKE16-LABEL: test87:
 ; GCN-FAKE16:       ; %bb.0:
 ; GCN-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GCN-FAKE16-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GCN-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GCN-FAKE16-NEXT:    v_cmp_ge_f16_e32 vcc_lo, v0, v2
 ; GCN-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -653,6 +657,8 @@ define i1 @test89(half %arg1, half %arg2, half %arg3) {
 ; GCN-FAKE16-LABEL: test89:
 ; GCN-FAKE16:       ; %bb.0:
 ; GCN-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GCN-FAKE16-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GCN-FAKE16-NEXT:    v_min_f16_e32 v0, v0, v1
 ; GCN-FAKE16-NEXT:    v_cmp_ge_f16_e32 vcc_lo, v0, v2
 ; GCN-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -677,6 +683,8 @@ define i1 @test90(half %arg1, half %arg2, half %arg3) {
 ; GCN-FAKE16-LABEL: test90:
 ; GCN-FAKE16:       ; %bb.0:
 ; GCN-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
+; GCN-FAKE16-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GCN-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GCN-FAKE16-NEXT:    v_cmp_le_f16_e32 vcc_lo, v0, v2
 ; GCN-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo

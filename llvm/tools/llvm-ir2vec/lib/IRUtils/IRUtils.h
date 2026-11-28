@@ -20,8 +20,6 @@
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PassInstrumentation.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -49,7 +47,6 @@ Expected<std::shared_ptr<Vocabulary>> loadVocabulary(StringRef VocabPath);
 class IR2VecTool {
 private:
   Module &M;
-  ModuleAnalysisManager MAM;
 
   /// \note The API around vocab object is not thread-safe.
   /// Specifically, calling setVocabulary() on an instance while

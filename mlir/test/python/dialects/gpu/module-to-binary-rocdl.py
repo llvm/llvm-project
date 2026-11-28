@@ -1,4 +1,4 @@
-# REQUIRES: host-supports-amdgpu
+# REQUIRES: amdgpu-registered-target
 # RUN: %PYTHON %s | FileCheck %s
 
 from mlir.ir import *

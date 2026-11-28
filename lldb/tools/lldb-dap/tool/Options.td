@@ -6,10 +6,15 @@ class R<list<string> prefixes, string name>
   : Option<prefixes, name, KIND_REMAINING_ARGS>;
 
 def help: F<"help">,
-  HelpText<"Prints out the usage information for the lldb-dap tool.">;
+  HelpText<"Prints out the usage information for the lldb-dap tool "
+    "(--help-hidden for more).">;
 def: Flag<["-"], "h">,
   Alias<help>,
   HelpText<"Alias for --help">;
+
+def help_hidden: F<"help-hidden">,
+  Flags<[HelpHidden]>,
+  HelpText<"Prints out the usage information, including hidden options.">;
 
 def version: F<"version">,
   HelpText<"Prints out the lldb-dap version.">;
@@ -22,9 +27,11 @@ def check_python : F<"check-python">,
                             "(Windows only).">;
 
 def wait_for_debugger: F<"wait-for-debugger">,
+  Flags<[HelpHidden]>,
   HelpText<"Pause the program at startup.">;
 def: Flag<["-"], "g">,
   Alias<wait_for_debugger>,
+  Flags<[HelpHidden]>,
   HelpText<"Alias for --wait-for-debugger">;
 
 def connection
@@ -35,23 +42,26 @@ def connection
           "Connections are specified like 'listen://[host]:port' or "
           "'accept:///path'.">;
 
-def launch_target: S<"launch-target">,
-  MetaVarName<"<target>">,
-  HelpText<"Launch a target for the launchInTerminal request. Any argument "
-    "provided after this one will be passed to the target. The parameter "
-    "--comm-file must also be specified.">;
+def launch_target: F<"launch-target">,
+  Flags<[HelpHidden]>,
+  HelpText<"Launch a target for the runInTerminal request: the target and "
+    "its arguments must be passed after '--'. The parameter --comm-file must also be "
+    "specified.">;
 
 def comm_file: S<"comm-file">,
+  Flags<[HelpHidden]>,
   MetaVarName<"<file>">,
   HelpText<"The fifo file used to communicate the with the debug adapter "
     "when using --launch-target.">;
 
 def debugger_pid: S<"debugger-pid">,
+  Flags<[HelpHidden]>,
   MetaVarName<"<pid>">,
-  HelpText<"The PID of the lldb-dap instance that sent the launchInTerminal "
+  HelpText<"The PID of the lldb-dap instance that sent the runInTerminal "
     "request when using --launch-target.">;
 
 def stdio: S<"stdio">,
+  Flags<[HelpHidden]>,
   MetaVarName<"<stdin:stdout:stderr:...>">,
   HelpText<"An array of file paths for redirecting the program's standard IO "
     "streams. On Windows, a semicolon-separated list of entries, a "

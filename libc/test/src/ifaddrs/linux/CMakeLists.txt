@@ -1,0 +1,30 @@
+add_libc_test(
+  getifaddrs_test
+  SUITE
+    libc-ifaddrs-tests
+  SRCS
+    getifaddrs_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.sys_resource_macros
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.sa_family_t
+    libc.hdr.types.struct_ifaddrs
+    libc.hdr.types.struct_rlimit
+    libc.hdr.types.struct_sockaddr
+    libc.src.__support.CPP.scope
+    libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.tuple
+    libc.src.__support.error_or
+    libc.src.__support.net.linux.netlink
+    libc.src.ifaddrs.freeifaddrs
+    libc.src.ifaddrs.getifaddrs
+    libc.src.ifaddrs.linux.getifaddrs_impl
+    libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.setrlimit
+    libc.test.src.__support.net.linux.netlink_test_support
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

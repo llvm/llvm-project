@@ -644,8 +644,7 @@ static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
     return OR;
 
   auto CheckGEP = [&](GetElementPtrInst *GEP, Value *GEPOperand) {
-    for (Value *GEPUser : GEP->users()) {
-      auto *GEPUserInst = cast<Instruction>(GEPUser);
+    for (Instruction *GEPUserInst : GEP->users()) {
       if (!isa<LoadInst>(GEPUserInst) &&
           !(isa<StoreInst>(GEPUserInst) && GEP == GEPUserInst->getOperand(1)))
         continue;
@@ -780,6 +779,7 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   // Replace all uses of the polynomial calculated from the two induction
   // variables with the one new one.
   IRBuilder<> Builder(FI.OuterInductionPHI->getParent()->getTerminator());
+  Builder.disableGEPCanonicalization();
   for (Value *V : FI.LinearIVUses) {
     Value *OuterValue = FI.OuterInductionPHI;
     if (FI.Widened)

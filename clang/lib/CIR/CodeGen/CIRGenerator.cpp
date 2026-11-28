@@ -14,7 +14,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/MLIRContext.h"
@@ -67,7 +67,9 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   mlir::ModuleOp mod = cgm->getModule();
   llvm::DataLayout layout =
       llvm::DataLayout(astContext.getTargetInfo().getDataLayoutString());
-  cir::setMLIRDataLayout(mod, layout);
+  cir::setMLIRDataLayout(mod, layout,
+                         astContext.getTargetInfo().getBitIntMaxAlign(),
+                         astContext.getTargetInfo().getMaxVectorAlign());
 }
 
 bool CIRGenerator::verifyModule() const { return cgm->verifyModule(); }

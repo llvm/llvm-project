@@ -25,6 +25,7 @@
 #  xcrun clang -Wl,-ld64 -isysroot `xcrun --show-sdk-path -sdk macosx` --target=arm64-apple-macos11.3 -dynamiclib -o libfoo.dylib -install_name @rpath/libfoo.dylib tmp.c
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

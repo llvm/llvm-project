@@ -423,6 +423,7 @@ bool HexagonBitSimplify::getSubregMask(const BitTracker::RegisterRef &RR,
   switch (RC->getID()) {
     case Hexagon::DoubleRegsRegClassID:
     case Hexagon::HvxWRRegClassID:
+    case Hexagon::HlxLLRRegClassID:
       Width = MRI.getTargetRegisterInfo()->getRegSizeInBits(*RC) / 2;
       if (RR.Sub == Hexagon::isub_hi || RR.Sub == Hexagon::vsub_hi)
         Begin = Width;
@@ -922,7 +923,10 @@ const TargetRegisterClass *HexagonBitSimplify::getFinalVRegClass(
     case Hexagon::HvxWRRegClassID:
       VerifySR(RC, RR.Sub);
       return &Hexagon::HvxVRRegClass;
-  }
+    case Hexagon::HlxLLRRegClassID:
+      VerifySR(RC, RR.Sub);
+      return &Hexagon::HlxLRRegClass;
+    }
   return nullptr;
 }
 
@@ -957,8 +961,7 @@ namespace {
   class DeadCodeElimination {
   public:
     DeadCodeElimination(MachineFunction &mf, MachineDominatorTree &mdt)
-      : MF(mf), HII(*MF.getSubtarget<HexagonSubtarget>().getInstrInfo()),
-        MDT(mdt), MRI(mf.getRegInfo()) {}
+        : MDT(mdt), MRI(mf.getRegInfo()) {}
 
     bool run() {
       return runOnNode(MDT.getRootNode());
@@ -968,8 +971,6 @@ namespace {
     bool isDead(unsigned R) const;
     bool runOnNode(MachineDomTreeNode *N);
 
-    MachineFunction &MF;
-    const HexagonInstrInfo &HII;
     MachineDominatorTree &MDT;
     MachineRegisterInfo &MRI;
   };

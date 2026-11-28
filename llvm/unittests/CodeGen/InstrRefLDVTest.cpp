@@ -456,7 +456,6 @@ public:
 ...
 ---
 name: test
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,

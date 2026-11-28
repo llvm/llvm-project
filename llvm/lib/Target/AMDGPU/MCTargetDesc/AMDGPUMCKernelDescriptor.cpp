@@ -55,14 +55,11 @@ MCKernelDescriptor::getDefaultAmdhsaKernelDescriptor(const MCSubtargetInfo *STI,
       amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X_SHIFT,
       amdhsa::COMPUTE_PGM_RSRC2_ENABLE_SGPR_WORKGROUP_ID_X, Ctx);
   if (Version.Major >= 10) {
-    if (STI->getFeatureBits().test(FeatureWavefrontSize32) &&
-        STI->getFeatureBits().test(FeatureSupportsWave32) &&
-        STI->getFeatureBits().test(FeatureSupportsWave64)) {
+    if (STI->getFeatureBits().test(FeatureWavefrontSize32))
       MCKernelDescriptor::bits_set(
           KD.kernel_code_properties, OneMCExpr,
           amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_SHIFT,
           amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32, Ctx);
-    }
     if (!STI->getFeatureBits().test(FeatureCuMode))
       MCKernelDescriptor::bits_set(
           KD.compute_pgm_rsrc1, OneMCExpr,

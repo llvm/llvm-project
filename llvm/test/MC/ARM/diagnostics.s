@@ -102,19 +102,17 @@
 @ CHECK-ERRORS:         bkpt #65536
 @ CHECK-ERRORS:              ^
 
-        @ Out of range immediates for v8 HLT instruction.
+        @ Out of range immediates for HLT instruction.
         hlt #65536
         hlt #-1
-@CHECK-ERRORS-V7: error: invalid instruction
-@CHECK-ERRORS-V8: error: operand must be an immediate in the range [0,65535]
+@CHECK-ERRORS: error: operand must be an immediate in the range [0,65535]
 @CHECK-ERRORS:         hlt #65536
 @CHECK-ERRORS:              ^
-@CHECK-ERRORS-V7: error: invalid instruction
-@CHECK-ERRORS-V8: error: operand must be an immediate in the range [0,65535]
+@CHECK-ERRORS: error: operand must be an immediate in the range [0,65535]
 @CHECK-ERRORS:         hlt #-1
 @CHECK-ERRORS:             ^
 
-        @ Illegal condition code for v8 HLT instruction.
+        @ Illegal condition code for HLT instruction.
         hlteq #2
         hltlt #23
 @CHECK-ERRORS: error: instruction 'hlt' is not predicable, but condition code specified

@@ -184,19 +184,17 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
                                    "Initialization failed. "
                                    "Unable to flush diagnostics");
 
-  // FIXME: Merge with CompilerInstance::ExecuteAction.
-  llvm::MemoryBuffer *MB = llvm::MemoryBuffer::getMemBuffer("").release();
-  Clang->getPreprocessorOpts().addRemappedFile("<<< inputs >>>", MB);
+  // The driver passes "<<< inputs >>>" as a placeholder main file; the real
+  // input arrives later as input_line_N buffers.
+  for (FrontendInputFile &Input : Clang->getFrontendOpts().Inputs)
+    if (Input.isFile() && Input.getFile() == "<<< inputs >>>")
+      Input = FrontendInputFile(llvm::MemoryBufferRef("", "<<< inputs >>>"),
+                                Input.getKind());
 
-  Clang->setTarget(TargetInfo::CreateTargetInfo(
-      Clang->getDiagnostics(), Clang->getInvocation().getTargetOpts()));
-  if (!Clang->hasTarget())
+  if (!Clang->createTarget())
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Initialization failed. "
                                    "Target is missing");
-
-  Clang->getTarget().adjust(Clang->getDiagnostics(), Clang->getLangOpts(),
-                            Clang->getAuxTarget());
 
   // Don't clear the AST before backend codegen since we do codegen multiple
   // times, reusing the same AST.
@@ -228,6 +226,19 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 
 static llvm::Error ExecuteIncrementalAction(CompilerInstance &CI,
                                             IncrementalAction &Act) {
+  // Parse -mllvm before the action gives CI's library options to the
+  // LLVMContext.
+  std::string Msg;
+  llvm::raw_string_ostream OS(Msg);
+  if (!CI.parseLLVMArgs(&OS)) {
+    // Without a preprocessor, the SourceManager never adopts the buffers.
+    PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
+    if (!PPOpts.RetainRemappedFileBuffers)
+      for (auto &RB : PPOpts.RemappedFileBuffers)
+        delete RB.second;
+    PPOpts.clearRemappedFiles();
+    return llvm::createStringError(llvm::StringRef(Msg).rtrim());
+  }
   if (!CI.ExecuteAction(Act) || CI.getDiagnostics().hasErrorOccurred()) {
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Failed to execute incremental action");
@@ -393,9 +404,11 @@ IncrementalCompilerBuilder::createOffload(bool device, OffloadType Type) {
         "Detecting the device vendor is not supported yet.",
         llvm::inconvertibleErrorCode());
 
+  constexpr size_t NumDriverArgs = 6;
+
   const bool HipEnabled = Type == OffloadType::HIP;
   std::vector<const char *> Argv;
-  Argv.reserve(5 + 4 + UserArgs.size());
+  Argv.reserve(NumDriverArgs + UserArgs.size());
   Argv.push_back(HipEnabled ? "-xhip" : "-xcuda");
   Argv.push_back(device ? "--cuda-device-only" : "--cuda-host-only");
 
@@ -416,6 +429,11 @@ IncrementalCompilerBuilder::createOffload(bool device, OffloadType Type) {
                                   /*LowerCase=*/true);
   std::string CUIDArg = "-cuid=" + OffloadCUID;
   Argv.push_back(CUIDArg.c_str());
+
+  // Unoptimized HIP kernels request hostcall support, which needs PCIe atomics
+  // and fails to dispatch without them. A -O in UserArgs comes later and wins.
+  if (device && HipEnabled)
+    Argv.push_back("-O3");
 
   llvm::append_range(Argv, UserArgs);
 
@@ -442,9 +460,6 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   llvm::ErrorAsOutParameter EAO(&ErrOut);
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
-
-  // Honor -mllvm options
-  CI->parseLLVMArgs();
 
   Act = TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
     return std::make_unique<IncrementalAction>(*CI, *Ctx, ErrOut, *this,
@@ -724,10 +739,6 @@ llvm::Error Interpreter::CreateExecutor() {
 
   if (!IncrExecutorBuilder)
     IncrExecutorBuilder = IncrementalExecutorBuilder::createDefault();
-
-  // Propagate mllvm args so the wasm executor can restore them after each
-  // lldMain invocation (which resets all cl options for test isolation).
-  IncrExecutorBuilder->LLVMArgs = CI->getFrontendOpts().LLVMArgs;
 
   auto ExecutorOrErr = IncrExecutorBuilder->create(*TSCtx, CI->getTarget());
   if (ExecutorOrErr)

@@ -741,15 +741,6 @@ public:
     applyMappingImpl(Builder, OpdMapper);
   }
 
-  /// Get the size in bits of \p Reg.
-  /// Utility method to get the size of any registers. Unlike
-  /// MachineRegisterInfo::getSize, the register does not need to be a
-  /// virtual register.
-  ///
-  /// \pre \p Reg != 0 (NoRegister).
-  TypeSize getSizeInBits(Register Reg, const MachineRegisterInfo &MRI,
-                         const TargetRegisterInfo &TRI) const;
-
   /// Check that information hold by this instance make sense for the
   /// given \p TRI.
   ///

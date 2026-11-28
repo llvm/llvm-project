@@ -170,8 +170,7 @@ Address DirectCallEdge::ResolveCalleeAddress(ModuleList &images) const {
            m_symbol_name);
 
   SymbolContextList sc_list;
-  images.FindFunctionSymbols(ConstString(m_symbol_name), eFunctionNameTypeAuto,
-                             sc_list);
+  images.FindFunctionSymbols(m_symbol_name, eFunctionNameTypeAuto, sc_list);
   size_t num_matches = sc_list.GetSize();
   if (num_matches == 0 || !sc_list[0].symbol) {
     LLDB_LOG(log, "DirectCallEdge: Found no symbols for {0}, cannot resolve it",

@@ -2,12 +2,15 @@
 
 // DEFINE: %{optimize} = opt -passes=mem2reg -S
 
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-cir -disable-O0-optnone -o - %s  | FileCheck %s --check-prefixes=C,CIR %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-cir -disable-O0-optnone -o - %s  | FileCheck %s --check-prefixes=C,CIR %}
+// CIR calling-convention lowering does not handle SVE scalable vector types
+// yet, so the -fclangir runs disable it. Remove
+// -fno-clangir-call-conv-lowering once those types are supported.
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -fno-clangir-call-conv-lowering -emit-cir -disable-O0-optnone -o - %s  | FileCheck %s --check-prefixes=C,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -fno-clangir-call-conv-lowering -emit-cir -disable-O0-optnone -o - %s  | FileCheck %s --check-prefixes=C,CIR %}
 
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-llvm -disable-O0-optnone -o - %s         | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - %s         | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - -x c++ %s  | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -fno-clangir-call-conv-lowering -emit-llvm -disable-O0-optnone -o - %s         | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -fno-clangir-call-conv-lowering -emit-llvm -disable-O0-optnone -o - %s         | %{optimize} | FileCheck %s --check-prefixes=C,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -fno-clangir-call-conv-lowering -emit-llvm -disable-O0-optnone -o - -x c++ %s  | %{optimize} | FileCheck %s --check-prefixes=CPP,LLVM %}
 
 // RUN:                   %clang_cc1_cg_arm64_sve                                  -emit-llvm -disable-O0-optnone -o - %s         | %{optimize} | FileCheck %s --check-prefixes=C,LLVM
 // RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - %s         | %{optimize} | FileCheck %s --check-prefixes=C,LLVM

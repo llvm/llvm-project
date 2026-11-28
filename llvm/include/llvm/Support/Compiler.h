@@ -234,8 +234,8 @@
 #define LLVM_ATTRIBUTE_USED
 #endif
 
-#if __has_attribute(warn_unused)
-#define LLVM_ATTRIBUTE_WARN_UNUSED __attribute__((warn_unused))
+#if LLVM_HAS_CPP_ATTRIBUTE(gnu::warn_unused)
+#define LLVM_ATTRIBUTE_WARN_UNUSED [[gnu::warn_unused]]
 #else
 #define LLVM_ATTRIBUTE_WARN_UNUSED
 #endif
@@ -678,6 +678,18 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_NO_SANITIZE(KIND) __attribute__((no_sanitize(KIND)))
 #else
 #define LLVM_NO_SANITIZE(KIND)
+#endif
+
+/// \macro LLVM_NO_SANITIZE_CFI_UNRELATED_CAST
+/// Disable Clang's cfi-unrelated-cast check for a function (e.g. when casting
+/// raw uninitialized storage to T* before constructing elements in place).
+/// Guarded with __clang__ because GCC supports no_sanitize but warns
+/// (-Wattributes) on Clang-specific CFI sanitizer names.
+#ifdef __clang__
+#define LLVM_NO_SANITIZE_CFI_UNRELATED_CAST                                    \
+  LLVM_NO_SANITIZE("cfi-unrelated-cast")
+#else
+#define LLVM_NO_SANITIZE_CFI_UNRELATED_CAST
 #endif
 
 /// Mark debug helper function definitions like dump() that should not be

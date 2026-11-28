@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c2y -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-unknown -std=c2y -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c2y -isystem %S/Inputs -DTEST_C2Y_LIB_SPELLINGS %s -emit-llvm -o - | FileCheck %s --check-prefix=C2Y
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-unknown -std=c2y -isystem %S/Inputs -DTEST_C2Y_LIB_SPELLINGS %s -emit-llvm -o - | FileCheck %s --check-prefix=C2Y %}
 
 #ifndef TEST_C2Y_LIB_SPELLINGS
 

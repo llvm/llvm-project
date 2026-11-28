@@ -16,10 +16,12 @@
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/math/exp10f_double_eval.h"
 #include "src/__support/math/exp10f_float_eval.h"
+#include "src/__support/math/exp10f_integer_eval.h"
 #include "src/math/exp10f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -29,27 +31,33 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 class Exp10fTest : public LIBC_NAMESPACE::testing::FPTest<float> {
 public:
-  void test_special_numbers(float (*func)(float)) {
+  void test_special_numbers(float (*func)(float), bool check_errno = true) {
     EXPECT_FP_EQ(aNaN, func(aNaN));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ(inf, func(inf));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ(0.0f, func(neg_inf));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ(1.0f, func(0.0f));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ(1.0f, func(-0.0f));
-    EXPECT_MATH_ERRNO(0);
+    if (check_errno)
+      EXPECT_MATH_ERRNO(0);
   }
 
   void test_overflow(float (*func)(float),
                      bool check_exception_and_errno = true) {
     constexpr float VALUES[] = {
         FPBits(0x7f7fffffU).get_val(),
+        FPBits(0x421a209bU).get_val(),
         FPBits(0x43000000U).get_val(),
         FPBits(0x43000001U).get_val(),
     };
@@ -74,20 +82,27 @@ public:
       EXPECT_FP_EQ(0.0f, func(FPBits(0xff7fffffU).get_val()));
     }
 
-    constexpr float VALUES[] = {
-        FPBits(0xc2cffff8U).get_val(),
-        FPBits(0xc2d00008U).get_val(),
+    struct TestCase {
+      float x;
+      int expected_errno;
+    } cases[] = {
+        {FPBits(0xc2349e35U).get_val(), 0},
+        {FPBits(0xc2349e36U).get_val(), ERANGE},
+        {FPBits(0xc2cffff8U).get_val(), ERANGE},
+        {FPBits(0xc2d00008U).get_val(), ERANGE},
     };
 
-    for (float x : VALUES) {
+    for (const auto &c : cases) {
+      libc_errno = 0;
       if (all_rounding) {
-        EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x, func(x),
+        EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, c.x, func(c.x),
                                        ulp_tolerance);
       } else {
-        EXPECT_MPFR_MATCH(mpfr::Operation::Exp10, x, func(x), ulp_tolerance);
+        EXPECT_MPFR_MATCH(mpfr::Operation::Exp10, c.x, func(c.x),
+                          ulp_tolerance);
       }
       if (check_exception_and_errno) {
-        EXPECT_MATH_ERRNO(ERANGE);
+        EXPECT_MATH_ERRNO(c.expected_errno);
       }
     }
   }
@@ -157,25 +172,44 @@ public:
   }
 };
 
-#define LIST_EXP10F_TESTS(suffix, func, ulp_tolerance, all_rounding)           \
+#define LIST_EXP10F_TESTS(suffix, func, ulp_tolerance, all_rounding,           \
+                          check_exception_and_errno, check_errno)              \
   using LlvmLibcExp10fTest##suffix = Exp10fTest;                               \
   TEST_F(LlvmLibcExp10fTest##suffix, SpecialNumbers) {                         \
-    test_special_numbers(&func);                                               \
+    test_special_numbers(&func, check_errno);                                  \
   }                                                                            \
-  TEST_F(LlvmLibcExp10fTest##suffix, Overflow) { test_overflow(&func); }       \
+  TEST_F(LlvmLibcExp10fTest##suffix, Overflow) {                               \
+    test_overflow(&func, check_exception_and_errno);                           \
+  }                                                                            \
   TEST_F(LlvmLibcExp10fTest##suffix, Underflow) {                              \
-    test_underflow(&func, ulp_tolerance, all_rounding);                        \
+    test_underflow(&func, ulp_tolerance, all_rounding,                         \
+                   check_exception_and_errno);                                 \
   }                                                                            \
   TEST_F(LlvmLibcExp10fTest##suffix, TrickyInputs) {                           \
     test_tricky_inputs(&func, ulp_tolerance, all_rounding);                    \
   }                                                                            \
   TEST_F(LlvmLibcExp10fTest##suffix, InFloatRange) {                           \
-    test_in_range(&func, ulp_tolerance, all_rounding);                         \
+    test_in_range(&func, ulp_tolerance, all_rounding, check_errno);            \
   }
 
 LIST_EXP10F_TESTS(Default, LIBC_NAMESPACE::exp10f, /*ulp_tolerance=*/0.5,
-                  /*all_rounding=*/true)
+                  /*all_rounding=*/true, /*check_exception_and_errno=*/true,
+                  /*check_errno=*/true)
 LIST_EXP10F_TESTS(DoubleEval, LIBC_NAMESPACE::math::double_eval::exp10f,
-                  /*ulp_tolerance=*/0.5, /*all_rounding=*/true)
+                  /*ulp_tolerance=*/0.5, /*all_rounding=*/true,
+                  /*check_exception_and_errno=*/true, /*check_errno=*/true)
 LIST_EXP10F_TESTS(FloatEval, LIBC_NAMESPACE::math::float_eval::exp10f,
-                  /*ulp_tolerance=*/1.5, /*all_rounding=*/false)
+                  /*ulp_tolerance=*/1.5, /*all_rounding=*/false,
+                  /*check_exception_and_errno=*/true, /*check_errno=*/true)
+LIST_EXP10F_TESTS(IntegerEval, LIBC_NAMESPACE::math::integer_eval::exp10f,
+                  /*ulp_tolerance=*/0.5, /*all_rounding=*/false,
+                  /*check_exception_and_errno=*/false, /*check_errno=*/false)
+
+static float exp10f_static_rounding(float x) {
+  return LIBC_NAMESPACE::math::static_rounding::exp10f(
+      x, LIBC_NAMESPACE::fputil::quick_get_round());
+}
+
+LIST_EXP10F_TESTS(StaticRounding, exp10f_static_rounding,
+                  /*ulp_tolerance=*/0.5, /*all_rounding=*/true,
+                  /*check_exception_and_errno=*/false, /*check_errno=*/false)

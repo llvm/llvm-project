@@ -17,9 +17,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:       []
 liveins:
   - { reg: '$edi', virtual-reg: '' }
   - { reg: '$esi', virtual-reg: '' }

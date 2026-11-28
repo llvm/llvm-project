@@ -1,3 +1,15 @@
+posix: posix-2024
+types:
+  id_t:
+    in-latest-posix: ''
+  rlim_t:
+    in-latest-posix: ''
+  struct rlimit:
+    in-latest-posix: ''
+  struct rusage:
+    in-latest-posix: ''
+  struct timeval:
+    in-latest-posix: ''
 functions:
   getpriority:
     in-latest-posix: ''
@@ -41,3 +53,5 @@ macros:
     in-latest-posix: ''
   RUSAGE_CHILDREN:
     in-latest-posix: ''
+  RUSAGE_THREAD:
+    extension: linux

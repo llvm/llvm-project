@@ -30,6 +30,8 @@ using LIBC_NAMESPACE::Sign;
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
+#if LIBC_TEST_HAS_MATCHERS()
+
 template <typename T, TestCond Condition> class FPMatcher : public Matcher<T> {
   static_assert(cpp::is_floating_point_v<T>,
                 "FPMatcher can only be used with floating point values.");
@@ -175,6 +177,16 @@ CFPMatcher<T, C> getMatcherComplex(T expectedValue) {
   return CFPMatcher<T, C>(expectedValue);
 }
 
+#endif // LIBC_TEST_HAS_MATCHERS()
+
+// Optimization barrier to prevent constant folding.
+template <typename T> LIBC_INLINE T opaque(T value) {
+  // The pointer is volatile rather than the value, which keeps this usable for
+  // class types such as BFloat16 that have no volatile copy constructor.
+  T *volatile pointer = &value;
+  return *pointer;
+}
+
 template <typename T> struct FPTest : public ErrnoCheckingTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using StorageType = typename FPBits::StorageType;
@@ -184,14 +196,14 @@ template <typename T> struct FPTest : public ErrnoCheckingTest {
   static constexpr T neg_zero = FPBits::zero(Sign::NEG).get_val();
   static constexpr T aNaN = FPBits::quiet_nan(Sign::POS).get_val();
   static constexpr T neg_aNaN = FPBits::quiet_nan(Sign::NEG).get_val();
-  static constexpr T sNaN = FPBits::signaling_nan().get_val();
+  const T sNaN = opaque(FPBits::signaling_nan().get_val());
   static constexpr T inf = FPBits::inf(Sign::POS).get_val();
   static constexpr T neg_inf = FPBits::inf(Sign::NEG).get_val();
   static constexpr T min_normal = FPBits::min_normal().get_val();
   static constexpr T max_normal = FPBits::max_normal(Sign::POS).get_val();
   static constexpr T neg_max_normal = FPBits::max_normal(Sign::NEG).get_val();
-  static constexpr T min_denormal = FPBits::min_subnormal().get_val();
-  static constexpr T max_denormal = FPBits::max_subnormal().get_val();
+  const T min_denormal = opaque(FPBits::min_subnormal().get_val());
+  const T max_denormal = opaque(FPBits::max_subnormal().get_val());
 
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   static constexpr int N_ROUNDING_MODES = 1;
@@ -254,16 +266,19 @@ private:
   const T neg_zero = FPBits::zero(Sign::NEG).get_val();                        \
   const T aNaN = FPBits::quiet_nan(Sign::POS).get_val();                       \
   const T neg_aNaN = FPBits::quiet_nan(Sign::NEG).get_val();                   \
-  const T sNaN = FPBits::signaling_nan(Sign::POS).get_val();                   \
+  const T sNaN = LIBC_NAMESPACE::testing::opaque(                              \
+      FPBits::signaling_nan(Sign::POS).get_val());                             \
   const T neg_sNaN = FPBits::signaling_nan(Sign::NEG).get_val();               \
   const T inf = FPBits::inf(Sign::POS).get_val();                              \
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();                          \
   const T min_normal = FPBits::min_normal().get_val();                         \
   const T max_normal = FPBits::max_normal(Sign::POS).get_val();                \
   const T neg_max_normal = FPBits::max_normal(Sign::NEG).get_val();            \
-  const T min_denormal = FPBits::min_subnormal(Sign::POS).get_val();           \
+  const T min_denormal = LIBC_NAMESPACE::testing::opaque(                      \
+      FPBits::min_subnormal(Sign::POS).get_val());                             \
   const T neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();       \
-  const T max_denormal = FPBits::max_subnormal().get_val();                    \
+  const T max_denormal =                                                       \
+      LIBC_NAMESPACE::testing::opaque(FPBits::max_subnormal().get_val());      \
   static constexpr int UNKNOWN_MATH_ROUNDING_DIRECTION = 99;                   \
   static constexpr LIBC_NAMESPACE::cpp::array<int, 6>                          \
       MATH_ROUNDING_DIRECTIONS_INCLUDING_UNKNOWN = {                           \
@@ -271,6 +286,10 @@ private:
           FP_INT_TOWARDZERO, FP_INT_TONEARESTFROMZERO,                         \
           FP_INT_TONEAREST,  UNKNOWN_MATH_ROUNDING_DIRECTION,                  \
   };
+
+#define EXPECT_FP_IS_NAN(actual) EXPECT_TRUE((actual) != (actual))
+
+#if LIBC_TEST_HAS_MATCHERS()
 
 #define EXPECT_FP_EQ(expected, actual)                                         \
   EXPECT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
@@ -284,8 +303,6 @@ private:
   LIBC_NAMESPACE::testing::getMatcher<LIBC_NAMESPACE::testing::TestCond::EQ>(  \
       expected)                                                                \
       .match(actual)
-
-#define EXPECT_FP_IS_NAN(actual) EXPECT_TRUE((actual) != (actual))
 
 #define ASSERT_FP_EQ(expected, actual)                                         \
   ASSERT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
@@ -661,6 +678,8 @@ private:
     EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO((expected), (actual),     \
                                                      (expected_except));       \
   } while (0)
+
+#endif // LIBC_TEST_HAS_MATCHERS()
 
 #define ASSERT_EQ_ROUNDING_MODE(expected, actual, rounding_mode)               \
   do {                                                                         \

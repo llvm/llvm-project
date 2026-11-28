@@ -207,8 +207,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
 liveins:
   - { reg: '$edi', virtual-reg: '' }
   - { reg: '$esi', virtual-reg: '' }

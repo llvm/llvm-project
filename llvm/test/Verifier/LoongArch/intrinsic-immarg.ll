@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 declare ptr @llvm.frameaddress(i32 immarg)
 declare ptr @llvm.returnaddress(i32 immarg)

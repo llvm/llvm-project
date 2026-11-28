@@ -1,7 +1,11 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin12 -o - -emit-llvm %s | FileCheck %s -check-prefix=CHECK-NOERRNO
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin12 -o - -emit-llvm %s | FileCheck %s -check-prefix=CHECK-NOERRNO %}
 // RUN: %clang_cc1 -triple x86_64 -o - -emit-llvm -fmath-errno %s | FileCheck %s -check-prefix=CHECK-ERRNO
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64 -o - -emit-llvm -fmath-errno %s | FileCheck %s -check-prefix=CHECK-ERRNO %}
 // RUN: %clang_cc1 -triple x86_64-apple-darwin12 -o - -emit-llvm -x c++ %s | FileCheck %s -check-prefix=CHECK-NOERRNO
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin12 -o - -emit-llvm -x c++ %s | FileCheck %s -check-prefix=CHECK-NOERRNO %}
 // RUN: %clang_cc1 -triple x86_64 -o - -emit-llvm -x c++ -fmath-errno %s | FileCheck %s -check-prefix=CHECK-ERRNO
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64 -o - -emit-llvm -x c++ -fmath-errno %s | FileCheck %s -check-prefix=CHECK-ERRNO %}
 
 // Prototypes.
 #ifdef __cplusplus

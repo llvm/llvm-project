@@ -305,7 +305,7 @@ def MOVXCCrr : F4_1<0b101100, (outs IntRegs:$rd),
                       [(set i32:$rd,
                        (SPselectxcc i32:$rs2, i32:$f, imm:$cond))]>;
 def MOVXCCri : F4_2<0b101100, (outs IntRegs:$rd),
-                      (ins i32imm:$simm11, IntRegs:$f, CCOp:$cond),
+                      (ins simm11Op:$simm11, IntRegs:$f, CCOp:$cond),
                       "mov$cond %xcc, $simm11, $rd",
                       [(set i32:$rd,
                        (SPselectxcc simm11:$simm11, i32:$f, imm:$cond))]>;
@@ -364,7 +364,7 @@ let Predicates = [HasV9], Constraints = "$f = $rd" in {
                    [(set i32:$rd, (SPselectreg i32:$rs2, i32:$f, imm:$rcond, i64:$rs1))]>;
 
   def MOVRri : F4_4i<0b101111, (outs IntRegs:$rd),
-                   (ins I64Regs:$rs1, i32imm:$simm10, IntRegs:$f, RegCCOp:$rcond),
+                   (ins I64Regs:$rs1, simm10Op:$simm10, IntRegs:$f, RegCCOp:$rcond),
                    "movr$rcond $rs1, $simm10, $rd",
                    [(set i32:$rd, (SPselectreg simm10:$simm10, i32:$f, imm:$rcond, i64:$rs1))]>;
 }
@@ -390,37 +390,37 @@ let Predicates = [HasV9], Constraints = "$f = $rd" in {
 // 64-bit Floating Point Conversions.
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasV9] in {
+let Predicates = [HasV9], Uses = [FSR], mayRaiseFPException = 1 in {
 
 def FXTOS : F3_3u<2, 0b110100, 0b010000100,
                  (outs FPRegs:$rd), (ins DFPRegs:$rs2),
                  "fxtos $rs2, $rd",
-                 [(set FPRegs:$rd, (SPxtof DFPRegs:$rs2))]>;
+                 [(set FPRegs:$rd, (SPany_xtof DFPRegs:$rs2))]>;
 def FXTOD : F3_3u<2, 0b110100, 0b010001000,
                  (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                  "fxtod $rs2, $rd",
-                 [(set DFPRegs:$rd, (SPxtof DFPRegs:$rs2))]>;
+                 [(set DFPRegs:$rd, (SPany_xtof DFPRegs:$rs2))]>;
 let append Predicates = [HasHardQuad] in
 def FXTOQ : F3_3u<2, 0b110100, 0b010001100,
                  (outs QFPRegs:$rd), (ins DFPRegs:$rs2),
                  "fxtoq $rs2, $rd",
-                 [(set QFPRegs:$rd, (SPxtof DFPRegs:$rs2))]>;
+                 [(set QFPRegs:$rd, (SPany_xtof DFPRegs:$rs2))]>;
 
 def FSTOX : F3_3u<2, 0b110100, 0b010000001,
                  (outs DFPRegs:$rd), (ins FPRegs:$rs2),
                  "fstox $rs2, $rd",
-                 [(set DFPRegs:$rd, (SPftox FPRegs:$rs2))]>;
+                 [(set DFPRegs:$rd, (SPany_ftox FPRegs:$rs2))]>;
 def FDTOX : F3_3u<2, 0b110100, 0b010000010,
                  (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                  "fdtox $rs2, $rd",
-                 [(set DFPRegs:$rd, (SPftox DFPRegs:$rs2))]>;
+                 [(set DFPRegs:$rd, (SPany_ftox DFPRegs:$rs2))]>;
 let append Predicates = [HasHardQuad] in
 def FQTOX : F3_3u<2, 0b110100, 0b010000011,
                  (outs DFPRegs:$rd), (ins QFPRegs:$rs2),
                  "fqtox $rs2, $rd",
-                 [(set DFPRegs:$rd, (SPftox QFPRegs:$rs2))]>;
+                 [(set DFPRegs:$rd, (SPany_ftox QFPRegs:$rs2))]>;
 
-} // Predicates = [HasV9]
+} // Predicates = [HasV9], Uses = [FSR], mayRaiseFPException = 1
 
 // Conditional move patterns.
 let Predicates = [Is64Bit] in {

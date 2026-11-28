@@ -93,4 +93,4 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr<272>, d
 // CHECK-DAG: #[[E11:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "v6", baseType = #{{.*}}, sizeInBits = 32, alignInBits = 32, offsetInBits = 1664>
 // CHECK-DAG: #[[E12:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "m_p3", baseType = #{{.*}}, sizeInBits = 384, alignInBits = 64, offsetInBits = 1728>
 // CHECK-DAG: #[[E13:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "v7", baseType = #{{.*}}, sizeInBits = 32, alignInBits = 32, offsetInBits = 2112>
-// CHECK-DAG: #llvm.di_composite_type<{{.*}}tag = DW_TAG_structure_type, name = "sometype"{{.*}}sizeInBits = 2144, elements = #[[E1]], #[[E2]], #[[E3]], #[[E4]], #[[E5]], #[[E6]], #[[E7]], #[[E8]], #[[E9]], #[[E10]], #[[E11]], #[[E12]], #[[E13]]>
+// CHECK-DAG: #llvm.di_composite_type<{{.*}}tag = DW_TAG_structure_type, name = "sometype"{{.*}}sizeInBits = 2176, elements = #[[E1]], #[[E2]], #[[E3]], #[[E4]], #[[E5]], #[[E6]], #[[E7]], #[[E8]], #[[E9]], #[[E10]], #[[E11]], #[[E12]], #[[E13]]>

@@ -926,8 +926,12 @@ LogicalResult mlir::affine::loopUnrollUpToFactor(AffineForOp forOp,
                                                  uint64_t unrollFactor) {
   std::optional<APInt> mayBeConstantTripCount = forOp.getStaticTripCount();
   if (mayBeConstantTripCount.has_value() &&
-      mayBeConstantTripCount->ult(unrollFactor))
+      mayBeConstantTripCount->ult(unrollFactor)) {
+    // Nothing to unroll in a zero-trip loop.
+    if (mayBeConstantTripCount->isZero())
+      return success();
     return loopUnrollByFactor(forOp, mayBeConstantTripCount->getZExtValue());
+  }
   return loopUnrollByFactor(forOp, unrollFactor);
 }
 
@@ -974,15 +978,10 @@ static void generateUnrolledLoop(
       annotateFn(i, clonedOp, builder);
     }
 
-    // Update yielded values. If the yielded value is defined outside the
-    // `loopBodyBlock` or if it is a BlockArgument then it won't be cloned, thus
-    // the `lastYielded` value remains unchanged. Else, update the `lastYielded`
-    // value with the clone corresponding to the yielded value.
-    for (unsigned i = 0, e = lastYielded.size(); i < e; i++) {
-      Operation *defOp = yieldedValues[i].getDefiningOp();
-      if (defOp && defOp->getBlock() == loopBodyBlock)
-        lastYielded[i] = operandMap.lookup(yieldedValues[i]);
-    }
+    // Update yielded values. Values defined outside the loop body are not in
+    // `operandMap` and stay unchanged.
+    for (unsigned i = 0, e = lastYielded.size(); i < e; i++)
+      lastYielded[i] = operandMap.lookupOrDefault(yieldedValues[i]);
   }
 
   // Make sure we annotate the Ops in the original body. We do this last so that
@@ -1622,7 +1621,7 @@ mlir::affine::tile(ArrayRef<AffineForOp> forOps, ArrayRef<uint64_t> sizes,
   for (auto it : llvm::zip(forOps, sizes)) {
     auto step = stripmineSink(std::get<0>(it), std::get<1>(it), currentTargets);
     res.push_back(step);
-    currentTargets = step;
+    currentTargets = std::move(step);
   }
   return res;
 }

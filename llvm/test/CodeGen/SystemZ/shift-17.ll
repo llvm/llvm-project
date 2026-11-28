@@ -115,7 +115,7 @@ define i128 @f4(i128 %a, i128 %b, i128 %sh) {
 ; Z15-NEXT:    vslb %v1, %v1, %v2
 ; Z15-NEXT:    vsl %v1, %v1, %v2
 ; Z15-NEXT:    vrepib %v2, 1
-; Z15-NEXT:    xilf %r0, 4294967295
+; Z15-NEXT:    nork %r0, %r0, %r0
 ; Z15-NEXT:    vsrl %v0, %v0, %v2
 ; Z15-NEXT:    vlvgp %v2, %r0, %r0
 ; Z15-NEXT:    vrepb %v2, %v2, 15
@@ -236,7 +236,7 @@ define i128 @f8(i128 %a, i128 %b, i128 %sh) {
 ; Z15-NEXT:    vsrlb %v1, %v1, %v2
 ; Z15-NEXT:    vsrl %v1, %v1, %v2
 ; Z15-NEXT:    vrepib %v2, 1
-; Z15-NEXT:    xilf %r0, 4294967295
+; Z15-NEXT:    nork %r0, %r0, %r0
 ; Z15-NEXT:    vsl %v0, %v0, %v2
 ; Z15-NEXT:    vlvgp %v2, %r0, %r0
 ; Z15-NEXT:    vrepb %v2, %v2, 15

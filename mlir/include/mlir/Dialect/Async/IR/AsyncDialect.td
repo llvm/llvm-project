@@ -22,13 +22,15 @@ include "mlir/IR/OpBase.td"
 def AsyncDialect : Dialect {
   let name = "async";
   let cppNamespace = "::mlir::async";
+  let useDefaultOperationRegistration = 1;
 
   let summary = "Types and operations for async dialect";
   let description = [{
     This dialect contains operations for modeling asynchronous execution.
   }];
 
-  let useDefaultTypePrinterParser = 1;
+  let hasTypes = 1;
+  let hasInitializer = 0;
 
   let extraClassDeclaration = [{
     /// The name of a unit attribute on funcs that are allowed to have a

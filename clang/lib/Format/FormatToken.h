@@ -198,6 +198,7 @@ namespace format {
   TYPE(TemplateOpener)                                                         \
   TYPE(TemplateString)                                                         \
   TYPE(TrailingAnnotation)                                                     \
+  TYPE(TrailingCommaVaOptRParen)                                               \
   TYPE(TrailingReturnArrow)                                                    \
   TYPE(TrailingUnaryOperator)                                                  \
   TYPE(TypeDeclarationParen)                                                   \
@@ -1164,6 +1165,7 @@ struct AdditionalKeywords {
     kw___except = &IdentTable.get("__except");
     kw___has_include = &IdentTable.get("__has_include");
     kw___has_include_next = &IdentTable.get("__has_include_next");
+    kw___VA_OPT__ = &IdentTable.get("__VA_OPT__");
 
     kw_mark = &IdentTable.get("mark");
     kw_region = &IdentTable.get("region");
@@ -1553,6 +1555,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw___except;
   IdentifierInfo *kw___has_include;
   IdentifierInfo *kw___has_include_next;
+  IdentifierInfo *kw___VA_OPT__;
 
   // JavaScript keywords.
   IdentifierInfo *kw_as;

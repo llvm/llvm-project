@@ -75,6 +75,12 @@ define void @constraint_R_i64() nounwind {
   ret void
 }
 
+define void @constraint_R_f64() nounwind {
+; CHECK: error: could not allocate input reg for constraint 'R'
+  tail call void asm "add a0, a0, $0", "R"(double 0.0)
+  ret void
+}
+
 define void @constraint_R_i128() nounwind {
 ; CHECK32: error: could not allocate input reg for constraint 'R'
   tail call void asm "add a0, a0, $0", "R"(i128 zeroinitializer)
@@ -96,6 +102,12 @@ define void @constraint_cR_i32() nounwind {
 define void @constraint_cR_i64() nounwind {
 ; CHECK64: error: could not allocate input reg for constraint 'cR'
   tail call void asm "add a0, a0, $0", "^cR"(i64 zeroinitializer)
+  ret void
+}
+
+define void @constraint_cR_f64() nounwind {
+; CHECK: error: could not allocate input reg for constraint 'cR'
+  tail call void asm "add a0, a0, $0", "^cR"(double 0.0)
   ret void
 }
 

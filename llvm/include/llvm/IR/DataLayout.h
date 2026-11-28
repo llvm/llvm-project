@@ -174,6 +174,9 @@ private:
   /// Internal helper method that returns requested alignment for type.
   Align getAlignment(Type *Ty, bool abi_or_pref) const;
 
+  /// getTypeAllocSize for types other than integers and pointers.
+  TypeSize getAggregateOrOtherTypeAllocSize(Type *Ty) const;
+
   /// Attempts to parse primitive specification ('i', 'f', or 'v').
   Error parsePrimitiveSpec(StringRef Spec);
 

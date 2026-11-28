@@ -1,6 +1,8 @@
 // RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!u64i = !cir.int<u, 64>
 
 module  {
 
@@ -59,6 +61,22 @@ cir.func @func3(%arg0: !cir.ptr<!cir.array<!s32i x 10>>) {
 // CHECK: cir.func{{.*}} @func3(%arg0: !cir.ptr<!cir.array<!s32i x 10>>) {
 // CHECK:   %0 = cir.alloca "pp" align(8) init : !cir.ptr<!cir.ptr<!cir.array<!s32i x 10>>>
 // CHECK:   cir.store %arg0, %0 : !cir.ptr<!cir.array<!s32i x 10>>, !cir.ptr<!cir.ptr<!cir.array<!s32i x 10>>>
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @get_element(%arg0: !cir.ptr<!cir.array<!s32i x 10>>, %arg1: !s64i, %arg2: !u64i) {
+  %0 = cir.get_element %arg0[%arg1 : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+  %1 = cir.get_element inbounds %arg0[%arg1 : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+  %2 = cir.get_element nuw %arg0[%arg2 : !u64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+  %3 = cir.get_element inbounds nuw %arg0[%arg2 : !u64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+  cir.return
+}
+
+// CHECK: cir.func{{.*}} @get_element(%arg0: !cir.ptr<!cir.array<!s32i x 10>>, %arg1: !s64i, %arg2: !u64i) {
+// CHECK:   %0 = cir.get_element %arg0[%arg1 : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+// CHECK:   %1 = cir.get_element inbounds %arg0[%arg1 : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+// CHECK:   %2 = cir.get_element nuw %arg0[%arg2 : !u64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+// CHECK:   %3 = cir.get_element inbounds nuw %arg0[%arg2 : !u64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
 // CHECK:   cir.return
 // CHECK: }
 

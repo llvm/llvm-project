@@ -6,10 +6,6 @@
 name:            ceil_float
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
 body:             |
   bb.0:
     ; CHECK-LABEL: name:            ceil_float
@@ -24,10 +20,6 @@ body:             |
 name:            ceil_double
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
 body:             |
   bb.0:
     ; CHECK-LABEL: name:            ceil_double
@@ -42,10 +34,6 @@ body:             |
 name:            ceil_v2f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
 body:             |
   bb.0:
     ; CHECK-LABEL: name:            ceil_v2f32
@@ -60,10 +48,6 @@ body:             |
 name:            ceil_v4f32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
 body:             |
   bb.0:
     ; CHECK-LABEL: name:            ceil_v4f32
@@ -78,10 +62,6 @@ body:             |
 name:            ceil_v2f64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
 body:             |
   bb.0:
     ; CHECK-LABEL: name:            ceil_v2f64
@@ -96,10 +76,6 @@ body:             |
 name:            ceil_v4f16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
 body:             |
   bb.0:
     ; CHECK-LABEL: name:            ceil_v4f16
@@ -114,10 +90,6 @@ body:             |
 name:            ceil_v8f16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
 body:             |
   bb.0:
     ; CHECK-LABEL: name:            ceil_v8f16

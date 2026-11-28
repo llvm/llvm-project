@@ -16,7 +16,6 @@
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Bitcode/BitcodeCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Bitstream/BitCodes.h"
@@ -322,6 +321,11 @@ private:
   void writeDIImportedEntity(const DIImportedEntity *N,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev);
+  void writeMDFunctionLocalContext(const MDFunctionLocalContext *N,
+                                   SmallVectorImpl<uint64_t> &Record,
+                                   unsigned &Abbrev) {
+    llvm_unreachable("DXIL cannot contain MDFunctionLocalContext Nodes");
+  }
   unsigned createMetadataStringsAbbrev();
   void writeMetadataStrings(ArrayRef<const Metadata *> Strings,
                             SmallVectorImpl<uint64_t> &Record);

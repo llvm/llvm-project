@@ -66,7 +66,22 @@
 // CHECK-LD-RT: "-lc"
 // CHECK-LD-RT: libclang_rt.builtins.a"
 // CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-linux{{/|\\\\}}clang_rt.crtend.o"
-//
+
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
+// RUN:     --target=x86_64-unknown-linux \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     --rtlib=none \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-RT-NONE %s
+// CHECK-LD-RT-NONE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-LD-RT-NONE-SAME: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
+// CHECK-LD-RT-NONE-NOT: "clang_rt.builtins"
+// CHECK-LD-RT-NONE-NOT: "-lgcc"
+// CHECK-LD-RT-NONE-SAME: "-lc"
+// CHECK-LD-RT-NONE-NOT: "clang_rt.builtins"
+// CHECK-LD-RT-NONE-NOT: "-lgcc"
+// CHECK-LD-RT-NONE-SAME: "crtend.o"
+
 // RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=i686-unknown-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
@@ -1636,6 +1651,39 @@
 // RUN:     --target=mips64el-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS64EL %s
 // RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips-pc-linux-musl -msoft-float \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS-SF %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mipsel-pc-linux-musl -mfloat-abi=soft \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSEL-SF %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64-pc-linux-musl -msoft-float \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS64-SF %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64el-pc-linux-musl -mabi=n32 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSN32EL %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64-pc-linux-muslabin32 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSN32 %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mipsisa32r6el-pc-linux-musl \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSR6EL %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips-pc-linux-musl -march=mips32r6 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSR6 %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64el-pc-linux-musl -march=i6400 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS64R6EL %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64el-pc-linux-musl -march=mips64r6 -mabi=n32 -msoft-float \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSN32R6EL-SF %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64el-pc-linux-musl -mabi=32 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-O32-OVERRIDE %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mipsisa64r6el-pc-linux-musl -march=mips64r2 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-R2-OVERRIDE %s
+// RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-PPC %s
 // RUN: %clang -### %s -no-pie 2>&1 \
@@ -1704,6 +1752,17 @@
 // CHECK-MUSL-MIPSEL:     "-dynamic-linker" "/lib/ld-musl-mipsel.so.1"
 // CHECK-MUSL-MIPS64:     "-dynamic-linker" "/lib/ld-musl-mips64.so.1"
 // CHECK-MUSL-MIPS64EL:   "-dynamic-linker" "/lib/ld-musl-mips64el.so.1"
+// CHECK-MUSL-MIPS-SF:    "-dynamic-linker" "/lib/ld-musl-mips-sf.so.1"
+// CHECK-MUSL-MIPSEL-SF:  "-dynamic-linker" "/lib/ld-musl-mipsel-sf.so.1"
+// CHECK-MUSL-MIPS64-SF:  "-dynamic-linker" "/lib/ld-musl-mips64-sf.so.1"
+// CHECK-MUSL-MIPSN32EL:  "-dynamic-linker" "/lib/ld-musl-mipsn32el.so.1"
+// CHECK-MUSL-MIPSN32:    "-dynamic-linker" "/lib/ld-musl-mipsn32.so.1"
+// CHECK-MUSL-MIPSR6EL:   "-dynamic-linker" "/lib/ld-musl-mipsr6el.so.1"
+// CHECK-MUSL-MIPSR6:     "-dynamic-linker" "/lib/ld-musl-mipsr6.so.1"
+// CHECK-MUSL-MIPS64R6EL: "-dynamic-linker" "/lib/ld-musl-mips64r6el.so.1"
+// CHECK-MUSL-MIPSN32R6EL-SF: "-dynamic-linker" "/lib/ld-musl-mipsn32r6el-sf.so.1"
+// CHECK-MUSL-O32-OVERRIDE:   "-dynamic-linker" "/lib/ld-musl-mipsel.so.1"
+// CHECK-MUSL-R2-OVERRIDE:    "-dynamic-linker" "/lib/ld-musl-mips64el.so.1"
 // CHECK-MUSL-PPC:        "-dynamic-linker" "/lib/ld-musl-powerpc.so.1"
 // CHECK-MUSL-PPC64:      "-dynamic-linker" "/lib/ld-musl-powerpc64.so.1"
 // CHECK-MUSL-PPCSPE:     "-dynamic-linker" "/lib/ld-musl-powerpc-sf.so.1"

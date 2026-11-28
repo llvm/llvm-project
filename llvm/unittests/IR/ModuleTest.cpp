@@ -471,6 +471,66 @@ define void @Foo2() {
   ASSERT_EQ(M2Str, M1Print);
 }
 
+TEST(ModuleTest, MoveAssignNameClash) {
+  // Each <M2 kind>_<M1 kind> name belongs to values of different kinds in M2
+  // and M1. Move assignment must not rename the M2 value.
+  SMDiagnostic Err;
+  LLVMContext Context;
+  std::unique_ptr<Module> M1 = parseAssemblyString(R"(
+@fn_gv = global i32 0
+@alias_gv = global i32 0
+@ifunc_gv = global i32 0
+@gv_alias = alias ptr (), ptr @resolver
+@fn_alias = alias ptr (), ptr @resolver
+@ifunc_alias = alias ptr (), ptr @resolver
+@gv_ifunc = ifunc void (), ptr @resolver
+@fn_ifunc = ifunc void (), ptr @resolver
+@alias_ifunc = ifunc void (), ptr @resolver
+
+declare void @gv_fn()
+declare void @alias_fn()
+declare void @ifunc_fn()
+
+define ptr @resolver() {
+  ret ptr null
+}
+)",
+                                                   Err, Context);
+  ASSERT_TRUE(M1.get());
+  std::unique_ptr<Module> M2 = parseAssemblyString(R"(
+@gv_fn = global i32 0
+@gv_alias = global i32 0
+@gv_ifunc = global i32 0
+@alias_gv = alias ptr (), ptr @resolver
+@alias_fn = alias ptr (), ptr @resolver
+@alias_ifunc = alias ptr (), ptr @resolver
+@ifunc_gv = ifunc void (), ptr @resolver
+@ifunc_fn = ifunc void (), ptr @resolver
+@ifunc_alias = ifunc void (), ptr @resolver
+
+declare void @fn_gv()
+declare void @fn_alias()
+declare void @fn_ifunc()
+
+define ptr @resolver() {
+  ret ptr null
+}
+)",
+                                                   Err, Context);
+  ASSERT_TRUE(M2.get());
+
+  *M1 = std::move(*M2);
+  for (StringRef Name : {"gv_fn", "gv_alias", "gv_ifunc"})
+    EXPECT_TRUE(isa_and_nonnull<GlobalVariable>(M1->getNamedValue(Name)))
+        << Name;
+  for (StringRef Name : {"fn_gv", "fn_alias", "fn_ifunc"})
+    EXPECT_TRUE(isa_and_nonnull<Function>(M1->getNamedValue(Name))) << Name;
+  for (StringRef Name : {"alias_gv", "alias_fn", "alias_ifunc"})
+    EXPECT_TRUE(isa_and_nonnull<GlobalAlias>(M1->getNamedValue(Name))) << Name;
+  for (StringRef Name : {"ifunc_gv", "ifunc_fn", "ifunc_alias"})
+    EXPECT_TRUE(isa_and_nonnull<GlobalIFunc>(M1->getNamedValue(Name))) << Name;
+}
+
 TEST(ModuleTest, RenumberMetadataPreservesContextWideUniqueIDs) {
   LLVMContext Context;
   Module M("M", Context);

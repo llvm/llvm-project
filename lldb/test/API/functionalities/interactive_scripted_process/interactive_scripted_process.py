@@ -304,7 +304,8 @@ def launch_scripted_process(target, class_name, dictionary):
     launch_info.SetScriptedProcessDictionary(structured_data)
 
     error = lldb.SBError()
-    return target.Launch(launch_info, error)
+    process = target.Launch(launch_info, error)
+    return process, error
 
 
 def duplicate_target(driving_target):
@@ -336,9 +337,11 @@ def create_mux_process(debugger, command, exe_ctx, result, dict):
 
     class_name = f"{__name__}.{MultiplexerScriptedProcess.__name__}"
     dictionary = {"driving_target_idx": debugger.GetIndexOfTarget(driving_target)}
-    mux_process = launch_scripted_process(mux_target, class_name, dictionary)
-    if not mux_process:
-        return result.SetError("Couldn't launch multiplexer scripted process")
+    _, error = launch_scripted_process(mux_target, class_name, dictionary)
+    if error.Fail():
+        return result.SetError(
+            f"Couldn't launch multiplexer scripted process: {error.GetCString()}"
+        )
 
 
 def create_child_processes(debugger, command, exe_ctx, result, dict):
@@ -369,9 +372,11 @@ def create_child_processes(debugger, command, exe_ctx, result, dict):
     class_name = f"{__name__}.{MultiplexedScriptedProcess.__name__}"
     dictionary = {"driving_target_idx": debugger.GetIndexOfTarget(mux_target)}
     dictionary["parity"] = 0
-    even_process = launch_scripted_process(even_target, class_name, dictionary)
-    if not even_process:
-        return result.SetError("Couldn't launch multiplexed even scripted process")
+    even_process, error = launch_scripted_process(even_target, class_name, dictionary)
+    if error.Fail():
+        return result.SetError(
+            f"Couldn't launch multiplexed even scripted process: {error.GetCString()}"
+        )
     multiplex(mux_process, even_process)
 
     # Create a target for the multiplexed odd scripted process
@@ -382,9 +387,11 @@ def create_child_processes(debugger, command, exe_ctx, result, dict):
         )
 
     dictionary["parity"] = 1
-    odd_process = launch_scripted_process(odd_target, class_name, dictionary)
-    if not odd_process:
-        return result.SetError("Couldn't launch multiplexed odd scripted process")
+    odd_process, error = launch_scripted_process(odd_target, class_name, dictionary)
+    if error.Fail():
+        return result.SetError(
+            f"Couldn't launch multiplexed odd scripted process: {error.GetCString()}"
+        )
     multiplex(mux_process, odd_process)
 
 

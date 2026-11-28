@@ -12,7 +12,7 @@
 
 @string = internal unnamed_addr constant [5 x i8] c"abcd\00", align 1
 
-define void @get_invariant_reg_usage(ptr %z) {
+define void @get_invariant_reg_usage(ptr %z) vscale_range(1,16) {
 ; CHECK-LABEL: LV: Checking a loop in 'get_invariant_reg_usage'
 ; CHECK: LV(REG): VF = vscale x 16
 ; CHECK-NEXT: LV(REG): Found max usage: 1 item
@@ -40,7 +40,7 @@ return:                    ;preds = %loopexit, %L.entry
   ret void
 }
 
-define void @load_and_compare_only_used_by_assume(ptr %a, ptr noalias %b) {
+define void @load_and_compare_only_used_by_assume(ptr %a, ptr noalias %b) vscale_range(1,16) {
 ; CHECK-LABEL: LV: Checking a loop in 'load_and_compare_only_used_by_assume'
 ; CHECK: LV(REG): VF = vscale x 4
 ; CHECK-NEXT: LV(REG): Found max usage: 2 item
@@ -68,7 +68,7 @@ exit:
   ret void
 }
 
-define void @dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum, i32 %n) #1 {
+define void @dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum, i32 %n) #1 vscale_range(1,16) {
 ; CHECK-LABEL: LV: Checking a loop in 'dotp_high_register_pressure' from <stdin>
 ; CHECK:       LV(REG): VF = 16
 ; CHECK-NEXT:  LV(REG): Found max usage: 2 item
@@ -186,7 +186,7 @@ for.body:
   br i1 %exitcond.not, label %for.cond.for.cond.cleanup_crit_edge, label %for.body
 }
 
-define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
+define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) vscale_range(1,16) {
 ; CHECK-LABEL: LV: Checking a loop in 'dotp_unrolled' from <stdin>
 ; CHECK:       LV(REG): VF = 16
 ; CHECK-NEXT:  LV(REG): Found max usage: 2 item
@@ -248,7 +248,7 @@ exit:
   ret i32 %result
 }
 
-define i64 @loop_reduction_and_store_last_element(ptr %src, ptr writeonly %dst) {
+define i64 @loop_reduction_and_store_last_element(ptr %src, ptr writeonly %dst) vscale_range(1,16) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_reduction_and_store_last_element'
 ; CHECK:       LV(REG): VF = 16
 ; CHECK-NEXT:  LV(REG): Found max usage: 2 item

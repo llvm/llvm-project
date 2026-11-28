@@ -16,35 +16,35 @@ module attributes {
   // eightbyte classification, but nothing here ever completes Incomplete
   // either, so no call or definition of this exact signature can arise
   // anywhere.  Left unclassified and unrewritten.
-  cir.func private @take_incomplete(!rec_Incomplete)
+  cir.func private @take_incomplete(!rec_Incomplete) requires_call_conv_lowering
 
   // CHECK: cir.func private @take_incomplete(!rec_Incomplete)
 
   // Same reasoning for an incomplete-by-value return type.
-  cir.func private @make_incomplete() -> !rec_Incomplete
+  cir.func private @make_incomplete() -> !rec_Incomplete requires_call_conv_lowering
 
   // CHECK: cir.func private @make_incomplete() -> !rec_Incomplete
 
   // The reject propagates through an enclosing struct and through an array
   // element, the same as any other unsupported member.
-  cir.func private @take_wrapped(!rec_Wraps)
+  cir.func private @take_wrapped(!rec_Wraps) requires_call_conv_lowering
 
   // CHECK: cir.func private @take_wrapped(!rec_Wraps)
 
-  cir.func private @take_incomplete_array(!cir.array<!rec_Incomplete x 4>)
+  cir.func private @take_incomplete_array(!cir.array<!rec_Incomplete x 4>) requires_call_conv_lowering
 
   // CHECK: cir.func private @take_incomplete_array(!cir.array<!rec_Incomplete x 4>)
 
   // A classifiable function sharing the module with an unclassifiable
   // declaration is still rewritten: skipping one function must not abort
   // the whole pass the way a hard NYI error would.
-  cir.func @take_pair(%arg0: !rec_Pair) {
+  cir.func @take_pair(%arg0: !rec_Pair) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @take_pair(%arg0: !u64i)
 
-  cir.func @call_pair(%arg0: !rec_Pair) {
+  cir.func @call_pair(%arg0: !rec_Pair) requires_call_conv_lowering {
     cir.call @take_pair(%arg0) : (!rec_Pair) -> ()
     cir.return
   }

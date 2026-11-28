@@ -17,11 +17,9 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Verifier.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::nvgpu;
@@ -29,18 +27,6 @@ using namespace mlir::nvgpu;
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc"
 
 void NVGPUDialect::initialize() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.cpp.inc"
-      >();
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/NVGPU/IR/NVGPUOps.cpp.inc"
-      >();
   declarePromisedInterfaces<memref::IndexedAccessOpInterface, LdMatrixOp>();
   declarePromisedInterfaces<memref::IndexedMemCopyOpInterface,
                             DeviceAsyncCopyOp>();

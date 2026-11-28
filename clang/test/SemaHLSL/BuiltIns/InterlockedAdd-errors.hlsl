@@ -2,6 +2,8 @@
 // RUN:   -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only \
 // RUN:   -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 // InterlockedAdd is provided as a set of address-space-qualified overloads
 // (groupshared/device, {int,uint,int64_t,uint64_t}, 2-arg/3-arg). Invalid
 // calls surface as "no matching function" with 16 candidates. The candidate

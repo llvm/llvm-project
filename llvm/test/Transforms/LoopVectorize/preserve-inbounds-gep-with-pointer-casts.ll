@@ -12,7 +12,7 @@ define void @preserve_inbounds_through_noop_gep(ptr %p) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY1]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -49,11 +49,11 @@ define void @bitcast_in_ptr_chain(ptr %src, ptr noalias %dst) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 32
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x double>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 4
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 32
 ; CHECK-NEXT:    store <4 x double> [[WIDE_LOAD]], ptr [[TMP3]], align 8
 ; CHECK-NEXT:    store <4 x double> [[WIDE_LOAD1]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
@@ -93,8 +93,8 @@ define void @addrspacecast_in_ptr_chain(ptr addrspace(1) %src, ptr noalias %dst)
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr addrspace(1) [[SRC]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr addrspace(1) [[SRC]], <4 x i64> [[STEP_ADD]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [8 x i8], ptr addrspace(1) [[SRC]], <4 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [8 x i8], ptr addrspace(1) [[SRC]], <4 x i64> [[STEP_ADD]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast <4 x ptr addrspace(1)> [[TMP0]] to <4 x ptr>
 ; CHECK-NEXT:    [[TMP7:%.*]] = addrspacecast <4 x ptr addrspace(1)> [[TMP1]] to <4 x ptr>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x ptr> [[TMP2]], i64 0
@@ -122,7 +122,7 @@ define void @addrspacecast_in_ptr_chain(ptr addrspace(1) %src, ptr noalias %dst)
 ; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x double> [[TMP25]], double [[TMP22]], i64 2
 ; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x double> [[TMP26]], double [[TMP23]], i64 3
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds double, ptr [[TMP28]], i64 4
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, ptr [[TMP28]], i64 32
 ; CHECK-NEXT:    store <4 x double> [[TMP19]], ptr [[TMP28]], align 8
 ; CHECK-NEXT:    store <4 x double> [[TMP27]], ptr [[TMP29]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8

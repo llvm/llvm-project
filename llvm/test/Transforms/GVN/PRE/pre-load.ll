@@ -317,7 +317,7 @@ return:
 define void @test7(i32 %N, ptr nocapture %G) nounwind ssp {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[G:%.*]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr double, ptr [[G:%.*]], i64 1
 ; CHECK-NEXT:    store double 1.000000e+00, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[N:%.*]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], 1
@@ -1176,6 +1176,48 @@ if.then:
 if.end:
   %l = load i32, ptr %p, align 4
   ret i32 %l
+}
+
+; PHI translation must not reuse an available GEP whose no-wrap flags are
+; stronger than those of the address being translated: the inbounds GEP may be
+; poison where the plain GEP is not.
+define i32 @pre_load_no_reuse_stronger_gep_flags(ptr %p, ptr %q, ptr %out, i1 %c) {
+; CHECK-LABEL: @pre_load_no_reuse_stronger_gep_flags(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[Q_1:%.*]] = getelementptr i32, ptr [[Q:%.*]], i64 1
+; CHECK-NEXT:    store ptr [[Q_1]], ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    [[V_PRE:%.*]] = load i32, ptr [[Q_1]], align 4
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       right:
+; CHECK-NEXT:    [[P_1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    store i32 0, ptr [[P_1]], align 4
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[V:%.*]] = phi i32 [ [[V_PRE]], [[LEFT]] ], [ 0, [[RIGHT]] ]
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[Q]], [[LEFT]] ], [ [[P]], [[RIGHT]] ]
+; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr i32, ptr [[PTR]], i64 1
+; CHECK-NEXT:    ret i32 [[V]]
+;
+entry:
+  %q.1 = getelementptr inbounds i32, ptr %q, i64 1
+  store ptr %q.1, ptr %out, align 8
+  br i1 %c, label %left, label %right
+
+left:
+  br label %join
+
+right:
+  %p.1 = getelementptr i32, ptr %p, i64 1
+  store i32 0, ptr %p.1, align 4
+  br label %join
+
+join:
+  %ptr = phi ptr [ %q, %left ], [ %p, %right ]
+  %ptr.1 = getelementptr i32, ptr %ptr, i64 1
+  %v = load i32, ptr %ptr.1, align 4
+  ret i32 %v
 }
 
 declare void @opaque(ptr) nounwind willreturn

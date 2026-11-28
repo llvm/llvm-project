@@ -13,7 +13,6 @@
 #include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/TypeUtilities.h"
 
 using namespace mlir;
@@ -43,10 +42,3 @@ static Type getI1SameShape(Type type) {
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/ArmSVE/IR/ArmSVETypes.cpp.inc"
-
-void ArmSVEDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/ArmSVE/IR/ArmSVE.cpp.inc"
-      >();
-}

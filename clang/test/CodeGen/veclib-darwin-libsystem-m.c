@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fveclib=Darwin_libsystem_m -triple arm64-apple-darwin %s -target-cpu apple-a7 -vectorize-loops -emit-llvm -O3 -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fveclib=Darwin_libsystem_m -triple arm64-apple-darwin %s -target-cpu apple-a7 -vectorize-loops -emit-llvm -O3 -o - | FileCheck %s %}
 
 // REQUIRES: aarch64-registered-target
 

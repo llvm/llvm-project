@@ -4,7 +4,6 @@
 # 16 bytes large.
 ---
 name: locals
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 stack:

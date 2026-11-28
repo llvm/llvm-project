@@ -386,4 +386,56 @@ def SPIRV_INTELMaskedScatterOp : SPIRV_IntelVendorOp<"MaskedScatter",
 
 // -----
 
+def SPIRV_INTELFunctionPointerCallOp : SPIRV_IntelVendorOp<"FunctionPointerCall",
+    [InFunctionScope]> {
+  let summary = "Call a function through a function pointer";
+
+  let description = [{
+    Result Type is the type of the return value of the function. It must be
+    the same as the Return Type of the function type pointed to by Function
+    Pointer.
+
+    Function Pointer must be a pointer to a function type.
+
+    Argument N is the object to copy to parameter N. Argument types must
+    match the parameter types of the pointee function type.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.INTEL.FunctionPointerCall %fp(%arg0)
+         : !spirv.ptr<(i32) -> i32, CodeSectionINTEL>, (i32) -> i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_INTEL_function_pointers]>,
+    Capability<[SPIRV_C_FunctionPointersINTEL]>
+  ];
+
+  let arguments = (ins
+    Type<And<[SPIRV_IsPtrType,
+              CPred<"::llvm::isa<::mlir::FunctionType>("
+                    "::llvm::cast<::mlir::spirv::PointerType>($_self)"
+                    ".getPointeeType())">]>,
+         "pointer to function type">:$function_pointer,
+    Variadic<SPIRV_Type>:$arguments
+  );
+
+  let results = (outs
+    Optional<SPIRV_Type>:$return_value
+  );
+
+  let autogenSerialization = 0;
+
+  let assemblyFormat = [{
+    $function_pointer `(` $arguments `)` attr-dict `:`
+      type($function_pointer) `,` functional-type($arguments, results)
+  }];
+}
+
+// -----
+
 #endif // MLIR_DIALECT_SPIRV_IR_INTEL_EXT_OPS

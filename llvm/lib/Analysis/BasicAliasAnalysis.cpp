@@ -56,6 +56,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <cassert>
 #include <cstdint>
@@ -224,6 +225,12 @@ static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
          !isPotentiallyReachableFromMany(Succs, BB, nullptr, DT, LI);
 }
 
+EarliestEscapeAnalysis::EarliestEscapeAnalysis(DominatorTree &DT,
+                                               const LoopInfo *LI,
+                                               const CycleInfo *CI)
+    : DT(DT), LI(LI), CI(CI),
+      BlockNumberEpoch(DT.getRoot()->getParent()->getBlockNumberEpoch()) {}
+
 CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
     const Value *Object, const Instruction *I, bool OrAt, bool ReturnCaptures) {
   if (!isIdentifiedFunctionLocal(Object))
@@ -253,17 +260,30 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
     if (!I)
       return false;
 
-    // Handle longjmp during re-entry.
-    if (callsReturnsTwiceFn())
-      return false;
-
     if (I == CaptureInst) {
-      if (OrAt)
+      if (OrAt || !isNotInCycle(I, &DT, LI, CI))
         return false;
-      return isNotInCycle(I, &DT, LI, CI);
+    } else {
+      // A capture earlier in the same block always reaches I. Otherwise,
+      // reachability only depends on the two blocks, so cache it.
+      const BasicBlock *CaptureBB = CaptureInst->getParent();
+      const BasicBlock *BB = I->getParent();
+      if (CaptureBB == BB && CaptureInst->comesBefore(I))
+        return false;
+      assert(BB->getParent()->getBlockNumberEpoch() == BlockNumberEpoch &&
+             "Blocks were renumbered while EarliestEscapeAnalysis was alive");
+      auto [It, Inserted] = IsReachableCache.try_emplace(
+          {CaptureBB->getNumber(), BB->getNumber()});
+      if (Inserted)
+        It->second =
+            isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI, CI);
+      if (It->second)
+        return false;
     }
 
-    return !isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI, CI);
+    // Handle longjmp during re-entry. Checked last, as it scans the whole
+    // function the first time it is queried.
+    return !callsReturnsTwiceFn();
   };
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
@@ -283,6 +303,20 @@ void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
     for (const Value *Obj : Iter->second)
       EarliestEscapes.erase(Obj);
     Inst2Obj.erase(I);
+  }
+}
+
+void EarliestEscapeAnalysis::insertPotentialCapture(const Instruction *I) {
+  for (const Use &U : I->operands()) {
+    if (!U->getType()->isPointerTy())
+      continue;
+
+    if (capturesAnyProvenance(
+            DetermineUseCaptureKind(U, /*Base=*/nullptr).UseCC)) {
+      EarliestEscapes.clear();
+      Inst2Obj.clear();
+      return;
+    }
   }
 }
 
@@ -437,7 +471,14 @@ struct LinearExpression {
     // (X +nsw Y) *nsw Z does not imply (X *nsw Z) +nsw (Y *nsw Z).
     bool NSW = IsNSW && (Other.isOne() || (MulIsNSW && Offset.isZero()));
     bool NUW = IsNUW && (Other.isOne() || MulIsNUW);
-    return LinearExpression(Val, Scale * Other, Offset * Other, NUW, NSW);
+    // (V *nsw Scale) *nsw Other is V *nsw (Scale * Other) only if the new
+    // scale does not overflow. Otherwise the scale we record is not the value
+    // V is multiplied by: V * 2^32 * 2^31 is V * 2^63 and is defined for
+    // V == -1, while V *nsw INT64_MIN is not.
+    bool ScaleOverflow;
+    APInt NewScale = Scale.smul_ov(Other, ScaleOverflow);
+    NSW &= !ScaleOverflow;
+    return LinearExpression(Val, NewScale, Offset * Other, NUW, NSW);
   }
 };
 }
@@ -488,17 +529,20 @@ static LinearExpression GetLinearExpression(
       case Instruction::Add: {
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
-        E.Offset += RHS;
+        // Folding the constants can overflow even if each add is nsw.
+        bool Overflow;
+        E.Offset = E.Offset.sadd_ov(RHS, Overflow);
         E.IsNUW &= NUW;
-        E.IsNSW &= NSW;
+        E.IsNSW &= NSW && !Overflow;
         break;
       }
       case Instruction::Sub: {
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), false), DL,
                                 Depth + 1, AC, DT);
-        E.Offset -= RHS;
+        bool Overflow;
+        E.Offset = E.Offset.ssub_ov(RHS, Overflow);
         E.IsNUW = false; // sub nuw x, y is not add nuw x, -y.
-        E.IsNSW &= NSW;
+        E.IsNSW &= NSW && !Overflow;
         break;
       }
       case Instruction::Mul:
@@ -506,7 +550,7 @@ static LinearExpression GetLinearExpression(
                                 Depth + 1, AC, DT)
                 .mul(RHS, NUW, NSW);
         break;
-      case Instruction::Shl:
+      case Instruction::Shl: {
         // We're trying to linearize an expression of the kind:
         //   shl i8 -128, 36
         // where the shift count exceeds the bitwidth of the type.
@@ -515,13 +559,19 @@ static LinearExpression GetLinearExpression(
         if (RHS.getLimitedValue() > Val.getBitWidth())
           return Val;
 
+        // X << C is X * (1 << C). Treat it as a multiplication, so that nsw
+        // is dropped in the cases where mul drops it. In addition, 1 << C is
+        // INT_MIN when C is the bit width minus one, so shl nsw is not mul
+        // nsw by that constant: shl nsw -1, C is defined, mul nsw -1, INT_MIN
+        // is not.
+        unsigned BitWidth = Val.getBitWidth();
+        unsigned ShAmt = RHS.getLimitedValue();
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0), NSW), DL,
-                                Depth + 1, AC, DT);
-        E.Offset <<= RHS.getLimitedValue();
-        E.Scale <<= RHS.getLimitedValue();
-        E.IsNUW &= NUW;
-        E.IsNSW &= NSW;
+                                Depth + 1, AC, DT)
+                .mul(APInt(BitWidth, 1).shl(ShAmt), NUW,
+                     NSW && ShAmt < BitWidth - 1);
         break;
+      }
       }
       return E;
     }
@@ -702,6 +752,17 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
     assert(GEPOp->getSourceElementType()->isSized() && "GEP must be sized");
 
+    // Fast path for canonical constant-offset getelementptr i8.
+    if (GEPOp->getSourceElementType()->isIntegerTy(8) &&
+        GEPOp->getNumOperands() == 2) {
+      if (const auto *CIdx = dyn_cast<ConstantInt>(GEPOp->getOperand(1))) {
+        if (!CIdx->isZero())
+          Decomposed.Offset += CIdx->getValue().sextOrTrunc(IndexSize);
+        V = GEPOp->getOperand(0);
+        continue;
+      }
+    }
+
     // Walk the indices of the GEP, accumulating them into BaseOff/VarIndices.
     gep_type_iterator GTI = gep_type_begin(GEPOp);
     for (User::const_op_iterator I = GEPOp->op_begin() + 1, E = GEPOp->op_end();
@@ -753,8 +814,9 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           CastedValue(Index, 0, SExtBits, TruncBits, NonNeg), DL, 0, AC, DT);
 
       // Scale by the type size.
-      unsigned TypeSize = AllocTypeSize.getFixedValue();
-      LE = LE.mul(APInt(IndexSize, TypeSize), NUW, NUSW);
+      APInt TypeSize(IndexSize, AllocTypeSize.getFixedValue(),
+                     /*isSigned=*/false, /*implicitTrunc=*/true);
+      LE = LE.mul(TypeSize, NUW, NUSW);
       Decomposed.Offset += LE.Offset;
       APInt Scale = LE.Scale;
       if (!LE.IsNUW)
@@ -1650,12 +1712,24 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
                                                AAQI.AllowEphemerals)) ||
               (AAQI.AllowEphemerals && (ValidAssumeForPtrContext(V1) ||
                                         ValidAssumeForPtrContext(V2)))) {
+            // The assumption relates values from the same iteration. Across
+            // iterations, both underlying objects must be invariant.
+            if (!isValueEqualInPotentialCycles(O1, O1, AAQI) ||
+                !isValueEqualInPotentialCycles(O2, O2, AAQI))
+              break;
             return AliasResult::NoAlias;
           }
         }
       }
     }
   }
+
+  // aliasCheckRecursive() only looks through GEPs, phis and selects, and
+  // otherwise only refines accesses to the same underlying object. All other
+  // pairs are MayAlias without further queries, so don't cache them.
+  if (O1 != O2 && !isa<GEPOperator, PHINode, SelectInst>(V1) &&
+      !isa<GEPOperator, PHINode, SelectInst>(V2))
+    return AliasResult::MayAlias;
 
   // If one the accesses may be before the accessed pointer, canonicalize this
   // by using unknown after-pointer sizes for both accesses. This is

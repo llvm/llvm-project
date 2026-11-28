@@ -131,6 +131,16 @@ def ACCOptimizeFirstprivateMap
                            "mlir::arith::ArithDialect"];
 }
 
+def ACCOptimizeDataMapping
+    : Pass<"acc-optimize-data-mapping", "mlir::ModuleOp"> {
+  let summary = "Change an implicit copy to a copyin";
+  let description = [{
+    Changes an implicit copy to a copyin for named constants and for
+    variables that are not modified inside the compute region.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect"];
+}
+
 def ACCMapInfoPrep
     : InterfacePass<"acc-fir-map-info-prep", "mlir::FunctionOpInterface"> {
   let summary = "Materialize acc.map_info for FIR mappings and privatization";

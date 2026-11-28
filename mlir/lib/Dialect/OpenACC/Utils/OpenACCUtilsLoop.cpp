@@ -14,7 +14,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
@@ -242,9 +242,20 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
     scfIVs.push_back(forOp.getInductionVar());
   mapACCLoopIVsToSCFIVs(loopOp, scfIVs, rewriter, mapping);
 
-  // Clone the loop body into the innermost scf.for
-  cloneACCRegionIntoForLoop(&loopOp.getRegion(), forOps.back().getBody(),
-                            rewriter.getInsertionPoint(), mapping, rewriter);
+  // Clone the loop body into the innermost scf.for. scf.for has a single-block
+  // region, so a multi-block body is wrapped in scf.execute_region, matching
+  // convertACCLoopToSCFParallel.
+  if (!loopOp.getRegion().hasOneBlock()) {
+    auto exeRegion = wrapMultiBlockRegionWithSCFExecuteRegion(
+        loopOp.getRegion(), mapping, loc, rewriter);
+    if (!exeRegion) {
+      rewriter.eraseOp(forOps.front());
+      return nullptr;
+    }
+  } else {
+    cloneACCRegionIntoForLoop(&loopOp.getRegion(), forOps.back().getBody(),
+                              rewriter.getInsertionPoint(), mapping, rewriter);
+  }
 
   // Denormalize IV uses: original_iv = normalized_iv * orig_step + orig_lb
   for (size_t idx = 0; idx < forOps.size(); ++idx) {

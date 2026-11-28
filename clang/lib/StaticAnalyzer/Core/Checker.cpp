@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 
 using namespace clang;
 using namespace ento;

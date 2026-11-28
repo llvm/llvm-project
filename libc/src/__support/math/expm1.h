@@ -1,31 +1,34 @@
-//===-- Implementation header for expm1 -------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Double-precision expm1 function.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXPM1_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXPM1_H
 
-#include "common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
-#include "exp_constants.h"
-#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
-#include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/FPUtil/triple_double.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/math/exp_constants.h"
+#include "src/__support/sign.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -38,7 +41,6 @@ namespace expm1_internal {
 #endif
 
 using fputil::DoubleDouble;
-using fputil::TripleDouble;
 using DFloat128 = typename fputil::DyadicFloat<128>;
 
 using LIBC_NAMESPACE::operator""_u128;
@@ -65,8 +67,6 @@ LIBC_INLINE_VAR constexpr double MLOG_2_EXP2_M12_MID = 0x1.718432a1b0e26p-47;
 LIBC_INLINE_VAR constexpr double MLOG_2_EXP2_M12_MID_30 = 0x1.718432ap-47;
 LIBC_INLINE_VAR constexpr double MLOG_2_EXP2_M12_LO = 0x1.b0e2633fe0685p-79;
 
-using namespace common_constants_internal;
-
 // Polynomial approximations with double precision:
 // Return expm1(dx) / x ~ 1 + dx / 2 + dx^2 / 6 + dx^3 / 24.
 // For |dx| < 2^-13 + 2^-30:
@@ -84,42 +84,44 @@ LIBC_INLINE double poly_approx_d(double dx) {
   return p;
 }
 
+// Taylor polynomial coefficients in double-double precision.
+LIBC_INLINE_VAR constexpr DoubleDouble COEFFS_DD[] = {
+    {0, 0x1p0},                                      // 1
+    {0, 0x1p-1},                                     // 1/2
+    {0x1.5555555555555p-57, 0x1.5555555555555p-3},   // 1/6
+    {0x1.5555555555555p-59, 0x1.5555555555555p-5},   // 1/24
+    {0x1.1111111111111p-63, 0x1.1111111111111p-7},   // 1/120
+    {-0x1.f49f49f49f49fp-65, 0x1.6c16c16c16c17p-10}, // 1/720
+    {0x1.a01a01a01a01ap-73, 0x1.a01a01a01a01ap-13},  // 1/5040
+};
+
 // Polynomial approximation with double-double precision:
 // Return expm1(dx) / dx ~ 1 + dx / 2 + dx^2 / 6 + ... + dx^6 / 5040
 // For |dx| < 2^-13 + 2^-30:
 //   | output - expm1(dx) | < 2^-101
 LIBC_INLINE DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
-  // Taylor polynomial.
-  constexpr DoubleDouble COEFFS[] = {
-      {0, 0x1p0},                                      // 1
-      {0, 0x1p-1},                                     // 1/2
-      {0x1.5555555555555p-57, 0x1.5555555555555p-3},   // 1/6
-      {0x1.5555555555555p-59, 0x1.5555555555555p-5},   // 1/24
-      {0x1.1111111111111p-63, 0x1.1111111111111p-7},   // 1/120
-      {-0x1.f49f49f49f49fp-65, 0x1.6c16c16c16c17p-10}, // 1/720
-      {0x1.a01a01a01a01ap-73, 0x1.a01a01a01a01ap-13},  // 1/5040
-  };
-
-  DoubleDouble p = fputil::polyeval(dx, COEFFS[0], COEFFS[1], COEFFS[2],
-                                    COEFFS[3], COEFFS[4], COEFFS[5], COEFFS[6]);
+  DoubleDouble p =
+      fputil::polyeval(dx, COEFFS_DD[0], COEFFS_DD[1], COEFFS_DD[2],
+                       COEFFS_DD[3], COEFFS_DD[4], COEFFS_DD[5], COEFFS_DD[6]);
   return p;
 }
+
+// Taylor polynomial coefficients in 128-bit precision.
+[[maybe_unused]] LIBC_INLINE_VAR constexpr DFloat128 COEFFS_128[]{
+    {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
+    {Sign::POS, -128, 0x80000000'00000000'00000000'00000000_u128}, // 0.5
+    {Sign::POS, -130, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/6
+    {Sign::POS, -132, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/24
+    {Sign::POS, -134, 0x88888888'88888888'88888888'88888889_u128}, // 1/120
+    {Sign::POS, -137, 0xb60b60b6'0b60b60b'60b60b60'b60b60b6_u128}, // 1/720
+    {Sign::POS, -140, 0xd00d00d0'0d00d00d'00d00d00'd00d00d0_u128}, // 1/5040
+};
 
 // Polynomial approximation with 128-bit precision:
 // Return (exp(dx) - 1)/dx ~ 1 + dx / 2 + dx^2 / 6 + ... + dx^6 / 5040
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
 [[maybe_unused]] LIBC_INLINE DFloat128 poly_approx_f128(const DFloat128 &dx) {
-  constexpr DFloat128 COEFFS_128[]{
-      {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
-      {Sign::POS, -128, 0x80000000'00000000'00000000'00000000_u128}, // 0.5
-      {Sign::POS, -130, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/6
-      {Sign::POS, -132, 0xaaaaaaaa'aaaaaaaa'aaaaaaaa'aaaaaaab_u128}, // 1/24
-      {Sign::POS, -134, 0x88888888'88888888'88888888'88888889_u128}, // 1/120
-      {Sign::POS, -137, 0xb60b60b6'0b60b60b'60b60b60'b60b60b6_u128}, // 1/720
-      {Sign::POS, -140, 0xd00d00d0'0d00d00d'00d00d00'd00d00d0_u128}, // 1/5040
-  };
-
   DFloat128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1],
                                  COEFFS_128[2], COEFFS_128[3], COEFFS_128[4],
                                  COEFFS_128[5], COEFFS_128[6]);
@@ -235,48 +237,44 @@ LIBC_INLINE double set_exceptional(double x) {
   // |x| <= 2^-53.
   if (x_abs <= 0x3ca0'0000'0000'0000ULL) {
     // expm1(x) ~ x.
-
     if (LIBC_UNLIKELY(x_abs <= 0x0370'0000'0000'0000ULL)) {
       if (LIBC_UNLIKELY(x_abs == 0))
         return x;
-      // |x| <= 2^-968, need to scale up a bit before rounding, then scale it
-      // back down.
-      return 0x1.0p-200 * fputil::multiply_add(x, 0x1.0p+200, 0x1.0p-1022);
+      // For 0 < |x| <= 2^-968, scale up by 2^200 before rounding, then scale
+      // back down by 2^-200.
+      double scaled = fputil::multiply_add(x, 0x1.0p+200, 0x1.0p-1022);
+      return 0x1.0p-200 * scaled;
     }
 
     // 2^-968 < |x| <= 2^-53.
     return fputil::round_result_slightly_up(x);
   }
 
-  // x < log(2^-54) || x >= 0x1.6232bdd7abcd3p+9 or inf/nan.
+  // x < log(2^-54) || x >= 0x1.62e42fefa39fp+9 or inf/nan.
 
   // x < log(2^-54) or -inf/nan
   if (x_u >= 0xc042'b708'8723'20e2ULL) {
-    // expm1(-Inf) = -1
-    if (xbits.is_inf())
-      return -1.0;
-
-    // exp(nan) = nan
-    if (xbits.is_nan())
+    if (xbits.is_inf_or_nan()) {
+      if (xbits.is_inf())
+        return -1.0;
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
       return x;
+    }
 
     return fputil::round_result_slightly_up(-1.0);
   }
 
   // x >= round(log(MAX_NORMAL), D, RU) = 0x1.62e42fefa39fp+9 or +inf/nan
-  // x is finite
-  if (x_u < 0x7ff0'0000'0000'0000ULL) {
-#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-    int rounding = fputil::quick_get_round();
-    if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-      return FPBits::max_normal().get_val();
-#endif
-
-    fputil::set_errno_if_required(ERANGE);
-    fputil::raise_except_if_required(FE_OVERFLOW);
+  if (x_u < 0x7ff0'0000'0000'0000ULL)
+    return fputil::set_overflow<double>();
+  if (xbits.is_signaling_nan()) {
+    fputil::raise_except_if_required(FE_INVALID);
+    return FPBits::quiet_nan().get_val();
   }
-  // x is +inf or nan
-  return x + FPBits::inf().get_val();
+  return x;
 }
 
 } // namespace expm1_internal
@@ -401,9 +399,12 @@ LIBC_INLINE double expm1(double x) {
 
   DoubleDouble exp_mid = fputil::quick_mult(exp_mid1, exp_mid2);
 
-  // -2^(-hi)
+  // Clamp -2^(-hi) to -2^-1022 when hi >= 1023 so the biased exponent stays >=
+  // 1; the difference from -2^(-hi) is <= 2^-1022 << ERR_DD.
+  int one_exp = (hi < FPBits::EXP_BIAS) ? (FPBits::EXP_BIAS - hi) : 1;
   double one_scaled =
-      FPBits::create_value(Sign::NEG, FPBits::EXP_BIAS - hi, 0).get_val();
+      FPBits::create_value(Sign::NEG, static_cast<uint16_t>(one_exp), 0)
+          .get_val();
 
   // 2^(mid1 + mid2) - 2^(-hi)
   DoubleDouble hi_part = x_is_neg ? fputil::exact_add(one_scaled, exp_mid.hi)
@@ -454,8 +455,10 @@ LIBC_INLINE double expm1(double x) {
 
   double err_d = cpp::bit_cast<double>(ERR_D + err);
 
-  double upper = hi_part.hi + (lo + err_d);
-  double lower = hi_part.hi + (lo - err_d);
+  double lo_u = lo + err_d;
+  double lo_l = lo - err_d;
+  double upper = hi_part.hi + lo_u;
+  double lower = hi_part.hi + lo_l;
 
 #ifdef DEBUGDEBUG
   std::cout << "=== FAST PASS ===\n"
@@ -496,8 +499,10 @@ LIBC_INLINE double expm1(double x) {
 #else
   double err_dd = cpp::bit_cast<double>(ERR_DD + err);
 
-  double upper_dd = r_dd.hi + (r_dd.lo + err_dd);
-  double lower_dd = r_dd.hi + (r_dd.lo - err_dd);
+  double r_lo_u = r_dd.lo + err_dd;
+  double r_lo_l = r_dd.lo - err_dd;
+  double upper_dd = r_dd.hi + r_lo_u;
+  double lower_dd = r_dd.hi + r_lo_l;
 
   if (LIBC_LIKELY(upper_dd == lower_dd)) {
     int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);

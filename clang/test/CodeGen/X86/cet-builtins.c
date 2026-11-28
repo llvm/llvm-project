@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -ffreestanding %s -triple=i386-unknown-unknown -target-feature +shstk -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=I386 --check-prefix=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding %s -triple=i386-unknown-unknown -target-feature +shstk -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=I386 --check-prefix=CHECK %}
 // RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +shstk  -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=X86_64  --check-prefix=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffreestanding %s -triple=x86_64-unknown-unknown -target-feature +shstk  -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefix=X86_64  --check-prefix=CHECK %}
 
 #include <immintrin.h>
 

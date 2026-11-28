@@ -17,7 +17,7 @@
 
 template <class T>
 class small_pointer {
-  std::uint16_t offset;
+  [[maybe_unused]] std::uint16_t offset;
 };
 
 template <class T>

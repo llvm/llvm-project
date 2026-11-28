@@ -1,3 +1,11 @@
+posix: posix-2024
+types:
+  fsblkcnt_t:
+    in-latest-posix: ''
+  fsfilcnt_t:
+    in-latest-posix: ''
+  struct statvfs:
+    in-latest-posix: ''
 functions:
   fstatvfs:
     in-latest-posix: ''

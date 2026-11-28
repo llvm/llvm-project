@@ -49,6 +49,13 @@ entry:
   ret i1 %ret
 }
 
+define noundef i1 @quad_all(i1 %x) {
+entry:
+  ; CHECK: Function quad_all : [[WAVE_FLAG]]
+  %ret = call i1 @llvm.dx.quad.all(i1 %x)
+  ret i1 %ret
+}
+
 define noundef i32 @wave_bit_or(i32 %x) {
 entry:
   ; CHECK: Function wave_bit_or : [[WAVE_FLAG]]
@@ -67,6 +74,62 @@ define noundef i32 @wave_bit_and(i32 %x) {
 entry:
   ; CHECK: Function wave_bit_and : [[WAVE_FLAG]]
   %ret = call i32 @llvm.dx.wave.reduce.and(i32 %x)
+  ret i32 %ret
+}
+
+define i32 @wave_multi_prefix_bit_and(i32 %x) {
+  ; CHECK: Function wave_multi_prefix_bit_and : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.multi.prefix.bit.and.i32(
+      i32 %x, i32 1, i32 2, i32 4, i32 8)
+  ret i32 %ret
+}
+
+define i32 @wave_multi_prefix_bit_or(i32 %x) {
+  ; CHECK: Function wave_multi_prefix_bit_or : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.multi.prefix.bit.or.i32(
+      i32 %x, i32 1, i32 2, i32 4, i32 8)
+  ret i32 %ret
+}
+
+define i32 @wave_multi_prefix_bit_xor(i32 %x) {
+  ; CHECK: Function wave_multi_prefix_bit_xor : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.multi.prefix.bit.xor.i32(
+      i32 %x, i32 1, i32 2, i32 4, i32 8)
+  ret i32 %ret
+}
+
+define i32 @wave_multi_prefix_count_bits(i1 %x) {
+  ; CHECK: Function wave_multi_prefix_count_bits : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.multi.prefix.bit.count(
+      i1 %x, i32 1, i32 2, i32 4, i32 8)
+  ret i32 %ret
+}
+
+define float @wave_multi_prefix_product(float %x) {
+  ; CHECK: Function wave_multi_prefix_product : [[WAVE_FLAG]]
+  %ret = call float @llvm.dx.wave.multi.prefix.product.f32(
+      float %x, i32 1, i32 2, i32 4, i32 8)
+  ret float %ret
+}
+
+define i32 @wave_multi_prefix_uproduct(i32 %x) {
+  ; CHECK: Function wave_multi_prefix_uproduct : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.multi.prefix.uproduct.i32(
+      i32 %x, i32 1, i32 2, i32 4, i32 8)
+  ret i32 %ret
+}
+
+define float @wave_multi_prefix_sum(float %x) {
+  ; CHECK: Function wave_multi_prefix_sum : [[WAVE_FLAG]]
+  %ret = call float @llvm.dx.wave.multi.prefix.sum.f32(
+      float %x, i32 1, i32 2, i32 4, i32 8)
+  ret float %ret
+}
+
+define i32 @wave_multi_prefix_usum(i32 %x) {
+  ; CHECK: Function wave_multi_prefix_usum : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.multi.prefix.usum.i32(
+      i32 %x, i32 1, i32 2, i32 4, i32 8)
   ret i32 %ret
 }
 

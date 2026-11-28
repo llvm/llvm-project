@@ -8,6 +8,9 @@
 
 #include "llvm/Support/SuffixTree.h"
 #include "gtest/gtest.h"
+#include <algorithm>
+#include <limits>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -271,6 +274,84 @@ TEST(SuffixTreeTest, TestSubstringRepeatsWithLeafDescendants) {
         }
       }
     }
+  }
+}
+
+using SubstringResults =
+    std::vector<std::pair<unsigned, std::vector<unsigned>>>;
+
+// Neither substring enumeration nor occurrence ordering is part of these tests.
+static SubstringResults collectSubstrings(SuffixTree &Tree) {
+  SubstringResults Results;
+  for (const auto &Repeat : Tree) {
+    std::vector<unsigned> Starts(Repeat.StartIndices.begin(),
+                                 Repeat.StartIndices.end());
+    std::sort(Starts.begin(), Starts.end());
+    Results.emplace_back(Repeat.Length, std::move(Starts));
+  }
+  std::sort(Results.begin(), Results.end());
+  return Results;
+}
+
+TEST(SuffixTreeTest, NoBoundaryAllowsRepeatedMaxUnsigned) {
+  const unsigned Max = std::numeric_limits<unsigned>::max();
+  std::vector<unsigned> Input = {Max, 1, Max, 1, 2};
+  const SubstringResults Expected = {{2, {0, 2}}};
+  for (bool LeafDescendants : {false, true}) {
+    SCOPED_TRACE(LeafDescendants);
+    SuffixTree Default(Input, LeafDescendants);
+    SuffixTree NoBoundary(Input, LeafDescendants, std::nullopt);
+    EXPECT_EQ(collectSubstrings(Default), Expected);
+    EXPECT_EQ(collectSubstrings(NoBoundary), Expected);
+  }
+}
+
+TEST(SuffixTreeTest, UniqueTerminatorsPreserveRepeatedSubstrings) {
+  // Include adjacent terminators and a one-symbol range, whose boundary leaves
+  // may be pruned, alongside a repeated two-symbol range that must be retained.
+  std::vector<unsigned> Input = {100, 1, 101, 1, 2, 102, 1, 2, 103, 104};
+  const SubstringResults Expected = {{2, {3, 6}}};
+  for (bool LeafDescendants : {false, true}) {
+    SCOPED_TRACE(LeafDescendants);
+    SuffixTree Default(Input, LeafDescendants);
+    SuffixTree Boundaries(Input, LeafDescendants, /*BoundaryStart=*/100);
+    EXPECT_EQ(collectSubstrings(Default), Expected);
+    EXPECT_EQ(collectSubstrings(Boundaries), Expected);
+  }
+}
+
+TEST(SuffixTreeTest, PrunedSingletonRanges) {
+  // Pruning leaves empty internal nodes alongside a retained repeated range.
+  std::vector<unsigned> Input = {1, 100, 1, 101, 2, 3, 102, 2, 3, 103};
+  const SubstringResults Expected = {{2, {4, 7}}};
+  for (bool LeafDescendants : {false, true}) {
+    SCOPED_TRACE(LeafDescendants);
+    SuffixTree Default(Input, LeafDescendants);
+    SuffixTree Boundaries(Input, LeafDescendants, /*BoundaryStart=*/100);
+    EXPECT_EQ(collectSubstrings(Default), Expected);
+    EXPECT_EQ(collectSubstrings(Boundaries), Expected);
+  }
+}
+
+TEST(SuffixTreeTest, MaxUnsignedBoundary) {
+  const unsigned Max = std::numeric_limits<unsigned>::max();
+  std::vector<unsigned> Input = {1, 2, 1, 2, Max};
+  const SubstringResults Expected = {{2, {0, 2}}};
+  for (bool LeafDescendants : {false, true}) {
+    SCOPED_TRACE(LeafDescendants);
+    SuffixTree Default(Input, LeafDescendants);
+    SuffixTree Boundary(Input, LeafDescendants, /*BoundaryStart=*/Max);
+    EXPECT_EQ(collectSubstrings(Default), Expected);
+    EXPECT_EQ(collectSubstrings(Boundary), Expected);
+  }
+}
+
+TEST(SuffixTreeTest, AllSymbolsAreUniqueTerminators) {
+  std::vector<unsigned> Input = {0, 1, 2, 3};
+  for (bool LeafDescendants : {false, true}) {
+    SCOPED_TRACE(LeafDescendants);
+    SuffixTree Tree(Input, LeafDescendants, /*BoundaryStart=*/0);
+    EXPECT_TRUE(collectSubstrings(Tree).empty());
   }
 }
 

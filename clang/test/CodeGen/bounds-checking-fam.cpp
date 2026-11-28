@@ -1,5 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -emit-llvm -triple x86_64 -fsanitize=array-bounds %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-STRICT-0
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -triple x86_64 -fsanitize=array-bounds %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-STRICT-0 %}
 //
 // Disable checks on FAM even though the class doesn't have standard layout.
 

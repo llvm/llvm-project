@@ -1,4 +1,5 @@
 ; RUN: %clang_cc1 -triple x86_64-apple-darwin10 -Os -emit-llvm -fobjc-arc -o - %s | FileCheck %s
+; RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin10 -Os -emit-llvm -fobjc-arc -o - %s | FileCheck %s %}
 
 declare ptr @llvm.objc.retain(ptr)
 declare void @llvm.objc.release(ptr)

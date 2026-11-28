@@ -27,192 +27,98 @@
 @i64 = global i64 0
 
 define void @const_v16i8() nounwind {
-; O32-BE-LABEL: const_v16i8:
-; O32-BE:       # %bb.0:
-; O32-BE-NEXT:    lui $2, %hi(_gp_disp)
-; O32-BE-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; O32-BE-NEXT:    addu $1, $2, $25
-; O32-BE-NEXT:    lw $2, %got(v16i8)($1)
-; O32-BE-NEXT:    ldi.b $w0, 0
-; O32-BE-NEXT:    st.b $w0, 0($2)
-; O32-BE-NEXT:    ldi.b $w0, 1
-; O32-BE-NEXT:    st.b $w0, 0($2)
-; O32-BE-NEXT:    lw $3, %got($CPI0_0)($1)
-; O32-BE-NEXT:    addiu $3, $3, %lo($CPI0_0)
-; O32-BE-NEXT:    ld.b $w0, 0($3)
-; O32-BE-NEXT:    st.b $w0, 0($2)
-; O32-BE-NEXT:    lw $1, %got($CPI0_1)($1)
-; O32-BE-NEXT:    addiu $1, $1, %lo($CPI0_1)
-; O32-BE-NEXT:    ld.b $w0, 0($1)
-; O32-BE-NEXT:    st.b $w0, 0($2)
-; O32-BE-NEXT:    ldi.h $w0, 256
-; O32-BE-NEXT:    st.b $w0, 0($2)
-; O32-BE-NEXT:    lui $1, 258
-; O32-BE-NEXT:    ori $1, $1, 772
-; O32-BE-NEXT:    fill.w $w0, $1
-; O32-BE-NEXT:    st.b $w0, 0($2)
-; O32-BE-NEXT:    lui $3, 1286
-; O32-BE-NEXT:    ori $3, $3, 1800
-; O32-BE-NEXT:    fill.w $w0, $3
-; O32-BE-NEXT:    insert.w $w0[1], $1
-; O32-BE-NEXT:    splati.d $w0, $w0[0]
-; O32-BE-NEXT:    jr $ra
-; O32-BE-NEXT:    st.b $w0, 0($2)
+; O32-LABEL: const_v16i8:
+; O32:       # %bb.0:
+; O32-NEXT:    lui $2, %hi(_gp_disp)
+; O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; O32-NEXT:    addu $1, $2, $25
+; O32-NEXT:    lw $2, %got(v16i8)($1)
+; O32-NEXT:    ldi.b $w0, 0
+; O32-NEXT:    st.b $w0, 0($2)
+; O32-NEXT:    ldi.b $w0, 1
+; O32-NEXT:    st.b $w0, 0($2)
+; O32-NEXT:    lw $3, %got($CPI0_0)($1)
+; O32-NEXT:    addiu $3, $3, %lo($CPI0_0)
+; O32-NEXT:    ld.b $w0, 0($3)
+; O32-NEXT:    st.b $w0, 0($2)
+; O32-NEXT:    lw $1, %got($CPI0_1)($1)
+; O32-NEXT:    addiu $1, $1, %lo($CPI0_1)
+; O32-NEXT:    ld.b $w0, 0($1)
+; O32-NEXT:    st.b $w0, 0($2)
+; O32-NEXT:    ldi.h $w0, 1
+; O32-NEXT:    st.b $w0, 0($2)
+; O32-NEXT:    lui $1, 1027
+; O32-NEXT:    ori $1, $1, 513
+; O32-NEXT:    fill.w $w0, $1
+; O32-NEXT:    st.b $w0, 0($2)
+; O32-NEXT:    lui $1, 2055
+; O32-NEXT:    ori $1, $1, 1541
+; O32-NEXT:    insert.w $w0[1], $1
+; O32-NEXT:    splati.d $w0, $w0[0]
+; O32-NEXT:    jr $ra
+; O32-NEXT:    st.b $w0, 0($2)
 ;
-; O32-LE-LABEL: const_v16i8:
-; O32-LE:       # %bb.0:
-; O32-LE-NEXT:    lui $2, %hi(_gp_disp)
-; O32-LE-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; O32-LE-NEXT:    addu $1, $2, $25
-; O32-LE-NEXT:    lw $2, %got(v16i8)($1)
-; O32-LE-NEXT:    ldi.b $w0, 0
-; O32-LE-NEXT:    st.b $w0, 0($2)
-; O32-LE-NEXT:    ldi.b $w0, 1
-; O32-LE-NEXT:    st.b $w0, 0($2)
-; O32-LE-NEXT:    lw $3, %got($CPI0_0)($1)
-; O32-LE-NEXT:    addiu $3, $3, %lo($CPI0_0)
-; O32-LE-NEXT:    ld.b $w0, 0($3)
-; O32-LE-NEXT:    st.b $w0, 0($2)
-; O32-LE-NEXT:    lw $1, %got($CPI0_1)($1)
-; O32-LE-NEXT:    addiu $1, $1, %lo($CPI0_1)
-; O32-LE-NEXT:    ld.b $w0, 0($1)
-; O32-LE-NEXT:    st.b $w0, 0($2)
-; O32-LE-NEXT:    ldi.h $w0, 1
-; O32-LE-NEXT:    st.b $w0, 0($2)
-; O32-LE-NEXT:    lui $1, 1027
-; O32-LE-NEXT:    ori $1, $1, 513
-; O32-LE-NEXT:    fill.w $w0, $1
-; O32-LE-NEXT:    st.b $w0, 0($2)
-; O32-LE-NEXT:    lui $1, 2055
-; O32-LE-NEXT:    ori $1, $1, 1541
-; O32-LE-NEXT:    insert.w $w0[1], $1
-; O32-LE-NEXT:    splati.d $w0, $w0[0]
-; O32-LE-NEXT:    jr $ra
-; O32-LE-NEXT:    st.b $w0, 0($2)
+; N32-LABEL: const_v16i8:
+; N32:       # %bb.0:
+; N32-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v16i8)))
+; N32-NEXT:    addu $1, $1, $25
+; N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(const_v16i8)))
+; N32-NEXT:    lw $2, %got_disp(v16i8)($1)
+; N32-NEXT:    ldi.b $w0, 0
+; N32-NEXT:    st.b $w0, 0($2)
+; N32-NEXT:    ldi.b $w0, 1
+; N32-NEXT:    st.b $w0, 0($2)
+; N32-NEXT:    lw $3, %got_page(.LCPI0_0)($1)
+; N32-NEXT:    addiu $3, $3, %got_ofst(.LCPI0_0)
+; N32-NEXT:    ld.b $w0, 0($3)
+; N32-NEXT:    st.b $w0, 0($2)
+; N32-NEXT:    lw $1, %got_page(.LCPI0_1)($1)
+; N32-NEXT:    addiu $1, $1, %got_ofst(.LCPI0_1)
+; N32-NEXT:    ld.b $w0, 0($1)
+; N32-NEXT:    st.b $w0, 0($2)
+; N32-NEXT:    ldi.h $w0, 1
+; N32-NEXT:    st.b $w0, 0($2)
+; N32-NEXT:    lui $1, 1027
+; N32-NEXT:    ori $1, $1, 513
+; N32-NEXT:    fill.w $w0, $1
+; N32-NEXT:    st.b $w0, 0($2)
+; N32-NEXT:    lui $3, 2055
+; N32-NEXT:    ori $3, $3, 1541
+; N32-NEXT:    dinsu $1, $3, 32, 32
+; N32-NEXT:    fill.d $w0, $1
+; N32-NEXT:    jr $ra
+; N32-NEXT:    st.b $w0, 0($2)
 ;
-; N32-BE-LABEL: const_v16i8:
-; N32-BE:       # %bb.0:
-; N32-BE-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v16i8)))
-; N32-BE-NEXT:    addu $1, $1, $25
-; N32-BE-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(const_v16i8)))
-; N32-BE-NEXT:    lw $2, %got_disp(v16i8)($1)
-; N32-BE-NEXT:    ldi.b $w0, 0
-; N32-BE-NEXT:    st.b $w0, 0($2)
-; N32-BE-NEXT:    ldi.b $w0, 1
-; N32-BE-NEXT:    st.b $w0, 0($2)
-; N32-BE-NEXT:    lw $3, %got_page(.LCPI0_0)($1)
-; N32-BE-NEXT:    addiu $3, $3, %got_ofst(.LCPI0_0)
-; N32-BE-NEXT:    ld.b $w0, 0($3)
-; N32-BE-NEXT:    st.b $w0, 0($2)
-; N32-BE-NEXT:    lw $1, %got_page(.LCPI0_1)($1)
-; N32-BE-NEXT:    addiu $1, $1, %got_ofst(.LCPI0_1)
-; N32-BE-NEXT:    ld.b $w0, 0($1)
-; N32-BE-NEXT:    st.b $w0, 0($2)
-; N32-BE-NEXT:    ldi.h $w0, 256
-; N32-BE-NEXT:    st.b $w0, 0($2)
-; N32-BE-NEXT:    lui $1, 258
-; N32-BE-NEXT:    ori $1, $1, 772
-; N32-BE-NEXT:    fill.w $w0, $1
-; N32-BE-NEXT:    st.b $w0, 0($2)
-; N32-BE-NEXT:    lui $3, 1286
-; N32-BE-NEXT:    ori $3, $3, 1800
-; N32-BE-NEXT:    dinsu $3, $1, 32, 32
-; N32-BE-NEXT:    fill.d $w0, $3
-; N32-BE-NEXT:    jr $ra
-; N32-BE-NEXT:    st.b $w0, 0($2)
-;
-; N32-LE-LABEL: const_v16i8:
-; N32-LE:       # %bb.0:
-; N32-LE-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v16i8)))
-; N32-LE-NEXT:    addu $1, $1, $25
-; N32-LE-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(const_v16i8)))
-; N32-LE-NEXT:    lw $2, %got_disp(v16i8)($1)
-; N32-LE-NEXT:    ldi.b $w0, 0
-; N32-LE-NEXT:    st.b $w0, 0($2)
-; N32-LE-NEXT:    ldi.b $w0, 1
-; N32-LE-NEXT:    st.b $w0, 0($2)
-; N32-LE-NEXT:    lw $3, %got_page(.LCPI0_0)($1)
-; N32-LE-NEXT:    addiu $3, $3, %got_ofst(.LCPI0_0)
-; N32-LE-NEXT:    ld.b $w0, 0($3)
-; N32-LE-NEXT:    st.b $w0, 0($2)
-; N32-LE-NEXT:    lw $1, %got_page(.LCPI0_1)($1)
-; N32-LE-NEXT:    addiu $1, $1, %got_ofst(.LCPI0_1)
-; N32-LE-NEXT:    ld.b $w0, 0($1)
-; N32-LE-NEXT:    st.b $w0, 0($2)
-; N32-LE-NEXT:    ldi.h $w0, 1
-; N32-LE-NEXT:    st.b $w0, 0($2)
-; N32-LE-NEXT:    lui $1, 1027
-; N32-LE-NEXT:    ori $1, $1, 513
-; N32-LE-NEXT:    fill.w $w0, $1
-; N32-LE-NEXT:    st.b $w0, 0($2)
-; N32-LE-NEXT:    lui $3, 2055
-; N32-LE-NEXT:    ori $3, $3, 1541
-; N32-LE-NEXT:    dinsu $1, $3, 32, 32
-; N32-LE-NEXT:    fill.d $w0, $1
-; N32-LE-NEXT:    jr $ra
-; N32-LE-NEXT:    st.b $w0, 0($2)
-;
-; N64-BE-LABEL: const_v16i8:
-; N64-BE:       # %bb.0:
-; N64-BE-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v16i8)))
-; N64-BE-NEXT:    daddu $1, $1, $25
-; N64-BE-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(const_v16i8)))
-; N64-BE-NEXT:    ld $2, %got_disp(v16i8)($1)
-; N64-BE-NEXT:    ldi.b $w0, 0
-; N64-BE-NEXT:    st.b $w0, 0($2)
-; N64-BE-NEXT:    ldi.b $w0, 1
-; N64-BE-NEXT:    st.b $w0, 0($2)
-; N64-BE-NEXT:    ld $3, %got_page(.LCPI0_0)($1)
-; N64-BE-NEXT:    daddiu $3, $3, %got_ofst(.LCPI0_0)
-; N64-BE-NEXT:    ld.b $w0, 0($3)
-; N64-BE-NEXT:    st.b $w0, 0($2)
-; N64-BE-NEXT:    ld $1, %got_page(.LCPI0_1)($1)
-; N64-BE-NEXT:    daddiu $1, $1, %got_ofst(.LCPI0_1)
-; N64-BE-NEXT:    ld.b $w0, 0($1)
-; N64-BE-NEXT:    st.b $w0, 0($2)
-; N64-BE-NEXT:    ldi.h $w0, 256
-; N64-BE-NEXT:    st.b $w0, 0($2)
-; N64-BE-NEXT:    lui $1, 258
-; N64-BE-NEXT:    ori $1, $1, 772
-; N64-BE-NEXT:    fill.w $w0, $1
-; N64-BE-NEXT:    st.b $w0, 0($2)
-; N64-BE-NEXT:    lui $3, 1286
-; N64-BE-NEXT:    ori $3, $3, 1800
-; N64-BE-NEXT:    dinsu $3, $1, 32, 32
-; N64-BE-NEXT:    fill.d $w0, $3
-; N64-BE-NEXT:    jr $ra
-; N64-BE-NEXT:    st.b $w0, 0($2)
-;
-; N64-LE-LABEL: const_v16i8:
-; N64-LE:       # %bb.0:
-; N64-LE-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v16i8)))
-; N64-LE-NEXT:    daddu $1, $1, $25
-; N64-LE-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(const_v16i8)))
-; N64-LE-NEXT:    ld $2, %got_disp(v16i8)($1)
-; N64-LE-NEXT:    ldi.b $w0, 0
-; N64-LE-NEXT:    st.b $w0, 0($2)
-; N64-LE-NEXT:    ldi.b $w0, 1
-; N64-LE-NEXT:    st.b $w0, 0($2)
-; N64-LE-NEXT:    ld $3, %got_page(.LCPI0_0)($1)
-; N64-LE-NEXT:    daddiu $3, $3, %got_ofst(.LCPI0_0)
-; N64-LE-NEXT:    ld.b $w0, 0($3)
-; N64-LE-NEXT:    st.b $w0, 0($2)
-; N64-LE-NEXT:    ld $1, %got_page(.LCPI0_1)($1)
-; N64-LE-NEXT:    daddiu $1, $1, %got_ofst(.LCPI0_1)
-; N64-LE-NEXT:    ld.b $w0, 0($1)
-; N64-LE-NEXT:    st.b $w0, 0($2)
-; N64-LE-NEXT:    ldi.h $w0, 1
-; N64-LE-NEXT:    st.b $w0, 0($2)
-; N64-LE-NEXT:    lui $1, 1027
-; N64-LE-NEXT:    ori $1, $1, 513
-; N64-LE-NEXT:    fill.w $w0, $1
-; N64-LE-NEXT:    st.b $w0, 0($2)
-; N64-LE-NEXT:    lui $3, 2055
-; N64-LE-NEXT:    ori $3, $3, 1541
-; N64-LE-NEXT:    dinsu $1, $3, 32, 32
-; N64-LE-NEXT:    fill.d $w0, $1
-; N64-LE-NEXT:    jr $ra
-; N64-LE-NEXT:    st.b $w0, 0($2)
+; N64-LABEL: const_v16i8:
+; N64:       # %bb.0:
+; N64-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v16i8)))
+; N64-NEXT:    daddu $1, $1, $25
+; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(const_v16i8)))
+; N64-NEXT:    ld $2, %got_disp(v16i8)($1)
+; N64-NEXT:    ldi.b $w0, 0
+; N64-NEXT:    st.b $w0, 0($2)
+; N64-NEXT:    ldi.b $w0, 1
+; N64-NEXT:    st.b $w0, 0($2)
+; N64-NEXT:    ld $3, %got_page(.LCPI0_0)($1)
+; N64-NEXT:    daddiu $3, $3, %got_ofst(.LCPI0_0)
+; N64-NEXT:    ld.b $w0, 0($3)
+; N64-NEXT:    st.b $w0, 0($2)
+; N64-NEXT:    ld $1, %got_page(.LCPI0_1)($1)
+; N64-NEXT:    daddiu $1, $1, %got_ofst(.LCPI0_1)
+; N64-NEXT:    ld.b $w0, 0($1)
+; N64-NEXT:    st.b $w0, 0($2)
+; N64-NEXT:    ldi.h $w0, 1
+; N64-NEXT:    st.b $w0, 0($2)
+; N64-NEXT:    lui $1, 1027
+; N64-NEXT:    ori $1, $1, 513
+; N64-NEXT:    fill.w $w0, $1
+; N64-NEXT:    st.b $w0, 0($2)
+; N64-NEXT:    lui $3, 2055
+; N64-NEXT:    ori $3, $3, 1541
+; N64-NEXT:    dinsu $1, $3, 32, 32
+; N64-NEXT:    fill.d $w0, $1
+; N64-NEXT:    jr $ra
+; N64-NEXT:    st.b $w0, 0($2)
   store volatile <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, ptr @v16i8
   store volatile <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, ptr @v16i8
   store volatile <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 31>, ptr @v16i8
@@ -224,168 +130,86 @@ define void @const_v16i8() nounwind {
 }
 
 define void @const_v8i16() nounwind {
-; O32-BE-LABEL: const_v8i16:
-; O32-BE:       # %bb.0:
-; O32-BE-NEXT:    lui $2, %hi(_gp_disp)
-; O32-BE-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; O32-BE-NEXT:    addu $1, $2, $25
-; O32-BE-NEXT:    ldi.b $w0, 0
-; O32-BE-NEXT:    lw $2, %got(v8i16)($1)
-; O32-BE-NEXT:    st.h $w0, 0($2)
-; O32-BE-NEXT:    ldi.h $w0, 1
-; O32-BE-NEXT:    st.h $w0, 0($2)
-; O32-BE-NEXT:    lw $1, %got($CPI1_0)($1)
-; O32-BE-NEXT:    addiu $1, $1, %lo($CPI1_0)
-; O32-BE-NEXT:    ld.h $w0, 0($1)
-; O32-BE-NEXT:    st.h $w0, 0($2)
-; O32-BE-NEXT:    ldi.b $w0, 4
-; O32-BE-NEXT:    st.h $w0, 0($2)
-; O32-BE-NEXT:    lui $1, 1
-; O32-BE-NEXT:    ori $1, $1, 2
-; O32-BE-NEXT:    fill.w $w0, $1
-; O32-BE-NEXT:    st.h $w0, 0($2)
-; O32-BE-NEXT:    lui $3, 3
-; O32-BE-NEXT:    ori $3, $3, 4
-; O32-BE-NEXT:    fill.w $w0, $3
-; O32-BE-NEXT:    insert.w $w0[1], $1
-; O32-BE-NEXT:    splati.d $w0, $w0[0]
-; O32-BE-NEXT:    jr $ra
-; O32-BE-NEXT:    st.h $w0, 0($2)
+; O32-LABEL: const_v8i16:
+; O32:       # %bb.0:
+; O32-NEXT:    lui $2, %hi(_gp_disp)
+; O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; O32-NEXT:    addu $1, $2, $25
+; O32-NEXT:    ldi.b $w0, 0
+; O32-NEXT:    lw $2, %got(v8i16)($1)
+; O32-NEXT:    st.h $w0, 0($2)
+; O32-NEXT:    ldi.h $w0, 1
+; O32-NEXT:    st.h $w0, 0($2)
+; O32-NEXT:    lw $1, %got($CPI1_0)($1)
+; O32-NEXT:    addiu $1, $1, %lo($CPI1_0)
+; O32-NEXT:    ld.h $w0, 0($1)
+; O32-NEXT:    st.h $w0, 0($2)
+; O32-NEXT:    ldi.b $w0, 4
+; O32-NEXT:    st.h $w0, 0($2)
+; O32-NEXT:    lui $1, 2
+; O32-NEXT:    ori $1, $1, 1
+; O32-NEXT:    fill.w $w0, $1
+; O32-NEXT:    st.h $w0, 0($2)
+; O32-NEXT:    lui $1, 4
+; O32-NEXT:    ori $1, $1, 3
+; O32-NEXT:    insert.w $w0[1], $1
+; O32-NEXT:    splati.d $w0, $w0[0]
+; O32-NEXT:    jr $ra
+; O32-NEXT:    st.h $w0, 0($2)
 ;
-; O32-LE-LABEL: const_v8i16:
-; O32-LE:       # %bb.0:
-; O32-LE-NEXT:    lui $2, %hi(_gp_disp)
-; O32-LE-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; O32-LE-NEXT:    addu $1, $2, $25
-; O32-LE-NEXT:    ldi.b $w0, 0
-; O32-LE-NEXT:    lw $2, %got(v8i16)($1)
-; O32-LE-NEXT:    st.h $w0, 0($2)
-; O32-LE-NEXT:    ldi.h $w0, 1
-; O32-LE-NEXT:    st.h $w0, 0($2)
-; O32-LE-NEXT:    lw $1, %got($CPI1_0)($1)
-; O32-LE-NEXT:    addiu $1, $1, %lo($CPI1_0)
-; O32-LE-NEXT:    ld.h $w0, 0($1)
-; O32-LE-NEXT:    st.h $w0, 0($2)
-; O32-LE-NEXT:    ldi.b $w0, 4
-; O32-LE-NEXT:    st.h $w0, 0($2)
-; O32-LE-NEXT:    lui $1, 2
-; O32-LE-NEXT:    ori $1, $1, 1
-; O32-LE-NEXT:    fill.w $w0, $1
-; O32-LE-NEXT:    st.h $w0, 0($2)
-; O32-LE-NEXT:    lui $1, 4
-; O32-LE-NEXT:    ori $1, $1, 3
-; O32-LE-NEXT:    insert.w $w0[1], $1
-; O32-LE-NEXT:    splati.d $w0, $w0[0]
-; O32-LE-NEXT:    jr $ra
-; O32-LE-NEXT:    st.h $w0, 0($2)
+; N32-LABEL: const_v8i16:
+; N32:       # %bb.0:
+; N32-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v8i16)))
+; N32-NEXT:    addu $1, $1, $25
+; N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(const_v8i16)))
+; N32-NEXT:    ldi.b $w0, 0
+; N32-NEXT:    lw $2, %got_disp(v8i16)($1)
+; N32-NEXT:    st.h $w0, 0($2)
+; N32-NEXT:    ldi.h $w0, 1
+; N32-NEXT:    st.h $w0, 0($2)
+; N32-NEXT:    lw $1, %got_page(.LCPI1_0)($1)
+; N32-NEXT:    addiu $1, $1, %got_ofst(.LCPI1_0)
+; N32-NEXT:    ld.h $w0, 0($1)
+; N32-NEXT:    st.h $w0, 0($2)
+; N32-NEXT:    ldi.b $w0, 4
+; N32-NEXT:    st.h $w0, 0($2)
+; N32-NEXT:    lui $1, 2
+; N32-NEXT:    ori $1, $1, 1
+; N32-NEXT:    fill.w $w0, $1
+; N32-NEXT:    st.h $w0, 0($2)
+; N32-NEXT:    lui $3, 4
+; N32-NEXT:    ori $3, $3, 3
+; N32-NEXT:    dinsu $1, $3, 32, 32
+; N32-NEXT:    fill.d $w0, $1
+; N32-NEXT:    jr $ra
+; N32-NEXT:    st.h $w0, 0($2)
 ;
-; N32-BE-LABEL: const_v8i16:
-; N32-BE:       # %bb.0:
-; N32-BE-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v8i16)))
-; N32-BE-NEXT:    addu $1, $1, $25
-; N32-BE-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(const_v8i16)))
-; N32-BE-NEXT:    ldi.b $w0, 0
-; N32-BE-NEXT:    lw $2, %got_disp(v8i16)($1)
-; N32-BE-NEXT:    st.h $w0, 0($2)
-; N32-BE-NEXT:    ldi.h $w0, 1
-; N32-BE-NEXT:    st.h $w0, 0($2)
-; N32-BE-NEXT:    lw $1, %got_page(.LCPI1_0)($1)
-; N32-BE-NEXT:    addiu $1, $1, %got_ofst(.LCPI1_0)
-; N32-BE-NEXT:    ld.h $w0, 0($1)
-; N32-BE-NEXT:    st.h $w0, 0($2)
-; N32-BE-NEXT:    ldi.b $w0, 4
-; N32-BE-NEXT:    st.h $w0, 0($2)
-; N32-BE-NEXT:    lui $1, 1
-; N32-BE-NEXT:    ori $1, $1, 2
-; N32-BE-NEXT:    fill.w $w0, $1
-; N32-BE-NEXT:    st.h $w0, 0($2)
-; N32-BE-NEXT:    lui $3, 3
-; N32-BE-NEXT:    ori $3, $3, 4
-; N32-BE-NEXT:    dinsu $3, $1, 32, 32
-; N32-BE-NEXT:    fill.d $w0, $3
-; N32-BE-NEXT:    jr $ra
-; N32-BE-NEXT:    st.h $w0, 0($2)
-;
-; N32-LE-LABEL: const_v8i16:
-; N32-LE:       # %bb.0:
-; N32-LE-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v8i16)))
-; N32-LE-NEXT:    addu $1, $1, $25
-; N32-LE-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(const_v8i16)))
-; N32-LE-NEXT:    ldi.b $w0, 0
-; N32-LE-NEXT:    lw $2, %got_disp(v8i16)($1)
-; N32-LE-NEXT:    st.h $w0, 0($2)
-; N32-LE-NEXT:    ldi.h $w0, 1
-; N32-LE-NEXT:    st.h $w0, 0($2)
-; N32-LE-NEXT:    lw $1, %got_page(.LCPI1_0)($1)
-; N32-LE-NEXT:    addiu $1, $1, %got_ofst(.LCPI1_0)
-; N32-LE-NEXT:    ld.h $w0, 0($1)
-; N32-LE-NEXT:    st.h $w0, 0($2)
-; N32-LE-NEXT:    ldi.b $w0, 4
-; N32-LE-NEXT:    st.h $w0, 0($2)
-; N32-LE-NEXT:    lui $1, 2
-; N32-LE-NEXT:    ori $1, $1, 1
-; N32-LE-NEXT:    fill.w $w0, $1
-; N32-LE-NEXT:    st.h $w0, 0($2)
-; N32-LE-NEXT:    lui $3, 4
-; N32-LE-NEXT:    ori $3, $3, 3
-; N32-LE-NEXT:    dinsu $1, $3, 32, 32
-; N32-LE-NEXT:    fill.d $w0, $1
-; N32-LE-NEXT:    jr $ra
-; N32-LE-NEXT:    st.h $w0, 0($2)
-;
-; N64-BE-LABEL: const_v8i16:
-; N64-BE:       # %bb.0:
-; N64-BE-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v8i16)))
-; N64-BE-NEXT:    daddu $1, $1, $25
-; N64-BE-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(const_v8i16)))
-; N64-BE-NEXT:    ldi.b $w0, 0
-; N64-BE-NEXT:    ld $2, %got_disp(v8i16)($1)
-; N64-BE-NEXT:    st.h $w0, 0($2)
-; N64-BE-NEXT:    ldi.h $w0, 1
-; N64-BE-NEXT:    st.h $w0, 0($2)
-; N64-BE-NEXT:    ld $1, %got_page(.LCPI1_0)($1)
-; N64-BE-NEXT:    daddiu $1, $1, %got_ofst(.LCPI1_0)
-; N64-BE-NEXT:    ld.h $w0, 0($1)
-; N64-BE-NEXT:    st.h $w0, 0($2)
-; N64-BE-NEXT:    ldi.b $w0, 4
-; N64-BE-NEXT:    st.h $w0, 0($2)
-; N64-BE-NEXT:    lui $1, 1
-; N64-BE-NEXT:    ori $1, $1, 2
-; N64-BE-NEXT:    fill.w $w0, $1
-; N64-BE-NEXT:    st.h $w0, 0($2)
-; N64-BE-NEXT:    lui $3, 3
-; N64-BE-NEXT:    ori $3, $3, 4
-; N64-BE-NEXT:    dinsu $3, $1, 32, 32
-; N64-BE-NEXT:    fill.d $w0, $3
-; N64-BE-NEXT:    jr $ra
-; N64-BE-NEXT:    st.h $w0, 0($2)
-;
-; N64-LE-LABEL: const_v8i16:
-; N64-LE:       # %bb.0:
-; N64-LE-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v8i16)))
-; N64-LE-NEXT:    daddu $1, $1, $25
-; N64-LE-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(const_v8i16)))
-; N64-LE-NEXT:    ldi.b $w0, 0
-; N64-LE-NEXT:    ld $2, %got_disp(v8i16)($1)
-; N64-LE-NEXT:    st.h $w0, 0($2)
-; N64-LE-NEXT:    ldi.h $w0, 1
-; N64-LE-NEXT:    st.h $w0, 0($2)
-; N64-LE-NEXT:    ld $1, %got_page(.LCPI1_0)($1)
-; N64-LE-NEXT:    daddiu $1, $1, %got_ofst(.LCPI1_0)
-; N64-LE-NEXT:    ld.h $w0, 0($1)
-; N64-LE-NEXT:    st.h $w0, 0($2)
-; N64-LE-NEXT:    ldi.b $w0, 4
-; N64-LE-NEXT:    st.h $w0, 0($2)
-; N64-LE-NEXT:    lui $1, 2
-; N64-LE-NEXT:    ori $1, $1, 1
-; N64-LE-NEXT:    fill.w $w0, $1
-; N64-LE-NEXT:    st.h $w0, 0($2)
-; N64-LE-NEXT:    lui $3, 4
-; N64-LE-NEXT:    ori $3, $3, 3
-; N64-LE-NEXT:    dinsu $1, $3, 32, 32
-; N64-LE-NEXT:    fill.d $w0, $1
-; N64-LE-NEXT:    jr $ra
-; N64-LE-NEXT:    st.h $w0, 0($2)
+; N64-LABEL: const_v8i16:
+; N64:       # %bb.0:
+; N64-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v8i16)))
+; N64-NEXT:    daddu $1, $1, $25
+; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(const_v8i16)))
+; N64-NEXT:    ldi.b $w0, 0
+; N64-NEXT:    ld $2, %got_disp(v8i16)($1)
+; N64-NEXT:    st.h $w0, 0($2)
+; N64-NEXT:    ldi.h $w0, 1
+; N64-NEXT:    st.h $w0, 0($2)
+; N64-NEXT:    ld $1, %got_page(.LCPI1_0)($1)
+; N64-NEXT:    daddiu $1, $1, %got_ofst(.LCPI1_0)
+; N64-NEXT:    ld.h $w0, 0($1)
+; N64-NEXT:    st.h $w0, 0($2)
+; N64-NEXT:    ldi.b $w0, 4
+; N64-NEXT:    st.h $w0, 0($2)
+; N64-NEXT:    lui $1, 2
+; N64-NEXT:    ori $1, $1, 1
+; N64-NEXT:    fill.w $w0, $1
+; N64-NEXT:    st.h $w0, 0($2)
+; N64-NEXT:    lui $3, 4
+; N64-NEXT:    ori $3, $3, 3
+; N64-NEXT:    dinsu $1, $3, 32, 32
+; N64-NEXT:    fill.d $w0, $1
+; N64-NEXT:    jr $ra
+; N64-NEXT:    st.h $w0, 0($2)
   store volatile <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, ptr @v8i16
   store volatile <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, ptr @v8i16
   store volatile <8 x i16> <i16 1, i16 1, i16 1, i16 2, i16 1, i16 1, i16 1, i16 31>, ptr @v8i16
@@ -396,181 +220,93 @@ define void @const_v8i16() nounwind {
 }
 
 define void @const_v4i32() nounwind {
-; O32-BE-LABEL: const_v4i32:
-; O32-BE:       # %bb.0:
-; O32-BE-NEXT:    lui $2, %hi(_gp_disp)
-; O32-BE-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; O32-BE-NEXT:    addu $1, $2, $25
-; O32-BE-NEXT:    ldi.b $w0, 0
-; O32-BE-NEXT:    lw $2, %got(v4i32)($1)
-; O32-BE-NEXT:    st.w $w0, 0($2)
-; O32-BE-NEXT:    ldi.w $w0, 1
-; O32-BE-NEXT:    st.w $w0, 0($2)
-; O32-BE-NEXT:    lw $3, %got($CPI2_0)($1)
-; O32-BE-NEXT:    addiu $3, $3, %lo($CPI2_0)
-; O32-BE-NEXT:    ld.w $w0, 0($3)
-; O32-BE-NEXT:    st.w $w0, 0($2)
-; O32-BE-NEXT:    ldi.b $w0, 1
-; O32-BE-NEXT:    st.w $w0, 0($2)
-; O32-BE-NEXT:    ldi.h $w0, 1
-; O32-BE-NEXT:    st.w $w0, 0($2)
-; O32-BE-NEXT:    ori $3, $zero, 1
-; O32-BE-NEXT:    ori $4, $zero, 2
-; O32-BE-NEXT:    fill.w $w0, $4
-; O32-BE-NEXT:    insert.w $w0[1], $3
-; O32-BE-NEXT:    splati.d $w0, $w0[0]
-; O32-BE-NEXT:    st.w $w0, 0($2)
-; O32-BE-NEXT:    lw $1, %got($CPI2_1)($1)
-; O32-BE-NEXT:    addiu $1, $1, %lo($CPI2_1)
-; O32-BE-NEXT:    ld.w $w0, 0($1)
-; O32-BE-NEXT:    jr $ra
-; O32-BE-NEXT:    st.w $w0, 0($2)
+; O32-LABEL: const_v4i32:
+; O32:       # %bb.0:
+; O32-NEXT:    lui $2, %hi(_gp_disp)
+; O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; O32-NEXT:    addu $1, $2, $25
+; O32-NEXT:    ldi.b $w0, 0
+; O32-NEXT:    lw $2, %got(v4i32)($1)
+; O32-NEXT:    st.w $w0, 0($2)
+; O32-NEXT:    ldi.w $w0, 1
+; O32-NEXT:    st.w $w0, 0($2)
+; O32-NEXT:    lw $3, %got($CPI2_0)($1)
+; O32-NEXT:    addiu $3, $3, %lo($CPI2_0)
+; O32-NEXT:    ld.w $w0, 0($3)
+; O32-NEXT:    st.w $w0, 0($2)
+; O32-NEXT:    ldi.b $w0, 1
+; O32-NEXT:    st.w $w0, 0($2)
+; O32-NEXT:    ldi.h $w0, 1
+; O32-NEXT:    st.w $w0, 0($2)
+; O32-NEXT:    ori $3, $zero, 2
+; O32-NEXT:    ori $4, $zero, 1
+; O32-NEXT:    fill.w $w0, $4
+; O32-NEXT:    insert.w $w0[1], $3
+; O32-NEXT:    splati.d $w0, $w0[0]
+; O32-NEXT:    st.w $w0, 0($2)
+; O32-NEXT:    lw $1, %got($CPI2_1)($1)
+; O32-NEXT:    addiu $1, $1, %lo($CPI2_1)
+; O32-NEXT:    ld.w $w0, 0($1)
+; O32-NEXT:    jr $ra
+; O32-NEXT:    st.w $w0, 0($2)
 ;
-; O32-LE-LABEL: const_v4i32:
-; O32-LE:       # %bb.0:
-; O32-LE-NEXT:    lui $2, %hi(_gp_disp)
-; O32-LE-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; O32-LE-NEXT:    addu $1, $2, $25
-; O32-LE-NEXT:    ldi.b $w0, 0
-; O32-LE-NEXT:    lw $2, %got(v4i32)($1)
-; O32-LE-NEXT:    st.w $w0, 0($2)
-; O32-LE-NEXT:    ldi.w $w0, 1
-; O32-LE-NEXT:    st.w $w0, 0($2)
-; O32-LE-NEXT:    lw $3, %got($CPI2_0)($1)
-; O32-LE-NEXT:    addiu $3, $3, %lo($CPI2_0)
-; O32-LE-NEXT:    ld.w $w0, 0($3)
-; O32-LE-NEXT:    st.w $w0, 0($2)
-; O32-LE-NEXT:    ldi.b $w0, 1
-; O32-LE-NEXT:    st.w $w0, 0($2)
-; O32-LE-NEXT:    ldi.h $w0, 1
-; O32-LE-NEXT:    st.w $w0, 0($2)
-; O32-LE-NEXT:    ori $3, $zero, 2
-; O32-LE-NEXT:    ori $4, $zero, 1
-; O32-LE-NEXT:    fill.w $w0, $4
-; O32-LE-NEXT:    insert.w $w0[1], $3
-; O32-LE-NEXT:    splati.d $w0, $w0[0]
-; O32-LE-NEXT:    st.w $w0, 0($2)
-; O32-LE-NEXT:    lw $1, %got($CPI2_1)($1)
-; O32-LE-NEXT:    addiu $1, $1, %lo($CPI2_1)
-; O32-LE-NEXT:    ld.w $w0, 0($1)
-; O32-LE-NEXT:    jr $ra
-; O32-LE-NEXT:    st.w $w0, 0($2)
+; N32-LABEL: const_v4i32:
+; N32:       # %bb.0:
+; N32-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v4i32)))
+; N32-NEXT:    addu $1, $1, $25
+; N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(const_v4i32)))
+; N32-NEXT:    ldi.b $w0, 0
+; N32-NEXT:    lw $2, %got_disp(v4i32)($1)
+; N32-NEXT:    st.w $w0, 0($2)
+; N32-NEXT:    ldi.w $w0, 1
+; N32-NEXT:    st.w $w0, 0($2)
+; N32-NEXT:    lw $3, %got_page(.LCPI2_0)($1)
+; N32-NEXT:    addiu $3, $3, %got_ofst(.LCPI2_0)
+; N32-NEXT:    ld.w $w0, 0($3)
+; N32-NEXT:    st.w $w0, 0($2)
+; N32-NEXT:    ldi.b $w0, 1
+; N32-NEXT:    st.w $w0, 0($2)
+; N32-NEXT:    ldi.h $w0, 1
+; N32-NEXT:    st.w $w0, 0($2)
+; N32-NEXT:    ori $3, $zero, 1
+; N32-NEXT:    ori $4, $zero, 2
+; N32-NEXT:    dinsu $3, $4, 32, 32
+; N32-NEXT:    fill.d $w0, $3
+; N32-NEXT:    st.w $w0, 0($2)
+; N32-NEXT:    lw $1, %got_page(.LCPI2_1)($1)
+; N32-NEXT:    addiu $1, $1, %got_ofst(.LCPI2_1)
+; N32-NEXT:    ld.w $w0, 0($1)
+; N32-NEXT:    jr $ra
+; N32-NEXT:    st.w $w0, 0($2)
 ;
-; N32-BE-LABEL: const_v4i32:
-; N32-BE:       # %bb.0:
-; N32-BE-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v4i32)))
-; N32-BE-NEXT:    addu $1, $1, $25
-; N32-BE-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(const_v4i32)))
-; N32-BE-NEXT:    ldi.b $w0, 0
-; N32-BE-NEXT:    lw $2, %got_disp(v4i32)($1)
-; N32-BE-NEXT:    st.w $w0, 0($2)
-; N32-BE-NEXT:    ldi.w $w0, 1
-; N32-BE-NEXT:    st.w $w0, 0($2)
-; N32-BE-NEXT:    lw $3, %got_page(.LCPI2_0)($1)
-; N32-BE-NEXT:    addiu $3, $3, %got_ofst(.LCPI2_0)
-; N32-BE-NEXT:    ld.w $w0, 0($3)
-; N32-BE-NEXT:    st.w $w0, 0($2)
-; N32-BE-NEXT:    ldi.b $w0, 1
-; N32-BE-NEXT:    st.w $w0, 0($2)
-; N32-BE-NEXT:    ldi.h $w0, 1
-; N32-BE-NEXT:    st.w $w0, 0($2)
-; N32-BE-NEXT:    ori $3, $zero, 2
-; N32-BE-NEXT:    ori $4, $zero, 1
-; N32-BE-NEXT:    dinsu $3, $4, 32, 32
-; N32-BE-NEXT:    fill.d $w0, $3
-; N32-BE-NEXT:    st.w $w0, 0($2)
-; N32-BE-NEXT:    lw $1, %got_page(.LCPI2_1)($1)
-; N32-BE-NEXT:    addiu $1, $1, %got_ofst(.LCPI2_1)
-; N32-BE-NEXT:    ld.w $w0, 0($1)
-; N32-BE-NEXT:    jr $ra
-; N32-BE-NEXT:    st.w $w0, 0($2)
-;
-; N32-LE-LABEL: const_v4i32:
-; N32-LE:       # %bb.0:
-; N32-LE-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v4i32)))
-; N32-LE-NEXT:    addu $1, $1, $25
-; N32-LE-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(const_v4i32)))
-; N32-LE-NEXT:    ldi.b $w0, 0
-; N32-LE-NEXT:    lw $2, %got_disp(v4i32)($1)
-; N32-LE-NEXT:    st.w $w0, 0($2)
-; N32-LE-NEXT:    ldi.w $w0, 1
-; N32-LE-NEXT:    st.w $w0, 0($2)
-; N32-LE-NEXT:    lw $3, %got_page(.LCPI2_0)($1)
-; N32-LE-NEXT:    addiu $3, $3, %got_ofst(.LCPI2_0)
-; N32-LE-NEXT:    ld.w $w0, 0($3)
-; N32-LE-NEXT:    st.w $w0, 0($2)
-; N32-LE-NEXT:    ldi.b $w0, 1
-; N32-LE-NEXT:    st.w $w0, 0($2)
-; N32-LE-NEXT:    ldi.h $w0, 1
-; N32-LE-NEXT:    st.w $w0, 0($2)
-; N32-LE-NEXT:    ori $3, $zero, 1
-; N32-LE-NEXT:    ori $4, $zero, 2
-; N32-LE-NEXT:    dinsu $3, $4, 32, 32
-; N32-LE-NEXT:    fill.d $w0, $3
-; N32-LE-NEXT:    st.w $w0, 0($2)
-; N32-LE-NEXT:    lw $1, %got_page(.LCPI2_1)($1)
-; N32-LE-NEXT:    addiu $1, $1, %got_ofst(.LCPI2_1)
-; N32-LE-NEXT:    ld.w $w0, 0($1)
-; N32-LE-NEXT:    jr $ra
-; N32-LE-NEXT:    st.w $w0, 0($2)
-;
-; N64-BE-LABEL: const_v4i32:
-; N64-BE:       # %bb.0:
-; N64-BE-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v4i32)))
-; N64-BE-NEXT:    daddu $1, $1, $25
-; N64-BE-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(const_v4i32)))
-; N64-BE-NEXT:    ldi.b $w0, 0
-; N64-BE-NEXT:    ld $2, %got_disp(v4i32)($1)
-; N64-BE-NEXT:    st.w $w0, 0($2)
-; N64-BE-NEXT:    ldi.w $w0, 1
-; N64-BE-NEXT:    st.w $w0, 0($2)
-; N64-BE-NEXT:    ld $3, %got_page(.LCPI2_0)($1)
-; N64-BE-NEXT:    daddiu $3, $3, %got_ofst(.LCPI2_0)
-; N64-BE-NEXT:    ld.w $w0, 0($3)
-; N64-BE-NEXT:    st.w $w0, 0($2)
-; N64-BE-NEXT:    ldi.b $w0, 1
-; N64-BE-NEXT:    st.w $w0, 0($2)
-; N64-BE-NEXT:    ldi.h $w0, 1
-; N64-BE-NEXT:    st.w $w0, 0($2)
-; N64-BE-NEXT:    ori $3, $zero, 2
-; N64-BE-NEXT:    ori $4, $zero, 1
-; N64-BE-NEXT:    dinsu $3, $4, 32, 32
-; N64-BE-NEXT:    fill.d $w0, $3
-; N64-BE-NEXT:    st.w $w0, 0($2)
-; N64-BE-NEXT:    ld $1, %got_page(.LCPI2_1)($1)
-; N64-BE-NEXT:    daddiu $1, $1, %got_ofst(.LCPI2_1)
-; N64-BE-NEXT:    ld.w $w0, 0($1)
-; N64-BE-NEXT:    jr $ra
-; N64-BE-NEXT:    st.w $w0, 0($2)
-;
-; N64-LE-LABEL: const_v4i32:
-; N64-LE:       # %bb.0:
-; N64-LE-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v4i32)))
-; N64-LE-NEXT:    daddu $1, $1, $25
-; N64-LE-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(const_v4i32)))
-; N64-LE-NEXT:    ldi.b $w0, 0
-; N64-LE-NEXT:    ld $2, %got_disp(v4i32)($1)
-; N64-LE-NEXT:    st.w $w0, 0($2)
-; N64-LE-NEXT:    ldi.w $w0, 1
-; N64-LE-NEXT:    st.w $w0, 0($2)
-; N64-LE-NEXT:    ld $3, %got_page(.LCPI2_0)($1)
-; N64-LE-NEXT:    daddiu $3, $3, %got_ofst(.LCPI2_0)
-; N64-LE-NEXT:    ld.w $w0, 0($3)
-; N64-LE-NEXT:    st.w $w0, 0($2)
-; N64-LE-NEXT:    ldi.b $w0, 1
-; N64-LE-NEXT:    st.w $w0, 0($2)
-; N64-LE-NEXT:    ldi.h $w0, 1
-; N64-LE-NEXT:    st.w $w0, 0($2)
-; N64-LE-NEXT:    ori $3, $zero, 1
-; N64-LE-NEXT:    ori $4, $zero, 2
-; N64-LE-NEXT:    dinsu $3, $4, 32, 32
-; N64-LE-NEXT:    fill.d $w0, $3
-; N64-LE-NEXT:    st.w $w0, 0($2)
-; N64-LE-NEXT:    ld $1, %got_page(.LCPI2_1)($1)
-; N64-LE-NEXT:    daddiu $1, $1, %got_ofst(.LCPI2_1)
-; N64-LE-NEXT:    ld.w $w0, 0($1)
-; N64-LE-NEXT:    jr $ra
-; N64-LE-NEXT:    st.w $w0, 0($2)
+; N64-LABEL: const_v4i32:
+; N64:       # %bb.0:
+; N64-NEXT:    lui $1, %hi(%neg(%gp_rel(const_v4i32)))
+; N64-NEXT:    daddu $1, $1, $25
+; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(const_v4i32)))
+; N64-NEXT:    ldi.b $w0, 0
+; N64-NEXT:    ld $2, %got_disp(v4i32)($1)
+; N64-NEXT:    st.w $w0, 0($2)
+; N64-NEXT:    ldi.w $w0, 1
+; N64-NEXT:    st.w $w0, 0($2)
+; N64-NEXT:    ld $3, %got_page(.LCPI2_0)($1)
+; N64-NEXT:    daddiu $3, $3, %got_ofst(.LCPI2_0)
+; N64-NEXT:    ld.w $w0, 0($3)
+; N64-NEXT:    st.w $w0, 0($2)
+; N64-NEXT:    ldi.b $w0, 1
+; N64-NEXT:    st.w $w0, 0($2)
+; N64-NEXT:    ldi.h $w0, 1
+; N64-NEXT:    st.w $w0, 0($2)
+; N64-NEXT:    ori $3, $zero, 1
+; N64-NEXT:    ori $4, $zero, 2
+; N64-NEXT:    dinsu $3, $4, 32, 32
+; N64-NEXT:    fill.d $w0, $3
+; N64-NEXT:    st.w $w0, 0($2)
+; N64-NEXT:    ld $1, %got_page(.LCPI2_1)($1)
+; N64-NEXT:    daddiu $1, $1, %got_ofst(.LCPI2_1)
+; N64-NEXT:    ld.w $w0, 0($1)
+; N64-NEXT:    jr $ra
+; N64-NEXT:    st.w $w0, 0($2)
   store volatile <4 x i32> <i32 0, i32 0, i32 0, i32 0>, ptr @v4i32
   store volatile <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr @v4i32
   store volatile <4 x i32> <i32 1, i32 1, i32 1, i32 31>, ptr @v4i32
@@ -582,31 +318,60 @@ define void @const_v4i32() nounwind {
 }
 
 define void @const_v2i64() nounwind {
-; O32-LABEL: const_v2i64:
-; O32:       # %bb.0:
-; O32-NEXT:    lui $2, %hi(_gp_disp)
-; O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
-; O32-NEXT:    addu $1, $2, $25
-; O32-NEXT:    ldi.b $w0, 0
-; O32-NEXT:    lw $2, %got(v2i64)($1)
-; O32-NEXT:    st.w $w0, 0($2)
-; O32-NEXT:    ldi.b $w0, 1
-; O32-NEXT:    st.w $w0, 0($2)
-; O32-NEXT:    ldi.h $w0, 1
-; O32-NEXT:    st.w $w0, 0($2)
-; O32-NEXT:    ldi.w $w0, 1
-; O32-NEXT:    st.w $w0, 0($2)
-; O32-NEXT:    ldi.d $w0, 1
-; O32-NEXT:    st.w $w0, 0($2)
-; O32-NEXT:    lw $3, %got($CPI3_0)($1)
-; O32-NEXT:    addiu $3, $3, %lo($CPI3_0)
-; O32-NEXT:    ld.w $w0, 0($3)
-; O32-NEXT:    st.w $w0, 0($2)
-; O32-NEXT:    lw $1, %got($CPI3_1)($1)
-; O32-NEXT:    addiu $1, $1, %lo($CPI3_1)
-; O32-NEXT:    ld.w $w0, 0($1)
-; O32-NEXT:    jr $ra
-; O32-NEXT:    st.w $w0, 0($2)
+; O32-BE-LABEL: const_v2i64:
+; O32-BE:       # %bb.0:
+; O32-BE-NEXT:    lui $2, %hi(_gp_disp)
+; O32-BE-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; O32-BE-NEXT:    addu $1, $2, $25
+; O32-BE-NEXT:    ldi.b $w0, 0
+; O32-BE-NEXT:    lw $2, %got(v2i64)($1)
+; O32-BE-NEXT:    st.w $w0, 0($2)
+; O32-BE-NEXT:    ldi.b $w0, 1
+; O32-BE-NEXT:    st.w $w0, 0($2)
+; O32-BE-NEXT:    ldi.h $w0, 1
+; O32-BE-NEXT:    st.w $w0, 0($2)
+; O32-BE-NEXT:    ldi.w $w0, 1
+; O32-BE-NEXT:    st.w $w0, 0($2)
+; O32-BE-NEXT:    ori $3, $zero, 1
+; O32-BE-NEXT:    fill.w $w0, $zero
+; O32-BE-NEXT:    insert.w $w0[1], $3
+; O32-BE-NEXT:    splati.d $w0, $w0[0]
+; O32-BE-NEXT:    st.w $w0, 0($2)
+; O32-BE-NEXT:    lw $3, %got($CPI3_0)($1)
+; O32-BE-NEXT:    addiu $3, $3, %lo($CPI3_0)
+; O32-BE-NEXT:    ld.w $w0, 0($3)
+; O32-BE-NEXT:    st.w $w0, 0($2)
+; O32-BE-NEXT:    lw $1, %got($CPI3_1)($1)
+; O32-BE-NEXT:    addiu $1, $1, %lo($CPI3_1)
+; O32-BE-NEXT:    ld.w $w0, 0($1)
+; O32-BE-NEXT:    jr $ra
+; O32-BE-NEXT:    st.w $w0, 0($2)
+;
+; O32-LE-LABEL: const_v2i64:
+; O32-LE:       # %bb.0:
+; O32-LE-NEXT:    lui $2, %hi(_gp_disp)
+; O32-LE-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; O32-LE-NEXT:    addu $1, $2, $25
+; O32-LE-NEXT:    ldi.b $w0, 0
+; O32-LE-NEXT:    lw $2, %got(v2i64)($1)
+; O32-LE-NEXT:    st.w $w0, 0($2)
+; O32-LE-NEXT:    ldi.b $w0, 1
+; O32-LE-NEXT:    st.w $w0, 0($2)
+; O32-LE-NEXT:    ldi.h $w0, 1
+; O32-LE-NEXT:    st.w $w0, 0($2)
+; O32-LE-NEXT:    ldi.w $w0, 1
+; O32-LE-NEXT:    st.w $w0, 0($2)
+; O32-LE-NEXT:    ldi.d $w0, 1
+; O32-LE-NEXT:    st.w $w0, 0($2)
+; O32-LE-NEXT:    lw $3, %got($CPI3_0)($1)
+; O32-LE-NEXT:    addiu $3, $3, %lo($CPI3_0)
+; O32-LE-NEXT:    ld.w $w0, 0($3)
+; O32-LE-NEXT:    st.w $w0, 0($2)
+; O32-LE-NEXT:    lw $1, %got($CPI3_1)($1)
+; O32-LE-NEXT:    addiu $1, $1, %lo($CPI3_1)
+; O32-LE-NEXT:    ld.w $w0, 0($1)
+; O32-LE-NEXT:    jr $ra
+; O32-LE-NEXT:    st.w $w0, 0($2)
 ;
 ; N32-LABEL: const_v2i64:
 ; N32:       # %bb.0:
@@ -2101,3 +1866,8 @@ define void @store_i8_32bit() nounwind {
   store volatile <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>, ptr @v4i8
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; N32-BE: {{.*}}
+; N32-LE: {{.*}}
+; N64-BE: {{.*}}
+; N64-LE: {{.*}}

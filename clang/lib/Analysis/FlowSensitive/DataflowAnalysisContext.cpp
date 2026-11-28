@@ -23,10 +23,10 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
@@ -34,12 +34,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-static llvm::cl::opt<std::string> DataflowLog(
-    "dataflow-log", llvm::cl::Hidden, llvm::cl::ValueOptional,
-    llvm::cl::desc("Emit log of dataflow analysis. With no arg, writes textual "
-                   "log to stderr. With an arg, writes HTML logs under the "
-                   "specified directory (one per analyzed function)."));
 
 namespace clang {
 namespace dataflow {
@@ -412,11 +406,17 @@ DataflowAnalysisContext::getAdornedCFG(const FunctionDecl *F) {
   return nullptr;
 }
 
-static std::unique_ptr<Logger> makeLoggerFromCommandLine() {
-  if (DataflowLog.empty())
+// CLANG_DATAFLOW_LOG=- writes a textual log to stderr. CLANG_DATAFLOW_LOG=<dir>
+// writes HTML logs under <dir>, one per analyzed function.
+static std::unique_ptr<Logger> makeLoggerFromEnv() {
+  std::optional<std::string> Env =
+      llvm::sys::Process::GetEnv("CLANG_DATAFLOW_LOG");
+  if (!Env || Env->empty())
+    return nullptr;
+  if (*Env == "-")
     return Logger::textual(llvm::errs());
 
-  llvm::StringRef Dir = DataflowLog;
+  llvm::StringRef Dir = *Env;
   if (auto EC = llvm::sys::fs::create_directories(Dir))
     llvm::errs() << "Failed to create log dir: " << EC.message() << "\n";
   // All analysis runs within a process will log to the same directory.
@@ -444,17 +444,11 @@ DataflowAnalysisContext::DataflowAnalysisContext(
     Solver &S, std::unique_ptr<Solver> &&OwnedSolver, Options Opts)
     : S(S), OwnedSolver(std::move(OwnedSolver)), A(std::make_unique<Arena>()),
       Opts(Opts) {
-  // If the -dataflow-log command-line flag was set, synthesize a logger.
-  // This is ugly but provides a uniform method for ad-hoc debugging dataflow-
-  // based tools.
+  // If CLANG_DATAFLOW_LOG is set, synthesize a logger. This is ugly but
+  // provides a uniform method for ad-hoc debugging dataflow-based tools.
   if (Opts.Log == nullptr) {
-    if (DataflowLog.getNumOccurrences() > 0) {
-      LogOwner = makeLoggerFromCommandLine();
-      this->Opts.Log = LogOwner.get();
-      // FIXME: if the flag is given a value, write an HTML log to a file.
-    } else {
-      this->Opts.Log = &Logger::null();
-    }
+    LogOwner = makeLoggerFromEnv();
+    this->Opts.Log = LogOwner ? LogOwner.get() : &Logger::null();
   }
 }
 

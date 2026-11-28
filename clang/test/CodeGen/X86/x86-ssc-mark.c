@@ -1,6 +1,8 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 %s -triple=i386-unknown-unknown -S -ffreestanding -o - | FileCheck %s --check-prefix=X86
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple=i386-unknown-unknown -S -ffreestanding -o - | FileCheck %s --check-prefix=X86 %}
 // RUN: %clang_cc1 %s -triple=x86_64-unknown-unknown -S -ffreestanding -o - | FileCheck %s --check-prefix=X64
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple=x86_64-unknown-unknown -S -ffreestanding -o - | FileCheck %s --check-prefix=X64 %}
 
 #include <immintrin.h>
 

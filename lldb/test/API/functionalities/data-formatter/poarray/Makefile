@@ -1,6 +1,6 @@
 OBJCXX_SOURCES := main.mm
 
-CFLAGS_EXTRAS := -w
+CFLAGS_EXTRAS := -w $(TEST_CFLAGS_EXTRAS)
 
 
 

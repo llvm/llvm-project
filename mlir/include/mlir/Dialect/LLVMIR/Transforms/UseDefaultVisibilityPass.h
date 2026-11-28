@@ -9,7 +9,7 @@
 #ifndef MLIR_DIALECT_LLVMIR_TRANSFORMS_USEDEFAULTVISIBILITYPASS_H
 #define MLIR_DIALECT_LLVMIR_TRANSFORMS_USEDEFAULTVISIBILITYPASS_H
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 
 namespace mlir {
 class Pass;

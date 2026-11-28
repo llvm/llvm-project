@@ -368,8 +368,10 @@ bool HexagonShuffler::restrictStoreLoadOrder(
       // Error if insn may not be executed in any slot.
       return false;
 
-    // A single load must use slot #0.
-    if (HexagonMCInstrInfo::getDesc(MCII, ID).mayLoad()) {
+    unsigned SlotCount = llvm::popcount(ISJ->Core.getUnits());
+    // A single load must use slot #0, unless it can only execute in one slot
+    // (e.g. HLX loads, which must take slot #1).
+    if (HexagonMCInstrInfo::getDesc(MCII, ID).mayLoad() && SlotCount > 1) {
       if (Summary.loads == 1 && Summary.loads == Summary.memory &&
           Summary.memops == 0)
         // Pin the load to slot #0.

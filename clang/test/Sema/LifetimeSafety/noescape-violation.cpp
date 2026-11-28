@@ -133,14 +133,18 @@ void escape_through_static_local(int *data [[clang::noescape]]) { // expected-wa
   static_local = data;
 }
 
+#ifndef __MVS__
 thread_local int *thread_local_storage; // expected-note {{escapes to this global storage}}
 
 void escape_through_thread_local(int *data [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
-  // FIXME: We might want to report whenever anything derived from a 
-  // noescape parameter is assigned to a global, as this is likely 
+  // FIXME: We might want to report whenever anything derived from a
+  // noescape parameter is assigned to a global, as this is likely
   // undesired behavior in most cases.
   thread_local_storage = data;
 }
+#else
+_Static_assert(!__has_feature(tls), "z/OS has tls now.  Re-enable the thread_local tests.");
+#endif
 
 struct ObjConsumer {
   void escape_through_member(const MyObj& in [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
@@ -192,16 +196,41 @@ int* return_spaced_brackets(int* p [ [clang::noescape] /*some comment*/ ]) { // 
   return p; // expected-note {{returned here}}
 }
 
-// FIXME: A [[clang::noescape]] parameter captured into the object via
-// [[clang::lifetime_capture_by_this]] escapes the function and should be
-// diagnosed. It currently is not: the escape is modeled as a ThisEscapeFact at
-// exit, which does not feed the noescape-violation machinery.
 struct CaptureByThisNoescape {
   const int *p;
   void store(const int &x [[clang::lifetime_capture_by_this]]);
-  void captures_noescape(const int &n [[clang::noescape]]) {
-    store(n); // FIXME-warning: parameter is marked [[clang::noescape]] but escapes
+  void captures_noescape(const int &n [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}} \
+                                                             // expected-note {{escapes to the object}}
+    store(n);
   }
+};
+
+struct NoescapeBase {
+  const int *p;
+  NoescapeBase(const int *q [[clang::lifetimebound]]) : p(q) {}
+};
+struct NoescapeThroughBaseInit : NoescapeBase {
+  NoescapeThroughBaseInit(const int *q [[clang::noescape]]) // expected-warning {{parameter is marked [[clang::noescape]] but escapes}} \
+                                                            // expected-note {{escapes to the object}}
+      : NoescapeBase(q) {}
+};
+
+struct NoescapeThroughDelegatingInit {
+  const int *p;
+  NoescapeThroughDelegatingInit(const int *q [[clang::lifetimebound]], int) : p(q) {}
+  NoescapeThroughDelegatingInit(const int *q [[clang::noescape]]) // expected-warning {{parameter is marked [[clang::noescape]] but escapes}} \
+                                                                  // expected-note {{escapes to the object}}
+      : NoescapeThroughDelegatingInit(q, 0) {}
+};
+
+struct NoCaptureBase { NoCaptureBase(const int *); };
+struct NoescapeNonCapturingBase : NoCaptureBase {
+  NoescapeNonCapturingBase(const int *q [[clang::noescape]]) : NoCaptureBase(q) {}
+};
+
+struct NoescapeMethodDoesNotCapture {
+  const int *p;
+  void m(const int *q [[clang::noescape]]) { (void)*q; }
 };
 
 namespace callable_wrappers {

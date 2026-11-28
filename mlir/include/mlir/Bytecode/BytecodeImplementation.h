@@ -17,7 +17,6 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -144,6 +143,31 @@ public:
     return emitError() << "expected " << llvm::getTypeName<T>()
                        << ", but got: " << baseResult;
   }
+
+  /// Publish `type` as the result of the entry currently being read, before
+  /// that entry has finished reading its own body.
+  ///
+  /// This is the bytecode analogue of AsmParser::tryStartCyclicParse, and it
+  /// exists for the same reason: a mutable type may refer to itself, directly
+  /// or through a pointer, so the body cannot be read until the type it
+  /// belongs to already exists. A dialect creates the incomplete type, calls
+  /// this, reads the body (a nested reference back to this same entry then
+  /// resolves to the incomplete type rather than re-entering it), and then
+  /// completes it. Unlike tryStartCyclicParse, which returns a guard and
+  /// fails a nested parse of the same type, this publishes the type so
+  /// nested reads succeed with the incomplete instance.
+  ///
+  /// Contract for the dialect: call this before reading any nested entry
+  /// that may refer back, and return the published instance as the read
+  /// result. The read may run more than once (deferred entries are retried),
+  /// so the type must be uniqued by key and completing it idempotent;
+  /// publishing a different instance for the same entry fails. There is no
+  /// attribute analogue yet; mutable attributes keep the fallback encoding.
+  ///
+  /// Emits an error and returns failure if the reader is not inside a custom
+  /// type entry, `type` is null or immutable, or a different instance was
+  /// already published for the entry.
+  virtual LogicalResult tryStartCyclicRead(Type type) = 0;
 
   /// Read a reference to the given type.
   virtual LogicalResult readType(Type &result) = 0;

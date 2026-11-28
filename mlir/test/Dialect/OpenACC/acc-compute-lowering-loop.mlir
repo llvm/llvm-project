@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -acc-compute-lowering | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(func.func(acc-compute-lowering))' | FileCheck %s
 
 // CHECK: [[UNROLL:#.*]] = #llvm.loop_unroll<disable = false, full = true>
 // CHECK: #loop_annotation = #llvm.loop_annotation<unroll = [[UNROLL]]>

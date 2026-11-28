@@ -26,6 +26,7 @@
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -664,13 +665,18 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
 }
 
 bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
+  assert(RegClassInfo.hasCurrentReservedRegs() &&
+         "RegisterClassInfo misses a change to the reserved registers");
+
   // This only applies on subtargets that have a configurable AGPR vs. VGPR
   // allocation.
   if (!ST.hasGFX90AInsts())
     return false;
 
-  // Early exit if no AGPRs were assigned.
-  if (!LRM.isPhysRegUsed(AMDGPU::AGPR0)) {
+  // MRI tracks physical operands and reg masks, not assigned virtual
+  // intervals. Reserved low AGPRs can leave AGPR0 unassigned.
+  if (llvm::none_of(RegClassInfo.getOrder(&AMDGPU::AGPR_32RegClass),
+                    [&](MCPhysReg Reg) { return LRM.isPhysRegUsed(Reg); })) {
     LLVM_DEBUG(dbgs() << "skipping function that did not allocate AGPRs\n");
     return false;
   }

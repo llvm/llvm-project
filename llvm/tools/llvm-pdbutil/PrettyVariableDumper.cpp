@@ -12,7 +12,6 @@
 #include "PrettyFunctionDumper.h"
 #include "llvm-pdbutil.h"
 
-#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
@@ -24,7 +23,6 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeVTable.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolTypeVTableShape.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 
 #include "llvm/Support/Format.h"

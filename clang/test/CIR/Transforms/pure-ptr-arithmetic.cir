@@ -41,17 +41,17 @@ cir.func @dead_vtable_get_vptr(%arg0: !cir.ptr<!rec_Derived>) {
   cir.return
 }
 
-// CHECK-LABEL: @dead_vtable_get_virtual_fn_addr
-// CHECK-NOT:     cir.vtable.get_virtual_fn_addr
-cir.func @dead_vtable_get_virtual_fn_addr(%arg0: !cir.vptr) {
-  %0 = cir.vtable.get_virtual_fn_addr %arg0[0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>
+// CHECK-LABEL: @dead_vtable_get_virtual_fn
+// CHECK-NOT:     cir.vtable.get_virtual_fn
+cir.func @dead_vtable_get_virtual_fn(%arg0: !cir.vptr) {
+  %0 = cir.vtable.get_virtual_fn %arg0[0] : !cir.vptr -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>
   cir.return
 }
 
 // CHECK-LABEL: @dead_vtable_get_type_info
 // CHECK-NOT:     cir.vtable.get_type_info
 cir.func @dead_vtable_get_type_info(%arg0: !cir.vptr) {
-  %0 = cir.vtable.get_type_info %arg0 : !cir.vptr -> !cir.ptr<!cir.ptr<!rec_S>>
+  %0 = cir.vtable.get_type_info %arg0 : !cir.vptr -> !cir.ptr<!rec_S>
   cir.return
 }
 

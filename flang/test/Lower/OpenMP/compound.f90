@@ -784,7 +784,7 @@ end subroutine
 ! CHECK-NEXT:      }
 ! CHECK-NOT:       omp.combined
 ! CHECK:           omp.terminator
-! CHECK-NEXT:    } {{{.*}}omp.combined{{.*}}}
+! CHECK-NEXT:    }{{.*}} {{{.*}}omp.combined{{.*}}}
 
 subroutine single_parallel()
   implicit none
@@ -803,7 +803,7 @@ end subroutine
 ! CHECK-NEXT:      }
 ! CHECK-NOT:       omp.combined
 ! CHECK:           omp.terminator
-! CHECK-NEXT:    } {{{.*}}omp.combined{{.*}}}
+! CHECK-NEXT:    }{{.*}} {{{.*}}omp.combined{{.*}}}
 
 subroutine single_simd()
   implicit none
@@ -825,7 +825,7 @@ end subroutine
 ! CHECK-NEXT:      }
 ! CHECK-NOT:       omp.combined
 ! CHECK:           omp.terminator
-! CHECK-NEXT:    } {{{.*}}omp.combined{{.*}}}
+! CHECK-NEXT:    }{{.*}} {{{.*}}omp.combined{{.*}}}
 
 subroutine single_target()
   implicit none
@@ -844,7 +844,7 @@ end subroutine
 ! CHECK-NEXT:      }
 ! CHECK-NOT:       omp.combined
 ! CHECK:           omp.terminator
-! CHECK-NEXT:    } {{{.*}}omp.combined{{.*}}}
+! CHECK-NEXT:    }{{.*}} {{{.*}}omp.combined{{.*}}}
 
 subroutine single_target_data()
   implicit none
@@ -864,7 +864,7 @@ end subroutine
 ! CHECK-NEXT:      }
 ! CHECK-NOT:       omp.combined
 ! CHECK:           omp.terminator
-! CHECK-NEXT:    } {{{.*}}omp.combined{{.*}}}
+! CHECK-NEXT:    }{{.*}} {{{.*}}omp.combined{{.*}}}
 
 subroutine single_task()
   implicit none
@@ -883,7 +883,7 @@ end subroutine
 ! CHECK-NEXT:      }
 ! CHECK-NOT:       omp.combined
 ! CHECK:           omp.terminator
-! CHECK-NEXT:    } {{{.*}}omp.combined{{.*}}}
+! CHECK-NEXT:    }{{.*}} {{{.*}}omp.combined{{.*}}}
 
 subroutine single_taskloop()
   implicit none
@@ -908,7 +908,7 @@ end subroutine
 ! CHECK:             omp.terminator
 ! CHECK-NEXT:      } {{{.*}}omp.combined{{.*}}}
 ! CHECK:           omp.terminator
-! CHECK-NEXT:    } {{{.*}}omp.combined{{.*}}}
+! CHECK-NEXT:    }{{.*}} {{{.*}}omp.combined{{.*}}}
 
 subroutine target_task()
   implicit none

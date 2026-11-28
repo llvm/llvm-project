@@ -2,7 +2,6 @@
 ---
 # CHECK-LABEL: name: func0
 name: func0
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK: [[REG0:\$e[a-z]+]] = MOV32ri 42
@@ -13,7 +12,6 @@ body: |
 ---
 # CHECK-LABEL: name: func2
 name: func2
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-NOT: $eax = MOV32ri 42
@@ -41,7 +39,6 @@ body: |
 ---
 # CHECK-LABEL: name: func3
 name: func3
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK: dead {{\$e[a-z]+}} = MOV32ri 42

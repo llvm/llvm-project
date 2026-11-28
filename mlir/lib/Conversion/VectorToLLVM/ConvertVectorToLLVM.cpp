@@ -255,6 +255,11 @@ public:
       return rewriter.notifyMatchFailure(loadOrStoreOp,
                                          "could not resolve alignment");
 
+    // The verifier (verifyLoadStoreMemRefLayout) guarantees a valid memref
+    // layout. Assert to make the invariant explicit in the lowering code.
+    assert(vector::isValidLoadStoreMemRefLayout(vectorTy, memRefTy) &&
+           "invalid memref layout for vector load/store op");
+
     // Resolve address.
     // When --enable-gep-inbounds-nuw is set, emit inbounds|nuw on the GEP so
     // LLVM can apply no-wrap optimizations on the index arithmetic. This
@@ -264,12 +269,6 @@ public:
     LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none;
     if constexpr (std::is_same_v<LoadOrStoreOp, vector::LoadOp> ||
                   std::is_same_v<LoadOrStoreOp, vector::StoreOp>) {
-      // The verifier (verifyLoadStoreMemRefLayout) guarantees that the
-      // trailing (most minor) stride of the memref is 1. Assert to make
-      // the invariant explicit in the lowering code.
-      auto [strides, offset] = memRefTy.getStridesAndOffset();
-      assert((strides.empty() || strides.back() == 1) &&
-             "vector.load/store requires unit trailing memref stride");
       if (enableGEPInboundsNuw) {
         noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::inbounds;
 
@@ -861,7 +860,7 @@ public:
   matchAndRewrite(vector::ReductionOp reductionOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto kind = reductionOp.getKind();
-    Type eltType = reductionOp.getDest().getType();
+    Type eltType = reductionOp.getResult().getType();
     Type llvmType = typeConverter->convertType(eltType);
     Value operand = adaptor.getVector();
     Value acc = adaptor.getAcc();
@@ -943,37 +942,46 @@ public:
 
     // Floating-point reductions: add/mul/min/max
     Value result;
-    if (kind == vector::CombiningKind::ADD) {
+    switch (kind) {
+    case vector::CombiningKind::ADD:
       result = lowerReductionWithStartValue<LLVM::vector_reduce_fadd,
                                             ReductionNeutralZero>(
           rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MUL) {
+      break;
+    case vector::CombiningKind::MUL:
       result = lowerReductionWithStartValue<LLVM::vector_reduce_fmul,
                                             ReductionNeutralFPOne>(
           rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MINIMUMF) {
+      break;
+    case vector::CombiningKind::MINIMUMF:
       result =
           createFPReductionComparisonOpLowering<LLVM::vector_reduce_fminimum>(
               rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MAXIMUMF) {
+      break;
+    case vector::CombiningKind::MAXIMUMF:
       result =
           createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmaximum>(
               rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MINNUMF) {
+      break;
+    case vector::CombiningKind::MINNUMF:
       result = createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmin>(
           rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MAXNUMF) {
+      break;
+    case vector::CombiningKind::MAXNUMF:
       result = createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmax>(
           rewriter, loc, llvmType, operand, acc, fmf);
-    } else if (kind == vector::CombiningKind::MAXIMUMNUMF) {
+      break;
+    case vector::CombiningKind::MAXIMUMNUMF:
       result = createFPReductionComparisonOpLowering<
           LLVM::vector_reduce_fmaximumnum>(rewriter, loc, llvmType, operand,
                                            acc, fmf);
-    } else if (kind == vector::CombiningKind::MINIMUMNUMF) {
+      break;
+    case vector::CombiningKind::MINIMUMNUMF:
       result = createFPReductionComparisonOpLowering<
           LLVM::vector_reduce_fminimumnum>(rewriter, loc, llvmType, operand,
                                            acc, fmf);
-    } else {
+      break;
+    default:
       return failure();
     }
 
@@ -1028,7 +1036,7 @@ public:
       ConversionPatternRewriter &rewriter) const override {
     auto reductionOp = cast<ReductionOp>(maskableOp.getOperation());
     auto kind = reductionOp.getKind();
-    Type eltType = reductionOp.getDest().getType();
+    Type eltType = reductionOp.getResult().getType();
     Type llvmType = typeConverter->convertType(eltType);
     Value operand = reductionOp.getVector();
     Value acc = reductionOp.getAcc();
@@ -1190,6 +1198,11 @@ public:
     Value insert = LLVM::PoisonOp::create(rewriter, loc, llvmType);
     int64_t insPos = 0;
     for (int64_t extPos : mask) {
+      // The result starts as poison, so a poison index needs no insertion.
+      if (extPos == vector::ShuffleOp::kPoisonIndex) {
+        ++insPos;
+        continue;
+      }
       Value value = adaptor.getV1();
       if (extPos >= v1Dim) {
         extPos -= v1Dim;

@@ -3,9 +3,9 @@
 
 ---
 name:            CTLSConst8AmbigousMaxSignbitNum
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0
   ; NOTE: Currently we do not estimate max sign bits in KnownBits,
   ; so while we could get more accurate here, this is currently
   ; not possible.
@@ -26,9 +26,9 @@ body:             |
 
 ---
 name:            CTLSNoKnown8
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0
   ; CHECK-LABEL: name: @CTLSNoKnown8
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000000000??? SignBits:13 IsKnownNeverZero:0
@@ -38,9 +38,9 @@ body:             |
 
 ---
 name:            CTLSNoKnown16
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $h0
   ; CHECK-LABEL: name: @CTLSNoKnown16
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:000000000000???? SignBits:12 IsKnownNeverZero:0
@@ -50,9 +50,9 @@ body:             |
 
 ---
 name:            CTLSNoKnown32
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $s0
   ; CHECK-LABEL: name: @CTLSNoKnown32
   ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:00000000000????? SignBits:11 IsKnownNeverZero:0
@@ -63,9 +63,9 @@ body:             |
 
 ---
 name:            CTLSHalfKnown8
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0
   ; CHECK-LABEL: name: @CTLSHalfKnown8
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:00000100 SignBits:5 IsKnownNeverZero:1
@@ -79,9 +79,9 @@ body:             |
 
 ---
 name:            CTLSHalfKnown16
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $h0
   ; CHECK-LABEL: name: @CTLSHalfKnown16
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000001000000 SignBits:9 IsKnownNeverZero:1
@@ -95,7 +95,6 @@ body:             |
 
 ---
 name:            CTLSHalfConst8Zero
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSHalfConst8Zero
@@ -107,7 +106,6 @@ body:             |
 
 ---
 name:            CTLSHalfConst16Zero
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTLSHalfConst16Zero
@@ -119,7 +117,6 @@ body:             |
 
 ---
 name:            VectorCTLSConst16Zero
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCTLSConst16Zero
@@ -133,9 +130,9 @@ body:             |
 
 ---
 name:            VectorCTLSNoneKnown
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $h0, $h1
   ; CHECK-LABEL: name: @VectorCTLSNoneKnown
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000000001000 SignBits:12 IsKnownNeverZero:1
@@ -153,9 +150,9 @@ body:             |
 
 ---
 name:            VectorCTLSHighBitKnown
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $h0, $h1
   ; CHECK-LABEL: name: @VectorCTLSHighBitKnown
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000000001000 SignBits:12 IsKnownNeverZero:1
@@ -177,9 +174,9 @@ body:             |
 
 ---
 name:            CTLSLargeEnough
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $s0
   ; CHECK-LABEL: name: @CTLSLargeEnough
   ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:00000000000000000000000000010000 SignBits:27 IsKnownNeverZero:1
@@ -193,9 +190,9 @@ body:             |
 
 ---
 name:            CTLSTooSmallToTrigger
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $s0
   ; CHECK-LABEL: name: @CTLSTooSmallToTrigger
   ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:00000000000000000000000000001111 SignBits:28 IsKnownNeverZero:1
@@ -209,12 +206,18 @@ body:             |
 
 ---
 name:            VectorCTLSDemandedElts
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $b0, $s1
   ; CHECK-LABEL: name: @VectorCTLSDemandedElts
-  ; CHECK: %count:_ KnownBits:000000000000000000000000000????? SignBits:27
-  ; CHECK: %selected:_ KnownBits:00000000000000000000000000011??? SignBits:27 IsKnownNeverZero:1
+  ; CHECK-NEXT: %narrow:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %wide:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %ext:_ KnownBits:???????????????????????????????? SignBits:25 IsKnownNeverZero:0
+  ; CHECK-NEXT: %src:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %count:_ KnownBits:000000000000000000000000000????? SignBits:27 IsKnownNeverZero:0
+  ; CHECK-NEXT: %zero:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000000 SignBits:64 IsKnownNeverZero:0
+  ; CHECK-NEXT: %one:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000001 SignBits:63 IsKnownNeverZero:1
+  ; CHECK-NEXT: %selected:_ KnownBits:00000000000000000000000000011??? SignBits:27 IsKnownNeverZero:1
   ; CHECK-NEXT: %other:_ KnownBits:000000000000000000000000000????? SignBits:27 IsKnownNeverZero:0
   ; CHECK-NEXT: %splat:_ KnownBits:00000000000000000000000000011??? SignBits:27 IsKnownNeverZero:1
     %narrow:_(i8) = COPY $b0

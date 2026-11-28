@@ -1,6 +1,7 @@
 // REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -triple powerpc64-unknown-unknown -target-cpu pwr10 \
 // RUN: -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple powerpc64-unknown-unknown -target-cpu pwr10 -emit-llvm %s -o - | FileCheck %s %}
 
 unsigned long long ulla, ullb;
 

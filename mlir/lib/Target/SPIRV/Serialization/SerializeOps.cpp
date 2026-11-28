@@ -1137,6 +1137,35 @@ Serializer::processOp<spirv::FunctionCallOp>(spirv::FunctionCallOp op) {
 }
 
 template <>
+LogicalResult Serializer::processOp<spirv::INTELFunctionPointerCallOp>(
+    spirv::INTELFunctionPointerCallOp op) {
+  uint32_t resTypeID = 0;
+  Value returnValue = op.getReturnValue();
+  Type resultTy = returnValue ? returnValue.getType() : getVoidType();
+  if (failed(processType(op.getLoc(), resultTy, resTypeID)))
+    return failure();
+
+  uint32_t callID = getNextID();
+  SmallVector<uint32_t, 8> operands{resTypeID, callID};
+  for (Value value : op->getOperands()) {
+    uint32_t valueID = getValueID(value);
+    assert(valueID &&
+           "cannot find a value for spirv.INTEL.FunctionPointerCall");
+    operands.push_back(valueID);
+  }
+
+  if (returnValue)
+    valueIDMap[returnValue] = callID;
+
+  encodeInstructionInto(functionBody, spirv::Opcode::OpFunctionPointerCallINTEL,
+                        operands);
+  for (NamedAttribute attr : op->getDiscardableAttrs())
+    if (failed(processDecoration(op.getLoc(), callID, attr)))
+      return failure();
+  return success();
+}
+
+template <>
 LogicalResult
 Serializer::processOp<spirv::CopyMemoryOp>(spirv::CopyMemoryOp op) {
   SmallVector<uint32_t, 4> operands;
@@ -1201,6 +1230,21 @@ LogicalResult Serializer::processOp<spirv::GenericCastToPtrExplicitOp>(
   operands.push_back(static_cast<uint32_t>(resultStorage));
   encodeInstructionInto(functionBody, spirv::Opcode::OpGenericCastToPtrExplicit,
                         operands);
+  return success();
+}
+
+template <>
+LogicalResult Serializer::processOp<spirv::KHRAbortOp>(spirv::KHRAbortOp op) {
+  Value message = op.getMessage();
+  uint32_t messageTypeID = 0;
+  if (failed(processType(op.getLoc(), message.getType(), messageTypeID)))
+    return failure();
+  uint32_t messageID = getValueID(message);
+  assert(messageID && "use before def!");
+  if (failed(emitDebugLine(functionBody, op.getLoc())))
+    return failure();
+  encodeInstructionInto(functionBody, spirv::Opcode::OpAbortKHR,
+                        {messageTypeID, messageID});
   return success();
 }
 

@@ -64,8 +64,8 @@ define amdgpu_kernel void @ds_combine_WAR(ptr addrspace(1) %out, ptr addrspace(3
 
 ; GCN-LABEL: {{^}}ds_combine_RAW
 
-; GCN:      ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
-; GCN-NEXT: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:32
+; GCN:      ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:32
+; GCN-NEXT: ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
 ; GCN-NEXT: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:104
 define amdgpu_kernel void @ds_combine_RAW(ptr addrspace(1) %out, ptr addrspace(3) %inptr) #0 {
 

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple avr-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple avr-unknown-unknown -emit-llvm -o - %s | FileCheck %s %}
 
 int mul(int a, int b) {
 	return a * b;

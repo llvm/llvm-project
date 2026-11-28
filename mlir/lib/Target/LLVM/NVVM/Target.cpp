@@ -16,6 +16,7 @@
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
@@ -98,12 +99,12 @@ StringRef mlir::NVVM::getCUDAToolkitPath() {
 SerializeGPUModuleBase::SerializeGPUModuleBase(
     Operation &module, NVVMTargetAttr target,
     const gpu::TargetOptions &targetOptions)
-    : ModuleToObject(module, target.getTriple(), target.getChip(),
-                     target.getFeatures(), target.getO(),
-                     targetOptions.getInitialLlvmIRCallback(),
-                     targetOptions.getLinkedLlvmIRCallback(),
-                     targetOptions.getOptimizedLlvmIRCallback(),
-                     targetOptions.getISACallback()),
+    : ModuleToObject(
+          module, target.getTriple(), target.getChip(), target.getFeatures(),
+          target.getO(), targetOptions.getInitialLlvmIRCallback(),
+          targetOptions.getLinkedLlvmIRCallback(),
+          targetOptions.getOptimizedLlvmIRCallback(),
+          targetOptions.getISACallback(), targetOptions.getLibraryOptions()),
       target(target), toolkitPath(targetOptions.getToolkitPath()),
       librariesToLink(targetOptions.getLibrariesToLink()) {
 

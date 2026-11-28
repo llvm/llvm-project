@@ -18,7 +18,9 @@
 #include "llvm-c/Target.h"
 #include "llvm-c/Transforms/PassBuilder.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "gtest/gtest.h"
 
@@ -342,6 +344,12 @@ TEST_F(MCJITCAPITest, simple_function) {
       reinterpret_cast<uintptr_t>(LLVMGetPointerToGlobal(Engine, Function)));
 
   EXPECT_EQ(42, functionPointer());
+
+  // The engine reads the library options of the module's context.
+  auto *TM = reinterpret_cast<TargetMachine *>(
+      LLVMGetExecutionEngineTargetMachine(Engine));
+  EXPECT_EQ(TM->Options.MCOptions.LibraryOptions,
+            &unwrap(Context)->getLibraryOptions());
 }
 
 TEST_F(MCJITCAPITest, gva) {

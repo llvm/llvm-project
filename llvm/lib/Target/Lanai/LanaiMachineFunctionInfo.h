@@ -29,11 +29,6 @@ class LanaiMachineFunctionInfo : public MachineFunctionInfo {
   // holds the virtual register into which the sret argument is passed.
   Register SRetReturnReg;
 
-  // GlobalBaseReg - keeps track of the virtual register initialized for
-  // use as the global base register. This is used for PIC in some PIC
-  // relocation models.
-  Register GlobalBaseReg;
-
   // VarArgsFrameIndex - FrameIndex for start of varargs area.
   int VarArgsFrameIndex;
 

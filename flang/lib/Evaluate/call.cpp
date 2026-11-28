@@ -25,8 +25,9 @@ ActualArgument::ActualArgument(AssumedType x) : u_{x} {}
 ActualArgument::ActualArgument(common::Label x) : u_{x} {}
 ActualArgument::ActualArgument(ConditionalArg &&x) : u_{std::move(x)} {}
 
-ActualArgument::ConditionalArg::ConditionalArg(Expr<SomeLogical> &&condition,
-    Consequent &&consequent, ConditionalArgPartOrConsequent &&tail)
+ActualArgument::ConditionalArg::ConditionalArg(
+    Expr<Type<TypeCategory::Logical>> &&condition, Consequent &&consequent,
+    ConditionalArgPartOrConsequent &&tail)
     : condition_{std::move(condition)}, consequent_{std::move(consequent)},
       tail_{std::move(tail)} {}
 ActualArgument::~ActualArgument() {}
@@ -108,6 +109,18 @@ bool ActualArgument::ConditionalArg::HasNilConsequent() const {
   return VisitTail(
       [](const ConditionalArg &inner) { return inner.HasNilConsequent(); },
       [](const Consequent &cons) { return !cons.has_value(); });
+}
+
+bool ActualArgument::ConditionalArg::IsPolymorphic() const {
+  bool result{false};
+  ForEachConsequent([&](const Consequent &cons) {
+    if (cons) {
+      if (auto type{cons->value().GetType()}) {
+        result |= type->IsPolymorphic();
+      }
+    }
+  });
+  return result;
 }
 
 SpecificIntrinsic::SpecificIntrinsic(
@@ -263,10 +276,10 @@ std::optional<Expr<SubscriptInteger>> ProcedureRef::LEN() const {
     if (intrinsic->name == "repeat") {
       // LEN(REPEAT(ch,n)) == LEN(ch) * n
       CHECK(arguments_.size() == 2);
-      const auto *stringArg{
-          UnwrapExpr<Expr<SomeCharacter>>(arguments_[0].value())};
+      const auto *stringArg{UnwrapExpr<Expr<Type<TypeCategory::Character>>>(
+          arguments_[0].value())};
       const auto *nCopiesArg{
-          UnwrapExpr<Expr<SomeInteger>>(arguments_[1].value())};
+          UnwrapExpr<Expr<Type<TypeCategory::Integer>>>(arguments_[1].value())};
       CHECK(stringArg && nCopiesArg);
       if (auto stringLen{stringArg->LEN()}) {
         auto converted{ConvertTo(*stringLen, common::Clone(*nCopiesArg))};

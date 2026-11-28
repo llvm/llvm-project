@@ -31,7 +31,3 @@ SPIRVMCAsmInfo::SPIRVMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
   HiddenDeclarationVisibilityAttr = HiddenVisibilityAttr = MCSA_Invalid;
   ProtectedVisibilityAttr = MCSA_Invalid;
 }
-
-bool SPIRVMCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
-  return true;
-}

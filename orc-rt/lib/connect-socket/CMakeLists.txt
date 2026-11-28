@@ -10,18 +10,18 @@ set(ORC_RT_CONNECT_SOCKET_SOURCES
   )
 
 set(ORC_RT_CONNECT_SOCKET_POSIX_SOURCES
-  sys/posix/SocketConnector.cpp
-  sys/posix/SocketHandle.cpp
-  sys/posix/sps/SimpleRemoteCAOverSocket.cpp
+  host/posix/SocketConnector.cpp
+  host/posix/SocketHandle.cpp
+  host/posix/sps/SimpleRemoteCAOverSocket.cpp
 )
 
 # TODO: Windows has stubs only. The connector and the CA report the socket
 # transport as not yet supported, and SocketHandle does not close the socket it
 # owns.
 set(ORC_RT_CONNECT_SOCKET_WINDOWS_SOURCES
-  sys/windows/SocketConnector.cpp
-  sys/windows/SocketHandle.cpp
-  sys/windows/sps/SimpleRemoteCAOverSocket.cpp
+  host/windows/SocketConnector.cpp
+  host/windows/SocketHandle.cpp
+  host/windows/sps/SimpleRemoteCAOverSocket.cpp
 )
 
 # Composed the way lib/bedrock/CMakeLists.txt composes its per-system sources;
@@ -36,7 +36,7 @@ else()
   # With no portable sources there is no library to build.
   message(WARNING
     "orc-rt: no socket implementation for ${CMAKE_SYSTEM_NAME}; "
-    "add an orc-rt/lib/connect-socket/sys/<system>/ directory and compose it "
+    "add an orc-rt/lib/connect-socket/host/<system>/ directory and compose it "
     "above")
   return()
 endif()

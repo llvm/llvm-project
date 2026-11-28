@@ -18,7 +18,7 @@
   }
 
   declare dso_local noundef i32 @printf(ptr nocapture noundef readonly, ...) local_unnamed_addr
-
+...
 ---
 name:            foo
 alignment:       16
@@ -27,7 +27,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
@@ -38,7 +37,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: true
-registers:       []
 liveins:
   - { reg: '$d0', virtual-reg: '' }
   - { reg: '$d3', virtual-reg: '' }

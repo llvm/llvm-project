@@ -22,7 +22,8 @@
 // The signature shared by ORC_RT_SPS_ALLOC_ACTION_DECL and _IMPL. Writing it
 // once keeps the declaration and definition from drifting apart.
 #define ORC_RT_SPS_ALLOC_ACTION_SIG(Name)                                      \
-  orc_rt_WrapperFunctionBuffer Name(const char *ArgData, size_t ArgSize)
+  orc_rt_WrapperFunctionBuffer Name(const char *ArgData,                       \
+                                    size_t ArgSize) noexcept
 
 /// Declare an allocation-action wrapper function. The name has C linkage, so it
 /// is the same function regardless of which namespace the declaration appears
@@ -99,12 +100,14 @@ public:
 struct AllocActionSPSSerializer {
 
   /// Pass-through for handlers returning WrapperFunctionBuffer.
-  static WrapperFunctionBuffer serialize(WrapperFunctionBuffer B) { return B; }
+  static WrapperFunctionBuffer serialize(WrapperFunctionBuffer B) noexcept {
+    return B;
+  }
 
   /// Error serialization:
   ///   - success values converted to empty WrapperFunctionBuffers
   ///   - failure values converted to out-of-band errors.
-  static WrapperFunctionBuffer serialize(Error Err) {
+  static WrapperFunctionBuffer serialize(Error Err) noexcept {
     if (!Err)
       return WrapperFunctionBuffer();
     return WrapperFunctionBuffer::createOutOfBandError(
@@ -114,7 +117,8 @@ struct AllocActionSPSSerializer {
 
 template <typename... SPSArgTs> struct AllocActionSPSDeserializer {
   template <typename... ArgTs>
-  bool deserialize(const char *ArgData, size_t ArgSize, ArgTs &...Args) {
+  bool deserialize(const char *ArgData, size_t ArgSize,
+                   ArgTs &...Args) noexcept {
     SPSInputBuffer IB(ArgData, ArgSize);
     return SPSArgList<SPSArgTs...>::deserialize(IB, Args...);
   }
@@ -127,7 +131,7 @@ template <typename... SPSArgTs> struct SPSAllocActionFunction {
 
   template <typename Handler>
   static WrapperFunctionBuffer handle(const char *ArgData, size_t ArgSize,
-                                      Handler &&H) {
+                                      Handler &&H) noexcept {
     return AllocActionFunction::handle(
         ArgData, ArgSize, AllocActionSPSDeserializer<SPSTuple<SPSArgTs...>>(),
         AllocActionSPSSerializer(), std::forward<Handler>(H));

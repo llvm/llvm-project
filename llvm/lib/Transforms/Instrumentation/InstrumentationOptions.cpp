@@ -17,8 +17,7 @@
 
 using namespace llvm;
 
-static llvm::opt::RegisterLibraryOptions<llvm::InstrumentationOptions>
-    Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::InstrumentationOptions)
 
 const InstrumentationOptions &
 llvm::getInstrumentationOptions(const LLVMContext &C) {

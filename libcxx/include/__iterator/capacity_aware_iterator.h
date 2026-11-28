@@ -56,49 +56,48 @@ public:
   using reference         = iter_reference_t<_Iter>;
   using value_type        = iter_value_t<_Iter>;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator()
+  constexpr __capacity_aware_iterator()
     requires is_default_constructible_v<_Iter>
   = default;
 
   template <typename _Iter2>
     requires is_convertible_v<_Iter2, _Iter>
-  _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator(
-      const __capacity_aware_iterator<_Iter2, _RangeMaxElements>& __y) noexcept
+  constexpr __capacity_aware_iterator(const __capacity_aware_iterator<_Iter2, _RangeMaxElements>& __y) noexcept
       : __iter_(__y.__iter_) {}
 
   template <class _It, size_t _RangeMaxElems2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto __make_capacity_aware_iterator(_It __iter) noexcept;
+  friend constexpr auto __make_capacity_aware_iterator(_It __iter) noexcept;
 
 private:
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __capacity_aware_iterator(_Iter __iter) : __iter_(std::move(__iter)) {}
+  constexpr explicit __capacity_aware_iterator(_Iter __iter) : __iter_(std::move(__iter)) {}
 
 public:
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const noexcept { return *__iter_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator->() const noexcept { return std::__to_address(__iter_); }
+  [[nodiscard]] constexpr decltype(auto) operator*() const noexcept { return *__iter_; }
+  constexpr decltype(auto) operator->() const noexcept { return std::__to_address(__iter_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator& operator++() noexcept {
+  constexpr __capacity_aware_iterator& operator++() noexcept {
     ++__iter_;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator operator++(int) noexcept {
+  constexpr __capacity_aware_iterator operator++(int) noexcept {
     __capacity_aware_iterator __tmp(*this);
     ++*this;
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator& operator--() noexcept {
+  constexpr __capacity_aware_iterator& operator--() noexcept {
     --__iter_;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator operator--(int) noexcept {
+  constexpr __capacity_aware_iterator operator--(int) noexcept {
     __capacity_aware_iterator __tmp(*this);
     --*this;
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator& operator+=(difference_type __n) noexcept {
+  constexpr __capacity_aware_iterator& operator+=(difference_type __n) noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         static_cast<size_t>(__n >= 0 ? __n : -__n) <= _RangeMaxElements,
         "__capacity_aware_iterator::operator+=: Attempting to move iterator past its container's possible range");
@@ -107,7 +106,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator& operator-=(difference_type __n) noexcept {
+  constexpr __capacity_aware_iterator& operator-=(difference_type __n) noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         static_cast<size_t>(__n >= 0 ? __n : -__n) <= _RangeMaxElements,
         "__capacity_aware_iterator::operator-=: Attempting to move iterator past its container's possible range");
@@ -116,19 +115,19 @@ public:
     return *this;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const noexcept {
+  [[nodiscard]] constexpr decltype(auto) operator[](difference_type __n) const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         static_cast<size_t>(__n >= 0 ? __n : -__n) < _RangeMaxElements,
         "__capacity_aware_iterator::operator[]: Attempting to index iterator past its container's possible range");
     return *(*this + __n);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  friend constexpr bool
   operator==(const __capacity_aware_iterator& __x, const __capacity_aware_iterator& __y) noexcept {
     return __x.__iter_ == __y.__iter_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto
+  friend constexpr auto
   operator<=>(const __capacity_aware_iterator& __x, const __capacity_aware_iterator& __y) noexcept {
     if constexpr (three_way_comparable_with<_Iter, _Iter, strong_ordering>) {
       return __x.__iter_ <=> __y.__iter_;
@@ -142,35 +141,35 @@ public:
     }
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
+  [[nodiscard]] friend constexpr __capacity_aware_iterator
   operator+(const __capacity_aware_iterator& __i, difference_type __n) noexcept {
     auto __tmp = __i;
     __tmp += __n;
     return __tmp;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
+  [[nodiscard]] friend constexpr __capacity_aware_iterator
   operator+(difference_type __n, const __capacity_aware_iterator& __i) noexcept {
     auto __tmp = __i;
     __tmp += __n;
     return __tmp;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __capacity_aware_iterator
+  [[nodiscard]] friend constexpr __capacity_aware_iterator
   operator-(const __capacity_aware_iterator& __i, difference_type __n) noexcept {
     auto __tmp = __i;
     __tmp -= __n;
     return __tmp;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
+  [[nodiscard]] friend constexpr difference_type
   operator-(const __capacity_aware_iterator& __x, const __capacity_aware_iterator& __y) noexcept {
     return difference_type(__x.__iter_ - __y.__iter_);
   }
 };
 
 template <class _It, size_t _RangeMaxElems2>
-_LIBCPP_HIDE_FROM_ABI constexpr auto __make_capacity_aware_iterator(_It __iter) noexcept {
+constexpr auto __make_capacity_aware_iterator(_It __iter) noexcept {
   return __capacity_aware_iterator<_It, _RangeMaxElems2>(__iter);
 }
 

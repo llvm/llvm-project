@@ -47,7 +47,7 @@ void a2(A *p) { delete p; }
 // OGCG:   %[[ISNULL:.*]] = icmp eq ptr %[[P]], null
 // OGCG:   br i1 %[[ISNULL]], label %{{.*}}, label %[[DELETE_NOTNULL:.*]]
 // OGCG: [[DELETE_NOTNULL]]:
-// OGCG:   call void @_ZdlPvmSt11align_val_t(ptr noundef %[[P]], i64 noundef 512, i64 noundef 32)
+// OGCG:   call void @_ZdlPvmSt11align_val_t(ptr allocptr noundef %[[P]], i64 noundef 512, i64 noundef 32)
 
 
 // Class-specific aligned operator delete.

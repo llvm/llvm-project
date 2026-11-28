@@ -45,7 +45,7 @@ fdata_pat = re.compile(r"([01].*) (?P<mispred>\d+) (?P<exec>\d+)")
 # <loc>: [<id>:]<offset>
 preagg_pat = re.compile(r"(?P<type>[TRSBFfr]) (?P<offsets_count>.*)")
 
-# No-LBR profile:
+# Basic sample profile (without brstack):
 # <is symbol?> <closest elf symbol or DSO name> <relative address> <count>
 nolbr_pat = re.compile(r"([01].*) (?P<count>\d+)")
 
@@ -108,7 +108,10 @@ nm_output = subprocess.run(
 # Populate symbol map
 symbols = {}
 for symline in nm_output.splitlines():
-    symval, _, symname = symline.split(maxsplit=2)
+    fields = symline.split(maxsplit=2)
+    if len(fields) < 3:
+        continue
+    symval, _, symname = fields
     if symname in symbols and args.no_redefine:
         continue
     symbols[symname] = symval

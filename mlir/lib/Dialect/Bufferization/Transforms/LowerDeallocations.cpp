@@ -361,6 +361,11 @@ public:
       return success();
     }
 
+    auto isMemref = [](Value v) { return isa<BaseMemRefType>(v.getType()); };
+    if (!llvm::all_of(adaptor.getMemrefs(), isMemref) ||
+        !llvm::all_of(adaptor.getRetained(), isMemref))
+      return rewriter.notifyMatchFailure(op, "expected memref operands");
+
     if (adaptor.getMemrefs().size() == 1 && adaptor.getRetained().empty())
       return rewriteOneMemrefNoRetainCase(op, adaptor, rewriter);
 

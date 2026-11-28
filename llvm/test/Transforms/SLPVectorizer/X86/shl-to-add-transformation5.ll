@@ -164,9 +164,9 @@ entry:
 define void @shl_add(ptr %p, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: define void @shl_add(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze i32 [[A]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i32 [[A]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[B]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[C]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[P]], align 4

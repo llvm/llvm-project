@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -target-abi elfv2 %s -o - -emit-llvm | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple powerpc64-unknown-linux-gnu -target-abi elfv2 %s -o - -emit-llvm | FileCheck %s %}
 
 // REQUIRES: powerpc-registered-target
 

@@ -36,7 +36,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16
 stack:

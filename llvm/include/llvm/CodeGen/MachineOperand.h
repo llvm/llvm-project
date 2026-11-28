@@ -453,6 +453,9 @@ public:
     return IsEarlyClobber;
   }
 
+  /// Return true if this operand is an early-clobber def or a use tied to one.
+  LLVM_ABI bool isEarlyClobberDefOrUse() const;
+
   bool isTied() const {
     assert(isReg() && "Wrong MachineOperand accessor");
     return TiedTo;

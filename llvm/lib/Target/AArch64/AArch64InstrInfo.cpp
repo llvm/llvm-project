@@ -100,13 +100,14 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     return 8;
   case AArch64::RET:
     // RET through another register expands to 2 instructions (guard + ret).
-    // RET through LR may also expand to 2 instructions if a deferred LR guard
-    // is flushed before the return.
-    return 8;
+    if (MI.getOperand(0).getReg() != AArch64::LR)
+      return 8;
+    return std::nullopt;
   case AArch64::RETAA:
   case AArch64::RETAB:
     // Authenticated returns expand to 3 instructions (authenticate + guard +
-    // ret).
+    // ret). Any deferred LR guard is discarded, so the flush allowance added
+    // by getInstSizeInBytes is an overestimate here.
     return 12;
   case AArch64::BRAA:
   case AArch64::BRAAZ:
@@ -119,6 +120,19 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     // Authenticated branches/calls expand to 3 instructions (authenticate +
     // guard + branch).
     return 12;
+  case AArch64::BRA:
+  case AArch64::BLRA:
+    // Up to 2 instructions to materialize the discriminator (mov + movk),
+    // followed by an authenticated branch/call that expands to 3 instructions
+    // (authenticate + guard + branch).
+    return 20;
+  case AArch64::TLSDESC_CALLSEQ:
+    // adrp + ldr + add + blr, where the ldr and blr each gain a guard.
+    return 24;
+  case AArch64::TLSDESC_AUTH_CALLSEQ:
+    // adrp + ldr + add + blraa, where the ldr gains a guard and the blraa
+    // expands to 3 instructions (authenticate + guard + blr).
+    return 28;
   case AArch64::AUTIASP:
   case AArch64::AUTIBSP:
   case AArch64::AUTIAZ:
@@ -179,6 +193,21 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 4;
   }
 
+  unsigned NumBytes = getInstSizeInBytesNoGuard(MI);
+
+  // The LFI rewriter may flush a deferred LR guard (1 instruction) before any
+  // control-flow instruction. Bundles are skipped because their size is the
+  // sum of the bundled instructions, which already include this.
+  if (Subtarget.isLFI() && !MI.isBundle() &&
+      (MI.isCall() || MI.isBranch() || MI.isReturn()))
+    NumBytes += 4;
+
+  return NumBytes;
+}
+
+unsigned
+AArch64InstrInfo::getInstSizeInBytesNoGuard(const MachineInstr &MI) const {
+  const MCInstrDesc &Desc = MI.getDesc();
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
   const Function &F = MF->getFunction();
@@ -206,6 +235,17 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   if (!MI.isBundle() && isTailCallReturnInst(MI)) {
     NumBytes = Desc.getSize() ? Desc.getSize() : 4;
+
+    if (STI.isLFI()) {
+      unsigned Opc = MI.getOpcode();
+      if (Opc == AArch64::AUTH_TCRETURN || Opc == AArch64::AUTH_TCRETURN_BTI) {
+        // The braa/brab expands to 3 instructions (authenticate + guard + br).
+        NumBytes += 8;
+      } else if (MI.getOperand(0).isReg()) {
+        // Indirect tail calls expand to 2 instructions (guard + br).
+        NumBytes += 4;
+      }
+    }
 
     const auto *MFI = MF->getInfo<AArch64FunctionInfo>();
     if (!MFI->shouldSignReturnAddress(*MF))
@@ -1333,8 +1373,6 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
     if (FoldedOpc) {
       FalseReg = NewReg;
       Opc = FoldedOpc;
-      // Extend the live range of NewReg.
-      MRI.clearKillFlags(NewReg);
     }
   }
 
@@ -1651,6 +1689,10 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
     return true;
 
   switch (MI.getOpcode()) {
+  case AArch64::PAUTH_EPILOGUE:
+    // Keep authentication after the other epilogue instructions and close to
+    // the return, allowing them to combine into an authenticated return.
+    return true;
   case AArch64::HINT:
     // CSDB hints are scheduling barriers.
     if (MI.getOperand(0).getImm() == 0x14)
@@ -2790,8 +2832,8 @@ bool AArch64InstrInfo::isGPRCopy(const MachineInstr &MI) {
   case TargetOpcode::COPY: {
     // GPR32 copies will by lowered to ORRXrs
     Register DstReg = MI.getOperand(0).getReg();
-    return (AArch64::GPR32RegClass.contains(DstReg) ||
-            AArch64::GPR64RegClass.contains(DstReg));
+    return DstReg.isPhysical() && (AArch64::GPR32RegClass.contains(DstReg) ||
+                                   AArch64::GPR64RegClass.contains(DstReg));
   }
   case AArch64::ORRXrs: // orr Xd, Xzr, Xm (LSL #0)
     if (MI.getOperand(1).getReg() == AArch64::XZR) {
@@ -2819,7 +2861,7 @@ bool AArch64InstrInfo::isFPRCopy(const MachineInstr &MI) {
     break;
   case TargetOpcode::COPY: {
     Register DstReg = MI.getOperand(0).getReg();
-    return AArch64::FPR128RegClass.contains(DstReg);
+    return DstReg.isPhysical() && AArch64::FPR128RegClass.contains(DstReg);
   }
   case AArch64::ORRv16i8:
     if (MI.getOperand(1).getReg() == MI.getOperand(2).getReg()) {
@@ -3694,6 +3736,8 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
     NumBytes = 8;
     break;
 
+  case AArch64::LDURSi:
+  case AArch64::STURSi:
   case AArch64::LDURWi:
   case AArch64::LDURSWi:
   case AArch64::STURWi:
@@ -3750,9 +3794,13 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
     OffsetScale = 8;
     break;
 
+  case AArch64::LDRSroX:
+  case AArch64::STRSroX:
   case AArch64::LDRWroX:
   case AArch64::LDRSWroX:
   case AArch64::STRWroX:
+  case AArch64::LDRSui:
+  case AArch64::STRSui:
   case AArch64::LDRWui:
   case AArch64::LDRSWui:
   case AArch64::STRWui:
@@ -4024,6 +4072,12 @@ static unsigned regOffsetOpcode(unsigned Opcode) {
   case AArch64::STURXi:
   case AArch64::STRXui:
     return AArch64::STRXroX;
+  case AArch64::LDURSi:
+  case AArch64::LDRSui:
+    return AArch64::LDRSroX;
+  case AArch64::STURSi:
+  case AArch64::STRSui:
+    return AArch64::STRSroX;
   case AArch64::LDURWi:
   case AArch64::LDRWui:
     return AArch64::LDRWroX;
@@ -4098,6 +4152,12 @@ unsigned scaledOffsetOpcode(unsigned Opcode, unsigned &Scale) {
   case AArch64::STURXi:
     Scale = 8;
     return AArch64::STRXui;
+  case AArch64::LDURSi:
+    Scale = 4;
+    return AArch64::LDRSui;
+  case AArch64::STURSi:
+    Scale = 4;
+    return AArch64::STRSui;
   case AArch64::LDURWi:
     Scale = 4;
     return AArch64::LDRWui;
@@ -4153,6 +4213,8 @@ unsigned scaledOffsetOpcode(unsigned Opcode, unsigned &Scale) {
   case AArch64::STRXui:
     Scale = 8;
     return Opcode;
+  case AArch64::LDRSui:
+  case AArch64::STRSui:
   case AArch64::LDRWui:
   case AArch64::LDRSWui:
   case AArch64::STRWui:
@@ -4191,6 +4253,8 @@ unsigned unscaledOffsetOpcode(unsigned Opcode) {
   case AArch64::STURDi:
   case AArch64::LDURXi:
   case AArch64::STURXi:
+  case AArch64::LDURSi:
+  case AArch64::STURSi:
   case AArch64::LDURWi:
   case AArch64::LDURSWi:
   case AArch64::STURWi:
@@ -4219,6 +4283,10 @@ unsigned unscaledOffsetOpcode(unsigned Opcode) {
     return AArch64::LDURXi;
   case AArch64::STRXui:
     return AArch64::STURXi;
+  case AArch64::LDRSui:
+    return AArch64::LDURSi;
+  case AArch64::STRSui:
+    return AArch64::STURSi;
   case AArch64::LDRWui:
     return AArch64::LDURWi;
   case AArch64::LDRSWui:
@@ -4285,6 +4353,14 @@ static unsigned offsetExtendOpcode(unsigned Opcode) {
   case AArch64::STURXi:
   case AArch64::STRXui:
     return AArch64::STRXroW;
+  case AArch64::LDRSroX:
+  case AArch64::LDURSi:
+  case AArch64::LDRSui:
+    return AArch64::LDRSroW;
+  case AArch64::STRSroX:
+  case AArch64::STURSi:
+  case AArch64::STRSui:
+    return AArch64::STRSroW;
   case AArch64::LDRWroX:
   case AArch64::LDURWi:
   case AArch64::LDRWui:
@@ -8986,7 +9062,6 @@ genIndexedMultiply(MachineInstr &Root,
     Dup = MRI.getUniqueVRegDef(Dup->getOperand(1).getReg());
 
   Register DupSrcReg = Dup->getOperand(1).getReg();
-  MRI.clearKillFlags(DupSrcReg);
   MRI.constrainRegClass(DupSrcReg, RC);
 
   unsigned DupSrcLane = Dup->getOperand(2).getImm();
@@ -10440,6 +10515,14 @@ AArch64InstrInfo::getSerializableMachineMemOperandTargetFlags() const {
 /// * Call construction overhead: 3 (save + BL + restore)
 /// * Frame construction overhead: 1 (ret)
 /// * Requires stack fixups? No
+///
+/// When Pointer Authentication (PAC) is enabled:
+/// - MachineOutlinerDefault, MachineOutlinerRegSave, MachineOutlinerThunk,
+///   and MachineOutlinerNoLRSave: Return address is signed in the prologue and
+///   authenticated in the epilogue if required by the signing scope.
+/// - MachineOutlinerTailCall: Rejected if return address signing is required
+///   to avoid corrupting the caller's LR.
+
 enum MachineOutlinerClass {
   MachineOutlinerDefault,  /// Emit a save, restore, call, and return.
   MachineOutlinerTailCall, /// Only emit a branch.
@@ -10546,6 +10629,25 @@ outliningCandidatesSigningKeyConsensus(const outliner::Candidate &a,
   const auto &MFIb = b.getMF()->getInfo<AArch64FunctionInfo>();
 
   return MFIa->shouldSignWithBKey() == MFIb->shouldSignWithBKey();
+}
+
+static bool outliningCandidatesPAuthLRConsensus(const outliner::Candidate &a,
+                                                const outliner::Candidate &b) {
+  const auto &MFIa = a.getMF()->getInfo<AArch64FunctionInfo>();
+  const auto &MFIb = b.getMF()->getInfo<AArch64FunctionInfo>();
+
+  const AArch64Subtarget &SubtargetA =
+      a.getMF()->getSubtarget<AArch64Subtarget>();
+  const AArch64Subtarget &SubtargetB =
+      b.getMF()->getSubtarget<AArch64Subtarget>();
+
+  // Return true only if branch-protection-pauth-lr attributes match
+  // and +pauth-lr feature is enabled for both.
+  if (MFIa->branchProtectionPAuthLR() != MFIb->branchProtectionPAuthLR())
+    return false;
+
+  return !MFIa->branchProtectionPAuthLR() ||
+         SubtargetA.hasPAuthLR() == SubtargetB.hasPAuthLR();
 }
 
 static bool outliningCandidatesV8_3OpsConsensus(const outliner::Candidate &a,
@@ -10658,8 +10760,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
   // We only allow outlining for functions having exactly matching return
   // address signing attributes, i.e., all share the same value for the
-  // attribute "sign-return-address" and all share the same type of key they
-  // are signed with.
+  // attribute "sign-return-address", all share the same type of key they
+  // are signed with & all share the same pauth-lr attributes.
   // Additionally we require all functions to simultaneously either support
   // v8.3a features or not. Otherwise an outlined function could get signed
   // using dedicated v8.3 instructions and a call from a function that doesn't
@@ -10668,10 +10770,11 @@ AArch64InstrInfo::getOutliningCandidateInfo(
           RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
           [](const outliner::Candidate &a, const outliner::Candidate &b) {
             // Return true if a and b are non-equal w.r.t. return address
-            // signing or support of v8.3a features
+            // signing, support of v8.3a features or support of pauth-lr
             if (outliningCandidatesSigningScopeConsensus(a, b) &&
                 outliningCandidatesSigningKeyConsensus(a, b) &&
-                outliningCandidatesV8_3OpsConsensus(a, b)) {
+                outliningCandidatesV8_3OpsConsensus(a, b) &&
+                outliningCandidatesPAuthLRConsensus(a, b)) {
               return false;
             }
             return true;
@@ -10716,9 +10819,6 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     if (RepeatedSequenceLocs.size() < MinRepeats)
       return std::nullopt;
 
-    // One PAC and one AUT instructions
-    NumBytesToCreateFrame += 8;
-
     // PAuth is enabled - set extra tail call cost, if any.
     auto LRCheckMethod = Subtarget.getAuthenticatedLRCheckMethod(
         *RepeatedSequenceLocs[0].getMF());
@@ -10728,61 +10828,6 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // SequenceSize, so account for it for more precise results.
     if (isTailCallReturnInst(RepeatedSequenceLocs[0].back()))
       SequenceSize += NumBytesToCheckLRInTCEpilogue;
-
-    // We have to check if sp modifying instructions would get outlined.
-    // If so we only allow outlining if sp is unchanged overall, so matching
-    // sub and add instructions are okay to outline, all other sp modifications
-    // are not
-    auto hasIllegalSPModification = [&TRI](outliner::Candidate &C) {
-      int SPValue = 0;
-      for (auto &MI : C) {
-        if (MI.modifiesRegister(AArch64::SP, &TRI)) {
-          switch (MI.getOpcode()) {
-          case AArch64::ADDXri:
-          case AArch64::ADDWri:
-            assert(MI.getNumOperands() == 4 && "Wrong number of operands");
-            assert(MI.getOperand(2).isImm() &&
-                   "Expected operand to be immediate");
-            assert(MI.getOperand(1).isReg() &&
-                   "Expected operand to be a register");
-            // Check if the add just increments sp. If so, we search for
-            // matching sub instructions that decrement sp. If not, the
-            // modification is illegal
-            if (MI.getOperand(1).getReg() == AArch64::SP)
-              SPValue += MI.getOperand(2).getImm();
-            else
-              return true;
-            break;
-          case AArch64::SUBXri:
-          case AArch64::SUBWri:
-            assert(MI.getNumOperands() == 4 && "Wrong number of operands");
-            assert(MI.getOperand(2).isImm() &&
-                   "Expected operand to be immediate");
-            assert(MI.getOperand(1).isReg() &&
-                   "Expected operand to be a register");
-            // Check if the sub just decrements sp. If so, we search for
-            // matching add instructions that increment sp. If not, the
-            // modification is illegal
-            if (MI.getOperand(1).getReg() == AArch64::SP)
-              SPValue -= MI.getOperand(2).getImm();
-            else
-              return true;
-            break;
-          default:
-            return true;
-          }
-        }
-      }
-      if (SPValue)
-        return true;
-      return false;
-    };
-    // Remove candidates with illegal stack modifying instructions
-    llvm::erase_if(RepeatedSequenceLocs, hasIllegalSPModification);
-
-    // If the sequence doesn't have enough candidates left, then we're done.
-    if (RepeatedSequenceLocs.size() < MinRepeats)
-      return std::nullopt;
   }
 
   // Properties about candidate MBBs that hold for all of them.
@@ -10894,6 +10939,15 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // If the last instruction in any candidate is a terminator, then we should
   // tail call all of the candidates.
   if (RepeatedSequenceLocs[0].back().isTerminator()) {
+    // Reject tail calls if they would require return address signing, as we
+    // cannot safely sign them without corrupting the caller's inherited LR.
+    if (AArch64FunctionInfo::shouldSignReturnAddress(
+            RASignCondition,
+            any_of(RepeatedSequenceLocs[0], [](const MachineInstr &MI) {
+              return MI.isCall() && !MI.isReturn();
+            })))
+      return std::nullopt;
+
     FrameID = MachineOutlinerTailCall;
     NumBytesToCreateFrame = 0;
     unsigned NumBytesForCall = 4 + NumBytesToCheckLRInTCEpilogue;
@@ -11036,11 +11090,11 @@ AArch64InstrInfo::getOutliningCandidateInfo(
 
   // Does every candidate's MBB contain a call? If so, then we might have a call
   // in the range.
+  bool ModStackToSaveLR = false;
   if (FlagsSetInAll & MachineOutlinerMBBFlags::HasCalls) {
     // Check if the range contains a call. These require a save + restore of the
     // link register.
     outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
-    bool ModStackToSaveLR = false;
     if (any_of(drop_end(FirstCand),
                [](const MachineInstr &MI) { return MI.isCall(); }))
       ModStackToSaveLR = true;
@@ -11074,6 +11128,48 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   if (FrameID != MachineOutlinerTailCall && CFICount > 0)
     return std::nullopt;
 
+  if (FrameID != MachineOutlinerTailCall &&
+      AArch64FunctionInfo::shouldSignReturnAddress(RASignCondition,
+                                                   ModStackToSaveLR))
+    NumBytesToCreateFrame += 8;
+  if (RASignCondition == SignReturnAddress::All) {
+    auto hasIllegalSPModification = [&TRI](outliner::Candidate &C) {
+      int SPValue = 0;
+      for (const MachineInstr &MI : C) {
+        if (!MI.isCall() && MI.modifiesRegister(AArch64::SP, &TRI)) {
+          switch (MI.getOpcode()) {
+          case AArch64::ADDXri:
+          case AArch64::ADDWri:
+            assert(MI.getNumOperands() == 4 && "Wrong number of operands");
+            assert(MI.getOperand(2).isImm() && "Expected immediate");
+            assert(MI.getOperand(1).isReg() && "Expected register");
+            if (MI.getOperand(1).getReg() == AArch64::SP)
+              SPValue += MI.getOperand(2).getImm();
+            else
+              return true;
+            break;
+          case AArch64::SUBXri:
+          case AArch64::SUBWri:
+            assert(MI.getNumOperands() == 4 && "Wrong number of operands");
+            assert(MI.getOperand(2).isImm() && "Expected immediate");
+            assert(MI.getOperand(1).isReg() && "Expected register");
+            if (MI.getOperand(1).getReg() == AArch64::SP)
+              SPValue -= MI.getOperand(2).getImm();
+            else
+              return true;
+            break;
+          default:
+            return true;
+          }
+        }
+      }
+      return SPValue != 0;
+    };
+
+    if (hasIllegalSPModification(RepeatedSequenceLocs[0]))
+      return std::nullopt;
+  }
+
   return std::make_unique<outliner::OutlinedFunction>(
       RepeatedSequenceLocs, SequenceSize, NumBytesToCreateFrame, FrameID);
 }
@@ -11089,6 +11185,8 @@ void AArch64InstrInfo::mergeOutliningCandidateAttributes(
     F.addFnAttr(CFn.getFnAttribute("ptrauth-returns"));
   if (CFn.hasFnAttribute("ptrauth-auth-traps"))
     F.addFnAttr(CFn.getFnAttribute("ptrauth-auth-traps"));
+  if (CFn.hasFnAttribute("branch-protection-pauth-lr"))
+    F.addFnAttr(CFn.getFnAttribute("branch-protection-pauth-lr"));
   // Since all candidates belong to the same module, just copy the
   // function-level attributes of an arbitrary function.
   if (CFn.hasFnAttribute("sign-return-address"))
@@ -11272,6 +11370,8 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
   case AArch64::PACIBSP:
   case AArch64::PACIASPPC:
   case AArch64::PACIBSPPC:
+  case AArch64::PACNBIASPPC:
+  case AArch64::PACNBIBSPPC:
   case AArch64::AUTIASP:
   case AArch64::AUTIBSP:
   case AArch64::AUTIASPPCi:
@@ -11444,6 +11544,11 @@ static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
                                  bool ShouldSignReturnAddr) {
   if (!ShouldSignReturnAddr)
     return;
+
+  // Thunks do not naturally have LR in their live-ins, but PAC signing
+  // requires it. Add it to prevent machine verifier crashes.
+  if (!MBB.isLiveIn(AArch64::LR))
+    MBB.addLiveIn(AArch64::LR);
 
   BuildMI(MBB, MBB.begin(), DebugLoc(), TII->get(AArch64::PAUTH_PROLOGUE))
       .setMIFlag(MachineInstr::FrameSetup);
@@ -12098,7 +12203,6 @@ namespace {
 class AArch64PipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
   MachineFunction *MF;
   const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
   MachineRegisterInfo &MRI;
 
   /// The block of the loop
@@ -12128,8 +12232,7 @@ public:
                            Register Init, bool IsUpdatePriorComp,
                            const SmallVectorImpl<MachineOperand> &Cond)
       : MF(Comp->getParent()->getParent()),
-        TII(MF->getSubtarget().getInstrInfo()),
-        TRI(MF->getSubtarget().getRegisterInfo()), MRI(MF->getRegInfo()),
+        TII(MF->getSubtarget().getInstrInfo()), MRI(MF->getRegInfo()),
         LoopBB(LoopBB), CondBranch(CondBranch), Comp(Comp),
         CompCounterOprNum(CompCounterOprNum), Update(Update),
         UpdateCounterOprNum(UpdateCounterOprNum), Init(Init),

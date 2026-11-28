@@ -126,10 +126,10 @@ LIBC_MATH_SMALL_TABLES_INLINE double exp_pm_eval(double x, bool is_sinh) {
   double x_a = xbits.abs().get_val();
 
   // Using ROUND_BIAS, ROUND_SHIFT, and ROUND_MASK (see exp_utils.h), we compute
-  // k_biased = fma(x_a, LOG2_E.hi, ROUND_BIAS) and extract in parallel:
+  // k_biased = fma(x_a, LOG2_E_DD.hi, ROUND_BIAS) and extract in parallel:
   //   kd = (k_biased & ROUND_MASK) - ROUND_SHIFT
   //   k  = (k_bits >> 32) & 0x3'ffff.
-  double k_biased = fputil::multiply_add(x_a, LOG2_E.hi, ROUND_BIAS);
+  double k_biased = fputil::multiply_add(x_a, LOG2_E_DD.hi, ROUND_BIAS);
   double kd = fputil::fp_and(k_biased, ROUND_MASK) - ROUND_SHIFT;
   int k = static_cast<int>(cpp::bit_cast<uint64_t>(k_biased) >> 32) & 0x3'ffff;
 
@@ -255,7 +255,7 @@ LIBC_MATH_SMALL_TABLES_INLINE double exp_pm_eval(double x, bool is_sinh) {
   FPBits xbits(x);
   double x_a = xbits.abs().get_val();
 
-  constexpr double LOG2_E_SCALE = EXP_SCALE * LOG2_E.hi;
+  constexpr double LOG2_E_SCALE = EXP_SCALE * LOG2_E_DD.hi;
   // Using ROUND_BIAS, ROUND_SHIFT, and ROUND_MASK (see exp_utils.h), we compute
   // k_biased = fma(x_a, LOG2_E_SCALE, ROUND_BIAS) and extract in parallel:
   //   kd  = (k_biased & ROUND_MASK) - ROUND_SHIFT
@@ -352,7 +352,7 @@ LIBC_MATH_SMALL_TABLES_INLINE double exp_pm_eval(double x, bool is_sinh) {
   //   even_lo ~ mp_lo + (s.hi * u^2) * P_even(u^2)
   //   poly_lo ~ even_lo + d.hi * odd_lo
   double mp_lo = fputil::multiply_add(m_p.lo, t1, m_p.lo);
-  double mm_lo = fputil::multiply_add(-m_m.lo, t1, m_m.lo);
+  double mm_lo = fputil::sub_multiply(m_m.lo, m_m.lo, t1);
   double s_u2 = s.hi * u2;
   double even_lo = fputil::multiply_add(s_u2, p_even, mp_lo);
   double poly_lo = fputil::multiply_add(d.hi, odd_lo, even_lo);

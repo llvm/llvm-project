@@ -887,7 +887,7 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
       // ... unless it's a .pcm.lock file, which indicates that someone is
       // in the process of rebuilding a module. They'll rebuild the index
       // at the end of that translation unit, so we don't have to.
-      if (llvm::sys::path::extension(D->path()) == ".pcm.lock")
+      if (StringRef(D->path()).ends_with(".pcm.lock"))
         return llvm::createStringError(std::errc::device_or_resource_busy,
                                        "someone else is building the index");
 

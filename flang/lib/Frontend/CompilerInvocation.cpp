@@ -586,6 +586,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.Underscoring = 0;
   }
 
+  opts.ImplicitDefaultMapperAllocatableMembers = args.hasFlag(
+      clang::options::OPT_fimplicit_default_mapper_allocatable_members,
+      clang::options::OPT_fno_implicit_default_mapper_allocatable_members,
+      /*Default=*/true);
+
   if (const llvm::opt::Arg *arg =
           args.getLastArg(clang::options::OPT_complex_range_EQ)) {
     llvm::StringRef argValue = llvm::StringRef(arg->getValue());
@@ -828,8 +833,11 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   opts.dependencyTargets = args.getAllArgValues(clang::options::OPT_MT);
   opts.showHelp = args.hasArg(clang::options::OPT_help);
   opts.showVersion = args.hasArg(clang::options::OPT_version);
+  // -mtune=help is an alias of --print-supported-tune-cpus.
+  // FIXME: Flang does not distinguish between the CPU and tuning CPU lists.
   opts.printSupportedCPUs =
-      args.hasArg(clang::options::OPT_print_supported_cpus);
+      args.hasArg(clang::options::OPT_print_supported_cpus) ||
+      args.hasArg(clang::options::OPT_print_supported_tune_cpus);
 
   // Get the input kind (from the value passed via `-x`)
   InputKind dashX(Language::Unknown);
@@ -1346,7 +1354,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   llvm::Triple t(res.getTargetOpts().triple);
 
   constexpr unsigned newestFullySupported = 31;
-  constexpr unsigned latestFinalized = 60;
+  constexpr unsigned latestFinalized = 61;
   // By default OpenMP is set to the most recent fully supported version
   res.getLangOpts().OpenMPVersion = newestFullySupported;
   res.getFrontendOpts().features.Enable(
@@ -2148,7 +2156,7 @@ void CompilerInvocation::setFortranOpts() {
 std::unique_ptr<Fortran::semantics::SemanticsContext>
 CompilerInvocation::getSemanticsCtx(
     Fortran::parser::AllCookedSources &allCookedSources,
-    const llvm::TargetMachine &targetMachine) {
+    llvm::StringRef targetFeatures) {
   auto &fortranOptions = getFortranOpts();
 
   auto semanticsContext = std::make_unique<semantics::SemanticsContext>(
@@ -2167,13 +2175,14 @@ CompilerInvocation::getSemanticsCtx(
               .getOptionPrefixedName(
                   clang::options::OPT_fno_openacc_default_none_scalars_strict)
               .str())
-      .set_targetTriple(targetMachine.getTargetTriple().str())
-      .set_targetFeatures(targetMachine.getTargetFeatureString().str());
+      .set_targetTriple(getTargetOpts().triple)
+      .set_targetFeatures(targetFeatures.str());
 
   std::string compilerVersion = Fortran::common::getFlangFullVersion();
   Fortran::tools::setUpTargetCharacteristics(
-      semanticsContext->targetCharacteristics(), targetMachine, getTargetOpts(),
-      compilerVersion, allCompilerInvocOpts);
+      semanticsContext->targetCharacteristics(),
+      llvm::Triple(getTargetOpts().triple), getTargetOpts(), compilerVersion,
+      allCompilerInvocOpts);
   return semanticsContext;
 }
 

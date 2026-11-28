@@ -280,7 +280,7 @@ template auto GLL::operator()<int>(int a) const -> int;
 #endif
 } // namespace cwg1780
 
-namespace cwg1795 { // cwg1975: 2.7
+namespace cwg1795 { // cwg1795: 2.7
 namespace N {
   struct S {}; // #cwg1795-S
 }

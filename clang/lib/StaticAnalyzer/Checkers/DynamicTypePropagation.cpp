@@ -887,8 +887,8 @@ void DynamicTypePropagation::checkPreObjCMessage(const ObjCMethodCall &M,
     // Warn when argument is incompatible with the parameter.
     if (!ASTCtxt.canAssignObjCInterfaces(ParamObjectPtrType,
                                          ArgObjectPtrType)) {
-      ExplodedNode *N = C.generateNonFatalErrorNode(State);
-      reportGenericsBug(ArgObjectPtrType, ParamObjectPtrType, N, Sym, C, Arg);
+      if (ExplodedNode *N = C.generateNonFatalErrorNode(State))
+        reportGenericsBug(ArgObjectPtrType, ParamObjectPtrType, N, Sym, C, Arg);
       return;
     }
   }

@@ -30,7 +30,7 @@ void *sink; // prevent optimizations from removing the calls
 // CHECK: call noalias ptr @calloc(i64 noundef 3, i64 noundef 4){{.*}} !alloc_token [[META_INT]]
 // CHECK: call noalias ptr @realloc(ptr noundef {{.*}}, i64 noundef 8){{.*}} !alloc_token [[META_LONG:![0-9]+]]
 // CHECK: call noalias ptr @reallocarray(ptr noundef {{.*}}, i64 noundef 5, i64 noundef 8), !alloc_token [[META_LONG]]
-// CHECK: call noalias align 128 ptr @aligned_alloc(i64 noundef 128, i64 noundef 4){{.*}} !alloc_token [[META_INT]]
+// CHECK: call noalias align 128 ptr @aligned_alloc(i64 allocalign noundef 128, i64 noundef 4){{.*}} !alloc_token [[META_INT]]
 // CHECK: call noalias ptr @memalign(i64 noundef 16, i64 noundef 4), !alloc_token [[META_INT]]
 // CHECK: call noalias ptr @valloc(i64 noundef 4), !alloc_token [[META_INT]]
 // CHECK: call noalias ptr @pvalloc(i64 noundef 4), !alloc_token [[META_INT]]

@@ -132,7 +132,7 @@ public:
       {{CDM::CLibraryMaybeHardened, {"memset"}, 3},
        &CStringChecker::evalMemset},
       {{CDM::CLibrary, {"explicit_memset"}, 3}, &CStringChecker::evalMemset},
-      // FIXME: C23 introduces 'memset_explicit', maybe also model that
+      {{CDM::CLibrary, {"memset_explicit"}, 3}, &CStringChecker::evalMemset},
       {{CDM::CLibraryMaybeHardened, {"strcpy"}, 2},
        &CStringChecker::evalStrcpy},
       {{CDM::CLibraryMaybeHardened, {"strncpy"}, 3},

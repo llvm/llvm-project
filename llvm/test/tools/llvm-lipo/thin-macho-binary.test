@@ -10,6 +10,7 @@
 # INPUT_FILE_THIN: must be a fat file when the -thin option is specified
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x00000097

@@ -38,6 +38,7 @@
 namespace llvm {
 
 class GlobalVariable;
+struct SPIRVOptions;
 class MachineDominatorTree;
 class SPIRVSubtarget;
 
@@ -48,9 +49,11 @@ class SPIRVSubtarget;
 /// Call sequence:
 /// - beginModule() collects compile-unit metadata.
 /// - prepareModuleOutput() adds the extension and ext-inst set to MAI.
-/// - emitNonSemanticDebugStrings() emits NSDI OpStrings in section 7.
-/// - emitNonSemanticGlobalDebugInfo() emits module-scope NSDI and sets
-///   GlobalNSDIEnabled.
+/// - generateModuleDebugInfo() buffers the module-scope NSDI and adds
+///   SPV_KHR_relaxed_extended_instruction if it used a forward reference.
+/// - emitNonSemanticDebugStrings() flushes the NSDI OpStrings in section 7.
+/// - emitNonSemanticGlobalDebugInfo() flushes the module-scope NSDI in
+///   section 10.
 /// - beginFunctionImpl() prepares per-function DebugFunctionDefinition state
 ///   and runs analyzeDebugRecords() over the whole function.
 /// - endInstruction() emits DebugFunctionDefinition after the last function-
@@ -60,6 +63,8 @@ class SPIRVSubtarget;
 ///   being printed, and the DebugDeclare and DebugValue anchored on it.
 /// - endFunctionImpl() resets per-function state.
 class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
+  const SPIRVOptions &CLOpts;
+
   static constexpr unsigned NSSet = static_cast<unsigned>(
       SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100);
 
@@ -149,8 +154,15 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   SmallDenseMap<const DIScope *, InProgressScope, 8> ScopesInProgress;
 
   // True when -spirv-debug-scope-forward-refs is set and prepareModuleOutput
-  // saw SPV_KHR_relaxed_extended_instruction.
-  bool HasRelaxedExtInst = false;
+  // saw that SPV_KHR_relaxed_extended_instruction may be used.
+  bool CanUseForwardRefs = false;
+
+  // True once an OpExtInstWithForwardRefsKHR was built.
+  bool UsedForwardRefs = false;
+
+  SmallVector<MCInst> PendingStrings;
+  SmallVector<MCInst> PendingGlobalDI;
+  SmallVector<MCInst> *PendingSink = nullptr;
 
   // Types and scopes that are not supported.
   SmallPtrSet<const DIScope *, 8> FailedScopes;
@@ -191,7 +203,7 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   DenseMap<const DILocation *, MCRegister> DebugInlinedAtRegs;
 
   // Path \c OpString result id per \c DIScope (CU, \c DIFile, declaration
-  // \c DISubprogram, …). Filled during \c emitNonSemanticDebugStrings() using
+  // \c DISubprogram, …). Filled during \c generateDebugStrings() using
   // \c getDebugFullPath + \c emitOpStringIfNew; section 10 uses it for
   // \c DebugSource without recomputing path text.
   DenseMap<const DIScope *, MCRegister> ScopeToPathOpStringReg;
@@ -201,14 +213,15 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   DenseMap<unsigned, MCRegister> DebugSourceRegByFileStr;
 
   // Maps OpString contents to result id. Populated only by emitOpStringIfNew()
-  // during section 7; section 10 uses getCachedOpStringReg() (lookup only).
+  // during generateDebugStrings(); section 10 uses getCachedOpStringReg()
+  // (lookup only).
   StringMap<MCRegister> OpStringContentCache;
 
 #ifndef NDEBUG // Only declare the variable for debugging purposes.
-  // True after emitNonSemanticDebugStrings() emitted the NSDI OpStrings for
-  // this module. SPIRVAsmPrinter calls that before
-  // emitNonSemanticGlobalDebugInfo().
-  bool NonSemanticOpStringsSectionEmitted = false;
+  // True after generateDebugStrings() built the NSDI OpStrings for this
+  // module. generateModuleDebugInfo() calls that before
+  // generateGlobalDebugInfo().
+  bool DebugStringsGenerated = false;
 #endif
 
   MCRegister CachedEmptyStringReg;
@@ -244,15 +257,15 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // and global-variable init expressions.
   DenseMap<SmallVector<MCRegister>, MCRegister> DebugExpressionCache;
 
-  // True once emitNonSemanticGlobalDebugInfo() has run. Both
+  // True once generateModuleDebugInfo() has run. Both
   // SPIRVAsmPrinter::emitFunctionHeader() and emitEndOfAsmFile() may call
   // outputModuleSections(), each guarded by ModuleSectionsEmitted, so only
   // one fires. This flag provides a secondary guard in case the call sites
   // change.
   bool GlobalDIEmitted = false;
 
-  // True when emitNonSemanticGlobalDebugInfo() completed module-scope NSDI
-  // emission for this module.
+  // True when generateGlobalDebugInfo() completed module-scope NSDI
+  // generation for this module.
   bool GlobalNSDIEnabled = false;
 
   SPIRV::ModuleAnalysisInfo *CurrentMAI = nullptr;
@@ -292,14 +305,10 @@ public:
   /// AsmPrinter::doInitialization() via the handler list. No emission.
   void beginModule(Module *M) override;
 
-  /// Emit OpString instructions for all NSDI file paths and basic type names
-  /// into the debug section (section 7 of the SPIR-V module layout). Must be
-  /// called from SPIRVAsmPrinter::outputDebugSourceAndStrings(), after
-  /// prepareModuleOutput() has registered the ext inst set. Registers are
-  /// stored in \c OpStringContentCache and \c ScopeToPathOpStringReg;
-  /// \c emitNonSemanticGlobalDebugInfo() resolves them via
-  /// \c getCachedOpStringReg() and path maps.
-  void emitNonSemanticDebugStrings(SPIRV::ModuleAnalysisInfo &MAI);
+  /// Output the NSDI OpStrings built by generateModuleDebugInfo() into the
+  /// debug section (section 7 of the SPIR-V module layout). Must be called
+  /// from SPIRVAsmPrinter::outputDebugSourceAndStrings().
+  void emitNonSemanticDebugStrings(SPIRV::ModuleAnalysisInfo &);
 
   /// Add SPV_KHR_non_semantic_info extension and
   /// NonSemantic.Shader.DebugInfo.100 ext inst set entry to MAI. Must be called
@@ -308,21 +317,22 @@ public:
   void prepareModuleOutput(const SPIRVSubtarget &ST,
                            SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Emit module-scope NSDI instructions (DebugSource, DebugCompilationUnit,
-  /// DebugTypeBasic, DebugTypePointer, DebugTypeFunction,
-  /// DebugFunctionDeclaration, DebugFunction). Called by
-  /// SPIRVAsmPrinter::outputModuleSections() at section 10 in place of
-  /// outputModuleSection(MB_NonSemanticGlobalDI). Requires
-  /// emitNonSemanticDebugStrings() to have run first when NSDI strings apply.
-  /// Sets \c GlobalNSDIEnabled when module-scope NSDI emission completes.
-  void emitNonSemanticGlobalDebugInfo(SPIRV::ModuleAnalysisInfo &MAI);
+  /// Buffer the module-scope NSDI and add SPV_KHR_relaxed_extended_instruction
+  /// to MAI if a forward reference was built. Must be called between
+  /// prepareModuleOutput() and outputGlobalRequirements().
+  void generateModuleDebugInfo(SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Output the module-scope NSDI built by generateModuleDebugInfo(). Called
+  /// by SPIRVAsmPrinter::outputModuleSections() at section 10 in place of
+  /// outputModuleSection(MB_NonSemanticGlobalDI).
+  void emitNonSemanticGlobalDebugInfo(SPIRV::ModuleAnalysisInfo &);
 
   /// Called after the synthesized entry \c OpLabel has been emitted.
   void notifyEntryLabelEmitted(const MachineFunction &MF);
 
 protected:
-  // All module-level output is driven by emitNonSemanticGlobalDebugInfo(),
-  // called explicitly from SPIRVAsmPrinter::outputModuleSections(). Nothing
+  // All module-level output is driven by generateModuleDebugInfo() and the
+  // emit* calls in SPIRVAsmPrinter::outputModuleSections(). Nothing
   // needs to happen in the AsmPrinterHandler::endModule() callback.
   void endModule() override {}
 
@@ -368,23 +378,34 @@ private:
   void preparePerFunctionDebug(const MachineFunction *MF);
   void tryEmitDebugFunctionDefinition(SPIRV::ModuleAnalysisInfo &MAI);
 
+  /// Build the NSDI OpStrings, caching their ids in \c OpStringContentCache and
+  /// \c ScopeToPathOpStringReg.
+  void generateDebugStrings(SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Build the section 10 NSDI. Requires generateDebugStrings() first.
+  void generateGlobalDebugInfo(SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Output and clear \p Insts.
+  void flushPendingInsts(SmallVectorImpl<MCInst> &Insts);
+
   void emitMCInst(MCInst &Inst);
   MCRegister emitOpString(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Section 7 only: emit OpString and cache it if not already present. Must
-  /// not be called after NonSemanticOpStringsSectionEmitted is set. Returns
+  /// generateDebugStrings() only: emit OpString and cache it if not already
+  /// present. Must not be called after DebugStringsGenerated is set. Returns
   /// the path (or string) \c OpString result id.
   MCRegister emitOpStringIfNew(StringRef S, SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Section 10 only: lookup OpString id from cache; asserts if missing or if
-  /// section 7 did not complete.
+  /// generateDebugStrings() did not complete.
   MCRegister getCachedOpStringReg(StringRef S);
 
-  /// Section 7 only: emit the path \c OpString for \p Scope and cache it under
-  /// \p Scope. Returns the \c OpString result id. A \p Scope already seen
-  /// returns the cached id without rebuilding the path. A null \p Scope maps to
-  /// the empty path and is cached like any other, though section 10 reads it
-  /// through \c getCachedScopePathOpStringReg, which handles null separately.
+  /// generateDebugStrings() only: emit the path \c OpString for \p Scope and
+  /// cache it under \p Scope. Returns the \c OpString result id. A \p Scope
+  /// already seen returns the cached id without rebuilding the path. A null
+  /// \p Scope maps to the empty path and is cached like any other, though
+  /// section 10 reads it through \c getCachedScopePathOpStringReg, which
+  /// handles null separately.
   MCRegister emitAndCacheScopePathOpStringReg(const DIScope *Scope,
                                               SPIRV::ModuleAnalysisInfo &MAI);
 
@@ -426,12 +447,16 @@ private:
   /// scopes it names first. One already in \c DebugScopeRegs is Emitted. A null
   /// \p S or one in \c FailedScopes is Unsupported. Entering a scope reserves
   /// its result id. A back edge (\p S already in \c ScopesInProgress) returns
-  /// that id when \c HasRelaxedExtInst is set, and InProgress otherwise. If
+  /// that id when \c CanUseForwardRefs is set, and InProgress otherwise. If
   /// emission fails after an emitted instruction used that id, it is defined as
   /// DebugInfoNone. An id that nothing named stays undefined. An Unsupported
   /// result is recorded in \c FailedScopes; an InProgress one is not, so a
   /// later walk can retry it.
   EmitResult<MCRegister> getOrCreateDebugScope(const DIScope *S);
+
+  /// Like \c getOrCreateDebugScope, but a null \p Ty (e.g. the base of a
+  /// \c void*) is Emitted as \c DebugInfoNone.
+  EmitResult<MCRegister> getOrCreateDebugTypeOrNone(const DIType *Ty);
 
   /// Build the instruction for \p S. Only \c getOrCreateDebugScope calls this
   /// and emits it.
@@ -458,6 +483,15 @@ private:
   /// space, which gives the storage class.
   EmitResult<PreparedScope>
   emitDebugTypePointer(const DIDerivedType *PT, SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Build \c DebugTypeQualifier with Type Qualifier value \p Qualifier for
+  /// the qualified type \p QT. Uses \c DebugInfoNone as Base Type when \p QT
+  /// has none.
+  ///
+  /// \returns The base's status if it fails.
+  EmitResult<PreparedScope>
+  emitDebugTypeQualifier(const DIDerivedType *QT, uint32_t Qualifier,
+                         SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Build one DebugTypeFunction for ST when every DI operand maps to a debug
   /// type id; otherwise build nothing and return the first failing slot's
@@ -705,18 +739,8 @@ private:
                                              MCRegister ExtInstSetReg,
                                              SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Map a \c DISubroutineType::getTypeArray() element to an operand register
-  /// for
-  /// \c DebugTypeFunction. A non-null \p Ty is created through
-  /// \c getOrCreateDebugScope, and its status is returned. A null \p Ty is not
-  /// a \c getOrCreateDebugScope call and is always Emitted.
-  ///
-  /// LLVM encodes a void return as a null first element (and may use null in
-  /// later slots). NonSemantic \c DebugTypeFunction
-  /// requires a concrete return-type operand, so when \p ReturnType is true and
-  /// \p Ty is null, this returns \p VoidTypeReg (\c OpTypeVoid). When
-  /// \p ReturnType is false and \p Ty is null, this returns
-  /// \c CachedDebugInfoNoneReg (\c DebugInfoNone).
+  /// Map a subroutine type element to a \c DebugTypeFunction operand. A null
+  /// return type is void, so it maps to \p VoidTypeReg.
   EmitResult<MCRegister> mapDISignatureTypeToReg(const DIType *Ty,
                                                  MCRegister VoidTypeReg,
                                                  bool ReturnType);
@@ -779,7 +803,7 @@ private:
   /// them). Must run after \c DebugScopeRegs is populated, since the Scope
   /// operand is resolved through \c resolveScope. \c DebugInlinedAt is not in
   /// the spec's in-block instruction list, so this is only ever called from
-  /// module-scope emission (\c emitNonSemanticGlobalDebugInfo), never from
+  /// module-scope emission (\c generateGlobalDebugInfo), never from
   /// per-instruction emission.
   ///
   /// \returns An invalid (default-constructed) \c MCRegister, and emits

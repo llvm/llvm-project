@@ -467,11 +467,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
@@ -490,9 +485,9 @@ body:             |
     ; GREEDY: [[ADD:%[0-9]+]]:gpr(s8) = G_ADD [[COPY]], [[COPY1]]
     ; GREEDY: $al = COPY [[ADD]](s8)
     ; GREEDY: RET 0, implicit $al
-    %0(s8) = COPY $dil
-    %1(s8) = COPY $sil
-    %2(s8) = G_ADD %0, %1
+    %0:_(s8) = COPY $dil
+    %1:_(s8) = COPY $sil
+    %2:_(s8) = G_ADD %0, %1
     $al = COPY %2(s8)
     RET 0, implicit $al
 
@@ -503,11 +498,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
@@ -526,9 +516,9 @@ body:             |
     ; GREEDY: [[ADD:%[0-9]+]]:gpr(s16) = G_ADD [[COPY]], [[COPY1]]
     ; GREEDY: $ax = COPY [[ADD]](s16)
     ; GREEDY: RET 0, implicit $ax
-    %0(s16) = COPY $di
-    %1(s16) = COPY $si
-    %2(s16) = G_ADD %0, %1
+    %0:_(s16) = COPY $di
+    %1:_(s16) = COPY $si
+    %2:_(s16) = G_ADD %0, %1
     $ax = COPY %2(s16)
     RET 0, implicit $ax
 
@@ -539,11 +529,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
@@ -562,9 +547,9 @@ body:             |
     ; GREEDY: [[ADD:%[0-9]+]]:gpr(s32) = G_ADD [[COPY]], [[COPY1]]
     ; GREEDY: $eax = COPY [[ADD]](s32)
     ; GREEDY: RET 0, implicit $eax
-    %0(s32) = COPY $edi
-    %1(s32) = COPY $esi
-    %2(s32) = G_ADD %0, %1
+    %0:_(s32) = COPY $edi
+    %1:_(s32) = COPY $esi
+    %2:_(s32) = G_ADD %0, %1
     $eax = COPY %2(s32)
     RET 0, implicit $eax
 
@@ -575,11 +560,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi, $rsi
@@ -598,9 +578,9 @@ body:             |
     ; GREEDY: [[ADD:%[0-9]+]]:gpr(s64) = G_ADD [[COPY]], [[COPY1]]
     ; GREEDY: $rax = COPY [[ADD]](s64)
     ; GREEDY: RET 0, implicit $rax
-    %0(s64) = COPY $rdi
-    %1(s64) = COPY $rsi
-    %2(s64) = G_ADD %0, %1
+    %0:_(s64) = COPY $rdi
+    %1:_(s64) = COPY $rsi
+    %2:_(s64) = G_ADD %0, %1
     $rax = COPY %2(s64)
     RET 0, implicit $rax
 
@@ -611,16 +591,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 body:             |
   bb.1 (%ir-block.0):
 
@@ -644,14 +614,14 @@ body:             |
     ; GREEDY: [[MUL2:%[0-9]+]]:gpr(s16) = G_MUL [[DEF2]], [[DEF2]]
     ; GREEDY: [[MUL3:%[0-9]+]]:gpr(s8) = G_MUL [[DEF3]], [[DEF3]]
     ; GREEDY: RET 0
-    %0(s64) = G_IMPLICIT_DEF
-    %1(s32) = G_IMPLICIT_DEF
-    %2(s16) = G_IMPLICIT_DEF
-    %3(s8)  = G_IMPLICIT_DEF
-    %4(s64) = G_MUL %0, %0
-    %5(s32) = G_MUL %1, %1
-    %6(s16) = G_MUL %2, %2
-    %7(s8)  = G_MUL %3, %3
+    %0:_(s64) = G_IMPLICIT_DEF
+    %1:_(s32) = G_IMPLICIT_DEF
+    %2:_(s16) = G_IMPLICIT_DEF
+    %3:_(s8)  = G_IMPLICIT_DEF
+    %4:_(s64) = G_MUL %0, %0
+    %5:_(s32) = G_MUL %1, %1
+    %6:_(s16) = G_MUL %2, %2
+    %7:_(s8)  = G_MUL %3, %3
     RET 0
 ...
 ---
@@ -660,14 +630,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -708,14 +670,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -755,11 +709,6 @@ name:            test_fsub_float
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -786,10 +735,10 @@ body:             |
     ; GREEDY: [[COPY3:%[0-9]+]]:vecr(s64) = COPY [[DEF1]](s64)
     ; GREEDY: [[FSUB1:%[0-9]+]]:vecr(s64) = G_FSUB [[COPY2]], [[COPY3]]
     ; GREEDY: RET 0
-    %0(s32) = G_IMPLICIT_DEF
-    %2(s64) = G_IMPLICIT_DEF
-    %1(s32) = G_FSUB %0, %0
-    %3(s64) = G_FSUB %2, %2
+    %0:_(s32) = G_IMPLICIT_DEF
+    %2:_(s64) = G_IMPLICIT_DEF
+    %1:_(s32) = G_FSUB %0, %0
+    %3:_(s64) = G_FSUB %2, %2
     RET 0
 
 ...
@@ -798,11 +747,6 @@ name:            test_fmul_float
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -829,10 +773,10 @@ body:             |
     ; GREEDY: [[COPY3:%[0-9]+]]:vecr(s64) = COPY [[DEF1]](s64)
     ; GREEDY: [[FMUL1:%[0-9]+]]:vecr(s64) = G_FMUL [[COPY2]], [[COPY3]]
     ; GREEDY: RET 0
-    %0(s32) = G_IMPLICIT_DEF
-    %2(s64) = G_IMPLICIT_DEF
-    %1(s32) = G_FMUL %0, %0
-    %3(s64) = G_FMUL %2, %2
+    %0:_(s32) = G_IMPLICIT_DEF
+    %2:_(s64) = G_IMPLICIT_DEF
+    %1:_(s32) = G_FMUL %0, %0
+    %3:_(s64) = G_FMUL %2, %2
     RET 0
 
 ...
@@ -841,11 +785,6 @@ name:            test_fdiv_float
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -872,10 +811,10 @@ body:             |
     ; GREEDY: [[COPY3:%[0-9]+]]:vecr(s64) = COPY [[DEF1]](s64)
     ; GREEDY: [[FDIV1:%[0-9]+]]:vecr(s64) = G_FDIV [[COPY2]], [[COPY3]]
     ; GREEDY: RET 0
-    %0(s32) = G_IMPLICIT_DEF
-    %2(s64) = G_IMPLICIT_DEF
-    %1(s32) = G_FDIV %0, %0
-    %3(s64) = G_FDIV %2, %2
+    %0:_(s32) = G_IMPLICIT_DEF
+    %2:_(s64) = G_IMPLICIT_DEF
+    %1:_(s32) = G_FDIV %0, %0
+    %3:_(s64) = G_FDIV %2, %2
     RET 0
 
 ...
@@ -885,11 +824,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -908,9 +842,9 @@ body:             |
     ; GREEDY: [[ADD:%[0-9]+]]:vecr(<4 x s32>) = G_ADD [[COPY]], [[COPY1]]
     ; GREEDY: $xmm0 = COPY [[ADD]](<4 x s32>)
     ; GREEDY: RET 0, implicit $xmm0
-    %0(<4 x s32>) = COPY $xmm0
-    %1(<4 x s32>) = COPY $xmm1
-    %2(<4 x s32>) = G_ADD %0, %1
+    %0:_(<4 x s32>) = COPY $xmm0
+    %1:_(<4 x s32>) = COPY $xmm1
+    %2:_(<4 x s32>) = G_ADD %0, %1
     $xmm0 = COPY %2(<4 x s32>)
     RET 0, implicit $xmm0
 
@@ -921,11 +855,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -944,9 +873,9 @@ body:             |
     ; GREEDY: [[FADD:%[0-9]+]]:vecr(<4 x s32>) = G_FADD [[COPY]], [[COPY1]]
     ; GREEDY: $xmm0 = COPY [[FADD]](<4 x s32>)
     ; GREEDY: RET 0, implicit $xmm0
-    %0(<4 x s32>) = COPY $xmm0
-    %1(<4 x s32>) = COPY $xmm1
-    %2(<4 x s32>) = G_FADD %0, %1
+    %0:_(<4 x s32>) = COPY $xmm0
+    %1:_(<4 x s32>) = COPY $xmm1
+    %2:_(<4 x s32>) = G_FADD %0, %1
     $xmm0 = COPY %2(<4 x s32>)
     RET 0, implicit $xmm0
 
@@ -957,9 +886,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi
@@ -974,8 +900,8 @@ body:             |
     ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s8) = G_LOAD [[COPY]](p0) :: (load (s8) from %ir.p1)
     ; GREEDY: $al = COPY [[LOAD]](s8)
     ; GREEDY: RET 0, implicit $al
-    %0(p0) = COPY $rdi
-    %1(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.p1)
+    %0:_(p0) = COPY $rdi
+    %1:_(s8) = G_LOAD %0(p0) :: (load (s8) from %ir.p1)
     $al = COPY %1(s8)
     RET 0, implicit $al
 
@@ -986,9 +912,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi
@@ -1003,8 +926,8 @@ body:             |
     ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s16) = G_LOAD [[COPY]](p0) :: (load (s16) from %ir.p1)
     ; GREEDY: $ax = COPY [[LOAD]](s16)
     ; GREEDY: RET 0, implicit $ax
-    %0(p0) = COPY $rdi
-    %1(s16) = G_LOAD %0(p0) :: (load (s16) from %ir.p1)
+    %0:_(p0) = COPY $rdi
+    %1:_(s16) = G_LOAD %0(p0) :: (load (s16) from %ir.p1)
     $ax = COPY %1(s16)
     RET 0, implicit $ax
 
@@ -1015,9 +938,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi
@@ -1032,8 +952,8 @@ body:             |
     ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.p1)
     ; GREEDY: $eax = COPY [[LOAD]](s32)
     ; GREEDY: RET 0, implicit $eax
-    %0(p0) = COPY $rdi
-    %1(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.p1)
+    %0:_(p0) = COPY $rdi
+    %1:_(s32) = G_LOAD %0(p0) :: (load (s32) from %ir.p1)
     $eax = COPY %1(s32)
     RET 0, implicit $eax
 
@@ -1045,9 +965,6 @@ exposesReturnsTwice: false
 legalized:       true
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi
@@ -1062,8 +979,8 @@ body:             |
     ; GREEDY: [[LOAD:%[0-9]+]]:gpr(s64) = G_LOAD [[COPY]](p0) :: (load (s64) from %ir.p1)
     ; GREEDY: $rax = COPY [[LOAD]](s64)
     ; GREEDY: RET 0, implicit $rax
-    %0(p0) = COPY $rdi
-    %1(s64) = G_LOAD %0(p0) :: (load (s64) from %ir.p1)
+    %0:_(p0) = COPY $rdi
+    %1:_(s64) = G_LOAD %0(p0) :: (load (s64) from %ir.p1)
     $rax = COPY %1(s64)
     RET 0, implicit $rax
 
@@ -1074,9 +991,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi
@@ -1108,9 +1022,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi
@@ -1142,9 +1053,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi
@@ -1159,8 +1067,8 @@ body:             |
     ; GREEDY: [[LOAD:%[0-9]+]]:vecr(<4 x s32>) = G_LOAD [[COPY]](p0) :: (load (<4 x s32>) from %ir.p1, align 1)
     ; GREEDY: $xmm0 = COPY [[LOAD]](<4 x s32>)
     ; GREEDY: RET 0, implicit $xmm0
-    %0(p0) = COPY $rdi
-    %1(<4 x s32>) = G_LOAD %0(p0) :: (load (<4 x s32>) from %ir.p1, align 1)
+    %0:_(p0) = COPY $rdi
+    %1:_(<4 x s32>) = G_LOAD %0(p0) :: (load (<4 x s32>) from %ir.p1, align 1)
     $xmm0 = COPY %1(<4 x s32>)
     RET 0, implicit $xmm0
 
@@ -1171,9 +1079,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $rsi
@@ -1190,8 +1095,8 @@ body:             |
     ; GREEDY: G_STORE [[COPY]](s32), [[COPY1]](p0) :: (store (s32) into %ir.p1)
     ; GREEDY: $rax = COPY [[COPY1]](p0)
     ; GREEDY: RET 0, implicit $rax
-    %0(s32) = COPY $edi
-    %1(p0) = COPY $rsi
+    %0:_(s32) = COPY $edi
+    %1:_(p0) = COPY $rsi
     G_STORE %0(s32), %1(p0) :: (store (s32) into %ir.p1)
     $rax = COPY %1(p0)
     RET 0, implicit $rax
@@ -1203,9 +1108,6 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi, $rsi
@@ -1222,8 +1124,8 @@ body:             |
     ; GREEDY: G_STORE [[COPY]](s64), [[COPY1]](p0) :: (store (s64) into %ir.p1)
     ; GREEDY: $rax = COPY [[COPY1]](p0)
     ; GREEDY: RET 0, implicit $rax
-    %0(s64) = COPY $rdi
-    %1(p0) = COPY $rsi
+    %0:_(s64) = COPY $rdi
+    %1:_(p0) = COPY $rsi
     G_STORE %0(s64), %1(p0) :: (store (s64) into %ir.p1)
     $rax = COPY %1(p0)
     RET 0, implicit $rax
@@ -1238,9 +1140,6 @@ selected:        false
 
 
 
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi, $xmm0
@@ -1277,9 +1176,6 @@ selected:        false
 
 
 
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi, $xmm0
@@ -1311,11 +1207,6 @@ body:             |
 name:            constInt_check
 alignment:       16
 legalized:       true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0 (%ir-block.0):
     ; FAST-LABEL: name: constInt_check
@@ -1330,10 +1221,10 @@ body:             |
     ; GREEDY: [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 32
     ; GREEDY: [[C3:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 64
     ; GREEDY: RET 0
-    %0(s8) = G_CONSTANT i8 8
-    %1(s16) = G_CONSTANT i16 16
-    %2(s32) = G_CONSTANT i32 32
-    %3(s64) = G_CONSTANT i64 64
+    %0:_(s8) = G_CONSTANT i8 8
+    %1:_(s16) = G_CONSTANT i16 16
+    %2:_(s32) = G_CONSTANT i32 32
+    %3:_(s64) = G_CONSTANT i64 64
     RET 0
 
 ...
@@ -1341,11 +1232,6 @@ body:             |
 name:            trunc_check
 alignment:       16
 legalized:       true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.0 (%ir-block.0):
     ; FAST-LABEL: name: trunc_check
@@ -1360,22 +1246,16 @@ body:             |
     ; GREEDY: [[TRUNC1:%[0-9]+]]:gpr(s8) = G_TRUNC [[DEF]](s32)
     ; GREEDY: [[TRUNC2:%[0-9]+]]:gpr(s16) = G_TRUNC [[DEF]](s32)
     ; GREEDY: RET 0
-    %0(s32) = G_IMPLICIT_DEF
-    %1(s1) = G_TRUNC %0(s32)
-    %2(s8) = G_TRUNC %0(s32)
-    %3(s16) = G_TRUNC %0(s32)
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s1) = G_TRUNC %0(s32)
+    %2:_(s8) = G_TRUNC %0(s32)
+    %3:_(s16) = G_TRUNC %0(s32)
     RET 0
 
 ...
 ---
 name:            test_gep
 legalized:       true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
 body:             |
   bb.0 (%ir-block.0):
     ; FAST-LABEL: name: test_gep
@@ -1389,9 +1269,9 @@ body:             |
     ; GREEDY: [[C:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 20
     ; GREEDY: [[PTR_ADD:%[0-9]+]]:gpr(p0) = G_PTR_ADD [[DEF]], [[C]](s64)
     ; GREEDY: RET 0
-    %0(p0) = G_IMPLICIT_DEF
-    %1(s64) = G_CONSTANT i64 20
-    %2(p0) = G_PTR_ADD %0, %1(s64)
+    %0:_(p0) = G_IMPLICIT_DEF
+    %1:_(s64) = G_CONSTANT i64 20
+    %2:_(p0) = G_PTR_ADD %0, %1(s64)
     RET 0
 
 ...
@@ -1400,10 +1280,6 @@ name:            test_icmp_eq_i8
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
@@ -1441,10 +1317,6 @@ name:            test_icmp_eq_i16
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
@@ -1482,10 +1354,6 @@ name:            test_icmp_eq_i32
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
@@ -1517,10 +1385,6 @@ name:            test_icmp_eq_i64
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi, $rsi
@@ -1552,9 +1416,6 @@ name:            test_xor_i8
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -1571,8 +1432,8 @@ body:             |
     ; GREEDY: [[XOR:%[0-9]+]]:gpr(s8) = G_XOR [[DEF]], [[DEF]]
     ; GREEDY: $al = COPY [[XOR]](s8)
     ; GREEDY: RET 0, implicit $al
-    %0(s8) = G_IMPLICIT_DEF
-    %1(s8) = G_XOR %0, %0
+    %0:_(s8) = G_IMPLICIT_DEF
+    %1:_(s8) = G_XOR %0, %0
     $al = COPY %1(s8)
     RET 0, implicit $al
 
@@ -1582,9 +1443,6 @@ name:            test_or_i16
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -1601,8 +1459,8 @@ body:             |
     ; GREEDY: [[OR:%[0-9]+]]:gpr(s16) = G_OR [[DEF]], [[DEF]]
     ; GREEDY: $ax = COPY [[OR]](s16)
     ; GREEDY: RET 0, implicit $ax
-    %0(s16) = G_IMPLICIT_DEF
-    %1(s16) = G_OR %0, %0
+    %0:_(s16) = G_IMPLICIT_DEF
+    %1:_(s16) = G_OR %0, %0
     $ax = COPY %1(s16)
     RET 0, implicit $ax
 
@@ -1612,9 +1470,6 @@ name:            test_and_i32
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -1631,8 +1486,8 @@ body:             |
     ; GREEDY: [[AND:%[0-9]+]]:gpr(s32) = G_AND [[DEF]], [[DEF]]
     ; GREEDY: $eax = COPY [[AND]](s32)
     ; GREEDY: RET 0, implicit $eax
-    %0(s32) = G_IMPLICIT_DEF
-    %1(s32) = G_AND %0, %0
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s32) = G_AND %0, %0
     $eax = COPY %1(s32)
     RET 0, implicit $eax
 
@@ -1642,9 +1497,6 @@ name:            test_and_i64
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -1661,8 +1513,8 @@ body:             |
     ; GREEDY: [[AND:%[0-9]+]]:gpr(s64) = G_AND [[DEF]], [[DEF]]
     ; GREEDY: $rax = COPY [[AND]](s64)
     ; GREEDY: RET 0, implicit $rax
-    %0(s64) = G_IMPLICIT_DEF
-    %1(s64) = G_AND %0, %0
+    %0:_(s64) = G_IMPLICIT_DEF
+    %1:_(s64) = G_AND %0, %0
     $rax = COPY %1(s64)
     RET 0, implicit $rax
 
@@ -1672,8 +1524,6 @@ name:            test_global_ptrv
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
 body:             |
   bb.1.entry:
     ; FAST-LABEL: name: test_global_ptrv
@@ -1684,7 +1534,7 @@ body:             |
     ; GREEDY: [[GV:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @g_int
     ; GREEDY: $rax = COPY [[GV]](p0)
     ; GREEDY: RET 0, implicit $rax
-    %0(p0) = G_GLOBAL_VALUE @g_int
+    %0:_(p0) = G_GLOBAL_VALUE @g_int
     $rax = COPY %0(p0)
     RET 0, implicit $rax
 
@@ -1694,8 +1544,6 @@ name:            test_undef
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -1710,7 +1558,7 @@ body:             |
     ; GREEDY: [[DEF:%[0-9]+]]:gpr(s8) = G_IMPLICIT_DEF
     ; GREEDY: $al = COPY [[DEF]](s8)
     ; GREEDY: RET 0, implicit $al
-    %0(s8) = G_IMPLICIT_DEF
+    %0:_(s8) = G_IMPLICIT_DEF
     $al = COPY %0(s8)
     RET 0, implicit $al
 
@@ -1720,10 +1568,6 @@ name:            test_undef2
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -1744,9 +1588,9 @@ body:             |
     ; GREEDY: [[ADD:%[0-9]+]]:gpr(s8) = G_ADD [[COPY]], [[DEF]]
     ; GREEDY: $al = COPY [[ADD]](s8)
     ; GREEDY: RET 0, implicit $al
-    %0(s8) = COPY $dil
-    %1(s8) = G_IMPLICIT_DEF
-    %2(s8) = G_ADD %0, %1
+    %0:_(s8) = COPY $dil
+    %1:_(s8) = G_IMPLICIT_DEF
+    %2:_(s8) = G_ADD %0, %1
     $al = COPY %2(s8)
     RET 0, implicit $al
 
@@ -1756,8 +1600,6 @@ name:            test_undef3
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 1, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -1772,7 +1614,7 @@ body:             |
     ; GREEDY: [[DEF:%[0-9]+]]:vecr(s128) = G_IMPLICIT_DEF
     ; GREEDY: $xmm0 = COPY [[DEF]](s128)
     ; GREEDY: RET 0, implicit $xmm0
-    %1(s128) = G_IMPLICIT_DEF
+    %1:_(s128) = G_IMPLICIT_DEF
     $xmm0 = COPY %1(s128)
     RET 0, implicit $xmm0
 
@@ -1782,12 +1624,6 @@ name:            test_undef4
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: _, preferred-register: '' }
-  - { id: 4, class: _, preferred-register: '' }
 liveins:
 fixedStack:
 stack:
@@ -1828,15 +1664,6 @@ name:            test_i32
 alignment:       16
 legalized:       true
 regBankSelected: false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: _, preferred-register: '' }
-  - { id: 4, class: _, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
-  - { id: 6, class: _, preferred-register: '' }
 body:             |
   ; FAST-LABEL: name: test_i32
   ; FAST: bb.0.entry:
@@ -1884,12 +1711,12 @@ body:             |
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $edi, $edx, $esi
 
-    %0(s32) = COPY $edi
-    %1(s32) = COPY $esi
-    %2(s32) = COPY $edx
-    %3(s32) = G_CONSTANT i32 0
-    %6(s8) = G_ICMP intpred(sgt), %0(s32), %3
-    %4(s1) = G_TRUNC %6(s8)
+    %0:_(s32) = COPY $edi
+    %1:_(s32) = COPY $esi
+    %2:_(s32) = COPY $edx
+    %3:_(s32) = G_CONSTANT i32 0
+    %6:_(s8) = G_ICMP intpred(sgt), %0(s32), %3
+    %4:_(s1) = G_TRUNC %6(s8)
     G_BRCOND %4(s1), %bb.1
     G_BR %bb.2
 
@@ -1902,7 +1729,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
   bb.3.cond.end:
-    %5(s32) = G_PHI %1(s32), %bb.1, %2(s32), %bb.2
+    %5:_(s32) = G_PHI %1(s32), %bb.1, %2(s32), %bb.2
     $eax = COPY %5(s32)
     RET 0, implicit $eax
 
@@ -1912,14 +1739,6 @@ name:            test_float
 alignment:       16
 legalized:       true
 regBankSelected: false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: _, preferred-register: '' }
-  - { id: 4, class: _, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
 body:             |
   ; FAST-LABEL: name: test_float
   ; FAST: bb.0.entry:
@@ -1991,9 +1810,6 @@ name:            test_fpext
 alignment:       16
 legalized:       true
 regBankSelected: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -2024,12 +1840,6 @@ body:             |
 name:            test_fptrunc
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -2062,9 +1872,6 @@ body:             |
 name:            test_fconstant
 # ALL-LABEL: name:            test_fconstant
 legalized:       true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body: |
   bb.0:
     ; FAST-LABEL: name: test_fconstant
@@ -2073,19 +1880,14 @@ body: |
     ; GREEDY-LABEL: name: test_fconstant
     ; GREEDY: [[C:%[0-9]+]]:vecr(s32) = G_FCONSTANT float 1.000000e+00
     ; GREEDY: [[C1:%[0-9]+]]:vecr(s64) = G_FCONSTANT double 2.000000e+00
-    %0(s32) = G_FCONSTANT float 1.0
-    %1(s64) = G_FCONSTANT double 2.0
+    %0:_(s32) = G_FCONSTANT float 1.0
+    %1:_(s64) = G_FCONSTANT double 2.0
 
 ...
 ---
 name:            int32_to_float
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $edi
@@ -2115,11 +1917,6 @@ body:             |
 name:            int64_to_float
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $rdi
@@ -2149,11 +1946,6 @@ body:             |
 name:            int32_to_double
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $edi
@@ -2183,11 +1975,6 @@ body:             |
 name:            int64_to_double
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $rdi
@@ -2217,12 +2004,6 @@ body:             |
 name:            float_to_int8
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -2255,12 +2036,6 @@ body:             |
 name:            float_to_int16
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -2293,11 +2068,6 @@ body:             |
 name:            float_to_int32
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -2327,11 +2097,6 @@ body:             |
 name:            float_to_int64
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -2361,12 +2126,6 @@ body:             |
 name:            double_to_int8
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -2399,12 +2158,6 @@ body:             |
 name:            double_to_int16
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -2437,11 +2190,6 @@ body:             |
 name:            double_to_int32
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -2471,11 +2219,6 @@ body:             |
 name:            double_to_int64
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1.entry:
     liveins: $xmm0
@@ -2505,15 +2248,6 @@ body:             |
 name:            fcmp_float_oeq
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -2552,15 +2286,6 @@ body:             |
 name:            fcmp_float_ogt
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -2599,15 +2324,6 @@ body:             |
 name:            fcmp_float_oge
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -2646,15 +2362,6 @@ body:             |
 name:            fcmp_float_olt
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -2693,15 +2400,6 @@ body:             |
 name:            fcmp_float_ole
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -2740,15 +2438,6 @@ body:             |
 name:            fcmp_float_one
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -2787,15 +2476,6 @@ body:             |
 name:            fcmp_float_ord
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -2834,15 +2514,6 @@ body:             |
 name:            fcmp_float_uno
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -2881,15 +2552,6 @@ body:             |
 name:            fcmp_float_ueq
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -2928,15 +2590,6 @@ body:             |
 name:            fcmp_float_ugt
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -2975,15 +2628,6 @@ body:             |
 name:            fcmp_float_uge
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3022,15 +2666,6 @@ body:             |
 name:            fcmp_float_ult
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3069,15 +2704,6 @@ body:             |
 name:            fcmp_float_ule
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3116,15 +2742,6 @@ body:             |
 name:            fcmp_float_une
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3163,15 +2780,6 @@ body:             |
 name:            fcmp_double_oeq
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3210,15 +2818,6 @@ body:             |
 name:            fcmp_double_ogt
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3257,15 +2856,6 @@ body:             |
 name:            fcmp_double_oge
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3304,15 +2894,6 @@ body:             |
 name:            fcmp_double_olt
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3351,15 +2932,6 @@ body:             |
 name:            fcmp_double_ole
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3398,15 +2970,6 @@ body:             |
 name:            fcmp_double_one
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3445,15 +3008,6 @@ body:             |
 name:            fcmp_double_ord
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3492,15 +3046,6 @@ body:             |
 name:            fcmp_double_uno
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3539,15 +3084,6 @@ body:             |
 name:            fcmp_double_ueq
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3586,15 +3122,6 @@ body:             |
 name:            fcmp_double_ugt
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3633,15 +3160,6 @@ body:             |
 name:            fcmp_double_uge
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3680,15 +3198,6 @@ body:             |
 name:            fcmp_double_ult
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3727,15 +3236,6 @@ body:             |
 name:            fcmp_double_ule
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -3774,15 +3274,6 @@ body:             |
 name:            fcmp_double_une
 alignment:       16
 legalized:       true
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1

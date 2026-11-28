@@ -6,7 +6,6 @@
 # and(trunc(x), trunc(y)) -> trunc(and(x, y))
 ---
 name:            and_trunc
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -27,7 +26,6 @@ body:             |
 ...
 ---
 name:            and_trunc_vector
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -50,7 +48,6 @@ body:             |
 # or(trunc(x), trunc(y)) -> trunc(or(x, y))
 ---
 name:            or_trunc
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -71,7 +68,6 @@ body:             |
 ...
 ---
 name:            or_trunc_vector
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -94,7 +90,6 @@ body:             |
 # xor(trunc(x), trunc(y)) -> trunc(xor(x, y))
 ---
 name:            xor_trunc
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -115,7 +110,6 @@ body:             |
 ...
 ---
 name:            xor_trunc_vector
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -138,7 +132,6 @@ body:             |
 # Truncs with multiple uses do not get folded.
 ---
 name:            or_trunc_multiuse_1
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1, $x2
@@ -166,7 +159,6 @@ body:             |
 ...
 ---
 name:            and_trunc_multiuse_2
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1, $x2
@@ -194,12 +186,11 @@ body:             |
 ...
 ---
 name:            xor_trunc_vector_multiuse
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1, $x2
+    liveins: $q0, $q1, $w0, $w1, $x2
     ; CHECK-LABEL: name: xor_trunc_vector_multiuse
-    ; CHECK: liveins: $w0, $w1, $x2
+    ; CHECK: liveins: $q0, $q1, $w0, $w1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
@@ -227,7 +218,6 @@ body:             |
 # and(freeze(trunc(x)), trunc(y)) -> trunc(and(freeze(x), y))
 ---
 name:            and_trunc_freeze
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -252,7 +242,6 @@ body:             |
 # and(freeze(trunc(x)), freeze(trunc(y))) -> trunc(and(freeze(x), freeze(y)))
 ---
 name:            and_trunc_freeze_both
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -280,7 +269,6 @@ body:             |
 # trigger.
 ---
 name:            or_trunc_freeze
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -303,7 +291,6 @@ body:             |
 ...
 ---
 name:            xor_trunc_freeze_both
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1

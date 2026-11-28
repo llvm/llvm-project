@@ -102,7 +102,7 @@ static std::optional<std::string>
 getAArch64TargetTuneCPUByTriple(const llvm::Triple &Triple) {
   // Apple Silicon macs default to the latest available target for tuning.
   if (Triple.isTargetMachineMac() && Triple.getArch() == llvm::Triple::aarch64)
-    return "apple-m5";
+    return "apple-m6";
 
   return std::nullopt;
 }

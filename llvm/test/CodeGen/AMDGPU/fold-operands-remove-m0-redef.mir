@@ -21,7 +21,6 @@
 
 ---
 name:            redef_m0_same_copy
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -47,7 +46,6 @@ body:             |
 
 ---
 name:            multi_redef_m0_same_copy
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -74,7 +72,6 @@ body:             |
 
 ---
 name:            redef_m0_different_copy
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -103,7 +100,6 @@ body:             |
 
 ---
 name:            redef_m0_mixed_copy0
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -133,7 +129,6 @@ body:             |
 
 ---
 name:            redef_m0_mixed_copy1
-tracksRegLiveness: true
 
 machineFunctionInfo:
   isEntryFunction: true
@@ -165,7 +160,6 @@ body:             |
 
 ---
 name:            redef_m0_same_mov_imm
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -191,7 +185,6 @@ body:             |
 
 ---
 name:            redef_m0_different_inst0
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -218,7 +211,6 @@ body:             |
 
 ---
 name:            redef_m0_different_inst1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -245,7 +237,6 @@ body:             |
 
 ---
 name:            redef_m0_mixed_read_m0
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -276,7 +267,6 @@ body:             |
 
 ---
 name:            redef_m0_same_copy_call
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -305,7 +295,6 @@ body:             |
 
 ---
 name:            redef_m0_same_copy_multi_block
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -338,7 +327,6 @@ body:             |
 
 ---
 name:            redef_m0_copy_self
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -365,7 +353,6 @@ body:             |
 
 ---
 name:            redef_m0_copy_physreg
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

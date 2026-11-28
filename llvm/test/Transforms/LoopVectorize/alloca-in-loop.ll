@@ -43,7 +43,7 @@ define void @alloca_address_stored(ptr noalias %dst, i64 %n) {
 ; VF4IC2-NEXT:    [[TMP23:%.*]] = insertelement <4 x ptr> [[TMP22]], ptr [[TMP19]], i64 2
 ; VF4IC2-NEXT:    [[TMP24:%.*]] = insertelement <4 x ptr> [[TMP23]], ptr [[TMP20]], i64 3
 ; VF4IC2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds ptr, ptr [[DST]], i64 [[INDEX]]
-; VF4IC2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds ptr, ptr [[TMP10]], i64 4
+; VF4IC2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i64 32
 ; VF4IC2-NEXT:    store <4 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP10]], align 8
 ; VF4IC2-NEXT:    store <4 x ptr> [[TMP24]], ptr [[TMP11]], align 8
 ; VF4IC2-NEXT:    store i32 [[TMP1]], ptr [[TMP9]], align 4
@@ -157,11 +157,11 @@ define void @two_allocas_different_types(ptr noalias %dst.a, ptr noalias %dst.b,
 ; VF4IC2-NEXT:    [[TMP31:%.*]] = insertelement <4 x ptr> [[TMP30]], ptr [[TMP27]], i64 2
 ; VF4IC2-NEXT:    [[TMP32:%.*]] = insertelement <4 x ptr> [[TMP31]], ptr [[TMP28]], i64 3
 ; VF4IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds ptr, ptr [[DST_A]], i64 [[INDEX]]
-; VF4IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP2]], i64 4
+; VF4IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 32
 ; VF4IC2-NEXT:    store <4 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP2]], align 8
 ; VF4IC2-NEXT:    store <4 x ptr> [[TMP16]], ptr [[TMP3]], align 8
 ; VF4IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[DST_B]], i64 [[INDEX]]
-; VF4IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[TMP4]], i64 4
+; VF4IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 32
 ; VF4IC2-NEXT:    store <4 x ptr> [[TMP24]], ptr [[TMP4]], align 8
 ; VF4IC2-NEXT:    store <4 x ptr> [[TMP32]], ptr [[TMP5]], align 8
 ; VF4IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8

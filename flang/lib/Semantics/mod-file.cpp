@@ -20,6 +20,7 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/FileSystem.h"
@@ -220,9 +221,8 @@ std::string ModFileWriter::GetAsString(const Symbol &symbol) {
   }
   all << '\n' << uses_.str();
   uses_.str().clear();
-  // Re-exported reduction modules are tracked per module file, so reset the set
-  // (like usedNonIntrinsicModules_) now that this module's uses are emitted.
-  reexportedReductionModules_.clear();
+  // Per-module-file state, like usedNonIntrinsicModules_.
+  reexportedPlainUseModules_.clear();
   all << useExtraAttrs_.str();
   useExtraAttrs_.str().clear();
   all << decls_.str();
@@ -443,6 +443,13 @@ static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
   }
 }
 
+// An ambiguous name (USE-associated from several modules) that is written to
+// the module file, as opposed to one the compiler created.
+static bool IsWrittenUseError(const Symbol &symbol) {
+  return symbol.has<UseErrorDetails>() &&
+      !symbol.test(Symbol::Flag::CompilerCreated);
+}
+
 // Put out the visible symbols from scope.
 void ModFileWriter::PutSymbols(
     const Scope &scope, UnorderedSymbolSet *hermeticModules) {
@@ -477,12 +484,34 @@ void ModFileWriter::PutSymbols(
       PutSymbol(typeBindings, symbol);
     }
   }
+  // The modules re-exported by a plain USE come from the USE-associated
+  // symbols (written by PutSymbol and PutUse) and from the occurrences of
+  // ambiguous names. An ambiguous name is written only if one of its modules is
+  // re-exported this way, so collect all such modules before writing any of
+  // them.
+  for (const Symbol &symbol : sorted) {
+    if (IsWrittenUseError(symbol)) {
+      PutUseErrorPlainUses(symbol);
+    }
+  }
   for (const Symbol &symbol : uses) {
     PutUse(symbol);
   }
+  for (const Symbol &symbol : sorted) {
+    if (IsWrittenUseError(symbol)) {
+      PutUseError(symbol);
+    }
+  }
   PutOpenMPRequirements(decls_, DEREF(scope.symbol()), context_);
-  if (scope.symbol()->test(Symbol::Flag::OmpAssumesNoOpenmp)) {
-    decls_ << "!$omp assumes no_openmp\n";
+  if (const auto *decls{GetOmpDeclarative(DEREF(scope.symbol()))};
+      decls && context_.langOptions().getOpenMPVersion() < 60) {
+    if (const llvm::omp::Clauses &assumes{decls->ompAssumes()};
+        assumes.count()) {
+      decls_ << "!$omp assumes ";
+      decls->printClauseSet(
+          decls_, assumes, llvm::omp::Directive::OMPD_assumes);
+      decls_ << '\n';
+    }
   }
   PutOpenMPDeclarativeDirectives(decls_, sorted, context_);
 
@@ -745,11 +774,10 @@ void ModFileWriter::PutEnumerationType(const Symbol &typeSymbol) {
           int ordinal{0};
           if (const auto &init{obj->init()}) {
             // The init may be a bare StructureConstructor or a
-            // Constant<SomeDerived> (after folding). Use
+            // Constant<Type<TypeCategory::Derived>> (after folding). Use
             // GetScalarConstantValue which handles both.
-            if (auto ctor{
-                    evaluate::GetScalarConstantValue<evaluate::SomeDerived>(
-                        *init)}) {
+            if (auto ctor{evaluate::GetScalarConstantValue<
+                    evaluate::Type<common::TypeCategory::Derived>>(*init)}) {
               for (const auto &[compRef, val] : *ctor) {
                 if (auto intVal{evaluate::ToInt64(val.value())}) {
                   ordinal = static_cast<int>(*intVal);
@@ -991,6 +1019,48 @@ void ModFileWriter::PutGeneric(const Symbol &symbol) {
   }
 }
 
+namespace {
+// How a USE-associated symbol is re-exported by a module file.
+enum class UseItem {
+  Writable, // a "use,only:" item
+  Skip, // written by other means; no item of its own
+  PlainUse, // unwritable name; re-export the whole module by a plain USE
+};
+} // namespace
+
+// Decide how the USE-associated entity whose ultimate symbol is given is
+// written in a module file. This is shared by every place that writes or
+// collects the modules of USE-associated names, so that they stay in step.
+static UseItem ClassifyUseItem(const Symbol &ultimate) {
+  // A DEC STRUCTURE's name has slashes (e.g. "/s/") and cannot be written in a
+  // USE only-list.
+  if (ultimate.has<DerivedTypeDetails>() &&
+      ultimate.get<DerivedTypeDetails>().isDECStructure()) {
+    return UseItem::PlainUse;
+  }
+  if (ultimate.has<UserReductionDetails>()) {
+    std::string opId{GetReductionFortranId(ultimate.name())};
+    const Symbol *opSym{
+        opId.empty() ? nullptr : ultimate.owner().FindSymbol(opId)};
+    if (opSym && opSym->GetUltimate().has<GenericDetails>()) {
+      return UseItem::Skip;
+    }
+    // An operator-less reduction (a special function, or an intrinsic operator
+    // on an intrinsic type) has an unwritable mangled name and no operator to
+    // recover through. It can only have been re-exported by a plain USE of the
+    // defining module, so re-export the whole module. The reduction then comes
+    // in as a shared use-association, with no facade-owned duplicate and no
+    // re-resolved directive text. Any entities the facade renames or makes
+    // private are still emitted with their own use/rename/private items, which
+    // the reader honors, so the plain USE does not widen their visibility.
+    llvm::StringRef mangled{ultimate.name().begin(), ultimate.name().size()};
+    if (mangled.starts_with("op.")) {
+      return UseItem::PlainUse;
+    }
+  }
+  return UseItem::Writable;
+}
+
 void ModFileWriter::PutUse(const Symbol &symbol) {
   // A declare reduction named by an operator has an internal mangled symbol
   // name
@@ -1006,48 +1076,46 @@ void ModFileWriter::PutUse(const Symbol &symbol) {
   // ("myred") has a valid name and is emitted normally below. An operator-less
   // reduction (a special function, or an intrinsic operator on an intrinsic
   // type) has an unwritable name and no operator to recover through; it is
-  // re-exported by a plain USE of the defining module (see below).
-  const Symbol &ultimate{symbol.GetUltimate()};
-  if (ultimate.has<UserReductionDetails>()) {
-    std::string opId{GetReductionFortranId(ultimate.name())};
-    const Symbol *opSym{
-        opId.empty() ? nullptr : ultimate.owner().FindSymbol(opId)};
-    if (opSym && opSym->GetUltimate().has<GenericDetails>()) {
-      return;
-    }
-    // An operator-less reduction (a special function, or an intrinsic operator
-    // on an intrinsic type) has an unwritable mangled name and no operator to
-    // recover through. It can only have been re-exported by a plain USE of the
-    // defining module (a mangled name cannot appear in an only-list, and there
-    // is no operator surrogate to name), so re-export the whole module. The
-    // reduction then comes in as a shared use-association, with no facade-owned
-    // duplicate and no re-resolved directive text. Any entities the facade
-    // renames or makes private are still emitted with their own use/rename/
-    // private items, which the reader honors, so the plain USE does not widen
-    // their visibility.
-    llvm::StringRef mangled{ultimate.name().begin(), ultimate.name().size()};
-    if (mangled.starts_with("op.")) {
-      // Only a PUBLIC operator-less reduction is re-exported. If the facade
-      // made it private, it must not be re-exported at all: emitting the plain
-      // use would re-import the whole module publicly and, because the mangled
-      // name is otherwise unwritable, silently change a consumer from the
-      // intrinsic reduction to this private one across a module-file
-      // round-trip.
-      if (!symbol.attrs().test(Attr::PRIVATE)) {
-        auto &reductionUse{symbol.get<UseDetails>()};
-        const Symbol &reexportModule{GetUsedModule(reductionUse)};
-        if (!reductionUse.symbol().owner().parent().IsIntrinsicModules() &&
-            reexportedReductionModules_.insert(reexportModule).second) {
-          uses_ << "use " << reexportModule.name() << '\n';
-          usedNonIntrinsicModules_.insert(reexportModule);
-        }
+  // re-exported by a plain USE of the defining module, as is a DEC STRUCTURE
+  // (see ClassifyUseItem).
+  switch (ClassifyUseItem(symbol.GetUltimate())) {
+  case UseItem::Skip:
+    return;
+  case UseItem::PlainUse:
+    // Only a PUBLIC symbol is re-exported. If it is private, it must not be
+    // re-exported at all: the plain USE would make it public again (and, for
+    // an unwritable reduction name, silently change a consumer from the
+    // intrinsic reduction to this private one across a module-file round-trip).
+    if (!symbol.attrs().test(Attr::PRIVATE)) {
+      auto &use{symbol.get<UseDetails>()};
+      if (!use.symbol().owner().parent().IsIntrinsicModules()) {
+        PutPlainUse(GetUsedModule(use));
       }
-      return;
     }
+    return;
+  case UseItem::Writable:
+    break;
   }
-  auto &details{symbol.get<UseDetails>()};
-  auto &use{details.symbol()};
-  const Symbol &module{GetUsedModule(details)};
+  auto &use{symbol.get<UseDetails>().symbol()};
+  PutUseOnly(symbol, use);
+  PutUseExtraAttr(Attr::VOLATILE, symbol, use);
+  PutUseExtraAttr(Attr::ASYNCHRONOUS, symbol, use);
+  if (!isSubmodule_ && symbol.attrs().test(Attr::PRIVATE)) {
+    PutGenericName(useExtraAttrs_ << "private::", symbol) << '\n';
+  }
+}
+
+// Re-export the whole of a module by a plain USE, once per module file.
+void ModFileWriter::PutPlainUse(const Symbol &module) {
+  if (reexportedPlainUseModules_.insert(module).second) {
+    uses_ << "use " << module.name() << '\n';
+    usedNonIntrinsicModules_.insert(module);
+  }
+}
+
+// Write "USE module, only: local => use".
+void ModFileWriter::PutUseOnly(const Symbol &local, const Symbol &use) {
+  const Symbol &module{DEREF(use.owner().symbol())};
   if (use.owner().parent().IsIntrinsicModules()) {
     uses_ << "use,intrinsic::";
   } else {
@@ -1055,17 +1123,61 @@ void ModFileWriter::PutUse(const Symbol &symbol) {
     usedNonIntrinsicModules_.insert(module);
   }
   uses_ << module.name() << ",only:";
-  PutGenericName(uses_, symbol);
+  PutGenericName(uses_, local);
   // Can have intrinsic op with different local-name and use-name
   // (e.g. `operator(<)` and `operator(.lt.)`) but rename is not allowed
-  if (!IsIntrinsicOp(symbol) && use.name() != symbol.name()) {
+  if (!IsIntrinsicOp(local) && use.name() != local.name()) {
     PutGenericName(uses_ << "=>", use);
   }
   uses_ << '\n';
-  PutUseExtraAttr(Attr::VOLATILE, symbol, use);
-  PutUseExtraAttr(Attr::ASYNCHRONOUS, symbol, use);
-  if (!isSubmodule_ && symbol.attrs().test(Attr::PRIVATE)) {
+}
+
+// An ambiguous name (USE-associated from several modules) has a symbol with
+// no unique use target, so it is not written by PutUse. If one of those modules
+// is re-exported by a plain USE, that USE would make the names hidden by the
+// ambiguity accessible again, so write the name's occurrences (with renames)
+// and its PRIVATE. An occurrence whose name cannot be written in an only-list
+// (see ClassifyUseItem) is left to the plain USE of its module, and the name
+// then gets no PRIVATE either. An ambiguity not involving a plain-USE module is
+// left out on purpose.
+void ModFileWriter::PutUseError(const Symbol &symbol) {
+  const auto &occurrences{symbol.get<UseErrorDetails>().occurrences()};
+  bool reexported{false}, unwritable{false};
+  for (const auto &occurrence : occurrences) {
+    const Symbol &use{DEREF(occurrence.second)};
+    reexported |=
+        reexportedPlainUseModules_.count(DEREF(use.owner().symbol())) > 0;
+    unwritable |= ClassifyUseItem(use.GetUltimate()) != UseItem::Writable;
+  }
+  if (!reexported) {
+    return;
+  }
+  for (const auto &occurrence : occurrences) {
+    const Symbol &use{DEREF(occurrence.second)};
+    if (ClassifyUseItem(use.GetUltimate()) == UseItem::Writable) {
+      PutUseOnly(symbol, use);
+    }
+  }
+  if (!unwritable && !isSubmodule_ && symbol.attrs().test(Attr::PRIVATE)) {
     PutGenericName(useExtraAttrs_ << "private::", symbol) << '\n';
+  }
+}
+
+// An ambiguous name may have occurrences whose names cannot be written in an
+// only-list. Re-export their modules by a plain USE, unless the ambiguous name
+// is PRIVATE (as for PutUse, a private name is not re-exported). This must
+// happen before any PutUseError, which relies on the complete set of plain-USE
+// modules.
+void ModFileWriter::PutUseErrorPlainUses(const Symbol &symbol) {
+  if (symbol.attrs().test(Attr::PRIVATE)) {
+    return;
+  }
+  for (const auto &occurrence : symbol.get<UseErrorDetails>().occurrences()) {
+    const Symbol &use{DEREF(occurrence.second)};
+    if (ClassifyUseItem(use.GetUltimate()) == UseItem::PlainUse &&
+        !use.owner().parent().IsIntrinsicModules()) {
+      PutPlainUse(DEREF(use.owner().symbol()));
+    }
   }
 }
 
@@ -1079,8 +1191,32 @@ void ModFileWriter::PutUseExtraAttr(
   }
 }
 
+// Collect the modules that the module file of this scope refers to. This must
+// agree with PutUse, PutUseErrorPlainUses and PutUseError, which write them.
 static void CollectModules(const Scope &scope, const SymbolVector &symbols,
     SourceOrderedSymbolSet &modules) {
+  // The modules that are re-exported by a plain USE. An ambiguous name is
+  // written only if one of its modules is among them (see PutUseError).
+  UnorderedSymbolSet plainUseModules;
+  auto addPlainUseModule{[&](const Symbol &use) {
+    if (ClassifyUseItem(use.GetUltimate()) == UseItem::PlainUse &&
+        !use.owner().parent().IsIntrinsicModules()) {
+      plainUseModules.insert(DEREF(use.owner().symbol()));
+    }
+  }};
+  for (const Symbol &symbol : symbols) {
+    if (const auto *use{symbol.detailsIf<UseDetails>()}) {
+      if (!symbol.attrs().test(Attr::PRIVATE)) {
+        addPlainUseModule(use->symbol());
+      }
+    } else if (IsWrittenUseError(symbol) &&
+        !symbol.attrs().test(Attr::PRIVATE)) {
+      for (const auto &occurrence :
+          symbol.get<UseErrorDetails>().occurrences()) {
+        addPlainUseModule(DEREF(occurrence.second));
+      }
+    }
+  }
   for (const Symbol &symbol : symbols) {
     const auto *generic{symbol.detailsIf<GenericDetails>()};
     if (generic) {
@@ -1089,6 +1225,16 @@ static void CollectModules(const Scope &scope, const SymbolVector &symbols,
       }
     } else if (const auto *use{symbol.detailsIf<UseDetails>()}) {
       modules.insert(GetUsedModule(*use));
+    } else if (IsWrittenUseError(symbol)) {
+      const auto &occurrences{symbol.get<UseErrorDetails>().occurrences()};
+      if (llvm::any_of(occurrences, [&](const auto &occurrence) {
+            return plainUseModules.count(
+                DEREF(DEREF(occurrence.second).owner().symbol()));
+          })) {
+        for (const auto &occurrence : occurrences) {
+          modules.insert(DEREF(DEREF(occurrence.second).owner().symbol()));
+        }
+      }
     }
   }
   for (const Scope &child : scope.children()) {

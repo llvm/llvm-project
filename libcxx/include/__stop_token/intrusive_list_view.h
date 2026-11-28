@@ -32,16 +32,16 @@ struct __intrusive_node_base {
 // operations on the linked list.
 template <class _Node>
 struct __intrusive_list_view {
-  _LIBCPP_HIDE_FROM_ABI __intrusive_list_view()                                        = default;
-  _LIBCPP_HIDE_FROM_ABI __intrusive_list_view(__intrusive_list_view const&)            = default;
-  _LIBCPP_HIDE_FROM_ABI __intrusive_list_view(__intrusive_list_view&&)                 = default;
-  _LIBCPP_HIDE_FROM_ABI __intrusive_list_view& operator=(__intrusive_list_view const&) = default;
-  _LIBCPP_HIDE_FROM_ABI __intrusive_list_view& operator=(__intrusive_list_view&&)      = default;
-  _LIBCPP_HIDE_FROM_ABI ~__intrusive_list_view()                                       = default;
+  __intrusive_list_view()                                        = default;
+  __intrusive_list_view(__intrusive_list_view const&)            = default;
+  __intrusive_list_view(__intrusive_list_view&&)                 = default;
+  __intrusive_list_view& operator=(__intrusive_list_view const&) = default;
+  __intrusive_list_view& operator=(__intrusive_list_view&&)      = default;
+  ~__intrusive_list_view()                                       = default;
 
-  _LIBCPP_HIDE_FROM_ABI bool __empty() const noexcept { return __head_ == nullptr; }
+  bool __empty() const noexcept { return __head_ == nullptr; }
 
-  _LIBCPP_HIDE_FROM_ABI void __push_front(_Node* __node) noexcept {
+  void __push_front(_Node* __node) noexcept {
     __node->__next_ = __head_;
     if (__head_) {
       __head_->__prev_ = __node;
@@ -49,7 +49,7 @@ struct __intrusive_list_view {
     __head_ = __node;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Node* __pop_front() noexcept {
+  _Node* __pop_front() noexcept {
     _Node* __front = __head_;
     __head_        = __head_->__next_;
     if (__head_) {
@@ -59,7 +59,7 @@ struct __intrusive_list_view {
     return __front;
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __remove(_Node* __node) noexcept {
+  void __remove(_Node* __node) noexcept {
     if (__node->__prev_) {
       // prev exists, set its next to our next to skip __node
       __node->__prev_->__next_ = __node->__next_;
@@ -72,7 +72,7 @@ struct __intrusive_list_view {
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool __is_head(_Node* __node) noexcept { return __node == __head_; }
+  bool __is_head(_Node* __node) noexcept { return __node == __head_; }
 
 private:
   _Node* __head_ = nullptr;

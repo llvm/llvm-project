@@ -8,28 +8,43 @@
 # RUN: llvm-strip --strip-unneeded %t*.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -static
 # RUN: %clang %cflags %t.compact.o -o %t.compact.exe -Wl,-q -static
-# RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite
-# RUN: llvm-bolt %t.compact.exe -o %t.compact.bolt --data %t.fdata --lite \
-# RUN:   --compact-code-model
+
 # RUN: llvm-objdump -d --disassemble-symbols=cold_function %t.exe \
 # RUN:   | FileCheck %s --check-prefix=CHECK-INPUT
+
+# RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite
 # RUN: llvm-objdump -d --disassemble-symbols=cold_function %t.bolt \
 # RUN:   | FileCheck %s
 # RUN: llvm-objdump -d --disassemble-symbols=_start.org.0 %t.bolt \
 # RUN:   | FileCheck %s --check-prefix=CHECK-PATCH
-# RUN: llvm-objdump -d %t.compact.bolt \
+# RUN: llvm-readelf -u %t.bolt | grep -wc FDE \
+# RUN:   | FileCheck --check-prefix=CHECK-FDE-CLUSTER %s
+
+# RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite \
+# RUN:   --relax-with-clusters=false
+# RUN: llvm-objdump -d --disassemble-symbols=cold_function %t.bolt \
+# RUN:   | FileCheck %s
+# RUN: llvm-objdump -d --disassemble-symbols=_start.org.0 %t.bolt \
+# RUN:   | FileCheck %s --check-prefix=CHECK-PATCH
+# RUN: llvm-readelf -u %t.bolt | grep -wc FDE \
+# RUN:   | FileCheck --check-prefix=CHECK-FDE-LEGACY %s
+
+# RUN: llvm-bolt %t.compact.exe -o %t.bolt --data %t.fdata --lite \
+# RUN:   --relax-with-clusters=false --compact-code-model
+# RUN: llvm-objdump -d %t.bolt \
 # RUN:   | FileCheck %s --check-prefix=CHECK-COMPACT
+# RUN: llvm-readelf -u %t.bolt | grep -wc FDE \
+# RUN:   | FileCheck --check-prefix=CHECK-FDE-COMPACT %s
 
 ## In compact mode, make sure we do not create an unnecessary patch thunk.
 # CHECK-COMPACT-NOT: <_start.org.0>
 
-## Verify that the number of FDEs matches the number of functions in the output
-## binary. There are four original functions and three optimized.
-## NOTE: at the moment we are emitting extra FDEs for patched functions, thus
-## there is one more FDE for _start.
-# RUN: llvm-readelf -u %t.bolt | grep -wc FDE \
-# RUN:   | FileCheck --check-prefix=CHECK-FDE %s
-# CHECK-FDE: 8
+## There are four original functions and three optimized functions. The large
+## input adds an FDE for the patched _start, and clustered relaxation adds
+## another for its long thunk to cold_function.
+# CHECK-FDE-CLUSTER: 9
+# CHECK-FDE-LEGACY:  8
+# CHECK-FDE-COMPACT: 7
 
 ## In lite mode, optimized code will be separated from the original .text by
 ## over 128MB, making it impossible for call/bl instructions in cold functions

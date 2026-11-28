@@ -50,9 +50,9 @@ define i256 @lshr_i256(i256 %a, i256 %amt) nounwind {
 ; CHECK-NEXT:    and x11, x4, #0x3f
 ; CHECK-NEXT:    mvn w13, w4
 ; CHECK-NEXT:    add x8, x9, x8, lsl #3
-; CHECK-NEXT:    stp x0, x1, [sp]
 ; CHECK-NEXT:    eor x11, x11, #0x3f
 ; CHECK-NEXT:    stp q0, q0, [sp, #32]
+; CHECK-NEXT:    stp x0, x1, [sp]
 ; CHECK-NEXT:    ldp x9, x10, [x8]
 ; CHECK-NEXT:    ldp x12, x8, [x8, #16]
 ; CHECK-NEXT:    lsl x14, x10, #1

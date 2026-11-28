@@ -24,14 +24,14 @@ module attributes {
 } {
 
   // Signed sub-register integer is sign-extended.
-  cir.func @take_s8(%arg0: !s8i) {
+  cir.func @take_s8(%arg0: !s8i) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @take_s8(%arg0: !s8i {llvm.noundef, llvm.signext})
 
   // Call site picks up the same extension attribute on the operand.
-  cir.func @call_s8(%arg0: !s8i) {
+  cir.func @call_s8(%arg0: !s8i) requires_call_conv_lowering {
     cir.call @take_s8(%arg0) : (!s8i) -> ()
     cir.return
   }
@@ -40,7 +40,7 @@ module attributes {
 
   // A zero-field record classifies as Ignore: the empty argument is dropped
   // and the real argument shifts down to the first slot.
-  cir.func @take_empty(%arg0: !rec_E0, %arg1: !s32i) -> !s32i {
+  cir.func @take_empty(%arg0: !rec_E0, %arg1: !s32i) -> !s32i requires_call_conv_lowering {
     cir.return %arg1 : !s32i
   }
 
@@ -49,7 +49,7 @@ module attributes {
 
   // A 33-64 bit aggregate is packed into a pair of i32 registers, coerced on
   // the wire to a [2 x i32] array.
-  cir.func @takes_pair32(%arg0: !rec_Pair32) {
+  cir.func @takes_pair32(%arg0: !rec_Pair32) requires_call_conv_lowering {
     %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair32>
     cir.store %arg0, %0 : !rec_Pair32, !cir.ptr<!rec_Pair32>
     cir.return
@@ -63,7 +63,7 @@ module attributes {
   // CHECK-NEXT: cir.copy %[[TMP_REC]] align(4) to %[[P]] align(4) : !cir.ptr<!rec_Pair32>
 
   // A 33-64 bit aggregate return is coerced to [2 x i32] as well.
-  cir.func @ret_pair32(%arg0: !cir.ptr<!rec_Pair32>) -> !rec_Pair32 {
+  cir.func @ret_pair32(%arg0: !cir.ptr<!rec_Pair32>) -> !rec_Pair32 requires_call_conv_lowering {
     %0 = cir.load %arg0 : !cir.ptr<!rec_Pair32>, !rec_Pair32
     cir.return %0 : !rec_Pair32
   }
@@ -76,7 +76,7 @@ module attributes {
   // CHECK-NEXT: cir.return %[[RET]] : !cir.array<!u32i x 2>
 
   // The call site coerces both the operand and the result.
-  cir.func @call_pair32() {
+  cir.func @call_pair32() requires_call_conv_lowering {
     %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair32>
     %1 = cir.load %0 : !cir.ptr<!rec_Pair32>, !rec_Pair32
     cir.call @takes_pair32(%1) : (!rec_Pair32) -> ()
@@ -98,7 +98,7 @@ module attributes {
 
   // A larger aggregate that still fits the register budget is passed directly,
   // one argument per field, as classic codegen does.
-  cir.func @takes_triple(%arg0: !rec_Triple) -> !s32i {
+  cir.func @takes_triple(%arg0: !rec_Triple) -> !s32i requires_call_conv_lowering {
     %0 = cir.alloca "t" align(4) : !cir.ptr<!rec_Triple>
     cir.store %arg0, %0 : !rec_Triple, !cir.ptr<!rec_Triple>
     %1 = cir.get_member %0[1] {name = "b"} : !cir.ptr<!rec_Triple> -> !cir.ptr<!s32i>
@@ -121,7 +121,7 @@ module attributes {
   // CHECK-NEXT: cir.return %[[B]] : !s32i
 
   // A direct aggregate return is not split.
-  cir.func @ret_triple(%arg0: !cir.ptr<!rec_Triple>) -> !rec_Triple {
+  cir.func @ret_triple(%arg0: !cir.ptr<!rec_Triple>) -> !rec_Triple requires_call_conv_lowering {
     %0 = cir.load %arg0 : !cir.ptr<!rec_Triple>, !rec_Triple
     cir.return %0 : !rec_Triple
   }
@@ -131,7 +131,7 @@ module attributes {
   // CHECK-NEXT: cir.return %[[V]] : !rec_Triple
 
   // The call site passes each field of the operand as its own argument.
-  cir.func @call_triple() -> !s32i {
+  cir.func @call_triple() -> !s32i requires_call_conv_lowering {
     %0 = cir.alloca "t" align(4) : !cir.ptr<!rec_Triple>
     %1 = cir.load %0 : !cir.ptr<!rec_Triple>, !rec_Triple
     %2 = cir.call @takes_triple(%1) : (!rec_Triple) -> !s32i
@@ -154,7 +154,7 @@ module attributes {
   // CHECK-NEXT: cir.return %[[R]] : !s32i
 
   // Only the top level is split, so a nested struct stays one argument.
-  cir.func @takes_outer(%arg0: !rec_Outer) {
+  cir.func @takes_outer(%arg0: !rec_Outer) requires_call_conv_lowering {
     cir.return
   }
 
@@ -168,14 +168,14 @@ module attributes {
 
   // A kernel scalar argument stays Direct: the AMDGPU_KERNEL convention is
   // routed to the kernel classifier and the signature is unchanged.
-  cir.func @kernel_scalar(%arg0: !s32i) cc(amdgpu_kernel) {
+  cir.func @kernel_scalar(%arg0: !s32i) cc(amdgpu_kernel) requires_call_conv_lowering {
     cir.return
   }
 
   // CHECK: cir.func{{.*}} @kernel_scalar(%arg0: !s32i){{.*}}cc(amdgpu_kernel)
 
   // Without HIP in the module's lang options, a kernel pointer stays generic.
-  cir.func @kernel_ptr(%arg0: !cir.ptr<!s32i>) cc(amdgpu_kernel) {
+  cir.func @kernel_ptr(%arg0: !cir.ptr<!s32i>) cc(amdgpu_kernel) requires_call_conv_lowering {
     cir.return
   }
 

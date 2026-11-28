@@ -54,7 +54,7 @@ namespace llvm {
 class LPMUpdater;
 class PassInstrumentation;
 
-namespace {
+namespace detail {
 
 template <typename PassT>
 using HasRunOnLoopT = decltype(std::declval<PassT>().run(
@@ -62,7 +62,7 @@ using HasRunOnLoopT = decltype(std::declval<PassT>().run(
     std::declval<LoopStandardAnalysisResults &>(),
     std::declval<LPMUpdater &>()));
 
-} // namespace
+} // namespace detail
 
 // Explicit specialization and instantiation declarations for the pass manager.
 // See the comments on the definition of the specialization for details on how
@@ -106,7 +106,7 @@ public:
   /// to the end of \var IsLoopNestPass so we can easily identify the types of
   /// passes in the pass manager later.
   template <typename PassT> LLVM_ATTRIBUTE_MINSIZE void addPass(PassT &&Pass) {
-    if constexpr (is_detected<HasRunOnLoopT, PassT>::value) {
+    if constexpr (is_detected<detail::HasRunOnLoopT, PassT>::value) {
       using LoopPassModelT =
           detail::PassModel<Loop, PassT, LoopAnalysisManager,
                             LoopStandardAnalysisResults &, LPMUpdater &>;
@@ -430,7 +430,7 @@ private:
 template <typename LoopPassT>
 inline FunctionToLoopPassAdaptor
 createFunctionToLoopPassAdaptor(LoopPassT &&Pass, bool UseMemorySSA = false) {
-  if constexpr (is_detected<HasRunOnLoopT, LoopPassT>::value) {
+  if constexpr (is_detected<detail::HasRunOnLoopT, LoopPassT>::value) {
     using PassModelT =
         detail::PassModel<Loop, LoopPassT, LoopAnalysisManager,
                           LoopStandardAnalysisResults &, LPMUpdater &>;

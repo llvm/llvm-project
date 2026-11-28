@@ -201,3 +201,75 @@ b:                                        ; preds = %entry
   ret i32 %1
 }
 
+
+declare ptr @readnone_ptr(ptr) memory(none) willreturn nounwind
+declare i32 @readnone_i32(i32) memory(none) willreturn nounwind
+
+; The hoisted call replaces a call with weaker attributes, so its attributes
+; must be intersected with the replaced call's.
+define ptr @hoist_call_ret_attrs(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_call_ret_attrs(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = call ptr @readnone_ptr(ptr [[P:%.*]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    ret ptr [[A]]
+; CHECK:       right:
+; CHECK-NEXT:    ret ptr [[A]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %a = call nonnull noundef ptr @readnone_ptr(ptr %p)
+  ret ptr %a
+
+right:
+  %b = call ptr @readnone_ptr(ptr %p)
+  ret ptr %b
+}
+
+define i32 @hoist_call_range_attr(i1 %c, i32 %x) {
+; CHECK-LABEL: @hoist_call_range_attr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = call range(i32 0, 20) i32 @readnone_i32(i32 [[X:%.*]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    ret i32 [[A]]
+; CHECK:       right:
+; CHECK-NEXT:    ret i32 [[A]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %a = call range(i32 0, 10) i32 @readnone_i32(i32 %x)
+  ret i32 %a
+
+right:
+  %b = call range(i32 5, 20) i32 @readnone_i32(i32 %x)
+  ret i32 %b
+}
+
+; Both calls carry the same attribute: it is kept.
+define ptr @hoist_call_common_attr(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_call_common_attr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = call nonnull ptr @readnone_ptr(ptr [[P:%.*]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
+; CHECK:       left:
+; CHECK-NEXT:    ret ptr [[A]]
+; CHECK:       right:
+; CHECK-NEXT:    ret ptr [[A]]
+;
+entry:
+  br i1 %c, label %left, label %right
+
+left:
+  %a = call nonnull ptr @readnone_ptr(ptr %p)
+  ret ptr %a
+
+right:
+  %b = call nonnull noundef ptr @readnone_ptr(ptr %p)
+  ret ptr %b
+}

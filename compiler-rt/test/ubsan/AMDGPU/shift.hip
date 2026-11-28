@@ -1,5 +1,4 @@
-// REQUIRES: ubsan-hip
-// RUN: %clang_hip -fsanitize=undefined %s -o %t %hip_libs
+// RUN: %clang_hip_ubsan %s -o %t %hip_libs
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // The host has no references to the shared runtime, it must still be loaded.

@@ -78,10 +78,10 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
       return false;
     unsigned ArgIndex = 0;
     for (auto *Arg : CE->arguments()) {
-      ParmVarDecl *Parm = nullptr;
+      QualType ParamType;
       if (ArgIndex < Ctor->getNumParams())
-        Parm = Ctor->getParamDecl(ArgIndex);
-      if (mutatesGuardian(Arg, Parm))
+        ParamType = Ctor->getParamDecl(ArgIndex)->getType();
+      if (mutatesGuardian(Arg, ParamType))
         return false;
       ArgIndex++;
     }
@@ -91,7 +91,7 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
   bool VisitCallExpr(CallExpr *CE) override {
     auto *Callee = CE->getDirectCallee();
     if (!Callee)
-      return false;
+      return !indirectCallMutatesGuardian(CE);
     if (isPtrConversion(Callee))
       return true;
     if (auto *Method = dyn_cast<CXXMethodDecl>(Callee)) {
@@ -106,16 +106,16 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
     unsigned ArgIndex = 0;
     unsigned ArgOffset = OperatorMethod ? 1 : 0;
     for (auto *Arg : CE->arguments()) {
-      ParmVarDecl *Parm = nullptr;
+      QualType ParamType;
       if (ArgIndex >= ArgOffset) {
         unsigned ParmIndex = ArgIndex - ArgOffset;
         if (ParmIndex < Callee->getNumParams())
-          Parm = Callee->getParamDecl(ParmIndex);
+          ParamType = Callee->getParamDecl(ParmIndex)->getType();
       } else if (OperatorMethod->isConst()) {
         ArgIndex++;
         continue;
       }
-      if (mutatesGuardian(Arg, Parm))
+      if (mutatesGuardian(Arg, ParamType))
         return false;
       ArgIndex++;
     }
@@ -129,18 +129,64 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
     auto ObjType = MCE->getObjectType();
     if (ObjType.isConstQualified())
       return true;
+    // A call through a pointer to member function has no method declaration.
+    if (!Method) {
+      if (auto *Prototype = getCalleePrototype(MCE);
+          Prototype && Prototype->getMethodQuals().hasConst())
+        return true;
+    }
     auto *ThisArg = MCE->getImplicitObjectArgument()->IgnoreParenCasts();
+    if (auto *UO = dyn_cast<UnaryOperator>(ThisArg);
+        UO && UO->getOpcode() == UO_AddrOf)
+      ThisArg = UO->getSubExpr()->IgnoreParenCasts();
     if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
-      if (!isa<CXXConversionDecl>(Method) && VarRef->getDecl() == Guardian)
+      if (!isa_and_nonnull<CXXConversionDecl>(Method) &&
+          VarRef->getDecl() == Guardian)
         return false;
     }
     return true;
   }
 
 private:
-  bool mutatesGuardian(const Expr *Arg, const ParmVarDecl *ParmDecl) {
+  // Returns the prototype of the callee of a call through a function pointer,
+  // a block, or a pointer to member function.
+  static const FunctionProtoType *getCalleePrototype(const CallExpr *CE) {
+    auto *CalleeExpr = CE->getCallee();
+    if (!CalleeExpr)
+      return nullptr;
+    CalleeExpr = CalleeExpr->IgnoreParens();
+    QualType CalleeType = CalleeExpr->getType();
+    if (auto *BO = dyn_cast<BinaryOperator>(CalleeExpr); BO && BO->isPtrMemOp())
+      CalleeType = BO->getRHS()->getType();
+    if (QualType PointeeType = CalleeType->getPointeeType();
+        !PointeeType.isNull())
+      CalleeType = PointeeType;
+    return CalleeType->getAs<FunctionProtoType>();
+  }
+
+  // A call through a function pointer, a block, or a pointer to member function
+  // can only mutate the guardian if the guardian is passed to it, or if the
+  // guardian is a __block variable that a block could have captured by
+  // reference.
+  bool indirectCallMutatesGuardian(const CallExpr *CE) {
+    if (Guardian->hasAttr<BlocksAttr>())
+      return true;
+    auto *Prototype = getCalleePrototype(CE);
+    unsigned ArgIndex = 0;
+    for (auto *Arg : CE->arguments()) {
+      QualType ParamType;
+      if (Prototype && ArgIndex < Prototype->getNumParams())
+        ParamType = Prototype->getParamType(ArgIndex);
+      if (mutatesGuardian(Arg, ParamType))
+        return true;
+      ArgIndex++;
+    }
+    return false;
+  }
+
+  bool mutatesGuardian(const Expr *Arg, QualType ParamType) {
     Arg = Arg->IgnoreParenCasts();
-    auto ArgType = ParmDecl ? ParmDecl->getType() : Arg->getType();
+    auto ArgType = !ParamType.isNull() ? ParamType : Arg->getType();
     bool IsAddressOf = false;
     if (auto *UO = dyn_cast<UnaryOperator>(Arg);
         UO && UO->getOpcode() == UO_AddrOf) {

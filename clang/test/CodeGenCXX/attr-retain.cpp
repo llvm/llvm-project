@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -triple x86_64 -Werror %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -triple x86_64 -Werror %s -o - | FileCheck %s %}
 
 // CHECK:      @llvm.used = appending global [7 x ptr]
 // CHECK-SAME:   @_ZN2X0C2Ev

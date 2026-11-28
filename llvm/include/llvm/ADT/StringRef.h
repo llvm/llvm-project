@@ -362,15 +362,7 @@ public:
   ///
   /// \returns The index of the last occurrence of \p C, or npos if not
   /// found.
-  [[nodiscard]] size_t rfind(char C, size_t From = npos) const {
-    size_t I = std::min(From, size());
-    while (I) {
-      --I;
-      if (data()[I] == C)
-        return I;
-    }
-    return npos;
-  }
+  [[nodiscard]] LLVM_ABI size_t rfind(char C, size_t From = npos) const;
 
   /// Search for the last character \p C in the string, ignoring case.
   ///

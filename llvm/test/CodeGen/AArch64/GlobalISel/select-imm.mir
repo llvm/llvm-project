@@ -23,8 +23,6 @@ name:            imm_s32_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
 
 body:             |
   bb.0:
@@ -41,7 +39,7 @@ body:             |
     ; CHECK-TINY-NEXT: {{  $}}
     ; CHECK-TINY-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm -1234
     ; CHECK-TINY-NEXT: $w0 = COPY [[MOVi32imm]]
-    %0(i32) = G_CONSTANT i32 -1234
+    %0:gpr(i32) = G_CONSTANT i32 -1234
     $w0 = COPY %0(i32)
 ...
 
@@ -51,8 +49,6 @@ name:            imm_s64_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
 
 body:             |
   bb.0:
@@ -71,7 +67,7 @@ body:             |
     ; CHECK-TINY-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1234
     ; CHECK-TINY-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
     ; CHECK-TINY-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
-    %0(i64) = G_CONSTANT i64 1234
+    %0:gpr(i64) = G_CONSTANT i64 1234
     $x0 = COPY %0(i64)
 ...
 

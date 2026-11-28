@@ -2192,9 +2192,9 @@ define void @PR34947(ptr %p0, ptr %p1) nounwind {
 ; X86-AVX2-NEXT:    vpmulld %xmm4, %xmm2, %xmm2
 ; X86-AVX2-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vmovd %xmm0, %eax
-; X86-AVX2-NEXT:    vmovdqa %ymm1, (%eax)
 ; X86-AVX2-NEXT:    imull $8199, %eax, %eax # imm = 0x2007
 ; X86-AVX2-NEXT:    movl %eax, (%eax)
+; X86-AVX2-NEXT:    vmovdqa %ymm1, (%eax)
 ; X86-AVX2-NEXT:    vzeroupper
 ; X86-AVX2-NEXT:    retl
 ;

@@ -8,6 +8,26 @@
 // RUN: %clang %cflags -fPIC -pie %t.o -o %t.exe -nostdlib -Wl,-q -Wl,-fini=dummy
 // RUN: llvm-bolt %t.exe -o %t.bolt -instrument -v=2 | FileCheck %s
 
+// Counters are kept out of an exclusive region even when the block holding
+// the store is a spanning tree leaf, which gets a block counter instead of
+// edge counters.
+// RUN: llvm-bolt %t.exe -o %t.leaf.bolt -instrument --print-finalized \
+// RUN:   --print-only=case6 | FileCheck %s --check-prefix=CHECK-LEAF
+// CHECK-LEAF:     ldaxr
+// CHECK-LEAF-NOT: stadd
+// CHECK-LEAF:     stlxr
+// CHECK-LEAF:     stadd
+
+// A spanning tree leaf that starts an exclusive region keeps its counter,
+// which runs before the exclusive load.
+// RUN: llvm-bolt %t.exe -o %t.entry.bolt -instrument --print-finalized \
+// RUN:   --print-only=case7 | FileCheck %s --check-prefix=CHECK-ENTRY
+// CHECK-ENTRY:      stadd
+// CHECK-ENTRY-NEXT: ldp
+// CHECK-ENTRY-NEXT: ldaxr
+// CHECK-ENTRY-NOT:  stadd
+// CHECK-ENTRY:      stlxr
+
 // CHECK: BOLT-INSTRUMENTER: skip BB {{.*}} due to exclusive instruction in function foo
 // CHECK: BOLT-INSTRUMENTER: skip BB {{.*}} due to exclusive instruction in function foo
 // CHECK: BOLT-INSTRUMENTER: skip BB {{.*}} due to exclusive instruction in function foo
@@ -46,6 +66,8 @@ _start:
   bl case3
   bl case4
   bl case5
+  bl case6
+  bl case7
 
   ret
 .size _start, .-_start
@@ -107,6 +129,36 @@ case5:
   ldxr x0, [x2]
   ret
 .size case5, .-case5
+
+# Case 6: the block holding the exclusive store is a spanning tree leaf
+.global case6
+.type case6, %function
+case6:
+  ldaxr w0, [x1]
+  cbz  w0, .Lcase6_store
+  clrex
+  b    .Lcase6_done
+.Lcase6_store:
+  stlxr w2, w3, [x1]
+  cbnz w2, case6
+.Lcase6_done:
+  ret
+.size case6, .-case6
+
+# Case 7: a block that starts an exclusive region is a spanning tree leaf
+.global case7
+.type case7, %function
+case7:
+  cbz  x0, .Lcase7_load
+  ldaxr w0, [x1]
+  b    .Lcase7_store
+.Lcase7_load:
+  ldaxr w0, [x1]
+.Lcase7_store:
+  stlxr w2, w3, [x1]
+  cbnz w2, case7
+  ret
+.size case7, .-case7
 
 .global dummy
 .type dummy, %function

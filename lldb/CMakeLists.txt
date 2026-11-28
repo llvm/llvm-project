@@ -1,12 +1,4 @@
-cmake_minimum_required(VERSION 3.20.0)
-if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
-  message(WARNING
-    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
-    "minimum version of CMake required to build LLVM will become 3.31.0, and "
-    "using an older CMake will become an error. Please upgrade your CMake to "
-    "at least 3.31.0 now to avoid issues in the future.")
-endif()
-
+cmake_minimum_required(VERSION 3.31.0)
 set(LLVM_SUBPROJECT_TITLE "LLDB")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -57,7 +49,6 @@ if(uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
 endif()
 
 if (WIN32)
-  add_definitions(-D_ENABLE_EXTENDED_ALIGNED_STORAGE)
   if (NOT MSVC)
     # _BSD_SOURCE is required for MinGW's getopt.h to define optreset
     add_definitions(-D_BSD_SOURCE)

@@ -46,10 +46,8 @@ define i32 @first_order_recurrence(ptr nocapture readonly %a, ptr nocapture %b, 
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <4 x i1> [[TMP5]], splat (i1 true)
-; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP12]], i1 false)
-; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP8]], i64 [[LAST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[TMP15:%.*]] = sub i64 [[TRIP_COUNT_MINUS_1]], [[INDEX]]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP8]], i64 [[TMP15]]
 ; CHECK-NEXT:    br [[FOR_EXIT:label %.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ;

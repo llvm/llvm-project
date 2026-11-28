@@ -1792,15 +1792,15 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
-; SSE2-NEXT:    movd %r9d, %xmm4
 ; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1],xmm4[2],xmm2[2],xmm4[3],xmm2[3],xmm4[4],xmm2[4],xmm4[5],xmm2[5],xmm4[6],xmm2[6],xmm4[7],xmm2[7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; SSE2-NEXT:    movd %r8d, %xmm2
-; SSE2-NEXT:    movd %ecx, %xmm3
+; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
-; SSE2-NEXT:    movd %edx, %xmm6
-; SSE2-NEXT:    movd %esi, %xmm2
+; SSE2-NEXT:    movd {{.*#+}} xmm6 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm6[0],xmm2[1],xmm6[1],xmm2[2],xmm6[2],xmm2[3],xmm6[3],xmm2[4],xmm6[4],xmm2[5],xmm6[5],xmm2[6],xmm6[6],xmm2[7],xmm6[7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
@@ -1820,29 +1820,29 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm6 = xmm6[0],xmm3[0],xmm6[1],xmm3[1],xmm6[2],xmm3[2],xmm6[3],xmm3[3],xmm6[4],xmm3[4],xmm6[5],xmm3[5],xmm6[6],xmm3[6],xmm6[7],xmm3[7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm4[0],xmm6[1],xmm4[1],xmm6[2],xmm4[2],xmm6[3],xmm4[3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1]
-; SSE2-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd %r8d, %xmm3
+; SSE2-NEXT:    movd %ecx, %xmm4
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3],xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
-; SSE2-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movd {{.*#+}} xmm5 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd %edx, %xmm3
+; SSE2-NEXT:    movd %esi, %xmm5
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1],xmm5[2],xmm3[2],xmm5[3],xmm3[3],xmm5[4],xmm3[4],xmm5[5],xmm3[5],xmm5[6],xmm3[6],xmm5[7],xmm3[7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
 ; SSE2-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movd {{.*#+}} xmm4 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3],xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
-; SSE2-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd %r9d, %xmm3
 ; SSE2-NEXT:    movd {{.*#+}} xmm7 = mem[0],zero,zero,zero
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm7 = xmm7[0],xmm3[0],xmm7[1],xmm3[1],xmm7[2],xmm3[2],xmm7[3],xmm3[3],xmm7[4],xmm3[4],xmm7[5],xmm3[5],xmm7[6],xmm3[6],xmm7[7],xmm3[7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm7 = xmm7[0],xmm4[0],xmm7[1],xmm4[1],xmm7[2],xmm4[2],xmm7[3],xmm4[3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm5[0],xmm7[1],xmm5[1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm7 = xmm7[0],xmm6[0]
-; SSE2-NEXT:    psllw $7, %xmm7
-; SSE2-NEXT:    pandn %xmm7, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %ecx
-; SSE2-NEXT:    shll $16, %ecx
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm7[0],xmm3[1],xmm7[1],xmm3[2],xmm7[2],xmm3[3],xmm7[3],xmm3[4],xmm7[4],xmm3[5],xmm7[5],xmm3[6],xmm7[6],xmm3[7],xmm7[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm5 = xmm5[0],xmm6[0]
+; SSE2-NEXT:    psllw $7, %xmm5
+; SSE2-NEXT:    pandn %xmm5, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %ecx
 ; SSE2-NEXT:    psllw $7, %xmm2
-; SSE2-NEXT:    pandn %xmm2, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %edx
+; SSE2-NEXT:    pandn %xmm2, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %edx
+; SSE2-NEXT:    shll $16, %edx
 ; SSE2-NEXT:    orl %ecx, %edx
 ; SSE2-NEXT:    movl %edx, (%rdi)
 ; SSE2-NEXT:    retq
@@ -1850,11 +1850,11 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ; SSE42-LABEL: is_positive_mask_v32i8_v32i1:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movq %rdi, %rax
-; SSE42-NEXT:    movd %esi, %xmm2
-; SSE42-NEXT:    pinsrb $1, %edx, %xmm2
-; SSE42-NEXT:    pinsrb $2, %ecx, %xmm2
-; SSE42-NEXT:    pinsrb $3, %r8d, %xmm2
-; SSE42-NEXT:    pinsrb $4, %r9d, %xmm2
+; SSE42-NEXT:    movd {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE42-NEXT:    pinsrb $1, {{[0-9]+}}(%rsp), %xmm2
+; SSE42-NEXT:    pinsrb $2, {{[0-9]+}}(%rsp), %xmm2
+; SSE42-NEXT:    pinsrb $3, {{[0-9]+}}(%rsp), %xmm2
+; SSE42-NEXT:    pinsrb $4, {{[0-9]+}}(%rsp), %xmm2
 ; SSE42-NEXT:    pinsrb $5, {{[0-9]+}}(%rsp), %xmm2
 ; SSE42-NEXT:    pinsrb $6, {{[0-9]+}}(%rsp), %xmm2
 ; SSE42-NEXT:    pinsrb $7, {{[0-9]+}}(%rsp), %xmm2
@@ -1866,11 +1866,11 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ; SSE42-NEXT:    pinsrb $13, {{[0-9]+}}(%rsp), %xmm2
 ; SSE42-NEXT:    pinsrb $14, {{[0-9]+}}(%rsp), %xmm2
 ; SSE42-NEXT:    pinsrb $15, {{[0-9]+}}(%rsp), %xmm2
-; SSE42-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; SSE42-NEXT:    pinsrb $1, {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    pinsrb $2, {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    pinsrb $3, {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    pinsrb $4, {{[0-9]+}}(%rsp), %xmm3
+; SSE42-NEXT:    movd %esi, %xmm3
+; SSE42-NEXT:    pinsrb $1, %edx, %xmm3
+; SSE42-NEXT:    pinsrb $2, %ecx, %xmm3
+; SSE42-NEXT:    pinsrb $3, %r8d, %xmm3
+; SSE42-NEXT:    pinsrb $4, %r9d, %xmm3
 ; SSE42-NEXT:    pinsrb $5, {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    pinsrb $6, {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    pinsrb $7, {{[0-9]+}}(%rsp), %xmm3
@@ -1883,12 +1883,12 @@ define <32 x i1> @is_positive_mask_v32i8_v32i1(<32 x i8> %x, <32 x i1> %y) {
 ; SSE42-NEXT:    pinsrb $14, {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    pinsrb $15, {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    psllw $7, %xmm3
-; SSE42-NEXT:    pandn %xmm3, %xmm1
-; SSE42-NEXT:    pmovmskb %xmm1, %ecx
-; SSE42-NEXT:    shll $16, %ecx
+; SSE42-NEXT:    pandn %xmm3, %xmm0
+; SSE42-NEXT:    pmovmskb %xmm0, %ecx
 ; SSE42-NEXT:    psllw $7, %xmm2
-; SSE42-NEXT:    pandn %xmm2, %xmm0
-; SSE42-NEXT:    pmovmskb %xmm0, %edx
+; SSE42-NEXT:    pandn %xmm2, %xmm1
+; SSE42-NEXT:    pmovmskb %xmm1, %edx
+; SSE42-NEXT:    shll $16, %edx
 ; SSE42-NEXT:    orl %ecx, %edx
 ; SSE42-NEXT:    movl %edx, (%rdi)
 ; SSE42-NEXT:    retq

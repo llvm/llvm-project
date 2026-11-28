@@ -170,8 +170,6 @@ Error DbiModuleList::initialize(BinaryStreamRef ModInfo,
 }
 
 Error DbiModuleList::initializeModInfo(BinaryStreamRef ModInfo) {
-  ModInfoSubstream = ModInfo;
-
   if (ModInfo.getLength() == 0)
     return Error::success();
 
@@ -184,8 +182,6 @@ Error DbiModuleList::initializeModInfo(BinaryStreamRef ModInfo) {
 }
 
 Error DbiModuleList::initializeFileInfo(BinaryStreamRef FileInfo) {
-  FileInfoSubstream = FileInfo;
-
   if (FileInfo.getLength() == 0)
     return Error::success();
 

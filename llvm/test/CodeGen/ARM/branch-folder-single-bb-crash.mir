@@ -13,7 +13,6 @@
 ...
 ---
 name:            f_1418_2054
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true

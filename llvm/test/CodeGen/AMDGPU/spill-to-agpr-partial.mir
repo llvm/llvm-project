@@ -3,7 +3,6 @@
 
 ---
 name: partial_spill_v128_1_of_4
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
@@ -34,7 +33,6 @@ body:             |
 
 ---
 name: partial_spill_v128_2_of_4
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
@@ -67,7 +65,6 @@ body:             |
 
 ---
 name: partial_spill_v128_3_of_4
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
@@ -102,7 +99,6 @@ body:             |
 
 ---
 name: full_spill_v128
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
@@ -141,7 +137,6 @@ body:             |
 
 ---
 name: partial_spill_a128_1_of_4
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
@@ -172,7 +167,6 @@ body:             |
 
 ---
 name: partial_spill_a128_2_of_4
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
@@ -205,7 +199,6 @@ body:             |
 
 ---
 name: partial_spill_a128_3_of_4
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
@@ -240,7 +233,6 @@ body:             |
 
 ---
 name: full_spill_a128
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:

@@ -7,7 +7,6 @@
 ...
 ---
 name:            testcase_valid_offset
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 512, alignment: 16, stack-id: scalable-vector }
 body:             |
@@ -110,7 +109,6 @@ body:             |
 ...
 ---
 name:            testcase_offset_out_of_range
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 512, alignment: 16, stack-id: scalable-vector }
 body:             |

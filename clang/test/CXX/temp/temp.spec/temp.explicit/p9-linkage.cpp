@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -O1 -disable-llvm-passes -emit-llvm -std=c++11 -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin -O1 -disable-llvm-passes -emit-llvm -std=c++11 -o - %s | FileCheck %s %}
 
 template<typename T>
 struct X0 {

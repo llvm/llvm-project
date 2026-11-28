@@ -197,6 +197,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::OpenMPDeprecated);
   warnUsage_.set(UsageWarning::OpenMPFuture);
   warnUsage_.set(UsageWarning::OpenMPUsage);
+  warnUsage_.set(UsageWarning::OpenMPMapSaveWithoutAlways);
   warnUsage_.set(UsageWarning::DataLength);
   warnUsage_.set(UsageWarning::IgnoredDirective);
   warnUsage_.set(UsageWarning::HomonymousSpecific);
@@ -225,6 +226,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::IgnoredNoReallocateLHS);
   warnUsage_.set(UsageWarning::IoImpliedDoIndexConflict);
   warnUsage_.set(UsageWarning::BOZLiteralTruncation);
+  warnUsage_.set(UsageWarning::UndelimitedNamelistCharacter);
   warnLanguage_.set(LanguageFeature::PreferIntrinsicModuleUseAssociation);
   warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
   warnLanguage_.set(LanguageFeature::OpenAccDefaultNoneScalarsStrict);

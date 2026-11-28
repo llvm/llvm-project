@@ -42,7 +42,6 @@
 #include "llvm/MC/MCSymbolCOFF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MD5.h"
@@ -962,12 +961,6 @@ private:
 };
 
 } // end anonymous namespace
-
-namespace llvm {
-
-extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
-
-} // end namespace llvm
 
 enum { DEFAULT_ADDRSPACE = 0 };
 
@@ -2758,7 +2751,7 @@ bool MasmParser::handleMacroEntry(const MCAsmMacro *M, SMLoc NameLoc,
                                   AsmToken::TokenKind ArgumentEndTok) {
   // Arbitrarily limit macro nesting depth (default matches 'as'). We can
   // eliminate this, although we should protect against infinite loops.
-  unsigned MaxNestingDepth = AsmMacroMaxNestingDepth;
+  unsigned MaxNestingDepth = MAI.getAsmMacroMaxNestingDepth();
   if (ActiveMacros.size() == MaxNestingDepth) {
     std::ostringstream MaxNestingDepthError;
     MaxNestingDepthError << "macros cannot be nested more than "
@@ -4238,7 +4231,7 @@ bool MasmParser::emitAlignTo(int64_t Alignment) {
     // Check whether we should use optimal code alignment for this align
     // directive.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
-    if (MAI.useCodeAlign(*Section)) {
+    if (Section->isText()) {
       getStreamer().emitCodeAlignment(Align(Alignment),
                                       getTargetParser().getSTI(),
                                       /*MaxBytesToEmit=*/0);

@@ -583,8 +583,9 @@ R600InstrInfo::fitsConstReadLimitations(const std::vector<MachineInstr *> &MIs)
         return false;
       if (Src.first->getReg() == R600::ALU_CONST)
         Consts.push_back(Src.second);
-      if (R600::R600_KC0RegClass.contains(Src.first->getReg()) ||
-          R600::R600_KC1RegClass.contains(Src.first->getReg())) {
+      if (Src.first->getReg().isPhysical() &&
+          (R600::R600_KC0RegClass.contains(Src.first->getReg()) ||
+           R600::R600_KC1RegClass.contains(Src.first->getReg()))) {
         unsigned Index = RI.getEncodingValue(Src.first->getReg()) & 0xff;
         unsigned Chan = RI.getHWRegChan(Src.first->getReg());
         Consts.push_back((Index << 2) | Chan);

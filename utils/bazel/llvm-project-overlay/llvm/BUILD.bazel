@@ -487,20 +487,6 @@ cc_library(
         "include/llvm/Support/VCSRevision.h",
     ],
     copts = llvm_copts,
-    defines = select({
-        "@platforms//cpu:aarch64": [
-        ],
-        "//conditions:default": ["BLAKE3_USE_NEON=0"],
-    }) + select({
-        "@platforms//cpu:x86_64": [
-        ],
-        "//conditions:default": [
-            "BLAKE3_NO_AVX2",
-            "BLAKE3_NO_AVX512",
-            "BLAKE3_NO_SSE2",
-            "BLAKE3_NO_SSE41",
-        ],
-    }),
     features = ["-parse_headers"],
     includes = ["include"],
     linkopts = select({
@@ -547,6 +533,16 @@ cc_library(
         "@rules_cc//cc/libc:musl": ["-Wl,-z,stack-size=8388608"],
         "//conditions:default": [],
     }),
+    local_defines = select({
+        "@platforms//cpu:x86_64": [
+        ],
+        "//conditions:default": [
+            "BLAKE3_NO_AVX2",
+            "BLAKE3_NO_AVX512",
+            "BLAKE3_NO_SSE2",
+            "BLAKE3_NO_SSE41",
+        ],
+    }),
     textual_hdrs = glob([
         "include/llvm/Support/*.def",
     ]),
@@ -566,7 +562,7 @@ cc_library(
         # provides the configuration define unless lzma is enabled, in which
         # case it also links the system liblzma.
         "//third-party:lzma",
-        "//libc:shared_math_headers_for_apfloat",
+        "//libc/shared:math_headers_for_apfloat",
     ],
 )
 
@@ -674,6 +670,7 @@ cc_library(
     deps = [
         ":BinaryFormatELF",
         ":PPCTargetParser",
+        ":SparcTargetParser",
         ":Support",
         ":TargetParser",
     ],
@@ -806,28 +803,21 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "DWARFCFIChecker",
-    srcs = glob([
-        "lib/DWARFCFIChecker/*.cpp",
-        "lib/DWARFCFIChecker/*.h",
-    ]),
-    hdrs = glob(["include/llvm/DWARFCFIChecker/*.h"]),
-    copts = llvm_copts,
-    deps = [
-        ":BinaryFormat",
-        ":DebugInfoDWARFLowLevel",
-        ":MC",
-        ":Support",
-    ],
-)
-
 gentbl_cc_library(
     name = "MCCLOptionsTableGen",
     strip_include_prefix = "lib/MC",
     tbl_outs = {"lib/MC/MCCLOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "lib/MC/MCCLOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MCToolOptionsTableGen",
+    strip_include_prefix = "lib/MC",
+    tbl_outs = {"lib/MC/MCToolOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/MC/MCToolOptions.td",
     deps = [":OptParserTdFiles"],
 )
 
@@ -847,6 +837,7 @@ cc_library(
         ":DebugInfoCodeView",
         ":DebugInfoDWARFLowLevel",
         ":MCCLOptionsTableGen",
+        ":MCToolOptionsTableGen",
         ":Option",
         ":Support",
         ":TargetParser",
@@ -1323,6 +1314,15 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "BitReaderOptionsTableGen",
+    strip_include_prefix = "lib/Bitcode/Reader",
+    tbl_outs = {"lib/Bitcode/Reader/BitReaderOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Bitcode/Reader/BitReaderOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "BitReader",
     srcs = glob([
@@ -1339,8 +1339,10 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
+        ":BitReaderOptionsTableGen",
         ":BitstreamReader",
         ":Core",
+        ":Option",
         ":Support",
         ":TargetParser",
         ":config",
@@ -1637,6 +1639,15 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "BitWriterOptionsTableGen",
+    strip_include_prefix = "lib/Bitcode/Writer",
+    tbl_outs = {"lib/Bitcode/Writer/BitWriterOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Bitcode/Writer/BitWriterOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "BitWriter",
     srcs = glob([
@@ -1656,10 +1667,12 @@ cc_library(
         ":Analysis",
         ":BinaryFormat",
         ":BitReader",
+        ":BitWriterOptionsTableGen",
         ":BitstreamWriter",
         ":Core",
         ":MC",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Support",
         ":TargetParser",
@@ -1760,6 +1773,13 @@ td_library(
 )
 
 td_library(
+    name = "SparcTargetTdFiles",
+    srcs = glob([
+        "lib/Target/Sparc/**/*.td",
+    ]),
+)
+
+td_library(
     name = "WebAssemblyTargetTdFiles",
     srcs = glob([
         "lib/Target/WebAssembly/**/*.td",
@@ -1770,7 +1790,7 @@ gentbl_cc_library(
     name = "RISCVTargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/RISCVTargetParserDef.inc": ["-gen-riscv-target-def"]},
     tblgen = ":llvm-min-tblgen",
-    td_file = "lib/Target/RISCV/RISCV.td",
+    td_file = "lib/Target/RISCV/RISCVTargetParserDef.td",
     deps = [
         ":CommonTargetTdFiles",
         ":RISCVTargetTdFiles",
@@ -1823,11 +1843,38 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "SparcGenTargetFeaturesGen",
+    tbl_outs = {"include/llvm/TargetParser/SparcGenTargetFeatures.inc": ["-gen-target-features"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Sparc/SparcTargetParserDef.td",
+    deps = [
+        ":CommonTargetTdFiles",
+        ":SparcTargetTdFiles",
+    ],
+)
+
+cc_library(
+    name = "SparcTargetParser",
+    srcs = ["lib/TargetParser/SparcTargetParser.cpp"],
+    hdrs = ["include/llvm/TargetParser/SparcTargetParser.h"],
+    copts = llvm_copts,
+    includes = ["include"],
+    deps = [
+        ":SparcGenTargetFeaturesGen",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
 cc_library(
     name = "TargetParser",
     srcs = glob(
         include = ["lib/TargetParser/*.cpp"],
-        exclude = ["lib/TargetParser/PPCTargetParser.cpp"],
+        exclude = [
+            "lib/TargetParser/PPCTargetParser.cpp",
+            "lib/TargetParser/SparcTargetParser.cpp",
+        ],
     ) + select({
         "@platforms//os:windows": glob([
             "lib/TargetParser/Windows/*.inc",
@@ -2383,10 +2430,22 @@ expand_template(
     template = "include/llvm/Transforms/IPO/InstrumentorVariables.inc.in",
 )
 
+gentbl_cc_library(
+    name = "IPOOptionsTableGen",
+    strip_include_prefix = "lib/Transforms/IPO",
+    tbl_outs = {
+        "lib/Transforms/IPO/IPOOptions.inc": ["-gen-opt-parser-defs"],
+    },
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Transforms/IPO/IPOOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 cc_library(
     name = "IPO",
     srcs = glob([
         "lib/Transforms/IPO/*.cpp",
+        "lib/Transforms/IPO/*.h",
     ]),
     hdrs = glob([
         "include/llvm/Transforms/IPO/*.h",
@@ -2407,6 +2466,7 @@ cc_library(
         ":Core",
         ":Demangle",
         ":FrontendOpenMP",
+        ":IPOOptionsTableGen",
         ":IRPrinter",
         ":IRReader",
         ":InstCombine",
@@ -2414,6 +2474,7 @@ cc_library(
         ":Linker",
         ":ObjCARC",
         ":Object",
+        ":Option",
         ":ProfileData",
         ":Scalar",
         ":Support",
@@ -2556,6 +2617,24 @@ gentbl_cc_library(
     deps = [":OptParserTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "CodeGenToolOptionsTableGen",
+    strip_include_prefix = "lib/CodeGen",
+    tbl_outs = {"lib/CodeGen/CodeGenToolOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/CodeGen/CodeGenToolOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "SelectionDAGOptionsTableGen",
+    strip_include_prefix = "lib/CodeGen/SelectionDAG",
+    tbl_outs = {"lib/CodeGen/SelectionDAG/SelectionDAGOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/CodeGen/SelectionDAG/SelectionDAGOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 copy_file(
     name = "generate_regalloc_model1_h",
     src = "lib/Analysis/models/regalloc-eviction-test-model.inc",
@@ -2627,6 +2706,7 @@ cc_library(
         ":CFGuard",
         ":CGData",
         ":CodeGenOptionsTableGen",
+        ":CodeGenToolOptionsTableGen",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -2643,6 +2723,7 @@ cc_library(
         ":ProfileData",
         ":Remarks",
         ":Scalar",
+        ":SelectionDAGOptionsTableGen",
         ":Support",
         ":Target",
         ":TargetParser",
@@ -2849,7 +2930,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/ARM/ARMGenFastISel.inc",
             ),
             (
-                ["-gen-global-isel"],
+                [
+                    "-gen-global-isel",
+                    "-gisel-extended-llt",
+                ],
                 "lib/Target/ARM/ARMGenGlobalISel.inc",
             ),
             (
@@ -2939,6 +3023,7 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
         "tbl_deps": [
+            ":AMDGPUOptionsTableGen",
             ":amdgpu_isel_target_gen",
             ":r600_target_gen",
         ],
@@ -3109,6 +3194,9 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-subtarget"],
                 "lib/Target/Hexagon/HexagonGenSubtargetInfo.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":HexagonOptionsTableGen",
         ],
     },
     {
@@ -3396,6 +3484,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/NVPTX/NVPTXGenSDNodeInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":NVPTXOptionsTableGen",
+        ],
     },
     {
         "name": "PowerPC",
@@ -3463,6 +3554,10 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-sd-node-info"],
                 "lib/Target/PowerPC/PPCGenSDNodeInfo.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":PPCMCOptionsTableGen",
+            ":PPCOptionsTableGen",
         ],
     },
     {
@@ -3620,13 +3715,17 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/SPIRV/SPIRVGenMCCodeEmitter.inc",
             ),
             (
-                ["-gen-global-isel"],
+                [
+                    "-gen-global-isel",
+                    "-gisel-extended-llt",
+                ],
                 "lib/Target/SPIRV/SPIRVGenGlobalISel.inc",
             ),
             (
                 [
                     "-gen-global-isel-combiner",
                     "-combiners=SPIRVPreLegalizerCombiner",
+                    "-gisel-extended-llt",
                 ],
                 "lib/Target/SPIRV/SPIRVGenPreLegalizeGICombiner.inc",
             ),
@@ -3656,6 +3755,9 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-subtarget"],
                 "lib/Target/SPIRV/SPIRVGenSubtargetInfo.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":SPIRVOptionsTableGen",
         ],
     },
     {
@@ -3719,6 +3821,9 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-sd-node-info"],
                 "lib/Target/SystemZ/SystemZGenSDNodeInfo.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":SystemZOptionsTableGen",
         ],
     },
     {
@@ -3829,6 +3934,7 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
         "tbl_deps": [
+            ":WebAssemblyOptionsTableGen",
             ":webassembly_isel_target_gen",
         ],
     },
@@ -4155,6 +4261,15 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "AMDGPUOptionsTableGen",
+    strip_include_prefix = "lib/Target/AMDGPU",
+    tbl_outs = {"lib/Target/AMDGPU/AMDGPUOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/AMDGPU/AMDGPUOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "AArch64MCOptionsTableGen",
     strip_include_prefix = "lib/Target/AArch64",
     tbl_outs = {"lib/Target/AArch64/AArch64MCOptions.inc": ["-gen-opt-parser-defs"]},
@@ -4169,6 +4284,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/AArch64/AArch64Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AArch64/AArch64Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "HexagonOptionsTableGen",
+    strip_include_prefix = "lib/Target/Hexagon",
+    tbl_outs = {"lib/Target/Hexagon/HexagonOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/Hexagon/HexagonOptions.td",
     deps = [":OptParserTdFiles"],
 )
 
@@ -4209,6 +4333,33 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "NVPTXOptionsTableGen",
+    strip_include_prefix = "lib/Target/NVPTX",
+    tbl_outs = {"lib/Target/NVPTX/NVPTXOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/NVPTX/NVPTXOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "PPCMCOptionsTableGen",
+    strip_include_prefix = "lib/Target/PowerPC",
+    tbl_outs = {"lib/Target/PowerPC/PPCMCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/PowerPC/MCTargetDesc/PPCMCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "PPCOptionsTableGen",
+    strip_include_prefix = "lib/Target/PowerPC",
+    tbl_outs = {"lib/Target/PowerPC/PPCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/PowerPC/PPCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "RISCVMCOptionsTableGen",
     strip_include_prefix = "lib/Target/RISCV",
     tbl_outs = {"lib/Target/RISCV/RISCVMCOptions.inc": ["-gen-opt-parser-defs"]},
@@ -4227,11 +4378,38 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "SPIRVOptionsTableGen",
+    strip_include_prefix = "lib/Target/SPIRV",
+    tbl_outs = {"lib/Target/SPIRV/SPIRVOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/SPIRV/SPIRVOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "SparcOptionsTableGen",
     strip_include_prefix = "lib/Target/Sparc",
     tbl_outs = {"lib/Target/Sparc/SparcOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/Sparc/SparcOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "SystemZOptionsTableGen",
+    strip_include_prefix = "lib/Target/SystemZ",
+    tbl_outs = {"lib/Target/SystemZ/SystemZOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/SystemZ/SystemZOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "WebAssemblyOptionsTableGen",
+    strip_include_prefix = "lib/Target/WebAssembly",
+    tbl_outs = {"lib/Target/WebAssembly/WebAssemblyOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/WebAssembly/WebAssemblyOptions.td",
     deps = [":OptParserTdFiles"],
 )
 
@@ -5360,6 +5538,7 @@ cc_library(
         ":CodeGen",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerBase",
         ":DWARFLinkerParallel",
         ":DebugInfo",
         ":DebugInfoDWARF",
@@ -5383,16 +5562,14 @@ llvm_driver_cc_binary(
     deps = [":dsymutil-lib"],
 )
 
-cc_library(
-    name = "llc-driver",
-    srcs = [
-        "tools/llc/lib/NewPMDriver.cpp",
-        "tools/llc/lib/llcdriver.cpp",
-    ],
-    hdrs = glob([
-        "tools/llc/lib/*.h",
+cc_binary(
+    name = "llc",
+    srcs = glob([
+        "tools/llc/*.cpp",
+        "tools/llc/*.h",
     ]),
     copts = llvm_copts,
+    stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
@@ -5413,17 +5590,6 @@ cc_library(
         ":Target",
         ":TargetParser",
         ":TransformUtils",
-    ],
-)
-
-cc_binary(
-    name = "llc",
-    srcs = ["tools/llc/llc.cpp"],
-    copts = llvm_copts,
-    stamp = 0,
-    deps = [
-        ":Support",
-        ":llc-driver",
     ],
 )
 
@@ -5477,14 +5643,33 @@ cc_binary(
     ],
 )
 
+cc_library(
+    name = "UBAwareInterpreter",
+    srcs = glob([
+        "lib/UBAwareInterpreter/*.cpp",
+        "lib/UBAwareInterpreter/*.h",
+    ]),
+    hdrs = glob([
+        "include/llvm/UBAwareInterpreter/*.h",
+    ]),
+    copts = llvm_copts,
+    features = ["-parse_headers"],
+    deps = [
+        ":Analysis",
+        ":AsmParser",
+        ":Core",
+        ":Support",
+        ":TargetParser",
+        ":config",
+    ],
+)
+
 cc_binary(
     name = "llubi",
     srcs = glob([
         "tools/llubi/*.cpp",
-        "tools/llubi/lib/*.cpp",
-        "tools/llubi/lib/*.h",
     ]),
-    features = ["-parse_headers"],
+    copts = llvm_copts,
     stamp = 0,
     deps = [
         ":Analysis",
@@ -5493,6 +5678,7 @@ cc_binary(
         ":IRReader",
         ":Support",
         ":TargetParser",
+        ":UBAwareInterpreter",
         ":config",
     ],
 )
@@ -5861,6 +6047,7 @@ cc_binary(
         ":AllTargetsCodeGens",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerBase",
         ":DWARFLinkerParallel",
         ":DebugInfoDWARF",
         ":DebugInfoDWARFLowLevel",
@@ -6211,7 +6398,6 @@ cc_binary(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
-        ":DWARFCFIChecker",
         ":MC",
         ":MCDisassembler",
         ":MCParser",

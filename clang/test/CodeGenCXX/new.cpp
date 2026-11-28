@@ -15,9 +15,9 @@ void t1() {
 }
 
 // CHECK: declare noundef nonnull ptr @_Znwm(i64 noundef) [[ATTR_NOBUILTIN:#[^ ]*]]
-// CHECK: declare void @_ZdlPvm(ptr noundef, i64 noundef) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
+// CHECK: declare void @_ZdlPvm(ptr allocptr noundef, i64 noundef) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
 // CHECK: declare noundef nonnull ptr @_Znam(i64 noundef) [[ATTR_NOBUILTIN]]
-// CHECK: declare void @_ZdaPv(ptr noundef) [[ATTR_NOBUILTIN_NOUNWIND]]
+// CHECK: declare void @_ZdaPv(ptr allocptr noundef) [[ATTR_NOBUILTIN_NOUNWIND]]
 
 namespace std {
   struct nothrow_t {};
@@ -192,7 +192,7 @@ void f() {
   // CHECK: store i64 200
   delete[] new (nothrow) Alloc[10][20];
   // CHECK: call noalias noundef nonnull ptr @_Znwm
-  // CHECK: call void @_ZdlPvm(ptr noundef {{%.*}}, i64 noundef 1)
+  // CHECK: call void @_ZdlPvm(ptr allocptr noundef {{%.*}}, i64 noundef 1)
   delete new bool;
   // CHECK: ret void
 }
@@ -320,9 +320,9 @@ namespace N3664 {
     // CHECK: call void @_ZdlPvm({{.*}}) [[ATTR_BUILTIN_DELETE:#[^ ]*]]
     delete p;
 
-    // CHECK: call noalias noundef nonnull ptr @_Znam(i64 noundef 12) [[ATTR_BUILTIN_NEW]]
+    // CHECK: call noalias noundef nonnull ptr @_Znam(i64 noundef 12) [[ATTR_BUILTIN_ARRAY_NEW:#[^ ]*]]
     int *q = new int[3];
-    // CHECK: call void @_ZdaPv({{.*}}) [[ATTR_BUILTIN_DELETE]]
+    // CHECK: call void @_ZdaPv({{.*}}) [[ATTR_BUILTIN_ARRAY_DELETE:#[^ ]*]]
     delete[] p; // expected-warning {{'delete[]' applied to a pointer that was allocated with 'new'; did you mean 'delete'?}}
 
     // CHECK: call noalias noundef ptr @_ZnamRKSt9nothrow_t(i64 noundef 3, {{.*}}) [[ATTR_NOBUILTIN_NOUNWIND_ALLOCSIZE:#[^ ]*]]
@@ -366,8 +366,11 @@ namespace builtins {
 // CHECK-DAG: attributes [[ATTR_NOBUILTIN_NOUNWIND]] = {{[{].*}} nobuiltin nounwind {{.*[}]}}
 // CHECK-DAG: attributes [[ATTR_NOBUILTIN_NOUNWIND_ALLOCSIZE]] = {{[{].*}} nobuiltin nounwind allocsize(0) {{.*[}]}}
 
-// CHECK-DAG: attributes [[ATTR_BUILTIN_NEW]] = {{[{].*}} builtin {{.*[}]}}
-// CHECK-DAG: attributes [[ATTR_BUILTIN_DELETE]] = {{[{].*}} builtin {{.*[}]}}
+// CHECK-DAG: attributes [[ATTR_BUILTIN_NEW]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_Znwm" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_DELETE]] = { builtin nounwind allockind("free") "alloc-family"="_Znwm" }
+
+// CHECK-DAG: attributes [[ATTR_BUILTIN_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_Znam" }
+// CHECK-DAG: attributes [[ATTR_BUILTIN_ARRAY_DELETE]] = { builtin nounwind allockind("free") "alloc-family"="_Znam" }
 
 // The ([^b}|...) monstrosity is matching a character that's not the start of 'builtin'.
 // Add more letters if this matches some other attribute.

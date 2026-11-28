@@ -3,6 +3,8 @@
 ; RUN: opt < %s -passes=instsimplify -use-constant-int-for-fixed-length-splat -S -data-layout="e-p:32:32:32-i1:8:8-i8:8:8-f64:32:64-v64:64:64-v128:128:128" | FileCheck %s --check-prefixes=CHECK,LE
 ; RUN: opt < %s -passes=instsimplify -S -data-layout="E-p:32:32:32-i1:8:8-i8:8:8-f64:32:64-v64:64:64-v128:128:128" | FileCheck %s --check-prefixes=CHECK,BE
 
+@g = external global i8
+
 define <2 x i64> @test1() {
 ; LE-LABEL: @test1(
 ; LE-NEXT:    ret <2 x i64> <i64 4294967296, i64 12884901890>
@@ -804,4 +806,91 @@ define ptr @bitcast_constexpr_allones_2b16_ptr() {
 ;
   %res = bitcast <2 x b16> splat (b16 -1) to ptr
   ret ptr %res
+}
+
+define b64 @bitcast_constexpr_2i32_b64() {
+; LE-LABEL: @bitcast_constexpr_2i32_b64(
+; LE-NEXT:    ret b64 8589934593
+;
+; BE-LABEL: @bitcast_constexpr_2i32_b64(
+; BE-NEXT:    ret b64 4294967298
+;
+  %res = bitcast <2 x i32> <i32 1, i32 2> to b64
+  ret b64 %res
+}
+
+define b64 @bitcast_constexpr_2b32_b64() {
+; LE-LABEL: @bitcast_constexpr_2b32_b64(
+; LE-NEXT:    ret b64 8589934593
+;
+; BE-LABEL: @bitcast_constexpr_2b32_b64(
+; BE-NEXT:    ret b64 4294967298
+;
+  %res = bitcast <2 x b32> <b32 1, b32 2> to b64
+  ret b64 %res
+}
+
+define b64 @bitcast_constexpr_2f32_b64() {
+; LE-LABEL: @bitcast_constexpr_2f32_b64(
+; LE-NEXT:    ret b64 4611686019492741120
+;
+; BE-LABEL: @bitcast_constexpr_2f32_b64(
+; BE-NEXT:    ret b64 4575657222482165760
+;
+  %res = bitcast <2 x float> <float 1.0, float 2.0> to b64
+  ret b64 %res
+}
+
+define b32 @bitcast_constexpr_4i8_b32() {
+; LE-LABEL: @bitcast_constexpr_4i8_b32(
+; LE-NEXT:    ret b32 67305985
+;
+; BE-LABEL: @bitcast_constexpr_4i8_b32(
+; BE-NEXT:    ret b32 16909060
+;
+  %res = bitcast <4 x i8> <i8 1, i8 2, i8 3, i8 4> to b32
+  ret b32 %res
+}
+
+; A byte constant can't represent partial poison.
+define b64 @neg_bitcast_constexpr_2i32_b64_poison() {
+; CHECK-LABEL: @neg_bitcast_constexpr_2i32_b64_poison(
+; CHECK-NEXT:    ret b64 bitcast (<2 x i32> <i32 1, i32 poison> to b64)
+;
+  %res = bitcast <2 x i32> <i32 1, i32 poison> to b64
+  ret b64 %res
+}
+
+define b64 @neg_bitcast_constexpr_2b32_b64_poison() {
+; CHECK-LABEL: @neg_bitcast_constexpr_2b32_b64_poison(
+; CHECK-NEXT:    ret b64 bitcast (<2 x b32> <b32 1, b32 poison> to b64)
+;
+  %res = bitcast <2 x b32> <b32 1, b32 poison> to b64
+  ret b64 %res
+}
+
+; Pointer bits carry provenance, which a byte constant can't represent.
+define b64 @neg_bitcast_constexpr_2ptr_b64() {
+; CHECK-LABEL: @neg_bitcast_constexpr_2ptr_b64(
+; CHECK-NEXT:    ret b64 bitcast (<2 x ptr> <ptr @g, ptr null> to b64)
+;
+  %res = bitcast <2 x ptr> <ptr @g, ptr null> to b64
+  ret b64 %res
+}
+
+; A byte element can hold pointer bits and provenance should be preserved.
+define b64 @neg_bitcast_constexpr_2b32_ptr_elt_b64() {
+; CHECK-LABEL: @neg_bitcast_constexpr_2b32_ptr_elt_b64(
+; CHECK-NEXT:    ret b64 bitcast (<2 x b32> <b32 bitcast (ptr @g to b32), b32 0> to b64)
+;
+  %res = bitcast <2 x b32> <b32 bitcast (ptr @g to b32), b32 0> to b64
+  ret b64 %res
+}
+
+define b64 @neg_bitcast_constexpr_2b32_inttoptr_elt_b64() {
+; CHECK-LABEL: @neg_bitcast_constexpr_2b32_inttoptr_elt_b64(
+; CHECK-NEXT:    ret b64 bitcast (<2 x b32> <b32 bitcast (ptr inttoptr (i32 123 to ptr) to b32), b32 0> to b64)
+;
+  %res = bitcast <2 x b32> <b32 bitcast (ptr inttoptr (i32 123 to ptr) to b32), b32 0> to b64
+  ret b64 %res
 }

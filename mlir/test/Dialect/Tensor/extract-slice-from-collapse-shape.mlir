@@ -224,3 +224,24 @@ func.func @collapse_and_slice_multiple_all_unit_dim(%input: tensor<1x1x1x100xf32
   // CHECK: %[[collapse:.+]] = tensor.collapse_shape %[[arg0]] {{\[}}[0, 1, 2], [3]] : tensor<1x1x1x100xf32> into tensor<1x100xf32>
   // CHECK: return %[[collapse]]
 }
+
+// -----
+
+// The replacement for the collapse must dominate its other users, including
+// users before the extract_slice that triggers the rewrite.
+func.func @collapse_with_earlier_use(%input: tensor<2x1xi1>) -> (tensor<?xi1>, tensor<1xi1>) {
+  %collapsed = tensor.collapse_shape %input [[0, 1]] : tensor<2x1xi1> into tensor<2xi1>
+  %early = tensor.cast %collapsed : tensor<2xi1> to tensor<?xi1>
+  %slice = tensor.extract_slice %collapsed[0] [1] [1] : tensor<2xi1> to tensor<1xi1>
+  return %early, %slice : tensor<?xi1>, tensor<1xi1>
+}
+
+// CHECK-LABEL: func.func @collapse_with_earlier_use(
+// CHECK: %[[REPLACEMENT:.+]] = tensor.extract_slice %{{.+}}[0, 0] [2, 1] [1, 1] : tensor<2x1xi1> to tensor<2xi1>
+// CHECK: %[[EARLY:.+]] = tensor.cast %[[REPLACEMENT]] : tensor<2xi1> to tensor<?xi1>
+// CHECK: return %[[EARLY]],
+
+// FOREACH-LABEL: func.func @collapse_with_earlier_use(
+// FOREACH: %[[REPLACEMENT:.+]] = tensor.extract_slice %{{.+}}[0, 0] [2, 1] [1, 1] : tensor<2x1xi1> to tensor<2xi1>
+// FOREACH: %[[EARLY:.+]] = tensor.cast %[[REPLACEMENT]] : tensor<2xi1> to tensor<?xi1>
+// FOREACH: return %[[EARLY]],

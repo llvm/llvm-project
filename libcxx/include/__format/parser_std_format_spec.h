@@ -53,19 +53,18 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __format_spec {
 
-[[noreturn]] _LIBCPP_HIDE_FROM_ABI inline void
-__throw_invalid_option_format_error(const char* __id, const char* __option) {
+[[noreturn]] inline void __throw_invalid_option_format_error(const char* __id, const char* __option) {
   std::__throw_format_error(
       (string("The format specifier for ") + __id + " does not allow the " + __option + " option").c_str());
 }
 
-[[noreturn]] _LIBCPP_HIDE_FROM_ABI inline void __throw_invalid_type_format_error(const char* __id) {
+[[noreturn]] inline void __throw_invalid_type_format_error(const char* __id) {
   std::__throw_format_error(
       (string("The type option contains an invalid value for ") + __id + " formatting argument").c_str());
 }
 
 template <contiguous_iterator _Iterator, class _ParseContext>
-_LIBCPP_HIDE_FROM_ABI constexpr __format::__parse_number_result<_Iterator>
+constexpr __format::__parse_number_result<_Iterator>
 __parse_arg_id(_Iterator __begin, _Iterator __end, _ParseContext& __ctx) {
   using _CharT = iter_value_t<_Iterator>;
   // This function is a wrapper to call the real parser. But it does the
@@ -83,7 +82,7 @@ __parse_arg_id(_Iterator __begin, _Iterator __end, _ParseContext& __ctx) {
 }
 
 template <class _Context>
-_LIBCPP_HIDE_FROM_ABI constexpr uint32_t __substitute_arg_id(basic_format_arg<_Context> __format_arg) {
+constexpr uint32_t __substitute_arg_id(basic_format_arg<_Context> __format_arg) {
   // [format.string.std]/8
   //   If the corresponding formatting argument is not of integral type...
   // This wording allows char and bool too. LWG-3720 changes the wording to
@@ -130,7 +129,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr uint32_t __substitute_arg_id(basic_format_arg<_C
 ///
 /// They default to false so when a new field is added it needs to be opted in
 /// explicitly.
-struct _LIBCPP_HIDE_FROM_ABI __fields {
+struct __fields {
   uint16_t __sign_                 : 1 {false};
   uint16_t __alternate_form_       : 1 {false};
   uint16_t __zero_padding_         : 1 {false};
@@ -175,7 +174,7 @@ inline constexpr __fields __fields_range{.__use_range_fill_ = true, .__clear_bra
 inline constexpr __fields __fields_fill_align_width{};
 #  endif
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __create_type_mask(__type __t) {
+inline constexpr uint32_t __create_type_mask(__type __t) {
   uint32_t __shift = static_cast<uint32_t>(__t);
   if (__shift == 0)
     return 1;
@@ -250,9 +249,9 @@ struct __parsed_specifications {
 
   __code_point<_CharT> __fill_;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __has_width() const { return __width_ > 0; }
+  constexpr bool __has_width() const { return __width_ > 0; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __has_precision() const { return __precision_ >= 0; }
+  constexpr bool __has_precision() const { return __precision_ >= 0; }
 };
 
 // Validate the struct is small and cheap to copy since the struct is passed by
@@ -296,7 +295,7 @@ public:
   using __base::__width_as_arg_;
 
   __parser() = default;
-  _LIBCPP_HIDE_FROM_ABI constexpr __parser(__parser_data<_CharT> __data) : __parser_data<_CharT>(__data) {}
+  constexpr __parser(__parser_data<_CharT> __data) : __parser_data<_CharT>(__data) {}
 
   // Parses the format specification.
   //
@@ -312,7 +311,7 @@ public:
   // functions are used. In that case the error will be detected during
   // compilation and there is no need to pay for the run-time overhead.
   template <class _ParseContext>
-  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator __parse(_ParseContext& __ctx, __fields __fields) {
+  constexpr typename _ParseContext::iterator __parse(_ParseContext& __ctx, __fields __fields) {
     auto __begin = __ctx.begin();
     auto __end   = __ctx.end();
     if (__begin == __end || *__begin == _CharT('}') || (__fields.__use_range_fill_ && *__begin == _CharT(':')))
@@ -408,8 +407,7 @@ public:
   //   line.
   // Note future versions of C++ may allow better compile-time error
   // reporting.
-  _LIBCPP_HIDE_FROM_ABI constexpr void
-  __validate(__fields __fields, const char* __id, uint32_t __type_mask = -1) const {
+  constexpr void __validate(__fields __fields, const char* __id, uint32_t __type_mask = -1) const {
     if (!__fields.__sign_ && __sign_ != __sign::__default) {
       if (std::is_constant_evaluated())
         std::__throw_format_error("The format specifier does not allow the sign option");
@@ -454,7 +452,7 @@ public:
   }
 
   /// \returns the `__parsed_specifications` with the resolved dynamic sizes..
-  _LIBCPP_HIDE_FROM_ABI __parsed_specifications<_CharT> __get_parsed_std_specifications(auto& __ctx) const {
+  __parsed_specifications<_CharT> __get_parsed_std_specifications(auto& __ctx) const {
     return __parsed_specifications<_CharT>{
         .__std_ = __std{.__alignment_            = __alignment_,
                         .__sign_                 = __sign_,
@@ -466,7 +464,7 @@ public:
         .__fill_{__fill_}};
   }
 
-  _LIBCPP_HIDE_FROM_ABI __parsed_specifications<_CharT> __get_parsed_chrono_specifications(auto& __ctx) const {
+  __parsed_specifications<_CharT> __get_parsed_chrono_specifications(auto& __ctx) const {
     return __parsed_specifications<_CharT>{
         .__chrono_ =
             __chrono{.__alignment_            = __alignment_,
@@ -483,7 +481,7 @@ public:
   }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_alignment(_CharT __c) {
+  constexpr bool __parse_alignment(_CharT __c) {
     switch (__c) {
     case _CharT('<'):
       __alignment_ = __alignment::__left;
@@ -500,7 +498,7 @@ private:
     return false;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr void __validate_fill_character(_CharT __fill) {
+  constexpr void __validate_fill_character(_CharT __fill) {
     // The forbidden fill characters all code points formed from a single code unit, thus the
     // check can be omitted when more code units are used.
     if (__fill == _CharT('{'))
@@ -514,7 +512,7 @@ private:
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
           || (same_as<_CharT, wchar_t> && sizeof(wchar_t) == 2)
 #    endif
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end) {
+  constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __begin != __end,
         "when called with an empty input the function will cause "
@@ -547,7 +545,7 @@ private:
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
   template <contiguous_iterator _Iterator>
     requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 4)
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end) {
+  constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __begin != __end,
         "when called with an empty input the function will cause "
@@ -575,7 +573,7 @@ private:
 #  else // _LIBCPP_HAS_UNICODE
   // range-fill and tuple-fill are identical
   template <contiguous_iterator _Iterator>
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end) {
+  constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __begin != __end,
         "when called with an empty input the function will cause "
@@ -600,7 +598,7 @@ private:
 #  endif // _LIBCPP_HAS_UNICODE
 
   template <contiguous_iterator _Iterator>
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_sign(_Iterator& __begin) {
+  constexpr bool __parse_sign(_Iterator& __begin) {
     switch (*__begin) {
     case _CharT('-'):
       __sign_ = __sign::__minus;
@@ -619,7 +617,7 @@ private:
   }
 
   template <contiguous_iterator _Iterator>
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_alternate_form(_Iterator& __begin) {
+  constexpr bool __parse_alternate_form(_Iterator& __begin) {
     if (*__begin != _CharT('#'))
       return false;
 
@@ -629,7 +627,7 @@ private:
   }
 
   template <contiguous_iterator _Iterator>
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_zero_padding(_Iterator& __begin) {
+  constexpr bool __parse_zero_padding(_Iterator& __begin) {
     if (*__begin != _CharT('0'))
       return false;
 
@@ -640,7 +638,7 @@ private:
   }
 
   template <contiguous_iterator _Iterator>
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_width(_Iterator& __begin, _Iterator __end, auto& __ctx) {
+  constexpr bool __parse_width(_Iterator& __begin, _Iterator __end, auto& __ctx) {
     if (*__begin == _CharT('0'))
       std::__throw_format_error("The width option should not have a leading zero");
 
@@ -665,7 +663,7 @@ private:
   }
 
   template <contiguous_iterator _Iterator>
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_precision(_Iterator& __begin, _Iterator __end, auto& __ctx) {
+  constexpr bool __parse_precision(_Iterator& __begin, _Iterator __end, auto& __ctx) {
     if (*__begin != _CharT('.'))
       return false;
 
@@ -692,7 +690,7 @@ private:
   }
 
   template <contiguous_iterator _Iterator>
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_locale_specific_form(_Iterator& __begin) {
+  constexpr bool __parse_locale_specific_form(_Iterator& __begin) {
     if (*__begin != _CharT('L'))
       return false;
 
@@ -702,7 +700,7 @@ private:
   }
 
   template <contiguous_iterator _Iterator>
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_clear_brackets(_Iterator& __begin) {
+  constexpr bool __parse_clear_brackets(_Iterator& __begin) {
     if (*__begin != _CharT('n'))
       return false;
 
@@ -712,7 +710,7 @@ private:
   }
 
   template <contiguous_iterator _Iterator>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __parse_type(_Iterator& __begin) {
+  constexpr void __parse_type(_Iterator& __begin) {
     // Determines the type. It does not validate whether the selected type is
     // valid. Most formatters have optional fields that are only allowed for
     // certain types. These parsers need to do validation after the type has
@@ -784,14 +782,14 @@ private:
     ++__begin;
   }
 
-  _LIBCPP_HIDE_FROM_ABI int32_t __get_width(auto& __ctx) const {
+  int32_t __get_width(auto& __ctx) const {
     if (!__width_as_arg_)
       return __width_;
 
     return __format_spec::__substitute_arg_id(__ctx.arg(__width_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI int32_t __get_precision(auto& __ctx) const {
+  int32_t __get_precision(auto& __ctx) const {
     if (!__precision_as_arg_)
       return __precision_;
 
@@ -805,7 +803,7 @@ static_assert(sizeof(__parser<char>) == 16);
 static_assert(sizeof(__parser<wchar_t>) == 16);
 #  endif
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_string(__format_spec::__type __type) {
+constexpr void __process_display_type_string(__format_spec::__type __type) {
   switch (__type) {
   case __format_spec::__type::__default:
   case __format_spec::__type::__string:
@@ -818,19 +816,19 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_string(__format_spec
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_bool_string(__parser<_CharT>& __parser, const char* __id) {
+constexpr void __process_display_type_bool_string(__parser<_CharT>& __parser, const char* __id) {
   __parser.__validate(__format_spec::__fields_bool, __id);
   if (__parser.__alignment_ == __alignment::__default)
     __parser.__alignment_ = __alignment::__left;
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_char(__parser<_CharT>& __parser, const char* __id) {
+constexpr void __process_display_type_char(__parser<_CharT>& __parser, const char* __id) {
   __format_spec::__process_display_type_bool_string(__parser, __id);
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_bool(__parser<_CharT>& __parser, const char* __id) {
+constexpr void __process_parsed_bool(__parser<_CharT>& __parser, const char* __id) {
   switch (__parser.__type_) {
   case __format_spec::__type::__default:
   case __format_spec::__type::__string:
@@ -851,7 +849,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_bool(__parser<_CharT>& __p
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_char(__parser<_CharT>& __parser, const char* __id) {
+constexpr void __process_parsed_char(__parser<_CharT>& __parser, const char* __id) {
   switch (__parser.__type_) {
   case __format_spec::__type::__default:
   case __format_spec::__type::__char:
@@ -873,7 +871,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_char(__parser<_CharT>& __p
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_integer(__parser<_CharT>& __parser, const char* __id) {
+constexpr void __process_parsed_integer(__parser<_CharT>& __parser, const char* __id) {
   switch (__parser.__type_) {
   case __format_spec::__type::__default:
   case __format_spec::__type::__binary_lower_case:
@@ -894,7 +892,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_integer(__parser<_CharT>& 
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_floating_point(__parser<_CharT>& __parser, const char* __id) {
+constexpr void __process_parsed_floating_point(__parser<_CharT>& __parser, const char* __id) {
   switch (__parser.__type_) {
   case __format_spec::__type::__default:
   case __format_spec::__type::__hexfloat_lower_case:
@@ -917,7 +915,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_floating_point(__parser<_C
   }
 }
 
-_LIBCPP_HIDE_FROM_ABI constexpr void __process_display_type_pointer(__format_spec::__type __type, const char* __id) {
+constexpr void __process_display_type_pointer(__format_spec::__type __type, const char* __id) {
   switch (__type) {
   case __format_spec::__type::__default:
   case __format_spec::__type::__pointer_lower_case:
@@ -957,7 +955,7 @@ enum class __column_width_rounding { __down, __up };
 
 namespace __detail {
 template <contiguous_iterator _Iterator>
-_LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_Iterator> __estimate_column_width_grapheme_clustering(
+constexpr __column_width_result<_Iterator> __estimate_column_width_grapheme_clustering(
     _Iterator __first, _Iterator __last, size_t __maximum, __column_width_rounding __rounding) noexcept {
   using _CharT = iter_value_t<_Iterator>;
   __unicode::__extended_grapheme_cluster_view<_CharT> __view{__first, __last};
@@ -1013,7 +1011,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_Iterator> __estimate_colu
 // - https://en.wikipedia.org/wiki/UTF-8#Encoding
 // - https://en.wikipedia.org/wiki/UTF-16#U+D800_to_U+DFFF
 
-_LIBCPP_HIDE_FROM_ABI constexpr bool __is_ascii(char32_t __c) { return __c < 0x80; }
+constexpr bool __is_ascii(char32_t __c) { return __c < 0x80; }
 
 /// Determines the number of output columns needed to render the input.
 ///
@@ -1030,7 +1028,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __is_ascii(char32_t __c) { return __c < 0x8
 ///                   \c __down result.__width_ <= __maximum
 ///                   \c __up result.__width_ <= __maximum + 1
 template <class _CharT, class _Iterator = typename basic_string_view<_CharT>::const_iterator>
-_LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_Iterator> __estimate_column_width(
+constexpr __column_width_result<_Iterator> __estimate_column_width(
     basic_string_view<_CharT> __str, size_t __maximum, __column_width_rounding __rounding) noexcept {
   // The width estimation is done in two steps:
   // - Quickly process for the ASCII part. ASCII has the following properties
@@ -1077,7 +1075,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_Iterator> __estimate_colu
 }
 #  else // _LIBCPP_HAS_UNICODE
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<typename basic_string_view<_CharT>::const_iterator>
+constexpr __column_width_result<typename basic_string_view<_CharT>::const_iterator>
 __estimate_column_width(basic_string_view<_CharT> __str, size_t __maximum, __column_width_rounding) noexcept {
   // When Unicode isn't supported assume ASCII and every code unit is one code
   // point. In ASCII the estimated column width is always one. Thus there's no

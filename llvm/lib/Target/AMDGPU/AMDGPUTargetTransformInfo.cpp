@@ -35,57 +35,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "AMDGPUtti"
 
-static cl::opt<unsigned> UnrollThresholdPrivate(
-  "amdgpu-unroll-threshold-private",
-  cl::desc("Unroll threshold for AMDGPU if private memory used in a loop"),
-  cl::init(2700), cl::Hidden);
-
-static cl::opt<unsigned> UnrollThresholdLocal(
-  "amdgpu-unroll-threshold-local",
-  cl::desc("Unroll threshold for AMDGPU if local memory used in a loop"),
-  cl::init(1000), cl::Hidden);
-
-static cl::opt<unsigned> UnrollThresholdIf(
-  "amdgpu-unroll-threshold-if",
-  cl::desc("Unroll threshold increment for AMDGPU for each if statement inside loop"),
-  cl::init(200), cl::Hidden);
-
-static cl::opt<bool> UnrollRuntimeLocal(
-  "amdgpu-unroll-runtime-local",
-  cl::desc("Allow runtime unroll for AMDGPU if local memory used in a loop"),
-  cl::init(true), cl::Hidden);
-
-static cl::opt<unsigned> UnrollMaxBlockToAnalyze(
-    "amdgpu-unroll-max-block-to-analyze",
-    cl::desc("Inner loop block size threshold to analyze in unroll for AMDGPU"),
-    cl::init(32), cl::Hidden);
-
-static cl::opt<unsigned> ArgAllocaCost("amdgpu-inline-arg-alloca-cost",
-                                       cl::Hidden, cl::init(4000),
-                                       cl::desc("Cost of alloca argument"));
-
-// If the amount of scratch memory to eliminate exceeds our ability to allocate
-// it into registers we gain nothing by aggressively inlining functions for that
-// heuristic.
-static cl::opt<unsigned>
-    ArgAllocaCutoff("amdgpu-inline-arg-alloca-cutoff", cl::Hidden,
-                    cl::init(256),
-                    cl::desc("Maximum alloca size to use for inline cost"));
-
-// Inliner constraint to achieve reasonable compilation time.
-static cl::opt<size_t> InlineMaxBB(
-    "amdgpu-inline-max-bb", cl::Hidden, cl::init(1100),
-    cl::desc("Maximum number of BBs allowed in a function after inlining"
-             " (compile time constraint)"));
-
-// This default unroll factor is based on microbenchmarks on gfx1030.
-static cl::opt<unsigned> MemcpyLoopUnroll(
-    "amdgpu-memcpy-loop-unroll",
-    cl::desc("Unroll factor (affecting 4x32-bit operations) to use for memory "
-             "operations when lowering statically-sized memcpy, memmove, or"
-             "memset as a loop"),
-    cl::init(16), cl::Hidden);
-
 static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
                               unsigned Depth = 0) {
   const Instruction *I = dyn_cast<Instruction>(Cond);
@@ -106,8 +55,7 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
 }
 
 AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getDataLayout()),
-      TargetTriple(F.getParent()->getTargetTriple()),
+    : BaseT(TM, F.getDataLayout()), CLOpts(TM->getCLOpts()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()) {}
 
@@ -135,8 +83,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
 
   // Maximum alloca size than can fit registers. Reserve 16 registers.
   const unsigned MaxAlloca = (256 - 16) * 4;
-  unsigned ThresholdPrivate = UnrollThresholdPrivate;
-  unsigned ThresholdLocal = UnrollThresholdLocal;
+  unsigned ThresholdPrivate = CLOpts.unroll_threshold_private;
+  unsigned ThresholdLocal = CLOpts.unroll_threshold_local;
 
   // If this loop has the amdgpu.loop.unroll.threshold metadata we will use the
   // provided threshold value as the default for Threshold
@@ -181,7 +129,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
               (L->contains(Succ1) && L->isLoopExiting(Succ1)))
             continue;
           if (dependsOnLocalPhi(L, Br->getCondition())) {
-            UP.Threshold += UnrollThresholdIf;
+            UP.Threshold += CLOpts.unroll_threshold_if;
             LLVM_DEBUG(dbgs() << "Set unroll threshold " << UP.Threshold
                               << " for loop:\n"
                               << *L << " due to " << *Br << '\n');
@@ -230,7 +178,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
           continue;
         LLVM_DEBUG(dbgs() << "Allow unroll runtime for loop:\n"
                           << *L << " due to LDS use.\n");
-        UP.Runtime = UnrollRuntimeLocal;
+        UP.Runtime = CLOpts.unroll_runtime_local;
       }
 
       // Check if GEP depends on a value defined by this loop itself.
@@ -272,7 +220,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
 
     // If we got a GEP in a small BB from inner loop then increase max trip
     // count to analyze for better estimation cost in unroll
-    if (L->isInnermost() && BB->size() < UnrollMaxBlockToAnalyze)
+    if (L->isInnermost() && BB->size() < CLOpts.unroll_max_block_to_analyze)
       UP.MaxIterationsCountToAnalyze = 32;
   }
 }
@@ -287,7 +235,7 @@ uint64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
 }
 
 GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getDataLayout()),
+    : BaseT(TM, F.getDataLayout()), CLOpts(TM->getCLOpts()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()), CommonTTI(TM, F),
       IsGraphics(AMDGPU::isGraphics(F.getCallingConv())) {
@@ -440,9 +388,9 @@ Type *GCNTTIImpl::getMemcpyLoopLoweringType(
   // total size of the type returned here. Mitigating that would require a more
   // complex lowering for variable-length memcpy and memmove.
   unsigned I32EltsInVector = 4;
-  if (MemcpyLoopUnroll > 0 && isa<ConstantInt>(Length))
+  if (CLOpts.memcpy_loop_unroll > 0 && isa<ConstantInt>(Length))
     return FixedVectorType::get(Type::getInt32Ty(Context),
-                                MemcpyLoopUnroll * I32EltsInVector);
+                                CLOpts.memcpy_loop_unroll * I32EltsInVector);
 
   return FixedVectorType::get(Type::getInt32Ty(Context), I32EltsInVector);
 }
@@ -578,7 +526,8 @@ static bool isFusedFMul(const SITargetLowering &TLI, Type *Ty,
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI,
+    const TargetLibraryInfo *TLibInfo, ArrayRef<const Value *> Scalars) const {
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
@@ -590,6 +539,16 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     LT.second.getVectorNumElements() : 1;
 
   MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+
+  // A vector operation has a property of its context instruction only if all
+  // non-poison lanes satisfy Pred.
+  auto AllLanes = [&](function_ref<bool(const Value *)> Pred) {
+    if (!CtxI || CtxI->getOpcode() != Opcode || !Pred(CtxI))
+      return false;
+    return all_of(Scalars, [&](const Value *V) {
+      return !V || isa<PoisonValue>(V) || V == CtxI || Pred(V);
+    });
+  };
 
   switch (ISD) {
   case ISD::SHL:
@@ -638,16 +597,20 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     // fmul(b,c) supposing the fadd|fsub will get estimated cost for the whole
     // fused operation. A vector fmul priced with a scalar context fuses with
     // the scalar fadd|fsub only when it is emitted lane by lane.
-    if (CtxI && CtxI->hasOneUse() &&
+    if (CtxI &&
         (CtxI->getType() == Ty ||
-         getMaximumVF(Ty->getScalarSizeInBits(), Opcode) == 1)) {
-      const auto *FAddSub = dyn_cast<BinaryOperator>(*CtxI->user_begin());
-      if (FAddSub &&
-          (FAddSub->getOpcode() == Instruction::FAdd ||
-           FAddSub->getOpcode() == Instruction::FSub) &&
-          isFusedFMul(*TLI, Ty, CtxI, FAddSub))
-        return TargetTransformInfo::TCC_Free;
-    }
+         getMaximumVF(Ty->getScalarSizeInBits(), Opcode) == 1) &&
+        AllLanes([&](const Value *V) {
+          const auto *FMul = dyn_cast<Instruction>(V);
+          if (!FMul || FMul->getOpcode() != Opcode || !FMul->hasOneUse())
+            return false;
+          const auto *FAddSub = dyn_cast<BinaryOperator>(*FMul->user_begin());
+          return FAddSub &&
+                 (FAddSub->getOpcode() == Instruction::FAdd ||
+                  FAddSub->getOpcode() == Instruction::FSub) &&
+                 isFusedFMul(*TLI, Ty, FMul, FAddSub);
+        }))
+      return TargetTransformInfo::TCC_Free;
     [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
@@ -700,7 +663,10 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       return LT.first * Cost * NElts;
     }
 
-    if (SLT == MVT::f32 && (CtxI && CtxI->hasApproxFunc())) {
+    if (SLT == MVT::f32 && AllLanes([&](const Value *V) {
+          const auto *FPMO = dyn_cast<FPMathOperator>(V);
+          return !FPMO || FPMO->getOpcode() != Opcode || FPMO->hasApproxFunc();
+        })) {
       // Fast unsafe fdiv lowering:
       // f32 rcp
       // f32 fmul
@@ -730,7 +696,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
   }
 
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CtxI);
+                                       Args, CtxI, TLibInfo, Scalars);
 }
 
 // Return true if there's a potential benefit from using v2f16/v2i16
@@ -1066,6 +1032,21 @@ InstructionCost GCNTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         Elts && Src->isIntegerTy(*Elts))
       return InstructionCost(MaskUnpackCostPerElt) * *Elts *
              getFullRateInstrCost();
+    // The generic code scalarizes a vector cast into element casts, which for
+    // a bitcast may pair elements of different sizes.
+    if (DL.getTypeSizeInBits(Src) == DL.getTypeSizeInBits(Dst)) {
+      // Integer and FP values share registers. A legalized vector may need its
+      // lanes repacked.
+      EVT SrcVT = TLI->getValueType(DL, Src);
+      EVT DstVT = TLI->getValueType(DL, Dst);
+      if (TLI->isTypeLegal(SrcVT) && TLI->isTypeLegal(DstVT))
+        return 0;
+      LLVMContext &Ctx = Src->getContext();
+      if (!SrcVT.isVector() && !DstVT.isVector() &&
+          TLI->getRegisterType(Ctx, SrcVT).getSizeInBits() ==
+              TLI->getRegisterType(Ctx, DstVT).getSizeInBits())
+        return 0;
+    }
   }
 
   // Each f32 lane is rounded and the halves are packed in pairs. A packed
@@ -1448,13 +1429,15 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
 
   // Loads from the private and flat address spaces are divergent, because
   // threads can execute the load instruction with the same inputs and get
-  // different results.
+  // different results. So are loads from the VGPR address space, since each
+  // lane reads its own registers.
   //
   // All other loads are not divergent, because if threads issue loads with the
   // same arguments, they will always get the same result.
   if (const LoadInst *Load = dyn_cast<LoadInst>(V))
     return Load->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
-           Load->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS;
+           Load->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS ||
+           Load->getPointerAddressSpace() == AMDGPUAS::VGPR;
 
   // Atomics are divergent because they are executed sequentially: when an
   // atomic operation refers to the same address in each thread, then each
@@ -1591,6 +1574,7 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
   case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_make_buffer_rsrc:
+  case Intrinsic::amdgcn_flat_prefetch:
     OpIndexes.push_back(0);
     return true;
   default:
@@ -1643,6 +1627,20 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     Module *M = II->getModule();
     Function *NewDecl = Intrinsic::getOrInsertDeclaration(
         M, II->getIntrinsicID(), {DstTy, SrcTy, NumRecordsTy});
+    II->setArgOperand(0, NewV);
+    II->setCalledFunction(NewDecl);
+    return II;
+  }
+  case Intrinsic::amdgcn_flat_prefetch: {
+    unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    if (!AMDGPU::isExtendedGlobalAddrSpace(NewAS))
+      return nullptr;
+    // llvm.amdgcn.global.prefetch only takes a global pointer.
+    if (NewAS != AMDGPUAS::GLOBAL_ADDRESS)
+      NewV = IRBuilder<>(II).CreateAddrSpaceCast(
+          NewV, PointerType::get(II->getContext(), AMDGPUAS::GLOBAL_ADDRESS));
+    Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+        II->getModule(), Intrinsic::amdgcn_global_prefetch);
     II->setArgOperand(0, NewV);
     II->setCalledFunction(NewDecl);
     return II;
@@ -1854,21 +1852,18 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
       continue;
     }
 
-    // Check for zero-cost multiple use InsertElement/ExtractElement
-    // instructions
-    if (Instruction *OpInst = dyn_cast<Instruction>(Op.get())) {
-      if (OpInst->getType()->isVectorTy() && OpInst->getNumOperands() > 1) {
-        Instruction *VecOpInst = dyn_cast<Instruction>(OpInst->getOperand(0));
-        if (VecOpInst && VecOpInst->hasOneUse())
-          continue;
+    // Check for zero-cost multiple use InsertElement instructions. Shuffles are
+    // handled below.
+    if (auto *OpInst = dyn_cast<InsertElementInst>(Op.get())) {
+      Instruction *VecOpInst = dyn_cast<Instruction>(OpInst->getOperand(0));
+      if (VecOpInst && VecOpInst->hasOneUse())
+        continue;
 
-        if (getVectorInstrCost(OpInst->getOpcode(), OpInst->getType(),
-                               TTI::TCK_RecipThroughput, 0,
-                               OpInst->getOperand(0),
-                               OpInst->getOperand(1)) == 0) {
-          Ops.push_back(&Op);
-          continue;
-        }
+      if (getVectorInstrCost(OpInst->getOpcode(), OpInst->getType(),
+                             TTI::TCK_RecipThroughput, 0, OpInst->getOperand(0),
+                             OpInst->getOperand(1)) == 0) {
+        Ops.push_back(&Op);
+        continue;
       }
     }
 
@@ -1899,6 +1894,12 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
 
       if (Shuffle->isReverse() || Shuffle->isZeroEltSplat() ||
           Shuffle->isSingleSource()) {
+        // Sink the insertelement of a scalar splat along with the shuffle, so
+        // that isel sees the scalar and can fold it as a splat operand.
+        if (Shuffle->isZeroEltSplat() &&
+            match(Shuffle->getOperand(0),
+                  m_InsertElt(m_Value(), m_Value(), m_ZeroInt())))
+          Ops.push_back(&Shuffle->getOperandUse(0));
         Ops.push_back(&Op);
         continue;
       }
@@ -1931,17 +1932,17 @@ bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
     return true;
 
   // Hack to make compile times reasonable.
-  if (InlineMaxBB) {
+  if (CLOpts.inline_max_bb) {
     // Single BB does not increase total BB amount.
     if (Callee->size() == 1)
       return true;
     size_t BBSize = Caller->size() + Callee->size() - 1;
-    if (BBSize > InlineMaxBB) {
+    if (BBSize > CLOpts.inline_max_bb) {
       LLVM_DEBUG(dbgs() << "AMDGPU inline max-BB rejected inlining "
                         << Callee->getName() << " into " << Caller->getName()
                         << ": caller BBs=" << Caller->size() << ", callee BBs="
                         << Callee->size() << ", combined BBs=" << BBSize
-                        << ", max BBs=" << InlineMaxBB << '\n');
+                        << ", max BBs=" << CLOpts.inline_max_bb << '\n');
       return false;
     }
   }
@@ -1988,12 +1989,13 @@ static unsigned adjustInliningThresholdUsingCallee(const CallBase *CB,
 
   // The penalty cost is computed relative to the cost of instructions and does
   // not model any storage costs.
-  adjustThreshold += static_cast<unsigned>(
-      std::max(0, SGPRsInUse - NrOfSGPRUntilSpill) * ArgStackCost.getValue() *
-      InlineConstants::getInstrCost());
-  adjustThreshold += static_cast<unsigned>(
-      std::max(0, VGPRsInUse - NrOfVGPRUntilSpill) * ArgStackCost.getValue() *
-      InlineConstants::getInstrCost());
+  int InstrCost = InlineConstants::getInstrCost(CB->getContext());
+  adjustThreshold +=
+      static_cast<unsigned>(std::max(0, SGPRsInUse - NrOfSGPRUntilSpill) *
+                            ArgStackCost.getValue() * InstrCost);
+  adjustThreshold +=
+      static_cast<unsigned>(std::max(0, VGPRsInUse - NrOfVGPRUntilSpill) *
+                            ArgStackCost.getValue() * InstrCost);
   return adjustThreshold;
 }
 
@@ -2037,7 +2039,7 @@ unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   // is not inlined. Increase the inline threshold to promote inlining.
   TypeSize AllocaSize = getCallArgsTotalAllocaSize(CB, DL);
   if (AllocaSize.getFixedValue() > 0)
-    Threshold += ArgAllocaCost;
+    Threshold += CLOpts.inline_arg_alloca_cost;
   return Threshold;
 }
 
@@ -2047,7 +2049,7 @@ unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
   // Below the cutoff, assume that the private memory objects would be
   // optimized
   auto AllocaSize = getCallArgsTotalAllocaSize(CB, DL).getFixedValue();
-  if (AllocaSize <= ArgAllocaCutoff)
+  if (AllocaSize <= CLOpts.inline_arg_alloca_cutoff)
     return 0;
 
   // Above the cutoff, we give a cost to each private memory object
@@ -2065,7 +2067,8 @@ unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
   // We compensate the first two multipliers, by repeating logic from the
   // inliner-cost in here. The vector-bonus is 0 on AMDGPU.
   static_assert(InlinerVectorBonusPercent == 0, "vector bonus assumed to be 0");
-  unsigned Threshold = ArgAllocaCost * getInliningThresholdMultiplier();
+  unsigned Threshold =
+      CLOpts.inline_arg_alloca_cost * getInliningThresholdMultiplier();
 
   bool SingleBB = none_of(*CB->getCalledFunction(), [](const BasicBlock &BB) {
     return BB.getTerminator()->getNumSuccessors() > 1;
@@ -2172,11 +2175,67 @@ static unsigned getNumMemoryInsts(unsigned Bytes, unsigned MaxBytes,
                                   bool HasDwordx3) {
   unsigned NumInsts = Bytes / MaxBytes;
   unsigned Rem = Bytes % MaxBytes;
-  if (HasDwordx3 && Rem >= 12) {
+  if (HasDwordx3 && Rem % 16 >= 12) {
     ++NumInsts;
     Rem -= 12;
   }
   return NumInsts + llvm::popcount(Rem);
+}
+
+static bool hasUniformPointerOperand(const Instruction *I) {
+  const auto *LI = dyn_cast_or_null<LoadInst>(I);
+  if (!LI)
+    return false;
+  const Value *Ptr = LI->getPointerOperand();
+  const DataLayout &DL = LI->getDataLayout();
+  APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+  Ptr = Ptr->stripAndAccumulateConstantOffsets(DL, Offset,
+                                               /*AllowNonInbounds=*/true);
+  return AMDGPU::isTriviallyUniform(Ptr, LI);
+}
+
+static std::pair<bool, bool> getKnownBufferOobProperties(const GCNSubtarget &ST,
+                                                         const DataLayout &DL,
+                                                         const Instruction *I,
+                                                         unsigned Bytes) {
+  const Value *Ptr = I ? getLoadStorePointerOperand(I) : nullptr;
+  if (!Ptr ||
+      Ptr->getType()->getPointerAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
+    return {false, false};
+  APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+  bool KnownOffset = true;
+  while (const auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
+    KnownOffset = KnownOffset && GEP->accumulateConstantOffset(DL, Offset);
+    Ptr = GEP->getPointerOperand();
+  }
+  const auto *Cast = dyn_cast<AddrSpaceCastInst>(Ptr);
+  if (Cast) {
+    if (Cast->getSrcAddressSpace() != AMDGPUAS::BUFFER_RESOURCE)
+      return {false, false};
+    Ptr = Cast->getPointerOperand();
+  }
+  const auto *Rsrc = dyn_cast<IntrinsicInst>(Ptr);
+  if (Rsrc && Rsrc->getIntrinsicID() != Intrinsic::amdgcn_make_buffer_rsrc)
+    Rsrc = nullptr;
+  if (!Cast && !Rsrc)
+    return {false, false};
+
+  bool NoWrapFromMax =
+      KnownOffset &&
+      Offset.ule(APInt::getAllOnes(Offset.getBitWidth()) - Bytes);
+  const auto *NumRecords =
+      Rsrc ? dyn_cast<ConstantInt>(Rsrc->getArgOperand(2)) : nullptr;
+  std::optional<unsigned> NumRecordsWidth =
+      ST.getBufferResourceNumRecordsWidth();
+  if (!NumRecords || !NumRecordsWidth)
+    return {NoWrapFromMax, false};
+  APInt Bound = NumRecords->getValue().zextOrTrunc(*NumRecordsWidth);
+  if (Bound.isAllOnes())
+    return {NoWrapFromMax, true};
+  if (!KnownOffset)
+    return {false, false};
+  APInt BoundsDiff = Bound.zext(64) - Offset.zext(64);
+  return {NoWrapFromMax, BoundsDiff.sge(Bytes) || BoundsDiff.isNonPositive()};
 }
 
 InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
@@ -2194,18 +2253,9 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
   unsigned EltBits = std::max<unsigned>(8, DL.getTypeSizeInBits(EltTy));
 
-  if (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS ||
-      AddressSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-      AddressSpace == AMDGPUAS::BUFFER_FAT_POINTER) {
-    if (Src->isVectorTy() && EltTy->isIntegerTy(8))
-      return divideCeil(DL.getTypeSizeInBits(Src) - 1,
-                        getLoadStoreVecRegBitWidth(AddressSpace));
-    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                  CostKind, OpInfo, I);
-  }
-
   auto *VecTy = dyn_cast<FixedVectorType>(Src);
-  if (VecTy && EltBits % 8 == 0 && !isPowerOf2_32(EltBits) &&
+  if (VecTy && AddressSpace != AMDGPUAS::BUFFER_FAT_POINTER &&
+      EltBits % 8 == 0 && !isPowerOf2_32(EltBits) &&
       !TLI->shouldCombineMemoryType(TLI->getValueType(DL, Src))) {
     Align EltAlign = commonAlignment(Alignment, EltBits / 8);
     return VecTy->getNumElements() * getMemoryOpCost(Opcode, EltTy, EltAlign,
@@ -2214,11 +2264,31 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   }
 
   unsigned Bytes = DL.getTypeStoreSize(Src);
+  if (Opcode == Instruction::Load &&
+      (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS ||
+       AddressSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
+      Alignment >= std::min(Bytes, 4u) &&
+      (AddressSpace == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+       hasUniformPointerOperand(I))) {
+    unsigned Dwords = divideCeil(Bytes, 4);
+    unsigned MaxBytes = getLoadStoreVecRegBitWidth(AddressSpace) / 8;
+    bool HasDwordx3 = ST->hasScalarDwordx3Loads();
+    // The last byte of a 7-byte remainder is not widened into the scalar load.
+    if (!VecTy && Bytes % 4)
+      return getNumMemoryInsts(Dwords * 4, 32, HasDwordx3) + (Bytes % 8 == 7);
+    if (!HasDwordx3 && Alignment >= 8 && Dwords % 4 == 3)
+      ++Dwords;
+    return getNumMemoryInsts(Dwords * 4, MaxBytes, HasDwordx3);
+  }
+
   unsigned MaxBytes =
       std::min(16u, getLoadStoreVecRegBitWidth(AddressSpace) / 8);
   if (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
       !ST->hasMultiDwordFlatScratchAddressing())
     MaxBytes = getLoadStoreVecRegBitWidth(AMDGPUAS::PRIVATE_ADDRESS) / 8;
+  if (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
+      ST->hasLDSMisalignedBugInWGPMode())
+    MaxBytes = std::clamp<uint64_t>(Alignment.value(), 4, MaxBytes);
   bool IsDS = AddressSpace == AMDGPUAS::LOCAL_ADDRESS ||
               AddressSpace == AMDGPUAS::REGION_ADDRESS;
   bool HasDwordx3 = ST->hasDwordx3LoadStores();
@@ -2228,19 +2298,28 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     HasUnalignedAccess = ST->hasUnalignedScratchAccessEnabled();
   else if (IsDS) {
     HasUnalignedAccess = ST->hasUnalignedDSAccessEnabled();
-    if (Alignment >= 4 && Alignment < 8)
+    if ((Alignment >= 4 || ST->hasLDSMisalignedBugInWGPMode()) && Alignment < 8)
       MaxBytes = 8;
     HasDwordx3 = HasDwordx3 &&
                  (Alignment >= 16 || (Alignment < 4 && HasUnalignedAccess));
   }
+  if (AddressSpace == AMDGPUAS::BUFFER_FAT_POINTER) {
+    auto [NoWrapFromMax, NoPartialOOB] =
+        getKnownBufferOobProperties(*ST, DL, I, Bytes);
+    MaxBytes = ST->getMaxBufferIntrinsicWidth(DL, Src, Alignment, NoWrapFromMax,
+                                              NoPartialOOB) /
+               8;
+  }
   if (Alignment < 4 && !HasUnalignedAccess)
     MaxBytes = std::min<unsigned>(MaxBytes, Alignment.value());
-  bool MergesDwords = ST->hasFlatInstOffsets() &&
-                      (AMDGPU::isExtendedGlobalAddrSpace(AddressSpace) ||
-                       (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
-                        !ST->hasFlatSegmentOffsetBug()));
+  bool MergesDwords = AddressSpace == AMDGPUAS::BUFFER_FAT_POINTER ||
+                      (ST->hasFlatInstOffsets() &&
+                       (AMDGPU::isExtendedGlobalAddrSpace(AddressSpace) ||
+                        (AddressSpace == AMDGPUAS::FLAT_ADDRESS &&
+                         !ST->hasFlatSegmentOffsetBug())));
 
-  if (Opcode == Instruction::Load) {
+  if (Opcode == Instruction::Load &&
+      AddressSpace != AMDGPUAS::BUFFER_FAT_POINTER) {
     if (VecTy && Alignment >= PowerOf2Ceil(Bytes))
       return divideCeil(Bytes, MaxBytes);
     if (EltBits <= 16 && Alignment >= 4 && Bytes % 4) {

@@ -16,6 +16,7 @@
 #include "SparcInstrInfo.h"
 #include "SparcSubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 
@@ -25,6 +26,19 @@ class SparcTargetMachine : public CodeGenTargetMachineImpl {
   const SparcOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<SparcSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, TuneCPU, FS, SoftFloat;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && TuneCPU == RHS.TuneCPU && FS == RHS.FS &&
+             SoftFloat == RHS.SoftFloat;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<SparcSubtarget, SubtargetAttrs> LastSubtarget;
 
 public:
   SparcTargetMachine(const Target &T, const Triple &TT, StringRef CPU,

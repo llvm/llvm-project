@@ -594,6 +594,8 @@
 
 // RUN: %clang_cl /Brepro- /Brepro /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro %s
 // Brepro: "-mno-incremental-linker-compatible"
+// Brepro: "-gno-codeview-command-line"
+// Brepro: "-gno-codeview-cwd"
 
 // RUN: %clang_cl /Brepro /Brepro- /c '-###' -- %s 2>&1 | FileCheck -check-prefix=Brepro_ %s
 // Brepro_: "-mincremental-linker-compatible"
@@ -733,6 +735,14 @@
 // RUN:     -fdiagnostics-absolute-paths \
 // RUN:     -fdiagnostics-show-inlining-chain \
 // RUN:     -fno-diagnostics-show-inlining-chain \
+// RUN:     -fdiagnostics-format=clang \
+// RUN:     -fallow-editor-placeholders \
+// RUN:     -fno-allow-editor-placeholders \
+// RUN:     -fspell-checking \
+// RUN:     -fno-spell-checking \
+// RUN:     -fparse-all-comments \
+// RUN:     -fno-align-functions \
+// RUN:     -pedantic \
 // RUN:     -ferror-limit=10 \
 // RUN:     -fident \
 // RUN:     -fno-ident \
@@ -775,6 +785,8 @@
 // RUN:     -fno-modules \
 // RUN:     -fimplicit-module-maps \
 // RUN:     -fmodule-maps \
+// RUN:     -fno-implicit-module-maps \
+// RUN:     -fbuiltin-module-map \
 // RUN:     -fmodule-name=foo \
 // RUN:     -fmodule-implementation-of \
 // RUN:     -fsystem-module \

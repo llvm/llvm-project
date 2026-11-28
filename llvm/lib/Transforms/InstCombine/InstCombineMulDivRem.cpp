@@ -15,6 +15,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
@@ -758,15 +759,13 @@ static bool getFSqrtDivOptPattern(Instruction *Div,
   Value *A;
   if (match(Div, m_FDiv(m_FPOne(), m_Sqrt(m_Value(A)))) ||
       match(Div, m_FDiv(m_SpecificFP(-1.0), m_Sqrt(m_Value(A))))) {
-    for (User *U : Div->users()) {
-      Instruction *I = cast<Instruction>(U);
+    for (Instruction *I : Div->users()) {
       if (match(I, m_FMul(m_Specific(Div), m_Specific(Div))))
         R1.insert(I);
     }
 
     CallInst *CI = cast<CallInst>(Div->getOperand(1));
-    for (User *U : CI->users()) {
-      Instruction *I = cast<Instruction>(U);
+    for (Instruction *I : CI->users()) {
       if (match(I, m_FDiv(m_Specific(A), m_Sqrt(m_Specific(A)))))
         R2.insert(I);
     }
@@ -1329,6 +1328,65 @@ static Value *foldIDivShl(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
   return nullptr;
 }
 
+/// Return true if a matching remainder is known to be zero at the division.
+static bool isKnownExactFromRem(const BinaryOperator &Div,
+                                const SimplifyQuery &Q) {
+  assert((Div.getOpcode() == Instruction::SDiv ||
+          Div.getOpcode() == Instruction::UDiv) &&
+         "Expected integer divide");
+
+  // The condition cache does not track vector lanes independently.
+  if (!Div.getType()->isIntegerTy())
+    return false;
+
+  unsigned RemOpcode = Div.getOpcode() == Instruction::SDiv ? Instruction::SRem
+                                                            : Instruction::URem;
+
+  Value *Op0 = Div.getOperand(0);
+  Value *Op1 = Div.getOperand(1);
+
+  auto IsKnownZeroRemainder = [&](Value *Cond) {
+    auto *Cmp = dyn_cast<ICmpInst>(Cond);
+    if (!Cmp || !Cmp->isEquality())
+      return false;
+
+    // Search for a remainder being compared to zero.
+    BinaryOperator *Rem;
+    if (!match(Cmp, m_c_ICmp(m_BinOp(Rem), m_Zero())))
+      return false;
+    if (Rem->getOpcode() != RemOpcode || Rem->getOperand(0) != Op0 ||
+        Rem->getOperand(1) != Op1)
+      return false;
+
+    KnownBits Known(Rem->getType()->getScalarSizeInBits());
+    computeKnownBitsFromContext(Rem, Known, Q.getWithInstruction(&Div));
+    return Known.isZero();
+  };
+
+  // findValuesAffectedByCondition() records both operands of a remainder that
+  // is compared against zero, so looking up one non-constant operand finds
+  // every candidate condition.
+  Value *V = isa<Constant>(Op0) ? Op1 : Op0;
+
+  if (Q.DC && Q.DT) {
+    for (CondBrInst *BI : Q.DC->conditionsFor(V))
+      if (IsKnownZeroRemainder(BI->getCondition()))
+        return true;
+  }
+
+  if (Q.AC) {
+    for (auto &AssumeValueHandle : Q.AC->assumptionsFor(V)) {
+      if (!AssumeValueHandle)
+        continue;
+      auto *Assume = cast<AssumeInst>(AssumeValueHandle);
+      if (IsKnownZeroRemainder(Assume->getArgOperand(0)))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 /// Common integer divide/remainder transforms
 Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
   assert(I.isIntDivRem() && "Unexpected instruction");
@@ -1373,6 +1431,11 @@ Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
 Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
   if (Instruction *Res = commonIDivRemTransforms(I))
     return Res;
+
+  if (!I.isExact() && isKnownExactFromRem(I, SQ)) {
+    I.setIsExact();
+    return &I;
+  }
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   bool IsSigned = I.getOpcode() == Instruction::SDiv;
@@ -2744,6 +2807,15 @@ Instruction *InstCombinerImpl::visitFRem(BinaryOperator &I) {
 
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
+
+  // Cases:
+  //  frem(x, -y) -> frem(x, y)
+  //  frem(x, |y|) -> frem(x, y)
+  //  frem(x, copysign(y, z)) -> frem(x, y)
+  Value *Y = I.getOperand(1);
+  Value *StrippedY = stripSignOnlyFPOps(Y);
+  if (StrippedY != Y)
+    return replaceOperand(I, 1, StrippedY);
 
   return nullptr;
 }

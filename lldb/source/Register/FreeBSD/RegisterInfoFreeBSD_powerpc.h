@@ -11,8 +11,7 @@
 
 #include "Register/RegisterInfoInterface.h"
 
-class RegisterInfoFreeBSD_powerpc
-    : public lldb_private::RegisterInfoInterface {
+class RegisterInfoFreeBSD_powerpc : public lldb_private::RegisterInfoInterface {
 public:
   RegisterInfoFreeBSD_powerpc(const lldb_private::ArchSpec &target_arch);
   ~RegisterInfoFreeBSD_powerpc() override;

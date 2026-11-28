@@ -34,7 +34,7 @@ if.end:                                           ; preds = %if.then, %entry
 
 }
 
-declare ptr @_Znwm(i64) nounwind
+declare ptr @_Znwm(i64) nounwind allockind("alloc,uninitialized") allocsize(0) "alloc-family"="_Znwm"
 
 define noalias ptr @test2() nounwind uwtable ssp {
 ; CHECK-LABEL: define noalias ptr @test2(

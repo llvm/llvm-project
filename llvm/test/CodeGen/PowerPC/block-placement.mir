@@ -88,9 +88,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:       []
 liveins:
   - { reg: '$x4', virtual-reg: '' }
   - { reg: '$x5', virtual-reg: '' }

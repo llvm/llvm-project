@@ -117,8 +117,8 @@ static bool extendsConvergenceOutsideLoop(const Instruction &I, const Loop *L) {
     return false;
   if (!isa<ConvergenceControlInst>(I))
     return false;
-  for (const auto *U : I.users()) {
-    if (!L->contains(cast<Instruction>(U)))
+  for (const Instruction *U : I.users()) {
+    if (!L->contains(U))
       return true;
   }
   return false;

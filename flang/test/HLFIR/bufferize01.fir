@@ -128,7 +128,9 @@ func.func @_QPtest1() {
     %38 = fir.box_elesize %30 : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> index
     %39 = hlfir.apply %31, %arg0 typeparams %38 : (!hlfir.expr<1x!fir.char<1,?>>, index, index) -> !hlfir.expr<!fir.char<1,?>>
     %40 = hlfir.no_reassoc %39 : !hlfir.expr<!fir.char<1,?>>
-    hlfir.yield_element %40 : !hlfir.expr<!fir.char<1,?>>
+    hlfir.yield_element %40 : !hlfir.expr<!fir.char<1,?>> cleanup {
+      hlfir.destroy %40 : !hlfir.expr<!fir.char<1,?>>
+    }
   }
   %35:3 = hlfir.associate %34(%33) typeparams %32 uniq_name("adapt.valuebyref") : (!hlfir.expr<1x!fir.char<1,?>>, !fir.shape<1>, index) -> (!fir.box<!fir.array<1x!fir.char<1,?>>>, !fir.ref<!fir.array<1x!fir.char<1,?>>>, i1)
   %36 = fir.shape %c1 : (index) -> !fir.shape<1>

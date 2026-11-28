@@ -5,6 +5,7 @@ add_flang_library(FIROpenACCTransforms
   ACCEraseUnusedKernelAllocations.cpp
   ACCInitializeFIRAnalyses.cpp
   ACCMapInfoPrep.cpp
+  ACCOptimizeDataMapping.cpp
   ACCOptimizeFirstprivateMap.cpp
   ACCPipeline.cpp
   ACCRecipeBufferization.cpp
@@ -22,6 +23,7 @@ add_flang_library(FIROpenACCTransforms
   FIRDialectSupport
   FIROpenACCAnalysis
   FIROpenACCSupport
+  FIROpenACCUtils
   FIRSupport
   HLFIRDialect
 

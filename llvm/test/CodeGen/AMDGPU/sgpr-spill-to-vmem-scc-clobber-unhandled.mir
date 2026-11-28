@@ -13,7 +13,6 @@
 
 ---
 name: sgpr32_save_clobber_scc_no_sgprs
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8192, alignment: 8 }
   - { id: 1, type: spill-slot, offset: 0, size: 8192, alignment: 4, stack-id: sgpr-spill }

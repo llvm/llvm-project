@@ -18,7 +18,8 @@ define internal void @writer(ptr %p) #0 {
 ; CHECK-LABEL: define internal void @writer(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x ptr addrspace(3)], ptr addrspace(1) @llvm.amdgcn.sw.lds.base.table, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP15:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i8], ptr addrspace(1) @llvm.amdgcn.sw.lds.base.table, i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(3), ptr addrspace(1) [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(3) [[TMP3]], align 8
 ; CHECK-NEXT:    [[IS_LDS:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[P]])
@@ -32,7 +33,8 @@ define internal void @writer(ptr %p) #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq ptr [[P]], null
 ; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)), ptr addrspace(3) [[TMP9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr addrspace(3) [[TMP13]] to i32
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 [[TMP10]]
+; CHECK-NEXT:    [[TMP14:%.*]] = sext i32 [[TMP10]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i64 [[TMP14]]
 ; CHECK-NEXT:    store i32 1, ptr addrspace(1) [[TMP11]], align 4
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[FLAT]]:
@@ -103,7 +105,8 @@ define amdgpu_kernel void @k1() sanitize_address {
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.k1, i32 [[TMP20]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(3) [[TMP21]], i32 0, i32 2
 ; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(3) [[GEP]] to i32
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i32 [[TMP22]]
+; CHECK-NEXT:    [[TMP28:%.*]] = sext i32 [[TMP22]] to i64
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i64 [[TMP28]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = addrspacecast ptr addrspace(1) [[TMP23]] to ptr
 ; CHECK-NEXT:    call void @mid(ptr [[TMP24]])
 ; CHECK-NEXT:    br label %[[CONDFREE:.*]]

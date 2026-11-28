@@ -84,16 +84,16 @@ Module &Module::operator=(Module &&Other) {
   ModuleID = std::move(Other.ModuleID);
   SourceFileName = std::move(Other.SourceFileName);
 
+  // The lists share one symbol table, so erase every global value before
+  // splicing any, or an incoming one would be renamed on a name clash.
   GlobalList.clear();
-  GlobalList.splice(GlobalList.begin(), Other.GlobalList);
-
   FunctionList.clear();
-  FunctionList.splice(FunctionList.begin(), Other.FunctionList);
-
   AliasList.clear();
-  AliasList.splice(AliasList.begin(), Other.AliasList);
-
   IFuncList.clear();
+
+  GlobalList.splice(GlobalList.begin(), Other.GlobalList);
+  FunctionList.splice(FunctionList.begin(), Other.FunctionList);
+  AliasList.splice(AliasList.begin(), Other.AliasList);
   IFuncList.splice(IFuncList.begin(), Other.IFuncList);
 
   NamedMDList.clear();
@@ -208,21 +208,40 @@ void Module::getOperandBundleTags(SmallVectorImpl<StringRef> &Result) const {
 // it.  This is nice because it allows most passes to get away with not handling
 // the symbol table directly for this common task.
 //
+FunctionCallee
+Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
+                            function_ref<void(Function &)> InitCallback) {
+  assert(InitCallback && "missing init callback");
+  assert(!Name.empty() && !Name.starts_with("llvm.") &&
+         "intrinsics and unnamed functions are not supported");
+
+  Function *New = nullptr;
+  Value *F = ValSymTab->lookupOrInsert(Name, [&] {
+    New = Function::Create(Ty, GlobalVariable::ExternalLinkage,
+                           DL.getProgramAddressSpace(), "", this);
+    return New;
+  });
+  if (New)
+    InitCallback(*New);
+  return {Ty, F};
+}
+
 FunctionCallee Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
                                            AttributeList AttributeList) {
-  // See if we have a definition for the specified function already.
-  GlobalValue *F = getNamedValue(Name);
-  if (!F) {
-    // Nope, add it
+  // Intrinsics are set up from their name on construction.
+  if (Name.empty() || Name.starts_with("llvm.")) {
+    if (GlobalValue *F = getNamedValue(Name))
+      return {Ty, F};
+
     Function *New = Function::Create(Ty, GlobalVariable::ExternalLinkage,
                                      DL.getProgramAddressSpace(), Name, this);
-    if (!New->isIntrinsic())       // Intrinsics get attrs set on construction
+    if (!New->isIntrinsic()) // Intrinsics get attrs set on construction
       New->setAttributes(AttributeList);
-    return {Ty, New}; // Return the new prototype.
+    return {Ty, New};
   }
 
-  // Otherwise, we just found the existing function or a prototype.
-  return {Ty, F};
+  return getOrInsertFunction(
+      Name, Ty, [&](Function &New) { New.setAttributes(AttributeList); });
 }
 
 FunctionCallee Module::getOrInsertFunction(StringRef Name, FunctionType *Ty) {
@@ -682,6 +701,12 @@ void Module::setCodeModel(CodeModel::Model CL) {
   addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
 }
 
+unsigned Module::getWCharSize() const {
+  if (auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("wchar_size")))
+    return cast<ConstantInt>(Val->getValue())->getZExtValue();
+  return getTargetTriple().getDefaultWCharSize();
+}
+
 LongDoubleFormat Module::getLongDoubleFormat() const {
   if (auto *Val = cast_or_null<MDString>(getModuleFlag("long-double-type"))) {
     if (std::optional<LongDoubleFormat> Format =
@@ -729,7 +754,7 @@ DebuggerKind Module::getDebuggerTuning() const {
       return *Tuning;
   }
 
-  return DebuggerKind::Default;
+  return getTargetTriple().getDefaultDebuggerTuning();
 }
 
 void Module::setDebuggerTuning(DebuggerKind Tuning) {
@@ -1017,7 +1042,7 @@ void Module::setDarwinTargetVariantSDKVersion(VersionTuple Version) {
   addSDKVersionMD(Version, *this, "darwin.target_variant.SDK Version");
 }
 
-StringRef Module::getTargetABIFromMD() {
+StringRef Module::getTargetABIFromMD() const {
   StringRef TargetABI;
   if (auto *TargetABIMD = cast_or_null<MDString>(getModuleFlag("target-abi")))
     TargetABI = TargetABIMD->getString();

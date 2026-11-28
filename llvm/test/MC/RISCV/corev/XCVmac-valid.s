@@ -3,306 +3,245 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+xcvmac < %s \
 # RUN:     | llvm-objdump --mattr=+xcvmac --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-INSTR %s
-# RUN: not llvm-mc -triple riscv32 %s 2>&1 \
-# RUN:     | FileCheck -check-prefix=CHECK-NO-EXT %s
+# RUN: llvm-mc --verify -triple riscv32 %s
 
-cv.mac t0, t1, t2
+cv.mac t0, t1, t2 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mac t0, t1, t2
 # CHECK-ENCODING: [0xab,0x32,0x73,0x90]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mac t0, t1, zero
+cv.mac t0, t1, zero # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mac t0, t1, zero
 # CHECK-ENCODING: [0xab,0x32,0x03,0x90]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.machhsn t0, t1, t2, 0
+cv.machhsn t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.machhsn t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x62,0x73,0x40]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.machhsn t0, t1, zero, 16
+cv.machhsn t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.machhsn t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x62,0x03,0x60]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.machhsn t0, t1, zero, 31
+cv.machhsn t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.machhsn t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x62,0x03,0x7e]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.machhsrn t0, t1, t2, 0
+cv.machhsrn t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.machhsrn t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x62,0x73,0xc0]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.machhsrn t0, t1, zero, 16
+cv.machhsrn t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.machhsrn t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x62,0x03,0xe0]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.machhsrn t0, t1, zero, 31
+cv.machhsrn t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.machhsrn t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x62,0x03,0xfe]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.machhun t0, t1, t2, 0
+cv.machhun t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.machhun t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x72,0x73,0x40]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.machhun t0, t1, zero, 16
+cv.machhun t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.machhun t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x72,0x03,0x60]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.machhun t0, t1, zero, 31
+cv.machhun t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.machhun t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x72,0x03,0x7e]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.machhurn t0, t1, t2, 0
+cv.machhurn t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.machhurn t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x72,0x73,0xc0]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.machhurn t0, t1, zero, 16
+cv.machhurn t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.machhurn t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x72,0x03,0xe0]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.machhurn t0, t1, zero, 31
+cv.machhurn t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.machhurn t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x72,0x03,0xfe]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.macsn t0, t1, t2, 0
+cv.macsn t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.macsn t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x62,0x73,0x00]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.macsn t0, t1, zero, 16
+cv.macsn t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.macsn t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x62,0x03,0x20]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.macsn t0, t1, zero, 31
+cv.macsn t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.macsn t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x62,0x03,0x3e]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.macsrn t0, t1, t2, 0
+cv.macsrn t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.macsrn t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x62,0x73,0x80]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.macsrn t0, t1, zero, 16
+cv.macsrn t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.macsrn t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x62,0x03,0xa0]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.macsrn t0, t1, zero, 31
+cv.macsrn t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.macsrn t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x62,0x03,0xbe]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.macun t0, t1, t2, 0
+cv.macun t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.macun t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x72,0x73,0x00]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.macun t0, t1, zero, 16
+cv.macun t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.macun t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x72,0x03,0x20]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.macun t0, t1, zero, 31
+cv.macun t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.macun t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x72,0x03,0x3e]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.macurn t0, t1, t2, 0
+cv.macurn t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.macurn t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x72,0x73,0x80]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.macurn t0, t1, zero, 16
+cv.macurn t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.macurn t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x72,0x03,0xa0]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.macurn t0, t1, zero, 31
+cv.macurn t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.macurn t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x72,0x03,0xbe]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.msu t0, t1, t2
+cv.msu t0, t1, t2 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.msu t0, t1, t2
 # CHECK-ENCODING: [0xab,0x32,0x73,0x92]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.msu t0, t1, zero
+cv.msu t0, t1, zero # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.msu t0, t1, zero
 # CHECK-ENCODING: [0xab,0x32,0x03,0x92]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhs t0, t1, t2
+cv.mulhhs t0, t1, t2 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhsn t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x42,0x73,0x40]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhs t0, t1, zero
+cv.mulhhs t0, t1, zero # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhsn t0, t1, zero, 0
 # CHECK-ENCODING: [0xdb,0x42,0x03,0x40]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhsn t0, t1, t2, 0
+cv.mulhhsn t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhsn t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x42,0x73,0x40]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhsn t0, t1, zero, 16
+cv.mulhhsn t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhsn t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x42,0x03,0x60]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhsn t0, t1, zero, 31
+cv.mulhhsn t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhsn t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x42,0x03,0x7e]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhsrn t0, t1, t2, 0
+cv.mulhhsrn t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhsrn t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x42,0x73,0xc0]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhsrn t0, t1, zero, 16
+cv.mulhhsrn t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhsrn t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x42,0x03,0xe0]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhsrn t0, t1, zero, 31
+cv.mulhhsrn t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhsrn t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x42,0x03,0xfe]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhu t0, t1, t2
+cv.mulhhu t0, t1, t2 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhun t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x52,0x73,0x40]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhu t0, t1, zero
+cv.mulhhu t0, t1, zero # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhun t0, t1, zero, 0
 # CHECK-ENCODING: [0xdb,0x52,0x03,0x40]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhun t0, t1, t2, 0
+cv.mulhhun t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhun t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x52,0x73,0x40]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
 
-cv.mulhhun t0, t1, zero, 16
+cv.mulhhun t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhun t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x52,0x03,0x60]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhun t0, t1, zero, 31
+cv.mulhhun t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhun t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x52,0x03,0x7e]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhurn t0, t1, t2, 0
+cv.mulhhurn t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhurn t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x52,0x73,0xc0]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhurn t0, t1, zero, 16
+cv.mulhhurn t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhurn t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x52,0x03,0xe0]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulhhurn t0, t1, zero, 31
+cv.mulhhurn t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulhhurn t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x52,0x03,0xfe]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.muls t0, t1, t2
+cv.muls t0, t1, t2 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulsn t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x42,0x73,0x00]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.muls t0, t1, zero
+cv.muls t0, t1, zero # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulsn t0, t1, zero, 0
 # CHECK-ENCODING: [0xdb,0x42,0x03,0x00]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulsn t0, t1, t2, 0
+cv.mulsn t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulsn t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x42,0x73,0x00]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulsn t0, t1, zero, 16
+cv.mulsn t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulsn t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x42,0x03,0x20]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulsn t0, t1, zero, 31
+cv.mulsn t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulsn t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x42,0x03,0x3e]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulsrn t0, t1, t2, 0
+cv.mulsrn t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulsrn t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x42,0x73,0x80]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulsrn t0, t1, zero, 16
+cv.mulsrn t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulsrn t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x42,0x03,0xa0]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulsrn t0, t1, zero, 31
+cv.mulsrn t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulsrn t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x42,0x03,0xbe]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulu t0, t1, t2
+cv.mulu t0, t1, t2 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulun t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x52,0x73,0x00]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulu t0, t1, zero
+cv.mulu t0, t1, zero # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulun t0, t1, zero, 0
 # CHECK-ENCODING: [0xdb,0x52,0x03,0x00]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulun t0, t1, t2, 0
+cv.mulun t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulun t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x52,0x73,0x00]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulun t0, t1, zero, 16
+cv.mulun t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulun t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x52,0x03,0x20]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulun t0, t1, zero, 31
+cv.mulun t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulun t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x52,0x03,0x3e]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulurn t0, t1, t2, 0
+cv.mulurn t0, t1, t2, 0 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulurn t0, t1, t2, 0
 # CHECK-ENCODING: [0xdb,0x52,0x73,0x80]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulurn t0, t1, zero, 16
+cv.mulurn t0, t1, zero, 16 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulurn t0, t1, zero, 16
 # CHECK-ENCODING: [0xdb,0x52,0x03,0xa0]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}
 
-cv.mulurn t0, t1, zero, 31
+cv.mulurn t0, t1, zero, 31 # expected-error {{instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate)}}
 # CHECK-INSTR: cv.mulurn t0, t1, zero, 31
 # CHECK-ENCODING: [0xdb,0x52,0x03,0xbe]
-# CHECK-NO-EXT: instruction requires the following: 'XCVmac' (CORE-V Multiply-Accumulate){{$}}

@@ -76,60 +76,60 @@ public:
   using iterator_type   = _Iter;
   using difference_type = iter_difference_t<_Iter>;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator()
+  constexpr counted_iterator()
     requires default_initializable<_Iter>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator(_Iter __iter, iter_difference_t<_Iter> __n)
+  constexpr counted_iterator(_Iter __iter, iter_difference_t<_Iter> __n)
       : __current_(std::move(__iter)), __count_(__n) {
     _LIBCPP_ASSERT_UNCATEGORIZED(__n >= 0, "__n must not be negative.");
   }
 
   template <class _I2>
     requires convertible_to<const _I2&, _Iter>
-  _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator(const counted_iterator<_I2>& __other)
+  constexpr counted_iterator(const counted_iterator<_I2>& __other)
       : __current_(__other.__current_), __count_(__other.__count_) {}
 
   template <class _I2>
     requires assignable_from<_Iter&, const _I2&>
-  _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator& operator=(const counted_iterator<_I2>& __other) {
+  constexpr counted_iterator& operator=(const counted_iterator<_I2>& __other) {
     __current_ = __other.__current_;
     __count_   = __other.__count_;
     return *this;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Iter& base() const& noexcept { return __current_; }
+  [[nodiscard]] constexpr const _Iter& base() const& noexcept { return __current_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Iter base() && { return std::move(__current_); }
+  [[nodiscard]] constexpr _Iter base() && { return std::move(__current_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Iter> count() const noexcept { return __count_; }
+  [[nodiscard]] constexpr iter_difference_t<_Iter> count() const noexcept { return __count_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() {
+  [[nodiscard]] constexpr decltype(auto) operator*() {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__count_ > 0, "Iterator is equal to or past end.");
     return *__current_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const
+  [[nodiscard]] constexpr decltype(auto) operator*() const
     requires __dereferenceable<const _Iter>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__count_ > 0, "Iterator is equal to or past end.");
     return *__current_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator->() const noexcept
+  constexpr auto operator->() const noexcept
     requires contiguous_iterator<_Iter>
   {
     return std::to_address(__current_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator& operator++() {
+  constexpr counted_iterator& operator++() {
     _LIBCPP_ASSERT_UNCATEGORIZED(__count_ > 0, "Iterator already at or past end.");
     ++__current_;
     --__count_;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator++(int) {
+  constexpr decltype(auto) operator++(int) {
     _LIBCPP_ASSERT_UNCATEGORIZED(__count_ > 0, "Iterator already at or past end.");
     --__count_;
 #  if _LIBCPP_HAS_EXCEPTIONS
@@ -144,7 +144,7 @@ public:
 #  endif // _LIBCPP_HAS_EXCEPTIONS
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator operator++(int)
+  constexpr counted_iterator operator++(int)
     requires forward_iterator<_Iter>
   {
     _LIBCPP_ASSERT_UNCATEGORIZED(__count_ > 0, "Iterator already at or past end.");
@@ -153,7 +153,7 @@ public:
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator& operator--()
+  constexpr counted_iterator& operator--()
     requires bidirectional_iterator<_Iter>
   {
     --__current_;
@@ -161,7 +161,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator operator--(int)
+  constexpr counted_iterator operator--(int)
     requires bidirectional_iterator<_Iter>
   {
     counted_iterator __tmp = *this;
@@ -169,20 +169,19 @@ public:
     return __tmp;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator operator+(iter_difference_t<_Iter> __n) const
+  [[nodiscard]] constexpr counted_iterator operator+(iter_difference_t<_Iter> __n) const
     requires random_access_iterator<_Iter>
   {
     return counted_iterator(__current_ + __n, __count_ - __n);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr counted_iterator
-  operator+(iter_difference_t<_Iter> __n, const counted_iterator& __x)
+  [[nodiscard]] friend constexpr counted_iterator operator+(iter_difference_t<_Iter> __n, const counted_iterator& __x)
     requires random_access_iterator<_Iter>
   {
     return __x + __n;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator& operator+=(iter_difference_t<_Iter> __n)
+  constexpr counted_iterator& operator+=(iter_difference_t<_Iter> __n)
     requires random_access_iterator<_Iter>
   {
     _LIBCPP_ASSERT_UNCATEGORIZED(__n <= __count_, "Cannot advance iterator past end.");
@@ -191,29 +190,29 @@ public:
     return *this;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator operator-(iter_difference_t<_Iter> __n) const
+  [[nodiscard]] constexpr counted_iterator operator-(iter_difference_t<_Iter> __n) const
     requires random_access_iterator<_Iter>
   {
     return counted_iterator(__current_ - __n, __count_ + __n);
   }
 
   template <common_with<_Iter> _I2>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr iter_difference_t<_I2>
+  [[nodiscard]] friend constexpr iter_difference_t<_I2>
   operator-(const counted_iterator& __lhs, const counted_iterator<_I2>& __rhs) {
     return __rhs.__count_ - __lhs.__count_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr iter_difference_t<_Iter>
+  [[nodiscard]] friend constexpr iter_difference_t<_Iter>
   operator-(const counted_iterator& __lhs, default_sentinel_t) noexcept {
     return -__lhs.__count_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr iter_difference_t<_Iter>
+  [[nodiscard]] friend constexpr iter_difference_t<_Iter>
   operator-(default_sentinel_t, const counted_iterator& __rhs) noexcept {
     return __rhs.__count_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr counted_iterator& operator-=(iter_difference_t<_Iter> __n)
+  constexpr counted_iterator& operator-=(iter_difference_t<_Iter> __n)
     requires random_access_iterator<_Iter>
   {
     _LIBCPP_ASSERT_UNCATEGORIZED(
@@ -226,7 +225,7 @@ public:
     return *this;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](iter_difference_t<_Iter> __n) const
+  [[nodiscard]] constexpr decltype(auto) operator[](iter_difference_t<_Iter> __n) const
     requires random_access_iterator<_Iter>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n < __count_, "Subscript argument must be less than size.");
@@ -234,22 +233,20 @@ public:
   }
 
   template <common_with<_Iter> _I2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-  operator==(const counted_iterator& __lhs, const counted_iterator<_I2>& __rhs) {
+  friend constexpr bool operator==(const counted_iterator& __lhs, const counted_iterator<_I2>& __rhs) {
     return __lhs.__count_ == __rhs.__count_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const counted_iterator& __lhs, default_sentinel_t) noexcept {
+  friend constexpr bool operator==(const counted_iterator& __lhs, default_sentinel_t) noexcept {
     return __lhs.__count_ == 0;
   }
 
   template <common_with<_Iter> _I2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering
-  operator<=>(const counted_iterator& __lhs, const counted_iterator<_I2>& __rhs) {
+  friend constexpr strong_ordering operator<=>(const counted_iterator& __lhs, const counted_iterator<_I2>& __rhs) {
     return __rhs.__count_ <=> __lhs.__count_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
+  [[nodiscard]] friend constexpr decltype(auto)
   iter_move(const counted_iterator& __i) noexcept(noexcept(ranges::iter_move(__i.__current_)))
     requires input_iterator<_Iter>
   {
@@ -258,7 +255,7 @@ public:
   }
 
   template <indirectly_swappable<_Iter> _I2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr void
+  friend constexpr void
   iter_swap(const counted_iterator& __x,
             const counted_iterator<_I2>& __y) noexcept(noexcept(ranges::iter_swap(__x.__current_, __y.__current_))) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(

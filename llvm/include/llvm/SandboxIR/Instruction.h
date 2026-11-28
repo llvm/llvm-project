@@ -106,6 +106,11 @@ protected:
   /// according to \p Pos.
   LLVM_ABI static IRBuilder<> &setInsertPos(InsertPosition Pos);
 
+#ifndef NDEBUG
+  /// A common hash calculation based on the instruction opcode and its operands
+  hash_code hashHelper() const { return hash_combine(Opc, User::hashHelper()); }
+#endif
+
 public:
   static const char *getOpcodeName(Opcode Opc) {
     switch (Opc) {
@@ -378,6 +383,10 @@ public:
 
 #ifndef NDEBUG
   void dumpOS(raw_ostream &OS) const override;
+
+  // TODO: This hash function does not capture the full state of several
+  // subclasses. So we need to implement subclass specific overrides.
+  hash_code hash() const final { return Instruction::hashHelper(); }
 #endif
 };
 
@@ -1957,8 +1966,8 @@ public:
   public:
     CaseHandleImpl(Context &Ctx, LLVMCaseItT LLVMCaseIt)
         : Ctx(Ctx), LLVMCaseIt(LLVMCaseIt) {}
-    ConstT *getCaseValue() const;
-    BlockT *getCaseSuccessor() const;
+    LLVM_ABI ConstT *getCaseValue() const;
+    LLVM_ABI BlockT *getCaseSuccessor() const;
     unsigned getCaseIndex() const {
       const auto &LLVMCaseHandle = *LLVMCaseIt;
       return LLVMCaseHandle.getCaseIndex();
@@ -2072,11 +2081,6 @@ public:
     return From->getSubclassID() == ClassID::Switch;
   }
 };
-
-extern template class LLVM_TEMPLATE_ABI SwitchInst::CaseHandleImpl<
-    llvm::SwitchInst::CaseIt, BasicBlock, ConstantInt>;
-extern template class LLVM_TEMPLATE_ABI SwitchInst::CaseHandleImpl<
-    llvm::SwitchInst::ConstCaseIt, const BasicBlock, const ConstantInt>;
 
 class UnaryOperator : public UnaryInstruction {
   static Opcode getUnaryOpcode(llvm::Instruction::UnaryOps UnOp) {

@@ -62,6 +62,7 @@
 # CAT: test_maccatalyst.o has platform macCatalyst, which is different from target platform macOS
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

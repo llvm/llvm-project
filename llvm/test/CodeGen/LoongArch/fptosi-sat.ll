@@ -337,7 +337,6 @@ define i8 @fptosi_sat_f64_to_i8(double %a) nounwind {
 ; LA32F-NEXT:    move $a2, $s0
 ; LA32F-NEXT:    move $a3, $fp
 ; LA32F-NEXT:    bl __unorddf2
-; LA32F-NEXT:    sltu $a0, $zero, $a0
 ; LA32F-NEXT:    masknez $a0, $s1, $a0
 ; LA32F-NEXT:    ld.w $s1, $sp, 0 # 4-byte Folded Reload
 ; LA32F-NEXT:    ld.w $s0, $sp, 4 # 4-byte Folded Reload
@@ -380,9 +379,8 @@ define i8 @fptosi_sat_f64_to_i8(double %a) nounwind {
 ; LA64F-NEXT:    addi.w $a1, $zero, -128
 ; LA64F-NEXT:    maskeqz $a1, $a1, $s0
 ; LA64F-NEXT:    or $s0, $a1, $a0
-; LA64F-NEXT:    ori $a0, $zero, 0
-; LA64F-NEXT:    lu32i.d $a0, -16384
-; LA64F-NEXT:    lu52i.d $a1, $a0, 1029
+; LA64F-NEXT:    lu12i.w $a0, 65919
+; LA64F-NEXT:    slli.d $a1, $a0, 34
 ; LA64F-NEXT:    move $a0, $fp
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__gtdf2)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
@@ -395,7 +393,6 @@ define i8 @fptosi_sat_f64_to_i8(double %a) nounwind {
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__unorddf2)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    sltu $a0, $zero, $a0
 ; LA64F-NEXT:    masknez $a0, $s0, $a0
 ; LA64F-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
@@ -405,12 +402,13 @@ define i8 @fptosi_sat_f64_to_i8(double %a) nounwind {
 ;
 ; LA64D-LABEL: fptosi_sat_f64_to_i8:
 ; LA64D:       # %bb.0: # %entry
-; LA64D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; LA64D-NEXT:    fld.d $fa1, $a0, %pc_lo12(.LCPI4_0)
 ; LA64D-NEXT:    lu52i.d $a0, $zero, -1018
+; LA64D-NEXT:    movgr2fr.d $fa1, $a0
+; LA64D-NEXT:    fmax.d $fa1, $fa0, $fa1
+; LA64D-NEXT:    lu12i.w $a0, 65919
+; LA64D-NEXT:    slli.d $a0, $a0, 34
 ; LA64D-NEXT:    movgr2fr.d $fa2, $a0
-; LA64D-NEXT:    fmax.d $fa2, $fa0, $fa2
-; LA64D-NEXT:    fmin.d $fa1, $fa2, $fa1
+; LA64D-NEXT:    fmin.d $fa1, $fa1, $fa2
 ; LA64D-NEXT:    ftintrz.l.d $fa1, $fa1
 ; LA64D-NEXT:    fcmp.cun.d $fcc0, $fa0, $fa0
 ; LA64D-NEXT:    movfr2gr.d $a0, $fa1
@@ -460,7 +458,6 @@ define i16 @fptosi_sat_f64_to_i16(double %a) nounwind {
 ; LA32F-NEXT:    move $a2, $s0
 ; LA32F-NEXT:    move $a3, $fp
 ; LA32F-NEXT:    bl __unorddf2
-; LA32F-NEXT:    sltu $a0, $zero, $a0
 ; LA32F-NEXT:    masknez $a0, $s1, $a0
 ; LA32F-NEXT:    ld.w $s1, $sp, 0 # 4-byte Folded Reload
 ; LA32F-NEXT:    ld.w $s0, $sp, 4 # 4-byte Folded Reload
@@ -519,7 +516,6 @@ define i16 @fptosi_sat_f64_to_i16(double %a) nounwind {
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__unorddf2)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    sltu $a0, $zero, $a0
 ; LA64F-NEXT:    masknez $a0, $s0, $a0
 ; LA64F-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
@@ -584,7 +580,6 @@ define i32 @fptosi_sat_f64_to_i32(double %a) nounwind {
 ; LA32F-NEXT:    move $a2, $s0
 ; LA32F-NEXT:    move $a3, $fp
 ; LA32F-NEXT:    bl __unorddf2
-; LA32F-NEXT:    sltu $a0, $zero, $a0
 ; LA32F-NEXT:    masknez $a0, $s1, $a0
 ; LA32F-NEXT:    ld.w $s1, $sp, 0 # 4-byte Folded Reload
 ; LA32F-NEXT:    ld.w $s0, $sp, 4 # 4-byte Folded Reload
@@ -632,7 +627,6 @@ define i32 @fptosi_sat_f64_to_i32(double %a) nounwind {
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__unorddf2)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    sltu $a0, $zero, $a0
 ; LA64F-NEXT:    masknez $a0, $s0, $a0
 ; LA64F-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
@@ -689,18 +683,18 @@ define i64 @fptosi_sat_f64_to_i64(double %a) nounwind {
 ; LA32F-NEXT:    move $a2, $s0
 ; LA32F-NEXT:    move $a3, $fp
 ; LA32F-NEXT:    bl __unorddf2
-; LA32F-NEXT:    sltu $a1, $zero, $a0
-; LA32F-NEXT:    masknez $a0, $s1, $a1
-; LA32F-NEXT:    masknez $a2, $s2, $s4
+; LA32F-NEXT:    masknez $a2, $s1, $a0
+; LA32F-NEXT:    masknez $a1, $s2, $s4
 ; LA32F-NEXT:    lu12i.w $a3, -524288
 ; LA32F-NEXT:    maskeqz $a3, $a3, $s4
-; LA32F-NEXT:    or $a2, $a3, $a2
-; LA32F-NEXT:    masknez $a2, $a2, $s3
+; LA32F-NEXT:    or $a1, $a3, $a1
+; LA32F-NEXT:    masknez $a1, $a1, $s3
 ; LA32F-NEXT:    lu12i.w $a3, 524287
 ; LA32F-NEXT:    ori $a3, $a3, 4095
 ; LA32F-NEXT:    maskeqz $a3, $a3, $s3
-; LA32F-NEXT:    or $a2, $a3, $a2
-; LA32F-NEXT:    masknez $a1, $a2, $a1
+; LA32F-NEXT:    or $a1, $a3, $a1
+; LA32F-NEXT:    masknez $a1, $a1, $a0
+; LA32F-NEXT:    move $a0, $a2
 ; LA32F-NEXT:    ld.w $s4, $sp, 4 # 4-byte Folded Reload
 ; LA32F-NEXT:    ld.w $s3, $sp, 8 # 4-byte Folded Reload
 ; LA32F-NEXT:    ld.w $s2, $sp, 12 # 4-byte Folded Reload
@@ -792,7 +786,6 @@ define i64 @fptosi_sat_f64_to_i64(double %a) nounwind {
 ; LA64F-NEXT:    move $a1, $fp
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__unorddf2)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    sltu $a0, $zero, $a0
 ; LA64F-NEXT:    masknez $a0, $s0, $a0
 ; LA64F-NEXT:    ld.d $s1, $sp, 0 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s0, $sp, 8 # 8-byte Folded Reload
@@ -880,7 +873,7 @@ define i64 @fptosi_nanguard_f64_to_i64(double %a) nounwind {
 ; LA32F-NEXT:    move $a2, $a0
 ; LA32F-NEXT:    move $a3, $a1
 ; LA32F-NEXT:    bl __unorddf2
-; LA32F-NEXT:    sltu $s1, $zero, $a0
+; LA32F-NEXT:    move $s1, $a0
 ; LA32F-NEXT:    move $a0, $s0
 ; LA32F-NEXT:    move $a1, $fp
 ; LA32F-NEXT:    bl __fixdfdi
@@ -920,7 +913,7 @@ define i64 @fptosi_nanguard_f64_to_i64(double %a) nounwind {
 ; LA64F-NEXT:    move $a1, $a0
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__unorddf2)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    sltu $s0, $zero, $a0
+; LA64F-NEXT:    move $s0, $a0
 ; LA64F-NEXT:    move $a0, $fp
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__fixdfdi)
 ; LA64F-NEXT:    jirl $ra, $ra, 0

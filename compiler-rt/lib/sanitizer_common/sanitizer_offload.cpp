@@ -388,4 +388,21 @@ void Offload::StoreSignal(hsa_signal_t Sig) {
   Api.hsa_signal_store_screlease(Sig, 1);
 }
 
+// dlsym(RTLD_DEFAULT) follows load order. hsa_init resolving inside libhsa
+// means this runtime was loaded too late to interpose.
+void WarnIfHsaNotInterposed() {
+  void* Sym = dlsym(RTLD_DEFAULT, "hsa_init");
+  if (!Sym)
+    return;
+  Dl_info Info = {};
+  if (!dladdr(Sym, &Info) || !Info.dli_fname ||
+      !internal_strstr(Info.dli_fname, SANITIZER_HSA_LIBRARY))
+    return;
+  Report(
+      "WARNING: %s: the runtime is loaded too late to intercept HSA. "
+      "GPU checking will not work. Link the runtime first or use "
+      "LD_PRELOAD.\n",
+      SanitizerToolName);
+}
+
 }  // namespace __sanitizer

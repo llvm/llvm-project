@@ -1,12 +1,20 @@
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +popcnt -no-enable-noundef-analysis -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-POPCNT
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +popcnt -no-enable-noundef-analysis -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-POPCNT %}
 // RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +popcnt -no-enable-noundef-analysis -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-POPCNT
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +popcnt -no-enable-noundef-analysis -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-POPCNT %}
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -no-enable-noundef-analysis -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=x86_64-apple-darwin -no-enable-noundef-analysis -emit-llvm -o - | FileCheck %s %}
 // RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -no-enable-noundef-analysis -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -no-enable-noundef-analysis -emit-llvm -o - | FileCheck %s %}
 
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +popcnt -no-enable-noundef-analysis -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,CHECK-POPCNT
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +popcnt -no-enable-noundef-analysis -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,CHECK-POPCNT %}
 // RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +popcnt -no-enable-noundef-analysis -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,CHECK-POPCNT
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +popcnt -no-enable-noundef-analysis -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,CHECK-POPCNT %}
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -no-enable-noundef-analysis -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=x86_64-apple-darwin -no-enable-noundef-analysis -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s %}
 // RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -no-enable-noundef-analysis -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -no-enable-noundef-analysis -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s %}
 
 
 #include <x86intrin.h>

@@ -1,5 +1,5 @@
-// RUN: mlir-opt -split-input-file --openacc-legalize-data-values %s | FileCheck %s --check-prefixes=CHECK,DEVICE
-// RUN: mlir-opt -split-input-file --openacc-legalize-data-values=host-to-device=false %s | FileCheck %s --check-prefixes=CHECK,HOST
+// RUN: mlir-opt -split-input-file --pass-pipeline='builtin.module(func.func(openacc-legalize-data-values))' %s | FileCheck %s --check-prefixes=CHECK,DEVICE
+// RUN: mlir-opt -split-input-file --pass-pipeline='builtin.module(func.func(openacc-legalize-data-values{host-to-device=false}))' %s | FileCheck %s --check-prefixes=CHECK,HOST
 
 func.func @test(%a: memref<10xf32>, %i : index) {
   %create = acc.create varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>

@@ -238,7 +238,6 @@ define amdgpu_kernel void @no_cvt_rpi_i32_f32_0(ptr addrspace(1) %out, float %x)
 ; SI-SDAG-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-SDAG-NEXT:    v_add_f32_e64 v0, s2, 0.5
-; SI-SDAG-NEXT:    v_floor_f32_e32 v0, v0
 ; SI-SDAG-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-SDAG-NEXT:    s_mov_b32 s2, -1
 ; SI-SDAG-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -251,7 +250,6 @@ define amdgpu_kernel void @no_cvt_rpi_i32_f32_0(ptr addrspace(1) %out, float %x)
 ; SI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    v_add_f32_e64 v0, s2, 0.5
-; SI-GISEL-NEXT:    v_floor_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
 ; SI-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -265,8 +263,7 @@ define amdgpu_kernel void @no_cvt_rpi_i32_f32_0(ptr addrspace(1) %out, float %x)
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_add_f32_e64 v0, s2, 0.5
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_floor_f32_e32 v0, v0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-SDAG-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-SDAG-NEXT:    s_endpgm
@@ -279,8 +276,7 @@ define amdgpu_kernel void @no_cvt_rpi_i32_f32_0(ptr addrspace(1) %out, float %x)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_f32_e64 v0, s2, 0.5
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_floor_f32_e32 v0, v0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX11-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-GISEL-NEXT:    s_endpgm

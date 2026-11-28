@@ -7,7 +7,6 @@
 name:            fma_f32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -34,7 +33,6 @@ body:             |
 name:            fma_f64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:

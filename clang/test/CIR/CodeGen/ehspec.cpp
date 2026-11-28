@@ -62,7 +62,7 @@ int target_value(int a) throw(int) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z12target_valuei(
-// CIR:         %[[RETVAL:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR:         %[[RETVAL:.*]] = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
 // CIR-NEXT:    %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:    cir.try {
 // CIR-NEXT:      cir.store %{{.+}}, %[[A]] : !s32i, !cir.ptr<!s32i>
@@ -165,13 +165,11 @@ void outer() throw() {
 // specification's own dispatch block before reaching the unexpected handler.
 // LLVMCIR:    {{^}}[[NOMATCH]]:
 // LLVMCIR:      br label %[[FILTER_DISPATCH:[0-9]+]]
-// LLVMCIR:    {{^}}[[TRY_CONT]]:
 // LLVMCIR:    {{^}}[[FILTER_DISPATCH]]:
 // LLVMCIR:      br label %[[UNEXPECTED:[0-9]+]]
 // LLVMCIR:    {{^}}[[UNEXPECTED]]:
 // LLVMCIR:      call void @__cxa_call_unexpected(ptr %{{.*}})
 // LLVMCIR-NEXT: unreachable
-// LLVMCIR:      ret void
 
-// OGCG:       {{^}}[[TRY_CONT]]:
-// OGCG-NEXT:    ret void
+// LLVM:       {{^}}[[TRY_CONT]]:
+// LLVM-NEXT:    ret void

@@ -1927,3 +1927,266 @@ func.func @negative_op_mmt4d(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>,
 
 // ALL-NOT: linalg.generic
 // ALL: linalg.contract
+
+// -----
+
+///----------------------------------------------------------------------------------------
+/// Tests for linalg.reduce
+///----------------------------------------------------------------------------------------
+
+// Full reduction of a 1D tensor into a 0D tensor.
+#map = affine_map<(d0) -> (d0)>
+#map_scalar = affine_map<(d0) -> ()>
+func.func @reduce_1d_sum(%A: tensor<?xf32>, %Out: tensor<f32>) -> tensor<f32> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map_scalar],
+    iterator_types = ["reduction"]}
+    ins(%A : tensor<?xf32>)
+    outs(%Out : tensor<f32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.addf %out, %in : f32
+    linalg.yield %1 : f32
+  } -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+// ALL-LABEL: reduce_1d_sum
+// ALL-SAME: %[[A:.+]]: tensor<?xf32>, %[[OUT:.+]]: tensor<f32>) -> tensor<f32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.reduce { arith.addf }
+// NAMED-SAME: ins(%[[A]] : tensor<?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<f32>)
+// NAMED-SAME: dimensions = [0]
+
+// CATEGORY-NOT: linalg.reduce
+// CATEGORY: linalg.generic
+
+// -----
+
+// Reduction along the innermost dimension.
+#map = affine_map<(d0, d1) -> (d0, d1)>
+#map_red = affine_map<(d0, d1) -> (d0)>
+func.func @reduce_2d_inner(%A: tensor<?x?xf32>, %Out: tensor<?xf32>) -> tensor<?xf32> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map_red],
+    iterator_types = ["parallel", "reduction"]}
+    ins(%A : tensor<?x?xf32>)
+    outs(%Out : tensor<?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.addf %out, %in : f32
+    linalg.yield %1 : f32
+  } -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// ALL-LABEL: reduce_2d_inner
+// ALL-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[OUT:.+]]: tensor<?xf32>) -> tensor<?xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.reduce { arith.addf }
+// NAMED-SAME: ins(%[[A]] : tensor<?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?xf32>)
+// NAMED-SAME: dimensions = [1]
+
+// CATEGORY-NOT: linalg.reduce
+// CATEGORY: linalg.generic
+
+// -----
+
+// Reduction along the outermost dimension.
+#map = affine_map<(d0, d1) -> (d0, d1)>
+#map_red = affine_map<(d0, d1) -> (d1)>
+func.func @reduce_2d_outer(%A: tensor<?x?xf32>, %Out: tensor<?xf32>) -> tensor<?xf32> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map_red],
+    iterator_types = ["reduction", "parallel"]}
+    ins(%A : tensor<?x?xf32>)
+    outs(%Out : tensor<?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.mulf %out, %in : f32
+    linalg.yield %1 : f32
+  } -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// ALL-LABEL: reduce_2d_outer
+// ALL-SAME: %[[A:.+]]: tensor<?x?xf32>, %[[OUT:.+]]: tensor<?xf32>) -> tensor<?xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.reduce { arith.mulf }
+// NAMED-SAME: ins(%[[A]] : tensor<?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?xf32>)
+// NAMED-SAME: dimensions = [0]
+
+// CATEGORY-NOT: linalg.reduce
+// CATEGORY: linalg.generic
+
+// -----
+
+// Reduction along multiple, non-adjacent dimensions.
+#map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+#map_red = affine_map<(d0, d1, d2) -> (d1)>
+func.func @reduce_3d_multi_dims(%A: tensor<?x?x?xi32>, %Out: tensor<?xi32>) -> tensor<?xi32> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map_red],
+    iterator_types = ["reduction", "parallel", "reduction"]}
+    ins(%A : tensor<?x?x?xi32>)
+    outs(%Out : tensor<?xi32>) {
+  ^bb0(%in: i32, %out: i32):
+    %1 = arith.maxsi %out, %in : i32
+    linalg.yield %1 : i32
+  } -> tensor<?xi32>
+  return %0 : tensor<?xi32>
+}
+
+// ALL-LABEL: reduce_3d_multi_dims
+// ALL-SAME: %[[A:.+]]: tensor<?x?x?xi32>, %[[OUT:.+]]: tensor<?xi32>) -> tensor<?xi32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.reduce { arith.maxsi }
+// NAMED-SAME: ins(%[[A]] : tensor<?x?x?xi32>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?xi32>)
+// NAMED-SAME: dimensions = [0, 2]
+
+// CATEGORY-NOT: linalg.reduce
+// CATEGORY: linalg.generic
+
+// -----
+
+// The payload is moved verbatim: an arbitrary combiner body (here with a cast)
+// is preserved in the long-form region of linalg.reduce.
+#map = affine_map<(d0, d1) -> (d0, d1)>
+#map_red = affine_map<(d0, d1) -> (d0)>
+func.func @reduce_with_cast_body(%A: tensor<?x?xf16>, %Out: tensor<?xf32>) -> tensor<?xf32> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map_red],
+    iterator_types = ["parallel", "reduction"]}
+    ins(%A : tensor<?x?xf16>)
+    outs(%Out : tensor<?xf32>) {
+  ^bb0(%in: f16, %out: f32):
+    %1 = arith.extf %in : f16 to f32
+    %2 = arith.addf %out, %1 : f32
+    linalg.yield %2 : f32
+  } -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// ALL-LABEL: reduce_with_cast_body
+// ALL-SAME: %[[A:.+]]: tensor<?x?xf16>, %[[OUT:.+]]: tensor<?xf32>) -> tensor<?xf32>
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.reduce ins(%[[A]] : tensor<?x?xf16>)
+// NAMED-SAME: outs(%[[OUT]] : tensor<?xf32>)
+// NAMED-SAME: dimensions = [1]
+// NAMED-NEXT: (%[[IN:.+]]: f16, %[[ACC:.+]]: f32) {
+// NAMED-NEXT: %[[EXT:.+]] = arith.extf %[[IN]] : f16 to f32
+// NAMED-NEXT: %[[ADD:.+]] = arith.addf %[[ACC]], %[[EXT]] : f32
+// NAMED-NEXT: linalg.yield %[[ADD]] : f32
+
+// CATEGORY-NOT: linalg.reduce
+// CATEGORY: linalg.generic
+
+// -----
+
+// Memref (buffer) semantics.
+#map = affine_map<(d0, d1) -> (d0, d1)>
+#map_red = affine_map<(d0, d1) -> (d0)>
+func.func @reduce_memref(%A: memref<?x?xf32>, %Out: memref<?xf32>) {
+  linalg.generic
+    {indexing_maps = [#map, #map_red],
+    iterator_types = ["parallel", "reduction"]}
+    ins(%A : memref<?x?xf32>)
+    outs(%Out : memref<?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.addf %out, %in : f32
+    linalg.yield %1 : f32
+  }
+  return
+}
+
+// ALL-LABEL: reduce_memref
+// ALL-SAME: %[[A:.+]]: memref<?x?xf32>, %[[OUT:.+]]: memref<?xf32>)
+
+// NAMED-NOT: linalg.generic
+// NAMED: linalg.reduce { arith.addf }
+// NAMED-SAME: ins(%[[A]] : memref<?x?xf32>)
+// NAMED-SAME: outs(%[[OUT]] : memref<?xf32>)
+// NAMED-SAME: dimensions = [1]
+
+// CATEGORY-NOT: linalg.reduce
+// CATEGORY: linalg.generic
+
+// -----
+
+// Input is not accessed with an identity map (transposed), which
+// linalg.reduce cannot express.
+#map_t = affine_map<(d0, d1) -> (d1, d0)>
+#map_red = affine_map<(d0, d1) -> (d0)>
+func.func @negative_reduce_transposed_input(%A: tensor<?x?xf32>, %Out: tensor<?xf32>) -> tensor<?xf32> {
+  %0 = linalg.generic
+    {indexing_maps = [#map_t, #map_red],
+    iterator_types = ["parallel", "reduction"]}
+    ins(%A : tensor<?x?xf32>)
+    outs(%Out : tensor<?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.addf %out, %in : f32
+    linalg.yield %1 : f32
+  } -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// ALL-LABEL: negative_reduce_transposed_input
+
+// ALL-NOT: linalg.reduce
+// ALL: linalg.generic
+
+// -----
+
+// Output dims are permuted relative to the (non-reduced) input dims, which
+// linalg.reduce cannot express.
+#map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+#map_red_t = affine_map<(d0, d1, d2) -> (d1, d0)>
+func.func @negative_reduce_permuted_output(%A: tensor<?x?x?xf32>, %Out: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map_red_t],
+    iterator_types = ["parallel", "parallel", "reduction"]}
+    ins(%A : tensor<?x?x?xf32>)
+    outs(%Out : tensor<?x?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.addf %out, %in : f32
+    linalg.yield %1 : f32
+  } -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// ALL-LABEL: negative_reduce_permuted_output
+
+// ALL-NOT: linalg.reduce
+// ALL: linalg.generic
+
+// -----
+
+// Two inputs with a reduction, but not a contraction body (add only).
+#map = affine_map<(d0, d1) -> (d0, d1)>
+#map_red = affine_map<(d0, d1) -> (d0)>
+func.func @negative_reduce_two_inputs(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
+                                      %Out: tensor<?xf32>) -> tensor<?xf32> {
+  %0 = linalg.generic
+    {indexing_maps = [#map, #map, #map_red],
+    iterator_types = ["parallel", "reduction"]}
+    ins(%A, %B : tensor<?x?xf32>, tensor<?x?xf32>)
+    outs(%Out : tensor<?xf32>) {
+  ^bb0(%in: f32, %in_0: f32, %out: f32):
+    %1 = arith.addf %in, %in_0 : f32
+    %2 = arith.addf %out, %1 : f32
+    linalg.yield %2 : f32
+  } -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// ALL-LABEL: negative_reduce_two_inputs
+
+// ALL-NOT: linalg.reduce
+// ALL-NOT: linalg.contract
+// ALL: linalg.generic

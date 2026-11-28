@@ -353,3 +353,50 @@ func.func @negative_buffer_non_packed_source_shape(%A: memref<8x64x64xf16>,
 // CHECK-LABEL: @negative_buffer_non_packed_source_shape(
 // CHECK-SAME:    %[[A:.+]]: memref<8x64x64xf16>
 // CHECK: vector.transfer_read %[[A]]
+
+// -----
+
+#map = affine_map<(m, n, k, vnni) -> (m, k, vnni)>
+#map1 = affine_map<(m, n, k, vnni) -> (k, n, vnni)>
+#map2 = affine_map<(m, n, k, vnni) -> (m, n)>
+func.func @negative_masked(%C: memref<64x64xf32>,
+    %vecA: vector<4x8x2xf16>, %vecB: vector<8x16x2xf16>,
+    %vecC: vector<4x16xf32>, %idx: index, %mask: vector<4x16xi1>) {
+  %vecD = vector.contract
+    {kind = #vector.kind<add>,
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction", "reduction"]}
+    %vecA, %vecB, %vecC : vector<4x8x2xf16>, vector<8x16x2xf16> into vector<4x16xf32>
+  vector.mask %mask {
+    vector.transfer_write %vecD, %C[%idx, %idx]
+      {in_bounds = [true, true]} : vector<4x16xf32>, memref<64x64xf32>
+  } : vector<4x16xi1>
+  return
+}
+
+// CHECK-LABEL: @negative_masked(
+// CHECK-SAME:    %[[C:.+]]: memref<64x64xf32>
+// CHECK: vector.mask
+// CHECK:   vector.transfer_write{{.*}}%[[C]]
+
+// -----
+
+#map = affine_map<(m, n, k, vnni) -> (m, k, vnni)>
+#map1 = affine_map<(m, n, k, vnni) -> (k, n, vnni)>
+#map2 = affine_map<(m, n, k, vnni) -> (m, n)>
+func.func @negative_with_mask(%C: memref<64x64xf32>,
+    %vecA: vector<4x8x2xf16>, %vecB: vector<8x16x2xf16>,
+    %vecC: vector<4x16xf32>, %idx: index, %mask: vector<4x16xi1>) {
+  %vecD = vector.contract
+    {kind = #vector.kind<add>,
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction", "reduction"]}
+    %vecA, %vecB, %vecC : vector<4x8x2xf16>, vector<8x16x2xf16> into vector<4x16xf32>
+  vector.transfer_write %vecD, %C[%idx, %idx], %mask
+    {in_bounds = [true, true]} : vector<4x16xf32>, memref<64x64xf32>
+  return
+}
+
+// CHECK-LABEL: @negative_with_mask(
+// CHECK-SAME:    %[[C:.+]]: memref<64x64xf32>
+// CHECK: vector.transfer_write{{.*}}%[[C]]

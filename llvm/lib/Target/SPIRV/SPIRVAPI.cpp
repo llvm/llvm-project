@@ -75,7 +75,7 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   if (!TheTarget)
     return false;
 
-  // A call to codegen::InitTargetOptionsFromCodeGenFlags(TargetTriple) hits an
+  // A call to codegen::getTargetOptions(TargetTriple) hits an
   // assertion in one of the codegen flag getters in
   // llvm/lib/CodeGen/CommandFlags.cpp:
   // `...View && "RegisterCodeGenFlags not created."' failed.

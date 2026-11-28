@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s
-; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16,+SPV_NV_shader_atomic_fp16_vector,+SPV_INTEL_bfloat16_arithmetic %s -o - 2>&1 | FileCheck %s --check-prefix=NOAMD
+; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_bfloat16,+SPV_NV_shader_atomic_fp16_vector,+SPV_EXT_bfloat16_arithmetic %s -o - 2>&1 | FileCheck %s --check-prefix=NOAMD
 
 ; SPV_NV_shader_atomic_fp16_vector extension is meant for fp16,
 ; but the bf16 type uses the same vector atomic so the AMD backend can lower it

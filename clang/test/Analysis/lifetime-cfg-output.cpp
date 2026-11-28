@@ -77,9 +77,9 @@ public:
 // CHECK-NEXT:   10: const A &c = A();
 // CHECK-NEXT:   11: [B1.10].~A() (Implicit destructor)
 // CHECK-NEXT:   12: [B1.10] (Lifetime ends)
-// CHECK-NEXT:   13: [B1.2].~A() (Implicit destructor)
-// CHECK-NEXT:   14: [B1.2] (Lifetime ends)
-// CHECK-NEXT:   15: [B1.5] (Lifetime ends)
+// CHECK-NEXT:   13: [B1.5] (Lifetime ends)
+// CHECK-NEXT:   14: [B1.2].~A() (Implicit destructor)
+// CHECK-NEXT:   15: [B1.2] (Lifetime ends)
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B0 (EXIT)]
@@ -97,11 +97,11 @@ void test_const_ref() {
 // CHECK-NEXT:    2: A a[2];
 // CHECK-NEXT:    3:  (CXXConstructExpr, [B1.4], A[0])
 // CHECK-NEXT:    4: A b[0];
-// CHECK-NEXT:    5: [B1.2].~A[2]() (Implicit destructor)
-// lifetime of a ends when its destructors are run
-// CHECK-NEXT:    6: [B1.2] (Lifetime ends)
 // lifetime of b ends when its storage duration ends
-// CHECK-NEXT:    7: [B1.4] (Lifetime ends)
+// CHECK-NEXT:    5: [B1.4] (Lifetime ends)
+// CHECK-NEXT:    6: [B1.2].~A[2]() (Implicit destructor)
+// lifetime of a ends when its destructors are run
+// CHECK-NEXT:    7: [B1.2] (Lifetime ends)
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:      [B0 (EXIT)]
@@ -814,9 +814,9 @@ void test_for_inc_conditional() {
 // CHECK-NEXT:    6: a
 // CHECK-NEXT:    7: [B1.6].p
 // CHECK-NEXT:    8: [B1.7] = [B1.5]
-// CHECK-NEXT:    9: [B1.2].~A() (Implicit destructor)
-// CHECK-NEXT:   10: [B1.2] (Lifetime ends)
-// CHECK-NEXT:   11: [B1.3] (Lifetime ends)
+// CHECK-NEXT:    9: [B1.3] (Lifetime ends) 
+// CHECK-NEXT:   10: [B1.2].~A() (Implicit destructor)
+// CHECK-NEXT:   11: [B1.2] (Lifetime ends)
 // CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B0 (EXIT)]

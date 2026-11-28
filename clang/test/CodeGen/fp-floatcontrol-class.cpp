@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -ffp-contract=on -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -ffp-contract=on -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s %}
 // Verify that float_control does not pertain to initializer expressions
 
 float y();

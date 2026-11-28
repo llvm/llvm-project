@@ -4,8 +4,7 @@
 # RUN: | FileCheck -dump-input=fail -match-full-lines --implicit-check-not=Error: %s
 # END.
 
-# CHECK: UNRESOLVED: shtest-glob :: glob-echo.txt ({{[^)]*}})
-# CHECK: TypeError: string argument expected, got 'GlobItem'
+# CHECK: PASS: shtest-glob :: glob-echo.txt ({{[^)]*}})
 
 # CHECK:      FAIL: shtest-glob :: glob-mkdir.txt ({{[^)]*}})
 # CHECK:      # | Error: 'mkdir' command failed, {{.*}}example_file1.input'

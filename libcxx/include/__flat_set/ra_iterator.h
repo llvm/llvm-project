@@ -52,98 +52,90 @@ public:
   using value_type        = iter_value_t<_Iterator>;
   using difference_type   = iter_difference_t<_Iterator>;
 
-  _LIBCPP_HIDE_FROM_ABI __ra_iterator()
+  __ra_iterator()
     requires is_default_constructible_v<_Iterator>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr __ra_iterator(_Iterator __iter) : __iter_(std::move(__iter)) {}
+  explicit constexpr __ra_iterator(_Iterator __iter) : __iter_(std::move(__iter)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Iterator __base() const noexcept(noexcept(_Iterator(__iter_))) { return __iter_; }
+  constexpr _Iterator __base() const noexcept(noexcept(_Iterator(__iter_))) { return __iter_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const { return *__iter_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator->() const
+  constexpr decltype(auto) operator*() const { return *__iter_; }
+  constexpr decltype(auto) operator->() const
     requires requires { __iter_.operator->(); }
   {
     return __iter_.operator->();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __ra_iterator& operator++() {
+  constexpr __ra_iterator& operator++() {
     ++__iter_;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __ra_iterator operator++(int) {
+  constexpr __ra_iterator operator++(int) {
     __ra_iterator __tmp(*this);
     ++*this;
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __ra_iterator& operator--() {
+  constexpr __ra_iterator& operator--() {
     --__iter_;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __ra_iterator operator--(int) {
+  constexpr __ra_iterator operator--(int) {
     __ra_iterator __tmp(*this);
     --*this;
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __ra_iterator& operator+=(difference_type __x) {
+  constexpr __ra_iterator& operator+=(difference_type __x) {
     __iter_ += __x;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __ra_iterator& operator-=(difference_type __x) {
+  constexpr __ra_iterator& operator-=(difference_type __x) {
     __iter_ -= __x;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const { return *(*this + __n); }
+  constexpr decltype(auto) operator[](difference_type __n) const { return *(*this + __n); }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __ra_iterator& __x, const __ra_iterator& __y) {
+  friend constexpr bool operator==(const __ra_iterator& __x, const __ra_iterator& __y) {
     return __x.__iter_ == __y.__iter_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(const __ra_iterator& __x, const __ra_iterator& __y) {
+  friend constexpr bool operator<(const __ra_iterator& __x, const __ra_iterator& __y) {
     return __x.__iter_ < __y.__iter_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(const __ra_iterator& __x, const __ra_iterator& __y) {
-    return __y < __x;
-  }
+  friend constexpr bool operator>(const __ra_iterator& __x, const __ra_iterator& __y) { return __y < __x; }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(const __ra_iterator& __x, const __ra_iterator& __y) {
-    return !(__y < __x);
-  }
+  friend constexpr bool operator<=(const __ra_iterator& __x, const __ra_iterator& __y) { return !(__y < __x); }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(const __ra_iterator& __x, const __ra_iterator& __y) {
-    return !(__x < __y);
-  }
+  friend constexpr bool operator>=(const __ra_iterator& __x, const __ra_iterator& __y) { return !(__x < __y); }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(const __ra_iterator& __x, const __ra_iterator& __y)
+  friend constexpr auto operator<=>(const __ra_iterator& __x, const __ra_iterator& __y)
     requires three_way_comparable<_Iterator>
   {
     return __x.__iter_ <=> __y.__iter_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __ra_iterator operator+(const __ra_iterator& __i, difference_type __n) {
+  friend constexpr __ra_iterator operator+(const __ra_iterator& __i, difference_type __n) {
     auto __tmp = __i;
     __tmp += __n;
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __ra_iterator operator+(difference_type __n, const __ra_iterator& __i) {
-    return __i + __n;
-  }
+  friend constexpr __ra_iterator operator+(difference_type __n, const __ra_iterator& __i) { return __i + __n; }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __ra_iterator operator-(const __ra_iterator& __i, difference_type __n) {
+  friend constexpr __ra_iterator operator-(const __ra_iterator& __i, difference_type __n) {
     auto __tmp = __i;
     __tmp -= __n;
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(const __ra_iterator& __x, const __ra_iterator& __y) {
+  friend constexpr difference_type operator-(const __ra_iterator& __x, const __ra_iterator& __y) {
     return __x.__iter_ - __y.__iter_;
   }
 };

@@ -24,6 +24,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.vpermi2var.d.512(<16 x i32>, <16 x i32>
 
 declare <16 x i32> @llvm.x86.avx512.mask.expand.v16i32(<16 x i32>, <16 x i32>, <16 x i1>)
 declare <16 x i32> @llvm.x86.avx512.mask.compress.v16i32(<16 x i32>, <16 x i32>, <16 x i1>)
+declare <8 x double> @llvm.x86.avx512.max.pd.512(<8 x double>, <8 x double>, i32 immarg)
 
 define <8 x double> @combine_permvar_8f64_identity(<8 x double> %x0, <8 x double> %x1) {
 ; CHECK-LABEL: combine_permvar_8f64_identity:
@@ -1238,13 +1239,152 @@ define <16 x float> @PR218379(ptr %p0, ptr %p1) nounwind {
   ret <16 x float> %shuffle2
 }
 
-; FIXME - ensure we don't introduce POISON into DIV denominators
+; Ensure we don't introduce POISON into DIV denominators
 define <8 x i64> @PR235659(<8 x i64> %a) {
-; CHECK-LABEL: PR235659:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
+; X86-LABEL: PR235659:
+; X86:       # %bb.0:
+; X86-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X86-NEXT:    vpmovsxbq {{.*#+}} zmm1 = [0,6,5,11,6,3,2,15]
+; X86-NEXT:    vpermi2q %zmm2, %zmm0, %zmm1
+; X86-NEXT:    vpmovsxdq {{.*#+}} zmm0 = [1431655765,0,1227133513,2147483647,1431655765,1717986918,18446744071562067968,1717986918]
+; X86-NEXT:    vpmuludq %zmm0, %zmm1, %zmm3
+; X86-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [0,0,0,0,0,0,0,0,0,0,0,0,4294967295,0,0,0]
+; X86-NEXT:    vpmuludq %zmm2, %zmm1, %zmm4
+; X86-NEXT:    vpsllq $32, %zmm4, %zmm4
+; X86-NEXT:    vpaddq %zmm4, %zmm3, %zmm4
+; X86-NEXT:    vpsraq $32, %zmm1, %zmm3
+; X86-NEXT:    vpmovzxdq {{.*#+}} zmm5 = [1431655766,0,613566757,4294967295,1431655766,1717986919,1,1717986919]
+; X86-NEXT:    vpmuludq %zmm5, %zmm3, %zmm6
+; X86-NEXT:    vpmuludq %zmm5, %zmm1, %zmm7
+; X86-NEXT:    vpsrlq $32, %zmm7, %zmm7
+; X86-NEXT:    vpaddq %zmm7, %zmm6, %zmm6
+; X86-NEXT:    vpsrlq $32, %zmm3, %zmm7
+; X86-NEXT:    vpmuludq %zmm5, %zmm7, %zmm5
+; X86-NEXT:    vpsllq $32, %zmm5, %zmm5
+; X86-NEXT:    vpaddq %zmm5, %zmm6, %zmm5
+; X86-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm5, %zmm6
+; X86-NEXT:    vpaddq %zmm6, %zmm4, %zmm4
+; X86-NEXT:    vpsraq $32, %zmm4, %zmm4
+; X86-NEXT:    vpsraq $32, %zmm5, %zmm5
+; X86-NEXT:    vpaddq %zmm4, %zmm5, %zmm4
+; X86-NEXT:    vpmuludq %zmm2, %zmm3, %zmm2
+; X86-NEXT:    vpmuludq %zmm0, %zmm7, %zmm5
+; X86-NEXT:    vpaddq %zmm5, %zmm2, %zmm2
+; X86-NEXT:    vpsllq $32, %zmm2, %zmm2
+; X86-NEXT:    vpmuludq %zmm0, %zmm3, %zmm0
+; X86-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
+; X86-NEXT:    vpsrlq $32, %zmm1, %zmm2
+; X86-NEXT:    vpmovsxbq {{.*#+}} zmm3 = [0,1,0,18446744073709551615,0,0,1,0]
+; X86-NEXT:    vpmuludq %zmm3, %zmm2, %zmm2
+; X86-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm5 # [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,255,255,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+; X86-NEXT:    vpaddq %zmm2, %zmm5, %zmm2
+; X86-NEXT:    vpmuludq %zmm3, %zmm1, %zmm1
+; X86-NEXT:    vpsllq $32, %zmm2, %zmm2
+; X86-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
+; X86-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; X86-NEXT:    vpaddq %zmm4, %zmm0, %zmm0
+; X86-NEXT:    vpsrlq $63, %zmm0, %zmm1
+; X86-NEXT:    vpsraq $1, %zmm0, %zmm0
+; X86-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; X86-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [5,5,5,5]
+; X86-NEXT:    vpermq %zmm0, %zmm1, %zmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR235659:
+; X64:       # %bb.0:
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,6,5,11,6,3,2,15]
+; X64-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
+; X64-NEXT:    vpmovsxdq {{.*#+}} zmm0 = [1431655765,0,1227133513,2147483647,1431655765,1717986918,18446744071562067968,1717986918]
+; X64-NEXT:    vpmuludq %zmm0, %zmm2, %zmm1
+; X64-NEXT:    vpmovsxbd {{.*#+}} zmm3 = [0,0,0,0,0,0,0,0,0,0,0,0,4294967295,0,0,0]
+; X64-NEXT:    vpmuludq %zmm3, %zmm2, %zmm4
+; X64-NEXT:    vpsllq $32, %zmm4, %zmm4
+; X64-NEXT:    vpaddq %zmm4, %zmm1, %zmm1
+; X64-NEXT:    vpsraq $32, %zmm2, %zmm4
+; X64-NEXT:    vpmovzxdq {{.*#+}} zmm5 = [1431655766,0,613566757,4294967295,1431655766,1717986919,1,1717986919]
+; X64-NEXT:    vpmuludq %zmm5, %zmm4, %zmm6
+; X64-NEXT:    vpsrlq $32, %zmm4, %zmm7
+; X64-NEXT:    vpmuludq %zmm5, %zmm7, %zmm8
+; X64-NEXT:    vpsllq $32, %zmm8, %zmm8
+; X64-NEXT:    vpmuludq %zmm5, %zmm2, %zmm5
+; X64-NEXT:    vpsrlq $32, %zmm5, %zmm5
+; X64-NEXT:    vpaddq %zmm5, %zmm6, %zmm5
+; X64-NEXT:    vpaddq %zmm8, %zmm5, %zmm5
+; X64-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm5, %zmm6
+; X64-NEXT:    vpaddq %zmm6, %zmm1, %zmm1
+; X64-NEXT:    vpsraq $32, %zmm1, %zmm1
+; X64-NEXT:    vpsraq $32, %zmm5, %zmm5
+; X64-NEXT:    vpaddq %zmm1, %zmm5, %zmm1
+; X64-NEXT:    vpmuludq %zmm3, %zmm4, %zmm3
+; X64-NEXT:    vpmuludq %zmm0, %zmm7, %zmm5
+; X64-NEXT:    vpaddq %zmm5, %zmm3, %zmm3
+; X64-NEXT:    vpsllq $32, %zmm3, %zmm3
+; X64-NEXT:    vpmuludq %zmm0, %zmm4, %zmm0
+; X64-NEXT:    vpaddq %zmm3, %zmm0, %zmm0
+; X64-NEXT:    vpsrlq $32, %zmm2, %zmm3
+; X64-NEXT:    vpmovsxbq {{.*#+}} zmm4 = [0,1,0,18446744073709551615,0,0,1,0]
+; X64-NEXT:    vpmuludq %zmm4, %zmm3, %zmm3
+; X64-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm2, %zmm5 # [0,0,0,4294967295,0,0,0,0]
+; X64-NEXT:    vpaddq %zmm3, %zmm5, %zmm3
+; X64-NEXT:    vpsllq $32, %zmm3, %zmm3
+; X64-NEXT:    vpmuludq %zmm4, %zmm2, %zmm2
+; X64-NEXT:    vpaddq %zmm3, %zmm2, %zmm2
+; X64-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
+; X64-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; X64-NEXT:    vpsrlq $63, %zmm0, %zmm1
+; X64-NEXT:    vpsraq $1, %zmm0, %zmm0
+; X64-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; X64-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [5,5,5,5]
+; X64-NEXT:    vpermq %zmm0, %zmm1, %zmm0
+; X64-NEXT:    retq
   %shuffle = shufflevector <8 x i64> %a, <8 x i64> zeroinitializer, <8 x i32> <i32 poison, i32 6, i32 5, i32 9, i32 6, i32 3, i32 2, i32 13>
   %div = sdiv <8 x i64> %shuffle, <i64 3, i64 1, i64 7, i64 -9223372036854775808, i64 3, i64 5, i64 16, i64 5>
   %shuffle3 = shufflevector <8 x i64> %div, <8 x i64> zeroinitializer, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 poison, i32 poison, i32 poison, i32 poison>
   ret <8 x i64> %shuffle3
 }
+
+define double @max_splat1_v8f64(<8 x double> %v) nounwind #0 {
+; X86-LABEL: max_splat1_v8f64:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; X86-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmovsd %xmm0, (%esp)
+; X86-NEXT:    fldl (%esp)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; X64-LABEL: max_splat1_v8f64:
+; X64:       # %bb.0:
+; X64-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; X64-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %c = shufflevector <8 x double> %v, <8 x double> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %m = call <8 x double> @llvm.x86.avx512.max.pd.512(<8 x double> %v, <8 x double> %c, i32 4)
+  %r = extractelement <8 x double> %m, i64 0
+  ret double %r
+}
+
+define <16 x i8> @splat_add_trunc_v8i64_v16i8(<8 x i64> %a, <16 x i8> %c) {
+; CHECK-LABEL: splat_add_trunc_v8i64_v16i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovqb %zmm0, %xmm0
+; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpbroadcastb %xmm0, %xmm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %t = trunc <8 x i64> %a to <8 x i8>
+  %w = shufflevector <8 x i8> %t, <8 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s = add <16 x i8> %w, %c
+  %r = shufflevector <16 x i8> %s, <16 x i8> poison, <16 x i32> zeroinitializer
+  ret <16 x i8> %r
+}
+
+attributes #0 = { "target-cpu"="skylake-avx512" }

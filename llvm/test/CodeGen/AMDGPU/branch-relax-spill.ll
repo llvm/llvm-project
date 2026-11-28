@@ -9,8 +9,6 @@ define amdgpu_kernel void @spill(ptr addrspace(1) %arg, i32 %cnd) #0 {
 ; CHECK-NEXT:    s_mov_b64 s[96:97], s[0:1]
 ; CHECK-NEXT:    s_add_u32 s96, s96, s15
 ; CHECK-NEXT:    s_addc_u32 s97, s97, 0
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_eq_u32 s27, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    ;;#ASMEND
@@ -92,6 +90,8 @@ define amdgpu_kernel void @spill(ptr addrspace(1) %arg, i32 %cnd) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s26, 0
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_cmp_eq_u32 s27, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s27, 0
 ; CHECK-NEXT:    ;;#ASMEND
@@ -336,14 +336,14 @@ define amdgpu_kernel void @spill(ptr addrspace(1) %arg, i32 %cnd) #0 {
 ; CHECK-NEXT:    s_setpc_b64 s[0:1]
 ; CHECK-NEXT:  .LBB0_1: ; %bb2
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop_e64
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_branch .LBB0_2
 ; CHECK-NEXT:  .LBB0_4: ; %bb3
@@ -942,7 +942,6 @@ define void @spill_func(ptr addrspace(1) %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v0, s30, 37
 ; CHECK-NEXT:    v_writelane_b32 v0, s31, 38
 ; CHECK-NEXT:    s_mov_b32 s40, s12
-; CHECK-NEXT:    s_cmp_eq_u32 s40, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    ;;#ASMEND
@@ -1036,6 +1035,7 @@ define void @spill_func(ptr addrspace(1) %arg) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s30, 0
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_cmp_eq_u32 s40, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_mov_b32 s31, 0
 ; CHECK-NEXT:    ;;#ASMEND
@@ -1268,14 +1268,14 @@ define void @spill_func(ptr addrspace(1) %arg) #0 {
 ; CHECK-NEXT:    s_setpc_b64 s[0:1]
 ; CHECK-NEXT:  .LBB1_1: ; %bb2
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop_e64
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_branch .LBB1_2
 ; CHECK-NEXT:  .LBB1_4: ; %bb3

@@ -37,6 +37,7 @@ def olMemAlloc : Function {
   let desc = "Creates a memory allocation on the specified device.";
   let details = [
       "The allocation is scoped to `Context` and `Device` must belong to it.",
+      "The returned pointer is aligned to at least `alignof(std::max_align_t)` bytes, regardless of allocation size.",
       "This function can only be used to create device or managed allocations. To create a host allocation use `olMemAllocHost`."
   ];
   let params = [
@@ -62,7 +63,8 @@ def olMemAlloc : Function {
 def olMemAllocHost : Function {
   let desc = "Creates a host memory allocation accessible from the specified device.";
   let details = [
-      "The allocation is scoped to `Context` and `Device` must belong to it."
+      "The allocation is scoped to `Context` and `Device` must belong to it.",
+      "The returned pointer is aligned to at least `alignof(std::max_align_t)` bytes, regardless of allocation size."
   ];
   let params = [
     Param<"ol_context_handle_t", "Context", "handle of the context", PARAM_IN>,
@@ -230,6 +232,46 @@ def olMemcpy : Function {
     let returns = [];
 }
 
+def ol_memcpy3d_layout_t : Struct {
+  let desc = "Placement of a 2D or 3D region within a pitched allocation.";
+  let members = [
+    StructMember<"ol_dimensions_t", "Offset", "offset of the region from the start of the allocation (x in bytes, y in rows, z in slices)">,
+    StructMember<"size_t", "Pitch", "distance in bytes between consecutive rows">,
+    StructMember<"size_t", "SlicePitch", "distance in bytes between consecutive slices">,
+  ];
+}
+
+def olMemcpy3D : Function {
+    let desc = "Enqueue a copy of a 2D or 3D region between two pitched memory layouts.";
+    let details = [
+        "Offsets and pitches are in bytes for the x dimension; y counts rows and z counts slices.",
+        "Size.x is the width of the copied region in bytes, Size.y the number of rows and Size.z the number of slices.",
+        "Pitch is the distance in bytes between consecutive rows; SlicePitch the distance in bytes between consecutive slices.",
+        "For host pointers, use the host device belonging to the OL_PLATFORM_BACKEND_HOST platform, or pass NULL.",
+        "If the two devices cannot exchange data directly, the copy is staged through a temporary host buffer and is synchronous: the queue, if given, is synchronized first.",
+        "If the backend has no native 2D/3D copy, or cannot represent the offsets and pitches, the region is copied one row at a time.",
+        "A copy between two host pointers is performed on the CPU after synchronizing the queue, if given.",
+        "The source and destination regions must not overlap.",
+        "The copy is performed by the destination device for a host-to-device copy, and by the source device otherwise (as for olMemcpy). The queue, if given, must belong to that device.",
+        "SlicePitch must be a multiple of Pitch and large enough to hold the rows copied; it is ignored for a single-slice copy at z offset 0.",
+        "If a queue is not specified, the copy happens synchronously"
+    ];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue.", PARAM_IN_OPTIONAL>,
+        Param<"void*", "DstPtr", "pointer to the base of the destination allocation", PARAM_IN>,
+        Param<"ol_device_handle_t", "DstDevice", "device that DstPtr belongs to, or NULL if DstPtr is host memory", PARAM_IN_OPTIONAL>,
+        Param<"const ol_memcpy3d_layout_t*", "DstLayout", "layout of the destination region", PARAM_IN>,
+        Param<"const void*", "SrcPtr", "pointer to the base of the source allocation", PARAM_IN>,
+        Param<"ol_device_handle_t", "SrcDevice", "device that SrcPtr belongs to, or NULL if SrcPtr is host memory", PARAM_IN_OPTIONAL>,
+        Param<"const ol_memcpy3d_layout_t*", "SrcLayout", "layout of the source region", PARAM_IN>,
+        Param<"ol_dimensions_t", "Size", "extent of the region (x in bytes, y in rows, z in slices)", PARAM_IN>,
+    ];
+    let returns = [
+        Return<"OL_ERRC_INVALID_SIZE", ["a pitch is smaller than the extent it must cover"]>,
+        Return<"OL_ERRC_INVALID_QUEUE", ["`Queue` does not belong to the device performing the copy"]>
+    ];
+}
+
 def olMemFill : Function {
   let desc = "Fill memory with copies of the given pattern";
   let details = [
@@ -260,7 +302,7 @@ def olMemRegister : Function {
         "not allowed. The pinned pointer can be accessed both on host and device and",
         "no guarantees are made about consistency.",
         "The pinned pointer should be used to execute memory transfers",
-        "as it is a stable pointer for memory access."  
+        "as it is a stable pointer for memory access."
   ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,

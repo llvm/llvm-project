@@ -92,7 +92,7 @@
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:      no_stack_call:
-; CHECK-NEXT:        .backend_stack_size: 0x10
+; CHECK-NEXT:        .backend_stack_size: 0x24
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x22
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x10
@@ -137,7 +137,7 @@
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x14
 ; CHECK-NEXT:        .vgpr_count:     0x2
 ; CHECK-NEXT:      simple_stack_call:
-; CHECK-NEXT:        .backend_stack_size: 0x20
+; CHECK-NEXT:        .backend_stack_size: 0x34
 ; CHECK-NEXT:        .lds_size:       0
 ; CHECK-NEXT:        .sgpr_count:     0x22
 ; CHECK-NEXT:        .stack_frame_size_in_bytes: 0x20

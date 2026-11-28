@@ -25,3 +25,21 @@ entry:
 ; CHECK: bl __chkstk
 ; CHECK: sub.w sp, sp, r4
 
+; __chkstk only moves SP down by the size, so align it afterwards.
+define arm_aapcs_vfpcc void @test_aligned_alloca() {
+entry:
+  %array = alloca ptr, align 4
+  %call = call arm_aapcs_vfpcc i32 @num_entries()
+  %mul = mul i32 4, %call
+  %0 = alloca i8, i32 %mul, align 32
+  store ptr %0, ptr %array, align 4
+  ret void
+}
+
+; CHECK-LABEL: test_aligned_alloca:
+; CHECK: bl __chkstk
+; CHECK-NEXT: sub.w sp, sp, r4
+; CHECK-NEXT: mov [[SP:r[0-9]+]], sp
+; CHECK-NEXT: bic [[SP]], [[SP]], #31
+; CHECK-NEXT: mov sp, [[SP]]
+

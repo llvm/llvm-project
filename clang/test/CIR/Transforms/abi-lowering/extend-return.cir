@@ -17,7 +17,7 @@ module attributes {
 } {
 
   cir.func @returns_s8() -> !s8i
-      attributes { test_classify = #extend_signed_return } {
+      requires_call_conv_lowering attributes { test_classify = #extend_signed_return } {
     %0 = cir.const #cir.int<7> : !s8i
     cir.return %0 : !s8i
   }
@@ -26,7 +26,7 @@ module attributes {
   // CHECK:   cir.return %{{.*}} : !s8i
 
   cir.func @caller() -> !s8i
-      attributes { test_classify = #extend_signed_return } {
+      requires_call_conv_lowering attributes { test_classify = #extend_signed_return } {
     %0 = cir.call @returns_s8() : () -> !s8i
     cir.return %0 : !s8i
   }

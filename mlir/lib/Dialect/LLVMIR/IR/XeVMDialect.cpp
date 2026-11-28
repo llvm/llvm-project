@@ -8,11 +8,9 @@
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -551,15 +549,6 @@ XeVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError, int O,
 }
 
 void XeVMDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/LLVMIR/XeVMOps.cpp.inc"
-      >();
-
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/LLVMIR/XeVMOpsAttributes.cpp.inc"
-      >();
   declarePromisedInterface<mlir::gpu::TargetAttrInterface,
                            mlir::xevm::XeVMTargetAttr>();
 }

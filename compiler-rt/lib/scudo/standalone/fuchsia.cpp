@@ -26,7 +26,12 @@ namespace scudo {
 
 uptr getPageSize() { return _zx_system_get_page_size(); }
 
-void NORETURN die() { __builtin_trap(); }
+void NOINLINE NORETURN die() {
+  // Equivalent to Zircon's CRASH_WITH_UNIQUE_BACKTRACE().
+  static const char UniqueBacktraceInstance = 0;
+  __asm__ volatile("" : : "r"(&UniqueBacktraceInstance));
+  __builtin_trap();
+}
 
 // We zero-initialize the Extra parameter of map(), make sure this is consistent
 // with ZX_HANDLE_INVALID.

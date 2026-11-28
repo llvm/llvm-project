@@ -2,6 +2,8 @@
 ; RUN: opt -passes=pre-isel-intrinsic-lowering -mtriple aarch64-unknown-linux -S < %s | FileCheck --check-prefix=NOPAUTH %s
 ; RUN: opt -passes=pre-isel-intrinsic-lowering -mtriple aarch64-unknown-linux -mattr=+pauth -S < %s | FileCheck --check-prefix=PAUTH1 %s
 ; RUN: opt -passes=pre-isel-intrinsic-lowering -mtriple arm64e-apple-darwin -S < %s | FileCheck --check-prefix=PAUTH2 %s
+;
+; REQUIRES: aarch64-registered-target
 
 @ds = external global i8
 

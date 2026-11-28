@@ -21,7 +21,8 @@ namespace polly {
 /// of Polly. The set of optimization passes scheduled here is probably not yet
 /// optimal. TODO: Optimize the set of canonicalization passes.
 llvm::FunctionPassManager
-buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
+buildCanonicalicationPassesForNPM(llvm::LLVMContext &Context,
+                                  llvm::ModulePassManager &MPM,
                                   llvm::OptimizationLevel Level);
 
 } // namespace polly

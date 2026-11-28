@@ -23,13 +23,6 @@ using namespace mlir::index;
 // IndexDialect
 //===----------------------------------------------------------------------===//
 
-void IndexDialect::registerOperations() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Index/IR/IndexOps.cpp.inc"
-      >();
-}
-
 Operation *IndexDialect::materializeConstant(OpBuilder &b, Attribute value,
                                              Type type, Location loc) {
   // Materialize bool constants as `i1`.

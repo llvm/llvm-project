@@ -10,25 +10,21 @@ from lldbsuite.test import lldbutil
 
 
 class BreakpointIgnoreCountTestCase(TestBase):
-    @skipIfWindows  # This test will hang on windows llvm.org/pr21753
     def test_with_run_command(self):
         """Exercise breakpoint ignore count with 'breakpoint set -i <count>'."""
         self.build()
         self.breakpoint_ignore_count()
 
     @add_test_categories(["pyapi"])
-    @skipIfWindows  # This test will hang on windows llvm.org/pr21753
     def test_with_python_api(self):
         """Use Python APIs to set breakpoint ignore count."""
         self.build()
         self.breakpoint_ignore_count_python()
 
-    @skipIfWindows  # This test will hang on windows llvm.org/pr21753
     def test_ignore_vrs_condition_bkpt(self):
         self.build()
         self.ignore_vrs_condition(False)
 
-    @skipIfWindows  # This test will hang on windows llvm.org/pr21753
     def test_ignore_vrs_condition_loc(self):
         self.build()
         self.ignore_vrs_condition(True)

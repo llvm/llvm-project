@@ -24,7 +24,7 @@ This section contains a formal execution model that can be used to model the beh
 barriers on AMDGPU targets.
 
 Barriers only synchronize execution and do not affect the visibility of memory operations between threads.
-Refer to the {ref}`execution barriers memory model<amdgpu-amdhsa-execution-barriers-memory-model>`
+Refer to the {ref}`execution barriers memory model<amdgpu-barrier-memory-model>`
 to determine how to synchronize memory operations through *barrier-executes-before*.
 
 :::{note}

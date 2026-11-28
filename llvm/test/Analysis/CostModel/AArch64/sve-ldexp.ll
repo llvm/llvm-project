@@ -6,14 +6,14 @@ target triple = "aarch64-linux-gnu"
 
 define void @ldexp() {
 ; CHECK-LABEL: 'ldexp'
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %1 = call <vscale x 2 x float> @llvm.ldexp.nxv2f32.nxv2i32(<vscale x 2 x float> poison, <vscale x 2 x i32> poison)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %2 = call <vscale x 4 x float> @llvm.ldexp.nxv4f32.nxv4i32(<vscale x 4 x float> poison, <vscale x 4 x i32> poison)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %3 = call <vscale x 8 x float> @llvm.ldexp.nxv8f32.nxv8i32(<vscale x 8 x float> poison, <vscale x 8 x i32> poison)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %4 = call <vscale x 16 x float> @llvm.ldexp.nxv16f32.nxv16i32(<vscale x 16 x float> poison, <vscale x 16 x i32> poison)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %5 = call <vscale x 2 x double> @llvm.ldexp.nxv2f64.nxv2i32(<vscale x 2 x double> poison, <vscale x 2 x i32> poison)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %6 = call <vscale x 4 x double> @llvm.ldexp.nxv4f64.nxv4i32(<vscale x 4 x double> poison, <vscale x 4 x i32> poison)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %7 = call <vscale x 8 x double> @llvm.ldexp.nxv8f64.nxv8i32(<vscale x 8 x double> poison, <vscale x 8 x i32> poison)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %8 = call <vscale x 16 x double> @llvm.ldexp.nxv16f64.nxv16i32(<vscale x 16 x double> poison, <vscale x 16 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %1 = call <vscale x 2 x float> @llvm.ldexp.nxv2f32.nxv2i32(<vscale x 2 x float> poison, <vscale x 2 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %2 = call <vscale x 4 x float> @llvm.ldexp.nxv4f32.nxv4i32(<vscale x 4 x float> poison, <vscale x 4 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %3 = call <vscale x 8 x float> @llvm.ldexp.nxv8f32.nxv8i32(<vscale x 8 x float> poison, <vscale x 8 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %4 = call <vscale x 16 x float> @llvm.ldexp.nxv16f32.nxv16i32(<vscale x 16 x float> poison, <vscale x 16 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %5 = call <vscale x 2 x double> @llvm.ldexp.nxv2f64.nxv2i32(<vscale x 2 x double> poison, <vscale x 2 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %6 = call <vscale x 4 x double> @llvm.ldexp.nxv4f64.nxv4i32(<vscale x 4 x double> poison, <vscale x 4 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %7 = call <vscale x 8 x double> @llvm.ldexp.nxv8f64.nxv8i32(<vscale x 8 x double> poison, <vscale x 8 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 16 for: %8 = call <vscale x 16 x double> @llvm.ldexp.nxv16f64.nxv16i32(<vscale x 16 x double> poison, <vscale x 16 x i32> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call <vscale x 2 x float> @llvm.ldexp.nxv2f32.nxv2i32(<vscale x 2 x float> poison, <vscale x 2 x i32> poison)
@@ -29,10 +29,10 @@ define void @ldexp() {
 
 define void @ldexp_fp16() {
 ; CHECK-LABEL: 'ldexp_fp16'
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %1 = call <vscale x 2 x half> @llvm.ldexp.nxv2f16.nxv2i32(<vscale x 2 x half> poison, <vscale x 2 x i32> poison)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %2 = call <vscale x 4 x half> @llvm.ldexp.nxv4f16.nxv4i32(<vscale x 4 x half> poison, <vscale x 4 x i32> poison)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %3 = call <vscale x 8 x half> @llvm.ldexp.nxv8f16.nxv8i32(<vscale x 8 x half> poison, <vscale x 8 x i32> poison)
-; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %4 = call <vscale x 16 x half> @llvm.ldexp.nxv16f16.nxv16i32(<vscale x 16 x half> poison, <vscale x 16 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %1 = call <vscale x 2 x half> @llvm.ldexp.nxv2f16.nxv2i32(<vscale x 2 x half> poison, <vscale x 2 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %2 = call <vscale x 4 x half> @llvm.ldexp.nxv4f16.nxv4i32(<vscale x 4 x half> poison, <vscale x 4 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %3 = call <vscale x 8 x half> @llvm.ldexp.nxv8f16.nxv8i32(<vscale x 8 x half> poison, <vscale x 8 x i32> poison)
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %4 = call <vscale x 16 x half> @llvm.ldexp.nxv16f16.nxv16i32(<vscale x 16 x half> poison, <vscale x 16 x i32> poison)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   call <vscale x 2 x half> @llvm.ldexp.nxv2f16.nxv2i32(<vscale x 2 x half> poison, <vscale x 2 x i32> poison)

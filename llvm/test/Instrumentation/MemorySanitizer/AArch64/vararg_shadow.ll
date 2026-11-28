@@ -788,14 +788,14 @@ define linkonce_odr dso_local void @_Z5test2IcEvT_iz(i8 noundef %t, i32 noundef 
 ; CHECK-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-NEXT:    [[TMP45:%.*]] = xor i64 [[TMP44]], 193514046488576
 ; CHECK-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 64
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, ptr [[TMP47]], i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = sub i64 128, [[TMP43]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP46]], ptr align 8 [[TMP48]], i64 [[TMP49]], i1 false)
 ; CHECK-NEXT:    [[TMP50:%.*]] = ptrtoint ptr [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP51:%.*]] = xor i64 [[TMP50]], 193514046488576
 ; CHECK-NEXT:    [[TMP52:%.*]] = inttoptr i64 [[TMP51]] to ptr
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 192
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 192
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP52]], ptr align 16 [[TMP53]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -871,14 +871,14 @@ define linkonce_odr dso_local void @_Z5test2IiEvT_iz(i32 noundef %t, i32 noundef
 ; CHECK-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-NEXT:    [[TMP45:%.*]] = xor i64 [[TMP44]], 193514046488576
 ; CHECK-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 64
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, ptr [[TMP47]], i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = sub i64 128, [[TMP43]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP46]], ptr align 8 [[TMP48]], i64 [[TMP49]], i1 false)
 ; CHECK-NEXT:    [[TMP50:%.*]] = ptrtoint ptr [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP51:%.*]] = xor i64 [[TMP50]], 193514046488576
 ; CHECK-NEXT:    [[TMP52:%.*]] = inttoptr i64 [[TMP51]] to ptr
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 192
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 192
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP52]], ptr align 16 [[TMP53]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -946,14 +946,14 @@ define linkonce_odr dso_local void @_Z5test2IfEvT_iz(float noundef %t, i32 nound
 ; CHECK-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-NEXT:    [[TMP45:%.*]] = xor i64 [[TMP44]], 193514046488576
 ; CHECK-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 64
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, ptr [[TMP47]], i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = sub i64 128, [[TMP43]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP46]], ptr align 8 [[TMP48]], i64 [[TMP49]], i1 false)
 ; CHECK-NEXT:    [[TMP50:%.*]] = ptrtoint ptr [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP51:%.*]] = xor i64 [[TMP50]], 193514046488576
 ; CHECK-NEXT:    [[TMP52:%.*]] = inttoptr i64 [[TMP51]] to ptr
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 192
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 192
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP52]], ptr align 16 [[TMP53]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -1021,14 +1021,14 @@ define linkonce_odr dso_local void @_Z5test2IdEvT_iz(double noundef %t, i32 noun
 ; CHECK-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-NEXT:    [[TMP45:%.*]] = xor i64 [[TMP44]], 193514046488576
 ; CHECK-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 64
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, ptr [[TMP47]], i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = sub i64 128, [[TMP43]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP46]], ptr align 8 [[TMP48]], i64 [[TMP49]], i1 false)
 ; CHECK-NEXT:    [[TMP50:%.*]] = ptrtoint ptr [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP51:%.*]] = xor i64 [[TMP50]], 193514046488576
 ; CHECK-NEXT:    [[TMP52:%.*]] = inttoptr i64 [[TMP51]] to ptr
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 192
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 192
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP52]], ptr align 16 [[TMP53]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -1096,14 +1096,14 @@ define linkonce_odr dso_local void @_Z5test2IeEvT_iz(fp128 noundef %t, i32 nound
 ; CHECK-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-NEXT:    [[TMP45:%.*]] = xor i64 [[TMP44]], 193514046488576
 ; CHECK-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 64
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, ptr [[TMP47]], i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = sub i64 128, [[TMP43]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP46]], ptr align 8 [[TMP48]], i64 [[TMP49]], i1 false)
 ; CHECK-NEXT:    [[TMP50:%.*]] = ptrtoint ptr [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP51:%.*]] = xor i64 [[TMP50]], 193514046488576
 ; CHECK-NEXT:    [[TMP52:%.*]] = inttoptr i64 [[TMP51]] to ptr
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 192
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 192
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP52]], ptr align 16 [[TMP53]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -1171,14 +1171,14 @@ define linkonce_odr dso_local void @_Z5test2I6IntIntEvT_iz(i64 %t.coerce, i32 no
 ; CHECK-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-NEXT:    [[TMP45:%.*]] = xor i64 [[TMP44]], 193514046488576
 ; CHECK-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 64
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, ptr [[TMP47]], i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = sub i64 128, [[TMP43]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP46]], ptr align 8 [[TMP48]], i64 [[TMP49]], i1 false)
 ; CHECK-NEXT:    [[TMP50:%.*]] = ptrtoint ptr [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP51:%.*]] = xor i64 [[TMP50]], 193514046488576
 ; CHECK-NEXT:    [[TMP52:%.*]] = inttoptr i64 [[TMP51]] to ptr
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 192
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 192
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP52]], ptr align 16 [[TMP53]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -1246,14 +1246,14 @@ define linkonce_odr dso_local void @_Z5test2I10Int64Int64EvT_iz([2 x i64] %t.coe
 ; CHECK-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-NEXT:    [[TMP45:%.*]] = xor i64 [[TMP44]], 193514046488576
 ; CHECK-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 64
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, ptr [[TMP47]], i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = sub i64 128, [[TMP43]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP46]], ptr align 8 [[TMP48]], i64 [[TMP49]], i1 false)
 ; CHECK-NEXT:    [[TMP50:%.*]] = ptrtoint ptr [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP51:%.*]] = xor i64 [[TMP50]], 193514046488576
 ; CHECK-NEXT:    [[TMP52:%.*]] = inttoptr i64 [[TMP51]] to ptr
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 192
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 192
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP52]], ptr align 16 [[TMP53]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -1321,14 +1321,14 @@ define linkonce_odr dso_local void @_Z5test2I12DoubleDoubleEvT_iz([2 x double] a
 ; CHECK-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-NEXT:    [[TMP45:%.*]] = xor i64 [[TMP44]], 193514046488576
 ; CHECK-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 64
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, ptr [[TMP47]], i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = sub i64 128, [[TMP43]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP46]], ptr align 8 [[TMP48]], i64 [[TMP49]], i1 false)
 ; CHECK-NEXT:    [[TMP50:%.*]] = ptrtoint ptr [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP51:%.*]] = xor i64 [[TMP50]], 193514046488576
 ; CHECK-NEXT:    [[TMP52:%.*]] = inttoptr i64 [[TMP51]] to ptr
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 192
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 192
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP52]], ptr align 16 [[TMP53]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -1396,14 +1396,14 @@ define linkonce_odr dso_local void @_Z5test2I7Double4EvT_iz([4 x double] alignst
 ; CHECK-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-NEXT:    [[TMP45:%.*]] = xor i64 [[TMP44]], 193514046488576
 ; CHECK-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 64
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, ptr [[TMP47]], i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = sub i64 128, [[TMP43]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP46]], ptr align 8 [[TMP48]], i64 [[TMP49]], i1 false)
 ; CHECK-NEXT:    [[TMP50:%.*]] = ptrtoint ptr [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP51:%.*]] = xor i64 [[TMP50]], 193514046488576
 ; CHECK-NEXT:    [[TMP52:%.*]] = inttoptr i64 [[TMP51]] to ptr
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 192
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 192
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP52]], ptr align 16 [[TMP53]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -1471,14 +1471,14 @@ define linkonce_odr dso_local void @_Z5test2I11DoubleFloatEvT_iz([2 x i64] %t.co
 ; CHECK-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-NEXT:    [[TMP45:%.*]] = xor i64 [[TMP44]], 193514046488576
 ; CHECK-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 64
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, ptr [[TMP47]], i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = sub i64 128, [[TMP43]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP46]], ptr align 8 [[TMP48]], i64 [[TMP49]], i1 false)
 ; CHECK-NEXT:    [[TMP50:%.*]] = ptrtoint ptr [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP51:%.*]] = xor i64 [[TMP50]], 193514046488576
 ; CHECK-NEXT:    [[TMP52:%.*]] = inttoptr i64 [[TMP51]] to ptr
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 192
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 192
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP52]], ptr align 16 [[TMP53]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -1546,14 +1546,14 @@ define linkonce_odr dso_local void @_Z5test2I11LongDouble2EvT_iz([2 x fp128] ali
 ; CHECK-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-NEXT:    [[TMP45:%.*]] = xor i64 [[TMP44]], 193514046488576
 ; CHECK-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 64
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, ptr [[TMP47]], i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = sub i64 128, [[TMP43]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP46]], ptr align 8 [[TMP48]], i64 [[TMP49]], i1 false)
 ; CHECK-NEXT:    [[TMP50:%.*]] = ptrtoint ptr [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP51:%.*]] = xor i64 [[TMP50]], 193514046488576
 ; CHECK-NEXT:    [[TMP52:%.*]] = inttoptr i64 [[TMP51]] to ptr
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 192
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 192
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP52]], ptr align 16 [[TMP53]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -1621,14 +1621,14 @@ define linkonce_odr dso_local void @_Z5test2I11LongDouble4EvT_iz([4 x fp128] ali
 ; CHECK-NEXT:    [[TMP44:%.*]] = ptrtoint ptr [[TMP36]] to i64
 ; CHECK-NEXT:    [[TMP45:%.*]] = xor i64 [[TMP44]], 193514046488576
 ; CHECK-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
-; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 64
+; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i8, ptr [[TMP47]], i64 [[TMP43]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = sub i64 128, [[TMP43]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP46]], ptr align 8 [[TMP48]], i64 [[TMP49]], i1 false)
 ; CHECK-NEXT:    [[TMP50:%.*]] = ptrtoint ptr [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP51:%.*]] = xor i64 [[TMP50]], 193514046488576
 ; CHECK-NEXT:    [[TMP52:%.*]] = inttoptr i64 [[TMP51]] to ptr
-; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 192
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 192
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP52]], ptr align 16 [[TMP53]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])

@@ -64,7 +64,6 @@ INITIALIZE_PASS(VirtRegMapWrapperLegacy, "virtregmap", "Virtual Register Map",
 
 void VirtRegMap::init(MachineFunction &mf) {
   MRI = &mf.getRegInfo();
-  TII = mf.getSubtarget().getInstrInfo();
   TRI = mf.getSubtarget().getRegisterInfo();
   MF = &mf;
 

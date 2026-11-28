@@ -23,7 +23,6 @@
 # CHECK-NEXT: SU(11):   VST64 %14:vr64bit, $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
 ---
 name:            fun0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f0d, $f2d, $f4d, $f6d
@@ -60,7 +59,6 @@ body:             |
 # CHECK-NEXT: SU(4):   VST64 %5:fp64bit, $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
 ---
 name:            fun1
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:fp64bit = LZDR
@@ -77,7 +75,6 @@ body:             |
 # CHECK: Pick Bot Cand SU(12) BOT-HEIGHT [pre-RA]
 ---
 name:            fun2
-tracksRegLiveness: true
 body:             |
   bb.0:
     %19:vr128bit = VREPIF 1
@@ -121,7 +118,6 @@ body:             |
 # CHECK-NEXT: SU(11):  dead %12:gr64bit = AGRK %11:gr64bit, %11:gr64bit,
 ---
 name:            fun3
-tracksRegLiveness: true
 body:             |
   bb.0:
     %1:gr64bit = COPY undef %0:gr64bit
@@ -168,7 +164,6 @@ body:             |
 # CHECK-NEXT: SU(4):   dead %5:gr64bit = MSGFI %5:gr64bit(tied-def 0), 1
 ---
 name:            fun4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $r2d, $r3l

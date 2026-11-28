@@ -11,7 +11,6 @@
 ---
 name:            test
 alignment:       16
-tracksRegLiveness: true
 jumpTable:
   kind:            block-address
   entries:

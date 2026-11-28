@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple nvptx-unknown-unknown -O3 -o - %s -emit-llvm | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple nvptx-unknown-unknown -O3 -o - %s -emit-llvm | FileCheck %s %}
 // RUN: %clang_cc1 -triple nvptx64-unknown-unknown -O3 -o - %s -emit-llvm | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple nvptx64-unknown-unknown -O3 -o - %s -emit-llvm | FileCheck %s %}
 
 void constraints(void) {
   char           c;

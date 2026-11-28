@@ -94,6 +94,8 @@ using TargetRegisterClass = MCRegisterClass;
     SDValue lowerFP16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
 
+    MachineBasicBlock *emitTRUNC_W_M1(MachineInstr &MI, MachineBasicBlock *BB,
+                                      unsigned CvtOpc) const;
     MachineBasicBlock *emitBPOSGE32(MachineInstr &MI,
                                     MachineBasicBlock *BB) const;
     MachineBasicBlock *emitMSACBranchPseudo(MachineInstr &MI,

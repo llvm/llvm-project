@@ -48,8 +48,6 @@ class Trace {
   using RecordVector = std::vector<XRayRecord>;
   RecordVector Records;
 
-  typedef std::vector<XRayRecord>::const_iterator citerator;
-
   LLVM_ABI friend Expected<Trace> loadTrace(const DataExtractor &, bool);
 
 public:

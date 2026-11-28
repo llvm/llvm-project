@@ -3,7 +3,6 @@
 
 ---
 name:            test_f16_poszero_nsz
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -27,7 +26,6 @@ body:             |
 
 ---
 name:            test_f16_poszero_nonsz_nofold
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -51,7 +49,6 @@ body:             |
 
 ---
 name:            test_f16_negzero
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -75,7 +72,6 @@ body:             |
 
 ---
 name:            test_f32_poszero_nsz
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -95,7 +91,6 @@ body:             |
 
 ---
 name:            test_f32_poszero_nonsz_nofold
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -115,7 +110,6 @@ body:             |
 
 ---
 name:            test_f32_negzero
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -135,7 +129,6 @@ body:             |
 
 ---
 name:            test_f64_poszero_nsz
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -155,7 +148,6 @@ body:             |
 
 ---
 name:            test_f64_poszero_nonsz_nofold
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -175,7 +167,6 @@ body:             |
 
 ---
 name:            test_f64_negzero
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -195,7 +186,6 @@ body:             |
 
 ---
 name:            test_v4f16_poszero_nsz
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -216,7 +206,6 @@ body:             |
 
 ---
 name:            test_v4f16_poszero_nonsz_nofold
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -238,7 +227,6 @@ body:             |
 
 ---
 name:            test_v4f16_negzero
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -259,7 +247,6 @@ body:             |
 
 ---
 name:            test_v4f32
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -280,7 +267,6 @@ body:             |
 
 ---
 name:            test_v4f32_negzero
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -301,7 +287,6 @@ body:             |
 
 ---
 name:            test_v4f32_negzero_undef_elt
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -323,7 +308,6 @@ body:             |
 
 ---
 name:            test_v4f32_poszero_undef_elt
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -345,7 +329,6 @@ body:             |
 
 ---
 name:            test_v2f64
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -366,7 +349,6 @@ body:             |
 
 ---
 name:            test_v2f64_negzero
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -387,7 +369,6 @@ body:             |
 
 ---
 name:            test_f32_negzero_const_rhs
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_f32_negzero_const_rhs
@@ -402,7 +383,6 @@ body:             |
 
 ---
 name:            test_f32_poszero_nsz_const_rhs
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_f32_poszero_nsz_const_rhs

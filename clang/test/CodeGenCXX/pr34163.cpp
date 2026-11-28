@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone -triple x86_64-linux-gnu -o - -x c++ %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -debug-info-kind=standalone -triple x86_64-linux-gnu -o - -x c++ %s | FileCheck %s %}
 
 void f(struct X *) {}
 

@@ -8,6 +8,8 @@
 
 #include "CodeGenOptions.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineScheduler.h"
+#include "llvm/CodeGen/WindowScheduler.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -18,10 +20,14 @@
 
 using namespace llvm;
 
-static llvm::opt::RegisterLibraryOptions<llvm::CodeGenOptions> Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::CodeGenOptions)
 
 const CodeGenOptions &llvm::getCodeGenOptions(const LLVMContext &C) {
   return C.getLibraryOptions().get<CodeGenOptions>();
+}
+
+const CodeGenOptions &llvm::getCodeGenOptions(const Function &F) {
+  return getCodeGenOptions(F.getContext());
 }
 
 const CodeGenOptions &llvm::getCodeGenOptions(const Module &M) {

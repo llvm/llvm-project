@@ -127,22 +127,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  remainder
-  SRCS
-    remainder.cpp
-  HDRS
-    ../remainder.h
-)
-
-add_entrypoint_object(
-  remainderf
-  SRCS
-    remainderf.cpp
-  HDRS
-    ../remainderf.h
-)
-
-add_entrypoint_object(
   rint
   SRCS
     rint.cpp

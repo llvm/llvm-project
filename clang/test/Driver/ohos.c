@@ -43,6 +43,15 @@
 // RUN:     | FileCheck %s -check-prefix=CHECK-RTLIB
 // CHECK-RTLIB: error: unsupported runtime library 'libgcc' for platform 'OHOS'
 
+// RUN: %clang %s -### --target=arm-linux-ohos -rtlib=none -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-RTLIB-NONE
+// CHECK-RTLIB-NONE: "{{.*}}ld{{(.exe)?}}"
+// CHECK-RTLIB-NONE-NOT: "libclang_rt.builtins.a"
+// CHECK-RTLIB-NONE-NOT: "-l:libunwind.a"
+// CHECK-RTLIB-NONE-SAME: "-lc"
+// CHECK-RTLIB-NONE-NOT: "libclang_rt.builtins.a"
+// CHECK-RTLIB-NONE-NOT: "-l:libunwind.a"
+
 // RUN: %clang %s -### --target=arm-liteos -static -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STATIC
 // CHECK-STATIC: "-static"

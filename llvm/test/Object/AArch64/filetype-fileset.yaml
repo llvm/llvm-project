@@ -7,6 +7,7 @@
 # CHECK-NEXT: MH_MAGIC_64 ARM64 ALL 0x00 FILESET 0 0 0x00000000
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

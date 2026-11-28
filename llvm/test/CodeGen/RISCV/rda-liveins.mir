@@ -2,7 +2,6 @@
 
 ---
 name:            test0
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: Reaching definitions for for machine function: test0
   ; CHECK-NEXT: %bb.0:
@@ -17,7 +16,6 @@ body:             |
 
 ---
 name:            test1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: Reaching definitions for for machine function: test1
   ; CHECK-NEXT: %bb.0:
@@ -35,7 +33,6 @@ body:             |
 
 ---
 name:            test2
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: Reaching definitions for for machine function: test2
   ; CHECK-NEXT: %bb.0:
@@ -69,7 +66,6 @@ body:             |
 
 ---
 name:            test3
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,

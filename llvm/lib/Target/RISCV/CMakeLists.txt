@@ -20,7 +20,7 @@ llvm_tablegen(RISCVGenExegesis.inc -gen-exegesis)
 llvm_tablegen(RISCVGenSDNodeInfo.inc -gen-sd-node-info)
 
 set(LLVM_TARGET_DEFINITIONS RISCVGISel.td)
-llvm_tablegen(RISCVGenGlobalISel.inc -gen-global-isel)
+llvm_tablegen(RISCVGenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
 llvm_tablegen(RISCVGenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="RISCVO0PreLegalizerCombiner")
 llvm_tablegen(RISCVGenPreLegalizeGICombiner.inc -gen-global-isel-combiner

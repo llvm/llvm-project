@@ -21,10 +21,6 @@
 ---
 name:            broken
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1:
     liveins: $x0

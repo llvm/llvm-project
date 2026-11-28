@@ -41,7 +41,7 @@ func.func @test_resize_nonpositive_scale(%arg0: tensor<1x8x8x8xf32>) -> tensor<?
 // CHECK-LABEL: test_reshape_inferable_dim
 func.func @test_reshape_inferable_dim(%arg0: tensor<4xf32>) -> tensor<?x2xf32> {
   %shape = tosa.const_shape values(dense<[-1, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
-  // expected-error@+1 {{'tosa.reshape' op shape input contains inferable dimension (-1) which does not conform to the TOSA specification}}
+  // expected-error@+1 {{'tosa.reshape' op new shape has invalid tensor dimension size -1}}
   %0 = tosa.reshape %arg0, %shape : (tensor<4xf32>, !tosa.shape<2>) -> tensor<?x2xf32>
   return %0 : tensor<?x2xf32>
 }
@@ -489,4 +489,81 @@ func.func @test_slice_dynamic_input_dimension(%arg0: tensor<?x11x7xi32>) -> tens
   %size = tosa.const_shape values(dense<[2, 4, 3]> : tensor<3xindex>) : () -> !tosa.shape<3>
   %0 = tosa.slice %arg0, %start, %size : (tensor<?x11x7xi32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<2x4x3xi32>
   return %0 : tensor<2x4x3xi32>
+}
+
+// -----
+
+func.func @test_tile_negative_multiple(%arg0: tensor<4x31xf32>) {
+  %multiples = tosa.const_shape values(dense<[2, -2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.tile' op multiples values must be > 0, got [2, -2]}}
+  %0 = tosa.tile %arg0, %multiples : (tensor<4x31xf32>, !tosa.shape<2>) -> tensor<8x?xf32>
+  return
+}
+
+// -----
+
+func.func @test_tile_zero_multiple(%arg0: tensor<4x31xf32>) {
+  %multiples = tosa.const_shape values(dense<[0, 2]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.tile' op multiples values must be > 0, got [0, 2]}}
+  %0 = tosa.tile %arg0, %multiples : (tensor<4x31xf32>, !tosa.shape<2>) -> tensor<?x62xf32>
+  return
+}
+
+// -----
+
+func.func @test_tile_minus_one_multiple(%arg0: tensor<4x31xf32>) {
+  %multiples = tosa.const_shape values(dense<[2, -1]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.tile' op multiples values must be > 0, got [2, -1]}}
+  %0 = tosa.tile %arg0, %multiples : (tensor<4x31xf32>, !tosa.shape<2>) -> tensor<8x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_invalid_tensor_dim
+func.func @test_reshape_invalid_tensor_dim(%arg0: tensor<4x4xf32>) -> tensor<?x4xf32> {
+  %shape = tosa.const_shape values(dense<[-2, -1]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.reshape' op new shape has invalid tensor dimension size -2}}
+  %0 = tosa.reshape %arg0, %shape : (tensor<4x4xf32>, !tosa.shape<2>) -> tensor<?x4xf32>
+  return %0 : tensor<?x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_inconsistent_result_shape
+func.func @test_reshape_inconsistent_result_shape(%arg0: tensor<4x4xf32>) -> tensor<?x3x5xf32> {
+  %shape = tosa.const_shape values(dense<[2, 4, 2]> : tensor<3xindex>) : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.reshape' op new shape is inconsistent with result shape}}
+  %0 = tosa.reshape %arg0, %shape : (tensor<4x4xf32>, !tosa.shape<3>) -> tensor<?x3x5xf32>
+  return %0 : tensor<?x3x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_invalid_dynamic_result_size
+func.func @test_reshape_invalid_dynamic_result_size(%arg0: tensor<8xf32>) -> tensor<?x4xf32> {
+  %shape = tosa.const_shape values(dense<[1, 4]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.reshape' op cannot reshape 8 elements into 4}}
+  %0 = tosa.reshape %arg0, %shape : (tensor<8xf32>, !tosa.shape<2>) -> tensor<?x4xf32>
+  return %0 : tensor<?x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_zero_dim
+func.func @test_reshape_zero_dim(%arg0: tensor<8xf32>) -> tensor<?x4xf32> {
+  %shape = tosa.const_shape values(dense<[0, 4]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.reshape' op new shape has invalid tensor dimension size 0}}
+  %0 = tosa.reshape %arg0, %shape : (tensor<8xf32>, !tosa.shape<2>) -> tensor<?x4xf32>
+  return %0 : tensor<?x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_reshape_dynamic_sentinel
+func.func @test_reshape_dynamic_sentinel(%arg0: tensor<1xf32>) -> tensor<?x1xf32> {
+  %shape = tosa.const_shape values(dense<[-9223372036854775808, 1]> : tensor<2xindex>) : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.reshape' op new shape has invalid tensor dimension size -9223372036854775808}}
+  %0 = tosa.reshape %arg0, %shape : (tensor<1xf32>, !tosa.shape<2>) -> tensor<?x1xf32>
+  return %0 : tensor<?x1xf32>
 }

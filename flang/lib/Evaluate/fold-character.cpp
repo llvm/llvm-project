@@ -14,7 +14,7 @@ namespace Fortran::evaluate {
 static std::optional<ConstantSubscript> GetConstantLength(
     FoldingContext &context, Expr<SomeType> &&expr) {
   expr = Fold(context, std::move(expr));
-  if (auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(expr)}) {
+  if (auto *chExpr{UnwrapExpr<Expr<Type<TypeCategory::Character>>>(expr)}) {
     if (auto len{chExpr->LEN()}) {
       return ToInt64(*len);
     }
@@ -131,7 +131,7 @@ Expr<Type<TypeCategory::Character>> FoldOperation(
     FoldingContext &context, Concat &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   using Result = Type<TypeCategory::Character>;
   if (auto folded{OperandsAreConstants(x)}) {
@@ -144,7 +144,7 @@ Expr<Type<TypeCategory::Character>> FoldOperation(
     FoldingContext &context, SetLength &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   using Result = Type<TypeCategory::Character>;
   if (auto folded{OperandsAreConstants(x)}) {
@@ -164,6 +164,5 @@ Expr<Type<TypeCategory::Character>> FoldOperation(
 #ifdef _MSC_VER // disable bogus warning about missing definitions
 #pragma warning(disable : 4661)
 #endif
-FOR_EACH_CHARACTER_KIND(template class ExpressionBase, )
-template class ExpressionBase<SomeCharacter>;
+template class ExpressionBase<Type<TypeCategory::Character>>;
 } // namespace Fortran::evaluate

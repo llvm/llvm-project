@@ -5,7 +5,6 @@
 name:            const_i64_INT_MIN
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -17,8 +16,8 @@ body:            |
     ; CHECK-NEXT: [[SLLI:%[0-9]+]]:gpr = SLLI [[ADDI]], 63
     ; CHECK-NEXT: $x10 = COPY [[SLLI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_CONSTANT i64 -9223372036854775808
-    $x10 = COPY %0(s64)
+    %0:gprb(i64) = G_CONSTANT i64 -9223372036854775808
+    $x10 = COPY %0(i64)
     PseudoRET implicit $x10
 
 ...
@@ -26,7 +25,6 @@ body:            |
 name:            const_i64_neg_9223372036854775000
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -39,8 +37,8 @@ body:            |
     ; CHECK-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI [[SLLI]], 808
     ; CHECK-NEXT: $x10 = COPY [[ADDI1]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_CONSTANT i64 -9223372036854775000
-    $x10 = COPY %0(s64)
+    %0:gprb(i64) = G_CONSTANT i64 -9223372036854775000
+    $x10 = COPY %0(i64)
     PseudoRET implicit $x10
 
 ...
@@ -48,7 +46,6 @@ body:            |
 name:            const_i64_INT_MAX
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -60,8 +57,8 @@ body:            |
     ; CHECK-NEXT: [[SRLI:%[0-9]+]]:gpr = SRLI [[ADDI]], 1
     ; CHECK-NEXT: $x10 = COPY [[SRLI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_CONSTANT i64 9223372036854775807
-    $x10 = COPY %0(s64)
+    %0:gprb(i64) = G_CONSTANT i64 9223372036854775807
+    $x10 = COPY %0(i64)
     PseudoRET implicit $x10
 
 ...
@@ -69,7 +66,6 @@ body:            |
 name:            const_i64_9223372036854775000
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -81,8 +77,8 @@ body:            |
     ; CHECK-NEXT: [[SRLI:%[0-9]+]]:gpr = SRLI [[ADDI]], 1
     ; CHECK-NEXT: $x10 = COPY [[SRLI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_CONSTANT i64 9223372036854775000
-    $x10 = COPY %0(s64)
+    %0:gprb(i64) = G_CONSTANT i64 9223372036854775000
+    $x10 = COPY %0(i64)
     PseudoRET implicit $x10
 
 ...
@@ -90,7 +86,6 @@ body:            |
 name:            const_i64_256
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -101,8 +96,8 @@ body:            |
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 256
     ; CHECK-NEXT: $x10 = COPY [[ADDI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_CONSTANT i64 256
-    $x10 = COPY %0(s64)
+    %0:gprb(i64) = G_CONSTANT i64 256
+    $x10 = COPY %0(i64)
     PseudoRET implicit $x10
 
 ...
@@ -110,7 +105,6 @@ body:            |
 name:            const_i64_0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -121,8 +115,8 @@ body:            |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_CONSTANT i64 0
-    $x10 = COPY %0(s64)
+    %0:gprb(i64) = G_CONSTANT i64 0
+    $x10 = COPY %0(i64)
     PseudoRET implicit $x10
 
 ...
@@ -130,7 +124,6 @@ body:            |
 name:            const_i32_INT_MIN
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -141,8 +134,8 @@ body:            |
     ; CHECK-NEXT: [[LUI:%[0-9]+]]:gpr = LUI 524288
     ; CHECK-NEXT: $x10 = COPY [[LUI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_CONSTANT i64 -2147483648
-    $x10 = COPY %0(s64)
+    %0:gprb(i64) = G_CONSTANT i64 -2147483648
+    $x10 = COPY %0(i64)
     PseudoRET implicit $x10
 
 ...
@@ -150,7 +143,6 @@ body:            |
 name:            const_i32_neg_2147483000
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -162,8 +154,8 @@ body:            |
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], 648
     ; CHECK-NEXT: $x10 = COPY [[ADDI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_CONSTANT i64 -2147483000
-    $x10 = COPY %0(s64)
+    %0:gprb(i64) = G_CONSTANT i64 -2147483000
+    $x10 = COPY %0(i64)
     PseudoRET implicit $x10
 
 ...
@@ -171,7 +163,6 @@ body:            |
 name:            const_i32_INT_MAX
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -183,8 +174,8 @@ body:            |
     ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LUI]], -1
     ; CHECK-NEXT: $x10 = COPY [[ADDIW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_CONSTANT i64 2147483647
-    $x10 = COPY %0(s64)
+    %0:gprb(i64) = G_CONSTANT i64 2147483647
+    $x10 = COPY %0(i64)
     PseudoRET implicit $x10
 
 ...
@@ -192,7 +183,6 @@ body:            |
 name:            const_i32_2147483000
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:            |
   bb.0:
     liveins: $x10
@@ -204,8 +194,8 @@ body:            |
     ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LUI]], -648
     ; CHECK-NEXT: $x10 = COPY [[ADDIW]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_CONSTANT i64 2147483000
-    $x10 = COPY %0(s64)
+    %0:gprb(i64) = G_CONSTANT i64 2147483000
+    $x10 = COPY %0(i64)
     PseudoRET implicit $x10
 
 ...

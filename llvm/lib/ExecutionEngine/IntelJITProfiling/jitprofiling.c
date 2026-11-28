@@ -176,7 +176,7 @@ iJIT_NotifyEvent(iJIT_JVM_EVENT event_type, void *EventSpecificData)
         if (!threadStack)
         {
             /* initialize the stack. */
-            threadStack = (pThreadStack) calloc (sizeof(ThreadStack), 1);
+            threadStack = (pThreadStack)calloc(1, sizeof(ThreadStack));
             threadStack->TopStack = INIT_TOP_Stack;
             threadStack->CurrentStack = INIT_TOP_Stack;
 #if ITT_PLATFORM==ITT_PLATFORM_WIN

@@ -91,6 +91,7 @@
 #include "../../../test_hash.h"
 #include "deduction_guides_sfinae_checks.h"
 #include "test_allocator.h"
+#include "type_algorithms.h"
 
 using P  = std::pair<int, long>;
 using PC = std::pair<const int, long>;
@@ -329,6 +330,69 @@ int main(int, char**) {
     ASSERT_SAME_TYPE(decltype(umm4), std::unordered_multimap<int, char>);
   }
 #endif
+
+  // [unord.multimap.overview]/5: Use the container's size_type in deduction guides
+  {
+    using Iter      = const P*;
+    using Hash      = std::hash<int>;
+    using AllocList = types::type_list<test_allocator<PC>, other_allocator<PC>>;
+
+    // Test multiple allocators with different size_types (unsigned int and size_t)
+    types::for_each(
+        AllocList(), types::apply_type_identity{[](auto alloc_id) {
+          using Alloc    = typename decltype(alloc_id)::type;
+          using SizeType = typename std::unordered_multimap<int, long, Hash, std::equal_to<int>, Alloc>::size_type;
+
+          // Ensure deduction guides only accept the exact SizeType and SFINAE away for other integer types.
+          types::for_each(
+              types::unsigned_integer_types(), types::apply_type_identity{[](auto id) {
+                using UI = typename decltype(id)::type;
+
+                // (iter, iter, size, alloc)
+                static_assert(SFINAEs_away<std::unordered_multimap, Iter, Iter, OnlyConvertibleTo<UI>, Alloc> ==
+                              !std::is_same_v<UI, SizeType>);
+
+                // (iter, iter, size, hash, alloc)
+                static_assert(SFINAEs_away<std::unordered_multimap, Iter, Iter, OnlyConvertibleTo<UI>, Hash, Alloc> ==
+                              !std::is_same_v<UI, SizeType>);
+
+                // (init_list, size, alloc)
+                static_assert(SFINAEs_away_initializer_list<std::unordered_multimap, P, OnlyConvertibleTo<UI>, Alloc> ==
+                              !std::is_same_v<UI, SizeType>);
+
+                // (init_list, size, hash, alloc)
+                static_assert(
+                    SFINAEs_away_initializer_list<std::unordered_multimap, P, OnlyConvertibleTo<UI>, Hash, Alloc> ==
+                    !std::is_same_v<UI, SizeType>);
+
+#if TEST_STD_VER >= 23
+                using Range = std::array<P, 0>;
+
+                // (from_range, range, size, alloc)
+                static_assert(
+                    SFINAEs_away<std::unordered_multimap, std::from_range_t, Range, OnlyConvertibleTo<UI>, Alloc> ==
+                    !std::is_same_v<UI, SizeType>);
+
+                // (from_range, range, size, hash, alloc)
+                static_assert(
+                    SFINAEs_away<std::unordered_multimap,
+                                 std::from_range_t,
+                                 Range,
+                                 OnlyConvertibleTo<UI>,
+                                 Hash,
+                                 Alloc> == !std::is_same_v<UI, SizeType>);
+#endif
+                // (iter, iter, size, alloc) - runtime check
+                if constexpr (std::is_same_v<UI, SizeType>) {
+                  const P arr[]       = {{1, 1}, {2, 2}, {1, 1}, {INT_MAX, 1}, {3, 1}};
+                  const PC expected[] = {{1, 1}, {1, 1}, {2, 2}, {3, 1}, {INT_MAX, 1}};
+                  std::unordered_multimap m(std::begin(arr), std::end(arr), OnlyConvertibleTo<SizeType>{}, Alloc());
+                  ASSERT_SAME_TYPE(decltype(m), std::unordered_multimap<int, long, Hash, std::equal_to<int>, Alloc>);
+                  assert(std::is_permutation(m.begin(), m.end(), std::begin(expected), std::end(expected)));
+                }
+              }});
+        }});
+  }
 
   UnorderedContainerDeductionGuidesSfinaeAway<std::unordered_multimap, std::unordered_multimap<int, long>>();
 

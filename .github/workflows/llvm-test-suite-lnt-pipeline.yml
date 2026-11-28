@@ -83,6 +83,7 @@ jobs:
     uses: $/.github/workflows/lnt-submit.yml
     with:
       artifacts: lnt-report
-      test-suite: llvm_test_suite
+      project: llvm
+      test-suite: test_suite
     secrets:
       LNT_SUBMISSION_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}

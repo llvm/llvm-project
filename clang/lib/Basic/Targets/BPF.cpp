@@ -36,6 +36,7 @@ void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
   Builder.defineMacro("__bpf__");
   Builder.defineMacro("__BPF__");
+  Builder.defineMacro("__BPF_FEATURE_ENUM_PRESERVE_ACCESS_INDEX");
 
   std::string CPU = getTargetOpts().CPU;
   if (CPU == "probe") {

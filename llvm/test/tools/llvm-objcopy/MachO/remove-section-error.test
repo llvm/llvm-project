@@ -11,6 +11,7 @@
 ## clang -fno-exceptions -fno-unwind-tables -c main.c -o main.o
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

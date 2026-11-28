@@ -1,5 +1,6 @@
 // REQUIRES: nvptx-registered-target
 // RUN: %clang_cc1 -x cuda -triple nvptx64-unknown-unknown -fcuda-is-device -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x cuda -triple nvptx64-unknown-unknown -fcuda-is-device -emit-llvm %s -o - | FileCheck %s %}
 //
 // Ensure NVPTX uses isCLZForZeroUndef() = false (CUDA semantics: CLZ(i32 0) == 32).
 

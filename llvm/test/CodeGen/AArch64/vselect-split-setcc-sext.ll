@@ -9,15 +9,11 @@ define <4 x double> @sel_f64(<4 x i8> %m, <4 x double> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-NEXT:    cmeq v0.4h, v0.4h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ushll v3.2d, v0.2s, #0
-; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-NEXT:    shl v0.2d, v0.2d, #56
-; CHECK-NEXT:    shl v3.2d, v3.2d, #56
-; CHECK-NEXT:    sshr v0.2d, v0.2d, #56
-; CHECK-NEXT:    sshr v3.2d, v3.2d, #56
-; CHECK-NEXT:    and v2.16b, v2.16b, v0.16b
-; CHECK-NEXT:    and v0.16b, v1.16b, v3.16b
+; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-NEXT:    sshll v3.2d, v0.2s, #0
+; CHECK-NEXT:    sshll2 v0.2d, v0.4s, #0
+; CHECK-NEXT:    and v2.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v3.16b, v1.16b
 ; CHECK-NEXT:    mov v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %c = icmp eq <4 x i8> %m, zeroinitializer
@@ -29,18 +25,35 @@ define <4 x i64> @sel_i64(<4 x i8> %m, <4 x i64> %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-NEXT:    cmeq v0.4h, v0.4h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ushll v3.2d, v0.2s, #0
-; CHECK-NEXT:    ushll2 v0.2d, v0.4s, #0
-; CHECK-NEXT:    shl v0.2d, v0.2d, #56
-; CHECK-NEXT:    shl v3.2d, v3.2d, #56
-; CHECK-NEXT:    sshr v0.2d, v0.2d, #56
-; CHECK-NEXT:    sshr v3.2d, v3.2d, #56
-; CHECK-NEXT:    and v2.16b, v2.16b, v0.16b
-; CHECK-NEXT:    and v0.16b, v1.16b, v3.16b
+; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-NEXT:    sshll v3.2d, v0.2s, #0
+; CHECK-NEXT:    sshll2 v0.2d, v0.4s, #0
+; CHECK-NEXT:    and v2.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v3.16b, v1.16b
 ; CHECK-NEXT:    mov v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %c = icmp eq <4 x i8> %m, zeroinitializer
+  %s = select <4 x i1> %c, <4 x i64> %x, <4 x i64> zeroinitializer
+  ret <4 x i64> %s
+}
+
+; The truncated lanes do not fit in the extended bits, so the shifts remain.
+
+define <4 x i64> @sel_i64_trunc(<4 x i16> %m, <4 x i64> %x) {
+; CHECK-LABEL: sel_i64_trunc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ushll2 v3.2d, v0.4s, #0
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    shl v3.2d, v3.2d, #63
+; CHECK-NEXT:    shl v0.2d, v0.2d, #63
+; CHECK-NEXT:    cmlt v3.2d, v3.2d, #0
+; CHECK-NEXT:    cmlt v0.2d, v0.2d, #0
+; CHECK-NEXT:    and v2.16b, v3.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mov v1.16b, v2.16b
+; CHECK-NEXT:    ret
+  %c = trunc <4 x i16> %m to <4 x i1>
   %s = select <4 x i1> %c, <4 x i64> %x, <4 x i64> zeroinitializer
   ret <4 x i64> %s
 }

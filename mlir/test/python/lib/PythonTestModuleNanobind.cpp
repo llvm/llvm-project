@@ -143,6 +143,8 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
       []() { mlirPythonTestRegisterRendezvousPass(); },
       "Registers the test-python-rendezvous pass used by concurrency tests.");
 
+  m.def("emit_linked_remarks", &mlirPythonTestEmitLinkedRemarks);
+
   m.def(
       "test_diagnostics_with_errors_and_notes",
       [](DefaultingPyMlirContext ctx) {

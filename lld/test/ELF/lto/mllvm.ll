@@ -8,7 +8,7 @@
 ; RUN: ld.lld %t.o -o %t -plugin-opt=-debug-pass=Structure -plugin-opt=-print-after-all 2>&1 | FileCheck %s
 
 ;; -mllvm reaches per-context library options.
-; RUN: ld.lld %t.o -o %t2 --lto-emit-asm -mllvm -x86-asm-syntax=intel
+; RUN: ld.lld %t.o -o %t2 --lto-emit-asm -mllvm -x86-asm-syntax=intel -mllvm -asm-show-inst
 ; RUN: FileCheck %s --check-prefix=INTEL < %t2.lto.s
 
 ; CHECK: Pass Arguments:
@@ -17,6 +17,7 @@
 ; DISASM: nopw
 
 ; INTEL: .intel_syntax
+; INTEL: <MCInst
 
 target triple = "x86_64-unknown-linux-gnu"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

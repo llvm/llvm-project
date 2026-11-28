@@ -23,19 +23,21 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Stmt.h"
+#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include <cstddef>
+#include <iterator>
 #include <optional>
 #include <string>
-#include <tuple>
 
 namespace clang {
 namespace clangd {
@@ -216,12 +218,166 @@ deleteTokensWithKind(const syntax::TokenBuffer &TokBuf, tok::TokenKind Kind,
   return DelKeywordCleanups;
 }
 
+// Helper function to skip over a matching pair of tokens (e.g., parentheses
+// or braces). Returns an iterator to the matching closing token, or the end
+// iterator if no matching pair is found.
+template <typename Iterator>
+Iterator skipTokenPair(Iterator Begin, Iterator End, tok::TokenKind StartKind,
+                       tok::TokenKind EndKind) {
+  int Count = 0;
+  for (auto It = Begin; It != End; ++It) {
+    if (It->kind() == StartKind) {
+      ++Count;
+    } else if (It->kind() == EndKind) {
+      if (--Count == 0)
+        return It;
+      if (Count < 0)
+        // We encountered a closing token without a matching opening token.
+        return End;
+    }
+  }
+  return End;
+}
+
+// Delete the attributes that should not appear in the generated function
+// definition. Some attributes must be repeated on the definition. If the
+// function has one of those, we leave all attributes alone.
+llvm::Error dropAttributes(const syntax::TokenBuffer &TokBuf,
+                           const FunctionDecl *FD,
+                           tooling::Replacements &DeclarationCleanups) {
+  llvm::Error Errors = llvm::Error::success();
+  if (!FD->hasAttrs())
+    return Errors;
+
+  // Some attributes are part of a function's identity and must be repeated on
+  // the definition so that it still matches the declaration: attributes that
+  // make a function multiversioned (e.g. target, cpu_specific) and attributes
+  // like enable_if and overloadable. Leave all attributes alone in this case.
+  if (FD->isMultiVersion() || FD->hasAttr<EnableIfAttr>() ||
+      FD->hasAttr<OverloadableAttr>()) {
+    return Errors;
+  }
+
+  for (const Attr *A : FD->attrs()) {
+    // Non-inheritable attributes are not inherited by the definition. As one
+    // may share an attribute list with an inheritable attribute, which we would
+    // delete along with the list, we better don't drop anything in this case.
+    if (A->isImplicit() || A->isInherited())
+      continue;
+    if (!isa<InheritableAttr>(A))
+      return Errors;
+  }
+
+  const SourceManager &SM = TokBuf.sourceManager();
+
+  // Do nothing if the function has no body.
+  const Stmt *Body = FD->getBody();
+  if (!Body)
+    return Errors;
+
+  auto FDTokens = TokBuf.spelledForExpanded(
+      TokBuf.expandedTokens({FD->getBeginLoc(), Body->getBeginLoc()}));
+
+  // Drop attributes that the out-of-line definition inherits from the
+  // declaration. Ones we can't safely locate are left alone.
+  // FIXME: Attributes coming from macros and attributes unknown to clang (which
+  // are not part of the AST) are not dropped.
+  for (const Attr *A : FD->attrs()) {
+    // Get the delimiter for the attribute type
+    llvm::SmallVector<tok::TokenKind> LeftDelimiter, RightDelimiter;
+    switch (A->getSyntax()) {
+    case AttributeCommonInfo::AS_GNU:
+      // Delimited by __attribute__(( and ))
+      LeftDelimiter.assign({tok::kw___attribute, tok::l_paren, tok::l_paren});
+      RightDelimiter.assign({tok::r_paren, tok::r_paren});
+      break;
+    case AttributeCommonInfo::AS_CXX11:
+    case AttributeCommonInfo::AS_C23:
+      // Delimited by [[ and ]]
+      LeftDelimiter.assign({tok::l_square, tok::l_square});
+      RightDelimiter.assign({tok::r_square, tok::r_square});
+      break;
+    case AttributeCommonInfo::AS_Declspec:
+      // Delimited by __declspec( and )
+      LeftDelimiter.assign({tok::kw___declspec, tok::l_paren});
+      RightDelimiter.assign({tok::r_paren});
+      break;
+    default:
+      // Keyword (e.g. __forceinline) and Microsoft ([...]) attributes are not
+      // handled, they are still copied to the definition.
+      break;
+    }
+
+    if (LeftDelimiter.empty() || RightDelimiter.empty())
+      continue;
+
+    auto AttrTokens =
+        TokBuf.spelledForExpanded(TokBuf.expandedTokens(A->getRange()));
+
+    if (!FDTokens.has_value() || !AttrTokens.has_value() ||
+        !SM.isPointWithin(A->getLocation(), FDTokens->front().location(),
+                          FDTokens->back().location()))
+      continue;
+
+    CharSourceRange DelRange;
+
+    // Find position of the right delimiter
+    for (auto It = AttrTokens->end(), E = FDTokens->end(); It != E; ++It) {
+      // There might be a further attribute with argument delimited by parens
+      // in the attribute list. The closing paren might be recognized as part
+      // of the attribute delimiter. So skip tokens until the closing paren.
+      if (It->kind() == tok::l_paren) {
+        It = skipTokenPair(It, E, tok::l_paren, tok::r_paren);
+        if (It != E)
+          continue;
+      }
+
+      if (std::distance(It, E) < static_cast<long>(RightDelimiter.size()))
+        // No chance to find the right delimiter. Give up.
+        break;
+
+      llvm::ArrayRef<syntax::Token> Candidate(It, RightDelimiter.size());
+
+      if (llvm::equal(Candidate, RightDelimiter,
+                      [](const auto &Tok, const auto &TokKindDel) {
+                        return Tok.kind() == TokKindDel;
+                      })) {
+        DelRange.setEnd(Candidate.back().endLocation());
+        break;
+      }
+    }
+
+    // Find position of the left delimiter
+    for (auto It = AttrTokens->begin(), E = FDTokens->begin(); It != E; --It) {
+      if (std::distance(E, It) < static_cast<long>(LeftDelimiter.size()))
+        break;
+
+      llvm::ArrayRef<syntax::Token> Candidate(
+          std::prev(It, LeftDelimiter.size()), LeftDelimiter.size());
+
+      if (llvm::equal(Candidate, LeftDelimiter,
+                      [](const auto &Tok, const auto &TokKindDel) {
+                        return Tok.kind() == TokKindDel;
+                      })) {
+        DelRange.setBegin(Candidate.front().location());
+        break;
+      }
+    }
+
+    if (DelRange.isValid()) {
+      if (auto Err =
+              DeclarationCleanups.add(tooling::Replacement(SM, DelRange, "")))
+        Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
+    }
+  }
+  return Errors;
+}
+
 // Creates a modified version of function definition that can be inserted at a
 // different location, qualifies return value and function name to achieve that.
 // Contains function signature, except defaulted parameter arguments, body and
 // template parameters if applicable. No need to qualify parameters, as they are
 // looked up in the context containing the function/method.
-// FIXME: Drop attributes in function signature.
 llvm::Expected<std::string>
 getFunctionSourceCode(const FunctionDecl *FD, const DeclContext *TargetContext,
                       const syntax::TokenBuffer &TokBuf,
@@ -365,6 +521,11 @@ getFunctionSourceCode(const FunctionDecl *FD, const DeclContext *TargetContext,
     if (CD->isExplicit())
       DelKeyword(tok::kw_explicit, {FD->getBeginLoc(), FD->getLocation()});
   }
+
+  // Must come after the keyword deletions above, otherwise keywords such as
+  // `static` are no longer removed (their offsets are shifted by merge()).
+  if (auto Err = dropAttributes(TokBuf, FD, DeclarationCleanups))
+    Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
 
   if (Errors)
     return std::move(Errors);
@@ -735,27 +896,6 @@ public:
         return InsertionAnchor{*Anchor, RelativeInsertPos::Before};
     }
     return {};
-  }
-
-  // Helper function to skip over a matching pair of tokens (e.g., parentheses
-  // or braces). Returns an iterator to the matching closing token, or the end
-  // iterator if no matching pair is found.
-  template <typename Iterator>
-  Iterator skipTokenPair(Iterator Begin, Iterator End, tok::TokenKind StartKind,
-                         tok::TokenKind EndKind) {
-    int Count = 0;
-    for (auto It = Begin; It != End; ++It) {
-      if (It->kind() == StartKind) {
-        ++Count;
-      } else if (It->kind() == EndKind) {
-        if (--Count == 0)
-          return It;
-        if (Count < 0)
-          // We encountered a closing token without a matching opening token.
-          return End;
-      }
-    }
-    return End;
   }
 
   // We don't know the actual start or end of the definition, only the position

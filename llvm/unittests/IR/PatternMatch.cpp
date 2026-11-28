@@ -2751,24 +2751,26 @@ TEST_F(PatternMatchTest, ConstExpr) {
 }
 
 TEST_F(PatternMatchTest, PtrAdd) {
+  DataLayout DL;
   Type *PtrTy = PointerType::getUnqual(Ctx);
   Type *IdxTy = Type::getInt64Ty(Ctx);
   Constant *Null = Constant::getNullValue(PtrTy);
   Constant *Offset = ConstantInt::get(IdxTy, 42);
   Value *PtrAdd = IRB.CreatePtrAdd(Null, Offset);
+  IRB.disableGEPCanonicalization();
   Value *OtherGEP = IRB.CreateGEP(IdxTy, Null, Offset);
   Value *PtrAddConst = ConstantExpr::getPtrAdd(Null, Offset);
 
   Value *A, *B;
-  EXPECT_TRUE(match(PtrAdd, m_PtrAdd(m_Value(A), m_Value(B))));
+  EXPECT_TRUE(match(PtrAdd, m_PtrAdd(DL, m_Value(A), m_Value(B))));
   EXPECT_EQ(A, Null);
   EXPECT_EQ(B, Offset);
 
-  EXPECT_TRUE(match(PtrAddConst, m_PtrAdd(m_Value(A), m_Value(B))));
+  EXPECT_TRUE(match(PtrAddConst, m_PtrAdd(DL, m_Value(A), m_Value(B))));
   EXPECT_EQ(A, Null);
   EXPECT_EQ(B, Offset);
 
-  EXPECT_FALSE(match(OtherGEP, m_PtrAdd(m_Value(A), m_Value(B))));
+  EXPECT_FALSE(match(OtherGEP, m_PtrAdd(DL, m_Value(A), m_Value(B))));
 }
 
 TEST_F(PatternMatchTest, ShiftOrSelf) {

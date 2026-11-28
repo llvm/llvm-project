@@ -177,21 +177,12 @@ void X86MachObjectWriter::RecordX86_64Relocation(
       return;
     }
 
-    // A subtraction expression where either symbol is undefined is a
-    // non-relocatable expression.
-    if (A->isUndefined() || B->isUndefined()) {
-      StringRef Name = A->isUndefined() ? A->getName() : B->getName();
-      reportError(
-          Fixup.getLoc(),
-          "unsupported relocation with subtraction expression, symbol '" +
-              Name + "' can not be undefined in a subtraction expression");
-      return;
-    }
-
-    Value += Writer->getSymbolAddress(*A) -
-             (!A_Base ? 0 : Writer->getSymbolAddress(*A_Base));
-    Value -= Writer->getSymbolAddress(*B) -
-             (!B_Base ? 0 : Writer->getSymbolAddress(*B_Base));
+    if (!A->isUndefined())
+      Value += Writer->getSymbolAddress(*A) -
+               (!A_Base ? 0 : Writer->getSymbolAddress(*A_Base));
+    if (!B->isUndefined())
+      Value -= Writer->getSymbolAddress(*B) -
+               (!B_Base ? 0 : Writer->getSymbolAddress(*B_Base));
 
     if (!A_Base)
       Index = A->getFragment()->getParent()->getOrdinal() + 1;

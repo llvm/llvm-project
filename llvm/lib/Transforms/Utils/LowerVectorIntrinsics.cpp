@@ -10,12 +10,13 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/VectorTypeUtils.h"
 
 #define DEBUG_TYPE "lower-vector-intrinsics"
 
 using namespace llvm;
 
-bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
+bool llvm::lowerVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
   Type *RetTy = CI->getType();
   auto *StructRetTy = dyn_cast<StructType>(RetTy);
   unsigned NumResults = StructRetTy ? StructRetTy->getNumElements() : 1;
@@ -49,12 +50,21 @@ bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
     ResultPhis[I]->addIncoming(PoisonValue::get(VecTy), PreLoopBB);
   }
 
-  Value *Elem =
-      LoopBuilder.CreateExtractElement(CI->getArgOperand(0), LoopIndex);
+  unsigned NumArgs = CI->arg_size();
+  SmallVector<Value *, 4> Args(NumArgs);
+  SmallVector<Type *, 4> ArgTys(NumArgs);
+  for (unsigned I = 0; I != NumArgs; ++I) {
+    Value *Arg = CI->getArgOperand(I);
+    if (Arg->getType()->isVectorTy())
+      Arg = LoopBuilder.CreateExtractElement(Arg, LoopIndex);
+    Args[I] = Arg;
+    ArgTys[I] = Arg->getType();
+  }
+  Type *ScalarRetTy = toScalarizedTy(RetTy);
   Function *Fn = Intrinsic::getOrInsertDeclaration(&M, CI->getIntrinsicID(),
-                                                   VecTy->getElementType());
+                                                   ScalarRetTy, ArgTys);
 
-  CallInst *ScalarCall = LoopBuilder.CreateCall(Fn, Elem);
+  CallInst *ScalarCall = LoopBuilder.CreateCall(Fn, Args);
   if (isa<FPMathOperator>(CI))
     ScalarCall->copyFastMathFlags(CI);
 

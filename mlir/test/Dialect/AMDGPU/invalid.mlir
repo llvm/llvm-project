@@ -1178,3 +1178,23 @@ func.func @dot_mixed_sign_i16(%a: vector<2xi16>, %b: vector<2xi16>, %c: i32) -> 
   %r = amdgpu.dot %a * %b + %c unsignedA : vector<2xi16>, vector<2xi16>, i32
   func.return %r : i32
 }
+
+// -----
+
+// TDMGatherBaseType: a non int/float element type must be rejected with a
+// diagnostic instead of tripping an assertion in getIntOrFloatBitWidth.
+
+// expected-error@+1 {{'amdgpu.tdm_gather_base' element type must be an integer or float type, but got}}
+func.func @tdm_gather_base_non_int_float_element_type() -> !amdgpu.tdm_gather_base<vector<1xi2>, i16> {
+  return
+}
+
+// -----
+
+func.func @make_dma_base_non_int_float_element_type(%idx: index,
+    %global: memref<8x8xvector<2xi32>, #gpu.address_space<global>>,
+    %lds: memref<8x8xvector<2xi32>, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.make_dma_base' op element type must be an integer or float type, but got}}
+  amdgpu.make_dma_base %global[%idx, %idx], %lds[%idx, %idx] : memref<8x8xvector<2xi32>, #gpu.address_space<global>>, memref<8x8xvector<2xi32>, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<vector<2xi32>>
+  return
+}

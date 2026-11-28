@@ -60,9 +60,9 @@
 ; REPLAY-FUNCTION-NEVER-NOT: '_Z3sumii' inlined into 'main'
 
 ; REPLAY-ERROR: LLVM ERROR: could not open remarks file:
-; REPLAY-ERROR-SCOPE: for the --cgscc-inline-replay-scope option: Cannot find option named 'function'!
-; REPLAY-ERROR-FALLBACK: for the --cgscc-inline-replay-fallback option: Cannot find option named 'original'!
-; REPLAY-ERROR-FORMAT: for the --cgscc-inline-replay-format option: Cannot find option named 'line'!
+; REPLAY-ERROR-SCOPE: invalid value 'function' in '-cgscc-inline-replay-scope=function'
+; REPLAY-ERROR-FALLBACK: invalid value 'original' in '-cgscc-inline-replay-fallback=original'
+; REPLAY-ERROR-FORMAT: invalid value 'line' in '-cgscc-inline-replay-format=line'
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 

@@ -1,4 +1,3 @@
-import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -19,23 +18,17 @@ class SharedCacheHostMemoryTestCase(TestBase):
             lambda: self.runCmd("settings clear symbols.shared-cache-binary-loading")
         )
 
-        target = self.createTestTarget()
-
         # Breaking on puts forces lldb to load and symbolicate the shared cache
         # binary it lives in. The breakpoint resolves once that library is
         # loaded as the process launches.
-        breakpoint = target.BreakpointCreateByName("puts")
-
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+        _, _, thread, breakpoint = lldbutil.run_to_name_breakpoint(
+            self, "puts", has_locations_before_run=False
+        )
         self.assertGreater(
             breakpoint.GetNumLocations(),
             0,
             "puts breakpoint should resolve in the shared cache binary",
         )
-
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertIsNotNone(thread, "Expected to stop at the puts breakpoint")
 
         # We should be able to walk the stack out of the shared cache binary
         # and back to main without crashing.

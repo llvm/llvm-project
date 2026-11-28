@@ -45,7 +45,6 @@
 ...
 ---
 name: simplified_eflags
-tracksRegLiveness: true
 noVRegs: false
 body: |
   ; CHECK-LABEL: name: simplified_eflags
@@ -62,7 +61,6 @@ body: |
 ...
 ---
 name: double_cmov
-tracksRegLiveness: true
 noVRegs: false
 body: |
   ; CHECK-LABEL: name: double_cmov
@@ -81,7 +79,6 @@ body: |
 ...
 ---
 name: constant_to_register
-tracksRegLiveness: true
 noVRegs: false
 body: |
   ; CHECK-LABEL: name: constant_to_register
@@ -97,7 +94,6 @@ body: |
 ...
 ---
 name: cttz_add
-tracksRegLiveness: true
 noVRegs: false
 body: |
   ; CHECK-LABEL: name: cttz_add

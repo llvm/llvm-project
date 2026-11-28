@@ -17,8 +17,6 @@ class TestFrameVarDILNullptrVar(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.c")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         # Check that if there is a defined variable called "nullptr",
         # it gets properly resolved into its value instead of a null pointer.
         self.expect_var_path("nullptr", value="1", type="int")

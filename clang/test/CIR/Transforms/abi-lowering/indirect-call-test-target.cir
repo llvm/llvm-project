@@ -12,7 +12,7 @@ module attributes {
 
   // Scalar indirect call under the test target: the callee's pointee FuncType
   // classifies to Direct passthrough, so signature and call site are unchanged.
-  cir.func @call_scalar(%fp: !cir.ptr<!cir.func<(!s32i) -> !s32i>>, %x: !s32i) -> !s32i {
+  cir.func @call_scalar(%fp: !cir.ptr<!cir.func<(!s32i) -> !s32i>>, %x: !s32i) -> !s32i requires_call_conv_lowering {
     %0 = cir.call %fp(%x) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
     cir.return %0 : !s32i
   }
@@ -24,7 +24,7 @@ module attributes {
   // Indirect call whose struct argument classifies to Indirect (byval) under
   // the test target: the argument spills to a stack slot and the callee
   // pointer is bitcast to the coerced signature before the call.
-  cir.func @call_byval(%fp: !cir.ptr<!cir.func<(!rec_Big) -> !s64i>>, %b: !rec_Big) -> !s64i {
+  cir.func @call_byval(%fp: !cir.ptr<!cir.func<(!rec_Big) -> !s64i>>, %b: !rec_Big) -> !s64i requires_call_conv_lowering {
     %0 = cir.call %fp(%b) : (!cir.ptr<!cir.func<(!rec_Big) -> !s64i>>, !rec_Big) -> !s64i
     cir.return %0 : !s64i
   }

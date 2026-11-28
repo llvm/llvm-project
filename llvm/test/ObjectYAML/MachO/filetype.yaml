@@ -1,0 +1,88 @@
+## Case 1: Each name is kept.
+# RUN: yaml2obj --docnum=1 -DFILETYPE=MH_OBJECT %s | obj2yaml \
+# RUN:   | FileCheck %s --check-prefix=OBJECT
+# RUN: yaml2obj --docnum=1 -DFILETYPE=MH_EXECUTE %s | obj2yaml \
+# RUN:   | FileCheck %s --check-prefix=EXECUTE
+# RUN: yaml2obj --docnum=1 -DFILETYPE=MH_FVMLIB %s | obj2yaml \
+# RUN:   | FileCheck %s --check-prefix=FVMLIB
+# RUN: yaml2obj --docnum=1 -DFILETYPE=MH_CORE %s | obj2yaml \
+# RUN:   | FileCheck %s --check-prefix=CORE
+# RUN: yaml2obj --docnum=1 -DFILETYPE=MH_PRELOAD %s | obj2yaml \
+# RUN:   | FileCheck %s --check-prefix=PRELOAD
+# RUN: yaml2obj --docnum=1 -DFILETYPE=MH_DYLINKER %s | obj2yaml \
+# RUN:   | FileCheck %s --check-prefix=DYLINKER
+# RUN: yaml2obj --docnum=1 -DFILETYPE=MH_BUNDLE %s | obj2yaml \
+# RUN:   | FileCheck %s --check-prefix=BUNDLE
+# RUN: yaml2obj --docnum=1 -DFILETYPE=MH_DSYM %s | obj2yaml \
+# RUN:   | FileCheck %s --check-prefix=DSYM
+# RUN: yaml2obj --docnum=1 -DFILETYPE=MH_KEXT_BUNDLE %s | obj2yaml \
+# RUN:   | FileCheck %s --check-prefix=KEXT_BUNDLE
+# RUN: yaml2obj --docnum=1 -DFILETYPE=MH_FILESET %s | obj2yaml \
+# RUN:   | FileCheck %s --check-prefix=FILESET
+
+## Case 2: Each name is kept for dynamic libraries, which need LC_ID_DYLIB.
+# RUN: yaml2obj --docnum=2 -DFILETYPE=MH_DYLIB %s | obj2yaml \
+# RUN:   | FileCheck %s --check-prefix=DYLIB
+# RUN: yaml2obj --docnum=2 -DFILETYPE=MH_DYLIB_STUB %s | obj2yaml \
+# RUN:   | FileCheck %s --check-prefix=DYLIB_STUB
+
+## Case 3: A number for a known value is printed as its name.
+# RUN: yaml2obj --docnum=1 -DFILETYPE=0x00000001 %s | obj2yaml \
+# RUN:   | FileCheck %s --check-prefix=OBJECT
+
+## Case 4: A number for an unknown value is accepted.
+# RUN: yaml2obj --docnum=1 -DFILETYPE=0x1000 %s -o %t.unknown
+
+## Case 5: An unknown name is an error.
+# RUN: not yaml2obj --docnum=1 -DFILETYPE=MH_UNKNOWN %s 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=ERR
+
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        [[FILETYPE]]
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x00000000
+  reserved:        0x00000000
+
+# OBJECT:      filetype: MH_OBJECT{{$}}
+# EXECUTE:     filetype: MH_EXECUTE{{$}}
+# FVMLIB:      filetype: MH_FVMLIB{{$}}
+# CORE:        filetype: MH_CORE{{$}}
+# PRELOAD:     filetype: MH_PRELOAD{{$}}
+# DYLINKER:    filetype: MH_DYLINKER{{$}}
+# BUNDLE:      filetype: MH_BUNDLE{{$}}
+# DSYM:        filetype: MH_DSYM{{$}}
+# KEXT_BUNDLE: filetype: MH_KEXT_BUNDLE{{$}}
+# FILESET:     filetype: MH_FILESET{{$}}
+
+# ERR: error: invalid hex32 number
+
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        [[FILETYPE]]
+  ncmds:           1
+  sizeofcmds:      48
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         48
+    dylib:
+      name:            24
+      timestamp:       1
+      current_version: 0
+      compatibility_version: 0
+    Content:         '@rpath/libfoo.dylib'
+    ZeroPadBytes:    5
+
+# DYLIB:       filetype: MH_DYLIB{{$}}
+# DYLIB_STUB:  filetype: MH_DYLIB_STUB{{$}}

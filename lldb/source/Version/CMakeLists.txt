@@ -40,7 +40,4 @@ add_lldb_library(lldbVersion NO_PLUGIN_DEPENDENCIES
   ADDITIONAL_HEADERS
     ${version_inc}
     ${vcs_version_inc}
-
-  CLANG_LIBS
-    clangBasic
 )

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple powerpc64le-linux-gnu | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm %s -o - -triple powerpc64le-linux-gnu | FileCheck %s %}
 // Sadly since this requires a register constraint to trigger we have to set
 // a target here.
 void a(void) {

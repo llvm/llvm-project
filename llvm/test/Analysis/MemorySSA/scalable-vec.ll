@@ -1,4 +1,4 @@
-; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>' -verify-memoryssa -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa-walker>' -verify-memoryssa -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: define <vscale x 4 x i32> @f(
 ; CHECK: 1 = MemoryDef(liveOnEntry)

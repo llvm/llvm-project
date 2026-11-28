@@ -333,6 +333,12 @@
 #  define SANITIZER_ALPHA 0
 #endif
 
+#if defined(__hppa__)
+#  define SANITIZER_HPPA 1
+#else
+#  define SANITIZER_HPPA 0
+#endif
+
 #if defined(__AMDGPU__)
 #  define SANITIZER_AMDGPU 1
 #else

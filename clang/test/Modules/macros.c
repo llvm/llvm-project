@@ -1,5 +1,5 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c -verify -fmodules-cache-path=%t -I %S/Inputs %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c -verify -fmodules-cache-path=%t -I %S/Inputs %s 2>&1 | FileCheck %s --check-prefix=DUMP
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c -verify -fmodules-cache-path=%t -I %S/Inputs %s -DALT
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -x objective-c -verify -fmodules-cache-path=%t -I %S/Inputs %s -detailed-preprocessing-record
 // RUN: not %clang_cc1 -E -fmodules -fimplicit-module-maps -x objective-c -fmodules-cache-path=%t -I %S/Inputs %s | FileCheck -check-prefix CHECK-PREPROCESSED %s
@@ -182,6 +182,8 @@ int tmp = TOP_OTHER_REDEF1;
 # error TOP_OTHER_UNDEF2 should still be defined
 #endif
 #pragma clang __debug macro TOP_OTHER_REDEF1
+// DUMP: ModuleMacro {{.*}} macros_other
+// DUMP-NEXT: MacroInfo {{.*}} <{{.*}}macros_other.h:4:9, col:26>
 #ifndef TOP_OTHER_REDEF1
 # error TOP_OTHER_REDEF1 should still be defined
 #endif

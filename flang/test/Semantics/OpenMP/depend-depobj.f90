@@ -1,4 +1,5 @@
 !RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
+!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=61
 
 ! OpenMP 5.0 2.17.11 depend Clause restrictions for the DEPOBJ dependence type:
 !  - Array sections cannot be specified.
@@ -31,5 +32,14 @@ subroutine f00(x, y, obj, objs)
   !$omp task depend(depobj: obj)
   !$omp end task
   !$omp task depend(depobj: objs(2))
+  !$omp end task
+end
+
+
+subroutine coindexed_depobj
+  use iso_c_binding, only: c_intptr_t
+  integer(c_intptr_t), save :: obj[*]
+  !ERROR: A coindexed object is not allowed as a list item on DEPEND clause
+  !$omp task depend(depobj: obj[1])
   !$omp end task
 end

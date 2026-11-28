@@ -116,10 +116,10 @@ TEST_F(BasicAATest, AliasInstWithFullObjectOfImpreciseSize) {
   BasicBlock *Entry(BasicBlock::Create(C, "", F));
   B.SetInsertPoint(Entry);
 
-  Value *ArbitraryI32 = F->arg_begin();
+  Value *ArbitraryI64 = F->arg_begin();
   AllocaInst *I8 = B.CreateAlloca(B.getInt8Ty(), B.getInt32(2));
   auto *I8AtUncertainOffset =
-      cast<GetElementPtrInst>(B.CreatePtrAdd(I8, ArbitraryI32));
+      cast<GetElementPtrInst>(B.CreatePtrAdd(I8, ArbitraryI64));
   B.CreateRetVoid();
 
   auto &AllAnalyses = setupAnalyses();
@@ -155,11 +155,11 @@ TEST_F(BasicAATest, PartialAliasOffsetPhi) {
   B.CreateCondBr(I, B1, B2);
 
   B.SetInsertPoint(B1);
-  auto *Ptr1 = cast<GetElementPtrInst>(B.CreatePtrAdd(Ptr, B.getInt32(1)));
+  auto *Ptr1 = cast<GetElementPtrInst>(B.CreatePtrAdd(Ptr, B.getInt64(1)));
   B.CreateBr(End);
 
   B.SetInsertPoint(B2);
-  auto *Ptr2 = cast<GetElementPtrInst>(B.CreatePtrAdd(Ptr, B.getInt32(1)));
+  auto *Ptr2 = cast<GetElementPtrInst>(B.CreatePtrAdd(Ptr, B.getInt64(1)));
   B.CreateBr(End);
 
   B.SetInsertPoint(End);
@@ -188,8 +188,8 @@ TEST_F(BasicAATest, PartialAliasOffsetSelect) {
   BasicBlock *Entry(BasicBlock::Create(C, "", F));
   B.SetInsertPoint(Entry);
 
-  auto *Ptr1 = cast<GetElementPtrInst>(B.CreatePtrAdd(Ptr, B.getInt32(1)));
-  auto *Ptr2 = cast<GetElementPtrInst>(B.CreatePtrAdd(Ptr, B.getInt32(1)));
+  auto *Ptr1 = cast<GetElementPtrInst>(B.CreatePtrAdd(Ptr, B.getInt64(1)));
+  auto *Ptr2 = cast<GetElementPtrInst>(B.CreatePtrAdd(Ptr, B.getInt64(1)));
   auto *Select = B.CreateSelect(I, Ptr1, Ptr2);
   B.CreateRetVoid();
 

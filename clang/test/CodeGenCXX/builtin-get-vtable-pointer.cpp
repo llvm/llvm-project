@@ -820,18 +820,18 @@ extern "C" const void *aArrayParameter(A aArray[]) {
 // CHECK-NOAUTH-SAME: ) #[[ATTR0]] {
 // CHECK-NOAUTH-NEXT:  [[ENTRY:.*:]]
 // CHECK-NOAUTH-NEXT:    [[ARRAY:%.*]] = alloca [1 x %"struct.test1::A"], align 8
-// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARRAY]]) #[[ATTR5:[0-9]+]]
+// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARRAY]])
 // CHECK-NOAUTH-NEXT:    call void @_ZN5test11AC1Ev(ptr nonnull align 8 dereferenceable(8) [[ARRAY]])
 // CHECK-NOAUTH-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x %"struct.test1::A"], ptr [[ARRAY]], i64 0, i64 0
 // CHECK-NOAUTH-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[ARRAYDECAY]], align 8, !tbaa [[TBAA9]]
-// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARRAY]]) #[[ATTR5]]
+// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARRAY]])
 // CHECK-NOAUTH-NEXT:    ret ptr [[VTABLE]]
 //
 // CHECK-TYPEAUTH-LABEL: define ptr @aArrayLocal(
 // CHECK-TYPEAUTH-SAME: ) #[[ATTR0]] {
 // CHECK-TYPEAUTH-NEXT:  [[ENTRY:.*:]]
 // CHECK-TYPEAUTH-NEXT:    [[ARRAY:%.*]] = alloca [1 x %"struct.test1::A"], align 8
-// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARRAY]]) #[[ATTR7:[0-9]+]]
+// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARRAY]])
 // CHECK-TYPEAUTH-NEXT:    [[CALL:%.*]] = call ptr @_ZN5test11AC1Ev(ptr nonnull align 8 dereferenceable(8) [[ARRAY]])
 // CHECK-TYPEAUTH-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x %"struct.test1::A"], ptr [[ARRAY]], i64 0, i64 0
 // CHECK-TYPEAUTH-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[ARRAYDECAY]], align 8, !tbaa [[TBAA9]]
@@ -839,14 +839,14 @@ extern "C" const void *aArrayParameter(A aArray[]) {
 // CHECK-TYPEAUTH-NEXT:    [[TMP1:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[TMP0]], i32 2, i64 48388)
 // CHECK-TYPEAUTH-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
 // CHECK-TYPEAUTH-NEXT:    [[TMP3:%.*]] = load volatile i8, ptr [[TMP2]], align 8
-// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARRAY]]) #[[ATTR7]]
+// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARRAY]])
 // CHECK-TYPEAUTH-NEXT:    ret ptr [[TMP2]]
 //
 // CHECK-ADDRESSAUTH-LABEL: define ptr @aArrayLocal(
 // CHECK-ADDRESSAUTH-SAME: ) #[[ATTR0]] {
 // CHECK-ADDRESSAUTH-NEXT:  [[ENTRY:.*:]]
 // CHECK-ADDRESSAUTH-NEXT:    [[ARRAY:%.*]] = alloca [1 x %"struct.test1::A"], align 8
-// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARRAY]]) #[[ATTR7:[0-9]+]]
+// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARRAY]])
 // CHECK-ADDRESSAUTH-NEXT:    [[CALL:%.*]] = call ptr @_ZN5test11AC1Ev(ptr nonnull align 8 dereferenceable(8) [[ARRAY]])
 // CHECK-ADDRESSAUTH-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x %"struct.test1::A"], ptr [[ARRAY]], i64 0, i64 0
 // CHECK-ADDRESSAUTH-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[ARRAYDECAY]], align 8, !tbaa [[TBAA9]]
@@ -855,14 +855,14 @@ extern "C" const void *aArrayParameter(A aArray[]) {
 // CHECK-ADDRESSAUTH-NEXT:    [[TMP2:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[TMP1]], i32 2, i64 [[TMP0]])
 // CHECK-ADDRESSAUTH-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
 // CHECK-ADDRESSAUTH-NEXT:    [[TMP4:%.*]] = load volatile i8, ptr [[TMP3]], align 8
-// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARRAY]]) #[[ATTR7]]
+// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARRAY]])
 // CHECK-ADDRESSAUTH-NEXT:    ret ptr [[TMP3]]
 //
 // CHECK-BOTHAUTH-LABEL: define ptr @aArrayLocal(
 // CHECK-BOTHAUTH-SAME: ) #[[ATTR0]] {
 // CHECK-BOTHAUTH-NEXT:  [[ENTRY:.*:]]
 // CHECK-BOTHAUTH-NEXT:    [[ARRAY:%.*]] = alloca [1 x %"struct.test1::A"], align 8
-// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARRAY]]) #[[ATTR7:[0-9]+]]
+// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARRAY]])
 // CHECK-BOTHAUTH-NEXT:    [[CALL:%.*]] = call ptr @_ZN5test11AC1Ev(ptr nonnull align 8 dereferenceable(8) [[ARRAY]])
 // CHECK-BOTHAUTH-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x %"struct.test1::A"], ptr [[ARRAY]], i64 0, i64 0
 // CHECK-BOTHAUTH-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[ARRAYDECAY]], align 8, !tbaa [[TBAA9]]
@@ -872,7 +872,7 @@ extern "C" const void *aArrayParameter(A aArray[]) {
 // CHECK-BOTHAUTH-NEXT:    [[TMP3:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[TMP2]], i32 2, i64 [[TMP1]])
 // CHECK-BOTHAUTH-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
 // CHECK-BOTHAUTH-NEXT:    [[TMP5:%.*]] = load volatile i8, ptr [[TMP4]], align 8
-// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARRAY]]) #[[ATTR7]]
+// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARRAY]])
 // CHECK-BOTHAUTH-NEXT:    ret ptr [[TMP4]]
 //
 extern "C" const void *aArrayLocal() {
@@ -890,17 +890,17 @@ extern "C" const void *aArrayLocal() {
 // CHECK-NOAUTH-NEXT:    [[DINSTANCE:%.*]] = alloca %"struct.test1::D", align 8
 // CHECK-NOAUTH-NEXT:    [[EINSTANCE:%.*]] = alloca %"struct.test1::E", align 8
 // CHECK-NOAUTH-NEXT:    [[EARRAY:%.*]] = alloca [1 x %"struct.test1::E"], align 16
-// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[AINSTANCE]]) #[[ATTR5]]
+// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[AINSTANCE]])
 // CHECK-NOAUTH-NEXT:    call void @_ZN5test11AC1Ev(ptr nonnull align 8 dereferenceable(8) [[AINSTANCE]])
-// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[BINSTANCE]]) #[[ATTR5]]
+// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[BINSTANCE]])
 // CHECK-NOAUTH-NEXT:    call void @_ZN5test11BC1Ev(ptr nonnull align 8 dereferenceable(8) [[BINSTANCE]])
-// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CINSTANCE]]) #[[ATTR5]]
+// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CINSTANCE]])
 // CHECK-NOAUTH-NEXT:    call void @_ZN5test11CC1Ev(ptr nonnull align 8 dereferenceable(16) [[CINSTANCE]])
-// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DINSTANCE]]) #[[ATTR5]]
+// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DINSTANCE]])
 // CHECK-NOAUTH-NEXT:    call void @_ZN5test11DC1Ev(ptr nonnull align 8 dereferenceable(8) [[DINSTANCE]])
-// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EINSTANCE]]) #[[ATTR5]]
+// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EINSTANCE]])
 // CHECK-NOAUTH-NEXT:    call void @_ZN5test11EC1Ev(ptr nonnull align 8 dereferenceable(16) [[EINSTANCE]])
-// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EARRAY]]) #[[ATTR5]]
+// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EARRAY]])
 // CHECK-NOAUTH-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[EARRAY]], i8 0, i64 16, i1 false)
 // CHECK-NOAUTH-NEXT:    call void @_ZN5test11EC1Ev(ptr nonnull align 8 dereferenceable(16) [[EARRAY]])
 // CHECK-NOAUTH-NEXT:    [[CALL:%.*]] = call ptr @_ZN5test11aEPNS_1AE(ptr [[AINSTANCE]])
@@ -973,12 +973,12 @@ extern "C" const void *aArrayLocal() {
 // CHECK-NOAUTH-NEXT:    [[CALL42:%.*]] = call ptr @_ZN5test16e_as_DEPNS_1EE(ptr [[EINSTANCE]])
 // CHECK-NOAUTH-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x %"struct.test1::E"], ptr [[EARRAY]], i64 0, i64 0
 // CHECK-NOAUTH-NEXT:    [[VTABLE43:%.*]] = load ptr, ptr [[ARRAYDECAY]], align 16, !tbaa [[TBAA9]]
-// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EARRAY]]) #[[ATTR5]]
-// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EINSTANCE]]) #[[ATTR5]]
-// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DINSTANCE]]) #[[ATTR5]]
-// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CINSTANCE]]) #[[ATTR5]]
-// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[BINSTANCE]]) #[[ATTR5]]
-// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AINSTANCE]]) #[[ATTR5]]
+// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EARRAY]])
+// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EINSTANCE]])
+// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DINSTANCE]])
+// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CINSTANCE]])
+// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[BINSTANCE]])
+// CHECK-NOAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AINSTANCE]])
 // CHECK-NOAUTH-NEXT:    ret void
 //
 // CHECK-TYPEAUTH-LABEL: define void @_ZN5test14testEv(
@@ -990,17 +990,17 @@ extern "C" const void *aArrayLocal() {
 // CHECK-TYPEAUTH-NEXT:    [[DINSTANCE:%.*]] = alloca %"struct.test1::D", align 8
 // CHECK-TYPEAUTH-NEXT:    [[EINSTANCE:%.*]] = alloca %"struct.test1::E", align 8
 // CHECK-TYPEAUTH-NEXT:    [[EARRAY:%.*]] = alloca [1 x %"struct.test1::E"], align 8
-// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[AINSTANCE]]) #[[ATTR7]]
+// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[AINSTANCE]])
 // CHECK-TYPEAUTH-NEXT:    [[CALL:%.*]] = call ptr @_ZN5test11AC1Ev(ptr nonnull align 8 dereferenceable(8) [[AINSTANCE]])
-// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[BINSTANCE]]) #[[ATTR7]]
+// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[BINSTANCE]])
 // CHECK-TYPEAUTH-NEXT:    [[CALL1:%.*]] = call ptr @_ZN5test11BC1Ev(ptr nonnull align 8 dereferenceable(8) [[BINSTANCE]])
-// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CINSTANCE]]) #[[ATTR7]]
+// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CINSTANCE]])
 // CHECK-TYPEAUTH-NEXT:    [[CALL2:%.*]] = call ptr @_ZN5test11CC1Ev(ptr nonnull align 8 dereferenceable(16) [[CINSTANCE]])
-// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DINSTANCE]]) #[[ATTR7]]
+// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DINSTANCE]])
 // CHECK-TYPEAUTH-NEXT:    [[CALL3:%.*]] = call ptr @_ZN5test11DC1Ev(ptr nonnull align 8 dereferenceable(8) [[DINSTANCE]])
-// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EINSTANCE]]) #[[ATTR7]]
+// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EINSTANCE]])
 // CHECK-TYPEAUTH-NEXT:    [[CALL4:%.*]] = call ptr @_ZN5test11EC1Ev(ptr nonnull align 8 dereferenceable(16) [[EINSTANCE]])
-// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EARRAY]]) #[[ATTR7]]
+// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EARRAY]])
 // CHECK-TYPEAUTH-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[EARRAY]], i8 0, i64 16, i1 false)
 // CHECK-TYPEAUTH-NEXT:    [[CALL5:%.*]] = call ptr @_ZN5test11EC1Ev(ptr nonnull align 8 dereferenceable(16) [[EARRAY]])
 // CHECK-TYPEAUTH-NEXT:    [[CALL6:%.*]] = call ptr @_ZN5test11aEPNS_1AE(ptr [[AINSTANCE]])
@@ -1083,12 +1083,12 @@ extern "C" const void *aArrayLocal() {
 // CHECK-TYPEAUTH-NEXT:    [[TMP13:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[TMP12]], i32 2, i64 48388)
 // CHECK-TYPEAUTH-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[TMP13]] to ptr
 // CHECK-TYPEAUTH-NEXT:    [[TMP15:%.*]] = load volatile i8, ptr [[TMP14]], align 8
-// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EARRAY]]) #[[ATTR7]]
-// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EINSTANCE]]) #[[ATTR7]]
-// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DINSTANCE]]) #[[ATTR7]]
-// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CINSTANCE]]) #[[ATTR7]]
-// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[BINSTANCE]]) #[[ATTR7]]
-// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AINSTANCE]]) #[[ATTR7]]
+// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EARRAY]])
+// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EINSTANCE]])
+// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DINSTANCE]])
+// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CINSTANCE]])
+// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[BINSTANCE]])
+// CHECK-TYPEAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AINSTANCE]])
 // CHECK-TYPEAUTH-NEXT:    ret void
 //
 // CHECK-ADDRESSAUTH-LABEL: define void @_ZN5test14testEv(
@@ -1100,17 +1100,17 @@ extern "C" const void *aArrayLocal() {
 // CHECK-ADDRESSAUTH-NEXT:    [[DINSTANCE:%.*]] = alloca %"struct.test1::D", align 8
 // CHECK-ADDRESSAUTH-NEXT:    [[EINSTANCE:%.*]] = alloca %"struct.test1::E", align 8
 // CHECK-ADDRESSAUTH-NEXT:    [[EARRAY:%.*]] = alloca [1 x %"struct.test1::E"], align 8
-// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[AINSTANCE]]) #[[ATTR7]]
+// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[AINSTANCE]])
 // CHECK-ADDRESSAUTH-NEXT:    [[CALL:%.*]] = call ptr @_ZN5test11AC1Ev(ptr nonnull align 8 dereferenceable(8) [[AINSTANCE]])
-// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[BINSTANCE]]) #[[ATTR7]]
+// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[BINSTANCE]])
 // CHECK-ADDRESSAUTH-NEXT:    [[CALL1:%.*]] = call ptr @_ZN5test11BC1Ev(ptr nonnull align 8 dereferenceable(8) [[BINSTANCE]])
-// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CINSTANCE]]) #[[ATTR7]]
+// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CINSTANCE]])
 // CHECK-ADDRESSAUTH-NEXT:    [[CALL2:%.*]] = call ptr @_ZN5test11CC1Ev(ptr nonnull align 8 dereferenceable(16) [[CINSTANCE]])
-// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DINSTANCE]]) #[[ATTR7]]
+// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DINSTANCE]])
 // CHECK-ADDRESSAUTH-NEXT:    [[CALL3:%.*]] = call ptr @_ZN5test11DC1Ev(ptr nonnull align 8 dereferenceable(8) [[DINSTANCE]])
-// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EINSTANCE]]) #[[ATTR7]]
+// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EINSTANCE]])
 // CHECK-ADDRESSAUTH-NEXT:    [[CALL4:%.*]] = call ptr @_ZN5test11EC1Ev(ptr nonnull align 8 dereferenceable(16) [[EINSTANCE]])
-// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EARRAY]]) #[[ATTR7]]
+// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EARRAY]])
 // CHECK-ADDRESSAUTH-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[EARRAY]], i8 0, i64 16, i1 false)
 // CHECK-ADDRESSAUTH-NEXT:    [[CALL5:%.*]] = call ptr @_ZN5test11EC1Ev(ptr nonnull align 8 dereferenceable(16) [[EARRAY]])
 // CHECK-ADDRESSAUTH-NEXT:    [[CALL6:%.*]] = call ptr @_ZN5test11aEPNS_1AE(ptr [[AINSTANCE]])
@@ -1196,12 +1196,12 @@ extern "C" const void *aArrayLocal() {
 // CHECK-ADDRESSAUTH-NEXT:    [[TMP16:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[TMP15]], i32 2, i64 [[TMP14]])
 // CHECK-ADDRESSAUTH-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[TMP16]] to ptr
 // CHECK-ADDRESSAUTH-NEXT:    [[TMP18:%.*]] = load volatile i8, ptr [[TMP17]], align 8
-// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EARRAY]]) #[[ATTR7]]
-// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EINSTANCE]]) #[[ATTR7]]
-// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DINSTANCE]]) #[[ATTR7]]
-// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CINSTANCE]]) #[[ATTR7]]
-// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[BINSTANCE]]) #[[ATTR7]]
-// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AINSTANCE]]) #[[ATTR7]]
+// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EARRAY]])
+// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EINSTANCE]])
+// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DINSTANCE]])
+// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CINSTANCE]])
+// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[BINSTANCE]])
+// CHECK-ADDRESSAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AINSTANCE]])
 // CHECK-ADDRESSAUTH-NEXT:    ret void
 //
 // CHECK-BOTHAUTH-LABEL: define void @_ZN5test14testEv(
@@ -1213,17 +1213,17 @@ extern "C" const void *aArrayLocal() {
 // CHECK-BOTHAUTH-NEXT:    [[DINSTANCE:%.*]] = alloca %"struct.test1::D", align 8
 // CHECK-BOTHAUTH-NEXT:    [[EINSTANCE:%.*]] = alloca %"struct.test1::E", align 8
 // CHECK-BOTHAUTH-NEXT:    [[EARRAY:%.*]] = alloca [1 x %"struct.test1::E"], align 8
-// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[AINSTANCE]]) #[[ATTR7]]
+// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[AINSTANCE]])
 // CHECK-BOTHAUTH-NEXT:    [[CALL:%.*]] = call ptr @_ZN5test11AC1Ev(ptr nonnull align 8 dereferenceable(8) [[AINSTANCE]])
-// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[BINSTANCE]]) #[[ATTR7]]
+// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[BINSTANCE]])
 // CHECK-BOTHAUTH-NEXT:    [[CALL1:%.*]] = call ptr @_ZN5test11BC1Ev(ptr nonnull align 8 dereferenceable(8) [[BINSTANCE]])
-// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CINSTANCE]]) #[[ATTR7]]
+// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CINSTANCE]])
 // CHECK-BOTHAUTH-NEXT:    [[CALL2:%.*]] = call ptr @_ZN5test11CC1Ev(ptr nonnull align 8 dereferenceable(16) [[CINSTANCE]])
-// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DINSTANCE]]) #[[ATTR7]]
+// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DINSTANCE]])
 // CHECK-BOTHAUTH-NEXT:    [[CALL3:%.*]] = call ptr @_ZN5test11DC1Ev(ptr nonnull align 8 dereferenceable(8) [[DINSTANCE]])
-// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EINSTANCE]]) #[[ATTR7]]
+// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EINSTANCE]])
 // CHECK-BOTHAUTH-NEXT:    [[CALL4:%.*]] = call ptr @_ZN5test11EC1Ev(ptr nonnull align 8 dereferenceable(16) [[EINSTANCE]])
-// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EARRAY]]) #[[ATTR7]]
+// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EARRAY]])
 // CHECK-BOTHAUTH-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[EARRAY]], i8 0, i64 16, i1 false)
 // CHECK-BOTHAUTH-NEXT:    [[CALL5:%.*]] = call ptr @_ZN5test11EC1Ev(ptr nonnull align 8 dereferenceable(16) [[EARRAY]])
 // CHECK-BOTHAUTH-NEXT:    [[CALL6:%.*]] = call ptr @_ZN5test11aEPNS_1AE(ptr [[AINSTANCE]])
@@ -1312,12 +1312,12 @@ extern "C" const void *aArrayLocal() {
 // CHECK-BOTHAUTH-NEXT:    [[TMP19:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[TMP18]], i32 2, i64 [[TMP17]])
 // CHECK-BOTHAUTH-NEXT:    [[TMP20:%.*]] = inttoptr i64 [[TMP19]] to ptr
 // CHECK-BOTHAUTH-NEXT:    [[TMP21:%.*]] = load volatile i8, ptr [[TMP20]], align 8
-// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EARRAY]]) #[[ATTR7]]
-// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EINSTANCE]]) #[[ATTR7]]
-// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DINSTANCE]]) #[[ATTR7]]
-// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CINSTANCE]]) #[[ATTR7]]
-// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[BINSTANCE]]) #[[ATTR7]]
-// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AINSTANCE]]) #[[ATTR7]]
+// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EARRAY]])
+// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[EINSTANCE]])
+// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DINSTANCE]])
+// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CINSTANCE]])
+// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[BINSTANCE]])
+// CHECK-BOTHAUTH-NEXT:    call void @llvm.lifetime.end.p0(ptr [[AINSTANCE]])
 // CHECK-BOTHAUTH-NEXT:    ret void
 //
 void test() {

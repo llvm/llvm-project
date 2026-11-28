@@ -126,6 +126,122 @@ define <32 x i8> @vector_variable_shift_right_v32i8(<32 x i1> %cond, <32 x i8> %
   ret <32 x i8> %sh
 }
 
+; A nested scalar-condition select of splats is also a splat, allowing
+; CodeGenPrepare to distribute the shift over the outer select on AVX1.
+define <4 x i32> @vector_variable_shift_left_nested_scalar_select(<4 x i32> %x, i1 %c, i1 %d, i32 %a, i32 %b, i32 %e) {
+; AVX1-LABEL: @vector_variable_shift_left_nested_scalar_select(
+; AVX1-NEXT:    [[IA:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i64 0
+; AVX1-NEXT:    [[SA:%.*]] = shufflevector <4 x i32> [[IA]], <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX1-NEXT:    [[IB:%.*]] = insertelement <4 x i32> poison, i32 [[B:%.*]], i64 0
+; AVX1-NEXT:    [[SB:%.*]] = shufflevector <4 x i32> [[IB]], <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX1-NEXT:    [[IE:%.*]] = insertelement <4 x i32> poison, i32 [[E:%.*]], i64 0
+; AVX1-NEXT:    [[SE:%.*]] = shufflevector <4 x i32> [[IE]], <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX1-NEXT:    [[INNER:%.*]] = select i1 [[D:%.*]], <4 x i32> [[SA]], <4 x i32> [[SB]], !prof [[PROF0:![0-9]+]]
+; AVX1-NEXT:    [[OUTER:%.*]] = select i1 [[C:%.*]], <4 x i32> [[INNER]], <4 x i32> [[SE]], !prof [[PROF1:![0-9]+]]
+; AVX1-NEXT:    [[TMP1:%.*]] = shl <4 x i32> [[X:%.*]], [[INNER]]
+; AVX1-NEXT:    [[TMP2:%.*]] = shl <4 x i32> [[X]], [[SE]]
+; AVX1-NEXT:    [[TMP3:%.*]] = select i1 [[C]], <4 x i32> [[TMP1]], <4 x i32> [[TMP2]], !prof [[PROF1]]
+; AVX1-NEXT:    ret <4 x i32> [[TMP3]]
+;
+; AVX2-LABEL: @vector_variable_shift_left_nested_scalar_select(
+; AVX2-NEXT:    [[IA:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i64 0
+; AVX2-NEXT:    [[SA:%.*]] = shufflevector <4 x i32> [[IA]], <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX2-NEXT:    [[IB:%.*]] = insertelement <4 x i32> poison, i32 [[B:%.*]], i64 0
+; AVX2-NEXT:    [[SB:%.*]] = shufflevector <4 x i32> [[IB]], <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX2-NEXT:    [[IE:%.*]] = insertelement <4 x i32> poison, i32 [[E:%.*]], i64 0
+; AVX2-NEXT:    [[SE:%.*]] = shufflevector <4 x i32> [[IE]], <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX2-NEXT:    [[INNER:%.*]] = select i1 [[D:%.*]], <4 x i32> [[SA]], <4 x i32> [[SB]], !prof [[PROF0:![0-9]+]]
+; AVX2-NEXT:    [[OUTER:%.*]] = select i1 [[C:%.*]], <4 x i32> [[INNER]], <4 x i32> [[SE]], !prof [[PROF1:![0-9]+]]
+; AVX2-NEXT:    [[R:%.*]] = shl <4 x i32> [[X:%.*]], [[OUTER]]
+; AVX2-NEXT:    ret <4 x i32> [[R]]
+;
+; AVX512BW-LABEL: @vector_variable_shift_left_nested_scalar_select(
+; AVX512BW-NEXT:    [[IA:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i64 0
+; AVX512BW-NEXT:    [[SA:%.*]] = shufflevector <4 x i32> [[IA]], <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[IB:%.*]] = insertelement <4 x i32> poison, i32 [[B:%.*]], i64 0
+; AVX512BW-NEXT:    [[SB:%.*]] = shufflevector <4 x i32> [[IB]], <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[IE:%.*]] = insertelement <4 x i32> poison, i32 [[E:%.*]], i64 0
+; AVX512BW-NEXT:    [[SE:%.*]] = shufflevector <4 x i32> [[IE]], <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[INNER:%.*]] = select i1 [[D:%.*]], <4 x i32> [[SA]], <4 x i32> [[SB]], !prof [[PROF0:![0-9]+]]
+; AVX512BW-NEXT:    [[OUTER:%.*]] = select i1 [[C:%.*]], <4 x i32> [[INNER]], <4 x i32> [[SE]], !prof [[PROF1:![0-9]+]]
+; AVX512BW-NEXT:    [[R:%.*]] = shl <4 x i32> [[X:%.*]], [[OUTER]]
+; AVX512BW-NEXT:    ret <4 x i32> [[R]]
+;
+; XOP-LABEL: @vector_variable_shift_left_nested_scalar_select(
+; XOP-NEXT:    [[IA:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i64 0
+; XOP-NEXT:    [[SA:%.*]] = shufflevector <4 x i32> [[IA]], <4 x i32> poison, <4 x i32> zeroinitializer
+; XOP-NEXT:    [[IB:%.*]] = insertelement <4 x i32> poison, i32 [[B:%.*]], i64 0
+; XOP-NEXT:    [[SB:%.*]] = shufflevector <4 x i32> [[IB]], <4 x i32> poison, <4 x i32> zeroinitializer
+; XOP-NEXT:    [[IE:%.*]] = insertelement <4 x i32> poison, i32 [[E:%.*]], i64 0
+; XOP-NEXT:    [[SE:%.*]] = shufflevector <4 x i32> [[IE]], <4 x i32> poison, <4 x i32> zeroinitializer
+; XOP-NEXT:    [[INNER:%.*]] = select i1 [[D:%.*]], <4 x i32> [[SA]], <4 x i32> [[SB]], !prof [[PROF0:![0-9]+]]
+; XOP-NEXT:    [[OUTER:%.*]] = select i1 [[C:%.*]], <4 x i32> [[INNER]], <4 x i32> [[SE]], !prof [[PROF1:![0-9]+]]
+; XOP-NEXT:    [[R:%.*]] = shl <4 x i32> [[X:%.*]], [[OUTER]]
+; XOP-NEXT:    ret <4 x i32> [[R]]
+;
+  %ia = insertelement <4 x i32> poison, i32 %a, i64 0
+  %sa = shufflevector <4 x i32> %ia, <4 x i32> poison, <4 x i32> zeroinitializer
+  %ib = insertelement <4 x i32> poison, i32 %b, i64 0
+  %sb = shufflevector <4 x i32> %ib, <4 x i32> poison, <4 x i32> zeroinitializer
+  %ie = insertelement <4 x i32> poison, i32 %e, i64 0
+  %se = shufflevector <4 x i32> %ie, <4 x i32> poison, <4 x i32> zeroinitializer
+  %inner = select i1 %d, <4 x i32> %sa, <4 x i32> %sb, !prof !0
+  %outer = select i1 %c, <4 x i32> %inner, <4 x i32> %se, !prof !1
+  %r = shl <4 x i32> %x, %outer
+  ret <4 x i32> %r
+}
+
+; The funnel shift by a scalar-condition select of splats keeps the profile
+; metadata of the select too.
+
+define <8 x i32> @vector_variable_fshl_scalar_select(<8 x i32> %x, i1 %c, i32 %a, i32 %b) {
+; AVX1-LABEL: @vector_variable_fshl_scalar_select(
+; AVX1-NEXT:    [[IA:%.*]] = insertelement <8 x i32> poison, i32 [[A:%.*]], i64 0
+; AVX1-NEXT:    [[SA:%.*]] = shufflevector <8 x i32> [[IA]], <8 x i32> poison, <8 x i32> zeroinitializer
+; AVX1-NEXT:    [[IB:%.*]] = insertelement <8 x i32> poison, i32 [[B:%.*]], i64 0
+; AVX1-NEXT:    [[SB:%.*]] = shufflevector <8 x i32> [[IB]], <8 x i32> poison, <8 x i32> zeroinitializer
+; AVX1-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], <8 x i32> [[SA]], <8 x i32> [[SB]], !prof [[PROF0]]
+; AVX1-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> [[X:%.*]], <8 x i32> [[X]], <8 x i32> [[SA]])
+; AVX1-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> [[X]], <8 x i32> [[X]], <8 x i32> [[SB]])
+; AVX1-NEXT:    [[TMP3:%.*]] = select i1 [[C]], <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], !prof [[PROF0]]
+; AVX1-NEXT:    ret <8 x i32> [[TMP3]]
+;
+; AVX2-LABEL: @vector_variable_fshl_scalar_select(
+; AVX2-NEXT:    [[IA:%.*]] = insertelement <8 x i32> poison, i32 [[A:%.*]], i64 0
+; AVX2-NEXT:    [[SA:%.*]] = shufflevector <8 x i32> [[IA]], <8 x i32> poison, <8 x i32> zeroinitializer
+; AVX2-NEXT:    [[IB:%.*]] = insertelement <8 x i32> poison, i32 [[B:%.*]], i64 0
+; AVX2-NEXT:    [[SB:%.*]] = shufflevector <8 x i32> [[IB]], <8 x i32> poison, <8 x i32> zeroinitializer
+; AVX2-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], <8 x i32> [[SA]], <8 x i32> [[SB]], !prof [[PROF0]]
+; AVX2-NEXT:    [[ROT:%.*]] = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> [[X:%.*]], <8 x i32> [[X]], <8 x i32> [[SEL]])
+; AVX2-NEXT:    ret <8 x i32> [[ROT]]
+;
+; AVX512BW-LABEL: @vector_variable_fshl_scalar_select(
+; AVX512BW-NEXT:    [[IA:%.*]] = insertelement <8 x i32> poison, i32 [[A:%.*]], i64 0
+; AVX512BW-NEXT:    [[SA:%.*]] = shufflevector <8 x i32> [[IA]], <8 x i32> poison, <8 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[IB:%.*]] = insertelement <8 x i32> poison, i32 [[B:%.*]], i64 0
+; AVX512BW-NEXT:    [[SB:%.*]] = shufflevector <8 x i32> [[IB]], <8 x i32> poison, <8 x i32> zeroinitializer
+; AVX512BW-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], <8 x i32> [[SA]], <8 x i32> [[SB]], !prof [[PROF0]]
+; AVX512BW-NEXT:    [[ROT:%.*]] = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> [[X:%.*]], <8 x i32> [[X]], <8 x i32> [[SEL]])
+; AVX512BW-NEXT:    ret <8 x i32> [[ROT]]
+;
+; XOP-LABEL: @vector_variable_fshl_scalar_select(
+; XOP-NEXT:    [[IA:%.*]] = insertelement <8 x i32> poison, i32 [[A:%.*]], i64 0
+; XOP-NEXT:    [[SA:%.*]] = shufflevector <8 x i32> [[IA]], <8 x i32> poison, <8 x i32> zeroinitializer
+; XOP-NEXT:    [[IB:%.*]] = insertelement <8 x i32> poison, i32 [[B:%.*]], i64 0
+; XOP-NEXT:    [[SB:%.*]] = shufflevector <8 x i32> [[IB]], <8 x i32> poison, <8 x i32> zeroinitializer
+; XOP-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], <8 x i32> [[SA]], <8 x i32> [[SB]], !prof [[PROF0]]
+; XOP-NEXT:    [[ROT:%.*]] = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> [[X:%.*]], <8 x i32> [[X]], <8 x i32> [[SEL]])
+; XOP-NEXT:    ret <8 x i32> [[ROT]]
+;
+  %ia = insertelement <8 x i32> poison, i32 %a, i64 0
+  %sa = shufflevector <8 x i32> %ia, <8 x i32> poison, <8 x i32> zeroinitializer
+  %ib = insertelement <8 x i32> poison, i32 %b, i64 0
+  %sb = shufflevector <8 x i32> %ib, <8 x i32> poison, <8 x i32> zeroinitializer
+  %sel = select i1 %c, <8 x i32> %sa, <8 x i32> %sb, !prof !0
+  %rot = call <8 x i32> @llvm.fshl.v8i32(<8 x i32> %x, <8 x i32> %x, <8 x i32> %sel)
+  ret <8 x i32> %rot
+}
+
 ; PR37428 - https://bugs.llvm.org/show_bug.cgi?id=37428
 
 define void @vector_variable_shift_left_loop(ptr nocapture %arr, ptr nocapture readonly %control, i32 %count, i32 %amt0, i32 %amt1, i32 %x) {
@@ -411,3 +527,6 @@ declare <8 x i32> @llvm.fshl.v8i32(<8 x i32>, <8 x i32>, <8 x i32>) #1
 
 ; Check that every instruction inserted by -passes='require<profile-summary>,function(codegenprepare)' has a debug location.
 ; DEBUG: CheckModuleDebugify: PASS
+
+!0 = !{!"branch_weights", i32 3, i32 7}
+!1 = !{!"branch_weights", i32 1, i32 5}

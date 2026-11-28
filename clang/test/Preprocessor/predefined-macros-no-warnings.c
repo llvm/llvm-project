@@ -98,9 +98,9 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple nvptx
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple nvptx64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple amdgpu
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple r600
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv32
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv32-linux
+// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv32-rtems
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv64-freebsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv64-openbsd
@@ -108,6 +108,7 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv64-linux
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv64-linux-openhos
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv64-managarm
+// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv64-rtems
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple sparc
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple sparc-linux
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple sparc-solaris

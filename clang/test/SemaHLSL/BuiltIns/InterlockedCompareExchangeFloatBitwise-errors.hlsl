@@ -2,6 +2,8 @@
 // RUN:   -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only \
 // RUN:   -disable-llvm-passes -verify
 
+using namespace hlsl;
+
 // InterlockedCompareExchangeFloatBitwise compares the bit pattern of a 32-bit
 // float, so it is provided as a float-only overload set (groupshared/device).
 // It reports the previous value, so it has a single 4-argument form.

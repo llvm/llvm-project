@@ -19,7 +19,7 @@ define i32 @switch_of_powers_two_default_reachable(i32 %arg) !dbg !5 {
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[SWITCH_LOOKUP:.*]], label %[[RETURN]], !dbg [[DBG8]]
 ; CHECK:       [[SWITCH_LOOKUP]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[TMP2]] to i64, !dbg [[DBG8]]
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i8], ptr @switch.table.switch_of_powers_two_default_reachable, i64 0, i64 [[TMP4]], !dbg [[DBG8]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds i8, ptr @switch.table.switch_of_powers_two_default_reachable, i64 [[TMP4]], !dbg [[DBG8]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1, !dbg [[DBG8]]
 ; CHECK-NEXT:    [[SWITCH_EXT:%.*]] = zext i8 [[SWITCH_LOAD]] to i32, !dbg [[DBG8]]
 ; CHECK-NEXT:    br label %[[RETURN]], !dbg [[DBG8]]

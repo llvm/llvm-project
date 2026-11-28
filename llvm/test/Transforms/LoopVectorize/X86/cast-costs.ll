@@ -13,7 +13,7 @@ define void @test_replicate_addrspacecast(ptr noalias %src, ptr noalias %dst, i6
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x ptr>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = addrspacecast <2 x ptr> [[WIDE_LOAD]] to <2 x ptr addrspace(1)>
@@ -21,7 +21,7 @@ define void @test_replicate_addrspacecast(ptr noalias %src, ptr noalias %dst, i6
 ; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x ptr addrspace(1)> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint <2 x ptr addrspace(1)> [[TMP3]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP6]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i64 16
 ; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    store <2 x i64> [[TMP5]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -61,13 +61,13 @@ define void @test_replicate_ptrtoaddr(ptr noalias %src, ptr noalias %dst, i64 %n
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds ptr, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x ptr>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoaddr <2 x ptr> [[WIDE_LOAD]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoaddr <2 x ptr> [[WIDE_LOAD1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 16
 ; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -140,9 +140,9 @@ define void @replicate_sext(i32 %N, ptr %dst, ptr %src) #0 {
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[STRIDED_VEC9:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
 ; CHECK-NEXT:    [[TMP25:%.*]] = sext <4 x i32> [[VEC_IND]] to <4 x i64>
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[DST]], <4 x i64> [[TMP25]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC]], <4 x ptr> align 4 [[TMP27]], <4 x i1> splat (i1 true)), !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC9]], <4 x ptr> align 4 [[TMP27]], <4 x i1> splat (i1 true)), !alias.scope [[META7]], !noalias [[META4]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[DST]], <4 x i64> [[TMP25]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC]], <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true)), !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[STRIDED_VEC9]], <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true)), !alias.scope [[META7]], !noalias [[META4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 12)
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -219,7 +219,7 @@ define i16 @bitcast_half_to_i16(ptr %src, ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <8 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr half, ptr [[SRC]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[TMP0]], i64 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 16
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <8 x half>, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x half>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[FADD:%.*]] = fadd <8 x half> [[LOAD]], zeroinitializer

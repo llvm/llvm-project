@@ -90,7 +90,7 @@ int test_rvalue_reference(int&& ri) {
 }
 
 //      CIR: cir.func {{.*}} @_Z21test_rvalue_referenceOi({{.*}})
-//      CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+//      CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR-NEXT:   %[[RI:.*]] = cir.alloca "ri" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
 // CIR-NEXT:   %[[TEMP_SLOT:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!s32i>
 // CIR-NEXT:   cir.store{{.*}} {{.*}}, %[[RI]]

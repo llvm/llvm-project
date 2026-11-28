@@ -31,7 +31,6 @@ namespace llvm {
 //    implemented yet.
 class MCSectionXCOFF final : public MCSection {
   friend class MCContext;
-  friend class MCAsmInfoXCOFF;
 
   std::optional<XCOFF::CsectProperties> CsectProp;
   MCSymbolXCOFF *const QualName;
@@ -90,8 +89,6 @@ class MCSectionXCOFF final : public MCSection {
     // Use default text alignment as the alignment for DWARF sections.
     setAlignment(Align(DefaultTextAlignVal));
   }
-
-  void printCsectDirective(raw_ostream &OS) const;
 
 public:
   LLVM_ABI ~MCSectionXCOFF();

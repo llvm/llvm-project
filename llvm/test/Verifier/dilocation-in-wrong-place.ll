@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: DILocation not allowed within this metadata node
 ; CHECK-NEXT: [[unknownMD:![0-9]+]] = distinct !{[[unknownMD]], [[dbgMD:![0-9]+]]}

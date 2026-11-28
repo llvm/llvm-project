@@ -9,9 +9,7 @@
 #ifndef MLIR_DIALECT_FUNC_TRANSFORMOPS_FUNCTRANSFORMOPS_H
 #define MLIR_DIALECT_FUNC_TRANSFORMOPS_FUNCTRANSFORMOPS_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
-#include "mlir/IR/OpImplementation.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Func/TransformOps/FuncTransformOps.h.inc"

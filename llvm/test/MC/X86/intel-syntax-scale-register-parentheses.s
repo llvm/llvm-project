@@ -18,3 +18,27 @@
   xor [rsi + 2*(2*2*(rbx))], eax
 // CHECK: xor dword ptr [rsi + 8*rbx - 40], eax
   xor [rsi -40 +(2*(1*(rbx*2))*(2))], eax
+
+// CHECK: xor dword ptr [rsi + 2*rbx], eax
+  xor [rsi + rbx*(1+1)], eax
+// CHECK: xor dword ptr [rsi + 2*rbx + 4], eax
+  xor [rsi + rbx*(8-6) + 4], eax
+// CHECK: xor dword ptr [rsi + 2*rbx], eax
+  xor [rsi + rbx*(4/2)], eax
+// CHECK: xor dword ptr [rsi + 4*rbx], eax
+  xor [rsi + rbx*((3-1)*2)], eax
+// CHECK: xor dword ptr [rsi + 8*rbx], eax
+  xor [rsi + rbx*(1<<3)], eax
+.set scale_value, 1
+// CHECK: xor dword ptr [rsi + 2*rbx], eax
+  xor [rsi + rbx*(scale_value+1)], eax
+// CHECK: xor dword ptr [rsi + 4*rbx], eax
+  xor [rsi + 2*(rbx*(1+1))], eax
+// CHECK: xor dword ptr [rsi + rbx], eax
+  xor [rsi + rbx*(1 or 1)], eax
+// CHECK: xor dword ptr [rsi + rbx], eax
+  xor [rsi + rbx*(1 and 1)], eax
+// CHECK: xor dword ptr [rsi + 2*rbx], eax
+  xor [rsi + rbx*(1 shl 1)], eax
+// CHECK: xor dword ptr [rsi + rbx], eax
+  xor [rsi + rbx*(2 shr 1)], eax

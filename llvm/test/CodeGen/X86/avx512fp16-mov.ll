@@ -2374,8 +2374,8 @@ define <16 x i32> @pr52561(<16 x i32> %a, <16 x i32> %b) "min-legal-vector-width
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-32, %esp
 ; X86-NEXT:    subl $32, %esp
-; X86-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; X86-NEXT:    vpaddd 8(%ebp), %ymm1, %ymm1
+; X86-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; X86-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [112,112,112,112,112,112,112,112]
 ; X86-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; X86-NEXT:    vpaddd %ymm2, %ymm1, %ymm1

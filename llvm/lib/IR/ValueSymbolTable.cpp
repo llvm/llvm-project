@@ -13,6 +13,7 @@
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -75,6 +76,15 @@ ValueName *ValueSymbolTable::makeUniqueName(Value *V,
     if (IterBool.second)
       return &*IterBool.first;
   }
+}
+
+void ValueSymbolTable::insertUnnamed(ValueName *Entry, Value *V) {
+  assert(!Entry->getKey().contains(0) && "Null bytes are not allowed in names");
+  assert(!V->hasName() && "expected an unnamed value");
+  V->setValueName(Entry);
+  Entry->setValue(V);
+  if (auto *F = dyn_cast<Function>(V))
+    F->updateAfterNameChange();
 }
 
 // Insert a value into the symbol table with the specified name...

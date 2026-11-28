@@ -28,6 +28,7 @@ public:
                                   SDValue Chain, SDValue Op1, SDValue Op2,
                                   SDValue Op3, Align DstAlign, Align SrcAlign,
                                   bool isVolatile, bool AlwaysInline,
+                                  bool &IsTailCall,
                                   MachinePointerInfo DstPtrInfo,
                                   MachinePointerInfo SrcPtrInfo) const override;
 };

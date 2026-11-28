@@ -1,6 +1,7 @@
 // RUN: %libomp-compile
 // RUN: env KMP_WARNINGS=0 OMP_NUM_THREADS_DEV_abc=10 \
 // RUN:   OMP_DEFAULT_DEVICE_ALL=2 OMP_NUM_THREADS_ALL=8 \
+// RUN:   env -u OMP_NUM_THREADS \
 // RUN:   %libomp-run 2>&1 | FileCheck %s
 //
 // KMP_WARNINGS=0 silences device-scope warnings; OMP_NUM_THREADS_ALL=8 applies.

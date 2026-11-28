@@ -1749,7 +1749,7 @@ let Predicates = [hasMBarrierLayoutSupport] in {
 
 class MBAR_UTIL<string op, string scope,
                 string space = "", string sem = "",
-                bit tl = 0, bit parity = 0> {
+                bit tl = 0, bit parity = 0, string phase = ""> {
   // The mbarrier instructions in PTX ISA are of the general form:
   // mbarrier.op.semantics.scope.space.b64 arg1, arg2 ...
   // where:
@@ -1778,7 +1778,8 @@ class MBAR_UTIL<string op, string scope,
                       true : space);
 
   string _parity = !if(parity, "parity", "");
-  string asm_str = StrJoin<".", ["mbarrier", op, _parity,
+  string _phase_asm = !if(!empty(phase), "", "phase_type::" # phase);
+  string asm_str = StrJoin<".", ["mbarrier", op, _parity, _phase_asm,
                                   sem, _scope_asm, _space_asm, "b64"]>.ret;
 
   string _intr_suffix = StrJoin<"_", [!subst(".", "_", op), _parity,
@@ -1810,10 +1811,26 @@ foreach op = ["expect_tx", "complete_tx"] in {
     foreach space = ["space_cta", "space_cluster"] in {
       defvar intr = !cast<Intrinsic>(MBAR_UTIL<op, scope, space>.intr_name);
       defvar suffix = StrJoin<"_", [op, scope, space]>.ret;
+      defvar asm_str = MBAR_UTIL<op, scope, space, "relaxed">.asm_str;
+
+      // The shared::cluster form additionally carries a 32-bit CTA mask.
+      defvar is_mc_space = !eq(space, "space_cluster");
+
       def mbar_ # suffix : BasicNVPTXInst<(outs), (ins ADDR:$addr, B32:$tx_count),
-                           MBAR_UTIL<op, scope, space, "relaxed">.asm_str,
-                           [(intr addr:$addr, i32:$tx_count)]>,
+                           asm_str,
+                           !if(is_mc_space,
+                               [(intr addr:$addr, i32:$tx_count, (i32 srcvalue), 0)],
+                               [(intr addr:$addr, i32:$tx_count)])>,
                            Requires<[PTX80, SM90]>;
+
+      if is_mc_space then {
+        def mbar_ # suffix # "_MC" : NVPTXInst<(outs),
+                              (ins ADDR:$addr, B32:$tx_count, B32:$mc),
+                              !subst(".b64", ".multicast::cluster::32b.b64", asm_str)
+                                # " [$addr], $tx_count, $mc;",
+                              [(intr addr:$addr, i32:$tx_count, i32:$mc, -1)]>,
+                              Requires<[hasRubinFamilySupport]>;
+      }
     } // space
   } // scope
 } // op
@@ -1842,8 +1859,14 @@ multiclass MBAR_ARR_INTR<string op, string scope, string sem,
   def _CLUSTER : NVPTXInst<(outs),
                  (ins ADDR:$addr, B32:$tx_count),
                  asm_cluster # " _, [$addr], $tx_count;",
-                 [(intr_cluster addr:$addr, i32:$tx_count)]>,
+                 [(intr_cluster addr:$addr, i32:$tx_count, (i32 srcvalue), 0)]>,
                  Requires<pred>;
+  def _CLUSTER_MC : NVPTXInst<(outs),
+                    (ins ADDR:$addr, B32:$tx_count, B32:$mc),
+                    !subst(".b64", ".multicast::cluster::32b.b64", asm_cluster)
+                      # " _, [$addr], $tx_count, $mc;",
+                    [(intr_cluster addr:$addr, i32:$tx_count, i32:$mc, -1)]>,
+                    Requires<[hasRubinFamilySupport]>;
 }
 foreach op = ["arrive", "arrive.expect_tx",
               "arrive_drop", "arrive_drop.expect_tx"] in {
@@ -1898,6 +1921,90 @@ foreach op = ["test_wait", "try_wait"] in {
       defm mbar_ # suffix # "_acquire" : MBAR_WAIT_INTR<op, scope, "", time_limit>;
       defm mbar_ # suffix # "_relaxed" : MBAR_WAIT_INTR<op, scope, "relaxed", time_limit>;
     } // time_limit
+  } // scope
+} // op
+
+// This class and the InstrMapping below record each phase-qualified mbarrier
+// wait instruction that produces the optional PTX report value together
+// with its variant without the report. The mapping is used by
+// NVPTXTargetLowering::EmitInstrWithCustomInserter to drop an unused
+// report value from the selected instruction.
+class MbarrierReportVariant<string name, bit report> {
+  string MbarrierWaitName = name;
+  bit HasReport = report;
+}
+
+def getMbarrierNoReportOpcode : InstrMapping {
+  let FilterClass = "MbarrierReportVariant";
+  let RowFields = ["MbarrierWaitName"];
+  let ColFields = ["HasReport"];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
+}
+
+class MBAR_PHASE_WAIT<string op, string scope, string phase, string sem,
+                      bit time_limit, bit parity, bit report> {
+  defvar intr_name = StrJoin<"_", ["int_nvvm_mbarrier", op,
+                                   !if(parity, "parity", ""),
+                                   !if(time_limit, "tl", ""), phase,
+                                   !if(!eq(sem, "acquire"), "", sem), scope,
+                                   "space_cta"]>.ret;
+  defvar intr = !cast<Intrinsic>(intr_name);
+
+  defvar state_dag = !if(parity, (intr i32:$state), (intr i64:$state));
+  dag intr_dag = !con((intr addr:$addr), state_dag,
+                      !if(time_limit, (intr i32:$tl), (intr)));
+  dag ins_dag  = !con((ins ADDR:$addr),
+                      !if(parity, (ins B32:$state), (ins B64:$state)),
+                      !if(time_limit, (ins B32:$tl), (ins)));
+  dag outs_dag = !if(!eq(phase, "conditional"), (outs B1:$complete),
+                     !con((outs B1:$complete, B1:$reportSeen),
+                          !if(report, (outs B32:$reportValue), (outs))));
+  dag pattern  = !if(!eq(phase, "conditional"), (set i1:$complete, intr_dag),
+                    (set i1:$complete, i1:$reportSeen, i32:$reportValue,
+                     intr_dag));
+
+  defvar asm_inst = MBAR_UTIL<op, scope, "space_cta", sem,
+                              time_limit, parity, phase>.asm_str;
+  defvar asm_results = !if(!eq(phase, "conditional"), "$complete",
+                           "$complete|$reportSeen" # !if(report, ", %rpt_out", ""));
+  string asm_str = !if(report, "\\{\n\t.reg .b8 %rpt_out;\n\t", "") #
+                   asm_inst # " " # asm_results # ", [$addr], $state" #
+                   !if(time_limit, ", $tl", "") # ";" #
+                   !if(report, "\n\tcvt.u32.u8 $reportValue, %rpt_out;\n\t\\}", "");
+}
+
+foreach op = ["test_wait", "try_wait"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach phase = ["primary", "conditional"] in {
+      foreach parity = !if(!eq(phase, "conditional"), [true], [true, false]) in {
+        foreach time_limit = !if(!eq(op, "try_wait"), [true, false], [false]) in {
+          foreach sem = ["acquire", "relaxed"] in {
+            defvar suffix = StrJoin<"_", [op,
+                                !if(parity, "parity", ""),
+                                !if(time_limit, "tl", ""), phase, sem, scope]>.ret;
+            defvar wait = MBAR_PHASE_WAIT<op, scope, phase, sem, time_limit,
+                                          parity, !eq(phase, "primary")>;
+            def mbar_ # suffix :
+                NVPTXInst<wait.outs_dag, wait.ins_dag, wait.asm_str, [wait.pattern]>,
+                Requires<[PTX93, SM90]>,
+                MbarrierReportVariant<suffix, !eq(phase, "primary")> {
+              let usesCustomInserter = !eq(phase, "primary");
+            }
+            if !eq(phase, "primary") then {
+              defvar no_report = MBAR_PHASE_WAIT<op, scope, phase, sem,
+                                                 time_limit, parity, false>;
+              // No pattern: only selected by the custom inserter when the
+              // report value result is unused.
+              def mbar_ # suffix # _NO_REPORT :
+                  NVPTXInst<no_report.outs_dag, no_report.ins_dag, no_report.asm_str>,
+                  Requires<[PTX93, SM90]>,
+                  MbarrierReportVariant<suffix, false>;
+            }
+          } // sem
+        } // time_limit
+      } // parity
+    } // phase
   } // scope
 } // op
 
@@ -2457,6 +2564,27 @@ foreach rnd = FPRoundingModes in {
            (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", sat]>.ret)
              (f32 (fpextend type:$a)), (f32 (fpextend type:$b)), f32:$c, rnd_imm))]>,
         Requires<[SM100]>;
+
+  let Predicates = [hasFP16x2MixedPrecisionSupport] in {
+    foreach t = [F16X2RT, BF16X2RT] in {
+      def FMA_ # !toupper(rnd # "_f32x2_" # t.PtxType # "_f32x2_f32x2") :
+        BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B64:$b, B64:$c),
+          "fma." # rnd # ".f32x2." # t.PtxType # ".f32x2.f32x2">;
+
+      defvar Inst = !cast<Instruction>("FMA_" # !toupper(rnd # "_f32x2_" # t.PtxType #
+                                                         "_f32x2_f32x2"));
+
+      def : Pat<(v2f32 (int_nvvm_fma (fpextend_v2f32_from_packed t.Ty:$a),
+                                     v2f32:$b, v2f32:$c, rnd_imm)),
+                (Inst $a, $b, $c)>;
+
+      def : Pat<(v2f32 (int_nvvm_fma
+                        (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                    t.Ty.ElementType:$a1),
+                        v2f32:$b, v2f32:$c, rnd_imm)),
+                (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b, $c)>;
+    }
+  }
 }
 
 // Pattern for llvm.fma.f32 intrinsic when there is no FTZ flag
@@ -2466,6 +2594,19 @@ let Predicates = [SM100, doNoF32FTZ] in {
   def : Pat<(f32 (fma (f32 (fpextend bf16:$a)), (f32 (fpextend bf16:$b)), f32:$c)),
             (FMA_RN_F32_BF16 B16:$a, B16:$b, B32:$c)>;
 }
+
+let Predicates = [hasFP16x2MixedPrecisionSupport, doNoF32FTZ] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar Inst = !cast<Instruction>("FMA_RN_F32X2_" # !toupper(t.PtxType) # "_F32X2_F32X2");
+
+    def : Pat<(v2f32 (fma (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b, v2f32:$c)),
+              (Inst $a, $b, $c)>;
+
+    def : Pat<(v2f32 (fma (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                     t.Ty.ElementType:$a1),
+                          v2f32:$b, v2f32:$c)),
+              (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b, $c)>;
+  }
 
 foreach ty = [F16RT, F16X2RT, BF16RT, BF16X2RT] in {
   foreach relu = ["", "_relu"] in {
@@ -7313,6 +7454,76 @@ foreach NumSrc = SPNumSrcs in {
 } // NumSrc
 
 //
+// tcgen05.ld{.red}.spcompress
+//
+
+// mdata = ceil(num / 32);
+// cdata = num / 2.
+class Tcgen05LdSPCompressLayout<int RepeatFactor, bit IsRed> {
+  int MetadataSize = SPCeilDiv<RepeatFactor, 32>.Value;
+  int CompressedDataSize = !div(RepeatFactor, 2);
+  int NumResultRegs =
+      !add(MetadataSize, CompressedDataSize, !if(IsRed, 1, 0));
+  // taddr, row_op, abs, [nan]
+  int NumOperands = !if(IsRed, 4, 3);
+}
+
+class Tcgen05LdSPCompressSDNode<int RepeatFactor, bit IsRed,
+                                Tcgen05LdSPCompressLayout Layout>
+    : SDNode<"NVPTXISD::TCGEN05_LD" # !if(IsRed, "_RED", "")
+                 # "_SPCOMPRESS_X" # RepeatFactor,
+             SDTypeProfile<Layout.NumResultRegs, Layout.NumOperands,
+                           !foreach(OpIdx, !range(!add(Layout.NumResultRegs, Layout.NumOperands)),
+                                    SDTCisVT<OpIdx, i32>)>,
+             [SDNPHasChain, SDNPSideEffect, SDNPMemOperand]>;
+
+class Tcgen05LdSPCompressInst<string Red, int RepeatFactor, string RowOp,
+                              string Abs, string Nan>
+    : NVPTXInst<(outs), (ins), "?", []> {
+  defvar IsRed = !not(!empty(Red));
+  defvar Layout = Tcgen05LdSPCompressLayout<RepeatFactor, IsRed>;
+  defvar Results = SPRegList<Layout.NumResultRegs, "r">;
+  defvar Opcode = Tcgen05LdSPCompressSDNode<RepeatFactor, IsRed, Layout>;
+  defvar Args =
+      !listconcat([SPRegList<Layout.MetadataSize, "r">.Asm,
+                   SPRegList<Layout.CompressedDataSize, "r",
+                             Layout.MetadataSize>.Asm],
+                  !if(IsRed, ["$r" # !sub(Layout.NumResultRegs, 1)], []),
+                  ["[$taddr]"]);
+  defvar RowOpVal = !cond(!eq(RowOp, "min") : 0, !eq(RowOp, "max") : 1);
+  defvar AbsVal = !if(!empty(Abs), 0, 1);
+  defvar NanVal = !if(!empty(Nan), 0, 1);
+
+  // The pattern only matches the qualifiers this instruction prints.
+  dag IntrinsicPattern =
+      !con((Opcode i32:$taddr, (i32 RowOpVal), (i32 AbsVal)),
+           !if(IsRed, (Opcode (i32 NanVal)), (Opcode)));
+
+  let OutOperandList = Results.Outs;
+  let InOperandList = (ins B32:$taddr);
+  let AsmString = "tcgen05.ld" # Red
+                  # ".spcompress.sync.aligned.32x32b.x" # RepeatFactor
+                  # "." # RowOp # ".sp::2:4" # Abs # Nan
+                  # ".f32.b2 " # !interleave(Args, ", ") # ";";
+  let Pattern = [!con(Results.Set, (set IntrinsicPattern))];
+  let Predicates = [hasSPCompress];
+}
+
+let isConvergent = true in {
+  foreach Red = ["", ".red"] in {
+    foreach RepeatFactor = [4, 8, 16, 32, 64, 128] in {
+      foreach RowOp = ["min", "max"] in {
+        foreach Abs = ["", ".abs"] in {
+          // .NaN only applies to the reduction.
+          foreach Nan = !if(!empty(Red), [""], ["", ".NaN"]) in
+            def : Tcgen05LdSPCompressInst<Red, RepeatFactor, RowOp, Abs, Nan>;
+        } // Abs
+      } // RowOp
+    } // RepeatFactor
+  } // Red
+} // isConvergent
+
+//
 // tensormap.replace Instructions
 //
 
@@ -7330,14 +7541,32 @@ class TensormapReplaceInst_3<string state_space, string field_name,
     "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # t.PtxType,
     [(IntrinsicInAS<Intrin, as> addr:$addr, i32:$ord, t.Ty:$val)]>;
 
+defvar TensormapAllocClasses = ["alloc_small", "alloc_large", "alloc_same"];
+
+class TensormapReplaceGlobalAddressInst<string state_space,
+  string alloc_class_str, int alloc_class, NVPTXAddressSpace as> :
+  BasicNVPTXInst<(outs),
+    (ins ADDR:$addr, I64RT.RegOrImm:$val),
+    "tensormap.replace.tile.global_address" # alloc_class_str # "." # state_space
+      # ".b1024.b64",
+    [(IntrinsicInAS<int_nvvm_tensormap_replace_global_address, as>
+        addr:$addr, i64:$val, (i32 alloc_class))]>;
+
+class TensormapReplaceAllocClassInst<string state_space, string qualifier,
+  int alloc_class, NVPTXAddressSpace as> :
+  BasicNVPTXInst<(outs), (ins ADDR:$addr),
+    "tensormap.replace.tile" # qualifier # "." # state_space # ".b1024",
+    [(IntrinsicInAS<int_nvvm_tensormap_replace_alloc_class, as>
+        addr:$addr, (i32 alloc_class))]>;
+
 foreach ss = ["GLOBAL", "SHARED_CTA"] in {
   defvar as = !if(!eq(ss, "GLOBAL"), AddrSpaceGlobal, AddrSpaceShared);
   defvar ss_ptx = !tolower(!subst("_", "::", ss));
-  let Predicates = [hasTensormapReplaceSupport] in {
+  let Predicates = [hasTensormapReplaceSupport, PredNot<PTX95>] in
     def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # ss :
-      TensormapReplaceInst_2<ss_ptx, "global_address", I64RT,
-        int_nvvm_tensormap_replace_global_address, as>;
+      TensormapReplaceGlobalAddressInst<ss_ptx, "", 0, as>;
 
+  let Predicates = [hasTensormapReplaceSupport] in {
     foreach field_name = ["INTERLEAVE_LAYOUT", "FILL_MODE", "RANK"] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
       def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss :
@@ -7369,4 +7598,32 @@ foreach ss = ["GLOBAL", "SHARED_CTA"] in {
   def TENSORMAP_REPLACE_SWIZZLE_MODE_ # ss :
     TensormapReplaceInst_2<ss_ptx, "swizzle_mode", I32RT,
       int_nvvm_tensormap_replace_swizzle_mode, as>;
+
+  let Predicates = [hasTensormapAllocClassSupport] in {
+    foreach alloc_class = [0, 1, 2] in {
+      defvar alloc_class_str = TensormapAllocClasses[alloc_class];
+      def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # !toupper(alloc_class_str) # _ # ss :
+        TensormapReplaceGlobalAddressInst<ss_ptx, "." # alloc_class_str, alloc_class, as>;
+    }
+
+    foreach alloc_class = [0, 1] in {
+      defvar alloc_class_str = TensormapAllocClasses[alloc_class];
+      def TENSORMAP_REPLACE_TILE_ # !toupper(alloc_class_str) # _ # ss :
+        TensormapReplaceAllocClassInst<ss_ptx, "." # alloc_class_str, alloc_class, as>;
+    }
+  }
 } // state_space
+
+class TensormapQueryAllocClassLargeInst<NVPTXAddressSpace as>
+  : BasicNVPTXInst<(outs B1:$res), (ins ADDR:$addr),
+      "tensormap.query.alloc_class_large"
+        # !if(!eq(as.Name, "shared"), ".shared::cta", as.Suffix) # ".b1024",
+      [(set i1:$res,
+         (IntrinsicInAS<int_nvvm_tensormap_query_alloc_class_large, as>
+            addr:$addr))]>,
+    Requires<[hasTensormapAllocClassSupport]>;
+
+foreach as = [AddrSpaceGeneric, AddrSpaceGlobal, AddrSpaceShared,
+              AddrSpaceConst, AddrSpaceParam] in
+  def TENSORMAP_QUERY_ALLOC_CLASS_LARGE_ # !toupper(as.Name) :
+    TensormapQueryAllocClassLargeInst<as>;

@@ -137,6 +137,26 @@ initializeFileAndStringTable(const llvm::object::COFFObjectFile &Obj,
   }
 }
 
+static void dumpBBAddrMap(COFFYAML::Section &Sec, ArrayRef<uint8_t> Content,
+                          unsigned AddressSize) {
+  if (Content.empty()) {
+    Sec.SectionData.reset();
+    return;
+  }
+
+  ExitOnError Err("invalid .llvm_bb_addr_map section: ");
+  Err(BBAddrMapYAML::decodePayload(Content, llvm::endianness::little,
+                                   AddressSize, Sec.BBAddrMapEntries,
+                                   Sec.PGOAnalyses));
+
+  // COFFYAML rejects Entries with SectionData or SizeOfRawData, since yaml2obj
+  // derives both from Entries.
+  if (Sec.BBAddrMapEntries) {
+    Sec.SectionData.reset();
+    Sec.Header.SizeOfRawData = 0;
+  }
+}
+
 void COFFDumper::dumpSections(unsigned NumSections) {
   std::vector<COFFYAML::Section> &YAMLSections = YAMLObj.Sections;
   codeview::StringsAndChecksumsRef SC;
@@ -194,6 +214,9 @@ void COFFDumper::dumpSections(unsigned NumSections) {
                                                        NewYAMLSection.Name);
     else if (NewYAMLSection.Name == ".debug$H")
       NewYAMLSection.DebugH = CodeViewYAML::fromDebugH(sectionData);
+    else if (NewYAMLSection.Name == ".llvm_bb_addr_map")
+      dumpBBAddrMap(NewYAMLSection, sectionData,
+                    COFF::is64Bit(Obj.getMachine()) ? 8 : 4);
 
     std::vector<COFFYAML::Relocation> Relocations;
     for (const auto &Reloc : ObjSection.relocations()) {

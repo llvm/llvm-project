@@ -7,19 +7,21 @@
 name:            smax_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV32I-LABEL: name: smax_i32
-    ; RV32I: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; RV32I-NEXT: [[MAX:%[0-9]+]]:gpr = MAX [[COPY]], [[COPY1]]
     ; RV32I-NEXT: $x10 = COPY [[MAX]]
     ; RV32I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = G_SMAX %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = G_SMAX %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -27,19 +29,21 @@ body:             |
 name:            smin_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV32I-LABEL: name: smin_i32
-    ; RV32I: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; RV32I-NEXT: [[MIN:%[0-9]+]]:gpr = MIN [[COPY]], [[COPY1]]
     ; RV32I-NEXT: $x10 = COPY [[MIN]]
     ; RV32I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = G_SMIN %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = G_SMIN %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -47,19 +51,21 @@ body:             |
 name:            umax_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV32I-LABEL: name: umax_i32
-    ; RV32I: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; RV32I-NEXT: [[MAXU:%[0-9]+]]:gpr = MAXU [[COPY]], [[COPY1]]
     ; RV32I-NEXT: $x10 = COPY [[MAXU]]
     ; RV32I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = G_UMAX %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = G_UMAX %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...
@@ -67,19 +73,21 @@ body:             |
 name:            umin_i32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV32I-LABEL: name: umin_i32
-    ; RV32I: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; RV32I-NEXT: [[MINU:%[0-9]+]]:gpr = MINU [[COPY]], [[COPY1]]
     ; RV32I-NEXT: $x10 = COPY [[MINU]]
     ; RV32I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = COPY $x11
-    %2:gprb(s32) = G_UMIN %0, %1
-    $x10 = COPY %2(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = COPY $x11
+    %2:gprb(i32) = G_UMIN %0, %1
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 
 ...

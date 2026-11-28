@@ -8,7 +8,6 @@
 
 #include "mlir/Interfaces/Utils/MemorySlotUtils.h"
 #include "TestDialect.h"
-#include "TestOps.h"
 #include "mlir/Parser/Parser.h"
 #include "gtest/gtest.h"
 

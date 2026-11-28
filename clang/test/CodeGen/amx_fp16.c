@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown \
 // RUN: -target-feature +amx-tile -target-feature +amx-int8 -target-feature +amx-bf16 -target-feature +amx-fp16 -emit-llvm -o - -Wall -Werror -pedantic \
 // RUN: -Wno-gnu-statement-expression| FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +amx-tile -target-feature +amx-int8 -target-feature +amx-bf16 -target-feature +amx-fp16 -emit-llvm -o - -Wall -Werror -pedantic -Wno-gnu-statement-expression| FileCheck %s %}
 
 #include <immintrin.h>
 #include <stddef.h>

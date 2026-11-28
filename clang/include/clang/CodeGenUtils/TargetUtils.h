@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 class Triple;
@@ -65,6 +66,67 @@ bool hasExtraNeonArgument(unsigned BuiltinID);
 bool isAAPCS(const TargetInfo &TargetInfo);
 
 //===----------------------------------------------------------------------===//
+// X86
+//===----------------------------------------------------------------------===//
+enum class MSVCIntrin {
+  _BitScanForward,
+  _BitScanReverse,
+  _CopyDoubleFromInt64,
+  _CopyFloatFromInt32,
+  _CopyInt32FromFloat,
+  _CopyInt64FromDouble,
+  _CountLeadingOnes,
+  _CountLeadingZeros,
+  _CountOneBits,
+  _CountTrailingZeros,
+  _InterlockedAdd,
+  _InterlockedAdd_acq,
+  _InterlockedAdd_rel,
+  _InterlockedAdd_nf,
+  __prefetch,
+  _InterlockedAnd,
+  _InterlockedCompareExchange,
+  _InterlockedDecrement,
+  _InterlockedExchange,
+  _InterlockedExchangeAdd,
+  _InterlockedExchangeSub,
+  _InterlockedIncrement,
+  _InterlockedOr,
+  _InterlockedXor,
+  _InterlockedExchangeAdd_acq,
+  _InterlockedExchangeAdd_rel,
+  _InterlockedExchangeAdd_nf,
+  _InterlockedExchange_acq,
+  _InterlockedExchange_rel,
+  _InterlockedExchange_nf,
+  _InterlockedCompareExchange_acq,
+  _InterlockedCompareExchange_rel,
+  _InterlockedCompareExchange_nf,
+  _InterlockedCompareExchange128,
+  _InterlockedCompareExchange128_acq,
+  _InterlockedCompareExchange128_rel,
+  _InterlockedCompareExchange128_nf,
+  _InterlockedOr_acq,
+  _InterlockedOr_rel,
+  _InterlockedOr_nf,
+  _InterlockedXor_acq,
+  _InterlockedXor_rel,
+  _InterlockedXor_nf,
+  _InterlockedAnd_acq,
+  _InterlockedAnd_rel,
+  _InterlockedAnd_nf,
+  _InterlockedIncrement_acq,
+  _InterlockedIncrement_rel,
+  _InterlockedIncrement_nf,
+  _InterlockedDecrement_acq,
+  _InterlockedDecrement_rel,
+  _InterlockedDecrement_nf,
+  _ReadWriteBarrier,
+  __fastfail,
+};
+
+std::optional<MSVCIntrin> translateX86ToMsvcIntrin(unsigned BuiltinID);
+
 // Library builtins (PowerPC64 and AIX)
 //===----------------------------------------------------------------------===//
 

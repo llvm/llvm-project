@@ -237,6 +237,7 @@ clang --target=arm64-apple-macos11 -c  -g -gdwarf-4 -fno-unwind-tables \
 
 #--- merged_callsites.dSYM.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

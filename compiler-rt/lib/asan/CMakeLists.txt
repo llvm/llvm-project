@@ -419,6 +419,7 @@ else()
     set(ASAN_DYNAMIC_WEAK_INTERCEPTION)
     add_compiler_rt_runtime(clang_rt.asan
       SHARED
+      FILE_DESCRIPTION "AddressSanitizer runtime"
       ARCHS ${arch}
       OBJECT_LIBS ${ASAN_COMMON_RUNTIME_OBJECT_LIBS}
               RTAsan_dynamic

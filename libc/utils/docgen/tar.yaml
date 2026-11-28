@@ -1,0 +1,40 @@
+posix: posix-2024
+macros:
+  AREGTYPE:
+    in-latest-posix: ''
+  BLKTYPE:
+    in-latest-posix: ''
+  CHRTYPE:
+    in-latest-posix: ''
+  CONTTYPE:
+    in-latest-posix: ''
+  DIRTYPE:
+    in-latest-posix: ''
+  FIFOTYPE:
+    in-latest-posix: ''
+  LNKTYPE:
+    in-latest-posix: ''
+  REGTYPE:
+    in-latest-posix: ''
+  SYMTYPE:
+    in-latest-posix: ''
+  TGEXEC:
+    in-latest-posix: ''
+  TMAGIC:
+    in-latest-posix: ''
+  TMAGLEN:
+    in-latest-posix: ''
+  TOEXEC:
+    in-latest-posix: ''
+  TSGID:
+    in-latest-posix: ''
+  TSUID:
+    in-latest-posix: ''
+  TSVTX:
+    in-latest-posix: ''
+  TUEXEC:
+    in-latest-posix: ''
+  TVERSION:
+    in-latest-posix: ''
+  TVERSLEN:
+    in-latest-posix: ''

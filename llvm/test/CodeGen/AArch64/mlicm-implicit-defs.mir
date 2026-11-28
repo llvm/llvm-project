@@ -4,7 +4,6 @@
 
 ---
 name: unsafe_to_move
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: unsafe_to_move
   ; CHECK: bb.0:
@@ -54,7 +53,6 @@ body: |
 
 ---
 name: dead_implicit_def
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: dead_implicit_def
   ; CHECK: bb.0:

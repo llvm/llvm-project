@@ -1,0 +1,62 @@
+; RUN: %if spirv-tools %{ spirv-as --target-env spv1.0 %s -o - | mlir-translate --deserialize-spirv - -o - | FileCheck %s %}
+
+; CHECK-LABEL: spirv.func @undef_constituents
+; CHECK-SAME:    (%[[S_PTR:.+]]: !spirv.ptr<{{.+}}>, %[[V_PTR:.+]]: !spirv.ptr<vector<2xi32>, Function>)
+; CHECK-DAG:     %[[ONE:.+]] = spirv.Constant 1 : i32
+; CHECK-DAG:     %[[TWO:.+]] = spirv.Constant 2 : i32
+; CHECK-DAG:     %[[UNDEF:.+]] = spirv.Undef : i32
+; CHECK-DAG:     %[[VEC:.+]] = spirv.CompositeConstruct %[[ONE]], %[[UNDEF]] : (i32, i32) -> vector<2xi32>
+; CHECK-DAG:     %[[ARR:.+]] = spirv.CompositeConstruct %[[UNDEF]], %[[TWO]] : (i32, i32) -> !spirv.array<2 x i32>
+; CHECK:         %[[STRUCT:.+]] = spirv.CompositeConstruct %[[VEC]], %[[ARR]] : (vector<2xi32>, !spirv.array<2 x i32>) -> !spirv.struct<(vector<2xi32>, !spirv.array<2 x i32>)>
+; CHECK-NEXT:    spirv.Store "Function" %[[S_PTR]], %[[STRUCT]]
+; CHECK-NEXT:    spirv.Store "Function" %[[V_PTR]], %[[VEC]]
+; CHECK-NEXT:    spirv.Return
+
+; CHECK-LABEL: spirv.func @phi_constituents
+; CHECK-SAME:    (%[[P:.+]]: !spirv.ptr<vector<2xi32>, Function>)
+; CHECK:         %[[A:.+]] = spirv.CompositeConstruct
+; CHECK-NEXT:    spirv.Branch ^[[BB:bb[0-9]+]](%[[A]] : vector<2xi32>)
+; CHECK-NEXT:  ^[[BB]](%[[ARG:.+]]: vector<2xi32>):
+; CHECK-NEXT:    spirv.Store "Function" %[[P]], %[[ARG]]
+; CHECK:         %[[B:.+]] = spirv.CompositeConstruct
+; CHECK-NEXT:    spirv.Store "Function" %[[P]], %[[B]]
+
+               OpCapability Addresses
+               OpCapability Kernel
+               OpCapability Linkage
+               OpMemoryModel Physical64 OpenCL
+               OpName %undef_constituents "undef_constituents"
+               OpName %phi_constituents "phi_constituents"
+       %void = OpTypeVoid
+       %uint = OpTypeInt 32 0
+     %v2uint = OpTypeVector %uint 2
+     %uint_1 = OpConstant %uint 1
+     %uint_2 = OpConstant %uint 2
+   %arr_uint = OpTypeArray %uint %uint_2
+     %struct = OpTypeStruct %v2uint %arr_uint
+ %ptr_struct = OpTypePointer Function %struct
+ %ptr_v2uint = OpTypePointer Function %v2uint
+       %fnty = OpTypeFunction %void %ptr_struct %ptr_v2uint
+     %fnty_v = OpTypeFunction %void %ptr_v2uint
+      %undef = OpUndef %uint
+        %vec = OpConstantComposite %v2uint %uint_1 %undef
+        %arr = OpConstantComposite %arr_uint %undef %uint_2
+     %nested = OpConstantComposite %struct %vec %arr
+%undef_constituents = OpFunction %void None %fnty
+          %s = OpFunctionParameter %ptr_struct
+          %v = OpFunctionParameter %ptr_v2uint
+      %entry = OpLabel
+               OpStore %s %nested
+               OpStore %v %vec
+               OpReturn
+               OpFunctionEnd
+%phi_constituents = OpFunction %void None %fnty_v
+          %p = OpFunctionParameter %ptr_v2uint
+     %entry2 = OpLabel
+               OpBranch %next
+       %next = OpLabel
+        %phi = OpPhi %v2uint %vec %entry2
+               OpStore %p %phi
+               OpStore %p %vec
+               OpReturn
+               OpFunctionEnd

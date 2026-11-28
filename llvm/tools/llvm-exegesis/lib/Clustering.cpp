@@ -122,9 +122,6 @@ Error BenchmarkClustering::validateAndSetup() {
     }
     LastMeasurement = CurMeasurement;
   }
-  if (LastMeasurement) {
-    NumDimensions_ = LastMeasurement->size();
-  }
   return Error::success();
 }
 

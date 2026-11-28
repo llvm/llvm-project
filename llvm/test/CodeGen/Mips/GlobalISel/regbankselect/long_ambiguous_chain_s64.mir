@@ -243,7 +243,6 @@
 name:            long_chain_ambiguous_i64_in_fpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 24, size: 4, alignment: 8, isImmutable: true }
   - { id: 1, offset: 20, size: 4, alignment: 4, isImmutable: true }
@@ -459,7 +458,6 @@ body:             |
 name:            long_chain_i64_in_gpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 24, size: 4, alignment: 8, isImmutable: true }
   - { id: 1, offset: 20, size: 4, alignment: 4, isImmutable: true }
@@ -711,7 +709,6 @@ body:             |
 name:            long_chain_ambiguous_double_in_fpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 24, size: 4, alignment: 8, isImmutable: true }
   - { id: 1, offset: 20, size: 4, alignment: 4, isImmutable: true }
@@ -927,7 +924,6 @@ body:             |
 name:            long_chain_double_in_fpr
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 24, size: 4, alignment: 8, isImmutable: true }
   - { id: 1, offset: 20, size: 4, alignment: 4, isImmutable: true }

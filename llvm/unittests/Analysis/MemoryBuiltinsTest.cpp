@@ -36,11 +36,10 @@ TEST(AllocSize, AllocationBuiltinsTest) {
   std::unique_ptr<CallInst> Caller(
       CallInst::Create(AllocSizeFn, {ConstantInt::get(ArgTy, 100)}));
 
-  const TargetLibraryInfo *TLI = nullptr;
-  EXPECT_FALSE(isAllocLikeFn(Caller.get(), TLI));
+  EXPECT_FALSE(isAllocLikeFn(Caller.get()));
 
   // FIXME: We might be able to treat allocsize functions as general allocation
   // functions.
-  EXPECT_FALSE(isAllocationFn(Caller.get(), TLI));
+  EXPECT_FALSE(isAllocationFn(Caller.get()));
 }
 }

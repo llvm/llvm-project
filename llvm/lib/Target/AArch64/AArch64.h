@@ -34,6 +34,7 @@ struct AArch64O0PreLegalizerCombinerImplRuleConfig;
 struct AArch64PreLegalizerCombinerImplRuleConfig;
 struct AArch64PostLegalizerCombinerImplRuleConfig;
 struct AArch64PostLegalizerLoweringImplRuleConfig;
+struct SLSHardeningInserter;
 
 namespace llvm {
 
@@ -79,7 +80,7 @@ FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 FunctionPass *createAArch64CollectLOHPass();
 Pass *createAArch64PredicateAsCounterLoopRewritesPass();
 FunctionPass *createSMEPeepholeOptPass();
-FunctionPass *createMachineSMEABIPass(CodeGenOptLevel);
+FunctionPass *createMachineSMEABIPass();
 FunctionPass *createAArch64SRLTDefineSuperRegsLegacyPass();
 Pass *createSVEShuffleOptsPass();
 InstructionSelector *
@@ -343,7 +344,13 @@ public:
 
 class AArch64SLSHardeningPass
     : public RequiredPassInfoMixin<AArch64SLSHardeningPass> {
+  std::unique_ptr<SLSHardeningInserter> Inserter;
+
 public:
+  AArch64SLSHardeningPass();
+  AArch64SLSHardeningPass(AArch64SLSHardeningPass &&);
+  ~AArch64SLSHardeningPass();
+
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };

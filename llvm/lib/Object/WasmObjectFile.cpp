@@ -884,6 +884,13 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
             "section symbols must have local binding",
             object_error::parse_failed);
       Info.ElementIndex = readVaruint32(Ctx);
+      if (Info.ElementIndex >= Sections.size())
+        return make_error<GenericBinaryError>("invalid section symbol index",
+                                              object_error::parse_failed);
+      if (Sections[Info.ElementIndex].Type != wasm::WASM_SEC_CUSTOM)
+        return make_error<GenericBinaryError>(
+            "section symbols must reference custom sections",
+            object_error::parse_failed);
       // Use somewhat unique section name as symbol name.
       StringRef SectionName = Sections[Info.ElementIndex].Name;
       Info.Name = SectionName;
@@ -2291,7 +2298,9 @@ int WasmSectionOrderChecker::getSectionOrder(unsigned ID,
 // Represents the edges in a directed graph where any node B reachable from node
 // A is not allowed to appear before A in the section ordering, but may appear
 // afterward.
-int WasmSectionOrderChecker::DisallowedPredecessors
+static_assert(WasmSectionOrderChecker::WASM_NUM_SEC_ORDERS < UINT8_MAX,
+              "WASM_NUM_SEC_ORDERS too large");
+const uint8_t WasmSectionOrderChecker::DisallowedPredecessors
     [WASM_NUM_SEC_ORDERS][WASM_NUM_SEC_ORDERS] = {
         // WASM_SEC_ORDER_NONE
         {},

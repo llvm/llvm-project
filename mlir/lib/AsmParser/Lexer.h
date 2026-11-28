@@ -55,6 +55,16 @@ private:
 
   Token emitError(const char *loc, const Twine &message);
 
+  /// Returns the character `offset` positions past the cursor, or 0 if that
+  /// position is not inside the buffer. The buffer is not required to be
+  /// followed by a terminator, so the scanners look ahead through this instead
+  /// of dereferencing the cursor.
+  char peek(size_t offset = 0) const {
+    return offset < static_cast<size_t>(curBuffer.end() - curPtr)
+               ? curPtr[offset]
+               : 0;
+  }
+
   // Lexer implementation methods.
   Token lexAtIdentifier(const char *tokStart);
   Token lexBareIdentifierOrKeyword(const char *tokStart);

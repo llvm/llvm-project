@@ -6,11 +6,11 @@
 ## Also check --emit-relocs.
 # RUN: ld.lld --emit-relocs %t.o -o %t
 # RUN: llvm-readelf -x .got %t 2>&1 | FileCheck --check-prefix=LE-GOT %s
-# RUN: llvm-objdump -dr --no-show-raw-insn %t | FileCheck --check-prefixes=LER %s
+# RUN: llvm-objdump --no-print-imm-hex -dr --no-show-raw-insn %t | FileCheck --check-prefixes=LER %s
 
 # RUN: ld.lld --emit-relocs --no-relax %t.o -o %t.norelax
 # RUN: llvm-readelf -x .got %t.norelax 2>&1 | FileCheck --check-prefix=LE-GOT %s
-# RUN: llvm-objdump -dr --no-show-raw-insn %t.norelax | FileCheck --check-prefixes=LE %s
+# RUN: llvm-objdump --no-print-imm-hex -dr --no-show-raw-insn %t.norelax | FileCheck --check-prefixes=LE %s
 
 # LE-GOT: could not find section '.got'
 

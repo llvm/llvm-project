@@ -2,6 +2,8 @@
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -fcxx-exceptions -fexceptions -Wno-coroutine-missing-unhandled-exception -emit-cir %s -o %t.eh.cir
 // RUN: FileCheck --input-file=%t.eh.cir %s -check-prefix=CIR
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -disable-llvm-passes -Wno-coroutine-missing-unhandled-exception %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-llvm -disable-llvm-passes -Wno-coroutine-missing-unhandled-exception %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -emit-llvm -disable-llvm-passes -Wno-coroutine-missing-unhandled-exception %s -o %t.eh.ll
@@ -27,6 +29,7 @@ struct Awaiter {
 };
 
 // CIR-LABEL: cir.func coroutine {{.*}} @_Z17test_await_assignv
+// LLVM-LABEL: define dso_local void @_Z17test_await_assignv
 // OGCG-LABEL: define dso_local void @_Z17test_await_assignv
 Task test_await_assign() {
   // CIR: %[[VAL:.*]] = cir.const #cir.int<42> : !s32i
@@ -44,6 +47,12 @@ Task test_await_assign() {
   // CIR: %[[LOADED_PTR:.*]] = cir.load %[[TMP_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
   // CIR: cir.store align(4) %[[VAL]], %[[LOADED_PTR]] : !s32i, !cir.ptr<!s32i>
 
+  // The await_resume() result is spilled and reloaded after the await.
+  // LLVM: %[[RES:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN7Awaiter12await_resumeEv(ptr {{.*}})
+  // LLVM-NEXT: store ptr %[[RES]], ptr %[[TMP_ADDR:.*]], align 8
+  // LLVM: %[[LOADED_PTR:.*]] = load ptr, ptr %[[TMP_ADDR]], align 8
+  // LLVM-NEXT: store i32 42, ptr %[[LOADED_PTR]], align 4
+
   // OGCG: %[[RES_OGCG:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN7Awaiter12await_resumeEv(ptr {{.*}})
   // OGCG: store i32 42, ptr %[[RES_OGCG]], align 4
   Awaiter a;
@@ -51,6 +60,7 @@ Task test_await_assign() {
 }
 
 // CIR-LABEL: cir.func coroutine {{.*}} @_Z14test_await_refv
+// LLVM-LABEL: define dso_local void @_Z14test_await_refv
 // OGCG-LABEL: define dso_local void @_Z14test_await_refv
 Task test_await_ref() {
   // CIR: %[[R_ADDR:.*]] = cir.alloca "r" align(8) init const : !cir.ptr<!cir.ptr<!s32i>>
@@ -67,6 +77,13 @@ Task test_await_ref() {
   // CIR: },)
   // CIR: %[[LOADED_PTR:.*]] = cir.load %[[TMP_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
   // CIR: cir.store align(8) %[[LOADED_PTR]], %[[R_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+
+  // LLVM: alloca %struct.Awaiter, align 4
+  // LLVM-NEXT: %[[R_ADDR:.*]] = alloca ptr, align 8
+  // LLVM: %[[RES:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN7Awaiter12await_resumeEv(ptr {{.*}})
+  // LLVM-NEXT: store ptr %[[RES]], ptr %[[TMP_ADDR:.*]], align 8
+  // LLVM: %[[LOADED_PTR:.*]] = load ptr, ptr %[[TMP_ADDR]], align 8
+  // LLVM-NEXT: store ptr %[[LOADED_PTR]], ptr %[[R_ADDR]], align 8
 
   // OGCG: %[[RES_OGCG:.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN7Awaiter12await_resumeEv(ptr {{.*}})
   // OGCG: store ptr %[[RES_OGCG]], ptr %{{.*}}, align 8

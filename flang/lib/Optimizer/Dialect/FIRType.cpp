@@ -17,7 +17,6 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Tools/PointerModels.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -1626,11 +1625,6 @@ bool BaseBoxType::isCoarray() const {
 //===----------------------------------------------------------------------===//
 
 void FIROpsDialect::registerTypes() {
-  addTypes<BoxType, BoxCharType, BoxProcType, CharacterType, ClassType,
-           FieldType, HeapType, fir::IntegerType, LenType, LogicalType,
-           LLVMPointerType, PointerType, RecordType, ReferenceType,
-           SequenceType, ShapeType, ShapeShiftType, ShiftType, SliceType,
-           TypeDescType, fir::VectorType, fir::DummyScopeType>();
   fir::ReferenceType::attachInterface<
       OpenMPPointerLikeModel<fir::ReferenceType>>(*getContext());
   fir::PointerType::attachInterface<OpenMPPointerLikeModel<fir::PointerType>>(

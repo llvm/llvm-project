@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/HardwareLoops.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -33,7 +34,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -46,32 +46,6 @@
 #define HW_LOOPS_NAME "Hardware Loop Insertion"
 
 using namespace llvm;
-
-static cl::opt<bool>
-ForceHardwareLoops("force-hardware-loops", cl::Hidden, cl::init(false),
-                   cl::desc("Force hardware loops intrinsics to be inserted"));
-
-static cl::opt<bool>
-ForceHardwareLoopPHI(
-  "force-hardware-loop-phi", cl::Hidden, cl::init(false),
-  cl::desc("Force hardware loop counter to be updated through a phi"));
-
-static cl::opt<bool>
-ForceNestedLoop("force-nested-hardware-loop", cl::Hidden, cl::init(false),
-                cl::desc("Force allowance of nested hardware loops"));
-
-static cl::opt<unsigned>
-LoopDecrement("hardware-loop-decrement", cl::Hidden, cl::init(1),
-            cl::desc("Set the loop decrement value"));
-
-static cl::opt<unsigned>
-CounterBitWidth("hardware-loop-counter-bitwidth", cl::Hidden, cl::init(32),
-                cl::desc("Set the loop counter bitwidth"));
-
-static cl::opt<bool>
-ForceGuardLoopEntry(
-  "force-hardware-loop-guard", cl::Hidden, cl::init(false),
-  cl::desc("Force generation of loop guard intrinsic"));
 
 STATISTIC(NumHWLoops, "Number of loops converted to hardware loops");
 
@@ -112,8 +86,6 @@ namespace {
     LLVM_DEBUG(debugHWLoopFailure(Msg, I));
     ORE->emit(createHWLoopAnalysis(ORETag, TheLoop, I) << Msg);
   }
-
-  using TTI = TargetTransformInfo;
 
   class HardwareLoopsLegacy : public FunctionPass {
   public:
@@ -193,8 +165,7 @@ namespace {
   public:
     HardwareLoop(HardwareLoopInfo &Info, ScalarEvolution &SE,
                  OptimizationRemarkEmitter *ORE, HardwareLoopOptions &Opts)
-        : SE(SE), ORE(ORE), Opts(Opts), L(Info.L),
-          M(L->getHeader()->getModule()), ExitCount(Info.ExitCount),
+        : SE(SE), ORE(ORE), Opts(Opts), L(Info.L), ExitCount(Info.ExitCount),
           CountType(Info.CountType), ExitBranch(Info.ExitBranch),
           LoopDecrement(Info.LoopDecrement), UsePHICounter(Info.CounterInReg),
           UseLoopGuard(Info.PerformEntryTest) {}
@@ -205,8 +176,7 @@ namespace {
     ScalarEvolution &SE;
     OptimizationRemarkEmitter *ORE = nullptr;
     HardwareLoopOptions &Opts;
-    Loop *L                 = nullptr;
-    Module *M               = nullptr;
+    Loop *L = nullptr;
     const SCEV *ExitCount   = nullptr;
     Type *CountType         = nullptr;
     CondBrInst *ExitBranch = nullptr;
@@ -235,19 +205,14 @@ bool HardwareLoopsLegacy::runOnFunction(Function &F) {
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
+  const CodeGenOptions &CGOpts = getCodeGenOptions(F);
   HardwareLoopOptions Opts;
-  if (ForceHardwareLoops.getNumOccurrences())
-    Opts.setForce(ForceHardwareLoops);
-  if (ForceHardwareLoopPHI.getNumOccurrences())
-    Opts.setForcePhi(ForceHardwareLoopPHI);
-  if (ForceNestedLoop.getNumOccurrences())
-    Opts.setForceNested(ForceNestedLoop);
-  if (ForceGuardLoopEntry.getNumOccurrences())
-    Opts.setForceGuard(ForceGuardLoopEntry);
-  if (LoopDecrement.getNumOccurrences())
-    Opts.setDecrement(LoopDecrement);
-  if (CounterBitWidth.getNumOccurrences())
-    Opts.setCounterBitwidth(CounterBitWidth);
+  Opts.Force = toOptional(CGOpts.force_hardware_loops);
+  Opts.ForcePhi = toOptional(CGOpts.force_hardware_loop_phi);
+  Opts.ForceNested = toOptional(CGOpts.force_nested_hardware_loop);
+  Opts.ForceGuard = toOptional(CGOpts.force_hardware_loop_guard);
+  Opts.Decrement = CGOpts.hardware_loop_decrement;
+  Opts.Bitwidth = CGOpts.hardware_loop_counter_bitwidth;
 
   HardwareLoopsImpl Impl(SE, LI, PreserveLCSSA, DT, TTI, TLI, AC, ORE, Opts);
   return Impl.run(F);

@@ -1,16 +1,23 @@
-//===-- Implementation of fopencookie -------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of fopencookie.
+///
+//===----------------------------------------------------------------------===//
 
 #include "src/stdio/fopencookie.h"
+#include "hdr/errno_macros.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/types/FILE.h"
 #include "hdr/types/cookie_io_functions_t.h"
 #include "hdr/types/off_t.h"
+#include "hdr/types/ssize_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
 #include "src/__support/File/file_mode.h"
@@ -45,16 +52,22 @@ FileIOResult CookieFile::cookie_write(File *f, const void *data, size_t size) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.write == nullptr)
     return 0;
-  return static_cast<size_t>(cookie_file->ops.write(
-      cookie_file->cookie, reinterpret_cast<const char *>(data), size));
+  ssize_t result = cookie_file->ops.write(
+      cookie_file->cookie, reinterpret_cast<const char *>(data), size);
+  if (result < 0)
+    return {0, EIO};
+  return static_cast<size_t>(result);
 }
 
 FileIOResult CookieFile::cookie_read(File *f, void *data, size_t size) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.read == nullptr)
     return 0;
-  return static_cast<size_t>(cookie_file->ops.read(
-      cookie_file->cookie, reinterpret_cast<char *>(data), size));
+  ssize_t result = cookie_file->ops.read(cookie_file->cookie,
+                                         reinterpret_cast<char *>(data), size);
+  if (result < 0)
+    return {0, EIO};
+  return static_cast<size_t>(result);
 }
 
 ErrorOr<off_t> CookieFile::cookie_seek(File *f, off_t offset, int whence) {
@@ -65,7 +78,7 @@ ErrorOr<off_t> CookieFile::cookie_seek(File *f, off_t offset, int whence) {
   int result = cookie_file->ops.seek(cookie_file->cookie, &offset, whence);
   if (result == 0)
     return offset;
-  return -1;
+  return Error(EIO);
 }
 
 int CookieFile::cookie_close(File *f) {

@@ -31,7 +31,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
@@ -52,7 +53,23 @@
 
 namespace {
 
-namespace cl = llvm::cl;
+using namespace llvm::opt;
+enum ID {
+  OPT_INVALID = 0,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
+
+#define OPTTABLE_CODE
+#include "Opts.inc"
+
+class SrcEditMergeOptTable : public OptTable {
+public:
+  SrcEditMergeOptTable() : OptTable(optionTables()) {
+    setDashDashParsing(true);
+  }
+};
 
 //===----------------------------------------------------------------------===//
 // Error Messages
@@ -82,22 +99,6 @@ constexpr const char *CandidateEditMessage = "candidate edit: \"{0}\"";
 constexpr const char *ConflictSarifMessage =
     "{0} overlapping replacement(s) at {1} byte {2} were dropped; resolve "
     "manually.";
-
-cl::OptionCategory MergeCategory("clang-ssaf-src-edit-merge options");
-
-cl::list<std::string> InputFiles(cl::Positional, cl::OneOrMore,
-                                 cl::desc("<input.yaml>..."),
-                                 cl::cat(MergeCategory));
-
-cl::opt<std::string> OutputFile("o", cl::Required, cl::value_desc("path"),
-                                cl::desc("Output path for the merged YAML."),
-                                cl::cat(MergeCategory));
-
-cl::opt<std::string> SarifConflictsOut(
-    "sarif-conflicts-out", cl::value_desc("path"),
-    cl::desc("Optional path. When supplied, write a SARIF document "
-             "listing conflict clusters dropped from the merged output."),
-    cl::cat(MergeCategory));
 
 /// Read one input YAML into a TranslationUnitReplacements.
 ///
@@ -388,12 +389,37 @@ template <> struct MappingTraits<MergedReplacements> {
 
 int main(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
-  cl::HideUnrelatedOptions(MergeCategory);
-  cl::ParseCommandLineOptions(
-      argc, argv,
-      "clang-ssaf-src-edit-merge: merge per-TU TranslationUnitReplacements "
-      "YAML files for one link unit into a single merged YAML. Does not "
-      "write source files; the apply step is the caller's responsibility.\n");
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver Saver(Alloc);
+  SrcEditMergeOptTable Tbl;
+  llvm::opt::InputArgList Args =
+      Tbl.parseArgs(argc, const_cast<char **>(argv), OPT_UNKNOWN, Saver,
+                    [](llvm::StringRef Msg) {
+                      llvm::errs() << ToolName << ": " << Msg << "\n";
+                      exit(1);
+                    });
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(
+        llvm::outs(), "clang-ssaf-src-edit-merge [options] <input.yaml>...",
+        "clang-ssaf-src-edit-merge: merge per-TU TranslationUnitReplacements "
+        "YAML files for one link unit into a single merged YAML. Does not "
+        "write source files; the apply step is the caller's responsibility.");
+    return 0;
+  }
+  std::vector<std::string> InputFiles = Args.getAllArgValues(OPT_INPUT);
+  if (InputFiles.empty()) {
+    llvm::errs() << ToolName
+                 << ": expected at least 1 positional argument <input.yaml>\n";
+    return 1;
+  }
+  const llvm::opt::Arg *OutputArg = Args.getLastArg(OPT_o);
+  if (!OutputArg) {
+    llvm::errs() << ToolName << ": -o must be specified\n";
+    return 1;
+  }
+  std::string OutputFile = OutputArg->getValue();
+  std::string SarifConflictsOut =
+      Args.getLastArgValue(OPT_sarif_conflicts_out).str();
 
   // Validate the command-line parameters that can be checked without
   // reading any input, so a bad -o or --sarif-conflicts-out path is rejected

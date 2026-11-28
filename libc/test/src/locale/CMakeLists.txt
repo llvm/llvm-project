@@ -7,11 +7,14 @@ add_libc_test(
   SRCS
     locale_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.locale_macros
+    libc.src.__support.CPP.scope
+    libc.src.locale.freelocale
     libc.src.locale.newlocale
     libc.src.locale.setlocale
     libc.src.locale.uselocale
-    libc.src.locale.freelocale
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(

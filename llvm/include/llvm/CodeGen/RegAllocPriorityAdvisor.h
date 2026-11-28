@@ -121,8 +121,6 @@ public:
 
 private:
   void initializeProvider(LLVMContext &Ctx);
-  void initializeMLProvider(RegAllocPriorityAdvisorProvider::AdvisorMode Mode,
-                            LLVMContext &Ctx);
   std::unique_ptr<RegAllocPriorityAdvisorProvider> Provider;
 };
 

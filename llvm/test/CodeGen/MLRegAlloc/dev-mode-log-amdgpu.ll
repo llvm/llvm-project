@@ -26,6 +26,7 @@
 ; PRIO-NEXT: {"observation":2}
 ; PRIO-NEXT: {"outcome":2}
 ; PRIO-NEXT: {"observation":3}
+; PRIO-NEXT: {"outcome":3}
 define amdgpu_kernel void @0(ptr addrspace(1) %p) {
   %v = load volatile i32, ptr addrspace(1) %p
   store volatile i32 %v, ptr addrspace(1) %p
@@ -41,6 +42,7 @@ define amdgpu_kernel void @0(ptr addrspace(1) %p) {
 ; PRIO-NEXT: {"observation":2}
 ; PRIO-NEXT: {"outcome":2}
 ; PRIO-NEXT: {"observation":3}
+; PRIO-NEXT: {"outcome":3}
 define amdgpu_kernel void @1(ptr addrspace(1) %p) {
   %v = load volatile i32, ptr addrspace(1) %p
   store volatile i32 %v, ptr addrspace(1) %p
@@ -56,6 +58,7 @@ define amdgpu_kernel void @1(ptr addrspace(1) %p) {
 ; PRIO-NEXT: {"observation":2}
 ; PRIO-NEXT: {"outcome":2}
 ; PRIO-NEXT: {"observation":3}
+; PRIO-NEXT: {"outcome":3}
 ; EVICT-NOT:  {{.}}
 ; PRIO-NOT:  {{.}}
 define amdgpu_kernel void @f(ptr addrspace(1) %p) {

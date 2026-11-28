@@ -69,8 +69,7 @@ static RegisterInfo g_register_infos_i386[] = {
 // clang-format on
 } // namespace
 
-RegisterInfoWindows_i386::RegisterInfoWindows_i386(
-    const ArchSpec &target_arch)
+RegisterInfoWindows_i386::RegisterInfoWindows_i386(const ArchSpec &target_arch)
     : lldb_private::RegisterInfoInterface(target_arch) {
   assert(target_arch.GetMachine() == llvm::Triple::x86);
 }

@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_VECTOR_IR_VECTORDIALECT_H
 #define MLIR_DIALECT_VECTOR_IR_VECTORDIALECT_H
 
-#include "mlir/IR/Dialect.h"
-
 #include "mlir/Dialect/Vector/IR/VectorDialect.h.inc"
 
 #endif // MLIR_DIALECT_VECTOR_IR_VECTORDIALECT_H

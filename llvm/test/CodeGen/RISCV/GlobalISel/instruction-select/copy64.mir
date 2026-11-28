@@ -6,7 +6,6 @@
 name:            virt_to_phys
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
@@ -14,8 +13,8 @@ body:             |
     ; RV64I: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 1
     ; RV64I-NEXT: $x10 = COPY [[ADDI]]
     ; RV64I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_CONSTANT i64 1
-    $x10 = COPY %0(s64)
+    %0:gprb(i64) = G_CONSTANT i64 1
+    $x10 = COPY %0(i64)
     PseudoRET implicit $x10
 
 ...
@@ -23,7 +22,6 @@ body:             |
 name:            phys_to_phys
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -41,14 +39,13 @@ body:             |
 name:            virt_to_virt
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
 
     ; RV64I-LABEL: name: virt_to_virt
     ; RV64I: PseudoRET
-    %0:gprb(s64) = G_CONSTANT i64 1
-    %1:gprb(s64) = COPY %0(s64)
+    %0:gprb(i64) = G_CONSTANT i64 1
+    %1:gprb(i64) = COPY %0(i64)
     PseudoRET
 
 ...
@@ -56,7 +53,6 @@ body:             |
 name:            phys_to_virt
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -65,7 +61,7 @@ body:             |
     ; RV64I: liveins: $x10
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: PseudoRET
-    %0:gprb(s64) = COPY $x10
+    %0:gprb(i64) = COPY $x10
     PseudoRET
 
 ...

@@ -158,8 +158,10 @@ EnumInfo::BitEnumSeparatorKind EnumInfo::getBitEnumSeparatorKind() const {
     return BitEnumSeparatorKind::VerticalBar;
   if (separator == ",")
     return BitEnumSeparatorKind::Comma;
-  PrintFatalError(def->getLoc(), "bit enum separator must be '|' or ',', "
-                                 "optionally surrounded by spaces");
+  if (separator.empty())
+    return BitEnumSeparatorKind::Space;
+  PrintFatalError(def->getLoc(),
+                  "bit enum separator must be '|', ',', or a space ' '");
 }
 
 StringRef EnumInfo::getBitEnumSeparatorParser() const {
@@ -168,6 +170,11 @@ StringRef EnumInfo::getBitEnumSeparatorParser() const {
     return "parseOptionalVerticalBar";
   case BitEnumSeparatorKind::Comma:
     return "parseOptionalComma";
+  case BitEnumSeparatorKind::Space:
+    // Whitespace is not a token, so there is nothing to parse between cases.
+    PrintFatalError(def->getLoc(),
+                    "a bit enum with a space separator has no separator "
+                    "parser");
   }
   llvm_unreachable("unknown bit enum separator kind");
 }

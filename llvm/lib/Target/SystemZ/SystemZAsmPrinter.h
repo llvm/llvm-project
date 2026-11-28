@@ -55,6 +55,26 @@ public:
     return false;
   }
 };
+
+class SystemZAsmPrinterBeginPass
+    : public RequiredPassInfoMixin<SystemZAsmPrinterBeginPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
+};
+
+class SystemZAsmPrinterPass
+    : public RequiredPassInfoMixin<SystemZAsmPrinterPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class SystemZAsmPrinterEndPass
+    : public RequiredPassInfoMixin<SystemZAsmPrinterEndPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
+};
+
 } // end namespace llvm
 
 #endif

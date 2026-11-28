@@ -1,0 +1,41 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is used as the registry of passes that are part of the SystemZ
+// backend.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("systemz-align-globals", SystemZAlignGlobalsPass())
+MODULE_PASS("systemz-asm-printer-begin", SystemZAsmPrinterBeginPass())
+MODULE_PASS("systemz-asm-printer-end", SystemZAsmPrinterEndPass())
+#undef MODULE_PASS
+
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+FUNCTION_PASS("systemz-tdc", SystemZTDCPass(*this))
+#undef FUNCTION_PASS
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("systemz-asm-printer", SystemZAsmPrinterPass())
+MACHINE_FUNCTION_PASS("systemz-copy-physregs", SystemZCopyPhysRegsPass())
+MACHINE_FUNCTION_PASS("systemz-elim-compare", SystemZElimComparePass())
+MACHINE_FUNCTION_PASS("systemz-isel", SystemZISelDAGToDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("systemz-ld-cleanup", SystemZLDCleanupPass())
+MACHINE_FUNCTION_PASS("systemz-long-branch", SystemZLongBranchPass())
+MACHINE_FUNCTION_PASS("systemz-post-rewrite", SystemZPostRewritePass())
+MACHINE_FUNCTION_PASS("systemz-shorten-inst", SystemZShortenInstPass())
+#undef MACHINE_FUNCTION_PASS

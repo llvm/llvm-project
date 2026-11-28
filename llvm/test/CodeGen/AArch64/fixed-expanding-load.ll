@@ -37,3 +37,29 @@ define <2 x i64> @test_fixed_expandload(ptr %base, <2 x i64> %passthru, <2 x i1>
   %res = call <2 x i64> @llvm.masked.expandload(ptr align 1 %base, <2 x i1> %pred, <2 x i64> %passthru)
   ret <2 x i64> %res
 }
+
+define <1 x i128> @test_fixed_expandload_v1i128(ptr %base, <1 x i128> %passthru, <1 x i1> %pred) {
+; CHECK-EXPAND-LABEL: test_fixed_expandload_v1i128:
+; CHECK-EXPAND:       // %bb.0:
+; CHECK-EXPAND-NEXT:    tbz w4, #0, .LBB1_2
+; CHECK-EXPAND-NEXT:  // %bb.1: // %cond.load
+; CHECK-EXPAND-NEXT:    ldp x0, x1, [x0]
+; CHECK-EXPAND-NEXT:    ret
+; CHECK-EXPAND-NEXT:  .LBB1_2:
+; CHECK-EXPAND-NEXT:    mov x1, x3
+; CHECK-EXPAND-NEXT:    mov x0, x2
+; CHECK-EXPAND-NEXT:    ret
+;
+; CHECK-EXPAND-STREAMING-LABEL: test_fixed_expandload_v1i128:
+; CHECK-EXPAND-STREAMING:       // %bb.0:
+; CHECK-EXPAND-STREAMING-NEXT:    tbz w4, #0, .LBB1_2
+; CHECK-EXPAND-STREAMING-NEXT:  // %bb.1: // %cond.load
+; CHECK-EXPAND-STREAMING-NEXT:    ldp x0, x1, [x0]
+; CHECK-EXPAND-STREAMING-NEXT:    ret
+; CHECK-EXPAND-STREAMING-NEXT:  .LBB1_2:
+; CHECK-EXPAND-STREAMING-NEXT:    mov x1, x3
+; CHECK-EXPAND-STREAMING-NEXT:    mov x0, x2
+; CHECK-EXPAND-STREAMING-NEXT:    ret
+  %res = call <1 x i128> @llvm.masked.expandload(ptr align 1 %base, <1 x i1> %pred, <1 x i128> %passthru)
+  ret <1 x i128> %res
+}

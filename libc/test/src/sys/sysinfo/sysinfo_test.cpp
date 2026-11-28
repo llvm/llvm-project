@@ -30,6 +30,10 @@ TEST(LlvmLibcSysinfoTest, ValidBuffer) {
   EXPECT_GT(info.procs, static_cast<unsigned short>(0));
 }
 
+// QEMU user space emulation does not check for a null pointer in sysinfo and
+// returns 0 instead of failing with EFAULT.
+#ifndef LIBC_TEST_UNDER_EMULATOR
 TEST(LlvmLibcSysinfoTest, NullptrBuffer) {
   EXPECT_THAT(LIBC_NAMESPACE::sysinfo(nullptr), Fails(EFAULT));
 }
+#endif // LIBC_TEST_UNDER_EMULATOR

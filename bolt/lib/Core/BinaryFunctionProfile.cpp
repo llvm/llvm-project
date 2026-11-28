@@ -294,7 +294,7 @@ void BinaryFunction::inferFallThroughCounts() {
       continue;
 
     // Calculate frequency of outgoing branches from this node according to
-    // LBR data.
+    // brstack data.
     uint64_t ReportedBranches = 0;
     for (const BinaryBasicBlock::BinaryBranchInfo &SuccBI : BB->branch_info())
       if (SuccBI.Count != BinaryBasicBlock::COUNT_NO_PROFILE)
@@ -308,7 +308,7 @@ void BinaryFunction::inferFallThroughCounts() {
           *CTCInstr, "CTCTakenCount");
     }
 
-    // Calculate frequency of throws from this node according to LBR data
+    // Calculate frequency of throws from this node according to brstack data
     // for branching into associated landing pads. Since it is possible
     // for a landing pad to be associated with more than one basic blocks,
     // we may overestimate the frequency of throws for such blocks.

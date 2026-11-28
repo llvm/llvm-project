@@ -119,6 +119,8 @@ extern bool PollyTrackFailures;
 extern bool PollyDelinearize;
 extern bool PollyUseRuntimeAliasChecks;
 extern bool PollyProcessUnprofitable;
+extern bool PollyDetectForVectorization;
+extern bool PollyOptimizeForVectorization;
 extern bool PollyInvariantLoadHoisting;
 extern bool PollyAllowUnsignedOperations;
 extern bool PollyAllowFullFunction;

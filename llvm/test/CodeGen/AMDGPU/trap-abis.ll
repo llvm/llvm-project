@@ -497,9 +497,7 @@ define amdgpu_kernel void @trap_with_constant_after(i1 %continue, ptr addrspace(
 ; NOHSA-TRAP-GFX900-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; NOHSA-TRAP-GFX900-NEXT:    s_waitcnt lgkmcnt(0)
 ; NOHSA-TRAP-GFX900-NEXT:    s_bitcmp1_b32 s0, 0
-; NOHSA-TRAP-GFX900-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; NOHSA-TRAP-GFX900-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; NOHSA-TRAP-GFX900-NEXT:    s_cbranch_vccz .LBB3_2
+; NOHSA-TRAP-GFX900-NEXT:    s_cbranch_scc0 .LBB3_2
 ; NOHSA-TRAP-GFX900-NEXT:  .LBB3_1:
 ; NOHSA-TRAP-GFX900-NEXT:    s_endpgm
 ; NOHSA-TRAP-GFX900-NEXT:  .LBB3_2: ; %trap
@@ -520,9 +518,7 @@ define amdgpu_kernel void @trap_with_constant_after(i1 %continue, ptr addrspace(
 ; HSA-TRAP-GFX803-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; HSA-TRAP-GFX803-NEXT:    s_waitcnt lgkmcnt(0)
 ; HSA-TRAP-GFX803-NEXT:    s_bitcmp1_b32 s0, 0
-; HSA-TRAP-GFX803-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; HSA-TRAP-GFX803-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; HSA-TRAP-GFX803-NEXT:    s_cbranch_vccz .LBB3_2
+; HSA-TRAP-GFX803-NEXT:    s_cbranch_scc0 .LBB3_2
 ; HSA-TRAP-GFX803-NEXT:  ; %bb.1: ; %exit
 ; HSA-TRAP-GFX803-NEXT:    s_endpgm
 ; HSA-TRAP-GFX803-NEXT:  .LBB3_2: ; %trap
@@ -541,9 +537,7 @@ define amdgpu_kernel void @trap_with_constant_after(i1 %continue, ptr addrspace(
 ; HSA-TRAP-GFX900-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; HSA-TRAP-GFX900-NEXT:    s_waitcnt lgkmcnt(0)
 ; HSA-TRAP-GFX900-NEXT:    s_bitcmp1_b32 s0, 0
-; HSA-TRAP-GFX900-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; HSA-TRAP-GFX900-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; HSA-TRAP-GFX900-NEXT:    s_cbranch_vccz .LBB3_2
+; HSA-TRAP-GFX900-NEXT:    s_cbranch_scc0 .LBB3_2
 ; HSA-TRAP-GFX900-NEXT:  ; %bb.1: ; %exit
 ; HSA-TRAP-GFX900-NEXT:    s_endpgm
 ; HSA-TRAP-GFX900-NEXT:  .LBB3_2: ; %trap
@@ -560,9 +554,7 @@ define amdgpu_kernel void @trap_with_constant_after(i1 %continue, ptr addrspace(
 ; HSA-NOTRAP-GFX900-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; HSA-NOTRAP-GFX900-NEXT:    s_waitcnt lgkmcnt(0)
 ; HSA-NOTRAP-GFX900-NEXT:    s_bitcmp1_b32 s0, 0
-; HSA-NOTRAP-GFX900-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; HSA-NOTRAP-GFX900-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; HSA-NOTRAP-GFX900-NEXT:    s_cbranch_vccz .LBB3_2
+; HSA-NOTRAP-GFX900-NEXT:    s_cbranch_scc0 .LBB3_2
 ; HSA-NOTRAP-GFX900-NEXT:  .LBB3_1:
 ; HSA-NOTRAP-GFX900-NEXT:    s_endpgm
 ; HSA-NOTRAP-GFX900-NEXT:  .LBB3_2: ; %trap
@@ -580,10 +572,7 @@ define amdgpu_kernel void @trap_with_constant_after(i1 %continue, ptr addrspace(
 ; HSA-TRAP-GFX1100-NEXT:    s_load_b32 s0, s[4:5], 0x0
 ; HSA-TRAP-GFX1100-NEXT:    s_waitcnt lgkmcnt(0)
 ; HSA-TRAP-GFX1100-NEXT:    s_bitcmp1_b32 s0, 0
-; HSA-TRAP-GFX1100-NEXT:    s_cselect_b32 s0, -1, 0
-; HSA-TRAP-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; HSA-TRAP-GFX1100-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
-; HSA-TRAP-GFX1100-NEXT:    s_cbranch_vccz .LBB3_2
+; HSA-TRAP-GFX1100-NEXT:    s_cbranch_scc0 .LBB3_2
 ; HSA-TRAP-GFX1100-NEXT:  ; %bb.1: ; %exit
 ; HSA-TRAP-GFX1100-NEXT:    s_endpgm
 ; HSA-TRAP-GFX1100-NEXT:  .LBB3_2: ; %trap
@@ -614,27 +603,26 @@ define amdgpu_kernel void @trap_with_constant_after(i1 %continue, ptr addrspace(
 ; HSA-TRAP-GFX1100-O0-NEXT:    v_mov_b32_e32 v0, 0
 ; HSA-TRAP-GFX1100-O0-NEXT:    global_load_u8 v0, v0, s[4:5]
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; HSA-TRAP-GFX1100-O0-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt lgkmcnt(0)
-; HSA-TRAP-GFX1100-O0-NEXT:    s_load_b32 s0, s[4:5], 0x0
-; HSA-TRAP-GFX1100-O0-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8
-; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt lgkmcnt(0)
-; HSA-TRAP-GFX1100-O0-NEXT:    s_and_b32 s0, 1, s0
-; HSA-TRAP-GFX1100-O0-NEXT:    s_cmp_eq_u32 s0, 1
-; HSA-TRAP-GFX1100-O0-NEXT:    s_cselect_b32 s0, -1, 0
+; HSA-TRAP-GFX1100-O0-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; HSA-TRAP-GFX1100-O0-NEXT:    s_and_b32 s2, 1, s2
+; HSA-TRAP-GFX1100-O0-NEXT:    s_cmp_eq_u32 s2, 1
 ; HSA-TRAP-GFX1100-O0-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
-; HSA-TRAP-GFX1100-O0-NEXT:    v_writelane_b32 v2, s2, 0
-; HSA-TRAP-GFX1100-O0-NEXT:    v_writelane_b32 v2, s3, 1
-; HSA-TRAP-GFX1100-O0-NEXT:    s_or_saveexec_b32 s6, -1
+; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt lgkmcnt(0)
+; HSA-TRAP-GFX1100-O0-NEXT:    v_writelane_b32 v2, s0, 0
+; HSA-TRAP-GFX1100-O0-NEXT:    v_writelane_b32 v2, s1, 1
+; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 s3, exec_lo
+; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 exec_lo, -1
 ; HSA-TRAP-GFX1100-O0-NEXT:    scratch_store_b32 off, v2, off ; 4-byte Folded Spill
-; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 exec_lo, s6
-; HSA-TRAP-GFX1100-O0-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
-; HSA-TRAP-GFX1100-O0-NEXT:    s_cbranch_vccnz .LBB3_3
+; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 exec_lo, s3
+; HSA-TRAP-GFX1100-O0-NEXT:    s_cbranch_scc1 .LBB3_3
 ; HSA-TRAP-GFX1100-O0-NEXT:  ; %bb.1: ; %trap
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_cbranch_execnz .LBB3_4
 ; HSA-TRAP-GFX1100-O0-NEXT:  ; %bb.2: ; %trap
-; HSA-TRAP-GFX1100-O0-NEXT:    s_or_saveexec_b32 s6, -1
+; HSA-TRAP-GFX1100-O0-NEXT:    s_or_saveexec_b32 s3, -1
 ; HSA-TRAP-GFX1100-O0-NEXT:    scratch_load_b32 v2, off, off ; 4-byte Folded Reload
-; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 exec_lo, s6
+; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 exec_lo, s3
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-TRAP-GFX1100-O0-NEXT:    v_readlane_b32 s0, v2, 0
 ; HSA-TRAP-GFX1100-O0-NEXT:    v_readlane_b32 s1, v2, 1

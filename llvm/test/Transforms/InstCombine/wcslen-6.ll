@@ -17,7 +17,7 @@ declare i64 @wcslen(ptr)
 
 define i64 @fold_af() {
 ; CHECK-LABEL: @fold_af(
-; CHECK-NEXT:    [[N:%.*]] = call i64 @wcslen(ptr nonnull @af)
+; CHECK-NEXT:    [[N:%.*]] = call i64 @wcslen(ptr noundef nonnull dereferenceable(4) @af)
 ; CHECK-NEXT:    ret i64 [[N]]
 ;
   %n = call i64 @wcslen(ptr @af)
@@ -31,7 +31,7 @@ define i64 @fold_af() {
 
 define i64 @fold_aS() {
 ; CHECK-LABEL: @fold_aS(
-; CHECK-NEXT:    [[N:%.*]] = call i64 @wcslen(ptr nonnull @aS)
+; CHECK-NEXT:    [[N:%.*]] = call i64 @wcslen(ptr noundef nonnull dereferenceable(4) @aS)
 ; CHECK-NEXT:    ret i64 [[N]]
 ;
   %n = call i64 @wcslen(ptr @aS)

@@ -141,7 +141,7 @@ static void emitPPA1Name(MCStreamer &OutStreamer, StringRef OutName) {
     OutSize = UINT16_MAX;
   }
   // Emit padding to ensure that the next optional field word-aligned.
-  uint8_t ExtraZeros = 4 - ((2 + OutSize) % 4);
+  uint8_t ExtraZeros = offsetToAlignment(2 + OutSize, Align(4));
 
   SmallString<512> OutnameConv;
   ConverterEBCDIC::convertToEBCDIC(OutName, OutnameConv);

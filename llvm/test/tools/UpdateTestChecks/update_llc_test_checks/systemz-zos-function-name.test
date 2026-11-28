@@ -1,0 +1,6 @@
+# REQUIRES: systemz-registered-target
+## Check that z/OS (HLASM) functions are matched using the entry point marker,
+## function and function end labels.
+
+# RUN: cp -f %S/Inputs/systemz_zos_function_name.ll %t.ll && %update_llc_test_checks %t.ll
+# RUN: diff -u %S/Inputs/systemz_zos_function_name.ll.expected %t.ll

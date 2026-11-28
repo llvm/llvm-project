@@ -60,7 +60,7 @@ def LegalizeVectorStorage
     alignment prevents this issue.
   }];
   let constructor = "mlir::arm_sve::createLegalizeVectorStoragePass()";
-  let dependentDialects = ["func::FuncDialect",
+  let dependentDialects = ["arith::ArithDialect", "func::FuncDialect",
     "memref::MemRefDialect", "vector::VectorDialect",
     "arm_sve::ArmSVEDialect"];
 }

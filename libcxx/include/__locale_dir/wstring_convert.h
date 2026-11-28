@@ -47,47 +47,44 @@ private:
 
 public:
 #    ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI wstring_convert() : wstring_convert(new _Codecvt) {}
-  _LIBCPP_HIDE_FROM_ABI explicit wstring_convert(_Codecvt* __pcvt);
+  wstring_convert() : wstring_convert(new _Codecvt) {}
+  explicit wstring_convert(_Codecvt* __pcvt);
 #    else
-  _LIBCPP_HIDE_FROM_ABI wstring_convert(_Codecvt* __pcvt = new _Codecvt);
+  wstring_convert(_Codecvt* __pcvt = new _Codecvt);
 #    endif
 
-  _LIBCPP_HIDE_FROM_ABI wstring_convert(_Codecvt* __pcvt, state_type __state);
-  explicit _LIBCPP_HIDE_FROM_ABI
-  wstring_convert(const byte_string& __byte_err, const wide_string& __wide_err = wide_string());
+  wstring_convert(_Codecvt* __pcvt, state_type __state);
+  explicit wstring_convert(const byte_string& __byte_err, const wide_string& __wide_err = wide_string());
 #    ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI wstring_convert(wstring_convert&& __wc);
+  wstring_convert(wstring_convert&& __wc);
 #    endif
-  _LIBCPP_HIDE_FROM_ABI ~wstring_convert();
+  ~wstring_convert();
 
   wstring_convert(const wstring_convert& __wc)            = delete;
   wstring_convert& operator=(const wstring_convert& __wc) = delete;
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI wide_string from_bytes(char __byte) {
-    return from_bytes(&__byte, &__byte + 1);
-  }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI wide_string from_bytes(const char* __ptr) {
+  [[__nodiscard__]] wide_string from_bytes(char __byte) { return from_bytes(&__byte, &__byte + 1); }
+  [[__nodiscard__]] wide_string from_bytes(const char* __ptr) {
     return from_bytes(__ptr, __ptr + char_traits<char>::length(__ptr));
   }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI wide_string from_bytes(const byte_string& __str) {
+  [[__nodiscard__]] wide_string from_bytes(const byte_string& __str) {
     return from_bytes(__str.data(), __str.data() + __str.size());
   }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI wide_string from_bytes(const char* __first, const char* __last);
+  [[__nodiscard__]] wide_string from_bytes(const char* __first, const char* __last);
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI byte_string to_bytes(_Elem __wchar) {
+  [[__nodiscard__]] byte_string to_bytes(_Elem __wchar) {
     return to_bytes(std::addressof(__wchar), std::addressof(__wchar) + 1);
   }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI byte_string to_bytes(const _Elem* __wptr) {
+  [[__nodiscard__]] byte_string to_bytes(const _Elem* __wptr) {
     return to_bytes(__wptr, __wptr + char_traits<_Elem>::length(__wptr));
   }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI byte_string to_bytes(const wide_string& __wstr) {
+  [[__nodiscard__]] byte_string to_bytes(const wide_string& __wstr) {
     return to_bytes(__wstr.data(), __wstr.data() + __wstr.size());
   }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI byte_string to_bytes(const _Elem* __first, const _Elem* __last);
+  [[__nodiscard__]] byte_string to_bytes(const _Elem* __first, const _Elem* __last);
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t converted() const _NOEXCEPT { return __cvtcount_; }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI state_type state() const { return __cvtstate_; }
+  [[__nodiscard__]] size_t converted() const _NOEXCEPT { return __cvtcount_; }
+  [[__nodiscard__]] state_type state() const { return __cvtstate_; }
 };
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH

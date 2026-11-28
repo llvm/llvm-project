@@ -22,7 +22,7 @@ else:
 # and "func_name_separator"
 
 ASM_FUNCTION_X86_RE = re.compile(
-    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*(@"?(?P=func)"?| -- Begin function (?P=func))\n(?:\s*\.?Lfunc_begin[^:\n]*:\n)?'
+    r'^_?(?P<func>[^:]+?)(?P<func_name_separator>(?:@@\d+)?:)[ \t]*#+[ \t]*(@"?(?P=func)"?| -- Begin function (?P=func))\n(?:\s*\.?Lfunc_begin[^:\n]*:\n)?'
     r"(?:\.L(?P=func)\$local:\n)?"  # drop .L<func>$local:
     r"(?:\s*\.type\s+\.L(?P=func)\$local,@function\n)?"  # drop .type .L<func>$local
     r"(?:[ \t]*(?:\.cfi_startproc|\.cfi_personality|\.cfi_lsda|\.seh_proc|\.seh_handler)\b[^\n]*\n)*"  # drop optional cfi
@@ -164,6 +164,18 @@ ASM_FUNCTION_SYSTEMZ_RE = re.compile(
     flags=(re.M | re.S),
 )
 
+# z/OS (HLASM) output has no colon after labels. A function ACDC is delimited by
+# the entry point marker label (L#EPM_ACDC_0), the function label (ACDC) and the
+# function end label (L#ACDC_end_0).
+ASM_FUNCTION_SYSTEMZ_ZOS_RE = re.compile(
+    r"^L#EPM_(?P<func>\S+?)_(?P<idx>[0-9]+) DS 0H\n"
+    r"(?:.*?)\n"
+    r"^(?P=func)(?P<func_name_separator> DS 0H)\n"
+    r"(?P<body>.*?)\n"
+    r"^L#(?P=func)_end_(?P=idx) DS 0H\n",
+    flags=(re.M | re.S),
+)
+
 ASM_FUNCTION_AARCH64_DARWIN_RE = re.compile(
     r'^_(?P<func>[^:]+):[ \t]*;[ \t]@"?(?P=func)"?\n'
     r"([ \t]*.cfi_startproc\n[\s]*)?"
@@ -211,7 +223,7 @@ ASM_FUNCTION_ARM_IOS_RE = re.compile(
 )
 
 ASM_FUNCTION_WASM_RE = re.compile(
-    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n'
+    r'^(?P<func>_?[^:\n]+):(?:[ \t]*#+[ \t]*@"?(?P=func)"?)?\n'
     r"(?P<body>.*?)\n"
     r"^\s*(\.Lfunc_end[0-9]+:\n|end_function)",
     flags=(re.M | re.S),
@@ -610,6 +622,8 @@ def get_run_handler(triple):
         "spirv32": (scrub_asm_spirv, ASM_FUNCTION_SPIRV_RE),
         "spirv64": (scrub_asm_spirv, ASM_FUNCTION_SPIRV_RE),
         "s390x": (scrub_asm_systemz, ASM_FUNCTION_SYSTEMZ_RE),
+        "s390x-zos": (scrub_asm_systemz, ASM_FUNCTION_SYSTEMZ_ZOS_RE),
+        "s390x-ibm-zos": (scrub_asm_systemz, ASM_FUNCTION_SYSTEMZ_ZOS_RE),
         "wasm32": (scrub_asm_wasm, ASM_FUNCTION_WASM_RE),
         "wasm64": (scrub_asm_wasm, ASM_FUNCTION_WASM_RE),
         "ve": (scrub_asm_ve, ASM_FUNCTION_VE_RE),

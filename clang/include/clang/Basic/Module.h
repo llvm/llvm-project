@@ -537,11 +537,11 @@ public:
 
   /// Headers that are mentioned in the module map file but that we have not
   /// yet attempted to resolve to a file on the file system.
-  SmallVector<UnresolvedHeaderDirective, 1> UnresolvedHeaders;
+  SmallVector<UnresolvedHeaderDirective, 0> UnresolvedHeaders;
 
   /// Headers that are mentioned in the module map file but could not be
   /// found on the file system.
-  SmallVector<UnresolvedHeaderDirective, 1> MissingHeaders;
+  SmallVector<UnresolvedHeaderDirective, 0> MissingHeaders;
 
   struct Requirement {
     std::string FeatureName;
@@ -689,13 +689,13 @@ public:
   };
 
   /// The set of export declarations that have yet to be resolved.
-  SmallVector<UnresolvedExportDecl, 2> UnresolvedExports;
+  SmallVector<UnresolvedExportDecl, 1> UnresolvedExports;
 
   /// The directly used modules.
   SmallVector<Module *, 2> DirectUses;
 
   /// The set of use declarations that have yet to be resolved.
-  SmallVector<ModuleId, 2> UnresolvedDirectUses;
+  SmallVector<ModuleId, 0> UnresolvedDirectUses;
 
   /// When \c NoUndeclaredIncludes is true, the set of modules this module tried
   /// to import but didn't because they are not direct uses.
@@ -741,7 +741,7 @@ public:
 
   /// The list of conflicts for which the module-id has not yet been
   /// resolved.
-  std::vector<UnresolvedConflict> UnresolvedConflicts;
+  SmallVector<UnresolvedConflict, 0> UnresolvedConflicts;
 
   /// A conflict between two modules.
   struct Conflict {

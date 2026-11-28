@@ -744,6 +744,102 @@ define void @diff_types(ptr %ptr, ptr %ptrX, ptr %ptrY) {
   ret void
 }
 
+define void @vectorize_ptrtoaddr(ptr %gep0, ptr %ptr0, ptr %ptr1) {
+; CHECK-LABEL: define void @vectorize_ptrtoaddr(
+; CHECK-SAME: ptr [[GEP0:%.*]], ptr [[PTR0:%.*]], ptr [[PTR1:%.*]]) {
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x ptr> poison, ptr [[PTR0]], i32 0, !sandboxvec [[META21:![0-9]+]]
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x ptr> [[PACK]], ptr [[PTR1]], i32 1, !sandboxvec [[META21]]
+; CHECK-NEXT:    [[VCAST:%.*]] = ptrtoaddr <2 x ptr> [[PACK1]] to <2 x i64>, !sandboxvec [[META21]]
+; CHECK-NEXT:    store <2 x i64> [[VCAST]], ptr [[GEP0]], align 8, !sandboxvec [[META21]]
+; CHECK-NEXT:    ret void
+;
+; REVERT-LABEL: define void @vectorize_ptrtoaddr(
+; REVERT-SAME: ptr [[GEP0:%.*]], ptr [[PTR0:%.*]], ptr [[PTR1:%.*]]) {
+; REVERT-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[GEP0]], i64 8, !sandboxvec [[META21:![0-9]+]]
+; REVERT-NEXT:    [[V0:%.*]] = ptrtoaddr ptr [[PTR0]] to i64, !sandboxvec [[META21]]
+; REVERT-NEXT:    [[V1:%.*]] = ptrtoaddr ptr [[PTR1]] to i64, !sandboxvec [[META21]]
+; REVERT-NEXT:    store i64 [[V0]], ptr [[GEP0]], align 8, !sandboxvec [[META21]]
+; REVERT-NEXT:    store i64 [[V1]], ptr [[GEP1]], align 8, !sandboxvec [[META21]]
+; REVERT-NEXT:    ret void
+;
+  %gep1 = getelementptr i8, ptr %gep0, i64 8
+  %v0 = ptrtoaddr ptr %ptr0 to i64
+  %v1 = ptrtoaddr ptr %ptr1 to i64
+  store i64 %v0, ptr %gep0, align 8
+  store i64 %v1, ptr %gep1, align 8
+  ret void
+}
+
+; In this test the pack [42, %ld0] should be emitted after the vectorized load
+; (instead of the just after %ld0), because the pack will eventually get its
+; input from an unpack from the vectorized load. Otherwise we will have a
+; use-before-def between the pack and the unpack.
+define void @pack_placement_after_vectorized() {
+; CHECK-LABEL: define void @pack_placement_after_vectorized() {
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i32, ptr null, i64 0
+; CHECK-NEXT:    [[LD0:%.*]] = load i32, ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x i32>, ptr [[GEP0]], align 4, !sandboxvec [[META22:![0-9]+]]
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i32> <i32 42, i32 poison>, i32 [[LD0]], i32 1, !sandboxvec [[META22]]
+; CHECK-NEXT:    [[VEC:%.*]] = sub <2 x i32> [[VECL]], [[PACK]], !sandboxvec [[META22]]
+; CHECK-NEXT:    store <2 x i32> [[VEC]], ptr [[GEP0]], align 4, !sandboxvec [[META22]]
+; CHECK-NEXT:    ret void
+;
+; REVERT-LABEL: define void @pack_placement_after_vectorized() {
+; REVERT-NEXT:    [[GEP0:%.*]] = getelementptr i32, ptr null, i64 0
+; REVERT-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr null, i64 1, !sandboxvec [[META22:![0-9]+]]
+; REVERT-NEXT:    [[LD0:%.*]] = load i32, ptr [[GEP0]], align 4
+; REVERT-NEXT:    [[LD1:%.*]] = load i32, ptr [[GEP1]], align 4, !sandboxvec [[META22]]
+; REVERT-NEXT:    [[S0:%.*]] = sub i32 [[LD0]], 42, !sandboxvec [[META22]]
+; REVERT-NEXT:    [[S1:%.*]] = sub i32 [[LD1]], [[LD0]], !sandboxvec [[META22]]
+; REVERT-NEXT:    store i32 [[S0]], ptr [[GEP0]], align 4, !sandboxvec [[META22]]
+; REVERT-NEXT:    store i32 [[S1]], ptr [[GEP1]], align 4, !sandboxvec [[META22]]
+; REVERT-NEXT:    ret void
+;
+  %gep0 = getelementptr i32, ptr null, i64 0
+  %gep1 = getelementptr i32, ptr null, i64 1
+  %ld0 = load i32, ptr %gep0
+  %ld1 = load i32, ptr %gep1
+  %s0 = sub i32 %ld0, 42
+  %s1 = sub i32 %ld1, %ld0
+  store i32 %s0, ptr %gep0
+  store i32 %s1, ptr %gep1
+  ret void
+}
+
+; Same, but this time the loads have not been vectorized by the time the
+; pack gets emitted.
+define void @pack_placement_after_to_be_vectorized() {
+; CHECK-LABEL: define void @pack_placement_after_to_be_vectorized() {
+; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i32, ptr null, i64 0
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x i32>, ptr [[GEP0]], align 4, !sandboxvec [[META23:![0-9]+]]
+; CHECK-NEXT:    [[UNPACK:%.*]] = extractelement <2 x i32> [[VECL]], i32 0, !sandboxvec [[META23]]
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i32> <i32 42, i32 poison>, i32 [[UNPACK]], i32 1, !sandboxvec [[META23]]
+; CHECK-NEXT:    [[VEC:%.*]] = sub <2 x i32> [[PACK]], [[VECL]], !sandboxvec [[META23]]
+; CHECK-NEXT:    store <2 x i32> [[VEC]], ptr [[GEP0]], align 4, !sandboxvec [[META23]]
+; CHECK-NEXT:    ret void
+;
+; REVERT-LABEL: define void @pack_placement_after_to_be_vectorized() {
+; REVERT-NEXT:    [[GEP0:%.*]] = getelementptr i32, ptr null, i64 0
+; REVERT-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr null, i64 1, !sandboxvec [[META23:![0-9]+]]
+; REVERT-NEXT:    [[LD0:%.*]] = load i32, ptr [[GEP0]], align 4, !sandboxvec [[META23]]
+; REVERT-NEXT:    [[LD1:%.*]] = load i32, ptr [[GEP1]], align 4, !sandboxvec [[META23]]
+; REVERT-NEXT:    [[S0:%.*]] = sub i32 42, [[LD0]], !sandboxvec [[META23]]
+; REVERT-NEXT:    [[S1:%.*]] = sub i32 [[LD0]], [[LD1]], !sandboxvec [[META23]]
+; REVERT-NEXT:    store i32 [[S0]], ptr [[GEP0]], align 4, !sandboxvec [[META23]]
+; REVERT-NEXT:    store i32 [[S1]], ptr [[GEP1]], align 4, !sandboxvec [[META23]]
+; REVERT-NEXT:    ret void
+;
+  %gep0 = getelementptr i32, ptr null, i64 0
+  %gep1 = getelementptr i32, ptr null, i64 1
+  %ld0 = load i32, ptr %gep0
+  %ld1 = load i32, ptr %gep1
+  %s0 = sub i32   42, %ld0
+  %s1 = sub i32 %ld0, %ld1
+  store i32 %s0, ptr %gep0
+  store i32 %s1, ptr %gep1
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META1]] = distinct !{!"sandboxregion"}
@@ -766,6 +862,9 @@ define void @diff_types(ptr %ptr, ptr %ptrX, ptr %ptrY) {
 ; CHECK: [[META18]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META19]] = distinct !{!"sandboxregion"}
 ; CHECK: [[META20]] = distinct !{!"sandboxregion"}
+; CHECK: [[META21]] = distinct !{!"sandboxregion"}
+; CHECK: [[META22]] = distinct !{!"sandboxregion"}
+; CHECK: [[META23]] = distinct !{!"sandboxregion"}
 ;.
 ; REVERT: [[META0]] = distinct !{!"sandboxregion"}
 ; REVERT: [[META1]] = distinct !{!"sandboxregion"}
@@ -788,4 +887,7 @@ define void @diff_types(ptr %ptr, ptr %ptrX, ptr %ptrY) {
 ; REVERT: [[META18]] = distinct !{!"sandboxregion"}
 ; REVERT: [[META19]] = distinct !{!"sandboxregion"}
 ; REVERT: [[META20]] = distinct !{!"sandboxregion"}
+; REVERT: [[META21]] = distinct !{!"sandboxregion"}
+; REVERT: [[META22]] = distinct !{!"sandboxregion"}
+; REVERT: [[META23]] = distinct !{!"sandboxregion"}
 ;.

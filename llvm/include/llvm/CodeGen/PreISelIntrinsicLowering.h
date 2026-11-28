@@ -22,9 +22,9 @@ class TargetMachine;
 
 struct PreISelIntrinsicLoweringPass
     : RequiredPassInfoMixin<PreISelIntrinsicLoweringPass> {
-  const TargetMachine *TM;
+  const TargetMachine &TM;
 
-  PreISelIntrinsicLoweringPass(const TargetMachine *TM) : TM(TM) {}
+  PreISelIntrinsicLoweringPass(const TargetMachine &TM) : TM(TM) {}
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

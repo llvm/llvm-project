@@ -236,7 +236,8 @@ void SystemZPostRASchedStrategy::enterMBB(MachineBasicBlock *NextMBB) {
 
   /// Create a HazardRec for MBB, save it in SchedStates and set HazardRec to
   /// point to it.
-  HazardRec = SchedStates[MBB] = new SystemZHazardRecognizer(TII, &SchedModel);
+  HazardRec = SchedStates[MBB] =
+      new SystemZHazardRecognizer(TII, &SchedModel, CLOpts);
   LLVM_DEBUG(const MachineLoop *Loop = MLI->getLoopFor(MBB);
              if (Loop && Loop->getHeader() == MBB) dbgs() << " (Loop header)";
              dbgs() << ":\n";);
@@ -278,12 +279,12 @@ void SystemZPostRASchedStrategy::leaveMBB() {
   advanceTo(MBB->getFirstTerminator());
 }
 
-SystemZPostRASchedStrategy::
-SystemZPostRASchedStrategy(const MachineSchedContext *C)
-  : MLI(C->MLI),
-    TII(static_cast<const SystemZInstrInfo *>
-        (C->MF->getSubtarget().getInstrInfo())),
-    MBB(nullptr), HazardRec(nullptr) {
+SystemZPostRASchedStrategy::SystemZPostRASchedStrategy(
+    const MachineSchedContext *C)
+    : MLI(C->MLI), TII(static_cast<const SystemZInstrInfo *>(
+                       C->MF->getSubtarget().getInstrInfo())),
+      CLOpts(C->MF->getSubtarget<SystemZSubtarget>().getCLOpts()), MBB(nullptr),
+      HazardRec(nullptr) {
   const TargetSubtargetInfo *ST = &C->MF->getSubtarget();
   SchedModel.init(ST);
 }

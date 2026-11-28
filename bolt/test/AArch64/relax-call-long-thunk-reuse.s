@@ -3,7 +3,7 @@
 ## borrowing cluster, otherwise reuse can become transitive and pick a thunk at
 ## the wrong cluster boundary.
 ##
-## With --max-cluster-size=64, each function forms its own cluster:
+## With --max-cluster-size=100, each function forms its own cluster:
 ##
 ##   cluster 0: A
 ##   cluster 1: B
@@ -20,7 +20,7 @@
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --relax-exp \
-# RUN:   --max-cluster-size=64 --max-thunk-chain-length=0 \
+# RUN:   --max-cluster-size=100 --max-thunk-chain-length=0 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
 # RUN: llvm-objdump -d \
 # RUN:   --disassemble-symbols=A,B,C,D,E,__AArch64_backward_ADRPThunk_A_0,__AArch64_backward_ADRPThunk_A_1 \

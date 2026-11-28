@@ -202,7 +202,7 @@ class PatAMO<SDPatternOperator OpNode, RVInst Inst, ValueType vt = XLenVT>
 
 multiclass AMOPat<string AtomicOp, string BaseInst, ValueType vt = XLenVT,
                   list<Predicate> ExtraPreds = []> {
-let Predicates = !listconcat([HasStdExtA, NoStdExtZtso], ExtraPreds) in {
+let Predicates = !listconcat([HasStdExtZaamo, NoStdExtZtso], ExtraPreds) in {
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_monotonic"),
                !cast<RVInst>(BaseInst), vt>;
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_acquire"),
@@ -214,7 +214,7 @@ let Predicates = !listconcat([HasStdExtA, NoStdExtZtso], ExtraPreds) in {
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_seq_cst"),
                !cast<RVInst>(BaseInst#"_AQRL"), vt>;
 }
-let Predicates = !listconcat([HasStdExtA, HasStdExtZtso], ExtraPreds) in {
+let Predicates = !listconcat([HasStdExtZaamo, HasStdExtZtso], ExtraPreds) in {
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_monotonic"),
                !cast<RVInst>(BaseInst), vt>;
   def : PatAMO<!cast<PatFrag>(AtomicOp#"_acquire"),

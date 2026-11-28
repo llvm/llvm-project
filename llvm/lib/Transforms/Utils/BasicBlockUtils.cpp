@@ -119,8 +119,7 @@ void llvm::detachDeadBlocks(ArrayRef<BasicBlock *> BBs,
       if (isa<FuncletPadInst>(I)) {
         UniqueEHRetBlocksToDelete.clear();
 
-        for (User *User : I.users()) {
-          Instruction *ReturnInstr = dyn_cast<Instruction>(User);
+        for (Instruction *ReturnInstr : I.users()) {
           // If we have a cleanupret or catchret block, replace it with just an
           // unreachable. The other alternative, that may use a catchpad is a
           // catchswitch. That does not need special handling for now.
@@ -1741,6 +1740,7 @@ void llvm::SplitBlockAndInsertForEachLane(
     std::function<void(IRBuilderBase &, Value *)> Func) {
 
   IRBuilder<> IRB(InsertBefore);
+  IRB.disableGEPCanonicalization();
 
   if (EC.isScalable()) {
     Value *NumElements = IRB.CreateElementCount(IndexTy, EC);
@@ -1765,6 +1765,7 @@ void llvm::SplitBlockAndInsertForEachLane(
     std::function<void(IRBuilderBase &, Value *)> Func) {
 
   IRBuilder<> IRB(InsertBefore);
+  IRB.disableGEPCanonicalization();
   Type *Ty = EVL->getType();
 
   if (!isa<ConstantInt>(EVL)) {

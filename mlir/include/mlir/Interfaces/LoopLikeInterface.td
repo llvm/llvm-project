@@ -48,6 +48,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     region iter_args.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/LoopLikeInterface.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -488,6 +489,8 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
 //===----------------------------------------------------------------------===//
 
 // Op contains a region that may have parallel execution semantics.
-def HasParallelRegion : NativeOpTrait<"HasParallelRegion">;
+def HasParallelRegion : NativeOpTrait<"HasParallelRegion"> {
+  let cppIncludes = ["mlir/Interfaces/LoopLikeInterface.h"];
+}
 
 #endif // MLIR_INTERFACES_LOOPLIKEINTERFACE

@@ -14,7 +14,7 @@
 #ifndef NVVM_DIALECT_NVVM_IR_BASICPTXBUILDERINTERFACE_H_
 #define NVVM_DIALECT_NVVM_IR_BASICPTXBUILDERINTERFACE_H_
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
@@ -54,6 +54,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h.inc"
 
 namespace mlir {
+namespace LLVM {
+class InlineAsmOp;
+} // namespace LLVM
 
 namespace NVVM {
 

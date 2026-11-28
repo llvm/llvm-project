@@ -245,7 +245,9 @@ struct OperandsSignature {
         return false;
       }
 
-      assert(Op.hasConcreteType(0) && "Type infererence not done?");
+      // Skip operands whose type depends on a HwMode.
+      if (!Op.getExtType(0).isMachineValueType())
+        return false;
 
       // For now, all the operands must have the same type (if they aren't
       // immediates).  Note that this causes us to reject variable sized shifts
@@ -500,12 +502,19 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
 
     const Record *InstPatOp = InstPatNode.getOperator();
     StringRef OpcodeName = CGP.getSDNodeInfo(InstPatOp).getEnumName();
+    // FastISel needs a single MVT for the result and first operand. Skip
+    // patterns whose types depend on a HwMode.
     MVT RetVT = MVT::isVoid;
-    if (InstPatNode.getNumTypes())
+    if (InstPatNode.getNumTypes()) {
+      if (!InstPatNode.getExtType(0).isMachineValueType())
+        continue;
       RetVT = InstPatNode.getSimpleType(0);
+    }
     MVT VT = RetVT;
     if (InstPatNode.getNumChildren()) {
       assert(InstPatNode.getChild(0).getNumTypes() == 1);
+      if (!InstPatNode.getChild(0).getExtType(0).isMachineValueType())
+        continue;
       VT = InstPatNode.getChild(0).getSimpleType(0);
     }
 

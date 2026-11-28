@@ -202,3 +202,23 @@ void ImplicitFloatToBoolCastThenSplat(float Value) {
 void ImplicitBoolToFloatCastThenSplat(bool Value) {
     float3x2 M = Value;
 }
+
+// CHECK-LABEL: define hidden void @_Z32ExplicitFloatToBoolCastThenSplatf(
+// CHECK-SAME: float noundef nofpclass(nan inf) [[VALUE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca float, align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [3 x <2 x i32>], align 4
+// CHECK-NEXT:    store float [[VALUE]], ptr [[VALUE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[VALUE_ADDR]], align 4
+// CHECK-NEXT:    [[TOBOOL:%.*]] = fcmp reassoc nnan ninf nsz arcp afn une float [[TMP1]], 0.000000e+00
+// CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <6 x i1> poison, i1 [[TOBOOL]], i64 0
+// CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <6 x i1> [[SPLAT_SPLATINSERT]], <6 x i1> poison, <6 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP2:%.*]] = zext <6 x i1> [[SPLAT_SPLAT]] to <6 x i32>
+// CHECK-NEXT:    store <6 x i32> [[TMP2]], ptr [[M]], align 4
+// CHECK-NEXT:    ret void
+//
+void ExplicitFloatToBoolCastThenSplat(float Value) {
+    bool2x3 M = (bool2x3) Value;
+}
+

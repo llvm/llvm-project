@@ -216,6 +216,66 @@ func.func @custom_types_scf_if_inplace_with_call(
 
 // -----
 
+// A wrapper over a tensor-like type is tensor-like; a wrapper over i64 is not.
+
+// CHECK-LABEL: func.func @custom_types_tensor_like_wrapper(
+// CHECK-SAME: %[[a:[^:]+]]: !test.test_memref<[4, 4], f64>,
+// CHECK-SAME: %[[b:[^:]+]]: !test.test_memref<[4, 4], f64>,
+// CHECK-SAME: %[[scalar:[^:]+]]: !test.tensor_like_wrapper<i64>,
+// CHECK-SAME: %[[cond:[^:]+]]: i1
+// CHECK-SAME: ) -> (!test.test_memref<[4, 4], f64>, !test.tensor_like_wrapper<i64>)
+// CHECK: %[[res:[^ ]+]] = scf.if %[[cond]] -> (!test.test_memref<[4, 4], f64>) {
+// CHECK: scf.yield %[[a]] : !test.test_memref<[4, 4], f64>
+// CHECK: } else {
+// CHECK: scf.yield %[[b]] : !test.test_memref<[4, 4], f64>
+// CHECK: }
+// CHECK: return %[[res]], %[[scalar]] : !test.test_memref<[4, 4], f64>, !test.tensor_like_wrapper<i64>
+func.func @custom_types_tensor_like_wrapper(
+    %a: !test.tensor_like_wrapper<!test.test_tensor<[4, 4], f64>>,
+    %b: !test.tensor_like_wrapper<!test.test_tensor<[4, 4], f64>>,
+    %scalar: !test.tensor_like_wrapper<i64>,
+    %cond: i1)
+    -> (!test.tensor_like_wrapper<!test.test_tensor<[4, 4], f64>>,
+        !test.tensor_like_wrapper<i64>) {
+  %res = scf.if %cond
+      -> (!test.tensor_like_wrapper<!test.test_tensor<[4, 4], f64>>) {
+    scf.yield %a : !test.tensor_like_wrapper<!test.test_tensor<[4, 4], f64>>
+  } else {
+    scf.yield %b : !test.tensor_like_wrapper<!test.test_tensor<[4, 4], f64>>
+  }
+  return %res, %scalar
+      : !test.tensor_like_wrapper<!test.test_tensor<[4, 4], f64>>,
+        !test.tensor_like_wrapper<i64>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @custom_types_wrapper_not_tensor_like(
+// CHECK-SAME: %[[a:[^:]+]]: !test.tensor_like_wrapper<i64>,
+// CHECK-SAME: %[[b:[^:]+]]: !test.tensor_like_wrapper<i64>,
+// CHECK-SAME: %[[cond:[^:]+]]: i1
+// CHECK-SAME: ) -> !test.tensor_like_wrapper<i64>
+// CHECK: %[[res:[^ ]+]] = scf.if %[[cond]] -> (!test.tensor_like_wrapper<i64>) {
+// CHECK: scf.yield %[[a]] : !test.tensor_like_wrapper<i64>
+// CHECK: } else {
+// CHECK: scf.yield %[[b]] : !test.tensor_like_wrapper<i64>
+// CHECK: }
+// CHECK: return %[[res]] : !test.tensor_like_wrapper<i64>
+func.func @custom_types_wrapper_not_tensor_like(
+    %a: !test.tensor_like_wrapper<i64>,
+    %b: !test.tensor_like_wrapper<i64>,
+    %cond: i1)
+    -> !test.tensor_like_wrapper<i64> {
+  %res = scf.if %cond -> (!test.tensor_like_wrapper<i64>) {
+    scf.yield %a : !test.tensor_like_wrapper<i64>
+  } else {
+    scf.yield %b : !test.tensor_like_wrapper<i64>
+  }
+  return %res : !test.tensor_like_wrapper<i64>
+}
+
+// -----
+
 // CHECK-LABEL: func.func @scf_while_inplace(
 // CHECK-SAME: !test.test_memref<[4, 4], f64>
 // CHECK: scf.while

@@ -66,6 +66,22 @@ entry:
   ret void
 }
 
+define void @sub_v2i128(ptr %res, ptr %a0, ptr %a1) nounwind {
+; CHECK-LABEL: sub_v2i128:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvsub.q $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
+; CHECK-NEXT:    ret
+entry:
+  %v0 = load <2 x i128>, ptr %a0
+  %v1 = load <2 x i128>, ptr %a1
+  %v2 = sub <2 x i128> %v0, %v1
+  store <2 x i128> %v2, ptr %res
+  ret void
+}
+
 define void @sub_v32i8_31(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: sub_v32i8_31:
 ; CHECK:       # %bb.0: # %entry

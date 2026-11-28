@@ -24,6 +24,7 @@ add_integration_test(
     libc.include.signal
     libc.include.sys_wait
     libc.include.unistd
+    libc.src.__support.OSUtil.linux.syscall_wrappers.gettid
     libc.src.pthread.pthread_atfork
     libc.src.signal.raise
     libc.src.sys.wait.wait
@@ -32,9 +33,7 @@ add_integration_test(
     libc.src.sys.wait.waitpid
     libc.src.unistd.fork
     libc.src.unistd.gettid
-    libc.src.__support.OSUtil.osutil
     libc.src.stdlib.exit
-    libc.include.sys_syscall
 )
 
 add_integration_test(

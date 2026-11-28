@@ -5,7 +5,8 @@
 // RUN: not %clang_cc1 -triple armv5--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s
 // CHECK: error: unknown target CPU 'not-a-cpu'
 // CHECK-NEXT: note: valid target CPU values are:
-// CHECK-SAME: {{^}} arm8
+// CHECK-SAME: {{^}} generic
+// CHECK-SAME: {{^}}, arm8
 // CHECK-SAME: {{^}}, arm810
 // CHECK-SAME: {{^}}, strongarm
 // CHECK-SAME: {{^}}, strongarm110

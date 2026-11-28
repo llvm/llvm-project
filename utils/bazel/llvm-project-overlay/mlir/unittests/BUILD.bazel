@@ -40,6 +40,7 @@ cc_test(
         "//llvm:Core",
         "//llvm:Remarks",
         "//llvm:Support",
+        "//llvm:config",
         "//mlir:BytecodeReader",
         "//mlir:BytecodeWriter",
         "//mlir:CallOpInterfaces",
@@ -340,6 +341,7 @@ cc_test(
         "//mlir:AffineAnalysis",
         "//mlir:BytecodeReader",
         "//mlir:IR",
+        "//mlir:MemorySlotUtils",
         "//mlir:Parser",
         "//mlir:Pass",
         "//mlir:SideEffectInterfaces",
@@ -441,6 +443,28 @@ cc_test(
         "//mlir:mlir_c_runner_utils",
         "//mlir:mlir_runner_utils",
         "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "remark_tests",
+    size = "small",
+    srcs = glob([
+        "Remark/*.cpp",
+    ]),
+    deps = [
+        "//llvm:BinaryFormat",
+        "//llvm:Core",
+        "//llvm:Remarks",
+        "//llvm:Support",
+        "//llvm:config",
+        "//mlir:IR",
+        "//mlir:Parser",
+        "//mlir:RemarkStreamer",
+        "//mlir:Support",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
 )

@@ -343,3 +343,33 @@ func.func @noinline_due_to_finalization(%arg0: !fir.box<!fir.array<?x!fir.type<_
 // CHECK:             %[[VAL_13:.*]] = hlfir.apply %[[VAL_6]], %{{.*}} : (!hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>>, index) -> !hlfir.expr<!fir.type<_QMtypesTt1{x:f32}>>
 // CHECK:           hlfir.destroy %[[VAL_11]] : !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>>
 // CHECK:           hlfir.destroy %[[VAL_6]] finalize : !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>>
+
+// Outside an elemental consumer, clone cleanup after the scalar's uses at
+// the original array destruction point, including through no_reassoc.
+func.func @scalar_character_cleanup(%a: !fir.ref<!fir.array<10x!fir.char<1,2>>>, %out: !fir.ref<!fir.char<1,4>>) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  %c10 = arith.constant 10 : index
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+  %expr = hlfir.elemental %shape typeparams %c4 unordered : (!fir.shape<1>, index) -> !hlfir.expr<10x!fir.char<1,4>> {
+  ^bb0(%i: index):
+    %a_i = hlfir.designate %a (%i) typeparams %c2 : (!fir.ref<!fir.array<10x!fir.char<1,2>>>, index, index) -> !fir.ref<!fir.char<1,2>>
+    %temp = hlfir.concat %a_i, %a_i len %c4 : (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>, index) -> !hlfir.expr<!fir.char<1,4>>
+    %alias = hlfir.no_reassoc %temp : !hlfir.expr<!fir.char<1,4>>
+    hlfir.yield_element %alias : !hlfir.expr<!fir.char<1,4>> cleanup {
+      hlfir.destroy %temp : !hlfir.expr<!fir.char<1,4>>
+    }
+  }
+  %element = hlfir.apply %expr, %c1 typeparams %c4 : (!hlfir.expr<10x!fir.char<1,4>>, index, index) -> !hlfir.expr<!fir.char<1,4>>
+  hlfir.assign %element to %out : !hlfir.expr<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>
+  hlfir.destroy %expr : !hlfir.expr<10x!fir.char<1,4>>
+  return
+}
+// CHECK-LABEL: func.func @scalar_character_cleanup
+// CHECK-NOT: hlfir.elemental
+// CHECK: %[[TEMP:.*]] = hlfir.concat
+// CHECK: %[[ALIAS:.*]] = hlfir.no_reassoc %[[TEMP]]
+// CHECK-NEXT: hlfir.assign %[[ALIAS]]
+// CHECK-NEXT: hlfir.destroy %[[TEMP]]
+// CHECK-NEXT: return

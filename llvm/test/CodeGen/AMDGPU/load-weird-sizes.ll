@@ -1,8 +1,6 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck --check-prefixes=SI-NOHSA,SI,FUNC %s
 ; RUN: llc -mtriple=amdgpu7.00-amdhsa < %s | FileCheck --check-prefixes=FUNC,CI-HSA,SI %s
 ; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck --check-prefixes=SI-NOHSA,SI,FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=cayman < %s | FileCheck -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}load_i24:
 ; SI-DAG: {{flat|buffer}}_load_ubyte

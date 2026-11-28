@@ -22,7 +22,7 @@ module attributes {
 } {
 
   cir.func @passthrough(%arg0: !s32i, %arg1: !s64i) -> !s32i
-      attributes { test_classify = #all_direct_two_args } {
+      requires_call_conv_lowering attributes { test_classify = #all_direct_two_args } {
     cir.return %arg0 : !s32i
   }
 
@@ -30,7 +30,7 @@ module attributes {
   // CHECK:   cir.return %arg0 : !s32i
 
   cir.func @caller(%arg0: !s32i, %arg1: !s64i) -> !s32i
-      attributes { test_classify = #all_direct_two_args } {
+      requires_call_conv_lowering attributes { test_classify = #all_direct_two_args } {
     %0 = cir.call @passthrough(%arg0, %arg1) : (!s32i, !s64i) -> !s32i
     cir.return %0 : !s32i
   }

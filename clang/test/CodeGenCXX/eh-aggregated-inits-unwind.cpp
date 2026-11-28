@@ -5,6 +5,7 @@
 // obtained by taking offset from struct, not by bitcasting pointers.
 //
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -O0 -fno-elide-constructors -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -O0 -fno-elide-constructors -emit-llvm %s -o - | FileCheck %s %}
 
 struct ImplicitCopy {
   int id;

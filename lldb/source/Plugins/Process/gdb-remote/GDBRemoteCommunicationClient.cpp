@@ -341,6 +341,30 @@ GDBRemoteCommunicationClient::AcceleratorBreakpointHit(
       response.GetStringRef(), llvm::toString(hit_response.takeError()));
 }
 
+std::optional<AcceleratorDynamicLoaderResponse>
+GDBRemoteCommunicationClient::GetAcceleratorDynamicLoaderLibraryInfos(
+    const AcceleratorDynamicLoaderArgs &args) {
+  StreamGDBRemote packet;
+  packet.PutCString("jAcceleratorPluginGetDynamicLoaderLibraryInfo:");
+  packet.PutAsJSON(args, /*hex_ascii=*/false);
+
+  StringExtractorGDBRemote response;
+  response.SetResponseValidatorToJSON();
+  if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
+          PacketResult::Success ||
+      response.IsErrorResponse())
+    return std::nullopt;
+
+  llvm::Expected<AcceleratorDynamicLoaderResponse> parsed =
+      llvm::json::parse<AcceleratorDynamicLoaderResponse>(
+          response.Peek(), "AcceleratorDynamicLoaderResponse");
+  if (!parsed) {
+    llvm::consumeError(parsed.takeError());
+    return std::nullopt;
+  }
+  return *parsed;
+}
+
 bool GDBRemoteCommunicationClient::QueryNoAckModeSupported() {
   if (m_supports_not_sending_acks == eLazyBoolCalculate) {
     m_send_acks = true;
@@ -951,10 +975,14 @@ lldb::pid_t GDBRemoteCommunicationClient::GetCurrentProcessID(bool allow_lazy) {
   return LLDB_INVALID_PROCESS_ID;
 }
 
-llvm::Error GDBRemoteCommunicationClient::LaunchProcess(const Args &args) {
+llvm::Expected<StringExtractorGDBRemote>
+GDBRemoteCommunicationClient::LaunchProcess(const Args &args) {
   if (!args.GetArgumentAtIndex(0))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Nothing to launch");
+
+  StringExtractorGDBRemote response;
+
   // try vRun first
   if (m_supports_vRun) {
     StreamString packet;
@@ -964,7 +992,6 @@ llvm::Error GDBRemoteCommunicationClient::LaunchProcess(const Args &args) {
       packet.PutStringAsRawHex8(arg.ref());
     }
 
-    StringExtractorGDBRemote response;
     if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
         PacketResult::Success)
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -973,11 +1000,8 @@ llvm::Error GDBRemoteCommunicationClient::LaunchProcess(const Args &args) {
     if (response.IsErrorResponse())
       return response.GetStatus().ToError();
 
-    // vRun replies with a stop reason packet
-    // FIXME: right now we just discard the packet and LLDB queries
-    // for stop reason again
     if (!response.IsUnsupportedResponse())
-      return llvm::Error::success();
+      return response;
 
     m_supports_vRun = false;
   }
@@ -992,7 +1016,6 @@ llvm::Error GDBRemoteCommunicationClient::LaunchProcess(const Args &args) {
     packet.PutStringAsRawHex8(arg.value().ref());
   }
 
-  StringExtractorGDBRemote response;
   if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
       PacketResult::Success) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -1007,7 +1030,7 @@ llvm::Error GDBRemoteCommunicationClient::LaunchProcess(const Args &args) {
                                    "Sending qLaunchSuccess packet failed");
   }
   if (response.IsOKResponse())
-    return llvm::Error::success();
+    return response;
   if (response.GetChar() == 'E') {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    response.GetStringRef().substr(1));
@@ -4350,7 +4373,7 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
               addr_t symbol_load_addr = LLDB_INVALID_ADDRESS;
               lldb_private::SymbolContextList sc_list;
               process->GetTarget().GetImages().FindSymbolsWithNameAndType(
-                  ConstString(symbol_name), eSymbolTypeAny, sc_list);
+                  symbol_name, eSymbolTypeAny, sc_list);
               for (const SymbolContext &sc : sc_list) {
                 if (symbol_load_addr != LLDB_INVALID_ADDRESS)
                   break;
@@ -4376,6 +4399,7 @@ void GDBRemoteCommunicationClient::ServeSymbolLookups(
                   case eSymbolTypeCompiler:
                   case eSymbolTypeInstrumentation:
                   case eSymbolTypeTrampoline:
+                  case eSymbolTypeASTFile:
                     if (sc.module_sp->GetArchitecture()
                             .GetTriple()
                             .getObjectFormat() !=

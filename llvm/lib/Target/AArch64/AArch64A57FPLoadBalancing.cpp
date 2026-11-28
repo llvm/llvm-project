@@ -98,7 +98,6 @@ public:
 
 private:
   const AArch64Options *CLOpts;
-  MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
   RegisterClassInfo *RCI = nullptr;
 
@@ -306,7 +305,6 @@ bool AArch64A57FPLoadBalancingImpl::run(MachineFunction &MF) {
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "***** AArch64A57FPLoadBalancing *****\n");
 
-  MRI = &MF.getRegInfo();
   TRI = MF.getRegInfo().getTargetRegisterInfo();
 
   for (auto &MBB : MF) {

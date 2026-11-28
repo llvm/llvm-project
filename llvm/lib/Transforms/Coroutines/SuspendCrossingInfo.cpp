@@ -8,8 +8,7 @@
 // The SuspendCrossingInfo maintains data that allows to answer a question
 // whether given two BasicBlocks A and B there is a path from A to B that
 // passes through a suspend point. Note, SuspendCrossingInfo is invalidated
-// by changes to the CFG including adding/removing BBs due to its use of BB
-// ptrs in the BlockToIndexMapping.
+// by changes to the block numbering.
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Coroutines/SuspendCrossingInfo.h"
@@ -36,8 +35,7 @@ SuspendCrossingInfo::dump(StringRef Label, BitVector const &BV,
                           ModuleSlotTracker &MST) const {
   dbgs() << Label << ":";
   for (const BasicBlock *BB : RPOT) {
-    auto BBNo = Mapping.blockToIndex(BB);
-    if (BV[BBNo]) {
+    if (BV[BB->getNumber()]) {
       dbgs() << " ";
       dumpBasicBlockLabel(BB, MST);
     }
@@ -49,19 +47,15 @@ LLVM_DUMP_METHOD void SuspendCrossingInfo::dump() const {
   if (Block.empty())
     return;
 
-  BasicBlock *const B = Mapping.indexToBlock(0);
-  Function *F = B->getParent();
-
   ModuleSlotTracker MST(F->getParent());
   MST.incorporateFunction(*F);
 
   ReversePostOrderTraversal<Function *> RPOT(F);
   for (const BasicBlock *BB : RPOT) {
-    auto BBNo = Mapping.blockToIndex(BB);
     dumpBasicBlockLabel(BB, MST);
     dbgs() << ":\n";
-    dump("   Consumes", Block[BBNo].Consumes, RPOT, MST);
-    dump("      Kills", Block[BBNo].Kills, RPOT, MST);
+    dump("   Consumes", Block[BB->getNumber()].Consumes, RPOT, MST);
+    dump("      Kills", Block[BB->getNumber()].Kills, RPOT, MST);
   }
   dbgs() << "\n";
 }
@@ -69,9 +63,7 @@ LLVM_DUMP_METHOD void SuspendCrossingInfo::dump() const {
 
 bool SuspendCrossingInfo::hasPathCrossingSuspendPoint(BasicBlock *From,
                                                       BasicBlock *To) const {
-  size_t const FromIndex = Mapping.blockToIndex(From);
-  size_t const ToIndex = Mapping.blockToIndex(To);
-  bool const Result = Block[ToIndex].Kills[FromIndex];
+  bool const Result = Block[To->getNumber()].Kills[From->getNumber()];
   LLVM_DEBUG(if (Result) dbgs() << From->getName() << " => " << To->getName()
                                 << " crosses suspend point\n");
   return Result;
@@ -79,10 +71,8 @@ bool SuspendCrossingInfo::hasPathCrossingSuspendPoint(BasicBlock *From,
 
 bool SuspendCrossingInfo::hasPathOrLoopCrossingSuspendPoint(
     BasicBlock *From, BasicBlock *To) const {
-  size_t const FromIndex = Mapping.blockToIndex(From);
-  size_t const ToIndex = Mapping.blockToIndex(To);
-  bool Result = Block[ToIndex].Kills[FromIndex] ||
-                (From == To && Block[ToIndex].KillLoop);
+  bool Result = Block[To->getNumber()].Kills[From->getNumber()] ||
+                (From == To && Block[To->getNumber()].KillLoop);
   LLVM_DEBUG(if (Result) dbgs() << From->getName() << " => " << To->getName()
                                 << " crosses suspend point (path or loop)\n");
   return Result;
@@ -93,16 +83,15 @@ bool SuspendCrossingInfo::computeBlockData(
     const ReversePostOrderTraversal<Function *> &RPOT) {
   bool Changed = false;
 
-  for (const BasicBlock *BB : RPOT) {
-    auto BBNo = Mapping.blockToIndex(BB);
-    auto &B = Block[BBNo];
+  for (BasicBlock *BB : RPOT) {
+    auto &B = Block[BB->getNumber()];
 
     // We don't need to count the predecessors when initialization.
     if constexpr (!Initialize)
       // If all the predecessors of the current Block don't change,
       // the BlockData for the current block must not change too.
-      if (all_of(predecessors(B), [this](BasicBlock *BB) {
-            return !Block[Mapping.blockToIndex(BB)].Changed;
+      if (all_of(predecessors(BB), [this](BasicBlock *BB) {
+            return !Block[BB->getNumber()].Changed;
           })) {
         B.Changed = false;
         continue;
@@ -113,9 +102,8 @@ bool SuspendCrossingInfo::computeBlockData(
     auto SavedConsumes = B.Consumes;
     auto SavedKills = B.Kills;
 
-    for (BasicBlock *PI : predecessors(B)) {
-      auto PrevNo = Mapping.blockToIndex(PI);
-      auto &P = Block[PrevNo];
+    for (BasicBlock *PI : predecessors(BB)) {
+      auto &P = Block[PI->getNumber()];
 
       // Propagate Kills and Consumes from predecessors into B.
       B.Consumes |= P.Consumes;
@@ -132,8 +120,8 @@ bool SuspendCrossingInfo::computeBlockData(
     } else {
       // This is reached when B block it not Suspend nor coro.end and it
       // need to make sure that it is not in the kill set.
-      B.KillLoop |= B.Kills[BBNo];
-      B.Kills.reset(BBNo);
+      B.KillLoop |= B.Kills[BB->getNumber()];
+      B.Kills.reset(BB->getNumber());
     }
 
     if constexpr (!Initialize) {
@@ -146,8 +134,8 @@ bool SuspendCrossingInfo::computeBlockData(
 }
 
 SuspendCrossingInfo::SuspendCrossingInfo(Function &F, const coro::Shape &Shape)
-    : Mapping(F) {
-  const size_t N = Mapping.size();
+    : F(&F) {
+  const size_t N = F.getMaxBlockNumber();
   Block.resize(N);
 
   // Initialize every block so that it consumes itself
@@ -167,7 +155,7 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, const coro::Shape &Shape)
     assert(CE->getParent()->getFirstInsertionPt() == CE->getIterator() &&
            CE->getParent()->size() <= 2 && "CoroEnd must be in its own BB");
 
-    getBlockData(CE->getParent()).setNeverKill();
+    Block[CE->getParent()->getNumber()].setNeverKill();
   }
 
   for (auto *InRamp : Shape.CoroIsInRampInsts)
@@ -175,7 +163,7 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, const coro::Shape &Shape)
       if (auto *Br = dyn_cast<CondBrInst>(U)) {
         auto *TrueBB = Br->getSuccessor(0);
         if (TrueBB->getSinglePredecessor())
-          getBlockData(TrueBB).setNeverKill();
+          Block[TrueBB->getNumber()].setNeverKill();
       }
 
   // Mark all suspend blocks and indicate that they kill everything they
@@ -184,7 +172,7 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, const coro::Shape &Shape)
   // state needs to be saved by that time.
   auto markSuspendBlock = [&](IntrinsicInst *BarrierInst) {
     BasicBlock *SuspendBlock = BarrierInst->getParent();
-    auto &B = getBlockData(SuspendBlock);
+    auto &B = Block[SuspendBlock->getNumber()];
     B.setAlwaysKill();
     B.Kills |= B.Consumes;
   };

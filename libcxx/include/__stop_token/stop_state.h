@@ -29,9 +29,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __stop_callback_base : __intrusive_node_base<__stop_callback_base> {
   using __callback_fn_t _LIBCPP_NODEBUG = void(__stop_callback_base*) noexcept;
-  _LIBCPP_HIDE_FROM_ABI explicit __stop_callback_base(__callback_fn_t* __callback_fn) : __callback_fn_(__callback_fn) {}
+  explicit __stop_callback_base(__callback_fn_t* __callback_fn) : __callback_fn_(__callback_fn) {}
 
-  _LIBCPP_HIDE_FROM_ABI void __invoke() noexcept { __callback_fn_(this); }
+  void __invoke() noexcept { __callback_fn_(this); }
 
   __callback_fn_t* __callback_fn_;
   atomic<bool> __completed_ = false;
@@ -67,9 +67,9 @@ class __stop_state {
   __thread_id __requesting_thread_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __stop_state() noexcept = default;
+  __stop_state() noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI void __increment_stop_source_counter() noexcept {
+  void __increment_stop_source_counter() noexcept {
     _LIBCPP_ASSERT_UNCATEGORIZED(
         __state_.load(std::memory_order_relaxed) <= static_cast<__state_t>(~(1 << __stop_source_counter_shift)),
         "stop_source's counter reaches the maximum. Incrementing the counter will overflow");
@@ -78,14 +78,14 @@ public:
 
   // We are not destroying the object after counter decrements to zero, nor do we have
   // operations depend on the ordering of decrementing the counter. relaxed is enough.
-  _LIBCPP_HIDE_FROM_ABI void __decrement_stop_source_counter() noexcept {
+  void __decrement_stop_source_counter() noexcept {
     _LIBCPP_ASSERT_UNCATEGORIZED(
         __state_.load(std::memory_order_relaxed) >= static_cast<__state_t>(1 << __stop_source_counter_shift),
         "stop_source's counter is 0. Decrementing the counter will underflow");
     __state_.fetch_sub(1 << __stop_source_counter_shift, std::memory_order_relaxed);
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool __stop_requested() const noexcept {
+  bool __stop_requested() const noexcept {
     // acquire because [thread.stoptoken.intro] A call to request_stop that returns true
     // synchronizes with a call to stop_requested on an associated stop_token or stop_source
     // object that returns true.
@@ -93,7 +93,7 @@ public:
     return (__state_.load(std::memory_order_acquire) & __stop_requested_bit) != 0;
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool __stop_possible_for_stop_token() const noexcept {
+  bool __stop_possible_for_stop_token() const noexcept {
     // [stoptoken.mem] false if "a stop request was not made and there are no associated stop_source objects"
     // Todo: Can this be std::memory_order_relaxed as the standard does not say anything except not to introduce data
     // race?
@@ -101,7 +101,7 @@ public:
     return ((__curent_state & __stop_requested_bit) != 0) || ((__curent_state >> __stop_source_counter_shift) != 0);
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool __request_stop() noexcept {
+  bool __request_stop() noexcept {
     auto __cb_list_lock = __try_lock_for_request_stop();
     if (!__cb_list_lock.__owns_lock()) {
       return false;
@@ -138,7 +138,7 @@ public:
     return true;
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool __add_callback(__stop_callback_base* __cb) noexcept {
+  bool __add_callback(__stop_callback_base* __cb) noexcept {
     // If it is already stop_requested. Do not try to request it again.
     const auto __give_up_trying_to_lock_condition = [__cb](__state_t __state) {
       if ((__state & __stop_requested_bit) != 0) {
@@ -165,7 +165,7 @@ public:
   }
 
   // called by the destructor of stop_callback
-  _LIBCPP_HIDE_FROM_ABI void __remove_callback(__stop_callback_base* __cb) noexcept {
+  void __remove_callback(__stop_callback_base* __cb) noexcept {
     __callback_list_lock __cb_list_lock(__state_);
 
     // under below condition, the request_stop call just popped __cb from the list and could execute it now
@@ -193,7 +193,7 @@ public:
   }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI __callback_list_lock __try_lock_for_request_stop() noexcept {
+  __callback_list_lock __try_lock_for_request_stop() noexcept {
     // If it is already stop_requested, do not try to request stop or lock the list again.
     const auto __lock_fail_condition = [](__state_t __state) { return (__state & __stop_requested_bit) != 0; };
 
@@ -225,9 +225,7 @@ struct __intrusive_shared_ptr_traits;
 
 template <>
 struct __intrusive_shared_ptr_traits<__stop_state> {
-  _LIBCPP_HIDE_FROM_ABI static atomic<uint32_t>& __get_atomic_ref_count(__stop_state& __state) {
-    return __state.__ref_count_;
-  }
+  static atomic<uint32_t>& __get_atomic_ref_count(__stop_state& __state) { return __state.__ref_count_; }
 };
 
 _LIBCPP_END_NAMESPACE_STD

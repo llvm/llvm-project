@@ -19,7 +19,6 @@
 ...
 ---
 name:            funca
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -62,7 +61,6 @@ body:             |
 ...
 ---
 name:            funcb
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }

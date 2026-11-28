@@ -8,18 +8,16 @@ define <2 x i8> @shuffle_v2i8_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX9-LABEL: shuffle_v2i8_rebroadcast:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v0, v[0:1], off
+; GFX9-NEXT:    global_load_ubyte v0, v[0:1], off offset:1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b16_e32 v0, 8, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: shuffle_v2i8_rebroadcast:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    global_load_ushort v0, v[0:1], off
+; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off offset:1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b16 v0, 8, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -36,10 +34,8 @@ define <2 x i8> @shuffle_v2i8_rebroadcast(ptr addrspace(1) %arg0) {
 ; GFX11-FAKE16-LABEL: shuffle_v2i8_rebroadcast:
 ; GFX11-FAKE16:       ; %bb.0: ; %entry
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off offset:1
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_lshrrev_b16 v0, 8, v0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 entry:

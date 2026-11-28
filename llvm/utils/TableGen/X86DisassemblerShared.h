@@ -33,7 +33,6 @@ struct InstructionSpecifier {
 /// instruction each possible value of the ModR/M byte corresponds to. Once
 /// this information is known, we have narrowed down to a single instruction.
 struct ModRMDecision {
-  uint8_t modrm_type;
   llvm::X86Disassembler::InstrUID instructionIDs[256];
 };
 

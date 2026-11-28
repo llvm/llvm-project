@@ -42,7 +42,6 @@
 ---
 name:            jt_test
 legalized:       true
-tracksRegLiveness: true
 jumpTable:
   kind:            custom32
   entries:

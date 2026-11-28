@@ -31,7 +31,9 @@ module root1 { header "root1.h"}
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-names=root,root1,direct > %t/result.json
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+// RUN: %scan-deps-filter %t/result.json --fields=modules.name,modules.file-deps,modules.clang-module-deps,modules.clang-modulemap-file \
+// RUN:   > %t/filtered.json
+// RUN: sed 's:\\\\\?:/:g' %t/filtered.json | FileCheck -DPREFIX=%/t %s
 
 //--- cdb.cc1.json.template
 [{
@@ -42,7 +44,9 @@ module root1 { header "root1.h"}
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.cc1.json.template > %t/cdb.cc1.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.cc1.json -format experimental-full -module-names=root,root1,direct > %t/result.cc1.json
-// RUN: cat %t/result.cc1.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+// RUN: %scan-deps-filter %t/result.cc1.json --fields=modules.name,modules.file-deps,modules.clang-module-deps,modules.clang-modulemap-file \
+// RUN:   > %t/filtered.cc1.json
+// RUN: sed 's:\\\\\?:/:g' %t/filtered.cc1.json | FileCheck -DPREFIX=%/t %s
 
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
@@ -54,14 +58,10 @@ module root1 { header "root1.h"}
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
-// CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/direct.h"
 // CHECK-NEXT:       ],
-// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "direct"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -72,15 +72,11 @@ module root1 { header "root1.h"}
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
-// CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/root.h",
 // CHECK-NEXT:         "[[PREFIX]]/root/textual.h"
 // CHECK-NEXT:       ],
-// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "root"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -91,29 +87,20 @@ module root1 { header "root1.h"}
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
-// CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/root1.h"
 // CHECK-NEXT:       ],
-// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "root1"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
-// CHECK-NEXT:       "command-line": [
-// CHECK:            ],
-// CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/transitive.h"
 // CHECK-NEXT:       ],
-// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "transitive"
 // CHECK-NEXT:     }
-// CHECK-NEXT:   ],
-// CHECK-NEXT:   "translation-units": []
+// CHECK-NEXT:   ]
 // CHECK-NEXT: }

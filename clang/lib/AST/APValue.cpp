@@ -1103,6 +1103,17 @@ std::string APValue::getAsString(const ASTContext &Ctx, QualType Ty) const {
   return Result;
 }
 
+std::string APValue::getCharArrayAsString() const {
+  assert(isArray() && "Invalid accessor");
+  unsigned Size = getArraySize();
+  std::string Result;
+  Result.reserve(Size);
+  for (unsigned I = 0; I < Size; ++I)
+    Result.push_back(
+        static_cast<char>(getArrayInitializedElt(I).getInt().getExtValue()));
+  return Result;
+}
+
 bool APValue::toIntegralConstant(APSInt &Result, QualType SrcTy,
                                  const ASTContext &Ctx) const {
   if (isInt()) {

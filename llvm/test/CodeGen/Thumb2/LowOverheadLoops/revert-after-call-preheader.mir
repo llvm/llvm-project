@@ -45,7 +45,6 @@
 ...
 ---
 name:            _Z9reproducePKfPvj4Typex
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,

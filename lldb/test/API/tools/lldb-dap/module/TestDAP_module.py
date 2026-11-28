@@ -171,4 +171,8 @@ class TestDAP_module(DAPTestCaseBase):
         page = session.get_modules(startModule=1, moduleCount=100)
         self.assertEqual(len(page), len(all_modules) - 1)
 
+        # A count past the end must not overflow startModule + moduleCount.
+        page = session.get_modules(startModule=1, moduleCount=0xFFFFFFFF)
+        self.assertEqual(len(page), len(all_modules) - 1)
+
         session.continue_to_exit()

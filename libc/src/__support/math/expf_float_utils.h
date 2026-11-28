@@ -15,9 +15,9 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXPF_FLOAT_UTILS_H
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 

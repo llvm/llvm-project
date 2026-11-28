@@ -81,7 +81,10 @@ public:
 
   template <class PredicateLibrary>
   void setISALevelAndRevisionFromPredicates(const PredicateLibrary &P) {
-    if (P.hasMips64()) {
+    if (P.hasNanoMips()) {
+      ISALevel = 32;
+      ISARevision = 6;
+    } else if (P.hasMips64()) {
       ISALevel = 64;
       if (P.hasMips64r6())
         ISARevision = 6;

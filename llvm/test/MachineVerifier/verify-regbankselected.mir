@@ -14,10 +14,8 @@
 # CHECK: operand 0: %0
 name:            test
 regBankSelected: true
-registers:
-  - { id: 0, class: _ }
 body: |
   bb.0:
    liveins: $x0
-   %0(s64) = COPY $x0
+   %0:_(s64) = COPY $x0
 ...

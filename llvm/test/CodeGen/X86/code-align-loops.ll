@@ -171,7 +171,7 @@ bb3:                                ; preds = %bb1
 bb4:                                ; preds = %bb1
   call void @bar()
   %cmp4 = icmp sgt i32 %d, 14
-  br i1 %cmp4, label %bb1, label %exit
+  br i1 %cmp4, label %bb1, label %exit, !llvm.loop !0
 
 exit:                               ; preds = %bb2, %bb3, %bb4
   ret void

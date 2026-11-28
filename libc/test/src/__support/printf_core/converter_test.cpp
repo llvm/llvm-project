@@ -24,13 +24,18 @@ using LIBC_NAMESPACE::printf_core::Writer;
 
 #if defined(LIBC_TYPES_WCHAR_T_IS_UTF32) &&                                    \
     !defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
-using TestCharTypes = LIBC_NAMESPACE::testing::TypeList<char, wchar_t>;
+using TestCharTypes = LIBC_NAMESPACE::testing::Types<char, wchar_t>;
 #else
-using TestCharTypes = LIBC_NAMESPACE::testing::TypeList<char>;
+using TestCharTypes = LIBC_NAMESPACE::testing::Types<char>;
 #endif
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, SimpleRawConversion, TestCharTypes) {
-  using CharT = ParamType;
+template <typename T>
+class LlvmLibcTypedPrintfConverterTest : public LIBC_NAMESPACE::testing::Test {
+};
+TYPED_TEST_SUITE(LlvmLibcTypedPrintfConverterTest, TestCharTypes);
+
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, SimpleRawConversion) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -47,8 +52,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, SimpleRawConversion, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{3});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, PercentConversion, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, PercentConversion) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -66,8 +71,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, PercentConversion, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{1});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, CharConversionSimple, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, CharConversionSimple) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -88,9 +93,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, CharConversionSimple, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{1});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, CharConversionRightJustified,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, CharConversionRightJustified) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -108,9 +112,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, CharConversionRightJustified,
   ASSERT_EQ(writer.get_chars_written(), size_t{4});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, CharConversionLeftJustified,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, CharConversionLeftJustified) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -147,9 +150,8 @@ TEST(LlvmLibcPrintfConverterTest, CharConversionInvalidAscii) {
   ASSERT_LT(LIBC_NAMESPACE::printf_core::convert(&writer, invalid_conv), 0);
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, WideCharConversionSimple,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, WideCharConversionSimple) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -171,9 +173,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, WideCharConversionSimple,
   ASSERT_EQ(writer.get_chars_written(), size_t{1});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, WideCharConversionRightJustified,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, WideCharConversionRightJustified) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -193,9 +194,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, WideCharConversionRightJustified,
   ASSERT_EQ(writer.get_chars_written(), size_t{4});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, WideCharConversionLeftJustified,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, WideCharConversionLeftJustified) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -219,8 +219,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, WideCharConversionLeftJustified,
 
 #endif // !LIBC_COPT_PRINTF_DISABLE_WIDE
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionSimple, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, StringConversionSimple) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -239,9 +239,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionSimple, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{3});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionPrecisionHigh,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, StringConversionPrecisionHigh) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -259,9 +258,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionPrecisionHigh,
   ASSERT_EQ(writer.get_chars_written(), size_t{3});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionPrecisionLow,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, StringConversionPrecisionLow) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -279,13 +277,12 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionPrecisionLow,
   ASSERT_EQ(writer.get_chars_written(), size_t{2});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionNoNullTerminator,
-           TestCharTypes) {
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, StringConversionNoNullTerminator) {
   // When a precision is specified for a %s conversion, the input string does
   // not need to be null-terminated, provided it contains at least as many
   // characters as the specified precision.
 
-  using CharT = ParamType;
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer =
       make_drop_overflow_writer(str, sizeof(str) / sizeof(CharT) - 1);
@@ -313,9 +310,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionNoNullTerminator,
   ASSERT_EQ(writer.get_chars_written(), size_t{3});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionRightJustified,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, StringConversionRightJustified) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -333,9 +329,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionRightJustified,
   ASSERT_EQ(writer.get_chars_written(), size_t{4});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionLeftJustified,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, StringConversionLeftJustified) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -357,9 +352,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, StringConversionLeftJustified,
 
 #if !defined(LIBC_COPT_PRINTF_DISABLE_WIDE)
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, WideStringConversionSimple,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, WideStringConversionSimple) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -379,9 +373,9 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, WideStringConversionSimple,
   ASSERT_EQ(writer.get_chars_written(), size_t{3});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, WideStringConversionPrecisionHigh,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest,
+           WideStringConversionPrecisionHigh) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -401,9 +395,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, WideStringConversionPrecisionHigh,
   ASSERT_EQ(writer.get_chars_written(), size_t{3});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, WideStringConversionPrecisionLow,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, WideStringConversionPrecisionLow) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -423,9 +416,9 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, WideStringConversionPrecisionLow,
   ASSERT_EQ(writer.get_chars_written(), size_t{2});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, WideStringConversionRightJustified,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest,
+           WideStringConversionRightJustified) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -445,9 +438,9 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, WideStringConversionRightJustified,
   ASSERT_EQ(writer.get_chars_written(), size_t{4});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, WideStringConversionLeftJustified,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest,
+           WideStringConversionLeftJustified) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -471,8 +464,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, WideStringConversionLeftJustified,
 
 #endif // !LIBC_COPT_PRINTF_DISABLE_WIDE
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, IntConversionSimple, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, IntConversionSimple) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -489,8 +482,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, IntConversionSimple, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{5});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, HexConversion, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, HexConversion) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -510,8 +503,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, HexConversion, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{18});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, BinaryConversion, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, BinaryConversion) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -528,8 +521,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, BinaryConversion, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{6});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, PointerConversion, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, PointerConversion) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();
@@ -546,8 +539,8 @@ TYPED_TEST(LlvmLibcPrintfConverterTest, PointerConversion, TestCharTypes) {
   ASSERT_EQ(writer.get_chars_written(), size_t{10});
 }
 
-TYPED_TEST(LlvmLibcPrintfConverterTest, OctConversion, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcTypedPrintfConverterTest, OctConversion) {
+  using CharT = TypeParam;
   CharT str[60];
   Writer writer = make_drop_overflow_writer(str, sizeof(str) - 1);
   WriteBuffer<CharT> &wb = writer.get_write_buffer();

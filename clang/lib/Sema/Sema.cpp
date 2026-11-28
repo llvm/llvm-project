@@ -23,7 +23,6 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/AST/StmtCXX.h"
-#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -318,8 +317,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       AlignPackStack(AlignPackInfo(getLangOpts().XLPragmaPack)),
       DataSegStack(nullptr), BSSSegStack(nullptr), ConstSegStack(nullptr),
       CodeSegStack(nullptr), StrictGuardStackCheckStack(false),
-      FpPragmaStack(FPOptionsOverride()), CurInitSeg(nullptr),
-      VisContext(nullptr), PragmaAttributeCurrentTargetDecl(nullptr),
+      FpPragmaStack(FPOptionsOverride()), CurInitSeg(), VisContext(nullptr),
+      PragmaAttributeCurrentTargetDecl(nullptr),
       StdCoroutineTraitsCache(nullptr), IdResolver(pp),
       OriginalLexicalContext(nullptr), StdInitializerList(nullptr),
       StdTypeIdentity(nullptr),
@@ -1331,6 +1330,7 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   DiagnoseUnterminatedPragmaAlignPack();
   DiagnoseUnterminatedPragmaAttribute();
+  BPF().DiagnoseAnonymousPreserveAIEnums();
   OpenMP().DiagnoseUnterminatedOpenMPDeclareTarget();
   DiagnosePrecisionLossInComplexDivision();
   DiagnoseUnusedAPINotesSelectors();
@@ -1924,8 +1924,8 @@ bool Sema::hasUncompilableErrorOccurred() const {
 // each call chain separately. The first note in each chain uses
 // "called by" and subsequent notes use "which is called by".
 static void emitCallStackNotes(Sema &S, const FunctionDecl *FD) {
-  auto FnIt = S.CUDA().DeviceKnownEmittedFns.find(FD);
-  if (FnIt == S.CUDA().DeviceKnownEmittedFns.end())
+  auto FnIt = S.DeviceKnownEmittedFns.find(FD);
+  if (FnIt == S.DeviceKnownEmittedFns.end())
     return;
 
   for (const auto &CallerInfo : FnIt->second) {
@@ -1933,13 +1933,13 @@ static void emitCallStackNotes(Sema &S, const FunctionDecl *FD) {
       return;
     S.Diags.Report(CallerInfo.Loc, diag::note_called_by) << CallerInfo.FD;
     // Walk up the rest of the chain using "which is called by".
-    auto NextIt = S.CUDA().DeviceKnownEmittedFns.find(CallerInfo.FD);
-    while (NextIt != S.CUDA().DeviceKnownEmittedFns.end()) {
+    auto NextIt = S.DeviceKnownEmittedFns.find(CallerInfo.FD);
+    while (NextIt != S.DeviceKnownEmittedFns.end()) {
       if (S.Diags.hasFatalErrorOccurred())
         return;
       const auto &Next = NextIt->second.front();
       S.Diags.Report(Next.Loc, diag::note_which_is_called_by) << Next.FD;
-      NextIt = S.CUDA().DeviceKnownEmittedFns.find(Next.FD);
+      NextIt = S.DeviceKnownEmittedFns.find(Next.FD);
     }
   }
 }
@@ -2090,7 +2090,7 @@ public:
         (ShouldEmitRootNode || InOMPDeviceContext))
       S.OpenMP().finalizeOpenMPDelayedAnalysis(Caller, FD, Loc);
     if (Caller) {
-      auto &Callers = S.CUDA().DeviceKnownEmittedFns[FD];
+      auto &Callers = S.DeviceKnownEmittedFns[FD];
       CanonicalDeclPtr<const FunctionDecl> CanonCaller(Caller);
       if (llvm::none_of(Callers, [CanonCaller](const auto &C) {
             return C.FD == CanonCaller;
@@ -2173,7 +2173,7 @@ void Sema::emitDeferredDiags() {
       const FunctionDecl *FD = Pair.first;
       if (!SemaCUDA::isImplicitHDExplicitInstantiation(FD))
         continue;
-      if (CUDA().DeviceKnownEmittedFns.count(FD))
+      if (DeviceKnownEmittedFns.count(FD))
         continue;
       bool HasError =
           llvm::any_of(Pair.second, [&](const PartialDiagnosticAt &PDAt) {
@@ -2795,9 +2795,15 @@ bool Sema::shouldRetainCommentsInAST(SourceLocation Loc) {
   return areDocumentationDiagsEnabled(Loc);
 }
 
+/// The diagnostic groups that documentation comments are checked for.
+static constexpr diag::Group DocumentationDiagGroups[] = {
+    diag::Group::Documentation, diag::Group::DocumentationPedantic};
+
 bool Sema::computeDocumentationDiagsAt(SourceLocation Loc) const {
-  return !Diags.areAllIgnored("documentation", Loc) ||
-         !Diags.areAllIgnored("documentation-pedantic", Loc);
+  return llvm::any_of(DocumentationDiagGroups, [&](diag::Group G) {
+    return !Diags.areAllIgnored(DiagnosticIDs::getWarningOptionForGroup(G),
+                                Loc);
+  });
 }
 
 void Sema::clearDocumentationDiagsCache() {
@@ -2805,10 +2811,27 @@ void Sema::clearDocumentationDiagsCache() {
   DocDiagsExactComputed = 0;
 }
 
+bool Sema::areDocumentationDiagsSourceLocationDependent() {
+  if (DocDiagsInSuppressionMapping)
+    return *DocDiagsInSuppressionMapping;
+
+  // Documentation diagnostics are not location-dependent, except if a
+  // (location-dependent) warning suppression mapping has a section for them.
+  SmallVector<diag::kind, 64> DocDiags;
+  for (diag::Group G : DocumentationDiagGroups)
+    Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
+        diag::Flavor::WarningOrError,
+        DiagnosticIDs::getWarningOptionForGroup(G), DocDiags);
+  DocDiagsInSuppressionMapping = llvm::any_of(DocDiags, [&](diag::kind D) {
+    return Diags.hasDiagSuppressionMappingFor(D);
+  });
+  return *DocDiagsInSuppressionMapping;
+}
+
 bool Sema::areDocumentationDiagsEnabled(SourceLocation Loc) {
-  // Under a suppression mapping the severity depends on the file path rather
-  // than the diagnostic state, so there is nothing stable to key a cache on.
-  if (Loc.isInvalid() || Diags.hasDiagSuppressionMapping())
+  // Under a suppression mapping the severity can depend on the file path rather
+  // than the diagnostic state. Then there is nothing stable to key a cache on.
+  if (Loc.isInvalid() || areDocumentationDiagsSourceLocationDependent())
     return computeDocumentationDiagsAt(Loc);
 
   const void *StateKey = Diags.getDiagStateKeyForLoc(Loc);

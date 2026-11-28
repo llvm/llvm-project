@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineLICM.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -61,33 +62,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machinelicm"
 
-static cl::opt<bool>
-AvoidSpeculation("avoid-speculation",
-                 cl::desc("MachineLICM should avoid speculation"),
-                 cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-HoistCheapInsts("hoist-cheap-insts",
-                cl::desc("MachineLICM should hoist even cheap instructions"),
-                cl::init(false), cl::Hidden);
-
-static cl::opt<bool>
-HoistConstStores("hoist-const-stores",
-                 cl::desc("Hoist invariant stores"),
-                 cl::init(true), cl::Hidden);
-
-static cl::opt<bool> HoistConstLoads("hoist-const-loads",
-                                     cl::desc("Hoist invariant loads"),
-                                     cl::init(true), cl::Hidden);
-
-// The default threshold of 100 (i.e. if target block is 100 times hotter)
-// is based on empirical data on a single target and is subject to tuning.
-static cl::opt<unsigned>
-BlockFrequencyRatioThreshold("block-freq-ratio-threshold",
-                             cl::desc("Do not hoist instructions if target"
-                             "block is N times hotter than the source."),
-                             cl::init(100), cl::Hidden);
-
 enum class UseBFI { None, PGO, All };
 
 static cl::opt<UseBFI>
@@ -121,8 +95,8 @@ namespace {
   enum HoistResult { NotHoisted = 1, Hoisted = 2, ErasedMI = 4 };
 
   class MachineLICMImpl {
+    const CodeGenOptions &Opts;
     const TargetInstrInfo *TII = nullptr;
-    const TargetLoweringBase *TLI = nullptr;
     const TargetRegisterInfo *TRI = nullptr;
     const MachineFrameInfo *MFI = nullptr;
     MachineRegisterInfo *MRI = nullptr;
@@ -182,9 +156,10 @@ namespace {
     SmallDenseMap<MachineLoop *, bool> GuaranteedToExecute;
 
   public:
-    MachineLICMImpl(bool PreRegAlloc, Pass *LegacyPass,
-                    MachineFunctionAnalysisManager *MFAM)
-        : PreRegAlloc(PreRegAlloc), LegacyPass(LegacyPass), MFAM(MFAM) {
+    MachineLICMImpl(const CodeGenOptions &Opts, bool PreRegAlloc,
+                    Pass *LegacyPass, MachineFunctionAnalysisManager *MFAM)
+        : Opts(Opts), PreRegAlloc(PreRegAlloc), LegacyPass(LegacyPass),
+          MFAM(MFAM) {
       assert((LegacyPass || MFAM) && "LegacyPass or MFAM must be provided");
       assert(!(LegacyPass && MFAM) &&
              "LegacyPass and MFAM cannot be provided at the same time");
@@ -303,6 +278,7 @@ namespace {
       AU.addRequired<MachineRegisterClassInfoWrapperPass>();
       AU.addRequired<AAResultsWrapperPass>();
       AU.addPreserved<MachineLoopInfoWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
       AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -352,7 +328,7 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  MachineLICMImpl Impl(PreRegAlloc, this, nullptr);
+  MachineLICMImpl Impl(getCodeGenOptions(MF), PreRegAlloc, this, nullptr);
   return Impl.run(MF);
 }
 
@@ -382,7 +358,6 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
   Changed = FirstInLoop = false;
   const TargetSubtargetInfo &ST = MF.getSubtarget();
   TII = ST.getInstrInfo();
-  TLI = ST.getTargetLowering();
   TRI = ST.getRegisterInfo();
   MFI = &MF.getFrameInfo();
   MRI = &MF.getRegInfo();
@@ -413,7 +388,7 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
       RegLimit[i] = RegClassInfo->getRegPressureSetLimit(i);
   }
 
-  if (HoistConstLoads)
+  if (Opts.machine_licm_hoist_const_loads)
     InitializeLoadsHoistableLoops();
 
   SmallVector<MachineLoop *, 8> Worklist(MLI->begin(), MLI->end());
@@ -1088,9 +1063,11 @@ static bool isCopyFeedingInvariantStore(const MachineInstr &MI,
 /// e.g. If the instruction is a call, then it's obviously not safe to hoist it.
 bool MachineLICMImpl::IsLICMCandidate(MachineInstr &I, MachineLoop *CurLoop) {
   // Check if it's safe to move the instruction.
-  bool DontMoveAcrossStore = !HoistConstLoads || !AllowedToHoistLoads[CurLoop];
+  bool DontMoveAcrossStore =
+      !Opts.machine_licm_hoist_const_loads || !AllowedToHoistLoads[CurLoop];
   if ((!I.isSafeToMove(DontMoveAcrossStore)) &&
-      !(HoistConstStores && isInvariantStore(I, TRI, MRI))) {
+      !(Opts.machine_licm_hoist_const_stores &&
+        isInvariantStore(I, TRI, MRI))) {
     LLVM_DEBUG(dbgs() << "LICM: Instruction not safe to move.\n");
     return false;
   }
@@ -1233,7 +1210,7 @@ bool MachineLICMImpl::CanCauseHighRegPressure(
 
     // Don't hoist cheap instructions if they would increase register pressure,
     // even if we're under the limit.
-    if (CheapInstr && !HoistCheapInsts)
+    if (CheapInstr && !Opts.machine_licm_hoist_cheap_insts)
       return true;
 
     for (const auto &RP : BackTrace)
@@ -1278,7 +1255,8 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
   // - When hoisting the last use of a value in the loop, that value no longer
   //   needs to be live in the loop. This lowers register pressure in the loop.
 
-  if (HoistConstStores &&  isCopyFeedingInvariantStore(MI, MRI, TRI))
+  if (Opts.machine_licm_hoist_const_stores &&
+      isCopyFeedingInvariantStore(MI, MRI, TRI))
     return true;
 
   bool CheapInstr = IsCheapInstruction(MI);
@@ -1337,7 +1315,7 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
   // Do not "speculate" in high register pressure situation. If an
   // instruction is not guaranteed to be executed in the loop, it's best to be
   // conservative.
-  if (AvoidSpeculation &&
+  if (Opts.machine_licm_avoid_speculation &&
       (!IsGuaranteedToExecute(MI.getParent(), CurLoop) && !MayCSE(&MI))) {
     LLVM_DEBUG(dbgs() << "Won't speculate: " << MI);
     return false;
@@ -1563,7 +1541,6 @@ bool MachineLICMImpl::EliminateCSE(
       Register Reg = MI->getOperand(Idx).getReg();
       Register DupReg = Dup->getOperand(Idx).getReg();
       MRI->replaceRegWith(Reg, DupReg);
-      MRI->clearKillFlags(DupReg);
       // Clear Dup dead flag if any, we reuse it for Reg.
       if (!MRI->use_nodbg_empty(DupReg))
         Dup->getOperand(Idx).setIsDead(false);
@@ -1678,13 +1655,6 @@ unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
     // Update register pressure for BBs from header to this block.
     UpdateBackTraceRegPressure(MI);
 
-    // Clear the kill flags of any register this instruction defines,
-    // since they may need to be live throughout the entire loop
-    // rather than just live for part of it.
-    for (MachineOperand &MO : MI->all_defs())
-      if (!MO.isDead())
-        MRI->clearKillFlags(MO.getReg());
-
     CSEMap[Preheader][Opcode].push_back(MI);
   }
 
@@ -1716,7 +1686,7 @@ MachineBasicBlock *MachineLICMImpl::getOrCreatePreheader(MachineLoop *CurLoop) {
   return nullptr;
 }
 
-/// Is the target basic block at least "BlockFrequencyRatioThreshold"
+/// Is the target basic block at least -machine-licm-block-freq-ratio-threshold
 /// times hotter than the source basic block.
 bool MachineLICMImpl::isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
                                          MachineBasicBlock *TgtBlock) {
@@ -1731,17 +1701,20 @@ bool MachineLICMImpl::isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
   double Ratio = (double)DstBF / SrcBF;
 
   // Compare the block frequency ratio with the threshold
-  return Ratio > BlockFrequencyRatioThreshold;
+  return Ratio > Opts.machine_licm_block_freq_ratio_threshold;
 }
 
 template <typename DerivedT, bool PreRegAlloc>
 PreservedAnalyses MachineLICMBasePass<DerivedT, PreRegAlloc>::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
-  bool Changed = MachineLICMImpl(PreRegAlloc, nullptr, &MFAM).run(MF);
+  bool Changed =
+      MachineLICMImpl(getCodeGenOptions(MF), PreRegAlloc, nullptr, &MFAM)
+          .run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<MachineLoopAnalysis>();
+  PA.preserve<MachineDominatorTreeAnalysis>();
   return PA;
 }
 

@@ -4,7 +4,7 @@
 ; as well since it is in the same comdat of g.
 ; RUN: opt -module-summary %s -o %t1.bc
 ; RUN: opt -module-summary %p/Inputs/linkonce_resolution_comdat.ll -o %t2.bc
-; RUN: llvm-lto -thinlto-action=run -disable-thinlto-funcattrs=0 %t1.bc %t2.bc -exported-symbol=f -exported-symbol=g -exported-symbol=h -thinlto-save-temps=%t3.
+; RUN: llvm-lto -thinlto-action=run -thinlto-funcattrs %t1.bc %t2.bc -exported-symbol=f -exported-symbol=g -exported-symbol=h -thinlto-save-temps=%t3.
 
 ; RUN: llvm-dis %t3.0.3.imported.bc -o - | FileCheck %s --check-prefix=IMPORT1
 ; RUN: llvm-dis %t3.1.3.imported.bc -o - | FileCheck %s --check-prefix=IMPORT2

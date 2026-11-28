@@ -19,6 +19,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -57,6 +58,19 @@ static std::pair<unsigned, unsigned> getMFHiLoOpc(unsigned Src) {
                           (unsigned)Mips::PseudoMFLO64);
 
   return std::make_pair(0, 0);
+}
+
+/// Return the number of instructions that save (or restore) the callee-saved
+/// registers in \p CSI. On MIPS I an AFGR64 register has no sdc1/ldc1 and is
+/// saved and restored with two swc1/lwc1.
+static unsigned getNumCSRInstrs(const MipsSubtarget &STI,
+                                ArrayRef<CalleeSavedInfo> CSI) {
+  unsigned N = CSI.size();
+  if (!STI.hasMips2())
+    N += llvm::count_if(CSI, [](const CalleeSavedInfo &I) {
+      return Mips::AFGR64RegClass.contains(I.getReg());
+    });
+  return N;
 }
 
 namespace {
@@ -399,7 +413,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
   unsigned ZERO = ABI.GetNullPtr();
   unsigned MOVE = ABI.GetGPRMoveOp();
   unsigned ADDiu = ABI.GetPtrAddiuOp();
-  unsigned AND = ABI.IsN64() ? Mips::AND64 : Mips::AND;
+  unsigned AND = ABI.GetPtrAndOp();
 
   const TargetRegisterClass *RC = ABI.ArePtrs64bit() ?
         &Mips::GPR64RegClass : &Mips::GPR32RegClass;
@@ -423,7 +437,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Find the instruction past the last instruction that saves a callee-saved
   // register to the stack.
-  std::advance(MBBI, CSI.size());
+  std::advance(MBBI, getNumCSRInstrs(STI, CSI));
   CFIBuilder.setInsertPoint(MBBI);
 
   if (!CSI.empty()) {
@@ -504,6 +518,11 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
       }
     }
   }
+
+  // Mark all the instructions added to the prologue as frame setup, so the
+  // scavenger doesn't place emergency spills above them.
+  for (MachineInstr &MI : make_range(MBB.begin(), MBBI))
+    MI.setFlag(MachineInstr::FrameSetup);
 }
 
 void MipsSEFrameLowering::emitInterruptPrologueStub(
@@ -649,8 +668,7 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
     // Find the first instruction that restores a callee-saved register.
     MachineBasicBlock::iterator I = MBBI;
 
-    for (unsigned i = 0; i < MFI.getCalleeSavedInfo().size(); ++i)
-      --I;
+    std::advance(I, -int(getNumCSRInstrs(STI, MFI.getCalleeSavedInfo())));
 
     // Insert instruction "move $sp, $fp" at this location.
     BuildMI(MBB, I, DL, TII.get(MOVE), SP).addReg(FP).addReg(ZERO);
@@ -662,8 +680,7 @@ void MipsSEFrameLowering::emitEpilogue(MachineFunction &MF,
 
     // Find first instruction that restores a callee-saved register.
     MachineBasicBlock::iterator I = MBBI;
-    for (unsigned i = 0; i < MFI.getCalleeSavedInfo().size(); ++i)
-      --I;
+    std::advance(I, -int(getNumCSRInstrs(STI, MFI.getCalleeSavedInfo())));
 
     // Insert instructions that restore eh data registers.
     for (int J = 0; J < 4; ++J) {

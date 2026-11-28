@@ -102,6 +102,17 @@
 # RUN: %lld -lSystem -o %t/test-alias %t/foo.o %t/test.o -order_file %t/ord-alias
 # RUN: llvm-objdump -d %t/test-alias | FileCheck %s --check-prefix=FOO-FIRST
 
+## Test alias symbols in an order_file.
+# ALIAS-FIRST: <_foo_alias>:
+# ALIAS-FIRST: <_main>:
+
+# RUN: %lld -lSystem -o %t/test-alias-option %t/test.o %t/foo.o \
+# RUN:   -alias "-[Foo doFoo:andBar:]" _foo_alias -order_file %t/ord-alias-option
+# RUN: llvm-objdump -d %t/test-alias-option | FileCheck %s --check-prefix=ALIAS-FIRST
+# RUN: %lld -lSystem -o %t/test-alias-option %t/foo.o %t/test.o \
+# RUN:   -alias "-[Foo doFoo:andBar:]" _foo_alias -order_file %t/ord-alias-option
+# RUN: llvm-objdump -d %t/test-alias-option | FileCheck %s --check-prefix=ALIAS-FIRST
+
 ## Absolute in symbols in order files make no sense. Just ignore them.
 # RUN: %lld -lSystem -dylib -o %t/test-abs %t/abs.o -order_file %t/ord-abs
 
@@ -163,6 +174,10 @@ foo.o:-[Foo doFoo:andBar:]
 _bar
 _main
 -[Foo doFoo:andBar:]
+
+#--- ord-alias-option
+_foo_alias
+_main
 
 #--- ord-abs
 _abs

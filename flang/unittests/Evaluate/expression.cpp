@@ -29,7 +29,10 @@ static Expr<Type<TypeCategory::Integer>> MakeDefaultIntegerExpr(int32_t v) {
 
 int main() {
   using DefaultIntegerExpr = Expr<Type<TypeCategory::Integer>>;
-  const int defaultIntegerKind{4};
+  // Static storage so the lambda below can read this without capturing it.
+  // MSVC 19.29 rejects a capture-less use of an automatic const (C3493).
+  // Clang rejects the explicit capture as unused (-Wunused-lambda-capture).
+  static constexpr int defaultIntegerKind{4};
   TEST(DefaultIntegerExpr::Result{4}.AsFortran() == "INTEGER(4)");
   MATCH("666_4", MakeDefaultIntegerExpr(666).AsFortran());
   MATCH("-1_4", (-MakeDefaultIntegerExpr(1)).AsFortran());

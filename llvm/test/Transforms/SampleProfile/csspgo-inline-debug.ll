@@ -3,8 +3,8 @@
 ; Use debug prints as repeated call site evaluation is not visible from final inline decision.
 
 ; Note that we need new pass manager to enable top-down processing for sample profile loader
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-prioritized-inline=0 -debug-only=sample-context-tracker -o /dev/null 2>&1 | FileCheck %s --check-prefix=OLD-INLINE
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-prioritized-inline=1 -debug-only=sample-context-tracker -o /dev/null 2>&1 | FileCheck %s --check-prefix=NEW-INLINE
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-prioritized-inline=0 -debug-only=sample-context-tracker -disable-output 2>&1 | FileCheck %s --check-prefix=OLD-INLINE
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-prioritized-inline=1 -debug-only=sample-context-tracker -disable-output 2>&1 | FileCheck %s --check-prefix=NEW-INLINE
 
 ; Old inliner will evaluate the same call site three times
 ; OLD-INLINE:      Getting callee context for instr:   %call = tail call i32 @_Z5funcBi

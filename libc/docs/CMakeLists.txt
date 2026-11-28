@@ -4,8 +4,8 @@ if(LLVM_ENABLE_SPHINX)
     if(${SPHINX_OUTPUT_HTML})
       # Similar to clang, we copy our static documentation files from libc/docs/
       # to the $build_dir/libc/docs/. That way, we can have a mix of both static
-      # committed files and dynamically generated .rst files. We don't want the
-      # dynamically generated .rst files to pollute the source tree.
+      # committed files and dynamically generated .md files. We don't want the
+      # dynamically generated .md files to pollute the source tree.
       # Maintain a list of headers for which we dynamically generate html docs
       # for via docgen. For more complex docs (such as per arch support, a la
       # math.h), those should be omitted and exist statically in
@@ -15,6 +15,7 @@ if(LLVM_ENABLE_SPHINX)
         arpa/inet
         assert
         byteswap
+        complex
         cpio
         ctype
         dirent
@@ -24,22 +25,40 @@ if(LLVM_ENABLE_SPHINX)
         fcntl
         fenv
         float
+        fmtmsg
+        fnmatch
+        ftw
         glob
+        grp
+        iconv
         inttypes
+        langinfo
         libgen
+        limits
         locale
-        nl_types
+        math
+        monetary
+        mqueue
+        ndbm
         net/if
+        netdb
         netinet/in
         netinet/tcp
+        nl_types
         poll
         pthread
         pwd
+        regex
         sched
+        search
+        semaphore
         setjmp
         signal
         spawn
         stdbit
+        stdckdint
+        stdfix
+        stdint
         stdio
         stdlib
         string
@@ -50,26 +69,35 @@ if(LLVM_ENABLE_SPHINX)
         sys/resource
         sys/select
         sys/sem
+        sys/shm
         sys/socket
         sys/stat
         sys/statvfs
         sys/time
+        sys/times
+        sys/types
         sys/uio
+        sys/un
         sys/utsname
         sys/wait
         syslog
+        tar
         termios
         threads
         time
         uchar
+        ulimit
         unistd
+        utime
+        utmpx
         wchar
         wctype
+        wordexp
       )
       foreach(stem IN LISTS docgen_list)
-        list(APPEND libc_generated_docs "headers/${stem}.rst")
+        list(APPEND libc_generated_docs "headers/${stem}.md")
       endforeach()
-      list(APPEND libc_generated_docs configure.rst)
+      list(APPEND libc_generated_docs headers/index.md configure.rst)
       add_sphinx_source_sync_target(copy-libc-rst-docs
         "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
         PRESERVE_DOCS ${libc_generated_docs})
@@ -102,17 +130,22 @@ if(LLVM_ENABLE_SPHINX)
         # docgen relies on the "/" to find headers nested under directories.
         # Replace with underscore and namespace the target to avoid collisions
         # with other runtime targets in combined builds.
-        string(REPLACE "/" "_" stem_rst ${stem})
-        set(docgen_target_name libc-docgen-${stem_rst})
+        string(REPLACE "/" "_" stem_target ${stem})
+        set(docgen_target_name libc-docgen-${stem_target})
 
         # docgen invocation.
         add_custom_target(${docgen_target_name}
           COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../utils/docgen/docgen.py ${stem}.h >
-            ${CMAKE_CURRENT_BINARY_DIR}/headers/${stem}.rst)
+            ${CMAKE_CURRENT_BINARY_DIR}/headers/${stem}.md)
         add_dependencies(${docgen_target_name} copy-libc-rst-docs)
         # depend on the docgen invocation.
         add_dependencies(docs-libc-html ${docgen_target_name})
       endforeach()
+      add_custom_target(libc-docgen-index
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../utils/docgen/docgen.py --index >
+          ${CMAKE_CURRENT_BINARY_DIR}/headers/index.md)
+      add_dependencies(libc-docgen-index copy-libc-rst-docs)
+      add_dependencies(docs-libc-html libc-docgen-index)
     endif()
   endif()
 endif()

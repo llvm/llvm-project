@@ -21,6 +21,9 @@ llvm_tablegen(WebAssemblyGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
 llvm_tablegen(WebAssemblyGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="WebAssemblyPostLegalizerCombiner")
 
+set(LLVM_TARGET_DEFINITIONS WebAssemblyOptions.td)
+llvm_tablegen(WebAssemblyOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(WebAssemblyCommonTableGen)
 
 add_llvm_target(WebAssemblyCodeGen
@@ -90,6 +93,7 @@ add_llvm_target(WebAssemblyCodeGen
   Core
   GlobalISel
   MC
+  Option
   Passes
   Scalar
   SelectionDAG

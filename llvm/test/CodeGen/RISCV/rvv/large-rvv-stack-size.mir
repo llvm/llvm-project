@@ -49,7 +49,6 @@
 ---
 name:            spillslot
 alignment:       4
-tracksRegLiveness: false
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false

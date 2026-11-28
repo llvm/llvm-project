@@ -2,6 +2,7 @@
 
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: %lld -dylib -%loadnewpmbye --lto-newpm-passes="goodbye" -mllvm %loadbye -mllvm -wave-goodbye %t.o -o /dev/null 2>&1 | FileCheck %s
+; RUN: %lld -dylib -%loadnewpmbye --lto-newpm-passes="goodbye" --pass-plugin-arg=Bye,-wave-goodbye %t.o -o /dev/null 2>&1 | FileCheck %s
 ; CHECK: Bye
 
 target triple = "x86_64-apple-macosx10.15.0"

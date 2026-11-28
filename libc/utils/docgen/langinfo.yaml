@@ -1,0 +1,122 @@
+posix: posix-2024
+functions:
+  nl_langinfo:
+    in-latest-posix: ''
+  nl_langinfo_l:
+    in-latest-posix: ''
+macros:
+  ABDAY_1:
+    in-latest-posix: ''
+  ABDAY_2:
+    in-latest-posix: ''
+  ABDAY_3:
+    in-latest-posix: ''
+  ABDAY_4:
+    in-latest-posix: ''
+  ABDAY_5:
+    in-latest-posix: ''
+  ABDAY_6:
+    in-latest-posix: ''
+  ABDAY_7:
+    in-latest-posix: ''
+  ABMON_1:
+    in-latest-posix: ''
+  ABMON_10:
+    in-latest-posix: ''
+  ABMON_11:
+    in-latest-posix: ''
+  ABMON_12:
+    in-latest-posix: ''
+  ABMON_2:
+    in-latest-posix: ''
+  ABMON_3:
+    in-latest-posix: ''
+  ABMON_4:
+    in-latest-posix: ''
+  ABMON_5:
+    in-latest-posix: ''
+  ABMON_6:
+    in-latest-posix: ''
+  ABMON_7:
+    in-latest-posix: ''
+  ABMON_8:
+    in-latest-posix: ''
+  ABMON_9:
+    in-latest-posix: ''
+  ALT_DIGITS:
+    in-latest-posix: ''
+  AM_STR:
+    in-latest-posix: ''
+  CODESET:
+    in-latest-posix: ''
+  CRNCYSTR:
+    in-latest-posix: ''
+  DAY_1:
+    in-latest-posix: ''
+  DAY_2:
+    in-latest-posix: ''
+  DAY_3:
+    in-latest-posix: ''
+  DAY_4:
+    in-latest-posix: ''
+  DAY_5:
+    in-latest-posix: ''
+  DAY_6:
+    in-latest-posix: ''
+  DAY_7:
+    in-latest-posix: ''
+  D_FMT:
+    in-latest-posix: ''
+  D_T_FMT:
+    in-latest-posix: ''
+  ERA:
+    in-latest-posix: ''
+  ERA_D_FMT:
+    in-latest-posix: ''
+  ERA_D_T_FMT:
+    in-latest-posix: ''
+  ERA_T_FMT:
+    in-latest-posix: ''
+  MON_1:
+    in-latest-posix: ''
+  MON_10:
+    in-latest-posix: ''
+  MON_11:
+    in-latest-posix: ''
+  MON_12:
+    in-latest-posix: ''
+  MON_2:
+    in-latest-posix: ''
+  MON_3:
+    in-latest-posix: ''
+  MON_4:
+    in-latest-posix: ''
+  MON_5:
+    in-latest-posix: ''
+  MON_6:
+    in-latest-posix: ''
+  MON_7:
+    in-latest-posix: ''
+  MON_8:
+    in-latest-posix: ''
+  MON_9:
+    in-latest-posix: ''
+  NOEXPR:
+    in-latest-posix: ''
+  PM_STR:
+    in-latest-posix: ''
+  RADIXCHAR:
+    in-latest-posix: ''
+  THOUSEP:
+    in-latest-posix: ''
+  T_FMT:
+    in-latest-posix: ''
+  T_FMT_AMPM:
+    in-latest-posix: ''
+  YESEXPR:
+    in-latest-posix: ''
+types:
+  locale_t:
+    in-latest-posix: ''
+  nl_item:
+    in-latest-posix: ''

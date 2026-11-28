@@ -12,7 +12,7 @@
 // SPIRV-DAG: @"$Globals.cb" = internal global target("spirv.VulkanBuffer", %"__cblayout_$Globals", 2, 0)
 // SPIRV-DAG: @a = external hidden addrspace(12) global float
 // SPIRV-DAG: @g = external hidden addrspace(12) global float
-// SPIRV-DAG: @h = external hidden addrspace(12) global %__cblayout_S, align 8
+// SPIRV-DAG: @h = external hidden addrspace(12) global %__cblayout_S, align 4
 
 struct EmptyStruct {
 };

@@ -718,6 +718,43 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
   EXPECT_TRUE(defLoc2.isFileID());
 }
 
+TEST_F(SourceManagerTest, getMacroArgExpandedLocationNestedArguments) {
+  // Each argument is passed through a chain of macros, so the expansion of an
+  // argument is spelled in the expansion of the same argument one level up.
+  const char *main = "#define ID1(...) __VA_ARGS__\n"
+                     "#define ID2(...) ID1(ID1(__VA_ARGS__))\n"
+                     "#define ID4(...) ID2(ID2(__VA_ARGS__))\n"
+                     "#define PAIR(x, y) ID4(x) + ID4(ID4(y))\n"
+                     "PAIR(a b, c)\n";
+
+  std::unique_ptr<llvm::MemoryBuffer> MainBuf =
+      llvm::MemoryBuffer::getMemBuffer(main);
+  FileID MainFileID = SourceMgr.createFileID(std::move(MainBuf));
+  SourceMgr.setMainFileID(MainFileID);
+
+  HeaderSearchOptions HSOpts;
+  PreprocessorOptions PPOpts;
+  TrivialModuleLoader ModLoader;
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
+  PP.Initialize(*Target);
+  PP.EnterMainSourceFile();
+
+  std::vector<Token> Toks;
+  PP.LexTokensUntilEOF(&Toks);
+  ASSERT_EQ(4U, Toks.size());
+
+  SourceLocation A = SourceMgr.translateLineCol(MainFileID, 5, 6);
+  SourceLocation B = SourceMgr.translateLineCol(MainFileID, 5, 8);
+  SourceLocation C = SourceMgr.translateLineCol(MainFileID, 5, 11);
+  SourceLocation Pair = SourceMgr.translateLineCol(MainFileID, 5, 1);
+  EXPECT_EQ(Toks[0].getLocation(), SourceMgr.getMacroArgExpandedLocation(A));
+  EXPECT_EQ(Toks[1].getLocation(), SourceMgr.getMacroArgExpandedLocation(B));
+  EXPECT_EQ(Toks[3].getLocation(), SourceMgr.getMacroArgExpandedLocation(C));
+  EXPECT_EQ(Pair, SourceMgr.getMacroArgExpandedLocation(Pair));
+}
+
 namespace {
 
 struct MacroAction {

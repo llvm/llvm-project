@@ -3,11 +3,13 @@
 
 ---
 name:            test_icmp_canon
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_icmp_canon
-    ; CHECK: %lhs:_(i64) = G_CONSTANT i64 11
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(i64) = G_CONSTANT i64 11
     ; CHECK-NEXT: %rhs:_(i64) = COPY $x0
     ; CHECK-NEXT: %res:_(i32) = G_ICMP intpred(sgt), %rhs(i64), %lhs
     ; CHECK-NEXT: $w0 = COPY %res(i32)
@@ -18,11 +20,13 @@ body:             |
 ...
 ---
 name:            test_icmp_no_canon
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_icmp_no_canon
-    ; CHECK: %lhs:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(i64) = COPY $x0
     ; CHECK-NEXT: %rhs:_(i64) = G_CONSTANT i64 11
     ; CHECK-NEXT: %res:_(i32) = G_ICMP intpred(slt), %lhs(i64), %rhs
     ; CHECK-NEXT: $w0 = COPY %res(i32)
@@ -33,11 +37,13 @@ body:             |
 ...
 ---
 name:            test_icmp_canon_bv
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_icmp_canon_bv
-    ; CHECK: %opaque1:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %opaque1:_(i64) = COPY $x0
     ; CHECK-NEXT: %opaque2:_(i64) = COPY $x0
     ; CHECK-NEXT: %const1:_(i64) = G_CONSTANT i64 11
     ; CHECK-NEXT: %const2:_(i64) = G_CONSTANT i64 12
@@ -56,11 +62,13 @@ body:             |
 ...
 ---
 name:            test_icmp_no_canon_bv_neither_const
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_icmp_no_canon_bv_neither_const
-    ; CHECK: %opaque1:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %opaque1:_(i64) = COPY $x0
     ; CHECK-NEXT: %opaque2:_(i64) = COPY $x0
     ; CHECK-NEXT: %const1:_(i64) = G_CONSTANT i64 11
     ; CHECK-NEXT: %const2:_(i64) = G_CONSTANT i64 12
@@ -79,11 +87,13 @@ body:             |
 ...
 ---
 name:            test_icmp_canon_splat
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x1
     ; CHECK-LABEL: name: test_icmp_canon_splat
-    ; CHECK: %const:_(i64) = G_CONSTANT i64 11
+    ; CHECK: liveins: $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %const:_(i64) = G_CONSTANT i64 11
     ; CHECK-NEXT: %lhs:_(<vscale x 2 x i64>) = G_SPLAT_VECTOR %const(i64)
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: %rhs:_(<vscale x 2 x i64>) = G_SPLAT_VECTOR [[COPY]](i64)

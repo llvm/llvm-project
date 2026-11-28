@@ -1,0 +1,61 @@
+// RUN: cir-opt %s --cir-to-llvm | FileCheck %s --check-prefix=REL
+// RUN: sed 's/relative_cxx_abi_vtables = true/relative_cxx_abi_vtables = false/' %s | cir-opt --cir-to-llvm | FileCheck %s --check-prefix=PTR
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_std3A3Atype_info = !cir.struct<"std::type_info" incomplete>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu", cir.lowering_options = #cir.lowering_options<
+    exceptions = false, threadsafe_statics = false, cuda = false,
+    cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = false,
+    gpu_rdc = false, openmp = false, openmp_is_target_device = false,
+    clang_abi_compat = 0, long_double_size = 64, enable_noundef_attrs = true,
+    no_trapping_math = false, ssp_buffer_size = 0,
+    relative_cxx_abi_vtables = true>} {
+
+  // REL-LABEL: llvm.func @get_virtual_fn
+  // REL:         %[[OFF:.*]] = llvm.mlir.constant(8 : i32) : i32
+  // REL:         llvm.call_intrinsic "llvm.load.relative.i32"(%arg0, %[[OFF]]) : (!llvm.ptr, i32) -> !llvm.ptr
+  // PTR-LABEL: llvm.func @get_virtual_fn
+  // PTR:         %[[SLOT:.*]] = llvm.getelementptr inbounds %arg0[2] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
+  // PTR:         llvm.load %[[SLOT]]
+  cir.func @get_virtual_fn(%arg0: !cir.vptr) -> !cir.ptr<!cir.func<(!s32i) -> !s32i>> {
+    %0 = cir.vtable.get_virtual_fn %arg0[2] : !cir.vptr -> !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+    cir.return %0 : !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+  }
+
+  // REL-LABEL: llvm.func @get_virtual_fn_by_offset
+  // REL:         llvm.call_intrinsic "llvm.load.relative.i64"(%arg0, %arg1) : (!llvm.ptr, i64) -> !llvm.ptr
+  // PTR-LABEL: llvm.func @get_virtual_fn_by_offset
+  // PTR:         %[[SLOT:.*]] = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+  // PTR:         llvm.load %[[SLOT]]
+  cir.func @get_virtual_fn_by_offset(%arg0: !cir.vptr, %arg1: !s64i) -> !cir.ptr<!cir.func<(!s32i) -> !s32i>> {
+    %0 = cir.vtable.get_virtual_fn_by_offset %arg0[%arg1 : !s64i] : !cir.vptr -> !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+    cir.return %0 : !cir.ptr<!cir.func<(!s32i) -> !s32i>>
+  }
+
+  // REL-LABEL: llvm.func @get_offset
+  // REL:         %[[OFF:.*]] = llvm.mlir.constant(-12 : i64) : i64
+  // REL:         %[[SLOT:.*]] = llvm.getelementptr %arg0[%[[OFF]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+  // REL:         %[[LOAD:.*]] = llvm.load %[[SLOT]] {{.*}} : !llvm.ptr -> i32
+  // REL:         llvm.sext %[[LOAD]] : i32 to i64
+  // PTR-LABEL: llvm.func @get_offset
+  // PTR:         %[[OFF:.*]] = llvm.mlir.constant(-24 : i64) : i64
+  // PTR:         %[[SLOT:.*]] = llvm.getelementptr %arg0[%[[OFF]]] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+  // PTR:         llvm.load %[[SLOT]] {{.*}} : !llvm.ptr -> i64
+  cir.func @get_offset(%arg0: !cir.vptr) -> !s64i {
+    %0 = cir.vtable.get_offset %arg0[-3] : !cir.vptr -> !s64i
+    cir.return %0 : !s64i
+  }
+
+  // REL-LABEL: llvm.func @get_entry
+  // REL:         %[[OFF:.*]] = llvm.mlir.constant(-4 : i32) : i32
+  // REL:         llvm.call_intrinsic "llvm.load.relative.i32"(%arg0, %[[OFF]]) : (!llvm.ptr, i32) -> !llvm.ptr
+  // PTR-LABEL: llvm.func @get_entry
+  // PTR:         %[[SLOT:.*]] = llvm.getelementptr inbounds %{{.*}}[%{{.*}}] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
+  // PTR:         llvm.load %[[SLOT]]
+  cir.func @get_entry(%arg0: !cir.vptr) -> !cir.ptr<!rec_std3A3Atype_info> {
+    %0 = cir.vtable.get_entry %arg0[-1] : !cir.vptr -> !cir.ptr<!rec_std3A3Atype_info>
+    cir.return %0 : !cir.ptr<!rec_std3A3Atype_info>
+  }
+}

@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FxBitsTest.h"
+#include "test/src/stdfix/FxBitsTest.h"
+
 #include "src/stdfix/urbits.h"
 
 LIST_FXBITS_TEST(ur, unsigned fract, uint_ur_t, LIBC_NAMESPACE::urbits);

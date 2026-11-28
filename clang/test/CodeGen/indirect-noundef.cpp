@@ -1,8 +1,11 @@
 // RUN: %clang_cc1 -x c++ -triple x86_64-unknown-unknown -O0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -triple x86_64-unknown-unknown -O0 -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -x c++ -triple x86_64-unknown-unknown -O0 -emit-llvm -fsanitize-memory-param-retval -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -triple x86_64-unknown-unknown -O0 -emit-llvm -fsanitize-memory-param-retval -o - %s | FileCheck %s %}
 
 // no-sanitize-memory-param-retval does NOT conflict with enable-noundef-analysis
 // RUN: %clang_cc1 -x c++ -triple x86_64-unknown-unknown -O0 -emit-llvm -fno-sanitize-memory-param-retval -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -triple x86_64-unknown-unknown -O0 -emit-llvm -fno-sanitize-memory-param-retval -o - %s | FileCheck %s %}
 
 union u1 {
   int val;

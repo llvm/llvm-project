@@ -2572,6 +2572,12 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure, SameOperandsAndResultShape,
       "operands custom<InputUnsigned>($input_unsigned) attr-dict `:` "
       "functional-type(operands, results)";
 
+  let builders = [
+    OpBuilder<(ins "::mlir::Type":$output, "::mlir::Value":$input)>,
+    OpBuilder<(ins "::mlir::Type":$output, "::mlir::Value":$input,
+      "bool":$input_unsigned)>
+  ];
+
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
@@ -2705,6 +2711,20 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale", [NoMemoryEffect]> {
   let results = (outs
     Tosa_Tensor:$output
   );
+
+  let builders = [
+    OpBuilder<(ins "::mlir::Type":$output, "::mlir::Value":$input,
+      "::mlir::Value":$multiplier, "::mlir::Value":$shift,
+      "::mlir::Value":$input_zp, "::mlir::Value":$output_zp,
+      "bool":$scale32, "::mlir::tosa::RoundingMode":$rounding_mode,
+      "bool":$per_channel)>,
+    OpBuilder<(ins "::mlir::Type":$output, "::mlir::Value":$input,
+      "::mlir::Value":$multiplier, "::mlir::Value":$shift,
+      "::mlir::Value":$input_zp, "::mlir::Value":$output_zp,
+      "::mlir::BoolAttr":$scale32,
+      "mlir::tosa::RoundingModeAttr":$rounding_mode,
+      "::mlir::BoolAttr":$per_channel)>
+  ];
 
   let extraClassDeclaration = [{
     FailureOr<int64_t> getInputZeroPoint();

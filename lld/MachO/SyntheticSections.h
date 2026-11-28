@@ -679,6 +679,7 @@ private:
   struct ImageInfo {
     uint8_t swiftVersion = 0;
     bool hasCategoryClassProperties = false;
+    bool hasSignedClassROs = false;
   } info;
   static ImageInfo parseImageInfo(const InputFile *);
   std::vector<const InputFile *> files; // files with image info

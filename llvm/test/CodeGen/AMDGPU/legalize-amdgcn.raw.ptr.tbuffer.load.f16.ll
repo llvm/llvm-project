@@ -49,7 +49,8 @@ define half @raw_tbuffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr add
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = COPY [[TBUFFER_LOAD_FORMAT_D16_X_OFFEN]]
+  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_X_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call half @llvm.amdgcn.raw.ptr.tbuffer.load.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 0)
   ret half %val
@@ -214,7 +215,8 @@ define half @raw_tbuffer_load_f16__vgpr_rsrc__sgpr_voffset__vgpr_soffset(ptr add
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = COPY [[TBUFFER_LOAD_FORMAT_D16_X_OFFEN]]
+  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_X_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call half @llvm.amdgcn.raw.ptr.tbuffer.load.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 0)
   ret half %val
@@ -268,7 +270,8 @@ define half @raw_tbuffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc(ptr
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = COPY [[TBUFFER_LOAD_FORMAT_D16_X_OFFEN]]
+  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_X_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call half @llvm.amdgcn.raw.ptr.tbuffer.load.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 1)
   ret half %val
@@ -322,7 +325,8 @@ define half @raw_tbuffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc(ptr
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = COPY [[TBUFFER_LOAD_FORMAT_D16_X_OFFEN]]
+  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_X_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call half @llvm.amdgcn.raw.ptr.tbuffer.load.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 2)
   ret half %val
@@ -376,7 +380,8 @@ define half @raw_tbuffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc_glc
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = COPY [[TBUFFER_LOAD_FORMAT_D16_X_OFFEN]]
+  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_X_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call half @llvm.amdgcn.raw.ptr.tbuffer.load.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 3)
   ret half %val
@@ -430,7 +435,8 @@ define half @raw_tbuffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_dlc(ptr
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = COPY [[TBUFFER_LOAD_FORMAT_D16_X_OFFEN]]
+  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[TBUFFER_LOAD_FORMAT_D16_X_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call half @llvm.amdgcn.raw.ptr.tbuffer.load.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 4)
   ret half %val

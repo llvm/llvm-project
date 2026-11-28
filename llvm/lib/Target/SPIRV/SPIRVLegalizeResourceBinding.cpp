@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass legalizes the @llvm.spv.resource.handlefromimplicitbinding
+// This pass legalizes the @llvm.spv.resource.handlefromimplicitbinding.mdname
 // and @llvm.spv.resource.handlefromheap intrinsics by replacing them with a
-// call to @llvm.spv.resource.handlefrombinding.
+// call to @llvm.spv.resource.handlefrombinding.mdname.
 // It also replaces any @llvm.spv.resource.counterhandlefromimplicitbinding and
 // @llvm.spv.resource.counterhandlefromheap intrinsics with calls to
 // @llvm.spv.resource.counterhandlefrombinding.
@@ -19,15 +19,14 @@
 #include "SPIRV.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/raw_ostream.h"
 #include <vector>
 
 using namespace llvm;
@@ -68,7 +67,7 @@ public:
 static uint32_t getDescSet(const CallInst *CI) {
   uint32_t DescSetArgIdx;
   switch (CI->getIntrinsicID()) {
-  case Intrinsic::spv_resource_handlefromimplicitbinding:
+  case Intrinsic::spv_resource_handlefromimplicitbinding_mdname:
     DescSetArgIdx = 1;
     break;
   case Intrinsic::spv_resource_counterhandlefromimplicitbinding:
@@ -114,13 +113,13 @@ void SPIRVLegalizeResourceBindingImpl::collectBindingInfo(Module &M) {
       continue;
 
     switch (F.getIntrinsicID()) {
-    case Intrinsic::spv_resource_handlefrombinding:
+    case Intrinsic::spv_resource_handlefrombinding_mdname:
       collectBinding(F, /*ArgDescSetIdx*/ 0, /*ArgBindingIdx*/ 1);
       break;
     case Intrinsic::spv_resource_counterhandlefrombinding:
       collectBinding(F, /*ArgDescSetIdx*/ 1, /*ArgBindingIdx*/ 2);
       break;
-    case Intrinsic::spv_resource_handlefromimplicitbinding:
+    case Intrinsic::spv_resource_handlefromimplicitbinding_mdname:
     case Intrinsic::spv_resource_counterhandlefromimplicitbinding:
       MayHaveImplicitBindings = true;
       break;
@@ -157,14 +156,14 @@ static void replaceWithHandleFromBinding(Module &M, CallInst *CI,
                                          Value *RangeOp, Value *IndexOp,
                                          Value *Name) {
   assert((CI->getIntrinsicID() ==
-              Intrinsic::spv_resource_handlefromimplicitbinding ||
+              Intrinsic::spv_resource_handlefromimplicitbinding_mdname ||
           CI->getIntrinsicID() == Intrinsic::spv_resource_handlefromheap) &&
          "unexpected binding intrinsic");
   IRBuilder<> Builder(CI);
   Value *DescSetOp = Builder.getInt32(DescSet);
   Value *BindingOp = Builder.getInt32(Binding);
   Function *NewFunc = Intrinsic::getOrInsertDeclaration(
-      &M, Intrinsic::spv_resource_handlefrombinding, {CI->getType()});
+      &M, Intrinsic::spv_resource_handlefrombinding_mdname, {CI->getType()});
   CallInst *NewCI = Builder.CreateCall(
       NewFunc, {DescSetOp, BindingOp, RangeOp, IndexOp, Name});
   NewCI->setCallingConv(CI->getCallingConv());
@@ -205,7 +204,8 @@ bool SPIRVLegalizeResourceBindingImpl::replaceImplicitBindingCalls(Module &M) {
       continue;
 
     uint32_t OrderIdIdx;
-    if (F.getIntrinsicID() == Intrinsic::spv_resource_handlefromimplicitbinding)
+    if (F.getIntrinsicID() ==
+        Intrinsic::spv_resource_handlefromimplicitbinding_mdname)
       OrderIdIdx = 0;
     else if (F.getIntrinsicID() ==
              Intrinsic::spv_resource_counterhandlefromimplicitbinding)
@@ -247,7 +247,7 @@ bool SPIRVLegalizeResourceBindingImpl::replaceImplicitBindingCalls(Module &M) {
 
     // Replace the implicit binding call with an explicit binding call.
     if (CI->getIntrinsicID() ==
-        Intrinsic::spv_resource_handlefromimplicitbinding)
+        Intrinsic::spv_resource_handlefromimplicitbinding_mdname)
       replaceWithHandleFromBinding(M, CI, DescSet, Binding,
                                    CI->getArgOperand(2), CI->getArgOperand(3),
                                    CI->getArgOperand(4));
@@ -262,46 +262,11 @@ bool SPIRVLegalizeResourceBindingImpl::replaceImplicitBindingCalls(Module &M) {
   return Changed;
 }
 
-bool moduleContainsConstantString(Module &M, StringRef Str) {
-  for (GlobalVariable &GV : M.globals()) {
-    if (!GV.hasInitializer())
-      continue;
-    if (ConstantDataArray *CDA =
-            dyn_cast<ConstantDataArray>(GV.getInitializer())) {
-      if (CDA->isString() && CDA->getAsCString() == Str)
-        return true;
-    }
-  }
-  return false;
-}
-
-// Creates unique global variable for the heap name string, making
-// sure that each heap name string is unique within the module.
-GlobalVariable *createHeapNameString(Module &M, StringRef Name) {
-  SmallString<32> GlobalStringName(Name);
-  uint32_t HeapNameLen = Name.size();
-  StringRef HeapName;
-  for (unsigned Suffix = 1;; ++Suffix) {
-    GlobalStringName.append(".str");
-    if (!M.getNamedValue(GlobalStringName)) {
-      // Make sure the module does not already have a constant
-      // string with this value.
-      HeapName = GlobalStringName.substr(0, HeapNameLen);
-      if (!moduleContainsConstantString(M, HeapName))
-        break;
-    }
-    GlobalStringName.resize(Name.size());
-    raw_svector_ostream(GlobalStringName) << '.' << Suffix;
-    HeapNameLen = GlobalStringName.size();
-  }
-  Constant *Init = ConstantDataArray::getString(M.getContext(), HeapName);
-  GlobalVariable *HeapNameGV = new GlobalVariable(
-      M, Init->getType(), /*isConstant=*/true, GlobalValue::PrivateLinkage,
-      Init, GlobalStringName, /*InsertBefore=*/nullptr,
-      GlobalVariable::NotThreadLocal, /*AddressSpace=*/0);
-  HeapNameGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  HeapNameGV->setAlignment(Align(1));
-  return HeapNameGV;
+static Value *createHeapNameMetadata(LLVMContext &Ctx, StringRef Name,
+                                     unsigned ID) {
+  std::string HeapName = (Twine(".") + Name + "." + Twine(ID)).str();
+  return MetadataAsValue::get(Ctx,
+                              MDNode::get(Ctx, MDString::get(Ctx, HeapName)));
 }
 
 // The SPIR-V backend represents dynamic resources as unbounded resource arrays.
@@ -363,25 +328,16 @@ bool SPIRVLegalizeResourceBindingImpl::replaceHeapBindingCalls(Module &M) {
     // ResourceDescriptorHeap name for each unique resource type. They will all
     // share the same binding and will overlap.
     uint32_t Binding = getAndReserveFirstUnusedBinding(DescSet);
-    SmallDenseMap<TargetExtType *, GlobalVariable *> ResourceDescriptorHeaps;
+    unsigned HeapID = 0;
     for (Function *F : CbvSrvUavs) {
-      TargetExtType *ResType = cast<TargetExtType>(F->getReturnType());
-      GlobalVariable *HeapNameGV = nullptr;
-      auto It = ResourceDescriptorHeaps.find(ResType);
-      if (It == ResourceDescriptorHeaps.end()) {
-        HeapNameGV = createHeapNameString(M, "ResourceDescriptorHeap");
-        [[maybe_unused]] auto [InsertedIt, Inserted] =
-            ResourceDescriptorHeaps.try_emplace(ResType, HeapNameGV);
-        assert(Inserted && "resource heap name already exists");
-      } else {
-        HeapNameGV = It->second;
-      }
+      Value *HeapName = createHeapNameMetadata(
+          M.getContext(), "ResourceDescriptorHeap", HeapID++);
 
       for (User *U : make_early_inc_range(F->users())) {
         if (CallInst *CI = dyn_cast<CallInst>(U)) {
           Value *HeapIdx = CI->getArgOperand(0);
           replaceWithHandleFromBinding(M, CI, DescSet, Binding, Zero, HeapIdx,
-                                       HeapNameGV);
+                                       HeapName);
           Changed = true;
         }
       }
@@ -396,8 +352,8 @@ bool SPIRVLegalizeResourceBindingImpl::replaceHeapBindingCalls(Module &M) {
     [[maybe_unused]] TargetExtType *SamplerHandleType =
         cast<TargetExtType>(Samplers.front()->getReturnType());
 
-    GlobalVariable *HeapNameGV =
-        createHeapNameString(M, "SamplerDescriptorHeap");
+    Value *HeapName =
+        createHeapNameMetadata(M.getContext(), "SamplerDescriptorHeap", 0);
     for (Function *F : Samplers) {
       assert(F->getReturnType() == SamplerHandleType &&
              "sampler handle type mismatch");
@@ -405,7 +361,7 @@ bool SPIRVLegalizeResourceBindingImpl::replaceHeapBindingCalls(Module &M) {
         if (CallInst *CI = dyn_cast<CallInst>(U)) {
           Value *HeapIdx = CI->getArgOperand(0);
           replaceWithHandleFromBinding(M, CI, DescSet, Binding, Zero, HeapIdx,
-                                       HeapNameGV);
+                                       HeapName);
           Changed = true;
         }
       }

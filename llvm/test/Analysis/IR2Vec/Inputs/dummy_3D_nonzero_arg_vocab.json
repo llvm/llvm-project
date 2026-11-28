@@ -88,6 +88,7 @@
         "Pointer": [4, 5, 6],
         "Constant": [7, 8, 9],
         "Variable": [10, 11, 12],
+        "Label": [91, 92, 93],
         "FCMP_false": [13, 14, 15],
         "FCMP_oeq": [16, 17, 18],
         "FCMP_ogt": [19, 20, 21],

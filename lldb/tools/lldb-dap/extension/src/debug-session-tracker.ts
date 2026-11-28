@@ -1,34 +1,25 @@
-import { DebugProtocol } from "@vscode/debugprotocol";
 import * as vscode from "vscode";
 
-export interface LLDBDapCapabilities extends DebugProtocol.Capabilities {
-  /** The debug adapter supports the `moduleSymbols` request. */
-  supportsModuleSymbolsRequest?: boolean;
-}
+import type { dap } from "@protocol/dap";
 
 /** A helper type for mapping event types to their corresponding data type. */
 // prettier-ignore
 interface EventMap {
-  "module": DebugProtocol.ModuleEvent;
-  "exited": DebugProtocol.ExitedEvent;
-  "capabilities": DebugProtocol.CapabilitiesEvent;
+  "module": dap.ModuleEvent;
+  "exited": dap.ExitedEvent;
+  "capabilities": dap.CapabilitiesEvent;
 }
 
 /** A type assertion to check if a ProtocolMessage is an event or if it is a specific event. */
-function isEvent(
-  message: DebugProtocol.ProtocolMessage,
-): message is DebugProtocol.Event;
+function isEvent(message: dap.ProtocolMessage): message is dap.Event;
 function isEvent<K extends keyof EventMap>(
-  message: DebugProtocol.ProtocolMessage,
+  message: dap.ProtocolMessage,
   event: K,
 ): message is EventMap[K];
-function isEvent(
-  message: DebugProtocol.ProtocolMessage,
-  event?: string,
-): boolean {
+function isEvent(message: dap.ProtocolMessage, event?: string): boolean {
   return (
     message.type === "event" &&
-    (!event || (message as DebugProtocol.Event).event === event)
+    (!event || (message as dap.Event).event === event)
   );
 }
 
@@ -41,12 +32,12 @@ export class DebugSessionTracker
    *
    * The modules are kept in an array to maintain the load order of the modules.
    */
-  private modules = new Map<vscode.DebugSession, DebugProtocol.Module[]>();
+  private modules = new Map<vscode.DebugSession, dap.Module[]>();
   private modulesChanged = new vscode.EventEmitter<
     vscode.DebugSession | undefined
   >();
   private sessionReceivedCapabilities = new vscode.EventEmitter<
-    [vscode.DebugSession, LLDBDapCapabilities]
+    [vscode.DebugSession, dap.Capabilities]
   >();
   private sessionExited = new vscode.EventEmitter<vscode.DebugSession>();
 
@@ -60,7 +51,7 @@ export class DebugSessionTracker
 
   /** Fired when a debug session is initialized. */
   onDidReceiveSessionCapabilities: vscode.Event<
-    [vscode.DebugSession, LLDBDapCapabilities]
+    [vscode.DebugSession, dap.Capabilities]
   > = this.sessionReceivedCapabilities.event;
 
   /** Fired when a debug session is exiting. */
@@ -97,7 +88,7 @@ export class DebugSessionTracker
    *
    * Modules are returned in load order.
    */
-  debugSessionModules(session: vscode.DebugSession): DebugProtocol.Module[] {
+  debugSessionModules(session: vscode.DebugSession): dap.Module[] {
     return this.modules.get(session) ?? [];
   }
 
@@ -129,7 +120,7 @@ export class DebugSessionTracker
 
   private onDidSendMessage(
     session: vscode.DebugSession,
-    message: DebugProtocol.ProtocolMessage,
+    message: dap.ProtocolMessage,
   ) {
     if (isEvent(message, "module")) {
       const { module, reason } = message.body;

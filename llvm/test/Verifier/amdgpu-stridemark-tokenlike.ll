@@ -1,6 +1,6 @@
 ; RUN: split-file %s %t
-; RUN: not llvm-as %t/function-arg.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-ARG %s
-; RUN: not llvm-as %t/function-return.ll -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-RETURN %s
+; RUN: not llvm-as %t/function-arg.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-ARG %s
+; RUN: not llvm-as %t/function-return.ll -disable-output 2>&1 | FileCheck --check-prefix=CHECK-RETURN %s
 
 ;--- function-arg.ll
 define void @f(target("amdgpu.stridemark") %mark) {

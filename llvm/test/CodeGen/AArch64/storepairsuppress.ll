@@ -168,9 +168,9 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; SUPPRESS-NEXT:    fsub s3, s5, s6
 ; SUPPRESS-NEXT:    fsub s2, s16, s2
 ; SUPPRESS-NEXT:    stp s3, s2, [x8, #40]
-; SUPPRESS-NEXT:    lsl x9, x3, #33
-; SUPPRESS-NEXT:    ldr x10, [x0, #8]
-; SUPPRESS-NEXT:    add x9, x10, x9, asr #29
+; SUPPRESS-NEXT:    ldr x9, [x0, #8]
+; SUPPRESS-NEXT:    sbfiz x10, x3, #4, #31
+; SUPPRESS-NEXT:    add x9, x9, x10
 ; SUPPRESS-NEXT:    ldp s2, s3, [x9]
 ; SUPPRESS-NEXT:    ldp s5, s6, [x8, #16]
 ; SUPPRESS-NEXT:    fmul s16, s4, s3
@@ -337,9 +337,9 @@ define void @load_store_units_critical(ptr %arg, ptr noundef %arg1, i64 noundef 
 ; NOSUPPRESS-NEXT:    fsub s3, s5, s6
 ; NOSUPPRESS-NEXT:    fsub s2, s16, s2
 ; NOSUPPRESS-NEXT:    stp s3, s2, [x8, #40]
-; NOSUPPRESS-NEXT:    lsl x9, x3, #33
-; NOSUPPRESS-NEXT:    ldr x10, [x0, #8]
-; NOSUPPRESS-NEXT:    add x9, x10, x9, asr #29
+; NOSUPPRESS-NEXT:    ldr x9, [x0, #8]
+; NOSUPPRESS-NEXT:    sbfiz x10, x3, #4, #31
+; NOSUPPRESS-NEXT:    add x9, x9, x10
 ; NOSUPPRESS-NEXT:    ldp s2, s3, [x9]
 ; NOSUPPRESS-NEXT:    ldp s5, s6, [x8, #16]
 ; NOSUPPRESS-NEXT:    fmul s16, s4, s3

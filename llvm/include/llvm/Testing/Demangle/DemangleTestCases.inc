@@ -29994,6 +29994,10 @@
 // See https://github.com/llvm/llvm-project/issues/108009.
 {"_ZN3FooIiE6methodIb3BarEEvT0_IT_ES3_IiE", "void Foo<int>::method<bool, Bar>(Bar<bool>, Bar<int>)"},
 
+// Cast target types must be printed in full.
+{"_Z1fIXscA_iLi0EEEvv", "void f<static_cast<int []>(0)>()"},
+{"_Z3fooIXscPFviEadL_Z5printiEEEvv", "void foo<static_cast<void (*)(int)>(&print(int))>()"},
+
 // C++20 class type non-type template parameters:
 {"_Z1fIXtl1BLPi0ELi1EEEEvv", "void f<B{(int*)0, 1}>()"},
 {"_Z1fIXtl1BLPi32EEEEvv", "void f<B{(int*)32}>()"},
@@ -30234,4 +30238,7 @@
 {"__alloc_token_123__ZnwmRKSt9nothrow_t", "operator new(unsigned long, std::nothrow_t const&) (.alloc_token)"},
 {"__alloc_token__Znwm.llvm.1234", "operator new(unsigned long) (.llvm.1234) (.alloc_token)"},
 {"__alloc_token_123__Z3foov", "foo() (.alloc_token)"},
+{"_Z1fILDu114EEvv", "void f<(char8_t)114>()"},
+{"_Z16ManglingTestNTTPILDB99_38EEvv", "void ManglingTestNTTP<(_BitInt(99))38>()"},
+{"_Z1fILDn0EEvv", "void f<nullptr>()"},
     // clang-format on

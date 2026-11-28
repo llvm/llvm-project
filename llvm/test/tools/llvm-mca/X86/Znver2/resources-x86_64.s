@@ -329,6 +329,9 @@ divl (%rax)
 divq %rcx
 divq (%rax)
 
+endbr32
+endbr64
+
 enter $7, $4095
 
 idivb %dil
@@ -411,6 +414,10 @@ lodsq
 loop 0
 loope 0
 loopne 0
+
+movw (%rax), %ds
+movl %eax, %ds
+movq %rax, %ds
 
 movsb
 movsw
@@ -1329,6 +1336,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  3      29    25.00   *             U     divl	(%rax)
 # CHECK-NEXT:  2      41    41.00                 U     divq	%rcx
 # CHECK-NEXT:  3      45    41.00   *             U     divq	(%rax)
+# CHECK-NEXT:  1      1     0.25                  U     endbr32
+# CHECK-NEXT:  1      1     0.25                  U     endbr64
 # CHECK-NEXT:  1      100   0.25                  U     enter	$7, $4095
 # CHECK-NEXT:  1      15    15.00                 U     idivb	%dil
 # CHECK-NEXT:  2      19    15.00   *             U     idivb	(%rax)
@@ -1397,6 +1406,9 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     0.50                  U     loop	0
 # CHECK-NEXT:  1      1     0.50                  U     loope	0
 # CHECK-NEXT:  1      1     0.50                  U     loopne	0
+# CHECK-NEXT:  1      1     0.25    *             U     movw	(%rax), %ds
+# CHECK-NEXT:  1      1     0.25                  U     movl	%eax, %ds
+# CHECK-NEXT:  1      1     0.25                  U     movq	%rax, %ds
 # CHECK-NEXT:  1      100   0.25    *      *      U     movsb	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  1      100   0.25    *      *      U     movsw	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  1      100   0.25    *      *      U     movsl	(%rsi), %es:(%rdi)
@@ -1965,7 +1977,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 160.33 160.33 160.33 297.50 330.00 312.00 297.50 392.00  -      -      -      -     34.00
+# CHECK-NEXT: 160.33 160.33 160.33 298.25 330.75 312.75 298.25 392.00  -      -      -      -     34.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -2264,6 +2276,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -     25.00   -      -      -      -      -     divl	(%rax)
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     41.00   -      -      -      -      -     divq	%rcx
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -     41.00   -      -      -      -      -     divq	(%rax)
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     endbr32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     endbr64
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     enter	$7, $4095
 # CHECK-NEXT:  -      -      -      -      -     1.00    -     15.00   -      -      -      -      -     idivb	%dil
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -     15.00   -      -      -      -      -     idivb	(%rax)
@@ -2332,6 +2346,9 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -     0.50    -      -     0.50    -      -      -      -      -      -     loop	0
 # CHECK-NEXT:  -      -      -     0.50    -      -     0.50    -      -      -      -      -      -     loope	0
 # CHECK-NEXT:  -      -      -     0.50    -      -     0.50    -      -      -      -      -      -     loopne	0
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     movw	(%rax), %ds
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     movl	%eax, %ds
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     movq	%rax, %ds
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     movsb	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     movsw	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     movsl	(%rsi), %es:(%rdi)

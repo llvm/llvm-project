@@ -53,13 +53,19 @@ HANDLE_TARGET_OPCODE(EXTRACT_SUBREG)
 /// anyext operations on target architectures which support it.
 HANDLE_TARGET_OPCODE(INSERT_SUBREG)
 
-/// IMPLICIT_DEF - This is the MachineInstr-level equivalent of undef.
+/// IMPLICIT_DEF - Defines a register without a value. Both undef and poison
+/// are selected to it, and each use may observe a different value.
+// TODO: Rename this to POISON once everyone handles it like poison.
 HANDLE_TARGET_OPCODE(IMPLICIT_DEF)
 
 /// Explicit undef initialization used past IMPLICIT_DEF elimination in cases
 /// where an undef operand must be allocated to a different register than an
 /// early-clobber result operand.
 HANDLE_TARGET_OPCODE(INIT_UNDEF)
+
+/// FREEZE - Returns an arbitrary, but fixed value of the same type when the
+/// input is undefined/poison. Otherwise, copies the input.
+HANDLE_TARGET_OPCODE(FREEZE)
 
 /// SUBREG_TO_REG - Expose the value of bits in a super register.
 /// This is typically used after an instruction which writes its result to a

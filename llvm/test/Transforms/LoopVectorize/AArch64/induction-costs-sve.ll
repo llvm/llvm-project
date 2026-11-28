@@ -16,8 +16,8 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; DEFAULT:       [[VECTOR_MEMCHECK]]:
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 5
-; DEFAULT-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -1
+; DEFAULT-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 5
+; DEFAULT-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP2]], -1
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
 ; DEFAULT-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], [[TMP3]]
@@ -118,7 +118,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED:       [[VECTOR_MEMCHECK]]:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 4
-; PRED-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -1
+; PRED-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP2]], -1
 ; PRED-NEXT:    [[TMP4:%.*]] = sub i64 [[DST1]], [[SRC2]]
 ; PRED-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
 ; PRED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], [[TMP3]]
@@ -668,7 +668,7 @@ define void @exit_cond_zext_iv_store64(ptr %dst, i64 %N) {
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[DST]], i64 [[INDEX]]
-; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP9]], i64 2
+; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP9]], i64 16
 ; DEFAULT-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP9]], align 8
 ; DEFAULT-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP10]], align 8
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -726,7 +726,7 @@ exit:
   ret void
 }
 
-attributes #0 = { "target-features"="+sve" }
+attributes #0 = { "target-features"="+sve" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.width", i32 4}

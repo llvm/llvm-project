@@ -16,7 +16,6 @@
 # CHECK-NOT: V6_vS32b_ai $r29, 192, {{.*}} $v1
 
 name: f0
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
 stack:

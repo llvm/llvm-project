@@ -12,7 +12,9 @@
 include "mlir/Dialect/SMT/IR/SMTDialect.td"
 include "mlir/IR/AttrTypeBase.td"
 
-class SMTTypeDef<string name> : TypeDef<SMTDialect, name> { }
+class SMTTypeDef<string name> : TypeDef<SMTDialect, name> {
+  let cppIncludes = ["mlir/Dialect/SMT/IR/SMTTypes.h"];
+}
 
 def BoolType : SMTTypeDef<"Bool"> {
   let mnemonic = "bool";

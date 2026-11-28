@@ -16,7 +16,7 @@ module attributes {
   // carry its wire form.  CIRABIRewriteContext cannot rebuild a cir.try_call,
   // so it is reported.
   cir.func @needs_rewrite(%arg0: !cir.ptr<!cir.func<(!s8i) -> !s32i>>,
-                          %arg1: !s8i) {
+                          %arg1: !s8i) requires_call_conv_lowering {
     %0 = cir.try_call %arg0(%arg1) ^bb1, ^bb2
         : (!cir.ptr<!cir.func<(!s8i) -> !s32i>>, !s8i) -> !s32i
   ^bb1:

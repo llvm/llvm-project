@@ -14,7 +14,6 @@
 ---
 name:            test_cp
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
 frameInfo:

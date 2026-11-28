@@ -35,4 +35,4 @@ int main(void) {
 // TRACE: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-7]])
 // TRACE:     launchKernel
 //
-// CHECK: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-13]])
+// CHECK: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-10]])

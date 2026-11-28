@@ -7283,8 +7283,8 @@ define dso_local void @st_reversed_float_from_i8(ptr %ptr) {
 ; CHECK-P10-NEXT:    xscvuxdsp f1, f1
 ; CHECK-P10-NEXT:    xsaddsp f0, f0, f2
 ; CHECK-P10-NEXT:    xsaddsp f1, f1, f2
-; CHECK-P10-NEXT:    stfs f0, 8(r3)
 ; CHECK-P10-NEXT:    stfs f1, 0(r3)
+; CHECK-P10-NEXT:    stfs f0, 8(r3)
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: st_reversed_float_from_i8:
@@ -7298,8 +7298,8 @@ define dso_local void @st_reversed_float_from_i8(ptr %ptr) {
 ; CHECK-P9-NEXT:    xscvuxdsp f1, f1
 ; CHECK-P9-NEXT:    xsaddsp f0, f0, f2
 ; CHECK-P9-NEXT:    xsaddsp f1, f1, f2
-; CHECK-P9-NEXT:    stfs f0, 8(r3)
 ; CHECK-P9-NEXT:    stfs f1, 0(r3)
+; CHECK-P9-NEXT:    stfs f0, 8(r3)
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: st_reversed_float_from_i8:

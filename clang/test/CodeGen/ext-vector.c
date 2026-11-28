@@ -112,18 +112,6 @@ void test6(float4 *ap, float4 *bp, float c) {
   a -= c;
   a *= c;
   a /= c;
-
-  // Vector comparisons can sometimes crash the x86 backend, reject them until
-  // the implementation is stable.
-#if 0
-  int4 cmp;
-  cmp = a < b;
-  cmp = a <= b;
-  cmp = a < b;
-  cmp = a >= b;
-  cmp = a == b;
-  cmp = a != b;
-#endif
 }
 
 // CHECK: @test7

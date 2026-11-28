@@ -15,6 +15,7 @@
     dialect = DW_LLVM_LANG_DIALECT_tile>,
   file = #versioned_file, isOptimized = false, emissionKind = Full
 >
+#di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, sizeInBits = 32, encoding = DW_ATE_signed>
 module attributes {test.versioned_cu = #versioned_cu} {
   llvm.func @imp_fn() {
     llvm.return loc(#loc2)
@@ -24,6 +25,9 @@ module attributes {test.versioned_cu = #versioned_cu} {
   ^bb1:  // pred: ^bb0
     llvm.return loc(#loc5)
   } loc(#loc3)
+  llvm.func @unnamed_di_basic_type() attributes {di = #di_basic_type} {
+    llvm.return
+  }
 } loc(#loc)
 #di_file = #llvm.di_file<"test.f90" in "">
 #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_program>

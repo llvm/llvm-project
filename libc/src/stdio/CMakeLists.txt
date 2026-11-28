@@ -119,6 +119,7 @@ add_entrypoint_object(
     libc.hdr.errno_macros
     libc.hdr.stdio_macros
     libc.hdr.types.off_t
+    libc.hdr.types.ssize_t
     libc.hdr.types.cookie_io_functions_t
     libc.hdr.types.FILE
     libc.src.__support.CPP.new
@@ -376,7 +377,9 @@ add_stdio_entrypoint_object(fwrite_unlocked)
 add_stdio_entrypoint_object(fwrite)
 add_stdio_entrypoint_object(fputc)
 add_stdio_entrypoint_object(putc)
+add_stdio_entrypoint_object(putc_unlocked)
 add_stdio_entrypoint_object(putchar)
+add_stdio_entrypoint_object(putchar_unlocked)
 add_stdio_entrypoint_object(printf)
 add_stdio_entrypoint_object(fprintf)
 add_stdio_entrypoint_object(fgetc)
@@ -385,6 +388,8 @@ add_stdio_entrypoint_object(getc)
 add_stdio_entrypoint_object(getc_unlocked)
 add_stdio_entrypoint_object(getchar)
 add_stdio_entrypoint_object(getchar_unlocked)
+add_stdio_entrypoint_object(getdelim)
+add_stdio_entrypoint_object(getline)
 add_stdio_entrypoint_object(fgets)
 add_stdio_entrypoint_object(ungetc)
 add_stdio_entrypoint_object(scanf)

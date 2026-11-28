@@ -179,6 +179,7 @@ static Expected<COFF::MachineTypes> getBitcodeFileMachine(MemoryBufferRef MB) {
   case Triple::x86_64:
     return COFF::IMAGE_FILE_MACHINE_AMD64;
   case Triple::arm:
+  case Triple::thumb:
     return COFF::IMAGE_FILE_MACHINE_ARMNT;
   case Triple::aarch64:
     return T.isWindowsArm64EC() ? COFF::IMAGE_FILE_MACHINE_ARM64EC

@@ -1,0 +1,243 @@
+// RUN: cir-opt %s --sccp | FileCheck %s
+
+// SCCP only folds operations that dead code analysis finds reachable. Each
+// region below folds a cast of a constant, so a region that keeps its cast was
+// proven dead through the region-branch interfaces.
+
+!s32i = !cir.int<s, 32>
+
+#true = #cir.bool<true> : !cir.bool
+#false = #cir.bool<false> : !cir.bool
+
+module {
+  cir.func private @use(!cir.bool)
+
+  cir.func @if_true() {
+    %one = cir.const #cir.int<1> : !s32i
+    %c = cir.const #true
+    cir.if %c {
+      %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+      cir.call @use(%b) : (!cir.bool) -> ()
+    } else {
+      %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+      cir.call @use(%b) : (!cir.bool) -> ()
+    }
+    cir.return
+  }
+  // CHECK-LABEL: cir.func @if_true
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         cir.if
+  // CHECK-NEXT:      cir.call @use(%[[TRUE]])
+  // CHECK:         } else {
+  // CHECK-NEXT:      cir.cast int_to_bool
+
+  cir.func @if_false() {
+    %one = cir.const #cir.int<1> : !s32i
+    %c = cir.const #false
+    cir.if %c {
+      %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+      cir.call @use(%b) : (!cir.bool) -> ()
+    } else {
+      %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+      cir.call @use(%b) : (!cir.bool) -> ()
+    }
+    cir.return
+  }
+  // CHECK-LABEL: cir.func @if_false
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         cir.if
+  // CHECK-NEXT:      cir.cast int_to_bool
+  // CHECK:         } else {
+  // CHECK-NEXT:      cir.call @use(%[[TRUE]])
+
+  // Without an else region, a false condition goes straight to the parent.
+  cir.func @if_false_no_else() {
+    %one = cir.const #cir.int<1> : !s32i
+    %c = cir.const #false
+    cir.if %c {
+      %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+      cir.call @use(%b) : (!cir.bool) -> ()
+    }
+    %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+    cir.call @use(%b) : (!cir.bool) -> ()
+    cir.return
+  }
+  // CHECK-LABEL: cir.func @if_false_no_else
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         cir.if
+  // CHECK-NEXT:      cir.cast int_to_bool
+  // CHECK:         }
+  // CHECK-NEXT:    cir.call @use(%[[TRUE]])
+
+  cir.func @if_unknown(%c: !cir.bool) {
+    %one = cir.const #cir.int<1> : !s32i
+    cir.if %c {
+      %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+      cir.call @use(%b) : (!cir.bool) -> ()
+    } else {
+      %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+      cir.call @use(%b) : (!cir.bool) -> ()
+    }
+    cir.return
+  }
+  // CHECK-LABEL: cir.func @if_unknown
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         cir.if
+  // CHECK-NEXT:      cir.call @use(%[[TRUE]])
+  // CHECK:         } else {
+  // CHECK-NEXT:      cir.call @use(%[[TRUE]])
+
+  // A false loop condition never enters the body, but still runs the cleanup.
+  cir.func @while_false() {
+    %one = cir.const #cir.int<1> : !s32i
+    cir.while {
+      %c = cir.const #false
+      cir.condition(%c)
+    } do {
+      %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+      cir.call @use(%b) : (!cir.bool) -> ()
+      cir.yield
+    } cleanup all {
+      %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+      cir.call @use(%b) : (!cir.bool) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+  // CHECK-LABEL: cir.func @while_false
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         cir.while
+  // CHECK:         } do {
+  // CHECK-NEXT:      cir.cast int_to_bool
+  // CHECK:         } cleanup all {
+  // CHECK-NEXT:      cir.call @use(%[[TRUE]])
+
+  cir.func @for_false() {
+    %one = cir.const #cir.int<1> : !s32i
+    cir.for : cond {
+      %c = cir.const #false
+      cir.condition(%c)
+    } body {
+      %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+      cir.call @use(%b) : (!cir.bool) -> ()
+      cir.yield
+    } step {
+      %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+      cir.call @use(%b) : (!cir.bool) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+  // CHECK-LABEL: cir.func @for_false
+  // CHECK:         cir.for : cond {
+  // CHECK:         } body {
+  // CHECK-NEXT:      cir.cast int_to_bool
+  // CHECK:         } step {
+  // CHECK-NEXT:      cir.cast int_to_bool
+
+  cir.func @while_unknown(%c: !cir.bool) {
+    %one = cir.const #cir.int<1> : !s32i
+    cir.while {
+      cir.condition(%c)
+    } do {
+      %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+      cir.call @use(%b) : (!cir.bool) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+  // CHECK-LABEL: cir.func @while_unknown
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         } do {
+  // CHECK-NEXT:      cir.call @use(%[[TRUE]])
+
+  // A true loop condition with a break still leaves the loop, so the code after
+  // it is folded. Dead code analysis tracks liveness per block, so this does
+  // not depend on the exit edge alone.
+  cir.func @while_true_break(%c: !cir.bool) {
+    %one = cir.const #cir.int<1> : !s32i
+    cir.while {
+      %t = cir.const #true
+      cir.condition(%t)
+    } do {
+      cir.if %c {
+        cir.break
+      }
+      cir.yield
+    }
+    %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+    cir.call @use(%b) : (!cir.bool) -> ()
+    cir.return
+  }
+  // CHECK-LABEL: cir.func @while_true_break
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         cir.while
+  // CHECK:         cir.break
+  // CHECK:         }
+  // CHECK-NOT:     cir.cast int_to_bool
+  // CHECK:         cir.call @use(%[[TRUE]])
+
+  // A ready condition that is true resumes without suspending.
+  cir.func coroutine @await_ready() {
+    %one = cir.const #cir.int<1> : !s32i
+    cir.coroutine initialSuspend : {
+      cir.await(init, ready : {
+        %c = cir.const #true
+        cir.condition(%c)
+      }, suspend : {
+        %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+        cir.call @use(%b) : (!cir.bool) -> ()
+        cir.coro.suspend_point
+      }, resume : {
+        %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+        cir.call @use(%b) : (!cir.bool) -> ()
+        cir.yield
+      },)
+      cir.yield
+    }, body : {
+      cir.yield
+    }, finalSuspend : {
+      cir.yield
+    }, destroy : {
+      cir.yield
+    }, exit : {
+      cir.return
+    }
+    cir.trap
+  }
+  // CHECK-LABEL: cir.func coroutine @await_ready
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         }, suspend : {
+  // CHECK-NEXT:      cir.cast int_to_bool
+  // CHECK:         }, resume : {
+  // CHECK-NEXT:      cir.call @use(%[[TRUE]])
+
+  cir.func coroutine @await_unknown(%c: !cir.bool) {
+    %one = cir.const #cir.int<1> : !s32i
+    cir.coroutine initialSuspend : {
+      cir.await(init, ready : {
+        cir.condition(%c)
+      }, suspend : {
+        %b = cir.cast int_to_bool %one : !s32i -> !cir.bool
+        cir.call @use(%b) : (!cir.bool) -> ()
+        cir.coro.suspend_point
+      }, resume : {
+        cir.yield
+      },)
+      cir.yield
+    }, body : {
+      cir.yield
+    }, finalSuspend : {
+      cir.yield
+    }, destroy : {
+      cir.yield
+    }, exit : {
+      cir.return
+    }
+    cir.trap
+  }
+  // CHECK-LABEL: cir.func coroutine @await_unknown
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         }, suspend : {
+  // CHECK-NEXT:      cir.call @use(%[[TRUE]])
+}

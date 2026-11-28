@@ -13,7 +13,6 @@
 ---
 name:            foo
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
   - { reg: '$x20' }
@@ -26,3 +25,4 @@ body:             |
     $sp = frame-destroy ADDXri $sp, 32, 0
     $lr, $fp, $x19, $x20 = frame-destroy HOM_Epilog
     TCRETURNdi @use_x20, 0, csr_aarch64_aapcs, implicit $sp, implicit $x20
+...

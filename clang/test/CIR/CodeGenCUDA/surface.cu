@@ -8,7 +8,10 @@
 // RUN: echo -n "GPU binary would be here." > %t
 // RUN: %clang_cc1 -fclangir -std=c++11 -triple x86_64-unknown-linux-gnu \
 // RUN:   -target-sdk-version=12.3 -fcuda-include-gpubinary %t \
-// RUN:   -emit-cir -o - %s | FileCheck --check-prefix=CIR-HOST %s
+// RUN:   -emit-cir -o - %s | FileCheck --check-prefix=CIR-HOST %s --implicit-check-not=cu.var_registration
+// RUN: %clang_cc1 -fclangir -std=c++11 -triple x86_64-unknown-linux-gnu \
+// RUN:   -target-sdk-version=12.3 -fcuda-include-gpubinary %t \
+// RUN:   -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare -o /dev/null %s 2>&1 | FileCheck --check-prefix=CIR-HOST-BEFORE-LPP %s
 // RUN: %clang_cc1 -fclangir -std=c++11 -triple x86_64-unknown-linux-gnu \
 // RUN:   -target-sdk-version=12.3 -fcuda-include-gpubinary %t \
 // RUN:   -emit-llvm -o - %s | FileCheck --check-prefix=LLVM-HOST %s
@@ -61,7 +64,8 @@ surface<void, 2> surf;
 
 // Check that the host-side shadow is internalized and carries the surface
 // registration metadata, including the surface type from surface<void, 2>.
-// CIR-HOST: cir.global "private" internal dso_local @surf = {{.*}}cu.var_registration = #cir.cu.var_registration<surf, Surface, surface_type = 2>
+// CIR-HOST: cir.global "private" internal dso_local @surf =
+// CIR-HOST-BEFORE-LPP: cir.global "private" internal dso_local @surf = {{.*}}cu.var_registration = #cir.cu.var_registration<surf, Surface, surface_type = 2>
 // LLVM-HOST: @surf = internal global %{{.*}} zeroinitializer
 
 // Check both CIR-lowered LLVM and original CodeGen registration.

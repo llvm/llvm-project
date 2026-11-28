@@ -1308,7 +1308,7 @@ body:             |
     $p15 = IMPLICIT_DEF
 
     RET_ReallyLR
-
+...
 ---
 # Make sure we account for the offset between the fp and the sve area, if it exists.
 # FIXME: Should there be an offset?
@@ -1343,6 +1343,7 @@ body:             |
     STR_ZXI $z0, %stack.0, 0
 
     RET_ReallyLR
+...
 ---
 ...
 # CHECK-LABEL: name: fp_relative_that_is_not_a_multiple_of_VLx16
@@ -1364,4 +1365,3 @@ body:             |
 
     renamable $z0 = LD1W_IMM killed renamable $p0, %stack.0, 0
     RET_ReallyLR
----

@@ -3,11 +3,13 @@
 
 ---
 name:            test_combine_trunc_xor_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_trunc_xor_i64
-    ; CHECK: %lhs:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(i64) = COPY $x0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %lhs(i64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 5
     ; CHECK-NEXT: %small:_(i32) = G_XOR [[TRUNC]], [[C]]
@@ -20,11 +22,13 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_add_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_trunc_add_i64
-    ; CHECK: %lhs:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(i64) = COPY $x0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %lhs(i64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 5
     ; CHECK-NEXT: %small:_(i32) = G_ADD [[TRUNC]], [[C]]
@@ -37,11 +41,13 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_mul_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_trunc_mul_i64
-    ; CHECK: %lhs:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(i64) = COPY $x0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %lhs(i64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 5
     ; CHECK-NEXT: %small:_(i32) = G_MUL [[TRUNC]], [[C]]
@@ -54,11 +60,13 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_and_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_trunc_and_i64
-    ; CHECK: %lhs:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(i64) = COPY $x0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %lhs(i64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 5
     ; CHECK-NEXT: %small:_(i32) = G_AND [[TRUNC]], [[C]]
@@ -71,11 +79,13 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_or_i64
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_trunc_or_i64
-    ; CHECK: %lhs:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(i64) = COPY $x0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %lhs(i64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 5
     ; CHECK-NEXT: %small:_(i32) = G_OR [[TRUNC]], [[C]]
@@ -88,11 +98,13 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_sub_i128
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $q0
     ; CHECK-LABEL: name: test_combine_trunc_sub_i128
-    ; CHECK: %lhs:_(i128) = COPY $q0
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(i128) = COPY $q0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC %lhs(i128)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -5
     ; CHECK-NEXT: %small:_(i32) = G_ADD [[TRUNC]], [[C]]
@@ -105,11 +117,13 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_sub_i128_multi_use
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $q0
     ; CHECK-LABEL: name: test_combine_trunc_sub_i128_multi_use
-    ; CHECK: %lhs:_(i128) = COPY $q0
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(i128) = COPY $q0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i128) = G_CONSTANT i128 -5
     ; CHECK-NEXT: %res:_(i128) = G_ADD %lhs, [[C]]
     ; CHECK-NEXT: %small:_(i32) = G_TRUNC %res(i128)
@@ -124,11 +138,13 @@ body:             |
 ...
 ---
 name:            test_combine_trunc_xor_vector_pattern_did_not_match
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $x0
     ; CHECK-LABEL: name: test_combine_trunc_xor_vector_pattern_did_not_match
-    ; CHECK: %arg1:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(i64) = COPY $x0
     ; CHECK-NEXT: %arg2:_(i64) = COPY $x0
     ; CHECK-NEXT: %lhs:_(<2 x i64>) = G_BUILD_VECTOR %arg1(i64), %arg2(i64)
     ; CHECK-NEXT: %rhs:_(<2 x i64>) = G_BUILD_VECTOR %arg1(i64), %arg2(i64)
@@ -142,3 +158,4 @@ body:             |
     %res:_(<2 x i64>) = G_XOR %lhs, %rhs
     %small:_(<2 x i16>) = G_TRUNC %res(<2 x i64>)
     $w0 = COPY %small(<2 x i16>)
+...

@@ -2399,7 +2399,7 @@ entry:
 
 declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
 
-declare void @free(ptr) allockind("free") "alloc-family"="malloc"
+declare void @free(ptr allocptr) allockind("free") "alloc-family"="malloc"
 
 define dso_local i32 @conditional_malloc(i32 %x) {
 ; CHECK-LABEL: define dso_local i32 @conditional_malloc(
@@ -3668,7 +3668,7 @@ declare void @llvm.assume(i1 noundef)
 ; CGSCC: attributes #[[ATTR21]] = { nofree nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR22]] = { nocallback }
 ; CGSCC: attributes #[[ATTR23]] = { norecurse }
-; CGSCC: attributes #[[ATTR24]] = { nounwind }
+; CGSCC: attributes #[[ATTR24]] = { nounwind willreturn }
 ; CGSCC: attributes #[[ATTR25]] = { nofree nounwind }
 ; CGSCC: attributes #[[ATTR26]] = { nofree nounwind willreturn }
 ; CGSCC: attributes #[[ATTR27]] = { nofree }

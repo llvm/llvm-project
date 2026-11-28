@@ -207,6 +207,11 @@ bool ThreadedCommunication::StopReadThread(Status *error_ptr) {
 
   BroadcastEvent(eBroadcastBitReadThreadShouldExit, nullptr);
 
+  // The read thread checks m_read_thread_enabled only once its read returns,
+  // which, without data to read, takes until the read times out.
+  if (m_connection_sp)
+    m_connection_sp->InterruptRead();
+
   Status error = m_read_thread.Join(nullptr);
   return error.Success();
 }

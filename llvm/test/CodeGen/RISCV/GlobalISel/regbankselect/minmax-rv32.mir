@@ -6,11 +6,13 @@
 ---
 name:            smax_i32
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV32I-LABEL: name: smax_i32
-    ; RV32I: [[COPY:%[0-9]+]]:gprb(s32) = COPY $x10
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(s32) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $x11
     ; RV32I-NEXT: [[SMAX:%[0-9]+]]:gprb(s32) = G_SMAX [[COPY]], [[COPY1]]
     ; RV32I-NEXT: $x10 = COPY [[SMAX]](s32)
@@ -25,11 +27,13 @@ body:             |
 ---
 name:            smin_i32
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV32I-LABEL: name: smin_i32
-    ; RV32I: [[COPY:%[0-9]+]]:gprb(s32) = COPY $x10
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(s32) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $x11
     ; RV32I-NEXT: [[SMIN:%[0-9]+]]:gprb(s32) = G_SMIN [[COPY]], [[COPY1]]
     ; RV32I-NEXT: $x10 = COPY [[SMIN]](s32)
@@ -44,11 +48,13 @@ body:             |
 ---
 name:            umax_i32
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV32I-LABEL: name: umax_i32
-    ; RV32I: [[COPY:%[0-9]+]]:gprb(s32) = COPY $x10
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(s32) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $x11
     ; RV32I-NEXT: [[UMAX:%[0-9]+]]:gprb(s32) = G_UMAX [[COPY]], [[COPY1]]
     ; RV32I-NEXT: $x10 = COPY [[UMAX]](s32)
@@ -63,11 +69,13 @@ body:             |
 ---
 name:            umin_i32
 legalized:       true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV32I-LABEL: name: umin_i32
-    ; RV32I: [[COPY:%[0-9]+]]:gprb(s32) = COPY $x10
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:gprb(s32) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $x11
     ; RV32I-NEXT: [[UMIN:%[0-9]+]]:gprb(s32) = G_UMIN [[COPY]], [[COPY1]]
     ; RV32I-NEXT: $x10 = COPY [[UMIN]](s32)

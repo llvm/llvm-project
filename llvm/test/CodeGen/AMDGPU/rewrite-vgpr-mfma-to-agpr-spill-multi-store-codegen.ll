@@ -36,8 +36,8 @@ define amdgpu_kernel void @multi_store_spill_slot() #0 {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0x7fc00000
 ; CHECK-NEXT:    v_mov_b32_e32 v213, 1.0
 ; CHECK-NEXT:    v_mov_b32_e32 v133, v132
-; CHECK-NEXT:    s_and_b64 vcc, exec, -1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v3
+; CHECK-NEXT:    s_mov_b64 vcc, exec
 ; CHECK-NEXT:  .LBB0_1: ; %do.body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_nop 6

@@ -5,7 +5,6 @@
 ---
 name:            test1_add_move_inner_cst_to_fold
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -34,7 +33,6 @@ body:             |
 ---
 name:            test2_add_move_inner_cst_to_rhs
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -63,7 +61,6 @@ body:             |
 ---
 name:            test2_add_move_inner_cst_to_rhs_multiuse
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -94,7 +91,6 @@ body:             |
 ---
 name:            test2_add_move_inner_cst_to_rhs_vector
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |

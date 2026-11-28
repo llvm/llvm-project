@@ -1,11 +1,15 @@
 // REQUIRES: x86-registered-target
 /// AT&T input
 // RUN: %clang_cc1 -triple x86_64 -S --output-asm-variant=0 %s -o - | FileCheck --check-prefix=ATT %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64 -S --output-asm-variant=0 %s -o - | FileCheck --check-prefix=ATT %s %}
 // RUN: %clang_cc1 -triple x86_64 -S --output-asm-variant=1 %s -o - | FileCheck --check-prefix=INTEL %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64 -S --output-asm-variant=1 %s -o - | FileCheck --check-prefix=INTEL %s %}
 
 /// Intel input
 // RUN: %clang_cc1 -triple x86_64 -S -D INTEL -mllvm -x86-asm-syntax=intel -inline-asm=intel %s -o - | FileCheck --check-prefix=INTEL %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64 -S -D INTEL -mllvm -x86-asm-syntax=intel -inline-asm=intel %s -o - | FileCheck --check-prefix=INTEL %s %}
 // RUN: %clang_cc1 -triple x86_64 -S -D INTEL -mllvm -x86-asm-syntax=intel -inline-asm=intel --output-asm-variant=1 %s -o - | FileCheck --check-prefix=INTEL %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64 -S -D INTEL -mllvm -x86-asm-syntax=intel -inline-asm=intel --output-asm-variant=1 %s -o - | FileCheck --check-prefix=INTEL %s %}
 
 // ATT: movl $1, %eax
 // ATT: movl $2, %eax

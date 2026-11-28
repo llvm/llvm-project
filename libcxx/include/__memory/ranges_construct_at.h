@@ -38,8 +38,8 @@ namespace ranges {
 // construct_at
 
 struct __construct_at {
-  template <class _Tp, class... _Args, class = decltype(::new(std::declval<void*>()) _Tp(std::declval<_Args>()...))>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* operator()(_Tp* __location, _Args&&... __args) const {
+  template <class _Tp, class... _Args, class = decltype(::new (std::declval<void*>()) _Tp(std::declval<_Args>()...))>
+  constexpr _Tp* operator()(_Tp* __location, _Args&&... __args) const {
     return std::construct_at(__location, std::forward<_Args>(__args)...);
   }
 };
@@ -52,7 +52,7 @@ inline constexpr auto construct_at = __construct_at{};
 
 struct __destroy_at {
   template <destructible _Tp>
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Tp* __location) const noexcept {
+  constexpr void operator()(_Tp* __location) const noexcept {
     std::destroy_at(__location);
   }
 };

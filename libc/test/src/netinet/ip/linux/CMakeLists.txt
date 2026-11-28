@@ -1,0 +1,11 @@
+add_libc_test(
+  ip_test
+  SUITE
+    libc-netinet-ip-tests
+  SRCS
+    ip_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_iphdr
+    libc.src.__support.net.byte_order
+    libc.src.string.memcmp
+)

@@ -545,10 +545,18 @@ end module
 ! CHECK:           %[[VAL_7:.*]] = arith.select %[[VAL_6]], %[[VAL_4]], %[[VAL_5]] : index
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[ARG0]](%[[VAL_8]]) dummy_scope %[[VAL_0]] arg {{[0-9]+}} uniq_name("_QMmFtest_optional_explicit_shapeEx") fortran_attrs<optional> : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
-! CHECK:           %[[VAL_10:.*]] = acc.copyin varPtr(%[[VAL_9]]#1 : !fir.ref<!fir.array<?xf32>>) dataClause(acc_copy) name("x") -> !fir.ref<!fir.array<?xf32>>
-! CHECK:           acc.parallel dataOperands(%[[VAL_10]] : !fir.ref<!fir.array<?xf32>>) {
+! CHECK:           %[[VAL_10:.*]] = acc.copyin var(%[[VAL_9]]#0 : !fir.box<!fir.array<?xf32>>) dataClause(acc_copy) name("x") -> !fir.box<!fir.array<?xf32>>
+! CHECK:           acc.parallel dataOperands(%[[VAL_10]] : !fir.box<!fir.array<?xf32>>) {
+! CHECK:             %[[PRES:.*]] = fir.is_present %[[VAL_10]] : (!fir.box<!fir.array<?xf32>>) -> i1
+! CHECK:             %[[RAW:.*]] = fir.if %[[PRES]] -> (!fir.ref<!fir.array<?xf32>>) {
+! CHECK:               %[[ADDR:.*]] = fir.box_addr %[[VAL_10]] : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+! CHECK:               fir.result %[[ADDR]] : !fir.ref<!fir.array<?xf32>>
+! CHECK:             } else {
+! CHECK:               %[[ABS:.*]] = fir.absent !fir.ref<!fir.array<?xf32>>
+! CHECK:               fir.result %[[ABS]] : !fir.ref<!fir.array<?xf32>>
+! CHECK:             }
 ! CHECK:             %[[VAL_11:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:             %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_8]]) dummy_scope %[[VAL_11]] {{.*}} uniq_name("_QMmFtest_optional_explicit_shapeEx") fortran_attrs<optional> : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+! CHECK:             %[[VAL_12:.*]]:2 = hlfir.declare %[[RAW]](%[[VAL_8]]) dummy_scope %[[VAL_11]] {{.*}} uniq_name("_QMmFtest_optional_explicit_shapeEx") fortran_attrs<optional> : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 ! CHECK:             %[[VAL_13:.*]] = fir.is_present %[[VAL_12]]#0 : (!fir.box<!fir.array<?xf32>>) -> i1
 ! CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] -> (!fir.ref<!fir.array<?xf32>>) {
 ! CHECK:               fir.result %[[VAL_12]]#1 : !fir.ref<!fir.array<?xf32>>
@@ -559,7 +567,7 @@ end module
 ! CHECK:             fir.call @_QPtakes_optional_explicit_shape(%[[VAL_14]], %[[VAL_1]]#0) fastmath<contract> : (!fir.ref<!fir.array<?xf32>>, !fir.ref<i32>) -> ()
 ! CHECK:             acc.yield
 ! CHECK:           }
-! CHECK:           acc.copyout accPtr(%[[VAL_10]] : !fir.ref<!fir.array<?xf32>>) to varPtr(%[[VAL_9]]#1 : !fir.ref<!fir.array<?xf32>>) dataClause(acc_copy) name("x")
+! CHECK:           acc.copyout accVar(%[[VAL_10]] : !fir.box<!fir.array<?xf32>>) to var(%[[VAL_9]]#0 : !fir.box<!fir.array<?xf32>>) dataClause(acc_copy) name("x")
 ! CHECK:           return
 ! CHECK:         }
 

@@ -430,7 +430,7 @@ define amdgpu_kernel void @dpp_sub_i64_rev(ptr addrspace(1) %arg, i64 %in) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_dpp v3, v0 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX11-NEXT:    v_mov_b32_dpp v4, v1 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v3
 ; GFX11-NEXT:    v_sub_co_ci_u32_e64 v1, null, v1, v4, vcc_lo
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
@@ -448,7 +448,7 @@ define amdgpu_kernel void @dpp_sub_i64_rev(ptr addrspace(1) %arg, i64 %in) {
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_dpp v3, v0 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX12-NEXT:    v_mov_b32_dpp v4, v1 quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v3
 ; GFX12-NEXT:    v_sub_co_ci_u32_e64 v1, null, v1, v4, vcc_lo
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]

@@ -47,7 +47,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 
 template <class _Value>
-_LIBCPP_HIDE_FROM_ABI constexpr _Value __div_ceil(_Value __left, _Value __right) {
+constexpr _Value __div_ceil(_Value __left, _Value __right) {
   _Value __r = __left / __right;
   if (__left % __right) {
     ++__r;
@@ -65,34 +65,34 @@ class stride_view : public view_interface<stride_view<_View>> {
   class __iterator;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit stride_view(_View __base, range_difference_t<_View> __stride)
+  constexpr explicit stride_view(_View __base, range_difference_t<_View> __stride)
       : __base_(std::move(__base)), __stride_(__stride) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__stride > 0, "The value of stride must be greater than 0");
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] constexpr _View base() && { return std::move(__base_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr range_difference_t<_View> stride() const noexcept { return __stride_; }
+  [[nodiscard]] constexpr range_difference_t<_View> stride() const noexcept { return __stride_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
+  [[nodiscard]] constexpr auto begin()
     requires(!__simple_view<_View>)
   {
     return __iterator</*_Const=*/false>(this, ranges::begin(__base_), 0);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] constexpr auto begin() const
     requires range<const _View>
   {
     return __iterator</*_Const=*/true>(this, ranges::begin(__base_), 0);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end()
+  [[nodiscard]] constexpr auto end()
     requires(!__simple_view<_View>)
   {
     if constexpr (common_range<_View> && sized_range<_View> && forward_range<_View>) {
@@ -105,7 +105,7 @@ public:
     }
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] constexpr auto end() const
     requires(range<const _View>)
   {
     if constexpr (common_range<const _View> && sized_range<const _View> && forward_range<const _View>) {
@@ -118,13 +118,13 @@ public:
     }
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] constexpr auto size()
     requires sized_range<_View>
   {
     return std::__to_unsigned_like(ranges::__div_ceil(ranges::distance(__base_), __stride_));
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] constexpr auto size() const
     requires sized_range<const _View>
   {
     return std::__to_unsigned_like(ranges::__div_ceil(ranges::distance(__base_), __stride_));
@@ -160,8 +160,7 @@ class stride_view<_View>::__iterator : public __stride_iterator_category<__maybe
 
   friend stride_view;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(
-      _Parent* __parent, ranges::iterator_t<_Base> __current, range_difference_t<_Base> __missing)
+  constexpr __iterator(_Parent* __parent, ranges::iterator_t<_Base> __current, range_difference_t<_Base> __missing)
       : __current_(std::move(__current)),
         __end_(ranges::end(__parent->__base_)),
         __stride_(__parent->__stride_),
@@ -185,11 +184,11 @@ public:
   using iterator_concept = decltype(__get_stride_view_iterator_concept());
   // using iterator_category = inherited;
 
-  _LIBCPP_HIDE_FROM_ABI __iterator()
+  __iterator()
     requires default_initializable<iterator_t<_Base>>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(__iterator<!_Const> __i)
+  constexpr __iterator(__iterator<!_Const> __i)
     requires _Const && convertible_to<ranges::iterator_t<_View>, iterator_t<_Base>> &&
                  convertible_to<sentinel_t<_View>, sentinel_t<_Base>>
       : __current_(std::move(__i.__current_)),
@@ -197,25 +196,25 @@ public:
         __stride_(__i.__stride_),
         __missing_(__i.__missing_) {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> const& base() const& noexcept { return __current_; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() && { return std::move(__current_); }
+  [[nodiscard]] constexpr iterator_t<_Base> const& base() const& noexcept { return __current_; }
+  [[nodiscard]] constexpr iterator_t<_Base> base() && { return std::move(__current_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const {
+  [[nodiscard]] constexpr decltype(auto) operator*() const {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__current_ != __end_, "Cannot dereference an iterator at the end.");
     return *__current_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+  constexpr __iterator& operator++() {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__current_ != __end_, "Cannot increment an iterator already at the end.");
     __missing_ = ranges::advance(__current_, __stride_, __end_);
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) {
+  constexpr void operator++(int) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__current_ != __end_, "Cannot increment an iterator already at the end.");
     ++*this;
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
+  constexpr __iterator operator++(int)
     requires forward_range<_Base>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__current_ != __end_, "Cannot increment an iterator already at the end.");
@@ -224,14 +223,14 @@ public:
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--()
+  constexpr __iterator& operator--()
     requires bidirectional_range<_Base>
   {
     ranges::advance(__current_, __missing_ - __stride_);
     __missing_ = 0;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
+  constexpr __iterator operator--(int)
     requires bidirectional_range<_Base>
   {
     auto __tmp = *this;
@@ -239,7 +238,7 @@ public:
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n)
+  constexpr __iterator& operator+=(difference_type __n)
     requires random_access_range<_Base>
   {
     if (__n > 0) {
@@ -255,66 +254,64 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __n)
+  constexpr __iterator& operator-=(difference_type __n)
     requires random_access_range<_Base>
   {
     return *this += -__n;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const
+  [[nodiscard]] constexpr decltype(auto) operator[](difference_type __n) const
     requires random_access_range<_Base>
   {
     return *(*this + __n);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(__iterator const& __x, default_sentinel_t) {
-    return __x.__current_ == __x.__end_;
-  }
+  friend constexpr bool operator==(__iterator const& __x, default_sentinel_t) { return __x.__current_ == __x.__end_; }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(__iterator const& __x, __iterator const& __y)
+  friend constexpr bool operator==(__iterator const& __x, __iterator const& __y)
     requires equality_comparable<iterator_t<_Base>>
   {
     return __x.__current_ == __y.__current_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(__iterator const& __x, __iterator const& __y)
+  friend constexpr bool operator<(__iterator const& __x, __iterator const& __y)
     requires random_access_range<_Base>
   {
     return __x.__current_ < __y.__current_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(__iterator const& __x, __iterator const& __y)
+  friend constexpr bool operator>(__iterator const& __x, __iterator const& __y)
     requires random_access_range<_Base>
   {
     return __y < __x;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(__iterator const& __x, __iterator const& __y)
+  friend constexpr bool operator<=(__iterator const& __x, __iterator const& __y)
     requires random_access_range<_Base>
   {
     return !(__y < __x);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(__iterator const& __x, __iterator const& __y)
+  friend constexpr bool operator>=(__iterator const& __x, __iterator const& __y)
     requires random_access_range<_Base>
   {
     return !(__x < __y);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(__iterator const& __x, __iterator const& __y)
+  friend constexpr auto operator<=>(__iterator const& __x, __iterator const& __y)
     requires random_access_range<_Base> && three_way_comparable<iterator_t<_Base>>
   {
     return __x.__current_ <=> __y.__current_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(__iterator const& __i, difference_type __s)
+  [[nodiscard]] friend constexpr __iterator operator+(__iterator const& __i, difference_type __s)
     requires random_access_range<_Base>
   {
     auto __r = __i;
     __r += __s;
     return __r;
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __s, __iterator const& __i)
+  [[nodiscard]] friend constexpr __iterator operator+(difference_type __s, __iterator const& __i)
     requires random_access_range<_Base>
   {
     auto __r = __i;
@@ -322,7 +319,7 @@ public:
     return __r;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(__iterator const& __i, difference_type __s)
+  [[nodiscard]] friend constexpr __iterator operator-(__iterator const& __i, difference_type __s)
     requires random_access_range<_Base>
   {
     auto __r = __i;
@@ -330,8 +327,7 @@ public:
     return __r;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
-  operator-(__iterator const& __x, __iterator const& __y)
+  [[nodiscard]] friend constexpr difference_type operator-(__iterator const& __x, __iterator const& __y)
     requires sized_sentinel_for<iterator_t<_Base>, iterator_t<_Base>>
   {
     if constexpr (forward_range<_Base>) {
@@ -345,25 +341,23 @@ public:
     return ranges::__div_ceil(__n, __x.__stride_);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
-  operator-(default_sentinel_t, __iterator const& __x)
+  [[nodiscard]] friend constexpr difference_type operator-(default_sentinel_t, __iterator const& __x)
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<_Base>>
   {
     return ranges::__div_ceil(__x.__end_ - __x.__current_, __x.__stride_);
   }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
-  operator-(__iterator const& __x, default_sentinel_t __y)
+  [[nodiscard]] friend constexpr difference_type operator-(__iterator const& __x, default_sentinel_t __y)
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<_Base>>
   {
     return -(__y - __x);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_rvalue_reference_t<_Base>
+  [[nodiscard]] friend constexpr range_rvalue_reference_t<_Base>
   iter_move(__iterator const& __it) noexcept(noexcept(ranges::iter_move(__it.__current_))) {
     return ranges::iter_move(__it.__current_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr void
+  friend constexpr void
   iter_swap(__iterator const& __x,
             __iterator const& __y) noexcept(noexcept(ranges::iter_swap(__x.__current_, __y.__current_)))
     requires indirectly_swappable<iterator_t<_Base>>
@@ -380,7 +374,7 @@ namespace __stride_view {
 struct __fn {
   // clang-format off
   template <viewable_range _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+  [[nodiscard]]
   constexpr auto operator()(_Range&& __range, range_difference_t<_Range> __n) const
     noexcept(noexcept(stride_view{std::forward<_Range>(__range), __n}))
     -> decltype(      stride_view{std::forward<_Range>(__range), __n})
@@ -388,7 +382,7 @@ struct __fn {
   // clang-format on
 
   template <class _Np>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Np&& __n) const {
+  [[nodiscard]] constexpr auto operator()(_Np&& __n) const {
     return __pipeable(std::__bind_back(*this, std::forward<_Np>(__n)));
   }
 };

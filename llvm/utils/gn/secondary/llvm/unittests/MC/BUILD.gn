@@ -16,6 +16,7 @@ unittest("MCTests") {
     "DwarfLineTables.cpp",
     "MCDisassemblerTest.cpp",
     "MCInstPrinter.cpp",
+    "MCPseudoProbeTest.cpp",
     "StringTableBuilderTest.cpp",
     "TargetRegistry.cpp",
     "WODRoundTripTest.cpp",

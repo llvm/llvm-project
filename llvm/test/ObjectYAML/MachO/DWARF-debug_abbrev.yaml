@@ -4,6 +4,7 @@
 # RUN: yaml2obj --docnum=1 %s | obj2yaml | FileCheck %s
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:      
   magic:           0xFEEDFACF
   cputype:         0x01000007
@@ -432,6 +433,7 @@ DWARF:
 # ID-COLLISION: yaml2obj: error: the ID (1) of abbrev table with index 1 has been used by abbrev table with index 0
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007

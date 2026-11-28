@@ -695,7 +695,8 @@ void Parser::ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
   assert(LAs.parseSoon() &&
          "Attribute list should be marked for immediate parsing.");
   for (unsigned i = 0, ni = LAs.size(); i < ni; ++i) {
-    if (D)
+    // A parameter's attribute already has its parameter.
+    if (D && LAs[i]->Decls.empty())
       LAs[i]->addDecl(D);
     ParseLexedAttribute(*LAs[i], EnterScope, OnDefinition, OutAttrs);
     delete LAs[i];
@@ -777,8 +778,14 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
 
   if (LPA.Decls.size() > 0) {
     Decl *D = LPA.Decls[0];
+    // An attribute on a parameter of a function is parsed in the function's
+    // scope, where 'this' is that of the function.
+    Decl *ScopeD = D;
+    if (auto *PVD = dyn_cast<ParmVarDecl>(D); PVD && LPA.Decls.size() == 1)
+      if (auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext()))
+        ScopeD = FD;
     bool HasFuncScope = EnterScope && LPA.Decls.size() == 1 &&
-                        D->isFunctionOrFunctionTemplate();
+                        ScopeD->isFunctionOrFunctionTemplate();
     bool IsCPlusPlus = getLangOpts().CPlusPlus;
 
     NamedDecl *ND = dyn_cast<NamedDecl>(D);
@@ -790,13 +797,14 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
                                          ND->isCXXInstanceMember());
 
     // If the Decl is templatized, add template parameters to the scope.
-    ReenterTemplateScopeRAII InDeclScope(*this, D, IsCPlusPlus && EnterScope);
+    ReenterTemplateScopeRAII InDeclScope(*this, ScopeD,
+                                         IsCPlusPlus && EnterScope);
 
     // If the Decl is on a function, add function parameters to the scope.
     if (HasFuncScope) {
       InDeclScope.Scopes.Enter(Scope::FnScope | Scope::DeclScope |
                                Scope::CompoundStmtScope);
-      Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
+      Actions.ActOnReenterFunctionContext(Actions.CurScope, ScopeD);
     }
 
     // For a function pointer field or variable, the arguments may name a
@@ -805,7 +813,8 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
     // of the same name. In a C struct, ActOnIdExpression finds the struct's
     // members only while its scope is innermost, so add the parameters to that
     // scope instead; it lets them shadow a member of the same name.
-    bool HasProtoParams = !HasFuncScope && !LPA.ProtoParams.empty();
+    bool HasProtoParams =
+        (!HasFuncScope || ScopeD != D) && !LPA.ProtoParams.empty();
     bool InCStruct = !IsCPlusPlus && getCurScope()->isClassScope();
     ParseScope ProtoScope(this,
                           Scope::FunctionPrototypeScope | Scope::DeclScope,

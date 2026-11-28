@@ -478,6 +478,13 @@ bool SemaX86::CheckBuiltinGatherScatterScale(unsigned BuiltinID,
 
 enum { TileRegLow = 0, TileRegHigh = 7 };
 
+// Only the low four bits of a row or column index name a row of the tile.
+enum { TileIndexLow = 0, TileIndexHigh = 15 };
+
+// The ACE scale group selector encodes the A group in bits [1:0] and the B
+// group in bits [4:3]; every other bit is reserved and must be zero.
+enum { ScaleGroupReservedMask = 0xE4 };
+
 bool SemaX86::CheckBuiltinTileArgumentsRange(CallExpr *TheCall,
                                              ArrayRef<int> ArgNums) {
   for (int ArgNum : ArgNums) {
@@ -485,6 +492,46 @@ bool SemaX86::CheckBuiltinTileArgumentsRange(CallExpr *TheCall,
                                         TileRegHigh))
       return true;
   }
+  return false;
+}
+
+// The ACE row and column index may be a run-time value, so unlike the AMX
+// immediate-index builtins it can only be checked when it is a constant.
+bool SemaX86::CheckBuiltinTileIndexRange(CallExpr *TheCall, int ArgNum) {
+  Expr *Arg = TheCall->getArg(ArgNum);
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
+
+  std::optional<llvm::APSInt> Index =
+      Arg->getIntegerConstantExpr(getASTContext());
+  if (!Index)
+    return false;
+
+  // getExtValue follows the argument's signedness, as the diagnostic does.
+  int64_t Value = Index->getExtValue();
+  if (Value >= TileIndexLow && Value <= TileIndexHigh)
+    return false;
+
+  // Let dead code get away with it, as BuiltinConstantArgRange does.
+  SemaRef.DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
+                              SemaRef.PDiag(diag::warn_argument_invalid_range)
+                                  << toString(*Index, 10) << TileIndexLow
+                                  << TileIndexHigh << Arg->getSourceRange());
+  return false;
+}
+
+bool SemaX86::CheckBuiltinScaleGroup(CallExpr *TheCall, int ArgNum) {
+  Expr *Arg = TheCall->getArg(ArgNum);
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
+
+  llvm::APSInt Result;
+  if (SemaRef.BuiltinConstantArg(TheCall, ArgNum, Result))
+    return true;
+  if (Result.getExtValue() & ScaleGroupReservedMask)
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_x86_builtin_invalid_scale_group)
+           << Arg->getSourceRange();
   return false;
 }
 
@@ -535,7 +582,46 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_tcvtrowps2phl:
   case X86::BI__builtin_ia32_tcvtrowd2ps:
   case X86::BI__builtin_ia32_tilemovrow:
+  // ACE spelling of the same instruction; the tile ID rule is unchanged.
+  case X86::BI__builtin_ia32_acev1_tilezero:
+  // The ACE outer products name only the destination tile; their other
+  // sources are ZMM values.
+  case X86::BI__builtin_ia32_top2bf16ps:
+  case X86::BI__builtin_ia32_top4buud:
+  case X86::BI__builtin_ia32_top4busd:
+  case X86::BI__builtin_ia32_top4bssd:
+  case X86::BI__builtin_ia32_top4bsud:
     return CheckBuiltinTileArgumentsRange(TheCall, 0);
+  // The row reads take the index as their second argument, the inserts as
+  // their third. It is not an ImmArg, so it is checked separately.
+  case X86::BI__builtin_ia32_acev1_tcvtrowps2bf16h:
+  case X86::BI__builtin_ia32_acev1_tcvtrowps2bf16l:
+  case X86::BI__builtin_ia32_acev1_tcvtrowps2phh:
+  case X86::BI__builtin_ia32_acev1_tcvtrowps2phl:
+  case X86::BI__builtin_ia32_acev1_tcvtrowd2ps:
+  case X86::BI__builtin_ia32_acev1_tilemovrowextract:
+    return CheckBuiltinTileArgumentsRange(TheCall, 0) ||
+           CheckBuiltinTileIndexRange(TheCall, 1);
+  case X86::BI__builtin_ia32_tilemovcolinsert:
+  case X86::BI__builtin_ia32_tilemovrowinsert:
+    return CheckBuiltinTileArgumentsRange(TheCall, 0) ||
+           CheckBuiltinTileIndexRange(TheCall, 2);
+  // The mixed-precision forms take an additional scale group selector, which
+  // only encodes two 2-bit groups; the remaining bits are reserved.
+  case X86::BI__builtin_ia32_top4mxhf8ps:
+  case X86::BI__builtin_ia32_top4mxbhf8ps:
+  case X86::BI__builtin_ia32_top4mxhbf8ps:
+  case X86::BI__builtin_ia32_top4mxbf8ps:
+  case X86::BI__builtin_ia32_top4mxbssps:
+    return CheckBuiltinTileArgumentsRange(TheCall, 0) ||
+           CheckBuiltinScaleGroup(TheCall, 3);
+  // The internal forms take a tile value, not an ID, so only the group is left.
+  case X86::BI__builtin_ia32_top4mxhf8ps_internal:
+  case X86::BI__builtin_ia32_top4mxbhf8ps_internal:
+  case X86::BI__builtin_ia32_top4mxhbf8ps_internal:
+  case X86::BI__builtin_ia32_top4mxbf8ps_internal:
+  case X86::BI__builtin_ia32_top4mxbssps_internal:
+    return CheckBuiltinScaleGroup(TheCall, 2);
   case X86::BI__builtin_ia32_tdpbssd:
   case X86::BI__builtin_ia32_tdpbsud:
   case X86::BI__builtin_ia32_tdpbusd:

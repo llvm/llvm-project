@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s  \
 // RUN:   -verify -verify-ignore-unexpected=note
 
+using namespace hlsl;
+
 // CHECK: define [[FNATTRS]] float @_Z15test_sin_doubled(
 // CHECK:    [[CONVI:%.*]] = fptrunc {{.*}} double %{{.*}} to float
 // CHECK:    [[V2:%.*]] = call {{.*}} float @llvm.sin.f32(float [[CONVI]])

@@ -322,14 +322,14 @@ define void @test16(ptr nocapture readonly %sums, i32 signext %delta, i32 signex
 ; P9BE-AIX32-NEXT:    lhz 3, 16(3)
 ; P9BE-AIX32-NEXT:    sth 6, -64(1)
 ; P9BE-AIX32-NEXT:    lxv 2, -64(1)
-; P9BE-AIX32-NEXT:    sth 4, -48(1)
-; P9BE-AIX32-NEXT:    lxv 4, -48(1)
 ; P9BE-AIX32-NEXT:    sth 3, -32(1)
+; P9BE-AIX32-NEXT:    sth 4, -48(1)
 ; P9BE-AIX32-NEXT:    lwz 3, L..C3(2) # %const.0
 ; P9BE-AIX32-NEXT:    lxv 3, -32(1)
-; P9BE-AIX32-NEXT:    vmrghh 4, 2, 4
+; P9BE-AIX32-NEXT:    lxv 4, -48(1)
 ; P9BE-AIX32-NEXT:    lxv 0, 0(3)
 ; P9BE-AIX32-NEXT:    vmrghh 3, 2, 3
+; P9BE-AIX32-NEXT:    vmrghh 4, 2, 4
 ; P9BE-AIX32-NEXT:    vsplth 2, 2, 0
 ; P9BE-AIX32-NEXT:    xxmrghw 2, 2, 4
 ; P9BE-AIX32-NEXT:    xxperm 3, 2, 0

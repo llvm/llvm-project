@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -debugger-tune=lldb -accel-tables=Dwarf -filetype=obj -o %t < %s
+; RUN: %llc_dwarf -accel-tables=Dwarf -filetype=obj -o %t < %s
 ; RUN: llvm-dwarfdump %t | FileCheck %s
 ; RUN: llvm-dwarfdump -debug-names %t | FileCheck --check-prefix=SAME-NAME %s
 ; RUN: llvm-dwarfdump -debug-names %t | FileCheck --check-prefix=DIFFERENT-NAME %s
@@ -43,7 +43,7 @@ target triple = "arm64-apple-macosx14.5.0"
 @q = global %struct.SameName zeroinitializer, align 4, !dbg !0
 @r = global %struct.DifferentName zeroinitializer, align 4, !dbg !5
 
-!llvm.module.flags = !{!14, !15, !16, !17, !18, !19, !20}
+!llvm.module.flags = !{!14, !15, !16, !17, !18, !19, !20, !22}
 !llvm.dbg.cu = !{!2}
 !llvm.ident = !{!21}
 
@@ -69,3 +69,4 @@ target triple = "arm64-apple-macosx14.5.0"
 !19 = !{i32 7, !"uwtable", i32 1}
 !20 = !{i32 7, !"frame-pointer", i32 1}
 !21 = !{!"clang version 1"}
+!22 = !{i32 2, !"debugger-tuning", !"lldb"}

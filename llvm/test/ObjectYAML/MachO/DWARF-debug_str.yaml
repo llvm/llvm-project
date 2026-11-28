@@ -3,6 +3,7 @@
 # RUN: yaml2obj --docnum=1 %s | obj2yaml | FileCheck %s
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:      
   magic:           0xFEEDFACF
   cputype:         0x01000007
@@ -275,6 +276,7 @@ DWARF:
 # EMPTY-CONTENT-NEXT:   debug_str: []
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007
@@ -344,6 +346,7 @@ DWARF:
 # NO-TERMINATOR-NEXT: ...
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007

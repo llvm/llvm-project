@@ -96,3 +96,49 @@ func.func @conversion_dealloc_simple(%arg0: memref<2xf32>, %arg1: i1) {
 // CHECK-NEXT:   memref.dealloc [[ARG0]] : memref<2xf32>
 // CHECK-NEXT: }
 // CHECK-NEXT: return
+
+// -----
+
+// A clone of a buffer-like value that is not a memref is not lowered to the
+// memref dialect.
+
+func.func @conversion_buffer_like_clone(%arg0: !test.test_memref<[4], f32>)
+    -> !test.test_memref<[4], f32> {
+  // expected-error@+1 {{failed to legalize operation 'bufferization.clone' that was explicitly marked illegal}}
+  %0 = bufferization.clone %arg0
+    : !test.test_memref<[4], f32> to !test.test_memref<[4], f32>
+  return %0 : !test.test_memref<[4], f32>
+}
+
+// -----
+
+// A clone of a buffer-like value that is not a memref into a memref is not
+// lowered to the memref dialect.
+
+func.func @conversion_buffer_like_clone_to_memref(
+    %arg0: !test.test_memref<[4], f32>) -> memref<4xf32> {
+  // expected-error@+1 {{failed to legalize operation 'bufferization.clone' that was explicitly marked illegal}}
+  %0 = bufferization.clone %arg0 : !test.test_memref<[4], f32> to memref<4xf32>
+  return %0 : memref<4xf32>
+}
+
+// -----
+
+func.func @conversion_buffer_like_clone_to_unranked_memref(
+    %arg0: !test.test_memref<[4], f32>) -> memref<*xf32> {
+  // expected-error@+1 {{failed to legalize operation 'bufferization.clone' that was explicitly marked illegal}}
+  %0 = bufferization.clone %arg0 : !test.test_memref<[4], f32> to memref<*xf32>
+  return %0 : memref<*xf32>
+}
+
+// -----
+
+// A dealloc of a buffer-like value that is not a memref is not lowered to the
+// memref dialect.
+
+func.func @conversion_buffer_like_dealloc(%arg0: !test.test_memref<[4], f32>,
+                                          %arg1: i1) {
+  // expected-error@+1 {{failed to legalize operation 'bufferization.dealloc' that was explicitly marked illegal}}
+  bufferization.dealloc (%arg0 : !test.test_memref<[4], f32>) if (%arg1)
+  return
+}

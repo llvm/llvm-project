@@ -134,3 +134,4 @@ body:             |
     PseudoReturn64 undef $r31_64, implicit $r2_64, debug-location !20 {
       $r29_64 = DADDiu $r29_64, 16
     }
+...

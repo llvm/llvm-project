@@ -6,7 +6,6 @@
 name:            duplane64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0
@@ -38,7 +37,6 @@ body:             |
 name:            duplane32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0
@@ -70,7 +68,6 @@ body:             |
 name:            duplane16
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0
@@ -102,7 +99,6 @@ body:             |
 name:            duplane8
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0
@@ -134,7 +130,6 @@ body:             |
 name:            v2s32_duplane32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
   - { reg: '$x0' }

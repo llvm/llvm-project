@@ -10,7 +10,6 @@
 # SGPR48 is already used, but SGPR49 is not. The tuple must still incur a
 # first-use CSR cost, making rematerialization after the call cheaper.
 name: tuple_unused_csr
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_32, preferred-register: '$sgpr48' }
   - { id: 1, class: sgpr_64, preferred-register: '$sgpr48_sgpr49' }
@@ -40,7 +39,6 @@ body: |
 # Only sub0 is live, so assigning the tuple to SGPR48_SGPR49 does not use
 # SGPR49. Reusing SGPR48 incurs no first-use cost and needs no rematerialization.
 name: tuple_unused_lane
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sgpr_32, preferred-register: '$sgpr48' }
   - { id: 1, class: sgpr_64, preferred-register: '$sgpr48_sgpr49' }

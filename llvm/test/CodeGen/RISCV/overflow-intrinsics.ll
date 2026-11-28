@@ -526,12 +526,12 @@ define i1 @uaddo6_xor_op_after_XOR(i32 %a, ptr %b.ptr) {
 define i1 @uaddo_i64_increment(i64 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i64_increment:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, a0, 1
-; RV32-NEXT:    seqz a3, a0
-; RV32-NEXT:    add a1, a1, a3
-; RV32-NEXT:    sw a0, 0(a2)
-; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    addi a3, a0, 1
+; RV32-NEXT:    seqz a0, a3
+; RV32-NEXT:    add a1, a1, a0
+; RV32-NEXT:    or a0, a3, a1
 ; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sw a1, 4(a2)
 ; RV32-NEXT:    ret
 ;
@@ -616,12 +616,12 @@ define i1 @uaddo_i16_increment_noncanonical_3(i16 %x, ptr %p) {
 define i1 @uaddo_i64_increment_alt(i64 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i64_increment_alt:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, a0, 1
-; RV32-NEXT:    seqz a3, a0
-; RV32-NEXT:    add a1, a1, a3
-; RV32-NEXT:    sw a0, 0(a2)
-; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    addi a3, a0, 1
+; RV32-NEXT:    seqz a0, a3
+; RV32-NEXT:    add a1, a1, a0
+; RV32-NEXT:    or a0, a3, a1
 ; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sw a1, 4(a2)
 ; RV32-NEXT:    ret
 ;
@@ -642,12 +642,12 @@ define i1 @uaddo_i64_increment_alt(i64 %x, ptr %p) {
 define i1 @uaddo_i64_increment_alt_dom(i64 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i64_increment_alt_dom:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, a0, 1
-; RV32-NEXT:    seqz a3, a0
-; RV32-NEXT:    add a1, a1, a3
-; RV32-NEXT:    sw a0, 0(a2)
-; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    addi a3, a0, 1
+; RV32-NEXT:    seqz a0, a3
+; RV32-NEXT:    add a1, a1, a0
+; RV32-NEXT:    or a0, a3, a1
 ; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sw a1, 4(a2)
 ; RV32-NEXT:    ret
 ;
@@ -746,13 +746,13 @@ define i1 @uaddo_i64_decrement_alt_dom(i64 %x, ptr %p) {
 define i1 @uaddo_i42_increment_illegal_type(i42 %x, ptr %p) {
 ; RV32-LABEL: uaddo_i42_increment_illegal_type:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, a0, 1
-; RV32-NEXT:    seqz a3, a0
-; RV32-NEXT:    add a1, a1, a3
-; RV32-NEXT:    andi a1, a1, 1023
-; RV32-NEXT:    sw a0, 0(a2)
-; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    addi a3, a0, 1
+; RV32-NEXT:    seqz a0, a3
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    andi a1, a0, 1023
+; RV32-NEXT:    or a0, a3, a1
 ; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sh a1, 4(a2)
 ; RV32-NEXT:    ret
 ;
@@ -1274,8 +1274,8 @@ define void @PR41129(ptr %p64) {
 ; RV32-NEXT:    beqz a3, .LBB37_2
 ; RV32-NEXT:  # %bb.1: # %false
 ; RV32-NEXT:    andi a1, a1, 7
-; RV32-NEXT:    sw a1, 0(a0)
 ; RV32-NEXT:    sw zero, 4(a0)
+; RV32-NEXT:    sw a1, 0(a0)
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB37_2: # %true
 ; RV32-NEXT:    seqz a3, a1

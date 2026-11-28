@@ -38,7 +38,7 @@ void ExprEngine::VisitMaterializeTemporaryExpr(
   const StackFrame *SF = Pred->getStackFrame();
 
   State = createTemporaryRegionIfNeeded(State, SF, TempExpr, MTE);
-  Dst.insert(Engine.makePostStmtNode(MTE, State, Pred));
+  Dst.insert(Engine.makePostStmtNode(MTE, State.get(), Pred));
 }
 
 void ExprEngine::performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,
@@ -98,7 +98,7 @@ void ExprEngine::performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,
       State = State->BindExpr(CallExpr, SF, ThisVal);
     else
       State = bindReturnValue(Call, SF, State);
-    Dst.insert(Engine.makePostStmtNode(CallExpr, State, N));
+    Dst.insert(Engine.makePostStmtNode(CallExpr, State.get(), N));
   }
 }
 
@@ -539,7 +539,7 @@ void ExprEngine::handleConstructor(const Expr *E, ExplodedNode *Pred,
       State = finishObjectConstruction(State, CE, SF);
       if (auto L = Target.getAs<Loc>())
         State = State->BindExpr(CE, SF, State->getSVal(*L, CE->getType()));
-      Dst.insert(Engine.makePostStmtNode(CE, State, Pred));
+      Dst.insert(Engine.makePostStmtNode(CE, State.get(), Pred));
       return;
     }
   }
@@ -579,7 +579,7 @@ void ExprEngine::handleConstructor(const Expr *E, ExplodedNode *Pred,
         static SimpleProgramPointTag T{"ExprEngine",
                                        "Skipping 0 size array construction"};
         PostStmt Loc(CE, Pred->getStackFrame(), &T);
-        Dst.insert(Engine.makeNode(Loc, State, Pred));
+        Dst.insert(Engine.makeNode(Loc, State.get(), Pred));
         return;
       }
 
@@ -657,7 +657,7 @@ void ExprEngine::handleConstructor(const Expr *E, ExplodedNode *Pred,
   if (State != Pred->getState()) {
     static SimpleProgramPointTag T("ExprEngine",
                                    "Prepare for object construction");
-    Pred = Engine.makeNode(PreStmt(E, SF, &T), State, Pred);
+    Pred = Engine.makeNode(PreStmt(E, SF, &T), State.get(), Pred);
     if (!Pred)
       return;
   }
@@ -699,7 +699,7 @@ void ExprEngine::handleConstructor(const Expr *E, ExplodedNode *Pred,
       }
 
       PreStmt P(CE, N->getStackFrame(), /*tag=*/nullptr);
-      PreInitialized.insert(Engine.makeNode(P, State, N));
+      PreInitialized.insert(Engine.makeNode(P, State.get(), N));
     }
   } else {
     PreInitialized = DstPreVisit;
@@ -751,7 +751,7 @@ void ExprEngine::handleConstructor(const Expr *E, ExplodedNode *Pred,
              "We should not have inlined this constructor!");
 
       for (ExplodedNode *N : DstEvaluated) {
-        Engine.makePostStmtNode(E, N->getState(), N, /*MarkAsSink=*/true);
+        Engine.makePostStmtNode(E, N->getState().get(), N, /*MarkAsSink=*/true);
       }
 
       // There is no need to run the PostCall and PostStmt checker
@@ -810,7 +810,7 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
     // FIXME: PostImplicitCall with a null decl may crash elsewhere anyway.
     PostImplicitCall PP(/*Decl=*/nullptr, S->getEndLoc(), SF,
                         getCFGElementRef(), &T);
-    Dst.insert(Engine.makeNode(PP, Pred->getState(), Pred));
+    Dst.insert(Engine.makeNode(PP, Pred->getState().get(), Pred));
     return;
   }
 
@@ -825,7 +825,8 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
       Dest = MRMgr.getCXXTempObjectRegion(E, Pred->getStackFrame());
     } else {
       static SimpleProgramPointTag T("ExprEngine", "SkipInvalidDestructor");
-      Engine.makeNode(Pred->getLocation().withTag(&T), Pred->getState(), Pred,
+      Engine.makeNode(Pred->getLocation().withTag(&T), Pred->getState().get(),
+                      Pred,
                       /*MarkAsSink=*/true);
       return;
     }
@@ -917,7 +918,7 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
     }
 
     DstPostValue.insert(Engine.makePostStmtNode(
-        CNE, addObjectUnderConstruction(State, CNE, SF, RetVal), I));
+        CNE, addObjectUnderConstruction(State, CNE, SF, RetVal).get(), I));
   }
 
   ExplodedNodeSet DstPostPostCallCallback;
@@ -1011,7 +1012,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
       // If the array is list initialized, we bind the initializer list to the
       // memory region here, otherwise we would lose it.
       if (isInitList) {
-        Pred = Engine.makePostStmtNode(CNE, State, Pred);
+        Pred = Engine.makePostStmtNode(CNE, State.get(), Pred);
 
         SVal V = State->getSVal(Init, SF);
         ExplodedNodeSet Evaluated;
@@ -1095,7 +1096,7 @@ void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
   ProgramStateRef state = Pred->getState();
   state = state->bindLoc(state->getLValue(VD, SF), V, SF);
 
-  Dst.insert(Engine.makePostStmtNode(CS, state, Pred));
+  Dst.insert(Engine.makePostStmtNode(CS, state.get(), Pred));
 }
 
 void ExprEngine::VisitCXXParenListInitExpr(const CXXParenListInitExpr *E,
@@ -1121,7 +1122,7 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
 
   if (!AMgr.options.ShouldInlineLambdas) {
     const ExplodedNode *Node = Engine.makePostStmtNode(
-        LE, Pred->getState(), Pred, /*MarkAsSink=*/true);
+        LE, Pred->getState().get(), Pred, /*MarkAsSink=*/true);
     Engine.addAbortedBlock(Node, getCurrBlock());
     return;
   }
@@ -1212,5 +1213,5 @@ void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
   }
 
   if (State)
-    Dst.insert(Engine.makePostStmtNode(A, State, Pred));
+    Dst.insert(Engine.makePostStmtNode(A, State.get(), Pred));
 }

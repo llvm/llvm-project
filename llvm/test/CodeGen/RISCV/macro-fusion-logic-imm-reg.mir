@@ -11,7 +11,6 @@
 # CHECK: Macro fuse: {{.*}}ANDI - AND
 ---
 name: andi_and
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -29,7 +28,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}ORI - OR
 ---
 name: ori_or
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -47,7 +45,6 @@ body:             |
 # CHECK: Macro fuse: {{.*}}XORI - XOR
 ---
 name: xori_xor
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11

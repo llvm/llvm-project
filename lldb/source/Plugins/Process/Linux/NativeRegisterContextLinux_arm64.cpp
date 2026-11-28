@@ -309,8 +309,8 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 
 llvm::Expected<ArchSpec>
 NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
-  return DetermineArchitectureViaGPR(
-      tid, RegisterInfo_arm64::GetGPRSizeStatic());
+  return DetermineArchitectureViaGPR(tid,
+                                     RegisterInfo_arm64::GetGPRSizeStatic());
 }
 
 NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
@@ -337,8 +337,7 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
     m_sve_state = SVEState::Disabled;
 }
 
-RegisterInfo_arm64 &
-NativeRegisterContextLinux_arm64::GetRegisterInfo() const {
+RegisterInfo_arm64 &NativeRegisterContextLinux_arm64::GetRegisterInfo() const {
   return static_cast<RegisterInfo_arm64 &>(*m_register_info_interface_up);
 }
 

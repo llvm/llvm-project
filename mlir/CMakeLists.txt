@@ -1,13 +1,5 @@
 # MLIR project.
-cmake_minimum_required(VERSION 3.20.0)
-if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
-  message(WARNING
-    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
-    "minimum version of CMake required to build LLVM will become 3.31.0, and "
-    "using an older CMake will become an error. Please upgrade your CMake to "
-    "at least 3.31.0 now to avoid issues in the future.")
-endif()
-
+cmake_minimum_required(VERSION 3.31.0)
 set(LLVM_SUBPROJECT_TITLE "MLIR")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -176,7 +168,15 @@ set(MLIR_INSTALL_AGGREGATE_OBJECTS 1 CACHE BOOL
 
 set(MLIR_BUILD_MLIR_C_DYLIB 0 CACHE BOOL "Builds libMLIR-C shared library.")
 
-set(MLIR_LINK_MLIR_DYLIB ${LLVM_LINK_LLVM_DYLIB} CACHE BOOL
+if(LLVM_LINK_LLVM_DYLIB AND NOT MSVC)
+  # We can't rely on default visibility with MSVC. libMLIR should have its own
+  # annotation (MLIR_ABI) and have its API properly annotated for exports on
+  # Windows too. See https://github.com/llvm/llvm-project/issues/238872
+  set(MLIR_LINK_MLIR_DYLIB_DEFAULT 1)
+else()
+  set(MLIR_LINK_MLIR_DYLIB_DEFAULT 0)
+endif()
+set(MLIR_LINK_MLIR_DYLIB ${MLIR_LINK_MLIR_DYLIB_DEFAULT} CACHE BOOL
     "Link tools against libMLIR.so")
 
 configure_file(

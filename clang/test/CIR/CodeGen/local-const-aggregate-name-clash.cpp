@@ -23,15 +23,15 @@ void f(bool which) {
   }
 }
 
-// CIR-DAG: cir.global "private" constant cir_private @[[GV0:.*]] = #cir.const_array<[#cir.int<10> : !s32i, #cir.int<20> : !s32i, #cir.int<30> : !s32i, #cir.int<40> : !s32i]> : !cir.array<!s32i x 4> align(16)
-// CIR-DAG: cir.global "private" constant cir_private @[[GV1:.*]] = #cir.const_array<[#cir.int<50> : !s32i, #cir.int<60> : !s32i]> : !cir.array<!s32i x 2> align(4)
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @[[GV0:.*]] = #cir.const_array<[#cir.int<10> : !s32i, #cir.int<20> : !s32i, #cir.int<30> : !s32i, #cir.int<40> : !s32i]> : !cir.array<!s32i x 4> align(16)
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @[[GV1:.*]] = #cir.const_array<[#cir.int<50> : !s32i, #cir.int<60> : !s32i]> : !cir.array<!s32i x 2> align(4)
 
 // CIR: cir.func{{.*}} @_Z1fb
 // CIR:   cir.get_global @[[GV0]] : !cir.ptr<!cir.array<!s32i x 4>>
 // CIR:   cir.get_global @[[GV1]] : !cir.ptr<!cir.array<!s32i x 2>>
 
-// LLVM-DAG: @[[GV0:.*]] = private constant [4 x i32] [i32 10, i32 20, i32 30, i32 40], align 16
-// LLVM-DAG: @[[GV1:.*]] = private constant [2 x i32] [i32 50, i32 60], align 4
+// LLVM-DAG: @[[GV0:.*]] = private unnamed_addr constant [4 x i32] [i32 10, i32 20, i32 30, i32 40], align 16
+// LLVM-DAG: @[[GV1:.*]] = private unnamed_addr constant [2 x i32] [i32 50, i32 60], align 4
 
 // LLVM: define{{.*}} @_Z1fb
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{[^,]+}}, ptr align 16 @[[GV0]], i64 16, i1 false)

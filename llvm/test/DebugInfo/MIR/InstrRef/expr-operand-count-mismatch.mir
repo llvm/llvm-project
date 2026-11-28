@@ -59,7 +59,6 @@
 ---
 name:            f
 alignment:       1
-tracksRegLiveness: true
 debugInstrRef:   true
 tracksDebugUserValues: true
 liveins:

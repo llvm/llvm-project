@@ -22,7 +22,6 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
-#include "clang/AST/TypeOrdering.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -3911,6 +3910,8 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
     if (!AliasTemplate->getDeclContext()->isFileContext())
       SavedContext.emplace(*this, AliasTemplate->getDeclContext());
 
+    // FIXME: Preserve the pattern's type source information during substitution
+    // while respecting underlying type changes made by mode attributes.
     CanonType =
         SubstType(Pattern->getUnderlyingType(), TemplateArgLists,
                   AliasTemplate->getLocation(), AliasTemplate->getDeclName());
@@ -4762,7 +4763,8 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
       (void)Result;
     } else {
       Matched.push_back(PartialSpecMatchResult());
-      Matched.back().Partial = Partial;
+      Matched.back().Partial = cast<VarTemplatePartialSpecializationDecl>(
+          Partial->getCanonicalDecl());
       Matched.back().Args = Info.takeSugared();
     }
   }

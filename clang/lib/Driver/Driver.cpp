@@ -13,7 +13,6 @@
 #include "ToolChains/AVR.h"
 #include "ToolChains/Arch/RISCV.h"
 #include "ToolChains/BareMetal.h"
-#include "ToolChains/CSKYToolChain.h"
 #include "ToolChains/Clang.h"
 #include "ToolChains/CrossWindows.h"
 #include "ToolChains/Cuda.h"
@@ -379,6 +378,8 @@ phases::ID Driver::getFinalPhase(const ArgList &Args,
     // -{fsyntax-only,-analyze,emit-ast} only run up to the compiler.
   } else if ((PhaseArg = Args.getLastArg(options::OPT_fsyntax_only)) ||
              (PhaseArg = Args.getLastArg(options::OPT_print_supported_cpus)) ||
+             (PhaseArg =
+                  Args.getLastArg(options::OPT_print_supported_tune_cpus)) ||
              (PhaseArg =
                   Args.getLastArg(options::OPT_print_enabled_extensions)) ||
              (PhaseArg = Args.getLastArg(options::OPT_module_file_info)) ||
@@ -2723,6 +2724,7 @@ bool Driver::HandleImmediateArgs(Compilation &C) {
   if (C.getArgs().hasArg(options::OPT_v) ||
       C.getArgs().hasArg(options::OPT__HASH_HASH_HASH) ||
       C.getArgs().hasArg(options::OPT_print_supported_cpus) ||
+      C.getArgs().hasArg(options::OPT_print_supported_tune_cpus) ||
       C.getArgs().hasArg(options::OPT_print_supported_extensions) ||
       C.getArgs().hasArg(options::OPT_print_enabled_extensions)) {
     PrintVersion(C, llvm::errs());
@@ -2855,6 +2857,8 @@ bool Driver::HandleImmediateArgs(Compilation &C) {
                           Action::OFK_Host);
     RegisterEffectiveTriple TripleRAII(TC, Triple);
     switch (RLT) {
+    case ToolChain::RLT_None:
+      break;
     case ToolChain::RLT_CompilerRT:
       llvm::outs() << TC.getCompilerRT(C.getArgs(), "builtins") << "\n";
       break;
@@ -3856,6 +3860,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   }
 
   for (auto Opt : {options::OPT_print_supported_cpus,
+                   options::OPT_print_supported_tune_cpus,
                    options::OPT_print_supported_extensions,
                    options::OPT_print_enabled_extensions}) {
     // If --print-supported-cpus, -mcpu=? or -mtune=? is specified, build a
@@ -4150,6 +4155,27 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
 
   Args.ClaimAllArgs(options::OPT_offload_arch_EQ);
   Args.ClaimAllArgs(options::OPT_no_offload_arch_EQ);
+
+  // For SYCL, compile once per IGCA target, e.g. once for igca_30r for both
+  // xe-mtl-u and xe-mtl-h, and record its Intel GPUs for ahead-of-time
+  // compilation.
+  // TODO: Do this for other offload kinds too. Their SPIR-V device link
+  // (spirv-link or llvm-lto) doesn't run ocloc for the "code" list yet; only
+  // the SYCL device link (clang-sycl-linker) does.
+  if (Kind == Action::OFK_SYCL) {
+    llvm::DenseSet<StringRef> Targets;
+    for (StringRef Arch : Archs) {
+      // The device job for an Intel GPU is named after its IGCA target; other
+      // values are kept as given.
+      OffloadArch ID = StringToOffloadArch(Arch);
+      StringRef Target =
+          ID.isIntelGPU() ? OffloadArchToVirtualArchString(ID) : Arch;
+      Targets.insert(Target);
+      if (ID.isIntelGPU())
+        C.addIGCADevice(&TC, Target, Arch);
+    }
+    Archs = std::move(Targets);
+  }
 
   SmallVector<StringRef> Sorted(Archs.begin(), Archs.end());
   llvm::sort(Sorted);
@@ -6443,7 +6469,7 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         TC = std::make_unique<toolchains::SPIRVToolChain>(*this, Target, Args);
         break;
       case llvm::Triple::csky:
-        TC = std::make_unique<toolchains::CSKYToolChain>(*this, Target, Args);
+        TC = std::make_unique<toolchains::BareMetal>(*this, Target, Args);
         break;
       case llvm::Triple::amdgpu:
       case llvm::Triple::r600:
@@ -6676,10 +6702,8 @@ llvm::Error driver::expandResponseFiles(SmallVectorImpl<const char *> &Args,
   if (MarkEOLs && Args.size() > 1 && StringRef(Args[1]).starts_with("-cc1"))
     MarkEOLs = false;
 
-  llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer);
+  llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer, FS);
   ECtx.setMarkEOLs(MarkEOLs);
-  if (FS)
-    ECtx.setVFS(FS);
 
   if (llvm::Error Err = ECtx.expandResponseFiles(Args))
     return Err;

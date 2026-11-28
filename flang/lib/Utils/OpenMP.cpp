@@ -65,7 +65,7 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     llvm::ArrayRef<mlir::Value> members, mlir::ArrayAttr membersIndex,
     mlir::omp::ClauseMapFlags mapType,
     mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-    bool partialMap, mlir::FlatSymbolRefAttr mapperId) {
+    bool partialMap, mlir::FlatSymbolRefAttr mapperId, mlir::Type varPtrTy) {
 
   auto getPtrVarType = [](mlir::Type ptrType) {
     mlir::TypeAttr varType = mlir::TypeAttr::get(
@@ -85,7 +85,7 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     retTy = baseAddr.getType();
   }
 
-  auto varPtrType = getPtrVarType(retTy);
+  auto varPtrType = getPtrVarType(varPtrTy ? varPtrTy : retTy);
   auto varPtrPtrTy =
       varPtrPtr ? getPtrVarType(varPtrPtr.getType()) : mlir::TypeAttr{};
 
@@ -214,7 +214,7 @@ void cloneOrMapRegionOutsiders(
 mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
     fir::FirOpBuilder &firOpBuilder, mlir::Location loc,
     fir::RecordType recordType, llvm::StringRef mapperNameStr,
-    RecordMemberMapperMangler mangler) {
+    RecordMemberMapperMangler mangler, bool emitAllocatableMemberMaps) {
   auto getKindlessDefaultMapperName =
       [](fir::RecordType recType) -> std::string {
     auto [nameKind, deconstructed] =
@@ -336,12 +336,12 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
       std::string mapperIdName = getCanonicalDefaultDeclareMapperName(recType);
       if (mangler)
         mangler(mapperIdName, memberName);
-      mapperId = getOrGenImplicitDefaultDeclareMapper(
-          firOpBuilder, loc, recType, mapperIdName, mangler);
+      mapperId = getOrGenImplicitDefaultDeclareMapper(firOpBuilder, loc,
+          recType, mapperIdName, mangler, emitAllocatableMemberMaps);
     }
 
     bool isAllocatable = fir::isAllocatableType(fir::unwrapRefType(memberType));
-    if (isAllocatable ||
+    if ((isAllocatable && emitAllocatableMemberMaps) ||
         mlir::isa<fir::RecordType>(fir::getFortranElementType(memberType))) {
       auto ref =
           getFieldRef(declareOp.getBase(), memberName, memberType, recordType);

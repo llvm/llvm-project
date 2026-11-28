@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bitsulk.h"
+#include "src/stdfix/bitsulk.h"
 #include "include/llvm-libc-macros/stdfix-macros.h" // unsigned long accum
 #include "include/llvm-libc-types/uint_ulk_t.h"     // uint_ulk_t
 #include "src/__support/common.h"                   // LLVM_LIBC_FUNCTION

@@ -24,6 +24,6 @@ services:
       dockerfile: libcxx/utils/ci/docker/android-builder.dockerfile
       args:
         BASE_IMAGE_VERSION: 5e1edea790610e7ef8c5e06b6e5185fe5dd1c830
-        ANDROID_CLANG_VERSION: r596125
-        ANDROID_CLANG_PREBUILTS_COMMIT: c757e540eeaac1661fd7495764aec83254ef81fe
+        ANDROID_CLANG_VERSION: r614150
+        ANDROID_CLANG_PREBUILTS_COMMIT: 16fae8ef5b856b1d3e02a55274e4327c5842bb34
         ANDROID_SYSROOT_COMMIT: d3a4496257f6e19fe25dd960a8ceee1d848a31a8

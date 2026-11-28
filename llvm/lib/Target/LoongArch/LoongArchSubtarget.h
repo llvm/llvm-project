@@ -51,6 +51,12 @@ class LoongArchSubtarget : public LoongArchGenSubtargetInfo {
   Align PrefLoopAlignment;
   unsigned MaxBytesForAlignment;
 
+  // Software prefetch settings for LoopDataPrefetch, set in
+  // initializeProperties. A PrefetchDistance of 0 disables the pass.
+  unsigned PrefetchDistance;
+  unsigned MinPrefetchStride;
+  unsigned MaxPrefetchIterationsAhead;
+
   /// Initializes using the passed in CPU and feature strings so that we can
   /// use initializer lists for subtarget initialization.
   LoongArchSubtarget &initializeSubtargetDependencies(const Triple &TT,
@@ -86,6 +92,8 @@ public:
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
+  void mirFileLoaded(MachineFunction &MF) const override;
+
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }
 #include "LoongArchGenSubtargetInfo.inc"
@@ -103,6 +111,17 @@ public:
   Align getPrefLoopAlignment() const { return PrefLoopAlignment; }
   unsigned getMaxBytesForAlignment() const { return MaxBytesForAlignment; }
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
+  unsigned getPrefetchDistance() const override { return PrefetchDistance; }
+  unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                unsigned NumStridedMemAccesses,
+                                unsigned NumPrefetches,
+                                bool HasCall) const override {
+    return MinPrefetchStride;
+  }
+  unsigned getMaxPrefetchIterationsAhead() const override {
+    return MaxPrefetchIterationsAhead;
+  }
+  bool enableWritePrefetching() const override { return true; }
   bool enableMachineScheduler() const override { return true; }
   bool useAA() const override;
 };

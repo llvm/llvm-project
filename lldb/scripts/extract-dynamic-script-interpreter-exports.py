@@ -9,7 +9,6 @@ import argparse
 import subprocess
 import sys
 
-
 # Mangled-name prefixes liblldb owns. Symbols outside these namespaces
 # are resolved through other libraries on the loader path.
 EXPORT_PREFIXES = (
@@ -39,7 +38,7 @@ def normalize(sym, mach_o):
     return sym
 
 
-def collect(nm, obj, mach_o):
+def collect(nm, obj, mach_o, arch):
     """Return (undefined, defined) symbol-name sets for `obj`.
 
     Both halves are needed so cross-object references that the plugin's
@@ -47,9 +46,10 @@ def collect(nm, obj, mach_o):
     """
     undefined = set()
     defined = set()
+    arch_args = [f"--arch={arch}"] if arch else []
 
     out = subprocess.check_output(
-        [nm, "--undefined-only", "--just-symbol-name", obj], text=True
+        [nm, *arch_args, "--undefined-only", "--just-symbol-name", obj], text=True
     )
     for line in out.splitlines():
         sym = line.strip()
@@ -57,7 +57,7 @@ def collect(nm, obj, mach_o):
             undefined.add(normalize(sym, mach_o))
 
     out = subprocess.check_output(
-        [nm, "--defined-only", "--extern-only", "--just-symbol-name", obj],
+        [nm, *arch_args, "--defined-only", "--extern-only", "--just-symbol-name", obj],
         text=True,
     )
     for line in out.splitlines():
@@ -78,18 +78,33 @@ def main():
         help="Strip the leading underscore Mach-O prepends to every symbol.",
     )
     parser.add_argument(
+        "--arch",
+        action="append",
+        default=[],
+        help="Architecture slice of universal objects to scan. Repeatable.",
+    )
+    parser.add_argument(
         "objects", nargs="+", help="Object files (or archives) to scan."
     )
     args = parser.parse_args()
 
-    undefined = set()
-    defined = set()
-    for obj in args.objects:
-        u, d = collect(args.nm, obj, args.mach_o)
-        undefined.update(u)
-        defined.update(d)
+    per_arch = []
+    for arch in args.arch or [None]:
+        undefined = set()
+        defined = set()
+        for obj in args.objects:
+            u, d = collect(args.nm, obj, args.mach_o, arch)
+            undefined.update(u)
+            defined.update(d)
+        per_arch.append(
+            {s for s in (undefined - defined) if s.startswith(EXPORT_PREFIXES)}
+        )
 
-    syms = {s for s in (undefined - defined) if s.startswith(EXPORT_PREFIXES)}
+    # ld64 requires every literal name in an export list to exist in every
+    # slice but lets a pattern match nothing. Bracketing the last character of
+    # a slice-specific name turns it into a pattern matching only that name.
+    common = set.intersection(*per_arch)
+    syms = common | {s[:-1] + f"[{s[-1]}]" for s in set.union(*per_arch) - common}
 
     with open(args.output, "w", newline="\n") as f:
         for s in sorted(syms):

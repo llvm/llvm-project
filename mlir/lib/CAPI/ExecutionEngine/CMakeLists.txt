@@ -13,4 +13,5 @@ add_mlir_upstream_c_api_library(MLIRCAPIExecutionEngine
   MLIRBuiltinToLLVMIRTranslation
   MLIRExecutionEngine
   MLIRLLVMToLLVMIRTranslation
+  MLIROpenMPToLLVMIRTranslation
 )

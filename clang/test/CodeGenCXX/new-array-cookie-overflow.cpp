@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i386-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i386-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s %}
 
 // Regression test for https://github.com/llvm/llvm-project/issues/232250.
 // With a 32-bit size_t, 'new S[0xFFFFFFFF]' has no multiplication overflow

@@ -4,7 +4,6 @@
 
 ---
 name:            srem_0
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $eax
@@ -23,7 +22,6 @@ body:             |
 ...
 ---
 name:            urem_0
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $eax

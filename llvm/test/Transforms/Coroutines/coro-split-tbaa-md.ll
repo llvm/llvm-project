@@ -55,7 +55,7 @@ declare void @llvm.coro.end(ptr, i1, token)
 
 declare noalias ptr @malloc(i32) allockind("alloc,uninitialized") "alloc-family"="malloc"
 declare void @print(i32)
-declare void @free(ptr) willreturn allockind("free") "alloc-family"="malloc"
+declare void @free(ptr allocptr) willreturn allockind("free") "alloc-family"="malloc"
 ; CHECK-LABEL: define ptr @f(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:

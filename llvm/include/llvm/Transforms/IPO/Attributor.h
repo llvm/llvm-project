@@ -139,6 +139,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
+#include <array>
 #include <limits>
 #include <map>
 #include <optional>
@@ -149,6 +150,7 @@ class DataLayout;
 class LLVMContext;
 class Pass;
 template <typename Fn> class function_ref;
+struct IPOOptions;
 struct AADepGraphNode;
 struct AADepGraph;
 struct Attributor;
@@ -335,10 +337,11 @@ inline bool operator==(const RangeTy &A, const RangeTy &B) {
 inline bool operator!=(const RangeTy &A, const RangeTy &B) { return !(A == B); }
 
 /// Return the initial value of \p Obj with type \p Ty if that is a constant.
-LLVM_ABI Constant *
-getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
-                      Value &Obj, Type &Ty, const TargetLibraryInfo *TLI,
-                      const DataLayout &DL, RangeTy *RangePtr = nullptr);
+LLVM_ABI Constant *getInitialValueForObj(Attributor &A,
+                                         const AbstractAttribute &QueryingAA,
+                                         Value &Obj, Type &Ty,
+                                         const DataLayout &DL,
+                                         RangeTy *RangePtr = nullptr);
 
 /// Collect all potential values \p LI could read into \p PotentialValues. That
 /// is, the only values read by \p LI are assumed to be known and all are in
@@ -468,10 +471,6 @@ struct DenseMapInfo<const AA::InstExclusionSetTy *>
   }
 };
 
-/// The value passed to the line option that defines the maximal initialization
-/// chain length.
-LLVM_ABI extern unsigned MaxInitializationChainLength;
-
 ///{
 enum class ChangeStatus {
   CHANGED,
@@ -554,7 +553,7 @@ struct AADepGraph {
   LLVM_ABI void viewGraph();
 
   /// Dump graph to file
-  LLVM_ABI void dumpGraph();
+  LLVM_ABI void dumpGraph(StringRef DotFileNamePrefix);
 
   /// Print dependency graph
   LLVM_ABI void print();
@@ -768,11 +767,10 @@ struct IRPosition {
 
   /// Return the value this abstract attribute is associated with.
   Value &getAssociatedValue() const {
-    if (getCallSiteArgNo() < 0 || isa<Argument>(&getAnchorValue()))
-      return getAnchorValue();
-    assert(isa<CallBase>(&getAnchorValue()) && "Expected a call base!");
-    return *cast<CallBase>(&getAnchorValue())
-                ->getArgOperand(getCallSiteArgNo());
+    // A call site argument position is encoded by the argument operand use.
+    if (getEncodingBits() == ENC_CALL_SITE_ARGUMENT_USE)
+      return *getAsUsePtr()->get();
+    return getAnchorValue();
   }
 
   /// Return the type this abstract attribute is associated with.
@@ -946,13 +944,16 @@ private:
   /// argument or call site argument. See also `getCalleeArgNo` and
   /// `getCallSiteArgNo`.
   int getArgNo(bool CallbackCalleeArgIfApplicable) const {
-    if (CallbackCalleeArgIfApplicable)
-      if (Argument *Arg = getAssociatedArgument())
-        return Arg->getArgNo();
     switch (getPositionKind()) {
     case IRPosition::IRP_ARGUMENT:
       return cast<Argument>(getAsValuePtr())->getArgNo();
     case IRPosition::IRP_CALL_SITE_ARGUMENT: {
+      // Only call site arguments can be associated with a callback callee
+      // argument.
+      if (CallbackCalleeArgIfApplicable) {
+        if (Argument *Arg = getAssociatedArgument())
+          return Arg->getArgNo();
+      }
       Use &U = *getAsUsePtr();
       return cast<CallBase>(U.getUser())->getArgOperandNo(&U);
     }
@@ -972,7 +973,11 @@ private:
   }
 
   /// Verify internal invariants.
+#ifdef EXPENSIVE_CHECKS
   LLVM_ABI void verify();
+#else
+  void verify() {}
+#endif
 
   /// Return the underlying pointer as Value *, valid for all positions but
   /// IRP_CALL_SITE_ARGUMENT.
@@ -1112,10 +1117,12 @@ struct AnalysisGetter {
     return nullptr;
   }
 
-  /// Invalidates the analyses. Valid only when using the new pass manager.
-  void invalidateAnalyses() {
+  /// Invalidates the analyses of each function in \p M individually, which
+  /// allows preserving invariant function analyses like TargetLibraryInfo.
+  void invalidateAnalyses(Module &M) {
     assert(FAM && "Can only be used from the new PM!");
-    FAM->clear();
+    for (Function &F : M)
+      FAM->invalidate(F, PreservedAnalyses::none());
   }
 
   AnalysisGetter(FunctionAnalysisManager &FAM, bool CachedOnly = false)
@@ -1213,7 +1220,8 @@ struct InformationCache {
   using InstructionVectorTy = SmallVector<Instruction *, 8>;
 
   /// A map type from opcodes to instructions with this opcode.
-  using OpcodeInstMapTy = DenseMap<unsigned, InstructionVectorTy *>;
+  using OpcodeInstMapTy =
+      std::array<InstructionVectorTy *, Instruction::OtherOpsEnd>;
 
   /// Return the map that relates "interesting" opcodes with all instructions
   /// with that opcode in \p F.
@@ -1249,13 +1257,16 @@ struct InformationCache {
     return FI.CalledViaMustTail || FI.ContainsMustTailCall;
   }
 
-  bool isOnlyUsedByAssume(const Instruction &I) const {
+  bool isOnlyUsedByAssume(const Instruction &I) {
+    const Function &F = *I.getFunction();
+    FunctionInfo &FI = getFunctionInfo(F);
+    if (!FI.AssumeOnlyValuesCollected)
+      collectAssumeOnlyValues(FI);
     return AssumeOnlyValues.contains(&I);
   }
 
-  /// Invalidates the cached analyses. Valid only when using the new pass
-  /// manager.
-  void invalidateAnalyses() { AG.invalidateAnalyses(); }
+  /// Invalidates the cached analyses of \p M.
+  void invalidateAnalyses(Module &M) { AG.invalidateAnalyses(M); }
 
   /// Return the analysis result from a pass \p AP for function \p F.
   template <typename AP>
@@ -1296,6 +1307,17 @@ struct InformationCache {
   LLVM_ABI ArrayRef<Function *>
   getIndirectlyCallableFunctions(Attributor &A) const;
 
+  /// Return true if \p F has an exact definition or is inlineable.
+  ///
+  /// This is computed once when the information of \p F is initialized. For
+  /// functions that are not initialized yet, only the definition is checked,
+  /// as InlineableFunctions is also only filled on initialization.
+  bool isExactOrInlineable(const Function &F) const {
+    if (const FunctionInfo *FI = FuncInfoMap.lookup(&F))
+      return FI->IsExactOrInlineable;
+    return F.hasExactDefinition();
+  }
+
   /// Return the flat address space if the associated target has.
   LLVM_ABI std::optional<unsigned> getFlatAddressSpace() const;
 
@@ -1305,9 +1327,12 @@ private:
   struct FunctionInfo {
     LLVM_ABI ~FunctionInfo();
 
+    /// Whether the function has an exact definition or is inlineable.
+    bool IsExactOrInlineable = false;
+
     /// A nested map that remembers all instructions in a function with a
     /// certain instruction opcode (Instruction::getOpcode()).
-    OpcodeInstMapTy OpcodeInstMap;
+    OpcodeInstMapTy OpcodeInstMap = {};
 
     /// A map from functions to their instructions that may read or write
     /// memory.
@@ -1321,6 +1346,10 @@ private:
 
     /// Function has the `"kernel"` attribute
     bool IsKernel;
+
+    /// The values only used by `llvm.assume`s in the function have been added
+    /// to AssumeOnlyValues.
+    bool AssumeOnlyValuesCollected = false;
   };
 
   /// A map type from functions to informatio about it.
@@ -1328,17 +1357,24 @@ private:
 
   /// Return information about the function \p F, potentially by creating it.
   FunctionInfo &getFunctionInfo(const Function &F) {
-    FunctionInfo *&FI = FuncInfoMap[&F];
-    if (!FI) {
-      FI = new (Allocator) FunctionInfo();
-      initializeInformationCache(F, *FI);
-    }
+    auto [It, Inserted] = FuncInfoMap.try_emplace(&F);
+    if (!Inserted)
+      return *It->second;
+
+    // Initialization can grow the map, so don't keep a reference into it.
+    FunctionInfo *FI = new (Allocator) FunctionInfo();
+    It->second = FI;
+    initializeInformationCache(F, *FI);
     return *FI;
   }
 
   /// Vector of functions that might be callable indirectly, i.a., via a
   /// function pointer.
   SmallVector<Function *> IndirectlyCallableFunctions;
+
+  /// Add the values only used by `llvm.assume`s in the function of \p FI to
+  /// AssumeOnlyValues. This is done on demand, as few users need them.
+  LLVM_ABI void collectAssumeOnlyValues(FunctionInfo &FI);
 
   /// Initialize the function information cache \p FI for the function \p F.
   ///
@@ -1373,6 +1409,24 @@ private:
   /// Give the Attributor access to the members so
   /// Attributor::identifyDefaultAbstractAttributes(...) can initialize them.
   friend struct Attributor;
+};
+
+/// A set of kinds of abstract attributes. The kinds declared here are tested
+/// with a bit mask, others with a list of IDs.
+class AAKindSet {
+public:
+  /// Return the set of the kinds of abstract attributes of types \p AATypes.
+  template <typename... AATypes> static constexpr AAKindSet get();
+
+  /// Return true if abstract attributes of type \p AAType are in the set.
+  template <typename AAType> bool contains() const;
+
+private:
+  constexpr AAKindSet(uint64_t Mask, ArrayRef<const char *> IDs)
+      : Mask(Mask), IDs(IDs) {}
+
+  uint64_t Mask;
+  ArrayRef<const char *> IDs;
 };
 
 /// Configuration for the Attributor.
@@ -1419,8 +1473,8 @@ struct AttributorConfig {
   /// Helper to update an underlying call graph and to delete functions.
   CallGraphUpdater &CGUpdater;
 
-  /// If not null, a set limiting the attribute opportunities.
-  DenseSet<const char *> *Allowed = nullptr;
+  /// If set, the only kinds of abstract attributes to create.
+  std::optional<AAKindSet> Allowed;
 
   /// Maximum number of iterations to run until fixpoint.
   std::optional<unsigned> MaxFixpointIterations;
@@ -1484,6 +1538,8 @@ struct Attributor {
                       AttributorConfig Configuration);
 
   LLVM_ABI ~Attributor();
+
+  const IPOOptions &Opts;
 
   /// Run the analyses until a fixpoint is reached or enforced (timeout).
   ///
@@ -1564,10 +1620,14 @@ struct Attributor {
     // Bootstrap the new attribute with an initial update to propagate
     // information, e.g., function -> call site.
     {
-      TimeTraceScope TimeScope("initialize", [&]() {
-        return AA.getName().str() +
-               std::to_string(AA.getIRPosition().getPositionKind());
-      });
+      std::optional<TimeTraceScope> TimeScope;
+      if (TimeTraceEnabled) {
+        TimeScope.emplace("initialize", [&]() {
+          return AA.getName().str() +
+                 std::to_string(AA.getIRPosition().getPositionKind());
+        });
+      }
+
       ++InitializationChainLength;
       AA.initialize(*this);
       --InitializationChainLength;
@@ -1746,7 +1806,7 @@ struct Attributor {
     if (!AAType::isValidIRPositionForInit(*this, IRP))
       return false;
 
-    if (Configuration.Allowed && !Configuration.Allowed->count(&AAType::ID))
+    if (Configuration.Allowed && !Configuration.Allowed->contains<AAType>())
       return false;
 
     // For now we skip anything in naked and optnone functions.
@@ -1781,8 +1841,19 @@ struct Attributor {
   /// If a function is exactly defined or it has alwaysinline attribute
   /// and is viable to be inlined, we say it is IPO amendable
   bool isFunctionIPOAmendable(const Function &F) {
-    return F.hasExactDefinition() || InfoCache.InlineableFunctions.count(&F) ||
+    return InfoCache.isExactOrInlineable(F) ||
            (Configuration.IPOAmendableCB && Configuration.IPOAmendableCB(F));
+  }
+
+  /// Return true if the body of the associated function can be used to derive
+  /// information for \p IRP.
+  ///
+  /// That is not the case for the interface (function, argument and return
+  /// positions) of a function that might be replaced by another definition,
+  /// e.g. a linkonce_odr function.
+  bool canUseBodyFor(const IRPosition &IRP) {
+    return !IRP.isFnInterfaceKind() ||
+           isFunctionIPOAmendable(*IRP.getAssociatedFunction());
   }
 
   /// Return whether attributes can participate in fixed-point deduction.
@@ -2488,7 +2559,18 @@ private:
   /// the inner level.
   ///{
   using AAMapKeyTy = std::pair<const char *, IRPosition>;
-  DenseMap<AAMapKeyTy, AbstractAttribute *> AAMap;
+  /// The IDs are adjacent bytes and the positions of a value differ only in
+  /// the low bits, both of which the default hash functions mostly ignore.
+  struct AAMapKeyInfo : DenseMapInfo<AAMapKeyTy> {
+    static unsigned getHashValue(const AAMapKeyTy &Key) {
+      const IRPosition &IRP = Key.second;
+      auto ID = reinterpret_cast<uintptr_t>(Key.first);
+      auto Pos = reinterpret_cast<uintptr_t>(static_cast<void *>(IRP));
+      auto Ctx = reinterpret_cast<uintptr_t>(IRP.getCallBaseContext());
+      return detail::combineHashValue(unsigned(ID), unsigned(Pos ^ Ctx));
+    }
+  };
+  DenseMap<AAMapKeyTy, AbstractAttribute *, AAMapKeyInfo> AAMap;
   ///}
 
   /// Map to remember all requested signature changes (= argument replacements).
@@ -2561,6 +2643,11 @@ private:
 
   /// The current initialization chain length. Tracked to avoid stack overflows.
   unsigned InitializationChainLength = 0;
+  const unsigned MaxInitializationChainLength;
+
+  /// Whether time trace scopes are recorded for every initialization and
+  /// update.
+  const bool TimeTraceEnabled = timeTraceProfilerEnabled();
 
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///
@@ -3163,6 +3250,10 @@ struct StateWrapper : public BaseType, public StateTy {
   StateType &getState() override { return *this; }
 
   const StateType &getState() const override { return *this; }
+
+  bool isAtFixpoint() const final { return StateTy::isAtFixpoint(); }
+
+  bool isStateAtFixpoint() const final { return StateTy::isAtFixpoint(); }
 };
 
 /// Helper class that provides common functionality to manifest IR attributes.
@@ -3302,10 +3393,10 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
 
   /// Return false if an AA should not be updated for \p IRP.
   static bool isValidIRPositionForUpdate(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFnInterfaceKind())
+      return true;
     Function *AssociatedFn = IRP.getAssociatedFunction();
-    bool IsFnInterface = IRP.isFnInterfaceKind();
-    assert((!IsFnInterface || AssociatedFn) &&
-           "Function interface without a function?");
+    assert(AssociatedFn && "Function interface without a function?");
 
     // TODO: Not all attributes require an exact definition. Find a way to
     //       enable deduction for some but not all attributes in case the
@@ -3314,7 +3405,7 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
     // TODO: We could always determine abstract attributes and if sufficient
     //       information was found we could duplicate the functions that do not
     //       have an exact definition.
-    return !IsFnInterface || A.isFunctionIPOAmendable(*AssociatedFn);
+    return A.isFunctionIPOAmendable(*AssociatedFn);
   }
 
   /// Initialize the state with the information in the Attributor \p A.
@@ -3338,6 +3429,10 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
   /// Return the internal abstract state for inspection.
   virtual StateType &getState() = 0;
   virtual const StateType &getState() const = 0;
+
+  /// Return true if the state is at a fixpoint, like
+  /// getState().isAtFixpoint() but with a single virtual call.
+  virtual bool isStateAtFixpoint() const { return getState().isAtFixpoint(); }
 
   /// Return an IR position, see struct IRPosition.
   const IRPosition &getIRPosition() const { return *this; };
@@ -4201,7 +4296,7 @@ struct AAAlign
   AAAlign(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
-    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+    if (!IRP.getAssociatedType()->isPointerTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
@@ -4844,6 +4939,10 @@ template <typename MemberTy> struct PotentialValuesState : AbstractState {
   PotentialValuesState(bool IsValid)
       : IsValidState(IsValid), UndefIsContained(false) {}
 
+  PotentialValuesState(bool IsValid, unsigned MaxPotentialValues)
+      : IsValidState(IsValid), UndefIsContained(false),
+        MaxPotentialValues(MaxPotentialValues) {}
+
   bool isValidState() const override { return IsValidState.isValidState(); }
 
   bool isAtFixpoint() const override { return IsValidState.isAtFixpoint(); }
@@ -4883,17 +4982,9 @@ template <typename MemberTy> struct PotentialValuesState : AbstractState {
     return Set == RHS.getAssumedSet();
   }
 
-  /// Maximum number of potential values to be tracked.
-  /// This is set by -attributor-max-potential-values command line option
-  static unsigned MaxPotentialValues;
-
   /// Return empty set as the best state of potential values.
-  static PotentialValuesState getBestState() {
-    return PotentialValuesState(true);
-  }
-
   static PotentialValuesState getBestState(const PotentialValuesState &PVS) {
-    return getBestState();
+    return PotentialValuesState(true, PVS.MaxPotentialValues);
   }
 
   /// Return full set as the worst state of potential values.
@@ -4980,6 +5071,9 @@ private:
 
   /// Flag for undef value
   bool UndefIsContained;
+
+  /// Maximum number of potential values to be tracked.
+  unsigned MaxPotentialValues = std::numeric_limits<unsigned>::max();
 };
 
 struct DenormalFPMathState : public AbstractState {
@@ -5093,9 +5187,11 @@ LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
 ///
 /// For non constant integers see AAPotentialValues.
 struct AAPotentialConstantValues
-    : public StateWrapper<PotentialConstantIntValuesState, AbstractAttribute> {
-  using Base = StateWrapper<PotentialConstantIntValuesState, AbstractAttribute>;
-  AAPotentialConstantValues(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+    : public StateWrapper<PotentialConstantIntValuesState, AbstractAttribute,
+                          bool, unsigned> {
+  using Base = StateWrapper<PotentialConstantIntValuesState, AbstractAttribute,
+                            bool, unsigned>;
+  LLVM_ABI AAPotentialConstantValues(const IRPosition &IRP, Attributor &A);
 
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
     if (!IRP.getAssociatedType()->isIntegerTy())
@@ -6373,6 +6469,68 @@ bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
   };
 }
 } // namespace AA
+
+namespace detail {
+template <typename... AATypes> struct AAKindList {};
+
+/// The abstract attributes declared here, by their bit in AAKindSet.
+using AAKinds = AAKindList<
+    AANoUnwind, AANoSync, AAMustProgress, AANonNull, AANoRecurse, AAWillReturn,
+    AAUndefinedBehavior, AAIntraFnReachability, AANoAlias, AANoFree, AANoReturn,
+    AAIsDead, AADereferenceable, AAAlign, AAInstanceInfo, AANoCapture,
+    AAValueSimplify, AAHeapToStack, AAPrivatizablePtr, AAMemoryBehavior,
+    AAMemoryLocation, AAValueConstantRange, AAPotentialConstantValues,
+    AAPotentialValues, AANoUndef, AANoFPClass, AACallEdges, AAExecutionDomain,
+    AAInterFnReachability, AANonConvergent, AAPointerInfo, AAAssumptionInfo,
+    AAUnderlyingObjects, AAInvariantLoadPointer, AAAddressSpace,
+    AANoAliasAddrSpace, AAAllocationInfo, AAGlobalValueInfo, AAIndirectCallInfo,
+    AADenormalFPMath>;
+
+template <typename... AATypes>
+constexpr size_t getNumAAKinds(AAKindList<AATypes...>) {
+  return sizeof...(AATypes);
+}
+
+constexpr size_t NumAAKinds = getNumAAKinds(AAKinds());
+static_assert(NumAAKinds <= 64, "Too many kinds for the mask");
+
+/// Return the bit of \p AAType in AAKindSet, or the number of kinds if it has
+/// none. The kinds are compared by type since older compilers cannot compare
+/// the addresses of IDs in constant expressions, and MSVC rejects the
+/// addresses of internal IDs as template arguments.
+template <typename AAType, typename... AATypes>
+constexpr size_t getAAKindBit(AAKindList<AATypes...>) {
+  constexpr bool Matches[] = {std::is_same_v<AAType, AATypes>...};
+  for (size_t I = 0; I != sizeof...(AATypes); ++I) {
+    if (Matches[I])
+      return I;
+  }
+  return sizeof...(AATypes);
+}
+
+/// Return the bit of \p AAType in the mask of AAKindSet, or 0 if it has none.
+template <typename AAType> constexpr uint64_t getAAKindMask() {
+  constexpr size_t Bit = getAAKindBit<AAType>(AAKinds());
+  return Bit < NumAAKinds ? uint64_t(1) << Bit : 0;
+}
+
+/// The storage of the IDs of an AAKindSet.
+template <typename... AATypes>
+inline constexpr const char *AAKindSetIDs[] = {&AATypes::ID...};
+} // namespace detail
+
+template <typename... AATypes> constexpr AAKindSet AAKindSet::get() {
+  return AAKindSet((detail::getAAKindMask<AATypes>() | ...),
+                   detail::AAKindSetIDs<AATypes...>);
+}
+
+template <typename AAType> bool AAKindSet::contains() const {
+  constexpr uint64_t KindMask = detail::getAAKindMask<AAType>();
+  if constexpr (KindMask != 0)
+    return Mask & KindMask;
+  else
+    return is_contained(IDs, &AAType::ID);
+}
 
 } // end namespace llvm
 

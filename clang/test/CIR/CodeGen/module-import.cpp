@@ -11,17 +11,20 @@
 // stay in its own translation unit, and the importing unit's global init
 // function calls the module's initializer first.
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-module-interface %t/a.cppm -o %t/a.pcm
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fmodule-file=a=%t/a.pcm -emit-cir %t/named-module.cpp -o - | FileCheck %t/named-module.cpp --check-prefix=CIR --implicit-check-not=__cxx_global_var_init
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fmodule-file=a=%t/a.pcm -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %t/named-module.cpp -o /dev/null 2>&1 | FileCheck %t/named-module.cpp --check-prefix=CIR-BEFORE-LPP
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fmodule-file=a=%t/a.pcm -emit-cir %t/named-module.cpp -o - | FileCheck %t/named-module.cpp --check-prefix=CIR --implicit-check-not=__cxx_global_var_init --implicit-check-not=cir.cxx_module_
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fmodule-file=a=%t/a.pcm -emit-llvm %t/named-module.cpp -o - | FileCheck %t/named-module.cpp --check-prefix=LLVM --implicit-check-not=__cxx_global_var_init
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fmodule-file=a=%t/a.pcm -emit-llvm %t/named-module.cpp -o - | FileCheck %t/named-module.cpp --check-prefix=LLVM --implicit-check-not=__cxx_global_var_init
 //
 // The interface unit's own initializer, guarded; one of a module that only
 // imports a module with an initializer, which calls it; one of a module with
 // nothing to run, emitted all the same.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir %t/a.cppm -o - | FileCheck %t/a.cppm --check-prefix=CIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %t/a.cppm -o /dev/null 2>&1 | FileCheck %t/a.cppm --check-prefix=CIR-BEFORE-LPP
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir %t/a.cppm -o - | FileCheck %t/a.cppm --check-prefix=CIR --implicit-check-not=cir.cxx_module_
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-llvm %t/a.cppm -o - | FileCheck %t/a.cppm --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm %t/a.cppm -o - | FileCheck %t/a.cppm --check-prefix=LLVM
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fmodule-file=a=%t/a.pcm -emit-cir %t/b.cppm -o - | FileCheck %t/b.cppm --check-prefix=CIR --implicit-check-not=__cxx_global_var_init
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fmodule-file=a=%t/a.pcm -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %t/b.cppm -o /dev/null 2>&1 | FileCheck %t/b.cppm --check-prefix=CIR-BEFORE-LPP
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fmodule-file=a=%t/a.pcm -emit-cir %t/b.cppm -o - | FileCheck %t/b.cppm --check-prefix=CIR --implicit-check-not=__cxx_global_var_init --implicit-check-not=cir.cxx_module_
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -fmodule-file=a=%t/a.pcm -emit-llvm %t/b.cppm -o - | FileCheck %t/b.cppm --check-prefix=LLVM --implicit-check-not=__cxx_global_var_init
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fmodule-file=a=%t/a.pcm -emit-llvm %t/b.cppm -o - | FileCheck %t/b.cppm --check-prefix=LLVM --implicit-check-not=__cxx_global_var_init
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclangir -emit-cir %t/c.cppm -o - | FileCheck %t/c.cppm --check-prefix=CIR --implicit-check-not=__in_chrg --implicit-check-not=cir.call
@@ -103,7 +106,7 @@ export inline int a_func(int x) { return x + 1; }
 
 // The initializer of a module interface unit has external linkage and runs
 // its initializers once, behind a guard byte, whichever caller comes first.
-// CIR: cir.cxx_module_init_fn_name = "_ZGIW1a"
+// CIR-BEFORE-LPP: cir.cxx_module_init_fn_name = "_ZGIW1a"
 // CIR: cir.global {{.*}}internal @_ZGIW1a__in_chrg = #cir.int<0> : !s8i
 // CIR: cir.func private @_ZGIW1a()
 // CIR:   cir.get_global @_ZGIW1a__in_chrg : !cir.ptr<!s8i>
@@ -124,7 +127,7 @@ import a;
 
 int use() { return a_func(a_val); }
 
-// CIR: cir.cxx_module_imported_inits = [#cir.cxx_module_init<"_ZGIW1a", {{[^>]*}}>]
+// CIR-BEFORE-LPP: cir.cxx_module_imported_inits = [#cir.cxx_module_init<"_ZGIW1a", {{[^>]*}}>]
 // CIR: cir.global "private" external {{.*}}@_ZW1a5a_val : !s32i
 // CIR: cir.func {{.*}}@_Z3usev()
 // CIR:   cir.get_global @_ZW1a5a_val : !cir.ptr<!s32i>
@@ -149,8 +152,8 @@ export module b;
 import a;
 export int b_func() { return a_func(a_val); }
 
-// CIR: cir.cxx_module_imported_inits = [#cir.cxx_module_init<"_ZGIW1a", {{[^>]*}}>]
-// CIR: cir.cxx_module_init_fn_name = "_ZGIW1b"
+// CIR-BEFORE-LPP: cir.cxx_module_imported_inits = [#cir.cxx_module_init<"_ZGIW1a", {{[^>]*}}>]
+// CIR-BEFORE-LPP: cir.cxx_module_init_fn_name = "_ZGIW1b"
 // CIR: cir.global {{.*}}internal @_ZGIW1b__in_chrg = #cir.int<0> : !s8i
 // CIR: cir.func private @_ZGIW1a()
 // CIR: cir.func private @_ZGIW1b()

@@ -36,16 +36,16 @@ public:
   typedef uint32_t result_type;
 
   // constructors
-  _LIBCPP_HIDE_FROM_ABI seed_seq() _NOEXCEPT {}
+  seed_seq() _NOEXCEPT {}
 #ifndef _LIBCPP_CXX03_LANG
   template <class _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI seed_seq(initializer_list<_Tp> __il) {
+  seed_seq(initializer_list<_Tp> __il) {
     __init(__il.begin(), __il.end());
   }
 #endif // _LIBCPP_CXX03_LANG
 
   template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI seed_seq(_InputIterator __first, _InputIterator __last) {
+  seed_seq(_InputIterator __first, _InputIterator __last) {
     static_assert(is_integral<typename iterator_traits<_InputIterator>::value_type>::value,
                   "Mandates: iterator_traits<InputIterator>::value_type is an integer type");
     __init(__first, __last);
@@ -53,23 +53,23 @@ public:
 
   // generating functions
   template <class _RandomAccessIterator>
-  _LIBCPP_HIDE_FROM_ABI void generate(_RandomAccessIterator __first, _RandomAccessIterator __last);
+  void generate(_RandomAccessIterator __first, _RandomAccessIterator __last);
 
   // property functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t size() const _NOEXCEPT { return __v_.size(); }
+  [[__nodiscard__]] size_t size() const _NOEXCEPT { return __v_.size(); }
   template <class _OutputIterator>
-  _LIBCPP_HIDE_FROM_ABI void param(_OutputIterator __dest) const {
+  void param(_OutputIterator __dest) const {
     std::copy(__v_.begin(), __v_.end(), __dest);
   }
 
   seed_seq(const seed_seq&)       = delete;
   void operator=(const seed_seq&) = delete;
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static result_type _Tp(result_type __x) { return __x ^ (__x >> 27); }
+  [[__nodiscard__]] static result_type _Tp(result_type __x) { return __x ^ (__x >> 27); }
 
 private:
   template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI void __init(_InputIterator __first, _InputIterator __last);
+  void __init(_InputIterator __first, _InputIterator __last);
 
   vector<result_type> __v_;
 };

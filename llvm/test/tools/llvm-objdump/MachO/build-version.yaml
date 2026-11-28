@@ -3,6 +3,7 @@
 # RUN: yaml2obj %s | llvm-otool -l - | FileCheck --check-prefix=SHORT %s
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

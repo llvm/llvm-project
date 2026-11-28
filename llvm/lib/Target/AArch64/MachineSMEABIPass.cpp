@@ -277,8 +277,7 @@ getInstNeededZAState(const TargetRegisterInfo &TRI, MachineInstr &MI,
 struct MachineSMEABI : public MachineFunctionPass {
   inline static char ID = 0;
 
-  MachineSMEABI(CodeGenOptLevel OptLevel = CodeGenOptLevel::Default)
-      : MachineFunctionPass(ID), OptLevel(OptLevel) {}
+  MachineSMEABI() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -329,9 +328,6 @@ struct MachineSMEABI : public MachineFunctionPass {
                   bool ClearTPIDR2, bool On);
 
   // Emission routines for agnostic ZA functions.
-  void emitSetupFullZASave(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI,
-                           LiveRegs PhysLiveRegs);
   // Emit a "full" ZA save or restore. It is "full" in the sense that this
   // function will emit a call to __arm_sme_save or __arm_sme_restore, which
   // handles saving and restoring both ZA and ZT0.
@@ -401,8 +397,6 @@ struct MachineSMEABI : public MachineFunctionPass {
                          MachineBasicBlock::iterator MBBI, DebugLoc DL);
 
 private:
-  CodeGenOptLevel OptLevel = CodeGenOptLevel::Default;
-
   MachineFunction *MF = nullptr;
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64RegisterInfo *TRI = nullptr;
@@ -412,7 +406,6 @@ private:
 
   MachineOptimizationRemarkEmitter *ORE = nullptr;
   MachineRegisterInfo *MRI = nullptr;
-  MachineLoopInfo *MLI = nullptr;
 };
 
 static LiveRegs getPhysLiveRegs(LiveRegUnits const &LiveUnits) {
@@ -1242,6 +1235,4 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-FunctionPass *llvm::createMachineSMEABIPass(CodeGenOptLevel OptLevel) {
-  return new MachineSMEABI(OptLevel);
-}
+FunctionPass *llvm::createMachineSMEABIPass() { return new MachineSMEABI(); }

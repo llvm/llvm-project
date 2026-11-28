@@ -1103,7 +1103,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     CurrentState.LastSpace = State.Column;
     CurrentState.NestedBlockIndent = State.Column;
   } else if (Current.isNoneOf(tok::comment, tok::caret) &&
-             ((Previous.is(tok::comma) &&
+             ((Previous.isOneOf(tok::comma, TT_TrailingCommaVaOptRParen) &&
                Previous.isNot(TT_OverloadedOperator)) ||
               (Previous.is(tok::colon) && Previous.is(TT_ObjCMethodExpr)))) {
     CurrentState.LastSpace = State.Column;
@@ -1273,7 +1273,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   }
 
   if ((PreviousNonComment &&
-       PreviousNonComment->isOneOf(tok::comma, tok::semi) &&
+       PreviousNonComment->isOneOf(tok::comma, tok::semi,
+                                   TT_TrailingCommaVaOptRParen) &&
        !CurrentState.AvoidBinPacking) ||
       Previous.is(TT_BinaryOperator)) {
     CurrentState.BreakBeforeParameter = false;
@@ -1392,7 +1393,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   }
 
   if (PreviousNonComment &&
-      PreviousNonComment->isNoneOf(tok::comma, tok::colon, tok::semi) &&
+      PreviousNonComment->isNoneOf(tok::comma, TT_TrailingCommaVaOptRParen,
+                                   tok::colon, tok::semi) &&
       ((PreviousNonComment->isNot(TT_TemplateCloser) &&
         !PreviousNonComment->ClosesRequiresClause) ||
        Current.NestingLevel != 0) &&
@@ -1778,7 +1780,8 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return CurrentState.Indent;
   }
   if (Previous.is(tok::r_paren) &&
-      Previous.isNot(TT_TableGenDAGArgOperatorToBreak) &&
+      Previous.isNoneOf(TT_TableGenDAGArgOperatorToBreak,
+                        TT_TrailingCommaVaOptRParen) &&
       !Current.isBinaryOperator() &&
       Current.isNoneOf(tok::colon, tok::comment)) {
     return ContinuationIndent;
@@ -1803,9 +1806,37 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
   return CurrentState.Indent;
 }
 
+// Returns true if \p Tok is the "=" of a designated initializer, e.g. in
+// ".a = ...", "[0] = ..." or ".a[0].b = ...".
+static bool isDesignatedInitializerEqual(const FormatToken &Tok) {
+  if (Tok.isNot(tok::equal))
+    return false;
+  // Only the first token of a designator is annotated, so walk back to it.
+  for (const auto *Prev = Tok.getPreviousNonComment(); Prev;
+       Prev = Prev->getPreviousNonComment()) {
+    if (Prev->is(tok::r_square)) {
+      Prev = Prev->MatchingParen;
+      if (!Prev)
+        return false;
+    }
+    if (Prev->isOneOf(TT_DesignatedInitializerPeriod,
+                      TT_DesignatedInitializerLSquare)) {
+      return true;
+    }
+    if (Prev->isNoneOf(tok::identifier, tok::period, tok::l_square))
+      return false;
+  }
+  return false;
+}
+
 static bool hasNestedBlockInlined(const FormatToken *Previous,
                                   const FormatToken &Current,
                                   const FormatStyle &Style) {
+  // The value of a designated initializer is not inlined into the enclosing
+  // braced list, which puts each designated initializer on its own line anyway.
+  // Treating it as inlined would forbid breaking the rest of that list.
+  if (isDesignatedInitializerEqual(*Previous))
+    return false;
   if (Previous->isNot(tok::l_paren))
     return true;
   if (Previous->ParameterCount > 1)
@@ -1952,6 +1983,9 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
                     !State.Stack.back().NoLineBreakInOperand;
   moveStatePastScopeOpener(State, Newline);
   moveStatePastFakeRParens(State);
+  // ')' first pops the __VA_OPT__(...) paren state, so reset here.
+  if (Current.is(TT_TrailingCommaVaOptRParen))
+    State.Stack.back().NoLineBreakInOperand = false;
 
   if (Current.is(TT_ObjCStringLiteral) && State.StartOfStringLiteral == 0)
     State.StartOfStringLiteral = State.Column + 1;
@@ -2151,7 +2185,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     const auto *Prev = Tok->getPreviousNonComment();
     if (!Prev)
       return false;
-    return Prev->is(tok::comma);
+    return Prev->isOneOf(tok::comma, TT_TrailingCommaVaOptRParen);
   }(Current.MatchingParen);
 
   IndentationAndAlignment NewIndent = 0;
@@ -2183,8 +2217,18 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     if (Current.ParameterCount > 1)
       NestedBlockIndent = std::max(NestedBlockIndent, State.Column + 1);
   } else {
-    NewIndent = IndentationAndAlignment(std::max(
-                    CurrentState.LastSpace, CurrentState.StartOfFunctionCall)) +
+    // With a break after the open bracket, the contents are indented relative
+    // to the enclosing indentation, so the column in StartOfFunctionCall does
+    // not apply to them.
+    const bool BreakAfterOpenParen = Style.AlignAfterOpenBracket &&
+                                     Style.BreakAfterOpenBracketFunction &&
+                                     Current.is(tok::l_paren);
+    unsigned EnclosingIndent = CurrentState.LastSpace;
+    if (!BreakAfterOpenParen) {
+      EnclosingIndent =
+          std::max(EnclosingIndent, CurrentState.StartOfFunctionCall);
+    }
+    NewIndent = IndentationAndAlignment(EnclosingIndent) +
                 Style.ContinuationIndentWidth;
 
     if (Style.isTableGen() && Current.is(TT_TableGenDAGArgOpenerToBreak) &&
@@ -2372,7 +2416,11 @@ void ContinuationIndenter::moveStateToNewBlock(LineState &State, bool NewLine) {
                                    State.Stack.back().LastSpace,
                                    /*AvoidBinPacking=*/true, NoLineBreak));
   State.Stack.back().NestedBlockIndent = NestedBlockIndent;
-  State.Stack.back().BreakBeforeParameter = true;
+  // Preserve the input's line breaks in short enums with no column limit
+  // instead of forcing each enumerator onto its own line.
+  State.Stack.back().BreakBeforeParameter =
+      Style.ColumnLimit != 0 || !Style.AllowShortEnumsOnASingleLine ||
+      State.NextToken->isNot(TT_EnumLBrace);
 }
 
 static unsigned getLastLineEndColumn(StringRef Text, unsigned StartColumn,

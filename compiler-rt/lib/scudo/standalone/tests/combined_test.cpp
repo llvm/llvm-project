@@ -13,7 +13,6 @@
 #include "allocator_config.h"
 #include "chunk.h"
 #include "combined.h"
-#include "condition_variable.h"
 #include "mem_map.h"
 #include "size_class_map.h"
 
@@ -296,8 +295,16 @@ struct TestDeallocZeroFillConfig {
 #endif
 
   struct Secondary {
-    template <typename Config>
-    using CacheT = scudo::MapAllocatorNoCache<Config>;
+    struct Cache {
+      static const u32 QuarantineSize = 0U;
+      static const u32 EntriesArraySize = 10U;
+      static const u32 DefaultMaxEntriesCount = 10U;
+      static const uptr DefaultMaxEntrySize = 600000;
+      static const s32 MinReleaseToOsIntervalMs = -1;
+      static const s32 MaxReleaseToOsIntervalMs = -1;
+      static const s32 DefaultReleaseToOsIntervalMs = -1;
+    };
+    template <typename Config> using CacheT = scudo::MapAllocatorCache<Config>;
   };
   template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
 };
@@ -511,6 +518,48 @@ TEST(ScudoCombinedTest, DeallocZeroFill) {
     ASSERT_EQ((reinterpret_cast<char *>(P2))[I], '\0');
 
   Allocator->deallocateSized(P2, Origin, Size);
+}
+
+TEST(ScudoCombinedTest, DeallocNoFillToZeroFill) {
+  auto Allocator =
+      std::make_unique<TestAllocator<scudo::TestDeallocZeroFillConfig>>();
+  // MTE zeroes the allocations even when turned off.
+  if (Allocator->useMemoryTaggingTestOnly())
+    TEST_SKIP("Doesn't work on MTE");
+
+  Allocator->setFillContents(scudo::NoFill);
+
+  // Do at least one allocation in the primary and one in the secondary.
+  const scudo::uptr PrimarySize = 1024U;
+  void *PrimaryPtr = Allocator->allocate(PrimarySize, Origin);
+  EXPECT_NE(PrimaryPtr, nullptr);
+  memset(PrimaryPtr, 0xaa, PrimarySize);
+  Allocator->deallocateSized(PrimaryPtr, Origin, PrimarySize);
+
+  const scudo::uptr SecondarySize = 500000;
+  void *SecondaryPtr = Allocator->allocate(SecondarySize, Origin);
+  EXPECT_NE(SecondaryPtr, nullptr);
+  memset(SecondaryPtr, 0xaa, SecondarySize);
+  Allocator->deallocateSized(SecondaryPtr, Origin, SecondarySize);
+
+  Allocator->setFillContents(scudo::ZeroFill);
+
+  PrimaryPtr = Allocator->allocate(PrimarySize, Origin);
+  SecondaryPtr = Allocator->allocate(SecondarySize, Origin);
+
+  void *ZeroPtr = calloc(SecondarySize, 1);
+  EXPECT_NE(ZeroPtr, nullptr);
+
+  // Verify the allocations are all zero.
+  EXPECT_EQ(0, memcmp(PrimaryPtr, ZeroPtr, PrimarySize))
+      << "Primary allocation is not all zero.";
+  EXPECT_EQ(0, memcmp(SecondaryPtr, ZeroPtr, SecondarySize))
+      << "Secondary allocation is not all zero.";
+
+  Allocator->deallocateSized(PrimaryPtr, Origin, PrimarySize);
+  Allocator->deallocateSized(SecondaryPtr, Origin, SecondarySize);
+
+  free(ZeroPtr);
 }
 
 TEST(ScudoCombinedTest, DeallocNoZeroFill) {
@@ -763,6 +812,43 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DoubleFreeFromPrimary) {
           Allocator->deallocate(P, Origin);
         },
         "invalid chunk state");
+  }
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DoubleFreeFromSecondary) {
+  auto *Allocator = this->Allocator.get();
+
+  using SecondaryConfig = scudo::SecondaryConfig<TypeParam>;
+  using CacheConfig = typename SecondaryConfig::CacheConfig;
+  using CacheT = typename SecondaryConfig::template CacheT<CacheConfig>;
+  // A secondary double free is only guaranteed to fail with "invalid chunk
+  // state" (like Primary) if the freed block remains mapped in the secondary
+  // cache. Uncached blocks are unmapped on the first deallocate(), so the
+  // second deallocate() faults when loading the chunk header instead.
+  if (!std::is_same_v<CacheT, scudo::MapAllocatorNoCache<CacheConfig>> &&
+      CacheConfig::getDefaultMaxEntriesCount() != 0U &&
+      CacheConfig::getDefaultMaxEntrySize() > 0U) {
+
+    EXPECT_GE(CacheConfig::getDefaultMaxEntrySize(),
+              scudo::getPageSizeCached());
+    scudo::uptr SecondarySize =
+        CacheConfig::getDefaultMaxEntrySize() - scudo::getPageSizeCached();
+    EXPECT_FALSE(
+        isPrimaryAllocation<TestAllocator<TypeParam>>(SecondarySize, 0));
+
+    // Verify that a double free results in a chunk state error (or a SIGSEGV
+    // under MTE, which marks cached secondary entries MAP_NOACCESS).
+    SCUDO_EXPECT_DEATH(
+        {
+          // Allocate from secondary
+          void *Ptr = Allocator->allocate(SecondarySize, Origin);
+          ASSERT_TRUE(Ptr != nullptr);
+          Allocator->deallocate(Ptr, Origin);
+          Allocator->deallocate(Ptr, Origin);
+        },
+        Allocator->useMemoryTaggingTestOnly()
+            ? ""
+            : "(invalid chunk state|or a double free)");
   }
 }
 
@@ -2064,22 +2150,34 @@ TEST(ScudoCombinedDeathTest, SizeNotExactUsableMismatch) {
   using AllocatorT = scudo::Allocator<TestMatchNotExactUsableSizeConfig>;
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
-  void *Ptr = Allocator->allocate(10, scudo::Chunk::Origin::Malloc);
+  // Free with exact size passed to allocate.
+  void *Ptr = Allocator->allocate(9, scudo::Chunk::Origin::Malloc);
   EXPECT_TRUE(Ptr != nullptr);
   SCUDO_EXPECT_DEATH(
       Allocator->deallocateSized(Ptr, scudo::Chunk::Origin::Malloc, 1000000),
-      "invalid sized delete when deallocating.*\\(1000000 vs 10 or .*\\)");
-  Allocator->deallocateSized(Ptr, scudo::Chunk::Origin::Malloc, 10);
+      "invalid sized delete when deallocating.*\\(1000000 vs \\[9,.*\\)");
+  Allocator->deallocateSized(Ptr, scudo::Chunk::Origin::Malloc, 9);
 
-  Ptr = Allocator->allocate(10, scudo::Chunk::Origin::Memalign, 32);
+  // Free with usable size which should not be the same as the exact size.
+  Ptr = Allocator->allocate(9, scudo::Chunk::Origin::Memalign, 32);
   EXPECT_TRUE(Ptr != nullptr);
   SCUDO_EXPECT_DEATH(
       Allocator->deallocateSizedAligned(Ptr, scudo::Chunk::Origin::Malloc,
                                         1000000, 32),
-      "invalid sized delete when deallocating.*\\(1000000 vs 10 or .*\\)");
-  EXPECT_NE(10U, Allocator->getUsableSize(Ptr));
+      "invalid sized delete when deallocating.*\\(1000000 vs \\[9,.*\\)");
+  auto UsableSize = Allocator->getUsableSize(Ptr);
+  EXPECT_NE(9U, UsableSize);
   Allocator->deallocateSizedAligned(Ptr, scudo::Chunk::Origin::Malloc,
-                                    Allocator->getUsableSize(Ptr), 32);
+                                    UsableSize, 32);
+
+  // Free with a size between the exact size and the usable size.
+  Ptr = Allocator->allocate(9, scudo::Chunk::Origin::Memalign, 32);
+  EXPECT_TRUE(Ptr != nullptr);
+  UsableSize = Allocator->getUsableSize(Ptr);
+  EXPECT_NE(9U, UsableSize);
+  // Verify the usable size and exact size is not usable size + 1.
+  EXPECT_NE(10U, UsableSize);
+  Allocator->deallocateSizedAligned(Ptr, scudo::Chunk::Origin::Malloc, 10U, 32);
 }
 
 template <class AllocatorT>

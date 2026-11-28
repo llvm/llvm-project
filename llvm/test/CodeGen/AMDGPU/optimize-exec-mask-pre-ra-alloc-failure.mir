@@ -8,7 +8,6 @@
 
 name:            test
 alignment:       1
-tracksRegLiveness: true
 registers:
   - { id: 0, class: sreg_32, preferred-register: '$vcc_lo' }
   - { id: 1, class: sreg_32, preferred-register: '$vcc_lo' }

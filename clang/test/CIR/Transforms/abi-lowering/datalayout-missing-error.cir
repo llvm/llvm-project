@@ -8,7 +8,7 @@
 
 module {
 
-  cir.func @passthrough(%arg0: !s32i) -> !s32i {
+  cir.func @passthrough(%arg0: !s32i) -> !s32i requires_call_conv_lowering {
     cir.return %arg0 : !s32i
   }
 

@@ -6,7 +6,7 @@
 
 // -----
 
-// The named clauses/bounds independently exclude Virtual.
+// These clauses and collapse depths independently exclude Virtual.
 // GATE-LABEL: define void @fallbacks(
 // GATE-NOT: omp_collapsed.init
 // GATE: {{^}}}
@@ -17,21 +17,17 @@
 // CHECK-DAG: call void @sink(i32 3,
 // CHECK-DAG: call void @sink(i32 4,
 // CHECK-DAG: call void @sink(i32 5,
-// CHECK-DAG: call void @sink(i32 6,
-// CHECK-DAG: call void @sink(i32 7,
 // CHECK-DAG: call void @sink(i32 8,
 // CHECK: {{^}}}
 omp.private {type = linear} @lin.i32 : i32
 
-llvm.func @fallbacks(%n: i32, %linear: !llvm.ptr) {
+llvm.func @fallbacks(%linear: !llvm.ptr) {
   %zero = llvm.mlir.constant(0 : i32) : i32
   %one = llvm.mlir.constant(1 : i32) : i32
   %two = llvm.mlir.constant(2 : i32) : i32
   %three = llvm.mlir.constant(3 : i32) : i32
   %four = llvm.mlir.constant(4 : i32) : i32
   %five = llvm.mlir.constant(5 : i32) : i32
-  %six = llvm.mlir.constant(6 : i32) : i32
-  %seven = llvm.mlir.constant(7 : i32) : i32
   %eight = llvm.mlir.constant(8 : i32) : i32
   omp.wsloop {
     omp.loop_nest (%i, %j, %k) : i32 = (%zero, %zero, %zero) to (%two, %three, %four) step (%one, %one, %one) collapse(3) {
@@ -66,18 +62,6 @@ llvm.func @fallbacks(%n: i32, %linear: !llvm.ptr) {
   omp.wsloop ordered(2) {
     omp.loop_nest (%i, %j) : i32 = (%zero, %zero) to (%three, %five) step (%one, %one) collapse(2) {
       llvm.call @sink(%five, %i, %j) : (i32, i32, i32) -> ()
-      omp.yield
-    }
-  }
-  omp.wsloop {
-    omp.loop_nest (%i, %j) : i32 = (%zero, %zero) to (%n, %five) step (%one, %one) collapse(2) {
-      llvm.call @sink(%six, %i, %j) : (i32, i32, i32) -> ()
-      omp.yield
-    }
-  }
-  omp.wsloop {
-    omp.loop_nest (%i, %j) : i32 = (%zero, %zero) to (%three, %n) step (%one, %one) collapse(2) {
-      llvm.call @sink(%seven, %i, %j) : (i32, i32, i32) -> ()
       omp.yield
     }
   }

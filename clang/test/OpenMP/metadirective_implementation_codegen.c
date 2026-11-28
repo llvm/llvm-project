@@ -68,4 +68,23 @@ void foo(void) {
 // NO-CHECK: call void @__kmpc_for_static_fini
 // CHECK: ret void
 
+// All three score 5. The first is a strict subset of the third, which ties
+// with the second, so the second is selected.
+void tie(void) {
+#pragma omp metadirective                                                    \
+    when(user = {condition(1)}, implementation = {vendor(score(4) : llvm)}   \
+         : taskyield)                                                        \
+    when(device = {kind(cpu)}, implementation = {vendor(score(3) : llvm)}    \
+         : taskwait)                                                         \
+    when(user = {condition(1)}, device = {kind(host)},                       \
+         implementation = {vendor(score(3) : llvm)} : barrier)
+}
+
+// CHECK-LABEL: define {{.*}}void @tie(
+// CHECK-NOT: call {{.*}}@__kmpc_omp_taskyield(
+// CHECK-NOT: call {{.*}}@__kmpc_barrier(
+// CHECK: call {{.*}}@__kmpc_omp_taskwait(
+// CHECK-NOT: call {{.*}}@__kmpc_barrier(
+// CHECK: ret void
+
 #endif

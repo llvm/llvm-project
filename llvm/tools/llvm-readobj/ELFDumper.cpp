@@ -43,9 +43,7 @@
 #include "llvm/Object/SFrameParser.h"
 #include "llvm/Object/StackMapParser.h"
 #include "llvm/Support/AArch64AttributeParser.h"
-#include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/ARMAttributeParser.h"
-#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
@@ -56,11 +54,9 @@
 #include "llvm/Support/HexagonAttributeParser.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MSP430AttributeParser.h"
-#include "llvm/Support/MSP430Attributes.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MipsABIFlags.h"
 #include "llvm/Support/RISCVAttributeParser.h"
-#include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -73,7 +69,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <system_error>
 #include <vector>
 
 using namespace llvm;
@@ -1513,6 +1508,17 @@ constexpr EnumStringDef<unsigned, 2> ElfHeaderMipsFlagsDefs[] = {
     ENUM_ENT(EF_MIPS_ARCH_64R6, "mips64r6"),
 };
 constexpr auto ElfHeaderMipsFlags = BUILD_ENUM_STRINGS(ElfHeaderMipsFlagsDefs);
+
+constexpr EnumStringDef<unsigned, 2> ElfHeaderNanoMipsFlagsDefs[] = {
+    ENUM_ENT(EF_NANOMIPS_LINKRELAX, "relaxable"),
+    ENUM_ENT(EF_NANOMIPS_PIC, "pic"),
+    ENUM_ENT(EF_NANOMIPS_32BITMODE, "32bitmode"),
+    ENUM_ENT(EF_NANOMIPS_PID, "pid"),
+    ENUM_ENT(EF_NANOMIPS_PCREL, "PC-relative"),
+    ENUM_ENT(EF_NANOMIPS_ABI_P32, "p32"),
+};
+constexpr auto ElfHeaderNanoMipsFlags =
+    BUILD_ENUM_STRINGS(ElfHeaderNanoMipsFlagsDefs);
 
 #define X(NUM, ENUM, NAME) ENUM_ENT(ENUM, NAME),
 #define AMDGPU_MACH_ENUM_ENTS                                                  \
@@ -3696,6 +3702,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
       }
     } break;
     }
+  } else if (e.e_machine == EM_NANOMIPS) {
+    ElfFlags = printFlags(e.e_flags, EnumStrings(ElfHeaderNanoMipsFlags),
+                          unsigned(EF_NANOMIPS_ABI));
   }
   Str = "0x" + utohexstr(e.e_flags, /*LowerCase=*/true);
   if (!ElfFlags.empty())
@@ -7613,6 +7622,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
     else if (E.e_machine == EM_CUDA)
       W.printFlags("Flags", E.e_flags, EnumStrings(ElfHeaderNVPTXFlags),
                    unsigned(ELF::EF_CUDA_SM));
+    else if (E.e_machine == EM_NANOMIPS)
+      W.printFlags("Flags", E.e_flags, EnumStrings(ElfHeaderNanoMipsFlags),
+                   unsigned(EF_NANOMIPS_ABI));
     else
       W.printFlags("Flags", E.e_flags);
     W.printNumber("HeaderSize", E.e_ehsize);

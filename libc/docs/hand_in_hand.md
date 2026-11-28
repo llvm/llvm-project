@@ -34,7 +34,14 @@ Current Hand-in-Hand users:
 
 - Libc++ uses it for `from_chars<float/double>`.
 - OpenMP uses it for printf on GPUs.
-- [WIP] clang uses it for APFloat functions.
+- compiler-rt can use it to implement its floating point builtins
+  (`COMPILER_RT_USE_LIBC_MATH`).
+- The offloading runtime and the sanitizers' GPU support use the RPC headers.
+- [WIP] LLVM uses it for APFloat functions. A few functions are provided so
+  far.
+
+See {ref}`code_organization` for the constraints on code that is exposed this
+way.
 
 For more information check out the 2024 talk about the original Project:
 

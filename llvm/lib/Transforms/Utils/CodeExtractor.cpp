@@ -895,6 +895,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::CoroDestroyOnlyWhenComplete:
       case Attribute::CoroElideSafe:
       case Attribute::NoDivergenceSource:
+      case Attribute::AlwaysUniform:
       case Attribute::NoCreateUndefOrPoison:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
@@ -1497,8 +1498,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   LLVM_DEBUG(newFunction->dump());
   LLVM_DEBUG(llvm::dbgs() << "After extractCodeRegion - oldFunction:\n");
   LLVM_DEBUG(oldFunction->dump());
-  LLVM_DEBUG(if (AC && verifyAssumptionCache(*oldFunction, *newFunction, AC))
-                 report_fatal_error("Stale Asumption cache for old Function!"));
+#ifndef NDEBUG
+  if (AC && verifyAssumptionCache(*oldFunction, *newFunction, AC))
+    report_fatal_error("Stale Asumption cache for old Function!");
+#endif
   return newFunction;
 }
 
@@ -2088,8 +2091,8 @@ bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
         continue;
       if (AffectedCI->getFunction() != &OldFunc)
         return true;
-      auto *AssumedInst = cast<Instruction>(AffectedCI->getOperand(0));
-      if (AssumedInst->getFunction() != &OldFunc)
+      auto *AssumedInst = dyn_cast<Instruction>(AffectedCI->getOperand(0));
+      if (AssumedInst && AssumedInst->getFunction() != &OldFunc)
         return true;
     }
   }

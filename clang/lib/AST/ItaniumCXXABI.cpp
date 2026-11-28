@@ -25,7 +25,6 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/iterator.h"
-#include <optional>
 
 using namespace clang;
 

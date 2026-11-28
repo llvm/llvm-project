@@ -125,3 +125,28 @@ TEST_F(GDBRemoteCommunicationTest, CheckForPacket) {
                                                  Test.Packet.size(), response));
   }
 }
+
+// Test that a packet split across reads is found wherever the split falls, and
+// that a packet left in the buffer is found without another read.
+TEST_F(GDBRemoteCommunicationTest, CheckForPacketInPieces) {
+  using PacketType = GDBRemoteCommunication::PacketType;
+  StringExtractorGDBRemote response;
+  auto check = [&](llvm::StringRef bytes) {
+    return client.CheckForPacket(bytes.bytes_begin(), bytes.size(), response);
+  };
+
+  llvm::StringRef packet = "$foo#44";
+  for (size_t split = 1; split < packet.size(); ++split) {
+    SCOPED_TRACE(split);
+    EXPECT_EQ(PacketType::Invalid, check(packet.take_front(split)));
+    EXPECT_EQ(PacketType::Standard, check(packet.drop_front(split)));
+    EXPECT_EQ("foo", response.GetStringRef());
+  }
+
+  // The search for the second packet's '#' must start over.
+  EXPECT_EQ(PacketType::Invalid, check("$abcdefgh"));
+  EXPECT_EQ(PacketType::Standard, check("#24$b#62"));
+  EXPECT_EQ("abcdefgh", response.GetStringRef());
+  EXPECT_EQ(PacketType::Standard, client.CheckForPacket(nullptr, 0, response));
+  EXPECT_EQ("b", response.GetStringRef());
+}

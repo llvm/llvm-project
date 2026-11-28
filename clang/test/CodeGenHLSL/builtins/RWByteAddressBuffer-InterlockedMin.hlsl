@@ -6,6 +6,8 @@
 // RUN:   spirv-pc-vulkan1.3-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
+using namespace hlsl;
+
 // Test that the signed and unsigned RWByteAddressBuffer::InterlockedMin and
 // InterlockedMin64 methods lower through a resource pointer.
 

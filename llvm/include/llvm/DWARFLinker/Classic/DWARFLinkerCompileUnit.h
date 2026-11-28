@@ -12,6 +12,7 @@
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/DIE.h"
+#include "llvm/DWARFLinker/DWARFFile.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
@@ -107,9 +108,10 @@ public:
 #endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   };
 
-  CompileUnit(DWARFUnit &OrigUnit, unsigned ID, bool CanUseODR,
-              StringRef ClangModuleName)
-      : OrigUnit(OrigUnit), ID(ID), ClangModuleName(ClangModuleName) {
+  CompileUnit(DWARFUnit &OrigUnit, const DWARFFile &File, unsigned ID,
+              bool CanUseODR, StringRef ClangModuleName)
+      : OrigUnit(OrigUnit), File(File), ID(ID),
+        ClangModuleName(ClangModuleName) {
     Info.resize(OrigUnit.getNumDIEs());
 
     auto CUDie = OrigUnit.getUnitDIE(false);
@@ -128,6 +130,9 @@ public:
   }
 
   DWARFUnit &getOrigUnit() const { return OrigUnit; }
+
+  /// Returns the input file containing the original unit.
+  const DWARFFile &getContainingFile() const { return File; }
 
   unsigned getUniqueID() const { return ID; }
 
@@ -290,6 +295,7 @@ public:
 
 private:
   DWARFUnit &OrigUnit;
+  const DWARFFile &File;
   unsigned ID;
   std::vector<DIEInfo> Info; ///< DIE info indexed by DIE index.
   std::optional<BasicDIEUnit> NewUnit;

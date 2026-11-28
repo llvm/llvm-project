@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "EmulateInstructionRISCV.h"
-#include "Register/RegisterInfoInterface.h"
-#include "Register/Common/RegisterInfo_riscv32.h"
-#include "Register/Common/RegisterInfo_riscv64.h"
-#include "Register/Arch/lldb-riscv-register-enums.h"
 #include "RISCVCInstructions.h"
 #include "RISCVInstructions.h"
+#include "Register/Arch/lldb-riscv-register-enums.h"
+#include "Register/Common/RegisterInfo_riscv32.h"
+#include "Register/Common/RegisterInfo_riscv64.h"
+#include "Register/RegisterInfoInterface.h"
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/PluginManager.h"
@@ -1245,12 +1245,11 @@ public:
   // RV32A & RV64A (The standard atomic instruction extension) //
   bool operator()(LR_W) { return AtomicSequence(m_emu); }
   bool operator()(LR_D) { return AtomicSequence(m_emu); }
-  bool operator()(SC_W) {
-    llvm_unreachable("should be handled in AtomicSequence");
-  }
-  bool operator()(SC_D) {
-    llvm_unreachable("should be handled in AtomicSequence");
-  }
+  // A store-conditional is only emulated as part of an LR/SC sequence by
+  // AtomicSequence. One reached on its own (e.g. a trap handler clearing a
+  // reservation, or linear instruction-emulation unwinding) is not emulated.
+  bool operator()(SC_W) { return false; }
+  bool operator()(SC_D) { return false; }
   bool operator()(AMOSWAP_W inst) {
     return AtomicSwap<AMOSWAP_W, uint32_t>(m_emu, inst, 4, SextW);
   }

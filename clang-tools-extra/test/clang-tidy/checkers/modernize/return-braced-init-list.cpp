@@ -333,3 +333,39 @@ Gaz hn3() {
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
   // CHECK-FIXES: return {x};
 }
+
+struct Variadic {
+  Variadic(int, ...);
+};
+
+Variadic variadicWithExtraArgs() {
+  return Variadic(0, 1, 2.0f);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {0, 1, 2.0f};
+}
+
+Variadic variadicWithoutExtraArgs() {
+  return Variadic(0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {0};
+}
+
+struct OnlyEllipsis {
+  OnlyEllipsis(...);
+};
+
+OnlyEllipsis onlyEllipsis() {
+  return OnlyEllipsis(1, 2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {1, 2};
+}
+
+struct VariadicWithDefault {
+  VariadicWithDefault(int = 0, ...);
+};
+
+VariadicWithDefault variadicWithDefault() {
+  return VariadicWithDefault();
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {};
+}

@@ -95,12 +95,12 @@ extern size_t sink;
 // O2-SAME: i64 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // O2-NEXT:  [[ENTRY:.*:]]
 // O2-NEXT:    [[AF:%.*]] = alloca [[STRUCT_ANNOTATED_FLEX:%.*]], align 8
-// O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AF]]) #[[ATTR6:[0-9]+]]
+// O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AF]])
 // O2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[AF]], i64 9
 // O2-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
 // O2-NEXT:    store i64 [[TMP1]], ptr @sink, align 8, !tbaa [[LONG_TBAA6:![0-9]+]]
 // O2-NEXT:    [[TMP2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 0)
-// O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AF]]) #[[ATTR6]]
+// O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AF]])
 // O2-NEXT:    ret i64 [[TMP2]]
 //
 size_t local_fam(size_t n) {
@@ -142,13 +142,13 @@ size_t local_fam(size_t n) {
 // O2-SAME: i64 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // O2-NEXT:  [[ENTRY:.*:]]
 // O2-NEXT:    [[AF:%.*]] = alloca [[STRUCT_ANNOTATED_FLEX:%.*]], align 8
-// O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AF]]) #[[ATTR6]]
+// O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AF]])
 // O2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[AF]], i64 11
 // O2-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
 // O2-NEXT:    store i64 [[TMP0]], ptr @sink, align 8, !tbaa [[LONG_TBAA6]]
 // O2-NEXT:    [[RESULT:%.*]] = add i64 [[N]], -2
 // O2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.smax.i64(i64 [[RESULT]], i64 0)
-// O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AF]]) #[[ATTR6]]
+// O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AF]])
 // O2-NEXT:    ret i64 [[TMP1]]
 //
 size_t local_subscript(size_t n) {
@@ -182,11 +182,11 @@ size_t local_subscript(size_t n) {
 // O2-SAME: i64 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // O2-NEXT:  [[ENTRY:.*:]]
 // O2-NEXT:    [[AF:%.*]] = alloca [[STRUCT_ANNOTATED_FLEX:%.*]], align 8
-// O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AF]]) #[[ATTR6]]
+// O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AF]])
 // O2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[AF]], i64 9
 // O2-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
 // O2-NEXT:    store i64 [[TMP1]], ptr @sink, align 8, !tbaa [[LONG_TBAA6]]
-// O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AF]]) #[[ATTR6]]
+// O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AF]])
 // O2-NEXT:    ret i64 7
 //
 size_t local_addrof(size_t n) {

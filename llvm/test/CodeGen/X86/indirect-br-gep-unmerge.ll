@@ -17,7 +17,7 @@ define ptr @testFunc(ptr readonly %array, i1 %skip) {
 ; CHECK-NEXT:    [[CURRENTARRAYELEMENT:%.*]] = phi ptr [ [[ARRAY]], [[ENTRY:%.*]] ], [ [[NEXTARRAYELEMENT:%.*]], [[LOOPFOOTER:%.*]] ]
 ; CHECK-NEXT:    [[ELEMENTVALUEPTR:%.*]] = getelementptr inbounds i8, ptr [[CURRENTARRAYELEMENT]], i64 1
 ; CHECK-NEXT:    [[ELEMENTVALUE:%.*]] = load i8, ptr [[ELEMENTVALUEPTR]], align 1
-; CHECK-NEXT:    indirectbr ptr @indirectBrPtr, [label [[LOOPFOOTER]], label %endBlock]
+; CHECK-NEXT:    indirectbr ptr @indirectBrPtr, [label [[LOOPFOOTER]], label [[ENDBLOCK:%.*]]]
 ; CHECK:       loopFooter:
 ; CHECK-NEXT:    [[ISGOODVALUE:%.*]] = icmp eq i8 [[ELEMENTVALUE]], 0
 ; CHECK-NEXT:    [[NEXTARRAYELEMENT]] = getelementptr inbounds [[STRUCT_BLUB:%.*]], ptr [[CURRENTARRAYELEMENT]], i64 1
@@ -25,7 +25,7 @@ define ptr @testFunc(ptr readonly %array, i1 %skip) {
 ; CHECK:       endBlock:
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
 ; CHECK:       .split:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi ptr [ [[ELEMENTVALUEPTR]], [[ENDBLOCK:%.*]] ], [ [[RETVAL_CLONE:%.*]], [[ENDBLOCK_CLONE]] ]
+; CHECK-NEXT:    [[MERGE:%.*]] = phi ptr [ [[ELEMENTVALUEPTR]], [[ENDBLOCK]] ], [ [[RETVAL_CLONE:%.*]], [[ENDBLOCK_CLONE]] ]
 ; CHECK-NEXT:    ret ptr [[MERGE]]
 ; CHECK:       endBlock.clone:
 ; CHECK-NEXT:    [[RETVAL_CLONE]] = phi ptr [ [[ARRAY]], [[ENTRY]] ], [ [[ELEMENTVALUEPTR]], [[LOOPFOOTER]] ]
@@ -48,4 +48,78 @@ loopFooter:
 endBlock:
   %retVal = phi ptr [ %array, %entry ], [ %elementValuePtr, %loopFooter ], [ %elementValuePtr, %loopHeader ]
   ret ptr %retVal
+}
+
+declare void @use(<2 x ptr>)
+
+; We don't really care if these vector cases fold, just make sure they don't
+; crash.
+
+define <2 x ptr> @vec_base_scalar_idx(ptr %memory, ptr %blockaddress) {
+; CHECK-LABEL: define <2 x ptr> @vec_base_scalar_idx(
+; CHECK-SAME: ptr [[MEMORY:%.*]], ptr [[BLOCKADDRESS:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[POINTERS:%.*]] = load <2 x ptr>, ptr [[MEMORY]], align 8
+; CHECK-NEXT:    [[INITALGEP:%.*]] = getelementptr i8, <2 x ptr> [[POINTERS]], i64 8
+; CHECK-NEXT:    indirectbr ptr [[BLOCKADDRESS]], [label [[EXIT:%.*]]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[UNMERGEDGEP:%.*]] = getelementptr i8, <2 x ptr> [[INITALGEP]], i64 8
+; CHECK-NEXT:    call void @use(<2 x ptr> [[INITALGEP]])
+; CHECK-NEXT:    ret <2 x ptr> [[UNMERGEDGEP]]
+;
+entry:
+  %pointers = load <2 x ptr>, ptr %memory, align 8
+  %initalGEP = getelementptr i8, <2 x ptr> %pointers, i64 8
+  indirectbr ptr %blockaddress, [label %exit]
+
+exit:
+  %unmergedGEP = getelementptr nuw i8, <2 x ptr> %pointers, i64 16
+  call void @use(<2 x ptr> %initalGEP)
+  ret <2 x ptr> %unmergedGEP
+}
+
+define <2 x ptr> @vec_base_vec_idx(ptr %memory, ptr %blockaddress) {
+; CHECK-LABEL: define <2 x ptr> @vec_base_vec_idx(
+; CHECK-SAME: ptr [[MEMORY:%.*]], ptr [[BLOCKADDRESS:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[POINTERS:%.*]] = load <2 x ptr>, ptr [[MEMORY]], align 8
+; CHECK-NEXT:    [[INITALGEP:%.*]] = getelementptr i8, <2 x ptr> [[POINTERS]], <2 x i64> splat (i64 8)
+; CHECK-NEXT:    indirectbr ptr [[BLOCKADDRESS]], [label [[EXIT:%.*]]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[UNMERGEDGEP:%.*]] = getelementptr nuw i8, <2 x ptr> [[POINTERS]], <2 x i64> splat (i64 16)
+; CHECK-NEXT:    call void @use(<2 x ptr> [[INITALGEP]])
+; CHECK-NEXT:    ret <2 x ptr> [[UNMERGEDGEP]]
+;
+entry:
+  %pointers = load <2 x ptr>, ptr %memory, align 8
+  %initalGEP = getelementptr i8, <2 x ptr> %pointers, <2 x i64> splat (i64 8)
+  indirectbr ptr %blockaddress, [label %exit]
+
+exit:
+  %unmergedGEP = getelementptr nuw i8, <2 x ptr> %pointers, <2 x i64> splat (i64 16)
+  call void @use(<2 x ptr> %initalGEP)
+  ret <2 x ptr> %unmergedGEP
+}
+
+define <2 x ptr> @scalar_base_vec_idx(ptr %memory, ptr %blockaddress) {
+; CHECK-LABEL: define <2 x ptr> @scalar_base_vec_idx(
+; CHECK-SAME: ptr [[MEMORY:%.*]], ptr [[BLOCKADDRESS:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[POINTER:%.*]] = load ptr, ptr [[MEMORY]], align 8
+; CHECK-NEXT:    [[INITALGEP:%.*]] = getelementptr i8, ptr [[POINTER]], <2 x i64> splat (i64 8)
+; CHECK-NEXT:    indirectbr ptr [[BLOCKADDRESS]], [label [[EXIT:%.*]]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[UNMERGEDGEP:%.*]] = getelementptr nuw i8, ptr [[POINTER]], <2 x i64> splat (i64 16)
+; CHECK-NEXT:    call void @use(<2 x ptr> [[INITALGEP]])
+; CHECK-NEXT:    ret <2 x ptr> [[UNMERGEDGEP]]
+;
+entry:
+  %pointer = load ptr, ptr %memory, align 8
+  %initalGEP = getelementptr i8, ptr %pointer, <2 x i64> splat (i64 8)
+  indirectbr ptr %blockaddress, [label %exit]
+
+exit:
+  %unmergedGEP = getelementptr nuw i8, ptr %pointer, <2 x i64> splat (i64 16)
+  call void @use(<2 x ptr> %initalGEP)
+  ret <2 x ptr> %unmergedGEP
 }

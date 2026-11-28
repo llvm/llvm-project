@@ -194,6 +194,10 @@ bool DialectInterfaceGenerator::emitInterfaceDecls() {
     return lhs->getID() < rhs->getID();
   });
 
+  // `::mlir::DialectInterface`.
+  if (!sortedDefs.empty())
+    tblgen::emitIncludes(os, StringRef("mlir/IR/DialectInterface.h"));
+
   for (const Record *def : sortedDefs)
     emitInterfaceDecl(DialectInterface(def));
 

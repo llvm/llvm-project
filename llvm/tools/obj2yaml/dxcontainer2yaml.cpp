@@ -12,8 +12,6 @@
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/Support/Error.h"
 
-#include <algorithm>
-
 using namespace llvm;
 using namespace llvm::object;
 

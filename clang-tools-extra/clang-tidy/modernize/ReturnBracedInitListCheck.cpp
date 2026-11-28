@@ -114,8 +114,9 @@ void ReturnBracedInitListCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Make sure that the ctor arguments match the declaration.
-  for (unsigned I = 0, NumParams = MatchedConstructExpr->getNumArgs();
-       I < NumParams; ++I) {
+  const unsigned NumParams =
+      MatchedConstructExpr->getConstructor()->getNumParams();
+  for (unsigned I = 0; I < NumParams; ++I) {
     if (const ParmVarDecl *VD =
             MatchedConstructExpr->getConstructor()->getParamDecl(I)) {
       const auto ArgType = MatchedConstructExpr->getArg(I)->getType();

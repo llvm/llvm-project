@@ -3,7 +3,6 @@
 ---
 name:            shift_immed_chain_mismatch_size_crash
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |

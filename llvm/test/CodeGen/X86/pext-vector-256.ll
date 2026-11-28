@@ -19,7 +19,7 @@ define <32 x i8> @pext_v32i8(<32 x i8> %val, <32 x i8> %mask) nounwind {
 ; AVX2-NEXT:    vpand %ymm6, %ymm5, %ymm5
 ; AVX2-NEXT:    vpxor %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpsubb %ymm3, %ymm1, %ymm3
-; AVX2-NEXT:    vpor %ymm4, %ymm3, %ymm3
+; AVX2-NEXT:    vpor %ymm3, %ymm4, %ymm3
 ; AVX2-NEXT:    vpxor %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vpaddb %ymm2, %ymm2, %ymm3
 ; AVX2-NEXT:    vpxor %ymm3, %ymm2, %ymm3
@@ -84,7 +84,7 @@ define <32 x i8> @pext_v32i8(<32 x i8> %val, <32 x i8> %mask) nounwind {
 ; AVX512-NEXT:    vpternlogq {{.*#+}} ymm4 = ymm3 ^ (ymm4 & ymm5)
 ; AVX512-NEXT:    vpsubb %ymm2, %ymm1, %ymm2
 ; AVX512-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; AVX512-NEXT:    vpternlogq {{.*#+}} ymm3 = ymm3 ^ (ymm2 | ymm4)
+; AVX512-NEXT:    vpternlogq {{.*#+}} ymm3 = ymm3 ^ (ymm4 | ymm2)
 ; AVX512-NEXT:    vpaddb %ymm3, %ymm3, %ymm2
 ; AVX512-NEXT:    vpxor %ymm2, %ymm3, %ymm2
 ; AVX512-NEXT:    vpaddb %ymm2, %ymm2, %ymm6

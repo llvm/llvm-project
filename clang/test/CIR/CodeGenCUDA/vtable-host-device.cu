@@ -53,10 +53,10 @@ const char *host_name() { return Square(3.0f).name(); }
 // HOST-DAG: declare {{.*}}void @__cxa_pure_virtual()
 // HOST-DAG: declare {{.*}}void @__cxa_deleted_virtual()
 
-// CIR-DEV:      cir.func weak {{.*}}@__cxa_deleted_virtual() {
+// CIR-DEV:      cir.func weak {{.*}}@__cxa_deleted_virtual() attributes {runtime_func} {
 // CIR-DEV-NEXT:   cir.trap
 // CIR-DEV-NEXT: }
-// CIR-DEV:      cir.func weak {{.*}}@__cxa_pure_virtual() {
+// CIR-DEV:      cir.func weak {{.*}}@__cxa_pure_virtual() attributes {runtime_func} {
 // CIR-DEV-NEXT:   cir.trap
 // CIR-DEV-NEXT: }
 

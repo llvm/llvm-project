@@ -22,8 +22,18 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up Python dependencies
+        shell: bash
+        run: |
+          python3 -m venv "${RUNNER_TEMP}/venv"
+          source "${RUNNER_TEMP}/venv/bin/activate"
+          pip install -r libcxx/utils/requirements.txt
+
       - name: Check generated files
-        run: libcxx/utils/ci/run-buildbot check-generated-output
+        shell: bash
+        run: |
+          source "${RUNNER_TEMP}/venv/bin/activate"
+          libcxx/utils/ci/run-buildbot check-generated-output
         env:
           CC: cc
           CXX: c++

@@ -69,8 +69,29 @@ size_t moveLoopInvariantCode(
     function_ref<void(Operation *, Region *)> moveOutOfRegion);
 
 /// Move side-effect free loop invariant code out of a loop-like op using
-/// methods provided by the interface.
+/// methods provided by the interface. This includes code in control-flow
+/// regions nested in the loop body, see
+/// `moveLoopInvariantCodeFromNestedRegions`.
 size_t moveLoopInvariantCode(LoopLikeOpInterface loopLike);
+
+/// Move loop invariant code out of the control-flow regions nested in the body
+/// of a loop-like op, e.g., out of an `scf.if` that stays in the loop:
+///
+/// ```mlir
+/// scf.for %i = %lb to %ub step %step {
+///   scf.if %cond {
+///     %v = arith.muli %a, %b : i32  // Moved before the loop.
+///     memref.store %v, %m[%i] : memref<?xi32>
+///   }
+/// }
+/// ```
+///
+/// Only regions of `RegionBranchOpInterface` ops are inspected, and nested
+/// loops are skipped. A nested region is not guaranteed to execute, so only
+/// speculatable ops without memory effects are moved.
+///
+/// Returns the number of operations moved.
+size_t moveLoopInvariantCodeFromNestedRegions(LoopLikeOpInterface loopLike);
 
 /// Hoist loop-invariant tensor subsets (subset extraction and subset insertion
 /// ops) from loop-like ops. Extraction ops are moved before the loop. Insertion

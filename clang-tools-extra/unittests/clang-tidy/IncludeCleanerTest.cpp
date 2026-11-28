@@ -89,6 +89,21 @@ TEST(IncludeCleanerCheckTest, SuppressUnusedIncludes) {
             "#pragma once"}}));
 }
 
+TEST(IncludeCleanerCheckTest, SuppressUnusedIncludesForwardSlashPattern) {
+  const char *Code = R"(
+#include "foo/qux.h"
+)";
+
+  std::vector<ClangTidyError> Errors;
+  ClangTidyOptions Opts;
+  Opts.CheckOptions["test-check-0.IgnoreHeaders"] = ".*/qux\\.h";
+  EXPECT_EQ(Code, runCheckOnCode<IncludeCleanerCheck>(
+                      Code, &Errors, "file.cpp", {}, Opts,
+                      {{appendPathFileSystemIndependent({"foo", "qux.h"}),
+                        "#pragma once"}}));
+  EXPECT_THAT(Errors.size(), testing::Eq(0U));
+}
+
 TEST(IncludeCleanerCheckTest, BasicMissingIncludes) {
   const char *PreCode = R"(
 #include "bar.h"

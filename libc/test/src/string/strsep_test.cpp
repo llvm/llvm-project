@@ -18,8 +18,8 @@ TEST(LlvmLibcStrsepTest, NullSrc) {
 TEST(LlvmLibcStrsepTest, NoTokenFound) {
   {
     char s[] = "";
-    char *string = s;
-    EXPECT_STREQ(LIBC_NAMESPACE::strsep(&string, ""), nullptr);
+    char *string = s, *orig = s;
+    EXPECT_STREQ(LIBC_NAMESPACE::strsep(&string, ""), orig);
     EXPECT_TRUE(string == nullptr);
   }
   {

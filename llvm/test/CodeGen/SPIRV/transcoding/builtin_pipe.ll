@@ -61,6 +61,14 @@
 ; CHECK: %[[#SubgroupReadReserve:]] = OpGroupReserveReadPipePackets %[[#ReserveIdTy]] %[[#Uint3]] %[[#FuncParam2]] %[[#Uint1]] %[[#Uint4]] %[[#Uint4]]
 ; CHECK: OpGroupCommitReadPipe %[[#Uint3]] %[[#FuncParam2]] %[[#SubgroupReadReserve]] %[[#Uint4]] %[[#Uint4]]
 
+; CHECK: OpFunction
+; CHECK: %[[#NEOut:]] = OpFunctionParameter %[[#PipeWriteTy]]
+; CHECK: %[[#NEIn:]] = OpFunctionParameter %[[#PipeReadTy]]
+; CHECK: %[[#NEWriteReserve:]] = OpGroupReserveWritePipePackets %[[#ReserveIdTy]] %[[#Uint2]] %[[#NEOut]] %[[#Uint1]] %[[#Uint4]] %[[#Uint4]]
+; CHECK: OpGroupCommitWritePipe %[[#Uint2]] %[[#NEOut]] %[[#NEWriteReserve]] %[[#Uint4]] %[[#Uint4]]
+; CHECK: %[[#NEReadReserve:]] = OpGroupReserveReadPipePackets %[[#ReserveIdTy]] %[[#Uint3]] %[[#NEIn]] %[[#Uint1]] %[[#Uint4]] %[[#Uint4]]
+; CHECK: OpGroupCommitReadPipe %[[#Uint3]] %[[#NEIn]] %[[#NEReadReserve]] %[[#Uint4]] %[[#Uint4]]
+
 define spir_kernel void @test_pipe_builtins(
   target("spirv.Pipe", 1) %out_pipe,
   target("spirv.Pipe", 0) %in_pipe,
@@ -114,6 +122,25 @@ entry:
   %17 = call spir_func target("spirv.ReserveId") @__sub_group_reserve_read_pipe(target("spirv.Pipe", 0) %in_pipe, i32 1, i32 4, i32 4)
   call spir_func void @__sub_group_commit_read_pipe(target("spirv.Pipe", 0) %in_pipe, target("spirv.ReserveId") %17, i32 4, i32 4)
   
+  ret void
+}
+
+define spir_kernel void @test_pipe_group_non_entry(
+  target("spirv.Pipe", 1) %out_pipe,
+  target("spirv.Pipe", 0) %in_pipe,
+  i1 %cond
+) {
+entry:
+  br i1 %cond, label %group, label %exit
+
+group:
+  %0 = call spir_func target("spirv.ReserveId") @__work_group_reserve_write_pipe(target("spirv.Pipe", 1) %out_pipe, i32 1, i32 4, i32 4)
+  call spir_func void @__work_group_commit_write_pipe(target("spirv.Pipe", 1) %out_pipe, target("spirv.ReserveId") %0, i32 4, i32 4)
+  %1 = call spir_func target("spirv.ReserveId") @__sub_group_reserve_read_pipe(target("spirv.Pipe", 0) %in_pipe, i32 1, i32 4, i32 4)
+  call spir_func void @__sub_group_commit_read_pipe(target("spirv.Pipe", 0) %in_pipe, target("spirv.ReserveId") %1, i32 4, i32 4)
+  br label %exit
+
+exit:
   ret void
 }
 

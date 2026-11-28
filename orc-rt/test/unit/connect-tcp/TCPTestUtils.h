@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Fixtures for tests of the TCP primitives, which skip on machines that cannot
-// run them. The probes are defined once per system under sys/<system>/.
+// run them. The probes are defined once per system under host/<system>/.
 //
 //===----------------------------------------------------------------------===//
 

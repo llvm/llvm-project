@@ -131,3 +131,39 @@ subroutine f11()
   logical, parameter :: use_variant = .true.
   !$omp metadirective when(user={condition(use_variant)}, implementation={extension(match_none)}: do) default(nothing)
 end subroutine
+
+! The first construct in a BEGIN METADIRECTIVE region consumes the region's own
+! replacements. Variants recorded later in the region must still be diagnosed
+! there, rather than associated with a loop after END METADIRECTIVE.
+subroutine f12(flag, n)
+  logical :: flag
+  integer :: n, i
+  !$omp begin metadirective default(parallel)
+    continue
+    !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+    !$omp metadirective when(user={condition(flag)}: simd) &
+    !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+    !$omp& default(do)
+  !$omp end metadirective
+  do i = 1, n
+  end do
+end subroutine
+
+! The same applies when a loop in a nested region consumes the replacements of
+! both enclosing BEGIN METADIRECTIVEs.
+subroutine f13(flag, n)
+  logical :: flag
+  integer :: n, i
+  !$omp begin metadirective default(parallel)
+    !$omp begin metadirective default(parallel)
+      do i = 1, n
+      end do
+      !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+      !$omp metadirective when(user={condition(flag)}: simd) &
+      !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+      !$omp& default(do)
+    !$omp end metadirective
+    do i = 1, n
+    end do
+  !$omp end metadirective
+end subroutine

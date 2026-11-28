@@ -65,6 +65,7 @@
       %tmp3 = getelementptr inbounds float, ptr addrspace(3) %tmp, i32 24
       br label %bb1
     }
+...
 ---
 name:            ds_combine_base_offset
 body:             |

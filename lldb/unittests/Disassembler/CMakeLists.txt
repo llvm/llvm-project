@@ -20,6 +20,12 @@ if("RISCV" IN_LIST LLVM_TARGETS_TO_BUILD)
   )
 endif()
 
+if("WebAssembly" IN_LIST LLVM_TARGETS_TO_BUILD)
+  list(APPEND disas_srcs
+    WebAssembly/TestWebAssemblyDisassembly.cpp
+  )
+endif()
+
 if (disas_srcs)
   add_lldb_unittest(DisassemblerTests
     ${disas_srcs}

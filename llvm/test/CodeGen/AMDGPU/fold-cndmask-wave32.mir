@@ -3,8 +3,6 @@
 
 ---
 name:            fold_cndmask
-tracksRegLiveness: true
-registers:
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: fold_cndmask

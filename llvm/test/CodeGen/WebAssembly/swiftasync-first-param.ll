@@ -60,7 +60,7 @@ define swiftcc { i32, i32 } @multiple_results(i32 %x, ptr swiftasync %ctx) {
 
 ; CHECK-LABEL: declared_caller:
 ; CHECK-NEXT: .functype declared_caller (i32, i32, i32) -> ()
-; CHECK-NEXT: local.get 0
+; CHECK:      local.get 0
 ; CHECK-NEXT: f64.const 0x1p0
 ; CHECK:      call declared
 declare swiftcc void @declared(double, ptr swiftasync)

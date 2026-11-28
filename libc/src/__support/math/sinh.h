@@ -18,8 +18,15 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
-#include "src/__support/math/sinh_double_eval.h"
+#ifndef LIBC_MATH_SINH_IMPL
 #define LIBC_MATH_SINH_IMPL double_eval
+#endif // !LIBC_MATH_SINH_IMPL
+
+#if LIBC_MATH_IMPL_IS(LIBC_MATH_SINH_IMPL, double_eval)
+#include "src/__support/math/sinh_double_eval.h"
+#else
+#error "Unsupported LIBC_MATH_SINH_IMPL"
+#endif // LIBC_MATH_IMPL_IS
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {

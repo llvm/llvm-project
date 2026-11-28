@@ -266,6 +266,7 @@ _foo:
 ## and then running it through `ld -r`. This converts a number of unwind-related
 ## relocations from section- to symbol-based ones.
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

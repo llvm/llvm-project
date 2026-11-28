@@ -3,10 +3,12 @@
 // RUN: %clang_cc1 -O0 -internal-isystem %S/../../lib/Headers/ \
 // RUN:   -target-cpu hexagonv67t -triple hexagon-unknown-elf \
 // RUN:   -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -O0 -internal-isystem %S/../../lib/Headers/   -target-cpu hexagonv67t -triple hexagon-unknown-elf   -emit-llvm %s -o - | FileCheck %s %}
 
 // RUN: %clang_cc1 -O0 -internal-isystem %S/../../lib/Headers/ \
 // RUN:   -target-cpu hexagonv67t -triple hexagon-unknown-elf -x c++ \
 // RUN:   -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -O0 -internal-isystem %S/../../lib/Headers/   -target-cpu hexagonv67t -triple hexagon-unknown-elf -x c++   -emit-llvm %s -o - | FileCheck %s %}
 
 // RUN: not %clang_cc1 -O0 -internal-isystem %S/../../lib/Headers/ \
 // RUN:   -target-cpu hexagonv68 -triple hexagon-unknown-elf -x c++ \

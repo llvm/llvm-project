@@ -6,7 +6,6 @@
 name:            ashr_v4s32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1
@@ -29,7 +28,6 @@ body:             |
 name:            lshr_v4s32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1
@@ -52,7 +50,6 @@ body:             |
 name:            lshr_v8s16
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1
@@ -75,7 +72,6 @@ body:             |
 name:            imm_too_large
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1
@@ -100,7 +96,6 @@ body:             |
 name:            imm_zero
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1
@@ -125,7 +120,6 @@ body:             |
 name:            imm_not_splat
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1

@@ -29,7 +29,9 @@
 
 #if !defined(__MINGW32__)
 #pragma comment(lib, "psapi.lib")
+#if !LLVM_WINDOWS_RESTRICTED_APIS
 #pragma comment(lib, "shell32.lib")
+#endif
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -169,7 +171,9 @@ static std::error_code WildcardExpand(StringRef Arg,
   // directory portion of the file path.  For example, it doesn't handle
   // "*\foo.c" nor "s?c\bar.cpp".
   WIN32_FIND_DATAW FileData;
-  HANDLE FindHandle = FindFirstFileW(ArgW.data(), &FileData);
+  HANDLE FindHandle = ::FindFirstFileExW(ArgW.data(), FindExInfoBasic,
+                                         &FileData, FindExSearchNameMatch, NULL,
+                                         FIND_FIRST_EX_LARGE_FETCH);
   if (FindHandle == INVALID_HANDLE_VALUE) {
     Args.push_back(Arg.data());
     return EC;

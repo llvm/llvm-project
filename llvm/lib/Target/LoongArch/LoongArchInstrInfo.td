@@ -1736,7 +1736,37 @@ multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt> {
 
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, GRLenVT>;
 
+// The mask instructions test the whole condition register for zero, so an
+// integer equality comparison against zero need not produce a boolean first.
+// Only do this when every remaining user of the comparison is the condition of
+// a select. Otherwise the boolean is still materialized for the other users,
+// and using the original operand may extend its live range.
+class SelectCondZeroCmp<PatFrag cmp>
+    : PatFrag<(ops node:$x), (cmp node:$x, 0), [{
+  return llvm::all_of(N->uses(), [](const SDUse &U) {
+    return U.getUser()->getOpcode() == ISD::SELECT && U.getOperandNo() == 0;
+  });
+}]>;
+def setne_zero_selcond : SelectCondZeroCmp<setne>;
+def seteq_zero_selcond : SelectCondZeroCmp<seteq>;
+
 let Predicates = [Has32S] in {
+// Prefer these patterns over the generic select patterns below.
+let AddedComplexity = 20 in {
+def : Pat<(select (GRLenVT (setne_zero_selcond GPR:$cond)), GPR:$t, 0),
+          (MASKEQZ GPR:$t, GPR:$cond)>;
+def : Pat<(select (GRLenVT (seteq_zero_selcond GPR:$cond)), GPR:$t, 0),
+          (MASKNEZ GPR:$t, GPR:$cond)>;
+def : Pat<(select (GRLenVT (setne_zero_selcond GPR:$cond)), 0, GPR:$f),
+          (MASKNEZ GPR:$f, GPR:$cond)>;
+def : Pat<(select (GRLenVT (seteq_zero_selcond GPR:$cond)), 0, GPR:$f),
+          (MASKEQZ GPR:$f, GPR:$cond)>;
+def : Pat<(select (GRLenVT (setne_zero_selcond GPR:$cond)), GPR:$t, GPR:$f),
+          (OR (MASKEQZ GPR:$t, GPR:$cond), (MASKNEZ GPR:$f, GPR:$cond))>;
+def : Pat<(select (GRLenVT (seteq_zero_selcond GPR:$cond)), GPR:$t, GPR:$f),
+          (OR (MASKNEZ GPR:$t, GPR:$cond), (MASKEQZ GPR:$f, GPR:$cond))>;
+} // AddedComplexity = 20
+
 def : Pat<(select GPR:$cond, GPR:$t, 0), (MASKEQZ GPR:$t, GPR:$cond)>;
 def : Pat<(select GPR:$cond, 0, GPR:$f), (MASKNEZ GPR:$f, GPR:$cond)>;
 def : Pat<(select GPR:$cond, GPR:$t, GPR:$f),
@@ -2147,6 +2177,10 @@ defm : StPat<store, ST_D, GPR, i64>;
 } // Predicates = [IsLA64]
 
 let Predicates = [IsLA64] in {
+// The sign-extension of LDPTR.W is also valid for an any-extending load.
+// Prefer LD.W for offsets that fit its signed 12-bit immediate.
+def : Pat<(i64 (extloadi32 (AddLike BaseAddr:$rj, simm14_lsl2:$imm14))),
+          (LDPTR_W BaseAddr:$rj, simm14_lsl2:$imm14)>;
 def : Pat<(i64 (sextloadi32 (AddLike BaseAddr:$rj, simm14_lsl2:$imm14))),
           (LDPTR_W BaseAddr:$rj, simm14_lsl2:$imm14)>;
 def : Pat<(i64 (load (AddLike BaseAddr:$rj, simm14_lsl2:$imm14))),

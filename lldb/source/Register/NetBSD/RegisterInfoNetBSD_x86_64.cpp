@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterInfoNetBSD_x86_64.h"
-#include "RegisterInfoNetBSD_i386.h"
 #include "Register/Arch/RegisterContext_x86.h"
 #include "Register/Arch/lldb-x86-register-enums.h"
+#include "RegisterInfoNetBSD_i386.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"

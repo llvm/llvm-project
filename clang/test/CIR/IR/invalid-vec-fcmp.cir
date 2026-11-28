@@ -1,0 +1,13 @@
+// RUN: cir-opt %s -verify-diagnostics
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @vec_fcmp_on_int(%a: !cir.vector<4 x !s32i>,
+                            %b: !cir.vector<4 x !s32i>) {
+    // expected-error@+1 {{'cir.vec.fcmp' op operand #0 must be vector of single float type or double float type or f16 type or bf16 type or f80 type or f128 type or long double type, but got '!cir.vector<4 x !cir.int<s, 32>>'}}
+    %0 = cir.vec.fcmp(oeq, %a, %b) : !cir.vector<4 x !s32i>,
+                                    !cir.vector<4 x !s32i>
+    cir.return
+  }
+}

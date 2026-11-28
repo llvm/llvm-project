@@ -3,6 +3,7 @@
 // ARM-MSVC: #define _M_ARM_NT 1
 // ARM-MSVC: #define _WIN32 1
 // ARM-MSVC-NOT:#define __ARM_DWARF_EH__ 1
+// ARM-MSVC: #define __ARM_SIZEOF_WCHAR_T 2
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-none-none < /dev/null | FileCheck -match-full-lines -check-prefix ARM %s
 // RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=arm-none-none < /dev/null | FileCheck -match-full-lines -check-prefix ARM -check-prefix ARM-CXX %s

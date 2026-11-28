@@ -66,7 +66,7 @@ class CodeGenTarget {
   mutable SmallVector<ValueTypeByHwMode, 8> LegalValueTypes;
   mutable std::optional<std::vector<const Record *>> RegClassByHwModeList;
   CodeGenHwModes CGH;
-  ArrayRef<const Record *> MacroFusions;
+  std::vector<const Record *> MacroFusions;
   mutable bool HasVariableLengthEncodings = false;
 
   void ReadInstructions() const;
@@ -183,7 +183,12 @@ public:
 
   bool hasMacroFusion() const { return !MacroFusions.empty(); }
 
+  /// Return the macro fusions, sorted by name.
   ArrayRef<const Record *> getMacroFusions() const { return MacroFusions; }
+
+  /// Return the name of a macro fusion, which is the name of the subtarget
+  /// feature that enables it.
+  static StringRef getMacroFusionName(const Record *Fusion);
 
 private:
   DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>> &

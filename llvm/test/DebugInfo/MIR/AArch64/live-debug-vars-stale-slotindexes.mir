@@ -146,7 +146,6 @@
 ---
 name:            update
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$x1', virtual-reg: '%1' }
@@ -256,7 +255,6 @@ body:             |
 ---
 name:            map_index
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0', virtual-reg: '%3' }
   - { reg: '$x1', virtual-reg: '%4' }

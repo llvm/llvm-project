@@ -26,7 +26,7 @@ entry:
   ; CHECK-LABEL: @ByValUnsafe
   ; CHECK: %[[A:.*]] = load {{.*}} @__safestack_unsafe_stack_ptr
   ; CHECK: store {{.*}} @__safestack_unsafe_stack_ptr
-  ; CHECK: %[[B:.*]] = getelementptr i8, ptr %[[A]], i32 -400
+  ; CHECK: %[[B:.*]] = getelementptr i8, ptr %[[A]], i64 -400
   ; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[B]], ptr align 8 %zzz, i64 400, i1 false)
   ; CHECK: ret i32
   %arrayidx = getelementptr inbounds %struct.S, ptr %zzz, i64 0, i32 0, i64 %idx
@@ -42,7 +42,7 @@ entry:
   ; CHECK-LABEL: @ByValUnsafe
   ; CHECK: %[[A:.*]] = load {{.*}} @__safestack_unsafe_stack_ptr
   ; CHECK: store {{.*}} @__safestack_unsafe_stack_ptr
-  ; CHECK: %[[B:.*]] = getelementptr i8, ptr %[[A]], i32 -400
+  ; CHECK: %[[B:.*]] = getelementptr i8, ptr %[[A]], i64 -400
   ; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[B]], ptr %zzz, i64 400, i1 false)
   ; CHECK: ret i32
   %arrayidx = getelementptr inbounds %struct.S, ptr %zzz, i64 0, i32 0, i64 %idx

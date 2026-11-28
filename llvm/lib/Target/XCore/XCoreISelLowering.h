@@ -75,7 +75,6 @@ namespace llvm {
     }
 
   private:
-    const TargetMachine &TM;
     const XCoreSubtarget &Subtarget;
 
     // Lower Operand helpers
@@ -104,7 +103,6 @@ namespace llvm {
     SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;

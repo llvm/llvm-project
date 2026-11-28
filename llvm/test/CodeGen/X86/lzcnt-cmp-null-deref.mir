@@ -15,7 +15,6 @@
 # not read it, so the forward scan breaks before the LTZCNT handling.
 ---
 name:            flags_clobbered_after_cmp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $rdi
@@ -34,7 +33,6 @@ body:             |
 # that is meant to reject this is skipped because MI is null.
 ---
 name:            flags_live_out_of_cmp_block
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1

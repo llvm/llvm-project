@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/DataLayout.h"
+#include <functional>
 
 namespace fir {
 
@@ -96,9 +97,15 @@ private:
 /// This converts FIR/mlir type to DITypeAttr.
 class DebugTypeGenerator {
 public:
+  /// Gives the scope of the module named by the module part of a uniqued
+  /// name, as in fir::NameUniquer::DeconstructedName::modules.
+  using ModuleScopeFn = std::function<mlir::LLVM::DIScopeAttr(
+      llvm::ArrayRef<std::string> modules)>;
+
   DebugTypeGenerator(mlir::ModuleOp module, mlir::SymbolTable *symbolTable,
                      const mlir::DataLayout &dl,
-                     bool boundsInStackSlots = false);
+                     bool boundsInStackSlots = false,
+                     ModuleScopeFn getModuleScope = {});
 
   mlir::LLVM::DITypeAttr convertType(mlir::Type Ty,
                                      mlir::LLVM::DIFileAttr fileAttr,
@@ -171,6 +178,7 @@ private:
       artificialVars;
   KindMapping kindMapping;
   fir::LLVMTypeConverter llvmTypeConverter;
+  ModuleScopeFn getModuleScope;
   std::uint64_t dimsSize;
   std::uint64_t dimsOffset;
   std::uint64_t ptrSize;

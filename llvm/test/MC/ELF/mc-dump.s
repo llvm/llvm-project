@@ -20,6 +20,7 @@
 # CHECK-NEXT:  Fixup @12 Value:_start@<variant 11> Kind:4017
 # CHECK-NEXT:  Symbol @16 .Ltmp0 Temporary
 # CHECK-NEXT:  Symbol @0  Temporary
+# CHECK-NEXT:  Symbol @8  Temporary
 # CHECK-NEXT:  Symbol @16  Temporary
 # CHECK-NEXT:MCSection Name:.data
 # CHECK-NEXT:0 Align Size:0+0 []
@@ -43,6 +44,8 @@
 #      CHECK2:MCSection Name:.eh_frame
 #      CHECK2:24 DwarfCallFrame Size:17+1 [00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,45] AddrDelta:.Lcfi0-.Ltmp1
 # CHECK2-NEXT:  Fixup @0 Value:.Ltmp12-.Ltmp11-0 Kind:4003
+## .Lcfi1-.Lcfi0 is known, so DW_CFA_advance_loc 8 (0x48) is emitted into the fixed part.
+#      CHECK2:42 Align Size:5+1 [86,03,48,0e,10]
 
 _start:
 var = _start
@@ -51,6 +54,7 @@ var = _start
 jmp 1f
 .cfi_offset %rbp, -24
 movq f0@GOTPCREL, %rax
+.cfi_def_cfa_offset 16
 movq _start@GOTPCREL, %rax
 1:
 .cfi_endproc

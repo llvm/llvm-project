@@ -210,7 +210,7 @@ define <2 x i64> @test_vpmadd52l_mul_lo52_const(<2 x i64> %x0) {
 ;
 ; AVX-LABEL: test_vpmadd52l_mul_lo52_const:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [56088,56088]
 ; AVX-NEXT:    retq
   %1 = call <2 x i64> @llvm.x86.avx512.vpmadd52l.uq.128(<2 x i64> %x0, <2 x i64> splat (i64 123), <2 x i64> splat (i64 456))
   ret <2 x i64> %1
@@ -225,7 +225,7 @@ define <2 x i64> @test_vpmadd52h_mul_hi52_const(<2 x i64> %x0) {
 ;
 ; AVX-LABEL: test_vpmadd52h_mul_hi52_const:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1125899906842624,1125899906842624]
 ; AVX-NEXT:    retq
   %1 = call <2 x i64> @llvm.x86.avx512.vpmadd52h.uq.128(<2 x i64> %x0, <2 x i64> splat (i64 2251799813685248), <2 x i64> splat (i64 2251799813685248))
   ret <2 x i64> %1

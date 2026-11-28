@@ -2043,7 +2043,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(CI, V);
   }
 
-  if (Value *FreedOp = getFreedOperand(&CI, &TLI))
+  if (Value *FreedOp = getFreedOperand(&CI))
     return visitFree(CI, FreedOp);
 
   // If the caller function (i.e. us, the function that contains this CallInst)
@@ -3955,10 +3955,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         Value *BasePtr;
         const APInt *PtrOffset;
-        if (match(Ptr.get(), m_PtrAdd(m_Value(BasePtr), m_APInt(PtrOffset)))) {
-          auto PtrOffsetVal =
-              PtrOffset->sextOrTrunc(DL.getIndexTypeSizeInBits(Ptr->getType()))
-                  .trySExtValue();
+        if (match(Ptr.get(),
+                  m_PtrAdd(DL, m_Value(BasePtr), m_APInt(PtrOffset)))) {
+          std::optional<int64_t> PtrOffsetVal = PtrOffset->trySExtValue();
           if (!PtrOffsetVal)
             break;
           Builder.CreateAlignmentAssumption(
@@ -4071,9 +4070,49 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         }
       } break;
 
+      case BundleAttr::Range: {
+        auto [Val, Range] = getAssumeRangeInfo(OBU);
+
+        auto KnownRange = computeConstantRangeIncludingKnownBits(
+            Val.get(), false, getSimplifyQuery().getWithInstruction(II));
+
+        // Drop the assume if we can prove it already without the assume
+        if (Range.contains(KnownRange))
+          return RemoveBundle();
+
+        // If we know more, update the range assume to be more precise. This
+        // allows dropping another range assume on the same value if they have
+        // overlapping ranges.
+        if (auto Intersected = Range.exactIntersectWith(KnownRange);
+            Intersected && *Intersected != Range) {
+          Builder.CreateRangeAssumption(Val, *Intersected);
+          return RemoveBundle();
+        }
+
+        // Move the assume across arithmetic operations
+        if (auto *BinOp = dyn_cast<BinaryOperator>(Val)) {
+          if (auto *ConstI = dyn_cast<ConstantInt>(BinOp->getOperand(1))) {
+            const auto &V = ConstI->getValue();
+            const auto &NewVal = BinOp->getOperand(0);
+            switch (BinOp->getOpcode()) {
+            case BinaryOperator::Add:
+              Builder.CreateRangeAssumption(NewVal, Range.sub(V));
+              return RemoveBundle();
+            case BinaryOperator::Sub:
+              Builder.CreateRangeAssumption(NewVal, Range.add(V));
+              return RemoveBundle();
+
+              // TODO: Move this across more arithemtic operations
+            default:
+              break;
+            }
+          }
+        }
+
+      } break;
+
       // TODO: Drop these assumes when they are redundant
       case BundleAttr::DereferenceableOrNull:
-      case BundleAttr::Range:
         break;
 
       // This cannot be simplified
@@ -4314,6 +4353,38 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(CI, Shuffle);
     }
     break;
+  }
+  case Intrinsic::vector_shuffle: {
+    // Canonicalize a shuffle with a constant mask to shufflevector. Mask
+    // elements that are poison or out of range select poison.
+    Value *Vec = II->getArgOperand(0);
+    auto *Mask = dyn_cast<Constant>(II->getArgOperand(1));
+    if (!Mask)
+      break;
+
+    auto *VecTy = cast<VectorType>(Vec->getType());
+    unsigned NumElts = VecTy->getElementCount().getKnownMinValue();
+
+    // shufflevector can only splat lane 0 of a scalable vector.
+    if (VecTy->isScalableTy() && !Mask->isNullValue())
+      break;
+
+    // Only fold masks whose elements are all ConstantInt or poison.
+    SmallVector<int, 16> ShuffleMask;
+    for (unsigned I = 0; I != NumElts; ++I) {
+      Constant *Elt = Mask->getAggregateElement(I);
+      if (!isa_and_nonnull<ConstantInt, PoisonValue>(Elt))
+        break;
+      auto *Idx = dyn_cast<ConstantInt>(Elt);
+      ShuffleMask.push_back(Idx && Idx->getValue().ult(NumElts)
+                                ? static_cast<int>(Idx->getZExtValue())
+                                : PoisonMaskElem);
+    }
+    if (ShuffleMask.size() != NumElts)
+      break;
+
+    return replaceInstUsesWith(CI,
+                               Builder.CreateShuffleVector(Vec, ShuffleMask));
   }
   case Intrinsic::experimental_vp_reverse: {
     Value *X;
@@ -5109,7 +5180,7 @@ bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
   }
 
   // Add alignment attribute if alignment is a power of two constant.
-  Value *Alignment = getAllocAlignment(&Call, TLI);
+  Value *Alignment = getAllocAlignment(&Call);
   if (!Alignment)
     return Changed;
 
@@ -5307,10 +5378,13 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
       }
     });
 
-    return CallBase::removeOperandBundle(&Call, LLVMContext::OB_kcfi);
+    CallBase *NewCall =
+        CallBase::removeOperandBundle(&Call, LLVMContext::OB_kcfi);
+    NewCall->copyMetadata(Call);
+    return NewCall;
   }
 
-  if (isRemovableAlloc(&Call, &TLI))
+  if (isRemovableAlloc(&Call))
     return visitAllocSite(Call);
 
   // Handle intrinsics which can be used in both call and invoke context.
@@ -5412,9 +5486,21 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   return Changed ? &Call : nullptr;
 }
 
-/// If the callee is a constexpr cast of a function, attempt to move the cast to
-/// the arguments of the call/invoke.
-/// CallBrInst is not supported.
+/// If the function type does not match between the call-site and the callee,
+/// try to adjust the call-site signature to match.
+///
+/// In practice, we care about this in two contexts. In K&R style C:
+///  * K&R style function declarations like "void foo();" leave the function
+///    arguments unspecified. On some targets, this will be lowered to a
+///    variadic call "call void (...) @foo()", while the corresponding
+///    definition will be non-variadic.
+///
+/// In Fortran when implicit interfaces are used:
+///  * Trailing extra arguments at the call-site, e.g. when passing a Fortran
+///    CHARACTER to a function taking an INTEGER(1) argument.
+///  * Missing arguments at the call-site, when emulating variadic functions
+///    in F77, prior to OPTIONAL support.
+///  * A call-site with void return calling a function with a non-void return.
 bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   auto *Callee =
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
@@ -5575,8 +5661,10 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     // type. Note that we made sure all incompatible ones are safe to drop.
     AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(
         ParamTy, CallerPAL.getParamAttrs(i), AttributeFuncs::ASK_SAFE_TO_DROP);
-    ArgAttrs.push_back(
-        CallerPAL.getParamAttrs(i).removeAttributes(Ctx, IncompatibleAttrs));
+    AttributeSet ParamAttrs =
+        CallerPAL.getParamAttrs(i).removeAttributes(Ctx, IncompatibleAttrs);
+    ArgAttrs.push_back(AttributeFuncs::dropRetOnlyCaptureComponents(
+        Ctx, ParamAttrs, NewRetTy));
   }
 
   // If the function takes more arguments than the call was taking, add them

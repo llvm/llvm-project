@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
@@ -22,19 +23,65 @@
 using namespace llvm;
 
 struct LookupTableInfo {
-  Value *Index;
   SmallVector<Constant *> Ptrs;
+  SmallVector<GlobalVariable *> DropUnnamedAddrGVs;
 };
 
-static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
-                                          GlobalVariable &GV) {
-  // If lookup table has more than one user,
-  // do not generate a relative lookup table.
-  // This is to simplify the analysis that needs to be done for this pass.
-  // TODO: Add support for lookup tables with multiple uses.
-  // For ex, this can happen when a function that uses a lookup table gets
-  // inlined into multiple call sites.
-  //
+struct LookupTableUse {
+  Value *Index;
+  GetElementPtrInst *GEP;
+  LoadInst *Load;
+};
+
+struct AccessPattern {
+  APInt Stride;
+  Type *ElemType;
+
+  bool operator==(const AccessPattern &Other) const {
+    return Stride == Other.Stride && ElemType == Other.ElemType;
+  }
+  bool operator!=(const AccessPattern &Other) const {
+    return !(*this == Other);
+  }
+};
+
+static bool analyzeLookupTableUse(AccessPattern &Pattern,
+                                  LookupTableUse &UseInfo, User *Usr) {
+  // TODO: Allow multiple load users of GEP.
+  UseInfo.GEP = dyn_cast<GetElementPtrInst>(Usr);
+  if (!UseInfo.GEP || !UseInfo.GEP->hasOneUse())
+    return false;
+
+  UseInfo.Load = dyn_cast<LoadInst>(UseInfo.GEP->use_begin()->getUser());
+  if (!UseInfo.Load || UseInfo.Load->isVolatile())
+    return false;
+
+  // If values are not 64-bit pointers, do not generate a relative lookup table.
+  const DataLayout &DL = UseInfo.Load->getDataLayout();
+  Pattern.ElemType = UseInfo.Load->getType();
+  if (!Pattern.ElemType->isPointerTy() ||
+      DL.getPointerTypeSizeInBits(Pattern.ElemType) != 64)
+    return false;
+
+  // Make sure this is a gep of the form GV + scale*var.
+  unsigned IndexWidth = DL.getIndexTypeSizeInBits(UseInfo.GEP->getType());
+  SmallMapVector<Value *, APInt, 4> VarOffsets;
+  APInt ConstOffset(IndexWidth, 0);
+  if (!UseInfo.GEP->collectOffset(DL, IndexWidth, VarOffsets, ConstOffset) ||
+      !ConstOffset.isZero() || VarOffsets.size() != 1)
+    return false;
+
+  // This can't be a pointer lookup table if the stride is smaller than a
+  // pointer.
+  UseInfo.Index = VarOffsets.front().first;
+  Pattern.Stride = VarOffsets.front().second;
+  if (Pattern.Stride.ult(DL.getTypeStoreSize(Pattern.ElemType)))
+    return false;
+
+  return true;
+}
+
+static bool isEligibleForRelLookupTable(const GlobalVariable &GV) {
   // If the original lookup table does not have local linkage and is
   // not dso_local, do not generate a relative lookup table.
   // This optimization creates a relative lookup table that consists of
@@ -42,41 +89,15 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
   // To be able to generate these offsets, relative lookup table and
   // its elements should have internal linkage and be dso_local, which means
   // that they should resolve to symbols within the same linkage unit.
-  if (!GV.hasInitializer() || !GV.isConstant() || !GV.hasOneUse() ||
-      !GV.hasLocalLinkage() || !GV.isDSOLocal() || !GV.isImplicitDSOLocal())
-    return false;
+  return GV.hasInitializer() && GV.isConstant() && GV.hasLocalLinkage() &&
+         GV.isDSOLocal() && GV.isImplicitDSOLocal();
+}
 
-  auto *GEP = dyn_cast<GetElementPtrInst>(GV.use_begin()->getUser());
-  if (!GEP || !GEP->hasOneUse())
-    return false;
-
-  auto *Load = dyn_cast<LoadInst>(GEP->use_begin()->getUser());
-  if (!Load || Load->isVolatile())
-    return false;
-
-  // If values are not 64-bit pointers, do not generate a relative lookup table.
-  const DataLayout &DL = M.getDataLayout();
-  Type *ElemType = Load->getType();
-  if (!ElemType->isPointerTy() || DL.getPointerTypeSizeInBits(ElemType) != 64)
-    return false;
-
-  // Make sure this is a gep of the form GV + scale*var.
-  unsigned IndexWidth = DL.getIndexTypeSizeInBits(GEP->getType());
-  SmallMapVector<Value *, APInt, 4> VarOffsets;
-  APInt ConstOffset(IndexWidth, 0);
-  if (!GEP->collectOffset(DL, IndexWidth, VarOffsets, ConstOffset) ||
-      !ConstOffset.isZero() || VarOffsets.size() != 1)
-    return false;
-
-  // This can't be a pointer lookup table if the stride is smaller than a
-  // pointer.
-  Info.Index = VarOffsets.front().first;
-  const APInt &Stride = VarOffsets.front().second;
-  if (Stride.ult(DL.getTypeStoreSize(ElemType)))
-    return false;
-
-  SmallVector<GlobalVariable *, 4> GVOps;
-  Triple TT = M.getTargetTriple();
+static bool analyzeLookupTable(LookupTableInfo &Info,
+                               const AccessPattern &Pattern,
+                               GlobalVariable &GV) {
+  Module *M = GV.getParent();
+  Triple TT = M->getTargetTriple();
   // FIXME: This should be removed in the future.
   bool ShouldDropUnnamedAddr =
       // Drop unnamed_addr to avoid matching pattern in
@@ -89,13 +110,20 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
       // https://github.com/rust-lang/rust/issues/141306.
       || (TT.isX86() && TT.isOSDarwin());
 
-  APInt Offset(IndexWidth, 0);
+  const DataLayout &DL = M->getDataLayout();
+  APInt Offset(Pattern.Stride.getBitWidth(), 0);
   uint64_t GVSize = GV.getGlobalSize(DL);
-  for (; Offset.ult(GVSize); Offset += Stride) {
-    Constant *C =
-        ConstantFoldLoadFromConst(GV.getInitializer(), ElemType, Offset, DL);
+  bool HasNonPoison = false;
+  for (; Offset.ult(GVSize); Offset += Pattern.Stride) {
+    Constant *C = ConstantFoldLoadFromConst(GV.getInitializer(),
+                                            Pattern.ElemType, Offset, DL);
     if (!C)
       return false;
+
+    if (isa<PoisonValue>(C)) {
+      Info.Ptrs.push_back(C);
+      continue;
+    }
 
     GlobalValue *GVOp;
     APInt GVOffset;
@@ -110,8 +138,14 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
     if (!GlobalVarOp || !GlobalVarOp->isConstant())
       return false;
 
-    if (!GlobalVarOp->hasLocalLinkage() || !GlobalVarOp->isDSOLocal() ||
-        !GlobalVarOp->isImplicitDSOLocal())
+    // Weak declarations have to be excluded because they may be null.
+    // Weak definitions are excluded because the assembler currently incorrectly
+    // resolves them against the local symbol, instead of emitting a relocation
+    // (https://github.com/llvm/llvm-project/issues/244540).
+    // Non-implicit dso_local is excluded because we currently do not convey to
+    // the linker that the symbol is non-preemptible, which may result in a
+    // relocation error.
+    if (GlobalVarOp->isWeakForLinker() || !GlobalVarOp->isImplicitDSOLocal())
       return false;
 
     // On AArch64 small code model, the text-to-data span can be up to 4GB,
@@ -124,20 +158,20 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
       return false;
 
     if (ShouldDropUnnamedAddr)
-      GVOps.push_back(GlobalVarOp);
+      Info.DropUnnamedAddrGVs.push_back(GlobalVarOp);
 
+    HasNonPoison = true;
     Info.Ptrs.push_back(C);
   }
 
-  if (ShouldDropUnnamedAddr)
-    for (auto *GVOp : GVOps)
-      GVOp->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
-
-  return true;
+  return HasNonPoison;
 }
 
-static GlobalVariable *createRelLookupTable(LookupTableInfo &Info,
+static GlobalVariable *createRelLookupTable(const LookupTableInfo &Info,
                                             GlobalVariable &LookupTable) {
+  for (auto *GV : Info.DropUnnamedAddrGVs)
+    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+
   Module &M = *LookupTable.getParent();
   ArrayType *IntArrayTy =
       ArrayType::get(Type::getInt32Ty(M.getContext()), Info.Ptrs.size());
@@ -156,6 +190,11 @@ static GlobalVariable *createRelLookupTable(LookupTableInfo &Info,
   SmallVector<Constant *, 64> RelLookupTableContents(Info.Ptrs.size());
 
   for (Constant *Element : Info.Ptrs) {
+    if (isa<PoisonValue>(Element)) {
+      RelLookupTableContents[Idx++] = PoisonValue::get(Int32Ty);
+      continue;
+    }
+
     Constant *Target = ConstantExpr::getPtrToInt(Element, IntPtrTy);
     Constant *Sub = ConstantExpr::getSub(Target, Base);
     Constant *RelOffset = ConstantExpr::getTrunc(Sub, Int32Ty);
@@ -170,43 +209,36 @@ static GlobalVariable *createRelLookupTable(LookupTableInfo &Info,
   return RelLookupTable;
 }
 
-static void convertToRelLookupTable(LookupTableInfo &Info,
-                                    GlobalVariable &LookupTable) {
-  GetElementPtrInst *GEP =
-      cast<GetElementPtrInst>(LookupTable.use_begin()->getUser());
-  LoadInst *Load = cast<LoadInst>(GEP->use_begin()->getUser());
-
-  Module &M = *LookupTable.getParent();
-  BasicBlock *BB = GEP->getParent();
+static void convertLookupTableUse(const LookupTableUse &UseInfo) {
+  BasicBlock *BB = UseInfo.GEP->getParent();
+  Module *M = BB->getModule();
   IRBuilder<> Builder(BB);
 
-  // Generate an array that consists of relative offsets.
-  GlobalVariable *RelLookupTable =
-      createRelLookupTable(Info, LookupTable);
-
   // Place new instruction sequence before GEP.
-  Builder.SetInsertPoint(GEP);
-  IntegerType *IntTy = cast<IntegerType>(Info.Index->getType());
-  Value *Offset = Builder.CreateShl(Info.Index, ConstantInt::get(IntTy, 2),
+  Builder.SetInsertPoint(UseInfo.GEP);
+  IntegerType *IntTy = cast<IntegerType>(UseInfo.Index->getType());
+  Value *Offset = Builder.CreateShl(UseInfo.Index, ConstantInt::get(IntTy, 2),
                                     "reltable.shift");
 
   // Insert the call to load.relative intrinsic before LOAD.
   // GEP might not be immediately followed by a LOAD, like it can be hoisted
-  // outside the loop or another instruction might be inserted them in between.
-  Builder.SetInsertPoint(Load);
+  // outside the loop or another instruction might be inserted them in
+  // between.
+  Builder.SetInsertPoint(UseInfo.Load);
   Function *LoadRelIntrinsic = llvm::Intrinsic::getOrInsertDeclaration(
-      &M, Intrinsic::load_relative, {Info.Index->getType()});
+      M, Intrinsic::load_relative, {UseInfo.Index->getType()});
 
   // Create a call to load.relative intrinsic that computes the target address
   // by adding base address (lookup table address) and relative offset.
-  Value *Result = Builder.CreateCall(LoadRelIntrinsic, {RelLookupTable, Offset},
+  Value *Result = Builder.CreateCall(LoadRelIntrinsic,
+                                     {UseInfo.GEP->getPointerOperand(), Offset},
                                      "reltable.intrinsic");
 
   // Replace load instruction with the new generated instruction sequence.
-  Load->replaceAllUsesWith(Result);
+  UseInfo.Load->replaceAllUsesWith(Result);
   // Remove Load and GEP instructions.
-  Load->eraseFromParent();
-  GEP->eraseFromParent();
+  UseInfo.Load->eraseFromParent();
+  UseInfo.GEP->eraseFromParent();
 }
 
 // Convert lookup tables to relative lookup tables in the module.
@@ -225,19 +257,77 @@ static bool convertToRelativeLookupTables(
   }
 
   bool Changed = false;
+  SmallVector<GlobalVariable *> DeadGVs;
+  auto AnalyzeGlobal = [&](GlobalVariable &GV) {
+    if (!isEligibleForRelLookupTable(GV))
+      return;
 
-  for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals())) {
-    LookupTableInfo Info;
-    if (!shouldConvertToRelLookupTable(Info, M, GV))
-      continue;
+    SmallMapVector<GlobalVariable *, LookupTableInfo, 4> GVs;
+    GVs.try_emplace(&GV);
 
-    convertToRelLookupTable(Info, GV);
+    std::optional<AccessPattern> Pattern;
+    SmallVector<LookupTableUse> Uses;
+    SmallSetVector<User *, 8> Worklist;
+    Worklist.insert(GV.user_begin(), GV.user_end());
+    for (unsigned I = 0; I < Worklist.size(); ++I) {
+      User *Usr = Worklist[I];
+      if (isa<PHINode, SelectInst>(Usr)) {
+        // Look through phi/select. In that case, make sure that all the
+        // operands are eligible for lookup table conversion and collect them.
+        for (Value *Op : drop_begin(Usr->operands(), isa<SelectInst>(Usr))) {
+          // TODO: This could be extended to handle nested selects/phis.
+          auto *OpGV = dyn_cast<GlobalVariable>(Op);
+          if (!OpGV || !isEligibleForRelLookupTable(*OpGV))
+            return;
 
-    // Remove the original lookup table.
-    GV.eraseFromParent();
+          GVs.try_emplace(OpGV);
+          Worklist.insert(OpGV->user_begin(), OpGV->user_end());
+        }
+
+        Worklist.insert(Usr->user_begin(), Usr->user_end());
+      } else {
+        // Make sure the access pattern is always the same and collect uses.
+        AccessPattern CurPattern;
+        LookupTableUse CurUse;
+        if (!analyzeLookupTableUse(CurPattern, CurUse, Usr))
+          return;
+
+        if (!Pattern)
+          Pattern = CurPattern;
+        else if (*Pattern != CurPattern)
+          return;
+
+        Uses.push_back(CurUse);
+      }
+    }
+
+    if (!Pattern)
+      return;
+
+    for (auto &[GV, Info] : GVs)
+      if (!analyzeLookupTable(Info, *Pattern, *GV))
+        return;
+
+    // Convert the uses, while still referencing the old lookup tables.
+    for (LookupTableUse &UseInfo : Uses)
+      convertLookupTableUse(UseInfo);
+
+    // Replace the actual lookup tables.
+    for (auto &[GV, Info] : GVs) {
+      GlobalVariable *RelLookupTable = createRelLookupTable(Info, *GV);
+      GV->replaceAllUsesWith(RelLookupTable);
+      DeadGVs.push_back(GV);
+    }
 
     Changed = true;
-  }
+  };
+
+  for (GlobalVariable &GV : M.globals())
+    AnalyzeGlobal(GV);
+
+  // Remove the original lookup tables.
+  for (GlobalVariable *DeadGV : DeadGVs)
+    DeadGV->eraseFromParent();
 
   return Changed;
 }

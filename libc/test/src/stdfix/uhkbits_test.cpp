@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FxBitsTest.h"
+#include "test/src/stdfix/FxBitsTest.h"
+
 #include "src/stdfix/uhkbits.h"
 
 LIST_FXBITS_TEST(uhk, unsigned short accum, uint_uhk_t,

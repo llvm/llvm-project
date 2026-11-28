@@ -73,10 +73,10 @@ void CIRCanonicalizePass::runOnOperation() {
     if (isa<BrOp, BrCondOp, BuiltinIntCastOp, CastOp, ScopeOp, SwitchOp,
             SelectOp, IncOp, DecOp, MinusOp, FNegOp, NotOp, AddOp, MulOp, AndOp,
             OrOp, XorOp, MaxOp, MinOp, ComplexCreateOp, ComplexImagOp,
-            ComplexRealOp, VecCmpOp, VecCreateOp, VecExtractOp, VecShuffleOp,
-            VecShuffleDynamicOp, VecTernaryOp, BitClrsbOp, BitClzOp, BitCtzOp,
-            BitFfsOp, BitParityOp, BitPopcountOp, BitReverseOp, ByteSwapOp,
-            RotateOp, ConstantOp, CleanupScopeOp>(op))
+            ComplexRealOp, VecCmpOp, VecFCmpOp, VecCreateOp, VecExtractOp,
+            VecShuffleOp, VecShuffleDynamicOp, VecTernaryOp, BitClrsbOp,
+            BitClzOp, BitCtzOp, BitFfsOp, BitParityOp, BitPopcountOp,
+            BitReverseOp, ByteSwapOp, RotateOp, ConstantOp, CleanupScopeOp>(op))
       ops.push_back(op);
   });
 

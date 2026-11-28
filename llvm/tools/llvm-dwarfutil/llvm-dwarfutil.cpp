@@ -8,10 +8,10 @@
 
 #include "DebugInfoLinker.h"
 #include "Error.h"
+#include "ObjectFile.h"
 #include "Options.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFVerifier.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ConfigManager.h"
 #include "llvm/ObjCopy/ObjCopy.h"
@@ -28,6 +28,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include <type_traits>
 
 using namespace llvm;
 using namespace object;
@@ -54,8 +55,6 @@ namespace llvm {
 namespace dwarfutil {
 
 std::string ToolName;
-
-static mc::RegisterMCTargetOptionsFlags MOF;
 
 static Error validateAndSetOptions(opt::InputArgList &Args, Options &Options) {
   auto UnknownArgs = Args.filtered(OPT_UNKNOWN);
@@ -423,43 +422,14 @@ using DebugInfoBits = SmallString<10000>;
 static Error addSectionsFromLinkedData(objcopy::ConfigManager &Config,
                                        ObjectFile &InputFile,
                                        DebugInfoBits &LinkedDebugInfoBits) {
-  if (isa<ELFObjectFile<ELF32LE>>(&InputFile)) {
-    Expected<ELFObjectFile<ELF32LE>> MemFile = ELFObjectFile<ELF32LE>::create(
-        MemoryBufferRef(LinkedDebugInfoBits, ""));
+  return dispatchObject(InputFile, [&](auto &File) -> Error {
+    using FileType = std::decay_t<decltype(File)>;
+    Expected<FileType> MemFile =
+        FileType::create(MemoryBufferRef(LinkedDebugInfoBits, ""));
     if (!MemFile)
       return MemFile.takeError();
-
-    if (Error Err = setConfigToAddNewDebugSections(Config, *MemFile))
-      return Err;
-  } else if (isa<ELFObjectFile<ELF64LE>>(&InputFile)) {
-    Expected<ELFObjectFile<ELF64LE>> MemFile = ELFObjectFile<ELF64LE>::create(
-        MemoryBufferRef(LinkedDebugInfoBits, ""));
-    if (!MemFile)
-      return MemFile.takeError();
-
-    if (Error Err = setConfigToAddNewDebugSections(Config, *MemFile))
-      return Err;
-  } else if (isa<ELFObjectFile<ELF32BE>>(&InputFile)) {
-    Expected<ELFObjectFile<ELF32BE>> MemFile = ELFObjectFile<ELF32BE>::create(
-        MemoryBufferRef(LinkedDebugInfoBits, ""));
-    if (!MemFile)
-      return MemFile.takeError();
-
-    if (Error Err = setConfigToAddNewDebugSections(Config, *MemFile))
-      return Err;
-  } else if (isa<ELFObjectFile<ELF64BE>>(&InputFile)) {
-    Expected<ELFObjectFile<ELF64BE>> MemFile = ELFObjectFile<ELF64BE>::create(
-        MemoryBufferRef(LinkedDebugInfoBits, ""));
-    if (!MemFile)
-      return MemFile.takeError();
-
-    if (Error Err = setConfigToAddNewDebugSections(Config, *MemFile))
-      return Err;
-  } else
-    return createStringError(std::errc::invalid_argument,
-                             "unsupported file format");
-
-  return Error::success();
+    return setConfigToAddNewDebugSections(Config, *MemFile);
+  });
 }
 
 static Expected<uint32_t>
@@ -624,17 +594,21 @@ int main(int Argc, char const *Argv[]) {
   if (!BinOrErr)
     error(createFileError(Opts.InputFileName, BinOrErr.takeError()));
 
+  if (!(*BinOrErr)->isObject())
+    error(createFileError(Opts.InputFileName,
+                          createError("unsupported input file")));
+  ObjectFile &InputFile = *cast<ObjectFile>((*BinOrErr).get());
+
+  if (Error Err = dispatchObject(
+          InputFile, [](auto &) -> Error { return Error::success(); }))
+    error(createFileError(Opts.InputFileName, std::move(Err)));
+
   Expected<FilePermissionsApplier> PermsApplierOrErr =
       FilePermissionsApplier::create(Opts.InputFileName);
   if (!PermsApplierOrErr)
     error(createFileError(Opts.InputFileName, PermsApplierOrErr.takeError()));
 
-  if (!(*BinOrErr)->isObject())
-    error(createFileError(Opts.InputFileName,
-                          createError("unsupported input file")));
-
-  if (Error Err =
-          applyCLOptions(Opts, *static_cast<ObjectFile *>((*BinOrErr).get())))
+  if (Error Err = applyCLOptions(Opts, InputFile))
     error(createFileError(Opts.InputFileName, std::move(Err)));
 
   BinOrErr->reset();

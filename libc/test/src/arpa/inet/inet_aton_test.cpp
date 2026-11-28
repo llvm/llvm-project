@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/arpa/inet/htonl.h"
+#include "src/__support/net/byte_order.h"
 #include "src/arpa/inet/inet_aton.h"
 #include "test/UnitTest/Test.h"
 
@@ -18,55 +18,55 @@ TEST(LlvmLibcInetAton, ValidTest) {
   // a.b.c.d
   a.s_addr = 0;
   ASSERT_EQ(1, inet_aton("127.1.2.4", &a));
-  ASSERT_EQ(htonl(0x7f010204), a.s_addr);
+  ASSERT_EQ(net::hton<uint32_t>(0x7f010204), a.s_addr);
 
   // a.b.c
   a.s_addr = 0;
   ASSERT_EQ(1, inet_aton("127.1.4", &a));
-  ASSERT_EQ(htonl(0x7f010004), a.s_addr);
+  ASSERT_EQ(net::hton<uint32_t>(0x7f010004), a.s_addr);
 
   // a.b
   a.s_addr = 0;
   ASSERT_EQ(1, inet_aton("127.1", &a));
-  ASSERT_EQ(htonl(0x7f000001), a.s_addr);
+  ASSERT_EQ(net::hton<uint32_t>(0x7f000001), a.s_addr);
 
   // a
   a.s_addr = 0;
   ASSERT_EQ(1, inet_aton("0x7f000001", &a));
-  ASSERT_EQ(htonl(0x7f000001), a.s_addr);
+  ASSERT_EQ(net::hton<uint32_t>(0x7f000001), a.s_addr);
 
   // Hex (0x) and mixed-case hex digits.
   a.s_addr = 0;
   ASSERT_EQ(1, inet_aton("0xFf.0.0.1", &a));
-  ASSERT_EQ(htonl(0xff000001), a.s_addr);
+  ASSERT_EQ(net::hton<uint32_t>(0xff000001), a.s_addr);
 
   // Hex (0X) and mixed-case hex digits.
   a.s_addr = 0;
   ASSERT_EQ(1, inet_aton("0XfF.0.0.1", &a));
-  ASSERT_EQ(htonl(0xff000001), a.s_addr);
+  ASSERT_EQ(net::hton<uint32_t>(0xff000001), a.s_addr);
 
   // Octal.
   a.s_addr = 0;
   ASSERT_EQ(1, inet_aton("0177.0.0.1", &a));
-  ASSERT_EQ(htonl(0x7f000001), a.s_addr);
+  ASSERT_EQ(net::hton<uint32_t>(0x7f000001), a.s_addr);
 
   a.s_addr = 0;
   ASSERT_EQ(1, inet_aton("036", &a));
-  ASSERT_EQ(htonl(036U), a.s_addr);
+  ASSERT_EQ(net::hton<uint32_t>(036), a.s_addr);
 
   // Trailing space.
   a.s_addr = 0;
   ASSERT_EQ(1, inet_aton("1 ", &a));
-  ASSERT_EQ(htonl(1), a.s_addr);
+  ASSERT_EQ(net::hton<uint32_t>(1), a.s_addr);
   a.s_addr = 0;
   ASSERT_EQ(1, inet_aton("1.2 ", &a));
-  ASSERT_EQ(htonl(0x01000002), a.s_addr);
+  ASSERT_EQ(net::hton<uint32_t>(0x01000002), a.s_addr);
   a.s_addr = 0;
   ASSERT_EQ(1, inet_aton("1.2.3 ", &a));
-  ASSERT_EQ(htonl(0x01020003), a.s_addr);
+  ASSERT_EQ(net::hton<uint32_t>(0x01020003), a.s_addr);
   a.s_addr = 0;
   ASSERT_EQ(1, inet_aton("1.2.3.4 ", &a));
-  ASSERT_EQ(htonl(0x01020304), a.s_addr);
+  ASSERT_EQ(net::hton<uint32_t>(0x01020304), a.s_addr);
 
   // We can check for validity with a nullptr argument.
   ASSERT_EQ(1, inet_aton("127.1.2.4", nullptr));

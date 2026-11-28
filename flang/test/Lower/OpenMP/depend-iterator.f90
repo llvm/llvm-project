@@ -44,7 +44,7 @@ end subroutine
 ! CHECK: %[[PTR_I:.*]] = fir.convert %[[COOR_I]]
 ! CHECK-SAME: (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK: omp.yield(%[[PTR_I]] : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[IT_J:.*]] = omp.iterator(%[[IV_J:.*]]: i32) =
 ! CHECK-SAME: (%[[J_LB]] to %[[J_UB]] step %[[J_STEP]]) {
 ! CHECK: fir.store %[[IV_J]] to %[[MEM_J:.*]] : !fir.ref<i32>
@@ -55,7 +55,7 @@ end subroutine
 ! CHECK: %[[PTR_J:.*]] = fir.convert %[[COOR_J]]
 ! CHECK-SAME: (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK: omp.yield(%[[PTR_J]] : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK-NOT: omp.iterator
 ! CHECK: omp.task depend(taskdependin -> %[[C]]#0 : !fir.ref<i32>,
 ! CHECK-SAME: taskdependin -> %[[IT_I]] : !omp.iterated<!llvm.ptr>,
@@ -104,7 +104,7 @@ end subroutine
 ! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.task depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
 ! CHECK:   omp.terminator
 ! CHECK: }
@@ -131,7 +131,7 @@ end subroutine
 ! CHECK:   %[[COOR:.*]] = hlfir.designate %{{.*}} (%[[IV0_I64]], %[[IV1_I64]])
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.task depend(taskdependinout -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
 
 subroutine task_depend_iterator_mixed()
@@ -148,7 +148,7 @@ end subroutine
 ! CHECK: %[[X:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtask_depend_iterator_mixedEx")
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.task depend(taskdependout -> %[[X]]#0 : !fir.ref<i32>, taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
 
 subroutine task_depend_iterator_step()
@@ -166,7 +166,7 @@ end subroutine
 ! CHECK: %[[STEP:.*]] = arith.constant 2 : i32
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.task depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
 
 subroutine task_depend_iterator_multi_obj()
@@ -185,12 +185,12 @@ end subroutine
 ! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   %[[PTR1:.*]] = fir.convert %[[COOR1]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR1]] : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[IT2:.*]] = omp.iterator(%[[IV2:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   %[[PTR2:.*]] = fir.convert %[[COOR2]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR2]] : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.task depend(taskdependinout -> %[[IT1]] : !omp.iterated<!llvm.ptr>, taskdependinout -> %[[IT2]] : !omp.iterated<!llvm.ptr>) {
 
 ! Expression-based subscript using multiple iterator variables: a((i-1)*m+j)
@@ -223,7 +223,7 @@ end subroutine
 ! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IDX]])
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.task depend(taskdependout -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
 
 ! Multiple depend clauses each with their own iterator on the same task.
@@ -244,12 +244,12 @@ end subroutine
 ! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   %[[PTR1:.*]] = fir.convert %[[COOR1]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR1]] : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[IT2:.*]] = omp.iterator(%[[IV2:.*]]: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   %[[PTR2:.*]] = fir.convert %[[COOR2]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR2]] : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.task depend(taskdependin -> %[[IT1]] : !omp.iterated<!llvm.ptr>, taskdependout -> %[[IT2]] : !omp.iterated<!llvm.ptr>) {
 
 subroutine task_depend_iterator_negative_step()
@@ -267,7 +267,7 @@ end subroutine
 ! CHECK: %[[STEP:.*]] = arith.constant -1 : i32
 ! CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: i32) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.task depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
 
 ! Mixed iterated and non-iterated objects in the same depend clause:
@@ -289,7 +289,7 @@ end subroutine
 ! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: omp.task depend(taskdependin -> %[[A1]] : !fir.ref<i32>, taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) {
 
 !===============================================================================
@@ -316,7 +316,7 @@ end subroutine
 ! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<16xi32>>
 ! CHECK: omp.target kernel_type(generic) depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP]] -> %{{.*}} : !fir.ref<!fir.array<16xi32>>) {
 ! CHECK:   omp.terminator
@@ -341,15 +341,15 @@ end subroutine
 ! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[IT3:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR3:.*]] = hlfir.designate %[[C]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<8xi32>>
 ! CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[B]]#1 : {{.*}}) map_clauses(tofrom) capture(ByRef) bounds({{.*}}) name("b") -> !fir.ref<!fir.array<8xi32>>
 ! CHECK: %[[MAP_C:.*]] = omp.map.info var_ptr(%[[C]]#1 : {{.*}}) map_clauses(implicit, tofrom) capture(ByRef) bounds({{.*}}) name("c") -> !fir.ref<!fir.array<8xi32>>
@@ -377,7 +377,7 @@ end subroutine
 ! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(to) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<16xi32>>
 ! CHECK: omp.target_enter_data depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP]] : !fir.ref<!fir.array<16xi32>>)
 
@@ -408,7 +408,7 @@ end subroutine
 ! CHECK:   %[[IDX:.*]] = fir.convert %[[ADD]] : (i32) -> i64
 ! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IDX]])
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(to) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<16xi32>>
 ! CHECK: omp.target_enter_data depend(taskdependinout -> %[[A1]] : !fir.ref<i32>, taskdependinout -> %[[IT]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP]] : !fir.ref<!fir.array<16xi32>>)
 
@@ -434,7 +434,7 @@ end subroutine
 ! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(from) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<16xi32>>
 ! CHECK: omp.target_exit_data depend(taskdependout -> %[[IT]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP]] : !fir.ref<!fir.array<16xi32>>)
 
@@ -456,11 +456,11 @@ end subroutine
 ! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: i32) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
 ! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: i32) = (%[[LB]] to %[[UB]] step %[[STEP]]) {
 ! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(from) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<16xi32>>
 ! CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[B]]#1 : {{.*}}) map_clauses(from) capture(ByRef) bounds({{.*}}) name("b") -> !fir.ref<!fir.array<16xi32>>
 ! CHECK: omp.target_exit_data depend(taskdependout -> %[[IT1]] : !omp.iterated<!llvm.ptr>, taskdependout -> %[[IT2]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP_A]], %[[MAP_B]] : !fir.ref<!fir.array<16xi32>>, !fir.ref<!fir.array<16xi32>>)
@@ -487,7 +487,7 @@ end subroutine
 ! CHECK:   %[[COOR:.*]] = hlfir.designate %[[A]]#0 (%[[IV_I64]])
 ! CHECK:   %[[PTR:.*]] = fir.convert %[[COOR]] : (!fir.ref<i32>) -> !llvm.ptr
 ! CHECK:   omp.yield(%[[PTR]] : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(to) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<16xi32>>
 ! CHECK: omp.target_update depend(taskdependin -> %[[IT]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP]] : !fir.ref<!fir.array<16xi32>>)
 
@@ -511,11 +511,11 @@ end subroutine
 ! CHECK: %[[IT1:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR1:.*]] = hlfir.designate %[[A]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[IT2:.*]] = omp.iterator(%{{.*}}: i32) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[COOR2:.*]] = hlfir.designate %[[B]]#0 (%{{.*}})
 ! CHECK:   omp.yield(%{{.*}} : !llvm.ptr)
-! CHECK: } -> !omp.iterated<!llvm.ptr>
+! CHECK: } inclusive -> !omp.iterated<!llvm.ptr>
 ! CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]]#1 : {{.*}}) map_clauses(to) capture(ByRef) bounds({{.*}}) name("a") -> !fir.ref<!fir.array<8xi32>>
 ! CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%[[B]]#1 : {{.*}}) map_clauses(from) capture(ByRef) bounds({{.*}}) name("b") -> !fir.ref<!fir.array<8xi32>>
 ! CHECK: omp.target_update depend(taskdependinout -> %[[X]]#0 : !fir.ref<i32>, taskdependin -> %[[IT1]] : !omp.iterated<!llvm.ptr>, taskdependout -> %[[IT2]] : !omp.iterated<!llvm.ptr>) map_entries(%[[MAP_A]], %[[MAP_B]] : !fir.ref<!fir.array<8xi32>>, !fir.ref<!fir.array<8xi32>>)

@@ -431,3 +431,68 @@ y:
   %1 = add nsw i32 %0, %0
   ret i32 %1
 }
+
+; The default dest is also reached from the indirect dest, so a use in a block
+; that it dominates gets the landing pad's value on the indirect path.
+define i32 @default_dest_reached_from_indirect_dest(i1 %c) {
+; CHECK-LABEL: @default_dest_reached_from_indirect_dest(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
+; CHECK-NEXT:            to label [[D:%.*]] [label [[I:%.*]]]
+; CHECK:       i:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
+; CHECK-NEXT:    br label [[D]]
+; CHECK:       d:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[I]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[T:%.*]], label [[E:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK:       e:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %0 = callbr i32 asm "", "=r,!i"()
+  to label %d [label %i]
+
+i:
+  br label %d
+
+d:
+  br i1 %c, label %t, label %e
+
+t:
+  ret i32 %0
+
+e:
+  ret i32 0
+}
+
+; Likewise when the default and indirect dests are the same block.
+define i32 @same_dest_dominated_use(i1 %c) {
+; CHECK-LABEL: @same_dest_dominated_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = callbr i32 asm "", "=r,!i"()
+; CHECK-NEXT:            to label [[SAME:%.*]] [label [[ENTRY_SAME_CRIT_EDGE:%.*]]]
+; CHECK:       entry.same_crit_edge:
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.callbr.landingpad.i32(i32 [[TMP0]])
+; CHECK-NEXT:    br label [[SAME]]
+; CHECK:       same:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[ENTRY_SAME_CRIT_EDGE]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[T:%.*]], label [[E:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK:       e:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %0 = callbr i32 asm "", "=r,!i"() to label %same [label %same]
+
+same:
+  br i1 %c, label %t, label %e
+
+t:
+  ret i32 %0
+
+e:
+  ret i32 0
+}

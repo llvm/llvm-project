@@ -17,13 +17,10 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Shard/Interfaces/ShardingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
-
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -94,23 +91,6 @@ addNamedOpBuilders(llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
 }
 
 void mlir::linalg::LinalgDialect::initialize() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Linalg/IR/LinalgOpsAttrDefs.cpp.inc"
-      >();
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Linalg/IR/LinalgOps.cpp.inc"
-      >();
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-      >();
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Linalg/IR/LinalgRelayoutOps.cpp.inc"
-      >();
-
   // Fill the Linalg-specific OpName to RegionBuilder map.
   addNamedOpBuilders<
 #define GET_OP_LIST

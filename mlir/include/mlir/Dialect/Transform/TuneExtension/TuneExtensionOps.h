@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/OpDefinition.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/TuneExtension/TuneExtensionOps.h.inc"

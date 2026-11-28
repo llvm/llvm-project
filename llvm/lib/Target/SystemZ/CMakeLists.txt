@@ -15,12 +15,16 @@ llvm_tablegen(SystemZGenRegisterInfo.inc -gen-register-info)
 llvm_tablegen(SystemZGenSDNodeInfo.inc -gen-sd-node-info)
 llvm_tablegen(SystemZGenSubtargetInfo.inc -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS SystemZOptions.td)
+llvm_tablegen(SystemZOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(SystemZCommonTableGen)
 
 add_llvm_target(SystemZCodeGen
   SystemZAsmPrinter.cpp
   SystemZAlignGlobals.cpp
   SystemZCallingConv.cpp
+  SystemZCodeGenPassBuilder.cpp
   SystemZConstantPoolValue.cpp
   SystemZCopyPhysRegs.cpp
   SystemZELFAsmPrinter.cpp
@@ -53,6 +57,8 @@ add_llvm_target(SystemZCodeGen
   CodeGenTypes
   Core
   MC
+  Option
+  Passes
   Scalar
   SelectionDAG
   Support

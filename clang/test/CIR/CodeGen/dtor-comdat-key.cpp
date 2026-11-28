@@ -11,8 +11,8 @@ template <class T> struct K {
 };
 template class K<double>;
 
-// CIR: cir.func {{.*}} comdat("_ZN1KIdED5Ev") {{.*}} weak_odr @_ZN1KIdED2Ev(
-// CIR: cir.func weak_odr private @_ZN1KIdED1Ev(!cir.ptr<!rec_K3Cdouble3E>) alias(@_ZN1KIdED2Ev)
+// CIR: cir.func {{.*}} comdat("_ZN1KIdED5Ev") {{.*}} weak_odr unnamed_addr @_ZN1KIdED2Ev(
+// CIR: cir.func weak_odr private unnamed_addr @_ZN1KIdED1Ev(!cir.ptr<!rec_K3Cdouble3E>) alias(@_ZN1KIdED2Ev)
 
 // LLVM: $_ZN1KIdED5Ev = comdat any
 // LLVM: @_ZN1KIdED1Ev = weak_odr {{.*}}alias void (ptr), ptr @_ZN1KIdED2Ev

@@ -18,9 +18,9 @@ define <2 x i8> @test_bitcast_assertion(<4 x i32> %vqaddq_v2.i.i, ptr %BS_VAR_0)
 ; CHECK-NEXT:    stp q1, q1, [x0, #32]
 ; CHECK-NEXT:    stp q1, q1, [x0, #64]
 ; CHECK-NEXT:    fmov d2, x9
-; CHECK-NEXT:    stp q1, q1, [x0, #96]
 ; CHECK-NEXT:    mov v2.d[1], xzr
 ; CHECK-NEXT:    stp q2, q1, [x0]
+; CHECK-NEXT:    stp q1, q1, [x0, #96]
 ; CHECK-NEXT:    b .LBB0_1
 entry:
   br label %for.cond

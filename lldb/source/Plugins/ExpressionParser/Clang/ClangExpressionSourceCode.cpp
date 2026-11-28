@@ -336,7 +336,10 @@ void ClangExpressionSourceCode::AddLocalVariableDecls(StreamString &stream,
   assert(frame);
   TokenVerifier tokens(expr);
 
+  // Subclasses like ScriptedFrame may not have a variable list.
   lldb::VariableListSP var_list_sp = frame->GetInScopeVariableList(false, true);
+  if (!var_list_sp)
+    return;
 
   for (size_t i = 0; i < var_list_sp->GetSize(); i++) {
     lldb::VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);

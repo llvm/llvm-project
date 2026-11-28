@@ -3,7 +3,6 @@
 
 ---
 name: v_mov_b64_pseudo_imm_0_copy_to_areg_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b64_pseudo_imm_0_copy_to_areg_64
@@ -19,7 +18,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_imm_neg1_copy_to_areg_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b64_pseudo_imm_neg1_copy_to_areg_64
@@ -35,7 +33,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_literal_copy_to_areg_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b64_pseudo_literal_copy_to_areg_64
@@ -52,7 +49,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_imm_0_copy_sub0_to_agpr_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b64_pseudo_imm_0_copy_sub0_to_agpr_32
@@ -68,7 +64,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_imm_0_copy_sub1_to_agpr_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b64_pseudo_imm_0_copy_sub1_to_agpr_32
@@ -84,7 +79,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_lit_copy_sub0_to_agpr_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b64_pseudo_lit_copy_sub0_to_agpr_32
@@ -101,7 +95,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_lit_copy_sub1_to_agpr_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b64_pseudo_lit_copy_sub1_to_agpr_32
@@ -119,7 +112,6 @@ body:             |
 
 ---
 name: v_mov_b64_pseudo_imm_0_copy_to_av_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b64_pseudo_imm_0_copy_to_av_64
@@ -133,7 +125,6 @@ body:             |
 
 ---
 name: s_mov_b32_imm_0_copy_to_agpr_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b32_imm_0_copy_to_agpr_32
@@ -147,7 +138,6 @@ body:             |
 
 ---
 name: s_mov_b32_imm_neg16_copy_to_agpr_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b32_imm_neg16_copy_to_agpr_32
@@ -161,7 +151,6 @@ body:             |
 
 ---
 name: s_mov_b32_imm_65_copy_to_agpr_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b32_imm_65_copy_to_agpr_32
@@ -176,7 +165,6 @@ body:             |
 
 ---
 name: s_mov_b32_imm_0_copy_to_av_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b32_imm_0_copy_to_av_32
@@ -190,7 +178,6 @@ body:             |
 
 ---
 name: s_mov_b32_imm_neg16_copy_to_av_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b32_imm_neg16_copy_to_av_32
@@ -204,7 +191,6 @@ body:             |
 
 ---
 name: s_mov_b32_imm_65_copy_to_av_32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b32_imm_65_copy_to_av_32
@@ -219,7 +205,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_0_copy_to_areg_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_0_copy_to_areg_64
@@ -233,7 +218,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_0_copy_to_areg_64_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_0_copy_to_areg_64_align2
@@ -247,7 +231,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_neg16_copy_to_areg_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_neg16_copy_to_areg_64
@@ -261,7 +244,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_neg16_copy_to_areg_64_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_neg16_copy_to_areg_64_align2
@@ -275,7 +257,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_0_copy_to_av_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_0_copy_to_av_64
@@ -289,7 +270,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_0_copy_to_av_64_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_0_copy_to_av_64_align2
@@ -303,7 +283,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_neg16_copy_to_av_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_neg16_copy_to_av_64
@@ -317,7 +296,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_neg16_copy_to_av_64_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_neg16_copy_to_av_64_align2
@@ -331,7 +309,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_areg_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_areg_64
@@ -345,7 +322,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_areg_64_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_areg_64_align2
@@ -359,7 +335,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_areg_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_areg_64
@@ -373,7 +348,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_areg_64_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_areg_64_align2
@@ -387,7 +361,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_av_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_av_64
@@ -401,7 +374,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_av_64_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_pseudo_literal_32_halves_copy_to_av_64_align2
@@ -415,7 +387,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_av_64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_av_64
@@ -430,7 +401,6 @@ body:             |
 
 ---
 name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_av_64_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b64_imm_pseudo_inlineimm_32_halves_copy_to_av_64_align2

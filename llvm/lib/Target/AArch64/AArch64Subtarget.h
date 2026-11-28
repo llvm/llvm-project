@@ -204,6 +204,7 @@ public:
     case AppleA17:
     case AppleM4:
     case AppleM5:
+    case AppleM6:
       return true;
     default:
       return false;
@@ -375,12 +376,6 @@ public:
   }
 
   bool useAA() const override;
-
-  bool addrSinkUsingGEPs() const override {
-    // Keeping GEPs inbounds is important for exploiting AArch64
-    // addressing-modes in ILP32 mode.
-    return useAA() || isTargetILP32();
-  }
 
   bool useSmallAddressing() const {
     switch (TLInfo.getTargetMachine().getCodeModel()) {

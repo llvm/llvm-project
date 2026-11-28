@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
@@ -370,6 +371,95 @@ static Value *findAggregateFromValue(Value *V) {
   return Aggregate;
 }
 
+TEST_F(OpenMPIRBuilderTest, CreateFlush) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc(Builder);
+  // A seq_cst flush at device scope, or a flush with a list, is a call to
+  // __kmpc_flush. Anything else calls __kmpc_flush_explicit with the
+  // __ATOMIC_* ordering and the __MEMORY_SCOPE_* scope.
+  OMPBuilder.createFlush(Loc);
+  OMPBuilder.createFlush(Loc, AtomicOrdering::NotAtomic);
+  OMPBuilder.createFlush(Loc, AtomicOrdering::Acquire);
+  OMPBuilder.createFlush(Loc, AtomicOrdering::SequentiallyConsistent,
+                         AtomicScope::System);
+  Builder.CreateRetVoid();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  SmallVector<CallInst *> Calls;
+  for (Instruction &I : *BB)
+    if (auto *CI = dyn_cast<CallInst>(&I))
+      Calls.push_back(CI);
+  ASSERT_EQ(Calls.size(), 4U);
+  EXPECT_EQ(Calls[0]->getCalledFunction()->getName(), "__kmpc_flush");
+  EXPECT_EQ(Calls[1]->getCalledFunction()->getName(), "__kmpc_flush");
+  for (auto [CI, Order, Scope] :
+       {std::tuple(Calls[2], 2, 1), std::tuple(Calls[3], 5, 0)}) {
+    EXPECT_EQ(CI->getCalledFunction()->getName(), "__kmpc_flush_explicit");
+    EXPECT_EQ(cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue(),
+              uint64_t(Order));
+    EXPECT_EQ(cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue(),
+              uint64_t(Scope));
+  }
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateFlushGPU) {
+  M->setTargetTriple(Triple("amdgcn-amd-amdhsa"));
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = true;
+  OMPBuilder.Config.setIsGPU(true);
+  OMPBuilder.initialize();
+
+  IRBuilder<> Builder(BB);
+  OpenMPIRBuilder::LocationDescription Loc(Builder);
+  // On a GPU a flush is a fence of the given ordering and scope.
+  OMPBuilder.createFlush(Loc);
+  OMPBuilder.createFlush(Loc, AtomicOrdering::NotAtomic);
+  OMPBuilder.createFlush(Loc, AtomicOrdering::Release, AtomicScope::System);
+  OMPBuilder.createFlush(Loc, AtomicOrdering::Acquire, AtomicScope::Workgroup);
+  Builder.CreateRetVoid();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  SmallVector<FenceInst *> Fences;
+  for (Instruction &I : *BB) {
+    EXPECT_FALSE(isa<CallInst>(I));
+    if (auto *FI = dyn_cast<FenceInst>(&I))
+      Fences.push_back(FI);
+  }
+  ASSERT_EQ(Fences.size(), 4U);
+  SyncScope::ID Agent = M->getContext().getOrInsertSyncScopeID("agent");
+  EXPECT_EQ(Fences[0]->getOrdering(), AtomicOrdering::SequentiallyConsistent);
+  EXPECT_EQ(Fences[0]->getSyncScopeID(), Agent);
+  EXPECT_EQ(Fences[1]->getOrdering(), AtomicOrdering::SequentiallyConsistent);
+  EXPECT_EQ(Fences[1]->getSyncScopeID(), Agent);
+  EXPECT_EQ(Fences[2]->getOrdering(), AtomicOrdering::Release);
+  EXPECT_EQ(Fences[2]->getSyncScopeID(), SyncScope::System);
+  EXPECT_EQ(Fences[3]->getOrdering(), AtomicOrdering::Acquire);
+  EXPECT_EQ(Fences[3]->getSyncScopeID(),
+            M->getContext().getOrInsertSyncScopeID("workgroup"));
+}
+
+TEST_F(OpenMPIRBuilderTest, CreateFlushGPUTriple) {
+  // Without IsGPU in the config, a GPU triple still gets a fence.
+  M->setTargetTriple(Triple("nvptx64-nvidia-cuda"));
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+
+  IRBuilder<> Builder(BB);
+  OMPBuilder.createFlush(OpenMPIRBuilder::LocationDescription(Builder),
+                         AtomicOrdering::Acquire);
+  Builder.CreateRetVoid();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  auto *FI = dyn_cast<FenceInst>(&BB->front());
+  ASSERT_NE(FI, nullptr);
+  EXPECT_EQ(FI->getOrdering(), AtomicOrdering::Acquire);
+  EXPECT_EQ(FI->getSyncScopeID(),
+            M->getContext().getOrInsertSyncScopeID("device"));
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.initialize();
@@ -410,6 +500,27 @@ TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
   Builder.CreateUnreachable();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+TEST_F(OpenMPIRBuilderTest, FinalizeRuntimeCallWithoutDebugLoc) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = false;
+  OMPBuilder.initialize();
+  F->setName("func");
+
+  IRBuilder<> Builder(BB);
+  CallInst *Call = Builder.CreateCall(
+      OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL_omp_get_thread_num));
+  Builder.CreateRetVoid();
+
+  EXPECT_DEATH(OMPBuilder.finalize(),
+               "OpenMP runtime call to 'omp_get_thread_num' in function 'func' "
+               "has no debug location");
+
+  Call->setDebugLoc(DL);
+  OMPBuilder.finalize();
+}
+#endif
 
 TEST_F(OpenMPIRBuilderTest, CreateCancel) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
@@ -646,6 +757,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimpleGPU) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
+  Builder.SetCurrentDebugLocation(DL);
   BasicBlock *EnterBB = BasicBlock::Create(Ctx, "parallel.enter", F);
   Builder.CreateBr(EnterBB);
   Builder.SetInsertPoint(EnterBB);
@@ -3154,6 +3266,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSource) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
+  Builder.SetCurrentDebugLocation(DL);
   LLVMContext &Ctx = M->getContext();
 
   InsertPointTy AllocaIP(F->getEntryBlock().getFirstInsertionPt());
@@ -3237,6 +3350,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSink) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
+  Builder.SetCurrentDebugLocation(DL);
   LLVMContext &Ctx = M->getContext();
 
   InsertPointTy AllocaIP(F->getEntryBlock().getFirstInsertionPt());
@@ -3320,6 +3434,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveThreads) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
+  Builder.SetCurrentDebugLocation(DL);
 
   Type *PrivType = F->arg_begin()->getType();
   AllocaInst *PrivAI = Builder.CreateAlloca(PrivType, nullptr, "priv.inst");
@@ -4696,6 +4811,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithThreadLimit) {
   F->setName("func");
   IRBuilder<> &Builder = OMPBuilder.Builder;
   Builder.SetInsertPoint(BB);
+  Builder.SetCurrentDebugLocation(DL);
 
   Function *FakeFunction =
       Function::Create(FunctionType::get(Builder.getVoidTy(), false),
@@ -4752,6 +4868,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsUpper) {
   F->setName("func");
   IRBuilder<> &Builder = OMPBuilder.Builder;
   Builder.SetInsertPoint(BB);
+  Builder.SetCurrentDebugLocation(DL);
 
   Function *FakeFunction =
       Function::Create(FunctionType::get(Builder.getVoidTy(), false),
@@ -4809,6 +4926,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsBoth) {
   F->setName("func");
   IRBuilder<> &Builder = OMPBuilder.Builder;
   Builder.SetInsertPoint(BB);
+  Builder.SetCurrentDebugLocation(DL);
 
   Function *FakeFunction =
       Function::Create(FunctionType::get(Builder.getVoidTy(), false),
@@ -4869,6 +4987,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsAndThreadLimit) {
   F->setName("func");
   IRBuilder<> &Builder = OMPBuilder.Builder;
   Builder.SetInsertPoint(BB);
+  Builder.SetCurrentDebugLocation(DL);
 
   BasicBlock *CodegenBB = splitBB(Builder, true);
   Builder.SetInsertPoint(CodegenBB);
@@ -4934,6 +5053,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithIfCondition) {
   F->setName("func");
   IRBuilder<> &Builder = OMPBuilder.Builder;
   Builder.SetInsertPoint(BB);
+  Builder.SetCurrentDebugLocation(DL);
 
   Value *IfExpr = Builder.CreateLoad(Builder.getInt1Ty(),
                                      Builder.CreateAlloca(Builder.getInt1Ty()));
@@ -4998,6 +5118,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithIfConditionAndNumTeams) {
   F->setName("func");
   IRBuilder<> &Builder = OMPBuilder.Builder;
   Builder.SetInsertPoint(BB);
+  Builder.SetCurrentDebugLocation(DL);
 
   Value *IfExpr = Builder.CreateLoad(
       Builder.getInt32Ty(), Builder.CreateAlloca(Builder.getInt32Ty()));
@@ -7364,6 +7485,13 @@ TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
   };
 
   auto CustomMapperCB = [&](unsigned int I) { return nullptr; };
+  auto *mainSP = F->getSubprogram();
+  DIBuilder DIB(*M, false, mainSP->getUnit());
+  auto SPTy = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
+  auto SP = DIB.createFunction(mainSP->getScope(), "target", "",
+                               mainSP->getFile(), 2, SPTy, 2, DINode::FlagZero,
+                               DISubprogram::SPFlagDefinition |
+                                   DISubprogram::SPFlagOptimized);
   auto BodyGenCB = [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
                        OpenMPIRBuilder::InsertPointTy CodeGenIP,
                        ArrayRef<BasicBlock *> DeallocBlocks)
@@ -7371,13 +7499,6 @@ TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
     IRBuilderBase::InsertPointGuard guard(Builder);
     Builder.SetCurrentDebugLocation(llvm::DebugLoc());
     Builder.restoreIP(CodeGenIP);
-    auto *mainSP = F->getSubprogram();
-    DIBuilder DIB(*M, false, mainSP->getUnit());
-    auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
-    auto SP = DIB.createFunction(
-        mainSP->getScope(), "target", "", mainSP->getFile(), 2, Type, 2,
-        DINode::FlagZero,
-        DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
     OutlinedFn = CodeGenIP.getNodeParent()->getParent();
     OutlinedFn->setSubprogram(SP);
     DebugLoc Loc = DILocation::get(Ctx, 3, 7, SP);
@@ -7436,7 +7557,9 @@ TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
           Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
           /*DeallocBlocks=*/{}, Info, EntryInfo, DefaultAttrs, RuntimeAttrs,
           /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB, BodyGenCB,
-          SimpleArgAccessorCB, CustomMapperCB, {}, false));
+          SimpleArgAccessorCB, CustomMapperCB, {}, false,
+          /*DynCGroupMem=*/nullptr, omp::OMPDynGroupprivateFallbackType::Abort,
+          /*OutlinedFnLoc=*/DILocation::get(Ctx, 2, 0, SP)));
   EXPECT_EQ(DL, Builder.getCurrentDebugLocation());
   Builder.restoreIP(AfterIP);
 
@@ -8868,29 +8991,140 @@ TEST_F(OpenMPIRBuilderTest, FuseLoopRangeNoDeadBlocks) {
   }
 }
 
-/// Build empty 3x5 source loops for Virtual API tests, in outer-to-inner order.
+/// Build a two-level nest for Virtual API tests; default counts are 3x5.
 static Expected<std::array<CanonicalLoopInfo *, 2>>
 createEmptyNest(OpenMPIRBuilder &OMP, OpenMPIRBuilder::LocationDescription Loc,
-                unsigned Bits = 32) {
+                unsigned Bits = 32, ArrayRef<Value *> Counts = {}) {
   auto *Ty = IntegerType::get(Loc.IP.getNodeParent()->getContext(), Bits);
   std::array<CanonicalLoopInfo *, 2> Loops{};
   auto Empty = [](OpenMPIRBuilder::InsertPointTy, Value *) {
     return Error::success();
   };
   auto Body = [&](OpenMPIRBuilder::InsertPointTy IP, Value *) -> Error {
-    auto Inner = OMP.createCanonicalLoop({IP, Loc.DL}, Empty,
-                                         ConstantInt::get(Ty, 5), "inner");
+    auto Inner = OMP.createCanonicalLoop(
+        {IP, Loc.DL}, Empty,
+        Counts.empty() ? ConstantInt::get(Ty, 5) : Counts[1], "inner");
     if (!Inner)
       return Inner.takeError();
     Loops[1] = *Inner;
     return Error::success();
   };
-  auto Outer =
-      OMP.createCanonicalLoop(Loc, Body, ConstantInt::get(Ty, 3), "outer");
+  auto Outer = OMP.createCanonicalLoop(
+      Loc, Body, Counts.empty() ? ConstantInt::get(Ty, 3) : Counts[0], "outer");
   if (!Outer)
     return Outer.takeError();
   Loops[0] = *Outer;
   return Loops;
+}
+
+/// Check that worksharing preserves frozen counts and unsigned IV increments.
+static void checkVirtualCollapseCounts(BinaryOperator *Product,
+                                       ArrayRef<Value *> Counts,
+                                       ArrayRef<PHINode *> IVs,
+                                       CmpInst *OuterCmp, BasicBlock *Compute) {
+  ASSERT_NE(Product, nullptr);
+  EXPECT_TRUE(Product->hasNoUnsignedWrap());
+  EXPECT_FALSE(Product->hasNoSignedWrap());
+  EXPECT_EQ(Product->getParent(), Compute);
+  for (unsigned Level = 0; Level < 2; ++Level) {
+    Value *Stable = Product->getOperand(Level);
+    if (isa<ConstantInt, FreezeInst>(Counts[Level])) {
+      EXPECT_EQ(Stable, Counts[Level]);
+    } else {
+      auto *Freeze = dyn_cast<FreezeInst>(Stable);
+      ASSERT_NE(Freeze, nullptr);
+      EXPECT_EQ(Freeze->getOperand(0), Counts[Level]);
+      EXPECT_EQ(Freeze->getParent(), Compute);
+      if (Counts[Level]->hasUseList())
+        EXPECT_TRUE(Counts[Level]->hasOneUse());
+    }
+    auto *Next = cast<BinaryOperator>(IVs[Level]->getIncomingValue(1));
+    EXPECT_TRUE(Next->hasNoUnsignedWrap());
+    EXPECT_EQ(Next->hasNoSignedWrap(), isa<ConstantInt>(Counts[Level]));
+  }
+  EXPECT_EQ(Product->getOperand(0) == Product->getOperand(1),
+            Counts[0] == Counts[1]);
+  auto *Div = cast<BinaryOperator>(IVs[0]->getIncomingValue(0));
+  EXPECT_EQ(Div->getOperand(1), Product->getOperand(1));
+  EXPECT_EQ(OuterCmp->getOperand(1), Product->getOperand(0));
+  // Poison trip counts must not bypass their freeze.
+  for (Instruction &I : instructions(Product->getFunction()))
+    for (Value *Operand : I.operands())
+      if (isa<PoisonValue>(Operand))
+        EXPECT_TRUE(&I == Product->getOperand(0) ||
+                    &I == Product->getOperand(1));
+}
+
+/// Build counts before the source nest and check both worksharing IV widths.
+static void runVirtualCollapseCounts(
+    BasicBlock *BB,
+    function_ref<std::array<Value *, 2>(IRBuilder<> &, Function &)>
+        MakeCounts) {
+  IRBuilder<>(BB).CreateRetVoid();
+  Module &M = *BB->getModule();
+  LLVMContext &Ctx = M.getContext();
+  for (unsigned Bits : {32u, 64u}) {
+    SCOPED_TRACE(Bits);
+    OpenMPIRBuilder OMP(M);
+    OMP.Config.IsTargetDevice = false;
+    OMP.Config.CollapseMapping = OpenMPIRBuilder::CollapseIVMapping::Virtual;
+    OMP.Config.setNoSignedWrap(true);
+    OMP.initialize();
+    auto *Ty = IntegerType::get(Ctx, Bits);
+    auto *Fn = Function::Create(
+        FunctionType::get(Type::getVoidTy(Ctx), {Ty, Ty}, false),
+        GlobalValue::ExternalLinkage, "runtime", M);
+    // Cover the same freezing policy for defined and possibly-undef counts.
+    Fn->addParamAttr(0, Attribute::NoUndef);
+    auto *Entry = BasicBlock::Create(Ctx, "entry", Fn);
+    IRBuilder<> B(Entry);
+    std::array<Value *, 2> Counts = MakeCounts(B, *Fn);
+    ASSERT_EXPECTED_INIT(auto, Loops,
+                         createEmptyNest(OMP, {B.saveIP(), {}}, Bits, Counts));
+    std::array<PHINode *, 2> IVs{cast<PHINode>(Loops[0]->getIndVar()),
+                                 cast<PHINode>(Loops[1]->getIndVar())};
+    auto *OuterCmp = cast<CmpInst>(&Loops[0]->getCond()->front());
+    BasicBlock *Compute = Loops[0]->getPreheader();
+    B.restoreIP(Loops[0]->getAfterIP());
+    B.CreateRetVoid();
+    auto *Collapsed = OMP.collapseLoops({}, Loops, {});
+    auto *Product = dyn_cast<BinaryOperator>(Collapsed->getTripCount());
+    ASSERT_THAT_EXPECTED(OMP.applyWorkshareLoop({}, Collapsed, Entry->begin(),
+                                                false,
+                                                omp::OMP_SCHEDULE_Static),
+                         Succeeded());
+    OMP.finalize();
+    ASSERT_NO_FATAL_FAILURE(
+        checkVirtualCollapseCounts(Product, Counts, IVs, OuterCmp, Compute));
+  }
+  ASSERT_FALSE(verifyModule(M, &errs()));
+}
+
+TEST_F(OpenMPIRBuilderTest, VirtualCollapseRuntimeCounts) {
+  runVirtualCollapseCounts(BB, [](IRBuilder<> &, Function &Fn) {
+    return std::array<Value *, 2>{Fn.getArg(0), Fn.getArg(1)};
+  });
+}
+
+TEST_F(OpenMPIRBuilderTest, VirtualCollapseSharedCount) {
+  runVirtualCollapseCounts(BB, [](IRBuilder<> &, Function &Fn) {
+    return std::array<Value *, 2>{Fn.getArg(1), Fn.getArg(1)};
+  });
+}
+
+TEST_F(OpenMPIRBuilderTest, VirtualCollapseFrozenCounts) {
+  runVirtualCollapseCounts(BB, [](IRBuilder<> &B, Function &Fn) {
+    return std::array<Value *, 2>{B.CreateFreeze(Fn.getArg(1)),
+                                  B.CreateFreeze(Fn.getArg(1))};
+  });
+}
+
+TEST_F(OpenMPIRBuilderTest, VirtualCollapsePoisonCount) {
+  runVirtualCollapseCounts(BB, [](IRBuilder<> &, Function &Fn) {
+    Type *Ty = Fn.getArg(0)->getType();
+    return std::array<Value *, 2>{ConstantInt::get(Ty, 0),
+                                  PoisonValue::get(Ty)};
+  });
 }
 
 // Preserve the outer condition and repeated direct edges through scheduling.
@@ -8962,16 +9196,6 @@ TEST_F(OpenMPIRBuilderTest, VirtualCollapseGuards) {
   B.restoreIP(Outer->getAfterIP());
   B.CreateRetVoid();
   ASSERT_FALSE(verifyModule(*M, &errs()));
-  EXPECT_DEATH_IF_SUPPORTED(
-      OMP.collapseLoops(DL, {Outer, Inner, Inner}, {}),
-      "Virtual collapse requires two constant-count loops");
-  auto *Cmp = cast<CmpInst>(&Outer->getCond()->front());
-  Value *TC = Cmp->getOperand(1);
-  Cmp->setOperand(1, F->getArg(0));
-  EXPECT_DEATH_IF_SUPPORTED(
-      OMP.collapseLoops(DL, {Outer, Inner}, {}),
-      "Virtual collapse requires two constant-count loops");
-  Cmp->setOperand(1, TC);
   // Isolate both direct-nesting edges using valid CFGs.
   for (BasicBlock *From : {Outer->getBody(), Inner->getAfter()}) {
     auto *Br = cast<UncondBrInst>(From->getTerminator());
@@ -9141,17 +9365,44 @@ TEST_P(OpenMPIRBuilderTestWithIVBits, VirtualCollapseAssertOK) {
   OpenMPIRBuilder OMP(*M);
   OMP.Config.IsTargetDevice = false;
   OMP.Config.CollapseMapping = OpenMPIRBuilder::CollapseIVMapping::Virtual;
+  OMP.Config.setNoSignedWrap(true);
   OMP.initialize();
   IRBuilder<> B(BB);
+  B.SetCurrentDebugLocation(DL);
+  auto *Ty = IntegerType::get(Ctx, Bits);
+  Value *Incoming = B.CreateZExtOrTrunc(F->getArg(0), Ty);
+  auto *Merge = BasicBlock::Create(Ctx, "merge", F);
+  B.CreateBr(Merge);
+  B.SetInsertPoint(Merge);
+  auto *Phi = B.CreatePHI(Ty, 1);
+  std::array<Value *, 2> Counts{Phi, ConstantInt::get(Ty, 5)};
   ASSERT_EXPECTED_INIT(auto, Loops,
-                       createEmptyNest(OMP, {B.saveIP(), DL}, Bits));
+                       createEmptyNest(OMP, {B.saveIP(), DL}, Bits, Counts));
   auto [Outer, Inner] = Loops;
+  auto *OuterNext = cast<BinaryOperator>(&Outer->getLatch()->front());
+  auto *InnerNext = cast<BinaryOperator>(&Inner->getLatch()->front());
+  auto ComputeIP = Merge->getTerminator()->getIterator();
+  ComputeIP->setDebugLoc(DL);
   B.restoreIP(Outer->getAfterIP());
   B.CreateRetVoid();
   // New executor instructions use the collapse location, not the source loops'.
   DebugLoc CollapseDL =
       DILocation::get(Ctx, DL.getLine() + 1, DL.getCol(), DL.getScope());
-  auto *Collapsed = OMP.collapseLoops(CollapseDL, {Outer, Inner}, {});
+  auto *Collapsed = OMP.collapseLoops(CollapseDL, {Outer, Inner}, ComputeIP);
+  // MLIR connects block-argument inputs after translating the loop.
+  Phi->addIncoming(Incoming, BB);
+  EXPECT_FALSE(OuterNext->hasNoSignedWrap());
+  EXPECT_TRUE(InnerNext->hasNoSignedWrap());
+  auto *Product = cast<BinaryOperator>(Collapsed->getTripCount());
+  auto *Frozen = dyn_cast<FreezeInst>(Product->getOperand(0));
+  ASSERT_NE(Frozen, nullptr);
+  EXPECT_EQ(Frozen->getOperand(0), Phi);
+  EXPECT_TRUE(Phi->hasOneUse());
+  EXPECT_EQ(Product->getOperand(1), Counts[1]);
+  EXPECT_EQ(Product->getParent(), Merge);
+  EXPECT_EQ(Frozen->getParent(), Product->getParent());
+  EXPECT_EQ(ComputeIP->getDebugLoc(), DL);
+  EXPECT_EQ(Product->getDebugLoc(), CollapseDL);
   unsigned Checked = 0;
   for (Instruction &I : instructions(F))
     if (I.getName().starts_with("omp_collapsed.") ||

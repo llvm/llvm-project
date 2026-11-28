@@ -167,6 +167,10 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
   if (!Subtarget.useSoftFloat()) {
     addRegisterClass(MVT::f32, &Mips::FGR32RegClass);
 
+    // The rounding mode is in FCSR.
+    setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
+    setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
+
     // RINT uses the current rounding mode and may raise inexact.
     if (Subtarget.hasMips32r6() && !Subtarget.inMicroMipsMode()) {
       setOperationAction(ISD::FRINT, MVT::f32, Legal);
@@ -174,6 +178,17 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
       if (!Subtarget.isSingleFloat()) {
         setOperationAction(ISD::FRINT, MVT::f64, Legal);
         setOperationAction(ISD::STRICT_FRINT, MVT::f64, Legal);
+      }
+    }
+
+    // Standard r6 has a fused multiply-add with a tied accumulator. Scalar
+    // FMA selection for the microMIPS encodings is not implemented here.
+    if (Subtarget.hasMips32r6() && !Subtarget.inMicroMipsMode()) {
+      // Keep strict nodes intact so their exception chains survive selection.
+      for (auto Op : {ISD::FMA, ISD::STRICT_FMA}) {
+        setOperationAction(Op, MVT::f32, Legal);
+        if (!Subtarget.isSingleFloat() && Subtarget.isFP64bit())
+          setOperationAction(Op, MVT::f64, Legal);
       }
     }
 
@@ -189,6 +204,14 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
                     ISD::STRICT_FDIV, ISD::STRICT_FSQRT}) {
       setOperationAction(Op, MVT::f32, Legal);
       setOperationAction(Op, MVT::f64, Legal);
+    }
+
+    // MIPS I has no sqrt.fmt, use a libcall.
+    if (!Subtarget.hasMips2()) {
+      for (auto Op : {ISD::FSQRT, ISD::STRICT_FSQRT}) {
+        setOperationAction(Op, MVT::f32, Expand);
+        setOperationAction(Op, MVT::f64, Expand);
+      }
     }
   }
 
@@ -285,12 +308,12 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::i32, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
 
-    setOperationAction(ISD::SETCC, MVT::f32, Legal);
+    setOperationAction(ISD::SETCC, MVT::f32, Custom);
     setOperationAction(ISD::SELECT, MVT::f32, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
 
     assert(Subtarget.isFP64bit() && "FR=1 is required for MIPS32r6");
-    setOperationAction(ISD::SETCC, MVT::f64, Legal);
+    setOperationAction(ISD::SETCC, MVT::f64, Custom);
     setOperationAction(ISD::SELECT, MVT::f64, Legal);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
 
@@ -367,6 +390,14 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::FMUL, MVT::f32, Custom);
     setOperationAction(ISD::FDIV, MVT::f32, Custom);
     setOperationAction(ISD::FSQRT, MVT::f32, Custom);
+
+    // The FPU has no NaN or infinity and always rounds toward zero. The
+    // constrained operations must follow the IEEE rules and the current
+    // rounding mode, so always use libcalls for them, even with fast-math
+    // flags.
+    for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+                    ISD::STRICT_FDIV, ISD::STRICT_FSQRT})
+      setOperationAction(Op, MVT::f32, LibCall);
   }
 
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -603,10 +634,8 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::VECTOR_SHUFFLE:
     return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::FP16_TO_FP:
-  case ISD::STRICT_FP16_TO_FP:
     return lowerFP16_TO_FP(Op, DAG);
   case ISD::FP_TO_FP16:
-  case ISD::STRICT_FP_TO_FP16:
     return lowerFP_TO_FP16(Op, DAG);
   case ISD::BITCAST:            return lowerBITCAST(Op, DAG);
   case ISD::FADD:
@@ -1179,9 +1208,9 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
     SDValue Op1 = N->getOperand(1);
     SDValue NotOp;
 
-    if (ISD::isBuildVectorAllOnes(Op0.getNode()))
+    if (ISD::isBuildVectorAllOnes(Op0))
       NotOp = Op1;
-    else if (ISD::isBuildVectorAllOnes(Op1.getNode()))
+    else if (ISD::isBuildVectorAllOnes(Op1))
       NotOp = Op0;
     else
       return SDValue();
@@ -1263,6 +1292,10 @@ MipsSETargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return MipsTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   case Mips::BPOSGE32_PSEUDO:
     return emitBPOSGE32(MI, BB);
+  case Mips::PseudoTRUNC_W_S_M1:
+    return emitTRUNC_W_M1(MI, BB, Mips::CVT_W_S);
+  case Mips::PseudoTRUNC_W_D32_M1:
+    return emitTRUNC_W_M1(MI, BB, Mips::CVT_W_D32);
   case Mips::SNZ_B_PSEUDO:
     return emitMSACBranchPseudo(MI, BB, Mips::BNZ_B);
   case Mips::SNZ_H_PSEUDO:
@@ -1376,7 +1409,7 @@ SDValue MipsSETargetLowering::lowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   if (Subtarget.hasMips2())
     BP = DAG.getNode(MipsISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
   else
-    BP = DAG.getNode(MipsISD::BuildPairF64_FPR, DL, MVT::f64, Hi, Lo);
+    BP = DAG.getNode(MipsISD::BuildPairF64_FPR, DL, MVT::f64, Lo, Hi);
 
   SDValue Ops[2] = {BP, Hi.getValue(1)};
   return DAG.getMergeValues(Ops, DL);
@@ -2087,9 +2120,11 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::mips_flog2_d:
     return DAG.getNode(ISD::FLOG2, DL, Op->getValueType(0), Op->getOperand(1));
   case Intrinsic::mips_fmadd_w:
-  case Intrinsic::mips_fmadd_d:
+  case Intrinsic::mips_fmadd_d: {
+    // The mips intrinsics compute `a + b*c`, which is `fma(b, c, a)`.
     return DAG.getNode(ISD::FMA, SDLoc(Op), Op->getValueType(0),
-                       Op->getOperand(1), Op->getOperand(2), Op->getOperand(3));
+                       Op->getOperand(2), Op->getOperand(3), Op->getOperand(1));
+  }
   case Intrinsic::mips_fmul_w:
   case Intrinsic::mips_fmul_d:
     return DAG.getNode(ISD::FMUL, DL, Op->getValueType(0), Op->getOperand(1),
@@ -3227,6 +3262,40 @@ SDValue MipsSETargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   return lowerVECTOR_SHUFFLE_VSHF(Op, ResTy, Indices, false, DAG);
 }
 
+// MIPS I has no trunc.w.fmt. Do the conversion with cvt.w.fmt and the
+// rounding mode set to round toward zero, then restore the FCSR. This is the
+// same sequence the assembler uses for the trunc.w.fmt macro.
+//
+//   cfc1 $old, $31
+//   ori  $tmp, $old, 3
+//   xori $tmp, $tmp, 2
+//   ctc1 $tmp, $31
+//   cvt.w.fmt $dst, $src
+//   ctc1 $old, $31
+MachineBasicBlock *MipsSETargetLowering::emitTRUNC_W_M1(MachineInstr &MI,
+                                                        MachineBasicBlock *BB,
+                                                        unsigned CvtOpc) const {
+  MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const TargetRegisterClass *RC = &Mips::GPR32RegClass;
+  DebugLoc DL = MI.getDebugLoc();
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register Old = RegInfo.createVirtualRegister(RC);
+  Register Tmp0 = RegInfo.createVirtualRegister(RC);
+  Register Tmp1 = RegInfo.createVirtualRegister(RC);
+
+  BuildMI(*BB, MI, DL, TII->get(Mips::CFC1), Old).addReg(Mips::FCR31);
+  BuildMI(*BB, MI, DL, TII->get(Mips::ORi), Tmp0).addReg(Old).addImm(3);
+  BuildMI(*BB, MI, DL, TII->get(Mips::XORi), Tmp1).addReg(Tmp0).addImm(2);
+  BuildMI(*BB, MI, DL, TII->get(Mips::CTC1), Mips::FCR31).addReg(Tmp1);
+  BuildMI(*BB, MI, DL, TII->get(CvtOpc), Dst).addReg(Src);
+  BuildMI(*BB, MI, DL, TII->get(Mips::CTC1), Mips::FCR31).addReg(Old);
+
+  MI.eraseFromParent();
+  return BB;
+}
+
 MachineBasicBlock *
 MipsSETargetLowering::emitBPOSGE32(MachineInstr &MI,
                                    MachineBasicBlock *BB) const {
@@ -3452,8 +3521,9 @@ MipsSETargetLowering::emitCOPY_FD(MachineInstr &MI,
 //
 // insert_fw_pseudo $wd, $wd_in, $n, $fs
 // =>
-// subreg_to_reg $wt:sub_lo, $fs
-// insve_w $wd[$n], $wd_in, $wt[0]
+// implicit_def $wt1
+// insert_subreg $wt2:sub_lo, $wt1, $fs
+// insve_w $wd[$n], $wd_in, $wt2[0]
 MachineBasicBlock *
 MipsSETargetLowering::emitINSERT_FW(MachineInstr &MI,
                                     MachineBasicBlock *BB) const {
@@ -3464,17 +3534,21 @@ MipsSETargetLowering::emitINSERT_FW(MachineInstr &MI,
   Register Wd_in = MI.getOperand(1).getReg();
   unsigned Lane = MI.getOperand(2).getImm();
   Register Fs = MI.getOperand(3).getReg();
-  Register Wt = RegInfo.createVirtualRegister(
-      Subtarget.useOddSPReg() ? &Mips::MSA128WRegClass
-                              : &Mips::MSA128WEvensRegClass);
+  const TargetRegisterClass *RC = Subtarget.useOddSPReg()
+                                      ? &Mips::MSA128WRegClass
+                                      : &Mips::MSA128WEvensRegClass;
+  Register Wt1 = RegInfo.createVirtualRegister(RC);
+  Register Wt2 = RegInfo.createVirtualRegister(RC);
 
-  BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
+  BuildMI(*BB, MI, DL, TII->get(Mips::IMPLICIT_DEF), Wt1);
+  BuildMI(*BB, MI, DL, TII->get(Mips::INSERT_SUBREG), Wt2)
+      .addReg(Wt1)
       .addReg(Fs)
       .addImm(Mips::sub_lo);
   BuildMI(*BB, MI, DL, TII->get(Mips::INSVE_W), Wd)
       .addReg(Wd_in)
       .addImm(Lane)
-      .addReg(Wt)
+      .addReg(Wt2)
       .addImm(0);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
@@ -3485,8 +3559,9 @@ MipsSETargetLowering::emitINSERT_FW(MachineInstr &MI,
 //
 // insert_fd_pseudo $wd, $fs, n
 // =>
-// subreg_to_reg $wt:sub_64, $fs
-// insve_d $wd[$n], $wd_in, $wt[0]
+// implicit_def $wt1
+// insert_subreg $wt2:sub_64, $wt1, $fs
+// insve_d $wd[$n], $wd_in, $wt2[0]
 MachineBasicBlock *
 MipsSETargetLowering::emitINSERT_FD(MachineInstr &MI,
                                     MachineBasicBlock *BB) const {
@@ -3499,15 +3574,18 @@ MipsSETargetLowering::emitINSERT_FD(MachineInstr &MI,
   Register Wd_in = MI.getOperand(1).getReg();
   unsigned Lane = MI.getOperand(2).getImm();
   Register Fs = MI.getOperand(3).getReg();
-  Register Wt = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
+  Register Wt1 = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
+  Register Wt2 = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
 
-  BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
+  BuildMI(*BB, MI, DL, TII->get(Mips::IMPLICIT_DEF), Wt1);
+  BuildMI(*BB, MI, DL, TII->get(Mips::INSERT_SUBREG), Wt2)
+      .addReg(Wt1)
       .addReg(Fs)
       .addImm(Mips::sub_64);
   BuildMI(*BB, MI, DL, TII->get(Mips::INSVE_D), Wd)
       .addReg(Wd_in)
       .addImm(Lane)
-      .addReg(Wt)
+      .addReg(Wt2)
       .addImm(0);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
@@ -3528,7 +3606,8 @@ MipsSETargetLowering::emitINSERT_FD(MachineInstr &MI,
 // For floating point:
 // (INSERT_([BHWD]|F[WD])_PSEUDO $wd, $wd_in, $n, $fs)
 // =>
-// (SUBREG_TO_REG $wt, $fs, <subreg>)
+// (IMPLICIT_DEF $wt1)
+// (INSERT_SUBREG $wt2, $wt1, $fs, <subreg>)
 // (SLL $lanetmp1, $lane, <log2size)
 // (SLD_B $wdtmp1, $wd_in, $wd_in, $lanetmp1)
 // (INSVE_[WD], $wdtmp2, 0, $wdtmp1, 0)
@@ -3584,11 +3663,14 @@ MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
   }
 
   if (IsFP) {
-    Register Wt = RegInfo.createVirtualRegister(VecRC);
-    BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
+    Register Wt1 = RegInfo.createVirtualRegister(VecRC);
+    Register Wt2 = RegInfo.createVirtualRegister(VecRC);
+    BuildMI(*BB, MI, DL, TII->get(Mips::IMPLICIT_DEF), Wt1);
+    BuildMI(*BB, MI, DL, TII->get(Mips::INSERT_SUBREG), Wt2)
+        .addReg(Wt1)
         .addReg(SrcValReg)
         .addImm(EltSizeInBytes == 8 ? Mips::sub_64 : Mips::sub_lo);
-    SrcValReg = Wt;
+    SrcValReg = Wt2;
   }
 
   // Convert the lane index into a byte index

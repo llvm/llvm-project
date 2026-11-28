@@ -385,7 +385,7 @@ struct TransferOpReduceRank
         newInBoundsAttr);
     return vector::BroadcastOp::create(rewriter, op.getLoc(), originalVecType,
                                        newRead)
-        .getVector();
+        .getResult();
   }
 };
 

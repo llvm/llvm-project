@@ -222,6 +222,13 @@ TargetLowering::getArgListForFunctionType(FunctionType *FuncTy,
   return Args;
 }
 
+std::pair<SDValue, SDValue> TargetLowering::makeLibCall(
+    SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT, ArrayRef<SDValue> Ops,
+    MakeLibCallOptions CallOptions, const SDLoc &dl, SDValue Chain) const {
+  return makeLibCall(DAG, DAG.getLibcalls().getLibcallImpl(LC), RetVT, Ops,
+                     CallOptions, dl, Chain);
+}
+
 /// Generate a libcall taking the given operands as arguments and returning a
 /// result of type RetVT.
 std::pair<SDValue, SDValue>
@@ -277,8 +284,8 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::LibcallImpl LibcallImpl,
 
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setLibCallee(getLibcallImplCallingConv(LibcallImpl), RetTy, OrigRetTy,
-                    Callee, std::move(Args))
+      .setLibCallee(DAG.getLibcalls().getLibcallImplCallingConv(LibcallImpl),
+                    RetTy, OrigRetTy, Callee, std::move(Args))
       .setNoReturn(CallOptions.DoesNotReturn)
       .setDiscardResult(!CallOptions.IsReturnValueUsed)
       .setIsPostTypeLegalization(CallOptions.IsPostTypeLegalization)
@@ -1023,7 +1030,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       // if we don't care about FP signed-zero. The use of SETLT with FP means
       // that we don't care about NaNs.
       if (CC == ISD::SETLT && Op1.getValueType().isInteger() &&
-          (isNullConstant(Op1) || ISD::isBuildVectorAllZeros(Op1.getNode())))
+          (isNullConstant(Op1) || ISD::isBuildVectorAllZeros(Op1)))
         return Op0;
     }
     break;
@@ -1786,7 +1793,7 @@ bool TargetLowering::SimplifyDemandedBits(
     // iff 'C' is Undef/Constant and AND(X,M) == X (for DemandedBits).
     if (Op0.getOpcode() == ISD::INSERT_SUBVECTOR && !VT.isScalableVector() &&
         (Op0.getOperand(0).isUndef() ||
-         ISD::isBuildVectorOfConstantSDNodes(Op0.getOperand(0).getNode())) &&
+         ISD::isBuildVectorOfConstantSDNodes(Op0.getOperand(0))) &&
         Op0->hasOneUse()) {
       unsigned NumSubElts =
           Op0.getOperand(1).getValueType().getVectorNumElements();
@@ -3349,8 +3356,13 @@ bool TargetLowering::SimplifyDemandedBits(
   }
   case ISD::FABS: {
     SDValue Op0 = Op.getOperand(0);
-    APInt SignMask = APInt::getSignMask(BitWidth);
+    EVT SVT = Op0.getValueType();
 
+    // The position of the sign bit for ppc_fp128 is endian-dependent.
+    if (!APFloat::hasSignBitInMSB(SVT.getFltSemantics()) || SVT == MVT::ppcf128)
+      break;
+
+    APInt SignMask = APInt::getSignMask(BitWidth);
     if (!DemandedBits.intersects(SignMask))
       return TLO.CombineTo(Op, Op0);
 
@@ -3402,6 +3414,13 @@ bool TargetLowering::SimplifyDemandedBits(
   }
   case ISD::FNEG: {
     SDValue Op0 = Op.getOperand(0);
+    EVT SVT = Op0.getValueType();
+
+    // The logic below assumes the sign bit is in the MSB.
+    // ppc_fp128 has two sign bits (at bits 127 and 63).
+    if (!APFloat::hasSignBitInMSB(SVT.getFltSemantics()) || SVT == MVT::ppcf128)
+      break;
+
     APInt SignMask = APInt::getSignMask(BitWidth);
 
     if (!DemandedBits.intersects(SignMask))
@@ -4054,6 +4073,38 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     }
     break;
   }
+  case ISD::VECTOR_SHUFFLE_VAR: {
+    SDValue Src = Op.getOperand(0);
+    SDValue Mask = Op.getOperand(1);
+
+    // Result element i only depends on mask element i, so the elements required
+    // from the mask are the same as the demanded result elements.
+    APInt DemandedMask = DemandedElts;
+    APInt UndefMask, ZeroMask;
+    if (!DemandedMask.isAllOnes() &&
+        SimplifyDemandedVectorElts(Mask, DemandedMask, UndefMask, ZeroMask, TLO,
+                                   Depth + 1))
+      return true;
+
+    // Only those source elements are required which are indexed by the demanded
+    // elements of the mask. So source elements that are not in the range
+    // specified by the following are not required.
+    ConstantRange KnownRange = TLO.DAG.computeConstantRangeIncludingKnownBits(
+        Mask, DemandedMask, /*ForSigned=*/false, Depth + 1);
+    // Indexes >= NumElts produce poison, so they don't require any source
+    // elements.
+    unsigned Lo = KnownRange.getUnsignedMin().getLimitedValue(NumElts);
+    unsigned Hi = KnownRange.getUnsignedMax().getLimitedValue(NumElts - 1) + 1;
+
+    APInt DemandedSrc = APInt::getBitsSet(NumElts, Lo, Hi);
+    APInt UndefSrc, ZeroSrc;
+    if (!DemandedSrc.isAllOnes() &&
+        SimplifyDemandedVectorElts(Src, DemandedSrc, UndefSrc, ZeroSrc, TLO,
+                                   Depth + 1))
+      return true;
+
+    break;
+  }
   case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG: {
@@ -4150,7 +4201,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    Depth + 1))
       return true;
 
-    KnownZero = ZeroLHS & ZeroRHS;
+    // 0.0 / 0.0 and frem(0.0, 0.0) are NaN, not zero.
+    if (Opcode != ISD::FDIV && Opcode != ISD::FREM)
+      KnownZero = ZeroLHS & ZeroRHS;
     KnownUndef = getKnownUndefForVectorBinop(Op, TLO.DAG, UndefLHS, UndefRHS);
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
@@ -6313,7 +6366,7 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         // now; without this it would get ZExt'd later in
         // ScheduleDAGSDNodes::EmitNode, which is very generic.
         bool IsBool = C->getConstantIntValue()->getBitWidth() == 1;
-        BooleanContent BCont = getBooleanContents(MVT::i64);
+        BooleanContent BCont = getBooleanContents(/*isVec=*/false);
         ISD::NodeType ExtOpc =
             IsBool ? getExtendForContent(BCont) : ISD::SIGN_EXTEND;
         int64_t ExtVal =
@@ -7301,14 +7354,14 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   }
   const unsigned SVTBits = SVT.getSizeInBits();
 
-  // Allow i32 to be widened to i64 for uncooperative divisors if i64 MULHU or
-  // UMUL_LOHI is supported.
-  const EVT WideSVT = MVT::i64;
+  // Allow scalars to be widened to twice their size for uncooperative divisors
+  // if MULHU or UMUL_LOHI is supported for the wider type.
+  const EVT WideSVT = EVT::getIntegerVT(*DAG.getContext(), 2 * EltBits);
   const bool HasWideMULHU =
-      VT == MVT::i32 &&
+      VT.isScalarInteger() &&
       isOperationLegalOrCustom(ISD::MULHU, WideSVT, IsAfterLegalization);
   const bool HasWideUMUL_LOHI =
-      VT == MVT::i32 &&
+      VT.isScalarInteger() &&
       isOperationLegalOrCustom(ISD::UMUL_LOHI, WideSVT, IsAfterLegalization);
   const bool AllowWiden = (HasWideMULHU || HasWideUMUL_LOHI);
 
@@ -8941,7 +8994,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
   // UDIVREM can lower it instead.
   bool CanDecomposeUREMWithoutMulHi =
       Opcode == ISD::UREM &&
-      getLibcallImpl(RTLIB::getUREM(N->getValueType(0))) ==
+      DAG.getLibcalls().getLibcallImpl(RTLIB::getUREM(N->getValueType(0))) ==
           RTLIB::Unsupported &&
       isOperationLegalOrCustom(ISD::UDIVREM, HiLoVT);
   if (!CanDecomposeUREMWithoutMulHi &&
@@ -12660,8 +12713,7 @@ TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr,
   // An out-of-range index only makes the vector operation return poison, but
   // a load/store through the pointer computed below would be immediate UB, so
   // freeze the index before clamping it into range.
-  if (!DAG.isGuaranteedNotToBePoison(Index))
-    Index = DAG.getFreeze(Index);
+  Index = DAG.getFreeze(Index, UndefPoisonKind::PoisonOnly);
 
   EVT IdxVT = Index.getValueType();
   if (SubVecVT.isScalableVector())
@@ -13107,7 +13159,7 @@ void TargetLowering::forceExpandWideMUL(SelectionDAG &DAG, const SDLoc &dl,
   else if (WideVT == MVT::i128)
     LC = RTLIB::MUL_I128;
 
-  RTLIB::LibcallImpl LibcallImpl = getLibcallImpl(LC);
+  RTLIB::LibcallImpl LibcallImpl = DAG.getLibcalls().getLibcallImpl(LC);
   if (LibcallImpl == RTLIB::Unsupported) {
     forceExpandMultiply(DAG, dl, Signed, Lo, Hi, LHS, RHS);
     return;
@@ -13994,6 +14046,20 @@ void TargetLowering::expandVectorInterleave(SDNode *Node,
   unsigned Factor = Node->getNumOperands();
   SDLoc DL(Node);
 
+  // Convert interleave of two lane operands to paired shuffles
+  if (VT.isFixedLengthVector() && VT.getVectorNumElements() == 2) {
+    for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx) {
+      unsigned FirstEltIdx = 2 * ResultIdx;
+      int FirstMaskIdx = FirstEltIdx / Factor;
+      int SecondMaskIdx = (FirstEltIdx + 1) / Factor + 2;
+      Results.push_back(
+          DAG.getVectorShuffle(VT, DL, Node->getOperand(FirstEltIdx % Factor),
+                               Node->getOperand((FirstEltIdx + 1) % Factor),
+                               {FirstMaskIdx, SecondMaskIdx}));
+    }
+    return;
+  }
+
   if (Factor > 2 && Factor % 2 == 0) {
     SmallVector<EVT> HalfVTs(Factor / 2, VT);
     SmallVector<SDValue, 8> LOps, ROps;
@@ -14052,6 +14118,19 @@ void TargetLowering::expandVectorDeinterleave(SDNode *Node,
   EVT VT = Node->getValueType(0);
   unsigned Factor = Node->getNumOperands();
   SDLoc DL(Node);
+
+  // Convert deinterleave of two lane operands to paired shuffles
+  if (VT.isFixedLengthVector() && VT.getVectorNumElements() == 2) {
+    for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx) {
+      int FirstMaskIdx = ResultIdx % 2;
+      int SecondMaskIdx = (ResultIdx + Factor) % 2 + 2;
+      Results.push_back(
+          DAG.getVectorShuffle(VT, DL, Node->getOperand(ResultIdx / 2),
+                               Node->getOperand((ResultIdx + Factor) / 2),
+                               {FirstMaskIdx, SecondMaskIdx}));
+    }
+    return;
+  }
 
   if (Factor > 2 && Factor % 2 == 0) {
     SmallVector<SDValue, 8> Ops(Node->ops());
@@ -14188,52 +14267,10 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
 
   Align Alignment = DAG.getReducedAlign(VecVT, /*UseABI=*/false);
   SDValue StackPtr = DAG.CreateStackTemporary(VecVT.getStoreSize(), Alignment);
-  int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
-  MachinePointerInfo PtrInfo =
-      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
 
   MVT PositionVT = getVectorIdxTy(DAG.getDataLayout());
   SDValue Chain = DAG.getEntryNode();
   SDValue OutPos = DAG.getConstant(0, DL, PositionVT);
-
-  bool HasPassthru = !Passthru.isUndef();
-
-  // If we have a passthru vector, store it on the stack, overwrite the matching
-  // positions and then re-write the last element that was potentially
-  // overwritten even though mask[i] = false.
-  if (HasPassthru)
-    Chain = DAG.getStore(Chain, DL, Passthru, StackPtr, PtrInfo, Alignment);
-
-  SDValue LastWriteVal;
-  APInt PassthruSplatVal;
-  bool IsSplatPassthru =
-      ISD::isConstantSplatVector(Passthru.getNode(), PassthruSplatVal);
-
-  if (IsSplatPassthru) {
-    // As we do not know which position we wrote to last, we cannot simply
-    // access that index from the passthru vector. So we first check if passthru
-    // is a splat vector, to use any element ...
-    LastWriteVal = DAG.getConstant(PassthruSplatVal, DL, ScalarVT);
-  } else if (HasPassthru) {
-    // ... if it is not a splat vector, we need to get the passthru value at
-    // position = popcount(mask) and re-load it from the stack before it is
-    // overwritten in the loop below.
-    EVT PopcountVT = ScalarVT.changeTypeToInteger();
-    SDValue Popcount = DAG.getNode(
-        ISD::TRUNCATE, DL,
-        MaskVT.changeVectorElementType(*DAG.getContext(), MVT::i1), Mask);
-    Popcount = DAG.getNode(
-        ISD::ZERO_EXTEND, DL,
-        MaskVT.changeVectorElementType(*DAG.getContext(), PopcountVT),
-        Popcount);
-    Popcount = DAG.getNode(ISD::VECREDUCE_ADD, DL, PopcountVT, Popcount);
-    SDValue LastElmtPtr =
-        getVectorElementPointer(DAG, StackPtr, VecVT, Popcount);
-    LastWriteVal = DAG.getLoad(
-        ScalarVT, DL, Chain, LastElmtPtr,
-        MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
-    Chain = LastWriteVal.getValue(1);
-  }
 
   unsigned NumElms = VecVT.getVectorNumElements();
   for (unsigned I = 0; I < NumElms; I++) {
@@ -14251,26 +14288,67 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
     MaskI = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, MaskI);
     MaskI = DAG.getNode(ISD::ZERO_EXTEND, DL, PositionVT, MaskI);
     OutPos = DAG.getNode(ISD::ADD, DL, PositionVT, OutPos, MaskI);
-
-    if (HasPassthru && I == NumElms - 1) {
-      SDValue EndOfVector =
-          DAG.getConstant(VecVT.getVectorNumElements() - 1, DL, PositionVT);
-      SDValue AllLanesSelected =
-          DAG.getSetCC(DL, MVT::i1, OutPos, EndOfVector, ISD::CondCode::SETUGT);
-      OutPos = DAG.getNode(ISD::UMIN, DL, PositionVT, OutPos, EndOfVector);
-      OutPtr = getVectorElementPointer(DAG, StackPtr, VecVT, OutPos);
-
-      // Re-write the last ValI if all lanes were selected. Otherwise,
-      // overwrite the last write it with the passthru value.
-      LastWriteVal = DAG.getSelect(DL, ScalarVT, AllLanesSelected, ValI,
-                                   LastWriteVal, SDNodeFlags::Unpredictable);
-      Chain = DAG.getStore(
-          Chain, DL, LastWriteVal, OutPtr,
-          MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
-    }
   }
 
-  return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo, Alignment);
+  int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+  MachinePointerInfo PtrInfo =
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
+
+  SDValue Load = DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo, Alignment);
+  if (Passthru.isUndef())
+    return Load;
+
+  EVT PopcountVT = ScalarVT.changeTypeToInteger();
+  SDValue Popcount = DAG.getNode(
+      ISD::TRUNCATE, DL,
+      MaskVT.changeVectorElementType(*DAG.getContext(), MVT::i1), Mask);
+  Popcount = DAG.getNode(
+      ISD::ZERO_EXTEND, DL,
+      MaskVT.changeVectorElementType(*DAG.getContext(), PopcountVT), Popcount);
+  Popcount = DAG.getNode(ISD::VECREDUCE_ADD, DL, PopcountVT, Popcount);
+
+  SDValue Zero = DAG.getConstant(0, DL, PopcountVT);
+  SDValue CompressedMask =
+      DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, MaskVT, Zero, Popcount);
+
+  return DAG.getSelect(DL, VecVT, CompressedMask, Load, Passthru);
+}
+
+SDValue TargetLowering::expandVECTOR_SHUFFLE_VAR(SDNode *Node,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  SDValue V = Node->getOperand(0);
+  SDValue Mask = Node->getOperand(1);
+
+  EVT VecVT = Node->getValueType(0);
+  EVT ScalarVT = VecVT.getScalarType();
+
+  // Needs to be handled by targets that have scalable vector types.
+  if (VecVT.isScalableVector())
+    reportFatalUsageError(
+        "Cannot expand vector_shuffle_var for scalable vectors.");
+
+  if (VecVT.getVectorNumElements() == 2) {
+    // Select between V and V with its lanes swapped.
+    EVT IdxVT = VecVT.changeVectorElementTypeToInteger();
+    SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IdxVT);
+    EVT CCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IdxVT);
+    SDValue Keep =
+        DAG.getSetCC(DL, CCVT, Idx, DAG.getStepVector(DL, IdxVT), ISD::SETEQ);
+    SDValue Swapped = DAG.getVectorShuffle(VecVT, DL, V, V, {1, 0});
+    return DAG.getNode(ISD::VSELECT, DL, VecVT, Keep, V, Swapped);
+  }
+
+  // Res[i] = V[Mask[i]]. Out-of-range extracts are undefined, as required.
+  MVT IdxVT = getVectorIdxTy(DAG.getDataLayout());
+  SmallVector<SDValue, 16> Elts;
+  DAG.ExtractVectorElements(Mask, Elts);
+  for (SDValue &Elt : Elts) {
+    SDValue Idx = DAG.getZExtOrTrunc(Elt, DL, IdxVT);
+    Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, V, Idx);
+  }
+  return DAG.getBuildVector(VecVT, DL, Elts);
 }
 
 SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
@@ -14487,7 +14565,8 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
 /// Given a store node \p StoreNode, return true if it is safe to fold that node
 /// into \p FPNode, which expands to a library call with output pointers.
 static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
-                                                  SDNode *FPNode) {
+                                                  SDNode *FPNode,
+                                                  unsigned MaxSteps) {
   SmallVector<const SDNode *, 8> Worklist;
   SmallVector<const SDNode *, 8> DeferredNodes;
   SmallPtrSet<const SDNode *, 16> Visited;
@@ -14497,7 +14576,6 @@ static bool canFoldStoreIntoLibCallOutputPointers(StoreSDNode *StoreNode,
     if (Op.getNode() != FPNode)
       Worklist.push_back(Op.getNode());
 
-  unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
   while (!Worklist.empty()) {
     const SDNode *Node = Worklist.pop_back_val();
     auto [_, Inserted] = Visited.insert(Node);
@@ -14537,13 +14615,14 @@ bool TargetLowering::expandMultipleResultFPLibCall(
     return false;
 
   RTLIB::LibcallImpl LibcallImpl =
-      getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC);
+      DAG.getLibcalls().getVectorLibcallImplOrMasked(LC);
   if (LibcallImpl == RTLIB::Unsupported)
     return false;
 
   LLVMContext &Ctx = *DAG.getContext();
   EVT VT = Node->getValueType(0);
   unsigned NumResults = Node->getNumValues();
+  unsigned MaxSteps = DAG.getHasPredecessorMaxSteps();
 
   // Find users of the node that store the results (and share input chains). The
   // destination pointers can be used instead of creating stack allocations.
@@ -14572,7 +14651,7 @@ bool TargetLowering::expandMultipleResultFPLibCall(
     // Avoid:
     //  1. Creating cyclic dependencies.
     //  2. Expanding the node to a call within a call sequence.
-    if (!canFoldStoreIntoLibCallOutputPointers(ST, Node))
+    if (!canFoldStoreIntoLibCallOutputPointers(ST, Node, MaxSteps))
       continue;
     ResultStores[ResNo] = ST;
     StoresInChain = ST->getChain();
@@ -14616,7 +14695,8 @@ bool TargetLowering::expandMultipleResultFPLibCall(
       DAG.getExternalSymbol(LibcallImpl, getPointerTy(DAG.getDataLayout()));
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(DL).setChain(InChain).setLibCallee(
-      getLibcallImplCallingConv(LibcallImpl), RetType, Callee, std::move(Args));
+      DAG.getLibcalls().getLibcallImplCallingConv(LibcallImpl), RetType, Callee,
+      std::move(Args));
 
   auto [Call, CallChain] = LowerCallTo(CLI);
 

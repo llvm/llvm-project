@@ -261,7 +261,8 @@ vp_depth_first_shallow(const VPBlockBase *G) {
 inline SmallVector<VPBasicBlock *>
 vp_rpo_plain_cfg_loop_body(VPBasicBlock *Header) {
   assert(!Header->getParent() && "Header must not be inside a region");
-  VPBlockBase *Middle = Header->getPredecessors()[1]->getSuccessors()[0];
+  VPBlockBase *Middle =
+      VPBlockUtils::getPlainCFGMiddleBlock(*Header->getPlan());
   SmallVector<VPBasicBlock *> Result;
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Header);

@@ -44,10 +44,9 @@ namespace __formatter {
 ///
 /// \note When \c _LIBCPP_HAS_UNICODE is false the function assumes the input is ASCII.
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__write_string(basic_string_view<_CharT> __str,
-               output_iterator<const _CharT&> auto __out_it,
-               __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
+auto __write_string(basic_string_view<_CharT> __str,
+                    output_iterator<const _CharT&> auto __out_it,
+                    __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
   if (!__specs.__has_precision())
     return __formatter::__write_string_no_precision(__str, std::move(__out_it), __specs);
 
@@ -62,13 +61,12 @@ __write_string(basic_string_view<_CharT> __str,
 struct __nul_terminator {};
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI bool operator==(const _CharT* __cstr, __nul_terminator) {
+bool operator==(const _CharT* __cstr, __nul_terminator) {
   return *__cstr == _CharT('\0');
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI void
-__write_escaped_code_unit(basic_string<_CharT>& __str, char32_t __value, const _CharT* __prefix) {
+void __write_escaped_code_unit(basic_string<_CharT>& __str, char32_t __value, const _CharT* __prefix) {
   back_insert_iterator __out_it{__str};
   std::ranges::copy(__prefix, __nul_terminator{}, __out_it);
 
@@ -86,7 +84,7 @@ __write_escaped_code_unit(basic_string<_CharT>& __str, char32_t __value, const _
 // hex-digit-sequence is the shortest hexadecimal representation of C using
 // lower-case hexadecimal digits.
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI void __write_well_formed_escaped_code_unit(basic_string<_CharT>& __str, char32_t __value) {
+void __write_well_formed_escaped_code_unit(basic_string<_CharT>& __str, char32_t __value) {
   __formatter::__write_escaped_code_unit(__str, __value, _LIBCPP_STATICALLY_WIDEN(_CharT, "\\u{"));
 }
 
@@ -96,13 +94,12 @@ _LIBCPP_HIDE_FROM_ABI void __write_well_formed_escaped_code_unit(basic_string<_C
 // hex-digit-sequence is the shortest hexadecimal representation of U using
 // lower-case hexadecimal digits.
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI void __write_escape_ill_formed_code_unit(basic_string<_CharT>& __str, char32_t __value) {
+void __write_escape_ill_formed_code_unit(basic_string<_CharT>& __str, char32_t __value) {
   __formatter::__write_escaped_code_unit(__str, __value, _LIBCPP_STATICALLY_WIDEN(_CharT, "\\x{"));
 }
 
 template <class _CharT>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool
-__is_escaped_sequence_written(basic_string<_CharT>& __str, bool __last_escaped, char32_t __value) {
+[[nodiscard]] bool __is_escaped_sequence_written(basic_string<_CharT>& __str, bool __last_escaped, char32_t __value) {
 #  if !_LIBCPP_HAS_UNICODE
   // For ASCII assume everything above 127 is printable.
   if (__value > 127)
@@ -128,7 +125,7 @@ __is_escaped_sequence_written(basic_string<_CharT>& __str, bool __last_escaped, 
 }
 
 template <class _CharT>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr char32_t __to_char32(_CharT __value) {
+[[nodiscard]] constexpr char32_t __to_char32(_CharT __value) {
   return static_cast<make_unsigned_t<_CharT>>(__value);
 }
 
@@ -136,7 +133,7 @@ enum class __escape_quotation_mark { __apostrophe, __double_quote };
 
 // [format.string.escaped]/2
 template <class _CharT>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool __is_escaped_sequence_written(
+[[nodiscard]] bool __is_escaped_sequence_written(
     basic_string<_CharT>& __str, char32_t __value, bool __last_escaped, __escape_quotation_mark __mark) {
   // 2.2.1.1 - Mapped character in [tab:format.escape.sequences]
   switch (__value) {
@@ -183,8 +180,7 @@ template <class _CharT>
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI void
-__escape(basic_string<_CharT>& __str, basic_string_view<_CharT> __values, __escape_quotation_mark __mark) {
+void __escape(basic_string<_CharT>& __str, basic_string_view<_CharT> __values, __escape_quotation_mark __mark) {
   __unicode::__code_point_view<_CharT> __view{__values.begin(), __values.end()};
 
   // When the first code unit has the property Grapheme_Extend=Yes it needs to
@@ -208,10 +204,9 @@ __escape(basic_string<_CharT>& __str, basic_string_view<_CharT> __values, __esca
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__format_escaped_char(_CharT __value,
-                      output_iterator<const _CharT&> auto __out_it,
-                      __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
+auto __format_escaped_char(_CharT __value,
+                           output_iterator<const _CharT&> auto __out_it,
+                           __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
   basic_string<_CharT> __str;
   __str += _CharT('\'');
   __formatter::__escape(__str, basic_string_view{std::addressof(__value), 1}, __escape_quotation_mark::__apostrophe);
@@ -220,10 +215,9 @@ __format_escaped_char(_CharT __value,
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto
-__format_escaped_string(basic_string_view<_CharT> __values,
-                        output_iterator<const _CharT&> auto __out_it,
-                        __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
+auto __format_escaped_string(basic_string_view<_CharT> __values,
+                             output_iterator<const _CharT&> auto __out_it,
+                             __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
   basic_string<_CharT> __str;
   __str += _CharT('"');
   __formatter::__escape(__str, __values, __escape_quotation_mark::__double_quote);

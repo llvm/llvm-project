@@ -4,7 +4,6 @@
 ---
 name:            test_groups
 alignment:       2
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
   - { reg: '$r0' }

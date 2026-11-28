@@ -54,7 +54,6 @@
 ---
 name:            sdiv_v16i8_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -82,7 +81,6 @@ body:             |
 ---
 name:            sdiv_v8i16_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -110,7 +108,6 @@ body:             |
 ---
 name:            sdiv_v4i32_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -138,7 +135,6 @@ body:             |
 ---
 name:            sdiv_v2i64_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -166,7 +162,6 @@ body:             |
 ---
 name:            smod_v16i8_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -194,7 +189,6 @@ body:             |
 ---
 name:            smod_v8i16_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -222,7 +216,6 @@ body:             |
 ---
 name:            smod_v4i32_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -250,7 +243,6 @@ body:             |
 ---
 name:            smod_v2i64_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -278,7 +270,6 @@ body:             |
 ---
 name:            udiv_v16i8_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -306,7 +297,6 @@ body:             |
 ---
 name:            udiv_v8i16_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -334,7 +324,6 @@ body:             |
 ---
 name:            udiv_v4i32_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -362,7 +351,6 @@ body:             |
 ---
 name:            udiv_v2i64_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -390,7 +378,6 @@ body:             |
 ---
 name:            umod_v16i8_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -418,7 +405,6 @@ body:             |
 ---
 name:            umod_v8i16_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -446,7 +432,6 @@ body:             |
 ---
 name:            umod_v4i32_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -474,7 +459,6 @@ body:             |
 ---
 name:            umod_v2i64_builtin
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6

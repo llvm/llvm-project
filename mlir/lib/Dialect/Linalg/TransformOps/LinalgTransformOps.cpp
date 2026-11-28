@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h"
 
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -1301,9 +1302,24 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
     return DiagnosedSilenceableFailure::success();
   }
 
-  // Helper function to find the next producer that should be fused. Take any
-  // producer that has a use inside the containing op.
-  SetVector<Operation *> remainingProducers(llvm::from_range, producerOps);
+  // Top-level operations do not share an ancestor region with other producers
+  // and cannot be fused into a containing operation.
+  if (llvm::any_of(producerOps, [](Operation *op) {
+        return op->getParentRegion() == nullptr;
+      })) {
+    auto diag = mlir::emitSilenceableFailure(getLoc())
+                << "cannot fuse a top-level operation";
+    diag.attachNote(containingOp->getLoc()) << "containing op";
+    return diag;
+  }
+
+  // Fuse consumers before their producers so that all uses introduced by
+  // fusing a selected consumer are exposed before its producer is processed.
+  SetVector<Operation *> sortedProducers =
+      topologicalSort(SetVector<Operation *>(llvm::from_range, producerOps));
+  SetVector<Operation *> remainingProducers(llvm::from_range,
+                                            llvm::reverse(sortedProducers));
+  // Find the next producer that has a use inside the containing op.
   auto getNextProducer = [&]() -> FailureOr<Operation *> {
     for (const auto &it : enumerate(remainingProducers)) {
       Operation *producerOp = it.value();
@@ -1312,9 +1328,6 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
           llvm::count_if(producerOp->getUsers(), [&](Operation *op) {
             return containingOp->isAncestor(op);
           });
-      // TODO: When resolving the TODO below (no duplicate ops), take an op
-      // that has no use among the remaining producers. This is a topological
-      // sorting.
       if (numUsesInContainingOp > 0) {
         if (numUsesInContainingOp == 1)
           remainingProducers.erase(remainingProducers.begin() + it.index());
@@ -1342,8 +1355,6 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
     // TODO: If there are multiple uses of the producer in the containing op,
     // we currently tile/clone the op multiple times (once per use). In some
     // cases, we can tile/clone once and reuse the value for each use.
-    // Futhermore, producers should then be traversed according to a
-    // topological sorting.
     auto [tiledOps, newContainingOp] = tileAndFuseFirstExtractUse(
         rewriter, diag, producerOp, containingOp, innerTileAlignments);
     if (!tiledOps.empty()) {
@@ -3917,20 +3928,22 @@ void transform::TileUsingForallOp::build(OpBuilder &builder,
                                          OperationState &result, Value target,
                                          ArrayRef<int64_t> staticTileSizes,
                                          transform::TileSizesSpec,
-                                         ArrayAttr mapping) {
+                                         ArrayAttr mapping,
+                                         ArrayRef<bool> scalableSizes) {
   return build(builder, result,
                /*target=*/target,
                /*mixedTileSizes=*/
                getAsOpFoldResult(builder.getI64ArrayAttr(staticTileSizes)),
                /*_=*/TileSizesSpec(),
-               /*mapping=*/mapping);
+               /*mapping=*/mapping, scalableSizes);
 }
 
 void transform::TileUsingForallOp::build(OpBuilder &builder,
                                          OperationState &result, Value target,
                                          ArrayRef<OpFoldResult> mixedTileSizes,
                                          transform::TileSizesSpec,
-                                         ArrayAttr mapping) {
+                                         ArrayAttr mapping,
+                                         ArrayRef<bool> scalableSizes) {
   SmallVector<int64_t> staticTileSizes;
   SmallVector<Value> dynamicTileSizes;
   dispatchIndexOpFoldResults(mixedTileSizes, dynamicTileSizes, staticTileSizes);
@@ -3949,6 +3962,7 @@ void transform::TileUsingForallOp::build(OpBuilder &builder,
         /*packed_tile_sizes=*/Value(),
         /*static_num_threads=*/builder.getDenseI64ArrayAttr({}),
         /*static_tile_sizes=*/staticTileSizesAttr,
+        /*scalable_sizes=*/builder.getDenseBoolArrayAttr(scalableSizes),
         /*mapping=*/mapping);
 }
 
@@ -3986,6 +4000,7 @@ void transform::TileUsingForallOp::build(OpBuilder &builder,
         /*packed_tile_sizes=*/Value(),
         /*static_num_threads=*/staticNumThreadsAttr,
         /*static_tile_sizes=*/builder.getDenseI64ArrayAttr({}),
+        /*scalable_sizes=*/builder.getDenseBoolArrayAttr({}),
         /*mapping=*/mapping);
 }
 
@@ -4080,7 +4095,7 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
     TransformOpInterface transformOp, Operation *target,
     ArrayRef<OpFoldResult> mixedNumThreads,
     ArrayRef<OpFoldResult> mixedTileSizes, std::optional<ArrayAttr> mapping,
-    scf::SCFTilingResult &tilingResult) {
+    scf::SCFTilingResult &tilingResult, ArrayRef<bool> scalableSizes) {
   // Transform all targets one by one.
   auto tileableOp = dyn_cast<TilingInterface>(target);
   if (!tileableOp) {
@@ -4105,7 +4120,26 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
   if (!mixedNumThreads.empty()) {
     options.setNumThreads(mixedNumThreads);
   } else {
-    options.setTileSizes(mixedTileSizes);
+    // Materialize scalable sizes only after checking the target's
+    // preconditions. The tiler invokes this callback in each target's scope.
+    options.setTileSizeComputationFunction(
+        [mixedTileSizes, scalableSizes](OpBuilder &builder, Operation *op) {
+          SmallVector<OpFoldResult> tileSizes(mixedTileSizes);
+          Value vscale;
+          for (auto [i, scalable] : llvm::enumerate(scalableSizes)) {
+            if (!scalable || isZeroInteger(tileSizes[i]))
+              continue;
+            Location loc = op->getLoc();
+            if (!vscale)
+              vscale = vector::VectorScaleOp::create(builder, loc,
+                                                     builder.getIndexType());
+            Value factor =
+                getValueOrCreateConstantIndexOp(builder, loc, tileSizes[i]);
+            tileSizes[i] =
+                arith::MulIOp::create(builder, loc, factor, vscale).getResult();
+          }
+          return tileSizes;
+        });
   }
   if (mapping) {
     options.setMapping(mapping.value().getValue());
@@ -4167,7 +4201,7 @@ DiagnosedSilenceableFailure transform::TileUsingForallOp::apply(
     scf::SCFTilingResult tilingResult;
     DiagnosedSilenceableFailure diag = tileToForallOpImpl(
         rewriter, state, transformOp, target, mixedNumThreads, mixedTileSizes,
-        getMapping(), tilingResult);
+        getMapping(), tilingResult, getScalableSizes());
     if (!diag.succeeded())
       return diag;
     if (!tilingResult.loops.empty())
@@ -4203,6 +4237,16 @@ SmallVector<OpFoldResult> TileUsingForallOp::getMixedTileSizes() {
 }
 
 LogicalResult TileUsingForallOp::verify() {
+  ArrayRef<bool> scalableSizes = getScalableSizes();
+  if (!scalableSizes.empty() &&
+      scalableSizes.size() != getStaticTileSizes().size())
+    return emitOpError(
+        "expected as many scalable size flags as static tile sizes");
+  for (auto [size, scalable] : llvm::zip(getStaticTileSizes(), scalableSizes)) {
+    if (scalable && (ShapedType::isDynamic(size) || size < 0))
+      return emitOpError(
+          "scalable tile sizes must be non-negative static integers");
+  }
   int numThreadsSpec = static_cast<int>(!getMixedNumThreads().empty()) +
                        static_cast<int>(getPackedNumThreads() != Value());
   if (numThreadsSpec > 1)
@@ -4216,6 +4260,8 @@ LogicalResult TileUsingForallOp::verify() {
   if (numThreadsSpec == 0 && tileSizesSpec == 0)
     return emitOpError("either (packed_)num_threads or (packed_)tile_sizes "
                        "must be specified");
+  if (numThreadsSpec != 0 && llvm::is_contained(scalableSizes, true))
+    return emitOpError("scalable tile sizes cannot be used with num_threads");
   return success();
 }
 

@@ -95,7 +95,7 @@ struct __pointer_traits_impl<_Ptr, __void_t<typename __pointer_traits_element_ty
 #endif // _LIBCPP_CXX03_LANG
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer
   pointer_to(__conditional_t<is_void<element_type>::value, __nat, element_type>& __r) {
     return pointer::pointer_to(__r);
   }
@@ -121,7 +121,7 @@ struct pointer_traits<_Tp*> {
 #endif
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer
   pointer_to(__conditional_t<is_void<element_type>::value, __nat, element_type>& __r) _NOEXCEPT {
     return std::addressof(__r);
   }
@@ -138,7 +138,7 @@ using __rebind_pointer_t _LIBCPP_NODEBUG = typename pointer_traits<_From>::templ
 // to_address
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* __to_address(_Tp* __p) _NOEXCEPT {
+_LIBCPP_CONSTEXPR _Tp* __to_address(_Tp* __p) _NOEXCEPT {
   static_assert(!is_function<_Tp>::value, "_Tp is a function type");
   return __p;
 }
@@ -180,13 +180,12 @@ struct __to_address_arrow_result {
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI constexpr auto to_address(_Tp* __p) noexcept {
+inline constexpr auto to_address(_Tp* __p) noexcept {
   return std::__to_address(__p);
 }
 
 template <class _Pointer>
-inline _LIBCPP_HIDE_FROM_ABI constexpr auto to_address(const _Pointer& __p) noexcept
-    -> decltype(std::__to_address(__p)) {
+inline constexpr auto to_address(const _Pointer& __p) noexcept -> decltype(std::__to_address(__p)) {
   return std::__to_address(__p);
 }
 #endif
@@ -242,7 +241,7 @@ concept __resettable_smart_pointer_with_args = requires(_Smart __s, _Pointer __p
 // then dereferencing it to retrieve the pointed-to object, and finally constructing the target fancy pointer
 // to that object using the `std::pointer_traits<>::pointer_to` function.
 template <class _PtrTo, class _PtrFrom>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _PtrTo __static_fancy_pointer_cast(const _PtrFrom& __p) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _PtrTo __static_fancy_pointer_cast(const _PtrFrom& __p) {
   using __ptr_traits   = pointer_traits<_PtrTo>;
   using __element_type = typename __ptr_traits::element_type;
   return __p ? __ptr_traits::pointer_to(*static_cast<__element_type*>(std::addressof(*__p)))

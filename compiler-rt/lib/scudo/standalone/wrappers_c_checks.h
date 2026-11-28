@@ -28,12 +28,6 @@ inline void *setErrnoOnNull(void *Ptr) {
 
 // Checks return true on failure.
 
-// Checks aligned_alloc() parameters, verifies that the alignment is a power of
-// two and that the size is a multiple of alignment.
-inline bool checkAlignedAllocAlignmentAndSize(uptr Alignment, uptr Size) {
-  return !isPowerOfTwo(Alignment) || !isAligned(Size, Alignment);
-}
-
 // Checks posix_memalign() parameters, verifies that alignment is a power of two
 // and a multiple of sizeof(void *).
 inline bool checkPosixMemalignAlignment(uptr Alignment) {

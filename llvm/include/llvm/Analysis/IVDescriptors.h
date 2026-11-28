@@ -51,10 +51,14 @@ enum class RecurKind {
   FAddChainWithSubs, ///< A chain of fadds and fsubs.
   FSub,     ///< Subtraction of floats.
   FMul,     ///< Product of floats.
-  FMin,     ///< FP min implemented in terms of select(cmp()).
-  FMax,     ///< FP max implemented in terms of select(cmp()).
+  FMin,     ///< FP min as select(cmp()) with nnan/nsz, or llvm.minnum.
+  FMax,     ///< FP max as select(cmp()) with nnan/nsz, or llvm.maxnum.
   FMinNum,  ///< FP min with llvm.minnum semantics including NaNs.
   FMaxNum,  ///< FP max with llvm.maxnum semantics including NaNs.
+  FMinSelectNoFMF, ///< FMin as select(cmp()) lacking nnan or nsz, on IEEE types
+                   ///< with IEEE denormals.
+  FMaxSelectNoFMF, ///< FMax as select(cmp()) lacking nnan or nsz, on IEEE types
+                   ///< with IEEE denormals.
   FMinimum, ///< FP min with llvm.minimum semantics
   FMaximum, ///< FP max with llvm.maximum semantics
   FMinimumNum, ///< FP min with llvm.minimumnum semantics
@@ -94,7 +98,7 @@ public:
                        RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
                        Type *RT, bool Signed, bool Ordered,
                        SmallPtrSetImpl<Instruction *> &CI,
-                       unsigned MinWidthCastToRecurTy,
+                       Type *MinWidthCastToRecurTy,
                        bool PhiHasUsesOutsideReductionChain = false)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
@@ -264,12 +268,20 @@ public:
     return Kind == RecurKind::FMinNum || Kind == RecurKind::FMaxNum;
   }
 
+  /// Returns true if the recurrence kind is a select-based floating-point
+  /// min/max kind lacking nnan or nsz.
+  static bool isFPMinMaxSelectNoFMFRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::FMinSelectNoFMF ||
+           Kind == RecurKind::FMaxSelectNoFMF;
+  }
+
   /// Returns true if the recurrence kind is a floating-point min/max kind.
   static bool isFPMinMaxRecurrenceKind(RecurKind Kind) {
     return Kind == RecurKind::FMin || Kind == RecurKind::FMax ||
            Kind == RecurKind::FMinimum || Kind == RecurKind::FMaximum ||
            Kind == RecurKind::FMinimumNum || Kind == RecurKind::FMaximumNum ||
-           isFPMinMaxNumRecurrenceKind(Kind);
+           isFPMinMaxNumRecurrenceKind(Kind) ||
+           isFPMinMaxSelectNoFMFRecurrenceKind(Kind);
   }
 
   /// Returns true if the recurrence kind is any min/max kind.
@@ -308,8 +320,9 @@ public:
   /// recurrence.
   const SmallPtrSet<Instruction *, 8> &getCastInsts() const { return CastInsts; }
 
-  /// Returns the minimum width used by the recurrence in bits.
-  unsigned getMinWidthCastToRecurrenceTypeInBits() const {
+  /// Returns the scalar source type of the narrowest cast to the recurrence
+  /// type, or null if there is no such cast.
+  Type *getMinWidthCastToRecurrenceType() const {
     return MinWidthCastToRecurrenceType;
   }
 
@@ -368,8 +381,8 @@ private:
   bool PhiHasUsesOutsideReductionChain = false;
   // Instructions used for type-promoting the recurrence.
   SmallPtrSet<Instruction *, 8> CastInsts;
-  // The minimum width used by the recurrence.
-  unsigned MinWidthCastToRecurrenceType;
+  // The scalar source type of the narrowest cast to the recurrence type.
+  Type *MinWidthCastToRecurrenceType = nullptr;
 };
 
 /// A struct for saving information about induction variables.

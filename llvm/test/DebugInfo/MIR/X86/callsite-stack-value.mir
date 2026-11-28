@@ -69,3 +69,4 @@ body:             |
     renamable $rsi = MOVSX64rr32 killed renamable $eax, debug-location !31
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !31
     TAILJMPd64 @f, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, debug-location !31
+...

@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 define void @test_fence_proxy_tensormap_generic_acquire(ptr addrspace(0) %addr) {
   ; CHECK: immarg value 127 for arg 1 out of range [128,129)

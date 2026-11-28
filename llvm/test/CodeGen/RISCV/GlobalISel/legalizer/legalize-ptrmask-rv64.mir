@@ -10,13 +10,13 @@ body:             |
     ; CHECK: liveins: $x10, $x11
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-NEXT: [[PTRMASK:%[0-9]+]]:_(p0) = G_PTRMASK [[COPY]], [[COPY1]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+    ; CHECK-NEXT: [[PTRMASK:%[0-9]+]]:_(p0) = G_PTRMASK [[COPY]], [[COPY1]](i64)
     ; CHECK-NEXT: $x10 = COPY [[PTRMASK]](p0)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %1:_(s64) = COPY $x11
-    %2:_(p0) = G_PTRMASK %0(p0), %1(s64)
+    %1:_(i64) = COPY $x11
+    %2:_(p0) = G_PTRMASK %0(p0), %1(i64)
     $x10 = COPY %2(p0)
     PseudoRET implicit $x10
 ...

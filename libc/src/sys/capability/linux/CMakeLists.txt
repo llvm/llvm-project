@@ -1,0 +1,33 @@
+add_entrypoint_object(
+  capget
+  SRCS
+    capget.cpp
+  HDRS
+    ../capget.h
+  DEPENDS
+    libc.hdr.types.cap_user_data_t
+    libc.hdr.types.cap_user_header_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.capget
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  capset
+  SRCS
+    capset.cpp
+  HDRS
+    ../capset.h
+  DEPENDS
+    libc.hdr.types.cap_user_data_t
+    libc.hdr.types.cap_user_header_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.capset
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)

@@ -9,7 +9,6 @@
 name:            xor_s32_sgpr_sgpr_sgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -56,7 +55,6 @@ body: |
 name:            xor_s32_vgpr_vgpr_vgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -105,7 +103,6 @@ body: |
 name:            xor_s32_sgpr_sgpr_vgpr_copy
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -139,10 +136,8 @@ body: |
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY]], [[COPY1]], implicit-def dead $scc
-    ; GFX10-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[S_XOR_B32_]]
-    ; GFX10-NEXT: [[V_XOR_B32_e64_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e64 [[COPY3]], [[COPY2]], implicit $exec
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[V_XOR_B32_e64_]]
+    ; GFX10-NEXT: [[V_XOR3_B32_e64_:%[0-9]+]]:vgpr_32 = V_XOR3_B32_e64 [[COPY]], [[COPY1]], [[COPY2]], implicit $exec
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[V_XOR3_B32_e64_]]
     %0:sgpr(i32) = COPY $sgpr0
     %1:sgpr(i32) = COPY $sgpr1
     %2:vgpr(i32) = COPY $vgpr0
@@ -157,7 +152,6 @@ body: |
 name:            xor_s32_sgpr_sgpr_vgpr_copy_commute
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -191,10 +185,8 @@ body: |
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX10-NEXT: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY]], [[COPY1]], implicit-def dead $scc
-    ; GFX10-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[S_XOR_B32_]]
-    ; GFX10-NEXT: [[V_XOR_B32_e64_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e64 [[COPY2]], [[COPY3]], implicit $exec
-    ; GFX10-NEXT: S_ENDPGM 0, implicit [[V_XOR_B32_e64_]]
+    ; GFX10-NEXT: [[V_XOR3_B32_e64_:%[0-9]+]]:vgpr_32 = V_XOR3_B32_e64 [[COPY]], [[COPY1]], [[COPY2]], implicit $exec
+    ; GFX10-NEXT: S_ENDPGM 0, implicit [[V_XOR3_B32_e64_]]
     %0:sgpr(i32) = COPY $sgpr0
     %1:sgpr(i32) = COPY $sgpr1
     %2:vgpr(i32) = COPY $vgpr0
@@ -209,7 +201,6 @@ body: |
 name:            xor_s32_sgpr_sgpr_vgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

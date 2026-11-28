@@ -33,13 +33,13 @@ func.func @_QPmax1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_12]], %[[C0_I32]] : i32
 // CHECK:   %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_5]]#1, %[[VAL_3]]#1 : !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_15:.*]] = arith.select %[[VAL_13]], %[[VAL_4]]#1, %[[VAL_2]]#1 : index
-// CHECK:   %[[VAL_16:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_7]] : index) <{bindc_name = ".chrtmp"}>
+// CHECK:   %[[VAL_16:.*]] = fir.allocmem !fir.char<1,?>(%[[VAL_7]] : index) <{bindc_name = ".chrtmp", uniq_name = ""}>
 // CHECK:   %[[VAL_17:.*]] = arith.cmpi slt, %[[VAL_7]], %[[VAL_15]] : index
 // CHECK:   %[[VAL_18:.*]] = arith.select %[[VAL_17]], %[[VAL_7]], %[[VAL_15]] : index
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 // CHECK:   %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (index) -> i64
 // CHECK:   %[[VAL_20:.*]] = arith.muli %[[C1_I64]], %[[VAL_19]] : i64
-// CHECK:   %[[VAL_21:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   %[[VAL_21:.*]] = fir.convert %[[VAL_16]] : (!fir.heap<!fir.char<1,?>>) -> !llvm.ptr
 // CHECK:   %[[VAL_22:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
 // CHECK:   "llvm.intr.memmove"(%[[VAL_21]], %[[VAL_22]], %[[VAL_20]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:   %[[C1:.*]] = arith.constant 1 : index
@@ -49,16 +49,19 @@ func.func @_QPmax1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_25:.*]] = fir.insert_value %[[VAL_24]], %[[C32_I8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 // CHECK:   %[[C1_0:.*]] = arith.constant 1 : index
 // CHECK:   fir.do_loop %[[ARG3:.*]] = %[[VAL_18:.*]] to %[[VAL_23]] step %[[C1_0]] {
-// CHECK:     %[[VAL_30:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
+// CHECK:     %[[VAL_30:.*]] = fir.convert %[[VAL_16]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:     %[[VAL_31:.*]] = fir.coordinate_of %[[VAL_30]], %[[ARG3]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_25:.*]] to %[[VAL_31]] : !fir.ref<!fir.char<1>>
 // CHECK:   }
-// CHECK:   %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_16]] typeparams %[[VAL_7]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-// CHECK:   %[[FALSE_1:.*]] = arith.constant false
+// CHECK:   %[[VAL_44:.*]] = fir.convert %[[VAL_16]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
+// CHECK:   %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_44]] typeparams %[[VAL_7]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[FALSE_1:.*]] = arith.constant true
 // CHECK:   %[[VAL_27:.*]] = fir.undefined tuple<!fir.boxchar<1>, i1>
 // CHECK:   %[[VAL_28:.*]] = fir.insert_value %[[VAL_27]], %[[FALSE_1]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:   %[[VAL_29:.*]] = fir.insert_value %[[VAL_28]], %[[VAL_26]]#0, [0 : index] : (tuple<!fir.boxchar<1>, i1>, !fir.boxchar<1>) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:   hlfir.assign %[[VAL_26]]#0 to %[[VAL_1]]#0 : !fir.boxchar<1>, !fir.boxchar<1>
+// CHECK:   %[[VAL_45:.*]] = fir.box_addr %[[VAL_26]]#0 : (!fir.boxchar<1>) -> !fir.heap<!fir.char<1,?>>
+// CHECK:   fir.freemem %[[VAL_45]] : !fir.heap<!fir.char<1,?>>
 // CHECK:   return
 // CHECK: }
 
@@ -94,13 +97,13 @@ func.func @_QPmin1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_13:.*]] = arith.cmpi slt, %[[VAL_12]], %[[C0_I32]] : i32
 // CHECK:   %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_5]]#1, %[[VAL_3]]#1 : !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_15:.*]] = arith.select %[[VAL_13]], %[[VAL_4]]#1, %[[VAL_2]]#1 : index
-// CHECK:   %[[VAL_16:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_7]] : index) <{bindc_name = ".chrtmp"}>
+// CHECK:   %[[VAL_16:.*]] = fir.allocmem !fir.char<1,?>(%[[VAL_7]] : index) <{bindc_name = ".chrtmp", uniq_name = ""}>
 // CHECK:   %[[VAL_17:.*]] = arith.cmpi slt, %[[VAL_7]], %[[VAL_15]] : index
 // CHECK:   %[[VAL_18:.*]] = arith.select %[[VAL_17]], %[[VAL_7]], %[[VAL_15]] : index
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 // CHECK:   %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (index) -> i64
 // CHECK:   %[[VAL_20:.*]] = arith.muli %[[C1_I64]], %[[VAL_19]] : i64
-// CHECK:   %[[VAL_21:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   %[[VAL_21:.*]] = fir.convert %[[VAL_16]] : (!fir.heap<!fir.char<1,?>>) -> !llvm.ptr
 // CHECK:   %[[VAL_22:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
 // CHECK:   "llvm.intr.memmove"(%[[VAL_21]], %[[VAL_22]], %[[VAL_20]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:   %[[C1:.*]] = arith.constant 1 : index
@@ -110,16 +113,19 @@ func.func @_QPmin1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_25:.*]] = fir.insert_value %[[VAL_24]], %[[C32_I8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 // CHECK:   %[[C1_0:.*]] = arith.constant 1 : index
 // CHECK:   fir.do_loop %[[ARG3:.*]] = %[[VAL_18:.*]] to %[[VAL_23]] step %[[C1_0]] {
-// CHECK:     %[[VAL_30:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
+// CHECK:     %[[VAL_30:.*]] = fir.convert %[[VAL_16]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:     %[[VAL_31:.*]] = fir.coordinate_of %[[VAL_30]], %[[ARG3]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_25:.*]] to %[[VAL_31]] : !fir.ref<!fir.char<1>>
 // CHECK:   }
-// CHECK:   %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_16]] typeparams %[[VAL_7]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-// CHECK:   %[[FALSE_1:.*]] = arith.constant false
+// CHECK:   %[[VAL_46:.*]] = fir.convert %[[VAL_16]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
+// CHECK:   %[[VAL_26:.*]]:2 = hlfir.declare %[[VAL_46]] typeparams %[[VAL_7]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[FALSE_1:.*]] = arith.constant true
 // CHECK:   %[[VAL_27:.*]] = fir.undefined tuple<!fir.boxchar<1>, i1>
 // CHECK:   %[[VAL_28:.*]] = fir.insert_value %[[VAL_27]], %[[FALSE_1]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:   %[[VAL_29:.*]] = fir.insert_value %[[VAL_28]], %[[VAL_26]]#0, [0 : index] : (tuple<!fir.boxchar<1>, i1>, !fir.boxchar<1>) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:   hlfir.assign %[[VAL_26]]#0 to %[[VAL_1]]#0 : !fir.boxchar<1>, !fir.boxchar<1>
+// CHECK:   %[[VAL_47:.*]] = fir.box_addr %[[VAL_26]]#0 : (!fir.boxchar<1>) -> !fir.heap<!fir.char<1,?>>
+// CHECK:   fir.freemem %[[VAL_47]] : !fir.heap<!fir.char<1,?>>
 // CHECK:   return
 // CHECK: }
 
@@ -188,13 +194,13 @@ func.func @_QPmax2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_23:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.char<1,20>>) -> !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_24:.*]] = arith.select %[[VAL_21]], %[[VAL_23]], %[[VAL_22]] : !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_25:.*]] = arith.select %[[VAL_21]], %[[C20]], %[[C10]] : index
-// CHECK:   %[[VAL_26:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_15]] : index) <{bindc_name = ".chrtmp"}>
+// CHECK:   %[[VAL_26:.*]] = fir.allocmem !fir.char<1,?>(%[[VAL_15]] : index) <{bindc_name = ".chrtmp", uniq_name = ""}>
 // CHECK:   %[[VAL_27:.*]] = arith.cmpi slt, %[[VAL_15]], %[[VAL_25]] : index
 // CHECK:   %[[VAL_28:.*]] = arith.select %[[VAL_27]], %[[VAL_15]], %[[VAL_25]] : index
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 // CHECK:   %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (index) -> i64
 // CHECK:   %[[VAL_30:.*]] = arith.muli %[[C1_I64]], %[[VAL_29]] : i64
-// CHECK:   %[[VAL_31:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   %[[VAL_31:.*]] = fir.convert %[[VAL_26]] : (!fir.heap<!fir.char<1,?>>) -> !llvm.ptr
 // CHECK:   %[[VAL_32:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
 // CHECK:   "llvm.intr.memmove"(%[[VAL_31]], %[[VAL_32]], %[[VAL_30]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:   %[[C1_3:.*]] = arith.constant 1 : index
@@ -204,19 +210,21 @@ func.func @_QPmax2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_35:.*]] = fir.insert_value %[[VAL_34]], %[[C32_I8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 // CHECK:   %[[C1_4:.*]] = arith.constant 1 : index
 // CHECK:   fir.do_loop %[[ARG3:.*]] = %[[VAL_28:.*]] to %[[VAL_33]] step %[[C1_4]] {
-// CHECK:     %[[VAL_42:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
+// CHECK:     %[[VAL_42:.*]] = fir.convert %[[VAL_26]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:     %[[VAL_43:.*]] = fir.coordinate_of %[[VAL_42]], %[[ARG3]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_35:.*]] to %[[VAL_43]] : !fir.ref<!fir.char<1>>
 // CHECK:   }
-// CHECK:   %[[VAL_36:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,20>>
+// CHECK:   %[[VAL_36:.*]] = fir.convert %[[VAL_26]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,20>>
 // CHECK:   %[[VAL_37:.*]]:2 = hlfir.declare %[[VAL_36]] typeparams %[[VAL_15]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,20>>, index) -> (!fir.ref<!fir.char<1,20>>, !fir.ref<!fir.char<1,20>>)
-// CHECK:   %[[FALSE_5:.*]] = arith.constant false
+// CHECK:   %[[FALSE_5:.*]] = arith.constant true
 // CHECK:   %[[VAL_38:.*]] = fir.undefined tuple<!fir.ref<!fir.char<1,20>>, i1>
 // CHECK:   %[[VAL_39:.*]] = fir.insert_value %[[VAL_38]], %[[FALSE_5]], [1 : index] : (tuple<!fir.ref<!fir.char<1,20>>, i1>, i1) -> tuple<!fir.ref<!fir.char<1,20>>, i1>
 // CHECK:   %[[VAL_40:.*]] = fir.insert_value %[[VAL_39]], %[[VAL_37]]#0, [0 : index] : (tuple<!fir.ref<!fir.char<1,20>>, i1>, !fir.ref<!fir.char<1,20>>) -> tuple<!fir.ref<!fir.char<1,20>>, i1>
 // CHECK:   %[[C1_6:.*]] = arith.constant 1 : index
 // CHECK:   %[[VAL_41:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[C1_6]])  typeparams %[[VAL_0]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
 // CHECK:   hlfir.assign %[[VAL_37]]#0 to %[[VAL_41:.*]] : !fir.ref<!fir.char<1,20>>, !fir.boxchar<1>
+// CHECK:   %[[VAL_48:.*]] = fir.convert %[[VAL_37]]#0 : (!fir.ref<!fir.char<1,20>>) -> !fir.heap<!fir.char<1,20>>
+// CHECK:   fir.freemem %[[VAL_48]] : !fir.heap<!fir.char<1,20>>
 // CHECK:   return
 // CHECK: }
 
@@ -285,13 +293,13 @@ func.func @_QPmin2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_23:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.char<1,20>>) -> !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_24:.*]] = arith.select %[[VAL_21]], %[[VAL_23]], %[[VAL_22]] : !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_25:.*]] = arith.select %[[VAL_21]], %[[C20]], %[[C10]] : index
-// CHECK:   %[[VAL_26:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_15]] : index) <{bindc_name = ".chrtmp"}>
+// CHECK:   %[[VAL_26:.*]] = fir.allocmem !fir.char<1,?>(%[[VAL_15]] : index) <{bindc_name = ".chrtmp", uniq_name = ""}>
 // CHECK:   %[[VAL_27:.*]] = arith.cmpi slt, %[[VAL_15]], %[[VAL_25]] : index
 // CHECK:   %[[VAL_28:.*]] = arith.select %[[VAL_27]], %[[VAL_15]], %[[VAL_25]] : index
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 // CHECK:   %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (index) -> i64
 // CHECK:   %[[VAL_30:.*]] = arith.muli %[[C1_I64]], %[[VAL_29]] : i64
-// CHECK:   %[[VAL_31:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   %[[VAL_31:.*]] = fir.convert %[[VAL_26]] : (!fir.heap<!fir.char<1,?>>) -> !llvm.ptr
 // CHECK:   %[[VAL_32:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
 // CHECK:   "llvm.intr.memmove"(%[[VAL_31]], %[[VAL_32]], %[[VAL_30]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:   %[[C1_3:.*]] = arith.constant 1 : index
@@ -301,19 +309,21 @@ func.func @_QPmin2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_35:.*]] = fir.insert_value %[[VAL_34]], %[[C32_I8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 // CHECK:   %[[C1_4:.*]] = arith.constant 1 : index
 // CHECK:   fir.do_loop %[[ARG3:.*]] = %[[VAL_28:.*]] to %[[VAL_33]] step %[[C1_4]] {
-// CHECK:     %[[VAL_42:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
+// CHECK:     %[[VAL_42:.*]] = fir.convert %[[VAL_26]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:     %[[VAL_43:.*]] = fir.coordinate_of %[[VAL_42]], %[[ARG3]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_35:.*]] to %[[VAL_43]] : !fir.ref<!fir.char<1>>
 // CHECK:   }
-// CHECK:   %[[VAL_36:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,20>>
+// CHECK:   %[[VAL_36:.*]] = fir.convert %[[VAL_26]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,20>>
 // CHECK:   %[[VAL_37:.*]]:2 = hlfir.declare %[[VAL_36]] typeparams %[[VAL_15]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,20>>, index) -> (!fir.ref<!fir.char<1,20>>, !fir.ref<!fir.char<1,20>>)
-// CHECK:   %[[FALSE_5:.*]] = arith.constant false
+// CHECK:   %[[FALSE_5:.*]] = arith.constant true
 // CHECK:   %[[VAL_38:.*]] = fir.undefined tuple<!fir.ref<!fir.char<1,20>>, i1>
 // CHECK:   %[[VAL_39:.*]] = fir.insert_value %[[VAL_38]], %[[FALSE_5]], [1 : index] : (tuple<!fir.ref<!fir.char<1,20>>, i1>, i1) -> tuple<!fir.ref<!fir.char<1,20>>, i1>
 // CHECK:   %[[VAL_40:.*]] = fir.insert_value %[[VAL_39]], %[[VAL_37]]#0, [0 : index] : (tuple<!fir.ref<!fir.char<1,20>>, i1>, !fir.ref<!fir.char<1,20>>) -> tuple<!fir.ref<!fir.char<1,20>>, i1>
 // CHECK:   %[[C1_6:.*]] = arith.constant 1 : index
 // CHECK:   %[[VAL_41:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[C1_6]])  typeparams %[[VAL_0]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
 // CHECK:   hlfir.assign %[[VAL_37]]#0 to %[[VAL_41:.*]] : !fir.ref<!fir.char<1,20>>, !fir.boxchar<1>
+// CHECK:   %[[VAL_49:.*]] = fir.convert %[[VAL_37]]#0 : (!fir.ref<!fir.char<1,20>>) -> !fir.heap<!fir.char<1,20>>
+// CHECK:   fir.freemem %[[VAL_49]] : !fir.heap<!fir.char<1,20>>
 // CHECK:   return
 // CHECK: }
 
@@ -363,13 +373,13 @@ func.func @_QPmax3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_25:.*]] = arith.cmpi sgt, %[[VAL_24]], %[[C0_I32_0]] : i32
 // CHECK:   %[[VAL_26:.*]] = arith.select %[[VAL_25]], %[[VAL_7]]#1, %[[VAL_16]] : !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_27:.*]] = arith.select %[[VAL_25]], %[[VAL_6]]#1, %[[VAL_17]] : index
-// CHECK:   %[[VAL_28:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_19]] : index) <{bindc_name = ".chrtmp"}>
+// CHECK:   %[[VAL_28:.*]] = fir.allocmem !fir.char<1,?>(%[[VAL_19]] : index) <{bindc_name = ".chrtmp", uniq_name = ""}>
 // CHECK:   %[[VAL_29:.*]] = arith.cmpi slt, %[[VAL_19]], %[[VAL_27]] : index
 // CHECK:   %[[VAL_30:.*]] = arith.select %[[VAL_29]], %[[VAL_19]], %[[VAL_27]] : index
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 // CHECK:   %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (index) -> i64
 // CHECK:   %[[VAL_32:.*]] = arith.muli %[[C1_I64]], %[[VAL_31]] : i64
-// CHECK:   %[[VAL_33:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   %[[VAL_33:.*]] = fir.convert %[[VAL_28]] : (!fir.heap<!fir.char<1,?>>) -> !llvm.ptr
 // CHECK:   %[[VAL_34:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
 // CHECK:   "llvm.intr.memmove"(%[[VAL_33]], %[[VAL_34]], %[[VAL_32]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:   %[[C1:.*]] = arith.constant 1 : index
@@ -379,16 +389,19 @@ func.func @_QPmax3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_37:.*]] = fir.insert_value %[[VAL_36]], %[[C32_I8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 // CHECK:   %[[C1_1:.*]] = arith.constant 1 : index
 // CHECK:   fir.do_loop %[[ARG4:.*]] = %[[VAL_30:.*]] to %[[VAL_35]] step %[[C1_1]] {
-// CHECK:     %[[VAL_42:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
+// CHECK:     %[[VAL_42:.*]] = fir.convert %[[VAL_28]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:     %[[VAL_43:.*]] = fir.coordinate_of %[[VAL_42]], %[[ARG4]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_37:.*]] to %[[VAL_43]] : !fir.ref<!fir.char<1>>
 // CHECK:   }
-// CHECK:   %[[VAL_38:.*]]:2 = hlfir.declare %[[VAL_28]] typeparams %[[VAL_19]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-// CHECK:   %[[FALSE_2:.*]] = arith.constant false
+// CHECK:   %[[VAL_50:.*]] = fir.convert %[[VAL_28]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
+// CHECK:   %[[VAL_38:.*]]:2 = hlfir.declare %[[VAL_50]] typeparams %[[VAL_19]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[FALSE_2:.*]] = arith.constant true
 // CHECK:   %[[VAL_39:.*]] = fir.undefined tuple<!fir.boxchar<1>, i1>
 // CHECK:   %[[VAL_40:.*]] = fir.insert_value %[[VAL_39]], %[[FALSE_2]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:   %[[VAL_41:.*]] = fir.insert_value %[[VAL_40]], %[[VAL_38]]#0, [0 : index] : (tuple<!fir.boxchar<1>, i1>, !fir.boxchar<1>) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:   hlfir.assign %[[VAL_38]]#0 to %[[VAL_1]]#0 : !fir.boxchar<1>, !fir.boxchar<1>
+// CHECK:   %[[VAL_51:.*]] = fir.box_addr %[[VAL_38]]#0 : (!fir.boxchar<1>) -> !fir.heap<!fir.char<1,?>>
+// CHECK:   fir.freemem %[[VAL_51]] : !fir.heap<!fir.char<1,?>>
 // CHECK:   return
 // CHECK: }
 
@@ -438,13 +451,13 @@ func.func @_QPmin3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_25:.*]] = arith.cmpi slt, %[[VAL_24]], %[[C0_I32_0]] : i32
 // CHECK:   %[[VAL_26:.*]] = arith.select %[[VAL_25]], %[[VAL_7]]#1, %[[VAL_16]] : !fir.ref<!fir.char<1,?>>
 // CHECK:   %[[VAL_27:.*]] = arith.select %[[VAL_25]], %[[VAL_6]]#1, %[[VAL_17]] : index
-// CHECK:   %[[VAL_28:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_19]] : index) <{bindc_name = ".chrtmp"}>
+// CHECK:   %[[VAL_28:.*]] = fir.allocmem !fir.char<1,?>(%[[VAL_19]] : index) <{bindc_name = ".chrtmp", uniq_name = ""}>
 // CHECK:   %[[VAL_29:.*]] = arith.cmpi slt, %[[VAL_19]], %[[VAL_27]] : index
 // CHECK:   %[[VAL_30:.*]] = arith.select %[[VAL_29]], %[[VAL_19]], %[[VAL_27]] : index
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 // CHECK:   %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (index) -> i64
 // CHECK:   %[[VAL_32:.*]] = arith.muli %[[C1_I64]], %[[VAL_31]] : i64
-// CHECK:   %[[VAL_33:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   %[[VAL_33:.*]] = fir.convert %[[VAL_28]] : (!fir.heap<!fir.char<1,?>>) -> !llvm.ptr
 // CHECK:   %[[VAL_34:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
 // CHECK:   "llvm.intr.memmove"(%[[VAL_33]], %[[VAL_34]], %[[VAL_32]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:   %[[C1:.*]] = arith.constant 1 : index
@@ -454,15 +467,18 @@ func.func @_QPmin3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[VAL_37:.*]] = fir.insert_value %[[VAL_36]], %[[C32_I8]], [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
 // CHECK:   %[[C1_1:.*]] = arith.constant 1 : index
 // CHECK:   fir.do_loop %[[ARG4:.*]] = %[[VAL_30:.*]] to %[[VAL_35]] step %[[C1_1]] {
-// CHECK:     %[[VAL_42:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
+// CHECK:     %[[VAL_42:.*]] = fir.convert %[[VAL_28]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
 // CHECK:     %[[VAL_43:.*]] = fir.coordinate_of %[[VAL_42]], %[[ARG4]] : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
 // CHECK:     fir.store %[[VAL_37:.*]] to %[[VAL_43]] : !fir.ref<!fir.char<1>>
 // CHECK:   }
-// CHECK:   %[[VAL_38:.*]]:2 = hlfir.declare %[[VAL_28]] typeparams %[[VAL_19]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-// CHECK:   %[[FALSE_2:.*]] = arith.constant false
+// CHECK:   %[[VAL_52:.*]] = fir.convert %[[VAL_28]] : (!fir.heap<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
+// CHECK:   %[[VAL_38:.*]]:2 = hlfir.declare %[[VAL_52]] typeparams %[[VAL_19]] uniq_name(".tmp.char_extremum") : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:   %[[FALSE_2:.*]] = arith.constant true
 // CHECK:   %[[VAL_39:.*]] = fir.undefined tuple<!fir.boxchar<1>, i1>
 // CHECK:   %[[VAL_40:.*]] = fir.insert_value %[[VAL_39]], %[[FALSE_2]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:   %[[VAL_41:.*]] = fir.insert_value %[[VAL_40]], %[[VAL_38]]#0, [0 : index] : (tuple<!fir.boxchar<1>, i1>, !fir.boxchar<1>) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:   hlfir.assign %[[VAL_38]]#0 to %[[VAL_1]]#0 : !fir.boxchar<1>, !fir.boxchar<1>
+// CHECK:   %[[VAL_53:.*]] = fir.box_addr %[[VAL_38]]#0 : (!fir.boxchar<1>) -> !fir.heap<!fir.char<1,?>>
+// CHECK:   fir.freemem %[[VAL_53]] : !fir.heap<!fir.char<1,?>>
 // CHECK:   return
 // CHECK: }

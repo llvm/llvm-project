@@ -23,7 +23,6 @@ class TestCreateValueFromExpression(TestBase):
             os.remove(log_file)
         self.runCmd("log enable -f '%s' lldb expr" % (log_file))
 
-        self.runCmd("settings set target.experimental.use-DIL true")
         self.runCmd("settings set target.experimental.use-DIL-for-creating-values true")
 
         # Check expression results

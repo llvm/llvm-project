@@ -53,7 +53,7 @@ void SymbolFileSymtab::GetTypes(SymbolContextScope *sc_scope,
 
 SymbolFileSymtab::SymbolFileSymtab(ObjectFileSP objfile_sp)
     : SymbolFileCommon(std::move(objfile_sp)), m_source_indexes(),
-      m_func_indexes(), m_code_indexes(), m_objc_class_name_to_index() {}
+      m_code_indexes() {}
 
 uint32_t SymbolFileSymtab::CalculateAbilities() {
   uint32_t abilities = 0;
@@ -63,60 +63,64 @@ uint32_t SymbolFileSymtab::CalculateAbilities() {
       if (symtab->GetNumSymbols() > 0)
         abilities |= Symbols;
 
-      // Get the indexes of source, code, data, and function-related entries in
-      // the module symbol table. Only source-file entries provide a genuine
-      // debug-info ability. Code and data entries remain available as symbols
-      // but are not equivalent to debug-info functions or global variables.
-      if (symtab->AppendSymbolIndexesWithType(eSymbolTypeSourceFile,
-                                              m_source_indexes)) {
+      // Only source-file entries provide a genuine debug-info ability. Code
+      // and data entries remain available as symbols but are not equivalent
+      // to debug-info functions or global variables. The symbol indexes are
+      // built later by InitializeSymbolIndexes() so we don't need to iterate
+      // over all of the symbols to calculate our abilities.
+      if (symtab->HasSourceFiles())
         abilities |= CompileUnits;
-      }
-
-      if (symtab->AppendSymbolIndexesWithType(
-              eSymbolTypeCode, Symtab::eDebugYes, Symtab::eVisibilityAny,
-              m_func_indexes)) {
-        symtab->SortSymbolIndexesByValue(m_func_indexes, true);
-      }
-
-      if (symtab->AppendSymbolIndexesWithType(eSymbolTypeCode, Symtab::eDebugNo,
-                                              Symtab::eVisibilityAny,
-                                              m_code_indexes)) {
-        symtab->SortSymbolIndexesByValue(m_code_indexes, true);
-      }
-
-      if (symtab->AppendSymbolIndexesWithType(eSymbolTypeData,
-                                              m_data_indexes)) {
-        symtab->SortSymbolIndexesByValue(m_data_indexes, true);
-      }
-
-      lldb_private::Symtab::IndexCollection objc_class_indexes;
-      if (symtab->AppendSymbolIndexesWithType(eSymbolTypeObjCClass,
-                                              objc_class_indexes)) {
-        symtab->AppendSymbolNamesToMap(objc_class_indexes, true, true,
-                                       m_objc_class_name_to_index);
-        m_objc_class_name_to_index.Sort();
-      }
     }
   }
   return abilities;
 }
 
+void SymbolFileSymtab::InitializeSymbolIndexes() {
+  // GetModuleMutex() dereferences the object file, so check it first.
+  if (!m_objfile_sp)
+    return;
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  if (m_symbol_indexes_initialized)
+    return;
+  const Symtab *symtab = m_objfile_sp->GetSymtab();
+  if (!symtab)
+    return;
+  m_symbol_indexes_initialized = true;
+
+  // Get the indexes of the source file and non-debug code entries in the
+  // module symbol table.
+  symtab->AppendSymbolIndexesWithType(eSymbolTypeSourceFile, m_source_indexes);
+
+  if (symtab->AppendSymbolIndexesWithType(eSymbolTypeCode, Symtab::eDebugNo,
+                                          Symtab::eVisibilityAny,
+                                          m_code_indexes)) {
+    symtab->SortSymbolIndexesByValue(m_code_indexes, true);
+  }
+}
+
 uint32_t SymbolFileSymtab::CalculateNumCompileUnits() {
-  // If we don't have any source file symbols we will just have one compile
-  // unit for the entire object file
-  if (m_source_indexes.empty())
+  // Compile units are only created from source file symbols, so don't build
+  // the symbol indexes, which iterates over all of the symbols, if there
+  // aren't any. Nothing else uses the indexes without a compile unit.
+  if (!m_objfile_sp)
+    return 0;
+  const Symtab *symtab = m_objfile_sp->GetSymtab();
+  if (!symtab || !symtab->HasSourceFiles())
     return 0;
 
-  // If we have any source file symbols we will logically organize the object
-  // symbols using these.
+  InitializeSymbolIndexes();
+
+  // Each source file symbol is a compile unit, and the object file symbols
+  // are logically organized using these.
   return m_source_indexes.size();
 }
 
 CompUnitSP SymbolFileSymtab::ParseCompileUnitAtIndex(uint32_t idx) {
+  InitializeSymbolIndexes();
+
   CompUnitSP cu_sp;
 
-  // If we don't have any source file symbols we will just have one compile
-  // unit for the entire object file
+  // Each source file symbol is a compile unit.
   if (idx < m_source_indexes.size()) {
     const Symbol *cu_symbol =
         m_objfile_sp->GetSymtab()->SymbolAtIndex(m_source_indexes[idx]);
@@ -135,6 +139,7 @@ lldb::LanguageType SymbolFileSymtab::ParseLanguage(CompileUnit &comp_unit) {
 
 size_t SymbolFileSymtab::ParseFunctions(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  InitializeSymbolIndexes();
   size_t num_added = 0;
   // We must at least have a valid compile unit
   const Symtab *symtab = m_objfile_sp->GetSymtab();
@@ -152,9 +157,6 @@ size_t SymbolFileSymtab::ParseFunctions(CompileUnit &comp_unit) {
     // The only time we will have a user ID of zero is when we don't have and
     // source file symbols and we declare one compile unit for the entire
     // object file
-    if (!m_func_indexes.empty()) {
-    }
-
     if (!m_code_indexes.empty()) {
       //          StreamFile s(stdout);
       //          symtab->Dump(&s, m_code_indexes);

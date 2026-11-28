@@ -332,6 +332,25 @@ define amdgpu_ps void @raw_ptr_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_vo
   ret void
 }
 
+define amdgpu_ps void @raw_ptr_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_soffset_i32(ptr addrspace(8) inreg %rsrc, i32 %val, i32 %voffset, i32 inreg %soffset) {
+  ; CHECK-LABEL: name: raw_ptr_buffer_store_format__sgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_soffset_i32
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $vgpr0, $vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr4
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr5
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
+  ; CHECK-NEXT:   BUFFER_STORE_FORMAT_X_OFFEN_exact [[COPY4]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, implicit $exec :: (dereferenceable store (i32) into %ir.rsrc, align 1, addrspace 8)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  call void @llvm.amdgcn.raw.ptr.buffer.store.format.i32(i32 %val, ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
+  ret void
+}
+
 declare void @llvm.amdgcn.raw.ptr.buffer.store.format.f32(float, ptr addrspace(8), i32, i32, i32 immarg)
 declare void @llvm.amdgcn.raw.ptr.buffer.store.format.v2f32(<2 x float>, ptr addrspace(8), i32, i32, i32 immarg)
 declare void @llvm.amdgcn.raw.ptr.buffer.store.format.v3f32(<3 x float>, ptr addrspace(8), i32, i32, i32 immarg)

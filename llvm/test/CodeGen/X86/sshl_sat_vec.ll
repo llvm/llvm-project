@@ -40,10 +40,10 @@ define <2 x i64> @vec_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[1,0,3,2]
 ; X64-SSE2-NEXT:    pand %xmm4, %xmm0
 ; X64-SSE2-NEXT:    andpd %xmm0, %xmm9
-; X64-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; X64-SSE2-NEXT:    pxor %xmm6, %xmm1
-; X64-SSE2-NEXT:    por %xmm5, %xmm1
-; X64-SSE2-NEXT:    pandn %xmm1, %xmm0
+; X64-SSE2-NEXT:    pandn %xmm6, %xmm5
+; X64-SSE2-NEXT:    por %xmm0, %xmm5
+; X64-SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; X64-SSE2-NEXT:    pxor %xmm5, %xmm0
 ; X64-SSE2-NEXT:    por %xmm9, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;

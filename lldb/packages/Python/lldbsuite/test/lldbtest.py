@@ -300,12 +300,23 @@ def dump_value_obj(val: lldb.SBValue, max_children: int = 10000) -> str:
     return str(val)
 
 
+class _LazyValueErrorMsg:
+    """Lazily error message that only formats the SBValue when needed."""
+
+    def __init__(self, prefix: str, val: lldb.SBValue):
+        self.prefix = prefix
+        self.val = val
+
+    def __str__(self):
+        return self.prefix + "\nChecking SBValue: " + dump_value_obj(self.val)
+
+
 class ValueCheck:
     def __init__(
         self,
         name: str = None,
         value: str = None,
-        type: str = None,
+        type: Union[str, re.Pattern, None] = None,
         summary: str = None,
         children: [ValueCheck] = None,
         dereference: bool = None,
@@ -364,8 +375,7 @@ class ValueCheck:
         not errors in the child values).
         """
 
-        this_error_msg = error_msg if error_msg else ""
-        this_error_msg += "\nChecking SBValue: " + dump_value_obj(val)
+        this_error_msg = _LazyValueErrorMsg(error_msg, val)
 
         test_base.assertSuccess(val.GetError())
 
@@ -377,9 +387,14 @@ class ValueCheck:
             else:
                 test_base.assertEqual(self.expect_value, val.GetValue(), this_error_msg)
         if self.expect_type:
-            test_base.assertEqual(
-                self.expect_type, val.GetDisplayTypeName(), this_error_msg
-            )
+            if isinstance(self.expect_type, re.Pattern):
+                test_base.assertRegex(
+                    val.GetDisplayTypeName(), self.expect_type, this_error_msg
+                )
+            else:
+                test_base.assertEqual(
+                    self.expect_type, val.GetDisplayTypeName(), this_error_msg
+                )
         if self.expect_summary:
             if isinstance(self.expect_summary, re.Pattern):
                 test_base.assertRegex(
@@ -404,8 +419,7 @@ class ValueCheck:
         :param val: The SBValue to check.
         """
 
-        this_error_msg = error_msg if error_msg else ""
-        this_error_msg += "\nChecking SBValue: " + dump_value_obj(val)
+        this_error_msg = _LazyValueErrorMsg(error_msg, val)
 
         test_base.assertEqual(len(self.children), val.GetNumChildren(), this_error_msg)
 
@@ -631,9 +645,8 @@ def builder_module():
 
 class Base(unittest.TestCase):
     """
-    Abstract base for performing lldb (see TestBase) or other generic tests (see
-    BenchBase for one example).  lldbtest.Base works with the test driver to
-    accomplish things.
+    Abstract base for performing lldb (see TestBase) or other generic tests.
+    lldbtest.Base works with the test driver to accomplish things.
 
     """
 

@@ -33,6 +33,7 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
@@ -556,7 +557,9 @@ Sema::ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val) {
 
     ExprResult ER = E;
     if (!E->isValueDependent())
-      ER = VerifyIntegerConstantExpression(E, AllowFoldKind::Allow);
+      ER = Context.getTargetInfo().getTriple().isBPF()
+               ? BPF().verifyCaseExpr(E)
+               : VerifyIntegerConstantExpression(E, AllowFoldKind::Allow);
     if (!ER.isInvalid())
       ER = DefaultLvalueConversion(ER.get());
     if (!ER.isInvalid())
@@ -1430,6 +1433,16 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
   typedef std::vector<std::pair<llvm::APSInt, CaseStmt*> > CaseRangesTy;
   CaseRangesTy CaseRanges;
 
+  // A BPF case with a relocated enumerator or an explicit
+  // __builtin_preserve_enum_value() call, see SemaBPF::verifyCaseExpr(), is
+  // compared before the switch, and its value is only known at load time, so
+  // it is not checked for duplicates or overlaps. Its local value is used for
+  // the other checks. A relocated singleton case is kept out of CaseVals until
+  // the checks for duplicates and overlaps are done.
+  bool IsBPF = Context.getTargetInfo().getTriple().isBPF();
+  CaseValsTy RelocatedCaseVals;
+  llvm::SmallPtrSet<const CaseStmt *, 4> RelocatedCaseRanges;
+
   DefaultStmt *TheDefaultStmt = nullptr;
 
   bool CaseListIsErroneous = false;
@@ -1488,7 +1501,12 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
           break;
         }
         CaseRanges.push_back(std::make_pair(LoVal, CS));
-      } else
+        if (IsBPF && (SemaBPF::hasPreserveEnumValue(Lo) ||
+                      SemaBPF::hasPreserveEnumValue(CS->getRHS())))
+          RelocatedCaseRanges.insert(CS);
+      } else if (IsBPF && SemaBPF::hasPreserveEnumValue(Lo))
+        RelocatedCaseVals.push_back(std::make_pair(LoVal, CS));
+      else
         CaseVals.push_back(std::make_pair(LoVal, CS));
     }
   }
@@ -1509,7 +1527,10 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
               ConstantCondValue.isSigned() == CondIsSigned));
       Diag(SwitchLoc, diag::warn_switch_default);
     }
-    bool ShouldCheckConstantCond = HasConstantCond;
+    // A relocated case may match the condition at load time.
+    bool ShouldCheckConstantCond = HasConstantCond &&
+                                   RelocatedCaseVals.empty() &&
+                                   RelocatedCaseRanges.empty();
 
     // Sort all the scalar case values so we can easily detect duplicates.
     llvm::stable_sort(CaseVals, CmpCaseVals);
@@ -1601,11 +1622,14 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
 
       // Rescan the ranges, looking for overlap with singleton values and other
       // ranges.  Since the range list is sorted, we only need to compare case
-      // ranges with their neighbors.
+      // ranges with their neighbors. A relocated range is skipped.
+      std::optional<unsigned> PrevRange;
       for (unsigned i = 0, e = CaseRanges.size(); i != e; ++i) {
         llvm::APSInt &CRLo = CaseRanges[i].first;
         llvm::APSInt &CRHi = HiVals[i];
         CaseStmt *CR = CaseRanges[i].second;
+        if (RelocatedCaseRanges.contains(CR))
+          continue;
 
         // Check to see whether the case range overlaps with any
         // singleton cases.
@@ -1630,10 +1654,11 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
 
         // Check to see if this case stmt overlaps with the subsequent
         // case range.
-        if (i && CRLo <= HiVals[i-1]) {
-          OverlapVal  = HiVals[i-1];       // Found overlap with range.
-          OverlapStmt = CaseRanges[i-1].second;
+        if (PrevRange && CRLo <= HiVals[*PrevRange]) {
+          OverlapVal = HiVals[*PrevRange]; // Found overlap with range.
+          OverlapStmt = CaseRanges[*PrevRange].second;
         }
+        PrevRange = i;
 
         if (OverlapStmt) {
           // If we have a duplicate, report it.
@@ -1656,6 +1681,12 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
       Diag(CondExpr->getExprLoc(), diag::warn_missing_case_for_condition)
         << toString(ConstantCondValue, 10)
         << CondExpr->getSourceRange();
+    }
+
+    // Check the relocated case values with their local values from here.
+    if (!RelocatedCaseVals.empty()) {
+      llvm::append_range(CaseVals, RelocatedCaseVals);
+      llvm::stable_sort(CaseVals, CmpCaseVals);
     }
 
     // Check to see if switch is over an Enum and handles all of its
@@ -1696,6 +1727,9 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
       EI = EnumVals.begin();
       for (CaseRangesTy::const_iterator RI = CaseRanges.begin();
           RI != CaseRanges.end(); RI++) {
+        // A relocated range may overlap the previous one.
+        if (!RelocatedCaseRanges.empty())
+          EI = EnumVals.begin();
         Expr *CaseExpr = RI->second->getLHS();
         if (ShouldDiagnoseSwitchCaseNotInEnum(*this, ED, CaseExpr, EI, EIEnd,
                                               RI->first))
@@ -4631,6 +4665,11 @@ void Sema::DiagnoseExceptionUse(SourceLocation Loc, bool IsTry) {
   if (getLangOpts().CUDA && getLangOpts().CXXExceptions) {
     CUDA().DiagIfDeviceCode(Loc, diag::err_cuda_device_exceptions)
         << IsTry << CUDA().CurrentTarget();
+    return;
+  }
+
+  if (getLangOpts().HLSL) {
+    targetDiag(Loc, diag::err_hlsl_exceptions) << IsTry;
     return;
   }
 

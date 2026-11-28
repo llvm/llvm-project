@@ -10,9 +10,9 @@
 #define _LIBCPP___TYPE_TRAITS_REGISTER_PASSABLE_H
 
 #include <__config>
+#include <__type_traits/is_destructible.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/is_trivially_constructible.h>
-#include <__type_traits/is_trivially_destructible.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

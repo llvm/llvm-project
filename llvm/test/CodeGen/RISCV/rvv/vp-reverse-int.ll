@@ -679,12 +679,17 @@ define <vscale x 128 x i8> @test_vp_reverse_nxv128i8(<vscale x 128 x i8> %src, i
 ; CHECK-LABEL: test_vp_reverse_nxv128i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a2, a1, 4
+; CHECK-NEXT:    bltu a0, a2, .LBB44_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:  .LBB44_2:
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    mv a2, a0
-; CHECK-NEXT:    bltu a0, a1, .LBB44_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    bltu a0, a1, .LBB44_4
+; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:  .LBB44_2:
+; CHECK-NEXT:  .LBB44_4:
 ; CHECK-NEXT:    addi sp, sp, -80
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill

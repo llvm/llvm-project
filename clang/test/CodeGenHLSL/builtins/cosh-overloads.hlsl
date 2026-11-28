@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-library %s \
 // RUN:   -verify -verify-ignore-unexpected=note
 
+using namespace hlsl;
+
 // CHECK: define [[FNATTRS]] float @_Z16test_cosh_doubled(
 // CHECK:    [[CONVI:%.*]] = fptrunc {{.*}} double %{{.*}} to float
 // CHECK:    [[V3:%.*]] = call {{.*}} float @llvm.cosh.f32(float [[CONVI]])

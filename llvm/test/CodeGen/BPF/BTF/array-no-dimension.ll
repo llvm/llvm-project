@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mtriple=bpfel -filetype=obj %s -o %t
+; RUN: llvm-objcopy --dump-section .BTF=- %t | %python %p/print_btf.py - | FileCheck %s
 ;
 ; Rust and other languages may emit array types with no DISubrange dimensions.
 ; Verify BTFDebug does not crash and emits a zero-length array.
@@ -9,9 +10,7 @@ define fastcc i1 @test() !dbg !4 {
   ret i1 false
 }
 
-; CHECK:             .section        .BTF,"",@progbits
-; CHECK:             BTF_KIND_ARRAY
-; CHECK:             .long   0{{$}}
+; CHECK: ARRAY '(anon)' {{.*}} nr_elems=0
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}

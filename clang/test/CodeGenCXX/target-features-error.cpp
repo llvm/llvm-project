@@ -2,6 +2,9 @@
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -S -verify -o - -DTEST2
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -S -verify -o - -DTEST3
 // RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -S -verify -o - -DTEST4
+// RUN: %clang_cc1 %s -triple=x86_64-pc-windows-msvc -emit-llvm-only -verify -DTEST4
+// RUN: %clang_cc1 %s -triple=x86_64-linux-gnu -emit-llvm-only -verify -DTEST5
+// RUN: %clang_cc1 %s -triple=x86_64-pc-windows-msvc -emit-llvm-only -verify -DTEST5
 
 struct S {
   __attribute__((always_inline, target("avx512f")))
@@ -83,5 +86,16 @@ namespace PR45468 {
     //expected-error@*{{'~CtorAndDTor' requires target feature 'avx512f'}}
     //expected-error@*{{'~CtorAndDTor' requires target feature 'avx512f'}}
   }
+}
+#endif
+
+#ifdef TEST5
+struct VirtualDtor {
+  __attribute__((always_inline, target("avx512f"))) virtual ~VirtualDtor() {}
+};
+
+void usage(VirtualDtor *p) {
+  delete p;          // expected-error {{'~VirtualDtor' requires target feature 'avx512f'}}
+  p->~VirtualDtor(); // expected-error {{'~VirtualDtor' requires target feature 'avx512f'}}
 }
 #endif

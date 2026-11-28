@@ -60,7 +60,8 @@ void InitializeShadowMemory() {
 }
 
 void MarkApplicationMemory(const void* app_addr, uptr num_bytes, bool is_copy) {
-  CHECK_GT(num_bytes, 0);
+  if (UNLIKELY(num_bytes == 0))
+    return;
   const uptr addr = reinterpret_cast<uptr>(app_addr);
   unsigned char* shadow =
       reinterpret_cast<unsigned char*>(g_copy_shadow.MemToShadow(addr));
@@ -85,7 +86,8 @@ void MarkApplicationMemory(const void* app_addr, uptr num_bytes, bool is_copy) {
 }
 
 bool IsMarkedAsCopy(const void* app_addr, uptr num_bytes) {
-  CHECK_GT(num_bytes, 0);
+  if (UNLIKELY(num_bytes == 0))
+    return true;
   const uptr addr = reinterpret_cast<uptr>(app_addr);
   const auto* shadow =
       reinterpret_cast<const unsigned char*>(g_copy_shadow.MemToShadow(addr));

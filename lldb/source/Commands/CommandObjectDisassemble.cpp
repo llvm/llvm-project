@@ -21,6 +21,7 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <iterator>
 
 static constexpr unsigned default_disasm_byte_size = 32;
@@ -367,7 +368,7 @@ CommandObjectDisassemble::GetCurrentLineRanges() {
 
 llvm::Expected<std::vector<AddressRange>>
 CommandObjectDisassemble::GetNameRanges(CommandReturnObject &result) {
-  ConstString name(m_options.func_name);
+  llvm::StringRef name = m_options.func_name;
 
   ModuleFunctionSearchOptions function_options;
   function_options.include_symbols = true;
@@ -401,9 +402,8 @@ CommandObjectDisassemble::GetNameRanges(CommandReturnObject &result) {
   if (ranges.empty()) {
     if (range_errs)
       return std::move(range_errs);
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Unable to find symbol with name '%s'.\n",
-                                   name.GetCString());
+    return llvm::createStringErrorV("Unable to find symbol with name '{0}'.\n",
+                                    name);
   }
   if (range_errs)
     result.AppendWarning(toString(std::move(range_errs)));
