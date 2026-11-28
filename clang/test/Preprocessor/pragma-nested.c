@@ -1,7 +1,18 @@
 // RUN: %clang_cc1 -fsyntax-only -fms-extensions -verify -verify-ignore-unexpected=note %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -fms-extensions -verify -verify-ignore-unexpected=note %s
 
-#pragma clang attribute (_Pragma("clang attribute push")) // expected-error {{nested pragma is not allowed}} expected-error {{expected an attribute}}
+#pragma clang attribute (_Pragma("clang attribute push")) // expected-error {{nested pragma is not allowed}}
+#pragma clang attribute () // expected-error {{expected an attribute after '('}}
+
+#define DEPRECATED_EMPTY
+#pragma clang deprecated(DEPRECATED_EMPTY)
+#pragma clang diagnostic push
+#pragma clang diagnostic error "-Wdeprecated-pragma"
+// expected-error@+2 {{macro 'DEPRECATED_EMPTY' has been marked as deprecated}}
+// expected-error@+1 {{expected an attribute after '('}}
+#pragma clang attribute (DEPRECATED_EMPTY)
+#pragma clang diagnostic pop
+
 #pragma clang __debug dump _Pragma("message(\"inner\")") // expected-error {{nested pragma is not allowed}} expected-warning {{missing argument to debug command 'dump'}}
 
 #define OPEN (

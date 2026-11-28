@@ -4083,6 +4083,7 @@ void PragmaAttributeHandler::HandlePragma(Preprocessor &PP,
       PP.Diag(Tok.getLocation(), diag::err_expected) << tok::l_paren;
       return;
     }
+    const unsigned NumRejectedBeforeArg = PP.getNumRejectedNestedPragmas();
     PP.Lex(Tok);
 
     // Lex the attribute tokens.
@@ -4102,7 +4103,10 @@ void PragmaAttributeHandler::HandlePragma(Preprocessor &PP,
     }
 
     if (AttributeTokens.empty()) {
-      PP.Diag(Tok.getLocation(), diag::err_pragma_attribute_expected_attribute);
+      // A rejected nested pragma can leave the argument empty.
+      if (NumRejectedBeforeArg == PP.getNumRejectedNestedPragmas())
+        PP.Diag(Tok.getLocation(),
+                diag::err_pragma_attribute_expected_attribute);
       return;
     }
     if (Tok.isNot(tok::r_paren)) {
