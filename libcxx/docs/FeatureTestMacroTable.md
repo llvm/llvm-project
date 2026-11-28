@@ -182,6 +182,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_format_ranges`                              | `202207L`       |
 | `__cpp_lib_formatters`                                 | *unimplemented* |
 | `__cpp_lib_forward_like`                               | `202207L`       |
+| `__cpp_lib_generator`                                  | `202207L`       |
 | `__cpp_lib_invoke_r`                                   | `202106L`       |
 | `__cpp_lib_ios_noreplace`                              | `202207L`       |
 | `__cpp_lib_is_implicit_lifetime`                       | `202302L`       |
