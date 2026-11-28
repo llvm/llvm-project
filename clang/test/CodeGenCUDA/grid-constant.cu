@@ -5,6 +5,15 @@
 
 struct S {};
 
+// CHECK-LABEL: define dso_local ptx_kernel void @_Z6kernel1Sii(
+// CHECK-SAME: ptr noundef byval([[STRUCT_S:%.*]]) align 1 "nvvm.grid_constant" [[GC_ARG1:%.*]], i32 noundef [[ARG2:%.*]], i32 noundef "nvvm.grid_constant" [[GC_ARG3:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARG2_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[GC_ARG3_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i32 [[ARG2]], ptr [[ARG2_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[GC_ARG3]], ptr [[GC_ARG3_ADDR]], align 4
+// CHECK-NEXT:    ret void
+//
 __global__ void kernel(__grid_constant__ const S gc_arg1, int arg2, __grid_constant__ const int gc_arg3) {}
 
 // dependent arguments get diagnosed after instantiation.
@@ -20,8 +29,11 @@ void foo() {
   tkernel<const S><<<1,1>>>(1, {});
 }
 
-// CHECK: define dso_local ptx_kernel void @_Z6kernel1Sii(ptr noundef byval(%struct.S) align 1 "nvvm.grid_constant" %gc_arg1, i32 noundef %arg2, i32 noundef "nvvm.grid_constant" %gc_arg3)
-// CHECK: define ptx_kernel void @_Z13tkernel_constIK1SEvT_(ptr noundef byval(%struct.S) align 1 "nvvm.grid_constant" %arg)
-// CHECK: define ptx_kernel void @_Z13tkernel_constI1SEvT_(ptr noundef byval(%struct.S) align 1 "nvvm.grid_constant" %arg)
-// CHECK: define ptx_kernel void @_Z7tkernelIK1SEviT_(i32 noundef %dummy, ptr noundef byval(%struct.S) align 1 "nvvm.grid_constant" %arg)
 
+//.
+// CHECK: attributes #[[ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// CHECK: attributes #[[ATTR1:[0-9]+]] = { convergent likely_module_local mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+//.
+// CHECK: [[META0:![0-9]+]] = !{i32 4, !"nvvm-reflect-ftz", i32 0}
+// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+//.

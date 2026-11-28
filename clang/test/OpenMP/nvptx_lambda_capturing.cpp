@@ -888,7 +888,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZZN1S3fooEvENKUlvE_clEv
-// CHECK2-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR2:[0-9]+]] comdat align 2 {
+// CHECK2-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR2:[0-9]+]] align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK2-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -1239,7 +1239,7 @@ int main(int argc, char **argv) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_ZZN1S3fooEvENKUlvE_clEv
-// CHECK3-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR2:[0-9]+]] comdat align 2 {
+// CHECK3-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR2:[0-9]+]] align 2 {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK3-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8

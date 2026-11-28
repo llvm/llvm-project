@@ -109,7 +109,7 @@ __host__ __device__ void tests_hd(void *t) {
 }
 
 // Make sure that we've generated the kernel used by A::~A.
-// DEVICE-LABEL: define ptx_kernel void @_Z1fIiEvT_
+// DEVICE-LABEL: define dso_local ptx_kernel void @_Z1fIiEvT_
 
 // Make sure we've picked deallocator for the correct side of compilation.
 

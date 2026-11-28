@@ -315,7 +315,7 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2TTIxcEixEi
-// CHECK1-SAME: (ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
+// CHECK1-SAME: (ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] align 2 {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
@@ -701,7 +701,7 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_ZN2TTIxcEixEi
-// CHECK2-SAME: (ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] comdat align 2 {
+// CHECK2-SAME: (ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], i32 [[I:%.*]]) #[[ATTR5:[0-9]+]] align 2 {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK2-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4

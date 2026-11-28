@@ -156,7 +156,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define linkonce_odr hidden void @_ZNSt7complexIfEC1ERKfS2_(
-// CHECK1-SAME: ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[__RE:%.*]], ptr nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR5:[0-9]+]] comdat align 2 {
+// CHECK1-SAME: ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[__RE:%.*]], ptr nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR5:[0-9]+]] align 2 {
 // CHECK1-NEXT:  [[ENTRY:.*:]]
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[__RE_ADDR:%.*]] = alloca ptr, align 8
@@ -354,7 +354,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define linkonce_odr hidden nonnull align 4 dereferenceable(8) ptr @_ZNSt7complexIfEpLIfEERS0_RKS_IT_E(
-// CHECK1-SAME: ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(8) [[__C:%.*]]) #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(8) [[__C:%.*]]) #[[ATTR5]] align 2 {
 // CHECK1-NEXT:  [[ENTRY:.*:]]
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[__C_ADDR:%.*]] = alloca ptr, align 8
@@ -648,7 +648,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define linkonce_odr hidden void @_ZNSt7complexIdEC1ERKdS2_(
-// CHECK1-SAME: ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr nonnull align 8 dereferenceable(8) [[__RE:%.*]], ptr nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr nonnull align 8 dereferenceable(8) [[__RE:%.*]], ptr nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR5]] align 2 {
 // CHECK1-NEXT:  [[ENTRY:.*:]]
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[__RE_ADDR:%.*]] = alloca ptr, align 8
@@ -846,7 +846,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define linkonce_odr hidden nonnull align 8 dereferenceable(16) ptr @_ZNSt7complexIdEpLIdEERS0_RKS_IT_E(
-// CHECK1-SAME: ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr nonnull align 8 dereferenceable(16) [[__C:%.*]]) #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr nonnull align 8 dereferenceable(16) [[__C:%.*]]) #[[ATTR5]] align 2 {
 // CHECK1-NEXT:  [[ENTRY:.*:]]
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[__C_ADDR:%.*]] = alloca ptr, align 8
@@ -1027,7 +1027,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define linkonce_odr hidden void @_ZNSt7complexIfEC2ERKfS2_(
-// CHECK1-SAME: ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[__RE:%.*]], ptr nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[__RE:%.*]], ptr nonnull align 4 dereferenceable(4) [[__IM:%.*]]) unnamed_addr #[[ATTR5]] align 2 {
 // CHECK1-NEXT:  [[ENTRY:.*:]]
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[__RE_ADDR:%.*]] = alloca ptr, align 8
@@ -1048,7 +1048,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define linkonce_odr hidden float @_ZNKSt7complexIfE4realEv(
-// CHECK1-SAME: ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR5]] align 2 {
 // CHECK1-NEXT:  [[ENTRY:.*:]]
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8, !tbaa [[_ZTSST7COMPLEXIFEPTR_TBAA19]]
@@ -1059,7 +1059,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define linkonce_odr hidden float @_ZNKSt7complexIfE4imagEv(
-// CHECK1-SAME: ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]]) #[[ATTR5]] align 2 {
 // CHECK1-NEXT:  [[ENTRY:.*:]]
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8, !tbaa [[_ZTSST7COMPLEXIFEPTR_TBAA19]]
@@ -1070,7 +1070,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define linkonce_odr hidden void @_ZNSt7complexIdEC2ERKdS2_(
-// CHECK1-SAME: ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr nonnull align 8 dereferenceable(8) [[__RE:%.*]], ptr nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]], ptr nonnull align 8 dereferenceable(8) [[__RE:%.*]], ptr nonnull align 8 dereferenceable(8) [[__IM:%.*]]) unnamed_addr #[[ATTR5]] align 2 {
 // CHECK1-NEXT:  [[ENTRY:.*:]]
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[__RE_ADDR:%.*]] = alloca ptr, align 8
@@ -1091,7 +1091,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define linkonce_odr hidden double @_ZNKSt7complexIdE4realEv(
-// CHECK1-SAME: ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR5]] align 2 {
 // CHECK1-NEXT:  [[ENTRY:.*:]]
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8, !tbaa [[_ZTSST7COMPLEXIDEPTR_TBAA32]]
@@ -1102,7 +1102,7 @@ void test() {
 //
 //
 // CHECK1-LABEL: define linkonce_odr hidden double @_ZNKSt7complexIdE4imagEv(
-// CHECK1-SAME: ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR5]] comdat align 2 {
+// CHECK1-SAME: ptr nonnull align 8 dereferenceable(16) [[THIS:%.*]]) #[[ATTR5]] align 2 {
 // CHECK1-NEXT:  [[ENTRY:.*:]]
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8, !tbaa [[_ZTSST7COMPLEXIDEPTR_TBAA32]]
