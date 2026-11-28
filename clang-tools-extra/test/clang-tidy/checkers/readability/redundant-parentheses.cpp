@@ -150,6 +150,146 @@ void memberExpr() {
   }
 }
 
+struct Addr { bool *operator&(); };
+struct ConstAddr { bool *operator&() const; };
+struct ByValueAddr { ~ByValueAddr(); };
+bool *operator&(ByValueAddr);
+struct Conv { operator ByValueAddr() const; };
+struct StaticX { static bool x; };
+struct BinaryAddr {};
+bool *operator&(BinaryAddr, bool);
+bool globalFlag;
+
+struct MemberAddress : Foo {
+  static bool s;
+  Addr a;
+  ConstAddr c;
+  ByValueAddr v;
+  Conv o;
+  void addressOf(MemberAddress &m) {
+    &(Foo::x);
+    &((Foo::x));
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:      &(Foo::x);
+    // CHECK-FIXES-NEXT: &(Foo::x);
+    &(x);
+    // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &x;
+    &(this->Foo::x);
+    // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &this->Foo::x;
+    &(m.Foo::x);
+    // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &m.Foo::x;
+    &(MemberAddress::s);
+    // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &MemberAddress::s;
+    &(MemberAddress::a);
+    &(MemberAddress::c);
+    &(MemberAddress::v);
+    &(MemberAddress::o);
+    &(a);
+    // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &a;
+    &ByValueAddr((MemberAddress::o));
+    // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &ByValueAddr(MemberAddress::o);
+    if ((Foo::x)) {}
+    // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    if (Foo::x) {}
+    BinaryAddr() & (Foo::x);
+    // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    BinaryAddr() & Foo::x;
+    [this] { &(Foo::x); };
+  }
+};
+
+template <class T> struct DependentMemberAddress : T {
+  void addressOf() {
+    &(T::x);
+    &((T::x));
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:      &(T::x);
+    // CHECK-FIXES-NEXT: &(T::x);
+  }
+};
+template struct DependentMemberAddress<Foo>;
+template struct DependentMemberAddress<StaticX>;
+
+template <class T> struct NonDependentAddress {
+  void addressOf() {
+    &(globalFlag);
+    // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &globalFlag;
+    &(StaticX::x);
+    // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    &StaticX::x;
+  }
+};
+template struct NonDependentAddress<int>;
+
+struct InstantiatedOverloadedAddress {
+  Addr a;
+  template <class T> bool *addressOf() {
+    // FIXME: These parentheses are required; the instantiation shares the
+    // operand with the template under a separate operator call.
+    return &(InstantiatedOverloadedAddress::a);
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  }
+};
+template bool *InstantiatedOverloadedAddress::addressOf<int>();
+
+struct AnonymousMembers { union { bool u; struct { bool n; }; }; };
+
+struct AnonymousMemberAddress : AnonymousMembers {
+  void addressOf() {
+    bool *p = &(AnonymousMembers::u);
+    bool *q = &(AnonymousMemberAddress::u);
+    bool *s = &(AnonymousMembers::n);
+    bool *r = &(this->AnonymousMemberAddress::u);
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: redundant parentheses around expression [readability-redundant-parentheses]
+    // CHECK-FIXES:    bool *r = &this->AnonymousMemberAddress::u;
+  }
+};
+
+template <class T> struct DependentAnonymousAddress : T {
+  void addressOf() { bool *p = &(T::u); }
+};
+template struct DependentAnonymousAddress<AnonymousMembers>;
+
+template <class T, class U> struct IsSame { static const bool value = false; };
+template <class T> struct IsSame<T, T> { static const bool value = true; };
+
+static_assert(IsSame<decltype(&(Foo::x)), bool *>::value, "");
+static_assert(IsSame<decltype(&(AnonymousMembers::u)), bool *>::value, "");
+
+struct StaticMemberAddress {
+  static void unevaluated() {
+    static_assert(IsSame<decltype(&(Foo::x)), bool *>::value, "");
+  }
+};
+
+template <class T> void dependentDefaultArgument(bool *p = &(T::x)) {}
+template <class T> void callDependentDefaultArgument() {
+  dependentDefaultArgument<StaticX>();
+}
+template void callDependentDefaultArgument<int>();
+
+template <class T> struct DependentUsingAddress : T {
+  using T::x;
+  bool *addressOf() { return &(DependentUsingAddress::x); }
+  bool *explicitThisAccess() { return &(this->DependentUsingAddress::x); }
+  // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:  bool *explicitThisAccess() { return &this->DependentUsingAddress::x; }
+};
+template struct DependentUsingAddress<StaticX>;
+
+template <class T> struct NonDependentInitializer { static bool *p; };
+template <class T> bool *NonDependentInitializer<T>::p = &(StaticX::x);
+// CHECK-MESSAGES: :[[@LINE-1]]:59: warning: redundant parentheses around expression [readability-redundant-parentheses]
+// CHECK-FIXES: template <class T> bool *NonDependentInitializer<T>::p = &StaticX::x;
+bool *nonDependentInitializer = NonDependentInitializer<int>::p;
+
 void call(bool (&func)(), Foo f) {
   if ((func())) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
