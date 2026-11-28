@@ -14,11 +14,9 @@
 // create a type that is not constructible and not callable.
 // See also: https://cplusplus.github.io/LWG/lwg-defects.html#2543
 
-#include "constexpr_hash.h"
-#include <cassert>
 #include <type_traits>
 
-#include "test_macros.h"
+#include "constexpr_hash.h"
 
 struct X {};
 
