@@ -352,6 +352,22 @@ static bool haveSamePseudoProbeContext(const MachineInstr &MI1,
   return MI1.getDebugLoc().isSameSourceLocation(MI2.getDebugLoc());
 }
 
+// A probe needs real code in its block to provide a sampling location. Do not
+// rely on forwarding branches, meta instructions, or non-call pseudos: these
+// can disappear without providing such a location. Calls include call pseudos
+// that expand to real instructions.
+static bool hasProbesWithoutRealCode(MachineBasicBlock::iterator Begin,
+                                     MachineBasicBlock::iterator End) {
+  bool HasProbe = false;
+  for (MachineInstr &MI : make_range(Begin, End)) {
+    HasProbe |= MI.isPseudoProbe();
+    if (MI.isCall() ||
+        (!MI.isPseudo() && !MI.isMetaInstruction() && !MI.isBranch()))
+      return false;
+  }
+  return HasProbe;
+}
+
 /// Iterate backwards from the given iterator \p I, towards the beginning of the
 /// block. If a MI satisfying 'countsAsInstruction' is found, return an iterator
 /// pointing to that MI. If no such MI is found, return the end iterator.
@@ -385,8 +401,15 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
     MBBI2 = skipBackwardPastNonInstructions(MBBI2, MBB2);
     if (MBBI1 == MBB1->end() || MBBI2 == MBB2->end())
       break;
+    if (!haveSamePseudoProbeContext(*MBBI1, *MBBI2)) {
+      // Keep the contexts separate, but allow the matched suffix to be shared
+      // when extracting it leaves real code beside the probes in both blocks.
+      if (TailLen && (hasProbesWithoutRealCode(MBB1->begin(), I1) ||
+                      hasProbesWithoutRealCode(MBB2->begin(), I2)))
+        return 0;
+      break;
+    }
     if (!MBBI1->isIdenticalTo(*MBBI2) ||
-        !haveSamePseudoProbeContext(*MBBI1, *MBBI2) ||
         // FIXME: This check is dubious. It's used to get around a problem where
         // people incorrectly expect inline asm directives to remain in the same
         // relative order. This is untenable because normal compiler
@@ -2133,6 +2156,12 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   }
 
   if (!HasDups)
+    return false;
+
+  // Tail merging may have left these prefixes as the only real code beside
+  // distinct probes. Hoisting them would strand the probes, allowing branch
+  // cleanup or dangling-probe removal to discard the contexts.
+  if (hasProbesWithoutRealCode(TIB, TIE) || hasProbesWithoutRealCode(FIB, FIE))
     return false;
 
   // Hoist the instructions from [T.begin, TIB) and then delete [F.begin, FIB).

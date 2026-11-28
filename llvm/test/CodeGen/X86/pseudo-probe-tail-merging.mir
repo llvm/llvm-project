@@ -1,5 +1,12 @@
-# RUN: llc -mtriple=x86_64-- -run-pass=branch-folder -o - %s | FileCheck %s
-# RUN: llc -mtriple=x86_64-- -passes="require<profile-summary>,function(machine-function(branch-folder<enable-tail-merge>))" -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -run-pass=branch-folder -verify-machineinstrs -o %t %s
+# RUN: FileCheck %s --input-file=%t
+# RUN: FileCheck %s --check-prefix=TAIL --input-file=%t
+# RUN: llc -mtriple=x86_64-- -passes="require<profile-summary>,function(machine-function(branch-folder<enable-tail-merge>))" -verify-machineinstrs -o %t %s
+# RUN: FileCheck %s --input-file=%t
+# RUN: FileCheck %s --check-prefix=TAIL --input-file=%t
+
+# Each common tail must exceed the default tail-merge threshold. Otherwise
+# these cases do not exercise detaching real instructions from distinct probes.
 
 --- |
   target triple = "x86_64-unknown-unknown"
@@ -19,6 +26,30 @@
   }
 
   define void @call_same_context() !dbg !21 {
+    ret void
+  }
+
+  define void @probe_real_prefix() !dbg !30 {
+    ret void
+  }
+
+  define void @probe_identical_prefix() !dbg !40 {
+    ret void
+  }
+
+  define void @probe_hoistable_prefix() !dbg !50 {
+    ret void
+  }
+
+  define void @probe_one_sided_prefix() !dbg !60 {
+    ret void
+  }
+
+  define void @probe_pseudo_prefix() !dbg !70 {
+    ret void
+  }
+
+  define void @probe_call_mismatch() !dbg !80 {
     ret void
   }
 
@@ -55,13 +86,54 @@
   !23 = !DILexicalBlockFile(scope: !22, file: !1, discriminator: 455082007)
   !24 = distinct !DILocation(line: 52, column: 1, scope: !21)
   !25 = !DILocation(line: 51, column: 1, scope: !23, inlinedAt: !24)
+  !30 = distinct !DISubprogram(name: "probe_real_prefix", scope: !1, file: !1, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !31 = distinct !DISubprogram(name: "inlined_probe_real_prefix", scope: !1, file: !1, line: 2, type: !3, scopeLine: 2, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !32 = distinct !DILocation(line: 10, column: 1, scope: !30)
+  !33 = distinct !DILocation(line: 20, column: 1, scope: !30)
+  !34 = !DILocation(line: 2, column: 1, scope: !31, inlinedAt: !32)
+  !35 = !DILocation(line: 2, column: 1, scope: !31, inlinedAt: !33)
+  !40 = distinct !DISubprogram(name: "probe_identical_prefix", scope: !1, file: !1, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !41 = distinct !DISubprogram(name: "inlined_probe_identical_prefix", scope: !1, file: !1, line: 2, type: !3, scopeLine: 2, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !42 = distinct !DILocation(line: 10, column: 1, scope: !40)
+  !43 = distinct !DILocation(line: 20, column: 1, scope: !40)
+  !44 = !DILocation(line: 2, column: 1, scope: !41, inlinedAt: !42)
+  !45 = !DILocation(line: 2, column: 1, scope: !41, inlinedAt: !43)
+  !50 = distinct !DISubprogram(name: "probe_hoistable_prefix", scope: !1, file: !1, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !51 = distinct !DISubprogram(name: "inlined_probe_hoistable_prefix", scope: !1, file: !1, line: 2, type: !3, scopeLine: 2, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !52 = distinct !DILocation(line: 10, column: 1, scope: !50)
+  !53 = distinct !DILocation(line: 20, column: 1, scope: !50)
+  !54 = !DILocation(line: 2, column: 1, scope: !51, inlinedAt: !52)
+  !55 = !DILocation(line: 2, column: 1, scope: !51, inlinedAt: !53)
+  !60 = distinct !DISubprogram(name: "probe_one_sided_prefix", scope: !1, file: !1, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !61 = distinct !DISubprogram(name: "inlined_probe_one_sided_prefix", scope: !1, file: !1, line: 2, type: !3, scopeLine: 2, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !62 = distinct !DILocation(line: 10, column: 1, scope: !60)
+  !63 = distinct !DILocation(line: 20, column: 1, scope: !60)
+  !64 = !DILocation(line: 2, column: 1, scope: !61, inlinedAt: !62)
+  !65 = !DILocation(line: 2, column: 1, scope: !61, inlinedAt: !63)
+  !70 = distinct !DISubprogram(name: "probe_pseudo_prefix", scope: !1, file: !1, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !71 = distinct !DISubprogram(name: "inlined_probe_pseudo_prefix", scope: !1, file: !1, line: 2, type: !3, scopeLine: 2, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !72 = distinct !DILocation(line: 10, column: 1, scope: !70)
+  !73 = distinct !DILocation(line: 20, column: 1, scope: !70)
+  !74 = !DILocation(line: 2, column: 1, scope: !71, inlinedAt: !72)
+  !75 = !DILocation(line: 2, column: 1, scope: !71, inlinedAt: !73)
+  !80 = distinct !DISubprogram(name: "probe_call_mismatch", scope: !1, file: !1, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !81 = distinct !DISubprogram(name: "inlined_probe_call_mismatch", scope: !1, file: !1, line: 2, type: !3, scopeLine: 2, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !82 = distinct !DILocation(line: 10, column: 1, scope: !80)
+  !83 = distinct !DILocation(line: 20, column: 1, scope: !80)
+  !86 = !DILexicalBlockFile(scope: !81, file: !1, discriminator: 455082007)
+  !84 = !DILocation(line: 2, column: 1, scope: !86, inlinedAt: !82)
+  !85 = !DILocation(line: 2, column: 1, scope: !86, inlinedAt: !83)
 ...
 
 ---
 name: probe_different_context
 body: |
+  ; TAIL-LABEL: name: probe_different_context
+  ; TAIL-COUNT-6: NOOP
+  ; TAIL-NOT: NOOP
   ; CHECK-LABEL: name: probe_different_context
   ; CHECK-COUNT-2: PSEUDO_PROBE 1, 1, 0, 0
+  ; CHECK-NOT: PSEUDO_PROBE 1, 1, 0, 0
   bb.0:
     liveins: $al
     TEST8rr killed $al, killed $al, implicit-def $eflags
@@ -70,10 +142,14 @@ body: |
   bb.1:
     PSEUDO_PROBE 1, 1, 0, 0, debug-location !8
     NOOP
+    NOOP
+    NOOP
     RET 0
 
   bb.2:
     PSEUDO_PROBE 1, 1, 0, 0, debug-location !9
+    NOOP
+    NOOP
     NOOP
     RET 0
 ...
@@ -81,8 +157,12 @@ body: |
 ---
 name: probe_same_context
 body: |
+  ; TAIL-LABEL: name: probe_same_context
+  ; TAIL-COUNT-3: NOOP
+  ; TAIL-NOT: NOOP
   ; CHECK-LABEL: name: probe_same_context
   ; CHECK-COUNT-1: PSEUDO_PROBE 2, 1, 0, 0
+  ; CHECK-NOT: PSEUDO_PROBE 2, 1, 0, 0
   bb.0:
     liveins: $al
     TEST8rr killed $al, killed $al, implicit-def $eflags
@@ -91,10 +171,14 @@ body: |
   bb.1:
     PSEUDO_PROBE 2, 1, 0, 0, debug-location !13
     NOOP
+    NOOP
+    NOOP
     RET 0
 
   bb.2:
     PSEUDO_PROBE 2, 1, 0, 0, debug-location !13
+    NOOP
+    NOOP
     NOOP
     RET 0
 ...
@@ -102,8 +186,12 @@ body: |
 ---
 name: call_different_context
 body: |
+  ; TAIL-LABEL: name: call_different_context
+  ; TAIL-COUNT-3: NOOP
+  ; TAIL-NOT: NOOP
   ; CHECK-LABEL: name: call_different_context
   ; CHECK-COUNT-2: CALL64pcrel32 @callee
+  ; CHECK-NOT: CALL64pcrel32 @callee
   bb.0:
     liveins: $al
     TEST8rr killed $al, killed $al, implicit-def $eflags
@@ -112,10 +200,14 @@ body: |
   bb.1:
     CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !19
     NOOP
+    NOOP
+    NOOP
     RET 0
 
   bb.2:
     CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !20
+    NOOP
+    NOOP
     NOOP
     RET 0
 ...
@@ -123,8 +215,12 @@ body: |
 ---
 name: call_same_context
 body: |
+  ; TAIL-LABEL: name: call_same_context
+  ; TAIL-COUNT-3: NOOP
+  ; TAIL-NOT: NOOP
   ; CHECK-LABEL: name: call_same_context
   ; CHECK-COUNT-1: CALL64pcrel32 @callee
+  ; CHECK-NOT: CALL64pcrel32 @callee
   bb.0:
     liveins: $al
     TEST8rr killed $al, killed $al, implicit-def $eflags
@@ -133,10 +229,214 @@ body: |
   bb.1:
     CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !25
     NOOP
+    NOOP
+    NOOP
     RET 0
 
   bb.2:
     CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !25
     NOOP
+    NOOP
+    NOOP
     RET 0
+...
+
+
+# Different real prefixes remain when the ordinary suffix is shared.
+---
+name: probe_real_prefix
+body: |
+  ; TAIL-LABEL: name: probe_real_prefix
+  ; TAIL-COUNT-3: NOOP
+  ; TAIL-NOT: NOOP
+  ; CHECK-LABEL: name: probe_real_prefix
+  ; CHECK-COUNT-2: PSEUDO_PROBE 10, 1, 0, 0
+  ; CHECK-NOT: PSEUDO_PROBE 10, 1, 0, 0
+  bb.0:
+    liveins: $al
+    TEST8rr killed $al, killed $al, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    $eax = MOV32ri 1
+    PSEUDO_PROBE 10, 1, 0, 0, debug-location !34
+    NOOP
+    NOOP
+    NOOP
+    RET 0
+
+  bb.2:
+    $eax = MOV32ri 2
+    PSEUDO_PROBE 10, 1, 0, 0, debug-location !35
+    NOOP
+    NOOP
+    NOOP
+    RET 0
+
+...
+
+# These identical prefixes cannot be hoisted across the use of al.
+---
+name: probe_identical_prefix
+body: |
+  ; TAIL-LABEL: name: probe_identical_prefix
+  ; TAIL-COUNT-3: NOOP
+  ; TAIL-NOT: NOOP
+  ; CHECK-LABEL: name: probe_identical_prefix
+  ; CHECK-COUNT-2: PSEUDO_PROBE 11, 1, 0, 0
+  ; CHECK-NOT: PSEUDO_PROBE 11, 1, 0, 0
+  bb.0:
+    liveins: $al
+    TEST8rr killed $al, killed $al, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    $eax = MOV32ri 1
+    PSEUDO_PROBE 11, 1, 0, 0, debug-location !44
+    NOOP
+    NOOP
+    NOOP
+    RET 0
+
+  bb.2:
+    $eax = MOV32ri 1
+    PSEUDO_PROBE 11, 1, 0, 0, debug-location !45
+    NOOP
+    NOOP
+    NOOP
+    RET 0
+
+...
+
+# Share the tail, but keep its last sampling instructions in the prefixes.
+---
+name: probe_hoistable_prefix
+body: |
+  ; TAIL-LABEL: name: probe_hoistable_prefix
+  ; TAIL-COUNT-2: NOOP
+  ; TAIL-NOT: NOOP
+  ; CHECK-LABEL: name: probe_hoistable_prefix
+  ; CHECK-COUNT-2: PSEUDO_PROBE 12, 1, 0, 0
+  ; CHECK-NOT: PSEUDO_PROBE 12, 1, 0, 0
+  bb.0:
+    liveins: $al
+    TEST8rr killed $al, killed $al, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    $ecx = MOV32ri 1
+    PSEUDO_PROBE 12, 1, 0, 0, debug-location !54
+    $eax = MOV32rr $ecx
+    NOOP
+    NOOP
+    RET 0, implicit $eax
+
+  bb.2:
+    $ecx = MOV32ri 1
+    PSEUDO_PROBE 12, 1, 0, 0, debug-location !55
+    $eax = MOV32rr $ecx
+    NOOP
+    NOOP
+    RET 0, implicit $eax
+
+...
+
+# Reject extracting the tail when only one prefix retains real code.
+---
+name: probe_one_sided_prefix
+body: |
+  ; TAIL-LABEL: name: probe_one_sided_prefix
+  ; TAIL-COUNT-6: NOOP
+  ; TAIL-NOT: NOOP
+  ; CHECK-LABEL: name: probe_one_sided_prefix
+  ; CHECK-COUNT-2: PSEUDO_PROBE 13, 1, 0, 0
+  ; CHECK-NOT: PSEUDO_PROBE 13, 1, 0, 0
+  bb.0:
+    liveins: $al
+    TEST8rr killed $al, killed $al, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    $eax = MOV32ri 1
+    PSEUDO_PROBE 13, 1, 0, 0, debug-location !64
+    NOOP
+    NOOP
+    NOOP
+    RET 0
+
+  bb.2:
+    PSEUDO_PROBE 13, 1, 0, 0, debug-location !65
+    NOOP
+    NOOP
+    NOOP
+    RET 0
+
+...
+
+# CFI and IMPLICIT_DEF emit no code and cannot provide a sampling instruction.
+---
+name: probe_pseudo_prefix
+body: |
+  ; TAIL-LABEL: name: probe_pseudo_prefix
+  ; TAIL-COUNT-6: NOOP
+  ; TAIL-NOT: NOOP
+  ; CHECK-LABEL: name: probe_pseudo_prefix
+  ; CHECK-COUNT-2: PSEUDO_PROBE 14, 1, 0, 0
+  ; CHECK-NOT: PSEUDO_PROBE 14, 1, 0, 0
+  bb.0:
+    liveins: $al
+    TEST8rr killed $al, killed $al, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    CFI_INSTRUCTION def_cfa_offset 8
+    $eax = IMPLICIT_DEF
+    PSEUDO_PROBE 14, 1, 0, 0, debug-location !74
+    NOOP
+    NOOP
+    NOOP
+    RET 0
+
+  bb.2:
+    CFI_INSTRUCTION def_cfa_offset 8
+    $eax = IMPLICIT_DEF
+    PSEUDO_PROBE 14, 1, 0, 0, debug-location !75
+    NOOP
+    NOOP
+    NOOP
+    RET 0
+
+...
+
+# A retained call on one side does not protect a probe-only prefix on the other.
+---
+name: probe_call_mismatch
+body: |
+  ; TAIL-LABEL: name: probe_call_mismatch
+  ; TAIL-COUNT-6: NOOP
+  ; TAIL-NOT: NOOP
+  ; CHECK-LABEL: name: probe_call_mismatch
+  ; CHECK: PSEUDO_PROBE 15, 1, 0, 0
+  ; CHECK-NOT: PSEUDO_PROBE 15, 1, 0, 0
+  ; CHECK: CALL64pcrel32 @callee
+  ; CHECK-NOT: CALL64pcrel32 @callee
+  bb.0:
+    liveins: $al
+    TEST8rr killed $al, killed $al, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+
+  bb.1:
+    PSEUDO_PROBE 15, 1, 0, 0, debug-location !84
+    NOOP
+    NOOP
+    NOOP
+    RET 0
+
+  bb.2:
+    CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !85
+    NOOP
+    NOOP
+    NOOP
+    RET 0
+
 ...
