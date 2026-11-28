@@ -1,0 +1,154 @@
+; RUN: rm -rf %t && split-file %s %t
+; RUN: llvm-profdata show --sample %t/profile.proftext | FileCheck %s --check-prefix=SHOW
+; RUN: llvm-profdata merge --sample --extbinary %t/profile.proftext -o %t/profile.extbin
+; RUN: llvm-profdata show --sample %t/profile.extbin | FileCheck %s --check-prefix=SHOW
+; RUN: llvm-profdata merge --sample --text %t/profile.extbin -o - | FileCheck %s --check-prefix=TEXT
+; RUN: llvm-profdata merge --sample --extbinary --split-layout %t/profile.proftext -o %t/profile.split
+; RUN: llvm-profdata show --sample %t/profile.split | FileCheck %s --check-prefix=SHOW
+; RUN: llvm-profdata merge --sample --extbinary %t/func.proftext %t/dap.proftext -o %t/merged.extbin
+; RUN: llvm-profdata show --sample %t/merged.extbin | FileCheck %s --check-prefix=SHOW
+; RUN: llvm-profdata merge --sample --text %t/func.proftext %t/dap.proftext -o - | FileCheck %s --check-prefix=TEXT
+; RUN: llvm-profdata merge --sample --text %t/profile.proftext --weighted-input=2,%t/dap2.proftext -o - | FileCheck %s --check-prefix=MERGE
+; RUN: llvm-profdata merge --sample --binary %t/profile.proftext -o %t/profile.bin 2>&1 | FileCheck %s --check-prefix=UNSUPPORTED-FORMAT
+; RUN: not llvm-profdata show --sample %t/duplicate.proftext 2>&1 | FileCheck %s --check-prefix=DUPLICATE
+
+; SHOW: Function: foo: 100, 0, 1 sampled lines
+; SHOW: Samples collected in the function's body {
+; SHOW:   1: 10
+; SHOW: }
+; SHOW: DataAccessProfiles:
+; SHOW-NEXT: ---
+; SHOW-NEXT: SampledRecords:
+; SHOW-NEXT:   - Symbol:          global_var
+; SHOW-NEXT:     AccessCount:     42
+; SHOW-NEXT:     Locations:
+; SHOW-NEXT:       - FileName:        file.c
+; SHOW-NEXT:         Line:            10
+; SHOW-NEXT:   - Symbol:          global_arr
+; SHOW-NEXT:     AccessCount:     100
+; SHOW-NEXT:   - Hash:            101010
+; SHOW-NEXT:     AccessCount:     200
+; SHOW-NEXT: KnownColdSymbols:
+; SHOW-NEXT:   - cold_var
+; SHOW-NEXT: KnownColdStrHashes: [ 999 ]
+; SHOW-NEXT: ...
+
+; TEXT: foo:100:0
+; TEXT:  1: 10
+; TEXT: [DataAccessProfiles]
+; TEXT-NEXT: ---
+; TEXT-NEXT: SampledRecords:
+; TEXT-NEXT:   - Symbol:          global_var
+; TEXT-NEXT:     AccessCount:     42
+; TEXT-NEXT:     Locations:
+; TEXT-NEXT:       - FileName:        file.c
+; TEXT-NEXT:         Line:            10
+; TEXT-NEXT:   - Symbol:          global_arr
+; TEXT-NEXT:     AccessCount:     100
+; TEXT-NEXT:   - Hash:            101010
+; TEXT-NEXT:     AccessCount:     200
+; TEXT-NEXT: KnownColdSymbols:
+; TEXT-NEXT:   - cold_var
+; TEXT-NEXT: KnownColdStrHashes: [ 999 ]
+; TEXT-NEXT: ...
+
+; MERGE: foo:200:0
+; MERGE:  1: 20
+; MERGE: [DataAccessProfiles]
+; MERGE-NEXT: ---
+; MERGE-NEXT: SampledRecords:
+; MERGE-NEXT:   - Symbol:          global_var
+; MERGE-NEXT:     AccessCount:     50
+; MERGE-NEXT:     Locations:
+; MERGE-NEXT:       - FileName:        file.c
+; MERGE-NEXT:         Line:            10
+; MERGE-NEXT:       - FileName:        other.c
+; MERGE-NEXT:         Line:            20
+; MERGE-NEXT:   - Symbol:          global_arr
+; MERGE-NEXT:     AccessCount:     100
+; MERGE-NEXT:   - Hash:            101010
+; MERGE-NEXT:     AccessCount:     300
+; MERGE-NEXT:   - Symbol:          cold_var
+; MERGE-NEXT:     AccessCount:     20
+; MERGE-NEXT: KnownColdSymbols:
+; MERGE-NEXT:   - cold_var2
+; MERGE-NEXT: KnownColdStrHashes: [ 999, 888 ]
+; MERGE-NEXT: ...
+
+; UNSUPPORTED-FORMAT: warning: data access profiles are not supported by the output format and will be dropped
+; DUPLICATE: error: {{.*}}duplicate.proftext:2: Duplicate symbol or string literal added.
+
+//--- profile.proftext
+foo:100:0
+ 1: 10
+[DataAccessProfiles]
+---
+SampledRecords:
+  - Symbol:          global_var
+    AccessCount:     42
+    Locations:
+      - FileName:        file.c
+        Line:            10
+  - Symbol:          global_arr
+    AccessCount:     100
+  - Hash:            101010
+    AccessCount:     200
+KnownColdSymbols:
+  - cold_var
+KnownColdStrHashes: [ 999 ]
+...
+
+//--- func.proftext
+foo:100:0
+ 1: 10
+
+//--- dap.proftext
+[DataAccessProfiles]
+---
+SampledRecords:
+  - Symbol:          global_var
+    AccessCount:     42
+    Locations:
+      - FileName:        file.c
+        Line:            10
+  - Symbol:          global_arr
+    AccessCount:     100
+  - Hash:            101010
+    AccessCount:     200
+KnownColdSymbols:
+  - cold_var
+KnownColdStrHashes: [ 999 ]
+...
+
+//--- dap2.proftext
+foo:50:0
+ 1: 5
+[DataAccessProfiles]
+---
+SampledRecords:
+  - Symbol:          global_var
+    AccessCount:     4
+    Locations:
+      - FileName:        file.c
+        Line:            10
+      - FileName:        other.c
+        Line:            20
+  - Symbol:          cold_var
+    AccessCount:     10
+  - Hash:            101010
+    AccessCount:     50
+KnownColdSymbols:
+  - global_arr
+  - cold_var2
+KnownColdStrHashes: [ 888, 101010 ]
+...
+
+//--- duplicate.proftext
+[DataAccessProfiles]
+---
+SampledRecords:
+  - Symbol:          x.llvm.111
+    AccessCount:     30
+  - Symbol:          x.llvm.222
+    AccessCount:     12
+...
