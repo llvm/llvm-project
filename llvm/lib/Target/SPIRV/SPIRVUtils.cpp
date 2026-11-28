@@ -1021,6 +1021,13 @@ bool isSpvIntrinsic(const Value *Arg) {
   return false;
 }
 
+IntrinsicInst *getResourceGetPointer(Value *V) {
+  if (auto *II = dyn_cast<IntrinsicInst>(V))
+    if (II->getIntrinsicID() == Intrinsic::spv_resource_getpointer)
+      return II;
+  return nullptr;
+}
+
 // Function to create continued instructions for SPV_INTEL_long_composites
 // extension
 SmallVector<MachineInstr *, 4>

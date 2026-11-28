@@ -42,6 +42,7 @@ MODULE_PASS("spirv-lower-resource-names", SPIRVLowerResourceNamesPass())
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 FUNCTION_PASS("spirv-legalize-pointer-cast", SPIRVLegalizePointerCastPass(*static_cast<const SPIRVTargetMachine *>(this)))
+FUNCTION_PASS("spirv-legalize-resource-pointer-phis", SPIRVLegalizeResourcePointerPhisPass())
 FUNCTION_PASS("spirv-merge-region-exits", SPIRVMergeRegionExitTargetsPass())
 FUNCTION_PASS("spirv-regularizer", SPIRVRegularizerPass())
 FUNCTION_PASS("spirv-structurizer", SPIRVStructurizerPass())

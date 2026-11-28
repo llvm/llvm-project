@@ -141,6 +141,7 @@ void SPIRVCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
     addFunctionPass(LoopSimplifyPass(), PMW);
   }
   addFunctionPass(StripConvergenceIntrinsicsPass(), PMW);
+  addFunctionPass(SPIRVLegalizeResourcePointerPhisPass(), PMW);
   flushFPMsToMPM(PMW);
   addModulePass(SPIRVLegalizeResourceBindingPass(), PMW);
   addModulePass(SPIRVLegalizeZeroSizeArraysPass(getTM()), PMW);

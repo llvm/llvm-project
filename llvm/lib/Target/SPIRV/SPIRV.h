@@ -141,6 +141,14 @@ public:
 
 FunctionPass *createSPIRVLegalizePointerCastPass(SPIRVTargetMachine *TM);
 
+class SPIRVLegalizeResourcePointerPhisPass
+    : public RequiredPassInfoMixin<SPIRVLegalizeResourcePointerPhisPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+FunctionPass *createSPIRVLegalizeResourcePointerPhisPass();
+
 class SPIRVRegularizerPass
     : public RequiredPassInfoMixin<SPIRVRegularizerPass> {
 public:
@@ -236,6 +244,7 @@ void initializeSPIRVLowerResourceNamesLegacyPass(PassRegistry &);
 void initializeSPIRVPushConstantAccessLegacyPass(PassRegistry &);
 void initializeSPIRVEmitIntrinsicsLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizePointerCastLegacyPass(PassRegistry &);
+void initializeSPIRVLegalizeResourcePointerPhisLegacyPass(PassRegistry &);
 void initializeSPIRVRegularizerLegacyPass(PassRegistry &);
 void initializeSPIRVMergeRegionExitTargetsLegacyPass(PassRegistry &);
 void initializeSPIRVPrepareFunctionsLegacyPass(PassRegistry &);

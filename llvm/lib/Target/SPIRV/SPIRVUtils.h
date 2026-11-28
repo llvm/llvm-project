@@ -31,6 +31,7 @@
 #include "SPIRVTypeInst.h"
 
 namespace llvm {
+class IntrinsicInst;
 class MCInst;
 class MachineFunction;
 class MachineInstrBuilder;
@@ -294,6 +295,9 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI);
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID);
 // Check if it's a SPIR-V specific intrinsic call.
 bool isSpvIntrinsic(const Value *Arg);
+
+// Returns V as an spv.resource.getpointer call, or null if it is not one.
+IntrinsicInst *getResourceGetPointer(Value *V);
 
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);

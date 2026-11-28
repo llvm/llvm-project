@@ -224,13 +224,6 @@ class SPIRVLegalizePointerCastImpl {
     return std::make_pair(GEP, CurrentTy);
   }
 
-  static IntrinsicInst *getResourceGetPointer(Value *Ptr) {
-    if (auto *II = dyn_cast<IntrinsicInst>(Ptr))
-      if (II->getIntrinsicID() == Intrinsic::spv_resource_getpointer)
-        return II;
-    return nullptr;
-  }
-
   Value *gepByteOffset(IRBuilder<> &B, Value *BasePtr, unsigned ByteOffset) {
     if (ByteOffset == 0)
       return BasePtr;
