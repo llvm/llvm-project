@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instruction.h"
 
@@ -245,12 +246,31 @@ static MachineOperand *getSalvageOpsForTrunc(const MachineRegisterInfo &MRI,
   return &Trunc.getOperand(1);
 }
 
+static MachineOperand *getSalvageOpsForFNeg(const MachineRegisterInfo &MRI,
+                                            MachineInstr &FNeg,
+                                            SmallVectorImpl<uint64_t> &Ops) {
+  assert(FNeg.getOpcode() == TargetOpcode::G_FNEG && "Must be a G_FNEG");
+
+  const LLT Ty = MRI.getType(FNeg.getOperand(0).getReg());
+  TypeSize Size = Ty.getSizeInBits();
+  // Values wider than 64 bits cannot be represented within a DIExpression.
+  if (Size.isScalable() || Size.getFixedValue() > 64)
+    return nullptr;
+
+  APInt SignMask = APInt::getSplat(
+      Size.getFixedValue(), APInt::getSignMask(Ty.getScalarSizeInBits()));
+  Ops.append({dwarf::DW_OP_constu, SignMask.getZExtValue(), dwarf::DW_OP_xor});
+  return &FNeg.getOperand(1);
+}
+
 static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
                                             MachineInstr &MI,
                                             SmallVectorImpl<uint64_t> &Ops) {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_TRUNC:
     return getSalvageOpsForTrunc(MRI, MI, Ops);
+  case TargetOpcode::G_FNEG:
+    return getSalvageOpsForFNeg(MRI, MI, Ops);
   case TargetOpcode::COPY:
   case TargetOpcode::G_BITCAST:
     return getSalvageOpsForCopy(MRI, MI);
