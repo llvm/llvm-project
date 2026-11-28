@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-optzns -o - %s -O0 | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-optzns -o - %s -O2 -fexperimental-new-constant-interpreter | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-optzns -o - %s -O0 -fexperimental-new-constant-interpreter | FileCheck %s
-
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -O2 | FileCheck %s --check-prefix=CHECK-O2
 
 int a = 42;
 
@@ -152,4 +152,27 @@ int test15_f(void);
 void test15(void) {
   int a, b;
   (void)__builtin_constant_p((a = b, test15_f()));
+}
+
+// GH204760
+
+// CHECK-O2-LABEL: define dso_local noundef { double, double } @test_nonconstant(
+// CHECK-O2-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-O2-NEXT:  [[ENTRY:.*:]]
+// CHECK-O2-NEXT:    ret { double, double } zeroinitializer
+//
+__complex__ double test_nonconstant(void) {
+  __complex__ double b = __builtin_constant_p(b);
+  return b;
+}
+
+// CHECK-O2-LABEL: define dso_local noundef { double, double } @test_constant(
+// CHECK-O2-SAME: ) local_unnamed_addr #[[ATTR0]] {
+// CHECK-O2-NEXT:  [[ENTRY:.*:]]
+// CHECK-O2-NEXT:    ret { double, double } { double 1.000000e+00, double 0.000000e+00 }
+//
+__complex__ double test_constant(void) {
+  int c = __builtin_constant_p(1.0 + 2.0i);
+  __complex__ double r = c;
+  return r;
 }
