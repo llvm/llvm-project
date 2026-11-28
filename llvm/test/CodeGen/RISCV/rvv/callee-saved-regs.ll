@@ -268,3 +268,148 @@ define riscv_vector_cc void @local_stack_allocation_frame_pointer() "frame-point
   store volatile i8 %load, ptr %va_gep, align 4
   ret void
 }
+
+define riscv_vector_cc void @test_vector_callee_realign() nounwind {
+; SPILL-O2-LABEL: test_vector_callee_realign:
+; SPILL-O2:       # %bb.0: # %entry
+; SPILL-O2-NEXT:    addi sp, sp, -144
+; SPILL-O2-NEXT:    sw ra, 140(sp) # 4-byte Folded Spill
+; SPILL-O2-NEXT:    sw s0, 136(sp) # 4-byte Folded Spill
+; SPILL-O2-NEXT:    addi s0, sp, 144
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    slli a0, a0, 1
+; SPILL-O2-NEXT:    sub sp, sp, a0
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
+; SPILL-O2-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    slli a0, a0, 1
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
+; SPILL-O2-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
+; SPILL-O2-NEXT:    andi sp, sp, -64
+; SPILL-O2-NEXT:    sw zero, 64(sp)
+; SPILL-O2-NEXT:    #APP
+; SPILL-O2-NEXT:    #NO_APP
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
+; SPILL-O2-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    slli a0, a0, 1
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
+; SPILL-O2-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; SPILL-O2-NEXT:    addi sp, s0, -144
+; SPILL-O2-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
+; SPILL-O2-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
+; SPILL-O2-NEXT:    addi sp, sp, 144
+; SPILL-O2-NEXT:    ret
+entry:
+  %local = alloca i32, align 64
+  store volatile i32 0, ptr %local
+  call void asm sideeffect "", "~{v1},~{v24}"()
+  ret void
+}
+
+define riscv_vector_cc void @test_vector_callee_realign_bp(i32 %n) nounwind {
+; SPILL-O2-LABEL: test_vector_callee_realign_bp:
+; SPILL-O2:       # %bb.0: # %entry
+; SPILL-O2-NEXT:    addi sp, sp, -144
+; SPILL-O2-NEXT:    sw ra, 140(sp) # 4-byte Folded Spill
+; SPILL-O2-NEXT:    sw s0, 136(sp) # 4-byte Folded Spill
+; SPILL-O2-NEXT:    sw s1, 132(sp) # 4-byte Folded Spill
+; SPILL-O2-NEXT:    addi s0, sp, 144
+; SPILL-O2-NEXT:    csrr a1, vlenb
+; SPILL-O2-NEXT:    slli a1, a1, 1
+; SPILL-O2-NEXT:    sub sp, sp, a1
+; SPILL-O2-NEXT:    csrr a1, vlenb
+; SPILL-O2-NEXT:    sub a1, s0, a1
+; SPILL-O2-NEXT:    addi a1, a1, -16
+; SPILL-O2-NEXT:    vs1r.v v1, (a1) # vscale x 8-byte Folded Spill
+; SPILL-O2-NEXT:    csrr a1, vlenb
+; SPILL-O2-NEXT:    slli a1, a1, 1
+; SPILL-O2-NEXT:    sub a1, s0, a1
+; SPILL-O2-NEXT:    addi a1, a1, -16
+; SPILL-O2-NEXT:    vs1r.v v24, (a1) # vscale x 8-byte Folded Spill
+; SPILL-O2-NEXT:    andi sp, sp, -64
+; SPILL-O2-NEXT:    mv s1, sp
+; SPILL-O2-NEXT:    addi a0, a0, 15
+; SPILL-O2-NEXT:    andi a0, a0, -16
+; SPILL-O2-NEXT:    sub a0, sp, a0
+; SPILL-O2-NEXT:    mv sp, a0
+; SPILL-O2-NEXT:    sw zero, 64(s1)
+; SPILL-O2-NEXT:    sb zero, 0(a0)
+; SPILL-O2-NEXT:    #APP
+; SPILL-O2-NEXT:    #NO_APP
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
+; SPILL-O2-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    slli a0, a0, 1
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
+; SPILL-O2-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; SPILL-O2-NEXT:    addi sp, s0, -144
+; SPILL-O2-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
+; SPILL-O2-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
+; SPILL-O2-NEXT:    lw s1, 132(sp) # 4-byte Folded Reload
+; SPILL-O2-NEXT:    addi sp, sp, 144
+; SPILL-O2-NEXT:    ret
+entry:
+  %local = alloca i32, align 64
+  %vla = alloca i8, i32 %n
+  store volatile i32 0, ptr %local
+  store volatile i8 0, ptr %vla
+  call void asm sideeffect "", "~{v1},~{v24}"()
+  ret void
+}
+
+define riscv_vector_cc void @test_vector_callee_realign_rvv_local() nounwind {
+; SPILL-O2-LABEL: test_vector_callee_realign_rvv_local:
+; SPILL-O2:       # %bb.0: # %entry
+; SPILL-O2-NEXT:    addi sp, sp, -48
+; SPILL-O2-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
+; SPILL-O2-NEXT:    sw s0, 40(sp) # 4-byte Folded Spill
+; SPILL-O2-NEXT:    addi s0, sp, 48
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    slli a0, a0, 3
+; SPILL-O2-NEXT:    sub sp, sp, a0
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
+; SPILL-O2-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    slli a0, a0, 1
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
+; SPILL-O2-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
+; SPILL-O2-NEXT:    andi sp, sp, -32
+; SPILL-O2-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
+; SPILL-O2-NEXT:    vmv.v.i v8, 0
+; SPILL-O2-NEXT:    addi a0, sp, 32
+; SPILL-O2-NEXT:    vs4r.v v8, (a0)
+; SPILL-O2-NEXT:    #APP
+; SPILL-O2-NEXT:    #NO_APP
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
+; SPILL-O2-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    slli a0, a0, 1
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
+; SPILL-O2-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; SPILL-O2-NEXT:    addi sp, s0, -48
+; SPILL-O2-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; SPILL-O2-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
+; SPILL-O2-NEXT:    addi sp, sp, 48
+; SPILL-O2-NEXT:    ret
+entry:
+  %local = alloca <vscale x 4 x i64>
+  store volatile <vscale x 4 x i64> zeroinitializer, ptr %local
+  call void asm sideeffect "", "~{v1},~{v24}"()
+  ret void
+}
