@@ -1865,69 +1865,33 @@ void CGOpenMPRuntime::registerVTableOffloadEntry(llvm::GlobalVariable *VTable,
 void CGOpenMPRuntime::emitAndRegisterVTable(CodeGenModule &CGM,
                                             CXXRecordDecl *CXXRecord,
                                             const VarDecl *VD) {
+  assert(CXXRecord && CXXRecord->hasDefinition() &&
+         CXXRecord->isDynamicClass() && "expected a dynamic class");
   // Register C++ VTable to OpenMP Offload Entry if it's a new
   // CXXRecordDecl.
-  if (CXXRecord && CXXRecord->hasDefinition() && CXXRecord->isDynamicClass() &&
-      !CGM.getOpenMPRuntime().VTableDeclMap.contains(CXXRecord)) {
-    auto Res = CGM.getOpenMPRuntime().VTableDeclMap.try_emplace(CXXRecord, VD);
-    if (Res.second) {
-      CGM.EmitVTable(CXXRecord);
-      CodeGenVTables VTables = CGM.getVTables();
-      llvm::GlobalVariable *VTablesAddr = VTables.GetAddrOfVTable(CXXRecord);
-      assert(VTablesAddr && "Expected non-null VTable address");
-      // Must set VTables to weak since we're emitting them in multiple TUs now
-      if (VTablesAddr->hasExternalLinkage())
-        VTablesAddr->setLinkage(llvm::GlobalValue::WeakODRLinkage);
-      CGM.getOpenMPRuntime().registerVTableOffloadEntry(VTablesAddr, VD);
-      // Emit VTable for all the fields containing dynamic CXXRecord
-      for (const FieldDecl *Field : CXXRecord->fields()) {
-        if (CXXRecordDecl *RecordDecl = Field->getType()->getAsCXXRecordDecl())
-          emitAndRegisterVTable(CGM, RecordDecl, VD);
-      }
-      // Emit VTable for all dynamic parent class
-      for (CXXBaseSpecifier &Base : CXXRecord->bases()) {
-        if (CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl())
-          emitAndRegisterVTable(CGM, BaseDecl, VD);
-      }
-    }
-  }
+  if (!CGM.getOpenMPRuntime().VTableDeclMap.try_emplace(CXXRecord, VD).second)
+    return;
+  CGM.EmitVTable(CXXRecord);
+  CodeGenVTables VTables = CGM.getVTables();
+  llvm::GlobalVariable *VTablesAddr = VTables.GetAddrOfVTable(CXXRecord);
+  assert(VTablesAddr && "Expected non-null VTable address");
+  // Must set VTables to weak since we're emitting them in multiple TUs now
+  if (VTablesAddr->hasExternalLinkage())
+    VTablesAddr->setLinkage(llvm::GlobalValue::WeakODRLinkage);
+  CGM.getOpenMPRuntime().registerVTableOffloadEntry(VTablesAddr, VD);
 }
 
 void CGOpenMPRuntime::registerVTable(const OMPExecutableDirective &D) {
   // Register VTable by scanning through the map clause of OpenMP target region.
-  // Get CXXRecordDecl and VarDecl from Expr.
-  auto GetVTableDecl = [](const Expr *E) {
-    QualType VDTy = E->getType();
-    CXXRecordDecl *CXXRecord = nullptr;
-    if (const auto *RefType = VDTy->getAs<LValueReferenceType>())
-      VDTy = RefType->getPointeeType();
-    if (VDTy->isPointerType())
-      CXXRecord = VDTy->getPointeeType()->getAsCXXRecordDecl();
-    else
-      CXXRecord = VDTy->getAsCXXRecordDecl();
-
-    const VarDecl *VD = nullptr;
-    if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-      // Handle BindingDecls by redirecting to their DecompositionDecl.
-      if (auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))
-        VD = cast<VarDecl>(BD->getDecomposedDecl());
-      else
-        VD = cast<VarDecl>(DRE->getDecl());
-    } else if (auto *MRE = dyn_cast<MemberExpr>(E)) {
-      if (auto *BaseDRE = dyn_cast<DeclRefExpr>(MRE->getBase())) {
-        if (auto *BaseVD = dyn_cast<VarDecl>(BaseDRE->getDecl()))
-          VD = BaseVD;
-      }
-    }
-    return std::pair<CXXRecordDecl *, const VarDecl *>(CXXRecord, VD);
-  };
-  // Collect VTable from OpenMP map clause.
   for (const auto *C : D.getClausesOfKind<OMPMapClause>()) {
     for (const auto *E : C->varlist()) {
-      auto DeclPair = GetVTableDecl(E);
-      // Ensure VD is not null
-      if (DeclPair.second)
-        emitAndRegisterVTable(CGM, DeclPair.first, DeclPair.second);
+      const auto Decls = OMPMapClause::getVTableDecl(E);
+      const VarDecl *VD = Decls.second;
+      if (!VD)
+        continue;
+      OMPMapClause::forEachOffloadVTable(Decls.first, [&](CXXRecordDecl *RD) {
+        emitAndRegisterVTable(CGM, RD, VD);
+      });
     }
   }
 }

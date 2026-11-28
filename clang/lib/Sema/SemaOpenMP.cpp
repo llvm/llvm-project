@@ -25999,6 +25999,18 @@ OMPClause *SemaOpenMP::ActOnOpenMPMapClause(
                               MapType, Modifiers, IsMapTypeImplicit,
                               NoDiagnose);
 
+  // CodeGen emits the vtables of mapped dynamic classes for offloading, so
+  // mark them used; the MS ABI needs this to set up deleting destructors.
+  for (const Expr *E : MVLI.ProcessedVarList) {
+    auto [RD, VD] = OMPMapClause::getVTableDecl(E);
+    if (!VD)
+      continue;
+    OMPMapClause::forEachOffloadVTable(RD, [&](CXXRecordDecl *Class) {
+      SemaRef.MarkVTableUsed(E->getExprLoc(), Class,
+                             /*DefinitionRequired=*/true);
+    });
+  }
+
   // We need to produce a map clause even if we don't have variables so that
   // other diagnostics related with non-existing map clauses are accurate.
   return OMPMapClause::Create(

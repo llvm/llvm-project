@@ -1132,6 +1132,7 @@ public:
   virtual void registerVTable(const OMPExecutableDirective &D);
 
   /// Emit and register VTable for the C++ class in OpenMP offload entry.
+  /// Fields and bases are visited by OMPMapClause::forEachOffloadVTable.
   /// \param CXXRecord C++ class decl.
   /// \param VD Variable decl which holds VTable.
   virtual void emitAndRegisterVTable(CodeGenModule &CGM,
