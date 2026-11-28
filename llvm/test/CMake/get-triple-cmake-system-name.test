@@ -1,0 +1,5 @@
+# Test get_triple_cmake_system_name() from cmake/Modules/GetTripleCMakeSystemName.cmake.
+
+RUN: %cmake -DSRC_ROOT=%S/../.. -P %S/Inputs/get-triple-cmake-system-name.cmake 2>&1 | FileCheck %s
+
+CHECK: get-triple-cmake-system-name: OK
