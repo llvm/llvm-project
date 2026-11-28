@@ -17,6 +17,7 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
@@ -3983,6 +3984,148 @@ bool GVNPassImpl::processBlock(BasicBlock *BB) {
   return ChangedFunction;
 }
 
+/// Recursively drop all poison-generating flags in the defining chain of \p V.
+static void
+dropPoisonGeneratingFlagsFromChain(Value *V, SmallPtrSetImpl<Value *> &Visited) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || !Visited.insert(I).second)
+    return;
+  I->dropPoisonGeneratingFlags();
+  for (Value *Op : I->operands())
+    dropPoisonGeneratingFlagsFromChain(Op, Visited);
+}
+
+/// Weaken the poison-generating flags along the defining chain of \p V so that
+/// reusing \p V in place of \p C does not produce a more poisonous value.
+///
+/// Value numbering ignores poison-generating flags, so the leader \p V can be
+/// built from instructions with stronger flags than \p C, arbitrarily deep in
+/// the chain (e.g. an inbounds GEP feeding a ptrtoint, or a samesign icmp
+/// feeding a zext). When the two chains correspond instruction-by-instruction,
+/// corresponding pairs have their flags intersected. The chains may also be
+/// equivalent while structurally unrelated -- a binary operator vs. an
+/// extractvalue of a with.overflow intrinsic, or GEPs that are equal only in
+/// offset representation -- and commutative instructions (including compares,
+/// whose expressions GVN canonicalizes by sorting operand value numbers) may
+/// have their operands reordered. Where no operand correspondence can be
+/// established, all poison-generating flags on and below the leader instruction
+/// are dropped instead. A phi stands in for its incoming values, so those are
+/// walked as well.
+///
+/// Two operands correspond if the reference operand's value number translates
+/// to the leader operand's value number across the PRE edge from \p Pred
+/// (phiTranslate covers plain value-number equality as well). \p Pred and \p
+/// CurrentBlock are the predecessor edge the leader was found on and the block
+/// under transformation, matching how the leader itself was looked up.
+static void patchLeaderChainFlags(
+    Value *V, Value *C, const BasicBlock *CurrentBlock, const BasicBlock *Pred,
+    GVNValueTable &VN, GVNLeaderMap &LeaderTable,
+    SmallDenseSet<std::pair<Value *, Value *>, 16> &Visited) {
+  if (V == C || !Visited.insert({V, C}).second)
+    return;
+
+  auto *VI = dyn_cast<Instruction>(V);
+  if (!VI)
+    return;
+
+  // A phi used as a leader (.pre-phi) stands for its incoming values.
+  if (auto *VP = dyn_cast<PHINode>(VI)) {
+    for (Value *Incoming : VP->incoming_values())
+      patchLeaderChainFlags(Incoming, C, CurrentBlock, Pred, VN, LeaderTable,
+                            Visited);
+    return;
+  }
+
+  auto *CI = dyn_cast<Instruction>(C);
+  if (!CI)
+    return;
+
+  // A phi in the reference chain stands for its incoming values. When the phi
+  // lives in the block under transformation, the leader was found on the \p
+  // Pred edge and corresponds to exactly that edge's incoming; for phis
+  // elsewhere the edge is not locally known, so fall back to all incomings
+  // (their intersection covers whichever edge flows).
+  if (auto *CP = dyn_cast<PHINode>(CI)) {
+    if (CI->getParent() == CurrentBlock) {
+      patchLeaderChainFlags(VI, CP->getIncomingValueForBlock(Pred),
+                            CurrentBlock, Pred, VN, LeaderTable, Visited);
+      return;
+    }
+    for (Value *Incoming : CP->incoming_values())
+      patchLeaderChainFlags(VI, Incoming, CurrentBlock, Pred, VN, LeaderTable,
+                            Visited);
+    return;
+  }
+
+  VI->andIRFlags(CI);
+
+  // The chains are equivalent by value numbering but may be structurally
+  // unrelated (a binary operator vs. an extractvalue of a with.overflow
+  // intrinsic, or GEPs that are equal only in offset representation). No
+  // operand correspondence can be established locally, and after andIRFlags
+  // VI can still carry flag kinds that CI cannot express, so clear VI itself
+  // and everything below it.
+  if (VI->getOpcode() != CI->getOpcode() ||
+      VI->getNumOperands() != CI->getNumOperands()) {
+    VI->dropPoisonGeneratingFlags();
+    SmallPtrSet<Value *, 8> DropVisited;
+    for (Value *Op : VI->operands())
+      dropPoisonGeneratingFlagsFromChain(Op, DropVisited);
+    return;
+  }
+
+  // Two operands correspond if the reference operand's value number translates
+  // to the leader operand's value number across the PRE edge. This always
+  // holds positionally for non-commutative instructions with equal
+  // expressions; commutative instructions and compares canonicalize their
+  // expressions by sorting operand value numbers, so equivalent chains may
+  // have reordered operands.
+  auto Corresponds = [&](Value *VOp, Value *COp) {
+    uint32_t VVN = VN.lookup(VOp, /*Verify=*/false);
+    if (VVN == 0)
+      return false;
+    uint32_t CVN = VN.lookup(COp, /*Verify=*/false);
+    if (CVN == 0)
+      return false;
+    return VVN == CVN ||
+           VVN == VN.phiTranslate(Pred, CurrentBlock, CVN, LeaderTable);
+  };
+
+  bool Positional = true;
+  for (unsigned I = 0; Positional && I != VI->getNumOperands(); ++I)
+    Positional = Corresponds(VI->getOperand(I), CI->getOperand(I));
+
+  if (Positional) {
+    for (unsigned I = 0, E = VI->getNumOperands(); I != E; ++I)
+      patchLeaderChainFlags(VI->getOperand(I), CI->getOperand(I), CurrentBlock,
+                            Pred, VN, LeaderTable, Visited);
+    return;
+  }
+
+  // The operands are reordered (or bridged through phis deeper in the chain).
+  // Match leader operands to reference operands by (translated) value number;
+  // phis participate through their own value numbers (a .pre-phi carries the
+  // value number of the instruction it replaced, and phiTranslate resolves
+  // bridged operands). Leader operands with no matching reference operand have
+  // an unknown correspondence and are conservatively cleared. VI's own flags
+  // are already fully handled by andIRFlags: both instructions have the same
+  // opcode, so andIRFlags sees every flag kind VI can have.
+  for (Value *VOp : VI->operands()) {
+    bool Matched = false;
+    for (Value *COp : CI->operands()) {
+      if (!Corresponds(VOp, COp))
+        continue;
+      patchLeaderChainFlags(VOp, COp, CurrentBlock, Pred, VN, LeaderTable,
+                            Visited);
+      Matched = true;
+    }
+    if (!Matched) {
+      SmallPtrSet<Value *, 8> DropVisited;
+      dropPoisonGeneratingFlagsFromChain(VOp, DropVisited);
+    }
+  }
+}
+
 // Instantiate an expression in a predecessor that lacked it.
 bool GVNPassImpl::performScalarPREInsertion(Instruction *Instr,
                                             BasicBlock *Pred, BasicBlock *Curr,
@@ -4166,11 +4309,18 @@ bool GVNPassImpl::performScalarPRE(Instruction *CurInst) {
   PHINode *Phi = PHINode::Create(CurInst->getType(), PredMap.size(),
                                  CurInst->getName() + ".pre-phi");
   Phi->insertBefore(CurrentBlock->begin());
+  SmallDenseSet<std::pair<Value *, Value *>, 16> Visited;
   for (auto &[V, BB] : PredMap) {
     if (V) {
       // If we use an existing value in this phi, we have to patch the original
       // value because the phi will be used to replace a later value.
       patchReplacementInstruction(CurInst, V);
+      // Value numbering ignores poison-generating flags, so the leader can be
+      // built from instructions with stronger flags than CurInst, arbitrarily
+      // deep in its defining chain. Drop them, as reusing the leader would
+      // otherwise make the phi more poisonous than the value it replaces.
+      patchLeaderChainFlags(V, CurInst, CurrentBlock, BB, VN, LeaderTable,
+                            Visited);
       Phi->addIncoming(V, BB);
     } else
       Phi->addIncoming(PREInstr, PREPred);
