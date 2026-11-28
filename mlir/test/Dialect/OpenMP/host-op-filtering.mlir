@@ -395,10 +395,9 @@ module attributes {omp.is_target_device = true} {
   }
 
   // CHECK-LABEL: llvm.func @private_with_map_idx
-  // CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: i64)
+  // CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: i64, %[[VAL0:.*]]: !llvm.struct<(ptr, i64)>, %[[VAL1:.*]]: !llvm.struct<(ptr, i64)>)
   llvm.func @private_with_map_idx(%arg0: !llvm.ptr, %arg1: i64) {
-    // CHECK-NEXT: %[[VAL0:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64)>
-    // CHECK-NEXT: %[[VAL1:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, i64)>
+    // CHECK-NOT: llvm.mlir.undef
     // CHECK-NEXT: %[[VAL2:.*]] = llvm.insertvalue %[[ARG0]], %[[VAL1]][0] : !llvm.struct<(ptr, i64)>
     // CHECK-NEXT: %[[VAL3:.*]] = llvm.insertvalue %[[ARG1]], %[[VAL2]][1] : !llvm.struct<(ptr, i64)>
     // CHECK-NEXT: %[[VAL4:.*]] = llvm.extractvalue %[[VAL3]][0] : !llvm.struct<(ptr, i64)>
@@ -441,6 +440,33 @@ module attributes {omp.is_target_device = true} {
 
     // CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[MAP]] -> %{{.*}} : !llvm.ptr)
     omp.target kernel_type(generic) map_entries(%2 -> %arg1 : !llvm.ptr) {
+      omp.terminator
+    }
+
+    // CHECK: llvm.return
+    llvm.return
+  }
+
+  // Poison values, such as those replacing the results of host-only calls
+  // removed by function filtering, and undef values must not reach the target
+  // region. They are replaced by placeholders like any other host value.
+  // CHECK-LABEL: llvm.func @poison_undef_map
+  // CHECK-SAME: (%[[ARG0:.*]]: !llvm.ptr, %[[POISON:.*]]: !llvm.ptr, %[[UNDEF:.*]]: !llvm.ptr)
+  llvm.func @poison_undef_map(%arg0: !llvm.ptr) {
+    // CHECK-NOT: llvm.mlir.poison
+    // CHECK-NOT: llvm.mlir.undef
+    // CHECK-NEXT: %[[GEP:.*]] = llvm.getelementptr %[[UNDEF]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64)>
+    %0 = llvm.mlir.poison : !llvm.ptr
+    %1 = llvm.mlir.undef : !llvm.ptr
+    %2 = llvm.getelementptr %1[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64)>
+
+    // CHECK-NEXT: %[[MAP0:.*]] = omp.map.info var_ptr(%[[POISON]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+    // CHECK-NEXT: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[GEP]] : !llvm.ptr, f32) -> !llvm.ptr
+    %3 = omp.map.info var_ptr(%0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+    %4 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%2 : !llvm.ptr, f32) -> !llvm.ptr
+
+    // CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[MAP0]] -> %{{.*}}, %[[MAP1]] -> %{{.*}} : !llvm.ptr, !llvm.ptr)
+    omp.target kernel_type(generic) map_entries(%3 -> %arg1, %4 -> %arg2 : !llvm.ptr, !llvm.ptr) {
       omp.terminator
     }
 
