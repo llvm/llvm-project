@@ -854,16 +854,6 @@ public:
   /// \name Scalar Target Information
   /// @{
 
-  /// Flags indicating the kind of support for population count.
-  ///
-  /// Compared to the SW implementation, HW support is supposed to
-  /// significantly boost the performance when the population is dense, and it
-  /// may or may not degrade performance if the population is sparse. A HW
-  /// support is considered as "Fast" if it can outperform, or is on a par
-  /// with, SW implementation when the population is sparse; otherwise, it is
-  /// considered as "Slow".
-  enum PopcntSupportKind { PSK_Software, PSK_SlowHardware, PSK_FastHardware };
-
   /// Return true if the specified immediate is legal add immediate, that
   /// is the target has add instructions which can add a register with the
   /// immediate without having to materialize the immediate into a register.
@@ -1291,9 +1281,6 @@ public:
                                                unsigned AddressSpace = 0,
                                                Align Alignment = Align(1),
                                                unsigned *Fast = nullptr) const;
-
-  /// Return hardware support for population count.
-  LLVM_ABI PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) const;
 
   /// Return true if the hardware has a fast square-root instruction.
   LLVM_ABI bool haveFastSqrt(Type *Ty) const;

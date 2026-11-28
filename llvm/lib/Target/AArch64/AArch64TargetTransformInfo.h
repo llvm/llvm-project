@@ -111,7 +111,6 @@ public:
   InstructionCost
   getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
                       Type *Ty, TTI::TargetCostKind CostKind) const override;
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
 
   /// @}
 

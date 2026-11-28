@@ -1030,8 +1030,22 @@ static bool tryToRecognizeTableBasedCtpop(LoadInst *LI, Type *AccessType,
                                           const TargetTransformInfo &TTI) {
   Type *IdxTy = GepIdx->getType();
   unsigned IdxBits = IdxTy->getIntegerBitWidth();
-  if (!LI->isSimple() || !isPowerOf2_32(IdxBits) ||
-      TTI.getPopcntSupport(IdxBits) != TargetTransformInfo::PSK_FastHardware)
+  if (!LI->isSimple() || !isPowerOf2_32(IdxBits))
+    return false;
+
+  // Only replace the table lookup if the popcount costs no more than it.
+  constexpr auto CostKind = TargetTransformInfo::TCK_SizeAndLatency;
+  auto *GEP = cast<GetElementPtrInst>(LI->getPointerOperand());
+  InstructionCost TableCost = TTI.getInstructionCost(GEP, CostKind) +
+                              TTI.getInstructionCost(LI, CostKind);
+  IntrinsicCostAttributes Attrs(Intrinsic::ctpop, IdxTy, {IdxTy});
+  InstructionCost CtpopCost = TTI.getIntrinsicInstrCost(Attrs, CostKind);
+  if (IdxTy != AccessType)
+    CtpopCost += TTI.getCastInstrCost(
+        IdxBits < AccessType->getIntegerBitWidth() ? Instruction::ZExt
+                                                   : Instruction::Trunc,
+        AccessType, IdxTy, TTI::CastContextHint::None, CostKind);
+  if (CtpopCost > TableCost)
     return false;
 
   uint64_t TableSize = DL.getTypeAllocSize(GVTable->getValueType());

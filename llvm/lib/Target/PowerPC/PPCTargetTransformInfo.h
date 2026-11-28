@@ -62,7 +62,6 @@ public:
   getInstructionCost(const User *U, ArrayRef<const Value *> Operands,
                      TTI::TargetCostKind CostKind) const override;
 
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                 AssumptionCache &AC, TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) const override;

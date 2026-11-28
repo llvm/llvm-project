@@ -74,13 +74,6 @@ unsigned HexagonTTIImpl::getTypeNumElements(Type *Ty) const {
   return 1;
 }
 
-TargetTransformInfo::PopcntSupportKind
-HexagonTTIImpl::getPopcntSupport(unsigned IntTyWidthInBit) const {
-  // Return fast hardware support as every input < 64 bits will be promoted
-  // to 64 bits.
-  return TargetTransformInfo::PSK_FastHardware;
-}
-
 // The Hexagon target can unroll loops with run-time trip counts.
 void HexagonTTIImpl::getUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, TTI::UnrollingPreferences &UP,

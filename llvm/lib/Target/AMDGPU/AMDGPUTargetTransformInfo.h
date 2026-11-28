@@ -124,11 +124,6 @@ public:
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP) const override;
 
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override {
-    assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
-    return TTI::PSK_FastHardware;
-  }
-
   unsigned getNumberOfRegisters(unsigned RCID) const override;
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind Vector) const override;

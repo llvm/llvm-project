@@ -608,15 +608,6 @@ AArch64TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return AArch64TTIImpl::getIntImmCost(Imm, Ty, CostKind);
 }
 
-TargetTransformInfo::PopcntSupportKind
-AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) const {
-  assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
-  if (TyWidth == 32 || TyWidth == 64)
-    return TTI::PSK_FastHardware;
-  // TODO: AArch64TargetLowering::LowerCTPOP() supports 128bit popcount.
-  return TTI::PSK_Software;
-}
-
 InstructionCost AArch64TTIImpl::getBranchMispredictPenalty() const {
   // MispredictPenalty is defined per-CPU in AArch64Sched*.td (e.g.,
   // AArch64SchedNeoverseV2.td).

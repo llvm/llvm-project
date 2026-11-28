@@ -40,16 +40,6 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override {
-    // SPIR-V natively supports OpBitcount, per 3.53.14 in the spec, as such it
-    // is reasonable to assume the Op is fast / preferable to the expanded loop.
-    // Furthermore, this prevents information being lost if transforms are
-    // applied to SPIR-V before lowering to a concrete target.
-    if (!isPowerOf2_32(TyWidth) || TyWidth > 64)
-      return TTI::PSK_Software; // Arbitrary bit-width INT is not core SPIR-V.
-    return TTI::PSK_FastHardware;
-  }
-
   bool hasBranchDivergence(const Function *F = nullptr) const override {
     // Shader and OpenCL work-items execute divergently across invocations.
     return true;
@@ -69,6 +59,10 @@ public:
                                           Value *NewV) const override;
 
   bool allowVectorElementIndexingUsingGEP() const override { return false; }
+
+  InstructionCost
+  getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                        TTI::TargetCostKind CostKind) const override;
 
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const override;
   bool isLegalMaskedScatter(Type *DataType, Align Alignment) const override;

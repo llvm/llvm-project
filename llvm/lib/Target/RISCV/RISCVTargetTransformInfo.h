@@ -117,9 +117,6 @@ public:
   /// https://llvm.org/docs/Proposals/VectorPredication.html#ir-level-vp-intrinsics).
   bool hasActiveVectorLength() const override;
 
-  TargetTransformInfo::PopcntSupportKind
-  getPopcntSupport(unsigned TyWidth) const override;
-
   InstructionCost getPartialReductionCost(
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
       ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
