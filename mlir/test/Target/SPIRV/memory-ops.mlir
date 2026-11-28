@@ -66,7 +66,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], [SPV_KHR_storage_buffer_storage_class]> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, Int64], [SPV_KHR_storage_buffer_storage_class]> {
   spirv.func @load_store_zero_rank_float(%arg0: !spirv.ptr<!spirv.struct<(!spirv.array<1 x f32, stride=4> [0]), Block>, StorageBuffer>, %arg1: !spirv.ptr<!spirv.struct<(!spirv.array<1 x f32, stride=4> [0]), Block>, StorageBuffer>) "None" {
     // CHECK: [[LOAD_PTR:%.*]] = spirv.AccessChain {{%.*}}[{{%.*}}, {{%.*}}] : !spirv.ptr<!spirv.struct<(!spirv.array<1 x f32, stride=4> [0]), Block>, StorageBuffer>
     // CHECK-NEXT: [[VAL:%.*]] = spirv.Load "StorageBuffer" [[LOAD_PTR]] : f32
@@ -95,6 +95,20 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], [SPV_K
     %4 = spirv.AccessChain %arg1[%3, %3] : !spirv.ptr<!spirv.struct<(!spirv.array<1 x i32, stride=4> [0]), Block>, StorageBuffer>, i32, i32 -> !spirv.ptr<i32, StorageBuffer>
     spirv.Store "StorageBuffer" %4, %2 : i32
     spirv.Return
+  }
+
+  // CHECK-LABEL: spirv.func @array_length
+  spirv.func @array_length(%arg0: !spirv.ptr<!spirv.struct<(i32 [0], !spirv.rtarray<f32, stride=4> [4]), Block>, StorageBuffer>) -> i32 "None" {
+    // CHECK: spirv.ArrayLength {{%.*}}, 1 : !spirv.ptr<!spirv.struct<(i32 [0], !spirv.rtarray<f32, stride=4> [4]), Block>, StorageBuffer> -> i32
+    %0 = spirv.ArrayLength %arg0, 1 : !spirv.ptr<!spirv.struct<(i32 [0], !spirv.rtarray<f32, stride=4> [4]), Block>, StorageBuffer> -> i32
+    spirv.ReturnValue %0 : i32
+  }
+
+  // CHECK-LABEL: spirv.func @array_length_i64
+  spirv.func @array_length_i64(%arg0: !spirv.ptr<!spirv.struct<(i32 [0], !spirv.rtarray<f32, stride=4> [4]), Block>, StorageBuffer>) -> i64 "None" {
+    // CHECK: spirv.ArrayLength {{%.*}}, 1 : !spirv.ptr<!spirv.struct<(i32 [0], !spirv.rtarray<f32, stride=4> [4]), Block>, StorageBuffer> -> i64
+    %0 = spirv.ArrayLength %arg0, 1 : !spirv.ptr<!spirv.struct<(i32 [0], !spirv.rtarray<f32, stride=4> [4]), Block>, StorageBuffer> -> i64
+    spirv.ReturnValue %0 : i64
   }
 }
 

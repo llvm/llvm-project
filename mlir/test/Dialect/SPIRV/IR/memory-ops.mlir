@@ -931,3 +931,50 @@ func.func @ptr_not_equal_type_mismatch(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %
   %0 = "spirv.PtrNotEqual"(%arg0, %arg1) : (!spirv.ptr<f32, CrossWorkgroup>, !spirv.ptr<i32, CrossWorkgroup>) -> i1
   return %0 : i1
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.ArrayLength
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @array_length
+func.func @array_length(%arg0: !spirv.ptr<!spirv.struct<(f32, !spirv.rtarray<f32>)>, StorageBuffer>) -> i32 {
+  // CHECK: spirv.ArrayLength %{{.*}}, 1 : !spirv.ptr<!spirv.struct<(f32, !spirv.rtarray<f32>)>, StorageBuffer> -> i32
+  %0 = spirv.ArrayLength %arg0, 1 : !spirv.ptr<!spirv.struct<(f32, !spirv.rtarray<f32>)>, StorageBuffer> -> i32
+  // CHECK: spirv.ArrayLength %{{.*}}, 1 : !spirv.ptr<!spirv.struct<(f32, !spirv.rtarray<f32>)>, StorageBuffer> -> i64
+  %1 = spirv.ArrayLength %arg0, 1 : !spirv.ptr<!spirv.struct<(f32, !spirv.rtarray<f32>)>, StorageBuffer> -> i64
+  return %0 : i32
+}
+
+// -----
+
+func.func @array_length_non_struct(%arg0: !spirv.ptr<f32, StorageBuffer>) {
+  // expected-error @+1 {{operand #0 must be pointer to struct type}}
+  %0 = spirv.ArrayLength %arg0, 0 : !spirv.ptr<f32, StorageBuffer> -> i32
+  return
+}
+
+// -----
+
+func.func @array_length_no_rtarray(%arg0: !spirv.ptr<!spirv.struct<(f32, i32)>, StorageBuffer>) {
+  // expected-error @+1 {{expected struct whose last member is a runtime array}}
+  %0 = spirv.ArrayLength %arg0, 1 : !spirv.ptr<!spirv.struct<(f32, i32)>, StorageBuffer> -> i32
+  return
+}
+
+// -----
+
+func.func @array_length_wrong_member(%arg0: !spirv.ptr<!spirv.struct<(f32, !spirv.rtarray<f32>)>, StorageBuffer>) {
+  // expected-error @+1 {{array member index must be the last struct member (1), got 0}}
+  %0 = spirv.ArrayLength %arg0, 0 : !spirv.ptr<!spirv.struct<(f32, !spirv.rtarray<f32>)>, StorageBuffer> -> i32
+  return
+}
+
+// -----
+
+func.func @array_length_invalid_result(%arg0: !spirv.ptr<!spirv.struct<(f32, !spirv.rtarray<f32>)>, StorageBuffer>) {
+  // expected-error @+1 {{result #0 must be 32/64-bit signless/unsigned integer}}
+  %0 = spirv.ArrayLength %arg0, 1 : !spirv.ptr<!spirv.struct<(f32, !spirv.rtarray<f32>)>, StorageBuffer> -> si32
+  return
+}

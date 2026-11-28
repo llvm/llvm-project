@@ -736,4 +736,20 @@ LogicalResult VariableOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// spirv.ArrayLength
+//===----------------------------------------------------------------------===//
+
+LogicalResult ArrayLengthOp::verify() {
+  auto ptrType = cast<spirv::PointerType>(getStructure().getType());
+  auto structType = cast<spirv::StructType>(ptrType.getPointeeType());
+  size_t numElements = structType.getNumElements();
+  if (numElements == 0 ||
+      !isa<spirv::RuntimeArrayType>(structType.getElementType(numElements - 1)))
+    return emitOpError("expected struct whose last member is a runtime array");
+  if (getArrayMember() != numElements - 1)
+    return emitOpError("array member index must be the last struct member (")
+           << (numElements - 1) << "), got " << getArrayMember();
+  return success();
+}
 } // namespace mlir::spirv

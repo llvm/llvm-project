@@ -81,6 +81,44 @@ def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [Pure]> {
 
 // -----
 
+def SPIRV_ArrayLengthOp : SPIRV_Op<"ArrayLength", [Pure]> {
+  let summary = "Result is the length of a run-time array.";
+
+  let description = [{
+    OpArrayLength requires a runtime array (OpTypeRuntimeArray), which is only
+    permitted as the final member of a Storage Buffer struct.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.ArrayLength %ptr, 1 : !spirv.ptr<!spirv.struct<(f32, !spirv.rtarray<f32>)>, StorageBuffer> -> i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Shader]>
+  ];
+
+  let arguments = (ins
+    Type<And<[SPIRV_IsPtrType,
+              CPred<"::llvm::isa<::mlir::spirv::StructType>("
+                    "::llvm::cast<::mlir::spirv::PointerType>($_self)"
+                    ".getPointeeType())">]>,
+         "pointer to struct type">:$structure,
+    I32Attr:$array_member
+  );
+
+  let results = (outs
+    SignlessOrUnsignedIntOfWidths<[32, 64]>:$result
+  );
+  let assemblyFormat = "$structure `,` $array_member attr-dict `:` type($structure) `->` type($result)";
+}
+
+// -----
+
 def SPIRV_InBoundsAccessChainOp : SPIRV_Op<"InBoundsAccessChain", [Pure]> {
   let summary = [{
     Create a pointer into a composite object that is known to stay within the
