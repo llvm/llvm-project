@@ -112,6 +112,8 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
 
   // Default JIT optimization level.
   auto optLevel = APInt::getZero(32);
+  // Options for the JIT compiler; empty if the object has none.
+  StringRef jitOptions;
 
   if (DictionaryAttr objectProps = object.getProperties()) {
     if (auto section = dyn_cast_or_null<StringAttr>(
@@ -121,6 +123,10 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
     // Check if there's an optimization level embedded in the object.
     if (auto optAttr = dyn_cast_or_null<IntegerAttr>(objectProps.get("O")))
       optLevel = optAttr.getValue();
+    // Check if there are JIT options embedded in the object.
+    if (auto optionsAttr =
+            dyn_cast_or_null<StringAttr>(objectProps.get(gpu::jitOptionsName)))
+      jitOptions = optionsAttr.getValue();
   }
 
   IRBuilder<> builder(module);
@@ -151,12 +157,21 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
                                                      ptrTy,
                                                      i32Ty,
                                                      i64Ty,
+                                                     ptrTy,
                                                  },
                                                  false));
 
       Constant *optValue = ConstantInt::get(i32Ty, optLevel);
-      return builder.CreateCall(moduleLoadFn,
-                                {serializedObj, optValue, binarySize});
+      // Pass the JIT options as a null-terminated string, or null if there
+      // are none.
+      Value *optionsValue =
+          jitOptions.empty()
+              ? static_cast<Value *>(ConstantPointerNull::get(ptrTy))
+              : builder.CreateGlobalString(jitOptions,
+                                           moduleName + "_jit_options",
+                                           /*AddressSpace=*/0, &module);
+      return builder.CreateCall(
+          moduleLoadFn, {serializedObj, optValue, binarySize, optionsValue});
     }
     FunctionCallee moduleLoadFn = module.getOrInsertFunction(
         "mgpuModuleLoad", FunctionType::get(ptrTy, {ptrTy, i64Ty}, false));

@@ -1,12 +1,18 @@
 // REQUIRES: asserts, spirv-registered-target
 // RUN: mlir-opt %s --gpu-module-to-binary="format=llvm" \
 // RUN:   -debug-only=serialize-to-llvm -o /dev/null 2>&1 | FileCheck %s
+// RUN: mlir-opt %s --gpu-module-to-binary="format=isa opts=-ze-opt-large-register-file" \
+// RUN:   | FileCheck %s --check-prefix=ISA
 
 // Every kernel of the module gets the required sub-group size, not only the
 // first one. Other functions get none.
 
+// With `format=isa`, the object keeps the command line options for the JIT
+// compiler of the runtime.
+
 module attributes {gpu.container_module} {
   // CHECK-LABEL: LLVM IR for module: "kernels"
+  // ISA: gpu.binary @kernels [#gpu.object<#xevm.target, properties = {O = 2 : i32, jit_options = "-ze-opt-large-register-file"}, assembly =
   gpu.module @kernels [#xevm.target] {
     // CHECK: define spir_kernel void @kernel1() !intel_reqd_sub_group_size ![[SG:[0-9]+]] {
     llvm.func spir_kernelcc @kernel1() attributes {gpu.kernel} {

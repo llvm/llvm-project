@@ -397,12 +397,13 @@ struct StreamWrapper {
 
 static ze_module_handle_t
 loadModule(const void *data, size_t dataSize,
-           ze_module_format_t format = ZE_MODULE_FORMAT_NATIVE) {
+           ze_module_format_t format = ZE_MODULE_FORMAT_NATIVE,
+           const char *buildFlags = nullptr) {
   assert(data);
   ze_module_handle_t zeModule;
   ze_module_desc_t desc = {
-      ZE_STRUCTURE_TYPE_MODULE_DESC, nullptr, format, dataSize,
-      (const uint8_t *)data,         nullptr, nullptr};
+      ZE_STRUCTURE_TYPE_MODULE_DESC, nullptr,    format, dataSize,
+      (const uint8_t *)data,         buildFlags, nullptr};
 
   ze_module_build_log_handle_t buildLogHandle;
   ze_result_t result =
@@ -535,8 +536,10 @@ extern "C" ze_module_handle_t mgpuModuleLoad(const void *data,
   return catchAll([&]() { return loadModule(data, gpuBlobSize); });
 }
 
+/// `options` holds the build flags for the driver, or is null.
 extern "C" ze_module_handle_t mgpuModuleLoadJIT(void *data, int optLevel,
-                                                size_t assemblySize) {
+                                                size_t assemblySize,
+                                                const char *options) {
   // Account for extra null terminator added in embedBinaryImpl.
   // A null terminator is added during embedding binary for assembly format to
   // support JIT paths that expect null-terminated strings. However, for SPIR-V
@@ -549,7 +552,8 @@ extern "C" ze_module_handle_t mgpuModuleLoadJIT(void *data, int optLevel,
   assert(actualAssemblySize % 4 == 0 &&
          "SPIR-V binary size must be a multiple of 4");
   return catchAll([&]() {
-    return loadModule(data, actualAssemblySize, ZE_MODULE_FORMAT_IL_SPIRV);
+    return loadModule(data, actualAssemblySize, ZE_MODULE_FORMAT_IL_SPIRV,
+                      options);
   });
 }
 

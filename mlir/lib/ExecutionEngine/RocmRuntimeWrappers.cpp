@@ -46,7 +46,8 @@ mgpuModuleLoad(void *data, size_t /*gpuBlobSize*/) {
 }
 
 extern "C" MLIR_ROCM_WRAPPERS_EXPORT hipModule_t
-mgpuModuleLoadJIT(void *data, int optLevel, size_t /*assmeblySize*/) {
+mgpuModuleLoadJIT(void *data, int optLevel, size_t /*assmeblySize*/,
+                  const char * /*options*/) {
   assert(false && "This function is not available in HIP.");
   return nullptr;
 }

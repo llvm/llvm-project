@@ -204,7 +204,10 @@ def GPU_ObjectAttr : GPU_Attr<"Object", "object"> {
     code.
 
     Object properties are specified through the `properties` dictionary
-    attribute and can be used to define additional information.
+    attribute and can be used to define additional information. For example,
+    on an `Assembly` object, the CUDA runtime uses `O` as the optimization
+    level of its just-in-time (JIT) compiler, and the Level Zero runtime passes
+    `jit_options` to its JIT compiler as build flags.
 
     Kernel metadata is specified through the `kernels` parameter, and can be
     used to specify additional information on a kernel by kernel basis.
@@ -215,6 +218,7 @@ def GPU_ObjectAttr : GPU_Attr<"Object", "object"> {
     ```
       #gpu.object<#rocdl.target, offload = "..."> // An offload object.
       #gpu.object<#nvvm.target, properties = {O = 3 : i32}, assembly = "..."> // An assembly object with additional properties.
+      #gpu.object<#xevm.target, properties = {O = 2 : i32, jit_options = "-ze-opt-large-register-file"}, assembly = "..."> // An assembly object with JIT options.
       #gpu.object<#rocdl.target, bin = "..."> // A binary object.
       #gpu.object<#nvvm.target, "..."> // A fatbin object.
       #gpu.object<#nvvm.target, kernels = #gpu.kernel_table<...>, "..."> // An object with a kernel table.
