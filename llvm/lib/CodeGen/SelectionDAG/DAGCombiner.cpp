@@ -397,6 +397,7 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     SDValue visitMULFIX(SDNode *N);
     SDValue useDivRem(SDNode *N);
     SDValue visitSDIV(SDNode *N);
+    SDValue visitMaskedDivRem(SDNode *N);
     SDValue visitSDIVLike(SDValue N0, SDValue N1, SDNode *N);
     SDValue visitUDIV(SDNode *N);
     SDValue visitUDIVLike(SDValue N0, SDValue N1, SDNode *N);
@@ -1956,6 +1957,10 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::UDIV:               return visitUDIV(N);
   case ISD::SREM:
   case ISD::UREM:               return visitREM(N);
+  case ISD::MASKED_SDIV:
+  case ISD::MASKED_UDIV:
+  case ISD::MASKED_SREM:
+  case ISD::MASKED_UREM:        return visitMaskedDivRem(N);
   case ISD::MULHU:              return visitMULHU(N);
   case ISD::MULHS:              return visitMULHS(N);
   case ISD::AVGFLOORS:
@@ -5294,6 +5299,12 @@ static SDValue simplifyDivRem(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// handles ISD::MASKED_SDIV, MASKED_UDIV, MASKED_SREM and MASKED_UREM
+SDValue DAGCombiner::visitMaskedDivRem(SDNode *N) {
+  // Disabled lanes are poison and fdiv never traps, so ignore the mask.
+  return TLI.expandIntDivRemViaFP(N, DAG, Level);
+}
+
 SDValue DAGCombiner::visitSDIV(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -5358,6 +5369,10 @@ SDValue DAGCombiner::visitSDIV(SDNode *N) {
   if (!N1C || TLI.isIntDivCheap(N->getValueType(0), Attr))
     if (SDValue DivRem = useDivRem(N))
         return DivRem;
+
+  // A target without vector integer division may want a float divide.
+  if (SDValue V = TLI.expandIntDivRemViaFP(N, DAG, Level))
+    return V;
 
   return SDValue();
 }
@@ -5515,6 +5530,10 @@ SDValue DAGCombiner::visitUDIV(SDNode *N) {
   // folding based on known bits.
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
+
+  // A target without vector integer division may want a float divide.
+  if (SDValue V = TLI.expandIntDivRemViaFP(N, DAG, Level))
+    return V;
 
   return SDValue();
 }
@@ -5689,6 +5708,10 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
       BCst.srem(Op1Cst).isZero() && !Op1Cst.isAllOnes()) {
     return DAG.getNode(ISD::SREM, DL, VT, A, DAG.getConstant(Op1Cst, DL, VT));
   }
+
+  // A target without vector integer division may want a float divide.
+  if (SDValue V = TLI.expandIntDivRemViaFP(N, DAG, Level))
+    return V;
 
   return SDValue();
 }
