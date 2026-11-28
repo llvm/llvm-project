@@ -22673,6 +22673,9 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
   MVT DstVT = Op.getSimpleValueType();
   MVT TmpVT = DstVT;
   EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+  unsigned SatWidth = SatVT.getScalarSizeInBits();
+  unsigned DstWidth = DstVT.getScalarSizeInBits();
+  unsigned TmpWidth = TmpVT.getScalarSizeInBits();
 
   if (Subtarget.hasAVX10_2() && SrcVT.isVector() &&
       SrcVT.getVectorElementType() == MVT::bf16 && SatVT == MVT::i8) {
@@ -22682,16 +22685,94 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::TRUNCATE, dl, DstVT, Res);
   }
 
+  if (!IsSigned && Subtarget.hasAVX512() && SatWidth <= 64) {
+    if (SrcVT == MVT::bf16 || (SrcVT == MVT::f16 && !Subtarget.hasFP16()))
+      return DAG.getNode(Op.getOpcode(), dl, DstVT,
+                         DAG.getNode(ISD::FP_EXTEND, dl, MVT::f32, Src),
+                         Op.getOperand(1));
+  }
+
   // This code is only for floats and doubles. Fall back to generic code for
   // anything else.
   if (!isScalarFPTypeInSSEReg(SrcVT) || isBF16orSoftF16(SrcVT, Subtarget))
     return SDValue();
 
-  unsigned SatWidth = SatVT.getScalarSizeInBits();
-  unsigned DstWidth = DstVT.getScalarSizeInBits();
-  unsigned TmpWidth = TmpVT.getScalarSizeInBits();
   assert(SatWidth <= DstWidth && SatWidth <= TmpWidth &&
          "Expected saturation width smaller than result width");
+
+  // For unsigned saturating conversions with AVX-512, clamp negative numbers
+  // and NaN to +0.0 via non-commutative PSEUDO_FMAX.
+  if (!IsSigned && Subtarget.hasAVX512() && SatWidth <= 64) {
+    SDValue ZeroFP = DAG.getConstantFP(0.0, dl, SrcVT);
+    SDValue Clamped = DAG.getNode(ISD::PSEUDO_FMAX, dl, SrcVT, Src, ZeroFP);
+
+    // On AVX-512, VCVTT*2USI natively saturates values >= UINT_MAX to UINT_MAX.
+    if (SatWidth == 32 || (SatWidth == 64 && Subtarget.is64Bit())) {
+      EVT SatIntVT = EVT::getIntegerVT(*DAG.getContext(), SatWidth);
+      SDValue Cvt = DAG.getNode(ISD::FP_TO_UINT, dl, SatIntVT, Clamped);
+      return DAG.getZExtOrTrunc(Cvt, dl, DstVT);
+    }
+
+    // For SatWidth < 32 or 32 < SatWidth < 64, use vector conversion and
+    // saturating truncation (VTRUNCUS) or unsigned min (UMIN) with VLX.
+    if (Subtarget.hasVLX()) {
+      bool IsFP16 = SrcVT == MVT::f16 && Subtarget.hasFP16();
+      bool IsDQI =
+          (SrcVT == MVT::f32 || SrcVT == MVT::f64) && Subtarget.hasDQI();
+
+      if (IsFP16 && SatWidth <= 16) {
+        SDValue VecSrc =
+            DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v8f16, Clamped);
+        SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, MVT::v8i16, VecSrc);
+        if (SatWidth == 8 && Subtarget.hasBWI()) {
+          SDValue Trunc = DAG.getNode(X86ISD::VTRUNCUS, dl, MVT::v16i8, Cvt);
+          SDValue Res = DAG.getExtractVectorElt(dl, MVT::i8, Trunc, 0);
+          return DAG.getZExtOrTrunc(Res, dl, DstVT);
+        }
+        SDValue Val = Cvt;
+        if (SatWidth < 16) {
+          uint64_t MaxVal = (1ULL << SatWidth) - 1;
+          Val = DAG.getNode(ISD::UMIN, dl, MVT::v8i16, Cvt,
+                            DAG.getConstant(MaxVal, dl, MVT::v8i16));
+        }
+        SDValue Res = DAG.getExtractVectorElt(dl, MVT::i16, Val, 0);
+        return DAG.getZExtOrTrunc(Res, dl, DstVT);
+      }
+
+      if (IsFP16 || IsDQI) {
+        MVT VecSrcVT = IsFP16              ? MVT::v8f16
+                       : SrcVT == MVT::f64 ? MVT::v2f64
+                                           : MVT::v4f32;
+        SDValue VecSrc =
+            DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VecSrcVT, Clamped);
+
+        if (SatWidth < 32) {
+          SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, MVT::v4i32, VecSrc);
+          if (IsDQI && (SatWidth == 8 || SatWidth == 16)) {
+            MVT TruncVT = SatWidth == 8 ? MVT::v16i8 : MVT::v8i16;
+            MVT EltVT = SatWidth == 8 ? MVT::i8 : MVT::i16;
+            SDValue Trunc = DAG.getNode(X86ISD::VTRUNCUS, dl, TruncVT, Cvt);
+            SDValue Res = DAG.getExtractVectorElt(dl, EltVT, Trunc, 0);
+            return DAG.getZExtOrTrunc(Res, dl, DstVT);
+          }
+          uint64_t MaxVal = (1ULL << SatWidth) - 1;
+          SDValue Val = DAG.getNode(ISD::UMIN, dl, MVT::v4i32, Cvt,
+                                    DAG.getConstant(MaxVal, dl, MVT::v4i32));
+          SDValue Res = DAG.getExtractVectorElt(dl, MVT::i32, Val, 0);
+          return DAG.getZExtOrTrunc(Res, dl, DstVT);
+        }
+
+        if (SatWidth < 64 && Subtarget.is64Bit()) {
+          SDValue Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, MVT::v2i64, VecSrc);
+          uint64_t MaxVal = (1ULL << SatWidth) - 1;
+          SDValue Val = DAG.getNode(ISD::UMIN, dl, MVT::v2i64, Cvt,
+                                    DAG.getConstant(MaxVal, dl, MVT::v2i64));
+          SDValue Res = DAG.getExtractVectorElt(dl, MVT::i64, Val, 0);
+          return DAG.getZExtOrTrunc(Res, dl, DstVT);
+        }
+      }
+    }
+  }
 
   // Promote result of FP_TO_*INT to at least 32 bits.
   if (TmpWidth < 32) {

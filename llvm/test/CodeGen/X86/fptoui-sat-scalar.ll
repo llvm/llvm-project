@@ -2,6 +2,9 @@
 ; RUN: llc < %s -mtriple=i686-linux | FileCheck %s --check-prefix=X86-X87
 ; RUN: llc < %s -mtriple=i686-linux -mattr=+sse2 | FileCheck %s --check-prefix=X86-SSE
 ; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s --check-prefix=X64
+; RUN: llc < %s -mtriple=x86_64-linux -mattr=+avx512dq,+avx512vl | FileCheck %s --check-prefixes=AVX512,AVX512-DQ,AVX512-DQ-NOFP16
+; RUN: llc < %s -mtriple=x86_64-linux -mattr=+avx512fp16,+avx512vl,+avx512bw | FileCheck %s --check-prefixes=AVX512,AVX512-FP16,AVX512-FP16-NODQ
+; RUN: llc < %s -mtriple=x86_64-linux -mattr=+avx512fp16,+avx512vl,+avx512bw,+avx512dq | FileCheck %s --check-prefixes=AVX512,AVX512-DQ,AVX512-FP16,AVX512-FP16-DQ
 
 ;
 ; 32-bit float to unsigned integer
@@ -77,6 +80,26 @@ define i1 @test_unsigned_i1_f32(float %f) nounwind {
 ; X64-NEXT:    cvttss2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i1_f32:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i1_f32:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vmovss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; AVX512-FP16-NODQ-NEXT:    vminss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-FP16-NODQ-NEXT:    retq
     %x = call i1 @llvm.fptoui.sat.i1.f32(float %f)
     ret i1 %x
 }
@@ -140,6 +163,26 @@ define i8 @test_unsigned_i8_f32(float %f) nounwind {
 ; X64-NEXT:    cvttss2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i8_f32:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpmovusdb %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i8_f32:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vmovss {{.*#+}} xmm1 = [2.55E+2,0.0E+0,0.0E+0,0.0E+0]
+; AVX512-FP16-NODQ-NEXT:    vminss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-FP16-NODQ-NEXT:    retq
     %x = call i8 @llvm.fptoui.sat.i8.f32(float %f)
     ret i8 %x
 }
@@ -202,6 +245,26 @@ define i13 @test_unsigned_i13_f32(float %f) nounwind {
 ; X64-NEXT:    cvttss2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i13_f32:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i13_f32:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vmovss {{.*#+}} xmm1 = [8.191E+3,0.0E+0,0.0E+0,0.0E+0]
+; AVX512-FP16-NODQ-NEXT:    vminss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-FP16-NODQ-NEXT:    retq
     %x = call i13 @llvm.fptoui.sat.i13.f32(float %f)
     ret i13 %x
 }
@@ -264,6 +327,36 @@ define i16 @test_unsigned_i16_f32(float %f) nounwind {
 ; X64-NEXT:    cvttss2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-NOFP16-LABEL: test_unsigned_i16_f32:
+; AVX512-DQ-NOFP16:       # %bb.0:
+; AVX512-DQ-NOFP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NOFP16-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vpmovusdw %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NOFP16-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-DQ-NOFP16-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i16_f32:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vmovss {{.*#+}} xmm1 = [6.5535E+4,0.0E+0,0.0E+0,0.0E+0]
+; AVX512-FP16-NODQ-NEXT:    vminss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-FP16-NODQ-NEXT:    retq
+;
+; AVX512-FP16-DQ-LABEL: test_unsigned_i16_f32:
+; AVX512-FP16-DQ:       # %bb.0:
+; AVX512-FP16-DQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-DQ-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-FP16-DQ-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-FP16-DQ-NEXT:    vpmovusdw %xmm0, %xmm0
+; AVX512-FP16-DQ-NEXT:    vmovw %xmm0, %eax
+; AVX512-FP16-DQ-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-FP16-DQ-NEXT:    retq
     %x = call i16 @llvm.fptoui.sat.i16.f32(float %f)
     ret i16 %x
 }
@@ -323,6 +416,23 @@ define i19 @test_unsigned_i19_f32(float %f) nounwind {
 ; X64-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    cvttss2si %xmm0, %eax
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i19_f32:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i19_f32:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    retq
     %x = call i19 @llvm.fptoui.sat.i19.f32(float %f)
     ret i19 %x
 }
@@ -397,6 +507,13 @@ define i32 @test_unsigned_i32_f32(float %f) nounwind {
 ; X64-NEXT:    movl $-1, %eax
 ; X64-NEXT:    cmovbel %ecx, %eax
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i32_f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vcvttss2usi %xmm0, %eax
+; AVX512-NEXT:    retq
     %x = call i32 @llvm.fptoui.sat.i32.f32(float %f)
     ret i32 %x
 }
@@ -523,6 +640,27 @@ define i50 @test_unsigned_i50_f32(float %f) nounwind {
 ; X64-NEXT:    movabsq $1125899906842623, %rax # imm = 0x3FFFFFFFFFFFF
 ; X64-NEXT:    cmovbeq %rcx, %rax
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i50_f32:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttps2uqq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovq %xmm0, %rax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i50_f32:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512-FP16-NODQ-NEXT:    xorl %ecx, %ecx
+; AVX512-FP16-NODQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vucomiss %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    cmovaeq %rax, %rcx
+; AVX512-FP16-NODQ-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX512-FP16-NODQ-NEXT:    movabsq $1125899906842623, %rax # imm = 0x3FFFFFFFFFFFF
+; AVX512-FP16-NODQ-NEXT:    cmovbeq %rcx, %rax
+; AVX512-FP16-NODQ-NEXT:    retq
     %x = call i50 @llvm.fptoui.sat.i50.f32(float %f)
     ret i50 %x
 }
@@ -652,6 +790,13 @@ define i64 @test_unsigned_i64_f32(float %f) nounwind {
 ; X64-NEXT:    movq $-1, %rax
 ; X64-NEXT:    cmovbeq %rcx, %rax
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i64_f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vcvttss2usi %xmm0, %rax
+; AVX512-NEXT:    retq
     %x = call i64 @llvm.fptoui.sat.i64.f32(float %f)
     ret i64 %x
 }
@@ -796,6 +941,26 @@ define i100 @test_unsigned_i100_f32(float %f) nounwind {
 ; X64-NEXT:    cmovaq %rcx, %rdx
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i100_f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    pushq %rax
+; AVX512-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX512-NEXT:    callq __fixunssfti@PLT
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; AVX512-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512-NEXT:    cmovbq %rcx, %rdx
+; AVX512-NEXT:    cmovbq %rcx, %rax
+; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX512-NEXT:    movq $-1, %rcx
+; AVX512-NEXT:    cmovaq %rcx, %rax
+; AVX512-NEXT:    movabsq $68719476735, %rcx # imm = 0xFFFFFFFFF
+; AVX512-NEXT:    cmovaq %rcx, %rdx
+; AVX512-NEXT:    popq %rcx
+; AVX512-NEXT:    retq
     %x = call i100 @llvm.fptoui.sat.i100.f32(float %f)
     ret i100 %x
 }
@@ -934,6 +1099,25 @@ define i128 @test_unsigned_i128_f32(float %f) nounwind {
 ; X64-NEXT:    cmovaq %rcx, %rdx
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i128_f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    pushq %rax
+; AVX512-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX512-NEXT:    callq __fixunssfti@PLT
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; AVX512-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512-NEXT:    cmovbq %rcx, %rdx
+; AVX512-NEXT:    cmovbq %rcx, %rax
+; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX512-NEXT:    movq $-1, %rcx
+; AVX512-NEXT:    cmovaq %rcx, %rax
+; AVX512-NEXT:    cmovaq %rcx, %rdx
+; AVX512-NEXT:    popq %rcx
+; AVX512-NEXT:    retq
     %x = call i128 @llvm.fptoui.sat.i128.f32(float %f)
     ret i128 %x
 }
@@ -1012,6 +1196,26 @@ define i1 @test_unsigned_i1_f64(double %f) nounwind {
 ; X64-NEXT:    cvttsd2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i1_f64:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttpd2udq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i1_f64:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxsd %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vmovsd {{.*#+}} xmm1 = [1.0E+0,0.0E+0]
+; AVX512-FP16-NODQ-NEXT:    vminsd %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-FP16-NODQ-NEXT:    retq
     %x = call i1 @llvm.fptoui.sat.i1.f64(double %f)
     ret i1 %x
 }
@@ -1075,6 +1279,26 @@ define i8 @test_unsigned_i8_f64(double %f) nounwind {
 ; X64-NEXT:    cvttsd2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i8_f64:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttpd2udq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpmovusdb %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i8_f64:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxsd %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vmovsd {{.*#+}} xmm1 = [2.55E+2,0.0E+0]
+; AVX512-FP16-NODQ-NEXT:    vminsd %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-FP16-NODQ-NEXT:    retq
     %x = call i8 @llvm.fptoui.sat.i8.f64(double %f)
     ret i8 %x
 }
@@ -1137,6 +1361,26 @@ define i13 @test_unsigned_i13_f64(double %f) nounwind {
 ; X64-NEXT:    cvttsd2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i13_f64:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttpd2udq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i13_f64:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxsd %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vmovsd {{.*#+}} xmm1 = [8.191E+3,0.0E+0]
+; AVX512-FP16-NODQ-NEXT:    vminsd %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-FP16-NODQ-NEXT:    retq
     %x = call i13 @llvm.fptoui.sat.i13.f64(double %f)
     ret i13 %x
 }
@@ -1199,6 +1443,36 @@ define i16 @test_unsigned_i16_f64(double %f) nounwind {
 ; X64-NEXT:    cvttsd2si %xmm0, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-NOFP16-LABEL: test_unsigned_i16_f64:
+; AVX512-DQ-NOFP16:       # %bb.0:
+; AVX512-DQ-NOFP16-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NOFP16-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vcvttpd2udq %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vpmovusdw %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NOFP16-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-DQ-NOFP16-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i16_f64:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxsd %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vmovsd {{.*#+}} xmm1 = [6.5535E+4,0.0E+0]
+; AVX512-FP16-NODQ-NEXT:    vminsd %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-FP16-NODQ-NEXT:    retq
+;
+; AVX512-FP16-DQ-LABEL: test_unsigned_i16_f64:
+; AVX512-FP16-DQ:       # %bb.0:
+; AVX512-FP16-DQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-FP16-DQ-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; AVX512-FP16-DQ-NEXT:    vcvttpd2udq %xmm0, %xmm0
+; AVX512-FP16-DQ-NEXT:    vpmovusdw %xmm0, %xmm0
+; AVX512-FP16-DQ-NEXT:    vmovw %xmm0, %eax
+; AVX512-FP16-DQ-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-FP16-DQ-NEXT:    retq
     %x = call i16 @llvm.fptoui.sat.i16.f64(double %f)
     ret i16 %x
 }
@@ -1258,6 +1532,23 @@ define i19 @test_unsigned_i19_f64(double %f) nounwind {
 ; X64-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    cvttsd2si %xmm0, %eax
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i19_f64:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttpd2udq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i19_f64:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttsd2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    retq
     %x = call i19 @llvm.fptoui.sat.i19.f64(double %f)
     ret i19 %x
 }
@@ -1325,6 +1616,13 @@ define i32 @test_unsigned_i32_f64(double %f) nounwind {
 ; X64-NEXT:    cvttsd2si %xmm0, %rax
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i32_f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vcvttsd2usi %xmm0, %eax
+; AVX512-NEXT:    retq
     %x = call i32 @llvm.fptoui.sat.i32.f64(double %f)
     ret i32 %x
 }
@@ -1435,6 +1733,23 @@ define i50 @test_unsigned_i50_f64(double %f) nounwind {
 ; X64-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    cvttsd2si %xmm0, %rax
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i50_f64:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttpd2uqq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovq %xmm0, %rax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i50_f64:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttsd2si %xmm0, %rax
+; AVX512-FP16-NODQ-NEXT:    retq
     %x = call i50 @llvm.fptoui.sat.i50.f64(double %f)
     ret i50 %x
 }
@@ -1564,6 +1879,13 @@ define i64 @test_unsigned_i64_f64(double %f) nounwind {
 ; X64-NEXT:    movq $-1, %rax
 ; X64-NEXT:    cmovbeq %rcx, %rax
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i64_f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vmaxsd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vcvttsd2usi %xmm0, %rax
+; AVX512-NEXT:    retq
     %x = call i64 @llvm.fptoui.sat.i64.f64(double %f)
     ret i64 %x
 }
@@ -1708,6 +2030,26 @@ define i100 @test_unsigned_i100_f64(double %f) nounwind {
 ; X64-NEXT:    cmovaq %rcx, %rdx
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i100_f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    pushq %rax
+; AVX512-NEXT:    vmovsd %xmm0, (%rsp) # 8-byte Spill
+; AVX512-NEXT:    callq __fixunsdfti@PLT
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovsd (%rsp), %xmm1 # 8-byte Reload
+; AVX512-NEXT:    # xmm1 = mem[0],zero
+; AVX512-NEXT:    vucomisd %xmm0, %xmm1
+; AVX512-NEXT:    cmovbq %rcx, %rdx
+; AVX512-NEXT:    cmovbq %rcx, %rax
+; AVX512-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX512-NEXT:    movq $-1, %rcx
+; AVX512-NEXT:    cmovaq %rcx, %rax
+; AVX512-NEXT:    movabsq $68719476735, %rcx # imm = 0xFFFFFFFFF
+; AVX512-NEXT:    cmovaq %rcx, %rdx
+; AVX512-NEXT:    popq %rcx
+; AVX512-NEXT:    retq
     %x = call i100 @llvm.fptoui.sat.i100.f64(double %f)
     ret i100 %x
 }
@@ -1846,6 +2188,25 @@ define i128 @test_unsigned_i128_f64(double %f) nounwind {
 ; X64-NEXT:    cmovaq %rcx, %rdx
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i128_f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    pushq %rax
+; AVX512-NEXT:    vmovsd %xmm0, (%rsp) # 8-byte Spill
+; AVX512-NEXT:    callq __fixunsdfti@PLT
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovsd (%rsp), %xmm1 # 8-byte Reload
+; AVX512-NEXT:    # xmm1 = mem[0],zero
+; AVX512-NEXT:    vucomisd %xmm0, %xmm1
+; AVX512-NEXT:    cmovbq %rcx, %rdx
+; AVX512-NEXT:    cmovbq %rcx, %rax
+; AVX512-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX512-NEXT:    movq $-1, %rcx
+; AVX512-NEXT:    cmovaq %rcx, %rax
+; AVX512-NEXT:    cmovaq %rcx, %rdx
+; AVX512-NEXT:    popq %rcx
+; AVX512-NEXT:    retq
     %x = call i128 @llvm.fptoui.sat.i128.f64(double %f)
     ret i128 %x
 }
@@ -1935,6 +2296,27 @@ define i1 @test_unsigned_i1_f16(half %f) nounwind {
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-NOFP16-LABEL: test_unsigned_i1_f16:
+; AVX512-DQ-NOFP16:       # %bb.0:
+; AVX512-DQ-NOFP16-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NOFP16-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NOFP16-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-DQ-NOFP16-NEXT:    retq
+;
+; AVX512-FP16-LABEL: test_unsigned_i1_f16:
+; AVX512-FP16:       # %bb.0:
+; AVX512-FP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NEXT:    vmaxsh %xmm1, %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vcvttph2uw %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vpminuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vmovw %xmm0, %eax
+; AVX512-FP16-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-FP16-NEXT:    retq
     %x = call i1 @llvm.fptoui.sat.i1.f16(half %f)
     ret i1 %x
 }
@@ -2009,6 +2391,27 @@ define i8 @test_unsigned_i8_f16(half %f) nounwind {
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-NOFP16-LABEL: test_unsigned_i8_f16:
+; AVX512-DQ-NOFP16:       # %bb.0:
+; AVX512-DQ-NOFP16-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NOFP16-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vpmovusdb %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NOFP16-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-DQ-NOFP16-NEXT:    retq
+;
+; AVX512-FP16-LABEL: test_unsigned_i8_f16:
+; AVX512-FP16:       # %bb.0:
+; AVX512-FP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NEXT:    vmaxsh %xmm1, %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vcvttph2uw %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vpmovuswb %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vmovd %xmm0, %eax
+; AVX512-FP16-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-FP16-NEXT:    retq
     %x = call i8 @llvm.fptoui.sat.i8.f16(half %f)
     ret i8 %x
 }
@@ -2082,6 +2485,27 @@ define i13 @test_unsigned_i13_f16(half %f) nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-NOFP16-LABEL: test_unsigned_i13_f16:
+; AVX512-DQ-NOFP16:       # %bb.0:
+; AVX512-DQ-NOFP16-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NOFP16-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NOFP16-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-DQ-NOFP16-NEXT:    retq
+;
+; AVX512-FP16-LABEL: test_unsigned_i13_f16:
+; AVX512-FP16:       # %bb.0:
+; AVX512-FP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NEXT:    vmaxsh %xmm1, %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vcvttph2uw %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vpminuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vmovw %xmm0, %eax
+; AVX512-FP16-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-FP16-NEXT:    retq
     %x = call i13 @llvm.fptoui.sat.i13.f16(half %f)
     ret i13 %x
 }
@@ -2155,6 +2579,26 @@ define i16 @test_unsigned_i16_f16(half %f) nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-NOFP16-LABEL: test_unsigned_i16_f16:
+; AVX512-DQ-NOFP16:       # %bb.0:
+; AVX512-DQ-NOFP16-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NOFP16-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vpmovusdw %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NOFP16-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-DQ-NOFP16-NEXT:    retq
+;
+; AVX512-FP16-LABEL: test_unsigned_i16_f16:
+; AVX512-FP16:       # %bb.0:
+; AVX512-FP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NEXT:    vmaxsh %xmm1, %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vcvttph2uw %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vmovw %xmm0, %eax
+; AVX512-FP16-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-FP16-NEXT:    retq
     %x = call i16 @llvm.fptoui.sat.i16.f16(half %f)
     ret i16 %x
 }
@@ -2233,6 +2677,25 @@ define i19 @test_unsigned_i19_f16(half %f) nounwind {
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-NOFP16-LABEL: test_unsigned_i19_f16:
+; AVX512-DQ-NOFP16:       # %bb.0:
+; AVX512-DQ-NOFP16-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NOFP16-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NOFP16-NEXT:    retq
+;
+; AVX512-FP16-LABEL: test_unsigned_i19_f16:
+; AVX512-FP16:       # %bb.0:
+; AVX512-FP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NEXT:    vmaxsh %xmm1, %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vcvttph2udq %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vmovd %xmm0, %eax
+; AVX512-FP16-NEXT:    retq
     %x = call i19 @llvm.fptoui.sat.i19.f16(half %f)
     ret i19 %x
 }
@@ -2319,6 +2782,21 @@ define i32 @test_unsigned_i32_f16(half %f) nounwind {
 ; X64-NEXT:    cmovbel %ecx, %eax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-NOFP16-LABEL: test_unsigned_i32_f16:
+; AVX512-DQ-NOFP16:       # %bb.0:
+; AVX512-DQ-NOFP16-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NOFP16-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vcvttss2usi %xmm0, %eax
+; AVX512-DQ-NOFP16-NEXT:    retq
+;
+; AVX512-FP16-LABEL: test_unsigned_i32_f16:
+; AVX512-FP16:       # %bb.0:
+; AVX512-FP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NEXT:    vmaxsh %xmm1, %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vcvttsh2usi %xmm0, %eax
+; AVX512-FP16-NEXT:    retq
     %x = call i32 @llvm.fptoui.sat.i32.f16(half %f)
     ret i32 %x
 }
@@ -2462,6 +2940,25 @@ define i50 @test_unsigned_i50_f16(half %f) nounwind {
 ; X64-NEXT:    cmovbeq %rcx, %rax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-NOFP16-LABEL: test_unsigned_i50_f16:
+; AVX512-DQ-NOFP16:       # %bb.0:
+; AVX512-DQ-NOFP16-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NOFP16-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vcvttps2uqq %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vmovq %xmm0, %rax
+; AVX512-DQ-NOFP16-NEXT:    retq
+;
+; AVX512-FP16-LABEL: test_unsigned_i50_f16:
+; AVX512-FP16:       # %bb.0:
+; AVX512-FP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NEXT:    vmaxsh %xmm1, %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vcvttph2uqq %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vmovq %xmm0, %rax
+; AVX512-FP16-NEXT:    retq
     %x = call i50 @llvm.fptoui.sat.i50.f16(half %f)
     ret i50 %x
 }
@@ -2601,6 +3098,21 @@ define i64 @test_unsigned_i64_f16(half %f) nounwind {
 ; X64-NEXT:    cmovbeq %rcx, %rax
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-NOFP16-LABEL: test_unsigned_i64_f16:
+; AVX512-DQ-NOFP16:       # %bb.0:
+; AVX512-DQ-NOFP16-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NOFP16-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vcvttss2usi %xmm0, %rax
+; AVX512-DQ-NOFP16-NEXT:    retq
+;
+; AVX512-FP16-LABEL: test_unsigned_i64_f16:
+; AVX512-FP16:       # %bb.0:
+; AVX512-FP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NEXT:    vmaxsh %xmm1, %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vcvttsh2usi %xmm0, %rax
+; AVX512-FP16-NEXT:    retq
     %x = call i64 @llvm.fptoui.sat.i64.f16(half %f)
     ret i64 %x
 }
@@ -2755,6 +3267,47 @@ define i100 @test_unsigned_i100_f16(half %f) nounwind {
 ; X64-NEXT:    cmovaq %rcx, %rdx
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-NOFP16-LABEL: test_unsigned_i100_f16:
+; AVX512-DQ-NOFP16:       # %bb.0:
+; AVX512-DQ-NOFP16-NEXT:    subq $24, %rsp
+; AVX512-DQ-NOFP16-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX512-DQ-NOFP16-NEXT:    callq __fixunssfti@PLT
+; AVX512-DQ-NOFP16-NEXT:    xorl %ecx, %ecx
+; AVX512-DQ-NOFP16-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; AVX512-DQ-NOFP16-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512-DQ-NOFP16-NEXT:    cmovbq %rcx, %rdx
+; AVX512-DQ-NOFP16-NEXT:    cmovbq %rcx, %rax
+; AVX512-DQ-NOFP16-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX512-DQ-NOFP16-NEXT:    movq $-1, %rcx
+; AVX512-DQ-NOFP16-NEXT:    cmovaq %rcx, %rax
+; AVX512-DQ-NOFP16-NEXT:    movabsq $68719476735, %rcx # imm = 0xFFFFFFFFF
+; AVX512-DQ-NOFP16-NEXT:    cmovaq %rcx, %rdx
+; AVX512-DQ-NOFP16-NEXT:    addq $24, %rsp
+; AVX512-DQ-NOFP16-NEXT:    retq
+;
+; AVX512-FP16-LABEL: test_unsigned_i100_f16:
+; AVX512-FP16:       # %bb.0:
+; AVX512-FP16-NEXT:    pushq %rax
+; AVX512-FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX512-FP16-NEXT:    callq __fixunssfti@PLT
+; AVX512-FP16-NEXT:    xorl %ecx, %ecx
+; AVX512-FP16-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; AVX512-FP16-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; AVX512-FP16-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512-FP16-NEXT:    cmovbq %rcx, %rdx
+; AVX512-FP16-NEXT:    cmovbq %rcx, %rax
+; AVX512-FP16-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX512-FP16-NEXT:    movq $-1, %rcx
+; AVX512-FP16-NEXT:    cmovaq %rcx, %rax
+; AVX512-FP16-NEXT:    movabsq $68719476735, %rcx # imm = 0xFFFFFFFFF
+; AVX512-FP16-NEXT:    cmovaq %rcx, %rdx
+; AVX512-FP16-NEXT:    popq %rcx
+; AVX512-FP16-NEXT:    retq
     %x = call i100 @llvm.fptoui.sat.i100.f16(half %f)
     ret i100 %x
 }
@@ -2903,6 +3456,45 @@ define i128 @test_unsigned_i128_f16(half %f) nounwind {
 ; X64-NEXT:    cmovaq %rcx, %rdx
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
+;
+; AVX512-DQ-NOFP16-LABEL: test_unsigned_i128_f16:
+; AVX512-DQ-NOFP16:       # %bb.0:
+; AVX512-DQ-NOFP16-NEXT:    subq $24, %rsp
+; AVX512-DQ-NOFP16-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX512-DQ-NOFP16-NEXT:    callq __fixunssfti@PLT
+; AVX512-DQ-NOFP16-NEXT:    xorl %ecx, %ecx
+; AVX512-DQ-NOFP16-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; AVX512-DQ-NOFP16-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512-DQ-NOFP16-NEXT:    cmovbq %rcx, %rdx
+; AVX512-DQ-NOFP16-NEXT:    cmovbq %rcx, %rax
+; AVX512-DQ-NOFP16-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX512-DQ-NOFP16-NEXT:    movq $-1, %rcx
+; AVX512-DQ-NOFP16-NEXT:    cmovaq %rcx, %rax
+; AVX512-DQ-NOFP16-NEXT:    cmovaq %rcx, %rdx
+; AVX512-DQ-NOFP16-NEXT:    addq $24, %rsp
+; AVX512-DQ-NOFP16-NEXT:    retq
+;
+; AVX512-FP16-LABEL: test_unsigned_i128_f16:
+; AVX512-FP16:       # %bb.0:
+; AVX512-FP16-NEXT:    pushq %rax
+; AVX512-FP16-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; AVX512-FP16-NEXT:    callq __fixunssfti@PLT
+; AVX512-FP16-NEXT:    xorl %ecx, %ecx
+; AVX512-FP16-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512-FP16-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Reload
+; AVX512-FP16-NEXT:    # xmm1 = mem[0],zero,zero,zero
+; AVX512-FP16-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512-FP16-NEXT:    cmovbq %rcx, %rdx
+; AVX512-FP16-NEXT:    cmovbq %rcx, %rax
+; AVX512-FP16-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX512-FP16-NEXT:    movq $-1, %rcx
+; AVX512-FP16-NEXT:    cmovaq %rcx, %rax
+; AVX512-FP16-NEXT:    cmovaq %rcx, %rdx
+; AVX512-FP16-NEXT:    popq %rcx
+; AVX512-FP16-NEXT:    retq
     %x = call i128 @llvm.fptoui.sat.i128.f16(half %f)
     ret i128 %x
 }
@@ -3015,6 +3607,27 @@ define i1 @test_unsigned_i1_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    cmovbel %ecx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i1_f80:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    fld %st(0)
+; AVX512-NEXT:    fisttps -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    fldz
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucomi %st(1), %st
+; AVX512-NEXT:    fstp %st(1)
+; AVX512-NEXT:    cmovael %eax, %ecx
+; AVX512-NEXT:    fld1
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucompi %st(1), %st
+; AVX512-NEXT:    fstp %st(0)
+; AVX512-NEXT:    movl $1, %eax
+; AVX512-NEXT:    cmovbel %ecx, %eax
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    retq
     %x = call i1 @llvm.fptoui.sat.i1.f80(x86_fp80 %f)
     ret i1 %x
 }
@@ -3112,6 +3725,27 @@ define i8 @test_unsigned_i8_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    cmovbel %ecx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i8_f80:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    fld %st(0)
+; AVX512-NEXT:    fisttps -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    fldz
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucomi %st(1), %st
+; AVX512-NEXT:    fstp %st(1)
+; AVX512-NEXT:    cmovael %eax, %ecx
+; AVX512-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucompi %st(1), %st
+; AVX512-NEXT:    fstp %st(0)
+; AVX512-NEXT:    movl $255, %eax
+; AVX512-NEXT:    cmovbel %ecx, %eax
+; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    retq
     %x = call i8 @llvm.fptoui.sat.i8.f80(x86_fp80 %f)
     ret i8 %x
 }
@@ -3212,6 +3846,29 @@ define i13 @test_unsigned_i13_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    cmovbel %ecx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i13_f80:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    fld %st(0)
+; AVX512-NEXT:    fisttpl -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    fldz
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucomi %st(1), %st
+; AVX512-NEXT:    fstp %st(1)
+; AVX512-NEXT:    jb .LBB32_2
+; AVX512-NEXT:  # %bb.1:
+; AVX512-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
+; AVX512-NEXT:  .LBB32_2:
+; AVX512-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucompi %st(1), %st
+; AVX512-NEXT:    fstp %st(0)
+; AVX512-NEXT:    movl $8191, %eax # imm = 0x1FFF
+; AVX512-NEXT:    cmovbel %ecx, %eax
+; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-NEXT:    retq
     %x = call i13 @llvm.fptoui.sat.i13.f80(x86_fp80 %f)
     ret i13 %x
 }
@@ -3312,6 +3969,29 @@ define i16 @test_unsigned_i16_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    cmovbel %ecx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i16_f80:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    fld %st(0)
+; AVX512-NEXT:    fisttpl -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    fldz
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucomi %st(1), %st
+; AVX512-NEXT:    fstp %st(1)
+; AVX512-NEXT:    jb .LBB33_2
+; AVX512-NEXT:  # %bb.1:
+; AVX512-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
+; AVX512-NEXT:  .LBB33_2:
+; AVX512-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucompi %st(1), %st
+; AVX512-NEXT:    fstp %st(0)
+; AVX512-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; AVX512-NEXT:    cmovbel %ecx, %eax
+; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-NEXT:    retq
     %x = call i16 @llvm.fptoui.sat.i16.f80(x86_fp80 %f)
     ret i16 %x
 }
@@ -3412,6 +4092,28 @@ define i19 @test_unsigned_i19_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    movl $524287, %eax # imm = 0x7FFFF
 ; X64-NEXT:    cmovbel %ecx, %eax
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i19_f80:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    fld %st(0)
+; AVX512-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    fldz
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucomi %st(1), %st
+; AVX512-NEXT:    fstp %st(1)
+; AVX512-NEXT:    jb .LBB34_2
+; AVX512-NEXT:  # %bb.1:
+; AVX512-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
+; AVX512-NEXT:  .LBB34_2:
+; AVX512-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucompi %st(1), %st
+; AVX512-NEXT:    fstp %st(0)
+; AVX512-NEXT:    movl $524287, %eax # imm = 0x7FFFF
+; AVX512-NEXT:    cmovbel %ecx, %eax
+; AVX512-NEXT:    retq
     %x = call i19 @llvm.fptoui.sat.i19.f80(x86_fp80 %f)
     ret i19 %x
 }
@@ -3512,6 +4214,28 @@ define i32 @test_unsigned_i32_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    movl $-1, %eax
 ; X64-NEXT:    cmovbel %ecx, %eax
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i32_f80:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    fld %st(0)
+; AVX512-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    fldz
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucomi %st(1), %st
+; AVX512-NEXT:    fstp %st(1)
+; AVX512-NEXT:    jb .LBB35_2
+; AVX512-NEXT:  # %bb.1:
+; AVX512-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
+; AVX512-NEXT:  .LBB35_2:
+; AVX512-NEXT:    fldl {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucompi %st(1), %st
+; AVX512-NEXT:    fstp %st(0)
+; AVX512-NEXT:    movl $-1, %eax
+; AVX512-NEXT:    cmovbel %ecx, %eax
+; AVX512-NEXT:    retq
     %x = call i32 @llvm.fptoui.sat.i32.f80(x86_fp80 %f)
     ret i32 %x
 }
@@ -3665,6 +4389,35 @@ define i50 @test_unsigned_i50_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    movabsq $1125899906842623, %rax # imm = 0x3FFFFFFFFFFFF
 ; X64-NEXT:    cmovbeq %rcx, %rax
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i50_f80:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; AVX512-NEXT:    xorl %eax, %eax
+; AVX512-NEXT:    fucomi %st(1), %st
+; AVX512-NEXT:    fldz
+; AVX512-NEXT:    fld %st(0)
+; AVX512-NEXT:    fcmovbe %st(2), %st
+; AVX512-NEXT:    fstp %st(2)
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fsubr %st(2), %st
+; AVX512-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    setbe %al
+; AVX512-NEXT:    shlq $63, %rax
+; AVX512-NEXT:    xorq -{{[0-9]+}}(%rsp), %rax
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucomi %st(1), %st
+; AVX512-NEXT:    fstp %st(1)
+; AVX512-NEXT:    cmovaeq %rax, %rcx
+; AVX512-NEXT:    fldl {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucompi %st(1), %st
+; AVX512-NEXT:    fstp %st(0)
+; AVX512-NEXT:    movabsq $1125899906842623, %rax # imm = 0x3FFFFFFFFFFFF
+; AVX512-NEXT:    cmovbeq %rcx, %rax
+; AVX512-NEXT:    retq
     %x = call i50 @llvm.fptoui.sat.i50.f80(x86_fp80 %f)
     ret i50 %x
 }
@@ -3816,6 +4569,35 @@ define i64 @test_unsigned_i64_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    movq $-1, %rax
 ; X64-NEXT:    cmovbeq %rcx, %rax
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i64_f80:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; AVX512-NEXT:    xorl %eax, %eax
+; AVX512-NEXT:    fucomi %st(1), %st
+; AVX512-NEXT:    fldz
+; AVX512-NEXT:    fld %st(0)
+; AVX512-NEXT:    fcmovbe %st(2), %st
+; AVX512-NEXT:    fstp %st(2)
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fsubr %st(2), %st
+; AVX512-NEXT:    fisttpll -{{[0-9]+}}(%rsp)
+; AVX512-NEXT:    setbe %al
+; AVX512-NEXT:    shlq $63, %rax
+; AVX512-NEXT:    xorq -{{[0-9]+}}(%rsp), %rax
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucomi %st(1), %st
+; AVX512-NEXT:    fstp %st(1)
+; AVX512-NEXT:    cmovaeq %rax, %rcx
+; AVX512-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucompi %st(1), %st
+; AVX512-NEXT:    fstp %st(0)
+; AVX512-NEXT:    movq $-1, %rax
+; AVX512-NEXT:    cmovbeq %rcx, %rax
+; AVX512-NEXT:    retq
     %x = call i64 @llvm.fptoui.sat.i64.f80(x86_fp80 %f)
     ret i64 %x
 }
@@ -3974,6 +4756,32 @@ define i100 @test_unsigned_i100_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    cmovaq %rcx, %rdx
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i100_f80:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    subq $40, %rsp
+; AVX512-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    fld %st(0)
+; AVX512-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
+; AVX512-NEXT:    fstpt (%rsp)
+; AVX512-NEXT:    callq __fixunsxfti@PLT
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    fldz
+; AVX512-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
+; AVX512-NEXT:    fucomi %st(1), %st
+; AVX512-NEXT:    fstp %st(1)
+; AVX512-NEXT:    cmovbq %rcx, %rdx
+; AVX512-NEXT:    cmovbq %rcx, %rax
+; AVX512-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucompi %st(1), %st
+; AVX512-NEXT:    fstp %st(0)
+; AVX512-NEXT:    movq $-1, %rcx
+; AVX512-NEXT:    cmovaq %rcx, %rax
+; AVX512-NEXT:    movabsq $68719476735, %rcx # imm = 0xFFFFFFFFF
+; AVX512-NEXT:    cmovaq %rcx, %rdx
+; AVX512-NEXT:    addq $40, %rsp
+; AVX512-NEXT:    retq
     %x = call i100 @llvm.fptoui.sat.i100.f80(x86_fp80 %f)
     ret i100 %x
 }
@@ -4126,6 +4934,1211 @@ define i128 @test_unsigned_i128_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    cmovaq %rcx, %rdx
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i128_f80:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    subq $40, %rsp
+; AVX512-NEXT:    fldt {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    fld %st(0)
+; AVX512-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
+; AVX512-NEXT:    fstpt (%rsp)
+; AVX512-NEXT:    callq __fixunsxfti@PLT
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    fldz
+; AVX512-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
+; AVX512-NEXT:    fucomi %st(1), %st
+; AVX512-NEXT:    fstp %st(1)
+; AVX512-NEXT:    cmovbq %rcx, %rdx
+; AVX512-NEXT:    cmovbq %rcx, %rax
+; AVX512-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; AVX512-NEXT:    fxch %st(1)
+; AVX512-NEXT:    fucompi %st(1), %st
+; AVX512-NEXT:    fstp %st(0)
+; AVX512-NEXT:    movq $-1, %rcx
+; AVX512-NEXT:    cmovaq %rcx, %rax
+; AVX512-NEXT:    cmovaq %rcx, %rdx
+; AVX512-NEXT:    addq $40, %rsp
+; AVX512-NEXT:    retq
     %x = call i128 @llvm.fptoui.sat.i128.f80(x86_fp80 %f)
+    ret i128 %x
+}
+
+;
+; 16-bit bfloat to unsigned integer
+;
+
+define i1 @test_unsigned_i1_bf16(bfloat %f) nounwind {
+; X86-X87-LABEL: test_unsigned_i1_bf16:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    subl $12, %esp
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fists {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldz
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucom %st(1)
+; X86-X87-NEXT:    fstp %st(1)
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    jb .LBB40_1
+; X86-X87-NEXT:  # %bb.2:
+; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    jmp .LBB40_3
+; X86-X87-NEXT:  .LBB40_1:
+; X86-X87-NEXT:    xorl %ecx, %ecx
+; X86-X87-NEXT:  .LBB40_3:
+; X86-X87-NEXT:    fld1
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucompp
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movb $1, %al
+; X86-X87-NEXT:    ja .LBB40_5
+; X86-X87-NEXT:  # %bb.4:
+; X86-X87-NEXT:    movl %ecx, %eax
+; X86-X87-NEXT:  .LBB40_5:
+; X86-X87-NEXT:    addl $12, %esp
+; X86-X87-NEXT:    retl
+;
+; X86-SSE-LABEL: test_unsigned_i1_bf16:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    shll $16, %eax
+; X86-SSE-NEXT:    movd %eax, %xmm0
+; X86-SSE-NEXT:    xorps %xmm1, %xmm1
+; X86-SSE-NEXT:    maxss %xmm0, %xmm1
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X86-SSE-NEXT:    minss %xmm1, %xmm0
+; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
+; X86-SSE-NEXT:    # kill: def $al killed $al killed $eax
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: test_unsigned_i1_bf16:
+; X64:       # %bb.0:
+; X64-NEXT:    pslld $16, %xmm0
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    maxss %xmm0, %xmm1
+; X64-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    minss %xmm1, %xmm0
+; X64-NEXT:    cvttss2si %xmm0, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i1_bf16:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i1_bf16:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vmovss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; AVX512-FP16-NODQ-NEXT:    vminss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-FP16-NODQ-NEXT:    retq
+    %x = call i1 @llvm.fptoui.sat.i1.bf16(bfloat %f)
+    ret i1 %x
+}
+
+define i8 @test_unsigned_i8_bf16(bfloat %f) nounwind {
+; X86-X87-LABEL: test_unsigned_i8_bf16:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    subl $12, %esp
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fists {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldz
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucom %st(1)
+; X86-X87-NEXT:    fstp %st(1)
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    jb .LBB41_1
+; X86-X87-NEXT:  # %bb.2:
+; X86-X87-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    jmp .LBB41_3
+; X86-X87-NEXT:  .LBB41_1:
+; X86-X87-NEXT:    xorl %ecx, %ecx
+; X86-X87-NEXT:  .LBB41_3:
+; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucompp
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movb $-1, %al
+; X86-X87-NEXT:    ja .LBB41_5
+; X86-X87-NEXT:  # %bb.4:
+; X86-X87-NEXT:    movl %ecx, %eax
+; X86-X87-NEXT:  .LBB41_5:
+; X86-X87-NEXT:    addl $12, %esp
+; X86-X87-NEXT:    retl
+;
+; X86-SSE-LABEL: test_unsigned_i8_bf16:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    shll $16, %eax
+; X86-SSE-NEXT:    movd %eax, %xmm0
+; X86-SSE-NEXT:    xorps %xmm1, %xmm1
+; X86-SSE-NEXT:    maxss %xmm0, %xmm1
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = [2.55E+2,0.0E+0,0.0E+0,0.0E+0]
+; X86-SSE-NEXT:    minss %xmm1, %xmm0
+; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
+; X86-SSE-NEXT:    # kill: def $al killed $al killed $eax
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: test_unsigned_i8_bf16:
+; X64:       # %bb.0:
+; X64-NEXT:    pslld $16, %xmm0
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    maxss %xmm0, %xmm1
+; X64-NEXT:    movss {{.*#+}} xmm0 = [2.55E+2,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    minss %xmm1, %xmm0
+; X64-NEXT:    cvttss2si %xmm0, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i8_bf16:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpmovusdb %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i8_bf16:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vmovss {{.*#+}} xmm1 = [2.55E+2,0.0E+0,0.0E+0,0.0E+0]
+; AVX512-FP16-NODQ-NEXT:    vminss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-FP16-NODQ-NEXT:    retq
+    %x = call i8 @llvm.fptoui.sat.i8.bf16(bfloat %f)
+    ret i8 %x
+}
+
+define i13 @test_unsigned_i13_bf16(bfloat %f) nounwind {
+; X86-X87-LABEL: test_unsigned_i13_bf16:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    subl $12, %esp
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fnstcw (%esp)
+; X86-X87-NEXT:    movzwl (%esp), %eax
+; X86-X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fistl {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw (%esp)
+; X86-X87-NEXT:    fldz
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucom %st(1)
+; X86-X87-NEXT:    fstp %st(1)
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    xorl %ecx, %ecx
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    jb .LBB42_2
+; X86-X87-NEXT:  # %bb.1:
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:  .LBB42_2:
+; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucompp
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $8191, %eax # imm = 0x1FFF
+; X86-X87-NEXT:    ja .LBB42_4
+; X86-X87-NEXT:  # %bb.3:
+; X86-X87-NEXT:    movl %ecx, %eax
+; X86-X87-NEXT:  .LBB42_4:
+; X86-X87-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-X87-NEXT:    addl $12, %esp
+; X86-X87-NEXT:    retl
+;
+; X86-SSE-LABEL: test_unsigned_i13_bf16:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    shll $16, %eax
+; X86-SSE-NEXT:    movd %eax, %xmm0
+; X86-SSE-NEXT:    xorps %xmm1, %xmm1
+; X86-SSE-NEXT:    maxss %xmm0, %xmm1
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = [8.191E+3,0.0E+0,0.0E+0,0.0E+0]
+; X86-SSE-NEXT:    minss %xmm1, %xmm0
+; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
+; X86-SSE-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: test_unsigned_i13_bf16:
+; X64:       # %bb.0:
+; X64-NEXT:    pslld $16, %xmm0
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    maxss %xmm0, %xmm1
+; X64-NEXT:    movss {{.*#+}} xmm0 = [8.191E+3,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    minss %xmm1, %xmm0
+; X64-NEXT:    cvttss2si %xmm0, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i13_bf16:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i13_bf16:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vmovss {{.*#+}} xmm1 = [8.191E+3,0.0E+0,0.0E+0,0.0E+0]
+; AVX512-FP16-NODQ-NEXT:    vminss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-FP16-NODQ-NEXT:    retq
+    %x = call i13 @llvm.fptoui.sat.i13.bf16(bfloat %f)
+    ret i13 %x
+}
+
+define i16 @test_unsigned_i16_bf16(bfloat %f) nounwind {
+; X86-X87-LABEL: test_unsigned_i16_bf16:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    subl $12, %esp
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fnstcw (%esp)
+; X86-X87-NEXT:    movzwl (%esp), %eax
+; X86-X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fistl {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw (%esp)
+; X86-X87-NEXT:    fldz
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucom %st(1)
+; X86-X87-NEXT:    fstp %st(1)
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    xorl %ecx, %ecx
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    jb .LBB43_2
+; X86-X87-NEXT:  # %bb.1:
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:  .LBB43_2:
+; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucompp
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; X86-X87-NEXT:    ja .LBB43_4
+; X86-X87-NEXT:  # %bb.3:
+; X86-X87-NEXT:    movl %ecx, %eax
+; X86-X87-NEXT:  .LBB43_4:
+; X86-X87-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-X87-NEXT:    addl $12, %esp
+; X86-X87-NEXT:    retl
+;
+; X86-SSE-LABEL: test_unsigned_i16_bf16:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    shll $16, %eax
+; X86-SSE-NEXT:    movd %eax, %xmm0
+; X86-SSE-NEXT:    xorps %xmm1, %xmm1
+; X86-SSE-NEXT:    maxss %xmm0, %xmm1
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = [6.5535E+4,0.0E+0,0.0E+0,0.0E+0]
+; X86-SSE-NEXT:    minss %xmm1, %xmm0
+; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
+; X86-SSE-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: test_unsigned_i16_bf16:
+; X64:       # %bb.0:
+; X64-NEXT:    pslld $16, %xmm0
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    maxss %xmm0, %xmm1
+; X64-NEXT:    movss {{.*#+}} xmm0 = [6.5535E+4,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    minss %xmm1, %xmm0
+; X64-NEXT:    cvttss2si %xmm0, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+;
+; AVX512-DQ-NOFP16-LABEL: test_unsigned_i16_bf16:
+; AVX512-DQ-NOFP16:       # %bb.0:
+; AVX512-DQ-NOFP16-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NOFP16-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vpmovusdw %xmm0, %xmm0
+; AVX512-DQ-NOFP16-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NOFP16-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-DQ-NOFP16-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i16_bf16:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vmovss {{.*#+}} xmm1 = [6.5535E+4,0.0E+0,0.0E+0,0.0E+0]
+; AVX512-FP16-NODQ-NEXT:    vminss %xmm0, %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-FP16-NODQ-NEXT:    retq
+;
+; AVX512-FP16-DQ-LABEL: test_unsigned_i16_bf16:
+; AVX512-FP16-DQ:       # %bb.0:
+; AVX512-FP16-DQ-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-FP16-DQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-DQ-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-FP16-DQ-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-FP16-DQ-NEXT:    vpmovusdw %xmm0, %xmm0
+; AVX512-FP16-DQ-NEXT:    vmovw %xmm0, %eax
+; AVX512-FP16-DQ-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-FP16-DQ-NEXT:    retq
+    %x = call i16 @llvm.fptoui.sat.i16.bf16(bfloat %f)
+    ret i16 %x
+}
+
+define i19 @test_unsigned_i19_bf16(bfloat %f) nounwind {
+; X86-X87-LABEL: test_unsigned_i19_bf16:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    subl $20, %esp
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fnstcw (%esp)
+; X86-X87-NEXT:    movzwl (%esp), %eax
+; X86-X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fld %st(0)
+; X86-X87-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw (%esp)
+; X86-X87-NEXT:    fldz
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucom %st(1)
+; X86-X87-NEXT:    fstp %st(1)
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    xorl %ecx, %ecx
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    jb .LBB44_2
+; X86-X87-NEXT:  # %bb.1:
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:  .LBB44_2:
+; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucompp
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $524287, %eax # imm = 0x7FFFF
+; X86-X87-NEXT:    ja .LBB44_4
+; X86-X87-NEXT:  # %bb.3:
+; X86-X87-NEXT:    movl %ecx, %eax
+; X86-X87-NEXT:  .LBB44_4:
+; X86-X87-NEXT:    addl $20, %esp
+; X86-X87-NEXT:    retl
+;
+; X86-SSE-LABEL: test_unsigned_i19_bf16:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    shll $16, %eax
+; X86-SSE-NEXT:    movd %eax, %xmm0
+; X86-SSE-NEXT:    xorps %xmm1, %xmm1
+; X86-SSE-NEXT:    maxss %xmm1, %xmm0
+; X86-SSE-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: test_unsigned_i19_bf16:
+; X64:       # %bb.0:
+; X64-NEXT:    pslld $16, %xmm0
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    maxss %xmm1, %xmm0
+; X64-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    cvttss2si %xmm0, %eax
+; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i19_bf16:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttps2udq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovd %xmm0, %eax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i19_bf16:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vminss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttss2si %xmm0, %eax
+; AVX512-FP16-NODQ-NEXT:    retq
+    %x = call i19 @llvm.fptoui.sat.i19.bf16(bfloat %f)
+    ret i19 %x
+}
+
+define i32 @test_unsigned_i32_bf16(bfloat %f) nounwind {
+; X86-X87-LABEL: test_unsigned_i32_bf16:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    subl $20, %esp
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fnstcw (%esp)
+; X86-X87-NEXT:    movzwl (%esp), %eax
+; X86-X87-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-X87-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fld %st(0)
+; X86-X87-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw (%esp)
+; X86-X87-NEXT:    fldz
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucom %st(1)
+; X86-X87-NEXT:    fstp %st(1)
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    xorl %ecx, %ecx
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    jb .LBB45_2
+; X86-X87-NEXT:  # %bb.1:
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:  .LBB45_2:
+; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucompp
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $-1, %eax
+; X86-X87-NEXT:    ja .LBB45_4
+; X86-X87-NEXT:  # %bb.3:
+; X86-X87-NEXT:    movl %ecx, %eax
+; X86-X87-NEXT:  .LBB45_4:
+; X86-X87-NEXT:    addl $20, %esp
+; X86-X87-NEXT:    retl
+;
+; X86-SSE-LABEL: test_unsigned_i32_bf16:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    shll $16, %eax
+; X86-SSE-NEXT:    movd %eax, %xmm0
+; X86-SSE-NEXT:    cvttss2si %xmm0, %eax
+; X86-SSE-NEXT:    movl %eax, %ecx
+; X86-SSE-NEXT:    sarl $31, %ecx
+; X86-SSE-NEXT:    movaps %xmm0, %xmm1
+; X86-SSE-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE-NEXT:    cvttss2si %xmm1, %edx
+; X86-SSE-NEXT:    andl %ecx, %edx
+; X86-SSE-NEXT:    orl %eax, %edx
+; X86-SSE-NEXT:    xorl %ecx, %ecx
+; X86-SSE-NEXT:    xorps %xmm1, %xmm1
+; X86-SSE-NEXT:    ucomiss %xmm1, %xmm0
+; X86-SSE-NEXT:    cmovael %edx, %ecx
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $-1, %eax
+; X86-SSE-NEXT:    cmovbel %ecx, %eax
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: test_unsigned_i32_bf16:
+; X64:       # %bb.0:
+; X64-NEXT:    pslld $16, %xmm0
+; X64-NEXT:    cvttss2si %xmm0, %rax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    ucomiss %xmm1, %xmm0
+; X64-NEXT:    cmovael %eax, %ecx
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $-1, %eax
+; X64-NEXT:    cmovbel %ecx, %eax
+; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i32_bf16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vcvttss2usi %xmm0, %eax
+; AVX512-NEXT:    retq
+    %x = call i32 @llvm.fptoui.sat.i32.bf16(bfloat %f)
+    ret i32 %x
+}
+
+define i50 @test_unsigned_i50_bf16(bfloat %f) nounwind {
+; X86-X87-LABEL: test_unsigned_i50_bf16:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    subl $16, %esp
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucom %st(1)
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    xorl %ecx, %ecx
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    setae %al
+; X86-X87-NEXT:    fldz
+; X86-X87-NEXT:    jae .LBB46_2
+; X86-X87-NEXT:  # %bb.1:
+; X86-X87-NEXT:    fstp %st(2)
+; X86-X87-NEXT:    fld %st(1)
+; X86-X87-NEXT:    fxch %st(2)
+; X86-X87-NEXT:  .LBB46_2:
+; X86-X87-NEXT:    fxch %st(2)
+; X86-X87-NEXT:    fsubr %st(1), %st
+; X86-X87-NEXT:    fnstcw (%esp)
+; X86-X87-NEXT:    movzwl (%esp), %edx
+; X86-X87-NEXT:    orl $3072, %edx # imm = 0xC00
+; X86-X87-NEXT:    movw %dx, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw (%esp)
+; X86-X87-NEXT:    movb %al, %cl
+; X86-X87-NEXT:    shll $31, %ecx
+; X86-X87-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    fucom %st(1)
+; X86-X87-NEXT:    fstp %st(1)
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    xorl %edx, %edx
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %esi
+; X86-X87-NEXT:    jb .LBB46_4
+; X86-X87-NEXT:  # %bb.3:
+; X86-X87-NEXT:    movl %ecx, %esi
+; X86-X87-NEXT:  .LBB46_4:
+; X86-X87-NEXT:    jb .LBB46_6
+; X86-X87-NEXT:  # %bb.5:
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-X87-NEXT:  .LBB46_6:
+; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucompp
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $-1, %eax
+; X86-X87-NEXT:    ja .LBB46_8
+; X86-X87-NEXT:  # %bb.7:
+; X86-X87-NEXT:    movl %edx, %eax
+; X86-X87-NEXT:  .LBB46_8:
+; X86-X87-NEXT:    movl $262143, %edx # imm = 0x3FFFF
+; X86-X87-NEXT:    ja .LBB46_10
+; X86-X87-NEXT:  # %bb.9:
+; X86-X87-NEXT:    movl %esi, %edx
+; X86-X87-NEXT:  .LBB46_10:
+; X86-X87-NEXT:    addl $16, %esp
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    retl
+;
+; X86-SSE-LABEL: test_unsigned_i50_bf16:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pushl %esi
+; X86-SSE-NEXT:    subl $16, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    shll $16, %eax
+; X86-SSE-NEXT:    movd %eax, %xmm0
+; X86-SSE-NEXT:    movss {{.*#+}} xmm2 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
+; X86-SSE-NEXT:    ucomiss %xmm2, %xmm0
+; X86-SSE-NEXT:    xorps %xmm1, %xmm1
+; X86-SSE-NEXT:    jae .LBB46_2
+; X86-SSE-NEXT:  # %bb.1:
+; X86-SSE-NEXT:    xorps %xmm2, %xmm2
+; X86-SSE-NEXT:  .LBB46_2:
+; X86-SSE-NEXT:    movaps %xmm0, %xmm3
+; X86-SSE-NEXT:    subss %xmm2, %xmm3
+; X86-SSE-NEXT:    movss %xmm3, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    setae %cl
+; X86-SSE-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-SSE-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    xorl %eax, %eax
+; X86-SSE-NEXT:    ucomiss %xmm1, %xmm0
+; X86-SSE-NEXT:    movl $0, %esi
+; X86-SSE-NEXT:    jb .LBB46_4
+; X86-SSE-NEXT:  # %bb.3:
+; X86-SSE-NEXT:    movzbl %cl, %eax
+; X86-SSE-NEXT:    shll $31, %eax
+; X86-SSE-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-NEXT:  .LBB46_4:
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $262143, %edx # imm = 0x3FFFF
+; X86-SSE-NEXT:    cmovbel %eax, %edx
+; X86-SSE-NEXT:    movl $-1, %eax
+; X86-SSE-NEXT:    cmovbel %esi, %eax
+; X86-SSE-NEXT:    addl $16, %esp
+; X86-SSE-NEXT:    popl %esi
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: test_unsigned_i50_bf16:
+; X64:       # %bb.0:
+; X64-NEXT:    pslld $16, %xmm0
+; X64-NEXT:    cvttss2si %xmm0, %rax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    ucomiss %xmm1, %xmm0
+; X64-NEXT:    cmovaeq %rax, %rcx
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movabsq $1125899906842623, %rax # imm = 0x3FFFFFFFFFFFF
+; X64-NEXT:    cmovbeq %rcx, %rax
+; X64-NEXT:    retq
+;
+; AVX512-DQ-LABEL: test_unsigned_i50_bf16:
+; AVX512-DQ:       # %bb.0:
+; AVX512-DQ-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-DQ-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vcvttps2uqq %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vpminuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; AVX512-DQ-NEXT:    vmovq %xmm0, %rax
+; AVX512-DQ-NEXT:    retq
+;
+; AVX512-FP16-NODQ-LABEL: test_unsigned_i50_bf16:
+; AVX512-FP16-NODQ:       # %bb.0:
+; AVX512-FP16-NODQ-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-FP16-NODQ-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512-FP16-NODQ-NEXT:    xorl %ecx, %ecx
+; AVX512-FP16-NODQ-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-FP16-NODQ-NEXT:    vucomiss %xmm1, %xmm0
+; AVX512-FP16-NODQ-NEXT:    cmovaeq %rax, %rcx
+; AVX512-FP16-NODQ-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX512-FP16-NODQ-NEXT:    movabsq $1125899906842623, %rax # imm = 0x3FFFFFFFFFFFF
+; AVX512-FP16-NODQ-NEXT:    cmovbeq %rcx, %rax
+; AVX512-FP16-NODQ-NEXT:    retq
+    %x = call i50 @llvm.fptoui.sat.i50.bf16(bfloat %f)
+    ret i50 %x
+}
+
+define i64 @test_unsigned_i64_bf16(bfloat %f) nounwind {
+; X86-X87-LABEL: test_unsigned_i64_bf16:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    subl $20, %esp
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucom %st(1)
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    xorl %ecx, %ecx
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    setae %al
+; X86-X87-NEXT:    fldz
+; X86-X87-NEXT:    jae .LBB47_2
+; X86-X87-NEXT:  # %bb.1:
+; X86-X87-NEXT:    fstp %st(2)
+; X86-X87-NEXT:    fld %st(1)
+; X86-X87-NEXT:    fxch %st(2)
+; X86-X87-NEXT:  .LBB47_2:
+; X86-X87-NEXT:    fxch %st(2)
+; X86-X87-NEXT:    fsubr %st(1), %st
+; X86-X87-NEXT:    fnstcw (%esp)
+; X86-X87-NEXT:    movzwl (%esp), %edx
+; X86-X87-NEXT:    orl $3072, %edx # imm = 0xC00
+; X86-X87-NEXT:    movw %dx, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldcw (%esp)
+; X86-X87-NEXT:    movb %al, %cl
+; X86-X87-NEXT:    shll $31, %ecx
+; X86-X87-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    fucom %st(1)
+; X86-X87-NEXT:    fstp %st(1)
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    xorl %esi, %esi
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %edi
+; X86-X87-NEXT:    jb .LBB47_4
+; X86-X87-NEXT:  # %bb.3:
+; X86-X87-NEXT:    movl %ecx, %edi
+; X86-X87-NEXT:  .LBB47_4:
+; X86-X87-NEXT:    jb .LBB47_6
+; X86-X87-NEXT:  # %bb.5:
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-X87-NEXT:  .LBB47_6:
+; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fucompp
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $-1, %eax
+; X86-X87-NEXT:    movl $-1, %edx
+; X86-X87-NEXT:    ja .LBB47_8
+; X86-X87-NEXT:  # %bb.7:
+; X86-X87-NEXT:    movl %esi, %eax
+; X86-X87-NEXT:    movl %edi, %edx
+; X86-X87-NEXT:  .LBB47_8:
+; X86-X87-NEXT:    addl $20, %esp
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    popl %edi
+; X86-X87-NEXT:    retl
+;
+; X86-SSE-LABEL: test_unsigned_i64_bf16:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    subl $20, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    shll $16, %eax
+; X86-SSE-NEXT:    movd %eax, %xmm0
+; X86-SSE-NEXT:    movss {{.*#+}} xmm2 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
+; X86-SSE-NEXT:    ucomiss %xmm2, %xmm0
+; X86-SSE-NEXT:    xorps %xmm1, %xmm1
+; X86-SSE-NEXT:    jae .LBB47_2
+; X86-SSE-NEXT:  # %bb.1:
+; X86-SSE-NEXT:    xorps %xmm2, %xmm2
+; X86-SSE-NEXT:  .LBB47_2:
+; X86-SSE-NEXT:    movaps %xmm0, %xmm3
+; X86-SSE-NEXT:    subss %xmm2, %xmm3
+; X86-SSE-NEXT:    movss %xmm3, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    setae %cl
+; X86-SSE-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-SSE-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    xorl %edx, %edx
+; X86-SSE-NEXT:    ucomiss %xmm1, %xmm0
+; X86-SSE-NEXT:    movl $0, %eax
+; X86-SSE-NEXT:    jb .LBB47_4
+; X86-SSE-NEXT:  # %bb.3:
+; X86-SSE-NEXT:    movzbl %cl, %edx
+; X86-SSE-NEXT:    shll $31, %edx
+; X86-SSE-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:  .LBB47_4:
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $-1, %ecx
+; X86-SSE-NEXT:    cmoval %ecx, %edx
+; X86-SSE-NEXT:    cmoval %ecx, %eax
+; X86-SSE-NEXT:    addl $20, %esp
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: test_unsigned_i64_bf16:
+; X64:       # %bb.0:
+; X64-NEXT:    pslld $16, %xmm0
+; X64-NEXT:    cvttss2si %xmm0, %rax
+; X64-NEXT:    movq %rax, %rcx
+; X64-NEXT:    sarq $63, %rcx
+; X64-NEXT:    movaps %xmm0, %xmm1
+; X64-NEXT:    subss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %rdx
+; X64-NEXT:    andq %rcx, %rdx
+; X64-NEXT:    orq %rax, %rdx
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    xorps %xmm1, %xmm1
+; X64-NEXT:    ucomiss %xmm1, %xmm0
+; X64-NEXT:    cmovaeq %rdx, %rcx
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movq $-1, %rax
+; X64-NEXT:    cmovbeq %rcx, %rax
+; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i64_bf16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vcvttss2usi %xmm0, %rax
+; AVX512-NEXT:    retq
+    %x = call i64 @llvm.fptoui.sat.i64.bf16(bfloat %f)
+    ret i64 %x
+}
+
+define i100 @test_unsigned_i100_bf16(bfloat %f) nounwind {
+; X86-X87-LABEL: test_unsigned_i100_bf16:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    subl $60, %esp
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    movl %ecx, (%esp)
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fsts {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldz
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fsts {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-X87-NEXT:    fucompp
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    movl %eax, %ebx
+; X86-X87-NEXT:    calll __fixunssfti
+; X86-X87-NEXT:    subl $4, %esp
+; X86-X87-NEXT:    xorl %edi, %edi
+; X86-X87-NEXT:    movb %bh, %ah
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %eax
+; X86-X87-NEXT:    jb .LBB48_2
+; X86-X87-NEXT:  # %bb.1:
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:  .LBB48_2:
+; X86-X87-NEXT:    movl $0, %esi
+; X86-X87-NEXT:    movl $0, %ebx
+; X86-X87-NEXT:    jb .LBB48_4
+; X86-X87-NEXT:  # %bb.3:
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-X87-NEXT:  .LBB48_4:
+; X86-X87-NEXT:    jb .LBB48_6
+; X86-X87-NEXT:  # %bb.5:
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-X87-NEXT:  .LBB48_6:
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-X87-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-X87-NEXT:    fucompp
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $15, %eax
+; X86-X87-NEXT:    ja .LBB48_8
+; X86-X87-NEXT:  # %bb.7:
+; X86-X87-NEXT:    movl %edi, %eax
+; X86-X87-NEXT:  .LBB48_8:
+; X86-X87-NEXT:    movl $-1, %edi
+; X86-X87-NEXT:    movl $-1, %ebp
+; X86-X87-NEXT:    movl $-1, %edx
+; X86-X87-NEXT:    ja .LBB48_10
+; X86-X87-NEXT:  # %bb.9:
+; X86-X87-NEXT:    movl %ebx, %edi
+; X86-X87-NEXT:    movl %esi, %ebp
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; X86-X87-NEXT:  .LBB48_10:
+; X86-X87-NEXT:    movl %edx, 8(%ecx)
+; X86-X87-NEXT:    movl %ebp, 4(%ecx)
+; X86-X87-NEXT:    movl %edi, (%ecx)
+; X86-X87-NEXT:    andl $15, %eax
+; X86-X87-NEXT:    movb %al, 12(%ecx)
+; X86-X87-NEXT:    movl %ecx, %eax
+; X86-X87-NEXT:    addl $60, %esp
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    popl %edi
+; X86-X87-NEXT:    popl %ebx
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl $4
+;
+; X86-SSE-LABEL: test_unsigned_i100_bf16:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pushl %ebx
+; X86-SSE-NEXT:    pushl %edi
+; X86-SSE-NEXT:    pushl %esi
+; X86-SSE-NEXT:    subl $16, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-NEXT:    subl $8, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE-NEXT:    shll $16, %edi
+; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    pushl %edi
+; X86-SSE-NEXT:    pushl %eax
+; X86-SSE-NEXT:    calll __fixunssfti
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    movd %edi, %xmm0
+; X86-SSE-NEXT:    xorl %eax, %eax
+; X86-SSE-NEXT:    xorps %xmm1, %xmm1
+; X86-SSE-NEXT:    ucomiss %xmm1, %xmm0
+; X86-SSE-NEXT:    movl $0, %ecx
+; X86-SSE-NEXT:    movl $0, %edx
+; X86-SSE-NEXT:    movl $0, %edi
+; X86-SSE-NEXT:    jb .LBB48_2
+; X86-SSE-NEXT:  # %bb.1:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movl (%esp), %edx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE-NEXT:  .LBB48_2:
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $15, %ebx
+; X86-SSE-NEXT:    cmovbel %edi, %ebx
+; X86-SSE-NEXT:    movl $-1, %edi
+; X86-SSE-NEXT:    cmoval %edi, %edx
+; X86-SSE-NEXT:    cmoval %edi, %ecx
+; X86-SSE-NEXT:    cmoval %edi, %eax
+; X86-SSE-NEXT:    movl %eax, 8(%esi)
+; X86-SSE-NEXT:    movl %ecx, 4(%esi)
+; X86-SSE-NEXT:    movl %edx, (%esi)
+; X86-SSE-NEXT:    andl $15, %ebx
+; X86-SSE-NEXT:    movb %bl, 12(%esi)
+; X86-SSE-NEXT:    movl %esi, %eax
+; X86-SSE-NEXT:    addl $16, %esp
+; X86-SSE-NEXT:    popl %esi
+; X86-SSE-NEXT:    popl %edi
+; X86-SSE-NEXT:    popl %ebx
+; X86-SSE-NEXT:    retl $4
+;
+; X64-LABEL: test_unsigned_i100_bf16:
+; X64:       # %bb.0:
+; X64-NEXT:    subq $24, %rsp
+; X64-NEXT:    pslld $16, %xmm0
+; X64-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; X64-NEXT:    callq __fixunssfti@PLT
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    pxor %xmm0, %xmm0
+; X64-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
+; X64-NEXT:    ucomiss %xmm0, %xmm1
+; X64-NEXT:    cmovbq %rcx, %rdx
+; X64-NEXT:    cmovbq %rcx, %rax
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    movq $-1, %rcx
+; X64-NEXT:    cmovaq %rcx, %rax
+; X64-NEXT:    movabsq $68719476735, %rcx # imm = 0xFFFFFFFFF
+; X64-NEXT:    cmovaq %rcx, %rdx
+; X64-NEXT:    addq $24, %rsp
+; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i100_bf16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    subq $24, %rsp
+; AVX512-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; AVX512-NEXT:    callq __fixunssfti@PLT
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; AVX512-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512-NEXT:    cmovbq %rcx, %rdx
+; AVX512-NEXT:    cmovbq %rcx, %rax
+; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX512-NEXT:    movq $-1, %rcx
+; AVX512-NEXT:    cmovaq %rcx, %rax
+; AVX512-NEXT:    movabsq $68719476735, %rcx # imm = 0xFFFFFFFFF
+; AVX512-NEXT:    cmovaq %rcx, %rdx
+; AVX512-NEXT:    addq $24, %rsp
+; AVX512-NEXT:    retq
+    %x = call i100 @llvm.fptoui.sat.i100.bf16(bfloat %f)
+    ret i100 %x
+}
+
+define i128 @test_unsigned_i128_bf16(bfloat %f) nounwind {
+; X86-X87-LABEL: test_unsigned_i128_bf16:
+; X86-X87:       # %bb.0:
+; X86-X87-NEXT:    pushl %ebp
+; X86-X87-NEXT:    pushl %ebx
+; X86-X87-NEXT:    pushl %edi
+; X86-X87-NEXT:    pushl %esi
+; X86-X87-NEXT:    subl $60, %esp
+; X86-X87-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    movl %ecx, (%esp)
+; X86-X87-NEXT:    shll $16, %eax
+; X86-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fsts {{[0-9]+}}(%esp)
+; X86-X87-NEXT:    fldz
+; X86-X87-NEXT:    fxch %st(1)
+; X86-X87-NEXT:    fsts {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-X87-NEXT:    fucompp
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    movl %eax, %ebx
+; X86-X87-NEXT:    calll __fixunssfti
+; X86-X87-NEXT:    subl $4, %esp
+; X86-X87-NEXT:    xorl %edi, %edi
+; X86-X87-NEXT:    movb %bh, %ah
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %eax
+; X86-X87-NEXT:    jb .LBB49_2
+; X86-X87-NEXT:  # %bb.1:
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-X87-NEXT:  .LBB49_2:
+; X86-X87-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X86-X87-NEXT:    jb .LBB49_4
+; X86-X87-NEXT:  # %bb.3:
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:  .LBB49_4:
+; X86-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-X87-NEXT:    movl $0, %ebx
+; X86-X87-NEXT:    jb .LBB49_6
+; X86-X87-NEXT:  # %bb.5:
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-X87-NEXT:  .LBB49_6:
+; X86-X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X86-X87-NEXT:    flds {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X86-X87-NEXT:    fucompp
+; X86-X87-NEXT:    fnstsw %ax
+; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $-1, %eax
+; X86-X87-NEXT:    movl $-1, %ebp
+; X86-X87-NEXT:    movl $-1, %edx
+; X86-X87-NEXT:    movl $-1, %esi
+; X86-X87-NEXT:    ja .LBB49_8
+; X86-X87-NEXT:  # %bb.7:
+; X86-X87-NEXT:    movl %ebx, %eax
+; X86-X87-NEXT:    movl %edi, %ebp
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; X86-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; X86-X87-NEXT:  .LBB49_8:
+; X86-X87-NEXT:    movl %esi, 12(%ecx)
+; X86-X87-NEXT:    movl %edx, 8(%ecx)
+; X86-X87-NEXT:    movl %ebp, 4(%ecx)
+; X86-X87-NEXT:    movl %eax, (%ecx)
+; X86-X87-NEXT:    movl %ecx, %eax
+; X86-X87-NEXT:    addl $60, %esp
+; X86-X87-NEXT:    popl %esi
+; X86-X87-NEXT:    popl %edi
+; X86-X87-NEXT:    popl %ebx
+; X86-X87-NEXT:    popl %ebp
+; X86-X87-NEXT:    retl $4
+;
+; X86-SSE-LABEL: test_unsigned_i128_bf16:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pushl %ebx
+; X86-SSE-NEXT:    pushl %edi
+; X86-SSE-NEXT:    pushl %esi
+; X86-SSE-NEXT:    subl $16, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-NEXT:    subl $8, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE-NEXT:    shll $16, %edi
+; X86-SSE-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    pushl %edi
+; X86-SSE-NEXT:    pushl %eax
+; X86-SSE-NEXT:    calll __fixunssfti
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    movd %edi, %xmm0
+; X86-SSE-NEXT:    xorl %eax, %eax
+; X86-SSE-NEXT:    xorps %xmm1, %xmm1
+; X86-SSE-NEXT:    ucomiss %xmm1, %xmm0
+; X86-SSE-NEXT:    movl $0, %ecx
+; X86-SSE-NEXT:    movl $0, %edx
+; X86-SSE-NEXT:    movl $0, %edi
+; X86-SSE-NEXT:    jb .LBB49_2
+; X86-SSE-NEXT:  # %bb.1:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE-NEXT:    movl (%esp), %edi
+; X86-SSE-NEXT:  .LBB49_2:
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $-1, %ebx
+; X86-SSE-NEXT:    cmoval %ebx, %edi
+; X86-SSE-NEXT:    cmoval %ebx, %edx
+; X86-SSE-NEXT:    cmoval %ebx, %ecx
+; X86-SSE-NEXT:    cmoval %ebx, %eax
+; X86-SSE-NEXT:    movl %eax, 12(%esi)
+; X86-SSE-NEXT:    movl %ecx, 8(%esi)
+; X86-SSE-NEXT:    movl %edx, 4(%esi)
+; X86-SSE-NEXT:    movl %edi, (%esi)
+; X86-SSE-NEXT:    movl %esi, %eax
+; X86-SSE-NEXT:    addl $16, %esp
+; X86-SSE-NEXT:    popl %esi
+; X86-SSE-NEXT:    popl %edi
+; X86-SSE-NEXT:    popl %ebx
+; X86-SSE-NEXT:    retl $4
+;
+; X64-LABEL: test_unsigned_i128_bf16:
+; X64:       # %bb.0:
+; X64-NEXT:    subq $24, %rsp
+; X64-NEXT:    pslld $16, %xmm0
+; X64-NEXT:    movdqa %xmm0, (%rsp) # 16-byte Spill
+; X64-NEXT:    callq __fixunssfti@PLT
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    pxor %xmm0, %xmm0
+; X64-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
+; X64-NEXT:    ucomiss %xmm0, %xmm1
+; X64-NEXT:    cmovbq %rcx, %rdx
+; X64-NEXT:    cmovbq %rcx, %rax
+; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    movq $-1, %rcx
+; X64-NEXT:    cmovaq %rcx, %rax
+; X64-NEXT:    cmovaq %rcx, %rdx
+; X64-NEXT:    addq $24, %rsp
+; X64-NEXT:    retq
+;
+; AVX512-LABEL: test_unsigned_i128_bf16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    subq $24, %rsp
+; AVX512-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; AVX512-NEXT:    callq __fixunssfti@PLT
+; AVX512-NEXT:    xorl %ecx, %ecx
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; AVX512-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512-NEXT:    cmovbq %rcx, %rdx
+; AVX512-NEXT:    cmovbq %rcx, %rax
+; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; AVX512-NEXT:    movq $-1, %rcx
+; AVX512-NEXT:    cmovaq %rcx, %rax
+; AVX512-NEXT:    cmovaq %rcx, %rdx
+; AVX512-NEXT:    addq $24, %rsp
+; AVX512-NEXT:    retq
+    %x = call i128 @llvm.fptoui.sat.i128.bf16(bfloat %f)
     ret i128 %x
 }
