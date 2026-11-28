@@ -136,8 +136,11 @@ class MIRVocabulary {
   // We return a zero vector in such cases.
   Embedding ZeroEmbedding;
 
-  // MO_Register is handled by the register sections. Operand types without an
-  // entry, such as MO_DbgInstrRef, get a zero embedding.
+  // Operand types without a CommonOperands entry. MO_Register is handled by the
+  // register sections; the others get a zero embedding.
+  static constexpr MachineOperand::MachineOperandType ExcludedOperandTypes[] = {
+      MachineOperand::MO_Register, MachineOperand::MO_DbgInstrRef};
+
   struct CommonOperandEntry {
     MachineOperand::MachineOperandType Type;
     StringLiteral Name;
@@ -163,6 +166,10 @@ class MIRVocabulary {
       {MachineOperand::MO_Predicate, "Predicate"},
       {MachineOperand::MO_ShuffleMask, "ShuffleMask"},
       {MachineOperand::MO_LaneMask, "LaneMask"}};
+  static_assert(std::size(CommonOperands) + std::size(ExcludedOperandTypes) ==
+                    MachineOperand::MO_Last + 1,
+                "Every MachineOperandType must be in CommonOperands or "
+                "ExcludedOperandTypes");
 
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
