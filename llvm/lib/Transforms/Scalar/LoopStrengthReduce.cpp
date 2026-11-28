@@ -7280,17 +7280,16 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   if (SalvageableDVIRecords.empty())
     return Changed;
 
-  // Obtain relevant IVs and attempt to rewrite the salvageable DVIs with
-  // expressions composed using the derived iteration count.
+  // Obtain an IV of the loop just reduced and attempt to rewrite the
+  // salvageable DVIs with expressions composed using the derived iteration
+  // count. Only query this loop: SCEV queries on loops that LSR has not
+  // processed yet would make their later expansion depend on debug records.
   // TODO: Allow for multiple IV references for nested AddRecSCEVs
-  for (const auto &L : LI) {
-    if (llvm::PHINode *IV = GetInductionVariable(*L, SE, Reducer))
-      DbgRewriteSalvageableDVIs(L, SE, IV, SalvageableDVIRecords);
-    else {
-      LLVM_DEBUG(dbgs() << "scev-salvage: SCEV salvaging not possible. An IV "
-                           "could not be identified.\n");
-    }
-  }
+  if (llvm::PHINode *IV = GetInductionVariable(*L, SE, Reducer))
+    DbgRewriteSalvageableDVIs(L, SE, IV, SalvageableDVIRecords);
+  else
+    LLVM_DEBUG(dbgs() << "scev-salvage: SCEV salvaging not possible. An IV "
+                         "could not be identified.\n");
 
   for (auto &Rec : SalvageableDVIRecords)
     Rec->clear();
