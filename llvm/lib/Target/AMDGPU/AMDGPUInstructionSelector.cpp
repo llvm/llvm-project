@@ -2439,10 +2439,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectDSAppendConsume(I, false);
   case Intrinsic::amdgcn_init_whole_wave:
     return selectInitWholeWave(I);
-  // Until we can store both the address space of the global and the LDS
-  // arguments by having tto MachineMemOperands on an intrinsic, we just trust
-  // that the argument is a global pointer (buffer pointers have been handled by
-  // a LLVM IR-level lowering).
+  // Buffer sources are lowered in IR. Generic sources must point into global
+  // memory.
   case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_load_async_to_lds:
   case Intrinsic::amdgcn_global_load_lds:

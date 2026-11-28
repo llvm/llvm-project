@@ -8,7 +8,9 @@
 ;; Note: load.async.to.lds is a wrapper intrinsic around underlying operations.
 ;; This is a bare-bones test to ensure that it lowers to the correct instructions.
 
+declare void @llvm.amdgcn.load.async.to.lds.p0(ptr nocapture %gptr, ptr addrspace(3) nocapture %lptr, i32 %size, i32 %offset, i32 %aux)
 declare void @llvm.amdgcn.load.async.to.lds.p1(ptr addrspace(1) nocapture %gptr, ptr addrspace(3) nocapture %lptr, i32 %size, i32 %offset, i32 %aux)
+declare void @llvm.amdgcn.load.async.to.lds.p4(ptr addrspace(4) nocapture %gptr, ptr addrspace(3) nocapture %lptr, i32 %size, i32 %offset, i32 %aux)
 declare void @llvm.amdgcn.load.async.to.lds.p7(ptr addrspace(7) nocapture %gptr, ptr addrspace(3) nocapture %lptr, i32 %size, i32 %offset, i32 %aux)
 
 define amdgpu_ps void @global_load_async_lds_dword_vaddr_saddr(ptr addrspace(1) nocapture %gptr, ptr addrspace(3) nocapture inreg %lptr) {
@@ -113,5 +115,69 @@ define amdgpu_ps void @buffer_load_async_lds(ptr addrspace(7) nocapture inreg %g
 main_body:
   %gptr.off = getelementptr i8, ptr addrspace(7) %gptr, i32 %off
   call void @llvm.amdgcn.load.async.to.lds.p7(ptr addrspace(7) %gptr.off, ptr addrspace(3) %lptr, i32 4, i32 16, i32 1)
+  ret void
+}
+
+define amdgpu_ps void @flat_load_async_lds_dword(ptr nocapture %gptr, ptr addrspace(3) nocapture inreg %lptr) {
+; GFX90A-LABEL: flat_load_async_lds_dword:
+; GFX90A:       ; %bb.0: ; %main_body
+; GFX90A-NEXT:    s_mov_b32 m0, s0
+; GFX90A-NEXT:    s_nop 0
+; GFX90A-NEXT:    global_load_dword v[0:1], off offset:16 glc lds
+; GFX90A-NEXT:    s_endpgm
+;
+; GFX942-LABEL: flat_load_async_lds_dword:
+; GFX942:       ; %bb.0: ; %main_body
+; GFX942-NEXT:    s_mov_b32 m0, s0
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    global_load_lds_dword v[0:1], off offset:16 sc0
+; GFX942-NEXT:    s_endpgm
+;
+; GFX10-LABEL: flat_load_async_lds_dword:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    s_mov_b32 m0, s0
+; GFX10-NEXT:    global_load_dword v[0:1], off offset:16 glc lds
+; GFX10-NEXT:    s_endpgm
+;
+; GFX942-GISEL-LABEL: flat_load_async_lds_dword:
+; GFX942-GISEL:       ; %bb.0: ; %main_body
+; GFX942-GISEL-NEXT:    s_mov_b32 m0, s0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    global_load_lds_dword v[0:1], off offset:16 sc0
+; GFX942-GISEL-NEXT:    s_endpgm
+main_body:
+  call void @llvm.amdgcn.load.async.to.lds.p0(ptr %gptr, ptr addrspace(3) %lptr, i32 4, i32 16, i32 1)
+  ret void
+}
+
+define amdgpu_ps void @constant_load_async_lds_dword(ptr addrspace(4) nocapture %gptr, ptr addrspace(3) nocapture inreg %lptr) {
+; GFX90A-LABEL: constant_load_async_lds_dword:
+; GFX90A:       ; %bb.0: ; %main_body
+; GFX90A-NEXT:    s_mov_b32 m0, s0
+; GFX90A-NEXT:    s_nop 0
+; GFX90A-NEXT:    global_load_dword v[0:1], off offset:16 glc lds
+; GFX90A-NEXT:    s_endpgm
+;
+; GFX942-LABEL: constant_load_async_lds_dword:
+; GFX942:       ; %bb.0: ; %main_body
+; GFX942-NEXT:    s_mov_b32 m0, s0
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    global_load_lds_dword v[0:1], off offset:16 sc0
+; GFX942-NEXT:    s_endpgm
+;
+; GFX10-LABEL: constant_load_async_lds_dword:
+; GFX10:       ; %bb.0: ; %main_body
+; GFX10-NEXT:    s_mov_b32 m0, s0
+; GFX10-NEXT:    global_load_dword v[0:1], off offset:16 glc lds
+; GFX10-NEXT:    s_endpgm
+;
+; GFX942-GISEL-LABEL: constant_load_async_lds_dword:
+; GFX942-GISEL:       ; %bb.0: ; %main_body
+; GFX942-GISEL-NEXT:    s_mov_b32 m0, s0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    global_load_lds_dword v[0:1], off offset:16 sc0
+; GFX942-GISEL-NEXT:    s_endpgm
+main_body:
+  call void @llvm.amdgcn.load.async.to.lds.p4(ptr addrspace(4) %gptr, ptr addrspace(3) %lptr, i32 4, i32 16, i32 1)
   ret void
 }
