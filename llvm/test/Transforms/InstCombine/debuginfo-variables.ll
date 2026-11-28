@@ -107,6 +107,36 @@ define void @test_srem(i64 %A) {
   ret void
 }
 
+define void @test_udiv(i32 %A) {
+; CHECK-LABEL: @test_udiv(
+; CHECK-NEXT:  #dbg_value(i32 %A, {{.*}}, !DIExpression(DW_OP_constu, 4294967295, DW_OP_and, DW_OP_constu, 3, DW_OP_div, DW_OP_stack_value),
+  %1 = udiv i32 %A, 3
+  ret void
+}
+
+define void @test_urem(i32 %A) {
+; CHECK-LABEL: @test_urem(
+; CHECK-NEXT:  #dbg_value(i32 %A, {{.*}}, !DIExpression(DW_OP_constu, 4294967295, DW_OP_and, DW_OP_constu, 4294967293, DW_OP_mod, DW_OP_stack_value),
+  %1 = urem i32 %A, -3
+  ret void
+}
+
+define void @test_udiv_var(i16 %A, i16 %B) {
+; CHECK-LABEL: @test_udiv_var(
+; CHECK-NEXT:  #dbg_value(!DIArgList(i16 %A, i16 %B), {{.*}}, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 65535, DW_OP_and, DW_OP_LLVM_arg, 1, DW_OP_constu, 65535, DW_OP_and, DW_OP_div, DW_OP_stack_value),
+  %1 = udiv i16 %A, %B
+  ret void
+}
+
+; Unsigned division of address-sized values cannot be expressed with the
+; signed DW_OP_div.
+define void @test_udiv_i64(i64 %A) {
+; CHECK-LABEL: @test_udiv_i64(
+; CHECK-NEXT:  #dbg_value(i64 poison, {{.*}}, !DIExpression(),
+  %1 = udiv i64 %A, 3
+  ret void
+}
+
 define void @test_ptrtoint(ptr %P) {
 ; CHECK-LABEL: @test_ptrtoint
 ; CHECK-NEXT:  #dbg_value(ptr %P, {{.*}}, !DIExpression(),

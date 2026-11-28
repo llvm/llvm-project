@@ -2262,7 +2262,8 @@ static void handleSSAValueOperands(uint64_t CurrentLocOps,
   AdditionalValues.push_back(I->getOperand(1));
 }
 
-Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
+Value *getSalvageOpsForBinOp(BinaryOperator *BI, const DataLayout &DL,
+                             uint64_t CurrentLocOps,
                              SmallVectorImpl<uint64_t> &Opcodes,
                              SmallVectorImpl<Value *> &AdditionalValues) {
   // Handle binary operations with constant integer operands as a special case.
@@ -2272,6 +2273,30 @@ Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
     return nullptr;
 
   Instruction::BinaryOps BinOpcode = BI->getOpcode();
+  // DWARF division is signed on the address-sized generic type, so unsigned
+  // division is only exact for narrower operands masked to be non-negative.
+  if (BinOpcode == Instruction::UDiv || BinOpcode == Instruction::URem) {
+    unsigned BitWidth = BI->getType()->getScalarSizeInBits();
+    if (BI->getType()->isVectorTy() || BitWidth >= DL.getPointerSizeInBits())
+      return nullptr;
+    uint64_t Mask = maskTrailingOnes<uint64_t>(BitWidth);
+    uint64_t DwarfOp =
+        BinOpcode == Instruction::UDiv ? dwarf::DW_OP_div : dwarf::DW_OP_mod;
+    if (ConstInt) {
+      Opcodes.append({dwarf::DW_OP_constu, Mask, dwarf::DW_OP_and,
+                      dwarf::DW_OP_constu, ConstInt->getZExtValue(), DwarfOp});
+      return BI->getOperand(0);
+    }
+    if (!CurrentLocOps) {
+      Opcodes.append({dwarf::DW_OP_LLVM_arg, 0});
+      CurrentLocOps = 1;
+    }
+    Opcodes.append({dwarf::DW_OP_constu, Mask, dwarf::DW_OP_and,
+                    dwarf::DW_OP_LLVM_arg, CurrentLocOps, dwarf::DW_OP_constu,
+                    Mask, dwarf::DW_OP_and, DwarfOp});
+    AdditionalValues.push_back(BI->getOperand(1));
+    return BI->getOperand(0);
+  }
   // Push any Constant Int operand onto the expression stack.
   if (ConstInt) {
     uint64_t Val = ConstInt->getSExtValue();
@@ -2388,7 +2413,7 @@ Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
   if (auto *GEP = dyn_cast<GetElementPtrInst>(&I))
     return getSalvageOpsForGEP(GEP, DL, CurrentLocOps, Ops, AdditionalValues);
   if (auto *BI = dyn_cast<BinaryOperator>(&I))
-    return getSalvageOpsForBinOp(BI, CurrentLocOps, Ops, AdditionalValues);
+    return getSalvageOpsForBinOp(BI, DL, CurrentLocOps, Ops, AdditionalValues);
   if (auto *IC = dyn_cast<ICmpInst>(&I))
     return getSalvageOpsForIcmpOp(IC, CurrentLocOps, Ops, AdditionalValues);
 
