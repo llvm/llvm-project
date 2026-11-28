@@ -74,7 +74,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 int __constexpr_memcmp(const _Tp* __lhs, const _Up
 
   if (__libcpp_is_constant_evaluated()) {
 #ifdef _LIBCPP_COMPILER_CLANG_BASED
-    if (sizeof(_Tp) == 1 && !is_same<_Tp, bool>::value)
+    if (sizeof(_Tp) == 1 && !is_same<_Tp, bool>::value && !__is_std_byte_v<_Tp>)
       return __builtin_memcmp(__lhs, __rhs, __count * sizeof(_Tp));
 #endif
 

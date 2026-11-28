@@ -40,6 +40,9 @@ struct __greater_tag {};
 // additional semantic requirements on that operation.
 struct __totally_ordered_less_tag {};
 
+// syntactically, the operation is equivalent to calling `a <=> b`, and `a <=> b == 0` is equivalent to `a == b`
+struct __compare_three_way_tag {};
+
 // This class template is used to determine whether an operation "desugars"
 // (or boils down) to a given canonical operation.
 //
