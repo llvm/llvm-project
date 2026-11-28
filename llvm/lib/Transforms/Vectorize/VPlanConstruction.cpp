@@ -1593,31 +1593,24 @@ static VPValue *createRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
                                     ArrayRef<RuntimePointerCheck> Checks,
                                     const Loop *TheLoop, ScalarEvolution &SE,
                                     DebugLoc DL) {
-  // Expand each group's bounds once so all checks reuse the same frozen values.
-  SmallDenseMap<const RuntimeCheckingPtrGroup *,
-                std::tuple<VPValue *, VPValue *, const SCEV *>, 8>
-      GroupToBounds;
-  for (const auto &[A, B] : Checks) {
-    for (const RuntimeCheckingPtrGroup *CG : {A, B}) {
-      if (GroupToBounds.contains(CG))
-        continue;
-      auto [Low, High, Stride] = getRuntimeCheckBounds(
-          CG, TheLoop, SE, VectorizerParams::HoistRuntimeChecks);
-      VPValue *Start = Expander.expand(Low);
-      VPValue *End = Expander.expand(High);
-      if (CG->NeedsFreeze) {
-        Start = Builder.createFreeze(Start, DL);
-        End = Builder.createFreeze(End, DL);
-      }
-      GroupToBounds[CG] = {Start, End, Stride};
+  auto ExpandBounds = [&](const RuntimeCheckingPtrGroup *CG,
+                          const RuntimeCheckGroupBounds &Bounds) {
+    VPValue *Start = Expander.expand(Bounds.Low);
+    VPValue *End = Expander.expand(Bounds.High);
+    if (CG->NeedsFreeze) {
+      Start = Builder.createFreeze(Start, DL);
+      End = Builder.createFreeze(End, DL);
     }
-  }
+    return std::make_pair(Start, End);
+  };
 
   VPValue *Cond = Plan.getFalse();
   SmallPtrSet<const SCEV *, 4> CheckedStrides;
-  for (const auto &[A, B] : Checks) {
-    auto [AStart, AEnd, AStride] = GroupToBounds[A];
-    auto [BStart, BEnd, BStride] = GroupToBounds[B];
+  for (const RuntimePointerCheck &Check : Checks) {
+    auto [ABounds, BBounds] = getRuntimeCheckBounds(
+        Check, TheLoop, SE, VectorizerParams::HoistRuntimeChecks);
+    auto [AStart, AEnd] = ExpandBounds(Check.first, ABounds);
+    auto [BStart, BEnd] = ExpandBounds(Check.second, BBounds);
     // Compare B's bounds in A's address space, see addRuntimeChecks.
     Type *PtrTy = AStart->getScalarType();
     if (BStart->getScalarType() != PtrTy) {
@@ -1632,7 +1625,7 @@ static VPValue *createRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
         Builder.createICmp(CmpInst::ICMP_ULT, BStart, AEnd, DL, "bound1");
     VPValue *IsConflict =
         Builder.createAnd(Bound0, Bound1, DL, "found.conflict");
-    for (const SCEV *Stride : {AStride, BStride}) {
+    for (const SCEV *Stride : {ABounds.StrideToCheck, BBounds.StrideToCheck}) {
       if (!Stride || !CheckedStrides.insert(Stride).second)
         continue;
       VPValue *StrideV = Expander.expand(Stride);

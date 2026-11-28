@@ -736,10 +736,10 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX1:       [[VECTOR_MEMCHECK]]:
 ; AVX1-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 80000
 ; AVX1-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER]], i64 40000
-; AVX1-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 80000
 ; AVX1-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
 ; AVX1-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[SCEVGEP]]
 ; AVX1-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; AVX1-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 80000
 ; AVX1-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
 ; AVX1-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; AVX1-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
@@ -799,10 +799,10 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX2:       [[VECTOR_MEMCHECK]]:
 ; AVX2-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 80000
 ; AVX2-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER]], i64 40000
-; AVX2-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 80000
 ; AVX2-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
 ; AVX2-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[SCEVGEP]]
 ; AVX2-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; AVX2-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 80000
 ; AVX2-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
 ; AVX2-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; AVX2-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
@@ -862,10 +862,10 @@ define void @foo3(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512:       [[VECTOR_MEMCHECK]]:
 ; AVX512-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 80000
 ; AVX512-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER]], i64 40000
-; AVX512-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 80000
 ; AVX512-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
 ; AVX512-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[SCEVGEP]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; AVX512-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 80000
 ; AVX512-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
 ; AVX512-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
@@ -1014,10 +1014,10 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; AVX512:       [[VECTOR_MEMCHECK]]:
 ; AVX512-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 79880
 ; AVX512-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER]], i64 39940
-; AVX512-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 159752
 ; AVX512-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
 ; AVX512-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[SCEVGEP]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; AVX512-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 159752
 ; AVX512-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
 ; AVX512-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
@@ -1096,10 +1096,10 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX1:       [[VECTOR_MEMCHECK]]:
 ; AVX1-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[OUT]], i64 32768
 ; AVX1-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER]], i64 16384
-; AVX1-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[IN]], i64 32768
 ; AVX1-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[OUT]], [[SCEVGEP1]]
 ; AVX1-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[SCEVGEP]]
 ; AVX1-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; AVX1-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[IN]], i64 32768
 ; AVX1-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[OUT]], [[SCEVGEP2]]
 ; AVX1-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[IN]], [[SCEVGEP]]
 ; AVX1-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
@@ -1167,10 +1167,10 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX2:       [[VECTOR_MEMCHECK]]:
 ; AVX2-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[OUT]], i64 32768
 ; AVX2-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER]], i64 16384
-; AVX2-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[IN]], i64 32768
 ; AVX2-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[OUT]], [[SCEVGEP1]]
 ; AVX2-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[SCEVGEP]]
 ; AVX2-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; AVX2-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[IN]], i64 32768
 ; AVX2-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[OUT]], [[SCEVGEP2]]
 ; AVX2-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[IN]], [[SCEVGEP]]
 ; AVX2-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
@@ -1238,10 +1238,10 @@ define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr
 ; AVX512:       [[VECTOR_MEMCHECK]]:
 ; AVX512-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[OUT]], i64 32768
 ; AVX512-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER]], i64 16384
-; AVX512-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[IN]], i64 32768
 ; AVX512-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[OUT]], [[SCEVGEP1]]
 ; AVX512-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[SCEVGEP]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; AVX512-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[IN]], i64 32768
 ; AVX512-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[OUT]], [[SCEVGEP2]]
 ; AVX512-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[IN]], [[SCEVGEP]]
 ; AVX512-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
