@@ -281,6 +281,7 @@ static bool FaultMapSection;
 static bool FileHeaders;
 bool objdump::SectionContents;
 static std::vector<std::string> InputFilenames;
+static std::optional<StringRef> BTFSection;
 bool objdump::PrintLines;
 static bool MachOOpt;
 std::string objdump::MCPU;
@@ -3522,6 +3523,186 @@ static void checkForInvalidStartStopAddress(ObjectFile *Obj, uint64_t Start,
                   Obj->getFileName());
 }
 
+static void dumpBTF(ObjectFile &Obj, StringRef SectionName) {
+  if (!Obj.isELF()) {
+    reportWarning("--btf is only supported for ELF files", Obj.getFileName());
+    return;
+  }
+  std::optional<SectionRef> Selected;
+  for (SectionRef Sec : ToolSectionFilter(Obj)) {
+    Expected<StringRef> Name = Sec.getName();
+    if (!Name) {
+      reportWarning(toString(Name.takeError()), Obj.getFileName());
+      return;
+    }
+    if (*Name == SectionName)
+      Selected = Sec;
+  }
+  if (Selected) {
+    SectionRef Sec = *Selected;
+    Expected<StringRef> Contents = Sec.getContents();
+    if (!Contents) {
+      reportWarning("error while reading BTF section '" + SectionName +
+                        "': " + toString(Contents.takeError()),
+                    Obj.getFileName());
+      return;
+    }
+    BTFParser Parser;
+    if (Error E = Parser.parseTypes(*Contents, Obj.isLittleEndian())) {
+      reportWarning("error while reading BTF section '" + SectionName +
+                        "': " + toString(std::move(E)),
+                    Obj.getFileName());
+      return;
+    }
+    auto NameOf = [&](uint32_t Offset) -> StringRef {
+      return Offset ? Parser.findString(Offset) : "(anon)";
+    };
+    auto Linkage = [](uint32_t Value) -> StringRef {
+      switch (Value) {
+      case 0:
+        return "static";
+      case 1:
+        return "global";
+      case 2:
+        return "extern";
+      default:
+        return "(unknown)";
+      }
+    };
+    raw_ostream &OS = outs();
+    auto KindName = [&](const BTF::CommonType *T) {
+      // bpftool spells the void kind UNKNOWN, unlike the UNKN INT encoding.
+      if (T->getKind() == BTF::BTF_KIND_UNKN)
+        return StringRef("UNKNOWN");
+      StringRef Kind;
+      switch (T->getKind()) {
+#define HANDLE_BTF_KIND(ID, NAME)                                              \
+  case BTF::BTF_KIND_##NAME:                                                   \
+    Kind = #NAME;                                                              \
+    break;
+#include "llvm/DebugInfo/BTF/BTF.def"
+      }
+      return Kind;
+    };
+    for (uint32_t Id = 1; Id < Parser.typesCount(); ++Id) {
+      const BTF::CommonType *T = Parser.findType(Id);
+      const uint32_t *Tail = reinterpret_cast<const uint32_t *>(T + 1);
+      OS << '[' << Id << "] " << KindName(T) << " '" << NameOf(T->NameOff)
+         << "'";
+      switch (T->getKind()) {
+      case BTF::BTF_KIND_INT: {
+        unsigned Encoding = (Tail[0] >> 24) & 15;
+        OS << " size=" << T->Size << " bits_offset=" << ((Tail[0] >> 16) & 255)
+           << " nr_bits=" << (Tail[0] & 255) << " encoding=";
+        switch (Encoding) {
+        case 0:
+          OS << "(none)";
+          break;
+        case BTF::INT_SIGNED:
+          OS << "SIGNED";
+          break;
+        case BTF::INT_CHAR:
+          OS << "CHAR";
+          break;
+        case BTF::INT_BOOL:
+          OS << "BOOL";
+          break;
+        default:
+          OS << "UNKN";
+          break;
+        }
+        break;
+      }
+      case BTF::BTF_KIND_ARRAY: {
+        const auto &A = cast<BTF::ArrayType>(T)->getArray();
+        OS << " type_id=" << A.ElemType << " index_type_id=" << A.IndexType
+           << " nr_elems=" << A.Nelems;
+        break;
+      }
+      case BTF::BTF_KIND_STRUCT:
+      case BTF::BTF_KIND_UNION:
+        OS << " size=" << T->Size << " vlen=" << T->getVlen() << '\n';
+        for (const auto &M : cast<BTF::StructType>(T)->members()) {
+          OS << "\t'" << NameOf(M.NameOff) << "' type_id=" << M.Type
+             << " bits_offset="
+             << ((T->Info >> 31) ? M.Offset & 0xffffff : M.Offset);
+          if ((T->Info >> 31) && (M.Offset >> 24))
+            OS << " bitfield_size=" << (M.Offset >> 24);
+          OS << '\n';
+        }
+        continue;
+      case BTF::BTF_KIND_ENUM:
+      case BTF::BTF_KIND_ENUM64: {
+        bool Signed = T->Info & BTF::ENUM_SIGNED_FLAG;
+        OS << " encoding=" << (Signed ? "SIGNED" : "UNSIGNED")
+           << " size=" << T->Size << " vlen=" << T->getVlen() << '\n';
+        if (T->getKind() == BTF::BTF_KIND_ENUM) {
+          for (const auto &E : cast<BTF::EnumType>(T)->values()) {
+            OS << "\t'" << NameOf(E.NameOff) << "' val=";
+            if (Signed)
+              OS << E.Val;
+            else
+              OS << uint32_t(E.Val);
+            OS << '\n';
+          }
+        } else {
+          for (const auto &E : cast<BTF::Enum64Type>(T)->values()) {
+            uint64_t V = uint64_t(E.Val_Hi32) << 32 | E.Val_Lo32;
+            OS << "\t'" << NameOf(E.NameOff) << "' val=";
+            if (Signed)
+              OS << int64_t(V) << "LL";
+            else
+              OS << V << "ULL";
+            OS << '\n';
+          }
+        }
+        continue;
+      }
+      case BTF::BTF_KIND_FWD:
+        OS << " fwd_kind="
+           << ((T->Info & BTF::FWD_UNION_FLAG) ? "union" : "struct");
+        break;
+      case BTF::BTF_KIND_FUNC:
+        OS << " type_id=" << T->Type << " linkage=" << Linkage(T->getVlen());
+        break;
+      case BTF::BTF_KIND_FUNC_PROTO:
+        OS << " ret_type_id=" << T->Type << " vlen=" << T->getVlen() << '\n';
+        for (const auto &P : cast<BTF::FuncProtoType>(T)->params())
+          OS << "\t'" << NameOf(P.NameOff) << "' type_id=" << P.Type << '\n';
+        continue;
+      case BTF::BTF_KIND_VAR:
+        OS << " type_id=" << T->Type << ", linkage=" << Linkage(Tail[0]);
+        break;
+      case BTF::BTF_KIND_DATASEC:
+        OS << " size=" << T->Size << " vlen=" << T->getVlen() << '\n';
+        for (const auto &Var : cast<BTF::DataSecType>(T)->variables()) {
+          uint32_t TypeId = Var.Type;
+          OS << "\ttype_id=" << TypeId << " offset=" << Var.Offset
+             << " size=" << Var.Size;
+          if (const auto *V = Parser.findType(TypeId))
+            OS << " (" << KindName(V) << " '" << NameOf(V->NameOff) << "')";
+          OS << '\n';
+        }
+        continue;
+      case BTF::BTF_KIND_FLOAT:
+        OS << " size=" << T->Size;
+        break;
+      case BTF::BTF_KIND_DECL_TAG:
+        OS << " type_id=" << T->Type << " component_idx=" << int32_t(Tail[0]);
+        break;
+      default:
+        OS << " type_id=" << T->Type;
+        break;
+      }
+      OS << '\n';
+    }
+    return;
+  }
+  // With -j, the shared section bookkeeping reports missing sections.
+  if (FilterSections.empty())
+    reportWarning("section '" + SectionName + "' not found", Obj.getFileName());
+}
+
 static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
                        const Archive::Child *C = nullptr) {
   Expected<std::unique_ptr<Dumper>> DumperOrErr = createDumper(*O);
@@ -3558,6 +3739,8 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
     D.printPrivateHeaders();
   if (SectionHeaders)
     printSectionHeaders(*O);
+  if (BTFSection)
+    dumpBTF(*O, *BTFSection);
   if (SymbolTable)
     D.printSymbolTable(ArchiveName);
   if (DynamicSymbolTable)
@@ -3617,6 +3800,8 @@ static void dumpObject(const COFFImportFile *I, const Archive *A,
     printArchiveChild(ArchiveName, *C);
   if (SymbolTable)
     printCOFFSymbolTable(*I);
+  if (BTFSection)
+    reportWarning("--btf is only supported for ELF files", I->getFileName());
 }
 
 /// Dump each object file in \a a;
@@ -3663,10 +3848,16 @@ static void dumpInput(StringRef file) {
     dumpObject(O);
   } else if (MachOUniversalBinary *UB =
                  dyn_cast<MachOUniversalBinary>(&Binary)) {
+    if (BTFSection)
+      reportWarning("--btf is only supported for ELF files", file);
     parseInputMachO(UB);
   } else if (isa<OffloadBinary>(&Binary)) {
-    std::unique_ptr<MemoryBuffer> OB = OBinary.takeBinary().second;
-    dumpOffloadSections(*OB);
+    if (BTFSection)
+      reportWarning("--btf is only supported for ELF files", file);
+    if (!BTFSection || Offloading) {
+      std::unique_ptr<MemoryBuffer> OB = OBinary.takeBinary().second;
+      dumpOffloadSections(*OB);
+    }
   } else {
     reportError(errorCodeToError(object_error::invalid_file_type), file);
   }
@@ -3848,6 +4039,11 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   Offloading = InputArgs.hasArg(OBJDUMP_offloading);
   FileHeaders = InputArgs.hasArg(OBJDUMP_file_headers);
   SectionContents = InputArgs.hasArg(OBJDUMP_full_contents);
+  if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_btf_EQ)) {
+    if (StringRef(A->getValue()).empty())
+      reportCmdLineError("--btf= requires a non-empty section name");
+    BTFSection = A->getValue();
+  }
   PrintLines = InputArgs.hasArg(OBJDUMP_line_numbers);
   InputFilenames = InputArgs.getAllArgValues(OBJDUMP_INPUT);
   MachOOpt = InputArgs.hasArg(OBJDUMP_macho);
@@ -3856,6 +4052,10 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   ShowRawInsn = !InputArgs.hasArg(OBJDUMP_no_show_raw_insn);
   LeadingAddr = !InputArgs.hasArg(OBJDUMP_no_leading_addr);
   RawClangAST = InputArgs.hasArg(OBJDUMP_raw_clang_ast);
+  if (BTFSection && MachOOpt)
+    reportCmdLineError("--btf cannot be used with --macho");
+  if (BTFSection && RawClangAST)
+    reportCmdLineError("--btf cannot be used with --raw-clang-ast");
   Relocations = InputArgs.hasArg(OBJDUMP_reloc);
   PrintImmHex =
       InputArgs.hasFlag(OBJDUMP_print_imm_hex, OBJDUMP_no_print_imm_hex, true);
@@ -4090,6 +4290,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
       DynamicRelocations || FileHeaders || PrivateHeaders || RawClangAST ||
       Relocations || SectionHeaders || SectionContents || SymbolTable ||
       DynamicSymbolTable || UnwindInfo || FaultMapSection || Offloading ||
+      BTFSection ||
       (MachOOpt &&
        (Bind || DataInCode || ChainedFixups || DyldInfo || DylibId ||
         DylibsUsed || ExportsTrie || FirstPrivateHeader ||

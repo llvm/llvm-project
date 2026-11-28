@@ -38,6 +38,10 @@ def arch_name_EQ : Joined<["--"], "arch-name=">,
 def archive_headers : Flag<["--"], "archive-headers">,
   HelpText<"Display archive header information">;
 
+def btf_EQ : Joined<["--"], "btf=">,
+  HelpText<"Display BTF types from the specified section (default .BTF)">;
+def : Flag<["--"], "btf">, Alias<btf_EQ>, AliasArgs<[".BTF"]>;
+
 defm build_id :
   Eq<"build-id", "Build ID to look up. Once found, added as an input file">,
   MetaVarName<"<hex>">;

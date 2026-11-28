@@ -349,6 +349,26 @@ struct Enum64Type final : CommonType,
   }
 };
 
+struct FuncProtoType final : CommonType,
+                             private TrailingObjects<FuncProtoType, BTFParam> {
+  friend TrailingObjects;
+  BTF_DEFINE_TAIL_ARR(BTFParam, params)
+
+  static bool classof(const CommonType *V) {
+    return V->getKind() == BTF_KIND_FUNC_PROTO;
+  }
+};
+
+struct DataSecType final : CommonType,
+                           private TrailingObjects<DataSecType, BTFDataSec> {
+  friend TrailingObjects;
+  BTF_DEFINE_TAIL_ARR(BTFDataSec, variables)
+
+  static bool classof(const CommonType *V) {
+    return V->getKind() == BTF_KIND_DATASEC;
+  }
+};
+
 #undef BTF_DEFINE_TAIL
 #undef BTF_DEFINE_TAIL_ARR
 
