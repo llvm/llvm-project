@@ -15,6 +15,19 @@ func.func @affine_apply(%a: index, %b: index) -> index {
 
 // -----
 
+// Reify the exclusive bound for a multiple of 4 known to be at most 10.
+// CHECK-LABEL: func @affine_round_down_ub(
+//       CHECK:   %[[BOUND:.*]] = arith.constant 9 : index
+//       CHECK:   return %[[BOUND]]
+func.func @affine_round_down_ub(%arg: index) -> index {
+  %x = affine.min affine_map<(d0) -> (d0, 10)>(%arg)
+  %r = affine.apply affine_map<(d0) -> ((d0 floordiv 4) * 4)>(%x)
+  %ub = "test.reify_bound"(%r) {type = "UB", constant} : (index) -> (index)
+  return %ub : index
+}
+
+// -----
+
 // CHECK-LABEL: func @affine_max_lb(
 //  CHECK-SAME:     %[[a:.*]]: index
 //       CHECK:   %[[c2:.*]] = arith.constant 2 : index

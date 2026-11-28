@@ -1871,20 +1871,82 @@ IntegerRelation::computeConstantLowerOrUpperBound(unsigned pos) {
 
 std::optional<DynamicAPInt>
 IntegerRelation::getConstantBound(BoundType type, unsigned pos) const {
+  auto getBound = [&](bool isLower) -> std::optional<DynamicAPInt> {
+    IntegerRelation copy(*this);
+    std::optional<DynamicAPInt> bound =
+        isLower ? copy.computeConstantLowerOrUpperBound<true>(pos)
+                : copy.computeConstantLowerOrUpperBound<false>(pos);
+    if (!bound)
+      return std::nullopt;
+
+    if (getNumEqualities() == 0)
+      return bound;
+
+    const DynamicAPInt projectedBound = *bound;
+    // Projection can lose congruences implied by the original equalities.
+    // Follow identity equalities to include congruences on equivalent
+    // variables, such as when ValueBounds introduces an anonymous variable
+    // equal to the SSA value whose bound is requested.
+    llvm::SmallBitVector seenVars(getNumVars()), seenRows(getNumEqualities());
+    SmallVector<unsigned> worklist{pos};
+    seenVars.set(pos);
+    while (!worklist.empty()) {
+      unsigned var = worklist.pop_back_val();
+      for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
+        ArrayRef<DynamicAPInt> eq = getEquality(i);
+        if (seenRows.test(i) || (eq[var] != 1 && eq[var] != -1))
+          continue;
+        // Any further unit coefficient in this row would have gcd 1 with
+        // this coefficient, so it cannot give another congruence.
+        seenRows.set(i);
+
+        DynamicAPInt modulus(0);
+        std::optional<unsigned> equivalentVar;
+        for (auto [col, coeff] : llvm::enumerate(eq.drop_back())) {
+          if (col == var || coeff == 0)
+            continue;
+          if (modulus == 0 && coeff == -eq[var] && eq.back() == 0) {
+            equivalentVar = col;
+            modulus = 1;
+            continue;
+          }
+          equivalentVar.reset();
+          modulus = llvm::gcd(modulus, abs(coeff));
+          if (modulus == 1)
+            break;
+        }
+        if (equivalentVar && !seenVars.test(*equivalentVar)) {
+          seenVars.set(*equivalentVar);
+          worklist.push_back(*equivalentVar);
+        }
+        if (modulus <= 1)
+          continue;
+
+        // In x * s + sum(a_i * y_i) + c = 0, if s is +/-1 then x is
+        // congruent to -s * c modulo the gcd of the other coefficients.
+        // Round the projected bound independently for each congruence.
+        DynamicAPInt residue = -eq[var] * eq.back();
+        if (isLower)
+          *bound = std::max(*bound,
+                            projectedBound +
+                                llvm::mod(residue - projectedBound, modulus));
+        else
+          *bound = std::min(*bound,
+                            projectedBound -
+                                llvm::mod(projectedBound - residue, modulus));
+      }
+    }
+    return bound;
+  };
+
   if (type == BoundType::LB)
-    return IntegerRelation(*this)
-        .computeConstantLowerOrUpperBound</*isLower=*/true>(pos);
+    return getBound(/*isLower=*/true);
   if (type == BoundType::UB)
-    return IntegerRelation(*this)
-        .computeConstantLowerOrUpperBound</*isLower=*/false>(pos);
+    return getBound(/*isLower=*/false);
 
   assert(type == BoundType::EQ && "expected EQ");
-  std::optional<DynamicAPInt> lb =
-      IntegerRelation(*this).computeConstantLowerOrUpperBound</*isLower=*/true>(
-          pos);
-  std::optional<DynamicAPInt> ub =
-      IntegerRelation(*this)
-          .computeConstantLowerOrUpperBound</*isLower=*/false>(pos);
+  std::optional<DynamicAPInt> lb = getBound(/*isLower=*/true);
+  std::optional<DynamicAPInt> ub = getBound(/*isLower=*/false);
   return (lb && ub && *lb == *ub) ? std::optional<DynamicAPInt>(*ub)
                                   : std::nullopt;
 }

@@ -23,6 +23,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/LogicalResult.h"
+#include <limits>
 #include <optional>
 
 namespace mlir {
@@ -630,12 +631,14 @@ public:
   /// std::nullopt otherwise.
   std::optional<DynamicAPInt> getConstantBound(BoundType type,
                                                unsigned pos) const;
-  /// The same, but casts to int64_t. This is unsafe and will assert-fail if the
-  /// value does not fit in an int64_t.
+  /// The same, but returns std::nullopt if the bound does not fit in int64_t.
   std::optional<int64_t> getConstantBound64(BoundType type,
                                             unsigned pos) const {
-    return llvm::transformOptional(getConstantBound(type, pos),
-                                   int64fromDynamicAPInt);
+    std::optional<DynamicAPInt> bound = getConstantBound(type, pos);
+    if (!bound || *bound < std::numeric_limits<int64_t>::min() ||
+        *bound > std::numeric_limits<int64_t>::max())
+      return std::nullopt;
+    return static_cast<int64_t>(*bound);
   }
 
   /// Removes constraints that are independent of (i.e., do not have a
