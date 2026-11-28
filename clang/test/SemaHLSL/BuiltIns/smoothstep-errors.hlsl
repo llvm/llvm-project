@@ -3,21 +3,21 @@
 float test_no_second_arg(float2 p0) {
   return smoothstep(p0);
   // expected-error@-1 {{no matching function for call to 'smoothstep'}}
-  // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* 8 {{candidate function not viable: requires 3 arguments, but 1 was provided}}
+  // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* 38 {{candidate function not viable: requires 3 arguments, but 1 was provided}}
   // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* 2 {{candidate function template not viable: requires 3 arguments, but 1 was provided}}
 }
 
 float test_no_third_arg(float2 p0) {
   return smoothstep(p0, p0);
   // expected-error@-1 {{no matching function for call to 'smoothstep'}}
-  // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* 8 {{candidate function not viable: requires 3 arguments, but 2 were provided}}
+  // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* 38 {{candidate function not viable: requires 3 arguments, but 2 were provided}}
   // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* 2 {{candidate function template not viable: requires 3 arguments, but 2 were provided}}
 }
 
 float test_too_many_arg(float2 p0) {
   return smoothstep(p0, p0, p0, p0);
   // expected-error@-1 {{no matching function for call to 'smoothstep'}}
-  // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* 8 {{candidate function not viable: requires 3 arguments, but 4 were provided}}
+  // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* 38 {{candidate function not viable: requires 3 arguments, but 4 were provided}}
   // expected-note@hlsl/hlsl_inline_intrinsics_gen.inc:* 2 {{candidate function template not viable: requires 3 arguments, but 4 were provided}}
 }
 
