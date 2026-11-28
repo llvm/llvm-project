@@ -326,18 +326,43 @@ static bool isKnownNonDecreasingInLoop(const SCEV *S, const Loop *L,
   }
 }
 
+/// Bound Base + Offset by the unsigned range of \p Offset, unless it is so wide
+/// that the runtime checks would fail whenever another object lies within the
+/// bounds. Returns {nullptr, nullptr} if no such bound can be formed.
+static std::pair<const SCEV *, const SCEV *>
+getUnsignedRangeBounds(const Loop *Lp, const SCEV *Base, const SCEV *Offset,
+                       const SCEV *EltSizeSCEV, ScalarEvolution *SE) {
+  APInt OffMin = SE->getUnsignedRangeMin(Offset);
+  APInt OffMaxEnd = SE->getUnsignedRangeMax(Offset).uadd_sat(
+      SE->getUnsignedRangeMax(EltSizeSCEV));
+  unsigned MaxRangeBytes =
+      getAnalysisOptions(*Lp).laa_max_nonaffine_range_bytes;
+  if ((OffMaxEnd - OffMin).ugt(MaxRangeBytes))
+    return {nullptr, nullptr};
+  const SCEV *BaseAddr = SE->getPtrToAddrExpr(Base);
+  if (isa<SCEVCouldNotCompute>(BaseAddr))
+    return {nullptr, nullptr};
+  // OffMin is at most any accessed offset, so the start cannot wrap. OffMax
+  // need not be accessed, so saturate the end at the highest address.
+  const SCEV *End =
+      SE->getUMinExpr(SE->getConstant(OffMaxEnd), SE->getNotSCEV(BaseAddr));
+  return {SE->getAddExpr(Base, SE->getConstant(OffMin)),
+          SE->getAddExpr(Base, End)};
+}
+
 /// Try to bound a loop-variant pointer that is not an affine AddRec.
 ///
 /// If the offset is provably monotonically non-decreasing the accessed range is
 /// bounded by the offset's value at the first iteration (via
 /// SplitIntoInitAndPostInc) and last iteration (via getSCEVAtScope). The
 /// returned range is half-open: \p EltSizeSCEV is added to the address of the
-/// last accessed element to form the end.
+/// last accessed element to form the end. Otherwise, or if those values are not
+/// loop-invariant, the offset's unsigned range is used.
 ///
 /// Returns {nullptr, nullptr} if no such bound can be formed.
 static std::pair<const SCEV *, const SCEV *>
-getNonAffineMonotonicBounds(const Loop *Lp, const SCEV *PtrExpr,
-                            const SCEV *EltSizeSCEV, ScalarEvolution *SE) {
+getNonAffineBounds(const Loop *Lp, const SCEV *PtrExpr, const SCEV *EltSizeSCEV,
+                   ScalarEvolution *SE) {
   const auto *PtrAdd = dyn_cast<SCEVAddExpr>(PtrExpr);
   if (!PtrAdd || !PtrAdd->hasNoUnsignedWrap())
     return {nullptr, nullptr};
@@ -349,15 +374,16 @@ getNonAffineMonotonicBounds(const Loop *Lp, const SCEV *PtrExpr,
     return {nullptr, nullptr};
 
   const SCEV *Offset = SE->getMinusSCEV(PtrExpr, Base);
-  if (isa<SCEVCouldNotCompute>(Offset) ||
-      !isKnownNonDecreasingInLoop(Offset, Lp, *SE))
+  if (isa<SCEVCouldNotCompute>(Offset))
     return {nullptr, nullptr};
+  if (!isKnownNonDecreasingInLoop(Offset, Lp, *SE))
+    return getUnsignedRangeBounds(Lp, Base, Offset, EltSizeSCEV, SE);
 
   const SCEV *OffStart = SE->SplitIntoInitAndPostInc(Lp, Offset).first;
   const SCEV *OffEnd = SE->getSCEVAtScope(Offset, Lp->getParentLoop());
   if (isa<SCEVCouldNotCompute>(OffStart) || isa<SCEVCouldNotCompute>(OffEnd) ||
       !SE->isLoopInvariant(OffStart, Lp) || !SE->isLoopInvariant(OffEnd, Lp))
-    return {nullptr, nullptr};
+    return getUnsignedRangeBounds(Lp, Base, Offset, EltSizeSCEV, SE);
 
   return {SE->getAddExpr(Base, OffStart),
           SE->getAddExpr(Base, OffEnd, EltSizeSCEV)};
@@ -396,8 +422,8 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     PtrBoundsPair = &Iter->second;
   }
 
-  // ScStart is the lowest accessed address; ScEnd is the highest one plus the
-  // size of the accessed element.
+  // ScStart is a lower bound of the accessed addresses; ScEnd is an upper bound
+  // of the accessed addresses plus the size of the accessed element.
   const SCEV *ScStart;
   const SCEV *ScEnd;
 
@@ -452,10 +478,8 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
       ScEnd = SE->getAddExpr(SE->getUMaxExpr(Start, LastAddr), EltSizeSCEV);
     }
   } else {
-    // The pointer is loop-variant but not an affine AddRec. Try to form a
-    // tight bound for a monotonic offset (see getNonAffineMonotonicBounds).
-    std::tie(ScStart, ScEnd) =
-        getNonAffineMonotonicBounds(Lp, PtrExpr, EltSizeSCEV, SE);
+    // The pointer is loop-variant but not an AddRec (see getNonAffineBounds).
+    std::tie(ScStart, ScEnd) = getNonAffineBounds(Lp, PtrExpr, EltSizeSCEV, SE);
     if (!ScStart)
       return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
   }
@@ -720,6 +744,13 @@ void RuntimePointerChecking::groupChecks(
   // case we will use the fallback path and create separate checking groups for
   // accesses not present in DepCands.
 
+  // Bounds from getNonAffineBounds need not be accessed addresses.
+  auto HasNonAffineBounds = [&](unsigned Idx) {
+    const SCEV *Expr = Pointers[Idx].Expr;
+    return !SE->isLoopInvariant(Expr, DC.getInnermostLoop()) &&
+           !isa<SCEVAddRecExpr>(Expr);
+  };
+
   unsigned TotalComparisons = 0;
 
   DenseMap<MemoryDepChecker::MemAccessInfo, SmallVector<unsigned>> PositionMap;
@@ -774,6 +805,15 @@ void RuntimePointerChecking::groupChecks(
             break;
 
           TotalComparisons++;
+
+          // addPointer orders bounds by the sign of their difference, which is
+          // wrong if they are half the address space or more apart, so only
+          // merge pointers with non-affine bounds if the bounds are equal.
+          if ((Pointers[Pointer].Start != Group.Low ||
+               Pointers[Pointer].End != Group.High) &&
+              (HasNonAffineBounds(Pointer) ||
+               HasNonAffineBounds(Group.Members.front())))
+            continue;
 
           if (Group.addPointer(Pointer, *this)) {
             Merged = true;
@@ -2143,12 +2183,11 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
     if (!AR && Assume)
       AR = PSE.getAsAddRec(Ptr, &Predicates);
     if (!AR || !AR->isAffine()) {
-      // Check if bounds for non-affine monotonic expressions can be formed.
+      // Check if bounds for non-affine expressions can be formed.
       const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(
           DL.getIndexType(P.getPointer()->getType()), AccessTy);
       if (!Assume ||
-          !getNonAffineMonotonicBounds(TheLoop, P.getPointer(), EltSizeSCEV, SE)
-               .first)
+          !getNonAffineBounds(TheLoop, P.getPointer(), EltSizeSCEV, SE).first)
         return false;
       continue;
     }

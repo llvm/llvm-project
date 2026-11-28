@@ -385,6 +385,10 @@ define void @cond_invariant_and_nonaffine_far_apart(ptr %a, ptr %b, i1 %c) {
 ; CHECK-NEXT:          %gep.b = getelementptr inbounds nuw i8, ptr %b, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %far = getelementptr i8, ptr %a, i64 -9223372036854775800
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds nuw i8, ptr %b, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %div
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
@@ -393,6 +397,8 @@ define void @cond_invariant_and_nonaffine_far_apart(ptr %a, ptr %b, i1 %c) {
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (-9223372036854775800 + %a) High: (-9223372036854775799 + %a))
 ; CHECK-NEXT:            Member: (-9223372036854775800 + %a)
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %a High: (32 + %a))
 ; CHECK-NEXT:            Member: (({0,+,1}<nuw><nsw><%loop.header> /u 2) + %a)<nuw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
