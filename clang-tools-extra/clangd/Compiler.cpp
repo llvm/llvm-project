@@ -151,6 +151,10 @@ prepareCompilerInstance(std::unique_ptr<clang::CompilerInvocation> CI,
   auto Clang = std::make_unique<CompilerInstance>(std::move(CI));
   Clang->createVirtualFileSystem(VFS, &DiagsClient);
   Clang->createDiagnostics(&DiagsClient, false);
+  // A fatal error, e.g. a header that is not found, would stop template
+  // instantiation for the rest of the file, and fail every use that needs
+  // one. Keep going, as libclang does with CXTranslationUnit_KeepGoing.
+  Clang->getDiagnostics().setFatalsAsError(true);
   Clang->createFileManager();
   if (!Clang->createTarget())
     return nullptr;

@@ -610,6 +610,9 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       CompilerInstance::createDiagnostics(*VFS, CI.getDiagnosticOpts(),
                                           &PreambleDiagnostics,
                                           /*ShouldOwnClient=*/false);
+  // Keep going after a fatal error, as the main file does (see
+  // prepareCompilerInstance).
+  PreambleDiagsEngine->setFatalsAsError(true);
   PreambleDiagnostics.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                            const clang::Diagnostic &Info) {
     switch (Info.getID()) {
