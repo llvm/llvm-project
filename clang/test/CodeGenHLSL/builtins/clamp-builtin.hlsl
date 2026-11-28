@@ -2,11 +2,11 @@
 
 
 // CHECK-LABEL: builtin_clamp_half
-// CHECK: %hlsl.clamp = call reassoc nnan ninf nsz arcp afn half @llvm.dx.nclamp.f16(half %{{.*}}, half %{{.*}}, half %{{.*}})
+// CHECK: %hlsl.clamp = call fast half @llvm.dx.nclamp.f16(half %{{.*}}, half %{{.*}}, half %{{.*}})
 // CHECK: ret half %hlsl.clamp
 half builtin_clamp_half(half p0) { return __builtin_hlsl_elementwise_clamp(p0, p0, p0); }
 
 // CHECK-LABEL: builtin_clamp_float
-// CHECK: %hlsl.clamp = call reassoc nnan ninf nsz arcp afn float @llvm.dx.nclamp.f32(float %{{.*}}, float %{{.*}}, float %{{.*}})
+// CHECK: %hlsl.clamp = call fast float @llvm.dx.nclamp.f32(float %{{.*}}, float %{{.*}}, float %{{.*}})
 // CHECK: ret float %hlsl.clamp
 float builtin_clamp_float(float p0) { return __builtin_hlsl_elementwise_clamp(p0, p0, p0); }

@@ -4486,6 +4486,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   if (Args.hasArg(options::OPT_fopenacc))
     Opts.OpenACC = true;
 
+  if (Opts.HLSL && !Opts.FastMath)
+    Opts.setDefaultFPContractMode(LangOptions::FPM_On);
+
   if (Arg *A = Args.getLastArg(OPT_ffp_contract)) {
     StringRef Val = A->getValue();
     if (Val == "fast")

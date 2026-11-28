@@ -200,8 +200,8 @@ float4 main(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK: %[[SAMPLER_GEP:.*]] = getelementptr inbounds nuw %"class.hlsl::SamplerState", ptr %[[SAMPLER]], i32 0, i32 0
 // CHECK: %[[SAMPLER_H:.*]] = load target{{.*}}, ptr %[[SAMPLER_GEP]]
 // CHECK: %[[COORD_VAL:.*]] = load [[COORD_LLVM]], ptr %[[COORD_ADDR]]
-// DXIL: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.sample.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], [[COORD_LLVM]] %[[COORD_VAL]], [[OFFSET_LLVM]] [[OFFSET_ZERO]]) [ "convergencectrl"(token %0) ]
-// SPIRV: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.sample.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], [[COORD_LLVM]] %[[COORD_VAL]], [[OFFSET_LLVM]] [[OFFSET_ZERO]]) [ "convergencectrl"(token %0) ]
+// DXIL: %[[RES:.*]] = call fast <4 x float> @llvm.dx.resource.sample.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], [[COORD_LLVM]] %[[COORD_VAL]], [[OFFSET_LLVM]] [[OFFSET_ZERO]]) [ "convergencectrl"(token %0) ]
+// SPIRV: %[[RES:.*]] = call fast <4 x float> @llvm.spv.resource.sample.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], [[COORD_LLVM]] %[[COORD_VAL]], [[OFFSET_LLVM]] [[OFFSET_ZERO]]) [ "convergencectrl"(token %0) ]
 // CHECK: ret <4 x float> %[[RES]]
 
 // CHECK-OFFSET: define hidden {{.*}} <4 x float> @test_offset([[COORD_CXX]])([[COORD_LLVM]] noundef nofpclass(nan inf) %[[LOC:.*]])
@@ -229,8 +229,8 @@ float4 test_offset(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK-OFFSET: %[[SAMPLER_H:.*]] = load target{{.*}}, ptr %[[SAMPLER_GEP]]
 // CHECK-OFFSET: %[[COORD_VAL:.*]] = load [[COORD_LLVM]], ptr %[[COORD_ADDR]]
 // CHECK-OFFSET: %[[OFFSET_VAL:.*]] = load [[OFFSET_LLVM]], ptr %[[OFFSET_ADDR]]
-// DXIL-OFFSET: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.sample.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], [[COORD_LLVM]] %[[COORD_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]]) [ "convergencectrl"(token %0) ]
-// SPIRV-OFFSET: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.sample.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], [[COORD_LLVM]] %[[COORD_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]]) [ "convergencectrl"(token %0) ]
+// DXIL-OFFSET: %[[RES:.*]] = call fast <4 x float> @llvm.dx.resource.sample.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], [[COORD_LLVM]] %[[COORD_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]]) [ "convergencectrl"(token %0) ]
+// SPIRV-OFFSET: %[[RES:.*]] = call fast <4 x float> @llvm.spv.resource.sample.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], [[COORD_LLVM]] %[[COORD_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]]) [ "convergencectrl"(token %0) ]
 // CHECK-OFFSET: ret <4 x float> %[[RES]]
 
 // CHECK-OFFSET: define hidden {{.*}} <4 x float> @test_clamp([[COORD_CXX]])([[COORD_LLVM]] noundef nofpclass(nan inf) %[[LOC:.*]])
@@ -270,8 +270,8 @@ float4 test_clamp(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK-OFFSET: %[[COORD_VAL:.*]] = load [[COORD_LLVM]], ptr %[[COORD_ADDR]]
 // CHECK-OFFSET: %[[OFFSET_VAL:.*]] = load [[OFFSET_LLVM]], ptr %[[OFFSET_ADDR]]
 // CHECK-OFFSET: %[[CLAMP_VAL:.*]] = load float, ptr %[[CLAMP_ADDR]]
-// DXIL-OFFSET: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.sample.clamp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], [[COORD_LLVM]] %[[COORD_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]], float %[[CLAMP_VAL]]) [ "convergencectrl"(token %0) ]
-// SPIRV-OFFSET: %[[RES:.*]] = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.sample.clamp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], [[COORD_LLVM]] %[[COORD_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]], float %[[CLAMP_VAL]]) [ "convergencectrl"(token %0) ]
+// DXIL-OFFSET: %[[RES:.*]] = call fast <4 x float> @llvm.dx.resource.sample.clamp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE]], target("dx.Sampler", 0) %[[SAMPLER_H]], [[COORD_LLVM]] %[[COORD_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]], float %[[CLAMP_VAL]]) [ "convergencectrl"(token %0) ]
+// SPIRV-OFFSET: %[[RES:.*]] = call fast <4 x float> @llvm.spv.resource.sample.clamp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE]], target("spirv.Sampler") %[[SAMPLER_H]], [[COORD_LLVM]] %[[COORD_VAL]], [[OFFSET_LLVM]] %[[OFFSET_VAL]], float %[[CLAMP_VAL]]) [ "convergencectrl"(token %0) ]
 // CHECK-OFFSET: ret <4 x float> %[[RES]]
 
 // CHECK-NOOFFSET: define linkonce_odr hidden {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::Sample(hlsl::SamplerState, [[COORD_CXX]], float)(
@@ -282,5 +282,5 @@ float4 test_clamp(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK-NOOFFSET: %[[SAMPLER_H_NC:.*]] = load target{{.*}}, ptr %[[SAMPLER_GEP_NC]]
 // CHECK-NOOFFSET: %[[COORD_VAL_NC:.*]] = load [[COORD_LLVM]], ptr %{{.*}}
 // CHECK-NOOFFSET: %[[CLAMP_VAL_NC:.*]] = load float, ptr %{{.*}}
-// DXIL-NOOFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.sample.clamp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE_NC]], target("dx.Sampler", 0) %[[SAMPLER_H_NC]], [[COORD_LLVM]] %{{.*}}, [[OFFSET_LLVM]] [[OFFSET_ZERO]], float %[[CLAMP_VAL_NC]])
-// SPIRV-NOOFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.sample.clamp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE_NC]], target("spirv.Sampler") %[[SAMPLER_H_NC]], [[COORD_LLVM]] %{{.*}}, [[OFFSET_LLVM]] [[OFFSET_ZERO]], float %[[CLAMP_VAL_NC]])
+// DXIL-NOOFFSET: call fast <4 x float> @llvm.dx.resource.sample.clamp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE_NC]], target("dx.Sampler", 0) %[[SAMPLER_H_NC]], [[COORD_LLVM]] %{{.*}}, [[OFFSET_LLVM]] [[OFFSET_ZERO]], float %[[CLAMP_VAL_NC]])
+// SPIRV-NOOFFSET: call fast <4 x float> @llvm.spv.resource.sample.clamp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE_NC]], target("spirv.Sampler") %[[SAMPLER_H_NC]], [[COORD_LLVM]] %{{.*}}, [[OFFSET_LLVM]] [[OFFSET_ZERO]], float %[[CLAMP_VAL_NC]])

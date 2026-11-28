@@ -224,6 +224,15 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: define void @no_contract
+; CHECK: call float @dx.op.unary.f32(i32 7,
+; CHECK-SAME: !dx.precise ![[SM]]
+define void @no_contract(float %p) {
+entry:
+  %1 = call reassoc nnan ninf nsz arcp afn float @llvm.dx.saturate.f32(float %p)
+  ret void
+}
+
 ; By this point all !dx.precise anotation should be matched
 ; CHECK-NOT: !dx.precise ![[SM]]
 
