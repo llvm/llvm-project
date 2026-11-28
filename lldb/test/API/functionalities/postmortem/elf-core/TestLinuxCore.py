@@ -130,6 +130,20 @@ class LinuxCoreTestCase(TestBase):
         )
 
     @skipIfLLVMTargetMissing("RISCV")
+    def test_riscv64_unaligned_fp_cfa(self):
+        """Test that lldb unwinds a riscv64 frame whose CFA is computed from a
+        frame pointer that isn't 16-byte aligned, like in .NET JIT generated
+        code. Only the CFA has to be 16-byte aligned."""
+        target = self.dbg.CreateTarget("linux-riscv64.unaligned-fp.out")
+        process = target.LoadCore("linux-riscv64.unaligned-fp.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+        thread = process.GetSelectedThread()
+        backtrace = ["bar", "foo", "_start"]
+        self.assertEqual(thread.GetNumFrames(), len(backtrace))
+        for i, name in enumerate(backtrace):
+            self.assertEqual(thread.GetFrameAtIndex(i).GetFunctionName(), name)
+
+    @skipIfLLVMTargetMissing("RISCV")
     def test_riscv32_gpr_csr(self):
         """Test that lldb can read the process information from a riscv32 bare-
         metal core file made for a RV32IMCXQCIXQCCMP target having GP and CS
