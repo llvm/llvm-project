@@ -272,7 +272,7 @@ private:
   /// Returns the size of the fixed object area (allocated next to sp on entry)
   /// On Win64 this may include a var args area and an UnwindHelp object for EH.
   unsigned getFixedObjectSize(const MachineFunction &MF,
-                              const AArch64FunctionInfo *AFI, bool IsWin64,
+                              const AArch64FunctionInfo *AFI,
                               bool IsFunclet) const;
 };
 
