@@ -53,9 +53,28 @@ let Predicates = [HasStdExtZibi] in {
   def PseudoLongBNEI : LongBcciPseudo<imm5_zibi, 8>;
 } // Predicates = [HasStdExtZibi]
 
-multiclass BccImmPat<CondCode Cond, Branch_imm Inst> {
-  def : Pat<(riscv_brcc (XLenVT GPR:$rs1), imm5_zibi:$cimm, Cond, bb:$imm12),
+// Preserve sharing of 1 with induction updates through allocation.
+// Folding this branch during selection can duplicate its materialization.
+def UseEarlyZibiBranch : Predicate<"TM.getOptLevel() < CodeGenOptLevel::Default">;
+
+multiclass BccImmPat<CondCode Cond, Branch_imm Inst,
+                    Operand ImmOp = imm5_zibi> {
+  def : Pat<(riscv_brcc (XLenVT GPR:$rs1), ImmOp:$cimm, Cond, bb:$imm12),
             (Inst GPR:$rs1, imm5_zibi:$cimm, bare_simm13_lsb0_bb:$imm12)>;
+}
+
+let Predicates = [HasStdExtZibi, UseEarlyZibiBranch] in {
+  defm : BccImmPat<SETEQ, BEQI>;
+  defm : BccImmPat<SETNE, BNEI>;
+}
+
+def imm5_zibi_not_one : RISCVOp<XLenVT>, ImmLeaf<XLenVT, [{
+  return Imm == -1 || (Imm >= 2 && Imm <= 31);
+}]>;
+
+let Predicates = [HasStdExtZibi] in {
+  defm : BccImmPat<SETEQ, BEQI, imm5_zibi_not_one>;
+  defm : BccImmPat<SETNE, BNEI, imm5_zibi_not_one>;
 }
 
 defm CC_Imm5_Zibi : SelectCC_GPR_riirr<GPR, imm5_zibi>;
@@ -65,7 +84,4 @@ let Predicates = [HasStdExtZibi] in {
                             (XLenVT GPR:$truev), GPR:$falsev),
             (Select_GPR_Using_CC_Imm5_Zibi GPR:$lhs, imm5_zibi:$cimm,
                 (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
-
-  defm : BccImmPat<SETEQ, BEQI>;
-  defm : BccImmPat<SETNE, BNEI>;
 } // Predicates = [HasStdExtZibi]
