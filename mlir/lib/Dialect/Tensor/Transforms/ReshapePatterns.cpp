@@ -619,9 +619,10 @@ LogicalResult mlir::tensor::getCollapsedExtractSliceInfo(
 }
 
 // Checks if the `ofr` is a multiple of the `factor`.
-// Handles both static integer and dynamic values
-// where the value is the result of an affine.apply.
+// Handles constants, affine.for induction variables, and affine.apply results.
 static bool isMultipleOf(OpFoldResult ofr, int64_t factor) {
+  if (factor <= 0)
+    return false;
   std::optional<int64_t> staticValue = getConstantIntValue(ofr);
   if (staticValue.has_value())
     return staticValue.value() % factor == 0;
@@ -629,6 +630,13 @@ static bool isMultipleOf(OpFoldResult ofr, int64_t factor) {
   Value value = dyn_cast<Value>(ofr);
   if (!value)
     return false;
+  // Affine IVs start at the lower bound and advance by a positive constant
+  // step.
+  if (auto loop = affine::getForInductionVarOwner(value)) {
+    if (loop.hasConstantLowerBound())
+      return loop.getConstantLowerBound() % factor == 0 &&
+             loop.getStepAsInt() % factor == 0;
+  }
   auto applyOp = value.getDefiningOp<affine::AffineApplyOp>();
   if (!applyOp)
     return false;
