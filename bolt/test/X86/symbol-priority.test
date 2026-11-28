@@ -1,0 +1,77 @@
+## Check when BOLT encounters multiple symbols at the same address,
+## they are prioritized in the following order (0 is highest):
+## 0: Global function
+## 1: Non-global function
+## 2: Other global symbol
+## 3: Other non-global symbol
+## 4: Global debug symbol
+## 5: Non-global debug symbol
+# REQUIRES: asserts
+# RUN: yaml2obj %s -o %t.exe
+# RUN: llvm-bolt %t.exe --lite=0 -debug-only=bolt -o %t.bolt 2>&1 | FileCheck %s
+
+# CHECK: considering symbol global_func for function
+# CHECK: considering symbol local_func/1 for function
+# CHECK: considering symbol global_other for function
+# CHECK: considering symbol local_other/1 for function
+# CHECK: considering symbol global_debug for function
+# CHECK: considering symbol local_debug/1 for function
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_EXEC
+  Machine: EM_X86_64
+  Entry: 0x400000
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    FirstSec: .text
+    LastSec: .text
+    VAddr: 0x400000
+    Align: 0x1000
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x400000
+    AddressAlign: 0x1000
+    Content: C3 # ret
+Symbols:
+  - Name: local_debug
+    Type: STT_SECTION
+    Binding: STB_LOCAL
+    Section: .text
+    Value: 0x400000
+    Size: 0
+  - Name: global_debug
+    Type: STT_SECTION
+    Binding: STB_GLOBAL
+    Section: .text
+    Value: 0x400000
+    Size: 0
+  - Name: global_other
+    Type: STT_NOTYPE
+    Binding: STB_GLOBAL
+    Section: .text
+    Value: 0x400000
+    Size: 1
+  - Name: local_other
+    Type: STT_OBJECT
+    Binding: STB_LOCAL
+    Section: .text
+    Value: 0x400000
+    Size: 1
+  - Name: local_func
+    Type: STT_FUNC
+    Binding: STB_LOCAL
+    Section: .text
+    Value: 0x400000
+    Size: 1
+  - Name: global_func
+    Type: STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text
+    Value: 0x400000
+    Size: 1
