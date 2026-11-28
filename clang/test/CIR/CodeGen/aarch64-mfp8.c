@@ -4,10 +4,6 @@
 // RUN: FileCheck --check-prefixes=LLVM,LLVMCIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +neon -target-feature +sve -mvscale-min=1 -mvscale-max=1 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefixes=LLVM,OGCG --input-file=%t.ll %s
-
-// __mfp8 values are kept out of function signatures here because calling
-// convention lowering does not yet handle the type.
-
 __mfp8 g;
 __mfp8 garr[4];
 __Mfloat8x8_t gv8;
@@ -165,3 +161,57 @@ void sve_local(void) {
 // LLVM:   %[[B:.*]] = alloca <vscale x 16 x i8>, align 16
 // LLVM:   %[[B_VAL:.*]] = load <vscale x 16 x i8>, ptr %[[B]], align 16
 // LLVM:   store <vscale x 16 x i8> %[[B_VAL]], ptr %[[A]], align 16
+
+__mfp8 pass_scalar(int i, __mfp8 a) { return a; }
+
+// CIR-LABEL: cir.func {{.*}} @pass_scalar(
+// CIR-SAME:      %{{.*}}: !s32i {llvm.noundef} {{.*}}, %{{.*}}: !cir.mfp8 {{.*}}) -> !cir.mfp8
+
+// LLVM-LABEL: define dso_local <1 x i8> @pass_scalar(
+// LLVM-SAME:      i32 noundef %{{.*}}, <1 x i8> %{{.*}})
+
+__Mfloat8x8_t pass_vec8(__Mfloat8x8_t a) { return a; }
+
+// CIR-LABEL: cir.func {{.*}} @pass_vec8(
+// CIR-SAME:      %{{.*}}: !cir.vector<8 x !cir.mfp8> {{.*}}) -> !cir.vector<8 x !cir.mfp8>
+
+// LLVM-LABEL: define dso_local <8 x i8> @pass_vec8(
+// LLVM-SAME:      <8 x i8> %{{.*}})
+
+__Mfloat8x16_t pass_vec16(__Mfloat8x16_t a) { return a; }
+
+// CIR-LABEL: cir.func {{.*}} @pass_vec16(
+// CIR-SAME:      %{{.*}}: !cir.vector<16 x !cir.mfp8> {{.*}}) -> !cir.vector<16 x !cir.mfp8>
+
+// LLVM-LABEL: define dso_local <16 x i8> @pass_vec16(
+// LLVM-SAME:      <16 x i8> %{{.*}})
+
+struct S pass_struct(struct S a) { return a; }
+
+// CIR-LABEL: cir.func {{.*}} @pass_struct(
+// CIR-SAME:      %{{.*}}: !u8i {{.*}}) -> !u8i
+
+// LLVM-LABEL: define dso_local i8 @pass_struct(
+// LLVM-SAME:      i8 %{{.*}})
+
+typedef struct {
+  __Mfloat8x8_t val[2];
+} mf8x8x2_t;
+
+mf8x8x2_t pass_tuple(mf8x8x2_t a) { return a; }
+
+// CIR-LABEL: cir.func {{.*}} @pass_tuple(
+// CIR-SAME:      %{{.*}}: !cir.array<!cir.vector<8 x !u8i> x 2> {llvm.alignstack = 8 : i64} {{.*}}) -> !rec_mf8x8x2_t
+
+// LLVM-LABEL: define dso_local %struct.mf8x8x2_t @pass_tuple(
+// LLVM-SAME:      [2 x <8 x i8>] alignstack(8) %{{.*}})
+
+void ext(__mfp8 a, __Mfloat8x8_t v);
+
+void call_ext(void) { ext(g, gv8); }
+
+// CIR-LABEL: cir.func {{.*}} @call_ext()
+// CIR:   cir.call @ext(%{{.*}}, %{{.*}}) : (!cir.mfp8, !cir.vector<8 x !cir.mfp8>) -> ()
+
+// LLVM-LABEL: define dso_local void @call_ext()
+// LLVM:   call void @ext(<1 x i8> %{{.*}}, <8 x i8> %{{.*}})

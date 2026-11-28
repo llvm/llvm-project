@@ -1,15 +1,21 @@
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD,AAPCS,LE,ARG8
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,HARD,AAPCS,LE,ARG8 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD,AAPCS,BE,ARG64
-// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,HARD,AAPCS,BE,ARG64 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD,OTHER,LE,ARG64
-// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,HARD,OTHER,LE,ARG64 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD,OTHER,LE,ARG8
-// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,HARD,OTHER,LE,ARG8 --implicit-check-not="not yet implemented"
-// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD,OTHER,LE,ARG8
-// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,HARD,OTHER,LE,ARG8 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD,SVE-MFP8,AAPCS,LE,ARG8
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,HARD,SVE-MFP8,AAPCS,LE,ARG8 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD,SVE-MFP8,AAPCS,BE,ARG64
+// RUN: %clang_cc1 -triple aarch64_be-linux-gnu -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,HARD,SVE-MFP8,AAPCS,BE,ARG64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD,SVE-MFP8,OTHER,LE,ARG64
+// RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,HARD,SVE-MFP8,OTHER,LE,ARG64 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD,SVE-MFP8,OTHER,LE,ARG8
+// RUN: %clang_cc1 -triple aarch64-pc-windows-msvc -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,HARD,SVE-MFP8,OTHER,LE,ARG8 --implicit-check-not="not yet implemented"
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD,SVE-MFP8,OTHER,LE,ARG8
+// RUN: %clang_cc1 -triple arm64ec-pc-windows-msvc -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,HARD,SVE-MFP8,OTHER,LE,ARG8 --implicit-check-not="not yet implemented"
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature -fp-armv8 -target-abi aapcs-soft -DSOFT_FLOAT -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LE,ARG8
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature -fp-armv8 -target-abi aapcs-soft -DSOFT_FLOAT -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LE,ARG8 --implicit-check-not="not yet implemented"
+// RUN: %if cir-enabled %{ %clang_cc1 -triple aarch64-linux-gnu -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -DNO_SVE_TYPES -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD,LE,ARG8 %}
+// RUN: %if cir-enabled %{ %clang_cc1 -triple aarch64_be-linux-gnu -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -DNO_SVE_TYPES -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD,BE,ARG64 %}
+// RUN: %if cir-enabled %{ %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -target-feature +sve -target-feature +neon -mvscale-min=1 -mvscale-max=1 -DNO_SVE_TYPES -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD,LE,ARG64 %}
+// RUN: %if cir-enabled %{ %clang_cc1 -triple aarch64-linux-gnu -target-feature -fp-armv8 -target-abi aapcs-soft -DSOFT_FLOAT -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LE,ARG8 %}
+
+// CIR calling-convention lowering does not yet support the SVE types below.
 
 // The scalar is an opaque 8-bit float. It is passed and returned directly as
 // <1 x i8>, which occupies a SIMD and floating-point register, and it is not
@@ -19,12 +25,16 @@
 
 // The soft-float ABI has no FPU, so this run has no SVE or Neon.
 #ifndef SOFT_FLOAT
+#ifndef NO_SVE_TYPES
 typedef __SVInt32_t fixed_int32_t __attribute__((arm_sve_vector_bits(128)));
 typedef __SVMfloat8_t fixed_mf8_t __attribute__((arm_sve_vector_bits(128)));
+#endif
 typedef __mfp8 mfloat8x8_t __attribute__((neon_vector_type(8)));
 typedef __mfp8 mfloat8x16_t __attribute__((neon_vector_type(16)));
 
+#ifndef NO_SVE_TYPES
 typedef struct { fixed_int32_t x; } One;
+#endif
 #endif
 
 struct OneByte { __mfp8 x; };
@@ -62,14 +72,16 @@ void arg_arr(struct ThreeMFP8 s) {}
 struct ThreeMFP8 ret_arr(struct ThreeMFP8 s) { return s; }
 
 #ifndef SOFT_FLOAT
-// HARD-LABEL: define{{.*}} void @arg_svmf8(<vscale x 16 x i8> %{{.*}})
+#ifndef NO_SVE_TYPES
+// SVE-MFP8-LABEL: define{{.*}} void @arg_svmf8(<vscale x 16 x i8> %{{.*}})
 void arg_svmf8(__SVMfloat8_t v) {}
 
-// HARD-LABEL: define{{.*}} void @arg_fixed_mf8(<vscale x 16 x i8> %{{.*}})
+// SVE-MFP8-LABEL: define{{.*}} void @arg_fixed_mf8(<vscale x 16 x i8> %{{.*}})
 void arg_fixed_mf8(fixed_mf8_t v) {}
 
-// HARD-LABEL: define{{.*}} <vscale x 16 x i8> @ret_fixed_mf8(<vscale x 16 x i8> %{{.*}})
+// SVE-MFP8-LABEL: define{{.*}} <vscale x 16 x i8> @ret_fixed_mf8(<vscale x 16 x i8> %{{.*}})
 fixed_mf8_t ret_fixed_mf8(fixed_mf8_t v) { return v; }
+#endif
 
 // HARD-LABEL: define{{.*}} void @arg_neon8(<8 x i8> %{{.*}})
 void arg_neon8(mfloat8x8_t v) {}
@@ -77,6 +89,7 @@ void arg_neon8(mfloat8x8_t v) {}
 // HARD-LABEL: define{{.*}} void @arg_neon16(<16 x i8> %{{.*}})
 void arg_neon16(mfloat8x16_t v) {}
 
+#ifndef NO_SVE_TYPES
 // AAPCS-LABEL: define{{.*}} void @budget(<1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, ptr {{.*}}align 16 dead_on_return dereferenceable(16) %{{.*}})
 // OTHER-LABEL: define{{.*}} void @budget(<1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, i128 %{{.*}})
 void budget(__mfp8 a, __mfp8 b, __mfp8 c, __mfp8 d, __mfp8 e, __mfp8 f,
@@ -86,4 +99,5 @@ void budget(__mfp8 a, __mfp8 b, __mfp8 c, __mfp8 d, __mfp8 e, __mfp8 f,
 // OTHER-LABEL: define{{.*}} void @budget_room(<1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, <1 x i8> %{{.*}}, i128 %{{.*}})
 void budget_room(__mfp8 a, __mfp8 b, __mfp8 c, __mfp8 d, __mfp8 e, __mfp8 f,
                  __mfp8 g, One one) {}
+#endif
 #endif
