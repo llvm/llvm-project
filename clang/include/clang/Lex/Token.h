@@ -231,6 +231,15 @@ public:
     if (is(tok::eof)) return nullptr;
     return (IdentifierInfo*) PtrData;
   }
+
+  /// Return the identifier info if present, or null for any other token,
+  /// including raw identifiers and annotations.
+  IdentifierInfo *getIdentifierInfoOrNull() const {
+    if (is(tok::raw_identifier) || isAnnotation())
+      return nullptr;
+    return getIdentifierInfo();
+  }
+
   void setIdentifierInfo(IdentifierInfo *II) {
     PtrData = (void*) II;
   }

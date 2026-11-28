@@ -108,10 +108,9 @@ void PragmaNamespace::HandlePragma(Preprocessor &PP,
   PP.LexUnexpandedToken(Tok);
 
   // Get the handler for this token.  If there is no handler, ignore the pragma.
-  PragmaHandler *Handler
-    = FindHandler(Tok.getIdentifierInfo() ? Tok.getIdentifierInfo()->getName()
-                                          : StringRef(),
-                  /*IgnoreNull=*/false);
+  IdentifierInfo *II = Tok.getIdentifierInfoOrNull();
+  PragmaHandler *Handler =
+      FindHandler(II ? II->getName() : StringRef(), /*IgnoreNull=*/false);
   if (!Handler) {
     PP.Diag(Tok, diag::warn_pragma_ignored);
     return;
@@ -921,12 +920,12 @@ void Preprocessor::HandlePragmaSetPPState(PragmaIntroducer Introducer,
                                           Token &Tok) {
   // Lex the macro name we want to set.
   LexUnexpandedToken(Tok);
-  if (!Tok.getIdentifierInfo()) {
+  IdentifierInfo *MacroName = Tok.getIdentifierInfoOrNull();
+  if (!MacroName) {
     Diag(Tok.getLocation(), diag::err_pp_pragma_set_pp_state_expected_name);
     return;
   }
 
-  IdentifierInfo *MacroName = Tok.getIdentifierInfo();
   if (!isPragmaSetPPStateMacro(MacroName)) {
     Diag(Tok.getLocation(), diag::err_pp_pragma_set_pp_state_invalid_arg)
         << MacroName;
@@ -1149,7 +1148,7 @@ struct PragmaDebugHandler : public PragmaHandler {
     } else if (II->isStr("macro")) {
       Token MacroName;
       PP.LexUnexpandedToken(MacroName);
-      auto *MacroII = MacroName.getIdentifierInfo();
+      auto *MacroII = MacroName.getIdentifierInfoOrNull();
       if (MacroII)
         PP.dumpMacroInfo(MacroII);
       else
@@ -1174,7 +1173,7 @@ struct PragmaDebugHandler : public PragmaHandler {
     } else if (II->isStr("module_lookup")) {
       Token MName;
       PP.LexUnexpandedToken(MName);
-      auto *MNameII = MName.getIdentifierInfo();
+      auto *MNameII = MName.getIdentifierInfoOrNull();
       if (!MNameII) {
         PP.Diag(MName, diag::warn_pragma_debug_missing_argument)
             << II->getName();
@@ -1219,7 +1218,7 @@ struct PragmaDebugHandler : public PragmaHandler {
 
       Token Kind;
       PP.LexUnexpandedToken(Kind);
-      auto *DumpII = Kind.getIdentifierInfo();
+      auto *DumpII = Kind.getIdentifierInfoOrNull();
       if (!DumpII) {
         PP.Diag(Kind, diag::warn_pragma_debug_missing_argument)
             << II->getName();
@@ -1453,7 +1452,7 @@ struct PragmaWarningHandler : public PragmaHandler {
     }
 
     PP.Lex(Tok);
-    IdentifierInfo *II = Tok.getIdentifierInfo();
+    IdentifierInfo *II = Tok.getIdentifierInfoOrNull();
 
     if (II && II->isStr("push")) {
       // #pragma warning( push[ ,n ] )
@@ -1484,7 +1483,7 @@ struct PragmaWarningHandler : public PragmaHandler {
       // #pragma warning( warning-specifier : warning-number-list
       //                  [; warning-specifier : warning-number-list...] )
       while (true) {
-        II = Tok.getIdentifierInfo();
+        II = Tok.getIdentifierInfoOrNull();
         if (!II && !Tok.is(tok::numeric_constant)) {
           PP.Diag(Tok, diag::warn_pragma_warning_spec_invalid);
           return;
@@ -1601,7 +1600,7 @@ struct PragmaExecCharsetHandler : public PragmaHandler {
     }
 
     PP.Lex(Tok);
-    IdentifierInfo *II = Tok.getIdentifierInfo();
+    IdentifierInfo *II = Tok.getIdentifierInfoOrNull();
 
     if (II && II->isStr("push")) {
       // #pragma execution_character_set( push[ , string ] )
@@ -1930,7 +1929,7 @@ struct PragmaARCCFCodeAuditedHandler : public PragmaHandler {
 
     // Lex the 'begin' or 'end'.
     PP.LexUnexpandedToken(Tok);
-    const IdentifierInfo *BeginEnd = Tok.getIdentifierInfo();
+    const IdentifierInfo *BeginEnd = Tok.getIdentifierInfoOrNull();
     if (BeginEnd && BeginEnd->isStr("begin")) {
       IsBegin = true;
     } else if (BeginEnd && BeginEnd->isStr("end")) {
@@ -1985,7 +1984,7 @@ struct PragmaAssumeNonNullHandler : public PragmaHandler {
 
     // Lex the 'begin' or 'end'.
     PP.LexUnexpandedToken(Tok);
-    const IdentifierInfo *BeginEnd = Tok.getIdentifierInfo();
+    const IdentifierInfo *BeginEnd = Tok.getIdentifierInfoOrNull();
     if (BeginEnd && BeginEnd->isStr("begin")) {
       IsBegin = true;
     } else if (BeginEnd && BeginEnd->isStr("end")) {
