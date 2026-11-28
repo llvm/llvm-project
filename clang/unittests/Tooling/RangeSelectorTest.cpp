@@ -661,6 +661,12 @@ TEST(RangeSelectorTest, CallArgsOpWithParens) {
   EXPECT_THAT_EXPECTED(select(callArgs(ID), Match), HasValue("3, 4"));
 }
 
+TEST(RangeSelectorTest, CallArgsOpLeadingEscapedNewLine) {
+  StringRef Code = "int g(int); int f(int x) { return g(\\\n(x)); }";
+  auto Match = matchCode(Code, callExpr().bind("call"));
+  EXPECT_THAT_EXPECTED(select(callArgs("call"), Match), HasValue("\\\n(x)"));
+}
+
 TEST(RangeSelectorTest, CallArgsOpLeadingComments) {
   const StringRef Code = R"cc(
     struct C {

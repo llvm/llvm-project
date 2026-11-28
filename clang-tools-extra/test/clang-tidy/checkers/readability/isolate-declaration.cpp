@@ -57,6 +57,13 @@ void f3() {
   // CHECK-FIXES: int *pointer2 = nullptr;
   // CHECK-FIXES: int *pointer3 = &i;
 
+  int *\
+*spliced_pointer = nullptr, spliced_value = 42;
+  // CHECK-MESSAGES: [[@LINE-2]]:3: warning: multiple declarations in a single statement reduces readability
+  // CHECK-FIXES: int *{{\\}}
+  // CHECK-FIXES-NEXT: *spliced_pointer = nullptr;
+  // CHECK-FIXES-NEXT: int spliced_value = 42;
+
   int *(i_ptr) = nullptr, *((i_ptr2));
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: multiple declarations in a single statement reduces readability
   // CHECK-FIXES: int *(i_ptr) = nullptr;

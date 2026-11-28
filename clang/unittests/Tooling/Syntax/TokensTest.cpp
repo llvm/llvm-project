@@ -580,6 +580,12 @@ TEST_F(TokenCollectorTest, SpecialTokens) {
   // FIXME: test tokens with digraphs and UCN identifiers.
 }
 
+TEST_F(TokenCollectorTest, LeadingEscapedNewLine) {
+  recordTokens("int \\\nvalue;\n");
+  EXPECT_THAT(Buffer.spelledForExpanded(findExpanded("value")),
+              ValueIs(SameRange(findSpelled("value"))));
+}
+
 TEST_F(TokenCollectorTest, LateBoundTokens) {
   // The parser eventually breaks the first '>>' into two tokens ('>' and '>'),
   // but we choose to record them as a single token (for now).

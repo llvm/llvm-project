@@ -410,6 +410,7 @@ StringRef Lexer::getSpelling(SourceLocation loc,
   Token token;
   lexer.LexFromRawLexer(token);
 
+  tokenBegin = lexer.getBufferLocation() - token.getLength();
   unsigned length = token.getLength();
 
   // Common case:  no need for cleaning.
@@ -512,7 +513,9 @@ unsigned Lexer::MeasureTokenLength(SourceLocation Loc,
   Token TheTok;
   if (getRawToken(Loc, TheTok, SM, LangOpts))
     return 0;
-  return TheTok.getLength();
+  // Include any leading escaped newlines skipped when relexing.
+  return TheTok.getLength() + (TheTok.getLocation().getRawEncoding() -
+                               SM.getExpansionLoc(Loc).getRawEncoding());
 }
 
 SourceLocation Lexer::findEndOfIdentifierContinuation(
@@ -561,7 +564,8 @@ bool Lexer::getRawToken(SourceLocation Loc, Token &Result,
 
   const char *StrData = Buffer.data()+LocInfo.second;
 
-  if (!IgnoreWhiteSpace && isWhitespace(SkipEscapedNewLines(StrData)[0]))
+  if (!IgnoreWhiteSpace &&
+      isWhitespace(SkipEscapedNewLines(StrData, LangOpts)[0]))
     return true;
 
   // Create a lexer starting at the beginning of this token.
@@ -859,7 +863,7 @@ unsigned Lexer::getTokenPrefixLength(SourceLocation TokStart, unsigned CharNo,
   // advanced by 3 should return the location of b, not of \\.  One compounding
   // detail of this is that the escape may be made by a trigraph.
   if (!Lexer::isObviouslySimpleCharacter(*TokPtr))
-    PhysOffset += Lexer::SkipEscapedNewLines(TokPtr)-TokPtr;
+    PhysOffset += Lexer::SkipEscapedNewLines(TokPtr, LangOpts) - TokPtr;
 
   return PhysOffset;
 }
@@ -1356,17 +1360,16 @@ unsigned Lexer::getEscapedNewLineSize(const char *Ptr) {
 /// SkipEscapedNewLines - If P points to an escaped newline (or a series of
 /// them), skip over them and return the first non-escaped-newline found,
 /// otherwise return P.
-const char *Lexer::SkipEscapedNewLines(const char *P) {
+const char *Lexer::SkipEscapedNewLines(const char *P,
+                                       const LangOptions &LangOpts) {
   while (true) {
     const char *AfterEscape;
     if (*P == '\\') {
       AfterEscape = P+1;
-    } else if (*P == '?') {
+    } else if (*P == '?' && LangOpts.Trigraphs) {
       // If not a trigraph for escape, bail out.
       if (P[1] != '?' || P[2] != '/')
         return P;
-      // FIXME: Take LangOpts into account; the language might not
-      // support trigraphs.
       AfterEscape = P+3;
     } else {
       return P;
@@ -1423,6 +1426,9 @@ std::optional<Token> Lexer::findPreviousToken(SourceLocation Loc,
     Token Tok;
     if (getRawToken(Loc, Tok, SM, LangOpts))
       continue; // Not a token, go to prev location.
+    // Relexing a leading escaped newline can advance to the following token.
+    if (Loc.isFileID() && Tok.getLocation() != Loc)
+      continue;
     if (!Tok.is(tok::comment) || IncludeComments) {
       return Tok;
     }
@@ -3887,6 +3893,11 @@ LexStart:
 
   // Read a character, advancing over it.
   char Char = getAndAdvanceChar(CurPtr, Result);
+  if (Result.needsCleaning() && !isKeepWhitespaceMode()) {
+    BufferPtr = SkipEscapedNewLines(BufferPtr, LangOpts);
+    // The first character still needs cleaning if it was a trigraph.
+    Result.setFlagValue(Token::NeedsCleaning, CurPtr - BufferPtr > 1);
+  }
   tok::TokenKind Kind;
 
   if (!isVerticalWhitespace(Char))
