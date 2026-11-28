@@ -1267,6 +1267,9 @@ public:
     if (I)
       DL = I->getDebugLoc();
   }
+  SDLoc(const DebugLoc &DL, int Order) : DL(DL), IROrder(Order) {
+    assert(Order >= 0 && "bad IROrder");
+  }
 
   unsigned getIROrder() const { return IROrder; }
   const DebugLoc &getDebugLoc() const { return DL; }

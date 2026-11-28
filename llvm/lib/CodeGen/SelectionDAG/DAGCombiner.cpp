@@ -16940,8 +16940,13 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
           DoXform =
               ExtendUsesToFormExtLoad(VT, N, N0, ISD::ANY_EXTEND, SetCCs, TLI);
         if (DoXform) {
+          // The upper bits of an any_extend are undefined, so the new load
+          // does nothing more than the original load. Give it the load's
+          // source location, not the location of the extend, which often
+          // comes from lowering, e.g. of a ret that needs a wider type.
+          SDLoc LoadDL(LN0->getDebugLoc(), DL.getIROrder());
           SDValue ExtLoad =
-              DAG.getExtLoad(ISD::EXTLOAD, DL, VT, LN0->getChain(),
+              DAG.getExtLoad(ISD::EXTLOAD, LoadDL, VT, LN0->getChain(),
                              LN0->getBasePtr(), LoadVT, LN0->getMemOperand());
           SDValue Res = Frozen ? DAG.getFreeze(ExtLoad) : ExtLoad;
           ExtendSetCCUses(SetCCs, N0, Res, ISD::ANY_EXTEND);
