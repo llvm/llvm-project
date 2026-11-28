@@ -76,6 +76,10 @@ LLVM_ABI void checkExpectAnnotations(const Instruction &I,
                                      ArrayRef<uint32_t> ExistingWeights,
                                      bool IsFrontend);
 
+LLVM_ABI void checkMissingAnnotations(const Instruction &I,
+                                      const ArrayRef<uint32_t> ExistingWeights,
+                                      bool IsFrontendInstr);
+
 } // namespace llvm::misexpect
 
 #endif
