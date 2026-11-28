@@ -41,6 +41,9 @@ target_include_directories(ompt-print-callback INTERFACE ${CMAKE_CURRENT_SOURCE_
 
 add_custom_target(libomp-test-depends)
 add_dependencies(libomp-test-depends omp)
+if (LIBOMP_ARCH STREQUAL "riscv64" AND TARGET llvm-dwarfdump)
+  add_dependencies(libomp-test-depends llvm-dwarfdump)
+endif ()
 if (LLVM_RUNTIMES_BUILD AND OPENMP_TEST_Fortran_COMPILER AND "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
   add_dependencies(libomp-test-depends flang-rt)
 endif ()
