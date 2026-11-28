@@ -173,3 +173,42 @@ Weak test_return_Weak(Weak *a) {
 void test_null_receiver(C *c) {
   [c m:getWeak()];
 }
+
+typedef struct {
+  __weak id values[2];
+} WeakArray;
+
+WeakArray getWeakArray(void);
+
+// ARM64: define{{.*}} void @test_copy_assignment_WeakArray(
+// ARM64: call void @__copy_assignment_8_8_AB0s8n2_w0_AE(ptr %{{.*}}, ptr %{{.*}})
+
+// ARM64: define linkonce_odr hidden void @__copy_assignment_8_8_AB0s8n2_w0_AE(
+// ARM64: loop.body:
+// ARM64: %[[COPY_OBJ:.*]] = call ptr @llvm.objc.loadWeakRetained(ptr %{{.*}})
+// ARM64: call ptr @llvm.objc.storeWeak(ptr %{{.*}}, ptr %[[COPY_OBJ]])
+// ARM64-NEXT: call void @llvm.objc.release(ptr %[[COPY_OBJ]])
+// ARM64: loop.exit:
+// ARM64-NOT: call void @llvm.objc.release
+// ARM64: ret void
+
+void test_copy_assignment_WeakArray(WeakArray *dst, WeakArray *src) {
+  *dst = *src;
+}
+
+// ARM64: define{{.*}} void @test_move_assignment_WeakArray(
+// ARM64: call void @__move_assignment_8_8_AB0s8n2_w0_AE(ptr %{{.*}}, ptr %{{.*}})
+
+// ARM64: define linkonce_odr hidden void @__move_assignment_8_8_AB0s8n2_w0_AE(
+// ARM64: loop.body:
+// ARM64: %[[MOVE_OBJ:.*]] = call ptr @llvm.objc.loadWeakRetained(ptr %{{.*}})
+// ARM64: call ptr @llvm.objc.storeWeak(ptr %{{.*}}, ptr %[[MOVE_OBJ]])
+// ARM64-NEXT: call void @llvm.objc.destroyWeak(ptr %{{.*}})
+// ARM64-NEXT: call void @llvm.objc.release(ptr %[[MOVE_OBJ]])
+// ARM64: loop.exit:
+// ARM64-NOT: call void @llvm.objc.release
+// ARM64: ret void
+
+void test_move_assignment_WeakArray(WeakArray *dst) {
+  *dst = getWeakArray();
+}
