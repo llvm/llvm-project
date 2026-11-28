@@ -7138,7 +7138,11 @@ static void DbgGatherSalvagableDVI(
           continue;
 
         // Check that the location op SCEVs are suitable for translation to
-        // DIExpression.
+        // DIExpression. Do not compute a new SCEV for an instruction outside
+        // the loop: ScalarEvolution would record the instruction as a value
+        // of that expression only under -g, and LSR's SCEVExpander may then
+        // reuse it, which makes the emitted code depend on debug info. LSR
+        // does not rewrite such an instruction, so it needs no salvage.
         const auto &HasTranslatableLocationOps =
             [&](const DbgVariableRecord &DbgValToTranslate) -> bool {
           for (const auto LocOp : DbgValToTranslate.location_ops()) {
@@ -7146,6 +7150,10 @@ static void DbgGatherSalvagableDVI(
               return false;
 
             if (!SE.isSCEVable(LocOp->getType()))
+              return false;
+
+            if (isa<Instruction>(LocOp) && L->isLoopInvariant(LocOp) &&
+                !SE.getExistingSCEV(LocOp))
               return false;
 
             const SCEV *S = SE.getSCEV(LocOp);
