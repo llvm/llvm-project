@@ -16,40 +16,7 @@
 ; CHECK-NEXT:       .tidig_comp_cnt: 0x1
 ; CHECK-NEXT:     .graphics_registers:
 ; CHECK-NEXT:      .ps_extra_lds_size: 0
-; CHECK-NEXT:      .spi_ps_input_addr:
-; CHECK-NEXT:        .ancillary_ena:  false
-; CHECK-NEXT:        .front_face_ena: true
-; CHECK-NEXT:        .line_stipple_tex_ena: false
-; CHECK-NEXT:        .linear_center_ena: true
-; CHECK-NEXT:        .linear_centroid_ena: true
-; CHECK-NEXT:        .linear_sample_ena: true
-; CHECK-NEXT:        .persp_center_ena: true
-; CHECK-NEXT:        .persp_centroid_ena: true
-; CHECK-NEXT:        .persp_pull_model_ena: false
-; CHECK-NEXT:        .persp_sample_ena: true
-; CHECK-NEXT:        .pos_fixed_pt_ena: true
-; CHECK-NEXT:        .pos_w_float_ena: false
-; CHECK-NEXT:        .pos_x_float_ena: false
-; CHECK-NEXT:        .pos_y_float_ena: false
-; CHECK-NEXT:        .pos_z_float_ena: false
-; CHECK-NEXT:        .sample_coverage_ena: false
-; CHECK-NEXT:      .spi_ps_input_ena:
-; CHECK-NEXT:        .ancillary_ena:  false
-; CHECK-NEXT:        .front_face_ena: false
-; CHECK-NEXT:        .line_stipple_tex_ena: false
-; CHECK-NEXT:        .linear_center_ena: false
-; CHECK-NEXT:        .linear_centroid_ena: false
-; CHECK-NEXT:        .linear_sample_ena: false
-; CHECK-NEXT:        .persp_center_ena: false
-; CHECK-NEXT:        .persp_centroid_ena: false
-; CHECK-NEXT:        .persp_pull_model_ena: false
-; CHECK-NEXT:        .persp_sample_ena: true
-; CHECK-NEXT:        .pos_fixed_pt_ena: false
-; CHECK-NEXT:        .pos_w_float_ena: false
-; CHECK-NEXT:        .pos_x_float_ena: false
-; CHECK-NEXT:        .pos_y_float_ena: false
-; CHECK-NEXT:        .pos_z_float_ena: false
-; CHECK-NEXT:        .sample_coverage_ena: false
+; CHECK-NEXT:      .ps_interp_cntl: 0x9077
 ; CHECK-NEXT:    .hardware_stages:
 ; CHECK-NEXT:      .cs:
 ; CHECK-NEXT:        .backend_stack_size: 0
