@@ -7176,10 +7176,7 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   if (DeviceKernelAttr::isOpenCLSpelling(D->getAttr<DeviceKernelAttr>())) {
     if (GD.getKernelReferenceKind() == KernelReferenceKind::Stub &&
-        !D->hasAttr<NoInlineAttr>() &&
-        !Fn->hasFnAttribute(llvm::Attribute::NoInline) &&
-        !D->hasAttr<OptimizeNoneAttr>() &&
-        !Fn->hasFnAttribute(llvm::Attribute::OptimizeNone) &&
+        !D->hasAttr<NoInlineAttr>() && !D->hasAttr<OptimizeNoneAttr>() &&
         !ShouldAddOptNone) {
       Fn->addFnAttr(llvm::Attribute::AlwaysInline);
     }
