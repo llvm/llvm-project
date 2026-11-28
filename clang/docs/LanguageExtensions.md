@@ -746,12 +746,23 @@ elementwise to the input.
 
 Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±infinity
 
-The elementwise intrinsics `__builtin_elementwise_popcount`,
-`__builtin_elementwise_bitreverse`, `__builtin_elementwise_add_sat`,
-`__builtin_elementwise_sub_sat`, `__builtin_elementwise_max`,
-`__builtin_elementwise_min`, `__builtin_elementwise_abs`,
-`__builtin_elementwise_clzg`, `__builtin_elementwise_ctzg`, and
-`__builtin_elementwise_fma` can be called in a `constexpr` context.
+The following elementwise intrinsics can be used in constant expressions:
+
+- `__builtin_elementwise_abs`
+- `__builtin_elementwise_add_sat`
+- `__builtin_elementwise_bitreverse`
+- `__builtin_elementwise_clmul`
+- `__builtin_elementwise_clzg`
+- `__builtin_elementwise_ctzg`
+- `__builtin_elementwise_fma`
+- `__builtin_elementwise_fshl`
+- `__builtin_elementwise_fshr`
+- `__builtin_elementwise_max`
+- `__builtin_elementwise_min`
+- `__builtin_elementwise_pdep`
+- `__builtin_elementwise_pext`
+- `__builtin_elementwise_popcount`
+- `__builtin_elementwise_sub_sat`
 
 No implicit promotion of integer types takes place. The mixing of integer types
 of different sizes and signs is forbidden in binary and ternary builtins.
