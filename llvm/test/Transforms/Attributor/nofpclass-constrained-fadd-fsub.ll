@@ -1072,6 +1072,16 @@ define float @fadd_dyn__threshold(float noundef %arg) #0 strictfp {
   ret float %fadd
 }
 
+define float @fsub_dyn__threshold(float noundef %arg) #0 strictfp {
+; CHECK-LABEL: define float @fsub_dyn__threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FSUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float noundef f0x0C000000, float noundef [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FSUB]]
+;
+  %fsub = call float @llvm.experimental.constrained.fsub.f32(float f0x0C000000, float %arg, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %fsub
+}
+
 ; nextup(T) in float precision.
 define float @fadd_dyn__nextup_threshold(float noundef %arg) #0 strictfp {
 ; CHECK-LABEL: define nofpclass(sub) float @fadd_dyn__nextup_threshold(
@@ -1081,6 +1091,16 @@ define float @fadd_dyn__nextup_threshold(float noundef %arg) #0 strictfp {
 ;
   %fadd = call float @llvm.experimental.constrained.fadd.f32(float %arg, float f0x0C000001, metadata !"round.dynamic", metadata !"fpexcept.ignore")
   ret float %fadd
+}
+
+define float @fsub_dyn__nextup_threshold(float noundef %arg) #0 strictfp {
+; CHECK-LABEL: define nofpclass(sub) float @fsub_dyn__nextup_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[FSUB:%.*]] = call nofpclass(sub) float @llvm.experimental.constrained.fsub.f32(float noundef f0x0C000001, float noundef [[ARG]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FSUB]]
+;
+  %fsub = call float @llvm.experimental.constrained.fsub.f32(float f0x0C000001, float %arg, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %fsub
 }
 
 ;-------------------------------------------------------------------------------

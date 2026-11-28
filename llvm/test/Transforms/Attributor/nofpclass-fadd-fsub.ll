@@ -845,6 +845,231 @@ define x86_fp80 @fadd_nextup_threshold_x86_fp80(x86_fp80 noundef %arg) {
   ret x86_fp80 %add
 }
 
+define float @fsub_p2(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fsub_p2(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float 2.000000e+00, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float 2.0, %arg
+  ret float %sub
+}
+
+define float @fsub_n2(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fsub_n2(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float -2.000000e+00, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float -2.0, %arg
+  ret float %sub
+}
+
+; Smallest positive float subnormal: 2^-149.
+define float @fsub_psub(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fsub_psub(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float 1.401300e-45, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float f0x00000001, %arg
+  ret float %sub
+}
+
+; Largest positive subnormal - negative subnormal >= smallest positive normal.
+define float @fsub_psub_max(float nofpclass(nan inf zero psub norm) %arg) {
+; CHECK-LABEL: define nofpclass(nan inf zero nsub nnorm) float @fsub_psub_max(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float f0x007FFFFF, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float f0x007FFFFF, %arg
+  ret float %sub
+}
+
+; Smallest negative float subnormal by magnitude: -2^-149.
+define float @fsub_nsub(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fsub_nsub(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float -1.401300e-45, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float f0x80000001, %arg
+  ret float %sub
+}
+
+define float @fsub_pinf(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(zero sub) float @fsub_pinf(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float +inf, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float +inf, %arg
+  ret float %sub
+}
+
+define float @fsub_ninf(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(zero sub) float @fsub_ninf(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float -inf, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float -inf, %arg
+  ret float %sub
+}
+
+define ppc_fp128 @fsub_ppc_fp128_bailout(ppc_fp128 noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) ppc_fp128 @fsub_ppc_fp128_bailout(
+; CHECK-SAME: ppc_fp128 noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub ppc_fp128 2.000000e+00, [[ARG]]
+; CHECK-NEXT:    ret ppc_fp128 [[SUB]]
+;
+  %sub = fsub ppc_fp128 2.0, %arg
+  ret ppc_fp128 %sub
+}
+
+; For float, the threshold T is 2^-103.
+define float @fsub_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fsub_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float f0x0C000000, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float f0x0C000000, %arg
+  ret float %sub
+}
+
+define float @fsub_neg_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fsub_neg_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float f0x8C000000, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float f0x8C000000, %arg
+  ret float %sub
+}
+
+; 2 * T.
+define float @fsub_twice_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fsub_twice_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float f0x0C800000, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float f0x0C800000, %arg
+  ret float %sub
+}
+
+; -2 * T.
+define float @fsub_neg_twice_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fsub_neg_twice_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float f0x8C800000, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float f0x8C800000, %arg
+  ret float %sub
+}
+
+; nextup(T) in float precision.
+define float @fsub_nextup_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fsub_nextup_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float f0x0C000001, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float f0x0C000001, %arg
+  ret float %sub
+}
+
+; nextdown(T) in float precision.
+define float @fsub_nextdown_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fsub_nextdown_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float f0x0BFFFFFF, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float f0x0BFFFFFF, %arg
+  ret float %sub
+}
+
+; nextup(-T) in float precision.
+define float @fsub_nextup_neg_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fsub_nextup_neg_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float f0x8BFFFFFF, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float f0x8BFFFFFF, %arg
+  ret float %sub
+}
+
+; nextdown(-T) in float precision.
+define float @fsub_nextdown_neg_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fsub_nextdown_neg_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float f0x8C000001, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float f0x8C000001, %arg
+  ret float %sub
+}
+
+; For half, the threshold T is 2^-4.
+define half @fsub_threshold_half(half noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) half @fsub_threshold_half(
+; CHECK-SAME: half noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub half 6.250000e-02, [[ARG]]
+; CHECK-NEXT:    ret half [[SUB]]
+;
+  %sub = fsub half f0x2C00, %arg
+  ret half %sub
+}
+
+; nextup(T) in half precision.
+define half @fsub_nextup_threshold_half(half noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) half @fsub_nextup_threshold_half(
+; CHECK-SAME: half noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub half 6.256100e-02, [[ARG]]
+; CHECK-NEXT:    ret half [[SUB]]
+;
+  %sub = fsub half f0x2C01, %arg
+  ret half %sub
+}
+
+; For x86_fp80, the threshold T is 2^-16319.
+define x86_fp80 @fsub_threshold_x86_fp80(x86_fp80 noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) x86_fp80 @fsub_threshold_x86_fp80(
+; CHECK-SAME: x86_fp80 noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub x86_fp80 f0x00408000000000000000, [[ARG]]
+; CHECK-NEXT:    ret x86_fp80 [[SUB]]
+;
+  %sub = fsub x86_fp80 f0x00408000000000000000, %arg
+  ret x86_fp80 %sub
+}
+
+; nextup(T) in x86_fp80 precision.
+define x86_fp80 @fsub_nextup_threshold_x86_fp80(x86_fp80 noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) x86_fp80 @fsub_nextup_threshold_x86_fp80(
+; CHECK-SAME: x86_fp80 noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub x86_fp80 f0x00408000000000000001, [[ARG]]
+; CHECK-NEXT:    ret x86_fp80 [[SUB]]
+;
+  %sub = fsub x86_fp80 f0x00408000000000000001, %arg
+  ret x86_fp80 %sub
+}
+
+; Flush RHS to +0.0, then negate: -0.0 + (-0.0) == -0.0.
+define float @fsub_nzero_psub_ieee_dapz(float noundef nofpclass(nan inf zero nsub norm) %arg) #5 {
+; CHECK-LABEL: define noundef nofpclass(nan inf pzero psub norm) float @fsub_nzero_psub_ieee_dapz(
+; CHECK-SAME: float noundef nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR7]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float -0.000000e+00, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float -0.0, %arg
+  ret float %sub
+}
+
 define float @fadd_self(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @fadd_self(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {

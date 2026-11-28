@@ -275,6 +275,11 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
         return;
       }
 
+      if (const APFloat *CLHS; !IsAdd && match(LHS, m_APFloat(CLHS))) {
+        Known = KnownFPClass::fsub(*CLHS, KnownRHS, RM, Mode);
+        return;
+      }
+
       Known = IsAdd ? KnownFPClass::fadd(KnownLHS, KnownRHS, RM, Mode)
                     : KnownFPClass::fsub(KnownLHS, KnownRHS, RM, Mode);
     }
