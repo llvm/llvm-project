@@ -55,6 +55,7 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -64,6 +65,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <limits>
 using namespace llvm;
 
@@ -260,6 +262,185 @@ public:
   WebAssemblyFixIrreducibleControlFlowLegacy() : MachineFunctionPass(ID) {}
 };
 
+static bool hasEHPadEntry(const BlockSet &Entries) {
+  return llvm::any_of(Entries,
+                      [](MachineBasicBlock *MBB) { return MBB->isEHPad(); });
+}
+
+static void cloneInstrIntoBlock(MachineInstr &MI, MachineBasicBlock *Clone,
+                                MachineFunction &MF,
+                                const TargetInstrInfo &TII) {
+  // EH_LABEL contains an MCSymbol for exception ranges. Do not reuse the same
+  // symbol in both the original and cloned EH pad.
+  if (MI.getOpcode() == WebAssembly::EH_LABEL) {
+    MCSymbol *Sym = MF.getContext().createTempSymbol();
+    BuildMI(*Clone, Clone->end(), MI.getDebugLoc(),
+            TII.get(WebAssembly::EH_LABEL))
+        .addSym(Sym);
+    return;
+  }
+
+  MachineInstr *NewMI = MF.CloneMachineInstr(&MI);
+  Clone->push_back(NewMI);
+}
+
+static MachineBasicBlock *
+getImplicitFallthroughSuccessor(MachineBasicBlock *MBB) {
+  MachineBasicBlock *Fallthrough = MBB->getFallThrough(false);
+  if (!Fallthrough || Fallthrough->isEHPad())
+    return nullptr;
+  return Fallthrough;
+}
+
+static void makeFallthroughExplicitIfNeeded(MachineBasicBlock *MBB,
+                                            const TargetInstrInfo &TII) {
+  MachineBasicBlock *Fallthrough = getImplicitFallthroughSuccessor(MBB);
+  if (!Fallthrough)
+    return;
+
+  // MBB currently reaches Fallthrough by layout fallthrough. Preserve that
+  // edge before inserting another block after MBB.
+  TII.insertUnconditionalBranch(*MBB, Fallthrough, DebugLoc());
+}
+
+/// Fix irreducible SCCs whose entries include an EH pad without routing
+/// exceptional edges through normal dispatch blocks.
+///
+/// Before:
+///
+///   external EH
+///       |
+///       v
+///   original.catch [EHPad] ---> body <--- external normal
+///       ^                      |
+///       |                      | unwind
+///       +----------------------+
+///
+/// After:
+///
+///   external EH
+///       |
+///       v
+///   original.catch [EHPad] ---> body <--- external normal
+///                              |
+///                              | unwind
+///                              v
+///                       cloned.catch [EHPad]
+///                              |
+///                              +---> original EH continuation
+///
+///   1. Detect:
+///        irreducible SCC entries contain an EH pad entry.
+///
+///   2. Trace EH backedges:
+///        same-SCC normal predecessor -> EH pad entry
+///
+///   3. Prepare for cloning:
+///        remember the original EH pad fallthrough and make the predecessor's
+///        fallthrough explicit before inserting a clone.
+///
+///   4. Clone EH pad:
+///        copy EH flags, live-ins, instructions, successors, give cloned
+///        EH_LABELs fresh symbols, and materialize the remembered fallthrough.
+///
+///   5. Redirect:
+///        rewrite the in-loop exceptional edge to target the cloned EH pad.
+///
+/// This preserves the machine verifier invariant that exceptional successors
+/// remain direct-to-EHPad while turning the loop body into a single-entry loop.
+static void cloneEHPadEntriesForBackedges(const BlockSet &Entries,
+                                          BlockSet &Blocks, MachineFunction &MF,
+                                          const ReachabilityGraph &Graph) {
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+
+  // (1) This EH-specific path is selected only for irreducible SCC entries
+  // that include an EH pad.
+  assert(hasEHPadEntry(Entries) && "Expected an EH pad entry");
+
+  for (MachineBasicBlock *EHPadEntry : getSortedEntries(Entries)) {
+    if (!EHPadEntry->isEHPad())
+      continue;
+
+    const unsigned SCCId = Graph.getSCCId(EHPadEntry);
+
+    SmallVector<MachineBasicBlock *, 4> InLoopPreds;
+    // (2) Find only same-SCC normal predecessors. External EH predecessors
+    // must continue to target the original EH pad.
+    for (MachineBasicBlock *Pred : EHPadEntry->predecessors()) {
+      if (!Blocks.count(Pred))
+        continue;
+      if (Graph.getSCCId(Pred) != SCCId)
+        continue;
+
+      if (Pred->isEHPad())
+        reportFatalUsageError(
+            "irreducible control flow with an EH pad predecessor is not "
+            "supported");
+
+      InLoopPreds.push_back(Pred);
+    }
+
+    assert(!InLoopPreds.empty() &&
+           "EH pad loop entry must have an in-loop predecessor");
+
+    for (MachineBasicBlock *Pred : InLoopPreds) {
+      LLVM_DEBUG({
+        dbgs() << "Cloning EH pad entry for irreducible EH backedge: ";
+        Pred->printName(dbgs());
+        dbgs() << " -> ";
+        EHPadEntry->printName(dbgs());
+        dbgs() << "\n";
+      });
+
+      // (3) Remember fallthroughs before changing block layout. If Pred falls
+      // through to the next layout block, inserting the clone immediately after
+      // Pred would otherwise break that edge.
+      MachineBasicBlock *EHPadFallthrough =
+          getImplicitFallthroughSuccessor(EHPadEntry);
+      makeFallthroughExplicitIfNeeded(Pred, TII);
+
+      // (4) Clone the EH pad before rewiring the exceptional edge.
+      MachineBasicBlock *Clone =
+          MF.CreateMachineBasicBlock(EHPadEntry->getBasicBlock());
+      MF.insert(std::next(Pred->getIterator()), Clone);
+
+      Clone->setIsEHPad(EHPadEntry->isEHPad());
+      Clone->setIsEHScopeEntry(EHPadEntry->isEHScopeEntry());
+      Clone->setIsEHFuncletEntry(EHPadEntry->isEHFuncletEntry());
+      Clone->setIsCleanupFuncletEntry(EHPadEntry->isCleanupFuncletEntry());
+
+      // Keep virtual registers unchanged because EH continuations are shared
+      // and may use values defined in either EH pad.
+      for (const MachineBasicBlock::RegisterMaskPair &LI :
+           EHPadEntry->liveins())
+        Clone->addLiveIn(LI);
+
+      for (MachineInstr &MI : *EHPadEntry)
+        cloneInstrIntoBlock(MI, Clone, MF, TII);
+
+      for (auto SI = EHPadEntry->succ_begin(), SE = EHPadEntry->succ_end();
+           SI != SE; ++SI)
+        Clone->copySuccessor(EHPadEntry, SI);
+
+      // (4) The cloned EH pad is not laid out before the original fallthrough
+      // successor, so make that edge explicit if the original used fallthrough.
+      if (EHPadFallthrough)
+        TII.insertUnconditionalBranch(*Clone, EHPadFallthrough, DebugLoc());
+
+      Blocks.insert(Clone);
+
+      // (5) Keep the exceptional successor direct-to-EHPad. We change the
+      // target from the original EH pad to its clone, not to a routing block.
+      Pred->ReplaceUsesOfBlockWith(EHPadEntry, Clone);
+
+      LLVM_DEBUG({
+        dbgs() << "  created cloned EH pad ";
+        Clone->printName(dbgs());
+        dbgs() << "\n";
+      });
+    }
+  }
+}
 // Given a set of entries to a single loop, create a single entry for that
 // loop by creating a dispatch block for them, routing control flow using
 // a helper variable. Also updates Blocks with any new blocks created, so
@@ -399,9 +580,15 @@ void makeSingleEntryLoop(const BlockSet &Entries, BlockSet &Blocks,
         if (Op.isMBB() && Indices.count(Op.getMBB()))
           Op.setMBB(Map[{Op.getMBB(), PredInLoop}]);
 
-    for (auto *Succ : Pred->successors()) {
+    for (MachineBasicBlock *Succ :
+         llvm::make_early_inc_range(Pred->successors())) {
       if (!Entries.count(Succ))
         continue;
+
+      assert(
+          !Succ->isEHPad() &&
+          "EH pad entries must not be routed through normal dispatch blocks");
+
       auto *Routing = Map[{Succ, PredInLoop}];
       Pred->replaceSuccessor(Succ, Routing);
     }
@@ -453,7 +640,13 @@ bool processRegion(MachineBasicBlock *Entry, BlockSet &Blocks,
           Graph.getLoopEntriesForSCC(Graph.getSCCId(LoopEntry));
 
       if (MutualLoopEntries.size() > 1) {
-        makeSingleEntryLoop(MutualLoopEntries, Blocks, MF, Graph);
+        if (hasEHPadEntry(MutualLoopEntries)) {
+          // EH pad entries cannot be routed through the normal dispatch block
+          // strategy, so split the in-loop EH backedges instead.
+          cloneEHPadEntriesForBackedges(MutualLoopEntries, Blocks, MF, Graph);
+        } else {
+          makeSingleEntryLoop(MutualLoopEntries, Blocks, MF, Graph);
+        }
         FoundIrreducibility = true;
         Changed = true;
         break;
