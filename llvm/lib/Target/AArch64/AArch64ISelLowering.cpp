@@ -6149,6 +6149,15 @@ static SDValue convertMulToShlAdd(SDNode *N, SelectionDAG &DAG) {
       !SplatValue.getBoolValue())
     return SDValue();
 
+  assert(N->getValueType(0) == MVT::v2i64 &&
+         "Only v2i64 multiplies are expected here");
+  assert(SplatValue.getBitWidth() == 64 && "Expected a 64-bit splat value");
+
+  // Multiplying by INT64_MIN here would produce a shift by 64 bits, which is
+  // invalid for 64-bit elements. Keep the multiplication operation.
+  if (SplatValue.isMinSignedValue())
+    return SDValue();
+
   bool IsNegative = SplatValue.isNegative();
   SplatValue = SplatValue.abs();
   // Placeholder for MathOp

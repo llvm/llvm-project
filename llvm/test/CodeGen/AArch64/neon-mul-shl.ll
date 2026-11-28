@@ -98,3 +98,22 @@ define <2 x i64> @mul_v2i64_13_no_opt(<2 x i64> %v) {
   %mul = mul <2 x i64> %v, splat (i64 13)
   ret <2 x i64> %mul
 }
+
+; Multiplying by INT64_MIN must not produce a shift by 64 bits. This would be
+; invalid for 64-bit elements.
+; https://github.com/llvm/llvm-project/issues/244524
+define <2 x i64> @mul_v2i64_int_min(<2 x i64> %v) {
+; CHECK-LABEL: mul_v2i64_int_min:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    lsl x9, x9, #63
+; CHECK-NEXT:    lsl x8, x8, #63
+; CHECK-NEXT:    fmov d0, x9
+; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    ret
+  %c = icmp eq <2 x i64> splat (i64 -9223372036854775808), <i64 1, i64 -9223372036854775808>
+  %k = select <2 x i1> %c, <2 x i64> <i64 1, i64 -9223372036854775808>, <2 x i64> splat (i64 -9223372036854775808)
+  %mul = mul <2 x i64> %v, %k
+  ret <2 x i64> %mul
+}
