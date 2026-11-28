@@ -29,6 +29,7 @@ else()
 endif()
 
 add_clang_library(clangInterpreter
+  DeviceCodeObjectLinker.cpp
   DeviceOffload.cpp
   CodeCompletion.cpp
   IncrementalAction.cpp
