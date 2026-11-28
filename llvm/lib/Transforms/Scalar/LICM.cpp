@@ -1444,7 +1444,7 @@ static void hoist(Instruction &I, const LICMDependencies &Deps,
     // Move the new node to the destination block, before its terminator.
     moveInstructionBefore(I, Dest->getTerminator()->getIterator(), Deps);
 
-  I.updateLocationAfterHoist();
+  I.dropSourcePositionKeepIRLayers();
 
   if (isa<LoadInst>(I))
     ++NumMovedLoads;

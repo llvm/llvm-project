@@ -7296,7 +7296,10 @@ addition to its primary source position. It is independent of `inlinedAt:`; a
 location may have either, both, or neither. A location with no intermediate
 position omits the field entirely. The field belongs to the location that
 carries it: locations in an `inlinedAt:` chain may each have their own, and LLVM
-defines no relationship between them.
+defines no relationship between them. `irlayers` are meant to keep describing
+for profilers where an instruction originated even when it is hoisted or sunk
+into an unrelated block and its source position is dropped. Such an instruction
+has a line 0 location that carries `irlayers:`.
 
 ```text
 !0 = !DILocation(line: 2900, column: 42, scope: !1, irlayers: !3)
