@@ -353,6 +353,9 @@ Makes programs 10x faster by doing Special New Thing.
   `numRecords` argument to account for targets that use 32-bit and 45-bit
   `numRecords` widths more accurately. If an integer of the incorrect width
   is used, it will be zero-extended or truncated as needed.
+* Added the `!amdgpu.mfma` metadata. `!{!"agpr"}` on a call to an
+  `llvm.amdgcn.mfma.*` intrinsic requests the AGPR form of the instruction
+  for that call. See the `amdgpu.mfma` metadata in AMDGPUUsage.
 
 * These intrinsics have been removed in favour of `llvm.amdgcn.ballot`:
   * `llvm.amdgcn.icmp`

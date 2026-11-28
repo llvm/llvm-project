@@ -3274,6 +3274,36 @@ arguments.
 %val = load i32, ptr %in, align 4, !amdgpu.last.use !{}
 ```
 
+(amdgpu_mfma)=
+
+### '`amdgpu.mfma`' Metadata
+
+A hint on a call to an `llvm.amdgcn.mfma.*` intrinsic (including
+`llvm.amdgcn.mfma.scale.*`). The metadata node has one string operand.
+The only defined value is `"agpr"`. A node with any other content is
+ignored.
+
+`!{!"agpr"}` requests that the accumulator input (C) and the result (D)
+be allocated to AGPRs. On subtargets where both forms exist (gfx90a and
+later), instruction selection then uses the AGPR form of the
+instruction, unless the function's AGPR budget is smaller than C and D
+need. The budget comes from the `amdgpu-agpr-alloc` attribute and from
+the attributes that limit the function's vector registers, such as
+`amdgpu-waves-per-eu`. An accumulator of up to 4 registers needs as
+many AGPRs as it has registers. A bigger accumulator needs twice as
+many, because C and D need disjoint AGPRs when C is live after the
+MFMA, and instruction selection cannot tell whether it is. On earlier
+subtargets MFMA always uses AGPRs and the hint has no effect. It also
+has no effect on the `llvm.amdgcn.smfmac.*` intrinsics, which have a
+single form. Dropping the metadata does not change program behavior.
+GlobalISel currently ignores it.
+
+```llvm
+%d = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> %a, <4 x half> %b, <4 x float> %c, i32 0, i32 0, i32 0), !amdgpu.mfma !0
+
+!0 = !{!"agpr"}
+```
+
 ### '`amdgpu.no.remote.memory`' Metadata
 
 Asserts a memory operation does not access bytes in host memory, or

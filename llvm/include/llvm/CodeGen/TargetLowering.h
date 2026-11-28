@@ -5639,6 +5639,13 @@ public:
                                               SmallVectorImpl<SDValue> &Ops,
                                               SelectionDAG &DAG) const;
 
+  /// Targets may override this function to return metadata from the intrinsic
+  /// call \p I that instruction selection should see. It is recorded on the
+  /// node built for \p I and read back with SelectionDAG::getTargetHint.
+  virtual MDNode *getTargetIntrinsicHint(const CallInst &I) const {
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Div utility functions
   //

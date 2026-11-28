@@ -1244,15 +1244,31 @@ class MAIFrag<SDPatternOperator Op, bit HasAbid = true, bit Scaled = false> : Pa
                            (Op $src0, $src1, $src2, $cbsz, $blgp)))>;
 
 class CanUseAGPR_MAI<ValueType vt> {
+  defvar NumRegs = !srl(vt.Size, 5);
+  // An accumulator bigger than 4 registers is selected to the tied form. The
+  // two-address pass converts it to the early-clobber form when C is live
+  // after the MFMA (see NoDstOverlap in VOPProfileMAI). That form needs C and
+  // D in disjoint AGPRs. Liveness is not known here, so count both.
+  defvar NumCDRegs = !if(!gt(vt.Size, 128), !mul(NumRegs, 2), NumRegs);
+
   code PredicateCode = [{
-    return !Subtarget->hasGFX90AInsts() ||
-      MF->getInfo<SIMachineFunctionInfo>()->selectAGPRFormMFMA(
-        }] # !srl(vt.Size, 5) # ");";
+    if (!Subtarget->hasGFX90AInsts())
+      return true;
+    // !amdgpu.mfma !{!"agpr"} requests the AGPR form. Honor it only if the
+    // function can allocate the AGPRs that C and D need. Register allocation
+    // fails otherwise.
+    if (CurDAG->getTargetHint(N) &&
+        Subtarget->getMaxNumVectorRegs(MF->getFunction()).second >=
+            }] # NumCDRegs # [{)
+      return true;
+    return MF->getInfo<SIMachineFunctionInfo>()->selectAGPRFormMFMA(
+        }] # NumRegs # [{);
+  }];
 
   code GISelPredicateCode = [{
     return !Subtarget->hasGFX90AInsts() ||
       MF.getInfo<SIMachineFunctionInfo>()->selectAGPRFormMFMA(
-  }] # !srl(vt.Size, 5) # ");";
+  }] # NumRegs # ");";
 }
 
 class AgprMAIFrag<SDPatternOperator Op, ValueType vt, bit HasAbid = true,

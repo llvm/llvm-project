@@ -302,6 +302,7 @@ class SelectionDAG {
     MDNode *HeapAllocSite = nullptr;
     MDNode *PCSections = nullptr;
     MDNode *MMRA = nullptr;
+    MDNode *TargetHint = nullptr;
     CalledGlobalInfo CalledGlobal{};
     bool NoMerge = false;
   };
@@ -2704,6 +2705,16 @@ public:
   MDNode *getMMRAMetadata(const SDNode *Node) const {
     auto It = SDEI.find(Node);
     return It != SDEI.end() ? It->second.MMRA : nullptr;
+  }
+  /// Set the target hint returned by TargetLowering::getTargetIntrinsicHint
+  /// for the intrinsic call that produced Node.
+  void addTargetHint(const SDNode *Node, MDNode *MD) {
+    SDEI[Node].TargetHint = MD;
+  }
+  /// Return the target hint associated with Node, or nullptr if none exists.
+  MDNode *getTargetHint(const SDNode *Node) const {
+    auto It = SDEI.find(Node);
+    return It != SDEI.end() ? It->second.TargetHint : nullptr;
   }
   /// Set CalledGlobal to be associated with Node.
   void addCalledGlobal(const SDNode *Node, const GlobalValue *GV,

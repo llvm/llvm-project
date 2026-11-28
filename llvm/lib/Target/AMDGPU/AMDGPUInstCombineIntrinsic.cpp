@@ -2317,6 +2317,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     Value *NewII = IC.Builder.CreateIntrinsic(
         IID, {Src0->getType(), Src1->getType()}, Args, &II);
+    if (auto *NewCall = dyn_cast<CallInst>(NewII))
+      NewCall->copyMetadata(II);
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
   }

@@ -310,3 +310,21 @@ define <16 x float> @test_mfma_scale_f32_32x32x64_f8f6f4___v8i32_fp4__v8i32_fp4_
   i32 0, i32 0, i32 0, i32 0)
   ret <16 x float> %result
 }
+
+; Shrinking the fp4 operands keeps the call's metadata.
+define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp4__v8i32_fp4__keep_md(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 %scale0, i32 %scale1) {
+; CHECK-LABEL: define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4___v8i32_fp4__v8i32_fp4__keep_md(
+; CHECK-SAME: <8 x i32> [[ARG0:%.*]], <8 x i32> [[ARG1:%.*]], <4 x float> [[ARG2:%.*]], i32 [[SCALE0:%.*]], i32 [[SCALE1:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[ARG0]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[ARG1]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[RESULT:%.*]] = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v4i32.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[TMP2]], <4 x float> [[ARG2]], i32 4, i32 4, i32 0, i32 [[SCALE0]], i32 0, i32 [[SCALE1]]), !amdgpu.mfma [[META0:![0-9]+]]
+; CHECK-NEXT:    ret <4 x float> [[RESULT]]
+;
+  %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 4, i32 4, i32 0, i32 %scale0, i32 0, i32 %scale1), !amdgpu.mfma !0
+  ret <4 x float> %result
+}
+
+!0 = !{!"agpr"}
+;.
+; CHECK: [[META0]] = !{!"agpr"}
+;.

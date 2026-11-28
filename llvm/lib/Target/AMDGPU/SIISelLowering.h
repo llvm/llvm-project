@@ -701,6 +701,8 @@ public:
 
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;
+
+  MDNode *getTargetIntrinsicHint(const CallInst &I) const override;
 };
 
 // Returns true if argument is a boolean value which is not serialized into
