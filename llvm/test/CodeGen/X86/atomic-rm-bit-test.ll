@@ -4657,12 +4657,12 @@ define i32 @atomic_shl1_small_mask_or_32_gpr_br(ptr %v, i32 %c) nounwind {
 ;
 ; X64-LABEL: atomic_shl1_small_mask_or_32_gpr_br:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    andl $15, %esi
 ; X64-NEXT:    lock btsl %esi, (%rdi)
 ; X64-NEXT:    jae .LBB79_1
 ; X64-NEXT:  # %bb.2: # %if.then
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    movl (%rdi,%rax,4), %eax
+; X64-NEXT:    movl (%rdi,%rsi,4), %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB79_1:
 ; X64-NEXT:    movl $123, %eax
@@ -4969,6 +4969,7 @@ define i32 @atomic_shl1_small_mask_or_32_gpr_brz(ptr %v, i32 %c) nounwind {
 ;
 ; X64-LABEL: atomic_shl1_small_mask_or_32_gpr_brz:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    andl $15, %esi
 ; X64-NEXT:    lock btsl %esi, (%rdi)
 ; X64-NEXT:    movl $123, %eax
@@ -4976,8 +4977,7 @@ define i32 @atomic_shl1_small_mask_or_32_gpr_brz(ptr %v, i32 %c) nounwind {
 ; X64-NEXT:  # %bb.2: # %return
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB85_1: # %if.then
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    movl (%rdi,%rax,4), %eax
+; X64-NEXT:    movl (%rdi,%rsi,4), %eax
 ; X64-NEXT:    retq
 entry:
   %0 = and i32 %c, 15
@@ -5282,12 +5282,12 @@ define i32 @atomic_shl1_small_mask_or_32_gpr_brnz(ptr %v, i32 %c) nounwind {
 ;
 ; X64-LABEL: atomic_shl1_small_mask_or_32_gpr_brnz:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    andl $15, %esi
 ; X64-NEXT:    lock btsl %esi, (%rdi)
 ; X64-NEXT:    jae .LBB91_1
 ; X64-NEXT:  # %bb.2: # %if.then
-; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    movl (%rdi,%rax,4), %eax
+; X64-NEXT:    movl (%rdi,%rsi,4), %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB91_1:
 ; X64-NEXT:    movl $123, %eax
@@ -5912,8 +5912,7 @@ define i32 @atomic_shl1_small_mask_and_32_gpr_br(ptr %v, i32 %c) nounwind {
 ; X64-NEXT:    movl $123, %eax
 ; X64-NEXT:    je .LBB103_2
 ; X64-NEXT:  # %bb.1: # %if.then
-; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    movl (%rdi,%rax,4), %eax
+; X64-NEXT:    movl (%rdi,%rcx,4), %eax
 ; X64-NEXT:  .LBB103_2: # %return
 ; X64-NEXT:    retq
 entry:
@@ -6248,8 +6247,7 @@ define i32 @atomic_shl1_small_mask_and_32_gpr_brz(ptr %v, i32 %c) nounwind {
 ; X64-NEXT:    movl $123, %eax
 ; X64-NEXT:    jne .LBB109_2
 ; X64-NEXT:  # %bb.1: # %if.then
-; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    movl (%rdi,%rax,4), %eax
+; X64-NEXT:    movl (%rdi,%rcx,4), %eax
 ; X64-NEXT:  .LBB109_2: # %return
 ; X64-NEXT:    retq
 entry:
