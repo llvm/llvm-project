@@ -146,6 +146,16 @@ features cannot lower the translation-unit ABI level;
   This also fixes a crash when such a struct was passed or returned.
   `-fclang-abi-compat=23` restores the previous behavior. (#GH202205)
 
+- Except on PlayStation, on x86-64 System V a field that occupies no storage --
+  a flexible array member or an array of length zero -- is now classified as
+  NO_CLASS regardless of its offset, like a zero-width bit-field, following the
+  updated psABI. A struct or union with a flexible array member is no longer
+  always passed and returned in memory; e.g. `struct { float x; int a[]; }` now
+  travels in an SSE register. A zero-length array no longer makes a packed
+  aggregate unaligned or forces an aggregate wrapping a single 256-bit or
+  512-bit vector into memory. `-fclang-abi-compat=23` restores the previous
+  behavior. (#GH243361)
+
 - On 32-bit x86, Clang now matches GCC when classifying arguments for the
   `regparm` calling convention. Floating-point types other than `float` and
   `double` no longer consume general-purpose register slots, complex values
