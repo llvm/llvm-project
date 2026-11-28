@@ -6648,6 +6648,18 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
     } else if (ArgParts.size() > 1) {
       // This was split due to the calling convention, and no virtual register
       // mapping exists for the value.
+      // The live-in copies of an unused argument are deleted, so describe its
+      // parts by their physical registers, as for a single register above.
+      if (Arg->use_empty()) {
+        for (MachineOperand &Part : make_first_range(ArgParts)) {
+          if (Part.isReg()) {
+            if (Register PhysReg =
+                    MF.getRegInfo().getLiveInPhysReg(Part.getReg())) {
+              Part.setReg(PhysReg);
+            }
+          }
+        }
+      }
       return splitMultiRegDbgValue(ArgParts);
     }
   }
@@ -12424,7 +12436,23 @@ void SelectionDAGISel::LowerArguments(const Function &F, bool FastISel) {
         TLI->supportSwiftError() &&
         Arg.hasAttribute(Attribute::SwiftError);
     if (!ArgHasUses && !isSwiftErrorArg) {
-      SDB->setUnusedArgValue(&Arg, InVals[i]);
+      // Join the parts of a split argument, so that its debug info describes
+      // all of them rather than only the first. Fragments cannot describe the
+      // parts of a scalable vector.
+      SDValue ArgValue = InVals[i];
+      if (NumValues == 1 && !ValueVTs[0].isScalableVector()) {
+        EVT VT = ValueVTs[0];
+        unsigned NumParts = TLI->getNumRegistersForCallingConv(
+            *CurDAG->getContext(), F.getCallingConv(), VT);
+        if (NumParts > 1) {
+          ArgValue = getCopyFromParts(
+              DAG, dl, &InVals[i], NumParts,
+              TLI->getRegisterTypeForCallingConv(*CurDAG->getContext(),
+                                                 F.getCallingConv(), VT),
+              VT, nullptr, NewRoot, F.getCallingConv(), std::nullopt);
+        }
+      }
+      SDB->setUnusedArgValue(&Arg, ArgValue);
 
       // Also remember any frame index for use in FastISel.
       if (FrameIndexSDNode *FI =

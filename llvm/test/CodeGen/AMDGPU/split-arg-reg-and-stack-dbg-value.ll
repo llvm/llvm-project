@@ -33,13 +33,21 @@ define i64 @split_in_fragment(<30 x i32> %pad, i64 %v) !dbg !30 {
   ret i64 %r, !dbg !32
 }
 
-; FIXME: Only the register part of an unused argument is recorded, so the whole
-; variable is described by it.
+; Unused arguments are described by all of their parts too.
 ; CHECK-LABEL: {{^}}split_unused:
-; CHECK:      ;DEBUG_VALUE: split_unused:v <- $vgpr30
+; CHECK:      ;DEBUG_VALUE: split_unused:v <- [DW_OP_LLVM_fragment 0 32] $vgpr30
+; CHECK:      ;DEBUG_VALUE: split_unused:v <- [DW_OP_LLVM_fragment 32 32] [$sgpr32+0]
 define void @split_unused(<30 x i32> %pad, i64 %v) !dbg !40 {
   #dbg_value(i64 %v, !41, !DIExpression(), !42)
   ret void, !dbg !42
+}
+
+; CHECK-LABEL: {{^}}unused_in_regs:
+; CHECK:      ;DEBUG_VALUE: unused_in_regs:v <- [DW_OP_LLVM_fragment 0 32] $vgpr0
+; CHECK:      ;DEBUG_VALUE: unused_in_regs:v <- [DW_OP_LLVM_fragment 32 32] $vgpr1
+define void @unused_in_regs(i64 %v) !dbg !50 {
+  #dbg_value(i64 %v, !51, !DIExpression(), !52)
+  ret void, !dbg !52
 }
 
 !llvm.dbg.cu = !{!0}
@@ -64,3 +72,6 @@ define void @split_unused(<30 x i32> %pad, i64 %v) !dbg !40 {
 !40 = distinct !DISubprogram(name: "split_unused", type: !3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
 !41 = !DILocalVariable(name: "v", arg: 2, scope: !40, type: !4)
 !42 = !DILocation(line: 1, scope: !40)
+!50 = distinct !DISubprogram(name: "unused_in_regs", type: !3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!51 = !DILocalVariable(name: "v", arg: 1, scope: !50, type: !4)
+!52 = !DILocation(line: 1, scope: !50)

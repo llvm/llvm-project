@@ -49,7 +49,8 @@
 
 ; CHECK:       DW_TAG_formal_parameter
 ; CHECK:         DW_AT_location        (indexed (0x0) loclist = 0x{{.*}}:
-; CHECK:            [0x00000000, 0x00000004): DW_OP_reg12 R12)
+; CHECK:            [0x00000000, 0x00000004): DW_OP_reg12 R12, DW_OP_piece 0x2, DW_OP_reg13 R13, DW_OP_piece 0x2
+; CHECK-NEXT:       [0x00000004, 0x00000006): DW_OP_piece 0x2, DW_OP_reg13 R13, DW_OP_piece 0x2)
 ; CHECK:         DW_AT_name    ("y")
 ; CHECK:         DW_AT_decl_file       ("/tmp{{[/\\]}}dwarf-basics-v5.c")
 ; CHECK:         DW_AT_decl_line       (5)
