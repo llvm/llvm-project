@@ -42,7 +42,6 @@ class Module;
 class SectionKind;
 class StringRef;
 class TargetMachine;
-class DSOLocalEquivalent;
 
 class LLVM_ABI TargetLoweringObjectFile : public MCObjectFileInfo {
   /// Name-mangler for global names.

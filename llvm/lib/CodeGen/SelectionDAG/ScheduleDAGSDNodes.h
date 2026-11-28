@@ -26,7 +26,6 @@
 
 namespace llvm {
 
-class AAResults;
 class InstrItineraryData;
 
   /// ScheduleDAGSDNodes - A ScheduleDAG for scheduling SDNode-based DAGs.

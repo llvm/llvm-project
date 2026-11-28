@@ -54,7 +54,6 @@ template <typename T> class ArrayRef;
 class Loop;
 class LoopInfo;
 class MDNode;
-class SCEVConstant;
 class raw_ostream;
 
 /// Dependence - This class represents a dependence between two memory

@@ -20,9 +20,7 @@
 
 namespace llvm {
 class MCStreamer;
-class MachineBasicBlock;
 class MachineInstr;
-class Module;
 class raw_ostream;
 
 class LLVM_LIBRARY_VISIBILITY XtensaAsmPrinter : public AsmPrinter {

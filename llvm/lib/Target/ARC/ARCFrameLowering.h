@@ -22,7 +22,6 @@ namespace llvm {
 
 class MachineFunction;
 class ARCSubtarget;
-class ARCInstrInfo;
 
 class ARCFrameLowering : public TargetFrameLowering {
 public:

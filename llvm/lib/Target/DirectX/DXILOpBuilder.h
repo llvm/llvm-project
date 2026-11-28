@@ -21,12 +21,10 @@
 
 namespace llvm {
 class Module;
-class IRBuilderBase;
 class CallInst;
 class Constant;
 class Value;
 class Type;
-class FunctionType;
 
 namespace dxil {
 

@@ -22,7 +22,6 @@
 namespace llvm {
 
 class CallGraph;
-class CallGraphSCC;
 
 /// Wrapper to unify "old style" CallGraph and "new style" LazyCallGraph. This
 /// simplifies the interface and the call sites, e.g., new and old pass manager

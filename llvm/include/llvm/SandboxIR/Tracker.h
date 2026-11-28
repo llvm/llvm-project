@@ -62,18 +62,13 @@
 namespace llvm::sandboxir {
 
 class BasicBlock;
-class CallBrInst;
-class LoadInst;
-class StoreInst;
 class Instruction;
 class Tracker;
-class AllocaInst;
 class CatchSwitchInst;
 class SwitchInst;
 class ConstantInt;
 class ShuffleVectorInst;
 class CmpInst;
-class GlobalVariable;
 
 #ifndef NDEBUG
 

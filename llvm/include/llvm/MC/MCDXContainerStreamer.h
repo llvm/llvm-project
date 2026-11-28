@@ -22,8 +22,6 @@
 #include "llvm/MC/MCObjectWriter.h"
 
 namespace llvm {
-class MCInst;
-class raw_ostream;
 
 class MCDXContainerStreamer : public MCObjectStreamer {
 public:

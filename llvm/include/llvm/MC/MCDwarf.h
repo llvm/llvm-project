@@ -41,7 +41,6 @@ class MCObjectStreamer;
 class MCSection;
 class MCStreamer;
 class MCSymbol;
-class raw_ostream;
 class SourceMgr;
 
 namespace mcdwarf {

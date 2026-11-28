@@ -35,10 +35,7 @@
 #include <vector>
 
 namespace llvm {
-class MCInst;
 class MCStreamer;
-class MCSubtargetInfo;
-class Triple;
 } // namespace llvm
 
 using namespace llvm;

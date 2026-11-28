@@ -71,7 +71,6 @@
 #include <vector>
 
 namespace llvm {
-class DataLayout;
 class Value;
 } // namespace llvm
 

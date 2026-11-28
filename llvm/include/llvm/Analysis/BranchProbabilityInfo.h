@@ -32,7 +32,6 @@ class raw_ostream;
 class DominatorTree;
 class PostDominatorTree;
 class TargetLibraryInfo;
-class Value;
 
 /// Analysis providing branch probability information.
 ///

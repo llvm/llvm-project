@@ -26,7 +26,6 @@ class BatchAAResults;
 class AssumptionCache;
 class DataLayout;
 class DominatorTree;
-class Instruction;
 class LoadInst;
 struct LoadStoreInstProperties;
 class Loop;
@@ -36,7 +35,6 @@ class ScalarEvolution;
 class SCEVPredicate;
 class StoreInst;
 template <typename T> class SmallVectorImpl;
-class TargetLibraryInfo;
 
 /// Returns true if V is always a dereferenceable pointer with alignment
 /// greater or equal than requested. If the context instruction is specified

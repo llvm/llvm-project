@@ -24,7 +24,6 @@
 namespace llvm {
 
 class MCAsmBackend;
-class MCAsmInfo;
 class MCAssembler;
 class MCCodeEmitter;
 class MCContext;

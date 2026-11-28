@@ -14,7 +14,6 @@
 namespace llvm {
 
 class Type;
-class Use;
 
 /// Extension point for the Value hierarchy. All classes outside of lib/IR
 /// that wish to inherit from User should instead inherit from DerivedUser

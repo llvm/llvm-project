@@ -24,7 +24,6 @@ namespace llvm {
 class BlockAddress;
 class Constant;
 class GlobalValue;
-class LLVMContext;
 class MachineBasicBlock;
 
 namespace CSKYCP {

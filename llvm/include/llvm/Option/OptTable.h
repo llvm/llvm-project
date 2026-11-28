@@ -24,7 +24,6 @@
 namespace llvm {
 
 class raw_ostream;
-template <typename Fn> class function_ref;
 
 namespace opt {
 

@@ -24,10 +24,6 @@ namespace llvm {
 namespace logicalview {
 
 class LVElement;
-class LVLine;
-class LVScopeCompileUnit;
-class LVSymbol;
-class LVType;
 
 using AttributeSpec = DWARFAbbreviationDeclaration::AttributeSpec;
 

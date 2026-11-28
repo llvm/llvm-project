@@ -22,7 +22,6 @@ namespace llvm {
 
 // Forward delcarations
 class ARCSubtarget;
-class ARCTargetMachine;
 
 //===--------------------------------------------------------------------===//
 // TargetLowering Implementation

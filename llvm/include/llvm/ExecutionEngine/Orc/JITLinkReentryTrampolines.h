@@ -21,7 +21,6 @@
 #include "llvm/Support/Error.h"
 
 namespace llvm::jitlink {
-class Block;
 class LinkGraph;
 class Section;
 class Symbol;

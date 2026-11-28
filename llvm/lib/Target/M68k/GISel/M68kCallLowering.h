@@ -22,7 +22,6 @@
 namespace llvm {
 
 class M68kTargetLowering;
-class MachineInstrBuilder;
 
 class M68kCallLowering : public CallLowering {
   // TODO: We are only supporting return instruction with no value at this time

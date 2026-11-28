@@ -45,7 +45,6 @@
 namespace llvm {
 
 class BasicBlock;
-class BlockAddress;
 class DataLayout;
 class DebugLoc;
 struct DenormalMode;

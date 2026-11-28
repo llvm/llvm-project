@@ -20,7 +20,6 @@
 
 namespace llvm {
 
-class BlockAddress;
 class GlobalValue;
 class LLVMContext;
 

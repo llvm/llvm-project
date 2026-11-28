@@ -12,7 +12,6 @@
 namespace llvm {
 class MachineDominatorTree;
 class MachineFunction;
-class TargetPassConfig;
 class Triple;
 
 // Inline namespace for types / symbols shared between different

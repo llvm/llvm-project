@@ -16,7 +16,6 @@ namespace llvm {
 
 class LiveRangeEdit;
 class MachineFunction;
-class MachineFunctionPass;
 class VirtRegMap;
 class VirtRegAuxInfo;
 class LiveIntervals;

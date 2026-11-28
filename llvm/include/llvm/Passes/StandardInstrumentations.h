@@ -40,7 +40,6 @@ namespace llvm {
 
 class Module;
 class Function;
-class MachineFunction;
 class PassInstrumentationCallbacks;
 struct ExtendedIRContext;
 struct PassesOptions;

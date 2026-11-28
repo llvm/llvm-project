@@ -11,8 +11,6 @@
 #include "llvm/MC/MCStreamer.h"
 namespace llvm {
 class MCContext;
-class MCExpr;
-class MCSection;
 class MCSymbol;
 } // namespace llvm
 

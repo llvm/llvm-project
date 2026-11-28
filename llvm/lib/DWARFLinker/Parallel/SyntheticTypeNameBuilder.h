@@ -19,7 +19,6 @@ class DWARFDebugInfoEntry;
 
 namespace dwarf_linker {
 namespace parallel {
-struct LinkContext;
 class CompileUnit;
 
 /// The helper class to build type name based on DIE properties.

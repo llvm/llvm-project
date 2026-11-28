@@ -19,8 +19,6 @@
 
 namespace llvm {
 
-class MCOperand;
-
 class SystemZHLASMInstPrinter : public SystemZInstPrinterCommon {
 public:
   SystemZHLASMInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,

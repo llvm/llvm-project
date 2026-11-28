@@ -138,7 +138,6 @@ class MachineLoopInfo;
 class RegisterClassInfo;
 class SchedDFSResult;
 class TargetInstrInfo;
-class TargetPassConfig;
 class TargetRegisterInfo;
 
 /// MachineSchedContext provides enough context from the MachineScheduler pass

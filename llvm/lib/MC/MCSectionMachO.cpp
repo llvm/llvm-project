@@ -13,7 +13,6 @@
 
 namespace llvm {
 class MCAsmInfo;
-class MCExpr;
 class MCSymbol;
 class Triple;
 } // namespace llvm

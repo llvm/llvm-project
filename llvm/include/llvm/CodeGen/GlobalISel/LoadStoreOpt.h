@@ -23,12 +23,7 @@
 namespace llvm {
 // Forward declarations.
 class AnalysisUsage;
-class GStore;
-class LegalizerInfo;
-class MachineBasicBlock;
 class MachineInstr;
-class TargetLowering;
-struct LegalityQuery;
 class MachineRegisterInfo;
 namespace GISelAddressing {
 /// Helper struct to store a base, index and offset that forms an address

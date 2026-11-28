@@ -17,8 +17,6 @@
 
 namespace llvm {
 
-class raw_ostream;
-
 namespace gsym {
 
 struct CUInfo;

@@ -50,7 +50,6 @@ class Type;
 class raw_ostream;
 enum FPClassTest : unsigned;
 struct DenormalFPEnv;
-struct DenormalMode;
 
 enum class AllocFnKind : uint64_t {
   Unknown = 0,

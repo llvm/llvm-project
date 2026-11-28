@@ -24,8 +24,6 @@ namespace sandboxir {
 class Context;
 class Function;
 class GlobalVariable;
-class Type;
-class Constant;
 class GlobalAlias;
 class GlobalIFunc;
 class Instruction;

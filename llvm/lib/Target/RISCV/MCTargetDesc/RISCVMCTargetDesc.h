@@ -24,7 +24,6 @@ class MCContext;
 class MCInstrInfo;
 class MCObjectTargetWriter;
 class MCRegisterInfo;
-class MCRelocationInfo;
 class MCSubtargetInfo;
 class Target;
 

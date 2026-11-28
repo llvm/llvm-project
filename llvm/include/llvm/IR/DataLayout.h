@@ -47,7 +47,6 @@ namespace llvm {
 class GlobalVariable;
 class LLVMContext;
 class StructLayout;
-class Triple;
 class Value;
 
 // FIXME: Currently the DataLayout string carries a "preferred alignment"

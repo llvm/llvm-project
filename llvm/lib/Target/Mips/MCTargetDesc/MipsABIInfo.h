@@ -16,7 +16,6 @@
 namespace llvm {
 
 template <typename T> class ArrayRef;
-class MCTargetOptions;
 class StringRef;
 
 class MipsABIInfo {

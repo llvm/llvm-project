@@ -31,7 +31,6 @@ class FunctionCallee;
 class GlobalIFunc;
 class GlobalValue;
 class Constant;
-class ConstantStruct;
 class Value;
 class Type;
 

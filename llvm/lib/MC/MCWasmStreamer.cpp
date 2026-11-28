@@ -28,7 +28,6 @@
 namespace llvm {
 class MCContext;
 class MCStreamer;
-class MCSubtargetInfo;
 } // namespace llvm
 
 using namespace llvm;

@@ -24,7 +24,6 @@
 namespace llvm {
 
 class Constant;
-class DIBuilder;
 class DbgRecord;
 class Function;
 class GlobalVariable;

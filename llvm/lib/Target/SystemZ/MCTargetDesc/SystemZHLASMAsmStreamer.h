@@ -29,7 +29,6 @@
 #include "llvm/Support/FormattedStream.h"
 
 namespace llvm {
-class MCSymbolGOFF;
 
 class SystemZHLASMAsmStreamer final : public MCAsmBaseStreamer {
   // The full length of a line.

@@ -27,7 +27,6 @@
 
 namespace llvm {
 
-class MCAsmInfo;
 class MCAssembler;
 class MCContext;
 class MCExpr;
@@ -36,8 +35,6 @@ class MCObjectStreamer;
 class MCSymbol;
 class MCSection;
 class MCSubtargetInfo;
-class raw_ostream;
-class Triple;
 
 // Represents a contiguous piece of code or data within a section. Its size is
 // determined by MCAssembler::layout. All subclasses must have trivial

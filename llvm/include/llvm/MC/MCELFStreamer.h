@@ -26,7 +26,6 @@ class MCSymbolRefExpr;
 class MCAsmBackend;
 class MCCodeEmitter;
 class MCExpr;
-class MCInst;
 
 class LLVM_ABI MCELFStreamer : public MCObjectStreamer {
 public:

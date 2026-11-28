@@ -28,11 +28,8 @@
 #define GET_INSTRINFO_OPERAND_ENUM
 #include "AMDGPUGenInstrInfo.inc"
 
-struct amd_kernel_code_t;
-
 namespace llvm {
 
-struct Align;
 class Argument;
 class Function;
 class GlobalValue;

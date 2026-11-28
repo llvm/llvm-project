@@ -14,7 +14,6 @@
 
 namespace llvm {
 namespace pdb {
-class DIASession;
 
 class DIAInjectedSource : public IPDBInjectedSource {
 public:

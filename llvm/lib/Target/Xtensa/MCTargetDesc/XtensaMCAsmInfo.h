@@ -20,7 +20,6 @@
 
 namespace llvm {
 class Triple;
-class StringRef;
 
 class XtensaMCAsmInfo : public MCAsmInfoELF {
 public:

@@ -39,7 +39,6 @@
 
 namespace llvm {
 
-class raw_ostream;
 class Record;
 class SMLoc;
 class CodeGenRegisterClass;

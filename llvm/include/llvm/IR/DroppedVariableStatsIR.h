@@ -24,7 +24,6 @@ class StringRef;
 class PassInstrumentationCallbacks;
 class Function;
 class Module;
-class DILocation;
 
 /// A class to collect and print dropped debug information due to LLVM IR
 /// optimization passes. After every LLVM IR pass is run, it will print how many

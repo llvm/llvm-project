@@ -47,11 +47,7 @@ class SymbolGroup;
 namespace logicalview {
 
 class LVElement;
-class LVLine;
 class LVScope;
-class LVScopeCompileUnit;
-class LVSymbol;
-class LVType;
 class LVTypeVisitor;
 class LVSymbolVisitor;
 class LVSymbolVisitorDelegate;

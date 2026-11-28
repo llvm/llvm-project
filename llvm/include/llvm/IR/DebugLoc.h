@@ -25,7 +25,6 @@ namespace llvm {
 class LLVMContext;
 class raw_ostream;
 class DILocation;
-class Function;
 
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN

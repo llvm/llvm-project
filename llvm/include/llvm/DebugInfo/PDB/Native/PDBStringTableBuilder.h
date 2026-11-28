@@ -21,7 +21,6 @@
 
 namespace llvm {
 class BinaryStreamWriter;
-class WritableBinaryStreamRef;
 
 namespace msf {
 struct MSFLayout;
@@ -29,7 +28,6 @@ struct MSFLayout;
 
 namespace pdb {
 
-class PDBFileBuilder;
 class PDBStringTableBuilder;
 
 struct StringTableHashTraits {

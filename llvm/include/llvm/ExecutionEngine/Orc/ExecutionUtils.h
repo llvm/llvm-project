@@ -36,10 +36,6 @@ class Function;
 class Module;
 class Value;
 
-namespace object {
-class MachOUniversalBinary;
-}
-
 namespace orc {
 
 class ObjectLayer;

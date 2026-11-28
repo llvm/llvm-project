@@ -29,7 +29,6 @@ class MCInst;
 class MCInstrInfo;
 class MCOperand;
 class MCSubtargetInfo;
-class raw_ostream;
 
 class HexagonMCCodeEmitter : public MCCodeEmitter {
   MCContext &MCT;

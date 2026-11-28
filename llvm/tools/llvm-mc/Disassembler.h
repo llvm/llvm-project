@@ -18,7 +18,6 @@ namespace llvm {
 
 class MemoryBuffer;
 class Target;
-class raw_ostream;
 class SourceMgr;
 class MCContext;
 class MCSubtargetInfo;

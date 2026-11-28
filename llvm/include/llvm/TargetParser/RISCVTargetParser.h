@@ -23,8 +23,6 @@
 
 namespace llvm {
 
-class Triple;
-
 namespace RISCV {
 
 struct CPUModel {

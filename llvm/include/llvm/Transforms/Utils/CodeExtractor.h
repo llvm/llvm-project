@@ -25,7 +25,6 @@
 
 namespace llvm {
 
-template <typename PtrType> class SmallPtrSetImpl;
 class AddrSpaceCastInst;
 class AllocaInst;
 class BlockFrequency;
@@ -36,7 +35,6 @@ class CallInst;
 class DominatorTree;
 class Function;
 class Instruction;
-class Module;
 class Type;
 class Value;
 class StructType;

@@ -22,8 +22,6 @@
 
 namespace llvm {
 
-class MCExpr;
-
 class LLVM_ABI MCSectionGOFF final : public MCSection {
   StringRef ExternalName; // Alternate external name.
 

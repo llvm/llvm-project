@@ -31,7 +31,6 @@ class MachineBasicBlock;
 class MachineBranchProbabilityInfo;
 class MachineFunction;
 class MachineInstr;
-class MachineModuleInfo;
 class MachineRegisterInfo;
 class ProfileSummaryInfo;
 class TargetRegisterInfo;

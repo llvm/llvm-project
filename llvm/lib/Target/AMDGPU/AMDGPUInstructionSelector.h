@@ -33,7 +33,6 @@ struct ImageDimIntrinsicInfo;
 }
 
 class AMDGPURegisterBankInfo;
-class AMDGPUTargetMachine;
 class BlockFrequencyInfo;
 class ProfileSummaryInfo;
 class GCNSubtarget;

@@ -46,7 +46,6 @@ namespace pdb {
 
 class ClassLayout;
 class PDBFile;
-class SymbolGroup;
 class WithColor;
 
 class LinePrinter {

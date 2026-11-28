@@ -20,8 +20,6 @@
 
 namespace llvm {
 
-class TargetRegisterInfo;
-
 class SPIRVGenRegisterBankInfo : public RegisterBankInfo {
 protected:
 #define GET_TARGET_REGBANK_CLASS

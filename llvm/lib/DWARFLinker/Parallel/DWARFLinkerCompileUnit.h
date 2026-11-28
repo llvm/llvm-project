@@ -21,7 +21,6 @@ namespace parallel {
 
 using OffsetToUnitTy = function_ref<CompileUnit *(uint64_t Offset)>;
 
-struct AttributesInfo;
 class SyntheticTypeNameBuilder;
 class DIEGenerator;
 class TypeUnit;

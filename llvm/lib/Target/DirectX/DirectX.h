@@ -15,7 +15,6 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-class AttributeMask;
 class Function;
 class FunctionPass;
 class Module;

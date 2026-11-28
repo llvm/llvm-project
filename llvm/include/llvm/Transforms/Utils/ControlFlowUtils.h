@@ -19,8 +19,6 @@
 namespace llvm {
 
 class BasicBlock;
-class CallBrInst;
-class LoopInfo;
 class DomTreeUpdater;
 
 /// Given a set of branch descriptors [BB, Succ0, Succ1], create a "hub" such

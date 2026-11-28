@@ -28,7 +28,6 @@
 namespace llvm {
 class MCStreamer;
 class MachineInstr;
-class MachineBasicBlock;
 class Module;
 class raw_ostream;
 

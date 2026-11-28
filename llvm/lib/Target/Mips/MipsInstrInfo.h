@@ -37,7 +37,6 @@ class MachineOperand;
 class MipsSubtarget;
 class MCRegisterClass;
 using TargetRegisterClass = MCRegisterClass;
-class TargetRegisterInfo;
 
 class MipsInstrInfo : public MipsGenInstrInfo {
   virtual void anchor();

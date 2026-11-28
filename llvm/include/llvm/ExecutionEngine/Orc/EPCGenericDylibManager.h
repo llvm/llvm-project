@@ -30,7 +30,6 @@
 namespace llvm {
 namespace orc {
 
-class JITDylib;
 class SymbolLookupSet;
 
 class LLVM_ABI EPCGenericDylibManager : public DylibManager {

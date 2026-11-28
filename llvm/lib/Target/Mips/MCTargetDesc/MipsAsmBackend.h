@@ -20,7 +20,6 @@
 
 namespace llvm {
 
-class MCAssembler;
 struct MCFixupKindInfo;
 class MCRegisterInfo;
 class Target;

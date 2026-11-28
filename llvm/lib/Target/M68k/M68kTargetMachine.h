@@ -26,8 +26,6 @@
 #include <optional>
 
 namespace llvm {
-class formatted_raw_ostream;
-class M68kRegisterInfo;
 
 class M68kTargetMachine : public CodeGenTargetMachineImpl {
   const M68kOptions &CLOpts;

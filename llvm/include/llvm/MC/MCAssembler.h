@@ -30,11 +30,8 @@
 namespace llvm {
 
 class MCBoundaryAlignFragment;
-class MCCVDefRangeFragment;
-class MCCVInlineLineTableFragment;
 class MCFragment;
 class MCFixup;
-class MCSymbolRefExpr;
 class raw_ostream;
 class MCAsmBackend;
 class MCContext;

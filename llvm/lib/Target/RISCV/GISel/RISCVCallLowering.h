@@ -19,7 +19,6 @@
 
 namespace llvm {
 
-class MachineInstrBuilder;
 class MachineIRBuilder;
 class RISCVTargetLowering;
 

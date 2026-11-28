@@ -19,7 +19,6 @@
 
 namespace llvm {
 
-class TargetLibraryInfo;
 namespace cl {
 class LibraryOptionsContext;
 } // namespace cl

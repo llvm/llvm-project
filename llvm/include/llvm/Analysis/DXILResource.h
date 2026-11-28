@@ -26,7 +26,6 @@
 namespace llvm {
 class CallInst;
 class DataLayout;
-class LLVMContext;
 class MDTuple;
 class Value;
 

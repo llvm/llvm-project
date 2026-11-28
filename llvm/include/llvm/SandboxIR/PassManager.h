@@ -28,8 +28,6 @@
 
 namespace llvm::sandboxir {
 
-class Value;
-
 /// Base class.
 template <typename ParentPass, typename ContainedPass>
 class PassManager : public ParentPass {

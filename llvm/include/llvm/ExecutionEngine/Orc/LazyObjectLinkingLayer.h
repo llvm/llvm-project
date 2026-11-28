@@ -20,7 +20,6 @@ namespace llvm::orc {
 
 class ObjectLinkingLayer;
 class LazyReexportsManager;
-class RedirectableSymbolManager;
 
 /// LazyObjectLinkingLayer is an adapter for ObjectLinkingLayer that builds
 /// lazy reexports for all function symbols in objects that are/ added to defer

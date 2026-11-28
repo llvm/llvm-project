@@ -40,7 +40,6 @@
 
 namespace llvm {
 
-class AAResults;
 class AllocaInst;
 class AtomicCmpXchgInst;
 class AtomicRMWInst;

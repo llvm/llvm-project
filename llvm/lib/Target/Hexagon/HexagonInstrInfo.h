@@ -36,7 +36,6 @@ class MachineBranchProbabilityInfo;
 class MachineFunction;
 class MachineInstr;
 class MachineOperand;
-class TargetRegisterInfo;
 
 class HexagonInstrInfo : public HexagonGenInstrInfo {
   const HexagonRegisterInfo RegInfo;

@@ -24,7 +24,6 @@ class BasicBlock;
 class Function;
 class GlobalVariable;
 class Instruction;
-class LLVMContext;
 class Module;
 class Type;
 class Value;

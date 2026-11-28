@@ -25,7 +25,6 @@ class BlockFrequencyInfo;
 class TargetTransformInfo;
 class OptimizationRemarkEmitter;
 class AssumptionCache;
-class DominatorTree;
 class CodeExtractor;
 class CodeExtractorAnalysisCache;
 

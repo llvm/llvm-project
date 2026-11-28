@@ -19,8 +19,6 @@
 namespace llvm {
 
 class ModulePass;
-class Pass;
-class raw_ostream;
 
 //===----------------------------------------------------------------------===//
 /// createDeadArgEliminationPass - This pass removes arguments from functions

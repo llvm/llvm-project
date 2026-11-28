@@ -21,7 +21,6 @@
 namespace llvm {
 
 class AAResults;
-class AllocaInst;
 class BatchAAResults;
 class AssumptionCache;
 class CallBase;

@@ -24,7 +24,6 @@ namespace llvm {
 class raw_ostream;
 class Record;
 namespace gi {
-class Matcher;
 class MatchTable;
 
 void emitEncodingMacrosDef(raw_ostream &OS);
