@@ -444,11 +444,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
   }
   case Instruction::FAdd:
   case Instruction::FSub: {
+    const bool IsAdd = I->getOpcode() == Instruction::FAdd;
     KnownFPClass KnownLHS, KnownRHS;
 
     // fadd x, x can be handled more aggressively.
-    if (I->getOperand(0) == I->getOperand(1) &&
-        I->getOpcode() == Instruction::FAdd &&
+    if (I->getOperand(0) == I->getOperand(1) && IsAdd &&
         isGuaranteedNotToBeUndef(I->getOperand(0), SQ.AC, SQ.CtxI, SQ.DT,
                                  Depth + 1)) {
       Type *EltTy = VTy->getScalarType();
@@ -491,29 +491,51 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                       Mode);
       KnownRHS = KnownLHS;
     } else {
-      FPClassTest SrcDemandedMask = fcFinite;
+      FPClassTest LHSDemandedMask = fcAllFlags;
+      FPClassTest RHSDemandedMask = fcAllFlags;
 
-      // inf + (-inf) = nan
-      if (DemandedMask & fcNan)
-        SrcDemandedMask |= fcNan | fcInf;
+      if ((DemandedMask & fcNan) == fcNone) {
+        LHSDemandedMask &= ~fcNan;
+        RHSDemandedMask &= ~fcNan;
+      }
 
-      if (DemandedMask & fcInf)
-        SrcDemandedMask |= fcInf;
+      if (IsAdd) {
+        // fadd(+inf, y) and fadd(x, +inf) = +inf or NaN
+        if ((DemandedMask & (fcNan | fcPosInf)) == fcNone) {
+          LHSDemandedMask &= ~fcPosInf;
+          RHSDemandedMask &= ~fcPosInf;
+        }
+        // fadd(-inf, y) and fadd(x, -inf) = -inf or NaN
+        if ((DemandedMask & (fcNan | fcNegInf)) == fcNone) {
+          LHSDemandedMask &= ~fcNegInf;
+          RHSDemandedMask &= ~fcNegInf;
+        }
+      } else {
+        // fsub(+inf, y) and fsub(x, -inf) = +inf or NaN
+        if ((DemandedMask & (fcNan | fcPosInf)) == fcNone) {
+          LHSDemandedMask &= ~fcPosInf;
+          RHSDemandedMask &= ~fcNegInf;
+        }
+        // fsub(-inf, y) and fsub(x, +inf) = -inf or NaN
+        if ((DemandedMask & (fcNan | fcNegInf)) == fcNone) {
+          LHSDemandedMask &= ~fcNegInf;
+          RHSDemandedMask &= ~fcPosInf;
+        }
+      }
 
-      if (SimplifyDemandedFPClass(I, 1, SrcDemandedMask, KnownRHS, SQ,
+      if (SimplifyDemandedFPClass(I, 1, RHSDemandedMask, KnownRHS, SQ,
                                   Depth + 1) ||
-          SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownLHS, SQ,
+          SimplifyDemandedFPClass(I, 0, LHSDemandedMask, KnownLHS, SQ,
                                   Depth + 1))
         return I;
 
       Type *EltTy = VTy->getScalarType();
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
-      Known = I->getOpcode() == Instruction::FAdd
-                  ? KnownFPClass::fadd(KnownLHS, KnownRHS,
-                                       RoundingMode::NearestTiesToEven, Mode)
-                  : KnownFPClass::fsub(KnownLHS, KnownRHS,
-                                       RoundingMode::NearestTiesToEven, Mode);
+      Known = IsAdd ? KnownFPClass::fadd(KnownLHS, KnownRHS,
+                                         RoundingMode::NearestTiesToEven, Mode)
+                    : KnownFPClass::fsub(KnownLHS, KnownRHS,
+                                         RoundingMode::NearestTiesToEven, Mode);
     }
 
     Known.knownNot(~DemandedMask);
@@ -526,8 +548,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     bool ResultNotNan = (DemandedMask & fcNan) == fcNone;
 
     // With nnan: X + {+/-}Inf --> {+/-}Inf
-    if (ResultNotNan && I->getOpcode() == Instruction::FAdd &&
-        KnownRHS.isKnownAlways(fcInf | fcNan) && KnownLHS.isKnownNever(fcNan))
+    if (ResultNotNan && IsAdd && KnownRHS.isKnownAlways(fcInf | fcNan) &&
+        KnownLHS.isKnownNever(fcNan))
       return I->getOperand(1);
 
     // With nnan: {+/-}Inf + X --> {+/-}Inf
