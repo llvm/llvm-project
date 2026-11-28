@@ -67,6 +67,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Coroutines/MaterializationUtils.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -1889,6 +1890,9 @@ void coro::AsyncABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
     coro::BaseCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone,
                                   Suspend, TTI);
+    // Each clone starts as a copy of the entire function. Prune it now so
+    // that we don't accumulate one full copy per suspend point.
+    postSplitCleanup(*Clone);
   }
 }
 
@@ -2019,6 +2023,9 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
 
     coro::BaseCloner::createClone(F, "resume." + Twine(Idx), Shape, Clone,
                                   Suspend, TTI);
+    // Each clone starts as a copy of the entire function. Prune it now so
+    // that we don't accumulate one full copy per suspend point.
+    postSplitCleanup(*Clone);
   }
 }
 
@@ -2371,6 +2378,17 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     SmallVector<Function *, 4> Clones;
     auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
     doSplitCoroutine(F, Clones, *ABI, TTI, OptimizeFrame);
+
+    // Continuation clones were already pruned of unreachable blocks as they
+    // were created. Finish simplifying their CFGs now; CoroCleanup will only
+    // do so for clones that still contain coroutine intrinsics.
+    if (Shape.ABI != coro::ABI::Switch) {
+      for (Function *Clone : Clones) {
+        PreservedAnalyses PA = SimplifyCFGPass().run(*Clone, FAM);
+        FAM.invalidate(*Clone, PA);
+      }
+    }
+
     CurrentSCC = &updateCallGraphAfterCoroutineSplit(
         *N, Shape, Clones, *CurrentSCC, CG, AM, UR, FAM);
 

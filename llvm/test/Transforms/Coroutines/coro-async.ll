@@ -1,5 +1,6 @@
 ; RUN: opt < %s -passes='default<O2>' -S | FileCheck %s
 ; RUN: opt < %s -O0 -S | FileCheck --check-prefixes=CHECK-O0 %s
+; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split)' -S | FileCheck --check-prefixes=CHECK-SPLIT %s
 target datalayout = "p:64:64:64"
 
 %async.task = type { i64 }
@@ -242,6 +243,15 @@ entry:
 ; CHECK-SAME: #[[FRAMEPOINTER]]
 ; CHECK: tail call swiftcc void @asyncReturn({{.*}}%1)
 ; CHECK: ret void
+
+; Each continuation starts as a copy of the whole coroutine. CoroSplit should
+; prune the copy as soon as it is created, without relying on later passes.
+; CHECK-SPLIT-LABEL: define internal swiftcc void @my_async_function2.resume.0(
+; CHECK-SPLIT-NOT:   No predecessors!
+; CHECK-SPLIT:       {{^}$}}
+; CHECK-SPLIT-LABEL: define internal swiftcc void @my_async_function2.resume.1(
+; CHECK-SPLIT-NOT:   No predecessors!
+; CHECK-SPLIT:       {{^}$}}
 
 define swiftcc void @top_level_caller(ptr %ctxt, ptr %task, ptr %actor) {
   %prepare = call ptr @llvm.coro.prepare.async(ptr @my_async_function)

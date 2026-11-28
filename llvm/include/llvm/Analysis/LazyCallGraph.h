@@ -1085,7 +1085,8 @@ public:
   /// function.
   ///
   /// The original function must reference (not call) all new functions.
-  /// All new functions must reference (not call) each other.
+  /// The new functions may reference (not call) each other. They are treated
+  /// as mutually ref-recursive even if they do not reference each other.
   LLVM_ABI void
   addSplitRefRecursiveFunctions(Function &OriginalFunction,
                                 ArrayRef<Function *> NewFunctions);
