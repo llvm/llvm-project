@@ -182,9 +182,6 @@ if (UNIX AND CMAKE_SYSTEM_NAME MATCHES "AIX")
   add_compile_definitions(_LARGE_FILE_API)
 endif ()
 
-# Indicates REAL(16) support via an external library (e.g. libquadmath).
-add_compile_definitions(FLANG_RT_SUPPORTS_REAL16=$<BOOL:${FORTRAN_SUPPORTS_REAL16}>)
-
 # Check whether the compiler can undefine a macro using the "-Wp,-U" flag.
 # Aternatively, we could use
 #   CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU"

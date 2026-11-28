@@ -151,6 +151,11 @@ page](https://llvm.org/releases/).
   range, so conforming code is flagged and the warning is disabled by
   default.
 
+- The kind constants of the intrinsic modules now reflect the
+  `-fdisable-integer-N` and `-fdisable-real-N` options of the compilation that
+  uses the module, instead of the options used to build the module files.
+  This affects the kind constants of `ISO_FORTRAN_ENV` and `ISO_C_BINDING`.
+
 ## New Compiler Flags
 - Added `-fno-out-of-bounds-subscripts`, which restores the previous behavior of
   rejecting an out-of-range constant subscript with an error. See the entry above

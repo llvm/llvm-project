@@ -12,6 +12,7 @@
 
 #include "flang/Lower/Bridge.h"
 
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Lower/Allocatable.h"
@@ -7369,19 +7370,16 @@ private:
       if (owningScope && mod.getScope() != *owningScope)
         continue;
 
-      // Very special case: The value of numeric_storage_size depends on
-      // compilation options and therefore its value is not yet known when
-      // building the builtins runtime. Instead, the parameter is folding a
-      // __numeric_storage_size() expression which is loaded into the user
-      // program. For the iso_fortran_env object file, omit the symbol as it
-      // is never used.
-      if (var.hasSymbol()) {
-        const Fortran::semantics::Symbol &sym = var.getSymbol();
-        const Fortran::semantics::Scope &owner = sym.owner();
-        if (sym.name() == "numeric_storage_size" && owner.IsModule() &&
-            DEREF(owner.symbol()).name() == "iso_fortran_env")
-          continue;
-      }
+      // Very special case: The values of some intrinsic module constants
+      // (e.g. numeric_storage_size) depend on compilation options and
+      // therefore are not yet known when building the builtins runtime.
+      // Instead, the parameter is initialized by an expression which is only
+      // folded when the module file is loaded into the user program. For the
+      // intrinsic module's object file, omit the symbol as it is never used.
+      if (var.hasSymbol() &&
+          Fortran::evaluate::IsDeferredFoldingAllowed(var.getSymbol()) &&
+          Fortran::evaluate::HasDeferredFolding(var.getSymbol()))
+        continue;
       Fortran::lower::defineModuleVariable(*this, var);
     }
     for (auto &eval : mod.evaluationList)

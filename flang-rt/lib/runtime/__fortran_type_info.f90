@@ -21,7 +21,7 @@ module __fortran_type_info
   ! to be exported by this MODULE.
   private
 
-  integer, parameter :: int64 = selected_int_kind(18)
+  integer, parameter :: int64 = 8
 
   type :: DerivedType
     ! "TBP" bindings appear first.  Inherited bindings, with overrides already

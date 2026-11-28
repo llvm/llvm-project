@@ -80,6 +80,16 @@ void CheckRealWidening(
 void CheckRealWidening(const Expr<SomeType> &,
     const std::optional<DynamicType> &, FoldingContext &);
 
+/// Predicate: true when an expression references a deferred folding intrinsic,
+/// directly or via the initializers of named constants.
+bool HasDeferredFolding(const Expr<SomeType> &);
+/// Predicate: true when the symbol is a named constant whose initializer
+/// HasDeferredFolding().
+bool HasDeferredFolding(const Symbol &);
+/// Predicate: true when the symbol is owned by one of the intrinsic modules
+/// whose named constants may have initializers with deferred folding.
+bool IsDeferredFoldingAllowed(const Symbol &);
+
 // Validate the value of a named constant, the static initial
 // value of a non-pointer non-allocatable non-dummy variable, or the
 // default initializer of a component of a derived type (or instantiation

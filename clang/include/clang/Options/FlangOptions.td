@@ -162,6 +162,8 @@ def fdisable_real_3 : Flag<["-"],"fdisable-real-3">, Group<f_Group>,
    HelpText<"Disable real(KIND=3) from TargetCharacteristics">, Flags<[HelpHidden]>;
 def fdisable_real_10 : Flag<["-"],"fdisable-real-10">, Group<f_Group>,
   HelpText<"Disable real(KIND=10) from TargetCharacteristics">, Flags<[HelpHidden]>;
+def fdisable_real_16 : Flag<["-"],"fdisable-real-16">, Group<f_Group>,
+  HelpText<"Disable real(KIND=16) from TargetCharacteristics">, Flags<[HelpHidden]>;
 def fdisable_integer_2 : Flag<["-"],"fdisable-integer-2">, Group<f_Group>,
   HelpText<"Disable integer(KIND=2) from TargetCharacteristics">, Flags<[HelpHidden]>;
 def fdisable_integer_16 : Flag<["-"],"fdisable-integer-16">, Group<f_Group>,
