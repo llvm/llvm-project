@@ -430,3 +430,36 @@ define half @fdiv_narrow_ninf_on_both(half %x, half %y) {
   %r = fptrunc ninf float %m to half
   ret half %r
 }
+
+; Negative test: the sitofp result of INT_MIN does not fit into half, so the
+; fadd cannot be narrowed (it would compute -inf + y instead of -2^31 + y).
+
+define half @fptrunc_fadd_sitofp_out_of_range(i32 %a, half %y) {
+; CHECK-LABEL: @fptrunc_fadd_sitofp_out_of_range(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], -2147483648
+; CHECK-NEXT:    [[TMP1:%.*]] = sitofp i32 [[AND]] to half
+; CHECK-NEXT:    [[R:%.*]] = fadd half [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %and = and i32 %a, -2147483648
+  %x = sitofp i32 %and to float
+  %ye = fpext half %y to float
+  %add = fadd float %x, %ye
+  %r = fptrunc float %add to half
+  ret half %r
+}
+
+define half @fptrunc_fadd_sitofp_in_range(i32 %a, half %y) {
+; CHECK-LABEL: @fptrunc_fadd_sitofp_in_range(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 32768
+; CHECK-NEXT:    [[TMP1:%.*]] = uitofp nneg i32 [[AND]] to half
+; CHECK-NEXT:    [[R:%.*]] = fadd half [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %and = and i32 %a, 32768
+  %x = sitofp i32 %and to float
+  %ye = fpext half %y to float
+  %add = fadd float %x, %ye
+  %r = fptrunc float %add to half
+  ret half %r
+}
