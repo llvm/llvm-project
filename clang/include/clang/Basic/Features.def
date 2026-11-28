@@ -147,6 +147,7 @@ FEATURE(memory_sanitizer,
 FEATURE(type_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Type))
 FEATURE(thread_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Thread))
 FEATURE(dataflow_sanitizer, LangOpts.Sanitize.has(SanitizerKind::DataFlow))
+FEATURE(stack_check, LangOpts.StackCheck)
 FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
 FEATURE(ptrauth_intrinsics, LangOpts.PointerAuthIntrinsics &&
                             PP.getTargetInfo().getTriple().isOSDarwin())

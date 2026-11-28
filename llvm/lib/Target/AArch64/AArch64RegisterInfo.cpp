@@ -388,6 +388,10 @@ const uint32_t *AArch64RegisterInfo::getWindowsStackProbePreservedMask() const {
   return CSR_AArch64_StackProbe_Windows_RegMask;
 }
 
+const uint32_t *AArch64RegisterInfo::getDarwinStackProbePreservedMask() const {
+  return CSR_AArch64_StackProbe_Darwin_RegMask;
+}
+
 std::optional<std::string>
 AArch64RegisterInfo::explainReservedReg(const MachineFunction &MF,
                                         MCRegister PhysReg) const {

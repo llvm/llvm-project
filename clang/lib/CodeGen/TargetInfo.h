@@ -534,6 +534,9 @@ std::unique_ptr<TargetCodeGenInfo>
 createWindowsAArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind K);
 
 std::unique_ptr<TargetCodeGenInfo>
+createDarwinAArch64TargetCodeGenInfo(CodeGenModule &CGM, AArch64ABIKind K);
+
+std::unique_ptr<TargetCodeGenInfo>
 createAMDGPUTargetCodeGenInfo(CodeGenModule &CGM);
 
 std::unique_ptr<TargetCodeGenInfo>

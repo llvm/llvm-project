@@ -131,7 +131,9 @@ private:
 
   void emitEmptyStackFramePrologue(int64_t NumBytes,
                                    MachineBasicBlock::iterator MBBI,
-                                   const DebugLoc &DL) const;
+                                   const DebugLoc &DL,
+                                   int StackProbeSize,
+                                   StringRef ProbeSym) const;
 
   void emitFramePointerSetup(MachineBasicBlock::iterator MBBI,
                              const DebugLoc &DL, unsigned FixedObject);
@@ -142,6 +144,9 @@ private:
   void emitWindowsStackProbe(MachineBasicBlock::iterator MBBI,
                              const DebugLoc &DL, int64_t &NumBytes,
                              int64_t RealignmentPadding) const;
+
+  void emitDarwinStackProbe(MachineBasicBlock::iterator MBBI, DebugLoc DL,
+                            unsigned NumBytes) const;
 
   void emitCalleeSavedGPRLocations(MachineBasicBlock::iterator MBBI) const;
   void emitCalleeSavedSVELocations(MachineBasicBlock::iterator MBBI) const;
