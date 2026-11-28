@@ -360,8 +360,7 @@ public:
       const mlir::Location loc = cgf.getLoc(e->getSourceRange());
       const mlir::Value vecValue = Visit(e->getBase());
       const mlir::Value indexValue = Visit(e->getIdx());
-      return cir::VecExtractOp::create(cgf.getBuilder(), loc, vecValue,
-                                       indexValue);
+      return builder.createExtractElement(loc, vecValue, indexValue);
     }
     // Just load the lvalue formed by the subscript expression.
     return emitLoadOfLValue(e);
@@ -3010,8 +3009,9 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
       std::iota(mask.begin(), mask.end(), 0);
       return builder.createVecShuffle(loc, vec, mask);
     }
-    mlir::Value idx = builder.getConstInt(loc, cgf.sizeTy, 0);
-    return cir::VecExtractOp::create(builder, loc, vec, idx);
+
+    return builder.createExtractElement(loc, vec, cgf.sizeTy,
+                                        /*idx=*/0);
   }
 
   case CK_HLSLMatrixTruncation: {

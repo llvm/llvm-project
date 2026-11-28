@@ -848,8 +848,8 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
   if (lv.isVectorElt()) {
     const mlir::Value load =
         builder.createLoad(getLoc(loc), lv.getVectorAddress());
-    return RValue::get(cir::VecExtractOp::create(builder, getLoc(loc), load,
-                                                 lv.getVectorIdx()));
+    return RValue::get(
+        builder.createExtractElement(getLoc(loc), load, lv.getVectorIdx()));
   }
 
   if (lv.isExtVectorElt())
@@ -903,13 +903,14 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
   const auto *exprVecTy = lv.getType()->getAs<clang::VectorType>();
   if (!exprVecTy) {
     int64_t indexValue = getAccessedFieldNo(0, elts);
-    cir::ConstantOp index = builder.getConstInt(loc, cgm.sizeTy, indexValue);
     if (mlir::isa<cir::VectorType>(vec.getType()))
-      return RValue::get(cir::VecExtractOp::create(builder, loc, vec, index));
+      return RValue::get(
+          builder.createExtractElement(loc, vec, cgm.sizeTy, indexValue));
 
+    cir::ConstantOp rowIdx = builder.getConstInt(loc, cgm.sizeTy, indexValue);
     cir::ConstantOp columnIdx = builder.getConstInt(loc, cgm.sizeTy, 0);
     mlir::Value element =
-        cir::MatrixExtractOp::create(builder, loc, vec, index, columnIdx);
+        cir::MatrixExtractOp::create(builder, loc, vec, rowIdx, columnIdx);
     return RValue::get(element);
   }
 
