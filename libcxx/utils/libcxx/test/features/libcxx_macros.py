@@ -35,6 +35,7 @@ macros = {
     "_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING": "libcpp-abi-no-compressed-pair-padding",
     "_LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE": "libcpp-abi-use-small-deque-block-size",
     "_LIBCPP_ABI_COMPACT_LOCALE_ID": "libcpp-abi-compact-locale-id",
+    "_LIBCPP_ABI_SYNCBUF_MANIP_VIRTUAL": "libcpp-abi-syncbuf-manip-virtual",
 }
 for macro, feature in macros.items():
     features.append(

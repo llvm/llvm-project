@@ -252,6 +252,14 @@ bytes would be able to use the underlying platform's atomic wait primitive, whic
 Since the whole program must use the same implementation for correctness, changing this is an ABI break since libc++
 supports linking against TUs that were compiled against older versions of the library.
 
+### `_LIBCPP_ABI_SYNCBUF_MANIP_VIRTUAL`
+
+`std::emit_on_flush`, `std::noemit_on_flush` and `std::flush_emit` have to find out whether `os.rdbuf()` is a
+`basic_syncbuf`. By default, libc++ uses `dynamic_cast` for this, so these manipulators are not provided when RTTI is
+disabled. This flag adds a private virtual function to `basic_streambuf`, which `basic_syncbuf` overrides, so that the
+manipulators work without RTTI. Adding a virtual function changes the vtable layout of `basic_streambuf`, which is an
+ABI break.
+
 ## inline namespaces
 
 Inline namespaces which contain types that are observable by the user need to be kept the same, since they affect
