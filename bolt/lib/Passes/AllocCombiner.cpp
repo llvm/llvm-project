@@ -11,8 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/AllocCombiner.h"
+#include "llvm/ADT/Statistic.h"
 
-#define DEBUG_TYPE "alloccombiner"
+#define DEBUG_TYPE "bolt-alloccombiner"
+
+ALWAYS_ENABLED_STATISTIC(NumCombined, "Number of stack adjustments combined");
+ALWAYS_ENABLED_STATISTIC(DynamicCountCombined,
+                         "Execution count of combined stack adjustments");
 
 using namespace llvm;
 

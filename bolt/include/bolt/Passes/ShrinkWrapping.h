@@ -11,7 +11,6 @@
 
 #include "bolt/Passes/FrameAnalysis.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include <atomic>
 
 namespace llvm {
 namespace bolt {
@@ -306,14 +305,6 @@ class ShrinkWrapping {
   CalleeSavedAnalysis CSA;
   std::vector<std::vector<uint64_t>> BestSaveCount;
   std::vector<std::vector<MCInst *>> BestSavePos;
-
-  /// Pass stats
-  static std::atomic<std::uint64_t> SpillsMovedRegularMode;
-  static std::atomic<std::uint64_t> SpillsMovedPushPopMode;
-  static std::atomic<std::uint64_t> SpillsMovedDynamicCount;
-  static std::atomic<std::uint64_t> SpillsFailedDynamicCount;
-  static std::atomic<std::uint64_t> InstrDynamicCount;
-  static std::atomic<std::uint64_t> StoreDynamicCount;
 
   std::optional<unsigned> AnnotationIndex;
 

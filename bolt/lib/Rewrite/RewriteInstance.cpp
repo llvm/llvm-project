@@ -38,6 +38,7 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
@@ -78,6 +79,11 @@ using namespace bolt;
 
 extern cl::opt<uint32_t> X86AlignBranchBoundary;
 extern cl::opt<bool> X86AlignBranchWithin32BBoundaries;
+
+ALWAYS_ENABLED_STATISTIC(CountOverwrittenFunctions,
+                         "Number of functions rewritten in place");
+ALWAYS_ENABLED_STATISTIC(OverwrittenScore,
+                         "Score of functions rewritten in place");
 
 namespace opts {
 
@@ -6790,8 +6796,6 @@ void RewriteInstance::rewriteFunctionsInPlace(raw_fd_ostream &OS) {
   Offset = OS.seek(Offset);
   assert((Offset != (uint64_t)-1) && "Error resizing output file");
 
-  uint64_t CountOverwrittenFunctions = 0;
-  uint64_t OverwrittenScore = 0;
   for (BinaryFunction *Function : BC->getAllBinaryFunctions()) {
     if (Function->getImageAddress() == 0 || Function->getImageSize() == 0)
       continue;

@@ -16,6 +16,7 @@
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
 
 #undef  DEBUG_TYPE
@@ -294,10 +295,13 @@ class RewriteInstanceDiff {
         }
       }
     }
+    // PrintProgramStats counts into statistics: reset them for each binary.
     PrintProgramStats PPS;
     outs() << "* BOLT-DIFF: Starting print program stats pass for binary 1\n";
+    ResetStatistics();
     RI1.BC->logBOLTErrorsAndQuitOnFatal(PPS.runOnFunctions(*RI1.BC));
     outs() << "* BOLT-DIFF: Starting print program stats pass for binary 2\n";
+    ResetStatistics();
     RI1.BC->logBOLTErrorsAndQuitOnFatal(PPS.runOnFunctions(*RI2.BC));
     outs() << "=====\n";
     outs() << "Inputs share " << BothHaveProfile

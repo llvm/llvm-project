@@ -19,6 +19,7 @@
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
 #include <cmath>
@@ -28,6 +29,49 @@
 #include <vector>
 
 #define DEBUG_TYPE "bolt-opts"
+
+ALWAYS_ENABLED_STATISTIC(NumRegularFunctions, "Number of functions");
+ALWAYS_ENABLED_STATISTIC(NumAllProfiledFunctions,
+                         "Number of functions with profile");
+ALWAYS_ENABLED_STATISTIC(NumStaleProfileFunctions,
+                         "Number of functions with invalid profile");
+ALWAYS_ENABLED_STATISTIC(
+    NumAllStaleFunctions,
+    "Number of functions with invalid or inferred profile");
+ALWAYS_ENABLED_STATISTIC(NumInferredFunctions,
+                         "Number of functions with inferred profile");
+ALWAYS_ENABLED_STATISTIC(NumNonSimpleProfiledFunctions,
+                         "Number of non-simple functions with profile");
+ALWAYS_ENABLED_STATISTIC(NumUnknownControlFlowFunctions,
+                         "Number of functions with unknown control flow");
+ALWAYS_ENABLED_STATISTIC(TotalSampleCount, "Number of profile samples");
+ALWAYS_ENABLED_STATISTIC(StaleSampleCount,
+                         "Number of samples in functions with invalid profile");
+ALWAYS_ENABLED_STATISTIC(
+    InferredSampleCount,
+    "Number of samples in functions with inferred profile");
+ALWAYS_ENABLED_STATISTIC(NumUnusedObjects, "Number of ignored profile objects");
+ALWAYS_ENABLED_STATISTIC(NumCandidateTailCalls,
+                         "Number of conditional tail call candidates");
+ALWAYS_ENABLED_STATISTIC(NumTailCallsPatched,
+                         "Number of conditional tail calls created");
+ALWAYS_ENABLED_STATISTIC(CTCExecCount,
+                         "Execution count of conditional tail calls");
+ALWAYS_ENABLED_STATISTIC(CTCTakenCount,
+                         "Taken count of conditional tail calls");
+ALWAYS_ENABLED_STATISTIC(NumOrigForwardBranches,
+                         "Number of forward branches considered by SCTC");
+ALWAYS_ENABLED_STATISTIC(NumOrigBackwardBranches,
+                         "Number of backward branches considered by SCTC");
+ALWAYS_ENABLED_STATISTIC(SCTCNumDoubleJumps,
+                         "Number of double jumps removed by SCTC");
+ALWAYS_ENABLED_STATISTIC(SCTCDeletedBlocks, "Number of blocks removed by SCTC");
+ALWAYS_ENABLED_STATISTIC(SCTCDeletedBytes,
+                         "Number of bytes in blocks removed by SCTC");
+ALWAYS_ENABLED_STATISTIC(UCEDeletedBlocks,
+                         "Number of unreachable blocks removed");
+ALWAYS_ENABLED_STATISTIC(UCEDeletedBytes,
+                         "Number of bytes in unreachable blocks removed");
 
 using namespace llvm;
 using namespace bolt;
@@ -363,8 +407,8 @@ void EliminateUnreachableBlocks::runOnFunction(BinaryFunction &Function) {
   BinaryContext::IndependentCodeEmitter Emitter =
       BC.createIndependentMCCodeEmitter();
   std::tie(Count, Bytes) = Function.eraseInvalidBBs(Emitter.MCE.get());
-  DeletedBlocks += Count;
-  DeletedBytes += Bytes;
+  UCEDeletedBlocks += Count;
+  UCEDeletedBytes += Bytes;
   if (Count) {
     auto L = BC.scopeLock();
     Modified.insert(&Function);
@@ -388,9 +432,9 @@ Error EliminateUnreachableBlocks::runOnFunctions(BinaryContext &BC) {
       BC, ParallelUtilities::SchedulingPolicy::SP_CONSTANT, WorkFun,
       SkipPredicate, "elimininate-unreachable");
 
-  if (DeletedBlocks)
-    BC.outs() << "BOLT-INFO: UCE removed " << DeletedBlocks << " blocks and "
-              << DeletedBytes << " bytes of code\n";
+  if (UCEDeletedBlocks)
+    BC.outs() << "BOLT-INFO: UCE removed " << UCEDeletedBlocks << " blocks and "
+              << UCEDeletedBytes << " bytes of code\n";
   return Error::success();
 }
 
@@ -1079,11 +1123,11 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
   }
 
   if (NumLocalCTCs > 0) {
-    NumDoubleJumps += fixDoubleJumps(BF, true);
+    SCTCNumDoubleJumps += fixDoubleJumps(BF, true);
     // Clean-up unreachable tail-call blocks.
     const std::pair<unsigned, uint64_t> Stats = BF.eraseInvalidBBs();
-    DeletedBlocks += Stats.first;
-    DeletedBytes += Stats.second;
+    SCTCDeletedBlocks += Stats.first;
+    SCTCDeletedBytes += Stats.second;
 
     assert(BF.validateCFG());
   }
@@ -1124,9 +1168,9 @@ Error SimplifyConditionalTailCalls::runOnFunctions(BinaryContext &BC) {
               << " tail calls (" << NumOrigForwardBranches << " forward)"
               << " tail calls (" << NumOrigBackwardBranches << " backward)"
               << " from a total of " << NumCandidateTailCalls
-              << " while removing " << NumDoubleJumps << " double jumps"
-              << " and removing " << DeletedBlocks << " basic blocks"
-              << " totalling " << DeletedBytes
+              << " while removing " << SCTCNumDoubleJumps << " double jumps"
+              << " and removing " << SCTCDeletedBlocks << " basic blocks"
+              << " totalling " << SCTCDeletedBytes
               << " bytes of code. CTCs total execution count is "
               << CTCExecCount << " and the number of times CTCs are taken is "
               << CTCTakenCount << "\n";
@@ -1488,15 +1532,6 @@ Error PrintProfileStats::runOnFunctions(BinaryContext &BC) {
 }
 
 Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
-  uint64_t NumRegularFunctions = 0;
-  uint64_t NumStaleProfileFunctions = 0;
-  uint64_t NumAllStaleFunctions = 0;
-  uint64_t NumInferredFunctions = 0;
-  uint64_t NumNonSimpleProfiledFunctions = 0;
-  uint64_t NumUnknownControlFlowFunctions = 0;
-  uint64_t TotalSampleCount = 0;
-  uint64_t StaleSampleCount = 0;
-  uint64_t InferredSampleCount = 0;
   std::vector<const BinaryFunction *> ProfiledFunctions;
   std::vector<std::pair<double, uint64_t>> FuncDensityList;
   const char *StaleFuncsHeader = "BOLT-INFO: Functions with stale profile:\n";
@@ -1577,8 +1612,7 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   BC.NumProfiledFuncs = ProfiledFunctions.size();
   BC.NumStaleProfileFuncs = NumStaleProfileFunctions;
 
-  const size_t NumAllProfiledFunctions =
-      ProfiledFunctions.size() + NumStaleProfileFunctions;
+  NumAllProfiledFunctions = ProfiledFunctions.size() + NumStaleProfileFunctions;
   BC.outs() << "BOLT-INFO: " << NumAllProfiledFunctions << " out of "
             << NumRegularFunctions << " functions in the binary ("
             << format("%.1f", NumAllProfiledFunctions /
@@ -1621,15 +1655,16 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     }
   }
   if (NumInferredFunctions) {
-    BC.outs() << format(
-        "BOLT-INFO: inferred profile for %d (%.2f%% of profiled, "
-        "%.2f%% of stale) functions responsible for %.2f%% samples"
-        " (%zu out of %zu)\n",
-        NumInferredFunctions,
-        100.0 * NumInferredFunctions / NumAllProfiledFunctions,
-        100.0 * NumInferredFunctions / NumAllStaleFunctions,
-        100.0 * InferredSampleCount / TotalSampleCount, InferredSampleCount,
-        TotalSampleCount);
+    // Statistics don't go through format()'s varargs: stream the counts.
+    BC.outs() << "BOLT-INFO: inferred profile for " << NumInferredFunctions
+              << format(" (%.2f%% of profiled, %.2f%% of stale)",
+                        100.0 * NumInferredFunctions / NumAllProfiledFunctions,
+                        100.0 * NumInferredFunctions / NumAllStaleFunctions)
+              << " functions responsible for "
+              << format("%.2f%%",
+                        100.0 * InferredSampleCount / TotalSampleCount)
+              << " samples (" << InferredSampleCount << " out of "
+              << TotalSampleCount << ")\n";
     BC.outs() << format(
         "BOLT-INFO: inference found an exact match for %.2f%% of basic blocks"
         " (%zu out of %zu stale) responsible for %.2f%% samples"
@@ -1678,7 +1713,7 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
         BC.Stats.LooseMatchedSampleCount, BC.Stats.StaleSampleCount);
   }
 
-  if (const uint64_t NumUnusedObjects = BC.getNumUnusedProfiledObjects()) {
+  if ((NumUnusedObjects = BC.getNumUnusedProfiledObjects())) {
     BC.outs() << "BOLT-INFO: profile for " << NumUnusedObjects
               << " objects was ignored\n";
   }
@@ -1846,14 +1881,15 @@ Error PrintProgramStats::runOnFunctions(BinaryContext &BC) {
     assert(opts::ProfileDensityCutOffHot <= 1000000 &&
            "The cutoff value is greater than 1000000(100%)");
     // Subtract samples in zero-density functions (no fall-throughs) from
-    // TotalSampleCount (not used anywhere below).
+    // a copy, so that the TotalSampleCount statistic keeps the total.
+    uint64_t DenseSampleCount = TotalSampleCount;
     for (const auto [CurDensity, CurSamples] : FuncDensityList) {
       if (CurDensity != 0.0)
         break;
-      TotalSampleCount -= CurSamples;
+      DenseSampleCount -= CurSamples;
     }
     const uint64_t CutoffSampleCount =
-        1.f * TotalSampleCount * opts::ProfileDensityCutOffHot / 1000000;
+        1.f * DenseSampleCount * opts::ProfileDensityCutOffHot / 1000000;
     // Process functions in decreasing density order
     for (const auto [CurDensity, CurSamples] : llvm::reverse(FuncDensityList)) {
       if (AccumulatedSamples >= CutoffSampleCount)

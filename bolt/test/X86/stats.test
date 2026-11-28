@@ -1,0 +1,16 @@
+## Check that BOLT counters are LLVM statistics, printed by -stats/-stats-json.
+REQUIRES: asserts
+
+RUN: yaml2obj %p/Inputs/blarge_new.yaml &> %t.exe
+RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/blarge_new.preagg.txt \
+RUN:   -stats 2>&1 | FileCheck %s
+RUN: llvm-bolt %t.exe -o %t.out --pa -p %p/Inputs/blarge_new.preagg.txt \
+RUN:   -stats -stats-json 2>&1 | FileCheck %s --check-prefix=CHECK-JSON
+
+CHECK: BOLT-INFO: 5 out of 16 functions in the binary
+CHECK: 5 bolt-opts {{.*}} Number of functions with profile
+CHECK: 16 bolt-opts {{.*}} Number of functions
+
+CHECK-JSON: "bolt-opts.NumAllProfiledFunctions": 5,
+CHECK-JSON: "bolt-opts.NumRegularFunctions": 16,
+CHECK-JSON: "bolt-opts.TotalSampleCount": 3482

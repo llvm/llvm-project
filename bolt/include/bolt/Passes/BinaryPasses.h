@@ -124,8 +124,6 @@ public:
 /// filled with nops and they are used for alignment.
 class EliminateUnreachableBlocks : public BinaryFunctionPass {
   std::unordered_set<const BinaryFunction *> Modified;
-  std::atomic<unsigned> DeletedBlocks{0};
-  std::atomic<uint64_t> DeletedBytes{0};
   void runOnFunction(BinaryFunction &Function);
 
 public:
@@ -290,15 +288,6 @@ public:
 /// We assume that the target of the conditional branch is the
 /// first successor.
 class SimplifyConditionalTailCalls : public BinaryFunctionPass {
-  uint64_t NumCandidateTailCalls{0};
-  uint64_t NumTailCallsPatched{0};
-  uint64_t CTCExecCount{0};
-  uint64_t CTCTakenCount{0};
-  uint64_t NumOrigForwardBranches{0};
-  uint64_t NumOrigBackwardBranches{0};
-  uint64_t NumDoubleJumps{0};
-  uint64_t DeletedBlocks{0};
-  uint64_t DeletedBytes{0};
   std::unordered_set<const BinaryFunction *> Modified;
   std::set<const BinaryBasicBlock *> BeenOptimized;
 

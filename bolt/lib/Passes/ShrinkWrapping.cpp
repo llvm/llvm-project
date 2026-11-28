@@ -14,11 +14,26 @@
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/MCF.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/Statistic.h"
 #include <numeric>
 #include <optional>
 #include <stack>
 
-#define DEBUG_TYPE "shrinkwrapping"
+#define DEBUG_TYPE "bolt-shrinkwrapping"
+
+ALWAYS_ENABLED_STATISTIC(SpillsMovedRegularMode,
+                         "Number of spills moved inserting loads/stores");
+ALWAYS_ENABLED_STATISTIC(SpillsMovedPushPopMode,
+                         "Number of spills moved inserting pushes/pops");
+ALWAYS_ENABLED_STATISTIC(SpillsMovedDynamicCount,
+                         "Estimated store executions removed");
+ALWAYS_ENABLED_STATISTIC(SpillsFailedDynamicCount,
+                         "Estimated store executions not removed");
+ALWAYS_ENABLED_STATISTIC(
+    InstrDynamicCount,
+    "Execution count of instructions in processed functions");
+ALWAYS_ENABLED_STATISTIC(StoreDynamicCount,
+                         "Execution count of stores in processed functions");
 
 using namespace llvm;
 
@@ -697,13 +712,6 @@ void StackLayoutModifier::initialize() {
   classifyCFIs();
   IsInitialized = true;
 }
-
-std::atomic<std::uint64_t> ShrinkWrapping::SpillsMovedRegularMode{0};
-std::atomic<std::uint64_t> ShrinkWrapping::SpillsMovedPushPopMode{0};
-std::atomic<std::uint64_t> ShrinkWrapping::SpillsMovedDynamicCount{0};
-std::atomic<std::uint64_t> ShrinkWrapping::SpillsFailedDynamicCount{0};
-std::atomic<std::uint64_t> ShrinkWrapping::InstrDynamicCount{0};
-std::atomic<std::uint64_t> ShrinkWrapping::StoreDynamicCount{0};
 
 using BBIterTy = BinaryBasicBlock::iterator;
 
