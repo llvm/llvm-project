@@ -97,7 +97,7 @@ public:
   RecurrenceDescriptor(Value *Start, Instruction *Exit, StoreInst *Store,
                        RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
                        Type *RT, bool Signed, bool Ordered,
-                       SmallPtrSetImpl<Instruction *> &CI,
+                       SmallPtrSetImpl<Instruction *> *CI,
                        Type *MinWidthCastToRecurTy,
                        bool PhiHasUsesOutsideReductionChain = false)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
@@ -105,10 +105,14 @@ public:
         IsSigned(Signed), IsOrdered(Ordered),
         PhiHasUsesOutsideReductionChain(PhiHasUsesOutsideReductionChain),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
-    CastInsts.insert_range(CI);
+    if (CI)
+      CastInsts.insert_range(*CI);
     assert(
         (!PhiHasUsesOutsideReductionChain || isMinMaxRecurrenceKind(K)) &&
         "Only min/max recurrences are allowed to have multiple uses currently");
+    assert((!Exit == PhiHasUsesOutsideReductionChain) &&
+           "A recurrence lacks an exit instruction iff it has uses "
+           "outside the chain");
   }
 
   /// Simpler constructor for min/max recurrences that don't track cast
@@ -116,9 +120,10 @@ public:
   RecurrenceDescriptor(Value *Start, Instruction *Exit, StoreInst *Store,
                        RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
                        Type *RT, bool IsMultiUse = false)
-      : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
-        Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
-        PhiHasUsesOutsideReductionChain(IsMultiUse) {}
+      : RecurrenceDescriptor(Start, Exit, Store, K, FMF, ExactFP, RT,
+                             /*Signed=*/false, /*Ordered=*/false,
+                             /*CI=*/nullptr, /*MinWidthCastToRecurTy=*/nullptr,
+                             IsMultiUse) {}
 
   /// This POD struct holds information about a potential recurrence operation.
   class InstDesc {

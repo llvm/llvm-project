@@ -855,7 +855,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   RedDes =
       RecurrenceDescriptor(RdxStart, ExitInstruction, IntermediateStore, Kind,
                            FMF, ExactFPMathInst, RecurrenceType, IsSigned,
-                           IsOrdered, CastInsts, MinWidthCastToRecurrenceType);
+                           IsOrdered, &CastInsts, MinWidthCastToRecurrenceType);
   return true;
 }
 
