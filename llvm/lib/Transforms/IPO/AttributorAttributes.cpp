@@ -11752,13 +11752,9 @@ struct AAPotentialValuesCallSiteReturned : AAPotentialValuesImpl {
 
     Function *Caller = CB->getCaller();
 
-    auto AddScope = [&](AA::ValueScope S) {
-      SmallVector<AA::ValueAndContext> Values;
-      if (!A.getAssumedSimplifiedValues(IRPosition::returned(*Callee), this,
-                                        Values, S, UsedAssumedInformation))
-        return false;
-
-      for (auto &It : Values) {
+    auto AddValues = [&](ArrayRef<AA::ValueAndContext> Values,
+                         AA::ValueScope S) {
+      for (const AA::ValueAndContext &It : Values) {
         Value *V = It.getValue();
         std::optional<Value *> CallerV = A.translateArgumentToCallSiteContent(
             V, *CB, *this, UsedAssumedInformation);
@@ -11773,16 +11769,41 @@ struct AAPotentialValuesCallSiteReturned : AAPotentialValuesImpl {
         }
         if (S == AA::Intraprocedural && !AA::isValidInScope(*V, Caller)) {
           giveUpOnIntraprocedural(A);
-          return true;
+          return;
         }
         addValue(A, getState(), *V, CB, S, getAnchorScope());
       }
-      return true;
     };
-    if (!AddScope(AA::Intraprocedural))
+
+    SmallVector<AA::ValueAndContext> Values;
+    if (!A.getAssumedSimplifiedValues(IRPosition::returned(*Callee), this,
+                                      Values, AA::Intraprocedural,
+                                      UsedAssumedInformation))
       return indicatePessimisticFixpoint();
-    if (!AddScope(AA::Interprocedural))
-      return indicatePessimisticFixpoint();
+    AddValues(Values, AA::Intraprocedural);
+
+    // If the callee returns only its arguments and constants, these values,
+    // translated to this call site, are also the interprocedural values of the
+    // call. The interprocedural values of the callee would add the values
+    // passed at all other call sites, which is imprecise and very expensive if
+    // the callee has many call sites.
+    bool OnlyArgsAndConstants =
+        !Values.empty() && all_of(Values, [&](const AA::ValueAndContext &VAC) {
+          const Value *V = VAC.getValue();
+          if (isa<Constant>(V))
+            return true;
+          const auto *Arg = dyn_cast<Argument>(V);
+          return Arg && Arg->getParent() == Callee;
+        });
+    if (!OnlyArgsAndConstants) {
+      Values.clear();
+      if (!A.getAssumedSimplifiedValues(IRPosition::returned(*Callee), this,
+                                        Values, AA::Interprocedural,
+                                        UsedAssumedInformation))
+        return indicatePessimisticFixpoint();
+    }
+    AddValues(Values, AA::Interprocedural);
+
     return (AssumedBefore == getAssumed()) ? ChangeStatus::UNCHANGED
                                            : ChangeStatus::CHANGED;
   }
