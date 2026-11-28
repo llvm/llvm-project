@@ -5,7 +5,7 @@ module attributes {omp.is_target_device = false} {
   // CHECK: llvm.mlir.global external @_QMtest_0Earray_1d(dense<[1, 2, 3]> : tensor<3xi32>) {{{.*}}omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>{{.*}}} : !llvm.array<3 x i32>
   fir.global @_QMtest_0Earray_1d(dense<[1, 2, 3]> : tensor<3xi32>) {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : !fir.array<3xi32>
 
-  // CHECK: llvm.mlir.global external @_QMtest_0Earray_2d() {{{.*}}omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>{{.*}}} : !llvm.array<2 x array<2 x i32>>
+  // CHECK: llvm.mlir.global external @_QMtest_0Earray_2d(dense<{{\[}}[1, 2], [3, 4]]> : tensor<2x2xi32>) {{{.*}}omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>{{.*}}} : !llvm.array<2 x array<2 x i32>>
   fir.global @_QMtest_0Earray_2d {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link>} : !fir.array<2x2xi32> {
     %0 = fir.undefined !fir.array<2x2xi32>
     %c1_i32 = arith.constant 1 : i32
