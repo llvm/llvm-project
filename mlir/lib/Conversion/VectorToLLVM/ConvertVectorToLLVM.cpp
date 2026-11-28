@@ -2047,7 +2047,8 @@ struct VectorDeinterleaveOpLowering
         oddShuffleMask.push_back(i);
     }
 
-    auto poison = LLVM::PoisonOp::create(rewriter, loc, sourceType);
+    auto poison =
+        LLVM::PoisonOp::create(rewriter, loc, adaptor.getSource().getType());
     auto evenShuffle = LLVM::ShuffleVectorOp::create(
         rewriter, loc, adaptor.getSource(), poison, evenShuffleMask);
     auto oddShuffle = LLVM::ShuffleVectorOp::create(
