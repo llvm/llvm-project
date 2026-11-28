@@ -225,7 +225,6 @@ public:
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(0),
         SymbolType(GOFF::ESD_ST_SectionDefinition) {
     BehavAttrs.setTaskingBehavior(Attr.TaskingBehavior);
-    BehavAttrs.setBindingScope(Attr.BindingScope);
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,

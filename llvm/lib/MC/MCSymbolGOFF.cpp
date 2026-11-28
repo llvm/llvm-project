@@ -16,9 +16,9 @@ using namespace llvm;
 
 MCSectionGOFF *MCSymbolGOFF::getSectionForCommonSymbol(MCContext &Ctx,
                                                        Align ByteAlignment) {
-  MCSectionGOFF *SD = Ctx.getGOFFSection(
-      SectionKind::getMetadata(), getName(),
-      GOFF::SDAttr{GOFF::ESD_TA_Unspecified, GOFF::ESD_BSC_Unspecified});
+  MCSectionGOFF *SD =
+      Ctx.getGOFFSection(SectionKind::getMetadata(), getName(),
+                         GOFF::SDAttr{GOFF::ESD_TA_Unspecified});
 
   MCSectionGOFF *ED = Ctx.getGOFFSection(
       SectionKind::getMetadata(), GOFF::CLASS_WSA,

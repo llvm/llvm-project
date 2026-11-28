@@ -45,7 +45,6 @@ namespace GOFF {
 // Attributes for SD symbols.
 struct SDAttr {
   GOFF::ESDTaskingBehavior TaskingBehavior = GOFF::ESD_TA_Unspecified;
-  GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified;
 };
 
 // Attributes for ED symbols.
