@@ -26,6 +26,7 @@ class LLVMContext;
 class raw_ostream;
 class DILocation;
 class Function;
+class ModuleSlotTracker;
 
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
@@ -298,6 +299,10 @@ struct FLDebugLoc {
       return true;
     return Context->isValidSrcLoc(SrcLocIdx, InlinedAtIdx);
   }
+
+  LLVM_ABI void printAsOperand(raw_ostream &OS) const;
+  LLVM_ABI void printAsOperand(raw_ostream &OS, const Function *F,
+                               ModuleSlotTracker &MST) const;
 };
 
 inline hash_code hash_value(const FLDebugLoc &Val) {

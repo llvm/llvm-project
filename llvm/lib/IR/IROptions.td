@@ -24,6 +24,10 @@ defm : BoolField<"print-prof-data", "false",
   "Pretty print perf data (branch weights, etc) when dumping">;
 defm : BoolField<"print-single-flmd-line", "false",
   "Print the full contents of a function-local context on a single line">;
+defm : EnumField<"print-fl-debug-locs", "PrintFLMDMode",
+  "PrintFLMDMode::Off", "off,on,expanded",
+  ["PrintFLMDMode::Off", "PrintFLMDMode::On", "PrintFLMDMode::Expanded"],
+  "Force debug locations to be printed as either function-local metadata or DILocations; =off (default) to print DILocation attachments, =on for standard dbgLocs, =expanded to print the dbgLoc contents in-line where possible.">;
 
 // AutoUpgrade.cpp
 defm : BoolField<"auto-upgrade-debug-info", "true",

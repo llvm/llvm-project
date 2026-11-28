@@ -28,6 +28,7 @@ add_llvm_component_library(LLVMCore
   DIExpressionOptimizer.cpp
   DebugProgramInstruction.cpp
   DebugLoc.cpp
+  DebugLocConversion.cpp
   DiagnosticHandler.cpp
   DiagnosticInfo.cpp
   DiagnosticPrinter.cpp

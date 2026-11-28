@@ -26,6 +26,7 @@
 
 namespace llvm {
 
+class DebugLocationStorage;
 class DiagnosticInfo;
 enum DiagnosticSeverity : char;
 class Function;
@@ -370,6 +371,9 @@ public:
   /// Key Instructions: get the next free atom group number and increment
   /// the global tracker.
   LLVM_ABI uint64_t incNextDILocationAtomGroup();
+
+  LLVM_ABI std::shared_ptr<DebugLocationStorage>
+  getModuleDLConversionStorage(Module *M);
 
 private:
   // Module needs access to the add/removeModule methods.

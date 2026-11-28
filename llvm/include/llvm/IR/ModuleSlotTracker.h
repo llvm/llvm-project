@@ -24,6 +24,7 @@ class SlotTracker;
 class Value;
 class DILocation;
 class MDNode;
+class DebugLocWriteConversionMap;
 
 /// Abstract interface of slot tracker storage.
 class LLVM_ABI AbstractSlotTrackerStorage {
@@ -89,6 +90,7 @@ public:
 
   /// Lazily creates a slot tracker.
   SlotTracker *getMachine();
+  DebugLocWriteConversionMap &getDLConversionMap();
 
   const Module *getModule() const { return M; }
   const Function *getCurrentFunction() const { return F; }
@@ -117,6 +119,8 @@ public:
   virtual bool shouldPrintDebugLocationInline(const DILocation *) const {
     return false;
   }
+  virtual bool shouldPrintFLDebugLocationInline(const Function *,
+                                                FLDebugLoc) const;
 };
 
 } // end namespace llvm

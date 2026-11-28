@@ -18,6 +18,9 @@ constexpr bool ElideAllZeroBranchWeightsDefault = false;
 #else
 constexpr bool ElideAllZeroBranchWeightsDefault = true;
 #endif
+
+enum class PrintFLMDMode { Off, On, Expanded };
+
 } // namespace llvm
 
 #define OPTIONS_STRUCT_DECL

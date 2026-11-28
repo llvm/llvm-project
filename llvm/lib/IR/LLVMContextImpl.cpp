@@ -13,6 +13,7 @@
 #include "LLVMContextImpl.h"
 #include "AttributeImpl.h"
 #include "llvm/ADT/StringMapEntry.h"
+#include "llvm/IR/DebugLocConversion.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Module.h"
@@ -247,4 +248,15 @@ OptPassGate &LLVMContextImpl::getOptPassGate() const {
 
 void LLVMContextImpl::setOptPassGate(OptPassGate& OPG) {
   this->OPG = &OPG;
+}
+
+std::shared_ptr<DebugLocationStorage>
+LLVMContextImpl::getModuleDLConversionStorage(Module *M) {
+  auto &StoragePtr = DebugLocConversionStorage.try_emplace(M).first->second;
+  if (!StoragePtr.get())
+    StoragePtr.reset(new DebugLocationStorage());
+
+  assert(StoragePtr.use_count() == 1 &&
+         "DebugLoc Conversion storage borrowed multiple times");
+  return StoragePtr;
 }

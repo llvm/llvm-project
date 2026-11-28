@@ -41,6 +41,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLocConversion.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -831,6 +832,8 @@ private:
   StringMap<unsigned> TypeIdCompatibleVtableMap;
   unsigned TypeIdCompatibleVtableNext = 0;
 
+  std::unique_ptr<DebugLocWriteConversionMap> DLConversionMap;
+
 public:
   /// Construct from a module.
   ///
@@ -904,6 +907,10 @@ public:
   inline void initializeIfNeeded();
   int initializeIndexIfNeeded();
 
+  DebugLocWriteConversionMap *getDLConversionMap() {
+    return DLConversionMap.get();
+  }
+
   // Implementation Details
 private:
   /// CreateModuleSlot - Insert the specified GlobalValue* into the slot table.
@@ -955,6 +962,9 @@ SlotTracker *ModuleSlotTracker::getMachine() {
     Machine->setProcessHook(ProcessFunctionHookFn);
   return Machine;
 }
+DebugLocWriteConversionMap &ModuleSlotTracker::getDLConversionMap() {
+  return *getMachine()->getDLConversionMap();
+}
 
 void ModuleSlotTracker::incorporateFunction(const Function &F) {
   // Using getMachine() may lazily create the slot tracker.
@@ -983,6 +993,12 @@ void ModuleSlotTracker::setProcessHook(
 void ModuleSlotTracker::setProcessHook(
     std::function<void(AbstractSlotTrackerStorage *, const Function *)> Fn) {
   ProcessFunctionHookFn = std::move(Fn);
+}
+
+bool ModuleSlotTracker::shouldPrintFLDebugLocationInline(const Function *,
+                                                         FLDebugLoc) const {
+  return getIROptions(M->getContext()).print_fl_debug_locs ==
+         PrintFLMDMode::Expanded;
 }
 
 static SlotTracker *createSlotTracker(const Value *V) {
@@ -1021,13 +1037,35 @@ static SlotTracker *createSlotTracker(const Value *V) {
 // to be added to the slot table.
 SlotTracker::SlotTracker(const Module *M, bool ShouldTrackMetadataDefinitions)
     : TheModule(M),
-      ShouldTrackMetadataDefinitions(ShouldTrackMetadataDefinitions) {}
+      ShouldTrackMetadataDefinitions(ShouldTrackMetadataDefinitions) {
+  // If we want to print FLMD, we completely convert the module now; this is
+  // costly if we are using this to print e.g. one instruction at a time, but
+  // this feature is mainly used for testing (for now). It also involves
+  // temporarily swapping out the current function FLMD attachments for newly
+  // generated MDFunctionLocalContexts.
+  if (TheModule &&
+      getIROptions(M->getContext()).print_fl_debug_locs != PrintFLMDMode::Off) {
+    auto *TheMutableModule = const_cast<Module *>(TheModule);
+    DLConversionMap.reset(new DebugLocWriteConversionMap(TheMutableModule));
+  }
+}
 
 // Function level constructor. Causes the contents of the Module and the one
 // function provided to be added to the slot table.
 SlotTracker::SlotTracker(const Function *F)
     : TheModule(F ? F->getParent() : nullptr), TheFunction(F),
-      ShouldTrackMetadataDefinitions(false) {}
+      ShouldTrackMetadataDefinitions(false) {
+  // If we want to print FLMD, we completely convert the module now; this is
+  // costly if we are using this to print e.g. one instruction at a time, but
+  // this feature is mainly used for testing (for now). It also involves
+  // temporarily swapping out the current function FLMD attachments for newly
+  // generated MDFunctionLocalContexts.
+  if (TheModule && getIROptions(TheModule->getContext()).print_fl_debug_locs !=
+                       PrintFLMDMode::Off) {
+    auto *TheMutableModule = const_cast<Module *>(TheModule);
+    DLConversionMap.reset(new DebugLocWriteConversionMap(TheMutableModule));
+  }
+}
 
 SlotTracker::SlotTracker(const ModuleSummaryIndex *Index)
     : TheModule(nullptr), ShouldTrackMetadataDefinitions(false),
@@ -1478,6 +1516,11 @@ void SlotTracker::CreateMetadataSlot(const MDNode *N) {
   assert(N && "Can't insert a null Value into SlotTracker!");
 
   if (isa<DIExpression>(N))
+    return;
+
+  // If we're converting to FLMD, don't track DILocations or their operands,
+  // which will be reachable from the converted FLContext.
+  if (isa<DILocation>(N) && DLConversionMap)
     return;
 
   unsigned ID = N->getContext().pImpl->getMetadataPrintID(N);
@@ -1979,6 +2022,9 @@ struct MDFieldPrinter {
                           bool ShouldSkipZero = true);
   template <class IntTy>
   void printInt(StringRef Name, IntTy Int, bool ShouldSkipZero = true);
+  template <class IntTy>
+  void printIntArray(StringRef Name, ArrayRef<IntTy> Ints,
+                     bool ShouldSkipEmpty = true);
   void printAPInt(StringRef Name, const APInt &Int, bool IsUnsigned,
                   bool ShouldSkipZero);
   void printBool(StringRef Name, bool Value,
@@ -2070,6 +2116,19 @@ void MDFieldPrinter::printInt(StringRef Name, IntTy Int, bool ShouldSkipZero) {
     return;
 
   Out << FS << Name << ": " << Int;
+}
+
+template <class IntTy>
+void MDFieldPrinter::printIntArray(StringRef Name, ArrayRef<IntTy> Ints,
+                                   bool ShouldSkipEmpty) {
+  if (ShouldSkipEmpty && Ints.empty())
+    return;
+
+  ListSeparator AS;
+  Out << FS << Name << ": " << "[";
+  for (IntTy Int : Ints)
+    Out << AS << Int;
+  Out << "]";
 }
 
 void MDFieldPrinter::printAPInt(StringRef Name, const APInt &Int,
@@ -2244,9 +2303,38 @@ static void writeMDFunctionLocalContext(raw_ostream &Out,
   Out << ")";
 }
 
+/// If ExpansionContext is non-null, then we print in-line the contents of the
+/// FLDebugLoc as much as possible, which includes the line, column, and scope.
+static void
+writeFLDebugLoc(raw_ostream &Out, FLDebugLoc DL, AsmWriterContext &WriterCtx,
+                MDFunctionLocalContext *ExpansionContext = nullptr) {
+  Out << "!!dbgLoc(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  if (ExpansionContext) {
+    FLSrcLoc SrcLoc = DL.getSrcLoc(ExpansionContext);
+    FLScope Scope = DL.getScope(ExpansionContext);
+    // Always output the line, since 0 is a relevant and important value for it.
+    Printer.printInt("line", SrcLoc.Line, /* ShouldSkipZero */ false);
+    Printer.printInt("column", SrcLoc.Column);
+    Printer.printMetadata("scope", Scope.get(), /* ShouldSkipNull */ false);
+  } else {
+    Printer.printInt("srcLoc", DL.SrcLocIdx.get(), false);
+  }
+  if (DL.InlinedAtIdx)
+    Printer.printInt("inlinedAt", DL.InlinedAtIdx.get(),
+                     /* ShouldSkipZero */ false);
+  if (DL.AtomGroup != 0)
+    Printer.printIntArray<uint16_t>("atom", {DL.AtomGroup, DL.AtomRank});
+  Out << ")";
+}
+
 static void writeDIDbgLoc(raw_ostream &Out, const DIDbgLoc *DL,
                           AsmWriterContext &WriterCtx) {
-  llvm_unreachable("not implemented");
+  Out << "!DIDbgLoc(context: ";
+  writeMetadataAsOperand(Out, DL->getFLContext(), WriterCtx);
+  Out << ", dbgLoc: ";
+  writeFLDebugLoc(Out, DL->getFLDebugLoc(), WriterCtx);
+  Out << ")";
 }
 
 static void writeDILocation(raw_ostream &Out, const DILocation *DL,
@@ -5118,6 +5206,22 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
   I.getAllMetadata(InstMD);
   printMetadataAttachments(InstMD, ", ");
 
+  // If we are using FLMD conversion, then any attached DILocation to I has been
+  // stripped, and we must use getInstrFLDebugLoc to find the FLDebugLoc
+  // attachment.
+  if (Opts.print_fl_debug_locs != PrintFLMDMode::Off) {
+    auto *ConversionMap = Machine.getDLConversionMap();
+    if (FLDebugLoc DL = ConversionMap->getDebugLoc(&I)) {
+      auto *ExpansionContext =
+          Opts.print_fl_debug_locs == PrintFLMDMode::Expanded
+              ? I.getFunction()->getFLContext()
+              : nullptr;
+      auto WriterCtx = getContext();
+      Out << ", ";
+      writeFLDebugLoc(Out, DL, WriterCtx, ExpansionContext);
+    }
+  }
+
   // Print a nice comment.
   printInfoComment(I);
 }
@@ -5187,7 +5291,17 @@ void AssemblyWriter::printDbgVariableRecord(const DbgVariableRecord &DVR) {
     PrintOrNull(DVR.getRawAddressExpression());
     Out << ", ";
   }
-  PrintOrNull(DVR.getDebugLoc().getAsMDNode());
+  if (Opts.print_fl_debug_locs != PrintFLMDMode::Off) {
+    auto *ConversionMap = Machine.getDLConversionMap();
+    auto *ExpansionContext = Opts.print_fl_debug_locs == PrintFLMDMode::Expanded
+                                 ? DVR.getFunction()->getFLContext()
+                                 : nullptr;
+    writeFLDebugLoc(
+        Out, ConversionMap->getDebugLoc(static_cast<const DbgRecord *>(&DVR)),
+        WriterCtx, ExpansionContext);
+  } else {
+    PrintOrNull(DVR.getDebugLoc().getAsMDNode());
+  }
   Out << ")";
 }
 
@@ -5205,7 +5319,17 @@ void AssemblyWriter::printDbgLabelRecord(const DbgLabelRecord &Label) {
   Out << "#dbg_label(";
   writeAsOperandInternal(Out, Label.getRawLabel(), WriterCtx, true);
   Out << ", ";
-  writeAsOperandInternal(Out, Label.getDebugLoc(), WriterCtx, true);
+  if (Opts.print_fl_debug_locs != PrintFLMDMode::Off) {
+    auto *ConversionMap = Machine.getDLConversionMap();
+    auto *ExpansionContext = Opts.print_fl_debug_locs == PrintFLMDMode::Expanded
+                                 ? Label.getFunction()->getFLContext()
+                                 : nullptr;
+    writeFLDebugLoc(
+        Out, ConversionMap->getDebugLoc(static_cast<const DbgRecord *>(&Label)),
+        WriterCtx, ExpansionContext);
+  } else {
+    writeAsOperandInternal(Out, Label.getDebugLoc(), WriterCtx, true);
+  }
   Out << ")";
 }
 
@@ -5664,6 +5788,29 @@ static void printMetadataImpl(raw_ostream &ROS, const Metadata &MD,
 
   OS << " = ";
   writeMDNodeBodyInternal(OS, N, *WriterCtx);
+}
+
+void FLDebugLoc::printAsOperand(raw_ostream &OS) const {
+  // We don't need any context to print a simple FLDebugLoc.
+  writeFLDebugLoc(OS, *this, AsmWriterContext::getEmpty());
+}
+
+void FLDebugLoc::printAsOperand(raw_ostream &OS, const Function *F,
+                                ModuleSlotTracker &MST) const {
+  if (!MST.shouldPrintFLDebugLocationInline(F, *this)) {
+    // We don't need any context to print a simple FLDebugLoc.
+    writeFLDebugLoc(OS, *this, AsmWriterContext::getEmpty());
+    return;
+  }
+  // If we want to print the expanded location, then we need the full slot
+  // tracker.
+  auto *ExpansionContext = F->getFLContext();
+  const Module *M = F->getParent();
+  TypePrinting TypePrinter(M);
+  std::unique_ptr<AsmWriterContext> WriterCtx =
+      std::make_unique<AsmWriterContext>(&TypePrinter, MST.getMachine(), M,
+                                         &MST);
+  writeFLDebugLoc(OS, *this, *WriterCtx, ExpansionContext);
 }
 
 void Metadata::printAsOperand(raw_ostream &OS, const Module *M) const {
