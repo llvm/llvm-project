@@ -1472,7 +1472,7 @@ private:
   /// An optional name that can be used for the generated IR instruction.
   std::string Name;
 
-  /// Whether this VPInstruction produces a single scalar value.
+  /// Whether this VPInstruction produces a single scalar from scalar operands.
   const bool GeneratesSingleScalar;
 
   /// Returns true if we can generate a single scalar, either because the recipe
@@ -1611,7 +1611,7 @@ public:
   /// e.g. by performing a reduction or extracting a lane.
   bool isVectorToScalar() const;
 
-  /// Returns true if the recipe produces a single scalar value.
+  /// Returns true if the recipe produces a single scalar from scalar operands.
   bool doesGenerateSingleScalar() const { return GeneratesSingleScalar; }
 
   /// Returns the symbolic name assigned to the VPInstruction.

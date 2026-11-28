@@ -85,6 +85,10 @@ bool isElementwise(const VPValue *V);
 /// Returns true if \p R produces scalar values for all VF lanes.
 bool doesGeneratePerAllLanes(const VPRecipeBase *R);
 
+/// Returns true if \p VPV produces a single-scalar value regardless of its
+/// operands.
+bool producesSingleScalar(const VPValue *VPV);
+
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
 VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
