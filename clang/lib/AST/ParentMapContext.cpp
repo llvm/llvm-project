@@ -392,8 +392,12 @@ private:
         NodeOrVector = new DynTypedNode(ParentStack.back());
     } else {
       if (!isa<ParentVector *>(NodeOrVector)) {
-        auto *Vector = new ParentVector(
-            1, getSingleDynTypedNodeFromParentMap(NodeOrVector));
+        const auto Single = getSingleDynTypedNodeFromParentMap(NodeOrVector);
+        // Preserve single-parent storage for ignored-node traversal.
+        if (ParentStack.back().getMemoizationData() &&
+            Single == ParentStack.back())
+          return;
+        auto *Vector = new ParentVector(1, Single);
         delete dyn_cast<DynTypedNode *>(NodeOrVector);
         NodeOrVector = Vector;
       }
