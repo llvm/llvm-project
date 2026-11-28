@@ -34,6 +34,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace llvm {
 
@@ -60,6 +61,8 @@ class MCTargetStreamer;
 class raw_ostream;
 class TargetMachine;
 class TargetOptions;
+struct SymbolInfoTy;
+using SectionSymbolsTy = std::vector<SymbolInfoTy>;
 namespace mca {
 class CustomBehaviour;
 class InstrPostProcess;
@@ -215,6 +218,9 @@ public:
                         LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
                         MCContext *Ctx,
                         std::unique_ptr<MCRelocationInfo> &&RelInfo);
+  using MCSymbolListSymbolizerCtorTy = MCSymbolizer *(*)(
+      const Triple &TT, const SectionSymbolsTy *Symbols, MCContext *Ctx,
+      std::unique_ptr<MCRelocationInfo> &&RelInfo);
 
   using CustomBehaviourCtorTy =
       mca::CustomBehaviour *(*)(const MCSubtargetInfo &STI,
@@ -335,6 +341,10 @@ private:
   /// MCSymbolizerCtorFn - Construction function for this target's
   /// MCSymbolizer, if registered (default = llvm::createMCSymbolizer)
   MCSymbolizerCtorTy MCSymbolizerCtorFn = nullptr;
+
+  /// MCSymbolListSymbolizerCtorFn - Construction function for this target's
+  /// symbol-list MCSymbolizer, if registered (default = nullptr)
+  MCSymbolListSymbolizerCtorTy MCSymbolListSymbolizerCtorFn = nullptr;
 
   /// CustomBehaviourCtorFn - Construction function for this target's
   /// CustomBehaviour, if registered (default = nullptr).
@@ -590,6 +600,10 @@ public:
 
   /// createMCSymbolizer - Create a target specific MCSymbolizer.
   ///
+  /// If either callback is provided, DisInfo belongs to the client and is only
+  /// passed back to the callbacks. Otherwise, a target that registered a
+  /// symbol-list symbolizer reads DisInfo as a SectionSymbolsTy, or null.
+  ///
   /// \param TT The target triple.
   /// \param GetOpInfo The function to get the symbolic information for
   /// operands.
@@ -605,6 +619,11 @@ public:
                      LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
                      MCContext *Ctx,
                      std::unique_ptr<MCRelocationInfo> &&RelInfo) const {
+    if (!GetOpInfo && !SymbolLookUp && MCSymbolListSymbolizerCtorFn) {
+      return MCSymbolListSymbolizerCtorFn(
+          TT, static_cast<const SectionSymbolsTy *>(DisInfo), Ctx,
+          std::move(RelInfo));
+    }
     MCSymbolizerCtorTy Fn =
         MCSymbolizerCtorFn ? MCSymbolizerCtorFn : llvm::createMCSymbolizer;
     return Fn(TT, GetOpInfo, SymbolLookUp, DisInfo, Ctx, std::move(RelInfo));
@@ -981,6 +1000,11 @@ struct TargetRegistry {
   /// RegisterMCSymbolizer - Register an MCSymbolizer
   /// implementation for the given target.
   ///
+  /// The symbolizer must use the client's GetOpInfo and SymbolLookUp
+  /// callbacks and treat DisInfo as opaque client data that is only passed
+  /// back to them. A symbolizer that reads a list of symbols instead must be
+  /// registered with RegisterMCSymbolListSymbolizer.
+  ///
   /// Clients are responsible for ensuring that registration doesn't occur
   /// while another thread is attempting to access the registry. Typically
   /// this is done by initializing all targets at program startup.
@@ -989,6 +1013,22 @@ struct TargetRegistry {
   /// @param Fn - A function to construct an MCSymbolizer for the target.
   static void RegisterMCSymbolizer(Target &T, Target::MCSymbolizerCtorTy Fn) {
     T.MCSymbolizerCtorFn = Fn;
+  }
+
+  /// RegisterMCSymbolListSymbolizer - Register an MCSymbolizer implementation
+  /// for the given target that reads a list of symbols. It is only used for
+  /// clients that pass no callbacks, such as llvm-objdump.
+  ///
+  /// Clients are responsible for ensuring that registration doesn't occur
+  /// while another thread is attempting to access the registry. Typically
+  /// this is done by initializing all targets at program startup.
+  ///
+  /// @param T - The target being registered.
+  /// @param Fn - A function to construct an MCSymbolizer for the target.
+  static void
+  RegisterMCSymbolListSymbolizer(Target &T,
+                                 Target::MCSymbolListSymbolizerCtorTy Fn) {
+    T.MCSymbolListSymbolizerCtorFn = Fn;
   }
 
   /// RegisterCustomBehaviour - Register a CustomBehaviour
