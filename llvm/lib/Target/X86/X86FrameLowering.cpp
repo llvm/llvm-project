@@ -3372,7 +3372,7 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
     const TargetRegisterClass *RC = getCalleeSavedSpillRC(Reg, STI, *TRI);
 
     TII.storeRegToStackSlot(MBB, MI, Reg, true, I.getFrameIdx(), RC, Register(),
-                            MachineInstr::FrameSetup);
+                            /*SubReg=*/0, MachineInstr::FrameSetup);
   }
 
   return true;

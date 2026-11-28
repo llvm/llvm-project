@@ -355,7 +355,7 @@ void XCoreInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC,
 
-    Register VReg, MachineInstr::MIFlag Flags) const {
+    Register VReg, unsigned SubReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end() && !I->isDebugInstr())
     DL = I->getDebugLoc();

@@ -59,6 +59,7 @@ public:
       MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
       Register SourceRegister, bool IsKill, int FrameIndex,
       const TargetRegisterClass *RegisterClass, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(

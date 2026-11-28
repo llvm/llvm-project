@@ -314,7 +314,7 @@ static void emitSiFiveCLICPreemptibleSaves(MachineFunction &MF,
   // are saved by the ordinary spill sequence after preemption is enabled.
   int ScratchFI = getPreemptibleInterruptScratchFrameIndex(MF);
   TII->storeRegToStackSlot(MBB, MBBI, RISCV::X5, /*IsKill=*/true, ScratchFI,
-                           &RISCV::GPRRegClass, Register(),
+                           &RISCV::GPRRegClass, Register(), /*SubReg=*/0,
                            MachineInstr::FrameSetup);
   if (needsDwarfCFI(MF))
     CFIInstBuilder(MBB, MBBI, MachineInstr::FrameSetup)
@@ -326,7 +326,7 @@ static void emitSiFiveCLICPreemptibleSaves(MachineFunction &MF,
       .setMIFlag(MachineInstr::FrameSetup);
   TII->storeRegToStackSlot(MBB, MBBI, RISCV::X5, /* IsKill=*/true,
                            RVFI->getInterruptCSRFrameIndex(0),
-                           &RISCV::GPRRegClass, Register(),
+                           &RISCV::GPRRegClass, Register(), /*SubReg=*/0,
                            MachineInstr::FrameSetup);
 
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRS), RISCV::X5)
@@ -341,7 +341,7 @@ static void emitSiFiveCLICPreemptibleSaves(MachineFunction &MF,
       .setMIFlag(MachineInstr::FrameSetup);
   TII->storeRegToStackSlot(MBB, MBBI, RISCV::X5, /* IsKill=*/true,
                            RVFI->getInterruptCSRFrameIndex(1),
-                           &RISCV::GPRRegClass, Register(),
+                           &RISCV::GPRRegClass, Register(), /*SubReg=*/0,
                            MachineInstr::FrameSetup);
 }
 
@@ -2819,7 +2819,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
       MCRegister Reg = CS.getReg();
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
       TII.storeRegToStackSlot(MBB, MI, Reg, !MBB.isLiveIn(Reg),
-                              CS.getFrameIdx(), RC, Register(),
+                              CS.getFrameIdx(), RC, Register(), /*SubReg=*/0,
                               MachineInstr::FrameSetup);
     }
   };

@@ -127,7 +127,7 @@ Register AVRInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 void AVRInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
-    MachineInstr::MIFlag Flags) const {
+    unsigned SubReg, MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
 

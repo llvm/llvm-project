@@ -384,6 +384,13 @@ public:
     return isStoreToStackSlot(MI, FrameIndex);
   }
 
+  virtual Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
+                                      TypeSize &MemBytes,
+                                      StackOffset &Offset) const {
+    Offset = StackOffset::getFixed(0);
+    return isStoreToStackSlot(MI, FrameIndex, MemBytes);
+  }
+
   /// Check for post-frame ptr elimination stack locations as well.
   /// This uses a heuristic, so it isn't reliable for correctness.
   virtual Register isStoreToStackSlotPostFE(const MachineInstr &MI,
@@ -1225,16 +1232,28 @@ public:
   /// register, \p VReg is the register being assigned. This additional register
   /// argument is needed for certain targets when invoked from RegAllocFast to
   /// map the spilled physical register to its virtual register. A null register
-  /// can be passed elsewhere. The \p Flags is used to set appropriate machine
-  /// flags on the spill instruction e.g. FrameSetup flag on a callee saved
-  /// register spill instruction, part of prologue, during the frame lowering.
+  /// can be passed elsewhere. \p SubReg is required for partial spill of
+  /// tuples if the target supports it. The \p Flags is used to set appropriate
+  /// machine flags on the spill instruction e.g. FrameSetup flag on a callee
+  /// saved register spill instruction, part of prologue, during the frame
+  /// lowering.
   virtual void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
       bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::storeRegToStackSlot!");
   }
+
+  /// \p SubReg was added in front of \p Flags, and MachineInstr::MIFlag is an
+  /// unscoped enum that implicitly converts to it. Reject a call still passing
+  /// the flags where the sub-register index now is.
+  void storeRegToStackSlot(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MI, Register SrcReg,
+                           bool isKill, int FrameIndex,
+                           const TargetRegisterClass *RC, Register VReg,
+                           MachineInstr::MIFlag Flags) const = delete;
 
   /// Load the specified register of the given register class from the specified
   /// stack frame index. The load instruction is to be added to the given
