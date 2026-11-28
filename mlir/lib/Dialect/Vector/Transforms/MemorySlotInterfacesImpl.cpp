@@ -12,13 +12,15 @@
 // and definitions of a vector SSA value. The models for `memref.copy` and
 // `memref.subview` live in the MemRef dialect.
 //
-// A read uses the slot's current value; a write defines its next value.
+// A read uses the slot's current value or extracts a constant-offset sub-vector
+// from the slot vector; a write defines its next value.
 // Static subviews use a vector matching the subview's shape: reads extract that
 // sub-vector from the parent, and writes insert it back into the parent.
 // Supported transfers through dynamic subviews use a vector type matching the
 // whole static parent, and the subview's slot holds that whole vector. Writes
-// preserve the previous value of lanes outside the runtime extent. Transfers
-// must be in-bounds, so lanes past the extent are expected to be masked off.
+// preserve the previous value of lanes outside the runtime extent. Reads use
+// padding for out-of-bounds lanes unless the transfer guarantees those lanes
+// are in-bounds. Writes must be in-bounds or mask off lanes past the extent.
 // `arith.select` implements masking by a transfer's mask operand.
 //
 // `vector.mask` owns its wrapped transfer's blocking use and is promoted as a
@@ -31,10 +33,12 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -42,6 +46,15 @@ using namespace mlir::vector;
 //===----------------------------------------------------------------------===//
 //  Utilities
 //===----------------------------------------------------------------------===//
+
+/// Return whether the transfer's only blocking use is its memref slot base.
+static bool
+isTransferSlotAccess(VectorTransferOpInterface xferOp, const MemorySlot &slot,
+                     const SmallPtrSetImpl<OpOperand *> &blockingUses) {
+  return blockingUses.size() == 1 &&
+         (*blockingUses.begin())->get() == slot.ptr &&
+         xferOp.getBase() == slot.ptr;
+}
 
 /// Returns whether `xferOp` can be promoted to use or define `slot`'s vector
 /// value. The transfer's memref base must be the slot pointer, its vector type
@@ -53,15 +66,7 @@ using namespace mlir::vector;
 static bool
 isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
                      const SmallPtrSetImpl<OpOperand *> &blockingUses) {
-  // The transfer's memref base must be the slot pointer.
-  if (blockingUses.size() != 1)
-    return false;
-  Value blockingUse = (*blockingUses.begin())->get();
-  if (blockingUse != slot.ptr || xferOp.getBase() != slot.ptr)
-    return false;
-
-  // Reject the tensor form (already implied, since slot pointers are memrefs).
-  if (!isa<MemRefType>(xferOp.getBase().getType()))
+  if (!isTransferSlotAccess(xferOp, slot, blockingUses))
     return false;
 
   // Exact type match pins rank/extents/element type/scalable dims.
@@ -79,13 +84,82 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
   if (!xferOp.getPermutationMap().isIdentity())
     return false;
 
-  // Out-of-bounds transfers (`in_bounds = [false]`) are not supported.
-  // Out-of-bounds lanes, e.g. past a dynamic subview's extent, must be masked
-  // off instead.
-  if (xferOp.hasOutOfBoundsDim())
-    return false;
+  // A fixed-size whole-buffer transfer at zero is statically in bounds.
+  auto memrefType = cast<MemRefType>(slot.ptr.getType());
+  VectorType vectorType = xferOp.getVectorType();
+  if (!vectorType.isScalable() && memrefType.hasStaticShape() &&
+      memrefType.getShape() == vectorType.getShape())
+    return true;
 
-  return true;
+  return !xferOp.hasOutOfBoundsDim();
+}
+
+/// Return constant offsets for a slice contained in the slot vector. Requires:
+/// - Fixed-size vectors of equal rank and element type.
+/// - Identity map and constant nonnegative indices.
+/// - Matching memref/slot shapes, or a zero-offset, unit-stride, same-rank
+///   dynamic subview of a static parent.
+///
+/// Static memref shapes prove bounds even without `in_bounds`; dynamic subview
+/// reads need an extent mask for dimensions not guaranteed to be in-bounds.
+static FailureOr<SmallVector<int64_t>> getPromotableReadSliceOffsets(
+    TransferReadOp readOp, const MemorySlot &slot,
+    const SmallPtrSetImpl<OpOperand *> &blockingUses) {
+  if (!isTransferSlotAccess(readOp, slot, blockingUses) ||
+      !readOp.getPermutationMap().isIdentity())
+    return failure();
+
+  auto slotType = dyn_cast<VectorType>(slot.valueType);
+  VectorType readType = readOp.getVectorType();
+  if (!slotType || slotType.isScalable() || readType.isScalable() ||
+      readType.getRank() != slotType.getRank() ||
+      readType.getElementType() != slotType.getElementType())
+    return failure();
+
+  // Dynamic bounds must be available without introducing new uses of the slot.
+  if (readOp.hasOutOfBoundsDim() &&
+      !cast<MemRefType>(slot.ptr.getType()).hasStaticShape() &&
+      !slot.ptr.getDefiningOp<memref::SubViewOp>())
+    return failure();
+
+  SmallVector<int64_t> offsets;
+  for (auto [index, size, extent] : llvm::zip_equal(
+           readOp.getIndices(), readType.getShape(), slotType.getShape())) {
+    auto offset = getConstantIntValue(index);
+    // Subtract first to avoid overflowing offset + size in the bounds check.
+    if (!offset || *offset < 0 || size > extent || *offset > extent - size)
+      return failure();
+    offsets.push_back(*offset);
+  }
+  return offsets;
+}
+
+/// Build a mask in the read's shape for lanes within a dynamic subview.
+/// Dimensions guaranteed in-bounds need no runtime check.
+static Value buildReadExtentMask(TransferReadOp readOp, const MemorySlot &slot,
+                                 OpBuilder &builder) {
+  if (!readOp.hasOutOfBoundsDim() ||
+      cast<MemRefType>(slot.ptr.getType()).hasStaticShape())
+    return {};
+
+  auto subView = slot.ptr.getDefiningOp<memref::SubViewOp>();
+  assert(subView && "expected a promotable dynamic subview read");
+  VectorType readType = readOp.getVectorType();
+  Location loc = readOp.getLoc();
+  SmallVector<Value> bounds;
+  for (auto [dim, size] : llvm::enumerate(subView.getMixedSizes())) {
+    if (readOp.isDimInBounds(dim)) {
+      bounds.push_back(arith::ConstantIndexOp::create(
+          builder, loc, readType.getDimSize(dim)));
+      continue;
+    }
+    Value extent = getValueOrCreateConstantIndexOp(builder, loc, size);
+    bounds.push_back(builder.createOrFold<arith::SubIOp>(
+        loc, extent, readOp.getIndices()[dim]));
+  }
+  return vector::CreateMaskOp::create(
+      builder, loc, VectorType::get(readType.getShape(), builder.getI1Type()),
+      bounds);
 }
 
 //===----------------------------------------------------------------------===//
@@ -113,11 +187,13 @@ struct TransferReadOpMemOpModel
                         SmallVectorImpl<OpOperand *> &newBlockingUses,
                         const DataLayout &dataLayout) const {
     return isPromotableTransfer(cast<VectorTransferOpInterface>(op), slot,
-                                blockingUses);
+                                blockingUses) ||
+           succeeded(getPromotableReadSliceOffsets(cast<TransferReadOp>(op),
+                                                   slot, blockingUses));
   }
 
   // Replace the read with the reaching definition, selecting padding for lanes
-  // disabled by the transfer's mask.
+  // outside the runtime extent or disabled by the transfer's mask.
   DeletionKind
   removeBlockingUses(Operation *op, const MemorySlot &slot,
                      const SmallPtrSetImpl<OpOperand *> &blockingUses,
@@ -126,11 +202,25 @@ struct TransferReadOpMemOpModel
     auto readOp = cast<vector::TransferReadOp>(op);
     Location loc = op->getLoc();
     Value result = reachingDefinition;
-    if (Value mask = readOp.getMask()) {
+    Value mask = readOp.getMask();
+    if (readOp.getVectorType() != slot.valueType) {
+      auto offsets = getPromotableReadSliceOffsets(readOp, slot, blockingUses);
+      assert(succeeded(offsets) && "expected a promotable read slice");
+      SmallVector<int64_t> strides(offsets->size(), 1);
+      result = vector::ExtractStridedSliceOp::create(
+          builder, loc, result, *offsets, readOp.getVectorType().getShape(),
+          strides);
+    }
+    if (Value extentMask = buildReadExtentMask(readOp, slot, builder)) {
+      if (mask)
+        mask = arith::AndIOp::create(builder, loc, mask, extentMask);
+      else
+        mask = extentMask;
+    }
+    if (mask) {
       Value padSplat = vector::BroadcastOp::create(
           builder, loc, readOp.getVectorType(), readOp.getPadding());
-      result = arith::SelectOp::create(builder, loc, mask, reachingDefinition,
-                                       padSplat);
+      result = arith::SelectOp::create(builder, loc, mask, result, padSplat);
     }
     readOp.getResult().replaceAllUsesWith(result);
     return DeletionKind::Delete;
