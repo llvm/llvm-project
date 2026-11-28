@@ -477,6 +477,12 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     default:
       // See if this is a generic print operand
       return AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O);
+    case 'a': // Print a register as a memory address with a zero offset.
+      if (MO.isReg()) {
+        O << "0($" << MipsInstPrinter::getRegisterName(MO.getReg()) << ")";
+        return false;
+      }
+      return AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O);
     case 'X': // hex const int
       if (!MO.isImm())
         return true;
