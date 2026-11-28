@@ -571,3 +571,25 @@ Module *Module::create(Context &ctx, SMLoc loc, ArrayRef<Decl *> children) {
   llvm::uninitialized_copy(children, module->getChildren().begin());
   return module;
 }
+
+//===----------------------------------------------------------------------===//
+// TypeConversionExpr
+//===----------------------------------------------------------------------===//
+
+TypeConversionExpr *TypeConversionExpr::create(Context &ctx, SMRange loc,
+                                                StringRef converterName,
+                                                Expr *typeExpr) {
+  return new (ctx.getAllocator())
+      TypeConversionExpr(ctx, loc, converterName, typeExpr);
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertedOperandExpr
+//===----------------------------------------------------------------------===//
+
+ConvertedOperandExpr *ConvertedOperandExpr::create(Context &ctx, SMRange loc,
+                                                     Expr *operandExpr,
+                                                     Expr *typeExpr) {
+  return new (ctx.getAllocator())
+      ConvertedOperandExpr(ctx, loc, operandExpr, typeExpr);
+}
