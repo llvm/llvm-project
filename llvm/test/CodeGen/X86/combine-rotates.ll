@@ -5,26 +5,26 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vl | FileCheck %s --check-prefixes=CHECK,AVX512
 
 ; FIXME fold (rot x, poison) -> poison
-define i8 @combine_rot_poison(i8 %a0) {
+define i8 @combine_rot_poison(i8 %x) {
 ; CHECK-LABEL: combine_rot_poison:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    rolb %cl, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
-  %rd = call i8 @llvm.fshl.i8(i8 %a0, i8 %a0, i8 poison)
+  %rd = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 poison)
   ret i8 %rd
 }
 
 ; FIXME fold (rot x, undef) -> x
-define i8 @combine_rot_undef(i8 %a0) {
+define i8 @combine_rot_undef(i8 %x) {
 ; CHECK-LABEL: combine_rot_undef:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    rorb %cl, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
-  %rd = call i8 @llvm.fshr.i8(i8 %a0, i8 %a0, i8 undef)
+  %rd = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 undef)
   ret i8 %rd
 }
 
