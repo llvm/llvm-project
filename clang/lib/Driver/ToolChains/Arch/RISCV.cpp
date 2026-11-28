@@ -66,6 +66,21 @@ static bool isValidRISCVCPU(const Driver &D, const Arg *A,
   return true;
 }
 
+bool riscv::hasUnalignedScalarMemoryAccess(const ArgList &Args,
+                                           const llvm::Triple &Triple) {
+  // Check explicit flags first
+  if (const Arg *A = Args.getLastArg(
+          options::OPT_mno_strict_align, options::OPT_mscalar_strict_align,
+          options::OPT_mstrict_align, options::OPT_mno_scalar_strict_align))
+    return A->getOption().matches(options::OPT_mno_strict_align) ||
+           A->getOption().matches(options::OPT_mno_scalar_strict_align);
+
+  // Otherwise enabled if the CPU supports it, or on Android.
+  return llvm::RISCV::hasFastScalarUnalignedAccess(
+             getRISCVTargetCPU(Args, Triple)) ||
+         Triple.isAndroid();
+}
+
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    const ArgList &Args,
                                    std::vector<StringRef> &Features) {
@@ -74,7 +89,6 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   if (!getArchFeatures(D, MArch, Features, Args))
     return;
 
-  bool CPUFastScalarUnaligned = false;
   bool CPUFastVectorUnaligned = false;
 
   StringRef CPU;
@@ -95,8 +109,6 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (!isValidRISCVCPU(D, CPUArg, Triple, CPU))
       return;
 
-    if (llvm::RISCV::hasFastScalarUnalignedAccess(CPU))
-      CPUFastScalarUnaligned = true;
     if (llvm::RISCV::hasFastVectorUnalignedAccess(CPU))
       CPUFastVectorUnaligned = true;
   }
@@ -148,18 +160,11 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // -mno-scalar-strict-align is passed, use it. Otherwise, the
   // unaligned-scalar-mem is enabled if the CPU supports it or the target is
   // Android.
-  if (const Arg *A = Args.getLastArg(
-          options::OPT_mno_strict_align, options::OPT_mscalar_strict_align,
-          options::OPT_mstrict_align, options::OPT_mno_scalar_strict_align)) {
-    if (A->getOption().matches(options::OPT_mno_strict_align) ||
-        A->getOption().matches(options::OPT_mno_scalar_strict_align)) {
-      Features.push_back("+unaligned-scalar-mem");
-    } else {
-      Features.push_back("-unaligned-scalar-mem");
-    }
-  } else if (CPUFastScalarUnaligned || Triple.isAndroid()) {
+  if (riscv::hasUnalignedScalarMemoryAccess(Args, Triple))
     Features.push_back("+unaligned-scalar-mem");
-  }
+  else if (Args.hasArg(options::OPT_mscalar_strict_align,
+                       options::OPT_mstrict_align))
+    Features.push_back("-unaligned-scalar-mem");
 
   // If -mstrict-align, -mno-strict-align, -mvector-strict-align, or
   // -mno-vector-strict-align is passed, use it. Otherwise, the

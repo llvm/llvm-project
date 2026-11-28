@@ -461,6 +461,19 @@ static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
             Args.getLastArgNoClaim(options::OPT_mcf_branch_label_scheme_EQ))
       Result.push_back(SchemeArg->getAsString(Args));
   }
+
+  if (tools::riscv::hasUnalignedScalarMemoryAccess(Args, Triple))
+    Result.push_back("-mno-strict-align");
+  else
+    Result.push_back("-mstrict-align");
+
+  StringRef CodeModel = "small";
+  if (const Arg *A = Args.getLastArgNoClaim(options::OPT_mcmodel_EQ))
+    CodeModel = llvm::StringSwitch<StringRef>(A->getValue())
+                    .Case("medlow", "small")
+                    .Case("medany", "medium")
+                    .Default(A->getValue());
+  Result.push_back(("-mcmodel=" + CodeModel).str());
 }
 
 Multilib::flags_list
