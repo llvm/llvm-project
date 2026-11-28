@@ -25,6 +25,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -66,8 +67,9 @@ class VectorCombine {
 public:
   VectorCombine(const VectorizeOptions &Opts, Function &F,
                 const TargetTransformInfo &TTI, const DominatorTree &DT,
-                AAResults &AA, AssumptionCache &AC, const DataLayout *DL,
-                TTI::TargetCostKind CostKind, bool TryEarlyFoldsOnly)
+                const LoopInfo &LI, AAResults &AA, AssumptionCache &AC,
+                const DataLayout *DL, TTI::TargetCostKind CostKind,
+                bool TryEarlyFoldsOnly)
       : Opts(Opts), F(F),
         Builder(*F.getParent(), InstSimplifyFolder(*DL),
                 IRBuilderCallbackInserter([this](Instruction *I) {
@@ -75,7 +77,7 @@ public:
                   // into the deferred queue.
                   Worklist.add(I);
                 })),
-        TTI(TTI), DT(DT), AA(AA), DL(DL), CostKind(CostKind),
+        TTI(TTI), DT(DT), LI(LI), AA(AA), DL(DL), CostKind(CostKind),
         SQ(*DL, /*TLI=*/nullptr, &DT, &AC),
         TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
@@ -87,6 +89,7 @@ private:
   IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> Builder;
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
+  const LoopInfo &LI;
   AAResults &AA;
   const DataLayout *DL;
   TTI::TargetCostKind CostKind;
@@ -6251,7 +6254,8 @@ static SmallVector<Value *, 8> getInstrOperandsAtIdx(ArrayRef<Value *> Members,
 /// can be rebuilt at the interleaved width.
 static bool canWidenDeinterleavedOperations(
     const VectorizeOptions &Opts, ArrayRef<Value *> Members,
-    DenseSet<Value *> &Visited, SmallPtrSetImpl<User *> &UndroppableUsers) {
+    DenseSet<Value *> &Visited, SmallPtrSetImpl<User *> &UndroppableUsers,
+    const Loop *L) {
   unsigned Factor = Members.size();
   if (getCommonDeinterleavedSource(Members))
     return true;
@@ -6286,12 +6290,19 @@ static bool canWidenDeinterleavedOperations(
   }
 
   // Scalars operands should be equal among all members.
-  // Vector operands should be a common splat value or can be widened.
+  // Vector operands should either be a common splat value, loop invariant splat
+  // values, or can be widened.
   for (unsigned Op = 0, E = getNumDataOperands(FirstInst); Op != E; ++Op) {
     SmallVector<Value *, 8> Operands = getInstrOperandsAtIdx(Members, Op);
     if (!getCommonSplatValue(Operands) &&
+        !all_of(Operands,
+                [&](Value *V) {
+                  // Loop invariant splat values.
+                  return isa<VectorType>(V->getType()) && getSplatValue(V) &&
+                         L && L->isLoopInvariant(V);
+                }) &&
         !canWidenDeinterleavedOperations(Opts, Operands, Visited,
-                                         UndroppableUsers))
+                                         UndroppableUsers, L))
       return false;
   }
   return true;
@@ -6349,6 +6360,16 @@ static Value *widenDeinterleavedOperations(
       } else {
         assert(all_equal(Operands) && "expected all operands to be equal");
       }
+    } else if (all_of(Operands, [](Value *V) {
+                 return isa<VectorType>(V->getType()) && getSplatValue(V);
+               })) {
+      // Generate a new interleave intrinsic for loop invariant splat values.
+      Builder.SetCurrentDebugLocation(NarrowInst->getDebugLoc());
+      Intrinsic::ID Intrin = getInterleaveIntrinsicOfFactor(Operands.size());
+      assert(Intrin != Intrinsic::not_intrinsic);
+      auto *OpVecTy = cast<VectorType>(Operands[0]->getType());
+      auto *WideOpVecTy = VectorType::get(OpVecTy->getElementType(), WideEC);
+      NewOperand = Builder.CreateIntrinsic(Intrin, WideOpVecTy, Operands);
     } else {
       NewOperand = widenDeinterleavedOperations(Operands, WideEC, Builder,
                                                 WideValueCache);
@@ -6405,6 +6426,28 @@ static Value *widenDeinterleavedOperations(
 ///  ```
 ///  %r = mul <4 x i16> %a, %b
 ///  ```
+/// If it's operating against different splat values %s0 and %s1:
+///  ```
+///  %d = call { <2 x i16>, <2 x i16> } @deinterleave2.v4i16(<4 x i16> %v)
+///  %f0 = extractvalue { <2 x i16>, <2 x i16> } %d, 0
+///  %f1 = extractvalue { <2 x i16>, <2 x i16> } %d, 1
+///
+///  %u0 = add <2 x i16> %f0, %s0
+///  %u1 = add <2 x i16> %f1, %s1
+///
+///  %r = call <4 x i16> @interleave2.v4i16(<2 x i16> %u0, <2 x i16> %u1)
+///  ```
+/// We'll fold it into
+///  ```
+///  %s = call <4 x i16> @vector.interleave2(<2 x i16> %s0, <2 x i16> %s1)
+///  %r = add <4 x i16> %v, %s
+///  ```
+/// if the original code is within a loop and both %s0 and %s1 are loop
+/// invariant. While it's possible to generalize %s0 and %s1 to non-splat
+/// values and similarly, generalize the condition to non-loop code, it could be
+/// tricky to estimate costs in those situations, as we're generate new
+/// interleave operations: targeting loop-invariant splats is the safest bet
+/// that'll be beneficial in most cases.
 bool VectorCombine::foldInterleaveOfDeinterleaveChains(Instruction &I) {
   auto *Interleave = dyn_cast<IntrinsicInst>(&I);
   if (!Interleave)
@@ -6418,7 +6461,8 @@ bool VectorCombine::foldInterleaveOfDeinterleaveChains(Instruction &I) {
   SmallPtrSet<User *, 4> UndroppableUsers;
   DenseSet<Value *> Visited;
   if (!canWidenDeinterleavedOperations(Opts, RootMembers, Visited,
-                                       UndroppableUsers))
+                                       UndroppableUsers,
+                                       LI.getLoopFor(I.getParent())))
     return false;
   // Every users should be in the tree.
   if (!set_is_subset(UndroppableUsers, Visited))
@@ -7477,11 +7521,12 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   auto &AC = FAM.getResult<AssumptionAnalysis>(F);
   TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
   const DataLayout *DL = &F.getDataLayout();
   TTI::TargetCostKind CostKind =
       F.hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
-  VectorCombine Combiner(getVectorizeOptions(F), F, TTI, DT, AA, AC, DL,
+  VectorCombine Combiner(getVectorizeOptions(F), F, TTI, DT, LI, AA, AC, DL,
                          CostKind, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();
