@@ -54,3 +54,11 @@ void vla(int n) {
   (void)(int[size]){1,2,3}; // expected-error {{compound literal cannot be of variable-length array type}}
   (void)(int[size]){1,2,3,4,5}; // expected-error {{compound literal cannot be of variable-length array type}}
 }
+
+// GH54014: a non-const file-scope compound literal may be modified at runtime,
+// so its value can't be read through a pointer in a constant initializer.
+static int *const GH54014_p = &(int){255};
+static int GH54014_x = *GH54014_p; // expected-error {{initializer element is not a compile-time constant}}
+// A const-qualified compound literal can't change, so this is still folded.
+static const int *const GH54014_q = &(const int){3};
+static int GH54014_y = *GH54014_q;

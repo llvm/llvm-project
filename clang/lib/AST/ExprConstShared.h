@@ -31,6 +31,7 @@ class ASTContext;
 class CharUnits;
 class Expr;
 class CallExpr;
+class CompoundLiteralExpr;
 class CXXRecordDecl;
 class FunctionDecl;
 
@@ -117,6 +118,8 @@ EvalScalarMinMaxFp(const llvm::APFloat &A, const llvm::APFloat &B,
                    std::optional<llvm::APSInt> RoundingMode, bool IsMin);
 
 const Expr *ignorePointerCastsAndParens(const Expr *E);
+
+const CompoundLiteralExpr *getDirectlyReadCompoundLiteral(const Expr *E);
 
 bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD);
 bool isReadByLvalueToRvalueConversion(QualType T);

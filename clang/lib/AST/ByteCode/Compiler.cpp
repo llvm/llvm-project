@@ -457,6 +457,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     if (!Ctx.getLangOpts().HLSL && E->getType()->isConstantMatrixType())
       return false;
 
+    llvm::SaveAndRestore DirectRead(DirectlyReadCLE,
+                                    getDirectlyReadCompoundLiteral(SubExpr));
+
     if (ToLValue && E->getType()->isPointerType()) {
       assert(!DiscardResult);
       if (!this->visit(SubExpr))
@@ -3710,7 +3713,9 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   }
 
   OptPrimType T = classify(E->getType());
-  if (E->isFileScope()) {
+  // A compound literal that is directly read doesn't need the global object;
+  // see getDirectlyReadCompoundLiteral.
+  if (E->isFileScope() && E != DirectlyReadCLE) {
     // Avoid creating a variable if this is a primitive RValue anyway.
     if (T && !E->isLValue())
       return this->delegate(Init);
