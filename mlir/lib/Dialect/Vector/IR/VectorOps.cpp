@@ -6216,8 +6216,11 @@ public:
 /// ```mlir
 ///   %0 = tensor.extract_slice %iter_arg[%iv0, %iv1] [%sz0, %sz1] [1, 1]
 ///        : tensor<27x37xf32> to tensor<?x?xf32>
-///   %1 = vector.transfer_write %vec, %0[%c0, %c0]
-///        : vector<8x16xf32>, tensor<?x?xf32>
+///   %m = vector.create_mask %sz0, %sz1 : vector<8x16xi1>
+///   %1 = vector.mask %m {
+///     vector.transfer_write %vec, %0[%c0, %c0] {in_bounds = [true, true]}
+///         : vector<8x16xf32>, tensor<?x?xf32>
+///   } : vector<8x16xi1> -> tensor<?x?xf32>
 ///   %r = tensor.insert_slice %1 into %iter_arg[%iv0, %iv1] [%sz0, %sz1] [1, 1]
 ///        : tensor<?x?xf32> into tensor<27x37xf32>
 /// ```
@@ -6285,8 +6288,7 @@ public:
     }
 
     // Swap the tensor::ExtractSliceOp in front of the vector::TransferWriteOp.
-    // Set all in_bounds to false and let the folder infer them.
-    SmallVector<bool> newInBounds(vectorShape.size(), false);
+    SmallVector<bool> newInBounds(vectorShape.size(), true);
     auto newExtractOp = tensor::ExtractSliceOp::create(
         rewriter, extractOp.getLoc(), insertOp.getSourceType(),
         insertOp.getDest(), insertOp.getMixedOffsets(),
@@ -6296,8 +6298,14 @@ public:
         newExtractOp.getResult(), transferOp.getIndices(),
         transferOp.getPermutationMapAttr(),
         rewriter.getBoolArrayAttr(newInBounds));
+    // The slice can be smaller than the vector, so mask off the lanes past it.
+    VectorType maskType = inferTransferOpMaskType(
+        transferOp.getVectorType(), transferOp.getPermutationMap());
+    Value mask = CreateMaskOp::create(rewriter, transferOp.getLoc(), maskType,
+                                      insertOp.getMixedSizes());
+    Operation *maskedOp = maskOperation(rewriter, newTransferWriteOp, mask);
     rewriter.modifyOpInPlace(insertOp, [&]() {
-      insertOp.getSourceMutable().assign(newTransferWriteOp.getResult());
+      insertOp.getSourceMutable().assign(maskedOp->getResult(0));
     });
     return success();
   }

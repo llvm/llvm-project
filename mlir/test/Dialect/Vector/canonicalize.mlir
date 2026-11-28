@@ -2394,14 +2394,16 @@ func.func @swap_extract_slice_transfer_write(%arg0 : vector<8x4xf32>,
                                              %arg1 : tensor<4x8xf32>,
                                              %arg2 : tensor<64x64xf32>,
                                              %iv : index, %sz : index) -> tensor<64x64xf32> {
-  //       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+  //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+  //   CHECK-DAG:   %[[C8:.*]] = arith.constant 8 : index
   %c0 = arith.constant 0 : index
 
   //       CHECK:   %[[T0:.*]] = tensor.extract_slice %[[ITER_ARG]]
   //  CHECK-SAME:                 [%[[IV]], 16] [%[[SZ]], 8]
-  //       CHECK:   %[[T1:.*]] = vector.transfer_write %[[VEC]]
-  //  CHECK-SAME:                 %[[T0]][%[[C0]], %[[C0]]]
-  //  CHECK-SAME:                 in_bounds = [true, false]
+  //       CHECK:   %[[MASK:.*]] = vector.create_mask %[[SZ]], %[[C8]] : vector<4x8xi1>
+  //       CHECK:   %[[T1:.*]] = vector.mask %[[MASK]] {
+  //  CHECK-SAME:                 vector.transfer_write %[[VEC]], %[[T0]][%[[C0]], %[[C0]]]
+  //  CHECK-SAME:                 in_bounds = [true, true]
   //  CHECK-SAME:                 permutation_map = #[[$MAP]]
   //       CHECK:   %[[T2:.*]] = tensor.insert_slice %[[T1]] into %[[ITER_ARG]]
   //  CHECK-SAME:                 [%[[IV]], 16] [%[[SZ]], 8]
