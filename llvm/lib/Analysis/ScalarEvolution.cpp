@@ -4955,6 +4955,29 @@ void ScalarEvolution::inferNoWrapViaConstantRanges(const SCEVAddRecExpr *AR) {
   }
 }
 
+void ScalarEvolution::inferNoWrapFlagsOrDrop(const SCEVAddRecExpr *AR) {
+  // Proving these flags asks for AR's loop trip count, and computing a count
+  // builds SCEVs, whose construction infers their flags in turn. Doing that at
+  // every level recurses once per unrolled loop copy, so a nested call drops
+  // and the outermost call replays what was dropped.
+  if (IsInferringNoWrapFlags) {
+    DroppedWrapFlagInference.push_back(AR);
+    return;
+  }
+  assert(DroppedWrapFlagInference.empty() &&
+         "drained worklist must be empty outside an inference");
+  SaveAndRestore Guard(IsInferringNoWrapFlags, true);
+  inferNoWrapViaConstantRanges(AR);
+  // Still under the guard, so addrecs built here are dropped again into the
+  // list this loop drains. Seen bounds the loop by the number of addrecs.
+  SmallPtrSet<const SCEVAddRecExpr *, 8> Seen;
+  while (!DroppedWrapFlagInference.empty()) {
+    const SCEVAddRecExpr *Dropped = DroppedWrapFlagInference.pop_back_val();
+    if (Seen.insert(Dropped).second)
+      inferNoWrapViaConstantRanges(Dropped);
+  }
+}
+
 SCEVFlags
 ScalarEvolution::proveNoSignedWrapViaInduction(const SCEVAddRecExpr *AR) {
   SCEVFlags Result = AR->getNoWrapFlags();
@@ -5641,7 +5664,7 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
   insertValueToMap(PN, PHISCEV);
 
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV))
-    inferNoWrapViaConstantRanges(AR);
+    inferNoWrapFlagsOrDrop(AR);
 
   // We can add Flags to the post-inc expression only if we
   // know that it is *undefined behavior* for BEValueV to
@@ -5758,7 +5781,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         insertValueToMap(PN, PHISCEV);
 
         if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV))
-          inferNoWrapViaConstantRanges(AR);
+          inferNoWrapFlagsOrDrop(AR);
 
         // We can add Flags to the post-inc expression only if we
         // know that it is *undefined behavior* for BEValueV to
@@ -13990,6 +14013,7 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       SCEVAllocator(std::move(Arg.SCEVAllocator)),
       ConstantSCEVs(std::move(Arg.ConstantSCEVs)),
       LoopUsers(std::move(Arg.LoopUsers)),
+      DroppedWrapFlagInference(std::move(Arg.DroppedWrapFlagInference)),
       PredicatedSCEVRewrites(std::move(Arg.PredicatedSCEVRewrites)),
       FirstUnknown(Arg.FirstUnknown),
       NextUnknownOrderID(Arg.NextUnknownOrderID) {
