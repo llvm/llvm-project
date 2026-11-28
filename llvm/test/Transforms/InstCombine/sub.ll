@@ -3026,3 +3026,354 @@ define i8 @neg_sub_and_-4_add(i8 %x) {
   %ret = add i8 %and, %x
   ret i8 %ret
 }
+
+; X - ((X << 1) & 2C) --> (X ^ C) - C
+
+define i32 @sub_shl_and_mask(i32 %x) {
+; CHECK-LABEL: @sub_shl_and_mask(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], 145
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], -145
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shl = shl i32 %x, 1
+  %and = and i32 %shl, 290
+  %r = sub i32 %x, %and
+  ret i32 %r
+}
+
+; The mask may keep the bit that is shifted into the sign bit.
+
+define i8 @sub_shl_and_mask_high_bits(i8 %x) {
+; CHECK-LABEL: @sub_shl_and_mask_high_bits(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], 126
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -126
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 %x, 1
+  %and = and i8 %shl, -4
+  %r = sub i8 %x, %and
+  ret i8 %r
+}
+
+; A mask of all shifted bits is removed first, leaving X - (X << 1).
+
+define i8 @sub_shl_and_mask_all_bits(i8 %x) {
+; CHECK-LABEL: @sub_shl_and_mask_all_bits(
+; CHECK-NEXT:    [[R:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 %x, 1
+  %and = and i8 %shl, 254
+  %r = sub i8 %x, %and
+  ret i8 %r
+}
+
+define i8 @sub_shl_and_mask_signbit(i8 %x) {
+; CHECK-LABEL: @sub_shl_and_mask_signbit(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], 64
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -64
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 %x, 1
+  %and = and i8 %shl, -128
+  %r = sub i8 %x, %and
+  ret i8 %r
+}
+
+; The low bit of the mask is cleared first because the shift leaves it zero.
+
+define i32 @sub_shl_and_mask_odd(i32 %x) {
+; CHECK-LABEL: @sub_shl_and_mask_odd(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[X:%.*]], 145
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], -145
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %shl = shl i32 %x, 1
+  %and = and i32 %shl, 291
+  %r = sub i32 %x, %and
+  ret i32 %r
+}
+
+define <2 x i8> @sub_shl_and_mask_splat(<2 x i8> %x) {
+; CHECK-LABEL: @sub_shl_and_mask_splat(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], splat (i8 6)
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP1]], splat (i8 -6)
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %shl = shl <2 x i8> %x, splat (i8 1)
+  %and = and <2 x i8> %shl, splat (i8 12)
+  %r = sub <2 x i8> %x, %and
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @sub_shl_and_mask_nonsplat(<2 x i8> %x) {
+; CHECK-LABEL: @sub_shl_and_mask_nonsplat(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], <i8 6, i8 96>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP1]], <i8 -6, i8 -96>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %shl = shl <2 x i8> %x, splat (i8 1)
+  %and = and <2 x i8> %shl, <i8 12, i8 -64>
+  %r = sub <2 x i8> %x, %and
+  ret <2 x i8> %r
+}
+
+; Flags on the sub and the shift are not transferred to the new instructions.
+
+define i8 @sub_nsw_shl_and_mask(i8 %x) {
+; CHECK-LABEL: @sub_nsw_shl_and_mask(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], 12
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -12
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 %x, 1
+  %and = and i8 %shl, 24
+  %r = sub nsw i8 %x, %and
+  ret i8 %r
+}
+
+define i8 @sub_nuw_shl_and_mask(i8 %x) {
+; CHECK-LABEL: @sub_nuw_shl_and_mask(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], 12
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -12
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 %x, 1
+  %and = and i8 %shl, 24
+  %r = sub nuw i8 %x, %and
+  ret i8 %r
+}
+
+define i8 @sub_shl_nuw_nsw_and_mask(i8 %x) {
+; CHECK-LABEL: @sub_shl_nuw_nsw_and_mask(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], 12
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -12
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl nuw nsw i8 %x, 1
+  %and = and i8 %shl, 24
+  %r = sub i8 %x, %and
+  ret i8 %r
+}
+
+; The shift may have other uses, the and is still replaced.
+
+define i8 @sub_shl_and_mask_use_shl(i8 %x) {
+; CHECK-LABEL: @sub_shl_and_mask_use_shl(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    call void @use8(i8 [[SHL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], 12
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -12
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 %x, 1
+  call void @use8(i8 %shl)
+  %and = and i8 %shl, 24
+  %r = sub i8 %x, %and
+  ret i8 %r
+}
+
+; X - ((X & C) << 1) --> (X ^ C) - C
+
+define i8 @sub_and_shl_use_and(i8 %x) {
+; CHECK-LABEL: @sub_and_shl_use_and(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 12
+; CHECK-NEXT:    call void @use8(i8 [[AND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], 12
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -12
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %and = and i8 %x, 12
+  call void @use8(i8 %and)
+  %shl = shl i8 %and, 1
+  %r = sub i8 %x, %shl
+  ret i8 %r
+}
+
+; The sign bit of C is shifted out, but the identity holds for any C.
+
+define i8 @sub_and_shl_use_and_signbit(i8 %x) {
+; CHECK-LABEL: @sub_and_shl_use_and_signbit(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -127
+; CHECK-NEXT:    call void @use8(i8 [[AND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], -127
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], 127
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %and = and i8 %x, -127
+  call void @use8(i8 %and)
+  %shl = shl i8 %and, 1
+  %r = sub i8 %x, %shl
+  ret i8 %r
+}
+
+define i8 @sub_and_shl_nuw_nsw_use_and(i8 %x) {
+; CHECK-LABEL: @sub_and_shl_nuw_nsw_use_and(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 12
+; CHECK-NEXT:    call void @use8(i8 [[AND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], 12
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -12
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %and = and i8 %x, 12
+  call void @use8(i8 %and)
+  %shl = shl nuw nsw i8 %and, 1
+  %r = sub nsw i8 %x, %shl
+  ret i8 %r
+}
+
+; negative test - extra use of the subtracted value would add an instruction
+
+define i8 @neg_sub_shl_and_mask_use_and(i8 %x) {
+; CHECK-LABEL: @neg_sub_shl_and_mask_use_and(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SHL]], 24
+; CHECK-NEXT:    call void @use8(i8 [[AND]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X]], [[AND]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 %x, 1
+  %and = and i8 %shl, 24
+  call void @use8(i8 %and)
+  %r = sub i8 %x, %and
+  ret i8 %r
+}
+
+define i8 @neg_sub_and_shl_use_shl(i8 %x) {
+; CHECK-LABEL: @neg_sub_and_shl_use_shl(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 12
+; CHECK-NEXT:    call void @use8(i8 [[AND]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 [[AND]], 1
+; CHECK-NEXT:    call void @use8(i8 [[SHL]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X]], [[SHL]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %and = and i8 %x, 12
+  call void @use8(i8 %and)
+  %shl = shl i8 %and, 1
+  call void @use8(i8 %shl)
+  %r = sub i8 %x, %shl
+  ret i8 %r
+}
+
+; negative test - only a shift by 1 doubles the masked value
+
+define i8 @neg_sub_shl2_and_mask(i8 %x) {
+; CHECK-LABEL: @neg_sub_shl2_and_mask(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SHL]], 24
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X]], [[AND]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 %x, 2
+  %and = and i8 %shl, 24
+  %r = sub i8 %x, %and
+  ret i8 %r
+}
+
+; negative test - the shifted value must be the minuend
+
+define i8 @neg_sub_shl_and_mask_other_op(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_sub_shl_and_mask_other_op(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SHL]], 24
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[AND]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 %y, 1
+  %and = and i8 %shl, 24
+  %r = sub i8 %x, %and
+  ret i8 %r
+}
+
+; negative test - the mask must be constant
+
+define i8 @neg_sub_shl_and_var_mask(i8 %x, i8 %m) {
+; CHECK-LABEL: @neg_sub_shl_and_var_mask(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SHL]], [[M:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X]], [[AND]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %shl = shl i8 %x, 1
+  %and = and i8 %shl, %m
+  %r = sub i8 %x, %and
+  ret i8 %r
+}
+
+; (X + C2) - ((X << 1) & 2C) --> (X ^ C) + (C2 - C)
+
+define i8 @sub_add_shl_and_mask(i8 %x) {
+; CHECK-LABEL: @sub_add_shl_and_mask(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], 12
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -5
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %add = add i8 %x, 7
+  %shl = shl i8 %x, 1
+  %and = and i8 %shl, 24
+  %r = sub i8 %add, %and
+  ret i8 %r
+}
+
+define i8 @sub_add_shl_and_mask_flags(i8 %x) {
+; CHECK-LABEL: @sub_add_shl_and_mask_flags(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], 12
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -5
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %add = add nuw nsw i8 %x, 7
+  %shl = shl nuw nsw i8 %x, 1
+  %and = and i8 %shl, 24
+  %r = sub nuw nsw i8 %add, %and
+  ret i8 %r
+}
+
+define i8 @sub_add_shl_and_mask_use_add(i8 %x) {
+; CHECK-LABEL: @sub_add_shl_and_mask_use_add(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], 7
+; CHECK-NEXT:    call void @use8(i8 [[ADD]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], 12
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -5
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %add = add i8 %x, 7
+  call void @use8(i8 %add)
+  %shl = shl i8 %x, 1
+  %and = and i8 %shl, 24
+  %r = sub i8 %add, %and
+  ret i8 %r
+}
+
+define i8 @sub_add_and_shl_use_and(i8 %x) {
+; CHECK-LABEL: @sub_add_and_shl_use_and(
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 12
+; CHECK-NEXT:    call void @use8(i8 [[AND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], 12
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -5
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %add = add i8 %x, 7
+  %and = and i8 %x, 12
+  call void @use8(i8 %and)
+  %shl = shl i8 %and, 1
+  %r = sub i8 %add, %shl
+  ret i8 %r
+}
+
+; negative test - the constant must be added to the shifted value
+
+define i8 @neg_sub_add_shl_and_mask_other_op(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_sub_add_shl_and_mask_other_op(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[Y:%.*]], 7
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SHL]], 24
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[ADD]], [[AND]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %add = add i8 %y, 7
+  %shl = shl i8 %x, 1
+  %and = and i8 %shl, 24
+  %r = sub i8 %add, %and
+  ret i8 %r
+}
