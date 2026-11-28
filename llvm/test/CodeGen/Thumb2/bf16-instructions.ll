@@ -1168,16 +1168,27 @@ define bfloat @test_uitofp_i32(i32 %a) {
 ; CHECK-NOFP-NEXT:    bl __truncsfbf2
 ; CHECK-NOFP-NEXT:    pop {r7, pc}
 ;
-; CHECK-FP-LABEL: test_uitofp_i32:
-; CHECK-FP:       @ %bb.0:
-; CHECK-FP-NEXT:    .save {r7, lr}
-; CHECK-FP-NEXT:    push {r7, lr}
-; CHECK-FP-NEXT:    vmov s0, r0
-; CHECK-FP-NEXT:    vcvt.f32.u32 s0, s0
-; CHECK-FP-NEXT:    bl __truncsfbf2
-; CHECK-FP-NEXT:    vmov.f16 r0, s0
-; CHECK-FP-NEXT:    vmov s0, r0
-; CHECK-FP-NEXT:    pop {r7, pc}
+; CHECK-FPNO64-LABEL: test_uitofp_i32:
+; CHECK-FPNO64:       @ %bb.0:
+; CHECK-FPNO64-NEXT:    .save {r7, lr}
+; CHECK-FPNO64-NEXT:    push {r7, lr}
+; CHECK-FPNO64-NEXT:    bl __aeabi_ui2d
+; CHECK-FPNO64-NEXT:    vmov d0, r0, r1
+; CHECK-FPNO64-NEXT:    bl __truncdfbf2
+; CHECK-FPNO64-NEXT:    vmov.f16 r0, s0
+; CHECK-FPNO64-NEXT:    vmov s0, r0
+; CHECK-FPNO64-NEXT:    pop {r7, pc}
+;
+; CHECK-FP64-LABEL: test_uitofp_i32:
+; CHECK-FP64:       @ %bb.0:
+; CHECK-FP64-NEXT:    .save {r7, lr}
+; CHECK-FP64-NEXT:    push {r7, lr}
+; CHECK-FP64-NEXT:    vmov s0, r0
+; CHECK-FP64-NEXT:    vcvt.f64.u32 d0, s0
+; CHECK-FP64-NEXT:    bl __truncdfbf2
+; CHECK-FP64-NEXT:    vmov.f16 r0, s0
+; CHECK-FP64-NEXT:    vmov s0, r0
+; CHECK-FP64-NEXT:    pop {r7, pc}
   %r = uitofp i32 %a to bfloat
   ret bfloat %r
 }
@@ -1214,16 +1225,27 @@ define bfloat @test_sitofp_i32(i32 %a) {
 ; CHECK-NOFP-NEXT:    bl __truncsfbf2
 ; CHECK-NOFP-NEXT:    pop {r7, pc}
 ;
-; CHECK-FP-LABEL: test_sitofp_i32:
-; CHECK-FP:       @ %bb.0:
-; CHECK-FP-NEXT:    .save {r7, lr}
-; CHECK-FP-NEXT:    push {r7, lr}
-; CHECK-FP-NEXT:    vmov s0, r0
-; CHECK-FP-NEXT:    vcvt.f32.s32 s0, s0
-; CHECK-FP-NEXT:    bl __truncsfbf2
-; CHECK-FP-NEXT:    vmov.f16 r0, s0
-; CHECK-FP-NEXT:    vmov s0, r0
-; CHECK-FP-NEXT:    pop {r7, pc}
+; CHECK-FPNO64-LABEL: test_sitofp_i32:
+; CHECK-FPNO64:       @ %bb.0:
+; CHECK-FPNO64-NEXT:    .save {r7, lr}
+; CHECK-FPNO64-NEXT:    push {r7, lr}
+; CHECK-FPNO64-NEXT:    bl __aeabi_i2d
+; CHECK-FPNO64-NEXT:    vmov d0, r0, r1
+; CHECK-FPNO64-NEXT:    bl __truncdfbf2
+; CHECK-FPNO64-NEXT:    vmov.f16 r0, s0
+; CHECK-FPNO64-NEXT:    vmov s0, r0
+; CHECK-FPNO64-NEXT:    pop {r7, pc}
+;
+; CHECK-FP64-LABEL: test_sitofp_i32:
+; CHECK-FP64:       @ %bb.0:
+; CHECK-FP64-NEXT:    .save {r7, lr}
+; CHECK-FP64-NEXT:    push {r7, lr}
+; CHECK-FP64-NEXT:    vmov s0, r0
+; CHECK-FP64-NEXT:    vcvt.f64.s32 d0, s0
+; CHECK-FP64-NEXT:    bl __truncdfbf2
+; CHECK-FP64-NEXT:    vmov.f16 r0, s0
+; CHECK-FP64-NEXT:    vmov s0, r0
+; CHECK-FP64-NEXT:    pop {r7, pc}
   %r = sitofp i32 %a to bfloat
   ret bfloat %r
 }
@@ -1266,25 +1288,48 @@ define bfloat @test_uitofp_i32_fadd(i32 %a, bfloat %b) {
 ; CHECK-NOFP-NEXT:    bl __truncsfbf2
 ; CHECK-NOFP-NEXT:    pop {r4, pc}
 ;
-; CHECK-FP-LABEL: test_uitofp_i32_fadd:
-; CHECK-FP:       @ %bb.0:
-; CHECK-FP-NEXT:    .save {r4, lr}
-; CHECK-FP-NEXT:    push {r4, lr}
-; CHECK-FP-NEXT:    vmov s2, r0
-; CHECK-FP-NEXT:    vmov r4, s0
-; CHECK-FP-NEXT:    vcvt.f32.u32 s2, s2
-; CHECK-FP-NEXT:    vmov.f32 s0, s2
-; CHECK-FP-NEXT:    bl __truncsfbf2
-; CHECK-FP-NEXT:    vmov r0, s0
-; CHECK-FP-NEXT:    lsls r1, r4, #16
-; CHECK-FP-NEXT:    vmov s0, r1
-; CHECK-FP-NEXT:    lsls r0, r0, #16
-; CHECK-FP-NEXT:    vmov s2, r0
-; CHECK-FP-NEXT:    vadd.f32 s0, s0, s2
-; CHECK-FP-NEXT:    bl __truncsfbf2
-; CHECK-FP-NEXT:    vmov.f16 r0, s0
-; CHECK-FP-NEXT:    vmov s0, r0
-; CHECK-FP-NEXT:    pop {r4, pc}
+; CHECK-FPNO64-LABEL: test_uitofp_i32_fadd:
+; CHECK-FPNO64:       @ %bb.0:
+; CHECK-FPNO64-NEXT:    .save {r4, lr}
+; CHECK-FPNO64-NEXT:    push {r4, lr}
+; CHECK-FPNO64-NEXT:    .vsave {d8}
+; CHECK-FPNO64-NEXT:    vpush {d8}
+; CHECK-FPNO64-NEXT:    vmov.f32 s16, s0
+; CHECK-FPNO64-NEXT:    bl __aeabi_ui2d
+; CHECK-FPNO64-NEXT:    vmov d0, r0, r1
+; CHECK-FPNO64-NEXT:    vmov r4, s16
+; CHECK-FPNO64-NEXT:    bl __truncdfbf2
+; CHECK-FPNO64-NEXT:    vmov r0, s0
+; CHECK-FPNO64-NEXT:    lsls r1, r4, #16
+; CHECK-FPNO64-NEXT:    vmov s0, r1
+; CHECK-FPNO64-NEXT:    lsls r0, r0, #16
+; CHECK-FPNO64-NEXT:    vmov s2, r0
+; CHECK-FPNO64-NEXT:    vadd.f32 s0, s0, s2
+; CHECK-FPNO64-NEXT:    bl __truncsfbf2
+; CHECK-FPNO64-NEXT:    vmov.f16 r0, s0
+; CHECK-FPNO64-NEXT:    vmov s0, r0
+; CHECK-FPNO64-NEXT:    vpop {d8}
+; CHECK-FPNO64-NEXT:    pop {r4, pc}
+;
+; CHECK-FP64-LABEL: test_uitofp_i32_fadd:
+; CHECK-FP64:       @ %bb.0:
+; CHECK-FP64-NEXT:    .save {r4, lr}
+; CHECK-FP64-NEXT:    push {r4, lr}
+; CHECK-FP64-NEXT:    vmov s2, r0
+; CHECK-FP64-NEXT:    vmov r4, s0
+; CHECK-FP64-NEXT:    vcvt.f64.u32 d1, s2
+; CHECK-FP64-NEXT:    vmov.f64 d0, d1
+; CHECK-FP64-NEXT:    bl __truncdfbf2
+; CHECK-FP64-NEXT:    vmov r0, s0
+; CHECK-FP64-NEXT:    lsls r1, r4, #16
+; CHECK-FP64-NEXT:    vmov s0, r1
+; CHECK-FP64-NEXT:    lsls r0, r0, #16
+; CHECK-FP64-NEXT:    vmov s2, r0
+; CHECK-FP64-NEXT:    vadd.f32 s0, s0, s2
+; CHECK-FP64-NEXT:    bl __truncsfbf2
+; CHECK-FP64-NEXT:    vmov.f16 r0, s0
+; CHECK-FP64-NEXT:    vmov s0, r0
+; CHECK-FP64-NEXT:    pop {r4, pc}
   %c = uitofp i32 %a to bfloat
   %r = fadd bfloat %b, %c
   ret bfloat %r
@@ -1305,25 +1350,48 @@ define bfloat @test_sitofp_i32_fadd(i32 %a, bfloat %b) {
 ; CHECK-NOFP-NEXT:    bl __truncsfbf2
 ; CHECK-NOFP-NEXT:    pop {r4, pc}
 ;
-; CHECK-FP-LABEL: test_sitofp_i32_fadd:
-; CHECK-FP:       @ %bb.0:
-; CHECK-FP-NEXT:    .save {r4, lr}
-; CHECK-FP-NEXT:    push {r4, lr}
-; CHECK-FP-NEXT:    vmov s2, r0
-; CHECK-FP-NEXT:    vmov r4, s0
-; CHECK-FP-NEXT:    vcvt.f32.s32 s2, s2
-; CHECK-FP-NEXT:    vmov.f32 s0, s2
-; CHECK-FP-NEXT:    bl __truncsfbf2
-; CHECK-FP-NEXT:    vmov r0, s0
-; CHECK-FP-NEXT:    lsls r1, r4, #16
-; CHECK-FP-NEXT:    vmov s0, r1
-; CHECK-FP-NEXT:    lsls r0, r0, #16
-; CHECK-FP-NEXT:    vmov s2, r0
-; CHECK-FP-NEXT:    vadd.f32 s0, s0, s2
-; CHECK-FP-NEXT:    bl __truncsfbf2
-; CHECK-FP-NEXT:    vmov.f16 r0, s0
-; CHECK-FP-NEXT:    vmov s0, r0
-; CHECK-FP-NEXT:    pop {r4, pc}
+; CHECK-FPNO64-LABEL: test_sitofp_i32_fadd:
+; CHECK-FPNO64:       @ %bb.0:
+; CHECK-FPNO64-NEXT:    .save {r4, lr}
+; CHECK-FPNO64-NEXT:    push {r4, lr}
+; CHECK-FPNO64-NEXT:    .vsave {d8}
+; CHECK-FPNO64-NEXT:    vpush {d8}
+; CHECK-FPNO64-NEXT:    vmov.f32 s16, s0
+; CHECK-FPNO64-NEXT:    bl __aeabi_i2d
+; CHECK-FPNO64-NEXT:    vmov d0, r0, r1
+; CHECK-FPNO64-NEXT:    vmov r4, s16
+; CHECK-FPNO64-NEXT:    bl __truncdfbf2
+; CHECK-FPNO64-NEXT:    vmov r0, s0
+; CHECK-FPNO64-NEXT:    lsls r1, r4, #16
+; CHECK-FPNO64-NEXT:    vmov s0, r1
+; CHECK-FPNO64-NEXT:    lsls r0, r0, #16
+; CHECK-FPNO64-NEXT:    vmov s2, r0
+; CHECK-FPNO64-NEXT:    vadd.f32 s0, s0, s2
+; CHECK-FPNO64-NEXT:    bl __truncsfbf2
+; CHECK-FPNO64-NEXT:    vmov.f16 r0, s0
+; CHECK-FPNO64-NEXT:    vmov s0, r0
+; CHECK-FPNO64-NEXT:    vpop {d8}
+; CHECK-FPNO64-NEXT:    pop {r4, pc}
+;
+; CHECK-FP64-LABEL: test_sitofp_i32_fadd:
+; CHECK-FP64:       @ %bb.0:
+; CHECK-FP64-NEXT:    .save {r4, lr}
+; CHECK-FP64-NEXT:    push {r4, lr}
+; CHECK-FP64-NEXT:    vmov s2, r0
+; CHECK-FP64-NEXT:    vmov r4, s0
+; CHECK-FP64-NEXT:    vcvt.f64.s32 d1, s2
+; CHECK-FP64-NEXT:    vmov.f64 d0, d1
+; CHECK-FP64-NEXT:    bl __truncdfbf2
+; CHECK-FP64-NEXT:    vmov r0, s0
+; CHECK-FP64-NEXT:    lsls r1, r4, #16
+; CHECK-FP64-NEXT:    vmov s0, r1
+; CHECK-FP64-NEXT:    lsls r0, r0, #16
+; CHECK-FP64-NEXT:    vmov s2, r0
+; CHECK-FP64-NEXT:    vadd.f32 s0, s0, s2
+; CHECK-FP64-NEXT:    bl __truncsfbf2
+; CHECK-FP64-NEXT:    vmov.f16 r0, s0
+; CHECK-FP64-NEXT:    vmov s0, r0
+; CHECK-FP64-NEXT:    pop {r4, pc}
   %c = sitofp i32 %a to bfloat
   %r = fadd bfloat %b, %c
   ret bfloat %r
