@@ -735,7 +735,7 @@ arguments.
    Body: ";" | "{" `BodyItem`* "}"
    BodyItem: ["field"] `Type` `TokIdentifier` ["=" `Value`] ";"
            :| "let" [`LetMode`] `TokIdentifier` [`RangeList`] "=" `Value` ";"
-           :| "defvar" `TokIdentifier` "=" `Value` ";"
+           :| `Defvar`
            :| `Assert`
    LetMode: "append" | "prepend"
 ```
