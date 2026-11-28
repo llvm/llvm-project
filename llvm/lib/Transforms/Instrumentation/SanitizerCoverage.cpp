@@ -191,8 +191,7 @@ private:
                                                     const char *Section);
   void CreatePCArray(Function &F, ArrayRef<BasicBlock *> AllBlocks);
   void CreateFunctionLocalArrays(Function &F, ArrayRef<BasicBlock *> AllBlocks);
-  Instruction *CreateGateBranch(Function &F, Value *&FunctionGateCmp,
-                                Instruction *I);
+  void CreateGateBranch(Function &F, Value *&FunctionGateCmp, IRBuilder<> &IRB);
   Value *CreateFunctionLocalGateCmp(IRBuilder<> &IRB);
   void InjectCoverageAtBlock(Function &F, BasicBlock &BB, size_t Idx,
                              Value *&FunctionGateCmp, bool IsLeafFunc);
@@ -820,9 +819,9 @@ Value *ModuleSanitizerCoverage::CreateFunctionLocalGateCmp(IRBuilder<> &IRB) {
   return Cmp;
 }
 
-Instruction *ModuleSanitizerCoverage::CreateGateBranch(Function &F,
-                                                       Value *&FunctionGateCmp,
-                                                       Instruction *IP) {
+void ModuleSanitizerCoverage::CreateGateBranch(Function &F,
+                                               Value *&FunctionGateCmp,
+                                               IRBuilder<> &IRB) {
   if (!FunctionGateCmp) {
     // Create this in the entry block
     BasicBlock &BB = F.getEntryBlock();
@@ -835,7 +834,10 @@ Instruction *ModuleSanitizerCoverage::CreateGateBranch(Function &F,
   // gate is turned off, allowing the default enablement of this
   // instrumentation with as little of a performance cost as possible
   auto Weights = MDBuilder(*C).createBranchWeights(1, 100000);
-  return SplitBlockAndInsertIfThen(FunctionGateCmp, IP, false, Weights);
+  DebugLoc DL = IRB.getCurrentDebugLocation();
+  IRB.SetInsertPoint(SplitBlockAndInsertIfThen(
+      FunctionGateCmp, &*IRB.GetInsertPoint(), false, Weights));
+  IRB.SetCurrentDebugLocation(DL);
 }
 
 bool ModuleSanitizerCoverage::InjectCoverage(Function &F,
@@ -912,13 +914,9 @@ void ModuleSanitizerCoverage::InjectTraceForSwitch(
           *CurModule, ArrayOfInt64Ty, false, GlobalVariable::InternalLinkage,
           ConstantArray::get(ArrayOfInt64Ty, Initializers),
           "__sancov_gen_cov_switch_values");
-      if (Options.GatedCallbacks) {
-        auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
-        IRBuilder<> GateIRB(GateBranch);
-        createRuntimeCall(GateIRB, SanCovTraceSwitchFunction, {Cond, GV});
-      } else {
-        createRuntimeCall(IRB, SanCovTraceSwitchFunction, {Cond, GV});
-      }
+      if (Options.GatedCallbacks)
+        CreateGateBranch(F, FunctionGateCmp, IRB);
+      createRuntimeCall(IRB, SanCovTraceSwitchFunction, {Cond, GV});
     }
   }
 }
@@ -1024,17 +1022,11 @@ void ModuleSanitizerCoverage::InjectTraceForCmp(
       }
 
       auto Ty = Type::getIntNTy(*C, TypeSize);
-      if (Options.GatedCallbacks) {
-        auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
-        IRBuilder<> GateIRB(GateBranch);
-        createRuntimeCall(GateIRB, CallbackFunc,
-                          {GateIRB.CreateIntCast(A0, Ty, true),
-                           GateIRB.CreateIntCast(A1, Ty, true)});
-      } else {
-        createRuntimeCall(
-            IRB, CallbackFunc,
-            {IRB.CreateIntCast(A0, Ty, true), IRB.CreateIntCast(A1, Ty, true)});
-      }
+      if (Options.GatedCallbacks)
+        CreateGateBranch(F, FunctionGateCmp, IRB);
+      createRuntimeCall(
+          IRB, CallbackFunc,
+          {IRB.CreateIntCast(A0, Ty, true), IRB.CreateIntCast(A1, Ty, true)});
     }
   }
 }
@@ -1068,14 +1060,13 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
   if (Options.TracePCGuard) {
     auto GuardPtr = IRB.CreateConstInBoundsGEP2_64(
         FunctionGuardArray->getValueType(), FunctionGuardArray, 0, Idx);
+    DebugLoc DL = IRB.getCurrentDebugLocation();
+    if (Options.GatedCallbacks)
+      CreateGateBranch(F, FunctionGateCmp, IRB);
+    createRuntimeCall(IRB, SanCovTracePCGuard, GuardPtr)->setCannotMerge();
     if (Options.GatedCallbacks) {
-      Instruction *I = &*IP;
-      auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
-      IRBuilder<> GateIRB(GateBranch);
-      createRuntimeCall(GateIRB, SanCovTracePCGuard, GuardPtr)
-          ->setCannotMerge();
-    } else {
-      createRuntimeCall(IRB, SanCovTracePCGuard, GuardPtr)->setCannotMerge();
+      IRB.SetInsertPoint(&*IP);
+      IRB.SetCurrentDebugLocation(DL);
     }
   }
   if (Options.Inline8bitCounters) {
