@@ -661,11 +661,10 @@ struct VPlanTransforms {
 
   /// Replace truncates of a wide induction, or of that induction's increment,
   /// by a VPWidenIntOrFpInductionRecipe producing the truncated type directly.
-  /// The canonical induction is narrowed even when the target reports the
-  /// truncate as free. If narrowing is only profitable for a subset of VFs in
-  /// \p Range, Range.End is updated.
+  /// If narrowing is only profitable for a subset of VFs in \p Range, Range.End
+  /// is updated.
   static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
-                                       const TargetTransformInfo &TTI);
+                                       VPCostContext &CostCtx);
 
   /// Wrap reduction operations and their vp.merge in expression recipes when
   /// the merge is expected to be folded, to better model the cost and register

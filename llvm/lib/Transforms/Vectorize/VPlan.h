@@ -2704,6 +2704,11 @@ public:
                getStartValue()->getScalarType()->getPrimitiveSizeInBits();
   }
 
+  /// Helper function for computing the cost of wide inductions.
+  static InstructionCost
+  computeWidenInductionCost(const InductionDescriptor &ID, Type *StepScalarTy,
+                            ElementCount VF, VPCostContext &Ctx);
+
   /// Return the cost of this VPWidenIntOrFpInductionRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
