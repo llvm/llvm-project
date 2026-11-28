@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 #include "COFFLinkGraphBuilder.h"
 
+#include "llvm/ExecutionEngine/JITLink/COFF.h"
+
 #include <memory>
 
 #define DEBUG_TYPE "jitlink"
@@ -330,6 +332,14 @@ Error COFFLinkGraphBuilder::flushWeakAliasRequests() {
                                          Linkage::Weak, S, *Target);
       if (!NewSymbol)
         return NewSymbol.takeError();
+
+      // MC's ".weak.<name>.default[.<suffix>]" helper is object-private;
+      // exporting it clashes with other definitions of the same weak symbol.
+      if (Target->hasName() &&
+          isCOFFWeakDefaultHelper(*Target->getName(), WeakExternal.SymbolName,
+                                  WeakExternal.Characteristics))
+        Target->setScope(Scope::Local);
+
       setGraphSymbol(AliasSymbol->getSectionNumber(), WeakExternal.Alias,
                      **NewSymbol);
       LLVM_DEBUG({

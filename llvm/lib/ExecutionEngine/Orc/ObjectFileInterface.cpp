@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
+#include "llvm/ExecutionEngine/JITLink/COFF.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
 #include "llvm/Object/COFF.h"
@@ -152,6 +153,9 @@ getCOFFObjectFileSymbolInfo(ExecutionSession &ES,
   MaterializationUnit::Interface I;
   std::vector<std::optional<object::coff_aux_section_definition>> ComdatDefs(
       Obj.getNumberOfSections() + 1);
+  // MC's weak default helpers are object-private; both JIT linkers keep them
+  // local.
+  SmallVector<StringRef> WeakDefaultHelpers;
   for (auto &Sym : Obj.symbols()) {
     Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();
     if (!SymFlagsOrErr)
@@ -211,8 +215,17 @@ getCOFFObjectFileSymbolInfo(ExecutionSession &ES,
     if (IsWeak)
       *SymFlags |= JITSymbolFlags::Weak;
 
+    auto Helper = jitlink::getCOFFWeakDefaultHelper(Obj, COFFSym);
+    if (!Helper)
+      return Helper.takeError();
+    if (*Helper)
+      WeakDefaultHelpers.push_back(**Helper);
+
     I.SymbolFlags[ES.intern(*Name)] = std::move(*SymFlags);
   }
+
+  for (auto Name : WeakDefaultHelpers)
+    I.SymbolFlags.erase(ES.intern(Name));
 
   for (auto &Sec : Obj.sections()) {
     if (auto SecName = Sec.getName()) {

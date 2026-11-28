@@ -16,6 +16,11 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
 namespace llvm {
+namespace object {
+class COFFObjectFile;
+class COFFSymbolRef;
+} // namespace object
+
 namespace jitlink {
 
 /// Create a LinkGraph from an COFF relocatable object.
@@ -52,6 +57,17 @@ private:
   StringRef ImageBaseName;
   std::optional<Symbol *> ImageBase;
 };
+
+/// Returns true if Name is the ".weak.<WeakName>.default[.<suffix>]" helper
+/// that MC emits as the default of a SEARCH_ALIAS weak external WeakName.
+LLVM_ABI bool isCOFFWeakDefaultHelper(StringRef Name, StringRef WeakName,
+                                      uint32_t Characteristics);
+
+/// Returns the name of Sym's default if Sym is a weak external whose default
+/// is MC's helper, and std::nullopt otherwise.
+LLVM_ABI Expected<std::optional<StringRef>>
+getCOFFWeakDefaultHelper(const object::COFFObjectFile &Obj,
+                         object::COFFSymbolRef Sym);
 
 } // end namespace jitlink
 } // end namespace llvm

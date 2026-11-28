@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include "llvm/ExecutionEngine/JITLink/COFF.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/Object/COFF.h"
 
@@ -72,6 +73,21 @@ private:
   MaterializationResponsibility &MR;
   SymbolDependenceMap &Deps;
 };
+
+// MC's weak default helpers are object-private, and getObjectFileInterface
+// leaves them out.
+Error addCOFFWeakDefaultHelpers(const object::COFFObjectFile &Obj,
+                                std::set<StringRef> &InternalSymbols) {
+  for (auto &Sym : Obj.symbols()) {
+    auto Helper =
+        jitlink::getCOFFWeakDefaultHelper(Obj, Obj.getCOFFSymbol(Sym));
+    if (!Helper)
+      return Helper.takeError();
+    if (*Helper)
+      InternalSymbols.insert(**Helper);
+  }
+  return Error::success();
+}
 
 } // end anonymous namespace
 
@@ -178,6 +194,14 @@ void RTDyldObjectLinkingLayer::emit(
       if (auto Err = R->defineMaterializing(ExtraSymbolsToClaim)) {
         ES.reportError(std::move(Err));
         R->failMaterialization();
+      }
+    }
+
+    if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(Obj->get())) {
+      if (auto Err = addCOFFWeakDefaultHelpers(*COFFObj, *InternalSymbols)) {
+        ES.reportError(std::move(Err));
+        R->failMaterialization();
+        return;
       }
     }
   }
