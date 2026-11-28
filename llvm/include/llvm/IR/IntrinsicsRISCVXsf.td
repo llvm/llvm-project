@@ -278,4 +278,7 @@ let TargetPrefix = "riscv" in {
   def int_riscv_sf_vtdiscard
       : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>,
         RISCVVIntrinsic;
+
+  // Xsfvfofp4min OFP4 to OFP8 conversion.
+  defm sf_vfext_vf2 : RISCVConversion;
 } // TargetPrefix = "riscv"
