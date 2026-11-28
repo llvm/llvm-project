@@ -156,6 +156,45 @@ arith::CmpIPredicate arith::invertPredicate(arith::CmpIPredicate pred) {
   llvm_unreachable("unknown cmpi predicate kind");
 }
 
+/// Invert a floating-point comparison predicate.
+arith::CmpFPredicate arith::invertPredicate(arith::CmpFPredicate pred) {
+  switch (pred) {
+  case arith::CmpFPredicate::AlwaysFalse:
+    return arith::CmpFPredicate::AlwaysTrue;
+  case arith::CmpFPredicate::OEQ:
+    return arith::CmpFPredicate::UNE;
+  case arith::CmpFPredicate::OGT:
+    return arith::CmpFPredicate::ULE;
+  case arith::CmpFPredicate::OGE:
+    return arith::CmpFPredicate::ULT;
+  case arith::CmpFPredicate::OLT:
+    return arith::CmpFPredicate::UGE;
+  case arith::CmpFPredicate::OLE:
+    return arith::CmpFPredicate::UGT;
+  case arith::CmpFPredicate::ONE:
+    return arith::CmpFPredicate::UEQ;
+  case arith::CmpFPredicate::ORD:
+    return arith::CmpFPredicate::UNO;
+  case arith::CmpFPredicate::UEQ:
+    return arith::CmpFPredicate::ONE;
+  case arith::CmpFPredicate::UGT:
+    return arith::CmpFPredicate::OLE;
+  case arith::CmpFPredicate::UGE:
+    return arith::CmpFPredicate::OLT;
+  case arith::CmpFPredicate::ULT:
+    return arith::CmpFPredicate::OGE;
+  case arith::CmpFPredicate::ULE:
+    return arith::CmpFPredicate::OGT;
+  case arith::CmpFPredicate::UNE:
+    return arith::CmpFPredicate::OEQ;
+  case arith::CmpFPredicate::UNO:
+    return arith::CmpFPredicate::ORD;
+  case arith::CmpFPredicate::AlwaysTrue:
+    return arith::CmpFPredicate::AlwaysFalse;
+  }
+  llvm_unreachable("unknown cmpf predicate kind");
+}
+
 /// Equivalent to
 /// convertRoundingModeToLLVM(convertArithRoundingModeToLLVM(roundingMode)).
 ///
@@ -183,6 +222,11 @@ convertArithRoundingModeToLLVMIR(std::optional<RoundingMode> roundingMode) {
 
 static arith::CmpIPredicateAttr invertPredicate(arith::CmpIPredicateAttr pred) {
   return arith::CmpIPredicateAttr::get(pred.getContext(),
+                                       invertPredicate(pred.getValue()));
+}
+
+static arith::CmpFPredicateAttr invertPredicate(arith::CmpFPredicateAttr pred) {
+  return arith::CmpFPredicateAttr::get(pred.getContext(),
                                        invertPredicate(pred.getValue()));
 }
 
@@ -1304,8 +1348,8 @@ OpFoldResult arith::XOrIOp::fold(FoldAdaptor adaptor) {
 
 void arith::XOrIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
-  patterns.add<XOrIXOrIConstant, XOrINotCmpI, XOrIOfExtUI, XOrIOfExtSI>(
-      context);
+  patterns.add<XOrIXOrIConstant, XOrINotCmpI, XOrINotCmpF, XOrIOfExtUI,
+               XOrIOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//

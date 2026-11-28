@@ -3222,6 +3222,156 @@ func.func @notCmpUGE(%arg0: i8, %arg1: i8) -> i1 {
   return %ncmp : i1
 }
 
+// CHECK-LABEL: @notCmpFOEQ
+//       CHECK:   %[[cres:.+]] = arith.cmpf une, %arg0, %arg1 : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpFOEQ(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf "oeq", %arg0, %arg1 : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpFOGT
+//       CHECK:   %[[cres:.+]] = arith.cmpf ule, %arg0, %arg1 : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpFOGT(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf "ogt", %arg0, %arg1 : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpFOGE
+//       CHECK:   %[[cres:.+]] = arith.cmpf ult, %arg0, %arg1 : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpFOGE(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf "oge", %arg0, %arg1 : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpFOLT
+//       CHECK:   %[[cres:.+]] = arith.cmpf uge, %arg0, %arg1 : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpFOLT(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf "olt", %arg0, %arg1 : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpFOLE
+//       CHECK:   %[[cres:.+]] = arith.cmpf ugt, %arg0, %arg1 : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpFOLE(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf "ole", %arg0, %arg1 : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpFONE
+//       CHECK:   %[[cres:.+]] = arith.cmpf ueq, %arg0, %arg1 : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpFONE(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf "one", %arg0, %arg1 : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpFORD
+//       CHECK:   %[[cres:.+]] = arith.cmpf uno, %arg0, %arg1 : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpFORD(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf "ord", %arg0, %arg1 : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpFUEQ
+//       CHECK:   %[[cres:.+]] = arith.cmpf one, %arg0, %arg1 : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpFUEQ(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf "ueq", %arg0, %arg1 : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpFUGT
+//       CHECK:   %[[cres:.+]] = arith.cmpf ole, %arg0, %arg1 : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpFUGT(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf "ugt", %arg0, %arg1 : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpFUGE
+//       CHECK:   %[[cres:.+]] = arith.cmpf olt, %arg0, %arg1 : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpFUGE(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf "uge", %arg0, %arg1 : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpFULT
+//       CHECK:   %[[cres:.+]] = arith.cmpf oge, %arg0, %arg1 : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpFULT(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf "ult", %arg0, %arg1 : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpFULE
+//       CHECK:   %[[cres:.+]] = arith.cmpf ogt, %arg0, %arg1 : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpFULE(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf "ule", %arg0, %arg1 : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpFUNE
+//       CHECK:   %[[cres:.+]] = arith.cmpf oeq, %arg0, %arg1 : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpFUNE(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf "une", %arg0, %arg1 : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpFUNO
+//       CHECK:   %[[cres:.+]] = arith.cmpf ord, %arg0, %arg1 : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpFUNO(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf "uno", %arg0, %arg1 : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
+// CHECK-LABEL: @notCmpF_fastmath
+//       CHECK:   %[[cres:.+]] = arith.cmpf ugt, %arg0, %arg1 fastmath<nnan,ninf> : f32
+//       CHECK:   return %[[cres]]
+func.func @notCmpF_fastmath(%arg0: f32, %arg1: f32) -> i1 {
+  %true = arith.constant true
+  %cmp = arith.cmpf ole, %arg0, %arg1 fastmath<nnan,ninf> : f32
+  %ncmp = arith.xori %cmp, %true : i1
+  return %ncmp : i1
+}
+
 // -----
 
 // CHECK-LABEL: @xorxor(
