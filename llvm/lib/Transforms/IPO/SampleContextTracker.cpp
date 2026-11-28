@@ -418,6 +418,16 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
 
   assert(!FromSamples->getContext().hasState(InlinedContext) &&
          "Shouldn't promote inlined context profile");
+
+  // Take the node out of the trie before the merge. With recursion, the node
+  // can be in the subtree of its own base profile, e.g. [foo:1 @ foo] under
+  // [foo]. If the node stayed in the trie, the merge would write into the
+  // subtree that it reads from. extract() keeps the node at the same address,
+  // and the node is freed when Detached goes out of scope.
+  auto Detached = NodeToPromo.getParentContext()->getAllChildContext().extract(
+      FunctionSamples::getCallSiteHash(NodeToPromo.getFuncName(),
+                                       NodeToPromo.getCallSiteLoc()));
+  assert(&Detached.mapped() == &NodeToPromo && "Expect to detach the node");
   return promoteMergeContextSamplesTree(NodeToPromo, RootContext);
 }
 
@@ -575,7 +585,6 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
   // Ignore call site location if destination is top level under root
   LineLocation NewCallSiteLoc = LineLocation(0, 0);
   LineLocation OldCallSiteLoc = FromNode.getCallSiteLoc();
-  ContextTrieNode &FromNodeParent = *FromNode.getParentContext();
   ContextTrieNode *ToNode = nullptr;
   bool MoveToRoot = (&ToNodeParent == &RootContext);
   if (!MoveToRoot) {
@@ -611,10 +620,6 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
     // Remove children once they're all merged
     FromNode.getAllChildContext().clear();
   }
-
-  // For root of subtree, remove itself from old parent too
-  if (MoveToRoot)
-    FromNodeParent.removeChildContext(OldCallSiteLoc, ToNode->getFuncName());
 
   return *ToNode;
 }
