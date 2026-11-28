@@ -1892,6 +1892,12 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   `--offload-arch` and `--no-offload-arch` must now name an Intel GPU or CPU, an
   IGCA target or `generic`. Any other value, e.g. a misspelled `xe-pcv`, is an
   error rather than a device job for a device that does not exist.
+- Added `--[no-]offload-embed-virtual-arch`. With
+  `--no-offload-embed-virtual-arch`, a SYCL device image compiled ahead of time
+  for Intel GPUs does not keep the SPIR-V for just-in-time compilation. To
+  apply it to one IGCA target only, use `-Xarch_<IGCA target>`, e.g.
+  `-Xarch_igca_40r --no-offload-embed-virtual-arch`; it then applies to all
+  Intel GPUs of that IGCA target.
 
 #### Improvements
 

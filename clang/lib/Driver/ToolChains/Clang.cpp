@@ -9794,8 +9794,20 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     // Add one "code=" per Intel GPU requested for this IGCA target.
     // llvm-offload-binary joins them, so the image gets
     // "code=xe-mtl-h,xe-mtl-u".
-    for (StringRef Device : C.getIGCADevices(TC, Arch.ArchName))
+    ArrayRef<StringRef> Devices = C.getIGCADevices(TC, Arch.ArchName);
+    for (StringRef Device : Devices)
       Parts.emplace_back("code=" + Device.str());
+
+    // Ask to drop the SPIR-V only for device code that is compiled ahead of
+    // time, and keep it if the user also gave the IGCA target itself in
+    // --offload-arch. The option is read only here, so clang reports it as
+    // unused where it can't do anything.
+    bool DropSPIRV =
+        !Devices.empty() &&
+        !TCArgs.hasFlag(options::OPT_offload_embed_virtual_arch,
+                        options::OPT_no_offload_embed_virtual_arch, true);
+    if (DropSPIRV && !C.isRequestedIGCATarget(TC, Arch.ArchName))
+      Parts.emplace_back("no-embed-virtual-arch=1");
 
     if (TC->isUsingLTO(TCArgs, OffloadAction->getOffloadingDeviceKind()))
       for (StringRef Feature : FeatureArgs)

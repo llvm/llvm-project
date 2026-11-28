@@ -92,6 +92,26 @@ Currently, only SYCL device code for Intel GPUs has a `code` list: the
 architecture is an IGCA target, e.g. `igca_30r`, and `code` lists its Intel
 GPUs, e.g. `xe-mtl-u`.
 
+`--no-offload-embed-virtual-arch` drops the SPIR-V from device code compiled
+ahead of time. It only takes effect if every object that is linked for the same
+GPUs was compiled with it:
+
+- If all of them were, the SPIR-V is dropped.
+- If only some were, the SPIR-V is kept, and a warning says so.
+
+```console
+# SPIR-V dropped: a.o and b.o were both compiled with --no-offload-embed-virtual-arch.
+clang++ -fsycl --offload-arch=xe-mtl-u --no-offload-embed-virtual-arch -c a.cpp -o a.o
+clang++ -fsycl --offload-arch=xe-mtl-u --no-offload-embed-virtual-arch -c b.cpp -o b.o
+clang++ -fsycl --offload-arch=xe-mtl-u a.o b.o -o app
+
+# SPIR-V kept, with a warning: only a.o was.
+clang++ -fsycl --offload-arch=xe-mtl-u --no-offload-embed-virtual-arch -c a.cpp -o a.o
+clang++ -fsycl --offload-arch=xe-mtl-u -c b.cpp -o b.o
+clang++ -fsycl --offload-arch=xe-mtl-u a.o b.o -o app
+clang-linker-wrapper: warning: not all device code for 'igca_30r' was compiled with --no-offload-embed-virtual-arch; the SPIR-V is kept
+```
+
 ## Debugging
 
 The linker wrapper performs a lot of steps internally, such as input matching,

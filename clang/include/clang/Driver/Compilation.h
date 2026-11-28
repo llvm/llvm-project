@@ -16,6 +16,7 @@
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
@@ -104,6 +105,10 @@ class Compilation {
   llvm::DenseMap<std::pair<const ToolChain *, StringRef>,
                  llvm::SmallVector<StringRef, 2>>
       IGCADevices;
+
+  /// The IGCA targets given directly in --offload-arch, e.g. igca_30r, for each
+  /// device toolchain.
+  llvm::DenseSet<std::pair<const ToolChain *, StringRef>> RequestedIGCATargets;
 
   /// Temporary files which should be removed on exit.
   llvm::opt::ArgStringList TempFiles;
@@ -272,6 +277,18 @@ public:
   /// toolchain \p TC, sorted, or an empty list if there are none.
   ArrayRef<StringRef> getIGCADevices(const ToolChain *TC,
                                      StringRef Target) const;
+
+  /// Remember that \p Target was given directly in --offload-arch for the
+  /// device toolchain \p TC.
+  void addRequestedIGCATarget(const ToolChain *TC, StringRef Target) {
+    RequestedIGCATargets.insert({TC, Target});
+  }
+
+  /// \return true if \p Target was given directly in --offload-arch for the
+  /// device toolchain \p TC.
+  bool isRequestedIGCATarget(const ToolChain *TC, StringRef Target) const {
+    return RequestedIGCATargets.contains({TC, Target});
+  }
 
   /// addTempFile - Add a file to remove on exit, and returns its
   /// argument.

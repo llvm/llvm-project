@@ -132,6 +132,16 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --save-temps --wrapper-verbose --linker-path=/usr/bin/ld %t.sycl-mix.o \
 // RUN:   -o a.out 2>&1 | FileCheck %s --check-prefix=SYCL-REPLAY
+// RUN: llvm-offload-binary -o %t.sycl-noembed.out \
+// RUN:   --image=file=%t.spirv.bc,kind=sycl,triple=spirv64-unknown-unknown,arch=igca_30r,code=xe-mtl-u,no-embed-virtual-arch=1
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.sycl-noembed.o -fembed-offload-object=%t.sycl-noembed.out
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld %t.sycl-noembed.o %t.sycl-noembed.o \
+// RUN:   %t.sycl-generic.a -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SYCL-NO-EMBED
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld %t.sycl-noembed.o %t.sycl-u.o -o a.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SYCL-SOME-NO-EMBED
 // RUN: llvm-offload-binary -o %t.openmp-code.out \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70,code=a \
 // RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70,code=b
@@ -181,6 +191,13 @@ __attribute__((visibility("protected"), used)) int x;
 // the same "arch" but different "code" are linked separately, without --code.
 // OPENMP-CODE-COUNT-2: clang{{.*}} --target=nvptx64-nvidia-cuda -march=sm_70 {{[^ ]*}}.o{{$}}
 // OPENMP-CODE-NOT:     --target=nvptx64-nvidia-cuda
+
+// The SPIR-V is dropped only if all device images that list real devices ask
+// for it. A generic archive member does not count.
+// SYCL-NO-EMBED-NOT: warning:
+// SYCL-NO-EMBED: clang{{.*}} -march=igca_30r {{.*}} --sycl-link -Xlinker --code=xe-mtl-u -Xlinker --no-embed-virtual-arch{{$}}
+// SYCL-SOME-NO-EMBED: warning: not all device code for 'igca_30r' was compiled with --no-offload-embed-virtual-arch; the SPIR-V is kept
+// SYCL-SOME-NO-EMBED: clang{{.*}} -march=igca_30r {{.*}} --sycl-link -Xlinker --code=xe-mtl-u{{$}}
 
 // The replayed extraction of an image without "code" does not also match one
 // with "code" for the same "arch".

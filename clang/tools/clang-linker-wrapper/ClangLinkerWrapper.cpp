@@ -125,6 +125,9 @@ static std::string CudaBinaryPath;
 /// Mutex lock to protect writes to shared TempFiles in parallel.
 static std::mutex TempFilesMutex;
 
+/// Device links run in parallel, so warnings from them take turns.
+static std::mutex WarningMutex;
+
 /// Temporary files created by the linker wrapper.
 static std::list<SmallString<128>> TempFiles;
 
@@ -597,6 +600,8 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
     CmdArgs.push_back("--sycl-link");
     for (const std::string &Device : Devices)
       CmdArgs.append({"-Xlinker", Args.MakeArgString("--code=" + Device)});
+    if (Args.hasArg(OPT_no_embed_virtual_arch))
+      CmdArgs.append({"-Xlinker", "--no-embed-virtual-arch"});
   }
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
@@ -1096,6 +1101,27 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
   for (StringRef Device : getCodeDevices(Binary))
     DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_code_EQ),
                      Args.MakeArgString(Device));
+
+  // Drop the SPIR-V only if every device image that lists real devices in
+  // "code" asked for it. Generic archive members list no devices, so they
+  // don't get a say.
+  auto HasCode = [](const OffloadFile &File) {
+    return !File.getBinary()->getString("code").empty();
+  };
+  auto AsksToDrop = [](const OffloadFile &File) {
+    return !File.getBinary()->getString("no-embed-virtual-arch").empty();
+  };
+  size_t NumWithCode = llvm::count_if(Input, HasCode);
+  size_t NumAskingToDrop = llvm::count_if(Input, AsksToDrop);
+  if (NumWithCode > 0 && NumAskingToDrop == NumWithCode)
+    DAL.AddFlagArg(nullptr, Tbl.getOption(OPT_no_embed_virtual_arch));
+  else if (NumAskingToDrop > 0) {
+    std::scoped_lock<std::mutex> Lock(WarningMutex);
+    WithColor::warning(errs(), LinkerExecutable)
+        << "not all device code for '" << Binary.getArch()
+        << "' was compiled with --no-offload-embed-virtual-arch; the "
+           "SPIR-V is kept\n";
+  }
 
   // If every input file is bitcode we have whole program visibility as we
   // do only support static linking with bitcode.
