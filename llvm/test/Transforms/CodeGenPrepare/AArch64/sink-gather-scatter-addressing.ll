@@ -35,10 +35,10 @@ define <vscale x 4 x float> @gather_field_offsets_sink_gep(ptr %base, <vscale x 
 ; CHECK-LABEL: define <vscale x 4 x float> @gather_field_offsets_sink_gep(
 ; CHECK-SAME: ptr [[BASE:%.*]], <vscale x 4 x i64> [[INDICES:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr [12 x i8], ptr [[BASE]], <vscale x 4 x i64> [[INDICES]]
-; CHECK-NEXT:    [[FIELD_PTRS:%.*]] = getelementptr i8, <vscale x 4 x ptr> [[PTRS]], i64 8
 ; CHECK-NEXT:    br i1 [[COND]], label [[COND_BLOCK:%.*]], label [[EXIT:%.*]]
 ; CHECK:       cond.block:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BASE]], i64 8
+; CHECK-NEXT:    [[FIELD_PTRS:%.*]] = getelementptr [12 x i8], ptr [[TMP0]], <vscale x 4 x i64> [[INDICES]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[FIELD_PTRS]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> poison)
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[LOAD]]
 ; CHECK:       exit:
