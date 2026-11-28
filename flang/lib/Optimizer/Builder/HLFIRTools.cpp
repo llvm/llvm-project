@@ -1548,6 +1548,22 @@ hlfir::createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
   return {hlfir::Entity{base}, isHeapAlloc};
 }
 
+void hlfir::genFreeTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
+                                hlfir::Entity temp, bool mustFree) {
+  if (!mustFree)
+    return;
+  mlir::Value addr = temp;
+  if (auto declareOp = temp.getDefiningOp<hlfir::DeclareOp>())
+    addr = declareOp.getMemref();
+  mlir::Type heapType = fir::HeapType::get(
+      hlfir::getFortranElementOrSequenceType(addr.getType()));
+  if (mlir::isa<fir::BaseBoxType, fir::BoxCharType>(addr.getType()))
+    addr = fir::BoxAddrOp::create(builder, loc, addr);
+  // fir::FreeMemOp operand type must be a fir::HeapType.
+  addr = builder.createConvert(loc, heapType, addr);
+  fir::FreeMemOp::create(builder, loc, addr);
+}
+
 hlfir::Entity hlfir::createStackTempFromMold(mlir::Location loc,
                                              fir::FirOpBuilder &builder,
                                              hlfir::Entity mold) {

@@ -559,6 +559,12 @@ std::pair<hlfir::Entity, bool> createTempFromMold(mlir::Location loc,
                                                   fir::FirOpBuilder &builder,
                                                   hlfir::Entity mold);
 
+/// Free the storage of a temporary \p temp created by createTempFromMold if
+/// \p mustFree, the bool result of createTempFromMold, is true. This does not
+/// finalize the temporary nor deallocate its allocatable components.
+void genFreeTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
+                         hlfir::Entity temp, bool mustFree);
+
 // TODO: this does not support polymorphic molds
 hlfir::Entity createStackTempFromMold(mlir::Location loc,
                                       fir::FirOpBuilder &builder,

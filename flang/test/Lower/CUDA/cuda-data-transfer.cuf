@@ -585,6 +585,8 @@ end subroutine
 ! CHECK: %[[TMP_BUFFER:.*]]:2 = hlfir.declare %[[TMP]](%{{.*}}) uniq_name(".tmp") : (!fir.heap<!fir.array<?xf16>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf16>>, !fir.heap<!fir.array<?xf16>>)
 ! CHECK: cuf.data_transfer %{{.*}} to %[[TMP_BUFFER]]#0 transfer_kind(device_host) : !fir.box<!fir.heap<!fir.array<?xf16>>>, !fir.box<!fir.array<?xf16>>
 ! CHECK: hlfir.elemental 
+! CHECK: hlfir.assign
+! CHECK: fir.freemem %[[TMP]] : !fir.heap<!fir.array<?xf16>>
 
 subroutine sub30()
   use mod1
@@ -877,3 +879,20 @@ end subroutine
 ! CHECK: hlfir.elemental
 ! CHECK: arith.negf
 ! CHECK: hlfir.assign
+
+subroutine sub51(n)
+  use mod1
+  integer :: n
+  real, device :: adev(n)
+  ! Implicit data transfer of rconst, assignment to a host temporary and
+  ! transfer of the temporary to adev
+  adev = rconst * 2.0
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub51
+! CHECK: %[[ADEV:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsub51Eadev") data_attr(#cuf.cuda<device>)
+! CHECK: %[[TMP:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}} <{bindc_name = ".tmp", uniq_name = ""}>
+! CHECK: %[[TMP_DECL:.*]]:2 = hlfir.declare %[[TMP]](%{{.*}}) uniq_name(".tmp")
+! CHECK: hlfir.assign %{{.*}} to %[[TMP_DECL]]#0
+! CHECK: cuf.data_transfer %[[TMP_DECL]]#0 to %[[ADEV]]#0 transfer_kind(host_device)
+! CHECK: fir.freemem %[[TMP]] : !fir.heap<!fir.array<?xf32>>
