@@ -2072,3 +2072,264 @@ loop:
 exit:
   ret void
 }
+
+; The tests below exercise exits analyzed by howManyLessThans (ult/slt/ugt/sgt
+; exit conditions), whose constant max backedge-taken count should also be
+; limited by loop guards.
+
+define void @guard_ult_rhs(i64 %n) {
+; CHECK-LABEL: 'guard_ult_rhs'
+; CHECK-NEXT:  Classifying expressions for: @guard_ult_rhs
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,15) S: [0,15) Exits: (-1 + (1 umax %n)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,16) S: [1,16) Exits: (1 umax %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @guard_ult_rhs
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 umax %n))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 14
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 umax %n))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %g = icmp ult i64 %n, 16
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw i64 %iv, 1
+  %ec = icmp ult i64 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @guard_slt_rhs(i32 %n) {
+; CHECK-LABEL: 'guard_slt_rhs'
+; CHECK-NEXT:  Classifying expressions for: @guard_slt_rhs
+; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,15) S: [0,15) Exits: (-1 + (1 smax %n))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nsw i32 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,16) S: [1,16) Exits: (1 smax %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @guard_slt_rhs
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 smax %n))<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 14
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 smax %n))<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %g = icmp slt i32 %n, 16
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw i32 %iv, 1
+  %ec = icmp slt i32 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @guard_ult_rhs_stride_4(i64 %n) {
+; CHECK-LABEL: 'guard_ult_rhs_stride_4'
+; CHECK-NEXT:  Classifying expressions for: @guard_ult_rhs_stride_4
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,4}<nuw><nsw><%loop> U: [0,61) S: [0,61) Exits: (4 * ((-1 + (4 umax %n)) /u 4))<nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 4
+; CHECK-NEXT:    --> {4,+,4}<nuw><nsw><%loop> U: [4,65) S: [4,65) Exits: (4 + (4 * ((-1 + (4 umax %n)) /u 4))<nuw>)<u nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @guard_ult_rhs_stride_4
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 + (4 umax %n)) /u 4)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 15
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + (4 umax %n)) /u 4)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %g = icmp ult i64 %n, 64
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw i64 %iv, 4
+  %ec = icmp ult i64 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @guard_ult_start(i64 %start) {
+; CHECK-LABEL: 'guard_ult_start'
+; CHECK-NEXT:  Classifying expressions for: @guard_ult_start
+; CHECK-NEXT:    %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%start,+,1}<nuw><%loop> U: full-set S: full-set Exits: (100 umax %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {(1 + %start),+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + (100 umax %start)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @guard_ult_start
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %start) + (100 umax %start))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 10
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %start) + (100 umax %start))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %g = icmp uge i64 %start, 90
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw i64 %iv, 1
+  %ec = icmp ult i64 %iv, 100
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @guard_slt_stride(i64 %s) {
+; CHECK-LABEL: 'guard_slt_stride'
+; CHECK-NEXT:  Classifying expressions for: @guard_slt_stride
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,%s}<nsw><%loop> U: full-set S: full-set Exits: (((((-1 * (1 umin ((-1 * %s) + (1000 smax %s))))<nuw><nsw> + (-1 * %s) + (1000 smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (1000 smax %s)))) * %s) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nsw i64 %iv, %s
+; CHECK-NEXT:    --> {%s,+,%s}<nsw><%loop> U: full-set S: full-set Exits: ((1 + (((-1 * (1 umin ((-1 * %s) + (1000 smax %s))))<nuw><nsw> + (-1 * %s) + (1000 smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (1000 smax %s)))) * %s) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @guard_slt_stride
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin ((-1 * %s) + (1000 smax %s))))<nuw><nsw> + (-1 * %s) + (1000 smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (1000 smax %s))))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 99
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin ((-1 * %s) + (1000 smax %s))))<nuw><nsw> + (-1 * %s) + (1000 smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (1000 smax %s))))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %g = icmp sgt i64 %s, 9
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw i64 %iv, %s
+  %ec = icmp slt i64 %iv.next, 1000
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @guard_ugt_rhs(i64 %n) {
+; CHECK-LABEL: 'guard_ugt_rhs'
+; CHECK-NEXT:  Classifying expressions for: @guard_ugt_rhs
+; CHECK-NEXT:    %iv = phi i64 [ 100, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {100,+,-1}<nsw><%loop> U: [51,101) S: [51,101) Exits: (1 + (99 umin %n))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add i64 %iv, -1
+; CHECK-NEXT:    --> {99,+,-1}<nsw><%loop> U: [50,100) S: [50,100) Exits: (99 umin %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @guard_ugt_rhs
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (99 + (-1 * (99 umin %n))<nsw>)<nsw>
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 49
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (99 + (-1 * (99 umin %n))<nsw>)<nsw>
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %g = icmp uge i64 %n, 50
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 100, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i64 %iv, -1
+  %ec = icmp ugt i64 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @guard_sgt_rhs(i32 %n) {
+; CHECK-LABEL: 'guard_sgt_rhs'
+; CHECK-NEXT:  Classifying expressions for: @guard_sgt_rhs
+; CHECK-NEXT:    %iv = phi i32 [ 10, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {10,+,-1}<nsw><%loop> U: [-18,11) S: [-18,11) Exits: (1 + (9 smin %n))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nsw i32 %iv, -1
+; CHECK-NEXT:    --> {9,+,-1}<nsw><%loop> U: [-19,10) S: [-19,10) Exits: (9 smin %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @guard_sgt_rhs
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (9 + (-1 * (9 smin %n)))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 28
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (9 + (-1 * (9 smin %n)))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %g = icmp sgt i32 %n, -20
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ 10, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw i32 %iv, -1
+  %ec = icmp sgt i32 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The guard does not dominate the loop, so it must not limit the max count.
+define void @guard_ult_rhs_not_dominating(i64 %n, i1 %c) {
+; CHECK-LABEL: 'guard_ult_rhs_not_dominating'
+; CHECK-NEXT:  Classifying expressions for: @guard_ult_rhs_not_dominating
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ 0, %guard ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-1) S: [0,-1) Exits: (-1 + (1 umax %n)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,0) S: [1,0) Exits: (1 umax %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @guard_ult_rhs_not_dominating
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (1 umax %n))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -2
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (1 umax %n))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  br i1 %c, label %guard, label %loop
+
+guard:
+  %g = icmp ult i64 %n, 16
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ 0, %guard ], [ %iv.next, %loop ]
+  %iv.next = add nuw i64 %iv, 1
+  %ec = icmp ult i64 %iv.next, %n
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Exit taken only if both conditions are true. Both have the same exact count,
+; so the constant max of either (the eq one is limited by the guard) applies.
+define void @and_exit_same_exact_count(i16 %start) {
+; CHECK-LABEL: 'and_exit_same_exact_count'
+; CHECK-NEXT:  Classifying expressions for: @and_exit_same_exact_count
+; CHECK-NEXT:    %g = and i1 %g.1, %g.2
+; CHECK-NEXT:    --> (%g.2 umin %g.1) U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i16 [ %start, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {%start,+,1}<nsw><%loop> U: full-set S: full-set Exits: 1 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nsw i16 %iv, 1
+; CHECK-NEXT:    --> {(1 + %start),+,1}<nsw><%loop> U: full-set S: full-set Exits: 2 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %and = and i1 %c.1, %c.2
+; CHECK-NEXT:    --> (%c.2 umin %c.1) U: full-set S: full-set Exits: true LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @and_exit_same_exact_count
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (1 + (-1 * %start))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i16 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (1 + (-1 * %start))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %g.1 = icmp sgt i16 %start, -10
+  %g.2 = icmp slt i16 %start, 2
+  %g = and i1 %g.1, %g.2
+  br i1 %g, label %loop, label %exit
+
+loop:
+  %iv = phi i16 [ %start, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nsw i16 %iv, 1
+  %c.1 = icmp sge i16 %iv.next, 2
+  %c.2 = icmp eq i16 %iv.next, 2
+  %and = and i1 %c.1, %c.2
+  br i1 %and, label %exit, label %loop
+
+exit:
+  ret void
+}

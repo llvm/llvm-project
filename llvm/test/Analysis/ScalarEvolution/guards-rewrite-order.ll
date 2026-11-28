@@ -104,7 +104,7 @@ define void @rewrite_chain(i64 %n, i64 %x, i64 %y) {
 ; CHECK-LABEL: 'rewrite_chain'
 ; CHECK-NEXT:  Determining loop execution counts for: @rewrite_chain
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 + %n) /u 16)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 1152921504606846974
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 576460752303423487
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + %n) /u 16)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;

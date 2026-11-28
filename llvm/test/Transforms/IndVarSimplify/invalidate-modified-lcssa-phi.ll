@@ -170,7 +170,7 @@ define i32 @pr58750(i16 %a, ptr %dst, i1 %c.0) {
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    store i16 0, ptr [[DST:%.*]], align 1
-; CHECK-NEXT:    br i1 false, label [[INNER]], label [[OUTER_LATCH]]
+; CHECK-NEXT:    br label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[LCSSA]] = phi i32 [ [[XOR]], [[INNER]] ]
 ; CHECK-NEXT:    br i1 [[C_0:%.*]], label [[OUTER_HEADER]], label [[EXIT:%.*]]
