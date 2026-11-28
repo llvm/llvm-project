@@ -1,0 +1,13 @@
+# RUN: not llvm-ifs --input-format=IFS --output-ifs - %S/versioned.ifs %s 2>&1 | \
+# RUN: FileCheck %s --check-prefixes=CHECK-IFS
+
+# CHECK-IFS: error: Interface Stub: Multiple default versions for def.
+
+--- !ifs-v1
+IfsVersion: 3.0
+SoName: libfoo.so
+Target: x86_64-unknown-linux-gnu
+Symbols:
+  - { Name: DEF, Version: DEF, Type: Object, Size: 0, Default: true }
+  - { Name: def, Version: DEF, Type: Func, Default: true }
+...
