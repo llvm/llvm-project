@@ -310,3 +310,24 @@ func.func @parallel_loop_gang_static_star(%buf: memref<1xi32>) {
   acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
   return
 }
+
+// -----
+
+// The exclusive upper bound of a descending loop lies below the last
+// iteration: 10, 7 and 4 are iterated, so the normalized loop has three trips.
+// CHECK-LABEL: func.func @descending_loop_exclusive_bound
+func.func @descending_loop_exclusive_bound(%buf: memref<16xi32>) {
+  %lb = arith.constant 10 : index
+  %ub = arith.constant 1 : index
+  %step = arith.constant -3 : index
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[C1:.*]] = arith.constant 1 : index
+  // CHECK: %[[C3:.*]] = arith.constant 3 : index
+  // CHECK: scf.for %{{.*}} = %[[C0]] to %[[C3]] step %[[C1]]
+  acc.loop control(%i : index) = (%lb : index) to (%ub : index) step (%step : index) {
+    %vi = arith.index_cast %i : index to i32
+    memref.store %vi, %buf[%i] : memref<16xi32>
+    acc.yield
+  } independent
+  return
+}
