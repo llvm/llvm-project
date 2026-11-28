@@ -12595,6 +12595,16 @@ bool LoongArchTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   return TargetLowering::isZExtFree(Val, VT2);
 }
 
+bool LoongArchTargetLowering::isTypeDesirableForOp(SDNode *N, EVT VT) const {
+  // Vector int to fp sources are widened to the result element size by
+  // ExtendSrcToDst. Do not narrow them back, as that would loop.
+  unsigned Opc = N->getOpcode();
+  if ((Opc == ISD::SINT_TO_FP || Opc == ISD::UINT_TO_FP) && VT.isVector() &&
+      VT.getScalarSizeInBits() < N->getValueType(0).getScalarSizeInBits())
+    return false;
+  return TargetLowering::isTypeDesirableForOp(N, VT);
+}
+
 bool LoongArchTargetLowering::isSExtCheaperThanZExt(EVT SrcVT,
                                                     EVT DstVT) const {
   return Subtarget.is64Bit() && SrcVT == MVT::i32 && DstVT == MVT::i64;
