@@ -15,7 +15,6 @@
 #include <cstddef>
 
 int main(int, char**) {
-
   typedef int* T;
   using H = support::constexpr_hash<T>;
 
