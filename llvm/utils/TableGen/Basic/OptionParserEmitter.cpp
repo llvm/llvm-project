@@ -356,7 +356,8 @@ static void emitOptionsStruct(const Record &Struct,
   StringRef Namespace = Struct.getValueAsString("Namespace");
   OS << "namespace llvm {\nnamespace opt {\nclass Arg;\n";
   OS << "class LibraryOptionsParser;\n";
-  OS << "class OptTable;\n} // namespace opt\n} // namespace llvm\n\n";
+  OS << "class OptionsStructTable;\n} // namespace opt\n} // namespace "
+        "llvm\n\n";
   // An empty namespace gives a tool's struct internal linkage.
   OS << "namespace " << (Namespace.empty() ? "" : Namespace + " ") << "{\n";
   OS << "struct " << Name << " {\n";
@@ -366,7 +367,7 @@ static void emitOptionsStruct(const Record &Struct,
     ConditionScope CS(OS, *R);
     OS << "  " << M.Type << " " << M.Name << "{" << M.Default << "};\n";
   }
-  OS << "\n  static const llvm::opt::OptTable &optTable();\n";
+  OS << "\n  static const llvm::opt::OptionsStructTable &optTable();\n";
   OS << "  /// Sets the member that \\p A names, allocating a list from \\p "
         "Alloc.\n  /// Returns false if the value is invalid.\n";
   OS << "  bool apply(const llvm::opt::Arg &A, llvm::BumpPtrAllocator "
@@ -385,8 +386,10 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "\n#ifdef OPTIONS_STRUCT_DEFS\n#undef OPTIONS_STRUCT_DEFS\n";
   OS << "LLVM_REQUIRE_CONSTANT_INITIALIZATION const " << Qualified << " "
      << Qualified << "::Default;\n\n";
-  OS << "const llvm::opt::OptTable &" << Qualified << "::optTable() {\n";
-  OS << "  static const llvm::opt::OptionsStructTable T(optionTables());\n";
+  OS << "const llvm::opt::OptionsStructTable &" << Qualified
+     << "::optTable() {\n";
+  OS << "  static const llvm::opt::OptionsStructTable T(optionTables(), "
+        "OPT_UNKNOWN);\n";
   OS << "  return T;\n}\n\n";
   OS << "bool " << Qualified
      << "::apply(const llvm::opt::Arg &A, llvm::BumpPtrAllocator &Alloc) {\n";

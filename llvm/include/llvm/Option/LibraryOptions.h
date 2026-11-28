@@ -48,7 +48,7 @@ public:
   }
 
 private:
-  const OptTable &(*Table)();
+  const OptionsStructTable &(*Table)();
   const void *Default;
   bool (*Apply)(void *Opts, const Arg &A, BumpPtrAllocator &Alloc);
   void *(*Copy)(BumpPtrAllocator &Alloc);

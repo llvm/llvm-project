@@ -129,35 +129,34 @@ bool appendArgValue(StringRef S, ArrayRef<T> &List, BumpPtrAllocator &Alloc) {
   return true;
 }
 
-/// An OptTable with a public constructor, shared by every options struct.
+/// The option table of an options struct.
 class LLVM_ABI OptionsStructTable : public OptTable {
 public:
-  explicit OptionsStructTable(const Tables &T) : OptTable(T) {
+  OptionsStructTable(const Tables &T, unsigned UnknownID)
+      : OptTable(T), UnknownID(UnknownID) {
     setDashDashParsing(true);
   }
   ~OptionsStructTable() override;
+
+  Error parseToolArgs(int Argc, const char *const *Argv, StringSaver &Saver,
+                      function_ref<bool(const Arg &)> Apply,
+                      SmallVectorImpl<StringRef> &Inputs) const;
+
+private:
+  unsigned UnknownID;
 };
 
-/// Parses a tool's command line, expanding response files, with the options
-/// table \p T. \p Apply sets the member an option names. Positional
+/// Parses a tool's command line, expanding response files, into options struct
+/// \p Opts, whose string members refer to \p Argv or \p Alloc. Positional
 /// arguments, and every argument after "--", are appended to \p Inputs.
-namespace detail {
-LLVM_ABI Error parseToolArgsImpl(const OptTable &T, int Argc,
-                                 const char *const *Argv, StringSaver &Saver,
-                                 function_ref<bool(const Arg &)> Apply,
-                                 SmallVectorImpl<StringRef> &Inputs);
-} // namespace detail
-
-/// Parses a tool's command line into options struct \p Opts, whose string
-/// members refer to \p Argv or \p Alloc.
 template <typename T>
 Error parseToolArgs(T &Opts, int Argc, const char *const *Argv,
                     BumpPtrAllocator &Alloc,
                     SmallVectorImpl<StringRef> &Inputs) {
   StringSaver Saver(Alloc);
-  return detail::parseToolArgsImpl(
-      T::optTable(), Argc, Argv, Saver,
-      [&](const Arg &A) { return Opts.apply(A, Alloc); }, Inputs);
+  return T::optTable().parseToolArgs(
+      Argc, Argv, Saver, [&](const Arg &A) { return Opts.apply(A, Alloc); },
+      Inputs);
 }
 
 } // namespace opt

@@ -2,7 +2,6 @@ add_llvm_component_library(LLVMOption
   Arg.cpp
   ArgList.cpp
   LibraryOptions.cpp
-  OptionsStruct.cpp
   Option.cpp
   OptTable.cpp
 

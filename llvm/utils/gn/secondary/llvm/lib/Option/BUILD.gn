@@ -6,7 +6,6 @@ static_library("Option") {
     "ArgList.cpp",
     "LibraryOptions.cpp",
     "OptTable.cpp",
-    "OptionsStruct.cpp",
     "Option.cpp",
   ]
 }
