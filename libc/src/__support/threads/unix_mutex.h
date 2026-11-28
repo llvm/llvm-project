@@ -73,8 +73,14 @@ public:
         error_checking(is_error_checking), owner(0), lock_count(0) {}
 
   LIBC_INLINE static MutexError destroy(Mutex *lock) {
-    LIBC_ASSERT(lock->owner == 0 && lock->lock_count == 0 &&
-                "Mutex destroyed while being locked.");
+    // Best effort, as POSIX leaves it: other implementations say EBUSY and
+    // leave a locked mutex as it was, except a robust one, whose owner may have
+    // exited and left the word held. The owner and the lock count are only set
+    // while the futex word is held, so the word alone tells a locked mutex.
+    if (lock->robust)
+      lock->reset();
+    else if (lock->is_locked())
+      return MutexError::BUSY;
     RawMutex::destroy(lock);
     return MutexError::NONE;
   }
