@@ -440,6 +440,9 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
     if (Callbacks)
       Callbacks->MacroExpands(Identifier, M, Identifier.getLocation(),
                               /*Args=*/nullptr);
+    IdentifierInfo *II = Identifier.getIdentifierInfo();
+    if (II == Ident_Pragma || II == Ident__pragma)
+      return HandlePragmaOperator(Identifier, II == Ident__pragma);
     ExpandBuiltinMacro(Identifier);
     return true;
   }
@@ -1600,13 +1603,6 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
   IdentifierInfo *II = Tok.getIdentifierInfo();
   assert(II && "Can't be a macro without id info!");
   SourceLocation MacroNameLoc = Tok.getLocation();
-
-  // If this is an _Pragma or Microsoft __pragma directive, expand it,
-  // invoke the pragma handler, then lex the token after it.
-  if (II == Ident_Pragma)
-    return Handle_Pragma(Tok);
-  else if (II == Ident__pragma) // in non-MS mode this is null
-    return HandleMicrosoft__pragma(Tok);
 
   ++NumBuiltinMacroExpanded;
 

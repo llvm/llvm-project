@@ -48,6 +48,10 @@ The previous behavior can be restored with `-Wno-error=unicode-whitespace`.
 Clang will stop accepting non-ascii whitespaces as token separators
 in a future version of Clang.
 
+- Clang now rejects nested pragmas during preprocessing instead of attempting
+  to execute them, which previously could cause crashes or unexpected behavior.
+  (#GH225035)
+
 ### C++ Specific Potentially Breaking Changes
 
 - The `[[carries_dependency]]` attribute is no longer recognized, in any language

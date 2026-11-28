@@ -713,6 +713,7 @@ def warn_pragma_exec_charset_push_invalid :
 
 def err__Pragma_malformed : Error<
   "_Pragma takes a parenthesized string literal">;
+def err_nested_pragma : Error<"nested pragma is not allowed">;
 def err_pragma_message_malformed : Error<
   "pragma %select{message|warning|error}0 requires parenthesized string">;
 def err_pragma_push_pop_macro_malformed : Error<
