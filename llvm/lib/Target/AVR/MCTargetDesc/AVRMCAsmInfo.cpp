@@ -19,35 +19,6 @@
 
 using namespace llvm;
 
-static bool evaluate(const MCSpecifierExpr &Expr, MCValue &Result,
-                     const MCAssembler *Asm) {
-  auto &E = static_cast<const AVRMCExpr &>(Expr);
-  MCValue Value;
-  bool isRelocatable = E.getSubExpr()->evaluateAsRelocatable(Value, Asm);
-  if (!isRelocatable)
-    return false;
-
-  if (Value.isAbsolute()) {
-    Result = MCValue::get(E.evaluateAsInt64(Value.getConstant()));
-  } else {
-    if (!Asm || !Asm->hasLayout())
-      return false;
-
-    auto Spec = AVR::S_None;
-    if (Value.getSpecifier())
-      return false;
-    assert(!Value.getSubSym());
-    if (E.getSpecifier() == AVR::S_PM)
-      Spec = AVR::S_PM;
-
-    // TODO: Don't attach specifier to MCSymbolRefExpr.
-    Result =
-        MCValue::get(Value.getAddSym(), nullptr, Value.getConstant(), Spec);
-  }
-
-  return true;
-}
-
 AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
     : MCAsmInfoELF(TT, Options) {
   CodePointerSize = 2;
@@ -68,7 +39,34 @@ AVRMCAsmInfo::AVRMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
       OS << ')';
     OS << ')';
   };
-  SpecifierExprEvaluateFn = evaluate;
+  SpecifierExprEvaluateFn = [](const MCSpecifierExpr &Expr, MCValue &Result,
+                               const MCAssembler *Asm) {
+    auto &E = static_cast<const AVRMCExpr &>(Expr);
+    MCValue Value;
+    bool isRelocatable = E.getSubExpr()->evaluateAsRelocatable(Value, Asm);
+    if (!isRelocatable)
+      return false;
+
+    if (Value.isAbsolute()) {
+      Result = MCValue::get(E.evaluateAsInt64(Value.getConstant()));
+    } else {
+      if (!Asm || !Asm->hasLayout())
+        return false;
+
+      auto Spec = AVR::S_None;
+      if (Value.getSpecifier())
+        return false;
+      assert(!Value.getSubSym());
+      if (E.getSpecifier() == AVR::S_PM)
+        Spec = AVR::S_PM;
+
+      // TODO: Don't attach specifier to MCSymbolRefExpr.
+      Result =
+          MCValue::get(Value.getAddSym(), nullptr, Value.getConstant(), Spec);
+    }
+
+    return true;
+  };
 }
 
 namespace {
