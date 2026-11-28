@@ -7519,6 +7519,20 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
+  case Intrinsic::riscv_vleff:
+  case Intrinsic::riscv_vleff_mask: {
+    // vleff must git in XLEN
+    FunctionType *FTy = Call.getFunctionType();
+    auto *ST = dyn_cast<StructType>(FTy->getReturnType());
+    if (!ST)
+      break;                            // malformed already caught elsewhere
+    Type *VLTy = ST->getElementType(1); // the new-vl element
+    unsigned VLBits = cast<IntegerType>(VLTy)->getBitWidth();
+    Check(VLBits <= (TT.isRISCV64() ? 64 : 32),
+          "new-vl result of llvm.riscv.vleff/vleff.mask must fit in XLEN",
+          &Call);
+    break;
+  }
   case Intrinsic::callbr_landingpad: {
     const auto *CBR = dyn_cast<CallBrInst>(Call.getOperand(0));
     Check(CBR, "intrinstic requires callbr operand", &Call);
