@@ -380,9 +380,20 @@ class MachineBlockPlacement {
     MachineBasicBlock *Dest = nullptr;
   };
 
-  /// work lists of blocks that are ready to be laid out
-  SmallVector<MachineBasicBlock *, 16> BlockWorkList;
-  SmallVector<MachineBasicBlock *, 16> EHPadWorkList;
+  /// A work list entry; Seq is its insertion order and breaks frequency ties.
+  struct WorkListEntry {
+    BlockFrequency Freq;
+    unsigned Seq;
+    MachineBasicBlock *BB;
+  };
+
+  /// Work lists of blocks that are ready to be laid out, kept as heaps with
+  /// the best candidate for selectBestCandidateBlock() on top. Entries of
+  /// placed or deleted blocks are only dropped once they reach the top. An
+  /// entry's BB may dangle and must not be used before checking BlockToChain.
+  SmallVector<WorkListEntry, 16> BlockWorkList;
+  SmallVector<WorkListEntry, 16> EHPadWorkList;
+  unsigned NextWorkListSeq = 0;
 
   /// Edges that have already been computed as optimal.
   DenseMap<const MachineBasicBlock *, BlockAndTailDupResult> ComputedEdges;
@@ -522,9 +533,11 @@ class MachineBlockPlacement {
   BlockAndTailDupResult selectBestSuccessor(const MachineBasicBlock *BB,
                                             const BlockChain &Chain,
                                             const BlockFilterSet *BlockFilter);
-  MachineBasicBlock *
-  selectBestCandidateBlock(const BlockChain &Chain,
-                           SmallVectorImpl<MachineBasicBlock *> &WorkList);
+  MachineBasicBlock *selectBestCandidateBlock(const BlockChain &Chain,
+                                              bool IsEHPad);
+  static bool isWorseCandidate(bool IsEHPad, const WorkListEntry &A,
+                               const WorkListEntry &B);
+  void addToWorkList(MachineBasicBlock *BB);
   MachineBasicBlock *
   getFirstUnplacedBlock(const BlockChain &PlacedChain,
                         MachineFunction::iterator &PrevUnplacedBlockIt);
@@ -745,11 +758,7 @@ void MachineBlockPlacement::markBlockSuccessors(
         --SuccChain.UnscheduledPredecessors > 0)
       continue;
 
-    auto *NewBB = *SuccChain.begin();
-    if (NewBB->isEHPad())
-      EHPadWorkList.push_back(NewBB);
-    else
-      BlockWorkList.push_back(NewBB);
+    addToWorkList(*SuccChain.begin());
   }
 }
 
@@ -1763,51 +1772,14 @@ MachineBlockPlacement::selectBestSuccessor(const MachineBasicBlock *BB,
   return BestSucc;
 }
 
-/// Select the best block from a worklist.
-///
-/// This looks through the provided worklist as a list of candidate basic
-/// blocks and select the most profitable one to place. The definition of
-/// profitable only really makes sense in the context of a loop. This returns
-/// the most frequently visited block in the worklist, which in the case of
-/// a loop, is the one most desirable to be physically close to the rest of the
-/// loop body in order to improve i-cache behavior.
-///
-/// \returns The best block found, or null if none are viable.
-MachineBasicBlock *MachineBlockPlacement::selectBestCandidateBlock(
-    const BlockChain &Chain, SmallVectorImpl<MachineBasicBlock *> &WorkList) {
-  // Once we need to walk the worklist looking for a candidate, cleanup the
-  // worklist of already placed entries.
-  // FIXME: If this shows up on profiles, it could be folded (at the cost of
-  // some code complexity) into the loop below.
-  llvm::erase_if(WorkList, [&](MachineBasicBlock *BB) {
-    return BlockToChain.lookup(BB) == &Chain;
-  });
-
-  if (WorkList.empty())
-    return nullptr;
-
-  bool IsEHPad = WorkList[0]->isEHPad();
-
-  MachineBasicBlock *BestBlock = nullptr;
-  BlockFrequency BestFreq;
-  for (MachineBasicBlock *MBB : WorkList) {
-    assert(MBB->isEHPad() == IsEHPad &&
-           "EHPad mismatch between block and work list.");
-
-    BlockChain &SuccChain = *BlockToChain[MBB];
-    if (&SuccChain == &Chain)
-      continue;
-
-    assert(SuccChain.UnscheduledPredecessors == 0 &&
-           "Found CFG-violating block");
-
-    BlockFrequency CandidateFreq = MBFI->getBlockFreq(MBB);
-    LLVM_DEBUG(dbgs() << "    " << getBlockName(MBB) << " -> "
-                      << printBlockFreq(MBFI->getMBFI(), CandidateFreq)
-                      << " (freq)\n");
-
-    // For ehpad, we layout the least probable first as to avoid jumping back
-    // from least probable landingpads to more probable ones.
+/// Return whether \p A is a worse candidate than \p B for
+/// selectBestCandidateBlock().
+bool MachineBlockPlacement::isWorseCandidate(bool IsEHPad,
+                                             const WorkListEntry &A,
+                                             const WorkListEntry &B) {
+  if (A.Freq != B.Freq) {
+    // EH pads go least frequent first, to avoid jumping back from less
+    // frequent landing pads to more frequent ones.
     //
     // FIXME: Using probability is probably (!) not the best way to achieve
     // this. We should probably have a more principled approach to layout
@@ -1824,12 +1796,83 @@ MachineBasicBlock *MachineBlockPlacement::selectBestCandidateBlock(
     //                 +-------------------------------------+
     //                 V                                     |
     // OuterLp -> OuterCleanup -> Resume     InnerLp -> InnerCleanup
-    if (BestBlock && (IsEHPad ^ (BestFreq >= CandidateFreq)))
-      continue;
-
-    BestBlock = MBB;
-    BestFreq = CandidateFreq;
+    return IsEHPad ? A.Freq > B.Freq : A.Freq < B.Freq;
   }
+  // Break ties by insertion order.
+  return IsEHPad ? A.Seq < B.Seq : A.Seq > B.Seq;
+}
+
+/// Add a block that is ready to be laid out to the work lists.
+void MachineBlockPlacement::addToWorkList(MachineBasicBlock *BB) {
+  bool IsEHPad = BB->isEHPad();
+  SmallVectorImpl<WorkListEntry> &WorkList =
+      IsEHPad ? EHPadWorkList : BlockWorkList;
+  WorkList.push_back({MBFI->getBlockFreq(BB), NextWorkListSeq++, BB});
+  std::push_heap(WorkList.begin(), WorkList.end(),
+                 [IsEHPad](const WorkListEntry &A, const WorkListEntry &B) {
+                   return isWorseCandidate(IsEHPad, A, B);
+                 });
+}
+
+/// Drop stale entries off the top of the work list's heap and return the
+/// block left on top (EHPadWorkList if \p IsEHPad is set, BlockWorkList
+/// otherwise).
+///
+/// The block on top is the most frequently visited one, which in the case of
+/// a loop is the one most desirable to be physically close to the rest of the
+/// loop body in order to improve i-cache behavior. For EH pads it is the least
+/// frequent one.
+///
+/// \returns The best block found, or null if none are viable.
+MachineBasicBlock *
+MachineBlockPlacement::selectBestCandidateBlock(const BlockChain &Chain,
+                                                bool IsEHPad) {
+  SmallVectorImpl<WorkListEntry> &WorkList =
+      IsEHPad ? EHPadWorkList : BlockWorkList;
+  while (!WorkList.empty()) {
+    const BlockChain *SuccChain = BlockToChain.lookup(WorkList.front().BB);
+    bool IsStale = !SuccChain || SuccChain == &Chain;
+    if (!IsStale)
+      break;
+    std::pop_heap(WorkList.begin(), WorkList.end(),
+                  [IsEHPad](const WorkListEntry &A, const WorkListEntry &B) {
+                    return isWorseCandidate(IsEHPad, A, B);
+                  });
+    WorkList.pop_back();
+  }
+
+  if (WorkList.empty())
+    return nullptr;
+
+  // Not popped; it becomes stale once buildChain() merges it into Chain.
+  MachineBasicBlock *BestBlock = WorkList.front().BB;
+  assert(BestBlock->isEHPad() == IsEHPad &&
+         "EHPad mismatch between block and work list.");
+  assert(BlockToChain[BestBlock]->UnscheduledPredecessors == 0 &&
+         "Found CFG-violating block");
+
+#ifdef EXPENSIVE_CHECKS
+  for (const WorkListEntry &E : WorkList) {
+    const BlockChain *C = BlockToChain.lookup(E.BB);
+    bool IsStale = !C || C == &Chain;
+    if (IsStale)
+      continue;
+    assert(E.BB->isEHPad() == IsEHPad &&
+           "EHPad mismatch between block and work list.");
+    assert(C->UnscheduledPredecessors == 0 && "Found CFG-violating block");
+  }
+#endif
+
+  LLVM_DEBUG({
+    for (const WorkListEntry &E : WorkList) {
+      const BlockChain *C = BlockToChain.lookup(E.BB);
+      bool IsStale = !C || C == &Chain;
+      if (IsStale)
+        continue;
+      dbgs() << "    " << getBlockName(E.BB) << " -> "
+             << printBlockFreq(MBFI->getMBFI(), E.Freq) << " (freq)\n";
+    }
+  });
 
   return BestBlock;
 }
@@ -1908,11 +1951,7 @@ void MachineBlockPlacement::fillWorkLists(
   if (Chain.UnscheduledPredecessors != 0)
     return;
 
-  MachineBasicBlock *BB = *Chain.begin();
-  if (BB->isEHPad())
-    EHPadWorkList.push_back(BB);
-  else
-    BlockWorkList.push_back(BB);
+  addToWorkList(*Chain.begin());
 }
 
 void MachineBlockPlacement::buildChain(const MachineBasicBlock *HeadBB,
@@ -1946,9 +1985,9 @@ void MachineBlockPlacement::buildChain(const MachineBasicBlock *HeadBB,
     // block among those we've identified as not violating the loop's CFG at
     // this point. This won't be a fallthrough, but it will increase locality.
     if (!BestSucc)
-      BestSucc = selectBestCandidateBlock(Chain, BlockWorkList);
+      BestSucc = selectBestCandidateBlock(Chain, /*IsEHPad=*/false);
     if (!BestSucc)
-      BestSucc = selectBestCandidateBlock(Chain, EHPadWorkList);
+      BestSucc = selectBestCandidateBlock(Chain, /*IsEHPad=*/true);
 
     if (!BestSucc) {
       if (BlockFilter)
@@ -3240,12 +3279,8 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
       PrevUnplacedBlockIt++;
     }
 
-    // Handle the Work Lists
-    if (RemBB->isEHPad()) {
-      llvm::erase(EHPadWorkList, RemBB);
-    } else {
-      llvm::erase(BlockWorkList, RemBB);
-    }
+    // Not erased from the work lists: they are heaps and drop stale entries
+    // lazily, see BlockWorkList.
 
     // Handle the filter set
     if (BlockFilter) {
