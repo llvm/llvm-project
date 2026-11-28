@@ -98,6 +98,13 @@ TripletResult IR2VecTool::generateTriplets(const Function &F) const {
       // Add "Arg" relationships
       unsigned ArgIndex = 0;
       for (const Use &U : I.operands()) {
+        // Metadata operands are skipped by the embedder, so they emit no
+        // triplet. ArgIndex still advances so that the remaining operands keep
+        // their positions.
+        if (isa<MetadataAsValue>(U.get())) {
+          ++ArgIndex;
+          continue;
+        }
         unsigned OperandID = Vocabulary::getIndex(*U.get());
         unsigned RelationID = ArgRelation + ArgIndex;
         Result.Triplets.push_back({Opcode, OperandID, RelationID});
