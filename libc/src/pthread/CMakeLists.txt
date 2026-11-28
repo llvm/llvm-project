@@ -8,6 +8,7 @@ add_header_library(
     libc.hdr.types.pthread_attr_t
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
+    libc.src.__support.threads.stack_size
     libc.src.__support.threads.thread
 )
 

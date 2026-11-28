@@ -27,6 +27,22 @@ if(NOT TARGET libc.src.__support.OSUtil.osutil)
 endif()
 
 add_header_library(
+  stack_size
+  HDRS
+    stack_size.h
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.hdr.pthread_macros
+    libc.hdr.sys_resource_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_rlimit
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.OSUtil.linux.syscall_wrappers.prlimit
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   futex_utils
   HDRS
     futex_utils.h
@@ -60,6 +76,7 @@ add_object_library(
     thread.cpp
   DEPENDS
     .futex_utils
+    .stack_size
     ${thread_tls_dep}
     libc.config.app_h
     libc.include.sys_syscall
