@@ -120,9 +120,10 @@ public:
 
   void *getAsOpaquePtr() const { return D; }
   static DeclGroupRef getFromOpaquePtr(void *Ptr) {
-    DeclGroupRef X;
-    X.D = static_cast<Decl*>(Ptr);
-    return X;
+    if ((reinterpret_cast<uintptr_t>(Ptr) & Mask) == SingleDeclKind)
+      return DeclGroupRef(static_cast<Decl *>(Ptr));
+    return DeclGroupRef(reinterpret_cast<DeclGroup *>(
+        reinterpret_cast<uintptr_t>(Ptr) & ~Mask));
   }
 };
 
