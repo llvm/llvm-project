@@ -1,0 +1,52 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgpu9.00 -run-pass=postmisched -debug-only=machine-scheduler %s -filetype=null 2>&1 | FileCheck %s
+
+# Meta instructions inside a bundle must not add to its latency.
+
+# CHECK-LABEL: {{^}}no_meta:%bb.0
+# CHECK:       Latency{{ +}}: [[LAT:[0-9]+]]{{$}}
+# CHECK-LABEL: {{^}}meta:%bb.0
+# CHECK:       Latency{{ +}}: [[LAT]]{{$}}
+
+--- |
+  define void @no_meta() { ret void }
+  define void @meta() !dbg !3 { ret void }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
+  !1 = !DIFile(filename: "t.c", directory: "/")
+  !2 = !{i32 2, !"Debug Info Version", i32 3}
+  !3 = distinct !DISubprogram(name: "meta", type: !6, spFlags: DISPFlagDefinition, unit: !0)
+  !4 = !DILocalVariable(name: "x", scope: !3)
+  !5 = !DILocation(line: 0, scope: !3)
+  !6 = !DISubroutineType(types: !{})
+...
+---
+name: no_meta
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit $vgpr0_vgpr1, implicit $exec {
+      $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+      $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec
+    }
+    $vgpr2 = V_ADD_U32_e32 $vgpr2, $vgpr3, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2
+...
+---
+name: meta
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr4
+    BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit $vgpr0_vgpr1, implicit $exec, implicit $vgpr4 {
+      $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+      DBG_VALUE $vgpr2, $noreg, !4, !DIExpression(), debug-location !5
+      KILL $vgpr4
+      $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec
+    }
+    $vgpr2 = V_ADD_U32_e32 $vgpr2, $vgpr3, implicit $exec
+    S_ENDPGM 0, implicit $vgpr2
+...
