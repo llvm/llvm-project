@@ -4,6 +4,30 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512vl | FileCheck %s --check-prefixes=CHECK,AVX512
 
+; FIXME fold (rot x, poison) -> poison
+define i8 @combine_rot_poison(i8 %x) {
+; CHECK-LABEL: combine_rot_poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    rolb %cl, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %rd = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 poison)
+  ret i8 %rd
+}
+
+; FIXME fold (rot x, undef) -> x
+define i8 @combine_rot_undef(i8 %x) {
+; CHECK-LABEL: combine_rot_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    rorb %cl, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %rd = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 undef)
+  ret i8 %rd
+}
+
 ; fold (rot (rot x, c1), c2) -> rot x, c1+c2
 define <4 x i32> @combine_vec_rot_rot(<4 x i32> %x) {
 ; SSE2-LABEL: combine_vec_rot_rot:
