@@ -17,13 +17,25 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/cpu_features.h"
 
 #ifndef LIBC_MATH_EXP_IMPL
+// Zdinx provides hardware double arithmetic without defining __riscv_flen.
+#if defined(LIBC_TARGET_ARCH_IS_RISCV32) &&                                    \
+    defined(LIBC_TARGET_CPU_HAS_RISCV_MUL) &&                                  \
+    !defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE) && !defined(__riscv_zdinx) &&     \
+    defined(LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY) &&                        \
+    defined(LIBC_MATH_HAS_NO_EXCEPT) && defined(LIBC_MATH_HAS_NO_ERRNO)
+#define LIBC_MATH_EXP_IMPL integer_eval
+#else
 #define LIBC_MATH_EXP_IMPL double_eval
+#endif
 #endif // !LIBC_MATH_EXP_IMPL
 
 #if LIBC_MATH_IMPL_IS(LIBC_MATH_EXP_IMPL, double_eval)
 #include "src/__support/math/exp_double_eval.h"
+#elif LIBC_MATH_IMPL_IS(LIBC_MATH_EXP_IMPL, integer_eval)
+#include "src/__support/math/exp_integer_eval.h"
 #else
 #error "Unsupported LIBC_MATH_EXP_IMPL"
 #endif // LIBC_MATH_IMPL_IS

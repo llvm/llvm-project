@@ -1347,11 +1347,14 @@ add_fp_unittest(
     exp_test.cpp
   DEPENDS
     libc.hdr.fenv_macros
-    libc.src.math.exp
-    libc.src.__support.math.exp_double_eval
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.attributes
     libc.src.__support.macros.optimization
+    libc.src.__support.libc_errno
+    libc.src.__support.math.exp_double_eval
+    libc.src.__support.math.exp_integer_eval
+    libc.src.errno.errno
+    libc.src.math.exp
 )
 
 add_fp_unittest(
