@@ -18,6 +18,9 @@ def OtherType : Type<ATypePred, "another type">;
 def AnAttrPred : CPred<"attrPred($_self, $_op)">;
 def AnAttr : Attr<AnAttrPred, "an attribute (got {{reformat($_self)}})">;
 def OtherAttr : Attr<AnAttrPred, "another attribute {{reformat($_self)}}">;
+def NoOpAttrPred : CPred<"attrPredNoOp($_self)">;
+def NoOpAttr : Attr<NoOpAttrPred, "a standalone attribute">;
+def SummaryOpAttr : Attr<NoOpAttrPred, "an attribute on {{($_op).getName()}}">;
 
 def ASuccessorPred : CPred<"successorPred($_self, $_op)">;
 def ASuccessor : Successor<ASuccessorPred, "a successor">;
@@ -52,6 +55,10 @@ def OpC : NS_Op<"op_c"> {
   let regions = (region OtherRegion:$d);
 }
 
+def OpD : NS_Op<"op_d"> {
+  let arguments = (ins NoOpAttr:$a, SummaryOpAttr:$b);
+}
+
 /// Test that a type contraint was generated.
 // CHECK:    static ::llvm::LogicalResult [[$A_TYPE_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
 // CHECK:      if (!((typePred(type, *op)))) {
@@ -67,21 +74,40 @@ def OpC : NS_Op<"op_c"> {
 // CHECK-NEXT:   return op->emitOpError(valueKind) << " #" << valueIndex
 // CHECK-NEXT:       << " must be another type, but got " << type;
 
-/// Test that an attribute contraint was generated.
+/// Test that an attribute constraint referencing $_op only generates the
+/// overload taking op.
 // CHECK:    static ::llvm::LogicalResult [[$A_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
-// CHECK:      if (attr && !((attrPred(attr, *op))))
-// CHECK-NEXT:   return emitError() << "attribute '" << attrName
+// CHECK-NEXT: ::mlir::Operation *op, ::mlir::Attribute attr, ::llvm::StringRef attrName) {
+// CHECK-NEXT: if (attr && !((attrPred(attr, *op))))
+// CHECK-NEXT:   return op->emitOpError() << "attribute '" << attrName
 // CHECK-NEXT:       << "' failed to satisfy constraint: an attribute (got " << reformat(attr) << ")";
 
 /// Test that duplicate attribute constraint was not generated.
 // CHECK-NOT:        << "' failed to satisfy constraint: an attribute
 
-/// Test that a attribute constraint with a different description was generated.
+/// Test that an attribute constraint with a different description was generated.
 // CHECK:    static ::llvm::LogicalResult [[$O_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
-// CHECK:    static ::llvm::LogicalResult [[$O_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
-// CHECK:      if (attr && !((attrPred(attr, *op))))
-// CHECK-NEXT:   return emitError() << "attribute '" << attrName
+// CHECK-NEXT: ::mlir::Operation *op, ::mlir::Attribute attr, ::llvm::StringRef attrName) {
+// CHECK-NEXT: if (attr && !((attrPred(attr, *op))))
+// CHECK-NEXT:   return op->emitOpError() << "attribute '" << attrName
 // CHECK-NEXT:       << "' failed to satisfy constraint: another attribute " << reformat(attr) << "";
+
+/// Test that an attribute constraint without $_op generates both overloads.
+// CHECK:    static ::llvm::LogicalResult [[$NO_OP_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
+// CHECK-NEXT: ::mlir::Attribute attr, ::llvm::StringRef attrName, llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {
+// CHECK-NEXT: if (attr && !((attrPredNoOp(attr))))
+// CHECK-NEXT:   return emitError() << "attribute '" << attrName
+// CHECK-NEXT:       << "' failed to satisfy constraint: a standalone attribute";
+// CHECK:    static ::llvm::LogicalResult [[$NO_OP_ATTR_CONSTRAINT]](
+// CHECK-NEXT: ::mlir::Operation *op, ::mlir::Attribute attr, ::llvm::StringRef attrName) {
+
+/// Test that an attribute constraint whose summary references $_op only
+/// generates the overload taking op.
+// CHECK:    static ::llvm::LogicalResult __mlir_ods_local_attr_constraint{{.*}}(
+// CHECK-NEXT: ::mlir::Operation *op, ::mlir::Attribute attr, ::llvm::StringRef attrName) {
+// CHECK-NEXT: if (attr && !((attrPredNoOp(attr))))
+// CHECK-NEXT:   return op->emitOpError() << "attribute '" << attrName
+// CHECK-NEXT:       << "' failed to satisfy constraint: an attribute on " << (*op).getName() << "";
 
 /// Test that a successor contraint was generated.
 // CHECK:    static ::llvm::LogicalResult [[$A_SUCCESSOR_CONSTRAINT:__mlir_ods_local_successor_constraint.*]](

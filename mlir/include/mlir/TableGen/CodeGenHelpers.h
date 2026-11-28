@@ -265,6 +265,9 @@ std::string buildErrorStreamingString(
     StringRef message, const FmtContext &ctx,
     ErrorStreamType errorStreamType = ErrorStreamType::InString);
 
+/// Returns true if the constraint's predicate condition or summary references
+/// `$_op`.
+bool constraintReferencesOp(const Constraint &constraint);
 } // namespace tblgen
 } // namespace mlir
 

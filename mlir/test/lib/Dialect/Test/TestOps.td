@@ -1304,6 +1304,12 @@ def ForwardSuccessor : Successor<
     }]>,
     "a forward block (a block listed after the op's block)">;
 
+// An integer attribute that must index into the operands of its op.
+def OperandIndexAttr : ConfinedAttr<I64Attr, [AttrConstraint<
+    CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() < "
+          "static_cast<int64_t>(($_op).getNumOperands())">,
+    "whose value is less than the number of operands">]>;
+
 let partition = Test_TraitsPartition in {
 def TestFallthroughBranchOp : TEST_Op<"fallthrough_br", [Terminator]> {
   let summary = "branch whose successors are constrained by predicates";
@@ -1312,6 +1318,11 @@ def TestFallthroughBranchOp : TEST_Op<"fallthrough_br", [Terminator]> {
   let assemblyFormat = [{
     $target `forward` `[` $forwardTargets `]` attr-dict
   }];
+}
+
+def TestOperandIndexAttrOp : TEST_Op<"operand_index_attr"> {
+  let summary = "op with an attribute constraint that references the op";
+  let arguments = (ins Variadic<AnyType>:$inputs, OperandIndexAttr:$index);
 }
 
 def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",

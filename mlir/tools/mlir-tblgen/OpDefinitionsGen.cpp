@@ -825,16 +825,15 @@ static void populateSubstitutions(const OpOrAdaptorHelper &emitHelper,
 
 // Return true if a verifier can be emitted for the attribute: it is not a
 // derived attribute, it has a predicate, its condition is not empty, and, for
-// adaptors, the condition does not reference the op.
+// adaptors, the constraint does not reference the op.
 static bool canEmitAttrVerifier(Attribute attr, bool isEmittingForOp) {
   if (attr.isDerivedAttr())
     return false;
   Pred pred = attr.getPredicate();
   if (pred.isNull())
     return false;
-  std::string condition = pred.getCondition();
-  return !condition.empty() &&
-         (!StringRef(condition).contains("$_op") || isEmittingForOp);
+  return !pred.getCondition().empty() &&
+         (!constraintReferencesOp(attr) || isEmittingForOp);
 }
 
 // Generate attribute verification. If an op instance is not available, then
