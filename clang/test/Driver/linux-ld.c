@@ -74,13 +74,13 @@
 // RUN:     --rtlib=none \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-RT-NONE %s
 // CHECK-LD-RT-NONE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-LD-RT-NONE-SAME: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
+// CHECK-LD-RT-NONE-NOT: "crtbegin.o"
 // CHECK-LD-RT-NONE-NOT: "clang_rt.builtins"
 // CHECK-LD-RT-NONE-NOT: "-lgcc"
 // CHECK-LD-RT-NONE-SAME: "-lc"
 // CHECK-LD-RT-NONE-NOT: "clang_rt.builtins"
 // CHECK-LD-RT-NONE-NOT: "-lgcc"
-// CHECK-LD-RT-NONE-SAME: "crtend.o"
+// CHECK-LD-RT-NONE-NOT: "crtend.o"
 
 // RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=i686-unknown-linux \

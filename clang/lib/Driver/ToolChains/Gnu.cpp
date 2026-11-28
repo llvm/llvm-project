@@ -402,7 +402,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (IsIAMCU)
       CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
-    else if (HasCRTBeginEndFiles) {
+    else if (ToolChain.GetRuntimeLibType(Args) != ToolChain::RLT_None &&
+             HasCRTBeginEndFiles) {
       std::string P;
       if (ToolChain.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT &&
           !isAndroid) {
@@ -570,7 +571,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
 
     if (!Args.hasArg(options::OPT_nostartfiles) && !IsIAMCU) {
-      if (HasCRTBeginEndFiles) {
+      if (ToolChain.GetRuntimeLibType(Args) != ToolChain::RLT_None &&
+          HasCRTBeginEndFiles) {
         std::string P;
         if (ToolChain.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT &&
             !isAndroid) {
