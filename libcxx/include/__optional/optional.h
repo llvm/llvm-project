@@ -557,6 +557,17 @@ public:
     return this->has_value() ? std::move(this->__val_) : static_cast<_Tp>(std::forward<_Up>(__v));
   }
 
+#  if _LIBCPP_STD_VER >= 29
+
+  [[nodiscard]] constexpr add_pointer_t<_Tp> get_ptr() noexcept {
+    return this->has_value() ? std::addressof(this->__val_) : nullptr;
+  }
+  [[nodiscard]] constexpr add_pointer_t<const _Tp> get_ptr() const noexcept {
+    return this->has_value() ? std::addressof(this->__val_) : nullptr;
+  }
+
+#  endif
+
 #  if _LIBCPP_STD_VER >= 23
   template <class _Func>
   [[nodiscard]] constexpr auto and_then(_Func&& __f) & {

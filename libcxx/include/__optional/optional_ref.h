@@ -246,6 +246,12 @@ public:
     return this->has_value() ? *__value_ : static_cast<_XTp>(std::forward<_Up>(__v));
   }
 
+#  if _LIBCPP_STD_VER >= 29
+
+  [[nodiscard]] constexpr add_pointer_t<_Tp> get_ptr() const noexcept { return __value_; }
+
+#  endif
+
   template <class _Func>
   [[nodiscard]] constexpr auto and_then(_Func&& __f) const {
     using _Up = invoke_result_t<_Func, _Tp&>;

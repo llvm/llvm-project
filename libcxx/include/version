@@ -230,7 +230,8 @@ __cpp_lib_not_fn                                        202306L <functional>
                                                         201603L // C++17
 __cpp_lib_null_iterators                                201304L <iterator>
 __cpp_lib_observable_checkpoint                         202506L <utility>
-__cpp_lib_optional                                      202506L <optional>
+__cpp_lib_optional                                      202611L <optional>
+                                                        202506L // C++26
                                                         202110L // C++23
                                                         202106L // C++20
                                                         201606L // C++17
@@ -754,6 +755,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_expected                             202606L
 // # define __cpp_lib_map_lookup                           202606L
 // # define __cpp_lib_mdspan_copy                          202606L
+# undef  __cpp_lib_optional
+# define __cpp_lib_optional                             202611L
 // # define __cpp_lib_pointer_tag_pair                     202606L
 // # define __cpp_lib_simd_bitops                          202607L
 // # define __cpp_lib_simd_complex                         202502L

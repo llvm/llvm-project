@@ -58,6 +58,13 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::move(cOpt).value_or(94);
 
+#if TEST_STD_VER >= 29
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  opt.get_ptr();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cOpt.get_ptr();
+#endif
+
 #if TEST_STD_VER >= 23
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   opt.and_then([](int&) { return std::optional<int>{82}; });
@@ -106,6 +113,11 @@ void test() {
   std::move(optRef).value_or(z);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   cOptRef.value_or(z);
+
+#  if TEST_STD_VER >= 29
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  cOptRef.get_ptr();
+#  endif
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   optRef.and_then([](int&) { return std::optional<int>{94}; });

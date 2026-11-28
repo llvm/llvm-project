@@ -1283,6 +1283,7 @@ feature_test_macros = [
                 "c++20": 202106,  # P2231R1 Missing constexpr in std::optional and std::variant
                 "c++23": 202110,  # P0798R8 Monadic operations for std::optional + LWG3621 Remove feature-test macro __cpp_lib_monadic_optional
                 "c++26": 202506,  # P2988R12: std::optional<T&>
+                "c++29": 202611,  # P4189R0: get()ing the pointer from optional
             },
             "headers": ["optional"],
         },
