@@ -25,6 +25,13 @@ public:
                                  MachineFunctionAnalysisManager &MFAM);
 };
 
+class MachineKCFISplitPass
+    : public RequiredPassInfoMixin<MachineKCFISplitPass> {
+public:
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+};
+
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_KCFI_H

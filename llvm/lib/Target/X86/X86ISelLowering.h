@@ -695,6 +695,14 @@ namespace llvm {
                                 MachineBasicBlock::instr_iterator &MBBI,
                                 const TargetInstrInfo *TII) const override;
 
+    bool isKCFICheck(const MachineInstr &MI) const override;
+
+    bool supportKCFIOutOfLineTraps(const MachineFunction &MF) const override;
+
+    MachineInstr *
+    EmitKCFIOutOfLineTrap(MachineInstr &Check, MachineBasicBlock &TrapMBB,
+                          const TargetInstrInfo *TII) const override;
+
     bool hasStackProbeSymbol(const MachineFunction &MF) const override;
     bool hasInlineStackProbe(const MachineFunction &MF) const override;
     StringRef getStackProbeSymbolName(const MachineFunction &MF) const override;

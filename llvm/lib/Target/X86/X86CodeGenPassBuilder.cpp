@@ -77,6 +77,7 @@ protected:
   Error addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
   void addPostRegAlloc(PassManagerWrapper &PMW) override;
   void addPreSched2(PassManagerWrapper &PMW) override;
+  void addPostBBSections(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
   void addPreEmitPass2(PassManagerWrapper &PMW) override;
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
@@ -249,6 +250,10 @@ void X86CodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
 void X86CodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
   addMachineFunctionPass(X86ExpandPseudoPass(), PMW);
   addMachineFunctionPass(MachineKCFIPass(), PMW);
+}
+
+void X86CodeGenPassBuilder::addPostBBSections(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(MachineKCFISplitPass(), PMW);
 }
 
 void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {

@@ -10820,6 +10820,24 @@ X86InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
                                    unsigned Flags) const {
   MachineInstr &MI = *MIT;
 
+  // Don't outline KCFI checks (including bundled tail-call checks) or traps:
+  // LowerKCFI_CHECK reads patchable-function-prefix from the parent function
+  // and must remain paired with its checked call, and KCFI_TRAP emits
+  // .kcfi_traps metadata linked to its caller's section.
+  if (MI.getOpcode() == X86::KCFI_CHECK || MI.getOpcode() == X86::KCFI_CMP ||
+      MI.getOpcode() == X86::KCFI_TRAP)
+    return outliner::InstrType::Illegal;
+  if (MI.isBundle()) {
+    for (auto It = std::next(MI.getIterator()),
+              End = MI.getParent()->instr_end();
+         It != End && It->isBundledWithPred(); ++It) {
+      if (It->getOpcode() == X86::KCFI_CHECK)
+        return outliner::InstrType::Illegal;
+      if (!It->isDebugInstr())
+        break;
+    }
+  }
+
   // Is this a terminator for a basic block?
   if (MI.isTerminator())
     // TargetInstrInfo::getOutliningType has already filtered out anything

@@ -1020,6 +1020,17 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
     KcfiArity = Args.hasArg(options::OPT_fsanitize_kcfi_arity);
 
+    KcfiOutOfLineTraps =
+        Args.hasFlag(options::OPT_fsanitize_kcfi_out_of_line_traps,
+                     options::OPT_fno_sanitize_kcfi_out_of_line_traps, false) &&
+        (Kinds & SanitizerKind::KCFI);
+    if (KcfiOutOfLineTraps &&
+        TC.getTriple().getArch() != llvm::Triple::x86_64 &&
+        !TC.getTriple().isAArch64(64) && DiagnoseErrors) {
+      D.Diag(clang::diag::err_drv_unsupported_opt_for_target)
+          << "-fsanitize-kcfi-out-of-line-traps" << TC.getTriple().str();
+    }
+
     if (const Arg *A = Args.getLastArg(options::OPT_fsanitize_kcfi_hash_EQ))
       KcfiHash = A->getValue();
 
@@ -1636,6 +1647,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     }
     CmdArgs.push_back("-fsanitize-kcfi-arity");
   }
+
+  if (KcfiOutOfLineTraps)
+    CmdArgs.push_back("-fsanitize-kcfi-out-of-line-traps");
 
   if (KcfiHash)
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-kcfi-hash=" + *KcfiHash));

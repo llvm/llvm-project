@@ -94,6 +94,8 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeMachineCycleInfoWrapperPassPass(Registry);
   initializeMachineDominatorTreeWrapperPassPass(Registry);
   initializeMachineFunctionPrinterPassPass(Registry);
+  initializeMachineKCFILegacyPass(Registry);
+  initializeMachineKCFISplitLegacyPass(Registry);
   initializeMachineLateInstrsCleanupLegacyPass(Registry);
   initializeMachineLICMPass(Registry);
   initializeMachineLoopInfoWrapperPassPass(Registry);

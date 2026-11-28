@@ -34514,6 +34514,39 @@ AArch64TargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
       .getInstr();
 }
 
+bool AArch64TargetLowering::isKCFICheck(const MachineInstr &MI) const {
+  return MI.getOpcode() == AArch64::KCFI_CHECK;
+}
+
+bool AArch64TargetLowering::supportKCFIOutOfLineTraps(
+    const MachineFunction &MF) const {
+  // Keep checks bundled inline when SpeculativeLoadHardening is enabled, as it
+  // uses X16 as its taint register across basic blocks.
+  return !MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening);
+}
+
+MachineInstr *
+AArch64TargetLowering::EmitKCFIOutOfLineTrap(MachineInstr &Check,
+                                             MachineBasicBlock &TrapMBB,
+                                             const TargetInstrInfo *TII) const {
+  assert(Check.getOpcode() == AArch64::KCFI_CHECK && "Unexpected KCFI check");
+  MIMetadata MIMD(Check);
+  Check.setDesc(TII->get(AArch64::KCFI_CMP));
+
+  AArch64::KCFICheckRegs Regs =
+      AArch64::getKCFICheckRegs(Check.getOperand(0).getReg());
+  const TargetRegisterInfo *TRI =
+      Check.getMF()->getSubtarget().getRegisterInfo();
+  BuildMI(&TrapMBB, MIMD, TII->get(AArch64::BRK))
+      .addImm(
+          AArch64::getKCFITrapESR(*TRI, Regs.AddrReg, Regs.ExpectedTypeReg));
+  return BuildMI(*Check.getParent(), std::next(Check.getIterator()), MIMD,
+                 TII->get(AArch64::Bcc))
+      .addImm(AArch64CC::NE)
+      .addMBB(&TrapMBB)
+      .getInstr();
+}
+
 bool AArch64TargetLowering::shallExtractConstSplatVectorElementToStore(
     Type *VectorTy, unsigned ElemSizeInBits, unsigned &Index) const {
   // On AArch64, we can efficiently extract a scalar from a splat vector using

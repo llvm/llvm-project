@@ -149,6 +149,7 @@ LLVM_ABI void initializeInterleavedAccessPass(PassRegistry &);
 LLVM_ABI void initializeInterleavedLoadCombinePass(PassRegistry &);
 LLVM_ABI void initializeJMCInstrumenterPass(PassRegistry &);
 LLVM_ABI void initializeMachineKCFILegacyPass(PassRegistry &);
+LLVM_ABI void initializeMachineKCFISplitLegacyPass(PassRegistry &);
 LLVM_ABI void initializeLCSSAVerificationPassPass(PassRegistry &);
 LLVM_ABI void initializeLCSSAWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeLazyBFIPassPass(PassRegistry &);

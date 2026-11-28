@@ -1667,6 +1667,14 @@ void CodeGenModule::Release() {
                                 CodeGenOpts.PatchableFunctionEntryOffset);
     if (CodeGenOpts.SanitizeKcfiArity)
       getModule().addModuleFlag(llvm::Module::Override, "kcfi-arity", 1);
+    // Use Max 1 when enabled and Override 0 when disabled so any inline-KCFI
+    // module forces inline traps under LTO, while non-KCFI modules (which omit
+    // the flag) preserve out-of-line traps.
+    getModule().addModuleFlag(CodeGenOpts.SanitizeKcfiOutOfLineTraps
+                                  ? llvm::Module::Max
+                                  : llvm::Module::Override,
+                              "kcfi-out-of-line-traps",
+                              CodeGenOpts.SanitizeKcfiOutOfLineTraps ? 1 : 0);
     // Store the hash algorithm choice for use in LLVM passes
     getModule().addModuleFlag(
         llvm::Module::Override, "kcfi-hash",
