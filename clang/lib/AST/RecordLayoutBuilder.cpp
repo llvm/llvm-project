@@ -657,7 +657,8 @@ protected:
   /// field has been handled, if any.
   bool HandledFirstNonOverlappingEmptyField;
 
-  typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
+  typedef llvm::SortedVectorMap<const CXXRecordDecl *, CharUnits>
+      BaseOffsetsMapTy;
 
   /// Bases - base classes and their offsets in the record.
   BaseOffsetsMapTy Bases;
@@ -1094,8 +1095,9 @@ void ItaniumRecordLayoutBuilder::LayoutNonVirtualBase(
   CharUnits Offset = LayoutBase(Base);
 
   // Add its base class offset.
-  assert(!Bases.count(Base->Class) && "base offset already exists!");
-  Bases.insert(std::make_pair(Base->Class, Offset));
+  [[maybe_unused]] bool Inserted =
+      Bases.try_emplace(Base->Class, Offset).second;
+  assert(Inserted && "base offset already exists!");
 
   AddPrimaryVirtualBaseOffsets(Base, Offset);
 }
@@ -1112,10 +1114,12 @@ void ItaniumRecordLayoutBuilder::AddPrimaryVirtualBaseOffsets(
            "Primary virtual base is not virtual!");
     if (Info->PrimaryVirtualBaseInfo->Derived == Info) {
       // Add the offset.
-      assert(!VBases.count(Info->PrimaryVirtualBaseInfo->Class) &&
-             "primary vbase offset already exists!");
-      VBases.insert(std::make_pair(Info->PrimaryVirtualBaseInfo->Class,
-                                   ASTRecordLayout::VBaseInfo(Offset, false)));
+      [[maybe_unused]] bool Inserted =
+          VBases
+              .try_emplace(Info->PrimaryVirtualBaseInfo->Class,
+                           ASTRecordLayout::VBaseInfo(Offset, false))
+              .second;
+      assert(Inserted && "primary vbase offset already exists!");
 
       // Traverse the primary virtual base.
       AddPrimaryVirtualBaseOffsets(Info->PrimaryVirtualBaseInfo, Offset);
@@ -1187,9 +1191,10 @@ void ItaniumRecordLayoutBuilder::LayoutVirtualBase(
   CharUnits Offset = LayoutBase(Base);
 
   // Add its base class offset.
-  assert(!VBases.count(Base->Class) && "vbase offset already exists!");
-  VBases.insert(std::make_pair(Base->Class,
-                       ASTRecordLayout::VBaseInfo(Offset, false)));
+  [[maybe_unused]] bool Inserted =
+      VBases.try_emplace(Base->Class, ASTRecordLayout::VBaseInfo(Offset, false))
+          .second;
+  assert(Inserted && "vbase offset already exists!");
 
   AddPrimaryVirtualBaseOffsets(Base, Offset);
 }
@@ -1401,14 +1406,15 @@ void ItaniumRecordLayoutBuilder::Layout(const CXXRecordDecl *RD) {
 
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
 
-    assert(Bases.count(BaseDecl) && "Did not find base offset!");
+    assert(Bases.find(BaseDecl) != Bases.end() && "Did not find base offset!");
   }
 
   // And all virtual bases.
   for (const CXXBaseSpecifier &Base : RD->vbases()) {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
 
-    assert(VBases.count(BaseDecl) && "Did not find base offset!");
+    assert(VBases.find(BaseDecl) != VBases.end() &&
+           "Did not find base offset!");
   }
 #endif
 }
@@ -2553,7 +2559,8 @@ struct MicrosoftRecordLayoutBuilder {
     /// the record's alignment (only its required alignment).
     CharUnits NonRequiredAlignment;
   };
-  typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
+  typedef llvm::SortedVectorMap<const CXXRecordDecl *, CharUnits>
+      BaseOffsetsMapTy;
   MicrosoftRecordLayoutBuilder(const ASTContext &Context,
                                EmptySubobjectMap *EmptySubobjects)
       : Context(Context), EmptySubobjects(EmptySubobjects),
@@ -3486,7 +3493,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
           Builder.Alignment, Builder.Alignment, Builder.NonRequiredAlignment,
           CharUnits::Zero(), Builder.PrimaryBase, false,
           Builder.SharedVBPtrBase, Builder.EndsWithZeroSizedObject,
-          Builder.LeadsWithZeroSizedBase, Builder.Bases, Builder.VBases);
+          Builder.LeadsWithZeroSizedBase, std::move(Builder.Bases),
+          std::move(Builder.VBases));
     } else {
       MicrosoftRecordLayoutBuilder Builder(*this, /*EmptySubobjects=*/nullptr);
       Builder.layout(D);
@@ -3523,8 +3531,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
           NonVirtualSize, Builder.NonVirtualAlignment,
           Builder.PreferredNVAlignment, Builder.NonVirtualAlignment,
           EmptySubobjects.SizeOfLargestEmptySubobject, Builder.PrimaryBase,
-          Builder.PrimaryBaseIsVirtual, nullptr, false, false, Builder.Bases,
-          Builder.VBases);
+          Builder.PrimaryBaseIsVirtual, nullptr, false, false,
+          std::move(Builder.Bases), std::move(Builder.VBases));
     } else {
       ItaniumRecordLayoutBuilder Builder(*this, /*EmptySubobjects=*/nullptr);
       Builder.Layout(D);

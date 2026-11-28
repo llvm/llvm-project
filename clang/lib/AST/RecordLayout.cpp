@@ -15,6 +15,7 @@
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include <cassert>
+#include <utility>
 
 using namespace clang;
 
@@ -52,7 +53,7 @@ ASTRecordLayout::ASTRecordLayout(
     CharUnits SizeOfLargestEmptySubobject, const CXXRecordDecl *PrimaryBase,
     bool IsPrimaryBaseVirtual, const CXXRecordDecl *BaseSharingVBPtr,
     bool EndsWithZeroSizedObject, bool LeadsWithZeroSizedBase,
-    const BaseOffsetsMapTy &BaseOffsets, const VBaseOffsetsMapTy &VBaseOffsets)
+    BaseOffsetsMapTy &&BaseOffsets, VBaseOffsetsMapTy &&VBaseOffsets)
     : Size(size), DataSize(datasize), Alignment(alignment),
       PreferredAlignment(preferredAlignment),
       UnadjustedAlignment(unadjustedAlignment),
@@ -68,8 +69,8 @@ ASTRecordLayout::ASTRecordLayout(
   CXXInfo->PreferredNVAlignment = preferrednvalignment;
   CXXInfo->NonRequiredNVAlignment = nonrequirednvalignment;
   CXXInfo->SizeOfLargestEmptySubobject = SizeOfLargestEmptySubobject;
-  CXXInfo->BaseOffsets = BaseOffsets;
-  CXXInfo->VBaseOffsets = VBaseOffsets;
+  CXXInfo->BaseOffsets = std::move(BaseOffsets);
+  CXXInfo->VBaseOffsets = std::move(VBaseOffsets);
   CXXInfo->HasOwnVFPtr = hasOwnVFPtr;
   CXXInfo->VBPtrOffset = vbptroffset;
   CXXInfo->HasExtendableVFPtr = hasExtendableVFPtr;

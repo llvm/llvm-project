@@ -18,8 +18,8 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SortedVectorMap.h"
 #include <cassert>
 #include <cstdint>
 
@@ -56,7 +56,8 @@ public:
     bool hasVtorDisp() const { return HasVtorDisp; }
   };
 
-  using VBaseOffsetsMapTy = llvm::DenseMap<const CXXRecordDecl *, VBaseInfo>;
+  using VBaseOffsetsMapTy =
+      llvm::SortedVectorMap<const CXXRecordDecl *, VBaseInfo>;
 
 private:
   friend class ASTContext;
@@ -145,8 +146,8 @@ private:
     /// BaseSharingVBPtr - The base we share vbptr with.
     const CXXRecordDecl *BaseSharingVBPtr;
 
-    /// FIXME: This should really use a SmallPtrMap, once we have one in LLVM :)
-    using BaseOffsetsMapTy = llvm::DenseMap<const CXXRecordDecl *, CharUnits>;
+    using BaseOffsetsMapTy =
+        llvm::SortedVectorMap<const CXXRecordDecl *, CharUnits>;
 
     /// BaseOffsets - Contains a map from base classes to their offset.
     BaseOffsetsMapTy BaseOffsets;
@@ -168,21 +169,18 @@ private:
   using BaseOffsetsMapTy = CXXRecordLayoutInfo::BaseOffsetsMapTy;
 
   // Constructor for C++ records.
-  ASTRecordLayout(const ASTContext &Ctx, CharUnits size, CharUnits alignment,
-                  CharUnits preferredAlignment, CharUnits unadjustedAlignment,
-                  CharUnits requiredAlignment,
-                  CharUnits pragmaPackResistantAlignment, bool hasOwnVFPtr,
-                  bool hasExtendableVFPtr, CharUnits vbptroffset,
-                  CharUnits datasize, ArrayRef<uint64_t> fieldoffsets,
-                  CharUnits nonvirtualsize, CharUnits nonvirtualalignment,
-                  CharUnits preferrednvalignment,
-                  CharUnits nonrequirednvalignment,
-                  CharUnits SizeOfLargestEmptySubobject,
-                  const CXXRecordDecl *PrimaryBase, bool IsPrimaryBaseVirtual,
-                  const CXXRecordDecl *BaseSharingVBPtr,
-                  bool EndsWithZeroSizedObject, bool LeadsWithZeroSizedBase,
-                  const BaseOffsetsMapTy &BaseOffsets,
-                  const VBaseOffsetsMapTy &VBaseOffsets);
+  ASTRecordLayout(
+      const ASTContext &Ctx, CharUnits size, CharUnits alignment,
+      CharUnits preferredAlignment, CharUnits unadjustedAlignment,
+      CharUnits requiredAlignment, CharUnits pragmaPackResistantAlignment,
+      bool hasOwnVFPtr, bool hasExtendableVFPtr, CharUnits vbptroffset,
+      CharUnits datasize, ArrayRef<uint64_t> fieldoffsets,
+      CharUnits nonvirtualsize, CharUnits nonvirtualalignment,
+      CharUnits preferrednvalignment, CharUnits nonrequirednvalignment,
+      CharUnits SizeOfLargestEmptySubobject, const CXXRecordDecl *PrimaryBase,
+      bool IsPrimaryBaseVirtual, const CXXRecordDecl *BaseSharingVBPtr,
+      bool EndsWithZeroSizedObject, bool LeadsWithZeroSizedBase,
+      BaseOffsetsMapTy &&BaseOffsets, VBaseOffsetsMapTy &&VBaseOffsets);
 
   ~ASTRecordLayout() = default;
 
@@ -273,9 +271,9 @@ public:
     assert(CXXInfo && "Record layout does not have C++ specific info!");
 
     Base = Base->getDefinition();
-    assert(CXXInfo->BaseOffsets.count(Base) && "Did not find base!");
-
-    return CXXInfo->BaseOffsets[Base];
+    auto I = CXXInfo->BaseOffsets.find(Base);
+    assert(I != CXXInfo->BaseOffsets.end() && "Did not find base!");
+    return I->second;
   }
 
   /// getVBaseClassOffset - Get the offset, in chars, for the given base class.
@@ -283,9 +281,9 @@ public:
     assert(CXXInfo && "Record layout does not have C++ specific info!");
 
     VBase = VBase->getDefinition();
-    assert(CXXInfo->VBaseOffsets.count(VBase) && "Did not find base!");
-
-    return CXXInfo->VBaseOffsets[VBase].VBaseOffset;
+    auto I = CXXInfo->VBaseOffsets.find(VBase);
+    assert(I != CXXInfo->VBaseOffsets.end() && "Did not find base!");
+    return I->second.VBaseOffset;
   }
 
   CharUnits getSizeOfLargestEmptySubobject() const {
