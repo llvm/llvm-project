@@ -330,9 +330,14 @@ private:
 
   // Analyze a combined offset from an amdgcn_s_buffer_load intrinsic and store
   // the three offsets (voffset, soffset and instoffset) into the SDValue[3]
-  // array pointed to by Offsets.
+  // array pointed to by Offsets. `ExtraBytes` is the number of additional bytes
+  // that will be added to the instoffset during splitting. `Alignment` is the
+  // required alignment of each component, while `ExtraBytes` is the number of
+  // bytes that will be added to the immediate offset by the lowering that's
+  // requesting this split.
   void setBufferOffsets(SDValue CombinedOffset, SelectionDAG &DAG,
-                        SDValue *Offsets, Align Alignment = Align(4)) const;
+                        SDValue *Offsets, uint32_t ExtraBytes = 0,
+                        Align Alignment = Align(4)) const;
 
   // Convert the i128 that an addrspace(8) pointer is natively represented as
   // into the v4i32 that all the buffer intrinsics expect to receive. We can't

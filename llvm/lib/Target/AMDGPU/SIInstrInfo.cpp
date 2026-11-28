@@ -10954,12 +10954,14 @@ bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
 // hardware bug needing a workaround).
 //
 // The required alignment ensures that individual address components remain
-// aligned if they are aligned to begin with. It also ensures that additional
-// offsets within the given alignment can be added to the resulting ImmOffset.
+// aligned if they are aligned to begin with. `ExtraBytes` indicates how many
+// bytes will be added to the `ImmOffset` by the caller and constrains the
+// maximum immediate offset.
 bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
-                                   uint32_t &ImmOffset, Align Alignment) const {
+                                   uint32_t &ImmOffset, uint32_t ExtraBytes,
+                                   Align Alignment) const {
   const uint64_t MaxOffset = SIInstrInfo::getMaxMUBUFImmOffset(ST);
-  const uint32_t MaxImm = alignDown(MaxOffset, Alignment.value());
+  const uint32_t MaxImm = alignDown(MaxOffset - ExtraBytes, Alignment.value());
   uint32_t Overflow = 0;
 
   if (Imm > MaxImm) {

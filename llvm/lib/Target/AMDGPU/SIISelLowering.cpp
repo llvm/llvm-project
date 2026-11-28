@@ -11071,7 +11071,7 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, EVT MemVT, SDLoc DL,
   };
   if ((MemVT == MVT::i8 || MemVT == MVT::i16) &&
       Subtarget->hasScalarSubwordLoads()) {
-    setBufferOffsets(Offset, DAG, &Ops[3], Align(4));
+    setBufferOffsets(Offset, DAG, &Ops[3], /*ExtraBytes=*/0, Align(4));
     SDValue Load = handleByteShortBufferLoads(DAG, MemVT, DL, Ops, MMO);
     SDValue LoadVal = DAG.getAnyExtOrTrunc(Load.getOperand(0), DL, VT);
     if (HasChainResult)
@@ -11093,10 +11093,10 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, EVT MemVT, SDLoc DL,
 
   SDVTList VTList = DAG.getVTList({LoadVT, MVT::Other});
 
-  // Use the alignment to ensure that the required offsets will fit into the
-  // immediate offsets.
-  setBufferOffsets(Offset, DAG, &Ops[3],
-                   NumLoads > 1 ? Align(16 * NumLoads) : Align(4));
+  // VBUFFER instructions, unlike SBUFFER ones, don't have an alignment
+  // requirement on the immediate offset.
+  setBufferOffsets(Offset, DAG, &Ops[3], /*ExtraBytes=*/(NumLoads - 1) * 16,
+                   Align(1));
 
   uint64_t InstOffset = Ops[5]->getAsZExtVal();
   unsigned LoadSize = LoadVT.getStoreSize();
@@ -13182,13 +13182,14 @@ SITargetLowering::splitBufferOffsets(SDValue Offset, SelectionDAG &DAG) const {
 // pointed to by Offsets.
 void SITargetLowering::setBufferOffsets(SDValue CombinedOffset,
                                         SelectionDAG &DAG, SDValue *Offsets,
+                                        uint32_t ExtraBytes,
                                         Align Alignment) const {
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   SDLoc DL(CombinedOffset);
   if (auto *C = dyn_cast<ConstantSDNode>(CombinedOffset)) {
     uint32_t Imm = C->getZExtValue();
     uint32_t SOffset, ImmOffset;
-    if (TII->splitMUBUFOffset(Imm, SOffset, ImmOffset, Alignment)) {
+    if (TII->splitMUBUFOffset(Imm, SOffset, ImmOffset, ExtraBytes, Alignment)) {
       Offsets[0] = DAG.getConstant(0, DL, MVT::i32);
       Offsets[1] = DAG.getConstant(SOffset, DL, MVT::i32);
       Offsets[2] = DAG.getTargetConstant(ImmOffset, DL, MVT::i32);
@@ -13205,7 +13206,8 @@ void SITargetLowering::setBufferOffsets(SDValue CombinedOffset,
     uint32_t SOffset, ImmOffset;
     int Offset = cast<ConstantSDNode>(N1)->getSExtValue();
     if (Offset >= 0 && (!CheckNUW || isNoUnsignedWrap(CombinedOffset)) &&
-        TII->splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
+        TII->splitMUBUFOffset(Offset, SOffset, ImmOffset, ExtraBytes,
+                              Alignment)) {
       Offsets[0] = N0;
       Offsets[1] = DAG.getConstant(SOffset, DL, MVT::i32);
       Offsets[2] = DAG.getTargetConstant(ImmOffset, DL, MVT::i32);

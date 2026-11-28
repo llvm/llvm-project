@@ -1233,17 +1233,21 @@ bool AMDGPURegisterBankInfo::applyMappingImage(
 }
 
 // Analyze a combined offset from an llvm.amdgcn.s.buffer intrinsic and store
-// the three offsets (voffset, soffset and instoffset)
+// the three offsets (voffset, soffset and instoffset). `ExtraBytes` indicates
+// how many additional bytes will be addded to the immediate offset by the
+// caller, and `Align` constrains the alignment of each component.
 unsigned AMDGPURegisterBankInfo::setBufferOffsets(
     MachineIRBuilder &B, Register CombinedOffset, Register &VOffsetReg,
-    Register &SOffsetReg, int64_t &InstOffsetVal, Align Alignment) const {
+    Register &SOffsetReg, int64_t &InstOffsetVal, unsigned ExtraBytes,
+    Align Alignment) const {
   const LLT S32 = LLT::scalar(32);
   MachineRegisterInfo *MRI = B.getMRI();
 
   if (std::optional<int64_t> Imm =
           getIConstantVRegSExtVal(CombinedOffset, *MRI)) {
     uint32_t SOffset, ImmOffset;
-    if (TII->splitMUBUFOffset(*Imm, SOffset, ImmOffset, Alignment)) {
+    if (TII->splitMUBUFOffset(*Imm, SOffset, ImmOffset, ExtraBytes,
+                              Alignment)) {
       VOffsetReg = B.buildConstant(S32, 0).getReg(0);
       SOffsetReg = B.buildConstant(S32, SOffset).getReg(0);
       InstOffsetVal = ImmOffset;
@@ -1265,7 +1269,8 @@ unsigned AMDGPURegisterBankInfo::setBufferOffsets(
 
   uint32_t SOffset, ImmOffset;
   if (static_cast<int32_t>(Offset) > 0 &&
-      TII->splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
+      TII->splitMUBUFOffset(Offset, SOffset, ImmOffset, ExtraBytes,
+                            Alignment)) {
     if (getRegBank(Base, *MRI, *TRI) == &AMDGPU::VGPRRegBank) {
       VOffsetReg = Base;
       SOffsetReg = B.buildConstant(S32, SOffset).getReg(0);
@@ -1366,18 +1371,16 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
     Ty = Ty.divide(NumLoads);
   }
 
-  // Use the alignment to ensure that the required offsets will fit into the
-  // immediate offsets.
-  const Align Alignment = NumLoads > 1 ? Align(16 * NumLoads) : Align(1);
-
   MachineFunction &MF = B.getMF();
 
   Register SOffset;
   Register VOffset;
   int64_t ImmOffset = 0;
 
-  unsigned MMOOffset = setBufferOffsets(B, MI.getOperand(2).getReg(), VOffset,
-                                        SOffset, ImmOffset, Alignment);
+  // Vbuffer instructions don't separately constrain the immediate's alignment.
+  unsigned MMOOffset = setBufferOffsets(
+      B, MI.getOperand(2).getReg(), VOffset, SOffset, ImmOffset,
+      /*ExtraBytes=*/(NumLoads - 1) * 16, Align(1));
 
   // TODO: 96-bit loads were widened to 128-bit results. Shrink the result if we
   // can, but we need to track an MMO for that.
