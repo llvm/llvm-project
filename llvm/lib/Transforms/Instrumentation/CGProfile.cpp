@@ -53,7 +53,8 @@ static bool runCGProfilePass(Module &M, FunctionAnalysisManager &FAM,
                           Function *CalledF, uint64_t NewCount) {
     if (NewCount == 0)
       return;
-    if (!CalledF || !TTI.isLoweredToCall(CalledF) ||
+    // An intrinsic has no symbol, even when it becomes a libcall.
+    if (!CalledF || CalledF->isIntrinsic() || !TTI.isLoweredToCall(CalledF) ||
         CalledF->hasDLLImportStorageClass())
       return;
     uint64_t &Count = Counts[std::make_pair(F, CalledF)];
