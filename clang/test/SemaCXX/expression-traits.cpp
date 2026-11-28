@@ -433,13 +433,17 @@ void expr_dynamic_cast_5()
 // defect that is being corrected by the response to UK65 (see
 // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2009/n2841.html).
 
-#if 0
+// typeid requires std::type_info to be declared.
+namespace std {
+class type_info;
+}
+
 void expr_typeid_1()
 {
     // expr.typeid/1: The result of a typeid expression is an lvalue...
     ASSERT_LVALUE(typeid(1));
+    ASSERT_LVALUE(typeid(int));
 }
-#endif
 
 void expr_static_cast_1(int x)
 {
