@@ -5616,7 +5616,13 @@ void DAGTypeLegalizer::ExpandIntRes_ZERO_EXTEND(SDNode *N,
   SDValue Op = N->getOperand(0);
   if (Op.getValueType().bitsLE(NVT)) {
     // The low part is zero extension of the input (degenerates to a copy).
-    Lo = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, N->getOperand(0));
+    if (Op.getValueType() == NVT) {
+      Lo = Op;
+    } else {
+      SDNodeFlags Flags;
+      Flags.setNonNeg(N->getFlags().hasNonNeg());
+      Lo = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Op, Flags);
+    }
     Hi = DAG.getConstant(0, dl, NVT);   // The high part is just a zero.
   } else {
     // For example, extension of an i48 to an i64.  The operand type necessarily

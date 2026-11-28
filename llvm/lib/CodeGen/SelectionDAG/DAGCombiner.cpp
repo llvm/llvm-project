@@ -15808,19 +15808,64 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
       (Frozen && !Load->hasNUsesOfValue(1, 0)))
     return {};
 
-  // If this is zext nneg, see if it would make sense to treat it as a sext.
-  if (NonNegZExt) {
+  SDValue V(Load, 0);
+  EVT SrcVT = V.getValueType();
+  auto HasExtLoad = [&](ISD::LoadExtType Kind) {
+    return TLI.isLoadLegalOrCustom(VT, SrcVT, Load->getAlign(),
+                                   Load->getAddressSpace(), Kind, false);
+  };
+  // Look for signed uses that benefit from a sign-extending load without
+  // introducing any obvious regressions.
+  if (NonNegZExt &&
+      (!HasExtLoad(ISD::ZEXTLOAD) || HasExtLoad(ISD::SEXTLOAD))) {
     assert(ExtLoadType == ISD::ZEXTLOAD && ExtOpc == ISD::ZERO_EXTEND &&
            "Unexpected load type or opcode");
-    for (SDNode *User : Load->users()) {
-      if (User->getOpcode() == ISD::SETCC) {
-        ISD::CondCode CC = User->getOperandCondCode(2);
-        if (ISD::isSignedIntSetCC(CC)) {
-          ExtLoadType = ISD::SEXTLOAD;
-          ExtOpc = ISD::SIGN_EXTEND;
-          break;
-        }
+
+    bool CanHarm = false;
+    bool CanHelp = false;
+
+    for (SDUse &Use : Load->uses()) {
+      if (Use.getResNo() != V.getResNo())
+        continue;
+      SDNode *User = Use.getUser();
+
+      // A sign extension to the load's new type can reuse the load directly.
+      if (User->getOpcode() == ISD::SIGN_EXTEND &&
+          User->getValueType(0) == VT) {
+        CanHelp = true;
+        continue;
       }
+
+      // Let the target veto an undesirable ops
+      if (TLI.isTypeDesirableForOp(User, SrcVT) &&
+          !TLI.isTypeDesirableForOp(User, VT)) {
+        CanHarm = true;
+        break;
+      }
+
+      // An ordinary zext still needs the zero high bits.
+      if (User->getOpcode() == ISD::ZERO_EXTEND &&
+          !User->getFlags().hasNonNeg()) {
+        CanHarm = true;
+        break;
+      }
+      bool IsSetCC = User->getOpcode() == ISD::SETCC;
+      if ((!IsSetCC && User->getOpcode() != ISD::SELECT_CC) ||
+          Use.getOperandNo() >= 2)
+        continue;
+
+      ISD::CondCode CC = User->getOperandCondCode(IsSetCC ? 2 : 4);
+      // Promotion of an unsigned compare can require masking a signed load.
+      if (ISD::isUnsignedIntSetCC(CC) && !TLI.isTypeLegal(SrcVT)) {
+        CanHarm = true;
+        break;
+      }
+      CanHelp |= ISD::isSignedIntSetCC(CC);
+    }
+
+    if (!CanHarm && CanHelp) {
+      ExtLoadType = ISD::SEXTLOAD;
+      ExtOpc = ISD::SIGN_EXTEND;
     }
   }
 
