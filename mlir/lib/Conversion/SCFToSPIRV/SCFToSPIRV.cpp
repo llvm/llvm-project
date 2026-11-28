@@ -337,6 +337,14 @@ struct IndexSwitchOpConversion final : SCFToSPIRVPattern<scf::IndexSwitchOp> {
                                          "selector type is not an integer");
     unsigned selectorWidth = selectorType.getWidth();
 
+    // A case value that does not fit the selector would be truncated onto
+    // another value, and so would branch for an index it does not equal.
+    if (llvm::any_of(switchOp.getCases(), [&](int64_t caseValue) {
+          return !llvm::isIntN(selectorWidth, caseValue);
+        }))
+      return rewriter.notifyMatchFailure(
+          loc, "case value does not fit the selector");
+
     // Create the `spirv.mlir.selection` op, its header block, and merge block.
     auto selectionControl = spirv::SelectionControl::None;
     if (auto attr =
@@ -404,13 +412,12 @@ public:
     Operation *parent = terminatorOp->getParentOp();
 
     // TODO: Implement conversion for the remaining `scf` ops.
+    // Erasing the terminator of an unconverted SCF parent would invalidate it.
     if (parent->getDialect()->getNamespace() ==
-            scf::SCFDialect::getDialectNamespace() &&
-        !isa<scf::IfOp, scf::ForOp, scf::WhileOp, scf::IndexSwitchOp>(parent))
+        scf::SCFDialect::getDialectNamespace())
       return rewriter.notifyMatchFailure(
-          terminatorOp,
-          llvm::formatv("conversion not supported for parent op: '{0}'",
-                        parent->getName()));
+          terminatorOp, llvm::formatv("parent op '{0}' was not converted",
+                                      parent->getName()));
 
     // If the region return values, store each value into the associated
     // VariableOp created during lowering of the parent region.
