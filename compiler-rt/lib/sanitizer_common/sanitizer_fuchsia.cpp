@@ -485,6 +485,14 @@ bool ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
   return false;
 }
 
+bool ReadFileToVector(const char* file_name,
+                      InternalMmapVectorNoCtor<char>* buff, uptr max_len,
+                      error_t* errno_p) {
+  if (errno_p)
+    *errno_p = ZX_ERR_NOT_SUPPORTED;
+  return false;
+}
+
 void RawWrite(const char *buffer) {
   constexpr size_t size = 128;
   static _Thread_local char line[size];
