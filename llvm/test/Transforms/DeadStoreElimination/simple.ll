@@ -205,7 +205,7 @@ declare void @may_unwind()
 define ptr @test_malloc_no_escape_before_return() {
 ; CHECK-LABEL: @test_malloc_no_escape_before_return(
 ; CHECK-NEXT:    [[PTR:%.*]] = tail call ptr @malloc(i64 4)
-; CHECK-NEXT:    call void @may_unwind()
+; CHECK-NEXT:    call void @may_unwind() #[[ATTR12:[0-9]+]]
 ; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
@@ -213,6 +213,27 @@ define ptr @test_malloc_no_escape_before_return() {
   %DEAD = load i32, ptr %ptr
   %DEAD2 = add i32 %DEAD, 1
   store i32 %DEAD2, ptr %ptr
+  call void @may_unwind() nosync
+  store i32 0, ptr %ptr
+  ret ptr %ptr
+}
+
+; Do not remove stores, as the function call may synchronize and the pointer
+; later escape to a different thread.
+define ptr @test_malloc_no_escape_before_return_may_sync() {
+; CHECK-LABEL: @test_malloc_no_escape_before_return_may_sync(
+; CHECK-NEXT:    [[PTR:%.*]] = tail call ptr @malloc(i64 4)
+; CHECK-NEXT:    [[DEAD:%.*]] = load i32, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[DEAD2:%.*]] = add i32 [[DEAD]], 1
+; CHECK-NEXT:    store i32 [[DEAD2]], ptr [[PTR]], align 4
+; CHECK-NEXT:    call void @may_unwind()
+; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    ret ptr [[PTR]]
+;
+  %ptr = tail call ptr @malloc(i64 4)
+  %NOT_DEAD = load i32, ptr %ptr
+  %NOT_DEAD2 = add i32 %NOT_DEAD, 1
+  store i32 %NOT_DEAD2, ptr %ptr
   call void @may_unwind()
   store i32 0, ptr %ptr
   ret ptr %ptr
@@ -221,7 +242,7 @@ define ptr @test_malloc_no_escape_before_return() {
 define ptr @test_custom_malloc_no_escape_before_return() {
 ; CHECK-LABEL: @test_custom_malloc_no_escape_before_return(
 ; CHECK-NEXT:    [[PTR:%.*]] = tail call ptr @custom_malloc(i32 4)
-; CHECK-NEXT:    call void @may_unwind()
+; CHECK-NEXT:    call void @may_unwind() #[[ATTR12]]
 ; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
@@ -229,7 +250,7 @@ define ptr @test_custom_malloc_no_escape_before_return() {
   %DEAD = load i32, ptr %ptr
   %DEAD2 = add i32 %DEAD, 1
   store i32 %DEAD2, ptr %ptr
-  call void @may_unwind()
+  call void @may_unwind() nosync
   store i32 0, ptr %ptr
   ret ptr %ptr
 }
@@ -238,7 +259,7 @@ define ptr addrspace(1) @test13_addrspacecast() {
 ; CHECK-LABEL: @test13_addrspacecast(
 ; CHECK-NEXT:    [[P:%.*]] = tail call ptr @malloc(i64 4)
 ; CHECK-NEXT:    [[P_AC:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
-; CHECK-NEXT:    call void @may_unwind()
+; CHECK-NEXT:    call void @may_unwind() #[[ATTR12]]
 ; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[P_AC]], align 4
 ; CHECK-NEXT:    ret ptr addrspace(1) [[P_AC]]
 ;
@@ -247,7 +268,7 @@ define ptr addrspace(1) @test13_addrspacecast() {
   %DEAD = load i32, ptr addrspace(1) %p.ac
   %DEAD2 = add i32 %DEAD, 1
   store i32 %DEAD2, ptr addrspace(1) %p.ac
-  call void @may_unwind()
+  call void @may_unwind() nosync
   store i32 0, ptr addrspace(1) %p.ac
   ret ptr addrspace(1) %p.ac
 }
@@ -391,7 +412,7 @@ define noalias ptr @test23() nounwind uwtable ssp {
 ; CHECK-NEXT:    store i8 97, ptr [[X]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [2 x i8], ptr [[X]], i64 0, i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @strdup(ptr [[X]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @strdup(ptr [[X]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret ptr [[CALL]]
 ;
   %x = alloca [2 x i8], align 1
@@ -425,7 +446,7 @@ define ptr @test25(ptr %p) nounwind {
 ; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8, ptr [[P_4]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[P_4]], align 1
-; CHECK-NEXT:    [[Q:%.*]] = call ptr @strdup(ptr [[P]]) #[[ATTR14:[0-9]+]]
+; CHECK-NEXT:    [[Q:%.*]] = call ptr @strdup(ptr [[P]]) #[[ATTR13:[0-9]+]]
 ; CHECK-NEXT:    store i8 [[TMP]], ptr [[P_4]], align 1
 ; CHECK-NEXT:    ret ptr [[Q]]
 ;
