@@ -111,7 +111,19 @@ void populateMemRefNarrowTypeEmulationConversions(
 /// When `skipOverrideAnalysis`, the pass will apply the transformation
 /// without checking thwt the buffer is overrided at the beginning of each
 /// iteration. This implies that user knows that there is no data carried across
-/// loop iterations. Example:
+/// loop iterations.
+/// A strided alloc of integer or float elements keeps those strides on each
+/// slot; the new leading stride is `size0 * stride0` (rounded up to the alloc
+/// alignment). Example:
+/// `memref<2x4x8x6xf32, strided<[256, 64, 8, 1]>>` with factor 3 becomes
+/// `memref<3x2x4x8x6xf32, strided<[512, 256, 64, 8, 1]>>`.
+/// If an identity alloc requires padding to satisfy the alloc alignment, it
+/// is given an explicit strided layout with leading stride rounded up.
+/// Example:
+/// `memref<192xi8> alignment = 256` with factor 2 becomes
+/// `memref<2x192xi8, strided<[256, 1]>> alignment = 256`.
+/// Identity layouts without alignment padding and non-int/float elements stay
+/// dense. Example:
 /// ```
 /// %0 = memref.alloc() : memref<4x128xf32>
 /// scf.for %iv = %c1 to %c1024 step %c3 {

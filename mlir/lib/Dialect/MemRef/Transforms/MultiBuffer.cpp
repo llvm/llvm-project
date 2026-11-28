@@ -22,6 +22,7 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
@@ -135,6 +136,63 @@ static LogicalResult replaceUsesAndPropagateType(RewriterBase &rewriter,
   return success();
 }
 
+/// Round `numElements` up so each multi-buffer slot satisfies the alloc
+/// alignment. Only the expanded alloc base is aligned; without this, slot 1
+/// can start at a non-aligned byte offset. Caller must pass an int/float
+/// element type; sub-byte widths are left unpadded.
+static int64_t alignToAllocAlignment(int64_t numElements,
+                                     memref::AllocOp allocOp) {
+  IntegerAttr alignment = allocOp.getAlignmentAttr();
+  if (!alignment)
+    return numElements;
+  Type elementType = allocOp.getType().getElementType();
+  unsigned bitWidth = elementType.getIntOrFloatBitWidth();
+  if (bitWidth % 8 != 0)
+    return numElements;
+  uint64_t elementBytes = bitWidth / 8;
+  uint64_t alignBytes = static_cast<uint64_t>(alignment.getInt());
+  if (alignBytes % elementBytes != 0)
+    return numElements;
+  return static_cast<int64_t>(
+      llvm::alignTo(static_cast<uint64_t>(numElements) * elementBytes,
+                    alignBytes) /
+      elementBytes);
+}
+
+/// Layout of the expanded alloc. Non-int/float elements or layouts that cannot
+/// be analyzed stay dense.
+///
+/// If the source has an identity layout and the slot pitch already satisfies
+/// the alloc alignment, the expanded alloc stays identity (dense).
+/// If the slot pitch needs to be rounded up to satisfy the alloc alignment,
+/// or if the source already has a strided layout, the expanded alloc gets an
+/// explicit strided layout where the new leading stride is
+/// `size0 * stride0` (rounded up to the alloc alignment) and trailing strides
+/// are preserved.
+static MemRefLayoutAttrInterface multiBufferLayout(memref::AllocOp allocOp) {
+  MemRefType srcType = allocOp.getType();
+  SmallVector<int64_t> strides;
+  int64_t offset = 0;
+  if (!srcType.getElementType().isIntOrFloat() ||
+      failed(srcType.getStridesAndOffset(strides, offset)) ||
+      srcType.getShape().empty() || strides.empty() ||
+      !ShapedType::isStatic(srcType.getDimSize(0)) ||
+      !ShapedType::isStatic(strides.front()) || strides.front() <= 0)
+    return {};
+
+  int64_t unpaddedPitch = srcType.getDimSize(0) * strides.front();
+  int64_t leadingStride = alignToAllocAlignment(unpaddedPitch, allocOp);
+
+  // Identity layout without alignment padding stays dense.
+  if (srcType.getLayout().isIdentity() && leadingStride == unpaddedPitch)
+    return {};
+
+  SmallVector<int64_t> expandedStrides{leadingStride};
+  llvm::append_range(expandedStrides, strides);
+  return StridedLayoutAttr::get(srcType.getContext(), /*offset=*/0,
+                                expandedStrides);
+}
+
 // Transformation to do multi-buffering/array expansion to remove dependencies
 // on the temporary allocation between consecutive loop iterations.
 // Returns success if the transformation happened and failure otherwise.
@@ -217,7 +275,7 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   LLVM_DEBUG(DBGS() << "--original type: " << allocOp.getType() << "\n");
   MemRefType mbMemRefType = MemRefType::Builder(allocOp.getType())
                                 .setShape(multiBufferedShape)
-                                .setLayout(MemRefLayoutAttrInterface());
+                                .setLayout(multiBufferLayout(allocOp));
   LLVM_DEBUG(DBGS() << "--multi-buffered type: " << mbMemRefType << "\n");
 
   // 2. Create the multi-buffered alloc.
