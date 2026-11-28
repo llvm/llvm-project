@@ -722,11 +722,13 @@ public:
   /// Is operation \p BinOp between \p LHS and \p RHS provably does not have
   /// a signed/unsigned overflow (\p Signed)? If \p CtxI is specified, the
   /// no-overflow fact should be true in the context of this instruction.
+  /// For shl, shift amounts greater than or equal to the bit width are ignored
+  /// as they already produce poison.
   LLVM_ABI bool willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
                                 const SCEV *LHS, const SCEV *RHS,
                                 const Instruction *CtxI = nullptr);
 
-  /// Parse NSW/NUW flags from add/sub/mul IR binary operation \p Op into
+  /// Parse NSW/NUW flags from add/sub/mul/shl IR binary operation \p Op into
   /// SCEV no-wrap flags, and deduce flag[s] that aren't known yet.
   /// Does not mutate the original instruction. Returns std::nullopt if it could
   /// not deduce more precise flags than the instruction already has, otherwise

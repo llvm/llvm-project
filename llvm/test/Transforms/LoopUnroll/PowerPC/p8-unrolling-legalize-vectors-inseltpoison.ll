@@ -110,7 +110,7 @@ define ptr @f(ptr returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_UNR]], [[FOR_BODY_PREHEADER_NEW]] ], [ [[INDVARS_IV_NEXT_7:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = trunc i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[TMP24]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[TMP24]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], [[X]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    [[CONV:%.*]] = select i1 [[TOBOOL]], i8 48, i8 49
@@ -118,7 +118,7 @@ define ptr @f(ptr returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[SHL_1:%.*]] = shl i32 1, [[TMP25]]
+; CHECK-NEXT:    [[SHL_1:%.*]] = shl nuw i32 1, [[TMP25]]
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i32 [[SHL_1]], [[X]]
 ; CHECK-NEXT:    [[TOBOOL_1:%.*]] = icmp eq i32 [[AND_1]], 0
 ; CHECK-NEXT:    [[CONV_1:%.*]] = select i1 [[TOBOOL_1]], i8 48, i8 49
@@ -126,7 +126,7 @@ define ptr @f(ptr returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK-NEXT:    store i8 [[CONV_1]], ptr [[ARRAYIDX_1]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[TMP26:%.*]] = trunc i64 [[INDVARS_IV_NEXT_1]] to i32
-; CHECK-NEXT:    [[SHL_2:%.*]] = shl i32 1, [[TMP26]]
+; CHECK-NEXT:    [[SHL_2:%.*]] = shl nuw i32 1, [[TMP26]]
 ; CHECK-NEXT:    [[AND_2:%.*]] = and i32 [[SHL_2]], [[X]]
 ; CHECK-NEXT:    [[TOBOOL_2:%.*]] = icmp eq i32 [[AND_2]], 0
 ; CHECK-NEXT:    [[CONV_2:%.*]] = select i1 [[TOBOOL_2]], i8 48, i8 49
@@ -134,7 +134,7 @@ define ptr @f(ptr returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK-NEXT:    store i8 [[CONV_2]], ptr [[ARRAYIDX_2]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[TMP27:%.*]] = trunc i64 [[INDVARS_IV_NEXT_2]] to i32
-; CHECK-NEXT:    [[SHL_3:%.*]] = shl i32 1, [[TMP27]]
+; CHECK-NEXT:    [[SHL_3:%.*]] = shl nuw i32 1, [[TMP27]]
 ; CHECK-NEXT:    [[AND_3:%.*]] = and i32 [[SHL_3]], [[X]]
 ; CHECK-NEXT:    [[TOBOOL_3:%.*]] = icmp eq i32 [[AND_3]], 0
 ; CHECK-NEXT:    [[CONV_3:%.*]] = select i1 [[TOBOOL_3]], i8 48, i8 49
@@ -142,7 +142,7 @@ define ptr @f(ptr returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK-NEXT:    store i8 [[CONV_3]], ptr [[ARRAYIDX_3]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_3:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 4
 ; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[INDVARS_IV_NEXT_3]] to i32
-; CHECK-NEXT:    [[SHL_4:%.*]] = shl i32 1, [[TMP28]]
+; CHECK-NEXT:    [[SHL_4:%.*]] = shl nuw i32 1, [[TMP28]]
 ; CHECK-NEXT:    [[AND_4:%.*]] = and i32 [[SHL_4]], [[X]]
 ; CHECK-NEXT:    [[TOBOOL_4:%.*]] = icmp eq i32 [[AND_4]], 0
 ; CHECK-NEXT:    [[CONV_4:%.*]] = select i1 [[TOBOOL_4]], i8 48, i8 49
@@ -150,7 +150,7 @@ define ptr @f(ptr returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK-NEXT:    store i8 [[CONV_4]], ptr [[ARRAYIDX_4]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_4:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 5
 ; CHECK-NEXT:    [[TMP29:%.*]] = trunc i64 [[INDVARS_IV_NEXT_4]] to i32
-; CHECK-NEXT:    [[SHL_5:%.*]] = shl i32 1, [[TMP29]]
+; CHECK-NEXT:    [[SHL_5:%.*]] = shl nuw i32 1, [[TMP29]]
 ; CHECK-NEXT:    [[AND_5:%.*]] = and i32 [[SHL_5]], [[X]]
 ; CHECK-NEXT:    [[TOBOOL_5:%.*]] = icmp eq i32 [[AND_5]], 0
 ; CHECK-NEXT:    [[CONV_5:%.*]] = select i1 [[TOBOOL_5]], i8 48, i8 49
@@ -158,7 +158,7 @@ define ptr @f(ptr returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK-NEXT:    store i8 [[CONV_5]], ptr [[ARRAYIDX_5]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_5:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 6
 ; CHECK-NEXT:    [[TMP30:%.*]] = trunc i64 [[INDVARS_IV_NEXT_5]] to i32
-; CHECK-NEXT:    [[SHL_6:%.*]] = shl i32 1, [[TMP30]]
+; CHECK-NEXT:    [[SHL_6:%.*]] = shl nuw i32 1, [[TMP30]]
 ; CHECK-NEXT:    [[AND_6:%.*]] = and i32 [[SHL_6]], [[X]]
 ; CHECK-NEXT:    [[TOBOOL_6:%.*]] = icmp eq i32 [[AND_6]], 0
 ; CHECK-NEXT:    [[CONV_6:%.*]] = select i1 [[TOBOOL_6]], i8 48, i8 49
@@ -166,7 +166,7 @@ define ptr @f(ptr returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK-NEXT:    store i8 [[CONV_6]], ptr [[ARRAYIDX_6]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_6:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 7
 ; CHECK-NEXT:    [[TMP31:%.*]] = trunc i64 [[INDVARS_IV_NEXT_6]] to i32
-; CHECK-NEXT:    [[SHL_7:%.*]] = shl i32 1, [[TMP31]]
+; CHECK-NEXT:    [[SHL_7:%.*]] = shl nuw i32 1, [[TMP31]]
 ; CHECK-NEXT:    [[AND_7:%.*]] = and i32 [[SHL_7]], [[X]]
 ; CHECK-NEXT:    [[TOBOOL_7:%.*]] = icmp eq i32 [[AND_7]], 0
 ; CHECK-NEXT:    [[CONV_7:%.*]] = select i1 [[TOBOOL_7]], i8 48, i8 49
