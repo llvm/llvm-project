@@ -11,7 +11,7 @@ define void @box(ptr noalias nocapture noundef writeonly sret(%Box) align 16 der
 ; CHECK-NEXT:    slli.d $a2, $a1, 5
 ; CHECK-NEXT:    alsl.d $a1, $a1, $a2, 4
 ; CHECK-NEXT:    addi.d $a2, $sp, 16
-; CHECK-NEXT:    add.d $a3, $a2, $a1
+; CHECK-NEXT:    add.d $a3, $a1, $a2
 ; CHECK-NEXT:    vldx $vr0, $a1, $a2
 ; CHECK-NEXT:    vld $vr1, $a3, 32
 ; CHECK-NEXT:    vld $vr2, $a3, 16

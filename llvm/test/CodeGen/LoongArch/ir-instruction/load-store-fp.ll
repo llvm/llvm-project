@@ -20,13 +20,13 @@ define float @fldx_s(ptr %a, i64 %idx) nounwind {
 ; LA64F-LABEL: fldx_s:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    slli.d $a1, $a1, 2
-; LA64F-NEXT:    fldx.s $fa0, $a0, $a1
+; LA64F-NEXT:    fldx.s $fa0, $a1, $a0
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: fldx_s:
 ; LA64D:       # %bb.0:
 ; LA64D-NEXT:    slli.d $a1, $a1, 2
-; LA64D-NEXT:    fldx.s $fa0, $a0, $a1
+; LA64D-NEXT:    fldx.s $fa0, $a1, $a0
 ; LA64D-NEXT:    ret
   %1 = getelementptr float, ptr %a, i64 %idx
   %2 = load float, ptr %1
@@ -50,13 +50,13 @@ define double @fldx_d(ptr %a, i64 %idx) nounwind {
 ; LA64F-LABEL: fldx_d:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    slli.d $a1, $a1, 3
-; LA64F-NEXT:    ldx.d $a0, $a0, $a1
+; LA64F-NEXT:    ldx.d $a0, $a1, $a0
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: fldx_d:
 ; LA64D:       # %bb.0:
 ; LA64D-NEXT:    slli.d $a1, $a1, 3
-; LA64D-NEXT:    fldx.d $fa0, $a0, $a1
+; LA64D-NEXT:    fldx.d $fa0, $a1, $a0
 ; LA64D-NEXT:    ret
   %1 = getelementptr double, ptr %a, i64 %idx
   %2 = load double, ptr %1
@@ -79,13 +79,13 @@ define void @fstx_s(ptr %dst, i64 %idx, float %val) nounwind {
 ; LA64F-LABEL: fstx_s:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    slli.d $a1, $a1, 2
-; LA64F-NEXT:    fstx.s $fa0, $a0, $a1
+; LA64F-NEXT:    fstx.s $fa0, $a1, $a0
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: fstx_s:
 ; LA64D:       # %bb.0:
 ; LA64D-NEXT:    slli.d $a1, $a1, 2
-; LA64D-NEXT:    fstx.s $fa0, $a0, $a1
+; LA64D-NEXT:    fstx.s $fa0, $a1, $a0
 ; LA64D-NEXT:    ret
   %1 = getelementptr float, ptr %dst, i64 %idx
   store float %val, ptr %1
@@ -109,13 +109,13 @@ define void @fstx_d(ptr %dst, i64 %idx, double %val) nounwind {
 ; LA64F-LABEL: fstx_d:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    slli.d $a1, $a1, 3
-; LA64F-NEXT:    stx.d $a2, $a0, $a1
+; LA64F-NEXT:    stx.d $a2, $a1, $a0
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: fstx_d:
 ; LA64D:       # %bb.0:
 ; LA64D-NEXT:    slli.d $a1, $a1, 3
-; LA64D-NEXT:    fstx.d $fa0, $a0, $a1
+; LA64D-NEXT:    fstx.d $fa0, $a1, $a0
 ; LA64D-NEXT:    ret
   %1 = getelementptr double, ptr %dst, i64 %idx
   store double %val, ptr %1
