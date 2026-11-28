@@ -31,7 +31,7 @@ class RISCVSubtarget;
 class RISCVTargetMachine;
 
 class RISCVCodeGenPreparePass
-    : public OptionalPassInfoMixin<RISCVCodeGenPreparePass> {
+    : public RequiredPassInfoMixin<RISCVCodeGenPreparePass> {
 private:
   const RISCVTargetMachine *TM;
 

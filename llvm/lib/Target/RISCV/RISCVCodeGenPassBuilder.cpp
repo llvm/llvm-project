@@ -105,8 +105,8 @@ void RISCVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 
     addFunctionPass(RISCVGatherScatterLoweringPass(&getTM()), PMW);
     addFunctionPass(InterleavedAccessPass(TM), PMW);
-    addFunctionPass(RISCVCodeGenPreparePass(&getTM()), PMW);
   }
+  addFunctionPass(RISCVCodeGenPreparePass(&getTM()), PMW);
 
   Base::addIRPasses(PMW);
 
