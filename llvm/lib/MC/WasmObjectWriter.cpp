@@ -1831,6 +1831,8 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
       Flags |= wasm::WASM_SYMBOL_EXPORTED;
     if (WS.isTLS())
       Flags |= wasm::WASM_SYMBOL_TLS;
+    if (WS.isMemtag())
+      Flags |= wasm::WASM_SYMBOL_MEMTAG;
 
     wasm::WasmSymbolInfo Info;
     Info.Name = WS.getName();

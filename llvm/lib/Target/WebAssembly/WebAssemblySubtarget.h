@@ -63,6 +63,7 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   bool HasGC = false;
   bool HasCooperativeMultithreading = false;
   bool HasLibcallThreadContext = false;
+  bool HasMemtag = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
@@ -135,6 +136,7 @@ public:
     return HasCooperativeMultithreading;
   }
   bool hasLibcallThreadContext() const { return HasLibcallThreadContext; }
+  bool hasMemtag() const { return HasMemtag; }
   bool hasMultiMemory() const { return HasMultiMemory; }
   bool hasMultivalue() const { return HasMultivalue; }
   bool hasMutableGlobals() const { return HasMutableGlobals; }

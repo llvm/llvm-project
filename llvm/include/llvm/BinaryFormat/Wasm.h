@@ -262,6 +262,10 @@ const unsigned WASM_SYMBOL_EXPLICIT_NAME = 0x40;
 const unsigned WASM_SYMBOL_NO_STRIP = 0x80;
 const unsigned WASM_SYMBOL_TLS = 0x100;
 const unsigned WASM_SYMBOL_ABSOLUTE = 0x200;
+// LLVM extension: the symbol's address is tagged at instantiation time. The
+// linker collects these symbols and emits memory tag descriptors for the
+// runtime. Not yet part of the wasm tool-conventions linking format.
+const unsigned WASM_SYMBOL_MEMTAG = 0x400;
 
 #define WASM_RELOC(name, value) name = value,
 

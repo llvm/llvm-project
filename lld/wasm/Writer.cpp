@@ -574,6 +574,7 @@ void Writer::addSections() {
   addSection(make<DataSection>(segments));
 
   createCustomSections();
+  addSection(make<MemtagGlobalsSection>());
 
   addSection(out.linkingSec);
   if (ctx.arg.emitRelocs || ctx.arg.relocatable) {

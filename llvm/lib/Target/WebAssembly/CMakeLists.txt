@@ -62,6 +62,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyNullifyDebugValueLists.cpp
   WebAssemblyOptimizeLiveIntervals.cpp
   WebAssemblyOptimizeReturned.cpp
+  WebAssemblyStackTagging.cpp
   WebAssemblyPeephole.cpp
   WebAssemblyReduceToAnyAllTrue.cpp
   WebAssemblyRefTypeMem2Local.cpp
@@ -80,6 +81,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyTargetObjectFile.cpp
   WebAssemblyTargetTransformInfo.cpp
   WebAssemblyUtilities.cpp
+  WebAssemblyGlobalsTagging.cpp
 
   DEPENDS
   intrinsics_gen
