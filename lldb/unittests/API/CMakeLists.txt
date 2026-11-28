@@ -11,6 +11,7 @@ add_lldb_unittest(APITests
   SBBreakpointClearConditionTest.cpp
   SBProtocolServerTest.cpp
   SBProgressTest.cpp
+  SBScriptObjectTest.cpp
   SBTargetTest.cpp
   SBTypeCategoryTest.cpp
   SBTypeFilterTest.cpp
