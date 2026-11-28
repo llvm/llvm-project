@@ -257,7 +257,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__riscv_landing_pad_unlabeled");
       break;
     case CFBranchLabelSchemeKind::FuncSig:
-      // TODO: Define macros after the func-sig scheme is implemented
+      Builder.defineMacro("__riscv_landing_pad_func_sig");
       break;
     case CFBranchLabelSchemeKind::Default:
       llvm_unreachable("default cf-branch-label scheme should already be "
@@ -647,22 +647,11 @@ bool RISCVTargetInfo::validateCpuIs(StringRef CPUName) const {
 
 bool RISCVTargetInfo::checkCFBranchLabelSchemeSupported(
     const CFBranchLabelSchemeKind Scheme, DiagnosticsEngine &Diags) const {
-  // TODO: Allow the default func-sig scheme to be selected after backend
-  // implements it
   switch (Scheme) {
   case CFBranchLabelSchemeKind::Default:
-    return true;
   case CFBranchLabelSchemeKind::Unlabeled:
-    return true;
   case CFBranchLabelSchemeKind::FuncSig:
-    Diags.Report(diag::err_opt_unsupported_with_suggest)
-        << (Twine("-mcf-branch-label-scheme=") +
-            getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::FuncSig))
-               .str()
-        << (Twine("-mcf-branch-label-scheme=") +
-            getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::Unlabeled))
-               .str();
-    return false;
+    return true;
   }
   return TargetInfo::checkCFBranchLabelSchemeSupported(Scheme, Diags);
 }

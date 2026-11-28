@@ -76,6 +76,7 @@ add_llvm_component_library(LLVMTransformUtils
   ProfileVerify.cpp
   PromoteMemoryToRegister.cpp
   RelLookupTableConverter.cpp
+  RISCVZicfilpHash.cpp
   ScalarEvolutionExpander.cpp
   SCCPSolver.cpp
   StripConvergenceIntrinsics.cpp
