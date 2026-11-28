@@ -178,6 +178,28 @@ func.func @test_add_cmpi_i64() -> i1 {
 }
 
 //===----------------------------------------------------------------------===//
+// Test folding index cast chains
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func.func @fold_index_cast_castui_chain
+// CHECK-SAME:    (%[[ARG0:.+]]: i8)
+// CHECK-NEXT:    return %[[ARG0]] : i8
+func.func @fold_index_cast_castui_chain(%arg0: i8) -> i8 {
+  %0 = arith.index_cast %arg0 : i8 to index
+  %1 = arith.index_castui %0 : index to i8
+  return %1 : i8
+}
+
+// CHECK-LABEL: func.func @fold_index_castui_cast_chain
+// CHECK-SAME:    (%[[ARG0:.+]]: i8)
+// CHECK-NEXT:    return %[[ARG0]] : i8
+func.func @fold_index_castui_cast_chain(%arg0: i8) -> i8 {
+  %0 = arith.index_castui %arg0 : i8 to index
+  %1 = arith.index_cast %0 : index to i8
+  return %1 : i8
+}
+
+//===----------------------------------------------------------------------===//
 // arith.addi
 //===----------------------------------------------------------------------===//
 
