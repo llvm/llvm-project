@@ -543,6 +543,12 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
+  /// For each entry of \c NonAffectingRanges, the offset to subtract from a
+  /// location in it to reach the same text in a loaded module file, or zero if
+  /// there is no copy there. Unlike the two vectors above, this one has no
+  /// leading sentinel element.
+  std::vector<int64_t> NonAffectingRedirectAdjustments;
+
   /// A list of classes in named modules which need to emit the VTable in
   /// the corresponding object file.
   llvm::SmallVector<CXXRecordDecl *> PendingEmittingVTables;
@@ -557,6 +563,14 @@ private:
   SourceLocation getAffectingIncludeLoc(const SourceManager &SourceMgr,
                                         const SrcMgr::FileInfo &File);
 
+  /// Returns \p Loc in a loaded module file's copy of its file, or an invalid
+  /// location if there is no such copy.
+  SourceLocation getRedirectedLocation(SourceLocation Loc) const;
+
+  /// Returns the index of the first non-affecting range whose end is not
+  /// before \p Offset.
+  unsigned getNonAffectingRangeLowerBound(SourceLocation::UIntTy Offset) const;
+
   /// Returns an adjusted \c FileID, accounting for any non-affecting input
   /// files.
   FileID getAdjustedFileID(FileID FID) const;
@@ -566,6 +580,10 @@ private:
   /// Returns an adjusted \c SourceLocation, accounting for any non-affecting
   /// input files.
   SourceLocation getAdjustedLocation(SourceLocation Loc) const;
+  /// Like \c getAdjustedLocation, but never redirects into a loaded module
+  /// file. This is for the values that a reader resolves against this module
+  /// file rather than in the global source space.
+  SourceLocation getAdjustedLocalLocation(SourceLocation Loc) const;
   /// Returns an adjusted \c SourceRange, accounting for any non-affecting input
   /// files.
   SourceRange getAdjustedRange(SourceRange Range) const;
@@ -769,6 +787,9 @@ public:
   /// Emit a source location, delta encoded against \p Chain.
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
                          SourceLocationEncoding::Chain &Chain);
+
+  /// Emit a source location that stays local to this module file.
+  void AddLocalSourceLocation(SourceLocation Loc, RecordDataImpl &Record);
 
   /// Return the raw encodings for source locations.
   SourceLocationEncoding::RawLocEncoding

@@ -1447,6 +1447,11 @@ private:
     const StringRef &operator*() && = delete;
   };
 
+  /// Finds a loaded module file that kept source location entries for the
+  /// module map \p Wanted, and returns where in it they start. The result is
+  /// invalid if no loaded module file has a copy.
+  serialization::InputFileLoc getLoadedModuleMapLoc(FileEntryRef Wanted);
+
 public:
   /// Get the buffer for resolving paths.
   SmallString<0> &getPathBuf() { return PathBuf; }
