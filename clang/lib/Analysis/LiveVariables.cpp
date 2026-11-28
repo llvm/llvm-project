@@ -497,6 +497,13 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
       continue;
     }
 
+    // The cleanup function receives the variable's address, so the implicit
+    // call keeps the variable live until the end of its scope.
+    if (auto Cleanup = elem.getAs<CFGCleanupFunction>()) {
+      val.liveDecls = DSetFact.add(val.liveDecls, Cleanup->getVarDecl());
+      continue;
+    }
+
     if (!elem.getAs<CFGStmt>())
       continue;
 

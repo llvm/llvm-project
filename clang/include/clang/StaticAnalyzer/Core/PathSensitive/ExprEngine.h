@@ -348,6 +348,9 @@ public:
 
   void ProcessImplicitDtor(const CFGImplicitDtor D, ExplodedNode *Pred);
 
+  void ProcessCleanupFunction(const CFGCleanupFunction Cleanup,
+                              ExplodedNode *Pred);
+
   void ProcessNewAllocator(const CXXNewExpr *NE, ExplodedNode *Pred);
 
   void ProcessAutomaticObjDtor(const CFGAutomaticObjDtor D,

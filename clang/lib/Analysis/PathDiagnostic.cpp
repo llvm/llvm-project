@@ -559,9 +559,15 @@ static PathDiagnosticLocation getLocationForCaller(const StackFrame *SF,
     return PathDiagnosticLocation::createEnd(Dtor.getBindTemporaryExpr(), SM,
                                              CallerSF);
   }
+  case CFGElement::CleanupFunction: {
+    // The cleanup call is implicit and runs when the variable goes out of
+    // scope, so anchor it at the end of the trigger statement.
+    const auto &Cleanup = Source.castAs<CFGCleanupFunction>();
+    return PathDiagnosticLocation::createEnd(Cleanup.getTriggerStmt(), SM,
+                                             CallerSF);
+  }
   case CFGElement::ScopeBegin:
   case CFGElement::ScopeEnd:
-  case CFGElement::CleanupFunction:
     llvm_unreachable("not yet implemented!");
   case CFGElement::LifetimeEnds:
   case CFGElement::FullExprCleanup:
