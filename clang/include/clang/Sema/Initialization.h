@@ -1158,6 +1158,9 @@ public:
     /// List-copy-initialization chose an explicit constructor.
     FK_ExplicitConstructor,
 
+    /// Copy-list-initialization chose an explicit conversion function.
+    FK_ExplicitConversionFunction,
+
     /// Parenthesized list initialization failed at some point.
     /// This is a C++20 feature.
     FK_ParenthesizedListInitFailed,
