@@ -1212,6 +1212,14 @@ bool llvm::isFinite(const Loop *L) {
   return L->getHeader()->getParent()->willReturn();
 }
 
+bool llvm::onlyUnreachableSuccessors(const BasicBlock *BB, const Loop *L) {
+  for (const BasicBlock *Succ : successors(BB))
+    if (!L->contains(Succ) && (!isa<UnreachableInst>(Succ->getTerminator()) ||
+                               &Succ->front() != Succ->getTerminator()))
+      return false;
+  return true;
+}
+
 bool llvm::isLoopNestFinite(Loop *L, ScalarEvolution &SE, const LoopInfo &LI) {
   // An assumption on L covers every cycle inside it.
   if (SE.loopIsFiniteByAssumption(L))
