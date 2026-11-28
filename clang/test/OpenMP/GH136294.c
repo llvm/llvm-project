@@ -361,4 +361,44 @@ void pointer_array(double **pp, int n) {
 #pragma omp target update to((([n])pp)[0:n][1])
 }
 
+// A pointer to a variable length array: the pointer is the outermost dimension
+// and needs no size of its own.
+// CHECK-LABEL: define {{.*}}void @pointer_to_vla(
+// CHECK:       store ptr %u, ptr [[PV_U_ADDR:%.+]],
+void pointer_to_vla(int t, int x, int y, int z, int (*u)[x][y][z]) {
+  // CHECK:      [[PV_U:%.+]] = load ptr, ptr [[PV_U_ADDR]],
+  // CHECK:      store ptr [[PV_U]], ptr
+  // CHECK:      getelementptr inbounds [5 x %struct.descriptor_dim{{.*}}], ptr %{{.+}}, i64 0, i64 0
+  // CHECK:      call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr %{{.+}}, ptr %{{.+}}, ptr @{{.+}}, ptr @{{.+}}, ptr null, ptr null)
+#pragma omp target update from(u[0:t][0:x][0:y][0:z])
+}
+
+// A pointer to a constant size array: the same descriptor as for double[3][4].
+// CHECK-LABEL: define {{.*}}void @pointer_to_array(
+void pointer_to_array(double (*b)[4]) {
+  // CHECK:      [[PB_DIM0:%.+]] = getelementptr inbounds [3 x [[PB_DESC:%struct.descriptor_dim[.0-9]*]]], ptr [[PB_DIMS:%.+]], i64 0, i64 0
+  // CHECK-NEXT: [[F:%.+]] = getelementptr inbounds nuw [[PB_DESC]], ptr [[PB_DIM0]], i32 0, i32 0
+  // CHECK-NEXT: store i64 0, ptr [[F]],
+  // CHECK-NEXT: [[F:%.+]] = getelementptr inbounds nuw [[PB_DESC]], ptr [[PB_DIM0]], i32 0, i32 1
+  // CHECK-NEXT: store i64 3, ptr [[F]],
+  // CHECK-NEXT: [[F:%.+]] = getelementptr inbounds nuw [[PB_DESC]], ptr [[PB_DIM0]], i32 0, i32 2
+  // CHECK-NEXT: store i64 32, ptr [[F]],
+  // CHECK-NEXT: [[PB_DIM1:%.+]] = getelementptr inbounds [3 x [[PB_DESC]]], ptr [[PB_DIMS]], i64 0, i64 1
+  // CHECK-NEXT: [[F:%.+]] = getelementptr inbounds nuw [[PB_DESC]], ptr [[PB_DIM1]], i32 0, i32 0
+  // CHECK-NEXT: store i64 8, ptr [[F]],
+  // CHECK-NEXT: [[F:%.+]] = getelementptr inbounds nuw [[PB_DESC]], ptr [[PB_DIM1]], i32 0, i32 1
+  // CHECK-NEXT: store i64 1, ptr [[F]],
+  // CHECK-NEXT: [[F:%.+]] = getelementptr inbounds nuw [[PB_DESC]], ptr [[PB_DIM1]], i32 0, i32 2
+  // CHECK-NEXT: store i64 8, ptr [[F]],
+  // CHECK-NEXT: [[PB_DIM2:%.+]] = getelementptr inbounds [3 x [[PB_DESC]]], ptr [[PB_DIMS]], i64 0, i64 2
+  // CHECK-NEXT: [[F:%.+]] = getelementptr inbounds nuw [[PB_DESC]], ptr [[PB_DIM2]], i32 0, i32 0
+  // CHECK-NEXT: store i64 0, ptr [[F]],
+  // CHECK-NEXT: [[F:%.+]] = getelementptr inbounds nuw [[PB_DESC]], ptr [[PB_DIM2]], i32 0, i32 1
+  // CHECK-NEXT: store i64 8, ptr [[F]],
+  // CHECK-NEXT: [[F:%.+]] = getelementptr inbounds nuw [[PB_DESC]], ptr [[PB_DIM2]], i32 0, i32 2
+  // CHECK-NEXT: store i64 1, ptr [[F]],
+  // CHECK:      call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr %{{.+}}, ptr %{{.+}}, ptr @{{.+}}, ptr @{{.+}}, ptr null, ptr null)
+#pragma omp target update from(b[0:3][1])
+}
+
 #endif // HEADER
