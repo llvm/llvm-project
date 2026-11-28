@@ -155,14 +155,22 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   }
 }
 
+static bool hasCondition(const AssumeInst *CI) {
+  return !match(CI->getOperand(0), m_One());
+}
+
 void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
   removeAffectedValues(CI);
   llvm::erase(AssumeHandles, CI);
+  llvm::erase(ConditionalAssumeHandles, CI);
 }
 
 void AssumptionCache::replaceAssumption(WeakVH &Handle, AssumeInst *New) {
   removeAffectedValues(cast<AssumeInst>(Handle));
+  llvm::erase(ConditionalAssumeHandles, cast<AssumeInst>(Handle));
   Handle = New;
+  if (hasCondition(New))
+    ConditionalAssumeHandles.push_back(New);
   updateAffectedValues(New);
 }
 
@@ -206,8 +214,11 @@ void AssumptionCache::scanFunction() {
   // to this cache.
   for (BasicBlock &B : F)
     for (Instruction &I : B)
-      if (isa<AssumeInst>(&I))
-        AssumeHandles.push_back(&I);
+      if (auto *Assume = dyn_cast<AssumeInst>(&I)) {
+        AssumeHandles.push_back(Assume);
+        if (hasCondition(Assume))
+          ConditionalAssumeHandles.push_back(Assume);
+      }
 
   // Mark the scan as complete.
   Scanned = true;
@@ -245,6 +256,8 @@ void AssumptionCache::registerAssumption(AssumeInst *CI) {
     return;
 
   AssumeHandles.push_back(CI);
+  if (hasCondition(CI))
+    ConditionalAssumeHandles.push_back(CI);
 
 #ifndef NDEBUG
   assert(CI->getParent() &&

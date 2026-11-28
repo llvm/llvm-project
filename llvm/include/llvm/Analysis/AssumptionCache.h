@@ -71,6 +71,9 @@ private:
   /// intrinsic.
   SmallVector<WeakVH, 4> AssumeHandles;
 
+  /// The subset of AssumeHandles whose condition is not the constant true.
+  SmallVector<WeakVH, 4> ConditionalAssumeHandles;
+
   class LLVM_ABI AffectedValueCallbackVH final : public CallbackVH {
     AssumptionCache *AC;
 
@@ -146,6 +149,7 @@ public:
   /// It will be re-scanned the next time it is requested.
   void clear() {
     AssumeHandles.clear();
+    ConditionalAssumeHandles.clear();
     AffectedValues.clear();
     Scanned = false;
   }
@@ -162,6 +166,13 @@ public:
     if (!Scanned)
       scanFunction();
     return AssumeHandles;
+  }
+
+  /// Access the assumptions whose condition is not the constant true.
+  MutableArrayRef<WeakVH> conditionalAssumptions() {
+    if (!Scanned)
+      scanFunction();
+    return ConditionalAssumeHandles;
   }
 
   /// Access the list of assumptions which affect this value.
