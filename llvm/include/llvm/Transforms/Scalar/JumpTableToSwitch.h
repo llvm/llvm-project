@@ -17,7 +17,8 @@ class Function;
 
 class JumpTableToSwitchPass
     : public OptionalPassInfoMixin<JumpTableToSwitchPass> {
-  // Necessary until we switch to GUIDs as metadata, after which we can drop it.
+  // Needed for sample profiles, which key local functions by their plain name.
+  // See getIRPGOObjectName.
   const bool InLTO;
 
 public:
