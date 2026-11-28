@@ -199,5 +199,361 @@ define i32 @ilogb_poison() {
   ret i32 %r
 }
 
-declare i32 @ilogbf(float)
+; The following tests are for the ilogb normal optimization where floating-point
+; numbers which are known to be normal can have the exponent extracted using
+; simple bit manipulations.
+
+; copysign is used to create a fp value which won't cause the ilogb call to
+; be immediately constant-folded.
+
+define i32 @ilogb_normal_non_pow2(double %sign) {
+; CHECK-LABEL: define i32 @ilogb_normal_non_pow2(
+; CHECK-SAME: double [[SIGN:%.*]]) {
+; CHECK-NEXT:    ret i32 3
+;
+  %x = call double @llvm.copysign.f64(double 12.5, double %sign)
+  %r = call i32 @ilogb(double %x)
+  ret i32 %r
+}
+
+define i32 @ilogbf_normal_non_pow2(float %sign) {
+; CHECK-LABEL: define i32 @ilogbf_normal_non_pow2(
+; CHECK-SAME: float [[SIGN:%.*]]) {
+; CHECK-NEXT:    ret i32 3
+;
+  %x = call float @llvm.copysign.f32(float 12.5, float %sign)
+  %r = call i32 @ilogbf(float %x)
+  ret i32 %r
+}
+
+define i32 @ilogbl_normal_non_pow2(fp128 %sign) {
+; CHECK-LABEL: define i32 @ilogbl_normal_non_pow2(
+; CHECK-SAME: fp128 [[SIGN:%.*]]) {
+; CHECK-NEXT:    ret i32 3
+;
+  %x = call fp128 @llvm.copysign.f128(fp128 12.5, fp128 %sign)
+  %r = call i32 @ilogbl(fp128 %x)
+  ret i32 %r
+}
+
+
+define i32 @ilogb_normal_pow2(double %sign) {
+; CHECK-LABEL: define i32 @ilogb_normal_pow2(
+; CHECK-SAME: double [[SIGN:%.*]]) {
+; CHECK-NEXT:    ret i32 4
+;
+  %x = call double @llvm.copysign.f64(double 16.0, double %sign)
+  %r = call i32 @ilogb(double %x)
+  ret i32 %r
+}
+
+define i32 @ilogbf_normal_pow2(float %sign) {
+; CHECK-LABEL: define i32 @ilogbf_normal_pow2(
+; CHECK-SAME: float [[SIGN:%.*]]) {
+; CHECK-NEXT:    ret i32 4
+;
+  %x = call float @llvm.copysign.f32(float 16.0, float %sign)
+  %r = call i32 @ilogbf(float %x)
+  ret i32 %r
+}
+
+define i32 @ilogbl_normal_pow2(fp128 %sign) {
+; CHECK-LABEL: define i32 @ilogbl_normal_pow2(
+; CHECK-SAME: fp128 [[SIGN:%.*]]) {
+; CHECK-NEXT:    ret i32 4
+;
+  %x = call fp128 @llvm.copysign.f128(fp128 16.0, fp128 %sign)
+  %r = call i32 @ilogbl(fp128 %x)
+  ret i32 %r
+}
+
+
+define i32 @ilogb_normal_smallest(double %sign) {
+; CHECK-LABEL: define i32 @ilogb_normal_smallest(
+; CHECK-SAME: double [[SIGN:%.*]]) {
+; CHECK-NEXT:    ret i32 -1022
+;
+  %x = call double @llvm.copysign.f64(double 0x1.0p-1022, double %sign)
+  %r = call i32 @ilogb(double %x)
+  ret i32 %r
+}
+
+define i32 @ilogbf_normal_smallest(float %sign) {
+; CHECK-LABEL: define i32 @ilogbf_normal_smallest(
+; CHECK-SAME: float [[SIGN:%.*]]) {
+; CHECK-NEXT:    ret i32 -126
+;
+  %x = call float @llvm.copysign.f32(float 0x1.0p-126, float %sign)
+  %r = call i32 @ilogbf(float %x)
+  ret i32 %r
+}
+
+define i32 @ilogbl_normal_smallest(fp128 %sign) {
+; CHECK-LABEL: define i32 @ilogbl_normal_smallest(
+; CHECK-SAME: fp128 [[SIGN:%.*]]) {
+; CHECK-NEXT:    ret i32 -16382
+;
+  %x = call fp128 @llvm.copysign.f128(fp128 0x1.0p-16382, fp128 %sign)
+  %r = call i32 @ilogbl(fp128 %x)
+  ret i32 %r
+}
+
+
+define i32 @ilogb_normal_largest(double %sign) {
+; CHECK-LABEL: define i32 @ilogb_normal_largest(
+; CHECK-SAME: double [[SIGN:%.*]]) {
+; CHECK-NEXT:    ret i32 1023
+;
+  %x = call double @llvm.copysign.f64(double 0x1.fffffffffffffp+1023, double %sign)
+  %r = call i32 @ilogb(double %x)
+  ret i32 %r
+}
+
+define i32 @ilogbf_normal_largest(float %sign) {
+; CHECK-LABEL: define i32 @ilogbf_normal_largest(
+; CHECK-SAME: float [[SIGN:%.*]]) {
+; CHECK-NEXT:    ret i32 127
+;
+  %x = call float @llvm.copysign.f32(float 0x1.fffffep+127, float %sign)
+  %r = call i32 @ilogbf(float %x)
+  ret i32 %r
+}
+
+define i32 @ilogbl_normal_largest(fp128 %sign) {
+; CHECK-LABEL: define i32 @ilogbl_normal_largest(
+; CHECK-SAME: fp128 [[SIGN:%.*]]) {
+; CHECK-NEXT:    ret i32 16383
+;
+  %x = call fp128 @llvm.copysign.f128(
+  fp128 0x1.ffffffffffffffffffffffffffffp+16383,
+  fp128 %sign)
+  %r = call i32 @ilogbl(fp128 %x)
+  ret i32 %r
+}
+
+define i32 @ilogb_known_normal_operations(double %a) {
+; CHECK-LABEL: define i32 @ilogb_known_normal_operations(
+; CHECK-SAME: double [[A:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = call i1 @llvm.is.fpclass.f64(double [[A]], /* (norm) */ i32 264)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[A]])
+; CHECK-NEXT:    [[ILOGB_NOSIGN:%.*]] = bitcast double [[TMP1]] to i64
+; CHECK-NEXT:    [[ILOGB_EXP:%.*]] = lshr i64 [[ILOGB_NOSIGN]], 52
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i64 [[ILOGB_EXP]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[TMP2]], -1023
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %and = call i1 @llvm.is.fpclass.f64(double %a, i32 264)
+  call void @llvm.assume(i1 %and)
+  %r = call i32 @ilogb(double %a)
+  ret i32 %r
+}
+
+define i32 @ilogbf_known_normal_operations(float %a) {
+; CHECK-LABEL: define i32 @ilogbf_known_normal_operations(
+; CHECK-SAME: float [[A:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = call i1 @llvm.is.fpclass.f32(float [[A]], /* (norm) */ i32 264)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[A]])
+; CHECK-NEXT:    [[ILOGB_NOSIGN:%.*]] = bitcast float [[TMP1]] to i32
+; CHECK-NEXT:    [[ILOGB_EXP:%.*]] = lshr i32 [[ILOGB_NOSIGN]], 23
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[ILOGB_EXP]], -127
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %and = call i1 @llvm.is.fpclass.f32(float %a, i32 264)
+  call void @llvm.assume(i1 %and)
+  %r = call i32 @ilogbf(float %a)
+  ret i32 %r
+}
+
+define i32 @ilogbl_known_normal_operations(fp128 %a) {
+; CHECK-LABEL: define i32 @ilogbl_known_normal_operations(
+; CHECK-SAME: fp128 [[A:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = call i1 @llvm.is.fpclass.f128(fp128 [[A]], /* (norm) */ i32 264)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fp128 @llvm.fabs.f128(fp128 [[A]])
+; CHECK-NEXT:    [[ILOGB_NOSIGN:%.*]] = bitcast fp128 [[TMP1]] to i128
+; CHECK-NEXT:    [[ILOGB_EXP:%.*]] = lshr i128 [[ILOGB_NOSIGN]], 112
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i128 [[ILOGB_EXP]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[TMP2]], -16383
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %and = call i1 @llvm.is.fpclass.f128(fp128 %a, i32 264)
+  call void @llvm.assume(i1 %and)
+  %r = call i32 @ilogbl(fp128 %a)
+  ret i32 %r
+}
+
+; Ensure the ilogb normal optimization will work when the normal class can be inferred
+; from the control flow.
+define i32 @ilogb_known_normal_from_fpclass(double %a) {
+; CHECK-LABEL: define i32 @ilogb_known_normal_from_fpclass(
+; CHECK-SAME: double [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[A]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IS_ZERO:.*]], label %[[NOT_ZERO:.*]]
+; CHECK:       [[NOT_ZERO]]:
+; CHECK-NEXT:    [[NANCMP:%.*]] = fcmp ord double [[A]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[NANCMP]], label %[[NOT_NAN:.*]], label %[[IS_NAN:.*]]
+; CHECK:       [[NOT_NAN]]:
+; CHECK-NEXT:    [[FA:%.*]] = call double @llvm.fabs.f64(double [[A]])
+; CHECK-NEXT:    [[INFCMP:%.*]] = fcmp ueq double [[FA]], +inf
+; CHECK-NEXT:    br i1 [[INFCMP]], label %[[IS_INF:.*]], label %[[NOT_INF:.*]]
+; CHECK:       [[NOT_INF]]:
+; CHECK-NEXT:    [[SUBCMP:%.*]] = fcmp ult double [[FA]], f0x0010000000000000
+; CHECK-NEXT:    br i1 [[SUBCMP]], label %[[IS_SUB:.*]], label %[[NOT_SUB:.*]]
+; CHECK:       [[NOT_SUB]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call double @llvm.fabs.f64(double [[A]])
+; CHECK-NEXT:    [[ILOGB_NOSIGN:%.*]] = bitcast double [[TMP0]] to i64
+; CHECK-NEXT:    [[ILOGB_EXP:%.*]] = lshr i64 [[ILOGB_NOSIGN]], 52
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[ILOGB_EXP]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[TMP1]], -1023
+; CHECK-NEXT:    ret i32 [[R]]
+; CHECK:       [[IS_SUB]]:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       [[IS_INF]]:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       [[IS_NAN]]:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       [[IS_ZERO]]:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %cmp = fcmp oeq double %a, 0.0
+  br i1 %cmp, label %is_zero, label %not_zero
+not_zero:
+  %nancmp = fcmp oeq double %a, %a
+  br i1 %nancmp, label %not_nan, label %is_nan
+not_nan:
+  %fa = call double @llvm.fabs.f64(double %a)
+  %infcmp = fcmp one double %fa, +inf
+  br i1 %infcmp, label %not_inf, label %is_inf
+not_inf:
+  %subcmp = fcmp oge double %fa, 0x1.0p-1022  ; smallest normal double (2^-1022)
+  br i1 %subcmp, label %not_sub, label %is_sub
+not_sub:
+  %r = call i32 @ilogb(double %a)
+  ret i32 %r
+is_sub:
+  ret i32 0
+is_inf:
+  ret i32 0
+is_nan:
+  ret i32 0
+is_zero:
+  ret i32 0
+}
+
+
+; Ensure the ilogb normal optimization does not happen for non-normal values.
+
+define i32 @ilogb_non_normal_zero(double %sign) {
+; CHECK-LABEL: define i32 @ilogb_non_normal_zero(
+; CHECK-SAME: double [[SIGN:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = call double @llvm.copysign.f64(double 0.000000e+00, double [[SIGN]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(double [[X]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = call double @llvm.copysign.f64(double 0.0, double %sign)
+  %r = call i32 @ilogb(double %x)
+  ret i32 %r
+}
+
+define i32 @ilogb_non_normal_subnormal(double %sign) {
+; CHECK-LABEL: define i32 @ilogb_non_normal_subnormal(
+; CHECK-SAME: double [[SIGN:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = call double @llvm.copysign.f64(double f0x000FFFFFFFFFFFFF, double [[SIGN]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(double [[X]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = call double @llvm.copysign.f64(double 0x1.ffffffffffffep-1023, double %sign)
+  %r = call i32 @ilogb(double %x)
+  ret i32 %r
+}
+
+define i32 @ilogb_non_normal_inf(double %sign) {
+; CHECK-LABEL: define i32 @ilogb_non_normal_inf(
+; CHECK-SAME: double [[SIGN:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = call double @llvm.copysign.f64(double +inf, double [[SIGN]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(double [[X]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = call double @llvm.copysign.f64(double +inf, double %sign)
+  %r = call i32 @ilogb(double %x)
+  ret i32 %r
+}
+
+define i32 @ilogb_non_normal_nan(double %sign) {
+; CHECK-LABEL: define i32 @ilogb_non_normal_nan(
+; CHECK-SAME: double [[SIGN:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = call double @llvm.copysign.f64(double +qnan, double [[SIGN]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(double [[X]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = call double @llvm.copysign.f64(double +qnan, double %sign)
+  %r = call i32 @ilogb(double %x)
+  ret i32 %r
+}
+
+define i32 @ilogb_normal_fp80(x86_fp80 %sign) {
+; CHECK-LABEL: define i32 @ilogb_normal_fp80(
+; CHECK-SAME: x86_fp80 [[SIGN:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = call x86_fp80 @llvm.copysign.f80(x86_fp80 1.600000e+01, x86_fp80 [[SIGN]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(x86_fp80 [[X]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = call x86_fp80 @llvm.copysign(x86_fp80 16.0, x86_fp80 %sign)
+  %r = call i32 @ilogb(x86_fp80 %x)
+  ret i32 %r
+}
+
+define i32 @ilogb_normal_ppc_fp128(ppc_fp128 %sign) {
+; CHECK-LABEL: define i32 @ilogb_normal_ppc_fp128(
+; CHECK-SAME: ppc_fp128 [[SIGN:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 1.600000e+01, ppc_fp128 [[SIGN]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @ilogb(ppc_fp128 [[X]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x = call ppc_fp128 @llvm.copysign(ppc_fp128 16.0, ppc_fp128 %sign)
+  %r = call i32 @ilogb(ppc_fp128 %x)
+  ret i32 %r
+}
+
+define i32 @ilogb_known_negative_normal(double %a) {
+; CHECK-LABEL: define i32 @ilogb_known_negative_normal(
+; CHECK-SAME: double [[A:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = call i1 @llvm.is.fpclass.f64(double [[A]], /* (nnorm) */ i32 8)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[A]])
+; CHECK-NEXT:    [[ILOGB_NOSIGN:%.*]] = bitcast double [[TMP1]] to i64
+; CHECK-NEXT:    [[ILOGB_EXP:%.*]] = lshr i64 [[ILOGB_NOSIGN]], 52
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i64 [[ILOGB_EXP]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[TMP2]], -1023
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %and = call i1 @llvm.is.fpclass.f64(double %a, i32 8)
+  call void @llvm.assume(i1 %and)
+  %r = call i32 @ilogb(double %a)
+  ret i32 %r
+}
+
+define i32 @ilogb_known_positive_normal(double %a) {
+; CHECK-LABEL: define i32 @ilogb_known_positive_normal(
+; CHECK-SAME: double [[A:%.*]]) {
+; CHECK-NEXT:    [[AND:%.*]] = call i1 @llvm.is.fpclass.f64(double [[A]], /* (pnorm) */ i32 256)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double [[A]] to i64
+; CHECK-NEXT:    [[ILOGB_EXP:%.*]] = lshr i64 [[TMP1]], 52
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i64 [[ILOGB_EXP]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[TMP2]], -1023
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %and = call i1 @llvm.is.fpclass.f64(double %a, i32 256)
+  call void @llvm.assume(i1 %and)
+  %r = call i32 @ilogb(double %a)
+  ret i32 %r
+}
+
 declare i32 @ilogb(double)
+declare i32 @ilogbf(float)
+declare i32 @ilogbl(fp128)
