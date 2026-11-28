@@ -31,10 +31,21 @@ class Stream;
 /// than checking thread identity at every callsite, the private state thread
 /// pushes Policy::CreatePrivateState() and the rest follows from the policy.
 struct Policy {
-  /// What view of the process this thread sees.
+  /// Which of the process's states and run locks this thread reads, and which
+  /// of the target's API mutexes it takes. See Process::GetState(),
+  /// Process::GetRunLock() and Target::GetAPIMutexForCurrentPolicy().
   enum class View {
-    Public,  ///< Provider-augmented frames, public state, public run lock.
-    Private, ///< Parent (unwinder) frames, private state, private run lock.
+    /// The public state, the public run lock and the target's public API
+    /// mutex.
+    Public,
+    /// The private state, the private run lock and the target's private API
+    /// mutex. Pushed on the private state thread.
+    Private,
+    /// The state and run lock of the Process::StopHandlingContext for the stop
+    /// this thread is handling in ProcessEventData::DoOnRemoval, which read
+    /// stopped while every other thread still gets eStateRunning. Takes the
+    /// target's public API mutex, like Public.
+    HandlingStop,
   };
 
   /// What operations this thread is allowed to perform.
@@ -77,6 +88,7 @@ struct Policy {
       PrivateStatePurpose purpose = PrivateStatePurpose::Default);
   static Policy CreatePublicStateRunningExpression();
   static Policy CreateScriptedExtensionCall();
+  static Policy CreateHandlingStop();
   /// @}
 
   void Dump(Stream &s) const;
@@ -144,6 +156,11 @@ public:
 
   [[nodiscard]] Guard PushScriptedExtensionCall() {
     Push(Policy::CreateScriptedExtensionCall());
+    return Guard();
+  }
+
+  [[nodiscard]] Guard PushHandlingStop() {
+    Push(Policy::CreateHandlingStop());
     return Guard();
   }
 
