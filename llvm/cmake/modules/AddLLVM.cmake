@@ -623,7 +623,7 @@ function(set_windows_version_resource_properties name resource_file)
   endif()
 
   if (NOT DEFINED ARG_VERSION_STRING)
-    if (${PACKAGE_VERSION})
+    if(DEFINED PACKAGE_VERSION AND NOT "${PACKAGE_VERSION}" STREQUAL "")
       set(ARG_VERSION_STRING ${PACKAGE_VERSION})
     else()
       set(ARG_VERSION_STRING 0)
