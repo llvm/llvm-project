@@ -42,6 +42,8 @@ struct DebugInfoPerPass {
   WeakInstValueMap InstToDelete;
   // Maps variable into dbg users (#dbg values/declares for this variable).
   DebugVarMap DIVariables;
+  // Tracks instructions that already had a line-0 DILocation before a pass.
+  WeakInstValueMap LineZeroInsts;
 };
 
 namespace llvm {

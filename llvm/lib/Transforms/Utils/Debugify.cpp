@@ -50,6 +50,11 @@ cl::opt<bool> ApplyAtomGroups("debugify-atoms", cl::init(false));
 cl::opt<bool> Quiet("debugify-quiet",
                     cl::desc("Suppress verbose debugify output"));
 
+cl::opt<bool> StrictLineZero(
+    "debugify-strict-line-zero",
+    cl::desc("Report instructions whose DebugLoc degrades to line 0"),
+    cl::init(false));
+
 cl::opt<uint64_t> DebugifyFunctionsLimit(
     "debugify-func-limit",
     cl::desc("Set max number of processed functions per pass."),
@@ -400,8 +405,16 @@ bool llvm::stripDebugifyMetadata(Module &M) {
   return Changed;
 }
 
-bool hasLoc(const Instruction &I) {
+bool hasLoc(const Instruction &I,
+            const DebugInfoPerPass *DebugInfoBeforePass = nullptr) {
   const DILocation *Loc = I.getDebugLoc().get();
+  if (StrictLineZero && Loc && Loc->getLine() == 0 && DebugInfoBeforePass) {
+    // Only allow line-0 locations that already existed on this instruction
+    // before the pass; check the WeakVH in case a deleted address was reused.
+    const auto *It = DebugInfoBeforePass->LineZeroInsts.find(&I);
+    if (It == DebugInfoBeforePass->LineZeroInsts.end() || It->second != &I)
+      return false;
+  }
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
   DebugLocKind Kind = I.getDebugLoc().getKind();
   return Loc || Kind != DebugLocKind::Normal;
@@ -443,6 +456,18 @@ bool llvm::collectDebugInfoMetadata(Module &M,
       for (const MDNode *DN : SP->getRetainedNodes()) {
         if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
           DebugInfoBeforePass.DIVariables[DV] = 0;
+        }
+      }
+    }
+    if (StrictLineZero) {
+      for (BasicBlock &BB : F) {
+        for (Instruction &I : BB) {
+          // Skip PHIs.
+          if (isa<PHINode>(I))
+            continue;
+          if (const DILocation *Loc = I.getDebugLoc().get();
+              Loc && Loc->getLine() == 0)
+            DebugInfoBeforePass.LineZeroInsts[&I] = &I;
         }
       }
     }
@@ -517,12 +542,12 @@ static bool checkFunctions(const DebugFnMap &DIFunctionsBefore,
   return Preserved;
 }
 
-static bool checkInstructionCoverage(Instruction &I,
-                                     StringRef NameOfWrappedPass,
-                                     StringRef FileNameFromCU,
-                                     bool ShouldWriteIntoJSON,
-                                     llvm::json::Array &Bugs) {
-  if (hasLoc(I))
+static bool
+checkInstructionCoverage(Instruction &I, StringRef NameOfWrappedPass,
+                         StringRef FileNameFromCU, bool ShouldWriteIntoJSON,
+                         llvm::json::Array &Bugs,
+                         const DebugInfoPerPass &DebugInfoBeforePass) {
+  if (hasLoc(I, &DebugInfoBeforePass))
     return true;
 
   Instruction *Instr = &I;
@@ -547,12 +572,15 @@ static bool checkInstructionCoverage(Instruction &I,
     Bugs.push_back(std::move(BugEntry));
   };
 
+  bool HasNullLoc = !Instr->getDebugLoc().get();
   if (ShouldWriteIntoJSON)
-    CreateJSONBugEntry("not-generate");
+    CreateJSONBugEntry(HasNullLoc ? "not-generate" : "line-zero");
   else
     dbg() << "WARNING: " << NameOfWrappedPass
-          << " did not generate DILocation for " << *Instr << " (BB: " << BBName
-          << ", Fn: " << FnName << ", File: " << FileNameFromCU << ")\n";
+          << (HasNullLoc ? " did not generate DILocation for "
+                         : " degraded DILocation to line 0 for ")
+          << *Instr << " (BB: " << BBName << ", Fn: " << FnName
+          << ", File: " << FileNameFromCU << ")\n";
   return false;
 }
 
@@ -695,9 +723,18 @@ bool llvm::checkDebugInfoMetadata(Module &M,
 
         // Track the addresses to symbolize, if the feature is enabled.
         bool InstResult = checkInstructionCoverage(
-            I, NameOfWrappedPass, FileNameFromCU, ShouldWriteIntoJSON, Bugs);
-        if (!InstResult)
+            I, NameOfWrappedPass, FileNameFromCU, ShouldWriteIntoJSON, Bugs,
+            DebugInfoBeforePass);
+        // Only mark missing locations as Unknown; keep valid line-0 DILocations
+        // intact and track them in LineZeroInsts to avoid re-reporting in
+        // subsequent passes.
+        if (!InstResult && !I.getDebugLoc().get())
           I.setDebugLoc(DebugLoc::getUnknown());
+        if (StrictLineZero) {
+          if (const DILocation *Loc = I.getDebugLoc().get();
+              Loc && Loc->getLine() == 0)
+            DebugInfoAfterPass.LineZeroInsts[&I] = &I;
+        }
         ResultForInsts &= InstResult;
       }
     }
@@ -825,6 +862,12 @@ bool checkDebugifyMetadata(Module &M,
 
       if (!isa<PHINode>(&I) && !DL) {
         dbg() << "WARNING: Instruction with empty DebugLoc in function ";
+        dbg() << F.getName() << " --";
+        I.print(dbg());
+        dbg() << "\n";
+      } else if (StrictLineZero && !isa<PHINode>(&I) && DL &&
+                 DL.getLine() == 0) {
+        dbg() << "WARNING: Instruction with line 0 DebugLoc in function ";
         dbg() << F.getName() << " --";
         I.print(dbg());
         dbg() << "\n";
