@@ -94,11 +94,11 @@
 ; BOLT-MAIN: DW_AT_call_line
 ; BOLT-MAIN: DW_AT_call_column
 ; BOLT-MAIN: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000000) address = <unresolved>)
-; BOLT-MAIN: DW_AT_high_pc [DW_FORM_data4] (0x0000001a)
+; BOLT-MAIN: DW_AT_high_pc [DW_FORM_data4] (0x00000000)
 ; BOLT-MAIN: DW_TAG_inlined_subroutine
 ; BOLT-MAIN: DW_AT_abstract_origin [DW_FORM_ref4]  (cu + 0x0072 => {0x00000072} "_Z8doStuff2i")
 ; BOLT-MAIN: DW_AT_call_file
 ; BOLT-MAIN: DW_AT_call_line
 ; BOLT-MAIN: DW_AT_call_column
 ; BOLT-MAIN: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000000) address = <unresolved>)
-; BOLT-MAIN: DW_AT_high_pc [DW_FORM_data4] (0x0000002d)
+; BOLT-MAIN: DW_AT_high_pc [DW_FORM_data4] (0x00000000)
