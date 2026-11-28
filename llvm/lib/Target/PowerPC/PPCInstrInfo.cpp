@@ -3308,6 +3308,7 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(PPC::CR7)
         .addImm(1);
     MI.setDesc(get(PPC::ISYNC));
+    MI.removeOperand(1);
     MI.removeOperand(0);
     return true;
   }
