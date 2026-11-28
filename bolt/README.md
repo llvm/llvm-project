@@ -13,6 +13,11 @@ BOLT operates on X86-64 and AArch64 ELF binaries. At the minimum, the binaries
 should have an unstripped symbol table, and, to get maximum performance gains,
 they should be linked with relocations (`--emit-relocs` or `-q` linker flag).
 
+> [!IMPORTANT]
+> If the linker supports relaxations that can leave retained relocations
+> inconsistent with the rewritten instructions, you must disable these
+> relaxations with the `--no-relax` linker flag.
+
 BOLT disassembles functions and reconstructs the control flow graph (CFG)
 before it runs optimizations. Since this is a nontrivial task,
 especially when indirect branches are present, we rely on certain heuristics
@@ -120,9 +125,13 @@ For a complete practical guide of using BOLT see [Optimizing Clang with BOLT](do
 
 In order to allow BOLT to re-arrange functions (in addition to re-arranging
 code within functions) in your program, it needs a little help from the linker.
-Add `--emit-relocs` to the final link step of your application. You can verify
-the presence of relocations by checking for `.rela.text` section in the binary.
-BOLT will also report if it detects relocations while processing the binary.
+Add the `--emit-relocs` option and, if required, the `--no-relax` option to the
+final link step of your application.
+
+> [!NOTE]
+> You can verify the presence of relocations by checking for `.rela.text`
+> section in the binary. BOLT will also report if it detects relocations while
+> processing the binary.
 
 ### Step 1: Collect Profile
 
