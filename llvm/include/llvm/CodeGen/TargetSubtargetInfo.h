@@ -334,6 +334,10 @@ public:
   /// a finer grain to tune the register allocator.
   virtual bool enableRALocalReassignment(CodeGenOptLevel OptLevel) const;
 
+  /// Enable sharing invariant load rematerializations after register
+  /// allocation.
+  virtual bool enableRematLoadSharing() const { return false; }
+
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).
   virtual bool useAA() const;
