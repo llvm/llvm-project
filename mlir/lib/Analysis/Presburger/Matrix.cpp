@@ -715,6 +715,26 @@ DynamicAPInt IntMatrix::normalizeRow(unsigned row) {
   return normalizeRow(row, getNumColumns());
 }
 
+void IntMatrix::eliminateColumnUsingRow(unsigned row,
+                                        ArrayRef<DynamicAPInt> pivot,
+                                        unsigned col) {
+  assert(pivot.size() == getNumColumns() && "pivot has wrong size");
+  assert(col < getNumColumns() && "column out of bounds");
+  assert(pivot[col] != 0 && "pivot must have a non-zero entry at col");
+  MutableArrayRef<DynamicAPInt> target = getRow(row);
+  assert(pivot.data() != target.data() && "pivot must not alias the row");
+  if (target[col] == 0)
+    return;
+  DynamicAPInt lcm = llvm::lcm(abs(target[col]), abs(pivot[col]));
+  DynamicAPInt rowMultiplier = lcm / abs(target[col]);
+  DynamicAPInt pivotMultiplier = lcm / abs(pivot[col]);
+  if ((target[col] > 0) == (pivot[col] > 0))
+    pivotMultiplier = -pivotMultiplier;
+  for (unsigned j = 0, e = getNumColumns(); j < e; ++j)
+    target[j] = rowMultiplier * target[j] + pivotMultiplier * pivot[j];
+  assert(target[col] == 0 && "column should have been eliminated");
+}
+
 DynamicAPInt IntMatrix::determinant(IntMatrix *inverse) const {
   assert(nRows == nColumns &&
          "determinant can only be calculated for square matrices!");

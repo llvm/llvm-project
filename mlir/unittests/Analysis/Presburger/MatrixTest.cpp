@@ -525,3 +525,25 @@ TEST(MatrixTest, moveColumns) {
     checkMatEqual(mat, movedMat);
   }
 }
+
+TEST(MatrixTest, eliminateColumnUsingRow) {
+  // Columns: x, y, constant.
+  IntMatrix mat = makeIntMatrix(3, 3, {{2, 3, 1}, {-3, 1, 4}, {0, 5, 7}});
+  // 4x - 6y + 2 = 0.
+  SmallVector<DynamicAPInt, 8> pivot = getDynamicAPIntVec({4, -6, 2});
+
+  // 2x + 3y + 1, 4x - 6y + 2: lcm(2, 4) = 4, so 2 * row - pivot.
+  mat.eliminateColumnUsingRow(0, pivot, 0);
+  // -3x + y + 4, 4x - 6y + 2: lcm(3, 4) = 12, so 4 * row + 3 * pivot.
+  mat.eliminateColumnUsingRow(1, pivot, 0);
+  // Zero entry at the eliminated column: row is unchanged.
+  mat.eliminateColumnUsingRow(2, pivot, 0);
+
+  checkMatEqual(mat,
+                makeIntMatrix(3, 3, {{0, 12, 0}, {0, -14, 22}, {0, 5, 7}}));
+
+  // The multiplier of the row is positive even if both entries are negative.
+  IntMatrix neg = makeIntMatrix(1, 2, {{-2, 3}});
+  neg.eliminateColumnUsingRow(0, getDynamicAPIntVec({-1, 1}), 0);
+  checkMatEqual(neg, makeIntMatrix(1, 2, {{0, 1}}));
+}
