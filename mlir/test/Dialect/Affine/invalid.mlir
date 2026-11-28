@@ -61,6 +61,32 @@ func.func @affine_for_upper_bound_invalid_sym() {
 
 // -----
 
+func.func @affine_max_of_invalid_dim(%n: index) {
+  affine.for %tile = 0 to 4 {
+    %one = arith.constant 1 : index
+    %non_affine = arith.addi %tile, %one : index
+    %cut = affine.max affine_map<(d0) -> (3, d0)>(%non_affine)
+    // expected-error@+1 {{operand cannot be used as a dimension id}}
+    affine.for %point = affine_map<(d0) -> (d0)>(%cut) to %n {
+    }
+  }
+  return
+}
+
+// -----
+
+func.func @affine_max_of_dim_is_not_symbol(%n: index) {
+  affine.for %tile = 0 to 4 {
+    %cut = affine.max affine_map<(d0) -> (3, d0 * 4)>(%tile)
+    // expected-error@+1 {{operand cannot be used as a symbol}}
+    affine.for %point = affine_map<()[s0] -> (s0)>()[%cut] to %n {
+    }
+  }
+  return
+}
+
+// -----
+
 #set0 = affine_set<(i)[N] : (i >= 0, N - i >= 0)>
 
 func.func @affine_if_invalid_sym() {
