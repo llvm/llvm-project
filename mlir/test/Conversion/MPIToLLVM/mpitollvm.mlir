@@ -261,7 +261,8 @@ module <{dlti = #dlti.map<"MPI:Implementation" = "OpenMPI">}> {
     // CHECK: [[v5:%.*]] = llvm.mlir.constant(1 : i32) : i32
     // CHECK: [[v6:%.*]] = llvm.alloca [[v5]] x !llvm.ptr : (i32) -> !llvm.ptr
     // CHECK: llvm.call @MPI_Comm_split([[v4]], [[v2]], [[v3]], [[v6]]) : (!llvm.ptr, i32, i32, !llvm.ptr) -> i32
-    // CHECK: llvm.load [[v6]] : !llvm.ptr -> i32
+    // CHECK: [[v7:%.*]] = llvm.load [[v6]] : !llvm.ptr -> !llvm.ptr
+    // CHECK: llvm.ptrtoint [[v7]] : !llvm.ptr to i64
     %split = mpi.comm_split(%comm, %color, %key) : !mpi.comm
     return
   }
