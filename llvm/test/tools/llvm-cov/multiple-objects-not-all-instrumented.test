@@ -1,4 +1,4 @@
-RUN: llvm-cov export --format=lcov --instr-profile=%S/Inputs/multiple_objects_not_all_instrumented/instrumented.profdata \
+RUN: llvm-cov export --respect-coverage-exclusion-markers=false --format=lcov --instr-profile=%S/Inputs/multiple_objects_not_all_instrumented/instrumented.profdata \
 RUN:   -object %S/Inputs/multiple_objects_not_all_instrumented/not_instrumented \
 RUN:   -object %S/Inputs/multiple_objects_not_all_instrumented/instrumented | FileCheck -check-prefix=FN %s
 

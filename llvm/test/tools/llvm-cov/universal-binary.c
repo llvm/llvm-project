@@ -6,8 +6,8 @@ int main(int argc, const char *argv[]) {}
 // RUN: llvm-profdata merge %S/Inputs/universal-binary.proftext -o %t.profdata
 // RUN: llvm-cov show %S/Inputs/universal-binary -instr-profile %t.profdata -path-equivalence=/tmp,%S %s -arch x86_64 | FileCheck %s
 
-// RUN: llvm-cov report %S/Inputs/universal-binary -arch x86_64 -object %S/Inputs/templateInstantiations.covmapping -arch i386 -instr-profile %t.profdata 2>&1 | FileCheck %s --check-prefix=COMBINED
-// RUN: llvm-cov report %S/Inputs/universal-binary -arch x86_64 -object %S/Inputs/templateInstantiations.covmapping -instr-profile %t.profdata 2>&1 | FileCheck %s --check-prefix=COMBINED
+// RUN: llvm-cov report --respect-coverage-exclusion-markers=false %S/Inputs/universal-binary -arch x86_64 -object %S/Inputs/templateInstantiations.covmapping -arch i386 -instr-profile %t.profdata 2>&1 | FileCheck %s --check-prefix=COMBINED
+// RUN: llvm-cov report --respect-coverage-exclusion-markers=false %S/Inputs/universal-binary -arch x86_64 -object %S/Inputs/templateInstantiations.covmapping -instr-profile %t.profdata 2>&1 | FileCheck %s --check-prefix=COMBINED
 // RUN: not llvm-cov report %S/Inputs/universal-binary -arch i386 -object %S/Inputs/templateInstantiations.covmapping -instr-profile %t.profdata 2>&1 | FileCheck %s --check-prefix=WRONG-ARCH
 // COMBINED: showTemplateInstantiations.cpp
 // COMBINED-NEXT: universal-binary.c

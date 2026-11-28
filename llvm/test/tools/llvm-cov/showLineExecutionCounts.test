@@ -12,7 +12,7 @@
 // RUN: FileCheck -check-prefixes=TEXT,WHOLE-FILE -D#C=999 -DC16K2=16.2k -DC16K1=16.1k -input-file %t.dir/show/coverage/tmp/showLineExecutionCounts.cpp.txt %S/Inputs/showLineExecutionCounts.cpp
 // RUN: FileCheck -check-prefixes=TEXT,FILTER -D#C=999 -DC16K2=16.2k -DC16K1=16.1k -input-file %t.dir/show.filtered/coverage/tmp/showLineExecutionCounts.cpp.txt %S/Inputs/showLineExecutionCounts.cpp
 //
-// RUN: llvm-cov export %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata 2>/dev/null -summary-only > %t.export-summary.json
+// RUN: llvm-cov export --respect-coverage-exclusion-markers=false %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata 2>/dev/null -summary-only > %t.export-summary.json
 // RUN: not grep '"name":"main"' %t.export-summary.json
 //
 // Test html output.

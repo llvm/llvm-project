@@ -21,7 +21,7 @@
 // CHECK-NOT: isn't covered.
 
 # Make sure remapping follows the specified order by proving paths in an overriding order (f4 comes after f3)
-// RUN: llvm-cov show %S/Inputs/multiple-path_equivalence.covmapping -instr-profile=%t.profdata -path-equivalence=/tmp/coverage/a,%/t -path-equivalence=/tmp/coverage/b,%/t -path-equivalence=/tmp/coverage/b/c,%/t -path-equivalence=/tmp/coverage,%/t 2>&1 | FileCheck %s -check-prefix=OVERRIDING_ORDER
+// RUN: llvm-cov show --respect-coverage-exclusion-markers=false %S/Inputs/multiple-path_equivalence.covmapping -instr-profile=%t.profdata -path-equivalence=/tmp/coverage/a,%/t -path-equivalence=/tmp/coverage/b,%/t -path-equivalence=/tmp/coverage/b/c,%/t -path-equivalence=/tmp/coverage,%/t 2>&1 | FileCheck %s -check-prefix=OVERRIDING_ORDER
 
 // OVERRIDING_ORDER-DAG: {{/|\\}}tmp{{/|\\}}coverage{{/|\\}}main.c:
 // OVERRIDING_ORDER-DAG: {{/|\\}}tmp{{/|\\}}coverage{{/|\\}}f1.c:

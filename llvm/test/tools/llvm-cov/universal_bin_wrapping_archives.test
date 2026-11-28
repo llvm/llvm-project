@@ -38,7 +38,7 @@ RUN:   -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs/universal_bin
 RUN:   | FileCheck %s --check-prefix=REPORT_ARCHIVE
 
 RUN: llvm-ar rcT %t.thin32.a %S/Inputs/universal_bin_wrapping_archives/obj1_32.o %S/Inputs/universal_bin_wrapping_archives/obj2_32.o
-RUN: llvm-cov report %t.thin32.a -instr-profile %t.profdata | FileCheck %s --check-prefix=REPORT_ARCHIVE
+RUN: llvm-cov report --respect-coverage-exclusion-markers=false %t.thin32.a -instr-profile %t.profdata | FileCheck %s --check-prefix=REPORT_ARCHIVE
 
 REPORT_ARCHIVE: obj1.c 1 0 100.00% 1 0 100.00% 1 0 100.00%
 REPORT_ARCHIVE: obj2.c 1 0 100.00% 1 0 100.00% 1 0 100.00%

@@ -9,6 +9,7 @@
 #ifndef LLVM_COV_COVERAGEVIEWOPTIONS_H
 #define LLVM_COV_COVERAGEVIEWOPTIONS_H
 
+#include "CoverageExclusions.h"
 #include "RenderingSupport.h"
 #include "llvm/Config/llvm-config.h"
 #include <vector>
@@ -49,6 +50,7 @@ struct CoverageViewOptions {
   bool SkipFunctions;
   bool SkipBranches;
   bool BinaryCounters;
+  bool RespectCoverageExclusionMarkers = true;
   OutputFormat Format;
   BranchOutputType ShowBranches;
   std::string ShowOutputDirectory;
@@ -60,6 +62,7 @@ struct CoverageViewOptions {
   std::string CompilationDirectory;
   float HighCovWatermark;
   float LowCovWatermark;
+  CoverageExclusions SourceExclusions;
 
   /// Change the output's stream color if the colors are enabled.
   ColoredRawOstream colored_ostream(raw_ostream &OS,

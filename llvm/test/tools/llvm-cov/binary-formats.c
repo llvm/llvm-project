@@ -17,4 +17,4 @@ int main(int argc, const char *argv[]) {}
 //     -fprofile-instr-generate -fcoverage-mapping -lwasi-emulated-getpid -lwasi-emulated-mman
 // RUN: llvm-cov show %S/Inputs/binary-formats.v6.wasm32 -instr-profile %t.wasm.profdata -path-equivalence=/tmp,%S %s | FileCheck %s
 
-// RUN: llvm-cov export %S/Inputs/binary-formats.macho64l -instr-profile %t.profdata | FileCheck %S/Inputs/binary-formats.canonical.json
+// RUN: llvm-cov export %S/Inputs/binary-formats.macho64l -instr-profile %t.profdata -path-equivalence=/tmp,%S | FileCheck %S/Inputs/binary-formats.canonical.json
