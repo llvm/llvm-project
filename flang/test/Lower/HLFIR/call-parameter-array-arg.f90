@@ -106,11 +106,13 @@ subroutine value_dummy()
   call byval(gp)
 end subroutine
 
-! Implicit interface: the whole named-constant array's address is passed
-! directly (known contiguous).
+! Implicit interface: the procedure may define the dummy argument, so the
+! whole named-constant array is passed in a temporary (see
+! call-parameter-implicit-interface.f90).
 ! CHECK-LABEL: func.func @_QPimplicit_iface
 ! CHECK: fir.address_of(@_QMmECgp)
-! CHECK-NOT: hlfir.as_expr
+! CHECK: hlfir.as_expr
+! CHECK: hlfir.associate
 ! CHECK: fir.call @_QPext_sub
 subroutine implicit_iface()
   use m
