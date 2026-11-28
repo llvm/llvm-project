@@ -15,6 +15,7 @@ defm encoding : Eq<"encoding", "Select the character encoding of the strings to 
 def help : FF<"help", "Display this help">;
 def print_file_name : Flag<["--"], "print-file-name">, HelpText<"Print the name of the file before each string">;
 defm radix : Eq<"radix", "Print the offset within the file with the specified radix: o (octal), d (decimal), x (hexadecimal)">, MetaVarName<"<radix>">;
+defm unicode : Eq<"unicode", "Control the handling of non-ASCII characters: default, utf8, invalid (reject), locale, escape (\\u00a0), hex (<0xc2a0>), highlight (\\u00a0 but highlighted)">;
 def version : FF<"version", "Display the version">;
 
 def : F<"a", "Alias for --all">, Alias<all>;
@@ -23,3 +24,4 @@ def : F<"h", "Alias for --help">, Alias<help>;
 def : JoinedOrSeparate<["-"], "n">, Alias<bytes_EQ>, HelpText<"Alias for --bytes">;
 def : JoinedOrSeparate<["-"], "e">, Alias<encoding_EQ>, HelpText<"Alias for --encoding">;
 def : JoinedOrSeparate<["-"], "t">, Alias<radix_EQ>, HelpText<"Alias for --radix">, MetaVarName<"<radix>">;
+def : JoinedOrSeparate<["-"], "U">, Alias<unicode_EQ>, HelpText<"Alias for --unicode">;
