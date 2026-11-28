@@ -7204,6 +7204,7 @@ private:
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
   std::unique_ptr<PragmaHandler> ExportHandler;
+  std::unique_ptr<PragmaHandler> MapHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
 
   /// Initialize all pragma handlers.
@@ -7330,6 +7331,10 @@ private:
   /// Handle the annotation token produced for
   /// #pragma export ...
   void HandlePragmaExport();
+
+  /// Handle the annotation token produced for
+  /// #pragma map ...
+  void HandlePragmaMap();
 
   ///@}
 

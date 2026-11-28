@@ -1143,6 +1143,41 @@ generated saying the pragma didn't resolve to a declaration. For example:
 int func(double) { return 0; } // warning: failed to resolve '#pragma export' to a declaration
 ```
 
+### #pragma map
+
+Clang supports the map pragma as a way to change the name of a declaration
+within the source to another name for external symbols.  This pragma is provided
+mainly for compatibility with the z/OS system headers.  This pragma behaves
+as if the declaration had an asm label.  The syntax for the pragma is:
+
+```c++
+#pragma map ( name , string-literal )
+```
+
+where `name` is the name used in the source code.  This can be an external function or
+variable declared or defined within the translation unit and `string-literal` is a
+string literal that is the external name for the declaration.  The string literal is
+encoded in IBM-1047.
+
+The pragma is only applied to declarations with external linkage and the declaration needs
+to have "C" linkage in C++.  A warning will be generated if the pragma is applied to a
+declaration that does not have external linkage or no declaration was found for the
+name by the end of the translation unit.
+
+In C, functions declared with `__attribute__((overloadable))` are mangled, so the
+pragma only applies to the one overload of that name, if any, that does not have
+the attribute.
+
+The pragma also interacts with `__attribute__((alias("...")))`. For example, in
+`int f(int) __attribute__((alias("_f")));` if there is a pragma for `f` or `_f`,
+the pragma must appear before the definition of `_f`. If `_f` has a pragma, the
+alias on `f` must specify the mapped name of `_f`, not `_f`.
+
+The pragma must appear before the first use of the declaration in the pragma.
+
+Pragma map and asm label can not be specified for the same declaration with different
+external names.
+
 ## Overflow behavior types
 
 Clang provides an extension that allows developers to annotate integer types

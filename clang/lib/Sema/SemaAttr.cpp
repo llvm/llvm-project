@@ -18,7 +18,11 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Sema/Lookup.h"
+#include "llvm/Support/ConvertEBCDIC.h"
+#include "llvm/Support/TextEncoding.h"
+
 #include <optional>
 using namespace clang;
 
@@ -1403,8 +1407,15 @@ NamedDecl *Sema::lookupExternCFunctionOrVariable(IdentifierInfo *IdentId,
                                                  Scope *curScope) {
   LookupResult Result(*this, IdentId, NameLoc, LookupOrdinaryName);
   LookupName(Result, curScope);
-  if (!getLangOpts().CPlusPlus)
-    return Result.getAsSingle<NamedDecl>();
+  if (!getLangOpts().CPlusPlus) {
+    // In C, functions declared with __attribute__((overloadable)) are mangled;
+    // at most one function of a given name can omit the attribute, and that is
+    // the one with the plain C name.
+    for (NamedDecl *D : Result)
+      if (isa<VarDecl>(D) || !D->hasAttr<OverloadableAttr>())
+        return D;
+    return nullptr;
+  }
   for (NamedDecl *D : Result) {
     if (auto *FD = dyn_cast<FunctionDecl>(D))
       if (FD->isExternC())
@@ -1456,6 +1467,83 @@ void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc,
   }
   mergeVisibilityType(PrevDecl->getCanonicalDecl(), NameLoc,
                       VisibilityAttr::Default);
+}
+
+void Sema::ActOnPragmaMap(IdentifierInfo *IdentId, SourceLocation NameLoc,
+                          Scope *curScope, const StringRef MappedName) {
+  assert(!MappedName.empty());
+
+  // All identifiers must be in UTF-8. On z/OS the mapped name was parsed with
+  // CA_ToLiteralEncodingForAsm, so it is in IBM-1047 and must be converted
+  // back.
+  llvm::SmallString<16> MappedNameUTF;
+  if (llvm::TextEncodingConverter *Conv =
+          PP.getTextEncoding().getzOSFromAsmLiteralEncodingConverter()) {
+    [[maybe_unused]] std::error_code EC =
+        Conv->convert(MappedName, MappedNameUTF);
+    assert(!EC && "This conversion should always succeed");
+  } else {
+    MappedNameUTF = MappedName;
+  }
+
+  AttributeCommonInfo AttrInfo(IdentId, NameLoc,
+                               AttributeCommonInfo::Form::Pragma());
+  AsmLabelAttr *Attr =
+      AsmLabelAttr::CreateImplicit(Context, MappedNameUTF.str(), AttrInfo);
+
+  PendingPragmaMapInfo Info;
+  Info.NameLoc = NameLoc;
+  Info.Attr = Attr;
+  Info.Used = false;
+
+  NamedDecl *PrevDecl =
+      lookupExternCFunctionOrVariable(IdentId, NameLoc, curScope);
+  if (!PrevDecl) {
+    LoadExternalMappedUndeclaredIdentifiers();
+    auto [It, Inserted] = PendingMappedNames.try_emplace(IdentId, Info);
+    if (!Inserted && !It->second.Attr->isEquivalent(Attr))
+      Diag(NameLoc, diag::warn_pragma_different_asm_label) << IdentId;
+    return;
+  }
+
+  if (auto *FD = dyn_cast<FunctionDecl>(PrevDecl->getCanonicalDecl())) {
+    // isDefined() also covers definitions that have no body, such as a
+    // function declared with the alias attribute.
+    if (FD->isDefined()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied_to_used_symbol)
+          << "map" << PrevDecl;
+      return;
+    }
+  } else if (isa<VarDecl>(PrevDecl)) {
+    // A variable declared with the alias attribute is a definition. Other
+    // variable definitions are not checked, so that the pragma can still be
+    // applied after a definition that has not been used.
+    if (llvm::any_of(PrevDecl->redecls(),
+                     [](const Decl *D) { return D->hasDefiningAttr(); })) {
+      Diag(NameLoc, diag::warn_pragma_not_applied_to_used_symbol)
+          << "map" << PrevDecl;
+      return;
+    }
+  }
+
+  if (!PrevDecl->hasExternalFormalLinkage()) {
+    Diag(NameLoc, diag::warn_pragma_not_applied) << "map" << PrevDecl;
+    return;
+  }
+
+  if (AsmLabelAttr *PrevAsmLabel = PrevDecl->getAttr<AsmLabelAttr>()) {
+    if (!PrevAsmLabel->isEquivalent(Attr))
+      Diag(NameLoc, diag::warn_pragma_different_asm_label) << PrevDecl;
+    return;
+  }
+
+  if (PrevDecl->isUsed()) {
+    Diag(NameLoc, diag::warn_pragma_not_applied_to_used_symbol)
+        << "map" << PrevDecl;
+    return;
+  }
+
+  PrevDecl->addAttr(Attr);
 }
 
 typedef std::vector<std::pair<unsigned, SourceLocation> > VisStack;

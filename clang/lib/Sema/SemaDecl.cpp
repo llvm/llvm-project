@@ -7797,6 +7797,41 @@ void Sema::ProcessPragmaExport(DeclaratorDecl *NewD) {
   }
 }
 
+void Sema::ProcessPragmaMap(DeclaratorDecl *NewD) {
+  LoadExternalMappedUndeclaredIdentifiers();
+  if (PendingMappedNames.empty())
+    return;
+  IdentifierInfo *IdentName = NewD->getIdentifier();
+  if (IdentName == nullptr)
+    return;
+  auto PendingName = PendingMappedNames.find(IdentName);
+  if (PendingName != PendingMappedNames.end()) {
+    auto &Info = PendingName->second;
+    if (!Info.Used) {
+      if (FunctionDecl *FD = dyn_cast<FunctionDecl>(NewD)) {
+        if (getLangOpts().CPlusPlus) {
+          if (!FD->isExternC())
+            return;
+        } else if (FD->hasAttr<OverloadableAttr>()) {
+          // In C, an overloadable function is mangled, so the pragma applies
+          // only to the (single) overload that lacks the attribute.
+          return;
+        }
+      }
+      Info.Used = true;
+      if (NewD->hasExternalFormalLinkage()) {
+        if (AsmLabelAttr *AsmLabel = NewD->getAttr<AsmLabelAttr>()) {
+          if (!AsmLabel->isEquivalent(Info.Attr))
+            Diag(Info.NameLoc, diag::warn_pragma_different_asm_label) << NewD;
+          return;
+        }
+        NewD->addAttr(Info.Attr);
+      } else
+        Diag(Info.NameLoc, diag::warn_pragma_not_applied) << "map" << NewD;
+    }
+  }
+}
+
 // Checks if VD is declared at global scope or with C language linkage.
 static bool isMainVar(DeclarationName Name, VarDecl *VD) {
   return Name.getAsIdentifierInfo() &&
@@ -8543,6 +8578,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   ProcessPragmaWeak(S, NewVD);
   ProcessPragmaExport(NewVD);
+  ProcessPragmaMap(NewVD);
 
   // If this is the first declaration of an extern C variable, update
   // the map of such variables.
@@ -11321,6 +11357,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   ProcessPragmaWeak(S, NewFD);
   ProcessPragmaExport(NewFD);
+  ProcessPragmaMap(NewFD);
   checkAttributesAfterMerging(*this, *NewFD);
 
   AddKnownFunctionAttributes(NewFD);
