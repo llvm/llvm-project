@@ -310,3 +310,8 @@ func.func @invalid_meet(%arg0 : tensor<2xindex>, %arg1 : tensor<3xindex>) -> ten
   %result = shape.meet %arg0, %arg1 : tensor<2xindex>, tensor<3xindex> -> tensor<?xindex>
   return %result : tensor<?xindex>
 }
+
+// -----
+
+// expected-error @+1 {{op requires attribute 'mapping'}}
+module attributes {shape.lib = [@lib]} { "shape.function_library"() <{sym_name = "lib"}> ({^bb0:}) : () -> () }
