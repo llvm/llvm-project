@@ -8,6 +8,22 @@
 
 ; NOSYMLIST: ProfileSymbolListSection {{.*}} Size: 0
 
+;; Showing a dropped symbol list should preserve the ordinary profile output.
+; RUN: llvm-profdata show -sample %t.5.output > %t.dropped.expected
+; RUN: llvm-profdata show -sample -show-prof-sym-list %t.5.output > %t.dropped.output
+; RUN: diff -b %t.dropped.expected %t.dropped.output
+
+;; The same applies to text, binary, and extbinary profiles without a symbol list.
+; RUN: llvm-profdata show -sample %S/Inputs/sample-profile.proftext > %t.absent.expected
+; RUN: llvm-profdata show -sample -show-prof-sym-list %S/Inputs/sample-profile.proftext > %t.absent.text
+; RUN: diff -b %t.absent.expected %t.absent.text
+; RUN: llvm-profdata merge -sample -binary %S/Inputs/sample-profile.proftext -o %t.absent.binary
+; RUN: llvm-profdata show -sample -show-prof-sym-list %t.absent.binary > %t.absent.output
+; RUN: diff -b %t.absent.expected %t.absent.output
+; RUN: llvm-profdata merge -sample -extbinary %S/Inputs/sample-profile.proftext -o %t.absent.extbinary
+; RUN: llvm-profdata show -sample -show-prof-sym-list %t.absent.extbinary > %t.absent.output
+; RUN: diff -b %t.absent.expected %t.absent.output
+
 ;; Verify that -md5-prof-sym-list records the md5 section flag for ProfileSymbolListSection
 ;; and that profiles with MD5 ProfileSymbolListSection can be merged.
 ; RUN: llvm-profdata merge -sample -extbinary -md5-prof-sym-list -prof-sym-list=%S/Inputs/profile-symbol-list-1.text %S/Inputs/sample-profile.proftext -o %t.md5.1.output
