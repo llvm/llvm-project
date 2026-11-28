@@ -13,14 +13,17 @@
 #include "llvm/Analysis/PHITransAddr.h"
 #include "AnalysisOptions.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 static bool canPHITrans(Instruction *Inst) {
   if (isa<PHINode>(Inst) || isa<GetElementPtrInst>(Inst) || isa<CastInst>(Inst))
@@ -356,10 +359,78 @@ SelectAddr::SelectAddrs PHITransAddr::translateValue(BasicBlock *CurBB,
     // Work on a copy so that the original address state is preserved and the
     // other side can be translated independently.
     PHITransAddr Tmp(*this);
-    return Tmp.translateSubExpr(Tmp.Addr, CurBB, PredBB, DT, Cond, CondVal);
+    if (Value *V =
+            Tmp.translateSubExpr(Tmp.Addr, CurBB, PredBB, DT, Cond, CondVal))
+      return V;
+    // A syntactic match misses addresses built from a differently shaped GEP
+    // chain. Compare decomposed offsets instead.
+    return findAvailableSelectArmAddr(Cond, CurBB, PredBB, DT, CondVal);
   };
 
   return {TranslateSide(/*CondVal=*/true), TranslateSide(/*CondVal=*/false)};
+}
+
+Value *PHITransAddr::findAvailableSelectArmAddr(Value *Cond, BasicBlock *CurBB,
+                                                BasicBlock *PredBB,
+                                                const DominatorTree *DT,
+                                                bool CondVal) const {
+  assert(DT && "Select-arm translation requires a dominator tree.");
+  LinearExpression Target = decomposeLinearExpression(DL, Addr);
+  Value *Base = Target.BasePtr;
+  if (!Target.Index || !Base->hasUseList())
+    return nullptr;
+
+  // Reject values from later blocks. The base is reused unchanged, while the
+  // index may also be defined in CurBB because it is translated below.
+  if (auto *BaseI = dyn_cast<Instruction>(Base);
+      BaseI && !DT->properlyDominates(BaseI->getParent(), CurBB))
+    return nullptr;
+  if (auto *IndexI = dyn_cast<Instruction>(Target.Index);
+      IndexI && !DT->dominates(IndexI->getParent(), CurBB))
+    return nullptr;
+
+  // Translate the index along the edge and fold its constant addends into the
+  // offset. GEP offset arithmetic wraps, so no-wrap flags are not required.
+  PHITransAddr IndexAddr(Target.Index, DL, AC);
+  Value *Index = IndexAddr.translateSubExpr(Target.Index, CurBB, PredBB, DT,
+                                            Cond, CondVal);
+  if (!Index)
+    return nullptr;
+  Value *X;
+  const APInt *C;
+  while (match(Index, m_AddLike(m_Value(X), m_APInt(C)))) {
+    Target.Offset += Target.Scale * *C;
+    Index = X;
+  }
+  Target.Index = Index;
+
+  // Look for an available GEP chain over the same base with an equal linear
+  // expression.
+  // Count every user, not only matching GEPs: a base such as a global can
+  // have an unbounded use list, and this runs for each load query.
+  static constexpr unsigned MaxUsersToVisit = 32;
+  unsigned NumScanned = 0;
+  SmallVector<Value *, 8> Worklist = {Base};
+  while (!Worklist.empty()) {
+    Value *Ptr = Worklist.pop_back_val();
+    for (User *U : Ptr->users()) {
+      if (++NumScanned > MaxUsersToVisit)
+        return nullptr;
+
+      auto *GEPI = dyn_cast<GetElementPtrInst>(U);
+      // Skip vector GEPs: decomposeLinearExpression requires a scalar pointer.
+      if (!GEPI || GEPI->getType() != Addr->getType() ||
+          GEPI->getFunction() != CurBB->getParent() ||
+          !DT->dominates(GEPI->getParent(), PredBB))
+        continue;
+      LinearExpression E = decomposeLinearExpression(DL, GEPI);
+      if (E.BasePtr == Base && E.Index == Target.Index &&
+          E.Scale == Target.Scale && E.Offset == Target.Offset)
+        return GEPI;
+      Worklist.push_back(GEPI);
+    }
+  }
+  return nullptr;
 }
 
 SelectInst *PHITransAddr::getSelect() const {
