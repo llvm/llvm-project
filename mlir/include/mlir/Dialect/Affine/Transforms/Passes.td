@@ -220,11 +220,28 @@ def AffineLoopUnroll : InterfacePass<"affine-loop-unroll", "FunctionOpInterface"
 
 def AffineLoopUnrollAndJam : InterfacePass<"affine-loop-unroll-jam", "FunctionOpInterface"> {
   let summary = "Unroll and jam affine loops";
+  let description = [{
+    By default, select the first operation in the function entry block if it
+    is an affine loop, and unroll and jam it by `unroll-jam-factor`.
+
+    With `unroll-jam-all-loops` enabled, also consider additional top-level
+    affine loops in the entry block, including those following setup operations.
+    These additional candidates must have proven iteration independence. The
+    proof conservatively accepts affine loads/stores with invariant memref
+    bases and pure, region-free operations, and requires non-aliasing between
+    distinct memrefs involved in a write.
+
+    The original target uses the existing transformation path with either
+    option setting. Nested loops are handled within their containing loop nest.
+  }];
   let constructor = "mlir::affine::createLoopUnrollAndJamPass()";
   let options = [
     Option<"unrollJamFactor", "unroll-jam-factor", "unsigned",
            /*default=*/"4",
            "Use this unroll jam factor for all loops (default 4)">,
+    Option<"unrollJamAllLoops", "unroll-jam-all-loops", "bool",
+           /*default=*/"false",
+           "Consider additional top-level affine loops in the function entry block">,
   ];
 }
 
