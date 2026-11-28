@@ -2803,6 +2803,11 @@ static void writeDIExpression(raw_ostream &Out, const DIExpression *N,
       assert(!OpStr.empty() && "Expected valid opcode");
 
       Out << FS << OpStr;
+      if (Op.getOp() == dwarf::DW_OP_LLVM_user) {
+        Out << FS
+            << dwarf::SubOperationEncodingString(Op.getOp(), Op.getArg(0));
+        continue;
+      }
       if (auto Convert = dyn_cast<DIExpression::ConvertOp>(Op)) {
         Out << FS << Convert.getBitSize();
         Out << FS << dwarf::AttributeEncodingString(Convert.getEncoding());

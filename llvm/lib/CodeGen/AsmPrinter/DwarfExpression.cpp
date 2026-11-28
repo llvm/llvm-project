@@ -668,6 +668,16 @@ bool DwarfExpression::addExpression(
       LocationKind = Implicit;
       break;
     }
+    case dwarf::DW_OP_LLVM_user:
+      assert(!isRegisterLocation());
+      assert(Op->getArg(0) == dwarf::DW_OP_LLVM_form_aspace_address &&
+             "Unsupported LLVM DWARF sub-operation");
+      emitOp(dwarf::DW_OP_LLVM_user);
+      emitUnsigned(Op->getArg(0));
+      // The operation consumes an address and an address-space ID and produces
+      // a memory location, even when the input was an implicit value.
+      LocationKind = Memory;
+      break;
     case dwarf::DW_OP_plus_uconst:
       assert(!isRegisterLocation());
       emitOp(dwarf::DW_OP_plus_uconst);

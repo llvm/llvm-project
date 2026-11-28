@@ -6906,9 +6906,27 @@ bool LLParser::parseDIExpressionBody(MDNode *&Result, bool IsDistinct) {
     return true;
 
   SmallVector<uint64_t, 8> Elements;
+  // Track opcode boundaries: an operand equal to DW_OP_LLVM_user is not an
+  // extension opcode (for example, DW_OP_constu, 233).
+  size_t LastOp = 0, NextOp = 0;
   if (Lex.getKind() != lltok::rparen)
     do {
       if (Lex.getKind() == lltok::DwarfOp) {
+        while (NextOp < Elements.size()) {
+          LastOp = NextOp;
+          NextOp += DIExpression::ExprOperand(&Elements[NextOp]).getSize();
+        }
+        if (Elements.size() == LastOp + 1 &&
+            Elements[LastOp] == dwarf::DW_OP_LLVM_user) {
+          if (unsigned SubOp = dwarf::getSubOperationEncoding(
+                  dwarf::DW_OP_LLVM_user, Lex.getStrVal())) {
+            Elements.push_back(SubOp);
+            Lex.Lex();
+            continue;
+          }
+          return tokError(Twine("invalid DW_OP_LLVM_user sub-op '") +
+                          Lex.getStrVal() + "'");
+        }
         if (unsigned Op = dwarf::getOperationEncoding(Lex.getStrVal())) {
           Lex.Lex();
           Elements.push_back(Op);
