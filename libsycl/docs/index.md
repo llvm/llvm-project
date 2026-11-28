@@ -91,7 +91,10 @@ which doesn't currently support Windows.
 
 - `exception`: methods with context are not implemented, to add once context is ready
 
-- `backend`: CUDA and HIP backends are not supported, to add together with the corresponding backend extensions; devices of these liboffload backends are ignored
+- `backend`:
+
+  - CUDA and HIP backends are not supported, to add together with the corresponding backend extensions; devices of these liboffload backends are ignored
+  - `ext_oneapi_level_zero`: see the [Level Zero extension status](Extensions.md#vendor-extensions).
 
 - `platform`: deprecated info descriptor is not implemented (`info::platform::extensions`), to implement on RT level with `device::get_info<info::device::aspects>()`
 

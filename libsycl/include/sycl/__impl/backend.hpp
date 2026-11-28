@@ -22,10 +22,10 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-// SYCL 2020 4.1. Backends.
+// SYCL 2020 4.1. Backends and SYCL 2020 6.3.7. Adding a backend.
 enum class backend : unsigned char {
   opencl = 0,
-  level_zero,
+  ext_oneapi_level_zero,
 };
 
 namespace detail {
