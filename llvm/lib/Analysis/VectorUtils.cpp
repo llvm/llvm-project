@@ -334,6 +334,27 @@ unsigned llvm::getInterleaveIntrinsicFactor(Intrinsic::ID ID) {
   }
 }
 
+Intrinsic::ID llvm::getInterleaveIntrinsicOfFactor(unsigned Factor) {
+  switch (Factor) {
+  case 2:
+    return Intrinsic::vector_interleave2;
+  case 3:
+    return Intrinsic::vector_interleave3;
+  case 4:
+    return Intrinsic::vector_interleave4;
+  case 5:
+    return Intrinsic::vector_interleave5;
+  case 6:
+    return Intrinsic::vector_interleave6;
+  case 7:
+    return Intrinsic::vector_interleave7;
+  case 8:
+    return Intrinsic::vector_interleave8;
+  default:
+    return Intrinsic::not_intrinsic;
+  }
+}
+
 unsigned llvm::getDeinterleaveIntrinsicFactor(Intrinsic::ID ID) {
   switch (ID) {
   case Intrinsic::vector_deinterleave2:
@@ -352,6 +373,27 @@ unsigned llvm::getDeinterleaveIntrinsicFactor(Intrinsic::ID ID) {
     return 8;
   default:
     return 0;
+  }
+}
+
+Intrinsic::ID llvm::getDeinterleaveIntrinsicOfFactor(unsigned Factor) {
+  switch (Factor) {
+  case 2:
+    return Intrinsic::vector_deinterleave2;
+  case 3:
+    return Intrinsic::vector_deinterleave3;
+  case 4:
+    return Intrinsic::vector_deinterleave4;
+  case 5:
+    return Intrinsic::vector_deinterleave5;
+  case 6:
+    return Intrinsic::vector_deinterleave6;
+  case 7:
+    return Intrinsic::vector_deinterleave7;
+  case 8:
+    return Intrinsic::vector_deinterleave8;
+  default:
+    return Intrinsic::not_intrinsic;
   }
 }
 

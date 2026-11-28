@@ -214,8 +214,16 @@ LLVM_ABI bool shouldSplitVectorSinCos(const TargetLibraryInfo &TLI,
 /// Returns the corresponding factor of llvm.vector.interleaveN intrinsics.
 LLVM_ABI unsigned getInterleaveIntrinsicFactor(Intrinsic::ID ID);
 
+/// Returns the corresponding llvm.vector.interleaveN intrinsics from the given
+/// factor.
+LLVM_ABI Intrinsic::ID getInterleaveIntrinsicOfFactor(unsigned Factor);
+
 /// Returns the corresponding factor of llvm.vector.deinterleaveN intrinsics.
 LLVM_ABI unsigned getDeinterleaveIntrinsicFactor(Intrinsic::ID ID);
+
+/// Returns the corresponding llvm.vector.deinterleaveN intrinsics from the
+/// given factor
+LLVM_ABI Intrinsic::ID getDeinterleaveIntrinsicOfFactor(unsigned Factor);
 
 /// Given a deinterleaveN intrinsic, return the (narrow) vector type of each
 /// factor.
