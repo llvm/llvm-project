@@ -212,38 +212,23 @@ GCNSchedStrategy::getBankedPressure(const GCNRegPressure &RP) const {
 
 void GCNSchedStrategy::getRegisterPressures(
     bool AtTop, const RegPressureTracker &RPTracker, SUnit *SU,
-    std::vector<unsigned> &Pressure, std::vector<unsigned> &MaxPressure,
-    const GCNDownwardRPTrackerBase &DownwardTracker,
-    const GCNUpwardRPTracker &UpwardTracker, ScheduleDAGMI *DAG,
-    const SIRegisterInfo *SRI) {
+    std::vector<unsigned> &Pressure, std::vector<unsigned> &MaxPressure) {
   // getDownwardPressure() and getUpwardPressure() make temporary changes to
   // the tracker, so we need to pass those function a non-const copy.
   RegPressureTracker &TempTracker = const_cast<RegPressureTracker &>(RPTracker);
-  if (!useGCNTrackers()) {
-    AtTop
-        ? TempTracker.getDownwardPressure(SU->getInstr(), Pressure, MaxPressure)
+  AtTop ? TempTracker.getDownwardPressure(SU->getInstr(), Pressure, MaxPressure)
         : TempTracker.getUpwardPressure(SU->getInstr(), Pressure, MaxPressure);
+}
 
-    return;
-  }
-
-  // GCNTrackers
-  Pressure.resize(4, 0);
+GCNRegPressure
+GCNSchedStrategy::getGCNTrackerPressure(bool AtTop, SUnit *SU,
+                                        const SIRegisterInfo *SRI) const {
   MachineInstr *MI = SU->getInstr();
-  GCNRegPressure NewPressure;
-  if (AtTop) {
-    NewPressure = DownwardTracker.bumpDownwardPressure(MI, SRI);
-  } else {
-    GCNUpwardRPTracker TempUpwardTracker(UpwardTracker);
-    TempUpwardTracker.recede(*MI);
-    NewPressure = TempUpwardTracker.getPressure();
-  }
-  auto [ArchNum, AccNum] = getBankedPressure(NewPressure);
-  Pressure[AMDGPU::RegisterPressureSets::SReg_32] = NewPressure.getSGPRNum();
-  Pressure[AMDGPU::RegisterPressureSets::VGPR_32] = ArchNum;
-  Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = AccNum;
-  CandUnifiedVGPRPressure =
-      GCNRegPressure::getBankedUnifiedVGPRNum(ArchNum, AccNum);
+  if (AtTop)
+    return DownwardTracker.bumpDownwardPressure(MI, SRI);
+  GCNUpwardRPTracker TempUpwardTracker(UpwardTracker);
+  TempUpwardTracker.recede(*MI);
+  return TempUpwardTracker.getPressure();
 }
 
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
@@ -259,68 +244,76 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   if (!DAG->isTrackingPressure())
     return;
 
-  Pressure.clear();
-  MaxPressure.clear();
-
-  // We try to use the cached PressureDiffs in the ScheduleDAG whenever
-  // possible over querying the RegPressureTracker.
-  //
-  // RegPressureTracker will make a lot of LIS queries which are very
-  // expensive, it is considered a slow function in this context.
-  //
-  // PressureDiffs are precomputed and cached, and getPressureDiff is just a
-  // trivial lookup into an array. It is pretty much free.
-  //
-  // In EXPENSIVE_CHECKS, we always query RPTracker to verify the results of
-  // PressureDiffs.
-  if (AtTop || !canUsePressureDiffs(*SU) || useGCNTrackers()) {
-    getRegisterPressures(AtTop, RPTracker, SU, Pressure, MaxPressure,
-                         DownwardTracker, UpwardTracker, DAG, SRI);
+  unsigned NewSGPRPressure, NewVGPRPressure, NewAGPRPressure;
+  if (useGCNTrackers()) {
+    GCNRegPressure NewPressure = getGCNTrackerPressure(AtTop, SU, SRI);
+    NewSGPRPressure = NewPressure.getSGPRNum();
+    std::tie(NewVGPRPressure, NewAGPRPressure) = getBankedPressure(NewPressure);
+    CandUnifiedVGPRPressure = GCNRegPressure::getBankedUnifiedVGPRNum(
+        NewVGPRPressure, NewAGPRPressure);
   } else {
-    // Reserve 4 slots.
-    Pressure.resize(4, 0);
-    Pressure[AMDGPU::RegisterPressureSets::SReg_32] = SGPRPressure;
-    Pressure[AMDGPU::RegisterPressureSets::VGPR_32] = VGPRPressure;
-    Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = AGPRPressure;
+    Pressure.clear();
+    MaxPressure.clear();
 
-    for (const auto &Diff : DAG->getPressureDiff(SU)) {
-      if (!Diff.isValid())
-        continue;
-      // PressureDiffs is always bottom-up so if we're working top-down we need
-      // to invert its sign.
-      Pressure[Diff.getPSet()] +=
-          (IsBottomUp ? Diff.getUnitInc() : -Diff.getUnitInc());
-    }
+    // We try to use the cached PressureDiffs in the ScheduleDAG whenever
+    // possible over querying the RegPressureTracker.
+    //
+    // RegPressureTracker will make a lot of LIS queries which are very
+    // expensive, it is considered a slow function in this context.
+    //
+    // PressureDiffs are precomputed and cached, and getPressureDiff is just a
+    // trivial lookup into an array. It is pretty much free.
+    //
+    // In EXPENSIVE_CHECKS, we always query RPTracker to verify the results of
+    // PressureDiffs.
+    if (AtTop || !canUsePressureDiffs(*SU)) {
+      getRegisterPressures(AtTop, RPTracker, SU, Pressure, MaxPressure);
+    } else {
+      // Reserve 4 slots.
+      Pressure.resize(4, 0);
+      Pressure[AMDGPU::RegisterPressureSets::SReg_32] = SGPRPressure;
+      Pressure[AMDGPU::RegisterPressureSets::VGPR_32] = VGPRPressure;
+      Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = AGPRPressure;
+
+      for (const auto &Diff : DAG->getPressureDiff(SU)) {
+        if (!Diff.isValid())
+          continue;
+        // PressureDiffs is always bottom-up so if we're working top-down we
+        // need to invert its sign.
+        Pressure[Diff.getPSet()] +=
+            (IsBottomUp ? Diff.getUnitInc() : -Diff.getUnitInc());
+      }
 
 #ifdef EXPENSIVE_CHECKS
-    std::vector<unsigned> CheckPressure, CheckMaxPressure;
-    getRegisterPressures(AtTop, RPTracker, SU, CheckPressure, CheckMaxPressure,
-                         DownwardTracker, UpwardTracker, DAG, SRI);
-    if (Pressure[AMDGPU::RegisterPressureSets::SReg_32] !=
-            CheckPressure[AMDGPU::RegisterPressureSets::SReg_32] ||
-        Pressure[AMDGPU::RegisterPressureSets::VGPR_32] !=
-            CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32] ||
-        Pressure[AMDGPU::RegisterPressureSets::AGPR_32] !=
-            CheckPressure[AMDGPU::RegisterPressureSets::AGPR_32]) {
-      errs() << "Register Pressure is inaccurate when calculated through "
-                "PressureDiff\n"
-             << "SGPR got " << Pressure[AMDGPU::RegisterPressureSets::SReg_32]
-             << ", expected "
-             << CheckPressure[AMDGPU::RegisterPressureSets::SReg_32] << "\n"
-             << "VGPR got " << Pressure[AMDGPU::RegisterPressureSets::VGPR_32]
-             << ", expected "
-             << CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32] << "\n"
-             << "AGPR got " << Pressure[AMDGPU::RegisterPressureSets::AGPR_32]
-             << ", expected "
-             << CheckPressure[AMDGPU::RegisterPressureSets::AGPR_32] << "\n";
-      report_fatal_error("inaccurate register pressure calculation");
-    }
+      std::vector<unsigned> CheckPressure, CheckMaxPressure;
+      getRegisterPressures(AtTop, RPTracker, SU, CheckPressure,
+                           CheckMaxPressure);
+      if (Pressure[AMDGPU::RegisterPressureSets::SReg_32] !=
+              CheckPressure[AMDGPU::RegisterPressureSets::SReg_32] ||
+          Pressure[AMDGPU::RegisterPressureSets::VGPR_32] !=
+              CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32] ||
+          Pressure[AMDGPU::RegisterPressureSets::AGPR_32] !=
+              CheckPressure[AMDGPU::RegisterPressureSets::AGPR_32]) {
+        errs() << "Register Pressure is inaccurate when calculated through "
+                  "PressureDiff\n"
+               << "SGPR got " << Pressure[AMDGPU::RegisterPressureSets::SReg_32]
+               << ", expected "
+               << CheckPressure[AMDGPU::RegisterPressureSets::SReg_32] << "\n"
+               << "VGPR got " << Pressure[AMDGPU::RegisterPressureSets::VGPR_32]
+               << ", expected "
+               << CheckPressure[AMDGPU::RegisterPressureSets::VGPR_32] << "\n"
+               << "AGPR got " << Pressure[AMDGPU::RegisterPressureSets::AGPR_32]
+               << ", expected "
+               << CheckPressure[AMDGPU::RegisterPressureSets::AGPR_32] << "\n";
+        report_fatal_error("inaccurate register pressure calculation");
+      }
 #endif
-  }
+    }
 
-  unsigned NewAGPRPressure = Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
-  unsigned NewSGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
-  unsigned NewVGPRPressure = Pressure[AMDGPU::RegisterPressureSets::VGPR_32];
+    NewSGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
+    NewVGPRPressure = Pressure[AMDGPU::RegisterPressureSets::VGPR_32];
+    NewAGPRPressure = Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
+  }
 
   // If two instructions increase the pressure of different register sets
   // by the same amount, the generic scheduler will prefer to schedule the

@@ -83,12 +83,15 @@ protected:
   void printCandidateDecision(const SchedCandidate &Current,
                               const SchedCandidate &Preferred);
 
+  /// Fills \p Pressure and \p MaxPressure, indexed by pressure set, with the
+  /// generic RegPressureTracker's pressure after scheduling \p SU.
   void getRegisterPressures(bool AtTop, const RegPressureTracker &RPTracker,
                             SUnit *SU, std::vector<unsigned> &Pressure,
-                            std::vector<unsigned> &MaxPressure,
-                            const GCNDownwardRPTrackerBase &DownwardTracker,
-                            const GCNUpwardRPTracker &UpwardTracker,
-                            ScheduleDAGMI *DAG, const SIRegisterInfo *SRI);
+                            std::vector<unsigned> &MaxPressure);
+
+  /// \returns the GCN trackers' pressure after scheduling \p SU.
+  GCNRegPressure getGCNTrackerPressure(bool AtTop, SUnit *SU,
+                                       const SIRegisterInfo *SRI) const;
 
   /// \returns the ArchVGPR and AGPR pressure of \p RP after distributing
   /// bank-agnostic AVGPR pressure across the two banks.
@@ -114,7 +117,7 @@ protected:
   unsigned UnifiedVGPRExcessLimit = 0;
 
   /// Combined-file pressure of the candidate most recently passed to
-  /// getRegisterPressures(). Only maintained when the GCN trackers are in use.
+  /// initCandidate(). Only maintained when the GCN trackers are in use.
   unsigned CandUnifiedVGPRPressure = 0;
 
   unsigned TargetOccupancy;
