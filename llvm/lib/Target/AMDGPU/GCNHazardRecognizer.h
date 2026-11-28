@@ -319,6 +319,11 @@ public:
   /// Get the CoExecMask for a given instruction.
   static AMDGPU::CoExecMaskT getCoExecMaskForMI(const MachineInstr &MI,
                                                 const SIInstrInfo &TII);
+
+  /// Largest number of intervening VALUs checkWMMACoexecutionHazards() can
+  /// require between an XDL WMMA and a dependent WMMA or VALU.
+  static unsigned getMaxWMMACoexecutionWaitStates(const GCNSubtarget &ST);
+
   // We can only issue one instruction per cycle.
   bool atIssueLimit() const override { return true; }
   void EmitInstruction(SUnit *SU) override;
