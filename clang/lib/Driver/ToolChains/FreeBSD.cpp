@@ -456,6 +456,11 @@ void FreeBSD::AddHIPIncludeArgs(const ArgList &DriverArgs,
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
+void FreeBSD::AddHIPIncludeArgsLate(const ArgList &DriverArgs,
+                                    ArgStringList &CC1Args) const {
+  RocmInstallation->AddHIPIncludeArgsLate(DriverArgs, CC1Args);
+}
+
 Tool *FreeBSD::buildAssembler() const {
   return new tools::freebsd::Assembler(*this);
 }
