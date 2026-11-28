@@ -12,12 +12,18 @@
 #include <__algorithm/in_out_result.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/unwrap_range.h>
+#include <__assert>
 #include <__config>
 #include <__cstddef/size_t.h>
+#include <__iterator/concepts.h>
+#include <__iterator/incrementable_traits.h>
+#include <__iterator/iterator_traits.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_always_bitcastable.h>
 #include <__type_traits/is_constructible.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_volatile.h>
 #include <__utility/move.h>
@@ -80,11 +86,45 @@ template <class _InIter, class _OutIter>
 struct __can_rewrap
     : integral_constant<bool, is_copy_constructible<_InIter>::value && is_copy_constructible<_OutIter>::value> {};
 
+// True when `__last - __first` is valid and O(1).
+// `__copy_move_unwrap_iters` is shared by classic `std::copy` (which has no `_AlgPolicy`) and `std::ranges::copy`.
+// When `_InIter` and `_Sent` are the same type, the call may come from classic `std::copy`, where pre-C++20
+// non-random-access iterator facades can declare an unconstrained `operator-` without specializing
+// `disable_sized_sentinel_for`; check random-access category/concept instead of `sized_sentinel_for` (mirroring
+// `std::distance`). Different `_InIter`/`_Sent` types only occur in `ranges::` algorithms, where
+// `sized_sentinel_for` guarantees `__last - __first` is valid.
+#if _LIBCPP_STD_VER >= 20
+template <class _InIter, class _Sent>
+struct __has_constant_time_distance
+    : integral_constant<bool,
+                        is_same_v<_InIter, _Sent>
+                            ? (__has_random_access_iterator_category<_InIter>::value || random_access_iterator<_InIter>)
+                            : sized_sentinel_for<_Sent, _InIter> > {};
+#else
+template <class _InIter, class _Sent>
+struct __has_constant_time_distance
+    : integral_constant<bool, is_same<_InIter, _Sent>::value && __has_random_access_iterator_category<_InIter>::value> {
+};
+#endif
+
+// If _OutIter is a bounded or user-defined contiguous iterator, we can only unwrap it up front when the input range's
+// length is known in O(1); otherwise keep _OutIter wrapped so the element-by-element loop checks bounds before each
+// write.
+template <class _InIter, class _Sent, class _OutIter>
+struct __can_unwrap_copy_move
+    : integral_constant< bool,
+                         __can_rewrap<_InIter, _OutIter>::value &&
+                             (!__unwrap_iter_may_strip_checks<_OutIter>::value ||
+                              __has_constant_time_distance<_InIter, _Sent>::value)> {};
+
 template <class _Algorithm,
+          bool _IsBackward = false,
           class _InIter,
           class _Sent,
           class _OutIter,
-          __enable_if_t<__can_rewrap<_InIter, _OutIter>::value, int> = 0>
+          __enable_if_t<__can_unwrap_copy_move<_InIter, _Sent, _OutIter>::value &&
+                            !__unwrap_iter_may_strip_checks<_OutIter>::value,
+                        int> = 0>
 _LIBCPP_CONSTEXPR_SINCE_CXX17 __in_out_result<_InIter, _OutIter>
 __copy_move_unwrap_iters(_InIter __first, _Sent __last, _OutIter __out_first) {
   auto __range  = std::__unwrap_range(__first, std::move(__last));
@@ -93,11 +133,40 @@ __copy_move_unwrap_iters(_InIter __first, _Sent __last, _OutIter __out_first) {
           std::__rewrap_iter(std::move(__out_first), std::move(__result.__out_))};
 }
 
+// Unwrapping _OutIter would strip its bounds checks, so advance the still-wrapped iterator over the whole output range
+// first: that lets the iterator itself reject an undersized destination before anything is written.
 template <class _Algorithm,
+          bool _IsBackward = false,
           class _InIter,
           class _Sent,
           class _OutIter,
-          __enable_if_t<!__can_rewrap<_InIter, _OutIter>::value, int> = 0>
+          __enable_if_t<__can_unwrap_copy_move<_InIter, _Sent, _OutIter>::value &&
+                            __unwrap_iter_may_strip_checks<_OutIter>::value,
+                        int> = 0>
+_LIBCPP_CONSTEXPR_SINCE_CXX17 __in_out_result<_InIter, _OutIter>
+__copy_move_unwrap_iters(_InIter __first, _Sent __last, _OutIter __out_first) {
+#if _LIBCPP_STD_VER >= 20
+  using _OutDiff _LIBCPP_NODEBUG = iter_difference_t<_OutIter>;
+#else
+  using _OutDiff _LIBCPP_NODEBUG = typename iterator_traits<_OutIter>::difference_type;
+#endif
+  auto __n         = __last - __first;
+  auto __range     = std::__unwrap_range(__first, std::move(__last));
+  _OutDiff __out_n = static_cast<_OutDiff>(__n);
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+      __n >= 0 && static_cast<decltype(__n)>(__out_n) == __n, "std::copy/move: [first, last) must be a valid range");
+  _OutIter __out_final = _IsBackward ? __out_first - __out_n : __out_first + __out_n;
+  auto __result =
+      _Algorithm()(std::move(__range.first), std::move(__range.second), std::__unwrap_iter(std::move(__out_first)));
+  return {std::__rewrap_range<_Sent>(std::move(__first), std::move(__result.__in_)), std::move(__out_final)};
+}
+
+template <class _Algorithm,
+          bool _IsBackward = false,
+          class _InIter,
+          class _Sent,
+          class _OutIter,
+          __enable_if_t<!__can_unwrap_copy_move<_InIter, _Sent, _OutIter>::value, int> = 0>
 _LIBCPP_CONSTEXPR_SINCE_CXX17 __in_out_result<_InIter, _OutIter>
 __copy_move_unwrap_iters(_InIter __first, _Sent __last, _OutIter __out_first) {
   return _Algorithm()(std::move(__first), std::move(__last), std::move(__out_first));
