@@ -151,7 +151,8 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
   uintptr_t SrcBitmapStart =
       SrcCountersEnd +
       __llvm_profile_get_num_padding_bytes(SrcCountersEnd - SrcCountersStart);
-  uintptr_t SrcNameStart = SrcBitmapStart + Header->NumBitmapBytes;
+  uintptr_t SrcNameStart = SrcBitmapStart + Header->NumBitmapBytes +
+                           Header->PaddingBytesAfterBitmapBytes;
   uintptr_t SrcValueProfDataStart =
       SrcNameStart + getDistanceFromCounterToValueProf(Header);
   if (SrcNameStart < SrcCountersStart || SrcNameStart < SrcBitmapStart)

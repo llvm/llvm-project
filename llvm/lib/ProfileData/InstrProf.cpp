@@ -556,6 +556,10 @@ Error readAndDecodeStrings(StringRef NameStrings,
   const uint8_t *P = NameStrings.bytes_begin();
   const uint8_t *EndP = NameStrings.bytes_end();
   while (P < EndP) {
+    if (*P == 0) {
+      ++P;
+      continue;
+    }
     uint32_t N;
     uint64_t UncompressedSize = decodeULEB128(P, &N);
     P += N;
@@ -587,9 +591,6 @@ Error readAndDecodeStrings(StringRef NameStrings,
     for (StringRef &Name : Names)
       if (Error E = NameCallback(Name))
         return E;
-
-    while (P < EndP && *P == 0)
-      P++;
   }
   return Error::success();
 }
