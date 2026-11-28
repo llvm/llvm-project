@@ -51733,8 +51733,10 @@ static SDValue combineInt64DivRemViaFPReciprocal(SDNode *N, bool IsSigned,
 
   bool Widen = VT != MVT::v8i64;
   // The chain multiplies twice on its critical path, so v2i64 only pays
-  // off where vpmullq is fast.
-  if (VT == MVT::v2i64 && Subtarget.isPMULLQSlow())
+  // off where vpmullq is fast. A uniform divisor takes its reciprocal from a
+  // scalar divide, which wins on throughput even where vpmullq is slow.
+  if (VT == MVT::v2i64 && Subtarget.isPMULLQSlow() &&
+      !DAG.getSplatValue(Divisor))
     return SDValue();
 
   MVT FPVT = MVT::v8f64;
@@ -51762,9 +51764,21 @@ static SDValue combineInt64DivRemViaFPReciprocal(SDNode *N, bool IsSigned,
   SDValue B = IsSigned ? DAG.getNode(ISD::ABS, DL, VT, Divisor) : Divisor;
 
   // b_rcp = round_down(1.0 / round_up(double(b)))
-  SDValue Recip =
-      DAG.getNode(X86ISD::FDIV_RND, DL, FPVT, DAG.getConstantFP(1.0, DL, FPVT),
-                  UToF(B, RU), RD);
+  SDValue Recip;
+  if (SDValue SplatB = DAG.getSplatValue(B)) {
+    // Only the packed SAE forms are 512-bit, so a uniform b takes b_rcp from
+    // a scalar divide and a broadcast.
+    SDValue SclB = DAG.getNode(X86ISD::SCALAR_UINT_TO_FP_RND, DL, MVT::v2f64,
+                               DAG.getUNDEF(MVT::v2f64), SplatB,
+                               RU); // vcvtusi2sd {ru-sae}
+    SDValue SclOne = DAG.getConstantFP(1.0, DL, MVT::v2f64);
+    SDValue SclRecip = DAG.getNode(X86ISD::FDIVS_RND, DL, MVT::v2f64, SclOne,
+                                   SclB, RD); // vdivsd {rd-sae}
+    Recip = DAG.getNode(X86ISD::VBROADCAST, DL, FPVT, SclRecip); // vbroadcastsd
+  } else {
+    Recip = DAG.getNode(X86ISD::FDIV_RND, DL, FPVT,
+                        DAG.getConstantFP(1.0, DL, FPVT), UToF(B, RU), RD);
+  }
   // first = round_down(uint64(round_down(double(a)) * b_rcp))
   SDValue First = FToU(FMul(UToF(A, RD), Recip));
   // rem = a - first * b
@@ -51891,9 +51905,12 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
     if (NextPowerOf2(NumElts) * FPSclVT.getSizeInBits() > 512)
       return SDValue();
     Dividend = DAG.WidenVector(Dividend, DL);
-    Divisor = DAG.WidenVector(Divisor, DL);
-    N = DAG.getNode(Opc, DL, Dividend.getValueType(), Dividend, Divisor)
-            .getNode();
+    EVT WideVT = Dividend.getValueType();
+    // Widening hides a splat, so splat a uniform divisor wider instead.
+    SDValue SplatD = DAG.getSplatValue(Divisor);
+    Divisor = SplatD ? DAG.getSplatBuildVector(WideVT, DL, SplatD)
+                     : DAG.WidenVector(Divisor, DL);
+    N = DAG.getNode(Opc, DL, WideVT, Dividend, Divisor).getNode();
   }
 
   SDValue Res =

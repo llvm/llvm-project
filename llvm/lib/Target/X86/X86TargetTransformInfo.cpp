@@ -781,8 +781,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   bool VarDivToFP = IsDivRem && !Op2Info.isConstant() &&
                     (!IsStrictFP || ST->useAVX512Regs());
 
-  // i64 needs the qq converts, which are AVX512DQ only. Two tables because the
-  // lowering picks by operand value and not by type.
+  // i64 needs the qq converts, which are AVX512DQ only.
   static const CostKindTblEntry AVX512DQExactVarDivCostTable[] = {
     { ISD::UDIV, MVT::v2i64,  {   5 } }, // cvt+divpd sequence
     { ISD::SDIV, MVT::v2i64,  {   5 } },
@@ -796,6 +795,21 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SDIV, MVT::v8i64,  {  16 } },
     { ISD::UREM, MVT::v8i64,  {  16 } },
     { ISD::SREM, MVT::v8i64,  {  16 } },
+  };
+
+  static const CostKindTblEntry AVX512DQUniformVarDivCostTable[] = {
+    { ISD::UDIV, MVT::v2i64,  {   9 } }, // cvt+divsd sequence
+    { ISD::SDIV, MVT::v2i64,  {   9 } },
+    { ISD::UREM, MVT::v2i64,  {   9 } },
+    { ISD::SREM, MVT::v2i64,  {   9 } },
+    { ISD::UDIV, MVT::v4i64,  {   9 } },
+    { ISD::SDIV, MVT::v4i64,  {   9 } },
+    { ISD::UREM, MVT::v4i64,  {   9 } },
+    { ISD::SREM, MVT::v4i64,  {   9 } },
+    { ISD::UDIV, MVT::v8i64,  {  13 } },
+    { ISD::SDIV, MVT::v8i64,  {  17 } },
+    { ISD::UREM, MVT::v8i64,  {  13 } },
+    { ISD::SREM, MVT::v8i64,  {  17 } },
   };
 
   static const CostKindTblEntry AVX512DQVarDivCostTable[] = {
@@ -842,13 +856,18 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     bool ExactFPDiv =
         OperandsFit(APFloat::semanticsPrecision(APFloat::IEEEdouble()));
 
-    // Only the reciprocal chain multiplies, so only it is vpmullq gated.
-    bool SlowMultiply =
-        !ExactFPDiv && LT.second == MVT::v2i64 && ST->isPMULLQSlow();
+    // Only the reciprocal chain multiplies, so only it is vpmullq gated. A
+    // uniform divisor takes its reciprocal from a scalar divide, which wins on
+    // throughput even where vpmullq is slow.
+    bool SlowMultiply = !ExactFPDiv && LT.second == MVT::v2i64 &&
+                        ST->isPMULLQSlow() && !Op2Info.isUniform();
 
     if (!SlowMultiply) {
-      ArrayRef<CostKindTblEntry> Tbl =
-          ExactFPDiv ? AVX512DQExactVarDivCostTable : AVX512DQVarDivCostTable;
+      ArrayRef<CostKindTblEntry> Tbl = AVX512DQVarDivCostTable;
+      if (ExactFPDiv)
+        Tbl = AVX512DQExactVarDivCostTable;
+      else if (Op2Info.isUniform())
+        Tbl = AVX512DQUniformVarDivCostTable;
       if (const auto *Entry = CostTableLookup(Tbl, ISD, LT.second))
         if (auto KindCost = Entry->Cost[CostKind])
           return LT.first * *KindCost;
@@ -8348,6 +8367,44 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
     }
 
     return !Ops.empty();
+  }
+
+  unsigned Opc = I->getOpcode();
+  if (Opc == Instruction::Call)
+    switch (cast<CallInst>(I)->getIntrinsicID()) {
+    case Intrinsic::masked_udiv:
+      Opc = Instruction::UDiv;
+      break;
+    case Intrinsic::masked_sdiv:
+      Opc = Instruction::SDiv;
+      break;
+    case Intrinsic::masked_urem:
+      Opc = Instruction::URem;
+      break;
+    case Intrinsic::masked_srem:
+      Opc = Instruction::SRem;
+      break;
+    default:
+      break;
+    }
+
+  switch (Opc) {
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::URem:
+  case Instruction::SRem:
+    // A uniform divisor needs only one scalar divide, so sink the splat.
+    if (VTy->getElementType()->isIntegerTy(64) && ST->hasDQI() &&
+        ST->useAVX512Regs() &&
+        match(I->getOperand(1),
+              m_Shuffle(m_InsertElt(m_Value(), m_Value(), m_ZeroInt()),
+                        m_Value(), m_ZeroMask()))) {
+      Use &Shuf = I->getOperandUse(1);
+      Ops.push_back(&cast<Instruction>(Shuf)->getOperandUse(0));
+      Ops.push_back(&Shuf);
+      return true;
+    }
+    break;
   }
 
   // A uniform shift amount in a vector shift or funnel shift may be much
