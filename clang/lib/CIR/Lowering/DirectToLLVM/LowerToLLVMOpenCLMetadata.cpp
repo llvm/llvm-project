@@ -12,6 +12,8 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -99,6 +101,49 @@ void lowerOpenCLKernelArgMetadata(
     addOpenCLKernelArgFunctionMetadata(ctx, entries, mapping.metadataName,
                                        metadataBuilder.getStringNode(metadata));
   }
+}
+
+mlir::LogicalResult lowerOpenCLKernelExecutionMetadata(
+    cir::OpenCLKernelExecutionMetadataAttr clExecutionMetadata,
+    mlir::Location loc, const mlir::TypeConverter &typeConverter,
+    llvm::SmallVectorImpl<mlir::NamedAttribute> &attributes) {
+  mlir::MLIRContext *ctx = clExecutionMetadata.getContext();
+  mlir::OperationName llvmFuncName(mlir::LLVM::LLVMFuncOp::getOperationName(),
+                                   ctx);
+
+  if (mlir::DenseI32ArrayAttr reqdWorkGroupSize =
+          clExecutionMetadata.getReqdWorkGroupSize()) {
+    attributes.push_back(mlir::NamedAttribute(
+        mlir::LLVM::LLVMFuncOp::getReqdWorkGroupSizeAttrName(llvmFuncName),
+        reqdWorkGroupSize));
+  }
+
+  if (mlir::DenseI32ArrayAttr workGroupSizeHint =
+          clExecutionMetadata.getWorkGroupSizeHint()) {
+    attributes.push_back(mlir::NamedAttribute(
+        mlir::LLVM::LLVMFuncOp::getWorkGroupSizeHintAttrName(llvmFuncName),
+        workGroupSizeHint));
+  }
+
+  if (mlir::TypeAttr vecTypeHint = clExecutionMetadata.getVecTypeHint()) {
+    mlir::Type hintType = vecTypeHint.getValue();
+    if (auto vectorType = mlir::dyn_cast<cir::VectorType>(hintType))
+      hintType = vectorType.getElementType();
+    auto intType = mlir::dyn_cast<cir::IntType>(hintType);
+    bool isSigned = intType && intType.isSigned();
+
+    mlir::Type convertedType =
+        typeConverter.convertType(vecTypeHint.getValue());
+    if (!convertedType)
+      return mlir::emitError(loc)
+             << "ClangIR lowering NYI: cannot convert "
+             << vecTypeHint.getValue() << " for vec_type_hint";
+    attributes.push_back(mlir::NamedAttribute(
+        mlir::LLVM::LLVMFuncOp::getVecTypeHintAttrName(llvmFuncName),
+        mlir::LLVM::VecTypeHintAttr::get(
+            ctx, mlir::TypeAttr::get(convertedType), isSigned)));
+  }
+  return mlir::success();
 }
 
 static void createOpenCLVersionNamedMetadata(mlir::ModuleOp module,

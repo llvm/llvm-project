@@ -1,0 +1,26 @@
+// RUN: cir-opt %s --cir-to-llvm | FileCheck %s
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // CHECK-LABEL: llvm.func @dimensions
+  // CHECK-SAME: reqd_work_group_size = array<i32: 1, 2, 4>
+  // CHECK-SAME: work_group_size_hint = array<i32: 8, 16, -2>
+  cir.func private @dimensions() attributes {cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata<reqd_work_group_size = [1, 2, 4], work_group_size_hint = [8, 16, -2]>}
+
+  // CHECK-LABEL: llvm.func @signed_hint
+  // CHECK-SAME: vec_type_hint = #llvm.vec_type_hint<hint = vector<4xi32>, is_signed = true>
+  cir.func private @signed_hint() attributes {cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata<vec_type_hint = !cir.vector<4 x !cir.int<s, 32>>>}
+
+  // CHECK-LABEL: llvm.func @unsigned_hint
+  // CHECK-SAME: vec_type_hint = #llvm.vec_type_hint<hint = i32>
+  cir.func private @unsigned_hint() attributes {cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata<vec_type_hint = !cir.int<u, 32>>}
+
+  // CHECK-LABEL: llvm.func @float_hint
+  // CHECK-SAME: vec_type_hint = #llvm.vec_type_hint<hint = f32>
+  cir.func private @float_hint() attributes {cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata<vec_type_hint = !cir.float>}
+
+  // A value stored under an unrelated name is not a kernel execution constraint.
+  // CHECK-LABEL: llvm.func @unrelated_attribute
+  // CHECK-SAME: other = #cir.cl.kernel_execution_metadata<reqd_work_group_size = [1, 2, 4]>
+  // CHECK-NOT: reqd_work_group_size = array
+  cir.func private @unrelated_attribute() attributes {other = #cir.cl.kernel_execution_metadata<reqd_work_group_size = [1, 2, 4]>}
+}

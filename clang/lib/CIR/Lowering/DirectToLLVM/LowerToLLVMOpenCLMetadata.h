@@ -11,8 +11,14 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/Support/LogicalResult.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "llvm/ADT/SmallVector.h"
+
+namespace mlir {
+class Location;
+class TypeConverter;
+} // namespace mlir
 
 namespace cir {
 namespace direct {
@@ -20,6 +26,11 @@ namespace direct {
 void lowerOpenCLKernelArgMetadata(
     cir::OpenCLKernelArgMetadataAttr clArgMetadata,
     llvm::SmallVectorImpl<mlir::Attribute> &entries);
+
+mlir::LogicalResult lowerOpenCLKernelExecutionMetadata(
+    cir::OpenCLKernelExecutionMetadataAttr clExecutionMetadata,
+    mlir::Location loc, const mlir::TypeConverter &typeConverter,
+    llvm::SmallVectorImpl<mlir::NamedAttribute> &attributes);
 
 void lowerOpenCLModuleMetadataAttrs(mlir::ModuleOp module);
 
