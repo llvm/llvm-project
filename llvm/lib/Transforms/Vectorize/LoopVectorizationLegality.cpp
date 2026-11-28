@@ -85,7 +85,7 @@ LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
     // Loop hints have the highest precedence.
     assert(ForceScalableHint != SK_AlwaysScalable && "Unexpected loop hint.");
     if (ForceScalableHint == SK_PreferScalable ||
-        ForceScalableHint == SK_FixedWidthOnly)
+        ForceScalableHint == SK_DisableScalable)
       return ForceScalableHint;
 
     // Then, consider -scalable-vectorization=(always|off|on).
@@ -96,14 +96,15 @@ LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
     if (ForceWidthOpt.isScalable())
       return SK_AlwaysScalable;
     if (ForceWidth)
-      return SK_FixedWidthOnly;
+      return SK_FixedWidth;
 
     // Finally, listen to TTI.
     if (TTI && TTI->enableScalableVectorization())
       return SK_PreferScalable;
 
-    // Preference unspecified, fallback to fixed-length vectorization.
-    return SK_FixedWidthOnly;
+    // Preference unspecified and not enabled by the target, fallback to
+    // fixed-length vectorization only.
+    return SK_DisableScalable;
   };
   Scalable =
       ComputeScalable(ScalableForceKind(Scalable), Opts.scalable_vectorization,
@@ -267,7 +268,7 @@ void LoopVectorizeHints::getHintsFromMetadata() {
       else if (Name == "llvm.loop.vectorize.scalable.enable")
         Scalable = SK_PreferScalable;
       else if (Name == "llvm.loop.vectorize.scalable.disable")
-        Scalable = SK_FixedWidthOnly;
+        Scalable = SK_DisableScalable;
       continue;
     }
     if (Args.size() == 1)

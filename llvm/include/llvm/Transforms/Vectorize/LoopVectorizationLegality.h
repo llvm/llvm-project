@@ -121,7 +121,7 @@ public:
     /// Not selected.
     SK_Unspecified = -1,
     /// Disables vectorization with scalable vectors.
-    SK_FixedWidthOnly = 0,
+    SK_DisableScalable = 0,
     /// Vectorize loops using scalable vectors or fixed-width vectors, but favor
     /// scalable vectors when the cost-model is inconclusive. This is the
     /// default when the scalable.enable hint is enabled through a pragma.
@@ -129,7 +129,9 @@ public:
     /// Always vectorize loops using scalable vectors if feasible (i.e. the plan
     /// has a valid cost and is not restricted by fixed-length dependence
     /// distances).
-    SK_AlwaysScalable = 2
+    SK_AlwaysScalable = 2,
+    /// Fixed-width VF is specefied.
+    SK_FixedWidth = 3
   };
 
   LLVM_ABI LoopVectorizeHints(const VectorizeOptions &Opts, const Loop *L,
@@ -171,7 +173,7 @@ public:
 
   /// \return true if scalable vectorization has been explicitly disabled.
   bool isScalableVectorizationDisabled() const {
-    return (ScalableForceKind)Scalable == SK_FixedWidthOnly;
+    return (ScalableForceKind)Scalable == SK_DisableScalable;
   }
 
   /// \return true if scalable vectorization is always preferred over
