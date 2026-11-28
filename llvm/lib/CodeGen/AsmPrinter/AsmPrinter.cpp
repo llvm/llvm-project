@@ -4066,6 +4066,13 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
     // expression properly.  This is important for differences between
     // blockaddress labels.  Since the two labels are in the same function, it
     // is reasonable to treat their delta as a 32-bit value.
+    //
+    // The assembler only truncates to the emitted size, which is a whole
+    // number of bytes, so a truncation to a type that is not byte-sized would
+    // leave the padding bits set. Report it as unsupported instead.
+    if (CE->getType()->isIntegerTy() &&
+        CE->getType()->getIntegerBitWidth() % 8 != 0)
+      break; // Error
     [[fallthrough]];
   case Instruction::BitCast:
     return lowerConstant(CE->getOperand(0), BaseCV, Offset);
