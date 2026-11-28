@@ -2710,7 +2710,6 @@ math_test(
     name = "expm1bf16",
     deps = [
         "//libc/src/__support/FPUtil:bfloat16",
-        "//libc/src/__support/FPUtil:cast",
     ],
 )
 

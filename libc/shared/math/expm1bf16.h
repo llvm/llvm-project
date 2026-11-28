@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \expm1bf16.h
-/// This file contains the declaration of the Instruction class, which is the
-/// base class for all of the VM instructions.
+/// \file
+/// Shared expm1bf16 function.
 ///
 //===----------------------------------------------------------------------===//
-
 
 #ifndef LLVM_LIBC_SHARED_MATH_EXPM1BF16_H
 #define LLVM_LIBC_SHARED_MATH_EXPM1BF16_H
