@@ -207,9 +207,6 @@ private:
   uint32_t cap = 0;
 };
 
-bool validateSymbolRelocation(const Symbol *, const InputSection *,
-                              const Relocation &);
-
 /*
  * v: The value the relocation is attempting to encode
  * bits: The number of bits actually available to encode this relocation

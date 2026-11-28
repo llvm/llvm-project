@@ -110,11 +110,16 @@ public:
     llvm_unreachable("target does not use thunks");
   }
 
-  const RelocAttrs &getRelocAttrs(uint8_t type) const {
+  static const RelocAttrs &getRelocAttrs(llvm::ArrayRef<RelocAttrs> relocAttrs,
+                                         uint8_t type) {
     assert(type < relocAttrs.size() && "invalid relocation type");
     if (type >= relocAttrs.size())
       return invalidRelocAttrs;
     return relocAttrs[type];
+  }
+
+  const RelocAttrs &getRelocAttrs(uint8_t type) const {
+    return getRelocAttrs(relocAttrs, type);
   }
 
   bool hasAttr(uint8_t type, RelocAttrBits bit) const {

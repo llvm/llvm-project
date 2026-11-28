@@ -15,6 +15,7 @@
 #include "MapFile.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
+#include "Relocations.h"
 #include "SectionPriorities.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -27,6 +28,7 @@
 #include "lld/Common/Parallel.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -669,8 +671,65 @@ void Writer::treatSpecialUndefineds() {
 // depends on which reference the relocation scan reaches first.
 static void addNonLazyPointerEntry(Symbol *sym) { in.got->addEntry(sym); }
 
+LLVM_ATTRIBUTE_NOINLINE static bool
+validateTlvRelocation(const Symbol *sym, const InputSection *isec,
+                      const Relocation &r, const RelocAttrs &relocAttrs) {
+  bool valid = true;
+  auto message = [&](const Twine &diagnostic) {
+    valid = false;
+    return (isec->getLocation(r.offset) + ": " + relocAttrs.name +
+            " relocation " + diagnostic)
+        .str();
+  };
+
+  // A GOT relocation against a thread-local is valid: the slot holds the
+  // address of the TLV descriptor, which is what such a reference asks for.
+  // Branch and unsigned relocations can likewise refer to the descriptor via
+  // a stub or pointer. ld-prime accepts all three kinds.
+  //
+  // A direct relocation against an imported TLV is not valid because an
+  // imported descriptor has no link-time address. Conversely, a TLV
+  // relocation against a symbol known not to be thread-local would interpret
+  // the referent's first word as a resolver function. Keep rejecting both.
+  //
+  // A dynamic-lookup symbol has no defining dylib, and Mach-O cannot express
+  // thread-locality on an undefined reference, so its kind is unknowable here.
+  // dyld resolves it at load time; rejecting it would refuse a valid link.
+  const auto *dysym = dyn_cast<DylibSymbol>(sym);
+  if (dysym && dysym->isDynamicLookup())
+    return true;
+
+  const bool isTlvReloc = relocAttrs.hasAttr(RelocAttrBits::TLV);
+  const bool permitsTlvDescriptor = isTlvReloc ||
+                                    relocAttrs.hasAttr(RelocAttrBits::GOT) ||
+                                    relocAttrs.hasAttr(RelocAttrBits::BRANCH) ||
+                                    relocAttrs.hasAttr(RelocAttrBits::UNSIGNED);
+  const bool isImportedTlv = dysym && dysym->isTlv();
+
+  if (isTlvReloc && !sym->isTlv())
+    error(message(Twine("requires that symbol ") + sym->getName() +
+                  " be thread-local"));
+  else if (isImportedTlv && !permitsTlvDescriptor)
+    error(message(Twine("cannot reference imported thread-local symbol ") +
+                  sym->getName() +
+                  "; its TLV descriptor has no address at link time"));
+
+  return valid;
+}
+
+static bool validateSymbolRelocation(const Symbol *sym,
+                                     const InputSection *isec,
+                                     const Relocation &r,
+                                     const RelocAttrs &relocAttrs) {
+  const auto *dysym = dyn_cast<DylibSymbol>(sym);
+  if (!relocAttrs.hasAttr(RelocAttrBits::TLV) && !(dysym && dysym->isTlv()))
+    return true;
+  return validateTlvRelocation(sym, isec, r, relocAttrs);
+}
+
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
-                                    const Relocation &r) {
+                                    const Relocation &r,
+                                    const RelocAttrs &relocAttrs) {
   if (!sym->isLive()) {
     if (Defined *defined = dyn_cast<Defined>(sym)) {
       if (config->emitInitOffsets &&
@@ -681,8 +740,6 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
     }
     assert(false && "referenced symbol must be live");
   }
-
-  const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
 
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
     if (needsBinding(sym))
@@ -713,6 +770,8 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
 void Writer::scanRelocations() {
   TimeTraceScope timeScope("Scan relocations");
 
+  const bool emitChainedFixups = config->emitChainedFixups;
+  const ArrayRef<RelocAttrs> targetRelocAttrs = target->relocAttrs;
   // This can't use a for-each loop: It calls treatUndefinedSymbol(), which can
   // add to inputSections, which invalidates inputSections's iterators.
   for (size_t i = 0; i < inputSections.size(); ++i) {
@@ -723,13 +782,10 @@ void Writer::scanRelocations() {
 
     for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
       Relocation &r = *it;
+      const RelocAttrs &relocAttrs =
+          TargetInfo::getRelocAttrs(targetRelocAttrs, r.type);
 
-      // Canonicalize the referent so that later accesses in Writer won't
-      // have to worry about it.
-      if (auto *referentIsec = dyn_cast_if_present<InputSection *>(r.referent))
-        r.referent = referentIsec->canonical();
-
-      if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
+      if (relocAttrs.hasAttr(RelocAttrBits::SUBTRAHEND)) {
         // Skip over the following UNSIGNED relocation -- it's just there as the
         // minuend, and doesn't have the usual UNSIGNED semantics. We don't want
         // to emit rebase opcodes for it.
@@ -741,15 +797,21 @@ void Writer::scanRelocations() {
           it->referent = referentIsec->canonical();
         continue;
       }
+
       if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent)) {
         if (auto *undefined = dyn_cast<Undefined>(sym))
           treatUndefinedSymbol(*undefined, isec, r.offset);
         // treatUndefinedSymbol() can replace sym with a DylibSymbol; re-check.
-        if (!isa<Undefined>(sym) && validateSymbolRelocation(sym, isec, r))
-          prepareSymbolRelocation(sym, isec, r);
+        if (!isa<Undefined>(sym) &&
+            validateSymbolRelocation(sym, isec, r, relocAttrs))
+          prepareSymbolRelocation(sym, isec, r, relocAttrs);
       } else {
+        // Canonicalize the referent so that later accesses in Writer won't
+        // have to worry about it.
+        if (auto *referentIsec = cast_if_present<InputSection *>(r.referent))
+          r.referent = referentIsec->canonical();
         if (!r.pcrel) {
-          if (config->emitChainedFixups)
+          if (emitChainedFixups)
             in.chainedFixups->addRebase(isec, r.offset);
           else
             in.rebase->addEntry(isec, r.offset);

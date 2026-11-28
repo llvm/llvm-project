@@ -263,7 +263,7 @@ public:
   const bool privateExtern;
 };
 
-class DylibSymbol : public Symbol {
+class DylibSymbol final : public Symbol {
 public:
   DylibSymbol(DylibFile *file, StringRef name, bool isWeakDef,
               RefState refState, bool isTlv)
