@@ -1245,7 +1245,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
   input_flags->native = 1;
   // __kmp_task_alloc() sets up all other flags
 
-  if (!if_cond) {
+  if (!if_cond && !copy_func) {
     arg_size = 0;
   }
 
@@ -1260,10 +1260,15 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
     }
     // else error??
 
-    if (copy_func) {
-      (*copy_func)(task->shareds, data);
-    } else {
-      KMP_MEMCPY(task->shareds, data, arg_size);
+    // Deferred tasks need their data environment before being scheduled.
+    // For undeferred tasks, construct it after waiting for dependencies and
+    // entering the task context below.
+    if (if_cond) {
+      if (copy_func) {
+        (*copy_func)(task->shareds, data);
+      } else {
+        KMP_MEMCPY(task->shareds, data, arg_size);
+      }
     }
   }
 
@@ -1318,7 +1323,12 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASK)(void (*func)(void *), void *data,
     }
 
     __kmpc_omp_task_begin_if0(&loc, gtid, task);
-    func(data);
+    if (copy_func && arg_size > 0) {
+      (*copy_func)(task->shareds, data);
+      func(task->shareds);
+    } else {
+      func(data);
+    }
     __kmpc_omp_task_complete_if0(&loc, gtid, task);
 
 #if OMPT_SUPPORT
