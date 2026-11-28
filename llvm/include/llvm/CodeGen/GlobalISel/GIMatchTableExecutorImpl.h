@@ -519,6 +519,25 @@ bool GIMatchTableExecutor::executeMatchTable(
           return false;
       break;
     }
+    case GIM_CheckIsLegal: {
+      uint16_t Opc = readU16();
+      uint64_t NumTypes = readULEB();
+      SmallVector<LLT, 4> Types;
+      for (uint64_t I = 0; I != NumTypes; ++I) {
+        uint64_t InsnID = readULEB();
+        uint64_t OpIdx = readULEB();
+        assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+        Types.push_back(
+            MRI.getType(State.MIs[InsnID]->getOperand(OpIdx).getReg()));
+      }
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckIsLegal(Opcode="
+                             << Opc << ", NumTypes=" << NumTypes << ")\n");
+      if (!isLegalForApply(Opc, Types))
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      break;
+    }
     case GIM_CheckHasNoUse: {
       uint64_t InsnID = readULEB();
 

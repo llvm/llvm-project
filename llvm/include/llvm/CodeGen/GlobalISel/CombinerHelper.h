@@ -160,6 +160,11 @@ public:
   /// Query is legal on the target.
   LLVM_ABI bool isLegalOrBeforeLegalizer(const LegalityQuery &Query) const;
 
+  /// \return true if an instruction with opcode \p Opcode and the type indices
+  /// \p Types is legal, or if we are before legalization.
+  LLVM_ABI bool isLegalOrBeforeLegalizer(unsigned Opcode,
+                                         ArrayRef<LLT> Types) const;
+
   /// \return true if \p Query is legal on the target, or if \p Query will
   /// perform WidenScalar action on the target.
   LLVM_ABI bool isLegalOrHasWidenScalar(const LegalityQuery &Query) const;

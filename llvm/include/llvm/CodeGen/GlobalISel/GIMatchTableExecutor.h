@@ -236,6 +236,14 @@ enum {
   /// - PredicateID(2) - The ID of the predicate function to call
   GIM_CheckCxxInsnPredicate,
 
+  /// Check that an instruction built by a combine's apply patterns would be
+  /// legal, using the types of operands from the matched instructions.
+  /// - Opcode(2) - The opcode of the instruction to check
+  /// - NumTypes(ULEB128) - The number of type indices of the opcode
+  /// - (InsnID(ULEB128), OpIdx(ULEB128)) x NumTypes - The matched operand
+  ///   whose type gives each type index, in order
+  GIM_CheckIsLegal,
+
   /// Check if there's no use of the first result.
   /// - InsnID(ULEB128) - Instruction ID
   GIM_CheckHasNoUse,
@@ -779,6 +787,12 @@ protected:
   virtual bool runCustomAction(unsigned, const MatcherState &State,
                                NewMIVector &OutMIs) const {
     llvm_unreachable("Subclass does not implement runCustomAction!");
+  }
+
+  /// Check whether an instruction with opcode \p Opcode and the type indices
+  /// \p Types would be legal. Only used by combiners, for GIM_CheckIsLegal.
+  virtual bool isLegalForApply(unsigned Opcode, ArrayRef<LLT> Types) const {
+    llvm_unreachable("Should have been overridden by tablegen if used");
   }
 
   virtual uint32_t getRootFlagsToDrop() const { return 0; }
