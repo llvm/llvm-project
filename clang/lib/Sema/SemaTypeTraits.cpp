@@ -653,6 +653,96 @@ static ComparisonCategoryResult EvaluateTypeOrder(Sema &S, QualType LHS,
                     : ComparisonCategoryResult::Less;
 }
 
+DestructibleTraits::DestructibleTraits(Sema &S, const ASTContext &C,
+                                       SourceLocation Loc, QualType T)
+    : Loc(Loc), Kind(Destructibility::TriviallyDestructible) {
+  // C++14 [meta.unary.prop]:
+  //   For reference types, is_destructible<T>::value is true.
+  if (T->isReferenceType()) {
+    Kind = Destructibility::TriviallyDestructible;
+    return;
+  }
+
+  // Objective-C++ ARC: autorelease types don't require destruction.
+  if (T->isObjCLifetimeType() &&
+      T.getObjCLifetime() == Qualifiers::OCL_Autoreleasing) {
+    Kind = Destructibility::TriviallyDestructible;
+    return;
+  }
+
+  // C++14 [meta.unary.prop]:
+  //   For incomplete types and function types, is_destructible<T>::value is
+  //   false.
+  if (T->isIncompleteType() || T->isFunctionType()) {
+    Kind = Destructibility::NotAvailable;
+    return;
+  }
+
+  // A type that requires destruction (via a non-trivial destructor or ARC
+  // lifetime semantics) is not trivially-destructible.
+  if (T.isDestructedType())
+    Kind = Destructibility::Destructible;
+
+  // C++14 [meta.unary.prop]:
+  //   For object types and given U equal to remove_all_extents_t<T>, if the
+  //   expression std::declval<U&>().~U() is well-formed when treated as an
+  //   unevaluated operand (Clause 5), then is_destructible<T>::value is true
+  auto *RD = C.getBaseElementType(T)->getAsCXXRecordDecl();
+  if (!RD)
+    return;
+
+  Destructor = S.LookupDestructor(RD);
+  if (!Destructor) {
+    Kind = Destructibility::NotAvailable;
+    return;
+  }
+
+  //  C++14 [dcl.fct.def.delete]p2:
+  //    A program that refers to a deleted function implicitly or
+  //    explicitly, other than to declare it, is ill-formed.
+  if (Destructor->isDeleted()) {
+    Kind = Destructibility::NotAvailable;
+    return;
+  }
+
+  if (C.getLangOpts().AccessControl && Destructor->getAccess() != AS_public) {
+    Kind = Destructibility::NotAvailable;
+    return;
+  }
+}
+
+DestructibleTraits::Destructibility DestructibleTraits::getKind() const {
+  return Kind;
+}
+
+bool DestructibleTraits::isDestructible() const {
+  return Kind != Destructibility::NotAvailable;
+}
+
+bool DestructibleTraits::isTriviallyDestructible() const {
+  return Kind == Destructibility::TriviallyDestructible;
+}
+
+bool DestructibleTraits::isNoThrowDestructible(Sema &S, const ASTContext &C) {
+  if (!isDestructible())
+    return false;
+
+  // We need to explicitly check `NoThrow` has a value because converting
+  // `NoThrow` to bool is ambiguous.
+  if (NoThrow.has_value())
+    return *NoThrow;
+
+  // A destructible type without a CXXDestructorDecl is always no-throw
+  // destructible.
+  if (!Destructor)
+    return true;
+
+  auto *CPT = Destructor->getType()->castAs<FunctionProtoType>();
+  CPT = S.ResolveExceptionSpec(Loc, CPT);
+  NoThrow = CPT && CPT->isNothrow();
+  return *NoThrow;
+}
+
 static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
                                    SourceLocation KeyLoc,
                                    TypeSourceInfo *TInfo) {
@@ -878,52 +968,12 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
              !RD->hasNonTrivialCopyAssignment();
     return false;
   case UTT_IsDestructible:
+    return DestructibleTraits(Self, C, KeyLoc, T).isDestructible();
   case UTT_IsTriviallyDestructible:
+    return DestructibleTraits(Self, C, KeyLoc, T).isTriviallyDestructible();
   case UTT_IsNothrowDestructible:
-    // C++14 [meta.unary.prop]:
-    //   For reference types, is_destructible<T>::value is true.
-    if (T->isReferenceType())
-      return true;
-
-    // Objective-C++ ARC: autorelease types don't require destruction.
-    if (T->isObjCLifetimeType() &&
-        T.getObjCLifetime() == Qualifiers::OCL_Autoreleasing)
-      return true;
-
-    // C++14 [meta.unary.prop]:
-    //   For incomplete types and function types, is_destructible<T>::value is
-    //   false.
-    if (T->isIncompleteType() || T->isFunctionType())
-      return false;
-
-    // A type that requires destruction (via a non-trivial destructor or ARC
-    // lifetime semantics) is not trivially-destructible.
-    if (UTT == UTT_IsTriviallyDestructible && T.isDestructedType())
-      return false;
-
-    // C++14 [meta.unary.prop]:
-    //   For object types and given U equal to remove_all_extents_t<T>, if the
-    //   expression std::declval<U&>().~U() is well-formed when treated as an
-    //   unevaluated operand (Clause 5), then is_destructible<T>::value is true
-    if (auto *RD = C.getBaseElementType(T)->getAsCXXRecordDecl()) {
-      CXXDestructorDecl *Destructor = Self.LookupDestructor(RD);
-      if (!Destructor)
-        return false;
-      //  C++14 [dcl.fct.def.delete]p2:
-      //    A program that refers to a deleted function implicitly or
-      //    explicitly, other than to declare it, is ill-formed.
-      if (Destructor->isDeleted())
-        return false;
-      if (C.getLangOpts().AccessControl && Destructor->getAccess() != AS_public)
-        return false;
-      if (UTT == UTT_IsNothrowDestructible) {
-        auto *CPT = Destructor->getType()->castAs<FunctionProtoType>();
-        CPT = Self.ResolveExceptionSpec(KeyLoc, CPT);
-        if (!CPT || !CPT->isNothrow())
-          return false;
-      }
-    }
-    return true;
+    return DestructibleTraits(Self, C, KeyLoc, T)
+        .isNoThrowDestructible(Self, C);
 
   case UTT_HasTrivialDestructor:
     // http://gcc.gnu.org/onlinedocs/gcc/Type-Traits.html

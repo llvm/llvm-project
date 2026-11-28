@@ -16136,6 +16136,48 @@ public:
   ///@}
 };
 
+/// Evaluates whether a type is trivially-destructible, non-trivially
+/// destructible, or cannot be destroyed in the current context. Caches
+/// the results from evaluation to allow for independently determining
+/// if the type's destructor throws.
+class DestructibleTraits {
+public:
+  /// Indicates whether a type is trivially-destructible, non-trivially
+  /// destructible, or not destructible.
+  enum class Destructibility : std::uint8_t {
+    /// Type is not destructible from this context.
+    NotAvailable,
+
+    /// Type is trivially-destructible.
+    TriviallyDestructible,
+
+    /// Type is destructible, but not trivially-destructible.
+    Destructible,
+  };
+
+  DestructibleTraits(Sema &S, const ASTContext &C, SourceLocation Loc,
+                     QualType T);
+
+  /// Returns the raw destructor kind.
+  Destructibility getKind() const;
+
+  /// Returns true if, and only if, the type is destructible.
+  bool isDestructible() const;
+
+  /// Returns true if, and only if, the type is trivially-destructible.
+  bool isTriviallyDestructible() const;
+
+  /// Returns true if, and only if, the type is destructible, and the chosen
+  /// destructor is non-throwing.
+  bool isNoThrowDestructible(Sema &S, const ASTContext &C);
+
+private:
+  SourceLocation Loc;
+  Destructibility Kind = Destructibility::NotAvailable;
+  const CXXDestructorDecl *Destructor = nullptr;
+  std::optional<bool> NoThrow = std::nullopt;
+};
+
 DeductionFailureInfo
 MakeDeductionFailureInfo(ASTContext &Context, TemplateDeductionResult TDK,
                          sema::TemplateDeductionInfo &Info);
