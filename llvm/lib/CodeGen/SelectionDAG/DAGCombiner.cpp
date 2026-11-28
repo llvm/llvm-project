@@ -16601,13 +16601,17 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   // Also handles (zext (and (bitcast (extract_subvector vNi1, 0)) cst))
   // by treating the bitcast+extract as equivalent to a truncate of the
   // wider bitcast, e.g. on AVX512DQ where v8i1 extract replaces truncate.
+  // That equivalence only holds on little-endian targets: on big-endian
+  // lane 0 is the most significant bit of the bitcast, so the low K bits
+  // of the wider bitcast hold the last K lanes instead of the first K.
   if (N0.getOpcode() == ISD::AND &&
       N0.getOperand(1).getOpcode() == ISD::Constant) {
     SDValue AndSrc = N0.getOperand(0);
     SDValue X;
     if (AndSrc.getOpcode() == ISD::TRUNCATE) {
       X = AndSrc.getOperand(0);
-    } else if (AndSrc.getOpcode() == ISD::BITCAST &&
+    } else if (DAG.getDataLayout().isLittleEndian() &&
+               AndSrc.getOpcode() == ISD::BITCAST &&
                AndSrc.getOperand(0).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
                AndSrc.getOperand(0).getConstantOperandVal(1) == 0) {
       // (bitcast (extract_subvector vNi1, 0) -> iK) is equivalent to
@@ -16884,14 +16888,18 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   // not cheaper than zero-extending it (which would indicate the target prefers
   // to keep operations at the narrower width).
   // Also handles (aext (and (bitcast (extract_subvector vNi1, 0)) cst))
-  // which arises on AVX512DQ where v8i1 extract replaces truncate.
+  // which arises on AVX512DQ where v8i1 extract replaces truncate. That
+  // equivalence only holds on little-endian targets: on big-endian lane 0 is
+  // the most significant bit of the bitcast, so the low K bits of the wider
+  // bitcast hold the last K lanes instead of the first K.
   if (N0.getOpcode() == ISD::AND &&
       N0.getOperand(1).getOpcode() == ISD::Constant) {
     SDValue AndSrc = N0.getOperand(0);
     SDValue X;
     if (AndSrc.getOpcode() == ISD::TRUNCATE) {
       X = AndSrc.getOperand(0);
-    } else if (AndSrc.getOpcode() == ISD::BITCAST &&
+    } else if (DAG.getDataLayout().isLittleEndian() &&
+               AndSrc.getOpcode() == ISD::BITCAST &&
                AndSrc.getOperand(0).getOpcode() == ISD::EXTRACT_SUBVECTOR &&
                AndSrc.getOperand(0).getConstantOperandVal(1) == 0) {
       SDValue Src = AndSrc.getOperand(0).getOperand(0);
