@@ -941,8 +941,7 @@ def headerpad_max_install_names : Flag<["-"], "headerpad_max_install_names">,
     HelpText<"Allocate extra space so all load-command paths can expand to MAXPATHLEN via install_name_tool">,
     Group<grp_rare>;
 def bind_at_load : Flag<["-"], "bind_at_load">,
-    HelpText<"Tell dyld to bind all symbols at load time, rather than lazily">,
-    Flags<[HelpHidden]>,
+    HelpText<"Bind all symbols at load time rather than lazily; no effect with chained fixups (the default when targeting macOS 13+)">,
     Group<grp_rare>;
 def force_flat_namespace : Flag<["-"], "force_flat_namespace">,
     HelpText<"Tell dyld to use a flat namespace on this executable and all its dependent dylibs & bundles">,
