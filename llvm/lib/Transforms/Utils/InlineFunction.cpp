@@ -2784,6 +2784,12 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
 
   { // Scope to destroy VMap after cloning.
     ValueToValueMapTy VMap;
+
+    // Growing the map moves the value handles, so estimate the map size.
+    unsigned NumCalleeBlocks = CalledFunc->getMaxBlockNumber();
+    VMap.reserve(CalledFunc->arg_size() + NumCalleeBlocks * 8);
+    InlinedFunctionInfo.OrigVMap.reserve(NumCalleeBlocks * 4);
+
     struct ByValInit {
       Value *Dst;
       Value *Src;
