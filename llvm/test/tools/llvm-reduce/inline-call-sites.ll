@@ -518,11 +518,18 @@ define void @callee_uses_branch_funnel(...) {
   ret void
 }
 
-; FIXME: This should fail the verifier after inlining
 ; CHECK-LABEL: define void @callee_branch_funnel_musttail_caller(
-; RESULT-NEXT: call void (...) @llvm.icall.branch.funnel()
+; RESULT-NEXT: musttail call void (...) @llvm.icall.branch.funnel(...)
 ; RESULT-NEXT: ret void
-define void @callee_branch_funnel_musttail_caller() {
+define void @callee_branch_funnel_musttail_caller(...) {
+  musttail call void (...) @callee_uses_branch_funnel(...)
+  ret void
+}
+
+; CHECK-LABEL: define void @callee_branch_funnel_caller(
+; RESULT-NEXT: call void (...) @callee_uses_branch_funnel()
+; RESULT-NEXT: ret void
+define void @callee_branch_funnel_caller() {
   call void (...) @callee_uses_branch_funnel()
   ret void
 }
