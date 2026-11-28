@@ -3474,6 +3474,12 @@ defm fine_grained_bitfield_accesses : BoolOption<"f", "fine-grained-bitfield-acc
   BothFlags<[], [ClangOption, CC1Option]>>,
   Group<f_clang_Group>;
 
+def fbit_insert_extract_bitfields : Flag<["-"], "fbit-insert-extract-bitfields">,
+  Group<f_Group>, Visibility<[CC1Option]>,
+  HelpText<"Use the LLVM bitinsert and bitextract instructions for bit-field "
+           "accesses (experimental)">,
+  MarshallingInfoFlag<CodeGenOpts<"BitInsertExtractBitfields">>;
+
 def fexperimental_relative_cxx_abi_vtables :
   Flag<["-"], "fexperimental-relative-c++-abi-vtables">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,

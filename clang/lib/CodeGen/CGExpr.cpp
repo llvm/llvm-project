@@ -2660,8 +2660,6 @@ RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV,
   llvm::Type *ResLTy = ConvertType(LV.getType());
 
   Address Ptr = LV.getBitFieldAddress();
-  llvm::Value *Val =
-      Builder.CreateLoad(Ptr, LV.isVolatileQualified(), "bf.load");
 
   bool UseVolatile = LV.isVolatileQualified() &&
                      Info.VolatileStorageSize != 0 &&
@@ -2669,7 +2667,18 @@ RValue CodeGenFunction::EmitLoadOfBitfieldLValue(LValue LV,
   const unsigned Offset = UseVolatile ? Info.VolatileOffset : Info.Offset;
   const unsigned StorageSize =
       UseVolatile ? Info.VolatileStorageSize : Info.StorageSize;
-  if (Info.IsSigned) {
+
+  const bool UseBitExtract = CGM.getCodeGenOpts().BitInsertExtractBitfields;
+  if (UseBitExtract)
+    Ptr = Ptr.withElementType(Builder.getByteNTy(StorageSize));
+
+  llvm::Value *Val =
+      Builder.CreateLoad(Ptr, LV.isVolatileQualified(), "bf.load");
+
+  if (UseBitExtract) {
+    Val = Builder.CreateBitExtract(Builder.getIntNTy(Info.Size), Val,
+                                   Builder.getInt32(Offset), "bf.extract");
+  } else if (Info.IsSigned) {
     assert(static_cast<unsigned>(Offset + Info.Size) <= StorageSize);
     unsigned HighBits = StorageSize - Offset - Info.Size;
     if (HighBits)
@@ -3071,9 +3080,22 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
   const unsigned StorageSize =
       UseVolatile ? Info.VolatileStorageSize : Info.StorageSize;
   const unsigned Offset = UseVolatile ? Info.VolatileOffset : Info.Offset;
+
   // See if there are other bits in the bitfield's storage we'll need to load
   // and mask together with source before storing.
-  if (StorageSize != Info.Size) {
+  if (StorageSize != Info.Size &&
+      CGM.getCodeGenOpts().BitInsertExtractBitfields) {
+    assert(StorageSize > Info.Size && "Invalid bitfield size.");
+    Address BytePtr = Ptr.withElementType(Builder.getByteNTy(StorageSize));
+    llvm::Value *Old =
+        Builder.CreateLoad(BytePtr, Dst.isVolatileQualified(), "bf.load");
+    llvm::Value *Field =
+        Builder.CreateTrunc(SrcVal, Builder.getIntNTy(Info.Size), "bf.value");
+    MaskedVal = Builder.CreateZExt(Field, SrcVal->getType(), "bf.value.zext");
+    SrcVal =
+        Builder.CreateBitInsert(Old, Field, Builder.getInt32(Offset), "bf.set");
+    Ptr = BytePtr;
+  } else if (StorageSize != Info.Size) {
     assert(StorageSize > Info.Size && "Invalid bitfield size.");
     llvm::Value *Val =
         Builder.CreateLoad(Ptr, Dst.isVolatileQualified(), "bf.load");
