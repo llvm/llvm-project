@@ -2066,6 +2066,8 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
 // Step must be 1 unless RemAmtLoopInvariant is a constant greater than Step.
 static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
                                     const LoopInfo *LI, DominatorTree &DT,
+                                    const TargetLowering &TLI,
+                                    const TargetTransformInfo &TTI,
                                     SmallPtrSet<BasicBlock *, 32> &FreshBBs,
                                     bool IsHuge) {
   Value *AddOffset, *RemAmt, *AddInst;
@@ -2090,6 +2092,18 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
     // A power-of-2 `urem` is a single mask.
     if (!IsConstRem || cast<ConstantInt>(RemAmt)->getValue().isPowerOf2() ||
         !DT.dominates(Rem->getParent(), L->getLoopLatch()))
+      return false;
+    // Typically, a constant `urem` on a single-register integer lowers to
+    // branchless magic-multiply (or a native rem instruction). Avoid replacing
+    // it with an extra loop-carried IV + `select` when `select` is expensive
+    // (e.g., expanded to a conditional branch).
+    EVT VT = TLI.getValueType(*DL, Ty);
+    if (TLI.getNumRegisters(Rem->getContext(), VT) == 1 &&
+        TTI.getCmpSelInstrCost(Instruction::Select, Ty,
+                               Type::getInt1Ty(Rem->getContext()),
+                               CmpInst::BAD_ICMP_PREDICATE,
+                               TargetTransformInfo::TCK_SizeAndLatency) >=
+            TargetTransformInfo::TCC_Expensive)
       return false;
   }
 
@@ -2161,7 +2175,8 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
 }
 
 bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
-  if (foldURemOfLoopIncrement(Rem, DL, LI, getDT(), FreshBBs, IsHugeFunc))
+  if (foldURemOfLoopIncrement(Rem, DL, LI, getDT(), *TLI, *TTI, FreshBBs,
+                              IsHugeFunc))
     return true;
   return false;
 }

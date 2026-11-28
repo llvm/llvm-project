@@ -19,6 +19,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include <algorithm>
 
 namespace llvm {
 class BPFTTIImpl final : public BasicTTIImplBase<BPFTTIImpl> {
@@ -51,8 +52,10 @@ public:
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       const llvm::Instruction *I = nullptr) const override {
+    // BPF has no cmov and expands select to branches.
     if (Opcode == Instruction::Select)
-      return SCEVCheapExpansionBudget.getValue();
+      return std::max<unsigned>(TTI::TCC_Expensive,
+                                SCEVCheapExpansionBudget.getValue());
 
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                      Op1Info, Op2Info, I);
