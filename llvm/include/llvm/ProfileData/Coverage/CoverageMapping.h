@@ -749,9 +749,11 @@ struct FunctionRecord {
   /// TODO: Uniquing filenames across all function records may be a performance
   /// optimization.
   std::vector<std::string> Filenames;
-  /// Regions in the function along with their counts.
+  /// Regions in the function along with their counts. Must be grouped by
+  /// ascending FileID.
   std::vector<CountedRegion> CountedRegions;
-  /// Branch Regions in the function along with their counts.
+  /// Branch Regions in the function along with their counts. Must be grouped by
+  /// ascending FileID.
   std::vector<CountedRegion> CountedBranchRegions;
   /// MCDC Records record a DecisionRegion and associated BranchRegions.
   std::vector<MCDCRecord> MCDCRecords;

@@ -854,6 +854,17 @@ struct CountedRegionEmitter {
                           CounterValues[Region.FalseCount]);
     }
 
+#ifndef NDEBUG
+    // Region lookups assume FileID order.
+    auto ByFileID = [](const CountedRegion &L, const CountedRegion &R) {
+      return L.FileID < R.FileID;
+    };
+    assert(llvm::is_sorted(Function.CountedRegions, ByFileID) &&
+           "CountedRegions must be sorted by FileID");
+    assert(llvm::is_sorted(Function.CountedBranchRegions, ByFileID) &&
+           "CountedBranchRegions must be sorted by FileID");
+#endif
+
     return Error::success();
   }
 };
@@ -1128,6 +1139,19 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
   return std::move(Coverage);
 }
 
+/// Return the subrange of \p Regions whose FileID is \p FileID.
+/// \p Regions must be grouped by ascending FileID.
+static ArrayRef<CountedRegion> regionsForFileID(ArrayRef<CountedRegion> Regions,
+                                                unsigned FileID) {
+  auto Begin = llvm::lower_bound(
+      Regions, FileID,
+      [](const CountedRegion &R, unsigned ID) { return R.FileID < ID; });
+  auto End = std::upper_bound(
+      Begin, Regions.end(), FileID,
+      [](unsigned ID, const CountedRegion &R) { return ID < R.FileID; });
+  return ArrayRef<CountedRegion>(Begin, End);
+}
+
 namespace {
 
 /// Distributes functions into instantiation sets.
@@ -1140,11 +1164,10 @@ class FunctionInstantiationSetCollector {
 
 public:
   void insert(const FunctionRecord &Function, unsigned FileID) {
-    auto I = Function.CountedRegions.begin(), E = Function.CountedRegions.end();
-    while (I != E && I->FileID != FileID)
-      ++I;
-    assert(I != E && "function does not cover the given file");
-    auto &Functions = InstantiatedFunctions[I->startLoc()];
+    ArrayRef<CountedRegion> Regions =
+        regionsForFileID(Function.CountedRegions, FileID);
+    assert(!Regions.empty() && "function does not cover the given file");
+    auto &Functions = InstantiatedFunctions[Regions.front().startLoc()];
     Functions.push_back(&Function);
   }
 
@@ -1547,16 +1570,16 @@ CoverageData CoverageMapping::getCoverageForExpansion(
   CoverageData ExpansionCoverage(
       *SingleByteCoverage, Expansion.Function.Filenames[Expansion.FileID]);
   std::vector<CountedRegion> Regions;
-  for (const auto &CR : Expansion.Function.CountedRegions)
-    if (CR.FileID == Expansion.FileID) {
-      Regions.push_back(CR);
-      if (isExpansion(CR, Expansion.FileID))
-        ExpansionCoverage.Expansions.emplace_back(CR, Expansion.Function);
-    }
-  for (const auto &CR : Expansion.Function.CountedBranchRegions)
-    // Capture branch regions that only pertain to the corresponding expansion.
-    if (CR.FileID == Expansion.FileID)
-      ExpansionCoverage.BranchRegions.push_back(CR);
+  for (const auto &CR :
+       regionsForFileID(Expansion.Function.CountedRegions, Expansion.FileID)) {
+    Regions.push_back(CR);
+    if (isExpansion(CR, Expansion.FileID))
+      ExpansionCoverage.Expansions.emplace_back(CR, Expansion.Function);
+  }
+  // Capture branch regions that only pertain to the corresponding expansion.
+  for (const auto &CR : regionsForFileID(
+           Expansion.Function.CountedBranchRegions, Expansion.FileID))
+    ExpansionCoverage.BranchRegions.push_back(CR);
 
   LLVM_DEBUG(dbgs() << "Emitting segments for expansion of file "
                     << Expansion.FileID << "\n");
