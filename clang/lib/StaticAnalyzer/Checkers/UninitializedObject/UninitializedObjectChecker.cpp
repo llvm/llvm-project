@@ -412,11 +412,8 @@ bool FindUninitializedFields::isPrimitiveUninit(SVal V) {
 //===----------------------------------------------------------------------===//
 
 bool FieldChainInfo::contains(const FieldRegion *FR) const {
-  for (const FieldNode &Node : Chain) {
-    if (Node.isSameRegion(FR))
-      return true;
-  }
-  return false;
+  return llvm::any_of(
+      Chain, [FR](const FieldNode &Node) { return Node.isSameRegion(FR); });
 }
 
 /// Prints every element except the last to `Out`. Since ImmutableLists store
@@ -530,14 +527,10 @@ static bool willObjectBeAnalyzedLater(const CXXConstructorDecl *Ctor,
 static bool shouldIgnoreRecord(const RecordDecl *RD, StringRef Pattern) {
   llvm::Regex R(Pattern);
 
-  for (const FieldDecl *FD : RD->fields()) {
-    if (R.match(FD->getType().getAsString()))
-      return true;
-    if (R.match(FD->getName()))
-      return true;
-  }
-
-  return false;
+  auto MatchesPattern = [&R](const FieldDecl *FD) {
+    return R.match(FD->getType().getAsString()) || R.match(FD->getName());
+  };
+  return llvm::any_of(RD->fields(), MatchesPattern);
 }
 
 static const Stmt *getMethodBody(const CXXMethodDecl *M) {
