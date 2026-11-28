@@ -82,6 +82,20 @@ define i1 @both(i8 %bits0, i8 %bits1) {
   ret i1 %r
 }
 
+; Same as @both, with the compare operands in the other order.
+define i1 @both_swapped(i8 %bits0, i8 %bits1) {
+; CHECK-LABEL: @both_swapped(
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw i8 1, [[BITS0:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nuw i8 1, [[BITS1:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[T0]], [[T1]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t0 = shl i8 1, %bits0
+  %t1 = shl i8 1, %bits1
+  %r = icmp ult i8 %t0, %t1
+  ret i1 %r
+}
+
 ; ============================================================================ ;
 ; One-use tests.
 ; ============================================================================ ;
