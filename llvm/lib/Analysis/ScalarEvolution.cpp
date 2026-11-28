@@ -10134,8 +10134,13 @@ SCEVUse ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
       for (++i; i != e; ++i)
         NewOps.push_back(getSCEVAtScope(AddRec->getOperand(i), L));
 
+      // nw does not depend on the start, so only keep it if no other operand
+      // changed.
       const SCEV *FoldedRec = getAddRecExpr(
-          NewOps, AddRec->getLoop(), AddRec->getNoWrapFlags(SCEV::FlagNW));
+          NewOps, AddRec->getLoop(),
+          equal(drop_begin(NewOps), drop_begin(AddRec->operands()))
+              ? AddRec->getNoWrapFlags(SCEV::FlagNW)
+              : SCEV::FlagNone);
       AddRec = dyn_cast<SCEVAddRecExpr>(FoldedRec);
       // The addrec may be folded to a nonrecurrence, for example, if the
       // induction variable is multiplied by zero after constant folding. Go
