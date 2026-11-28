@@ -1,3 +1,5 @@
 foreach (tgt ${BOLT_TARGETS_TO_BUILD})
   add_subdirectory(${tgt})
+  string(TOUPPER ${tgt} TGT_UPPER)
+  add_definitions(-D${TGT_UPPER}_AVAILABLE)
 endforeach()
