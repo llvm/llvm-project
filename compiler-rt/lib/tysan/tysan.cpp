@@ -87,23 +87,24 @@ static void printTDName(tysan_type_descriptor *td) {
     return;
   }
 
-  switch (td->Tag) {
-  default:
-    CHECK(false && "invalid enum value");
-    break;
-  case TYSAN_MEMBER_TD:
+  switch (td->Kind) {
+  case TysanTDKind::MEMBER:
     printTDName(td->Member.Access);
     if (td->Member.Access != td->Member.Base) {
       Printf(" (in ");
       printTDName(td->Member.Base);
       Printf(" at offset %zu)", td->Member.Offset);
     }
-    break;
-  case TYSAN_STRUCT_TD:
+    return;
+  case TysanTDKind::STRUCT:
     Printf("%s", getDisplayName(
                      (char *)(td->Struct.Members + td->Struct.MemberCount)));
-    break;
+    return;
+  case TysanTDKind::CONSERVATIVE_ALIAS:
+    Printf("<Unsupported Type>");
+    return;
   }
+  CHECK(false && "invalid enum value");
 }
 
 static tysan_type_descriptor *getRootTD(tysan_type_descriptor *TD) {
@@ -112,13 +113,15 @@ static tysan_type_descriptor *getRootTD(tysan_type_descriptor *TD) {
   do {
     RootTD = TD;
 
-    if (TD->Tag == TYSAN_STRUCT_TD) {
+    if (TD->Kind == TysanTDKind::STRUCT) {
       if (TD->Struct.MemberCount > 0)
         TD = TD->Struct.Members[0].Type;
       else
         TD = nullptr;
-    } else if (TD->Tag == TYSAN_MEMBER_TD) {
+    } else if (TD->Kind == TysanTDKind::MEMBER) {
       TD = TD->Member.Access;
+    } else if (TD->Kind == TysanTDKind::CONSERVATIVE_ALIAS) {
+      return RootTD;
     } else {
       CHECK(false && "invalid enum value");
       break;
@@ -133,10 +136,10 @@ static bool walkAliasTree(tysan_type_descriptor *TDA,
                           tysan_type_descriptor *TDB, uptr OffsetA,
                           uptr OffsetB) {
   do {
-    if (TDA == TDB)
+    if (TDA == TDB || TDA->Kind == TysanTDKind::CONSERVATIVE_ALIAS)
       return OffsetA == OffsetB;
 
-    if (TDA->Tag == TYSAN_STRUCT_TD) {
+    if (TDA->Kind == TysanTDKind::STRUCT) {
       // Reached root type descriptor.
       if (!TDA->Struct.MemberCount)
         break;
@@ -173,12 +176,12 @@ static bool walkAliasTree(tysan_type_descriptor *TDA,
 static bool isAliasingLegalUp(tysan_type_descriptor *TDA,
                               tysan_type_descriptor *TDB) {
   uptr OffsetA = 0, OffsetB = 0;
-  if (TDB->Tag == TYSAN_MEMBER_TD) {
+  if (TDB->Kind == TysanTDKind::MEMBER) {
     OffsetB = TDB->Member.Offset;
     TDB = TDB->Member.Base;
   }
 
-  if (TDA->Tag == TYSAN_MEMBER_TD) {
+  if (TDA->Kind == TysanTDKind::MEMBER) {
     OffsetA = TDA->Member.Offset;
     TDA = TDA->Member.Base;
   }
@@ -194,11 +197,11 @@ static bool isAliasingLegalWithOffset(tysan_type_descriptor *TDA,
     return false;
 
   // You can't have an offset into a member.
-  if (TDB->Tag == TYSAN_MEMBER_TD)
+  if (TDB->Kind == TysanTDKind::MEMBER)
     return false;
 
   uptr OffsetA = 0;
-  if (TDA->Tag == TYSAN_MEMBER_TD) {
+  if (TDA->Kind == TysanTDKind::MEMBER) {
     OffsetA = TDA->Member.Offset;
     TDA = TDA->Member.Base;
   }
