@@ -63,29 +63,29 @@ define swifttailcc void @more_csrs(ptr swiftasync %ctx) "frame-pointer"="all" {
 define swifttailcc void @locals(ptr swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK-LABEL: locals:
 ; CHECK: orr x29, x29, #0x100000000000000
-; CHECK: sub sp, sp, #64
-; CHECK: stp x29, x30, [sp, #48]
+; CHECK: sub sp, sp, #80
+; CHECK: stp x29, x30, [sp, #64]
 
-; CHECK-NOAUTH-DAG: str x22, [sp, #40]
-; CHECK-AUTH: add x16, sp, #40
+; CHECK-NOAUTH-DAG: str x22, [sp, #56]
+; CHECK-AUTH: add x16, sp, #56
 ; CHECK-AUTH: movk x16, #49946, lsl #48
 ; CHECK-AUTH: mov x17, x22
 ; CHECK-AUTH: pacdb x17, x16
-; CHECK-AUTH: str x17, [sp, #40]
+; CHECK-AUTH: str x17, [sp, #56]
 
-; CHECK-DAG: add x29, sp, #48
+; CHECK-DAG: add x29, sp, #64
 ; CHECK: .cfi_def_cfa w29, 16
 ; CHECK: .cfi_offset w30, -8
 ; CHECK: .cfi_offset w29, -16
 
-; CHECK: mov x0, sp
+; CHECK: add x0, sp, #8
 ; CHECK: bl _bar
 
 ; [...]
 
-; CHECK: ldp x29, x30, [sp, #48]
+; CHECK: ldp x29, x30, [sp, #64]
 ; CHECK: and x29, x29, #0xefffffffffffffff
-; CHECK: add sp, sp, #64
+; CHECK: add sp, sp, #80
   %var = alloca i32, i32 10
   call void @bar(ptr %var)
   ret void

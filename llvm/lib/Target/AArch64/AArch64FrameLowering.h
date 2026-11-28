@@ -120,6 +120,8 @@ public:
     return true;
   }
 
+  unsigned calleeSaveAreaAlignment() const override { return 16; }
+
   bool enableStackSlotScavenging(const MachineFunction &MF) const override;
   TargetStackID::Value getStackIDForScalableVectors() const override;
 

@@ -2905,7 +2905,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (hasFP(MF) && AFI->hasSwiftAsyncContext())
     CSStackSize += 8;
 
-  uint64_t AlignedCSStackSize = alignTo(CSStackSize, 16);
+  unsigned CSAlign = calleeSaveAreaAlignment();
+  uint64_t AlignedCSStackSize = alignTo(CSStackSize, CSAlign);
   LLVM_DEBUG(dbgs() << "Estimated stack frame size: "
                     << EstimatedStackSize + AlignedCSStackSize << " bytes.\n");
 
@@ -2917,7 +2918,8 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // instructions.
   AFI->setCalleeSavedStackSize(AlignedCSStackSize);
   AFI->setCalleeSaveStackHasFreeSpace(AlignedCSStackSize != CSStackSize);
-  AFI->setSVECalleeSavedStackSize(ZPRCSStackSize, alignTo(PPRCSStackSize, 16));
+  AFI->setSVECalleeSavedStackSize(ZPRCSStackSize,
+                                  alignTo(PPRCSStackSize, CSAlign));
 }
 
 // Reorder ZPRs to maximize grouping, quads and pairs. The main condition we try
