@@ -3,12 +3,15 @@
 gpu.module @load_store_check {
     // CHECK-LABEL: gpu.func @load_store_matrix_a
     // CHECK-SAME: %[[ARG0:.*]]: memref<16x128xi4, 1>, %[[ARG1:.*]]: memref<16x128xi4, 1>
-    gpu.func @load_store_matrix_a(%src: memref<16x128xi4, 1>, %dst: memref<16x128xi4, 1>) kernel {
-        // CHECK: %[[C64_I32:.*]] = arith.constant 64 : i32
-        // CHECK: %[[C8_I32:.*]] = arith.constant 8 : i32
-        // CHECK: %[[CST:.*]] = arith.constant dense<0> : vector<4xi64>
-        // CHECK: %[[C16_I32:.*]] = arith.constant 16 : i32
-        // CHECK: %[[C128_I32:.*]] = arith.constant 128 : i32
+    // CHECK-SAME: %[[B:[a-zA-Z0-9_]+]]: index
+    gpu.func @load_store_matrix_a(%src: memref<16x128xi4, 1>, %dst: memref<16x128xi4, 1>,
+                                  %src_batch: memref<4x16x128xi4, 1>, %dst_batch: memref<4x16x128xi4, 1>,
+                                  %b: index) kernel {
+        // CHECK-DAG: %[[C64_I32:.*]] = arith.constant 64 : i32
+        // CHECK-DAG: %[[C8_I32:.*]] = arith.constant 8 : i32
+        // CHECK-DAG: %[[CST:.*]] = arith.constant dense<0> : vector<4xi64>
+        // CHECK-DAG: %[[C16_I32:.*]] = arith.constant 16 : i32
+        // CHECK-DAG: %[[C128_I32:.*]] = arith.constant 128 : i32
         // CHECK: %[[SRCCE:.*]] = memref.memory_space_cast %[[ARG0]]
         // CHECK: %[[SRCINDEX:.*]] = memref.extract_aligned_pointer_as_index %[[SRCCE]]
         // CHECK: %[[SRCPTR64:.*]] = arith.index_castui %[[SRCINDEX]] : index to i64
@@ -52,6 +55,32 @@ gpu.module @load_store_check {
         // CHECK-SAME:    tile_height = 8 : i32, tile_width = 16 : i32}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi16>)
         xegpu.store_nd %loaded, %dst_tdesc[8, 64] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>
             : vector<32xi4>, !xegpu.tensor_desc<8x64xi4, #xegpu.block_tdesc_attr<memory_space = global>>
+
+        // Leading (batch) dims of size 1 move the row in the flattened plane:
+        // offset [%b, 8, 64] of a 4x16x128 source is row 16 * %b + 8, and the
+        // plane has 4 * 16 = 64 rows.
+        %srcb_ce = memref.memory_space_cast %src_batch : memref<4x16x128xi4, 1> to memref<4x16x128xi4>
+        %dstb_ce = memref.memory_space_cast %dst_batch : memref<4x16x128xi4, 1> to memref<4x16x128xi4>
+        %srcb_tdesc = xegpu.create_nd_tdesc %srcb_ce : memref<4x16x128xi4> -> !xegpu.tensor_desc<1x8x64xi4>
+        // CHECK: %[[LB:.*]] = arith.index_cast %[[B]] : index to i32
+        // CHECK: %[[LROWS:.*]] = arith.muli %[[LB]], %[[C16_I32]] : i32
+        // CHECK: %[[LROW:.*]] = arith.addi %[[LROWS]], %[[C8_I32]] : i32
+        // CHECK: %[[LOADEDB:.*]] = xevm.blockload2d %{{.*}}, %[[C64_I32]], %[[C64_I32]], %[[C64_I32]], %[[C16_I32]], %[[LROW]] <{
+        // CHECK-SAME: elem_size_in_bits = 16 : i32, pack_register = false, tile_height = 8 : i32, tile_width = 16 : i32
+        %loadedb = xegpu.load_nd %srcb_tdesc[%b, 8, 64] : !xegpu.tensor_desc<1x8x64xi4> -> vector<32xi4>
+        %dstb_tdesc = xegpu.create_nd_tdesc %dstb_ce : memref<4x16x128xi4> -> !xegpu.tensor_desc<1x8x64xi4>
+        // CHECK: %[[SB:.*]] = arith.index_cast %[[B]] : index to i32
+        // CHECK: %[[SROWS:.*]] = arith.muli %[[SB]], %[[C16_I32]] : i32
+        // CHECK: %[[SROW:.*]] = arith.addi %[[SROWS]], %[[C8_I32]] : i32
+        // CHECK: xevm.blockstore2d %{{.*}}, %[[C64_I32]], %[[C64_I32]], %[[C64_I32]], %[[C16_I32]], %[[SROW]], %[[LOADEDB]] <{
+        // CHECK-SAME: elem_size_in_bits = 16 : i32, tile_height = 8 : i32, tile_width = 16 : i32
+        xegpu.store_nd %loadedb, %dstb_tdesc[%b, 8, 64] : vector<32xi4>, !xegpu.tensor_desc<1x8x64xi4>
+        // CHECK: %[[PB:.*]] = arith.index_cast %[[B]] : index to i32
+        // CHECK: %[[PROWS:.*]] = arith.muli %[[PB]], %[[C16_I32]] : i32
+        // CHECK: %[[PROW:.*]] = arith.addi %[[PROWS]], %[[C8_I32]] : i32
+        // CHECK: xevm.blockprefetch2d %{{.*}}, %[[C64_I32]], %[[C64_I32]], %[[C64_I32]], %[[C16_I32]], %[[PROW]] <{
+        // CHECK-SAME: elem_size_in_bits = 16 : i32, tile_height = 8 : i32, tile_width = 16 : i32
+        xegpu.prefetch_nd %srcb_tdesc[%b, 8, 64] : !xegpu.tensor_desc<1x8x64xi4>
         gpu.return
     }
 

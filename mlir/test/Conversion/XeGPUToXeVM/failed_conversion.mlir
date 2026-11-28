@@ -305,3 +305,16 @@ gpu.module @test_kernel [#xevm.target<chip = "pvc">] {
     gpu.return
   }
 }
+
+// -----
+
+// A packed sub-byte load needs a 2D tensor descriptor; batch dims are not
+// supported there.
+gpu.module @test_kernel {
+  gpu.func @load_nd_packed_sub_byte_batch(%src: memref<2x64x128xi4>) -> vector<128xi4> {
+    %tdesc = xegpu.create_nd_tdesc %src : memref<2x64x128xi4> -> !xegpu.tensor_desc<1x32x64xi4>
+    // expected-error@+1 {{failed to legalize operation 'xegpu.load_nd' that was explicitly marked illegal}}
+    %loaded = xegpu.load_nd %tdesc[1, 32, 64] <{packed}> : !xegpu.tensor_desc<1x32x64xi4> -> vector<128xi4>
+    gpu.return %loaded : vector<128xi4>
+  }
+}
