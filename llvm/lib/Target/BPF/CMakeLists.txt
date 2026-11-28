@@ -26,6 +26,7 @@ add_llvm_target(BPFCodeGen
   BPFAdjustOpt.cpp
   BPFAsmPrinter.cpp
   BPFASpaceCastSimplifyPass.cpp
+  BPFBTFDebug.cpp
   BPFCheckAndAdjustIR.cpp
   BPFCodeGenPassBuilder.cpp
   BPFFrameLowering.cpp
@@ -46,7 +47,6 @@ add_llvm_target(BPFCodeGen
   BPFMIPeephole.cpp
   BPFMIChecking.cpp
   BPFMISimplifyPatchable.cpp
-  BTFDebug.cpp
 
   LINK_COMPONENTS
   Analysis
