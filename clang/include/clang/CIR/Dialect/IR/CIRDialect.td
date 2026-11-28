@@ -81,6 +81,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getGlobalDtorsAttrName() { return "cir.global_dtors"; }
     static llvm::StringRef getOffloadContainerAttrName() { return "cir.offload.container"; }
     static llvm::StringRef getOffloadKindAttrName() { return "cir.offload.kind"; }
+    static llvm::StringRef getOffloadSourceNameAttrName() { return "cir.offload.source_name"; }
     static llvm::StringRef getOperandSegmentSizesAttrName() { return "operandSegmentSizes"; }
     static llvm::StringRef getNoCallerSavedRegsAttrName() { return "no_caller_saved_registers"; }
     static llvm::StringRef getNoCallbackAttrName() { return "nocallback"; }
