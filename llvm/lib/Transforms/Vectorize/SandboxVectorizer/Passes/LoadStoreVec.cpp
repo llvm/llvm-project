@@ -69,6 +69,43 @@ bool LoadStoreVec::acceptOrRevert() {
   return true;
 }
 
+/// \returns \p ElemTy if \p N is 1, otherwise < \p N x \p ElemTy >.
+static Type *getWidenedType(Type *ElemTy, unsigned N) {
+  assert(!ElemTy->isVectorTy() && "Expected a scalar element type!");
+  return N == 1 ? ElemTy : FixedVectorType::get(ElemTy, N);
+}
+
+template <typename TypeRangeT>
+bool LoadStoreVec::canUnpack(FixedVectorType *FromTy, TypeRangeT ToTypes) {
+  Type *VecElemTy = FromTy->getElementType();
+  return all_of(ToTypes, [this, VecElemTy](Type *ToTy) {
+    unsigned NumElems =
+        Utils::getNumBits(ToTy, *DL) / Utils::getNumBits(VecElemTy, *DL);
+    return SameSizeReinterpret::canReinterpret(
+        getWidenedType(VecElemTy, NumElems), ToTy, *DL);
+  });
+}
+
+void LoadStoreVec::unpackIfNeeded(LoadInst *VecLoad,
+                                  BndlRef<Instruction *> OrigLoads) {
+  Type *VecElemTy = cast<FixedVectorType>(VecLoad->getType())->getElementType();
+  BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
+  unsigned Lane = 0;
+  for (Instruction *I : OrigLoads) {
+    auto *Orig = cast<LoadInst>(I);
+    unsigned NumElems = Utils::getNumBits(Orig->getType(), *DL) /
+                        Utils::getNumBits(VecElemTy, *DL);
+    Type *LanesTy = getWidenedType(VecElemTy, NumElems);
+    if (!Orig->hasNUses(0)) {
+      Value *Unpacked = VecUtils::unpack(VecLoad, LanesTy, Lane, WhereIt);
+      Unpacked = SameSizeReinterpret::reinterpretValue(
+          Unpacked, Orig->getType(), WhereIt, *Ctx, *DL);
+      Orig->replaceAllUsesWith(Unpacked);
+    }
+    Lane += VecUtils::getNumLanes(LanesTy);
+  }
+}
+
 LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   Type *Ty = VecUtils::getCombinedVectorTypeFor(Loads, *DL);
   Value *LdPtr = cast<LoadInst>(Loads[0])->getPointerOperand();
@@ -120,6 +157,18 @@ SameSizeReinterpret::getCastChain(Type *SrcTy, Type *DestTy,
   // pointers and a scalar pointer of the same width need all three.
   assert(Chain.size() <= 3 && "Unexpected reinterpret cast chain!");
   return Chain;
+}
+
+Value *SameSizeReinterpret::reinterpretValue(Value *V, Type *DestTy,
+                                             BasicBlock::iterator WhereIt,
+                                             Context &Ctx,
+                                             const DataLayout &DL) {
+  if (!canReinterpret(V->getType(), DestTy, DL))
+    return nullptr;
+  Value *NewV = V;
+  for (auto [Opc, Ty] : getCastChain(V->getType(), DestTy, DL))
+    NewV = CastInst::create(Ty, Opc, NewV, WhereIt, Ctx, "VCast");
+  return NewV;
 }
 
 Constant *SameSizeReinterpret::reinterpretConstant(Constant *C, Type *DestTy,
@@ -331,27 +380,17 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
   if (!VecTy)
     return nullptr;
 
-  // TODO: Support mixed-type top-level load chains.
-  Type *VecElemTy = cast<FixedVectorType>(*VecTy)->getElementType();
-  if (!all_of(Loads, [VecElemTy](Instruction *I) {
-        return VecUtils::getElementType(I->getType()) == VecElemTy;
-      }))
+  // Each load is unpacked from the lanes it occupies in the vector and, for a
+  // chain of mixed types, reinterpreted back as the type of the load.
+  if (!canUnpack(cast<FixedVectorType>(*VecTy),
+                 map_range(Loads, [](Instruction *I) { return I->getType(); })))
     return nullptr;
 
   saveIR(Rgn);
 
   auto *VecLoad = createVectorLoad(Loads);
   assert(VecLoad != nullptr && "Expected vector load");
-
-  BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
-  for (auto [Lane, OrigV] : VecUtils::enumerateLanes(Loads)) {
-    auto *OrigLoad = cast<LoadInst>(OrigV);
-    if (OrigLoad->hasNUses(0))
-      continue;
-    Value *Unpacked =
-        VecUtils::unpack(VecLoad, OrigLoad->getType(), Lane, WhereIt);
-    OrigLoad->replaceAllUsesWith(Unpacked);
-  }
+  unpackIfNeeded(VecLoad, Loads);
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Loads);
   DeadInstrMorgue.tryEraseDeadInstrs();
@@ -392,6 +431,9 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &RegionAnalyses) {
                      F.getContext(), IMaps, Dir);
   Legality = &L;
 
+  // Save state for the top-level roll-back if not Changed (below).
+  Ctx->save();
+
   bool Changed = false;
   switch (Opc) {
   case Instruction::Opcode::Load:
@@ -403,6 +445,13 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &RegionAnalyses) {
   default:
     llvm_unreachable("Expected Load or Store");
   }
+
+  // The IR may have changed even if Changed == false, because of scheduling.
+  // So to be save revert the state.
+  if (!Changed)
+    Ctx->revert();
+  else
+    Ctx->accept();
   return Changed;
 }
 

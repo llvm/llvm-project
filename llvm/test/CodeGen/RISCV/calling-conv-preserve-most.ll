@@ -168,9 +168,9 @@ define void @preserve_mostcc3() nounwind {
 ; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    #APP
 ; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    mv a0, t1
 ; RV32I-NEXT:    #APP
 ; RV32I-NEXT:    #NO_APP
+; RV32I-NEXT:    mv a0, t1
 ; RV32I-NEXT:    mv a1, t2
 ; RV32I-NEXT:    #APP
 ; RV32I-NEXT:    #NO_APP
@@ -199,9 +199,9 @@ define void @preserve_mostcc3() nounwind {
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    #NO_APP
-; RV64I-NEXT:    mv a0, t1
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    #NO_APP
+; RV64I-NEXT:    mv a0, t1
 ; RV64I-NEXT:    mv a1, t2
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    #NO_APP
@@ -230,9 +230,9 @@ define void @preserve_mostcc3() nounwind {
 ; RV32E-NEXT:    sw s1, 0(sp) # 4-byte Folded Spill
 ; RV32E-NEXT:    #APP
 ; RV32E-NEXT:    #NO_APP
-; RV32E-NEXT:    mv a0, t1
 ; RV32E-NEXT:    #APP
 ; RV32E-NEXT:    #NO_APP
+; RV32E-NEXT:    mv a0, t1
 ; RV32E-NEXT:    mv a1, t2
 ; RV32E-NEXT:    #APP
 ; RV32E-NEXT:    #NO_APP
@@ -261,9 +261,9 @@ define void @preserve_mostcc3() nounwind {
 ; RV64E-NEXT:    sd s1, 0(sp) # 8-byte Folded Spill
 ; RV64E-NEXT:    #APP
 ; RV64E-NEXT:    #NO_APP
-; RV64E-NEXT:    mv a0, t1
 ; RV64E-NEXT:    #APP
 ; RV64E-NEXT:    #NO_APP
+; RV64E-NEXT:    mv a0, t1
 ; RV64E-NEXT:    mv a1, t2
 ; RV64E-NEXT:    #APP
 ; RV64E-NEXT:    #NO_APP
@@ -306,9 +306,9 @@ define void @preserve_mostcc4() nounwind {
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    #APP
 ; RV32I-NEXT:    #NO_APP
-; RV32I-NEXT:    mv s2, t1
 ; RV32I-NEXT:    #APP
 ; RV32I-NEXT:    #NO_APP
+; RV32I-NEXT:    mv s2, t1
 ; RV32I-NEXT:    mv s3, t2
 ; RV32I-NEXT:    #APP
 ; RV32I-NEXT:    #NO_APP
@@ -343,9 +343,9 @@ define void @preserve_mostcc4() nounwind {
 ; RV64I-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    #NO_APP
-; RV64I-NEXT:    mv s2, t1
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    #NO_APP
+; RV64I-NEXT:    mv s2, t1
 ; RV64I-NEXT:    mv s3, t2
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    #NO_APP
@@ -377,9 +377,9 @@ define void @preserve_mostcc4() nounwind {
 ; RV32E-NEXT:    sw s1, 12(sp) # 4-byte Folded Spill
 ; RV32E-NEXT:    #APP
 ; RV32E-NEXT:    #NO_APP
-; RV32E-NEXT:    sw t1, 8(sp) # 4-byte Folded Spill
 ; RV32E-NEXT:    #APP
 ; RV32E-NEXT:    #NO_APP
+; RV32E-NEXT:    sw t1, 8(sp) # 4-byte Folded Spill
 ; RV32E-NEXT:    sw t2, 4(sp) # 4-byte Folded Spill
 ; RV32E-NEXT:    #APP
 ; RV32E-NEXT:    #NO_APP
@@ -408,9 +408,9 @@ define void @preserve_mostcc4() nounwind {
 ; RV64E-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64E-NEXT:    #APP
 ; RV64E-NEXT:    #NO_APP
-; RV64E-NEXT:    sd t1, 16(sp) # 8-byte Folded Spill
 ; RV64E-NEXT:    #APP
 ; RV64E-NEXT:    #NO_APP
+; RV64E-NEXT:    sd t1, 16(sp) # 8-byte Folded Spill
 ; RV64E-NEXT:    sd t2, 8(sp) # 8-byte Folded Spill
 ; RV64E-NEXT:    #APP
 ; RV64E-NEXT:    #NO_APP

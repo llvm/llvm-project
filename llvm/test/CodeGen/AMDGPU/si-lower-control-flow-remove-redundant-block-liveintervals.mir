@@ -7,7 +7,6 @@
 
 ---
 name:            f
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: f
   ; CHECK: bb.0:

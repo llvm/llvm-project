@@ -25,9 +25,9 @@ body:             |
     %0:gr64 = COPY $rdi
     undef %1.sub_32bit:gr64_nosp = MOV32r0 implicit-def dead $eflags
     dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def $rax
-    INLINEASM &"", 1 /* sideeffect attdialect */
+    INLINEASM &"", sideeffect attdialect
     dead $eax = MOV32r0 implicit-def dead $eflags
-    INLINEASM &"", 1 /* sideeffect attdialect */
+    INLINEASM &"", sideeffect attdialect
     dead $eax = MOV32r0 implicit-def dead $eflags
     dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def $rax
 

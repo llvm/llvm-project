@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare noalias ptr @calloc(i32, i32) nounwind allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
-declare void @free(ptr) allockind("free") "alloc-family"="malloc"
+declare void @free(ptr allocptr) allockind("free") "alloc-family"="malloc"
 
 ; Test load from uninitialized alloca - should be removed and replaced with undef
 define i32 @test_load_uninitialized_alloca() {

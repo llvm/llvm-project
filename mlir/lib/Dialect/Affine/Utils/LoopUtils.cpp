@@ -926,8 +926,12 @@ LogicalResult mlir::affine::loopUnrollUpToFactor(AffineForOp forOp,
                                                  uint64_t unrollFactor) {
   std::optional<APInt> mayBeConstantTripCount = forOp.getStaticTripCount();
   if (mayBeConstantTripCount.has_value() &&
-      mayBeConstantTripCount->ult(unrollFactor))
+      mayBeConstantTripCount->ult(unrollFactor)) {
+    // Nothing to unroll in a zero-trip loop.
+    if (mayBeConstantTripCount->isZero())
+      return success();
     return loopUnrollByFactor(forOp, mayBeConstantTripCount->getZExtValue());
+  }
   return loopUnrollByFactor(forOp, unrollFactor);
 }
 

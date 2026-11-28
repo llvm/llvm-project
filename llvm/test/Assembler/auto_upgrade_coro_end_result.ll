@@ -22,6 +22,25 @@ entry:
   ret void
 }
 
+declare void @may_throw()
+declare i32 @__CxxFrameHandler3(...)
+
+define void @funclet_bundle(ptr %frame) presplitcoroutine personality ptr @__CxxFrameHandler3 {
+; CHECK-LABEL: @funclet_bundle(
+; CHECK: [[CP:%.*]] = cleanuppad within none []
+; CHECK-NEXT: call void @llvm.coro.end(ptr %frame, i1 true, token none) [ "funclet"(token [[CP]]) ]
+; CHECK-NEXT: cleanupret from [[CP]] unwind to caller
+entry:
+  invoke void @may_throw()
+          to label %cont unwind label %ehcleanup
+cont:
+  ret void
+ehcleanup:
+  %cp = cleanuppad within none []
+  %unused = call i1 @llvm.coro.end(ptr %frame, i1 true, token none) [ "funclet"(token %cp) ]
+  cleanupret from %cp unwind to caller
+}
+
 declare i1 @llvm.coro.end.async(ptr, i1, ...)
 
 define i1 @used_async_result(ptr %frame) presplitcoroutine {

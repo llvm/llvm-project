@@ -210,6 +210,13 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    std::inplace_merge(
+        pol, non_bidir, non_bidir, non_bidir); // expected-error@*:* {{static assertion failed: inplace_merge}}
+    std::inplace_merge(
+        pol, non_bidir, non_bidir, non_bidir, pred); // expected-error@*:* {{static assertion failed: inplace_merge}}
+  }
+
+  {
     (void)std::is_heap(pol, non_random, non_random);       // expected-error@*:* {{static assertion failed: is_heap}}
     (void)std::is_heap(pol, non_random, non_random, pred); // expected-error@*:* {{static assertion failed: is_heap}}
   }
@@ -313,6 +320,10 @@ void f(non_forward_iterator non_fwd,
         pol, it, it, non_fwd, val, val); // expected-error@*:* {{static assertion failed: replace_copy}}
     (void)std::replace_copy(
         pol, it, it, non_output, val, val); // expected-error@*:* {{static assertion failed: replace_copy}}
+  }
+
+  {
+    (void)std::rotate(pol, non_fwd, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: rotate}}
   }
 
   {
@@ -540,5 +551,17 @@ void f(non_forward_iterator non_fwd,
         pol, non_fwd, n, it); // expected-error@*:* {{static assertion failed: uninitialized_move_n}}
     std::uninitialized_move_n(
         pol, it, n, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_move_n}}
+  }
+
+  {
+    (void)std::unique_copy(pol, non_fwd, non_fwd, out); // expected-error@*:* {{static assertion failed: unique_copy}}
+    (void)std::unique_copy(pol, it, it, non_fwd);       // expected-error@*:* {{static assertion failed: unique_copy}}
+    (void)std::unique_copy(pol, it, it, non_output);    // expected-error@*:* {{static assertion failed: unique_copy}}
+
+    (void)std::unique_copy(
+        pol, non_fwd, non_fwd, out, pred);              // expected-error@*:* {{static assertion failed: unique_copy}}
+    (void)std::unique_copy(pol, it, it, non_fwd, pred); // expected-error@*:* {{static assertion failed: unique_copy}}
+    (void)std::unique_copy(
+        pol, it, it, non_output, pred); // expected-error@*:* {{static assertion failed: unique_copy}}
   }
 }

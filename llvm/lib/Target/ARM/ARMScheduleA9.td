@@ -1983,6 +1983,7 @@ def A9WriteV7 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 7; }
 def A9WriteV9 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 9; }
 def A9WriteV10 : SchedWriteRes<[A9UnitFP, A9UnitAGU]> { let Latency = 10; }
 
+// Overridden by the InstRW mappings for structure loads and stores below.
 def : WriteRes<WriteVLD1, []>;
 def : WriteRes<WriteVLD2, []>;
 def : WriteRes<WriteVLD3, []>;
@@ -2380,40 +2381,33 @@ def :ItinRW<[A9WriteLMAdr, A9WriteLMfp], [IIC_fpLoad_mu]>;
 def :ItinRW<[A9WriteAdr, A9WriteLSfp], [IIC_fpStore32, IIC_fpStore64,
                                         IIC_fpStore_m, IIC_fpStore_mu]>;
 
-// Note: Unlike VLDM, VLD1 expects the writeback operand after the
-// normal writes.
-def :ItinRW<[A9WriteLfp1, A9WriteAdr1], [IIC_VLD1, IIC_VLD1u,
-                                         IIC_VLD1x2, IIC_VLD1x2u]>;
-def :ItinRW<[A9WriteLfp2, A9WriteAdr2], [IIC_VLD1x3, IIC_VLD1x3u,
-                                         IIC_VLD1x4, IIC_VLD1x4u,
-                                         IIC_VLD4dup, IIC_VLD4dupu]>;
-def :ItinRW<[A9WriteLfp1Mov, A9WriteAdr1], [IIC_VLD1dup, IIC_VLD1dupu,
-                                            IIC_VLD2, IIC_VLD2u,
-                                            IIC_VLD2dup, IIC_VLD2dupu]>;
-def :ItinRW<[A9WriteLfp2Mov, A9WriteAdr1], [IIC_VLD1ln, IIC_VLD1lnu,
-                                            IIC_VLD2x2, IIC_VLD2x2u,
-                                            IIC_VLD2ln, IIC_VLD2lnu]>;
-def :ItinRW<[A9WriteLfp3Mov, A9WriteAdr3], [IIC_VLD3, IIC_VLD3u,
-                                            IIC_VLD3dup, IIC_VLD3dupu]>;
-def :ItinRW<[A9WriteLfp4Mov, A9WriteAdr4], [IIC_VLD4, IIC_VLD4u,
-                                            IIC_VLD4ln, IIC_VLD4lnu]>;
-def :ItinRW<[A9WriteLfp5Mov, A9WriteAdr5], [IIC_VLD3ln, IIC_VLD3lnu]>;
+// NEON structure loads and stores. Preserve the existing write sequences
+// for the VST1/VST2 writeback encodings that shared VLD1 itineraries.
+def : InstRW<[A9WriteLfp1, A9WriteAdr1],
+             (instregex "VLD1[dq][0-9]+($|wb_)", "VLD1d[0-9]+[TQ]wb_",
+                        "VST1[dq][0-9]+wb_", "VST2[bdq][0-9]+wb_")>;
+def : InstRW<[A9WriteLfp2, A9WriteAdr2],
+             (instregex "VLD1d[0-9]+[TQ]($|Pseudo)",
+                        "VLD1q[0-9]+(High|Low)[TQ]", "VLD4DUP[dq][0-9]+",
+                        "VST1d[0-9]+[TQ]wb_")>;
+def : InstRW<[A9WriteLfp1Mov, A9WriteAdr1],
+             (instregex "VLD[12]DUP[dq][0-9]+", "VLD2[bd][0-9]+")>;
+def : InstRW<[A9WriteLfp2Mov, A9WriteAdr1],
+             (instregex "VLD[12]LN[dq][0-9]+", "VLD2q[0-9]+")>;
+def : InstRW<[A9WriteLfp3Mov, A9WriteAdr3],
+             (instregex "VLD3(DUP)?[dq][0-9]+")>;
+def : InstRW<[A9WriteLfp4Mov, A9WriteAdr4],
+             (instregex "VLD4(LN)?[dq][0-9]+")>;
+def : InstRW<[A9WriteLfp5Mov, A9WriteAdr5],
+             (instregex "VLD3LN[dq][0-9]+")>;
 
-// Vector stores use similar resources to vector loads, so use the
-// same write types. The address write must be first for stores with
-// address writeback.
-def :ItinRW<[A9WriteAdr1, A9WriteLfp1], [IIC_VST1, IIC_VST1u,
-                                         IIC_VST1x2, IIC_VST1x2u,
-                                         IIC_VST1ln, IIC_VST1lnu,
-                                         IIC_VST2, IIC_VST2u,
-                                         IIC_VST2x2, IIC_VST2x2u,
-                                         IIC_VST2ln, IIC_VST2lnu]>;
-def :ItinRW<[A9WriteAdr2, A9WriteLfp2], [IIC_VST1x3, IIC_VST1x3u,
-                                         IIC_VST1x4, IIC_VST1x4u,
-                                         IIC_VST3, IIC_VST3u,
-                                         IIC_VST3ln, IIC_VST3lnu,
-                                         IIC_VST4, IIC_VST4u,
-                                         IIC_VST4ln, IIC_VST4lnu]>;
+// The remaining stores put the address write first for writeback.
+def : InstRW<[A9WriteAdr1, A9WriteLfp1],
+             (instregex "VST1[dq][0-9]+$", "VST[12]LN[dq][0-9]+",
+                        "VST2[bdq][0-9]+($|Pseudo)")>;
+def : InstRW<[A9WriteAdr2, A9WriteLfp2],
+             (instregex "VST1d[0-9]+[TQ]($|Pseudo)",
+                        "VST1q[0-9]+(High|Low)[TQ]", "VST[34](LN)?[dq][0-9]+")>;
 
 // NEON moves.
 def :ItinRW<[A9WriteV2], [IIC_VMOVSI, IIC_VMOVDI, IIC_VMOVD, IIC_VMOVQ]>;

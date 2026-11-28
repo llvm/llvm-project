@@ -47,7 +47,7 @@ FailureOr<IdxAndShape> parseInputShape(Location loc, StringRef input) {
   input = input.substr(colonPos + 1);
 
   size_t index;
-  if (indexStr.getAsInteger(10, index) || index < 0) {
+  if (indexStr.getAsInteger(10, index)) {
     emitError(loc) << "invalid argument index, got " << indexStr;
     return failure();
   }

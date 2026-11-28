@@ -24,15 +24,6 @@
 
 namespace clang {
 
-// The builder stores the main-file buffer as a raw pointer, which a
-// FrontendAction takes ownership of in InitializeFileRemapping(). Free it here
-// only if no action ran, otherwise it is freed twice.
-inline void cleanupRemappedFileBuffers(CompilerInstance &CI) {
-  for (const auto &RB : CI.getPreprocessorOpts().RemappedFileBuffers)
-    delete RB.second;
-  CI.getPreprocessorOpts().clearRemappedFiles();
-}
-
 class InterpreterTestBase : public ::testing::Test {
 protected:
   static bool HostSupportsJIT() {

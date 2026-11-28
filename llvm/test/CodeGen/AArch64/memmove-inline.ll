@@ -80,7 +80,6 @@ define void @t256(ptr %out, ptr %in) {
 ; CHECK-ALIGNED-NEXT:    ldp q18, q19, [x1, #128]
 ; CHECK-ALIGNED-NEXT:    ldp q20, q21, [x1, #160]
 ; CHECK-ALIGNED-NEXT:    ldp q22, q23, [x1, #192]
-; CHECK-ALIGNED-NEXT:    stp q0, q1, [x0]
 ; CHECK-ALIGNED-NEXT:    stp q2, q3, [x0, #32]
 ; CHECK-ALIGNED-NEXT:    stp q4, q5, [x0, #64]
 ; CHECK-ALIGNED-NEXT:    stp q6, q7, [x0, #96]
@@ -88,6 +87,7 @@ define void @t256(ptr %out, ptr %in) {
 ; CHECK-ALIGNED-NEXT:    stp q20, q21, [x0, #160]
 ; CHECK-ALIGNED-NEXT:    stp q22, q23, [x0, #192]
 ; CHECK-ALIGNED-NEXT:    stp q16, q17, [x0, #224]
+; CHECK-ALIGNED-NEXT:    stp q0, q1, [x0]
 ; CHECK-ALIGNED-NEXT:    ret
 ;
 ; CHECK-UNALIGNED-LABEL: t256:

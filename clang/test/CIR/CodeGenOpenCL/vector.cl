@@ -16,7 +16,7 @@ int4 vec_ternary(int4 c, int4 a, int4 b) {
   return c ? a : c;
 }
 
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
@@ -46,7 +46,7 @@ float4 vec_ternary_f4(int4 c, float4 a, float4 b) {
   return c ? a : b;
 }
 
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.float>>
@@ -108,7 +108,7 @@ int4 vec_unary_inc(int4 a) {
   return a;
 }
 
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: cir.store %{{.*}}, %[[A_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
@@ -125,7 +125,7 @@ int4 vec_unary_dec(int4 a) {
   return a;
 }
 
-// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: cir.store %{{.*}}, %[[A_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
@@ -180,10 +180,10 @@ int4 vec_init_scalar_swizzles(int4 a, int c) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @vec_init_scalar_swizzles
-// CIR: %[[X:.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !s64i] : !cir.vector<4 x !s32i>
-// CIR: %[[Y:.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !s64i] : !cir.vector<4 x !s32i>
+// CIR: %[[X:.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u32i] : !cir.vector<4 x !s32i>
+// CIR: %[[Y:.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u32i] : !cir.vector<4 x !s32i>
 // CIR: %[[C:.*]] = cir.load {{.*}} : !cir.ptr<!s32i>, !s32i
-// CIR: %[[W:.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !s64i] : !cir.vector<4 x !s32i>
+// CIR: %[[W:.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u32i] : !cir.vector<4 x !s32i>
 // CIR: cir.vec.create(%[[X]], %[[Y]], %[[C]], %[[W]] : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
 
 // LLVM-LABEL: @vec_init_scalar_swizzles
@@ -251,7 +251,7 @@ int vec_volatile_swizzle_scalar(volatile int4 *p) {
 
 // CIR-LABEL: cir.func {{.*}} @vec_volatile_swizzle_scalar
 // CIR: %[[V:.*]] = cir.load volatile {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: cir.vec.extract %[[V]][%{{.*}} : !s64i] : !cir.vector<4 x !s32i>
+// CIR: cir.vec.extract %[[V]][%{{.*}} : !u32i] : !cir.vector<4 x !s32i>
 
 // LLVM-LABEL: @vec_volatile_swizzle_scalar
 // LLVM: %[[V:.*]] = load volatile <4 x i32>, ptr %{{.*}}, align 16

@@ -359,8 +359,8 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
         if (MI->getOperand(1).isReg()) {
           if (MachineInstr *DefInstr =
                   MRI.getVRegDef(MI->getOperand(1).getReg())) {
-            if (SPIRVTypeInst Def =
-                    propagateSPIRVType(DefInstr, GR, MRI, MIB)) {
+            SPIRVTypeInst Def = propagateSPIRVType(DefInstr, GR, MRI, MIB);
+            if (Def && !GR->isAggregateType(Def)) {
               unsigned CurrentBW = GR->getScalarOrVectorBitWidth(Def);
               unsigned ExpectedBW =
                   std::max(MRI.getType(Reg).getScalarSizeInBits(), CurrentBW);

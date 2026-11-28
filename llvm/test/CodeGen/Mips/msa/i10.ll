@@ -1,7 +1,7 @@
 ; Test the MSA intrinsics that are encoded with the I10 instruction format.
 
-; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
-; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s --check-prefixes=CHECK,BE
+; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s --check-prefixes=CHECK,LE
 
 @llvm_mips_bnz_b_ARG1 = global <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, align 16
 
@@ -156,5 +156,9 @@ entry:
 declare <2 x i64> @llvm.mips.ldi.d(i32)
 
 ; CHECK-LABEL: llvm_mips_ldi_d_test
-; CHECK-DAG: ldi.d {{\$w[0-9]}}, 3
-; CHECK-DAG: ldi.d {{\$w[0-9]}}, -3
+; LE-DAG: ldi.d {{\$w[0-9]}}, 3
+; LE-DAG: ldi.d {{\$w[0-9]}}, -3
+; BE-DAG: ori [[R1:\$[0-9]+]], $zero, 3
+; BE-DAG: fill.w [[W1:\$w[0-9]]], $zero
+; BE-DAG: insert.w [[W1]][1], [[R1]]
+; BE-DAG: splati.d {{\$w[0-9]}}, [[W1]][0]

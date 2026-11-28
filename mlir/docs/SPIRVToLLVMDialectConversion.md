@@ -74,7 +74,8 @@ However, there are cases (*e.g.* in graphics) where one would place struct
 members explicitly at particular offsets. This case is **not** supported at the
 moment. Hence, we adhere to the following mapping:
 
-*   Structs with no offset are modelled as LLVM packed structures.
+*   Structs with no offset are mapped to naturally padded structs, or to LLVM
+    packed structs if decorated with `CPacked`.
 
 *   Structs with natural offset (*i.e.* offset that equals to cumulative size of
     the previous struct elements or is a natural alignment) are mapped to
@@ -86,11 +87,16 @@ moment. Hence, we adhere to the following mapping:
     a design would require index recalculation in the conversion of ops that
     involve memory addressing.
 
-Examples of SPIR-V struct conversion are: ```mlir !spirv.struct<i8, i32> =>
-!llvm.struct<packed (i8, i32)> !spirv.struct<i8 [0], i32 [4]> => !llvm.struct<(i8,
-i32)>
+Examples of SPIR-V struct conversion are:
 
-// error !spirv.struct<i8 [0], i32 [8]> ```
+```mlir
+!spirv.struct<(i8, i32)>           =>  !llvm.struct<(i8, i32)>
+!spirv.struct<(i8, i32), CPacked>  =>  !llvm.struct<packed (i8, i32)>
+!spirv.struct<(i8 [0], i32 [4])>   =>  !llvm.struct<(i8, i32)>
+
+// error
+!spirv.struct<(i8 [0], i32 [8])>
+```
 
 ### Not implemented types
 
@@ -355,26 +361,33 @@ SPIR-V Dialect op            | LLVM Dialect op
 
 ### Composite ops
 
-Currently, conversion supports rewrite patterns for `spirv.CompositeExtract` and
-`spirv.CompositeInsert`. We distinguish two cases for these operations: when the
-composite object is a vector, and when the composite object is of a non-vector
-type (*i.e.* struct, array or runtime array).
+Currently, conversion supports rewrite patterns for `spirv.CompositeConstruct`,
+`spirv.CompositeExtract` and `spirv.CompositeInsert`. We distinguish two cases
+for these operations: when the composite object is a vector, and when the
+composite object is of a non-vector type (*i.e.* struct, array or runtime
+array).
 
 Composite type | SPIR-V Dialect op      | LLVM Dialect op
 :------------: | :--------------------: | :-------------------:
+vector         | `spirv.CompositeConstruct` | `llvm.insertelement`
 vector         | `spirv.CompositeExtract` | `llvm.extractelement`
 vector         | `spirv.CompositeInsert`  | `llvm.insertelement`
+non-vector     | `spirv.CompositeConstruct` | `llvm.insertvalue`
 non-vector     | `spirv.CompositeExtract` | `llvm.extractvalue`
 non-vector     | `spirv.CompositeInsert`  | `llvm.insertvalue`
 
 `spirv.CopyObject` is replaced with its converted operand.
+
+`spirv.VectorExtractDynamic` and `spirv.VectorInsertDynamic` map to
+`llvm.extractelement` and `llvm.insertelement`.
 
 ### `spirv.EntryPoint` and `spirv.ExecutionMode`
 
 First of all, it is important to note that there is no direct representation of
 entry points in LLVM. At the moment, we use the following approach:
 
-*   `spirv.EntryPoint` is simply removed.
+*   `spirv.EntryPoint` is removed. A function targeted by a `Kernel` entry
+    point gets the `spir_kernel` calling convention.
 
 *   In contrast, `spirv.ExecutionMode` may contain important information about the
     entry point. For example, `LocalSize` provides information about the
@@ -424,6 +437,13 @@ modelled with `xor` operation with a mask with all bits set.
 %0 = spirv.LogicalNot %op : i1  =>  %0    = llvm.xor %op, %mask : i1
 ```
 
+`spirv.Any` and `spirv.All` reduce a vector of `i1` to a scalar `i1`:
+
+SPIR-V Dialect op | LLVM Dialect op
+:---------------: | :---------------------------:
+`spirv.Any`       | `llvm.intr.vector.reduce.or`
+`spirv.All`       | `llvm.intr.vector.reduce.and`
+
 The floating-point classification ops are mapped to the `llvm.intr.is.fpclass`
 intrinsic with the corresponding `FPClassTest` mask. The intrinsic operates per
 component and returns `i1` or a vector of `i1`, exactly like the SPIR-V ops.
@@ -455,14 +475,14 @@ way and additionally sets the `inbounds` flag on the resulting
 ```mlir
 // Access the 1st element of the array
 %i   = spirv.Constant 1: i32
-%var = spirv.Variable : !spirv.ptr<!spirv.struct<f32, !spirv.array<4xf32>>, Function>
-%el  = spirv.AccessChain %var[%i, %i] : !spirv.ptr<!spirv.struct<f32, !spirv.array<4xf32>>, Function>, i32, i32
+%var = spirv.Variable : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>
+%el  = spirv.AccessChain %var[%i, %i] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
 
 // Corresponding LLVM dialect code
 %i   = ...
 %var = ...
 %0   = llvm.mlir.constant(0 : i32) : i32
-%el  = llvm.getelementptr %var[%0, %i, %i] : (!llvm.ptr, i32, i32, i32), !llvm.struct<packed (f32, array<4 x f32>)>
+%el  = llvm.getelementptr %var[%0, 1, %i] : (!llvm.ptr, i32, i32) -> !llvm.ptr, !llvm.struct<(f32, array<4 x f32>)>
 ```
 
 #### `spirv.PtrAccessChain` and `spirv.InBoundsPtrAccessChain`
@@ -481,7 +501,7 @@ resulting `llvm.getelementptr`.
 %el  = spirv.PtrAccessChain %ptr[%elem %i] : !spirv.ptr<!spirv.struct<(f32, i32)>, CrossWorkgroup>, i64, i32 -> !spirv.ptr<i32, CrossWorkgroup>
 
 // Corresponding LLVM dialect code
-%el  = llvm.getelementptr %ptr[%elem, 1] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<packed (f32, i32)>
+%el  = llvm.getelementptr %ptr[%elem, 1] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(f32, i32)>
 ```
 
 The element stride is the size of the converted pointee type. The SPIR-V
@@ -490,6 +510,11 @@ stride for the Uniform, StorageBuffer, PhysicalStorageBuffer and PushConstant
 storage classes. Since the SPIR-V dialect does not model this decoration on
 pointer types, conversion of these two ops rejects base pointers in those
 storage classes rather than assuming a natural stride.
+
+#### `spirv.PtrEqual` and `spirv.PtrNotEqual`
+
+These ops are mapped to `llvm.icmp "eq"` and `llvm.icmp "ne"` on the converted
+pointers.
 
 #### `spirv.CopyMemory`
 
@@ -546,16 +571,16 @@ and are used to reference the global.
 ```mlir
 // Original SPIR-V module
 spirv.module Logical GLSL450 {
-  spirv.GlobalVariable @struct : !spirv.ptr<!spirv.struct<f32, !spirv.array<10xf32>>, Private>
+  spirv.GlobalVariable @struct : !spirv.ptr<!spirv.struct<(f32, !spirv.array<10xf32>)>, Private>
   spirv.func @func() -> () "None" {
-    %0 = spirv.mlir.addressof @struct : !spirv.ptr<!spirv.struct<f32, !spirv.array<10xf32>>, Private>
+    %0 = spirv.mlir.addressof @struct : !spirv.ptr<!spirv.struct<(f32, !spirv.array<10xf32>)>, Private>
     spirv.Return
   }
 }
 
 // Converted result
 module {
-  llvm.mlir.global private @struct() : !llvm.struct<packed (f32, [10 x f32])>
+  llvm.mlir.global private @struct() : !llvm.struct<(f32, array<10 x f32>)>
   llvm.func @func() {
     %0 = llvm.mlir.addressof @struct : !llvm.ptr
     llvm.return
@@ -692,7 +717,6 @@ There is no support of the following ops:
 
 As well as:
 
-*   spirv.CompositeConstruct
 *   spirv.ControlBarrier
 *   spirv.FMod
 *   spirv.GL.Acos
@@ -703,12 +727,10 @@ As well as:
 *   spirv.GL.SAbs
 *   spirv.GL.Sinh
 *   spirv.GL.SSign
-*   spirv.MemoryBarrier
 *   spirv.mlir.referenceof
 *   spirv.SMod
 *   spirv.SpecConstant
 *   spirv.Unreachable
-*   spirv.VectorExtractDynamic
 
 ## Control flow conversion
 
@@ -851,8 +873,7 @@ to LLVM dialect.
 
 This op declares or defines a SPIR-V function and it is converted to
 `llvm.func`. This conversion handles signature conversion, and function control
-attributes remapping to LLVM dialect function
-[`passthrough` attribute](Dialects/LLVM.md/#attribute-pass-through).
+attributes remapping to LLVM dialect function attributes.
 
 The following mapping is used to map
 [SPIR-V function control][SPIRVFunctionAttributes] to
@@ -863,8 +884,8 @@ SPIR-V Function Control Attributes | LLVM Function Attributes
 None                               | No function attributes passed
 Inline                             | `alwaysinline`
 DontInline                         | `noinline`
-Pure                               | `readonly`
-Const                              | `readnone`
+Pure                               | `memory(read)`
+Const                              | `memory(none)`
 
 ### `spirv.Return` and `spirv.ReturnValue`
 

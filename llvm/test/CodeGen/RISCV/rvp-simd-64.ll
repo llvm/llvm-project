@@ -1344,8 +1344,8 @@ define <2 x i32> @test_insert_vector_32_variable(<2 x i32> %a, i32 %val, i32 %id
 ; RV32-NEXT:    andi a3, a3, 1
 ; RV32-NEXT:    addi a4, sp, 8
 ; RV32-NEXT:    sh2add a3, a3, a4
-; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    sw a2, 0(a3)
 ; RV32-NEXT:    lw a0, 8(sp)
 ; RV32-NEXT:    lw a1, 12(sp)

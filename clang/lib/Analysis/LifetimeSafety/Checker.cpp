@@ -155,6 +155,8 @@ public:
           NoescapeWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
         if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
           NoescapeWarningsMap.try_emplace(PVD, GlobalEsc->getGlobal());
+        if (isa<ThisEscapeFact>(OEF))
+          NoescapeWarningsMap.try_emplace(PVD, cast<CXXMethodDecl>(FD));
         return;
       }
       // Skip annotation suggestion for moved loans, as ownership transfer
@@ -165,9 +167,10 @@ public:
         checkCaptureBy(*PVD, *OEF);
       if (paramIsLifetimeBound(*PVD)) {
         // Track that this lifetimebound parameter correctly escapes
-        // (via return or via field assignment in a constructor).
+        // (via return, or into the object in a constructor).
         if (isa<ReturnEscapeFact>(OEF) ||
-            (isa<FieldEscapeFact>(OEF) && isa<CXXConstructorDecl>(FD)))
+            (isa<FieldEscapeFact, ThisEscapeFact>(OEF) &&
+             isa<CXXConstructorDecl>(FD)))
           VerifiedLiftimeboundEscapes.insert(PVD);
       } else {
         // Otherwise, suggest lifetimebound for parameter escaping through
@@ -594,6 +597,8 @@ public:
         SemaHelper->reportNoescapeViolation(PVD, FD);
       else if (const auto *G = dyn_cast<const VarDecl *>(EscapeTarget))
         SemaHelper->reportNoescapeViolation(PVD, G);
+      else if (const auto *MD = dyn_cast<const CXXMethodDecl *>(EscapeTarget))
+        SemaHelper->reportNoescapeViolation(PVD, MD);
       else
         llvm_unreachable("Unhandled EscapingTarget type");
     }

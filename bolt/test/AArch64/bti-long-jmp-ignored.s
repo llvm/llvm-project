@@ -6,11 +6,12 @@
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:   -mattr=+bti -aarch64-mark-bti-property %s -o %t.o
 # RUN: %clang %cflags -O0 %t.o -o %t.exe -Wl,-q -Wl,-z,force-bti
-# RUN: not llvm-bolt %t.exe -o %t.bolt \
-# RUN:   --align-text=0x10000000 --skip-funcs=far_away_func 2>&1 | FileCheck %s
-# RUN: not llvm-bolt %t.exe -o %t.cluster.bolt \
-# RUN:   --align-text=0x10000000 --skip-funcs=far_away_func \
-# RUN:   --relax-exp 2>&1 | FileCheck %s
+
+# RUN: not llvm-bolt %t.exe -o %t.bolt --align-text=0x10000000 \
+# RUN:   --skip-funcs=far_away_func 2>&1 | FileCheck %s
+
+# RUN: not llvm-bolt %t.exe -o %t.bolt --align-text=0x10000000 \
+# RUN:   --skip-funcs=far_away_func --relax-with-clusters=false 2>&1 | FileCheck %s
 
 # CHECK:  BOLT-ERROR: Cannot add BTI to function without CFG far_away_func. Recompile the binary using -fpatchable-function-entry 1 to include a nop at the entry
 
@@ -33,4 +34,3 @@ far_away_func:
     ret
 
 .reloc 0, R_AARCH64_NONE
-

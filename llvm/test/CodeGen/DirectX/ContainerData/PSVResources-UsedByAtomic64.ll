@@ -1,4 +1,4 @@
-; RUN: llc %s -disable-dxil-remove-unused-resources --filetype=obj -o - | obj2yaml | FileCheck %s
+; RUN: llc %s -dx-remove-unused-resources=false --filetype=obj -o - | obj2yaml | FileCheck %s
 
 ; Two UAVs: `AtomicUAV` is used by a 64-bit atomicrmw, `PlainUAV` is only
 ; loaded/stored (no atomics). Only `AtomicUAV` should have the

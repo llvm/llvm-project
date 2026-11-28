@@ -141,3 +141,15 @@ entry:
   %4 = shufflevector <4 x i64> %3, <4 x i64> poison, <4 x i32> zeroinitializer
   ret <4 x i64> %4
 }
+
+define void @merge_store_v2f32_const_zero(ptr %p) {
+; CHECK-LABEL: merge_store_v2f32_const_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    vmovaps %xmm0, (%rdi)
+; CHECK-NEXT:    retq
+  store <2 x float> <float 1.0, float 0.0>, ptr %p, align 16
+  %q = getelementptr i8, ptr %p, i64 8
+  store <2 x float> zeroinitializer, ptr %q, align 8
+  ret void
+}

@@ -39,7 +39,6 @@
 name:            main
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false

@@ -1,4 +1,4 @@
-// REQUIRES: asserts, host-supports-spirv
+// REQUIRES: asserts, spirv-registered-target
 // RUN: mlir-opt %s --gpu-module-to-binary="format=llvm" \
 // RUN:   -debug-only=serialize-to-llvm -o /dev/null 2>&1 | FileCheck %s
 

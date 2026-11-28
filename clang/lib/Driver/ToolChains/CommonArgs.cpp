@@ -656,7 +656,9 @@ const char *tools::getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   case llvm::Triple::ve:
     return "elf64ve";
   case llvm::Triple::csky:
-    return "cskyelf_linux";
+    if (T.isOSLinux())
+      return "cskyelf_linux";
+    return "cskyelf";
   default:
     return nullptr;
   }
@@ -2646,6 +2648,8 @@ void tools::AddRunTimeLibs(const ToolChain &TC, const Driver &D,
   ToolChain::RuntimeLibType RLT = TC.GetRuntimeLibType(Args);
 
   switch (RLT) {
+  case ToolChain::RLT_None:
+    return;
   case ToolChain::RLT_CompilerRT:
     CmdArgs.push_back(TC.getCompilerRTArgString(Args, "builtins"));
     AddUnwindLibrary(TC, D, CmdArgs, Args);

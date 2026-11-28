@@ -21,7 +21,6 @@ define float @ueq(double %lhs, double %rhs, float %true, float %false) {
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    cmp.ueq.d $f0, $f12, $f14
 ; MIPS32R6-NEXT:    mfc1 $1, $f0
-; MIPS32R6-NEXT:    andi $1, $1, 1
 ; MIPS32R6-NEXT:    addiu $2, $sp, 20
 ; MIPS32R6-NEXT:    seleqz $2, $2, $1
 ; MIPS32R6-NEXT:    addiu $3, $sp, 16

@@ -69,7 +69,7 @@ void copy_c(C &c1, C &c2) {
 // Implicit assignment operator for C.
 
 // CIR: cir.func {{.*}} @_ZN1CaSERKS_(%arg0: !cir.ptr<!rec_C> {{.*}}, %arg1: !cir.ptr<!rec_C> {{.*}}) -> (!cir.ptr<!rec_C>{{.*}})
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!rec_C>>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!rec_C>>
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_C>>
 // CIR:   %[[ARG1_ADDR:.*]] = cir.alloca "" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_C>>
 // CIR:   cir.store %arg0, %[[THIS_ADDR]]

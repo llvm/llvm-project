@@ -46,6 +46,7 @@ class SystemZHazardRecognizer : public ScheduleHazardRecognizer {
 
   const SystemZInstrInfo *TII;
   const TargetSchedModel *SchedModel;
+  const SystemZOptions &CLOpts;
 
   /// Keep track of the number of decoder slots used in the current
   /// decoder group.
@@ -108,8 +109,9 @@ class SystemZHazardRecognizer : public ScheduleHazardRecognizer {
 
 public:
   SystemZHazardRecognizer(const SystemZInstrInfo *tii,
-                          const TargetSchedModel *SM)
-      : TII(tii), SchedModel(SM) {
+                          const TargetSchedModel *SM,
+                          const SystemZOptions &CLOpts)
+      : TII(tii), SchedModel(SM), CLOpts(CLOpts) {
     Reset();
   }
 

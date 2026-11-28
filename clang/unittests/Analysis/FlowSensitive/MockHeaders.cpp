@@ -847,6 +847,12 @@ struct unexpect_t {
 
 inline constexpr unexpect_t unexpect{};
 
+template <class T, class E> class expected;
+
+template <class> constexpr bool __is_expected = false;
+template <class T, class E>
+constexpr bool __is_expected<expected<T, E>> = true;
+
 template <class T, class E> class expected {
 public:
   using value_type = T;
@@ -898,6 +904,20 @@ public:
   template <class... Args> T &emplace(Args &&...args) noexcept;
 
   void swap(expected &rhs) noexcept;
+
+  // The comparisons rely on C++20 rewritten candidates for `!=` and for
+  // reversed operands.
+#if __cplusplus >= 202002L
+  template <class T2, class E2>
+  friend bool operator==(const expected &x, const expected<T2, E2> &y);
+
+  template <class T2>
+    requires(!__is_expected<T2>)
+  friend bool operator==(const expected &x, const T2 &v);
+
+  template <class E2>
+  friend bool operator==(const expected &x, const unexpected<E2> &e);
+#endif
 };
 
 template <class E> class expected<void, E> {
@@ -938,6 +958,14 @@ public:
   void emplace() noexcept;
 
   void swap(expected &rhs) noexcept;
+
+#if __cplusplus >= 202002L
+  template <class T2, class E2>
+  friend bool operator==(const expected &x, const expected<T2, E2> &y);
+
+  template <class E2>
+  friend bool operator==(const expected &x, const unexpected<E2> &e);
+#endif
 };
 
 } // namespace std
@@ -951,7 +979,9 @@ static constexpr char TlExpectedHeader[] = R"(
 
 // Mock of `tl::expected` from https://github.com/TartanLlama/expected.
 //
-// Unlike `std::expected`, it has no `void` specialization.
+// Unlike `std::expected`, it has no `void` specialization and its comparison
+// operators are free functions that are declared for both operand orders,
+// including `operator!=`.
 
 #include "std_type_traits.h"
 
@@ -1080,6 +1110,33 @@ public:
   template <class U> T value_or(U &&v) const &;
   template <class U> T value_or(U &&v) &&;
 };
+
+template <class T, class E, class U, class F>
+bool operator==(const expected<T, E> &lhs, const expected<U, F> &rhs);
+template <class T, class E, class U, class F>
+bool operator!=(const expected<T, E> &lhs, const expected<U, F> &rhs);
+template <class E, class F>
+bool operator==(const expected<void, E> &lhs, const expected<void, F> &rhs);
+template <class E, class F>
+bool operator!=(const expected<void, E> &lhs, const expected<void, F> &rhs);
+
+template <class T, class E, class U>
+bool operator==(const expected<T, E> &x, const U &v);
+template <class T, class E, class U>
+bool operator==(const U &v, const expected<T, E> &x);
+template <class T, class E, class U>
+bool operator!=(const expected<T, E> &x, const U &v);
+template <class T, class E, class U>
+bool operator!=(const U &v, const expected<T, E> &x);
+
+template <class T, class E>
+bool operator==(const expected<T, E> &x, const unexpected<E> &e);
+template <class T, class E>
+bool operator==(const unexpected<E> &e, const expected<T, E> &x);
+template <class T, class E>
+bool operator!=(const expected<T, E> &x, const unexpected<E> &e);
+template <class T, class E>
+bool operator!=(const unexpected<E> &e, const expected<T, E> &x);
 
 template <class T, class E>
 void swap(expected<T, E> &lhs, expected<T, E> &rhs);

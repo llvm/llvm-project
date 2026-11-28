@@ -107,8 +107,6 @@ private:
 
   const FileInfoSubstreamHeader *FileInfoHeader = nullptr;
 
-  BinaryStreamRef ModInfoSubstream;
-  BinaryStreamRef FileInfoSubstream;
   BinaryStreamRef NamesBuffer;
 };
 

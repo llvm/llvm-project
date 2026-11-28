@@ -1464,11 +1464,11 @@ inline auto pred_end(const MachineBasicBlock *BB) { return BB->pred_end(); }
 /// at some point after the MachineInstrSpan is constructed.
 class MachineInstrSpan {
   MachineBasicBlock &MBB;
-  MachineBasicBlock::iterator I, B, E;
+  MachineBasicBlock::iterator B, E;
 
 public:
   MachineInstrSpan(MachineBasicBlock::iterator I, MachineBasicBlock *BB)
-      : MBB(*BB), I(I), B(I == MBB.begin() ? MBB.end() : std::prev(I)),
+      : MBB(*BB), B(I == MBB.begin() ? MBB.end() : std::prev(I)),
         E(std::next(I)) {
     assert(I == BB->end() || I->getParent() == BB);
   }

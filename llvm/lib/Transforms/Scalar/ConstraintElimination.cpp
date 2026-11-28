@@ -2505,23 +2505,22 @@ static bool replaceOverflowUses(WithOverflowInst *II,
   bool Changed = false;
   IRBuilder<> Builder(II->getIterator());
   Value *Res = nullptr;
-  for (User *U : make_early_inc_range(II->users())) {
-    if (match(U, m_ExtractValue<0>(m_Value()))) {
+  for (Instruction *I : make_early_inc_range(II->users())) {
+    if (match(I, m_ExtractValue<0>(m_Value()))) {
       if (!Res)
         Res = Builder.CreateNoWrapBinOp(II->getBinaryOp(), II->getLHS(),
                                         II->getRHS(),
                                         /*IsNUW=*/!II->isSigned(),
                                         /*IsNSW=*/II->isSigned());
-      U->replaceAllUsesWith(Res);
+      I->replaceAllUsesWith(Res);
       Changed = true;
-    } else if (match(U, m_ExtractValue<1>(m_Value()))) {
-      U->replaceAllUsesWith(ConstantInt::getFalse(U->getType()));
+    } else if (match(I, m_ExtractValue<1>(m_Value()))) {
+      I->replaceAllUsesWith(ConstantInt::getFalse(I->getType()));
       Changed = true;
     } else
       continue;
 
-    if (U->use_empty()) {
-      auto *I = cast<Instruction>(U);
+    if (I->use_empty()) {
       ToRemove.push_back(I);
       I->setOperand(0, PoisonValue::get(II->getType()));
       Changed = true;

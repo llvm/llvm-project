@@ -170,11 +170,11 @@ define <64 x i8> @pext_v64i8(<64 x i8> %val, <64 x i8> %mask) nounwind {
 ; AVX512-NEXT:    vpternlogq {{.*#+}} zmm6 = (zmm6 & zmm8) | zmm5
 ; AVX512-NEXT:    vpandq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpandq %zmm2, %zmm0, %zmm1
-; AVX512-NEXT:    vpsrlw $1, %zmm1, %zmm2
-; AVX512-NEXT:    vpandq %zmm7, %zmm2, %zmm2
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm2 = zmm2 | (zmm0 ^ zmm1)
-; AVX512-NEXT:    vpandq %zmm4, %zmm2, %zmm0
-; AVX512-NEXT:    vpxorq %zmm0, %zmm2, %zmm1
+; AVX512-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpsrlw $1, %zmm1, %zmm1
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm1 = (zmm1 & zmm7) | zmm0
+; AVX512-NEXT:    vpandq %zmm4, %zmm1, %zmm0
+; AVX512-NEXT:    vpxorq %zmm0, %zmm1, %zmm1
 ; AVX512-NEXT:    vpsrlw $2, %zmm0, %zmm0
 ; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = (zmm0 & zmm8) | zmm1
 ; AVX512-NEXT:    vpternlogq {{.*#+}} zmm6 = zmm6 & zmm0 & zmm3

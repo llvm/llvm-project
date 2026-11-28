@@ -792,3 +792,10 @@ auto f() {
   return c;
 }
 }
+
+namespace GH46331 {
+template <typename> alignas (enum a{}) // expected-error {{cannot be defined in a type specifier}}
+~a ()()() -> auto; // expected-error {{function with trailing return type must specify return type 'auto', not 'void'}} \
+                   // expected-error {{destructor must be a non-static member function}} \
+                   // expected-error {{destructor cannot be declared as a template}}
+}

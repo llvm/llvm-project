@@ -104,6 +104,7 @@ defset list<DXILOpClass> OpClasses = {
   def cutStream : DXILOpClass;
   def cycleCounterLegacy : DXILOpClass;
   def debugBreak : DXILOpClass;
+  def isDebuggingEnabled : DXILOpClass;
   def discard : DXILOpClass;
   def dispatchMesh : DXILOpClass;
   def dispatchRaysDimensions : DXILOpClass;
@@ -1718,5 +1719,13 @@ def DebugBreak : DXILOp<343, debugBreak> {
   let intrinsics = [IntrinSelect<int_debugtrap>];
   let arguments = [];
   let result = VoidTy;
+  let stages = [Stages<DXIL1_10, [all_stages]>];
+}
+
+def IsDebuggingEnabled : DXILOp<344, isDebuggingEnabled> {
+  let Doc = "query if debugging is enabled";
+  let intrinsics = [IntrinSelect<int_dx_isdebuggingenabled>];
+  let arguments = [];
+  let result = Int1Ty;
   let stages = [Stages<DXIL1_10, [all_stages]>];
 }

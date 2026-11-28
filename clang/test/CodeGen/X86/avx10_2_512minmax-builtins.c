@@ -9,20 +9,33 @@
 
 __m512bh test_mm512_minmax_pbh(__m512bh __A, __m512bh __B) {
   // CHECK-LABEL: @test_mm512_minmax_pbh(
-  // CHECK: call <32 x bfloat> @llvm.x86.avx10.vminmaxbf16512(
+  // CHECK: store <32 x bfloat> %{{.*}}, ptr [[AADDR:%[^,]+]],
+  // CHECK: store <32 x bfloat> %{{.*}}, ptr [[BADDR:%[^,]+]],
+  // CHECK: [[X:%.+]] = load <32 x bfloat>, ptr [[AADDR]],
+  // CHECK: [[Y:%.+]] = load <32 x bfloat>, ptr [[BADDR]],
+  // CHECK: call <32 x bfloat> @llvm.x86.avx10.vminmaxbf16512(<32 x bfloat> [[X]], <32 x bfloat> [[Y]], i32 127)
   return _mm512_minmax_pbh(__A, __B, 127);
 }
 
 __m512bh test_mm512_mask_minmax_pbh(__m512bh __A, __mmask32 __B, __m512bh __C, __m512bh __D) {
   // CHECK-LABEL: @test_mm512_mask_minmax_pbh(
-  // CHECK: call <32 x bfloat> @llvm.x86.avx10.vminmaxbf16512(
+  // CHECK: store <32 x bfloat> %{{.*}}, ptr [[AADDR:%[^,]+]],
+  // CHECK: store <32 x bfloat> %{{.*}}, ptr [[CADDR:%[^,]+]],
+  // CHECK: store <32 x bfloat> %{{.*}}, ptr [[DADDR:%[^,]+]],
+  // CHECK: [[X:%.+]] = load <32 x bfloat>, ptr [[CADDR]],
+  // CHECK: [[Y:%.+]] = load <32 x bfloat>, ptr [[DADDR]],
+  // CHECK: call <32 x bfloat> @llvm.x86.avx10.vminmaxbf16512(<32 x bfloat> [[X]], <32 x bfloat> [[Y]], i32 127)
   // CHECK: select <32 x i1> %{{.*}}, <32 x bfloat> %{{.*}}, <32 x bfloat> %{{.*}}
   return _mm512_mask_minmax_pbh(__A, __B, __C, __D, 127);
 }
 
 __m512bh test_mm512_maskz_minmax_pbh(__mmask32 __A, __m512bh __B, __m512bh __C) {
   // CHECK-LABEL: @test_mm512_maskz_minmax_pbh(
-  // CHECK: call <32 x bfloat> @llvm.x86.avx10.vminmaxbf16512(
+  // CHECK: store <32 x bfloat> %{{.*}}, ptr [[BADDR:%[^,]+]],
+  // CHECK: store <32 x bfloat> %{{.*}}, ptr [[CADDR:%[^,]+]],
+  // CHECK: [[X:%.+]] = load <32 x bfloat>, ptr [[BADDR]],
+  // CHECK: [[Y:%.+]] = load <32 x bfloat>, ptr [[CADDR]],
+  // CHECK: call <32 x bfloat> @llvm.x86.avx10.vminmaxbf16512(<32 x bfloat> [[X]], <32 x bfloat> [[Y]], i32 127)
   // CHECK: zeroinitializer
   // CHECK: select <32 x i1> %{{.*}}, <32 x bfloat> %{{.*}}, <32 x bfloat> %{{.*}}
   return _mm512_maskz_minmax_pbh(__A, __B, __C, 127);

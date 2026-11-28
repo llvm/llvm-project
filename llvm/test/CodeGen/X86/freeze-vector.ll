@@ -812,16 +812,10 @@ define <2 x i32> @freeze_vselect_high_demanded(<4 x i32> %csrc, <2 x i32> %a, <2
 ;
 ; X64-LABEL: freeze_vselect_high_demanded:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [2147483647,2147483647,2147483647,2147483647]
-; X64-NEXT:    vpaddd %xmm5, %xmm0, %xmm6
-; X64-NEXT:    vpxor %xmm7, %xmm7, %xmm7
-; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm6[0,1],xmm0[2,3]
-; X64-NEXT:    vpcmpgtd %xmm7, %xmm0, %xmm0
-; X64-NEXT:    vpaddd %xmm5, %xmm2, %xmm2
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
-; X64-NEXT:    vpsubd %xmm5, %xmm4, %xmm4
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm4[0],xmm3[0]
+; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-NEXT:    vpcmpgtd %xmm2, %xmm0, %xmm0
+; X64-NEXT:    vmovddup {{.*#+}} xmm1 = xmm1[0,0]
+; X64-NEXT:    vmovddup {{.*#+}} xmm2 = xmm3[0,0]
 ; X64-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X64-NEXT:    retq

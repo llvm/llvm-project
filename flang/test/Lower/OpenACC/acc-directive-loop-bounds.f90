@@ -64,3 +64,68 @@ end subroutine
 ! CHECK: Subroutine parallel_region_goto
 ! CHECK: <<OpenACCConstruct!>>
 ! CHECK: GotoStmt!
+
+! A do concurrent with a SELECT CASE in its body keeps its structured form too,
+! so the directive's acc.loop carries the bounds.
+subroutine parallel_loop_do_concurrent(a, n, tag)
+  real :: a(n)
+  integer :: n, i, tag
+  !$acc parallel loop
+  do concurrent (i = 1:n)
+    select case (tag)
+    case (1)
+      a(i) = 1.0
+    case default
+      a(i) = 0.0
+    end select
+  end do
+end subroutine
+
+! CHECK: Subroutine parallel_loop_do_concurrent
+! CHECK: <<OpenACCConstruct~>>
+! CHECK: <<DoConstruct~>>
+
+! FIR-LABEL: func.func @_QPparallel_loop_do_concurrent
+! FIR:         acc.parallel combined(loop) {
+! FIR-NOT:       acc.loop
+! FIR:           acc.loop combined(parallel) private({{.*}}) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! FIR:             scf.execute_region no_inline {
+! FIR:               fir.select_case
+! FIR:               scf.yield
+! FIR:             }
+! FIR-NOT:       acc.loop
+! FIR:           acc.yield
+! FIR:         }
+
+! The same do concurrent directly in a kernels region gets the implicit acc.loop
+! with bounds, instead of being reported as an unstructured DO.
+subroutine kernels_do_concurrent(a, n, tag)
+  real :: a(n)
+  integer :: n, i, tag
+  !$acc kernels
+  do concurrent (i = 1:n)
+    select case (tag)
+    case (1)
+      a(i) = 1.0
+    case default
+      a(i) = 0.0
+    end select
+  end do
+  !$acc end kernels
+end subroutine
+
+! CHECK: Subroutine kernels_do_concurrent
+! CHECK: <<OpenACCConstruct~>>
+! CHECK: <<DoConstruct~>>
+
+! FIR-LABEL: func.func @_QPkernels_do_concurrent
+! FIR:         acc.kernels {
+! FIR-NOT:       acc.loop
+! FIR:           acc.loop private({{.*}}) control(%{{.*}} : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! FIR:             scf.execute_region no_inline {
+! FIR:               fir.select_case
+! FIR:               scf.yield
+! FIR:             }
+! FIR-NOT:       acc.loop
+! FIR:           acc.yield
+! FIR:         }

@@ -60,6 +60,9 @@ infrastructure are described first, followed by tool-specific sections.
   All of the symbols it used to define were moved into `clang-tidy/ClangTidyModule.h`.
   The deprecated header has been removed in this release.
 
+- The hidden `-dataflow-log` option has been replaced by the `CLANG_DATAFLOW_LOG` environment variable.
+  `CLANG_DATAFLOW_LOG=-` writes a textual dataflow log to stderr, and `CLANG_DATAFLOW_LOG=<dir>` writes HTML logs under `<dir>`.
+
 ### Improvements to clangd
 
 #### Inlay hints
@@ -102,6 +105,10 @@ infrastructure are described first, followed by tool-specific sections.
   value when possible, and otherwise via a pointer parameter, since C has
   no references.
 
+- The `Define outline` tweak no longer copies attributes (`[[...]]`,
+  `__attribute__((...))` and `__declspec(...)`) from the declaration to the
+  generated out-of-line definition.
+
 #### Signature help
 
 - Parameters declared with a `decltype` are now displayed as the type the
@@ -143,6 +150,10 @@ infrastructure are described first, followed by tool-specific sections.
   `ImplementationFileExtensions` contains an invalid entry, such as one with a
   leading dot. The invalid option is now reported as a warning.
 
+- Added a new {program}`clang-tidy` command line option `-sarif-export=<file>`
+  in which clang-tidy diagnostics are exported in the [SARIF](https://sarifweb.azurewebsites.net/)
+  format.
+  
 #### New checks
 
 - New {doc}`bugprone-macro-condition
@@ -219,8 +230,9 @@ infrastructure are described first, followed by tool-specific sections.
   operands narrower than `int` is only signed due to integer promotion.
 
 - Improved {doc}`bugprone-macro-parentheses
-  <clang-tidy/checks/bugprone/macro-parentheses>` by fixing invalid fixes for
-  macro arguments used as names in alias declarations.
+  <clang-tidy/checks/bugprone/macro-parentheses>` by fixing invalid fixes
+  for macro arguments used as names in alias declarations, and correcting
+  diagnostic and fix-it locations for tokens containing escaped newlines.
 
 - Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when

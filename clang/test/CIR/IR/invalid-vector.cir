@@ -16,7 +16,7 @@ cir.global external @vec_b = #cir.zero : !cir.vector<4 x !cir.array<!s32i x 10>>
 module {
   cir.func @scalable_vector_constant() {
     // expected-error @below {{scalable vector constants are not supported}}
-    %0 = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.vector<[2] x !s32i>
+    %0 = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.vector<[2] x !s32i, sve_data>
     cir.return
   }
 }
@@ -30,7 +30,7 @@ module {
     %0 = cir.const #cir.int<1> : !s32i
     %1 = cir.const #cir.int<2> : !s32i
     // expected-error @below {{scalable vectors are not supported}}
-    %2 = cir.vec.create(%0, %1 : !s32i, !s32i) : !cir.vector<[2] x !s32i>
+    %2 = cir.vec.create(%0, %1 : !s32i, !s32i) : !cir.vector<[2] x !s32i, sve_data>
     cir.return
   }
 }
@@ -40,10 +40,10 @@ module {
 !s32i = !cir.int<s, 32>
 
 module {
-  cir.func @scalable_vector_shuffle(%arg0: !cir.vector<[2] x !s32i>,
-                                    %arg1: !cir.vector<[2] x !s32i>) {
+  cir.func @scalable_vector_shuffle(%arg0: !cir.vector<[2] x !s32i, sve_data>,
+                                    %arg1: !cir.vector<[2] x !s32i, sve_data>) {
     // expected-error @below {{scalable vectors are not supported}}
-    %0 = cir.vec.shuffle(%arg0, %arg1 : !cir.vector<[2] x !s32i>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<[2] x !s32i>
+    %0 = cir.vec.shuffle(%arg0, %arg1 : !cir.vector<[2] x !s32i, sve_data>) [#cir.int<0> : !s32i, #cir.int<1> : !s32i] : !cir.vector<[2] x !s32i, sve_data>
     cir.return
   }
 }
@@ -53,7 +53,7 @@ module {
 cir.func @invalid_scalable_vec_syntax() {
   // expected-error@+2 {{missing closing `]` for scalable dim size}}
   // expected-error @below {{expected ']'}}
-  %3 = cir.alloca !cir.vector<[1 x] !s32i>, !cir.ptr<!cir.vector<[1] x !s32i>> {alignment = 4 : i64}
+  %3 = cir.alloca !cir.vector<[1 x] !s32i>, !cir.ptr<!cir.vector<[1] x !s32i, sve_data>> {alignment = 4 : i64}
   cir.return
 
 }
@@ -196,6 +196,102 @@ module  {
 cir.global external @vec_a = #cir.zero : !cir.vector<0 x !s32i>
 
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+// expected-error @below {{a scalable vector must have a vector kind}}
+cir.func private @scalable_generic(!cir.vector<[4] x !s32i>)
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+// expected-error @below {{expected 'sve_data' or 'sve_predicate'}}
+cir.func private @kind_generic(!cir.vector<4 x !s32i, generic>)
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+// expected-error @below {{expected 'sve_data' or 'sve_predicate'}}
+cir.func private @kind_unknown(!cir.vector<4 x !s32i, neon>)
+
+// -----
+
+// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or mfp8, f16, bf16, float, or double elements}}
+cir.func private @sve_data_bitint(!cir.vector<[4] x !cir.int<s, 32, bitint>, sve_data>)
+
+// -----
+
+// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or mfp8, f16, bf16, float, or double elements}}
+cir.func private @sve_data_s24(!cir.vector<[4] x !cir.int<s, 24>, sve_data>)
+
+// -----
+
+// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or mfp8, f16, bf16, float, or double elements}}
+cir.func private @sve_data_u1(!cir.vector<[16] x !cir.int<u, 1>, sve_data>)
+
+// -----
+
+// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or mfp8, f16, bf16, float, or double elements}}
+cir.func private @sve_data_bool(!cir.vector<16 x !cir.bool, sve_data>)
+
+// -----
+
+// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or mfp8, f16, bf16, float, or double elements}}
+cir.func private @sve_data_f80(!cir.vector<[1] x !cir.long_double<!cir.f80>, sve_data>)
+
+// -----
+
+// expected-error @below {{a NEON mfp8 vector must have 8 or 16 elements}}
+cir.func private @neon_mfp8_4(!cir.vector<4 x !cir.mfp8>)
+
+// -----
+
+// expected-error @below {{a NEON mfp8 vector must have 8 or 16 elements}}
+cir.func private @neon_mfp8_32(!cir.vector<32 x !cir.mfp8>)
+
+// -----
+
+// expected-error @below {{an SVE mfp8 vector must have [16] elements, or a power-of-two number of elements from 16 to 256}}
+cir.func private @sve_mfp8_scalable_8(!cir.vector<[8] x !cir.mfp8, sve_data>)
+
+// -----
+
+// expected-error @below {{an SVE mfp8 vector must have [16] elements, or a power-of-two number of elements from 16 to 256}}
+cir.func private @sve_mfp8_fixed_8(!cir.vector<8 x !cir.mfp8, sve_data>)
+
+// -----
+
+// expected-error @below {{an SVE mfp8 vector must have [16] elements, or a power-of-two number of elements from 16 to 256}}
+cir.func private @sve_mfp8_fixed_48(!cir.vector<48 x !cir.mfp8, sve_data>)
+
+// -----
+
+// expected-error @below {{an SVE mfp8 vector must have [16] elements, or a power-of-two number of elements from 16 to 256}}
+cir.func private @sve_mfp8_fixed_512(!cir.vector<512 x !cir.mfp8, sve_data>)
+
+// -----
+
+// expected-error @below {{an SVE predicate vector must have '!cir.int<u, 1>' elements}}
+cir.func private @sve_pred_u8(!cir.vector<[16] x !cir.int<u, 8>, sve_predicate>)
+
+// -----
+
+// expected-error @below {{an SVE predicate vector must have '!cir.int<u, 1>' elements}}
+cir.func private @sve_pred_bool(!cir.vector<[16] x !cir.bool, sve_predicate>)
+
+// -----
+
+// expected-error @below {{an SVE predicate vector must have '!cir.int<u, 8>' elements}}
+cir.func private @sve_fixed_pred_u1(!cir.vector<64 x !cir.int<u, 1>, sve_predicate>)
+
+// -----
+
+// expected-error @below {{an SVE predicate vector must have '!cir.int<u, 8>' elements}}
+cir.func private @sve_fixed_pred_s8(!cir.vector<8 x !cir.int<s, 8>, sve_predicate>)
 
 // -----
 

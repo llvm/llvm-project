@@ -17,7 +17,6 @@
 ---
 name:            test1
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:
   - { reg: '$edi', virtual-reg: '%0' }

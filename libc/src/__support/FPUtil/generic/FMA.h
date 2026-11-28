@@ -18,7 +18,7 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/big_int.h"
-#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
@@ -38,7 +38,8 @@ fma(InType x, InType y, InType z);
 // TODO(lntue): Implement fmaf that is correctly rounded to all rounding modes.
 // The implementation below only is only correct for the default rounding mode,
 // round-to-nearest tie-to-even.
-template <> LIBC_INLINE float fma<float>(float x, float y, float z) {
+template <>
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float fma<float>(float x, float y, float z) {
   // Product is exact.
   double prod = static_cast<double>(x) * static_cast<double>(y);
   double z_d = static_cast<double>(z);
@@ -90,7 +91,8 @@ namespace internal {
 // Extract the sticky bits and shift the `mantissa` to the right by
 // `shift_length`.
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<is_unsigned_integral_or_big_int_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<is_unsigned_integral_or_big_int_v<T>,
+                                       bool>
 shift_mantissa(int shift_length, T &mant) {
   if (shift_length >= cpp::numeric_limits<T>::digits) {
     mant = 0;

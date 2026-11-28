@@ -109,3 +109,29 @@ void test_long(int arg0) {
   long v15_16;
   __asm volatile("v_lshlrev_b64 v[15:16], 0, %0" : "={v[15:16]}"(v15_16) : "v"(arg0));
 }
+
+// 'RF' constraint - flat memory operand (flat_load / flat_store address).
+void test_RF_constraint(__global int *ptr) {
+  int val;
+  __asm("flat_load_dword %0, %1" : "=v"(val) : "RF"(*ptr));
+  __asm("flat_store_dword %0, %1" : : "RF"(*ptr), "v"(val));
+}
+
+// Invalid: 'R' alone (not followed by 'F') is not a valid constraint.
+void test_R_invalid(__global int *ptr) {
+  int val;
+  __asm("flat_load_dword %0, %1" : "=v"(val) : "R"(*ptr)); // expected-error {{invalid input constraint 'R' in asm}}
+}
+
+// Invalid: 'RF' cannot be combined with other constraint letters.
+void test_RF_combined_invalid(__global int *ptr) {
+  int val;
+  __asm("flat_load_dword %0, %1" : "=v"(val) : "RFm"(*ptr)); // expected-error {{invalid input constraint 'RFm' in asm}}
+  __asm("flat_load_dword %0, %1" : "=v"(val) : "RFv"(*ptr)); // expected-error {{invalid input constraint 'RFv' in asm}}
+}
+
+// Invalid: 'RF' requires an lvalue.
+void test_RF_nonlvalue(void) {
+  int val;
+  __asm("flat_load_dword %0, %1" : "=v"(val) : "RF"(42)); // expected-error {{invalid lvalue in asm input for constraint 'RF'}}
+}

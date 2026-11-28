@@ -560,16 +560,6 @@ struct VectorInlinerInterface : public DialectInlinerInterface {
 } // namespace
 
 void VectorDialect::initialize() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Vector/IR/VectorAttributes.cpp.inc"
-      >();
-
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Vector/IR/VectorOps.cpp.inc"
-      >();
-
   addInterfaces<VectorInlinerInterface>();
 
   declarePromisedInterfaces<memref::IndexedAccessOpInterface, LoadOp, StoreOp,
@@ -6053,7 +6043,8 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
   if (read.hasOutOfBoundsDim() || write.hasOutOfBoundsDim())
     return failure();
   // Masked transfers have padding/select semantics and are not identity folds.
-  if (read.getMask() || write.getMask())
+  // This includes a write under an enclosing vector.mask.
+  if (read.getMask() || write.getMask() || write.isMasked())
     return failure();
   // Tensor types must be the same.
   if (read.getBase().getType() != rankedTensorType)
@@ -6346,16 +6337,20 @@ static void printBoolAttr(OpAsmPrinter &printer, Operation *, BoolAttr attr) {
   printer.printAttribute(attr);
 }
 
-static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
-                                                 VectorType vecTy,
-                                                 MemRefType memRefTy) {
+bool vector::isValidLoadStoreMemRefLayout(VectorType vecTy,
+                                          MemRefType memRefTy) {
   // If rank==0 or size==1 it's equivalent to scalar load/store, so we don't
   // need any strides limitations.
   if (!vecTy.isScalable() &&
       (vecTy.getRank() == 0 || vecTy.getNumElements() == 1))
-    return success();
+    return true;
+  return memRefTy.isLastDimUnitStride();
+}
 
-  if (!memRefTy.isLastDimUnitStride())
+static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
+                                                 VectorType vecTy,
+                                                 MemRefType memRefTy) {
+  if (!isValidLoadStoreMemRefLayout(vecTy, memRefTy))
     return op->emitOpError("most minor memref dim must have unit stride");
   return success();
 }
@@ -8343,17 +8338,27 @@ LogicalResult MaskOp::verify() {
                      [](Type t) { return llvm::isa<VectorType>(t); }) > 1)
     return emitOpError("multiple vector results not supported");
 
-  // Mask checks.
-  Type expectedMaskType = maskableOp.getExpectedMaskType();
-  if (getMask().getType() != expectedMaskType)
-    return emitOpError("expects a ")
-           << expectedMaskType << " mask for the maskable operation";
-
+  // TODO: Remove once https://github.com/llvm/llvm-project/issues/239511 is
+  // completed
   auto transferOp =
       dyn_cast<VectorTransferOpInterface>(maskableOp.getOperation());
   if (transferOp && transferOp.getMask())
     return emitOpError(
         "doesn't expect a mask operand for the masked transfer operation");
+
+  // TODO: This does not belong here, but there is just no good way to mask
+  // transfer Ops with vector elements. Instead, cnsider removing support for
+  // vector elements in XFer ops.
+  if (transferOp &&
+      isa<VectorType>(transferOp.getShapedType().getElementType()))
+    return emitOpError("does not support masking a transfer operation on a "
+                       "source with vector element type");
+
+  // Mask checks.
+  Type expectedMaskType = maskableOp.getExpectedMaskType();
+  if (getMask().getType() != expectedMaskType)
+    return emitOpError("expects a ")
+           << expectedMaskType << " mask for the maskable operation";
 
   // Passthru checks.
   Value passthru = getPassthru();

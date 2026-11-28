@@ -94,6 +94,8 @@ const StreamErrorState ErrorNone{true, false, false};
 const StreamErrorState ErrorFEof{false, true, false};
 const StreamErrorState ErrorFError{false, false, true};
 
+enum class IODirection { Input, Output, Any };
+
 /// Full state information about a stream pointer.
 struct StreamState {
   /// The last file operation called in the stream.
@@ -133,10 +135,16 @@ struct StreamState {
   /// An EOF+indeterminate state is the same as EOF state.
   bool const FilePositionIndeterminate = false;
 
+  /// Indicates what kind of access (read or write or both) is allowed at the
+  /// next (read or write) operation. This value is used to check for "alternate
+  /// input-output" errors.
+  IODirection NextAllowedIODir;
+
   StreamState(const FnDescription *L, KindTy S, const StreamErrorState &ES,
-              bool IsFilePositionIndeterminate)
+              bool IsFilePositionIndeterminate, IODirection Dir)
       : LastOperation(L), State(S), ErrorState(ES),
-        FilePositionIndeterminate(IsFilePositionIndeterminate) {
+        FilePositionIndeterminate(IsFilePositionIndeterminate),
+        NextAllowedIODir(Dir) {
     assert((!ES.isFEof() || !IsFilePositionIndeterminate) &&
            "FilePositionIndeterminate should be false in FEof case.");
     assert((State == Opened || ErrorState.isNoError()) &&
@@ -152,19 +160,30 @@ struct StreamState {
     // here is no problem.
     return LastOperation == X.LastOperation && State == X.State &&
            ErrorState == X.ErrorState &&
-           FilePositionIndeterminate == X.FilePositionIndeterminate;
+           FilePositionIndeterminate == X.FilePositionIndeterminate &&
+           NextAllowedIODir == X.NextAllowedIODir;
   }
 
   static StreamState getOpened(const FnDescription *L,
-                               const StreamErrorState &ES = ErrorNone,
-                               bool IsFilePositionIndeterminate = false) {
-    return StreamState{L, Opened, ES, IsFilePositionIndeterminate};
+                               IODirection Dir = IODirection::Any) {
+    return StreamState{L, Opened, ErrorNone, false, Dir};
+  }
+  static StreamState getOpened(const FnDescription *L,
+                               const StreamErrorState &ES,
+                               bool IsFilePositionIndeterminate) {
+    return StreamState{L, Opened, ES, IsFilePositionIndeterminate,
+                       IODirection::Any};
+  }
+  static StreamState getOpened(const FnDescription *L, IODirection Access,
+                               const StreamErrorState &ES,
+                               bool IsFilePositionIndeterminate) {
+    return StreamState{L, Opened, ES, IsFilePositionIndeterminate, Access};
   }
   static StreamState getClosed(const FnDescription *L) {
-    return StreamState{L, Closed, {}, false};
+    return StreamState{L, Closed, {}, false, IODirection::Any};
   }
   static StreamState getOpenFailed(const FnDescription *L) {
-    return StreamState{L, OpenFailed, {}, false};
+    return StreamState{L, OpenFailed, {}, false, IODirection::Any};
   }
 
   LLVM_DUMP_METHOD void dump() const { dumpToStream(llvm::errs()); }
@@ -175,6 +194,7 @@ struct StreamState {
     ID.AddInteger(State);
     ErrorState.Profile(ID);
     ID.AddBoolean(FilePositionIndeterminate);
+    ID.Add(NextAllowedIODir);
   }
 };
 
@@ -263,6 +283,8 @@ class StreamChecker : public Checker<check::PreCall, eval::Call,
   BugType BT_IllegalWhence{this, "Illegal whence argument",
                            "Stream handling error"};
   BugType BT_StreamEof{this, "Stream already in EOF", "Stream handling error"};
+  BugType BT_AlternateReadWrite{this, "Disallowed access mode",
+                                "Stream handling error"};
   BugType BT_ResourceLeak{this, "Resource leak", "Stream handling error",
                           /*SuppressOnSink =*/true};
 
@@ -391,7 +413,7 @@ private:
        {&StreamChecker::preRead,
         std::bind(&StreamChecker::evalFscanf, _1, _2, _3, _4), 0}},
       {{CDM::CLibrary, {"ungetc"}, 2},
-       {&StreamChecker::preWrite,
+       {&StreamChecker::preGetpos,
         std::bind(&StreamChecker::evalUngetc, _1, _2, _3, _4), 1}},
       {{CDM::CLibrary, {"getdelim"}, 4},
        {&StreamChecker::preRead,
@@ -404,15 +426,15 @@ private:
       {{CDM::CLibrary, {"fseeko"}, 3},
        {&StreamChecker::preFseek, &StreamChecker::evalFseek, 0}},
       {{CDM::CLibrary, {"ftell"}, 1},
-       {&StreamChecker::preWrite, &StreamChecker::evalFtell, 0}},
+       {&StreamChecker::preGetpos, &StreamChecker::evalFtell, 0}},
       {{CDM::CLibrary, {"ftello"}, 1},
-       {&StreamChecker::preWrite, &StreamChecker::evalFtell, 0}},
+       {&StreamChecker::preGetpos, &StreamChecker::evalFtell, 0}},
       {{CDM::CLibrary, {"fflush"}, 1},
        {&StreamChecker::preFflush, &StreamChecker::evalFflush, 0}},
       {{CDM::CLibrary, {"rewind"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalRewind, 0}},
       {{CDM::CLibrary, {"fgetpos"}, 2},
-       {&StreamChecker::preWrite, &StreamChecker::evalFgetpos, 0}},
+       {&StreamChecker::preGetpos, &StreamChecker::evalFgetpos, 0}},
       {{CDM::CLibrary, {"fsetpos"}, 2},
        {&StreamChecker::preDefault, &StreamChecker::evalFsetpos, 0}},
       {{CDM::CLibrary, {"clearerr"}, 1},
@@ -480,6 +502,9 @@ private:
 
   void preWrite(const FnDescription *Desc, const CallEvent &Call,
                 CheckerContext &C) const;
+
+  void preGetpos(const FnDescription *Desc, const CallEvent &Call,
+                 CheckerContext &C) const;
 
   void evalFreadFwrite(const FnDescription *Desc, const CallEvent &Call,
                        CheckerContext &C, bool IsFread) const;
@@ -573,12 +598,26 @@ private:
   ProgramStateRef ensureFseekWhenceCorrect(SVal WhenceVal, CheckerContext &C,
                                            ProgramStateRef State) const;
 
+  std::tuple<ProgramStateRef, SVal> checkCommonPreconditions(
+      const FnDescription *Desc, const CallEvent &Call, CheckerContext &C,
+      bool EnsureNoFilePositionIndeterminate = true,
+      bool EnsureStreamOpened = true, bool EnsureStreamNonNull = true) const;
+
   /// Generate warning about stream in EOF state.
   /// There will be always a state transition into the passed State,
   /// by the new non-fatal error node or (if failed) a normal transition,
   /// to ensure uniform handling.
   void reportFEofWarning(SymbolRef StreamSym, CheckerContext &C,
                          ProgramStateRef State) const;
+
+  /// Generate warning about invalid alternate access (read after write or write
+  /// after read). 'NextAllowedIODir' should indicate the currently allowed
+  /// access direction, the to-be performed (and not allowed) operation is the
+  /// opposite kind.
+  void reportAlternatingAccessWarning(SymbolRef StreamSym,
+                                      IODirection NextAllowedIODir,
+                                      CheckerContext &C,
+                                      ProgramStateRef State) const;
 
   /// Emit resource leak warnings for the given symbols.
   /// Returns either the non-fatal error node (where the warnings are emitted),
@@ -962,9 +1001,9 @@ void StreamChecker::evalFopen(const FnDescription *Desc, const CallEvent &Call,
 void StreamChecker::preFreopen(const FnDescription *Desc, const CallEvent &Call,
                                CheckerContext &C) const {
   // Do not allow NULL as passed stream pointer but allow a closed stream.
-  ProgramStateRef State = C.getState();
-  State = ensureStreamNonNull(getStreamArg(Desc, Call),
-                              Call.getArgExpr(Desc->StreamArgNo), C, State);
+  auto [State, _] = checkCommonPreconditions(
+      Desc, Call, C, /*EnsureNoFilePositionIndeterminate=*/false,
+      /*EnsureStreamOpened=*/false);
   if (!State)
     return;
 
@@ -1036,41 +1075,43 @@ void StreamChecker::evalFclose(const FnDescription *Desc, const CallEvent &Call,
 
 void StreamChecker::preRead(const FnDescription *Desc, const CallEvent &Call,
                             CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
-  SVal StreamVal = getStreamArg(Desc, Call);
-  State = ensureStreamNonNull(StreamVal, Call.getArgExpr(Desc->StreamArgNo), C,
-                              State);
-  if (!State)
-    return;
-  State = ensureStreamOpened(StreamVal, C, State);
-  if (!State)
-    return;
-  State = ensureNoFilePositionIndeterminate(StreamVal, C, State);
+  auto [State, StreamVal] = checkCommonPreconditions(Desc, Call, C);
   if (!State)
     return;
 
   SymbolRef Sym = StreamVal.getAsSymbol();
-  if (Sym && State->get<StreamMap>(Sym)) {
-    const StreamState *SS = State->get<StreamMap>(Sym);
-    if (SS->ErrorState & ErrorFEof)
+  if (const StreamState *SS = State->get<StreamMap>(Sym)) {
+    if (SS->ErrorState & ErrorFEof) {
       reportFEofWarning(Sym, C, State);
-  } else {
-    C.addTransition(State);
+      return;
+    }
+    if (SS->NextAllowedIODir == IODirection::Output) {
+      reportAlternatingAccessWarning(Sym, IODirection::Output, C, State);
+      return;
+    }
   }
+  C.addTransition(State);
 }
 
 void StreamChecker::preWrite(const FnDescription *Desc, const CallEvent &Call,
                              CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
-  SVal StreamVal = getStreamArg(Desc, Call);
-  State = ensureStreamNonNull(StreamVal, Call.getArgExpr(Desc->StreamArgNo), C,
-                              State);
+  auto [State, StreamVal] = checkCommonPreconditions(Desc, Call, C);
   if (!State)
     return;
-  State = ensureStreamOpened(StreamVal, C, State);
-  if (!State)
+
+  SymbolRef Sym = StreamVal.getAsSymbol();
+  const StreamState *SS = State->get<StreamMap>(Sym);
+  if (SS && Sym && SS->NextAllowedIODir == IODirection::Input) {
+    reportAlternatingAccessWarning(Sym, IODirection::Input, C, State);
     return;
-  State = ensureNoFilePositionIndeterminate(StreamVal, C, State);
+  }
+
+  C.addTransition(State);
+}
+
+void StreamChecker::preGetpos(const FnDescription *Desc, const CallEvent &Call,
+                              CheckerContext &C) const {
+  auto [State, _] = checkCommonPreconditions(Desc, Call, C);
   if (!State)
     return;
 
@@ -1194,8 +1235,10 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
   if (!IsFread || !E.isStreamEof()) {
     ProgramStateRef StateNotFailed =
         State->BindExpr(E.CE, C.getStackFrame(), *NMembVal);
-    StateNotFailed =
-        E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
+    StateNotFailed = E.setStreamState(
+        StateNotFailed,
+        StreamState::getOpened(Desc, IsFread ? IODirection::Input
+                                             : IODirection::Output));
     C.addTransition(StateNotFailed);
   }
 
@@ -1251,6 +1294,8 @@ void StreamChecker::evalFgetx(const FnDescription *Desc, const CallEvent &Call,
           true);
       if (!StateNotFailed)
         return;
+      StateNotFailed = E.setStreamState(
+          StateNotFailed, StreamState::getOpened(Desc, IODirection::Input));
       C.addTransition(StateNotFailed);
     } else {
       // Generate a transition for the success state of `fgets`.
@@ -1260,8 +1305,8 @@ void StreamChecker::evalFgetx(const FnDescription *Desc, const CallEvent &Call,
         return;
       ProgramStateRef StateNotFailed =
           State->BindExpr(E.CE, C.getStackFrame(), *GetBuf);
-      StateNotFailed =
-          E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
+      StateNotFailed = E.setStreamState(
+          StateNotFailed, StreamState::getOpened(Desc, IODirection::Input));
       C.addTransition(StateNotFailed);
     }
   }
@@ -1299,8 +1344,8 @@ void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
       return;
     ProgramStateRef StateNotFailed =
         State->BindExpr(E.CE, C.getStackFrame(), *PutVal);
-    StateNotFailed =
-        E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
+    StateNotFailed = E.setStreamState(
+        StateNotFailed, StreamState::getOpened(Desc, IODirection::Output));
     C.addTransition(StateNotFailed);
   } else {
     // Generate a transition for the success state of `fputs`.
@@ -1311,8 +1356,8 @@ void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
         E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
     if (!StateNotFailed)
       return;
-    StateNotFailed =
-        E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
+    StateNotFailed = E.setStreamState(
+        StateNotFailed, StreamState::getOpened(Desc, IODirection::Output));
     C.addTransition(StateNotFailed);
   }
 
@@ -1350,8 +1395,8 @@ void StreamChecker::evalFprintf(const FnDescription *Desc,
   ProgramStateRef StateNotFailed, StateFailed;
   std::tie(StateNotFailed, StateFailed) = State->assume(*Cond);
 
-  StateNotFailed =
-      E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
+  StateNotFailed = E.setStreamState(
+      StateNotFailed, StreamState::getOpened(Desc, IODirection::Output));
   C.addTransition(StateNotFailed);
 
   if (!PedanticMode)
@@ -1386,6 +1431,8 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
     NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
     ProgramStateRef StateNotFailed =
         State->BindExpr(E.CE, C.getStackFrame(), RetVal);
+    StateNotFailed = E.setStreamState(
+        StateNotFailed, StreamState::getOpened(Desc, IODirection::Input));
     StateNotFailed =
         E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
     if (!StateNotFailed)
@@ -1429,8 +1476,10 @@ void StreamChecker::evalUngetc(const FnDescription *Desc, const CallEvent &Call,
   if (!PutVal)
     return;
   ProgramStateRef StateNotFailed = E.bindReturnValue(State, C, *PutVal);
-  StateNotFailed =
-      E.setStreamState(StateNotFailed, StreamState::getOpened(Desc));
+  StateNotFailed = E.setStreamState(
+      StateNotFailed,
+      StreamState::getOpened(Desc, E.SS->NextAllowedIODir, E.SS->ErrorState,
+                             E.SS->FilePositionIndeterminate));
   C.addTransition(StateNotFailed);
 
   // Add transition for the failed state.
@@ -1440,7 +1489,10 @@ void StreamChecker::evalUngetc(const FnDescription *Desc, const CallEvent &Call,
   // In this case only one state transition is added by the analyzer (the two
   // new states may be similar).
   ProgramStateRef StateFailed = E.bindReturnValue(State, C, *EofVal);
-  StateFailed = E.setStreamState(StateFailed, StreamState::getOpened(Desc));
+  StateFailed = E.setStreamState(
+      StateFailed,
+      StreamState::getOpened(Desc, E.SS->NextAllowedIODir, E.SS->ErrorState,
+                             E.SS->FilePositionIndeterminate));
   C.addTransition(StateFailed);
 }
 
@@ -1466,6 +1518,8 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
     // Add transition for the successful state.
     NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
     ProgramStateRef StateNotFailed = E.bindReturnValue(State, C, RetVal);
+    StateNotFailed = E.setStreamState(
+        StateNotFailed, StreamState::getOpened(Desc, IODirection::Input));
     StateNotFailed =
         E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
 
@@ -1506,13 +1560,8 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
 
 void StreamChecker::preFseek(const FnDescription *Desc, const CallEvent &Call,
                              CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
-  SVal StreamVal = getStreamArg(Desc, Call);
-  State = ensureStreamNonNull(StreamVal, Call.getArgExpr(Desc->StreamArgNo), C,
-                              State);
-  if (!State)
-    return;
-  State = ensureStreamOpened(StreamVal, C, State);
+  auto [State, _] = checkCommonPreconditions(
+      Desc, Call, C, /*EnsureNoFilePositionIndeterminate=*/false);
   if (!State)
     return;
   State = ensureFseekWhenceCorrect(Call.getArgSVal(2), C, State);
@@ -1582,7 +1631,7 @@ void StreamChecker::evalFsetpos(const FnDescription *Desc,
   std::tie(StateFailed, StateNotFailed) = E.makeRetValAndAssumeDual(State, C);
 
   StateNotFailed = E.setStreamState(
-      StateNotFailed, StreamState::getOpened(Desc, ErrorNone, false));
+      StateNotFailed, StreamState::getOpened(Desc, IODirection::Any));
   C.addTransition(StateNotFailed);
 
   if (!PedanticMode)
@@ -1630,7 +1679,7 @@ void StreamChecker::evalRewind(const FnDescription *Desc, const CallEvent &Call,
     return;
 
   State =
-      E.setStreamState(State, StreamState::getOpened(Desc, ErrorNone, false));
+      E.setStreamState(State, StreamState::getOpened(Desc, IODirection::Any));
   C.addTransition(State);
 }
 
@@ -1676,16 +1725,16 @@ void StreamChecker::evalFflush(const FnDescription *Desc, const CallEvent &Call,
   ProgramStateRef StateFailed = bindInt(*EofVal, State, C, CE);
   ProgramStateRef StateNotFailed = bindInt(0, State, C, CE);
 
-  // Clear error states if `fflush` returns 0, but retain their EOF flags.
-  auto ClearErrorInNotFailed = [&StateNotFailed, Desc](SymbolRef Sym,
-                                                       const StreamState *SS) {
-    if (SS->ErrorState & ErrorFError) {
-      StreamErrorState NewES =
-          (SS->ErrorState & ErrorFEof) ? ErrorFEof : ErrorNone;
-      StreamState NewSS = StreamState::getOpened(Desc, NewES, false);
-      StateNotFailed = StateNotFailed->set<StreamMap>(Sym, NewSS);
-    }
-  };
+  auto SetNotFailedStreamState =
+      [Desc, &StateNotFailed](SymbolRef Sym, const StreamState *SS) {
+        // If `fflush` is successful, the FError flag is cleared but the EOF
+        // flag remains (if it was set).
+        StreamErrorState NewES = SS->ErrorState & (~ErrorFError);
+        if (!NewES)
+          NewES = ErrorNone;
+        StateNotFailed = StateNotFailed->set<StreamMap>(
+            Sym, StreamState::getOpened(Desc, NewES, false));
+      };
 
   if (StateNotNull && !StateNull) {
     // Skip if the input stream's state is unknown, open-failed or closed.
@@ -1693,20 +1742,22 @@ void StreamChecker::evalFflush(const FnDescription *Desc, const CallEvent &Call,
       const StreamState *SS = State->get<StreamMap>(StreamSym);
       if (SS) {
         assert(SS->isOpened() && "Stream is expected to be opened");
-        ClearErrorInNotFailed(StreamSym, SS);
+        SetNotFailedStreamState(StreamSym, SS);
       } else
         return;
     }
   } else {
-    // Clear error states for all streams.
+    // `fflush` applies to all open streams, change state for all streams.
     const StreamMapTy &Map = StateNotFailed->get<StreamMap>();
     for (const auto &I : Map) {
       SymbolRef Sym = I.first;
       const StreamState &SS = I.second;
       if (SS.isOpened())
-        ClearErrorInNotFailed(Sym, &SS);
+        SetNotFailedStreamState(Sym, &SS);
     }
   }
+
+  // If `fflush` fails, do not change state of the affected streams.
 
   C.addTransition(StateNotFailed);
   C.addTransition(StateFailed);
@@ -1720,10 +1771,10 @@ void StreamChecker::evalClearerr(const FnDescription *Desc,
   if (!E.Init(Desc, Call, C, State))
     return;
 
-  // FilePositionIndeterminate is not cleared.
+  // FilePositionIndeterminate and NextAllowedIODir is not changed.
   State = E.setStreamState(
-      State,
-      StreamState::getOpened(Desc, ErrorNone, E.SS->FilePositionIndeterminate));
+      State, StreamState::getOpened(Desc, E.SS->NextAllowedIODir, ErrorNone,
+                                    E.SS->FilePositionIndeterminate));
   C.addTransition(State);
 }
 
@@ -1742,9 +1793,10 @@ void StreamChecker::evalFeofFerror(const FnDescription *Desc,
     ProgramStateRef TrueState =
         bindAndAssumeTrue(State, C, E.CE, E.Elem.value());
     C.addTransition(E.setStreamState(
-        TrueState, StreamState::getOpened(Desc, ErrorKind,
-                                          E.SS->FilePositionIndeterminate &&
-                                              !ErrorKind.isFEof())));
+        TrueState,
+        StreamState::getOpened(Desc, E.SS->NextAllowedIODir, ErrorKind,
+                               E.SS->FilePositionIndeterminate &&
+                                   !ErrorKind.isFEof())));
   }
   if (StreamErrorState NewES = E.SS->ErrorState & (~ErrorKind)) {
     // Execution path(s) with ErrorKind not set.
@@ -1752,9 +1804,9 @@ void StreamChecker::evalFeofFerror(const FnDescription *Desc,
     // New error state is everything before minus ErrorKind.
     ProgramStateRef FalseState = E.bindReturnValue(State, C, 0);
     C.addTransition(E.setStreamState(
-        FalseState,
-        StreamState::getOpened(
-            Desc, NewES, E.SS->FilePositionIndeterminate && !NewES.isFEof())));
+        FalseState, StreamState::getOpened(Desc, E.SS->NextAllowedIODir, NewES,
+                                           E.SS->FilePositionIndeterminate &&
+                                               !NewES.isFEof())));
   }
 }
 
@@ -1785,13 +1837,8 @@ void StreamChecker::evalFileno(const FnDescription *Desc, const CallEvent &Call,
 
 void StreamChecker::preDefault(const FnDescription *Desc, const CallEvent &Call,
                                CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
-  SVal StreamVal = getStreamArg(Desc, Call);
-  State = ensureStreamNonNull(StreamVal, Call.getArgExpr(Desc->StreamArgNo), C,
-                              State);
-  if (!State)
-    return;
-  State = ensureStreamOpened(StreamVal, C, State);
+  auto [State, _] = checkCommonPreconditions(
+      Desc, Call, C, /*EnsureNoFilePositionIndeterminate=*/false);
   if (!State)
     return;
 
@@ -1808,8 +1855,8 @@ void StreamChecker::evalSetFeofFerror(const FnDescription *Desc,
   const StreamState *SS = State->get<StreamMap>(StreamSym);
   assert(SS && "Stream should be tracked by the checker.");
   State = State->set<StreamMap>(
-      StreamSym,
-      StreamState::getOpened(SS->LastOperation, ErrorKind, Indeterminate));
+      StreamSym, StreamState::getOpened(SS->LastOperation, SS->NextAllowedIODir,
+                                        ErrorKind, Indeterminate));
   C.addTransition(State);
 }
 
@@ -1997,6 +2044,24 @@ StreamChecker::ensureFseekWhenceCorrect(SVal WhenceVal, CheckerContext &C,
   return State;
 }
 
+std::tuple<ProgramStateRef, SVal> StreamChecker::checkCommonPreconditions(
+    const FnDescription *Desc, const CallEvent &Call, CheckerContext &C,
+    bool EnsureNoFilePositionIndeterminate, bool EnsureStreamOpened,
+    bool EnsureStreamNonNull) const {
+  ProgramStateRef State = C.getState();
+  SVal StreamVal = getStreamArg(Desc, Call);
+
+  if (EnsureStreamNonNull)
+    State = ensureStreamNonNull(StreamVal, Call.getArgExpr(Desc->StreamArgNo),
+                                C, State);
+  if (State && EnsureStreamOpened)
+    State = ensureStreamOpened(StreamVal, C, State);
+  if (State && EnsureNoFilePositionIndeterminate)
+    State = ensureNoFilePositionIndeterminate(StreamVal, C, State);
+
+  return std::make_tuple(State, StreamVal);
+}
+
 void StreamChecker::reportFEofWarning(SymbolRef StreamSym, CheckerContext &C,
                                       ProgramStateRef State) const {
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
@@ -2009,7 +2074,25 @@ void StreamChecker::reportFEofWarning(SymbolRef StreamSym, CheckerContext &C,
     C.emitReport(std::move(R));
     return;
   }
-  C.addTransition(State);
+}
+
+void StreamChecker::reportAlternatingAccessWarning(
+    SymbolRef StreamSym, IODirection NextAllowedIODir, CheckerContext &C,
+    ProgramStateRef State) const {
+  if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
+    const char *Message =
+        (NextAllowedIODir == IODirection::Input)
+            ? "Output to a stream after a previous input operation without "
+              "intervening position change may cause undefined behavior"
+            : "Input from a stream after a previous output operation without "
+              "intervening position change or flush may cause undefined "
+              "behavior";
+    auto R = std::make_unique<PathSensitiveBugReport>(BT_AlternateReadWrite,
+                                                      Message, N);
+    R->markInteresting(StreamSym);
+    C.emitReport(std::move(R));
+    return;
+  }
 }
 
 ExplodedNode *

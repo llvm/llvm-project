@@ -34,6 +34,7 @@ with worker.run(
                 "-DFLANG_RUNTIME_F128_MATH_LIB=libquadmath",
                 "-DCMAKE_CXX_STANDARD=17",
                 "-DLIBOMPTARGET_PLUGINS_TO_BUILD=amdgpu;host",
+                "-DLIBOMPTEST_BUILD_UNITTESTS=ON",
             ]
         )
 

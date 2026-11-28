@@ -227,9 +227,7 @@ struct AllocaInfo {
     // As we scan the uses of the alloca instruction, keep track of stores,
     // and decide whether all of the loads and stores to the alloca are within
     // the same basic block.
-    for (User *U : AI->users()) {
-      Instruction *User = cast<Instruction>(U);
-
+    for (Instruction *User : AI->users()) {
       if (StoreInst *SI = dyn_cast<StoreInst>(User)) {
         // Remember the basic blocks which define new values for the alloca
         DefiningBlocks.push_back(SI->getParent());
@@ -591,8 +589,7 @@ static bool rewriteSingleStoreAlloca(
   // Clear out UsingBlocks.  We will reconstruct it here if needed.
   Info.UsingBlocks.clear();
 
-  for (User *U : make_early_inc_range(AI->users())) {
-    Instruction *UserInst = cast<Instruction>(U);
+  for (Instruction *UserInst : make_early_inc_range(AI->users())) {
     if (UserInst == OnlyStore)
       continue;
     LoadInst *LI = cast<LoadInst>(UserInst);

@@ -40,6 +40,7 @@ class FastMathFlags;
 class FixedVectorType;
 class Function;
 class Instruction;
+class LoadInst;
 class TargetLibraryInfo;
 class Type;
 class User;
@@ -49,6 +50,34 @@ enum class RecurKind;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
+
+/// Returns \p Stride scaled by the allocation size of \p ScalarTy, negated if
+/// \p IsReverse is set
+ConstantInt *getStrideBytesForConstant(ConstantInt *Stride, Type *ScalarTy,
+                                       const DataLayout &DL,
+                                       bool IsReverse = false);
+
+/// Return the cost of a strided load and accompanying bitcast.
+InstructionCost getStridedLoadCost(
+    const TargetTransformInfo &TTI, const DataLayout &DL, Value *StrideVal,
+    Type *StridedLoadTy, Type *VecTy, Type *ScalarTy, Value *Ptr,
+    Align CommonAlignment, TargetTransformInfo::CastContextHint Ctx,
+    TargetTransformInfo::TargetCostKind CostKind, bool IsReverse);
+
+/// Describe a single compressed load for costing and generating the vector
+/// instruction.
+struct CompressedLoadInfo {
+  bool IsMasked = false;
+  unsigned InterleaveFactor = 0;
+  SmallVector<int> CompressMask;
+  VectorType *LoadVecTy = nullptr;
+};
+
+/// Return the cost of a compressed load and accompanying shuffle.
+InstructionCost
+getCompressedLoadCost(const TargetTransformInfo &TTI, const LoadInst *LI0,
+                      const CompressedLoadInfo &Info,
+                      TargetTransformInfo::TargetCostKind CostKind);
 
 /// Returns the cost of the shuffle instructions with the given \p Kind, vector
 /// type \p Tp and optional \p Mask. Adds SLP-specific cost estimation for
@@ -85,6 +114,14 @@ getWidenedStridedCastCost(const TargetTransformInfo &TTI, Type *SrcTy,
                           Type *DstTy, const DataLayout &DL,
                           TargetTransformInfo::CastContextHint CCH,
                           TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of casting a vector of the demoted type to \p VecTy.
+/// \p MinBW is the bit width and signedness of the demoted type.
+InstructionCost
+getDemotedTypeCastCost(const TargetTransformInfo &TTI, VectorType *VecTy,
+                       const std::pair<uint64_t, bool> &MinBW,
+                       TargetTransformInfo::CastContextHint CCH,
+                       TargetTransformInfo::TargetCostKind CostKind);
 
 /// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, checks if
 /// padding to a full register and using the masked div/rem intrinsic is

@@ -32,7 +32,7 @@ void test() {
 // LLVM-DAG: @__const._Z3fooIJEEDav.values = private unnamed_addr constant [1 x i32] zeroinitializer
 
 // CIR: cir.func {{.*}}@_Z3fooIJEEDav()
-// CIR: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!u64i>
+// CIR: %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!u64i>
 // CIR: %[[VAL_ARR:.*]] = cir.alloca "values" {{.*}} init : !cir.ptr<!cir.array<!s32i x 1>>
 // CIR: %[[GET_GLOB_VAL:.*]] = cir.get_global @__const._Z3fooIJEEDav.values : !cir.ptr<!cir.array<!s32i x 1>>
 // CIR: cir.copy %[[GET_GLOB_VAL]] to %[[VAL_ARR]] : !cir.ptr<!cir.array<!s32i x 1>>
@@ -55,7 +55,7 @@ void test() {
 // OGCG: ret i64 0
 
 // CIR: cir.func {{.*}}@_Z3fooIJ2S12S22S3EEDav()
-// CIR: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!u64i>
+// CIR: %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!u64i>
 // CIR: %[[VAL_ARR:.*]] = cir.alloca "values" {{.*}} init : !cir.ptr<!cir.array<!s32i x 4>>
 // CIR: %[[GET_GLOB_VAL:.*]] = cir.get_global @__const._Z3fooIJ2S12S22S3EEDav.values : !cir.ptr<!cir.array<!s32i x 4>>
 // CIR: cir.copy %[[GET_GLOB_VAL]] align(16) to %[[VAL_ARR]] align(16) : !cir.ptr<!cir.array<!s32i x 4>>

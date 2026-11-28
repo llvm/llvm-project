@@ -8,6 +8,7 @@
 
 #include "lldb/API/SBTypeFilter.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "lldb/API/SBStream.h"
 
@@ -91,7 +92,7 @@ const char *SBTypeFilter::GetExpressionPathAtIndex(uint32_t i) {
   llvm::StringRef item = m_opaque_sp->GetExpressionPathAtIndex(i);
   if (item.starts_with('.'))
     item = item.drop_front();
-  return ConstString(item).GetCString();
+  return StringPool::GetSystemPool().Intern(item);
 }
 
 bool SBTypeFilter::ReplaceExpressionPathAtIndex(uint32_t i, const char *item) {

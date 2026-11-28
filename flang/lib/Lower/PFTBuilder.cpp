@@ -2924,10 +2924,10 @@ static bool isStructurableWithUnstructuredInternals(
       loop.evaluationList->size() < 3)
     return false;
 
-  // Only an increment loop keeps all of its control outside the body. A DO
-  // WHILE or an infinite DO lowers through a header block and a back edge, and
-  // a do concurrent has no plain bounds triple either, so in each case the
-  // loop's own control flow runs through the body a wrap would cover.
+  // Only an increment loop or a do concurrent keeps all of its control outside
+  // the body. A DO WHILE or an infinite DO lowers through a header block and a
+  // back edge, so the loop's own control flow runs through the body a wrap
+  // would cover.
   const auto *doConstruct = loop.getIf<parser::DoConstruct>();
   if (!doConstruct)
     return false;
@@ -2936,22 +2936,28 @@ static bool isStructurableWithUnstructuredInternals(
   if (!loopControl)
     return false;
 
-  const auto *bounds =
-      std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
-  if (!bounds)
-    return false;
+  // A do concurrent header puts no control flow in the body: its indices are
+  // always integer, and its mask is a test inside the innermost loop. The body
+  // checks below still apply.
+  if (!std::holds_alternative<parser::LoopControl::Concurrent>(
+          loopControl->u)) {
+    const auto *bounds =
+        std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
+    if (!bounds)
+      return false;
 
-  // A REAL control variable does not lower to fir.do_loop, whose induction
-  // variable must be a signless integer or index, so such a loop is lowered as
-  // unstructured whatever its body looks like.
-  const semantics::Symbol *ctrlVar = bounds->Name().thing.symbol;
-  if (!ctrlVar)
-    return false;
+    // A REAL control variable does not lower to fir.do_loop, whose induction
+    // variable must be a signless integer or index, so such a loop is lowered
+    // as unstructured whatever its body looks like.
+    const semantics::Symbol *ctrlVar = bounds->Name().thing.symbol;
+    if (!ctrlVar)
+      return false;
 
-  const semantics::DeclTypeSpec *ctrlType = ctrlVar->GetType();
-  if (!ctrlType || ctrlType->category() != semantics::DeclTypeSpec::Numeric ||
-      ctrlType->numericTypeSpec().category() != common::TypeCategory::Integer)
-    return false;
+    const semantics::DeclTypeSpec *ctrlType = ctrlVar->GetType();
+    if (!ctrlType || ctrlType->category() != semantics::DeclTypeSpec::Numeric ||
+        ctrlType->numericTypeSpec().category() != common::TypeCategory::Integer)
+      return false;
+  }
 
   const Fortran::lower::pft::Evaluation *endDoStmt =
       &loop.evaluationList->back();

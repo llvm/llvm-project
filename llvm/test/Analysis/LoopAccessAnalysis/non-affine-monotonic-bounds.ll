@@ -134,6 +134,55 @@ exit:
   ret void
 }
 
+; a[i / 2] and a[i / 2 + 1] have different bounds.
+define void @udiv2_two_loads_different_bounds(ptr %a, ptr %b, i64 %N) {
+; CHECK-LABEL: 'udiv2_two_loads_different_bounds'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds nuw i8, ptr %b, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.a.1 = getelementptr inbounds nuw i8, ptr %a, i64 %div.1
+; CHECK-NEXT:          %gep.a.0 = getelementptr inbounds nuw i8, ptr %a, i64 %div
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %b High: (%N + %b))
+; CHECK-NEXT:            Member: {%b,+,1}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %a High: (2 + ((-1 + %N) /u 2) + %a))
+; CHECK-NEXT:            Member: (1 + ({0,+,1}<nuw><nsw><%loop> /u 2) + %a)<nuw>
+; CHECK-NEXT:            Member: (({0,+,1}<nuw><nsw><%loop> /u 2) + %a)<nuw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %div = udiv i64 %iv, 2
+  %gep.a.0 = getelementptr inbounds nuw i8, ptr %a, i64 %div
+  %l.0 = load i8, ptr %gep.a.0, align 1
+  %div.1 = add nuw nsw i64 %div, 1
+  %gep.a.1 = getelementptr inbounds nuw i8, ptr %a, i64 %div.1
+  %l.1 = load i8, ptr %gep.a.1, align 1
+  %add = add i8 %l.0, %l.1
+  %gep.b = getelementptr inbounds nuw i8, ptr %b, i64 %iv
+  store i8 %add, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; The divisor is a loop-invariant value rather than a constant.
 define void @udiv_invariant_divisor(ptr %a, ptr %b, i64 %N, i64 %d) {
 ; CHECK-LABEL: 'udiv_invariant_divisor'

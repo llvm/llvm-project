@@ -364,14 +364,6 @@ private:
       Symbol::Flag::AccPrivate, Symbol::Flag::AccFirstPrivate,
       Symbol::Flag::AccReduction};
 
-  Symbol::Flags dataMappingAttributeFlags{Symbol::Flag::AccCreate,
-      Symbol::Flag::AccCopyIn, Symbol::Flag::AccCopyOut,
-      Symbol::Flag::AccDelete, Symbol::Flag::AccNoCreate,
-      Symbol::Flag::AccPresent};
-
-  Symbol::Flags accDataMvtFlags{
-      Symbol::Flag::AccDevice, Symbol::Flag::AccHost, Symbol::Flag::AccSelf};
-
   Symbol::Flags accFlagsRequireMark{Symbol::Flag::AccCreate,
       Symbol::Flag::AccCopyIn, Symbol::Flag::AccCopyInReadOnly,
       Symbol::Flag::AccCopy, Symbol::Flag::AccCopyOut,

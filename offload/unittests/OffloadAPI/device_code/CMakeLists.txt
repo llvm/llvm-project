@@ -9,6 +9,7 @@ add_offload_test_device_code(byte.cpp byte)
 add_offload_test_device_code(localmem.cpp localmem)
 add_offload_test_device_code(localmem_reduction.cpp localmem_reduction)
 add_offload_test_device_code(localmem_static.cpp localmem_static)
+add_offload_test_device_code(localmem_groups.cpp localmem_groups)
 add_offload_test_device_code(single_counter.cpp single_counter)
 add_offload_test_device_code(global.cpp global)
 add_offload_test_device_code(global_init.cpp global_init)
@@ -29,6 +30,7 @@ add_custom_target(offload_device_binaries DEPENDS
     localmem.bin
     localmem_reduction.bin
     localmem_static.bin
+    localmem_groups.bin
     single_counter.bin
     global.bin
     global_init.bin

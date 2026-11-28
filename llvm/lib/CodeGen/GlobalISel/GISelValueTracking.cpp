@@ -691,8 +691,7 @@ void GISelValueTracking::computeKnownBits(Register R, KnownBits &Known,
   case TargetOpcode::G_ICMP: {
     if (DstTy.isVector())
       break;
-    if (TL.getBooleanContents(DstTy.isVector(),
-                              Opcode == TargetOpcode::G_FCMP) ==
+    if (TL.getBooleanContents(DstTy.isVector()) ==
             TargetLowering::ZeroOrOneBooleanContent &&
         BitWidth > 1)
       Known.Zero.setBitsFrom(1);
@@ -958,7 +957,7 @@ void GISelValueTracking::computeKnownBits(Register R, KnownBits &Known,
     if (MI.getOperand(1).getReg() == R) {
       // If we know the result of a compare has the top bits zero, use this
       // info.
-      if (TL.getBooleanContents(DstTy.isVector(), false) ==
+      if (TL.getBooleanContents(DstTy.isVector()) ==
               TargetLowering::ZeroOrOneBooleanContent &&
           BitWidth > 1)
         Known.Zero.setBitsFrom(1);
@@ -994,7 +993,7 @@ void GISelValueTracking::computeKnownBits(Register R, KnownBits &Known,
     if (MI.getOperand(1).getReg() == R) {
       // If we know the result of a compare has the top bits zero, use this
       // info.
-      if (TL.getBooleanContents(DstTy.isVector(), false) ==
+      if (TL.getBooleanContents(DstTy.isVector()) ==
               TargetLowering::ZeroOrOneBooleanContent &&
           BitWidth > 1)
         Known.Zero.setBitsFrom(1);
@@ -1330,7 +1329,12 @@ void GISelValueTracking::computeKnownFPClassForFPTrunc(
   const fltSemantics &SrcSem =
       getFltSemanticForLLT(MRI.getType(Val).getScalarType());
 
-  Known = KnownFPClass::fptrunc(KnownSrc, DstSem, SrcSem,
+  const RoundingMode RM =
+      MI.getOpcode() == TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND
+          ? static_cast<RoundingMode>(MI.getOperand(2).getImm())
+          : RoundingMode::NearestTiesToEven;
+
+  Known = KnownFPClass::fptrunc(KnownSrc, DstSem, SrcSem, RM,
                                 MF.getDenormalMode(DstSem),
                                 MF.getDenormalMode(SrcSem));
 }
@@ -2805,10 +2809,8 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   case TargetOpcode::G_SMULO:
   case TargetOpcode::G_UMULO: {
     // If compares returns 0/-1, all bits are sign bits.
-    // We know that we have an integer-based boolean since these operations
-    // are only available for integer.
     if (MI.getOperand(1).getReg() == R) {
-      if (TL.getBooleanContents(DstTy.isVector(), false) ==
+      if (TL.getBooleanContents(DstTy.isVector()) ==
           TargetLowering::ZeroOrNegativeOneBooleanContent)
         return TyBits;
     }
@@ -2909,10 +2911,9 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   }
   case TargetOpcode::G_FCMP:
   case TargetOpcode::G_ICMP: {
-    bool IsFP = Opcode == TargetOpcode::G_FCMP;
     if (TyBits == 1)
       break;
-    auto BC = TL.getBooleanContents(DstTy.isVector(), IsFP);
+    auto BC = TL.getBooleanContents(DstTy.isVector());
     if (BC == TargetLoweringBase::ZeroOrNegativeOneBooleanContent)
       return TyBits; // All bits are sign bits.
     if (BC == TargetLowering::ZeroOrOneBooleanContent)

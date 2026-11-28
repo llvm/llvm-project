@@ -15,11 +15,11 @@
 ; CHECK-DAG: OpDecorate [[Buf]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[Buf]] Binding 1
 
-; CHECK-DAG: OpName [[ResourceHeap:%[0-9]+]] "ResourceDescriptorHeap"
+; CHECK-DAG: OpName [[ResourceHeap:%[0-9]+]] ".ResourceDescriptorHeap.0"
 ; CHECK-DAG: OpDecorate [[ResourceHeap]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[ResourceHeap]] Binding 0
 
-; CHECK-DAG: OpName [[SamplerHeap:%[0-9]+]] "SamplerDescriptorHeap"
+; CHECK-DAG: OpName [[SamplerHeap:%[0-9]+]] ".SamplerDescriptorHeap.0"
 ; CHECK-DAG: OpDecorate [[SamplerHeap]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[SamplerHeap]] Binding 2
 

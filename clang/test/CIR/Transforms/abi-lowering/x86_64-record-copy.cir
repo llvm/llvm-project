@@ -662,7 +662,7 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func @sret_nodom_x87mem(%arg0: !cir.ptr<!cir.ptr<!rec_UX87Mem>>)
-  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "sret" align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "" align(16) return_slot : !cir.ptr<!rec_UX87Mem>
   // CHECK-NEXT:    cir.call @make_x87mem(%[[SRET]]) : (!cir.ptr<!rec_UX87Mem> {llvm.align = 16 : i64, llvm.dead_on_unwind, llvm.sret = !rec_UX87Mem, llvm.writable}) -> ()
   // CHECK-NEXT:    %[[DEST:.*]] = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_UX87Mem>>, !cir.ptr<!rec_UX87Mem>
   // CHECK-NEXT:    cir.copy %[[SRET]] align(16) to %[[DEST]] align(16) : !cir.ptr<!rec_UX87Mem>
@@ -676,7 +676,7 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func @sret_nodom_hmem(%arg0: !cir.ptr<!cir.ptr<!rec_HMem>>)
-  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "sret" align(8) : !cir.ptr<!rec_HMem>
+  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_HMem>
   // CHECK-NEXT:    cir.call @make_hmem(%[[SRET]]) : (!cir.ptr<!rec_HMem> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_HMem, llvm.writable}) -> ()
   // CHECK-NEXT:    %[[DEST:.*]] = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_HMem>>, !cir.ptr<!rec_HMem>
   // CHECK-NEXT:    cir.copy %[[SRET]] align(8) to %[[DEST]] align(8) : !cir.ptr<!rec_HMem>
@@ -690,7 +690,7 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func @sret_nodom_smem(%arg0: !cir.ptr<!cir.ptr<!rec_SMem>>)
-  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "sret" align(8) : !cir.ptr<!rec_SMem>
+  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_SMem>
   // CHECK-NEXT:    cir.call @make_smem(%[[SRET]]) : (!cir.ptr<!rec_SMem> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_SMem, llvm.writable}) -> ()
   // CHECK-NEXT:    %[[DEST:.*]] = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_SMem>>, !cir.ptr<!rec_SMem>
   // CHECK-NEXT:    cir.copy %[[SRET]] align(8) to %[[DEST]] align(8) : !cir.ptr<!rec_SMem>
@@ -737,7 +737,7 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func @sret_nodom_tpmem(%arg0: !cir.ptr<!cir.ptr<!rec_TPMem>>)
-  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "sret" align(8) : !cir.ptr<!rec_TPMem>
+  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_TPMem>
   // CHECK-NEXT:    cir.call @make_tpmem(%[[SRET]]) : (!cir.ptr<!rec_TPMem> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_TPMem, llvm.writable}) -> ()
   // CHECK-NEXT:    %[[DEST:.*]] = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_TPMem>>, !cir.ptr<!rec_TPMem>
   // CHECK-NEXT:    cir.copy %[[SRET]] align(8) to %[[DEST]] align(8) skip_tail_padding : !cir.ptr<!rec_TPMem>
@@ -818,7 +818,7 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func @byval_result_x87mem()
-  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "sret" align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "" align(16) return_slot : !cir.ptr<!rec_UX87Mem>
   // CHECK-NEXT:    cir.call @make_x87mem(%[[SRET]])
   // CHECK-NEXT:    %[[BYVAL:.*]] = cir.alloca "byval" align(16) : !cir.ptr<!rec_UX87Mem>
   // CHECK-NEXT:    cir.copy %[[SRET]] align(16) to %[[BYVAL]] align(16) : !cir.ptr<!rec_UX87Mem>
@@ -832,7 +832,7 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func @byval_result_hmem()
-  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "sret" align(8) : !cir.ptr<!rec_HMem>
+  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_HMem>
   // CHECK-NEXT:    cir.call @make_hmem(%[[SRET]])
   // CHECK-NEXT:    %[[BYVAL:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_HMem>
   // CHECK-NEXT:    cir.copy %[[SRET]] align(8) to %[[BYVAL]] align(8) : !cir.ptr<!rec_HMem>
@@ -991,7 +991,7 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func @byval_result_late_x87mem()
-  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "sret" align(16) : !cir.ptr<!rec_UX87Mem>
+  // CHECK-NEXT:    %[[SRET:.*]] = cir.alloca "" align(16) return_slot : !cir.ptr<!rec_UX87Mem>
   // CHECK-NEXT:    cir.call @make_x87mem(%[[SRET]])
   // CHECK-NEXT:    cir.call @take_late_x87mem(%[[SRET]]) : (!cir.ptr<!rec_UX87Mem> {llvm.align = 16 : i64, llvm.byval = !rec_UX87Mem, llvm.noundef}) -> ()
   // CHECK-NEXT:    cir.return

@@ -3,7 +3,6 @@
 
 ---
 name:            constrain_readfirstlane_av
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: constrain_readfirstlane_av
   ; CHECK: bb.0:
@@ -48,7 +47,6 @@ body:             |
 # Need to respect subregister on copy source
 ---
 name:            constrain_readfirstlane_av64
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: constrain_readfirstlane_av64
   ; CHECK: bb.0:
@@ -92,7 +90,6 @@ body:             |
 
 ---
 name:            constrain_readfirstlane_av64_subreg_m0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -114,7 +111,6 @@ body:             |
 # must not narrow the AV-class source to a VGPR-only class.
 ---
 name:            moveto_valu_preserves_av
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -134,7 +130,6 @@ body:             |
 
 ---
 name:            phi_vgpr_av_operand
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: phi_vgpr_av_operand
   ; CHECK: bb.0:
@@ -180,7 +175,6 @@ body:             |
 
 ---
 name:            phi_av_vgpr_operand
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: phi_av_vgpr_operand
   ; CHECK: bb.0:
@@ -226,7 +220,6 @@ body:             |
 
 ---
 name:            phi_av64_vreg64_operand
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: phi_av64_vreg64_operand
   ; CHECK: bb.0:
@@ -274,7 +267,6 @@ body:             |
 # block (#168761).
 ---
 name:            phi_av_sgpr_operand
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: phi_av_sgpr_operand
   ; CHECK: bb.0:
@@ -321,7 +313,6 @@ body:             |
 
 ---
 name:            phi_vgpr_agpr_operand
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: phi_vgpr_agpr_operand
   ; CHECK: bb.0:
@@ -367,7 +358,6 @@ body:             |
 
 ---
 name:            phi_vgpr_av64_subreg_operand
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: phi_vgpr_av64_subreg_operand
   ; CHECK: bb.0:
@@ -413,7 +403,6 @@ body:             |
 
 ---
 name:            phi_agpr_av_operand
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: phi_agpr_av_operand
   ; CHECK: bb.0:
@@ -459,7 +448,6 @@ body:             |
 
 ---
 name:            phi_av_agpr_operand
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: phi_av_agpr_operand
   ; CHECK: bb.0:
@@ -506,7 +494,6 @@ body:             |
 # An SGPR PHI feeding a PHI that moves to AGPR moves to AGPR too.
 ---
 name:            phi_sgpr_phi_operand_to_agpr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: phi_sgpr_phi_operand_to_agpr
   ; CHECK: bb.0:
@@ -583,7 +570,6 @@ body:             |
 # A VGPR PHI feeding a PHI that moves to AGPR stays VGPR.
 ---
 name:            phi_vgpr_phi_operand_stays_vgpr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: phi_vgpr_phi_operand_stays_vgpr
   ; CHECK: bb.0:

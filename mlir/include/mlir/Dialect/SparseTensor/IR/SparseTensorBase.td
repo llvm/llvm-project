@@ -14,6 +14,7 @@ include "mlir/IR/OpBase.td"
 def SparseTensor_Dialect : Dialect {
   let name = "sparse_tensor";
   let cppNamespace = "::mlir::sparse_tensor";
+  let useDefaultOperationRegistration = 1;
   let description = [{
     The `SparseTensor` dialect supports all the attributes, types,
     operations, and passes that are required to make sparse tensor
@@ -88,8 +89,8 @@ def SparseTensor_Dialect : Dialect {
     PhD thesis, MIT, February, 2020.
   }];
 
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
   let hasConstantMaterializer = 1;
 }
 

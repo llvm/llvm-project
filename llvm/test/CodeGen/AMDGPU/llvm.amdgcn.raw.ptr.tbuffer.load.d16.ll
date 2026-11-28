@@ -108,7 +108,7 @@ define amdgpu_ps half @tbuffer_load_d16_xyzw(ptr addrspace(8) inreg %rsrc) {
 ; PREGFX10-UNPACKED:       ; %bb.0: ; %main_body
 ; PREGFX10-UNPACKED-NEXT:    tbuffer_load_format_d16_xyzw v[0:3], off, s[0:3], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] ; encoding: [0x00,0x80,0xb5,0xe8,0x00,0x00,0x00,0x80]
 ; PREGFX10-UNPACKED-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x0f,0x8c,0xbf]
-; PREGFX10-UNPACKED-NEXT:    v_mov_b32_e32 v0, v3 ; encoding: [0x03,0x03,0x00,0x7e]
+; PREGFX10-UNPACKED-NEXT:    v_and_b32_e32 v0, 0xffff, v3 ; encoding: [0xff,0x06,0x00,0x26,0xff,0xff,0x00,0x00]
 ; PREGFX10-UNPACKED-NEXT:    ; return to shader part epilog
 ;
 ; PREGFX10-PACKED-LABEL: tbuffer_load_d16_xyzw:
@@ -247,7 +247,8 @@ define amdgpu_ps i16 @tbuffer_load_v4i16(ptr addrspace(8) inreg %rsrc) {
 ; PREGFX10-UNPACKED:       ; %bb.0: ; %main_body
 ; PREGFX10-UNPACKED-NEXT:    tbuffer_load_format_d16_xyzw v[0:3], off, s[0:3], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] ; encoding: [0x00,0x80,0xb5,0xe8,0x00,0x00,0x00,0x80]
 ; PREGFX10-UNPACKED-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x0f,0x8c,0xbf]
-; PREGFX10-UNPACKED-NEXT:    v_readfirstlane_b32 s0, v3 ; encoding: [0x03,0x05,0x00,0x7e]
+; PREGFX10-UNPACKED-NEXT:    v_and_b32_e32 v0, 0xffff, v3 ; encoding: [0xff,0x06,0x00,0x26,0xff,0xff,0x00,0x00]
+; PREGFX10-UNPACKED-NEXT:    v_readfirstlane_b32 s0, v0 ; encoding: [0x00,0x05,0x00,0x7e]
 ; PREGFX10-UNPACKED-NEXT:    ; return to shader part epilog
 ;
 ; PREGFX10-PACKED-LABEL: tbuffer_load_v4i16:
@@ -348,7 +349,7 @@ define amdgpu_ps bfloat @tbuffer_load_v4bf16(ptr addrspace(8) inreg %rsrc) {
 ; PREGFX10-UNPACKED:       ; %bb.0: ; %main_body
 ; PREGFX10-UNPACKED-NEXT:    tbuffer_load_format_d16_xyzw v[0:3], off, s[0:3], 0 format:[BUF_DATA_FORMAT_10_11_11,BUF_NUM_FORMAT_SNORM] ; encoding: [0x00,0x80,0xb5,0xe8,0x00,0x00,0x00,0x80]
 ; PREGFX10-UNPACKED-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x0f,0x8c,0xbf]
-; PREGFX10-UNPACKED-NEXT:    v_mov_b32_e32 v0, v3 ; encoding: [0x03,0x03,0x00,0x7e]
+; PREGFX10-UNPACKED-NEXT:    v_and_b32_e32 v0, 0xffff, v3 ; encoding: [0xff,0x06,0x00,0x26,0xff,0xff,0x00,0x00]
 ; PREGFX10-UNPACKED-NEXT:    ; return to shader part epilog
 ;
 ; PREGFX10-PACKED-LABEL: tbuffer_load_v4bf16:

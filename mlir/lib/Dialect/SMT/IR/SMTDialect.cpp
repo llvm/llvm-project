@@ -14,15 +14,6 @@
 using namespace mlir;
 using namespace smt;
 
-void SMTDialect::initialize() {
-  registerAttributes();
-  registerTypes();
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/SMT/IR/SMT.cpp.inc"
-      >();
-}
-
 Operation *SMTDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                            Type type, Location loc) {
   // BitVectorType constants can materialize into smt.bv.constant

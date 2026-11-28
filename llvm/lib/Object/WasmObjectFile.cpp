@@ -2298,7 +2298,9 @@ int WasmSectionOrderChecker::getSectionOrder(unsigned ID,
 // Represents the edges in a directed graph where any node B reachable from node
 // A is not allowed to appear before A in the section ordering, but may appear
 // afterward.
-int WasmSectionOrderChecker::DisallowedPredecessors
+static_assert(WasmSectionOrderChecker::WASM_NUM_SEC_ORDERS < UINT8_MAX,
+              "WASM_NUM_SEC_ORDERS too large");
+const uint8_t WasmSectionOrderChecker::DisallowedPredecessors
     [WASM_NUM_SEC_ORDERS][WASM_NUM_SEC_ORDERS] = {
         // WASM_SEC_ORDER_NONE
         {},

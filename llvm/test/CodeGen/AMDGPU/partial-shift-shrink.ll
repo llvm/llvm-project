@@ -7,7 +7,7 @@ define i16 @trunc_srl_i64_16_to_i16(i64 %x) {
 ; GCN-LABEL: trunc_srl_i64_16_to_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GCN-NEXT:    v_alignbit_b32 v0, v1, v0, 16
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %shift = lshr i64 %x, 16
   %trunc = trunc i64 %shift to i16
@@ -18,7 +18,7 @@ define i16 @trunc_srl_i64_17_to_i16(i64 %x) {
 ; GCN-LABEL: trunc_srl_i64_17_to_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_lshrrev_b64 v[0:1], 17, v[0:1]
+; GCN-NEXT:    v_alignbit_b32 v0, v1, v0, 17
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %shift = lshr i64 %x, 17
   %trunc = trunc i64 %shift to i16
@@ -42,7 +42,7 @@ define i16 @trunc_sra_i64_16_to_i16(i64 %x) {
 ; GCN-LABEL: trunc_sra_i64_16_to_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GCN-NEXT:    v_alignbit_b32 v0, v1, v0, 16
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %shift = ashr i64 %x, 16
   %trunc = trunc i64 %shift to i16
@@ -53,7 +53,7 @@ define i16 @trunc_sra_i64_17_to_i16(i64 %x) {
 ; GCN-LABEL: trunc_sra_i64_17_to_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_lshrrev_b64 v[0:1], 17, v[0:1]
+; GCN-NEXT:    v_alignbit_b32 v0, v1, v0, 17
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %shift = ashr i64 %x, 17
   %trunc = trunc i64 %shift to i16
@@ -64,7 +64,7 @@ define i16 @trunc_shl_i64_16_to_i16(i64 %x) {
 ; GCN-LABEL: trunc_shl_i64_16_to_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %shift = shl i64 %x, 16
   %trunc = trunc i64 %shift to i16
@@ -75,7 +75,7 @@ define i16 @trunc_shl_i64_17_to_i16(i64 %x) {
 ; GCN-LABEL: trunc_shl_i64_17_to_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 17, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %shift = shl i64 %x, 17
   %trunc = trunc i64 %shift to i16
@@ -115,8 +115,8 @@ define i16 @trunc_srl_i64_var_mask15_to_i16(i64 %x, i64 %amt) {
 ; GCN-LABEL: trunc_srl_i64_var_mask15_to_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v1, 15, v2
-; GCN-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
+; GCN-NEXT:    v_and_b32_e32 v2, 15, v2
+; GCN-NEXT:    v_lshrrev_b64 v[0:1], v2, v[0:1]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %amt.masked = and i64 %amt, 15
   %shift = lshr i64 %x, %amt.masked
@@ -128,8 +128,8 @@ define i16 @trunc_srl_i64_var_mask16_to_i16(i64 %x, i64 %amt) {
 ; GCN-LABEL: trunc_srl_i64_var_mask16_to_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v1, 16, v2
-; GCN-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
+; GCN-NEXT:    v_and_b32_e32 v2, 16, v2
+; GCN-NEXT:    v_lshrrev_b64 v[0:1], v2, v[0:1]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %amt.masked = and i64 %amt, 16
   %shift = lshr i64 %x, %amt.masked
@@ -141,8 +141,7 @@ define i16 @trunc_srl_i64_var_mask31_to_i16(i64 %x, i64 %amt) {
 ; GCN-LABEL: trunc_srl_i64_var_mask31_to_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_and_b32_e32 v2, 31, v2
-; GCN-NEXT:    v_lshrrev_b64 v[0:1], v2, v[0:1]
+; GCN-NEXT:    v_alignbit_b32 v0, v1, v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %amt.masked = and i64 %amt, 31
   %shift = lshr i64 %x, %amt.masked

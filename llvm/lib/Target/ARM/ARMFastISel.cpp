@@ -20,7 +20,6 @@
 #include "ARMISelLowering.h"
 #include "ARMMachineFunctionInfo.h"
 #include "ARMSubtarget.h"
-#include "ARMTargetMachine.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "Utils/ARMBaseInfo.h"
@@ -137,7 +136,6 @@ class ARMFastISel final : public FastISel {
   Module &M;
   const ARMBaseInstrInfo &TII;
   const ARMTargetLowering &TLI;
-  const ARMBaseTargetMachine &TM;
   ARMFunctionInfo *AFI;
 
   // Convenience variables to avoid some queries.
@@ -151,8 +149,8 @@ class ARMFastISel final : public FastISel {
         : FastISel(funcInfo, libInfo, libcallLowering),
           Subtarget(&funcInfo.MF->getSubtarget<ARMSubtarget>()),
           M(const_cast<Module &>(*funcInfo.Fn->getParent())),
-          TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()),
-          TM(TLI.getTM()) {
+          TII(*Subtarget->getInstrInfo()),
+          TLI(*Subtarget->getTargetLowering()) {
       AFI = funcInfo.MF->getInfo<ARMFunctionInfo>();
       isThumb2 = AFI->isThumbFunction();
       Context = &funcInfo.Fn->getContext();

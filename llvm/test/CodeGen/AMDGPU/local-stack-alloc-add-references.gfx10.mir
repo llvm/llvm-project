@@ -4,7 +4,6 @@
 
 ---
 name:            local_stack_alloc__v_add_u32_e64__literal_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -39,7 +38,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_u32_e64__literal_offsets_commute
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:

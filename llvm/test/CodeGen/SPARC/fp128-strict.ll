@@ -802,7 +802,8 @@ define fp128 @uitofp_i32_f128(i32 %a) nounwind strictfp {
   ret fp128 %r
 }
 
-;; Soft-quad compares use _Q[p]_cmp (quiet) or _Q[p]_cmpe (signaling).
+;; Soft-quad compares use _Q[p]_cmp (quiet) or _Q[p]_cmpe (signaling), except
+;; where a predicate helper such as _Q[p]_flt has the same exception behaviour.
 define i32 @fcmp_olt_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-LABEL: fcmp_olt_f128:
 ; SOFT32:       ! %bb.0:
@@ -887,10 +888,10 @@ define i32 @fcmps_olt_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
 ; SOFT32-NEXT:    std %f6, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmpe
+; SOFT32-NEXT:    call _Q_flt
 ; SOFT32-NEXT:    add %fp, -32, %o1
-; SOFT32-NEXT:    cmp %o0, 1
-; SOFT32-NEXT:    be .LBB15_2
+; SOFT32-NEXT:    cmp %o0, 0
+; SOFT32-NEXT:    bne .LBB15_2
 ; SOFT32-NEXT:    nop
 ; SOFT32-NEXT:  ! %bb.1:
 ; SOFT32-NEXT:    ret
@@ -907,11 +908,11 @@ define i32 @fcmps_olt_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmpe
+; SOFT64-NEXT:    call _Qp_flt
 ; SOFT64-NEXT:    add %fp, 2015, %o1
 ; SOFT64-NEXT:    mov %g0, %i0
-; SOFT64-NEXT:    cmp %o0, 1
-; SOFT64-NEXT:    move %icc, 1, %i0
+; SOFT64-NEXT:    cmp %o0, 0
+; SOFT64-NEXT:    movne %icc, 1, %i0
 ; SOFT64-NEXT:    srl %i0, 0, %i0
 ; SOFT64-NEXT:    ret
 ; SOFT64-NEXT:    restore
@@ -1104,10 +1105,10 @@ define i32 @fcmps_oge_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
 ; SOFT32-NEXT:    std %f6, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmpe
+; SOFT32-NEXT:    call _Q_fge
 ; SOFT32-NEXT:    add %fp, -32, %o1
-; SOFT32-NEXT:    andcc %o0, 1, %g0
-; SOFT32-NEXT:    be .LBB18_2
+; SOFT32-NEXT:    cmp %o0, 0
+; SOFT32-NEXT:    bne .LBB18_2
 ; SOFT32-NEXT:    nop
 ; SOFT32-NEXT:  ! %bb.1:
 ; SOFT32-NEXT:    ret
@@ -1124,11 +1125,11 @@ define i32 @fcmps_oge_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmpe
+; SOFT64-NEXT:    call _Qp_fge
 ; SOFT64-NEXT:    add %fp, 2015, %o1
 ; SOFT64-NEXT:    mov %g0, %i0
-; SOFT64-NEXT:    andcc %o0, 1, %g0
-; SOFT64-NEXT:    move %icc, 1, %i0
+; SOFT64-NEXT:    cmp %o0, 0
+; SOFT64-NEXT:    movne %icc, 1, %i0
 ; SOFT64-NEXT:    srl %i0, 0, %i0
 ; SOFT64-NEXT:    ret
 ; SOFT64-NEXT:    restore
@@ -1175,10 +1176,10 @@ define void @fcmps_branch_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
 ; SOFT32-NEXT:    std %f6, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmpe
+; SOFT32-NEXT:    call _Q_fge
 ; SOFT32-NEXT:    add %fp, -32, %o1
-; SOFT32-NEXT:    andcc %o0, 1, %g0
-; SOFT32-NEXT:    bne .LBB19_2
+; SOFT32-NEXT:    cmp %o0, 0
+; SOFT32-NEXT:    be .LBB19_2
 ; SOFT32-NEXT:    nop
 ; SOFT32-NEXT:  ! %bb.1: ! %if.then
 ; SOFT32-NEXT:    call foo
@@ -1195,10 +1196,10 @@ define void @fcmps_branch_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmpe
+; SOFT64-NEXT:    call _Qp_fge
 ; SOFT64-NEXT:    add %fp, 2015, %o1
-; SOFT64-NEXT:    andcc %o0, 1, %g0
-; SOFT64-NEXT:    bne %icc, .LBB19_2
+; SOFT64-NEXT:    cmp %o0, 0
+; SOFT64-NEXT:    be %icc, .LBB19_2
 ; SOFT64-NEXT:    nop
 ; SOFT64-NEXT:  ! %bb.1: ! %if.then
 ; SOFT64-NEXT:    call foo

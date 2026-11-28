@@ -1091,15 +1091,13 @@ private:
   // block of \p FC1.
   // TODO: Move functionality into CodeMoverUtils
   bool canSinkInst(Instruction &I, const FusionCandidate &FC1) const {
-    for (User *U : I.users()) {
-      if (auto *UI{dyn_cast<Instruction>(U)}) {
-        // Cannot sink if user in loop
-        // If FC1 has phi users of this value, we cannot sink it into FC1.
-        if (FC1.L->contains(UI)) {
-          // Cannot hoist or sink this instruction. No hoisting/sinking
-          // should take place, loops should not fuse
-          return false;
-        }
+    for (Instruction *UI : I.users()) {
+      // Cannot sink if user in loop
+      // If FC1 has phi users of this value, we cannot sink it into FC1.
+      if (FC1.L->contains(UI)) {
+        // Cannot hoist or sink this instruction. No hoisting/sinking
+        // should take place, loops should not fuse
+        return false;
       }
     }
 

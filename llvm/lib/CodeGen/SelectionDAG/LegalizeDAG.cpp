@@ -267,6 +267,28 @@ public:
 
 } // end anonymous namespace
 
+[[maybe_unused]] static bool hasAtomicLibcallLowering(unsigned Opc) {
+  switch (Opc) {
+  case ISD::ATOMIC_FENCE:
+  case ISD::ATOMIC_SWAP:
+  case ISD::ATOMIC_CMP_SWAP:
+  case ISD::ATOMIC_LOAD_ADD:
+  case ISD::ATOMIC_LOAD_SUB:
+  case ISD::ATOMIC_LOAD_AND:
+  case ISD::ATOMIC_LOAD_CLR:
+  case ISD::ATOMIC_LOAD_OR:
+  case ISD::ATOMIC_LOAD_XOR:
+  case ISD::ATOMIC_LOAD_NAND:
+  case ISD::ATOMIC_LOAD_MIN:
+  case ISD::ATOMIC_LOAD_MAX:
+  case ISD::ATOMIC_LOAD_UMIN:
+  case ISD::ATOMIC_LOAD_UMAX:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Helper function that generates an MMO that considers the alignment of the
 // stack, and the size of the stack object
 static MachineMemOperand *getStackAlignedMMO(SDValue StackPtr,
@@ -1402,6 +1424,9 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     case TargetLowering::Expand:
       if (ExpandNode(Node))
         return;
+      assert((Action != TargetLowering::Expand ||
+              !hasAtomicLibcallLowering(Node->getOpcode())) &&
+             "atomic operations lowered to calls must use LibCall");
       [[fallthrough]];
     case TargetLowering::LibCall:
       ConvertNodeToLibcall(Node);
@@ -1526,6 +1551,7 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   // Store the value to a temporary stack slot, then LOAD the returned part.
   EVT VecVT = Vec.getValueType();
   EVT PartVT = Part.getValueType();
+  bool IsInsertSubvector = Op.getOpcode() == ISD::INSERT_SUBVECTOR;
   SDValue StackPtr = DAG.CreateStackTemporary(VecVT);
   int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
   MachinePointerInfo PtrInfo =
@@ -1540,11 +1566,14 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   // Freeze the index so we don't poison the clamping code we're about to emit.
   Idx = DAG.getFreeze(Idx);
 
-  Type *PartTy = PartVT.getTypeForEVT(*DAG.getContext());
+  // INSERT_VECTOR_ELT implicitly truncates an over-width scalar, so use the
+  // vector element type as the actual store type.
+  EVT PartMemVT = IsInsertSubvector ? PartVT : VecVT.getVectorElementType();
+  Type *PartTy = PartMemVT.getTypeForEVT(*DAG.getContext());
   Align PartAlignment = DAG.getDataLayout().getPrefTypeAlign(PartTy);
 
   // Then store the inserted part.
-  if (PartVT.isVector()) {
+  if (IsInsertSubvector) {
     SDValue SubStackPtr =
         TLI.getVectorSubVecPointer(DAG, StackPtr, VecVT, PartVT, Idx);
 
@@ -4717,19 +4746,9 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   case ISD::ATOMIC_FENCE: {
     // If the target didn't lower this, lower it to '__sync_synchronize()' call
     // FIXME: handle "fence singlethread" more efficiently.
-    TargetLowering::ArgListTy Args;
-
-    TargetLowering::CallLoweringInfo CLI(DAG);
-    CLI.setDebugLoc(dl)
-        .setChain(Node->getOperand(0))
-        .setLibCallee(
-            CallingConv::C, Type::getVoidTy(*DAG.getContext()),
-            DAG.getExternalSymbol("__sync_synchronize",
-                                  TLI.getPointerTy(DAG.getDataLayout())),
-            std::move(Args));
-
-    std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
-
+    std::pair<SDValue, SDValue> CallResult =
+        TLI.makeLibCall(DAG, RTLIB::SYNC_SYNCHRONIZE, MVT::isVoid, {},
+                        CallOptions, dl, Node->getOperand(0));
     Results.push_back(CallResult.second);
     break;
   }

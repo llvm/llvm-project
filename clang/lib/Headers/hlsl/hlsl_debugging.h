@@ -14,6 +14,17 @@ namespace hlsl {
 _HLSL_AVAILABILITY(shadermodel, 6.10)
 void inline DebugBreak() { __builtin_debugtrap(); }
 
+#if defined(__DIRECTX__)
+
+namespace dx {
+
+_HLSL_AVAILABILITY(shadermodel, 6.10)
+bool inline IsDebuggingEnabled() { return __builtin_hlsl_isdebuggingenabled(); }
+
+} // namespace dx
+
+#endif // defined(__DIRECTX__)
+
 } // namespace hlsl
 
 #endif // _HLSL_HLSL_DEBUGGING_H_

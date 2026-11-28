@@ -12,13 +12,13 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $x10 = COPY [[ZEXTLOAD]](s64)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: $x10 = COPY [[ZEXTLOAD]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %2:_(s16) = G_ZEXTLOAD %0(p0) :: (load (s8))
-    %3:_(s64) = G_ANYEXT %2(s16)
-    $x10 = COPY %3(s64)
+    %2:_(i16) = G_ZEXTLOAD %0(p0) :: (load (s8))
+    %3:_(i64) = G_ANYEXT %2(i16)
+    $x10 = COPY %3(i64)
     PseudoRET implicit $x10
 
 ...
@@ -32,13 +32,13 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $x10 = COPY [[ZEXTLOAD]](s64)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: $x10 = COPY [[ZEXTLOAD]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %2:_(s32) = G_ZEXTLOAD %0(p0) :: (load (s8))
-    %3:_(s64) = G_ANYEXT %2(s32)
-    $x10 = COPY %3(s64)
+    %2:_(i32) = G_ZEXTLOAD %0(p0) :: (load (s8))
+    %3:_(i64) = G_ANYEXT %2(i32)
+    $x10 = COPY %3(i64)
     PseudoRET implicit $x10
 
 ...
@@ -52,13 +52,13 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16))
-    ; CHECK-NEXT: $x10 = COPY [[ZEXTLOAD]](s64)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16))
+    ; CHECK-NEXT: $x10 = COPY [[ZEXTLOAD]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %2:_(s32) = G_ZEXTLOAD %0(p0) :: (load (s16))
-    %3:_(s64) = G_ANYEXT %2(s32)
-    $x10 = COPY %3(s64)
+    %2:_(i32) = G_ZEXTLOAD %0(p0) :: (load (s16))
+    %3:_(i64) = G_ANYEXT %2(i32)
+    $x10 = COPY %3(i64)
     PseudoRET implicit $x10
 
 ...
@@ -72,12 +72,12 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $x10 = COPY [[ZEXTLOAD]](s64)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: $x10 = COPY [[ZEXTLOAD]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %2:_(s64) = G_ZEXTLOAD %0(p0) :: (load (s8))
-    $x10 = COPY %2(s64)
+    %2:_(i64) = G_ZEXTLOAD %0(p0) :: (load (s8))
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -91,12 +91,12 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16))
-    ; CHECK-NEXT: $x10 = COPY [[ZEXTLOAD]](s64)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s16))
+    ; CHECK-NEXT: $x10 = COPY [[ZEXTLOAD]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %2:_(s64) = G_ZEXTLOAD %0(p0) :: (load (s16))
-    $x10 = COPY %2(s64)
+    %2:_(i64) = G_ZEXTLOAD %0(p0) :: (load (s16))
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -110,12 +110,12 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s32))
-    ; CHECK-NEXT: $x10 = COPY [[ZEXTLOAD]](s64)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s32))
+    ; CHECK-NEXT: $x10 = COPY [[ZEXTLOAD]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %2:_(s64) = G_ZEXTLOAD %0(p0) :: (load (s32))
-    $x10 = COPY %2(s64)
+    %2:_(i64) = G_ZEXTLOAD %0(p0) :: (load (s32))
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -129,13 +129,13 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $x10 = COPY [[ZEXTLOAD]](s64)
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(i64) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: $x10 = COPY [[ZEXTLOAD]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %2:_(s48) = G_ZEXTLOAD %0(p0) :: (load (s8))
-    %3:_(s64) = G_ANYEXT %2(s48)
-    $x10 = COPY %3(s64)
+    %2:_(i48) = G_ZEXTLOAD %0(p0) :: (load (s8))
+    %3:_(i64) = G_ANYEXT %2(i48)
+    $x10 = COPY %3(i64)
     PseudoRET implicit $x10
 
 ...
@@ -149,13 +149,13 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $x10 = COPY [[SEXTLOAD]](s64)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: $x10 = COPY [[SEXTLOAD]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %2:_(s16) = G_SEXTLOAD %0(p0) :: (load (s8))
-    %3:_(s64) = G_ANYEXT %2(s16)
-    $x10 = COPY %3(s64)
+    %2:_(i16) = G_SEXTLOAD %0(p0) :: (load (s8))
+    %3:_(i64) = G_ANYEXT %2(i16)
+    $x10 = COPY %3(i64)
     PseudoRET implicit $x10
 
 ...
@@ -169,13 +169,13 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $x10 = COPY [[SEXTLOAD]](s64)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: $x10 = COPY [[SEXTLOAD]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %2:_(s32) = G_SEXTLOAD %0(p0) :: (load (s8))
-    %3:_(s64) = G_ANYEXT %2(s32)
-    $x10 = COPY %3(s64)
+    %2:_(i32) = G_SEXTLOAD %0(p0) :: (load (s8))
+    %3:_(i64) = G_ANYEXT %2(i32)
+    $x10 = COPY %3(i64)
     PseudoRET implicit $x10
 
 ...
@@ -189,13 +189,13 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
-    ; CHECK-NEXT: $x10 = COPY [[SEXTLOAD]](s64)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
+    ; CHECK-NEXT: $x10 = COPY [[SEXTLOAD]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %2:_(s32) = G_SEXTLOAD %0(p0) :: (load (s16))
-    %3:_(s64) = G_ANYEXT %2(s32)
-    $x10 = COPY %3(s64)
+    %2:_(i32) = G_SEXTLOAD %0(p0) :: (load (s16))
+    %3:_(i64) = G_ANYEXT %2(i32)
+    $x10 = COPY %3(i64)
     PseudoRET implicit $x10
 
 ...
@@ -209,12 +209,12 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $x10 = COPY [[SEXTLOAD]](s64)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: $x10 = COPY [[SEXTLOAD]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %2:_(s64) = G_SEXTLOAD %0(p0) :: (load (s8))
-    $x10 = COPY %2(s64)
+    %2:_(i64) = G_SEXTLOAD %0(p0) :: (load (s8))
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -228,12 +228,12 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
-    ; CHECK-NEXT: $x10 = COPY [[SEXTLOAD]](s64)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
+    ; CHECK-NEXT: $x10 = COPY [[SEXTLOAD]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %2:_(s64) = G_SEXTLOAD %0(p0) :: (load (s16))
-    $x10 = COPY %2(s64)
+    %2:_(i64) = G_SEXTLOAD %0(p0) :: (load (s16))
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -247,12 +247,12 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s32))
-    ; CHECK-NEXT: $x10 = COPY [[SEXTLOAD]](s64)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (s32))
+    ; CHECK-NEXT: $x10 = COPY [[SEXTLOAD]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %2:_(s64) = G_SEXTLOAD %0(p0) :: (load (s32))
-    $x10 = COPY %2(s64)
+    %2:_(i64) = G_SEXTLOAD %0(p0) :: (load (s32))
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -267,13 +267,13 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x10
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
-    ; CHECK-NEXT: $x10 = COPY [[SEXTLOAD]](s64)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i64) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
+    ; CHECK-NEXT: $x10 = COPY [[SEXTLOAD]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(p0) = COPY $x10
-    %2:_(s48) = G_SEXTLOAD %0(p0) :: (load (s8))
-    %3:_(s64) = G_ANYEXT %2(s48)
-    $x10 = COPY %3(s64)
+    %2:_(i48) = G_SEXTLOAD %0(p0) :: (load (s8))
+    %3:_(i64) = G_ANYEXT %2(i48)
+    $x10 = COPY %3(i64)
     PseudoRET implicit $x10
 
 ...

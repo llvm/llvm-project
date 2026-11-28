@@ -7,16 +7,16 @@ define double @test_lwc1() {
 ; MIPS1-LE-LABEL: test_lwc1:
 ; MIPS1-LE:       # %bb.0: # %entry
 ; MIPS1-LE-NEXT:    lui	$1, %hi(test)
-; MIPS1-LE-NEXT:    lwc1 $f0, %lo(test)($1)
 ; MIPS1-LE-NEXT:    lwc1 $f1, %lo(test+4)($1)
+; MIPS1-LE-NEXT:    lwc1 $f0, %lo(test)($1)
 ; MIPS1-LE-NEXT:    jr $ra
 ; MIPS1-LE-NEXT:    nop
 
 ; MIPS1-BE-LABEL: test_lwc1:
 ; MIPS1-BE:       # %bb.0: # %entry
 ; MIPS1-BE-NEXT:    lui	$1, %hi(test)
-; MIPS1-BE-NEXT:    lwc1 $f0, %lo(test+4)($1)
 ; MIPS1-BE-NEXT:    lwc1 $f1, %lo(test)($1)
+; MIPS1-BE-NEXT:    lwc1 $f0, %lo(test+4)($1)
 ; MIPS1-BE-NEXT:    jr $ra
 ; MIPS1-BE-NEXT:    nop
 entry:

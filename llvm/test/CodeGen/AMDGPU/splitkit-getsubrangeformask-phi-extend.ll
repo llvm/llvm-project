@@ -874,8 +874,9 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v7
 ; CHECK-NEXT:    v_lshrrev_b64 v[6:7], 1, v[8:9]
 ; CHECK-NEXT:    v_or_b32_e32 v7, v7, v1
-; CHECK-NEXT:    flat_store_dwordx4 v[34:35], v[4:7]
 ; CHECK-NEXT:    flat_store_dwordx4 v[22:23], v[18:21] offset:16
+; CHECK-NEXT:    flat_store_dwordx4 v[34:35], v[4:7]
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_mov_b32_e32 v7, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v6, v10
 ; CHECK-NEXT:  .LBB0_43: ; %Flow48

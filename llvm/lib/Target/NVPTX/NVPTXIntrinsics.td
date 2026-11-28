@@ -1749,7 +1749,7 @@ let Predicates = [hasMBarrierLayoutSupport] in {
 
 class MBAR_UTIL<string op, string scope,
                 string space = "", string sem = "",
-                bit tl = 0, bit parity = 0> {
+                bit tl = 0, bit parity = 0, string phase = ""> {
   // The mbarrier instructions in PTX ISA are of the general form:
   // mbarrier.op.semantics.scope.space.b64 arg1, arg2 ...
   // where:
@@ -1778,7 +1778,8 @@ class MBAR_UTIL<string op, string scope,
                       true : space);
 
   string _parity = !if(parity, "parity", "");
-  string asm_str = StrJoin<".", ["mbarrier", op, _parity,
+  string _phase_asm = !if(!empty(phase), "", "phase_type::" # phase);
+  string asm_str = StrJoin<".", ["mbarrier", op, _parity, _phase_asm,
                                   sem, _scope_asm, _space_asm, "b64"]>.ret;
 
   string _intr_suffix = StrJoin<"_", [!subst(".", "_", op), _parity,
@@ -1920,6 +1921,90 @@ foreach op = ["test_wait", "try_wait"] in {
       defm mbar_ # suffix # "_acquire" : MBAR_WAIT_INTR<op, scope, "", time_limit>;
       defm mbar_ # suffix # "_relaxed" : MBAR_WAIT_INTR<op, scope, "relaxed", time_limit>;
     } // time_limit
+  } // scope
+} // op
+
+// This class and the InstrMapping below record each phase-qualified mbarrier
+// wait instruction that produces the optional PTX report value together
+// with its variant without the report. The mapping is used by
+// NVPTXTargetLowering::EmitInstrWithCustomInserter to drop an unused
+// report value from the selected instruction.
+class MbarrierReportVariant<string name, bit report> {
+  string MbarrierWaitName = name;
+  bit HasReport = report;
+}
+
+def getMbarrierNoReportOpcode : InstrMapping {
+  let FilterClass = "MbarrierReportVariant";
+  let RowFields = ["MbarrierWaitName"];
+  let ColFields = ["HasReport"];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
+}
+
+class MBAR_PHASE_WAIT<string op, string scope, string phase, string sem,
+                      bit time_limit, bit parity, bit report> {
+  defvar intr_name = StrJoin<"_", ["int_nvvm_mbarrier", op,
+                                   !if(parity, "parity", ""),
+                                   !if(time_limit, "tl", ""), phase,
+                                   !if(!eq(sem, "acquire"), "", sem), scope,
+                                   "space_cta"]>.ret;
+  defvar intr = !cast<Intrinsic>(intr_name);
+
+  defvar state_dag = !if(parity, (intr i32:$state), (intr i64:$state));
+  dag intr_dag = !con((intr addr:$addr), state_dag,
+                      !if(time_limit, (intr i32:$tl), (intr)));
+  dag ins_dag  = !con((ins ADDR:$addr),
+                      !if(parity, (ins B32:$state), (ins B64:$state)),
+                      !if(time_limit, (ins B32:$tl), (ins)));
+  dag outs_dag = !if(!eq(phase, "conditional"), (outs B1:$complete),
+                     !con((outs B1:$complete, B1:$reportSeen),
+                          !if(report, (outs B32:$reportValue), (outs))));
+  dag pattern  = !if(!eq(phase, "conditional"), (set i1:$complete, intr_dag),
+                    (set i1:$complete, i1:$reportSeen, i32:$reportValue,
+                     intr_dag));
+
+  defvar asm_inst = MBAR_UTIL<op, scope, "space_cta", sem,
+                              time_limit, parity, phase>.asm_str;
+  defvar asm_results = !if(!eq(phase, "conditional"), "$complete",
+                           "$complete|$reportSeen" # !if(report, ", %rpt_out", ""));
+  string asm_str = !if(report, "\\{\n\t.reg .b8 %rpt_out;\n\t", "") #
+                   asm_inst # " " # asm_results # ", [$addr], $state" #
+                   !if(time_limit, ", $tl", "") # ";" #
+                   !if(report, "\n\tcvt.u32.u8 $reportValue, %rpt_out;\n\t\\}", "");
+}
+
+foreach op = ["test_wait", "try_wait"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach phase = ["primary", "conditional"] in {
+      foreach parity = !if(!eq(phase, "conditional"), [true], [true, false]) in {
+        foreach time_limit = !if(!eq(op, "try_wait"), [true, false], [false]) in {
+          foreach sem = ["acquire", "relaxed"] in {
+            defvar suffix = StrJoin<"_", [op,
+                                !if(parity, "parity", ""),
+                                !if(time_limit, "tl", ""), phase, sem, scope]>.ret;
+            defvar wait = MBAR_PHASE_WAIT<op, scope, phase, sem, time_limit,
+                                          parity, !eq(phase, "primary")>;
+            def mbar_ # suffix :
+                NVPTXInst<wait.outs_dag, wait.ins_dag, wait.asm_str, [wait.pattern]>,
+                Requires<[PTX93, SM90]>,
+                MbarrierReportVariant<suffix, !eq(phase, "primary")> {
+              let usesCustomInserter = !eq(phase, "primary");
+            }
+            if !eq(phase, "primary") then {
+              defvar no_report = MBAR_PHASE_WAIT<op, scope, phase, sem,
+                                                 time_limit, parity, false>;
+              // No pattern: only selected by the custom inserter when the
+              // report value result is unused.
+              def mbar_ # suffix # _NO_REPORT :
+                  NVPTXInst<no_report.outs_dag, no_report.ins_dag, no_report.asm_str>,
+                  Requires<[PTX93, SM90]>,
+                  MbarrierReportVariant<suffix, false>;
+            }
+          } // sem
+        } // time_limit
+      } // parity
+    } // phase
   } // scope
 } // op
 
@@ -7367,6 +7452,76 @@ foreach NumSrc = SPNumSrcs in {
     } // ElemSize
   } // NumTgt
 } // NumSrc
+
+//
+// tcgen05.ld{.red}.spcompress
+//
+
+// mdata = ceil(num / 32);
+// cdata = num / 2.
+class Tcgen05LdSPCompressLayout<int RepeatFactor, bit IsRed> {
+  int MetadataSize = SPCeilDiv<RepeatFactor, 32>.Value;
+  int CompressedDataSize = !div(RepeatFactor, 2);
+  int NumResultRegs =
+      !add(MetadataSize, CompressedDataSize, !if(IsRed, 1, 0));
+  // taddr, row_op, abs, [nan]
+  int NumOperands = !if(IsRed, 4, 3);
+}
+
+class Tcgen05LdSPCompressSDNode<int RepeatFactor, bit IsRed,
+                                Tcgen05LdSPCompressLayout Layout>
+    : SDNode<"NVPTXISD::TCGEN05_LD" # !if(IsRed, "_RED", "")
+                 # "_SPCOMPRESS_X" # RepeatFactor,
+             SDTypeProfile<Layout.NumResultRegs, Layout.NumOperands,
+                           !foreach(OpIdx, !range(!add(Layout.NumResultRegs, Layout.NumOperands)),
+                                    SDTCisVT<OpIdx, i32>)>,
+             [SDNPHasChain, SDNPSideEffect, SDNPMemOperand]>;
+
+class Tcgen05LdSPCompressInst<string Red, int RepeatFactor, string RowOp,
+                              string Abs, string Nan>
+    : NVPTXInst<(outs), (ins), "?", []> {
+  defvar IsRed = !not(!empty(Red));
+  defvar Layout = Tcgen05LdSPCompressLayout<RepeatFactor, IsRed>;
+  defvar Results = SPRegList<Layout.NumResultRegs, "r">;
+  defvar Opcode = Tcgen05LdSPCompressSDNode<RepeatFactor, IsRed, Layout>;
+  defvar Args =
+      !listconcat([SPRegList<Layout.MetadataSize, "r">.Asm,
+                   SPRegList<Layout.CompressedDataSize, "r",
+                             Layout.MetadataSize>.Asm],
+                  !if(IsRed, ["$r" # !sub(Layout.NumResultRegs, 1)], []),
+                  ["[$taddr]"]);
+  defvar RowOpVal = !cond(!eq(RowOp, "min") : 0, !eq(RowOp, "max") : 1);
+  defvar AbsVal = !if(!empty(Abs), 0, 1);
+  defvar NanVal = !if(!empty(Nan), 0, 1);
+
+  // The pattern only matches the qualifiers this instruction prints.
+  dag IntrinsicPattern =
+      !con((Opcode i32:$taddr, (i32 RowOpVal), (i32 AbsVal)),
+           !if(IsRed, (Opcode (i32 NanVal)), (Opcode)));
+
+  let OutOperandList = Results.Outs;
+  let InOperandList = (ins B32:$taddr);
+  let AsmString = "tcgen05.ld" # Red
+                  # ".spcompress.sync.aligned.32x32b.x" # RepeatFactor
+                  # "." # RowOp # ".sp::2:4" # Abs # Nan
+                  # ".f32.b2 " # !interleave(Args, ", ") # ";";
+  let Pattern = [!con(Results.Set, (set IntrinsicPattern))];
+  let Predicates = [hasSPCompress];
+}
+
+let isConvergent = true in {
+  foreach Red = ["", ".red"] in {
+    foreach RepeatFactor = [4, 8, 16, 32, 64, 128] in {
+      foreach RowOp = ["min", "max"] in {
+        foreach Abs = ["", ".abs"] in {
+          // .NaN only applies to the reduction.
+          foreach Nan = !if(!empty(Red), [""], ["", ".NaN"]) in
+            def : Tcgen05LdSPCompressInst<Red, RepeatFactor, RowOp, Abs, Nan>;
+        } // Abs
+      } // RowOp
+    } // RepeatFactor
+  } // Red
+} // isConvergent
 
 //
 // tensormap.replace Instructions

@@ -127,7 +127,7 @@
 ; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
-; SJLJ-NEXT: declare arm_aapcscc void @__clear_cache(ptr, ptr)
+; SJLJ-NEXT: declare arm_aapcscc void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__clzti2(i128) [[NOMEM_ATTRS]]
@@ -333,6 +333,7 @@
 ; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_lock_test_and_set_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i32 @__sync_lock_test_and_set_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i64 @__sync_lock_test_and_set_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc void @__sync_synchronize() [[ATOMIC_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc zeroext i8 @__sync_val_compare_and_swap_1(ptr captures(none), i8 zeroext, i8 zeroext) [[ATOMIC_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc i128 @__sync_val_compare_and_swap_16(ptr captures(none), i128, i128) [[ATOMIC_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc zeroext i16 @__sync_val_compare_and_swap_2(ptr captures(none), i16 zeroext, i16 zeroext) [[ATOMIC_ATTRS]]
@@ -388,10 +389,10 @@
 ; SJLJ-NEXT: declare arm_aapcscc float @expf(float) [[ERRNO_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc double @fdim(double, double) [[ERRNO_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc float @fdimf(float, float) [[ERRNO_ATTRS]]
-; SJLJ-NEXT: declare arm_aapcscc i32 @fegetenv(ptr)
-; SJLJ-NEXT: declare arm_aapcscc i32 @fegetmode(ptr)
-; SJLJ-NEXT: declare arm_aapcscc i32 @fesetenv(ptr)
-; SJLJ-NEXT: declare arm_aapcscc i32 @fesetmode(ptr)
+; SJLJ-NEXT: declare arm_aapcscc noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; SJLJ-NEXT: declare arm_aapcscc noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; SJLJ-NEXT: declare arm_aapcscc noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc double @floor(double) [[NOMEM_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc float @floorf(float) [[NOMEM_ATTRS]]
 ; SJLJ-NEXT: declare arm_aapcscc double @fma(double, double, double) [[ERRNO_ATTRS]]
@@ -485,6 +486,7 @@
 ; SJLJ-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; SJLJ-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; SJLJ-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; SJLJ-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; SJLJ-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; SJLJ-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; SJLJ-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
@@ -609,7 +611,7 @@
 ; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
-; DWARF-NEXT: declare arm_aapcscc void @__clear_cache(ptr, ptr)
+; DWARF-NEXT: declare arm_aapcscc void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i32 @__clzti2(i128) [[NOMEM_ATTRS]]
@@ -815,6 +817,7 @@
 ; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_lock_test_and_set_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i32 @__sync_lock_test_and_set_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i64 @__sync_lock_test_and_set_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc void @__sync_synchronize() [[ATOMIC_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc zeroext i8 @__sync_val_compare_and_swap_1(ptr captures(none), i8 zeroext, i8 zeroext) [[ATOMIC_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc i128 @__sync_val_compare_and_swap_16(ptr captures(none), i128, i128) [[ATOMIC_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc zeroext i16 @__sync_val_compare_and_swap_2(ptr captures(none), i16 zeroext, i16 zeroext) [[ATOMIC_ATTRS]]
@@ -870,10 +873,10 @@
 ; DWARF-NEXT: declare arm_aapcscc float @expf(float) [[ERRNO_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc double @fdim(double, double) [[ERRNO_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc float @fdimf(float, float) [[ERRNO_ATTRS]]
-; DWARF-NEXT: declare arm_aapcscc i32 @fegetenv(ptr)
-; DWARF-NEXT: declare arm_aapcscc i32 @fegetmode(ptr)
-; DWARF-NEXT: declare arm_aapcscc i32 @fesetenv(ptr)
-; DWARF-NEXT: declare arm_aapcscc i32 @fesetmode(ptr)
+; DWARF-NEXT: declare arm_aapcscc noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; DWARF-NEXT: declare arm_aapcscc noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; DWARF-NEXT: declare arm_aapcscc noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc double @floor(double) [[NOMEM_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc float @floorf(float) [[NOMEM_ATTRS]]
 ; DWARF-NEXT: declare arm_aapcscc double @fma(double, double, double) [[ERRNO_ATTRS]]
@@ -966,6 +969,7 @@
 ; DWARF-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; DWARF-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; DWARF-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; DWARF-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; DWARF-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; DWARF-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; DWARF-NEXT: attributes [[ARGMEM_ERRNO_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }

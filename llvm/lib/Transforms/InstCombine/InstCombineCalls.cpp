@@ -2043,7 +2043,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(CI, V);
   }
 
-  if (Value *FreedOp = getFreedOperand(&CI, &TLI))
+  if (Value *FreedOp = getFreedOperand(&CI))
     return visitFree(CI, FreedOp);
 
   // If the caller function (i.e. us, the function that contains this CallInst)
@@ -5180,7 +5180,7 @@ bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
   }
 
   // Add alignment attribute if alignment is a power of two constant.
-  Value *Alignment = getAllocAlignment(&Call, TLI);
+  Value *Alignment = getAllocAlignment(&Call);
   if (!Alignment)
     return Changed;
 
@@ -5384,7 +5384,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     return NewCall;
   }
 
-  if (isRemovableAlloc(&Call, &TLI))
+  if (isRemovableAlloc(&Call))
     return visitAllocSite(Call);
 
   // Handle intrinsics which can be used in both call and invoke context.
@@ -5486,9 +5486,21 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   return Changed ? &Call : nullptr;
 }
 
-/// If the callee is a constexpr cast of a function, attempt to move the cast to
-/// the arguments of the call/invoke.
-/// CallBrInst is not supported.
+/// If the function type does not match between the call-site and the callee,
+/// try to adjust the call-site signature to match.
+///
+/// In practice, we care about this in two contexts. In K&R style C:
+///  * K&R style function declarations like "void foo();" leave the function
+///    arguments unspecified. On some targets, this will be lowered to a
+///    variadic call "call void (...) @foo()", while the corresponding
+///    definition will be non-variadic.
+///
+/// In Fortran when implicit interfaces are used:
+///  * Trailing extra arguments at the call-site, e.g. when passing a Fortran
+///    CHARACTER to a function taking an INTEGER(1) argument.
+///  * Missing arguments at the call-site, when emulating variadic functions
+///    in F77, prior to OPTIONAL support.
+///  * A call-site with void return calling a function with a non-void return.
 bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   auto *Callee =
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
@@ -5649,8 +5661,10 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     // type. Note that we made sure all incompatible ones are safe to drop.
     AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(
         ParamTy, CallerPAL.getParamAttrs(i), AttributeFuncs::ASK_SAFE_TO_DROP);
-    ArgAttrs.push_back(
-        CallerPAL.getParamAttrs(i).removeAttributes(Ctx, IncompatibleAttrs));
+    AttributeSet ParamAttrs =
+        CallerPAL.getParamAttrs(i).removeAttributes(Ctx, IncompatibleAttrs);
+    ArgAttrs.push_back(AttributeFuncs::dropRetOnlyCaptureComponents(
+        Ctx, ParamAttrs, NewRetTy));
   }
 
   // If the function takes more arguments than the call was taking, add them

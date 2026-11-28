@@ -10,7 +10,6 @@
 # A value used once after the call is rematerialized instead of using a CSR.
 ---
 name: one_use
-tracksRegLiveness: true
 frameInfo:
   adjustsStack: true
 body: |
@@ -43,7 +42,6 @@ body: |
 # An implicit definition used after the call is also rematerialized.
 ---
 name: implicit_def
-tracksRegLiveness: true
 frameInfo:
   adjustsStack: true
 body: |
@@ -76,7 +74,6 @@ body: |
 # A value used on both sides of the call is rematerialized for the later use.
 ---
 name: two_uses
-tracksRegLiveness: true
 frameInfo:
   adjustsStack: true
 body: |
@@ -112,7 +109,6 @@ body: |
 # A use in a hot loop makes rematerialization costlier than assigning a CSR.
 ---
 name: hot_loop_use
-tracksRegLiveness: true
 frameInfo:
   adjustsStack: true
 body: |

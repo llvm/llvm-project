@@ -7,7 +7,6 @@
 
 ---
 name: spill_undef_subreg_impdef
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body: |
@@ -65,7 +64,7 @@ body: |
     %1:vreg_64 = COPY %2
 
   bb.3:
-    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $vgpr0, 12 /* clobber */, implicit-def dead early-clobber $vgpr1, 12 /* clobber */, implicit-def dead early-clobber $vgpr2, 12 /* clobber */, implicit-def dead early-clobber $vgpr3
+    INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $vgpr0, clobber, implicit-def dead early-clobber $vgpr1, clobber, implicit-def dead early-clobber $vgpr2, clobber, implicit-def dead early-clobber $vgpr3
     S_NOP 0, implicit %0, implicit %1
     S_ENDPGM 0
 ...
@@ -73,7 +72,6 @@ body: |
 # Same with a multi-lane read-undef def that doesn't start at sub0.
 ---
 name: spill_undef_subreg_impdef_multi_lane
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body: |
@@ -121,7 +119,7 @@ body: |
     %0:vreg_128 = COPY %1
 
   bb.3:
-    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $vgpr0, 12 /* clobber */, implicit-def dead early-clobber $vgpr1, 12 /* clobber */, implicit-def dead early-clobber $vgpr2, 12 /* clobber */, implicit-def dead early-clobber $vgpr3
+    INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $vgpr0, clobber, implicit-def dead early-clobber $vgpr1, clobber, implicit-def dead early-clobber $vgpr2, clobber, implicit-def dead early-clobber $vgpr3
     S_NOP 0, implicit %0
     S_ENDPGM 0
 ...

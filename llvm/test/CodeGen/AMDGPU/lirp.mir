@@ -16,7 +16,6 @@
 ...
 ---
 name: lirp_estimate_test
-tracksRegLiveness: true
 isSSA: false
 body: |
   bb.0:
@@ -48,7 +47,6 @@ body: |
 # CHECK: LIRP: Region {{[0-9]+}},{{.*}}InstantRP=1, LIRP=1
 ---
 name: lirp_slot_reuse_test
-tracksRegLiveness: true
 isSSA: false
 body: |
   bb.0:
@@ -73,7 +71,6 @@ body: |
 # DISABLE-NEXT: KILL %14
 ---
 name: lirp_reschedule
-tracksRegLiveness: true
 isSSA: false
 machineFunctionInfo:
   occupancy: 4

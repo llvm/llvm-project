@@ -84,14 +84,6 @@ public:
 
   StringRef getPassName() const override { return "SPIRV prepare functions"; }
 };
-
-static cl::list<std::string> SPVAllowUnknownIntrinsics(
-    "spv-allow-unknown-intrinsics", cl::CommaSeparated,
-    cl::desc("Emit unknown intrinsics as calls to external functions. A "
-             "comma-separated input list of intrinsic prefixes must be "
-             "provided, and only intrinsics carrying a listed prefix get "
-             "emitted as described."),
-    cl::value_desc("intrinsic_prefix_0,intrinsic_prefix_1"), cl::ValueOptional);
 } // namespace
 
 char SPIRVPrepareFunctionsLegacy::ID = 0;
@@ -482,6 +474,17 @@ lowerConstrainedFmuladd(IntrinsicInst *II,
   EraseFromParent.push_back(II);
 }
 
+// Give a zero minnum/maxnum result the sign llvm.minimum/maximum(num) require.
+static Value *fixZeroSign(IRBuilderBase &Builder, bool IsMax, Value *Res,
+                          Value *X, Value *Y) {
+  Type *Ty = X->getType();
+  Value *XSign = Builder.CreateCopySign(ConstantFP::get(Ty, 1.0), X);
+  Value *XNeg = Builder.CreateFCmpOLT(XSign, ConstantFP::getZero(Ty));
+  Value *Sign = IsMax ? Builder.CreateSelect(XNeg, Y, X)
+                      : Builder.CreateSelect(XNeg, X, Y);
+  return Builder.CreateCopySign(Res, Sign);
+}
+
 // llvm.minimum/llvm.maximum return NaN if either operand is NaN and order -0.0
 // before +0.0, whereas OpenCL.std fmin/fmax and GLSL.std.450 NMin/NMax return
 // the other operand for a NaN and may return either zero. Expand them like
@@ -503,13 +506,8 @@ static Value *expandFMinimumMaximum(IRBuilderBase &Builder, bool IsMax,
   Type *Ty = X->getType();
   Value *Res = Builder.CreateIntrinsic(
       IsMax ? Intrinsic::maxnum : Intrinsic::minnum, {Ty}, {X, Y}, FMF);
-  if (!FMF.noSignedZeros()) {
-    Value *XSign = Builder.CreateCopySign(ConstantFP::get(Ty, 1.0), X);
-    Value *XNeg = Builder.CreateFCmpOLT(XSign, ConstantFP::getZero(Ty));
-    Value *Sign = IsMax ? Builder.CreateSelect(XNeg, Y, X)
-                        : Builder.CreateSelect(XNeg, X, Y);
-    Res = Builder.CreateCopySign(Res, Sign);
-  }
+  if (!FMF.noSignedZeros())
+    Res = fixZeroSign(Builder, IsMax, Res, X, Y);
   if (!FMF.noNaNs()) {
     Value *Uno = Builder.CreateFCmpUNO(X, Y);
     Res = Builder.CreateSelect(Uno, ConstantFP::getQNaN(Ty), Res);
@@ -523,6 +521,32 @@ static void lowerFMinimumMaximum(IntrinsicInst *II,
   Value *Res = expandFMinimumMaximum(
       Builder, II->getIntrinsicID() == Intrinsic::maximum, II->getArgOperand(0),
       II->getArgOperand(1), II->getFastMathFlags());
+  Res->takeName(II);
+  II->replaceAllUsesWith(Res);
+  EraseFromParent.push_back(II);
+}
+
+// The SPIR-V fmin/fmax and NMin/NMax that minnum/maxnum lower to may return NaN
+// for an sNaN input and either zero for -0.0 vs +0.0; minimumnum/maximumnum
+// may not.
+static void
+lowerFMinimumMaximumNum(IntrinsicInst *II,
+                        SmallVector<Instruction *> &EraseFromParent) {
+  IRBuilder<> Builder(II);
+  bool IsMax = II->getIntrinsicID() == Intrinsic::maximumnum;
+  Value *X = II->getArgOperand(0), *Y = II->getArgOperand(1);
+  Type *Ty = X->getType();
+  FastMathFlags FMF = II->getFastMathFlags();
+  if (!FMF.noNaNs()) {
+    X = Builder.CreateSelect(Builder.CreateFCmpUNO(X, X), Y, X);
+    Y = Builder.CreateSelect(Builder.CreateFCmpUNO(Y, Y), X, Y);
+  }
+  // Don't forward flags: SPIR-V NSZ and Fast would also drop the sign of
+  // same-sign zeros.
+  Value *Res = Builder.CreateIntrinsic(
+      IsMax ? Intrinsic::maxnum : Intrinsic::minnum, {Ty}, {X, Y});
+  if (!FMF.noSignedZeros())
+    Res = fixZeroSign(Builder, IsMax, Res, X, Y);
   Res->takeName(II);
   II->replaceAllUsesWith(Res);
   EraseFromParent.push_back(II);
@@ -587,6 +611,11 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
         lowerFMinimumMaximum(II, EraseFromParent);
         Changed = true;
         break;
+      case Intrinsic::minimumnum:
+      case Intrinsic::maximumnum:
+        lowerFMinimumMaximumNum(II, EraseFromParent);
+        Changed = true;
+        break;
       case Intrinsic::vector_reduce_fminimum:
       case Intrinsic::vector_reduce_fmaximum:
         lowerVectorReduceFMinimumMaximum(II, EraseFromParent);
@@ -641,11 +670,13 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
           break;
         }
         if (STI.getTargetTriple().getVendor() == Triple::AMD ||
-            any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
-              if (Prefix.empty())
-                return false;
-              return II->getCalledFunction()->getName().starts_with(Prefix);
-            }))
+            any_of(STI.getCLOpts().allow_unknown_intrinsics,
+                   [II](StringRef Prefix) {
+                     if (Prefix.empty())
+                       return false;
+                     return II->getCalledFunction()->getName().starts_with(
+                         Prefix);
+                   }))
           Changed |= lowerIntrinsicToFunction(II, TTI);
         break;
       }

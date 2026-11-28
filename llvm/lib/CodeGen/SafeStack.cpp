@@ -105,7 +105,6 @@ class SafeStack {
 
   Type *StackPtrTy;
   Type *AddrTy;
-  Type *Int32Ty;
 
   Value *UnsafeStackPtr = nullptr;
 
@@ -183,8 +182,7 @@ public:
             DomTreeUpdater *DTU, ScalarEvolution &SE)
       : Opts(getCodeGenOptions(F)), F(F), TL(TL), Libcalls(Libcalls), DL(DL),
         DTU(DTU), SE(SE), StackPtrTy(DL.getAllocaPtrType(F.getContext())),
-        AddrTy(DL.getAddressType(StackPtrTy)),
-        Int32Ty(Type::getInt32Ty(F.getContext())) {}
+        AddrTy(DL.getAddressType(StackPtrTy)) {}
 
   // Run the transformation on the associated function.
   // Returns whether the function was changed.

@@ -97,7 +97,6 @@ namespace {
   class MachineLICMImpl {
     const CodeGenOptions &Opts;
     const TargetInstrInfo *TII = nullptr;
-    const TargetLoweringBase *TLI = nullptr;
     const TargetRegisterInfo *TRI = nullptr;
     const MachineFrameInfo *MFI = nullptr;
     MachineRegisterInfo *MRI = nullptr;
@@ -359,7 +358,6 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
   Changed = FirstInLoop = false;
   const TargetSubtargetInfo &ST = MF.getSubtarget();
   TII = ST.getInstrInfo();
-  TLI = ST.getTargetLowering();
   TRI = ST.getRegisterInfo();
   MFI = &MF.getFrameInfo();
   MRI = &MF.getRegInfo();

@@ -44,12 +44,6 @@ class LLVM_ABI LVTypeVisitor final : public TypeVisitorCallbacks {
   uint32_t StreamIdx;
   LVShared *Shared = nullptr;
 
-  // In a PDB, a type index may refer to a type (TPI) or an item ID (IPI).
-  // In a COFF or PDB (/Z7), the type index always refer to a type (TPI).
-  // When creating logical elements, we must access the correct element
-  // table, while searching for a type index.
-  bool HasIds = false;
-
   // Current type index during the types traversal.
   TypeIndex CurrentTypeIndex = TypeIndex::None();
 
@@ -61,9 +55,7 @@ public:
                 LazyRandomTypeCollection &Types, LazyRandomTypeCollection &Ids,
                 uint32_t StreamIdx, LVShared *Shared)
       : TypeVisitorCallbacks(), W(W), LogicalVisitor(LogicalVisitor),
-        Types(Types), Ids(Ids), StreamIdx(StreamIdx), Shared(Shared) {
-    HasIds = &Types != &Ids;
-  }
+        Types(Types), Ids(Ids), StreamIdx(StreamIdx), Shared(Shared) {}
 
   Error visitTypeBegin(CVType &Record) override;
   Error visitTypeBegin(CVType &Record, TypeIndex TI) override;
@@ -130,14 +122,11 @@ class LLVM_ABI LVSymbolVisitor final : public SymbolVisitorCallbacks {
   LVSymbolVisitorDelegate *ObjDelegate;
   LVShared *Shared;
 
-  // Symbol offset when processing PDB streams.
-  uint32_t CurrentOffset = 0;
   // Current object name collected from S_OBJNAME.
   StringRef CurrentObjectName;
   // Last symbol processed by S_LOCAL.
   LVSymbol *LocalSymbol = nullptr;
 
-  bool HasIds;
   bool InFunctionScope = false;
   bool IsCompileUnit = false;
 
@@ -184,9 +173,7 @@ public:
                   LazyRandomTypeCollection &Ids,
                   LVSymbolVisitorDelegate *ObjDelegate, LVShared *Shared)
       : Reader(Reader), W(W), LogicalVisitor(LogicalVisitor), Types(Types),
-        Ids(Ids), ObjDelegate(ObjDelegate), Shared(Shared) {
-    HasIds = &Types != &Ids;
-  }
+        Ids(Ids), ObjDelegate(ObjDelegate), Shared(Shared) {}
 
   Error visitSymbolBegin(CVSymbol &Record) override;
   Error visitSymbolBegin(CVSymbol &Record, uint32_t Offset) override;

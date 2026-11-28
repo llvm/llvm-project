@@ -583,6 +583,28 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::bf16, Custom);
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
+
+    for (auto Op :
+         {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FCEIL, ISD::FFLOOR,
+          ISD::FNEARBYINT, ISD::FRINT, ISD::FROUND, ISD::FROUNDEVEN,
+          ISD::FTRUNC, ISD::FMINNUM, ISD::FMAXNUM, ISD::FSQRT})
+      setOperationAction(Op, MVT::bf16, Promote);
+
+    for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
+                    ISD::FCOS,          ISD::FSIN,         ISD::FSINCOS,
+                    ISD::FSINCOSPI,     ISD::FMODF,        ISD::FACOS,
+                    ISD::FASIN,         ISD::FATAN,        ISD::FATAN2,
+                    ISD::FCOSH,         ISD::FSINH,        ISD::FTANH,
+                    ISD::FTAN,          ISD::FEXP,         ISD::FEXP2,
+                    ISD::FEXP10,        ISD::FLOG,         ISD::FLOG2,
+                    ISD::FLOG10,        ISD::STRICT_FREM,  ISD::STRICT_FPOW,
+                    ISD::STRICT_FPOWI,  ISD::STRICT_FCOS,  ISD::STRICT_FSIN,
+                    ISD::STRICT_FACOS,  ISD::STRICT_FASIN, ISD::STRICT_FATAN,
+                    ISD::STRICT_FATAN2, ISD::STRICT_FCOSH, ISD::STRICT_FSINH,
+                    ISD::STRICT_FTANH,  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,
+                    ISD::STRICT_FLOG,   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10,
+                    ISD::STRICT_FTAN})
+      setOperationAction(Op, MVT::bf16, Promote);
   } else {
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
@@ -1134,8 +1156,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     if (Subtarget->hasDataBarrier())
       InsertFencesForAtomic = true;
 
-    setOperationAction(ISD::ATOMIC_FENCE,   MVT::Other,
-                       Subtarget->hasAnyDataBarrier() ? Custom : Expand);
+    setOperationAction(ISD::ATOMIC_FENCE, MVT::Other,
+                       Subtarget->hasAnyDataBarrier() ? Custom : LibCall);
 
     // Set them all for libcall, which will force libcalls.
     setOperationAction(
@@ -6062,6 +6084,25 @@ SDValue ARMTargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const{
   return DAG.getCopyFromReg(DAG.getEntryNode(), dl, Reg, VT);
 }
 
+SDValue ARMTargetLowering::LowerADDROFRETURNADDR(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  // The return address is in the frame record, at FP + 4. Build the frame
+  // record as with frame-pointer=all, so that LR is saved there even in a leaf
+  // function.
+  const ARMBaseRegisterInfo &ARI =
+      *static_cast<const ARMBaseRegisterInfo *>(RegInfo);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MFI.setFrameAddressIsTaken(true);
+  MFI.setFramePointerPolicy(FramePointerKind::All);
+
+  EVT VT = Op.getValueType();
+  SDLoc dl(Op);
+  Register FrameReg = ARI.getFrameRegister(MF);
+  SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl, FrameReg, VT);
+  return DAG.getNode(ISD::ADD, dl, VT, FrameAddr, DAG.getConstant(4, dl, VT));
+}
+
 SDValue ARMTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   const ARMBaseRegisterInfo &ARI =
     *static_cast<const ARMBaseRegisterInfo*>(RegInfo);
@@ -10402,6 +10443,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FCOPYSIGN:     return LowerFCOPYSIGN(Op, DAG);
   case ISD::RETURNADDR:    return LowerRETURNADDR(Op, DAG);
   case ISD::FRAMEADDR:     return LowerFRAMEADDR(Op, DAG);
+  case ISD::ADDROFRETURNADDR:
+    return LowerADDROFRETURNADDR(Op, DAG);
   case ISD::EH_SJLJ_SETJMP: return LowerEH_SJLJ_SETJMP(Op, DAG);
   case ISD::EH_SJLJ_LONGJMP: return LowerEH_SJLJ_LONGJMP(Op, DAG);
   case ISD::EH_SJLJ_SETUP_DISPATCH: return LowerEH_SJLJ_SETUP_DISPATCH(Op, DAG);
@@ -21389,11 +21432,11 @@ ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const 
   // Get the inputs.
   SDValue Chain = Op.getOperand(0);
   SDValue Size  = Op.getOperand(1);
+  MaybeAlign Align =
+      cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
 
   if (DAG.getMachineFunction().getFunction().hasFnAttribute(
           "no-stack-arg-probe")) {
-    MaybeAlign Align =
-        cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
     SDValue SP = DAG.getCopyFromReg(Chain, DL, ARM::SP, MVT::i32);
     Chain = SP.getValue(1);
     SP = DAG.getNode(ISD::SUB, DL, MVT::i32, SP, Size);
@@ -21417,6 +21460,12 @@ ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const 
 
   SDValue NewSP = DAG.getCopyFromReg(Chain, DL, ARM::SP, MVT::i32);
   Chain = NewSP.getValue(1);
+
+  if (Align) {
+    NewSP = DAG.getNode(ISD::AND, DL, MVT::i32, NewSP,
+                        DAG.getSignedConstant(-Align->value(), DL, MVT::i32));
+    Chain = DAG.getCopyToReg(Chain, DL, ARM::SP, NewSP);
+  }
 
   SDValue Ops[2] = { NewSP, Chain };
   return DAG.getMergeValues(Ops, DL);
@@ -21927,7 +21976,7 @@ Instruction *ARMTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 // things go wrong. Cortex M doesn't have ldrexd/strexd though, so don't emit
 // anything for those.
 TargetLoweringBase::AtomicExpansionKind
-ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+ARMTargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   bool has64BitLLSC;
   if (Subtarget->isMClass())
     has64BitLLSC = false;
@@ -21955,7 +22004,7 @@ ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 // guarantee, see DDI0406C ARM architecture reference manual,
 // sections A8.8.72-74 LDRD)
 TargetLowering::AtomicExpansionKind
-ARMTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+ARMTargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
   bool has64BitLLSC;
   if (Subtarget->isMClass())
     has64BitLLSC = false;

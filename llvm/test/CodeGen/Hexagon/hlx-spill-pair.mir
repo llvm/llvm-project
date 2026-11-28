@@ -52,7 +52,6 @@
 ...
 ---
 name:            spill_pair
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
   - { reg: '$r1' }

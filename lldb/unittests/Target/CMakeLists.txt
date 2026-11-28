@@ -58,5 +58,6 @@ set(test_inputs
   AndroidModule.unstripped.so
   TestModule.so
   inlined-function.yaml
+  tail-call.yaml
   )
 add_unittest_inputs(TargetTests "${test_inputs}")

@@ -252,3 +252,5 @@ add_fp_unittest(
   DEPENDS
     libc.src.complex.cimagf128
 )
+
+add_subdirectory(smoke)

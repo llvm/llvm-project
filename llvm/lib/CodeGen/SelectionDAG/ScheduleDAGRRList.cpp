@@ -408,6 +408,7 @@ void ScheduleDAGRRList::Schedule() {
   LiveRegs.clear();
   CallSeqEndForStart.clear();
   assert(Interferences.empty() && LRegsMap.empty() && "stale Interferences");
+  assert(PendingQueue.empty() && "stale PendingQueue");
 
   // Build the scheduling graph.
   BuildSchedGraph();
@@ -1750,8 +1751,6 @@ public:
       RegPressure.resize(NumRC);
       llvm::fill(RegLimit, 0);
       llvm::fill(RegPressure, 0);
-      for (const TargetRegisterClass &RC : TRI->regclasses())
-        RegLimit[RC.getID()] = tri->getRegPressureLimit(&RC, MF);
     }
   }
 
@@ -2787,6 +2786,13 @@ bool ilp_ls_rr_sort::operator()(SUnit *left, SUnit *right) const {
 
 void RegReductionPQBase::initNodes(std::vector<SUnit> &sunits) {
   SUnits = &sunits;
+  CurQueueId = 0;
+  setCurCycle(0);
+  // The limits depend on function state that can change between blocks, e.g.
+  // whether a frame pointer is needed.
+  if (TracksRegPressure)
+    for (const TargetRegisterClass &RC : TRI->regclasses())
+      RegLimit[RC.getID()] = TRI->getRegPressureLimit(&RC, MF);
   // Add pseudo dependency edges for two-address nodes.
   if (!Disable2AddrHack)
     AddPseudoTwoAddrDeps();

@@ -14,13 +14,13 @@ body:             |
   ; CHECK-NEXT:   G_BRINDIRECT [[COPY]](p0)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   $x10 = COPY [[C]](s64)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   $x10 = COPY [[C]](i64)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   $x10 = COPY [[C1]](s64)
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   $x10 = COPY [[C1]](i64)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   bb.1:
     successors: %bb.2, %bb.3
@@ -30,13 +30,13 @@ body:             |
     G_BRINDIRECT %0(p0)
 
   bb.2:
-    %4:_(s64) = G_CONSTANT i64 0
-    $x10 = COPY %4(s64)
+    %4:_(i64) = G_CONSTANT i64 0
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 
   bb.3:
-    %2:_(s64) = G_CONSTANT i64 1
-    $x10 = COPY %2(s64)
+    %2:_(i64) = G_CONSTANT i64 1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...

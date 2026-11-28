@@ -175,7 +175,7 @@ llvm.func @callee_returns_twice() attributes { passthrough = ["returns_twice"] }
   llvm.return
 }
 
-llvm.func @callee_strictfp() attributes { passthrough = ["strictfp"] } {
+llvm.func @callee_strictfp() attributes { strictfp } {
   llvm.return
 }
 
@@ -789,4 +789,21 @@ llvm.func @caller_cf_br_terminator(%arg0 : i64) -> i64 {
   // CHECK: llvm.return %arg0
   %0 = llvm.call @callee_cf_br_terminator(%arg0) : (i64) -> i64
   llvm.return %0 : i64
+}
+
+// -----
+
+// A func.func callee that ends in llvm.unreachable must not take the
+// single-block fast path, which only handles llvm.return.
+
+func.func @func_unreachable_callee() {
+  llvm.unreachable
+}
+
+// CHECK-LABEL: func.func @func_unreachable_caller
+// CHECK-NOT: call @func_unreachable_callee
+// CHECK: llvm.unreachable
+func.func @func_unreachable_caller() {
+  call @func_unreachable_callee() : () -> ()
+  return
 }

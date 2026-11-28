@@ -61,6 +61,14 @@ public:
   LLVM_ABI static bool canReinterpret(Type *SrcTy, Type *DestTy,
                                       const DataLayout &DL);
 
+  /// Reinterprets \p V as \p DestTy, which must have the same size in \p DL,
+  /// inserting casts before \p WhereIt. Casts of constants fold, so nothing is
+  /// inserted for those. \returns nullptr if a non-integral pointer is
+  /// involved.
+  LLVM_ABI static Value *reinterpretValue(Value *V, Type *DestTy,
+                                          BasicBlock::iterator WhereIt,
+                                          Context &Ctx, const DataLayout &DL);
+
   /// Reinterprets constant \p C as \p DestTy, e.g., float 1.0 to i32
   /// 0x3f800000, or a null pointer to i64 0. \returns nullptr if a
   /// non-integral pointer is involved.
@@ -94,6 +102,16 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// Builds a single vector load out of \p Loads. \returns the new load.
   LoadInst *createVectorLoad(BndlRef<Instruction *> Loads);
 
+  /// \returns true if a vector of type \p FromTy can be unpacked as each
+  /// of \p ToTypes.
+  template <typename TypeRangeT>
+  bool canUnpack(FixedVectorType *FromTy, TypeRangeT ToTypes);
+
+  /// \p VecLoad is the vectorized \p OrigLoads. This function unpacks the
+  /// elements of \p VecLoad that have uses, casting them back to the
+  /// element's type (as in \p OrigLoads) if needed.
+  void unpackIfNeeded(LoadInst *VecLoad, BndlRef<Instruction *> OrigLoads);
+
   /// Packs \p Constants into one constant vector. The element type is chosen
   /// by VecUtils::getCombinedVectorTypeFor().
   ///
@@ -107,7 +125,9 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// loads. \returns true on success.
   bool vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn);
 
-  /// Vectorizes \p Loads into a single load. \return the packed load.
+  /// Vectorizes \p Loads into a single load and unpacks each original load
+  /// from it, casting the lanes back to the load's type if needed.
+  /// \return the packed load.
   LoadInst *vectorizeLoads(BndlRef<Instruction *> Loads, Region &Rgn);
 
 public:

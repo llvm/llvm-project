@@ -41,14 +41,6 @@
 
 using namespace llvm;
 
-// This disables the removal of registers when lowering into MC, as required
-// by some current tests.
-static cl::opt<bool>
-    WasmKeepRegisters("wasm-keep-registers", cl::Hidden,
-                      cl::desc("WebAssembly: output stack registers in"
-                               " instruction output for test purposes only."),
-                      cl::init(false));
-
 static std::optional<bool> getWasmGlobalMutable(const GlobalValue *Global,
                                                 const Function &CurrentFunc,
                                                 const DiagnosticLocation &DL) {
@@ -358,7 +350,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
     OutMI.addOperand(MCOp);
   }
 
-  if (!WasmKeepRegisters)
+  if (!Printer.getSubtarget().getCLOpts().keep_registers)
     removeRegisterOperands(MI, OutMI);
   else if (Desc.variadicOpsAreDefs())
     OutMI.insert(OutMI.begin(), MCOperand::createImm(MI->getNumExplicitDefs()));

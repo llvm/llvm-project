@@ -152,8 +152,22 @@ Value *BundleVec::createShuffle(Value *VecOp, const ShuffleMask &Mask,
 }
 
 Value *BundleVec::createPack(BndlRef<Value *> ToPack, BasicBlock *UserBB) {
-  BasicBlock::iterator WhereIt =
-      VecUtils::getInsertPointAfterInstrs(ToPack, UserBB);
+  // If any of the instrs in ToPack are being vectorized, then we have to make
+  // sure we place the pack after the originals or the vector instruction, if
+  // available. Because in this case the packed value will need to come from an
+  // unpack of the vectorized instruction.
+  SmallVector<Value *, 8> ToPackAfter;
+  for (Value *V : ToPack) {
+    if (Action *Actn = IMaps->getVectorForOrig(V)) {
+      if (Actn->Vec)
+        ToPackAfter.push_back(Actn->Vec);
+      else
+        ToPackAfter.insert(ToPackAfter.end(), Actn->Bndl.begin(),
+                           Actn->Bndl.end());
+    }
+  }
+  BasicBlock::iterator WhereIt = VecUtils::getInsertPointAfterInstrs(
+      ToPackAfter.empty() ? ToPack : ToPackAfter, UserBB);
 
   Type *ScalarTy = VecUtils::getCommonScalarType(ToPack);
   unsigned Lanes = VecUtils::getNumLanes(ToPack);
@@ -506,6 +520,7 @@ bool BundleVec::tryVectorize(BndlRef<Value *> Bndl,
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << schedDirectionToStr(Dir)
                     << "Vec: Vectorization Actions:\n";
              Actions.dump());
+  Change |= !Actions.empty();
   emitVectors();
   DeadInstrMorgue.tryEraseDeadInstrs();
   return Change;
@@ -524,10 +539,17 @@ bool BundleVec::runOnRegion(Region &Rgn, const Analyses &A) {
 
   // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
   SmallVector<Value *> SeedSliceVals(SeedSlice.begin(), SeedSlice.end());
+
+  Rgn.getContext().save();
   // Try to vectorize starting from the seed slice. The returned value
   // is true if we found vectorizable code and generated some vector
   // code for it. It does not mean that the code is profitable.
-  return tryVectorize(SeedSliceVals, Legality);
+  bool Change = tryVectorize(SeedSliceVals, Legality);
+  if (!Change)
+    Rgn.getContext().revert();
+  else
+    Rgn.getContext().accept();
+  return Change;
 }
 
 } // namespace sandboxir

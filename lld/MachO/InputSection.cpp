@@ -27,11 +27,7 @@ using namespace llvm::support;
 using namespace lld;
 using namespace lld::macho;
 
-// Verify ConcatInputSection's size on 64-bit builds. The size of std::vector
-// can differ based on STL debug levels (e.g. iterator debugging on MSVC's STL),
-// so account for that.
-static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) ==
-                                         sizeof(std::vector<Relocation>) + 88,
+static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) == 104,
               "Try to minimize ConcatInputSection's size, we create many "
               "instances of it");
 
@@ -140,7 +136,8 @@ std::string InputSection::getLocation(uint64_t off) const {
       .str();
 }
 
-std::string InputSection::getSourceLocation(uint64_t off) const {
+std::string InputSection::getSourceLocation(uint64_t off,
+                                            StringRef symName) const {
   auto *obj = dyn_cast_or_null<ObjFile>(getFile());
   if (!obj)
     return {};
@@ -170,10 +167,12 @@ std::string InputSection::getSourceLocation(uint64_t off) const {
     return createMsg(li->FileName, li->Line);
 
   // If it failed, look up again as a variable.
-  if (const Defined *sym = getContainingSymbol(off)) {
+  if (symName.empty())
+    if (const Defined *sym = getContainingSymbol(off))
+      symName = sym->getName();
+  if (!symName.empty()) {
     // Symbols are generally prefixed with an underscore, which is not included
     // in the debug information.
-    StringRef symName = sym->getName();
     symName.consume_front("_");
 
     if (std::optional<std::pair<std::string, unsigned>> fileLine =

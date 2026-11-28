@@ -304,7 +304,7 @@ __kmp_unnamed_critical_addr:
 #endif /* KMP_GOMP_COMPAT */
 
 
-#if KMP_ARCH_X86 && !KMP_ARCH_PPC64
+#if KMP_ARCH_X86
 
 // -----------------------------------------------------------------------
 // microtasking routines specifically written for IA-32 architecture
@@ -1086,9 +1086,9 @@ KMP_LABEL(invoke_3):
         DEBUG_INFO __kmp_xchg_real64
 
 
-# endif /* !KMP_MIC */
-
 # endif /* !KMP_ASM_INTRINS */
+
+# endif /* !KMP_MIC */
 
 //------------------------------------------------------------------------
 // int
@@ -2529,7 +2529,7 @@ __kmp_invoke_microtask:
 	// The total number of bytes is then max(0, argc - 3)*8 + 8
 
 	lgr	%r10,%r5
-	aghi	%r10,-2
+	aghi	%r10,-3
 	jnm	0f
 	lghi	%r10,0
 0:
@@ -2597,6 +2597,196 @@ __kmp_invoke_microtask:
 // -- End  __kmp_invoke_microtask
 
 #endif /* KMP_ARCH_S390X */
+
+#if KMP_ARCH_SPARC32 || KMP_ARCH_SPARC64
+
+//------------------------------------------------------------------------
+//
+// typedef void (*microtask_t)(int *gtid, int *tid, ...);
+//
+// int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
+//                            void *p_argv[]
+// #if OMPT_SUPPORT
+//                            ,
+//                            void **exit_frame_ptr
+// #endif
+//                            ) {
+// #if OMPT_SUPPORT
+//   *exit_frame_ptr = OMPT_GET_FRAME_ADDRESS(0);
+// #endif
+//
+//   (*pkfn)(&gtid, &tid, argv[0], ...);
+//
+//   return 1;
+// }
+//
+// Parameters (after the save):
+//   %i0: pkfn
+//   %i1: gtid
+//   %i2: tid
+//   %i3: argc
+//   %i4: p_argv
+//   %i5: exit_frame_ptr
+//
+// Locals:
+//   __gtid: gtid param stored at %fp + BIAS - 4 so can pass &gtid to pkfn
+//   __tid: tid param stored at %fp + BIAS - 8 so can pass &tid to pkfn
+//
+// Temp. registers:
+//
+//  %g1: used to calculate the dynamic stack size
+//  %l0: used as temporary for number of remaining pkfn parms
+//  %l1: used to traverse p_argv array
+//  %l2: used to traverse the outgoing stack argument area
+//  %l3: used as temporary for stack arguments
+//
+// return: %o0 (always 1/TRUE)
+//
+// The first six arguments are passed in %o0-%o5. Since &gtid and &tid
+// take up two of them, at most four p_argv entries are passed in
+// registers and the rest are passed on the stack.
+//
+// SPARC V8 (32-bit): the minimal frame is the 64 byte register window save
+// area, the 4 byte hidden struct return slot and the 24 byte argument dump
+// area for %o0-%o5. Stack arguments start at %sp + 92. The stack is 8 byte
+// aligned.
+//
+// SPARC V9 (64-bit): the minimal frame is the 128 byte register window save
+// area and the 48 byte argument dump area for %o0-%o5. Stack arguments start
+// at %sp + BIAS + 176. %sp and %fp are biased by 2047 and the stack is 16 byte
+// aligned.
+
+# if KMP_ARCH_SPARC64
+#  define KMP_SPARC_BIAS 2047
+#  define KMP_SPARC_PTR_SIZE 8
+#  define KMP_SPARC_PTR_SHIFT 3
+#  define KMP_SPARC_STACK_ARGS 176
+#  define KMP_SPARC_STACK_ALIGN 16
+#  define KMP_SPARC_LDPTR ldx
+#  define KMP_SPARC_STPTR stx
+# else
+#  define KMP_SPARC_BIAS 0
+#  define KMP_SPARC_PTR_SIZE 4
+#  define KMP_SPARC_PTR_SHIFT 2
+#  define KMP_SPARC_STACK_ARGS 92
+#  define KMP_SPARC_STACK_ALIGN 8
+#  define KMP_SPARC_LDPTR ld
+#  define KMP_SPARC_STPTR st
+# endif
+
+__gtid = KMP_SPARC_BIAS - 4
+__tid = KMP_SPARC_BIAS - 8
+
+// -- Begin __kmp_invoke_microtask
+// mark_begin;
+	.text
+	.globl	__kmp_invoke_microtask
+	.p2align	2
+	.type	__kmp_invoke_microtask,@function
+__kmp_invoke_microtask:
+	.cfi_startproc
+
+	// Compute the dynamic stack size:
+	//
+	// - We need the minimal frame (KMP_SPARC_STACK_ARGS bytes)
+	// - We need 8 bytes for storing 'gtid' and 'tid', so we can pass them by
+	//   reference
+	// - We need KMP_SPARC_PTR_SIZE bytes for each argument that cannot be
+	//   passed to the 'pkfn' function by register. Given that we have 6 of
+	//   such registers (%o0-%o5) and two + 'argc' arguments (consider &gtid
+	//   and &tid), we need to reserve max(0, argc - 4) * KMP_SPARC_PTR_SIZE
+	//   extra bytes
+	//
+	// The total is then rounded up to the stack alignment.
+
+	sra	%o3, 0, %g1
+	add	%g1, -4, %g1
+	cmp	%g1, 0
+	bl,a	.L_kmp_0
+	 mov	0, %g1
+.L_kmp_0:
+	sll	%g1, KMP_SPARC_PTR_SHIFT, %g1
+	add	%g1, KMP_SPARC_STACK_ARGS + 8 + KMP_SPARC_STACK_ALIGN - 1, %g1
+	and	%g1, -KMP_SPARC_STACK_ALIGN, %g1
+	sub	%g0, %g1, %g1
+	save	%sp, %g1, %sp
+	.cfi_def_cfa_register 30
+	.cfi_window_save
+	.cfi_register 15, 31
+
+#if OMPT_SUPPORT
+	// Save frame pointer into exit_frame
+	add	%fp, KMP_SPARC_BIAS, %l0
+	KMP_SPARC_STPTR	%l0, [%i5]
+#endif
+
+	// Prepare arguments for the pkfn function (first 6 using %o0-%o5)
+
+	st	%i1, [%fp + __gtid]
+	st	%i2, [%fp + __tid]
+
+	add	%fp, __gtid, %o0
+	add	%fp, __tid, %o1
+
+	cmp	%i3, 0
+	ble	.L_kmp_2
+	 nop
+	KMP_SPARC_LDPTR	[%i4 + 0 * KMP_SPARC_PTR_SIZE], %o2
+
+	cmp	%i3, 1
+	ble	.L_kmp_2
+	 nop
+	KMP_SPARC_LDPTR	[%i4 + 1 * KMP_SPARC_PTR_SIZE], %o3
+
+	cmp	%i3, 2
+	ble	.L_kmp_2
+	 nop
+	KMP_SPARC_LDPTR	[%i4 + 2 * KMP_SPARC_PTR_SIZE], %o4
+
+	cmp	%i3, 3
+	ble	.L_kmp_2
+	 nop
+	KMP_SPARC_LDPTR	[%i4 + 3 * KMP_SPARC_PTR_SIZE], %o5
+
+	cmp	%i3, 4
+	ble	.L_kmp_2
+	 nop
+
+	// Prepare any additional argument passed through the stack
+	add	%i3, -4, %l0
+	add	%i4, 4 * KMP_SPARC_PTR_SIZE, %l1
+	add	%sp, KMP_SPARC_BIAS + KMP_SPARC_STACK_ARGS, %l2
+.L_kmp_1:
+	KMP_SPARC_LDPTR	[%l1], %l3
+	KMP_SPARC_STPTR	%l3, [%l2]
+	add	%l1, KMP_SPARC_PTR_SIZE, %l1
+	subcc	%l0, 1, %l0
+	bne	.L_kmp_1
+	 add	%l2, KMP_SPARC_PTR_SIZE, %l2
+
+.L_kmp_2:
+	// Call pkfn function
+	call	%i0
+	 nop
+
+	// Restore stack and return 1
+	ret
+	 restore %g0, 1, %o0
+.Lfunc_end0:
+	.size	__kmp_invoke_microtask, .Lfunc_end0-__kmp_invoke_microtask
+	.cfi_endproc
+
+// -- End  __kmp_invoke_microtask
+
+# undef KMP_SPARC_BIAS
+# undef KMP_SPARC_PTR_SIZE
+# undef KMP_SPARC_PTR_SHIFT
+# undef KMP_SPARC_STACK_ARGS
+# undef KMP_SPARC_STACK_ALIGN
+# undef KMP_SPARC_LDPTR
+# undef KMP_SPARC_STPTR
+
+#endif /* KMP_ARCH_SPARC32 || KMP_ARCH_SPARC64 */
 
 #if KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_PPC || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC32
 #ifndef KMP_PREFIX_UNDERSCORE

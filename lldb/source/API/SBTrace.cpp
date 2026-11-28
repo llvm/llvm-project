@@ -13,6 +13,7 @@
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBTrace.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "lldb/Core/StructuredDataImpl.h"
 
@@ -116,7 +117,8 @@ const char *SBTrace::GetStartConfigurationHelp() {
   if (!m_opaque_sp)
     return nullptr;
 
-  return ConstString(m_opaque_sp->GetStartConfigurationHelp()).GetCString();
+  return StringPool::GetSystemPool().Intern(
+      m_opaque_sp->GetStartConfigurationHelp());
 }
 
 SBError SBTrace::Start(const SBStructuredData &configuration) {

@@ -112,7 +112,7 @@ int ignore_result_assign() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @ignore_result_assign() -> !s32i
-// CIR:         %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:         %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:         %[[ARR:.*]] = cir.alloca "arr" {{.*}} : !cir.ptr<!cir.array<!s32i x 10>>
 // CIR:         %[[I:.*]] = cir.alloca "i" {{.*}} : !cir.ptr<!s32i>
 // CIR:         %[[J:.*]] = cir.alloca "j" {{.*}} : !cir.ptr<!s32i>

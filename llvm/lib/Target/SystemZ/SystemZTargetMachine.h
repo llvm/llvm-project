@@ -27,6 +27,7 @@
 namespace llvm {
 
 class SystemZTargetMachine : public CodeGenTargetMachineImpl {
+  const SystemZOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
 
   mutable StringMap<std::unique_ptr<SystemZSubtarget>> SubtargetMap;
@@ -51,6 +52,8 @@ public:
                        std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                        bool JIT);
   ~SystemZTargetMachine() override;
+
+  const SystemZOptions &getCLOpts() const { return CLOpts; }
 
   const SystemZSubtarget *getSubtargetImpl(const Function &) const override;
   // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,

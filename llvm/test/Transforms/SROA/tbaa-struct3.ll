@@ -56,7 +56,7 @@ define void @memcpy_transfer_tbaa_field_and_size_do_not_align(ptr dereferenceabl
 ; CHECK-NEXT:    [[TMP_SROA_2_0_L_PTR_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[L_PTR]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[B]] to i32
 ; CHECK-NEXT:    [[TMP_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[TMP0]] to i16
-; CHECK-NEXT:    store i16 [[TMP_SROA_2_0_EXTRACT_TRUNC]], ptr [[TMP_SROA_2_0_L_PTR_SROA_IDX]], align 1
+; CHECK-NEXT:    store i16 [[TMP_SROA_2_0_EXTRACT_TRUNC]], ptr [[TMP_SROA_2_0_L_PTR_SROA_IDX]], align 1, !tbaa [[FLOAT_TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -161,7 +161,7 @@ define void @memset(ptr %dst, ptr align 8 %src) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_4]], ptr align 1 [[A_SROA_4_0_SRC_SROA_IDX]], i32 10, i1 false)
 ; CHECK-NEXT:    store i16 1, ptr [[A_SROA_3]], align 2
 ; CHECK-NEXT:    [[A_SROA_0_1_A_1_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 1
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[A_SROA_0_1_A_1_SROA_IDX2]], i8 42, i32 6, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[A_SROA_0_1_A_1_SROA_IDX2]], i8 42, i32 6, i1 false), !tbaa [[FLOAT_TBAA0]]
 ; CHECK-NEXT:    store i16 10794, ptr [[A_SROA_3]], align 2, !tbaa [[FLOAT_TBAA0]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST]], ptr align 1 [[A_SROA_0]], i32 7, i1 true)
 ; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 7
@@ -240,7 +240,7 @@ define void @slice_store_v2i8_1(ptr %dst, ptr %dst.2, ptr %src) {
 ; CHECK-NEXT:    [[A_SROA_2_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 6
 ; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_COPYLOAD:%.*]] = load <2 x i8>, ptr [[A_SROA_2_0_SRC_SROA_IDX]], align 2
 ; CHECK-NEXT:    store <2 x i8> [[A_SROA_2_SROA_0_0_COPYLOAD]], ptr [[A_SROA_2_SROA_0]], align 4
-; CHECK-NEXT:    store <2 x i8> bitcast (<1 x i16> splat (i16 123) to <2 x i8>), ptr [[A_SROA_2_SROA_0]], align 4
+; CHECK-NEXT:    store <2 x i8> bitcast (<1 x i16> splat (i16 123) to <2 x i8>), ptr [[A_SROA_2_SROA_0]], align 4, !tbaa [[FLOAT_TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_A_SROA_2_SROA_0_0_A_SROA_2_6_V_4:%.*]] = load <2 x i8>, ptr [[A_SROA_2_SROA_0]], align 4
 ; CHECK-NEXT:    store <2 x i8> [[A_SROA_2_SROA_0_0_A_SROA_2_SROA_0_0_A_SROA_2_6_V_4]], ptr [[DST_2]], align 2
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST]], ptr align 1 [[A_SROA_0]], i32 6, i1 true)
@@ -279,8 +279,8 @@ define void @slice_store_v2i8_2(ptr %dst, ptr %dst.2, ptr %src) {
 ; CHECK-NEXT:    store i8 [[A_SROA_0_SROA_4_1_COPYLOAD]], ptr [[A_SROA_0_SROA_4]], align 1
 ; CHECK-NEXT:    [[A_SROA_4_1_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 3
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_4]], ptr align 1 [[A_SROA_4_1_SRC_SROA_IDX]], i32 5, i1 false)
-; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[A_SROA_0_SROA_1]], align 2
-; CHECK-NEXT:    store i8 0, ptr [[A_SROA_0_SROA_4]], align 1
+; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[A_SROA_0_SROA_1]], align 2, !tbaa [[FLOAT_TBAA0]]
+; CHECK-NEXT:    store i8 0, ptr [[A_SROA_0_SROA_4]], align 1, !tbaa [[FLOAT_TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_0_SROA_1_0_A_SROA_0_SROA_1_1_A_SROA_0_1_V_4:%.*]] = load <2 x i8>, ptr [[A_SROA_0_SROA_1]], align 2
 ; CHECK-NEXT:    store <2 x i8> [[A_SROA_0_SROA_1_0_A_SROA_0_SROA_1_1_A_SROA_0_1_V_4]], ptr [[DST_2]], align 2
 ; CHECK-NEXT:    [[A_SROA_0_SROA_1_0_A_SROA_0_SROA_1_1_COPYLOAD3:%.*]] = load volatile <2 x i8>, ptr [[A_SROA_0_SROA_1]], align 2
@@ -375,7 +375,7 @@ define <2 x i16> @shorten_vector_store_multiple_fields(ptr %dst, ptr %dst.2, ptr
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[DST_2:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca <2 x i32>, align 8
-; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[A_SROA_0]], align 8
+; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[A_SROA_0]], align 8, !tbaa [[FLOAT_TBAA0]]
 ; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_L:%.*]] = load <2 x i16>, ptr [[A_SROA_0]], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST]], ptr align 8 [[A_SROA_0]], i32 4, i1 true)
 ; CHECK-NEXT:    ret <2 x i16> [[A_SROA_0_0_A_SROA_0_0_L]]
@@ -527,6 +527,30 @@ entry:
 }
 
 
+; Both loads from a split copy retain the tag, including the first load,
+; whose access ends inside the tagged field.
+define void @split_copy(ptr %dst, ptr %src) {
+; CHECK-LABEL: define void @split_copy(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]]) {
+; CHECK-NEXT:    [[TMP_SROA_0_0_COPYLOAD:%.*]] = load i32, ptr [[SRC]], align 8, !tbaa [[LONG_TBAA7:![0-9]+]]
+; CHECK-NEXT:    [[TMP_SROA_2_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 4
+; CHECK-NEXT:    [[TMP_SROA_2_0_COPYLOAD:%.*]] = load i32, ptr [[TMP_SROA_2_0_SRC_SROA_IDX]], align 4, !tbaa [[LONG_TBAA7]]
+; CHECK-NEXT:    store volatile i32 [[TMP_SROA_0_0_COPYLOAD]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[DST_HI:%.*]] = getelementptr i8, ptr [[DST]], i64 4
+; CHECK-NEXT:    store volatile i32 [[TMP_SROA_2_0_COPYLOAD]], ptr [[DST_HI]], align 4
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca [8 x i8], align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %tmp, ptr align 8 %src, i64 8, i1 false), !tbaa.struct !17
+  %lo = load i32, ptr %tmp, align 8
+  store volatile i32 %lo, ptr %dst
+  %hi.ptr = getelementptr i8, ptr %tmp, i64 4
+  %hi = load i32, ptr %hi.ptr, align 4
+  %dst.hi = getelementptr i8, ptr %dst, i64 4
+  store volatile i32 %hi, ptr %dst.hi
+  ret void
+}
+
 ; Function Attrs: mustprogress nocallback nofree nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #2
 
@@ -547,6 +571,11 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias
 !14 = !{i64 0, i64 4, !6}
 !15 = !{i64 0, i64 7, !6, i64 7, i64 1, !6}
 !16 = !{i64 0, i64 2, !6, i64 4, i64 4, !6, i64 8, i64 1, !6}
+!17 = !{i64 0, i64 8, !18}
+!18 = !{!19, !19, i64 0}
+!19 = !{!"long", !20, i64 0}
+!20 = !{!"omnipotent char", !21, i64 0}
+!21 = !{!"Simple C/C++ TBAA"}
 ;.
 ; CHECK: [[FLOAT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"float", [[META2:![0-9]+]], i64 0}
@@ -555,4 +584,8 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias
 ; CHECK: [[TBAA_STRUCT4]] = !{i64 0, i64 4, [[FLOAT_TBAA0]], i64 4, i64 4, [[FLOAT_TBAA0]]}
 ; CHECK: [[V2F32_TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
 ; CHECK: [[META6]] = !{!"v2f32", [[META2]], i64 0}
+; CHECK: [[LONG_TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
+; CHECK: [[META8]] = !{!"long", [[META9:![0-9]+]], i64 0}
+; CHECK: [[META9]] = !{!"omnipotent char", [[META10:![0-9]+]], i64 0}
+; CHECK: [[META10]] = !{!"Simple C/C++ TBAA"}
 ;.

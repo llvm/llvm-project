@@ -23,6 +23,7 @@ add_flang_library(FIROpenACCTransforms
   FIRDialectSupport
   FIROpenACCAnalysis
   FIROpenACCSupport
+  FIROpenACCUtils
   FIRSupport
   HLFIRDialect
 

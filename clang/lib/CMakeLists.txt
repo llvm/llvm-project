@@ -1,3 +1,11 @@
+# HAS_WERROR_GLOBAL_CTORS and LLVM_HAS_NOGLOBAL_CTOR_MUTEX are cached by
+# llvm/lib/Support/CMakeLists.txt. They are unset in a standalone build, which
+# skips the check.
+if (HAS_WERROR_GLOBAL_CTORS AND LLVM_HAS_NOGLOBAL_CTOR_MUTEX)
+  set(CLANG_LIB_WERROR_GLOBAL_CTORS ON)
+  string(APPEND CMAKE_CXX_FLAGS " -Werror=global-constructors")
+endif()
+
 add_subdirectory(Headers)
 add_subdirectory(Basic)
 add_subdirectory(APINotes)
@@ -36,4 +44,34 @@ add_subdirectory(UnifiedSymbolResolution)
 
 if(CLANG_ENABLE_CIR)
   add_subdirectory(CIR)
+endif()
+
+# Libraries that still have static initializers. Remove a library once it has
+# none, so that it cannot regain them.
+if (CLANG_LIB_WERROR_GLOBAL_CTORS)
+  foreach(lib
+      SSAFExamplePlugin
+      clangBasic
+      clangDriver
+      clangFormat
+      clangFrontendTool
+      clangInstallAPI
+      clangInterpreter
+      clangScalableStaticAnalysisAnalyses
+      clangScalableStaticAnalysisCore
+      clangScalableStaticAnalysisSourceTransformation
+      clangSema
+      clangSerialization
+      clangStaticAnalyzerCheckers
+      clangStaticAnalyzerCore
+      clangStaticAnalyzerFrontend
+      clangTooling
+      clangToolingInclusions
+      )
+    if (TARGET obj.${lib})
+      target_compile_options(obj.${lib} PRIVATE -Wno-global-constructors)
+    elseif (TARGET ${lib})
+      target_compile_options(${lib} PRIVATE -Wno-global-constructors)
+    endif()
+  endforeach()
 endif()

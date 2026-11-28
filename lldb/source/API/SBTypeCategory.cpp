@@ -8,6 +8,7 @@
 
 #include "lldb/API/SBTypeCategory.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTypeFilter.h"
@@ -73,7 +74,7 @@ const char *SBTypeCategory::GetName() {
 
   if (!IsValid())
     return nullptr;
-  return ConstString(m_opaque_sp->GetName()).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_sp->GetName());
 }
 
 lldb::LanguageType SBTypeCategory::GetLanguageAtIndex(uint32_t idx) {

@@ -791,6 +791,7 @@ bool X86InstrInfo::isReMaterializableImpl(
   case X86::MOV64ri32:
   case X86::MOV8ri:
   case X86::PTILEZEROV:
+  case X86::ACE_PTILEZEROV:
     return true;
 
   case X86::MOV8rm:
@@ -3144,17 +3145,6 @@ X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
                                        : X86::COND_INVALID;
 }
 
-X86::CondCode X86::getCondFromCFCMov(const MachineInstr &MI) {
-  return X86::isCFCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
-                                         : X86::COND_INVALID;
-}
-
-X86::CondCode X86::getCondFromCCMP(const MachineInstr &MI) {
-  return X86::isCCMPCC(MI.getOpcode()) || X86::isCTESTCC(MI.getOpcode())
-             ? X86::getCondFromMI(MI)
-             : X86::COND_INVALID;
-}
-
 int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
   // CCMP/CTEST has two conditional operands:
   // - SCC: source conditonal code (same as CMOV)
@@ -4375,6 +4365,12 @@ X86InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     if (MI.getOperand(0).isUndef() && MI.getOperand(0).getSubReg())
       return std::nullopt;
 
+    // With BWI, KMOVW zeroes the upper mask bits, so it is not a copy.
+    if ((MI.getOpcode() == X86::KMOVWkk ||
+         MI.getOpcode() == X86::KMOVWkk_EVEX) &&
+        Subtarget.hasBWI())
+      return std::nullopt;
+
     return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
   }
   return std::nullopt;
@@ -4518,7 +4514,8 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
       return Load ? X86::VMOVUPSZrm : X86::VMOVUPSZmr;
   case 1024:
     assert(X86::TILERegClass.hasSubClassEq(RC) && "Unknown 1024-byte regclass");
-    assert(STI.hasAMXTILE() && "Using 8*1024-bit register requires AMX-TILE");
+    assert((STI.hasAMXTILE() || STI.hasACEV1()) &&
+           "Using 8*1024-bit register requires AMX-TILE or ACE");
 #define GET_EGPR_IF_ENABLED(OPC) (STI.hasEGPR() ? OPC##_EVEX : OPC)
     return Load ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
                 : GET_EGPR_IF_ENABLED(X86::TILESTORED);
@@ -4709,6 +4706,26 @@ static bool isAMXOpcode(unsigned Opc) {
   }
 }
 
+// Palette 2 has no TILELOADD/TILESTORED, so those tiles spill and reload
+// through pseudos that X86LowerTileCopy expands into TILEMOVROW. An ACE target
+// can still hold palette 1 tiles, which spill the AMX way, so the programming
+// model decides this rather than the subtarget.
+static unsigned getACETileSpillOpcode(unsigned Opc, const MachineFunction &MF) {
+  if (MF.getInfo<X86MachineFunctionInfo>()->getACEProgModel() !=
+      ACEProgModelEnum::ACE_ManagedRA)
+    return Opc;
+  switch (Opc) {
+  default:
+    return Opc;
+  case X86::TILELOADD:
+  case X86::TILELOADD_EVEX:
+    return X86::ACE_TILERELOAD;
+  case X86::TILESTORED:
+  case X86::TILESTORED_EVEX:
+    return X86::ACE_TILESPILL;
+  }
+}
+
 void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MI,
                                     unsigned Opc, Register Reg, int FrameIdx,
@@ -4760,6 +4777,7 @@ void X86InstrInfo::storeRegToStackSlot(
       (RI.canRealignStack(MF) && !MFI.isFixedObjectIndex(FrameIdx));
 
   unsigned Opc = getStoreRegOpcode(SrcReg, RC, isAligned, Subtarget);
+  Opc = getACETileSpillOpcode(Opc, MF);
   if (isAMXOpcode(Opc))
     loadStoreTileReg(MBB, MI, Opc, SrcReg, FrameIdx, isKill);
   else
@@ -4784,6 +4802,7 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       (RI.canRealignStack(MF) && !MFI.isFixedObjectIndex(FrameIdx));
 
   unsigned Opc = getLoadRegOpcode(DestReg, RC, isAligned, Subtarget);
+  Opc = getACETileSpillOpcode(Opc, MF);
   if (isAMXOpcode(Opc))
     loadStoreTileReg(MBB, MI, Opc, DestReg, FrameIdx);
   else
@@ -6069,7 +6088,13 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       //          %100 = add %101, 0
       //    ==>
       //          %100 = COPY %101
-      UseMI.setDesc(get(TargetOpcode::COPY));
+      // On x86-64 a 32-bit result has its upper 32 bits zeroed, which
+      // SUBREG_TO_REG users may rely on, so keep a real MOV32rr.
+      unsigned CopyOpc = TargetOpcode::COPY;
+      if (Subtarget.is64Bit() &&
+          RI.getRegSizeInBits(UseMI.getOperand(0).getReg(), *MRI) == 32)
+        CopyOpc = X86::MOV32rr;
+      UseMI.setDesc(get(CopyOpc));
       UseMI.removeOperand(
           UseMI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr));
       UseMI.removeOperand(

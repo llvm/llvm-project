@@ -102,6 +102,14 @@ if os.path.exists(
 ):
     config.available_features.add("ubsan-offload")
 
+if ubsan_lit_test_mode == "Standalone" and os.path.exists(
+    os.path.join(
+        config.compiler_rt_libdir,
+        "libclang_rt.ubsan_standalone%s.so" % config.target_suffix,
+    )
+):
+    config.available_features.add("ubsan-standalone-shared")
+
 # Device tests need this suite's GPU runtime, not just a usable machine.
 if ubsan_lit_test_mode == "Standalone" and "ubsan_standalone" in config.gpu_runtimes:
     if "hip" in config.available_features:

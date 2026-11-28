@@ -708,7 +708,11 @@ clang:ssaf:
       - clang/docs/ScalableStaticAnalysis/**
       - clang/include/clang/ScalableStaticAnalysis/**
       - clang/lib/ScalableStaticAnalysis/**
-      - clang/test/Analysis/Scalable/**
+      - clang/test/ScalableStaticAnalysis/**
+      - clang/tools/clang-ssaf-analyzer/**
+      - clang/tools/clang-ssaf-format/**
+      - clang/tools/clang-ssaf-linker/**
+      - clang/tools/clang-ssaf-src-edit-merge/**
       - clang/unittests/ScalableStaticAnalysis/**
 
 clang:static analyzer:
@@ -883,6 +887,27 @@ llvm:support:
   - changed-files:
     - any-glob-to-any-file:
       - llvm/**/Support/**
+
+floating-point:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/include/llvm/ADT/APFloat.h
+      - llvm/include/llvm/ADT/FloatingPointMode.h
+      - llvm/include/llvm/IR/ConstantFPRange.h
+      - llvm/include/llvm/Support/KnownFPClass.h
+      - llvm/lib/Analysis/ValueTrackingFP.cpp
+      - llvm/lib/IR/ConstantFPRange.cpp
+      - llvm/lib/Support/APFloat.cpp
+      - llvm/lib/Support/FloatingPointMode.cpp
+      - llvm/lib/Support/KnownFPClass.cpp
+      - llvm/lib/Transforms/InstCombine/InstCombineSimplifyDemandedFP.cpp
+      - llvm/test/Transforms/Attributor/nofpclass-*
+      - llvm/test/Transforms/InstCombine/*fpclass*
+      - llvm/unittests/ADT/APFloatTest.cpp
+      - llvm/unittests/ADT/FloatingPointMode.cpp
+      - llvm/unittests/CodeGen/GlobalISel/KnownFPClassTest.cpp
+      - llvm/unittests/IR/ConstantFPRangeTest.cpp
+      - llvm/unittests/Support/KnownFPClassTest.cpp
 
 # Skip llvm/test/MC and llvm/unittests/MC, which includes target-specific directories.
 llvm:mc:

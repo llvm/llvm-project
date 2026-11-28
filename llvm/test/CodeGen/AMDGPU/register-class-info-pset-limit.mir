@@ -18,7 +18,6 @@
 ...
 ---
 name: reserved_weight_exceeds_limit
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

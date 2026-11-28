@@ -31,11 +31,18 @@
 
 namespace llvm::orc::sps {
 
+using DylibMgrCreateProxySpec = ProxySpec<rt::sps_ci::DylibMgrCreate>;
 using DylibMgrOpenProxySpec = ProxySpec<rt::sps_ci::DylibMgrOpen>;
 using DylibMgrResolveProxySpec = ProxySpec<rt::sps_ci::DylibMgrResolve>;
 
 /// Create an EPCGenericDylibManager for the ORC runtime's NativeDylibManager
 /// interface, resolving its symbols in the given JITDylib.
+///
+/// If the executor provides the create operation (DylibMgrCreateProxySpec)
+/// then it is called to create a new executor-side instance for the manager.
+/// Otherwise the executor's pre-created instance is used (see
+/// rt::sps_ci::NativeDylibManagerInstanceName). An error is returned if
+/// neither is available.
 LLVM_ABI Expected<std::unique_ptr<EPCGenericDylibManager>>
 createEPCGenericDylibManager(JITDylib &JD);
 

@@ -87,6 +87,15 @@ TEST(OffloadArchTest, IntelGPUOtherSpellings) {
   EXPECT_TRUE(parse("bmg_g21").isUnknown());
 }
 
+TEST(OffloadArchTest, VirtualArch) {
+  // The virtual architecture of an Intel GPU is its IGCA target.
+  EXPECT_STREQ(OffloadArchToVirtualArchString(parse("xe-mtl-u")), "igca_30r");
+  EXPECT_STREQ(OffloadArchToVirtualArchString(parse("xe-mtl-h")), "igca_30r");
+  EXPECT_STREQ(OffloadArchToVirtualArchString(parse("xe-pvc")), "igca_20ca");
+  EXPECT_STREQ(OffloadArchToVirtualArchString(parse("igca_30r")), "igca_30r");
+  EXPECT_STREQ(OffloadArchToVirtualArchString(parse("sm_70")), "compute_70");
+}
+
 TEST(OffloadArchTest, Defaults) {
   EXPECT_STREQ(OffloadArchToString(OffloadArch::CudaDefault()), "sm_52");
   EXPECT_STREQ(OffloadArchToString(OffloadArch::HIPDefault()), "gfx906");

@@ -4,7 +4,6 @@
 # GCN: %1:sreg_32_xm0 = S_MOV_B32 123
 ---
 name: fold-imm-readfirstlane
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
@@ -17,7 +16,6 @@ body:             |
 # GCN: DBG_VALUE %0:vgpr_32, 0, 0
 ---
 name: fold-imm-readfirstlane-dbgvalue
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
@@ -31,7 +29,6 @@ body:             |
 
 ---
 name: fold-imm-readfirstlane-readfirstlane
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
@@ -47,7 +44,6 @@ body:             |
 # GCN: %2:sreg_32_xm0 = COPY %0
 ---
 name: fold-copy-readfirstlane
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr10
@@ -62,7 +58,6 @@ body:             |
 # GCN-NEXT: %1:sreg_32_xm0 = V_READFIRSTLANE_B32 %0, implicit $exec
 ---
 name: no-fold-copy-readfirstlane-physreg0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr10
@@ -76,7 +71,6 @@ body:             |
 # GCN-NEXT: %0:sreg_32_xm0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
 ---
 name: no-fold-copy-readfirstlane-physreg1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr10
@@ -91,7 +85,6 @@ body:             |
 
 ---
 name: no-fold-imm-readfirstlane-physreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 123, implicit $exec
@@ -106,7 +99,6 @@ body:             |
 # GCN: V_READFIRSTLANE_B32
 ---
 name: fold-imm-readfirstlane-cross-block
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vgpr_32 = V_MOV_B32_e32 123, implicit $exec
@@ -123,7 +115,6 @@ body:             |
 # GCN: V_READFIRSTLANE_B32
 ---
 name: fold-copy-readfirstlane-cross-block
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr12
@@ -140,7 +131,6 @@ body:             |
 # GCN: V_READFIRSTLANE_B32
 ---
 name: fold-copy-readfirstlane-cross-block-exec-def
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr10_sgpr11, $sgpr12
@@ -159,7 +149,6 @@ body:             |
 # GCN-NEXT: V_READFIRSTLANE_B32
 ---
 name: fold-copy-readfirstlane-same-block-exec-def
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr10_sgpr11, $sgpr12
@@ -177,7 +166,6 @@ body:             |
 
 ---
 name: fold-imm-readfirstlane-cross-block-exec-def
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr10_sgpr11, $sgpr12_sgpr13
@@ -194,7 +182,6 @@ body:             |
 # GCN-NEXT: V_READFIRSTLANE_B32
 ---
 name: fold-imm-readfirstlane-same-block-exec-def
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr10_sgpr11
@@ -210,7 +197,6 @@ body:             |
 # GCN-NEXT: V_READFIRSTLANE_B32
 ---
 name: fold-sgpr-copy-readfirstlane-same-block-exec-def
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr10_sgpr11, $sgpr12
@@ -223,7 +209,6 @@ body:             |
 # GCN: %3:sreg_32_xm0 = S_MOV_B32 123
 ---
 name: fold-imm-readfirstlane-user
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $sgpr0_sgpr1
@@ -238,7 +223,6 @@ body:             |
 # GCN: %1:sreg_32_xm0 = S_MOV_B32 123
 ---
 name: fold-imm-readlane
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $sgpr0_sgpr1
@@ -252,7 +236,6 @@ body:             |
 # GCN: V_READLANE_B32 %0, 12, implicit $exec
 ---
 name: fold-imm-readlane-src1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -271,7 +254,6 @@ body:             |
 # GCN-NEXT: %4:sreg_32_xm0 = S_MOV_B32 0
 ---
 name: fold-imm-readfirstlane-regsequence0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -293,7 +275,6 @@ body:             |
 
 ---
 name: fold-imm-readfirstlane-regsequence1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -314,7 +295,6 @@ body:             |
 # GCN-NEXT: %4:sreg_32_xm0 = S_MOV_B32 1
 ---
 name: fold-imm-readfirstlane-regsequence2
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -334,7 +314,6 @@ body:             |
 # GCN-NEXT: %4:sreg_32_xm0 = S_MOV_B32 0
 ---
 name: fold-imm-readfirstlane-regsequence3
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -354,7 +333,6 @@ body:             |
 # GCN-NEXT: %4:sreg_32_xm0 = V_READFIRSTLANE_B32 %2.sub1, implicit $exec
 ---
 name: fold-copy-readfirstlane-regsequence0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr10, $sgpr11
@@ -375,7 +353,6 @@ body:             |
 # GCN-NEXT: %6:sreg_32_xm0 = V_READFIRSTLANE_B32 %4.sub1, implicit $exec
 ---
 name: fold-copy-readfirstlane-regsequence1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr10, $sgpr11

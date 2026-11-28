@@ -3353,6 +3353,20 @@ const SCEV *ScalarEvolution::getURemExpr(SCEVUse LHS, SCEVUse RHS) {
     }
   }
 
+  // Fold LHS urem X and LHS urem (C * X) to 0 if X is a power of 2 and LHS is
+  // a multiple of C * max(X).
+  const APInt *C = nullptr;
+  const SCEV *X = RHS;
+  match(RHS, m_scev_Mul(m_scev_APInt(C), m_SCEV(X)));
+  if (isKnownToBeAPowerOfTwo(X)) {
+    APInt MaxX = getUnsignedRangeMax(X);
+    bool Overflow = false;
+    APInt MaxRHS = C ? C->umul_ov(MaxX, Overflow) : MaxX;
+    if (MaxX.isPowerOf2() && !Overflow &&
+        getConstantMultiple(LHS).urem(MaxRHS) == 0)
+      return getZero(LHS->getType());
+  }
+
   // Fallback to %a == %x urem %y == %x -<nuw> ((%x udiv %y) *<nuw> %y)
   const SCEV *UDiv = getUDivExpr(LHS, RHS);
   const SCEV *Mult = getMulExpr(UDiv, RHS, SCEV::FlagNUW);
@@ -4708,8 +4722,7 @@ static void PushDefUseChildren(Instruction *I,
                                SmallVectorImpl<Instruction *> &Worklist,
                                SmallPtrSetImpl<Instruction *> &Visited) {
   // Push the def-use children onto the Worklist stack.
-  for (User *U : I->users()) {
-    auto *UserInsn = cast<Instruction>(U);
+  for (Instruction *UserInsn : I->users()) {
     if (Visited.insert(UserInsn).second)
       Worklist.push_back(UserInsn);
   }
@@ -7287,6 +7300,10 @@ bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
 }
 
 bool ScalarEvolution::isGuaranteedNotToBePoison(const SCEV *Op) {
+  // Use flags only hold where the expression is used, so Op may be poison
+  // elsewhere if it or any of its operands carries them.
+  if (Op->getCanonical() != Op)
+    return false;
   SCEVPoisonCollector PC(/* LookThroughMaybePoisonBlocking */ true);
   visitAll(Op, PC);
   return PC.MaybePoison.empty();
@@ -11321,13 +11338,19 @@ bool ScalarEvolution::isKnownViaInduction(CmpPredicate Pred, SCEVUse LHS,
          isLoopEntryGuardedByCond(MDL, Pred, SplitLHS.first, SplitRHS.first);
 }
 
+/// Maximum nesting depth of recursive isKnownPredicate calls.
+static constexpr unsigned MaxKnownPredicateDepth = 4;
+
 bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
-                                       SCEVUse RHS) {
+                                       SCEVUse RHS, unsigned Depth) {
+  if (Depth > MaxKnownPredicateDepth)
+    return false;
+
   // Canonicalize the inputs first.
   (void)SimplifyICmpOperands(Pred, LHS, RHS);
 
   return isKnownViaInduction(Pred, LHS, RHS) ||
-         isKnownPredicateViaSplitting(Pred, LHS, RHS) ||
+         isKnownPredicateViaSplitting(Pred, LHS, RHS, Depth) ||
          isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
 }
 
@@ -11742,7 +11765,8 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
 }
 
 bool ScalarEvolution::isKnownPredicateViaSplitting(CmpPredicate Pred,
-                                                   SCEVUse LHS, SCEVUse RHS) {
+                                                   SCEVUse LHS, SCEVUse RHS,
+                                                   unsigned Depth) {
   if (Pred != ICmpInst::ICMP_ULT || ProvingSplitPredicate)
     return false;
 
@@ -11758,8 +11782,9 @@ bool ScalarEvolution::isKnownPredicateViaSplitting(CmpPredicate Pred,
   // interesting cases seen in practice.  We can consider "upgrading" L >= 0 to
   // use isKnownPredicate later if needed.
   return isKnownNonNegative(RHS) &&
-         isKnownPredicate(CmpInst::ICMP_SGE, LHS, getZero(LHS->getType())) &&
-         isKnownPredicate(CmpInst::ICMP_SLT, LHS, RHS);
+         isKnownPredicate(CmpInst::ICMP_SGE, LHS, getZero(LHS->getType()),
+                          Depth + 1) &&
+         isKnownPredicate(CmpInst::ICMP_SLT, LHS, RHS, Depth + 1);
 }
 
 bool ScalarEvolution::isImpliedViaGuard(const BasicBlock *BB, CmpPredicate Pred,
@@ -14704,7 +14729,7 @@ void ScalarEvolution::verify() const {
     if (It == BackedgeTakenCounts.end())
       continue;
 
-    auto *CurBECount =
+    SCEVUse CurBECount =
         SCM.visit(It->second.getExact(L, const_cast<ScalarEvolution *>(this)));
     auto *NewBECount = SE2.getBackedgeTakenCount(L);
 
@@ -15366,6 +15391,9 @@ bool SCEVUnionPredicate::implies(const SCEVPredicate *N,
     return all_of(Set->Preds, [this, &SE](const SCEVPredicate *I) {
       return this->implies(I, SE);
     });
+
+  if (is_contained(Preds, N))
+    return true;
 
   if (any_of(Preds,
              [N, &SE](const SCEVPredicate *I) { return I->implies(N, SE); }))

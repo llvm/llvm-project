@@ -741,10 +741,8 @@ define ptr @conditional_ptr_phi_with_liveout(ptr %start, ptr %c, i64 %n) {
 ; CHECK-TF-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-TF-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-TF:       [[MIDDLE_BLOCK]]:
-; CHECK-TF-NEXT:    [[TMP9:%.*]] = xor <4 x i1> [[TMP1]], splat (i1 true)
-; CHECK-TF-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP9]], i1 false)
-; CHECK-TF-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
-; CHECK-TF-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[BROADCAST_SPLAT2]], i64 [[LAST_ACTIVE_LANE]]
+; CHECK-TF-NEXT:    [[TMP9:%.*]] = sub i64 [[TRIP_COUNT_MINUS_1]], [[INDEX]]
+; CHECK-TF-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[BROADCAST_SPLAT2]], i64 [[TMP9]]
 ; CHECK-TF-NEXT:    br label %[[EXIT:.*]]
 ; CHECK-TF:       [[EXIT]]:
 ; CHECK-TF-NEXT:    ret ptr [[TMP10]]
@@ -837,10 +835,8 @@ define ptr @conditional_ptr_phi_non_const_step_with_liveout(ptr %start, ptr %c, 
 ; CHECK-TF-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-TF-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK-TF:       [[MIDDLE_BLOCK]]:
-; CHECK-TF-NEXT:    [[TMP9:%.*]] = xor <4 x i1> [[TMP1]], splat (i1 true)
-; CHECK-TF-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP9]], i1 false)
-; CHECK-TF-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
-; CHECK-TF-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[BROADCAST_SPLAT2]], i64 [[LAST_ACTIVE_LANE]]
+; CHECK-TF-NEXT:    [[TMP12:%.*]] = sub i64 [[TRIP_COUNT_MINUS_1]], [[INDEX]]
+; CHECK-TF-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[BROADCAST_SPLAT2]], i64 [[TMP12]]
 ; CHECK-TF-NEXT:    br label %[[EXIT:.*]]
 ; CHECK-TF:       [[EXIT]]:
 ; CHECK-TF-NEXT:    ret ptr [[TMP10]]

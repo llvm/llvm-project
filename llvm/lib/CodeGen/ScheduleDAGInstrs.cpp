@@ -204,8 +204,13 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
   // Only use any non-zero latency for real defs/uses, in contrast to
   // "fake" operands added by regalloc.
   const MCInstrDesc &DefMIDesc = SU->getInstr()->getDesc();
-  bool ImplicitPseudoDef = (OperIdx >= DefMIDesc.getNumOperands() &&
-                            !DefMIDesc.hasImplicitDefOfPhysReg(Reg));
+  // Recognize asm outputs and clobbers by their operand groups, excluding
+  // trailing register bookkeeping operands.
+  bool IsInlineAsmDef = SU->getInstr()->isInlineAsm() &&
+                        SU->getInstr()->findInlineAsmFlagIdx(OperIdx) >= 0;
+  bool ImplicitPseudoDef = OperIdx >= DefMIDesc.getNumOperands() &&
+                           !DefMIDesc.hasImplicitDefOfPhysReg(Reg) &&
+                           !IsInlineAsmDef;
   for (MCRegUnit Unit : TRI->regunits(Reg)) {
     for (RegUnit2SUnitsMap::iterator I = Uses.find(Unit); I != Uses.end();
          ++I) {
@@ -229,8 +234,13 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
         UseInstr = UseSU->getInstr();
         Register UseReg = UseInstr->getOperand(UseOpIdx).getReg();
         const MCInstrDesc &UseMIDesc = UseInstr->getDesc();
+        // Recognize asm inputs by their operand groups, excluding trailing
+        // register bookkeeping operands.
+        bool IsInlineAsmUse = UseInstr->isInlineAsm() &&
+                              UseInstr->findInlineAsmFlagIdx(UseOpIdx) >= 0;
         ImplicitPseudoUse = UseOpIdx >= ((int)UseMIDesc.getNumOperands()) &&
-                            !UseMIDesc.hasImplicitUseOfPhysReg(UseReg);
+                            !UseMIDesc.hasImplicitUseOfPhysReg(UseReg) &&
+                            !IsInlineAsmUse;
 
         Dep = SDep(SU, SDep::Data, UseReg);
       }

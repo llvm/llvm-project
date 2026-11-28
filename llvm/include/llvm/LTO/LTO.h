@@ -52,7 +52,8 @@ class ToolOutputFile;
 /// This is done for correctness (if value exported, ensure we always
 /// emit a copy), and compile-time optimization (allow drop of duplicates).
 LLVM_ABI void thinLTOResolvePrevailingInIndex(
-    const lto::Config &C, ModuleSummaryIndex &Index,
+    const cl::LibraryOptionsContext &LibraryOptions, const lto::Config &C,
+    ModuleSummaryIndex &Index,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
@@ -673,7 +674,8 @@ private:
   // Pass-plugins that we loaded from the provided configuration.
   SmallVector<std::unique_ptr<PassPlugin>, 0> PassPlugins;
 
-  // Load pass-plugins from the provided configuration.
+  // Load pass-plugins and pass them their arguments from the provided
+  // configuration.
   Error setupPassPlugins();
 
   // LibFuncs that were implemented in bitcode but were not extracted

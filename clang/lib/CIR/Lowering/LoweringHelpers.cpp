@@ -112,7 +112,7 @@ mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
   // M/8 byte count (isSplitStorageBitInt), use a byte array instead so the
   // size stays exact.
   if (auto intTy = mlir::dyn_cast<cir::IntType>(type);
-      intTy && intTy.isBitInt()) {
+      cir::isBitIntType(intTy)) {
     if (isSplitStorageBitInt(intTy, dataLayout))
       return mlir::LLVM::LLVMArrayType::get(
           mlir::IntegerType::get(type.getContext(), 8),
@@ -130,8 +130,7 @@ mlir::Type convertTypeForLoadStore(const mlir::TypeConverter &converter,
   // A split-storage _BitInt's memory type is a byte array (see
   // convertTypeForMemory), but a load/store must still access the whole
   // integer as-is.
-  if (auto intTy = mlir::dyn_cast<cir::IntType>(type);
-      intTy && intTy.isBitInt())
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(type); cir::isBitIntType(intTy))
     return mlir::IntegerType::get(type.getContext(),
                                   intTy.getStorageTypeWidth(dataLayout));
 

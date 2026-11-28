@@ -329,6 +329,14 @@ func.func @fuse_memory_counter_wait_not_adjacent() {
 
 // -----
 
+// A memory_counter_wait that is the last op in its block has no next node.
+// CHECK: amdgpu.memory_counter_wait tensor(3)
+module {
+  amdgpu.memory_counter_wait tensor(3)
+}
+
+// -----
+
 // Erase duplicate barriers.
 // CHECK-LABEL: func @erase_barriers
 //       CHECK-NEXT: amdgpu.lds_barrier

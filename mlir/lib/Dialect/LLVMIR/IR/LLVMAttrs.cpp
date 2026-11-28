@@ -52,18 +52,6 @@ static void printSourceLanguage(AsmPrinter &printer,
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// LLVMDialect registration
-//===----------------------------------------------------------------------===//
-
-void LLVMDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
-
-      >();
-}
-
-//===----------------------------------------------------------------------===//
 // AddressSpaceAttr
 //===----------------------------------------------------------------------===//
 

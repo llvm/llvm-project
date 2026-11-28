@@ -776,7 +776,6 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
             StringAttr::get(dialect->getContext(), "noduplicate"),
             StringAttr::get(dialect->getContext(), "presplitcoroutine"),
             StringAttr::get(dialect->getContext(), "returns_twice"),
-            StringAttr::get(dialect->getContext(), "strictfp"),
         }) {}
 
   bool isLegalToInline(Operation *call, Operation *callable,
@@ -799,6 +798,10 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     }
     if (funcOp.isNoInline()) {
       LDBG() << "Cannot inline: function is marked no_inline";
+      return false;
+    }
+    if (funcOp.getStrictfp()) {
+      LDBG() << "Cannot inline: function is marked strictfp";
       return false;
     }
     if (funcOp.isVarArg()) {

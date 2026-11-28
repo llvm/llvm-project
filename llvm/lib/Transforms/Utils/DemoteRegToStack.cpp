@@ -168,8 +168,7 @@ AllocaInst *llvm::DemotePHIToStack(PHINode *P, std::optional<BasicBlock::iterato
   if (isa<CatchSwitchInst>(InsertPt)) {
     // We need a separate load before each actual use of the PHI
     SmallVector<Instruction *, 4> Users;
-    for (User *U : P->users()) {
-      Instruction *User = cast<Instruction>(U);
+    for (Instruction *User : P->users()) {
       Users.push_back(User);
     }
     for (Instruction *User : Users) {

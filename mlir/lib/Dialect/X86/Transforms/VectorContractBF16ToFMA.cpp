@@ -39,6 +39,12 @@ static bool validateVectorContractOperands(Value prodOp, bool isVnni) {
     if (readOp.hasOutOfBoundsDim())
       return false;
 
+    // The x86 packed loads read every lane, so they cannot keep a mask. A read
+    // in `vector.mask` never gets here: the operand is then the `vector.mask`
+    // result, which is rejected below as it is not a load.
+    if (readOp.getMask())
+      return false;
+
     if (!readOp.getPermutationMap().isMinorIdentity())
       return false;
   }
@@ -297,7 +303,7 @@ struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
         !validateVectorContractOperands(contractOp.getRhs(), isVnni)) {
       return rewriter.notifyMatchFailure(
           contractOp, "The LHS or RHS is in an invalid format. Either it has "
-                      "false in-bounds, "
+                      "false in-bounds, a mask, "
                       "a non-identity permutation map, a non-zero VNNI offset, "
                       "a non-memref "
                       "source, or a non-unit VNNI stride");
@@ -351,6 +357,13 @@ struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
 
       if (!pairContractOp)
         return failure();
+
+      // The pair is rewritten too, so its reads need the same checks.
+      if (!validateVectorContractOperands(pairContractOp.getLhs(), isVnni) ||
+          !validateVectorContractOperands(pairContractOp.getRhs(), isVnni))
+        return rewriter.notifyMatchFailure(
+            contractOp, "The LHS or RHS of the pair contract is in an invalid "
+                        "format.");
 
       Operation *accReadOp0 =
           traceToVectorReadLikeParentOperation(contractOp.getAcc());

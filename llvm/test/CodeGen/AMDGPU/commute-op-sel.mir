@@ -28,7 +28,6 @@ body: |
 
 ---
 name: test_machine_cse_op_sel_v_fma_f16
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test_machine_cse_op_sel_v_fma_f16
   ; GCN: %3:vgpr_32 = nofpexcept V_FMA_F16_e64 0, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
@@ -45,7 +44,6 @@ body:             |
 
 ---
 name: test_machine_cse_op_sel_const_v_fma_f16
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test_machine_cse_op_sel_const_v_fma_f16
   ; GCN: %1:vgpr_32 = nofpexcept V_FMA_F16_e64 0, 1, 0, 3481272320, 0, %0, 0, 0, implicit $mode, implicit $exec
@@ -60,7 +58,6 @@ body:             |
 
 ---
 name: test_machine_cse_op_sel_v_mad_u16
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test_machine_cse_op_sel_v_mad_u16
   ; GCN: %3:vgpr_32 = V_MAD_U32_U16_e64 0, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
@@ -77,7 +74,6 @@ body:             |
 
 ---
 name: test_machine_cse_op_sel_const_v_mad_u16
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test_machine_cse_op_sel_const_v_mad_u16
   ; GCN: %1:vgpr_32 = V_MAD_U32_U16_e64 0, 1, 0, 64, 0, %0, 0, 0, implicit $mode, implicit $exec
@@ -92,7 +88,6 @@ body:             |
 
 ---
 name: test_machine_cse_op_sel_v_mad_i16
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test_machine_cse_op_sel_v_mad_i16
   ; GCN: %3:vgpr_32 = V_MAD_I32_I16_e64 0, %0, 0, %1, 0, %2, 0, 0, implicit $mode, implicit $exec
@@ -109,7 +104,6 @@ body:             |
 
 ---
 name: test_machine_cse_op_sel_const_v_mad_i16
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test_machine_cse_op_sel_const_v_mad_i16
   ; GCN: %1:vgpr_32 = V_MAD_I32_I16_e64 0, 1, 0, 64, 0, %0, 0, 0, implicit $mode, implicit $exec

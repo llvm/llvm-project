@@ -20,14 +20,14 @@
 #define DEBUG_TYPE "spirv-serialization"
 
 namespace mlir {
-LogicalResult spirv::serialize(spirv::ModuleOp module,
+LogicalResult spirv::serialize(spirv::ModuleOp moduleOp,
                                SmallVectorImpl<uint32_t> &binary,
                                const SerializationOptions &options) {
-  if (!module.getVceTriple())
-    return module.emitError(
+  if (!moduleOp.getVceTriple())
+    return moduleOp.emitError(
         "module must have 'vce_triple' attribute to be serializeable");
 
-  Serializer serializer(module, options);
+  Serializer serializer(moduleOp, options);
 
   if (failed(serializer.serialize()))
     return failure();

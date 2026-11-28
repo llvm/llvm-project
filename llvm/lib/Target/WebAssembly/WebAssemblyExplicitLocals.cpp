@@ -250,12 +250,15 @@ static bool explicitLocals(MachineFunction &MF) {
   unsigned CurLocal = static_cast<unsigned>(MFI.getParams().size());
   CurLocal += static_cast<unsigned>(MFI.getLocals().size());
 
-  // ABI contract: the async context must always be available in local 0. If
-  // something else defines the register of the swiftasync argument too, for
-  // example a value that register coalescing merged with it, that register
-  // gets its own local.
+  // ABI contract: local 0 holds the frame's async context and only
+  // llvm.swift.async.context.addr writes it. The swiftasync argument is also
+  // in local 0, so it needs its own local if its register has other defs
+  // (e.g. after register coalescing) or if the function uses the intrinsic
+  // (e.g. await resume funclets).
   Register SwiftAsyncReg = WebAssembly::getSwiftAsyncArgReg(MF);
-  bool CopySwiftAsyncArg = SwiftAsyncReg && !MRI.hasOneDef(SwiftAsyncReg);
+  bool CopySwiftAsyncArg =
+      SwiftAsyncReg && (!MRI.hasOneDef(SwiftAsyncReg) ||
+                        MFI.getSwiftAsyncContextFrameIdx().has_value());
 
   // Handle ARGUMENTS first to ensure that they get the designated numbers.
   for (MachineBasicBlock::iterator I = MF.begin()->begin(),

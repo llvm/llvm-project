@@ -32,7 +32,7 @@ function( get_host_triple var )
         set( value "i686-w64-windows-gnu" )
       endif()
     endif()
-  elseif( CMAKE_SYSTEM_NAME MATCHES "OS390" )
+  elseif( CMAKE_SYSTEM_NAME STREQUAL "OS390" )
     set( value "s390x-ibm-zos" )
   elseif( CMAKE_SYSTEM_NAME STREQUAL "AIX" )
     # We defer to dynamic detection of the host AIX version.

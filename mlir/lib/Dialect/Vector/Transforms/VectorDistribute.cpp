@@ -2061,7 +2061,10 @@ struct WarpOpScfIfOp : public WarpDistributionPattern {
               newWarpOp.getLaneid(), newWarpOp.getWarpSize(),
               innerWarpInputVals, innerWarpInputTypes);
 
-          innerWarp.getWarpRegion().takeBody(*oldIfBranch->getParent());
+          Region &warpRegion = innerWarp.getWarpRegion();
+          rewriter.eraseBlock(innerWarp.getBody());
+          rewriter.inlineRegionBefore(*oldIfBranch->getParent(), warpRegion,
+                                      warpRegion.end());
           innerWarp.getWarpRegion().addArguments(
               innerWarpInputTypes,
               SmallVector<Location>(innerWarpInputTypes.size(), ifOp.getLoc()));
@@ -2112,7 +2115,7 @@ struct WarpOpScfIfOp : public WarpDistributionPattern {
                                     newIfOp.getResult(newIdx), newIfOp);
 
     // The original `ifOp` was left inside `newWarpOp` with empty then/else
-    // regions (their blocks were moved into the inner WarpOps by takeBody).
+    // regions (their blocks were moved into the inner WarpOps).
     // Clear remaining uses and erase it to restore IR validity. Directly
     // update newWarpOp's yield operands instead of using replaceAllUsesWith,
     // to avoid triggering notifyOperandReplaced on the now-invalid ifOp.

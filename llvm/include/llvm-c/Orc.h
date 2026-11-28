@@ -399,6 +399,13 @@ typedef LLVMErrorRef (*LLVMOrcGenericIRModuleOperationFunction)(
     void *Ctx, LLVMModuleRef M);
 
 /**
+ * A function for inspecting/mutating LLVM contexts, suitable for use with
+ * LLVMOrcThreadSafeContextWithContextDo.
+ */
+typedef LLVMErrorRef (*LLVMOrcGenericContextOperationFunction)(
+    void *Ctx, LLVMContextRef C);
+
+/**
  * A reference to an orc::JITTargetMachineBuilder instance.
  */
 typedef struct LLVMOrcOpaqueJITTargetMachineBuilder
@@ -1103,6 +1110,22 @@ LLVMOrcCreateNewThreadSafeContextFromLLVMContext(LLVMContextRef Ctx);
  */
 LLVM_C_ABI void
 LLVMOrcDisposeThreadSafeContext(LLVMOrcThreadSafeContextRef TSCtx);
+
+/**
+ * Apply the given function to the LLVMContext contained in this
+ * ThreadSafeContext.
+ *
+ * The context lock is held for the duration of the call, so the function has
+ * exclusive access to the LLVMContext. The lock is recursive, so the function
+ * may call LLVMOrcThreadSafeModuleWithModuleDo on modules associated with the
+ * same ThreadSafeContext.
+ *
+ * The LLVMContextRef passed to the function must not be used after the
+ * function returns.
+ */
+LLVM_C_ABI LLVMErrorRef LLVMOrcThreadSafeContextWithContextDo(
+    LLVMOrcThreadSafeContextRef TSCtx, LLVMOrcGenericContextOperationFunction F,
+    void *Ctx);
 
 /**
  * Create a ThreadSafeModule wrapper around the given LLVM module. This takes

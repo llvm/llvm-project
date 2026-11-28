@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
@@ -1174,12 +1175,12 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       // static relocation which doesn't need to reserve r14, r15 and r28.
 
       auto MIB = BuildMI(MBB, MI, DL, get(Hexagon::J2_call))
-                 .addUse(Hexagon::R0, RegState::Implicit|RegState::InternalRead)
-                 .addDef(Hexagon::R29, RegState::ImplicitDefine)
-                 .addDef(Hexagon::R30, RegState::ImplicitDefine)
-                 .addDef(Hexagon::R14, RegState::ImplicitDefine)
-                 .addDef(Hexagon::R15, RegState::ImplicitDefine)
-                 .addDef(Hexagon::R28, RegState::ImplicitDefine);
+                     .addUse(Hexagon::R0, RegState::Implicit)
+                     .addDef(Hexagon::R29, RegState::ImplicitDefine)
+                     .addDef(Hexagon::R30, RegState::ImplicitDefine)
+                     .addDef(Hexagon::R14, RegState::ImplicitDefine)
+                     .addDef(Hexagon::R15, RegState::ImplicitDefine)
+                     .addDef(Hexagon::R28, RegState::ImplicitDefine);
       const char *cstr = MF.createExternalSymbolName(NameStr);
       MIB.addExternalSymbol(cstr);
       MBB.erase(MI);
@@ -1966,12 +1967,13 @@ bool HexagonInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
 /// constant exenders.
 unsigned HexagonInstrInfo::getInlineAsmLength(const char *Str,
                                               const MCAsmInfo &MAI,
-                                              const TargetSubtargetInfo *STI) const {
+                                              unsigned MaxInstLength) const {
   StringRef AStr(Str);
   // Count the number of instructions in the asm.
   bool atInsnStart = true;
   unsigned Length = 0;
-  const unsigned MaxInstLength = MAI.getMaxInstLength(STI);
+  if (MaxInstLength == 0)
+    MaxInstLength = MAI.getMaxInstLength();
   for (; *Str; ++Str) {
     if (*Str == '\n' || strncmp(Str, MAI.getSeparatorString(),
                                 strlen(MAI.getSeparatorString())) == 0)
@@ -2164,6 +2166,86 @@ bool HexagonInstrInfo::areMemAccessesTriviallyDisjoint(
   }
 
   return false;
+}
+
+// This MI might have either incomplete info, or known to be unsafe
+// to deal with (i.e. volatile object).
+static bool isUnsafeMemoryObject(const MachineInstr *MI) {
+  if (!MI || MI->memoperands_empty())
+    return true;
+
+  if ((*MI->memoperands_begin())->isVolatile() || MI->hasUnmodeledSideEffects())
+    return true;
+
+  if (!(*MI->memoperands_begin())->getValue())
+    return true;
+
+  return false;
+}
+
+/// This returns true if the two MIs could be memory dependent.
+bool HexagonInstrInfo::areMemAccessesDependent(AAResults *AA,
+                                               const MachineInstr *MIa,
+                                               const MachineInstr *MIb) const {
+  // Cover a trivial case - no edge is need to itself.
+  if (MIa == MIb)
+    return false;
+
+  if (areMemAccessesTriviallyDisjoint(*MIa, *MIb))
+    return false;
+
+  if (isUnsafeMemoryObject(MIa) || isUnsafeMemoryObject(MIb))
+    return true;
+
+  // If we are dealing with two "normal" loads, we do not need an edge
+  // between them - they could be reordered.
+  if (!MIa->mayStore() && !MIb->mayStore())
+    return false;
+
+  // To this point analysis is generic. From here on we do need AA.
+  if (!AA)
+    return true;
+
+  MachineMemOperand *MMOa = *MIa->memoperands_begin();
+  MachineMemOperand *MMOb = *MIb->memoperands_begin();
+
+  // TODO: Need to handle multiple memory operands.
+  // if either instruction has more than one memory operand, punt.
+  if (!(MIa->hasOneMemOperand() && MIb->hasOneMemOperand()))
+    return true;
+
+  if (!MMOa->getSize().hasValue() || !MMOb->getSize().hasValue())
+    return true;
+
+  assert((MMOa->getOffset() >= 0) && "Negative MachineMemOperand offset");
+  assert((MMOb->getOffset() >= 0) && "Negative MachineMemOperand offset");
+  assert((MMOa->getSize().hasValue() && MMOb->getSize().hasValue()) &&
+         "Size 0 memory access");
+
+  // If the base address of the two memoperands is the same. For instance,
+  // x and x+4, then we can easily reason about them using the offset and size
+  // of access.
+  if (MMOa->getValue() == MMOb->getValue()) {
+    if (MMOa->getOffset() > MMOb->getOffset()) {
+      uint64_t offDiff = MMOa->getOffset() - MMOb->getOffset();
+      return !(MMOb->getSize().getValue() <= offDiff);
+    } else if (MMOa->getOffset() < MMOb->getOffset()) {
+      uint64_t offDiff = MMOb->getOffset() - MMOa->getOffset();
+      return !(MMOa->getSize().getValue() <= offDiff);
+    }
+    // MMOa->getOffset() == MMOb->getOffset()
+    return true;
+  }
+
+  int64_t MinOffset = std::min(MMOa->getOffset(), MMOb->getOffset());
+  int64_t Overlapa = MMOa->getSize().getValue() + MMOa->getOffset() - MinOffset;
+  int64_t Overlapb = MMOb->getSize().getValue() + MMOb->getOffset() - MinOffset;
+
+  AliasResult AAResult =
+      AA->alias(MemoryLocation(MMOa->getValue(), Overlapa, MMOa->getAAInfo()),
+                MemoryLocation(MMOb->getValue(), Overlapb, MMOb->getAAInfo()));
+
+  return (AAResult != AliasResult::NoAlias);
 }
 
 /// If the instruction is an increment of a constant value, return the amount.
@@ -2365,12 +2447,163 @@ bool HexagonInstrInfo::isDependent(const MachineInstr &ProdMI,
 
 // Returns true if the instruction is already a .cur.
 bool HexagonInstrInfo::isDotCurInst(const MachineInstr &MI) const {
+  // TODO: Use an attribute instead of switch case of opcodes.
+  // This would be more maintainable and allow TableGen to generate the list.
   switch (MI.getOpcode()) {
+  // HVX vector load instructions with .cur suffix.
+  // Variants include:
+  //   - Base addressing modes: pi (post-increment), ai (absolute immediate),
+  //     ppu (post-increment by register)
+  //   - Predicated versions: pred (if true), npred (if false)
+  //   - Non-temporal hint: nt (non-temporal)
+  // Note: Does not include pseudo instructions.
   case Hexagon::V6_vL32b_cur_pi:
+  case Hexagon::V6_vL32b_nt_cur_pi:
+  case Hexagon::V6_vL32b_cur_pred_pi:
+  case Hexagon::V6_vL32b_nt_cur_pred_pi:
+  case Hexagon::V6_vL32b_cur_npred_pi:
+  case Hexagon::V6_vL32b_nt_cur_npred_pi:
   case Hexagon::V6_vL32b_cur_ai:
+  case Hexagon::V6_vL32b_nt_cur_ai:
+  case Hexagon::V6_vL32b_cur_pred_ai:
+  case Hexagon::V6_vL32b_nt_cur_pred_ai:
+  case Hexagon::V6_vL32b_cur_npred_ai:
+  case Hexagon::V6_vL32b_nt_cur_npred_ai:
+  case Hexagon::V6_vL32b_cur_ppu:
+  case Hexagon::V6_vL32b_nt_cur_ppu:
+  case Hexagon::V6_vL32b_cur_pred_ppu:
+  case Hexagon::V6_vL32b_nt_cur_pred_ppu:
+  case Hexagon::V6_vL32b_cur_npred_ppu:
+  case Hexagon::V6_vL32b_nt_cur_npred_ppu:
     return true;
   }
   return false;
+}
+
+/// Should be able to tell if the operand in question is .new.
+/// Instead of exhaustive case statement (which would be prohibitively large)
+/// we use a set of rules.
+bool HexagonInstrInfo::isDotNewOperand(const MachineInstr &MI,
+                                       unsigned OpIndex) const {
+  // If it is not MI that has "any" .new, return false.
+  if (!isDotNewInst(MI))
+    return false;
+
+  const MachineOperand &MO = MI.getOperand(OpIndex);
+  // If it is a def, or not a register, it could not be .new.
+  if (MO.isDef() || !MO.isReg())
+    return false;
+
+  // If it is a predicated instruction, it reduces options on
+  // what could be a .new operand.
+  if (isPredicated(MI)) {
+    const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
+    if (HRI.isFakeReg(MO.getReg()))
+      return false;
+    else {
+      const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(MO.getReg());
+      return (RC == &Hexagon::PredRegsRegClass);
+    }
+  }
+
+  // For a NVJ by definition, operand with .new must be an internal read.
+  if (isNewValueJump(MI)) {
+    if (MO.isReg() && MO.isInternalRead())
+      return true;
+    else
+      return false;
+  }
+
+  // Each new value store has different "position"
+  // of the .new operand. But it always should be
+  // an internal read.
+  // S2_storerinew_io %R29, 28, %R1<internal>
+  // Use: [0] is.new(0) reg(%R29)
+  // Use: [2] is.new(1) reg(%R1)
+  if (isNewValueStore(MI)) {
+    if (MO.isInternalRead())
+      return true;
+    else
+      return false;
+  }
+
+  llvm_unreachable("Unhandled operand.");
+  return false;
+}
+
+// Returns true, if any of the operands of the instruction,
+// is a dot tmp register
+bool HexagonInstrInfo::isDotTmpInst(const MachineInstr &MI) const {
+  return HexagonII::getTSFlag(MI.getDesc(), HexagonII::isTmpWritePos);
+}
+
+/// Returns true if the specified operand is a .tmp (temporary) operand.
+/// .tmp operands represent temporary values that are used in the same packet.
+/// This function checks:
+///   1. The instruction is a .tmp instruction (isDotTmpInst)
+///   2. The operand is a def register
+///   3. The operand is not tied (excludes post-increment base registers)
+bool HexagonInstrInfo::isDotTmpOperand(const MachineInstr &MI,
+                                       unsigned OpIndex) const {
+  // If it is not MI that has "any" .tmp, return false.
+  if (!isDotTmpInst(MI))
+    return false;
+
+  const MachineOperand &MO = MI.getOperand(OpIndex);
+
+  // .tmp only applies to def registers.
+  // Also, make sure that MO is not a tied (post-inc) operand
+  if (MO.isDef() && MO.isReg() && !MO.isTied())
+    return true;
+  return false;
+}
+
+/// Returns true if the specified operand is a .cur (current) operand.
+/// .cur operands can be used immediately in the same packet.
+/// This function checks:
+///   1. The instruction is a .cur instruction (isDotCurInst)
+///   2. The operand is a def register
+///   3. The operand is not tied (excludes post-increment base registers)
+bool HexagonInstrInfo::isDotCurOperand(const MachineInstr &MI,
+                                       unsigned OpIndex) const {
+  // If it is not MI that has "any" .cur, return false.
+  if (!isDotCurInst(MI))
+    return false;
+
+  const MachineOperand &MO = MI.getOperand(OpIndex);
+
+  // .cur only applies to def registers.
+  // Also, make sure that MO is not a tied (post-inc) operand
+  if (MO.isDef() && MO.isReg() && !MO.isTied())
+    return true;
+  return false;
+}
+
+bool HexagonInstrInfo::isSafeInBundleWAR(const MachineInstr &DefMI,
+                                         unsigned DefOpIdx,
+                                         const MachineInstr &UseMI,
+                                         unsigned UseOpIdx, bool IsPullDown,
+                                         bool DefViaRegMask) const {
+  // Push-down needs in-packet forwarding (.cur/.new) so the use sees the new
+  // value; that analysis is not implemented, so reject it. Only pull-up today.
+  if (IsPullDown)
+    return false;
+  if (!DefViaRegMask) {
+    // A forwarding .cur/.tmp def exposes its value in-packet, making the use
+    // read the new value, a disguised RAW, not a safe WAR. (A regmask clobber
+    // never forwards, so these checks are skipped for it.)
+    if (!DefMI.getOperand(DefOpIdx).isReg())
+      return false;
+    if (isDotCurOperand(DefMI, DefOpIdx))
+      return false;
+    if (isDotTmpOperand(DefMI, DefOpIdx))
+      return false;
+  }
+  if (isDotNewOperand(UseMI, UseOpIdx))
+    return false;
+  if (UseMI.isTerminator())
+    return false;
+  return true;
 }
 
 // Returns true, if any one of the operands is a dot new

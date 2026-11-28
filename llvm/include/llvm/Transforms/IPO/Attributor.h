@@ -337,10 +337,11 @@ inline bool operator==(const RangeTy &A, const RangeTy &B) {
 inline bool operator!=(const RangeTy &A, const RangeTy &B) { return !(A == B); }
 
 /// Return the initial value of \p Obj with type \p Ty if that is a constant.
-LLVM_ABI Constant *
-getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
-                      Value &Obj, Type &Ty, const TargetLibraryInfo *TLI,
-                      const DataLayout &DL, RangeTy *RangePtr = nullptr);
+LLVM_ABI Constant *getInitialValueForObj(Attributor &A,
+                                         const AbstractAttribute &QueryingAA,
+                                         Value &Obj, Type &Ty,
+                                         const DataLayout &DL,
+                                         RangeTy *RangePtr = nullptr);
 
 /// Collect all potential values \p LI could read into \p PotentialValues. That
 /// is, the only values read by \p LI are assumed to be known and all are in
@@ -1116,10 +1117,12 @@ struct AnalysisGetter {
     return nullptr;
   }
 
-  /// Invalidates the analyses. Valid only when using the new pass manager.
-  void invalidateAnalyses() {
+  /// Invalidates the analyses of each function in \p M individually, which
+  /// allows preserving invariant function analyses like TargetLibraryInfo.
+  void invalidateAnalyses(Module &M) {
     assert(FAM && "Can only be used from the new PM!");
-    FAM->clear();
+    for (Function &F : M)
+      FAM->invalidate(F, PreservedAnalyses::none());
   }
 
   AnalysisGetter(FunctionAnalysisManager &FAM, bool CachedOnly = false)
@@ -1262,9 +1265,8 @@ struct InformationCache {
     return AssumeOnlyValues.contains(&I);
   }
 
-  /// Invalidates the cached analyses. Valid only when using the new pass
-  /// manager.
-  void invalidateAnalyses() { AG.invalidateAnalyses(); }
+  /// Invalidates the cached analyses of \p M.
+  void invalidateAnalyses(Module &M) { AG.invalidateAnalyses(M); }
 
   /// Return the analysis result from a pass \p AP for function \p F.
   template <typename AP>

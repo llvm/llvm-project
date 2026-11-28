@@ -4696,6 +4696,7 @@ add_fp_unittest(
     expm1_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.expm1
     libc.src.__support.FPUtil.fp_bits
 )
@@ -4708,6 +4709,7 @@ add_fp_unittest(
     expm1f_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.expm1f
     libc.src.__support.FPUtil.fp_bits
 )
@@ -4733,6 +4735,7 @@ add_fp_unittest(
     log_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.log
     libc.src.__support.FPUtil.fp_bits
 )
@@ -4799,6 +4802,7 @@ add_fp_unittest(
     log2_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.log2
     libc.src.__support.FPUtil.fp_bits
 )
@@ -4838,6 +4842,7 @@ add_fp_unittest(
     log10_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.log10
     libc.src.__support.FPUtil.fp_bits
 )

@@ -102,14 +102,15 @@ static mlir::InFlightDiagnostic emitTypeConversionError(mlir::Location loc,
 /// Alignment to use for a memory access whose op carries no explicit alignment.
 /// For _BitInt the storage integer iM's ABI alignment (e.g. i128's 16)
 /// over-aligns the value, so use the _BitInt language alignment (e.g. 8).
+/// An SVE count lowers to target("aarch64.svcount"), which the MLIR data
+/// layout cannot size, so it also uses its language alignment.
 static uint64_t getMemoryFallbackAlignment(mlir::Operation *op,
                                            mlir::Type cirType,
                                            mlir::Type llvmMemType,
                                            const mlir::DataLayout &dataLayout) {
-  if (auto intTy = mlir::dyn_cast<cir::IntType>(cirType);
-      intTy && intTy.isBitInt())
+  if (cir::isBitIntType(cirType) || mlir::isa<cir::SveCountType>(cirType))
     return cir::CIRDataLayout(op->getParentOfType<mlir::ModuleOp>())
-        .getTypeLanguageAlignment(intTy);
+        .getTypeLanguageAlignment(cirType);
   return dataLayout.getTypeABIAlignment(llvmMemType);
 }
 
@@ -213,7 +214,7 @@ static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
 
   // Truncate the padded storage integer back to the _BitInt's literal width.
   if (auto intTy = mlir::dyn_cast<cir::IntType>(op.getType());
-      intTy && intTy.isBitInt())
+      cir::isBitIntType(intTy))
     return castBitIntMemoryStorage(rewriter, dataLayout, intTy, value,
                                    /*toMemory=*/false);
 
@@ -259,7 +260,7 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
 
   // Sign/zero-extend the _BitInt value to its padded storage integer.
   if (auto intTy = mlir::dyn_cast<cir::IntType>(origType);
-      intTy && intTy.isBitInt())
+      cir::isBitIntType(intTy))
     return castBitIntMemoryStorage(rewriter, dataLayout, intTy, value,
                                    /*toMemory=*/true);
 
@@ -644,13 +645,10 @@ static llvm::StringRef getConstrainedRoundingMetadata(cir::FenvAttr fenv) {
 }
 
 static llvm::StringRef getConstrainedExceptMetadata(cir::FenvAttr fenv) {
-  std::optional<cir::FPExceptionMode> exceptMode = fenv.getExceptMode();
-  if (exceptMode == cir::FPExceptionMode::Masked)
+  if (fenv.canIgnoreExceptions())
     return "fpexcept.ignore";
-  mlir::BoolAttr strictExcept = fenv.getStrictExcept();
-  if (!strictExcept)
-    return "fpexcept.ignore";
-  return strictExcept.getValue() ? "fpexcept.strict" : "fpexcept.maytrap";
+  return fenv.getStrictExceptOrDefault() ? "fpexcept.strict"
+                                         : "fpexcept.maytrap";
 }
 
 static mlir::Value
@@ -825,9 +823,9 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BoolAttr boolAttr) {
 mlir::Value CIRAttrToValue::visitCirAttr(cir::IntAttr intAttr) {
   mlir::DataLayout layout(parentModule);
 
-  if (auto intTy = mlir::dyn_cast<cir::IntType>(intAttr.getType());
-      intTy && intTy.isBitInt()) {
-    mlir::Type biTy = convertTypeForMemory(*converter, layout, intTy);
+  mlir::Type type = intAttr.getType();
+  if (cir::isBitIntType(type)) {
+    mlir::Type biTy = convertTypeForMemory(*converter, layout, type);
     return mlir::LLVM::ConstantOp::create(
         rewriter, parentLoc, biTy,
         getBitIntStorageAttr(rewriter, intAttr, layout));
@@ -1380,8 +1378,7 @@ public:
     // A split-storage _BitInt's memory representation is a byte array (see
     // convertTypeForMemory), not a scalar, so its constant must be built as
     // raw bytes rather than a single sign/zero-extended IntegerAttr.
-    if (auto intTy = mlir::dyn_cast<cir::IntType>(attr.getType());
-        intTy && intTy.isBitInt())
+    if (cir::isBitIntType(attr.getType()))
       return getBitIntStorageAttr(rewriter, attr, dataLayout);
 
     return rewriter.getIntegerAttr(llvmType, attr.getValue());
@@ -2935,6 +2932,10 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     attr = rewriter.getFloatAttr(
         typeConverter->convertType(op.getType()),
         mlir::cast<cir::FPAttr>(op.getValue()).getValue());
+  } else if (cir::isAnyOpaqueFloatingPointType(op.getType())) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ZeroOp>(
+        op, typeConverter->convertType(op.getType()));
+    return mlir::success();
   } else if (mlir::isa<cir::PointerType>(op.getType())) {
     // Optimize with dedicated LLVM op for null pointers.
     if (mlir::isa<cir::ConstPtrAttr>(op.getValue())) {
@@ -2962,7 +2963,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     // Unlike a global initializer, the constant must keep its type.
     mlir::Attribute value = spellOutSplitTrailingZeros(op.getValue());
     const auto constArr = mlir::dyn_cast<cir::ConstArrayAttr>(value);
-    if (!constArr && !isa<cir::ZeroAttr, cir::UndefAttr>(value))
+    if (!constArr && !isa<cir::ZeroAttr>(value))
       return op.emitError() << "array does not have a constant initializer";
 
     std::optional<mlir::Attribute> denseAttr;
@@ -2997,7 +2998,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     rewriter.replaceOp(op, initVal);
     return mlir::success();
   } else if (mlir::isa<cir::RecordType>(op.getType())) {
-    if (mlir::isa<cir::ZeroAttr, cir::UndefAttr>(attr)) {
+    if (mlir::isa<cir::ZeroAttr>(attr)) {
       mlir::Value initVal =
           lowerCirAttrAsValue(op->getLoc(), moduleOp, attr, rewriter,
                               symbolTables, typeConverter, preConversionTypes);
@@ -3009,43 +3010,19 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     return op.emitError() << "unsupported lowering for record constant type "
                           << op.getType();
   } else if (auto complexTy = mlir::dyn_cast<cir::ComplexType>(op.getType())) {
-    mlir::Type complexElemTy = complexTy.getElementType();
-    mlir::Type complexElemLLVMTy = typeConverter->convertType(complexElemTy);
-
-    if (auto zeroInitAttr = mlir::dyn_cast<cir::ZeroAttr>(op.getValue())) {
-      mlir::TypedAttr zeroAttr = rewriter.getZeroAttr(complexElemLLVMTy);
-      mlir::ArrayAttr array = rewriter.getArrayAttr({zeroAttr, zeroAttr});
-      rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
-          op, getTypeConverter()->convertType(op.getType()), array);
-      return mlir::success();
-    }
-
-    if (mlir::isa<cir::UndefAttr>(op.getValue())) {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::UndefOp>(
-          op, getTypeConverter()->convertType(op.getType()));
-      return mlir::success();
-    }
-
-    auto complexAttr = mlir::cast<cir::ConstComplexAttr>(op.getValue());
-
-    mlir::Attribute components[2];
-    if (mlir::isa<cir::IntType>(complexElemTy)) {
-      components[0] = rewriter.getIntegerAttr(
-          complexElemLLVMTy,
-          mlir::cast<cir::IntAttr>(complexAttr.getReal()).getValue());
-      components[1] = rewriter.getIntegerAttr(
-          complexElemLLVMTy,
-          mlir::cast<cir::IntAttr>(complexAttr.getImag()).getValue());
+    if (mlir::isa<cir::ZeroAttr>(op.getValue())) {
+      mlir::TypedAttr zeroAttr = rewriter.getZeroAttr(
+          typeConverter->convertType(complexTy.getElementType()));
+      attr = rewriter.getArrayAttr({zeroAttr, zeroAttr});
     } else {
-      components[0] = rewriter.getFloatAttr(
-          complexElemLLVMTy,
-          mlir::cast<cir::FPAttr>(complexAttr.getReal()).getValue());
-      components[1] = rewriter.getFloatAttr(
-          complexElemLLVMTy,
-          mlir::cast<cir::FPAttr>(complexAttr.getImag()).getValue());
+      mlir::Value initVal =
+          lowerCirAttrAsValue(op->getLoc(), moduleOp, op.getValue(), rewriter,
+                              symbolTables, typeConverter, preConversionTypes);
+      if (!initVal)
+        return mlir::failure();
+      rewriter.replaceOp(op, initVal);
+      return mlir::success();
     }
-
-    attr = rewriter.getArrayAttr(components);
   } else {
     return op.emitError() << "unsupported constant type " << op.getType();
   }
@@ -4324,6 +4301,27 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
   return cmpOp.emitError() << "unsupported type for CmpOp: " << type;
 }
 
+mlir::LogicalResult CIRToLLVMFCmpOpLowering::matchAndRewrite(
+    cir::FCmpOp fCmpOp, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(mlir::isa<cir::FPTypeInterface>(fCmpOp.getLhs().getType()) &&
+         "unexpected fcmp type");
+
+  mlir::Type llvmResTy = getTypeConverter()->convertType(fCmpOp.getType());
+  if (cir::FenvAttr fenv = fCmpOp.getFenvAttr()) {
+    mlir::LLVM::CallIntrinsicOp call = createConstrainedFCmpCall(
+        rewriter, fCmpOp.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
+        fCmpOp.getKind(), fCmpOp.getSignaling(), fenv, llvmResTy);
+    rewriter.replaceOp(fCmpOp, call.getResult(0));
+    return mlir::success();
+  }
+  mlir::LLVM::FCmpPredicate kind =
+      convertCmpKindToFCmpPredicate(fCmpOp.getKind());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
+      fCmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
+  return mlir::success();
+}
+
 /// Shared lowering logic for checked binary arithmetic overflow operations.
 /// The \p opStr parameter specifies the arithmetic operation name used in the
 /// LLVM intrinsic (e.g., "add", "sub", "mul").
@@ -4584,16 +4582,24 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       return {};
     return mlir::LLVM::LLVMArrayType::get(ty, type.getSize());
   });
+  converter.addConversion([&](cir::SveCountType type) -> mlir::Type {
+    return mlir::LLVM::LLVMTargetExtType::get(type.getContext(),
+                                              "aarch64.svcount", {}, {});
+  });
   converter.addConversion([&](cir::VectorType type) -> mlir::Type {
     // Vector-of-_BitInt memory layout is not modeled here (the element would
     // stay at its literal width); report a conversion failure rather than emit
     // an unvalidated vector.
-    if (auto intTy = mlir::dyn_cast<cir::IntType>(type.getElementType());
-        intTy && intTy.isBitInt())
+    if (cir::isBitIntType(type.getElementType()))
       return {};
-    const mlir::Type ty = converter.convertType(type.getElementType());
+    mlir::Type ty = converter.convertType(type.getElementType());
     if (!ty)
       return {};
+    // A scalar opaque float is lowered to a one-element vector of an integer
+    // of the same width. A vector of opaque floats has that integer as its
+    // element type.
+    if (cir::isAnyOpaqueFloatingPointType(type.getElementType()))
+      ty = mlir::cast<mlir::VectorType>(ty).getElementType();
     return mlir::VectorType::get(type.getSize().getKnownMinValue(), ty,
                                  {type.isScalable()});
   });
@@ -4630,6 +4636,13 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::BF16Type type) -> mlir::Type {
     return mlir::BFloat16Type::get(type.getContext());
+  });
+  // LLVM IR has no type for a floating-point value whose format is not fixed.
+  // A scalar opaque float is lowered to a one-element vector of an integer of
+  // the same width.
+  converter.addConversion([&](cir::MFloat8Type type) -> mlir::Type {
+    return mlir::VectorType::get(
+        1, mlir::IntegerType::get(type.getContext(), type.getWidth()));
   });
   converter.addConversion([&](cir::ComplexType type) -> mlir::Type {
     // A complex type is lowered to an LLVM struct that contains the real and
@@ -5201,6 +5214,24 @@ void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
   lowerOpenCLModuleMetadataAttrs(module);
 }
 
+namespace {
+/// Convert the kernel operands of gpu.launch_func to the types expected by the
+/// converted kernel signature.
+struct GPULaunchFuncOperandLowering : public mlir::ConversionPattern {
+  GPULaunchFuncOperandLowering(const mlir::TypeConverter &converter,
+                               mlir::MLIRContext *ctx)
+      : ConversionPattern(converter, "gpu.launch_func", /*benefit=*/1, ctx) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::Operation *op, llvm::ArrayRef<mlir::Value> operands,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.modifyOpInPlace(op,
+                             [operands, &op] { op->setOperands(operands); });
+    return mlir::success();
+  }
+};
+} // namespace
+
 void ConvertCIRToLLVMPass::runOnOperation() {
   llvm::TimeTraceScope scope("Convert CIR to LLVM Pass");
 
@@ -5270,6 +5301,21 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   mlir::populateOpenMPToLLVMConversionPatterns(converter, patterns);
   target.addIllegalDialect<mlir::BuiltinDialect, cir::CIRDialect,
                            mlir::func::FuncDialect>();
+  // Kernels outlined from CIR keep CIR types in their signature and launch
+  // operands; convert them so later GPU-to-LLVM lowerings see LLVM types.
+  mlir::populateFunctionOpInterfaceTypeConversionPattern("gpu.func", patterns,
+                                                         converter);
+  patterns.add<GPULaunchFuncOperandLowering>(converter, &getContext());
+  mlir::MLIRContext *ctx = &getContext();
+  target.addDynamicallyLegalOp(
+      mlir::OperationName("gpu.func", ctx), [&](mlir::Operation *op) {
+        return converter.isSignatureLegal(mlir::cast<mlir::FunctionType>(
+            mlir::cast<mlir::FunctionOpInterface>(op).getFunctionType()));
+      });
+  target.addDynamicallyLegalOp(
+      mlir::OperationName("gpu.launch_func", ctx), [&](mlir::Operation *op) {
+        return converter.isLegal(op->getOperandTypes());
+      });
 
   llvm::SmallVector<mlir::Operation *> ops;
   ops.push_back(module);
@@ -5939,6 +5985,59 @@ mlir::LogicalResult CIRToLLVMVTTAddrPointOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+/// Converts \p value, the lowered form of a scalar of CIR type \p cirTy, to
+/// the LLVM vector element type for \p cirTy. A scalar opaque float is lowered
+/// to a one-element vector, which is bitcast to its element type.
+static mlir::Value toVectorElement(mlir::OpBuilder &builder, mlir::Location loc,
+                                   mlir::Type cirTy, mlir::Value value) {
+  if (!cir::isAnyOpaqueFloatingPointType(cirTy))
+    return value;
+  auto vecTy = mlir::cast<mlir::VectorType>(value.getType());
+  return mlir::LLVM::BitcastOp::create(builder, loc, vecTy.getElementType(),
+                                       value);
+}
+
+/// Converts \p element, an LLVM vector element of CIR type \p cirTy, to the
+/// lowered form of a scalar of that type. An opaque float element is inserted
+/// into a one-element vector.
+static mlir::Value fromVectorElement(mlir::OpBuilder &builder,
+                                     mlir::Location loc,
+                                     const mlir::TypeConverter &converter,
+                                     mlir::Type cirTy, mlir::Value element) {
+  if (!cir::isAnyOpaqueFloatingPointType(cirTy))
+    return element;
+  mlir::Value poison =
+      mlir::LLVM::PoisonOp::create(builder, loc, converter.convertType(cirTy));
+  mlir::Value zero =
+      mlir::LLVM::ConstantOp::create(builder, loc, builder.getI64Type(), 0);
+  return mlir::LLVM::InsertElementOp::create(builder, loc, poison, element,
+                                             zero);
+}
+
+mlir::LogicalResult CIRToLLVMVecExtractOpLowering::matchAndRewrite(
+    cir::VecExtractOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  const mlir::Location loc = op.getLoc();
+  mlir::Value vec = adaptor.getVec();
+  mlir::Type eltTy =
+      mlir::cast<mlir::VectorType>(vec.getType()).getElementType();
+  mlir::Value element = mlir::LLVM::ExtractElementOp::create(
+      rewriter, loc, eltTy, vec, adaptor.getIndex());
+  rewriter.replaceOp(op, fromVectorElement(rewriter, loc, *typeConverter,
+                                           op.getType(), element));
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
+    cir::VecInsertOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value element = toVectorElement(
+      rewriter, op.getLoc(), op.getValue().getType(), adaptor.getValue());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertElementOp>(
+      op, adaptor.getVec(), element, adaptor.getIndex());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMVecCreateOpLowering::matchAndRewrite(
     cir::VecCreateOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -5955,8 +6054,10 @@ mlir::LogicalResult CIRToLLVMVecCreateOpLowering::matchAndRewrite(
   for (uint64_t i = 0; i < vectorSize; ++i) {
     const mlir::Value indexValue =
         mlir::LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), i);
-    result = mlir::LLVM::InsertElementOp::create(
-        rewriter, loc, result, adaptor.getElements()[i], indexValue);
+    mlir::Value element = toVectorElement(rewriter, loc, vecTy.getElementType(),
+                                          adaptor.getElements()[i]);
+    result = mlir::LLVM::InsertElementOp::create(rewriter, loc, result, element,
+                                                 indexValue);
   }
 
   rewriter.replaceOp(op, result);
@@ -6042,7 +6143,8 @@ mlir::LogicalResult CIRToLLVMVecSplatOpLowering::matchAndRewrite(
   mlir::Location loc = op.getLoc();
   mlir::Value poison = mlir::LLVM::PoisonOp::create(rewriter, loc, llvmTy);
 
-  mlir::Value elementValue = adaptor.getValue();
+  mlir::Value elementValue = toVectorElement(
+      rewriter, loc, op.getValue().getType(), adaptor.getValue());
   if (elementValue.getDefiningOp<mlir::LLVM::PoisonOp>()) {
     // If the splat value is poison, then we can just use poison value
     // for the entire vector.

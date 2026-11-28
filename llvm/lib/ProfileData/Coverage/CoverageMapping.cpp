@@ -422,9 +422,6 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// Vector used to track whether a condition is constant folded.
   MCDCRecord::BoolVector Folded;
 
-  /// Mapping of calculated MC/DC Independence Pairs for each condition.
-  MCDCRecord::TVPairMap IndependencePairs;
-
   /// Helper for sorting ExecVectors / NotExecVectors.
   struct TVIdxTuple {
     MCDCRecord::CondState MCDCCond; /// True/False
@@ -464,7 +461,7 @@ public:
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
         Folded{{BitVector(NumConditions), BitVector(NumConditions)}},
-        IndependencePairs(NumConditions), IsVersion11(IsVersion11) {}
+        IsVersion11(IsVersion11) {}
 
 private:
   // Walk the binary decision diagram and try assigning both false and true to

@@ -13,6 +13,7 @@
 #include "HexagonSubtarget.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
+#include "HexagonTargetMachine.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -23,8 +24,10 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
@@ -39,41 +42,13 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #include "HexagonGenSubtargetInfo.inc"
 
-static cl::opt<bool> EnableBSBSched("enable-bsb-sched", cl::Hidden,
-                                    cl::init(true));
-
-static cl::opt<bool> EnableTCLatencySched("enable-tc-latency-sched", cl::Hidden,
-                                          cl::init(false));
-
-static cl::opt<bool>
-    EnableDotCurSched("enable-cur-sched", cl::Hidden, cl::init(true),
-                      cl::desc("Enable the scheduler to generate .cur"));
-
-static cl::opt<bool>
-    DisableHexagonMISched("disable-hexagon-misched", cl::Hidden,
-                          cl::desc("Disable Hexagon MI Scheduling"));
-
-static cl::opt<bool> OverrideLongCalls(
-    "hexagon-long-calls", cl::Hidden,
-    cl::desc("If present, forces/disables the use of long calls"));
-
-static cl::opt<bool>
-    EnablePredicatedCalls("hexagon-pred-calls", cl::Hidden,
-                          cl::desc("Consider calls to be predicable"));
-
-static cl::opt<bool> SchedPredsCloser("sched-preds-closer", cl::Hidden,
-                                      cl::init(true));
-
-static cl::opt<bool> SchedRetvalOptimization("sched-retval-optimization",
-                                             cl::Hidden, cl::init(true));
-
-static cl::opt<bool> EnableCheckBankConflict(
-    "hexagon-check-bank-conflict", cl::Hidden, cl::init(true),
-    cl::desc("Enable checking for cache bank conflicts"));
+#define OPTIONS_STRUCT_DEFS
+#include "HexagonOptions.inc"
 
 HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
                                    StringRef FS, const TargetMachine &TM)
     : HexagonGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
+      CLOpts(static_cast<const HexagonTargetMachine &>(TM).getCLOpts()),
       OptLevel(TM.getOptLevel()),
       CPUString(std::string(Hexagon_MC::selectHexagonCPU(CPU))),
       TargetTriple(TT), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
@@ -165,15 +140,14 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
     LLVM_DEBUG(
         dbgs() << "Behavior is undefined for simultaneous qfloat and ieee hvx codegen...");
 
-  if (OverrideLongCalls.getPosition())
-    UseLongCalls = OverrideLongCalls;
+  UseLongCalls = valueOr(CLOpts.long_calls, UseLongCalls);
 
-  UseBSBScheduling = hasV60Ops() && EnableBSBSched;
+  UseBSBScheduling = hasV60Ops() && valueOr(CLOpts.bsb_sched, true);
 
   if (isTinyCore()) {
     // Tiny core has a single thread, so back-to-back scheduling is enabled by
     // default.
-    if (!EnableBSBSched.getPosition())
+    if (CLOpts.bsb_sched == BoolOrDefault::Default)
       UseBSBScheduling = false;
   }
 
@@ -510,6 +484,8 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   DenseMap<unsigned, SUnit *> LastVRegUse;
   auto &TRI = *DAG->MF.getSubtarget().getRegisterInfo();
   auto &HII = *DAG->MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
+  const HexagonOptions &CLOpts =
+      DAG->MF.getSubtarget<HexagonSubtarget>().getCLOpts();
 
   // Currently we only catch the situation when compare gets scheduled
   // before preceding call.
@@ -521,8 +497,9 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
     else if (DAG->SUnits[su].getInstr()->isCompare() && LastSequentialCall)
       DAG->addEdge(&DAG->SUnits[su], SDep(LastSequentialCall, SDep::Barrier));
     // Look for call and tfri* instructions.
-    else if (SchedPredsCloser && LastSequentialCall && su > 1 && su < e-1 &&
-             shouldTFRICallBind(HII, DAG->SUnits[su], DAG->SUnits[su+1]))
+    else if (CLOpts.sched_preds_closer && LastSequentialCall && su > 1 &&
+             su < e - 1 &&
+             shouldTFRICallBind(HII, DAG->SUnits[su], DAG->SUnits[su + 1]))
       DAG->addEdge(&DAG->SUnits[su], SDep(&DAG->SUnits[su-1], SDep::Barrier));
     // Prevent redundant register copies due to reads and writes of physical
     // registers. The original motivation for this was the code generated
@@ -538,7 +515,7 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
     // needed. This code inserts a Barrier dependence between 3 & 4 to prevent
     // this.
     // The code below checks for all the physical registers, not just R0/D0/V0.
-    else if (SchedRetvalOptimization) {
+    else if (CLOpts.sched_retval_optimization) {
       const MachineInstr *MI = DAG->SUnits[su].getInstr();
       if (MI->isCopy() && MI->getOperand(1).getReg().isPhysical()) {
         // %vregX = COPY %r0
@@ -570,8 +547,142 @@ void HexagonSubtarget::CallMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   }
 }
 
+namespace {
+// Address of a load in the form used by the bank conflict check:
+//   (Base << Shift) + Sym + Offset
+// Sym is null when the offset is a plain immediate.
+struct BankAddr {
+  Register Base;
+  unsigned Shift = 0;
+  const GlobalValue *Sym = nullptr;
+  int64_t Offset = 0;
+  uint64_t Size = 0;
+};
+} // end anonymous namespace
+
+// Decompose a scalar load into a BankAddr. Handles the base + offset form,
+// with either an immediate (memw(Rs+#s11)) or a global address
+// (memw(Rs+##sym)) as the offset, and the shifted-register + global form
+// (memw(Rt<<#u2+##sym)).
+static std::optional<BankAddr> getBankAddr(const MachineInstr &MI,
+                                           const HexagonInstrInfo &HII) {
+  if (!MI.mayLoad() || MI.mayStore() || HII.isMemOp(MI) ||
+      HII.isPostIncrement(MI) || HII.isHLXVec(MI))
+    return std::nullopt;
+  unsigned AddrMode = HII.getAddrMode(MI);
+  if (AddrMode != HexagonII::BaseImmOffset &&
+      AddrMode != HexagonII::BaseLongOffset)
+    return std::nullopt;
+
+  // Operand 0 is the loaded value; the address operands follow.
+  unsigned BasePos = 1;
+  if (HII.isPredicated(MI))
+    ++BasePos;
+
+  BankAddr A;
+  unsigned OffsetPos = BasePos + 1;
+  if (AddrMode == HexagonII::BaseLongOffset) {
+    // Rt << #u2 + ##u32
+    const MachineOperand &ShiftOp = MI.getOperand(BasePos + 1);
+    if (!ShiftOp.isImm())
+      return std::nullopt;
+    A.Shift = ShiftOp.getImm();
+    ++OffsetPos;
+  }
+
+  const MachineOperand &BaseOp = MI.getOperand(BasePos);
+  if (!BaseOp.isReg() || BaseOp.getSubReg() != 0)
+    return std::nullopt;
+  A.Base = BaseOp.getReg();
+
+  const MachineOperand &OffsetOp = MI.getOperand(OffsetPos);
+  if (OffsetOp.isImm()) {
+    A.Offset = OffsetOp.getImm();
+  } else if (OffsetOp.isGlobal()) {
+    // Only a direct reference to the symbol tells where it is relative to the
+    // bank boundaries; GOT, TLS and other relocations do not.
+    if ((OffsetOp.getTargetFlags() & ~HexagonII::HMOTF_ConstExtended) !=
+        HexagonII::MO_NO_FLAG)
+      return std::nullopt;
+    A.Sym = OffsetOp.getGlobal();
+    A.Offset = OffsetOp.getOffset();
+  } else {
+    return std::nullopt;
+  }
+
+  A.Size = HII.getMemAccessSize(MI);
+  return A;
+}
+
+// Return true if the offsets of the two loads can be compared to decide
+// whether they map to the same bank, i.e. whether the symbols (if any)
+// contribute the same value to the bank bits of the address.
+static bool haveComparableSyms(const BankAddr &A0, const BankAddr &A1,
+                               const DataLayout &DL) {
+  if (A0.Sym == A1.Sym)
+    return true;
+  // Different symbols: the linker places each one independently, so their
+  // low address bits are known only from their alignment. A symbol aligned to
+  // the bank period (32 bytes) does not affect the bank bits, the same as a
+  // plain immediate offset (null Sym).
+  const Align BankPeriod(32);
+  auto HasKnownBankBits = [&](const GlobalValue *Sym) {
+    return !Sym || Sym->getPointerAlignment(DL) >= BankPeriod;
+  };
+  return HasKnownBankBits(A0.Sym) && HasKnownBankBits(A1.Sym);
+}
+
+// Return true if loads MI0 and MI1 likely map to the same cache bank and
+// should not be issued in the same packet. If IgnoreSameLine is true, loads
+// that likely read the same cache line, which cannot conflict, are not
+// reported.
+bool HexagonSubtarget::mayHaveBankConflict(const MachineInstr &MI0,
+                                           const MachineInstr &MI1,
+                                           const HexagonInstrInfo &HII,
+                                           bool IgnoreSameLine) const {
+  if (!CLOpts.check_bank_conflict)
+    return false;
+  std::optional<BankAddr> A0 = getBankAddr(MI0, HII);
+  // Skip accesses as large as the L1 cache line.
+  if (!A0 || A0->Size == 0 || A0->Size >= 32)
+    return false;
+  std::optional<BankAddr> A1 = getBankAddr(MI1, HII);
+  if (!A1 || A1->Size == 0 || A1->Size >= 32 || A0->Base != A1->Base ||
+      A0->Shift != A1->Shift ||
+      !haveComparableSyms(*A0, *A1, MI0.getMF()->getDataLayout()))
+    return false;
+  // A bank conflict needs two different cache lines. As the bank check
+  // below does, assume the base is 32-byte aligned: offsets within the same
+  // 32-byte block then read the same line and cannot conflict.
+  if (IgnoreSameLine && A0->Sym == A1->Sym &&
+      (A0->Offset & ~int64_t(31)) == (A1->Offset & ~int64_t(31)))
+    return false;
+  // Compare the bank bits of the two offsets. If any of them differ, the
+  // loads go to different banks and can share a packet.
+  //
+  // Which address bits select the bank depends on the access sizes:
+  //
+  //   Load pair                                  Bank bits   Mask
+  //   -----------------------------------------  ---------   ----
+  //   double word + any load                     4:3         0x18
+  //   word/half-word/byte + word/half-word/byte  4:2         0x1C
+  //
+  // Bit 2 only tells two loads apart when neither of them is a double word.
+  // A double word covers both words of its 8-byte slot, so once one is
+  // involved, offsets that differ only in bit 2 still count as a conflict.
+  // Example (same base):
+  //   memw(Rs+#0) and memw(Rs+#4) differ in bit 2  -> no conflict
+  //   memw(Rs+#0) and memh(Rs+#4) differ in bit 2  -> no conflict
+  //   memd(Rs+#0) and memw(Rs+#4) match on 4:3     -> conflict
+  //   memd(Rs+#0) and memd(Rs+#8) differ in bit 3  -> no conflict
+  bool HasDoubleWord = A0->Size == 8 || A1->Size == 8;
+  int64_t BankMask = HasDoubleWord ? 0x18 : 0x1C;
+  return ((A0->Offset ^ A1->Offset) & BankMask) == 0;
+}
+
 void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
-  if (!EnableCheckBankConflict)
+  const auto &HST = DAG->MF.getSubtarget<HexagonSubtarget>();
+  if (!HST.getCLOpts().check_bank_conflict)
     return;
 
   const auto &HII = static_cast<const HexagonInstrInfo&>(*DAG->TII);
@@ -581,35 +692,17 @@ void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
   // between them, we cannot rely on existing edges.
   for (unsigned i = 0, e = DAG->SUnits.size(); i != e; ++i) {
     SUnit &S0 = DAG->SUnits[i];
-    MachineInstr &L0 = *S0.getInstr();
-    if (!L0.mayLoad() || L0.mayStore() ||
-        HII.getAddrMode(L0) != HexagonII::BaseImmOffset)
-      continue;
-    int64_t Offset0;
-    LocationSize Size0 = LocationSize::precise(0);
-    MachineOperand *BaseOp0 = HII.getBaseAndOffset(L0, Offset0, Size0);
-    // Is the access size is longer than the L1 cache line, skip the check.
-    if (BaseOp0 == nullptr || !BaseOp0->isReg() || !Size0.hasValue() ||
-        Size0.getValue() >= 32)
+    if (!getBankAddr(*S0.getInstr(), HII))
       continue;
     // Scan only up to 32 instructions ahead (to avoid n^2 complexity).
     for (unsigned j = i+1, m = std::min(i+32, e); j != m; ++j) {
       SUnit &S1 = DAG->SUnits[j];
-      MachineInstr &L1 = *S1.getInstr();
-      if (!L1.mayLoad() || L1.mayStore() ||
-          HII.getAddrMode(L1) != HexagonII::BaseImmOffset)
+      // Use the conservative check here: the edge only guides the scheduler,
+      // and the packetizer decides whether the loads can share a packet.
+      if (!HST.mayHaveBankConflict(*S0.getInstr(), *S1.getInstr(), HII,
+                                   /*IgnoreSameLine=*/false))
         continue;
-      int64_t Offset1;
-      LocationSize Size1 = LocationSize::precise(0);
-      MachineOperand *BaseOp1 = HII.getBaseAndOffset(L1, Offset1, Size1);
-      if (BaseOp1 == nullptr || !BaseOp1->isReg() || !Size0.hasValue() ||
-          Size1.getValue() >= 32 || BaseOp0->getReg() != BaseOp1->getReg())
-        continue;
-      // Check bits 3 and 4 of the offset: if they differ, a bank conflict
-      // is unlikely.
-      if (((Offset0 ^ Offset1) & 0x18) != 0)
-        continue;
-      // Bits 3 and 4 are the same, add an artificial edge and set extra
+      // The loads likely conflict: add an artificial edge and set extra
       // latency.
       SDep A(&S0, SDep::Artificial);
       A.setLatency(1);
@@ -726,7 +819,7 @@ void HexagonSubtarget::adjustSchedDependency(
   // Try to schedule uses near definitions to generate .cur.
   ExclSrc.clear();
   ExclDst.clear();
-  if (EnableDotCurSched && QII->isToBeScheduledASAP(*SrcInst, *DstInst) &&
+  if (CLOpts.cur_sched && QII->isToBeScheduledASAP(*SrcInst, *DstInst) &&
       isBestZeroLatency(Src, Dst, QII, ExclSrc, ExclDst)) {
     Dep.setLatency(0);
     return;
@@ -756,15 +849,9 @@ void HexagonSubtarget::getSMSMutations(
 // Pin the vtable to this file.
 void HexagonSubtarget::anchor() {}
 
-bool HexagonSubtarget::enableMachineScheduler() const {
-  if (DisableHexagonMISched.getNumOccurrences())
-    return !DisableHexagonMISched;
-  return true;
-}
+bool HexagonSubtarget::enableMachineScheduler() const { return CLOpts.misched; }
 
-bool HexagonSubtarget::usePredicatedCalls() const {
-  return EnablePredicatedCalls;
-}
+bool HexagonSubtarget::usePredicatedCalls() const { return CLOpts.pred_calls; }
 
 int HexagonSubtarget::updateLatency(MachineInstr &SrcInst,
                                     MachineInstr &DstInst, bool IsArtificial,

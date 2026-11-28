@@ -240,9 +240,9 @@ define void @_ZN5clang6format22BreakableStringLiteral11insertBreakEjjSt4pairImjE
 ; CHECK-NEXT:    extsw 0, 0
 ; CHECK-NEXT:    std 3, 112(1)
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    std 0, 120(1)
 ; CHECK-NEXT:    std 3, 104(1)
 ; CHECK-NEXT:    mr 3, 12
+; CHECK-NEXT:    std 0, 120(1)
 ; CHECK-NEXT:    bl _ZN5clang6format17WhitespaceManager24replaceWhitespaceInTokenERKNS0_11FormatTokenEjjN4llvm9StringRefES6_bjji
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi 1, 1, 144

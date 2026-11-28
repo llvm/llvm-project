@@ -7,26 +7,45 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/PassManager.h"
+#include "llvm/SandboxIR/Function.h"
+#include "llvm/SandboxIR/Region.h"
 
 namespace llvm::sandboxir {
 
 bool FunctionPassManager::runOnFunction(Function &F, const Analyses &A) {
   bool Change = false;
   for (auto &Pass : Passes) {
-    Change |= Pass->runOnFunction(F, A);
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+    auto HashBefore = F.hash();
+#endif
+    bool PassChange = Pass->runOnFunction(F, A);
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+    auto HashAfter = F.hash();
+    assert((PassChange || HashAfter == HashBefore) &&
+           "The pass returned false (i.e., no change) but the IR changed!");
+#endif
+    Change |= PassChange;
     // TODO: run the verifier.
   }
-  // TODO: Check ChangeAll against hashes before/after.
   return Change;
 }
 
 bool RegionPassManager::runOnRegion(Region &R, const Analyses &A) {
   bool Change = false;
   for (auto &Pass : Passes) {
-    Change |= Pass->runOnRegion(R, A);
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+    auto &F = R.getParentFunction();
+    auto HashBefore = F.hash();
+#endif
+    bool PassChange = Pass->runOnRegion(R, A);
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+    auto HashAfter = F.hash();
+    assert((PassChange || HashAfter == HashBefore) &&
+           "The pass returned false (i.e., no change) but the IR changed!");
+#endif
+    Change |= PassChange;
     // TODO: run the verifier.
   }
-  // TODO: Check ChangeAll against hashes before/after.
   return Change;
 }
 

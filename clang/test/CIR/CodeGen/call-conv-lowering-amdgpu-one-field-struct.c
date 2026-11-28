@@ -104,7 +104,7 @@ cdwrap_t ret_cdwrap(cdwrap_t w) { return w; }
 // CIR-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
 // CIR-NEXT:   %[[FIELD:.*]] = cir.get_member %[[COERCE]][0] {name = ""} : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!cir.complex<!cir.double>, target_address_space(5)>
 // CIR-NEXT:   cir.store %[[ARG]], %[[FIELD]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>, target_address_space(5)>
-// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
+// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
 // CIR-NEXT:   %[[W:.*]] = cir.alloca "w" align(8) init : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
 // CIR-NEXT:   %[[W_VIEW:.*]] = cir.cast address_space %[[W]] : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!rec_cdwrap_t>
 // CIR-NEXT:   %[[RETVAL_VIEW:.*]] = cir.cast address_space %[[RETVAL]] : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!rec_cdwrap_t>

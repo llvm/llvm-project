@@ -1680,8 +1680,7 @@ SIScheduler::scheduleVariant(SISchedulerBlockCreatorVariant BlockVariant,
 
 SIScheduleDAGMI::SIScheduleDAGMI(MachineSchedContext *C) :
   ScheduleDAGMILive(C, std::make_unique<GenericScheduler>(C)) {
-  SITII = static_cast<const SIInstrInfo*>(TII);
-  SITRI = static_cast<const SIRegisterInfo*>(TRI);
+  SITII = static_cast<const SIInstrInfo *>(TII);
 }
 
 SIScheduleDAGMI::~SIScheduleDAGMI() = default;

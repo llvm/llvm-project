@@ -278,20 +278,20 @@ void VETargetLowering::initSPUActions() {
     setOperationAction(ISD::ATOMIC_SWAP, VT, Custom);
 
     // FIXME: Support "atmam" instructions.
-    setOperationAction(ISD::ATOMIC_LOAD_ADD, VT, Expand);
+    setOperationAction(ISD::ATOMIC_LOAD_ADD, VT, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_SUB, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_AND, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_OR, VT, Expand);
+    setOperationAction(ISD::ATOMIC_LOAD_AND, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_OR, VT, LibCall);
 
     // VE doesn't have follwing instructions.
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, VT, Expand);
     setOperationAction(ISD::ATOMIC_LOAD_CLR, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_XOR, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_NAND, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_MIN, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_MAX, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_UMIN, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_UMAX, VT, Expand);
+    setOperationAction(ISD::ATOMIC_LOAD_XOR, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_NAND, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_MIN, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_MAX, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_UMIN, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_UMAX, VT, LibCall);
   }
 
   /// } Atomic instructions

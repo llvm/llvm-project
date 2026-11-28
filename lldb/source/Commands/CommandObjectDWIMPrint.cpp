@@ -45,6 +45,7 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
                         LLDB_OPT_SET_1);
   StringRef exclude_expr_options[] = {"debug", "top-level"};
   m_option_group.Append(&m_expr_options, exclude_expr_options);
+  m_expr_options.AppendLanguageOptions(m_option_group);
   m_option_group.Append(&m_varobj_options, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
   m_option_group.Finalize();
 }
@@ -156,15 +157,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   // First, try `expr` as a _limited_ frame variable expression path: only the
   // dot operator (`.`) is permitted for this case.
-  //
-  // This is limited to support only unambiguous expression paths. Of note,
-  // expression paths are not attempted if the expression contain either the
-  // arrow operator (`->`) or the subscript operator (`[]`). This is because
-  // both operators can be overloaded in C++, and could result in ambiguity in
-  // how the expression is handled. Additionally, `*` and `&` are not supported.
-  const bool try_variable_path =
-      !expr.contains("->") && expr.find_first_of("*&[]") == StringRef::npos;
-  if (frame && try_variable_path) {
+  if (frame) {
     VariableSP var_sp;
     Status status;
     auto valobj_sp = frame->GetValueForVariableExpressionPath(

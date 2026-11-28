@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fopenacc -ast-dump | FileCheck %s
+// RUN: %clang_cc1 %s -fopenacc -ast-dump | FileCheck %s --check-prefixes=CHECK,CHECK-NOPCH
 
 // Test this with PCH.
 // RUN: %clang_cc1 %s -fopenacc -emit-pch -o %t %s
@@ -57,6 +57,7 @@ auto Lambda2 = [](){};
 #pragma acc routine worker nohost bind("asdf")
 auto Lambda3 = [](auto a){ return a;};
 // CHECK: VarDecl{{.*}} Lambda3 '(lambda at
+// CHECK-NOPCH-NEXT: value: Struct
 // CHECK-NEXT: LambdaExpr
 // CHECK-NEXT: CXXRecordDecl
 // CHECK: FunctionTemplateDecl{{.*}} operator()
@@ -125,7 +126,7 @@ struct S {
 #pragma acc routine worker
   constexpr static auto Lambda2 = [](){ return 1; };
   // CHECK: VarDecl{{.*}}Lambda2 'const S::(lambda at
-  // CHECK-NEXT: value: Struct
+  // CHECK-NOPCH-NEXT: value: Struct
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: LambdaExpr
   // CHECK-NEXT: CXXRecordDecl
@@ -312,7 +313,7 @@ struct DepS {
 // CHECK-NEXT: value: Int 1
 
 // CHECK: VarDecl{{.*}}Lambda2 'const DepS<int>::(lambda at
-// CHECK-NEXT: value: Struct
+// CHECK-NOPCH-NEXT: value: Struct
 // CHECK-NEXT: ImplicitCastExpr
 // CHECK-NEXT: LambdaExpr
 // CHECK-NEXT: CXXRecordDecl
@@ -326,7 +327,7 @@ struct DepS {
 // CHECK-NEXT: value: Int 1
 
 // CHECK: VarDecl{{.*}}Lambda3 'const DepS<int>::(lambda at
-// CHECK-NEXT: value: Struct
+// CHECK-NOPCH-NEXT: value: Struct
 // CHECK-NEXT: ImplicitCastExpr
 // CHECK-NEXT: LambdaExpr
 // CHECK-NEXT: CXXRecordDecl

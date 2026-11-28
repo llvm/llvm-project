@@ -5,7 +5,6 @@
 
 ---
 name:            reg_coalescer_subreg_liveness
-tracksRegLiveness: true
 liveins:
 body:             |
   ; CHECK-LABEL: name: reg_coalescer_subreg_liveness
@@ -78,7 +77,6 @@ body:             |
 ...
 ---
 name:            reg_coalescer_subreg_liveness_2
-tracksRegLiveness: true
 liveins:
 body:             |
   ; CHECK-LABEL: name: reg_coalescer_subreg_liveness_2

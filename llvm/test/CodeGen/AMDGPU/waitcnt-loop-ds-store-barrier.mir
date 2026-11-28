@@ -19,7 +19,6 @@
 # The preheader should NOT have S_WAIT_DSCNT because SeenDSStoreInLoop = true.
 # Instead, the wait should be inside the loop.
 name: ds_store_barrier_no_preheader_flush
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

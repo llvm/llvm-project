@@ -20,7 +20,6 @@
 
 ---
 name:            foo
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 32, alignment: 4 }
 machineFunctionInfo:

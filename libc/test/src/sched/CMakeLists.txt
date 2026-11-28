@@ -13,8 +13,7 @@ add_libc_test(
   DEPENDS
     libc.hdr.types.cpu_set_t
     libc.hdr.types.pid_t
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.gettid
     libc.src.sched.sched_getaffinity
     libc.src.sched.sched_setaffinity
     libc.test.UnitTest.ErrnoCheckingTest
@@ -143,8 +142,7 @@ add_libc_test(
     libc.hdr.sched_macros
     libc.hdr.types.cpu_set_t
     libc.hdr.types.pid_t
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.gettid
     libc.src.sched.sched_getaffinity
     libc.src.sched.__sched_clrcpuset
     libc.src.sched.__sched_getcpucount

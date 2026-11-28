@@ -22,13 +22,7 @@ using namespace mlir;
 using namespace mlir::abi;
 using namespace cir;
 
-namespace {
-
-/// The AArch64 options the library classifies with, derived from \p modOp's
-/// attributes the way classic CodeGen derives them from the target and the
-/// language options.  A module with no triple is classified as AAPCS64
-/// little-endian, and one with no source language as C.
-llvm::abi::AArch64ABIOptions getAArch64ABIOptions(mlir::ModuleOp modOp) {
+llvm::abi::AArch64ABIOptions cir::getAArch64ABIOptions(mlir::ModuleOp modOp) {
   llvm::Triple triple("aarch64-unknown-linux-gnu");
   if (auto tripleAttr = modOp->getAttrOfType<mlir::StringAttr>(
           cir::CIRDialect::getTripleAttrName()))
@@ -75,20 +69,35 @@ llvm::abi::AArch64ABIOptions getAArch64ABIOptions(mlir::ModuleOp modOp) {
   return opts;
 }
 
+namespace {
+
 class AArch64ABIClassifier final : public CIRABIClassifierCommon {
 public:
-  AArch64ABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp)
-      : CIRABIClassifierCommon(dl, modOp),
+  AArch64ABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp,
+                       const llvm::abi::AArch64ABIOptions &opts)
+      : CIRABIClassifierCommon(dl, modOp), abiKind(opts.Kind),
         targetInfo(llvm::abi::createAArch64TargetInfo(
-            typeMapper.getTypeBuilder(), getAArch64ABIOptions(modOp))) {}
+            typeMapper.getTypeBuilder(), opts)) {}
 
-  /// The AArch64 `va_list` and the expansion of `cir.va_arg` through it are
-  /// not implemented yet.
+  /// Classify the type fetched by \p vaArg as an unnamed argument with a full
+  /// register budget.
   mlir::FailureOr<ArgClassification>
   classifyVAArg(cir::VAArgOp vaArg) override {
-    vaArg->emitOpError()
-        << "not yet implemented in CallConvLowering for AArch64";
-    return mlir::failure();
+    switch (abiKind) {
+    case llvm::abi::AArch64ABIKind::DarwinPCS:
+      vaArg->emitOpError()
+          << "not yet implemented in CallConvLowering for Darwin AArch64";
+      return mlir::failure();
+    case llvm::abi::AArch64ABIKind::Win64:
+      vaArg->emitOpError()
+          << "not yet implemented in CallConvLowering for Windows AArch64";
+      return mlir::failure();
+    case llvm::abi::AArch64ABIKind::AAPCS:
+    case llvm::abi::AArch64ABIKind::AAPCSSoft:
+      break;
+    }
+    return classifyVarArgType(vaArg.getType(), *targetInfo,
+                              [&]() { return vaArg->emitOpError(); });
   }
 
 protected:
@@ -99,6 +108,7 @@ protected:
   }
 
 private:
+  llvm::abi::AArch64ABIKind abiKind;
   std::unique_ptr<llvm::abi::TargetInfo> targetInfo;
 };
 
@@ -106,6 +116,7 @@ private:
 
 std::unique_ptr<CIRABIClassifier>
 cir::createAArch64ABIClassifier(const mlir::DataLayout &dl,
-                                mlir::ModuleOp modOp) {
-  return std::make_unique<AArch64ABIClassifier>(dl, modOp);
+                                mlir::ModuleOp modOp,
+                                const llvm::abi::AArch64ABIOptions &opts) {
+  return std::make_unique<AArch64ABIClassifier>(dl, modOp, opts);
 }

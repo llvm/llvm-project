@@ -325,11 +325,8 @@ const char *SBWatchpoint::GetWatchSpec() {
 
   TargetAPIMutex api_lock = watchpoint_sp->GetTarget().GetAPIMutex();
   std::lock_guard<TargetAPIMutex> guard(api_lock);
-  // Store the result of `GetWatchSpec()` as a ConstString
-  // so that the C string we return has a sufficiently long
-  // lifetime. Note this a memory leak but should be fairly
-  // low impact.
-  return ConstString(watchpoint_sp->GetWatchSpec()).AsCString(nullptr);
+  return GetDebuggerStringPool(watchpoint_sp->GetTarget())
+      .InternNonEmpty(watchpoint_sp->GetWatchSpec());
 }
 
 bool SBWatchpoint::IsWatchingReads() {

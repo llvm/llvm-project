@@ -47,6 +47,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Alignment.h"
@@ -1043,18 +1044,17 @@ public:
   /// selects between the two kinds.  For example on X86 a scalar boolean should
   /// be zero extended from i1, while the elements of a vector of booleans
   /// should be sign extended from i1.
-  ///
-  /// Some cpus also treat floating point types the same way as they treat
-  /// vectors instead of the way they treat scalars.
-  BooleanContent getBooleanContents(bool isVec, bool isFloat) const {
-    if (isVec)
-      return BooleanVectorContents;
-    return isFloat ? BooleanFloatContents : BooleanContents;
+  BooleanContent getBooleanContents(bool isVec) const {
+    return isVec ? BooleanVectorContents : BooleanContents;
   }
 
   BooleanContent getBooleanContents(EVT Type) const {
-    return getBooleanContents(Type.isVector(), Type.isFloatingPoint());
+    return getBooleanContents(Type.isVector());
   }
+
+  // MVT::SimpleValueType would otherwise convert to bool and pick the isVec
+  // overload. Use getBooleanContents(EVT) or pass isVec.
+  BooleanContent getBooleanContents(MVT::SimpleValueType) const = delete;
 
   /// Promote the given target boolean to a target boolean of the given type.
   /// A target boolean is an integer value, not necessarily of type i1, the bits
@@ -1287,6 +1287,14 @@ public:
 
     // value representing memory location
     PointerUnion<const Value *, const PseudoSourceValue *> ptrVal;
+
+    // Cache hint metadata for this memory access.
+    const MDNode *memCacheHint = nullptr;
+
+    void setPointerOperand(const CallBase &I, unsigned ArgNo) {
+      ptrVal = I.getArgOperand(ArgNo);
+      memCacheHint = getMemCacheHint(I, ArgNo);
+    }
 
     // Fallback address space for use if ptrVal is nullptr. std::nullopt means
     // unknown address space.
@@ -2559,7 +2567,8 @@ public:
 
   /// Returns how the given (atomic) load should be expanded by the
   /// IR-level AtomicExpand pass.
-  virtual AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+  virtual AtomicExpansionKind
+  shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
     return AtomicExpansionKind::None;
   }
 
@@ -2574,7 +2583,8 @@ public:
   /// Returns how the given (atomic) store should be expanded by the IR-level
   /// AtomicExpand pass into. For instance AtomicExpansionKind::CustomExpand
   /// will try to use an atomicrmw xchg.
-  virtual AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+  virtual AtomicExpansionKind
+  shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
     return AtomicExpansionKind::None;
   }
 
@@ -2743,19 +2753,9 @@ public:
   // the derived class constructor to configure this object for the target.
   //
 protected:
-  /// Specify how the target extends the result of integer and floating point
-  /// boolean values from i1 to a wider type.  See getBooleanContents.
-  void setBooleanContents(BooleanContent Ty) {
-    BooleanContents = Ty;
-    BooleanFloatContents = Ty;
-  }
-
-  /// Specify how the target extends the result of integer and floating point
-  /// boolean values from i1 to a wider type.  See getBooleanContents.
-  void setBooleanContents(BooleanContent IntTy, BooleanContent FloatTy) {
-    BooleanContents = IntTy;
-    BooleanFloatContents = FloatTy;
-  }
+  /// Specify how the target extends the result of a boolean value from i1 to a
+  /// wider type.  See getBooleanContents.
+  void setBooleanContents(BooleanContent Ty) { BooleanContents = Ty; }
 
   /// Specify how the target extends the result of a vector boolean value from a
   /// vector of i1 to a wider type.  See getBooleanContents.
@@ -3893,10 +3893,6 @@ private:
   /// Information about the contents of the high-bits in boolean values held in
   /// a type wider than i1. See getBooleanContents.
   BooleanContent BooleanContents;
-
-  /// Information about the contents of the high-bits in boolean values held in
-  /// a type wider than i1. See getBooleanContents.
-  BooleanContent BooleanFloatContents;
 
   /// Information about the contents of the high-bits in boolean vector values
   /// when the element type is wider than i1. See getBooleanContents.

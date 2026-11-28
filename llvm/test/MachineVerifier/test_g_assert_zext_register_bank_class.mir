@@ -3,7 +3,6 @@
 
 ---
 name: test
-tracksRegLiveness: true
 regBankSelected: false
 body: |
   bb.0:

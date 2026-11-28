@@ -44,7 +44,7 @@
 float16_t test_svmaxnmv_f16(svbool_t pg, svfloat16_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.fmaxnmv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !cir.f16
 
@@ -60,7 +60,7 @@ float16_t test_svmaxnmv_f16(svbool_t pg, svfloat16_t op) MODE_ATTR
 float32_t test_svmaxnmv_f32(svbool_t pg, svfloat32_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[4] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.fmaxnmv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !cir.float
 
@@ -76,7 +76,7 @@ float32_t test_svmaxnmv_f32(svbool_t pg, svfloat32_t op) MODE_ATTR
 float64_t test_svmaxnmv_f64(svbool_t pg, svfloat64_t op) MODE_ATTR
 {
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
-// CIR-SAME:          -> !cir.vector<[2] x !cir.int<u, 1>>
+// CIR-SAME:          -> !cir.vector<[2] x !cir.int<u, 1>, sve_predicate>
 // CIR:           %[[RES:.*]] = cir.call_llvm_intrinsic "aarch64.sve.fmaxnmv" %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !cir.double
 

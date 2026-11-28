@@ -9,8 +9,9 @@
 
 #include "lldb/API/SBTraceCursor.h"
 #include "Utils.h"
-#include "lldb/Utility/Instrumentation.h"
 #include "lldb/Target/TraceCursor.h"
+#include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -108,7 +109,7 @@ bool SBTraceCursor::IsError() const {
 const char *SBTraceCursor::GetError() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return ConstString(m_opaque_sp->GetError()).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_sp->GetError());
 }
 
 bool SBTraceCursor::IsEvent() const {
@@ -126,7 +127,8 @@ lldb::TraceEvent SBTraceCursor::GetEventType() const {
 const char *SBTraceCursor::GetEventTypeAsString() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return ConstString(m_opaque_sp->GetEventTypeAsString()).GetCString();
+  return StringPool::GetSystemPool().Intern(
+      m_opaque_sp->GetEventTypeAsString());
 }
 
 bool SBTraceCursor::IsInstruction() const {

@@ -135,8 +135,6 @@ private:
 
     StringRef SrcFileName;
 
-    uint8_t DebugMapObjectType;
-
     std::shared_ptr<DwarfLinkerForBinaryRelocationMap> DwarfLinkerRelocMap;
 
     std::optional<std::string> LibInstallName;
@@ -171,9 +169,8 @@ private:
                    const DebugMapObject &DMO,
                    std::shared_ptr<DwarfLinkerForBinaryRelocationMap> DLBRM)
         : Linker(Linker), SrcFileName(DMO.getObjectFilename()),
-          DebugMapObjectType(MachO::N_OSO), DwarfLinkerRelocMap(DLBRM) {
+          DwarfLinkerRelocMap(DLBRM) {
       if (DMO.getRelocationMap().has_value()) {
-        DebugMapObjectType = MachO::N_LIB;
         LibInstallName.emplace(DMO.getInstallName().value());
         const RelocationMap &RM = DMO.getRelocationMap().value();
         auto AddRelocs =

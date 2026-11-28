@@ -184,6 +184,6 @@ declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 declare noalias ptr @malloc(i64) willreturn allockind("alloc,uninitialized") "alloc-family"="malloc"
 declare void @readnone(ptr) readnone nounwind
-declare void @free(ptr nocapture) allockind("free") "alloc-family"="malloc"
+declare void @free(ptr allocptr nocapture) allockind("free") "alloc-family"="malloc"
 
 declare void @use(ptr)

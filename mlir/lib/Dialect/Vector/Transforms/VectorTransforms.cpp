@@ -1624,11 +1624,13 @@ getTransferFoldableInnerUnitDims(MemRefType srcType, VectorType vectorType) {
 
 /// Drop inner most contiguous unit dimensions from transfer_read operand.
 class DropInnerMostUnitDimsTransferRead
-    : public OpRewritePattern<vector::TransferReadOp> {
-  using Base::Base;
+    : public MaskableOpRewritePattern<vector::TransferReadOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<Value>
+  matchAndRewriteMaskableOp(vector::TransferReadOp readOp,
+                            vector::MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (readOp.getTransferRank() == 0)
       return failure();
@@ -1651,6 +1653,11 @@ class DropInnerMostUnitDimsTransferRead
 
     size_t dimsToDrop = maybeDimsToDrop.value();
     if (dimsToDrop == 0)
+      return failure();
+
+    // TODO: Extend vector.mask to support 0-d vectors. In the meantime, bail
+    // out.
+    if (maskingOp && dimsToDrop == static_cast<size_t>(targetType.getRank()))
       return failure();
 
     auto inBounds = readOp.getInBoundsValues();
@@ -1681,8 +1688,9 @@ class DropInnerMostUnitDimsTransferRead
     auto permMap = getTransferMinorIdentityMap(
         cast<ShapedType>(rankedReducedView.getType()), resultTargetVecType);
 
-    // If there is a mask, shape_cast it to drop the same inner unit dims.
-    Value mask = readOp.getMask();
+    // If there is a mask, either the operand or the one of the enclosing
+    // vector.mask, shape_cast it to drop the same inner unit dims.
+    Value mask = maskingOp ? maskingOp.getMask() : readOp.getMask();
     if (mask) {
       auto maskType = cast<VectorType>(mask.getType());
       auto reducedMaskType = VectorType::get(
@@ -1692,13 +1700,20 @@ class DropInnerMostUnitDimsTransferRead
                                                         mask);
     }
 
-    Value result = vector::TransferReadOp::create(
+    Operation *newReadOp = vector::TransferReadOp::create(
         rewriter, loc, resultTargetVecType, rankedReducedView,
         readOp.getIndices().drop_back(dimsToDrop), AffineMapAttr::get(permMap),
-        readOp.getPadding(), mask, inBoundsAttr);
-    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(readOp, targetType,
-                                                     result);
-    return success();
+        readOp.getPadding(), maskingOp ? Value() : mask, inBoundsAttr);
+    if (maskingOp) {
+      Value passthru;
+      if (maskingOp.hasPassthru())
+        passthru = rewriter.createOrFold<vector::ShapeCastOp>(
+            loc, resultTargetVecType, maskingOp.getPassthru());
+      newReadOp = vector::maskOperation(rewriter, newReadOp, mask, passthru);
+    }
+    return vector::ShapeCastOp::create(rewriter, loc, targetType,
+                                       newReadOp->getResult(0))
+        .getResult();
   }
 };
 
@@ -1721,11 +1736,13 @@ class DropInnerMostUnitDimsTransferRead
 ///
 /// Note, this pattern will not collapse "scalable unit" dims (i.e. `[1]`).
 class DropInnerMostUnitDimsTransferWrite
-    : public OpRewritePattern<vector::TransferWriteOp> {
-  using Base::Base;
+    : public MaskableOpRewritePattern<vector::TransferWriteOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<Value>
+  matchAndRewriteMaskableOp(vector::TransferWriteOp writeOp,
+                            vector::MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const override {
     // TODO: support 0-d corner case.
     if (writeOp.getTransferRank() == 0)
       return failure();
@@ -1748,6 +1765,11 @@ class DropInnerMostUnitDimsTransferWrite
 
     size_t dimsToDrop = maybeDimsToDrop.value();
     if (dimsToDrop == 0)
+      return failure();
+
+    // TODO: Extend vector.mask to support 0-d vectors. In the meantime, bail
+    // out.
+    if (maskingOp && dimsToDrop == static_cast<size_t>(targetType.getRank()))
       return failure();
 
     auto inBounds = writeOp.getInBoundsValues();
@@ -1782,8 +1804,9 @@ class DropInnerMostUnitDimsTransferWrite
     auto shapeCast = rewriter.createOrFold<vector::ShapeCastOp>(
         loc, resultTargetVecType, writeOp.getVector());
 
-    // If there is a mask, shape_cast it to drop the same inner unit dims.
-    Value mask = writeOp.getMask();
+    // If there is a mask, either the operand or the one of the enclosing
+    // vector.mask, shape_cast it to drop the same inner unit dims.
+    Value mask = maskingOp ? maskingOp.getMask() : writeOp.getMask();
     if (mask) {
       auto maskType = cast<VectorType>(mask.getType());
       auto reducedMaskType = VectorType::get(
@@ -1793,11 +1816,14 @@ class DropInnerMostUnitDimsTransferWrite
                                                         mask);
     }
 
-    rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        writeOp, shapeCast, rankedReducedView,
+    Operation *newWriteOp = vector::TransferWriteOp::create(
+        rewriter, loc, shapeCast, rankedReducedView,
         writeOp.getIndices().drop_back(dimsToDrop), AffineMapAttr::get(permMap),
-        mask, inBoundsAttr);
-    return success();
+        maskingOp ? Value() : mask, inBoundsAttr);
+    if (maskingOp)
+      vector::maskOperation(rewriter, newWriteOp, mask);
+    // Writes to memrefs have no results.
+    return Value();
   }
 };
 
@@ -1938,6 +1964,14 @@ struct FoldArithExtIntoContractionOp
     if (!lhsDefOp || !rhsDefOp) {
       return rewriter.notifyMatchFailure(contractOp,
                                          "no defining op on contract operands");
+    }
+
+    // The contraction requires lhs and rhs to have the same element type, so
+    // the two extensions must also start from the same one.
+    if (getElementTypeOrSelf(lhsDefOp.getIn().getType()) !=
+        getElementTypeOrSelf(rhsDefOp.getIn().getType())) {
+      return rewriter.notifyMatchFailure(
+          contractOp, "lhs and rhs are extended from different element types");
     }
 
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(

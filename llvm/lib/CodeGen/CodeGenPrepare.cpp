@@ -188,7 +188,7 @@ class CodeGenPrepare {
 
   /// Keeps track of non-local addresses that have been sunk into a block.
   /// This allows us to avoid inserting duplicate code for blocks with
-  /// multiple load/stores of the same address. The usage of WeakTrackingVH
+  /// multiple memory accesses of the same address. The usage of WeakTrackingVH
   /// enables SunkAddrs to be treated as a cache whose entries can be
   /// invalidated if a sunken address computation has been erased.
   ValueMap<Value *, WeakTrackingVH> SunkAddrs;
@@ -927,8 +927,7 @@ bool CodeGenPrepare::canMergeBlocks(const BasicBlock *BB,
   // the successor.  If there are more complex condition (e.g. preheaders),
   // don't mess around with them.
   for (const PHINode &PN : BB->phis()) {
-    for (const User *U : PN.users()) {
-      const Instruction *UI = cast<Instruction>(U);
+    for (const Instruction *UI : PN.users()) {
       if (UI->getParent() != DestBB || !isa<PHINode>(UI))
         return false;
       // If User is inside DestBB block and it is a PHINode then check
@@ -2217,9 +2216,7 @@ static bool sinkAndCmp0Expression(Instruction *AndI, const TargetLowering &TLI,
       AndI->getOperand(0)->hasOneUse() && AndI->getOperand(1)->hasOneUse())
     return false;
 
-  for (auto *U : AndI->users()) {
-    Instruction *User = cast<Instruction>(U);
-
+  for (Instruction *User : AndI->users()) {
     // Only sink 'and' feeding icmp with 0.
     if (!isa<ICmpInst>(User))
       return false;
@@ -6051,9 +6048,15 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 /// vector. The 2 operands to the GEP must have a scalar pointer and a vector
 /// index.
 ///
+/// If the GEP is in another basic block, e.g. because LICM hoisted it out of a
+/// loop, sink it next to the gather/scatter and reuse it for the other
+/// gathers/scatters of the same GEP in the block.
+///
 /// If the existing GEP has a vector base pointer that is splat, we can look
-/// through the splat to find the scalar pointer. If we can't find a scalar
-/// pointer there's nothing we can do.
+/// through the splat to find the scalar pointer. If the vector base pointer is
+/// a GEP with a scalar or splat base pointer, and the existing GEP only adds a
+/// uniform offset to it, we can add that offset to the scalar pointer instead.
+/// If we can't find a scalar pointer there's nothing we can do.
 ///
 /// If we have a GEP with more than 2 indices where the middle indices are all
 /// zeroes, we can replace it with 2 GEPs where the second has 2 operands.
@@ -6064,26 +6067,54 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 /// zero index.
 bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
                                                Value *Ptr) {
+  BasicBlock *BB = MemoryInst->getParent();
   Value *NewAddr;
 
-  if (const auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+  // Reuse the address sunk into this block for an earlier gather/scatter, if
+  // any. The block may be visited again, so it can also be after this one.
+  auto *SunkAddr = dyn_cast_or_null<Instruction>(SunkAddrs.lookup(Ptr));
+  if (SunkAddr && SunkAddr->getParent() == BB &&
+      SunkAddr->comesBefore(MemoryInst)) {
+    NewAddr = SunkAddr;
+  } else if (const auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
     // Don't optimize GEPs that don't have indices.
     if (!GEP->hasIndices())
       return false;
 
-    // If the GEP and the gather/scatter aren't in the same BB, don't optimize.
-    // FIXME: We should support this by sinking the GEP.
-    if (MemoryInst->getParent() != GEP->getParent())
-      return false;
+    bool SinkGEP = GEP->getParent() != BB;
 
     SmallVector<Value *, 2> Ops(GEP->operands());
+    Type *SourceTy = GEP->getSourceElementType();
 
-    bool RewriteGEP = false;
+    Type *OffsetTy = nullptr;
+    SmallVector<Value *, 1> OffsetIdxs;
+
+    bool RewriteGEP = SinkGEP;
 
     if (Ops[0]->getType()->isVectorTy()) {
-      Ops[0] = getSplatValue(Ops[0]);
-      if (!Ops[0])
-        return false;
+      if (Value *Splat = getSplatValue(Ops[0])) {
+        Ops[0] = Splat;
+      } else {
+        auto *BaseGEP = dyn_cast<GetElementPtrInst>(Ops[0]);
+        if (!BaseGEP || !BaseGEP->hasIndices())
+          return false;
+        Value *Base = BaseGEP->getPointerOperand();
+        if (Base->getType()->isVectorTy())
+          Base = getSplatValue(Base);
+        if (!Base)
+          return false;
+        for (Value *Idx : drop_begin(Ops)) {
+          if (Idx->getType()->isVectorTy())
+            Idx = getSplatValue(Idx);
+          if (!Idx)
+            return false;
+          OffsetIdxs.push_back(Idx);
+        }
+        OffsetTy = SourceTy;
+        SourceTy = BaseGEP->getSourceElementType();
+        Ops.assign(BaseGEP->op_begin(), BaseGEP->op_end());
+        Ops[0] = Base;
+      }
       RewriteGEP = true;
     }
 
@@ -6127,7 +6158,9 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
     IRBuilder<> Builder(MemoryInst);
     Builder.disableGEPCanonicalization();
 
-    Type *SourceTy = GEP->getSourceElementType();
+    if (OffsetTy)
+      Ops[0] = Builder.CreateGEP(OffsetTy, Ops[0], OffsetIdxs);
+
     Type *ScalarIndexTy = DL->getIndexType(Ops[0]->getType()->getScalarType());
 
     // If the final index isn't a vector, emit a scalar GEP containing all ops
@@ -6156,6 +6189,9 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
       // Now create the GEP with scalar pointer and vector index.
       NewAddr = Builder.CreateGEP(SourceTy, Base, Index);
     }
+
+    if (SinkGEP)
+      SunkAddrs[Ptr] = WeakTrackingVH(NewAddr);
   } else if (!isa<Constant>(Ptr)) {
     // Not a GEP, maybe its a splat and we can create a GEP to enable
     // SelectionDAGBuilder to use it as a uniform base.
@@ -7113,9 +7149,7 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
     return false;
 
   bool DefIsLiveOut = false;
-  for (User *U : I->users()) {
-    Instruction *UI = cast<Instruction>(U);
-
+  for (Instruction *UI : I->users()) {
     // Figure out which BB this ext is used in.
     BasicBlock *UserBB = UI->getParent();
     if (UserBB == DefBB)
@@ -7242,8 +7276,8 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
   SmallPtrSet<Instruction *, 16> Visited;
   SmallVector<Instruction *, 8> AndsToMaybeRemove;
   SmallVector<Instruction *, 8> DropFlags;
-  for (auto *U : Load->users())
-    WorkList.push_back(cast<Instruction>(U));
+  for (Instruction *U : Load->users())
+    WorkList.push_back(U);
 
   EVT LoadResultVT = TLI->getValueType(*DL, Load->getType());
   unsigned BitWidth = LoadResultVT.getSizeInBits();
@@ -7263,8 +7297,8 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
 
     // For a PHI node, push all of its users.
     if (auto *Phi = dyn_cast<PHINode>(I)) {
-      for (auto *U : Phi->users())
-        WorkList.push_back(cast<Instruction>(U));
+      for (Instruction *U : Phi->users())
+        WorkList.push_back(U);
       continue;
     }
 
@@ -7462,7 +7496,11 @@ bool CodeGenPrepare::optimizeShiftInst(BinaryOperator *Shift) {
   BinaryOperator::BinaryOps Opcode = Shift->getOpcode();
   Value *NewTVal = Builder.CreateBinOp(Opcode, Shift->getOperand(0), TVal);
   Value *NewFVal = Builder.CreateBinOp(Opcode, Shift->getOperand(0), FVal);
-  Value *NewSel = Builder.CreateSelect(Cond, NewTVal, NewFVal);
+  // The new select has the same condition, so it keeps the profile metadata.
+  Value *NewSel = Builder.CreateSelect(
+      Cond, NewTVal, NewFVal, "",
+      ProfcheckDisableMetadataFixes ? nullptr
+                                    : cast<Instruction>(Shift->getOperand(1)));
   replaceAllUsesWith(Shift, NewSel, FreshBBs, IsHugeFunc);
   Shift->eraseFromParent();
   return true;
@@ -7497,7 +7535,10 @@ bool CodeGenPrepare::optimizeFunnelShift(IntrinsicInst *Fsh) {
   Value *X = Fsh->getOperand(0), *Y = Fsh->getOperand(1);
   Value *NewTVal = Builder.CreateIntrinsic(Opcode, Ty, {X, Y, TVal});
   Value *NewFVal = Builder.CreateIntrinsic(Opcode, Ty, {X, Y, FVal});
-  Value *NewSel = Builder.CreateSelect(Cond, NewTVal, NewFVal);
+  Value *NewSel = Builder.CreateSelect(
+      Cond, NewTVal, NewFVal, "",
+      ProfcheckDisableMetadataFixes ? nullptr
+                                    : cast<Instruction>(Fsh->getOperand(2)));
   replaceAllUsesWith(Fsh, NewSel, FreshBBs, IsHugeFunc);
   Fsh->eraseFromParent();
   return true;
@@ -8537,15 +8578,11 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
   std::vector<GetElementPtrInst *> UGEPIs;
   // Check each user of GEPIOp to check if unmerging would make GEPIOp not alive
   // on IndirectBr edges.
-  for (User *Usr : GEPIOp->users()) {
+  for (Instruction *Usr : GEPIOp->users()) {
     if (Usr == GEPI)
       continue;
-    // Check if Usr is an Instruction. If not, give up.
-    if (!isa<Instruction>(Usr))
-      return false;
-    auto *UI = cast<Instruction>(Usr);
     // Check if Usr in the same block as GEPIOp, which is fine, skip.
-    if (UI->getParent() == SrcBlock)
+    if (Usr->getParent() == SrcBlock)
       continue;
     // Check if Usr is also a constant ptradd with GEPIOp as pointer operand.
     // If so, record it in the vector. If not, give up.
@@ -8722,8 +8759,9 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   if (DL.getTypeStoreSize(ITy) != DL.getPointerSize())
     return false;
 
-  // TODO: Handle offsets from stepvector.
-  if (!match(Start, m_Intrinsic<Intrinsic::stepvector>()))
+  if (!match(Start, m_CombineOr(m_Intrinsic<Intrinsic::stepvector>(),
+                                m_Add(m_Intrinsic<Intrinsic::stepvector>(),
+                                      m_Splat(m_Value())))))
     return false;
 
   Value *LoopStride = nullptr;

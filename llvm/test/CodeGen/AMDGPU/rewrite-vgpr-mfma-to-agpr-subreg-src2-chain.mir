@@ -3,7 +3,6 @@
 
 ---
 name:  test_rewrite_mfma_src2_is_subreg_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -33,7 +32,6 @@ body:             |
 
 ---
 name:  test_rewrite_mfma_src2_is_subreg_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -63,7 +61,6 @@ body:             |
 
 ---
 name:  test_rewrite_mfma_src2_is_subreg_chain_mfma_full_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -97,7 +94,6 @@ body:             |
 
 ---
 name:  test_rewrite_mfma_src2_is_subreg_chain_mfma_sub_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -134,7 +130,6 @@ body:             |
 
 ---
 name:  test_rewrite_mfma_src2_is_subreg_chain_mfma_sub_def_copy_subreg_insert
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -171,7 +166,6 @@ body:             |
 
 ---
 name:  test_rewrite_mfma_src2_is_subreg_chain_mfma_sub_def_copy_subreg_extract
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -212,7 +206,6 @@ body:             |
 # subregisters.
 ---
 name:  test_rewrite_mfma_src2_chain_different_subregs_same_reg_full_copy_use
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -254,7 +247,6 @@ body:             |
 # subregisters.
 ---
 name:  test_rewrite_mfma_src2_chain_different_subregs_same_reg_extract_use_0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -294,7 +286,6 @@ body:             |
 
 ---
 name:  test_rewrite_mfma_src2_chain_different_subregs_same_reg_extract_use_1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5

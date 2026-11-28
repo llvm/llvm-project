@@ -116,7 +116,6 @@ TEST_F(RegisterPressureTest, MarkDeadDefAfterMoveBeyondLastUse) {
   StringRef MIRString = R"(
 ---
 name: func
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -124,7 +123,7 @@ body:             |
     undef %0.sub0:vreg_64 = IMPLICIT_DEF
     %0.sub1:vreg_64 = IMPLICIT_DEF
     %1:vgpr_32 = V_ADD_U32_e32 %0.sub0, %0.sub0, implicit $exec
-    
+
   bb.1:
     S_NOP 0, implicit %1
     S_ENDPGM 0

@@ -1176,7 +1176,7 @@ LogicalResult mlir::coalescePerfectlyNestedSCFForLoops(scf::ForOp op) {
   return result;
 }
 
-void mlir::collapseParallelLoops(
+scf::ParallelOp mlir::collapseParallelLoops(
     RewriterBase &rewriter, scf::ParallelOp loops,
     ArrayRef<std::vector<unsigned>> combinedDimensions) {
   OpBuilder::InsertionGuard g(rewriter);
@@ -1226,9 +1226,10 @@ void mlir::collapseParallelLoops(
   // value. The remainders then determine based on that range, which iteration
   // of the original induction value this represents. This is a normalized value
   // that is un-normalized already by the previous logic.
+  SmallVector<Value> newIVs(loops.getNumLoops());
   auto newPloop = scf::ParallelOp::create(
-      rewriter, loc, lowerBounds, upperBounds, steps,
-      [&](OpBuilder &insideBuilder, Location, ValueRange ploopIVs) {
+      rewriter, loc, lowerBounds, upperBounds, steps, loops.getInitVals(),
+      [&](OpBuilder &insideBuilder, Location, ValueRange ploopIVs, ValueRange) {
         for (unsigned i = 0, e = combinedDimensions.size(); i < e; ++i) {
           Value previous = ploopIVs[i];
           unsigned numberCombinedDimensions = combinedDimensions[i].size();
@@ -1239,8 +1240,7 @@ void mlir::collapseParallelLoops(
             // Determine the current induction value's current loop iteration
             Value iv = arith::RemSIOp::create(insideBuilder, loc, previous,
                                               normalizedUpperBounds[idx]);
-            replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx), iv,
-                                       loops.getRegion());
+            newIVs[idx] = iv;
 
             // Remove the effect of the current induction value to prepare for
             // the next value.
@@ -1250,17 +1250,19 @@ void mlir::collapseParallelLoops(
 
           // The final induction value is just the remaining value.
           unsigned idx = combinedDimensions[i][0];
-          replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx),
-                                     previous, loops.getRegion());
+          newIVs[idx] = previous;
         }
       });
 
-  // Replace the old loop with the new loop.
-  loops.getBody()->back().erase();
-  newPloop.getBody()->getOperations().splice(
-      Block::iterator(newPloop.getBody()->back()),
-      loops.getBody()->getOperations());
-  loops.erase();
+  // The builder inserts an empty scf.reduce only when there are no reductions.
+  // Drop that terminator and move the original one over with the body, so a
+  // loop with reductions keeps its scf.reduce and its results.
+  if (loops.getInitVals().empty())
+    rewriter.eraseOp(newPloop.getBody()->getTerminator());
+  rewriter.mergeBlocks(loops.getBody(), newPloop.getBody(), newIVs);
+  // Replace uses of the results.
+  rewriter.replaceOp(loops, newPloop);
+  return newPloop;
 }
 
 // Hoist the ops within `outer` that appear before `inner`.

@@ -420,3 +420,19 @@ func.func @explicit_parallel(%arg0: memref<1x123x194xf64>, %arg5: memref<34x99x1
   }
   return
 }
+
+
+#first = affine_set<(d0) : (d0 == 0)>
+// CHECK-LABEL: @non_parallelizable_else_block
+func.func @non_parallelizable_else_block(%a: memref<4xi32>) {
+  // CHECK:  affine.for
+  affine.for %i = 0 to 4 {
+    // CHECK-NEXT:  affine.if
+    affine.if #first(%i) {
+    } else {
+      %v = affine.load %a[%i - 1] : memref<4xi32>
+      affine.store %v, %a[%i] : memref<4xi32>
+    }
+  }
+  return
+}

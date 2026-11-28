@@ -11,7 +11,6 @@
 ...
 ---
 name: store_2k
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 2100, alignment: 4 }
 body: |

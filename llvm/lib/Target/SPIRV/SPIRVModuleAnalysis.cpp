@@ -397,7 +397,7 @@ bool SPIRVModuleAnalysisImpl::isDeclSection(const MachineRegisterInfo &MRI,
 void SPIRVModuleAnalysisImpl::visitFunPtrUse(
     Register OpReg, const MachineOperand *FunPtrOp,
     InstrGRegsMap &SignatureToGReg,
-    std::map<const Value *, unsigned> &GlobalToGReg,
+    std::map<const Value *, MCRegister> &GlobalToGReg,
     const MachineFunction *MF) {
   const MachineOperand *OpFunDef = GR->getFunctionDefinitionByUse(FunPtrOp);
   assert(OpFunDef && OpFunDef->isReg());
@@ -423,8 +423,8 @@ void SPIRVModuleAnalysisImpl::visitFunPtrUse(
 // by MAI.hasRegisterAlias().
 void SPIRVModuleAnalysisImpl::visitDecl(
     const MachineRegisterInfo &MRI, InstrGRegsMap &SignatureToGReg,
-    std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
-    const MachineInstr &MI) {
+    std::map<const Value *, MCRegister> &GlobalToGReg,
+    const MachineFunction *MF, const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
 
   // Process each operand of the instruction to resolve dependencies
@@ -505,7 +505,7 @@ void SPIRVModuleAnalysisImpl::visitDecl(
 
 MCRegister SPIRVModuleAnalysisImpl::handleFunctionOrParameter(
     const MachineFunction *MF, const MachineInstr &MI,
-    std::map<const Value *, unsigned> &GlobalToGReg, bool &IsFunDef) {
+    std::map<const Value *, MCRegister> &GlobalToGReg, bool &IsFunDef) {
   const Value *GObj = GR->getGlobalObject(MF, MI.getOperand(0).getReg());
   assert(GObj && "Unregistered global definition");
   const Function *F = dyn_cast<Function>(GObj);
@@ -537,7 +537,7 @@ MCRegister SPIRVModuleAnalysisImpl::handleTypeDeclOrConstant(
 
 MCRegister SPIRVModuleAnalysisImpl::handleVariable(
     const MachineFunction *MF, const MachineInstr &MI,
-    std::map<const Value *, unsigned> &GlobalToGReg) {
+    std::map<const Value *, MCRegister> &GlobalToGReg) {
   MAI.GlobalVarList.push_back(&MI);
   const Value *GObj = GR->getGlobalObject(MF, MI.getOperand(0).getReg());
   assert(GObj && "Unregistered global definition");
@@ -554,7 +554,7 @@ MCRegister SPIRVModuleAnalysisImpl::handleVariable(
 
 void SPIRVModuleAnalysisImpl::collectDeclarations(const Module &M) {
   InstrGRegsMap SignatureToGReg;
-  std::map<const Value *, unsigned> GlobalToGReg;
+  std::map<const Value *, MCRegister> GlobalToGReg;
   for (const Function &F : M) {
     MachineFunction *MF = GetMF(F);
     if (!MF)
@@ -1189,6 +1189,12 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
       report_fatal_error(
           "Barycentric built-ins require the following SPIR-V extension: "
           "SPV_KHR_fragment_shader_barycentric",
+          false);
+    if (BuiltIn == SPIRV::BuiltIn::FragStencilRefEXT &&
+        !ST.canUseExtension(SPIRV::Extension::SPV_EXT_shader_stencil_export))
+      report_fatal_error(
+          "FragStencilRefEXT requires the following SPIR-V extension: "
+          "SPV_EXT_shader_stencil_export",
           false);
     switch (BuiltIn) {
     case SPIRV::BuiltIn::BaseVertex:

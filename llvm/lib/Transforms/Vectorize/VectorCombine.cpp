@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -2175,9 +2176,8 @@ bool VectorCombine::scalarizeLoad(Instruction &I) {
   // Check what type of users we have (must either all be extracts or
   // bitcasts) and ensure no memory modifications between the load and
   // its users.
-  for (User *U : LI->users()) {
-    auto *UI = dyn_cast<Instruction>(U);
-    if (!UI || UI->getParent() != LI->getParent())
+  for (Instruction *UI : LI->users()) {
+    if (UI->getParent() != LI->getParent())
       return false;
 
     // If any user is waiting to be erased, then bail out as this will
@@ -2306,6 +2306,9 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     Align ScalarOpAlignment =
         computeAlignmentAfterScalarization(LI->getAlign(), ElemType, Idx, *DL);
     NewLoad->setAlignment(ScalarOpAlignment);
+    NewLoad->copyMetadata(*LI,
+                          {LLVMContext::MD_mmra, LLVMContext::MD_nontemporal,
+                           LLVMContext::MD_mem_cache_hint});
 
     if (auto *ConstIdx = dyn_cast<ConstantInt>(Idx)) {
       size_t Offset = ConstIdx->getZExtValue() * DL->getTypeStoreSize(ElemType);
@@ -2413,7 +2416,7 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
                            TTI::CastContextHint::None, CostKind, Ext);
   unsigned ExtCnt = 0;
   bool ExtLane0 = false;
-  for (User *U : Ext->users()) {
+  for (Instruction *U : Ext->users()) {
     uint64_t Idx;
     if (!match(U, m_ExtractElt(m_Value(), m_ConstantInt(Idx))))
       return false;
@@ -2421,7 +2424,7 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
     // than computing a shift amount that overflows the packed type.
     if (Idx >= SrcTy->getNumElements())
       return false;
-    if (cast<Instruction>(U)->use_empty())
+    if (U->use_empty())
       continue;
     ExtCnt += 1;
     ExtLane0 |= !Idx;
@@ -3738,7 +3741,7 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
     unsigned NumElts =
         cast<FixedVectorType>(FrontV->getType())->getNumElements();
     SmallVector<Value *> Values(Item.size() / NumElts, nullptr);
-    for (unsigned S = 0; S < Values.size(); ++S)
+    for (size_t S = 0; S < Values.size(); ++S)
       Values[S] = Item[S * NumElts].first;
 
     while (Values.size() > 1) {
@@ -5434,8 +5437,7 @@ static bool feedsIntoVectorReduction(ShuffleVectorInst *SVI) {
   WorkList.push_back(SVI);
   while (!WorkList.empty()) {
     Instruction *I = WorkList.pop_back_val();
-    for (User *U : I->users()) {
-      auto *UI = cast<Instruction>(U);
+    for (Instruction *UI : I->users()) {
       if (!UI || !Visited.insert(UI).second)
         continue;
       if (Visited.size() > MaxVisited)
@@ -6247,26 +6249,40 @@ static SmallVector<Value *, 8> getInstrOperandsAtIdx(ArrayRef<Value *> Members,
 
 /// Check whether the tree of elementwise operations each feeding \p Members
 /// can be rebuilt at the interleaved width.
-static bool canWidenDeinterleavedOperations(const VectorizeOptions &Opts,
-                                            ArrayRef<Value *> Members,
-                                            unsigned &NumScanned) {
+static bool canWidenDeinterleavedOperations(
+    const VectorizeOptions &Opts, ArrayRef<Value *> Members,
+    DenseSet<Value *> &Visited, SmallPtrSetImpl<User *> &UndroppableUsers) {
   unsigned Factor = Members.size();
   if (getCommonDeinterleavedSource(Members))
     return true;
-  if (NumScanned + Factor > Opts.vector_combine_max_scan_instrs)
+
+  if (all_of(Members, [&](Value *V) { return Visited.count(V); }))
+    return true;
+
+  if (Visited.size() + Factor > Opts.vector_combine_max_scan_instrs)
     return false;
-  NumScanned += Factor;
+
+  auto addUndroppableUsers = [&](Value *V) {
+    for (User *U : V->users()) {
+      if (U->isDroppable())
+        continue;
+      UndroppableUsers.insert(U);
+    }
+  };
 
   auto *FirstInst = dyn_cast<Instruction>(Members.front());
-  if (!FirstInst || !isSupportedElementwise(FirstInst) ||
-      !FirstInst->getSingleUndroppableUse())
+  if (!FirstInst || !isSupportedElementwise(FirstInst))
     return false;
+  if (Visited.insert(FirstInst).second && !FirstInst->getSingleUndroppableUse())
+    addUndroppableUsers(FirstInst);
 
   for (Value *Member : Members.drop_front()) {
     auto *Inst = dyn_cast<Instruction>(Member);
-    if (!Inst || !Inst->getSingleUndroppableUse() ||
+    if (!Inst ||
         !FirstInst->isSameOperationAs(Inst, Instruction::CompareCallTargets))
       return false;
+    if (Visited.insert(Inst).second && !Inst->getSingleUndroppableUse())
+      addUndroppableUsers(Inst);
   }
 
   // Scalars operands should be equal among all members.
@@ -6274,7 +6290,8 @@ static bool canWidenDeinterleavedOperations(const VectorizeOptions &Opts,
   for (unsigned Op = 0, E = getNumDataOperands(FirstInst); Op != E; ++Op) {
     SmallVector<Value *, 8> Operands = getInstrOperandsAtIdx(Members, Op);
     if (!getCommonSplatValue(Operands) &&
-        !canWidenDeinterleavedOperations(Opts, Operands, NumScanned))
+        !canWidenDeinterleavedOperations(Opts, Operands, Visited,
+                                         UndroppableUsers))
       return false;
   }
   return true;
@@ -6303,13 +6320,18 @@ static Value *createWideInstruction(Instruction *NarrowInst,
   llvm_unreachable("Unsupported instruction");
 }
 
-static Value *widenDeinterleavedOperations(ArrayRef<Value *> Members,
-                                           ElementCount WideEC,
-                                           IRBuilderBase &Builder) {
+static Value *widenDeinterleavedOperations(
+    const SmallVector<Value *, 8> &Members, ElementCount WideEC,
+    IRBuilderBase &Builder,
+    DenseMap<SmallVector<Value *, 8>, Value *> &WideValueCache) {
+  if (Value *WideValue = WideValueCache.lookup(Members))
+    return WideValue;
+
   if (auto *Deinterleave = getCommonDeinterleavedSource(Members)) {
     Value *Source = Deinterleave->getArgOperand(0);
     assert(cast<VectorType>(Source->getType())->getElementCount() == WideEC &&
            "deinterleave source must have the interleaved element count");
+    WideValueCache[Members] = Source;
     return Source;
   }
 
@@ -6328,7 +6350,8 @@ static Value *widenDeinterleavedOperations(ArrayRef<Value *> Members,
         assert(all_equal(Operands) && "expected all operands to be equal");
       }
     } else {
-      NewOperand = widenDeinterleavedOperations(Operands, WideEC, Builder);
+      NewOperand = widenDeinterleavedOperations(Operands, WideEC, Builder,
+                                                WideValueCache);
     }
     NewOperands.push_back(NewOperand);
   }
@@ -6342,6 +6365,7 @@ static Value *widenDeinterleavedOperations(ArrayRef<Value *> Members,
     propagateIRFlags(NewInst, Members);
     propagateMetadata(NewInst, Members);
   }
+  WideValueCache[Members] = NewValue;
   return NewValue;
 }
 
@@ -6391,13 +6415,22 @@ bool VectorCombine::foldInterleaveOfDeinterleaveChains(Instruction &I) {
     return false;
 
   SmallVector<Value *, 8> RootMembers(Interleave->args());
-  unsigned NumScanned = 0;
-  if (!canWidenDeinterleavedOperations(Opts, RootMembers, NumScanned))
+  SmallPtrSet<User *, 4> UndroppableUsers;
+  DenseSet<Value *> Visited;
+  if (!canWidenDeinterleavedOperations(Opts, RootMembers, Visited,
+                                       UndroppableUsers))
+    return false;
+  // Every users should be in the tree.
+  if (!set_is_subset(UndroppableUsers, Visited))
     return false;
 
   ElementCount WideEC = cast<VectorType>(I.getType())->getElementCount();
   Builder.SetInsertPoint(Interleave);
-  Value *WideValue = widenDeinterleavedOperations(RootMembers, WideEC, Builder);
+  // Mapping from members to the new wide value. This avoids emitting redundant
+  // instructions when a new operand value has more than one use.
+  DenseMap<SmallVector<Value *, 8>, Value *> WideValueCache;
+  Value *WideValue = widenDeinterleavedOperations(RootMembers, WideEC, Builder,
+                                                  WideValueCache);
   assert(WideValue->getType() == Interleave->getType());
   replaceValue(*Interleave, *WideValue);
   return true;

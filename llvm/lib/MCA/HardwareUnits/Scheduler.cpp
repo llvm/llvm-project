@@ -51,6 +51,14 @@ Scheduler::Status Scheduler::isAvailable(const InstRef &IR) {
     break;
   }
 
+  // Instructions that must issue at dispatch also need their pipelines to be
+  // available, even if a previous instruction has already released its buffers.
+  if (mustIssueImmediately(IR) &&
+      Resources->checkAvailability(IR.getInstruction()->getDesc())) {
+    HadTokenStall = true;
+    return Scheduler::SC_DISPATCH_GROUP_STALL;
+  }
+
   // Give lower priority to LSUnit stall events.
   LSUnit::Status LSS = LSU.isAvailable(IR);
   HadTokenStall = LSS != LSUnit::LSU_AVAILABLE;

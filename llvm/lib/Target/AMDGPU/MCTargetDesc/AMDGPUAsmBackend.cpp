@@ -91,6 +91,8 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   switch (Kind) {
   case AMDGPU::fixup_si_sopp_br:
     return 2;
+  case AMDGPU::fixup_si_smem_pcrel:
+    return 3;
   case FK_SecRel_1:
   case FK_Data_1:
     return 1;
@@ -120,6 +122,19 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
       Ctx->reportError(Fixup.getLoc(), "branch size exceeds simm16");
 
     return BrImm;
+  }
+  case AMDGPU::fixup_si_smem_pcrel: {
+    // SignedValue is label - (PC + 4): the fixup sits at byte 4 of the
+    // instruction. s_prefetch_inst_pc_rel is 8 bytes and the field is a signed
+    // byte offset from the next instruction, so subtract the remaining 4.
+    int64_t OffImm = SignedValue - 4;
+
+    if (Ctx && !isInt<24>(OffImm)) {
+      Ctx->reportError(Fixup.getLoc(),
+                       "prefetch offset exceeds 24-bit signed range");
+    }
+
+    return OffImm;
   }
   case FK_Data_1:
   case FK_Data_2:
@@ -169,8 +184,8 @@ AMDGPUAsmBackend::getFixupKind(StringRef Name) const {
                   .Case("BFD_RELOC_NONE", ELF::R_AMDGPU_NONE)
                   .Case("BFD_RELOC_32", ELF::R_AMDGPU_ABS32)
                   .Case("BFD_RELOC_64", ELF::R_AMDGPU_ABS64)
-                  .Default(-1u);
-  if (Type != -1u)
+                  .Default(~0u);
+  if (Type != ~0u)
     return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
   return std::nullopt;
 }
@@ -179,6 +194,7 @@ MCFixupKindInfo AMDGPUAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[AMDGPU::NumTargetFixupKinds] = {
       // name                   offset bits  flags
       {"fixup_si_sopp_br", 0, 16, 0},
+      {"fixup_si_smem_pcrel", 0, 24, 0},
   };
 
   if (mc::isRelocation(Kind))

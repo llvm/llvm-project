@@ -1,0 +1,201 @@
+# Generated from:
+#
+#   volatile int x;
+#
+#   __attribute__((noinline)) void sink() { x++; }
+#
+#   __attribute__((noinline)) void tail() { sink(); }
+#
+#   int main() {
+#     tail();
+#     return 0;
+#   }
+#
+#   clang --target=x86_64-pc-linux -gdwarf-4 -O2 -c tail.cpp -o tail.o
+#   obj2yaml tail.o
+#
+# -O2 turns tail()'s call to sink() into a jump, so a backtrace from sink() has
+# no frame for tail(). The call site entries in the debug info let lldb add an
+# artificial one. Sections not needed for that (.rela.text, .comment,
+# .note.GNU-stack, .eh_frame, .rela.eh_frame, .llvm_addrsig) have been dropped
+# by hand.
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         FF0500000000C3660F1F840000000000E90000000066662E0F1F84000000000050E80000000031C059C3
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x4
+    Size:            0x4
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         011101250E1305030E10171B0E110112060000023400030E49133F193A0B3B0B0218000003350049130000042400030E3E0B0B0B0000052E001101120640189742196E0E030E3A0B3B0B3F190000062E011101120640189742196E0E030E3A0B3B0B3F1900000789820100311395421911010000082E01110112064018974219030E3A0B3B0B49133F190000098982010031131101000000
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         AF000000040000000000080100000000210000000000000000000000000000000000000000002A00000002000000003F0000000101090300000000000000000344000000040000000005040500000000000000000700000001570000000000000000010306000000000000000005000000015700000000000000000105074B0000000000000000000000000800000000000000000A000000015700000000010744000000096400000000000000000000000000
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         4E000000040020000000010101FB0E0D000101010100000001000001007461696C2E6370700000000000052A0A000902000000000000000014052E06660529060AA00500F405030A2159060B2E0202000101
+  - Name:            .rela.debug_info
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0x6
+        Symbol:          .debug_abbrev
+        Type:            R_X86_64_32
+      - Offset:          0xC
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+      - Offset:          0x12
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          86
+      - Offset:          0x16
+        Symbol:          .debug_line
+        Type:            R_X86_64_32
+      - Offset:          0x1A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          95
+      - Offset:          0x1E
+        Symbol:          .text
+        Type:            R_X86_64_64
+      - Offset:          0x2B
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          100
+      - Offset:          0x37
+        Symbol:          x
+        Type:            R_X86_64_64
+      - Offset:          0x45
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          102
+      - Offset:          0x4C
+        Symbol:          .text
+        Type:            R_X86_64_64
+      - Offset:          0x5A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          106
+      - Offset:          0x5E
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          115
+      - Offset:          0x65
+        Symbol:          .text
+        Type:            R_X86_64_64
+        Addend:          16
+      - Offset:          0x73
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          120
+      - Offset:          0x77
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          129
+      - Offset:          0x82
+        Symbol:          .text
+        Type:            R_X86_64_64
+        Addend:          21
+      - Offset:          0x8C
+        Symbol:          .text
+        Type:            R_X86_64_64
+        Addend:          32
+      - Offset:          0x9A
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          134
+      - Offset:          0xA9
+        Symbol:          .text
+        Type:            R_X86_64_64
+        Addend:          38
+  - Name:            .rela.debug_line
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_line
+    Relocations:
+      - Offset:          0x30
+        Symbol:          .text
+        Type:            R_X86_64_64
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .bss
+      - Name:            .debug_abbrev
+      - Name:            .debug_info
+      - Name:            .rela.debug_info
+      - Name:            .debug_str
+      - Name:            .debug_line
+      - Name:            .rela.debug_line
+      - Name:            .symtab
+Symbols:
+  - Name:            tail.cpp
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+  - Name:            .debug_line
+    Type:            STT_SECTION
+    Section:         .debug_line
+  - Name:            _Z4sinkv
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x7
+  - Name:            x
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Size:            0x4
+  - Name:            _Z4tailv
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x10
+    Size:            0x5
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x20
+    Size:            0xA
+DWARF:
+  debug_str:
+    - 'Ubuntu clang version 20.1.8 (++20250804090239+87f0227cb601-1~exp1~20250804210352.139)'
+    - tail.cpp
+    - '/tmp'
+    - x
+    - int
+    - _Z4sinkv
+    - sink
+    - _Z4tailv
+    - tail
+    - main
+...

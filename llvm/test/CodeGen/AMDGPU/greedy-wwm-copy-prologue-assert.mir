@@ -16,7 +16,6 @@
 ...
 ---
 name:            wwm_copy_prologue_assert
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, flags: [ WWM_REG ] }
   - { id: 1, class: vgpr_32, flags: [ WWM_REG ] }

@@ -18,7 +18,8 @@
 #include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMVectorOps.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
+#include "mlir/Dialect/LLVMIR/NVVMMmaOps.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
 

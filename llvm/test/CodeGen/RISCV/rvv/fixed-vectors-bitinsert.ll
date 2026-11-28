@@ -79,8 +79,8 @@ define <2 x b64> @test_bitinsert_v2ptr(<2 x b64> %base, <2 x ptr> %val) {
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    li a0, -1
-; RV32-NEXT:    sw zero, 8(sp)
 ; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    sw zero, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
@@ -143,10 +143,10 @@ define <2 x b128> @test_bitinsert_v2ptr_b128(<2 x b128> %base, <2 x ptr> %val) {
 ; RV64-NEXT:    srli a4, a4, 32
 ; RV64-NEXT:    or a1, a1, a5
 ; RV64-NEXT:    or a4, a6, a4
+; RV64-NEXT:    sd a4, 24(a0)
 ; RV64-NEXT:    sd a3, 0(a0)
 ; RV64-NEXT:    sd a2, 8(a0)
 ; RV64-NEXT:    sd a1, 16(a0)
-; RV64-NEXT:    sd a4, 24(a0)
 ; RV64-NEXT:    ret
   %result = bitinsert <2 x b128> %base, <2 x ptr> %val, <2 x i32> splat (i32 32)
   ret <2 x b128> %result

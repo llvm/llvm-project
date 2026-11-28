@@ -109,7 +109,6 @@
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
-#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -1520,6 +1519,22 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
         !TheCall->getArg(1)->getType()->isPointerType() ||
         !TheCall->getArg(2)->getType()->isIntegerType())
       return;
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
+    BufferSize = Checker.ComputeSizeArgument(1);
+    break;
+  }
+
+  case Builtin::BIgetlogin_r: {
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(1);
+    BufferSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+
+  case Builtin::BIttyname_r:
+  case Builtin::BIptsname_r:
+  case Builtin::BIconfstr: {
     DiagID = diag::warn_fortify_source_size_mismatch;
     AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
     BufferSize = Checker.ComputeSizeArgument(1);
@@ -3379,6 +3394,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_islessequal:
   case Builtin::BI__builtin_islessgreater:
   case Builtin::BI__builtin_isunordered:
+  case Builtin::BI__builtin_iseqsig:
     if (BuiltinUnorderedCompare(TheCall, BuiltinID))
       return ExprError();
     break;

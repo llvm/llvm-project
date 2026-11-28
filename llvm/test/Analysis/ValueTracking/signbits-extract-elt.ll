@@ -121,3 +121,59 @@ define <2 x i32> @bitcast_scalar_sign_splat(i1 %x) {
   %result = ashr <2 x i32> %cast, splat (i32 5)
   ret <2 x i32> %result
 }
+
+define i32 @extract_demanded(<2 x i1> %x, <2 x i32> %wide) {
+; CHECK-LABEL: @extract_demanded(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SRC:%.*]] = shufflevector <2 x i32> [[EXT]], <2 x i32> [[WIDE:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <2 x i32> [[SRC]], i32 0
+; CHECK-NEXT:    ret i32 [[ELT]]
+;
+  %ext = sext <2 x i1> %x to <2 x i32>
+  %src = shufflevector <2 x i32> %ext, <2 x i32> %wide, <2 x i32> <i32 0, i32 2>
+  %elt = extractelement <2 x i32> %src, i32 0
+  %result = ashr i32 %elt, 5
+  ret i32 %result
+}
+
+define i32 @extract_other(<2 x i1> %x, <2 x i32> %wide) {
+; CHECK-LABEL: @extract_other(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SRC:%.*]] = shufflevector <2 x i32> [[EXT]], <2 x i32> [[WIDE:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <2 x i32> [[SRC]], i32 1
+; CHECK-NEXT:    [[RESULT:%.*]] = ashr i32 [[ELT]], 5
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %ext = sext <2 x i1> %x to <2 x i32>
+  %src = shufflevector <2 x i32> %ext, <2 x i32> %wide, <2 x i32> <i32 0, i32 2>
+  %elt = extractelement <2 x i32> %src, i32 1
+  %result = ashr i32 %elt, 5
+  ret i32 %result
+}
+
+define i32 @extract_variable(<2 x i1> %x, <2 x i32> %wide, i32 %idx) {
+; CHECK-LABEL: @extract_variable(
+; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[SRC:%.*]] = shufflevector <2 x i32> [[EXT]], <2 x i32> [[WIDE:%.*]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <2 x i32> [[SRC]], i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[RESULT:%.*]] = ashr i32 [[ELT]], 5
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %ext = sext <2 x i1> %x to <2 x i32>
+  %src = shufflevector <2 x i32> %ext, <2 x i32> %wide, <2 x i32> <i32 0, i32 2>
+  %elt = extractelement <2 x i32> %src, i32 %idx
+  %result = ashr i32 %elt, 5
+  ret i32 %result
+}
+
+define i32 @extract_scalable(<vscale x 2 x i1> %x) {
+; CHECK-LABEL: @extract_scalable(
+; CHECK-NEXT:    [[SRC:%.*]] = sext <vscale x 2 x i1> [[X:%.*]] to <vscale x 2 x i32>
+; CHECK-NEXT:    [[ELT:%.*]] = extractelement <vscale x 2 x i32> [[SRC]], i32 0
+; CHECK-NEXT:    ret i32 [[ELT]]
+;
+  %src = sext <vscale x 2 x i1> %x to <vscale x 2 x i32>
+  %elt = extractelement <vscale x 2 x i32> %src, i32 0
+  %result = ashr i32 %elt, 5
+  ret i32 %result
+}

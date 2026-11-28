@@ -587,11 +587,7 @@ bool BPFAbstractMemberAccess::IsValidAIChain(const MDNode *ParentType,
 
 void BPFAbstractMemberAccess::traceAICall(CallInst *Call,
                                           CallInfo &ParentInfo) {
-  for (User *U : Call->users()) {
-    Instruction *Inst = dyn_cast<Instruction>(U);
-    if (!Inst)
-      continue;
-
+  for (Instruction *Inst : Call->users()) {
     if (auto *BI = dyn_cast<BitCastInst>(Inst)) {
       traceBitCast(BI, Call, ParentInfo);
     } else if (auto *CI = dyn_cast<CallInst>(Inst)) {
@@ -619,11 +615,7 @@ void BPFAbstractMemberAccess::traceAICall(CallInst *Call,
 void BPFAbstractMemberAccess::traceBitCast(BitCastInst *BitCast,
                                            CallInst *Parent,
                                            CallInfo &ParentInfo) {
-  for (User *U : BitCast->users()) {
-    Instruction *Inst = dyn_cast<Instruction>(U);
-    if (!Inst)
-      continue;
-
+  for (Instruction *Inst : BitCast->users()) {
     if (auto *BI = dyn_cast<BitCastInst>(Inst)) {
       traceBitCast(BI, Parent, ParentInfo);
     } else if (auto *CI = dyn_cast<CallInst>(Inst)) {
@@ -649,11 +641,7 @@ void BPFAbstractMemberAccess::traceBitCast(BitCastInst *BitCast,
 
 void BPFAbstractMemberAccess::traceGEP(GetElementPtrInst *GEP, CallInst *Parent,
                                        CallInfo &ParentInfo) {
-  for (User *U : GEP->users()) {
-    Instruction *Inst = dyn_cast<Instruction>(U);
-    if (!Inst)
-      continue;
-
+  for (Instruction *Inst : GEP->users()) {
     if (auto *BI = dyn_cast<BitCastInst>(Inst)) {
       traceBitCast(BI, Parent, ParentInfo);
     } else if (auto *CI = dyn_cast<CallInst>(Inst)) {

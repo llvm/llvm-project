@@ -2885,6 +2885,9 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
       AnalyzerNoReturn = true;
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;
+    // Other unevaluated builtins, such as __builtin_constant_p, keep their
+    // arguments so that DiagRuntimeBehavior can drop warnings in branches of
+    // them that fold away.
     if (isBuiltinAssumeWithSideEffects(FD->getASTContext(), C) ||
         FD->getBuiltinID() == Builtin::BI__builtin_object_size ||
         FD->getBuiltinID() == Builtin::BI__builtin_dynamic_object_size)

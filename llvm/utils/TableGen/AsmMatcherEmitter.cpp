@@ -154,6 +154,9 @@ public:
   void run(raw_ostream &o);
 };
 
+/// The RenderMethod used for register classes that don't specify one.
+static constexpr StringLiteral DefaultRegRenderMethod = "addRegOperands";
+
 /// ClassInfo - Helper class for storing the information about a particular
 /// class of operands which can be matched.
 struct ClassInfo {
@@ -205,7 +208,7 @@ struct ClassInfo {
   bool PredicateUsesSubtarget = false;
 
   /// RenderMethod - The name of the operand method to add this operand to an
-  /// MCInst; this is not valid for Token or register kinds.
+  /// MCInst; this is not valid for Token kinds.
   std::string RenderMethod;
 
   /// ParserMethod - The name of the operand method to do a target specific
@@ -1332,6 +1335,16 @@ void AsmMatcherInfo::buildRegisterClasses(
     return BS;
   };
 
+  // MatchRegisterName returns the first register (in enum order) for each
+  // AsmName, so registers shadowed by an earlier one are never parsed and
+  // can't be coerced from.
+  StringMap<const CodeGenRegister *> FirstRegByAsmName;
+  for (const CodeGenRegister &Reg : Registers) {
+    StringRef AsmName = Reg.TheDef->getValueAsString("AsmName");
+    if (!AsmName.empty())
+      FirstRegByAsmName.try_emplace(AsmName, &Reg);
+  }
+
   // Allow register classes with CoerceFromRegClass to also accept registers
   // with the same name from that class (e.g. x1 parsed as a GPR for a YGPR
   // operand). They get converted to the right register in convertToMCInst.
@@ -1339,6 +1352,10 @@ void AsmMatcherInfo::buildRegisterClasses(
     const Record *Def = RC.getDef();
     if (!Def || Def->isValueUnset("CoerceFromRegClass"))
       continue;
+    if (!Def->isValueUnset("RenderMethod"))
+      PrintFatalError(Def->getLoc(), "RegisterClass '" + RC.getName() +
+                                         "' cannot specify both 'RenderMethod' "
+                                         "and 'CoerceFromRegClass'");
     DenseMap<StringRef, const Record *> RegsByAsmName;
     for (const Record *Reg : RC.getOrder()) {
       StringRef AsmName = Reg->getValueAsString("AsmName");
@@ -1352,10 +1369,18 @@ void AsmMatcherInfo::buildRegisterClasses(
         Def->getValueAsDef("CoerceFromRegClass"));
     // Iterate getMembers() so conversions are ordered by EnumValue.
     for (const CodeGenRegister *From : FromRC->getMembers()) {
-      const Record *To =
-          RegsByAsmName.lookup(From->TheDef->getValueAsString("AsmName"));
-      if (To && To != From->TheDef)
-        RegConversions[Def].push_back({From->TheDef, To});
+      StringRef AsmName = From->TheDef->getValueAsString("AsmName");
+      const Record *To = RegsByAsmName.lookup(AsmName);
+      if (!To || To == From->TheDef)
+        continue;
+      const CodeGenRegister *First = FirstRegByAsmName.lookup(AsmName);
+      if (First != From)
+        PrintFatalError(Def->getLoc(),
+                        "RegisterClass '" + RC.getName() +
+                            "' cannot coerce from '" + From->getName() +
+                            "' since MatchRegisterName returns '" +
+                            First->getName() + "' for '" + AsmName + "'");
+      RegConversions[Def].push_back({From->TheDef, To});
     }
   }
 
@@ -1419,7 +1444,7 @@ void AsmMatcherInfo::buildRegisterClasses(
     CI->Name = "MCK_Reg" + utostr(Index);
     CI->ValueName = "";
     CI->PredicateMethod = ""; // unused
-    CI->RenderMethod = "addRegOperands";
+    CI->RenderMethod = DefaultRegRenderMethod;
     CI->Registers = RS;
     // FIXME: diagnostic type.
     CI->DiagnosticType = "";
@@ -1446,11 +1471,19 @@ void AsmMatcherInfo::buildRegisterClasses(
     if (!Def)
       continue;
     ClassInfo *CI = RegisterSetClasses[GetRegisterSet(RC)];
+    StringRef RenderMethod = Def->getValueAsOptionalString("RenderMethod")
+                                 .value_or(DefaultRegRenderMethod);
     if (CI->ValueName.empty()) {
       CI->ClassName = RC.getName();
       CI->Name = "MCK_" + RC.getName();
       CI->ValueName = RC.getName();
+      CI->RenderMethod = RenderMethod.str();
     } else {
+      if (CI->RenderMethod != RenderMethod)
+        PrintFatalError(Def->getLoc(), "RegisterClass '" + RC.getName() +
+                                           "' has the same registers as '" +
+                                           CI->ClassName +
+                                           "' but a different RenderMethod");
       CI->ValueName = CI->ValueName + "," + RC.getName();
     }
 
@@ -1479,7 +1512,8 @@ void AsmMatcherInfo::buildRegisterClasses(
     CI.ClassName = "RegByHwMode_" + ClassByHwMode->getName().str();
     CI.Name = "MCK_" + CI.ClassName;
     CI.ValueName = ClassByHwMode->getName();
-    CI.RenderMethod = "addRegOperands";
+    CI.RenderMethod = ClassByHwMode->getValueAsOptionalString("RenderMethod")
+                          .value_or(DefaultRegRenderMethod);
     //  FIXME: Set diagnostic type.
     ++RegClassByHwModeIndex;
 
@@ -2294,24 +2328,28 @@ static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         bool HasRegCoercion =
             RegClass && Info.RegConversions.contains(RegClass);
         // For RegClassByHwMode operands: the HwModes that select a register
-        // class that needs coercion.
-        SmallVector<std::pair<unsigned, const Record *>, 0> HwModeCoercions;
+        // class that needs coercion or a different RenderMethod.
+        SmallVector<std::pair<unsigned, const Record *>, 0> HwModeConversions;
         if (RegClass && RegClass->isSubClassOf("RegClassByHwMode"))
           for (auto [ModeId, ModeRC] :
                Target.getHwModes().getHwModeSelect(RegClass).Items)
-            if (Info.RegConversions.contains(ModeRC))
-              HwModeCoercions.emplace_back(ModeId, ModeRC);
+            if (Info.RegConversions.contains(ModeRC) ||
+                Info.RegisterClassClasses.at(ModeRC)->RenderMethod !=
+                    Op.Class->RenderMethod)
+              HwModeConversions.emplace_back(ModeId, ModeRC);
         // Registers are always converted the same unless they need to be
-        // coerced, don't duplicate the conversion function based on them.
+        // coerced or use a custom RenderMethod, don't duplicate the conversion
+        // function based on them.
         std::string Class;
         std::string Name = "CVT_";
         if (HasRegCoercion) {
           Class = RegClass->getName().str();
           Name += "convertTo" + Class;
-        } else if (!HwModeCoercions.empty()) {
+        } else if (!HwModeConversions.empty()) {
           Class = Op.Class->ClassName;
           Name += "convertTo" + Class;
-        } else if (Op.Class->isRegisterClass()) {
+        } else if (Op.Class->isRegisterClass() &&
+                   Op.Class->RenderMethod == DefaultRegRenderMethod) {
           Class = "Reg";
           Name += "Reg";
         } else {
@@ -2362,19 +2400,29 @@ static unsigned emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         } else if (HasRegCoercion) {
           assert(OpInfo.MINumOperands == 1 && "Expected a single register");
           emitCoercedRegOperand(RegClass, 6);
-        } else if (!HwModeCoercions.empty()) {
+        } else if (!HwModeConversions.empty()) {
           // Only convert the register in the HwModes that need it.
           assert(OpInfo.MINumOperands == 1 && "Expected a single register");
           CvtOS << "      switch "
                    "(STI->getHwMode(MCSubtargetInfo::HwMode_RegInfo)) {\n";
-          for (auto [ModeId, ModeRC] : HwModeCoercions) {
-            CvtOS << "      case " << ModeId << ": { // "
+          for (auto [ModeId, ModeRC] : HwModeConversions) {
+            bool Coerce = Info.RegConversions.contains(ModeRC);
+            CvtOS << "      case " << ModeId << ":" << (Coerce ? " {" : "")
+                  << " // "
                   << Target.getHwModes().getModeName(ModeId,
                                                      /*IncludeDefault=*/true)
                   << "\n";
-            emitCoercedRegOperand(ModeRC, 8);
-            CvtOS << "        break;\n"
-                  << "      }\n";
+            if (Coerce) {
+              emitCoercedRegOperand(ModeRC, 8);
+            } else {
+              CvtOS << "        static_cast<" << TargetOperandClass
+                    << " &>(*Operands[OpIdx])."
+                    << Info.RegisterClassClasses.at(ModeRC)->RenderMethod
+                    << "(Inst, 1);\n";
+            }
+            CvtOS << "        break;\n";
+            if (Coerce)
+              CvtOS << "      }\n";
           }
           CvtOS << "      default:\n"
                 << "        static_cast<" << TargetOperandClass

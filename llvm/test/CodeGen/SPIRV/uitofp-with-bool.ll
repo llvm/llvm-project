@@ -35,6 +35,9 @@
 ; SPV-DAG: %[[#vec_32:]] = OpTypeVector %[[#int_32]] 2
 ; SPV-DAG: %[[#vec_64:]] = OpTypeVector %[[#int_64]] 2
 ; SPV-DAG: %[[#vec_float:]] = OpTypeVector %[[#float]] 2
+; SPV-DAG: %[[#vec8_1:]] = OpTypeVector %[[#bool]] 8
+; SPV-DAG: %[[#vec8_32:]] = OpTypeVector %[[#int_32]] 8
+; SPV-DAG: %[[#vec8_float:]] = OpTypeVector %[[#float]] 8
 ; SPV-DAG: %[[#zeros_8:]] = OpConstantNull %[[#vec_8]]
 ; SPV-DAG: %[[#mones_8:]] = OpConstantComposite %[[#vec_8]] %[[#mone_8]] %[[#mone_8]]
 ; SPV-DAG: %[[#zeros_16:]] = OpConstantNull %[[#vec_16]]
@@ -47,6 +50,8 @@
 ; SPV-DAG: %[[#ones_16:]] = OpConstantComposite %[[#vec_16]] %[[#one_16]] %[[#one_16]]
 ; SPV-DAG: %[[#ones_32:]] = OpConstantComposite %[[#vec_32]] %[[#one_32]] %[[#one_32]]
 ; SPV-DAG: %[[#ones_64:]] = OpConstantComposite %[[#vec_64]] %[[#one_64]] %[[#one_64]]
+; SPV-DAG: %[[#zeros8_32:]] = OpConstantNull %[[#vec8_32]]
+; SPV-DAG: %[[#ones8_32:]] = OpConstantComposite %[[#vec8_32]] %[[#one_32]] %[[#one_32]] %[[#one_32]] %[[#one_32]] %[[#one_32]] %[[#one_32]] %[[#one_32]] %[[#one_32]]
 ; SPV-DAG: %[[#pointer:]] = OpTypePointer CrossWorkgroup %[[#float]]
 
 @G_s1 = global i8 0
@@ -67,6 +72,7 @@
 @G_z8 = global <2 x i64> zeroinitializer
 @G_ufp1 = global float 0.0
 @G_ufp2 = global <2 x float> zeroinitializer
+@G_ufp3 = global <8 x float> zeroinitializer
 @G_sfp1 = global float 0.0
 @G_sfp2 = global <2 x float> zeroinitializer
 
@@ -75,8 +81,9 @@
 ; SPV-DAG: %[[#B:]] = OpFunctionParameter %[[#]]
 ; SPV-DAG: %[[#i1s:]] = OpFunctionParameter %[[#]]
 ; SPV-DAG: %[[#i1v:]] = OpFunctionParameter %[[#]]
+; SPV-DAG: %[[#i1v8:]] = OpFunctionParameter %[[#vec8_1]]
 
-define dso_local spir_kernel void @K(ptr addrspace(1) nocapture %A, i32 %B, i1 %i1s, <2 x i1> %i1v) local_unnamed_addr {
+define dso_local spir_kernel void @K(ptr addrspace(1) nocapture %A, i32 %B, i1 %i1s, <2 x i1> %i1v, <8 x i1> %i1v8) local_unnamed_addr {
 entry:
 
 ; SPV: %[[#cmp_res:]] = OpSGreaterThan %[[#bool]] %[[#B]] %[[#zero_32]]
@@ -143,6 +150,11 @@ entry:
 ; SPV: %[[#ufp2:]] = OpConvertUToF %[[#vec_float]] %[[#ufp2_res]]
   %ufp2 = uitofp <2 x i1> %i1v to <2 x float>
   store <2 x float> %ufp2, ptr @G_ufp2
+; The <8 x i32> select result is wider than 128 bits.
+; SPV: %[[#ufp3_res:]] = OpSelect %[[#vec8_32]] %[[#i1v8]] %[[#ones8_32]] %[[#zeros8_32]]
+; SPV: %[[#ufp3:]] = OpConvertUToF %[[#vec8_float]] %[[#ufp3_res]]
+  %ufp3 = uitofp <8 x i1> %i1v8 to <8 x float>
+  store <8 x float> %ufp3, ptr @G_ufp3
 ; SPV: %[[#sfp1_res:]] = OpSelect %[[#int_32]] %[[#i1s]] %[[#mone_32]] %[[#zero_32]]
 ; SPV: %[[#sfp1:]] = OpConvertSToF %[[#float]] %[[#sfp1_res]]
   %sfp1 = sitofp i1 %i1s to float

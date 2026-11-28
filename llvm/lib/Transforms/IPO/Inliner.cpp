@@ -376,11 +376,12 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       // whether this makes the callee trivially dead. In that case, we can drop
       // the body of the function eagerly which may reduce the number of callers
       // of other functions to one, changing inline cost thresholds. Non-local
-      // discardable functions with comdats are checked later on.
+      // discardable functions with non-trivial comdats are checked later on.
       bool CalleeWasDeleted = false;
       if (Callee.isDiscardableIfUnused() && Callee.hasZeroLiveUses() &&
           !CG.isLibFunction(Callee)) {
-        if (Callee.hasLocalLinkage() || !Callee.hasComdat()) {
+        if (Callee.hasLocalLinkage() || !Callee.hasComdat() ||
+            Callee.getComdat()->getUsers().size() == 1) {
           Calls.erase(std::remove_if(Calls.begin() + I + 1, Calls.end(),
                                      [&](const CallBase *CB) {
                                        return CB->getCaller() == &Callee;

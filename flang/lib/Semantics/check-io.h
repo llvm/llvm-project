@@ -83,7 +83,7 @@ private:
   ENUM_CLASS(Flag, IoControlList, InternalUnit, NumberUnit, StarUnit, CharFmt,
       LabelFmt, StarFmt, AssignFmt, FmtOrNml, KnownAccess, AccessDirect,
       AccessStream, AdvanceYes, AsynchronousYes, KnownStatus, StatusNew,
-      StatusReplace, StatusScratch, DataList)
+      StatusReplace, StatusScratch, DataList, DelimNone)
 
   template <typename R, typename T> std::optional<R> GetConstExpr(const T &x) {
     using DefaultCharConstantType = evaluate::Ascii;
@@ -140,6 +140,8 @@ private:
 
   void CheckNamelist(
       const Symbol &, common::DefinedIo, parser::CharBlock) const;
+  void CheckForUndelimitedNamelistCharacter(
+      const Symbol &, parser::CharBlock) const;
 
   void Init(IoStmtKind s) {
     stmt_ = s;

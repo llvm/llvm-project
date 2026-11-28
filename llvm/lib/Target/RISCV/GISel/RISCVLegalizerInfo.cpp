@@ -14,11 +14,13 @@
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -541,7 +543,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         // the low bits for the mul result and high bits to do the overflow
         // check.
         .widenScalarIf(typeIs(0, sXLen),
-                       LegalizeMutations::changeTo(0, sDoubleXLen))
+                       LegalizeMutations::changeTo(0, LLT::integer(2 * XLen)))
         .lower();
   }
 
@@ -753,20 +755,37 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
                     (ST.hasStdExtZfh() &&
                      Query.Types[0].getSizeInBits() == 16));
           },
-          LegalizeMutations::changeTo(1, sXLen))
+          LegalizeMutations::changeTo(1, iXLen))
       // Otherwise only promote to s32 since we have si libcalls.
       .minScalar(1, s32)
       .libcallFor({{f32, s32}, {f64, s32}, {f32, s64}, {f64, s64}})
       .libcallFor(ST.is64Bit(), {{f128, s32}, {f128, s64}}) // FIXME RV32.
       .libcallFor(ST.is64Bit(), {{f32, s128}, {f64, s128}, {f128, s128}});
 
-  // FIXME: We can do custom inline expansion like SelectionDAG.
-  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_FNEARBYINT,
-                               G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
-                               G_INTRINSIC_ROUNDEVEN})
+  // Without Zfa, round by converting to an integer and back, like
+  // SelectionDAG does.
+  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_INTRINSIC_TRUNC,
+                               G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
       .legalFor(ST.hasStdExtZfa(), {f32})
       .legalFor(ST.hasStdExtZfa() && ST.hasStdExtD(), {f64})
       .legalFor(ST.hasStdExtZfa() && ST.hasStdExtZfh(), {f16})
+      .customFor(ST.hasStdExtZfh(), {f16})
+      // Without Zfh there is no fcvt.w.h, so round in f32, which f16 extends
+      // to exactly.
+      .widenScalarIf(typeIs(0, f16), changeTo(0, f32))
+      .customFor(ST.hasStdExtF(), {f32})
+      // Rounding an f64 needs an integer that can hold every value below 2^52.
+      .customFor(ST.is64Bit() && ST.hasStdExtD(), {f64})
+      .libcallFor({f32, f64})
+      .libcallFor(ST.is64Bit(), {f128});
+
+  // G_FNEARBYINT must not raise the inexact exception, which the integer round
+  // trip does, so without Zfa it has to stay a libcall.
+  getActionDefinitionsBuilder(G_FNEARBYINT)
+      .legalFor(ST.hasStdExtZfa(), {f32})
+      .legalFor(ST.hasStdExtZfa() && ST.hasStdExtD(), {f64})
+      .legalFor(ST.hasStdExtZfa() && ST.hasStdExtZfh(), {f16})
+      .widenScalarIf(typeIs(0, f16), changeTo(0, f32))
       .libcallFor({f32, f64})
       .libcallFor(ST.is64Bit(), {f128});
 
@@ -838,14 +857,15 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       // We don't have the ability to slide mask vectors down indexed by their
       // i1 elements; the smallest we can do is i8. Often we are able to bitcast
       // to equivalent i8 vectors.
-      .bitcastIf(
-          all(typeIsLegalBoolVec(0, BoolVecTys, ST),
-              typeIsLegalBoolVec(1, BoolVecTys, ST), ExtractSubvecBitcastPred),
-          [=](const LegalityQuery &Query) {
-            LLT CastTy = LLT::vector(
-                Query.Types[0].getElementCount().divideCoefficientBy(8), 8);
-            return std::pair(0, CastTy);
-          })
+      .bitcastIf(all(typeIsLegalBoolVec(0, BoolVecTys, ST),
+                     typeIsLegalBoolVec(1, BoolVecTys, ST),
+                     ExtractSubvecBitcastPred),
+                 [=](const LegalityQuery &Query) {
+                   LLT CastTy = LLT::vector(
+                       Query.Types[0].getElementCount().divideCoefficientBy(8),
+                       LLT::integer(8));
+                   return std::pair(0, CastTy);
+                 })
       .customIf(LegalityPredicates::any(
           all(typeIsLegalBoolVec(0, BoolVecTys, ST),
               typeIsLegalBoolVec(1, BoolVecTys, ST)),
@@ -864,18 +884,20 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_ATOMIC_CMPXCHG, G_ATOMICRMW_ADD,
                                G_ATOMICRMW_XCHG, G_ATOMICRMW_AND,
                                G_ATOMICRMW_OR, G_ATOMICRMW_XOR})
-      .legalFor(ST.hasStdExtA(), {{sXLen, p0}})
-      .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
+      .legalFor(ST.hasStdExtZalrsc(), {{sXLen, p0}})
+      .libcallFor(!ST.hasStdExtZalrsc(),
+                  {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
       .clampScalar(0, sXLen, sXLen);
 
   getActionDefinitionsBuilder(G_ATOMICRMW_SUB)
-      .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
+      .libcallFor(!ST.hasStdExtZalrsc(),
+                  {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
       .clampScalar(0, sXLen, sXLen)
       .lower();
 
   getActionDefinitionsBuilder(
       {G_ATOMICRMW_MAX, G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN})
-      .legalFor(ST.hasStdExtA(), {{sXLen, p0}})
+      .legalFor(ST.hasStdExtZalrsc(), {{sXLen, p0}})
       .clampScalar(0, sXLen, sXLen)
       .unsupported();
 
@@ -941,16 +963,19 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
     MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    if (Ty == iXLen)
-      return true;
-    if (!STI.is64Bit() || Ty != LLT::scalar(32))
+    if (Ty != iXLen && (!STI.is64Bit() || Ty != LLT::scalar(32)))
       return false;
 
-    // Each output byte depends only on the corresponding input byte.
-    auto Src = MIRBuilder.buildAnyExt(iXLen, MI.getOperand(2));
-    auto Result = MIRBuilder.buildIntrinsic(IntrinsicID, {DstOp(iXLen)})
-                      .addUse(Src.getReg(0));
-    MIRBuilder.buildTrunc(MI.getOperand(0), Result);
+    // Each output byte depends only on the corresponding input byte, so any
+    // extension is fine for narrow types.
+    Register Src = MI.getOperand(2).getReg();
+    if (Ty != iXLen)
+      Src = MIRBuilder.buildAnyExt(iXLen, Src).getReg(0);
+    auto Result = MIRBuilder.buildInstr(RISCV::G_ORC_B, {iXLen}, {Src});
+    if (Ty != iXLen)
+      MIRBuilder.buildTrunc(MI.getOperand(0), Result);
+    else
+      MIRBuilder.buildCopy(MI.getOperand(0), Result);
     MI.eraseFromParent();
     return true;
   }
@@ -1316,7 +1341,7 @@ bool RISCVLegalizerInfo::legalizeLoadStore(MachineInstr &MI,
   // Calculate the new vector type with i8 elements
   unsigned NumElements =
       DataTy.getElementCount().getKnownMinValue() * (EltSizeBits / 8);
-  LLT NewDataTy = LLT::scalable_vector(NumElements, 8);
+  LLT NewDataTy = LLT::scalable_vector(NumElements, LLT::integer(8));
 
   Helper.bitcast(MI, 0, NewDataTy);
 
@@ -1561,7 +1586,8 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
     if (BigTyMinElts >= 8 && LitTyMinElts >= 8)
       return Helper.bitcast(
           IS, 0,
-          LLT::vector(BigTy.getElementCount().divideCoefficientBy(8), 8));
+          LLT::vector(BigTy.getElementCount().divideCoefficientBy(8),
+                      LLT::integer(8)));
 
     // We can't slide this mask vector up indexed by its i1 elements.
     // This poses a problem when we wish to insert a scalable vector which
@@ -1714,6 +1740,64 @@ static unsigned getRISCVWOpcode(unsigned Opcode) {
   case TargetOpcode::G_FPTOUI:
     return RISCV::G_FCVT_WU_RV64;
   }
+}
+
+bool RISCVLegalizerInfo::legalizeFpRound(
+    MachineInstr &MI, LegalizerHelper &Helper, MachineIRBuilder &MIRBuilder,
+    LostDebugLocObserver &LocObserver) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  LLT Ty = MRI.getType(Src);
+
+  // SelectionDAG keeps the libcall when optimizing for size, but there is no
+  // f16 libcall, so f16 always uses the inline expansion.
+  if (Ty != LLT::float16() && MIRBuilder.getMF().getFunction().hasOptSize())
+    return Helper.libcall(MI, LocObserver) == LegalizerHelper::Legalized;
+
+  RISCVFPRndMode::RoundingMode FRM;
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_FCEIL:
+    FRM = RISCVFPRndMode::RUP;
+    break;
+  case TargetOpcode::G_FFLOOR:
+    FRM = RISCVFPRndMode::RDN;
+    break;
+  case TargetOpcode::G_FRINT:
+    FRM = RISCVFPRndMode::DYN;
+    break;
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+    FRM = RISCVFPRndMode::RTZ;
+    break;
+  case TargetOpcode::G_INTRINSIC_ROUND:
+    FRM = RISCVFPRndMode::RMM;
+    break;
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+    FRM = RISCVFPRndMode::RNE;
+    break;
+  default:
+    llvm_unreachable("Unexpected rounding opcode");
+  }
+
+  // Create an integer the size of the mantissa with the MSB set. This and all
+  // values larger than it have no fractional bits, so emitFROUND passes them
+  // through instead of converting. NaN is passed through as well.
+  const fltSemantics &Sem = getFltSemanticForLLT(Ty);
+  unsigned Precision = APFloat::semanticsPrecision(Sem);
+  APFloat MaxVal(Sem);
+  MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
+                          /*IsSigned=*/false, APFloat::rmNearestTiesToEven);
+  auto Max = MIRBuilder.buildFConstant(Ty, MaxVal);
+
+  // Leave the guarded round trip through the integer domain to emitFROUND, so
+  // the expansion stays shared with SelectionDAG.
+  MIRBuilder
+      .buildInstr(RISCV::G_FROUND, {Dst}, {Src, Max},
+                  MI.getFlags() & MachineInstr::NoFPExcept)
+      .addImm(FRM);
+
+  MI.eraseFromParent();
+  return true;
 }
 
 bool RISCVLegalizerInfo::legalizeCustom(
@@ -1888,6 +1972,13 @@ bool RISCVLegalizerInfo::legalizeCustom(
     Helper.Observer.changedInstr(MI);
     return true;
   }
+  case TargetOpcode::G_FCEIL:
+  case TargetOpcode::G_FFLOOR:
+  case TargetOpcode::G_FRINT:
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+  case TargetOpcode::G_INTRINSIC_ROUND:
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+    return legalizeFpRound(MI, Helper, MIRBuilder, LocObserver);
   case TargetOpcode::G_READCYCLECOUNTER:
   case TargetOpcode::G_READSTEADYCOUNTER:
     return legalizeReadCounter(MI, MIRBuilder, Helper.Observer);

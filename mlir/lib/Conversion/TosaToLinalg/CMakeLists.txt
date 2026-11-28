@@ -13,6 +13,7 @@ add_mlir_conversion_library(MLIRTosaToLinalg
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
+  MLIRControlFlowDialect
   MLIRDialectUtils
   MLIRIR
   MLIRIndexDialect

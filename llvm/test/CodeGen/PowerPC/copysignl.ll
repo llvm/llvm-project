@@ -172,19 +172,19 @@ define ppc_fp128 @foo_ll(double %a, ppc_fp128 %b) #0 {
 ; BE32-NEXT:    stw 0, 100(1)
 ; BE32-NEXT:    li 3, 0
 ; BE32-NEXT:    stfd 1, 32(1)
+; BE32-NEXT:    stfd 2, 56(1)
 ; BE32-NEXT:    stw 3, 44(1)
 ; BE32-NEXT:    stw 3, 40(1)
 ; BE32-NEXT:    lwz 3, 36(1)
-; BE32-NEXT:    stfd 2, 56(1)
+; BE32-NEXT:    lfd 4, 64(1)
 ; BE32-NEXT:    stw 3, 52(1)
 ; BE32-NEXT:    lwz 3, 32(1)
-; BE32-NEXT:    lfd 4, 64(1)
+; BE32-NEXT:    lfd 2, 40(1)
 ; BE32-NEXT:    stw 3, 48(1)
 ; BE32-NEXT:    lwz 3, 60(1)
-; BE32-NEXT:    lfd 2, 40(1)
+; BE32-NEXT:    lfd 1, 48(1)
 ; BE32-NEXT:    stw 3, 76(1)
 ; BE32-NEXT:    lwz 3, 56(1)
-; BE32-NEXT:    lfd 1, 48(1)
 ; BE32-NEXT:    stw 3, 72(1)
 ; BE32-NEXT:    lfd 3, 72(1)
 ; BE32-NEXT:    bl copysignl
@@ -381,6 +381,13 @@ entry:
 define ppc_fp128 @copysign_signmask(ppc_fp128 %x, i1 %s) {
 ; LE-LABEL: copysign_signmask:
 ; LE:       # %bb.0: # %entry
+; LE-NEXT:    fmr 0, 1
+; LE-NEXT:    xsabsdp 1, 1
+; LE-NEXT:    xscmpudp 0, 0, 1
+; LE-NEXT:    beq 0, .LBB6_2
+; LE-NEXT:  # %bb.1: # %entry
+; LE-NEXT:    xsnegdp 2, 2
+; LE-NEXT:  .LBB6_2: # %entry
 ; LE-NEXT:    mflr 0
 ; LE-NEXT:    stdu 1, -32(1)
 ; LE-NEXT:    std 0, 48(1)
@@ -398,6 +405,13 @@ define ppc_fp128 @copysign_signmask(ppc_fp128 %x, i1 %s) {
 ;
 ; BE-LABEL: copysign_signmask:
 ; BE:       # %bb.0: # %entry
+; BE-NEXT:    fmr 0, 1
+; BE-NEXT:    fabs 1, 1
+; BE-NEXT:    fcmpu 0, 0, 1
+; BE-NEXT:    beq 0, .LBB6_2
+; BE-NEXT:  # %bb.1: # %entry
+; BE-NEXT:    fneg 2, 2
+; BE-NEXT:  .LBB6_2: # %entry
 ; BE-NEXT:    mflr 0
 ; BE-NEXT:    stdu 1, -128(1)
 ; BE-NEXT:    std 0, 144(1)
@@ -417,6 +431,13 @@ define ppc_fp128 @copysign_signmask(ppc_fp128 %x, i1 %s) {
 ;
 ; BE-VSX-LABEL: copysign_signmask:
 ; BE-VSX:       # %bb.0: # %entry
+; BE-VSX-NEXT:    fmr 0, 1
+; BE-VSX-NEXT:    xsabsdp 1, 1
+; BE-VSX-NEXT:    xscmpudp 0, 0, 1
+; BE-VSX-NEXT:    beq 0, .LBB6_2
+; BE-VSX-NEXT:  # %bb.1: # %entry
+; BE-VSX-NEXT:    xsnegdp 2, 2
+; BE-VSX-NEXT:  .LBB6_2: # %entry
 ; BE-VSX-NEXT:    mflr 0
 ; BE-VSX-NEXT:    stdu 1, -128(1)
 ; BE-VSX-NEXT:    std 0, 144(1)
@@ -440,25 +461,31 @@ define ppc_fp128 @copysign_signmask(ppc_fp128 %x, i1 %s) {
 ; BE32-NEXT:    stw 0, 100(1)
 ; BE32-NEXT:    .cfi_def_cfa_offset 96
 ; BE32-NEXT:    .cfi_offset lr, 4
-; BE32-NEXT:    stfd 1, 40(1)
-; BE32-NEXT:    slwi 3, 3, 31
-; BE32-NEXT:    stw 3, 64(1)
+; BE32-NEXT:    fabs 0, 1
+; BE32-NEXT:    fcmpu 0, 1, 0
+; BE32-NEXT:    beq 0, .LBB6_2
+; BE32-NEXT:  # %bb.1: # %entry
+; BE32-NEXT:    fneg 2, 2
+; BE32-NEXT:  .LBB6_2: # %entry
+; BE32-NEXT:    stfd 0, 40(1)
 ; BE32-NEXT:    li 4, 0
-; BE32-NEXT:    lwz 3, 44(1)
+; BE32-NEXT:    slwi 3, 3, 31
 ; BE32-NEXT:    stfd 2, 32(1)
+; BE32-NEXT:    stw 4, 76(1)
+; BE32-NEXT:    stw 4, 72(1)
+; BE32-NEXT:    stw 4, 68(1)
+; BE32-NEXT:    stw 3, 64(1)
+; BE32-NEXT:    lwz 3, 44(1)
+; BE32-NEXT:    lfd 4, 72(1)
 ; BE32-NEXT:    stw 3, 60(1)
 ; BE32-NEXT:    lwz 3, 40(1)
-; BE32-NEXT:    stw 4, 76(1)
+; BE32-NEXT:    lfd 3, 64(1)
 ; BE32-NEXT:    stw 3, 56(1)
 ; BE32-NEXT:    lwz 3, 36(1)
-; BE32-NEXT:    stw 4, 72(1)
+; BE32-NEXT:    lfd 1, 56(1)
 ; BE32-NEXT:    stw 3, 52(1)
 ; BE32-NEXT:    lwz 3, 32(1)
-; BE32-NEXT:    stw 4, 68(1)
 ; BE32-NEXT:    stw 3, 48(1)
-; BE32-NEXT:    lfd 4, 72(1)
-; BE32-NEXT:    lfd 3, 64(1)
-; BE32-NEXT:    lfd 1, 56(1)
 ; BE32-NEXT:    lfd 2, 48(1)
 ; BE32-NEXT:    bl copysignl
 ; BE32-NEXT:    stfd 1, 8(1)

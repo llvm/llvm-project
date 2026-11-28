@@ -3813,7 +3813,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
                 llvm::dyn_cast<llvm::PointerType>(lookupPtr->getType());
             origPtrTy && origPtrTy->getAddressSpace() != 0)
           lookupPtr = builder.CreateAddrSpaceCast(lookupPtr, ptrTy);
-        llvm::Value *priv = builder.CreateCall(
+        llvm::Value *priv = ompB.createRuntimeFunctionCall(
             getThData, {bodyGtid, nullDesc, lookupPtr}, "omp.inred.priv");
         if (auto *argPtrTy = llvm::dyn_cast<llvm::PointerType>(
                 moduleTranslation.convertType(blockArg.getType()));
@@ -4209,7 +4209,7 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
     llvm::Value *outerGtid = ompBuilderRef.getOrCreateThreadID(ident);
     llvm::FunctionCallee taskgroupFn = ompBuilderRef.getOrCreateRuntimeFunction(
         *module, llvm::omp::OMPRTL___kmpc_taskgroup);
-    builder.CreateCall(taskgroupFn, {ident, outerGtid});
+    ompBuilderRef.createRuntimeFunctionCall(taskgroupFn, {ident, outerGtid});
 
     redDesc = emitTaskReductionInitCall(redDecls, redOrigPtrs,
                                         "__omp_taskloop_taskred_", builder,
@@ -4329,8 +4329,8 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
                 llvm::dyn_cast<llvm::PointerType>(origPtr->getType());
             origPtrTy && origPtrTy->getAddressSpace() != 0)
           origPtr = builder.CreateAddrSpaceCast(origPtr, ptrTy);
-        llvm::Value *priv =
-            builder.CreateCall(getThData, {bodyGtid, desc, origPtr}, name);
+        llvm::Value *priv = ompB.createRuntimeFunctionCall(
+            getThData, {bodyGtid, desc, origPtr}, name);
         if (auto *argPtrTy = llvm::dyn_cast<llvm::PointerType>(
                 moduleTranslation.convertType(blockArg.getType()));
             argPtrTy && argPtrTy->getAddressSpace() != 0)
@@ -4523,7 +4523,7 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
     llvm::FunctionCallee endTgFn = ompBuilder.getOrCreateRuntimeFunction(
         *moduleTranslation.getLLVMModule(),
         llvm::omp::OMPRTL___kmpc_end_taskgroup);
-    builder.CreateCall(endTgFn, {ident, outerGtid});
+    ompBuilder.createRuntimeFunctionCall(endTgFn, {ident, outerGtid});
   }
   return success();
 }
@@ -4731,17 +4731,17 @@ static llvm::Value *emitTaskReductionInitCall(
     // task-reduction scope for the enclosing parallel/worksharing region.
     llvm::FunctionCallee modInit = ompBuilder->getOrCreateRuntimeFunction(
         *llvmModule, llvm::omp::OMPRTL___kmpc_taskred_modifier_init);
-    return builder.CreateCall(modInit,
-                              {ident, gtid,
-                               builder.getInt32(isWorksharing ? 1 : 0),
-                               builder.getInt32(n), arrAlloca},
-                              ".taskred.desc");
+    return ompBuilder->createRuntimeFunctionCall(
+        modInit,
+        {ident, gtid, builder.getInt32(isWorksharing ? 1 : 0),
+         builder.getInt32(n), arrAlloca},
+        ".taskred.desc");
   }
   // __kmpc_taskred_init(gtid, num, &arr).
   llvm::FunctionCallee taskredInit = ompBuilder->getOrCreateRuntimeFunction(
       *llvmModule, llvm::omp::OMPRTL___kmpc_taskred_init);
-  return builder.CreateCall(taskredInit, {gtid, builder.getInt32(n), arrAlloca},
-                            ".taskred.desc");
+  return ompBuilder->createRuntimeFunctionCall(
+      taskredInit, {gtid, builder.getInt32(n), arrAlloca}, ".taskred.desc");
 }
 
 /// Emits `__kmpc_task_reduction_modifier_fini(loc, gtid, is_ws)` at the current
@@ -4761,8 +4761,8 @@ emitTaskReductionModifierFini(bool isWorksharing, llvm::IRBuilderBase &builder,
   llvm::Value *gtid = ompBuilder->getOrCreateThreadID(ident);
   llvm::FunctionCallee fini = ompBuilder->getOrCreateRuntimeFunction(
       *llvmModule, llvm::omp::OMPRTL___kmpc_task_reduction_modifier_fini);
-  builder.CreateCall(fini,
-                     {ident, gtid, builder.getInt32(isWorksharing ? 1 : 0)});
+  ompBuilder->createRuntimeFunctionCall(
+      fini, {ident, gtid, builder.getInt32(isWorksharing ? 1 : 0)});
 }
 
 /// Converts an OpenMP taskgroup construct into LLVM IR using OpenMPIRBuilder.
@@ -5582,10 +5582,9 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                             privateVarsInfo);
 }
 
-/// Select Virtual only for two constant-count host worksharing loops.
+/// Select Virtual only for two host worksharing loops.
 static llvm::OpenMPIRBuilder::CollapseIVMapping
-selectCollapseIVMapping(omp::LoopNestOp loopOp, bool isTargetDevice,
-                        ArrayRef<llvm::CanonicalLoopInfo *> loops) {
+selectCollapseIVMapping(omp::LoopNestOp loopOp, bool isTargetDevice) {
   using Mapping = llvm::OpenMPIRBuilder::CollapseIVMapping;
   if (isTargetDevice || loopOp.getCollapseNumLoops() != 2 ||
       disableVirtualCollapse)
@@ -5596,13 +5595,6 @@ selectCollapseIVMapping(omp::LoopNestOp loopOp, bool isTargetDevice,
           omp::ClauseScheduleKind::Static ||
       wsloop.getScheduleChunk() || wsloop.getOrdered().has_value() ||
       !wsloop.getLinearVars().empty())
-    return Mapping::DivMod;
-  // Use the existing normalized counts; the builder also validates direct
-  // API callers.
-  if (llvm::any_of(loops, [](llvm::CanonicalLoopInfo *loop) {
-        auto *count = llvm::dyn_cast<llvm::ConstantInt>(loop->getTripCount());
-        return !count;
-      }))
     return Mapping::DivMod;
   return Mapping::Virtual;
 }
@@ -5717,8 +5709,7 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::SaveAndRestore<llvm::OpenMPIRBuilder::CollapseIVMapping> mappingGuard(
       ompBuilder->Config.CollapseMapping,
-      selectCollapseIVMapping(loopOp, ompBuilder->Config.isTargetDevice(),
-                              collapseLoopInfos));
+      selectCollapseIVMapping(loopOp, ompBuilder->Config.isTargetDevice()));
   auto newTopLoopInfo =
       ompBuilder->collapseLoops(ompLoc.DL, collapseLoopInfos, {});
 
@@ -6577,13 +6568,6 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
                             llvmAtomicV.IsVolatile);
       }
 
-      // Emit flush after atomic compare if needed (release/acq_rel/seq_cst).
-      if (atomicOrdering == llvm::AtomicOrdering::Release ||
-          atomicOrdering == llvm::AtomicOrdering::AcquireRelease ||
-          atomicOrdering == llvm::AtomicOrdering::SequentiallyConsistent) {
-        llvm::OpenMPIRBuilder::LocationDescription flushLoc(builder);
-        ompBuilder->createFlush(flushLoc);
-      }
       return success();
     }
 
@@ -7017,14 +7001,6 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
     (void)oldComplex;
     (void)cmpOk;
 
-    // Emit flush after atomic compare if needed (for release, acq_rel,
-    // seq_cst orderings).
-    if (atomicOrdering == llvm::AtomicOrdering::Release ||
-        atomicOrdering == llvm::AtomicOrdering::AcquireRelease ||
-        atomicOrdering == llvm::AtomicOrdering::SequentiallyConsistent) {
-      llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-      ompBuilder->createFlush(ompLoc);
-    }
     return success();
   } else {
     AtomicComparePatternInfo patternInfo;

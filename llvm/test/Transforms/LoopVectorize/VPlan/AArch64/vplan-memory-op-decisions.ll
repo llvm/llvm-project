@@ -25,7 +25,7 @@ define void @replicating_load_used_as_store_addr(ptr noalias %A) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%gep.A> = getelementptr ir<%A>, ir<%iv>
 ; CHECK-NEXT:      REPLICATE ir<%l.p> = load ir<%gep.A>
-; CHECK-NEXT:      EMIT-SCALAR ir<%iv.trunc> = trunc ir<%iv.next> to i32
+; CHECK-NEXT:      EMIT ir<%iv.trunc> = trunc ir<%iv.next> to i32
 ; CHECK-NEXT:      EMIT store ir<%iv.trunc>, ir<%l.p>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<100>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -147,7 +147,7 @@ define void @single_scalar_load_used_as_store_addr(ptr noalias %p) {
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%l.p> = load ir<%p>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%l.p>, ir<%iv>
-; CHECK-NEXT:      EMIT-SCALAR ir<%iv.trunc> = trunc ir<%iv.next> to i32
+; CHECK-NEXT:      EMIT ir<%iv.trunc> = trunc ir<%iv.next> to i32
 ; CHECK-NEXT:      EMIT store ir<%iv.trunc>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<100>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
@@ -313,7 +313,7 @@ define void @consecutive_load_with_first_order_recurrence_address(ptr noalias %a
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%prev> = phi ir<0>, ir<%ext>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%inc> = add ir<%narrow>, ir<1>
-; CHECK-NEXT:      EMIT-SCALAR ir<%ext> = zext ir<%inc> to i64
+; CHECK-NEXT:      EMIT ir<%ext> = zext ir<%inc> to i64
 ; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = first-order splice ir<%prev>, ir<%ext>
 ; CHECK-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%lv> = load ir<%gep.a>

@@ -5,8 +5,8 @@
 ; Without the extension on SPIR-V < 1.6 the set is unavailable, so lowering
 ; falls back to OpNop.
 ; RUN: llc -O0 -mtriple=spirv1.5-unknown-vulkan1.2-compute %s -o - | FileCheck %s --check-prefix=NOEXT
-; Two consecutive debugtraps must both survive -O2 and lower to two DebugBreak.
-; RUN: llc -O2 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - | FileCheck %s --check-prefix=O2
+; Two consecutive debugtraps must both survive -O3 and lower to two DebugBreak.
+; RUN: llc -O3 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - | FileCheck %s --check-prefix=O3
 
 ; CORE-NOT:  OpExtension "SPV_KHR_non_semantic_info"
 ; EXT:       OpExtension "SPV_KHR_non_semantic_info"
@@ -21,9 +21,9 @@
 ; NOEXT:     OpNop
 ; NOEXT:     OpReturn
 
-; O2:        %[[#Set:]] = OpExtInstImport "NonSemantic.DebugBreak"
-; O2:        OpExtInst %[[#]] %[[#Set]] DebugBreak
-; O2-NEXT:   OpExtInst %[[#]] %[[#Set]] DebugBreak
+; O3:        %[[#Set:]] = OpExtInstImport "NonSemantic.DebugBreak"
+; O3:        OpExtInst %[[#]] %[[#Set]] DebugBreak
+; O3-NEXT:   OpExtInst %[[#]] %[[#Set]] DebugBreak
 
 define void @main() #0 {
 entry:

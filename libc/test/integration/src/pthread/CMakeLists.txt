@@ -82,6 +82,7 @@ add_integration_test(
     libc.src.stdlib.exit
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.new
+    libc.src.__support.OSUtil.linux.syscall_wrappers.gettid
     libc.src.__support.threads.sleep
 )
 

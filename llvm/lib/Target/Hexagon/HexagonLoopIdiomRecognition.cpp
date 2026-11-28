@@ -1327,8 +1327,7 @@ bool PolynomialMultiplyRecognize::convertShiftsToLeft(BasicBlock *LoopB,
     // be unshifted.
     if (!commutesWithShift(R))
       return false;
-    for (User *U : R->users()) {
-      auto *T = cast<Instruction>(U);
+    for (Instruction *T : R->users()) {
       // Skip users from outside of the loop. They will be handled later.
       // Also, skip the right-shifts and phi nodes, since they mix early
       // and late values.
@@ -2421,10 +2420,7 @@ bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
         continue;
       if (!Worklist.count(&In) && In.mayHaveSideEffects())
         return false;
-      for (auto *K : In.users()) {
-        Instruction *UseI = dyn_cast<Instruction>(K);
-        if (!UseI)
-          continue;
+      for (Instruction *UseI : In.users()) {
         BasicBlock *UseB = UseI->getParent();
         if (LF->getLoopFor(UseB) != L)
           return false;

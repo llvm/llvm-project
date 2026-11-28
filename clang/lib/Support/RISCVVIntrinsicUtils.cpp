@@ -1001,13 +1001,13 @@ RVVTypeCache::computeTypes(BasicType BT, int Log2LMUL, unsigned NF,
 static uint64_t computeRVVTypeHashValue(BasicType BT, int Log2LMUL,
                                         PrototypeDescriptor Proto) {
   // Layout of hash value:
-  // 0               8    24          32        40          48
+  // 0               8    24          32        48          56
   // | Log2LMUL + 3  | BT  | Proto.PT | Proto.TM | Proto.VTM |
   assert(Log2LMUL >= -3 && Log2LMUL <= 3);
   return (Log2LMUL + 3) | (static_cast<uint64_t>(BT) & 0xffff) << 8 |
          (static_cast<uint64_t>(Proto.PT) << 24) |
          (static_cast<uint64_t>(Proto.TM) << 32) |
-         (static_cast<uint64_t>(Proto.VTM) << 40);
+         (static_cast<uint64_t>(Proto.VTM) << 48);
 }
 
 std::optional<RVVTypePtr> RVVTypeCache::computeType(BasicType BT, int Log2LMUL,

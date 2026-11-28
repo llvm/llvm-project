@@ -1,15 +1,12 @@
 ; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -amdgpu-function-calls < %s | FileCheck -check-prefix=CALLS %s
 ; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck -check-prefix=CALLS %s
 ; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -amdgpu-function-calls=0 < %s | FileCheck -check-prefix=NOCALLS %s
-; RUN: llc -mtriple=r600-mesa-mesa3d < %s | FileCheck -check-prefix=NOCALLS %s
-; RUN: llc -mtriple=r600-mesa-mesa3d -amdgpu-function-calls=0 < %s | FileCheck -check-prefix=NOCALLS %s
 
 ; CALLS-LABEL: callee:
 ; CALLS: ;;#ASMSTART
 ; CALLS: ;;#ASMEND
 
 ; NOCALLS-NOT: callee
-; R600-NOT: callee
 define internal void @callee() {
   call void asm sideeffect "", ""()
   ret void

@@ -84,16 +84,16 @@ Module &Module::operator=(Module &&Other) {
   ModuleID = std::move(Other.ModuleID);
   SourceFileName = std::move(Other.SourceFileName);
 
+  // The lists share one symbol table, so erase every global value before
+  // splicing any, or an incoming one would be renamed on a name clash.
   GlobalList.clear();
-  GlobalList.splice(GlobalList.begin(), Other.GlobalList);
-
   FunctionList.clear();
-  FunctionList.splice(FunctionList.begin(), Other.FunctionList);
-
   AliasList.clear();
-  AliasList.splice(AliasList.begin(), Other.AliasList);
-
   IFuncList.clear();
+
+  GlobalList.splice(GlobalList.begin(), Other.GlobalList);
+  FunctionList.splice(FunctionList.begin(), Other.FunctionList);
+  AliasList.splice(AliasList.begin(), Other.AliasList);
   IFuncList.splice(IFuncList.begin(), Other.IFuncList);
 
   NamedMDList.clear();
@@ -1042,7 +1042,7 @@ void Module::setDarwinTargetVariantSDKVersion(VersionTuple Version) {
   addSDKVersionMD(Version, *this, "darwin.target_variant.SDK Version");
 }
 
-StringRef Module::getTargetABIFromMD() {
+StringRef Module::getTargetABIFromMD() const {
   StringRef TargetABI;
   if (auto *TargetABIMD = cast_or_null<MDString>(getModuleFlag("target-abi")))
     TargetABI = TargetABIMD->getString();

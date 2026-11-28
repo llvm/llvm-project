@@ -12,20 +12,22 @@
 include "mlir/Pass/PassBase.td"
 
 def EliminateVectorMasks : Pass<"eliminate-vector-masks", "func::FuncOp"> {
-  let summary = "Replace masks that are provably all-true with constant masks";
+  let summary = "Replace provably all-true or all-false masks with constant masks";
   let description = [{
-    Rewrites `vector.create_mask` operations that can be proven all-true into
-    `vector.constant_mask`. Canonicalization then folds those away, turning a
-    masked transfer into an unmasked one.
+    Rewrites `vector.create_mask` operations that can be proven all-true or
+    all-false into `vector.constant_mask`. Canonicalization then folds those
+    away, e.g. turning a masked transfer into an unmasked one.
 
     A mask dimension is all-true when its size is at least the size of the
     corresponding vector dimension. Sizes are bounded with
     `ValueBoundsOpInterface`, so sizes derived from a loop, such as
-    `%dim - %iv`, can be proven too.
+    `%dim - %iv`, can be proven too. A mask is all-false if any dimension has
+    a nonpositive upper bound.
 
-    Proving a scalable dimension needs the range of `vscale`: pass `vscale-min`
-    and `vscale-max` when it is known for the target (1 and 16 for SVE, say).
-    Without a range, only fixed-size dimensions can be proven.
+    Proving a scalable dimension all-true needs the range of `vscale`: pass
+    `vscale-min` and `vscale-max` when it is known for the target (1 and 16 for
+    SVE, say). Without a range, only fixed-size dimensions can be proven
+    all-true. All-false proofs do not use the range.
   }];
   let options = [
     Option<"vscaleMin", "vscale-min", "unsigned", /*default=*/"0",

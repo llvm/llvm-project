@@ -25,17 +25,50 @@ end subroutine
 ! CHECK-LABEL: Testing : "_QPtest_module"
 ! CHECK: test_effect_external -> test_var_xmod#0: ModRef
 
-subroutine test_saved_local
+non_recursive subroutine test_saved_local
   use somemod, only : may_capture
   implicit none
   real, save :: test_var_xsaved
   ! Capture is invalid after the call because test_var_xsaved does not have the
-  ! target attribute.
+  ! target attribute. The call cannot invoke test_saved_local again, because
+  ! it is NON_RECURSIVE.
   call may_capture(test_var_xsaved)
   call test_effect_external()
 end subroutine
 ! CHECK-LABEL: Testing : "_QPtest_saved_local"
 ! CHECK: test_effect_external -> test_var_xsaved#0: NoModRef
+
+subroutine test_saved_local_default_recursion
+  implicit none
+  real, save :: test_var_xsaved_default
+  ! The procedure may be recursive, so the call may invoke it again, and that
+  ! instance may access test_var_xsaved_default.
+  call test_effect_external()
+end subroutine
+! CHECK-LABEL: Testing : "_QPtest_saved_local_default_recursion"
+! CHECK: test_effect_external -> test_var_xsaved_default#0: ModRef
+
+recursive subroutine test_saved_local_recursive
+  implicit none
+  real, save :: test_var_xsaved_recursive
+  call test_effect_external()
+end subroutine
+! CHECK-LABEL: Testing : "_QPtest_saved_local_recursive"
+! CHECK: test_effect_external -> test_var_xsaved_recursive#0: ModRef
+
+subroutine test_saved_local_pure_callee
+  implicit none
+  interface
+    pure subroutine test_effect_pure()
+    end subroutine
+  end interface
+  real, save :: test_var_xsaved_pure
+  ! A pure procedure can only invoke pure procedures, so it cannot invoke
+  ! test_saved_local_pure_callee.
+  call test_effect_pure()
+end subroutine
+! CHECK-LABEL: Testing : "_QPtest_saved_local_pure_callee"
+! CHECK: test_effect_pure -> test_var_xsaved_pure#0: NoModRef
 
 subroutine test_saved_target
   use somemod, only : may_capture
@@ -102,3 +135,12 @@ end subroutine
 ! CHECK-LABEL: Testing : "_QPtest_module_allocatable"
 ! CHECK-DAG: test_effect_external -> test_var_alloc#0: ModRef
 ! CHECK-DAG: test_effect_external -> box_addr_1#0: ModRef
+
+program test_main_program
+  implicit none
+  real :: test_var_xmain(10)
+  ! The variable is saved, but the call cannot invoke the main program.
+  call test_effect_external()
+end program
+! CHECK-LABEL: Testing : "_QQmain"
+! CHECK: test_effect_external -> test_var_xmain#0: NoModRef

@@ -224,10 +224,6 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void AffineDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Affine/IR/AffineOps.cpp.inc"
-      >();
   addInterfaces<AffineInlinerInterface>();
   declarePromisedInterfaces<ValueBoundsOpInterface, AffineApplyOp, AffineMaxOp,
                             AffineMinOp>();
@@ -4697,6 +4693,19 @@ ParseResult AffineParallelOp::parse(OpAsmParser &parser,
   return success();
 }
 
+void AffineParallelOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  assert((point.isParent() ||
+          point.getTerminatorPredecessorOrNull()->getParentRegion() ==
+              &getRegion()) &&
+         "expected loop region");
+  // Both the operation itself and the region may be branching into the body or
+  // back into the operation itself. It is possible for the loop to not enter
+  // the body.
+  regions.push_back(RegionSuccessor(&getRegion()));
+  regions.push_back(RegionSuccessor(getOperation()));
+}
+
 //===----------------------------------------------------------------------===//
 // AffineYieldOp
 //===----------------------------------------------------------------------===//
@@ -4717,6 +4726,14 @@ LogicalResult AffineYieldOp::verify() {
   }
 
   return success();
+}
+
+MutableOperandRange
+AffineYieldOp::getMutableSuccessorOperands(RegionSuccessor point) {
+  // Reductions in affine.parallel are not directly forwarded SSA values.
+  if (isa_and_nonnull<AffineParallelOp>((*this)->getParentOp()))
+    return MutableOperandRange(getOperation(), /*start=*/0, /*length=*/0);
+  return MutableOperandRange(*this);
 }
 
 //===----------------------------------------------------------------------===//

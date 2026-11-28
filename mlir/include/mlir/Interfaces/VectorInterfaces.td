@@ -72,6 +72,26 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
         return SmallVector<int64_t>{2, 2};
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+          Returns the dimension indices in the order used for vector unrolling.
+
+          By default, dimensions are ordered from the outermost (slowest-varying)
+          to the innermost (fastest-varying), i.e. [0, 1, ..., rank - 1].
+          Setting `reverseOrder` to `true` reverses this order.
+      }],
+      /*retTy=*/"::llvm::SmallVector<int64_t>",
+      /*methodName=*/"getUnrollOrder",
+      /*args=*/(ins "bool":$reverseOrder),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        int64_t numLoops = $_op.getIterationShapeToUnroll().value().size();
+        auto order = llvm::seq<int64_t>(0, numLoops);
+        if (reverseOrder)
+          return llvm::to_vector(llvm::reverse(order));
+        return llvm::to_vector(order);
+      }]
+    >,
   ];
 }
 

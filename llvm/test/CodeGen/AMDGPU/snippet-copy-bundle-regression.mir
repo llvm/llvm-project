@@ -19,7 +19,6 @@
 ...
 ---
 name:            kernel
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
   hasCalls:        true

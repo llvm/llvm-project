@@ -491,9 +491,9 @@ protected:
   virtual FunctionPass *createRegAllocPass(bool Optimized);
 
   /// Add core register allocator passes which do the actual register assignment
-  /// and rewriting. \returns true if any passes were added.
-  virtual bool addRegAssignAndRewriteFast();
-  virtual bool addRegAssignAndRewriteOptimized();
+  /// and rewriting.
+  virtual void addRegAssignAndRewriteFast();
+  virtual void addRegAssignAndRewriteOptimized();
 };
 
 /// TargetPassConfig needs a TargetMachine; the pass registry cannot create one.

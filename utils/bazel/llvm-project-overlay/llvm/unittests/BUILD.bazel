@@ -774,6 +774,8 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        "//llvm:PPCTargetParser",
+        "//llvm:SparcTargetParser",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:TestingSupport",

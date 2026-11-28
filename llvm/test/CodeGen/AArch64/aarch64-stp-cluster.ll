@@ -240,5 +240,6 @@ entry:
   store i8 5, ptr %add.ptr, align 1
   %1 = load i32, ptr %add.ptr, align 4
   %add = add nsw i32 %1, %0
+  store i32 %add, ptr %q, align 4
   ret i32 %add
 }

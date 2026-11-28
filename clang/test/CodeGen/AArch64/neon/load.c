@@ -1,8 +1,10 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
+// FIXME: Remove -fno-clangir-call-conv-lowering from the RUN lines once
+// calling-convention lowering is implemented for the mfp8 types.
 // RUN:                   %clang_cc1_cg_arm64_neon           -emit-llvm %s -disable-O0-optnone | opt -S -passes=sroa,instcombine | FileCheck %s --check-prefixes=ALL,LLVM
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=sroa,instcombine | FileCheck %s --check-prefixes=ALL,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-cir  %s -disable-O0-optnone |                                   FileCheck %s --check-prefixes=ALL,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -disable-O0-optnone | opt -S -passes=sroa,instcombine | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -fno-clangir-call-conv-lowering -emit-cir  %s -disable-O0-optnone |                                   FileCheck %s --check-prefixes=ALL,CIR %}
 
 #include <arm_neon.h>
 
@@ -43,7 +45,7 @@ float64x2_t test_vld1q_f64(float64_t const *a) {
 
 // ALL-LABEL: @test_vld1q_mf8(
 mfloat8x16_t test_vld1q_mf8(mfloat8_t const *a) {
-// CIR: cir.load align(1) {{.*}} : !cir.ptr<!cir.vector<16 x !u8i>>, !cir.vector<16 x !u8i>
+// CIR: cir.load align(1) {{.*}} : !cir.ptr<!cir.vector<16 x !cir.mfp8>>, !cir.vector<16 x !cir.mfp8>
 
 // LLVM-SAME: ptr {{.*}} [[A:%.*]])
 // LLVM: [[TMP0:%.*]] = load <16 x i8>, ptr [[A]], align 1
@@ -193,7 +195,7 @@ float64x1_t test_vld1_f64(float64_t const *a) {
 
 // ALL-LABEL: @test_vld1_mf8(
 mfloat8x8_t test_vld1_mf8(mfloat8_t const *a) {
-// CIR: cir.load align(1) {{.*}} : !cir.ptr<!cir.vector<8 x !u8i>>, !cir.vector<8 x !u8i>
+// CIR: cir.load align(1) {{.*}} : !cir.ptr<!cir.vector<8 x !cir.mfp8>>, !cir.vector<8 x !cir.mfp8>
 
 // LLVM-SAME: ptr {{.*}} [[A:%.*]])
 // LLVM: [[TMP0:%.*]] = load <8 x i8>, ptr [[A]], align 1
@@ -1511,8 +1513,8 @@ float64x2_t test_vld1q_lane_f64(float64_t  *a, float64x2_t b) {
 // ALL-LABEL: @test_vld1q_lane_mf8(
 mfloat8x16_t test_vld1q_lane_mf8(mfloat8_t  *a, mfloat8x16_t b) {
 // CIR: [[IDX:%.*]] = cir.const #cir.int<15> : !s32i
-// CIR: [[SCALAR:%.*]] = cir.load align(1) {{.*}} : !cir.ptr<!u8i>, !u8i
-// CIR: cir.vec.insert [[SCALAR]], {{.*}}[[IDX]] : !s32i] : !cir.vector<16 x !u8i>
+// CIR: [[SCALAR:%.*]] = cir.load align(1) {{.*}} : !cir.ptr<!cir.mfp8>, !cir.mfp8
+// CIR: cir.vec.insert [[SCALAR]], {{.*}}[[IDX]] : !s32i] : !cir.vector<16 x !cir.mfp8>
 
 // LLVM-SAME: ptr {{.*}} [[A:%.*]], <16 x i8> [[B:%.*]])
 // LLVM: [[TMP0:%.*]] = load i8, ptr [[A]], align 1
@@ -1706,8 +1708,8 @@ float64x1_t test_vld1_lane_f64(float64_t  *a, float64x1_t b) {
 // ALL-LABEL: @test_vld1_lane_mf8(
 mfloat8x8_t test_vld1_lane_mf8(mfloat8_t  *a, mfloat8x8_t b) {
 // CIR: [[IDX:%.*]] = cir.const #cir.int<7> : !s32i
-// CIR: [[SCALAR:%.*]] = cir.load align(1) {{.*}} : !cir.ptr<!u8i>, !u8i
-// CIR: cir.vec.insert [[SCALAR]], {{.*}}[[IDX]] : !s32i] : !cir.vector<8 x !u8i>
+// CIR: [[SCALAR:%.*]] = cir.load align(1) {{.*}} : !cir.ptr<!cir.mfp8>, !cir.mfp8
+// CIR: cir.vec.insert [[SCALAR]], {{.*}}[[IDX]] : !s32i] : !cir.vector<8 x !cir.mfp8>
 
 // LLVM-SAME: ptr {{.*}} [[A:%.*]], <8 x i8> [[B:%.*]])
 // LLVM: [[TMP0:%.*]] = load i8, ptr [[A]], align 1
@@ -1897,8 +1899,8 @@ float64x2_t test_vld1q_dup_f64(float64_t  *a) {
 
 // ALL-LABEL: @test_vld1q_dup_mf8(
 mfloat8x16_t test_vld1q_dup_mf8(mfloat8_t  *a) {
-// CIR: [[SCALAR:%.*]] = cir.load align(1) {{.*}} : !cir.ptr<!u8i>, !u8i
-// CIR: cir.vec.splat [[SCALAR]] : !u8i, !cir.vector<16 x !u8i>
+// CIR: [[SCALAR:%.*]] = cir.load align(1) {{.*}} : !cir.ptr<!cir.mfp8>, !cir.mfp8
+// CIR: cir.vec.splat [[SCALAR]] : !cir.mfp8, !cir.vector<16 x !cir.mfp8>
 
 // LLVM-SAME: ptr {{.*}} [[A:%.*]])
 // LLVM: [[TMP0:%.*]] = load i8, ptr [[A]], align 1
@@ -2088,8 +2090,8 @@ float64x1_t test_vld1_dup_f64(float64_t  *a) {
 
 // ALL-LABEL: @test_vld1_dup_mf8(
 mfloat8x8_t test_vld1_dup_mf8(mfloat8_t  *a) {
-// CIR: [[SCALAR:%.*]] = cir.load align(1) {{.*}} : !cir.ptr<!u8i>, !u8i
-// CIR: cir.vec.splat [[SCALAR]] : !u8i, !cir.vector<8 x !u8i>
+// CIR: [[SCALAR:%.*]] = cir.load align(1) {{.*}} : !cir.ptr<!cir.mfp8>, !cir.mfp8
+// CIR: cir.vec.splat [[SCALAR]] : !cir.mfp8, !cir.vector<8 x !cir.mfp8>
 
 // LLVM-SAME: ptr {{.*}} [[A:%.*]])
 // LLVM: [[TMP0:%.*]] = load i8, ptr [[A]], align 1
@@ -3491,7 +3493,7 @@ float64x2x2_t test_vld2q_lane_f64(float64_t  *a, float64x2x2_t b) {
 
 // ALL-LABEL: @test_vld2q_lane_mf8(
 mfloat8x16x2_t test_vld2q_lane_mf8(mfloat8_t  *a, mfloat8x16x2_t b) {
-// CIR: [[VLD:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.ld2lane" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !s64i, !cir.ptr<!void>) -> [[STY:!rec_anon_struct[0-9]*]]
+// CIR: [[VLD:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.ld2lane" {{.*}} : (!cir.vector<16 x !cir.mfp8>, !cir.vector<16 x !cir.mfp8>, !s64i, !cir.ptr<!void>) -> [[STY:!rec_anon_struct[0-9]*]]
 // CIR: cir.store align(16) [[VLD]], {{.*}} : [[STY]], !cir.ptr<[[STY]]>
 
 // LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
@@ -3659,7 +3661,7 @@ float64x1x2_t test_vld2_lane_f64(float64_t  *a, float64x1x2_t b) {
 
 // ALL-LABEL: @test_vld2_lane_mf8(
 mfloat8x8x2_t test_vld2_lane_mf8(mfloat8_t  *a, mfloat8x8x2_t b) {
-// CIR: [[VLD:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.ld2lane" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !s64i, !cir.ptr<!void>) -> [[STY:!rec_anon_struct[0-9]*]]
+// CIR: [[VLD:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.ld2lane" {{.*}} : (!cir.vector<8 x !cir.mfp8>, !cir.vector<8 x !cir.mfp8>, !s64i, !cir.ptr<!void>) -> [[STY:!rec_anon_struct[0-9]*]]
 // CIR: cir.store align(8) [[VLD]], {{.*}} : [[STY]], !cir.ptr<[[STY]]>
 
 // LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
@@ -3824,7 +3826,7 @@ float64x2x3_t test_vld3q_lane_f64(float64_t  *a, float64x2x3_t b) {
 
 // ALL-LABEL: @test_vld3q_lane_mf8(
 mfloat8x16x3_t test_vld3q_lane_mf8(mfloat8_t  *a, mfloat8x16x3_t b) {
-// CIR: [[VLD:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.ld3lane" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !s64i, !cir.ptr<!void>) -> [[STY:!rec_anon_struct[0-9]*]]
+// CIR: [[VLD:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.ld3lane" {{.*}} : (!cir.vector<16 x !cir.mfp8>, !cir.vector<16 x !cir.mfp8>, !cir.vector<16 x !cir.mfp8>, !s64i, !cir.ptr<!void>) -> [[STY:!rec_anon_struct[0-9]*]]
 // CIR: cir.store align(16) [[VLD]], {{.*}} : [[STY]], !cir.ptr<[[STY]]>
 
 // LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
@@ -4019,7 +4021,7 @@ float64x1x3_t test_vld3_lane_f64(float64_t  *a, float64x1x3_t b) {
 
 // ALL-LABEL: @test_vld3_lane_mf8(
 mfloat8x8x3_t test_vld3_lane_mf8(mfloat8_t  *a, mfloat8x8x3_t b) {
-// CIR: [[VLD:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.ld3lane" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !s64i, !cir.ptr<!void>) -> [[STY:!rec_anon_struct[0-9]*]]
+// CIR: [[VLD:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.ld3lane" {{.*}} : (!cir.vector<8 x !cir.mfp8>, !cir.vector<8 x !cir.mfp8>, !cir.vector<8 x !cir.mfp8>, !s64i, !cir.ptr<!void>) -> [[STY:!rec_anon_struct[0-9]*]]
 // CIR: cir.store align(8) [[VLD]], {{.*}} : [[STY]], !cir.ptr<[[STY]]>
 
 // LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
@@ -4225,7 +4227,7 @@ float64x2x4_t test_vld4q_lane_f64(float64_t  *a, float64x2x4_t b) {
 
 // ALL-LABEL: @test_vld4q_lane_mf8(
 mfloat8x16x4_t test_vld4q_lane_mf8(mfloat8_t  *a, mfloat8x16x4_t b) {
-// CIR: [[VLD:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.ld4lane" {{.*}} : (!cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !cir.vector<16 x !u8i>, !s64i, !cir.ptr<!void>) -> [[STY:!rec_anon_struct[0-9]*]]
+// CIR: [[VLD:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.ld4lane" {{.*}} : (!cir.vector<16 x !cir.mfp8>, !cir.vector<16 x !cir.mfp8>, !cir.vector<16 x !cir.mfp8>, !cir.vector<16 x !cir.mfp8>, !s64i, !cir.ptr<!void>) -> [[STY:!rec_anon_struct[0-9]*]]
 // CIR: cir.store align(16) [[VLD]], {{.*}} : [[STY]], !cir.ptr<[[STY]]>
 
 // LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],
@@ -4435,7 +4437,7 @@ float64x1x4_t test_vld4_lane_f64(float64_t  *a, float64x1x4_t b) {
 
 // ALL-LABEL: @test_vld4_lane_mf8(
 mfloat8x8x4_t test_vld4_lane_mf8(mfloat8_t  *a, mfloat8x8x4_t b) {
-// CIR: [[VLD:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.ld4lane" {{.*}} : (!cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !cir.vector<8 x !u8i>, !s64i, !cir.ptr<!void>) -> [[STY:!rec_anon_struct[0-9]*]]
+// CIR: [[VLD:%.*]] = cir.call_llvm_intrinsic "aarch64.neon.ld4lane" {{.*}} : (!cir.vector<8 x !cir.mfp8>, !cir.vector<8 x !cir.mfp8>, !cir.vector<8 x !cir.mfp8>, !cir.vector<8 x !cir.mfp8>, !s64i, !cir.ptr<!void>) -> [[STY:!rec_anon_struct[0-9]*]]
 // CIR: cir.store align(8) [[VLD]], {{.*}} : [[STY]], !cir.ptr<[[STY]]>
 
 // LLVM-SAME: ptr {{[a-z ]*}}[[A:%[a-z0-9_.]+]],

@@ -18,11 +18,13 @@
 using namespace mlir;
 
 /// Return "true" if the given vector transfer op is contiguous and suitable
-/// for replacement with an async copy.
+/// for replacement with an async copy. An op masked by an enclosing
+/// vector.mask is not: replacing it would drop the mask and leave non-maskable
+/// ops inside the vector.mask region.
 template <typename OpTy>
 static bool isContiguousXferOp(OpTy op) {
-  return op.getPermutationMap().isMinorIdentity() && op.isDimInBounds(0) &&
-         op.hasPureBufferSemantics() &&
+  return !op.isMasked() && op.getPermutationMap().isMinorIdentity() &&
+         op.isDimInBounds(0) && op.hasPureBufferSemantics() &&
          cast<MemRefType>(nvgpu::getMemrefOperand(op).getType())
              .isLastDimUnitStride();
 }

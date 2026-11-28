@@ -91,9 +91,9 @@
 # STRIP-NEXT:  3 __mybss          00000000
 # STRIP-NEXT:  4 __bar            00000000
 # STRIP-NEXT:  5 __ever           00000000
-# STRIP-NEXT:  6 __lookup         00000000
+# STRIP-NEXT:  6 __quux           00000000
 # STRIP-NEXT:  7 symbol           00000000
-# STRIP-NEXT:  8 __quux           00000000
+# STRIP-NEXT:  8 __lookup         00000000
 
 # STRIP-LABEL: SYMBOL TABLE:
 # STRIP-NOT:   section$start$__FOO$__bar
@@ -113,9 +113,9 @@
 # STRIP2-NEXT:  4 __bar            00000000
 # STRIP2-NEXT:  5 __notexist       00000000
 # STRIP2-NEXT:  6 __ever           00000000
-# STRIP2-NEXT:  7 __lookup         00000000
+# STRIP2-NEXT:  7 __quux           00000000
 # STRIP2-NEXT:  8 symbol           00000000
-# STRIP2-NEXT:  9 __quux           00000000
+# STRIP2-NEXT:  9 __lookup         00000000
 
 # CHECK-LABEL: Sections:
 # CHECK-NEXT:  Idx Name           Size     VMA              Type

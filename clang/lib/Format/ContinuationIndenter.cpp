@@ -2217,8 +2217,18 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     if (Current.ParameterCount > 1)
       NestedBlockIndent = std::max(NestedBlockIndent, State.Column + 1);
   } else {
-    NewIndent = IndentationAndAlignment(std::max(
-                    CurrentState.LastSpace, CurrentState.StartOfFunctionCall)) +
+    // With a break after the open bracket, the contents are indented relative
+    // to the enclosing indentation, so the column in StartOfFunctionCall does
+    // not apply to them.
+    const bool BreakAfterOpenParen = Style.AlignAfterOpenBracket &&
+                                     Style.BreakAfterOpenBracketFunction &&
+                                     Current.is(tok::l_paren);
+    unsigned EnclosingIndent = CurrentState.LastSpace;
+    if (!BreakAfterOpenParen) {
+      EnclosingIndent =
+          std::max(EnclosingIndent, CurrentState.StartOfFunctionCall);
+    }
+    NewIndent = IndentationAndAlignment(EnclosingIndent) +
                 Style.ContinuationIndentWidth;
 
     if (Style.isTableGen() && Current.is(TT_TableGenDAGArgOpenerToBreak) &&

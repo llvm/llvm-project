@@ -63,6 +63,12 @@ static bool convertAnnotation2Metadata(Module &M) {
 
 PreservedAnalyses Annotation2MetadataPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
-  return convertAnnotation2Metadata(M) ? PreservedAnalyses::none()
-                                       : PreservedAnalyses::all();
+  if (!convertAnnotation2Metadata(M))
+    return PreservedAnalyses::all();
+
+  // Only !annotation metadata was added.
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }

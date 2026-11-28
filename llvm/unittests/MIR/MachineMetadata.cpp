@@ -598,7 +598,6 @@ TEST_F(MachineMetadataTest, TiedOpsRewritten) {
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16
 machineFunctionInfo: {}
@@ -628,7 +627,6 @@ TEST_F(MachineMetadataTest, NoTiedOpsRewritten) {
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    16
 machineFunctionInfo: {}

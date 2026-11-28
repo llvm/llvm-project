@@ -205,6 +205,12 @@ static bool pacWritesLR(const MCInst &Inst) {
   }
 }
 
+static bool isBTIC(const MCInst &Inst) {
+  return Inst.getOpcode() == AArch64::HINT &&
+         Inst.getOperand(0).getImm() ==
+             getBTIHintNum(/*CallTarget=*/true, /*JumpTarget=*/false);
+}
+
 // User-mode DC/IC instructions that take a virtual address operand. Encoded as
 // SYSxt with op1=3, Cn=7, op2=1 where the Cm field selects the operation.
 static bool isVASysOp(const MCInst &Inst) {
@@ -905,6 +911,22 @@ void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
 
   if (isVASysOp(Inst))
     return rewriteVASysOp(Inst, Out, STI);
+
+  // LFI routes all indirect branches through x28, including tail calls that
+  // would otherwise use x16/x17. AAPCS64 only allows for `bti c` landing
+  // pads for indirect calls though x16/x17.
+  // A BR through any other register (e.g., x28) cannot land on BTI C, so
+  // we promote call landing pads to BTI JC.
+  //
+  // br {x16,x17}
+  // ->
+  // add x28, x27, {w16,w17}, uxtw
+  // br x28
+  if (isBTIC(Inst))
+    return emitInst(MCInstBuilder(AArch64::HINT)
+                        .addImm(getBTIHintNum(/*CallTarget=*/true,
+                                              /*JumpTarget=*/true)),
+                    Out, STI);
 
   if (isExceptionReturn(Inst.getOpcode())) {
     error(Inst, "exception returns are not supported by LFI");

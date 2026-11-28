@@ -25,25 +25,23 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct monostate {};
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr bool operator==(monostate, monostate) noexcept { return true; }
+inline constexpr bool operator==(monostate, monostate) noexcept { return true; }
 
 #  if _LIBCPP_STD_VER >= 20
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr strong_ordering operator<=>(monostate, monostate) noexcept {
-  return strong_ordering::equal;
-}
+inline constexpr strong_ordering operator<=>(monostate, monostate) noexcept { return strong_ordering::equal; }
 
 #  else // _LIBCPP_STD_VER >= 20
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr bool operator!=(monostate, monostate) noexcept { return false; }
+inline constexpr bool operator!=(monostate, monostate) noexcept { return false; }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr bool operator<(monostate, monostate) noexcept { return false; }
+inline constexpr bool operator<(monostate, monostate) noexcept { return false; }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr bool operator>(monostate, monostate) noexcept { return false; }
+inline constexpr bool operator>(monostate, monostate) noexcept { return false; }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr bool operator<=(monostate, monostate) noexcept { return true; }
+inline constexpr bool operator<=(monostate, monostate) noexcept { return true; }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr bool operator>=(monostate, monostate) noexcept { return true; }
+inline constexpr bool operator>=(monostate, monostate) noexcept { return true; }
 
 #  endif // _LIBCPP_STD_VER >= 20
 
@@ -54,7 +52,7 @@ struct hash<monostate> {
   using result_type _LIBCPP_DEPRECATED_IN_CXX17   = size_t;
 #  endif
 
-  inline _LIBCPP_HIDE_FROM_ABI size_t operator()(const monostate&) const noexcept {
+  inline size_t operator()(const monostate&) const noexcept {
     return 66740831; // return a fundamentally attractive random value.
   }
 };

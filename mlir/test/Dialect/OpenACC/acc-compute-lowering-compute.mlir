@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -acc-compute-lowering | FileCheck %s
-// RUN: mlir-opt %s -acc-compute-lowering --remarks-filter="(open)?acc.*" 2>&1 | FileCheck %s --check-prefix=REMARK
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(func.func(acc-compute-lowering))' | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(func.func(acc-compute-lowering))' --remarks-filter="(open)?acc.*" 2>&1 | FileCheck %s --check-prefix=REMARK
 
 // CHECK-LABEL: func.func @parallel_gang_loop
 func.func @parallel_gang_loop(%buf: memref<1xi32>) {

@@ -29,6 +29,8 @@ using llvm::libc_benchmarks::MoveSetup;
 using llvm::libc_benchmarks::OffsetDistribution;
 using llvm::libc_benchmarks::SearchSetup;
 using llvm::libc_benchmarks::SetSetup;
+using llvm::libc_benchmarks::StrcmpConfiguration;
+using llvm::libc_benchmarks::StrlenConfiguration;
 
 // Alignment to use for when accessing the buffers.
 static constexpr Align kBenchmarkAlignment = Align::Constant<1>();
@@ -129,3 +131,11 @@ BENCHMARK_MEMORY_FUNCTION(BM_Bzero, SetSetup, BzeroConfiguration,
 extern llvm::ArrayRef<MemchrConfiguration> getMemchrConfigurations();
 BENCHMARK_MEMORY_FUNCTION(BM_Memchr, SearchSetup, MemchrConfiguration,
                           getMemchrConfigurations());
+
+extern llvm::ArrayRef<StrlenConfiguration> getStrlenConfigurations();
+BENCHMARK_MEMORY_FUNCTION(BM_Strlen, SearchSetup, StrlenConfiguration,
+                          getStrlenConfigurations());
+
+extern llvm::ArrayRef<StrcmpConfiguration> getStrcmpConfigurations();
+BENCHMARK_MEMORY_FUNCTION(BM_Strcmp, ComparisonSetup, StrcmpConfiguration,
+                          getStrcmpConfigurations());

@@ -319,6 +319,21 @@ int main(int, char**) {
       }
 
       {
+        auto mid1 = util::throw_on_move_iterator(std::begin(a) + 2, tokens[5].active() ? 1 : -1);
+        auto comp = maybe_throw(tokens[6], [](int x, int y) -> bool { return x < y; });
+
+        // inplace_merge(first, mid, last)
+        assert_non_throwing([=, &policy] {
+          std::inplace_merge(policy, std::move(first1), std::move(mid1), std::move(last1));
+        });
+
+        // inplace_merge(first, mid, last, comp)
+        assert_non_throwing([=, &policy] {
+          std::inplace_merge(policy, std::move(first1), std::move(mid1), std::move(last1), comp);
+        });
+      }
+
+      {
         auto comp = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
 
         // is_heap(first, last)
@@ -488,6 +503,15 @@ int main(int, char**) {
         // replace_copy(first, last, dest, val1, val2)
         assert_non_throwing([=, &policy] {
           (void)std::replace_copy(policy, std::move(first1), std::move(last1), std::move(dest), val, val);
+        });
+      }
+
+      {
+        auto mid1 = util::throw_on_move_iterator(std::begin(a) + 2, tokens[5].active() ? 1 : -1);
+
+        // rotate(first, mid, last)
+        assert_non_throwing([=, &policy] {
+          (void)std::rotate(policy, std::move(first1), std::move(mid1), std::move(last1));
         });
       }
 
@@ -781,6 +805,20 @@ int main(int, char**) {
               std::move(last2),
               std::move(dest),
               compare);
+        });
+      }
+
+      {
+        auto pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
+
+        // unique_copy(first, last, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::unique_copy(policy, std::move(first1), std::move(last1), std::move(dest));
+        });
+
+        // unique_copy(first, last, dest, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::unique_copy(policy, std::move(first1), std::move(last1), std::move(dest), pred);
         });
       }
     }

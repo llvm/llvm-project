@@ -384,6 +384,7 @@ protected:
 private:
   void ParseProducerInfo();
   void ExtractDIEsRWLocked();
+  void ExtractDIEsNoDwoRWLocked();
   void ClearDIEsRWLocked();
 
   void AddUnitDIE(const DWARFDebugInfoEntry &cu_die);

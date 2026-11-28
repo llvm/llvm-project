@@ -33,18 +33,10 @@ function(tablegen_internal project ofn)
   # Filter out any empty include items.
   list(REMOVE_ITEM tblgen_includes "")
 
-  # Use depfile instead of globbing arbitrary *.td(s) for Ninja. We force
-  # CMake versions older than v3.30 on Windows to use the fallback behavior
-  # due to a depfile parsing bug on Windows paths in versions prior to 3.30.
-  # https://gitlab.kitware.com/cmake/cmake/-/issues/25943
-  # CMake versions older than v3.23 on other platforms use the fallback
-  # behavior as v3.22 and earlier fail to parse some depfiles that get
-  # generated, and this behavior was fixed in CMake commit
-  # e04a352cca523eba2ac0d60063a3799f5bb1c69e.
+  # Use depfile instead of globbing arbitrary *.td(s). CMP0116 is always NEW
+  # for non-Ninja generators.
   cmake_policy(GET CMP0116 cmp0116_state)
-  if(CMAKE_GENERATOR MATCHES "Ninja" AND cmp0116_state STREQUAL NEW
-     AND NOT (CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS 3.30)
-     AND NOT (CMAKE_VERSION VERSION_LESS 3.23))
+  if(NOT CMAKE_GENERATOR MATCHES "Ninja" OR cmp0116_state STREQUAL NEW)
     # CMake emits build targets as relative paths but Ninja doesn't identify
     # absolute path (in *.d) as relative path (in build.ninja). Post CMP0116,
     # CMake handles this discrepancy for us, otherwise we use the fallback

@@ -491,7 +491,7 @@ public:
   }
 
   void runOnOperation() override {
-    auto op = getOperation();
+    FunctionOpInterface op = getOperation();
     auto *context = op.getContext();
 
     DefaultACCToGPUMappingPolicy policy;

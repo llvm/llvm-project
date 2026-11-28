@@ -1,10 +1,19 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Opts") {
+  visibility = [ ":clang-diff" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 executable("clang-diff") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":Opts",
     "//clang/lib/Basic",
     "//clang/lib/Frontend",
     "//clang/lib/Tooling",
     "//clang/lib/Tooling/ASTDiff",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
   sources = [ "ClangDiff.cpp" ]

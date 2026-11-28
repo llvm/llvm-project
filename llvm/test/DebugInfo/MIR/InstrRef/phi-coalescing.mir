@@ -22,10 +22,10 @@
 #      ext(bar);
 #      bar += 12;
 #      ext(bar);
-#    
+#
 #      if (getlong())
 #        bar += 1;
-#    
+#
 #      bar += baz;
 #      ext(bar);
 #      return bar;
@@ -36,7 +36,7 @@
   source_filename = "test.c"
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
-  
+
   define dso_local i32 @foo(i64 %bar, i64 %baz) !dbg !7 {
   entry:
     call void @llvm.dbg.value(metadata i64 %bar, metadata !12, metadata !DIExpression()), !dbg !13
@@ -48,12 +48,12 @@
     %call = call i64 @getlong(), !dbg !13
     %tobool = icmp ne i64 %call, 0, !dbg !13
     br i1 %tobool, label %if.then, label %if.end, !dbg !13
-  
+
   if.then:                                          ; preds = %entry
     %add1 = add nsw i64 %add, 1, !dbg !13
     call void @llvm.dbg.value(metadata i64 %add1, metadata !12, metadata !DIExpression()), !dbg !13
     br label %if.end, !dbg !13
-  
+
   if.end:                                           ; preds = %if.then, %entry
     %bar.addr.0 = phi i64 [ %add1, %if.then ], [ %add, %entry ], !dbg !13
     call void @llvm.dbg.value(metadata i64 %bar.addr.0, metadata !12, metadata !DIExpression()), !dbg !13
@@ -63,21 +63,21 @@
     %conv = trunc i64 %add2 to i32, !dbg !13
     ret i32 %conv, !dbg !13
   }
-  
+
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.declare(metadata, metadata, metadata)
-  
+
   declare dso_local void @ext(i64)
-  
+
   declare dso_local i64 @getlong()
-  
+
   ; Function Attrs: nounwind readnone speculatable willreturn
   declare void @llvm.dbg.value(metadata, metadata, metadata)
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3, !4, !5}
   !llvm.ident = !{!6}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
   !1 = !DIFile(filename: "test.c", directory: "/tmp/out.c")
   !2 = !{}
@@ -99,7 +99,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '%3' }
@@ -112,7 +111,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     liveins: $rdi, $rsi
-  
+
     %5:gr64 = COPY $rsi
     %3:gr64 = COPY $rdi
     %4:gr64 = COPY %3
@@ -132,7 +131,7 @@ body:             |
     %8:gr64 = COPY $rax, debug-location !13
     CMP64ri8 %8, 0, implicit-def $eflags, debug-location !13
     JCC_1 %bb.2, 4, implicit $eflags, debug-location !13
-  
+
   ; DOESCOALESCE-LABEL: bb.1.if.then:
   ; CHECK-LABEL:        bb.1.if.then:
   bb.1.if.then:
@@ -143,7 +142,7 @@ body:             |
   ; DOESCOALESCE:       %{{[0-9]+}}:gr64_with_sub_8bit = ADD64ri32
   ; Verify that all these registers land in r14.
   ; CHECK:              renamable $r14 = ADD64ri32 killed renamable $r14
-  
+
   ; DOESCOALESCE-LABEL: bb.2.if.end:
   ; CHECK-LABEL:        bb.2.if.end:
   bb.2.if.end:

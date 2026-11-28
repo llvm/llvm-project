@@ -6,7 +6,6 @@
 
 ---
 name: av_mov_b32_split
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'
@@ -57,7 +56,6 @@ body:             |
 
 ---
 name: v_mov_b32_split
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'
@@ -111,7 +109,6 @@ body:             |
 
 ---
 name: av_mov_b64_split
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'

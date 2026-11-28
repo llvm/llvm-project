@@ -214,7 +214,7 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
     // floats are passed in a SIMD and floating-point register. A tuple
     // occupies one register of the appropriate kind per vector it contains.
     if (const auto *VT = dyn_cast<VectorType>(Ty)) {
-      if (VT->isSVEPredicate() || VT->isSVECount())
+      if (VT->isSVEPredicate())
         NPRN = std::min(NPRN + 1, 4u);
       else
         NSRN = std::min(NSRN + 1, 8u);
@@ -223,6 +223,8 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
         NPRN = std::min(NPRN + TT->getNumVectors(), 4u);
       else
         NSRN = std::min(NSRN + TT->getNumVectors(), 8u);
+    } else if (Ty->isSveCount()) {
+      NPRN = std::min(NPRN + 1, 4u);
     } else if (Ty->isFloat() || Ty->isOpaqueFloat8()) {
       NSRN = std::min(NSRN + 1, 8u);
     }
@@ -374,7 +376,7 @@ bool AArch64TargetInfo::passAsAggregateType(const Type *Ty) const {
     const auto *TupleTy = dyn_cast<TupleType>(Ty);
     assert((!TupleTy || TupleTy->getNumVectors() > 1) &&
            "unexpected single vector tuple");
-    return TupleTy && !TupleTy->getVectorType()->isSVECount();
+    return TupleTy;
   }
   return isAggregateTypeForABI(Ty);
 }
@@ -386,8 +388,7 @@ bool AArch64TargetInfo::passAsAggregateType(const Type *Ty) const {
 const VectorType *AArch64TargetInfo::convertFixedToScalableVectorType(
     const VectorType *VT) const {
   if (VT->isFixedLengthSVEPredicate())
-    return TB.getScalablePredicateOrCountVectorType(Align(2),
-                                                    VectorKind::SVEPredicate);
+    return TB.getScalablePredicateVectorType(Align(2));
 
   assert(VT->isFixedLengthSVEData() && "expected a fixed-length SVE vector!");
 
@@ -415,8 +416,7 @@ ArgInfo AArch64TargetInfo::coerceIllegalVector(const VectorType *VT,
            VT->getElementType()->getSizeInBits().getFixedValue() == 8 &&
            "unexpected element type for SVE predicate!");
     NPRN = std::min(NPRN + 1, 4u);
-    return ArgInfo::getDirect(TB.getScalablePredicateOrCountVectorType(
-        Align(2), VectorKind::SVEPredicate));
+    return ArgInfo::getDirect(TB.getScalablePredicateVectorType(Align(2)));
   }
 
   if (VT->isFixedLengthSVEData()) {
@@ -599,7 +599,7 @@ bool AArch64TargetInfo::passAsPureScalableType(
 
   if (const auto *TT = dyn_cast<TupleType>(Ty)) {
     const VectorType *VT = TT->getVectorType();
-    if (!VT->isScalable() || VT->isSVECount())
+    if (!VT->isScalable())
       return false;
 
     unsigned N = TT->getNumVectors();

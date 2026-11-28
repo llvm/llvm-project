@@ -3314,6 +3314,11 @@ void BinaryFunction::resetState() {
 void BinaryFunction::setTrapOnEntry() {
   clearDisasmState();
 
+  // The trap body doesn't reference jump tables found during disassembly.
+  while (!JumpTables.empty())
+    BC.detachJumpTable(*this, JumpTables.begin()->first);
+  clearList(JTSites);
+
   forEachEntryPoint([&](uint64_t Offset, const MCSymbol *Label) -> bool {
     MCInst TrapInstr;
     BC.MIB->createTrap(TrapInstr);

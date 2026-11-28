@@ -226,8 +226,9 @@ def SPIRV_LoadOp : SPIRV_Op<"Load", [DeclareOpInterfaceMethods<AlignmentAttrOpIn
     fixed size; i.e., it cannot be, nor include, any OpTypeRuntimeArray
     types.
 
-    Pointer is the pointer to load through.  Its type must be an
-    OpTypePointer whose Type operand is the same as Result Type.
+    Pointer is the pointer to load through. Its type must be a pointer type.
+    If its type is OpTypePointer, the Type operand must be the same as Result
+    Type.
 
     If present, any Memory Operands must begin with a memory operand
     literal. If not present, it is the same as specifying the memory operand
@@ -241,6 +242,8 @@ def SPIRV_LoadOp : SPIRV_Op<"Load", [DeclareOpInterfaceMethods<AlignmentAttrOpIn
 
     load-op ::= ssa-id ` = spirv.Load ` storage-class ssa-use
                 (`[` memory-access `]`)? ` : ` spirv-element-type
+              | ssa-id ` = spirv.Load ` ssa-use (`[` memory-access `]`)?
+                ` : ` spirv-untyped-pointer-type ` -> ` spirv-type
     ```
 
     #### Example:
@@ -250,11 +253,12 @@ def SPIRV_LoadOp : SPIRV_Op<"Load", [DeclareOpInterfaceMethods<AlignmentAttrOpIn
     %1 = spirv.Load "Function" %0 : f32
     %2 = spirv.Load "Function" %0 ["Volatile"] : f32
     %3 = spirv.Load "Function" %0 ["Aligned", 4] : f32
+    %4 = spirv.Load %5 : !spirv.untyped_ptr<Workgroup> -> f32
     ```
   }];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$ptr,
+    SPIRV_AnyPtrOrUntypedPtr:$ptr,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
     OptionalAttr<IntValidAlignment<I32Attr>>:$alignment
   );
@@ -346,12 +350,103 @@ def SPIRV_PtrAccessChainOp : SPIRV_Op<"PtrAccessChain", [Pure]> {
 
 // -----
 
+def SPIRV_PtrEqualOp : SPIRV_Op<"PtrEqual", [
+    Pure, AllTypesMatch<["operand1", "operand2"]>]> {
+  let summary = [{
+    Result is true if Operand 1 and Operand 2 have the same value. Result is
+    false if Operand 1 and Operand 2 have different values.
+  }];
+
+  let description = [{
+    Result Type must be a Boolean type scalar.
+
+    The types of Operand 1 and Operand 2 must be OpTypePointer of the same
+    type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.PtrEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_4>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$operand1,
+    SPIRV_AnyPtr:$operand2
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = "$operand1 `,` $operand2 `:` type($operand1) attr-dict";
+}
+
+// -----
+
+def SPIRV_PtrNotEqualOp : SPIRV_Op<"PtrNotEqual", [
+    Pure, AllTypesMatch<["operand1", "operand2"]>]> {
+  let summary = [{
+    Result is true if Operand 1 and Operand 2 have different values. Result
+    is false if Operand 1 and Operand 2 have the same value.
+  }];
+
+  let description = [{
+    Result Type must be a Boolean type scalar.
+
+    The types of Operand 1 and Operand 2 must be OpTypePointer of the same
+    type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.PtrNotEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_4>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$operand1,
+    SPIRV_AnyPtr:$operand2
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = "$operand1 `,` $operand2 `:` type($operand1) attr-dict";
+}
+
+// -----
+
 def SPIRV_StoreOp : SPIRV_Op<"Store", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = "Store through a pointer.";
 
   let description = [{
-    Pointer is the pointer to store through.  Its type must be an
-    OpTypePointer whose Type operand is the same as the type of Object.
+    Pointer is the pointer to store through. Its type must be a pointer type.
+    If its type is OpTypePointer, the Type operand must be the same as the
+    type of Object.
 
     Object is the object to store.
 
@@ -364,6 +459,8 @@ def SPIRV_StoreOp : SPIRV_Op<"Store", [DeclareOpInterfaceMethods<AlignmentAttrOp
     ```
     store-op ::= `spirv.Store ` storage-class ssa-use `, ` ssa-use `, `
                   (`[` memory-access `]`)? `:` spirv-element-type
+               | `spirv.Store ` ssa-use `, ` ssa-use (`[` memory-access `]`)?
+                  `:` spirv-untyped-pointer-type `, ` spirv-type
     ```
 
     #### Example:
@@ -374,11 +471,12 @@ def SPIRV_StoreOp : SPIRV_Op<"Store", [DeclareOpInterfaceMethods<AlignmentAttrOp
     spirv.Store "Function" %0, %1 : f32
     spirv.Store "Function" %0, %1 ["Volatile"] : f32
     spirv.Store "Function" %0, %1 ["Aligned", 4] : f32
+    spirv.Store %2, %1 : !spirv.untyped_ptr<Workgroup>, f32
     ```
   }];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$ptr,
+    SPIRV_AnyPtrOrUntypedPtr:$ptr,
     SPIRV_Type:$value,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
     OptionalAttr<IntValidAlignment<I32Attr>>:$alignment

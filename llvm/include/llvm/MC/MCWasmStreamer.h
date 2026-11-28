@@ -26,16 +26,9 @@ public:
                  std::unique_ptr<MCObjectWriter> OW,
                  std::unique_ptr<MCCodeEmitter> Emitter)
       : MCObjectStreamer(Context, std::move(TAB), std::move(OW),
-                         std::move(Emitter)),
-        SeenIdent(false) {}
+                         std::move(Emitter)) {}
 
   ~MCWasmStreamer() override;
-
-  /// state management
-  void reset() override {
-    SeenIdent = false;
-    MCObjectStreamer::reset();
-  }
 
   /// \name MCStreamer Interface
   /// @{
@@ -56,9 +49,6 @@ public:
   void emitIdent(StringRef IdentString) override;
 
   void finishImpl() override;
-
-private:
-  bool SeenIdent;
 };
 
 } // end namespace llvm

@@ -9,20 +9,12 @@
 ; RUN: opt < %s -S -mtriple=amdgpu7.00-unknown-amdhsa -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=HSAOPT -check-prefix=OPT %s
 ; RUN: opt < %s -S -mtriple=amdgpu7.00-unknown-unknown -passes=amdgpu-promote-alloca -disable-promote-alloca-to-vector | FileCheck -enable-var-scope -check-prefix=NOHSAOPT -check-prefix=OPT %s
 
-; RUN: llc < %s -mtriple=r600 -mcpu=cypress -disable-promote-alloca-to-vector | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
-; RUN: llc < %s -mtriple=r600 -mcpu=cypress | FileCheck %s -check-prefix=R600-VECT -check-prefix=FUNC
-
 ; HSAOPT: @mova_same_clause.stack = internal unnamed_addr addrspace(3) global [256 x [5 x i32]] poison, align 4
 ; HSAOPT: @high_alignment.stack = internal unnamed_addr addrspace(3) global [256 x [8 x i32]] poison, align 16
 
 
 ; FUNC-LABEL: {{^}}mova_same_clause:
 ; OPT-LABEL: @mova_same_clause(
-
-; R600: LDS_WRITE
-; R600: LDS_WRITE
-; R600: LDS_READ
-; R600: LDS_READ
 
 ; HSA-PROMOTE: .amdhsa_group_segment_fixed_size 5120
 
@@ -147,7 +139,6 @@ entry:
 ; FUNC-LABEL: {{^}}multiple_structs:
 ; OPT-LABEL: @multiple_structs(
 
-; R600-NOT: MOVA_INT
 ; SI-NOT: v_movrel
 ; SI-NOT: v_movrel
 %struct.point = type { i32, i32 }
@@ -174,9 +165,7 @@ entry:
 ; MOVA instructions.
 
 ; FUNC-LABEL: {{^}}direct_loop:
-; R600-NOT: MOVA_INT
 ; SI-NOT: v_movrel
-
 define amdgpu_kernel void @direct_loop(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 entry:
   %prv_array_const = alloca [2 x i32], addrspace(5)
@@ -207,8 +196,6 @@ for.end:
 
 ; FUNC-LABEL: {{^}}short_array:
 
-; R600-VECT: MOVA_INT
-
 ; SI-ALLOCA-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 offset:2 ; encoding: [0x02,0x00,0x68,0xe0
 ; SI-ALLOCA-DAG: buffer_store_short v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], 0 ; encoding: [0x00,0x00,0x68,0xe0
 ; Loaded value is 0 or 1, so sext will become zext, so we get buffer_load_ushort instead of buffer_load_sshort.
@@ -233,8 +220,6 @@ entry:
 
 ; FUNC-LABEL: {{^}}char_array:
 
-; R600-VECT: MOVA_INT
-
 ; SI-PROMOTE-VECT-DAG: s_lshl_b32
 ; SI-PROMOTE-VECT-DAG: s_lshr_b32
 
@@ -254,7 +239,6 @@ entry:
 }
 
 ; Test that two stack objects are not stored in the same register
-; The second stack object should be in T3.X
 ; FUNC-LABEL: {{^}}no_overlap:
 ;
 ; A total of 5 bytes should be allocated and used.
@@ -406,23 +390,6 @@ entry:
 
 ; FUNC-LABEL: v16i32_stack:
 
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-
 ; SI: buffer_load_dword
 ; SI: buffer_load_dword
 ; SI: buffer_load_dword
@@ -439,7 +406,6 @@ entry:
 ; SI: buffer_load_dword
 ; SI: buffer_load_dword
 ; SI: buffer_load_dword
-
 define amdgpu_kernel void @v16i32_stack(ptr addrspace(1) %out, i32 %a) {
   %alloca = alloca [2 x <16 x i32>], addrspace(5)
   %tmp0 = getelementptr [2 x <16 x i32>], ptr addrspace(5) %alloca, i32 0, i32 %a
@@ -450,23 +416,6 @@ define amdgpu_kernel void @v16i32_stack(ptr addrspace(1) %out, i32 %a) {
 
 ; FUNC-LABEL: v16float_stack:
 
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-; R600: MOVA_INT
-
 ; SI: buffer_load_dword
 ; SI: buffer_load_dword
 ; SI: buffer_load_dword
@@ -483,7 +432,6 @@ define amdgpu_kernel void @v16i32_stack(ptr addrspace(1) %out, i32 %a) {
 ; SI: buffer_load_dword
 ; SI: buffer_load_dword
 ; SI: buffer_load_dword
-
 define amdgpu_kernel void @v16float_stack(ptr addrspace(1) %out, i32 %a) {
   %alloca = alloca [2 x <16 x float>], addrspace(5)
   %tmp0 = getelementptr [2 x <16 x float>], ptr addrspace(5) %alloca, i32 0, i32 %a
@@ -494,12 +442,8 @@ define amdgpu_kernel void @v16float_stack(ptr addrspace(1) %out, i32 %a) {
 
 ; FUNC-LABEL: v2float_stack:
 
-; R600: MOVA_INT
-; R600: MOVA_INT
-
 ; SI: buffer_load_dword
 ; SI: buffer_load_dword
-
 define amdgpu_kernel void @v2float_stack(ptr addrspace(1) %out, i32 %a) {
   %alloca = alloca [16 x <2 x float>], addrspace(5)
   %tmp0 = getelementptr [16 x <2 x float>], ptr addrspace(5) %alloca, i32 0, i32 %a

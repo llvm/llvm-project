@@ -30,7 +30,6 @@ public:
 TEST_F(GCNRegPressureTest, DownwardTrackerEndOnDbgVal) {
   StringRef MIR = R"(
 name:            DownwardTrackerEndOnDbgVal
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -102,7 +101,6 @@ body:             |
 TEST_F(GCNRegPressureTest, DownwardTrackerAllDbgVal) {
   StringRef MIR = R"(
 name:            DownwardTrackerAllDbgVal
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -153,7 +151,6 @@ body:             |
 TEST_F(GCNRegPressureTest, BumpDownwardPressureLastUseAfterCommit) {
   StringRef MIR = R"(
 name:            BumpDownwardPressureLastUseAfterCommit
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vgpr_32 = IMPLICIT_DEF
@@ -206,7 +203,6 @@ body:             |
 TEST_F(GCNRegPressureTest, BumpDownwardPressureUseAndRedef) {
   StringRef MIR = R"(
 name:            BumpDownwardPressureUseAndRedef
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:sgpr_32 = IMPLICIT_DEF
@@ -272,7 +268,6 @@ protected:
 TEST_F(GCNRegPressureBankingTest, BankedVGPRNumDistributesAVGPRs) {
   StringRef MIR = R"(
 name:            banked_distribute
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vreg_128 = IMPLICIT_DEF
@@ -326,7 +321,6 @@ body:             |
 TEST_F(GCNRegPressureBankingTest, BankedVGPRNumWithoutAVGPRs) {
   StringRef MIR = R"(
 name:            banked_no_avgprs
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vreg_128 = IMPLICIT_DEF
@@ -350,7 +344,6 @@ body:             |
 TEST_F(GCNRegPressureBankingTest, BankedVGPRNumMatchesReferenceSweep) {
   StringRef MIR = R"(
 name:            banked_sweep
-tracksRegLiveness: true
 body:             |
   bb.0:
     %0:vreg_128 = IMPLICIT_DEF
@@ -408,7 +401,6 @@ getMaxPressureOfBlock(MachineFunction &MF, LiveIntervals &LIS) {
 TEST_F(GCNRegPressureTest, MaxPressureAVAndVGPRAtDifferentPoints) {
   StringRef MIR = R"(
 name:            MaxPressureAVAndVGPRAtDifferentPoints
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -435,7 +427,6 @@ body:             |
 TEST_F(GCNRegPressureTest, MaxPressureAVAndVGPRTuplesAtDifferentPoints) {
   StringRef MIR = R"(
 name:            MaxPressureAVAndVGPRTuplesAtDifferentPoints
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

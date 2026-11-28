@@ -976,7 +976,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STORE, MVT::i128, Custom);
 
   // Aligned 128-bit loads and stores are single-copy atomic according to the
-  // v8.4a spec. LRCPC3 introduces 128-bit STILP/LDIAPP but still requires LSE2.
+  // v8.4a spec. The paired loads/stores from LRCPC3 and LSCP still require
+  // LSE2.
   if (Subtarget->hasLSE2()) {
     setOperationAction(ISD::ATOMIC_LOAD, MVT::i128, Custom);
     setOperationAction(ISD::ATOMIC_STORE, MVT::i128, Custom);
@@ -1631,12 +1632,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
       setVectorInterleaveAction(
-          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3, 4}, VT,
           Custom);
-      if (Subtarget->hasSME2() && Subtarget->isStreaming())
-        setVectorInterleaveAction(
-            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {4}, VT,
-            Custom);
 
       setOperationAction(ISD::UMUL_LOHI, VT, Expand);
       setOperationAction(ISD::SMUL_LOHI, VT, Expand);
@@ -1810,12 +1807,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
       setVectorInterleaveAction(
-          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3, 4}, VT,
           Custom);
-      if (Subtarget->hasSME2() && Subtarget->isStreaming())
-        setVectorInterleaveAction(
-            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {4}, VT,
-            Custom);
 
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction({ISD::FREM, ISD::STRICT_FREM}, VT, Expand);
@@ -1878,12 +1871,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
       setVectorInterleaveAction(
-          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3, 4}, VT,
           Custom);
-      if (Subtarget->hasSME2() && Subtarget->isStreaming())
-        setVectorInterleaveAction(
-            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {4}, VT,
-            Custom);
       setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
     }
@@ -2379,7 +2368,11 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
   setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Custom);
   setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
-                            {3}, VT, Custom);
+                            {3, 4}, VT, Custom);
+  if (Subtarget->isLittleEndian() &&
+      (VT.getScalarSizeInBits() == 8 || VT.getScalarSizeInBits() == 16))
+    setVectorInterleaveAction(
+        {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {5, 7}, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
   // NEON has no 64-bit multiply to form the byte indices.
   if (VT.getScalarSizeInBits() < 64)
@@ -10736,8 +10729,31 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue ThunkVarArgSrc = OutVals[Outs.size() - 2];
     SDValue ThunkVarArgSize =
         DAG.getZExtOrTrunc(OutVals[Outs.size() - 1], DL, PtrVT);
-    SDValue RoundedThunkVarArgSize = DAG.getNode(
-        ISD::ADD, DL, PtrVT, ThunkVarArgSize, DAG.getConstant(15, DL, PtrVT));
+
+    // All arguments other than the first four will have to be copied with
+    // `memcpy` into the outgoing stack area (RSP+0x20 for x86-64). There is a
+    // special case when the x86-64 function returns a 16-byte structure: The
+    // x86-64 ABI requires that the value be returned in memory, so it has a
+    // hidden pointer, and the 4th argument has to spill to the stack; the
+    // ARM64EC function returns the value in {X0,X1} and it doesn't have a
+    // hidden pointer. In this case, the x86-64 function has one more argument
+    // than the ARM64EC one:
+    //
+    //   SP+00 => home for hidden pointer
+    //   SP+08 => home for 1st argument
+    //   SP+16 => home for 2nd argument
+    //   SP+24 => home for 3rd argument
+    //   SP+32 => 4th argument             ; !!
+    //   SP+40 => 5th argument             ; written by `memcpy`
+    //   SP+48 => ...
+    //
+    // `NumBytes` (32, or 40 in the hidden pointer case) is exactly the
+    // distance from the stack pointer to the 5th argument, so the whole
+    // outgoing argument area is reserved here, together with stack arguments
+    // from the 5th, in the same dynamically allocated block.
+    SDValue RoundedThunkVarArgSize =
+        DAG.getNode(ISD::ADD, DL, PtrVT, ThunkVarArgSize,
+                    DAG.getConstant(NumBytes + 15, DL, PtrVT));
     RoundedThunkVarArgSize =
         DAG.getNode(ISD::AND, DL, PtrVT, RoundedThunkVarArgSize,
                     DAG.getSignedConstant(-16, DL, PtrVT));
@@ -10747,12 +10763,24 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = ThunkVarArgDst.getValue(1);
     MFI.CreateVariableSizedObject(Align(16), nullptr);
 
-    // The x64 shadow store for the final thunk call is allocated by the normal
-    // CALLSEQ_START below. Copy the variadic stack arguments before that call
-    // sequence starts so lowering the memcpy libcall cannot create nested
+    // The copy goes right after the outgoing argument area, which is where the
+    // x64 callee expects its first stack argument.
+    ThunkVarArgDst = DAG.getNode(ISD::ADD, DL, PtrVT, ThunkVarArgDst,
+                                 DAG.getConstant(NumBytes, DL, PtrVT));
+
+    // The dynamically allocated block includes the outgoing stack area for the
+    // target function below, taking the place of its call frame. Varargs will
+    // have been copied by `memcpy` below, so the call must not adjust the
+    // stack pointer any further. The function call will look as if it didn't
+    // have a call frame, which isn't the case: Its call frame is now provided
+    // by the dynamically allocated block.
+    NumBytes = 0;
+
+    // Copy the variadic stack arguments before the call sequence starts so
+    // lowering the memcpy libcall cannot create nested
     // ADJCALLSTACKDOWN/ADJCALLSTACKUP pairs.
     Chain = DAG.getMemcpy(
-        Chain, DL, ThunkVarArgDst, ThunkVarArgSrc, ThunkVarArgSize, Align(16),
+        Chain, DL, ThunkVarArgDst, ThunkVarArgSrc, ThunkVarArgSize, Align(8),
         Align(1), /*isVol=*/false, /*AlwaysInline=*/false,
         /*CI=*/nullptr, std::nullopt, MachinePointerInfo::getUnknownStack(MF),
         MachinePointerInfo());
@@ -25116,11 +25144,18 @@ static SDValue LowerSVEIntrinsicDUP(SDNode *N, SelectionDAG &DAG) {
   SDValue Scalar = N->getOperand(3);
   EVT ScalarTy = Scalar.getValueType();
 
+  SDValue Passthru = N->getOperand(1);
+  SDValue Pred = N->getOperand(2);
+  if (isZerosVector(Passthru)) {
+    if (isOneConstant(Scalar))
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, N->getValueType(0), Pred);
+    if (isAllOnesConstant(Scalar))
+      return DAG.getNode(ISD::SIGN_EXTEND, DL, N->getValueType(0), Pred);
+  }
+
   if ((ScalarTy == MVT::i8) || (ScalarTy == MVT::i16))
     Scalar = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Scalar);
 
-  SDValue Passthru = N->getOperand(1);
-  SDValue Pred = N->getOperand(2);
   return DAG.getNode(AArch64ISD::DUP_MERGE_PASSTHRU, DL, N->getValueType(0),
                      Pred, Scalar, Passthru);
 }
@@ -30147,7 +30182,7 @@ performSetccMergeZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return V;
 
   if (Cond == ISD::SETNE && isZerosVector(RHS) &&
-      LHS->getOpcode() == ISD::SIGN_EXTEND &&
+      ISD::isExtOpcode(LHS->getOpcode()) &&
       LHS->getOperand(0)->getValueType(0) == N->getValueType(0)) {
     //    setcc_merge_zero(
     //       pred, extend(setcc_merge_zero(pred, ...)), != splat(0))
@@ -33452,10 +33487,16 @@ void AArch64TargetLowering::ReplaceNodeResults(
       auto *AN = dyn_cast<AtomicSDNode>(LoadNode);
       bool isLoadAcquire =
           AN && AN->getSuccessOrdering() == AtomicOrdering::Acquire;
-      unsigned Opcode = isLoadAcquire ? AArch64ISD::LDIAPP : AArch64ISD::LDP;
-
-      if (isLoadAcquire)
-        assert(Subtarget->hasFeature(AArch64::FeatureRCPC3));
+      bool isSeqCst = AN && AN->getSuccessOrdering() ==
+                                AtomicOrdering::SequentiallyConsistent;
+      unsigned Opcode = AArch64ISD::LDP;
+      if (isSeqCst) {
+        assert(Subtarget->hasLSCP());
+        Opcode = AArch64ISD::LDAP;
+      } else if (isLoadAcquire) {
+        assert(Subtarget->hasRCPC3() || Subtarget->hasLSCP());
+        Opcode = AArch64ISD::LDP_ACQ;
+      }
 
       SDValue Result = DAG.getMemIntrinsicNode(
           Opcode, SDLoc(N), DAG.getVTList({MVT::i64, MVT::i64, MVT::Other}),
@@ -33680,6 +33721,11 @@ bool AArch64TargetLowering::isOpSuitableForLSCP(const Instruction *I) const {
   if (!Subtarget->hasLSE2() || !Subtarget->hasLSCP())
     return false;
 
+  if (auto LI = dyn_cast<LoadInst>(I))
+    return LI->getType()->getPrimitiveSizeInBits() == 128 &&
+           LI->getAlign() >= Align(16) &&
+           isAcquireOrStronger(LI->getOrdering());
+
   if (auto SI = dyn_cast<StoreInst>(I))
     return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() == 128 &&
            SI->getAlign() >= Align(16) &&
@@ -33793,7 +33839,7 @@ Instruction *AArch64TargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 // are doomed anyway, so defer to the default libcall and blame the OS when
 // things go wrong.
 TargetLoweringBase::AtomicExpansionKind
-AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+AArch64TargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   unsigned Size = SI->getValueOperand()->getType()->getPrimitiveSizeInBits();
   if (Size != 128)
     return AtomicExpansionKind::None;
@@ -33812,10 +33858,12 @@ AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 // are doomed anyway, so defer to the default libcall and blame the OS when
 // things go wrong.
 TargetLowering::AtomicExpansionKind
-AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+AArch64TargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
   unsigned Size = LI->getType()->getPrimitiveSizeInBits();
 
   if (Size != 128)
+    return AtomicExpansionKind::None;
+  if (isOpSuitableForLSCP(LI))
     return AtomicExpansionKind::None;
   if (isOpSuitableForRCPC3(LI))
     return AtomicExpansionKind::None;
@@ -34627,6 +34675,11 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
         return true;
     }
   }
+  // The stride of a GEP with a scalable source element type is
+  // vscale-dependent, which the IRTranslator can't handle.
+  if (const auto *GEP = dyn_cast<GetElementPtrInst>(&Inst))
+    if (GEP->getSourceElementType()->isScalableTy())
+      return true;
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
@@ -35707,11 +35760,102 @@ static SDValue lowerPredicateInterleaveWithPackedVectors(SDValue Op,
   return DAG.getMergeValues(Results, DL);
 }
 
+static SDValue lowerInterleaveWithTBL(SDValue Op, SelectionDAG &DAG,
+                                      const AArch64Subtarget &Subtarget) {
+  unsigned Factor = Op->getNumOperands();
+  if (Factor != 5 && Factor != 7)
+    return SDValue();
+  EVT VT = Op.getValueType();
+  if (!Subtarget.isNeonAvailable() || !Subtarget.isLittleEndian() ||
+      (!VT.is64BitVector() && !VT.is128BitVector()) ||
+      (VT.getScalarSizeInBits() != 8 && VT.getScalarSizeInBits() != 16))
+    return SDValue();
+
+  SDLoc DL(Op);
+  unsigned ElementBytes = VT.getScalarSizeInBits() / 8;
+  MVT ByteVT = VT.is64BitVector() ? MVT::v8i8 : MVT::v16i8;
+  SmallVector<SDValue> Sources;
+  for (SDValue V : Op->ops())
+    Sources.push_back(DAG.getBitcast(ByteVT, V));
+
+  SmallVector<SDValue> Tables;
+  if (VT.is64BitVector()) {
+    // Pair 64-bit sources so all bytes fit in one TBL instruction.
+    for (unsigned I = 0; I < Factor; I += 2)
+      Tables.push_back(DAG.getNode(
+          ISD::CONCAT_VECTORS, DL, MVT::v16i8, Sources[I],
+          I + 1 < Factor ? Sources[I + 1] : DAG.getPOISON(MVT::v8i8)));
+  } else {
+    Tables = std::move(Sources);
+  }
+
+  bool IsInterleave = Op.getOpcode() == ISD::VECTOR_INTERLEAVE;
+  unsigned NumElements = VT.getVectorNumElements();
+  static constexpr Intrinsic::ID TblIDs[] = {
+      Intrinsic::aarch64_neon_tbl1, Intrinsic::aarch64_neon_tbl2,
+      Intrinsic::aarch64_neon_tbl3, Intrinsic::aarch64_neon_tbl4};
+  static constexpr Intrinsic::ID TbxIDs[] = {
+      Intrinsic::aarch64_neon_tbx1, Intrinsic::aarch64_neon_tbx2,
+      Intrinsic::aarch64_neon_tbx3, Intrinsic::aarch64_neon_tbx4};
+  SmallVector<int, 16> ElementsMask;
+  if (IsInterleave)
+    ElementsMask = createInterleaveMask(NumElements, Factor);
+  // For 64-bit types, gather two adjacent results with one 128-bit lookup.
+  unsigned ResultsPerLookup = IsInterleave && VT.is64BitVector() ? 2 : 1;
+  SmallVector<SDValue> Results;
+  for (unsigned Result = 0; Result < Factor; Result += ResultsPerLookup) {
+    unsigned NumResults = std::min(ResultsPerLookup, Factor - Result);
+    MVT LookupVT = NumResults == 2 ? MVT::v16i8 : ByteVT;
+    if (!IsInterleave)
+      ElementsMask = createStrideMask(Result, Factor, NumElements);
+    ArrayRef<int> ResultElementsMask = ElementsMask;
+    if (IsInterleave)
+      ResultElementsMask = ResultElementsMask.slice(Result * NumElements,
+                                                    NumResults * NumElements);
+    SmallVector<unsigned, 16> Indices;
+    // Expand element shuffle indices into byte indices for TBL.
+    for (int ElementMask : ResultElementsMask)
+      for (unsigned Byte = 0; Byte < ElementBytes; ++Byte)
+        Indices.push_back(ElementMask * ElementBytes + Byte);
+    auto BuildMask = [&](unsigned Base, unsigned NumRegs) {
+      auto Mask = map_to_vector(Indices, [&](unsigned Index) {
+        return DAG.getConstant(
+            Index < Base || Index >= Base + NumRegs * 16 ? 255 : Index - Base,
+            DL, MVT::i32);
+      });
+      return DAG.getBuildVector(LookupVT, DL, Mask);
+    };
+
+    SDValue Bytes;
+    for (unsigned TableStart = 0; TableStart < Tables.size(); TableStart += 4) {
+      unsigned NumRegs = std::min<unsigned>(Tables.size() - TableStart, 4);
+      bool IsFirst = TableStart == 0;
+      Intrinsic::ID ID = IsFirst ? TblIDs[NumRegs - 1] : TbxIDs[NumRegs - 1];
+      SmallVector<SDValue, 7> Ops = {DAG.getTargetConstant(ID, DL, MVT::i64)};
+      if (!IsFirst)
+        Ops.push_back(Bytes);
+      Ops.append(Tables.begin() + TableStart,
+                 Tables.begin() + TableStart + NumRegs);
+      Ops.push_back(BuildMask(TableStart * 16, NumRegs));
+      Bytes = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, LookupVT, Ops);
+    }
+    // Split the lookup into NumResults
+    for (unsigned I = 0; I < NumResults; ++I)
+      Results.push_back(DAG.getBitcast(
+          VT, DAG.getExtractSubvector(DL, ByteVT, Bytes,
+                                      I * ByteVT.getVectorNumElements())));
+  }
+  return DAG.getMergeValues(Results, DL);
+}
+
 SDValue
 AArch64TargetLowering::LowerVECTOR_DEINTERLEAVE(SDValue Op,
                                                 SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT OpVT = Op.getValueType();
+
+  if (SDValue Result = lowerInterleaveWithTBL(Op, DAG, *Subtarget))
+    return Result;
 
   if (OpVT.isFixedLengthVector() && Op->getNumOperands() == 3) {
     Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
@@ -35825,6 +35969,9 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
                                                       SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT OpVT = Op.getValueType();
+
+  if (SDValue Result = lowerInterleaveWithTBL(Op, DAG, *Subtarget))
+    return Result;
 
   if (OpVT.isFixedLengthVector() && Op->getNumOperands() == 3) {
     Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);

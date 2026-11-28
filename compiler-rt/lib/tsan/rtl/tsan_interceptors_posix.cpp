@@ -1270,6 +1270,23 @@ TSAN_INTERCEPTOR(int, pthread_timedjoin_np, void *th, void **ret,
     ThreadNotJoined(thr, pc, tid, (uptr)th);
   return res;
 }
+
+#endif
+
+#if __GLIBC_PREREQ(2, 31)
+TSAN_INTERCEPTOR(int, pthread_clockjoin_np, void* th, void** ret,
+                 __sanitizer_clockid_t clock, const struct timespec* abstime) {
+  SCOPED_INTERCEPTOR_RAW(pthread_clockjoin_np, th, ret, clock, abstime);
+  Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
+  ThreadIgnoreBegin(thr, pc);
+  int res = BLOCK_REAL(pthread_clockjoin_np)(th, ret, clock, abstime);
+  ThreadIgnoreEnd(thr);
+  if (res == 0)
+    ThreadJoin(thr, pc, tid);
+  else
+    ThreadNotJoined(thr, pc, tid, (uptr)th);
+  return res;
+}
 #endif
 
 #if SANITIZER_INTERCEPT_C11_THREADS
@@ -3177,10 +3194,13 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_join);
   TSAN_INTERCEPT(pthread_detach);
   TSAN_INTERCEPT(pthread_exit);
-  #if SANITIZER_LINUX
+#if SANITIZER_LINUX
   TSAN_INTERCEPT(pthread_tryjoin_np);
   TSAN_INTERCEPT(pthread_timedjoin_np);
-  #endif
+#endif
+#if __GLIBC_PREREQ(2, 31)
+  TSAN_INTERCEPT(pthread_clockjoin_np);
+#endif
 #if SANITIZER_INTERCEPT_C11_THREADS
   TSAN_INTERCEPT(thrd_create);
   TSAN_INTERCEPT(thrd_join);

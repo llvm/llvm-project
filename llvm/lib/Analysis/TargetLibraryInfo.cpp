@@ -25,10 +25,12 @@ using namespace llvm;
 #include "llvm/Analysis/TargetLibraryInfo.inc"
 
 std::string VecDesc::getVectorFunctionABIVariantString() const {
-  assert(!VectorFnName.empty() && "Vector function name must not be empty.");
+  assert(!getVectorFnName().empty() &&
+         "Vector function name must not be empty.");
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
-  Out << VABIPrefix << "_" << ScalarFnName << "(" << VectorFnName << ")";
+  Out << getVABIPrefix() << "_" << getScalarFnName() << "(" << getVectorFnName()
+      << ")";
   return std::string(Out.str());
 }
 
@@ -60,7 +62,7 @@ static bool hasBcmp(const Triple &TT) {
     return TT.isGNUEnvironment() || TT.isMusl();
   // Both NetBSD and OpenBSD are planning to remove the function. Windows does
   // not have it.
-  return TT.isOSFreeBSD() || TT.isOSSolaris();
+  return TT.isOSFreeBSD() || TT.isOSDragonFly() || TT.isOSSolaris();
 }
 
 static bool isCallingConvCCompatible(CallingConv::ID CC, const Triple &TT,
@@ -573,8 +575,8 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_exp10l);
   }
 
-  // ffsl is available on at least Darwin, Mac OS X, iOS, FreeBSD, and
-  // Linux (GLIBC):
+  // ffsl is available on at least Darwin, Mac OS X, iOS, FreeBSD, DragonFly,
+  // OpenBSD and Linux (GLIBC):
   // http://developer.apple.com/library/mac/#documentation/Darwin/Reference/ManPages/man3/ffsl.3.html
   // http://svn.freebsd.org/base/head/lib/libc/string/ffsl.c
   // http://www.gnu.org/software/gnulib/manual/html_node/ffsl.html
@@ -586,13 +588,16 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   case Triple::WatchOS:
   case Triple::XROS:
   case Triple::FreeBSD:
+  case Triple::DragonFly:
+  case Triple::OpenBSD:
   case Triple::Linux:
     break;
   default:
     TLI.setUnavailable(LibFunc_ffsl);
   }
 
-  // ffsll is available on at least FreeBSD and Linux (GLIBC):
+  // ffsll is available on at least FreeBSD, DragonFly, OpenBSD and Linux
+  // (GLIBC):
   // http://svn.freebsd.org/base/head/lib/libc/string/ffsll.c
   // http://www.gnu.org/software/gnulib/manual/html_node/ffsll.html
   switch (T.getOS()) {
@@ -603,17 +608,22 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   case Triple::WatchOS:
   case Triple::XROS:
   case Triple::FreeBSD:
+  case Triple::DragonFly:
+  case Triple::OpenBSD:
   case Triple::Linux:
     break;
   default:
     TLI.setUnavailable(LibFunc_ffsll);
   }
 
-  // The following functions are available on at least FreeBSD:
+  // The following functions are available on at least FreeBSD and DragonFly:
   // http://svn.freebsd.org/base/head/lib/libc/string/fls.c
   // http://svn.freebsd.org/base/head/lib/libc/string/flsl.c
   // http://svn.freebsd.org/base/head/lib/libc/string/flsll.c
-  if (!T.isOSFreeBSD()) {
+  // https://gitweb.dragonflybsd.org/?p=dragonfly.git;a=blob;f=lib/libc/string/fls.c
+  // https://gitweb.dragonflybsd.org/?p=dragonfly.git;a=blob;f=lib/libc/string/flsl.c
+  // https://gitweb.dragonflybsd.org/?p=dragonfly.git;a=blob;f=lib/libc/string/flsll.c
+  if (!T.isOSFreeBSD() && !T.isOSDragonFly()) {
     TLI.setUnavailable(LibFunc_fls);
     TLI.setUnavailable(LibFunc_flsl);
     TLI.setUnavailable(LibFunc_flsll);
@@ -839,10 +849,17 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   if (T.isOSFreeBSD()) {
     TLI.setAvailable(LibFunc_dunder_strtok_r);
     TLI.setAvailable(LibFunc_memalign);
+  }
+
+  if (T.isOSFreeBSD() || T.isOSDragonFly()) {
     TLI.setAvailable(LibFunc_fputc_unlocked);
     TLI.setAvailable(LibFunc_fputs_unlocked);
     TLI.setAvailable(LibFunc_fread_unlocked);
     TLI.setAvailable(LibFunc_fwrite_unlocked);
+  }
+
+  if (T.isOSFreeBSD() || T.isOSDragonFly() || T.isOSNetBSD() ||
+      T.isOSOpenBSD()) {
     TLI.setAvailable(LibFunc_getc_unlocked);
     TLI.setAvailable(LibFunc_getchar_unlocked);
     TLI.setAvailable(LibFunc_putc_unlocked);
@@ -901,6 +918,11 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
 
   if (T.isOSAIX())
     TLI.setUnavailable(LibFunc_memrchr);
+
+  if (T.getOS() != Triple::CheriotRTOS) {
+    TLI.setUnavailable(LibFunc_cheriot_heap_allocate);
+    TLI.setUnavailable(LibFunc_cheriot_heap_free);
+  }
 
   TLI.addVectorizableFunctionsFromVecLib(VecLib, T);
 }
@@ -1270,7 +1292,8 @@ static bool compareWithScalarFnName(const VecDesc &LHS, StringRef S) {
   return LHS.getScalarFnName() < S;
 }
 
-void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
+void TargetLibraryInfoImpl::addVectorizableFunctions(
+    EnumStrings<VecDescData, 3> Fns) {
   llvm::append_range(VectorDescs, Fns);
   llvm::sort(VectorDescs, compareByScalarFnName);
 
@@ -1278,95 +1301,111 @@ void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
   llvm::sort(ScalarDescs, compareByVectorFnName);
 }
 
-// The VecDesc tables should be constant-initialized to avoid compilation
-// regression. Now VecDesc (see class definition) intentionally keeps trivially
-// constructable/destructable, so the tables land in .rdata and do not run
-// through CRT dynamic init (which can overflow small stack on MSVC Debug
-// DLL loads). When LLVM requires C++20 mark them constinit to enforce this
-// at compile time.
-static constexpr VecDesc VecFuncs_Accelerate[] = {
+// The VecDesc tables should be constant-initialized and not contain any
+// pointers to avoid startup cost through global ctors or dynamic relocations.
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_Accelerate[] = {
 #define TLI_DEFINE_ACCELERATE_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_ACCELERATE_VECFUNCS
 };
+constexpr auto VecFuncs_Accelerate = BUILD_ENUM_STRINGS(VecFuncDefs_Accelerate);
 
-static constexpr VecDesc VecFuncs_DarwinLibSystemM[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_DarwinLibSystemM[] = {
 #define TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
 };
+constexpr auto VecFuncs_DarwinLibSystemM =
+    BUILD_ENUM_STRINGS(VecFuncDefs_DarwinLibSystemM);
 
-static constexpr VecDesc VecFuncs_LIBMVEC_X86[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_LIBMVEC_X86[] = {
 #define TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
 };
+constexpr auto VecFuncs_LIBMVEC_X86 =
+    BUILD_ENUM_STRINGS(VecFuncDefs_LIBMVEC_X86);
 
-static constexpr VecDesc VecFuncs_LIBMVEC_AARCH64[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_LIBMVEC_AARCH64[] = {
 #define TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
+  {{SCAL, VEC, VABI_PREFIX}, {VF, MASK, CC}},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
 };
+constexpr auto VecFuncs_LIBMVEC_AARCH64 =
+    BUILD_ENUM_STRINGS(VecFuncDefs_LIBMVEC_AARCH64);
 
-static constexpr VecDesc VecFuncs_MASSV[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_MASSV[] = {
 #define TLI_DEFINE_MASSV_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_MASSV_VECFUNCS
 };
+constexpr auto VecFuncs_MASSV = BUILD_ENUM_STRINGS(VecFuncDefs_MASSV);
 
-static constexpr VecDesc VecFuncs_SVML[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_SVML[] = {
 #define TLI_DEFINE_SVML_VECFUNCS
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SVML_VECFUNCS
 };
+constexpr auto VecFuncs_SVML = BUILD_ENUM_STRINGS(VecFuncDefs_SVML);
 
-static constexpr VecDesc VecFuncs_SLEEFGNUABI_VF2[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_SLEEFGNUABI_VF2[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
-  {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX, /* CC = */ std::nullopt},
+  {{SCAL, VEC, VABI_PREFIX}, {VF, /*MASK=*/false, /*CC=*/std::nullopt}},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 };
-static constexpr VecDesc VecFuncs_SLEEFGNUABI_VF4[] = {
+constexpr auto VecFuncs_SLEEFGNUABI_VF2 =
+    BUILD_ENUM_STRINGS(VecFuncDefs_SLEEFGNUABI_VF2);
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_SLEEFGNUABI_VF4[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
-  {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX, /* CC = */ std::nullopt},
+  {{SCAL, VEC, VABI_PREFIX}, {VF, /*MASK=*/false, /*CC=*/std::nullopt}},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 };
-static constexpr VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
+constexpr auto VecFuncs_SLEEFGNUABI_VF4 =
+    BUILD_ENUM_STRINGS(VecFuncDefs_SLEEFGNUABI_VF4);
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_SLEEFGNUABI_VFScalable[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
+  {{SCAL, VEC, VABI_PREFIX}, {VF, MASK, /*CC=*/std::nullopt}},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 };
+constexpr auto VecFuncs_SLEEFGNUABI_VFScalable =
+    BUILD_ENUM_STRINGS(VecFuncDefs_SLEEFGNUABI_VFScalable);
 
-static constexpr VecDesc VecFuncs_SLEEFGNUABI_VFScalableRISCV[] = {
+constexpr EnumStringDef<VecDescData, 3>
+    VecFuncDefs_SLEEFGNUABI_VFScalableRISCV[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
+  {{SCAL, VEC, VABI_PREFIX}, {VF, MASK, /*CC=*/std::nullopt}},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
 };
+constexpr auto VecFuncs_SLEEFGNUABI_VFScalableRISCV =
+    BUILD_ENUM_STRINGS(VecFuncDefs_SLEEFGNUABI_VFScalableRISCV);
 
-static constexpr VecDesc VecFuncs_ArmPL[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_ArmPL[] = {
 #define TLI_DEFINE_ARMPL_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
+  {{SCAL, VEC, VABI_PREFIX}, {VF, MASK, CC}},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_ARMPL_VECFUNCS
 };
+constexpr auto VecFuncs_ArmPL = BUILD_ENUM_STRINGS(VecFuncDefs_ArmPL);
 
-constexpr VecDesc VecFuncs_AMDLIBM[] = {
+constexpr EnumStringDef<VecDescData, 3> VecFuncDefs_AMDLIBM[] = {
 #define TLI_DEFINE_AMDLIBM_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
+  {{SCAL, VEC, VABI_PREFIX}, {VF, MASK, /*CC=*/std::nullopt}},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_AMDLIBM_VECFUNCS
 };
+constexpr auto VecFuncs_AMDLIBM = BUILD_ENUM_STRINGS(VecFuncDefs_AMDLIBM);
 
 void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     enum VectorLibrary VecLib, const llvm::Triple &TargetTriple) {

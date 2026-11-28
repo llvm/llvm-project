@@ -1700,11 +1700,7 @@ const char *SBTarget::GetTriple() {
 
   if (TargetSP target_sp = GetSP()) {
     const std::string &triple = target_sp->GetArchitecture().GetTriple().str();
-    // Unique the string so we don't run into ownership issues since the const
-    // strings put the string into the string pool once and the strings never
-    // comes out
-    ConstString const_triple(triple);
-    return const_triple.GetCString();
+    return GetDebuggerStringPool(*target_sp).Intern(triple);
   }
   return nullptr;
 }
@@ -1715,9 +1711,7 @@ const char *SBTarget::GetArchName() const {
   if (TargetSP target_sp = GetSP()) {
     llvm::StringRef arch_name =
         target_sp->GetArchitecture().GetTriple().getArchName();
-    ConstString const_arch_name(arch_name);
-
-    return const_arch_name.GetCString();
+    return GetDebuggerStringPool(*target_sp).Intern(arch_name);
   }
   return nullptr;
 }
@@ -1726,8 +1720,7 @@ const char *SBTarget::GetABIName() {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP()) {
-    ConstString const_name(target_sp->GetABIName());
-    return const_name.GetCString();
+    return GetDebuggerStringPool(*target_sp).Intern(target_sp->GetABIName());
   }
   return nullptr;
 }

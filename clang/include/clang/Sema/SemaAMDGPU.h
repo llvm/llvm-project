@@ -35,9 +35,9 @@ public:
 
   /// Emits a diagnostic if the \p E is not an atomic ordering encoded in the C
   /// ABI format, or if the atomic ordering is not valid for the operation type
-  /// as defined by \p MayLoad and \p MayStore. \returns true if a diagnostic
-  /// was emitted.
-  bool checkAtomicOrderingCABIArg(Expr *E, bool MayLoad, bool MayStore);
+  /// as defined by \p MayLoad and \p MayStore. This is only a warning: CodeGen
+  /// lowers invalid orderings to a valid one.
+  void checkAtomicOrderingCABIArg(Expr *E, bool MayLoad, bool MayStore);
 
   bool checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore);
   bool checkAVLoadStore(CallExpr *TheCall, bool IsStore);

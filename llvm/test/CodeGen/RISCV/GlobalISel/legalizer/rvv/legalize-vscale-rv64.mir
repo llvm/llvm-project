@@ -9,10 +9,10 @@ body:             |
     ; CHECK-LABEL: name: test_1
     ; CHECK: [[READ_VLENB:%[0-9]+]]:_(i64) = G_READ_VLENB
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 3
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = exact G_LSHR [[READ_VLENB]], [[C]](i64)
-    ; CHECK-NEXT: $x10 = COPY [[LSHR]](s64)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i64) = exact G_LSHR [[READ_VLENB]], [[C]](i64)
+    ; CHECK-NEXT: $x10 = COPY [[LSHR]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s64) = G_VSCALE i64 1
+    %0:_(i64) = G_VSCALE i64 1
     $x10 = COPY %0
     PseudoRET implicit $x10
 ...
@@ -24,10 +24,10 @@ body:             |
     ; CHECK-LABEL: name: test_2
     ; CHECK: [[READ_VLENB:%[0-9]+]]:_(i64) = G_READ_VLENB
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 2
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = exact G_LSHR [[READ_VLENB]], [[C]](i64)
-    ; CHECK-NEXT: $x10 = COPY [[LSHR]](s64)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i64) = exact G_LSHR [[READ_VLENB]], [[C]](i64)
+    ; CHECK-NEXT: $x10 = COPY [[LSHR]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s64) = G_VSCALE i64 2
+    %0:_(i64) = G_VSCALE i64 2
     $x10 = COPY %0
     PseudoRET implicit $x10
 ...
@@ -40,10 +40,10 @@ body:             |
     ; CHECK: [[READ_VLENB:%[0-9]+]]:_(i64) = G_READ_VLENB
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 3
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i64) = exact G_LSHR [[READ_VLENB]], [[C]](i64)
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[LSHR]], [[C]]
-    ; CHECK-NEXT: $x10 = COPY [[MUL]](s64)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(i64) = G_MUL [[LSHR]], [[C]]
+    ; CHECK-NEXT: $x10 = COPY [[MUL]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s64) = G_VSCALE i64 3
+    %0:_(i64) = G_VSCALE i64 3
     $x10 = COPY %0
     PseudoRET implicit $x10
 ...
@@ -55,10 +55,10 @@ body:             |
     ; CHECK-LABEL: name: test_4
     ; CHECK: [[READ_VLENB:%[0-9]+]]:_(i64) = G_READ_VLENB
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = exact G_LSHR [[READ_VLENB]], [[C]](i64)
-    ; CHECK-NEXT: $x10 = COPY [[LSHR]](s64)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i64) = exact G_LSHR [[READ_VLENB]], [[C]](i64)
+    ; CHECK-NEXT: $x10 = COPY [[LSHR]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s64) = G_VSCALE i64 4
+    %0:_(i64) = G_VSCALE i64 4
     $x10 = COPY %0
     PseudoRET implicit $x10
 ...
@@ -68,10 +68,10 @@ body:             |
   bb.0.entry:
 
     ; CHECK-LABEL: name: test_8
-    ; CHECK: [[READ_VLENB:%[0-9]+]]:_(s64) = G_READ_VLENB
-    ; CHECK-NEXT: $x10 = COPY [[READ_VLENB]](s64)
+    ; CHECK: [[READ_VLENB:%[0-9]+]]:_(i64) = G_READ_VLENB
+    ; CHECK-NEXT: $x10 = COPY [[READ_VLENB]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s64) = G_VSCALE i64 8
+    %0:_(i64) = G_VSCALE i64 8
     $x10 = COPY %0
     PseudoRET implicit $x10
 ...
@@ -83,10 +83,10 @@ body:             |
     ; CHECK-LABEL: name: test_16
     ; CHECK: [[READ_VLENB:%[0-9]+]]:_(i64) = G_READ_VLENB
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[READ_VLENB]], [[C]](i64)
-    ; CHECK-NEXT: $x10 = COPY [[SHL]](s64)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i64) = G_SHL [[READ_VLENB]], [[C]](i64)
+    ; CHECK-NEXT: $x10 = COPY [[SHL]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s64) = G_VSCALE i64 16
+    %0:_(i64) = G_VSCALE i64 16
     $x10 = COPY %0
     PseudoRET implicit $x10
 ...
@@ -98,10 +98,10 @@ body:             |
     ; CHECK-LABEL: name: test_40
     ; CHECK: [[READ_VLENB:%[0-9]+]]:_(i64) = G_READ_VLENB
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 5
-    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[READ_VLENB]], [[C]]
-    ; CHECK-NEXT: $x10 = COPY [[MUL]](s64)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(i64) = G_MUL [[READ_VLENB]], [[C]]
+    ; CHECK-NEXT: $x10 = COPY [[MUL]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s64) = G_VSCALE i64 40
+    %0:_(i64) = G_VSCALE i64 40
     $x10 = COPY %0
     PseudoRET implicit $x10
 ...

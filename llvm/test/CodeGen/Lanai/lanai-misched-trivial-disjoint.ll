@@ -5,7 +5,7 @@
 ; are trivially disjoint.
 
 ; Function Attrs: norecurse nounwind uwtable
-define i32 @foo(ptr inreg nocapture %x) {
+define i32 @foo(ptr noalias inreg nocapture %x) {
 entry:
   %0 = bitcast ptr %x to ptr
   store i32 1, ptr %0, align 4

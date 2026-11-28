@@ -68,8 +68,8 @@
 # CHECK-NEXT: 0x[[#%X,BAR]]            0x00000001  [  2] _bar
 # CHECK-NEXT: 0x[[#%X,FOO]]            0x00000001  [  3] __ZTIN3foo3bar4MethE
 # CHECK-NEXT: 0x[[#%X,FOO+1]]          0x00000001  [  3] ltmp1
-# CHECK-NEXT: 0x[[#%X,STUBS]]          0x00000006  [  5] _baz
-# CHECK-NEXT: 0x[[#%X,STUBS+6]]        0x00000006  [  2] _bar
+# CHECK-NEXT: 0x[[#%X,STUBS]]          0x00000006  [  2] _bar
+# CHECK-NEXT: 0x[[#%X,STUBS+6]]        0x00000006  [  5] _baz
 # CHECK-NEXT: 0x[[#%X,HELPER]]         0x0000001A  [  0] helper helper
 # CHECK-NEXT: 0x[[#%X,HIWORLD]]        0x0000000E  [  4] literal string: Hello world!\n
 # CHECK-NEXT: 0x[[#%X,HIITSME]]        0x0000000F  [  4] literal string: Hello, it's me
@@ -78,11 +78,11 @@
 ## Note: ld64 prints "CIE" and "FDE for: <function>" instead of "EH_Frame".
 # CHECK-NEXT: 0x[[#%X,EH_FRAME]]       0x00000018  [  2] EH_Frame
 # CHECK-NEXT: 0x[[#%X,EH_FRAME+0x18]]  0x00000020  [  2] EH_Frame
-# CHECK-NEXT: 0x[[#%X,GOT]]            0x00000008  [  0] non-lazy-pointer-to-local: _baz_tlv
-# CHECK-NEXT: 0x[[#%X,GOT+8]]          0x00000008  [  0] non-lazy-pointer-to-local: _baz2
+# CHECK-NEXT: 0x[[#%X,GOT]]            0x00000008  [  0] non-lazy-pointer-to-local: _baz2
+# CHECK-NEXT: 0x[[#%X,GOT+8]]          0x00000008  [  0] non-lazy-pointer-to-local: _baz_tlv
 # CHECK-NEXT: 0x[[#%X,GOT+0x10]]       0x00000008  [  0] non-lazy-pointer-to-local: dyld_stub_binder
-# CHECK-NEXT: 0x[[#%X,LAZY]]           0x00000008  [  5] _baz
-# CHECK-NEXT: 0x[[#%X,LAZY+8]]         0x00000008  [  2] _bar
+# CHECK-NEXT: 0x[[#%X,LAZY]]           0x00000008  [  2] _bar
+# CHECK-NEXT: 0x[[#%X,LAZY+8]]         0x00000008  [  5] _baz
 # CHECK-NEXT: 0x[[#%X,DYLD]]           0x00000000  [  0] __dyld_private
 # CHECK-NEXT: 0x[[#%X,BSS]]            0x00000001  [  2] _number
 # CHECK-EMPTY:

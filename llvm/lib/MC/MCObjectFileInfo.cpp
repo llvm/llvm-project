@@ -1409,7 +1409,8 @@ MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName,
     auto Flags = S->getFlags() | ELF::SHF_GROUP;
     return Ctx->getELFSection(
         S->getName(), S->getType(), Flags, S->getEntrySize(),
-        S->getName() + "_" + FuncName + "." + Twine::utohexstr(FuncHash),
+        (S->getName() + "_" + FuncName + "." + Twine::utohexstr(FuncHash))
+            .str(),
         /*IsComdat=*/true);
   } else if (ObjFileType == MCContext::IsCOFF) {
     auto *S = static_cast<MCSectionCOFF *>(PseudoProbeDescSection);

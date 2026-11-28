@@ -812,7 +812,7 @@ AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
   MDNode *M = New.TBAAStruct;
 
   // The access may cover several !tbaa.struct fields (e.g. a {int, int} copy
-  // widened to an i64 load/store). If those fields share a single tag and tile
+  // widened to an i64 load/store). If those fields share a single tag and cover
   // [0, AccessSize) with no gaps, that tag still describes the whole access.
   New.TBAAStruct = nullptr;
   if (New.TBAA || !M)
@@ -831,7 +831,8 @@ AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
         (CommonTag && FieldTag != CommonTag))
       break;
     CommonTag = FieldTag;
-    Offset += *FieldSize;
+    // The final field may extend beyond the access.
+    Offset += std::min(*FieldSize, uint64_t(AccessSize) - Offset);
   }
   if (Offset == AccessSize)
     New.TBAA = CommonTag;

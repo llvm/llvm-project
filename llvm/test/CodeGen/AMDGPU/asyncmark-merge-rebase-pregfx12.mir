@@ -9,7 +9,6 @@
 
 ---
 name:            async_mark_pred_merged_first
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       8
 body:             |
@@ -88,7 +87,6 @@ body:             |
 
 ---
 name:            load_pred_merged_first
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       8
 body:             |

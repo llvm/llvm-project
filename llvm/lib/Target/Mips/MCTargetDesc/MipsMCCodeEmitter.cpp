@@ -22,10 +22,12 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/raw_ostream.h"
@@ -162,6 +164,12 @@ void MipsMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                           SmallVectorImpl<char> &CB,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
+  if (MI.getOpcode() == Mips::PseudoGOTLoadGlobal ||
+      MI.getOpcode() == Mips::PseudoGOTLoadLocal) {
+    expandGOTLoad(MI, CB, Fixups, STI);
+    return;
+  }
+
   // Non-pseudo instructions that get changed for direct object
   // only based on operand values.
   // If this list of instructions get much longer we will move
@@ -248,6 +256,78 @@ void MipsMCCodeEmitter::encodeInstruction(const MCInst &MI,
     support::endian::write<uint16_t>(CB, Binary & 0xffff, Endian);
   } else {
     support::endian::write<uint32_t>(CB, Binary, Endian);
+  }
+}
+
+/// Expand PseudoGOTLoadGlobal and PseudoGOTLoadLocal into the sequence that
+/// MipsAsmParser::loadAndAddSymbolAddress emits when the binding of the
+/// symbol is already known:
+///
+///   Global:          lw    $rd, %got(sym)($gp)
+///                   >addiu $rd, $rd, offset
+///   Global call:     lw    $25, %call16(sym)($gp)
+///   Local (O32):     lw    $rd, %got(sym+offset)($gp)
+///                    addiu $rd, $rd, %lo(sym+offset)
+///   Local (N32/N64): ld    $rd, %got_disp(sym)($gp)
+///                   >daddiu $rd, $rd, offset
+void MipsMCCodeEmitter::expandGOTLoad(const MCInst &MI,
+                                      SmallVectorImpl<char> &CB,
+                                      SmallVectorImpl<MCFixup> &Fixups,
+                                      const MCSubtargetInfo &STI) const {
+  MCRegister DstReg = MI.getOperand(0).getReg();
+  MCRegister GPReg = MI.getOperand(1).getReg();
+  const MCExpr *SymExpr = MI.getOperand(2).getExpr();
+  unsigned Flags = MI.getOperand(3).getImm();
+  bool IsLocal = MI.getOpcode() == Mips::PseudoGOTLoadLocal;
+  bool IsPtr64 = Flags & MipsII::GOTLoad_Ptr64;
+  unsigned LoadOpc = IsPtr64 ? Mips::LD : Mips::LW;
+  unsigned AddiuOpc = IsPtr64 ? Mips::DADDiu : Mips::ADDiu;
+
+  MCValue Res;
+  [[maybe_unused]] bool Ok = SymExpr->evaluateAsRelocatable(Res, nullptr);
+  assert(Ok && Res.getAddSym() && !Res.getSubSym() &&
+         "expected a symbol plus an optional constant");
+  const MCExpr *Sym = MCSymbolRefExpr::create(Res.getAddSym(), Ctx);
+  int64_t Offset = Res.getConstant();
+
+  SmallVector<MCInst, 2> Insts;
+  auto AddInst = [&](unsigned Opc, MCRegister Rd, MCRegister Rs,
+                     const MCExpr *Expr) {
+    Insts.push_back(MCInstBuilder(Opc).addReg(Rd).addReg(Rs).addExpr(Expr));
+  };
+  auto AddOffset = [&]() {
+    if (Offset != 0)
+      AddInst(AddiuOpc, DstReg, DstReg, MCConstantExpr::create(Offset, Ctx));
+  };
+
+  if (!IsLocal && (Flags & MipsII::GOTLoad_Call)) {
+    assert(Offset == 0 && "unexpected offset for a call");
+    AddInst(LoadOpc, DstReg, GPReg,
+            MCSpecifierExpr::create(Sym, Mips::S_GOT_CALL, Ctx));
+  } else if (!IsLocal) {
+    AddInst(LoadOpc, DstReg, GPReg,
+            MCSpecifierExpr::create(Sym, Mips::S_GOT, Ctx));
+    AddOffset();
+  } else if (Flags & MipsII::GOTLoad_NewABI) {
+    AddInst(LoadOpc, DstReg, GPReg,
+            MCSpecifierExpr::create(Sym, Mips::S_GOT_DISP, Ctx));
+    AddOffset();
+  } else {
+    AddInst(LoadOpc, DstReg, GPReg,
+            MCSpecifierExpr::create(SymExpr, Mips::S_GOT, Ctx));
+    AddInst(AddiuOpc, DstReg, DstReg,
+            MCSpecifierExpr::create(SymExpr, Mips::S_LO, Ctx));
+  }
+
+  // Fixup offsets are relative to the start of the instruction being encoded,
+  // so rebase the fixups of each expanded instruction onto the pseudo.
+  size_t Start = CB.size();
+  for (const MCInst &Inst : Insts) {
+    size_t InstOffset = CB.size() - Start;
+    size_t N = Fixups.size();
+    encodeInstruction(Inst, CB, Fixups, STI);
+    for (size_t I = N, E = Fixups.size(); I != E; ++I)
+      Fixups[I].setOffset(Fixups[I].getOffset() + InstOffset);
   }
 }
 

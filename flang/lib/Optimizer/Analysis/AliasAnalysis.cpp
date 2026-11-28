@@ -322,6 +322,7 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
   } else {
     mergedPath = {};
     mergedPath.isApproximate = true;
+    mergedPath.isIncomplete = true;
     for (const fir::AliasAnalysis::Source &s : sources)
       if (!mergedPath.storageDecl)
         mergedPath.storageDecl = s.accessPath.storageDecl;
@@ -401,6 +402,8 @@ namespace fir {
 
 void AliasAnalysis::Source::AccessPath::print(llvm::raw_ostream &os) const {
   os << "[";
+  if (isIncomplete)
+    os << (steps.empty() ? "..." : "..., ");
   for (auto it = steps.begin(); it != steps.end(); ++it) {
     if (it != steps.begin())
       os << ", ";
@@ -515,6 +518,18 @@ bool AliasAnalysis::Source::isFortranUserVariable() const {
       .Default([&](auto op) { return false; });
 }
 
+/// Return true if \p ty, the type of the address of data or of a descriptor
+/// value, gives access to data that may contain a descriptor: a derived type
+/// object with a descriptor component (see fir::isRecordWithDescriptorMember),
+/// an array of them, or a polymorphic object, whose dynamic type may have such
+/// components.
+static bool mayContainDescriptor(mlir::Type ty) {
+  if (mlir::isa<fir::ClassType>(ty))
+    return true;
+  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
+  return eleTy && fir::isRecordWithDescriptorMember(eleTy);
+}
+
 bool AliasAnalysis::Source::mayBeDummyArgOrHostAssoc() const {
   return kind != SourceKind::Null && kind != SourceKind::Allocate &&
          kind != SourceKind::Global;
@@ -540,11 +555,20 @@ bool AliasAnalysis::Source::mayBeActualArgWithPtr(
   // Must not be local.
   if (!mayBeActualArg())
     return false;
+  // Must not be part of a dummy arg with neither TARGET nor POINTER, unless
+  // it may be reached through a pointer: only the dummy arg may change such a
+  // part, and if it does, only the dummy arg may reference it (F2023
+  // 15.5.2.14).  A Pointer attribute without access steps may be that of the
+  // dummy arg itself.
+  if (kind == SourceKind::Argument && !isTarget() &&
+      !accessPath.mayHavePointerDeref() &&
+      !(isPointer() && accessPath.steps.empty()))
+    return false;
   // Can be address *of* (not *in*) a pointer.
   if (attributes.test(Attribute::Pointer) && !isData())
     return true;
   // Can be address of a composite with a pointer component.
-  if (isRecordWithPointerComponent(val->getType()))
+  if (mayContainDescriptor(val->getType()))
     return true;
   return false;
 }
@@ -650,7 +674,8 @@ componentsAreDisjoint(const fir::AliasAnalysis::Source::PathStep &lhs,
 /// disjoint, while [Component("a"), Component("x")] and
 /// [Component("a"), Component("y")] are disjoint at their second steps.
 /// Paths crossing different storage-associated declarations are not
-/// compared.
+/// compared, nor are incomplete paths, whose missing steps may reach other
+/// objects.
 ///
 /// A PointerDeref or AllocDeref step reaches another object, whose type may
 /// be related to the type of the root variable (e.g. an allocatable
@@ -676,7 +701,8 @@ static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
                                     const fir::AliasAnalysis::Source &rhsSrc,
                                     GetParentTypeFn getParentType) {
   using PathStep = fir::AliasAnalysis::Source::PathStep;
-  if (lhsSrc.accessPath.storageDecl != rhsSrc.accessPath.storageDecl)
+  if (lhsSrc.accessPath.storageDecl != rhsSrc.accessPath.storageDecl ||
+      lhsSrc.accessPath.isIncomplete || rhsSrc.accessPath.isIncomplete)
     return false;
   llvm::ArrayRef<PathStep> lhsSteps = lhsSrc.accessPath.steps;
   llvm::ArrayRef<PathStep> rhsSteps = rhsSrc.accessPath.steps;
@@ -713,6 +739,33 @@ static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
     }
   }
   return false;
+}
+
+/// Return true if the descriptor addressed by \p descSrc may be part of the
+/// data addressed by \p dataSrc, which has the same origin value. The data is
+/// reached through the descriptor if its access path continues the path of the
+/// descriptor with a dereference. Such data contains the descriptor only if a
+/// pointer on the way may be associated with an object containing the
+/// descriptor: without a pointer, the data belongs to the allocatable the
+/// descriptor describes, and a whole local or global variable is not part of
+/// any object. Incomplete paths are not compared, since their missing steps
+/// are unknown.
+static bool descriptorMayBeInData(const fir::AliasAnalysis::Source &descSrc,
+                                  const fir::AliasAnalysis::Source &dataSrc) {
+  using PathStep = fir::AliasAnalysis::Source::PathStep;
+  using SourceKind = fir::AliasAnalysis::SourceKind;
+  if (descSrc.accessPath.isIncomplete || dataSrc.accessPath.isIncomplete)
+    return true;
+  llvm::ArrayRef<PathStep> descSteps = descSrc.accessPath.steps;
+  llvm::ArrayRef<PathStep> dataSteps = dataSrc.accessPath.steps;
+  if (dataSteps.size() <= descSteps.size() ||
+      dataSteps.take_front(descSteps.size()) != descSteps ||
+      dataSteps[descSteps.size()].kind == PathStep::Kind::Component)
+    return true;
+  if (!dataSrc.accessPath.mayHavePointerDeref())
+    return false;
+  return !descSteps.empty() || (descSrc.kind != SourceKind::Allocate &&
+                                descSrc.kind != SourceKind::Global);
 }
 
 /// Walk backward from \p val through FortranObjectViewOpInterface ops
@@ -862,7 +915,6 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     }
   }
 
-  bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
   LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";
              llvm::dbgs() << "  lhsSrc: " << lhsSrc << "\n";
@@ -873,8 +925,15 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   if (noAliasBasedOnType(lhs, rhs))
     return AliasResult::NoAlias;
 
-  // A null address aliases nothing. Same-value pairs already returned
-  // MustAlias above.
+  return aliasSources(std::move(lhsSrc), std::move(rhsSrc), lhs, rhs);
+}
+
+AliasResult AliasAnalysis::aliasSources(Source lhsSrc, Source rhsSrc,
+                                        mlir::Value lhs, mlir::Value rhs) {
+  bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
+
+  // A null address aliases nothing. alias() returns MustAlias for a pair of
+  // the same values before getting here.
   if (lhsSrc.kind == SourceKind::Null || rhsSrc.kind == SourceKind::Null) {
     LLVM_DEBUG(llvm::dbgs() << "  no alias: null address\n");
     return AliasResult::NoAlias;
@@ -896,8 +955,10 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // does not introduce cross-variable aliasing, so this check is skipped
   // (the normal same-origin logic handles that case).
   if (lhsSrc.origin.u != rhsSrc.origin.u &&
-      ((lhsSrc.accessPath.hasPointerDeref() && rhsSrc.isTargetOrPointer()) ||
-       (rhsSrc.accessPath.hasPointerDeref() && lhsSrc.isTargetOrPointer()))) {
+      ((lhsSrc.accessPath.mayHavePointerDeref() &&
+        rhsSrc.isTargetOrPointer()) ||
+       (rhsSrc.accessPath.mayHavePointerDeref() &&
+        lhsSrc.isTargetOrPointer()))) {
     LLVM_DEBUG(llvm::dbgs()
                << "  aliasing because pointer dereference may reach "
                << "target/pointer\n");
@@ -963,19 +1024,18 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     // can affect a load from the other, so the result should be MayAlias.  To
     // catch this case, we conservatively return MayAlias when one value is the
     // address of a composite, the other value is non-data, and they have the
-    // same origin value.
+    // same origin value.  The composite may be an array, and its address may be
+    // a descriptor value (see mayContainDescriptor).  Composites that cannot
+    // contain the descriptor are excluded (see descriptorMayBeInData).
     //
     // TODO: That logic does not check that the latter is actually a component
     // of the former, so it can return MayAlias when unnecessary.  For example,
     // they might both be addresses of components of a larger composite.
-    //
-    // FIXME: Actually, we should generalize from isRecordWithPointerComponent
-    // to any composite because a component with !isData() is not always a
-    // pointer.  However, Source::isRecordWithPointerComponent currently doesn't
-    // actually check for pointer components, so it's fine for now.
     if (lhsSrc.origin.u == rhsSrc.origin.u &&
-        ((isRecordWithPointerComponent(lhs.getType()) && !rhsSrc.isData()) ||
-         (isRecordWithPointerComponent(rhs.getType()) && !lhsSrc.isData()))) {
+        ((mayContainDescriptor(lhs.getType()) && !rhsSrc.isData() &&
+          descriptorMayBeInData(rhsSrc, lhsSrc)) ||
+         (mayContainDescriptor(rhs.getType()) && !lhsSrc.isData() &&
+          descriptorMayBeInData(lhsSrc, rhsSrc)))) {
       if (pathsDivergeAtComponent(lhsSrc, rhsSrc, getParentType)) {
         LLVM_DEBUG(llvm::dbgs()
                    << "  no alias: different components of same origin\n");
@@ -1078,8 +1138,9 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // The address of a pointer dummy arg (but not a pointer component of a dummy
   // arg) may alias the address of either (1) a non-local pointer or (2) thus a
   // non-local composite with a pointer component.  A non-local might be a
-  // global or another dummy arg.  The following is an example of the global
-  // composite case:
+  // global or another dummy arg, but not a part of a dummy arg with neither
+  // TARGET nor POINTER (see mayBeActualArgWithPtr).  The following is an
+  // example of the global composite case:
   //
   // module m
   //   type t
@@ -1147,6 +1208,79 @@ static bool isSavedLocal(const fir::AliasAnalysis::Source &src) {
   return false;
 }
 
+static bool isMainProgram(mlir::func::FuncOp func) {
+  return func.getSymName() == fir::NameUniquer::doProgramEntry();
+}
+
+/// Whether \p func is the function of the main program or of the procedure
+/// that owns the saved local variable whose global is named \p varName. The
+/// procedure is identified by the name of the function, or by its
+/// fir.internal_name if the function was renamed. The BLOCK construct of the
+/// variable, if any, does not matter.
+static bool isOwnerOf(mlir::func::FuncOp func, llvm::StringRef varName) {
+  auto [varKind, varParts] = fir::NameUniquer::deconstruct(varName);
+  if (varKind != fir::NameUniquer::NameKind::VARIABLE)
+    return false;
+  // The variables of the main program are named as if the main program was a
+  // procedure with an empty name.
+  if (isMainProgram(func))
+    return varParts.modules.empty() && varParts.procs.size() == 1 &&
+           varParts.procs.front().empty();
+  llvm::StringRef funcName = func.getSymName();
+  if (auto internalName = func->getAttrOfType<mlir::StringAttr>(
+          fir::getInternalFuncNameAttrName()))
+    funcName = internalName.getValue();
+  auto [funcKind, funcParts] = fir::NameUniquer::deconstruct(funcName);
+  if (funcKind != fir::NameUniquer::NameKind::PROCEDURE ||
+      varParts.modules != funcParts.modules ||
+      varParts.procs.size() != funcParts.procs.size() + 1)
+    return false;
+  return llvm::equal(funcParts.procs,
+                     llvm::ArrayRef(varParts.procs).drop_back()) &&
+         varParts.procs.back() == funcParts.name;
+}
+
+/// Whether \p call cannot access the saved local variable \p src, other than
+/// through its arguments. All the instances of the procedure that owns the
+/// variable share it, so this requires that the call cannot invoke that
+/// procedure. Returns false if this cannot be proven.
+static bool callCannotReachSavedLocal(fir::CallOp call,
+                                      const fir::AliasAnalysis::Source &src) {
+  // A pure procedure only references pure procedures, and a pure procedure
+  // has no saved local variables (F2023 C1598, C15105).
+  if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::pure>(
+          call.getOperation()))
+    return true;
+  // A NON_RECURSIVE procedure cannot invoke itself, directly or indirectly
+  // (F2023 15.6.2.1), so a call in the func.func lowered from the procedure
+  // cannot invoke it. A call in another func.func that the procedure was
+  // inlined into may invoke it. For example, after work is inlined into
+  // caller, the call to g may invoke work and modify x, because no instance
+  // of work is active when g is called:
+  //
+  //   non_recursive subroutine work()
+  //     integer, save :: x = 0
+  //     x = x + 1
+  //   end subroutine
+  //   subroutine caller()
+  //     call work()  ! inlined: x = x + 1
+  //     call g()     ! may call work()
+  //     call work()  ! inlined: x = x + 1
+  //   end subroutine
+  //
+  // The main program cannot be referenced (F2023 14.1), so a call in its
+  // func.func cannot invoke it either.
+  auto func = mlir::dyn_cast_or_null<mlir::func::FuncOp>(
+      call->getParentOfType<mlir::FunctionOpInterface>().getOperation());
+  if (!func ||
+      (!isMainProgram(func) &&
+       !fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::non_recursive>(
+           func.getOperation())))
+    return false;
+  auto symRef = llvm::dyn_cast<mlir::SymbolRefAttr>(src.origin.u);
+  return symRef && isOwnerOf(func, symRef.getLeafReference().getValue());
+}
+
 bool AliasAnalysis::isCallToFortranUserProcedure(Operation *op) {
   fir::CallOp call = dyn_cast<fir::CallOp>(op);
   if (!call)
@@ -1174,6 +1308,45 @@ bool AliasAnalysis::isCallToFortranUserProcedure(Operation *op) {
           return true;
   }
   return false;
+}
+
+bool AliasAnalysis::mayAccessThroughArgument(mlir::Value arg, mlir::Value var,
+                                             const Source &varSrc) {
+  // getSource() does not see that a pointer reachable from arg, e.g. a
+  // pointer component, may be associated with var.
+  if (varSrc.isTargetOrPointer())
+    return true;
+  if (!alias(arg, var).isNo())
+    return true;
+  if (!fir::isBoxAddress(arg.getType()))
+    return false;
+  // The callee may also access the data that the descriptor describes, e.g.
+  // through an allocatable or pointer dummy. Build the source of this data as
+  // getSource() does for a fir.box_addr of a fir.load of arg: the source of
+  // the descriptor followed by a dereference. Compare it with the source of
+  // var through aliasSources(): alias() would decide from the type of arg, a
+  // descriptor address, that it does not alias data.
+  Source dataSrc = getSource(arg, /*getLastInstantiationPoint=*/false,
+                             /*collectScopedOrigins=*/false);
+  auto boxTy = mlir::cast<fir::BaseBoxType>(fir::unwrapRefType(arg.getType()));
+  bool isPointerBox = mlir::isa<fir::PointerType>(boxTy.getEleTy());
+  if (isPointerBox)
+    dataSrc.attributes.set(Attribute::Pointer);
+  Source::PathStep derefStep;
+  derefStep.kind = isPointerBox ? Source::PathStep::Kind::PointerDeref
+                                : Source::PathStep::Kind::AllocDeref;
+  dataSrc.accessPath.steps.push_back(derefStep);
+  dataSrc.origin.isData = true;
+  // Compare with a source of var built like dataSrc.
+  Source fullVarSrc = getSource(var, /*getLastInstantiationPoint=*/false,
+                                /*collectScopedOrigins=*/false);
+  LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::mayAccessThroughArgument\n";
+             llvm::dbgs() << "  arg: " << arg << "\n";
+             llvm::dbgs() << "  described data: " << dataSrc << "\n";
+             llvm::dbgs() << "  var: " << var << "\n";
+             llvm::dbgs() << "  varSrc: " << fullVarSrc << "\n";);
+  return !aliasSources(std::move(dataSrc), std::move(fullVarSrc), arg, var)
+              .isNo();
 }
 
 ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
@@ -1222,22 +1395,24 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   if (varSrc.kind == fir::AliasAnalysis::SourceKind::HostAssoc ||
       varSrc.isCapturedInInternalProcedure)
     return ModRefResult::getModAndRef();
-  // At that stage, it has been ruled out that local (including the saved ones)
-  // and dummy cannot be indirectly accessed in the call.
+  // At that stage, it has been ruled out that locals and dummies can be
+  // accessed indirectly in the call, except that a saved local may be
+  // accessed by another instance of its procedure.
   if (varSrc.kind != fir::AliasAnalysis::SourceKind::Allocate &&
       varSrc.kind != fir::AliasAnalysis::SourceKind::Argument &&
       !varSrc.isDummyArgument()) {
     if (varSrc.kind != fir::AliasAnalysis::SourceKind::Global ||
-        !isSavedLocal(varSrc))
+        !isSavedLocal(varSrc) || !callCannotReachSavedLocal(call, varSrc))
       return ModRefResult::getModAndRef();
   }
-  // 2. Check if the variable is passed via the arguments. A dummy with a
-  // declared intent is a read, a write, or both. intent(out) is a write for
-  // a trivial non-pointer, non-allocatable dummy, and a read and a write
-  // otherwise. An argument with no visible intent stays ModAndRef. The
-  // callee is resolved through the cached symbol table. Intent is a
-  // signature attribute, so a declaration is enough and the callee body is
-  // not inspected.
+  // 2. Check if the variable is passed via the arguments. An argument that
+  // is the address of a descriptor also passes the data that the descriptor
+  // describes. A dummy with a declared intent is a read, a write, or both.
+  // intent(out) is a write for a trivial non-pointer, non-allocatable dummy,
+  // and a read and a write otherwise. An argument with no visible intent
+  // stays ModAndRef. The callee is resolved through the cached symbol table.
+  // Intent is a signature attribute, so a declaration is enough and the
+  // callee body is not inspected.
   mlir::func::FuncOp callee;
   if (std::optional<mlir::SymbolRefAttr> calleeAttr = call.getCallee()) {
     if (const mlir::SymbolTable *symTab = getNearestSymbolTable(call))
@@ -1249,7 +1424,8 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
       callee && args.size() == callee.getNumArguments();
   ModRefResult modRef = ModRefResult::getNoModRef();
   for (auto [idx, arg] : llvm::enumerate(args)) {
-    if (!fir::conformsWithPassByRef(arg.getType()) || alias(arg, var).isNo())
+    if (!fir::conformsWithPassByRef(arg.getType()) ||
+        !mayAccessThroughArgument(arg, var, varSrc))
       continue;
     if (!intentsAvailable)
       return ModRefResult::getModAndRef();
@@ -1831,6 +2007,7 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
               accessPath.steps.push_back(pathSteps[i]);
             accessPath.isApproximate =
                 boxSrc.accessPath.isApproximate || approximateSource;
+            accessPath.isIncomplete = boxSrc.accessPath.isIncomplete;
             setStorageDecl(boxSrc.accessPath.storageDecl);
             accessPath.storageDecl = storageDecl;
             accessPathFinalized = true;

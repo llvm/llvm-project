@@ -7,7 +7,6 @@
 
 ---
 name: hazard_wave_barrier
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -31,7 +30,6 @@ body: |
 
 ---
 name: hazard-masked-unreachable
-tracksRegLiveness: true
 body: |
   ; GCN-LABEL: name: hazard-masked-unreachable
   ; GCN: bb.0:
@@ -59,7 +57,6 @@ body: |
 
 ---
 name: hazard_sched_barrier
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0

@@ -810,9 +810,8 @@ collectPromiseAliasesBeforeCB(const DominatorTree &DT,
   Worklist.emplace_back(PA, APInt(IdxWidth, 0));
   while (!Worklist.empty()) {
     auto [Ptr, Offset] = Worklist.pop_back_val();
-    for (User *U : Ptr->users()) {
-      auto *I = dyn_cast<Instruction>(U);
-      if (!I || DT.dominates(Shape.CoroBegin, I))
+    for (Instruction *I : Ptr->users()) {
+      if (DT.dominates(Shape.CoroBegin, I))
         continue;
       APInt NewOffset = Offset;
       if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
@@ -1234,8 +1233,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       auto *G = createGEPToFramePointer(FrameData, Builder, Shape, Alloca);
 
       // Remove any lifetime intrinsics, now that these are no longer allocas.
-      for (User *U : make_early_inc_range(Alloca->users())) {
-        auto *I = cast<Instruction>(U);
+      for (Instruction *I : make_early_inc_range(Alloca->users())) {
         if (I->isLifetimeStartOrEnd())
           I->eraseFromParent();
       }
@@ -1259,8 +1257,7 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   for (const auto &A : FrameData.Allocas) {
     AllocaInst *Alloca = A.Alloca;
     UsersToUpdate.clear();
-    for (User *U : make_early_inc_range(Alloca->users())) {
-      auto *I = cast<Instruction>(U);
+    for (Instruction *I : make_early_inc_range(Alloca->users())) {
       // It is meaningless to retain the lifetime intrinsics refer for the
       // member of coroutine frames and the meaningless lifetime intrinsics
       // are possible to block further optimizations.
@@ -1601,7 +1598,7 @@ static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
     auto Alloca = Builder.CreateAlloca(Builder.getInt8Ty(), AI->getSize());
     Alloca->setAlignment(AI->getAlignment());
 
-    for (auto *U : AI->users()) {
+    for (Instruction *U : AI->users()) {
       // Replace gets with the allocation.
       if (isa<CoroAllocaGetInst>(U)) {
         U->replaceAllUsesWith(Alloca);
@@ -1616,7 +1613,7 @@ static void lowerLocalAllocas(ArrayRef<CoroAllocaAllocInst*> LocalAllocas,
           Builder.CreateStackRestore(StackSave);
         }
       }
-      DeadInsts.push_back(cast<Instruction>(U));
+      DeadInsts.push_back(U);
     }
 
     DeadInsts.push_back(AI);
@@ -1832,8 +1829,7 @@ static void sinkLifetimeStartMarkers(Function &F, coro::Shape &Shape,
         return false;
       };
 
-      for (User *U : AI->users()) {
-        Instruction *UI = cast<Instruction>(U);
+      for (Instruction *UI : AI->users()) {
         // For all users except lifetime.start markers, if they are all
         // dominated by one of the basic blocks and do not cross
         // suspend points as well, then there is no need to spill the

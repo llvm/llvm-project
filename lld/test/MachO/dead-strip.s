@@ -176,8 +176,8 @@
 # STRIPDYLIB-NEXT:  *UND* _ref_undef_fun
 # STRIPDYLIB:      Bind table:
 # STRIPDYLIB:      Lazy bind table:
-# STRIPDYLIB:       __DATA   __la_symbol_ptr {{.*}} flat-namespace _ref_undef_fun
 # STRIPDYLIB:       __DATA   __la_symbol_ptr {{.*}} dylib _ref_dylib_fun
+# STRIPDYLIB:       __DATA   __la_symbol_ptr {{.*}} flat-namespace _ref_undef_fun
 # STRIPDYLIB:      Weak bind table:
 ## Stubs smoke check: There should be two stubs entries, not four, but we
 ## don't verify that they belong to _ref_undef_fun and _ref_dylib_fun.

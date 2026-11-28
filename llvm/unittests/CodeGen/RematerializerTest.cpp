@@ -117,7 +117,6 @@ public:
     StringRef MIRString = (Twine(R"MIR(
 ---
 name: func
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -491,17 +490,17 @@ TEST_F(RematerializerTest, SubRegRematSupport) {
     undef %2.sub0:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
 
     undef %34.sub0:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
-    
+
     undef %56.sub0:sreg_64 = S_MOV_B32 5
-    %56.sub1:sreg_64 = S_MOV_B32 6, implicit-def $m0    
-    
+    %56.sub1:sreg_64 = S_MOV_B32 6, implicit-def $m0
+
     undef %78.sub0:sreg_64 = S_MOV_B32 7
     S_NOP 0, implicit %78.sub0
     %78.sub1:sreg_64 = S_MOV_B32 8
-    
+
     undef %99.sub0:sreg_64 = S_MOV_B32 9
     %99.sub1:sreg_64 = S_MOV_B32 %99.sub0
-    
+
   bb.1:
     %34.sub1:vreg_64_align2 = nofpexcept V_CVT_I32_F64_e32 4, implicit $exec, implicit $mode
 
@@ -545,13 +544,13 @@ TEST_F(RematerializerTest, SubRegUserTransfer) {
   StringRef MIRBody = R"MIR(
   bb.0:
     undef %01.sub0:sreg_64 = S_MOV_B32 0
-    %01.sub1:sreg_64 = S_MOV_B32 1    
-    
+    %01.sub1:sreg_64 = S_MOV_B32 1
+
   bb.1:
     undef %23.sub0:sreg_64 = S_MOV_B32 %01.sub0
     %23.sub1:sreg_64 = S_MOV_B32 %01.sub1
     S_NOP 0, implicit %23
-  
+
     S_ENDPGM 0
 )MIR";
   rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
@@ -606,9 +605,9 @@ TEST_F(RematerializerTest, SubRegRollback) {
   bb.0:
     undef %01.sub0:sreg_64 = S_MOV_B32 0
     %unremat0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
-    %01.sub1:sreg_64 = S_MOV_B32 1    
+    %01.sub1:sreg_64 = S_MOV_B32 1
     %unremat1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
-  
+
   bb.1:
     undef %23.sub0:sreg_64 = S_MOV_B32 2
     %23.sub1:sreg_64 = S_MOV_B32 3
@@ -621,7 +620,7 @@ TEST_F(RematerializerTest, SubRegRollback) {
 
   bb.3:
     S_NOP 0, implicit %01, implicit %23, implicit %45, implicit %67
-    S_NOP 0, implicit %unremat0, implicit %unremat1 
+    S_NOP 0, implicit %unremat0, implicit %unremat1
     S_ENDPGM 0
 )MIR";
   rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
@@ -784,7 +783,7 @@ TEST_F(RematerializerTest, SplitSubRegDeadDef) {
     undef %0.sub0:vreg_64 = IMPLICIT_DEF
     %0.sub1:vreg_64 = IMPLICIT_DEF
     %1:vgpr_32 = V_ADD_U32_e32 %0.sub0, %0.sub0, implicit $exec
-    
+
   bb.1:
     S_NOP 0, implicit %1
     S_ENDPGM 0
@@ -833,7 +832,7 @@ TEST_F(RematerializerTest, RemoveEmptySubRanges) {
   bb.0:
     undef %fullUndefUse.sub0:vreg_64 = IMPLICIT_DEF
     undef %partialUndefUse.sub0_sub1_sub2:vreg_128 = IMPLICIT_DEF
-    
+
   bb.1:
     S_NOP 0, implicit %fullUndefUse.sub1
     S_NOP 0, implicit %partialUndefUse.sub2_sub3
@@ -866,13 +865,13 @@ TEST_F(RematerializerTest, DeadDefCascadeDeletion) {
 
     undef %multidefDontDie.sub0:vreg_64 = IMPLICIT_DEF
     %multidefDontDie.sub1:vreg_64 = IMPLICIT_DEF
-    
+
   bb.1:
     %cst2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
     undef %multidef.sub0:vreg_64 = IMPLICIT_DEF
     %multidef.sub1:vreg_64 = V_ADD_U32_e32 %addDie, %multidefDontDie.sub1, implicit $exec
     %add:vgpr_32 = V_ADD_U32_e32 %multidef.sub0, %multidefDontDie.sub0, implicit $exec
-    
+
   bb.2:
     S_NOP 0, implicit %cst2, implicit %add
     S_ENDPGM 0
@@ -1095,7 +1094,7 @@ TEST_F(RematerializerTest, RollbackNextPosIsRemat) {
   bb.0:
     %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
     %1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
-    
+
   bb.1:
     %2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
     S_NOP 0, implicit %0

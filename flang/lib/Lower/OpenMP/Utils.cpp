@@ -1530,6 +1530,8 @@ void collectEnclosingConstructTraits(
   // used for variant selection.
   bool skippedDispatch = false;
   for (; op; op = op->getParentOp()) {
+    if (mlir::isa<mlir::omp::SimdOp>(op))
+      constructTraits.push_back(llvm::omp::TraitProperty::construct_simd_simd);
     if (mlir::isa<mlir::omp::WsloopOp>(op))
       constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
     if (mlir::isa<mlir::omp::DispatchOp>(op)) {

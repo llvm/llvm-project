@@ -15,7 +15,7 @@ cir.func private @Other(!s32i) -> !s32i
 // }
 cir.func @test_musttail_skips_stack_restore(%arg0: !s32i) -> !s32i {
   %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
-  %1 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+  %1 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
   %2 = cir.alloca "saved_stack" align(8) : !cir.ptr<!cir.ptr<!u8i>>
   cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
   %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
@@ -133,7 +133,7 @@ cir.func @test_musttail_void(%arg0: !s32i) {
 // }
 cir.func @test_musttail_beside_normal_return(%arg0: !s32i) -> !s32i {
   %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
-  %1 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+  %1 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
   %2 = cir.alloca "saved_stack" align(8) : !cir.ptr<!cir.ptr<!u8i>>
   cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
   %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i

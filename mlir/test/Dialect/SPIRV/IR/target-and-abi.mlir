@@ -42,6 +42,20 @@ func.func @spv_entry_point() attributes {
 // -----
 
 func.func @spv_entry_point() attributes {
+  // expected-error @+1 {{expected 3 workgroup size values, but got 2}}
+  spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 1]>
+} { return }
+
+// -----
+
+func.func @spv_entry_point() attributes {
+  // expected-error @+1 {{expected positive workgroup size values}}
+  spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 0, 1]>
+} { return }
+
+// -----
+
+func.func @spv_entry_point() attributes {
   // CHECK: {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [64, 1, 1]>}
   spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [64, 1, 1]>
 } { return }

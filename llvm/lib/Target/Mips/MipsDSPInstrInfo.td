@@ -1310,6 +1310,8 @@ def : BitconvertPat<f32, v2i16, FGR32, DSPR>;
 def : BitconvertPat<f32, v4i8, FGR32, DSPR>;
 def : BitconvertPat<v2i16, f32, DSPR, FGR32>;
 def : BitconvertPat<v4i8, f32, DSPR, FGR32>;
+def : BitconvertPat<v2i16, v4i8, DSPR, DSPR>;
+def : BitconvertPat<v4i8, v2i16, DSPR, DSPR>;
 
 def : DSPPat<(v2i16 (load (addr MemBase:$a_base, iPTR:$a_offset))),
              (v2i16 (COPY_TO_REGCLASS (LW $a_base, $a_offset), DSPR))>;
