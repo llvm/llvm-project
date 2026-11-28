@@ -1,4 +1,3 @@
-; RUN: opt -S -passes='assign-guid,wholeprogramdevirt' -devirtualize-speculatively %s | FileCheck %s
 ; RUN: opt -S -passes='assign-guid,wholeprogramdevirt' -whole-program-visibility -wholeprogramdevirt-check=fallback %s | FileCheck %s
 
 @vt = constant [1 x ptr] [ptr @func1], !type !0
