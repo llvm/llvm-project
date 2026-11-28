@@ -16,6 +16,7 @@
 
 #include "data-to-inits.h"
 #include "pointer-assignment.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/fold-designator.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Semantics/tools.h"
@@ -719,8 +720,11 @@ static void IncorporateExplicitInitialization(
       }
     } else if (auto *object{mutableSymbol.detailsIf<ObjectEntityDetails>()}) {
       if (!IsNamedConstant(mutableSymbol) && object->init()) {
-        auto status{combined.image.Add(
-            offset, mutableSymbol.size(), *object->init(), foldingContext)};
+        // The combined storage image needs one value per element.
+        auto expanded{evaluate::ExpandScalarInitializer(
+            mutableSymbol, *object->init(), foldingContext)};
+        auto status{combined.image.Add(offset, mutableSymbol.size(),
+            expanded ? *expanded : *object->init(), foldingContext)};
         combined.NoteInitializedRange(offset, mutableSymbol.size(),
             status == evaluate::InitialImage::OkNoChange);
         if (removeOriginalInits) {

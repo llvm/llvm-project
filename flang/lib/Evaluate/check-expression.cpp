@@ -552,6 +552,45 @@ public:
   }
 };
 
+// Numeric and logical array variables keep a scalar initializer unexpanded.
+static bool KeepScalarInitializer(
+    const Symbol &symbol, const Expr<SomeType> &init) {
+  if (IsNamedConstant(symbol) ||
+      !symbol.has<semantics::ObjectEntityDetails>() ||
+      symbol.owner().IsDerivedType() || IsCoarray(symbol)) {
+    return false;
+  }
+  if (auto type{init.GetType()}) {
+    switch (type->category()) {
+    case TypeCategory::Integer:
+    case TypeCategory::Real:
+    case TypeCategory::Complex:
+    case TypeCategory::Logical:
+      return true;
+    default:
+      break;
+    }
+  }
+  return false;
+}
+
+std::optional<Expr<SomeType>> ExpandScalarInitializer(
+    const Symbol &symbol, const Expr<SomeType> &init, FoldingContext &context) {
+  if (init.Rank() != 0 || symbol.Rank() == 0) {
+    return std::nullopt;
+  }
+  if (auto symTS{
+          characteristics::TypeAndShape::Characterize(symbol, context)}) {
+    if (auto extents{AsConstantExtents(context, symTS->shape())}) {
+      return ScalarConstantExpander{std::move(*extents),
+          AsConstantExtents(
+              context, GetRawLowerBounds(context, NamedEntity{symbol}))}
+          .Expand(Expr<SomeType>{init});
+    }
+  }
+  return std::nullopt;
+}
+
 // Converts, folds, and then checks type, rank, and shape of an
 // initialization expression for a named constant, a non-pointer
 // variable static initialization, a component default initializer,
@@ -603,6 +642,9 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
             // symbol and constant are both scalars
             return {std::move(folded)};
           } else if (folded.Rank() == 0 && symRank > 0) {
+            if (KeepScalarInitializer(symbol, folded)) {
+              return {std::move(folded)};
+            }
             // expand the scalar constant to an array
             return ScalarConstantExpander{std::move(*extents),
                 AsConstantExtents(
