@@ -2975,9 +2975,25 @@ static bool CheckCompatibleArguments(
 static constexpr int cudaInfMatchingValue{common::numeric_limits<int>::max()};
 
 struct CudaMatchingDistance {
+  // One distance per present actual argument, in the dummy argument order of
+  // the specific, including the passed object (at the position of its dummy).
   std::vector<int> perArg;
+  // The position in perArg of the passed object's distance (a PASS binding).
+  std::optional<std::size_t> passedObjectIndex;
   bool isInfinite{false};
 };
+
+// The distances of a PASS candidate without its passed object, comparable with
+// those of a NOPASS candidate.
+static std::vector<int> EffectiveDistances(const CudaMatchingDistance &x) {
+  std::vector<int> result;
+  for (std::size_t i{0}; i < x.perArg.size(); ++i) {
+    if (!x.passedObjectIndex || *x.passedObjectIndex != i) {
+      result.push_back(x.perArg[i]);
+    }
+  }
+  return result;
+}
 
 // Compare CUDA matching distances using lexicographical comparison of
 // per-argument distances. This is needed to differentiate procedures that would
@@ -2991,6 +3007,16 @@ static int CompareCudaMatchingDistance(
   }
   if (x.isInfinite) {
     return 0;
+  }
+  if (x.passedObjectIndex.has_value() != y.passedObjectIndex.has_value()) {
+    // A PASS and a NOPASS candidate: their distances have different lengths.
+    // Prefer the PASS one, as nvfortran does, unless the two lists of
+    // distances without the passed object (each in the dummy argument order of
+    // its own specific) are equal.
+    if (EffectiveDistances(x) == EffectiveDistances(y)) {
+      return 0;
+    }
+    return x.passedObjectIndex ? -1 : 1;
   }
   CHECK(x.perArg.size() == y.perArg.size());
   if (std::lexicographical_compare(
@@ -3211,6 +3237,9 @@ static CudaMatchingDistance ComputeCudaMatchingDistance(
     if (d == cudaInfMatchingValue) {
       distance.isInfinite = true;
       return distance;
+    }
+    if (actual->isPassedObject()) {
+      distance.passedObjectIndex = distance.perArg.size();
     }
     distance.perArg.push_back(d);
   }

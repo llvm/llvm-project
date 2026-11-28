@@ -1,0 +1,176 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+! Examples that reviewers gave on llvm/llvm-project#239830 and on the related PRs (#244377 and
+! #244662), one module each, with what this PR reports for each. A comment that says FIXME marks a
+! result that differs from flang 22.1.2 and is addressed or discussed elsewhere. Only the
+! diagnostics are checked here; the selected specific is recorded in the comment of each module.
+! The examples of the first review (2026-11-15) are covered by cuf-generic-pass-nopass.cuf (case 1)
+! and cuf-generic-pass-ranking.cuf (the last dummy, and the operator); the omitted optional
+! argument before the passed object of the second review is in cuf-generic-pass-nopass-tie.cuf.
+
+! Eugene on llvm#239830, 2026-11-20: keyword call g(p=null(), n=mn) and positional h(null(), mn); sa/sb list the dummies in different orders, sc/sd in the same order.
+! Result: g resolves to sa, h is ambiguous (22.1.2: both ambiguous).
+module review_2_1
+  type :: t
+  contains
+    procedure :: a => sa
+    procedure, nopass :: b => sb
+    generic :: g => a, b
+    procedure :: c => sc
+    procedure, nopass :: d => sd
+    generic :: h => c, d
+  end type
+contains
+  subroutine sa(x, p, n)
+    class(t) :: x
+    integer, pointer :: p
+    integer, device :: n
+  end subroutine
+  subroutine sb(n, p)
+    integer, device :: n
+    real, pointer :: p
+  end subroutine
+  subroutine sc(x, p, n)
+    class(t) :: x
+    integer, pointer :: p
+    integer, device :: n
+  end subroutine
+  subroutine sd(p, n)
+    real, pointer :: p
+    integer, device :: n
+  end subroutine
+  subroutine user(v)
+    type(t) :: v
+    integer, managed :: mn
+    call v%g(p=null(), n=mn)
+    !ERROR: The actual arguments to the generic procedure 'h' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call v%h(null(), mn)
+  end subroutine
+end module review_2_1
+
+! Eugene on llvm#239830, 2026-11-20: the distances read [2, 3] in each specific although each actual differs.
+! Result: ambiguous.
+module review_2_2
+  type :: t
+  contains
+    procedure :: a => sa
+    procedure, nopass :: b => sb
+    generic :: g => a, b
+  end type
+contains
+  subroutine sa(x, a, b)
+    class(t) :: x
+    integer, device :: a
+    real :: b
+  end subroutine
+  subroutine sb(b, a)
+    real, device :: b
+    integer :: a
+  end subroutine
+  subroutine user(v)
+    type(t) :: v
+    integer, managed :: ia
+    real, managed :: rb
+    !ERROR: The actual arguments to the generic procedure 'g' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call v%g(a=ia, b=rb)
+  end subroutine
+end module review_2_2
+
+! Eugene on llvm#239830, 2026-11-20: three specifics in six orders; sa/sb tie and sc is worse. Flang 22.1.2 selects sb in all six; this PR is order dependent (llvm#244662 makes it consistent).
+! Result: g1,g2,g3,g5 ambiguous; g4 and g6 resolve to sa (FIXME: order dependent).
+module review_2_3
+  type t
+  contains
+    procedure :: sa, sc
+    procedure, nopass :: sb
+    generic :: g1 => sa, sb, sc
+    generic :: g2 => sa, sc, sb
+    generic :: g3 => sb, sa, sc
+    generic :: g4 => sb, sc, sa
+    generic :: g5 => sc, sa, sb
+    generic :: g6 => sc, sb, sa
+  end type
+contains
+  subroutine sa(this, x, y)
+    class(t) :: this
+    type(*) :: x(*)
+    real, device :: y(:)
+  end subroutine
+  subroutine sb(x, y)
+    real :: x(:, :)
+    real, device :: y(:)
+  end subroutine
+  subroutine sc(this, x, y)
+    class(t) :: this
+    type(*) :: x(*)
+    real :: y(:)
+  end subroutine
+  subroutine test(v, m, w)
+    type(t) :: v
+    real, managed :: m(4, 4), w(4)
+    !ERROR: The actual arguments to the generic procedure 'g1' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call v%g1(m, w)
+    !ERROR: The actual arguments to the generic procedure 'g2' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call v%g2(m, w)
+    !ERROR: The actual arguments to the generic procedure 'g3' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call v%g3(m, w)
+    call v%g4(m, w)
+    !ERROR: The actual arguments to the generic procedure 'g5' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call v%g5(m, w)
+    call v%g6(m, w)
+  end subroutine
+end module review_2_3
+
+! Eugene on llvm#239830, 2026-11-20: n1 (exact match) loses to n2 because it is compared with the elemental PASS el (fixed by llvm#244377). Flang 22.1.2 selects n1.
+! Result: resolves to n2 (FIXME: n1 is the better match; llvm#244377).
+module review_2_4
+  type :: t
+  contains
+    procedure, nopass :: n1
+    procedure, nopass :: n2
+    procedure :: el
+    generic :: g4 => n2, el, n1
+  end type
+contains
+  subroutine n1(x)
+    integer, managed :: x(:)
+  end subroutine
+  subroutine n2(x)
+    integer :: x(:)
+  end subroutine
+  elemental subroutine el(this, x)
+    class(t), intent(in) :: this
+    integer, intent(in) :: x
+  end subroutine
+  subroutine user(v)
+    type(t) :: v
+    integer, managed :: y(2)
+    call v%g4(y)
+  end subroutine
+end module review_2_4
+
+! clementval on llvm#244662, 2026-11-20: an elemental PASS specific and a non-elemental NOPASS specific are both viable.
+! Result: resolves to n; main resolves it too, and it must not abort.
+module review_3
+  type t
+  contains
+    procedure :: e
+    procedure, nopass :: n
+    generic :: g => e, n
+  end type
+contains
+  pure elemental subroutine e(self, x)
+    class(t), intent(in) :: self
+    integer, intent(in) :: x
+  end subroutine
+
+  subroutine n(x)
+    integer :: x(:)
+  end subroutine
+
+  subroutine test(obj, x)
+    type(t) :: obj
+    integer :: x(2)
+    call obj%g(x)
+  end subroutine
+end module review_3

@@ -1,0 +1,85 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+! Calls of a generic that match several specifics with equal distances without a
+! bare NULL() or an implicit interface. The distances are compared in the dummy
+! argument order of each specific, so these calls tie even though a smaller total
+! (or a better argument) exists. Specifics that differ only by CUDA data
+! attributes are an extension; the standard does not distinguish them.
+
+! s1 and s2 list the same dummies in a different order, so their distances are
+! [0,2] and [0,2] for two MANAGED actuals, whether the actuals are positional or
+! keywords written in either order.
+module reordered_dummies
+  interface g
+    module procedure s1, s2
+  end interface
+contains
+  subroutine s1(a, b)
+    integer, managed :: a
+    integer, device :: b
+  end subroutine
+  subroutine s2(b, a)
+    integer, managed :: b
+    integer, device :: a
+  end subroutine
+  subroutine user()
+    integer, managed :: ma, mb
+    !ERROR: The actual arguments to the generic procedure 'g' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call g(ma, mb)
+    !ERROR: The actual arguments to the generic procedure 'g' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call g(b=mb, a=ma)
+  end subroutine
+end module
+
+! The passed object of one specific is compared with an explicit argument of the
+! other: the distances are [2,0] and [2,0] for a MANAGED object and a MANAGED
+! argument.
+module passed_object_position
+  type :: t
+  contains
+    procedure :: object_first
+    procedure, pass(this) :: object_last
+    generic :: g => object_first, object_last
+  end type
+contains
+  subroutine object_first(this, x)
+    class(t), device :: this
+    integer, managed :: x
+  end subroutine
+  subroutine object_last(x, this)
+    integer, device :: x
+    class(t), managed :: this
+  end subroutine
+  subroutine user(obj, x)
+    type(t), managed :: obj
+    integer, managed :: x
+    !ERROR: The actual arguments to the generic procedure 'g' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call obj%g(x)
+  end subroutine
+end module
+
+! s1 and s2 tie at [0,2] and s3 has a smaller total, [1,0], but a larger first
+! distance, so the tie is not resolved in favor of s3.
+module tie_hides_smaller_total
+  interface g
+    module procedure s1, s2, s3
+  end interface
+contains
+  subroutine s1(a, b)
+    integer, managed :: a
+    integer, device :: b
+  end subroutine
+  subroutine s2(b, a)
+    integer, managed :: b
+    integer, device :: a
+  end subroutine
+  subroutine s3(a, b)
+    integer, unified :: a
+    integer, managed :: b
+  end subroutine
+  subroutine user()
+    integer, managed :: ma, mb
+    !ERROR: The actual arguments to the generic procedure 'g' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call g(a=ma, b=mb)
+  end subroutine
+end module

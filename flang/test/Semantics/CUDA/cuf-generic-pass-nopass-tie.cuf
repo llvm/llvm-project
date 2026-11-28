@@ -1,0 +1,92 @@
+! RUN: not bbc -emit-hlfir -fcuda %s -o /dev/null 2>&1 | FileCheck %s
+! RUN: not bbc -emit-hlfir -fcuda -gpu=unified %s -o /dev/null 2>&1 | FileCheck %s
+
+! A PASS and a NOPASS candidate whose lists of distances, without the passed
+! object and each in the dummy argument order of its own specific, are equal
+! cannot be told apart.
+
+! Under -gpu=unified an unattributed host variable, such as the passed object
+! here, has distance 3 from a host dummy instead of 0, so the tie must not be
+! recognized by distances that are all zero.
+module bare_null
+  type :: t
+  contains
+    procedure :: a => sa
+    procedure, nopass :: b => sb
+    generic :: g => a, b
+  end type
+contains
+  subroutine sa(x, p)
+    class(t) :: x
+    integer, pointer :: p
+  end subroutine
+  subroutine sb(p)
+    real, pointer :: p
+  end subroutine
+  subroutine user(v)
+    type(t) :: v
+    ! CHECK: error: The actual arguments to the generic procedure 'g' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call v%g(null())
+  end subroutine
+end module
+
+! sa and sb tie, with other arguments at distances [0,0], and sc is worse, [0,2].
+! The tie is reported whether the worse candidate is declared first or last.
+module tie_next_to_worse
+  type :: t
+  contains
+    procedure :: a => sa
+    procedure, nopass :: b => sb
+    procedure, nopass :: c => sc
+    generic :: g => a, b, c
+    generic :: h => c, a, b
+  end type
+contains
+  subroutine sa(x, p, n)
+    class(t) :: x
+    integer, pointer :: p
+    integer, managed :: n
+  end subroutine
+  subroutine sb(p, n)
+    real, pointer :: p
+    integer, managed :: n
+  end subroutine
+  subroutine sc(p, n)
+    real, pointer :: p
+    integer, device :: n
+  end subroutine
+  subroutine user(v)
+    type(t) :: v
+    integer, managed :: mn
+    ! CHECK: error: The actual arguments to the generic procedure 'g' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call v%g(null(), mn)
+    ! CHECK: error: The actual arguments to the generic procedure 'h' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call v%h(null(), mn)
+  end subroutine
+end module
+
+! An omitted optional argument comes before the passed object, which is then the
+! second present actual although it is the third dummy. The call is still a tie
+! with the NOPASS candidate, which has no passed object.
+module omitted_optional
+  type :: t
+  contains
+    procedure, pass(this) :: a
+    procedure, nopass :: b
+    generic :: g => a, b
+  end type
+contains
+  subroutine a(unused, p, this)
+    real, optional :: unused
+    integer, pointer :: p
+    class(t) :: this
+  end subroutine
+  subroutine b(p)
+    real, pointer :: p
+  end subroutine
+  subroutine test(v)
+    type(t) :: v
+    ! CHECK: error: The actual arguments to the generic procedure 'g' matched multiple specific procedures, perhaps due to use of NULL() without MOLD= or an actual procedure with an implicit interface
+    call v%g(p=null())
+  end subroutine
+end module
