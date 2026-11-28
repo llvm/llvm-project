@@ -17,6 +17,15 @@
 // RUN: cat %t.clean.diff %t.diff | %clang_tidy_diff -checks=-*,modernize-use-override -j 1 -- -std=c++11 2>&1 | FileCheck %s --check-prefix=CHECK-NOBLANK
 // CHECK-NOBLANK: Running clang-tidy in 1 threads...
 // CHECK-NOBLANK-NEXT: :8: warning: annotate this
+
+// RUN: echo 'UseColor: true' > %t.dir/color.yaml
+// RUN: %clang_tidy_diff -checks=-*,modernize-use-override -config-file=%t.dir/color.yaml -- -std=c++11 < %t.diff | FileCheck %s --check-prefix=CHECK-COLOR
+// RUN: %clang_tidy_diff -checks=-*,modernize-use-override -config-file=%t.dir/color.yaml -use-color=false -- -std=c++11 < %t.diff | FileCheck %s --check-prefix=CHECK-NO-COLOR
+// RUN: echo 'UseColor: false' > %t.dir/color.yaml
+// RUN: %clang_tidy_diff -checks=-*,modernize-use-override -config-file=%t.dir/color.yaml -use-color -- -std=c++11 < %t.diff | FileCheck %s --check-prefix=CHECK-COLOR
+// CHECK-COLOR: {{.\[0;1;35m}}warning: {{.\[0m}}{{.\[1m}}annotate this
+// CHECK-NO-COLOR: :8: warning: annotate this
+
 struct A {
   virtual void f() {}
   virtual void g() {}

@@ -137,6 +137,9 @@ infrastructure are described first, followed by tool-specific sections.
 
 ### Improvements to clang-tidy
 
+- {program}`clang-tidy-diff.py` now accepts `-use-color=false` to disable
+  colored diagnostics, overriding the `UseColor` setting in `.clang-tidy`.
+
 - Improved {program}`check_clang_tidy.py` by adding support of
   `-std=cXX-or-earlier` values, mirroring the existing `-std=cXX-or-later`.
   New construct expands to the given standard and every earlier one.

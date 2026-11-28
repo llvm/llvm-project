@@ -44,6 +44,17 @@ except ImportError:
     yaml = None
 
 
+def strtobool(val: str) -> bool:
+    """Parse a boolean using the same values as clang-tidy."""
+
+    value = val.lower()
+    if value in ("", "true", "1"):
+        return True
+    if value in ("false", "0"):
+        return False
+    raise argparse.ArgumentTypeError(f"invalid boolean value: {val!r}")
+
+
 def run_tidy(task_queue, lock, timeout, failed_files):
     watchdog = None
     while True:
@@ -192,7 +203,13 @@ def main():
         help="Specify the path of .clang-tidy or custom config file",
         default="",
     )
-    parser.add_argument("-use-color", action="store_true", help="Use colors in output")
+    parser.add_argument(
+        "-use-color",
+        type=strtobool,
+        nargs="?",
+        const=True,
+        help="Use colors in output",
+    )
     parser.add_argument(
         "-path", dest="build_path", help="Path used to read a compile command database."
     )
@@ -378,8 +395,10 @@ def main():
         common_clang_tidy_args.append("-quiet")
     if args.build_path is not None:
         common_clang_tidy_args.append("-p=%s" % args.build_path)
-    if args.use_color:
-        common_clang_tidy_args.append("--use-color")
+    if args.use_color is not None:
+        common_clang_tidy_args.append(
+            "--use-color" if args.use_color else "--use-color=false"
+        )
     if args.allow_no_checks:
         common_clang_tidy_args.append("--allow-no-checks")
     for arg in args.extra_arg:
