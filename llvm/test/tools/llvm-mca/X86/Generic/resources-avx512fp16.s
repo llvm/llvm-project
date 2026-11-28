@@ -41,6 +41,26 @@ vsubph            %zmm16, %zmm17, %zmm19 {k1}{z}
 vsubph            (%rax), %zmm17, %zmm19 {k1}{z}
 vsubph            (%rax){1to32}, %zmm17, %zmm19 {k1}{z}
 
+vfmadd132ph       %zmm16, %zmm17, %zmm19
+vfmadd132ph       (%rax), %zmm17, %zmm19
+vfmadd132ph       (%rax){1to32}, %zmm17, %zmm19
+vfmadd132ph       %zmm16, %zmm17, %zmm19 {k1}
+vfmadd132ph       (%rax), %zmm17, %zmm19 {k1}
+vfmadd132ph       (%rax){1to32}, %zmm17, %zmm19 {k1}
+vfmadd132ph       %zmm16, %zmm17, %zmm19 {k1}{z}
+vfmadd132ph       (%rax), %zmm17, %zmm19 {k1}{z}
+vfmadd132ph       (%rax){1to32}, %zmm17, %zmm19 {k1}{z}
+
+vmulph          %zmm16, %zmm17, %zmm19
+vmulph          (%rax), %zmm17, %zmm19
+vmulph          (%rax){1to32}, %zmm17, %zmm19
+vmulph          %zmm16, %zmm17, %zmm19 {k1}
+vmulph          (%rax), %zmm17, %zmm19 {k1}
+vmulph          (%rax){1to32}, %zmm17, %zmm19 {k1}
+vmulph          %zmm16, %zmm17, %zmm19 {k1}{z}
+vmulph          (%rax), %zmm17, %zmm19 {k1}{z}
+vmulph          (%rax){1to32}, %zmm17, %zmm19 {k1}{z}
+
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
 # CHECK-NEXT: [2]: Latency
@@ -86,6 +106,24 @@ vsubph            (%rax){1to32}, %zmm17, %zmm19 {k1}{z}
 # CHECK-NEXT:  1      3     1.00                        vsubph	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      10    1.00    *                   vsubph	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  2      10    1.00    *                   vsubph	(%rax){1to32}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      5     0.50                        vfmadd132ph	%zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  2      10    0.50    *                   vfmadd132ph	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  2      10    0.50    *                   vfmadd132ph	(%rax){1to32}, %zmm17, %zmm19
+# CHECK-NEXT:  1      5     0.50                        vfmadd132ph	%zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  2      10    0.50    *                   vfmadd132ph	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  2      10    0.50    *                   vfmadd132ph	(%rax){1to32}, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  1      5     0.50                        vfmadd132ph	%zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      10    0.50    *                   vfmadd132ph	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      10    0.50    *                   vfmadd132ph	(%rax){1to32}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      5     1.00                        vmulph	%zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  2      12    1.00    *                   vmulph	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  2      12    1.00    *                   vmulph	(%rax){1to32}, %zmm17, %zmm19
+# CHECK-NEXT:  1      5     1.00                        vmulph	%zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  2      12    1.00    *                   vmulph	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  2      12    1.00    *                   vmulph	(%rax){1to32}, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  1      5     1.00                        vmulph	%zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      12    1.00    *                   vmulph	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      12    1.00    *                   vmulph	(%rax){1to32}, %zmm17, %zmm19 {%k1} {z}
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SBDivider
@@ -99,7 +137,7 @@ vsubph            (%rax){1to32}, %zmm17, %zmm19 {k1}{z}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]
-# CHECK-NEXT:  -     252.00 31.50  18.00   -     4.50   12.00  12.00
+# CHECK-NEXT:  -     252.00 45.00  22.50   -     4.50   18.00  18.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6.0]  [6.1]  Instructions:
@@ -139,3 +177,21 @@ vsubph            (%rax){1to32}, %zmm17, %zmm19 {k1}{z}
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     vsubph	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vsubph	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -     1.00    -      -     0.50   0.50   vsubph	(%rax){1to32}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     vfmadd132ph	%zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.50   0.50    -      -     0.50   0.50   vfmadd132ph	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.50   0.50    -      -     0.50   0.50   vfmadd132ph	(%rax){1to32}, %zmm17, %zmm19
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     vfmadd132ph	%zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.50   0.50    -      -     0.50   0.50   vfmadd132ph	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.50   0.50    -      -     0.50   0.50   vfmadd132ph	(%rax){1to32}, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -     vfmadd132ph	%zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.50   0.50    -      -     0.50   0.50   vfmadd132ph	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.50   0.50    -      -     0.50   0.50   vfmadd132ph	(%rax){1to32}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vmulph	%zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vmulph	(%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vmulph	(%rax){1to32}, %zmm17, %zmm19
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vmulph	%zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vmulph	(%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vmulph	(%rax){1to32}, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vmulph	%zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vmulph	(%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50   0.50   vmulph	(%rax){1to32}, %zmm17, %zmm19 {%k1} {z}
