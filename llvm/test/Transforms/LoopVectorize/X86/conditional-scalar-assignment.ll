@@ -431,7 +431,7 @@ define i32 @multi_use_cmp_for_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; AVX512-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP3]])
 ; AVX512-NEXT:    [[TMP5]] = select i1 [[TMP4]], <8 x i1> [[TMP3]], <8 x i1> [[TMP0]]
 ; AVX512-NEXT:    [[TMP6]] = select i1 [[TMP4]], <8 x i32> [[WIDE_LOAD]], <8 x i32> [[VEC_PHI]]
-; AVX512-NEXT:    [[TMP7]] = select <8 x i1> [[TMP2]], <8 x i64> [[VEC_IND]], <8 x i64> [[VEC_PHI1]]
+; AVX512-NEXT:    [[TMP7]] = select <8 x i1> [[TMP3]], <8 x i64> [[VEC_IND]], <8 x i64> [[VEC_PHI1]]
 ; AVX512-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
 ; AVX512-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i64> [[VEC_IND]], splat (i64 8)
 ; AVX512-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
