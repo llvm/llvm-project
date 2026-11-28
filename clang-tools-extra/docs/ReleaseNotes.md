@@ -289,6 +289,10 @@ infrastructure are described first, followed by tool-specific sections.
   diagnostics are still emitted at the class name for implicitly declared
   destructors.
 
+- Fixed a crash in {doc}`llvmlibc-callee-namespace
+  <clang-tidy/checks/llvmlibc/callee-namespace>` when referencing implicitly
+  declared global allocation or deallocation functions without a source location.
+
 - Improved {doc}`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check:
 

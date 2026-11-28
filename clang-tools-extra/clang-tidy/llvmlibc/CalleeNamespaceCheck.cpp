@@ -63,8 +63,9 @@ void CalleeNamespaceCheck::check(const MatchFinder::MatchResult &Result) {
        "within the namespace defined by the '%1' macro")
       << FuncDecl << RequiredNamespaceRefMacroName;
 
-  diag(FuncDecl->getLocation(), "resolves to this declaration",
-       DiagnosticIDs::Note);
+  if (FuncDecl->getLocation().isValid())
+    diag(FuncDecl->getLocation(), "resolves to this declaration",
+         DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::llvm_libc
