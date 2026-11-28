@@ -2570,14 +2570,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
     setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v2i32, Custom);
     setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v2i32, Custom);
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i64, Legal);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i64, Legal);
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i64, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i64, Custom);
+
     for (MVT VT : {MVT::i32, MVT::i64, MVT::v4i32, MVT::v8i32, MVT::v16i32,
                    MVT::v2i64, MVT::v4i64}) {
       if (VT == MVT::i64 && !Subtarget.is64Bit())
         continue;
-      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Legal);
-      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Legal);
+      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
+      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
     }
 
     // Lower scalar bf16 arithmetic by widening to a vector op and extracting
@@ -22673,6 +22674,10 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
   MVT DstVT = Op.getSimpleValueType();
   MVT TmpVT = DstVT;
   EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+
+  if (Subtarget.hasAVX10_2() &&
+      (SrcVT.getScalarType() == MVT::f32 || SrcVT.getScalarType() == MVT::f64))
+    return Op;
 
   if (Subtarget.hasAVX10_2() && SrcVT.isVector() &&
       SrcVT.getVectorElementType() == MVT::bf16 && SatVT == MVT::i8) {

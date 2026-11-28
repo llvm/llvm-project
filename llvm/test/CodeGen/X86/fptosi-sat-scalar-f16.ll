@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=i686-linux -mattr=+sse2 | FileCheck %s --check-prefix=X86-SSE
 ; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-linux -mattr=+avx512fp16 | FileCheck %s --check-prefix=X64-AVX512FP16
+; RUN: llc < %s -mtriple=x86_64-linux -mattr=+avx10.2 | FileCheck %s --check-prefix=X64-AVX10
 
 ;
 ; 16-bit float to signed integer
@@ -107,6 +108,16 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; X64-AVX512FP16-NEXT:    vcvttsh2si %xmm0, %eax
 ; X64-AVX512FP16-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX10-LABEL: test_signed_i1_f16:
+; X64-AVX10:       # %bb.0:
+; X64-AVX10-NEXT:    vmovsh {{.*#+}} xmm1 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X64-AVX10-NEXT:    vmaxsh %xmm0, %xmm1, %xmm0
+; X64-AVX10-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-AVX10-NEXT:    vminsh %xmm0, %xmm1, %xmm0
+; X64-AVX10-NEXT:    vcvttsh2si %xmm0, %eax
+; X64-AVX10-NEXT:    # kill: def $al killed $al killed $eax
+; X64-AVX10-NEXT:    retq
     %x = call i1 @llvm.fptosi.sat.i1.f16(half %f)
     ret i1 %x
 }
@@ -204,6 +215,16 @@ define i8 @test_signed_i8_f16(half %f) nounwind {
 ; X64-AVX512FP16-NEXT:    vcvttsh2si %xmm0, %eax
 ; X64-AVX512FP16-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX10-LABEL: test_signed_i8_f16:
+; X64-AVX10:       # %bb.0:
+; X64-AVX10-NEXT:    vmovsh {{.*#+}} xmm1 = [-1.28E+2,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X64-AVX10-NEXT:    vmaxsh %xmm0, %xmm1, %xmm0
+; X64-AVX10-NEXT:    vmovsh {{.*#+}} xmm1 = [1.27E+2,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X64-AVX10-NEXT:    vminsh %xmm0, %xmm1, %xmm0
+; X64-AVX10-NEXT:    vcvttsh2si %xmm0, %eax
+; X64-AVX10-NEXT:    # kill: def $al killed $al killed $eax
+; X64-AVX10-NEXT:    retq
     %x = call i8 @llvm.fptosi.sat.i8.f16(half %f)
     ret i8 %x
 }
@@ -305,6 +326,19 @@ define i13 @test_signed_i13_f16(half %f) nounwind {
 ; X64-AVX512FP16-NEXT:    cmovbel %ecx, %eax
 ; X64-AVX512FP16-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX10-LABEL: test_signed_i13_f16:
+; X64-AVX10:       # %bb.0:
+; X64-AVX10-NEXT:    vcvttsh2si %xmm0, %eax
+; X64-AVX10-NEXT:    vmovsh {{.*#+}} xmm1 = [-4.096E+3,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X64-AVX10-NEXT:    vucomish %xmm0, %xmm1
+; X64-AVX10-NEXT:    movl $61440, %ecx # imm = 0xF000
+; X64-AVX10-NEXT:    cmovbel %eax, %ecx
+; X64-AVX10-NEXT:    vucomish {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX10-NEXT:    movl $4095, %eax # imm = 0xFFF
+; X64-AVX10-NEXT:    cmovbel %ecx, %eax
+; X64-AVX10-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-AVX10-NEXT:    retq
     %x = call i13 @llvm.fptosi.sat.i13.f16(half %f)
     ret i13 %x
 }
@@ -406,6 +440,19 @@ define i16 @test_signed_i16_f16(half %f) nounwind {
 ; X64-AVX512FP16-NEXT:    cmovbel %ecx, %eax
 ; X64-AVX512FP16-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX10-LABEL: test_signed_i16_f16:
+; X64-AVX10:       # %bb.0:
+; X64-AVX10-NEXT:    vcvttsh2si %xmm0, %eax
+; X64-AVX10-NEXT:    vmovsh {{.*#+}} xmm1 = [-3.2768E+4,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X64-AVX10-NEXT:    vucomish %xmm0, %xmm1
+; X64-AVX10-NEXT:    movl $32768, %ecx # imm = 0x8000
+; X64-AVX10-NEXT:    cmovbel %eax, %ecx
+; X64-AVX10-NEXT:    vucomish {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX10-NEXT:    movl $32767, %eax # imm = 0x7FFF
+; X64-AVX10-NEXT:    cmovbel %ecx, %eax
+; X64-AVX10-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-AVX10-NEXT:    retq
     %x = call i16 @llvm.fptosi.sat.i16.f16(half %f)
     ret i16 %x
 }
@@ -506,6 +553,20 @@ define i19 @test_signed_i19_f16(half %f) nounwind {
 ; X64-AVX512FP16-NEXT:    vucomish %xmm0, %xmm0
 ; X64-AVX512FP16-NEXT:    cmovnpl %edx, %eax
 ; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX10-LABEL: test_signed_i19_f16:
+; X64-AVX10:       # %bb.0:
+; X64-AVX10-NEXT:    vcvttsh2si %xmm0, %eax
+; X64-AVX10-NEXT:    vucomish {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX10-NEXT:    movl $-262144, %ecx # imm = 0xFFFC0000
+; X64-AVX10-NEXT:    cmovael %eax, %ecx
+; X64-AVX10-NEXT:    vucomish {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX10-NEXT:    movl $262143, %edx # imm = 0x3FFFF
+; X64-AVX10-NEXT:    cmovbel %ecx, %edx
+; X64-AVX10-NEXT:    xorl %eax, %eax
+; X64-AVX10-NEXT:    vucomish %xmm0, %xmm0
+; X64-AVX10-NEXT:    cmovnpl %edx, %eax
+; X64-AVX10-NEXT:    retq
     %x = call i19 @llvm.fptosi.sat.i19.f16(half %f)
     ret i19 %x
 }
@@ -610,6 +671,17 @@ define i32 @test_signed_i32_f16(half %f) nounwind {
 ; X64-AVX512FP16-NEXT:    vucomish %xmm0, %xmm0
 ; X64-AVX512FP16-NEXT:    cmovnpl %ecx, %eax
 ; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX10-LABEL: test_signed_i32_f16:
+; X64-AVX10:       # %bb.0:
+; X64-AVX10-NEXT:    vcvttsh2si %xmm0, %eax
+; X64-AVX10-NEXT:    vucomish {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX10-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
+; X64-AVX10-NEXT:    cmovbel %eax, %ecx
+; X64-AVX10-NEXT:    xorl %eax, %eax
+; X64-AVX10-NEXT:    vucomish %xmm0, %xmm0
+; X64-AVX10-NEXT:    cmovnpl %ecx, %eax
+; X64-AVX10-NEXT:    retq
     %x = call i32 @llvm.fptosi.sat.i32.f16(half %f)
     ret i32 %x
 }
@@ -749,6 +821,20 @@ define i50 @test_signed_i50_f16(half %f) nounwind {
 ; X64-AVX512FP16-NEXT:    vucomish %xmm0, %xmm0
 ; X64-AVX512FP16-NEXT:    cmovnpq %rdx, %rax
 ; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX10-LABEL: test_signed_i50_f16:
+; X64-AVX10:       # %bb.0:
+; X64-AVX10-NEXT:    vcvttsh2si %xmm0, %rax
+; X64-AVX10-NEXT:    vucomish {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX10-NEXT:    movabsq $-562949953421312, %rcx # imm = 0xFFFE000000000000
+; X64-AVX10-NEXT:    cmovaeq %rax, %rcx
+; X64-AVX10-NEXT:    vucomish {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX10-NEXT:    movabsq $562949953421311, %rdx # imm = 0x1FFFFFFFFFFFF
+; X64-AVX10-NEXT:    cmovbeq %rcx, %rdx
+; X64-AVX10-NEXT:    xorl %eax, %eax
+; X64-AVX10-NEXT:    vucomish %xmm0, %xmm0
+; X64-AVX10-NEXT:    cmovnpq %rdx, %rax
+; X64-AVX10-NEXT:    retq
     %x = call i50 @llvm.fptosi.sat.i50.f16(half %f)
     ret i50 %x
 }
@@ -885,6 +971,17 @@ define i64 @test_signed_i64_f16(half %f) nounwind {
 ; X64-AVX512FP16-NEXT:    vucomish %xmm0, %xmm0
 ; X64-AVX512FP16-NEXT:    cmovnpq %rcx, %rax
 ; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX10-LABEL: test_signed_i64_f16:
+; X64-AVX10:       # %bb.0:
+; X64-AVX10-NEXT:    vcvttsh2si %xmm0, %rax
+; X64-AVX10-NEXT:    vucomish {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX10-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-AVX10-NEXT:    cmovbeq %rax, %rcx
+; X64-AVX10-NEXT:    xorl %eax, %eax
+; X64-AVX10-NEXT:    vucomish %xmm0, %xmm0
+; X64-AVX10-NEXT:    cmovnpq %rcx, %rax
+; X64-AVX10-NEXT:    retq
     %x = call i64 @llvm.fptosi.sat.i64.f16(half %f)
     ret i64 %x
 }
@@ -1089,6 +1186,30 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; X64-AVX512FP16-NEXT:    cmovpq %rcx, %rdx
 ; X64-AVX512FP16-NEXT:    popq %rcx
 ; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX10-LABEL: test_signed_i100_f16:
+; X64-AVX10:       # %bb.0:
+; X64-AVX10-NEXT:    pushq %rax
+; X64-AVX10-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; X64-AVX10-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; X64-AVX10-NEXT:    callq __fixsfti@PLT
+; X64-AVX10-NEXT:    xorl %ecx, %ecx
+; X64-AVX10-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; X64-AVX10-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; X64-AVX10-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX10-NEXT:    cmovbq %rcx, %rax
+; X64-AVX10-NEXT:    movabsq $-34359738368, %rsi # imm = 0xFFFFFFF800000000
+; X64-AVX10-NEXT:    cmovbq %rsi, %rdx
+; X64-AVX10-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX10-NEXT:    movabsq $34359738367, %rsi # imm = 0x7FFFFFFFF
+; X64-AVX10-NEXT:    cmovaq %rsi, %rdx
+; X64-AVX10-NEXT:    movq $-1, %rsi
+; X64-AVX10-NEXT:    cmovaq %rsi, %rax
+; X64-AVX10-NEXT:    vucomiss %xmm0, %xmm0
+; X64-AVX10-NEXT:    cmovpq %rcx, %rax
+; X64-AVX10-NEXT:    cmovpq %rcx, %rdx
+; X64-AVX10-NEXT:    popq %rcx
+; X64-AVX10-NEXT:    retq
     %x = call i100 @llvm.fptosi.sat.i100.f16(half %f)
     ret i100 %x
 }
@@ -1295,6 +1416,30 @@ define i128 @test_signed_i128_f16(half %f) nounwind {
 ; X64-AVX512FP16-NEXT:    cmovpq %rcx, %rdx
 ; X64-AVX512FP16-NEXT:    popq %rcx
 ; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX10-LABEL: test_signed_i128_f16:
+; X64-AVX10:       # %bb.0:
+; X64-AVX10-NEXT:    pushq %rax
+; X64-AVX10-NEXT:    vcvtsh2ss %xmm0, %xmm0, %xmm0
+; X64-AVX10-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; X64-AVX10-NEXT:    callq __fixsfti@PLT
+; X64-AVX10-NEXT:    xorl %ecx, %ecx
+; X64-AVX10-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
+; X64-AVX10-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; X64-AVX10-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX10-NEXT:    cmovbq %rcx, %rax
+; X64-AVX10-NEXT:    movabsq $-9223372036854775808, %rsi # imm = 0x8000000000000000
+; X64-AVX10-NEXT:    cmovbq %rsi, %rdx
+; X64-AVX10-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-AVX10-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
+; X64-AVX10-NEXT:    cmovaq %rsi, %rdx
+; X64-AVX10-NEXT:    movq $-1, %rsi
+; X64-AVX10-NEXT:    cmovaq %rsi, %rax
+; X64-AVX10-NEXT:    vucomiss %xmm0, %xmm0
+; X64-AVX10-NEXT:    cmovpq %rcx, %rax
+; X64-AVX10-NEXT:    cmovpq %rcx, %rdx
+; X64-AVX10-NEXT:    popq %rcx
+; X64-AVX10-NEXT:    retq
     %x = call i128 @llvm.fptosi.sat.i128.f16(half %f)
     ret i128 %x
 }
