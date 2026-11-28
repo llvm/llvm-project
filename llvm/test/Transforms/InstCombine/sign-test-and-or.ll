@@ -351,7 +351,8 @@ define i1 @test9_logical(i32 %a) {
 
 define i1 @test9_logical_samesign(i32 %a) {
 ; CHECK-LABEL: @test9_logical_samesign(
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[A:%.*]], -1073741825
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[MASKED]], 0
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %masked = and i32 %a, -1073741825
@@ -363,7 +364,7 @@ define i1 @test9_logical_samesign(i32 %a) {
 
 define i1 @test_logical_or_icmp_icmp_samesign(i32 %a) {
 ; CHECK-LABEL: @test_logical_or_icmp_icmp_samesign(
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[CMP2]]
 ;
   %cmp1 = icmp eq i32 %a, 0

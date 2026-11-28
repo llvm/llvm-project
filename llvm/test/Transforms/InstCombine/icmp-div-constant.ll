@@ -559,3 +559,34 @@ define i1 @ashr_x_by_const_cmp_sle_value_neg(i32 %x) {
   %r = icmp sle i32 %v, %x
   ret i1 %r
 }
+
+; https://github.com/llvm/llvm-project/issues/243593
+; samesign compares on the sign boundary must not reach foldICmpDivConstant
+; with a non-strict predicate.
+
+define i1 @sdiv_neg_samesign_sge_zero(i32 %x) {
+; CHECK-LABEL: @sdiv_neg_samesign_sge_zero(
+; CHECK-NEXT:    ret i1 true
+;
+  %q = sdiv i32 %x, -2
+  %c = icmp samesign sge i32 %q, 0
+  ret i1 %c
+}
+
+define i1 @sdiv_pos_samesign_sge_zero(i32 %x) {
+; CHECK-LABEL: @sdiv_pos_samesign_sge_zero(
+; CHECK-NEXT:    ret i1 true
+;
+  %q = sdiv i32 %x, 2
+  %c = icmp samesign sge i32 %q, 0
+  ret i1 %c
+}
+
+define i1 @sdiv_pos_samesign_sle_minus_one(i32 %x) {
+; CHECK-LABEL: @sdiv_pos_samesign_sle_minus_one(
+; CHECK-NEXT:    ret i1 true
+;
+  %q = sdiv i32 %x, 2
+  %c = icmp samesign sle i32 %q, -1
+  ret i1 %c
+}

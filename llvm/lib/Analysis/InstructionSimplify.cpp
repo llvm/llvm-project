@@ -3146,6 +3146,21 @@ static Value *simplifyICmpWithConstant(CmpPredicate Pred, Value *LHS,
   if (RHS_CR.isFullSet())
     return ConstantInt::getTrue(ITy);
 
+  // A samesign compare is poison unless LHS has the same sign as C, so only
+  // values in that half of the range matter (eg., samesign sge X, 0 or
+  // samesign sle X, -1).
+  if (Pred.hasSameSign()) {
+    unsigned BitWidth = C->getBitWidth();
+    APInt Zero = APInt::getZero(BitWidth);
+    APInt SignedMin = APInt::getSignedMinValue(BitWidth);
+    ConstantRange SameSignCR = C->isNegative() ? ConstantRange(SignedMin, Zero)
+                                               : ConstantRange(Zero, SignedMin);
+    if (RHS_CR.contains(SameSignCR))
+      return ConstantInt::getTrue(ITy);
+    if (RHS_CR.inverse().contains(SameSignCR))
+      return ConstantInt::getFalse(ITy);
+  }
+
   ConstantRange LHS_CR = computeConstantRange(LHS, CmpInst::isSigned(Pred), Q);
   if (!LHS_CR.isFullSet()) {
     if (RHS_CR.contains(LHS_CR))

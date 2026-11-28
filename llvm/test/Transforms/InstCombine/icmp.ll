@@ -6100,8 +6100,7 @@ define i1 @icmp_and_inv_pow2_or_zero_ne_0(i32 %A, i32 %B) {
 define i1 @icmp_samesign_logical_and(i32 %In) {
 ; CHECK-LABEL: define i1 @icmp_samesign_logical_and(
 ; CHECK-SAME: i32 [[IN:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = icmp eq i32 [[IN]], 1
-; CHECK-NEXT:    ret i1 [[V]]
+; CHECK-NEXT:    ret i1 false
 ;
   %c1 = icmp samesign sgt i32 %In, -1
   %c2 = icmp samesign eq i32 %In, 1
@@ -6112,7 +6111,7 @@ define i1 @icmp_samesign_logical_and(i32 %In) {
 define i1 @icmp_samesign_logical_or(i32 %In) {
 ; CHECK-LABEL: define i1 @icmp_samesign_logical_or(
 ; CHECK-SAME: i32 [[IN:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = icmp ne i32 [[IN]], 1
+; CHECK-NEXT:    [[V:%.*]] = icmp samesign ne i32 [[IN]], 1
 ; CHECK-NEXT:    ret i1 [[V]]
 ;
   %c1 = icmp samesign slt i32 %In, 0
