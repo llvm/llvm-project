@@ -1,0 +1,31 @@
+dispatch:180200:0
+ 1: 90100
+ 2: first:60000
+  1: 60000
+  !CFGChecksum: 4294967295
+  !Attributes: 2
+ 2: hot20:20000
+  1: 20000
+  !CFGChecksum: 4294967295
+  !Attributes: 2
+ 2: hot10:10000
+  1: 10000
+  !CFGChecksum: 4294967295
+  !Attributes: 2
+ 2: cold:100
+  1: 100
+  !CFGChecksum: 4294967295
+  !Attributes: 2
+ !CFGChecksum: 281479271677951
+first:1:0
+ 1: 1
+ !CFGChecksum: 4294967295
+hot20:1:0
+ 1: 1
+ !CFGChecksum: 4294967295
+hot10:1:0
+ 1: 1
+ !CFGChecksum: 4294967295
+cold:1:0
+ 1: 1
+ !CFGChecksum: 4294967295
