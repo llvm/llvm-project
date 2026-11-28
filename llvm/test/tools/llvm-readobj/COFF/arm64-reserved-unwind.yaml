@@ -1,0 +1,35 @@
+# RUN: yaml2obj %s -o %t.exe
+# RUN: llvm-readobj --unwind %t.exe | FileCheck %s
+
+# CHECK:      UnwindInformation [
+# CHECK-NEXT:   RuntimeFunction {
+# CHECK-NEXT:     UnsupportedUnwindFlag: 3
+# CHECK-NEXT:     UnwindData: 0x200B
+# CHECK-NEXT:   }
+# CHECK-NEXT:   RuntimeFunction {
+# CHECK-NEXT:     Function: 0x140001004
+# CHECK-NEXT:     Fragment: No
+# CHECK-NEXT:     FunctionLength: 4
+
+--- !COFF
+OptionalHeader:
+  ImageBase: 0x140000000
+  SectionAlignment: 4096
+  FileAlignment: 512
+  Subsystem: IMAGE_SUBSYSTEM_WINDOWS_CUI
+header:
+  Machine: IMAGE_FILE_MACHINE_ARM64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name: .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress: 0x1000
+    VirtualSize: 8
+    SectionData: C0035FD6C0035FD6
+  - Name: .pdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress: 0x2000
+    VirtualSize: 16
+    # The flag-3 entry refers to the following packed entry at RVA 0x2008.
+    SectionData: '001000000B2000000410000005000000'
+symbols: []

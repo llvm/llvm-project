@@ -1498,6 +1498,11 @@ bool Decoder::dumpProcedureDataEntry(const COFFObjectFile &COFF,
     return dumpUnpackedEntry(COFF, Section, Offset, Entry);
   if (isAArch64) {
     const RuntimeFunctionARM64 EntryARM64(Data);
+    if (EntryARM64.Flag() == RuntimeFunctionFlag::RFF_Reserved) {
+      SW.printNumber("UnsupportedUnwindFlag", unsigned(EntryARM64.Flag()));
+      SW.printHex("UnwindData", uint32_t(EntryARM64.UnwindData));
+      return true;
+    }
     return dumpPackedARM64Entry(COFF, Section, Offset, EntryARM64);
   }
   return dumpPackedEntry(COFF, Section, Offset, Entry);
