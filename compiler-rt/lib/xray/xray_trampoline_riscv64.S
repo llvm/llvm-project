@@ -27,6 +27,7 @@
         sd	a2, 88(sp)
         sd	a1, 80(sp)
         sd	a0, 72(sp)
+#if __riscv_float_abi_double
         fsd	fa7, 64(sp)
         fsd	fa6, 56(sp)
         fsd	fa5, 48(sp)
@@ -35,6 +36,7 @@
         fsd	fa2, 24(sp)
         fsd	fa1, 16(sp)
         fsd	fa0, 8(sp)
+#endif
 .endm
 
 .macro SAVE_RET_REGISTERS
@@ -44,14 +46,18 @@
         sd      ra, 40(sp)
         sd      a1, 32(sp)
         sd      a0, 24(sp)
+#if __riscv_float_abi_double
         fsd     fa1, 16(sp)
         fsd     fa0, 8(sp)
+#endif
 .endm
 
 .macro RESTORE_RET_REGISTERS
 	// Restore return registers
+#if __riscv_float_abi_double
         fld     fa0, 8(sp)
         fld     fa1, 16(sp)
+#endif
         ld      a0, 24(sp)
         ld      a1, 32(sp)
         ld      ra, 40(sp)
@@ -61,6 +67,7 @@
 
 .macro RESTORE_ARG_REGISTERS
         // Restore argument registers
+#if __riscv_float_abi_double
 	fld	fa0, 8(sp)
 	fld	fa1, 16(sp)
 	fld	fa2, 24(sp)
@@ -69,6 +76,7 @@
 	fld	fa5, 48(sp)
 	fld	fa6, 56(sp)
 	fld	fa7, 64(sp)
+#endif
 	ld	a0, 72(sp)
 	ld	a1, 80(sp)
 	ld	a2, 88(sp)
