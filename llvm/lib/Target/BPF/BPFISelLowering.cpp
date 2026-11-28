@@ -126,8 +126,9 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SDIVREM, VT, Expand);
     setOperationAction(ISD::UDIVREM, VT, Expand);
     if (!STI.hasSdivSmod()) {
-      setOperationAction(ISD::SDIV, VT, Custom);
-      setOperationAction(ISD::SREM, VT, Custom);
+      LegalizeAction Action = BPFAllowsLibcalls ? Expand : Custom;
+      setOperationAction(ISD::SDIV, VT, Action);
+      setOperationAction(ISD::SREM, VT, Action);
     }
     if (VT == MVT::i32 || !STI.hasHmul()) {
       setOperationAction(ISD::MULHU, VT, Expand);
