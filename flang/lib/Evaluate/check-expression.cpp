@@ -28,7 +28,7 @@ namespace Fortran::evaluate {
 // are not yet known.
 //
 // The variant form (IsScopeInvariantExpr()) also accepts symbols that are
-// INTENT(IN) dummy arguments without the VALUE attribute.
+// nonpointer INTENT(IN) dummy arguments without the VALUE attribute.
 template <bool INVARIANT>
 class IsConstantExprHelper
     : public AllTraverse<IsConstantExprHelper<INVARIANT>, true> {
@@ -52,7 +52,7 @@ public:
         IsInitialProcedureTarget(ultimate) ||
         ultimate.has<semantics::TypeParamDetails>() ||
         (INVARIANT && IsIntentIn(symbol) && !IsOptional(symbol) &&
-            !symbol.attrs().test(semantics::Attr::VALUE));
+            !IsPointer(symbol) && !symbol.attrs().test(semantics::Attr::VALUE));
   }
   bool operator()(const CoarrayRef &) const { return false; }
   bool operator()(const semantics::ParamValue &param) const {
@@ -68,7 +68,8 @@ public:
     return true;
   }
   bool operator()(const Component &component) const {
-    return (*this)(component.base());
+    // INTENT(IN) does not prevent definition of a pointer component's target.
+    return !IsPointer(component.GetLastSymbol()) && (*this)(component.base());
   }
   // Prevent integer division by known zeroes in constant expressions.
   bool operator()(const Divide<Type<TypeCategory::Integer>> &division) const {
@@ -86,10 +87,19 @@ public:
   }
   bool operator()(const DescriptorInquiry &x) const {
     const Symbol &sym{x.base().GetLastSymbol()};
-    return INVARIANT && !IsAllocatable(sym) &&
-        (!IsDummy(sym) ||
-            (IsIntentIn(sym) && !IsOptional(sym) &&
-                !sym.attrs().test(semantics::Attr::VALUE)));
+    if (!INVARIANT || IsAllocatable(sym)) {
+      return false;
+    } else if (const auto *component{x.base().UnwrapComponent()}) {
+      // The descriptor can change through a pointer in the component's base,
+      // even when the first symbol is INTENT(IN). Check subscripts as well.
+      return (*this)(component->base());
+    } else if (IsDummy(sym)) {
+      return IsIntentIn(sym) && !IsOptional(sym) &&
+          !sym.attrs().test(semantics::Attr::VALUE);
+    } else {
+      // INTENT(IN) protects a pointer's association, not its target's value.
+      return !IsPointer(sym);
+    }
   }
   bool operator()(const RankOneBoundElement &x) const {
     return (*this)(x.base());
@@ -171,6 +181,14 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
       auto base{ExtractNamedEntity(call.arguments()[0]->UnwrapExpr())};
       return base && IsConstantExprShape(GetUBOUNDs(*base));
     } else if (intrinsic->name == "shape" || intrinsic->name == "size") {
+      if (intrinsic->name == "size" && call.arguments().size() > 1 &&
+          call.arguments()[1]) {
+        // A fixed shape does not make SIZE invariant if DIM can change.
+        const auto *dim{call.arguments()[1]->UnwrapExpr()};
+        if (!dim || !(*this)(*dim)) {
+          return false;
+        }
+      }
       auto shape{GetShape(call.arguments()[0]->UnwrapExpr())};
       return shape && IsConstantExprShape(*shape);
     } else if (proc.IsPure()) {
