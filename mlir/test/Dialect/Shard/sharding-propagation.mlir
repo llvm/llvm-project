@@ -1,9 +1,179 @@
-// RUN: mlir-opt --pass-pipeline="builtin.module(func.func(sharding-propagation,cse))" %s | FileCheck %s
+// RUN: mlir-opt --pass-pipeline="builtin.module(func.func(sharding-propagation,cse))" %s -verify-diagnostics | FileCheck %s
 
 shard.grid @grid_2(shape = 2)
 shard.grid @grid_1d(shape = ?)
 shard.grid @grid_2d(shape = 2x4)
 shard.grid @grid_3d(shape = ?x?x?)
+
+// CHECK-LABEL: func.func @matmul_broadcast_batches
+// CHECK-SAME: %[[A:.*]]: tensor<2x1x4x8xf32>, %[[B:.*]]: tensor<1x4x8x16xf32>
+func.func @matmul_broadcast_batches(%a: tensor<2x1x4x8xf32>, %b: tensor<1x4x8x16xf32>, %zp: tensor<1xf32>) -> tensor<2x4x4x16xf32> {
+  // CHECK: %[[A_SHARDING:.*]] = shard.sharding @grid_2d split_axes = {{\[\[}}0]]
+  // CHECK: %[[A_SHARDED:.*]] = shard.shard %[[A]] to %[[A_SHARDING]] annotate_for_users
+  // CHECK: %[[B_SHARDING:.*]] = shard.sharding @grid_2d split_axes = {{\[\[}}], [1]]
+  // CHECK: %[[B_SHARDED:.*]] = shard.shard %[[B]] to %[[B_SHARDING]] annotate_for_users
+  // CHECK: tosa.matmul %[[A_SHARDED]], %[[B_SHARDED]]
+  %0 = tosa.matmul %a, %b, %zp, %zp : (tensor<2x1x4x8xf32>, tensor<1x4x8x16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x4x16xf32>
+  %sharding = shard.sharding @grid_2d split_axes = [[0], [1], [], []] : !shard.sharding
+  %sharded = shard.shard %0 to %sharding : tensor<2x4x4x16xf32>
+  return %sharded : tensor<2x4x4x16xf32>
+}
+
+// CHECK-LABEL: func.func @matmul_missing_batch
+// CHECK-SAME: %[[A:.*]]: tensor<4x4x8xf32>, %[[B:.*]]: tensor<2x4x8x16xf32>
+func.func @matmul_missing_batch(%a: tensor<4x4x8xf32>, %b: tensor<2x4x8x16xf32>, %zp: tensor<1xf32>) -> tensor<2x4x4x16xf32> {
+  // CHECK: %[[A_SHARDING:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}]]
+  // CHECK: %[[A_SHARDED:.*]] = shard.shard %[[A]] to %[[A_SHARDING]] annotate_for_users
+  // CHECK: %[[B_SHARDING:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}0]]
+  // CHECK: %[[B_SHARDED:.*]] = shard.shard %[[B]] to %[[B_SHARDING]] annotate_for_users
+  // CHECK: tosa.matmul %[[A_SHARDED]], %[[B_SHARDED]]
+  %0 = tosa.matmul %a, %b, %zp, %zp : (tensor<4x4x8xf32>, tensor<2x4x8x16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x4x16xf32>
+  %sharding = shard.sharding @grid_2 split_axes = [[0], [], [], []] : !shard.sharding
+  %sharded = shard.shard %0 to %sharding : tensor<2x4x4x16xf32>
+  return %sharded : tensor<2x4x4x16xf32>
+}
+
+// CHECK-LABEL: func.func @matmul_t_rank2
+// CHECK-SAME: %[[A:.*]]: tensor<4x8xf32>, %[[B:.*]]: tensor<16x8xf32>
+func.func @matmul_t_rank2(%a: tensor<4x8xf32>, %b: tensor<16x8xf32>, %zp: tensor<1xf32>) -> tensor<4x16xf32> {
+  // CHECK: %[[A_SHARDING:.*]] = shard.sharding @grid_2d split_axes = {{\[\[}}0]]
+  // CHECK: %[[A_SHARDED:.*]] = shard.shard %[[A]] to %[[A_SHARDING]] annotate_for_users
+  // CHECK: %[[B_SHARDING:.*]] = shard.sharding @grid_2d split_axes = {{\[\[}}1]]
+  // CHECK: %[[B_SHARDED:.*]] = shard.shard %[[B]] to %[[B_SHARDING]] annotate_for_users
+  // CHECK: tosa.matmul_t %[[A_SHARDED]], %[[B_SHARDED]]
+  %0 = tosa.matmul_t %a, %b, %zp, %zp : (tensor<4x8xf32>, tensor<16x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<4x16xf32>
+  %sharding = shard.sharding @grid_2d split_axes = [[0], [1]] : !shard.sharding
+  %sharded = shard.shard %0 to %sharding : tensor<4x16xf32>
+  return %sharded : tensor<4x16xf32>
+}
+
+// CHECK-LABEL: func.func @matmul_t_broadcast_batches
+// CHECK-SAME: %[[A:.*]]: tensor<2x1x4x8xf32>, %[[B:.*]]: tensor<1x4x16x8xf32>
+func.func @matmul_t_broadcast_batches(%a: tensor<2x1x4x8xf32>, %b: tensor<1x4x16x8xf32>, %zp: tensor<1xf32>) -> tensor<2x4x4x16xf32> {
+  // CHECK: %[[A_SHARDING:.*]] = shard.sharding @grid_2d split_axes = {{\[\[}}0]]
+  // CHECK: %[[A_SHARDED:.*]] = shard.shard %[[A]] to %[[A_SHARDING]] annotate_for_users
+  // CHECK: %[[B_SHARDING:.*]] = shard.sharding @grid_2d split_axes = {{\[\[}}], [1]]
+  // CHECK: %[[B_SHARDED:.*]] = shard.shard %[[B]] to %[[B_SHARDING]] annotate_for_users
+  // CHECK: tosa.matmul_t %[[A_SHARDED]], %[[B_SHARDED]]
+  %0 = tosa.matmul_t %a, %b, %zp, %zp : (tensor<2x1x4x8xf32>, tensor<1x4x16x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x4x16xf32>
+  %sharding = shard.sharding @grid_2d split_axes = [[0], [1], [], []] : !shard.sharding
+  %sharded = shard.shard %0 to %sharding : tensor<2x4x4x16xf32>
+  return %sharded : tensor<2x4x4x16xf32>
+}
+
+// CHECK-LABEL: func.func @matmul_t_missing_batch
+// CHECK-SAME: %[[A:.*]]: tensor<4x4x8xf32>, %[[B:.*]]: tensor<2x4x16x8xf32>
+func.func @matmul_t_missing_batch(%a: tensor<4x4x8xf32>, %b: tensor<2x4x16x8xf32>, %zp: tensor<1xf32>) -> tensor<2x4x4x16xf32> {
+  // CHECK: %[[A_SHARDING:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}]]
+  // CHECK: %[[A_SHARDED:.*]] = shard.shard %[[A]] to %[[A_SHARDING]] annotate_for_users
+  // CHECK: %[[B_SHARDING:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}0]]
+  // CHECK: %[[B_SHARDED:.*]] = shard.shard %[[B]] to %[[B_SHARDING]] annotate_for_users
+  // CHECK: tosa.matmul_t %[[A_SHARDED]], %[[B_SHARDED]]
+  %0 = tosa.matmul_t %a, %b, %zp, %zp : (tensor<4x4x8xf32>, tensor<2x4x16x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x4x16xf32>
+  %sharding = shard.sharding @grid_2 split_axes = [[0], [], [], []] : !shard.sharding
+  %sharded = shard.shard %0 to %sharding : tensor<2x4x4x16xf32>
+  return %sharded : tensor<2x4x4x16xf32>
+}
+
+// Ambiguous batch dimensions do not prevent sharding the matrix rows.
+// CHECK-LABEL: func.func @matmul_dynamic_batch_shard_rows
+// CHECK-SAME: %[[A:.*]]: tensor<?x4x8xf32>, %[[B:.*]]: tensor<?x8x16xf32>
+// CHECK: %[[ROWS:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}], [0]]
+// CHECK: %[[A_SHARDED:.*]] = shard.shard %[[A]] to %[[ROWS]] annotate_for_users
+// CHECK: %[[REPLICATION:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}]]
+// CHECK: %[[B_REPLICATED:.*]] = shard.shard %[[B]] to %[[REPLICATION]] annotate_for_users
+// CHECK: %[[RESULT:.*]] = tosa.matmul %[[A_SHARDED]], %[[B_REPLICATED]]
+// CHECK: %[[OUTPUT:.*]] = shard.shard %[[RESULT]] to %[[ROWS]] : tensor<?x4x16xf32>
+// CHECK-NEXT: return %[[OUTPUT]]
+func.func @matmul_dynamic_batch_shard_rows(%a: tensor<?x4x8xf32>, %b: tensor<?x8x16xf32>, %zp: tensor<1xf32>) -> tensor<?x4x16xf32> {
+  %0 = tosa.matmul %a, %b, %zp, %zp : (tensor<?x4x8xf32>, tensor<?x8x16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<?x4x16xf32>
+  %sharding = shard.sharding @grid_2 split_axes = [[], [0]] : !shard.sharding
+  %sharded = shard.shard %0 to %sharding : tensor<?x4x16xf32>
+  return %sharded : tensor<?x4x16xf32>
+}
+
+// Column sharding of matmul_t must reach the transposed operand's row dimension.
+// CHECK-LABEL: func.func @matmul_t_dynamic_batch_shard_columns
+// CHECK-SAME: %[[A:.*]]: tensor<?x4x8xf32>, %[[B:.*]]: tensor<?x16x8xf32>
+// CHECK: %[[REPLICATION:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}]]
+// CHECK: %[[A_REPLICATED:.*]] = shard.shard %[[A]] to %[[REPLICATION]] annotate_for_users
+// CHECK: %[[B_SHARDING:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}], [0]]
+// CHECK: %[[B_SHARDED:.*]] = shard.shard %[[B]] to %[[B_SHARDING]] annotate_for_users
+// CHECK: %[[RESULT:.*]] = tosa.matmul_t %[[A_REPLICATED]], %[[B_SHARDED]]
+// CHECK: %[[COLUMNS:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}], [], [0]]
+// CHECK: %[[OUTPUT:.*]] = shard.shard %[[RESULT]] to %[[COLUMNS]] : tensor<?x4x16xf32>
+// CHECK-NEXT: return %[[OUTPUT]]
+func.func @matmul_t_dynamic_batch_shard_columns(%a: tensor<?x4x8xf32>, %b: tensor<?x16x8xf32>, %zp: tensor<1xf32>) -> tensor<?x4x16xf32> {
+  %0 = tosa.matmul_t %a, %b, %zp, %zp : (tensor<?x4x8xf32>, tensor<?x16x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<?x4x16xf32>
+  %sharding = shard.sharding @grid_2 split_axes = [[], [], [0]] : !shard.sharding
+  %sharded = shard.shard %0 to %sharding : tensor<?x4x16xf32>
+  return %sharded : tensor<?x4x16xf32>
+}
+
+// A missing leading batch dimension is replicated. The other batch dimension
+// is ambiguous but unsplit, so the static leading batch loop can still shard.
+// CHECK-LABEL: func.func @matmul_dynamic_batch_shard_static_batch
+// CHECK-SAME: %[[A:.*]]: tensor<?x4x8xf32>, %[[B:.*]]: tensor<2x?x8x16xf32>
+// CHECK: %[[REPLICATION:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}]]
+// CHECK: %[[A_REPLICATED:.*]] = shard.shard %[[A]] to %[[REPLICATION]] annotate_for_users
+// CHECK: %[[BATCH:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}0]]
+// CHECK: %[[B_SHARDED:.*]] = shard.shard %[[B]] to %[[BATCH]] annotate_for_users
+// CHECK: %[[RESULT:.*]] = tosa.matmul %[[A_REPLICATED]], %[[B_SHARDED]]
+// CHECK: %[[OUTPUT:.*]] = shard.shard %[[RESULT]] to %[[BATCH]] : tensor<2x?x4x16xf32>
+// CHECK-NEXT: return %[[OUTPUT]]
+func.func @matmul_dynamic_batch_shard_static_batch(%a: tensor<?x4x8xf32>, %b: tensor<2x?x8x16xf32>, %zp: tensor<1xf32>) -> tensor<2x?x4x16xf32> {
+  %0 = tosa.matmul %a, %b, %zp, %zp : (tensor<?x4x8xf32>, tensor<2x?x8x16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x?x4x16xf32>
+  %sharding = shard.sharding @grid_2 split_axes = [[0]] : !shard.sharding
+  %sharded = shard.shard %0 to %sharding : tensor<2x?x4x16xf32>
+  return %sharded : tensor<2x?x4x16xf32>
+}
+
+// CHECK-LABEL: func.func @matmul_dynamic_lhs_batch
+// CHECK-NOT: annotate_for_users
+// CHECK: tosa.matmul
+func.func @matmul_dynamic_lhs_batch(%a: tensor<?x4x8xf32>, %b: tensor<2x8x16xf32>, %zp: tensor<1xf32>) -> tensor<2x4x16xf32> {
+  %0 = tosa.matmul %a, %b, %zp, %zp : (tensor<?x4x8xf32>, tensor<2x8x16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x16xf32>
+  %sharding = shard.sharding @grid_2 split_axes = [[0]] : !shard.sharding
+  %sharded = shard.shard %0 to %sharding : tensor<2x4x16xf32>
+  return %sharded : tensor<2x4x16xf32>
+}
+
+// CHECK-LABEL: func.func @matmul_dynamic_rhs_batch
+// CHECK-NOT: annotate_for_users
+// CHECK: tosa.matmul
+func.func @matmul_dynamic_rhs_batch(%a: tensor<2x4x8xf32>, %b: tensor<?x8x16xf32>, %zp: tensor<1xf32>) -> tensor<2x4x16xf32> {
+  %0 = tosa.matmul %a, %b, %zp, %zp : (tensor<2x4x8xf32>, tensor<?x8x16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x16xf32>
+  %sharding = shard.sharding @grid_2 split_axes = [[0]] : !shard.sharding
+  %sharded = shard.shard %0 to %sharding : tensor<2x4x16xf32>
+  return %sharded : tensor<2x4x16xf32>
+}
+
+// CHECK-LABEL: func.func @matmul_dynamic_and_singleton_batch
+// CHECK-SAME: %[[A:.*]]: tensor<?x4x8xf32>, %[[B:.*]]: tensor<1x8x16xf32>
+// CHECK: %[[A_SHARDING:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}0]]
+// CHECK: %[[A_SHARDED:.*]] = shard.shard %[[A]] to %[[A_SHARDING]] annotate_for_users
+// CHECK: %[[B_SHARDING:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}]]
+// CHECK: %[[B_SHARDED:.*]] = shard.shard %[[B]] to %[[B_SHARDING]] annotate_for_users
+// CHECK: tosa.matmul %[[A_SHARDED]], %[[B_SHARDED]]
+func.func @matmul_dynamic_and_singleton_batch(%a: tensor<?x4x8xf32>, %b: tensor<1x8x16xf32>, %zp: tensor<1xf32>) -> tensor<?x4x16xf32> {
+  %0 = tosa.matmul %a, %b, %zp, %zp : (tensor<?x4x8xf32>, tensor<1x8x16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<?x4x16xf32>
+  %sharding = shard.sharding @grid_2 split_axes = [[0]] : !shard.sharding
+  %sharded = shard.shard %0 to %sharding : tensor<?x4x16xf32>
+  return %sharded : tensor<?x4x16xf32>
+}
+
+// CHECK-LABEL: func.func @matmul_operand_replication
+// CHECK-SAME: %[[A:.*]]: tensor<1x4x8xf32>, %[[B:.*]]: tensor<1x8x16xf32>
+// CHECK: %[[REPLICATION:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}]]
+// CHECK: %[[A_REPLICATED:.*]] = shard.shard %[[A]] to %[[REPLICATION]] annotate_for_users
+// CHECK: %[[B_REPLICATED:.*]] = shard.shard %[[B]] to %[[REPLICATION]] annotate_for_users
+// CHECK: tosa.matmul %[[A_REPLICATED]], %[[B_REPLICATED]]
+func.func @matmul_operand_replication(%a: tensor<1x4x8xf32>, %b: tensor<1x8x16xf32>, %zp: tensor<1xf32>) -> tensor<1x4x16xf32> {
+  %replication = shard.sharding @grid_2 split_axes = [[]] : !shard.sharding
+  %a_replicated = shard.shard %a to %replication annotate_for_users : tensor<1x4x8xf32>
+  %0 = tosa.matmul %a_replicated, %b, %zp, %zp : (tensor<1x4x8xf32>, tensor<1x8x16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x4x16xf32>
+  return %0 : tensor<1x4x16xf32>
+}
 
 // CHECK-LABEL: func.func @element_wise_empty_sharding_info
 func.func @element_wise_empty_sharding_info(%arg0: tensor<8x16xf32>) -> tensor<8x16xf32> {
@@ -298,4 +468,84 @@ func.func @elementwise_duplicated_chain(%arg0: tensor<8x16xf32>) -> tensor<8x16x
   %2 = shard.shard %1 to %s0 : tensor<8x16xf32>
   // CHECK-NEXT:  return %[[V5]]
   return %2 : tensor<8x16xf32>
+}
+
+// A constant indexing expression cannot carry split axes. Reject the candidate
+// without a diagnostic or propagating its sharding to the other operands/result.
+// CHECK-LABEL: func.func @matmul_shard_broadcast_dimension
+// CHECK-SAME: %[[A:.*]]: tensor<1x4x8xf32>, %[[B:.*]]: tensor<2x8x16xf32>, %[[ZP:.*]]: tensor<1xf32>
+// CHECK: %[[SHARDING:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}0]]
+// CHECK-NEXT: %[[SHARDED:.*]] = shard.shard %[[A]] to %[[SHARDING]] annotate_for_users
+// CHECK-NEXT: %[[RESULT:.*]] = tosa.matmul %[[SHARDED]], %[[B]], %[[ZP]], %[[ZP]]
+// CHECK-NEXT: return %[[RESULT]]
+func.func @matmul_shard_broadcast_dimension(%a: tensor<1x4x8xf32>, %b: tensor<2x8x16xf32>, %zp: tensor<1xf32>) -> tensor<2x4x16xf32> {
+  %sharding = shard.sharding @grid_2 split_axes = [[0]] : !shard.sharding
+  %a_sharded = shard.shard %a to %sharding annotate_for_users : tensor<1x4x8xf32>
+  %0 = tosa.matmul %a_sharded, %b, %zp, %zp : (tensor<1x4x8xf32>, tensor<2x8x16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x16xf32>
+  return %0 : tensor<2x4x16xf32>
+}
+
+// An offset expression must not propagate sharding as if it were d0.
+// CHECK-LABEL: func.func @shard_operand_with_offset
+// CHECK-SAME: %[[INPUT:.*]]: tensor<11xf32>, %[[INIT:.*]]: tensor<8xf32>
+// CHECK: %[[SHARDED:.*]] = shard.shard %[[INPUT]] {{.*}} annotate_for_users
+// CHECK-NEXT: %[[RESULT:.*]] = linalg.generic
+// CHECK-SAME: ins(%[[SHARDED]] : tensor<11xf32>) outs(%[[INIT]] : tensor<8xf32>)
+// CHECK: linalg.yield
+// CHECK-NEXT: } -> tensor<8xf32>
+// CHECK-NEXT: return %[[RESULT]]
+func.func @shard_operand_with_offset(%input: tensor<11xf32>, %init: tensor<8xf32>) -> tensor<8xf32> {
+  %sharding = shard.sharding @grid_2 split_axes = [[0]] : !shard.sharding
+  %sharded = shard.shard %input to %sharding annotate_for_users : tensor<11xf32>
+  %result = linalg.generic {
+    indexing_maps = [affine_map<(d0) -> (d0 + 3)>, affine_map<(d0) -> (d0)>],
+    iterator_types = ["parallel"]
+  } ins(%sharded : tensor<11xf32>) outs(%init : tensor<8xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    linalg.yield %in : f32
+  } -> tensor<8xf32>
+  return %result : tensor<8xf32>
+}
+
+// Neither loop in d0 + d1 is fixed by another annotation, so the candidate
+// cannot determine which loop to shard.
+// CHECK-LABEL: func.func @shard_operand_with_multiple_loop_indices
+// CHECK-SAME: %[[INPUT:.*]]: tensor<15xf32>, %[[INIT:.*]]: tensor<8x8xf32>
+// CHECK: %[[SHARDED:.*]] = shard.shard %[[INPUT]] {{.*}} annotate_for_users
+// CHECK-NEXT: %[[RESULT:.*]] = linalg.generic
+// CHECK-SAME: ins(%[[SHARDED]] : tensor<15xf32>) outs(%[[INIT]] : tensor<8x8xf32>)
+// CHECK: linalg.yield
+// CHECK-NEXT: } -> tensor<8x8xf32>
+// CHECK-NEXT: return %[[RESULT]]
+func.func @shard_operand_with_multiple_loop_indices(%input: tensor<15xf32>, %init: tensor<8x8xf32>) -> tensor<8x8xf32> {
+  %sharding = shard.sharding @grid_2 split_axes = [[0]] : !shard.sharding
+  %sharded = shard.shard %input to %sharding annotate_for_users : tensor<15xf32>
+  %result = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0 + d1)>, affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]
+  } ins(%sharded : tensor<15xf32>) outs(%init : tensor<8x8xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    linalg.yield %in : f32
+  } -> tensor<8x8xf32>
+  return %result : tensor<8x8xf32>
+}
+
+// The first candidate tries to shard a broadcast dimension. Dropping that
+// optional operand annotation allows propagation from the result to succeed.
+// CHECK-LABEL: func.func @matmul_shard_broadcast_candidate_fallback
+// CHECK-SAME: %[[A:.*]]: tensor<1x4x8xf32>
+// CHECK: %[[BATCH_SHARDING:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}0]]
+// CHECK: %[[A_BATCH:.*]] = shard.shard %[[A]] to %[[BATCH_SHARDING]] : tensor<1x4x8xf32>
+// CHECK: %[[ROW_SHARDING:.*]] = shard.sharding @grid_2 split_axes = {{\[\[}}], [0]]
+// CHECK: %[[A_ROWS:.*]] = shard.shard %[[A_BATCH]] to %[[ROW_SHARDING]] annotate_for_users
+// CHECK: %[[RESULT:.*]] = tosa.matmul %[[A_ROWS]]
+// CHECK: %[[OUTPUT:.*]] = shard.shard %[[RESULT]] to %[[ROW_SHARDING]] : tensor<2x4x16xf32>
+// CHECK-NEXT: return %[[OUTPUT]]
+func.func @matmul_shard_broadcast_candidate_fallback(%a: tensor<1x4x8xf32>, %b: tensor<2x8x16xf32>, %zp: tensor<1xf32>) -> tensor<2x4x16xf32> {
+  %batch_sharding = shard.sharding @grid_2 split_axes = [[0]] : !shard.sharding
+  %a_sharded = shard.shard %a to %batch_sharding : tensor<1x4x8xf32>
+  %0 = tosa.matmul %a_sharded, %b, %zp, %zp : (tensor<1x4x8xf32>, tensor<2x8x16xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x4x16xf32>
+  %row_sharding = shard.sharding @grid_2 split_axes = [[], [0]] : !shard.sharding
+  %result = shard.shard %0 to %row_sharding : tensor<2x4x16xf32>
+  return %result : tensor<2x4x16xf32>
 }
