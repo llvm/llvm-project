@@ -8,7 +8,7 @@
 // RUN: %clang_cc1 -fsycl-is-device -triple spir64-unknown-unknown -aux-triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-sycl-cir.ll
 // RUN: FileCheck --check-prefix=LLVM-DEV --implicit-check-not=_ZTI --input-file=%t-sycl-cir.ll %s
 // RUN: %clang_cc1 -fsycl-is-device -triple spir64-unknown-unknown -aux-triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t-sycl.ll
-// RUN: FileCheck --check-prefix=LLVM-DEV --implicit-check-not=_ZTI --input-file=%t-sycl.ll %s
+// RUN: FileCheck --check-prefix=OGCG-DEV --implicit-check-not=_ZTI --input-file=%t-sycl.ll %s
 
 // OpenMP device on AMDGPU.
 // RUN: %clang_cc1 -fopenmp -fopenmp-is-target-device -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t-omp.cir
@@ -57,6 +57,7 @@ DEVICE void Key::f() {}
 
 // CIR-DEV: cir.global {{.*}} @_ZTV3Key = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZN3Key1fEv> : !cir.ptr<!u8i>]>
 // LLVM-DEV: @_ZTV3Key = {{.*}}null, ptr{{.*}} null, ptr{{.*}} @_ZN3Key1fEv
+// OGCG-DEV: @_ZTV3Key = {{.*}}constant { [3 x ptr addrspace(4)] } {{.*}}ptr addrspace(4) null, ptr addrspace(4) addrspacecast (ptr addrspace(1) null to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr @_ZN3Key1fEv to ptr addrspace(4))
 
 // CIR-HOST-DAG: cir.global {{.*}} @_ZTV3Key = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI3Key> : !cir.ptr<!u8i>, #cir.global_view<@_ZN3Key1fEv> : !cir.ptr<!u8i>]>
 // CIR-HOST-DAG: cir.global constant external @_ZTI3Key = #cir.typeinfo<
