@@ -1,0 +1,48 @@
+# REQUIRES: ssaf-driver-make-build
+# RUN: rm -rf %t && split-file %s %t
+# RUN: mkdir -p %t/build
+
+# Both translation units report the declaration group in the header; the
+# report has each of its declarators once, after main.cpp's own group.
+# RUN: cd %t
+# RUN: %clang-ssaf-driver --transformation=cpp-bounded-buffers \
+# RUN:     --ssaf-clang=%ssaf-driver-clang -o %t/out -- make \
+# RUN:     2> %t/stderr.txt | FileCheck %s --check-prefix=STDOUT
+# STDOUT: report: {{[^ ]*}}/out/cpp-bounded-buffers.sarif
+
+# RUN: FileCheck %s --check-prefix=STDERR --input-file=%t/stderr.txt
+# STDERR:      src/main.cpp:2:1: note: declarator of a multi-declarator group is not yet rewritten [cpp-bounded-buffers-skipped]
+# STDERR-NEXT: src/main.cpp:2:1: note: declarator of a multi-declarator group is not yet rewritten [cpp-bounded-buffers-skipped]
+# STDERR-NEXT: src/shared.h:1:8: note: declarator of a multi-declarator group is not yet rewritten [cpp-bounded-buffers-skipped]
+# STDERR-NEXT: src/shared.h:1:8: note: declarator of a multi-declarator group is not yet rewritten [cpp-bounded-buffers-skipped]
+# STDERR-NEXT: 4 cpp-bounded-buffers-skipped reported
+
+# The report holds the same findings, and the patch changes nothing.
+# RUN: FileCheck %s --check-prefix=SARIF \
+# RUN:   --input-file=%t/out/cpp-bounded-buffers.sarif
+# RUN: grep 'multi-declarator group' %t/out/cpp-bounded-buffers.sarif | count 4
+# RUN: count 0 < %t/out/cpp-bounded-buffers.patch
+# SARIF: "runs": [
+# SARIF: "name": "clang-ssaf",
+# SARIF: "name": "clang-ssaf-src-edit-merge",
+
+#--- Makefile
+CXX = clang++
+all: build/prg
+build/%.o: src/%.cpp src/shared.h
+	$(CXX) -c -o $@ $<
+build/prg: build/main.o build/use.o
+	$(CXX) -o $@ build/main.o build/use.o
+
+#--- src/shared.h
+extern int *p, *q;
+
+#--- src/use.cpp
+#include "shared.h"
+int use() { return p[1] + q[1]; }
+
+#--- src/main.cpp
+#include "shared.h"
+int *p, *q;
+int use();
+int main() { return use(); }

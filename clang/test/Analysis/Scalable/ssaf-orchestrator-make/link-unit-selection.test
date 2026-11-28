@@ -1,0 +1,91 @@
+
+# REQUIRES: ssaf-orchestrator-make-build
+# RUN: rm -rf %t && split-file %s %t
+# RUN: mkdir -p %t/two/build %t/none/build %t/lib/build
+
+# RUN: cd %t/two
+# RUN: not %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/two/out -- make 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=AMBIGUOUS
+# AMBIGUOUS: produced 2 unconsumed outputs and none of them consumes the others
+# AMBIGUOUS-SAME: {{[^ ]*}}/build/one
+# AMBIGUOUS-SAME: {{[^ ]*}}/build/two
+# AMBIGUOUS-SAME: Build one of them on its own
+
+# RUN: %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/two/out -- make build/two \
+# RUN:   | FileCheck %s --check-prefix=PICKED
+# PICKED: summaries: 2
+# PICKED: link-unit: {{[^ ]*}}/build/two
+
+# RUN: cd %t/lib
+# RUN: not %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/lib/out -- make 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=LIB-AND-BINARY
+# LIB-AND-BINARY: produced 2 unconsumed outputs and none of them consumes the
+# LIB-AND-BINARY-SAME: others
+# LIB-AND-BINARY-SAME: {{[^ ]*}}/build/libextra.a
+# LIB-AND-BINARY-SAME: {{[^ ]*}}/build/prg
+
+# RUN: %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/lib/out -- make build/prg \
+# RUN:   | FileCheck %s --check-prefix=LIB-PICKED
+# LIB-PICKED: link-unit: {{[^ ]*}}/build/prg
+
+# RUN: cd %t/none
+# RUN: not %clang-ssaf-orchestrator-make \
+# RUN:     --extract-summaries=PointerFlow \
+# RUN:     --ssaf-clang=%ssaf-orchestrator-make-clang \
+# RUN:     -o %t/none/out -- make 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NO-LINK
+# NO-LINK: produced no link unit
+
+#--- two/Makefile
+CXX = clang++
+all: build/one build/two
+build/%.o: src/%.cpp
+	$(CXX) -c -o $@ $<
+build/one: build/one.o
+	$(CXX) -o $@ $<
+build/two: build/two.o
+	$(CXX) -o $@ $<
+
+#--- two/src/one.cpp
+int main() { return 0; }
+
+#--- two/src/two.cpp
+int main() { return 1; }
+
+#--- lib/Makefile
+CXX = clang++
+AR = ar
+all: build/prg build/libextra.a
+build/%.o: src/%.cpp
+	$(CXX) -c -o $@ $<
+build/prg: build/main.o
+	$(CXX) -o $@ $<
+build/libextra.a: build/extra.o
+	$(AR) rcs $@ $<
+
+#--- lib/src/main.cpp
+int main() { return 0; }
+
+#--- lib/src/extra.cpp
+int extra(int *p) { return p[0]; }
+
+#--- none/Makefile
+CXX = clang++
+all: build/only.o
+build/%.o: src/%.cpp
+	$(CXX) -c -o $@ $<
+
+#--- none/src/only.cpp
+int only(int *p) { return p[0]; }

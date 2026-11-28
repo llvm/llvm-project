@@ -1,0 +1,12 @@
+
+# RUN: not %clang-ssaf-driver -- make 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NO-TRANSFORMATION
+# NO-TRANSFORMATION: error: the following arguments are required: --transformation
+
+# RUN: not %clang-ssaf-driver --transformation=no-such -- make 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=UNKNOWN
+# UNKNOWN: error: argument --transformation: invalid choice: 'no-such' {{.*}}cpp-bounded-buffers
+
+# RUN: not %clang-ssaf-driver --transformation=cpp-bounded-buffers 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NO-BUILD
+# NO-BUILD: clang-ssaf-driver: error: no build command given
