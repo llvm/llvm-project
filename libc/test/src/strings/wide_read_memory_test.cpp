@@ -178,4 +178,29 @@ TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstCharAfterRange) {
   });
 }
 
+TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstCharStopsBeforePageBoundary) {
+  static constexpr const void *(*kImpls[])(const unsigned char *, unsigned char,
+                                           size_t) = {
+      internal::element::find_first_character,
+      internal::word::find_first_character,
+#if LIBC_HAS_VECTOR_TYPE
+      clang_vector::find_first_character,
+#endif
+#ifdef LIBC_TARGET_ARCH_IS_X86
+      internal::arch_vector::find_first_character,
+#endif
+  };
+  inline_memset(page1_, 'a', page_size);
+  auto *end = reinterpret_cast<unsigned char *>(page2_);
+  end[-1] = 'b';
+  const void *expected = end - 1;
+  for (size_t dist = 1; dist <= kLargestTestVectorSize; ++dist) {
+    unsigned char *s = end - dist;
+    for (auto find_first_character : kImpls) {
+      ASSERT_EQ(find_first_character(s, 'b', dist + 1), expected);
+      ASSERT_EQ(find_first_character(s, 'b', page_size), expected);
+    }
+  }
+}
+
 } // namespace LIBC_NAMESPACE_DECL
