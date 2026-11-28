@@ -26,7 +26,6 @@ class MipsELFMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit MipsELFMCAsmInfo(const Triple &TheTriple,
                             const MCTargetOptions &Options);
-  bool usesCompInstByteOrder(const MCSubtargetInfo &STI) const override;
 };
 
 class MipsCOFFMCAsmInfo : public MCAsmInfoGNUCOFF {

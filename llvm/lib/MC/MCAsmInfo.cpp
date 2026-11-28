@@ -19,6 +19,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 
@@ -35,6 +36,12 @@ MCAsmInfo::MCAsmInfo(const MCTargetOptions &Options) : TargetOptions(Options) {
 }
 
 MCAsmInfo::~MCAsmInfo() = default;
+
+bool MCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
+  if (CompInstByteOrderFeature)
+    return STI.hasFeature(*CompInstByteOrderFeature);
+  return false;
+}
 
 unsigned MCAsmInfo::getAsmMacroMaxNestingDepth() const {
   return getMCCLOptions(TargetOptions).asm_macro_max_nesting_depth;

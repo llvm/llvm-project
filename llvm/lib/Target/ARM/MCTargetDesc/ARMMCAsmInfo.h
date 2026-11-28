@@ -34,7 +34,6 @@ class ARMELFMCAsmInfo : public MCAsmInfoELF {
 
 public:
   explicit ARMELFMCAsmInfo(const Triple &TT, const MCTargetOptions &Options);
-  bool usesCompInstByteOrder(const MCSubtargetInfo &STI) const override;
 };
 
 class ARMCOFFMCAsmInfoMicrosoft : public MCAsmInfoMicrosoft {
