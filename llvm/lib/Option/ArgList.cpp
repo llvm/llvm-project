@@ -217,7 +217,8 @@ StringRef ArgList::getSubCommand(
 
     StringRef CmdName = A->getValue();
     bool IsCandidate =
-        !AllowSubCommandNamesAsPositionals || SubCommands.empty();
+        A->getSpelling() != "--" &&
+        (!AllowSubCommandNamesAsPositionals || SubCommands.empty());
     if (IsCandidate &&
         llvm::any_of(AllSubCommands, [&](const OptTable::SubCommand &CMD) {
           return CmdName == CMD.Name;
