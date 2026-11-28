@@ -37,6 +37,19 @@
 ; CHECK-OUTLINE: @bar
 ; CHECK-OUTLINE: @baz
 
+; The merge block `end` has two predecessors and is reached with high
+; frequency from the hot `work` block, so the cold `check -> end` edge must not
+; cause {check, work, end} to be outlined.
+; CHECK-OUTLINE-LABEL: define {{.*}}@merge_block(
+; CHECK-OUTLINE-NOT: @merge_block.cold
+; CHECK-OUTLINE: work:
+; CHECK-OUTLINE: end:
+
+; The merge block `cold` has two predecessors, each reaching it through a
+; low-probability edge, so it is still cold and should be outlined.
+; CHECK-OUTLINE-LABEL: define {{.*}}@merge_block_all_cold(
+; CHECK-OUTLINE: hot:
+
 ; CHECK-OUTLINE: internal void @foo.cold.1() #[[ATTR0:[0-9]+]]
 ; CHECK-OUTLINE-NEXT: newFuncRoot
 ; CHECK-OUTLINE: tail call noundef i32 @cold
@@ -53,6 +66,11 @@
 ; CHECK-PROB-NEXT: newFuncRoot
 ; CHECK-PROB: tail call noundef i32 @cold
 ; CHECK-PROB: tail call noundef i32 @cold
+
+; CHECK-OUTLINE: internal void @merge_block_all_cold.cold.1() #[[ATTR0:[0-9]+]]
+; CHECK-OUTLINE-NEXT: newFuncRoot
+; CHECK-OUTLINE: tail call noundef i32 @cold
+; CHECK-OUTLINE: tail call noundef i32 @cold
 ; CHECK-OUTLINE: attributes #[[ATTR0]] = { cold minsize }
 
 source_filename = "/app/example.cpp"
@@ -119,6 +137,59 @@ if.else:
 if.end:
   ret void
 }
+
+define dso_local i32 @merge_block(i32 noundef %t, ptr noundef %stats) {
+entry:
+  %bad = icmp ugt i32 %t, 7
+  br i1 %bad, label %error, label %check, !prof !1
+
+error:
+  call void @log_error(i32 %t)
+  unreachable
+
+check:
+  %node = call i32 @get_node()
+  %isnull = icmp eq i32 %node, 0
+  br i1 %isnull, label %end, label %work, !prof !1
+
+work:
+  %r = call i32 @work(i32 %t, ptr %stats)
+  %a = load i32, ptr %stats
+  %a1 = add i32 %a, %r
+  store i32 %a1, ptr %stats
+  br label %end
+
+end:
+  ret i32 0
+}
+
+define dso_local void @merge_block_all_cold(i32 noundef %a) {
+entry:
+  %c1 = icmp eq i32 %a, 0
+  br i1 %c1, label %cold, label %check, !prof !1
+
+check:
+  %c2 = icmp eq i32 %a, 1
+  br i1 %c2, label %cold, label %hot, !prof !1
+
+hot:
+  %call = tail call noundef i32 @hot(ptr noundef nonnull @.str)
+  br label %exit
+
+cold:
+  %call1 = tail call noundef i32 @cold(ptr noundef nonnull @.str)
+  %call2 = tail call noundef i32 @cold(ptr noundef nonnull @.str)
+  br label %exit
+
+exit:
+  ret void
+}
+
+declare void @log_error(i32) noreturn
+
+declare i32 @get_node()
+
+declare i32 @work(i32, ptr)
 
 !1 = !{!"branch_weights", i32 1, i32 2000}
 !2 = !{!"branch_weights", i32 2000, i32 1}

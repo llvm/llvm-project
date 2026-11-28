@@ -14,7 +14,7 @@ declare void @sink_call(ptr, i32, ptr)
 ; CHECK: ret void
 define ptr @test_stale_funcretval() {
 entry:
-  br i1 false, label %sink, label %then
+  br i1 false, label %sink, label %then, !prof !1
 
 then:                                             ; preds = %entry
   br i1 false, label %end, label %sink, !prof !0
@@ -30,3 +30,4 @@ end:                                              ; preds = %sink, %then
 }
 
 !0 = !{!"branch_weights", !"expected", i32 2000, i32 1}
+!1 = !{!"branch_weights", i32 1, i32 2000}
