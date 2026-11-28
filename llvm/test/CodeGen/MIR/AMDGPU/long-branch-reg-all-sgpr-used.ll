@@ -315,9 +315,8 @@
 ; CHECK-NEXT:     fp64-fp16-output-denormals: true
 ; CHECK-NEXT:   highBitsOf32BitAddress: 0
 ; CHECK-NEXT:   occupancy:       4
-; CHECK-NEXT:   scavengeFI:      '%stack.0'
 ; CHECK-NEXT:   vgprForAGPRCopy: ''
-; CHECK-NEXT:   sgprForEXECCopy: '$sgpr100_sgpr101'
+; CHECK-NEXT:   sgprForEXECCopy: ''
 ; CHECK-NEXT:   longBranchReservedReg: ''
 ; CHECK-NEXT:   hasInitWholeWave: false
 ; CHECK-NEXT:   dynamicVGPRBlockSize: 0
@@ -326,6 +325,11 @@
 ; CHECK-NEXT:   isWholeWaveFunction: false
 ; CHECK-NEXT:   minNumAGPRs: 4294967295
 ; CHECK-NEXT: body:
+; The SGPR reserved for EXEC copy is released, so the long branch can use it
+; instead of spilling an SGPR pair.
+; CHECK-NOT: SI_SPILL
+; CHECK: $sgpr100_sgpr101 = S_GETPC_B64
+; CHECK: S_SETPC_B64 $sgpr100_sgpr101
   define amdgpu_kernel void @long_branch_high_num_sgprs_used(ptr addrspace(1) %arg, i32 %cnd) #0 {
   entry:
     %long_branch_used_all_sgprs.kernarg.segment = call nonnull align 16 dereferenceable(48) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
