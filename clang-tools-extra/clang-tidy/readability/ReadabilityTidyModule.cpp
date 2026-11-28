@@ -13,6 +13,7 @@
 #include "AvoidNestedConditionalOperatorCheck.h"
 #include "AvoidReturnWithVoidValueCheck.h"
 #include "AvoidUnconditionalPreprocessorIfCheck.h"
+#include "BlockSizeCheck.h"
 #include "BracesAroundStatementsCheck.h"
 #include "ConstReturnTypeCheck.h"
 #include "ContainerContainsCheck.h"
@@ -117,6 +118,7 @@ public:
         "readability-identifier-length");
     CheckFactories.registerCheck<IdentifierNamingCheck>(
         "readability-identifier-naming");
+    CheckFactories.registerCheck<BlockSizeCheck>("readability-block-size");
     CheckFactories.registerCheck<ImplicitBoolConversionCheck>(
         "readability-implicit-bool-conversion");
     CheckFactories.registerCheck<InconsistentIfElseBracesCheck>(
