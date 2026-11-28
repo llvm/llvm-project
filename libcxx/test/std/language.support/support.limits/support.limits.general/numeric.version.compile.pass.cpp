@@ -20,6 +20,10 @@
 
 #if TEST_STD_VER < 14
 
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_numeric
 #    error "__cpp_lib_constexpr_numeric should not be defined before c++20"
 #  endif
@@ -46,6 +50,10 @@
 
 #elif TEST_STD_VER == 14
 
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_numeric
 #    error "__cpp_lib_constexpr_numeric should not be defined before c++20"
 #  endif
@@ -71,6 +79,10 @@
 #  endif
 
 #elif TEST_STD_VER == 17
+
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
+#  endif
 
 #  ifdef __cpp_lib_constexpr_numeric
 #    error "__cpp_lib_constexpr_numeric should not be defined before c++20"
@@ -109,6 +121,10 @@
 #  endif
 
 #elif TEST_STD_VER == 20
+
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
+#  endif
 
 #  ifndef __cpp_lib_constexpr_numeric
 #    error "__cpp_lib_constexpr_numeric should be defined in c++20"
@@ -153,6 +169,10 @@
 #  endif
 
 #elif TEST_STD_VER == 23
+
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
+#  endif
 
 #  ifndef __cpp_lib_constexpr_numeric
 #    error "__cpp_lib_constexpr_numeric should be defined in c++23"
@@ -200,6 +220,10 @@
 #  endif
 
 #elif TEST_STD_VER == 26
+
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
+#  endif
 
 #  ifndef __cpp_lib_constexpr_numeric
 #    error "__cpp_lib_constexpr_numeric should be defined in c++26"
@@ -250,6 +274,19 @@
 #  endif
 
 #elif TEST_STD_VER > 26
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_clmul
+#      error "__cpp_lib_clmul should be defined in c++29"
+#    endif
+#    if __cpp_lib_clmul != 202611L
+#      error "__cpp_lib_clmul should have the value 202611L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_clmul
+#      error "__cpp_lib_clmul should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
 
 #  ifndef __cpp_lib_constexpr_numeric
 #    error "__cpp_lib_constexpr_numeric should be defined in c++29"

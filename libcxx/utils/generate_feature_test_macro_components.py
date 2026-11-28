@@ -329,6 +329,12 @@ feature_test_macros = [
             "headers": ["algorithm"],
         },
         {
+            "name": "__cpp_lib_clmul",
+            "values": {"c++29": 202611},
+            "headers": ["numeric"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_common_reference",
             "values": {"c++20": 202302},
             "headers": ["type_traits"],
@@ -957,8 +963,9 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_hazard_pointer",
             "values": {
-                "c++26": 202306,  # P2530R3 Hazard Pointers for C++26
-                # "c++29": 202606,  # P3428R4 Hazard Pointer Batches
+                "c++26": 202306,  # P2530R3: Hazard Pointers for C++26
+                # "c++29": 202606,  # P3428R4: Hazard Pointer Batches
+                # "c++29": 202611,  # P3427R9: Hazard Pointer Synchronous Reclamation
             },
             "headers": ["hazard_pointer"],
             "unimplemented": True,
@@ -1283,6 +1290,7 @@ feature_test_macros = [
                 "c++20": 202106,  # P2231R1 Missing constexpr in std::optional and std::variant
                 "c++23": 202110,  # P0798R8 Monadic operations for std::optional + LWG3621 Remove feature-test macro __cpp_lib_monadic_optional
                 "c++26": 202506,  # P2988R12: std::optional<T&>
+                # "c++29": 202611,  # P4189R0: get()ing the pointer from optional
             },
             "headers": ["optional"],
         },
@@ -1462,6 +1470,12 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_ranges_slice",
+            "values": {"c++29": 202611},
+            "headers": ["ranges"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_ranges_slide",
             "values": {"c++23": 202202},
             "headers": ["ranges"],
@@ -1614,6 +1628,12 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_simd_clmul",
+            "values": {"c++29": 202611},
+            "headers": ["simd"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_simd_complex",
             "values": {"c++29": 202502},  # P3793R2 Better shifting
             "headers": ["simd"],
@@ -1721,6 +1741,18 @@ feature_test_macros = [
                 "c++26": 202403,  # P2591R5: Concatenation of strings and string views
             },
             "headers": ["string", "string_view"],
+        },
+        {
+            "name": "__cpp_lib_structural_types",
+            "values": {"c++29": 202611},
+            "headers": [
+                "optional",
+                "span",
+                "string_view",
+                "tuple",
+                "variant",
+            ],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_submdspan",

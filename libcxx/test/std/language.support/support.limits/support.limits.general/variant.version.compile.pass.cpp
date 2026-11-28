@@ -32,6 +32,10 @@
 #    error "__cpp_lib_freestanding_variant should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_variant
 #    error "__cpp_lib_variant should not be defined before c++17"
 #  endif
@@ -50,6 +54,10 @@
 #    error "__cpp_lib_freestanding_variant should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_variant
 #    error "__cpp_lib_variant should not be defined before c++17"
 #  endif
@@ -66,6 +74,10 @@
 
 #  ifdef __cpp_lib_freestanding_variant
 #    error "__cpp_lib_freestanding_variant should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_variant
@@ -89,6 +101,10 @@
 #    error "__cpp_lib_freestanding_variant should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
+#  endif
+
 #  ifndef __cpp_lib_variant
 #    error "__cpp_lib_variant should be defined in c++20"
 #  endif
@@ -108,6 +124,10 @@
 
 #  ifdef __cpp_lib_freestanding_variant
 #    error "__cpp_lib_freestanding_variant should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_variant
@@ -152,6 +172,10 @@
 #    endif
 #  endif
 
+#  ifdef __cpp_lib_structural_types
+#    error "__cpp_lib_structural_types should not be defined before c++29"
+#  endif
+
 #  ifndef __cpp_lib_variant
 #    error "__cpp_lib_variant should be defined in c++26"
 #  endif
@@ -191,6 +215,19 @@
 #  else
 #    ifdef __cpp_lib_freestanding_variant
 #      error "__cpp_lib_freestanding_variant should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_structural_types
+#      error "__cpp_lib_structural_types should be defined in c++29"
+#    endif
+#    if __cpp_lib_structural_types != 202611L
+#      error "__cpp_lib_structural_types should have the value 202611L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_structural_types
+#      error "__cpp_lib_structural_types should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 

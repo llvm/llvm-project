@@ -80,6 +80,10 @@
 #    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_slice
+#    error "__cpp_lib_ranges_slice should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_ranges_slide
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
 #  endif
@@ -162,6 +166,10 @@
 #    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_slice
+#    error "__cpp_lib_ranges_slice should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_ranges_slide
 #    error "__cpp_lib_ranges_slide should not be defined before c++23"
 #  endif
@@ -242,6 +250,10 @@
 
 #  ifdef __cpp_lib_ranges_reserve_hint
 #    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_ranges_slice
+#    error "__cpp_lib_ranges_slice should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_ranges_slide
@@ -327,6 +339,10 @@
 
 #  ifdef __cpp_lib_ranges_reserve_hint
 #    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_ranges_slice
+#    error "__cpp_lib_ranges_slice should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_ranges_slide
@@ -445,6 +461,10 @@
 
 #  ifdef __cpp_lib_ranges_reserve_hint
 #    error "__cpp_lib_ranges_reserve_hint should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_ranges_slice
+#    error "__cpp_lib_ranges_slice should not be defined before c++29"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
@@ -634,6 +654,10 @@
 #    endif
 #  endif
 
+#  ifdef __cpp_lib_ranges_slice
+#    error "__cpp_lib_ranges_slice should not be defined before c++29"
+#  endif
+
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_slide
 #      error "__cpp_lib_ranges_slide should be defined in c++26"
@@ -818,6 +842,19 @@
 #  else
 #    ifdef __cpp_lib_ranges_reserve_hint
 #      error "__cpp_lib_ranges_reserve_hint should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_slice
+#      error "__cpp_lib_ranges_slice should be defined in c++29"
+#    endif
+#    if __cpp_lib_ranges_slice != 202611L
+#      error "__cpp_lib_ranges_slice should have the value 202611L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_slice
+#      error "__cpp_lib_ranges_slice should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
