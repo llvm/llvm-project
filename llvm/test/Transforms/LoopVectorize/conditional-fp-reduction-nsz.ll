@@ -16,7 +16,7 @@ define float @cond_fadd(ptr %src, i64 %n) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ <float -0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
@@ -26,7 +26,7 @@ define float @cond_fadd(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[PREDPHI]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call reassoc nnan ninf arcp contract afn float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[PREDPHI]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -46,9 +46,9 @@ define float @cond_fadd(ptr %src, i64 %n) {
 ; INLOOP-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[INDEX]]
 ; INLOOP-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; INLOOP-NEXT:    [[TMP2:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
-; INLOOP-NEXT:    [[TMP3:%.*]] = select fast <4 x i1> [[TMP2]], <4 x float> [[WIDE_LOAD]], <4 x float> zeroinitializer
-; INLOOP-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
-; INLOOP-NEXT:    [[TMP5]] = fadd fast float [[VEC_PHI]], [[TMP4]]
+; INLOOP-NEXT:    [[TMP3:%.*]] = select reassoc nnan ninf arcp contract afn <4 x i1> [[TMP2]], <4 x float> [[WIDE_LOAD]], <4 x float> splat (float -0.000000e+00)
+; INLOOP-NEXT:    [[TMP4:%.*]] = call reassoc nnan ninf arcp contract afn float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
+; INLOOP-NEXT:    [[TMP5]] = fadd reassoc nnan ninf arcp contract afn float [[VEC_PHI]], [[TMP4]]
 ; INLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INLOOP-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INLOOP-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -174,7 +174,7 @@ define float @cond_fsub(ptr %src, i64 %n) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ <float -0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
@@ -184,7 +184,7 @@ define float @cond_fsub(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[PREDPHI]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call reassoc nnan ninf arcp contract afn float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[PREDPHI]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -204,9 +204,9 @@ define float @cond_fsub(ptr %src, i64 %n) {
 ; INLOOP-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[INDEX]]
 ; INLOOP-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; INLOOP-NEXT:    [[TMP2:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
-; INLOOP-NEXT:    [[TMP3:%.*]] = select fast <4 x i1> [[TMP2]], <4 x float> [[WIDE_LOAD]], <4 x float> zeroinitializer
-; INLOOP-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
-; INLOOP-NEXT:    [[TMP5]] = fsub fast float [[VEC_PHI]], [[TMP4]]
+; INLOOP-NEXT:    [[TMP3:%.*]] = select reassoc nnan ninf arcp contract afn <4 x i1> [[TMP2]], <4 x float> [[WIDE_LOAD]], <4 x float> splat (float -0.000000e+00)
+; INLOOP-NEXT:    [[TMP4:%.*]] = call reassoc nnan ninf arcp contract afn float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
+; INLOOP-NEXT:    [[TMP5]] = fsub reassoc nnan ninf arcp contract afn float [[VEC_PHI]], [[TMP4]]
 ; INLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INLOOP-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INLOOP-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -253,7 +253,7 @@ define float @cond_fmuladd(ptr %src, i64 %n) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ <float -0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
@@ -263,7 +263,7 @@ define float @cond_fmuladd(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[PREDPHI]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call reassoc nnan ninf arcp contract afn float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[PREDPHI]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -284,9 +284,9 @@ define float @cond_fmuladd(ptr %src, i64 %n) {
 ; INLOOP-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; INLOOP-NEXT:    [[TMP2:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
 ; INLOOP-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD]]
-; INLOOP-NEXT:    [[TMP4:%.*]] = select fast <4 x i1> [[TMP2]], <4 x float> [[TMP3]], <4 x float> zeroinitializer
-; INLOOP-NEXT:    [[TMP5:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP4]])
-; INLOOP-NEXT:    [[TMP6]] = fadd fast float [[VEC_PHI]], [[TMP5]]
+; INLOOP-NEXT:    [[TMP4:%.*]] = select reassoc nnan ninf arcp contract afn <4 x i1> [[TMP2]], <4 x float> [[TMP3]], <4 x float> splat (float -0.000000e+00)
+; INLOOP-NEXT:    [[TMP5:%.*]] = call reassoc nnan ninf arcp contract afn float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP4]])
+; INLOOP-NEXT:    [[TMP6]] = fadd reassoc nnan ninf arcp contract afn float [[VEC_PHI]], [[TMP5]]
 ; INLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INLOOP-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INLOOP-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -343,7 +343,7 @@ define float @cond_fmul(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[PREDPHI]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call reassoc nnan ninf arcp contract afn float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[PREDPHI]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -363,9 +363,9 @@ define float @cond_fmul(ptr %src, i64 %n) {
 ; INLOOP-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[INDEX]]
 ; INLOOP-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; INLOOP-NEXT:    [[TMP2:%.*]] = fcmp ogt <4 x float> [[WIDE_LOAD]], splat (float 2.000000e+00)
-; INLOOP-NEXT:    [[TMP3:%.*]] = select fast <4 x i1> [[TMP2]], <4 x float> [[WIDE_LOAD]], <4 x float> splat (float 1.000000e+00)
-; INLOOP-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[TMP3]])
-; INLOOP-NEXT:    [[TMP5]] = fmul fast float [[VEC_PHI]], [[TMP4]]
+; INLOOP-NEXT:    [[TMP3:%.*]] = select reassoc nnan ninf arcp contract afn <4 x i1> [[TMP2]], <4 x float> [[WIDE_LOAD]], <4 x float> splat (float 1.000000e+00)
+; INLOOP-NEXT:    [[TMP4:%.*]] = call reassoc nnan ninf arcp contract afn float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[TMP3]])
+; INLOOP-NEXT:    [[TMP5]] = fmul reassoc nnan ninf arcp contract afn float [[VEC_PHI]], [[TMP4]]
 ; INLOOP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INLOOP-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INLOOP-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]

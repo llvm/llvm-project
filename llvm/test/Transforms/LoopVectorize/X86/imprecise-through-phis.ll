@@ -72,8 +72,8 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; SSE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SSE:       vector.body:
 ; SSE-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; SSE-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[VECTOR_BODY]] ]
-; SSE-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI3:%.*]], [[VECTOR_BODY]] ]
+; SSE-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ <double 0.000000e+00, double -0.000000e+00>, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[VECTOR_BODY]] ]
+; SSE-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), [[VECTOR_PH]] ], [ [[PREDPHI3:%.*]], [[VECTOR_BODY]] ]
 ; SSE-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[ARR:%.*]], i32 [[INDEX]]
 ; SSE-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP2]], i64 16
 ; SSE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
@@ -88,8 +88,8 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; SSE-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
 ; SSE-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SSE:       middle.block:
-; SSE-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[PREDPHI3]], [[PREDPHI]]
-; SSE-NEXT:    [[TMP11:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[BIN_RDX]])
+; SSE-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc nnan ninf arcp contract afn <2 x double> [[PREDPHI3]], [[PREDPHI]]
+; SSE-NEXT:    [[TMP11:%.*]] = call reassoc nnan ninf arcp contract afn double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[BIN_RDX]])
 ; SSE-NEXT:    br label [[NEXT_ITER:%.*]]
 ; SSE:       done:
 ; SSE-NEXT:    ret double [[TMP11]]
@@ -101,10 +101,10 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; AVX-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX:       vector.body:
 ; AVX-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; AVX-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[VECTOR_BODY]] ]
-; AVX-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI7:%.*]], [[VECTOR_BODY]] ]
-; AVX-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI8:%.*]], [[VECTOR_BODY]] ]
-; AVX-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x double> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI9:%.*]], [[VECTOR_BODY]] ]
+; AVX-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ <double 0.000000e+00, double -0.000000e+00, double -0.000000e+00, double -0.000000e+00>, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[VECTOR_BODY]] ]
+; AVX-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x double> [ splat (double -0.000000e+00), [[VECTOR_PH]] ], [ [[PREDPHI7:%.*]], [[VECTOR_BODY]] ]
+; AVX-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x double> [ splat (double -0.000000e+00), [[VECTOR_PH]] ], [ [[PREDPHI8:%.*]], [[VECTOR_BODY]] ]
+; AVX-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x double> [ splat (double -0.000000e+00), [[VECTOR_PH]] ], [ [[PREDPHI9:%.*]], [[VECTOR_BODY]] ]
 ; AVX-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[ARR:%.*]], i32 [[INDEX]]
 ; AVX-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP4]], i64 32
 ; AVX-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP4]], i64 64
@@ -129,10 +129,10 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; AVX-NEXT:    [[TMP20:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
 ; AVX-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX:       middle.block:
-; AVX-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x double> [[PREDPHI7]], [[PREDPHI]]
-; AVX-NEXT:    [[BIN_RDX10:%.*]] = fadd fast <4 x double> [[PREDPHI8]], [[BIN_RDX]]
-; AVX-NEXT:    [[BIN_RDX11:%.*]] = fadd fast <4 x double> [[PREDPHI9]], [[BIN_RDX10]]
-; AVX-NEXT:    [[TMP21:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[BIN_RDX11]])
+; AVX-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc nnan ninf arcp contract afn <4 x double> [[PREDPHI7]], [[PREDPHI]]
+; AVX-NEXT:    [[BIN_RDX10:%.*]] = fadd reassoc nnan ninf arcp contract afn <4 x double> [[PREDPHI8]], [[BIN_RDX]]
+; AVX-NEXT:    [[BIN_RDX11:%.*]] = fadd reassoc nnan ninf arcp contract afn <4 x double> [[PREDPHI9]], [[BIN_RDX10]]
+; AVX-NEXT:    [[TMP21:%.*]] = call reassoc nnan ninf arcp contract afn double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[BIN_RDX11]])
 ; AVX-NEXT:    br label [[NEXT_ITER:%.*]]
 ; AVX:       done:
 ; AVX-NEXT:    ret double [[TMP21]]

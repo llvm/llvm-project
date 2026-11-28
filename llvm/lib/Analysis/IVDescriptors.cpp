@@ -508,6 +508,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   // allow any other operations.
   [[maybe_unused]] unsigned NumNonPHIUsers = 0;
   bool FoundFindLastLikePhi = false;
+  bool HasMergePhiWithoutNSZ = false;
 
   // Data used for determining if the recurrence has been type-promoted.
   Type *RecurrenceType = Phi->getType();
@@ -670,6 +671,11 @@ bool RecurrenceDescriptor::AddReductionVar(
     // All inputs to a PHI node must be a reduction value, unless the phi is a
     // "FindLast-like" phi (described below).
     if (IsAPhi && Cur != Phi) {
+      // The phi may forward the start value unchanged, if no reduction
+      // operation executes.
+      auto *FPPhi = dyn_cast<FPMathOperator>(Cur);
+      if (FPPhi && !FPPhi->hasNoSignedZeros())
+        HasMergePhiWithoutNSZ = true;
       if (!areAllUsesIn(Cur, VisitedInsts)) {
         // A "FindLast-like" phi acts like a conditional select between the
         // previous reduction value, and an arbitrary value. Note: Multiple
@@ -850,6 +856,11 @@ bool RecurrenceDescriptor::AddReductionVar(
 
   // The ExitInstruction(Instruction which is allowed to have out-of-loop users)
   // is saved as part of the RecurrenceDescriptor.
+
+  // If no reduction operation executes, the result is the start value, whose
+  // sign of zero must be preserved. FP min/max kinds require nsz.
+  if (HasMergePhiWithoutNSZ && !isFPMinMaxRecurrenceKind(Kind))
+    FMF.setNoSignedZeros(false);
 
   // Save the description of this reduction variable.
   RedDes =
