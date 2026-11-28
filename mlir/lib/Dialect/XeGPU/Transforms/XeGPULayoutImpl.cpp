@@ -2026,6 +2026,17 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
   assert((consumerLaneData[rank - 2] == 1 || consumerLaneData[rank - 1] == 1) &&
          "Expected consumer lane data to have at most one non-unit dim");
 
+  // Sub-byte element types only support contiguous block loads. If the
+  // consumer asks for a transposed or transformed (VNNI) layout, the load does
+  // not take it as is: it uses the regular contiguous layout, and the layout
+  // conflict with the consumer is resolved by a convert_layout.
+  bool isSubByte = elemTy.isIntOrFloat() && elemTy.getIntOrFloatBitWidth() < 8;
+  bool subByteStrided = isSubByte && (hasTranspose || hasTransform);
+  if (subByteStrided) {
+    hasTranspose = false;
+    hasTransform = false;
+  }
+
   if (layoutKind == xegpu::LayoutKind::InstData) {
     auto blockWHC = uArchInstruction->getBlockWidthHeightCount(
         elemTy, hasTransform, hasTranspose,
@@ -2072,7 +2083,7 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
     // Only switch if a transformed load is possible (checking via a call
     // to 'get2DBlockIOInstDataLayout') otherwise keep the regularone and leave
     // the conflict to a convert_layout.
-    if (!hasTranspose && !hasTransform &&
+    if (!isSubByte && !hasTranspose && !hasTransform &&
         consumerInstData[rank - 1] %
                 (laneLayout[rank - 1] * laneData[rank - 1]) !=
             0 &&
@@ -2096,6 +2107,19 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                                        orderAttr);
   }
   if (layoutKind == xegpu::LayoutKind::Lane) {
+    if (subByteStrided) {
+      auto [laneLayout, laneData, order] = compute2DBlockIOLaneLayout(
+          dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(),
+          uArchInstruction->getPackedFormatBitSize());
+      auto toI32Attr = [&](ArrayRef<int64_t> v) {
+        return DenseI32ArrayAttr::get(context,
+                                      SmallVector<int32_t>(v.begin(), v.end()));
+      };
+      return xegpu::LayoutAttr::get(context, /*sg_layout=*/nullptr,
+                                    /*sg_data=*/nullptr, /*inst_data=*/nullptr,
+                                    toI32Attr(laneLayout), toI32Attr(laneData),
+                                    /*order=*/nullptr);
+    }
     assert(isValidLaneLayout(dataShape, consumerLaneLayout, consumerLaneData) &&
            "Expected the lane layout to satisfy uArch block constraints");
     return consumerLayout;

@@ -589,32 +589,6 @@ gpu.func @transpose_dynamic_offset(%arg0: memref<64x64xf16, strided<[64, 1], off
 }
 
 // -----
-// The memref offset of an i4 source counts elements, two per byte.
-#l = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8], order = [0, 1]>
-// CHECK-LABEL: gpu.func @i4_transpose_memref_offset(
-// CHECK-DAG:     %[[C16:.*]] = arith.constant 16 : index
-// CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : index
-// CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : index
-// CHECK:         %[[BASE:.*]], %[[OFFSET:.*]], %{{.+}}:2, %{{.+}}:2 = memref.extract_strided_metadata
-// CHECK:         %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE]]
-// CHECK:         %[[BITS:.*]] = arith.muli %[[OFFSET]], %[[C4]] : index
-// CHECK:         %[[BYTES:.*]] = arith.divui %[[BITS]], %[[C8]] : index
-// CHECK:         arith.addi %[[PTR]], %[[BYTES]] : index
-// CHECK:         %[[DESC:.*]] = xegpu.create_nd_tdesc {{.*}} -> !xegpu.tensor_desc<16x8xi32
-// CHECK:         %[[L0:.*]] = xegpu.load_nd %[[DESC]][%[[I:.*]], %[[J:.*]]] {{.*}} -> vector<16x8xi32>
-// CHECK:         %[[V0:.*]] = vector.insert_strided_slice %[[L0]], %{{.*}} offsets = [0, 0], {{.*}} into vector<32x8xi32>
-// CHECK:         %[[I16:.*]] = arith.addi %[[I]], %[[C16]] : index
-// CHECK:         %[[L1:.*]] = xegpu.load_nd %[[DESC]][%[[I16]], %[[J]]] {{.*}} -> vector<16x8xi32>
-// CHECK:         vector.insert_strided_slice %[[L1]], %[[V0]] offsets = [16, 0], {{.*}} into vector<32x8xi32>
-gpu.module @xevm_module {
-gpu.func @i4_transpose_memref_offset(%src: memref<512x2048xi4, strided<[2048, 1], offset: ?>>, %i: index, %j: index) -> vector<32x64xi4> {
-  %t = xegpu.create_nd_tdesc %src : memref<512x2048xi4, strided<[2048, 1], offset: ?>> -> !xegpu.tensor_desc<32x64xi4, #l>
-  %v = xegpu.load_nd %t[%i, %j] <{layout = #l}> : !xegpu.tensor_desc<32x64xi4, #l> -> vector<32x64xi4>
-  gpu.return %v : vector<32x64xi4>
-}
-}
-
-// -----
 // CHECK-LABEL: gpu.func @vector_reduce_2d_fastmath(
 // CHECK:      %[[REDUCE_1:.*]] = vector.multi_reduction <maximumf>, %{{.*}}, %{{.*}} fastmath<nnan,nsz> [0] : vector<4x16xf32> to vector<16xf32>
 // CHECK:      vector.multi_reduction <maximumf>, %[[REDUCE_1]], %{{.*}} fastmath<nnan,nsz> [0] : vector<16xf32> to f32

@@ -845,3 +845,90 @@ func.func @create_mem_desc_non_contiguous() {
   %mem_desc = xegpu.create_mem_desc %m_sub : memref<16x32xf16, strided<[64, 1]>, 3> -> !xegpu.mem_desc<16x32xf16>
   return
 }
+
+// -----
+func.func @load_nd_sub_byte_transpose(%src: memref<64x64xi4>) {
+  %0 = xegpu.create_nd_tdesc %src : memref<64x64xi4> -> !xegpu.tensor_desc<16x32xi4>
+  // expected-error@+1 {{transpose is not supported for sub-byte element type 'i4'}}
+  %1 = xegpu.load_nd %0[0, 0] <{transpose = array<i64: 1, 0>}> : !xegpu.tensor_desc<16x32xi4> -> vector<32x16xi4>
+  return
+}
+
+// -----
+func.func @load_nd_sub_byte_packed(%src: memref<64x64xf4E2M1FN>) {
+  %0 = xegpu.create_nd_tdesc %src : memref<64x64xf4E2M1FN> -> !xegpu.tensor_desc<32x16xf4E2M1FN>
+  // expected-error@+1 {{packed is not supported for sub-byte element type 'f4E2M1FN'}}
+  %1 = xegpu.load_nd %0[0, 0] <{packed}> : !xegpu.tensor_desc<32x16xf4E2M1FN> -> vector<4x16x8xf4E2M1FN>
+  return
+}
+
+// -----
+#l = #xegpu.layout<lane_layout = [1, 16], lane_data = [8, 1]>
+func.func @load_nd_sub_byte_packed_layout(%src: memref<64x64xf4E2M1FN>) {
+  %0 = xegpu.create_nd_tdesc %src : memref<64x64xf4E2M1FN> -> !xegpu.tensor_desc<64x16xf4E2M1FN, #l>
+  // expected-error@+1 {{layout implies strided access, which is not supported for sub-byte element type 'f4E2M1FN'}}
+  %1 = xegpu.load_nd %0[0, 0] <{layout = #l}> : !xegpu.tensor_desc<64x16xf4E2M1FN, #l> -> vector<64x16xf4E2M1FN>
+  return
+}
+
+// -----
+#l = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2], order = [0, 1]>
+func.func @load_nd_sub_byte_transpose_layout(%src: memref<64x64xi4>) {
+  %0 = xegpu.create_nd_tdesc %src : memref<64x64xi4> -> !xegpu.tensor_desc<16x32xi4, #l>
+  // expected-error@+1 {{layout implies strided access, which is not supported for sub-byte element type 'i4'}}
+  %1 = xegpu.load_nd %0[0, 0] <{layout = #l}> : !xegpu.tensor_desc<16x32xi4, #l> -> vector<16x32xi4>
+  return
+}
+
+// -----
+#l = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2], order = [0, 1]>
+func.func @store_nd_sub_byte_transpose_layout(%src: memref<64x64xi4>, %v: vector<16x32xi4>) {
+  %0 = xegpu.create_nd_tdesc %src : memref<64x64xi4> -> !xegpu.tensor_desc<16x32xi4, #l>
+  // expected-error@+1 {{layout implies strided access, which is not supported for sub-byte element type 'i4'}}
+  xegpu.store_nd %v, %0[0, 0] <{layout = #l}> : vector<16x32xi4>, !xegpu.tensor_desc<16x32xi4, #l>
+  return
+}
+
+// -----
+func.func @store_matrix_sub_byte_packed_layout(%arg0: !xegpu.mem_desc<32x64xi4>, %v: vector<32x16xi4>) {
+  // expected-error@+1 {{layout implies strided access, which is not supported for sub-byte element type 'i4'}}
+  xegpu.store_matrix %v, %arg0[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}> : vector<32x16xi4>, !xegpu.mem_desc<32x64xi4>
+  return
+}
+
+// -----
+func.func @load_gather_sub_byte_no_contiguity(%src: ui64, %offsets: vector<16x8xindex>, %mask: vector<16x8xi1>) {
+  // expected-error@+1 {{sub-byte element type 'i4' requires contiguity}}
+  %1 = xegpu.load %src[%offsets], %mask : ui64, vector<16x8xindex>, vector<16x8xi1> -> vector<16x8xi4>
+  return
+}
+
+// -----
+func.func @load_gather_sub_byte_odd_contiguity(%src: ui64, %offsets: vector<16x9xindex>, %mask: vector<16x9xi1>) {
+  // expected-error@+1 {{contiguity = 3 must cover a multiple of 8 bits for sub-byte element type 'i4'}}
+  %1 = xegpu.load %src[%offsets], %mask <{contiguity = 3 : i64}> : ui64, vector<16x9xindex>, vector<16x9xi1> -> vector<16x9xi4>
+  return
+}
+
+// -----
+func.func @store_scatter_sub_byte_layout_no_contiguity(%v: vector<16x8xi4>, %dst: ui64, %offsets: vector<16x8xindex>, %mask: vector<16x8xi1>) {
+  // expected-error@+1 {{sub-byte element type 'i4' requires contiguity}}
+  xegpu.store %v, %dst[%offsets], %mask <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8]>}>
+      : vector<16x8xi4>, ui64, vector<16x8xindex>, vector<16x8xi1>
+  return
+}
+
+// -----
+func.func @load_matrix_sub_byte_non_unit_stride(%arg0: !xegpu.mem_desc<32x64xi4, #xegpu.mem_layout<stride = [1, 32]>>) {
+  // expected-error@+1 {{the fastest-changing dimension 1 must have stride 1 in mem_desc for sub-byte element type 'i4', but its stride is 32}}
+  %data = xegpu.load_matrix %arg0[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>}>
+      : !xegpu.mem_desc<32x64xi4, #xegpu.mem_layout<stride = [1, 32]>> -> vector<8x32xi4>
+  return
+}
+
+// -----
+func.func @store_matrix_sub_byte_non_unit_stride_no_layout(%arg0: !xegpu.mem_desc<32x64xi4, #xegpu.mem_layout<stride = [1, 32]>>, %v: vector<8x32xi4>) {
+  // expected-error@+1 {{the fastest-changing dimension 1 must have stride 1 in mem_desc for sub-byte element type 'i4', but its stride is 32}}
+  xegpu.store_matrix %v, %arg0[0, 0] : vector<8x32xi4>, !xegpu.mem_desc<32x64xi4, #xegpu.mem_layout<stride = [1, 32]>>
+  return
+}
