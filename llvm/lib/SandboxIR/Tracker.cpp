@@ -373,6 +373,9 @@ void Tracker::accept(bool AcceptAll) {
   if (!AcceptAll && Snapshots.size() > 1) {
     // Just remove the last stacked checkpoint.
     Snapshots.pop_back();
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+    SnapshotChecker.pop_back();
+#endif
     return;
   }
   State = TrackerState::Disabled;

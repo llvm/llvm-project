@@ -2054,6 +2054,13 @@ define i32 @foo(i32 %arg0, i32 %arg1) {
   EXPECT_EQ(Add1->getOperand(0), Arg0);
   Checker.expectNoDiff();
 
+  // Check nested checkpoint with no changes after last save.
+  Ctx.save();
+  Add1->setOperand(0, Arg1);
+  Ctx.save();
+  Ctx.accept();
+  Ctx.revert();
+
   // Check revert(/*RevertAll=*/true)
   Checker.save();
   Ctx.save();
