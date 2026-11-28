@@ -709,6 +709,10 @@ clang:ssaf:
       - clang/include/clang/ScalableStaticAnalysis/**
       - clang/lib/ScalableStaticAnalysis/**
       - clang/test/ScalableStaticAnalysis/**
+      - clang/tools/clang-ssaf-analyzer/**
+      - clang/tools/clang-ssaf-format/**
+      - clang/tools/clang-ssaf-linker/**
+      - clang/tools/clang-ssaf-src-edit-merge/**
       - clang/unittests/ScalableStaticAnalysis/**
 
 clang:static analyzer:
