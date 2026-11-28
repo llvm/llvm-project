@@ -8109,9 +8109,10 @@ void AMDGPUAsmParser::cvtExp(MCInst &Inst, const OperandVector &Operands) {
 
   assert(SrcIdx == 4);
 
-  bool Compr = false;
-  if (OptionalIdx.find(AMDGPUOperand::ImmTyExpCompr) != OptionalIdx.end()) {
-    Compr = true;
+  auto ComprIt = OptionalIdx.find(AMDGPUOperand::ImmTyExpCompr);
+  bool Compr = ComprIt != OptionalIdx.end() &&
+               ((AMDGPUOperand &)*Operands[ComprIt->second]).getImm();
+  if (Compr) {
     Inst.getOperand(OperandIdx[1]) = Inst.getOperand(OperandIdx[2]);
     Inst.getOperand(OperandIdx[2]).setReg(MCRegister());
     Inst.getOperand(OperandIdx[3]).setReg(MCRegister());
