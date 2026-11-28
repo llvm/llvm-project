@@ -1671,20 +1671,28 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     if (TypeIdx != 0)
       return UnableToLegalize;
 
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    // Should widen scalar first
-    if (Ty.getSizeInBits() % NarrowTy.getSizeInBits() != 0)
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT Ty = MRI.getType(DstReg);
+
+    // Split into NarrowTy-sized pieces, with a leftover piece if Ty isn't an
+    // exact multiple of NarrowTy. Apply the operation to each piece
+    // independently, then reassemble. This is valid because freezing (or
+    // folding-barrier-ing) a value is purely a per-bit operation.
+    LLT LeftoverTy;
+    SmallVector<Register, 8> Parts, LeftoverParts;
+    if (!extractParts(SrcReg, Ty, NarrowTy, LeftoverTy, Parts, LeftoverParts,
+                      MIRBuilder, MRI))
       return UnableToLegalize;
 
-    auto Unmerge = MIRBuilder.buildUnmerge(NarrowTy, MI.getOperand(1).getReg());
-    SmallVector<Register, 8> Parts;
-    for (unsigned i = 0; i < Unmerge->getNumDefs(); ++i) {
-      Parts.push_back(
-          MIRBuilder.buildInstr(MI.getOpcode(), {NarrowTy}, {Unmerge.getReg(i)})
-              .getReg(0));
-    }
+    for (Register &Part : Parts)
+      Part =
+          MIRBuilder.buildInstr(MI.getOpcode(), {NarrowTy}, {Part}).getReg(0);
+    for (Register &Part : LeftoverParts)
+      Part =
+          MIRBuilder.buildInstr(MI.getOpcode(), {LeftoverTy}, {Part}).getReg(0);
 
-    MIRBuilder.buildMergeLikeInstr(MI.getOperand(0).getReg(), Parts);
+    insertParts(DstReg, Ty, NarrowTy, Parts, LeftoverTy, LeftoverParts);
     MI.eraseFromParent();
     return Legalized;
   }
