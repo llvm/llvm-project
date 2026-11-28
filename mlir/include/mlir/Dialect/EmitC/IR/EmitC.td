@@ -1685,7 +1685,8 @@ def EmitC_RemAssignOp
 }
 
 def EmitC_YieldOp : EmitC_Op<"yield",
-      [Pure, Terminator, ParentOneOf<["DoOp", "ExpressionOp", "ForOp", "IfOp", "SwitchOp"]>]> {
+      [Pure, ReturnLike, Terminator,
+       ParentOneOf<["DoOp", "ExpressionOp", "ForOp", "IfOp", "SwitchOp"]>]> {
   let summary = "Block termination operation";
   let description = [{
     The `emitc.yield` terminates its parent EmitC op's region, optionally yielding
