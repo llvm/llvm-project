@@ -1364,8 +1364,10 @@ bool CombineRuleBuilder::checkSemantics() {
       }
       break;
     }
-    case BI_ReplaceReg: {
-      // (GIReplaceReg can only be used on the root instruction)
+    case BI_ReplaceReg:
+    case BI_ReplaceRegWithConstant:
+    case BI_ReplaceRegWithFConstant: {
+      // (can only be used on the root instruction)
       // TODO: When we allow rewriting non-root instructions, also allow this.
       StringRef OldRegName = BIP->getOperand(0).getOperandName();
       auto *Def = MatchOpTable.getDef(OldRegName);
@@ -1378,6 +1380,12 @@ bool CombineRuleBuilder::checkSemantics() {
         PrintError(Name + " cannot replace '" + OldRegName +
                    "': this builtin can only replace a register defined by the "
                    "match root");
+        return false;
+      }
+      if ((BIP->getBuiltinKind() == BI_ReplaceRegWithConstant ||
+           BIP->getBuiltinKind() == BI_ReplaceRegWithFConstant) &&
+          !BIP->getOperand(1).hasImmValue()) {
+        PrintError(Name + " expects an immediate value as its second operand");
         return false;
       }
       break;
@@ -2250,6 +2258,21 @@ bool CombineRuleBuilder::emitBuiltinApplyPattern(
     }
     // checkSemantics should have ensured that we can only rewrite the root.
     // Ensure we're deleting it.
+    assert(MatchOpTable.getDef(Old) == MatchRoot);
+    return true;
+  }
+  case BI_ReplaceRegWithConstant:
+  case BI_ReplaceRegWithFConstant: {
+    StringRef Old = P.getOperand(0).getOperandName();
+    // For GIReplaceRegWithFConstant, Imm is the IEEE bit pattern of $reg's
+    // (scalar) type.
+    int64_t Val = P.getOperand(1).getImmValue();
+
+    // The constant defines $reg itself, which relies on the root being erased.
+    auto &OldOM = M.getOperandMatcher(Old);
+    M.addAction<BuildConstantInPlaceAction>(
+        OldOM.getInsnVarID(), OldOM.getOpIdx(), Val,
+        P.getBuiltinKind() == BI_ReplaceRegWithFConstant);
     assert(MatchOpTable.getDef(Old) == MatchRoot);
     return true;
   }
