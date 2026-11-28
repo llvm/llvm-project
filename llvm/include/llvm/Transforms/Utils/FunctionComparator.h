@@ -90,7 +90,9 @@ public:
 /// FunctionComparator - Compares two functions to determine whether or not
 /// they will generate machine code with the same behaviour. DataLayout is
 /// used if available. The comparator always fails conservatively (erring on the
-/// side of claiming that two functions are different).
+/// side of claiming that two functions are different). Instruction flags, such
+/// as nuw or fast-math flags, and instruction metadata are not compared, so a
+/// user that merges two functions must combine them.
 class FunctionComparator {
 public:
   FunctionComparator(const Function *F1, const Function *F2,
@@ -266,7 +268,6 @@ protected:
   /// 6.2.Load: alignment (as integer numbers)
   /// 6.3.Load: ordering (as underlying enum class value)
   /// 6.4.Load: sync-scope (as integer numbers)
-  /// 6.5.Load: range metadata (as integer ranges)
   /// On this stage its better to see the code, since its not more than 10-15
   /// strings for particular instruction, and could change sometimes.
   ///
@@ -335,7 +336,6 @@ private:
   int cmpAttrs(const AttributeList L, const AttributeList R) const;
   int cmpMDNode(const MDNode *L, const MDNode *R) const;
   int cmpMetadata(const Metadata *L, const Metadata *R) const;
-  int cmpInstMetadata(Instruction const *L, Instruction const *R) const;
   int cmpOperandBundlesSchema(const CallBase &LCS, const CallBase &RCS) const;
 
   /// Compare two GEPs for equivalent pointer arithmetic.
