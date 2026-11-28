@@ -16080,6 +16080,18 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
         continue;
       }
 
+      // The condition 'trunc x to i1' is equivalent to 'icmp ne (x & 1), 0'.
+      // Use the corresponding SCEV expression, 'icmp ne zext(trunc(x)), 0',
+      // for trunc.
+      if (auto *Trunc = dyn_cast<TruncInst>(Cond)) {
+        auto Predicate = EnterIfTrue ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ;
+        Type *Ty = Trunc->getOperand(0)->getType();
+        const SCEV *LHS = SE.getZeroExtendExpr(SE.getSCEV(Trunc), Ty);
+        const SCEV *RHS = SE.getConstant(Ty, 0);
+        GuardsToProcess.emplace_back(Predicate, LHS, RHS);
+        continue;
+      }
+
       Value *L, *R;
       if (EnterIfTrue ? match(Cond, m_LogicalAnd(m_Value(L), m_Value(R)))
                       : match(Cond, m_LogicalOr(m_Value(L), m_Value(R)))) {
