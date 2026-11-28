@@ -29,6 +29,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <dlfcn.h>
 
 #define DEBUG_TYPE "macho_platform"
 
@@ -73,6 +74,33 @@ extern "C" int __unw_remove_find_dynamic_unwind_sections(
     ORC_RT_WEAK_IMPORT;
 
 namespace {
+
+using ObjCMapImagesFn = void (*)(unsigned, const char *const[],
+                                 const mach_header *const[]);
+using ObjCLoadImageFn = void (*)(const char *, const mach_header *);
+
+static ObjCMapImagesFn resolveObjCMapImages() {
+  if (_objc_map_images)
+    return _objc_map_images;
+  return reinterpret_cast<ObjCMapImagesFn>(
+      dlsym(RTLD_DEFAULT, "_objc_map_images"));
+}
+
+static ObjCLoadImageFn resolveObjCLoadImage() {
+  if (_objc_load_image)
+    return _objc_load_image;
+  return reinterpret_cast<ObjCLoadImageFn>(
+      dlsym(RTLD_DEFAULT, "_objc_load_image"));
+}
+
+struct objc_selector;
+using SEL = objc_selector *;
+using SelRegisterNameFn = SEL (*)(const char *);
+
+static SelRegisterNameFn resolveSelRegisterName() {
+  return reinterpret_cast<SelRegisterNameFn>(
+      dlsym(RTLD_DEFAULT, "sel_registerName"));
+}
 
 struct MachOJITDylibDepInfo {
   bool Sealed = false;
@@ -201,6 +229,7 @@ private:
     UnwindSectionsMap UnwindSections;
     RecordSectionsTracker<void (*)()> ModInitsSections;
     RecordSectionsTracker<char> ObjCRuntimeRegistrationObjects;
+    RecordSectionsTracker<char> ObjCSelRefsSections;
 
     bool referenced() const {
       return LinkedAgainstRefCount != 0 || DlRefCount != 0;
@@ -605,6 +634,8 @@ Error MachOPlatformRuntimeState::registerObjectPlatformSections(
         return Err;
     } else if (KV.first == "__llvm_jitlink_ObjCRuntimeRegistrationObject")
       JDS->ObjCRuntimeRegistrationObjects.add(KV.second.toSpan<char>());
+    else if (KV.first == "__DATA,__objc_selrefs")
+      JDS->ObjCSelRefsSections.add(KV.second.toSpan<char>());
     else if (KV.first == "__DATA,__mod_init_func")
       JDS->ModInitsSections.add(KV.second.toSpan<void (*)()>());
     else {
@@ -686,7 +717,9 @@ Error MachOPlatformRuntimeState::deregisterObjectPlatformSections(
         return Err;
     } else if (KV.first == "__llvm_jitlink_ObjCRuntimeRegistrationObject")
       JDS->ObjCRuntimeRegistrationObjects.removeIfPresent(KV.second);
-    else if (KV.first == "__DATA,__mod_init_func")
+      else if (KV.first == "__DATA,__objc_selrefs")
+      JDS->ObjCSelRefsSections.removeIfPresent(KV.second);
+      else if (KV.first == "__DATA,__mod_init_func")
       JDS->ModInitsSections.removeIfPresent(KV.second);
     else {
       // Should this be a warning instead?
@@ -1013,21 +1046,47 @@ Error MachOPlatformRuntimeState::registerObjCRegistrationObjects(
   if (RegObjBases.empty())
     return Error::success();
 
-  if (!_objc_map_images || !_objc_load_image)
+  auto SelRegisterName = reinterpret_cast<SelRegisterNameFn>(
+      dlsym(RTLD_DEFAULT, "sel_registerName"));
+
+  if (!SelRegisterName)
+    return make_error<StringError>(
+        "Could not register Objective-C / Swift metadata: sel_registerName "
+        "not found");
+
+  JDS.ObjCSelRefsSections.processNewSections(
+      [&](span<char> SelRefSection) {
+        if (SelRefSection.size() % sizeof(SEL) != 0)
+          return;
+
+        auto *SelRefs = reinterpret_cast<SEL *>(SelRefSection.data());
+        size_t Count = SelRefSection.size() / sizeof(SEL);
+
+        for (size_t I = 0; I != Count; ++I) {
+          if (!SelRefs[I])
+            continue;
+          SelRefs[I] = SelRegisterName(
+              reinterpret_cast<const char *>(SelRefs[I]));
+        }
+      });
+
+  auto ObjCMapImages = resolveObjCMapImages();
+  auto ObjCLoadImage = resolveObjCLoadImage();
+
+  if (!ObjCMapImages || !ObjCLoadImage)
     return make_error<StringError>(
         "Could not register Objective-C / Swift metadata: _objc_map_images / "
         "_objc_load_image not found");
 
-  // Release the lock while calling out to libobjc in case +load methods cause
-  // reentering the orc runtime.
   JDStatesLock.unlock();
   std::vector<char *> Paths;
   Paths.resize(RegObjBases.size());
-  _objc_map_images(RegObjBases.size(), Paths.data(),
-                   reinterpret_cast<mach_header **>(RegObjBases.data()));
+  ObjCMapImages(RegObjBases.size(), Paths.data(),
+                reinterpret_cast<const mach_header *const *>(
+                    RegObjBases.data()));
 
   for (void *RegObjBase : RegObjBases)
-    _objc_load_image(nullptr, reinterpret_cast<mach_header *>(RegObjBase));
+    ObjCLoadImage(nullptr, reinterpret_cast<mach_header *>(RegObjBase));
   JDStatesLock.lock();
 
   return Error::success();
