@@ -991,6 +991,10 @@ bool isTrue16Inst(unsigned Opc);
 LLVM_READONLY
 FPType getFPDstSelType(unsigned Opc);
 
+enum class DPMACCInstructionKind { None, Always, FullRate64Ops, PreGFX125x };
+
+/// Classifies DP-MACC completion for gfx125x.
+DPMACCInstructionKind getDPMACCInstructionKind(unsigned Opcode);
 bool isDPMACCInstruction(unsigned Opc);
 
 LLVM_READONLY
