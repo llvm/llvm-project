@@ -1,13 +1,14 @@
-// RUN: mlir-opt -arith-expand="include-min-max-f=true include-min-max-i=true" -convert-arith-to-emitc %s | FileCheck %s
+// RUN: mlir-opt -arith-expand="include-min-max-f=true include-min-max-i=true" -convert-math-to-emitc -convert-arith-to-emitc %s | FileCheck %s
 
-/// This file checks the combined `-arith-expand | -convert-arith-to-emitc`
+/// This file checks the combined expansion and Math/Arith-to-EmitC
 /// pipeline with intentionally minimal FileCheck coverage.
 /// The full expansion is covered in `test/Dialect/Arith/expand-ops.mlir`, and
 /// the full ArithToEmitC lowering is covered in
 /// `test/Conversion/ArithToEmitC/arith-to-emitc.mlir`; this test only covers
 /// that the combination of the two produces the expected EmitC ops.
 
-/// `arith.maximumf`/`arith.minimumf` expand through `arith.cmpf`.
+/// `arith.maximumf`/`arith.minimumf` expand through `arith.cmpf` and
+/// `math.copysign` to preserve signed zeros.
 /// Vector cases excluded because ArithToEmitC cannot convert `VectorType`.
 /// Tensor cases excluded because ArithToEmitC only lowers scalar `cmpf`.
 
@@ -18,7 +19,11 @@ func.func @maximumf(%a: f32, %b: f32) -> f32 {
 // CHECK:       %[[CMP:.*]] = emitc.cmp gt, %[[ARG0]], %[[ARG1]] : (f32, f32) -> i1
 // CHECK:       %[[OR:.*]] = emitc.logical_or %{{.*}}, %[[CMP]] : i1, i1
 // CHECK:       %[[SEL0:.*]] = emitc.conditional %[[OR]], %[[ARG0]], %[[ARG1]] : f32
-// CHECK:       %[[SEL1:.*]] = emitc.conditional %{{.*}}, %[[ARG1]], %[[SEL0]] : f32
+// CHECK:       %[[SIGN:.*]] = emitc.call_opaque "std::copysign"(%{{.*}}, %[[ARG0]]) : (f32, f32) -> f32
+// CHECK:       %[[NEGATIVE:.*]] = emitc.cmp lt, %[[SIGN]], %{{.*}} : (f32, f32) -> i1
+// CHECK:       %[[EQVAL:.*]] = emitc.conditional %{{.*}}, %[[ARG1]], %[[ARG0]] : f32
+// CHECK:       %[[SIGNED_SEL:.*]] = emitc.conditional %{{.*}}, %[[EQVAL]], %[[SEL0]] : f32
+// CHECK:       %[[SEL1:.*]] = emitc.conditional %{{.*}}, %[[ARG1]], %[[SIGNED_SEL]] : f32
   %result = arith.maximumf %a, %b : f32
 // CHECK:       return %[[SEL1]] : f32
   return %result : f32
@@ -31,7 +36,11 @@ func.func @minimumf(%a: f32, %b: f32) -> f32 {
 // CHECK:       %[[CMP:.*]] = emitc.cmp lt, %[[ARG0]], %[[ARG1]] : (f32, f32) -> i1
 // CHECK:       %[[OR:.*]] = emitc.logical_or %{{.*}}, %[[CMP]] : i1, i1
 // CHECK:       %[[SEL0:.*]] = emitc.conditional %[[OR]], %[[ARG0]], %[[ARG1]] : f32
-// CHECK:       %[[SEL1:.*]] = emitc.conditional %{{.*}}, %[[ARG1]], %[[SEL0]] : f32
+// CHECK:       %[[SIGN:.*]] = emitc.call_opaque "std::copysign"(%{{.*}}, %[[ARG0]]) : (f32, f32) -> f32
+// CHECK:       %[[NEGATIVE:.*]] = emitc.cmp lt, %[[SIGN]], %{{.*}} : (f32, f32) -> i1
+// CHECK:       %[[EQVAL:.*]] = emitc.conditional %{{.*}}, %[[ARG0]], %[[ARG1]] : f32
+// CHECK:       %[[SIGNED_SEL:.*]] = emitc.conditional %{{.*}}, %[[EQVAL]], %[[SEL0]] : f32
+// CHECK:       %[[SEL1:.*]] = emitc.conditional %{{.*}}, %[[ARG1]], %[[SIGNED_SEL]] : f32
   %result = arith.minimumf %a, %b : f32
 // CHECK:       return %[[SEL1]] : f32
   return %result : f32

@@ -28,8 +28,10 @@ add_mlir_dialect_library(MLIRArithTransforms
   MLIRInferIntRangeInterface
   MLIRIR
   MLIRLoopLikeInterface
+  MLIRMathDialect
   MLIRMemRefDialect
   MLIRPass
+  MLIRShapeDialect
   MLIRTensorDialect
   MLIRTransforms
   MLIRTransformUtils
