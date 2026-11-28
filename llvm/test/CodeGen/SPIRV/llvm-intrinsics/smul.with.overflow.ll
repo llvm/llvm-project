@@ -9,10 +9,12 @@
 ; CHECK-DAG: %[[PtrChar:.*]] = OpTypePointer Function %[[Char]]
 ; CHECK-DAG: %[[StructChar:.*]] = OpTypeStruct %[[Char]] %[[Char]]
 ; CHECK-DAG: %[[NullChar:.*]] = OpConstantNull %[[Char]]
+; CHECK-DAG: %[[Char7:.*]] = OpConstant %[[Char]] 7{{$}}
 ; CHECK-DAG: %[[Int:.*]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[PtrInt:.*]] = OpTypePointer Function %[[Int]]
 ; CHECK-DAG: %[[StructInt:.*]] = OpTypeStruct %[[Int]] %[[Int]]
 ; CHECK-DAG: %[[NullInt:.*]] = OpConstantNull %[[Int]]
+; CHECK-DAG: %[[Int31:.*]] = OpConstant %[[Int]] 31{{$}}
 ; CHECK-DAG: %[[Bool:.*]] = OpTypeBool
 ; CHECK-DAG: %[[V2Bool:.*]] = OpTypeVector %[[Bool]] 2
 ; CHECK-DAG: %[[Long:.*]] = OpTypeInt 64 0
@@ -20,6 +22,8 @@
 ; CHECK-DAG: %[[PtrV2Long:.*]] = OpTypePointer Function %[[V2Long]]
 ; CHECK-DAG: %[[StructV2Long:.*]] = OpTypeStruct %[[V2Long]] %[[V2Long]]
 ; CHECK-DAG: %[[ZeroV2Long:.*]] = OpConstantNull %[[V2Long]]
+; CHECK-DAG: %[[Long63:.*]] = OpConstant %[[Long]] 63{{$}}
+; CHECK-DAG: %[[V2Long63:.*]] = OpConstantComposite %[[V2Long]] %[[Long63]] %[[Long63]]
 
 ; CHECK: OpFunction
 ; CHECK: %[[A:.*]] = OpFunctionParameter %[[Char]]
@@ -28,7 +32,8 @@
 ; CHECK: %[[Struct:.*]] = OpSMulExtended %[[StructChar]] %[[A]] %[[B]]
 ; CHECK: %[[Val:.*]] = OpCompositeExtract %[[Char]] %[[Struct]] 0
 ; CHECK: %[[Over:.*]] = OpCompositeExtract %[[Char]] %[[Struct]] 1
-; CHECK: %[[IsOver:.*]] = OpINotEqual %[[Bool]] %[[Over]] %[[NullChar]]
+; CHECK: %[[Sign:.*]] = OpShiftRightArithmetic %[[Char]] %[[Val]] %[[Char7]]
+; CHECK: %[[IsOver:.*]] = OpINotEqual %[[Bool]] %[[Over]] %[[Sign]]
 ; CHECK: %[[Res:.*]] = OpSelect %[[Char]] %[[IsOver]] %[[NullChar]] %[[Val]]
 ; CHECK: OpStore %[[Ptr]] %[[Res]] Aligned 1
 ; CHECK: OpReturn
@@ -49,7 +54,8 @@ entry:
 ; CHECK: %[[Struct2:.*]] = OpSMulExtended %[[StructInt]] %[[B2]] %[[A2]]
 ; CHECK: %[[Val2:.*]] = OpCompositeExtract %[[Int]] %[[Struct2]] 0
 ; CHECK: %[[Over2:.*]] = OpCompositeExtract %[[Int]] %[[Struct2]] 1
-; CHECK: %[[IsOver2:.*]] = OpINotEqual %[[Bool]] %[[Over2]] %[[NullInt]]
+; CHECK: %[[Sign2:.*]] = OpShiftRightArithmetic %[[Int]] %[[Val2]] %[[Int31]]
+; CHECK: %[[IsOver2:.*]] = OpINotEqual %[[Bool]] %[[Over2]] %[[Sign2]]
 ; CHECK: %[[Res2:.*]] = OpSelect %[[Int]] %[[IsOver2]] %[[NullInt]] %[[Val2]]
 ; CHECK: OpStore %[[Ptr2]] %[[Res2]] Aligned 4
 ; CHECK: OpReturn
@@ -70,7 +76,8 @@ entry:
 ; CHECK: %[[Struct3:.*]] = OpSMulExtended %[[StructV2Long]] %[[A3]] %[[B3]]
 ; CHECK: %[[Val3:.*]] = OpCompositeExtract %[[V2Long]] %[[Struct3]] 0
 ; CHECK: %[[Over3:.*]] = OpCompositeExtract %[[V2Long]] %[[Struct3]] 1
-; CHECK: %[[IsOver3:.*]] = OpINotEqual %[[V2Bool]] %[[Over3]] %[[ZeroV2Long]]
+; CHECK: %[[Sign3:.*]] = OpShiftRightArithmetic %[[V2Long]] %[[Val3]] %[[V2Long63]]
+; CHECK: %[[IsOver3:.*]] = OpINotEqual %[[V2Bool]] %[[Over3]] %[[Sign3]]
 ; CHECK: %[[Res3:.*]] = OpSelect %[[V2Long]] %[[IsOver3]] %[[ZeroV2Long]] %[[Val3]]
 ; CHECK: OpStore %[[Ptr3]] %[[Res3]] Aligned 16
 ; CHECK: OpReturn
