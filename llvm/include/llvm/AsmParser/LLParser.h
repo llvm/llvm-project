@@ -198,6 +198,7 @@ namespace llvm {
 
     bool SeenNewDbgInfoFormat = false;
     bool SeenOldDbgInfoFormat = false;
+    bool InConstantVector = false;
 
     std::string SourceFileName;
 
