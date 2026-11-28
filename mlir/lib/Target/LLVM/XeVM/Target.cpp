@@ -40,6 +40,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <mutex>
 
 using namespace mlir;
 using namespace mlir::xevm;
@@ -400,7 +401,65 @@ SerializeGPUModuleBase::compileToBinary(StringRef asmStr,
 #endif
 }
 
-std::optional<std::string> SerializeGPUModuleBase::findTool(StringRef tool) {
+std::string SerializeGPUModuleBase::getCompilerInfo(
+    [[maybe_unused]] const gpu::TargetOptions &targetOptions) {
+  static constexpr const char *query = "OCL_DRIVER_VERSION";
+#if MLIR_XEVM_OCLOC_LIB_AVAILABLE
+  const char *argv[] = {"ocloc", "query", query};
+  uint32_t outputsNum = 0;
+  uint8_t **outputs = nullptr;
+  uint64_t *outputLengths = nullptr;
+  char **outputNames = nullptr;
+  auto freeOutputs = llvm::scope_exit([&]() {
+    oclocFreeOutput(&outputsNum, &outputs, &outputLengths, &outputNames);
+  });
+  if (oclocInvoke(std::size(argv), argv, /*numSources=*/0, nullptr, nullptr,
+                  nullptr, /*numHeaders=*/0, nullptr, nullptr, nullptr,
+                  &outputsNum, &outputs, &outputLengths,
+                  &outputNames) != OCLOC_SUCCESS)
+    return {};
+  for (uint32_t i = 0; i < outputsNum; ++i)
+    if (outputNames && outputNames[i] && StringRef(outputNames[i]) == query)
+      return outputs && outputs[i] && outputLengths
+                 ? StringRef(reinterpret_cast<char *>(outputs[i]),
+                             outputLengths[i])
+                       .rtrim('\0')
+                       .trim()
+                       .str()
+                 : std::string();
+  return {};
+#else
+  std::optional<std::string> oclocPath = findTool("ocloc", targetOptions);
+  SmallString<128> out;
+  if (!oclocPath || llvm::sys::fs::createTemporaryFile("ocloc", "query", out))
+    return {};
+  llvm::FileRemover outRemover(out);
+  // ocloc writes the result to a file in the CWD, serialize the queries.
+  static std::mutex queryMutex;
+  std::lock_guard<std::mutex> lock(queryMutex);
+  // Remove the file created by ocloc unless it already existed. ocloc
+  // overwrites an existing file, so only the file is kept, not its content.
+  llvm::FileRemover queryRemover(query,
+                                 /*deleteIt=*/!llvm::sys::fs::exists(query));
+  std::optional<StringRef> redirects[] = {std::nullopt, out.str(),
+                                          StringRef("")};
+  if (llvm::sys::ExecuteAndWait(*oclocPath, {"ocloc", "query", query},
+                                std::nullopt, redirects))
+    return {};
+  // Newer versions also print the result to stdout, older ones write only the
+  // file in the CWD.
+  for (StringRef file : {out.str(), StringRef(query)})
+    if (llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buf =
+            llvm::MemoryBuffer::getFile(file))
+      if (StringRef ver = (*buf)->getBuffer().rtrim('\0').trim(); !ver.empty())
+        return ver.str();
+  return {};
+#endif
+}
+
+std::optional<std::string>
+SerializeGPUModuleBase::findTool(StringRef tool,
+                                 const gpu::TargetOptions &targetOptions) {
   // 1. Check the toolkit path given in the command line.
   StringRef pathRef = targetOptions.getToolkitPath();
   SmallVector<char, 256> path;
@@ -413,7 +472,12 @@ std::optional<std::string> SerializeGPUModuleBase::findTool(StringRef tool) {
   // 2. Check PATH.
   if (llvm::ErrorOr<std::string> toolPath = llvm::sys::findProgramByName(tool))
     return *toolPath;
+  return std::nullopt;
+}
 
+std::optional<std::string> SerializeGPUModuleBase::findTool(StringRef tool) {
+  if (std::optional<std::string> path = findTool(tool, targetOptions))
+    return path;
   getGPUModuleOp().emitError()
       << "Couldn't find the `" << tool
       << "` binary. Please specify the toolkit "
