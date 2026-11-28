@@ -95,6 +95,7 @@ OrcIncrementalExecutorBuilder::configure(IncrementalCompilerBuilder &CB,
                                          const Options &Opts) {
   IsOutOfProcess = Opts.IsOutOfProcess;
   OOPExecutor = Opts.ExecutorPath;
+  OOPExecutorConnect = Opts.ExecutorConnect;
   OrcRuntimePath = Opts.RuntimePath;
   if (OrcRuntimePath.empty())
     CB.SetDriverCompilationCallback(UpdateOrcRuntimePathCB);
