@@ -1,0 +1,68 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// REQUIRES: std-at-least-c++26
+
+// "support/constexpr_hash.h"
+
+// Make sure that we can hash enumeration values.
+
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <type_traits>
+#include "constexpr_hash.h"
+#include "poisoned_hash_helper.h"
+#include "test_macros.h"
+
+enum class Colors { red, orange, yellow, green, blue, indigo, violet };
+enum class Cardinals { zero, one, two, three, five = 5 };
+enum class LongColors : short { red, orange, yellow, green, blue, indigo, violet };
+enum class ShortColors : long { red, orange, yellow, green, blue, indigo, violet };
+enum class EightBitColors : std::uint8_t { red, orange, yellow, green, blue, indigo, violet };
+
+enum Fruits { apple, pear, grape, mango, cantaloupe };
+
+template <class T>
+constexpr void test() {
+  test_hash_disabled<const T, support::constexpr_hash<const T>>();
+  test_hash_disabled<volatile T, support::constexpr_hash<volatile T>>();
+  test_hash_disabled<const volatile T, support::constexpr_hash<const volatile T>>();
+
+  using H = support::constexpr_hash<T>;
+  ASSERT_NOEXCEPT(H()(T()));
+  using under_type = std::underlying_type_t<T>;
+
+  H h1;
+  support::constexpr_hash<under_type> h2;
+  for (int i = 0; i <= 5; ++i) {
+    auto t = static_cast<T>(i);
+    assert(h1(t) == h2(static_cast<under_type>(t)));
+  }
+}
+
+constexpr bool test_with_hash() {
+  test<Cardinals>();
+
+  test<Colors>();
+  test<ShortColors>();
+  test<LongColors>();
+  test<EightBitColors>();
+
+  test<Fruits>();
+
+  return true;
+}
+
+int main(int, char**) {
+  test_with_hash();
+  static_assert(test_with_hash());
+
+  return 0;
+}
