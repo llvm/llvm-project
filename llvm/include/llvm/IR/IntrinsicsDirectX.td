@@ -670,4 +670,7 @@ let TargetPrefix = "dx" in {
 
 def int_dx_isdebuggingenabled
       : DefaultAttrsIntrinsic<[llvm_i1_ty], [], []>;
+
+  def int_dx_coverage
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
 }

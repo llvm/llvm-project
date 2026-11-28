@@ -1283,6 +1283,50 @@ createSPIRVBuiltinDelta(IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty,
   return B.CreateSub(Value, Base);
 }
 
+// The SampleMask built-in is an array of 32-bit integers, with one element for
+// every 32 samples (see VUID-SampleMask-SampleMask-04359). SV_Coverage is a
+// single 32-bit mask, which maps to its first element.
+static llvm::GlobalVariable *
+createSPIRVSampleMaskVariable(CodeGenModule &CGM, llvm::Type *Ty,
+                              const Twine &Name, bool IsInput,
+                              llvm::hlsl::InterpolationMode InterpMode) {
+  unsigned AddrSpace = CGM.getContext().getTargetAddressSpace(
+      IsInput ? LangAS::hlsl_input : LangAS::hlsl_output);
+  auto *GV = new llvm::GlobalVariable(
+      CGM.getModule(), llvm::ArrayType::get(Ty, 1), /* isConstant= */ IsInput,
+      llvm::GlobalValue::ExternalLinkage, /* Initializer= */ nullptr, Name,
+      /* insertBefore= */ nullptr, llvm::GlobalVariable::GeneralDynamicTLSModel,
+      /* AddressSpace */ AddrSpace,
+      /* isExternallyInitialized= */ IsInput);
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  addSPIRVInterfaceDecorations(
+      GV, llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+      static_cast<unsigned>(llvm::hlsl::SPIRVBuiltIn::SampleMask), InterpMode);
+  return GV;
+}
+
+static llvm::Value *
+createSPIRVSampleMaskLoad(IRBuilder<> &B, CodeGenModule &CGM, llvm::Type *Ty,
+                          const Twine &Name,
+                          llvm::hlsl::InterpolationMode InterpMode) {
+  llvm::GlobalVariable *GV = createSPIRVSampleMaskVariable(
+      CGM, Ty, Name, /* IsInput= */ true, InterpMode);
+  llvm::Value *Ptr =
+      B.CreateStructuredGEP(GV->getValueType(), GV, {B.getInt32(0)});
+  return B.CreateLoad(Ty, Ptr);
+}
+
+static void
+createSPIRVSampleMaskStore(IRBuilder<> &B, CodeGenModule &CGM,
+                           llvm::Value *Source, const Twine &Name,
+                           llvm::hlsl::InterpolationMode InterpMode) {
+  llvm::GlobalVariable *GV = createSPIRVSampleMaskVariable(
+      CGM, Source->getType(), Name, /* IsInput= */ false, InterpMode);
+  llvm::Value *Ptr =
+      B.CreateStructuredGEP(GV->getValueType(), GV, {B.getInt32(0)});
+  B.CreateStore(Source, Ptr);
+}
+
 llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
     llvm::IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
     HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index,
@@ -1456,7 +1500,8 @@ static llvm::hlsl::SemanticSignatureElement createSemanticSignatureElement(
   // unsigned component type.
   if (Kind == llvm::dxbc::PSV::SemanticKind::SampleIndex ||
       Kind == llvm::dxbc::PSV::SemanticKind::PrimitiveID ||
-      Kind == llvm::dxbc::PSV::SemanticKind::StencilRef) {
+      Kind == llvm::dxbc::PSV::SemanticKind::StencilRef ||
+      Kind == llvm::dxbc::PSV::SemanticKind::Coverage) {
     if (CompType == llvm::dxil::ElementType::I16)
       CompType = llvm::dxil::ElementType::U16;
     else if (CompType == llvm::dxil::ElementType::I32)
@@ -1863,6 +1908,18 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
     break;
+  case llvm::dxbc::PSV::SemanticKind::Coverage:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_Coverage is not available in this stage and should have been "
+           "diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV())
+      return createSPIRVSampleMaskLoad(
+          B, CGM, Type, Semantic->getAttrName()->getName(), InterpMode);
+    // The input coverage is not part of the signature and is read with a
+    // dedicated operation.
+    if (CGM.getTarget().getTriple().isDXIL())
+      return B.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::dx_coverage));
+    break;
   case llvm::dxbc::PSV::SemanticKind::SampleIndex:
     assert(Stage == llvm::Triple::Pixel &&
            "SV_SampleIndex is in an unavailable stage and should have been "
@@ -1968,6 +2025,22 @@ void CGHLSLRuntime::emitSystemSemanticStore(
                              Semantic->getAttrName()->getName(),
                              llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
                              /* Position */ 0, InterpMode);
+      return;
+    }
+    break;
+  case llvm::dxbc::PSV::SemanticKind::Coverage:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_Coverage is not available in this stage and should have been "
+           "diagnosed by Sema");
+    // The output coverage is an output element that is not packed into the
+    // render-target rows.
+    if (CGM.getTarget().getTriple().isDXIL()) {
+      emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
+      return;
+    }
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      createSPIRVSampleMaskStore(
+          B, CGM, Source, Semantic->getAttrName()->getName(), InterpMode);
       return;
     }
     break;

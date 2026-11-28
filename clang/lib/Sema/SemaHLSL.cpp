@@ -1033,6 +1033,9 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     return IsInput;
   case SemanticKind::StencilRef:
     return ST == llvm::Triple::Pixel && !IsInput;
+  case SemanticKind::Coverage:
+    // Both the input and the output are the SampleMask built-in.
+    return ST == llvm::Triple::Pixel;
   default:
     return false;
   }
@@ -1484,6 +1487,7 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
   case SemanticKind::StartVertexLocation:
   case SemanticKind::StartInstanceLocation:
   case SemanticKind::ViewID:
+  case SemanticKind::Coverage:
     if (DeclaredTy != T || !T->isScalarType() ||
         !isIntElementOfWidth(Ctx, T, 32))
       Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
@@ -2387,7 +2391,6 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   case SemanticKind::OutputControlPointID:
   case SemanticKind::DomainLocation:
   case SemanticKind::GSInstanceID:
-  case SemanticKind::Coverage:
   case SemanticKind::InnerCoverage:
   case SemanticKind::Depth:
   case SemanticKind::DepthLessEqual:
