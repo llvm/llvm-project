@@ -1621,10 +1621,11 @@ void BinaryContext::processInterproceduralReferences() {
       continue;
     }
 
+    // The referenced address does not have to be in any section, e.g. a call
+    // to an absolute address. Such a reference is not into code we can
+    // process, so skip it.
     ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
-    assert(Section && "cannot get section for referenced address");
-
-    if (!Section->isText())
+    if (!Section || !Section->isText())
       continue;
 
     // PLT requires special handling and could be ignored in this context.
