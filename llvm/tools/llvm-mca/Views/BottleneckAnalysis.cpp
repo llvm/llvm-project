@@ -170,13 +170,13 @@ void DependencyGraph::pruneEdges(unsigned Iterations) {
     unsigned NumPruned = 0;
     const unsigned Size = N.OutgoingEdges.size();
     // Use a cut-off threshold to prune edges with a low frequency.
-    for (unsigned I = 0, E = Size; I < E; ++I) {
+    for (unsigned I = 0, E = Size; I < E;) {
       DependencyEdge &Edge = N.OutgoingEdges[I];
-      if (Edge.Frequency == Iterations)
+      if (Edge.Frequency == Iterations ||
+          0.10 < (double)Edge.Frequency / Iterations) {
+        ++I;
         continue;
-      double Factor = (double)Edge.Frequency / Iterations;
-      if (0.10 < Factor)
-        continue;
+      }
       Nodes[Edge.ToIID].NumPredecessors--;
       std::swap(Edge, N.OutgoingEdges[E - 1]);
       --E;
