@@ -78,7 +78,8 @@ define i32 @peel_with_guard_known_nonnegative_2(ptr %x, i32 %w) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[SUB]] to i64
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[W]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = freeze i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PH_SPLIT:.*]], label %[[EXIT_LOOPEXIT_PEEL_BEGIN:.*]]
 ; CHECK:       [[PH_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
@@ -171,13 +172,15 @@ define void @peel_with_guard2(i32 %n) {
 ; CHECK-NEXT:    br i1 [[PRECOND]], label %[[EXIT:.*]], label %[[LOOP_HEADER_PREHEADER:.*]]
 ; CHECK:       [[LOOP_HEADER_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -2
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_HEADER_PREHEADER_SPLIT:.*]], label %[[EXIT_LOOPEXIT_PEEL_BEGIN:.*]]
 ; CHECK:       [[LOOP_HEADER_PREHEADER_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ 1, %[[LOOP_HEADER_PREHEADER_SPLIT]] ]
-; CHECK-NEXT:    br i1 false, label %[[THEN:.*]], label %[[LOOP_LATCH]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[IV]], [[SUB]]
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
@@ -243,13 +246,15 @@ define void @test_peel_guard_sub_1_btc(i32 %n) {
 ; CHECK-NEXT:    br i1 [[PRE]], label %[[EXIT:.*]], label %[[LOOP_HEADER_PREHEADER:.*]]
 ; CHECK:       [[LOOP_HEADER_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -2
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[LOOP_HEADER_PREHEADER_SPLIT:.*]], label %[[EXIT_LOOPEXIT_PEEL_BEGIN:.*]]
 ; CHECK:       [[LOOP_HEADER_PREHEADER_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ], [ 1, %[[LOOP_HEADER_PREHEADER_SPLIT]] ]
-; CHECK-NEXT:    br i1 false, label %[[LOOP_LATCH]], label %[[THEN:.*]]
+; CHECK-NEXT:    [[CMP115:%.*]] = icmp eq i32 [[IV]], [[SUB]]
+; CHECK-NEXT:    br i1 [[CMP115]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[CALL136:%.*]] = load volatile ptr, ptr null, align 4294967296
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
