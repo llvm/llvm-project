@@ -6704,7 +6704,13 @@ def CMP_SWAP_32 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
 // registers, which could overlap with two different GPRPairs, causing
 // allocation to fail. With them combined, we need to allocate 4 GPRPairs,
 // which will always succeed.
-let Constraints = "@earlyclobber $Rd,$addr_temp_out = $addr_temp" in
+//
+// Both outputs need early-clobber constraints: after pseudo expansion, Rd is
+// written by LDREXD before the remaining inputs are consumed, and temp is
+// STREXD's early-clobbered status output, which must be different from new.lo
+// and new.hi.
+let Constraints = "@earlyclobber $Rd,@earlyclobber $addr_temp_out," #
+                  "$addr_temp_out = $addr_temp" in
 def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPRPair:$addr_temp_out),
                              (ins GPRPair:$addr_temp, GPRPair:$desired, GPRPair:$new),
                              NoItinerary, []>, Sched<[]>;

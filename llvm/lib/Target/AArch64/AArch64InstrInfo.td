@@ -3314,8 +3314,11 @@ def : Pat<(AArch64stz2g GPR64sp:$Rn, (am_indexeds9s128 GPR64sp:$Rm, simm9s16:$im
           (STZ2Gi $Rn, $Rm, $imm)>;
 
 defm STGP     : StorePairOffset <0b01, 0, GPR64z, simm7s16, "stgp">;
-def  STGPpre  : StorePairPreIdx <0b01, 0, GPR64z, simm7s16, "stgp">;
-def  STGPpost : StorePairPostIdx<0b01, 0, GPR64z, simm7s16, "stgp">;
+let Constraints = "$Rn = $wback" in {
+  // Contrary to stp, stgp does not have an "@earlyclobber $wback" constraint.
+  def  STGPpre  : StorePairPreIdx <0b01, 0, GPR64z, simm7s16, "stgp">;
+  def  STGPpost : StorePairPostIdx<0b01, 0, GPR64z, simm7s16, "stgp">;
+}
 
 def : Pat<(int_aarch64_stg GPR64:$Rt, (am_indexeds9s128 GPR64sp:$Rn, simm9s16:$offset)),
           (STGi GPR64:$Rt, GPR64sp:$Rn,  simm9s16:$offset)>;

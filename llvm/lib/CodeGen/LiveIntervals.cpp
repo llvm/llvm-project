@@ -748,9 +748,8 @@ void LiveIntervals::shrinkSubRangeToUses(LiveInterval::SubRange &SR,
     if (!VNI)
       continue;
 
-    // An untied use may read a register redefined by an early-clobber def.
-    if (VNInfo *DefVNI = LRQ.valueDefined())
-      Idx = DefVNI->def;
+    assert((!LRQ.valueDefined() || LRQ.valueDefined()->def == Idx) &&
+           "An untied use must not get clobbered at an earlier slot.");
 
     WorkList.push_back(std::make_pair(Idx, VNI));
   }

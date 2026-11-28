@@ -1,0 +1,74 @@
+# RUN: split-file %s %t
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %t/physreg.mir 2>&1 | FileCheck %s --check-prefix=PHYSREG --implicit-check-not="Bad machine code"
+# RUN: llc -mtriple=aarch64 -run-pass=none -filetype=null %t/undef.mir
+# RUN: llc -mtriple=aarch64 -run-pass=none -filetype=null %t/implicit.mir
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %t/vreg.mir 2>&1 | FileCheck %s --implicit-check-not="Bad machine code"
+# REQUIRES: aarch64-registered-target
+
+#--- physreg.mir
+# NOK: Physical register overlaps, including aliases, are rejected.
+---
+name: stxrw_physreg
+body: |
+  bb.0:
+    liveins: $x0, $w2
+
+    ; PHYSREG: Bad machine code: Early-clobber def overlaps an untied input
+    ; PHYSREG: - operand 1: {{ *}}$w2
+    early-clobber $w2 = STXRW $w2, $x0
+    ; PHYSREG: Bad machine code: Early-clobber def overlaps an untied input
+    ; PHYSREG: - operand 2: {{ *}}$x0
+    early-clobber $w0 = STXRW $w2, $x0
+    RET_ReallyLR implicit $w0
+...
+
+#--- undef.mir
+# OK: An undef input does not read the early-clobbered lane.
+---
+name: stxrw_undef
+isSSA: false
+body: |
+  bb.0:
+    liveins: $x0, $w2_w3
+
+    %0:gpr64sp = COPY $x0
+    %1:wseqpairsclass = COPY $w2_w3
+    early-clobber $w2 = STXRW undef $w2, %0
+    early-clobber %1.sube32:wseqpairsclass = STXRW undef %1.sube32, %0
+    $w0 = COPY %1.sube32
+    RET_ReallyLR implicit $w0
+...
+
+#--- vreg.mir
+# NOK: An untied input cannot read the lane defined by an early-clobber output.
+---
+name: stxrw_vreg
+isSSA: false
+body: |
+  bb.0:
+    liveins: $x0, $w2_w3
+
+    %0:gpr64sp = COPY $x0
+    %1:wseqpairsclass = COPY $w2_w3
+
+    ; CHECK: Bad machine code: Early-clobber def overlaps an untied input
+    ; CHECK: - instruction: early-clobber %1.sube32:wseqpairsclass = STXRW %1.sube32:wseqpairsclass, %0:gpr64sp
+    ; CHECK: - operand 1: {{ *}}%1.sube32:wseqpairsclass
+    early-clobber %1.sube32:wseqpairsclass = STXRW %1.sube32, %0
+    dead %2:wseqpairsclass = COPY %1
+    $w0 = COPY %1.sube32
+    RET_ReallyLR implicit $w0
+...
+
+#--- implicit.mir
+# OK: Implicit physical operands can represent liveness and dependency markers.
+---
+name: stxrw_implicit_physreg
+body: |
+  bb.0:
+    liveins: $x0, $w2, $w3
+
+    early-clobber $w2 = STXRW $w3, $x0, implicit $w2
+    $w2 = COPY $w3, implicit-def early-clobber $w3
+    RET_ReallyLR implicit $w2
+...

@@ -2710,6 +2710,27 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
     const Register Reg = MO->getReg();
     if (!Reg)
       return;
+
+    // Check that an early-clobber def does not clobber any untied input in the
+    // instruction. Ignore implicit physical operands, which may be
+    // conservatively added after regalloc to describe super-register liveness.
+    if (MO->isEarlyClobber() && !(Reg.isPhysical() && MO->isImplicit())) {
+      for (const MachineOperand &UseMO : MI->all_uses()) {
+        if (!UseMO.readsReg() || !UseMO.getReg() ||
+            (UseMO.isImplicit() && UseMO.getReg().isPhysical()) ||
+            !TRI->regsOverlap(Reg, UseMO.getReg()))
+          continue;
+        unsigned UseIdx = MI->getOperandNo(&UseMO);
+        if (MO->isTied() && MI->findTiedOperandIdx(MONum) == UseIdx)
+          continue;
+        if (Reg.isVirtual() &&
+            !TRI->checkSubRegInterference(Reg, MO->getSubReg(), Reg,
+                                          UseMO.getSubReg()))
+          continue;
+        report("Early-clobber def overlaps an untied input", &UseMO, UseIdx);
+      }
+    }
+
     if (MRI->tracksLiveness() && !MI->isDebugInstr())
       checkLiveness(MO, MONum);
 
@@ -3197,7 +3218,6 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
 
   if (MO->isDef()) {
     // Register defined.
-    // TODO: verify that earlyclobber ops are not used.
     if (MO->isDead())
       addRegWithSubRegs(regsDead, Reg);
     else
