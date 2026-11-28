@@ -19,3 +19,12 @@ func.func @func(%arg0: i64) {
   }
   return
 }
+
+// CHECK-LABEL: func.func @addui_extended_tensor
+// CHECK-SAME:    (%{{.+}}: tensor<3x6xi32>, %[[ARG1:.+]]: tensor<3x6xi32>)
+// CHECK:         %[[SUM:.+]], %[[OVERFLOW:.+]] = arith.addui_extended %[[ARG1]], %[[ARG1]] : tensor<3x6xi32>, tensor<3x6xi1>
+// CHECK:         return %[[SUM]], %[[OVERFLOW]] : tensor<3x6xi32>, tensor<3x6xi1>
+func.func @addui_extended_tensor(%arg0: tensor<3x6xi32>, %arg1: tensor<3x6xi32>) -> (tensor<3x6xi32>, tensor<3x6xi1>) {
+  %sum, %overflow = arith.addui_extended %arg1, %arg1 : tensor<3x6xi32>, tensor<3x6xi1>
+  return %sum, %overflow : tensor<3x6xi32>, tensor<3x6xi1>
+}

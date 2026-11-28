@@ -71,6 +71,38 @@ func.func @ceildivui_vector4_invalid(%arg0: vector<2xi16>, %arg1: vector<2xi16>)
 
 // -----
 
+func.func @floordivsi_tensor_no_crash(%arg0: tensor<4xi32>, %arg1: tensor<4xi32>) -> tensor<4xi32> {
+  // expected-error @+1 {{failed to legalize operation 'arith.floordivsi'}}
+  %0 = arith.floordivsi %arg0, %arg1 : tensor<4xi32>
+  return %0 : tensor<4xi32>
+}
+
+// -----
+
+func.func @floordivsi_multidim_tensor_no_crash(%arg0: tensor<3x3x1x3xi16>, %arg1: tensor<3x3x1x3xi16>) -> tensor<3x3x1x3xi16> {
+  // expected-error @+1 {{failed to legalize operation 'arith.floordivsi'}}
+  %0 = arith.floordivsi %arg0, %arg1 : tensor<3x3x1x3xi16>
+  return %0 : tensor<3x3x1x3xi16>
+}
+
+// -----
+
+func.func @ceildivsi_tensor_no_crash(%arg0: tensor<4xi32>, %arg1: tensor<4xi32>) -> tensor<4xi32> {
+  // expected-error @+1 {{failed to legalize operation 'arith.ceildivsi'}}
+  %0 = arith.ceildivsi %arg0, %arg1 : tensor<4xi32>
+  return %0 : tensor<4xi32>
+}
+
+// -----
+
+func.func @ceildivui_tensor_no_crash(%arg0: tensor<4xindex>, %arg1: tensor<4xindex>) -> tensor<4xindex> {
+  // expected-error @+1 {{failed to legalize operation 'arith.ceildivui'}}
+  %0 = arith.ceildivui %arg0, %arg1 : tensor<4xindex>
+  return %0 : tensor<4xindex>
+}
+
+// -----
+
 func.func @int_vector_invalid_bitwidth(%arg0: vector<2xi12>) {
   // expected-error @+1 {{failed to legalize operation 'arith.addi'}}
   %0 = arith.addi %arg0, %arg0: vector<2xi12>
@@ -137,6 +169,22 @@ func.func @trunci_tensor_no_crash(%arg0: tensor<1xi32>) -> tensor<1xi16> {
   // expected-error @+1 {{failed to legalize operation 'arith.trunci'}}
   %0 = arith.trunci %arg0 : tensor<1xi32> to tensor<1xi16>
   return %0 : tensor<1xi16>
+}
+
+// -----
+
+func.func @addui_extended_tensor_no_crash(%arg0: tensor<1xi32>, %arg1: tensor<1xi32>) -> (tensor<1xi32>, tensor<1xi1>) {
+  // expected-error @+1 {{failed to legalize operation 'arith.addui_extended'}}
+  %sum, %overflow = arith.addui_extended %arg0, %arg1 : tensor<1xi32>, tensor<1xi1>
+  return %sum, %overflow : tensor<1xi32>, tensor<1xi1>
+}
+
+// -----
+
+func.func @subui_extended_tensor_no_crash(%arg0: tensor<1xi32>, %arg1: tensor<1xi32>) -> (tensor<1xi32>, tensor<1xi1>) {
+  // expected-error @+1 {{failed to legalize operation 'arith.subui_extended'}}
+  %diff, %borrow = arith.subui_extended %arg0, %arg1 : tensor<1xi32>, tensor<1xi1>
+  return %diff, %borrow : tensor<1xi32>, tensor<1xi1>
 }
 
 // -----
