@@ -12,7 +12,9 @@
 //   * Removes basic blocks with no predecessors.
 //   * Merges a basic block into its predecessor if there is only one and the
 //     predecessor only has one successor.
-//   * Eliminates PHI nodes for basic blocks with a single predecessor.
+//   * Folds single-entry PHI nodes when merging a block into its predecessor.
+//     Other single-entry PHIs are left alone, since they may be LCSSA PHIs;
+//     InstSimplify and InstCombine remove the rest.
 //   * Eliminates a basic block that only contains an unconditional branch.
 //   * Changes invoke instructions to nounwind functions to be calls.
 //   * Change things like "if (x) if (y)" into "if (x&y)".
