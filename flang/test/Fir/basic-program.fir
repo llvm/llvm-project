@@ -189,6 +189,7 @@ func.func @_QQmain() {
 // PASSES-NEXT:  FunctionAttr
 // PASSES-NEXT:  LowerNontemporalPass
 // PASSES-NEXT: MarkDeclareTargetPass
+// PASSES-NEXT: DeviceThreadprivateCheckPass
 // PASSES-NEXT: UnimplementedDeviceCheckPass
 // PASSES-NEXT: FIRToLLVMLowering
 // PASSES-NEXT: ReconcileUnrealizedCasts

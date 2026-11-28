@@ -165,6 +165,19 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 // -----
 
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  llvm.mlir.global internal @tp_var() : i32
+  llvm.func @threadprivate_in_declare_target() attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} {
+    %0 = llvm.mlir.addressof @tp_var : !llvm.ptr
+    // expected-error @below {{threadprivate variable 'tp_var' cannot be accessed in device code}}
+    // expected-error @below {{LLVM Translation failed for operation: omp.threadprivate}}
+    %1 = omp.threadprivate %0 : !llvm.ptr -> !llvm.ptr
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   llvm.func @host_op_in_device_nested_target(%arg0 : !llvm.ptr) {
     // expected-error @below {{unsupported host op found in device}}
     // expected-error @below {{LLVM Translation failed for operation: omp.parallel}}
