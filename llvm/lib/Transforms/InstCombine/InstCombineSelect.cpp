@@ -4737,6 +4737,96 @@ static bool isSelectZeroSignInsignificant(SelectInst &SI) {
   return true;
 }
 
+/// Fold a select between X and X * C, controlled by the sign of X, to a
+/// min/max of the two values. For a finite non-zero constant C:
+///   X < 0 ? X : X * C --> maxnum(X, X * C)  if C >= 1
+///   X < 0 ? X : X * C --> minnum(X, X * C)  if C <= 1
+///   X > 0 ? X : X * C --> minnum(X, X * C)  if C >= 1
+///   X > 0 ? X : X * C --> maxnum(X, X * C)  if C <= 1
+/// The C <= 1 cases include negative C, where X and X * C have opposite signs.
+/// That requires the sign of a zero result to be insignificant.
+/// Non-strict comparisons and selects with swapped arms are handled too.
+static Instruction *foldSelectOfScaledValueToMinMax(SelectInst &SI,
+                                                    InstCombinerImpl &IC) {
+  auto *FCmp = dyn_cast<FCmpInst>(SI.getCondition());
+  if (!FCmp || !match(FCmp->getOperand(1), m_AnyZeroFP()))
+    return nullptr;
+
+  // Canonicalize to "Pred(X, 0) ? X : Mul".
+  Value *X = FCmp->getOperand(0);
+  Value *Mul = SI.getFalseValue();
+  CmpInst::Predicate Pred = FCmp->getPredicate();
+  if (SI.getTrueValue() != X) {
+    if (Mul != X)
+      return nullptr;
+    Mul = SI.getTrueValue();
+    Pred = CmpInst::getInversePredicate(Pred);
+  }
+
+  // If C is infinite or zero then X * C can be NaN when X is not, and the
+  // min/max would not propagate that NaN.
+  const APFloat *C;
+  if (!match(Mul, m_FMul(m_Specific(X), m_APFloat(C))) || !C->isFiniteNonZero())
+    return nullptr;
+
+  // A denormal C may be treated as zero, see above.
+  if (C->isDenormal() &&
+      SI.getFunction()->getDenormalMode(C->getSemantics()).Input !=
+          DenormalMode::IEEE)
+    return nullptr;
+
+  bool XIfNegative;
+  switch (Pred) {
+  case FCmpInst::FCMP_OLT:
+  case FCmpInst::FCMP_OLE:
+  case FCmpInst::FCMP_ULT:
+  case FCmpInst::FCMP_ULE:
+    XIfNegative = true;
+    break;
+  case FCmpInst::FCMP_OGT:
+  case FCmpInst::FCMP_OGE:
+  case FCmpInst::FCMP_UGT:
+  case FCmpInst::FCMP_UGE:
+    XIfNegative = false;
+    break;
+  default:
+    return nullptr;
+  }
+
+  // If X is NaN then an ordered predicate selects X * C, which is also NaN, and
+  // so is the min/max. An unordered predicate selects X itself, but the min/max
+  // may return a NaN with a different sign or payload.
+  bool NoNaNs = SI.hasNoNaNs() || FCmp->hasNoNaNs();
+  if (CmpInst::isUnordered(Pred) && !NoNaNs)
+    return nullptr;
+
+  // If C is negative then X and X * C are zeros of opposite sign when X is
+  // zero, and the min/max may not return the one that was selected.
+  bool NoSignedZeros =
+      SI.hasNoSignedZeros() || isSelectZeroSignInsignificant(SI);
+  if (C->isNegative() && !NoSignedZeros)
+    return nullptr;
+
+  // If C is 1 then X * C is X, so either min or max is correct.
+  bool CGreaterThanOne =
+      C->compare(APFloat::getOne(C->getSemantics())) == APFloat::cmpGreaterThan;
+  bool IsMax = XIfNegative == CGreaterThanOne;
+  Value *MinMax = IC.Builder.CreateBinaryIntrinsic(
+      IsMax ? Intrinsic::maxnum : Intrinsic::minnum, X, Mul, &SI);
+  if (auto *MinMaxInst = dyn_cast<Instruction>(MinMax)) {
+    // If X is NaN then the original select was poison if either it or the
+    // comparison had nnan.
+    MinMaxInst->setHasNoNaNs(NoNaNs);
+    // If |C| > 1 then the min/max can have an infinite operand, from X * C
+    // overflowing, that was not selected originally.
+    if (abs(*C).compare(APFloat::getOne(C->getSemantics())) ==
+        APFloat::cmpGreaterThan)
+      MinMaxInst->setHasNoInfs(false);
+    MinMaxInst->setHasNoSignedZeros(NoSignedZeros);
+  }
+  return IC.replaceInstUsesWith(SI, MinMax);
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -5054,6 +5144,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // Fold selecting to fabs.
   if (Instruction *Fabs = foldSelectWithFCmpToFabs(SI, *this))
     return Fabs;
+
+  if (Instruction *MinMax = foldSelectOfScaledValueToMinMax(SI, *this))
+    return MinMax;
 
   if (Instruction *I = foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SI, *this))
     return I;
