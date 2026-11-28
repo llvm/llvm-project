@@ -378,8 +378,8 @@ def ZnVer4PfmCounters : ProcPfmCounters {
   let CycleCounter = PfmCounter<"cycles_not_in_halt">;
   let UopsCounter = PfmCounter<"retired_ops">;
   let IssueCounters = [
-    PfmIssueCounter<"Zn4Int", "ops_type_dispatched_from_decoder:int_disp_retire_mode">,
-    PfmIssueCounter<"Zn4FPU", "ops_type_dispatched_from_decoder:fp_disp_retire_mode">,
+    PfmIssueCounter<"Zn4Int", "ops_type_dispatched_from_decoder:integer_dispatch">,
+    PfmIssueCounter<"Zn4FPU", "ops_type_dispatched_from_decoder:fp_dispatch">,
     PfmIssueCounter<"Zn4Load", "ls_dispatch:ld_dispatch">,
     PfmIssueCounter<"Zn4Store", "ls_dispatch:store_dispatch">,
     PfmIssueCounter<"Zn4Divider", "div_op_count">,
