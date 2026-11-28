@@ -44,6 +44,7 @@
 #include "flang/Support/default-kinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
 #include <map>
@@ -826,6 +827,11 @@ protected:
     std::vector<MutableSymbolRef> deferredDataIDoVars;
     std::vector<const parser::ScalarLogicalConstantExpr *>
         ompAssumesNoParallelismConditions;
+    // !DIR$ ALIGN requests, resolved at the end of the specification part
+    // since the declaration of a name may follow the directive
+    std::vector<std::pair<std::uint64_t, const parser::Name *>> alignRequests;
+    // The alignment requested so far for each object, recorded or ignored
+    std::map<const Symbol *, std::uint64_t> requestedAlignments;
     // Info about SAVE statements and attributes in current scope
     struct {
       std::optional<SourceName> saveAll; // "SAVE" without entity list
@@ -2483,6 +2489,7 @@ private:
   void CreateObjectSymbols(const std::list<parser::ObjectDecl> &, Attr);
   void CreateGeneric(const parser::GenericSpec &);
   void FinishSpecificationPart(const std::list<parser::DeclarationConstruct> &);
+  void ApplyAlignDirective(const parser::Name &, Symbol &, std::uint64_t);
   void AnalyzeStmtFunctionStmt(const parser::StmtFunctionStmt &);
   void CheckImports();
   void CheckImport(const SourceName &, const SourceName &);
@@ -11235,6 +11242,72 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       }
     }
   }
+  // Resolve the names of the !DIR$ ALIGN directives now that every
+  // declaration of this specification part has been seen. The scope must
+  // declare the name itself; no symbol is created for it.
+  for (const auto &[value, name] : specPartState_.alignRequests) {
+    auto iter{currScope().find(name->source)};
+    Symbol *symbol{iter == currScope().end() ? nullptr : &*iter->second};
+    if (symbol && !symbol->has<UseDetails>() &&
+        !symbol->has<UseErrorDetails>() && !symbol->has<HostAssocDetails>()) {
+      ApplyAlignDirective(*name, *symbol, value);
+    } else if (Symbol * other{symbol ? symbol : FindSymbol(*name)}) {
+      SayWithDecl(*name, *other,
+          "'%s' must be declared in this scoping unit to be aligned with !DIR$ ALIGN"_err_en_US);
+    } else {
+      Say(*name,
+          "'%s' must be declared in this scoping unit to be aligned with !DIR$ ALIGN"_err_en_US);
+    }
+  }
+  specPartState_.alignRequests.clear();
+}
+
+// Record a !DIR$ ALIGN request on an object declared in the current scope.
+// A request that is ignored is not recorded, so that neither lowering nor
+// the module file sees it. A request on an object that the directive may not
+// apply to is recorded, and diagnosed with the other declaration checks.
+void ResolveNamesVisitor::ApplyAlignDirective(
+    const parser::Name &name, Symbol &symbol, std::uint64_t value) {
+  Resolve(name, &symbol);
+  ConvertToObjectEntity(symbol);
+  auto *object{symbol.detailsIf<ObjectEntityDetails>()};
+  if (!object) {
+    SayWithDecl(name, symbol,
+        "'%s' must be a variable to be aligned with !DIR$ ALIGN"_err_en_US);
+    return;
+  }
+  // Detect duplicate (via iter->second) and the first use. Note that multiple
+  // align directives with the same alignment value are allowed.
+  auto [iter, isFirstRequest]{
+      specPartState_.requestedAlignments.emplace(&symbol, value)};
+  if (iter->second != value) {
+    SayWithDecl(name, symbol,
+        "'%s' already has a different !DIR$ ALIGN alignment"_err_en_US);
+    return;
+  }
+  bool mayNotApply{IsDummy(symbol) || IsFunctionResult(symbol) ||
+      evaluate::IsCoarray(symbol) || object->cudaDataAttr()};
+  if (!mayNotApply) {
+    // The placement of an object in COMMON or EQUIVALENCE storage is fixed
+    // by storage association, and the storage of an ALLOCATABLE or POINTER
+    // object is not aligned yet.
+    if (FindCommonBlockContaining(symbol) || FindEquivalenceSet(symbol)) {
+      if (isFirstRequest) {
+        context().Warn(common::UsageWarning::IgnoredDirective, name.source,
+            "!DIR$ ALIGN is ignored for '%s' because it is in COMMON or EQUIVALENCE storage"_warn_en_US,
+            name.source);
+      }
+      return;
+    } else if (IsAllocatableOrPointer(symbol)) {
+      if (isFirstRequest) {
+        context().Warn(common::UsageWarning::IgnoredDirective, name.source,
+            "!DIR$ ALIGN is not yet implemented for ALLOCATABLE or POINTER '%s' and was ignored"_warn_en_US,
+            name.source);
+      }
+      return;
+    }
+  }
+  object->set_alignment(value);
 }
 
 // Analyze the bodies of statement functions now that the symbols in this
@@ -11602,13 +11675,40 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
         }
       }
     }
-  } else if (std::holds_alternative<parser::CompilerDirective::Align>(x.u)) {
-    // Not context().Warn(): the directive may appear outside any program
-    // unit, where there is no scope to look up.
-    if (context().ShouldWarn(common::UsageWarning::IgnoredDirective)) {
+  } else if (const auto *align{
+                 std::get_if<parser::CompilerDirective::Align>(&x.u)}) {
+    // !DIR$ ALIGN(n) :: names -- request an alignment for each named object.
+    if (currScope().IsTopLevel()) {
       Say(x.source,
-          "!DIR$ ALIGN is not yet implemented and was ignored"_warn_en_US)
-          .set_usageWarning(common::UsageWarning::IgnoredDirective);
+          "!DIR$ ALIGN directive must appear in a program unit"_err_en_US);
+      return;
+    } else if (!inSpecificationPart_) {
+      Say(x.source,
+          "!DIR$ ALIGN directive must appear in the specification part"_err_en_US);
+      return;
+    }
+    constexpr std::uint64_t maxAlignment{std::uint64_t{1} << 28};
+    std::uint64_t value{std::get<std::uint64_t>(align->t)};
+    if (!llvm::isPowerOf2_64(value) || value > maxAlignment) {
+      Say(x.source,
+          "The alignment in !DIR$ ALIGN must be a power of two no greater than %jd"_err_en_US,
+          static_cast<std::intmax_t>(maxAlignment));
+      return;
+    }
+    for (const parser::Name &name :
+        std::get<std::list<parser::Name>>(align->t)) {
+      if (!currScope().IsDerivedType()) {
+        // The declaration of the name may follow the directive.
+        specPartState_.alignRequests.emplace_back(value, &name);
+      } else if (auto iter{currScope().find(name.source)};
+          iter != currScope().end()) {
+        ApplyAlignDirective(name, *iter->second, value);
+      } else {
+        // Among the components of a derived type, the directive can only
+        // name a component that is already declared.
+        Say(name,
+            "'%s' must be a previously declared component of this derived type to be aligned with !DIR$ ALIGN"_err_en_US);
+      }
     }
   } else if (const auto *inlineAlways{
                  std::get_if<parser::CompilerDirective::InlineAlways>(&x.u)}) {

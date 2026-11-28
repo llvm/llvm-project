@@ -1714,9 +1714,20 @@ void PutOpenMPDirective(llvm::raw_ostream &os, const Symbol &symbol) {
   }
 }
 
+// !DIR$ ALIGN is re-emitted in its canonical spelling after the entity's
+// declaration so that using units see the same alignment request.
+static void PutAlignDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+  if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (std::optional<std::uint64_t> alignment{object->alignment()}) {
+      os << "!dir$ align(" << *alignment << ") :: " << symbol.name() << '\n';
+    }
+  }
+}
+
 void ModFileWriter::PutDirective(llvm::raw_ostream &os, const Symbol &symbol) {
   PutOpenACCDirective(os, symbol);
   PutOpenMPDirective(os, symbol);
+  PutAlignDirective(os, symbol);
 }
 
 struct Temp {

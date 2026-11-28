@@ -828,6 +828,45 @@ void CheckHelper::CheckObjectEntity(
   const Symbol *commonBlock{FindCommonBlockContaining(symbol)};
   bool isLocalVariable{!commonBlock && !isComponent && !details.isDummy() &&
       symbol.owner().kind() != Scope::Kind::OtherConstruct};
+  if (details.alignment()) { // !DIR$ ALIGN applicability
+    if (details.isDummy()) {
+      messages_.Say(
+          "!DIR$ ALIGN may not apply to dummy argument '%s'"_err_en_US,
+          symbol.name());
+    } else if (IsFunctionResult(symbol)) {
+      messages_.Say(
+          "!DIR$ ALIGN may not apply to function result '%s'"_err_en_US,
+          symbol.name());
+    } else if (IsNamedConstant(symbol)) {
+      messages_.Say(
+          "!DIR$ ALIGN may not apply to named constant '%s'"_err_en_US,
+          symbol.name());
+    } else if (symbol.attrs().test(Attr::BIND_C)) {
+      messages_.Say(
+          "!DIR$ ALIGN is not yet supported for BIND(C) variable '%s'"_err_en_US,
+          symbol.name());
+    } else if (details.cudaDataAttr()) {
+      messages_.Say(
+          "!DIR$ ALIGN is not yet supported for CUDA Fortran variable '%s'"_err_en_US,
+          symbol.name());
+    } else if (evaluate::IsCoarray(symbol)) {
+      messages_.Say(
+          "!DIR$ ALIGN may not apply to coarray '%s'"_err_en_US, symbol.name());
+    } else if (symbol.test(Symbol::Flag::CrayPointee)) {
+      messages_.Say("!DIR$ ALIGN may not apply to Cray pointee '%s'"_err_en_US,
+          symbol.name());
+    } else if (isComponent) {
+      // The layout of a derived type does not take the request into account.
+      messages_.Say(
+          "!DIR$ ALIGN is not supported for component '%s', which is neither ALLOCATABLE nor POINTER"_err_en_US,
+          symbol.name());
+    } else {
+      // Accepted, but lowering does not act on it yet.
+      Warn(common::UsageWarning::IgnoredDirective,
+          "!DIR$ ALIGN on '%s' is not yet implemented and was ignored"_warn_en_US,
+          symbol.name());
+    }
+  }
   if (int corank{evaluate::GetCorank(symbol)}; corank > 0) { // it's a coarray
     bool isDeferredCoshape{details.coshape().CanBeDeferredShape()};
     if (IsAllocatable(symbol)) {
