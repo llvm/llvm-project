@@ -41,9 +41,8 @@ set(python_plugin_sources
 )
 
 if (WIN32)
-  # Add the library directories to allow Python to use #pragma comment(lib, "python3.lib").
-  # FIXME: We should use Python3_SABI_LIBRARY_DIRS here, but this requires CMake 3.26.
-  set(PYTHON_SABI_LIBRARY_DIRS ${Python3_LIBRARY_DIRS})
+  # Add the library directories to make pyconfig.h's `#pragma comment(lib, "python3.lib")` work.
+  set(PYTHON_SABI_LIBRARY_DIRS ${Python3_SABI_LIBRARY_DIRS})
 endif()
 
 if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
