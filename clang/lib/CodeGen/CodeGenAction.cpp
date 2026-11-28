@@ -442,6 +442,18 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   if (!CI.getCodeGenOpts().ThinLTOIndexFile.empty()) {
     VMContext->enableDebugTypeODRUniquing();
 
+    // The ThinLTO index identifies this module by the path given on the
+    // command line. With a VFS overlay that uses 'use-external-names', the
+    // FileManager renames the main file to its external path (see the FIXME in
+    // FileManager::getFileRefImpl), and BitcodeReader takes the module
+    // identifier from the buffer name. As a result, the module does not match
+    // its index entry, and the ThinLTO backend mishandles it.
+    // We name the buffer by the requested path so the module matches its index
+    // entry.
+    if (OptionalFileEntryRef FE = SM.getFileEntryRefForID(SM.getMainFileID()))
+      if (FE->getName() != FE->getNameAsRequested())
+        MBRef = MemoryBufferRef(MBRef.getBuffer(), FE->getNameAsRequested());
+
     Expected<std::vector<BitcodeModule>> BMsOrErr = getBitcodeModuleList(MBRef);
     if (!BMsOrErr)
       return DiagErrors(BMsOrErr.takeError());

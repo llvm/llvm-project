@@ -7578,7 +7578,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << "SampleUse with PGO options";
 
       StringRef fname = A->getValue();
-      if (!llvm::sys::fs::exists(fname))
+      if (!D.getVFS().exists(fname))
         D.Diag(diag::err_drv_no_such_file) << fname;
       else
         A->render(Args, CmdArgs);

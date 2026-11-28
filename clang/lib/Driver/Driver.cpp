@@ -68,6 +68,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "clang/ScalableStaticAnalysis/Core/Serialization/SerializationFormatRegistry.h"
@@ -1610,6 +1611,13 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   if (Arg *WD = Args.getLastArg(options::OPT_working_directory))
     if (VFS->setCurrentWorkingDirectory(WD->getValue()))
       Diag(diag::err_drv_unable_to_set_working_directory) << WD->getValue();
+
+  // Apply VFS overlays so the driver sees the same files as -cc1.
+  std::vector<std::string> VFSOverlayFiles;
+  for (const Arg *A :
+       Args.filtered(options::OPT_ivfsoverlay, options::OPT_vfsoverlay))
+    VFSOverlayFiles.push_back(A->getValue());
+  VFS = createVFSFromOverlayFiles(VFSOverlayFiles, Diags, std::move(VFS));
 
   // Check for missing include directories.
   if (!Diags.isIgnored(diag::warn_missing_include_dirs, SourceLocation())) {

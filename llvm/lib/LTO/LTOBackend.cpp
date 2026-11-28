@@ -263,7 +263,8 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
                            unsigned OptLevel, bool IsThinLTO,
                            ModuleSummaryIndex *ExportSummary,
                            const ModuleSummaryIndex *ImportSummary,
-                           const DenseSet<StringRef> &BitcodeLibFuncs) {
+                           const DenseSet<StringRef> &BitcodeLibFuncs,
+                           IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   std::optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
     PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
@@ -297,7 +298,8 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   StandardInstrumentations SI(Mod.getContext(), Conf.DebugPassManager,
                               Conf.VerifyEach);
   SI.registerCallbacks(PIC, &MAM);
-  PassBuilder PB(Mod.getContext(), TM, Conf.PTO, PGOOpt, &PIC);
+  PassBuilder PB(Mod.getContext(), TM, Conf.PTO, PGOOpt, &PIC,
+                 FS ? FS : vfs::getRealFileSystem());
 
   RegisterPassPlugins(Conf, PB);
 
@@ -406,7 +408,8 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
               bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
               const ModuleSummaryIndex *ImportSummary,
               const std::vector<uint8_t> &CmdArgs,
-              ArrayRef<StringRef> BitcodeLibFuncs) {
+              ArrayRef<StringRef> BitcodeLibFuncs,
+              IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   llvm::TimeTraceScope timeScope("opt");
   if (EmbedBitcode == LTOBitcodeEmbedding::EmbedPostMergePreOptimized) {
     // FIXME: the motivation for capturing post-merge bitcode and command line
@@ -435,7 +438,7 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
                                            BitcodeLibFuncs.end());
     // FIXME: Plumb the combined index into the new pass manager.
     runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
-                   ImportSummary, BitcodeLibFuncsSet);
+                   ImportSummary, BitcodeLibFuncsSet, FS);
   }
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
@@ -654,7 +657,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
                        bool CodeGenOnly, ArrayRef<StringRef> BitcodeLibFuncs,
                        AddStreamFn IRAddStream,
-                       const std::vector<uint8_t> &CmdArgs) {
+                       const std::vector<uint8_t> &CmdArgs,
+                       IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   llvm::TimeTraceScope timeScope("Thin backend", Mod.getModuleIdentifier());
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
@@ -692,7 +696,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
         // Perform optimization and code generation for ThinLTO.
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
-                 CmdArgs, BitcodeLibFuncs))
+                 CmdArgs, BitcodeLibFuncs, FS))
           return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
         // Save the current module before the first codegen round.
@@ -744,7 +748,10 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
     }
 
     ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MBOrErr =
-        llvm::MemoryBuffer::getFile(Identifier);
+        FS ? FS->getBufferForFile(Identifier, /*FileSize=*/-1,
+                                  /*RequiresNullTerminator=*/false,
+                                  /*IsVolatile=*/false, /*IsText=*/false)
+           : llvm::MemoryBuffer::getFile(Identifier);
     if (!MBOrErr)
       return Expected<std::unique_ptr<llvm::Module>>(make_error<StringError>(
           Twine("Error loading imported file ") + Identifier + " : ",

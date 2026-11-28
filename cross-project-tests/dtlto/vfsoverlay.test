@@ -1,0 +1,70 @@
+REQUIRES: ld.lld
+
+# Check that DTLTO works when the remote worker stores the inputs under paths
+# that differ from the absolute paths in the DTLTO JSON and the summary indices,
+# and the distributor passes -vfsoverlay to map them.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: %clang --target=x86_64-linux-gnu -c foo.c start.c -flto=thin -O2
+
+# Link with absolute paths so that the JSON and the indices record them.
+DEFINE: %{link} = %clang --target=x86_64-linux-gnu -flto=thin -fuse-ld=lld \
+DEFINE:   -nostdlib %t/foo.o %t/start.o -o %t/out.elf \
+DEFINE:   -fthinlto-distributor=%python -Xthinlto-distributor=stage.py
+
+# Without the overlay, the backend compile cannot find its inputs.
+RUN: not %{link} -Xthinlto-distributor=--no-overlay 2>&1 \
+RUN:   | FileCheck %s
+CHECK: no such file or directory: '{{.*}}foo.o'
+
+# With the overlay, the link succeeds.
+RUN: %{link}
+
+#--- foo.c
+int foo(int x) { return x + 1; }
+
+#--- start.c
+extern int foo(int);
+int _start(int x) { return foo(x); }
+
+#--- stage.py
+"""
+Runs each DTLTO job as if on a remote worker that stores the job inputs under
+different paths. The inputs are moved away from their original paths, and a
+synthesized -vfsoverlay maps the original paths to the moved files.
+"""
+
+import json, shutil, subprocess, sys
+from pathlib import Path
+
+use_overlay = "--no-overlay" not in sys.argv
+data = json.loads(Path(sys.argv[-1]).read_bytes())
+common = data["common"]
+worker = Path("worker").resolve()
+
+for job in data["jobs"]:
+    moved = []
+    try:
+        roots = []
+        # Move inputs to different paths on the worker.
+        for path in common["inputs"] + job["inputs"]:
+            path_on_worker = worker / Path(path).relative_to(Path(path).anchor)
+            path_on_worker.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(path, path_on_worker)
+            moved.append((path, path_on_worker))
+            roots.append(
+                {"type": "file", "name": path, "external-contents": str(path_on_worker)}
+            )
+        # Map the original paths to the files on the worker.
+        overlay = worker / "vfs.yaml"
+        overlay.write_text(json.dumps({"version": 0, "roots": roots}))
+        args = common["args"] + job["args"]
+        if use_overlay:
+            args += ["-vfsoverlay", str(overlay)]
+        # Compile the job.
+        subprocess.check_call(args)
+    finally:
+        # Restore the inputs for the next runs.
+        for path, path_on_worker in moved:
+            shutil.move(path_on_worker, path)
