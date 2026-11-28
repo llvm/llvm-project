@@ -1,0 +1,211 @@
+// RUN: cir-opt %s --split-input-file --pass-pipeline="builtin.module(test-acc-recipe-populate{recipe-type=private})" | FileCheck %s
+
+// Integer scalar. Private allocation has no copy and no destroy.
+!s32i = !cir.int<s, 32>
+
+cir.func @test_i32() {
+  %0 = cir.alloca "i32" align(4) : !cir.ptr<!s32i> {test.var = "i32"}
+  cir.return
+}
+
+// CHECK: acc.private.recipe @private_i32 : !cir.ptr<!s32i> init {
+// CHECK: ^bb0(%{{.*}}: !cir.ptr<!s32i>):
+// CHECK:   %[[ALLOC:.*]] = cir.alloca "i32" align(4) : !cir.ptr<!s32i> {acc.var_name = #acc.var_name<"i32">}
+// CHECK:   acc.yield %[[ALLOC]] : !cir.ptr<!s32i>
+// CHECK: }
+// CHECK-NOT: copy
+// CHECK-NOT: destroy
+
+// -----
+
+cir.func @test_f32() {
+  %0 = cir.alloca "f32" align(4) : !cir.ptr<!cir.float> {test.var = "f32"}
+  cir.return
+}
+
+// CHECK: acc.private.recipe @private_f32 : !cir.ptr<!cir.float> init {
+// CHECK:   %[[ALLOC:.*]] = cir.alloca "f32" align(4) : !cir.ptr<!cir.float> {acc.var_name = #acc.var_name<"f32">}
+// CHECK:   acc.yield %[[ALLOC]] : !cir.ptr<!cir.float>
+// CHECK: }
+// CHECK-NOT: copy
+// CHECK-NOT: destroy
+
+// -----
+
+cir.func @test_f64() {
+  %0 = cir.alloca "f64" align(8) : !cir.ptr<!cir.double> {test.var = "f64"}
+  cir.return
+}
+
+// CHECK: acc.private.recipe @private_f64 : !cir.ptr<!cir.double> init {
+// CHECK:   %[[ALLOC:.*]] = cir.alloca "f64" align(8) : !cir.ptr<!cir.double> {acc.var_name = #acc.var_name<"f64">}
+// CHECK:   acc.yield %[[ALLOC]] : !cir.ptr<!cir.double>
+// CHECK: }
+// CHECK-NOT: copy
+// CHECK-NOT: destroy
+
+// -----
+
+cir.func @test_bool() {
+  %0 = cir.alloca "bool" align(1) : !cir.ptr<!cir.bool> {test.var = "bool"}
+  cir.return
+}
+
+// CHECK: acc.private.recipe @private_bool : !cir.ptr<!cir.bool> init {
+// CHECK:   %[[ALLOC:.*]] = cir.alloca "bool" align(1) : !cir.ptr<!cir.bool> {acc.var_name = #acc.var_name<"bool">}
+// CHECK:   acc.yield %[[ALLOC]] : !cir.ptr<!cir.bool>
+// CHECK: }
+// CHECK-NOT: copy
+// CHECK-NOT: destroy
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @test_ptr() {
+  %0 = cir.alloca "ptr" align(8) : !cir.ptr<!cir.ptr<!s32i>> {test.var = "ptr"}
+  cir.return
+}
+
+// CHECK: acc.private.recipe @private_ptr : !cir.ptr<!cir.ptr<!s32i>> init {
+// CHECK:   %[[ALLOC:.*]] = cir.alloca "ptr" align(8) : !cir.ptr<!cir.ptr<!s32i>> {acc.var_name = #acc.var_name<"ptr">}
+// CHECK:   acc.yield %[[ALLOC]] : !cir.ptr<!cir.ptr<!s32i>>
+// CHECK: }
+// CHECK-NOT: copy
+// CHECK-NOT: destroy
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @test_addrspace() {
+  %0 = cir.alloca "addrspace" align(4) : !cir.ptr<!s32i, lang_address_space(offload_global)> {test.var = "addrspace"}
+  cir.return
+}
+
+// CHECK: acc.private.recipe @private_addrspace : !cir.ptr<!s32i, lang_address_space(offload_global)> init {
+// CHECK:   %[[ALLOC:.*]] = cir.alloca "addrspace" align(4) : !cir.ptr<!s32i, lang_address_space(offload_global)> {acc.var_name = #acc.var_name<"addrspace">}
+// CHECK:   acc.yield %[[ALLOC]] : !cir.ptr<!s32i, lang_address_space(offload_global)>
+// CHECK: }
+// CHECK-NOT: copy
+// CHECK-NOT: destroy
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @test_array_1d() {
+  %0 = cir.alloca "array_1d" align(4) : !cir.ptr<!cir.array<!s32i x 100>> {test.var = "array_1d"}
+  cir.return
+}
+
+// CHECK: acc.private.recipe @private_array_1d : !cir.ptr<!cir.array<!s32i x 100>> init {
+// CHECK:   %[[ALLOC:.*]] = cir.alloca "array_1d" align(4) : !cir.ptr<!cir.array<!s32i x 100>> {acc.var_name = #acc.var_name<"array_1d">}
+// CHECK:   acc.yield %[[ALLOC]] : !cir.ptr<!cir.array<!s32i x 100>>
+// CHECK: }
+// CHECK-NOT: copy
+// CHECK-NOT: destroy
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @test_array_2d() {
+  %0 = cir.alloca "array_2d" align(4) : !cir.ptr<!cir.array<!cir.array<!s32i x 20> x 10>> {test.var = "array_2d"}
+  cir.return
+}
+
+// CHECK: acc.private.recipe @private_array_2d : !cir.ptr<!cir.array<!cir.array<!s32i x 20> x 10>> init {
+// CHECK:   %[[ALLOC:.*]] = cir.alloca "array_2d" align(4) : !cir.ptr<!cir.array<!cir.array<!s32i x 20> x 10>> {acc.var_name = #acc.var_name<"array_2d">}
+// CHECK:   acc.yield %[[ALLOC]] : !cir.ptr<!cir.array<!cir.array<!s32i x 20> x 10>>
+// CHECK: }
+// CHECK-NOT: copy
+// CHECK-NOT: destroy
+
+// -----
+
+// Global address. There is no alloca.
+!s32i = !cir.int<s, 32>
+
+cir.global external @gscalar = #cir.int<0> : !s32i
+
+cir.func @test_global() {
+  %addr = cir.get_global @gscalar : !cir.ptr<!s32i> {test.var = "global"}
+  cir.return
+}
+
+// CHECK: acc.private.recipe @private_global : !cir.ptr<!s32i> init {
+// CHECK:   %[[ALLOC:.*]] = cir.alloca "global" align(4) : !cir.ptr<!s32i> {acc.var_name = #acc.var_name<"global">}
+// CHECK:   acc.yield %[[ALLOC]] : !cir.ptr<!s32i>
+// CHECK: }
+// CHECK-NOT: copy
+// CHECK-NOT: destroy
+
+// -----
+
+// Loaded pointer. The load result has no alloca.
+!s32i = !cir.int<s, 32>
+
+cir.func @test_loaded() {
+  %slot = cir.alloca "slot" align(8) : !cir.ptr<!cir.ptr<!s32i>>
+  %p = cir.load %slot : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i> {test.var = "loaded"}
+  cir.return
+}
+
+// CHECK: acc.private.recipe @private_loaded : !cir.ptr<!s32i> init {
+// CHECK:   %[[ALLOC:.*]] = cir.alloca "loaded" align(4) : !cir.ptr<!s32i> {acc.var_name = #acc.var_name<"loaded">}
+// CHECK:   acc.yield %[[ALLOC]] : !cir.ptr<!s32i>
+// CHECK: }
+// CHECK-NOT: copy
+// CHECK-NOT: destroy
+
+// -----
+
+// Function argument. There is no alloca.
+!s32i = !cir.int<s, 32>
+
+cir.func @test_arg(%arg: !cir.ptr<!s32i>) {
+  %zero = cir.const #cir.int<0> : !s32i
+  %p = cir.ptr_stride %arg, %zero : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i> {test.var = "arg"}
+  cir.return
+}
+
+// CHECK: acc.private.recipe @private_arg : !cir.ptr<!s32i> init {
+// CHECK:   %[[ALLOC:.*]] = cir.alloca "arg" align(4) : !cir.ptr<!s32i> {acc.var_name = #acc.var_name<"arg">}
+// CHECK:   acc.yield %[[ALLOC]] : !cir.ptr<!s32i>
+// CHECK: }
+// CHECK-NOT: copy
+// CHECK-NOT: destroy
+
+// -----
+
+// Loaded pointer to a constant array. There is no alloca of the array.
+!s32i = !cir.int<s, 32>
+
+cir.func @test_loaded_array() {
+  %slot = cir.alloca "slot" align(8) : !cir.ptr<!cir.ptr<!cir.array<!s32i x 4>>>
+  %p = cir.load %slot : !cir.ptr<!cir.ptr<!cir.array<!s32i x 4>>>, !cir.ptr<!cir.array<!s32i x 4>> {test.var = "loaded_array"}
+  cir.return
+}
+
+// CHECK: acc.private.recipe @private_loaded_array : !cir.ptr<!cir.array<!s32i x 4>> init {
+// CHECK:   %[[ALLOC:.*]] = cir.alloca "loaded_array" align(4) : !cir.ptr<!cir.array<!s32i x 4>> {acc.var_name = #acc.var_name<"loaded_array">}
+// CHECK:   acc.yield %[[ALLOC]] : !cir.ptr<!cir.array<!s32i x 4>>
+// CHECK: }
+// CHECK-NOT: copy
+// CHECK-NOT: destroy
+
+// -----
+
+// Complex scalar.
+cir.func @test_complex() {
+  %0 = cir.alloca "complex" align(4) : !cir.ptr<!cir.complex<!cir.float>> {test.var = "complex"}
+  cir.return
+}
+
+// CHECK: acc.private.recipe @private_complex : !cir.ptr<!cir.complex<!cir.float>> init {
+// CHECK:   cir.alloca "complex" align(4) : !cir.ptr<!cir.complex<!cir.float>>
+// CHECK:   acc.yield
+// CHECK: }
+// CHECK-NOT: copy
+// CHECK-NOT: destroy
