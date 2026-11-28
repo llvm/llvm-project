@@ -51,17 +51,24 @@ large_prolog_known:
 // CHECK-NEXT:       IpOffsetOfLastInstruction: 0x5
 // CHECK-NEXT:       [0] IP +0x0000: ALLOC_SMALL Size=0x20
 // CHECK-NEXT:       [1] IP +0x0004: PUSH Reg=RBX
-// Uses .p2align inside the prolog to create a relaxable fragment that makes
-// GetOptionalAbsDifference return nullopt, triggering the conservative
-// NeedsLargeProlog=true path with fixup-based emission.
+// Uses a forward jump inside the prolog to create a relaxable fragment that
+// makes GetOptionalAbsDifference return nullopt, triggering the conservative
+// NeedsLargeProlog=true path with fixup-based emission. (Alignment
+// directives no longer work for this: their padding is resolved exactly
+// before layout nowadays.)
 large_prolog_unevaluatable:
     .seh_proc large_prolog_unevaluatable
     .seh_unwindversion 3
     .seh_pushreg %rbx
     pushq   %rbx
-    // Alignment directive creates a relaxable fragment ΓÇö the distance from
-    // the function start to subsequent instructions becomes unevaluatable.
-    .p2align 8, 0x90
+    // A not-yet-relaxed forward jump ΓÇö the distance from the function start
+    // to subsequent instructions is unevaluatable when unwind info is
+    // emitted at .seh_endproc time.
+    jmp 1f
+    .rept 252
+    nop
+    .endr
+1:
     .seh_stackalloc 32
     subq    $32, %rsp
     .seh_endprologue
@@ -76,21 +83,21 @@ large_prolog_unevaluatable:
     .seh_endproc
 // When the expression is unevaluatable, we conservatively set LARGE.
 // The output should still be valid V3 unwind info with the Large flag.
-// The .p2align 8 aligns to 256; with the function starting at offset 0x110
-// in the section, the pushq is at func+0, and the .p2align pads to the
-// next 256-byte boundary at func+0xF0, so the subq is at func+0xF0.
+// After layout the jmp relaxes to a 5-byte near jump: the pushq is at
+// func+0, and the subq lands at func+0x102 (1 + 5 + 252), so the fixups
+// resolve to values that genuinely need the 16-bit LARGE encodings.
 // CHECK-LABEL:  StartAddress: large_prolog_unevaluatable
 // CHECK:        UnwindInfo {
 // CHECK-NEXT:     Version: 3
 // CHECK-NEXT:     Flags [ (0x8)
 // CHECK-NEXT:       Large (0x8)
 // CHECK-NEXT:     ]
-// CHECK-NEXT:     SizeOfProlog: 0xF4
+// CHECK-NEXT:     SizeOfProlog: 0x106
 // CHECK-NEXT:     PayloadWords: 8
 // CHECK-NEXT:     NumberOfOps: 2
 // CHECK-NEXT:     NumberOfEpilogs: 1
 // CHECK:          Prolog [2 ops]:
-// CHECK-NEXT:       [0] IP +0x00F0: ALLOC_SMALL Size=0x20
+// CHECK-NEXT:       [0] IP +0x0102: ALLOC_SMALL Size=0x20
 // CHECK-NEXT:       [1] IP +0x0000: PUSH Reg=RBX
 // CHECK:          Epilog [0] {
 // CHECK:            EpilogOffset: -0x6
@@ -150,10 +157,10 @@ large_epilog_known:
 // CHECK-NEXT:       [0] IP +0x0000: ALLOC_SMALL Size=0x20
 // CHECK-NEXT:       [1] IP +0x0108: PUSH Reg=RBX
 
-// --- Test 4: epilog with alignment directive (unevaluatable case) ---
-// Uses .p2align inside the epilog to create a relaxable fragment, making
-// the epilog IP offsets unevaluatable and triggering EPILOG_INFO_LARGE
-// conservatively.
+// --- Test 4: epilog with a relaxable fragment (unevaluatable case) ---
+// Uses a forward jump inside the epilog to create a relaxable fragment,
+// making the epilog IP offsets unevaluatable and triggering
+// EPILOG_INFO_LARGE conservatively.
 large_epilog_unevaluatable:
     .seh_proc large_epilog_unevaluatable
     .seh_unwindversion 3
@@ -166,8 +173,13 @@ large_epilog_unevaluatable:
     .seh_startepilogue
     .seh_stackalloc 32
     addq    $32, %rsp
-    // Alignment directive inside epilog makes offsets unevaluatable.
-    .p2align 8, 0x90
+    // A not-yet-relaxed forward jump inside the epilog makes offsets
+    // unevaluatable.
+    jmp 2f
+    .rept 252
+    nop
+    .endr
+2:
     .seh_pushreg %rbx
     popq    %rbx
     .seh_endepilogue
@@ -189,9 +201,9 @@ large_epilog_unevaluatable:
 // CHECK-NEXT:       Flags [ (0x2)
 // CHECK-NEXT:         Large (0x2)
 // CHECK-NEXT:       ]
-// CHECK-NEXT:       EpilogOffset: -0xE1
+// CHECK-NEXT:       EpilogOffset: -0x107
 // CHECK-NEXT:       NumberOfOps: 2
 // CHECK-NEXT:       FirstOp: 0x0
-// CHECK-NEXT:       IpOffsetOfLastInstruction: 0xE0
+// CHECK-NEXT:       IpOffsetOfLastInstruction: 0x106
 // CHECK-NEXT:       [0] IP +0x0000: ALLOC_SMALL Size=0x20
-// CHECK-NEXT:       [1] IP +0x00DF: PUSH Reg=RBX
+// CHECK-NEXT:       [1] IP +0x0105: PUSH Reg=RBX
