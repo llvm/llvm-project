@@ -142,7 +142,9 @@ static void SymbolizeDataCallback(void *vdata, uintptr_t, const char *symname,
   }
 }
 
-static void ErrorCallback(void *, const char *, int) {}
+static void ErrorCallback(void *, const char *msg, int) {
+  VReport(2, "Libbacktrace error callback: %s\n", msg);
+}
 }  // extern "C"
 
 }  // namespace
