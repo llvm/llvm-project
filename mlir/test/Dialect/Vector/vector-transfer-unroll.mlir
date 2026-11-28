@@ -629,13 +629,13 @@ func.func @negative_masked_transfer_read_permutation(%mem : memref<4x4xf32>, %id
 
 // -----
 
-// Not supported yet: scalable vectors.
+// Not supported yet: masked transfers with scalable vectors.
 
 // TargetShape is [2x2]
 // ALL-LABEL: func @negative_masked_transfer_write_scalable(
-//  ALL-NEXT:   vector.mask %{{.*}} { vector.transfer_write {{.*}} : vector<4x[4]xf32>, memref<4x?xf32> }
+//  ALL-NEXT:   vector.mask %{{.*}} { vector.transfer_write {{.*}} : vector<4x[2]xf32>, memref<4x?xf32> }
 //  ALL-NEXT:   return
-func.func @negative_masked_transfer_write_scalable(%mem : memref<4x?xf32>, %vec : vector<4x[4]xf32>, %idx : index, %mask : vector<4x[4]xi1>) {
-  vector.mask %mask { vector.transfer_write %vec, %mem[%idx, %idx] : vector<4x[4]xf32>, memref<4x?xf32> } : vector<4x[4]xi1>
+func.func @negative_masked_transfer_write_scalable(%mem : memref<4x?xf32>, %vec : vector<4x[2]xf32>, %idx : index, %mask : vector<4x[2]xi1>) {
+  vector.mask %mask { vector.transfer_write %vec, %mem[%idx, %idx] : vector<4x[2]xf32>, memref<4x?xf32> } : vector<4x[2]xi1>
   return
 }
