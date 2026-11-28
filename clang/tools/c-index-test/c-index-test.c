@@ -1897,6 +1897,8 @@ static enum CXChildVisitResult PrintMangledName(CXCursor cursor, CXCursor p,
     return CXChildVisit_Recurse;
   if (clang_getCursorKind(cursor) == CXCursor_LinkageSpec)
     return CXChildVisit_Recurse;
+  if (clang_getCursorKind(cursor) == CXCursor_ModuleExportDecl)
+    return CXChildVisit_Recurse;
   PrintCursor(cursor, NULL);
   MangledName = clang_Cursor_getMangling(cursor);
   printf(" [mangled=%s]\n", clang_getCString(MangledName));
@@ -1913,6 +1915,8 @@ static enum CXChildVisitResult PrintManglings(CXCursor cursor, CXCursor p,
   if (!clang_isDeclaration(clang_getCursorKind(cursor)))
     return CXChildVisit_Recurse;
   if (clang_getCursorKind(cursor) == CXCursor_LinkageSpec)
+    return CXChildVisit_Recurse;
+  if (clang_getCursorKind(cursor) == CXCursor_ModuleExportDecl)
     return CXChildVisit_Recurse;
   if (clang_getCursorKind(cursor) == CXCursor_ParmDecl)
     return CXChildVisit_Continue;
