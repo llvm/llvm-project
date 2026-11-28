@@ -15814,8 +15814,8 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
     return TLI.isLoadLegalOrCustom(VT, SrcVT, Load->getAlign(),
                                    Load->getAddressSpace(), Kind, false);
   };
-  // Look for signed compares that benefit from widening without introducing
-  // any obvious regressions.
+  // Look for signed uses that benefit from a sign-extending load without
+  // introducing any obvious regressions.
   if (NonNegZExt &&
       (!HasExtLoad(ISD::ZEXTLOAD) || HasExtLoad(ISD::SEXTLOAD))) {
     assert(ExtLoadType == ISD::ZEXTLOAD && ExtOpc == ISD::ZERO_EXTEND &&
@@ -15828,6 +15828,13 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
       if (Use.getResNo() != V.getResNo())
         continue;
       SDNode *User = Use.getUser();
+
+      // A sign extension to the load's new type can reuse the load directly.
+      if (User->getOpcode() == ISD::SIGN_EXTEND &&
+          User->getValueType(0) == VT) {
+        CanHelp = true;
+        continue;
+      }
 
       // Let the target veto an undesirable ops
       if (TLI.isTypeDesirableForOp(User, SrcVT) &&

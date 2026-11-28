@@ -153,41 +153,18 @@ define i64 @select_add_i32(ptr %p) {
 ;
 ; X86-LABEL: select_add_i32:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %ecx
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    addl $-3, %eax
-; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    adcl $-1, %edx
-; X86-NEXT:    xorl %edi, %edi
-; X86-NEXT:    movl $7, %ebx
-; X86-NEXT:    cmpl %ecx, %ebx
-; X86-NEXT:    sbbl %esi, %edi
-; X86-NEXT:    jl .LBB3_2
+; X86-NEXT:    cmpl $8, %ecx
+; X86-NEXT:    jge .LBB3_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl $0, %edx
-; X86-NEXT:  .LBB3_2:
-; X86-NEXT:    jl .LBB3_4
-; X86-NEXT:  # %bb.3:
 ; X86-NEXT:    movl $5, %eax
-; X86-NEXT:  .LBB3_4:
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:  .LBB3_2:
 ; X86-NEXT:    retl
   %v = load i32, ptr %p, align 4
   %c = icmp sgt i32 %v, 7
@@ -209,41 +186,18 @@ define i64 @select_add_i16_i64(ptr %p, i64 %b) {
 ;
 ; X86-LABEL: select_add_i16_i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movswl (%eax), %esi
-; X86-NEXT:    movl %esi, %ecx
-; X86-NEXT:    sarl $31, %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    addl %esi, %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    adcl %ecx, %edx
-; X86-NEXT:    xorl %edi, %edi
-; X86-NEXT:    movl $1000, %ebx # imm = 0x3E8
-; X86-NEXT:    cmpl %esi, %ebx
-; X86-NEXT:    sbbl %ecx, %edi
-; X86-NEXT:    jl .LBB4_2
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movswl (%eax), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    adcl $0, %edx
+; X86-NEXT:    cmpl $1001, %ecx # imm = 0x3E9
+; X86-NEXT:    jge .LBB4_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl $0, %edx
-; X86-NEXT:  .LBB4_2:
-; X86-NEXT:    jl .LBB4_4
-; X86-NEXT:  # %bb.3:
+; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl $11, %eax
-; X86-NEXT:  .LBB4_4:
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:  .LBB4_2:
 ; X86-NEXT:    retl
   %v = load i16, ptr %p, align 2
   %c = icmp sgt i16 %v, 1000
