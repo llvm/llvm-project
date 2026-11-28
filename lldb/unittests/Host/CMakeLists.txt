@@ -15,6 +15,7 @@ set (FILES
   SocketAddressTest.cpp
   SocketTest.cpp
   ThreadLauncherTest.cpp
+  XMLParserTest.cpp
   XMLTest.cpp
 )
 
