@@ -38,6 +38,9 @@ void setTargetTriple(mlir::ModuleOp mod, llvm::StringRef triple);
 /// Get the Triple instance from the Module or return the default Triple.
 llvm::Triple getTargetTriple(mlir::ModuleOp mod);
 
+/// Returns true if the target C ABI sign extends i32 (C int) arguments.
+bool needsI32ParamSignExt(mlir::ModuleOp mod);
+
 /// Set the kind mapping for the module. `kindMap` must not be deallocated while
 /// module `mod` is still live.
 void setKindMapping(mlir::ModuleOp mod, KindMapping &kindMap);

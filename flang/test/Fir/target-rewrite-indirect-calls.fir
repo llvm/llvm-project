@@ -33,3 +33,36 @@ func.func @test(%arg0: () -> (), %arg1: !fir.ref<!fir.type<t{a:!fir.array<5xf64>
 // CHECK-S390-NOT:       llvm.byval
 // CHECK-S390:           return
 // CHECK-S390:         }
+
+// -----
+
+// Indirect call argument extension (SystemZ only).
+func.func @test_int_ext(%arg0: () -> (), %arg1: i32, %arg2: i16, %arg3: !fir.logical<4>, %arg4: i64, %arg5: !fir.logical<1>) {
+  %0 = fir.convert %arg0 : (() -> ()) -> ((i32, i16, !fir.logical<4>, i64, !fir.logical<1>) -> ())
+  fir.call %0(%arg1, %arg2, %arg3, %arg4, %arg5) : (i32, i16, !fir.logical<4>, i64, !fir.logical<1>) -> ()
+  return
+}
+
+// CHECK-X86-LABEL:   func.func @test_int_ext(
+// CHECK-X86-NOT:       llvm.signext
+// CHECK-X86-NOT:       llvm.zeroext
+// CHECK-X86:           return
+
+// CHECK-S390-LABEL:  func.func @test_int_ext(
+// CHECK-S390:          fir.call %{{.*}}(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (i32 {llvm.signext}, i16 {llvm.signext}, !fir.logical<4> {llvm.signext}, i64, !fir.logical<1> {llvm.zeroext}) -> ()
+// CHECK-S390:          return
+
+// -----
+
+// Indirect call argument CHARACTER(1) (SystemZ only).
+func.func @test_char(%arg0: () -> (), %arg1: !fir.char<1>) {
+  %0 = fir.convert %arg0 : (() -> ()) -> ((!fir.char<1>) -> ())
+  fir.call %0(%arg1) : (!fir.char<1>) -> ()
+  return
+}
+
+// CHECK-X86-LABEL:   func.func @test_char(
+// CHECK-X86:           fir.call %{{.*}}(%{{.*}}) : (!fir.char<1>) -> ()
+
+// CHECK-S390-LABEL:  func.func @test_char(
+// CHECK-S390:          fir.call %{{.*}}(%{{.*}}) : (i8 {llvm.zeroext}) -> ()

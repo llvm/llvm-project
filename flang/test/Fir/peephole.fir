@@ -1,5 +1,6 @@
-// RUN: tco %s | FileCheck %s
-// RUN: %flang_fc1 -emit-llvm %s -o - | FileCheck %s
+// RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s
+// RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
+module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu"} {
 
 // Test peephole optimizations
 
@@ -124,4 +125,5 @@ func.func @test_slump2(%0 : index) -> index {
   %1 = fir.convert %0 : (index) -> i16
   %2 = fir.convert %1 : (i16) -> index
   return %2 : index
+}
 }

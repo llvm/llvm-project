@@ -391,6 +391,7 @@ bool CompilerInstance::setUpTargetMachine() {
   tOpts.MCOptions.LibraryOptions = &libraryOptions;
   tOpts.FunctionSections = CGOpts.FunctionSections;
   tOpts.DataSections = CGOpts.DataSections;
+  tOpts.VerifyArgABICompliance = true;
 
   targetMachine.reset(theTarget->createTargetMachine(
       triple, /*CPU=*/targetOpts.cpu,

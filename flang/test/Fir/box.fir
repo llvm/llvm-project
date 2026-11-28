@@ -1,4 +1,4 @@
-// RUN: tco -o - %s | FileCheck %s
+// RUN: tco --target=x86_64-unknown-linux-gnu -o - %s | FileCheck %s
 
 // Global box initialization (test must come first because llvm globals are emitted first).
 // CHECK-LABEL: @globalx = internal global { ptr, i64, i32, i8, i8, i8, i8 } { ptr null, i64 4, i32 20240719, i8 0, i8 9, i8 2, i8 0 }

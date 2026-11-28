@@ -1,7 +1,8 @@
 // Test lowering FIR to LLVM IR of fir.select{|_rank|_case}
 
-// RUN: tco %s | FileCheck %s
-// RUN: %flang_fc1 -emit-llvm %s -o - | FileCheck %s
+// RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s
+// RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
+module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu"} {
 
 // CHECK-LABEL: @f
 func.func @f(%a : i32) -> i32 {
@@ -87,3 +88,4 @@ func.func private @crash()
 //CHECK-NOT:    switch
 //CHECK:        call void @crash()
 //CHECK-NEXT:   unreachable
+}

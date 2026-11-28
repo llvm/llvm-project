@@ -1,5 +1,8 @@
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir %s | FileCheck %s
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=amdgcn-amd-amdhsa datalayout=e-p:64:64-p1:64:64-p5:32:32-A5-G1" %s | FileCheck %s --check-prefix=GLOBAL
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=s390x-unknown-linux-gnu" %s | FileCheck %s --check-prefix=SIGNEXT
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=powerpc64le-unknown-linux-gnu" %s | FileCheck %s --check-prefix=SIGNEXT
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=riscv64-unknown-linux-gnu" %s | FileCheck %s --check-prefix=SIGNEXT
 
 func.func @check(%ok: i1, %small: i32, %n: index, %array: !fir.ref<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>> {
   %g = fir.assert %ok, conformance, "extents %lld and %lld" values(%small, %n : i32, index) guard(%array : !fir.ref<!fir.array<?xi32>>) loc("source.f90":42:7)
@@ -75,6 +78,8 @@ gpu.module @device {
 // CHECK: llvm.cond_br
 // CHECK: llvm.call @_FortranAReportFatalUserErrorValues
 // CHECK: llvm.unreachable
+// SIGNEXT-LABEL: gpu.module @device {
+// SIGNEXT: llvm.func @_FortranAReportFatalUserErrorValues(!llvm.ptr, !llvm.ptr, i32, i64, i64, i64, i64) attributes {noreturn}
 // GLOBAL-LABEL: gpu.module @device {
 // GLOBAL-DAG: llvm.mlir.global internal constant @{{.*}}("kernel.f90\00") {{.*}}addr_space = 1
 // GLOBAL-DAG: llvm.mlir.global internal constant @{{.*}}("subscript %lld\00") {{.*}}addr_space = 1
@@ -95,3 +100,4 @@ func.func @boolean_value(%ok: i1, %flag: i1) {
 // CHECK: llvm.cond_br
 // CHECK: %[[EXT:.*]] = llvm.sext %[[VALUE]] : i8 to i64
 // CHECK: llvm.call @_FortranAReportFatalUserErrorValues(%{{.*}}, %{{.*}}, %{{.*}}, %[[EXT]],
+// SIGNEXT: llvm.func @_FortranAReportFatalUserErrorValues(!llvm.ptr, !llvm.ptr, i32 {llvm.signext},

@@ -1,4 +1,4 @@
-// RUN: fir-opt %s | tco | FileCheck %s
+// RUN: fir-opt %s | tco --target=x86_64-unknown-linux-gnu | FileCheck %s
 
 // CHECK-LABEL: define [3 x i8] @x
 func.func @x() -> !fir.char<1,3> {

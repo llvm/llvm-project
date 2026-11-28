@@ -1,3 +1,4 @@
+// RUN: export FILECHECK_OPTS="-DEXT=%if target=s390x{{.*}} %{\ signext%} %else %{%}"
 // RUN: %flang_fc1 -emit-llvm  %s -o - | FileCheck %s
 
 // UNSUPPORTED: system-windows
@@ -60,7 +61,7 @@ func.func @omp_target_allocmem_scalar_char_kind() -> () {
 }
 
 // CHECK-LABEL: define void @omp_target_allocmem_scalar_dynchar(
-// CHECK-SAME: i32 [[TMP0:%.*]]) {
+// CHECK-SAME: i32[[EXT]] [[TMP0:%.*]]) {
 // CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP0]] to i64
 // CHECK-NEXT:    [[TMP3:%.*]] = mul i64 1, [[TMP2]]
 // CHECK-NEXT:    [[TMP4:%.*]] = mul i64 1, [[TMP3]]
@@ -78,7 +79,7 @@ func.func @omp_target_allocmem_scalar_dynchar(%l : i32) -> () {
 
 
 // CHECK-LABEL: define void @omp_target_allocmem_scalar_dynchar_kind(
-// CHECK-SAME: i32 [[TMP0:%.*]]) {
+// CHECK-SAME: i32[[EXT]] [[TMP0:%.*]]) {
 // CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP0]] to i64
 // CHECK-NEXT:    [[TMP3:%.*]] = mul i64 2, [[TMP2]]
 // CHECK-NEXT:    [[TMP4:%.*]] = mul i64 1, [[TMP3]]
@@ -122,7 +123,7 @@ func.func @omp_target_allocmem_array_of_char() -> () {
 }
 
 // CHECK-LABEL: define void @omp_target_allocmem_array_of_dynchar(
-// CHECK-SAME: i32 [[TMP0:%.*]]) {
+// CHECK-SAME: i32[[EXT]] [[TMP0:%.*]]) {
 // CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP0]] to i64
 // CHECK-NEXT:    [[TMP3:%.*]] = mul i64 9, [[TMP2]]
 // CHECK-NEXT:    [[TMP4:%.*]] = mul i64 1, [[TMP3]]
@@ -207,7 +208,7 @@ func.func @omp_target_allocmem_dynarray_of_char2(%e : index) -> () {
 }
 
 // CHECK-LABEL: define void @omp_target_allocmem_dynarray_of_dynchar(
-// CHECK-SAME: i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) {
+// CHECK-SAME: i32[[EXT]] [[TMP0:%.*]], i64 [[TMP1:%.*]]) {
 // CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP0]] to i64
 // CHECK-NEXT:    [[TMP4:%.*]] = mul i64 6, [[TMP3]]
 // CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], [[TMP1]]
@@ -225,7 +226,7 @@ func.func @omp_target_allocmem_dynarray_of_dynchar(%l: i32, %e : index) -> () {
 }
 
 // CHECK-LABEL: define void @omp_target_allocmem_dynarray_of_dynchar2(
-// CHECK-SAME: i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) {
+// CHECK-SAME: i32[[EXT]] [[TMP0:%.*]], i64 [[TMP1:%.*]]) {
 // CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP0]] to i64
 // CHECK-NEXT:    [[TMP4:%.*]] = mul i64 2, [[TMP3]]
 // CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], [[TMP1]]

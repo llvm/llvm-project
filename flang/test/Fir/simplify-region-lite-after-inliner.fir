@@ -1,4 +1,4 @@
-// RUN: tco %s | FileCheck %s
+// RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s
 
 
 // In flang pipeline, the inliner calls createCanonicalizerPass with the region

@@ -1,3 +1,4 @@
+// RUN: export FILECHECK_OPTS="-DEXT=%if target=s390x{{.*}} %{\ signext%} %else %{%}"
 // RUN: tco %s | FileCheck %s
 // RUN: %flang_fc1 -emit-llvm  %s -o - | FileCheck %s
 
@@ -66,7 +67,7 @@ func.func @allocmem_scalar_char_kind() -> !fir.heap<!fir.char<2,10>> {
 }
 
 // CHECK-LABEL: define ptr @alloca_scalar_dynchar(
-// CHECK-SAME: i32 %[[len:.*]])
+// CHECK-SAME: i32[[EXT]] %[[len:.*]])
 // CHECK: %[[mul1:.*]] = sext i32 %[[len]] to i64
 // CHECK: alloca i8, i64 %[[mul1]]
 func.func @alloca_scalar_dynchar(%l : i32) -> !fir.ref<!fir.char<1,?>> {
@@ -75,7 +76,7 @@ func.func @alloca_scalar_dynchar(%l : i32) -> !fir.ref<!fir.char<1,?>> {
 }
 
 // CHECK-LABEL: define ptr @alloca_scalar_dynchar_kind(
-// CHECK-SAME: i32 %[[len:.*]])
+// CHECK-SAME: i32[[EXT]] %[[len:.*]])
 // CHECK: %[[mul1:.*]] = sext i32 %[[len]] to i64
 // CHECK: alloca i16, i64 %[[mul1]]
 func.func @alloca_scalar_dynchar_kind(%l : i32) -> !fir.ref<!fir.char<2,?>> {
@@ -84,7 +85,7 @@ func.func @alloca_scalar_dynchar_kind(%l : i32) -> !fir.ref<!fir.char<2,?>> {
 }
 
 // CHECK-LABEL: define ptr @allocmem_scalar_dynchar(
-// CHECK-SAME: i32 %[[len:.*]])
+// CHECK-SAME: i32[[EXT]] %[[len:.*]])
 // CHECK: %[[mul1:.*]] = sext i32 %[[len]] to i64
 // CHECK: %[[mul2:.*]] = mul i64 1, %[[mul1]]
 // CHECK: %[[cmp:.*]] = icmp sgt i64 %[[mul2]], 0
@@ -96,7 +97,7 @@ func.func @allocmem_scalar_dynchar(%l : i32) -> !fir.heap<!fir.char<1,?>> {
 }
 
 // CHECK-LABEL: define ptr @allocmem_scalar_dynchar_kind(
-// CHECK-SAME: i32 %[[len:.*]])
+// CHECK-SAME: i32[[EXT]] %[[len:.*]])
 // CHECK: %[[mul1:.*]] = sext i32 %[[len]] to i64
 // CHECK: %[[mul2:.*]] = mul i64 2, %[[mul1]]
 // CHECK: %[[cmp:.*]] = icmp sgt i64 %[[mul2]], 0
@@ -129,7 +130,7 @@ func.func @alloca_array_of_char() -> !fir.ref<!fir.array<3x3x!fir.char<1,10>>> {
 }
 
 // CHECK-LABEL: define ptr @alloca_array_of_dynchar(
-// CHECK-SAME: i32 %[[len:.*]])
+// CHECK-SAME: i32[[EXT]] %[[len:.*]])
 // CHECK: %[[mul1:.*]] = sext i32 %[[len]] to i64
 // CHECK: %[[mul2:.*]] = mul i64 %[[mul1]], 9
 // CHECK: alloca i8, i64 %[[mul2]]
@@ -153,7 +154,7 @@ func.func @allocmem_array_of_char() -> !fir.heap<!fir.array<3x3x!fir.char<1,10>>
 }
 
 // CHECK-LABEL: define ptr @allocmem_array_of_dynchar(
-// CHECK-SAME: i32 %[[len:.*]])
+// CHECK-SAME: i32[[EXT]] %[[len:.*]])
 // CHECK: %[[mul1:.*]] = sext i32 %[[len]] to i64
 // CHECK: %[[mul2:.*]] = mul i64 9, %[[mul1]]
 // CHECK: %[[cmp:.*]] = icmp sgt i64 %[[mul2]], 0
@@ -249,7 +250,7 @@ func.func @allocmem_dynarray_of_char2(%e : index) -> !fir.heap<!fir.array<?x?x!f
 }
 
 // CHECK-LABEL: define ptr @alloca_dynarray_of_dynchar(
-// CHECK-SAME: i32 %[[len:.*]], i64 %[[extent:.*]])
+// CHECK-SAME: i32[[EXT]] %[[len:.*]], i64 %[[extent:.*]])
 // CHECK: %[[prod1:.*]] = sext i32 %[[len]] to i64
 // CHECK: %[[prod2:.*]] = mul i64 %[[prod1]], 3
 // CHECK: %[[prod3:.*]] = mul i64 %[[prod2]], %[[extent]]
@@ -260,7 +261,7 @@ func.func @alloca_dynarray_of_dynchar(%l: i32, %e : index) -> !fir.ref<!fir.arra
 }
 
 // CHECK-LABEL: define ptr @alloca_dynarray_of_dynchar2(
-// CHECK-SAME: i32 %[[len:.*]], i64 %[[extent:.*]])
+// CHECK-SAME: i32[[EXT]] %[[len:.*]], i64 %[[extent:.*]])
 // CHECK: %[[prod1:.*]] = sext i32 %[[len]] to i64
 // CHECK: %[[prod2:.*]] = mul i64 %[[prod1]], %[[extent]]
 // CHECK: %[[prod3:.*]] = mul i64 %[[prod2]], %[[extent]]
@@ -271,7 +272,7 @@ func.func @alloca_dynarray_of_dynchar2(%l: i32, %e : index) -> !fir.ref<!fir.arr
 }
 
 // CHECK-LABEL: define ptr @allocmem_dynarray_of_dynchar(
-// CHECK-SAME: i32 %[[len:.*]], i64 %[[extent:.*]])
+// CHECK-SAME: i32[[EXT]] %[[len:.*]], i64 %[[extent:.*]])
 // CHECK: %[[prod1:.*]] = sext i32 %[[len]] to i64
 // CHECK: %[[prod2:.*]] = mul i64 6, %[[prod1]]
 // CHECK: %[[prod3:.*]] = mul i64 %[[prod2]], %[[extent]]
@@ -284,7 +285,7 @@ func.func @allocmem_dynarray_of_dynchar(%l: i32, %e : index) -> !fir.heap<!fir.a
 }
 
 // CHECK-LABEL: define ptr @allocmem_dynarray_of_dynchar2(
-// CHECK-SAME: i32 %[[len:.*]], i64 %[[extent:.*]])
+// CHECK-SAME: i32[[EXT]] %[[len:.*]], i64 %[[extent:.*]])
 // CHECK: %[[a:.*]] = sext i32 %[[len]] to i64
 // CHECK: %[[prod1:.*]] = mul i64 2, %[[a]]
 // CHECK: %[[prod2:.*]] = mul i64 %[[prod1]], %[[extent]]

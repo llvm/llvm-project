@@ -1,4 +1,4 @@
-// RUN: tco %s | FileCheck %s
+// RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s
 
 // CHECK-LABEL: define i64 @_QTtP.mem.size(i32 %0, i16 %1)
 func.func @_QTtP.mem.size(%0 : i32, %1 : i16) -> index {
