@@ -1175,11 +1175,8 @@ define float @test_rootn_afn_nnan_ninf_f32(float %x, i32 %y) {
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = select nnan ninf afn i1 [[DOTNOT]], float 1.000000e+00, float [[X]]
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = call nnan ninf afn float @llvm.copysign.f32(float [[TMP5]], float [[TMP7]])
 ; NOPRELINK-NEXT:    [[TMP9:%.*]] = fcmp nnan ninf afn oeq float [[X]], 0.000000e+00
-; NOPRELINK-NEXT:    [[TMP10:%.*]] = icmp slt i32 [[Y]], 0
-; NOPRELINK-NEXT:    [[TMP11:%.*]] = xor i1 [[TMP9]], [[TMP10]]
-; NOPRELINK-NEXT:    [[TMP12:%.*]] = select nnan ninf afn i1 [[TMP11]], float 0.000000e+00, float +inf
-; NOPRELINK-NEXT:    [[TMP13:%.*]] = select nnan ninf afn i1 [[DOTNOT]], float 0.000000e+00, float [[X]]
-; NOPRELINK-NEXT:    [[TMP14:%.*]] = call nnan ninf afn float @llvm.copysign.f32(float [[TMP12]], float [[TMP13]])
+; NOPRELINK-NEXT:    [[TMP10:%.*]] = call nnan ninf afn float @llvm.copysign.f32(float 0.000000e+00, float [[X]])
+; NOPRELINK-NEXT:    [[TMP14:%.*]] = select i1 [[DOTNOT]], float 0.000000e+00, float [[TMP10]]
 ; NOPRELINK-NEXT:    [[TMP15:%.*]] = select nnan ninf afn i1 [[TMP9]], float [[TMP14]], float [[TMP8]]
 ; NOPRELINK-NEXT:    [[TMP16:%.*]] = fcmp nnan ninf afn olt float [[X]], 0.000000e+00
 ; NOPRELINK-NEXT:    [[TMP17:%.*]] = and i1 [[TMP16]], [[DOTNOT]]
@@ -1316,11 +1313,8 @@ define float @test_rootn_fast_f32_strictfp(float %x, i32 %y) #1 {
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float [[TMP9]], float +inf, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR0]]
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float [[X]], float 0.000000e+00, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR0]]
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP10]], [[TMP11]]
-; NOPRELINK-NEXT:    [[TMP13:%.*]] = icmp slt i32 [[Y]], 0
-; NOPRELINK-NEXT:    [[TMP14:%.*]] = xor i1 [[TMP11]], [[TMP13]]
-; NOPRELINK-NEXT:    [[TMP15:%.*]] = select fast i1 [[TMP14]], float 0.000000e+00, float +inf
-; NOPRELINK-NEXT:    [[TMP16:%.*]] = select fast i1 [[DOTNOT]], float 0.000000e+00, float [[X]]
-; NOPRELINK-NEXT:    [[TMP17:%.*]] = call fast float @llvm.copysign.f32(float [[TMP15]], float [[TMP16]]) #[[ATTR0]]
+; NOPRELINK-NEXT:    [[TMP13:%.*]] = call fast float @llvm.copysign.f32(float 0.000000e+00, float [[X]]) #[[ATTR0]]
+; NOPRELINK-NEXT:    [[TMP17:%.*]] = select i1 [[DOTNOT]], float 0.000000e+00, float [[TMP13]]
 ; NOPRELINK-NEXT:    [[TMP18:%.*]] = select fast i1 [[TMP12]], float [[TMP17]], float [[TMP8]]
 ; NOPRELINK-NEXT:    [[TMP19:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f32(float [[X]], float 0.000000e+00, metadata !"olt", metadata !"fpexcept.strict") #[[ATTR0]]
 ; NOPRELINK-NEXT:    [[TMP20:%.*]] = and i1 [[TMP19]], [[DOTNOT]]
@@ -1382,7 +1376,7 @@ define float @test_rootn_afn_nnan_ninf_f32__y_neg3(float %x) {
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn float [[TMP2]], f0xBEAAAAAB
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[TMP3]])
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = fcmp nnan ninf afn une float [[X]], 0.000000e+00
-; NOPRELINK-NEXT:    [[DOTV:%.*]] = select i1 [[TMP6]], float [[TMP4]], float +inf
+; NOPRELINK-NEXT:    [[DOTV:%.*]] = select i1 [[TMP6]], float [[TMP4]], float 0.000000e+00
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = call nnan ninf afn float @llvm.copysign.f32(float [[DOTV]], float [[X]])
 ; NOPRELINK-NEXT:    ret float [[TMP8]]
 ;
@@ -1425,7 +1419,7 @@ define float @test_rootn_afn_nnan_ninf_f32__y_neg4(float %x) {
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn float [[TMP2]], -2.500000e-01
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[TMP3]])
 ; NOPRELINK-NEXT:    [[TMP5:%.*]] = fcmp nnan ninf afn une float [[X]], 0.000000e+00
-; NOPRELINK-NEXT:    [[TMP6:%.*]] = select nnan ninf afn i1 [[TMP5]], float [[TMP4]], float +inf
+; NOPRELINK-NEXT:    [[TMP6:%.*]] = select nnan ninf afn i1 [[TMP5]], float [[TMP4]], float 0.000000e+00
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = fcmp nnan ninf afn olt float [[X]], 0.000000e+00
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = select nnan ninf afn i1 [[TMP7]], float +qnan, float [[TMP6]]
 ; NOPRELINK-NEXT:    ret float [[TMP8]]
@@ -1468,7 +1462,7 @@ define float @test_rootn_afn_nnan_ninf_f32__y_neg5(float %x) {
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn float [[TMP2]], -2.000000e-01
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[TMP3]])
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = fcmp nnan ninf afn une float [[X]], 0.000000e+00
-; NOPRELINK-NEXT:    [[DOTV:%.*]] = select i1 [[TMP6]], float [[TMP4]], float +inf
+; NOPRELINK-NEXT:    [[DOTV:%.*]] = select i1 [[TMP6]], float [[TMP4]], float 0.000000e+00
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = call nnan ninf afn float @llvm.copysign.f32(float [[DOTV]], float [[X]])
 ; NOPRELINK-NEXT:    ret float [[TMP8]]
 ;
@@ -1510,7 +1504,7 @@ define float @test_rootn_afn_nnan_ninf_f32__y_neg7(float %x) {
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn float [[TMP2]], f0xBE124925
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[TMP3]])
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = fcmp nnan ninf afn une float [[X]], 0.000000e+00
-; NOPRELINK-NEXT:    [[DOTV:%.*]] = select i1 [[TMP6]], float [[TMP4]], float +inf
+; NOPRELINK-NEXT:    [[DOTV:%.*]] = select i1 [[TMP6]], float [[TMP4]], float 0.000000e+00
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = call nnan ninf afn float @llvm.copysign.f32(float [[DOTV]], float [[X]])
 ; NOPRELINK-NEXT:    ret float [[TMP8]]
 ;
@@ -1553,7 +1547,7 @@ define float @test_rootn_afn_nnan_ninf_f32__y_neg8(float %x) {
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = fmul nnan ninf afn float [[TMP2]], -1.250000e-01
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[TMP3]])
 ; NOPRELINK-NEXT:    [[TMP5:%.*]] = fcmp nnan ninf afn une float [[X]], 0.000000e+00
-; NOPRELINK-NEXT:    [[TMP6:%.*]] = select nnan ninf afn i1 [[TMP5]], float [[TMP4]], float +inf
+; NOPRELINK-NEXT:    [[TMP6:%.*]] = select nnan ninf afn i1 [[TMP5]], float [[TMP4]], float 0.000000e+00
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = fcmp nnan ninf afn olt float [[X]], 0.000000e+00
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = select nnan ninf afn i1 [[TMP7]], float +qnan, float [[TMP6]]
 ; NOPRELINK-NEXT:    ret float [[TMP8]]
@@ -1755,11 +1749,8 @@ define float @test_rootn_afn_ninf_nnan_f32__x_known_positive(float nofpclass(nin
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = select nnan ninf afn i1 [[DOTNOT]], float 1.000000e+00, float [[X]]
 ; NOPRELINK-NEXT:    [[TMP7:%.*]] = call nnan ninf afn float @llvm.copysign.f32(float [[TMP4]], float [[TMP6]])
 ; NOPRELINK-NEXT:    [[TMP8:%.*]] = fcmp nnan ninf afn oeq float [[X]], 0.000000e+00
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = icmp slt i32 [[Y]], 0
-; NOPRELINK-NEXT:    [[TMP10:%.*]] = xor i1 [[TMP8]], [[TMP9]]
-; NOPRELINK-NEXT:    [[TMP11:%.*]] = select nnan ninf afn i1 [[TMP10]], float 0.000000e+00, float +inf
-; NOPRELINK-NEXT:    [[TMP12:%.*]] = select nnan ninf afn i1 [[DOTNOT]], float 0.000000e+00, float [[X]]
-; NOPRELINK-NEXT:    [[TMP13:%.*]] = call nnan ninf afn float @llvm.copysign.f32(float [[TMP11]], float [[TMP12]])
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = call nnan ninf afn float @llvm.copysign.f32(float 0.000000e+00, float [[X]])
+; NOPRELINK-NEXT:    [[TMP13:%.*]] = select i1 [[DOTNOT]], float 0.000000e+00, float [[TMP9]]
 ; NOPRELINK-NEXT:    [[TMP14:%.*]] = select nnan ninf afn i1 [[TMP8]], float [[TMP13]], float [[TMP7]]
 ; NOPRELINK-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[Y]], 0
 ; NOPRELINK-NEXT:    [[TMP16:%.*]] = select nnan ninf afn i1 [[TMP15]], float +qnan, float [[TMP14]]
@@ -1841,9 +1832,7 @@ define float @test_fast_rootn_f32_y_known_even(float %x, i32 %y.arg) {
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = fdiv fast float [[TMP3]], [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.exp2.f32(float [[TMP4]])
 ; NOPRELINK-NEXT:    [[TMP6:%.*]] = fcmp fast oeq float [[X]], 0.000000e+00
-; NOPRELINK-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[Y]], -1
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = select fast i1 [[TMP8]], float 0.000000e+00, float +inf
-; NOPRELINK-NEXT:    [[TMP10:%.*]] = select fast i1 [[TMP6]], float [[TMP9]], float [[TMP5]]
+; NOPRELINK-NEXT:    [[TMP10:%.*]] = select fast i1 [[TMP6]], float 0.000000e+00, float [[TMP5]]
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = fcmp fast olt float [[X]], 0.000000e+00
 ; NOPRELINK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[Y]], 0
 ; NOPRELINK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]]
@@ -1874,9 +1863,7 @@ define float @test_fast_rootn_f32_known_positive_y_known_even(float nofpclass(ni
 ; NOPRELINK-NEXT:    [[TMP3:%.*]] = fdiv fast float [[TMP2]], [[TMP0]]
 ; NOPRELINK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.exp2.f32(float [[TMP3]])
 ; NOPRELINK-NEXT:    [[TMP5:%.*]] = fcmp fast oeq float [[X]], 0.000000e+00
-; NOPRELINK-NEXT:    [[TMP7:%.*]] = icmp sgt i32 [[Y]], -1
-; NOPRELINK-NEXT:    [[TMP8:%.*]] = select fast i1 [[TMP7]], float 0.000000e+00, float +inf
-; NOPRELINK-NEXT:    [[TMP9:%.*]] = select fast i1 [[TMP5]], float [[TMP8]], float [[TMP4]]
+; NOPRELINK-NEXT:    [[TMP9:%.*]] = select fast i1 [[TMP5]], float 0.000000e+00, float [[TMP4]]
 ; NOPRELINK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[Y]], 0
 ; NOPRELINK-NEXT:    [[TMP11:%.*]] = select fast i1 [[TMP10]], float +qnan, float [[TMP9]]
 ; NOPRELINK-NEXT:    ret float [[TMP11]]
