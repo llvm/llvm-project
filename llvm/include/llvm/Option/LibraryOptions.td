@@ -113,6 +113,15 @@ multiclass ListField<string name, string type, string help> {
     Field<NAME, "llvm::ArrayRef<"#type#">", "">, HelpText<help>;
 }
 
+// An llvm::ArrayRef<<type>> member. Each -<name>=<value> or -<name> <value>
+// appends its whole value, commas included.
+multiclass RepeatedField<string name, string type, string help> {
+  def NAME : SeparateOrEq<["-", "--"], name>,
+    Field<NAME, "llvm::ArrayRef<"#type#">", "">, HelpText<help> {
+    bit Repeated = 1;
+  }
+}
+
 // A ListField of the enumeration <type>, with <values> mapping to <enumerators>
 // as in EnumField.
 multiclass EnumListField<string name, string type, string values,

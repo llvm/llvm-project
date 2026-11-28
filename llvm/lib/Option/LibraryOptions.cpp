@@ -15,8 +15,6 @@
 using namespace llvm;
 using namespace llvm::opt;
 
-LibraryOptTable::~LibraryOptTable() = default;
-
 void LibraryOptionsParser::forEachOption(
     function_ref<void(StringRef, StringRef, StringRef)> Fn) const {
   const OptTable &T = Table();

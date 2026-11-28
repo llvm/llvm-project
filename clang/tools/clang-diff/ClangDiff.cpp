@@ -11,59 +11,47 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define OPTIONS_STRUCT_DECL
+#include "Opts.inc"
+
 #include "clang/Tooling/ASTDiff/ASTDiff.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/Option/ArgList.h"
-#include "llvm/Option/OptTable.h"
+#include "llvm/Option/OptionsStruct.h"
+
+#define OPTIONS_STRUCT_DEFS
+#include "Opts.inc"
 
 using namespace llvm;
 using namespace clang;
 using namespace clang::tooling;
 
-namespace {
-using namespace llvm::opt;
-enum ID {
-  OPT_INVALID = 0,
-#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
-#include "Opts.inc"
-#undef OPTION
-};
-
-#define OPTTABLE_CODE
-#include "Opts.inc"
-
-class ClangDiffOptTable : public OptTable {
-public:
-  ClangDiffOptTable() : OptTable(optionTables()) {}
-};
-} // namespace
-
-static std::string BuildPath;
-static std::vector<std::string> ArgsAfter;
-static std::vector<std::string> ArgsBefore;
-
-static void addExtraArgs(std::unique_ptr<CompilationDatabase> &Compilations) {
+static void addExtraArgs(const ClangDiffOptions &Opts,
+                         std::unique_ptr<CompilationDatabase> &Compilations) {
   if (!Compilations)
     return;
   auto AdjustingCompilations =
       std::make_unique<ArgumentsAdjustingCompilations>(
           std::move(Compilations));
-  AdjustingCompilations->appendArgumentsAdjuster(
-      getInsertArgumentAdjuster(ArgsBefore, ArgumentInsertPosition::BEGIN));
-  AdjustingCompilations->appendArgumentsAdjuster(
-      getInsertArgumentAdjuster(ArgsAfter, ArgumentInsertPosition::END));
+  AdjustingCompilations->appendArgumentsAdjuster(getInsertArgumentAdjuster(
+      std::vector<std::string>(Opts.extra_arg_before.begin(),
+                               Opts.extra_arg_before.end()),
+      ArgumentInsertPosition::BEGIN));
+  AdjustingCompilations->appendArgumentsAdjuster(getInsertArgumentAdjuster(
+      std::vector<std::string>(Opts.extra_arg.begin(), Opts.extra_arg.end()),
+      ArgumentInsertPosition::END));
   Compilations = std::move(AdjustingCompilations);
 }
 
 static std::unique_ptr<ASTUnit>
-getAST(const std::unique_ptr<CompilationDatabase> &CommonCompilations,
+getAST(const ClangDiffOptions &Opts,
+       const std::unique_ptr<CompilationDatabase> &CommonCompilations,
        const StringRef Filename) {
   std::string ErrorMessage;
   std::unique_ptr<CompilationDatabase> Compilations;
   if (!CommonCompilations) {
     Compilations = CompilationDatabase::autoDetectFromSource(
-        BuildPath.empty() ? Filename : BuildPath, ErrorMessage);
+        Opts.p.empty() ? Filename : Opts.p, ErrorMessage);
     if (!Compilations) {
       llvm::errs()
           << "Error while trying to load a compilation database, running "
@@ -74,7 +62,7 @@ getAST(const std::unique_ptr<CompilationDatabase> &CommonCompilations,
               ".", std::vector<std::string>());
     }
   }
-  addExtraArgs(Compilations);
+  addExtraArgs(Opts, Compilations);
   std::array<std::string, 1> Files = {{std::string(Filename)}};
   ClangTool Tool(Compilations ? *Compilations : *CommonCompilations, Files);
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
@@ -420,54 +408,37 @@ int main(int argc, const char **argv) {
   if (!CommonCompilations && !ErrorMessage.empty())
     llvm::errs() << ErrorMessage;
   BumpPtrAllocator Alloc;
-  StringSaver Saver(Alloc);
-  ClangDiffOptTable Tbl;
-  opt::InputArgList Args = Tbl.parseArgs(
-      argc, const_cast<char **>(argv), OPT_UNKNOWN, Saver, [](StringRef Msg) {
-        llvm::errs() << "Error: " << Msg << "\n";
-        exit(1);
-      });
-  if (Args.hasArg(OPT_help)) {
-    Tbl.printHelp(llvm::outs(), "clang-diff [options] <source> [<destination>]",
-                  "Compare source files by AST nodes");
+  ClangDiffOptions Opts;
+  SmallVector<StringRef, 2> Inputs;
+  if (Error E = opt::parseToolArgs(Opts, argc, argv, Alloc, Inputs)) {
+    llvm::errs() << "Error: " << toString(std::move(E)) << "\n";
+    return 1;
+  }
+  if (Opts.help) {
+    ClangDiffOptions::optTable().printHelp(
+        llvm::outs(), "clang-diff [options] <source> [<destination>]",
+        "Compare source files by AST nodes");
     return 0;
   }
-  std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
   if (Inputs.empty() || Inputs.size() > 2) {
     llvm::errs() << "Error: Expected one or two paths.\n";
     return 1;
   }
-  std::string SourcePath = Inputs[0];
-  std::string DestinationPath = Inputs.size() > 1 ? Inputs[1] : "";
-  bool ASTDump = Args.hasArg(OPT_ast_dump);
-  bool ASTDumpJson = Args.hasArg(OPT_ast_dump_json);
-  bool PrintMatches = Args.hasArg(OPT_dump_matches);
-  bool HtmlDiff = Args.hasArg(OPT_html);
-  std::string StopAfter = Args.getLastArgValue(OPT_stop_diff_after).str();
-  int MaxSize = -1;
-  if (const opt::Arg *A = Args.getLastArg(OPT_s)) {
-    if (StringRef(A->getValue()).getAsInteger(0, MaxSize)) {
-      llvm::errs() << "Error: Invalid argument '" << A->getValue()
-                   << "' for -s\n";
-      return 1;
-    }
-  }
-  BuildPath = Args.getLastArgValue(OPT_p).str();
-  ArgsAfter = Args.getAllArgValues(OPT_extra_arg);
-  ArgsBefore = Args.getAllArgValues(OPT_extra_arg_before);
+  StringRef SourcePath = Inputs[0];
+  StringRef DestinationPath = Inputs.size() > 1 ? Inputs[1] : "";
 
-  addExtraArgs(CommonCompilations);
+  addExtraArgs(Opts, CommonCompilations);
 
-  if (ASTDump || ASTDumpJson) {
+  if (Opts.ast_dump || Opts.ast_dump_json) {
     if (!DestinationPath.empty()) {
       llvm::errs() << "Error: Please specify exactly one filename.\n";
       return 1;
     }
-    std::unique_ptr<ASTUnit> AST = getAST(CommonCompilations, SourcePath);
+    std::unique_ptr<ASTUnit> AST = getAST(Opts, CommonCompilations, SourcePath);
     if (!AST)
       return 1;
     diff::SyntaxTree Tree(AST->getASTContext());
-    if (ASTDump) {
+    if (Opts.ast_dump) {
       printTree(llvm::outs(), Tree);
       return 0;
     }
@@ -484,27 +455,21 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
-  std::unique_ptr<ASTUnit> Src = getAST(CommonCompilations, SourcePath);
-  std::unique_ptr<ASTUnit> Dst = getAST(CommonCompilations, DestinationPath);
+  std::unique_ptr<ASTUnit> Src = getAST(Opts, CommonCompilations, SourcePath);
+  std::unique_ptr<ASTUnit> Dst =
+      getAST(Opts, CommonCompilations, DestinationPath);
   if (!Src || !Dst)
     return 1;
 
   diff::ComparisonOptions Options;
-  if (MaxSize != -1)
-    Options.MaxSize = MaxSize;
-  if (!StopAfter.empty()) {
-    if (StopAfter == "topdown")
-      Options.StopAfterTopDown = true;
-    else if (StopAfter != "bottomup") {
-      llvm::errs() << "Error: Invalid argument for -stop-after\n";
-      return 1;
-    }
-  }
+  if (Opts.s)
+    Options.MaxSize = *Opts.s;
+  Options.StopAfterTopDown = Opts.stop_after_topdown;
   diff::SyntaxTree SrcTree(Src->getASTContext());
   diff::SyntaxTree DstTree(Dst->getASTContext());
   diff::ASTDiff Diff(SrcTree, DstTree, Options);
 
-  if (HtmlDiff) {
+  if (Opts.html) {
     llvm::outs() << HtmlDiffHeader << "<pre>";
     llvm::outs() << "<div id='L' class='code'>";
     printHtmlForNode(llvm::outs(), Diff, SrcTree, true, SrcTree.getRootId(), 0);
@@ -519,7 +484,7 @@ int main(int argc, const char **argv) {
 
   for (diff::NodeId Dst : DstTree) {
     diff::NodeId Src = Diff.getMapped(DstTree, Dst);
-    if (PrintMatches && Src.isValid()) {
+    if (Opts.dump_matches && Src.isValid()) {
       llvm::outs() << "Match ";
       printNode(llvm::outs(), SrcTree, Src);
       llvm::outs() << " to ";
