@@ -339,20 +339,20 @@ define dso_local half @load_atomic_half_aligned_monotonic_const(ptr readonly %pt
 
 define dso_local half @load_atomic_half_aligned_acquire(ptr %ptr) {
 ; -O0-LABEL: load_atomic_half_aligned_acquire:
-; -O0:    ldaprh w0, [x0]
+; -O0:    ldaprh w8, [x0]
 ;
 ; -O1-LABEL: load_atomic_half_aligned_acquire:
-; -O1:    ldaprh w8, [x0]
+; -O1:    ldapur h0, [x0]
     %r = load atomic half, ptr %ptr acquire, align 2
     ret half %r
 }
 
 define dso_local half @load_atomic_half_aligned_acquire_const(ptr readonly %ptr) {
 ; -O0-LABEL: load_atomic_half_aligned_acquire_const:
-; -O0:    ldaprh w0, [x0]
+; -O0:    ldaprh w8, [x0]
 ;
 ; -O1-LABEL: load_atomic_half_aligned_acquire_const:
-; -O1:    ldaprh w8, [x0]
+; -O1:    ldapur h0, [x0]
     %r = load atomic half, ptr %ptr acquire, align 2
     ret half %r
 }
@@ -419,20 +419,20 @@ define dso_local bfloat @load_atomic_bfloat_aligned_monotonic_const(ptr readonly
 
 define dso_local bfloat @load_atomic_bfloat_aligned_acquire(ptr %ptr) {
 ; -O0-LABEL: load_atomic_bfloat_aligned_acquire:
-; -O0:    ldaprh w0, [x0]
+; -O0:    ldaprh w8, [x0]
 ;
 ; -O1-LABEL: load_atomic_bfloat_aligned_acquire:
-; -O1:    ldaprh w8, [x0]
+; -O1:    ldapur h0, [x0]
     %r = load atomic bfloat, ptr %ptr acquire, align 2
     ret bfloat %r
 }
 
 define dso_local bfloat @load_atomic_bfloat_aligned_acquire_const(ptr readonly %ptr) {
 ; -O0-LABEL: load_atomic_bfloat_aligned_acquire_const:
-; -O0:    ldaprh w0, [x0]
+; -O0:    ldaprh w8, [x0]
 ;
 ; -O1-LABEL: load_atomic_bfloat_aligned_acquire_const:
-; -O1:    ldaprh w8, [x0]
+; -O1:    ldapur h0, [x0]
     %r = load atomic bfloat, ptr %ptr acquire, align 2
     ret bfloat %r
 }
@@ -499,20 +499,20 @@ define dso_local float @load_atomic_float_aligned_monotonic_const(ptr readonly %
 
 define dso_local float @load_atomic_float_aligned_acquire(ptr %ptr) {
 ; -O0-LABEL: load_atomic_float_aligned_acquire:
-; -O0:    ldapr w0, [x0]
+; -O0:    ldapr w8, [x0]
 ;
 ; -O1-LABEL: load_atomic_float_aligned_acquire:
-; -O1:    ldapr w8, [x0]
+; -O1:    ldapur s0, [x0]
     %r = load atomic float, ptr %ptr acquire, align 4
     ret float %r
 }
 
 define dso_local float @load_atomic_float_aligned_acquire_const(ptr readonly %ptr) {
 ; -O0-LABEL: load_atomic_float_aligned_acquire_const:
-; -O0:    ldapr w0, [x0]
+; -O0:    ldapr w8, [x0]
 ;
 ; -O1-LABEL: load_atomic_float_aligned_acquire_const:
-; -O1:    ldapr w8, [x0]
+; -O1:    ldapur s0, [x0]
     %r = load atomic float, ptr %ptr acquire, align 4
     ret float %r
 }
@@ -579,20 +579,20 @@ define dso_local double @load_atomic_double_aligned_monotonic_const(ptr readonly
 
 define dso_local double @load_atomic_double_aligned_acquire(ptr %ptr) {
 ; -O0-LABEL: load_atomic_double_aligned_acquire:
-; -O0:    ldapr x0, [x0]
+; -O0:    ldapr x8, [x0]
 ;
 ; -O1-LABEL: load_atomic_double_aligned_acquire:
-; -O1:    ldapr x8, [x0]
+; -O1:    ldapur d0, [x0]
     %r = load atomic double, ptr %ptr acquire, align 8
     ret double %r
 }
 
 define dso_local double @load_atomic_double_aligned_acquire_const(ptr readonly %ptr) {
 ; -O0-LABEL: load_atomic_double_aligned_acquire_const:
-; -O0:    ldapr x0, [x0]
+; -O0:    ldapr x8, [x0]
 ;
 ; -O1-LABEL: load_atomic_double_aligned_acquire_const:
-; -O1:    ldapr x8, [x0]
+; -O1:    ldapur d0, [x0]
     %r = load atomic double, ptr %ptr acquire, align 8
     ret double %r
 }
