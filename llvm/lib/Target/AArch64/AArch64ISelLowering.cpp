@@ -25,6 +25,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
@@ -1088,7 +1089,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                        ISD::UINT_TO_FP});
 
   setTargetDAGCombine({ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::FP_TO_SINT_SAT,
-                       ISD::FP_TO_UINT_SAT, ISD::FADD});
+                       ISD::FP_TO_UINT_SAT, ISD::FADD, ISD::FMA});
 
   // Try and combine setcc/select_cc with csel and bool-vector bitcasts.
   setTargetDAGCombine(ISD::SETCC);
@@ -22568,6 +22569,226 @@ static SDValue performANDCombine(SDNode *N,
   return SDValue();
 }
 
+// Match a lane through the disposable vector plumbing of a complex FMA pair.
+// Do not treat undef lanes as wildcards: every lane consumed by FCMLA must have
+// the same input and sign as the two original FMAs.
+static bool matchComplexFMALane(SDValue V, unsigned Lane, SDValue Input,
+                                unsigned InputLane, bool Negated,
+                                SmallPtrSetImpl<SDNode *> &Plumbing) {
+  if (Input.isUndef())
+    return false;
+  EVT ElementVT = Input.getValueType().getVectorElementType();
+
+  // The DAG is acyclic and each step follows one selected operand. Collect
+  // internal fanout here, then check that the whole pair owns the plumbing.
+  while (V != Input) {
+    EVT VT = V.getValueType();
+    if (VT.isFixedLengthVector()) {
+      if (VT.getVectorElementType() != ElementVT ||
+          Lane >= VT.getVectorNumElements())
+        return false;
+    } else if (VT != ElementVT || Lane != 0) {
+      return false;
+    }
+    Plumbing.insert(V.getNode());
+
+    if (V.getOpcode() == ISD::FNEG) {
+      V = V.getOperand(0);
+      Negated = !Negated;
+      continue;
+    }
+    if (auto *Shuffle = dyn_cast<ShuffleVectorSDNode>(V)) {
+      int Mask = Shuffle->getMaskElt(Lane);
+      if (Mask < 0)
+        return false;
+      unsigned NumElts =
+          Shuffle->getOperand(0).getValueType().getVectorNumElements();
+      V = Shuffle->getOperand(Mask / NumElts);
+      Lane = Mask % NumElts;
+      continue;
+    }
+
+    // Width-changing IR shuffles can initially use scalar extracts assembled
+    // by BUILD_VECTOR. Match this form before its later shuffle combine.
+    if (V.getOpcode() == ISD::BUILD_VECTOR) {
+      V = V.getOperand(Lane);
+      Lane = 0;
+      continue;
+    }
+    if (V.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+      auto *Index = dyn_cast<ConstantSDNode>(V.getOperand(1));
+      SDValue Source = V.getOperand(0);
+      if (!Index || !Source.getValueType().isFixedLengthVector() ||
+          Source.getValueType().getVectorElementType() != VT)
+        return false;
+      if (Index->getAPIntValue().uge(
+              Source.getValueType().getVectorNumElements()))
+        return false;
+      V = Source;
+      Lane = Index->getZExtValue();
+      continue;
+    }
+
+    if (V.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+      auto *Index = dyn_cast<ConstantSDNode>(V.getOperand(1));
+      SDValue Source = V.getOperand(0);
+      if (!Index || !Source.getValueType().isFixedLengthVector())
+        return false;
+      uint64_t Offset = Index->getZExtValue();
+      unsigned NumElts = Source.getValueType().getVectorNumElements();
+      if (Offset >= NumElts || Lane >= NumElts - Offset)
+        return false;
+      V = Source;
+      Lane += Offset;
+      continue;
+    }
+    if (V.getOpcode() == ISD::CONCAT_VECTORS) {
+      SDValue Selected;
+      for (SDValue Op : V->op_values()) {
+        unsigned NumElts = Op.getValueType().getVectorNumElements();
+        if (Lane < NumElts) {
+          Selected = Op;
+          break;
+        }
+        Lane -= NumElts;
+      }
+      if (!Selected)
+        return false;
+      V = Selected;
+      continue;
+    }
+    return false;
+  }
+  return Lane == InputLane && !Negated;
+}
+
+// Ordinary FMA multiplication is commutative independently in each lane.
+// Match the same signed source products without moving signs, changing the
+// accumulator, or reassociating the two fused stages. Only successful paths
+// enter the closure set: a failed orientation must not admit unrelated users.
+static bool matchComplexFMAProductLane(SDValue Odd, SDValue Rotated,
+                                       unsigned Lane, SDValue A, SDValue B,
+                                       SmallPtrSetImpl<SDNode *> &Plumbing) {
+  SDValue Operands[] = {Odd, Rotated};
+  for (unsigned Swap = 0; Swap != 2; ++Swap) {
+    SmallPtrSet<SDNode *, 32> LanePlumbing;
+    if (matchComplexFMALane(Operands[Swap], Lane, B, Lane | 1U, false,
+                            LanePlumbing) &&
+        matchComplexFMALane(Operands[1 - Swap], Lane, A, Lane ^ 1U, !(Lane & 1),
+                            LanePlumbing)) {
+      Plumbing.insert(LanePlumbing.begin(), LanePlumbing.end());
+      return true;
+    }
+  }
+  return false;
+}
+
+// Ignore only already-dead, unchained lane plumbing. In particular, a store or
+// a live extract/shuffle outside the pair is not covered by this exception.
+static bool isDeadComplexFMAPlumbing(SDNode *N) {
+  if (!N->use_empty() || N->getNumValues() != 1)
+    return false;
+  switch (N->getOpcode()) {
+  case ISD::FNEG:
+  case ISD::VECTOR_SHUFFLE:
+  case ISD::BUILD_VECTOR:
+  case ISD::EXTRACT_VECTOR_ELT:
+  case ISD::EXTRACT_SUBVECTOR:
+  case ISD::CONCAT_VECTORS:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static SDValue performComplexFMACombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const AArch64Subtarget *Subtarget) {
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+  // These are the fixed Advanced SIMD FCMLA forms. Do not introduce NEON
+  // operations into streaming functions or use the SVE complex instruction.
+  if (VT != MVT::v2f32 && VT != MVT::v4f32 && VT != MVT::v2f64 &&
+      VT != MVT::v4f16 && VT != MVT::v8f16)
+    return SDValue();
+  if ((VT == MVT::v4f16 || VT == MVT::v8f16) && !Subtarget->hasFullFP16())
+    return SDValue();
+  if (!Subtarget->hasNEON() || !Subtarget->hasComplxNum() ||
+      Subtarget->isStreaming() || Subtarget->isStreamingCompatible() ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(VT) ||
+      DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::StrictFP))
+    return SDValue();
+
+  unsigned NumElts = VT.getVectorNumElements();
+  SDValue Partial = N->getOperand(2);
+  if (Partial.getOpcode() != ISD::FMA || !Partial.hasOneUse())
+    return SDValue();
+
+  // P = fma(A, dup_even(B), C)
+  // R = fma([-Ai, Ar, ...], dup_odd(B), P)
+  //
+  // Keep both fused stages in order:
+  // P = vcmla.rot0(C, B, A); R = vcmla.rot90(P, B, A).
+  // Only the two multiplicands of an ordinary FMA may exchange positions.
+  // No reassociation, contraction or sign movement between operands is used.
+  for (unsigned FirstA = 0; FirstA != 2; ++FirstA) {
+    SDValue A = Partial.getOperand(FirstA);
+    SDValue Even = Partial.getOperand(1 - FirstA);
+    auto *EvenShuffle = dyn_cast<ShuffleVectorSDNode>(Even);
+    if (!EvenShuffle)
+      continue;
+    for (SDValue B : EvenShuffle->op_values()) {
+      if (B.getValueType() != VT || B.isUndef())
+        continue;
+      for (unsigned SecondA = 0; SecondA != 2; ++SecondA) {
+        SDValue Rotated = N->getOperand(SecondA);
+        SDValue Odd = N->getOperand(1 - SecondA);
+        SmallPtrSet<SDNode *, 32> Plumbing;
+        bool Matches = true;
+        for (unsigned Lane = 0; Lane != NumElts; ++Lane) {
+          if (!matchComplexFMALane(Even, Lane, B, Lane & ~1U, false,
+                                   Plumbing) ||
+              !matchComplexFMAProductLane(Odd, Rotated, Lane, A, B, Plumbing)) {
+            Matches = false;
+            break;
+          }
+        }
+        if (!Matches)
+          continue;
+
+        // A, B and the initial accumulator survive in the replacement. They
+        // may have other users, but must not be captured as removable plumbing
+        // while matching a different operand.
+        if (Plumbing.contains(A.getNode()) || Plumbing.contains(B.getNode()) ||
+            Plumbing.contains(Partial.getOperand(2).getNode()))
+          continue;
+        bool Closed = all_of(Plumbing, [&](SDNode *P) {
+          return all_of(P->users(), [&](SDNode *User) {
+            return User == Partial.getNode() || User == N ||
+                   Plumbing.contains(User) || isDeadComplexFMAPlumbing(User);
+          });
+        });
+        if (!Closed)
+          continue;
+
+        SDLoc DL(N);
+        SDValue First = DAG.getNode(
+            ISD::INTRINSIC_WO_CHAIN, DL, VT,
+            {DAG.getConstant(Intrinsic::aarch64_neon_vcmla_rot0, DL, MVT::i32),
+             Partial.getOperand(2), B, A},
+            Partial->getFlags());
+        return DAG.getNode(
+            ISD::INTRINSIC_WO_CHAIN, DL, VT,
+            {DAG.getConstant(Intrinsic::aarch64_neon_vcmla_rot90, DL, MVT::i32),
+             First, B, A},
+            N->getFlags());
+      }
+    }
+  }
+  return SDValue();
+}
+
 static SDValue performFADDCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
@@ -32363,6 +32584,10 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performORCombine(N, DCI);
   case ISD::AND:
     return performANDCombine(N, DCI);
+  case ISD::FMA:
+    if (useSVEForFixedLengthVectorVT(N->getValueType(0)))
+      return SDValue();
+    return performComplexFMACombine(N, DCI, Subtarget);
   case ISD::FADD:
     return performFADDCombine(N, DCI);
   case AArch64ISD::FADD_PRED:
