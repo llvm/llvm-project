@@ -1416,6 +1416,8 @@ ContractionOp::getDefaultUnrollTargetShape() {
 ///    %e = vector.contract %a, %b, %d: ...
 /// ```
 ///
+/// The contract must have the `add` kind.
+///
 /// Return null if the canonicalization does not apply.
 // TODO: This should be a folding of Add into Contract in core but while they
 // live in different dialects, it is not possible without unnatural
@@ -1431,7 +1433,8 @@ struct CanonicalizeContractAdd : public OpRewritePattern<AddOpType> {
       vector::ContractionOp contractionOp =
           dyn_cast_or_null<vector::ContractionOp>(
               maybeContraction.getDefiningOp());
-      if (!contractionOp)
+      // Fold only into a contract with the `add` kind.
+      if (!contractionOp || !contractionOp.isAddKind())
         return vector::ContractionOp();
       if (auto maybeZero = dyn_cast_or_null<arith::ConstantOp>(
               contractionOp.getAcc().getDefiningOp())) {
