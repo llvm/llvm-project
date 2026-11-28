@@ -157,6 +157,10 @@ public:
     return false;
   }
 
+  virtual bool isReadOnlyAndFastAddressSpace(unsigned AddressSpace) const {
+    return false;
+  }
+
   virtual bool isNoopAddrSpaceCast(unsigned, unsigned) const { return false; }
 
   virtual std::pair<KnownBits, KnownBits>
