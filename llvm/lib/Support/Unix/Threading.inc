@@ -29,7 +29,9 @@
 
 #include <pthread.h>
 
-#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__) ||  \
+    (defined(HAVE_PTHREAD_SET_NAME_NP) && HAVE_PTHREAD_SET_NAME_NP) ||         \
+    (defined(HAVE_PTHREAD_GET_NAME_NP) && HAVE_PTHREAD_GET_NAME_NP)
 #include <pthread_np.h> // For pthread_getthreadid_np() / pthread_set_name_np()
 #endif
 
