@@ -73,12 +73,8 @@ ProgramStateManager::ProgramStateManager(ASTContext &Ctx,
   ConstraintMgr = (*CreateCMgr)(*this, ExprEng);
 }
 
-
-ProgramStateManager::~ProgramStateManager() {
-  for (GDMContextsTy::iterator I=GDMContexts.begin(), E=GDMContexts.end();
-       I!=E; ++I)
-    I->second.second(I->second.first);
-}
+// Out-of-line so unique_ptr members can use forward-declared types.
+ProgramStateManager::~ProgramStateManager() = default;
 
 ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(
     ProgramStateRef state, const StackFrame *SF, SymbolReaper &SymReaper) {
@@ -523,13 +519,13 @@ void *ProgramStateManager::FindGDMContext(
     const void *K, void *(*CreateContext)(llvm::BumpPtrAllocator &),
     void (*DeleteContext)(void *)) {
 
-  std::pair<void*, void (*)(void*)>& p = GDMContexts[K];
-  if (!p.first) {
-    p.first = CreateContext(Alloc);
-    p.second = DeleteContext;
+  auto &[GDMKey, Deleter] = GDMContexts[K];
+  if (!GDMKey) {
+    GDMKey = CreateContext(Alloc);
+    Deleter = DeleteContext;
   }
 
-  return p.first;
+  return GDMKey;
 }
 
 ProgramStateRef ProgramStateManager::addGDM(ProgramStateRef St, const void *Key,
