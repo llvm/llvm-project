@@ -1,6 +1,15 @@
-set(LLVM_LINK_COMPONENTS Support)
+set(LLVM_LINK_COMPONENTS Option Support)
 
-add_clang_tool(offload-arch OffloadArch.cpp)
+set(LLVM_TARGET_DEFINITIONS Opts.td)
+llvm_tablegen(Opts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(OffloadArchOptsTableGen)
+
+add_clang_tool(offload-arch
+  OffloadArch.cpp
+
+  DEPENDS
+  OffloadArchOptsTableGen
+  )
 
 # Legacy binary names.
 add_clang_symlink(amdgpu-arch offload-arch)

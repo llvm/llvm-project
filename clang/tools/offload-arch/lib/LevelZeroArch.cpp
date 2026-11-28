@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/CommandLine.h"
+#include "OffloadArchOptions.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/IntelGPUTargetParser.h"
@@ -89,7 +89,6 @@ ze_result_t zeDeviceGet(ze_driver_handle_t hDriver, uint32_t *pCount,
 ze_result_t zeDeviceGetProperties(void *hDevice, void *pProperties);
 
 using namespace llvm;
-extern cl::opt<bool> Verbose;
 
 #define DEFINE_WRAPPER(NAME)                                                   \
   using NAME##_ty = decltype(NAME);                                            \

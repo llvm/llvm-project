@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/CommandLine.h"
+#include "OffloadArchOptions.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -19,8 +19,6 @@
 #include <memory>
 
 using namespace llvm;
-
-extern cl::opt<bool> Verbose;
 
 typedef enum cudaError_enum {
   CUDA_SUCCESS = 0,
