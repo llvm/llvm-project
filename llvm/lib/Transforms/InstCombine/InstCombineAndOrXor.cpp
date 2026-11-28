@@ -4289,6 +4289,18 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return BinaryOperator::CreateXor(Or, ConstantInt::get(Ty, *CV));
   }
 
+  // (C << X) | -(C << X) --> (-C) << X when C is a power of 2
+  {
+    Constant *C;
+    Value *P;
+    if (match(&I, m_c_Or(m_CombineAnd(
+                             m_Value(P),
+                             m_Shl(m_CombineAnd(m_ImmConstant(C), m_Power2()),
+                                   m_Value(X))),
+                         m_Neg(m_Deferred(P)))))
+      return BinaryOperator::CreateShl(ConstantExpr::getNeg(C), X);
+  }
+
   // If the operands have no common bits set:
   // or (mul X, Y), X --> add (mul X, Y), X --> mul X, (Y + 1)
   if (match(&I, m_c_DisjointOr(m_OneUse(m_Mul(m_Value(X), m_Value(Y))),

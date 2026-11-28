@@ -2386,3 +2386,119 @@ define i32 @signum_i32_or_wrong_ext(i32 %x) {
   %r = or i32 %signbit, %sgt0ext
   ret i32 %r
 }
+
+; (C << X) | -(C << X) --> (-C) << X when C is a power of 2
+; https://github.com/llvm/llvm-project/issues/244101
+
+define i32 @or_shl_pow2_neg(i32 %x) {
+; CHECK-LABEL: @or_shl_pow2_neg(
+; CHECK-NEXT:    [[R:%.*]] = shl i32 -2, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %p = shl i32 2, %x
+  %n = sub i32 0, %p
+  %r = or i32 %p, %n
+  ret i32 %r
+}
+
+define i32 @or_shl_pow2_neg_commuted(i32 %x) {
+; CHECK-LABEL: @or_shl_pow2_neg_commuted(
+; CHECK-NEXT:    [[R:%.*]] = shl i32 -8, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %p = shl i32 8, %x
+  %n = sub i32 0, %p
+  %r = or i32 %n, %p
+  ret i32 %r
+}
+
+define i32 @or_shl_pow2_neg_multiuse(i32 %x) {
+; CHECK-LABEL: @or_shl_pow2_neg_multiuse(
+; CHECK-NEXT:    [[P:%.*]] = shl i32 2, [[X:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[P]])
+; CHECK-NEXT:    [[N:%.*]] = sub i32 0, [[P]]
+; CHECK-NEXT:    call void @use(i32 [[N]])
+; CHECK-NEXT:    [[R:%.*]] = shl i32 -2, [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %p = shl i32 2, %x
+  call void @use(i32 %p)
+  %n = sub i32 0, %p
+  call void @use(i32 %n)
+  %r = or i32 %p, %n
+  ret i32 %r
+}
+
+define <2 x i8> @or_shl_pow2_neg_splat(<2 x i8> %x) {
+; CHECK-LABEL: @or_shl_pow2_neg_splat(
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i8> splat (i8 -4), [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %p = shl <2 x i8> <i8 4, i8 4>, %x
+  %n = sub <2 x i8> zeroinitializer, %p
+  %r = or <2 x i8> %p, %n
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @or_shl_pow2_neg_nonsplat(<2 x i8> %x) {
+; CHECK-LABEL: @or_shl_pow2_neg_nonsplat(
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i8> <i8 -2, i8 -16>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %p = shl <2 x i8> <i8 2, i8 16>, %x
+  %n = sub <2 x i8> zeroinitializer, %p
+  %r = or <2 x i8> %p, %n
+  ret <2 x i8> %r
+}
+
+define <2 x i8> @or_shl_pow2_neg_poison(<2 x i8> %x) {
+; CHECK-LABEL: @or_shl_pow2_neg_poison(
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i8> <i8 -2, i8 poison>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %p = shl <2 x i8> <i8 2, i8 poison>, %x
+  %n = sub <2 x i8> <i8 0, i8 poison>, %p
+  %r = or <2 x i8> %p, %n
+  ret <2 x i8> %r
+}
+
+; C is the sign bit, so -C == C and the existing negation fold already handles it
+define i8 @or_shl_signbit_neg(i8 %x) {
+; CHECK-LABEL: @or_shl_signbit_neg(
+; CHECK-NEXT:    [[P:%.*]] = shl i8 -128, [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[P]]
+;
+  %p = shl i8 -128, %x
+  %n = sub i8 0, %p
+  %r = or i8 %p, %n
+  ret i8 %r
+}
+
+; negative test - 3 is not a power of 2
+define i32 @or_shl_not_pow2_neg(i32 %x) {
+; CHECK-LABEL: @or_shl_not_pow2_neg(
+; CHECK-NEXT:    [[P:%.*]] = shl i32 3, [[X:%.*]]
+; CHECK-NEXT:    [[N:%.*]] = sub i32 0, [[P]]
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[P]], [[N]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %p = shl i32 3, %x
+  %n = sub i32 0, %p
+  %r = or i32 %p, %n
+  ret i32 %r
+}
+
+; negative test - negation of a different shift
+define i32 @or_shl_pow2_neg_wrong_shift(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_shl_pow2_neg_wrong_shift(
+; CHECK-NEXT:    [[P:%.*]] = shl i32 2, [[X:%.*]]
+; CHECK-NEXT:    [[Q_NEG:%.*]] = shl i32 -2, [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[P]], [[Q_NEG]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %p = shl i32 2, %x
+  %q = shl i32 2, %y
+  %n = sub i32 0, %q
+  %r = or i32 %p, %n
+  ret i32 %r
+}
