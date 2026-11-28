@@ -14,10 +14,7 @@
 
 #ifdef __linux__
 #include <endian.h>
-#include <fcntl.h>
 #include <sys/mman.h>
-#include <sys/syscall.h>
-#include <unistd.h>
 #endif // __linux__
 
 namespace llvm {
@@ -26,43 +23,23 @@ namespace exegesis {
 #if defined(__linux__) && !defined(__ANDROID__) &&                             \
     !(defined(__powerpc__) || defined(__s390x__) || defined(__sparc__))
 
-// This needs to be updated anytime a test is added or removed from the test
-// suite.
-static constexpr size_t TestCount = 4;
-
 class SubprocessMemoryTest : public X86TestBase {
 protected:
-  int getSharedMemoryNumber(const unsigned TestNumber) {
-    // Do a process similar to 2D array indexing so that each process gets it's
-    // own shared memory space to avoid collisions. This will not overflow as
-    // the maximum value a PID can take on is 10^22.
-    return getpid() * TestCount + TestNumber;
+  void testCommon(StringMap<MemoryValue> MemoryDefinitions) {
+    EXPECT_FALSE(SM.initializeSubprocessMemory());
+    EXPECT_FALSE(SM.addMemoryDefinition(std::move(MemoryDefinitions)));
   }
 
-  void testCommon(StringMap<MemoryValue> MemoryDefinitions,
-                  const unsigned TestNumber) {
-    EXPECT_FALSE(
-        SM.initializeSubprocessMemory(getSharedMemoryNumber(TestNumber)));
-    EXPECT_FALSE(SM.addMemoryDefinition(MemoryDefinitions,
-                                        getSharedMemoryNumber(TestNumber)));
-  }
-
-  std::string getSharedMemoryName(const unsigned TestNumber,
-                                  const unsigned DefinitionNumber) {
-    long CurrentTID = syscall(SYS_gettid);
-    return "/" + std::to_string(getSharedMemoryNumber(TestNumber)) + "t" +
-           std::to_string(CurrentTID) + "memdef" +
-           std::to_string(DefinitionNumber);
-  }
-
-  void checkSharedMemoryDefinition(const std::string &DefinitionName,
+  void checkSharedMemoryDefinition(const unsigned DefinitionNumber,
                                    size_t DefinitionSize,
                                    std::vector<uint8_t> ExpectedValue) {
-    int SharedMemoryFD =
-        shm_open(DefinitionName.c_str(), O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    uint8_t *SharedMemoryMapping = (uint8_t *)mmap(
-        NULL, DefinitionSize, PROT_READ, MAP_SHARED, SharedMemoryFD, 0);
-    EXPECT_NE(reinterpret_cast<intptr_t>(SharedMemoryMapping), -1);
+    Expected<int> SharedMemoryFDOrErr =
+        SM.getMemoryDefinitionFD(DefinitionNumber);
+    ASSERT_TRUE(static_cast<bool>(SharedMemoryFDOrErr));
+    uint8_t *SharedMemoryMapping =
+        static_cast<uint8_t *>(mmap(nullptr, DefinitionSize, PROT_READ,
+                                    MAP_SHARED, *SharedMemoryFDOrErr, 0));
+    ASSERT_NE(SharedMemoryMapping, MAP_FAILED);
     for (size_t I = 0; I < ExpectedValue.size(); ++I) {
       EXPECT_EQ(SharedMemoryMapping[I], ExpectedValue[I]);
     }
@@ -77,31 +54,29 @@ protected:
 // TODO(boomanaiden154): Investigate and fix this issue on PPC.
 
 TEST_F(SubprocessMemoryTest, OneDefinition) {
-  testCommon({{"test1", {APInt(8, 0xff), 4096, 0}}}, 0);
-  checkSharedMemoryDefinition(getSharedMemoryName(0, 0), 4096, {0xff});
+  testCommon({{"test1", {APInt(8, 0xff), 4096, 0}}});
+  checkSharedMemoryDefinition(0, 4096, {0xff});
 }
 
 TEST_F(SubprocessMemoryTest, MultipleDefinitions) {
   testCommon({{"test1", {APInt(8, 0xaa), 4096, 0}},
               {"test2", {APInt(8, 0xbb), 4096, 1}},
-              {"test3", {APInt(8, 0xcc), 4096, 2}}},
-             1);
-  checkSharedMemoryDefinition(getSharedMemoryName(1, 0), 4096, {0xaa});
-  checkSharedMemoryDefinition(getSharedMemoryName(1, 1), 4096, {0xbb});
-  checkSharedMemoryDefinition(getSharedMemoryName(1, 2), 4096, {0xcc});
+              {"test3", {APInt(8, 0xcc), 4096, 2}}});
+  checkSharedMemoryDefinition(0, 4096, {0xaa});
+  checkSharedMemoryDefinition(1, 4096, {0xbb});
+  checkSharedMemoryDefinition(2, 4096, {0xcc});
 }
 
 TEST_F(SubprocessMemoryTest, DefinitionFillsCompletely) {
   testCommon({{"test1", {APInt(8, 0xaa), 4096, 0}},
               {"test2", {APInt(16, 0xbbbb), 4096, 1}},
-              {"test3", {APInt(24, 0xcccccc), 4096, 2}}},
-             2);
+              {"test3", {APInt(24, 0xcccccc), 4096, 2}}});
   std::vector<uint8_t> Test1Expected(512, 0xaa);
   std::vector<uint8_t> Test2Expected(512, 0xbb);
   std::vector<uint8_t> Test3Expected(512, 0xcc);
-  checkSharedMemoryDefinition(getSharedMemoryName(2, 0), 4096, Test1Expected);
-  checkSharedMemoryDefinition(getSharedMemoryName(2, 1), 4096, Test2Expected);
-  checkSharedMemoryDefinition(getSharedMemoryName(2, 2), 4096, Test3Expected);
+  checkSharedMemoryDefinition(0, 4096, Test1Expected);
+  checkSharedMemoryDefinition(1, 4096, Test2Expected);
+  checkSharedMemoryDefinition(2, 4096, Test3Expected);
 }
 
 // The following test is only supported on little endian systems.
@@ -110,7 +85,7 @@ TEST_F(SubprocessMemoryTest, DISABLED_DefinitionEndTruncation) {
 #else
 TEST_F(SubprocessMemoryTest, DefinitionEndTruncation) {
 #endif
-  testCommon({{"test1", {APInt(48, 0xaabbccddeeff), 4096, 0}}}, 3);
+  testCommon({{"test1", {APInt(48, 0xaabbccddeeff), 4096, 0}}});
   std::vector<uint8_t> Test1Expected(512, 0);
   // order is reversed since we're assuming a little endian system.
   for (size_t I = 0; I < Test1Expected.size(); ++I) {
@@ -134,7 +109,7 @@ TEST_F(SubprocessMemoryTest, DefinitionEndTruncation) {
       Test1Expected[I] = 0xaa;
     }
   }
-  checkSharedMemoryDefinition(getSharedMemoryName(3, 0), 4096, Test1Expected);
+  checkSharedMemoryDefinition(0, 4096, Test1Expected);
 }
 
 #endif // __linux__ && !__ANDROID__ && !(__powerpc__ || __s390x__ || __sparc__)

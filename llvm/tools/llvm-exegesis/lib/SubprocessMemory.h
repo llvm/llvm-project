@@ -17,15 +17,7 @@
 
 #include "BenchmarkResult.h"
 #include "llvm/ADT/StringMap.h"
-#include <string>
 #include <vector>
-
-#ifdef _MSC_VER
-typedef int pid_t;
-#else
-#include <sys/types.h>
-#endif // _MSC_VER
-
 
 namespace llvm {
 namespace exegesis {
@@ -35,34 +27,35 @@ public:
   static constexpr size_t AuxiliaryMemoryOffset = 1;
   static constexpr size_t AuxiliaryMemorySize = 4096;
 
-  // Gets the thread ID for the calling thread.
-  static long getCurrentTID();
+  SubprocessMemory() = default;
+  SubprocessMemory(const SubprocessMemory &) = delete;
+  SubprocessMemory &operator=(const SubprocessMemory &) = delete;
 
-  Error initializeSubprocessMemory(pid_t ProcessID);
+  Error initializeSubprocessMemory();
 
-  // The following function sets up memory definitions. It creates shared
-  // memory objects for the definitions and fills them with the specified
-  // values. Arguments: MemoryDefinitions - A map from memory value names to
-  // MemoryValues, ProcessID - The ID of the current process.
-  Error addMemoryDefinition(StringMap<MemoryValue> MemoryDefinitions,
-                            pid_t ProcessID);
+  // The following function sets up memory definitions. It creates
+  // shared memory objects for the definitions and fills them with the
+  // specified values.
+  Error addMemoryDefinition(StringMap<MemoryValue> MemoryDefinitions);
 
-  // The following function sets up the auxiliary memory by opening shared
-  // memory objects backing memory definitions and putting file descriptors
-  // into appropriate places. Arguments: MemoryDefinitions - A map from memory
-  // values names to Memoryvalues, ParentPID - The ID of the process that
-  // setup the memory definitions, CounterFileDescriptor - The file descriptor
-  // for the performance counter that will be placed in the auxiliary memory
-  // section.
-  static Expected<int>
-  setupAuxiliaryMemoryInSubprocess(StringMap<MemoryValue> MemoryDefinitions,
-                                   pid_t ParentPID, long ParentTID,
-                                   int CounterFileDescriptor);
+  // The following function sets up the auxiliary memory by writing the counter
+  // file descriptor and memory definition file descriptors into the auxiliary
+  // memory section.
+  Expected<int>
+  setupAuxiliaryMemoryInSubprocess(int CounterFileDescriptor) const;
+
+  Expected<int> getMemoryDefinitionFD(size_t DefinitionIndex) const;
 
   ~SubprocessMemory();
 
 private:
-  std::vector<std::string> SharedMemoryNames;
+  struct MemoryDefinitionFD {
+    size_t Index;
+    int FD;
+  };
+
+  int AuxiliaryMemoryFD = -1;
+  std::vector<MemoryDefinitionFD> MemoryDefinitionFDs;
 };
 
 } // namespace exegesis

@@ -442,16 +442,14 @@ private:
     }
 
     SubprocessMemory SPMemory;
-    Error MemoryInitError = SPMemory.initializeSubprocessMemory(getpid());
+    Error MemoryInitError = SPMemory.initializeSubprocessMemory();
     if (MemoryInitError)
       return MemoryInitError;
 
-    Error AddMemDefError =
-        SPMemory.addMemoryDefinition(Key.MemoryValues, getpid());
+    Error AddMemDefError = SPMemory.addMemoryDefinition(Key.MemoryValues);
     if (AddMemDefError)
       return AddMemDefError;
 
-    long ParentTID = SubprocessMemory::getCurrentTID();
     pid_t ParentOrChildPID = fork();
 
     if (ParentOrChildPID == -1) {
@@ -469,7 +467,7 @@ private:
       // Unregister handlers, signal handling is now handled through ptrace in
       // the host process.
       sys::unregisterHandlers();
-      runChildSubprocess(PipeFiles[0], Key, ParentTID);
+      runChildSubprocess(PipeFiles[0], Key, SPMemory);
       // The child process terminates in the above function, so we should never
       // get to this point.
       llvm_unreachable("Child process didn't exit when expected.");
@@ -491,7 +489,7 @@ private:
   }
 
   [[noreturn]] void runChildSubprocess(int Pipe, const BenchmarkKey &Key,
-                                       long ParentTID) const {
+                                       const SubprocessMemory &SPMemory) const {
     // Disable core dumps in the child process as otherwise everytime we
     // encounter an execution failure like a segmentation fault, we will create
     // a core dump. We report the information directly rather than require the
@@ -499,8 +497,6 @@ private:
     disableCoreDumps();
 
     // The following occurs within the benchmarking subprocess.
-    pid_t ParentPID = getppid();
-
     Expected<int> CounterFileDescriptorOrError =
         getFileDescriptorFromSocket(Pipe);
 
@@ -559,8 +555,7 @@ private:
     mprotect(FunctionDataCopy, FunctionDataCopySize, PROT_READ | PROT_EXEC);
 
     Expected<int> AuxMemFDOrError =
-        SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
-            Key.MemoryValues, ParentPID, ParentTID, CounterFileDescriptor);
+        SPMemory.setupAuxiliaryMemoryInSubprocess(CounterFileDescriptor);
     if (!AuxMemFDOrError)
       exit(ChildProcessExitCodeE::AuxiliaryMemorySetupFailed);
 
