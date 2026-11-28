@@ -510,6 +510,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   // Set DAG combine for LA32 and LA64.
   if (Subtarget.hasBasicF()) {
     setTargetDAGCombine(ISD::SINT_TO_FP);
+    setTargetDAGCombine({ISD::FP_TO_SINT, ISD::FP_TO_SINT_SAT});
   }
 
   setTargetDAGCombine(ISD::AND);
@@ -540,7 +541,6 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
     setTargetDAGCombine(ISD::BITCAST);
     setTargetDAGCombine(ISD::VSELECT);
-    setTargetDAGCombine(ISD::FP_TO_SINT);
     setTargetDAGCombine(ISD::FP_TO_UINT);
     setTargetDAGCombine(ISD::UINT_TO_FP);
     setTargetDAGCombine(ISD::ZERO_EXTEND);
@@ -9206,6 +9206,70 @@ static SDValue performUINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Return the FTINT node that converts with the rounding of \p RoundOpc, or 0.
+static unsigned getRoundingFTINTOpcode(unsigned RoundOpc) {
+  switch (RoundOpc) {
+  case ISD::FFLOOR:
+    return LoongArchISD::FTINTRM;
+  case ISD::FCEIL:
+    return LoongArchISD::FTINTRP;
+  case ISD::FROUNDEVEN:
+    return LoongArchISD::FTINTRNE;
+  case ISD::FRINT:
+    return LoongArchISD::FTINT_CURRENT;
+  default:
+    return 0;
+  }
+}
+
+// Fold rounding into a scalar FP_TO_SINT or FP_TO_SINT_SAT before the rounding
+// operation can expand to a libcall or an LSX instruction. The generic DAG
+// combiner already removes FTRUNC.
+static SDValue
+performScalarFP_TO_SINTCombine(SDNode *N, SelectionDAG &DAG,
+                               TargetLowering::DAGCombinerInfo &DCI,
+                               const LoongArchSubtarget &Subtarget) {
+  if (!DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  EVT DstVT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  if (!DstVT.isScalarInteger() || (SrcVT != MVT::f32 && SrcVT != MVT::f64) ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(SrcVT))
+    return SDValue();
+
+  // Keep a shared rounding operation; folding would only extend the live range
+  // of its operand.
+  if (!Src.hasOneUse())
+    return SDValue();
+
+  unsigned Opc = getRoundingFTINTOpcode(Src.getOpcode());
+  if (!Opc)
+    return SDValue();
+
+  // FTINT* saturates to the width of its result, so FP_TO_SINT_SAT can only be
+  // folded at a native width. Narrower FP_TO_SINT results are converted as i32
+  // since out-of-range values are poison.
+  unsigned Width = DstVT.getSizeInBits();
+  if (N->getOpcode() == ISD::FP_TO_SINT_SAT) {
+    if (cast<VTSDNode>(N->getOperand(1))->getVT().getSizeInBits() != Width)
+      return SDValue();
+  } else if (Width < 32) {
+    Width = 32;
+  }
+  if (Width != 32 &&
+      (Width != 64 || !Subtarget.is64Bit() || !Subtarget.hasBasicD()))
+    return SDValue();
+
+  SDLoc DL(N);
+  MVT IntVT = MVT::getIntegerVT(Width);
+  SDValue Conv = DAG.getNode(Opc, DL, Width == 32 ? MVT::f32 : MVT::f64,
+                             Src.getOperand(0));
+  SDValue Res = DAG.getBitcast(IntVT, Conv);
+  return DstVT == IntVT ? Res : DAG.getNode(ISD::TRUNCATE, DL, DstVT, Res);
+}
+
 // Using [X]VFTINTRZ_W_D for double to signed 32-bit integer conversion.
 // For example:
 //   v4i32 = fp_to_sint (concat_vectors v2f64, v2f64)
@@ -9848,8 +9912,13 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UINT_TO_FP:
     return performUINT_TO_FPCombine(N, DAG, DCI, Subtarget);
   case ISD::FP_TO_SINT:
+    if (!N->getValueType(0).isVector())
+      return performScalarFP_TO_SINTCombine(N, DAG, DCI, Subtarget);
+    [[fallthrough]];
   case ISD::FP_TO_UINT:
     return performFP_TO_INTCombine(N, DAG, DCI, Subtarget);
+  case ISD::FP_TO_SINT_SAT:
+    return performScalarFP_TO_SINTCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BITREV_W:
     return performBITREV_WCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BR_CC:
