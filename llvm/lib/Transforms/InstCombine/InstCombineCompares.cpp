@@ -121,54 +121,12 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
 Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     LoadInst *LI, CmpPredicate Pred, Constant *RHSC, Instruction &CtxI,
     ConstantInt *AndCst) {
-  Value *Ptr = LI->getPointerOperand();
-  auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(Ptr));
-  if (LI->isVolatile() || !GV || !GV->isConstant() ||
-      !GV->hasDefinitiveInitializer())
-    return nullptr;
-
-  Type *EltTy = LI->getType();
-  TypeSize EltSize = DL.getTypeStoreSize(EltTy);
-  if (EltSize.isScalable())
-    return nullptr;
-
-  LinearExpression Expr = decomposeLinearExpression(DL, Ptr);
-  if (!Expr.Index || Expr.BasePtr != GV || Expr.Offset.getBitWidth() > 64)
-    return nullptr;
-
-  Constant *Init = GV->getInitializer();
-  TypeSize GlobalSize = DL.getTypeAllocSize(Init->getType());
-
-  Value *Idx = Expr.Index;
-  const APInt &Stride = Expr.Scale;
-  const APInt &ConstOffset = Expr.Offset;
-
-  // Allow an additional context offset, but only within the stride.
-  if (!ConstOffset.ult(Stride))
-    return nullptr;
-
-  // Don't handle overlapping loads for now.
-  if (!Stride.uge(EltSize.getFixedValue()))
-    return nullptr;
-
-  // - With nuw: `Idx * Stride` does not wrap and all strides are valid.
-  // - With nusw: `Idx * Stride` does not wrap as signed, and the following
-  //   enumeration over ArrayElementCount is valid so long as the stride is
-  //   positive.
-  // - Without nusw or nuw: `Idx * Stride` is computed modulo 2^N (see MaskIdx
-  //   below), and the masking in MaskIdx below is only exact when the stride
-  //   is a power of two.
-  bool StrideIsValid =
-      Expr.Flags.hasNoUnsignedWrap() ||
-      (Expr.Flags.hasNoUnsignedSignedWrap() ? !Stride.isNegative()
-                                            : Stride.isPowerOf2());
-  if (!StrideIsValid)
+  std::optional<ConstGlobalLoad> GlobalIter = ConstGlobalLoad::fromLoadInst(LI);
+  if (!GlobalIter)
     return nullptr;
 
   // Don't blow up on huge arrays.
-  uint64_t ArrayElementCount =
-      divideCeil((GlobalSize.getFixedValue() - ConstOffset.getZExtValue()),
-                 Stride.getZExtValue());
+  const uint64_t ArrayElementCount = GlobalIter->elementCount();
   if (ArrayElementCount > CLOpts.maxarray_size)
     return nullptr;
 
@@ -201,9 +159,8 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   uint64_t MagicBitvector = 0;
 
   // Scan the array and see if one of our patterns matches.
-  APInt Offset = ConstOffset;
-  for (unsigned i = 0, e = ArrayElementCount; i != e; ++i, Offset += Stride) {
-    Constant *Elt = ConstantFoldLoadFromConst(Init, EltTy, Offset, DL);
+  for (uint64_t i = 0; i < ArrayElementCount; i += 1) {
+    Constant *Elt = GlobalIter->elementAt(i);
     if (!Elt)
       return nullptr;
 
@@ -291,28 +248,10 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // Now that we've scanned the entire array, emit our new comparison(s).  We
   // order the state machines in complexity of the generated code.
 
-  // If none of nusw (implied by inbounds) or nuw is present, Idx * Stride can
-  // overflow.
-  // Let's assume that Stride is 2 and the wanted value is at offset 0.
-  // Then, there are two possible values for Idx to match offset 0:
-  // 0x00..00, 0x80..00.
-  // Emitting 'icmp eq Idx, 0' isn't correct in this case because the
-  // comparison is false if Idx was 0x80..00.
-  // We need to erase the highest countTrailingZeros(Stride) bits of Idx.
-  auto MaskIdx = [&](Value *Idx) {
-    if (!Expr.Flags.hasNoUnsignedWrap() &&
-        !Expr.Flags.hasNoUnsignedSignedWrap() && Stride.countr_zero() != 0) {
-      Value *Mask = Constant::getAllOnesValue(Idx->getType());
-      Mask = Builder.CreateLShr(Mask, Stride.countr_zero());
-      Idx = Builder.CreateAnd(Idx, Mask);
-    }
-    return Idx;
-  };
-
   // If the comparison is only true for one or two elements, emit direct
   // comparisons.
   if (SecondTrueElement != Overdefined) {
-    Idx = MaskIdx(Idx);
+    Value *Idx = GlobalIter->buildIndex(Builder);
     // None true -> false.
     if (FirstTrueElement == Undefined)
       return replaceInstUsesWith(CtxI, Builder.getFalse());
@@ -333,7 +272,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // If the comparison is only false for one or two elements, emit direct
   // comparisons.
   if (SecondFalseElement != Overdefined) {
-    Idx = MaskIdx(Idx);
+    Value *Idx = GlobalIter->buildIndex(Builder);
     // None false -> true.
     if (FirstFalseElement == Undefined)
       return replaceInstUsesWith(CtxI, Builder.getTrue());
@@ -356,7 +295,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // where it is true, emit the range check.
   if (TrueRangeEnd != Overdefined) {
     assert(TrueRangeEnd != FirstTrueElement && "Should emit single compare");
-    Idx = MaskIdx(Idx);
+    Value *Idx = GlobalIter->buildIndex(Builder);
 
     // Generate (i-FirstTrue) <u (TrueRangeEnd-FirstTrue+1).
     if (FirstTrueElement) {
@@ -372,7 +311,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // False range check.
   if (FalseRangeEnd != Overdefined) {
     assert(FalseRangeEnd != FirstFalseElement && "Should emit single compare");
-    Idx = MaskIdx(Idx);
+    Value *Idx = GlobalIter->buildIndex(Builder);
     // Generate (i-FirstFalse) >u (FalseRangeEnd-FirstFalse).
     if (FirstFalseElement) {
       Value *Offs = ConstantInt::getSigned(Idx->getType(), -FirstFalseElement);
@@ -388,18 +327,15 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // of this load, replace it with computation that does:
   //   ((magic_cst >> i) & 1) != 0
   {
-    Type *Ty = nullptr;
-
     // Look for an appropriate type:
     // - The type of Idx if the magic fits
     // - The smallest fitting legal type
-    if (ArrayElementCount <= Idx->getType()->getIntegerBitWidth())
-      Ty = Idx->getType();
-    else
-      Ty = DL.getSmallestLegalIntType(Init->getContext(), ArrayElementCount);
+    Type *Ty = GlobalIter->getIndexType();
+    if (ArrayElementCount > Ty->getIntegerBitWidth())
+      Ty = DL.getSmallestLegalIntType(RHSC->getContext(), ArrayElementCount);
 
     if (Ty) {
-      Idx = MaskIdx(Idx);
+      Value *Idx = GlobalIter->buildIndex(Builder);
       Value *V = Builder.CreateIntCast(Idx, Ty, false);
       V = Builder.CreateLShr(ConstantInt::get(Ty, MagicBitvector), V);
       V = Builder.CreateAnd(ConstantInt::get(Ty, 1), V);

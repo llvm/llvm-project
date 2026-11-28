@@ -19,6 +19,7 @@
 #include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace llvm {
 
@@ -26,6 +27,7 @@ class BatchAAResults;
 class AssumptionCache;
 class DataLayout;
 class DominatorTree;
+class IRBuilderBase;
 class Instruction;
 class LoadInst;
 struct LoadStoreInstProperties;
@@ -238,6 +240,58 @@ struct LinearExpression {
 /// multiple GEPs.
 LLVM_ABI LinearExpression decomposeLinearExpression(const DataLayout &DL,
                                                     Value *Ptr);
+
+/// A helper to analyze a load instruction that loads from a constant global.
+/// Provides an API to access the elements of the global.
+///
+/// Currently the analysis requires constant offset to the global to be less
+/// than the stride, so the global is always accessed with 0 as the first valid
+/// index.
+class ConstGlobalLoad {
+  const DataLayout &DL;
+  LinearExpression Expr;
+  uint64_t ElementCount;
+  GlobalVariable *GV;
+  Type *EltTy;
+
+  ConstGlobalLoad(const DataLayout &DL, LinearExpression Expr,
+                  uint64_t ArrayElementCount, GlobalVariable *GV, Type *EltTy)
+      : DL(DL), Expr(Expr), ElementCount(ArrayElementCount), GV(GV),
+        EltTy(EltTy) {}
+
+public:
+  /// Analyze a load instruction to a linear expression that loads from a
+  /// constant global.
+  LLVM_ABI static std::optional<ConstGlobalLoad> fromLoadInst(LoadInst *LI);
+
+  /// Get the element of the global that the load instruction reads when its
+  /// linear expression's index value is the given value.
+  ///
+  /// Currently the first index value is always 0, so the global can be iterated
+  /// with indices from 0 to `elementCount`.
+  ///
+  /// This uses `ConstantFoldLoadFromConst` and returns null under the same
+  /// circumstances that `ConstantLoadFromConst` returns null. (e.g. when the
+  /// value being loaded cannot be reinterpreted as the load type)
+  LLVM_ABI Constant *elementAt(uint64_t Idx) const;
+
+  /// Number of elements that can be read from the global.
+  ///
+  /// Currently the first element always has index 0, so the valid index range
+  /// is `[0, elementCount())`.
+  uint64_t elementCount() const { return ElementCount; }
+
+  /// Get the index value of the linear expression that can be compared against
+  /// known index values. E.g. if `elementAt(5)` returns a constant, then the
+  /// load instruction, when the returned value here is '5' reads the same
+  /// constant.
+  LLVM_ABI Value *buildIndex(IRBuilderBase &Builder) const;
+
+  /// Returns the type of the index returned by `buildIndex`.
+  /// This does not build the index, so it can be used to check the type without
+  /// generating the masking instructions for the index.
+  Type *getIndexType() const { return Expr.Index->getType(); }
+};
 }
 
 #endif
