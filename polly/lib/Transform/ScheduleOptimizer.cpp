@@ -55,6 +55,7 @@
 #include "polly/ScopInfo.h"
 #include "polly/Support/ISLOStream.h"
 #include "polly/Support/ISLTools.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -123,6 +124,11 @@ static cl::opt<int> PrevectorWidth(
 static cl::opt<bool> FirstLevelTiling("polly-tiling",
                                       cl::desc("Enable loop tiling"),
                                       cl::init(true), cl::cat(PollyCategory));
+
+static cl::opt<bool> TileOuterBands(
+    "polly-tile-outer-bands",
+    cl::desc("Also tile permutable bands that contain other loops"),
+    cl::init(true), cl::cat(PollyCategory));
 
 static cl::opt<int> FirstLevelDefaultTileSize(
     "polly-default-tile-size",
@@ -400,8 +406,10 @@ private:
 
   /// Apply tiling optimizations on the bands in the schedule tree.
   ///
-  /// @param Node The schedule node to (possibly) optimize.
-  static isl::schedule_node applyTileBandOpt(isl::schedule_node Node);
+  /// @param Node        The schedule node to (possibly) optimize.
+  /// @param IsInnermost Whether @p Node contains no other loops.
+  static isl::schedule_node applyTileBandOpt(isl::schedule_node Node,
+                                             bool IsInnermost);
 
   /// Apply prevectorization on the bands in the schedule tree.
   ///
@@ -581,6 +589,51 @@ static bool isOneTimeParentBandNode(isl::schedule_node Node) {
   return true;
 }
 
+/// Check whether an outer band has a tileable child and a parameter-independent
+/// schedule over a subtree without anchored nodes.
+static bool isTileableOuterBand(isl::schedule_node Node) {
+  auto Child = Node.child(0);
+  if (Child.isa<isl::schedule_node_mark>()) {
+    std::string Name = Child.as<isl::schedule_node_mark>().get_id().get_name();
+    // Tile markers wrap an already tiled inner band. Point markers are not
+    // accepted, so the tile band inserted by tileNode is not tiled again.
+    if (Name != "1st level tiling - Tiles" &&
+        Name != "2nd level tiling - Tiles" && Name != "Register tiling - Tiles")
+      return false;
+    Child = Child.child(0);
+  }
+  if (!Child.isa<isl::schedule_node_sequence>() &&
+      !Child.isa<isl::schedule_node_set>() &&
+      !Child.isa<isl::schedule_node_band>())
+    return false;
+
+  // isl cannot tile a band above an extension node, as inserted by the
+  // optimization of matrix multiplications.
+  if (isl_schedule_node_is_subtree_anchored(Node.get()) != isl_bool_false)
+    return false;
+
+  // If the schedule of the band depends on parameters, the statements in it are
+  // typically shifted against each other by parametric offsets. The tile
+  // boundaries of each statement then depend on the parameters modulo the tile
+  // size, and the AST generator has to distinguish all these cases for every
+  // loop nested in the band, which blows up the generated code.
+  isl::union_map Partial = isl::union_map::from(
+      Node.as<isl::schedule_node_band>().get_partial_schedule());
+  isl::map_list Maps = Partial.get_map_list();
+  isl::size NumMaps = Maps.size();
+  if (NumMaps.is_error())
+    return false;
+  for (auto [i, Map] : llvm::enumerate(Maps)) {
+    isl::size NumParams = Map.dim(isl::dim::param);
+    if (NumParams.is_error() ||
+        !Map.involves_dims(isl::dim::param, 0, unsignedFromIslSize(NumParams))
+             .is_false())
+      return false;
+  }
+
+  return true;
+}
+
 bool ScheduleTreeOptimizer::isTileableBandNode(isl::schedule_node Node) {
   if (!isOneTimeParentBandNode(Node))
     return false;
@@ -593,7 +646,10 @@ bool ScheduleTreeOptimizer::isTileableBandNode(isl::schedule_node Node) {
   if (unsignedFromIslSize(Space.dim(isl::dim::set)) <= 1u)
     return false;
 
-  return isSimpleInnermostBand(Node);
+  if (isSimpleInnermostBand(Node))
+    return true;
+
+  return TileOuterBands && isTileableOuterBand(Node);
 }
 
 bool ScheduleTreeOptimizer::isPMOptimizableBandNode(isl::schedule_node Node) {
@@ -615,7 +671,8 @@ static SmallVector<int, 4> resolveTileSizes(isl::schedule_node Node,
 }
 
 __isl_give isl::schedule_node
-ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node) {
+ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node,
+                                        bool IsInnermost) {
   if (FirstLevelTiling) {
     // Resolve the tile size of every dimension before tiling splits the band.
     SmallVector<int, 4> Sizes;
@@ -643,7 +700,9 @@ ScheduleTreeOptimizer::applyTileBandOpt(isl::schedule_node Node) {
       Node = isolateCompleteTiles(Node, Sizes);
   }
 
-  if (RegisterTiling) {
+  // Register tiling unrolls the point loops, which would duplicate the loops
+  // nested in them.
+  if (RegisterTiling && IsInnermost) {
     SmallVector<int, 4> Sizes;
     if (IsolateCompleteRegisterTiles)
       Sizes =
@@ -696,10 +755,11 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *NodeArg,
   if (!isTileableBandNode(Node))
     return Node.release();
 
+  bool IsInnermost = isSimpleInnermostBand(Node);
   if (OAI->Postopts)
-    Node = applyTileBandOpt(Node);
+    Node = applyTileBandOpt(Node, IsInnermost);
 
-  if (OAI->Prevect) {
+  if (OAI->Prevect && IsInnermost) {
     IslQuotaScope MaxScope = OAI->MaxOpGuard.enter();
 
     // FIXME: Prevectorization requirements are different from those checked by

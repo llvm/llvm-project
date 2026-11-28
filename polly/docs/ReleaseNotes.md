@@ -20,6 +20,8 @@ branch.
 :::
 ::::
 
+- `-polly-tile-outer-bands` enables tiling of outer permutable bands by default.
+  Use `-polly-tile-outer-bands=false` to disable it.
 - Polly's options are passed to `opt` with `-plugin-arg=Polly,<option>`,
   whether Polly is linked into `opt` or loaded as a plugin, e.g.
   `opt -load-pass-plugin=LLVMPolly.so -plugin-arg=Polly,-polly-process-unprofitable`.
