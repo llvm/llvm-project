@@ -1855,6 +1855,23 @@ void (*(&fp_ref_to_array)[4])(void) EXCLUSIVE_LOCK_FUNCTION(mu1) = fp_array; // 
 [[clang::acquire_capability(mu1)]] void (*fp_cxx11)(void);
 [[clang::requires_capability(mu1)]] void (*fp_cxx11_req)(void);
 
+class SCOPED_LOCKABLE ScopedLockForParam {};
+typedef bool (*GoodTryLockFn)(void);
+template <typename T>
+struct DependentTrylockParam {
+  void f(T p EXCLUSIVE_TRYLOCK_FUNCTION(true, mu1)); // \
+    // expected-warning {{'exclusive_trylock_function' attribute on a variable requires the variable to be of function pointer type}}
+};
+DependentTrylockParam<GoodTryLockFn> dependent_trylock_param_ok;
+DependentTrylockParam<ScopedLockForParam &> dependent_trylock_param_bad; // \
+  // expected-note {{in instantiation of template class 'FunctionPointers::DependentTrylockParam<FunctionPointers::ScopedLockForParam &>' requested here}}
+
+#if __cplusplus >= 201103L
+template <bool... Bs>
+bool tac_pack_success_fn() EXCLUSIVE_TRYLOCK_FUNCTION(Bs..., mu1); // \
+  // expected-error {{'exclusive_trylock_function' attribute requires parameter 1 to be int or bool}}
+#endif
+
 template <typename FuncPtr>
 struct DependentFPFields {
   FuncPtr lock EXCLUSIVE_LOCK_FUNCTION(mu1); // \

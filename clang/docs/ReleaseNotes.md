@@ -1048,6 +1048,21 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed rejection of standard attributes following GNU attributes on
   declarations inside namespaces. (#GH240537)
 
+- Fixed the template instantiation of thread safety attributes. An
+  `acquire_capability`, `release_capability`, `assert_capability` or
+  `try_acquire_capability` attribute whose capability arguments are a parameter
+  pack that expands to no arguments is now ignored instead of being applied to
+  the implicit object argument, also on members of capability classes. Only
+  constructors of `scoped_lockable` classes keep the attribute; base classes
+  are not taken into account for this. An `acquire_capability` attribute
+  without arguments on a constructor of a class that is both
+  `scoped_lockable` and a capability no longer acquires the constructed
+  object, which caused false positives.
+  `try_acquire_capability` and `assert_capability` on `scoped_lockable`
+  reference parameters are now rejected during instantiation as for
+  non-template declarations, and a pack expansion as the success value of
+  `try_acquire_capability` is now rejected.
+
 - Fixed a crash when using a zero-argument call to an undeclared
   `__CFStringMakeConstantString` as a format string. (#GH225034)
 
