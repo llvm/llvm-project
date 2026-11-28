@@ -551,6 +551,8 @@ public:
   void Post(const parser::OmpIteration &x);
   void Post(const parser::OmpMapClause &x);
   void Post(const parser::OmpToClause &x);
+  bool Pre(const parser::OmpTaskReductionClause &x);
+  void ResolveOmpReductionIdentifier(const parser::OmpReductionIdentifier &opr);
 
   void Post(const parser::Name &);
 
@@ -2591,38 +2593,12 @@ bool OmpAttributeVisitor::Pre(const parser::OmpClause::Reduction &x) {
   ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
 
   if (auto &modifiers{OmpGetModifiers(x.v)}) {
-    auto createDummyProcSymbol = [&](const parser::Name *name) {
-      // If name resolution failed, create a dummy symbol
-      const auto namePair{
-          currScope().try_emplace(name->source, Attrs{}, ProcEntityDetails{})};
-      auto &newSymbol{*namePair.first->second};
-      if (context_.intrinsics().IsIntrinsic(name->ToString())) {
-        newSymbol.attrs().set(Attr::INTRINSIC);
-      }
-      name->symbol = &newSymbol;
-    };
-
     for (auto &mod : *modifiers) {
       if (!std::holds_alternative<parser::OmpReductionIdentifier>(mod.u)) {
         continue;
       }
-      auto &opr{std::get<parser::OmpReductionIdentifier>(mod.u)};
-      if (auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
-        if (auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
-          if (!name->symbol) {
-            if (!ResolveName(name)) {
-              createDummyProcSymbol(name);
-            }
-          }
-        }
-        if (auto *procRef{parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
-          if (!procRef->v.thing.Component().symbol) {
-            if (!ResolveName(&procRef->v.thing.Component())) {
-              createDummyProcSymbol(&procRef->v.thing.Component());
-            }
-          }
-        }
-      }
+      ResolveOmpReductionIdentifier(
+          std::get<parser::OmpReductionIdentifier>(mod.u));
     }
     using ReductionModifier = parser::OmpReductionModifier;
     if (auto *maybeModifier{
@@ -2655,9 +2631,56 @@ bool OmpAttributeVisitor::Pre(const parser::OmpClause::UseDevicePtr &x) {
   return false;
 }
 
+bool OmpAttributeVisitor::Pre(const parser::OmpTaskReductionClause &x) {
+  if (auto &modifiers{OmpGetModifiers(x)}) {
+    if (auto *ident{
+            OmpGetUniqueModifier<parser::OmpReductionIdentifier>(modifiers)}) {
+      ResolveOmpReductionIdentifier(*ident);
+    }
+  }
+  return true;
+}
+
+void OmpAttributeVisitor::ResolveOmpReductionIdentifier(
+    const parser::OmpReductionIdentifier &opr) {
+  auto createDummyProcSymbol = [&](const parser::Name *name) {
+    // If name resolution failed, create a dummy symbol
+    const auto namePair{
+        currScope().try_emplace(name->source, Attrs{}, ProcEntityDetails{})};
+    auto &newSymbol{*namePair.first->second};
+    if (context_.intrinsics().IsIntrinsic(name->ToString())) {
+      newSymbol.attrs().set(Attr::INTRINSIC);
+    }
+    name->symbol = &newSymbol;
+  };
+
+  if (auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
+    if (auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
+      if (!name->symbol) {
+        if (!ResolveName(name)) {
+          createDummyProcSymbol(name);
+        }
+      }
+    }
+    if (auto *procRef{parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
+      if (!procRef->v.thing.Component().symbol) {
+        if (!ResolveName(&procRef->v.thing.Component())) {
+          createDummyProcSymbol(&procRef->v.thing.Component());
+        }
+      }
+    }
+  }
+}
+
 bool OmpAttributeVisitor::Pre(const parser::OmpInReductionClause &x) {
   ResolveOmpObjectList(
       *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpInReduction);
+  if (auto &modifiers{OmpGetModifiers(x)}) {
+    if (auto *ident{
+            OmpGetUniqueModifier<parser::OmpReductionIdentifier>(modifiers)}) {
+      ResolveOmpReductionIdentifier(*ident);
+    }
+  }
   return false;
 }
 
