@@ -672,7 +672,53 @@ public:
   }
 };
 
-bool EnsureFunctionAnalysis::isACallToEnsureFn(const clang::Expr *E) const {
+/// \returns true if E is `this` or `*this`, possibly wrapped in casts or in
+/// calls to pointer conversion functions (e.g. downcast<Derived>(*this)).
+static bool isThisOrConversionOfThis(const Expr *E) {
+  while (E) {
+    E = E->IgnoreParenCasts();
+    if (auto *UO = dyn_cast<UnaryOperator>(E)) {
+      if (UO->getOpcode() != UO_Deref)
+        return false;
+      E = UO->getSubExpr();
+      continue;
+    }
+    if (auto *Call = dyn_cast<CallExpr>(E)) {
+      auto *Callee = Call->getDirectCallee();
+      if (!Callee || Call->getNumArgs() != 1 || !isPtrConversion(Callee))
+        return false;
+      E = Call->getArg(0);
+      continue;
+    }
+    return isa<CXXThisExpr>(E);
+  }
+  return false;
+}
+
+/// Accepts a body whose every return statement returns `this` or `*this`,
+/// possibly converted (e.g. static_cast<Derived*>(this)).
+class ReturnsThisVisitor : public ConstStmtVisitor<ReturnsThisVisitor, bool> {
+public:
+  bool VisitStmt(const Stmt *S) {
+    for (const Stmt *Child : S->children()) {
+      if (Child && !Visit(Child))
+        return false;
+    }
+    return true;
+  }
+
+  bool VisitReturnStmt(const ReturnStmt *RS) {
+    auto *RV = RS->getRetValue();
+    return RV && isThisOrConversionOfThis(RV);
+  }
+};
+
+/// Runs VisitorT over the body of the non-virtual member function called by E,
+/// caching the result per callee.
+template <typename VisitorT>
+static bool
+analyzeMemberCallee(const Expr *E,
+                    llvm::DenseMap<const FunctionDecl *, bool> &Cache) {
   auto *MCE = dyn_cast<CXXMemberCallExpr>(E);
   if (!MCE)
     return false;
@@ -684,8 +730,17 @@ bool EnsureFunctionAnalysis::isACallToEnsureFn(const clang::Expr *E) const {
     return false;
   auto [CacheIt, IsNew] = Cache.insert(std::make_pair(Callee, false));
   if (IsNew)
-    CacheIt->second = EnsureFunctionVisitor().Visit(Body);
+    CacheIt->second = VisitorT().Visit(Body);
   return CacheIt->second;
+}
+
+bool EnsureFunctionAnalysis::isACallToEnsureFn(const clang::Expr *E) const {
+  return analyzeMemberCallee<EnsureFunctionVisitor>(E, Cache);
+}
+
+bool CastOfThisFunctionAnalysis::isACallToCastOfThisFn(
+    const clang::Expr *E) const {
+  return analyzeMemberCallee<ReturnsThisVisitor>(E, Cache);
 }
 
 } // namespace clang

@@ -105,6 +105,19 @@ public:
   bool isACallToEnsureFn(const Expr *E) const;
 };
 
+/// \returns true if E is a call to a non-virtual member function which always
+/// returns `this` or `*this`, possibly converted to another type by a cast or
+/// a pointer conversion function. The result has the same lifetime as the
+/// receiver, so callers must check that the receiver (the implicit object
+/// argument) is safe.
+class CastOfThisFunctionAnalysis {
+  using CacheTy = llvm::DenseMap<const FunctionDecl *, bool>;
+  mutable CacheTy Cache{};
+
+public:
+  bool isACallToCastOfThisFn(const Expr *E) const;
+};
+
 /// \returns name of AST node or empty string.
 template <typename T> std::string safeGetName(const T *ASTNode) {
   const auto *const ND = llvm::dyn_cast_or_null<clang::NamedDecl>(ASTNode);

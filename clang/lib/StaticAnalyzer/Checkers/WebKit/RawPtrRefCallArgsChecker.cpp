@@ -35,6 +35,7 @@ class RawPtrRefCallArgsChecker
 
   TrivialFunctionAnalysis TFA;
   EnsureFunctionAnalysis EFA;
+  CastOfThisFunctionAnalysis CTFA;
 
 protected:
   mutable BugReporter *BR;
@@ -319,6 +320,12 @@ public:
               originOutlivesCall(ArgOrigin))
             return true;
           if (EFA.isACallToEnsureFn(ArgOrigin)) {
+            auto *MCE = dyn_cast<CXXMemberCallExpr>(ArgOrigin);
+            assert(MCE);
+            if (isPtrOriginSafe(MCE->getImplicitObjectArgument()))
+              return true;
+          }
+          if (CTFA.isACallToCastOfThisFn(ArgOrigin)) {
             auto *MCE = dyn_cast<CXXMemberCallExpr>(ArgOrigin);
             assert(MCE);
             if (isPtrOriginSafe(MCE->getImplicitObjectArgument()))
