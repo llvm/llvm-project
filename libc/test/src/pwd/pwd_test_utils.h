@@ -29,7 +29,7 @@ class ScopedPasswdFile {
 
 public:
   ScopedPasswdFile(const char *file_path, const char *content) {
-    LIBC_NAMESPACE::internal::strlcpy(path, file_path, sizeof(path));
+    LIBC_NAMESPACE::internal::strlcpy(path, file_path);
 
     auto file_or = LIBC_NAMESPACE::openfile(path, "w");
     if (file_or.has_value()) {

@@ -24,8 +24,8 @@ LLVM_LIBC_FUNCTION(void *, memchr, (const void *src, int c, size_t n)) {
   [[clang::always_inline]]
 #endif
   return internal::find_first_character(
-      reinterpret_cast<const unsigned char *>(src),
-      static_cast<unsigned char>(c), n);
+      {reinterpret_cast<const unsigned char *>(src), n},
+      static_cast<unsigned char>(c));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

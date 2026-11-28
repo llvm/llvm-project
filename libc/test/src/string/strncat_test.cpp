@@ -74,3 +74,13 @@ TEST(LlvmLibcStrNCatTest, NonEmptyDest) {
   ASSERT_EQ(dest, result);
   ASSERT_STREQ(dest, "abcabc");
 }
+
+TEST(LlvmLibcStrNCatTest, ZeroCountAndUnterminatedSource) {
+  char dest[8] = "hi";
+  EXPECT_EQ(LIBC_NAMESPACE::strncat(dest, nullptr, 0), dest);
+  EXPECT_STREQ(dest, "hi");
+
+  const char src[3] = {'x', 'y', 'z'};
+  EXPECT_EQ(LIBC_NAMESPACE::strncat(dest, src, sizeof(src)), dest);
+  EXPECT_STREQ(dest, "hixyz");
+}

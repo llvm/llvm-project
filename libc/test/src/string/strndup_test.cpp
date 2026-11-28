@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/scope.h"
 #include "src/string/strndup.h"
 #include "test/UnitTest/Test.h"
 
@@ -48,4 +49,18 @@ TEST(LlvmLibcstrndupTest, NullPtr) {
   char *result = LIBC_NAMESPACE::strndup(nullptr, 0);
 
   ASSERT_EQ(result, static_cast<char *>(nullptr));
+}
+
+TEST(LlvmLibcstrndupTest, UnterminatedBoundedInput) {
+  const char buf[3] = {'a', 'b', 'c'};
+
+  char *result = LIBC_NAMESPACE::strndup(buf, sizeof(buf));
+  ASSERT_NE(result, nullptr);
+  LIBC_NAMESPACE::cpp::scope_exit free_result([result] { ::free(result); });
+  EXPECT_STREQ(result, "abc");
+
+  char *empty = LIBC_NAMESPACE::strndup(buf, 0);
+  ASSERT_NE(empty, nullptr);
+  LIBC_NAMESPACE::cpp::scope_exit free_empty([empty] { ::free(empty); });
+  EXPECT_STREQ(empty, "");
 }

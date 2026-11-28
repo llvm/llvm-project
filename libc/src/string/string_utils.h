@@ -16,6 +16,9 @@
 
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/bitset.h"
+#include "src/__support/CPP/optional.h"
+#include "src/__support/CPP/span.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
@@ -89,13 +92,50 @@ LIBC_INLINE char *string_token(char *__restrict src,
   return reinterpret_cast<char *>(tok_start);
 }
 
-LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
-                           size_t size) {
+// Bounded overload of string_token operating on a NUL-terminated span
+// (`rest.back() == '\0'`). Extracts the next token, NUL-terminates it in place,
+// and advances `rest` without reading or writing outside `rest`. The returned
+// span covers only the token characters (excluding the NUL terminator), while
+// guaranteeing `token.data()[token.size()] == '\0'`. Leaves `rest` unchanged
+// and returns nullopt if `rest` is empty or not NUL-terminated.
+template <bool SkipDelim = true>
+LIBC_INLINE constexpr cpp::optional<cpp::span<char>>
+string_token(cpp::span<char> &rest, cpp::string_view delimiters) {
+  if (rest.empty() || rest.back() != '\0')
+    return cpp::nullopt;
+
+  if constexpr (SkipDelim) {
+    size_t start = 0;
+    while (rest[start] != '\0' && delimiters.contains(rest[start]))
+      ++start;
+    if (rest[start] == '\0') {
+      rest = {};
+      return cpp::nullopt;
+    }
+    rest = rest.subspan(start);
+  }
+
+  size_t len = 0;
+  while (rest[len] != '\0' && !delimiters.contains(rest[len]))
+    ++len;
+
+  cpp::span<char> token = rest.first(len);
+  if (rest[len] != '\0') {
+    rest[len] = '\0';
+    rest = rest.subspan(len + 1);
+  } else {
+    rest = {};
+  }
+  return token;
+}
+
+LIBC_ALWAYS_INLINE size_t strlcpy(cpp::span<char> dst,
+                                  const char *__restrict src) {
   size_t len = internal::string_length(src);
-  if (!size)
+  if (dst.empty())
     return len;
-  size_t n = len < size - 1 ? len : size - 1;
-  inline_memcpy(dst, src, n);
+  size_t n = len < dst.size() - 1 ? len : dst.size() - 1;
+  inline_memcpy(dst.data(), src, n);
   dst[n] = '\0';
   return len;
 }
@@ -123,17 +163,20 @@ LIBC_INLINE constexpr static char *strrchr_implementation(const char *src,
   }
 }
 
-// Returns the first occurrence of 'ch' within the first 'n' characters of
-// 'src'. If 'ch' is not found, returns nullptr.
-LIBC_INLINE void *find_first_character(const unsigned char *src,
-                                       unsigned char ch, size_t max_strlen) {
-  return const_cast<void *>(find_first_character_impl(src, ch, max_strlen));
+// Returns the first occurrence of 'ch' within 'src'. If 'ch' is not found,
+// returns nullptr.
+LIBC_INLINE void *find_first_character(cpp::span<const unsigned char> src,
+                                       unsigned char ch) {
+  return const_cast<void *>(
+      find_first_character_impl(src.data(), ch, src.size()));
 }
 
-LIBC_INLINE size_t strnlen(const char *s, size_t max_len) {
+LIBC_INLINE size_t strnlen(cpp::span<const char> s) {
   const void *temp = internal::find_first_character(
-      reinterpret_cast<const unsigned char *>(s), '\0', max_len);
-  return temp ? reinterpret_cast<const char *>(temp) - s : max_len;
+      {reinterpret_cast<const unsigned char *>(s.data()), s.size()}, '\0');
+  return temp ? static_cast<size_t>(reinterpret_cast<const char *>(temp) -
+                                    s.data())
+              : s.size();
 }
 
 } // namespace internal

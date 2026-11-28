@@ -39,6 +39,9 @@ libc_support_library(
         "//libc/include:llvm_libc_types_size_t",
         "//libc/src/__support:common",
         "//libc/src/__support/CPP:bitset",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/CPP:type_traits",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
@@ -376,6 +379,7 @@ libc_function(
         ":utils",
         "//libc/include:llvm_libc_types_size_t",
         "//libc/src/__support:common",
+        "//libc/src/__support/CPP:span",
         "//libc/src/__support/macros:config",
     ],
 )
@@ -390,6 +394,7 @@ libc_function(
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
     ],
 )
 

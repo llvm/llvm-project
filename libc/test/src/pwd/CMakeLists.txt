@@ -79,6 +79,7 @@ add_libc_test(
     libc.hdr.types.size_t
     libc.hdr.types.struct_passwd
     libc.hdr.types.uid_t
+    libc.src.__support.CPP.span
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
     libc.src.pwd.endpwent
@@ -127,6 +128,7 @@ add_libc_test(
     libc.hdr.types.size_t
     libc.hdr.types.struct_passwd
     libc.hdr.types.uid_t
+    libc.src.__support.CPP.span
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
     libc.src.pwd.getpwuid

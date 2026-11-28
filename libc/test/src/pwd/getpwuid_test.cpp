@@ -15,6 +15,7 @@
 #include "hdr/types/gid_t.h"
 #include "hdr/types/struct_passwd.h"
 #include "hdr/types/uid_t.h"
+#include "src/__support/CPP/span.h"
 #include "src/__support/libc_errno.h"
 #include "src/pwd/getpwuid.h"
 #include "src/pwd/pwd_utils.h"
@@ -104,14 +105,14 @@ TEST_F(LlvmLibcGetpwuidTest, LongLineGrowsBuffer) {
   constexpr size_t GECOS_LENGTH = 3000;
   constexpr size_t CONTENT_BUFFER_SIZE = GECOS_LENGTH + 128;
   char content[CONTENT_BUFFER_SIZE];
-  LIBC_NAMESPACE::internal::strlcpy(content,
-                                    "longuser:x:1000:1000:", sizeof(content));
+  LIBC_NAMESPACE::internal::strlcpy(content, "longuser:x:1000:1000:");
   size_t prefix_len = LIBC_NAMESPACE::internal::string_length(content);
   size_t cur = prefix_len;
   for (size_t i = 0; i < GECOS_LENGTH; ++i)
     content[cur++] = 'a';
-  LIBC_NAMESPACE::internal::strlcpy(content + cur, ":/home/longuser:/bin/sh\n",
-                                    sizeof(content) - cur);
+  LIBC_NAMESPACE::internal::strlcpy(
+      LIBC_NAMESPACE::cpp::span<char>(content).subspan(cur),
+      ":/home/longuser:/bin/sh\n");
 
   ScopedPasswdFile test_file(libc_make_test_file_path("getpwuid_longline.test"),
                              content);
