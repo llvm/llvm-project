@@ -26,8 +26,8 @@ struct KT {
 // calls a potentially throwing sycl_kernel_launch function (a thrown
 // exception will propagate with no explicit handling required).
 namespace ns1 {
-  template<typename KN, typename... Ts>
-  void sycl_kernel_launch(const char *, Ts...);
+  template<typename KI, typename... Ts>
+  void sycl_kernel_launch(Ts...);
   [[clang::sycl_kernel_entry_point(KN<1>)]]
   void skep(KT<1> k) {
     k();
@@ -35,12 +35,12 @@ namespace ns1 {
 }
 // CIR: cir.func {{.*}}@_ZN3ns14skepE2KTILi1ELi0EE() attributes {{{.*}}mustprogress, optnone} {
 // CIR-NOT: cir.try
-// CIR: cir.call @_ZN3ns118sycl_kernel_launchI2KNILi1EEJ2KTILi1ELi0EEEEEvPKcDpT0_(%{{.*}}) : (
+// CIR: cir.call @_ZN3ns118sycl_kernel_launchI18__sycl_kernel_infoI2KNILi1EEEJ2KTILi1ELi0EEEEEvDpT0_() : (
 // CIR: cir.return
 
 // LLVM: define dso_local void @_ZN3ns14skepE2KTILi1ELi0EE() #[[THROW_ATTR:[0-9]+]] {
 // LLVM-NOT: invoke
-// LLVM: call void @_ZN3ns118sycl_kernel_launchI2KNILi1EEJ2KTILi1ELi0EEEEEvPKcDpT0_(ptr noundef @.str)
+// LLVM: call void @_ZN3ns118sycl_kernel_launchI18__sycl_kernel_infoI2KNILi1EEEJ2KTILi1ELi0EEEEEvDpT0_()
 // LLVM: ret void
 
 
@@ -48,8 +48,8 @@ namespace ns1 {
 // non-throwing sycl_kernel_entry_point attributed function calls
 // a potentially throwing sycl_kernel_launch function.
 namespace ns2 {
-  template<typename KN, typename... Ts>
-  void sycl_kernel_launch(const char *, Ts...);
+  template<typename KI, typename... Ts>
+  void sycl_kernel_launch(Ts...);
   [[clang::sycl_kernel_entry_point(KN<2>)]]
   void skep(KT<2> k) noexcept {
     k();
@@ -57,9 +57,7 @@ namespace ns2 {
 }
 // CIR:      cir.func {{.*}}@_ZN3ns24skepE2KTILi2ELi0EE() personality(@__gxx_personality_v0) attributes {{{.*}}mustprogress, nothrow, optnone} {
 // CIR:        cir.try {
-// CIR:          %[[STR:.*]] = cir.get_global @".str.1" : !cir.ptr<!cir.array<!s8i x 14>>
-// CIR-NEXT:     %[[STR_PTR:.*]] = cir.cast array_to_ptrdecay %[[STR]] : !cir.ptr<!cir.array<!s8i x 14>> -> !cir.ptr<!s8i>
-// CIR:          cir.call @_ZN3ns218sycl_kernel_launchI2KNILi2EEJ2KTILi2ELi0EEEEEvPKcDpT0_(%[[STR_PTR]]) : (!cir.ptr<!s8i> {llvm.noundef}) -> ()
+// CIR:          cir.call @_ZN3ns218sycl_kernel_launchI18__sycl_kernel_infoI2KNILi2EEEJ2KTILi2ELi0EEEEEvDpT0_() : () -> ()
 // CIR-NEXT:     cir.yield
 // CIR-NEXT:   } catch all (%[[TOK:[a-z0-9]+]]: !cir.eh_token
 // CIR-NEXT:     cir.eh.terminate %[[TOK]] : !cir.eh_token
@@ -68,7 +66,7 @@ namespace ns2 {
 // CIR-NEXT: }
 
 // LLVM:      define dso_local void @_ZN3ns24skepE2KTILi2ELi0EE() #[[NOTHROW_ATTR:[0-9]+]] personality ptr @__gxx_personality_v0 {
-// LLVM:        invoke void @_ZN3ns218sycl_kernel_launchI2KNILi2EEJ2KTILi2ELi0EEEEEvPKcDpT0_(ptr noundef @.str.1)
+// LLVM:        invoke void @_ZN3ns218sycl_kernel_launchI18__sycl_kernel_infoI2KNILi2EEEJ2KTILi2ELi0EEEEEvDpT0_()
 // LLVM-NEXT:     to label %[[CONT:[a-z0-9.]+]] unwind label %[[LPAD:[a-z0-9.]+]]
 // LLVM-EMPTY:
 // LLVM-NEXT: {{^}}[[CONT]]:
@@ -109,8 +107,8 @@ namespace ns2 {
 // calls a non-throwing sycl_kernel_launch function (a thrown
 // exception will terminate within sycl_kernel_launch).
 namespace ns3 {
-  template<typename KN, typename... Ts>
-  void sycl_kernel_launch(const char *, Ts...) noexcept;
+  template<typename KI, typename... Ts>
+  void sycl_kernel_launch(Ts...) noexcept;
   [[clang::sycl_kernel_entry_point(KN<3>)]]
   void skep(KT<3> k) {
     k();
@@ -118,7 +116,7 @@ namespace ns3 {
 }
 // CIR: cir.func {{.*}}@_ZN3ns34skepE2KTILi3ELi0EE() attributes {{{.*}}mustprogress, optnone} {
 // CIR-NOT: cir.try
-// CIR: cir.call @_ZN3ns318sycl_kernel_launchI2KNILi3EEJ2KTILi3ELi0EEEEEvPKcDpT0_(%{{.*}}) nothrow : (
+// CIR: cir.call @_ZN3ns318sycl_kernel_launchI18__sycl_kernel_infoI2KNILi3EEEJ2KTILi3ELi0EEEEEvDpT0_() nothrow : () -> ()
 // CIR: cir.return
 
 // FIXME(cir): ClangIR needs to infer nounwind for functions that don't contain
@@ -126,7 +124,7 @@ namespace ns3 {
 // LLVM-CIR: define dso_local void @_ZN3ns34skepE2KTILi3ELi0EE() #[[THROW_ATTR]] {
 // OGCG: define dso_local void @_ZN3ns34skepE2KTILi3ELi0EE() #[[NOTHROW_ATTR]] {
 // LLVM-NOT: invoke
-// LLVM: call void @_ZN3ns318sycl_kernel_launchI2KNILi3EEJ2KTILi3ELi0EEEEEvPKcDpT0_(ptr noundef @.str.2) #{{[0-9]+}}
+// LLVM: call void @_ZN3ns318sycl_kernel_launchI18__sycl_kernel_infoI2KNILi3EEEJ2KTILi3ELi0EEEEEvDpT0_() #{{[0-9]+}}
 // LLVM: ret void
 
 
@@ -134,8 +132,8 @@ namespace ns3 {
 // non-throwing sycl_kernel_entry_point attributed function calls a
 // non-throwing sycl_kernel_launch function.
 namespace ns4 {
-  template<typename KN, typename... Ts>
-  void sycl_kernel_launch(const char *, Ts...) noexcept;
+  template<typename KI, typename... Ts>
+  void sycl_kernel_launch(Ts...) noexcept;
   [[clang::sycl_kernel_entry_point(KN<4>)]]
   void skep(KT<4> k) noexcept {
     k();
@@ -145,12 +143,12 @@ namespace ns4 {
 // when the only call it contains is nothrow.
 // CIR: cir.func {{.*}}@_ZN3ns44skepE2KTILi4ELi0EE() personality(@__gxx_personality_v0) attributes {{{.*}}mustprogress, nothrow, optnone} {
 // CIR: cir.try {
-// CIR: cir.call @_ZN3ns418sycl_kernel_launchI2KNILi4EEJ2KTILi4ELi0EEEEEvPKcDpT0_(%{{.*}}) nothrow : (
+// CIR: cir.call @_ZN3ns418sycl_kernel_launchI18__sycl_kernel_infoI2KNILi4EEEJ2KTILi4ELi0EEEEEvDpT0_() nothrow : () -> ()
 // CIR: cir.eh.terminate
 
 // LLVM: define dso_local void @_ZN3ns44skepE2KTILi4ELi0EE() #[[NOTHROW_ATTR]] {
 // LLVM-NOT: invoke
-// LLVM: call void @_ZN3ns418sycl_kernel_launchI2KNILi4EEJ2KTILi4ELi0EEEEEvPKcDpT0_(ptr noundef @.str.3) #{{[0-9]+}}
+// LLVM: call void @_ZN3ns418sycl_kernel_launchI18__sycl_kernel_infoI2KNILi4EEEJ2KTILi4ELi0EEEEEvDpT0_() #{{[0-9]+}}
 // LLVM: ret void
 
 // LLVM: attributes #[[THROW_ATTR]] = { mustprogress noinline optnone {{.*}}}

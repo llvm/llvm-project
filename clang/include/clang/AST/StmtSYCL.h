@@ -103,9 +103,9 @@ class UnresolvedSYCLKernelCallStmt : public Stmt {
 
 private:
   Stmt *OriginalStmt = nullptr;
-  // KernelLaunchIdExpr stores an UnresolvedLookupExpr or UnresolvedMemberExpr
-  // corresponding to the SYCL kernel launch function for which a call
-  // will be synthesized during template instantiation.
+
+  // KernelLaunchIdExpr stores an expression for the (probably unresolved)
+  // lookup of 'sycl_kernel_launch'.
   Expr *KernelLaunchIdExpr = nullptr;
 
   UnresolvedSYCLKernelCallStmt(CompoundStmt *CS, Expr *IdExpr)
