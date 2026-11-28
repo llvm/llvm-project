@@ -465,7 +465,8 @@ def SimplifyRegionLite : Pass<"simplify-region-lite"> {
   }];
 }
 
-def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
+def AlgebraicSimplification
+    : Pass<"flang-algebraic-simplification", "mlir::ModuleOp"> {
   let summary = "";
   let description = [{
     Run algebraic simplifications for Math/Complex/etc. dialect operations.
@@ -473,9 +474,23 @@ def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
     the rewrite patterns specifically for Fortran (e.g. increase
     the limit for constant exponent value that defines the cases
     when pow(x, constant) is transformed into a set of multiplications, etc.).
+
+    A complex power with a negative constant exponent is not simplified in
+    OpenACC and CUDA Fortran device code, nor in the functions that device
+    code references by name. The simplification would turn it into an inline
+    complex division, whose intermediate results can overflow although the
+    power is representable. Functions that device code only reaches through a
+    procedure pointer set in host code or through dynamic dispatch are not
+    detected.
   }];
   let dependentDialects = [ "mlir::math::MathDialect" ];
   let constructor = "::fir::createAlgebraicSimplificationPass()";
+  let options = [
+    Option<"keepDeviceComplexPowi", "keep-device-complex-powi", "bool",
+           /*default=*/"true",
+           "Do not simplify a complex power with a negative constant exponent "
+           "in OpenACC and CUDA Fortran device code.">
+  ];
 }
 
 def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "mlir::ModuleOp"> {
