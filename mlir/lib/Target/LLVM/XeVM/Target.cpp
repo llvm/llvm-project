@@ -24,7 +24,9 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/XeVM/XeVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Config/Targets.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -40,6 +42,14 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <mutex>
+#include <utility>
+
+#if MLIR_XEVM_L0_AVAILABLE
+#include "llvm/TargetParser/IntelGPUTargetParser.h"
+
+#include "level_zero/ze_api.h"
+#endif
 
 using namespace mlir;
 using namespace mlir::xevm;
@@ -166,8 +176,7 @@ void mlir::xevm::registerXeVMTargetInterfaceExternalModels(
 SerializeGPUModuleBase::SerializeGPUModuleBase(
     Operation &module, XeVMTargetAttr xeTarget,
     const gpu::TargetOptions &targetOptions)
-    : ModuleToObject(module, xeTarget.getTriple(), "", {}, xeTarget.getO(), {},
-                     {}, {}, {}, targetOptions.getLibraryOptions()),
+    : ModuleToObject(module, xeTarget.getTriple(), "", {}, xeTarget.getO()),
       xeTarget(xeTarget), librariesToLink(targetOptions.getLibrariesToLink()),
       targetOptions(targetOptions) {
   if (xeTarget.getLinkFiles())
@@ -386,9 +395,200 @@ SerializeGPUModuleBase::compileToBinaryViaOclocTool(StringRef asmStr,
   return SmallVector<char, 0>(bin.begin(), bin.end());
 }
 
+#if MLIR_XEVM_L0_AVAILABLE
+// ----------------------------------------------------------------------------
+// Compile SPIR-V to binary with the Level Zero driver. Acts as a fallback
+// when `ocloc` is not available.
+// ----------------------------------------------------------------------------
+namespace {
+struct LevelZeroDevice {
+  ze_driver_handle_t driver;
+  ze_device_handle_t device;
+  /// Architecture name, e.g. "xe-bmg-g21"; empty if the driver does not report
+  /// a known one.
+  StringRef arch;
+  /// Packed GPU IP version reported by the driver, or 0 if unavailable.
+  uint32_t ipVersion;
+};
+} // namespace
+
+/// Collects the Intel GPUs found on this machine.
+static ze_result_t
+getLevelZeroDevices(SmallVectorImpl<LevelZeroDevice> &devices) {
+  ze_init_driver_type_desc_t initDesc{ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC,
+                                      nullptr, ZE_INIT_DRIVER_TYPE_FLAG_GPU};
+  uint32_t numDrivers = 0;
+  if (ze_result_t res = zeInitDrivers(&numDrivers, nullptr, &initDesc);
+      res != ZE_RESULT_SUCCESS)
+    return res;
+  if (numDrivers == 0)
+    return ZE_RESULT_SUCCESS;
+  SmallVector<ze_driver_handle_t> drivers(numDrivers);
+  if (ze_result_t res = zeInitDrivers(&numDrivers, drivers.data(), &initDesc);
+      res != ZE_RESULT_SUCCESS)
+    return res;
+  drivers.resize(numDrivers);
+
+  for (ze_driver_handle_t driver : drivers) {
+    uint32_t numHandles = 0;
+    if (zeDeviceGet(driver, &numHandles, nullptr) != ZE_RESULT_SUCCESS ||
+        numHandles == 0)
+      continue;
+    SmallVector<ze_device_handle_t> handles(numHandles);
+    if (zeDeviceGet(driver, &numHandles, handles.data()) != ZE_RESULT_SUCCESS)
+      continue;
+    handles.resize(numHandles);
+    for (ze_device_handle_t device : handles) {
+      // The IP version stays 0 if the driver lacks the extension.
+      ze_device_ip_version_ext_t ip{};
+      ip.stype = ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT;
+      ze_device_properties_t props{};
+      props.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+      props.pNext = &ip;
+      if (zeDeviceGetProperties(device, &props) != ZE_RESULT_SUCCESS) {
+        ip.ipVersion = 0;
+        props = {};
+        props.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+        if (zeDeviceGetProperties(device, &props) != ZE_RESULT_SUCCESS)
+          continue;
+      }
+      if (props.type == ZE_DEVICE_TYPE_GPU && props.vendorId == 0x8086)
+        devices.push_back({driver, device,
+                           llvm::IntelGPU::getArchName(ip.ipVersion),
+                           ip.ipVersion});
+    }
+  }
+  return ZE_RESULT_SUCCESS;
+}
+
+static FailureOr<SmallVector<char, 0>>
+compileToBinaryViaLevelZero(gpu::GPUModuleOp op, StringRef chip,
+                            StringRef spirv, const std::string &buildFlags) {
+  auto succeeded = [&](ze_result_t res, StringRef call) {
+    if (res == ZE_RESULT_SUCCESS)
+      return true;
+    op.emitError() << "Level Zero: `" << call << "` failed, error code: 0x"
+                   << llvm::utohexstr(res);
+    return false;
+  };
+
+  SmallVector<LevelZeroDevice> devices;
+  if (!succeeded(getLevelZeroDevices(devices), "zeInitDrivers"))
+    return failure();
+
+  // The chip is either a device ("pvc", "bmg_g21", "xe-bmg-g21", "xe_20.1.0")
+  // or a product line ("bmg" stands for "xe-bmg-g21" and "xe-bmg-g31").
+  std::string normalized = chip.lower();
+  llvm::IntelGPU::GPUKind kind = llvm::IntelGPU::parseArch(normalized);
+  if (kind == llvm::IntelGPU::GK_NONE) {
+    llvm::replace(normalized, '_', '-');
+    if (!StringRef(normalized).starts_with("xe-"))
+      normalized.insert(0, "xe-");
+    kind = llvm::IntelGPU::parseArch(normalized);
+  }
+  const StringRef family =
+      kind == llvm::IntelGPU::GK_XE_DG2 ? StringRef("xe-acm") : normalized;
+  const LevelZeroDevice *dev =
+      llvm::find_if(devices, [&](const LevelZeroDevice &candidate) {
+        StringRef arch = candidate.arch;
+        return (kind != llvm::IntelGPU::GK_NONE &&
+                llvm::IntelGPU::parseArch(arch) == kind) ||
+               (arch.consume_front(family) && arch.starts_with("-"));
+      });
+  if (dev == devices.end()) {
+    // Fall back to the nearest compatible device with the lowest IGCA target
+    // (and IP version) that is at least the requested chip's target.
+    if (uint16_t requestedTarget =
+            llvm::IntelGPU::getIGCATarget(kind).getTarget()) {
+      std::pair<uint16_t, uint32_t> bestKey{};
+      for (const LevelZeroDevice &candidate : devices) {
+        uint16_t target = llvm::IntelGPU::getIGCATarget(
+                              llvm::IntelGPU::parseArch(candidate.arch))
+                              .getTarget();
+        if (target < requestedTarget)
+          continue;
+        std::pair<uint16_t, uint32_t> key{target, candidate.ipVersion};
+        if (dev == devices.end() || key < bestKey) {
+          dev = &candidate;
+          bestKey = key;
+        }
+      }
+      if (dev != devices.end())
+        op.emitWarning() << "Level Zero: no Intel GPU matching the target "
+                            "chip `"
+                         << chip << "` found, falling back to `" << dev->arch
+                         << "`";
+    }
+    if (dev == devices.end()) {
+      dev = llvm::find_if(devices, [](const LevelZeroDevice &candidate) {
+        return candidate.arch.empty();
+      });
+      if (dev == devices.end())
+        return op.emitError() << "Level Zero: no Intel GPU matching the target "
+                                 "chip `"
+                              << chip << "` found";
+      op.emitWarning() << "Level Zero: unknown device architecture, the binary "
+                          "may not match the target chip `"
+                       << chip << "`";
+    }
+  }
+
+  ze_context_desc_t contextDesc{};
+  contextDesc.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
+  ze_context_handle_t context = nullptr;
+  if (!succeeded(zeContextCreate(dev->driver, &contextDesc, &context),
+                 "zeContextCreate"))
+    return failure();
+  auto destroyContext = llvm::scope_exit([&]() { zeContextDestroy(context); });
+
+  ze_module_desc_t moduleDesc{};
+  moduleDesc.stype = ZE_STRUCTURE_TYPE_MODULE_DESC;
+  moduleDesc.format = ZE_MODULE_FORMAT_IL_SPIRV;
+  moduleDesc.inputSize = spirv.size();
+  moduleDesc.pInputModule = spirv.bytes_begin();
+  moduleDesc.pBuildFlags = buildFlags.c_str();
+  ze_module_handle_t module = nullptr;
+  ze_module_build_log_handle_t log = nullptr;
+  ze_result_t res =
+      zeModuleCreate(context, dev->device, &moduleDesc, &module, &log);
+  auto destroyModule = llvm::scope_exit([&]() {
+    if (log)
+      zeModuleBuildLogDestroy(log);
+    if (module)
+      zeModuleDestroy(module);
+  });
+  if (!succeeded(res, "zeModuleCreate")) {
+    size_t logSize = 0;
+    if (log &&
+        zeModuleBuildLogGetString(log, &logSize, nullptr) ==
+            ZE_RESULT_SUCCESS &&
+        logSize) {
+      std::string logStr(logSize, '\0');
+      if (zeModuleBuildLogGetString(log, &logSize, logStr.data()) ==
+          ZE_RESULT_SUCCESS)
+        if (StringRef msg = StringRef(logStr).rtrim('\0').trim(); !msg.empty())
+          op.emitError() << "Compiler log:\n" << msg;
+    }
+    return failure();
+  }
+
+  size_t size = 0;
+  if (!succeeded(zeModuleGetNativeBinary(module, &size, nullptr),
+                 "zeModuleGetNativeBinary"))
+    return failure();
+  SmallVector<char, 0> binary(size);
+  if (!succeeded(zeModuleGetNativeBinary(
+                     module, &size, reinterpret_cast<uint8_t *>(binary.data())),
+                 "zeModuleGetNativeBinary"))
+    return failure();
+  return binary;
+}
+#endif // MLIR_XEVM_L0_AVAILABLE
+
 // ----------------------------------------------------------------------------
 // Public entry-point: prefer the in-process library path; fall back to the
-// external tool when the library is not available.
+// external tool when the library is not available, and to Level Zero when the
+// tool is not found either.
 // ----------------------------------------------------------------------------
 FailureOr<SmallVector<char, 0>>
 SerializeGPUModuleBase::compileToBinary(StringRef asmStr,
@@ -396,11 +596,103 @@ SerializeGPUModuleBase::compileToBinary(StringRef asmStr,
 #if MLIR_XEVM_OCLOC_LIB_AVAILABLE
   return compileToBinaryViaLibocloc(asmStr, inputFormat);
 #else
+#if MLIR_XEVM_L0_AVAILABLE
+  // Level Zero accepts SPIR-V only.
+  if (inputFormat == "-spirv_input" && !findTool("ocloc", targetOptions))
+    return compileToBinaryViaLevelZero(
+        getGPUModuleOp(), getTarget().getChip(), asmStr,
+        llvm::join(targetOptions.tokenizeCmdOptions().second, " "));
+#endif
   return compileToBinaryViaOclocTool(asmStr, inputFormat);
 #endif
 }
 
-std::optional<std::string> SerializeGPUModuleBase::findTool(StringRef tool) {
+std::string SerializeGPUModuleBase::getCompilerInfo(
+    [[maybe_unused]] const gpu::TargetOptions &targetOptions) {
+  static constexpr const char *query = "OCL_DRIVER_VERSION";
+#if MLIR_XEVM_OCLOC_LIB_AVAILABLE
+  const char *argv[] = {"ocloc", "query", query};
+  uint32_t outputsNum = 0;
+  uint8_t **outputs = nullptr;
+  uint64_t *outputLengths = nullptr;
+  char **outputNames = nullptr;
+  auto freeOutputs = llvm::scope_exit([&]() {
+    oclocFreeOutput(&outputsNum, &outputs, &outputLengths, &outputNames);
+  });
+  if (oclocInvoke(std::size(argv), argv, /*numSources=*/0, nullptr, nullptr,
+                  nullptr, /*numHeaders=*/0, nullptr, nullptr, nullptr,
+                  &outputsNum, &outputs, &outputLengths,
+                  &outputNames) != OCLOC_SUCCESS)
+    return {};
+  for (uint32_t i = 0; i < outputsNum; ++i)
+    if (outputNames && outputNames[i] && StringRef(outputNames[i]) == query)
+      return outputs && outputs[i] && outputLengths
+                 ? StringRef(reinterpret_cast<char *>(outputs[i]),
+                             outputLengths[i])
+                       .rtrim('\0')
+                       .trim()
+                       .str()
+                 : std::string();
+  return {};
+#else
+  std::optional<std::string> oclocPath = findTool("ocloc", targetOptions);
+#if MLIR_XEVM_L0_AVAILABLE
+  // Without `ocloc` the Level Zero driver is the compiler.
+  if (!oclocPath) {
+    SmallVector<LevelZeroDevice> devices;
+    if (getLevelZeroDevices(devices) != ZE_RESULT_SUCCESS)
+      return {};
+    SmallVector<uint32_t> versions;
+    for (const LevelZeroDevice &dev : devices) {
+      ze_driver_properties_t props{};
+      props.stype = ZE_STRUCTURE_TYPE_DRIVER_PROPERTIES;
+      if (zeDriverGetProperties(dev.driver, &props) == ZE_RESULT_SUCCESS)
+        versions.push_back(props.driverVersion);
+    }
+    llvm::sort(versions);
+    versions.erase(llvm::unique(versions), versions.end());
+    std::string result;
+    llvm::raw_string_ostream os(result);
+    llvm::interleave(
+        versions, os,
+        [&](uint32_t ver) {
+          // Major, minor and build, the leading components of
+          // `OCL_DRIVER_VERSION`.
+          os << (ver >> 24) << '.' << ((ver >> 16) & 0xFF) << '.'
+             << (ver & 0xFFFF);
+        },
+        ",");
+    return result;
+  }
+#endif
+  SmallString<128> out;
+  if (!oclocPath || llvm::sys::fs::createTemporaryFile("ocloc", "query", out))
+    return {};
+  llvm::FileRemover outRemover(out);
+  static std::mutex queryMutex;
+  std::lock_guard<std::mutex> lock(queryMutex);
+  // Remove the file created by ocloc unless it already existed.
+  llvm::FileRemover queryRemover(query,
+                                 /*deleteIt=*/!llvm::sys::fs::exists(query));
+  std::optional<StringRef> redirects[] = {std::nullopt, out.str(),
+                                          StringRef("")};
+  if (llvm::sys::ExecuteAndWait(*oclocPath, {"ocloc", "query", query},
+                                std::nullopt, redirects))
+    return {};
+  // Newer versions also print the result to stdout, older ones write only the
+  // file in the CWD.
+  for (StringRef file : {out.str(), StringRef(query)})
+    if (llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buf =
+            llvm::MemoryBuffer::getFile(file))
+      if (StringRef ver = (*buf)->getBuffer().rtrim('\0').trim(); !ver.empty())
+        return ver.str();
+  return {};
+#endif
+}
+
+std::optional<std::string>
+SerializeGPUModuleBase::findTool(StringRef tool,
+                                 const gpu::TargetOptions &targetOptions) {
   // 1. Check the toolkit path given in the command line.
   StringRef pathRef = targetOptions.getToolkitPath();
   SmallVector<char, 256> path;
@@ -413,7 +705,12 @@ std::optional<std::string> SerializeGPUModuleBase::findTool(StringRef tool) {
   // 2. Check PATH.
   if (llvm::ErrorOr<std::string> toolPath = llvm::sys::findProgramByName(tool))
     return *toolPath;
+  return std::nullopt;
+}
 
+std::optional<std::string> SerializeGPUModuleBase::findTool(StringRef tool) {
+  if (std::optional<std::string> path = findTool(tool, targetOptions))
+    return path;
   getGPUModuleOp().emitError()
       << "Couldn't find the `" << tool
       << "` binary. Please specify the toolkit "

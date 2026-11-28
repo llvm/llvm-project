@@ -39,9 +39,15 @@ public:
   /// Returns the gpu module being serialized.
   gpu::GPUModuleOp getGPUModuleOp();
 
-  /// Compiles to native code using `ocloc` (API or tool).
+  /// Compiles to native code using `ocloc` (API or tool), or the Level Zero
+  /// driver if `ocloc` is not found.
   FailureOr<SmallVector<char, 0>> compileToBinary(StringRef asmStr,
                                                   StringRef inputFormat);
+
+  /// Returns the GPU compiler version info, or an empty string if
+  /// the compiler is not found.
+  static std::string
+  getCompilerInfo(const gpu::TargetOptions &targetOptions = {});
 
 protected:
   /// XeVM Target attribute.
@@ -53,6 +59,8 @@ protected:
 
   /// Returns the path to the tool used for serialization.
   std::optional<std::string> findTool(StringRef tool);
+  static std::optional<std::string>
+  findTool(StringRef tool, const gpu::TargetOptions &targetOptions);
 
   /// Compiles to native code using the `ocloc` command-line tool, communicating
   /// through temporary files.
