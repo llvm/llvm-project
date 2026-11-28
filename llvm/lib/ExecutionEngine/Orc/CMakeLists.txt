@@ -29,6 +29,7 @@ add_llvm_component_library(LLVMOrcJIT
   ExecutionUtils.cpp
   ExecutorResolutionGenerator.cpp
   ObjectFileInterface.cpp
+  HandleLookupInJITDylib.cpp
   IndirectionUtils.cpp
   InProcessEPC.cpp
   InProcessMemoryAccess.cpp
