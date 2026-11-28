@@ -68,4 +68,17 @@ TEST(CodeLayout, BreakLoop) {
   Order = computeCacheDirectedLayout(Sizes, Counts, Edges, CallOffsets);
   EXPECT_THAT(Order, ElementsAreArray({0, 4, 1, 2, 3, 5}));
 }
+
+TEST(CodeLayout, ExtTSP) {
+  const uint64_t Sizes[] = {16, 16, 16, 16, 16, 16, 16, 16};
+  const uint64_t Counts[] = {100, 100, 100, 100, 100, 100, 100, 100};
+  const EdgeCount Edges[] = {
+      {0, 1, 60}, {0, 2, 40}, {1, 2, 60}, {1, 3, 40}, {2, 3, 60}, {2, 4, 40},
+      {3, 4, 60}, {3, 5, 40}, {4, 5, 60}, {4, 6, 40}, {5, 6, 60}, {5, 7, 40},
+      {6, 7, 60}, {6, 0, 40}, {7, 0, 60}, {7, 1, 40},
+  };
+
+  auto Order = computeExtTspLayout(Sizes, Counts, Edges);
+  EXPECT_THAT(Order, ElementsAreArray({0, 1, 2, 3, 4, 5, 6, 7}));
+}
 } // namespace
