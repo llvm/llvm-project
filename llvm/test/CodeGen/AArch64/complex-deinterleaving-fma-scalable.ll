@@ -37,19 +37,15 @@ entry:
 define <vscale x 8 x float> @complex_mul_fma_scalable_no_fmf(<vscale x 8 x float> %a, <vscale x 8 x float> %b) {
 ; CHECK-LABEL: complex_mul_fma_scalable_no_fmf:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp2 z4.s, z0.s, z1.s
+; CHECK-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEXT:    movi v5.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    uzp1 z6.s, z2.s, z3.s
-; CHECK-NEXT:    uzp2 z2.s, z2.s, z3.s
-; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    movprfx z5, z4
-; CHECK-NEXT:    fneg z5.s, p0/m, z4.s
-; CHECK-NEXT:    fmul z4.s, z6.s, z4.s
-; CHECK-NEXT:    fmul z3.s, z2.s, z5.s
-; CHECK-NEXT:    fmad z2.s, p0/m, z0.s, z4.s
-; CHECK-NEXT:    fmla z3.s, p0/m, z0.s, z6.s
-; CHECK-NEXT:    zip1 z0.s, z3.s, z2.s
-; CHECK-NEXT:    zip2 z1.s, z3.s, z2.s
+; CHECK-NEXT:    fcmla z5.s, p0/m, z0.s, z2.s, #90
+; CHECK-NEXT:    fcmla z4.s, p0/m, z1.s, z3.s, #90
+; CHECK-NEXT:    fcmla z5.s, p0/m, z0.s, z2.s, #0
+; CHECK-NEXT:    fcmla z4.s, p0/m, z1.s, z3.s, #0
+; CHECK-NEXT:    mov z0.d, z5.d
+; CHECK-NEXT:    mov z1.d, z4.d
 ; CHECK-NEXT:    ret
 entry:
   %da = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %a)

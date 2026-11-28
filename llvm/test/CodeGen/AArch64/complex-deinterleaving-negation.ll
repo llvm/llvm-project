@@ -10,10 +10,10 @@ define <4 x double> @complex_mul_negated_imaginary_operand(<4 x double> %a, <4 x
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v5.2d, v2.2d, v0.2d, #270
-; CHECK-NEXT:    fcmla v4.2d, v3.2d, v1.2d, #270
 ; CHECK-NEXT:    fcmla v5.2d, v2.2d, v0.2d, #0
 ; CHECK-NEXT:    fcmla v4.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v5.2d, v2.2d, v0.2d, #270
+; CHECK-NEXT:    fcmla v4.2d, v3.2d, v1.2d, #270
 ; CHECK-NEXT:    mov v0.16b, v5.16b
 ; CHECK-NEXT:    mov v1.16b, v4.16b
 ; CHECK-NEXT:    ret
@@ -38,10 +38,10 @@ define <4 x double> @complex_mul_negated_real_operand(<4 x double> %a, <4 x doub
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-NEXT:    fcmla v5.2d, v2.2d, v0.2d, #90
-; CHECK-NEXT:    fcmla v4.2d, v3.2d, v1.2d, #90
 ; CHECK-NEXT:    fcmla v5.2d, v2.2d, v0.2d, #0
 ; CHECK-NEXT:    fcmla v4.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v5.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    fcmla v4.2d, v3.2d, v1.2d, #90
 ; CHECK-NEXT:    mov v0.16b, v5.16b
 ; CHECK-NEXT:    mov v1.16b, v4.16b
 ; CHECK-NEXT:    ret
