@@ -98,10 +98,6 @@ define void @store_chain_three_benign_users(ptr %dst, i32 %x0, i32 %x1, i32 %y0,
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[Y1]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <2 x i32> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP5]], i64 0
-; CHECK-NEXT:    [[Z0:%.*]] = zext i1 [[TMP6]] to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP5]], i64 1
-; CHECK-NEXT:    [[Z1:%.*]] = zext i1 [[TMP7]] to i32
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[TMP4]], [[TMP1]]
@@ -110,7 +106,11 @@ define void @store_chain_three_benign_users(ptr %dst, i32 %x0, i32 %x1, i32 %y0,
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP12]], <2 x i32> [[TMP4]], <2 x i32> [[TMP3]]
 ; CHECK-NEXT:    store i32 [[TMP8]], ptr [[DST]], align 4
 ; CHECK-NEXT:    store i32 [[TMP9]], ptr [[DST1]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x i1> [[TMP5]], i64 0
+; CHECK-NEXT:    [[Z0:%.*]] = zext i1 [[TMP18]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[Z0]])
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i1> [[TMP5]], i64 1
+; CHECK-NEXT:    [[Z1:%.*]] = zext i1 [[TMP19]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[Z1]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[TMP10]], i64 0
 ; CHECK-NEXT:    call void @use(i32 [[TMP14]])

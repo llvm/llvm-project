@@ -23,7 +23,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
-
 namespace llvm {
 
 class AAResults;
@@ -102,6 +101,16 @@ private:
   /// \returns true if a value was vectorized.
   bool tryToVectorizeList(ArrayRef<Value *> VL, slpvectorizer::BoUpSLP &R,
                           bool MaxVFOnly = false, bool StandaloneSeeds = false);
+
+  /// Try to vectorize \p VL by walking its user chain downward (toward the
+  /// sinks) as far as it stays isomorphic (same opcode, type and parent
+  /// block), and rerooting the tree at the deepest list along that chain that
+  /// vectorizes. Falls back to vectorizing \p VL itself, so it is a superset
+  /// of a plain bottom-up tryToVectorizeList(VL) attempt.
+  /// \returns true if any list along the chain was vectorized.
+  bool tryToVectorizeListDownwards(ArrayRef<Value *> VL,
+                                   slpvectorizer::BoUpSLP &R,
+                                   bool MaxVFOnly = false);
 
   /// Try to vectorize a chain that may start at the operands of \p I.
   bool tryToVectorize(Instruction *I, slpvectorizer::BoUpSLP &R,
