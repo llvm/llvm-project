@@ -596,6 +596,10 @@ Makes programs 10x faster by doing Special New Thing.
 * llvm-rc now supports `/showIncludes` to report header and resource-file
   dependencies in a format compatible with Ninja's `deps = msvc` mode.
 
+* llvm-rc and llvm-windres now support the `MESSAGETABLE` resource type. It
+  was previously stored as a user-defined type named "MESSAGETABLE" instead of
+  `RT_MESSAGETABLE` (11), so `FormatMessage` could not find the messages.
+
 * llvm-dwarfutil now supports `--compress-debug-sections[=<format>]` to compress
   the output debug sections. Previously, the debug sections were always written
   uncompressed after garbage collection and deduplication, even if the input
