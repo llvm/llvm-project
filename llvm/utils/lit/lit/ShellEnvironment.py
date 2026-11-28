@@ -80,6 +80,13 @@ class ShellEnvironment:
             self.cwd = lit.util.abs_path_preserve_drive(os.path.join(self.cwd, newdir))
 
 
+def _matching_env_keys(env, name):
+    if not kIsWindows:
+        return [name] if name in env else []
+    folded_name = name.upper()
+    return [key for key in env if key.upper() == folded_name]
+
+
 # args are from 'export' or 'env' command.
 # Skips the command, and parses its arguments.
 # Modifies env accordingly.
@@ -100,8 +107,8 @@ def updateEnv(env, args):
             continue
         if unset_next_env_var:
             unset_next_env_var = False
-            if arg in env.env:
-                del env.env[arg]
+            for key in _matching_env_keys(env.env, arg):
+                del env.env[key]
             continue
 
         # Partition the string into KEY=VALUE.
@@ -110,6 +117,12 @@ def updateEnv(env, args):
         if eq == "":
             arg_idx_next = arg_idx + 1
             break
+        matches = _matching_env_keys(env.env, key)
+        if matches:
+            # Keep the existing spelling, as cmd.exe does when setting a variable.
+            key = matches[0]
+            for duplicate in matches[1:]:
+                del env.env[duplicate]
         env.env[key] = val
     return args[arg_idx_next:]
 

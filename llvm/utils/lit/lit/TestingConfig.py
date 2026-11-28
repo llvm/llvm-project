@@ -57,7 +57,7 @@ class TestingConfig:
             "AVRLIT_PORT",
             "FILECHECK_OPTS",
             "VCINSTALLDIR",
-            "VCToolsinstallDir",
+            "VCToolsInstallDir",
             "VSINSTALLDIR",
             "WindowsSdkDir",
             "WindowsSDKLibVersion",
