@@ -1,4 +1,6 @@
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %s -o - | FileCheck %s --check-prefixes=CHECK,DELAYED
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -mmlir \
+! RUN:   --enable-delayed-privatization=false %s -o - | FileCheck %s --check-prefixes=CHECK,EAGER
 
 ! Each clause has its own bounded-recipe-effects assumption, which requires
 ! all variables in that clause to be non-derived, non-allocatable and non-pointer.
@@ -99,8 +101,9 @@ contains
   ! Eager sections privatization creates character and array storage directly,
   ! including when the enclosing parallel uses a referenced array descriptor.
   ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPsections_character_array_private(
-  ! CHECK: omp.parallel private(
-  ! CHECK-SAME: : !fir.boxchar<1>, !fir.ref<!fir.box<!fir.array<?xf32>>>) {
+  ! DELAYED: omp.parallel private(
+  ! DELAYED-SAME: : !fir.boxchar<1>, !fir.ref<!fir.box<!fir.array<?xf32>>>) {
+  ! EAGER: omp.parallel {
   ! CHECK: omp.sections nowait reduction(
   ! CHECK-SAME: : !fir.ref<f32>) {
   ! CHECK: } <private_assume_bounded_recipe_effects, reduction_assume_bounded_recipe_effects>{{$}}
@@ -196,19 +199,20 @@ contains
     !$omp end sections
   end subroutine
 
-  ! Eager privatisation emits the privatisation recipe inside the single
-  ! region, preventing getEffects() from providing its memory effects.
-  ! Make sure these are emitted so recursive analyis records their memory
-  ! effects.
-  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPsingle_eager_firstprivate(
+  ! Delayed privatization exposes the original variable through the private
+  ! clause. Eager privatization emits the copy inside the single region, where
+  ! recursive analysis records its memory effects.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPsingle_firstprivate(
   ! CHECK: %[[ORIGINAL:.*]] = fir.alloca i32
   ! CHECK: %[[ORIGINAL_DECL:.*]]:2 = hlfir.declare %[[ORIGINAL]]
   ! CHECK: omp.parallel {
-  ! CHECK-NEXT: omp.single {
-  ! CHECK-NEXT: %[[PRIVATE:.*]] = fir.alloca i32
-  ! CHECK-NEXT: %[[PRIVATE_DECL:.*]]:2 = hlfir.declare %[[PRIVATE]]
-  ! CHECK-NEXT: %[[INITIAL:.*]] = fir.load %[[ORIGINAL_DECL]]#0 : !fir.ref<i32>
-  ! CHECK-NEXT: hlfir.assign %[[INITIAL]] to %[[PRIVATE_DECL]]#0 : i32, !fir.ref<i32>
+  ! EAGER-NEXT: omp.single {
+  ! EAGER-NEXT: %[[PRIVATE:.*]] = fir.alloca i32
+  ! EAGER-NEXT: %[[PRIVATE_DECL:.*]]:2 = hlfir.declare %[[PRIVATE]]
+  ! EAGER-NEXT: %[[INITIAL:.*]] = fir.load %[[ORIGINAL_DECL]]#0 : !fir.ref<i32>
+  ! EAGER-NEXT: hlfir.assign %[[INITIAL]] to %[[PRIVATE_DECL]]#0 : i32, !fir.ref<i32>
+  ! DELAYED-NEXT: omp.single private(@{{[^ ]+}} %[[ORIGINAL_DECL]]#0 -> %[[PRIVATE:.*]] : !fir.ref<i32>) {
+  ! DELAYED-NEXT: %[[PRIVATE_DECL:.*]]:2 = hlfir.declare %[[PRIVATE]]
   ! CHECK-NEXT: %[[VALUE:.*]] = fir.load %[[PRIVATE_DECL]]#0 : !fir.ref<i32>
   ! CHECK-NEXT: %[[ONE:.*]] = arith.constant 1 : i32
   ! CHECK-NEXT: %[[UPDATED:.*]] = arith.addi %[[VALUE]], %[[ONE]] : i32
@@ -220,7 +224,7 @@ contains
   ! CHECK-NEXT: %[[AFTER:.*]] = fir.load %[[ORIGINAL_DECL]]#0 : !fir.ref<i32>
   ! CHECK-NEXT: hlfir.assign %[[AFTER]] to %{{.*}} : i32, !fir.ref<i32>
   ! CHECK-NEXT: return
-  subroutine single_eager_firstprivate(result)
+  subroutine single_firstprivate(result)
     integer :: result, x
     x = 10
     !$omp parallel shared(x)
@@ -231,9 +235,10 @@ contains
     result = x
   end subroutine
 
-  ! Eager single privatization maps COMMON members rather than the block.
+  ! Single privatization maps COMMON members rather than the block.
   ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPsingle_intrinsic_common_private(
-  ! CHECK: omp.single {
+  ! EAGER: omp.single {
+  ! DELAYED: omp.single private(
   ! CHECK: } <copyprivate_assume_bounded_recipe_effects, private_assume_bounded_recipe_effects>
   ! CHECK: return
   subroutine single_intrinsic_common_private()
@@ -248,7 +253,8 @@ contains
 
   ! Firstprivate COMMON blocks must also be checked member by member.
   ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPsingle_intrinsic_common_firstprivate(
-  ! CHECK: omp.single {
+  ! EAGER: omp.single {
+  ! DELAYED: omp.single private(
   ! CHECK: } <copyprivate_assume_bounded_recipe_effects, private_assume_bounded_recipe_effects>
   ! CHECK: return
   subroutine single_intrinsic_common_firstprivate()
@@ -263,7 +269,8 @@ contains
 
   ! One derived member prevents the assumption for the entire COMMON block.
   ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPsingle_derived_common_private(
-  ! CHECK: omp.single {
+  ! EAGER: omp.single {
+  ! DELAYED: omp.single private(
   ! CHECK-NOT: private_assume_bounded_recipe_effects
   ! CHECK: } <copyprivate_assume_bounded_recipe_effects>
   ! CHECK: return
@@ -274,6 +281,37 @@ contains
     !$omp single private(/single_derived_block/)
       x = 1
       z%value = x
+    !$omp end single
+  end subroutine
+
+  ! An allocatable private variable prevents the private-clause assumption.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPsingle_allocatable_private(
+  ! EAGER: omp.single {
+  ! DELAYED: omp.single private(
+  ! CHECK-NOT: private_assume_bounded_recipe_effects
+  ! CHECK: } <copyprivate_assume_bounded_recipe_effects>{{$}}
+  ! CHECK: return
+  subroutine single_allocatable_private(a)
+    integer, allocatable :: a(:)
+    !$omp single private(a)
+      a = 1
+    !$omp end single
+  end subroutine
+
+  ! Delayed firstprivate uses a referenced descriptor, so accesses to the
+  ! array elements prevent the assumption. Eager copying is explicit.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPsingle_array_descriptor_firstprivate(
+  ! EAGER: omp.single {
+  ! DELAYED: omp.single private(
+  ! DELAYED-SAME: : !fir.ref<!fir.box<!fir.array<?xf32>>>) {
+  ! DELAYED-NOT: private_assume_bounded_recipe_effects
+  ! DELAYED: } <copyprivate_assume_bounded_recipe_effects>{{$}}
+  ! EAGER: } <copyprivate_assume_bounded_recipe_effects, private_assume_bounded_recipe_effects>{{$}}
+  ! CHECK: return
+  subroutine single_array_descriptor_firstprivate(a)
+    real :: a(:)
+    !$omp single firstprivate(a)
+      a = 1.0
     !$omp end single
   end subroutine
 
