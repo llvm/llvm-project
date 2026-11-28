@@ -1,0 +1,177 @@
+## Show that llvm-objcopy keeps N_OSO stabs and their n_sect value. For N_OSO,
+## n_sect is not a section index. It may hold the low byte of the CPU subtype
+## of any arch (2 for arm64e, 12 for armv7k). The inputs below use x86_64 (3).
+
+## Case 1: An N_OSO stab with an n_sect value greater than the number of
+## sections is kept.
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: llvm-objcopy %t1 %t1.copy
+# RUN: llvm-readobj --symbols %t1.copy | FileCheck %s --check-prefix=CASE1
+
+## Case 2: Removing a section doesn't change the n_sect value of an N_OSO stab,
+## but still updates the section index of other symbols.
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: llvm-objcopy --remove-section __TEXT,__text %t2 %t2.copy
+# RUN: llvm-readobj --symbols %t2.copy | FileCheck %s --check-prefix=CASE2
+
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x3
+  filetype:        MH_OBJECT
+  ncmds:           2
+  sizeofcmds:      176
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         ''
+    vmaddr:          0
+    vmsize:          1
+    fileoff:         208
+    filesize:        1
+    maxprot:         7
+    initprot:        7
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            1
+        offset:          208
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         C3
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          216
+    nsyms:           1
+    stroff:          232
+    strsize:         16
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x66 ## N_OSO
+      n_sect:          3
+      n_desc:          1
+      n_value:         0
+  StringTable:
+    - ''
+    - '/tmp/a.o'
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+...
+
+# CASE1:      Name: /tmp/a.o (1)
+# CASE1-NEXT: Type: SymDebugTable (0x66)
+# CASE1-NEXT: Section: (0x3)
+
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x3
+  filetype:        MH_OBJECT
+  ncmds:           2
+  sizeofcmds:      336
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         ''
+    vmaddr:          0
+    vmsize:          3
+    fileoff:         368
+    filesize:        3
+    maxprot:         7
+    initprot:        7
+    nsects:          3
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            1
+        offset:          368
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         C3
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x1
+        size:            1
+        offset:          369
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '01'
+      - sectname:        __const
+        segname:         __DATA
+        addr:            0x2
+        size:            1
+        offset:          370
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '02'
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          376
+    nsyms:           2
+    stroff:          408
+    strsize:         16
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x66 ## N_OSO
+      n_sect:          3
+      n_desc:          1
+      n_value:         0
+    - n_strx:          10
+      n_type:          0xE
+      n_sect:          3
+      n_desc:          0
+      n_value:         2
+  StringTable:
+    - ''
+    - '/tmp/a.o'
+    - _a
+    - ''
+    - ''
+    - ''
+...
+
+# CASE2:      Name: /tmp/a.o (1)
+# CASE2-NEXT: Type: SymDebugTable (0x66)
+# CASE2-NEXT: Section: (0x3)
+# CASE2:      Name: _a (10)
+# CASE2-NEXT: Type: Section (0xE)
+# CASE2-NEXT: Section: __const (0x2)

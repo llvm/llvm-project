@@ -124,8 +124,12 @@ struct SymbolEntry {
   }
 
   std::optional<uint32_t> section() const {
-    return n_sect == MachO::NO_SECT ? std::nullopt
-                                    : std::optional<uint32_t>(n_sect);
+    // The n_sect field of an N_OSO stab is not a section index. It may hold the
+    // low byte of the CPU subtype.
+    if (n_type == MachO::N_OSO || n_sect == MachO::NO_SECT) {
+      return std::nullopt;
+    }
+    return n_sect;
   }
 };
 
