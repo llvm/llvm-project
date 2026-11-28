@@ -29,8 +29,6 @@ T foo(T targ, U uarg) {
 
 #pragma omp target update from(b, ([a][targ])p) if(l<5) device(l-1) nowait depend(inout:l)
 
-#pragma omp target update to((([a][targ])p)[0:l][1], (([a][targ])p)[0:l][l+1])
-
   U marr[10][10][10];
 #pragma omp target update to(marr[2][0:2][0:2])
 
@@ -78,19 +76,16 @@ T foo(T targ, U uarg) {
 // CHECK-NEXT: int l;
 // CHECK-NEXT: #pragma omp target update to(([a][targ])p,a) if(l > 5) device(l) nowait depend(inout : l){{$}}
 // CHECK-NEXT: #pragma omp target update from(b,([a][targ])p) if(l < 5) device(l - 1) nowait depend(inout : l)
-// CHECK-NEXT: #pragma omp target update to((([a][targ])p)[0:l][1],(([a][targ])p)[0:l][l + 1])
 // CHECK:      static int a, *p;
 // CHECK-NEXT: float b;
 // CHECK-NEXT: int l;
 // CHECK-NEXT: #pragma omp target update to(([a][targ])p,a) if(l > 5) device(l) nowait depend(inout : l)
 // CHECK-NEXT: #pragma omp target update from(b,([a][targ])p) if(l < 5) device(l - 1) nowait depend(inout : l)
-// CHECK-NEXT: #pragma omp target update to((([a][targ])p)[0:l][1],(([a][targ])p)[0:l][l + 1])
 // CHECK:      static char a, *p;
 // CHECK-NEXT: float b;
 // CHECK-NEXT: int l;
 // CHECK-NEXT: #pragma omp target update to(([a][targ])p,a) if(l > 5) device(l) nowait depend(inout : l)
 // CHECK-NEXT: #pragma omp target update from(b,([a][targ])p) if(l < 5) device(l - 1) nowait depend(inout : l)
-// CHECK-NEXT: #pragma omp target update to((([a][targ])p)[0:l][1],(([a][targ])p)[0:l][l + 1])
 // CHECK: marr[10][10][10];
 // CHECK-NEXT: #pragma omp target update to(marr[2][0:2][0:2])
 // CHECK-NEXT: #pragma omp target update from(marr[2][0:2][0:2])
@@ -128,10 +123,6 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: #pragma omp target update to(argv[2][0:1:2])
 #pragma omp target update from(argv[2][0:1:2])
 // CHECK-NEXT: #pragma omp target update from(argv[2][0:1:2])
-#pragma omp target update to((([n][n])argv)[0:n][1])
-// CHECK-NEXT: #pragma omp target update to((([n][n])argv)[0:n][1])
-#pragma omp target update from((([n][n + 2])argv)[1][2:n:2])
-// CHECK-NEXT: #pragma omp target update from((([n][n + 2])argv)[1][2:n:2])
 #ifdef OMP51
 #pragma omp target update to(present: argv[2][0:1:2])
 // OMP5-NEXT: #pragma omp target update to(present: arr[2][0:1:2])

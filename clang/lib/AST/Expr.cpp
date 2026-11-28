@@ -5451,15 +5451,10 @@ QualType ArraySectionExpr::getBaseOriginalType(const Expr *Base) {
     ++ArraySectionCount;
   }
   Base = Base->IgnoreParenImpCasts();
-  QualType OriginalTy;
-  if (const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(Base)) {
-    OriginalTy = OAShE->getShapedType();
-  } else {
-    OriginalTy = Base->getType();
-    if (auto *DRE = dyn_cast<DeclRefExpr>(Base))
-      if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
-        OriginalTy = PVD->getOriginalType().getNonReferenceType();
-  }
+  auto OriginalTy = Base->getType();
+  if (auto *DRE = dyn_cast<DeclRefExpr>(Base))
+    if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl()))
+      OriginalTy = PVD->getOriginalType().getNonReferenceType();
 
   for (unsigned Cnt = 0; Cnt < ArraySectionCount; ++Cnt) {
     if (OriginalTy->isAnyPointerType())
@@ -5473,7 +5468,12 @@ QualType ArraySectionExpr::getBaseOriginalType(const Expr *Base) {
 }
 
 QualType ArraySectionExpr::getElementType() const {
-  QualType BaseTy = getBaseType();
+  QualType BaseTy = getBase()->IgnoreParenImpCasts()->getType();
+  // We only have to look into the array section exprs, else we will get the
+  // type of the base, which should already be valid.
+  if (auto *ASE = dyn_cast<ArraySectionExpr>(getBase()->IgnoreParenImpCasts()))
+    BaseTy = ASE->getElementType();
+
   if (BaseTy->isAnyPointerType())
     return BaseTy->getPointeeType();
   if (BaseTy->isArrayType())
@@ -5486,15 +5486,12 @@ QualType ArraySectionExpr::getElementType() const {
 }
 
 QualType ArraySectionExpr::getBaseType() const {
-  const Expr *Base = getBase()->IgnoreParenImpCasts();
   // We only have to look into the array section exprs, else we will get the
   // type of the base, which should already be valid.
-  if (const auto *ASE = dyn_cast<ArraySectionExpr>(Base))
+  if (auto *ASE = dyn_cast<ArraySectionExpr>(getBase()->IgnoreParenImpCasts()))
     return ASE->getElementType();
-  if (const auto *OAShE = dyn_cast<OMPArrayShapingExpr>(Base))
-    return OAShE->getShapedType();
 
-  return Base->getType();
+  return getBase()->IgnoreParenImpCasts()->getType();
 }
 
 RecoveryExpr::RecoveryExpr(ASTContext &Ctx, QualType T, SourceLocation BeginLoc,
@@ -5539,28 +5536,27 @@ void OMPArrayShapingExpr::setBracketsRanges(ArrayRef<SourceRange> BR) {
   llvm::copy(BR, getTrailingObjects<SourceRange>());
 }
 
-OMPArrayShapingExpr::OMPArrayShapingExpr(QualType ExprTy, QualType ShapedTy,
-                                         Expr *Op, SourceLocation L,
-                                         SourceLocation R,
+OMPArrayShapingExpr::OMPArrayShapingExpr(QualType ExprTy, Expr *Op,
+                                         SourceLocation L, SourceLocation R,
                                          ArrayRef<Expr *> Dims)
     : Expr(OMPArrayShapingExprClass, ExprTy, VK_LValue, OK_Ordinary), LPLoc(L),
-      RPLoc(R), NumDims(Dims.size()), ShapedType(ShapedTy) {
+      RPLoc(R), NumDims(Dims.size()) {
   setBase(Op);
   setDimensions(Dims);
   setDependence(computeDependence(this));
 }
 
 OMPArrayShapingExpr *
-OMPArrayShapingExpr::Create(const ASTContext &Context, QualType T,
-                            QualType ShapedTy, Expr *Op, SourceLocation L,
-                            SourceLocation R, ArrayRef<Expr *> Dims,
+OMPArrayShapingExpr::Create(const ASTContext &Context, QualType T, Expr *Op,
+                            SourceLocation L, SourceLocation R,
+                            ArrayRef<Expr *> Dims,
                             ArrayRef<SourceRange> BracketRanges) {
   assert(Dims.size() == BracketRanges.size() &&
          "Different number of dimensions and brackets ranges.");
   void *Mem = Context.Allocate(
       totalSizeToAlloc<Expr *, SourceRange>(Dims.size() + 1, Dims.size()),
       alignof(OMPArrayShapingExpr));
-  auto *E = new (Mem) OMPArrayShapingExpr(T, ShapedTy, Op, L, R, Dims);
+  auto *E = new (Mem) OMPArrayShapingExpr(T, Op, L, R, Dims);
   E->setBracketsRanges(BracketRanges);
   return E;
 }
