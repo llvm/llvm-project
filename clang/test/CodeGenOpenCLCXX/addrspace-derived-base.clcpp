@@ -55,13 +55,16 @@ void pr43145_3(int n) {
   d.getRef() = n;
 
   // CHECK-LABEL: @_Z9pr43145_3
-  // CHECK: addrspacecast ptr %d to ptr addrspace(4)
+  // CHECK: [[B2_1:%[^ ]+]] = getelementptr inbounds i8, ptr %d, i32 4
+  // CHECK: addrspacecast ptr [[B2_1]] to ptr addrspace(4)
   // CHECK: call {{.*}} @_ZNU3AS42B26getRefEv
 
   private Derived *pd = &d;
   pd->getRef() = n;
 
-  // CHECK: addrspacecast ptr %2 to ptr addrspace(4)
+  // CHECK: [[PD:%[^ ]+]] = load ptr, ptr %pd
+  // CHECK: [[B2_2:%[^ ]+]] = getelementptr inbounds i8, ptr [[PD]], i32 4
+  // CHECK: addrspacecast ptr [[B2_2]] to ptr addrspace(4)
   // CHECK: call {{.*}} @_ZNU3AS42B26getRefEv
 }
 

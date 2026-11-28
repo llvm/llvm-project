@@ -1,0 +1,71 @@
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -pedantic -verify -ast-dump | FileCheck %s
+// expected-no-diagnostics
+// Derived-to-base conversions stay in the source address space before any
+// implicit object parameter address space conversion.
+
+struct B {
+  int v;
+  void cf() const;
+  void cvf() const volatile;
+};
+struct D : B {};
+struct D1 : B {};
+struct D2 : B {};
+struct VD : D1, D2 {};
+
+// CHECK-LABEL: FunctionDecl {{.*}} test
+void test(__global D *p, __global VD *vp, volatile __global D *vgp,
+          __generic D *gp) {
+  D d;
+
+  // CHECK: CXXMemberCallExpr {{.*}} 'void'
+  // CHECK-NEXT: `-MemberExpr {{.*}} .cf
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __generic B' lvalue <AddressSpaceConversion>
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __private B' lvalue <UncheckedDerivedToBase (B)>
+  d.cf();
+
+  // CHECK: CXXMemberCallExpr {{.*}} 'void'
+  // CHECK-NEXT: `-MemberExpr {{.*}} .cf
+  // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'B'
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __generic B' lvalue <AddressSpaceConversion>
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} '__private B' lvalue <UncheckedDerivedToBase (B)>
+  d.B::cf();
+
+  // CHECK: CXXMemberCallExpr {{.*}} 'void'
+  // CHECK-NEXT: `-MemberExpr {{.*}} ->cf
+  // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'B'
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __generic B *' <AddressSpaceConversion>
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} '__global B *' <UncheckedDerivedToBase (B)>
+  p->B::cf();
+
+  // CHECK: CXXMemberCallExpr {{.*}} 'void'
+  // CHECK-NEXT: `-MemberExpr {{.*}} ->cf
+  // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'D1'
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __generic B *' <AddressSpaceConversion>
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __global B *' <UncheckedDerivedToBase (B)>
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} '__global D1 *' <UncheckedDerivedToBase (D1)>
+  vp->D1::cf();
+
+  // CHECK: CXXMemberCallExpr {{.*}} 'void'
+  // CHECK-NEXT: `-MemberExpr {{.*}} ->cvf
+  // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'B'
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const volatile __generic B *' <AddressSpaceConversion>
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'volatile __global B *' <UncheckedDerivedToBase (B)>
+  vgp->B::cvf();
+
+  // CHECK: CXXMemberCallExpr {{.*}} 'void'
+  // CHECK-NEXT: `-MemberExpr {{.*}} ->cf
+  // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'B'
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __generic B *' <NoOp>
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} '__generic B *' <UncheckedDerivedToBase (B)>
+  gp->B::cf();
+
+  // CHECK: MemberExpr {{.*}} 'volatile __global int' lvalue ->v
+  // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'B'
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'volatile __global B *' <UncheckedDerivedToBase (B)>
+  (void)vgp->B::v;
+
+  // CHECK: MemberExpr {{.*}} 'volatile __global int' lvalue ->v
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'volatile __global B *' <UncheckedDerivedToBase (B)>
+  (void)vgp->v;
+}
