@@ -244,9 +244,11 @@ class NoUnwindLibcall<FuncArgType RetType, list<FuncArgType> ArgTypes = []>
 // Integer
 foreach IntTy = [TypeSuffix<"I16", Int16>, TypeSuffix<"I32", Int32>,
                  TypeSuffix<"I64", Int64>, TypeSuffix<"I128", Int128>] in {
-  def SHL_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, Int]>;
-  def SRL_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, Int]>;
-  def SRA_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, Int]>;
+  // libgcc's __ashlti3 and friends take a word-sized shift count.
+  defvar ShAmtTy = !if(!eq(IntTy.Type, Int128), ShiftCount, Int);
+  def SHL_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, ShAmtTy]>;
+  def SRL_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, ShAmtTy]>;
+  def SRA_#IntTy.Suffix : PureLibcall<IntTy.Type, [IntTy.Type, ShAmtTy]>;
 }
 
 foreach IntTy = [TypeSuffix<"I8", Int8>, TypeSuffix<"I16", Int16>,

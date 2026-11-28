@@ -1070,10 +1070,6 @@ EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy,
   return ShiftVT;
 }
 
-MVT TargetLoweringBase::getShiftLibcallAmountTy() const {
-  return MVT::getIntegerVT(TM.getPointerSizeInBits(0));
-}
-
 bool TargetLoweringBase::isFreeAddrSpaceCast(const DataLayout &DL,
                                              unsigned SrcAS,
                                              unsigned DestAS) const {

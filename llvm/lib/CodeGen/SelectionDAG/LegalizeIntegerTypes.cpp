@@ -26,6 +26,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 using namespace llvm;
 
@@ -5306,8 +5307,14 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
   }
 
   if (RTLIB::LibcallImpl LibcallImpl = DAG.getLibcalls().getLibcallImpl(LC)) {
-    SDValue ShAmt =
-        DAG.getZExtOrTrunc(N->getOperand(1), dl, TLI.getShiftLibcallAmountTy());
+    FunctionType *FuncTy =
+        DAG.getLibcalls()
+            .getRuntimeLibcallsInfo()
+            .getFunctionTy(*DAG.getContext(), DAG.getTarget().getTargetTriple(),
+                           DAG.getDataLayout(), LibcallImpl)
+            .first;
+    EVT ShAmtTy = EVT::getEVT(FuncTy->getParamType(1));
+    SDValue ShAmt = DAG.getZExtOrTrunc(N->getOperand(1), dl, ShAmtTy);
     SDValue Ops[2] = {N->getOperand(0), ShAmt};
     TargetLowering::MakeLibCallOptions CallOptions;
     CallOptions.setIsSigned(isSigned);
