@@ -7947,6 +7947,9 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_SYCLKernelEntryPoint:
     S.SYCL().handleKernelEntryPointAttr(D, AL);
     break;
+  case ParsedAttr::AT_SYCLReifiedKernelParameter:
+    handleSimpleAttribute<SYCLReifiedKernelParameterAttr>(S, D, AL);
+    break;
   case ParsedAttr::AT_SYCLSpecialClass:
     handleSimpleAttribute<SYCLSpecialClassAttr>(S, D, AL);
     break;
@@ -8914,7 +8917,7 @@ void Sema::DeclApplyPragmaWeak(Scope *S, NamedDecl *ND, const WeakInfo &W) {
     NewD->addAttr(
         AliasAttr::CreateImplicit(Context, NDId->getName(), W.getLocation()));
     NewD->addAttr(WeakAttr::CreateImplicit(Context, W.getLocation()));
-    WeakTopLevelDecl.push_back(NewD);
+    addSynthesizedTopLevelDecl(NewD);
     // FIXME: "hideous" code from Sema::LazilyCreateBuiltin
     // to insert Decl at TU scope, sorry.
     DeclContext *SavedContext = CurContext;

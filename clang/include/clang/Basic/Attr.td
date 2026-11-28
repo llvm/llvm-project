@@ -1736,6 +1736,13 @@ def SYCLKernelEntryPoint : InheritableAttr {
   }];
 }
 
+def SYCLReifiedKernelParameter : InheritableAttr {
+  let Spellings = [CXX11<"clang", "sycl_reified_kernel_parameter">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLReifiedKernelParameterDocs];
+}
+
 def SYCLSpecialClass: InheritableAttr {
   let Spellings = [Clang<"sycl_special_class">];
   let Subjects = SubjectList<[CXXRecord]>;

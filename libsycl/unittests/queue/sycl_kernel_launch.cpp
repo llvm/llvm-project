@@ -31,6 +31,12 @@ struct KernelData {
   double DoubleArr[8];
 };
 
+struct TestKernel;
+struct TestKernelInfo {
+  using kernel_name = TestKernel;
+  static constexpr char kernel_entry_point_name[] = "TestKernel";
+};
+
 TEST(Queue, KernelLaunch) {
   mock::MockWrapper Mock;
   sycl::unittests::ScopedKernelRegistration Registration{"TestKernel"};
@@ -64,11 +70,17 @@ TEST(Queue, KernelLaunch) {
         EXPECT_EQ(std::memcmp(PayloadPtr, &Data, sizeof(KernelData)), 0);
         return OL_SUCCESS;
       });
-  Q.sycl_kernel_launch<class TestKernel>("TestKernel", Data);
+  Q.sycl_kernel_launch<TestKernelInfo>(Data);
 
   EXPECT_CALL(Mock.get(), olSyncQueue(_)).Times(1);
   Q.wait();
 }
+
+struct DimSwapTestKernel;
+struct DimSwapTestKernelInfo {
+  using kernel_name = DimSwapTestKernel;
+  static constexpr char kernel_entry_point_name[] = "DimSwapTestKernel";
+};
 
 // Captures the ol_kernel_launch_size_args_t passed to olLaunchKernel.
 // SetParams is called with the queue to invoke setKernelParameters.
@@ -90,7 +102,7 @@ static ol_kernel_launch_size_args_t captureKernelLaunchArgs(
       });
   SetParams(Q);
   KernelData Data{};
-  Q.sycl_kernel_launch<class DimSwapTestKernel>("DimSwapTestKernel", Data);
+  Q.sycl_kernel_launch<DimSwapTestKernelInfo>(Data);
   return Captured;
 }
 
