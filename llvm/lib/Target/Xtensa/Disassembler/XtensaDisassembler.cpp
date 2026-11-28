@@ -306,7 +306,7 @@ static DecodeStatus decodeL32ROperand(MCInst &Inst, uint64_t Imm,
 
   assert(isUInt<16>(Imm) && "Invalid immediate");
   Inst.addOperand(MCOperand::createImm(
-      SignExtend64<17>((Imm << 2) + 0x40000 + (Address & 0x3))));
+      SignExtend64<19>((Imm << 2) + 0x40000 + (Address & 0x3))));
   return MCDisassembler::Success;
 }
 
