@@ -1196,6 +1196,12 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
           "FragStencilRefEXT requires the following SPIR-V extension: "
           "SPV_EXT_shader_stencil_export",
           false);
+    if (BuiltIn == SPIRV::BuiltIn::DeviceBarrierExecutionValidINTEL &&
+        !ST.canUseExtension(SPIRV::Extension::SPV_INTEL_device_barrier))
+      report_fatal_error(
+          "DeviceBarrierExecutionValidINTEL built-in requires the following "
+          "SPIR-V extension: SPV_INTEL_device_barrier",
+          false);
     switch (BuiltIn) {
     case SPIRV::BuiltIn::BaseVertex:
     case SPIRV::BuiltIn::BaseInstance:
@@ -2338,6 +2344,21 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::SplitBarrierINTEL);
     }
     break;
+  case SPIRV::OpControlBarrier: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_device_barrier))
+      break;
+    // DeviceBarrierINTEL allows Device as the Execution scope. Require it
+    // unless the scope is known to be an integer OpConstant other than Device.
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    const MachineInstr *ExecScopeDef =
+        MRI.getVRegDef(MI.getOperand(0).getReg());
+    if (ExecScopeDef->getOpcode() != SPIRV::OpConstantI ||
+        ExecScopeDef->getOperand(2).getImm() == SPIRV::Scope::Device) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_device_barrier);
+      Reqs.addCapability(SPIRV::Capability::DeviceBarrierINTEL);
+    }
+    break;
+  }
   case SPIRV::OpCooperativeMatrixMulAddKHR: {
     if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_cooperative_matrix))
       report_fatal_error("Cooperative matrix instructions require the "

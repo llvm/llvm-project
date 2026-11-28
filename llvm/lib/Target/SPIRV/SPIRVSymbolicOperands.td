@@ -416,6 +416,7 @@ defm SPV_KHR_compute_shader_derivatives : ExtensionOperand<145, [EnvVulkan]>;
 // Legacy name for SPV_EXT_bfloat16_arithmetic. It is kept for consumers
 // that recognize only the INTEL name, until they transition to the EXT name.
 defm SPV_INTEL_bfloat16_arithmetic : ExtensionOperand<146, [EnvOpenCL]>;
+defm SPV_INTEL_device_barrier : ExtensionOperand<147, [EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -624,6 +625,7 @@ defm USMStorageClassesINTEL : CapabilityOperand<5935, 0, 0, [SPV_INTEL_usm_stora
 defm BFloat16ArithmeticEXT : CapabilityOperand<6226, 0, 0, [SPV_EXT_bfloat16_arithmetic], []>;
 defm BFloat16ArithmeticINTEL : CapabilityOperand<6226, 0, 0, [SPV_INTEL_bfloat16_arithmetic], []>;
 defm BFloat16ConversionINTEL : CapabilityOperand<6115, 0, 0, [SPV_INTEL_bfloat16_conversion], []>;
+defm DeviceBarrierINTEL : CapabilityOperand<6185, 0, 0, [SPV_INTEL_device_barrier], []>;
 defm GlobalVariableHostAccessINTEL : CapabilityOperand<6187, 0, 0, [SPV_INTEL_global_variable_host_access], []>;
 defm HostAccessINTEL : CapabilityOperand<6188, 0, 0, [SPV_INTEL_global_variable_host_access], []>;
 defm GlobalVariableFPGADecorationsINTEL : CapabilityOperand<6189, 0, 0, [SPV_INTEL_global_variable_fpga_decorations], []>;
@@ -1596,6 +1598,10 @@ defm WorldToObjectNV : BuiltInOperand<5331, 0, 0, [], [RayTracingNV]>;
 defm HitTNV : BuiltInOperand<5332, 0, 0, [], [RayTracingNV]>;
 defm HitKindNV : BuiltInOperand<5333, 0, 0, [], [RayTracingNV]>;
 defm IncomingRayFlagsNV : BuiltInOperand<5351, 0, 0, [], [RayTracingNV]>;
+defm DeviceBarrierExecutionValidINTEL : BuiltInOperand<6186, 0, 0, [SPV_INTEL_device_barrier], [DeviceBarrierINTEL]>;
+// Old name, kept so __spirv_BuiltInDeviceBarrierValidINTEL is still recognized.
+// Requirements are looked up by value, so they come from the record above.
+defm DeviceBarrierValidINTEL : BuiltInOperand<6186, 0, 0, [], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SelectionControl enum values and at the same time
