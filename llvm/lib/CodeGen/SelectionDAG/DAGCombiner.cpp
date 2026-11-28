@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PostIndexCandidateCache.h"
 #include "SelectionDAGOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -153,6 +154,8 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     // BatchAA - Used for DAG load/store alias analysis.
     BatchAAResults *BatchAA;
 
+    PostIndexCandidateCache PostIndexCandidates;
+
     /// This caches all chains that have already been processed in
     /// DAGCombiner::getStoreMergeCandidates() and found to have no mergeable
     /// stores candidates.
@@ -209,7 +212,7 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     DAGCombiner(SelectionDAG &D, BatchAAResults *BatchAA, CodeGenOptLevel OL)
         : DAG(D), TLI(D.getTargetLoweringInfo()),
           STI(D.getSubtarget().getSelectionDAGInfo()), OptLevel(OL),
-          BatchAA(BatchAA) {
+          BatchAA(BatchAA), PostIndexCandidates(D) {
       ForCodeSize = DAG.shouldOptForSize();
       DisableGenericCombines = DAG.getSelectionDAGOptions().combiner_disabled ||
                                (STI && STI->disableGenericCombines(OptLevel));
@@ -326,6 +329,9 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
 
     bool CombineToPreIndexedLoadStore(SDNode *N);
     bool CombineToPostIndexedLoadStore(SDNode *N);
+    SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad, bool &IsMasked,
+                                      SDValue &Ptr, SDValue &BasePtr,
+                                      SDValue &Offset, ISD::MemIndexedMode &AM);
     SDValue SplitIndexingFromLoad(LoadSDNode *LD);
     bool SliceUpLoad(SDNode *N);
 
@@ -22022,15 +22028,19 @@ static bool shouldCombineToPostInc(SDNode *N, SDValue Ptr, SDNode *PtrUse,
   return true;
 }
 
-static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
-                                         bool &IsMasked, SDValue &Ptr,
-                                         SDValue &BasePtr, SDValue &Offset,
-                                         ISD::MemIndexedMode &AM,
-                                         SelectionDAG &DAG,
-                                         const TargetLowering &TLI) {
+SDNode *DAGCombiner::getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
+                                               bool &IsMasked, SDValue &Ptr,
+                                               SDValue &BasePtr,
+                                               SDValue &Offset,
+                                               ISD::MemIndexedMode &AM) {
   if (!getCombineLoadStoreParts(N, ISD::POST_INC, ISD::POST_DEC, IsLoad,
                                 IsMasked, Ptr, TLI) ||
       Ptr->hasOneUse())
+    return nullptr;
+
+  // Only cache the absence of syntactic candidates, not a failed match for N.
+  // A different memory operation may be able to use an existing ADD/SUB.
+  if (!PostIndexCandidates.hasAnyAddOrSubUser(Ptr.getNode()))
     return nullptr;
 
   // Try turning it into a post-indexed load / store except when
@@ -22077,8 +22087,8 @@ bool DAGCombiner::CombineToPostIndexedLoadStore(SDNode *N) {
   SDValue BasePtr;
   SDValue Offset;
   ISD::MemIndexedMode AM = ISD::UNINDEXED;
-  SDNode *Op = getPostIndexedLoadStoreOp(N, IsLoad, IsMasked, Ptr, BasePtr,
-                                         Offset, AM, DAG, TLI);
+  SDNode *Op =
+      getPostIndexedLoadStoreOp(N, IsLoad, IsMasked, Ptr, BasePtr, Offset, AM);
   if (!Op)
     return false;
 
