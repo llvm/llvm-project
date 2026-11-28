@@ -9,6 +9,7 @@
 #include "Analysis.h"
 #include "BenchmarkResult.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -287,21 +288,42 @@ void Analysis::printSchedClassClustersHtml(
   }
   OS << "</tr>";
   for (const SchedClassCluster &Cluster : Clusters) {
-    OS << "<tr class=\""
-       << (Cluster.measurementsMatch(State_.getSubtargetInfo(), RSC,
-                                     Clustering_,
-                                     AnalysisInconsistencyEpsilonSquared_)
-               ? "good-cluster"
-               : "bad-cluster")
-       << "\"><td>";
+    const auto &Centroid = Cluster.getCentroid();
+    std::vector<BenchmarkMeasure> SchedClassPoint;
+    if (Centroid.validate(Points[0].Mode))
+      SchedClassPoint = RSC.getAsPoint(
+          Points[0].Mode, State_.getSubtargetInfo(), Centroid.getStats());
+    assert((SchedClassPoint.empty() ||
+            SchedClassPoint.size() == Centroid.getStats().size()) &&
+           "Expected measured/sched data dimensions to match.");
+    const bool ClusterMatches =
+        !SchedClassPoint.empty() &&
+        Clustering_.isNeighbour(Centroid.getAsPoint(), SchedClassPoint,
+                                AnalysisInconsistencyEpsilonSquared_);
+    SmallVector<bool> MeasurementMatches;
+    for (const auto &[Stats, Measurement] :
+         zip(Centroid.getStats(), SchedClassPoint)) {
+      const double Diff = Stats.avg() - Measurement.PerInstructionValue;
+      MeasurementMatches.push_back(Diff * Diff <=
+                                   AnalysisInconsistencyEpsilonSquared_);
+    }
+    OS << "<tr class=\"" << (ClusterMatches ? "good-cluster" : "bad-cluster")
+       << "\"><td class=\"cluster-id\">";
     writeClusterId<kEscapeHtml>(OS, Cluster.id());
+    if (!ClusterMatches && !MeasurementMatches.empty() &&
+        !is_contained(MeasurementMatches, false))
+      OS << "<br><small>Combined distance exceeds epsilon</small>";
     OS << "</td><td><ul>";
     for (const size_t PointId : Cluster.getPointIds()) {
       printPointHtml(Points[PointId], OS);
     }
     OS << "</ul></td>";
-    for (const auto &Stats : Cluster.getCentroid().getStats()) {
-      OS << "<td class=\"measurement\">";
+    for (const auto &[I, Stats] : enumerate(Centroid.getStats())) {
+      OS << "<td class=\"measurement";
+      if (!MeasurementMatches.empty())
+        OS << (MeasurementMatches[I] ? " good-measurement"
+                                     : " bad-measurement");
+      OS << "\">";
       writeMeasurementValue<kEscapeHtml>(OS, Stats.avg());
       OS << "<br><span class=\"minmax\">[";
       writeMeasurementValue<kEscapeHtml>(OS, Stats.min());
@@ -497,7 +519,14 @@ td.measurement {
 tr.good-cluster td.measurement {
   color: #292
 }
+tr.bad-cluster td.cluster-id,
 tr.bad-cluster td.measurement {
+  color: #922
+}
+tr td.measurement.good-measurement {
+  color: #292
+}
+tr td.measurement.bad-measurement {
   color: #922
 }
 tr.good-cluster td.measurement span.minmax {
