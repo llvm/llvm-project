@@ -199,7 +199,7 @@ libclc_add_sources(${LIBCLC_CLC_TARGET} FILES
   shared/clc_vload.cl
   shared/clc_vstore.cl
   subnormal_config.cl
-  subgroup/sub_group_barrier.cl
+  subgroup/clc_sub_group_barrier_default_scope.cl
   workitem/clc_get_global_id.cl
   workitem/clc_get_global_linear_id.cl
   workitem/clc_get_local_linear_id.cl
