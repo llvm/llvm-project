@@ -1637,3 +1637,93 @@ func.func @push_extract_through_generic_secondextract(%arg0: tensor<128x128xf32>
 // CHECK-SAME:        ins(%[[PAD]], %[[ARG0]]
 // CHECK:           %[[EXTRACT2:.+]] =  tensor.extract_slice %[[GENERIC]]
 // CHECK:           scf.yield %[[EXTRACT2]]
+
+// -----
+
+// The full extent of a dynamic sliced dim must come from the runtime size of
+// the slice source, not from the static type (kDynamic).
+func.func @push_extract_through_generic_dynamic_source_outs_unused(%arg0: tensor<?xf32>, %arg1: index) -> tensor<?xf32> {
+  %extracted_slice = tensor.extract_slice %arg0[0] [%arg1] [1] : tensor<?xf32> to tensor<?xf32>
+  %empty = tensor.empty(%arg1) : tensor<?xf32>
+  %0 = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>], iterator_types = ["parallel"]} ins(%extracted_slice : tensor<?xf32>) outs(%empty : tensor<?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.negf %in : f32
+    linalg.yield %1 : f32
+  } -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// CHECK-LABEL: func.func @push_extract_through_generic_dynamic_source_outs_unused
+// CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]
+// CHECK:         %[[C0:.+]] = arith.constant 0 : index
+// CHECK:         %[[DIM:.+]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<?xf32>
+// CHECK:         %[[EMPTY:.+]] = tensor.empty(%[[DIM]]) : tensor<?xf32>
+// CHECK:         %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME:    ins(%[[ARG0]] : tensor<?xf32>)
+// CHECK-SAME:    outs(%[[EMPTY]] : tensor<?xf32>)
+// CHECK:         %[[EXTRACT:.+]] = tensor.extract_slice %[[GENERIC]][0] [%[[ARG1]]] [1] : tensor<?xf32> to tensor<?xf32>
+// CHECK:         return %[[EXTRACT]]
+
+// -----
+
+// The high padding of the init along a dynamic sliced dim must be computed
+// from the runtime size of the slice source.
+func.func @push_extract_through_generic_dynamic_source_outs_used(%arg0: tensor<?xf32>, %arg1: index, %arg2: tensor<?xf32>) -> tensor<?xf32> {
+  %extracted_slice = tensor.extract_slice %arg0[0] [%arg1] [1] : tensor<?xf32> to tensor<?xf32>
+  %0 = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>], iterator_types = ["parallel"]} ins(%extracted_slice : tensor<?xf32>) outs(%arg2 : tensor<?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.addf %in, %out : f32
+    linalg.yield %1 : f32
+  } -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// CHECK-DAG:   #[[$SUB:.+]] = affine_map<()[s0, s1] -> (s0 - s1)>
+// CHECK-LABEL: func.func @push_extract_through_generic_dynamic_source_outs_used
+// CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[ARG2:[a-zA-Z0-9]+]]
+// CHECK:         %[[POISON:.+]] = ub.poison : f32
+// CHECK:         %[[C0:.+]] = arith.constant 0 : index
+// CHECK:         %[[DIM:.+]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<?xf32>
+// CHECK:         %[[HIGH:.+]] = affine.apply #[[$SUB]]()[%[[DIM]], %[[ARG1]]]
+// CHECK:         %[[PADDED:.+]] = tensor.pad %[[ARG2]] low[0] high[%[[HIGH]]]
+// CHECK:           tensor.yield %[[POISON]] : f32
+// CHECK:         %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME:    ins(%[[ARG0]] : tensor<?xf32>)
+// CHECK-SAME:    outs(%[[PADDED]] : tensor<?xf32>)
+// CHECK:         %[[EXTRACT:.+]] = tensor.extract_slice %[[GENERIC]][0] [%[[ARG1]]] [1] : tensor<?xf32> to tensor<?xf32>
+// CHECK:         return %[[EXTRACT]]
+
+// -----
+
+// Dims of the init that are not sliced keep their runtime size, even when it
+// is dynamic.
+func.func @push_extract_through_generic_dynamic_unsliced_init_dim(%arg0: tensor<?x8xf32>, %arg1: index, %arg2: index) -> tensor<?x?xf32> {
+  %extracted_slice = tensor.extract_slice %arg0[%arg1, 0] [%arg2, 8] [1, 1] : tensor<?x8xf32> to tensor<?x8xf32>
+  %c8 = arith.constant 8 : index
+  %empty = tensor.empty(%arg2, %c8) : tensor<?x?xf32>
+  %0 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>], iterator_types = ["parallel", "parallel"]} ins(%extracted_slice : tensor<?x8xf32>) outs(%empty : tensor<?x?xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    %1 = arith.negf %in : f32
+    linalg.yield %1 : f32
+  } -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// CHECK-LABEL: func.func @push_extract_through_generic_dynamic_unsliced_init_dim
+// CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[ARG2:[a-zA-Z0-9]+]]
+// CHECK-DAG:     %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.+]] = arith.constant 1 : index
+// CHECK-DAG:     %[[INIT:.+]] = tensor.empty(%[[ARG2]], %{{.*}}) : tensor<?x?xf32>
+// CHECK-DAG:     %[[DIM0:.+]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<?x8xf32>
+// CHECK-DAG:     %[[DIM1:.+]] = tensor.dim %[[INIT]], %[[C1]] : tensor<?x?xf32>
+// CHECK:         %[[EMPTY:.+]] = tensor.empty(%[[DIM0]], %[[DIM1]]) : tensor<?x?xf32>
+// CHECK:         %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME:    ins(%[[ARG0]] : tensor<?x8xf32>)
+// CHECK-SAME:    outs(%[[EMPTY]] : tensor<?x?xf32>)
+// CHECK:         %[[EXTRACT:.+]] = tensor.extract_slice %[[GENERIC]][%[[ARG1]], 0] [%[[ARG2]], %[[DIM1]]] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
+// CHECK:         return %[[EXTRACT]]
