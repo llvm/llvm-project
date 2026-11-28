@@ -131,14 +131,12 @@ __from_chars_atoi(const char* __first, const char* __last, _Tp& __value) {
 
   return std::__subject_seq_combinator(
       __first, __last, __value, [](const char* __f, const char* __l, _Tp& __val) -> from_chars_result {
-        __output_type __a, __b;
-        auto __p = __tx::__read(__f, __l, __a, __b);
-        if (__p == __l || !std::__in_pattern(*__p)) {
-          __output_type __m = numeric_limits<_Tp>::max();
-          if (__m >= __a && __m - __a >= __b) {
-            __val = __a + __b;
-            return {__p, {}};
-          }
+        __output_type __x;
+        bool __overflow;
+        auto __p = __tx::__read(__f, __l, __x, __overflow);
+        if (!__overflow && __x <= numeric_limits<_Tp>::max()) {
+          __val = __x;
+          return {__p, {}};
         }
         return {__p, errc::result_out_of_range};
       });

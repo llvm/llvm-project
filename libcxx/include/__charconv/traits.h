@@ -17,7 +17,6 @@
 #include <__config>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_unsigned.h>
-#include <__utility/checked_int.h>
 #include <cstdint>
 #include <limits>
 
@@ -108,29 +107,32 @@ struct _LIBCPP_HIDDEN __traits : __traits_base<_Tp> {
   using typename __traits_base<_Tp>::type;
 
   // precondition: at least one non-zero character available
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 char const* __read(char const* __p, char const* __ep, type& __a, type& __b) {
-    type __cprod[digits];
-    int __j = digits - 1;
-    int __i = digits;
+  //
+  // Reads all the digits. The value is accumulated without overflow checks, and whether it overflowed is decided
+  // afterwards: fewer than `digits` digits always fit. With exactly `digits` digits the value can wrap at most once,
+  // so it fits iff the leading digit is below the largest leading digit that can fit, or equal to it and the result
+  // did not wrap below that digit's range.
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK char const*
+  __read(char const* __p, char const* __ep, type& __value, bool& __overflow) {
+    char const* const __first = __p;
+    type __x                  = 0;
     do {
       if (*__p < '0' || *__p > '9')
         break;
-      __cprod[--__i] = *__p++ - '0';
-    } while (__p != __ep && __i != 0);
+      __x = __x * 10 + static_cast<type>(*__p - '0');
+      ++__p;
+    } while (__p != __ep);
 
-    __a = __inner_product(__cprod + __i + 1, __cprod + __j, __pow() + 1, __cprod[__i]);
-    auto __res = __checked_int<type>(__cprod[__j]) * __pow()[__j - __i];
-    __b        = __res.__value();
-    if (__res.__overflowed())
-      --__p;
+    __value    = __x;
+    __overflow = false;
+    if (__p - __first >= digits) [[__unlikely__]] {
+      const type __lead_scale = __pow()[digits - 1];
+      const type __max_lead   = numeric_limits<type>::max() / __lead_scale;
+      const type __lead       = static_cast<type>(*__first - '0');
+      __overflow =
+          __p - __first > digits || __lead > __max_lead || (__lead == __max_lead && __x < __max_lead * __lead_scale);
+    }
     return __p;
-  }
-
-  template <typename _It1, typename _It2, class _Up>
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _Up __inner_product(_It1 __first1, _It1 __last1, _It2 __first2, _Up __init) {
-    for (; __first1 < __last1; ++__first1, ++__first2)
-      __init = __init + *__first1 * *__first2;
-    return __init;
   }
 };
 
