@@ -632,8 +632,10 @@ public:
   /// loops where the condition follows the loop body.
   void LeaveLoopBody();
 
-  /// containedInPrototypeScope - Return true if this or a parent scope
-  /// is a FunctionPrototypeScope.
+  /// Return the innermost function prototype scope containing this scope.
+  const Scope *getEnclosingFunctionPrototypeScope() const;
+
+  /// Return true if this or a parent scope is a function prototype scope.
   bool containedInPrototypeScope() const;
 
   void PushUsingDirective(UsingDirectiveDecl *UDir) {

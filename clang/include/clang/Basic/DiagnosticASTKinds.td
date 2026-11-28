@@ -9,6 +9,11 @@
 let Component = "AST" in {
 
 // Constant expression diagnostics. These (and their users) belong in Sema.
+def note_constexpr_non_constexpr_compound_literal : Note<
+  "read of a non-constexpr compound literal is not allowed in a constant expression">;
+def ext_constexpr_compound_literal : Extension<
+  "reading a non-constexpr compound literal in a constant expression is a GNU extension">,
+  InGroup<GNUFoldingConstant>;
 def note_expr_divide_by_zero : Note<"division by zero">;
 def note_constexpr_invalid_cast : Note<
   "%enum_select<ConstexprInvalidCastKind>{%Reinterpret{reinterpret_cast}|%Dynamic{dynamic_cast}|"

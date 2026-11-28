@@ -713,9 +713,8 @@ void AggExprEmitter::emitAggLoadOfLValue(const Expr *e) {
 }
 
 void AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *e) {
-  if (dest.isPotentiallyAliased() && e->getType().isPODType(cgf.getContext())) {
-    // For a POD type, just emit a load of the lvalue + a copy, because our
-    // compound literal might alias the destination.
+  if (e->hasGlobalStorage() || (dest.isPotentiallyAliased() &&
+                                e->getType().isPODType(cgf.getContext()))) {
     emitAggLoadOfLValue(e);
     return;
   }

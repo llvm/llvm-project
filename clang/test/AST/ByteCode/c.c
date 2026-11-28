@@ -253,6 +253,10 @@ void unaryops(void) {
   (void)((struct ww {float x;}){3}.x--);
 }
 
+void arrays(void) {
+  _Static_assert(((int[]){1})[0] == 1, ""); // pedantic-warning {{folding it to a constant is a GNU extension}}
+}
+
 /// Elements of a file-scope compound literal carry their evaluated value.
 static long *addr_as_int = (long[]){2, (long)"x"};
 static const char **into_string = (const char *[]){&"abc"[1]};

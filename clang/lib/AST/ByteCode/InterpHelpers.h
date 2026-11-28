@@ -85,6 +85,14 @@ inline bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return CheckMutable(S, OpPC, Ptr.view(), AK);
 }
 
+bool CheckConstexprObject(InterpState &S, CodePtr OpPC, const Descriptor *Desc);
+
+/// Checks whether an object can be read in a C23 constant expression.
+inline bool CheckC23ConstexprObject(InterpState &S, CodePtr OpPC,
+                                    const Descriptor *Desc) {
+  return !S.getLangOpts().C23 || CheckConstexprObject(S, OpPC, Desc);
+}
+
 /// Checks if a value can be loaded from a block.
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK = AK_Read);

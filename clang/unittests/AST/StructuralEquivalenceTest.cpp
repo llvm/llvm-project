@@ -2219,6 +2219,25 @@ TEST_F(StructuralEquivalenceStmtTest, CharacterLiteralDifferentValues) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+TEST_F(StructuralEquivalenceStmtTest, CompoundLiteralExpr) {
+  EXPECT_TRUE(testStructuralMatch(makeWrappedStmts(
+      "(static thread_local int){1}", "(thread_local static int){1}", Lang_C23,
+      compoundLiteralExpr())));
+  EXPECT_FALSE(testStructuralMatch(
+      makeStmts("const int *p = &(constexpr int){1};",
+                "void f(void) { (void)&(constexpr int){1}; }", Lang_C23,
+                compoundLiteralExpr())));
+  EXPECT_FALSE(testStructuralMatch(makeWrappedStmts(
+      "(static constexpr int){1}", "(register constexpr int){1}", Lang_C23,
+      compoundLiteralExpr())));
+  EXPECT_FALSE(testStructuralMatch(
+      makeWrappedStmts("(static int){1}", "(static thread_local int){1}",
+                       Lang_C23, compoundLiteralExpr())));
+  EXPECT_FALSE(testStructuralMatch(
+      makeWrappedStmts("(static const int){1}", "(static constexpr int){1}",
+                       Lang_C23, compoundLiteralExpr())));
+}
+
 TEST_F(StructuralEquivalenceStmtTest, ExpressionTraitExpr) {
   auto t = makeWrappedStmts("__is_lvalue_expr(1)", "__is_lvalue_expr(1)",
                             Lang_CXX03, fallbackExprMatcher());

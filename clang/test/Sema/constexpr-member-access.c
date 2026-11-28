@@ -28,7 +28,7 @@ struct S2 {
 constexpr struct S2 V1 = {0, 1, 1, 'c', E_B, {3}, 1.0, -1};
 constexpr union U V2 = {5};
 constexpr int V3 = V1.f.a;
-constexpr int V4 = ((struct S2){0, 4, 0, 0, E_A, {6}, 0.0, 0}).f.a;
+constexpr int V4 = ((constexpr struct S2){0, 4, 0, 0, E_A, {6}, 0.0, 0}).f.a;
 
 void gh178349() {
   int a[V1.b] = {};
