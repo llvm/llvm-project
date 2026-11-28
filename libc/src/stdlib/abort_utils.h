@@ -15,6 +15,8 @@
 #include "src/stdlib/gpu/abort_utils.h"
 #elif defined(__linux__)
 #include "src/stdlib/linux/abort_utils.h"
+#elif defined(__UEFI__)
+#include "src/stdlib/uefi/abort_utils.h"
 #elif defined(__ELF__)
 // TODO:ELF detection logic is borrowed from io.h (as we are still missing
 // LIBC_TARGET_OS_IS_BAREMETAL).

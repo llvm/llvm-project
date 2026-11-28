@@ -23,3 +23,24 @@ add_object_library(
     libc.src.__support.common
     libc.src.__support.CPP.string_view
 )
+
+add_object_library(
+  pool_allocator
+  SRCS
+    pool_allocator.cpp
+  HDRS
+    pool_allocator.h
+  DEPENDS
+    libc.config.app_h
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.include.llvm-libc-types.EFI_MEMORY_TYPE
+    libc.include.llvm-libc-types.EFI_STATUS
+    libc.include.llvm-libc-types.EFI_SYSTEM_TABLE
+    libc.src.__support.common
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.cstddef
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
+)
