@@ -125,6 +125,27 @@ def mif_ThisImageOp : mif_Op<"this_image", [AttrSizedOperandSegments]> {
   }];
 }
 
+def mif_ImageStatusOp : mif_Op<"image_status", []> {
+  let summary = "Image execution state.";
+  let description = [{
+    Arguments: 
+      - `image`: Its value shall be positive and less than or equal to the number
+        of images in the specified `team`.
+      - `team`(optional) : Shall be a scalar of type `team_type` from ISO_FORTRAN_ENV.
+    Result: The result value is STAT_FAILED_IMAGE from the intrinsic module ISO_FORTRAN_ENV
+      if the specified image is known to has failed, STAT_STOPPED_IMAGE from the intrinsic
+      module ISO_FORTRAN_ENV if that image is known to have initiated normal termination,
+      and zero otherwise.
+  }];
+  let arguments = (ins Arg<AnyIntegerType>:$image,
+                       Optional<AnyReferenceLike>:$team);
+  let results = (outs AnyIntegerType);
+
+  let assemblyFormat = [{
+    $image ( `team` $team^ )? 
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
 //===----------------------------------------------------------------------===//
 // Coarray Queries
 //===----------------------------------------------------------------------===//
