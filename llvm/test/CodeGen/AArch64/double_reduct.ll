@@ -573,8 +573,8 @@ define i32 @xor_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
-; CHECK-SD-NEXT:    lsr x9, x8, #32
-; CHECK-SD-NEXT:    eor w0, w8, w9
+; CHECK-SD-NEXT:    eor x0, x8, x8, lsr #32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: xor_i32:
@@ -605,8 +605,8 @@ define i32 @xor_i32_same(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    fmov x8, d0
-; CHECK-SD-NEXT:    lsr x9, x8, #32
-; CHECK-SD-NEXT:    eor w0, w8, w9
+; CHECK-SD-NEXT:    eor x0, x8, x8, lsr #32
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: xor_i32_same:
@@ -1165,13 +1165,12 @@ define i32 @nested_xor_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD-LABEL: nested_xor_i32:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    eor w8, w0, w1
+; CHECK-SD-NEXT:    eor w9, w0, w1
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    fmov x9, d0
-; CHECK-SD-NEXT:    lsr x10, x9, #32
-; CHECK-SD-NEXT:    eor w8, w9, w8
-; CHECK-SD-NEXT:    eor w0, w8, w10
+; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    eor x8, x8, x8, lsr #32
+; CHECK-SD-NEXT:    eor w0, w8, w9
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: nested_xor_i32:
