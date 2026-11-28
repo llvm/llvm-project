@@ -7743,11 +7743,18 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
   }
 
   // Remove all incompatibile attributes from function.
-  F.removeRetAttrs(AttributeFuncs::typeIncompatible(
-      F.getReturnType(), F.getAttributes().getRetAttrs()));
-  for (auto &Arg : F.args())
-    Arg.removeAttrs(
-        AttributeFuncs::typeIncompatible(Arg.getType(), Arg.getAttributes()));
+  if (AttributeSet RetAttrs = F.getAttributes().getRetAttrs();
+      RetAttrs.hasAttributes()) {
+    F.removeRetAttrs(
+        AttributeFuncs::typeIncompatible(F.getReturnType(), RetAttrs));
+  }
+
+  for (auto &Arg : F.args()) {
+    if (AttributeSet ArgAttrs = Arg.getAttributes(); ArgAttrs.hasAttributes()) {
+      Arg.removeAttrs(
+          AttributeFuncs::typeIncompatible(Arg.getType(), ArgAttrs));
+    }
+  }
 
   bool AddingAttrs = false, RemovingAttrs = false;
   AttrBuilder AttrsToAdd(F.getContext());
