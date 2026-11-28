@@ -130,14 +130,7 @@ static void checkObjCUnusedIvar(const ObjCImplementationDecl *D,
   Scan(M, D);
 
   // Any potentially unused ivars?
-  bool hasUnused = false;
-  for (IVarState State : llvm::make_second_range(M))
-    if (State == Unused) {
-      hasUnused = true;
-      break;
-    }
-
-  if (!hasUnused)
+  if (!llvm::is_contained(llvm::make_second_range(M), Unused))
     return;
 
   // We found some potentially unused ivars.  Scan the entire translation unit
