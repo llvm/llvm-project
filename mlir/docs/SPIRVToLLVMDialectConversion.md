@@ -134,6 +134,20 @@ SPIR-V Dialect op | LLVM Dialect op
 `spirv.UDiv`        | `llvm.udiv`
 `spirv.UMod`        | `llvm.urem`
 
+### Atomic ops
+
+Atomic read-modify-write ops map to `llvm.atomicrmw`, both compare-exchange ops
+to a strong `llvm.cmpxchg`, and `spirv.AtomicLoad` and `spirv.AtomicStore` to
+atomic `llvm.load` and `llvm.store`. The scope maps to the syncscope clang uses
+for SPIR-V targets, the ordering bits to the LLVM ordering, and `Volatile` to
+`volatile`. Other semantics bits are dropped. Scopes and orderings with no LLVM
+equivalent fail to convert.
+
+```mlir
+%0 = spirv.AtomicIAdd <Device> <AcquireRelease> %ptr, %v : !spirv.ptr<i32, CrossWorkgroup>
+  =>  %0 = llvm.atomicrmw add %ptr, %v syncscope("device") acq_rel : !llvm.ptr, i32
+```
+
 ### Bitwise ops
 
 SPIR-V has a range of bit ops that are mapped to LLVM dialect ops, intrinsics or
@@ -710,7 +724,6 @@ cover all possible corner cases.
 
 There is no support of the following ops:
 
-*   All atomic ops
 *   All group ops
 *   All matrix ops
 *   All CL ops

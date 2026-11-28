@@ -1630,6 +1630,151 @@ public:
   }
 };
 
+/// Returns the syncscope that clang emits for `scope` on SPIR-V targets.
+static std::optional<StringRef> getSyncScope(spirv::Scope scope) {
+  switch (scope) {
+  case spirv::Scope::CrossDevice:
+    return "";
+  case spirv::Scope::Device:
+    return "device";
+  case spirv::Scope::Workgroup:
+    return "workgroup";
+  case spirv::Scope::Subgroup:
+    return "subgroup";
+  case spirv::Scope::Invocation:
+    return "singlethread";
+  default:
+    return std::nullopt;
+  }
+}
+
+/// Maps only the ordering bits.
+static LLVM::AtomicOrdering
+getAtomicOrdering(spirv::MemorySemantics semantics) {
+  using spirv::MemorySemantics;
+  constexpr MemorySemantics orderingMask =
+      MemorySemantics::Acquire | MemorySemantics::Release |
+      MemorySemantics::AcquireRelease | MemorySemantics::SequentiallyConsistent;
+  switch (semantics & orderingMask) {
+  case MemorySemantics::None:
+    return LLVM::AtomicOrdering::monotonic;
+  case MemorySemantics::Acquire:
+    return LLVM::AtomicOrdering::acquire;
+  case MemorySemantics::Release:
+    return LLVM::AtomicOrdering::release;
+  case MemorySemantics::AcquireRelease:
+    return LLVM::AtomicOrdering::acq_rel;
+  case MemorySemantics::SequentiallyConsistent:
+    return LLVM::AtomicOrdering::seq_cst;
+  default:
+    llvm_unreachable("verifier rejects multiple ordering bits");
+  }
+}
+
+static bool isVolatile(spirv::MemorySemantics semantics) {
+  return spirv::bitEnumContainsAny(semantics, spirv::MemorySemantics::Volatile);
+}
+
+template <typename SPIRVOp, LLVM::AtomicBinOp binOp>
+class AtomicRMWPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    std::optional<StringRef> syncScope = getSyncScope(op.getMemoryScope());
+    if (!syncScope)
+      return rewriter.notifyMatchFailure(op, "unsupported scope");
+
+    Value value;
+    if constexpr (llvm::is_one_of<SPIRVOp, spirv::AtomicIIncrementOp,
+                                  spirv::AtomicIDecrementOp>::value) {
+      Type dstType = this->getTypeConverter()->convertType(op.getType());
+      if (!dstType)
+        return rewriter.notifyMatchFailure(op, "type conversion failed");
+      value = LLVM::ConstantOp::create(rewriter, op.getLoc(), dstType, 1);
+    } else {
+      value = adaptor.getValue();
+    }
+
+    rewriter.replaceOpWithNewOp<LLVM::AtomicRMWOp>(
+        op, binOp, adaptor.getPointer(), value,
+        getAtomicOrdering(op.getSemantics()), *syncScope,
+        /*alignment=*/0, isVolatile(op.getSemantics()));
+    return success();
+  }
+};
+
+/// Weak is lowered as strong since SPIR-V gives both the same semantics.
+template <typename SPIRVOp>
+class AtomicCompareExchangePattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    std::optional<StringRef> syncScope = getSyncScope(op.getMemoryScope());
+    LLVM::AtomicOrdering successOrdering =
+        getAtomicOrdering(op.getEqualSemantics());
+    LLVM::AtomicOrdering failureOrdering =
+        getAtomicOrdering(op.getUnequalSemantics());
+    if (!syncScope || failureOrdering == LLVM::AtomicOrdering::release ||
+        failureOrdering == LLVM::AtomicOrdering::acq_rel)
+      return rewriter.notifyMatchFailure(op, "unsupported scope or semantics");
+
+    auto cmpXchg = LLVM::AtomicCmpXchgOp::create(
+        rewriter, op.getLoc(), adaptor.getPointer(), adaptor.getComparator(),
+        adaptor.getValue(), successOrdering, failureOrdering, *syncScope,
+        /*alignment=*/0, /*isWeak=*/false,
+        isVolatile(op.getEqualSemantics() | op.getUnequalSemantics()));
+    rewriter.replaceOpWithNewOp<LLVM::ExtractValueOp>(op, cmpXchg, 0);
+    return success();
+  }
+};
+
+template <typename SPIRVOp>
+class AtomicLoadStorePattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    constexpr bool isLoad = std::is_same_v<SPIRVOp, spirv::AtomicLoadOp>;
+    std::optional<StringRef> syncScope = getSyncScope(op.getMemoryScope());
+    LLVM::AtomicOrdering ordering = getAtomicOrdering(op.getSemantics());
+    LLVM::AtomicOrdering invalidOrdering =
+        isLoad ? LLVM::AtomicOrdering::release : LLVM::AtomicOrdering::acquire;
+    if (!syncScope || ordering == invalidOrdering ||
+        ordering == LLVM::AtomicOrdering::acq_rel)
+      return rewriter.notifyMatchFailure(op, "unsupported scope or semantics");
+
+    // Atomic values are scalar integers or floats, aligned to their size.
+    Type pointeeType =
+        cast<spirv::PointerType>(op.getPointer().getType()).getPointeeType();
+    unsigned alignment = pointeeType.getIntOrFloatBitWidth() / 8;
+
+    if constexpr (isLoad) {
+      Type dstType = this->getTypeConverter()->convertType(op.getType());
+      if (!dstType)
+        return rewriter.notifyMatchFailure(op, "type conversion failed");
+      rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+          op, dstType, adaptor.getPointer(), alignment,
+          isVolatile(op.getSemantics()), /*isNonTemporal=*/false,
+          /*isInvariant=*/false, /*isInvariantGroup=*/false,
+          /*isNoundef=*/false, ordering, *syncScope);
+    } else {
+      rewriter.replaceOpWithNewOp<LLVM::StoreOp>(
+          op, adaptor.getValue(), adaptor.getPointer(), alignment,
+          isVolatile(op.getSemantics()), /*isNonTemporal=*/false,
+          /*isInvariantGroup=*/false, ordering, *syncScope);
+    }
+    return success();
+  }
+};
+
 /// Converts `spirv.Not` and `spirv.LogicalNot` into LLVM dialect.
 template <typename SPIRVOp>
 class NotPattern : public SPIRVToLLVMConversion<SPIRVOp> {
@@ -2765,6 +2910,25 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
                                     LLVM::USubWithOverflowOp>,
       MulExtendedPattern<spirv::SMulExtendedOp, LLVM::SExtOp>,
       MulExtendedPattern<spirv::UMulExtendedOp, LLVM::ZExtOp>,
+
+      // Atomic ops
+      AtomicRMWPattern<spirv::AtomicAndOp, LLVM::AtomicBinOp::_and>,
+      AtomicRMWPattern<spirv::AtomicExchangeOp, LLVM::AtomicBinOp::xchg>,
+      AtomicRMWPattern<spirv::AtomicIAddOp, LLVM::AtomicBinOp::add>,
+      AtomicRMWPattern<spirv::AtomicIDecrementOp, LLVM::AtomicBinOp::sub>,
+      AtomicRMWPattern<spirv::AtomicIIncrementOp, LLVM::AtomicBinOp::add>,
+      AtomicRMWPattern<spirv::AtomicISubOp, LLVM::AtomicBinOp::sub>,
+      AtomicRMWPattern<spirv::AtomicOrOp, LLVM::AtomicBinOp::_or>,
+      AtomicRMWPattern<spirv::AtomicSMaxOp, LLVM::AtomicBinOp::max>,
+      AtomicRMWPattern<spirv::AtomicSMinOp, LLVM::AtomicBinOp::min>,
+      AtomicRMWPattern<spirv::AtomicUMaxOp, LLVM::AtomicBinOp::umax>,
+      AtomicRMWPattern<spirv::AtomicUMinOp, LLVM::AtomicBinOp::umin>,
+      AtomicRMWPattern<spirv::AtomicXorOp, LLVM::AtomicBinOp::_xor>,
+      AtomicRMWPattern<spirv::EXTAtomicFAddOp, LLVM::AtomicBinOp::fadd>,
+      AtomicCompareExchangePattern<spirv::AtomicCompareExchangeOp>,
+      AtomicCompareExchangePattern<spirv::AtomicCompareExchangeWeakOp>,
+      AtomicLoadStorePattern<spirv::AtomicLoadOp>,
+      AtomicLoadStorePattern<spirv::AtomicStoreOp>,
 
       // Bitwise ops
       BitFieldInsertPattern, BitFieldUExtractPattern, BitFieldSExtractPattern,
