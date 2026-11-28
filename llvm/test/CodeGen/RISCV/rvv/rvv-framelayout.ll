@@ -9,7 +9,8 @@ define void @rvv_vla(i64 %n, i64 %i) nounwind {
 ; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi s0, sp, 32
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    slli a3, a2, 1
+; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    addi a0, a0, 15
@@ -17,12 +18,14 @@ define void @rvv_vla(i64 %n, i64 %i) nounwind {
 ; CHECK-NEXT:    sub a0, sp, a0
 ; CHECK-NEXT:    mv sp, a0
 ; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a3, a2, 1
+; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    sub a2, s0, a2
 ; CHECK-NEXT:    addi a2, a2, -32
 ; CHECK-NEXT:    vl1re64.v v8, (a2)
 ; CHECK-NEXT:    slli a1, a1, 2
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    sub a2, s0, a2
 ; CHECK-NEXT:    addi a2, a2, -32
 ; CHECK-NEXT:    add a0, a0, a1
@@ -54,12 +57,12 @@ define void @rvv_overaligned() nounwind {
 ; CHECK-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi s0, sp, 128
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    slli a1, a0, 1
+; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a1, a0, 1
-; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 112
 ; CHECK-NEXT:    vl1re64.v v8, (a0)
@@ -92,7 +95,8 @@ define void @rvv_vla_and_overaligned(i64 %n, i64 %i) nounwind {
 ; CHECK-NEXT:    sd s1, 120(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi s0, sp, 144
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 2
+; CHECK-NEXT:    slli a3, a2, 1
+; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    mv s1, sp
@@ -102,8 +106,7 @@ define void @rvv_vla_and_overaligned(i64 %n, i64 %i) nounwind {
 ; CHECK-NEXT:    sub a0, sp, a0
 ; CHECK-NEXT:    mv sp, a0
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a3, a2, 1
-; CHECK-NEXT:    add a2, a3, a2
+; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    add a2, s1, a2
 ; CHECK-NEXT:    addi a2, a2, 112
 ; CHECK-NEXT:    vl1re64.v v8, (a2)
@@ -133,4 +136,37 @@ define void @rvv_vla_and_overaligned(i64 %n, i64 %i) nounwind {
   %s2 = load volatile i32, ptr %p
   ret void
 
+}
+
+; The more aligned object has the lower frame index.
+define void @rvv_decreasing_alignment() nounwind {
+; CHECK-LABEL: rvv_decreasing_alignment:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -80
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi s0, sp, 80
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    li a1, 12
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    andi sp, sp, -64
+; CHECK-NEXT:    addi a0, sp, 64
+; CHECK-NEXT:    vl8re64.v v8, (a0)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 64
+; CHECK-NEXT:    vl1re64.v v8, (a0)
+; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    ret
+  %v8.addr = alloca <vscale x 8 x i64>
+  %v8 = load volatile <vscale x 8 x i64>, ptr %v8.addr
+
+  %v1.addr = alloca <vscale x 1 x i64>
+  %v1 = load volatile <vscale x 1 x i64>, ptr %v1.addr
+  ret void
 }
