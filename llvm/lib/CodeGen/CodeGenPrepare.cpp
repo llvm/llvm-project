@@ -8768,6 +8768,23 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   if (!match(Step, m_OneUse(m_c_Add(m_Specific(Phi), m_Value(LoopStride)))))
     return false;
 
+  unsigned NumStructs = 1;
+  Value *ShiftedVScale = LoopStride;
+  unsigned DepthLimit = 4;
+  SmallDenseMap<Value *, unsigned> Offsets;
+  if (match(LoopStride, m_c_Add(m_Value(LoopStride),
+                                m_Value(ShiftedVScale, m_Splat(m_Value())))))
+    while (--DepthLimit) {
+      Offsets.insert({LoopStride, NumStructs});
+      NumStructs++;
+      if (!match(LoopStride,
+                 m_c_Add(m_Value(LoopStride), m_Specific(ShiftedVScale))))
+        break;
+    }
+
+  if (!DepthLimit)
+    return false;
+
   // Make sure the loop stride matches the pointer stride.
   auto EltCnt = cast<VectorType>(Phi->getType())->getElementCount();
   const APInt *ShiftAmt = nullptr;
@@ -8775,7 +8792,8 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
   if (!match(
           LoopStride,
           m_Splat(m_Value(PtrStride, m_Shl(m_VScale(), m_APInt(ShiftAmt))))) ||
-      (1ULL << ShiftAmt->getZExtValue()) != EltCnt.getKnownMinValue())
+      (1ULL << ShiftAmt->getZExtValue()) != EltCnt.getKnownMinValue() ||
+      LoopStride != ShiftedVScale)
     return false;
 
   // Make sure the stride isn't defined inside the loop, so we don't have to
@@ -8785,60 +8803,105 @@ static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
 
   // For the simplest case, we're only interested if the phi has two users;
   // The Step forming the incoming value for the backedge, and a GEP.
-  GetElementPtrInst *GEP = nullptr;
-  Value *Base = nullptr;
+  struct OffsetGEP {
+    GetElementPtrInst *GEP;
+    Value *Offset;
+  };
+  SmallVector<OffsetGEP, 4> Candidates;
+  Value *CommonBase = nullptr;
+  Type *CommonTy = nullptr;
+  unsigned CommonSize = 0;
   for (User *U : Phi->users()) {
     // Skip over the step, handled above.
     if (Step == U)
       continue;
 
-    // If we've already found a GEP, bail out.
-    // TODO: Support multiple GEPs.
-    if (GEP)
+    // If we have an offset from the Phi values, record that and then look
+    // for a GEP.
+    Value *Offset = nullptr;
+    if (match(U, m_OneUse(m_c_Add(m_Specific(Phi), m_Value(Offset)))))
+      U = *(cast<Instruction>(U)->user_begin());
+
+    // Make sure any offset is one we already know about
+    if (Offset && !Offsets.contains(Offset))
       return false;
 
     // We're only interested in single index GEPs
-    GEP = dyn_cast<GetElementPtrInst>(U);
+    auto *GEP = dyn_cast<GetElementPtrInst>(U);
     if (!GEP || GEP->getNumOperands() != 2)
       return false;
 
-    // Reject if the base isn't loop invariant.
-    Base = GEP->getOperand(0);
-    if (!L->isLoopInvariant(Base))
+    Type *GepTy = GEP->getType();
+    if (CommonTy && (GepTy != CommonTy))
       return false;
+
+    CommonTy = GepTy;
+
+    // Reject if the base isn't loop invariant, or if different GEPs have
+    // different bases.
+    Value *Base = GEP->getOperand(0);
+    if (!L->isLoopInvariant(Base) || (CommonBase && CommonBase != Base))
+      return false;
+
+    CommonBase = Base;
+
+    // Check that the source type size is also the same.
+    TypeSize TSize = DL.getTypeAllocSize(GEP->getSourceElementType());
+    if (TSize.isScalable())
+      return false;
+
+    unsigned Size = TSize.getFixedValue();
+    if (!Size || (CommonSize && CommonSize != Size))
+      return false;
+
+    CommonSize = Size;
+    Candidates.push_back({GEP, Offset});
   }
 
-  // Make sure we found a GEP.
-  if (!GEP)
+  if (Candidates.empty())
     return false;
 
   // Multiply the start by the size of the struct, and add the base pointer.
-  unsigned Size = DL.getTypeAllocSize(GEP->getSourceElementType());
-  IRBuilder<> Builder(PreHeader->getTerminator());
-  Value *StructSize = ConstantInt::get(ITy, Size);
+  IRBuilder<> PHBuilder(PreHeader->getTerminator());
+  Value *StructSize = ConstantInt::get(ITy, CommonSize);
   Value *SizeSplat =
-      Builder.CreateVectorSplat(VTy->getElementCount(), StructSize);
-  Value *NewStart = Builder.CreateMul(Start, SizeSplat);
-  NewStart = Builder.CreatePtrAdd(Base, NewStart);
+      PHBuilder.CreateVectorSplat(VTy->getElementCount(), StructSize);
+  Value *NewStart = PHBuilder.CreateMul(Start, SizeSplat);
+  NewStart = PHBuilder.CreatePtrAdd(CommonBase, NewStart);
 
   // Create a new step based on the total size of all struct addresses per
   // iteration.
-  Value *StructStride = Builder.CreateMul(PtrStride, StructSize);
-  StructStride =
-      Builder.CreateVectorSplat(VTy->getElementCount(), StructStride);
+  Value *StructStride = PHBuilder.CreateMul(PtrStride, StructSize);
+  Value *TotalStride = StructStride;
+  if (NumStructs > 1)
+    TotalStride =
+        PHBuilder.CreateMul(TotalStride, ConstantInt::get(ITy, NumStructs));
+  TotalStride =
+      PHBuilder.CreateVectorSplat(VTy->getElementCount(), TotalStride);
 
-  Builder.SetInsertPoint(Phi);
-  PHINode *NewPhi = Builder.CreatePHI(GEP->getType(), 2, "vec.lsr.phi");
-  Builder.SetInsertPoint(cast<Instruction>(Step));
-  StructStride = Builder.CreatePtrAdd(NewPhi, StructStride);
+  IRBuilder<> LBuilder(Phi);
+  PHINode *NewPhi = LBuilder.CreatePHI(CommonTy, 2, "vec.lsr.phi");
+  LBuilder.SetInsertPoint(cast<Instruction>(Step));
+  TotalStride = LBuilder.CreatePtrAdd(NewPhi, TotalStride);
 
   // Set up the new PHI.
   NewPhi->addIncoming(NewStart, PreHeader);
-  NewPhi->addIncoming(StructStride, Latch);
+  NewPhi->addIncoming(TotalStride, Latch);
 
-  // Replace the GEP with the new phi.
-  Builder.SetInsertPoint(GEP);
-  GEP->replaceAllUsesWith(NewPhi);
+  // Replace the GEP with the new phi, or with a new ptradd based on the new phi
+  // if the original had an offset.
+  for (auto [GEP, Offset] : Candidates) {
+    Value *NewBase = NewPhi;
+    if (Offset) {
+      LBuilder.SetInsertPoint(GEP);
+      unsigned MulBy = NumStructs - Offsets.at(Offset);
+      Value *Index =
+          PHBuilder.CreateMul(StructStride, ConstantInt::get(ITy, MulBy));
+      Index = PHBuilder.CreateVectorSplat(VTy->getElementCount(), Index);
+      NewBase = LBuilder.CreatePtrAdd(NewBase, Index);
+    }
+    GEP->replaceAllUsesWith(NewBase);
+  }
 
   // Remove old phi, gep, and step.
   Phi->replaceAllUsesWith(llvm::PoisonValue::get(Phi->getType()));
