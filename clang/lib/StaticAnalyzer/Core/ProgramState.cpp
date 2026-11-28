@@ -75,9 +75,8 @@ ProgramStateManager::ProgramStateManager(ASTContext &Ctx,
 
 
 ProgramStateManager::~ProgramStateManager() {
-  for (GDMContextsTy::iterator I=GDMContexts.begin(), E=GDMContexts.end();
-       I!=E; ++I)
-    I->second.second(I->second.first);
+  for (const auto &[Key, Ctx] : GDMContexts)
+    Ctx.second(Ctx.first);
 }
 
 ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(

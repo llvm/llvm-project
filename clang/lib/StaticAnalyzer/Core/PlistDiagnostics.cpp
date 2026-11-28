@@ -254,8 +254,7 @@ void PlistPrinter::ReportControlFlow(raw_ostream &o,
   ++indent;
   Indent(o, indent) << "<array>\n";
   ++indent;
-  for (PathDiagnosticControlFlowPiece::const_iterator I=P.begin(), E=P.end();
-       I!=E; ++I) {
+  for (const PathDiagnosticLocationPair &Edge : P) {
     Indent(o, indent) << "<dict>\n";
     ++indent;
 
@@ -264,12 +263,12 @@ void PlistPrinter::ReportControlFlow(raw_ostream &o,
     // logic for clients.
     Indent(o, indent) << "<key>start</key>\n";
     SourceRange StartEdge(
-        SM.getExpansionLoc(I->getStart().asRange().getBegin()));
+        SM.getExpansionLoc(Edge.getStart().asRange().getBegin()));
     EmitRange(o, SM, Lexer::getAsCharRange(StartEdge, SM, LangOpts), FM,
               indent + 1);
 
     Indent(o, indent) << "<key>end</key>\n";
-    SourceRange EndEdge(SM.getExpansionLoc(I->getEnd().asRange().getBegin()));
+    SourceRange EndEdge(SM.getExpansionLoc(Edge.getEnd().asRange().getBegin()));
     EmitRange(o, SM, Lexer::getAsCharRange(EndEdge, SM, LangOpts), FM,
               indent + 1);
 
@@ -349,8 +348,8 @@ void PlistPrinter::ReportCall(raw_ostream &o, const PathDiagnosticCallPiece &P,
     ReportPiece(o, *callEnterWithinCaller, indent, depth,
                 /*includeControlFlow*/ true);
 
-  for (PathPieces::const_iterator I = P.path.begin(), E = P.path.end();I!=E;++I)
-    ReportPiece(o, **I, indent, depth, /*includeControlFlow*/ true);
+  for (const auto &Piece : P.path)
+    ReportPiece(o, *Piece, indent, depth, /*includeControlFlow*/ true);
 
   --depth;
 
