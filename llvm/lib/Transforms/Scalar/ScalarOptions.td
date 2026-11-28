@@ -260,7 +260,9 @@ defm : BoolField<"loop-flatten-widen-iv", "true",
 defm : ValueField<"loop-fusion-peel-max-count", "uint32_t", "0",
   "Max number of iterations to be peeled from a loop, such that fusion can take place">;
 defm : ValueField<"loop-fusion-min-reused-values", "unsigned", "1",
-  "Minimum number of distinct values reused across fused loops">;
+  "Minimum number of distinct reused or nearby memory accesses across fused loops">;
+defm : ValueField<"loop-fusion-max-reuse-distance", "unsigned", "64",
+  "Maximum byte distance between the start addresses of affine reads that still counts as reuse. A distance equal to this value does not count">;
 defm : BoolField<"loop-fusion-disable-cost-model", "false",
   "Do not apply cost model when deciding whether to fuse loops">;
 let Condition = AssertsOnly in

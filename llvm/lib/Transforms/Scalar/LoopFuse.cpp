@@ -1181,20 +1181,35 @@ private:
     return true;
   }
 
-  using AffineLoadKey = std::tuple<const SCEV *, const SCEV *>;
-
-  std::optional<AffineLoadKey> getAffineLoadKey(const FusionCandidate &FC,
-                                                Instruction &I) {
+  /// Return the affine add recurrence of \p I's address in \p FC's loop if
+  /// \p I is a load, or nullptr otherwise.
+  const SCEVAddRecExpr *getAffineRead(const FusionCandidate &FC,
+                                      Instruction &I) {
     auto *Load = dyn_cast<LoadInst>(&I);
     if (!Load)
-      return std::nullopt;
+      return nullptr;
 
     const auto *AR =
         dyn_cast<SCEVAddRecExpr>(SE.getSCEV(Load->getPointerOperand()));
     if (!AR || AR->getLoop() != FC.L || !AR->isAffine())
-      return std::nullopt;
+      return nullptr;
+    return AR;
+  }
 
-    return AffineLoadKey{AR->getStart(), AR->getStepRecurrence(SE)};
+  /// Return true if the starts of \p AR0 and \p AR1 differ by a constant whose
+  /// magnitude is less than -loop-fusion-max-reuse-distance. Identical starts
+  /// always qualify.
+  bool isWithinReuseDistance(const SCEVAddRecExpr *AR0,
+                             const SCEVAddRecExpr *AR1) {
+    std::optional<APInt> Delta =
+        SE.computeConstantDifference(AR0->getStart(), AR1->getStart());
+    if (!Delta)
+      return false;
+    // An exact match counts even when the reuse distance limit is zero.
+    if (*Delta == 0)
+      return true;
+    unsigned Limit = Opts.loop_fusion_max_reuse_distance;
+    return Delta->slt(Limit) && Delta->sgt(-int64_t(Limit));
   }
 
   /// Return true if \p A is known to execute before \p B in an iteration of
@@ -1226,10 +1241,14 @@ private:
     return false;
   }
 
+  using AffineLoadKey = std::tuple<const SCEV *, const SCEV *>;
+
   /// Collect distinct read-read addresses reused at corresponding iterations.
   ///
-  /// This uses exact affine SCEV equality rather than adding a potentially
-  /// expensive read-read DependenceAnalysis query for every load pair.
+  /// Reads whose start addresses differ by a constant byte distance also
+  /// count, when that distance is within -loop-fusion-max-reuse-distance.
+  /// Every load that shares a pointer base and step is kept, so a farther
+  /// offset cannot hide a later in-range match.
   void collectReadReadReuse(const FusionCandidate &FC0,
                             const FusionCandidate &FC1,
                             ReusedValueSet &ReusedValues) {
@@ -1237,34 +1256,45 @@ private:
       return;
 
     BatchAAResults BAA(AA);
-    SmallDenseMap<AffineLoadKey, Instruction *, 8> LoadAccesses0;
+    using CandidateLoad = std::pair<LoadInst *, const SCEVAddRecExpr *>;
+    SmallDenseMap<AffineLoadKey, SmallVector<CandidateLoad, 2>, 8> LoadsByBase;
+    auto Key = [&](const SCEVAddRecExpr *AR) {
+      return AffineLoadKey{SE.getPointerBase(AR), AR->getStepRecurrence(SE)};
+    };
     for (Instruction *ReadL0 : FC0.MemReads) {
-      std::optional<AffineLoadKey> Key = getAffineLoadKey(FC0, *ReadL0);
-      if (!Key)
+      const SCEVAddRecExpr *AR = getAffineRead(FC0, *ReadL0);
+      if (!AR)
         continue;
 
-      LoadAccesses0.try_emplace(*Key, ReadL0);
+      LoadsByBase[Key(AR)].emplace_back(cast<LoadInst>(ReadL0), AR);
     }
 
     for (Instruction *ReadL1 : FC1.MemReads) {
-      std::optional<AffineLoadKey> Key = getAffineLoadKey(FC1, *ReadL1);
-      if (!Key)
+      const SCEVAddRecExpr *AR = getAffineRead(FC1, *ReadL1);
+      if (!AR)
         continue;
 
-      Instruction *MatchingLoad = LoadAccesses0.lookup(*Key);
-      if (!MatchingLoad)
+      auto It = LoadsByBase.find(Key(AR));
+      if (It == LoadsByBase.end())
         continue;
 
-      auto *Load0 = cast<LoadInst>(MatchingLoad);
       auto *Load1 = cast<LoadInst>(ReadL1);
-      if (hasInterveningWrite(BAA, *Load0, *Load1, FC0, FC1))
-        continue;
+      for (const CandidateLoad &Match : It->second) {
+        LoadInst *Cand = Match.first;
+        // This load already counts, from an earlier read or a flow dependence.
+        if (ReusedValues.contains(Cand))
+          continue;
+        if (!isWithinReuseDistance(AR, Match.second))
+          continue;
+        if (hasInterveningWrite(BAA, *Cand, *Load1, FC0, FC1))
+          continue;
 
-      ReusedValues.insert(MatchingLoad);
-      LLVM_DEBUG(dbgs() << "Same-iteration read-read reuse via "
-                        << *MatchingLoad << "\n");
-      if (ReusedValues.size() >= Opts.loop_fusion_min_reused_values)
-        return;
+        ReusedValues.insert(Cand);
+        LLVM_DEBUG(dbgs() << "Same-iteration read-read reuse via " << *Cand
+                          << "\n");
+        if (ReusedValues.size() >= Opts.loop_fusion_min_reused_values)
+          return;
+      }
     }
   }
 
