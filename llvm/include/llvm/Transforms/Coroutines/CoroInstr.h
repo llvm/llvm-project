@@ -255,8 +255,16 @@ public:
   /// attributes, and calling convention of the continuation function(s)
   /// are taken from this declaration.
   Function *getPrototype() const {
-    return cast<Function>(
-        getArgOperand(PrototypeArg)->stripPointerCastsAndAliases());
+    Value *Prototype = getArgOperand(PrototypeArg);
+    if (ConstantPtrAuth *Signed = getSignedPrototype())
+      Prototype = Signed->getPointer();
+    return cast<Function>(Prototype->stripPointerCastsAndAliases());
+  }
+
+  /// Return the prototype operand if it is a signed pointer, in which case
+  /// the continuation function pointers are signed with the same schema.
+  ConstantPtrAuth *getSignedPrototype() const {
+    return dyn_cast<ConstantPtrAuth>(getArgOperand(PrototypeArg));
   }
 
   /// Return the function to use for allocating memory.

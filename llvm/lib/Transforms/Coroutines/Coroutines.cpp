@@ -556,6 +556,15 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
 /// Check that the given value is a well-formed prototype for the
 /// llvm.coro.id.retcon.* intrinsics.
 static void checkWFRetconPrototype(const AnyCoroIdRetconInst *I, Value *V) {
+  if (auto *Signed = dyn_cast<ConstantPtrAuth>(V)) {
+    if (!Signed->getDeactivationSymbol()->isNullValue() ||
+        (Signed->hasAddressDiscriminator() &&
+         !Signed->hasSpecialAddressDiscriminator(
+             ConstantPtrAuth::AddrDiscriminator_UseCoroStorage)))
+      fail(I, "llvm.coro.id.retcon.* prototype has an unsupported schema", V);
+    V = Signed->getPointer();
+  }
+
   auto F = dyn_cast<Function>(V->stripPointerCastsAndAliases());
   if (!F)
     fail(I, "llvm.coro.id.retcon.* prototype not a Function", V);
