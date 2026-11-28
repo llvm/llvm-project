@@ -2077,6 +2077,44 @@ static MCRegister getRVVBaseRegister(const RISCVRegisterInfo &TRI,
   return BaseReg;
 }
 
+// Describe DW_AT_frame_base in terms of the CFA rather than the raw frame
+// register. The frame register (s0 or sp) is only valid between the end of
+// the prologue and the point in the epilogue where it is restored, so a
+// register-based frame base makes every DW_OP_fbreg local unreadable once the
+// epilogue has reloaded s0. The CFA is recovered from the CFI, which stays
+// correct through the whole function.
+TargetFrameLowering::DwarfFrameBase
+RISCVFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
+  const RISCVRegisterInfo *RI = STI.getRegisterInfo();
+  Register FrameReg = RI->getFrameRegister(MF);
+  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+
+  // Naked functions have no prologue and no CFI to recover the CFA from.
+  if (MF.getFunction().hasFnAttribute(Attribute::Naked))
+    return DwarfFrameBase{DwarfFrameBase::Register, {FrameReg}};
+
+  DwarfFrameBase FrameBase;
+  FrameBase.Kind = DwarfFrameBase::CFA;
+
+  if (hasFP(MF)) {
+    // emitPrologue emits ".cfi_def_cfa fp, VarArgsSaveSize", i.e.
+    // CFA = fp + VarArgsSaveSize, so fp = CFA - VarArgsSaveSize.
+    FrameBase.Location.Offset = -(int64_t)RVFI->getVarArgsSaveSize();
+    return FrameBase;
+  }
+
+  // Without a frame pointer the frame register is sp. If there is a scalable
+  // vector stack area the CFA is "sp + StackSize + vlenb * N", which cannot
+  // be expressed as a constant offset from the CFA, so keep the register.
+  if (RVFI->getRVVStackSize() != 0)
+    return DwarfFrameBase{DwarfFrameBase::Register, {FrameReg}};
+
+  // After the prologue the CFI says CFA = sp + StackSizeWithRVVPadding, so
+  // sp = CFA - StackSizeWithRVVPadding.
+  FrameBase.Location.Offset = -(int64_t)getStackSizeWithRVVPadding(MF);
+  return FrameBase;
+}
+
 void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                               BitVector &SavedRegs,
                                               RegScavenger *RS) const {
