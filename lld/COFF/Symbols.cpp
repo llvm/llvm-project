@@ -11,6 +11,7 @@
 #include "InputFiles.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/IR/Mangler.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -124,10 +125,39 @@ DefinedImportThunk::DefinedImportThunk(COFFLinkerContext &ctx, StringRef name,
 Symbol *Undefined::getWeakAlias() {
   // A weak alias may be a weak alias to another symbol, so check recursively.
   DenseSet<Symbol *> weakChain;
+  Undefined *ecAlias = isAntiDep ? this : nullptr;
   for (Symbol *a = weakAlias; a; a = cast<Undefined>(a)->weakAlias) {
-    // Anti-dependency symbols can't be chained.
-    if (a->isAntiDep)
-      break;
+    // A definition satisfies the fallback whether or not it is an
+    // anti-dependency: that flag says the symbol does not keep a reference
+    // alive, not that it cannot stand in for another symbol.
+    if (isa<Defined>(a)) {
+      // A plain EC name-pair alias must keep the x64 spelling across a weak
+      // rename. Import thunks, unlike regular definitions, have distinct x64
+      // and native entry points.
+      if (ecAlias)
+        if (auto *thunk = dyn_cast<DefinedImportThunk>(a)) {
+          ImportFile *file = thunk->wrappedSym->file;
+          if (file->symtab.isEC() && thunk->wrappedSym == file->impECSym) {
+            std::optional<std::string> mangled =
+                getArm64ECMangledFunctionName(ecAlias->getName());
+            if (mangled && ecAlias->weakAlias->getName() == *mangled)
+              return file->thunkSym;
+          }
+        }
+      return a;
+    }
+    // Anti-dependency symbols can't be chained, with one exception: an ARM64EC
+    // name and its mangled form denote the same function, so a fallback that
+    // lands on one of them may continue to the other.
+    if (a->isAntiDep) {
+      auto *undef = dyn_cast<Undefined>(a);
+      Symbol *next = undef ? undef->weakAlias : nullptr;
+      std::optional<std::string> mangled =
+          getArm64ECMangledFunctionName(a->getName());
+      if (!next || !mangled || next->getName() != *mangled)
+        break;
+      ecAlias = undef;
+    }
     if (!isa<Undefined>(a))
       return a;
     if (!weakChain.insert(a).second)
