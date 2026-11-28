@@ -35,8 +35,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // must carry a debug location, scoped to the correct function.
 
 // CHECK: define {{.*}}@__omp_offloading_{{.*}} !dbg ![[SP:[0-9]+]] {
-// CHECK: call {{.*}}@__kmpc_alloc_shared(i64 16), !dbg ![[LOC:[0-9]+]]
-// CHECK: call {{.*}}@__kmpc_alloc_shared(i64 4), !dbg ![[LOC]]
+// CHECK: call {{.*}}@__kmpc_alloc_shared(i64 4), !dbg ![[LOC:[0-9]+]]
+// CHECK: call {{.*}}@__kmpc_alloc_shared(i64 16), !dbg ![[LOC]]
 // CHECK: call void @__kmpc_free_shared(ptr {{.*}}, i64 16), !dbg ![[LOC]]
 // CHECK: call void @__kmpc_free_shared(ptr {{.*}}, i64 4), !dbg ![[LOC]]
 // CHECK-DAG: ![[SP]] = distinct !DISubprogram(name: "__omp_offloading_target"
