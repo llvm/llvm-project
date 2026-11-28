@@ -456,8 +456,13 @@ namespace detail {
       if (count)
       {
          max = guess;
+         //
+         // We can't have this extra recursive tidy up step on CUDA:
+         //
+#if !defined(BOOST_MATH_ENABLE_CUDA) && !defined(BOOST_MATH_ENABLE_SYCL)
          if (multiplier > 16)
             return (guess0 - guess) + bracket_root_towards_min(f, guess, f_current, min, max, count);
+#endif
       }
       return guess0 - (max + min) / 2;
    }
@@ -520,8 +525,13 @@ namespace detail {
       if (count)
       {
          min = guess;
+         //
+         // We can't have this extra recursive tidy up step on CUDA:
+         //
+#if !defined(BOOST_MATH_ENABLE_CUDA) && !defined(BOOST_MATH_ENABLE_SYCL)
          if (multiplier > 16)
             return (guess0 - guess) + bracket_root_towards_max(f, guess, f_current, min, max, count);
+#endif
       }
       return guess0 - (max + min) / 2;
    }

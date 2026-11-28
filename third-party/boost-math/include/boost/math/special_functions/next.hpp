@@ -25,7 +25,7 @@
 #include <cfloat>
 
 
-#if !defined(_CRAYC) && !defined(__CUDACC__) && (!defined(__GNUC__) || (__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ > 3)))
+#if !defined(_CRAYC) && !defined(BOOST_MATH_ENABLE_CUDA) && (!defined(__GNUC__) || (__GNUC__ > 3) || ((__GNUC__ == 3) && (__GNUC_MINOR__ > 3)))
 #if (defined(_M_IX86_FP) && (_M_IX86_FP >= 2)) || defined(__SSE2__)
 #include "xmmintrin.h"
 #define BOOST_MATH_CHECK_SSE2

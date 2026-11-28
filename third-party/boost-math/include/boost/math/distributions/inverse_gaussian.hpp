@@ -52,6 +52,7 @@
 #include <boost/math/tools/config.hpp>
 #include <boost/math/tools/cstdint.hpp>
 #include <boost/math/special_functions/erf.hpp> // for erf/erfc.
+#include <boost/math/special_functions/pow.hpp> // for erf/erfc.
 #include <boost/math/distributions/complement.hpp>
 #include <boost/math/distributions/detail/common_error_handling.hpp>
 #include <boost/math/distributions/normal.hpp>
@@ -298,7 +299,7 @@ struct inverse_gaussian_quantile_complement_functor
 namespace detail
 {
   template <class RealType>
-  BOOST_MATH_GPU_ENABLED inline RealType guess_ig(RealType p, RealType mu = 1, RealType lambda = 1)
+  BOOST_MATH_GPU_ENABLED inline RealType guess_ig(RealType p, RealType q, RealType mu, RealType lambda)
   { // guess at random variate value x for inverse gaussian quantile.
     BOOST_MATH_STD_USING
     using boost::math::policies::policy;
@@ -323,27 +324,16 @@ namespace detail
       x = mu * exp(quantile(n01, p) / sqrt(phi) - 1/(2 * phi));
      }
     else
-    { // phi < 2 so much less symmetrical with long tail,
-      // so use gamma distribution as an approximation.
-      using boost::math::gamma_distribution;
-
-      // Define the distribution, using gamma_nooverflow:
-      using gamma_nooverflow = gamma_distribution<RealType, no_overthrow_policy>;
-
-      gamma_nooverflow g(static_cast<RealType>(0.5), static_cast<RealType>(1.));
-
-      // R qgamma(0.2, 0.5, 1) = 0.0320923
-      RealType qg = quantile(complement(g, p));
-      x = lambda / (qg * 2);
-      // 
-      if (x > mu/2) // x > mu /2?
-      { // x too large for the gamma approximation to work well.
-        //x = qgamma(p, 0.5, 1.0); // qgamma(0.270614, 0.5, 1) = 0.05983807
-        RealType q = quantile(g, p);
-       // x = mu * exp(q * static_cast<RealType>(0.1));  // Said to improve at high p
-       // x = mu * x;  // Improves at high p?
-        x = mu * exp(q / sqrt(phi) - 1/(2 * phi));
-      }
+    {
+       // Construct a gamma distribution with the same mean and standard deviation, and hope it
+       // get's us in more or less the right ballpark:
+       inverse_gaussian_distribution<RealType> ig(mu, lambda);
+       RealType m = mean(ig);
+       RealType v = standard_deviation(ig);
+       RealType k = m * m / v;
+       RealType theta = v / m;
+       gamma_distribution<RealType> n01(k, theta);
+       x = p < q ? quantile(n01, p) : quantile(complement(n01, q));
     }
     return x;
   }  // guess_ig
@@ -379,7 +369,7 @@ BOOST_MATH_GPU_ENABLED inline RealType quantile(const inverse_gaussian_distribut
       return result; // infinity;
    }
 
-  RealType guess = detail::guess_ig(p, dist.mean(), dist.scale());
+  RealType guess = detail::guess_ig(p, RealType(1 - p), dist.mean(), dist.scale());
   using boost::math::tools::max_value;
 
   RealType min = static_cast<RealType>(0); // Minimum possible value is bottom of range of distribution.
@@ -390,8 +380,19 @@ BOOST_MATH_GPU_ENABLED inline RealType quantile(const inverse_gaussian_distribut
   int get_digits = policies::digits<RealType, Policy>();// get digits from policy, 
   boost::math::uintmax_t max_iter = policies::get_max_root_iterations<Policy>(); // and max iterations.
   using boost::math::tools::newton_raphson_iterate;
+  inverse_gaussian_quantile_functor<RealType, Policy> func(dist, p);
+  //
+  // Our guess is often not very good, so lets bracket the root just in case:
+  //
+  RealType f0 = boost::math::get<0>(func(guess));
+  if (f0 < 0)
+     tools::detail::bracket_root_towards_max(func, guess, f0, min, max, max_iter);
+  else
+     tools::detail::bracket_root_towards_min(func, guess, f0, min, max, max_iter);
+  if((guess < min) || (guess > max))
+     guess = (min + max) / 2;
   result =
-    newton_raphson_iterate(inverse_gaussian_quantile_functor<RealType, Policy>(dist, p), guess, min, max, get_digits, max_iter);
+    newton_raphson_iterate(func, guess, min, max, get_digits, max_iter);
   if (max_iter >= policies::get_max_root_iterations<Policy>())
   {
      return policies::raise_evaluation_error<RealType>(function, "Unable to locate solution in a reasonable time:" // LCOV_EXCL_LINE
@@ -455,7 +456,7 @@ BOOST_MATH_GPU_ENABLED inline RealType quantile(const complemented2_type<inverse
    if(false == detail::check_probability(function, q, &result, Policy()))
       return result;
 
-   RealType guess = detail::guess_ig(q, mean, scale);
+   RealType guess = detail::guess_ig(RealType(1 - q), q, mean, scale);
    // Complement.
    using boost::math::tools::max_value;
 
@@ -466,7 +467,17 @@ BOOST_MATH_GPU_ENABLED inline RealType quantile(const complemented2_type<inverse
   int get_digits = policies::digits<RealType, Policy>();
   boost::math::uintmax_t max_iter = policies::get_max_root_iterations<Policy>();
   using boost::math::tools::newton_raphson_iterate;
-  result = newton_raphson_iterate(inverse_gaussian_quantile_complement_functor<RealType, Policy>(c.dist, q), guess, min, max, get_digits, max_iter);
+  inverse_gaussian_quantile_complement_functor<RealType, Policy> func(c.dist, q);
+  RealType f0 = boost::math::get<0>(func(guess));
+  if (f0 > 0)
+     tools::detail::bracket_root_towards_max(func, guess, f0, min, max, max_iter);
+  else
+     tools::detail::bracket_root_towards_min(func, guess, f0, min, max, max_iter);
+  if ((guess < min) || (guess > max))
+     guess = (min + max) / 2;
+  result =
+     newton_raphson_iterate(func, guess, min, max, get_digits, max_iter);
+  result = newton_raphson_iterate(func, guess, min, max, get_digits, max_iter);
   if (max_iter >= policies::get_max_root_iterations<Policy>())
   {
      return policies::raise_evaluation_error<RealType>(function, "Unable to locate solution in a reasonable time:" // LCOV_EXCL_LINE

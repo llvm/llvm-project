@@ -6,10 +6,32 @@
 #define BOOST_MATH_TOOLS_CUBIC_ROOTS_HPP
 #include <algorithm>
 #include <array>
+#include <boost/math/special_functions/fpclassify.hpp>
 #include <boost/math/special_functions/sign.hpp>
 #include <boost/math/tools/roots.hpp>
 
 namespace boost::math::tools {
+
+namespace detail {
+
+// Orders finite roots ascending and moves NaN entries to the back.
+// Sorting NaNs is UB when using vanilla operator< (comparisons to NaN are always false),
+// so we need to provide our own sort function that pushes NaN to the end
+template <typename Real>
+bool roots_less(const Real& lhs, const Real& rhs)
+{
+    if ((boost::math::isnan)(lhs))
+    {
+        return false;
+    }
+    if ((boost::math::isnan)(rhs))
+    {
+        return true;
+    }
+    return lhs < rhs;
+}
+
+} // namespace detail
 
 // Solves ax^3 + bx^2 + cx + d = 0.
 // Only returns the real roots, as types get weird for real coefficients and
@@ -55,7 +77,7 @@ std::array<Real, 3> cubic_roots(Real a, Real b, Real c, Real d) {
         roots[0] = x0;
         roots[1] = x1;
         roots[2] = 0;
-        std::sort(roots.begin(), roots.end());
+        std::sort(roots.begin(), roots.end(), detail::roots_less<Real>);
         return roots;
     }
     Real p = b / a;
@@ -115,7 +137,7 @@ std::array<Real, 3> cubic_roots(Real a, Real b, Real c, Real d) {
             }
         }
     }
-    std::sort(roots.begin(), roots.end());
+    std::sort(roots.begin(), roots.end(), detail::roots_less<Real>);
     return roots;
 }
 

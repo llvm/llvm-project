@@ -19,6 +19,8 @@
 #include <boost/math/constants/constants.hpp>
 #include <boost/math/policies/policy.hpp>
 #include <boost/math/policies/error_handling.hpp>
+#include <boost/math/special_functions/logit.hpp>
+#include <boost/math/special_functions/logistic_sigmoid.hpp>
 
 namespace boost { namespace math { 
 
@@ -144,13 +146,10 @@ namespace boost { namespace math {
        {
           return result;
        }
-       BOOST_MATH_STD_USING
-       RealType power = (location - x) / scale;
-       if(power > tools::log_max_value<RealType>())
-          return 0;
-       if(power < -tools::log_max_value<RealType>())
-          return 1;
-       return 1 / (1 + exp(power)); 
+
+       using promoted_real_type = typename policies::evaluation<RealType, Policy>::type;
+       promoted_real_type power = (static_cast<promoted_real_type>(x) - static_cast<promoted_real_type>(location)) / static_cast<promoted_real_type>(scale);
+       return logistic_sigmoid(power, policies::make_forwarding_policy_t<Policy>());
     }
 
     template <class RealType, class Policy>
@@ -159,7 +158,7 @@ namespace boost { namespace math {
        RealType scale = dist.scale();
        RealType location = dist.location();
        RealType result = 0; // of checks.
-       constexpr auto function = "boost::math::cdf(const logistic_distribution<%1%>&, %1%)";
+       constexpr auto function = "boost::math::logcdf(const logistic_distribution<%1%>&, %1%)";
        if(false == detail::check_scale(function, scale, &result, Policy()))
        {
           return result;
@@ -199,7 +198,6 @@ namespace boost { namespace math {
     template <class RealType, class Policy>
     BOOST_MATH_GPU_ENABLED inline RealType quantile(const logistic_distribution<RealType, Policy>& dist, const RealType& p)
     {
-       BOOST_MATH_STD_USING
        RealType location = dist.location();
        RealType scale = dist.scale();
 
@@ -221,21 +219,13 @@ namespace boost { namespace math {
        {
           return policies::raise_overflow_error<RealType>(function,"probability argument is 1, must be >0 and <1",Policy());
        }
-       //Expressions to try
-       //return location+scale*log(p/(1-p));
-       //return location+scale*log1p((2*p-1)/(1-p));
 
-       //return location - scale*log( (1-p)/p);
-       //return location - scale*log1p((1-2*p)/p);
-
-       //return -scale*log(1/p-1) + location;
-       return location - scale * log((1 - p) / p);
+       return location + scale * logit(p, Policy());
      } // RealType quantile(const logistic_distribution<RealType, Policy>& dist, const RealType& p)
     
     template <class RealType, class Policy>
     BOOST_MATH_GPU_ENABLED inline RealType cdf(const complemented2_type<logistic_distribution<RealType, Policy>, RealType>& c)
     {
-       BOOST_MATH_STD_USING
        RealType location = c.dist.location();
        RealType scale = c.dist.scale();
        RealType x = c.param;
@@ -259,12 +249,10 @@ namespace boost { namespace math {
        {
           return result;
        }
-       RealType power = (x - location) / scale;
-       if(power > tools::log_max_value<RealType>())
-          return 0;
-       if(power < -tools::log_max_value<RealType>())
-          return 1;
-       return 1 / (1 + exp(power)); 
+
+       using promoted_real_type = typename policies::evaluation<RealType, Policy>::type;
+       promoted_real_type power = (static_cast<promoted_real_type>(location) - static_cast<promoted_real_type>(x)) / static_cast<promoted_real_type>(scale);
+       return logistic_sigmoid(power, policies::make_forwarding_policy_t<Policy>());
     } 
 
     template <class RealType, class Policy>
@@ -274,7 +262,7 @@ namespace boost { namespace math {
        RealType location = c.dist.location();
        RealType scale = c.dist.scale();
        RealType x = c.param;
-       constexpr auto function = "boost::math::cdf(const complement(logistic_distribution<%1%>&), %1%)";
+       constexpr auto function = "boost::math::logcdf(const complement(logistic_distribution<%1%>&), %1%)";
 
        RealType result = 0;
        if(false == detail::check_scale(function, scale, &result, Policy()))
@@ -306,7 +294,6 @@ namespace boost { namespace math {
     template <class RealType, class Policy>
     BOOST_MATH_GPU_ENABLED inline RealType quantile(const complemented2_type<logistic_distribution<RealType, Policy>, RealType>& c)
     {
-       BOOST_MATH_STD_USING
        RealType scale = c.dist.scale();
        RealType location = c.dist.location();
        constexpr auto function = "boost::math::quantile(const complement(logistic_distribution<%1%>&), %1%)";
@@ -328,15 +315,8 @@ namespace boost { namespace math {
        {
           return policies::raise_overflow_error<RealType>(function,"probability argument is 0, but must be >0 and <1",Policy());
        }
-       //Expressions to try 
-       //return location+scale*log((1-q)/q);
-       return location + scale * log((1 - q) / q);
 
-       //return location-scale*log(q/(1-q));
-       //return location-scale*log1p((2*q-1)/(1-q));
-
-       //return location+scale*log(1/q-1);
-       //return location+scale*log1p(1/q-2);
+       return location - scale * logit(q, Policy());
     } 
     
     template <class RealType, class Policy>
