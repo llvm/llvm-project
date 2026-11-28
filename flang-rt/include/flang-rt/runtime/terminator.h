@@ -16,6 +16,12 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+// <csignal> is not available for device compilation or a native GPU build.
+// FLANG_RT_HAVE_CSIGNAL marks the host builds where std::signal is declared.
+#if !defined(RT_DEVICE_COMPILATION) && !RT_GPU_TARGET
+#include <csignal>
+#define FLANG_RT_HAVE_CSIGNAL 1
+#endif
 
 namespace Fortran::runtime {
 
@@ -119,6 +125,18 @@ void SetErrorCallback(void (*callback)(int));
 
 [[noreturn]] void NormalExit(int exitCode);
 [[noreturn]] void ErrorExit(int exitCode);
+
+#ifdef FLANG_RT_HAVE_CSIGNAL
+// Host only. Device and native GPU builds do not include <csignal>.
+// Print a stack trace when -fbacktrace is enabled and backtrace(3) is
+// available. heading may be null. Does nothing when backtrace(3) is not
+// available; CALL BACKTRACE() still reports that it is unsupported.
+void PrintFatalBacktrace(const char *heading);
+// Install handlers for deadly signals whose action is still the default.
+// An existing handler or SIG_IGN is left in place. Does nothing when
+// backtrace(3) is not available.
+void InstallFatalBacktraceHandlers();
+#endif
 
 RT_API_ATTRS void SynchronizeImagesOfNormalEnd(int);
 RT_API_ATTRS void NotifyOtherImagesOfFailImageStatement();

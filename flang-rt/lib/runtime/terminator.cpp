@@ -75,6 +75,12 @@ RT_API_ATTRS void Terminator::CrashHeader() const {
   // FIXME: re-enable the flush along with the IO enabling.
   io::FlushOutputOnCrash(*this);
 #endif
+#ifdef FLANG_RT_HAVE_CSIGNAL
+  // Print before abort(). Reset SIGABRT so the fatal-signal handler does not
+  // print a second trace. Both are compiled only where <csignal> is included.
+  PrintFatalBacktrace("\nError termination. Backtrace:\n");
+  std::signal(SIGABRT, SIG_DFL);
+#endif
 #endif
   NotifyOtherImagesOfErrorTermination(EXIT_FAILURE);
 #if defined(RT_DEVICE_COMPILATION)
