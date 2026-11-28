@@ -2380,6 +2380,16 @@ public:
     return false;
   }
 
+  /// Whether AtomicExpandPass should lower the atomic load, store, atomicrmw
+  /// or cmpxchg \p I to non-atomic memory operations, as it does in a
+  /// single-threaded module. This is valid when no other thread can access the
+  /// memory \p I accesses. Unlike AtomicExpansionKind::NotAtomic, this happens
+  /// before AtomicExpandPass emits libcalls or fences for \p I. Defaults to
+  /// false.
+  virtual bool shouldLowerAtomicToNonAtomic(const Instruction *I) const {
+    return false;
+  }
+
   /// Whether a fence between the load-linked and the store-conditional can
   /// clear the reservation. If true, AtomicExpandPass places the release fence
   /// of a weak cmpxchg before the load-linked. Defaults to false.

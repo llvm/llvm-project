@@ -339,9 +339,10 @@ bool AtomicExpandImpl::tryInsertFencesForAtomic(AtomicInst *AtomicI,
   return false;
 }
 
-/// In a single-threaded environment, atomic operations can be lowered to their
-/// non-atomic equivalents: fences are removed, and atomic loads, stores, RMW,
-/// and cmpxchg become plain memory operations.
+/// In a single-threaded environment, or for memory that only the executing
+/// thread can access, atomic operations can be lowered to their non-atomic
+/// equivalents: fences are removed, and atomic loads, stores, RMW, and cmpxchg
+/// become plain memory operations.
 bool AtomicExpandImpl::lowerToNonAtomic(Instruction *I) {
   if (auto *FI = dyn_cast<FenceInst>(I)) {
     FI->eraseFromParent();
@@ -379,6 +380,10 @@ bool AtomicExpandImpl::lowerToNonAtomic(Instruction *I) {
 
 bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
   if (SingleThreaded)
+    return lowerToNonAtomic(I);
+
+  if (I->isAtomic() && !isa<FenceInst>(I) &&
+      TLI->shouldLowerAtomicToNonAtomic(I))
     return lowerToNonAtomic(I);
 
   if (auto *LI = dyn_cast<LoadInst>(I)) {

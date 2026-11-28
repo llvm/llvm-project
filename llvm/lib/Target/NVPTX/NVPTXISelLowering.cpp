@@ -8402,6 +8402,20 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
   return false;
 }
 
+bool NVPTXTargetLowering::shouldLowerAtomicToNonAtomic(
+    const Instruction *I) const {
+  // Local memory is private to the thread, so atomics on it don't need to be
+  // atomic. PTX has no atom instruction for the .local state space anyway.
+  unsigned AS;
+  if (const auto *RMW = dyn_cast<AtomicRMWInst>(I))
+    AS = RMW->getPointerAddressSpace();
+  else if (const auto *CmpXchg = dyn_cast<AtomicCmpXchgInst>(I))
+    AS = CmpXchg->getPointerAddressSpace();
+  else
+    AS = getLoadStoreAddressSpace(I);
+  return AS == ADDRESS_SPACE_LOCAL;
+}
+
 AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
     const Instruction *I) const {
   // Returns the new AtomicOrdering for the original op once AtomicExpandPass

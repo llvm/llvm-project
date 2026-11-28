@@ -174,6 +174,8 @@ public:
 
   bool shouldInsertFencesForAtomic(const Instruction *) const override;
 
+  bool shouldLowerAtomicToNonAtomic(const Instruction *I) const override;
+
   AtomicOrdering
   atomicOperationOrderAfterFenceSplit(const Instruction *I) const override;
 
