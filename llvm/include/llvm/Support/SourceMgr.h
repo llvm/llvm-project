@@ -77,6 +77,11 @@ private:
     template <typename T>
     const char *getPointerForLineNumberSpecialized(unsigned LineNo) const;
 
+    /// Return a pointer to the newline that terminates the specified line, or
+    /// to the end of the buffer if there is no terminating newline. The line
+    /// number must be valid.
+    LLVM_ABI const char *getPointerForLineEnd(unsigned LineNo) const;
+
     /// This is the location of the parent include, or null if at the top level.
     SMLoc IncludeLoc;
 
