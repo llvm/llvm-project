@@ -71,6 +71,16 @@ public:
   /// Top-level function for invoking callback after device data deallocation
   void endTargetDataDelete(int64_t DeviceId, void *TgtPtrBegin, void *Code);
 
+  /// Top-level function for invoking callback before a rectangular transfer
+  void beginTargetDataTransferRect(int64_t SrcDeviceId, void *SrcPtrBegin,
+                                   int64_t DstDeviceId, void *DstPtrBegin,
+                                   size_t Size, void *Code);
+
+  /// Top-level function for invoking callback after a rectangular transfer
+  void endTargetDataTransferRect(int64_t SrcDeviceId, void *SrcPtrBegin,
+                                 int64_t DstDeviceId, void *DstPtrBegin,
+                                 size_t Size, void *Code);
+
   /// Top-level function for invoking callback before data retrieve
   void beginTargetDataRetrieve(int64_t SrcDeviceId, void *SrcPtrBegin,
                                int64_t DstDeviceId, void *DstPtrBegin,
@@ -165,6 +175,12 @@ public:
                   OpType == ompt_target_data_transfer_from_device_async)
       return std::make_pair(std::mem_fn(&Interface::beginTargetDataRetrieve),
                             std::mem_fn(&Interface::endTargetDataRetrieve));
+
+    if constexpr (OpType == ompt_target_data_transfer_rect ||
+                  OpType == ompt_target_data_transfer_rect_async)
+      return std::make_pair(
+          std::mem_fn(&Interface::beginTargetDataTransferRect),
+          std::mem_fn(&Interface::endTargetDataTransferRect));
 
     if constexpr (OpType == ompt_target_data_associate)
       return std::make_pair(

@@ -792,6 +792,240 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
   return OFFLOAD_SUCCESS;
 }
 
+// Returns false if another path is needed. liboffload itself falls back to
+// other strategies when the backend lacks 2D/3D copies or the devices cannot
+// exchange data.
+static llvm::Expected<bool> dataMemcpy3D(ol_queue_handle_t Queue, void *DstPtr,
+                                         ol_device_handle_t DstHandle,
+                                         const ol_memcpy3d_layout_t &DstLayout,
+                                         const void *SrcPtr,
+                                         ol_device_handle_t SrcHandle,
+                                         const ol_memcpy3d_layout_t &SrcLayout,
+                                         ol_dimensions_t Size) {
+  if (auto Res = olMemcpy3D(Queue, DstPtr, DstHandle, &DstLayout, SrcPtr,
+                            SrcHandle, &SrcLayout, Size)) {
+    // The generic path accepts layouts that liboffload rejects.
+    if (Res->Code == OL_ERRC_INVALID_SIZE)
+      return false;
+    return createError(ErrorCode::BackendFailure,
+                       "failure in rectangular memcpy: %s", Res->Details);
+  }
+  return true;
+}
+
+llvm::Error forEachMemcpyRectRow(
+    void *Dst, const void *Src, const MemcpyRectTy &Rect,
+    llvm::function_ref<llvm::Error(void *, const void *, size_t)> CopyRow) {
+  const auto [ElementSize, NumDims, Volume, DstOffsets, SrcOffsets,
+              DstDimensions, SrcDimensions] = Rect;
+  // Nothing to copy if any dimension is empty.
+  for (int I = 0; I < NumDims; ++I)
+    if (!Volume[I])
+      return llvm::Error::success();
+
+  llvm::SmallVector<size_t, 4> DstStride(NumDims), SrcStride(NumDims);
+  DstStride[NumDims - 1] = SrcStride[NumDims - 1] = ElementSize;
+  // Compute the byte stride of each dimension, innermost to outermost.
+  for (int I = NumDims - 2; I >= 0; --I) {
+    DstStride[I] = DstStride[I + 1] * DstDimensions[I + 1];
+    SrcStride[I] = SrcStride[I + 1] * SrcDimensions[I + 1];
+  }
+  size_t DstBase = 0, SrcBase = 0;
+  // Fold the starting offsets into a byte offset from each base pointer.
+  for (int I = 0; I < NumDims; ++I) {
+    DstBase += DstOffsets[I] * DstStride[I];
+    SrcBase += SrcOffsets[I] * SrcStride[I];
+  }
+  size_t RowLength = Volume[NumDims - 1] * ElementSize;
+
+  llvm::SmallVector<size_t, 4> Idx(NumDims, 0);
+  // Copy one contiguous row per iteration, until the index has wrapped around
+  // in every outer dimension.
+  int D = 0;
+  while (D >= 0) {
+    char *DstAddr = static_cast<char *>(Dst) + DstBase;
+    const char *SrcAddr = static_cast<const char *>(Src) + SrcBase;
+    // Add the current outer index of each dimension to the row address.
+    for (int I = 0; I < NumDims - 1; ++I) {
+      DstAddr += Idx[I] * DstStride[I];
+      SrcAddr += Idx[I] * SrcStride[I];
+    }
+    if (llvm::Error Err = CopyRow(DstAddr, SrcAddr, RowLength))
+      return Err;
+
+    // Move to the next row: increment the innermost outer index, and if it
+    // reaches its volume, reset it to 0 and increment the next one outward.
+    // D ends up negative once every outer index has wrapped.
+    for (D = NumDims - 2; D >= 0; --D) {
+      if (++Idx[D] < Volume[D])
+        break;
+      Idx[D] = 0;
+    }
+  }
+  return llvm::Error::success();
+}
+
+// Describe \p Rect as a 3D copy, padding leading dimensions. Returns false if
+// the values do not fit what liboffload takes.
+static bool makeMemcpy3DArgs(const MemcpyRectTy &Rect,
+                             ol_memcpy3d_layout_t &DstLayout,
+                             ol_memcpy3d_layout_t &SrcLayout,
+                             ol_dimensions_t &Size) {
+  size_t Vol[3] = {1, 1, 1}, DstOff[3] = {0, 0, 0}, SrcOff[3] = {0, 0, 0};
+  size_t DstDim[3] = {1, 1, 1}, SrcDim[3] = {1, 1, 1};
+  for (int I = 0; I < Rect.NumDims; ++I) {
+    int J = 3 - Rect.NumDims + I;
+    Vol[J] = Rect.Volume[I];
+    DstOff[J] = Rect.DstOffsets[I];
+    SrcOff[J] = Rect.SrcOffsets[I];
+    DstDim[J] = Rect.DstDimensions[I];
+    SrcDim[J] = Rect.SrcDimensions[I];
+  }
+
+  // Offsets and extents must fit in 32 bits; pitches must not overflow.
+  constexpr size_t Max = std::numeric_limits<uint32_t>::max();
+  bool InRange = true;
+  auto Mul = [&](size_t A, size_t B) {
+    size_t R;
+    InRange &= !__builtin_mul_overflow(A, B, &R);
+    return R;
+  };
+  size_t ES = Rect.ElementSize;
+  size_t DstPitch = Mul(DstDim[2], ES);
+  size_t SrcPitch = Mul(SrcDim[2], ES);
+  size_t DstSlicePitch = Mul(DstDim[1], DstPitch);
+  size_t SrcSlicePitch = Mul(SrcDim[1], SrcPitch);
+  size_t Width = Mul(Vol[2], ES);
+  size_t DstX = Mul(DstOff[2], ES);
+  size_t SrcX = Mul(SrcOff[2], ES);
+  for (size_t V : {Width, Vol[1], Vol[0], DstX, DstOff[1], DstOff[0], SrcX,
+                   SrcOff[1], SrcOff[0]})
+    InRange &= V <= Max;
+  if (!InRange)
+    return false;
+
+  DstLayout = {{static_cast<uint32_t>(DstX), static_cast<uint32_t>(DstOff[1]),
+                static_cast<uint32_t>(DstOff[0])},
+               DstPitch,
+               DstSlicePitch};
+  SrcLayout = {{static_cast<uint32_t>(SrcX), static_cast<uint32_t>(SrcOff[1]),
+                static_cast<uint32_t>(SrcOff[0])},
+               SrcPitch,
+               SrcSlicePitch};
+  Size = {static_cast<uint32_t>(Width), static_cast<uint32_t>(Vol[1]),
+          static_cast<uint32_t>(Vol[0])};
+  return true;
+}
+
+// Byte offset of the first element of the region of \p Rect inside a buffer
+// with the given per-dimension sizes.
+static size_t rectStartOffset(const MemcpyRectTy &Rect, const size_t *Offsets,
+                              const size_t *Dimensions) {
+  size_t Offset = 0;
+  size_t Stride = Rect.ElementSize;
+  for (int I = Rect.NumDims - 1; I >= 0; --I) {
+    Offset += Offsets[I] * Stride;
+    Stride *= Dimensions[I];
+  }
+  return Offset;
+}
+
+llvm::Error DeviceTy::dataMemcpyRect(CopyDirTy Dir, void *Dst, const void *Src,
+                                     const MemcpyRectTy &Rect,
+                                     DeviceTy *DstDevice,
+                                     AsyncInfoTy *AsyncInfo) {
+  assert((Dir != CopyDirTy::DeviceToDevice || DstDevice) &&
+         "DeviceToDevice needs a destination device");
+  // A null queue makes the copy synchronous.
+  ol_queue_handle_t Queue = nullptr;
+  if (AsyncInfo) {
+    Queue = AsyncInfo->getQueue();
+    if (!Queue)
+      return createError(ErrorCode::BackendFailure,
+                         "no queue available for rectangular memcpy");
+  }
+  ol_device_handle_t DstHandle = nullptr;
+  ol_device_handle_t SrcHandle = nullptr;
+  switch (Dir) {
+  case CopyDirTy::HostToDevice:
+    DstHandle = DeviceHandle;
+    break;
+  case CopyDirTy::DeviceToHost:
+    SrcHandle = DeviceHandle;
+    break;
+  case CopyDirTy::DeviceToDevice:
+    DstHandle = DstDevice->DeviceHandle;
+    SrcHandle = DeviceHandle;
+    break;
+  }
+
+  // Nothing to report or copy if any dimension is empty.
+  size_t Bytes = Rect.ElementSize;
+  for (int I = 0; I < Rect.NumDims; ++I)
+    Bytes *= Rect.Volume[I];
+  if (!Bytes)
+    return llvm::Error::success();
+
+  void *DstStart = static_cast<char *>(Dst) +
+                   rectStartOffset(Rect, Rect.DstOffsets, Rect.DstDimensions);
+  const void *SrcStart =
+      static_cast<const char *>(Src) +
+      rectStartOffset(Rect, Rect.SrcOffsets, Rect.SrcDimensions);
+
+  if (Dir != CopyDirTy::DeviceToDevice &&
+      (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER)) {
+    bool H2D = Dir == CopyDirTy::HostToDevice;
+    MappingInfo.printCopyInfo(H2D ? DstStart : const_cast<void *>(SrcStart),
+                              H2D ? const_cast<void *>(SrcStart) : DstStart,
+                              static_cast<int64_t>(Bytes), H2D,
+                              /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr);
+  }
+
+  // The whole rectangular copy, whichever path performs it, is a single data
+  // operation for tools; the individual row copies are not reported.
+  OMPT_IF_BUILT(
+      int32_t SrcID =
+          Dir == CopyDirTy::HostToDevice ? omp_initial_device : DeviceID;
+      int32_t DstID = Dir == CopyDirTy::HostToDevice   ? DeviceID
+                      : Dir == CopyDirTy::DeviceToHost ? omp_initial_device
+                                                       : DstDevice->DeviceID;
+      InterfaceRAII TargetDataRectRAII(
+          RegionInterface.getCallbacks<ompt_target_data_transfer_rect>(), SrcID,
+          const_cast<void *>(SrcStart), DstID, DstStart, Bytes,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
+
+  // Fast path: one liboffload call.
+  ol_memcpy3d_layout_t DstLayout, SrcLayout;
+  ol_dimensions_t Size;
+  if (Rect.NumDims >= 2 && Rect.NumDims <= 3 &&
+      makeMemcpy3DArgs(Rect, DstLayout, SrcLayout, Size)) {
+    auto SupportedOrErr = dataMemcpy3D(Queue, Dst, DstHandle, DstLayout, Src,
+                                       SrcHandle, SrcLayout, Size);
+    if (!SupportedOrErr)
+      return SupportedOrErr.takeError();
+    if (*SupportedOrErr)
+      return llvm::Error::success();
+  }
+
+  // Generic path: one copy per contiguous row.
+  ODBG(ODT_Mapping) << "Rectangular memcpy of " << Bytes << " bytes on device "
+                    << DeviceID << " is done row by row (" << Rect.NumDims
+                    << " dimensions, no single liboffload copy available)";
+  auto CopyRow = [&](void *DstAddr, const void *SrcAddr,
+                     size_t Length) -> llvm::Error {
+    // use olMemcpy directly to avoid reporting each row as a separate data
+    // transfer to tools
+    if (auto Res =
+            olMemcpy(Queue, DstAddr, DstHandle, SrcAddr, SrcHandle, Length))
+      return createError(ErrorCode::BackendFailure,
+                         "failure in rectangular memcpy row copy: dst=%p "
+                         "src=%p size=%zu: %s",
+                         DstAddr, SrcAddr, Length, Res->Details);
+    return llvm::Error::success();
+  };
+  return forEachMemcpyRectRow(Dst, Src, Rect, CopyRow);
+}
+
 llvm::Expected<void *> DeviceTy::registerMemory(void *HstPtr, int64_t Size,
                                                 bool LockMemory) {
   void *LockedPtr = nullptr;

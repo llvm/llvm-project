@@ -34,6 +34,7 @@
 #include "OpenMP/Mapping.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -117,6 +118,22 @@ namespace llvm::omp::target::rr {
 struct RecordReplayTy;
 } // namespace llvm::omp::target::rr
 using RecordReplayTy = llvm::omp::target::rr::RecordReplayTy;
+
+/// A rectangular copy; per-dimension arrays are ordered slowest-varying first.
+struct MemcpyRectTy {
+  size_t ElementSize;
+  int NumDims;
+  const size_t *Volume;
+  const size_t *DstOffsets;
+  const size_t *SrcOffsets;
+  const size_t *DstDimensions;
+  const size_t *SrcDimensions;
+};
+
+/// Call \p CopyRow for each contiguous row of \p Rect.
+llvm::Error forEachMemcpyRectRow(
+    void *Dst, const void *Src, const MemcpyRectTy &Rect,
+    llvm::function_ref<llvm::Error(void *, const void *, size_t)> CopyRow);
 
 struct DeviceTy {
   int32_t DeviceID;
@@ -258,6 +275,26 @@ struct DeviceTy {
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
 
+  /// Rectangular versions of submitData, retrieveData and dataExchange. A null
+  /// \p AsyncInfo makes the copy synchronous.
+  llvm::Error submitDataRect(void *TgtPtr, const void *HstPtr,
+                             const MemcpyRectTy &Rect, AsyncInfoTy *AsyncInfo) {
+    return dataMemcpyRect(CopyDirTy::HostToDevice, TgtPtr, HstPtr, Rect,
+                          /*DstDevice=*/nullptr, AsyncInfo);
+  }
+  llvm::Error retrieveDataRect(void *HstPtr, const void *TgtPtr,
+                               const MemcpyRectTy &Rect,
+                               AsyncInfoTy *AsyncInfo) {
+    return dataMemcpyRect(CopyDirTy::DeviceToHost, HstPtr, TgtPtr, Rect,
+                          /*DstDevice=*/nullptr, AsyncInfo);
+  }
+  llvm::Error dataExchangeRect(const void *SrcPtr, DeviceTy &DstDev,
+                               void *DstPtr, const MemcpyRectTy &Rect,
+                               AsyncInfoTy *AsyncInfo) {
+    return dataMemcpyRect(CopyDirTy::DeviceToDevice, DstPtr, SrcPtr, Rect,
+                          &DstDev, AsyncInfo);
+  }
+
   /// Register (and, if \p LockMemory, page-lock) the host buffer \p HstPtr
   /// with \p Size bytes, returning the device-accessible pointer.
   llvm::Expected<void *> registerMemory(void *HstPtr, int64_t Size,
@@ -388,6 +425,16 @@ struct DeviceTy {
   }
 
 private:
+  /// This device is the destination of HostToDevice and the source otherwise.
+  enum class CopyDirTy { HostToDevice, DeviceToHost, DeviceToDevice };
+
+  /// Implementation of the rectangular copies; \p DstDevice is the destination
+  /// of a DeviceToDevice copy. The copy is reported to tools as a single data
+  /// operation.
+  llvm::Error dataMemcpyRect(CopyDirTy Dir, void *Dst, const void *Src,
+                             const MemcpyRectTy &Rect, DeviceTy *DstDevice,
+                             AsyncInfoTy *AsyncInfo);
+
   /// Query the properties used to compute the launch geometry of a kernel.
   llvm::Error initGeometryProps();
 
