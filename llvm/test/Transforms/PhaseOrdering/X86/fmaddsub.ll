@@ -1037,3 +1037,273 @@ define <8 x double> @buildvector_mul_subadd_pd512_partial(<8 x double> %C, <8 x 
   %vecinsert8 = insertelement <8 x double> %vecinsert7, double %add7, i32 7
   ret <8 x double> %vecinsert8
 }
+
+; Chains of two FMUL+ADDSUB/SUBADD patterns, as in consecutive complex multiply-adds.
+; Ideally, each link should reach the backend with 1 fmul, 1 fsub, 1 fadd, and 1 shuffle.
+
+define <2 x double> @buildvector_mul_addsub_chain_pd128(<2 x double> %A, <2 x double> %B, <2 x double> %C, <2 x double> %D, <2 x double> %E) {
+; CHECK-LABEL: @buildvector_mul_addsub_chain_pd128(
+; CHECK-NEXT:    [[AB:%.*]] = fmul contract <2 x double> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CD:%.*]] = fmul contract <2 x double> [[C:%.*]], [[D:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub contract <2 x double> [[AB]], [[E:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd contract <2 x double> [[AB]], [[E]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub contract <2 x double> [[CD]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd contract <2 x double> [[CD]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    ret <2 x double> [[TMP6]]
+;
+  %AB = fmul contract <2 x double> %A, %B
+  %CD = fmul contract <2 x double> %C, %D
+  %AB0 = extractelement <2 x double> %AB, i32 0
+  %E0 = extractelement <2 x double> %E, i32 0
+  %innersub0 = fsub contract double %AB0, %E0
+  %CD0 = extractelement <2 x double> %CD, i32 0
+  %outersub0 = fsub contract double %CD0, %innersub0
+  %AB1 = extractelement <2 x double> %AB, i32 1
+  %E1 = extractelement <2 x double> %E, i32 1
+  %inneradd1 = fadd contract double %AB1, %E1
+  %CD1 = extractelement <2 x double> %CD, i32 1
+  %outeradd1 = fadd contract double %CD1, %inneradd1
+  %vecinsert1 = insertelement <2 x double> poison, double %outersub0, i32 0
+  %vecinsert2 = insertelement <2 x double> %vecinsert1, double %outeradd1, i32 1
+  ret <2 x double> %vecinsert2
+}
+
+define <8 x float> @buildvector_mul_addsub_chain_ps256(<8 x float> %A, <8 x float> %B, <8 x float> %C, <8 x float> %D, <8 x float> %E) {
+; SSE2-LABEL: @buildvector_mul_addsub_chain_ps256(
+; SSE2-NEXT:    [[AB:%.*]] = fmul contract <8 x float> [[A:%.*]], [[B:%.*]]
+; SSE2-NEXT:    [[CD:%.*]] = fmul contract <8 x float> [[C:%.*]], [[D:%.*]]
+; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[AB]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[E:%.*]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; SSE2-NEXT:    [[TMP3:%.*]] = fsub contract <4 x float> [[TMP1]], [[TMP2]]
+; SSE2-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[CD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; SSE2-NEXT:    [[TMP5:%.*]] = fsub contract <4 x float> [[TMP4]], [[TMP3]]
+; SSE2-NEXT:    [[TMP6:%.*]] = shufflevector <8 x float> [[AB]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; SSE2-NEXT:    [[TMP7:%.*]] = shufflevector <8 x float> [[E]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; SSE2-NEXT:    [[TMP8:%.*]] = fadd contract <4 x float> [[TMP6]], [[TMP7]]
+; SSE2-NEXT:    [[TMP9:%.*]] = shufflevector <8 x float> [[CD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; SSE2-NEXT:    [[TMP10:%.*]] = fadd contract <4 x float> [[TMP9]], [[TMP8]]
+; SSE2-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP10]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; SSE2-NEXT:    ret <8 x float> [[TMP11]]
+;
+; SSE4-LABEL: @buildvector_mul_addsub_chain_ps256(
+; SSE4-NEXT:    [[AB:%.*]] = fmul contract <8 x float> [[A:%.*]], [[B:%.*]]
+; SSE4-NEXT:    [[CD:%.*]] = fmul contract <8 x float> [[C:%.*]], [[D:%.*]]
+; SSE4-NEXT:    [[TMP1:%.*]] = fsub contract <8 x float> [[AB]], [[E:%.*]]
+; SSE4-NEXT:    [[TMP2:%.*]] = fadd contract <8 x float> [[AB]], [[E]]
+; SSE4-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+; SSE4-NEXT:    [[TMP4:%.*]] = fsub contract <8 x float> [[CD]], [[TMP3]]
+; SSE4-NEXT:    [[TMP5:%.*]] = fadd contract <8 x float> [[CD]], [[TMP3]]
+; SSE4-NEXT:    [[TMP6:%.*]] = shufflevector <8 x float> [[TMP4]], <8 x float> [[TMP5]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+; SSE4-NEXT:    ret <8 x float> [[TMP6]]
+;
+; AVX-LABEL: @buildvector_mul_addsub_chain_ps256(
+; AVX-NEXT:    [[AB:%.*]] = fmul contract <8 x float> [[A:%.*]], [[B:%.*]]
+; AVX-NEXT:    [[CD:%.*]] = fmul contract <8 x float> [[C:%.*]], [[D:%.*]]
+; AVX-NEXT:    [[TMP1:%.*]] = fsub contract <8 x float> [[AB]], [[E:%.*]]
+; AVX-NEXT:    [[TMP2:%.*]] = fadd contract <8 x float> [[AB]], [[E]]
+; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+; AVX-NEXT:    [[TMP4:%.*]] = fsub contract <8 x float> [[CD]], [[TMP3]]
+; AVX-NEXT:    [[TMP5:%.*]] = fadd contract <8 x float> [[CD]], [[TMP3]]
+; AVX-NEXT:    [[TMP6:%.*]] = shufflevector <8 x float> [[TMP4]], <8 x float> [[TMP5]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+; AVX-NEXT:    ret <8 x float> [[TMP6]]
+;
+  %AB = fmul contract <8 x float> %A, %B
+  %CD = fmul contract <8 x float> %C, %D
+  %AB0 = extractelement <8 x float> %AB, i32 0
+  %E0 = extractelement <8 x float> %E, i32 0
+  %innersub0 = fsub contract float %AB0, %E0
+  %CD0 = extractelement <8 x float> %CD, i32 0
+  %outersub0 = fsub contract float %CD0, %innersub0
+  %AB2 = extractelement <8 x float> %AB, i32 2
+  %E2 = extractelement <8 x float> %E, i32 2
+  %innersub2 = fsub contract float %AB2, %E2
+  %CD2 = extractelement <8 x float> %CD, i32 2
+  %outersub2 = fsub contract float %CD2, %innersub2
+  %AB4 = extractelement <8 x float> %AB, i32 4
+  %E4 = extractelement <8 x float> %E, i32 4
+  %innersub4 = fsub contract float %AB4, %E4
+  %CD4 = extractelement <8 x float> %CD, i32 4
+  %outersub4 = fsub contract float %CD4, %innersub4
+  %AB6 = extractelement <8 x float> %AB, i32 6
+  %E6 = extractelement <8 x float> %E, i32 6
+  %innersub6 = fsub contract float %AB6, %E6
+  %CD6 = extractelement <8 x float> %CD, i32 6
+  %outersub6 = fsub contract float %CD6, %innersub6
+  %AB1 = extractelement <8 x float> %AB, i32 1
+  %E1 = extractelement <8 x float> %E, i32 1
+  %inneradd1 = fadd contract float %AB1, %E1
+  %CD1 = extractelement <8 x float> %CD, i32 1
+  %outeradd1 = fadd contract float %CD1, %inneradd1
+  %AB3 = extractelement <8 x float> %AB, i32 3
+  %E3 = extractelement <8 x float> %E, i32 3
+  %inneradd3 = fadd contract float %AB3, %E3
+  %CD3 = extractelement <8 x float> %CD, i32 3
+  %outeradd3 = fadd contract float %CD3, %inneradd3
+  %AB5 = extractelement <8 x float> %AB, i32 5
+  %E5 = extractelement <8 x float> %E, i32 5
+  %inneradd5 = fadd contract float %AB5, %E5
+  %CD5 = extractelement <8 x float> %CD, i32 5
+  %outeradd5 = fadd contract float %CD5, %inneradd5
+  %AB7 = extractelement <8 x float> %AB, i32 7
+  %E7 = extractelement <8 x float> %E, i32 7
+  %inneradd7 = fadd contract float %AB7, %E7
+  %CD7 = extractelement <8 x float> %CD, i32 7
+  %outeradd7 = fadd contract float %CD7, %inneradd7
+  %vecinsert1 = insertelement <8 x float> poison, float %outersub0, i32 0
+  %vecinsert2 = insertelement <8 x float> %vecinsert1, float %outeradd1, i32 1
+  %vecinsert3 = insertelement <8 x float> %vecinsert2, float %outersub2, i32 2
+  %vecinsert4 = insertelement <8 x float> %vecinsert3, float %outeradd3, i32 3
+  %vecinsert5 = insertelement <8 x float> %vecinsert4, float %outersub4, i32 4
+  %vecinsert6 = insertelement <8 x float> %vecinsert5, float %outeradd5, i32 5
+  %vecinsert7 = insertelement <8 x float> %vecinsert6, float %outersub6, i32 6
+  %vecinsert8 = insertelement <8 x float> %vecinsert7, float %outeradd7, i32 7
+  ret <8 x float> %vecinsert8
+}
+
+define <8 x double> @buildvector_mul_addsub_chain_pd512(<8 x double> %A, <8 x double> %B, <8 x double> %C, <8 x double> %D, <8 x double> %E) {
+; SSE2-LABEL: @buildvector_mul_addsub_chain_pd512(
+; SSE2-NEXT:    [[AB:%.*]] = fmul contract <8 x double> [[A:%.*]], [[B:%.*]]
+; SSE2-NEXT:    [[CD:%.*]] = fmul contract <8 x double> [[C:%.*]], [[D:%.*]]
+; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[AB]], <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[E:%.*]], <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; SSE2-NEXT:    [[TMP3:%.*]] = fsub contract <4 x double> [[TMP1]], [[TMP2]]
+; SSE2-NEXT:    [[TMP4:%.*]] = shufflevector <8 x double> [[CD]], <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; SSE2-NEXT:    [[TMP5:%.*]] = fsub contract <4 x double> [[TMP4]], [[TMP3]]
+; SSE2-NEXT:    [[TMP6:%.*]] = shufflevector <8 x double> [[AB]], <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; SSE2-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[E]], <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; SSE2-NEXT:    [[TMP8:%.*]] = fadd contract <4 x double> [[TMP6]], [[TMP7]]
+; SSE2-NEXT:    [[TMP9:%.*]] = shufflevector <8 x double> [[CD]], <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; SSE2-NEXT:    [[TMP10:%.*]] = fadd contract <4 x double> [[TMP9]], [[TMP8]]
+; SSE2-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP5]], <4 x double> [[TMP10]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; SSE2-NEXT:    ret <8 x double> [[TMP11]]
+;
+; SSE4-LABEL: @buildvector_mul_addsub_chain_pd512(
+; SSE4-NEXT:    [[AB:%.*]] = fmul contract <8 x double> [[A:%.*]], [[B:%.*]]
+; SSE4-NEXT:    [[CD:%.*]] = fmul contract <8 x double> [[C:%.*]], [[D:%.*]]
+; SSE4-NEXT:    [[TMP1:%.*]] = fsub contract <8 x double> [[AB]], [[E:%.*]]
+; SSE4-NEXT:    [[TMP2:%.*]] = fadd contract <8 x double> [[AB]], [[E]]
+; SSE4-NEXT:    [[TMP3:%.*]] = fsub contract <8 x double> [[CD]], [[TMP1]]
+; SSE4-NEXT:    [[TMP4:%.*]] = shufflevector <8 x double> [[TMP3]], <8 x double> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE4-NEXT:    [[TMP5:%.*]] = fadd contract <8 x double> [[CD]], [[TMP2]]
+; SSE4-NEXT:    [[TMP6:%.*]] = shufflevector <8 x double> [[TMP5]], <8 x double> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE4-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[TMP4]], <8 x double> [[TMP6]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+; SSE4-NEXT:    ret <8 x double> [[TMP7]]
+;
+; AVX-LABEL: @buildvector_mul_addsub_chain_pd512(
+; AVX-NEXT:    [[AB:%.*]] = fmul contract <8 x double> [[A:%.*]], [[B:%.*]]
+; AVX-NEXT:    [[CD:%.*]] = fmul contract <8 x double> [[C:%.*]], [[D:%.*]]
+; AVX-NEXT:    [[TMP1:%.*]] = fsub contract <8 x double> [[AB]], [[E:%.*]]
+; AVX-NEXT:    [[TMP2:%.*]] = fadd contract <8 x double> [[AB]], [[E]]
+; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+; AVX-NEXT:    [[TMP4:%.*]] = fsub contract <8 x double> [[CD]], [[TMP3]]
+; AVX-NEXT:    [[TMP5:%.*]] = fadd contract <8 x double> [[CD]], [[TMP3]]
+; AVX-NEXT:    [[TMP6:%.*]] = shufflevector <8 x double> [[TMP4]], <8 x double> [[TMP5]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+; AVX-NEXT:    ret <8 x double> [[TMP6]]
+;
+  %AB = fmul contract <8 x double> %A, %B
+  %CD = fmul contract <8 x double> %C, %D
+  %AB0 = extractelement <8 x double> %AB, i32 0
+  %E0 = extractelement <8 x double> %E, i32 0
+  %innersub0 = fsub contract double %AB0, %E0
+  %CD0 = extractelement <8 x double> %CD, i32 0
+  %outersub0 = fsub contract double %CD0, %innersub0
+  %AB2 = extractelement <8 x double> %AB, i32 2
+  %E2 = extractelement <8 x double> %E, i32 2
+  %innersub2 = fsub contract double %AB2, %E2
+  %CD2 = extractelement <8 x double> %CD, i32 2
+  %outersub2 = fsub contract double %CD2, %innersub2
+  %AB4 = extractelement <8 x double> %AB, i32 4
+  %E4 = extractelement <8 x double> %E, i32 4
+  %innersub4 = fsub contract double %AB4, %E4
+  %CD4 = extractelement <8 x double> %CD, i32 4
+  %outersub4 = fsub contract double %CD4, %innersub4
+  %AB6 = extractelement <8 x double> %AB, i32 6
+  %E6 = extractelement <8 x double> %E, i32 6
+  %innersub6 = fsub contract double %AB6, %E6
+  %CD6 = extractelement <8 x double> %CD, i32 6
+  %outersub6 = fsub contract double %CD6, %innersub6
+  %AB1 = extractelement <8 x double> %AB, i32 1
+  %E1 = extractelement <8 x double> %E, i32 1
+  %inneradd1 = fadd contract double %AB1, %E1
+  %CD1 = extractelement <8 x double> %CD, i32 1
+  %outeradd1 = fadd contract double %CD1, %inneradd1
+  %AB3 = extractelement <8 x double> %AB, i32 3
+  %E3 = extractelement <8 x double> %E, i32 3
+  %inneradd3 = fadd contract double %AB3, %E3
+  %CD3 = extractelement <8 x double> %CD, i32 3
+  %outeradd3 = fadd contract double %CD3, %inneradd3
+  %AB5 = extractelement <8 x double> %AB, i32 5
+  %E5 = extractelement <8 x double> %E, i32 5
+  %inneradd5 = fadd contract double %AB5, %E5
+  %CD5 = extractelement <8 x double> %CD, i32 5
+  %outeradd5 = fadd contract double %CD5, %inneradd5
+  %AB7 = extractelement <8 x double> %AB, i32 7
+  %E7 = extractelement <8 x double> %E, i32 7
+  %inneradd7 = fadd contract double %AB7, %E7
+  %CD7 = extractelement <8 x double> %CD, i32 7
+  %outeradd7 = fadd contract double %CD7, %inneradd7
+  %vecinsert1 = insertelement <8 x double> poison, double %outersub0, i32 0
+  %vecinsert2 = insertelement <8 x double> %vecinsert1, double %outeradd1, i32 1
+  %vecinsert3 = insertelement <8 x double> %vecinsert2, double %outersub2, i32 2
+  %vecinsert4 = insertelement <8 x double> %vecinsert3, double %outeradd3, i32 3
+  %vecinsert5 = insertelement <8 x double> %vecinsert4, double %outersub4, i32 4
+  %vecinsert6 = insertelement <8 x double> %vecinsert5, double %outeradd5, i32 5
+  %vecinsert7 = insertelement <8 x double> %vecinsert6, double %outersub6, i32 6
+  %vecinsert8 = insertelement <8 x double> %vecinsert7, double %outeradd7, i32 7
+  ret <8 x double> %vecinsert8
+}
+
+define <4 x double> @buildvector_mul_subadd_chain_pd256(<4 x double> %A, <4 x double> %B, <4 x double> %C, <4 x double> %D, <4 x double> %E) {
+; SSE-LABEL: @buildvector_mul_subadd_chain_pd256(
+; SSE-NEXT:    [[AB:%.*]] = fmul contract <4 x double> [[A:%.*]], [[B:%.*]]
+; SSE-NEXT:    [[CD:%.*]] = fmul contract <4 x double> [[C:%.*]], [[D:%.*]]
+; SSE-NEXT:    [[TMP1:%.*]] = fadd contract <4 x double> [[AB]], [[E:%.*]]
+; SSE-NEXT:    [[TMP2:%.*]] = fsub contract <4 x double> [[AB]], [[E]]
+; SSE-NEXT:    [[TMP3:%.*]] = fadd contract <4 x double> [[CD]], [[TMP1]]
+; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
+; SSE-NEXT:    [[TMP5:%.*]] = fsub contract <4 x double> [[CD]], [[TMP2]]
+; SSE-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP5]], <4 x double> poison, <4 x i32> <i32 1, i32 3, i32 poison, i32 poison>
+; SSE-NEXT:    [[TMP7:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> [[TMP6]], <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+; SSE-NEXT:    ret <4 x double> [[TMP7]]
+;
+; AVX-LABEL: @buildvector_mul_subadd_chain_pd256(
+; AVX-NEXT:    [[AB:%.*]] = fmul contract <4 x double> [[A:%.*]], [[B:%.*]]
+; AVX-NEXT:    [[CD:%.*]] = fmul contract <4 x double> [[C:%.*]], [[D:%.*]]
+; AVX-NEXT:    [[TMP1:%.*]] = fadd contract <4 x double> [[AB]], [[E:%.*]]
+; AVX-NEXT:    [[TMP2:%.*]] = fsub contract <4 x double> [[AB]], [[E]]
+; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; AVX-NEXT:    [[TMP4:%.*]] = fadd contract <4 x double> [[CD]], [[TMP3]]
+; AVX-NEXT:    [[TMP5:%.*]] = fsub contract <4 x double> [[CD]], [[TMP3]]
+; AVX-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> [[TMP5]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; AVX-NEXT:    ret <4 x double> [[TMP6]]
+;
+  %AB = fmul contract <4 x double> %A, %B
+  %CD = fmul contract <4 x double> %C, %D
+  %AB0 = extractelement <4 x double> %AB, i32 0
+  %E0 = extractelement <4 x double> %E, i32 0
+  %inneradd0 = fadd contract double %AB0, %E0
+  %CD0 = extractelement <4 x double> %CD, i32 0
+  %outeradd0 = fadd contract double %CD0, %inneradd0
+  %AB2 = extractelement <4 x double> %AB, i32 2
+  %E2 = extractelement <4 x double> %E, i32 2
+  %inneradd2 = fadd contract double %AB2, %E2
+  %CD2 = extractelement <4 x double> %CD, i32 2
+  %outeradd2 = fadd contract double %CD2, %inneradd2
+  %AB1 = extractelement <4 x double> %AB, i32 1
+  %E1 = extractelement <4 x double> %E, i32 1
+  %innersub1 = fsub contract double %AB1, %E1
+  %CD1 = extractelement <4 x double> %CD, i32 1
+  %outersub1 = fsub contract double %CD1, %innersub1
+  %AB3 = extractelement <4 x double> %AB, i32 3
+  %E3 = extractelement <4 x double> %E, i32 3
+  %innersub3 = fsub contract double %AB3, %E3
+  %CD3 = extractelement <4 x double> %CD, i32 3
+  %outersub3 = fsub contract double %CD3, %innersub3
+  %vecinsert1 = insertelement <4 x double> poison, double %outeradd0, i32 0
+  %vecinsert2 = insertelement <4 x double> %vecinsert1, double %outersub1, i32 1
+  %vecinsert3 = insertelement <4 x double> %vecinsert2, double %outeradd2, i32 2
+  %vecinsert4 = insertelement <4 x double> %vecinsert3, double %outersub3, i32 3
+  ret <4 x double> %vecinsert4
+}
