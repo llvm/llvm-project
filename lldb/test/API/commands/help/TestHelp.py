@@ -515,3 +515,19 @@ class HelpCommandTestCase(TestBase):
                 "Calculate the dynamic type of values, but don't run",
             ],
         )
+
+    @no_debug_info_test
+    def test_help_darwin_log_filter(self):
+        """Check the help output for the special argument of the --filter option."""
+        self.expect(
+            "help plugin structured-data darwin-log enable",
+            substrs=["-f <darwin-log-filter> ( --filter <darwin-log-filter> )"],
+        )
+        self.runCmd("settings set term-width 100")
+        self.expect(
+            "help <darwin-log-filter>",
+            patterns=[
+                r"\s+A log message filter rule: '{action} {attribute} {op}', where action is"
+                r"\s+'accept' or 'reject' and op is 'match <text>' or 'regex <regex>'.",
+            ],
+        )
