@@ -11010,7 +11010,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
 
   // The indirect targets of a callbr read its outputs again, from the
   // registers that the INLINEASM_BR defines them in.
-  SmallVector<CallBrOutput, 2> *CallBrOuts =
+  SmallVectorImpl<CallBrOutput> *CallBrOuts =
       IsCallBr ? &CallBrOutputs[cast<CallBrInst>(&Call)] : nullptr;
 
   // Deal with output operands.
