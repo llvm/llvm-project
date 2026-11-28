@@ -24495,7 +24495,7 @@ call <void> @llvm.masked.compressstore.v8f64(<8 x double> %Tmp, ptr %Bptr, <8 x 
 
 Other targets may support this intrinsic differently, for example, by lowering it into a sequence of branches that guard scalar store operations.
 
-### Masked Vector Arithmetic Intrinsics
+### Masked Integer Arithmetic Intrinsics
 
 #### '`llvm.masked.udiv.*`' Intrinsics
 
@@ -24503,21 +24503,26 @@ Other targets may support this intrinsic differently, for example, by lowering i
 This is an overloaded intrinsic.
 
 ```
+declare i32 @llvm.masked.udiv.i32(i32 <op1>, i32 <op2>, i1 <mask>)
 declare <8 x i32> @llvm.masked.udiv.v8i32(<8 x i32> <op1>, <8 x i32> <op2>, <8 x i1> <mask>)
 declare <vscale x 2 x i64> @llvm.masked.udiv.nxv2i64(<vscale x 2 x i64> <op1>, <vscale x 2 x i64> <op2>, <vscale x 2 x i1> <mask>)
 ```
 
 ##### Overview:
 
-Performs unsigned division ({ref}`udiv <i_udiv>`) of two vectors of integers, but only on enabled lanes.
+Performs predicated unsigned division ({ref}`udiv <i_udiv>`) of two integers or vectors of integers.
 
 ##### Arguments:
 
-The first two arguments and the result have the same vector of integer type. The third argument is the vector mask and has the same number of elements as the result vector type.
+The first two arguments and the result have the same integer or vector of integer type.
+The third argument is an `i1` mask for scalar operands, or a vector of `i1` with the same number of elements as the result vector type.
+A scalar operation is treated as a single lane controlled by the `i1` mask.
 
 ##### Semantics:
 
-Follows the same semantics as {ref}`udiv <i_udiv>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
+Each enabled lane (`mask` element is `true`) follows the semantics of {ref}`udiv <i_udiv>`.
+Disabled lanes (`mask` element is `false`) cannot cause undefined behavior regardless of their operands and produce a {ref}`poison value <poisonvalues>`.
+A lane whose mask element is `poison` has undefined behavior under the same conditions as {ref}`udiv <i_udiv>`, and otherwise produces a {ref}`poison value <poisonvalues>`.
 
 #### '`llvm.masked.sdiv.*`' Intrinsics
 
@@ -24525,21 +24530,26 @@ Follows the same semantics as {ref}`udiv <i_udiv>` with the exception that disab
 This is an overloaded intrinsic.
 
 ```
+declare i32 @llvm.masked.sdiv.i32(i32 <op1>, i32 <op2>, i1 <mask>)
 declare <8 x i32> @llvm.masked.sdiv.v8i32(<8 x i32> <op1>, <8 x i32> <op2>, <8 x i1> <mask>)
 declare <vscale x 2 x i64> @llvm.masked.sdiv.nxv2i64(<vscale x 2 x i64> <op1>, <vscale x 2 x i64> <op2>, <vscale x 2 x i1> <mask>)
 ```
 
 ##### Overview:
 
-Performs signed division ({ref}`sdiv <i_sdiv>`) of two vectors of integers, but only on enabled lanes.
+Performs predicated signed division ({ref}`sdiv <i_sdiv>`) of two integers or vectors of integers.
 
 ##### Arguments:
 
-The first two arguments and the result have the same vector of integer type. The third argument is the vector mask and has the same number of elements as the result vector type.
+The first two arguments and the result have the same integer or vector of integer type.
+The third argument is an `i1` mask for scalar operands, or a vector of `i1` with the same number of elements as the result vector type.
+A scalar operation is treated as a single lane controlled by the `i1` mask.
 
 ##### Semantics:
 
-Follows the same semantics as {ref}`sdiv <i_sdiv>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
+Each enabled lane (`mask` element is `true`) follows the semantics of {ref}`sdiv <i_sdiv>`.
+Disabled lanes (`mask` element is `false`) cannot cause undefined behavior regardless of their operands and produce a {ref}`poison value <poisonvalues>`.
+A lane whose mask element is `poison` has undefined behavior under the same conditions as {ref}`sdiv <i_sdiv>`, and otherwise produces a {ref}`poison value <poisonvalues>`.
 
 #### '`llvm.masked.urem.*`' Intrinsics
 
@@ -24547,21 +24557,26 @@ Follows the same semantics as {ref}`sdiv <i_sdiv>` with the exception that disab
 This is an overloaded intrinsic.
 
 ```
+declare i32 @llvm.masked.urem.i32(i32 <op1>, i32 <op2>, i1 <mask>)
 declare <8 x i32> @llvm.masked.urem.v8i32(<8 x i32> <op1>, <8 x i32> <op2>, <8 x i1> <mask>)
 declare <vscale x 2 x i64> @llvm.masked.urem.nxv2i64(<vscale x 2 x i64> <op1>, <vscale x 2 x i64> <op2>, <vscale x 2 x i1> <mask>)
 ```
 
 ##### Overview:
 
-Computes the remainder from the unsigned division ({ref}`urem <i_urem>`) of two vectors of integers, but only on enabled lanes.
+Computes the predicated remainder from the unsigned division ({ref}`urem <i_urem>`) of two integers or vectors of integers.
 
 ##### Arguments:
 
-The first two arguments and the result have the same vector of integer type. The third argument is the vector mask and has the same number of elements as the result vector type.
+The first two arguments and the result have the same integer or vector of integer type.
+The third argument is an `i1` mask for scalar operands, or a vector of `i1` with the same number of elements as the result vector type.
+A scalar operation is treated as a single lane controlled by the `i1` mask.
 
 ##### Semantics:
 
-Follows the same semantics as {ref}`urem <i_urem>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
+Each enabled lane (`mask` element is `true`) follows the semantics of {ref}`urem <i_urem>`.
+Disabled lanes (`mask` element is `false`) cannot cause undefined behavior regardless of their operands and produce a {ref}`poison value <poisonvalues>`.
+A lane whose mask element is `poison` has undefined behavior under the same conditions as {ref}`urem <i_urem>`, and otherwise produces a {ref}`poison value <poisonvalues>`.
 
 #### '`llvm.masked.srem.*`' Intrinsics
 
@@ -24569,21 +24584,26 @@ Follows the same semantics as {ref}`urem <i_urem>` with the exception that disab
 This is an overloaded intrinsic.
 
 ```
+declare i32 @llvm.masked.srem.i32(i32 <op1>, i32 <op2>, i1 <mask>)
 declare <8 x i32> @llvm.masked.srem.v8i32(<8 x i32> <op1>, <8 x i32> <op2>, <8 x i1> <mask>)
 declare <vscale x 2 x i64> @llvm.masked.srem.nxv2i64(<vscale x 2 x i64> <op1>, <vscale x 2 x i64> <op2>, <vscale x 2 x i1> <mask>)
 ```
 
 ##### Overview:
 
-Computes the remainder from the signed division ({ref}`srem <i_srem>`) of two vectors of integers, but only on enabled lanes.
+Computes the predicated remainder from the signed division ({ref}`srem <i_srem>`) of two integers or vectors of integers.
 
 ##### Arguments:
 
-The first two arguments and the result have the same vector of integer type. The third argument is the vector mask and has the same number of elements as the result vector type.
+The first two arguments and the result have the same integer or vector of integer type.
+The third argument is an `i1` mask for scalar operands, or a vector of `i1` with the same number of elements as the result vector type.
+A scalar operation is treated as a single lane controlled by the `i1` mask.
 
 ##### Semantics:
 
-Follows the same semantics as {ref}`srem <i_srem>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
+Each enabled lane (`mask` element is `true`) follows the semantics of {ref}`srem <i_srem>`.
+Disabled lanes (`mask` element is `false`) cannot cause undefined behavior regardless of their operands and produce a {ref}`poison value <poisonvalues>`.
+A lane whose mask element is `poison` has undefined behavior under the same conditions as {ref}`srem <i_srem>`, and otherwise produces a {ref}`poison value <poisonvalues>`.
 
 ### Speculative Load Intrinsics
 
