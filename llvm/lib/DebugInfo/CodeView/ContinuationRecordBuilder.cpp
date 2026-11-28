@@ -170,7 +170,8 @@ CVType ContinuationRecordBuilder::createSegmentRecord(
   return CVType(Data);
 }
 
-std::vector<CVType> ContinuationRecordBuilder::end(TypeIndex Index) {
+TypeIndex ContinuationRecordBuilder::end(
+    function_ref<TypeIndex(ArrayRef<uint8_t>)> InsertSegment) {
   RecordPrefix Prefix(getTypeLeafKind(*Kind));
   CVType Type(&Prefix, sizeof(Prefix));
   cantFail(Mapping.visitTypeEnd(Type));
@@ -182,9 +183,8 @@ std::vector<CVType> ContinuationRecordBuilder::end(TypeIndex Index) {
   //    LF_FIELDLIST or LF_METHODLIST, but the Length field is still 0.
   //    Those should all be set to the correct length now.
   // 2) Each continuation record has an IndexRef field which we set to the
-  //    magic value 0xB0C0B0C0.  Now that the caller has told us the TypeIndex
-  //    they want this sequence to start from, we can go through and update
-  //    each one.
+  //    magic value 0xB0C0B0C0.  Each one must be updated to the TypeIndex of
+  //    the segment it continues into.
   //
   // Logically, the sequence of records we've built up looks like this:
   //
@@ -217,27 +217,25 @@ std::vector<CVType> ContinuationRecordBuilder::end(TypeIndex Index) {
   // And this is the way we have laid them out in the serialization buffer.  But
   // we cannot actually commit them to the underlying stream this way, due to
   // the topological sorting requirement of a type stream (specifically,
-  // TypeIndex references can only point backwards, not forwards).  So the
-  // sequence that we return to the caller contains the records in reverse
-  // order, which is the proper order for committing the serialized records.
-
-  std::vector<CVType> Types;
-  Types.reserve(SegmentOffsets.size());
-
-  ArrayRef SO = SegmentOffsets;
-
+  // TypeIndex references can only point backwards, not forwards).  So we
+  // commit the records in reverse order.
+  //
+  // We can't assume which TypeIndex each segment will be assigned: a type
+  // table that deduplicates records may return the index of an identical,
+  // previously inserted record rather than the next index. So each segment is
+  // inserted before the next one is created, and the next segment's
+  // continuation refers to the index the previous segment actually received.
   uint32_t End = SegmentWriter.getOffset();
 
   std::optional<TypeIndex> RefersTo;
-  for (uint32_t Offset : reverse(SO)) {
-    Types.push_back(createSegmentRecord(Offset, End, RefersTo));
-
+  for (uint32_t Offset : reverse(ArrayRef(SegmentOffsets))) {
+    CVType Segment = createSegmentRecord(Offset, End, RefersTo);
+    RefersTo = InsertSegment(Segment.RecordData);
     End = Offset;
-    RefersTo = Index++;
   }
 
   Kind.reset();
-  return Types;
+  return *RefersTo;
 }
 
 // Explicitly instantiate the member function for each known type so that we can

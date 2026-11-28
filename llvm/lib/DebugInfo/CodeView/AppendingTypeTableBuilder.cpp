@@ -83,12 +83,8 @@ AppendingTypeTableBuilder::insertRecordBytes(ArrayRef<uint8_t> &Record) {
 
 TypeIndex
 AppendingTypeTableBuilder::insertRecord(ContinuationRecordBuilder &Builder) {
-  TypeIndex TI;
-  auto Fragments = Builder.end(nextTypeIndex());
-  assert(!Fragments.empty());
-  for (auto C : Fragments)
-    TI = insertRecordBytes(C.RecordData);
-  return TI;
+  return Builder.end(
+      [this](ArrayRef<uint8_t> Segment) { return insertRecordBytes(Segment); });
 }
 
 bool AppendingTypeTableBuilder::replaceType(TypeIndex &Index, CVType Data,
