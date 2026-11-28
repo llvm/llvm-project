@@ -589,11 +589,15 @@ public:
     /// virtual base classes have already been initialized by the constructor
     /// of the most derived class while we're in the base class.
     VirtualBaseBranch,
+    /// A branch to an overflow handler label, taken when the trap overflow
+    /// behavior check of the last statement in the block fails. The first
+    /// successor is the continuation and the second is the handler.
+    OverflowBranch,
 
     /// Number of different kinds, for assertions. We subtract 1 so that
     /// to keep receiving compiler warnings when we don't cover all enum values
     /// in a switch.
-    NumKindsMinusOne = VirtualBaseBranch
+    NumKindsMinusOne = OverflowBranch
   };
 
 private:
@@ -620,6 +624,7 @@ public:
   bool isVirtualBaseBranch() const {
     return getKind() == VirtualBaseBranch;
   }
+  bool isOverflowBranch() const { return getKind() == OverflowBranch; }
 };
 
 /// Represents a single basic block in a source-level CFG.

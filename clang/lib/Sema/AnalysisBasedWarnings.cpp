@@ -1025,6 +1025,17 @@ static void DiagUninitUse(Sema &S, const VarDecl *VD, const UninitUse &Use,
                                   : (I->Output ? "1" : "0");
     FixItHint Fixit1, Fixit2;
 
+    // "an overflow check passes / fails".
+    if (I->IsOverflowBranch) {
+      S.Diag(Term->getBeginLoc(), diag::warn_sometimes_uninit_var)
+          << VD->getDeclName() << IsCapturedByBlock << 6 << "" << I->Output
+          << Term->getSourceRange();
+      S.Diag(User->getBeginLoc(), diag::note_uninit_var_use)
+          << IsCapturedByBlock << User->getSourceRange();
+      Diagnosed = true;
+      continue;
+    }
+
     switch (Term ? Term->getStmtClass() : Stmt::DeclStmtClass) {
     default:
       // Don't know how to report this. Just fall back to 'may be used

@@ -30,8 +30,11 @@ class VarDecl;
 class UninitUse {
 public:
   struct Branch {
+    /// The branch statement, or for an overflow branch, the checked
+    /// operation.
     const Stmt *Terminator;
     unsigned Output;
+    bool IsOverflowBranch = false;
   };
 
 private:
