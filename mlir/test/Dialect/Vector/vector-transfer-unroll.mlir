@@ -35,6 +35,54 @@ func.func @transfer_read_unroll(%mem : memref<4x4xf32>) -> vector<4x4xf32> {
 
 // -----
 
+// Only a scalable trailing dim is supported. The target shape keeps it whole,
+// so only the leading dim is unrolled and the tiles stay scalable.
+
+// ALL-LABEL:   func @transfer_read_unroll_scalable
+//   ALL-DAG:     %[[C2:.*]] = arith.constant 2 : index
+//   ALL-DAG:     %[[C0:.*]] = arith.constant 0 : index
+//       ALL:     %[[VTR0:.*]] = vector.transfer_read {{.*}}[%[[C0]], %[[C0]]], %{{.*}} : memref<4x?xf32>, vector<2x[2]xf32>
+//  ALL-NEXT:     %[[VEC0:.*]] = vector.insert_strided_slice %[[VTR0]], %{{.*}} offsets = [0, 0], strides = [1, 1] : vector<2x[2]xf32> into vector<4x[2]xf32>
+//  ALL-NEXT:     %[[VTR1:.*]] = vector.transfer_read {{.*}}[%[[C2]], %[[C0]]], %{{.*}} : memref<4x?xf32>, vector<2x[2]xf32>
+//  ALL-NEXT:     %[[VEC1:.*]] = vector.insert_strided_slice %[[VTR1]], %[[VEC0]] offsets = [2, 0], strides = [1, 1] : vector<2x[2]xf32> into vector<4x[2]xf32>
+//  ALL-NEXT:     return %[[VEC1]] : vector<4x[2]xf32>
+func.func @transfer_read_unroll_scalable(%mem : memref<4x?xf32>) -> vector<4x[2]xf32> {
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  %res = vector.transfer_read %mem[%c0, %c0], %cf0 : memref<4x?xf32>, vector<4x[2]xf32>
+  return %res : vector<4x[2]xf32>
+}
+
+// -----
+
+// Not supported: the target shape would split the scalable dim.
+
+// ALL-LABEL:   func @negative_transfer_read_unroll_scalable_split
+//       ALL:     %[[RES:.*]] = vector.transfer_read {{.*}} : memref<4x?xf32>, vector<4x[4]xf32>
+//  ALL-NEXT:     return %[[RES]]
+func.func @negative_transfer_read_unroll_scalable_split(%mem : memref<4x?xf32>) -> vector<4x[4]xf32> {
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  %res = vector.transfer_read %mem[%c0, %c0], %cf0 : memref<4x?xf32>, vector<4x[4]xf32>
+  return %res : vector<4x[4]xf32>
+}
+
+// -----
+
+// Not supported: only a scalable trailing dim is.
+
+// ALL-LABEL:   func @negative_transfer_read_unroll_scalable_leading
+//       ALL:     %[[RES:.*]] = vector.transfer_read {{.*}} : memref<?x4xf32>, vector<[2]x4xf32>
+//  ALL-NEXT:     return %[[RES]]
+func.func @negative_transfer_read_unroll_scalable_leading(%mem : memref<?x4xf32>) -> vector<[2]x4xf32> {
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  %res = vector.transfer_read %mem[%c0, %c0], %cf0 : memref<?x4xf32>, vector<[2]x4xf32>
+  return %res : vector<[2]x4xf32>
+}
+
+// -----
+
 // ALL-LABEL:   func @transfer_write_unroll
 // CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
@@ -63,6 +111,44 @@ func.func @transfer_read_unroll(%mem : memref<4x4xf32>) -> vector<4x4xf32> {
 func.func @transfer_write_unroll(%mem : memref<4x4xf32>, %vec : vector<4x4xf32>) {
   %c0 = arith.constant 0 : index
   vector.transfer_write %vec, %mem[%c0, %c0] : vector<4x4xf32>, memref<4x4xf32>
+  return
+}
+
+// -----
+
+// ALL-LABEL:   func @transfer_write_unroll_scalable
+//   ALL-DAG:     %[[C2:.*]] = arith.constant 2 : index
+//   ALL-DAG:     %[[C0:.*]] = arith.constant 0 : index
+//       ALL:     %[[S0:.*]] = vector.extract_strided_slice %{{.*}} offsets = [0, 0], sizes = [2, 2], strides = [1, 1] : vector<4x[2]xf32> to vector<2x[2]xf32>
+//  ALL-NEXT:     vector.transfer_write %[[S0]], {{.*}}[%[[C0]], %[[C0]]] {{.*}} : vector<2x[2]xf32>, memref<4x?xf32>
+//  ALL-NEXT:     %[[S1:.*]] = vector.extract_strided_slice %{{.*}} offsets = [2, 0], sizes = [2, 2], strides = [1, 1] : vector<4x[2]xf32> to vector<2x[2]xf32>
+//  ALL-NEXT:     vector.transfer_write %[[S1]], {{.*}}[%[[C2]], %[[C0]]] {{.*}} : vector<2x[2]xf32>, memref<4x?xf32>
+//  ALL-NEXT:     return
+func.func @transfer_write_unroll_scalable(%mem : memref<4x?xf32>, %vec : vector<4x[2]xf32>) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %mem[%c0, %c0] : vector<4x[2]xf32>, memref<4x?xf32>
+  return
+}
+
+// -----
+
+// ALL-LABEL:   func @negative_transfer_write_unroll_scalable_split
+//       ALL:     vector.transfer_write {{.*}} : vector<4x[4]xf32>, memref<4x?xf32>
+//  ALL-NEXT:     return
+func.func @negative_transfer_write_unroll_scalable_split(%mem : memref<4x?xf32>, %vec : vector<4x[4]xf32>) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %mem[%c0, %c0] : vector<4x[4]xf32>, memref<4x?xf32>
+  return
+}
+
+// -----
+
+// ALL-LABEL:   func @negative_transfer_write_unroll_scalable_leading
+//       ALL:     vector.transfer_write {{.*}} : vector<[2]x4xf32>, memref<?x4xf32>
+//  ALL-NEXT:     return
+func.func @negative_transfer_write_unroll_scalable_leading(%mem : memref<?x4xf32>, %vec : vector<[2]x4xf32>) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %mem[%c0, %c0] : vector<[2]x4xf32>, memref<?x4xf32>
   return
 }
 
@@ -543,13 +629,13 @@ func.func @negative_masked_transfer_read_permutation(%mem : memref<4x4xf32>, %id
 
 // -----
 
-// Not supported yet: scalable vectors.
+// Not supported yet: masked transfers with scalable vectors.
 
 // TargetShape is [2x2]
 // ALL-LABEL: func @negative_masked_transfer_write_scalable(
-//  ALL-NEXT:   vector.mask %{{.*}} { vector.transfer_write {{.*}} : vector<4x[4]xf32>, memref<4x?xf32> }
+//  ALL-NEXT:   vector.mask %{{.*}} { vector.transfer_write {{.*}} : vector<4x[2]xf32>, memref<4x?xf32> }
 //  ALL-NEXT:   return
-func.func @negative_masked_transfer_write_scalable(%mem : memref<4x?xf32>, %vec : vector<4x[4]xf32>, %idx : index, %mask : vector<4x[4]xi1>) {
-  vector.mask %mask { vector.transfer_write %vec, %mem[%idx, %idx] : vector<4x[4]xf32>, memref<4x?xf32> } : vector<4x[4]xi1>
+func.func @negative_masked_transfer_write_scalable(%mem : memref<4x?xf32>, %vec : vector<4x[2]xf32>, %idx : index, %mask : vector<4x[2]xi1>) {
+  vector.mask %mask { vector.transfer_write %vec, %mem[%idx, %idx] : vector<4x[2]xf32>, memref<4x?xf32> } : vector<4x[2]xi1>
   return
 }

@@ -168,6 +168,20 @@ checkSupportedMaskedTransferUnrolling(TransferOpTy xferOp,
   return success();
 }
 
+/// Return true if a non-trailing vector dim is scalable, or if the target
+/// shape would split the scalable trailing vector dim. Scalable dims must
+/// remain whole because tile offsets are static.
+static bool hasUnsupportedScalableDims(VectorType vectorType,
+                                       ArrayRef<int64_t> targetShape) {
+  ArrayRef<bool> scalableDims = vectorType.getScalableDims();
+  if (scalableDims.empty())
+    return false;
+  if (llvm::is_contained(scalableDims.drop_back(), true))
+    return true;
+  return scalableDims.back() &&
+         vectorType.getShape().back() != targetShape.back();
+}
+
 /// Wrap `tiledXferOp`, the new transfer for one tile, in a vector.mask with the
 /// tile of `maskingOp`'s mask (and passthru, if any) at `offsets` with shape
 /// `sizes`. `maskingOp` is the vector.mask around the original transfer;
@@ -228,13 +242,18 @@ struct UnrollTransferReadPattern
       return rewriter.notifyMatchFailure(
           readOp,
           "expected source input vector rank to match target shape rank");
+    if (hasUnsupportedScalableDims(sourceVectorType, *targetShape))
+      return rewriter.notifyMatchFailure(
+          readOp, "only an unsplit scalable trailing vector dim is supported");
 
     // Prepare the result vector;
     Value result =
         arith::ConstantOp::create(rewriter, loc, sourceVectorType,
                                   rewriter.getZeroAttr(sourceVectorType));
+    // A scalable trailing dim is not split, so the tiles keep it scalable.
     auto targetType =
-        VectorType::get(*targetShape, sourceVectorType.getElementType());
+        VectorType::get(*targetShape, sourceVectorType.getElementType(),
+                        sourceVectorType.getScalableDims());
     SmallVector<Value> originalIndices(readOp.getIndices().begin(),
                                        readOp.getIndices().end());
     SmallVector<int64_t> loopOrder =
@@ -300,6 +319,9 @@ struct UnrollTransferWritePattern
       return rewriter.notifyMatchFailure(
           writeOp,
           "expected source input vector rank to match target shape rank");
+    if (hasUnsupportedScalableDims(sourceVectorType, *targetShape))
+      return rewriter.notifyMatchFailure(
+          writeOp, "only an unsplit scalable trailing vector dim is supported");
 
     SmallVector<Value> originalIndices(writeOp.getIndices().begin(),
                                        writeOp.getIndices().end());
