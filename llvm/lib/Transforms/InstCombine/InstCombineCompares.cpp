@@ -8411,8 +8411,14 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Value *V = simplifyICmpInst(I.getCmpPredicate(), Op0, Op1, Q))
     return replaceInstUsesWith(I, V);
 
-  if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
-    return Res;
+  // The folds below up to the min/max bailout are ordered canonicalizations.
+  // The ones that need a particular operand opcode test for it here, so that
+  // icmps without such an operand skip them without a call.
+  unsigned Opc0 = Operator::getOpcode(Op0), Opc1 = Operator::getOpcode(Op1);
+
+  if (Opc0 == Instruction::Trunc || Opc1 == Instruction::Trunc)
+    if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
+      return Res;
 
   if (Op0->getType()->isIntOrIntVectorTy(1))
     if (Instruction *Res = canonicalizeICmpBool(I, Builder))
@@ -8430,14 +8436,17 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpWithDominatingICmp(I))
     return Res;
 
-  if (Instruction *Res = foldICmpUsingBoolRange(I))
-    return Res;
+  if (Opc0 == Instruction::ZExt || Opc0 == Instruction::SExt ||
+      Opc1 == Instruction::ZExt || Opc1 == Instruction::SExt)
+    if (Instruction *Res = foldICmpUsingBoolRange(I))
+      return Res;
 
   if (Instruction *Res = foldICmpUsingKnownBits(I))
     return Res;
 
-  if (Instruction *Res = foldIsMultipleOfAPowerOfTwo(I))
-    return Res;
+  if (Opc0 == Instruction::And || Opc1 == Instruction::And)
+    if (Instruction *Res = foldIsMultipleOfAPowerOfTwo(I))
+      return Res;
 
   // Test if the ICmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
@@ -8539,51 +8548,63 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
           foldICmpCommutative(I.getSwappedCmpPredicate(), Op1, Op0, I))
     return Res;
 
-  if (I.isCommutative()) {
-    if (auto Pair = matchSymmetricPair(I.getOperand(0), I.getOperand(1))) {
-      replaceOperand(I, 0, Pair->first);
-      replaceOperand(I, 1, Pair->second);
-      return &I;
+  // Folds of two operands with the same opcode.
+  if (Operator::getOpcode(Op0) == Operator::getOpcode(Op1)) {
+    switch (Operator::getOpcode(Op0)) {
+    case Instruction::PHI:
+    case Instruction::Call:
+    case Instruction::Select: {
+      if (I.isCommutative()) {
+        if (auto Pair = matchSymmetricPair(Op0, Op1)) {
+          replaceOperand(I, 0, Pair->first);
+          replaceOperand(I, 1, Pair->second);
+          return &I;
+        }
+      }
+      if (!isa<SelectInst>(Op0))
+        break;
+
+      // Fold icmp pred (select C1, TV1, FV1), (select C2, TV2, FV2)
+      // when all select arms are constants, via truth table.
+      if (Instruction *R = foldCmpSelectOfConstants(I))
+        return R;
+
+      // In case of a comparison with two select instructions having the same
+      // condition, check whether one of the resulting branches can be
+      // simplified. If so, just compare the other branch and select the
+      // appropriate result. For example:
+      //   %tmp1 = select i1 %cmp, i32 %y, i32 %x
+      //   %tmp2 = select i1 %cmp, i32 %z, i32 %x
+      //   %cmp2 = icmp slt i32 %tmp2, %tmp1
+      // The icmp will result false for the false value of selects and the
+      // result will depend upon the comparison of true values of selects if
+      // %cmp is true. Thus, transform this into:
+      //   %cmp = icmp slt i32 %y, %z
+      //   %sel = select i1 %cond, i1 %cmp, i1 false
+      // This handles similar cases to transform.
+      {
+        Value *Cond, *A, *B, *C, *D;
+        if (match(Op0, m_Select(m_Value(Cond), m_Value(A), m_Value(B))) &&
+            match(Op1, m_Select(m_Specific(Cond), m_Value(C), m_Value(D))) &&
+            (Op0->hasOneUse() || Op1->hasOneUse())) {
+          // Check whether comparison of TrueValues can be simplified
+          if (Value *Res = simplifyICmpInst(Pred, A, C, SQ)) {
+            Value *NewICMP = Builder.CreateICmp(Pred, B, D);
+            return SelectInst::Create(Cond, Res, NewICMP, /*NameStr=*/"",
+                                      /*InsertBefore=*/nullptr,
+                                      cast<Instruction>(Op0));
+          }
+          // Check whether comparison of FalseValues can be simplified
+          if (Value *Res = simplifyICmpInst(Pred, B, D, SQ)) {
+            Value *NewICMP = Builder.CreateICmp(Pred, A, C);
+            return SelectInst::Create(Cond, NewICMP, Res, /*NameStr=*/"",
+                                      /*InsertBefore=*/nullptr,
+                                      cast<Instruction>(Op0));
+          }
+        }
+      }
+      break;
     }
-  }
-
-  // Fold icmp pred (select C1, TV1, FV1), (select C2, TV2, FV2)
-  // when all select arms are constants, via truth table.
-  if (Instruction *R = foldCmpSelectOfConstants(I))
-    return R;
-
-  // In case of a comparison with two select instructions having the same
-  // condition, check whether one of the resulting branches can be simplified.
-  // If so, just compare the other branch and select the appropriate result.
-  // For example:
-  //   %tmp1 = select i1 %cmp, i32 %y, i32 %x
-  //   %tmp2 = select i1 %cmp, i32 %z, i32 %x
-  //   %cmp2 = icmp slt i32 %tmp2, %tmp1
-  // The icmp will result false for the false value of selects and the result
-  // will depend upon the comparison of true values of selects if %cmp is
-  // true. Thus, transform this into:
-  //   %cmp = icmp slt i32 %y, %z
-  //   %sel = select i1 %cond, i1 %cmp, i1 false
-  // This handles similar cases to transform.
-  {
-    Value *Cond, *A, *B, *C, *D;
-    if (match(Op0, m_Select(m_Value(Cond), m_Value(A), m_Value(B))) &&
-        match(Op1, m_Select(m_Specific(Cond), m_Value(C), m_Value(D))) &&
-        (Op0->hasOneUse() || Op1->hasOneUse())) {
-      // Check whether comparison of TrueValues can be simplified
-      if (Value *Res = simplifyICmpInst(Pred, A, C, SQ)) {
-        Value *NewICMP = Builder.CreateICmp(Pred, B, D);
-        return SelectInst::Create(Cond, Res, NewICMP, /*NameStr=*/"",
-                                  /*InsertBefore=*/nullptr,
-                                  cast<Instruction>(Op0));
-      }
-      // Check whether comparison of FalseValues can be simplified
-      if (Value *Res = simplifyICmpInst(Pred, B, D, SQ)) {
-        Value *NewICMP = Builder.CreateICmp(Pred, A, C);
-        return SelectInst::Create(Cond, NewICMP, Res, /*NameStr=*/"",
-                                  /*InsertBefore=*/nullptr,
-                                  cast<Instruction>(Op0));
-      }
     }
   }
 
