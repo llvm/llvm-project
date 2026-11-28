@@ -1,8 +1,19 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-dwarfdump -debug-line -verify %t.o | FileCheck %s
+# RUN: llvm-dwarfdump -debug-line --error-display=details %t.o | FileCheck %s
 
 #      CHECK: Verifying .debug_line...
 # CHECK-NEXT: warning: .debug_line[0x00000000].prologue.file_names[2] is a duplicate of file_names[1]
+
+## The warning is printed along with the error details, so it is omitted when
+## only the summary or nothing is requested.
+# RUN: llvm-dwarfdump -debug-line --error-display=summary %t.o \
+# RUN:   | FileCheck %s --check-prefix=NOWARN --implicit-check-not=warning:
+# RUN: llvm-dwarfdump -debug-line --error-display=quiet %t.o \
+# RUN:   | FileCheck %s --check-prefix=NOWARN --implicit-check-not=warning:
+
+# NOWARN: Verifying .debug_line...
+# NOWARN: No errors.
 
 --- !ELF
 FileHeader:

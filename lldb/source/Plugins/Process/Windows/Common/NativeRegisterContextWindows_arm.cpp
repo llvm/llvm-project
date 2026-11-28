@@ -10,8 +10,8 @@
 
 #include "NativeRegisterContextWindows_arm.h"
 #include "NativeThreadWindows.h"
-#include "Register/Common/RegisterInfo_arm.h"
 #include "ProcessWindowsLog.h"
+#include "Register/Common/RegisterInfo_arm.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/windows/HostThreadWindows.h"

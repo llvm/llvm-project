@@ -13,14 +13,14 @@ entry:
   store ptr %destructorCalled, ptr %destructorCalled.addr, align 4
   %0 = load ptr, ptr %destructorCalled.addr, align 4
   %call = call x86_thiscallcc noundef ptr @"??0Destructor@@QAE@PA_N@Z"(ptr noundef nonnull align 4 dereferenceable(4) %x, ptr noundef %0)
-  ; CHECK:  store i32 0, ptr %9, align 4
+  ; CHECK:  store i32 0, ptr %{{.*}}, align 4
   ; CHECK-NEXT:  invoke void @llvm.seh.scope.begin()
   invoke void @llvm.seh.scope.begin()
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:
   store i32 1, ptr inttoptr (i32 1 to ptr), align 4
-  ; CHECK:  store i32 -1, ptr %10, align 4
+  ; CHECK:  store i32 -1, ptr %{{.*}}, align 4
   ; CHECK-NEXT:  invoke void @llvm.seh.scope.end()
   invoke void @llvm.seh.scope.end()
           to label %invoke.cont1 unwind label %ehcleanup

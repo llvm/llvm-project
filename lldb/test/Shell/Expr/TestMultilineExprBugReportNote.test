@@ -1,0 +1,8 @@
+# RUN: %lldb -b -s %s 2>&1 | FileCheck %s
+
+# The 'bugreport' note follows the error of a multi-line expression.
+expression
+foo
+
+# CHECK: error: {{.*}}use of undeclared identifier 'foo'
+# CHECK: note: if you believe this is a bug, use the 'bugreport' command

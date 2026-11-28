@@ -36,3 +36,4 @@ body:             |
     successors: 
   bb.25.if.else.i103.i (machine-block-address-taken):
     JMP_1 %bb.28
+...

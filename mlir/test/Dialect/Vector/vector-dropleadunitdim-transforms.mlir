@@ -358,6 +358,19 @@ func.func @cast_away_transfer_read_leading_one_dims_one_element(%arg0: memref<1x
   return %0: vector<1x1xf16>
 }
 
+// The leading unit dim is out of bounds. Dropping it would make it a non-vector
+// dim, and those must be in bounds.
+
+// CHECK-LABEL: func @negative_cast_away_transfer_read_leading_one_dims_out_of_bounds
+// CHECK:         %[[READ:.+]] = vector.transfer_read %{{.*}} {in_bounds = [false, true]} : memref<?x4xf16>, vector<1x4xf16>
+// CHECK:         return %[[READ]]
+func.func @negative_cast_away_transfer_read_leading_one_dims_out_of_bounds(%arg0: memref<?x4xf16>, %arg1: index) -> vector<1x4xf16> {
+  %c0 = arith.constant 0 : index
+  %f0 = arith.constant 0. : f16
+  %0 = vector.transfer_read %arg0[%arg1, %c0], %f0 {in_bounds = [false, true]} : memref<?x4xf16>, vector<1x4xf16>
+  return %0: vector<1x4xf16>
+}
+
 // -----
 
 // CHECK:       #[[$MAP:.+]] = affine_map<(d0, d1, d2) -> (d1)>
@@ -425,6 +438,17 @@ func.func @cast_away_transfer_write_leading_one_dims_one_element(%arg0: memref<1
   %c0 = arith.constant 0 : index
   // CHECK: vector.shape_cast %{{.+}} : vector<1x1xf16> to vector<1xf16>
   vector.transfer_write %arg1, %arg0[%c0, %c0, %c0, %c0] {in_bounds = [true, true]} : vector<1x1xf16>, memref<1x1x1x1xf16>
+  return
+}
+
+// Same as @negative_cast_away_transfer_read_leading_one_dims_out_of_bounds, for
+// a write.
+
+// CHECK-LABEL: func @negative_cast_away_transfer_write_leading_one_dims_out_of_bounds
+// CHECK:         vector.transfer_write %{{.*}} {in_bounds = [false, true]} : vector<1x4xf16>, memref<?x4xf16>
+func.func @negative_cast_away_transfer_write_leading_one_dims_out_of_bounds(%arg0: memref<?x4xf16>, %arg1: vector<1x4xf16>, %arg2: index) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %arg1, %arg0[%arg2, %c0] {in_bounds = [false, true]} : vector<1x4xf16>, memref<?x4xf16>
   return
 }
 

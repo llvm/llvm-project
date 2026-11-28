@@ -27,14 +27,10 @@ private:
   mutex_type& __m_;
 
 public:
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI explicit lock_guard(mutex_type& __m) _LIBCPP_ACQUIRE_CAPABILITY(__m)
-      : __m_(__m) {
-    __m_.lock();
-  }
+  [[__nodiscard__]] explicit lock_guard(mutex_type& __m) _LIBCPP_ACQUIRE_CAPABILITY(__m) : __m_(__m) { __m_.lock(); }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI lock_guard(mutex_type& __m, adopt_lock_t) _LIBCPP_REQUIRES_CAPABILITY(__m)
-      : __m_(__m) {}
-  _LIBCPP_RELEASE_CAPABILITY() _LIBCPP_HIDE_FROM_ABI ~lock_guard() { __m_.unlock(); }
+  [[__nodiscard__]] lock_guard(mutex_type& __m, adopt_lock_t) _LIBCPP_REQUIRES_CAPABILITY(__m) : __m_(__m) {}
+  _LIBCPP_RELEASE_CAPABILITY() ~lock_guard() { __m_.unlock(); }
 
   lock_guard(lock_guard const&)            = delete;
   lock_guard& operator=(lock_guard const&) = delete;

@@ -20,9 +20,11 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <algorithm>
 #include <cassert>
+#include <cinttypes>
 #include <climits>
 #include <cstddef>
 #include <cstdint>
@@ -79,29 +81,32 @@ public:
 /// own local state.
 class SimpleBitstreamCursor {
   ArrayRef<uint8_t> BitcodeBytes;
-  size_t NextChar = 0;
+
+  /// The number of the next bit to read.
+  uint64_t BitNo = 0;
+
+  /// Reads at bits before this can load a whole word from their first byte.
+  uint64_t WordLoadEnd = 0;
 
 public:
-  /// This is the current data we have pulled from the stream but have not
-  /// returned to the client. This is specifically and intentionally defined to
-  /// follow the word size of the host machine for efficiency. We use word_t in
-  /// places that are aware of this to make it perfectly explicit what is going
-  /// on.
+  /// The type of the values returned by Read. This is specifically and
+  /// intentionally defined to follow the word size of the host machine for
+  /// efficiency. We use word_t in places that are aware of this to make it
+  /// perfectly explicit what is going on.
   using word_t = size_t;
 
 private:
-  word_t CurWord = 0;
-
-  /// This is the number of bits in CurWord that are valid. This is always from
-  /// [0...bits_of(size_t)-1] inclusive.
-  unsigned BitsInCurWord = 0;
+  static constexpr unsigned BitsInWord = sizeof(word_t) * 8;
 
 public:
   SimpleBitstreamCursor() = default;
   explicit SimpleBitstreamCursor(ArrayRef<uint8_t> BitcodeBytes)
-      : BitcodeBytes(BitcodeBytes) {}
+      : BitcodeBytes(BitcodeBytes),
+        WordLoadEnd(BitcodeBytes.size() < sizeof(word_t)
+                        ? 0
+                        : (BitcodeBytes.size() - sizeof(word_t) + 1) * 8) {}
   explicit SimpleBitstreamCursor(StringRef BitcodeBytes)
-      : BitcodeBytes(arrayRefFromStringRef(BitcodeBytes)) {}
+      : SimpleBitstreamCursor(arrayRefFromStringRef(BitcodeBytes)) {}
   explicit SimpleBitstreamCursor(MemoryBufferRef BitcodeBytes)
       : SimpleBitstreamCursor(BitcodeBytes.getBuffer()) {}
 
@@ -110,14 +115,10 @@ public:
     return pos <= BitcodeBytes.size();
   }
 
-  bool AtEndOfStream() {
-    return BitsInCurWord == 0 && BitcodeBytes.size() <= NextChar;
-  }
+  bool AtEndOfStream() { return BitNo >= sizeInBits(); }
 
   /// Return the bit # of the bit we are reading.
-  uint64_t GetCurrentBitNo() const {
-    return uint64_t(NextChar)*CHAR_BIT - BitsInCurWord;
-  }
+  uint64_t GetCurrentBitNo() const { return BitNo; }
 
   // Return the byte # of the current bit.
   uint64_t getCurrentByteNo() const { return GetCurrentBitNo() / 8; }
@@ -125,23 +126,14 @@ public:
   ArrayRef<uint8_t> getBitcodeBytes() const { return BitcodeBytes; }
 
   /// Reset the stream to the specified bit number.
-  Error JumpToBit(uint64_t BitNo) {
-    size_t ByteNo = size_t(BitNo/8) & ~(sizeof(word_t)-1);
-    unsigned WordBitNo = unsigned(BitNo & (sizeof(word_t)*8-1));
-    assert(canSkipToPos(ByteNo) && "Invalid location");
-
-    // Move the cursor to the right word.
-    NextChar = ByteNo;
-    BitsInCurWord = 0;
-
-    // Skip over any bits that are already consumed.
-    if (WordBitNo) {
-      if (Expected<word_t> Res = Read(WordBitNo))
-        return Error::success();
-      else
-        return Res.takeError();
-    }
-
+  Error JumpToBit(uint64_t NewBitNo) {
+    assert(canSkipToPos(NewBitNo / 8) && "Invalid location");
+    if (NewBitNo > sizeInBits())
+      return createStringError(std::errc::io_error,
+                               "Unexpected end of file jumping to bit %" PRIu64
+                               " of %" PRIu64 " bits",
+                               NewBitNo, sizeInBits());
+    BitNo = NewBitNo;
     return Error::success();
   }
 
@@ -158,73 +150,35 @@ public:
     return getPointerToByte(BitNo / 8, NumBytes);
   }
 
-  Error fillCurWord() {
-    if (NextChar >= BitcodeBytes.size())
-      return createStringError(std::errc::io_error,
-                               "Unexpected end of file reading %u of %u bytes",
-                               NextChar, BitcodeBytes.size());
-
-    // Read the next word from the stream.
-    const uint8_t *NextCharPtr = BitcodeBytes.data() + NextChar;
-    unsigned BytesRead;
-    if (BitcodeBytes.size() >= NextChar + sizeof(word_t)) {
-      BytesRead = sizeof(word_t);
-      CurWord =
-          support::endian::read<word_t, llvm::endianness::little>(NextCharPtr);
-    } else {
-      // Short read.
-      BytesRead = BitcodeBytes.size() - NextChar;
-      CurWord = 0;
-      for (unsigned B = 0; B != BytesRead; ++B)
-        CurWord |= uint64_t(NextCharPtr[B]) << (B * 8);
-    }
-    NextChar += BytesRead;
-    BitsInCurWord = BytesRead * 8;
-    return Error::success();
+private:
+  /// Return the word starting at the current bit, which must be before
+  /// WordLoadEnd. Only the low BitsInWord - 7 bits are guaranteed to be valid.
+  word_t loadWordAtBit() const {
+    assert(BitNo < WordLoadEnd && "Word load past the end of the stream");
+    return support::endian::read<word_t, llvm::endianness::little>(
+               BitcodeBytes.data() + BitNo / 8) >>
+           (BitNo % 8);
   }
 
+public:
   Expected<word_t> Read(unsigned NumBits) {
-    static const unsigned BitsInWord = sizeof(word_t) * 8;
-
     assert(NumBits && NumBits <= BitsInWord &&
            "Cannot return zero or more than BitsInWord bits!");
 
-    static const unsigned Mask = sizeof(word_t) > 4 ? 0x3f : 0x1f;
-
-    // If the field is fully contained by CurWord, return it quickly.
-    if (BitsInCurWord >= NumBits) {
-      word_t R = CurWord & (~word_t(0) >> (BitsInWord - NumBits));
-
-      // Use a mask to avoid undefined behavior.
-      CurWord >>= (NumBits & Mask);
-
-      BitsInCurWord -= NumBits;
+    // If the field is contained in a word starting at the current byte, load
+    // that word directly.
+    if (NumBits <= BitsInWord - 7 && BitNo < WordLoadEnd) {
+      word_t R = loadWordAtBit() & (~word_t(0) >> (BitsInWord - NumBits));
+      BitNo += NumBits;
       return R;
     }
 
-    word_t R = BitsInCurWord ? CurWord : 0;
-    unsigned BitsLeft = NumBits - BitsInCurWord;
-
-    if (Error fillResult = fillCurWord())
-      return std::move(fillResult);
-
-    // If we run out of data, abort.
-    if (BitsLeft > BitsInCurWord)
-      return createStringError(std::errc::io_error,
-                               "Unexpected end of file reading %u of %u bits",
-                               BitsInCurWord, BitsLeft);
-
-    word_t R2 = CurWord & (~word_t(0) >> (BitsInWord - BitsLeft));
-
-    // Use a mask to avoid undefined behavior.
-    CurWord >>= (BitsLeft & Mask);
-
-    BitsInCurWord -= BitsLeft;
-
-    R |= R2 << (NumBits - BitsLeft);
-
-    return R;
+    return readSlow(NumBits);
   }
+
+  /// Read \p NumBits bits that don't fit in a word load from the current byte,
+  /// or are near the end of the stream.
+  LLVM_ABI Expected<word_t> readSlow(unsigned NumBits);
 
   Expected<uint32_t> ReadVBR(const unsigned NumBits) {
     Expected<unsigned> MaybeRead = Read(NumBits);
@@ -294,23 +248,17 @@ public:
   }
 
   void SkipToFourByteBoundary() {
-    // If word_t is 64-bits and if we've read less than 32 bits, just dump
-    // the bits we have up to the next 32-bit boundary.
-    if (sizeof(word_t) > 4 &&
-        BitsInCurWord >= 32) {
-      CurWord >>= BitsInCurWord-32;
-      BitsInCurWord = 32;
-      return;
-    }
-
-    BitsInCurWord = 0;
+    BitNo = std::min(alignTo(BitNo, 32), sizeInBits());
   }
 
   /// Return the size of the stream in bytes.
   size_t SizeInBytes() const { return BitcodeBytes.size(); }
 
+  /// Return the size of the stream in bits.
+  uint64_t sizeInBits() const { return uint64_t(BitcodeBytes.size()) * 8; }
+
   /// Skip to the end of the file.
-  void skipToEnd() { NextChar = BitcodeBytes.size(); }
+  void skipToEnd() { BitNo = sizeInBits(); }
 
   /// Check whether a reservation of Size elements is plausible.
   bool isSizePlausible(size_t Size) const {
@@ -388,7 +336,6 @@ public:
 
   using SimpleBitstreamCursor::AtEndOfStream;
   using SimpleBitstreamCursor::canSkipToPos;
-  using SimpleBitstreamCursor::fillCurWord;
   using SimpleBitstreamCursor::getBitcodeBytes;
   using SimpleBitstreamCursor::GetCurrentBitNo;
   using SimpleBitstreamCursor::getCurrentByteNo;

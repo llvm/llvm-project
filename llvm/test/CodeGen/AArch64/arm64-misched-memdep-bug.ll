@@ -8,10 +8,10 @@
 ; CHECK: SU(2):   %2:gpr32 = LDRWui %0:gpr64common, 1 :: (load (s32) from %ir.ptr1_plus1)
 ; CHECK:   Successors:
 ; CHECK-NEXT:    SU(5): Data Latency=4 Reg=%2
-; CHECK-NEXT:    SU(4): Ord  Latency=0
+; CHECK-NEXT:    SU(3): Ord  Latency=0 Barrier
 ; CHECK: SU(3):   STRWui $wzr, %0:gpr64common, 0 :: (store (s32) into %ir.ptr1)
 ; CHECK:   Successors:
-; CHECK: SU(4): Ord  Latency=0
+; CHECK-NEXT:    SU(4): Ord  Latency=0 Barrier
 ; CHECK: SU(4):   STRWui $wzr, %1:gpr64common, 0 :: (store (s32) into %ir.ptr2)
 ; CHECK: SU(5):   $w0 = COPY %2
 ; CHECK: ** ScheduleDAGMI::schedule picking next node

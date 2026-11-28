@@ -6,7 +6,6 @@
 
 ---
 name:            swp_amdgpu_pipeline_neg_no_exit
-tracksRegLiveness: true
 isSSA:           true
 liveins:
   - { reg: '$sgpr8' }

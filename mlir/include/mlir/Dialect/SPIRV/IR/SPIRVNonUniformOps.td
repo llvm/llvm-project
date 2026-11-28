@@ -18,6 +18,7 @@
 
 class SPIRV_GroupNonUniformArithmeticOp<string mnemonic, Type type,
       list<Trait> traits = []> : SPIRV_Op<mnemonic, !listconcat([
+        AllTypesMatch<["value", "result"]>,
         SPIRV_ExecutionScopeAttrIs<"execution_scope", ["Subgroup"]>
       ], traits)> {
 
@@ -1510,6 +1511,8 @@ def SPIRV_GroupNonUniformRotateKHROp : SPIRV_Op<"GroupNonUniformRotateKHR", [
   let assemblyFormat = [{
     $execution_scope $value `,` $delta (`,` `cluster_size` `(` $cluster_size^ `)`)? attr-dict `:` type($value) `,` type($delta) (`,` type($cluster_size)^)? `->` type(results)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----

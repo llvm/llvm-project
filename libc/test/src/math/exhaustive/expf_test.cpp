@@ -1,11 +1,18 @@
-//===-- Exhaustive test for expf ------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Exhaustive test for expf.
+///
+//===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h"
+#include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/math/expf_double_eval.h"
 #include "src/__support/math/expf_float_eval.h"
 #include "src/__support/math/expf_integer_eval.h"
@@ -78,10 +85,13 @@ TEST_F(LlvmLibcExpfFloatCrRnExhaustiveTest, NegativeRange) {
 
 // Statically rounded implementation: tested against double_eval across all
 // roundings.
+static float expf_static_rounding(float x, int rounding) {
+  return LIBC_NAMESPACE::math::static_rounding::expf(x, rounding);
+}
+
 using LlvmLibcExpfStaticRoundingExhaustiveTest =
     LlvmLibcStaticallyRoundedUnaryOpExhaustiveMathTest<
-        float, LIBC_NAMESPACE::math::double_eval::expf,
-        LIBC_NAMESPACE::math::static_rounding::expf>;
+        float, LIBC_NAMESPACE::math::double_eval::expf, expf_static_rounding>;
 
 TEST_F(LlvmLibcExpfStaticRoundingExhaustiveTest, PositiveRange) {
   test_full_range_all_roundings(POS_START, POS_STOP);

@@ -46,3 +46,32 @@ define i32 @test4(i32 %x, i32 %y) {
   %outer = or i32 %inner, %y
   ret i32 %outer
 }
+
+; V | (X | C) --> (X | V) | C
+
+define i32 @test4_commuted(i32 %x, i32 %y) {
+; CHECK-LABEL: @test4_commuted(
+; CHECK-NEXT:    [[INNER:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OUTER:%.*]] = or i32 [[INNER]], 5
+; CHECK-NEXT:    ret i32 [[OUTER]]
+;
+  %inner = or i32 %x, 5
+  %outer = or i32 %y, %inner
+  ret i32 %outer
+}
+
+declare void @use(i32)
+
+; Negative test: the inner or has another use.
+define i32 @test_commuted_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_commuted_multiuse(
+; CHECK-NEXT:    [[INNER:%.*]] = or disjoint i32 [[X:%.*]], 5
+; CHECK-NEXT:    call void @use(i32 [[INNER]])
+; CHECK-NEXT:    [[OUTER:%.*]] = or disjoint i32 [[Y:%.*]], [[INNER]]
+; CHECK-NEXT:    ret i32 [[OUTER]]
+;
+  %inner = or disjoint i32 %x, 5
+  call void @use(i32 %inner)
+  %outer = or disjoint i32 %y, %inner
+  ret i32 %outer
+}

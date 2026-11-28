@@ -3,6 +3,8 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:  -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
+using namespace hlsl;
+
 #ifdef __HLSL_ENABLE_16_BIT
 // NATIVE_HALF-LABEL: define hidden noundef <4 x i16> {{.*}}test_max_short4_mismatch
 // NATIVE_HALF: [[CONV0:%.*]] = insertelement <4 x i16> poison, i16 %{{.*}}, i64 0

@@ -137,8 +137,8 @@ define <3 x i15> @fp2si_v3f32_v3i15(<3 x float> %x) {
 ; ZVFH32-NEXT:    srli a3, a3, 2
 ; ZVFH32-NEXT:    srli a2, a2, 19
 ; ZVFH32-NEXT:    or a1, a1, a3
-; ZVFH32-NEXT:    sw a1, 0(a0)
 ; ZVFH32-NEXT:    sh a2, 4(a0)
+; ZVFH32-NEXT:    sw a1, 0(a0)
 ; ZVFH32-NEXT:    ret
 ;
 ; ZVFH64-LABEL: fp2si_v3f32_v3i15:
@@ -181,8 +181,8 @@ define <3 x i15> @fp2si_v3f32_v3i15(<3 x float> %x) {
 ; ZVFHMIN32-NEXT:    srli a3, a3, 2
 ; ZVFHMIN32-NEXT:    srli a2, a2, 19
 ; ZVFHMIN32-NEXT:    or a1, a1, a3
-; ZVFHMIN32-NEXT:    sw a1, 0(a0)
 ; ZVFHMIN32-NEXT:    sh a2, 4(a0)
+; ZVFHMIN32-NEXT:    sw a1, 0(a0)
 ; ZVFHMIN32-NEXT:    ret
 ;
 ; ZVFHMIN64-LABEL: fp2si_v3f32_v3i15:
@@ -230,8 +230,8 @@ define <3 x i15> @fp2ui_v3f32_v3i15(<3 x float> %x) {
 ; ZVFH32-NEXT:    srli a3, a3, 1
 ; ZVFH32-NEXT:    srli a2, a2, 19
 ; ZVFH32-NEXT:    or a1, a1, a3
-; ZVFH32-NEXT:    sw a1, 0(a0)
 ; ZVFH32-NEXT:    sh a2, 4(a0)
+; ZVFH32-NEXT:    sw a1, 0(a0)
 ; ZVFH32-NEXT:    ret
 ;
 ; ZVFH64-LABEL: fp2ui_v3f32_v3i15:
@@ -274,8 +274,8 @@ define <3 x i15> @fp2ui_v3f32_v3i15(<3 x float> %x) {
 ; ZVFHMIN32-NEXT:    srli a3, a3, 1
 ; ZVFHMIN32-NEXT:    srli a2, a2, 19
 ; ZVFHMIN32-NEXT:    or a1, a1, a3
-; ZVFHMIN32-NEXT:    sw a1, 0(a0)
 ; ZVFHMIN32-NEXT:    sh a2, 4(a0)
+; ZVFHMIN32-NEXT:    sw a1, 0(a0)
 ; ZVFHMIN32-NEXT:    ret
 ;
 ; ZVFHMIN64-LABEL: fp2ui_v3f32_v3i15:

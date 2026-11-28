@@ -13,6 +13,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Analysis/AnyCall.h"
@@ -114,6 +115,17 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   return isNormalAssignmentOperator(FD);
 }
 
+bool paramIsLifetimeBound(const ParmVarDecl &PVD) {
+  if (PVD.hasAttr<LifetimeBoundAttr>())
+    return true;
+  return isa<CXXConstructorDecl>(PVD.getDeclContext()) &&
+         llvm::any_of(PVD.specific_attrs<LifetimeCaptureByAttr>(),
+                      [](const LifetimeCaptureByAttr *A) {
+                        return llvm::is_contained(A->params(),
+                                                  LifetimeCaptureByAttr::This);
+                      });
+}
+
 const LifetimeCaptureByAttr *
 getCaptureByAttrFromFunctionType(const FunctionDecl *FD) {
   return getImplicitObjectParamAttr<LifetimeCaptureByAttr>(FD);
@@ -123,12 +135,31 @@ FunctionCallInfo::FunctionCallInfo(const Expr *Call) {
   if (!Call)
     return;
 
-  std::optional<AnyCall> AC = AnyCall::forExpr(Call->IgnoreParenImpCasts());
+  std::optional<AnyCall> AC = AnyCall::forExpr(ignoreParensAndImpCasts(Call));
   if (!AC)
     return;
 
   Args = AC->arguments();
   FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
+}
+
+bool hasObjectArg(const FunctionDecl &FD) {
+  const auto *MD = dyn_cast<CXXMethodDecl>(&FD);
+  return MD && MD->isInstance() && !isa<CXXConstructorDecl>(MD);
+}
+
+bool hasImplicitObjectArg(const FunctionDecl &FD) {
+  return hasObjectArg(FD) &&
+         cast<CXXMethodDecl>(FD).isImplicitObjectMemberFunction();
+}
+
+const ParmVarDecl *getParamForArg(const FunctionDecl &FD, unsigned I) {
+  if (hasImplicitObjectArg(FD)) {
+    if (I == 0)
+      return nullptr;
+    --I;
+  }
+  return I < FD.getNumParams() ? FD.getParamDecl(I) : nullptr;
 }
 
 std::optional<LifetimeBoundParamInfo>
@@ -138,31 +169,28 @@ getTrackedArgInfo(const FunctionDecl *FD, llvm::ArrayRef<const Expr *> Args,
   if (!FD || I >= Args.size())
     return std::nullopt;
 
-  const ParmVarDecl *PVD = nullptr;
-
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
-    if (I == 0) {
-      // For the 'this' argument, the attribute is on the method itself.
-      if (implicitObjectParamIsLifetimeBound(Method) ||
-          shouldTrackImplicitObjectArg(*Args[0], Method,
-                                       /*RunningUnderLifetimeSafety=*/true))
-        return LifetimeBoundParamInfo(Method);
-      return std::nullopt;
-    }
-    if ((I - 1) < Method->getNumParams())
-      // For explicit arguments, find the corresponding parameter declaration.
-      PVD = Method->getParamDecl(I - 1);
-  } else if (I == 0 && shouldTrackFirstArgument(FD)) {
-    return LifetimeBoundParamInfo(FD->getParamDecl(I));
-  } else if (I == 1 && shouldTrackSecondArgument(FD)) {
-    return LifetimeBoundParamInfo(FD->getParamDecl(I));
-  } else if (I < FD->getNumParams()) {
-    // For free functions or static methods.
-    PVD = FD->getParamDecl(I);
+  if (I == 0 && hasObjectArg(*FD)) {
+    const auto *Method = cast<CXXMethodDecl>(FD);
+    bool TrackObject =
+        implicitObjectParamIsLifetimeBound(Method) ||
+        shouldTrackImplicitObjectArg(*Args[0], Method,
+                                     /*RunningUnderLifetimeSafety=*/true);
+    if (hasImplicitObjectArg(*FD))
+      return TrackObject ? std::optional(LifetimeBoundParamInfo(Method))
+                         : std::nullopt;
+    // An explicit object parameter is reported as the parameter it is.
+    if (TrackObject)
+      return LifetimeBoundParamInfo(Method->getParamDecl(0));
+  }
+  if (!hasImplicitObjectArg(*FD)) {
+    if (I == 0 && shouldTrackFirstArgument(FD))
+      return LifetimeBoundParamInfo(FD->getParamDecl(I));
+    if (I == 1 && shouldTrackSecondArgument(FD))
+      return LifetimeBoundParamInfo(FD->getParamDecl(I));
   }
 
-  if (PVD && PVD->hasAttr<clang::LifetimeBoundAttr>())
+  if (const ParmVarDecl *PVD = getParamForArg(*FD, I);
+      PVD && paramIsLifetimeBound(*PVD))
     return LifetimeBoundParamInfo(PVD);
 
   return std::nullopt;
@@ -178,7 +206,7 @@ getTrackingInfoForCallArg(const Expr *Call, const Expr *Source) {
     return std::nullopt;
 
   for (unsigned I = 0; I < Args.size(); ++I)
-    if (Args[I]->IgnoreParenImpCasts() == Source->IgnoreParenImpCasts())
+    if (ignoreParensAndImpCasts(Args[I]) == ignoreParensAndImpCasts(Source))
       if (std::optional<LifetimeBoundParamInfo> ParamInfo =
               getTrackedArgInfo(FD, Args, I))
         return ParamInfo;
@@ -425,8 +453,6 @@ bool isUniquePtrRelease(const CXXMethodDecl &MD) {
 
 bool isInvalidationMethod(const CXXMethodDecl &MD) {
   const CXXRecordDecl *RD = MD.getParent();
-  if (!isInStlNamespace(RD))
-    return false;
 
   // `pop_back` is excluded: it only invalidates references to the removed
   // element, not to other elements.
@@ -508,7 +534,8 @@ bool isInvalidationMethod(const CXXMethodDecl &MD) {
           .Case("unique_ptr", &UniquePtr)
           .Default(nullptr);
 
-  if (!InvalidatingMethods)
+  // Check the record name before the namespace, which walks the DeclContexts.
+  if (!InvalidatingMethods || !isInStlNamespace(RD))
     return false;
 
   // Handle Operators via OverloadedOperatorKind
@@ -536,14 +563,49 @@ bool isInvalidationMethod(const CXXMethodDecl &MD) {
 bool destructsFirstArg(const FunctionDecl &FD) {
   if (isa<CXXDestructorDecl>(FD))
     return true;
-  return isInStlNamespace(&FD) && getName(FD) == "destroy_at";
+  return getName(FD) == "destroy_at" && isInStlNamespace(&FD);
+}
+
+bool isAllocatingFunction(const FunctionDecl &FD) {
+  switch (FD.getBuiltinID()) {
+  case Builtin::BImalloc:
+  case Builtin::BI__builtin_malloc:
+  case Builtin::BIcalloc:
+  case Builtin::BI__builtin_calloc:
+  case Builtin::BIrealloc:
+  case Builtin::BI__builtin_realloc:
+    return true;
+  default:
+    break;
+  }
+  return llvm::any_of(FD.specific_attrs<OwnershipAttr>(),
+                      [](const OwnershipAttr *Attr) {
+                        return Attr->getOwnKind() == OwnershipAttr::Returns;
+                      });
+}
+
+bool isFreeingFunction(const FunctionDecl &FD) {
+  switch (FD.getBuiltinID()) {
+  case Builtin::BIfree:
+  case Builtin::BI__builtin_free:
+  case Builtin::BIrealloc:
+  case Builtin::BI__builtin_realloc:
+    return true;
+  default:
+    break;
+  }
+  return llvm::any_of(FD.specific_attrs<OwnershipAttr>(),
+                      [](const OwnershipAttr *Attr) {
+                        return Attr->getOwnKind() == OwnershipAttr::Takes;
+                      });
 }
 
 bool isStdCallableWrapperType(const CXXRecordDecl *RD) {
-  if (!RD || !isInStlNamespace(RD))
+  if (!RD)
     return false;
   StringRef Name = getName(*RD);
-  return Name == "function" || Name == "move_only_function";
+  return (Name == "function" || Name == "move_only_function") &&
+         isInStlNamespace(RD);
 }
 
 bool isStdReferenceCast(const FunctionDecl *FD) {
@@ -559,6 +621,11 @@ bool isStdReferenceCast(const FunctionDecl *FD) {
   default:
     return false;
   }
+}
+
+const Expr *ignoreParensAndImpCasts(const Expr *E) {
+  return IgnoreExprNodes(E, IgnoreParensSingleStep,
+                         IgnoreImplicitCastsSingleStep);
 }
 
 } // namespace clang::lifetimes

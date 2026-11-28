@@ -92,6 +92,140 @@ define i64 @umulh__commuted(i64 %x, i64 %y) {
   ret i64 %hw64
 }
 
+; HiHi + (A + (B + C))
+define i64 @umulh1_add_carry_to_low_accum_hi(i64 %x, i64 %y) {
+  ; Extract low and high 32 bits
+; CHECK-LABEL: define i64 @umulh1_add_carry_to_low_accum_hi(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    ret i64 [[HW64]]
+;
+  %x_lo = and i64 %x, 4294967295              ; x & 0xffffffff
+  %y_lo = and i64 %y, 4294967295              ; y & 0xffffffff
+  %x_hi = lshr i64 %x, 32                     ; x >> 32
+  %y_hi = lshr i64 %y, 32                     ; y >> 32
+
+  ; Cross products
+  %y_lo_x_hi = mul nuw i64 %y_lo, %x_hi       ; y_lo * x_hi
+  %y_hi_x_hi = mul nuw i64 %y_hi, %x_hi       ; y_hi * x_hi
+  %y_hi_x_lo = mul nuw i64 %y_hi, %x_lo       ; y_hi * x_lo
+  %y_lo_x_lo = mul nuw i64 %y_lo, %x_lo       ; y_lo * x_lo
+
+  ; Add cross terms
+  %cross_sum = add i64 %y_hi_x_lo, %y_lo_x_hi ; full 64-bit sum
+
+  ; Carry if overflowed
+  %carry_out = icmp ult i64 %cross_sum, %y_lo_x_hi
+  %carry = select i1 %carry_out, i64 4294967296, i64 0 ; if overflow, add 1 << 32
+
+  ; High 32 bits of low product
+  %y_lo_x_lo_hi = lshr i64 %y_lo_x_lo, 32
+
+  ; Low and high 32 bits of cross_sum
+  %cross_sum_lo = and i64 %cross_sum, 4294967295
+  %cross_sum_hi = lshr i64 %cross_sum, 32
+
+  %low_accum = add nuw nsw i64 %cross_sum_lo, %y_lo_x_lo_hi
+  %low_accum_hi = lshr i64 %low_accum, 32
+
+  ; Final result accumulation
+  %carries = or disjoint i64 %carry, %low_accum_hi
+  %intermediate = add i64 %cross_sum_hi, %carries
+  %hw64 = add i64 %y_hi_x_hi, %intermediate
+
+  ret i64 %hw64
+}
+
+; A + (HiHi + (B + C))
+define i64 @umulh2_add_carry_to_low_accum_hi(i64 %x, i64 %y) {
+  ; Extract low and high 32 bits
+; CHECK-LABEL: define i64 @umulh2_add_carry_to_low_accum_hi(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    ret i64 [[HW64]]
+;
+  %x_lo = and i64 %x, 4294967295              ; x & 0xffffffff
+  %y_lo = and i64 %y, 4294967295              ; y & 0xffffffff
+  %x_hi = lshr i64 %x, 32                     ; x >> 32
+  %y_hi = lshr i64 %y, 32                     ; y >> 32
+
+  ; Cross products
+  %y_lo_x_hi = mul nuw i64 %y_lo, %x_hi       ; y_lo * x_hi
+  %y_hi_x_hi = mul nuw i64 %y_hi, %x_hi       ; y_hi * x_hi
+  %y_hi_x_lo = mul nuw i64 %y_hi, %x_lo       ; y_hi * x_lo
+  %y_lo_x_lo = mul nuw i64 %y_lo, %x_lo       ; y_lo * x_lo
+
+  ; Add cross terms
+  %cross_sum = add i64 %y_hi_x_lo, %y_lo_x_hi ; full 64-bit sum
+
+  ; Carry if overflowed
+  %carry_out = icmp ult i64 %cross_sum, %y_lo_x_hi
+  %carry = select i1 %carry_out, i64 4294967296, i64 0 ; if overflow, add 1 << 32
+
+  ; High 32 bits of low product
+  %y_lo_x_lo_hi = lshr i64 %y_lo_x_lo, 32
+
+  ; Low and high 32 bits of cross_sum
+  %cross_sum_lo = and i64 %cross_sum, 4294967295
+  %cross_sum_hi = lshr i64 %cross_sum, 32
+
+  %low_accum = add nuw nsw i64 %cross_sum_lo, %y_lo_x_lo_hi
+  %low_accum_hi = lshr i64 %low_accum, 32
+
+  ; Final result accumulation
+  %carries = or disjoint i64 %carry, %low_accum_hi
+  %intermediate = add i64 %y_hi_x_hi, %carries
+  %hw64 = add i64 %cross_sum_hi, %intermediate
+
+  ret i64 %hw64
+}
+
+; Skip A + (B + (HiHi + C)) because it is impossible to add carry and low_accum_hi.
+
+; (HiHi + A) + (B + C)
+define i64 @umulh4_add_carry_to_low_accum_hi(i64 %x, i64 %y) {
+  ; Extract low and high 32 bits
+; CHECK-LABEL: define i64 @umulh4_add_carry_to_low_accum_hi(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    ret i64 [[HW64]]
+;
+  %x_lo = and i64 %x, 4294967295              ; x & 0xffffffff
+  %y_lo = and i64 %y, 4294967295              ; y & 0xffffffff
+  %x_hi = lshr i64 %x, 32                     ; x >> 32
+  %y_hi = lshr i64 %y, 32                     ; y >> 32
+
+  ; Cross products
+  %y_lo_x_hi = mul nuw i64 %y_lo, %x_hi       ; y_lo * x_hi
+  %y_hi_x_hi = mul nuw i64 %y_hi, %x_hi       ; y_hi * x_hi
+  %y_hi_x_lo = mul nuw i64 %y_hi, %x_lo       ; y_hi * x_lo
+  %y_lo_x_lo = mul nuw i64 %y_lo, %x_lo       ; y_lo * x_lo
+
+  ; Add cross terms
+  %cross_sum = add i64 %y_hi_x_lo, %y_lo_x_hi ; full 64-bit sum
+
+  ; Carry if overflowed
+  %carry_out = icmp ult i64 %cross_sum, %y_lo_x_hi
+  %carry = select i1 %carry_out, i64 4294967296, i64 0 ; if overflow, add 1 << 32
+
+  ; High 32 bits of low product
+  %y_lo_x_lo_hi = lshr i64 %y_lo_x_lo, 32
+
+  ; Low and high 32 bits of cross_sum
+  %cross_sum_lo = and i64 %cross_sum, 4294967295
+  %cross_sum_hi = lshr i64 %cross_sum, 32
+
+  %low_accum = add nuw nsw i64 %cross_sum_lo, %y_lo_x_lo_hi
+  %low_accum_hi = lshr i64 %low_accum, 32
+
+  ; Final result accumulation
+  %intermediate = add i64 %y_hi_x_hi, %cross_sum_hi
+  %carries = or disjoint i64 %carry, %low_accum_hi
+  %hw64 = add i64 %intermediate, %carries
+
+  ret i64 %hw64
+}
+
 define i32 @mulh_src32(i32 %x, i32 %y) {
   ; Extract low and high 16 bits
 ; CHECK-LABEL: define i32 @mulh_src32(
@@ -2952,4 +3086,3 @@ define void @full_mul_int128__mul_use__low_accum_shifted(i64 %x, i64 %y, ptr %p)
 
   ret void
 }
-

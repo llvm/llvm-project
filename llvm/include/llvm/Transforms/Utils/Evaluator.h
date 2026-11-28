@@ -79,8 +79,9 @@ class Evaluator {
   };
 
 public:
-  Evaluator(const DataLayout &DL, const TargetLibraryInfo *TLI)
-      : DL(DL), TLI(TLI) {
+  Evaluator(const DataLayout &DL,
+            const function_ref<TargetLibraryInfo &(Function &)> GetTLI)
+      : DL(DL), GetTLI(GetTLI) {
     ValueStack.emplace_back();
   }
 
@@ -111,7 +112,8 @@ public:
   }
 
 private:
-  bool EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
+  bool EvaluateBlock(BasicBlock::iterator CurInst, TargetLibraryInfo *TLI,
+                     BasicBlock *&NextBB,
                      bool &StrippedPointerCastsForAliasAnalysis);
 
   Constant *getVal(Value *V) {
@@ -166,7 +168,7 @@ private:
   SmallPtrSet<Constant*, 8> SimpleConstants;
 
   const DataLayout &DL;
-  const TargetLibraryInfo *TLI;
+  function_ref<TargetLibraryInfo &(Function &)> GetTLI;
 };
 
 } // end namespace llvm

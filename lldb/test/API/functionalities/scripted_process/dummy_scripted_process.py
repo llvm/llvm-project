@@ -220,7 +220,7 @@ def __lldb_init_module(debugger, dict):
     # automatically, register the stop-hook and launch the scripted process.
     if not "SKIP_SCRIPTED_PROCESS_LAUNCH" in os.environ:
         debugger.HandleCommand(
-            "target stop-hook add -k first -v 1 -k second -v 2 -P %s.%s"
+            "target stop-hook add -I true -k first -v 1 -k second -v 2 -P %s.%s"
             % (__name__, DummyStopHook.__name__)
         )
         debugger.HandleCommand(

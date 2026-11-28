@@ -24,9 +24,13 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-// CHECK: baz{{[^#]*}}#[[ATTRS]]
+// CHECK: baz{{[^#]*}}#[[BAZ_ATTRS:[0-9]+]]
 
 // CHECK: attributes #[[ATTRS]] = {
+// CHECK-SAME: "no_caller_saved_registers"
+// CHECK-SAME: }
+// CHECK: attributes #[[BAZ_ATTRS]] = {
+// CHECK-SAME: likely_module_local
 // CHECK-SAME: "no_caller_saved_registers"
 // CHECK-SAME: }
 // CHECK: attributes #[[ATTRS1]] = { "no_caller_saved_registers" }

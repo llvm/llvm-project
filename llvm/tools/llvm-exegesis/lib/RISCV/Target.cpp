@@ -497,8 +497,6 @@ void RISCVSnippetGenerator<BaseT>::annotateWithVType(
   std::string ConfigStr;
   SmallVector<std::pair<const Operand *, MCOperand>, 4> ValueAssignments;
   for (const auto &[RM, AVL, Log2SEW, Policy] : Combinations) {
-    InstructionTemplate IT(&Instr);
-
     ListSeparator LS;
     ConfigStr = "vtype = {";
     raw_string_ostream SS(ConfigStr);

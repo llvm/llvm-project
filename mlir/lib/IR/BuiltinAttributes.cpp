@@ -38,18 +38,6 @@ using namespace mlir::detail;
 #include "mlir/IR/BuiltinAttributes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// BuiltinDialect
-//===----------------------------------------------------------------------===//
-
-void BuiltinDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/IR/BuiltinAttributes.cpp.inc"
-      >();
-  addAttributes<DistinctAttr>();
-}
-
-//===----------------------------------------------------------------------===//
 // DictionaryAttr
 //===----------------------------------------------------------------------===//
 
@@ -1560,6 +1548,10 @@ Attribute SparseElementsAttr::getZeroAttr() const {
   // Handle string type.
   if (llvm::isa<DenseStringElementsAttr>(getValues()))
     return StringAttr::get("", eltType);
+
+  // MXI8 elements use signless i8 attributes for their encoded bits.
+  if (llvm::isa<MXI8Type>(eltType))
+    return IntegerAttr::get(IntegerType::get(eltType.getContext(), 8), 0);
 
   // Otherwise, this is an integer.
   return IntegerAttr::get(eltType, 0);

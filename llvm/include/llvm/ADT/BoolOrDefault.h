@@ -10,6 +10,7 @@
 #define LLVM_ADT_BOOLORDEFAULT_H
 
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
@@ -20,6 +21,12 @@ enum class BoolOrDefault : uint8_t { Default, False, True };
 // Like std::optional<bool>::value_or.
 constexpr bool valueOr(BoolOrDefault X, bool Default) {
   return X == BoolOrDefault::Default ? Default : X == BoolOrDefault::True;
+}
+
+constexpr std::optional<bool> toOptional(BoolOrDefault X) {
+  if (X == BoolOrDefault::Default)
+    return std::nullopt;
+  return X == BoolOrDefault::True;
 }
 
 } // namespace llvm

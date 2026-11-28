@@ -48,10 +48,10 @@ void do_nothing(int*) {}
 
 int main(int, char**)
 {
-  AssertComparisonsAreNoexcept<std::shared_ptr<int>, nullptr_t>();
-  AssertComparisonsAreNoexcept<nullptr_t, std::shared_ptr<int> >();
-  AssertComparisonsReturnBool<std::shared_ptr<int>, nullptr_t>();
-  AssertComparisonsReturnBool<nullptr_t, std::shared_ptr<int> >();
+  AssertComparisonsAreNoexcept<std::shared_ptr<int>, std::nullptr_t>();
+  AssertComparisonsAreNoexcept<std::nullptr_t, std::shared_ptr<int> >();
+  AssertComparisonsReturnBool<std::shared_ptr<int>, std::nullptr_t>();
+  AssertComparisonsReturnBool<std::nullptr_t, std::shared_ptr<int> >();
 #if TEST_STD_VER >= 20
   AssertOrderAreNoexcept<std::shared_ptr<int>>();
   AssertOrderReturn<std::strong_ordering, std::shared_ptr<int>>();

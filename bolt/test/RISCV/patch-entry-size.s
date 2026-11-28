@@ -7,9 +7,8 @@
 
 # CHECK: BOLT-INFO: enabling relocation mode
 # CHECK-NOT: could not find corresponding %pcrel_hi
-# PATCH: auipc t0,
-# PATCH-NEXT: addi t0, t0,
-# PATCH-NEXT: jr t0
+# PATCH: auipc t1,
+# PATCH-NEXT: jr {{.*}}(t1)
 
   .text
   .globl _start

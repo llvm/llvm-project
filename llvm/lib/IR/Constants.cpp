@@ -751,8 +751,14 @@ Constant::PossibleRelocationsTy Constant::getRelocationInfo() const {
   }
 
   PossibleRelocationsTy Result = NoRelocation;
-  for (const Value *Op : operands())
-    Result = std::max(cast<Constant>(Op)->getRelocationInfo(), Result);
+  for (const Value *Op : operands()) {
+    PossibleRelocationsTy R = cast<Constant>(Op)->getRelocationInfo();
+    if (R > Result) {
+      Result = R;
+      if (Result == GlobalRelocation) // We hit the max.
+        break;
+    }
+  }
 
   return Result;
 }
@@ -790,6 +796,14 @@ static bool constantIsDead(const Constant *C, bool RemoveDeadUsers) {
 }
 
 void Constant::removeDeadConstantUsers() const {
+  // Only constants other than globals can be dead users. Globals track whether
+  // they may have such users, which lets us skip walking the use list of a
+  // function that is only called.
+  const auto *GV = dyn_cast<GlobalValue>(this);
+  if (GV && !GV->mayHaveConstantUsers())
+    return;
+
+  bool HasLiveConstantUser = false;
   Value::const_user_iterator I = user_begin(), E = user_end();
   Value::const_user_iterator LastNonDeadUser = E;
   while (I != E) {
@@ -803,6 +817,7 @@ void Constant::removeDeadConstantUsers() const {
     if (!constantIsDead(User, /* RemoveDeadUsers= */ true)) {
       // If the constant wasn't dead, remember that this was the last live use
       // and move on to the next constant.
+      HasLiveConstantUser |= !isa<GlobalValue>(User);
       LastNonDeadUser = I;
       ++I;
       continue;
@@ -814,6 +829,11 @@ void Constant::removeDeadConstantUsers() const {
     else
       I = std::next(LastNonDeadUser);
   }
+
+  // Every remaining user is an instruction or a global, so later calls can
+  // return early until a new constant uses this global.
+  if (GV && !HasLiveConstantUser)
+    const_cast<GlobalValue *>(GV)->MayHaveConstantUsers = false;
 }
 
 bool Constant::hasOneLiveUse() const { return hasNLiveUses(1); }
@@ -2176,6 +2196,7 @@ DSOLocalEquivalent *DSOLocalEquivalent::get(GlobalValue *GV) {
 DSOLocalEquivalent::DSOLocalEquivalent(GlobalValue *GV)
     : Constant(GV->getType(), Value::DSOLocalEquivalentVal, AllocMarker) {
   setOperand(0, GV);
+  GV->setMayHaveConstantUsers();
 }
 
 /// Remove the constant from the constant table.
@@ -2204,6 +2225,7 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
   getContext().pImpl->DSOLocalEquivalents.erase(getGlobalValue());
   getContext().pImpl->DSOLocalEquivalents[GV] = this;
   setOperand(0, GV);
+  GV->setMayHaveConstantUsers();
 
   if (GV->getType() != getType()) {
     // It is ok to mutate the type here because this constant should always
@@ -2226,6 +2248,7 @@ NoCFIValue *NoCFIValue::get(GlobalValue *GV) {
 NoCFIValue::NoCFIValue(GlobalValue *GV)
     : Constant(GV->getType(), Value::NoCFIValueVal, AllocMarker) {
   setOperand(0, GV);
+  GV->setMayHaveConstantUsers();
 }
 
 /// Remove the constant from the constant table.
@@ -2247,6 +2270,7 @@ Value *NoCFIValue::handleOperandChangeImpl(Value *From, Value *To) {
   getContext().pImpl->NoCFIValues.erase(getGlobalValue());
   getContext().pImpl->NoCFIValues[GV] = this;
   setOperand(0, GV);
+  GV->setMayHaveConstantUsers();
 
   if (GV->getType() != getType())
     mutateType(GV->getType());

@@ -1,4 +1,5 @@
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
@@ -9,7 +10,9 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
@@ -75,6 +78,13 @@ TEST(TargetOptionsTest, IPRASetToOff) {
 
 TEST(TargetOptionsTest, IPRASetToOn) {
   targetOptionsTest(true);
+}
+
+TEST(TargetOptionsTest, LibraryOptions) {
+  cl::LibraryOptionsContext C;
+  EXPECT_EQ(mc::getMCTargetOptions(C).LibraryOptions, &C);
+  EXPECT_EQ(codegen::getTargetOptions(C, Triple()).MCOptions.LibraryOptions,
+            &C);
 }
 
 TEST(TargetOptionsTest, SubtargetCopyPreservesHwMode) {

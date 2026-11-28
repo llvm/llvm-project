@@ -11,7 +11,6 @@
 ...
 ---
 name:            outline_x5_live_reserved_0
-tracksRegLiveness: true
 body:             |
   ; CHECK-X6-RESERVED-LABEL: name: outline_x5_live_reserved_0
   ; CHECK-X6-RESERVED: bb.0:
@@ -62,7 +61,6 @@ body:             |
 ...
 ---
 name:            outline_x5_live_reserved_1
-tracksRegLiveness: true
 body:             |
   ; CHECK-X6-RESERVED-LABEL: name: outline_x5_live_reserved_1
   ; CHECK-X6-RESERVED: bb.0:
@@ -114,7 +112,6 @@ body:             |
 ...
 ---
 name:            outline_x5_live_reserved_2
-tracksRegLiveness: true
 body:             |
   ; CHECK-X6-RESERVED-LABEL: name: outline_x5_live_reserved_2
   ; CHECK-X6-RESERVED: bb.0:

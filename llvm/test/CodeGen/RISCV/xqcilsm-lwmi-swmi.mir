@@ -28,9 +28,9 @@
   define void @pair_two_sw_into_qc_setwmi() nounwind { ret void }
   define void @pair_two_sw_into_qc_setwmi_reversed() nounwind { ret void }
   define void @pair_if_not_adjacent_setwmi() nounwind { ret void }
+...
 ---
 name: pair_two_lw_into_qc_lwmi
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -47,7 +47,6 @@ body: |
 ---
 # FIXME: Kill flags are not propagated correctly for the base register
 name: pair_two_lw_into_qc_lwmi_reversed
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -63,7 +62,6 @@ body: |
 ...
 ---
 name: pair_two_sw_into_qc_swmi_reversed
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10, $x12, $x13
@@ -79,7 +77,6 @@ body: |
 ...
 ---
 name: no_pair_if_different_base_regs
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10, $x11
@@ -96,7 +93,6 @@ body: |
 ...
 ---
 name: no_pair_if_alignment_lt_4
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -113,7 +109,6 @@ body: |
 ...
 ---
 name: pair_two_sw_into_qc_swmi
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10, $x12, $x13
@@ -129,7 +124,6 @@ body: |
 ...
 ---
 name: no_pair_if_misaligned
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -147,7 +141,6 @@ body: |
 ---
 # FIXME: Kill flags are not propagated correctly for the base register
 name: pair_at_upper_boundary_lw
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -164,7 +157,6 @@ body: |
 ---
 # FIXME: Kill flags are not propagated correctly for the base register
 name: pair_at_upper_boundary_sw
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10, $x12, $x13
@@ -180,7 +172,6 @@ body: |
 ...
 ---
 name: no_pair_if_offset_out_of_range_lw
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -197,7 +188,6 @@ body: |
 ...
 ---
 name: no_pair_if_offset_out_of_range_sw
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10, $x12, $x13
@@ -214,7 +204,6 @@ body: |
 ...
 ---
 name: no_pair_if_non_consecutive_regs
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -231,7 +220,6 @@ body: |
 ...
 ---
 name: no_pair_if_rd_is_x0_lwmi
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -248,12 +236,11 @@ body: |
 ...
 ---
 name: no_pair_if_rd_is_x0_swmi
-tracksRegLiveness: false
 body: |
   bb.0:
-    liveins: $x10
+    liveins: $x1, $x10
     ; CHECK-LABEL: name: no_pair_if_rd_is_x0_swmi
-    ; CHECK: liveins: $x10
+    ; CHECK: liveins: $x1, $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: SW $x0, $x10, 0 :: (store (s32))
     ; CHECK-NEXT: SW $x1, $x10, 4 :: (store (s32))
@@ -265,7 +252,6 @@ body: |
 ...
 ---
 name: pair_if_rd_is_x0_setwmi
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -281,7 +267,6 @@ body: |
 ...
 ---
 name: no_pair_if_lw_rd_equals_base
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -298,7 +283,6 @@ body: |
 ...
 ---
 name: second_pair_if_no_first_pair_lwmi
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -316,12 +300,11 @@ body: |
 ...
 ---
 name: second_pair_if_no_first_pair_swmi
-tracksRegLiveness: false
 body: |
   bb.0:
-    liveins: $x10
+    liveins: $x1, $x10
     ; CHECK-LABEL: name: second_pair_if_no_first_pair_swmi
-    ; CHECK: liveins: $x10
+    ; CHECK: liveins: $x1, $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: SW $x0, $x10, 0 :: (store (s32))
     ; CHECK-NEXT: QC_SWMI $x1, $x10, 2, 4, implicit $x2 :: (store (s32))
@@ -334,7 +317,6 @@ body: |
 ...
 ---
 name: second_pair_if_no_first_pair_setwmi
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -353,7 +335,6 @@ body: |
 ---
 # FIXME: Kill flags are not propagated correctly for the base register
 name: pair_if_not_adjacent
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
@@ -371,7 +352,6 @@ body: |
 ...
 ---
 name: pair_if_not_adjacent_use
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10, $x1, $x2
@@ -389,7 +369,6 @@ body: |
 ...
 ---
 name: no_pair_if_not_adjacent_use
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10, $x2
@@ -410,7 +389,6 @@ body: |
 ...
 ---
 name: pair_two_sw_into_qc_setwmi
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10, $x1
@@ -426,7 +404,6 @@ body: |
 ...
 ---
 name: pair_two_sw_into_qc_setwmi_reversed
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10, $x2
@@ -442,7 +419,6 @@ body: |
 ...
 ---
 name: pair_if_not_adjacent_setwmi
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10, $x1

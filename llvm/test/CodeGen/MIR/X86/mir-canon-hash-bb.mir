@@ -15,16 +15,6 @@
 ---
 name:            _Z1fi
 tracksRegLiveness: false
-registers:
-  - { id: 0, class: _, preferred-register: '' }
-  - { id: 1, class: _, preferred-register: '' }
-  - { id: 2, class: _, preferred-register: '' }
-  - { id: 3, class: _, preferred-register: '' }
-  - { id: 4, class: _, preferred-register: '' }
-  - { id: 5, class: _, preferred-register: '' }
-  - { id: 6, class: _, preferred-register: '' }
-  - { id: 7, class: _, preferred-register: '' }
-  - { id: 8, class: _, preferred-register: '' }
 stack:
   - { id: 0, name: tmp, type: default, offset: 0, size: 4, alignment: 4  }
   - { id: 1, name: tmp1, type: default, offset: 0, size: 4, alignment: 4 }

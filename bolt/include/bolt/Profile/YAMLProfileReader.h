@@ -157,7 +157,7 @@ public:
                 std::reference_wrapper<yaml::bolt::BinaryFunctionProfile>>;
 
 private:
-  /// Adjustments for basic samples profiles (without LBR).
+  /// Adjustments for basic sample profiles (without brstack).
   bool NormalizeByInsnCount{false};
   bool NormalizeByCalls{false};
 

@@ -31,9 +31,6 @@
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_fd.h"
-#if SANITIZER_APPLE && !SANITIZER_GO
-#  include "tsan_flags.h"
-#endif
 #include "tsan_adaptive_delay.h"
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
@@ -41,6 +38,10 @@
 #include "tsan_platform.h"
 #include "tsan_rtl.h"
 #include "tsan_suppressions.h"
+
+#if SANITIZER_APPLE
+#  include <dlfcn.h>
+#endif
 
 using namespace __tsan;
 
@@ -450,7 +451,15 @@ TSAN_INTERCEPTOR(int, atexit, void (*f)()) {
   // We want to setup the atexit callback even if we are in ignored lib
   // or after fork.
   SCOPED_INTERCEPTOR_RAW(atexit, f);
-  return setup_at_exit_wrapper(thr, GET_CALLER_PC(), (void (*)())f, 0, 0);
+  void* dso = nullptr;
+#  if SANITIZER_APPLE
+  // Darwin's libc runs an atexit callback when the image containing it is
+  // dlclose'd. Pass that image as the DSO so the wrapper runs then too.
+  Dl_info info;
+  if (dladdr((const void*)f, &info))
+    dso = info.dli_fbase;
+#  endif
+  return setup_at_exit_wrapper(thr, GET_CALLER_PC(), f, 0, dso);
 }
 #endif
 
@@ -1254,6 +1263,23 @@ TSAN_INTERCEPTOR(int, pthread_timedjoin_np, void *th, void **ret,
   Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
   ThreadIgnoreBegin(thr, pc);
   int res = BLOCK_REAL(pthread_timedjoin_np)(th, ret, abstime);
+  ThreadIgnoreEnd(thr);
+  if (res == 0)
+    ThreadJoin(thr, pc, tid);
+  else
+    ThreadNotJoined(thr, pc, tid, (uptr)th);
+  return res;
+}
+
+#endif
+
+#if __GLIBC_PREREQ(2, 31)
+TSAN_INTERCEPTOR(int, pthread_clockjoin_np, void* th, void** ret,
+                 __sanitizer_clockid_t clock, const struct timespec* abstime) {
+  SCOPED_INTERCEPTOR_RAW(pthread_clockjoin_np, th, ret, clock, abstime);
+  Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
+  ThreadIgnoreBegin(thr, pc);
+  int res = BLOCK_REAL(pthread_clockjoin_np)(th, ret, clock, abstime);
   ThreadIgnoreEnd(thr);
   if (res == 0)
     ThreadJoin(thr, pc, tid);
@@ -3222,10 +3248,13 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_join);
   TSAN_INTERCEPT(pthread_detach);
   TSAN_INTERCEPT(pthread_exit);
-  #if SANITIZER_LINUX
+#if SANITIZER_LINUX
   TSAN_INTERCEPT(pthread_tryjoin_np);
   TSAN_INTERCEPT(pthread_timedjoin_np);
-  #endif
+#endif
+#if __GLIBC_PREREQ(2, 31)
+  TSAN_INTERCEPT(pthread_clockjoin_np);
+#endif
 #if SANITIZER_INTERCEPT_C11_THREADS
   TSAN_INTERCEPT(thrd_create);
   TSAN_INTERCEPT(thrd_join);

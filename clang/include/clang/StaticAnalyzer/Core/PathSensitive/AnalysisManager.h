@@ -20,6 +20,8 @@
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace clang {
 
@@ -43,6 +45,7 @@ class AnalysisManager : public BugReporterData {
   ConstraintManagerCreator CreateConstraintMgr;
 
   CheckerManager *CheckerMgr;
+  SmallVector<StringRef> UnityBuildFileExtensions;
 
 public:
   AnalyzerOptions &options;
@@ -124,9 +127,17 @@ public:
     return AnaCtxMgr.getContext(D);
   }
 
-  static bool isInCodeFile(SourceLocation SL, const SourceManager &SM) {
+  bool isInCodeFile(SourceLocation SL) const {
+    const SourceManager &SM = Ctx.getSourceManager();
     if (SM.isInMainFile(SL))
       return true;
+
+    // Treat configured included source files #include "foo.cpp" same as the
+    // main file.
+    StringRef FileName = SM.getFilename(SL);
+    for (StringRef Extension : UnityBuildFileExtensions)
+      if (FileName.ends_with(Extension))
+        return true;
 
     // Support the "unified sources" compilation method (eg. WebKit) that
     // involves producing non-header files that include other non-header files.
@@ -147,11 +158,6 @@ public:
     }
 
     return false;
-  }
-
-  bool isInCodeFile(SourceLocation SL) {
-    const SourceManager &SM = getASTContext().getSourceManager();
-    return isInCodeFile(SL, SM);
   }
 };
 

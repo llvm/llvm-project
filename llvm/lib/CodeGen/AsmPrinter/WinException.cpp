@@ -38,7 +38,6 @@ WinException::WinException(AsmPrinter *A) : EHStreamer(A) {
   // 32-bit x86.
   useImageRel32 = A->TM.getTargetTriple().getArch() != Triple::x86;
   isAArch64 = Asm->TM.getTargetTriple().isAArch64();
-  isThumb = Asm->TM.getTargetTriple().isThumb();
 }
 
 WinException::~WinException() = default;

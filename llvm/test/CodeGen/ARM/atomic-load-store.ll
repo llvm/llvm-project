@@ -4,7 +4,8 @@
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios -verify-machineinstrs | FileCheck %s -check-prefix=THUMBTWO
 ; RUN: llc < %s -mtriple=thumbv6 | FileCheck %s -check-prefix=THUMBONE
 ; RUN: llc < %s -mtriple=armv4 | FileCheck %s -check-prefix=ARMV4
-; RUN: llc < %s -mtriple=armv6 | FileCheck %s -check-prefix=ARMV6
+; RUN: llc < %s -mtriple=armv6 | FileCheck %s -check-prefixes=ARMV6,ARMV6-NOCLREX
+; RUN: llc < %s -mtriple=armv6k | FileCheck %s -check-prefixes=ARMV6,ARMV6K
 ; RUN: llc < %s -mtriple=thumbv7m | FileCheck %s -check-prefix=THUMBM
 
 define void @test1(ptr %ptr, i32 %val1) {
@@ -288,12 +289,20 @@ define i64 @test_old_load_64bit(ptr %p) {
 ; ARMV4-NEXT:    pop {r11, lr}
 ; ARMV4-NEXT:    mov pc, lr
 ;
-; ARMV6-LABEL: test_old_load_64bit:
-; ARMV6:       @ %bb.0:
-; ARMV6-NEXT:    ldrexd r0, r1, [r0]
-; ARMV6-NEXT:    mov r2, #0
-; ARMV6-NEXT:    mcr p15, #0, r2, c7, c10, #5
-; ARMV6-NEXT:    bx lr
+; ARMV6-NOCLREX-LABEL: test_old_load_64bit:
+; ARMV6-NOCLREX:       @ %bb.0:
+; ARMV6-NOCLREX-NEXT:    ldrexd r0, r1, [r0]
+; ARMV6-NOCLREX-NEXT:    mov r2, #0
+; ARMV6-NOCLREX-NEXT:    mcr p15, #0, r2, c7, c10, #5
+; ARMV6-NOCLREX-NEXT:    bx lr
+;
+; ARMV6K-LABEL: test_old_load_64bit:
+; ARMV6K:       @ %bb.0:
+; ARMV6K-NEXT:    ldrexd r0, r1, [r0]
+; ARMV6K-NEXT:    clrex
+; ARMV6K-NEXT:    mov r2, #0
+; ARMV6K-NEXT:    mcr p15, #0, r2, c7, c10, #5
+; ARMV6K-NEXT:    bx lr
 ;
 ; THUMBM-LABEL: test_old_load_64bit:
 ; THUMBM:       @ %bb.0:
@@ -645,12 +654,20 @@ define double @load_atomic_f64__seq_cst(ptr %ptr) {
 ; ARMV4-NEXT:    pop {r11, lr}
 ; ARMV4-NEXT:    mov pc, lr
 ;
-; ARMV6-LABEL: load_atomic_f64__seq_cst:
-; ARMV6:       @ %bb.0:
-; ARMV6-NEXT:    ldrexd r0, r1, [r0]
-; ARMV6-NEXT:    mov r2, #0
-; ARMV6-NEXT:    mcr p15, #0, r2, c7, c10, #5
-; ARMV6-NEXT:    bx lr
+; ARMV6-NOCLREX-LABEL: load_atomic_f64__seq_cst:
+; ARMV6-NOCLREX:       @ %bb.0:
+; ARMV6-NOCLREX-NEXT:    ldrexd r0, r1, [r0]
+; ARMV6-NOCLREX-NEXT:    mov r2, #0
+; ARMV6-NOCLREX-NEXT:    mcr p15, #0, r2, c7, c10, #5
+; ARMV6-NOCLREX-NEXT:    bx lr
+;
+; ARMV6K-LABEL: load_atomic_f64__seq_cst:
+; ARMV6K:       @ %bb.0:
+; ARMV6K-NEXT:    ldrexd r0, r1, [r0]
+; ARMV6K-NEXT:    clrex
+; ARMV6K-NEXT:    mov r2, #0
+; ARMV6K-NEXT:    mcr p15, #0, r2, c7, c10, #5
+; ARMV6K-NEXT:    bx lr
 ;
 ; THUMBM-LABEL: load_atomic_f64__seq_cst:
 ; THUMBM:       @ %bb.0:

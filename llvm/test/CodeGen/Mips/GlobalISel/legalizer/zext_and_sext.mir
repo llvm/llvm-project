@@ -9,7 +9,6 @@
 ---
 name:            zext
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -32,7 +31,6 @@ body:             |
 ---
 name:            sext
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4

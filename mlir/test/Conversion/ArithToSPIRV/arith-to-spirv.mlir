@@ -1446,9 +1446,15 @@ func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
 // CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
 func.func @float32_minimumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
   // CHECK: %[[MIN:.+]] = spirv.CL.fmin %arg0, %arg1 : f32
+  // CHECK: %[[BITS:.+]] = spirv.Bitcast %[[LHS]] : f32 to i32
+  // CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
+  // CHECK: %[[NEG:.+]] = spirv.SLessThan %[[BITS]], %[[ZERO]] : i32
+  // CHECK: %[[PICK:.+]] = spirv.Select %[[NEG]], %[[LHS]], %[[RHS]]
+  // CHECK: %[[EQ:.+]] = spirv.FOrdEqual %[[LHS]], %[[RHS]] : f32
+  // CHECK: %[[MIN_Z:.+]] = spirv.Select %[[EQ]], %[[PICK]], %[[MIN]]
   // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : f32
   // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : f32
-  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[LHS]], %[[MIN]]
+  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[LHS]], %[[MIN_Z]]
   // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[RHS]], %[[SELECT1]]
   %0 = arith.minimumf %arg0, %arg1 : f32
   // CHECK: return %[[SELECT2]]
@@ -1468,9 +1474,15 @@ func.func @float32_minnumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
 // CHECK-SAME: %[[LHS:.+]]: vector<2xf32>, %[[RHS:.+]]: vector<2xf32>
 func.func @float32_maximumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>) -> vector<2xf32> {
   // CHECK: %[[MAX:.+]] = spirv.CL.fmax %arg0, %arg1 : vector<2xf32>
+  // CHECK: %[[BITS:.+]] = spirv.Bitcast %[[LHS]] : vector<2xf32> to vector<2xi32>
+  // CHECK: %[[ZERO:.+]] = spirv.Constant dense<0> : vector<2xi32>
+  // CHECK: %[[NEG:.+]] = spirv.SLessThan %[[BITS]], %[[ZERO]] : vector<2xi32>
+  // CHECK: %[[PICK:.+]] = spirv.Select %[[NEG]], %[[RHS]], %[[LHS]]
+  // CHECK: %[[EQ:.+]] = spirv.FOrdEqual %[[LHS]], %[[RHS]] : vector<2xf32>
+  // CHECK: %[[MAX_Z:.+]] = spirv.Select %[[EQ]], %[[PICK]], %[[MAX]]
   // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : vector<2xf32>
   // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : vector<2xf32>
-  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[LHS]], %[[MAX]]
+  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[LHS]], %[[MAX_Z]]
   // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[RHS]], %[[SELECT1]]
   %0 = arith.maximumf %arg0, %arg1 : vector<2xf32>
   // CHECK: return %[[SELECT2]]
@@ -1611,9 +1623,15 @@ func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
 // CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
 func.func @float32_minimumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
   // CHECK: %[[MIN:.+]] = spirv.GL.FMin %arg0, %arg1 : f32
+  // CHECK: %[[BITS:.+]] = spirv.Bitcast %[[LHS]] : f32 to i32
+  // CHECK: %[[ZERO:.+]] = spirv.Constant 0 : i32
+  // CHECK: %[[NEG:.+]] = spirv.SLessThan %[[BITS]], %[[ZERO]] : i32
+  // CHECK: %[[PICK:.+]] = spirv.Select %[[NEG]], %[[LHS]], %[[RHS]]
+  // CHECK: %[[EQ:.+]] = spirv.FOrdEqual %[[LHS]], %[[RHS]] : f32
+  // CHECK: %[[MIN_Z:.+]] = spirv.Select %[[EQ]], %[[PICK]], %[[MIN]]
   // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : f32
   // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : f32
-  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[LHS]], %[[MIN]]
+  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[LHS]], %[[MIN_Z]]
   // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[RHS]], %[[SELECT1]]
   %0 = arith.minimumf %arg0, %arg1 : f32
   // CHECK: return %[[SELECT2]]
@@ -1631,9 +1649,15 @@ func.func @float32_minnumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
 // CHECK-SAME: %[[LHS:.+]]: vector<2xf32>, %[[RHS:.+]]: vector<2xf32>
 func.func @float32_maximumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>) -> vector<2xf32> {
   // CHECK: %[[MAX:.+]] = spirv.GL.FMax %arg0, %arg1 : vector<2xf32>
+  // CHECK: %[[BITS:.+]] = spirv.Bitcast %[[LHS]] : vector<2xf32> to vector<2xi32>
+  // CHECK: %[[ZERO:.+]] = spirv.Constant dense<0> : vector<2xi32>
+  // CHECK: %[[NEG:.+]] = spirv.SLessThan %[[BITS]], %[[ZERO]] : vector<2xi32>
+  // CHECK: %[[PICK:.+]] = spirv.Select %[[NEG]], %[[RHS]], %[[LHS]]
+  // CHECK: %[[EQ:.+]] = spirv.FOrdEqual %[[LHS]], %[[RHS]] : vector<2xf32>
+  // CHECK: %[[MAX_Z:.+]] = spirv.Select %[[EQ]], %[[PICK]], %[[MAX]]
   // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : vector<2xf32>
   // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : vector<2xf32>
-  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[LHS]], %[[MAX]]
+  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[LHS]], %[[MAX_Z]]
   // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[RHS]], %[[SELECT1]]
   %0 = arith.maximumf %arg0, %arg1 : vector<2xf32>
   // CHECK: return %[[SELECT2]]
@@ -1685,6 +1709,45 @@ func.func @one_elem_vector(%arg0: vector<1xi32>) {
   // CHECK: spirv.IAdd %{{.+}}, %{{.+}}: i32
   %0 = arith.addi %arg0, %arg0: vector<1xi32>
   return
+}
+
+} // end module
+
+// -----
+
+// Check that the sign of f16 and f64 is read through f32 without Int16 or Int64.
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader, Float16, Float64], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @float16_maximumf_scalar
+// CHECK-SAME: %[[LHS:.+]]: f16, %[[RHS:.+]]: f16
+func.func @float16_maximumf_scalar(%arg0 : f16, %arg1 : f16) -> f16 {
+  // CHECK: %[[MAX:.+]] = spirv.GL.FMax %[[LHS]], %[[RHS]] : f16
+  // CHECK: %[[EXT:.+]] = spirv.FConvert %[[LHS]] : f16 to f32
+  // CHECK: %[[BITS:.+]] = spirv.Bitcast %[[EXT]] : f32 to i32
+  // CHECK: %[[NEG:.+]] = spirv.SLessThan %[[BITS]], %{{.+}} : i32
+  // CHECK: %[[PICK:.+]] = spirv.Select %[[NEG]], %[[RHS]], %[[LHS]]
+  // CHECK: %[[EQ:.+]] = spirv.FOrdEqual %[[LHS]], %[[RHS]] : f16
+  // CHECK: %[[MAX_Z:.+]] = spirv.Select %[[EQ]], %[[PICK]], %[[MAX]]
+  // CHECK-NEXT: return %[[MAX_Z]]
+  %0 = arith.maximumf %arg0, %arg1 fastmath<nnan> : f16
+  return %0: f16
+}
+
+// CHECK-LABEL: @float64_minimumf_scalar
+// CHECK-SAME: %[[LHS:.+]]: f64, %[[RHS:.+]]: f64
+func.func @float64_minimumf_scalar(%arg0 : f64, %arg1 : f64) -> f64 {
+  // CHECK: %[[MIN:.+]] = spirv.GL.FMin %[[LHS]], %[[RHS]] : f64
+  // CHECK: %[[EXT:.+]] = spirv.FConvert %[[LHS]] : f64 to f32
+  // CHECK: %[[BITS:.+]] = spirv.Bitcast %[[EXT]] : f32 to i32
+  // CHECK: %[[NEG:.+]] = spirv.SLessThan %[[BITS]], %{{.+}} : i32
+  // CHECK: %[[PICK:.+]] = spirv.Select %[[NEG]], %[[LHS]], %[[RHS]]
+  // CHECK: %[[EQ:.+]] = spirv.FOrdEqual %[[LHS]], %[[RHS]] : f64
+  // CHECK: %[[MIN_Z:.+]] = spirv.Select %[[EQ]], %[[PICK]], %[[MIN]]
+  // CHECK-NEXT: return %[[MIN_Z]]
+  %0 = arith.minimumf %arg0, %arg1 fastmath<nnan> : f64
+  return %0: f64
 }
 
 } // end module

@@ -39,14 +39,11 @@ class RaiseTestCase(TestBase):
                 self, signal, self.default_pass, self.default_stop, self.default_notify
             )
 
-        process = target.LaunchSimple(
-            [signal], None, self.get_process_working_directory()
-        )
-        self.assertTrue(process, PROCESS_IS_VALID)
-        self.assertState(process.GetState(), lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(), "Thread should be stopped due to a breakpoint"
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetArguments([signal], True)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        _, process, _, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, target.GetBreakpointAtIndex(0), launch_info
         )
         return process
 

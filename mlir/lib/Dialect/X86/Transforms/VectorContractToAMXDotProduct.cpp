@@ -26,7 +26,6 @@ using namespace mlir::vector;
 using namespace mlir::x86;
 
 namespace {
-
 // Return true if the operation is a constant dense element
 // attribute.
 static bool isZeroVectorConstant(Operation *op) {
@@ -96,6 +95,15 @@ static bool isReadSrcMemref(Value operand) {
           [&](auto readOp) { srcBuff = readOp.getOperand(0); });
 
   return srcBuff && isa<MemRefType>(srcBuff.getType());
+}
+
+// Return true if any of the values is a masked or out-of-bounds transfer_read,
+// which can't be replaced by a load.
+static bool hasMaskedOrOutOfBoundsRead(ArrayRef<Value> values) {
+  return llvm::any_of(values, [](Value value) {
+    auto readOp = value.getDefiningOp<TransferReadOp>();
+    return readOp && (readOp.getMask() || readOp.hasOutOfBoundsDim());
+  });
 }
 
 // Check if a vector.contract operand reads whole VNNI groups: the memref's
@@ -334,10 +342,11 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
           ValueRange iterArgs) {
         subviewOffset[subviewOffset.size() - 2] = iv;
 
-        // Retrieve two rows of vector (32) for int8 and f8 type. For bf16,
+        // Retrieve two rows of vector (32) for int8 and f8 type. For bf16/f16,
         // retrieve one row of vector (32).
+        bool is16BitFloat = ipType.isBF16() || ipType.isF16();
         auto vectorType = VectorType::get({2, (16 * (offset / 2))}, ipType);
-        if (ipType.isBF16())
+        if (is16BitFloat)
           vectorType = VectorType::get((16 * offset), ipType);
 
         int64_t srcRank = (dyn_cast<ShapedType>(matB.getType())).getRank();
@@ -349,7 +358,7 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
             rewriter, loc, vectorType, matB, ValueRange(subviewOffset), padding,
             map, inBounds);
 
-        if (!ipType.isBF16())
+        if (!is16BitFloat)
           vec1 = vector::ShapeCastOp::create(
               rewriter, loc, VectorType::get((16 * offset), ipType), vec1);
 
@@ -361,14 +370,14 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
         Value vec2 = vector::TransferReadOp::create(
             rewriter, loc, vectorType, matB, ValueRange(subviewOffset), padding,
             map, inBounds);
-        if (!ipType.isBF16())
+        if (!is16BitFloat)
           vec2 = vector::ShapeCastOp::create(
               rewriter, loc, VectorType::get((16 * offset), ipType), vec2);
 
         vector::ShuffleOp writeVal1;
         vector::ShuffleOp writeVal2;
 
-        if (ipType.isBF16()) {
+        if (is16BitFloat) {
 
           writeVal1 = vector::ShuffleOp::create(
               rewriter, loc, VectorType::get({(16 * offset)}, ipType), vec1,
@@ -520,7 +529,7 @@ createTiledDp(OpBuilder &rewriter, Location loc,
     auto accTileType = amx::TileType::get({16, 16}, opType);
 
     Value dp;
-    if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN())
+    if (isa<FloatType>(ipType))
       dp = amx::TileMulFOp::create(rewriter, loc, accTileType, tilesLhs,
                                    tilesRhs, accIterArgs[i]);
 
@@ -901,30 +910,27 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
 //     - Shuffle them as we packed using vpunpack
 //     - Load C matrix and do arith.add with the shuffle
 //     - Store back into C matrix
-struct VectorContractToAMXDotProduct
-    : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
+  using Base::Base;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
+  LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const override {
 
-    if (contractOp.getKind() != vector::CombiningKind::ADD)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind.");
-
+    Type lhsElemTy = contractOp.getLhsType().getElementType();
     unsigned int blockingFactor =
-        contractOp.getLhsType().getElementType().isBF16() ? 2 : 4;
+        (lhsElemTy.isBF16() || lhsElemTy.isF16()) ? 2 : 4;
     bool isVnni =
         isInVnniLayout(contractOp.getOperation(),
                        contractOp.getIndexingMapsArray(), blockingFactor);
 
     VectorType lhsTy = contractOp.getLhsType();
-    if (!lhsTy.getElementType().isBF16() &&
+    if (!lhsTy.getElementType().isBF16() && !lhsTy.getElementType().isF16() &&
         !lhsTy.getElementType().isSignlessInteger(8) &&
         !lhsTy.getElementType().isF8E4M3FN() &&
         !lhsTy.getElementType().isF8E5M2())
       return rewriter.notifyMatchFailure(
-          contractOp, "Only BF16/Int8/F8 lowering is supported.");
+          contractOp, "Only BF16/F16/Int8/F8 lowering is supported.");
 
     if (lhsTy.getElementType() != contractOp.getRhsType().getElementType())
       return rewriter.notifyMatchFailure(
@@ -934,15 +940,15 @@ struct VectorContractToAMXDotProduct
     if (!accTy)
       return rewriter.notifyMatchFailure(contractOp, "Wrong accmulator type.");
 
-    if (((lhsTy.getElementType().isBF16() ||
+    if (((lhsTy.getElementType().isBF16() || lhsTy.getElementType().isF16() ||
           lhsTy.getElementType().isF8E4M3FN() ||
           lhsTy.getElementType().isF8E5M2()) &&
          !accTy.getElementType().isF32()) ||
         (lhsTy.getElementType().isSignlessInteger(8) &&
          !accTy.getElementType().isSignlessInteger(32)))
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Only F32 for BF16 or Int32 for Int8 "
-                                         "accumulation type is supported.");
+      return rewriter.notifyMatchFailure(
+          contractOp, "Only F32 for BF16/F16/F8 or Int32 for Int8 "
+                      "accumulation type is supported.");
 
     Operation *accReadOp =
         traceToVectorReadLikeParentOperation(contractOp.getAcc());
@@ -963,18 +969,20 @@ struct VectorContractToAMXDotProduct
     Block *resultBlock = resultChainEnd.user_begin()->getBlock();
 
     Type ipType = rewriter.getBF16Type();
-    Type opType = rewriter.getF32Type();
-
-    if (lhsTy.getElementType().isSignlessInteger(8)) {
+    if (lhsTy.getElementType().isSignlessInteger(8))
       ipType = rewriter.getIntegerType(8);
-      opType = rewriter.getIntegerType(32);
-    }
+
+    if (lhsTy.getElementType().isF16())
+      ipType = rewriter.getF16Type();
 
     if (lhsTy.getElementType().isF8E4M3FN())
       ipType = rewriter.getF8E4M3FNType();
 
     if (lhsTy.getElementType().isF8E5M2())
       ipType = rewriter.getF8E5M2Type();
+
+    Type opType = isa<FloatType>(ipType) ? Type(rewriter.getF32Type())
+                                         : Type(rewriter.getIntegerType(32));
 
     if (accReadOp->getBlock() == contractOp->getBlock() &&
         resultBlock != contractOp->getBlock())
@@ -1008,6 +1016,11 @@ struct VectorContractToAMXDotProduct
       if (!isReadSrcMemref(contractOp.getAcc()))
         return rewriter.notifyMatchFailure(contractOp,
                                            "The ACC src is not a MemRef type.");
+
+      if (hasMaskedOrOutOfBoundsRead(
+              {contractOp.getLhs(), contractOp.getRhs(), contractOp.getAcc()}))
+        return rewriter.notifyMatchFailure(
+            contractOp, "The reads should be unmasked and in bounds.");
 
       bool collapse = false;
       if (isVnni)
@@ -1168,7 +1181,7 @@ struct VectorContractToAMXDotProduct
 
       // Tiled dot-product.
       Value dp;
-      if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN())
+      if (isa<FloatType>(ipType))
         dp = amx::TileMulFOp::create(rewriter, loc, tileTypeAcc, loadLhs,
                                      loadRhs, loadAcc);
 
@@ -1300,6 +1313,11 @@ struct VectorContractToAMXDotProduct
                           "transfer_read for all contracts");
 
         Value accInit = getLoopNestInit(contract.getAcc(), loopLists);
+        if (hasMaskedOrOutOfBoundsRead(
+                {contract.getLhs(), contract.getRhs(), accInit}))
+          return rewriter.notifyMatchFailure(
+              contractOp, "The reads of an associated contract operation "
+                          "should be unmasked and in bounds.");
         Operation *accInitOp = accInit.getDefiningOp();
         bool carried = !isa_and_present<TransferReadOp, LoadOp>(accInitOp) &&
                        !isZeroVectorConstant(accInitOp);
@@ -1373,8 +1391,9 @@ struct VectorContractToAMXDotProduct
           validateLoopStep(rewriter, innerLoop.getStep(), stepValue);
       if (failed(validateInnerLoopStep))
         return rewriter.notifyMatchFailure(
-            contractOp, "Invalid loop step. The step should be 32 for BF16 and "
-                        "64 for Int8/F8.");
+            contractOp,
+            "Invalid loop step. The step should be 32 for BF16/F16 and "
+            "64 for Int8/F8.");
 
       SmallVector<Value> loopItrArgs = createInitTiles(outerLoop);
       rewriter.setInsertionPoint(outerLoop);
@@ -1529,7 +1548,7 @@ struct VectorContractToAMXDotProduct
       if (failed(validateInnerLoopStep))
         return rewriter.notifyMatchFailure(
             contractOp,
-            "Invalid loop step. The step should be 32 for BF16 and "
+            "Invalid loop step. The step should be 32 for BF16/F16 and "
             "64 for Int8/F8 or 1 if it is rduction loop other than K.");
 
       SmallVector<Value> loopItrArgs = createInitTiles(innerLoop);
@@ -1739,7 +1758,7 @@ struct VectorContractToAMXDotProduct
                   rewriter, loc, VectorType::get(16, opType), srcBuffAcc,
                   indicesAcc);
 
-              if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN()) {
+              if (isa<FloatType>(ipType)) {
                 writeVal1 =
                     arith::AddFOp::create(rewriter, loc, writeVal1, valueCRow1);
 
@@ -1815,7 +1834,6 @@ struct VectorContractToAMXDotProduct
     return success();
   }
 };
-
 } // namespace
 
 void x86::populateVectorContractToAMXDotProductPatterns(

@@ -9,7 +9,8 @@ define i64 @multi_exit_1_exit_count_with_udiv_by_value_in_header(ptr %dst, i64 %
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[N]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[TMP4]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SMAX]], i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[UMIN]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP1]], 4
@@ -137,7 +138,9 @@ define i64 @multi_exit_2_exit_count_with_udiv_by_value_in_block_executed_uncondi
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[N]]
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i64 [[N]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP4]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[TMP6]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SMAX]], i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[UMIN]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP1]], 4
@@ -862,7 +865,8 @@ define void @single_exit_tc_with_udiv(ptr %dst, i64 %N) {
 ; CHECK-LABEL: define void @single_exit_tc_with_udiv(
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[N]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i64 42, [[TMP2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -1306,7 +1310,90 @@ exit:
   ret i64 %p
 }
 
+; Expanding the conditional urem for the SCEV check must not add UB.
+define void @multi_exit_count_with_urem_by_value_in_latch_scev_check(ptr %dst, i64 %N, i64 %X, i64 %M) {
+; CHECK-LABEL: define void @multi_exit_count_with_urem_by_value_in_latch_scev_check(
+; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]], i64 [[X:%.*]], i64 [[M:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = freeze i64 [[M]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv i64 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[M]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[X]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP5]], i64 [[N]])
+; CHECK-NEXT:    [[TMP7:%.*]] = add nuw i64 [[TMP6]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP7]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; CHECK:       vector.scevcheck:
+; CHECK-NEXT:    [[TMP19:%.*]] = freeze i64 [[M]]
+; CHECK-NEXT:    [[TMP20:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP19]], i64 1)
+; CHECK-NEXT:    [[TMP8:%.*]] = urem i64 [[X]], [[TMP20]]
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze i64 [[TMP8]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP9]], i64 [[N]])
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[UMIN]], 4294967295
+; CHECK-NEXT:    br i1 [[TMP10]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP7]], 3
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[TMP11]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP12]], i64 4, i64 [[TMP11]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP7]], [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP16]]
+; CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[TMP17]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ [[TMP14]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV_32:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ], [ [[IV_32_NEXT:%.*]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[C_0:%.*]] = icmp eq i64 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[C_0]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[EXT:%.*]] = zext i32 [[IV_32]] to i64
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[EXT]]
+; CHECK-NEXT:    store i32 1, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_32_NEXT]] = add i32 [[IV_32]], 1
+; CHECK-NEXT:    [[D:%.*]] = urem i64 [[X]], [[M]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i64 [[IV]], [[D]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP33:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
 
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %iv.32 = phi i32 [ 0, %entry ], [ %iv.32.next, %loop.latch ]
+  %c.0 = icmp eq i64 %iv, %N
+  br i1 %c.0, label %exit, label %loop.latch
+
+loop.latch:
+  %ext = zext i32 %iv.32 to i64
+  %gep = getelementptr inbounds i32, ptr %dst, i64 %ext
+  store i32 1, ptr %gep
+  %iv.next = add i64 %iv, 1
+  %iv.32.next = add i32 %iv.32, 1
+  %d = urem i64 %X, %M
+  %c.1 = icmp eq i64 %iv, %d
+  br i1 %c.1, label %exit, label %loop.header
+
+exit:
+  ret void
+}
 
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
@@ -1341,4 +1428,6 @@ exit:
 ; CHECK: [[LOOP29]] = distinct !{[[LOOP29]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP30]] = distinct !{[[LOOP30]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP31]] = distinct !{[[LOOP31]], [[META2]], [[META1]]}
+; CHECK: [[LOOP32]] = distinct !{[[LOOP32]], [[META1]], [[META2]]}
+; CHECK: [[LOOP33]] = distinct !{[[LOOP33]], [[META1]]}
 ;.

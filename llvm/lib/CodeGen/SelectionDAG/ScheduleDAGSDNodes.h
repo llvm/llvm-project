@@ -108,8 +108,9 @@ class InstrItineraryData;
                                        unsigned OpIdx, SDep& dep) const;
 
     /// Schedule - Order nodes according to selected style, filling
-    /// in the Sequence member.
-    ///
+    /// in the Sequence member. The scheduler is reused for all blocks of a
+    /// function, so implementations must reset any per-block state, including
+    /// that of their priority queue and hazard recognizer.
     virtual void Schedule() = 0;
 
     /// VerifyScheduledSequence - Verify that all SUnits are scheduled and

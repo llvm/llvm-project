@@ -116,20 +116,18 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
   }
 
   if (TII.isFLAT(Inst)) {
-    if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode())) {
-      HWEvents E = getSimplifiedVMEMEventsFor(Inst, TII);
-      if (ST.hasWaitXcnt() && ST.isXNACKEnabled())
-        E |= HWEvents::VMEM_GROUP;
-      return E;
-    }
-
-    assert(Inst.mayLoadOrStore());
+    assert(Inst.mayLoadOrStore() ||
+           SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode()));
     HWEvents E = HWEvents::NONE;
-    if (TII.mayAccessVMEMThroughFlat(Inst)) {
-      if (ST.hasWaitXcnt() && ST.isXNACKEnabled())
-        E |= HWEvents::VMEM_GROUP;
+    // Every FLAT instruction except the VGLOBAL tensor ops increments xcnt,
+    // including prefetches, async LDS DMA and LDS-only accesses that do not
+    // use the VMEM counters.
+    if (ST.hasWaitXcnt() && ST.isXNACKEnabled() &&
+        Inst.getOpcode() != AMDGPU::TENSOR_SAVE &&
+        Inst.getOpcode() != AMDGPU::TENSOR_STOP)
+      E |= HWEvents::VMEM_GROUP;
+    if (TII.mayAccessVMEMThroughFlat(Inst))
       E |= getSimplifiedVMEMEventsFor(Inst, TII);
-    }
 
     if (TII.mayAccessLDSThroughFlat(Inst, TgSplit))
       E |= HWEvents::LDS_ACCESS;

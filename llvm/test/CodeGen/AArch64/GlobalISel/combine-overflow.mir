@@ -3,7 +3,6 @@
 
 ---
 name:            add_unused
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -23,7 +22,6 @@ body:             |
 ...
 ---
 name:            add_canon
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -48,7 +46,6 @@ body:             |
 ...
 ---
 name:            add_const_fold
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -72,12 +69,11 @@ body:             |
 ...
 ---
 name:            add_add_zero
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $w0, $w1, $w2
     ; CHECK-LABEL: name: add_add_zero
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $w2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w2
     ; CHECK-NEXT: %o_wide:_(i32) = G_CONSTANT i32 0
@@ -98,7 +94,6 @@ body:             |
 ...
 ---
 name:            add_multiuse
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -122,12 +117,11 @@ body:             |
 ...
 ---
 name:            add_vector
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $w0, $w1, $w2, $w3
     ; CHECK-LABEL: name: add_vector
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -154,12 +148,11 @@ body:             |
 ...
 ---
 name:            add_splat_vector
-tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $w0, $w1
+    liveins: $w0, $w1, $w2, $w3
     ; CHECK-LABEL: name: add_splat_vector
-    ; CHECK: liveins: $w0, $w1
+    ; CHECK: liveins: $w0, $w1, $w2, $w3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
@@ -184,7 +177,6 @@ body:             |
 ...
 ---
 name:            sub_may
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -208,7 +200,6 @@ body:             |
 ...
 ---
 name:            usub_may
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -232,7 +223,6 @@ body:             |
 ...
 ---
 name:            usub_may_carry_s11
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -256,7 +246,6 @@ body:             |
 ...
 ---
 name:            usub_may_carry_s11_vector
-tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1

@@ -5,7 +5,7 @@
 ; RUN: split-file %s %t
 ; RUN: opt -thinlto-bc %t/main.ll -thin-link-bitcode-file=%t1.thinlink.bc -o %t1.bc
 ; RUN: opt -thinlto-bc %t/callees.ll -thin-link-bitcode-file=%t2.thinlink.bc -o %t2.bc
-; RUN: llvm-lto2 run -disable-thinlto-funcattrs=0 \
+; RUN: llvm-lto2 run -thinlto-funcattrs \
 ; RUN:   %t1.bc %t2.bc -o %t.o \
 ; RUN:   -r %t1.bc,caller,l -r %t1.bc,caller_noattr,l -r %t1.bc,importer,px -r %t1.bc,importer_noattr,px \
 ; RUN:   -r %t2.bc,caller,px -r %t2.bc,caller_noattr,px \

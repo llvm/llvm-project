@@ -1,12 +1,12 @@
 set(LIBOMPACCSUPPORT_SOURCES
-  ${CMAKE_CURRENT_SOURCE_DIR}/AsyncInfo.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/BackendConfig.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/device.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/PluginManager.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/DeviceImage.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/Mapping.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/OmpAccError.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/Platform.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/Program.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/RecordReplay.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/AsyncInfo.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/BackendConfig.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/device.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/PluginManager.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/DeviceImage.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Mapping.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/OmpAccError.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Platform.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Program.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/RecordReplay.cpp
   PARENT_SCOPE)

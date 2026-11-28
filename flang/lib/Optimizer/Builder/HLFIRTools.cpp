@@ -20,6 +20,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <mlir/Dialect/LLVMIR/LLVMAttrs.h>
 #include <mlir/Dialect/OpenMP/OpenMPDialect.h>
@@ -925,21 +926,27 @@ hlfir::ElementalOp hlfir::genElementalOp(
       builder, loc, exprType, shape, polymorphicMold, typeParams, isUnordered);
   auto insertPt = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(elementalOp.getBody());
-  mlir::Value elementResult = genKernel(loc, builder, elementalOp.getIndices());
+  auto [element, cleanup] = genKernel(loc, builder, elementalOp.getIndices());
+  mlir::Value elementResult = element;
   // Numerical and logical scalars may be lowered to another type than the
   // Fortran expression type (e.g i1 instead of fir.logical). Array expression
   // values are typed according to their Fortran type. Insert a cast if needed
   // here.
   if (fir::isa_trivial(elementResult.getType()))
     elementResult = builder.createConvert(loc, elementType, elementResult);
-  hlfir::YieldElementOp::create(builder, loc, elementResult);
+  auto yield = hlfir::YieldElementOp::create(builder, loc, elementResult);
+  if (cleanup) {
+    builder.createBlock(&yield.getCleanup());
+    (*cleanup)();
+    if (yield.getCleanup().front().empty())
+      yield.getCleanup().front().erase();
+    else
+      hlfir::YieldElementOp::ensureTerminator(yield.getCleanup(), builder, loc);
+  }
   builder.restoreInsertionPoint(insertPt);
   return elementalOp;
 }
 
-// TODO: we do not actually need to clone the YieldElementOp,
-// because returning its getElementValue() operand should be enough
-// for all callers of this function.
 hlfir::YieldElementOp
 hlfir::inlineElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
                          hlfir::ElementalOp elemental,
@@ -957,11 +964,31 @@ hlfir::inlineElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
   return yield;
 }
 
+/// Save only the mappings of values captured by this cleanup, not the whole
+/// expression tree's mapping. Each inlined evaluation needs its own snapshot:
+/// a later application of the same elemental overwrites its value mappings.
+static hlfir::CleanupFunction getElementCleanup(mlir::Region &cleanup,
+                                                fir::FirOpBuilder &builder,
+                                                const mlir::IRMapping &mapper) {
+  mlir::IRMapping cleanupMapper;
+  mlir::visitUsedValuesDefinedAbove(
+      cleanup, cleanup, [&](mlir::OpOperand *operand) {
+        mlir::Value value = operand->get();
+        if (mlir::Value mapped = mapper.lookupOrNull(value))
+          cleanupMapper.map(value, mapped);
+      });
+  return [&cleanup, &builder, mapper = std::move(cleanupMapper)]() mutable {
+    for (auto &op : cleanup.front().without_terminator())
+      builder.clone(op, mapper);
+  };
+}
+
 mlir::Value hlfir::inlineElementalOp(
     mlir::Location loc, fir::FirOpBuilder &builder,
     hlfir::ElementalOpInterface elemental, mlir::ValueRange oneBasedIndices,
     mlir::IRMapping &mapper,
-    const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline) {
+    const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline,
+    llvm::SmallVectorImpl<hlfir::CleanupFunction> &cleanups) {
   mlir::Region &region = elemental.getElementalRegion();
   // hlfir.elemental region is a SizedRegion<1>.
   assert(region.hasOneBlock() && "elemental region must have one block");
@@ -977,15 +1004,23 @@ mlir::Value hlfir::inlineElementalOp(
           hlfir::ElementalOpInterface elementalIface =
               mlir::cast<hlfir::ElementalOpInterface>(
                   appliedElemental.getOperation());
-          mlir::Value inlined = inlineElementalOp(loc, builder, elementalIface,
-                                                  clonedApplyIndices, mapper,
-                                                  mustRecursivelyInline);
+          mlir::Value inlined = inlineElementalOp(
+              loc, builder, elementalIface, clonedApplyIndices, mapper,
+              mustRecursivelyInline, cleanups);
           mapper.map(apply.getResult(), inlined);
           continue;
         }
     (void)builder.clone(op, mapper);
   }
-  return mapper.lookupOrDefault(elemental.getElementEntity());
+  mlir::Value result = mapper.lookupOrDefault(elemental.getElementEntity());
+  if (auto yield = mlir::dyn_cast<hlfir::YieldElementOp>(
+          region.front().getTerminator())) {
+    if (!yield.getCleanup().empty()) {
+      cleanups.push_back(
+          getElementCleanup(yield.getCleanup(), builder, mapper));
+    }
+  }
+  return result;
 }
 
 hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
@@ -1369,18 +1404,20 @@ hlfir::cloneToElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
   hlfir::genLengthParameters(loc, builder, scalarAddress, typeParams);
 
   builder.setInsertionPointAfter(elementalAddrOp);
-  auto genKernel = [&](mlir::Location l, fir::FirOpBuilder &b,
-                       mlir::ValueRange oneBasedIndices) -> hlfir::Entity {
+  auto genKernel =
+      [&](mlir::Location l, fir::FirOpBuilder &b,
+          mlir::ValueRange oneBasedIndices) -> hlfir::ElementalKernelResult {
     mlir::IRMapping mapper;
     mapper.map(elementalAddrOp.getIndices(), oneBasedIndices);
-    mlir::Operation *newOp = nullptr;
-    for (auto &op : elementalAddrOp.getBody().back().getOperations())
-      newOp = b.clone(op, mapper);
-    auto newYielOp = mlir::dyn_cast_or_null<hlfir::YieldOp>(newOp);
-    assert(newYielOp && "hlfir.elemental_addr is ill formed");
-    hlfir::Entity newAddr{newYielOp.getEntity()};
-    newYielOp->erase();
-    return hlfir::loadTrivialScalar(l, b, newAddr);
+    for (auto &op : elementalAddrOp.getBody().back().without_terminator())
+      b.clone(op, mapper);
+    auto yield = mlir::cast<hlfir::YieldOp>(
+        elementalAddrOp.getBody().back().getTerminator());
+    hlfir::Entity newAddr{mapper.lookupOrDefault(yield.getEntity())};
+    hlfir::Entity element = hlfir::loadTrivialScalar(l, b, newAddr);
+    if (yield.getCleanup().empty())
+      return {element, std::nullopt};
+    return {element, getElementCleanup(yield.getCleanup(), b, mapper)};
   };
   mlir::Type elementType = scalarAddress.getFortranElementType();
   return hlfir::genElementalOp(
@@ -1485,7 +1522,13 @@ hlfir::createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
     extents = hlfir::getExplicitExtentsFromShape(shape, builder);
   }
 
-  bool useStack = !mold.isArray() && !mold.isPolymorphic();
+  // Keep character temporary lifetimes explicit until allocation placement.
+  // In particular, a dynamic scalar character alloca in a CFG loop cannot be
+  // reclaimed by the structured-loop stack reclamation pass.
+  auto charType =
+      mlir::dyn_cast<fir::CharacterType>(mold.getFortranElementType());
+  bool useStack = !mold.isArray() && !mold.isPolymorphic() &&
+                  (!charType || charType.hasConstantLen());
   auto genTempDeclareOp =
       [](fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value memref,
          llvm::StringRef name, mlir::Value shape,
@@ -1543,13 +1586,17 @@ hlfir::convertCharacterKind(mlir::Location loc, fir::FirOpBuilder &builder,
                                      scalarChar.getFortranElementType());
   assert(src.first.getCharBox() && "must be scalar character");
   fir::CharBoxValue res = fir::factory::convertCharacterKind(
-      builder, loc, *src.first.getCharBox(), toKind);
+      builder, loc, *src.first.getCharBox(), toKind, /*useHeap=*/true);
   if (src.second.has_value())
     src.second.value()();
 
-  return hlfir::EntityWithAttributes{hlfir::DeclareOp::create(
+  auto declare = hlfir::DeclareOp::create(
       builder, loc, res.getAddr(), ".temp.kindconvert", /*shape=*/nullptr,
-      /*typeparams=*/mlir::ValueRange{res.getLen()})};
+      /*typeparams=*/mlir::ValueRange{res.getLen()});
+  return hlfir::EntityWithAttributes{hlfir::AsExprOp::create(
+      builder, loc, declare.getBase(),
+      builder.createBool(loc,
+                         mlir::isa<fir::HeapType>(res.getAddr().getType())))};
 }
 
 std::pair<hlfir::Entity, std::optional<hlfir::CleanupFunction>>
@@ -1583,20 +1630,24 @@ hlfir::genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
                            ? mlir::Value{hlfir::convertCharacterKind(
                                  loc, builder, source, *toKindCharConvert)}
                            : builder.convertWithSemantics(loc, toType, source);
+    if (toKindCharConvert) {
+      fir::FirOpBuilder *bldr = &builder;
+      return {hlfir::Entity{cast},
+              [=]() { hlfir::DestroyOp::create(*bldr, loc, cast); }};
+    }
     return {hlfir::Entity{cast}, std::nullopt};
   }
 
   mlir::Value shape = hlfir::genShape(loc, builder, source);
-  auto genKernel = [source, toType, toKindCharConvert](
-                       mlir::Location loc, fir::FirOpBuilder &builder,
-                       mlir::ValueRange oneBasedIndices) -> hlfir::Entity {
+  auto genKernel =
+      [source, toType](
+          mlir::Location loc, fir::FirOpBuilder &builder,
+          mlir::ValueRange oneBasedIndices) -> hlfir::ElementalKernelResult {
     auto elementPtr =
         hlfir::getElementAt(loc, builder, source, oneBasedIndices);
     auto val = hlfir::loadTrivialScalar(loc, builder, elementPtr);
-    if (toKindCharConvert)
-      return hlfir::convertCharacterKind(loc, builder, val, *toKindCharConvert);
-    return hlfir::EntityWithAttributes{
-        builder.convertWithSemantics(loc, toType, val)};
+    return hlfir::genTypeAndKindConvert(loc, builder, val, toType,
+                                        /*preserveLowerBounds=*/false);
   };
   llvm::SmallVector<mlir::Value, 1> lenParams;
   hlfir::genLengthParameters(loc, builder, source, lenParams);

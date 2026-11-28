@@ -21,18 +21,10 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
-
-static cl::opt<bool> SPVPreserveAuxData(
-    "spirv-preserve-auxdata",
-    cl::desc("Preserve LLVM attributes and metadata as "
-             "NonSemantic.AuxData ExtInst annotations (requires "
-             "SPV_KHR_non_semantic_info)"),
-    cl::Hidden, cl::init(false));
 
 namespace {
 enum AuxDataLinkageType : uint32_t {
@@ -71,15 +63,13 @@ static bool canUseForwardRefs(const SPIRV::ModuleAnalysisInfo &MAI) {
 
 SPIRVAuxDataHandler::SPIRVAuxDataHandler(AsmPrinter &AP, const Module &M)
     : Asm(AP), Mod(M) {
-  assert(spirvPreserveAuxData(M.getTargetTriple()) &&
-         "AuxData handler created with AuxData preservation disabled");
   for (const GlobalObject &GO : M.global_objects())
     if (wasAvailableExternally(&GO))
       LinkagePreservedGOs.push_back(&GO);
 }
 
-bool llvm::spirvPreserveAuxData(const Triple &TT) {
-  return SPVPreserveAuxData || TT.getVendor() == Triple::VendorType::AMD;
+bool llvm::spirvPreserveAuxData(const SPIRVOptions &CLOpts, const Triple &TT) {
+  return CLOpts.preserve_auxdata || TT.getVendor() == Triple::VendorType::AMD;
 }
 
 void SPIRVAuxDataHandler::prepareModuleOutput(const SPIRVSubtarget &ST,

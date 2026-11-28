@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "sqrtur.h"
+#include "src/stdfix/sqrtur.h"
 #include "src/__support/common.h"
 #include "src/__support/fixed_point/sqrt.h"
 #include "src/__support/macros/config.h"

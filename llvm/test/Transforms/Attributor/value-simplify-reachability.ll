@@ -10,7 +10,7 @@
 
 declare void @llvm.assume(i1)
 declare void @useI32(i32) nosync nocallback
-declare void @free(ptr) allockind("free") "alloc-family"="malloc"
+declare void @free(ptr allocptr) allockind("free") "alloc-family"="malloc"
 declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0, 1) "alloc-family"="malloc"
 
 ;.

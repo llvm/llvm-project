@@ -68,9 +68,9 @@ define void @store_nonzero_to_escaped_alloca(i16 %a) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP4]], 17592186044416
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP6]], -4
 ; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP5]], i64 0
 ; CHECK-NEXT:    store i8 [[TMP2]], ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP5]], i64 1
 ; CHECK-NEXT:    store i8 [[TMP2]], ptr [[TMP10]], align 1
 ; CHECK-NEXT:    [[_DFSCMP:%.*]] = icmp ne i8 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_DFSCMP]], label %[[BB11:.*]], label %[[BB13:.*]], !prof [[PROF1:![0-9]+]]
@@ -108,7 +108,7 @@ define void @store64_align8(ptr %p, i64 %a) {
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP13:%.*]] = insertelement <8 x i8> [[TMP12]], i8 [[TMP2]], i32 5
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP14:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[TMP2]], i32 6
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP15:%.*]] = insertelement <8 x i8> [[TMP14]], i8 [[TMP2]], i32 7
-; NO_COMBINE_STORE_PTR-NEXT:    [[TMP16:%.*]] = getelementptr <8 x i8>, ptr [[TMP5]], i32 0
+; NO_COMBINE_STORE_PTR-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP5]], i64 0
 ; NO_COMBINE_STORE_PTR-NEXT:    store <8 x i8> [[TMP15]], ptr [[TMP16]], align 1
 ; NO_COMBINE_STORE_PTR-NEXT:    [[_DFSCMP:%.*]] = icmp ne i8 [[TMP2]], 0
 ; NO_COMBINE_STORE_PTR-NEXT:    br i1 [[_DFSCMP]], label %[[BB17:.*]], label %[[BB22:.*]], !prof [[PROF1]]
@@ -145,7 +145,7 @@ define void @store64_align8(ptr %p, i64 %a) {
 ; COMBINE_STORE_PTR-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> [[TMP17]], i8 [[TMP5]], i32 5
 ; COMBINE_STORE_PTR-NEXT:    [[TMP19:%.*]] = insertelement <8 x i8> [[TMP18]], i8 [[TMP5]], i32 6
 ; COMBINE_STORE_PTR-NEXT:    [[TMP20:%.*]] = insertelement <8 x i8> [[TMP19]], i8 [[TMP5]], i32 7
-; COMBINE_STORE_PTR-NEXT:    [[TMP21:%.*]] = getelementptr <8 x i8>, ptr [[TMP10]], i32 0
+; COMBINE_STORE_PTR-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP10]], i64 0
 ; COMBINE_STORE_PTR-NEXT:    store <8 x i8> [[TMP20]], ptr [[TMP21]], align 1
 ; COMBINE_STORE_PTR-NEXT:    [[_DFSCMP:%.*]] = icmp ne i8 [[TMP5]], 0
 ; COMBINE_STORE_PTR-NEXT:    br i1 [[_DFSCMP]], label %[[BB22:.*]], label %[[BB27:.*]], !prof [[PROF1]]
@@ -183,14 +183,14 @@ define void @store64_align2(ptr %p, i64 %a) {
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP14:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[TMP2]], i32 5
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP15:%.*]] = insertelement <8 x i8> [[TMP14]], i8 [[TMP2]], i32 6
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP16:%.*]] = insertelement <8 x i8> [[TMP15]], i8 [[TMP2]], i32 7
-; NO_COMBINE_STORE_PTR-NEXT:    [[TMP17:%.*]] = getelementptr <8 x i8>, ptr [[TMP5]], i32 0
+; NO_COMBINE_STORE_PTR-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP5]], i64 0
 ; NO_COMBINE_STORE_PTR-NEXT:    store <8 x i8> [[TMP16]], ptr [[TMP17]], align 1
 ; NO_COMBINE_STORE_PTR-NEXT:    [[_DFSCMP:%.*]] = icmp ne i8 [[TMP2]], 0
 ; NO_COMBINE_STORE_PTR-NEXT:    br i1 [[_DFSCMP]], label %[[BB18:.*]], label %[[BB21:.*]], !prof [[PROF1]]
 ; NO_COMBINE_STORE_PTR:       [[BB18]]:
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP19:%.*]] = call i32 @__dfsan_chain_origin(i32 [[TMP1]])
 ; NO_COMBINE_STORE_PTR-NEXT:    store i32 [[TMP19]], ptr [[TMP8]], align 4
-; NO_COMBINE_STORE_PTR-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP8]], i32 1
+; NO_COMBINE_STORE_PTR-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP8]], i64 4
 ; NO_COMBINE_STORE_PTR-NEXT:    store i32 [[TMP19]], ptr [[TMP20]], align 4
 ; NO_COMBINE_STORE_PTR-NEXT:    br label %[[BB21]]
 ; NO_COMBINE_STORE_PTR:       [[BB21]]:
@@ -220,14 +220,14 @@ define void @store64_align2(ptr %p, i64 %a) {
 ; COMBINE_STORE_PTR-NEXT:    [[TMP19:%.*]] = insertelement <8 x i8> [[TMP18]], i8 [[TMP5]], i32 5
 ; COMBINE_STORE_PTR-NEXT:    [[TMP20:%.*]] = insertelement <8 x i8> [[TMP19]], i8 [[TMP5]], i32 6
 ; COMBINE_STORE_PTR-NEXT:    [[TMP21:%.*]] = insertelement <8 x i8> [[TMP20]], i8 [[TMP5]], i32 7
-; COMBINE_STORE_PTR-NEXT:    [[TMP22:%.*]] = getelementptr <8 x i8>, ptr [[TMP10]], i32 0
+; COMBINE_STORE_PTR-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[TMP10]], i64 0
 ; COMBINE_STORE_PTR-NEXT:    store <8 x i8> [[TMP21]], ptr [[TMP22]], align 1
 ; COMBINE_STORE_PTR-NEXT:    [[_DFSCMP:%.*]] = icmp ne i8 [[TMP5]], 0
 ; COMBINE_STORE_PTR-NEXT:    br i1 [[_DFSCMP]], label %[[BB23:.*]], label %[[BB26:.*]], !prof [[PROF1]]
 ; COMBINE_STORE_PTR:       [[BB23]]:
 ; COMBINE_STORE_PTR-NEXT:    [[TMP24:%.*]] = call i32 @__dfsan_chain_origin(i32 [[TMP7]])
 ; COMBINE_STORE_PTR-NEXT:    store i32 [[TMP24]], ptr [[TMP13]], align 4
-; COMBINE_STORE_PTR-NEXT:    [[TMP25:%.*]] = getelementptr i32, ptr [[TMP13]], i32 1
+; COMBINE_STORE_PTR-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP13]], i64 4
 ; COMBINE_STORE_PTR-NEXT:    store i32 [[TMP24]], ptr [[TMP25]], align 4
 ; COMBINE_STORE_PTR-NEXT:    br label %[[BB26]]
 ; COMBINE_STORE_PTR:       [[BB26]]:
@@ -256,15 +256,15 @@ define void @store96_align8(ptr %p, i96 %a) {
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP13:%.*]] = insertelement <8 x i8> [[TMP12]], i8 [[TMP2]], i32 5
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP14:%.*]] = insertelement <8 x i8> [[TMP13]], i8 [[TMP2]], i32 6
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP15:%.*]] = insertelement <8 x i8> [[TMP14]], i8 [[TMP2]], i32 7
-; NO_COMBINE_STORE_PTR-NEXT:    [[TMP16:%.*]] = getelementptr <8 x i8>, ptr [[TMP5]], i32 0
+; NO_COMBINE_STORE_PTR-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP5]], i64 0
 ; NO_COMBINE_STORE_PTR-NEXT:    store <8 x i8> [[TMP15]], ptr [[TMP16]], align 1
-; NO_COMBINE_STORE_PTR-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP5]], i32 8
+; NO_COMBINE_STORE_PTR-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP5]], i64 8
 ; NO_COMBINE_STORE_PTR-NEXT:    store i8 [[TMP2]], ptr [[TMP17]], align 1
-; NO_COMBINE_STORE_PTR-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP5]], i32 9
+; NO_COMBINE_STORE_PTR-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP5]], i64 9
 ; NO_COMBINE_STORE_PTR-NEXT:    store i8 [[TMP2]], ptr [[TMP18]], align 1
-; NO_COMBINE_STORE_PTR-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP5]], i32 10
+; NO_COMBINE_STORE_PTR-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP5]], i64 10
 ; NO_COMBINE_STORE_PTR-NEXT:    store i8 [[TMP2]], ptr [[TMP19]], align 1
-; NO_COMBINE_STORE_PTR-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP5]], i32 11
+; NO_COMBINE_STORE_PTR-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP5]], i64 11
 ; NO_COMBINE_STORE_PTR-NEXT:    store i8 [[TMP2]], ptr [[TMP20]], align 1
 ; NO_COMBINE_STORE_PTR-NEXT:    [[_DFSCMP:%.*]] = icmp ne i8 [[TMP2]], 0
 ; NO_COMBINE_STORE_PTR-NEXT:    br i1 [[_DFSCMP]], label %[[BB21:.*]], label %[[BB27:.*]], !prof [[PROF1]]
@@ -274,7 +274,7 @@ define void @store96_align8(ptr %p, i96 %a) {
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP24:%.*]] = shl i64 [[TMP23]], 32
 ; NO_COMBINE_STORE_PTR-NEXT:    [[TMP25:%.*]] = or i64 [[TMP23]], [[TMP24]]
 ; NO_COMBINE_STORE_PTR-NEXT:    store i64 [[TMP25]], ptr [[TMP7]], align 8
-; NO_COMBINE_STORE_PTR-NEXT:    [[TMP26:%.*]] = getelementptr i32, ptr [[TMP7]], i32 2
+; NO_COMBINE_STORE_PTR-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP7]], i64 8
 ; NO_COMBINE_STORE_PTR-NEXT:    store i32 [[TMP22]], ptr [[TMP26]], align 8
 ; NO_COMBINE_STORE_PTR-NEXT:    br label %[[BB27]]
 ; NO_COMBINE_STORE_PTR:       [[BB27]]:
@@ -303,15 +303,15 @@ define void @store96_align8(ptr %p, i96 %a) {
 ; COMBINE_STORE_PTR-NEXT:    [[TMP18:%.*]] = insertelement <8 x i8> [[TMP17]], i8 [[TMP5]], i32 5
 ; COMBINE_STORE_PTR-NEXT:    [[TMP19:%.*]] = insertelement <8 x i8> [[TMP18]], i8 [[TMP5]], i32 6
 ; COMBINE_STORE_PTR-NEXT:    [[TMP20:%.*]] = insertelement <8 x i8> [[TMP19]], i8 [[TMP5]], i32 7
-; COMBINE_STORE_PTR-NEXT:    [[TMP21:%.*]] = getelementptr <8 x i8>, ptr [[TMP10]], i32 0
+; COMBINE_STORE_PTR-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP10]], i64 0
 ; COMBINE_STORE_PTR-NEXT:    store <8 x i8> [[TMP20]], ptr [[TMP21]], align 1
-; COMBINE_STORE_PTR-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[TMP10]], i32 8
+; COMBINE_STORE_PTR-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[TMP10]], i64 8
 ; COMBINE_STORE_PTR-NEXT:    store i8 [[TMP5]], ptr [[TMP22]], align 1
-; COMBINE_STORE_PTR-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP10]], i32 9
+; COMBINE_STORE_PTR-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP10]], i64 9
 ; COMBINE_STORE_PTR-NEXT:    store i8 [[TMP5]], ptr [[TMP23]], align 1
-; COMBINE_STORE_PTR-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP10]], i32 10
+; COMBINE_STORE_PTR-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP10]], i64 10
 ; COMBINE_STORE_PTR-NEXT:    store i8 [[TMP5]], ptr [[TMP24]], align 1
-; COMBINE_STORE_PTR-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP10]], i32 11
+; COMBINE_STORE_PTR-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP10]], i64 11
 ; COMBINE_STORE_PTR-NEXT:    store i8 [[TMP5]], ptr [[TMP25]], align 1
 ; COMBINE_STORE_PTR-NEXT:    [[_DFSCMP:%.*]] = icmp ne i8 [[TMP5]], 0
 ; COMBINE_STORE_PTR-NEXT:    br i1 [[_DFSCMP]], label %[[BB26:.*]], label %[[BB32:.*]], !prof [[PROF1]]
@@ -321,7 +321,7 @@ define void @store96_align8(ptr %p, i96 %a) {
 ; COMBINE_STORE_PTR-NEXT:    [[TMP29:%.*]] = shl i64 [[TMP28]], 32
 ; COMBINE_STORE_PTR-NEXT:    [[TMP30:%.*]] = or i64 [[TMP28]], [[TMP29]]
 ; COMBINE_STORE_PTR-NEXT:    store i64 [[TMP30]], ptr [[TMP12]], align 8
-; COMBINE_STORE_PTR-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[TMP12]], i32 2
+; COMBINE_STORE_PTR-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP12]], i64 8
 ; COMBINE_STORE_PTR-NEXT:    store i32 [[TMP27]], ptr [[TMP31]], align 8
 ; COMBINE_STORE_PTR-NEXT:    br label %[[BB32]]
 ; COMBINE_STORE_PTR:       [[BB32]]:

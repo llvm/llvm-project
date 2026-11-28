@@ -11,9 +11,7 @@
   attributes #0 = { nounwind }
 ...
 ---
----
 name: scavenge_register_position
-tracksRegLiveness: true
 
 # Force a frame larger than the immediate field with a large alignment.
 stack:

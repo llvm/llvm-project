@@ -1764,7 +1764,7 @@ def ROCDL_LoadAsyncToLDSOp :
     stored values to - you need to use the `rocdl.asyncmark` and `rocdl.wait.asyncmark`
     operations to explicitly group these operations and wait for their completion.
 
-    Available on gfx10 and earlier with varying suppported values of `size`.
+    Available on gfx10 and earlier with varying supported values of `size`.
 
     Example:
     ```mlir

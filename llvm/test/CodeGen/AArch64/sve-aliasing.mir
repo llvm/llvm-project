@@ -4,11 +4,6 @@
 
 ---
 name:            scalable_v16i1
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr64common, preferred-register: '' }
-  - { id: 1, class: ppr, preferred-register: '' }
-  - { id: 2, class: ppr, preferred-register: '' }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$p0', virtual-reg: '%1' }
@@ -35,11 +30,6 @@ body:             |
 ...
 ---
 name:            scalable_neg_v16i1
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr64common, preferred-register: '' }
-  - { id: 1, class: ppr, preferred-register: '' }
-  - { id: 2, class: ppr, preferred-register: '' }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
   - { reg: '$p0', virtual-reg: '%1' }

@@ -72,7 +72,7 @@ Session::~Session() {
 }
 
 SymbolLookupResult
-Session::lookupInstanceSymbols(const SymbolLookupSet &LS) const noexcept {
+Session::lookupInstanceSymbols(const RemoteSymbolLookupSet &LS) const noexcept {
   std::scoped_lock<std::mutex> Lock(M);
   return InstanceSymbols.lookup(LS);
 }

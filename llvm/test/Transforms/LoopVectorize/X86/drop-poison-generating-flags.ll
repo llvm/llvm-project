@@ -196,8 +196,8 @@ define void @preserve_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr 
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[INPUT]], <4 x i64> <i64 -2, i64 0, i64 2, i64 4>
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[TMP0]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[INPUT]], <4 x i64> <i64 -2, i64 0, i64 2, i64 4>
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> [[WIDE_MASKED_GATHER]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[OUTPUT]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -239,7 +239,7 @@ define void @drop_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr %out
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[INPUT]], <4 x i64> <i64 -1, i64 0, i64 1, i64 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [4 x i8], ptr [[INPUT]], <4 x i64> <i64 -1, i64 0, i64 1, i64 2>
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x ptr> [[TMP3]], i64 0
 ; CHECK-NEXT:    store <4 x ptr> [[TMP3]], ptr [[PTRS]], align 8
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[TMP1]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
@@ -475,8 +475,8 @@ define void @preserve_vector_exact_no_addr(ptr noalias nocapture readonly %input
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[INPUT]], <4 x i64> <i64 0, i64 0, i64 1, i64 1>
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[TMP0]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x float> poison), !invariant.load [[META0]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[INPUT]], <4 x i64> <i64 0, i64 0, i64 1, i64 1>
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x float> poison), !invariant.load [[META0]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 false>, <4 x float> zeroinitializer, <4 x float> [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[OUTPUT]], align 4
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]

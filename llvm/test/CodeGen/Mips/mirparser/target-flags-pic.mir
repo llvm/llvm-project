@@ -29,22 +29,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr64, preferred-register: '' }
-  - { id: 1, class: gpr64, preferred-register: '' }
-  - { id: 2, class: gpr64, preferred-register: '' }
-  - { id: 3, class: gpr32, preferred-register: '' }
-  - { id: 4, class: gpr32, preferred-register: '' }
-  - { id: 5, class: gpr32, preferred-register: '' }
-  - { id: 6, class: gpr64, preferred-register: '' }
-  - { id: 7, class: gpr32, preferred-register: '' }
-  - { id: 8, class: gpr32, preferred-register: '' }
-  - { id: 9, class: gpr64, preferred-register: '' }
-  - { id: 10, class: gpr32, preferred-register: '' }
-  - { id: 11, class: gpr32, preferred-register: '' }
-  - { id: 12, class: gpr64, preferred-register: '' }
-  - { id: 13, class: gpr64, preferred-register: '' }
 liveins:
   - { reg: '$r4_64', virtual-reg: '%0' }
   - { reg: '$r25_64', virtual-reg: '' }
@@ -72,25 +56,25 @@ body:             |
   bb.0.entry:
     liveins: $r4_64, $r25_64
 
-    %12 = LUi64 target-flags(mips-gpoff-hi) @_Z2k1i
-    %13 = DADDu %12, $r25_64
-    %1 = DADDiu %13, target-flags(mips-gpoff-lo) @_Z2k1i
-    %0 = COPY $r4_64
+    %12:gpr64 = LUi64 target-flags(mips-gpoff-hi) @_Z2k1i
+    %13:gpr64 = DADDu %12, $r25_64
+    %1:gpr64 = DADDiu %13, target-flags(mips-gpoff-lo) @_Z2k1i
+    %0:gpr64 = COPY $r4_64
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $r29, implicit $r29
-    %2 = LD %1, target-flags(mips-got-call) @_Z1gi :: (load (s64) from call-entry @_Z1gi)
+    %2:gpr64 = LD %1, target-flags(mips-got-call) @_Z1gi :: (load (s64) from call-entry @_Z1gi)
     $r4_64 = COPY %0
     $r28_64 = COPY %1
     JALR64Pseudo %2, csr_n64, implicit-def dead $r31, implicit $r4_64, implicit $r28_64, implicit-def $r29, implicit-def $r2
     ADJCALLSTACKUP 0, 0, implicit-def dead $r29, implicit $r29
-    %3 = COPY $r2
-    %4 = COPY %0.sub_32
-    %5 = ADDu %3, %4
-    %6 = LD %1, target-flags(mips-got-disp) @v :: (load (s64) from got)
-    %7 = LW %6, 0 :: (dereferenceable load (s32) from @v)
-    %8 = ADDu %5, %7
-    %9 = LD %1, target-flags(mips-got-disp) @j :: (load (s64) from got)
-    %10 = LW %9, 0 :: (dereferenceable load (s32) from @j)
-    %11 = ADDu %8, %10
+    %3:gpr32 = COPY $r2
+    %4:gpr32 = COPY %0.sub_32
+    %5:gpr32 = ADDu %3, %4
+    %6:gpr64 = LD %1, target-flags(mips-got-disp) @v :: (load (s64) from got)
+    %7:gpr32 = LW %6, 0 :: (dereferenceable load (s32) from @v)
+    %8:gpr32 = ADDu %5, %7
+    %9:gpr64 = LD %1, target-flags(mips-got-disp) @j :: (load (s64) from got)
+    %10:gpr32 = LW %9, 0 :: (dereferenceable load (s32) from @j)
+    %11:gpr32 = ADDu %8, %10
     $r2 = COPY %11
     RetRA implicit $r2
 

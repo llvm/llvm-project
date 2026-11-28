@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_SANITIZER_HANDLER_H
 #define LLVM_CLANG_LIB_CODEGEN_SANITIZER_HANDLER_H
 
+// To add new checks, append them to the end of this list.
 #define LIST_SANITIZER_CHECKS                                                  \
   SANITIZER_CHECK(AddOverflow, add_overflow, 0, "Integer addition overflowed") \
   SANITIZER_CHECK(BuiltinUnreachable, builtin_unreachable, 0,                  \
@@ -70,15 +71,21 @@
   SANITIZER_CHECK(                                                             \
       VLABoundNotPositive, vla_bound_not_positive, 0,                          \
       "Variable length array bound evaluates to non-positive value")           \
-  SANITIZER_CHECK(BoundsSafety, bounds_safety, 0,                              \
-                  "") // BoundsSafety Msg is empty because it is not considered
-                      // part of UBSan; therefore, no trap reason is emitted for
-                      // this case.
+  /* BoundsSafety Msg is empty because it is not considered part of UBSan; */  \
+  /* therefore, no trap reason is emitted for this case. */                    \
+  SANITIZER_CHECK(BoundsSafety, bounds_safety, 0, "")                          \
+  SANITIZER_CHECK(ReturnAlignmentAssumption, return_alignment_assumption, 0,   \
+                  "Alignment assumption violated")
 
 enum SanitizerHandler {
 #define SANITIZER_CHECK(Enum, Name, Version, Msg) Enum,
   LIST_SANITIZER_CHECKS
 #undef SANITIZER_CHECK
 };
+
+static_assert(BoundsSafety == 0x19,
+              "BoundsSafety must stay 0x19: it is encoded in -fbounds-safety "
+              "trap instructions (brk #0x5519, ud1l 0x19(%eax)) that debuggers "
+              "decode; append new checks at the end of LIST_SANITIZER_CHECKS");
 
 #endif // LLVM_CLANG_LIB_CODEGEN_SANITIZER_HANDLER_H

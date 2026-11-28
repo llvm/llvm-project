@@ -28,8 +28,6 @@ struct GUID;
 namespace detail {
 
 class LLVM_ABI GuidAdapter final : public FormatAdapter<ArrayRef<uint8_t>> {
-  ArrayRef<uint8_t> Guid;
-
 public:
   explicit GuidAdapter(ArrayRef<uint8_t> Guid);
   explicit GuidAdapter(StringRef Guid);

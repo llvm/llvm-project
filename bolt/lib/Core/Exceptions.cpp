@@ -512,6 +512,8 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
     Function.setPersonalityEncoding(
         *CurFDE.getLinkedCIE()->getPersonalityEncoding());
   }
+  if (CurFDE.getLinkedCIE()->getAugmentationString().contains('S'))
+    Function.setIsSignalFrame(true);
 
   auto decodeFrameInstruction = [this, &Function, &Offset, Address,
                                  CodeAlignment, DataAlignment](

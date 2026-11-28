@@ -13,6 +13,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
 #include "mlir/IR/Attributes.h"
@@ -304,19 +305,6 @@ static std::string generateLoopNestingName(StringRef prefix,
 }
 
 void OpenMPDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/OpenMP/OpenMPOps.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/OpenMP/OpenMPOpsTypes.cpp.inc"
-      >();
-
   declarePromisedInterface<ConvertToLLVMPatternInterface, OpenMPDialect>();
 
   MemRefType::attachInterface<MemRefPointerLikeModel>(*getContext());
@@ -3506,7 +3494,7 @@ static void getPrivatisationEffects(
 }
 
 /// Reductions initialise private accumulators and combine them into the
-/// original variables. Account for all three reduction clauses.
+/// original variables. Account for reduction and in_reduction clauses.
 static void
 getReductionEffects(Operation *op,
                     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
@@ -3530,7 +3518,6 @@ getReductionEffects(Operation *op,
 
   addEffects(iface.getReductionVars(), iface.getReductionBlockArgs());
   addEffects(iface.getInReductionVars(), iface.getInReductionBlockArgs());
-  addEffects(iface.getTaskReductionVars(), iface.getTaskReductionBlockArgs());
 }
 
 static void getBarrierEffects(
@@ -4242,7 +4229,8 @@ void TaskgroupOp::build(OpBuilder &builder, OperationState &state,
                      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
                      clauses.taskReductionVars,
                      makeDenseBoolArrayAttr(ctx, clauses.taskReductionByref),
-                     makeArrayAttr(ctx, clauses.taskReductionSyms));
+                     makeArrayAttr(ctx, clauses.taskReductionSyms),
+                     /*task_reduction_assume_bounded_recipe_effects=*/nullptr);
 }
 
 LogicalResult TaskgroupOp::verify() {
@@ -4254,6 +4242,48 @@ LogicalResult TaskgroupOp::verify() {
   return verifyReductionVarList(*this, getTaskReductionSyms(),
                                 getTaskReductionVars(),
                                 getTaskReductionByref());
+}
+
+static void getTaskReductionEffects(
+    Operation *op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  auto iface = dyn_cast<BlockArgOpenMPOpInterface>(op);
+  auto taskVars = iface.getTaskReductionVars();
+  for (auto &source : MutableArrayRef(taskVars.getBase(), taskVars.size())) {
+    effects.emplace_back(MemoryEffects::Read::get(), &source);
+    effects.emplace_back(MemoryEffects::Write::get(), &source);
+  }
+
+  for (BlockArgument arg : iface.getTaskReductionBlockArgs()) {
+    effects.emplace_back(MemoryEffects::Read::get(), arg);
+    effects.emplace_back(MemoryEffects::Write::get(), arg);
+  }
+
+  // The task_reduction clause does not necessarily allocate or free private
+  // accumulators. We avoid attaching an allocate effect to these accumulators
+  // as this would incorrectly imply they are fresh storage.
+  if (!taskVars.empty()) {
+    effects.emplace_back(MemoryEffects::Allocate::get());
+    effects.emplace_back(MemoryEffects::Free::get());
+  }
+}
+
+static void getTaskSchedulingPointEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get());
+  effects.emplace_back(MemoryEffects::Write::get());
+}
+
+void TaskgroupOp::getEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getTaskSchedulingPointEffects(effects);
+
+  if (!getTaskReductionVars().empty() &&
+      !getTaskReductionAssumeBoundedRecipeEffects())
+    addUnknownMemoryEffects(effects);
+  else
+    getTaskReductionEffects(*this, effects);
 }
 
 //===----------------------------------------------------------------------===//
@@ -5548,6 +5578,23 @@ LogicalResult AtomicCompareOp::verifyRegions() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// ThreadprivateOp
+//===----------------------------------------------------------------------===//
+
+void ThreadprivateOp::getEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+
+  // Read the primary thread's copy and write to the thread-local versions.
+  effects.emplace_back(MemoryEffects::Read::get(), &getSymAddrMutable());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       cast<OpResult>(getTlsAddr()));
+  // Threadprivate runtime bookeeping may or may not allocate new storage for
+  // caches or thread-local storage, do not attach this effect to an address to
+  // avoid incorrectly implying it is new storage.
+  effects.emplace_back(MemoryEffects::Allocate::get());
+}
 //===----------------------------------------------------------------------===//
 // CancelOp
 //===----------------------------------------------------------------------===//

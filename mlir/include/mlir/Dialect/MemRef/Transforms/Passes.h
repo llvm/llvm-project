@@ -16,14 +16,9 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-
-class AffineDialect;
 class ModuleOp;
 
 namespace func {
-namespace arith {
-class ArithDialect;
-} // namespace arith
 class FuncDialect;
 } // namespace func
 namespace scf {

@@ -20,12 +20,28 @@ namespace Fortran::utils::openmp {
 // TODO We can probably move the stuff inside `Support/OpenMP-utils.h/.cpp` here
 // as well.
 
-/// Create an `omp.map.info` op. Parameters other than the ones documented below
-/// correspond to operation arguments in the OpenMPOps.td file, see op docs for
-/// more details.
+/// Create an `omp.map.info` op. See OpenMPOps.td for map operand semantics.
 ///
-/// \param [in] builder - MLIR operation builder.
-/// \param [in] loc     - Source location of the created op.
+/// \param builder        - Operation builder.
+/// \param loc            - Source location of the created op.
+/// \param baseAddr       - Variable address. Box values are converted to their
+/// data address with `fir.box_addr`.
+/// \param varPtrPtr      - Optional address of the mapped pointer, used for
+/// descriptor base-address maps.
+/// \param name           - Name identifying the mapped object.
+/// \param bounds         - Bounds selecting the mapped elements or section.
+/// \param members        - Child map entries of a structured map.
+/// \param membersIndex   - Placement indices of the child map entries.
+/// \param mapType        - Map type and modifier flags.
+/// \param mapCaptureType - Capture kind of the mapped variable.
+/// \param retTy          - Result type. Replaced by the data address type when
+/// \p baseAddr is a box value.
+/// \param partialMap     - Whether the record is mapped only through selected
+/// components rather than in its entirety.
+/// \param mapperId       - Optional declare mapper symbol reference.
+/// \param varPtrTy       - Pointer type used to derive the `var_ptr` type
+/// attribute. Defaults to \p retTy after box conversion. Set this when an
+/// opaque map result must retain the type of its FIR variable pointer.
 mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     mlir::Location loc, mlir::Value baseAddr, mlir::Value varPtrPtr,
     llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
@@ -33,7 +49,8 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     mlir::omp::ClauseMapFlags mapType,
     mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
     bool partialMap = false,
-    mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
+    mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr(),
+    mlir::Type varPtrTy = mlir::Type());
 
 /// For an mlir value that does not have storage, allocate temporary storage
 /// (outside the target region), store the value in that storage, and map the

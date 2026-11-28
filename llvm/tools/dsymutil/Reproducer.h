@@ -79,10 +79,6 @@ class ReproducerUse : public Reproducer {
 public:
   ReproducerUse(StringRef Root, std::error_code &EC);
   ~ReproducerUse() override;
-
-private:
-  /// The path to the reproducer.
-  std::string Root;
 };
 
 } // end namespace dsymutil

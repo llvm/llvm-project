@@ -91,14 +91,7 @@ class LongPathTargetTestCase(TestBase):
         bp = target.BreakpointCreateByName("main", exe_basename)
         self.assertGreater(bp.GetNumLocations(), 0, "main breakpoint has a location")
 
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
-        self.assertState(
-            process.GetState(), lldb.eStateStopped, "process stopped at main"
-        )
-
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertIsNotNone(thread, "stopped at the main breakpoint")
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(self, target, bp)
         self.assertEqual(thread.GetFrameAtIndex(0).GetFunctionName(), "main")
 
         # After launch the loaded executable module still carries the full path.

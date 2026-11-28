@@ -4,6 +4,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK-LABEL: define hidden noundef i32 @_Z8Return11u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

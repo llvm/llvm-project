@@ -79,10 +79,8 @@ TEST_F(IRTypeMapperTest, SVEPredicateVectorMapsToScalableI1Vector) {
   EXPECT_TRUE(Vec->getElementType()->isIntegerTy(1));
 }
 
-TEST_F(IRTypeMapperTest, SVECountMapsToAArch64SVCount) {
-  const llvm::abi::VectorType *SVCount =
-      TB.getScalablePredicateOrCountVectorType(llvm::Align(2),
-                                               llvm::abi::VectorKind::SVECount);
+TEST_F(IRTypeMapperTest, SveCountMapsToAArch64SVCount) {
+  const llvm::abi::SveCountType *SVCount = TB.getSveCountType(llvm::Align(2));
 
   auto *TET = llvm::dyn_cast<llvm::TargetExtType>(Mapper.convertType(SVCount));
   ASSERT_NE(TET, nullptr);

@@ -2,8 +2,8 @@
 ; use the result as a third operand and results in wider elements than the
 ; operands had.
 
-; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
-; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s --check-prefixes=CHECK,BE
+; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s --check-prefixes=CHECK,LE
 
 @llvm_mips_dpadd_s_h_ARG2 = global <16 x i8> <i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23>, align 16
 @llvm_mips_dpadd_s_h_ARG3 = global <16 x i8> <i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31, i8 32, i8 33, i8 34, i8 35, i8 36, i8 37, i8 38, i8 39>, align 16
@@ -67,7 +67,9 @@ entry:
 declare <2 x i64> @llvm.mips.dpadd.s.d(<2 x i64>, <4 x i32>, <4 x i32>) nounwind
 
 ; CHECK: llvm_mips_dpadd_s_d_test:
-; CHECK: ldi.d [[R1:\$w[0-9]+]],
+; LE: ldi.d [[R1:\$w[0-9]+]], 4
+; BE: splati.d [[R0:\$w[0-9]+]],
+; BE: shf.w [[R1:\$w[0-9]+]], [[R0]], 177
 ; CHECK: ld.w
 ; CHECK: ld.w
 ; CHECK: dpadd_s.d [[R1]],
@@ -136,7 +138,9 @@ entry:
 declare <2 x i64> @llvm.mips.dpadd.u.d(<2 x i64>, <4 x i32>, <4 x i32>) nounwind
 
 ; CHECK: llvm_mips_dpadd_u_d_test:
-; CHECK: ldi.d [[R1:\$w[0-9]+]],
+; LE: ldi.d [[R1:\$w[0-9]+]], 4
+; BE: splati.d [[R0:\$w[0-9]+]],
+; BE: shf.w [[R1:\$w[0-9]+]], [[R0]], 177
 ; CHECK: ld.w
 ; CHECK: ld.w
 ; CHECK: dpadd_u.d [[R1]],

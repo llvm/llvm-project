@@ -13,7 +13,6 @@ name:            add_i32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $r4, $r5
@@ -37,7 +36,6 @@ name:            add_imm
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -60,7 +58,6 @@ name:            add_negative_imm
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -83,7 +80,6 @@ name:            add_not_imm32SExt16
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4

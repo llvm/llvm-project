@@ -7,18 +7,13 @@
 # GFX1250: V_FMAMK_F64 %0, 4607182418800017408, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_imm_f64
-registers:
-  - { id: 0, class: vreg_64_align2 }
-  - { id: 1, class: vreg_64_align2 }
-  - { id: 2, class: vreg_64_align2 }
-  - { id: 3, class: vreg_64_align2 }
 body:             |
   bb.0:
 
-    %0 = IMPLICIT_DEF
-    %1 = COPY %0
-    %2 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
-    %3 = V_FMAC_F64_e32 %0, %2, %1, implicit $mode, implicit $exec
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:vreg_64_align2 = COPY %0
+    %2:vreg_64_align2 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
+    %3:vreg_64_align2 = V_FMAC_F64_e32 %0, %2, %1, implicit $mode, implicit $exec
 
 ...
 
@@ -27,18 +22,13 @@ body:             |
 # GFX1250: V_FMAMK_F64 %0.sub0_sub1, 4607182418800017408, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_imm_reg_f64
-registers:
-  - { id: 0, class: vreg_128_align2 }
-  - { id: 1, class: vreg_64_align2 }
-  - { id: 2, class: vreg_64_align2 }
-  - { id: 3, class: vreg_64_align2 }
 body:             |
   bb.0:
 
-    %0 = IMPLICIT_DEF
-    %1 = COPY %0.sub2_sub3
-    %2 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
-    %3 = V_FMAC_F64_e32 %2, %0.sub0_sub1, %1, implicit $mode, implicit $exec
+    %0:vreg_128_align2 = IMPLICIT_DEF
+    %1:vreg_64_align2 = COPY %0.sub2_sub3
+    %2:vreg_64_align2 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
+    %3:vreg_64_align2 = V_FMAC_F64_e32 %2, %0.sub0_sub1, %1, implicit $mode, implicit $exec
 
 ...
 
@@ -47,16 +37,12 @@ body:             |
 # GFX1250: V_FMAAK_F64 %0.sub0_sub1, %0.sub2_sub3, 4607182418800017408, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_f64
-registers:
-  - { id: 0, class: vreg_128_align2 }
-  - { id: 1, class: vreg_64_align2 }
-  - { id: 2, class: vreg_64_align2 }
 body:             |
   bb.0:
 
-    %0 = IMPLICIT_DEF
-    %1 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
-    %2 = V_FMAC_F64_e32 %0.sub0_sub1, %0.sub2_sub3, %1, implicit $mode, implicit $exec
+    %0:vreg_128_align2 = IMPLICIT_DEF
+    %1:vreg_64_align2 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
+    %2:vreg_64_align2 = V_FMAC_F64_e32 %0.sub0_sub1, %0.sub2_sub3, %1, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %1
 ...
 
@@ -66,18 +52,13 @@ body:             |
 
 ---
 name:            test_fmaak_sgpr_src0_f64
-registers:
-  - { id: 0, class: sreg_64 }
-  - { id: 1, class: vreg_64_align2 }
-  - { id: 2, class: vreg_64_align2 }
-  - { id: 3, class: vreg_64_align2 }
 body:             |
   bb.0:
 
-    %0 = IMPLICIT_DEF
-    %1 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
-    %2 = IMPLICIT_DEF
-    %3 = V_FMAC_F64_e32 %0, %1, %2, implicit $mode, implicit $exec
+    %0:sreg_64 = IMPLICIT_DEF
+    %1:vreg_64_align2 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
+    %2:vreg_64_align2 = IMPLICIT_DEF
+    %3:vreg_64_align2 = V_FMAC_F64_e32 %0, %1, %2, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %2
 ...
 
@@ -87,16 +68,12 @@ body:             |
 
 ---
 name:            test_fmaak_inlineimm_src0_f64
-registers:
-  - { id: 0, class: vreg_64_align2 }
-  - { id: 1, class: vreg_64_align2 }
-  - { id: 2, class: vreg_64_align2 }
 body:             |
   bb.0:
 
-    %0 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
-    %1 = IMPLICIT_DEF
-    %2 = V_FMAC_F64_e32 4611686018427387904, %0, %1, implicit $mode, implicit $exec
+    %0:vreg_64_align2 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
+    %1:vreg_64_align2 = IMPLICIT_DEF
+    %2:vreg_64_align2 = V_FMAC_F64_e32 4611686018427387904, %0, %1, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %1
 ...
 
@@ -106,16 +83,12 @@ body:             |
 
 ---
 name:            test_fmaak_otherimm_src0_f64
-registers:
-  - { id: 0, class: vreg_64_align2 }
-  - { id: 1, class: vreg_64_align2 }
-  - { id: 2, class: vreg_64_align2 }
 body:             |
   bb.0:
 
-    %0 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
-    %1 = IMPLICIT_DEF
-    %2 = V_FMAC_F64_e32 4636737291354636288, %0, %1, implicit $mode, implicit $exec
+    %0:vreg_64_align2 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
+    %1:vreg_64_align2 = IMPLICIT_DEF
+    %2:vreg_64_align2 = V_FMAC_F64_e32 4636737291354636288, %0, %1, implicit $mode, implicit $exec
 
 ...
 
@@ -123,10 +96,6 @@ body:             |
 # GCN: V_FMAC_F64_e32 %stack.0, %0, %2, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_other_constantlike_src0_f64
-registers:
-  - { id: 0, class: vreg_64_align2 }
-  - { id: 1, class: vreg_64_align2 }
-  - { id: 2, class: vreg_64_align2 }
 stack:
   - { id: 0, name: "", type: default, offset: 0, size: 128, alignment: 8,
       callee-saved-register: '', local-offset: 0, debug-info-variable: '',
@@ -134,9 +103,9 @@ stack:
 body:             |
   bb.0:
 
-    %0 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
-    %1 = IMPLICIT_DEF
-    %2 = V_FMAC_F64_e32 %stack.0, %0, %1, implicit $mode, implicit $exec
+    %0:vreg_64_align2 = V_MOV_B64_PSEUDO 4607182418800017408, implicit $exec
+    %1:vreg_64_align2 = IMPLICIT_DEF
+    %2:vreg_64_align2 = V_FMAC_F64_e32 %stack.0, %0, %1, implicit $mode, implicit $exec
 
 ...
 
@@ -145,18 +114,13 @@ body:             |
 # GFX1250: V_FMAMK_F64 %0, 123456, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_unfoldable_literal_src0_f64
-registers:
-  - { id: 0, class: vreg_64_align2 }
-  - { id: 1, class: vreg_64_align2 }
-  - { id: 2, class: vreg_64_align2 }
-  - { id: 3, class: vreg_64_align2 }
 body:             |
   bb.0:
 
-    %0 = IMPLICIT_DEF
-    %1 = COPY %0
-    %2 = V_MOV_B64_PSEUDO 123456, implicit $exec
-    %3 = V_FMAC_F64_e32 %2, %0, %1, implicit $mode, implicit $exec
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:vreg_64_align2 = COPY %0
+    %2:vreg_64_align2 = V_MOV_B64_PSEUDO 123456, implicit $exec
+    %3:vreg_64_align2 = V_FMAC_F64_e32 %2, %0, %1, implicit $mode, implicit $exec
 
 ...
 
@@ -165,18 +129,13 @@ body:             |
 # GFX1250: V_FMAMK_F64 %0, 123456, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_reg_unfoldable_literal_src1_f64
-registers:
-  - { id: 0, class: vreg_64_align2 }
-  - { id: 1, class: vreg_64_align2 }
-  - { id: 2, class: vreg_64_align2 }
-  - { id: 3, class: vreg_64_align2 }
 body:             |
   bb.0:
 
-    %0 = IMPLICIT_DEF
-    %1 = COPY %0
-    %2 = V_MOV_B64_PSEUDO 123456, implicit $exec
-    %3 = V_FMAC_F64_e32 %0, %2, %1, implicit $mode, implicit $exec
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:vreg_64_align2 = COPY %0
+    %2:vreg_64_align2 = V_MOV_B64_PSEUDO 123456, implicit $exec
+    %3:vreg_64_align2 = V_FMAC_F64_e32 %0, %2, %1, implicit $mode, implicit $exec
 
 ...
 
@@ -185,17 +144,12 @@ body:             |
 # GFX1250: V_FMAAK_F64 %0, %1, 123456, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_reg_unfoldable_literal_src2_f64
-registers:
-  - { id: 0, class: vreg_64_align2 }
-  - { id: 1, class: vreg_64_align2 }
-  - { id: 2, class: vreg_64_align2 }
-  - { id: 3, class: vreg_64_align2 }
 body:             |
   bb.0:
 
-    %0 = IMPLICIT_DEF
-    %1 = COPY %0
-    %2 = V_MOV_B64_PSEUDO 123456, implicit $exec
-    %3 = V_FMAC_F64_e32 %0, %1, %2, implicit $mode, implicit $exec
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:vreg_64_align2 = COPY %0
+    %2:vreg_64_align2 = V_MOV_B64_PSEUDO 123456, implicit $exec
+    %3:vreg_64_align2 = V_FMAC_F64_e32 %0, %1, %2, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %2
 ...

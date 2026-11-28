@@ -9,8 +9,8 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_POWERPC_H
 #define LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_POWERPC_H
 
-#include "Register/RegisterInfoInterface.h"
 #include "Register/Arch/RegisterContext_powerpc.h"
+#include "Register/RegisterInfoInterface.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 

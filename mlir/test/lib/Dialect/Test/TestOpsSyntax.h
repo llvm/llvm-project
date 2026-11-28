@@ -9,13 +9,8 @@
 #ifndef MLIR_TEST_DIALECT_TEST_TESTOPSSYNTAX_H
 #define MLIR_TEST_DIALECT_TEST_TESTOPSSYNTAX_H
 
-#include "TestAttributes.h"
-#include "TestTypes.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-
-namespace test {
-class TestReturnOp;
-} // namespace test
+#include "TestAttributesSyntax.h"
+#include "TestTypesSyntax.h"
 
 #define GET_OP_CLASSES
 #include "TestOpsSyntax.h.inc"

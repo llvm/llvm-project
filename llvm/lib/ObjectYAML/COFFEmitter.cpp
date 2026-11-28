@@ -176,7 +176,7 @@ toDebugS(ArrayRef<CodeViewYAML::YAMLDebugSubsection> Subsections,
 // Returns whether the section has any content.
 static bool writeSectionContent(COFFParser &CP, COFFYAML::Section &S,
                                 ContiguousBlobAccumulator &CBA) {
-  if (S.SectionData.binary_size() == 0) {
+  if (!S.SectionData || S.SectionData->binary_size() == 0) {
     if (S.Name == ".debug$S") {
       assert(CP.StringsAndChecksums.hasStrings() &&
              "Object file does not have debug string table!");
@@ -190,7 +190,7 @@ static bool writeSectionContent(COFFParser &CP, COFFYAML::Section &S,
     }
   }
 
-  bool HasContent = S.SectionData.binary_size() != 0;
+  bool HasContent = S.SectionData && S.SectionData->binary_size() != 0;
   for (const auto &E : S.StructuredData)
     HasContent |= E.size() != 0;
   // Every BB address map entry encodes at least a version and a feature field.
@@ -221,7 +221,8 @@ static bool writeSectionContent(COFFParser &CP, COFFYAML::Section &S,
   S.Header.PointerToRawData = CBA.getOffset();
   for (const auto &E : S.StructuredData)
     E.writeAsBinary(CBA);
-  CBA.writeAsBinary(S.SectionData);
+  if (S.SectionData)
+    CBA.writeAsBinary(*S.SectionData);
   if (S.BBAddrMapEntries)
     BBAddrMapYAML::encodePayload(*S.BBAddrMapEntries, PGOAnalyses, CBA,
                                  LittleEndian, CP.is64Bit() ? 8 : 4);
@@ -408,7 +409,8 @@ static bool writeCOFF(COFFParser &CP, ContiguousBlobAccumulator &CBA) {
   for (COFFYAML::Section &S : CP.Obj.Sections) {
     // We support specifying exactly one of SectionData or Subsections. So if
     // there is already some SectionData, then we don't need to do any of this.
-    if (S.Name == ".debug$S" && S.SectionData.binary_size() == 0) {
+    if (S.Name == ".debug$S" &&
+        (!S.SectionData || S.SectionData->binary_size() == 0)) {
       CodeViewYAML::initializeStringsAndChecksums(S.DebugS,
                                                   CP.StringsAndChecksums);
       if (CP.StringsAndChecksums.hasChecksums() &&

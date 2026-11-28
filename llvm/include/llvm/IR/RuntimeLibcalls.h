@@ -29,6 +29,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
+#include <string>
 
 /// TableGen will produce 2 enums, RTLIB::Libcall and
 /// RTLIB::LibcallImpl. RTLIB::Libcall describes abstract functionality the
@@ -48,6 +49,8 @@ template <> struct enum_iteration_traits<RTLIB::LibcallImpl> {
 };
 
 class LibcallLoweringInfo;
+class GlobalValue;
+class Module;
 class Type;
 
 namespace Intrinsic {
@@ -81,7 +84,20 @@ private:
   /// Bitset of libcalls a module may emit a call to.
   LibcallImplBitset AvailableLibcallImpls;
 
+  unsigned WCharSize;
   LongDoubleFormat LongDoubleFmt;
+
+  /// Whether math library calls may write errno.
+  bool MathErrno = true;
+
+  std::string ABIName;
+
+  /// Lower a returned C struct of two \p EltTy values for the target ABI.
+  /// \returns the IR return type, and the struct type if the struct is
+  /// returned through an sret argument (in which case the IR return type is
+  /// void), or nullptr if it is returned in registers.
+  std::pair<Type *, Type *> lowerCPairReturn(const Triple &TT,
+                                             Type *EltTy) const;
 
 public:
   friend class llvm::LibcallLoweringInfo;
@@ -91,7 +107,7 @@ public:
   LLVM_ABI explicit RuntimeLibcallsInfo(
       const Triple &TT,
       ExceptionHandling ExceptionModel = ExceptionHandling::Default,
-      FloatABI::ABIType FloatABI = FloatABI::Default,
+      unsigned WCharSize = 0, FloatABI::ABIType FloatABI = FloatABI::Default,
       std::optional<LongDoubleFormat> LDblFormat = std::nullopt,
       StringRef ABIName = "", VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
@@ -216,6 +232,38 @@ public:
   getFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
                 RTLIB::LibcallImpl LibcallImpl) const;
 
+  /// \returns the value type of \p LibcallImpl if it is a global variable
+  /// rather than a function, or nullptr otherwise.
+  LLVM_ABI Type *getVariableType(LLVMContext &Ctx, const Triple &TT,
+                                 const DataLayout &DL,
+                                 RTLIB::LibcallImpl LibcallImpl) const;
+
+  /// \returns the declaration of \p LibcallImpl in \p M. If \p M does not
+  /// contain a global with its name, a function is inserted with the
+  /// signature, attributes and calling convention of \p LibcallImpl. If the
+  /// signature is unknown, the function is declared as void(...).
+  LLVM_ABI FunctionCallee
+  getOrInsertLibcallDecl(Module &M, RTLIB::LibcallImpl LibcallImpl) const;
+
+  /// \returns the global for the variable \p LibcallImpl in \p M. If \p M does
+  /// not contain a global with its name, a global variable is inserted with
+  /// the type and thread local mode of \p LibcallImpl.
+  LLVM_ABI GlobalValue *
+  getOrInsertImplGlobal(Module &M, RTLIB::LibcallImpl LibcallImpl) const;
+
+  /// \returns true if \p LibcallImpl is a global variable rather than a
+  /// function.
+  static bool isVariable(RTLIB::LibcallImpl LibcallImpl) {
+    RTLIB::FuncArgTypeID ID = SignatureTable[SignatureOffset[LibcallImpl]];
+    return ID == RTLIB::Variable || ID == RTLIB::ThreadLocalVariable;
+  }
+
+  /// \returns true if \p LibcallImpl is a thread local variable.
+  static bool isThreadLocalVariable(RTLIB::LibcallImpl LibcallImpl) {
+    return SignatureTable[SignatureOffset[LibcallImpl]] ==
+           RTLIB::ThreadLocalVariable;
+  }
+
   /// Return the unmasked variant of the masked vector libcall \p LC, or
   /// RTLIB::UNKNOWN_LIBCALL if \p LC is not a masked vector libcall.
   LLVM_ABI static RTLIB::Libcall getUnmaskedVectorLibcall(RTLIB::Libcall LC);
@@ -270,23 +318,6 @@ private:
   /// the value \p StrOffset.
   static inline iota_range<RTLIB::LibcallImpl>
   libcallImplNameHit(uint16_t NameOffsetEntry, uint16_t StrOffset);
-
-  static bool darwinHasSinCosStret(const Triple &TT) {
-    if (!TT.isOSDarwin())
-      return false;
-
-    // Don't bother with 32 bit x86.
-    if (TT.getArch() == Triple::x86)
-      return false;
-    // Macos < 10.9 has no sincos_stret.
-    if (TT.isMacOSX())
-      return !TT.isMacOSXVersionLT(10, 9) && TT.isArch64Bit();
-    // iOS < 7.0 has no sincos_stret.
-    if (TT.isiOS())
-      return !TT.isOSVersionLT(7, 0);
-    // Any other darwin such as WatchOS/TvOS is new enough.
-    return true;
-  }
 
   LLVM_READONLY
   static bool isAAPCS_ABI(const Triple &TT, StringRef ABIName);

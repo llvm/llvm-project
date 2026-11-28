@@ -99,6 +99,23 @@ define i64 @foo(i64 %a, i64 %b) {
   ret i64 %sum
 }
 
+; CHECK: OpFunction
+; CHECK: OpBranchConditional
+; CHECK: OpLabel
+; CHECK: OpIAddCarry %[[StructChar]]
+; CHECK: OpReturnValue
+define spir_func i8 @non_entry(i8 %a, i8 %b, i1 %c) {
+entry:
+  br i1 %c, label %bb, label %exit
+bb:
+  %r = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
+  %v = extractvalue { i8, i1 } %r, 0
+  br label %exit
+exit:
+  %p = phi i8 [ 0, %entry ], [ %v, %bb ]
+  ret i8 %p
+}
+
 declare {i8, i1} @llvm.uadd.with.overflow.i8(i8, i8)
 declare {i32, i1} @llvm.uadd.with.overflow.i32(i32, i32)
 declare {i64, i1} @llvm.uadd.with.overflow.i64(i64, i64)

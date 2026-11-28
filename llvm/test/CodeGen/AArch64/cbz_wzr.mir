@@ -4,7 +4,6 @@
 
 ---
 name:            cbz_wzr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cbz_wzr
   ; CHECK: bb.0:
@@ -36,7 +35,6 @@ body:             |
 ...
 ---
 name:            cbnz_wzr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cbnz_wzr
   ; CHECK: bb.0:
@@ -66,7 +64,6 @@ body:             |
 ...
 ---
 name:            tbz_wzr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: tbz_wzr
   ; CHECK: bb.0:
@@ -98,7 +95,6 @@ body:             |
 ...
 ---
 name:            tbnz_wzr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: tbnz_wzr
   ; CHECK: bb.0:
@@ -129,7 +125,6 @@ body:             |
 
 ---
 name:            cbz_xzr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cbz_xzr
   ; CHECK: bb.0:
@@ -161,7 +156,6 @@ body:             |
 ...
 ---
 name:            cbnz_xzr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: cbnz_xzr
   ; CHECK: bb.0:
@@ -191,7 +185,6 @@ body:             |
 ...
 ---
 name:            tbz_xzr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: tbz_xzr
   ; CHECK: bb.0:
@@ -223,7 +216,6 @@ body:             |
 ...
 ---
 name:            tbnz_xzr
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: tbnz_xzr
   ; CHECK: bb.0:

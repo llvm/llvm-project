@@ -83,5 +83,18 @@ TEST_F(TBAATest, checkTBAAMerging) {
   EXPECT_TRUE(!verifyFunction(*F));
 }
 
-} // end anonymous namspace
-} // end llvm namespace
+TEST_F(TBAATest, AdjustAccessWithinField) {
+  auto *Ty = MD.createTBAAScalarTypeNode("long", MD.createTBAARoot("root"));
+  auto *Tag = MD.createTBAAStructTagNode(Ty, Ty, 0);
+  AAMDNodes AA;
+  AA.TBAAStruct = MDNode::get(
+      C,
+      {ConstantAsMetadata::get(ConstantInt::get(Type::getInt64Ty(C), 0)),
+       ConstantAsMetadata::get(ConstantInt::get(Type::getInt64Ty(C), 8)), Tag});
+  EXPECT_EQ(AA.adjustForAccess(4).TBAA, Tag);
+  EXPECT_EQ(AA.adjustForAccess(8).TBAA, Tag);
+  EXPECT_EQ(AA.adjustForAccess(12).TBAA, nullptr);
+}
+
+} // namespace
+} // namespace llvm

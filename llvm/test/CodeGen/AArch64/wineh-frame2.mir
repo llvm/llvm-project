@@ -31,9 +31,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       true
-registers:
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 frameInfo:

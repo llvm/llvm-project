@@ -8,8 +8,8 @@
 
 #include "src/stdio/snprintf.h"
 
+#include "src/__support/CPP/limits.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
-#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using LlvmLibcSNPrintfTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;

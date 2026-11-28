@@ -10,9 +10,11 @@
 
 #pragma once
 
+#include "sanitizer_common/sanitizer_internal_defs.h"
+
 namespace __rtsan {
 
-class Context {
+class alignas(SANITIZER_CACHE_LINE_SIZE) Context {
 public:
   Context();
 

@@ -611,6 +611,8 @@ def LaunchIndx : AnyTypeOf<[Index, I32, I64]>;
 def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
       GPU_AsyncOpInterface, AttrSizedOperandSegments,
       DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+      MemoryEffects<[MemRead, MemWrite,
+                     MemAlloc<AutomaticAllocationScopeResource>]>,
       AllTypesMatch<["gridSizeX", "gridSizeY", "gridSizeZ", "blockSizeX",
                      "blockSizeY", "blockSizeZ"]>]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
@@ -2244,7 +2246,7 @@ def MMAElementWiseAttr : EnumAttr<GPU_Dialect, MMAElementWise,
 
 def GPU_SubgroupMmaElementwiseOp : GPU_Op<"subgroup_mma_elementwise",
     [Pure,
-     AllTypesMatch<["args"]>]>{
+     VariadicAllTypesMatch<"args">]>{
 
   let summary = "GPU warp elementwise operation on a matrix";
 

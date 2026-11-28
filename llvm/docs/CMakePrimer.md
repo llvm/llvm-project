@@ -44,7 +44,7 @@ The example below is the full CMake build for building a C++ "Hello World"
 program. The example uses only CMake language-defined functions.
 
 ```cmake
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 3.31.0)
 project(HelloWorld)
 add_executable(HelloWorld HelloWorld.cpp)
 ```
@@ -54,7 +54,7 @@ and `if` blocks. To make the example above more complicated you could add an if
 block to define "APPLE" when targeting Apple platforms:
 
 ```cmake
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 3.31.0)
 project(HelloWorld)
 add_executable(HelloWorld HelloWorld.cpp)
 if(APPLE)

@@ -44,7 +44,6 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
@@ -57,10 +56,12 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
@@ -80,8 +81,6 @@
 #include <vector>
 
 namespace llvm {
-
-static mc::RegisterMCTargetOptionsFlags MOF;
 
 using namespace dwarf_linker;
 
@@ -176,26 +175,54 @@ Error DwarfLinkerForBinary::emitRelocations(
   if (!Options.ResourceDir)
     return Error::success();
 
-  RelocationMap RM(DM.getTriple(), DM.getBinaryPath());
-  for (auto &Obj : ObjectsForLinking) {
-    if (!Obj.OutRelocs->isInitialized())
-      continue;
-    Obj.OutRelocs->addValidRelocs(RM);
+  StringRef ArchName = Triple::getArchName(DM.getTriple().getArch(),
+                                           DM.getTriple().getSubArch());
+  std::string FileName =
+      (sys::path::filename(DM.getBinaryPath()) + ".yml").str();
+
+  // A dSYM being updated has no relocations, its addresses being final, so it
+  // keeps the relocation map it has.
+  SmallString<128> InputPath;
+  if (Options.Update) {
+    InputPath =
+        sys::path::parent_path(sys::path::parent_path(DM.getBinaryPath()));
+    sys::path::append(InputPath, "Relocations", ArchName, FileName);
+    if (!sys::fs::exists(InputPath))
+      return Error::success();
   }
 
   SmallString<128> Path;
   // Create the "Relocations" directory in the "Resources" directory, and
   // create an architecture-specific directory in the "Relocations" directory.
-  StringRef ArchName = Triple::getArchName(RM.getTriple().getArch(),
-                                           RM.getTriple().getSubArch());
   sys::path::append(Path, *Options.ResourceDir, "Relocations", ArchName);
   if (std::error_code EC = sys::fs::create_directories(Path.str(), true,
                                                        sys::fs::perms::all_all))
     return errorCodeToError(EC);
 
   // Append the file name.
-  sys::path::append(Path, sys::path::filename(DM.getBinaryPath()));
-  Path.append(".yml");
+  sys::path::append(Path, FileName);
+
+  if (Options.Update) {
+    bool IsInput = false;
+    if (sys::fs::exists(Path) &&
+        !sys::fs::equivalent(InputPath, Path, IsInput) && IsInput)
+      return Error::success();
+    return errorCodeToError(sys::fs::copy_file(InputPath, Path));
+  }
+
+  RelocationMap RM(DM.getTriple(), DM.getBinaryPath());
+  for (auto &Obj : ObjectsForLinking) {
+    if (!Obj.OutRelocs->isInitialized())
+      continue;
+    size_t NumSaved = Obj.OutRelocs->addValidRelocs(RM);
+    // A valid relocation is against a symbol of the binary, whose DIE is kept
+    // along with the relocation, so saving none means they were lost.
+    if (NumSaved == 0 && Obj.OutRelocs->getNumInputRelocs() != 0)
+      reportWarning("none of the " + Twine(Obj.OutRelocs->getNumInputRelocs()) +
+                        " valid relocations was saved to the relocation map, "
+                        "so merging the library would drop this debug info",
+                    Obj.Object->FileName);
+  }
 
   std::error_code EC;
   raw_fd_ostream OS(Path.str(), EC, sys::fs::OF_Text);
@@ -269,6 +296,11 @@ ErrorOr<std::unique_ptr<DWARFFile>> DwarfLinkerForBinary::loadObject(
         Obj.getObjectFilename(), std::move(Context),
         std::make_unique<AddressManager>(*this, *ErrorOrObj, Obj, DLBRM),
         [&](StringRef FileName) { BinHolder.eraseObjectEntry(FileName); });
+    Res->UnitOffsetsFunc = [DLBRM](uint64_t UnitOffset,
+                                   uint64_t DebugInfoOffset,
+                                   uint64_t DebugAddrOffset) {
+      DLBRM->setUnitOffsets(UnitOffset, DebugInfoOffset, DebugAddrOffset);
+    };
 
     if (Error E = PL.collect(*ErrorOrObj))
       reportWarning(toString(std::move(E)), Obj.getObjectFilename());
@@ -481,6 +513,54 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
     RelocationsToApply.emplace_back(AddressFromDwarfVM, Value,
                                     ShouldSubtractDwarfVM);
   }
+}
+
+std::shared_ptr<PrefixMapper>
+DwarfLinkerForBinary::findCompilationPrefixMap(StringRef ObjectPath) {
+  // With compilation caching, the compiler can prefix map the paths it sees,
+  // so that cache keys don't depend on where the build happens. The build
+  // system then records the mapping in compilation-prefix-map.json in a parent
+  // directory of the object files, as a JSON object from each remapped prefix
+  // to the original one.
+  StringRef ObjectDir = sys::path::parent_path(ObjectPath);
+  auto [It, Inserted] = CompilationPrefixMaps.try_emplace(ObjectDir);
+  if (!Inserted)
+    return It->second;
+
+  std::optional<std::string> Path = vfs::findFileInParentDirectories(
+      *Options.VFS, ObjectDir, {"compilation-prefix-map.json"});
+  if (!Path)
+    return nullptr;
+
+  if (Options.Verbose)
+    outs() << "found compilation prefix map " << *Path << '\n';
+  auto BufferOrErr = Options.VFS->getBufferForFile(*Path);
+  if (!BufferOrErr) {
+    reportWarning("cannot read compilation prefix map: " +
+                      BufferOrErr.getError().message(),
+                  *Path);
+    return nullptr;
+  }
+  Expected<json::Value> Root = json::parse((*BufferOrErr)->getBuffer());
+  if (!Root) {
+    reportWarning("cannot parse compilation prefix map: " +
+                      toString(Root.takeError()),
+                  *Path);
+    return nullptr;
+  }
+  const json::Object *Entries = Root->getAsObject();
+  if (!Entries) {
+    reportWarning("cannot parse compilation prefix map: expected a JSON "
+                  "object",
+                  *Path);
+    return nullptr;
+  }
+  auto PrefixMap = std::make_shared<PrefixMapper>();
+  for (const auto &Entry : *Entries)
+    if (std::optional<StringRef> Original = Entry.second.getAsString())
+      PrefixMap->add(MappedPrefix(Entry.first, *Original));
+  PrefixMap->sort();
+  return It->second = std::move(PrefixMap);
 }
 
 Error DwarfLinkerForBinary::copySwiftInterfaces(StringRef Architecture) const {
@@ -930,6 +1010,8 @@ bool DwarfLinkerForBinary::linkImpl(
     auto DLBRelocMap = std::make_shared<DwarfLinkerForBinaryRelocationMap>();
     if (ErrorOr<std::unique_ptr<DWARFFile>> ErrorOrObj =
             loadObject(*Obj, Map, RL, PL, DLBRelocMap)) {
+      (*ErrorOrObj)->PrefixMap =
+          findCompilationPrefixMap(Obj->getObjectFilename());
       ObjectsForLinking.emplace_back(std::move(*ErrorOrObj), DLBRelocMap);
       GeneralLinker->addObjectFile(*ObjectsForLinking.back().Object, Loader,
                                    OnCUDieLoaded);
@@ -988,6 +1070,12 @@ bool DwarfLinkerForBinary::linkImpl(
 
   Streamer->finish();
   return true;
+}
+
+static bool isDwarfSection(const object::MachOObjectFile &Obj,
+                           object::section_iterator Sec) {
+  return Sec != Obj.section_end() &&
+         Obj.getSectionFinalSegmentName(Sec->getRawDataRefImpl()) == "__DWARF";
 }
 
 /// Iterate over the relocations of the given \p Section and
@@ -1060,6 +1148,11 @@ void DwarfLinkerForBinary::AddressManager::findValidRelocsMachO(
       if (const auto *Mapping = DMO.lookupSymbol(*SymbolName))
         ValidRelocs.emplace_back(Offset64, RelocSize, Addend, Mapping->getKey(),
                                  Mapping->getValue());
+    } else if (isDwarfSection(Obj, Obj.getRelocationSection(RelocDataRef))) {
+      // A reference into a DWARF section holds an offset into that section,
+      // not an object address, so it must not be matched against the debug
+      // map. The linker rewrites these offsets itself.
+      continue;
     } else if (const auto *Mapping = DMO.lookupObjectAddress(SymAddress)) {
       // Do not store the addend. The addend was the address of the symbol in
       // the object file, the address in the binary that is stored in the debug
@@ -1271,22 +1364,19 @@ DwarfLinkerForBinary::AddressManager::relocate(const ValidReloc &Reloc) const {
   return Reloc.SymbolMapping.BinaryAddress + Reloc.Addend;
 }
 
-void DwarfLinkerForBinary::AddressManager::updateAndSaveValidRelocs(
-    bool IsDWARF5, uint64_t OriginalUnitOffset, int64_t LinkedOffset,
-    uint64_t StartOffset, uint64_t EndOffset) {
-  std::vector<ValidReloc> InRelocs =
-      getRelocations(ValidDebugInfoRelocs, StartOffset, EndOffset);
-  if (IsDWARF5)
-    InRelocs = getRelocations(ValidDebugAddrRelocs, StartOffset, EndOffset);
+bool DwarfLinkerForBinary::AddressManager::updateAndSaveValidRelocs(
+    RelocSectionKind InSection, RelocSectionKind OutSection,
+    uint64_t OriginalUnitOffset, int64_t LinkedOffset, uint64_t StartOffset,
+    uint64_t EndOffset) {
+  std::vector<ValidReloc> InRelocs = getRelocations(
+      InSection == RelocSectionKind::DebugAddr ? ValidDebugAddrRelocs
+                                               : ValidDebugInfoRelocs,
+      StartOffset, EndOffset);
   DwarfLinkerRelocMap->updateAndSaveValidRelocs(
-      IsDWARF5, InRelocs, OriginalUnitOffset, LinkedOffset);
+      OutSection, InRelocs, OriginalUnitOffset, LinkedOffset);
+  return !InRelocs.empty();
 }
 
-void DwarfLinkerForBinary::AddressManager::updateRelocationsWithUnitOffset(
-    uint64_t OriginalUnitOffset, uint64_t OutputUnitOffset) {
-  DwarfLinkerRelocMap->updateRelocationsWithUnitOffset(OriginalUnitOffset,
-                                                       OutputUnitOffset);
-}
 /// Apply the valid relocations found by findValidRelocs() to
 /// the buffer \p Data, taking into account that Data is at \p BaseOffset
 /// in the debug_info section.
@@ -1318,38 +1408,52 @@ bool DwarfLinkerForBinary::AddressManager::applyValidRelocs(
 
 void DwarfLinkerForBinaryRelocationMap::init(DWARFContext &Context) {
   for (const std::unique_ptr<DWARFUnit> &CU : Context.compile_units())
-    StoredValidDebugInfoRelocsMap.insert(
-        std::make_pair(CU->getOffset(), std::vector<ValidReloc>()));
-  // FIXME: Support relocations debug_addr (DWARF5).
+    Units.try_emplace(CU->getOffset());
 }
 
-void DwarfLinkerForBinaryRelocationMap::addValidRelocs(RelocationMap &RM) {
-  for (const auto &DebugInfoRelocs : StoredValidDebugInfoRelocsMap) {
-    for (const auto &InfoReloc : DebugInfoRelocs.second)
-      RM.addRelocationMapEntry(InfoReloc);
+size_t DwarfLinkerForBinaryRelocationMap::addValidRelocs(RelocationMap &RM) {
+  std::vector<ValidReloc> DebugInfoRelocs;
+  std::vector<ValidReloc> DebugAddrRelocs;
+  for (const auto &[UnitOffset, Relocs] : Units) {
+    auto [DebugInfoBase, DebugAddrBase] =
+        Relocs.Offsets.value_or(std::pair<uint64_t, uint64_t>(0, 0));
+    for (ValidReloc R : Relocs.DebugInfo) {
+      R.Offset = R.Offset + DebugInfoBase;
+      DebugInfoRelocs.push_back(R);
+    }
+    for (ValidReloc R : Relocs.DebugAddr) {
+      R.Offset = R.Offset + DebugAddrBase;
+      DebugAddrRelocs.push_back(R);
+    }
   }
-  // FIXME: Support relocations debug_addr (DWARF5).
+
+  // The units are unordered.
+  llvm::stable_sort(DebugInfoRelocs);
+  llvm::stable_sort(DebugAddrRelocs);
+  for (const ValidReloc &R : DebugInfoRelocs)
+    RM.addDebugInfoRelocationMapEntry(R);
+  for (const ValidReloc &R : DebugAddrRelocs)
+    RM.addDebugAddrRelocationMapEntry(R);
+  return DebugInfoRelocs.size() + DebugAddrRelocs.size();
 }
 
-void DwarfLinkerForBinaryRelocationMap::updateRelocationsWithUnitOffset(
-    uint64_t OriginalUnitOffset, uint64_t OutputUnitOffset) {
-  std::vector<ValidReloc> &StoredValidDebugInfoRelocs =
-      StoredValidDebugInfoRelocsMap[OriginalUnitOffset];
-  for (ValidReloc &R : StoredValidDebugInfoRelocs) {
-    R.Offset = (uint64_t)R.Offset + OutputUnitOffset;
-  }
-  // FIXME: Support relocations debug_addr (DWARF5).
+void DwarfLinkerForBinaryRelocationMap::setUnitOffsets(
+    uint64_t UnitOffset, uint64_t DebugInfoOffset, uint64_t DebugAddrOffset) {
+  auto It = Units.find(UnitOffset);
+  assert(It != Units.end() && "unit placed before init()");
+  It->second.Offsets.emplace(DebugInfoOffset, DebugAddrOffset);
 }
 
 void DwarfLinkerForBinaryRelocationMap::updateAndSaveValidRelocs(
-    bool IsDWARF5, std::vector<ValidReloc> &InRelocs, uint64_t UnitOffset,
-    int64_t LinkedOffset) {
-  std::vector<ValidReloc> &OutRelocs =
-      StoredValidDebugInfoRelocsMap[UnitOffset];
-  if (IsDWARF5)
-    OutRelocs = StoredValidDebugAddrRelocsMap[UnitOffset];
+    RelocSectionKind OutSection, const std::vector<ValidReloc> &InRelocs,
+    uint64_t UnitOffset, int64_t LinkedOffset) {
+  auto It = Units.find(UnitOffset);
+  assert(It != Units.end() && "relocations saved before init()");
+  std::vector<ValidReloc> &OutRelocs = OutSection == RelocSectionKind::DebugAddr
+                                           ? It->second.DebugAddr
+                                           : It->second.DebugInfo;
 
-  for (ValidReloc &R : InRelocs) {
+  for (const ValidReloc &R : InRelocs) {
     OutRelocs.emplace_back(R.Offset + LinkedOffset, R.Size, R.Addend,
                            R.SymbolName, R.SymbolMapping);
   }

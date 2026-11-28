@@ -619,6 +619,40 @@ func.func @tf32_elements_attr() {
 
 // -----
 
+// Test MXI8 dense elements at both storage endpoints and around zero.
+
+// CHECK-LABEL: func @mxi8_elements_attr
+func.func @mxi8_elements_attr() {
+  // CHECK: "foo"() {attr = dense<tensor<4xmxi8> : [-128 : i8, -1 : i8, 0 : i8, 127 : i8]>} : () -> ()
+  "foo"() {attr = dense<tensor<4xmxi8> : [-128 : i8, -1 : i8, 0 : i8, 127 : i8]>} : () -> ()
+  // CHECK: "foo"() {attr = dense<tensor<3xmxi8> : 64 : i8>} : () -> ()
+  "foo"() {attr = dense<tensor<3xmxi8> : 64 : i8>} : () -> ()
+  // CHECK: "foo"() {attr = dense<vector<2xmxi8> : [-128 : i8, 127 : i8]>} : () -> ()
+  "foo"() {attr = dense<vector<2xmxi8> : [-128 : i8, 127 : i8]>} : () -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @mxi8_hex_elements_attr
+func.func @mxi8_hex_elements_attr() {
+  // CHECK: "foo"() {attr = dense<tensor<1xmxi8> : -128 : i8>} : () -> ()
+  "foo"() {attr = dense<"0x80"> : tensor<1xmxi8>} : () -> ()
+  // CHECK: "foo"() {attr = dense<tensor<3xmxi8> : 64 : i8>} : () -> ()
+  "foo"() {attr = dense<"0x40"> : tensor<3xmxi8>} : () -> ()
+  // CHECK: "foo"() {attr = dense<tensor<4xmxi8> : [-128 : i8, -1 : i8, 0 : i8, 127 : i8]>} : () -> ()
+  "foo"() {attr = dense<"0x80FF007F"> : tensor<4xmxi8>} : () -> ()
+  // CHECK: "foo"() {attr = dense<vector<2xmxi8> : [-128 : i8, 127 : i8]>} : () -> ()
+  "foo"() {attr = dense<"0x807F"> : vector<2xmxi8>} : () -> ()
+  // CHECK: "foo"() {attr = sparse<0, -128> : tensor<1xmxi8>} : () -> ()
+  "foo"() {attr = sparse<0, "0x80"> : tensor<1xmxi8>} : () -> ()
+  // CHECK: "foo"() {attr = sparse<[0, 2], [-128, 127]> : tensor<3xmxi8>} : () -> ()
+  "foo"() {attr = sparse<[0, 2], "0x807F"> : tensor<3xmxi8>} : () -> ()
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // Test StringElementsAttr
 //===----------------------------------------------------------------------===//

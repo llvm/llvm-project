@@ -21,6 +21,7 @@ class Builtin_LocationAttr<string name, list<Trait> traits = []>
     : LocationAttrDef<Builtin_Dialect, name, traits> {
   let cppClassName = name;
   let mnemonic = ?;
+  let cppIncludes = ["mlir/IR/Location.h"];
 }
 
 //===----------------------------------------------------------------------===//

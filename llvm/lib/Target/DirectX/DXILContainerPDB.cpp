@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectX.h"
-#include "MCTargetDesc/DirectXContainerObjectWriter.h"
+#include "MCTargetDesc/DirectXMCOptions.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/CodeView/GUID.h"
@@ -20,7 +20,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -31,6 +30,7 @@ using namespace llvm;
 namespace {
 
 class DXILContainerPDBImpl : MCDXContainerBaseWriter {
+  const DirectXMCOptions *CLOpts = nullptr;
   Module *M = nullptr;
   SmallVector<MCDXContainerPart> Parts;
 
@@ -65,7 +65,7 @@ bool DXILContainerPDBImpl::shouldSkipSection(StringRef SectionName,
                                              size_t SectionSize) {
   if (MCDXContainerBaseWriter::shouldSkipSection(SectionName, SectionSize))
     return true;
-  if (dxil::SlimDebug && SectionName == "ILDB")
+  if (CLOpts->slim_debug && SectionName == "ILDB")
     return true;
 
   // Skip sections that are irrelevant for debug info.
@@ -112,6 +112,7 @@ static GlobalVariable *createPrivateDataGlobal(Module &M, StringRef Data) {
 bool DXILContainerPDBImpl::runOnModule(Module &M) {
   llvm::scope_exit Cleanup([&]() { reset(); });
   this->M = &M;
+  CLOpts = &M.getContext().getLibraryOptions().get<DirectXMCOptions>();
 
   SmallString<128> DebugFileName;
   ArrayRef<char> ModuleHash;
@@ -127,7 +128,7 @@ bool DXILContainerPDBImpl::runOnModule(Module &M) {
   }
 
   // PDB emission was not requested.
-  if (DebugFileName.empty() && !dxil::PdbInPrivate)
+  if (DebugFileName.empty() && !CLOpts->pdb_in_private)
     return false;
   if (ModuleHash.empty())
     report_fatal_error("Module hash for PDB not found");
@@ -190,7 +191,7 @@ bool DXILContainerPDBImpl::runOnModule(Module &M) {
                             Twine(toString(std::move(Err))));
   }
 
-  if (!dxil::PdbInPrivate)
+  if (!CLOpts->pdb_in_private)
     return false;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =

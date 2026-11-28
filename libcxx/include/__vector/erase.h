@@ -26,7 +26,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator, class _Up>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::size_type
+_LIBCPP_CONSTEXPR_SINCE_CXX20 inline typename vector<_Tp, _Allocator>::size_type
 erase(vector<_Tp, _Allocator>& __c, const _Up& __v) {
   auto __old_size = __c.size();
   __c.erase(std::remove(__c.begin(), __c.end(), __v), __c.end());
@@ -34,7 +34,7 @@ erase(vector<_Tp, _Allocator>& __c, const _Up& __v) {
 }
 
 template <class _Tp, class _Allocator, class _Predicate>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::size_type
+_LIBCPP_CONSTEXPR_SINCE_CXX20 inline typename vector<_Tp, _Allocator>::size_type
 erase_if(vector<_Tp, _Allocator>& __c, _Predicate __pred) {
   auto __old_size = __c.size();
   __c.erase(std::remove_if(__c.begin(), __c.end(), __pred), __c.end());

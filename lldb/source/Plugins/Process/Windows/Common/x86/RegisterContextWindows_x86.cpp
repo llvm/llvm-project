@@ -15,10 +15,10 @@
 #include "lldb/lldb-private-types.h"
 
 #include "ProcessWindowsLog.h"
-#include "RegisterContextWindows_x86.h"
 #include "Register/Arch/RegisterContext_x86.h"
-#include "TargetThreadWindows.h"
 #include "Register/Arch/lldb-x86-register-enums.h"
+#include "RegisterContextWindows_x86.h"
+#include "TargetThreadWindows.h"
 
 #include "llvm/ADT/STLExtras.h"
 

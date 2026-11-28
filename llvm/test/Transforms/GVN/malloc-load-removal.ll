@@ -33,7 +33,7 @@ if.end:                                           ; preds = %if.then, %entry
   ret ptr %call
 }
 
-declare noalias ptr @_Znwm(i64) nounwind
+declare noalias ptr @_Znwm(i64) nounwind allockind("alloc,uninitialized") allocsize(0)
 
 define noalias ptr @test2() nounwind uwtable ssp {
 ; CHECK-LABEL: define noalias ptr @test2(

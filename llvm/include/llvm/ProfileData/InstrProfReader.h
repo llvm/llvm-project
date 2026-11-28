@@ -364,7 +364,6 @@ private:
   // After value profile is all read, this pointer points to
   // the header of next profile data (if exists)
   const uint8_t *ValueDataStart;
-  uint32_t ValueKindLast;
   uint32_t CurValueDataSize;
   std::vector<llvm::object::BuildID> BinaryIds;
 

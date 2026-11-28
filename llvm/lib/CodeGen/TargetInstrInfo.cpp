@@ -111,13 +111,14 @@ static bool isAsmComment(const char *Str, const MCAsmInfo &MAI) {
 /// simple--i.e. not a logical or arithmetic expression--size values without
 /// the optional fill value. This is primarily used for creating arbitrary
 /// sized inline asm blocks for testing purposes.
-unsigned TargetInstrInfo::getInlineAsmLength(
-  const char *Str,
-  const MCAsmInfo &MAI, const TargetSubtargetInfo *STI) const {
+unsigned TargetInstrInfo::getInlineAsmLength(const char *Str,
+                                             const MCAsmInfo &MAI,
+                                             unsigned MaxInstLength) const {
   // Count the number of instructions in the asm.
   bool AtInsnStart = true;
   unsigned Length = 0;
-  const unsigned MaxInstLength = MAI.getMaxInstLength(STI);
+  if (MaxInstLength == 0)
+    MaxInstLength = MAI.getMaxInstLength();
   for (; *Str; ++Str) {
     if (*Str == '\n' || strncmp(Str, MAI.getSeparatorString(),
                                 strlen(MAI.getSeparatorString())) == 0) {
@@ -233,6 +234,8 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   SmallVector<unsigned> UpdateImplicitDefIdx;
   if (HasDef && MI.hasImplicitDef()) {
     for (auto [OpNo, MO] : llvm::enumerate(MI.implicit_operands())) {
+      if (!MO.isReg())
+        continue;
       Register ImplReg = MO.getReg();
       if ((ImplReg.isVirtual() && ImplReg == Reg0) ||
           (ImplReg.isPhysical() && Reg0.isPhysical() &&
@@ -1064,7 +1067,7 @@ bool TargetInstrInfo::getAccumulatorReassociationPatterns(
   if (!MRI.hasOneNonDBGUser(Root.getOperand(0).getReg()))
     return false;
 
-  auto User = MRI.use_instr_begin(Root.getOperand(0).getReg());
+  auto User = MRI.use_instr_nodbg_begin(Root.getOperand(0).getReg());
   if (User->getOpcode() == Opc)
     return false;
 
@@ -2096,10 +2099,11 @@ std::string TargetInstrInfo::createMIROperandComment(const MachineInstr &MI,
   OS << F.getKindName();
 
   unsigned RCID;
-  if (!F.isImmKind() && !F.isMemKind() && F.hasRegClassConstraint(RCID))
+  if (!F.isImmKind() && !F.isMemKind() && !F.isFuncKind() &&
+      F.hasRegClassConstraint(RCID))
     OS << ':' << TRI.getRegClassName(TRI.getRegClass(RCID));
 
-  if (F.isMemKind()) {
+  if (F.isMemKind() || F.isFuncKind()) {
     InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();
     OS << ":" << InlineAsm::getMemConstraintName(MCID);
   }
@@ -2155,6 +2159,9 @@ TargetInstrInfo::getOutliningType(const MachineModuleInfo &MMI,
 
   // Labels generally can't safely be outlined.
   if (MI.isLabel())
+    return outliner::InstrType::Illegal;
+
+  if (MI.getFlag(MachineInstr::NoMerge))
     return outliner::InstrType::Illegal;
 
   // Don't let debug instructions impact analysis.

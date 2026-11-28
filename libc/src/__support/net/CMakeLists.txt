@@ -1,3 +1,16 @@
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${LIBC_TARGET_OS})
+endif()
+
+add_header_library(
+  byte_order
+  HDRS
+    byte_order.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
 add_header_library(
   hex
   HDRS
@@ -19,6 +32,7 @@ add_object_library(
   SRCS
     address.cpp
   DEPENDS
+    .byte_order
     .hex
     libc.hdr.types.in_addr_t
     libc.hdr.types.struct_in_addr

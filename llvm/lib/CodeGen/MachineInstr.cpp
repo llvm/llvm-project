@@ -1236,6 +1236,9 @@ const unsigned TiedMax = 15;
 /// The tied def must be one of the first TiedMax operands on a normal
 /// instruction. INLINEASM instructions allow more tied defs.
 ///
+/// A tied use and def of the same virtual register must use the same
+/// subregister index.
+///
 void MachineInstr::tieOperands(unsigned DefIdx, unsigned UseIdx) {
   MachineOperand &DefMO = getOperand(DefIdx);
   MachineOperand &UseMO = getOperand(UseIdx);
@@ -2006,14 +2009,15 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << F.getKindName();
 
       unsigned RCID;
-      if (!F.isImmKind() && !F.isMemKind() && F.hasRegClassConstraint(RCID)) {
+      if (!F.isImmKind() && !F.isMemKind() && !F.isFuncKind() &&
+          F.hasRegClassConstraint(RCID)) {
         if (TRI) {
           OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
         } else
           OS << ":RC" << RCID;
       }
 
-      if (F.isMemKind()) {
+      if (F.isMemKind() || F.isFuncKind()) {
         const InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();
         OS << ":" << InlineAsm::getMemConstraintName(MCID);
       }

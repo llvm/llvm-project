@@ -28,7 +28,6 @@
 ...
 ---
 name:            computed_goto
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: computed_goto
   ; CHECK: bb.0:
@@ -123,7 +122,6 @@ body:             |
 ...
 ---
 name:            jump_table
-tracksRegLiveness: true
 jumpTable:
   kind:            block-address
   entries:
@@ -243,7 +241,6 @@ body:             |
 ...
 ---
 name:            jump_table_pic
-tracksRegLiveness: true
 jumpTable:
   kind:            block-address
   entries:

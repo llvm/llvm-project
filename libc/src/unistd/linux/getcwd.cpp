@@ -10,8 +10,8 @@
 
 #include "hdr/types/size_t.h"
 #include "hdr/types/ssize_t.h"
-#include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/getcwd.h"
+#include "src/__support/checked_ptr.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
@@ -35,12 +35,12 @@ LLVM_LIBC_FUNCTION(char *, getcwd, (char *buf, size_t size)) {
       return nullptr;
     }
 
-    cpp::optional<char *> cwd = internal::strdup(pathbuf);
+    CheckedPtr<char[]> cwd = internal::strdup(pathbuf);
     if (!cwd) {
       libc_errno = ENOMEM;
       return nullptr;
     }
-    return *cwd;
+    return cwd.release();
   }
 
   if (size == 0) {

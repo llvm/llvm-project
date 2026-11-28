@@ -8,7 +8,6 @@
 ...
 ---
 name:            test1
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
 body: |

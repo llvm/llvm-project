@@ -32,8 +32,7 @@ class ExprSyscallTestCase(TestBase):
             False,  # Stop at entry
             error,
         )  # error
-
-        self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
+        self.assertSuccess(error)
 
         event = lldb.SBEvent()
 

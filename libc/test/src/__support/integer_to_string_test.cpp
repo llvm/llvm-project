@@ -38,13 +38,17 @@ using LIBC_NAMESPACE::operator""_u256;
   }
 
 #if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
-using TestCharTypes = LIBC_NAMESPACE::testing::TypeList<char, wchar_t>;
+using TestCharTypes = LIBC_NAMESPACE::testing::Types<char, wchar_t>;
 #else
-using TestCharTypes = LIBC_NAMESPACE::testing::TypeList<char>;
+using TestCharTypes = LIBC_NAMESPACE::testing::Types<char>;
 #endif
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, UINT8, TestCharTypes) {
-  using CharT = ParamType;
+template <typename T>
+class LlvmLibcIntegerToStringTest : public LIBC_NAMESPACE::testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcIntegerToStringTest, TestCharTypes);
+
+TYPED_TEST(LlvmLibcIntegerToStringTest, UINT8) {
+  using CharT = TypeParam;
   using type = IntegerToString<uint8_t, Dec, CharT>;
   EXPECT(type, 0, ENCODED(CharT, "0"));
   EXPECT(type, 1, ENCODED(CharT, "1"));
@@ -54,8 +58,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, UINT8, TestCharTypes) {
   EXPECT(type, static_cast<uint8_t>(-1), ENCODED(CharT, "255"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, INT8, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, INT8) {
+  using CharT = TypeParam;
   using type = IntegerToString<int8_t, Dec, CharT>;
   EXPECT(type, 0, ENCODED(CharT, "0"));
   EXPECT(type, 1, ENCODED(CharT, "1"));
@@ -67,8 +71,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, INT8, TestCharTypes) {
   EXPECT(type, INT8_MIN, ENCODED(CharT, "-128"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, UINT16, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, UINT16) {
+  using CharT = TypeParam;
   using type = IntegerToString<uint16_t, Dec, CharT>;
   EXPECT(type, 0, ENCODED(CharT, "0"));
   EXPECT(type, 1, ENCODED(CharT, "1"));
@@ -80,8 +84,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, UINT16, TestCharTypes) {
   EXPECT(type, static_cast<uint16_t>(-1), ENCODED(CharT, "65535"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, INT16, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, INT16) {
+  using CharT = TypeParam;
   using type = IntegerToString<int16_t, Dec, CharT>;
   EXPECT(type, 0, ENCODED(CharT, "0"));
   EXPECT(type, 1, ENCODED(CharT, "1"));
@@ -98,8 +102,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, INT16, TestCharTypes) {
   EXPECT(type, INT16_MIN, ENCODED(CharT, "-32768"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, UINT32, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, UINT32) {
+  using CharT = TypeParam;
   using type = IntegerToString<uint32_t, Dec, CharT>;
   EXPECT(type, 0, ENCODED(CharT, "0"));
   EXPECT(type, 1, ENCODED(CharT, "1"));
@@ -116,8 +120,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, UINT32, TestCharTypes) {
   EXPECT(type, static_cast<uint32_t>(-1), ENCODED(CharT, "4294967295"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, INT32, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, INT32) {
+  using CharT = TypeParam;
   using type = IntegerToString<int32_t, Dec, CharT>;
   EXPECT(type, 0, ENCODED(CharT, "0"));
   EXPECT(type, 1, ENCODED(CharT, "1"));
@@ -144,8 +148,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, INT32, TestCharTypes) {
   EXPECT(type, INT32_MIN, ENCODED(CharT, "-2147483648"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64) {
+  using CharT = TypeParam;
   using type = IntegerToString<uint64_t, Dec, CharT>;
   EXPECT(type, 0, ENCODED(CharT, "0"));
   EXPECT(type, 1, ENCODED(CharT, "1"));
@@ -164,8 +168,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64, TestCharTypes) {
          ENCODED(CharT, "18446744073709551615"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, INT64, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, INT64) {
+  using CharT = TypeParam;
   using type = IntegerToString<int64_t, Dec, CharT>;
   EXPECT(type, 0, ENCODED(CharT, "0"));
   EXPECT(type, 1, ENCODED(CharT, "1"));
@@ -194,8 +198,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, INT64, TestCharTypes) {
   EXPECT(type, INT64_MIN, ENCODED(CharT, "-9223372036854775808"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64_Base_8, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64_Base_8) {
+  using CharT = TypeParam;
   using type = IntegerToString<int64_t, Oct, CharT>;
   EXPECT(type, 0, ENCODED(CharT, "0"));
   EXPECT(type, 012345, ENCODED(CharT, "12345"));
@@ -204,8 +208,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64_Base_8, TestCharTypes) {
          ENCODED(CharT, "1777777777777777777777"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64_Base_16, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64_Base_16) {
+  using CharT = TypeParam;
   using type = IntegerToString<uint64_t, Hex, CharT>;
   EXPECT(type, 0, ENCODED(CharT, "0"));
   EXPECT(type, 0x12345, ENCODED(CharT, "12345"));
@@ -215,8 +219,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64_Base_16, TestCharTypes) {
   EXPECT(TYPE, 0x123456789abcdef, ENCODED(CharT, "123456789ABCDEF"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64_Base_2, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64_Base_2) {
+  using CharT = TypeParam;
   using type = IntegerToString<uint64_t, Bin, CharT>;
   EXPECT(type, 0, ENCODED(CharT, "0"));
   EXPECT(type, 0b111100001100, ENCODED(CharT, "111100001100"));
@@ -229,8 +233,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64_Base_2, TestCharTypes) {
           "1111111111111111111111111111111111111111111111111111111111111111"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, UINT128_Base_16, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, UINT128_Base_16) {
+  using CharT = TypeParam;
   using type = IntegerToString<UInt128, Hex::WithWidth<32>, CharT>;
   EXPECT(type, 0, ENCODED(CharT, "00000000000000000000000000000000"));
   EXPECT(type, 0x12345, ENCODED(CharT, "00000000000000000000000000012345"));
@@ -242,8 +246,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, UINT128_Base_16, TestCharTypes) {
          ENCODED(CharT, "00000000000000012340000000000000"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64_Base_36, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64_Base_36) {
+  using CharT = TypeParam;
   using type = IntegerToString<uint64_t, Custom<36>, CharT>;
   EXPECT(type, 0, ENCODED(CharT, "0"));
   EXPECT(type, 12345, ENCODED(CharT, "9ix"));
@@ -255,8 +259,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, UINT64_Base_36, TestCharTypes) {
   EXPECT(TYPE, 1867590395, ENCODED(CharT, "UVWXYZ"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, UINT256_Base_16, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, UINT256_Base_16) {
+  using CharT = TypeParam;
   using UInt256 = LIBC_NAMESPACE::UInt<256>;
   using type = IntegerToString<UInt256, Hex::WithWidth<64>, CharT>;
   EXPECT(
@@ -291,9 +295,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, UINT256_Base_16, TestCharTypes) {
           "1234000000000000000000000000000000000000000000000000000000000000"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, NegativeInterpretedAsPositive,
-           TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, NegativeInterpretedAsPositive) {
+  using CharT = TypeParam;
   using BIN = IntegerToString<int8_t, Bin, CharT>;
   using OCT = IntegerToString<int8_t, Oct, CharT>;
   using DEC = IntegerToString<int8_t, Dec, CharT>;
@@ -304,8 +307,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, NegativeInterpretedAsPositive,
   EXPECT(HEX, -1, ENCODED(CharT, "ff"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, Width, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, Width) {
+  using CharT = TypeParam;
   using BIN = IntegerToString<uint8_t, Bin::WithWidth<4>, CharT>;
   using OCT = IntegerToString<uint8_t, Oct::WithWidth<4>, CharT>;
   using DEC = IntegerToString<uint8_t, Dec::WithWidth<4>, CharT>;
@@ -316,8 +319,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, Width, TestCharTypes) {
   EXPECT(DEC, 1, ENCODED(CharT, "0001"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, Prefix, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, Prefix) {
+  using CharT = TypeParam;
   // WithPrefix is not supported for Decimal
   using BIN = IntegerToString<uint8_t, Bin::WithPrefix, CharT>;
   using OCT = IntegerToString<uint8_t, Oct::WithPrefix, CharT>;
@@ -328,14 +331,14 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, Prefix, TestCharTypes) {
   EXPECT(OCT, 0, ENCODED(CharT, "0")); // Zero is not prefixed for octal
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, Uppercase, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, Uppercase) {
+  using CharT = TypeParam;
   using HEX = IntegerToString<uint64_t, Hex::Uppercase, CharT>;
   EXPECT(HEX, 0xDEADC0DE, ENCODED(CharT, "DEADC0DE"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, Sign, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, Sign) {
+  using CharT = TypeParam;
   // WithSign only compiles with DEC
   using DEC = IntegerToString<int8_t, Dec::WithSign, CharT>;
   EXPECT(DEC, -1, ENCODED(CharT, "-1"));
@@ -343,8 +346,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, Sign, TestCharTypes) {
   EXPECT(DEC, 1, ENCODED(CharT, "+1"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, BigInt_Base_10, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, BigInt_Base_10) {
+  using CharT = TypeParam;
   uint64_t int256_max_w64[4] = {
       0xFFFFFFFFFFFFFFFF,
       0xFFFFFFFFFFFFFFFF,
@@ -451,8 +454,8 @@ TYPED_TEST(LlvmLibcIntegerToStringTest, BigInt_Base_10, TestCharTypes) {
                         "019728792003956564819968"));
 }
 
-TYPED_TEST(LlvmLibcIntegerToStringTest, BufferOverrun, TestCharTypes) {
-  using CharT = ParamType;
+TYPED_TEST(LlvmLibcIntegerToStringTest, BufferOverrun) {
+  using CharT = TypeParam;
   { // Writing '0' in an empty buffer requiring zero digits : works
     const auto view = IntegerToString<int, Dec::WithWidth<0>, CharT>::format_to(
         span<CharT>(), 0);

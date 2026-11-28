@@ -21,6 +21,8 @@ using namespace llvm;
 bool CallGraphUpdater::finalize() {
   if (!DeadFunctionsInComdats.empty()) {
     filterDeadComdatFunctions(DeadFunctionsInComdats);
+    for (Function *DeadFn : DeadFunctionsInComdats)
+      makeFunctionBodyUnreachable(*DeadFn);
     DeadFunctions.append(DeadFunctionsInComdats.begin(),
                          DeadFunctionsInComdats.end());
   }
@@ -56,6 +58,9 @@ bool CallGraphUpdater::finalize() {
       // call graph walk, so only erase the function if we're not using that
       // infrastructure.
       // The function is now really dead and de-attached from everything.
+      // Clear any analyses computed since it was removed.
+      if (FAM)
+        FAM->clear(*DeadFn, DeadFn->getName());
       DeadFn->eraseFromParent();
     }
   }
@@ -95,12 +100,15 @@ void CallGraphUpdater::registerOutlinedFunction(Function &OriginalFn,
 }
 
 void CallGraphUpdater::removeFunction(Function &DeadFn) {
-  DeadFn.deleteBody();
-  DeadFn.setLinkage(GlobalValue::ExternalLinkage);
-  if (DeadFn.hasComdat())
+  // With a LazyCallGraph, the function is erased only at the end of the CGSCC
+  // walk, and its node must stay a definition until then. Functions in a comdat
+  // are only cleared in finalize(), once we know the whole comdat is dead.
+  if (DeadFn.hasComdat()) {
     DeadFunctionsInComdats.push_back(&DeadFn);
-  else
+  } else {
+    makeFunctionBodyUnreachable(DeadFn);
     DeadFunctions.push_back(&DeadFn);
+  }
 
   if (FAM)
     FAM->clear(DeadFn, DeadFn.getName());

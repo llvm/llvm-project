@@ -117,8 +117,8 @@ define void @i56_and_or(ptr %a) {
 ; BE:       @ %bb.0:
 ; BE-NEXT:    ldrh r1, [r0, #4]!
 ; BE-NEXT:    mov r2, #128
-; BE-NEXT:    orr r1, r1, #1
 ; BE-NEXT:    strb r2, [r0, #2]
+; BE-NEXT:    orr r1, r1, #1
 ; BE-NEXT:    strh r1, [r0]
 ; BE-NEXT:    mov pc, lr
 

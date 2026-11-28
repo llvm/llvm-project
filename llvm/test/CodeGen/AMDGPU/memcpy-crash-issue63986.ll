@@ -27,15 +27,15 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:    flat_store_dwordx4 v[12:13], v[8:11]
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %dynamic-memcpy-expansion-residual-cond
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:    s_branch .LBB0_5
 ; CHECK-NEXT:  ; %bb.3: ; %dynamic-memcpy-expansion-residual-body.preheader
 ; CHECK-NEXT:    v_lshlrev_b64 v[4:5], 6, v[2:3]
-; CHECK-NEXT:    s_add_u32 s4, s16, 32
-; CHECK-NEXT:    s_addc_u32 s5, s17, 0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s5
-; CHECK-NEXT:    v_add_co_u32_e32 v2, vcc, s4, v4
+; CHECK-NEXT:    s_add_u32 s6, s16, 32
+; CHECK-NEXT:    s_addc_u32 s7, s17, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, s7
+; CHECK-NEXT:    v_add_co_u32_e32 v2, vcc, s6, v4
 ; CHECK-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v5, vcc
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:  ; %bb.4: ; %dynamic-memcpy-expansion-residual-body
 ; CHECK-NEXT:    s_add_u32 s6, 32, s4
 ; CHECK-NEXT:    s_addc_u32 s7, 0, s5
@@ -168,7 +168,7 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v4, v2
 ; CHECK-NEXT:    v_mov_b32_e32 v5, v2
-; CHECK-NEXT:    s_and_b64 vcc, exec, -1
+; CHECK-NEXT:    s_mov_b64 vcc, exec
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
 ; CHECK-NEXT:  .LBB1_8: ; %loop-memcpy-expansion2
 ; CHECK-NEXT:    s_mov_b64 vcc, vcc

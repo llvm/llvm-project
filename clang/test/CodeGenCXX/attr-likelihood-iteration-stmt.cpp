@@ -72,7 +72,7 @@ void w_branch_elided(unsigned e){
 // CHECK-NEXT:    [[E_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[E]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I]])
 // CHECK-NEXT:    store i32 0, ptr [[I]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    br label %[[FOR_COND:.*]]
 // CHECK:       [[FOR_COND]]:
@@ -82,7 +82,7 @@ void w_branch_elided(unsigned e){
 // CHECK-NEXT:    [[CMP_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[CMP]], i1 true)
 // CHECK-NEXT:    br i1 [[CMP_EXPVAL]], label %[[FOR_BODY:.*]], label %[[FOR_COND_CLEANUP:.*]]
 // CHECK:       [[FOR_COND_CLEANUP]]:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I]])
 // CHECK-NEXT:    br label %[[FOR_END:.*]]
 // CHECK:       [[FOR_BODY]]:
 // CHECK-NEXT:    br label %[[FOR_INC:.*]]
@@ -105,7 +105,7 @@ void fl(unsigned e)
 // CHECK-NEXT:    [[E_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[E]], ptr [[E_ADDR]], align 4, !tbaa [[INT_TBAA6]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I]])
 // CHECK-NEXT:    store i32 0, ptr [[I]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    br label %[[FOR_COND:.*]]
 // CHECK:       [[FOR_COND]]:
@@ -115,7 +115,7 @@ void fl(unsigned e)
 // CHECK-NEXT:    [[CMP_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[CMP]], i1 false)
 // CHECK-NEXT:    br i1 [[CMP_EXPVAL]], label %[[FOR_BODY:.*]], label %[[FOR_COND_CLEANUP:.*]]
 // CHECK:       [[FOR_COND_CLEANUP]]:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I]])
 // CHECK-NEXT:    br label %[[FOR_END:.*]]
 // CHECK:       [[FOR_BODY]]:
 // CHECK-NEXT:    br label %[[FOR_INC:.*]]
@@ -153,14 +153,14 @@ void f_branch_elided()
 // CHECK-NEXT:    [[__END1:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 8, !tbaa [[INTPTR_TBAA15:![0-9]+]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__RANGE1]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__RANGE1]])
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8, !tbaa [[INTPTR_TBAA15]], !nonnull [[META18:![0-9]+]], !align [[META19:![0-9]+]]
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA15]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__BEGIN1]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__BEGIN1]])
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA15]], !nonnull [[META18]], !align [[META19]]
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x i32], ptr [[TMP1]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__END1]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__END1]])
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA15]], !nonnull [[META18]], !align [[META19]]
 // CHECK-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [4 x i32], ptr [[TMP2]], i64 0, i64 0
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAYDECAY1]], i64 4
@@ -173,16 +173,16 @@ void f_branch_elided()
 // CHECK-NEXT:    [[CMP_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[CMP]], i1 true)
 // CHECK-NEXT:    br i1 [[CMP_EXPVAL]], label %[[FOR_BODY:.*]], label %[[FOR_COND_CLEANUP:.*]]
 // CHECK:       [[FOR_COND_CLEANUP]]:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[__END1]]) #[[ATTR3]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[__BEGIN1]]) #[[ATTR3]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[__RANGE1]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[__END1]])
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[__BEGIN1]])
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[__RANGE1]])
 // CHECK-NEXT:    br label %[[FOR_END:.*]]
 // CHECK:       [[FOR_BODY]]:
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I]])
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
 // CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    store i32 [[TMP6]], ptr [[I]], align 4, !tbaa [[INT_TBAA6]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I]])
 // CHECK-NEXT:    br label %[[FOR_INC:.*]]
 // CHECK:       [[FOR_INC]]:
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
@@ -206,14 +206,14 @@ void frl(int (&&e) [4])
 // CHECK-NEXT:    [[__END1:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 8, !tbaa [[INTPTR_TBAA15]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__RANGE1]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__RANGE1]])
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8, !tbaa [[INTPTR_TBAA15]], !nonnull [[META18]], !align [[META19]]
 // CHECK-NEXT:    store ptr [[TMP0]], ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA15]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__BEGIN1]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__BEGIN1]])
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA15]], !nonnull [[META18]], !align [[META19]]
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x i32], ptr [[TMP1]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__END1]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[__END1]])
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[__RANGE1]], align 8, !tbaa [[INTPTR_TBAA15]], !nonnull [[META18]], !align [[META19]]
 // CHECK-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [4 x i32], ptr [[TMP2]], i64 0, i64 0
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAYDECAY1]], i64 4
@@ -226,16 +226,16 @@ void frl(int (&&e) [4])
 // CHECK-NEXT:    [[CMP_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[CMP]], i1 false)
 // CHECK-NEXT:    br i1 [[CMP_EXPVAL]], label %[[FOR_BODY:.*]], label %[[FOR_COND_CLEANUP:.*]]
 // CHECK:       [[FOR_COND_CLEANUP]]:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[__END1]]) #[[ATTR3]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[__BEGIN1]]) #[[ATTR3]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[__RANGE1]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[__END1]])
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[__BEGIN1]])
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[__RANGE1]])
 // CHECK-NEXT:    br label %[[FOR_END:.*]]
 // CHECK:       [[FOR_BODY]]:
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I]])
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]
 // CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP5]], align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    store i32 [[TMP6]], ptr [[I]], align 4, !tbaa [[INT_TBAA6]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I]])
 // CHECK-NEXT:    br label %[[FOR_INC:.*]]
 // CHECK:       [[FOR_INC]]:
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[__BEGIN1]], align 8, !tbaa [[INTPTR_TBAA15]]

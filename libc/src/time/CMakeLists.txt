@@ -204,6 +204,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  timegm
+  SRCS
+    timegm.cpp
+  HDRS
+    timegm.h
+  DEPENDS
+    .time_utils
+    .time_constants
+    libc.include.time
+    libc.src.errno.errno
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
   strftime
   SRCS
     strftime.cpp
@@ -270,6 +288,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.clock
+)
+
+add_entrypoint_object(
+  clock_nanosleep
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.clock_nanosleep
 )
 
 add_entrypoint_object(

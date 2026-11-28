@@ -60,7 +60,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$r4_64' }
   - { reg: '$r25_64' }

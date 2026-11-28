@@ -128,7 +128,7 @@ end subroutine
 ! CHECK:  return
 
 ! Test that the hlfir.expr result of the outer intrinsic call
-! is not destructed.
+! is destroyed in the element cleanup after its value has been consumed.
 subroutine test_hlfir_expr_result_destruction
   character(4) :: a(21)
   a = (/ (repeat(repeat(char(i),2),2),i=1,n) /)
@@ -142,16 +142,12 @@ end subroutine
 ! CHECK:             %[[VAL_68:.*]]:3 = hlfir.associate %[[VAL_66]] typeparams %{{.*}} {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>, i1)
 ! CHECK:             %[[VAL_81:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} uniq_name(".tmp.intrinsic_result") : (!fir.heap<!fir.char<1,4>>, index) -> (!fir.heap<!fir.char<1,4>>, !fir.heap<!fir.char<1,4>>)
 ! CHECK:             %[[VAL_83:.*]] = hlfir.as_expr %[[VAL_81]]#0 move %{{.*}} : (!fir.heap<!fir.char<1,4>>, i1) -> !hlfir.expr<!fir.char<1,4>>
-! CHECK-NOT:         hlfir.destroy %[[VAL_83]]
-! CHECK:             hlfir.end_associate %[[VAL_68]]#1, %[[VAL_68]]#2 : !fir.ref<!fir.char<1,2>>, i1
-! CHECK-NOT:         hlfir.destroy %[[VAL_83]]
-! CHECK:             hlfir.destroy %[[VAL_66]] : !hlfir.expr<!fir.char<1,2>>
-! CHECK-NOT:         hlfir.destroy %[[VAL_83]]
-! CHECK:             hlfir.end_associate %[[VAL_51]]#1, %[[VAL_51]]#2 : !fir.ref<!fir.char<1>>, i1
-! CHECK-NOT:         hlfir.destroy %[[VAL_83]]
-! CHECK:             hlfir.destroy %[[VAL_48]] : !hlfir.expr<!fir.char<1>>
-! CHECK-NOT:         hlfir.destroy %[[VAL_83]]
-! CHECK:             hlfir.yield_element %[[VAL_83]] : !hlfir.expr<!fir.char<1,4>>
-! CHECK-NOT:         hlfir.destroy %[[VAL_83]]
+! CHECK-NEXT:        hlfir.yield_element %[[VAL_83]] : !hlfir.expr<!fir.char<1,4>> cleanup {
+! CHECK-NEXT:          hlfir.destroy %[[VAL_83]] : !hlfir.expr<!fir.char<1,4>>
+! CHECK-NEXT:          hlfir.end_associate %[[VAL_68]]#1, %[[VAL_68]]#2 : !fir.ref<!fir.char<1,2>>, i1
+! CHECK-NEXT:          hlfir.destroy %[[VAL_66]] : !hlfir.expr<!fir.char<1,2>>
+! CHECK-NEXT:          hlfir.end_associate %[[VAL_51]]#1, %[[VAL_51]]#2 : !fir.ref<!fir.char<1>>, i1
+! CHECK-NEXT:          hlfir.destroy %[[VAL_48]] : !hlfir.expr<!fir.char<1>>
+! CHECK-NEXT:        }
 ! CHECK:           }
 ! CHECK-NOT:       hlfir.destroy %[[VAL_83]]

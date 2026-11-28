@@ -115,16 +115,6 @@
 ---
 name:            phi_i1
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -136,59 +126,49 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $x10, $x11, $x12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[AND]](s64), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x12
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY1]](i64)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[AND]](i64), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[COPY2]](i64)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[TRUNC1]](s32), %bb.1, [[TRUNC]](s32), %bb.0
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[PHI]](s32)
-  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT]](s64)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[TRUNC1]](i32), %bb.1, [[TRUNC]](i32), %bb.0
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[PHI]](i32)
+  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT]](i64)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   bb.1.entry:
     liveins: $x10, $x11, $x12
 
-    %3:_(s64) = COPY $x10
-    %0:_(s1) = G_TRUNC %3(s64)
-    %4:_(s64) = COPY $x11
-    %1:_(s1) = G_TRUNC %4(s64)
-    %5:_(s64) = COPY $x12
-    %2:_(s1) = G_TRUNC %5(s64)
-    G_BRCOND %0(s1), %bb.3
+    %3:_(i64) = COPY $x10
+    %0:_(i1) = G_TRUNC %3(i64)
+    %4:_(i64) = COPY $x11
+    %1:_(i1) = G_TRUNC %4(i64)
+    %5:_(i64) = COPY $x12
+    %2:_(i1) = G_TRUNC %5(i64)
+    G_BRCOND %0(i1), %bb.3
     G_BR %bb.2
 
   bb.2.cond.false:
 
   bb.3.cond.end:
-    %6:_(s1) = G_PHI %2(s1), %bb.2, %1(s1), %bb.1
-    %7:_(s64) = G_ANYEXT %6(s1)
-    $x10 = COPY %7(s64)
+    %6:_(i1) = G_PHI %2(i1), %bb.2, %1(i1), %bb.1
+    %7:_(i64) = G_ANYEXT %6(i1)
+    $x10 = COPY %7(i64)
     PseudoRET implicit $x10
 
 ...
 ---
 name:            phi_i8
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -200,59 +180,49 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $x10, $x11, $x12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[AND]](s64), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x12
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY1]](i64)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[AND]](i64), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[COPY2]](i64)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[TRUNC1]](s32), %bb.1, [[TRUNC]](s32), %bb.0
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[PHI]](s32)
-  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT]](s64)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[TRUNC1]](i32), %bb.1, [[TRUNC]](i32), %bb.0
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[PHI]](i32)
+  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT]](i64)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   bb.1.entry:
     liveins: $x10, $x11, $x12
 
-    %3:_(s64) = COPY $x10
-    %0:_(s1) = G_TRUNC %3(s64)
-    %4:_(s64) = COPY $x11
-    %1:_(s8) = G_TRUNC %4(s64)
-    %5:_(s64) = COPY $x12
-    %2:_(s8) = G_TRUNC %5(s64)
-    G_BRCOND %0(s1), %bb.3
+    %3:_(i64) = COPY $x10
+    %0:_(i1) = G_TRUNC %3(i64)
+    %4:_(i64) = COPY $x11
+    %1:_(i8) = G_TRUNC %4(i64)
+    %5:_(i64) = COPY $x12
+    %2:_(i8) = G_TRUNC %5(i64)
+    G_BRCOND %0(i1), %bb.3
     G_BR %bb.2
 
   bb.2.cond.false:
 
   bb.3.cond.end:
-    %6:_(s8) = G_PHI %2(s8), %bb.2, %1(s8), %bb.1
-    %7:_(s64) = G_ANYEXT %6(s8)
-    $x10 = COPY %7(s64)
+    %6:_(i8) = G_PHI %2(i8), %bb.2, %1(i8), %bb.1
+    %7:_(i64) = G_ANYEXT %6(i8)
+    $x10 = COPY %7(i64)
     PseudoRET implicit $x10
 
 ...
 ---
 name:            phi_i16
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -264,59 +234,49 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $x10, $x11, $x12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[AND]](s64), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x12
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY1]](i64)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[AND]](i64), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[COPY2]](i64)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[TRUNC1]](s32), %bb.1, [[TRUNC]](s32), %bb.0
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[PHI]](s32)
-  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT]](s64)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[TRUNC1]](i32), %bb.1, [[TRUNC]](i32), %bb.0
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[PHI]](i32)
+  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT]](i64)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   bb.1.entry:
     liveins: $x10, $x11, $x12
 
-    %3:_(s64) = COPY $x10
-    %0:_(s1) = G_TRUNC %3(s64)
-    %4:_(s64) = COPY $x11
-    %1:_(s16) = G_TRUNC %4(s64)
-    %5:_(s64) = COPY $x12
-    %2:_(s16) = G_TRUNC %5(s64)
-    G_BRCOND %0(s1), %bb.3
+    %3:_(i64) = COPY $x10
+    %0:_(i1) = G_TRUNC %3(i64)
+    %4:_(i64) = COPY $x11
+    %1:_(i16) = G_TRUNC %4(i64)
+    %5:_(i64) = COPY $x12
+    %2:_(i16) = G_TRUNC %5(i64)
+    G_BRCOND %0(i1), %bb.3
     G_BR %bb.2
 
   bb.2.cond.false:
 
   bb.3.cond.end:
-    %6:_(s16) = G_PHI %2(s16), %bb.2, %1(s16), %bb.1
-    %7:_(s64) = G_ANYEXT %6(s16)
-    $x10 = COPY %7(s64)
+    %6:_(i16) = G_PHI %2(i16), %bb.2, %1(i16), %bb.1
+    %7:_(i64) = G_ANYEXT %6(i16)
+    $x10 = COPY %7(i64)
     PseudoRET implicit $x10
 
 ...
 ---
 name:            phi_i32
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -328,55 +288,48 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $x10, $x11, $x12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY2]](s64)
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[AND]](s64), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY1]](i64)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x12
+  ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[COPY2]](i64)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[AND]](i64), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[TRUNC1]](s32), %bb.1, [[TRUNC]](s32), %bb.0
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[PHI]](s32)
-  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT]](s64)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i32) = G_PHI [[TRUNC1]](i32), %bb.1, [[TRUNC]](i32), %bb.0
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[PHI]](i32)
+  ; CHECK-NEXT:   $x10 = COPY [[ANYEXT]](i64)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   bb.1.entry:
     liveins: $x10, $x11, $x12
 
-    %3:_(s64) = COPY $x10
-    %0:_(s1) = G_TRUNC %3(s64)
-    %4:_(s64) = COPY $x11
-    %1:_(s32) = G_TRUNC %4(s64)
-    %5:_(s64) = COPY $x12
-    %2:_(s32) = G_TRUNC %5(s64)
-    G_BRCOND %0(s1), %bb.3
+    %3:_(i64) = COPY $x10
+    %0:_(i1) = G_TRUNC %3(i64)
+    %4:_(i64) = COPY $x11
+    %1:_(i32) = G_TRUNC %4(i64)
+    %5:_(i64) = COPY $x12
+    %2:_(i32) = G_TRUNC %5(i64)
+    G_BRCOND %0(i1), %bb.3
     G_BR %bb.2
 
   bb.2.cond.false:
 
   bb.3.cond.end:
-    %6:_(s32) = G_PHI %2(s32), %bb.2, %1(s32), %bb.1
-    %7:_(s64) = G_ANYEXT %6(s32)
-    $x10 = COPY %7(s64)
+    %6:_(i32) = G_PHI %2(i32), %bb.2, %1(i32), %bb.1
+    %7:_(i64) = G_ANYEXT %6(i32)
+    $x10 = COPY %7(i64)
     PseudoRET implicit $x10
 
 ...
 ---
 name:            phi_i64
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -388,49 +341,42 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $x10, $x11, $x12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[AND]](s64), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x12
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[AND]](i64), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY2]](s64), %bb.1, [[COPY1]](s64), %bb.0
-  ; CHECK-NEXT:   $x10 = COPY [[PHI]](s64)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i64) = G_PHI [[COPY2]](i64), %bb.1, [[COPY1]](i64), %bb.0
+  ; CHECK-NEXT:   $x10 = COPY [[PHI]](i64)
   ; CHECK-NEXT:   PseudoRET implicit $x10
   bb.1.entry:
     liveins: $x10, $x11, $x12
 
-    %3:_(s64) = COPY $x10
-    %0:_(s1) = G_TRUNC %3(s64)
-    %1:_(s64) = COPY $x11
-    %2:_(s64) = COPY $x12
-    G_BRCOND %0(s1), %bb.3
+    %3:_(i64) = COPY $x10
+    %0:_(i1) = G_TRUNC %3(i64)
+    %1:_(i64) = COPY $x11
+    %2:_(i64) = COPY $x12
+    G_BRCOND %0(i1), %bb.3
     G_BR %bb.2
 
   bb.2.cond.false:
 
   bb.3.cond.end:
-    %4:_(s64) = G_PHI %2(s64), %bb.2, %1(s64), %bb.1
-    $x10 = COPY %4(s64)
+    %4:_(i64) = G_PHI %2(i64), %bb.2, %1(i64), %bb.1
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 
 ...
 ---
 name:            phi_ptr
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -442,12 +388,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $x10, $x11, $x12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x10
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY $x11
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(p0) = COPY $x12
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[AND]](s64), %bb.2
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[AND]](i64), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cond.false:
@@ -460,11 +406,11 @@ body:             |
   bb.1.entry:
     liveins: $x10, $x11, $x12
 
-    %3:_(s64) = COPY $x10
-    %0:_(s1) = G_TRUNC %3(s64)
+    %3:_(i64) = COPY $x10
+    %0:_(i1) = G_TRUNC %3(i64)
     %1:_(p0) = COPY $x11
     %2:_(p0) = COPY $x12
-    G_BRCOND %0(s1), %bb.3
+    G_BRCOND %0(i1), %bb.3
     G_BR %bb.2
 
   bb.2.cond.false:
@@ -478,22 +424,6 @@ body:             |
 ---
 name:            phi_i72
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
-  - { id: 9, class: _ }
-  - { id: 10, class: _ }
-  - { id: 11, class: _ }
-  - { id: 12, class: _ }
-  - { id: 13, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -505,68 +435,55 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[AND]](s64), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x12
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i64) = COPY $x13
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i64) = COPY $x14
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[AND]](i64), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY3]](s64), %bb.1, [[COPY1]](s64), %bb.0
-  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(s64) = G_PHI [[COPY4]](s64), %bb.1, [[COPY2]](s64), %bb.0
-  ; CHECK-NEXT:   $x10 = COPY [[PHI]](s64)
-  ; CHECK-NEXT:   $x11 = COPY [[PHI1]](s64)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i64) = G_PHI [[COPY3]](i64), %bb.1, [[COPY1]](i64), %bb.0
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(i64) = G_PHI [[COPY4]](i64), %bb.1, [[COPY2]](i64), %bb.0
+  ; CHECK-NEXT:   $x10 = COPY [[PHI]](i64)
+  ; CHECK-NEXT:   $x11 = COPY [[PHI1]](i64)
   ; CHECK-NEXT:   PseudoRET implicit $x10, implicit $x11
   bb.1.entry:
     liveins: $x10, $x11, $x12, $x13, $x14
 
-    %3:_(s64) = COPY $x10
-    %0:_(s1) = G_TRUNC %3(s64)
-    %4:_(s64) = COPY $x11
-    %5:_(s64) = COPY $x12
-    %6:_(s128) = G_MERGE_VALUES %4(s64), %5(s64)
-    %1:_(s72) = G_TRUNC %6(s128)
-    %7:_(s64) = COPY $x13
-    %8:_(s64) = COPY $x14
-    %9:_(s128) = G_MERGE_VALUES %7(s64), %8(s64)
-    %2:_(s72) = G_TRUNC %9(s128)
-    G_BRCOND %0(s1), %bb.3
+    %3:_(i64) = COPY $x10
+    %0:_(i1) = G_TRUNC %3(i64)
+    %4:_(i64) = COPY $x11
+    %5:_(i64) = COPY $x12
+    %6:_(i128) = G_MERGE_VALUES %4(i64), %5(i64)
+    %1:_(i72) = G_TRUNC %6(i128)
+    %7:_(i64) = COPY $x13
+    %8:_(i64) = COPY $x14
+    %9:_(i128) = G_MERGE_VALUES %7(i64), %8(i64)
+    %2:_(i72) = G_TRUNC %9(i128)
+    G_BRCOND %0(i1), %bb.3
     G_BR %bb.2
 
   bb.2.cond.false:
 
   bb.3.cond.end:
-    %10:_(s72) = G_PHI %2(s72), %bb.2, %1(s72), %bb.1
-    %13:_(s128) = G_ANYEXT %10(s72)
-    %11:_(s64), %12:_(s64) = G_UNMERGE_VALUES %13(s128)
-    $x10 = COPY %11(s64)
-    $x11 = COPY %12(s64)
+    %10:_(i72) = G_PHI %2(i72), %bb.2, %1(i72), %bb.1
+    %13:_(i128) = G_ANYEXT %10(i72)
+    %11:_(i64), %12:_(i64) = G_UNMERGE_VALUES %13(i128)
+    $x10 = COPY %11(i64)
+    $x11 = COPY %12(i64)
     PseudoRET implicit $x10, implicit $x11
 
 ...
 ---
 name:            phi_i128
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
-  - { id: 9, class: _ }
-  - { id: 10, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -578,68 +495,52 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x12
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x13
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x14
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[AND]](s64), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x12
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i64) = COPY $x13
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i64) = COPY $x14
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[AND]](i64), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY3]](s64), %bb.1, [[COPY1]](s64), %bb.0
-  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(s64) = G_PHI [[COPY4]](s64), %bb.1, [[COPY2]](s64), %bb.0
-  ; CHECK-NEXT:   $x10 = COPY [[PHI]](s64)
-  ; CHECK-NEXT:   $x11 = COPY [[PHI1]](s64)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i64) = G_PHI [[COPY3]](i64), %bb.1, [[COPY1]](i64), %bb.0
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(i64) = G_PHI [[COPY4]](i64), %bb.1, [[COPY2]](i64), %bb.0
+  ; CHECK-NEXT:   $x10 = COPY [[PHI]](i64)
+  ; CHECK-NEXT:   $x11 = COPY [[PHI1]](i64)
   ; CHECK-NEXT:   PseudoRET implicit $x10, implicit $x11
   bb.1.entry:
     liveins: $x10, $x11, $x12, $x13, $x14
 
-    %3:_(s64) = COPY $x10
-    %0:_(s1) = G_TRUNC %3(s64)
-    %4:_(s64) = COPY $x11
-    %5:_(s64) = COPY $x12
-    %1:_(s128) = G_MERGE_VALUES %4(s64), %5(s64)
-    %6:_(s64) = COPY $x13
-    %7:_(s64) = COPY $x14
-    %2:_(s128) = G_MERGE_VALUES %6(s64), %7(s64)
-    G_BRCOND %0(s1), %bb.3
+    %3:_(i64) = COPY $x10
+    %0:_(i1) = G_TRUNC %3(i64)
+    %4:_(i64) = COPY $x11
+    %5:_(i64) = COPY $x12
+    %1:_(i128) = G_MERGE_VALUES %4(i64), %5(i64)
+    %6:_(i64) = COPY $x13
+    %7:_(i64) = COPY $x14
+    %2:_(i128) = G_MERGE_VALUES %6(i64), %7(i64)
+    G_BRCOND %0(i1), %bb.3
     G_BR %bb.2
 
   bb.2.cond.false:
 
   bb.3.cond.end:
-    %8:_(s128) = G_PHI %2(s128), %bb.2, %1(s128), %bb.1
-    %9:_(s64), %10:_(s64) = G_UNMERGE_VALUES %8(s128)
-    $x10 = COPY %9(s64)
-    $x11 = COPY %10(s64)
+    %8:_(i128) = G_PHI %2(i128), %bb.2, %1(i128), %bb.1
+    %9:_(i64), %10:_(i64) = G_UNMERGE_VALUES %8(i128)
+    $x10 = COPY %9(i64)
+    $x11 = COPY %10(i64)
     PseudoRET implicit $x10, implicit $x11
 
 ...
 ---
 name:            phi_i192
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-  - { id: 8, class: _ }
-  - { id: 9, class: _ }
-  - { id: 10, class: _ }
-  - { id: 11, class: _ }
-  - { id: 12, class: _ }
-  - { id: 13, class: _ }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo:
@@ -651,53 +552,53 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $x10, $x11, $x12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x11
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x11
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x12
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x12
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x12
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-  ; CHECK-NEXT:   G_BRCOND [[AND]](s64), %bb.2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i64) = COPY $x11
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i64) = COPY $x11
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i64) = COPY $x12
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(i64) = COPY $x12
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:_(i64) = COPY $x12
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[COPY]], [[C]]
+  ; CHECK-NEXT:   G_BRCOND [[AND]](i64), %bb.2
   ; CHECK-NEXT:   G_BR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.cond.false:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cond.end:
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY4]](s64), %bb.1, [[COPY1]](s64), %bb.0
-  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(s64) = G_PHI [[COPY5]](s64), %bb.1, [[COPY2]](s64), %bb.0
-  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:_(s64) = G_PHI [[COPY6]](s64), %bb.1, [[COPY3]](s64), %bb.0
-  ; CHECK-NEXT:   $x10 = COPY [[PHI]](s64)
-  ; CHECK-NEXT:   $x10 = COPY [[PHI1]](s64)
-  ; CHECK-NEXT:   $x10 = COPY [[PHI2]](s64)
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(i64) = G_PHI [[COPY4]](i64), %bb.1, [[COPY1]](i64), %bb.0
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(i64) = G_PHI [[COPY5]](i64), %bb.1, [[COPY2]](i64), %bb.0
+  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:_(i64) = G_PHI [[COPY6]](i64), %bb.1, [[COPY3]](i64), %bb.0
+  ; CHECK-NEXT:   $x10 = COPY [[PHI]](i64)
+  ; CHECK-NEXT:   $x10 = COPY [[PHI1]](i64)
+  ; CHECK-NEXT:   $x10 = COPY [[PHI2]](i64)
   ; CHECK-NEXT:   PseudoRET implicit $x10, implicit $x10, implicit $x10
   bb.1.entry:
     liveins: $x10, $x11, $x12
 
-    %3:_(s64) = COPY $x10
-    %0:_(s1) = G_TRUNC %3(s64)
-    %4:_(s64) = COPY $x11
-    %5:_(s64) = COPY $x11
-    %6:_(s64) = COPY $x11
-    %1:_(s192) = G_MERGE_VALUES %4(s64), %5(s64), %6(s64)
-    %7:_(s64) = COPY $x12
-    %8:_(s64) = COPY $x12
-    %9:_(s64) = COPY $x12
-    %2:_(s192) = G_MERGE_VALUES %7(s64), %8(s64), %9(s64)
-    G_BRCOND %0(s1), %bb.3
+    %3:_(i64) = COPY $x10
+    %0:_(i1) = G_TRUNC %3(i64)
+    %4:_(i64) = COPY $x11
+    %5:_(i64) = COPY $x11
+    %6:_(i64) = COPY $x11
+    %1:_(i192) = G_MERGE_VALUES %4(i64), %5(i64), %6(i64)
+    %7:_(i64) = COPY $x12
+    %8:_(i64) = COPY $x12
+    %9:_(i64) = COPY $x12
+    %2:_(i192) = G_MERGE_VALUES %7(i64), %8(i64), %9(i64)
+    G_BRCOND %0(i1), %bb.3
     G_BR %bb.2
 
   bb.2.cond.false:
 
   bb.3.cond.end:
-    %10:_(s192) = G_PHI %2(s192), %bb.2, %1(s192), %bb.1
-    %11:_(s64), %12:_(s64), %13:_(s64) = G_UNMERGE_VALUES %10(s192)
-    $x10 = COPY %11(s64)
-    $x10 = COPY %12(s64)
-    $x10 = COPY %13(s64)
+    %10:_(i192) = G_PHI %2(i192), %bb.2, %1(i192), %bb.1
+    %11:_(i64), %12:_(i64), %13:_(i64) = G_UNMERGE_VALUES %10(i192)
+    $x10 = COPY %11(i64)
+    $x10 = COPY %12(i64)
+    $x10 = COPY %13(i64)
     PseudoRET implicit $x10, implicit $x10, implicit $x10
 
 ...

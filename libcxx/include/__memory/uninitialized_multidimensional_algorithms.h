@@ -42,8 +42,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Alloc,
           class _BidirIter,
           __enable_if_t<__has_bidirectional_iterator_category<_BidirIter>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI constexpr void
-__allocator_destroy_multidimensional(_Alloc& __alloc, _BidirIter __first, _BidirIter __last) noexcept {
+constexpr void __allocator_destroy_multidimensional(_Alloc& __alloc, _BidirIter __first, _BidirIter __last) noexcept {
   using _ValueType = typename iterator_traits<_BidirIter>::value_type;
   static_assert(is_same_v<typename allocator_traits<_Alloc>::value_type, _ValueType>,
                 "The allocator should already be rebound to the correct type");
@@ -78,7 +77,7 @@ __allocator_destroy_multidimensional(_Alloc& __alloc, _BidirIter __first, _Bidir
 //
 // This function assumes that the allocator is bound to the correct type.
 template <class _Alloc, class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr void __allocator_construct_at_multidimensional(_Alloc& __alloc, _Tp* __loc) {
+constexpr void __allocator_construct_at_multidimensional(_Alloc& __alloc, _Tp* __loc) {
   static_assert(is_same_v<typename allocator_traits<_Alloc>::value_type, _Tp>,
                 "The allocator should already be rebound to the correct type");
 
@@ -113,8 +112,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __allocator_construct_at_multidimensional(_
 //
 // This function assumes that the allocator is bound to the correct type.
 template <class _Alloc, class _Tp, class _Arg>
-_LIBCPP_HIDE_FROM_ABI constexpr void
-__allocator_construct_at_multidimensional(_Alloc& __alloc, _Tp* __loc, _Arg const& __arg) {
+constexpr void __allocator_construct_at_multidimensional(_Alloc& __alloc, _Tp* __loc, _Arg const& __arg) {
   static_assert(is_same_v<typename allocator_traits<_Alloc>::value_type, _Tp>,
                 "The allocator should already be rebound to the correct type");
 
@@ -152,7 +150,7 @@ template <class _Alloc,
           class _BidirIter,
           class _Tp,
           class _Size = typename iterator_traits<_BidirIter>::difference_type>
-_LIBCPP_HIDE_FROM_ABI constexpr void
+constexpr void
 __uninitialized_allocator_fill_n_multidimensional(_Alloc& __alloc, _BidirIter __it, _Size __n, _Tp const& __value) {
   using _ValueType = typename iterator_traits<_BidirIter>::value_type;
   __allocator_traits_rebind_t<_Alloc, _ValueType> __value_alloc(__alloc);
@@ -170,7 +168,7 @@ __uninitialized_allocator_fill_n_multidimensional(_Alloc& __alloc, _BidirIter __
 // Same as __uninitialized_allocator_fill_n_multidimensional, but doesn't pass any initialization argument
 // to the allocator's construct method, which results in value initialization.
 template <class _Alloc, class _BidirIter, class _Size = typename iterator_traits<_BidirIter>::difference_type>
-_LIBCPP_HIDE_FROM_ABI constexpr void
+constexpr void
 __uninitialized_allocator_value_construct_n_multidimensional(_Alloc& __alloc, _BidirIter __it, _Size __n) {
   using _ValueType = typename iterator_traits<_BidirIter>::value_type;
   __allocator_traits_rebind_t<_Alloc, _ValueType> __value_alloc(__alloc);

@@ -126,7 +126,7 @@ LinkEditData:
 #CHECK: magic:           0xFEEDFACF
 #CHECK:   cputype:         0x1000007
 #CHECK:   cpusubtype:      0x3
-#CHECK:   filetype:        0x1
+#CHECK:   filetype:        MH_OBJECT
 #CHECK:   ncmds:           4
 #CHECK:   sizeofcmds:      512
 #CHECK:   flags:           0x2000

@@ -70,13 +70,13 @@ export void foo() {
 // CHECK-SPV: %[[Handle2:.*]] = call target("spirv.VulkanBuffer", [0 x float], 12, 1)
 // CHECK-SPV-SAME: @llvm.spv.resource.handlefromimplicitbinding.tspirv.VulkanBuffer_a0f32_12_1t(
 // CHECK-SPV: %[[HandlePtr:.*]] = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %[[Tmp2]], i32 0, i32 0
-// CHECK-SPV-NEXT: store target("spirv.VulkanBuffer", [0 x float], 12, 1) %[[Handle2]], ptr %[[HandlePtr]], align 8
+// CHECK-SPV-NEXT: store target("spirv.VulkanBuffer", [0 x float], 12, 1) %[[Handle2]], ptr %[[HandlePtr]], align 4
 // CHECK-SPV: %[[HandlePtr:.*]] = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %[[Tmp2]], i32 0, i32 0
-// CHECK-SPV: %[[LoadedHandle:.*]] = load target("spirv.VulkanBuffer", [0 x float], 12, 1), ptr %[[HandlePtr]], align 8
+// CHECK-SPV: %[[LoadedHandle:.*]] = load target("spirv.VulkanBuffer", [0 x float], 12, 1), ptr %[[HandlePtr]], align 4
 // CHECK-SPV: %[[CounterHandle:.*]] = call target("spirv.VulkanBuffer", i32, 12, 1) @llvm.spv.resource.counterhandlefromimplicitbinding
 // CHECK-SPV-SAME: [ "convergencectrl"(token %[[ConvTok]]) ]
 // CHECK-SPV: %[[CounterHandlePtr:.*]] = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %[[Tmp2]], i32 0, i32 1
-// CHECK-SPV-NEXT: store target("spirv.VulkanBuffer", i32, 12, 1) %[[CounterHandle]], ptr %[[CounterHandlePtr]], align 8
+// CHECK-SPV-NEXT: store target("spirv.VulkanBuffer", i32, 12, 1) %[[CounterHandle]], ptr %[[CounterHandlePtr]], align 4
 // CHECK: call {{(spir_func )?}}void @hlsl::RWStructuredBuffer<float>::RWStructuredBuffer(hlsl::RWStructuredBuffer<float> const&)(ptr {{.*}} %[[RetValue2]], ptr {{.*}} %[[Tmp2]])
 
 // Buf3 initialization part 1 - local variable declared in function foo() is initialized by 

@@ -67,7 +67,6 @@
 ---
 name:            fn1
 alignment:       16
-tracksRegLiveness: true
 liveins:         []
 body:             |
   bb.0.entry:

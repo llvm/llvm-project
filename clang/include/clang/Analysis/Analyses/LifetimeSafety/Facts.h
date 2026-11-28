@@ -29,6 +29,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <optional>
+#include <type_traits>
 
 namespace clang::lifetimes {
 
@@ -235,6 +236,7 @@ public:
     Global, /// Escapes via assignment to global storage.
     This,   /// Escapes via the enclosing object `this`, which outlives the
             /// method.
+    Param,  /// Escapes via storage reachable through a reference parameter.
   } EscKind;
 
   static bool classof(const Fact *F) {
@@ -322,6 +324,28 @@ public:
                EscapeKind::This;
   }
   SourceLocation getLoc() const { return Loc; }
+  void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
+            const LoanPropagationAnalysis *LPA = nullptr) const override;
+};
+
+/// Represents an origin escaping through storage reachable from a reference
+/// parameter, which the caller can observe after the function returns.
+/// Example: `out = local_view;` for a parameter `std::string_view &out`.
+/// Emitted at function exit; only used to verify annotations, so it does not
+/// keep the origin live.
+class ParamEscapeFact : public OriginEscapesFact {
+  const ParmVarDecl *Param;
+
+public:
+  ParamEscapeFact(OriginID OID, const ParmVarDecl *Param)
+      : OriginEscapesFact(OID, EscapeKind::Param), Param(Param) {}
+
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::Param;
+  }
+  const ParmVarDecl *getParam() const { return Param; }
   void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
             const LoanPropagationAnalysis *LPA = nullptr) const override;
 };
@@ -430,7 +454,9 @@ public:
 
 class FactManager {
 public:
-  FactManager(const AnalysisDeclContext &AC, const CFG &Cfg) : OriginMgr(AC) {
+  FactManager(const AnalysisDeclContext &AC, const CFG &Cfg,
+              llvm::BumpPtrAllocator &Alloc)
+      : LoanMgr(Alloc), OriginMgr(AC, Alloc), FactAllocator(Alloc) {
     BlockToFacts.resize(Cfg.getNumBlockIDs());
   }
 
@@ -449,11 +475,15 @@ public:
 
   template <typename FactType, typename... Args>
   FactType *createFact(Args &&...args) {
-    void *Mem = FactAllocator.Allocate<FactType>();
-    FactType *Res = new (Mem) FactType(std::forward<Args>(args)...);
+    FactType *Res = new (FactAllocator) FactType(std::forward<Args>(args)...);
     Res->setID(NextFactID++);
+    if constexpr (std::is_same_v<FactType, MovedOriginFact>)
+      HasMovedOriginFacts = true;
     return Res;
   }
+
+  /// Whether any MovedOriginFact was created.
+  bool hasMovedOriginFacts() const { return HasMovedOriginFacts; }
 
   void dump(const CFG &Cfg, AnalysisDeclContext &AC,
             const LoanPropagationAnalysis *LPA = nullptr) const;
@@ -503,11 +533,12 @@ private:
   friend class FactsGenerator;
 
   FactID NextFactID{0};
+  bool HasMovedOriginFacts = false;
   LoanManager LoanMgr;
   OriginManager OriginMgr;
   /// Facts for each CFG block, indexed by block ID.
   llvm::SmallVector<llvm::SmallVector<const Fact *>> BlockToFacts;
-  llvm::BumpPtrAllocator FactAllocator;
+  llvm::BumpPtrAllocator &FactAllocator;
   /// Bit vector indexed by origin ID. If set, the origin is referenced from
   /// more than one basic block and must participate in join operations. If
   /// unset, the origin is block-local and can be discarded at block

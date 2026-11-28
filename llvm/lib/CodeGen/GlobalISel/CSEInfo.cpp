@@ -94,10 +94,7 @@ llvm::getStandardCSEConfigForOpt(CodeGenOptLevel Level) {
 /// -----------------------------------------
 
 /// -------- GISelCSEInfo -------------//
-void GISelCSEInfo::setMF(MachineFunction &MF) {
-  this->MF = &MF;
-  this->MRI = &MF.getRegInfo();
-}
+void GISelCSEInfo::setMF(MachineFunction &MF) { this->MRI = &MF.getRegInfo(); }
 
 GISelCSEInfo::~GISelCSEInfo() = default;
 
@@ -266,7 +263,6 @@ void GISelCSEInfo::releaseMemory() {
   TemporaryInsts.clear();
   CSEOpt.reset();
   MRI = nullptr;
-  MF = nullptr;
 #ifndef NDEBUG
   OpcodeHitTable.clear();
 #endif

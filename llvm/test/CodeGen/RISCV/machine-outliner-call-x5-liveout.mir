@@ -9,7 +9,6 @@
 ---
 
 name:            outline_0
-tracksRegLiveness: true
 isOutlined: false
 body:             |
   bb.0:
@@ -36,7 +35,6 @@ body:             |
 ---
 
 name:            dont_outline
-tracksRegLiveness: true
 isOutlined: false
 body:             |
   ; RV32I-MO-LABEL: name: dont_outline
@@ -85,7 +83,6 @@ body:             |
 ---
 
 name:            outline_1
-tracksRegLiveness: true
 isOutlined: false
 body:             |
   bb.0:
@@ -111,7 +108,6 @@ body:             |
 ...
 ---
 name:            outline_2
-tracksRegLiveness: true
 isOutlined: false
 body:             |
   bb.0:

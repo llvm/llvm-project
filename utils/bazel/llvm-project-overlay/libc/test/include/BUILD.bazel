@@ -14,7 +14,7 @@ libc_test(
     name = "assert_test",
     srcs = ["assert_test.cpp"],
     deps = [
-        "//libc:llvm_libc_macros_assert_macros",
+        "//libc/include:llvm_libc_macros_assert_macros",
     ],
 )
 
@@ -23,7 +23,7 @@ libc_test(
     srcs = ["complex_test.cpp"],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_complex_macros",
+        "//libc/include:llvm_libc_macros_complex_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -36,7 +36,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -49,7 +49,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -62,7 +62,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -72,7 +72,7 @@ libc_test(
     srcs = ["fpclassify_test.c"],
     c_test = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
     ],
 )
 
@@ -84,7 +84,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -97,7 +97,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -110,7 +110,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -120,7 +120,7 @@ libc_test(
     srcs = ["isfinite_test.c"],
     c_test = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
     ],
 )
 
@@ -132,7 +132,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -145,7 +145,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -158,7 +158,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -168,7 +168,7 @@ libc_test(
     srcs = ["isinf_test.c"],
     c_test = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
     ],
 )
 
@@ -180,7 +180,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -193,7 +193,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -206,7 +206,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -216,7 +216,7 @@ libc_test(
     srcs = ["isnan_test.c"],
     c_test = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
     ],
 )
 
@@ -228,7 +228,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -241,7 +241,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -254,7 +254,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -264,7 +264,27 @@ libc_test(
     srcs = ["isnormal_test.c"],
     c_test = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
+    ],
+)
+
+libc_test(
+    name = "math_comparison_macros_test",
+    srcs = ["math_comparison_macros_test.cpp"],
+    full_build_only = True,
+    deps = [
+        "//libc/include:llvm_libc_macros_math_function_macros",
+        "//libc/src/__support/macros/properties:types",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "math_comparison_macros_c_test",
+    srcs = ["math_comparison_macros_test.c"],
+    c_test = True,
+    deps = [
+        "//libc/include:llvm_libc_macros_math_function_macros",
     ],
 )
 
@@ -273,7 +293,7 @@ libc_test(
     srcs = ["issubnormal_test.c"],
     c_test = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
     ],
 )
 
@@ -285,7 +305,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -298,7 +318,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -311,7 +331,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -321,7 +341,7 @@ libc_test(
     srcs = ["iszero_test.c"],
     c_test = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
     ],
 )
 
@@ -333,7 +353,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -346,7 +366,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -359,7 +379,7 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -372,8 +392,8 @@ libc_test(
     ],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_common_h",
-        "//libc:llvm_libc_macros_stdbit_macros",
+        "//libc/include:llvm_libc_common_h",
+        "//libc/include:llvm_libc_macros_stdbit_macros",
     ],
 )
 
@@ -382,7 +402,7 @@ libc_test(
     srcs = ["signbit_test.c"],
     c_test = True,
     deps = [
-        "//libc:llvm_libc_macros_math_function_macros",
+        "//libc/include:llvm_libc_macros_math_function_macros",
     ],
 )
 
@@ -391,7 +411,7 @@ libc_test(
     srcs = ["stdckdint_test.cpp"],
     full_build_only = True,
     deps = [
-        "//libc:llvm_libc_macros_stdckdint_macros",
+        "//libc/include:llvm_libc_macros_stdckdint_macros",
     ],
 )
 
@@ -400,8 +420,8 @@ libc_test(
     srcs = ["sys/queue_test.cpp"],
     full_build_only = True,
     deps = [
-        "//libc:__support_char_vector",
-        "//libc:__support_cpp_string",
-        "//libc:llvm_libc_macros_sys_queue_macros",
+        "//libc/include:llvm_libc_macros_sys_queue_macros",
+        "//libc/src/__support:char_vector",
+        "//libc/src/__support/CPP:string",
     ],
 )

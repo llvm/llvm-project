@@ -6,7 +6,6 @@
 
 ---
 name:            foo
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
@@ -35,7 +34,6 @@ body:             |
 # This would hit "Unexpected reg unit state" assert.
 ---
 name:            bar
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'

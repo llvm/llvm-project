@@ -86,7 +86,6 @@ def HasPWRPSR : Predicate<"Subtarget->hasPWRPSR()">,
 // UMAC and SMAC instructions
 def HasUMAC_SMAC : Predicate<"Subtarget->hasUmacSmac()">;
 
-def HasNoFdivSqrtFix : Predicate<"!Subtarget->fixAllFDIVSQRT()">;
 def HasFMULS : Predicate<"!Subtarget->hasNoFMULS()">;
 def HasFSMULD : Predicate<"!Subtarget->hasNoFSMULD()">;
 
@@ -193,6 +192,29 @@ def simm13Op : Operand<iPTR> {
   let OperandType = "OPERAND_IMMEDIATE";
   let DecoderMethod = "DecodeSIMM13";
   let EncoderMethod = "getSImm13OpValue";
+}
+
+// Immediate operands of movr, movcc, sethi/unimp and Tcc. A symbolic value gets
+// a relocation for the field: R_SPARC_10, R_SPARC_11, R_SPARC_22 and R_SPARC_7
+// respectively.
+def simm10Op : Operand<i32> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let EncoderMethod = "getSImm10OpValue";
+}
+
+def simm11Op : Operand<i32> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let EncoderMethod = "getSImm11OpValue";
+}
+
+def imm22Op : Operand<i32> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let EncoderMethod = "getImm22OpValue";
+}
+
+def trapnum : Operand<i32> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let EncoderMethod = "getTrapNumOpValue";
 }
 
 def MEMrr : Operand<iPTR> {
@@ -402,6 +424,11 @@ def SPselecticc : SDNode<"SPISD::SELECT_ICC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectxcc : SDNode<"SPISD::SELECT_XCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectfcc : SDNode<"SPISD::SELECT_FCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectreg : SDNode<"SPISD::SELECT_REG", SDTSPselectreg>;
+
+def SPreadcyclecounter
+    : SDNode<"SPISD::READ_CYCLE_COUNTER",
+             SDTypeProfile<2, 0, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>,
+             [SDNPHasChain, SDNPSideEffect]>;
 
 // GPRC, CHAIN = LOAD_BIG/LITTLE CHAIN, Ptr, Type
 // These are endianness-adjusted load instructions. They load the low "Type"
@@ -643,6 +670,11 @@ class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
 
 // Full memory barrier for V8.
 def V8BAR : Pseudo<(outs), (ins), "!V8BAR", []>, Requires<[HasNoV9]>;
+
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
+def ReadCycleCounter
+    : Pseudo<(outs IntRegs:$lo, IntRegs:$hi), (ins), "",
+             [(set IntRegs:$lo, IntRegs:$hi, (SPreadcyclecounter))]>;
 
 // GETPCX for PIC
 let Defs = [O7] in {
@@ -902,7 +934,7 @@ let Predicates = [HasV9], Uses = [ASR3] in
 
 // Section B.9 - SETHI Instruction, p. 104
 def SETHIi: F2_1<0b100,
-                 (outs IntRegs:$rd), (ins i32imm:$imm22),
+                 (outs IntRegs:$rd), (ins imm22Op:$imm22),
                  "sethi $imm22, $rd",
                  [(set i32:$rd, SETHIimm:$imm22)],
                  IIC_iu_instr>;
@@ -1284,7 +1316,7 @@ let DecoderNamespace = "SparcV8", hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
                         "t$cond $rs1 + $rs2",
                         []>;
   def TRAPri : TRAPSPri<0b111010,
-                        (outs), (ins IntRegs:$rs1, i32imm:$imm, CCOp:$cond),
+                        (outs), (ins IntRegs:$rs1, trapnum:$imm, CCOp:$cond),
                         "t$cond $rs1 + $imm",
                         []>;
 }
@@ -1295,7 +1327,7 @@ multiclass TRAP<string regStr> {
                     !strconcat(!strconcat("t$cond ", regStr), ", $rs1 + $rs2"),
                     []>;
   def ri : TRAPSPri<0b111010,
-                    (outs), (ins IntRegs:$rs1, i32imm:$imm, CCOp:$cond),
+                    (outs), (ins IntRegs:$rs1, trapnum:$imm, CCOp:$cond),
                     !strconcat(!strconcat("t$cond ", regStr), ", $rs1 + $imm"),
                     []>;
 }
@@ -1379,7 +1411,7 @@ let hasSideEffects = 1, rd = 0, rs1 = 0b01111, rs2 = 0 in
 
 // Section B.31 - Unimplemented Instruction
 let rd = 0 in
-  def UNIMP : F2_1<0b000, (outs), (ins i32imm:$imm22),
+  def UNIMP : F2_1<0b000, (outs), (ins imm22Op:$imm22),
                   "unimp $imm22", []>;
 
 // Section B.32 - Flush Instruction Memory
@@ -1484,9 +1516,6 @@ def FABSS : F3_3u<2, 0b110100, 0b000001001,
 
 // Floating-point Square Root Instructions, p.145
 let Uses = [FSR], mayRaiseFPException = 1 in {
-// FSQRTS generates an erratum on LEON processors, so by disabling this instruction
-// this will be promoted to use FSQRTD with doubles instead.
-let Predicates = [HasNoFdivSqrtFix] in
 def FSQRTS : F3_3u<2, 0b110100, 0b000101001,
                   (outs FPRegs:$rd), (ins FPRegs:$rs2),
                   "fsqrts $rs2, $rd",
@@ -1751,7 +1780,7 @@ let Predicates = [HasV9], Constraints = "$f = $rd" in {
 
     def MOVICCri
       : F4_2<0b101100, (outs IntRegs:$rd),
-             (ins i32imm:$simm11, IntRegs:$f, CCOp:$cond),
+             (ins simm11Op:$simm11, IntRegs:$f, CCOp:$cond),
              "mov$cond %icc, $simm11, $rd",
              [(set i32:$rd,
                     (SPselecticc simm11:$simm11, i32:$f, imm:$cond))]>;
@@ -1765,7 +1794,7 @@ let Predicates = [HasV9], Constraints = "$f = $rd" in {
              [(set i32:$rd, (SPselectfcc i32:$rs2, i32:$f, imm:$cond))]>;
     def MOVFCCri
       : F4_2<0b101100, (outs IntRegs:$rd),
-             (ins i32imm:$simm11, IntRegs:$f, CCOp:$cond),
+             (ins simm11Op:$simm11, IntRegs:$f, CCOp:$cond),
              "mov$cond %fcc0, $simm11, $rd",
              [(set i32:$rd,
                     (SPselectfcc simm11:$simm11, i32:$f, imm:$cond))]>;
@@ -1874,7 +1903,7 @@ let Predicates = [HasV9] in {
              "mov$cond $cc, $rs2, $rd", []>;
     def V9MOVFCCri
       : F4_2<0b101100, (outs IntRegs:$rd),
-             (ins FCCRegs:$cc, i32imm:$simm11, IntRegs:$f, CCOp:$cond),
+             (ins FCCRegs:$cc, simm11Op:$simm11, IntRegs:$f, CCOp:$cond),
              "mov$cond $cc, $simm11, $rd", []>;
     def V9FMOVS_FCC
       : F4_3<0b110101, 0b000001, (outs FPRegs:$rd),
@@ -1925,6 +1954,21 @@ let Predicates = [HasV9], Uses = [ASR3], Constraints = "$swap = $rd" in
                 (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
                                      IntRegs:$swap),
                  "casa [$rs1] %asi, $rs2, $rd", []>;
+
+// 64-bit compare-and-swap in 32-bit V8+ code, the equivalent of GCC's
+// *atomic_compare_and_swapdi_v8plus. The 32-bit halves of the compare and new
+// values are packed into %g/%o registers, casx is issued and the result is
+// split back into halves. The results are written before all inputs are read,
+// so they are early-clobber; $tmp is a scratch register. Expanded after
+// register allocation so no 64-bit value is spilled to a 32-bit stack slot.
+let Predicates = [HasV9], mayLoad = 1, mayStore = 1, hasSideEffects = 0,
+    Constraints = "@earlyclobber $rd_hi,@earlyclobber $rd_lo,@earlyclobber $tmp" in
+  def CASX_V8PLUS
+      : Pseudo<(outs IntRegsV8Plus:$rd_hi, IntRegsV8Plus:$rd_lo,
+                     IntRegsV8Plus:$tmp),
+               (ins IntRegs:$rs1, IntRegs:$cmp_hi, IntRegs:$cmp_lo,
+                    IntRegs:$new_hi, IntRegs:$new_lo),
+               "!CASX_V8PLUS", []>;
 
 // TODO: Add DAG sequence to lower these instructions. Currently, only provided
 // as inline assembler-supported instructions.

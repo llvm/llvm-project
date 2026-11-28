@@ -84,8 +84,6 @@ define void @stencil_loads_and_independent_stores_with_unknown_deps(ptr %a, ptr 
 ; FORCE-NEXT:      SCEV assumptions:
 ; FORCE-NEXT:      Compare predicate: %m sgt) 0
 ; FORCE-NEXT:      Compare predicate: %m sle) 1152921504606846975
-; FORCE-NEXT:      Compare predicate: %m sgt) 0
-; FORCE-NEXT:      Compare predicate: %m sle) 1152921504606846975
 ; FORCE-EMPTY:
 ; FORCE-NEXT:      Expressions re-written:
 ;

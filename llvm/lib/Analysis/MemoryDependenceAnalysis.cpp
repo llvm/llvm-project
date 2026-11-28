@@ -128,7 +128,7 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
   }
 
   if (const CallBase *CB = dyn_cast<CallBase>(Inst)) {
-    if (Value *FreedOp = getFreedOperand(CB, &TLI)) {
+    if (Value *FreedOp = getFreedOperand(CB)) {
       // calls to free() deallocate the entire structure
       Loc = MemoryLocation::getAfter(FreedOp);
       return ModRefInfo::Mod;
@@ -389,12 +389,10 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   // For Load/Store return true if atomic ordering is stronger than AO,
   // for other instruction just true if it can read or write to memory.
   auto isComplexForReordering = [](Instruction * I, AtomicOrdering AO)->bool {
-    if (I->isVolatile())
-      return true;
     if (auto *LI = dyn_cast<LoadInst>(I))
-      return isStrongerThan(LI->getOrdering(), AO);
+      return LI->isVolatile() || isStrongerThan(LI->getOrdering(), AO);
     if (auto *SI = dyn_cast<StoreInst>(I))
-      return isStrongerThan(SI->getOrdering(), AO);
+      return SI->isVolatile() || isStrongerThan(SI->getOrdering(), AO);
     return I->mayReadOrWriteMemory();
   };
 

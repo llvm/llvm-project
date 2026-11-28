@@ -880,7 +880,7 @@ void foo() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN2StC1Ev
-// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR3:[0-9]+]] align 2 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -908,7 +908,7 @@ void foo() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN2StD1Ev
-// CHECK5-SAME: (ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// CHECK5-SAME: (ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -934,7 +934,7 @@ void foo() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_Z10array_funcv.omp_outlined
-// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK5-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -969,7 +969,7 @@ void foo() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN2StaSERKS_
-// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR0]] align 2 {
+// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR3]] align 2 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
@@ -980,7 +980,7 @@ void foo() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN2StC2Ev
-// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// CHECK5-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -993,7 +993,7 @@ void foo() {
 //
 //
 // CHECK5-LABEL: define {{[^@]+}}@_ZN2StD2Ev
-// CHECK5-SAME: (ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// CHECK5-SAME: (ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR3]] align 2 {
 // CHECK5-NEXT:  entry:
 // CHECK5-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK5-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -1571,7 +1571,7 @@ void foo() {
 // CHECK15-NEXT:    [[ARRAYCTOR_DONE:%.*]] = icmp eq ptr [[ARRAYCTOR_NEXT]], getelementptr inbounds nuw (i8, ptr @_ZZ10array_funcvE1s, i64 16)
 // CHECK15-NEXT:    br i1 [[ARRAYCTOR_DONE]], label [[ARRAYCTOR_CONT:%.*]], label [[ARRAYCTOR_LOOP]]
 // CHECK15:       arrayctor.cont:
-// CHECK15-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR2:[0-9]+]]
+// CHECK15-NEXT:    [[TMP1:%.*]] = call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle) #[[ATTR3:[0-9]+]]
 // CHECK15-NEXT:    store i8 1, ptr @_ZGVZ10array_funcvE1s, align 1
 // CHECK15-NEXT:    br label [[INIT_END]]
 // CHECK15:       init.end:
@@ -1582,7 +1582,7 @@ void foo() {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_ZN2StC1Ev
-// CHECK15-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK15-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK15-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -1592,7 +1592,7 @@ void foo() {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@__cxx_global_array_dtor
-// CHECK15-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] section ".text.startup" {
+// CHECK15-SAME: (ptr noundef [[TMP0:%.*]]) #[[ATTR2:[0-9]+]] section ".text.startup" {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK15-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
@@ -1600,7 +1600,7 @@ void foo() {
 // CHECK15:       arraydestroy.body:
 // CHECK15-NEXT:    [[ARRAYDESTROY_ELEMENTPAST:%.*]] = phi ptr [ getelementptr inbounds nuw (i8, ptr @_ZZ10array_funcvE1s, i64 16), [[ENTRY:%.*]] ], [ [[ARRAYDESTROY_ELEMENT:%.*]], [[ARRAYDESTROY_BODY]] ]
 // CHECK15-NEXT:    [[ARRAYDESTROY_ELEMENT]] = getelementptr inbounds [[STRUCT_ST:%.*]], ptr [[ARRAYDESTROY_ELEMENTPAST]], i64 -1
-// CHECK15-NEXT:    call void @_ZN2StD1Ev(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR2]]
+// CHECK15-NEXT:    call void @_ZN2StD1Ev(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[ARRAYDESTROY_ELEMENT]]) #[[ATTR3]]
 // CHECK15-NEXT:    [[ARRAYDESTROY_DONE:%.*]] = icmp eq ptr [[ARRAYDESTROY_ELEMENT]], @_ZZ10array_funcvE1s
 // CHECK15-NEXT:    br i1 [[ARRAYDESTROY_DONE]], label [[ARRAYDESTROY_DONE1:%.*]], label [[ARRAYDESTROY_BODY]]
 // CHECK15:       arraydestroy.done1:
@@ -1608,17 +1608,17 @@ void foo() {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_ZN2StD1Ev
-// CHECK15-SAME: (ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK15-SAME: (ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK15-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK15-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK15-NEXT:    call void @_ZN2StD2Ev(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[THIS1]]) #[[ATTR2]]
+// CHECK15-NEXT:    call void @_ZN2StD2Ev(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[THIS1]]) #[[ATTR3]]
 // CHECK15-NEXT:    ret void
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_Z10array_funcv.omp_outlined
-// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(16) [[S:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK15-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(16) [[S:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK15-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1660,7 +1660,7 @@ void foo() {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_ZN2StaSERKS_
-// CHECK15-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK15-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP0:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK15-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
@@ -1671,7 +1671,7 @@ void foo() {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_ZN2StC2Ev
-// CHECK15-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK15-SAME: (ptr noundef nonnull align 4 dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK15-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -1684,7 +1684,7 @@ void foo() {
 //
 //
 // CHECK15-LABEL: define {{[^@]+}}@_ZN2StD2Ev
-// CHECK15-SAME: (ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK15-SAME: (ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK15-NEXT:  entry:
 // CHECK15-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK15-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8

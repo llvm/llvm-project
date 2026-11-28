@@ -4,7 +4,7 @@
 define half @test_bitextract_half_full(b16 %src) {
 ; CHECK-LABEL: test_bitextract_half_full:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pinsrw $0, %edi, %xmm0
+; CHECK-NEXT:    movd %edi, %xmm0
 ; CHECK-NEXT:    retq
   %result = bitextract half, b16 %src, i32 0
   ret half %result

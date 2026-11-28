@@ -9,7 +9,6 @@
 #include "DAP.h"
 #include "ProtocolUtils.h"
 #include "RequestHandler.h"
-#include <algorithm>
 
 using namespace lldb_dap::protocol;
 namespace lldb_dap {
@@ -32,12 +31,15 @@ ModulesRequestHandler::Run(const std::optional<ModulesArguments> &args) const {
   if (start_module >= total_modules)
     return response;
 
-  const uint32_t module_count = args ? args->moduleCount : 0;
-  const uint32_t end_module =
-      module_count == 0 ? total_modules
-                        : std::min(total_modules, start_module + module_count);
-  assert(start_module <= end_module);
-  modules.reserve(end_module - start_module);
+  const uint32_t remaining_modules = total_modules - start_module;
+  uint32_t module_count = args ? args->moduleCount : 0;
+  if (module_count == 0 || module_count > remaining_modules)
+    module_count = remaining_modules;
+
+  const uint32_t end_module = start_module + module_count;
+  assert(end_module <= total_modules);
+
+  modules.reserve(module_count);
   for (uint32_t i = start_module; i < end_module; ++i) {
     lldb::SBModule module = dap.target.GetModuleAtIndex(i);
 

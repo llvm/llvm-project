@@ -1217,8 +1217,8 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     // is shifted off the end. That is sufficient with OrZero set, otherwise
     // the result must also be known never to be zero.
 
-    // TODO: Constant splat
-    if (auto ConstLHS = getIConstantVRegVal(MI.getOperand(1).getReg(), MRI)) {
+    if (auto ConstLHS =
+            isConstantOrConstantSplatVector(MI.getOperand(1).getReg(), MRI)) {
       if (*ConstLHS == 1)
         return true;
     }
@@ -1231,7 +1231,8 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     break;
   }
   case TargetOpcode::G_LSHR: {
-    if (auto ConstLHS = getIConstantVRegVal(MI.getOperand(1).getReg(), MRI)) {
+    if (auto ConstLHS =
+            isConstantOrConstantSplatVector(MI.getOperand(1).getReg(), MRI)) {
       if (ConstLHS->isSignMask())
         return true;
     }
@@ -1708,9 +1709,7 @@ bool llvm::isNullOrNullSplat(const MachineInstr &MI,
     return FPImm->isZero() && !FPImm->isNegative();
   }
   default:
-    if (!AllowUndefs) // TODO: isBuildVectorAllZeros assumes undef is OK already
-      return false;
-    return isBuildVectorAllZeros(MI, MRI);
+    return isBuildVectorAllZeros(MI, MRI, AllowUndefs);
   }
 }
 
@@ -1723,9 +1722,7 @@ bool llvm::isAllOnesOrAllOnesSplat(const MachineInstr &MI,
   case TargetOpcode::G_CONSTANT:
     return MI.getOperand(1).getCImm()->isAllOnesValue();
   default:
-    if (!AllowUndefs) // TODO: isBuildVectorAllOnes assumes undef is OK already
-      return false;
-    return isBuildVectorAllOnes(MI, MRI);
+    return isBuildVectorAllOnes(MI, MRI, AllowUndefs);
   }
 }
 
@@ -1762,9 +1759,9 @@ bool llvm::matchUnaryPredicate(
   return true;
 }
 
-bool llvm::isConstTrueVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
-                          bool IsFP) {
-  switch (TLI.getBooleanContents(IsVector, IsFP)) {
+bool llvm::isConstTrueVal(const TargetLowering &TLI, int64_t Val,
+                          bool IsVector) {
+  switch (TLI.getBooleanContents(IsVector)) {
   case TargetLowering::UndefinedBooleanContent:
     return Val & 0x1;
   case TargetLowering::ZeroOrOneBooleanContent:
@@ -1776,8 +1773,8 @@ bool llvm::isConstTrueVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
 }
 
 bool llvm::isConstFalseVal(const TargetLowering &TLI, int64_t Val,
-                           bool IsVector, bool IsFP) {
-  switch (TLI.getBooleanContents(IsVector, IsFP)) {
+                           bool IsVector) {
+  switch (TLI.getBooleanContents(IsVector)) {
   case TargetLowering::UndefinedBooleanContent:
     return ~Val & 0x1;
   case TargetLowering::ZeroOrOneBooleanContent:
@@ -1787,9 +1784,8 @@ bool llvm::isConstFalseVal(const TargetLowering &TLI, int64_t Val,
   llvm_unreachable("Invalid boolean contents");
 }
 
-int64_t llvm::getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
-                             bool IsFP) {
-  switch (TLI.getBooleanContents(IsVector, IsFP)) {
+int64_t llvm::getICmpTrueVal(const TargetLowering &TLI, bool IsVector) {
+  switch (TLI.getBooleanContents(IsVector)) {
   case TargetLowering::UndefinedBooleanContent:
   case TargetLowering::ZeroOrOneBooleanContent:
     return 1;
@@ -1841,10 +1837,12 @@ void llvm::salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI) {
     SmallVector<MachineOperand *, 16> DbgUsers;
     for (auto &MOUse : MRI.use_operands(Def.getReg())) {
       MachineInstr *DbgValue = MOUse.getParent();
-      // Ignore partially formed DBG_VALUEs.
-      if (DbgValue->isNonListDebugValue() && DbgValue->getNumOperands() == 4) {
-        DbgUsers.push_back(&MOUse);
-      }
+      // Ignore partially formed DBG_VALUEs (a complete one has 4 operands:
+      // location, offset, variable and expression).
+      if (!DbgValue->isDebugValueList() &&
+          !(DbgValue->isNonListDebugValue() && DbgValue->getNumOperands() == 4))
+        continue;
+      DbgUsers.push_back(&MOUse);
     }
 
     if (!DbgUsers.empty()) {
@@ -1970,6 +1968,8 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
   case TargetOpcode::G_FPTOUI:
     // fptosi/ui yields poison if the resulting value does not fit in the
     // destination type.
+    return true;
+  case TargetOpcode::G_ADDRSPACE_CAST:
     return true;
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:

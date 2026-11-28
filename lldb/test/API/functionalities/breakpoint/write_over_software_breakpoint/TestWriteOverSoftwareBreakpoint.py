@@ -42,6 +42,7 @@ class TestCases(object):
     # Could not find a way to make place_break_here visible to lldb on Windows.
     @skipIfWindows
     @skipIfOutOfTreeDebugserver
+    @requireNotWasm("the inferior's inline assembly has no Wasm variant")
     def test_write_over_breakpoint(self):
         target, process, loop_start_breakpoint_addr = self.run_to_start()
 
@@ -162,6 +163,7 @@ class TestCases(object):
             self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonBreakpoint)
             self.assertEqual(loop_start_breakpoint_addr, thread.selected_frame.GetPC())
 
+    @requireNotWasm("the inferior's inline assembly has no Wasm variant")
     def test_write_over_uncommitted_breakpoint(self):
         self.runCmd("settings set target.process.use-delayed-breakpoints true")
         target, process, loop_start_breakpoint_addr = self.run_to_start()

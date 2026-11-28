@@ -87,6 +87,10 @@ page](https://llvm.org/releases/).
 
 ## Non-comprehensive list of changes in this release
 
+- An OpenMP `atomic` construct no longer emits a call to `__kmpc_flush` after
+  the atomic operation; the memory ordering of the operation already provides
+  the flushes that the construct implies.
+
 - Added support for the OpenMP implementation-defined extension sentinels
   (OpenMP 5.2, section 3.1): `!$omx`, `c$omx` and `*$omx` in fixed source form
   and `!$ompx` in free source form. These sentinels are recognized like their
@@ -140,6 +144,12 @@ page](https://llvm.org/releases/).
   same applies to array section endpoints, but not to cosubscripts, which remain
   errors. Use `-fno-out-of-bounds-subscripts` to get an error again, or
   `-Wno-out-of-bounds-subscripts` to silence the warning.
+
+- Flang now provides an opt-in warning, enabled with `-Wstat-kind`, when the
+  `STAT=` variable has a decimal exponent range smaller than four (for
+  example, an 8-bit integer). Fortran 2023 (9.7.4 p1) only recommends this
+  range, so conforming code is flagged and the warning is disabled by
+  default.
 
 ## New Compiler Flags
 - Added `-fno-out-of-bounds-subscripts`, which restores the previous behavior of

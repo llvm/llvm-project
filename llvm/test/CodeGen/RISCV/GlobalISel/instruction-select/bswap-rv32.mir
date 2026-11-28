@@ -8,17 +8,19 @@
 name:            bswap_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; CHECK-LABEL: name: bswap_s32
-    ; CHECK: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[REV8_RV32_:%[0-9]+]]:gpr = REV8_RV32 [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[REV8_RV32_]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_BSWAP %0
-    $x10 = COPY %1(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_BSWAP %0
+    $x10 = COPY %1(i32)
     PseudoRET implicit $x10
 
 ...

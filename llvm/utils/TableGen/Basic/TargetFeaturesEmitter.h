@@ -19,11 +19,15 @@
 
 namespace llvm {
 /// Sorting predicate to sort record pointers by their
-/// FieldName field.
+/// FieldName field. Records with the same FieldName are sorted by their unique
+/// ID, which is the order in which they were defined.
 struct LessRecordFieldFieldName {
   bool operator()(const Record *Rec1, const Record *Rec2) const {
-    return Rec1->getValueAsString("FieldName") <
-           Rec2->getValueAsString("FieldName");
+    int Cmp = Rec1->getValueAsString("FieldName")
+                  .compare(Rec2->getValueAsString("FieldName"));
+    if (Cmp != 0)
+      return Cmp < 0;
+    return Rec1->getID() < Rec2->getID();
   }
 };
 

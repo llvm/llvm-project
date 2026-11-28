@@ -257,7 +257,6 @@ public:
       report_fatal_error(Twine("Can't allocate enough memory: ") +
                          EC.message());
 
-    PreallocSlab = MB;
     UsePreallocation = true;
     SlabSize = Size;
   }
@@ -280,7 +279,6 @@ public:
 
 private:
   std::map<std::string, uint64_t> DummyExterns;
-  sys::MemoryBlock PreallocSlab;
   bool UsePreallocation = false;
   uintptr_t SlabSize = 0;
   uintptr_t CurrentSlabOffset = 0;

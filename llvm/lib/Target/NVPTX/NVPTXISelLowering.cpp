@@ -14,6 +14,7 @@
 #include "NVPTXISelLowering.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
+#include "NVPTXInstrInfo.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXSubtarget.h"
@@ -28,10 +29,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -63,7 +67,6 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
@@ -81,61 +84,38 @@
 
 #define DEBUG_TYPE "nvptx-lower"
 
+#define GET_INSTRMAP_INFO
+#include "NVPTXGenInstrInfo.inc"
+
 using namespace llvm;
 
-static cl::opt<bool> sched4reg(
-    "nvptx-sched4reg",
-    cl::desc("NVPTX Specific: schedule for register pressue"), cl::init(false));
+// The phase-qualified mbarrier wait instructions can omit the optional PTX
+// report value destination. When the report value result of the selected
+// instruction has no uses, rewrite it to the variant without the report
+// value to avoid emitting the 8-bit payload register.
+MachineBasicBlock *
+NVPTXTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
+                                                 MachineBasicBlock *MBB) const {
+  int Opcode = NVPTX::getMbarrierNoReportOpcode(MI.getOpcode());
+  if (Opcode == -1)
+    return TargetLowering::EmitInstrWithCustomInserter(MI, MBB);
 
-static cl::opt<unsigned> FMAContractLevelOpt(
-    "nvptx-fma-level", cl::Hidden,
-    cl::desc("NVPTX Specific: FMA contraction (0: don't do it"
-             " 1: do it  2: do it aggressively"),
-    cl::init(2));
-
-static cl::opt<NVPTX::DivPrecisionLevel> UsePrecDivF32(
-    "nvptx-prec-divf32", cl::Hidden,
-    cl::desc(
-        "NVPTX Specific: Override the precision of the lowering for f32 fdiv"),
-    cl::values(
-        clEnumValN(NVPTX::DivPrecisionLevel::Approx, "0", "Use div.approx"),
-        clEnumValN(NVPTX::DivPrecisionLevel::Full, "1", "Use div.full"),
-        clEnumValN(NVPTX::DivPrecisionLevel::IEEE754, "2",
-                   "Use IEEE Compliant F32 div.rnd if available (default)"),
-        clEnumValN(NVPTX::DivPrecisionLevel::IEEE754_NoFTZ, "3",
-                   "Use IEEE Compliant F32 div.rnd if available, no FTZ")),
-    cl::init(NVPTX::DivPrecisionLevel::IEEE754));
-
-static cl::opt<bool> UsePrecSqrtF32(
-    "nvptx-prec-sqrtf32", cl::Hidden,
-    cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
-    cl::init(true));
-
-// PTX atom.add.f32 has fixed FTZ behavior that may not match the function's
-// (see shouldExpandAtomicRMWInIR), so by default we fall back to a CAS loop
-// when they disagree (strict mode), unless declared insignificant via
-// !atomic.ignore.denormal.mode metadata or this option. This option allows
-// using atom.add anyway, trading correct denormal handling for the speed of the
-// native instruction.
-static cl::opt<bool> AllowFTZAtomics(
-    "nvptx-allow-ftz-atomics", cl::Hidden,
-    cl::desc("NVPTX Specific: Lower atomicrmw fadd to atom.add even when its "
-             "FTZ behavior does not match the function's denormal mode."),
-    cl::init(false));
-
-/// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
-/// does NOT use lg2.approx for log2, so this is disabled by default.
-static cl::opt<bool> UseApproxLog2F32(
-    "nvptx-approx-log2f32",
-    cl::desc("NVPTX Specific: whether to use lg2.approx for log2"),
-    cl::init(false));
+  const MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+  Register Report = MI.getOperand(2).getReg();
+  if (MRI.use_nodbg_empty(Report)) {
+    MRI.markUsesInDebugValueAsUndef(Report);
+    MI.removeOperand(2);
+    MI.setDesc(STI.getInstrInfo()->get(Opcode));
+  }
+  return MBB;
+}
 
 NVPTX::DivPrecisionLevel
 NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,
                                     const SDNode &N) const {
   // If nvptx-prec-div32=N is used on the command-line, always honor it
-  if (UsePrecDivF32.getNumOccurrences() > 0)
-    return UsePrecDivF32;
+  if (auto PrecDivF32 = STI.getCLOpts().prec_divf32)
+    return *PrecDivF32;
 
   const SDNodeFlags Flags = N.getFlags();
   if (Flags.hasApproximateFuncs())
@@ -146,8 +126,8 @@ NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,
 
 bool NVPTXTargetLowering::usePrecSqrtF32(const SDNode *N) const {
   // If nvptx-prec-sqrtf32 is used on the command-line, always honor it
-  if (UsePrecSqrtF32.getNumOccurrences() > 0)
-    return UsePrecSqrtF32;
+  if (STI.getCLOpts().prec_sqrtf32 != BoolOrDefault::Default)
+    return STI.getCLOpts().prec_sqrtf32 == BoolOrDefault::True;
 
   if (N) {
     const SDNodeFlags Flags = N->getFlags();
@@ -553,7 +533,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   addBypassSlowDiv(64, 32);
 
   // By default, use the Source scheduling
-  if (sched4reg)
+  if (STI.getCLOpts().sched4reg)
     setSchedulingPreference(Sched::RegPressure);
   else
     setSchedulingPreference(Sched::Source);
@@ -1047,6 +1027,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setOperationAction({ISD::LROUND, ISD::LLROUND}, {MVT::f32, MVT::f64}, Expand);
 
+  setOperationAction({ISD::LRINT, ISD::LLRINT}, {MVT::f32, MVT::f64}, Expand);
+
   // 'Expand' implements FCOPYSIGN without calling an external library.
   setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::v2f16, Expand);
@@ -1146,7 +1128,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // FLOG2 supports f32 only
   // f16/bf16 types aren't supported, but they are promoted/expanded to f32.
-  if (UseApproxLog2F32) {
+  if (STI.getCLOpts().approx_log2f32) {
     setOperationAction(ISD::FLOG2, MVT::f32, Legal);
     setOperationPromotedToType(ISD::FLOG2, MVT::f16, MVT::f32);
     setOperationPromotedToType(ISD::FLOG2, MVT::bf16, MVT::f32);
@@ -2412,10 +2394,41 @@ SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,
 
   if (Op.getValueType() == MVT::bf16) {
     SDLoc Loc(Op);
-    return DAG.getNode(
-        ISD::FP_ROUND, Loc, MVT::bf16,
-        DAG.getNode(Op.getOpcode(), Loc, MVT::f32, Op.getOperand(0)),
-        DAG.getIntPtrConstant(0, Loc, /*isTarget=*/true));
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    bool IsSigned = Op.getOpcode() == ISD::SINT_TO_FP;
+    SDValue F32;
+    if (IsSigned ? DAG.ComputeMaxSignificantBits(Src) <= 25
+                 : DAG.computeKnownBits(Src).countMaxActiveBits() <= 24) {
+      // The value is exact in f32, so only the f32 -> bf16 step rounds.
+      F32 = DAG.getNode(Op.getOpcode(), Loc, MVT::f32, Src);
+    } else {
+      // Rounding to f32 and then to bf16 can round twice. Instead, round to
+      // odd: convert rounding down and up and pick the odd result (both are
+      // equal if the value is exact in f32). This makes the f32 -> bf16
+      // conversion correctly rounded.
+      assert((SrcVT == MVT::i32 || SrcVT == MVT::i64) && "Unexpected type");
+      Intrinsic::ID RMID =
+          SrcVT == MVT::i64
+              ? (IsSigned ? Intrinsic::nvvm_ll2f_rm : Intrinsic::nvvm_ull2f_rm)
+              : (IsSigned ? Intrinsic::nvvm_i2f_rm : Intrinsic::nvvm_ui2f_rm);
+      Intrinsic::ID RPID =
+          SrcVT == MVT::i64
+              ? (IsSigned ? Intrinsic::nvvm_ll2f_rp : Intrinsic::nvvm_ull2f_rp)
+              : (IsSigned ? Intrinsic::nvvm_i2f_rp : Intrinsic::nvvm_ui2f_rp);
+      SDValue RM = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, Loc, MVT::f32,
+                               DAG.getConstant(RMID, Loc, MVT::i32), Src);
+      SDValue RP = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, Loc, MVT::f32,
+                               DAG.getConstant(RPID, Loc, MVT::i32), Src);
+      SDValue IsOdd = DAG.getSetCC(
+          Loc, MVT::i1,
+          DAG.getNode(ISD::AND, Loc, MVT::i32, DAG.getBitcast(MVT::i32, RM),
+                      DAG.getConstant(1, Loc, MVT::i32)),
+          DAG.getConstant(0, Loc, MVT::i32), ISD::SETNE);
+      F32 = DAG.getSelect(Loc, MVT::f32, IsOdd, RM, RP);
+    }
+    return DAG.getNode(ISD::FP_ROUND, Loc, MVT::bf16, F32,
+                       DAG.getIntPtrConstant(0, Loc, /*isTarget=*/true));
   }
 
   // Everything else is considered legal.
@@ -3253,6 +3266,8 @@ lowerTcgen05LdRed(SDNode *N, SelectionDAG &DAG) {
   return {{BuildVector, RedResult, Chain}};
 }
 
+static SDValue lowerTcgen05LdSPCompress(SDValue Op, SelectionDAG &DAG);
+
 static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
   switch (Op->getConstantOperandVal(1)) {
   default:
@@ -3280,6 +3295,10 @@ static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
       return DAG.getMergeValues(
           {std::get<0>(*Res), std::get<1>(*Res), std::get<2>(*Res)}, SDLoc(Op));
     return SDValue();
+
+  case Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b:
+  case Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b:
+    return lowerTcgen05LdSPCompress(Op, DAG);
   }
 }
 
@@ -3336,7 +3355,7 @@ static SDValue joinSPRegs(EVT VT, ArrayRef<SDValue> Regs, const SDLoc &DL,
   assert(Regs.size() == getSPNumRegs(VT) && VT.getSizeInBits() % 32 == 0 &&
          "Incorrect number of SP vector registers");
   if (!VT.isVector())
-    return Regs.front();
+    return DAG.getBitcast(VT, Regs.front());
 
   EVT RegVT = getSPRegType(VT);
   SmallVector<SDValue> Parts;
@@ -3444,6 +3463,71 @@ static SDValue lowerSPIntrinsic(SDValue Op, SelectionDAG &DAG) {
     Reg += Regs.size();
     Retvals.push_back(joinSPRegs(VT, Regs, DL, DAG));
   }
+
+  return DAG.getMergeValues(Retvals, DL);
+}
+
+static unsigned getTcgen05LdSPCompressNodeOpcode(bool IsRed,
+                                                 unsigned RepeatFactor) {
+#define TCGEN05_LD_SPCOMPRESS_NODE_CASE(RepeatFactor)                          \
+  case RepeatFactor:                                                           \
+    return IsRed ? NVPTXISD::TCGEN05_LD_RED_SPCOMPRESS_X##RepeatFactor         \
+                 : NVPTXISD::TCGEN05_LD_SPCOMPRESS_X##RepeatFactor
+
+  switch (RepeatFactor) {
+    TCGEN05_LD_SPCOMPRESS_NODE_CASE(4);
+    TCGEN05_LD_SPCOMPRESS_NODE_CASE(8);
+    TCGEN05_LD_SPCOMPRESS_NODE_CASE(16);
+    TCGEN05_LD_SPCOMPRESS_NODE_CASE(32);
+    TCGEN05_LD_SPCOMPRESS_NODE_CASE(64);
+    TCGEN05_LD_SPCOMPRESS_NODE_CASE(128);
+  default:
+    llvm_unreachable("Invalid tcgen05.ld.spcompress repeat factor");
+  }
+
+#undef TCGEN05_LD_SPCOMPRESS_NODE_CASE
+}
+
+static SDValue lowerTcgen05LdSPCompress(SDValue Op, SelectionDAG &DAG) {
+  auto *N = cast<MemIntrinsicSDNode>(Op.getNode());
+  SDLoc DL(N);
+
+  auto IID = static_cast<Intrinsic::ID>(N->getConstantOperandVal(1));
+  bool IsRed = IID == Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b;
+  assert((IsRed || IID == Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b) &&
+         "Unexpected tcgen05.ld.spcompress intrinsic");
+
+  unsigned RepeatFactor = 2 * N->getValueType(1).getVectorNumElements();
+
+  // Operands: {Chain, IID, taddr, row_op, abs, [nan]}.
+  SmallVector<SDValue, 6> Ops = {N->getOperand(0), N->getOperand(2)};
+  for (SDValue Qualifier : N->ops().drop_front(3))
+    Ops.push_back(
+        DAG.getTargetConstant(Qualifier->getAsZExtVal(), DL, MVT::i32));
+
+  // Results: {mdata, cdata, [redval], Chain}.
+  ArrayRef<EVT> ValueVTs =
+      ArrayRef<EVT>(N->value_begin(), N->value_end()).drop_back();
+  SmallVector<EVT, 72> ResultVTs;
+  for (const EVT VT : ValueVTs)
+    ResultVTs.append(getSPNumRegs(VT), MVT::i32);
+  unsigned NumResultRegs = ResultVTs.size();
+  ResultVTs.push_back(MVT::Other);
+
+  SDValue Lowered = DAG.getMemIntrinsicNode(
+      getTcgen05LdSPCompressNodeOpcode(IsRed, RepeatFactor), DL,
+      DAG.getVTList(ResultVTs), Ops, N->getMemoryVT(), N->getMemOperand());
+
+  SmallVector<SDValue, 4> Retvals;
+  unsigned Reg = 0;
+  for (const EVT VT : ValueVTs) {
+    SmallVector<SDValue> Regs;
+    for (unsigned R : llvm::seq(getSPNumRegs(VT)))
+      Regs.push_back(Lowered.getValue(Reg + R));
+    Reg += Regs.size();
+    Retvals.push_back(joinSPRegs(VT, Regs, DL, DAG));
+  }
+  Retvals.push_back(Lowered.getValue(NumResultRegs));
 
   return DAG.getMergeValues(Retvals, DL);
 }
@@ -5087,12 +5171,24 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_tensormap_replace_interleave_layout:
   case Intrinsic::nvvm_tensormap_replace_swizzle_mode:
   case Intrinsic::nvvm_tensormap_replace_swizzle_atomicity:
-  case Intrinsic::nvvm_tensormap_replace_fill_mode: {
+  case Intrinsic::nvvm_tensormap_replace_fill_mode:
+  case Intrinsic::nvvm_tensormap_replace_alloc_class: {
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOStore;
+    Info.align.reset();
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_tensormap_query_alloc_class_large: {
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
     Info.align.reset();
     Infos.push_back(Info);
     return;
@@ -5525,6 +5621,23 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x2_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v2i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b:
+  case Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b: {
+    auto *CDataTy =
+        cast<FixedVectorType>(cast<StructType>(I.getType())->getElementType(1));
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    // Each thread loads num f32 elements (32x32b.num) and the 2:4 compression
+    // keeps num / 2 of them in cdata, so the loaded size is twice cdata's.
+    Info.memVT = EVT::getVectorVT(I.getContext(), MVT::f32,
+                                  2 * CDataTy->getNumElements());
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
@@ -6019,8 +6132,8 @@ NVPTXTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 bool NVPTXTargetLowering::allowFMA(MachineFunction &MF,
                                    CodeGenOptLevel OptLevel) const {
   // Always honor command-line argument
-  if (FMAContractLevelOpt.getNumOccurrences() > 0)
-    return FMAContractLevelOpt > 0;
+  if (auto FMAContractLevel = STI.getCLOpts().fma_level)
+    return *FMAContractLevel > 0;
 
   // Do not contract if we're not optimizing the code.
   if (OptLevel == CodeGenOptLevel::None)
@@ -7124,7 +7237,7 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
     return SDValue();
 
   // Don't mess with undef values as sra may be simplified to 0, not undef.
-  if (Vector->isUndef() || ISD::allOperandsUndef(Vector.getNode()))
+  if (Vector->isUndef() || ISD::allOperandsUndef(Vector))
     return SDValue();
 
   uint64_t VectorBits = VectorVT.getSizeInBits();
@@ -7878,6 +7991,12 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
       Results.push_back(std::get<2>(*Res));
     }
     return;
+
+  case Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b:
+  case Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b:
+    llvm::append_range(
+        Results, lowerTcgen05LdSPCompress(SDValue(N, 0), DAG)->op_values());
+    return;
   }
 }
 
@@ -8044,7 +8163,8 @@ static TargetLoweringBase::AtomicExpansionKind getScalarAtomicRMWExpansion(
     // !atomic.ignore.denormal.mode say that denormal handling is insignificant
     // here, so atom.add may be used even when its FTZ behavior disagrees with
     // the function's.
-    const bool IgnoreFTZMismatch = AllowFTZAtomics || IgnoreDenormalMode;
+    const bool IgnoreFTZMismatch =
+        STI.getCLOpts().allow_ftz_atomics || IgnoreDenormalMode;
 
     if (Ty->isFloatTy()) {
       const bool FTZ = F.getDenormalMode(APFloat::IEEEsingle()).Input ==
@@ -8522,6 +8642,16 @@ void NVPTXTargetLowering::computeKnownBitsForTargetNode(
     // unused parts of its operands, such as the high bytes of narrow loads.
     Known = KnownBits::mul(IsSigned ? LHS.sext(BitWidth) : LHS.zext(BitWidth),
                            IsSigned ? RHS.sext(BitWidth) : RHS.zext(BitWidth));
+    break;
+  }
+  case NVPTXISD::CLZ_B64:
+  case NVPTXISD::POPC_B64: {
+    KnownBits Input =
+        DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    unsigned MaxCount = Op.getOpcode() == NVPTXISD::CLZ_B64
+                            ? Input.countMaxLeadingZeros()
+                            : Input.countMaxPopulation();
+    Known.Zero.setBitsFrom(llvm::bit_width(MaxCount));
     break;
   }
   case NVPTXISD::PRMT:

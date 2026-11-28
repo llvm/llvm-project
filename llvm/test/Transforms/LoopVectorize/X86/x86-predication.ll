@@ -204,7 +204,7 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; SINK-GATHER-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SINK-GATHER-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP49:%.*]], %[[VECTOR_BODY]] ]
 ; SINK-GATHER-NEXT:    [[TMP0:%.*]] = mul <8 x i64> [[VEC_IND]], splat (i64 777)
-; SINK-GATHER-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], <8 x i64> [[TMP0]]
+; SINK-GATHER-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <8 x i64> [[TMP0]]
 ; SINK-GATHER-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[WIDE_GEP]], <8 x i1> [[BROADCAST_SPLAT1]], <8 x i32> poison)
 ; SINK-GATHER-NEXT:    [[TMP48:%.*]] = call <8 x i32> @llvm.masked.udiv.v8i32(<8 x i32> [[WIDE_MASKED_GATHER]], <8 x i32> [[BROADCAST_SPLAT]], <8 x i1> [[BROADCAST_SPLAT1]])
 ; SINK-GATHER-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <8 x i32> [[TMP48]], <8 x i32> [[BROADCAST_SPLAT]]

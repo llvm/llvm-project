@@ -355,9 +355,9 @@ void BPFTargetLowering::ReplaceNodeResults(
   }
 
   SDLoc DL(N);
-  // We'll still produce a fatal error downstream, but this diagnostic is more
-  // user-friendly.
   fail(DL, DAG, Msg);
+  for (EVT VT : N->values())
+    Results.push_back(VT == MVT::Other ? N->getOperand(0) : DAG.getUNDEF(VT));
 }
 
 SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -843,7 +843,7 @@ BPFTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 }
 
 TargetLowering::AtomicExpansionKind
-BPFTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+BPFTargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   // Store release is not ordered with a later load. xchg is fully ordered.
   if (HasLoadAcqStoreRel &&
       SI->getOrdering() == AtomicOrdering::SequentiallyConsistent)

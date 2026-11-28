@@ -13,11 +13,13 @@ define void @test(ptr %p, float %f) {
 ; CHECK:       [[BB]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x float> [ <float 0.000000e+00, float 1.000000e+00>, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP15]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x float> [[TMP6]], <8 x float> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x float> [[TMP6]], <8 x float> [[TMP9]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x float> [[TMP16]], <8 x float> [[TMP9]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP11:%.*]] = fsub <8 x float> [[TMP10]], <float 1.000000e+00, float 3.000000e+00, float 5.000000e+00, float 7.000000e+00, float 2.000000e+00, float 4.000000e+00, float 6.000000e+00, float 8.000000e+00>
 ; CHECK-NEXT:    [[TMP12:%.*]] = fsub <8 x float> [[TMP8]], <float 1.000000e+02, float 1.020000e+02, float 1.040000e+02, float 1.060000e+02, float 1.010000e+02, float 1.030000e+02, float 1.050000e+02, float 1.070000e+02>
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds float, ptr [[P]], i64 0

@@ -4,7 +4,6 @@
 name:            cmp_ult_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -17,10 +16,10 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(ult), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_ICMP intpred(ult), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -28,7 +27,6 @@ body:             |
 name:            cmp_slt_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -41,10 +39,10 @@ body:             |
     ; CHECK-NEXT: [[SLT:%[0-9]+]]:gpr = SLT [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[SLT]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(slt), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_ICMP intpred(slt), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -52,7 +50,6 @@ body:             |
 name:            cmp_ugt_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -65,10 +62,10 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(ugt), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_ICMP intpred(ugt), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -76,7 +73,6 @@ body:             |
 name:            cmp_sgt_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -89,10 +85,10 @@ body:             |
     ; CHECK-NEXT: [[SLT:%[0-9]+]]:gpr = SLT [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[SLT]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(sgt), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_ICMP intpred(sgt), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -100,7 +96,6 @@ body:             |
 name:            cmp_eq_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -114,10 +109,10 @@ body:             |
     ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[XOR]], 1
     ; CHECK-NEXT: $x10 = COPY [[SLTIU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(eq), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_ICMP intpred(eq), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -125,7 +120,6 @@ body:             |
 name:            cmp_ne_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -139,10 +133,10 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU $x0, [[XOR]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(ne), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_ICMP intpred(ne), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -150,7 +144,6 @@ body:             |
 name:            cmp_ule_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -164,10 +157,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTU]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(ule), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_ICMP intpred(ule), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -175,7 +168,6 @@ body:             |
 name:            cmp_sle_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -189,10 +181,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLT]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(sle), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_ICMP intpred(sle), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -200,7 +192,6 @@ body:             |
 name:            cmp_uge_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -214,10 +205,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTU]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(uge), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_ICMP intpred(uge), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -225,7 +216,6 @@ body:             |
 name:            cmp_sge_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -239,10 +229,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLT]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(sge), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = COPY $x11
+    %2:gprb(i64) = G_ICMP intpred(sge), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -250,7 +240,6 @@ body:             |
 name:            cmp_ult_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -265,8 +254,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(ult), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(ult), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -274,7 +263,6 @@ body:             |
 name:            cmp_slt_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -289,8 +277,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(slt), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(slt), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -298,7 +286,6 @@ body:             |
 name:            cmp_ugt_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -313,8 +300,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(ugt), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(ugt), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -322,7 +309,6 @@ body:             |
 name:            cmp_sgt_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -337,8 +323,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(sgt), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(sgt), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -346,7 +332,6 @@ body:             |
 name:            cmp_eq_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -362,8 +347,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(eq), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(eq), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -371,7 +356,6 @@ body:             |
 name:            cmp_ne_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -387,8 +371,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(ne), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(ne), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -396,7 +380,6 @@ body:             |
 name:            cmp_ule_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -412,8 +395,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(ule), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(ule), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -421,7 +404,6 @@ body:             |
 name:            cmp_sle_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -437,8 +419,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(sle), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(sle), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -446,7 +428,6 @@ body:             |
 name:            cmp_uge_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -462,8 +443,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(uge), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(uge), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -471,7 +452,6 @@ body:             |
 name:            cmp_sge_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
@@ -487,8 +467,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %2:gprb(s64) = G_ICMP intpred(sge), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(sge), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -496,7 +476,6 @@ body:             |
 name:            cmp_ulti_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -508,10 +487,10 @@ body:             |
     ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[COPY]], 10
     ; CHECK-NEXT: $x10 = COPY [[SLTIU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_CONSTANT i64 10
-    %2:gprb(s64) = G_ICMP intpred(ult), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = G_CONSTANT i64 10
+    %2:gprb(i64) = G_ICMP intpred(ult), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -519,7 +498,6 @@ body:             |
 name:            cmp_slti_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -531,10 +509,10 @@ body:             |
     ; CHECK-NEXT: [[SLTI:%[0-9]+]]:gpr = SLTI [[COPY]], -10
     ; CHECK-NEXT: $x10 = COPY [[SLTI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_CONSTANT i64 -10
-    %2:gprb(s64) = G_ICMP intpred(slt), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = G_CONSTANT i64 -10
+    %2:gprb(i64) = G_ICMP intpred(slt), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -542,7 +520,6 @@ body:             |
 name:            cmp_ugti_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -555,10 +532,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTIU]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_CONSTANT i64 10
-    %2:gprb(s64) = G_ICMP intpred(ugt), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = G_CONSTANT i64 10
+    %2:gprb(i64) = G_ICMP intpred(ugt), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -566,7 +543,6 @@ body:             |
 name:            cmp_sgti_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -579,10 +555,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTI]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_CONSTANT i64 -10
-    %2:gprb(s64) = G_ICMP intpred(sgt), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = G_CONSTANT i64 -10
+    %2:gprb(i64) = G_ICMP intpred(sgt), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -590,7 +566,6 @@ body:             |
 name:            cmp_eqi_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -603,10 +578,10 @@ body:             |
     ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[ADDI]], 1
     ; CHECK-NEXT: $x10 = COPY [[SLTIU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_CONSTANT i64 10
-    %2:gprb(s64) = G_ICMP intpred(eq), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = G_CONSTANT i64 10
+    %2:gprb(i64) = G_ICMP intpred(eq), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -614,7 +589,6 @@ body:             |
 name:            cmp_nei_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -627,10 +601,10 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU $x0, [[ADDI]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_CONSTANT i64 -10
-    %2:gprb(s64) = G_ICMP intpred(ne), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = G_CONSTANT i64 -10
+    %2:gprb(i64) = G_ICMP intpred(ne), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -638,7 +612,6 @@ body:             |
 name:            cmp_ulei_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -650,10 +623,10 @@ body:             |
     ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[COPY]], 11
     ; CHECK-NEXT: $x10 = COPY [[SLTIU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_CONSTANT i64 10
-    %2:gprb(s64) = G_ICMP intpred(ule), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = G_CONSTANT i64 10
+    %2:gprb(i64) = G_ICMP intpred(ule), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -661,7 +634,6 @@ body:             |
 name:            cmp_slei_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -673,10 +645,10 @@ body:             |
     ; CHECK-NEXT: [[SLTI:%[0-9]+]]:gpr = SLTI [[COPY]], -9
     ; CHECK-NEXT: $x10 = COPY [[SLTI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_CONSTANT i64 -10
-    %2:gprb(s64) = G_ICMP intpred(sle), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = G_CONSTANT i64 -10
+    %2:gprb(i64) = G_ICMP intpred(sle), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -684,7 +656,6 @@ body:             |
 name:            cmp_ugei_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -697,10 +668,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTIU]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_CONSTANT i64 10
-    %2:gprb(s64) = G_ICMP intpred(uge), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = G_CONSTANT i64 10
+    %2:gprb(i64) = G_ICMP intpred(uge), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -708,7 +679,6 @@ body:             |
 name:            cmp_sgei_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -721,10 +691,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[SLTI]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_CONSTANT i64 -10
-    %2:gprb(s64) = G_ICMP intpred(sge), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = G_CONSTANT i64 -10
+    %2:gprb(i64) = G_ICMP intpred(sge), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -732,7 +702,6 @@ body:             |
 name:            cmp_ulti_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -747,8 +716,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i64 10
-    %2:gprb(s64) = G_ICMP intpred(ult), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(ult), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -756,7 +725,6 @@ body:             |
 name:            cmp_slti_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -771,8 +739,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i64 -10
-    %2:gprb(s64) = G_ICMP intpred(slt), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(slt), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -780,7 +748,6 @@ body:             |
 name:            cmp_ugti_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -795,8 +762,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i64 10
-    %2:gprb(s64) = G_ICMP intpred(ugt), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(ugt), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -804,7 +771,6 @@ body:             |
 name:            cmp_sgti_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -819,8 +785,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i64 -10
-    %2:gprb(s64) = G_ICMP intpred(sgt), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(sgt), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -828,7 +794,6 @@ body:             |
 name:            cmp_eqi_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -844,8 +809,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i64 10
-    %2:gprb(s64) = G_ICMP intpred(eq), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(eq), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -853,7 +818,6 @@ body:             |
 name:            cmp_nei_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -869,8 +833,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i64 -10
-    %2:gprb(s64) = G_ICMP intpred(ne), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(ne), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -878,7 +842,6 @@ body:             |
 name:            cmp_ulei_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -894,8 +857,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i64 10
-    %2:gprb(s64) = G_ICMP intpred(ule), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(ule), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -903,7 +866,6 @@ body:             |
 name:            cmp_slei_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -919,8 +881,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i64 -10
-    %2:gprb(s64) = G_ICMP intpred(sle), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(sle), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -928,7 +890,6 @@ body:             |
 name:            cmp_ugei_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -944,8 +905,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i64 10
-    %2:gprb(s64) = G_ICMP intpred(uge), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(uge), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -953,7 +914,6 @@ body:             |
 name:            cmp_sgei_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -969,8 +929,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i64 -10
-    %2:gprb(s64) = G_ICMP intpred(sge), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(sge), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -978,7 +938,6 @@ body:             |
 name:            cmp_eq0_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -990,10 +949,10 @@ body:             |
     ; CHECK-NEXT: [[SLTIU:%[0-9]+]]:gpr = SLTIU [[COPY]], 1
     ; CHECK-NEXT: $x10 = COPY [[SLTIU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_CONSTANT i64 0
-    %2:gprb(s64) = G_ICMP intpred(eq), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = G_CONSTANT i64 0
+    %2:gprb(i64) = G_ICMP intpred(eq), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -1001,7 +960,6 @@ body:             |
 name:            cmp_eq0_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1015,8 +973,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i64 0
-    %2:gprb(s64) = G_ICMP intpred(eq), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(eq), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -1024,7 +982,6 @@ body:             |
 name:            cmp_ne0_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1036,10 +993,10 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU $x0, [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_CONSTANT i64 0
-    %2:gprb(s64) = G_ICMP intpred(ne), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = G_CONSTANT i64 0
+    %2:gprb(i64) = G_ICMP intpred(ne), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -1047,7 +1004,6 @@ body:             |
 name:            cmp_ne0_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1061,8 +1017,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i64 0
-    %2:gprb(s64) = G_ICMP intpred(ne), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(ne), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -1070,7 +1026,6 @@ body:             |
 name:            cmp_ugt_neg1_i64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1083,10 +1038,10 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU [[ADDI]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = COPY $x10
-    %1:gprb(s64) = G_CONSTANT i64 -1
-    %2:gprb(s64) = G_ICMP intpred(ugt), %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = COPY $x10
+    %1:gprb(i64) = G_CONSTANT i64 -1
+    %2:gprb(i64) = G_ICMP intpred(ugt), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -1094,7 +1049,6 @@ body:             |
 name:            cmp_ugt_neg1_p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x10
@@ -1109,8 +1063,8 @@ body:             |
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(p0) = COPY $x10
     %1:gprb(p0) = G_CONSTANT i64 -1
-    %2:gprb(s64) = G_ICMP intpred(ugt), %0, %1
-    $x10 = COPY %2(s64)
+    %2:gprb(i64) = G_ICMP intpred(ugt), %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...

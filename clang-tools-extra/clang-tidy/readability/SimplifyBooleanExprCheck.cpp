@@ -659,6 +659,22 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
               Replacement);
   };
 
+  // `f() && false` and `f() || true` always call `f()`, so don't replace them
+  // with the literal if the left operand may have side effects.
+  const auto ReplaceWithBool = [this, &Context, Op, Bool,
+                                &ReplaceWithExpression]() {
+    const Expr *Left = Op->getLHS();
+    if (!Left->HasSideEffects(Context)) {
+      ReplaceWithExpression(Bool, /*Negated=*/false);
+      return;
+    }
+    diag(Bool->getBeginLoc(), SimplifyOperatorDiagnostic);
+    diag(Left->getBeginLoc(),
+         "left operand may have side effects and cannot be removed",
+         DiagnosticIDs::Note)
+        << Left->getSourceRange();
+  };
+
   switch (Op->getOpcode()) {
   case BO_LAnd:
     if (BoolValue)
@@ -666,12 +682,12 @@ void SimplifyBooleanExprCheck::reportBinOp(const ASTContext &Context,
       ReplaceWithExpression(Other, /*Negated=*/false);
     else
       // expr && false -> false
-      ReplaceWithExpression(Bool, /*Negated=*/false);
+      ReplaceWithBool();
     break;
   case BO_LOr:
     if (BoolValue)
       // expr || true -> true
-      ReplaceWithExpression(Bool, /*Negated=*/false);
+      ReplaceWithBool();
     else
       // expr || false -> expr
       ReplaceWithExpression(Other, /*Negated=*/false);

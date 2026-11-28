@@ -9,15 +9,11 @@
 ; OBJ-NOT: .bpf_cleanup
 ; OBJ-NOT: .gcc_except_table
 ; OBJ-NOT: _Unwind_
-; OBJ-NOT: abort
 ; OBJ-NOT: personality
 
 declare ptr @bpf_alloc(i64, i64) nounwind
 declare void @bpf_free(ptr) nounwind
 declare void @btree_insert(ptr, ptr, i64)
-declare i32 @_Unwind_RaiseException(ptr)
-declare void @_Unwind_Resume(ptr) noreturn
-declare void @abort() noreturn nounwind
 declare i32 @rust_eh_personality(i32, i64, ptr, ptr)
 
 ; invoke, cleanup pad, resume. A call of nounwind function is left alone.
@@ -156,13 +152,10 @@ terminate:
 ; CHECK-NEXT:    r0 = 2
 
 ; The start of an unwind, as at the end of a panic handler. It is not different
-; from carrying one on. By its prototype _Unwind_RaiseException() comes back
-; when it fails, so a runtime has something after it. Here it cannot fail: that
-; code is dropped and the function ends with unwind_exit.
+; from carrying one on.
 define void @fail() noreturn uwtable {
 entry:
-  %err = call i32 @_Unwind_RaiseException(ptr null)
-  call void @abort()
+  call void @llvm.bpf.unwind.exit()
   unreachable
 }
 
@@ -176,11 +169,10 @@ entry:
 ; The same in a frame that owns something: its own pad comes first.
 define void @fail_owner(ptr %node) uwtable personality ptr @rust_eh_personality {
 entry:
-  %err = invoke i32 @_Unwind_RaiseException(ptr null)
+  invoke void @llvm.bpf.unwind.exit()
           to label %failed unwind label %cleanup
 
 failed:
-  call void @abort()
   unreachable
 
 cleanup:
@@ -190,7 +182,6 @@ cleanup:
 }
 
 ; CHECK-LABEL: fail_owner:
-; CHECK-NOT:     _Unwind_
 ; CHECK-NOT:     exit
 ; CHECK:         call bpf_free
 ; CHECK-NEXT:    r0 = 0
@@ -202,7 +193,7 @@ cleanup:
 ; unreachable code, so it has to go as well.
 define void @fail_then_spins() noreturn uwtable {
 entry:
-  %err = call i32 @_Unwind_RaiseException(ptr null)
+  call void @llvm.bpf.unwind.exit()
   br label %spin
 
 spin:
@@ -214,18 +205,6 @@ spin:
 ; CHECK-NEXT:    unwind_exit
 ; CHECK-NOT:     goto
 ; CHECK:       .Lfunc_end
-
-; 'resume' spelled as the call that other targets lower it to.
-define void @resume_spelled_out(ptr %exn) uwtable {
-entry:
-  call void @_Unwind_Resume(ptr %exn)
-  unreachable
-}
-
-; CHECK-LABEL: resume_spelled_out:
-; CHECK-NOT:     call
-; CHECK:         r0 = 0
-; CHECK-NEXT:    unwind_exit
 
 ; A callee that does not return: its unwind_exit needs unwind_goto all the same.
 ; What follows is not reached, but the block cannot end there.

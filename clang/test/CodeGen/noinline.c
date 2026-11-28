@@ -16,5 +16,5 @@ void foo(void) {
     pa[3] = inline_me(pa[4],pa[5]);
 }
 
-// NOINLINE: Function Attrs: noinline
+// NOINLINE: Function Attrs: likely_module_local noinline
 // NOINLINE: @dont_inline_me

@@ -23,6 +23,7 @@ def AlignmentAttrOpInterface : OpInterface<"AlignmentAttrOpInterface"> {
   }];
 
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/AlignmentAttrInterface.h"];
 
   let methods = [
     InterfaceMethod<[{

@@ -4,7 +4,6 @@
 name: f
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0', virtual-reg: '' }
 body: |

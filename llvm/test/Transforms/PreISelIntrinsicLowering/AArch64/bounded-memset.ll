@@ -319,8 +319,8 @@ define void @minsize(ptr %p, i64 %len) minsize {
   ret void
 }
 
-; In a function with profile data, the branches of the expansion get explicitly
-; unknown weights.
+; In a function with profile data but without VP metadata on the memset, the
+; branches of the expansion get explicitly unknown weights.
 define void @profiled(ptr %p, i64 %len) !prof !0 {
 ; EXPAND-LABEL: define void @profiled(
 ; EXPAND-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]]) !prof [[PROF0:![0-9]+]] {
@@ -352,10 +352,46 @@ define void @profiled(ptr %p, i64 %len) !prof !0 {
   ret void
 }
 
+; In a function with VP metadata, we propagate that metadata to the branches.
+define void @profiled2(ptr %p, i64 %len) !prof !0 {
+; EXPAND-LABEL: define void @profiled2(
+; EXPAND-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]]) !prof [[PROF0]] {
+; EXPAND-NEXT:    [[LEN_GE2:%.*]] = icmp uge i64 [[LEN]], 2
+; EXPAND-NEXT:    br i1 [[LEN_GE2]], label %[[MEMSET_STORE2:.*]], label %[[MEMSET_LT2:.*]], !prof [[PROF2:![0-9]+]]
+; EXPAND:       [[MEMSET_STORE2]]:
+; EXPAND-NEXT:    store i16 0, ptr [[P]], align 1
+; EXPAND-NEXT:    [[TAIL_OFF:%.*]] = sub i64 [[LEN]], 2
+; EXPAND-NEXT:    [[TAIL:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TAIL_OFF]]
+; EXPAND-NEXT:    store i16 0, ptr [[TAIL]], align 1
+; EXPAND-NEXT:    br label %[[MEMSET_DONE:.*]]
+; EXPAND:       [[MEMSET_LT2]]:
+; EXPAND-NEXT:    [[LEN_GE1:%.*]] = icmp uge i64 [[LEN]], 1
+; EXPAND-NEXT:    br i1 [[LEN_GE1]], label %[[MEMSET_STORE1:.*]], label %[[BB1:.*]], !prof [[PROF3:![0-9]+]]
+; EXPAND:       [[MEMSET_STORE1]]:
+; EXPAND-NEXT:    store i8 0, ptr [[P]], align 1
+; EXPAND-NEXT:    br label %[[BB1]]
+; EXPAND:       [[BB1]]:
+; EXPAND-NEXT:    br label %[[MEMSET_DONE]]
+; EXPAND:       [[MEMSET_DONE]]:
+; EXPAND-NEXT:    ret void
+;
+; CALL-LABEL: define void @profiled2(
+; CALL-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]]) !prof [[PROF0]] {
+; CALL-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 range(i64 0, 4) [[LEN]], i1 false), !prof [[PROF1:![0-9]+]]
+; CALL-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr align 1 %p, i8 0, i64 range(i64 0, 4) %len, i1 false), !prof !1
+  ret void
+}
+
 !0 = !{!"function_entry_count", i64 1000}
+!1 = !{!"VP", i32 1, i32 10, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4}
 ;.
 ; EXPAND: [[PROF0]] = !{!"function_entry_count", i64 1000}
 ; EXPAND: [[PROF1]] = !{!"unknown", !"lower-mem-intrinsics"}
+; EXPAND: [[PROF2]] = !{!"branch_weights", i32 7, i32 3}
+; EXPAND: [[PROF3]] = !{!"branch_weights", i32 2, i32 1}
 ;.
 ; CALL: [[PROF0]] = !{!"function_entry_count", i64 1000}
+; CALL: [[PROF1]] = !{!"VP", i32 1, i32 10, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3, i32 4}
 ;.

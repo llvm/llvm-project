@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: 'alloc-variant-zeroed' must not be empty
 declare ptr @a(i64) "alloc-variant-zeroed"=""

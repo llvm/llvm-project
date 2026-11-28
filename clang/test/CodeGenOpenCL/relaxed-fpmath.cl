@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 %s -emit-llvm -cl-fast-relaxed-math -menable-no-nans -menable-no-infs -mreassociate -freciprocal-math -fapprox-func -fno-signed-zeros -o - | FileCheck %s -check-prefix=FAST
 // RUN: %clang_cc1 %s -emit-llvm -menable-no-infs -menable-no-nans -cl-finite-math-only -o - | FileCheck %s -check-prefix=FINITE
 // RUN: %clang_cc1 %s -emit-llvm -cl-unsafe-math-optimizations -o - | FileCheck %s -check-prefix=UNSAFE
-// RUN: %clang_cc1 %s -emit-llvm -cl-mad-enable -o - | FileCheck %s -check-prefix=MAD
 // RUN: %clang_cc1 %s -emit-llvm -cl-no-signed-zeros -o - | FileCheck %s -check-prefix=NOSIGNED
 
 // Check the fp options are correct with PCH.
@@ -11,7 +10,6 @@
 // RUN: %clang_cc1 %s -include-pch %t.pch -fno-validate-pch -emit-llvm -cl-fast-relaxed-math -menable-no-nans -menable-no-infs -mreassociate -freciprocal-math -fapprox-func -fno-signed-zeros -o - | FileCheck %s -check-prefix=FAST
 // RUN: %clang_cc1 %s -include-pch %t.pch -fno-validate-pch -emit-llvm -menable-no-infs -menable-no-nans -cl-finite-math-only -o - | FileCheck %s -check-prefix=FINITE
 // RUN: %clang_cc1 %s -include-pch %t.pch -fno-validate-pch -emit-llvm -cl-unsafe-math-optimizations -o - | FileCheck %s -check-prefix=UNSAFE
-// RUN: %clang_cc1 %s -include-pch %t.pch -fno-validate-pch -emit-llvm -cl-mad-enable -o - | FileCheck %s -check-prefix=MAD
 // RUN: %clang_cc1 %s -include-pch %t.pch -fno-validate-pch -emit-llvm -cl-no-signed-zeros -o - | FileCheck %s -check-prefix=NOSIGNED
 
 #if !GEN_PCH
@@ -23,28 +21,19 @@ float spscalardiv(float a, float b) {
   // FAST: fdiv fast float
   // FINITE: fdiv nnan ninf float
   // UNSAFE: fdiv reassoc nsz arcp contract afn float
-  // MAD: fdiv float
   // NOSIGNED: fdiv nsz float
   return a / b;
 }
 // CHECK: attributes
 
-// NORMAL-NOT: "less-precise-fpmad"
 // NORMAL-NOT: "no-signed-zeros-fp-math"
 
-// FAST: "less-precise-fpmad"="true"
 // FAST: "no-signed-zeros-fp-math"="true"
 
-// FINITE-NOT: "less-precise-fpmad"
 // FINITE-NOT: "no-signed-zeros-fp-math"
 
-// UNSAFE: "less-precise-fpmad"="true"
 // UNSAFE: "no-signed-zeros-fp-math"="true"
 
-// MAD: "less-precise-fpmad"="true"
-// MAD-NOT: "no-signed-zeros-fp-math"
-
-// NOSIGNED-NOT: "less-precise-fpmad"
 // NOSIGNED: "no-signed-zeros-fp-math"="true"
 
 #else

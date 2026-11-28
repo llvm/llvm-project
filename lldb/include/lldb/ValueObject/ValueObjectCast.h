@@ -37,6 +37,12 @@ public:
 
   bool IsInScope() override;
 
+  AddrAndType GetAddressOf(bool scalar_is_load_address = true) override;
+
+  const char *GetLocationAsCString() override;
+
+  llvm::Error CanSetValue() override;
+
   ValueObject *GetParent() override {
     return ((m_parent != nullptr) ? m_parent->GetParent() : nullptr);
   }
@@ -56,6 +62,9 @@ protected:
   CompilerType m_cast_type;
 
 private:
+  /// True if the value is a scalar but the cast lives in the parent's storage.
+  bool LivesInParentStorage();
+
   ValueObjectCast(const ValueObjectCast &) = delete;
   const ValueObjectCast &operator=(const ValueObjectCast &) = delete;
 };

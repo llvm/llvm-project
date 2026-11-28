@@ -74,6 +74,15 @@ let Command = "settings show" in {
   def setshow_changed : Option<"changed", "c">,
                         Desc<"Only show settings whose value differs from the "
                              "default.">;
+  def setshow_include_deprecated
+      : Option<"include-deprecated", "D">,
+        Desc<"Include ${D}eprecated settings.">;
+}
+
+let Command = "settings list" in {
+  def setlist_include_deprecated
+      : Option<"include-deprecated", "D">,
+        Desc<"Include ${D}eprecated settings.">;
 }
 
 let Command = "breakpoint list" in {
@@ -814,13 +823,6 @@ let Command = "expression" in {
         Desc<"Persist expression result in a variable for subsequent use. "
              "Expression results will be labeled with $-prefixed variables, "
              "e.g. $0, $1, etc.">;
-  def ignore_context_qualifiers
-      : Option<"c++-ignore-context-qualifiers", "Q">,
-        Groups<[1, 2]>,
-        Desc<"When specified, evaluates the expression without taking into "
-             "account the type ${Q}ualifiers of the scope. In C++, this would "
-             "permit calling a non-const method when stopped in a const-method "
-             "(which would be disallowed by language rules).">;
 }
 
 let Command = "frame diag" in {
@@ -1804,6 +1806,15 @@ let Command = "target modules list" in {
         Desc<
             "Display whether the module is still in the "
             "the shared module cache (Y/N), and its shared pointer use_count.">;
+  def target_modules_list_symtab_flags
+      : Option<"symtab-state-flags", "F">,
+        Group<1>,
+        OptionalArg<"Width">,
+        Desc<"Display state about the symbol table with optional width: "
+             "C if it was read from the index cache, F if it was parsed from "
+             "the object file, W if it was written to the index cache, S if "
+             "a symbol file added or updated symbols, - if none of these "
+             "apply.">;
   def target_modules_list_pointer : Option<"pointer", "p">,
                                     Group<1>,
                                     OptionalArg<"None">,
@@ -1981,10 +1992,17 @@ let Command = "target stop_hook add" in {
       : Option<"at-initial-stop", "I">,
         Arg<"Boolean">,
         Desc<"Whether the stop-hook will trigger when lldb ${i}nitially gains "
-             "control of the process. For a process launch, this initial stop "
-             "may happen very early on - before the loader has run. You can "
-             "use this option if you do not want some stop-hooks to run then. "
-             "Defaults to true.">;
+             "control of the process: when an attach completes, when a core "
+             "file has loaded, or at a launch's entry stop, which happens "
+             "before the loader has run, even when the launch doesn't stop "
+             "there. If a module's __lldb_module_added_to_target adds the "
+             "stop-hook with this option while the process is stopped, it also "
+             "runs at that stop. Defaults to false.">;
+  def target_stop_hook_add_one_shot
+      : Option<"one-shot", "O">,
+        Arg<"Boolean">,
+        Desc<"The stop-hook runs at the next stop where it applies, for every "
+             "thread it applies to, and is then deleted. Defaults to false.">;
 }
 
 let Command = "target stop_hook list" in {
@@ -2074,7 +2092,11 @@ let Command = "target hook add" in {
       : Option<"at-initial-stop", "I">,
         Arg<"Boolean">,
         Desc<"Whether the stop handler will trigger when lldb ${I}nitially "
-             "gains control of the process. Defaults to true.">;
+             "gains control of the process: when an attach completes, when a "
+             "core file has loaded, or at a launch's entry stop. If a module's "
+             "__lldb_module_added_to_target adds the hook with this option "
+             "while the process is stopped, its stop handler also runs at that "
+             "stop. Defaults to false.">;
 }
 
 let Command = "target hook modify" in {

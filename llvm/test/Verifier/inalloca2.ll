@@ -1,6 +1,6 @@
 ; This used to be invalid, but now it's valid.  Ensure the verifier
 ; doesn't reject it.
-; RUN: llvm-as %s -o /dev/null
+; RUN: llvm-as %s -disable-output
 
 declare void @doit(ptr inalloca(i64) %a)
 

@@ -5,7 +5,6 @@
 
 # First operand is FI is in a VGPR, other operand is a VGPR
 name: shrink_vgpr_fi_vgpr_v_add_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 64, alignment: 16 }
 body:             |
@@ -30,7 +29,6 @@ body:             |
 
 # First operand is a VGPR, other operand FI is in a VGPR
 name: shrink_vgpr_vgpr_fi_v_add_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 64, alignment: 16 }
 body:             |
@@ -55,7 +53,6 @@ body:             |
 
 # First operand is FI is in an SGPR, other operand is a VGPR
 name: shrink_vgpr_fi_sgpr_v_add_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 64, alignment: 16 }
 body:             |
@@ -80,7 +77,6 @@ body:             |
 
 # First operand is an SGPR, other operand FI is in a VGPR
 name: shrink_sgpr_vgpr_fi_v_add_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 64, alignment: 16 }
 body:             |
@@ -105,7 +101,6 @@ body:             |
 
 # First operand is FI is in an SGPR, other operand is a VGPR
 name: shrink_sgpr_fi_vgpr_v_add_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 64, alignment: 16 }
 body:             |
@@ -130,7 +125,6 @@ body:             |
 
 # First operand is a VGPR, other operand FI is in an SGPR
 name: shrink_vgpr_sgpr_fi_v_add_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 64, alignment: 16}
 body:             |
@@ -155,7 +149,6 @@ body:             |
 
 # First operand is FI is in a VGPR, other operand is an inline imm in a VGPR
 name: shrink_vgpr_imm_fi_vgpr_v_add_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 64, alignment: 16 }
 body:             |
@@ -176,7 +169,6 @@ body:             |
 
 # First operand is an inline imm in a VGPR, other operand FI is in a VGPR
 name: shrink_vgpr_imm_vgpr_fi_v_add_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 64, alignment: 16 }
 body:             |
@@ -196,7 +188,6 @@ body:             |
 
 # First operand is FI is in a VGPR, other operand is an literal constant in a VGPR
 name: shrink_vgpr_k_fi_vgpr_v_add_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 64, alignment: 16 }
 body:             |
@@ -217,7 +208,6 @@ body:             |
 
 # First operand is a literal constant in a VGPR, other operand FI is in a VGPR
 name: shrink_vgpr_k_vgpr_fi_v_add_i32_e64_no_carry_out_use
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 64, alignment: 16 }
 body:             |

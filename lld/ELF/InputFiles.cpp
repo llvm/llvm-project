@@ -663,8 +663,8 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       if (keepGroup) {
         keptGroups.push_back(i);
         if (!ctx.arg.resolveGroups)
-          sections[i] = createInputSection(
-              i, sec, check(obj.getSectionName(sec, shstrtab)));
+          sections[i] = makeThreadLocal<InputSection>(
+              *this, sec, check(obj.getSectionName(sec, shstrtab)));
       } else {
         // Otherwise, discard group members.
         for (uint32_t secIndex : entries.slice(1)) {
@@ -830,8 +830,7 @@ static bool isKnownSpecificSectionType(uint32_t t, uint32_t flags) {
 }
 
 template <class ELFT>
-void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
-                                       const llvm::object::ELFFile<ELFT> &obj) {
+void ObjFile<ELFT>::initializeSections(const llvm::object::ELFFile<ELFT> &obj) {
   ArrayRef<Elf_Shdr> objSections = getELFShdrs<ELFT>();
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
@@ -1054,7 +1053,7 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
     uint32_t type = read32<ELFT::Endianness>(desc.data());
     uint32_t size = read32<ELFT::Endianness>(desc.data() + 4);
     desc = desc.slice(8);
-    if (desc.size() < size)
+    if (desc.size() < alignTo<(ELFT::Is64Bits ? 8 : 4)>(size))
       return void(err(place) << "program property is too short");
 
     if (type == featureAndType) {
@@ -1292,14 +1291,14 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
         Err(ctx) << this << ": common symbol '" << sym->getName()
                  << "' has invalid alignment: " << value;
       hasCommonSyms = true;
-      sym->resolve(ctx, CommonSymbol{ctx, this, StringRef(), binding, stOther,
-                                     type, value, size});
+      sym->resolve(ctx, CommonSymbol{this, StringRef(), binding, stOther, type,
+                                     value, size});
       continue;
     }
 
     // Handle global defined symbols. Defined::section will be set in postParse.
-    sym->resolve(ctx, Defined{ctx, this, StringRef(), binding, stOther, type,
-                              value, size, nullptr});
+    sym->resolve(ctx, Defined{this, StringRef(), binding, stOther, type, value,
+                              size, nullptr});
   }
 
   // Undefined symbols (excluding those defined relative to non-prevailing
@@ -1383,10 +1382,9 @@ template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
   }
 }
 
-template <class ELFT>
-void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
+template <class ELFT> void ObjFile<ELFT>::initSectionsAndLocalSyms() {
   if (!justSymbols)
-    initializeSections(ignoreComdats, getObj());
+    initializeSections(getObj());
 
   if (!firstGlobal)
     return;
@@ -1424,7 +1422,7 @@ void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
       new (symbols[i]) Undefined(this, name, STB_LOCAL, eSym.st_other, type,
                                  /*discardedSecIdx=*/secIdx);
     else
-      new (symbols[i]) Defined(ctx, this, name, STB_LOCAL, eSym.st_other, type,
+      new (symbols[i]) Defined(this, name, STB_LOCAL, eSym.st_other, type,
                                eSym.st_value, eSym.st_size, sec);
     symbols[i]->isUsedInRegularObj = true;
   }
@@ -1949,12 +1947,11 @@ static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
   }
 
   if (objSym.isCommon()) {
-    sym->resolve(ctx, CommonSymbol{ctx, &f, StringRef(), binding, visibility,
+    sym->resolve(ctx, CommonSymbol{&f, StringRef(), binding, visibility,
                                    STT_OBJECT, objSym.getCommonAlignment(),
                                    objSym.getCommonSize()});
   } else {
-    Defined newSym(ctx, &f, StringRef(), binding, visibility, type, 0, 0,
-                   nullptr);
+    Defined newSym(&f, StringRef(), binding, visibility, type, 0, 0, nullptr);
     // The definition can be omitted if all bitcode definitions satisfy
     // `canBeOmittedFromSymbolTable()` and isUsedInRegularObj is false.
     // The latter condition is tested in parseVersionAndComputeIsPreemptible.
@@ -2037,15 +2034,15 @@ void BinaryFile::parse() {
       c = '_';
 
   llvm::StringSaver &ss = ctx.saver;
-  ctx.symtab->addAndCheckDuplicate(
-      ctx, Defined{ctx, this, ss.save(s + "_start"), STB_GLOBAL, STV_DEFAULT,
-                   STT_OBJECT, 0, 0, section});
-  ctx.symtab->addAndCheckDuplicate(
-      ctx, Defined{ctx, this, ss.save(s + "_end"), STB_GLOBAL, STV_DEFAULT,
-                   STT_OBJECT, data.size(), 0, section});
-  ctx.symtab->addAndCheckDuplicate(
-      ctx, Defined{ctx, this, ss.save(s + "_size"), STB_GLOBAL, STV_DEFAULT,
-                   STT_OBJECT, data.size(), 0, nullptr});
+  ctx.symtab->addAndCheckDuplicate(Defined{this, ss.save(s + "_start"),
+                                           STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
+                                           0, 0, section});
+  ctx.symtab->addAndCheckDuplicate(Defined{this, ss.save(s + "_end"),
+                                           STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
+                                           data.size(), 0, section});
+  ctx.symtab->addAndCheckDuplicate(Defined{this, ss.save(s + "_size"),
+                                           STB_GLOBAL, STV_DEFAULT, STT_OBJECT,
+                                           data.size(), 0, nullptr});
 }
 
 InputFile *elf::createInternalFile(Ctx &ctx, StringRef name) {
@@ -2084,7 +2081,6 @@ std::unique_ptr<ELFFileBase> elf::createObjFile(Ctx &ctx, MemoryBufferRef mb,
 
 template <class ELFT> void ObjFile<ELFT>::parseLazy() {
   const ArrayRef<typename ELFT::Sym> eSyms = this->getELFSyms<ELFT>();
-  numSymbols = eSyms.size();
   if (!symbols)
     symbols = std::make_unique<Symbol *[]>(numSymbols);
 

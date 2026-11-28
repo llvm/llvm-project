@@ -57,3 +57,17 @@ module {
     cir.return
   }
 }
+
+// -----
+
+!u16i = !cir.int<u, 16>
+!u32i = !cir.int<u, 32>
+!struct1 = !cir.struct<"Struct1" {data !u16i, data !u32i}>
+
+module {
+  cir.func @invalid_addr_space(%arg0 : !cir.data_member<!u32i in !struct1>, %arg1 : !cir.ptr<!struct1, target_address_space(4)>) {
+    // expected-error@+1 {{result address space does not match the object address space}}
+    %0 = cir.get_runtime_member %arg1[%arg0 : !cir.data_member<!u32i in !struct1>] : !cir.ptr<!struct1, target_address_space(4)> -> !cir.ptr<!u32i>
+    cir.return
+  }
+}

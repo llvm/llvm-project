@@ -72,8 +72,20 @@ static unsigned adjustFixupValue(unsigned Kind, uint64_t Value) {
   case ELF::R_SPARC_LM22:
     return (Value >> 10) & 0x3fffff;
 
+  case ELF::R_SPARC_22:
+    return Value & 0x3fffff;
+
   case Sparc::fixup_sparc_13:
     return Value & 0x1fff;
+
+  case ELF::R_SPARC_11:
+    return Value & 0x7ff;
+
+  case ELF::R_SPARC_10:
+    return Value & 0x3ff;
+
+  case ELF::R_SPARC_7:
+    return Value & 0x7f;
 
   case ELF::R_SPARC_5:
     return Value & 0x1f;
@@ -211,6 +223,18 @@ MCFixupKindInfo SparcAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   switch (uint16_t(Kind)) {
   case ELF::R_SPARC_PC10:
     Info = {"", 22, 10, 0};
+    break;
+  case ELF::R_SPARC_7:
+    Info = {"", 25, 7, 0};
+    break;
+  case ELF::R_SPARC_10:
+    Info = {"", 22, 10, 0};
+    break;
+  case ELF::R_SPARC_11:
+    Info = {"", 21, 11, 0};
+    break;
+  case ELF::R_SPARC_22:
+    Info = {"", 10, 22, 0};
     break;
   case ELF::R_SPARC_PC22:
     Info = {"", 10, 22, 0};

@@ -967,3 +967,29 @@ void fMultipleObjectsReferencingTheSameObjectTest() {
   INIT(IntReferenceWrapper1, (a));
   INIT(IntReferenceWrapper2, (a));
 }
+
+// The pointee 'x' is dead at the end of the first iteration, so a later
+// object referencing the new 'x' in the next iteration must be reported too.
+struct IntPointerWrapper1 {
+  int *p; // expected-note{{uninitialized pointee 'this->p'}}
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  IntPointerWrapper1(int *p) : p(p) {} // expected-warning{{1 uninitialized field}}
+};
+
+struct IntPointerWrapper2 {
+  int *p; // expected-note{{uninitialized pointee 'this->p'}}
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  IntPointerWrapper2(int *p) : p(p) {} // expected-warning{{1 uninitialized field}}
+};
+
+void fDeadPointeeRegionIsForgottenTest() {
+  for (int i = 0; i < 2; ++i) {
+    int x;
+    if (i == 0)
+      IntPointerWrapper1 w1(&x);
+    else
+      IntPointerWrapper2 w2(&x);
+  }
+}

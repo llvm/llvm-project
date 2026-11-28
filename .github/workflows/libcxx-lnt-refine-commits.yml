@@ -63,6 +63,7 @@ jobs:
       LNT_URL: https://lnt.llvm.org
       LNT_PROJECT: libcxx
       LNT_TEST_SUITE: microbenchmarks
+      LNT_BRANCH: main
     steps:
       # The selection only changes as new runs are submitted to LNT, and computing it takes several minutes.
       # It is cached and recomputed every hour instead of every time this workflow is called.
@@ -70,7 +71,7 @@ jobs:
         id: key
         run: |
           echo "key=lnt-refinement-commits-${MACHINE}-${METRIC}-${DIRECTION}-${MIN_CHANGE}-${MAX_COMMITS}-$(date -u +%F-%H)" >> "${GITHUB_OUTPUT}"
-          echo "series-prefix=lnt-series-${MACHINE}-${METRIC}-$(date -u +%G-W%V)-" >> "${GITHUB_OUTPUT}"
+          echo "series-prefix=lnt-series-${MACHINE}-${METRIC}-${LNT_BRANCH}-$(date -u +%G-W%V)-" >> "${GITHUB_OUTPUT}"
 
       - name: Try restoring the selection from cache
         id: restore-refinements
@@ -131,7 +132,8 @@ jobs:
           fi
           curl -sS --fail --compressed -G "${suite_url}/series"                                           \
                --data-urlencode machine="${MACHINE}" --data-urlencode metric="${METRIC}"                  \
-               --data-urlencode has_ordinal=true --data-urlencode submitted_before="${as_of}" "${since[@]}" \
+               --data-urlencode branch="${LNT_BRANCH}" --data-urlencode has_ordinal=true                  \
+               --data-urlencode submitted_before="${as_of}" "${since[@]}"                                 \
                >> "${series}/series.jsonl"
           echo "${as_of}" > "${series}/as-of"
 

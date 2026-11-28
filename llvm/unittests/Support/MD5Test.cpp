@@ -42,6 +42,7 @@ void TestMD5Sum(StringRef Input, StringRef Final) {
 TEST(MD5Test, MD5) {
   TestMD5Sum(ArrayRef((const uint8_t *)"", (size_t)0),
              "d41d8cd98f00b204e9800998ecf8427e");
+  TestMD5Sum(ArrayRef<uint8_t>(), "d41d8cd98f00b204e9800998ecf8427e");
   TestMD5Sum(ArrayRef((const uint8_t *)"a", (size_t)1),
              "0cc175b9c0f1b6a831c399e269772661");
   TestMD5Sum(

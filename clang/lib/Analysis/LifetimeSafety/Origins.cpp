@@ -198,8 +198,9 @@ bool doesDeclHaveStorage(const ValueDecl *D) {
   return !D->getType()->isReferenceType();
 }
 
-OriginManager::OriginManager(const AnalysisDeclContext &AC)
-    : AST(AC.getASTContext()) {
+OriginManager::OriginManager(const AnalysisDeclContext &AC,
+                             llvm::BumpPtrAllocator &Alloc)
+    : AST(AC.getASTContext()), ListAllocator(Alloc) {
   collectLifetimeAnnotatedOriginTypes(AC);
   initializeThisOrigins(AC.getDecl());
 }
@@ -264,7 +265,7 @@ OriginList *OriginManager::getOrCreateList(const ValueDecl *D) {
 /// Returns true if the field named by \p ME denotes a subobject of `*this`,
 /// reached as `this->f` or through anonymous-struct/union subobjects.
 static bool isSubobjectOfThis(const MemberExpr *ME) {
-  const Expr *Base = ME->getBase()->IgnoreParenImpCasts();
+  const Expr *Base = ignoreParensAndImpCasts(ME->getBase());
   if (isa<CXXThisExpr>(Base))
     return true;
 

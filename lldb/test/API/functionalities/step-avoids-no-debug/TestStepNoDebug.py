@@ -11,10 +11,6 @@ from lldbsuite.test import lldbutil
 
 class StepAvoidsNoDebugTestCase(TestBase):
     @add_test_categories(["pyapi"])
-    @expectedFailureAll(
-        archs=["aarch64"], oslist=["windows"], bugnumber="llvm.org/pr56292",
-        debug_info=["dwarf", "dwo"]
-    )
     def test_step_out_with_python(self):
         """Test stepping out using avoid-no-debug."""
         self.build()
@@ -30,11 +26,8 @@ class StepAvoidsNoDebugTestCase(TestBase):
         oslist=no_match(["freebsd"]),
         bugnumber="llvm.org/pr28549",
     )
-    @expectedFailureAll(
-        archs=["aarch64"], oslist=["windows"], bugnumber="llvm.org/pr56292",
-        debug_info=["dwarf", "dwo"]
-    )
     @expectedFailureAll(archs=["arm64e"])
+    @skipIfWasm  # steps past no-debug code stop on the wrong line
     def test_step_over_with_python(self):
         """Test stepping over using avoid-no-debug."""
         self.build()
@@ -50,11 +43,8 @@ class StepAvoidsNoDebugTestCase(TestBase):
         oslist=no_match(["freebsd"]),
         bugnumber="llvm.org/pr28549",
     )
-    @expectedFailureAll(
-        archs=["aarch64"], oslist=["windows"], bugnumber="llvm.org/pr56292",
-        debug_info=["dwarf", "dwo"]
-    )
     @expectedFailureAll(archs=["arm64e"])
+    @skipIfWasm  # steps past no-debug code stop on the wrong line
     def test_step_in_with_python(self):
         """Test stepping in using avoid-no-debug."""
         self.build()

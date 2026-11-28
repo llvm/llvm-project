@@ -454,10 +454,9 @@ void MCELFStreamer::finishImpl() {
 
   // Emit .note.GNU-stack, similar to AsmPrinter::doFinalization.
   MCContext &Ctx = getContext();
-  auto *StackSec = Ctx.getAsmInfo().getStackSection(Ctx,
-                                                    /*Exec=*/false);
-  if (StackSec && Ctx.getTargetOptions().MCNoExecStack)
-    switchSection(StackSec);
+  if (Ctx.getAsmInfo().emitELFStackSection() &&
+      Ctx.getTargetOptions().MCNoExecStack)
+    switchSection(Ctx.getELFSection(".note.GNU-stack", ELF::SHT_PROGBITS, 0U));
 
   // Emit the .gnu attributes section if any attributes have been added.
   if (!GNUAttributes.empty()) {

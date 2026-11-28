@@ -541,6 +541,10 @@ TEST_F(GetModuleMapsForModulesTest, SubdirectorySearch) {
   addFile("/root/a/Sub/module.modulemap", "module A { header \"a.h\" }\n");
   addFile("/root/a/Sub/a.h", "\n");
 
+  SmallString<128> CacheDir;
+  ASSERT_FALSE(
+      llvm::sys::fs::createUniqueDirectory("subdirectory-search", CacheDir));
+
   std::pair<StringRef, StringRef> Cases[] = {
       {"-fmodulemap-allow-subdirectory-search", "/root/a/Sub/module.modulemap"},
       {"-fno-modulemap-allow-subdirectory-search", ""}};
@@ -550,6 +554,7 @@ TEST_F(GetModuleMapsForModulesTest, SubdirectorySearch) {
         "clang",     "-target", "x86_64-apple-macosx10.7",
         "-c",        "test.m",  "-fmodules",
         "-I/root/a", Flag.str()};
+    CommandLine.push_back(("-fmodules-cache-path=" + CacheDir).str());
 
     TextDiagnosticBuffer ScanDiags;
     EXPECT_EQ(llvm::sys::path::convert_to_slash(

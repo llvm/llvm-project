@@ -9,16 +9,15 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_X86_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_X86_H
 
-#include "Plugins/Register/Core/RegisterContextCore_x86.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "Plugins/Register/Core/RegisterContextCore_x86.h"
 
 class RegisterContextELFCore_x86 : public RegisterContextCore_x86 {
 public:
-  RegisterContextELFCore_x86(
-      lldb_private::Thread &thread,
-      lldb_private::RegisterInfoInterface *register_info,
-      const lldb_private::DataExtractor &gpregset,
-      llvm::ArrayRef<lldb_private::CoreNote> notes);
+  RegisterContextELFCore_x86(lldb_private::Thread &thread,
+                             lldb_private::RegisterInfoInterface *register_info,
+                             const lldb_private::DataExtractor &gpregset,
+                             llvm::ArrayRef<lldb_private::CoreNote> notes);
 
   bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
                     lldb_private::RegisterValue &value) override;

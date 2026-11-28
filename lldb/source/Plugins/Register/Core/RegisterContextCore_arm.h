@@ -9,16 +9,15 @@
 #ifndef LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_ARM_H
 #define LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_ARM_H
 
-#include "Register/RegisterInfoInterface.h"
 #include "Register/Common/RegisterInfo_arm.h"
+#include "Register/RegisterInfoInterface.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
 class RegisterContextCore_arm : public lldb_private::RegisterContext {
 public:
-  RegisterContextCore_arm(
-      lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfo_arm> register_info);
+  RegisterContextCore_arm(lldb_private::Thread &thread,
+                          std::unique_ptr<RegisterInfo_arm> register_info);
 
   ~RegisterContextCore_arm() override;
 

@@ -1,15 +1,8 @@
 ; RUN: llc -mtriple=amdgpu6.01-- < %s | FileCheck -check-prefix=GCN -check-prefix=SIVI -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02-- -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=SIVI -check-prefix=VI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgpu9.00-- < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=FUNC %s
-; RUN: llc -mtriple=r600-- -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
-; RUN: llc -mtriple=r600-- -mcpu=cayman < %s | FileCheck -check-prefix=CM -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}store_i1:
-; EG: MEM_RAT MSKOR
-; EG-NOT: MEM_RAT MSKOR
-
-; CM: MEM_RAT MSKOR
-; CM-NOT: MEM_RAT MSKOR
 
 ; SIVI: buffer_store_byte
 ; GFX9: global_store_byte
@@ -21,15 +14,6 @@ entry:
 
 ; i8 store
 ; FUNC-LABEL: {{^}}store_i8:
-; EG: MEM_RAT MSKOR T[[RW_GPR:[0-9]]].XW, T{{[0-9]}}.X
-; EG-NOT: MEM_RAT MSKOR
-
-; EG: VTX_READ_8
-; EG: AND_INT
-; EG: AND_INT
-; EG: LSHL
-; EG: LSHL
-; EG: LSHL
 
 ; SIVI: buffer_store_byte
 ; GFX9: global_store_byte
@@ -41,15 +25,6 @@ entry:
 
 ; i16 store
 ; FUNC-LABEL: {{^}}store_i16:
-; EG: MEM_RAT MSKOR T[[RW_GPR:[0-9]]].XW, T{{[0-9]}}.X
-; EG-NOT: MEM_RAT MSKOR
-
-; EG: VTX_READ_16
-; EG: AND_INT
-; EG: AND_INT
-; EG: LSHL
-; EG: LSHL
-; EG: LSHL
 
 
 ; SIVI: buffer_store_short
@@ -67,9 +42,6 @@ entry:
 
 ; GFX9-DAG: global_store_byte_d16_hi v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}} offset:2
 ; GFX9-DAG: global_store_short
-
-; EG: MEM_RAT MSKOR
-; EG: MEM_RAT MSKOR
 define amdgpu_kernel void @store_i24(ptr addrspace(1) %out, i24 %in) {
 entry:
   store i24 %in, ptr addrspace(1) %out
@@ -81,12 +53,6 @@ entry:
 ; GCN: v_mov_b32_e32 [[VAND:v[0-9]+]], [[AND]]
 ; SIVI: buffer_store_dword [[VAND]]
 ; GFX9: global_store_dword v{{[0-9]+}}, [[VAND]], s
-
-; EG: MEM_RAT_CACHELESS STORE_RAW
-; EG-NOT: MEM_RAT
-
-; CM: MEM_RAT_CACHELESS STORE_DWORD
-; CM-NOT: MEM_RAT
 define amdgpu_kernel void @store_i25(ptr addrspace(1) %out, i25 %in) {
 entry:
   store i25 %in, ptr addrspace(1) %out
@@ -95,11 +61,6 @@ entry:
 
 ; FUNC-LABEL: {{^}}store_v2i8:
 ; v2i8 is naturally 2B aligned
-; EG: MEM_RAT MSKOR
-; EG-NOT: MEM_RAT MSKOR
-
-; CM: MEM_RAT MSKOR
-; CM-NOT: MEM_RAT MSKOR
 
 ; SIVI: buffer_store_short
 ; GFX9: global_store_short
@@ -111,13 +72,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v2i8_unaligned:
-; EG: MEM_RAT MSKOR
-; EG: MEM_RAT MSKOR
-; EG-NOT: MEM_RAT MSKOR
-
-; CM: MEM_RAT MSKOR
-; CM: MEM_RAT MSKOR
-; CM-NOT: MEM_RAT MSKOR
 
 ; SI: buffer_store_byte
 define amdgpu_kernel void @store_v2i8_unaligned(ptr addrspace(1) %out, <2 x i32> %in) {
@@ -129,9 +83,6 @@ entry:
 
 
 ; FUNC-LABEL: {{^}}store_v2i16:
-; EG: MEM_RAT_CACHELESS STORE_RAW
-
-; CM: MEM_RAT_CACHELESS STORE_DWORD
 
 ; SIVI: buffer_store_dword
 ; GFX9: global_store_dword
@@ -143,15 +94,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v2i16_unaligned:
-; EG: MEM_RAT MSKOR
-; EG: MEM_RAT MSKOR
-; EG-NOT: MEM_RAT MSKOR
-; EG-NOT: MEM_RAT_CACHELESS STORE_RAW
-
-; CM: MEM_RAT MSKOR
-; CM: MEM_RAT MSKOR
-; CM-NOT: MEM_RAT MSKOR
-; CM-NOT: MEM_RAT_CACHELESS STORE_DWORD
 
 ; SIVI: buffer_store_short
 ; SIVI: buffer_store_short
@@ -166,9 +108,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v4i8:
-; EG: MEM_RAT_CACHELESS STORE_RAW
-
-; CM: MEM_RAT_CACHELESS STORE_DWORD
 
 ; SIVI: buffer_store_dword
 ; GFX9: global_store_dword
@@ -180,19 +119,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v4i8_unaligned:
-; EG: MEM_RAT MSKOR
-; EG: MEM_RAT MSKOR
-; EG: MEM_RAT MSKOR
-; EG: MEM_RAT MSKOR
-; EG-NOT: MEM_RAT MSKOR
-; EG-NOT: MEM_RAT_CACHELESS STORE_RAW
-
-; CM: MEM_RAT MSKOR
-; CM: MEM_RAT MSKOR
-; CM: MEM_RAT MSKOR
-; CM: MEM_RAT MSKOR
-; CM-NOT: MEM_RAT MSKOR
-; CM-NOT: MEM_RAT_CACHELESS STORE_DWORD
 
 ; SI: buffer_store_byte
 ; SI: buffer_store_byte
@@ -207,15 +133,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v4i8_halfaligned:
-; EG: MEM_RAT MSKOR
-; EG: MEM_RAT MSKOR
-; EG-NOT: MEM_RAT MSKOR
-; EG-NOT: MEM_RAT_CACHELESS STORE_RAW
-
-; CM: MEM_RAT MSKOR
-; CM: MEM_RAT MSKOR
-; CM-NOT: MEM_RAT MSKOR
-; CM-NOT: MEM_RAT_CACHELESS STORE_DWORD
 
 ; SI: buffer_store_short
 ; SI: buffer_store_short
@@ -229,9 +146,6 @@ entry:
 
 ; floating-point store
 ; FUNC-LABEL: {{^}}store_f32:
-; EG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+\.X, T[0-9]+\.X}}, 1
-
-; CM: MEM_RAT_CACHELESS STORE_DWORD T{{[0-9]+\.X, T[0-9]+\.X}}
 
 ; SIVI: buffer_store_dword
 ; GFX9: global_store_dword
@@ -242,9 +156,6 @@ define amdgpu_kernel void @store_f32(ptr addrspace(1) %out, float %in) {
 }
 
 ; FUNC-LABEL: {{^}}store_v4i16:
-; EG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XY
-
-; CM: MEM_RAT_CACHELESS STORE_DWORD T{{[0-9]+}}
 
 ; SIVI: buffer_store_dwordx2
 ; GFX9: global_store_dwordx2
@@ -257,9 +168,6 @@ entry:
 
 ; vec2 floating-point stores
 ; FUNC-LABEL: {{^}}store_v2f32:
-; EG: MEM_RAT_CACHELESS STORE_RAW
-
-; CM: MEM_RAT_CACHELESS STORE_DWORD
 
 ; SIVI: buffer_store_dwordx2
 ; GFX9: global_store_dwordx2
@@ -279,20 +187,12 @@ entry:
 ; VI: buffer_store_dwordx3
 
 ; GFX9: global_store_dwordx3
-
-; EG-DAG: MEM_RAT_CACHELESS STORE_RAW {{T[0-9]+\.[XYZW]}}, {{T[0-9]+\.[XYZW]}},
-; EG-DAG: MEM_RAT_CACHELESS STORE_RAW {{T[0-9]+\.XY}}, {{T[0-9]+\.[XYZW]}},
 define amdgpu_kernel void @store_v3i32(ptr addrspace(1) %out, <3 x i32> %a) nounwind {
   store <3 x i32> %a, ptr addrspace(1) %out, align 16
   ret void
 }
 
 ; FUNC-LABEL: {{^}}store_v4i32:
-; EG: MEM_RAT_CACHELESS STORE_RAW {{T[0-9]+\.XYZW}}
-; EG-NOT: MEM_RAT_CACHELESS STORE_RAW
-
-; CM: MEM_RAT_CACHELESS STORE_DWORD
-; CM-NOT: MEM_RAT_CACHELESS STORE_DWORD
 
 ; SIVI: buffer_store_dwordx4
 ; GFX9: global_store_dwordx4
@@ -303,11 +203,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v4i32_unaligned:
-; EG: MEM_RAT_CACHELESS STORE_RAW {{T[0-9]+\.XYZW}}
-; EG-NOT: MEM_RAT_CACHELESS STORE_RAW
-
-; CM: MEM_RAT_CACHELESS STORE_DWORD
-; CM-NOT: MEM_RAT_CACHELESS STORE_DWORD
 
 ; SIVI: buffer_store_dwordx4
 ; GFX9: global_store_dwordx4
@@ -319,11 +214,6 @@ entry:
 
 ; v4f32 store
 ; FUNC-LABEL: {{^}}store_v4f32:
-; EG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+\.XYZW, T[0-9]+\.X}}, 1
-; EG-NOT: MEM_RAT_CACHELESS STORE_RAW
-
-; CM: MEM_RAT_CACHELESS STORE_DWORD
-; CM-NOT: MEM_RAT_CACHELESS STORE_DWORD
 
 ; SIVI: buffer_store_dwordx4
 ; GFX9: global_store_dwordx4
@@ -334,9 +224,6 @@ define amdgpu_kernel void @store_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %
 }
 
 ; FUNC-LABEL: {{^}}store_i64_i8:
-; EG: MEM_RAT MSKOR
-
-; CM: MEM_RAT MSKOR
 
 ; SIVI: buffer_store_byte
 ; GFX9: global_store_byte
@@ -348,7 +235,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_i64_i16:
-; EG: MEM_RAT MSKOR
 ; SIVI: buffer_store_short
 ; GFX9: global_store_short
 define amdgpu_kernel void @store_i64_i16(ptr addrspace(1) %out, i64 %in) {
@@ -363,11 +249,6 @@ entry:
 ; should not try to split the 64-bit store back into 2 32-bit stores.
 
 ; FUNC-LABEL: {{^}}vecload2:
-; EG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+\.XY, T[0-9]+\.X}}, 1
-; EG-NOT: MEM_RAT_CACHELESS STORE_RAW
-
-; CM: MEM_RAT_CACHELESS STORE_DWORD
-; CM-NOT: MEM_RAT_CACHELESS STORE_DWORD
 
 ; SIVI: buffer_store_dwordx2
 ; GFX9: global_store_dwordx2
@@ -385,9 +266,6 @@ entry:
 ; When i128 was a legal type this program generated cannot select errors:
 
 ; FUNC-LABEL: {{^}}"i128-const-store":
-; EG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XYZW, T{{[0-9]+}}.X, 1
-
-; CM: MEM_RAT_CACHELESS STORE_DWORD T{{[0-9]+}}, T{{[0-9]+}}.X
 
 ; SIVI: buffer_store_dwordx4
 ; GFX9: global_store_dwordx4

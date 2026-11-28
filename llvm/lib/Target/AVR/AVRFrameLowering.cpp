@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -35,8 +34,9 @@ using namespace llvm;
 
 namespace llvm {
 
-AVRFrameLowering::AVRFrameLowering()
-    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(1), -2) {}
+AVRFrameLowering::AVRFrameLowering(const AVRSubtarget &STI)
+    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(1),
+                          STI.hasEIJMPCALL() ? -3 : -2) {}
 
 bool AVRFrameLowering::canSimplifyCallFramePseudos(
     const MachineFunction &MF) const {

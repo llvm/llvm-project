@@ -106,7 +106,10 @@ define void @and_v4i32_i(ptr %c, ptr %a) nounwind {
 define void @and_v2i64_i(ptr %c, ptr %a) nounwind {
 ; MIPS-LABEL: and_v2i64_i:
 ; MIPS:       # %bb.0:
-; MIPS-NEXT:    ldi.d $w0, 1
+; MIPS-NEXT:    ori $1, $zero, 1
+; MIPS-NEXT:    fill.w $w0, $zero
+; MIPS-NEXT:    insert.w $w0[1], $1
+; MIPS-NEXT:    splati.d $w0, $w0[0]
 ; MIPS-NEXT:    shf.w $w0, $w0, 177
 ; MIPS-NEXT:    ld.d $w1, 0($5)
 ; MIPS-NEXT:    and.v $w0, $w1, $w0
@@ -230,7 +233,10 @@ define void @or_v4i32_i(ptr %c, ptr %a) nounwind {
 define void @or_v2i64_i(ptr %c, ptr %a) nounwind {
 ; MIPS-LABEL: or_v2i64_i:
 ; MIPS:       # %bb.0:
-; MIPS-NEXT:    ldi.d $w0, 3
+; MIPS-NEXT:    ori $1, $zero, 3
+; MIPS-NEXT:    fill.w $w0, $zero
+; MIPS-NEXT:    insert.w $w0[1], $1
+; MIPS-NEXT:    splati.d $w0, $w0[0]
 ; MIPS-NEXT:    shf.w $w0, $w0, 177
 ; MIPS-NEXT:    ld.d $w1, 0($5)
 ; MIPS-NEXT:    or.v $w0, $w1, $w0
@@ -361,7 +367,10 @@ define void @nor_v4i32_i(ptr %c, ptr %a) nounwind {
 define void @nor_v2i64_i(ptr %c, ptr %a) nounwind {
 ; MIPS-LABEL: nor_v2i64_i:
 ; MIPS:       # %bb.0:
-; MIPS-NEXT:    ldi.d $w0, 1
+; MIPS-NEXT:    ori $1, $zero, 1
+; MIPS-NEXT:    fill.w $w0, $zero
+; MIPS-NEXT:    insert.w $w0[1], $1
+; MIPS-NEXT:    splati.d $w0, $w0[0]
 ; MIPS-NEXT:    shf.w $w0, $w0, 177
 ; MIPS-NEXT:    ld.d $w1, 0($5)
 ; MIPS-NEXT:    nor.v $w0, $w1, $w0
@@ -486,7 +495,10 @@ define void @xor_v4i32_i(ptr %c, ptr %a) nounwind {
 define void @xor_v2i64_i(ptr %c, ptr %a) nounwind {
 ; MIPS-LABEL: xor_v2i64_i:
 ; MIPS:       # %bb.0:
-; MIPS-NEXT:    ldi.d $w0, 3
+; MIPS-NEXT:    ori $1, $zero, 3
+; MIPS-NEXT:    fill.w $w0, $zero
+; MIPS-NEXT:    insert.w $w0[1], $1
+; MIPS-NEXT:    splati.d $w0, $w0[0]
 ; MIPS-NEXT:    shf.w $w0, $w0, 177
 ; MIPS-NEXT:    ld.d $w1, 0($5)
 ; MIPS-NEXT:    xor.v $w0, $w1, $w0
@@ -1036,7 +1048,10 @@ define void @bsel_v4i32(ptr %c, ptr %a, ptr %b) nounwind {
 define void @bsel_v2i64(ptr %c, ptr %a, ptr %b) nounwind {
 ; MIPS-LABEL: bsel_v2i64:
 ; MIPS:       # %bb.0:
-; MIPS-NEXT:    ldi.d $w0, 6
+; MIPS-NEXT:    ori $1, $zero, 6
+; MIPS-NEXT:    fill.w $w0, $zero
+; MIPS-NEXT:    insert.w $w0[1], $1
+; MIPS-NEXT:    splati.d $w0, $w0[0]
 ; MIPS-NEXT:    shf.w $w0, $w0, 177
 ; MIPS-NEXT:    ld.d $w1, 0($5)
 ; MIPS-NEXT:    ld.d $w2, 0($6)

@@ -12,7 +12,7 @@
 
 #include "mlir/Dialect/LLVMIR/VCIXDialect.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -27,11 +27,6 @@ using namespace vcix;
 //===----------------------------------------------------------------------===//
 
 void VCIXDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/LLVMIR/VCIXOps.cpp.inc"
-      >();
-
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/LLVMIR/VCIXOpsAttributes.cpp.inc"

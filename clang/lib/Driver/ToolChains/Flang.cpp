@@ -825,7 +825,7 @@ void Flang::addTargetOptions(const ArgList &Args, ArgStringList &CmdArgs,
     }
 
     if (Triple.isOSDarwin()) {
-      // flang doesn't currently suport nostdlib, nodefaultlibs. Adding these
+      // flang doesn't currently support nostdlib, nodefaultlibs. Adding these
       // here incase they are added someday
       if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
         if (A->getValue() == StringRef{"Accelerate"}) {

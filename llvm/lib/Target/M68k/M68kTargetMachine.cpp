@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/PassRegistry.h"
 #include <memory>
 #include <optional>
@@ -35,6 +36,7 @@ using namespace llvm;
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTarget() {
   RegisterTargetMachine<M68kTargetMachine> X(getTheM68kTarget());
+  static opt::RegisterLibraryOptions<M68kOptions> O;
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeM68kAsmPrinterPass(*PR);
@@ -71,6 +73,8 @@ M68kTargetMachine::M68kTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                ::getEffectiveCodeModel(CM, JIT), OL),
+      CLOpts(cl::LibraryOptionsContext::get<M68kOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(std::make_unique<M68kELFTargetObjectFile>()),
       Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();
@@ -80,15 +84,26 @@ M68kTargetMachine::~M68kTargetMachine() {}
 
 const M68kSubtarget *
 M68kTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const M68kSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
 
-  auto CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
-  auto FS = FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+
+  if (const M68kSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
+
+  auto CPU =
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString().str() : TargetCPU;
+  auto FS = Attrs.FS.isValid() ? Attrs.FS.getValueAsString().str() : TargetFS;
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I)
     I = std::make_unique<M68kSubtarget>(TargetTriple, CPU, FS, *this);
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 

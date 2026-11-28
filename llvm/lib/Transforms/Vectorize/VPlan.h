@@ -55,7 +55,6 @@ namespace llvm {
 
 class BasicBlock;
 class DominatorTree;
-class InnerLoopVectorizer;
 struct VPTransformState;
 class raw_ostream;
 class SCEV;
@@ -983,6 +982,12 @@ public:
 
   LLVM_ABI_FOR_TEST FastMathFlags getFastMathFlagsOrNone() const;
 
+  /// Set the fast-math flags to \p FMFs.
+  void setFastMathFlags(FastMathFlags FMFs) {
+    assert(hasFastMathFlags() && "recipe doesn't have fast-math flags");
+    getFMFsRef() = FMFs;
+  }
+
   bool hasNoUnsignedWrap() const {
     switch (OpType) {
     case OperationType::OverflowingBinOp:
@@ -1467,9 +1472,13 @@ private:
   /// An optional name that can be used for the generated IR instruction.
   std::string Name;
 
-  /// Returns true if we can generate a scalar for the first lane only if
-  /// needed.
-  bool doesGenerateSingleScalar() const;
+  /// Whether this VPInstruction produces a single scalar value.
+  const bool GeneratesSingleScalar;
+
+  /// Returns true if we can generate a single scalar, either because the recipe
+  /// is known to generate one or because only its first lane is used.
+  /// TODO: Replace remaining inferred cases with GeneratesSingleScalar.
+  bool inferGeneratesSingleScalar() const;
 
   /// Utility method serving execute: Generates either a single-scalar or vector
   /// value. \p GenerateSingleScalar determines whether to generate a
@@ -1478,7 +1487,12 @@ private:
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {
-    if (Opcode == VPInstruction::MaskedCond)
+    assert(Opcode != VPInstruction::MaskedCond &&
+           "Should be expanded in VPlanPredicator");
+
+    // These VPInstruction can be (optionally) masked.
+    if (Opcode == VPInstruction::WideVectorLoad ||
+        Opcode == VPInstruction::WideVectorStore)
       return false;
 
     // For now only VPInstructions with underlying values use masks.
@@ -1491,11 +1505,18 @@ private:
            Opcode == Instruction::ExtractValue;
   }
 
+  /// Returns true if this is an abstract instruction that can't be executed.
+  bool isAbstract() const {
+    return isMasked() && Opcode != VPInstruction::WideVectorLoad &&
+           Opcode != VPInstruction::WideVectorStore;
+  }
+
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags = {}, const VPIRMetadata &MD = {},
                 DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "",
-                Type *ResultTy = nullptr, const VPIRAttributes &Attrs = {});
+                Type *ResultTy = nullptr, const VPIRAttributes &Attrs = {},
+                std::optional<bool> GeneratesSingleScalar = std::nullopt);
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPInstructionSC)
 
@@ -1505,8 +1526,9 @@ public:
 
   VPInstruction *cloneWithOperands(ArrayRef<VPValue *> NewOperands,
                                    Type *ResultTy = nullptr) {
-    auto *New = new VPInstruction(Opcode, NewOperands, *this, *this,
-                                  getDebugLoc(), Name, ResultTy, *this);
+    auto *New =
+        new VPInstruction(Opcode, NewOperands, *this, *this, getDebugLoc(),
+                          Name, ResultTy, *this, GeneratesSingleScalar);
     if (getUnderlyingValue())
       New->setUnderlyingValue(getUnderlyingInstr());
     return New;
@@ -1578,19 +1600,19 @@ public:
 
   /// Returns true if the recipe only uses scalars of operand \p Op.
   bool usesScalars(const VPValue *Op) const override {
-    return isSingleScalar() || getOpcode() == VPInstruction::PtrAdd ||
+    return doesGenerateSingleScalar() || getOpcode() == VPInstruction::PtrAdd ||
            usesFirstLaneOnly(Op);
   }
 
-  /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool usesFirstPartOnly(const VPValue *Op) const override;
+  /// Returns true if the recipe only uses the first part of all operands.
+  bool usesFirstPartOnly() const override;
 
   /// Returns true if this VPInstruction produces a scalar value from a vector,
   /// e.g. by performing a reduction or extracting a lane.
   bool isVectorToScalar() const;
 
   /// Returns true if the recipe produces a single scalar value.
-  bool isSingleScalar() const;
+  bool doesGenerateSingleScalar() const { return GeneratesSingleScalar; }
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
@@ -1762,11 +1784,8 @@ public:
     return true;
   }
 
-  bool usesFirstPartOnly(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
-  }
+  /// Returns true if the recipe only uses the first part of all operands.
+  bool usesFirstPartOnly() const override { return true; }
 
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -2357,10 +2376,8 @@ public:
     return 0;
   }
 
-  /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool usesFirstPartOnly(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
+  /// Returns true if the recipe only uses the first part of all operands.
+  bool usesFirstPartOnly() const override {
     assert(getNumOperands() <= 2 && "must have at most two operands");
     return true;
   }
@@ -2422,10 +2439,8 @@ public:
     return true;
   }
 
-  /// Returns true if the recipe only uses the first part of operand \p Op.
-  bool usesFirstPartOnly(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
+  /// Returns true if the recipe only uses the first part of all operands.
+  bool usesFirstPartOnly() const override {
     assert(getNumOperands() <= 2 && "must have at most two operands");
     return true;
   }
@@ -3665,6 +3680,10 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
     /// extended vector operands, negating the multiplication, performing a
     /// reduction.add on the result, and adding the scalar result to a chain.
     ExtNegatedMulAccReduction,
+    /// Represent a chain of recipes whose last recipe will be optimized away.
+    /// Currently only supports folding vp.merge with an in-loop operation, so
+    /// LV does not account for the cost or register pressure of vp.merge.
+    FoldedVPMerge,
   };
 
   /// Type of the expression.
@@ -3722,6 +3741,13 @@ public:
     } else
       assert(Neg->getOpcode() == Instruction::FNeg && "Unexpected opcode");
   }
+  VPExpressionRecipe(VPSingleDefRecipe *InLoopOp,
+                     VPWidenIntrinsicRecipe *VPMerge)
+      : VPExpressionRecipe(ExpressionTypes::FoldedVPMerge,
+                           {InLoopOp, VPMerge}) {
+    assert(VPMerge->getVectorIntrinsicID() == Intrinsic::vp_merge &&
+           "Expected a vp.merge");
+  }
 
   ~VPExpressionRecipe() override {
     SmallPtrSet<VPSingleDefRecipe *, 4> ExpressionRecipesSeen;
@@ -3772,6 +3798,9 @@ public:
 
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override;
 
   /// Returns true if this expression contains recipes that may read from or
   /// write to memory.
@@ -5343,25 +5372,13 @@ public:
 
   unsigned getMaxBlockNumber() const { return CreatedBlocks.size(); }
 
-  /// Returns true if the VPlan is based on a loop with an early exit.
+  /// Returns true if the VPlan is based on a loop with an early exit. Must be
+  /// called before regions are dissolved.
   bool hasEarlyExit() const {
-    unsigned NumExitPredecessors =
-        sum_of(map_range(ExitBlocks, [](VPIRBasicBlock *EB) {
-          return EB->getNumPredecessors();
-        }));
-
-    // If the scalar preheader executes unconditionally, there's no branch from
-    // middle block to any exit. If there is any edge to an exit block
-    // remaining, it must be an early exit.
-    VPBasicBlock *ScalarPH = getScalarPreheader();
-    VPBlockBase *ScalarPHPred =
-        ScalarPH ? ScalarPH->getSinglePredecessor() : nullptr;
-    if (ScalarPHPred && ScalarPHPred->getNumSuccessors() == 1)
-      return NumExitPredecessors >= 1;
-
-    // Otherwise there must be at least 2 edges to exit blocks (from the middle
-    // block and the early exiting edge).
-    return NumExitPredecessors > 1;
+    // An early exit plan uses BranchOnTwoConds in the vector loop region latch.
+    const VPRegionBlock *LoopRegion = getVectorLoopRegion();
+    assert(LoopRegion && "vector loop region already dissolved");
+    return LoopRegion->getNumSuccessors() > 1;
   }
 
   /// Returns true if the scalar tail may execute after the vector loop, i.e.

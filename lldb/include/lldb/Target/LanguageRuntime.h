@@ -18,6 +18,7 @@
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Runtime.h"
+#include "lldb/Target/StackID.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
@@ -73,6 +74,14 @@ public:
     return nullptr;
   }
 
+  /// Returns whether this runtime is the preferred runtime for \p in_value, an
+  /// object of another language, for example because code in this runtime's
+  /// language uses it. The runtime of the object's language can then return
+  /// this runtime from GetPreferredLanguageRuntime().
+  virtual bool IsPreferredLanguageRuntimeFor(ValueObject &in_value) {
+    return false;
+  }
+
   virtual llvm::Error GetObjectDescription(Stream &str,
                                            ValueObject &object) = 0;
 
@@ -120,7 +129,7 @@ public:
   // ExecutionContextScope in which one can actually fetch any specialization
   // information required.
   virtual CompilerType GetConcreteType(ExecutionContextScope *exe_scope,
-                                       ConstString abstract_type_name) {
+                                       llvm::StringRef abstract_type_name) {
     return CompilerType();
   }
 
@@ -136,11 +145,42 @@ public:
   virtual TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                          ValueObject &static_value) = 0;
 
+  /// Returns the address of the instance that \p pointer refers to, where
+  /// \p pointer is the value of an object of \p type, whose instances are
+  /// pointers (see eTypeInstanceIsPointer). A runtime can remove information
+  /// that it stores in the spare bits of such pointers, or follow a reference
+  /// that refers to the instance indirectly.
+  virtual llvm::Expected<lldb::addr_t> FixupPointerValue(lldb::addr_t pointer,
+                                                         CompilerType type) {
+    return pointer;
+  }
+
   /// This allows a language runtime to adjust the location of \p variable
   /// computed from its debug info, for storage whose indirection is only
   /// known at runtime.
   virtual llvm::Error FixupVariableLocation(Variable &variable, Value &value) {
     return llvm::Error::success();
+  }
+
+  /// This allows a language runtime to evaluate
+  /// DW_OP_entry_value(\p entry_value) in \p frame without call site
+  /// information from the caller, when the runtime knows the value the
+  /// register had on entry. For example, a runtime that unwinds the frame
+  /// with GetRuntimeUnwindPlan() may know how that value relates to the CFA.
+  ///
+  /// \param[in,out] following
+  ///     The operations after the DW_OP_entry_value. The runtime may
+  ///     evaluate the first of them together with the entry value, and
+  ///     consume them from the front, when it knows their combined result
+  ///     but not the entry value alone.
+  ///
+  /// \return
+  ///     The entry value, or std::nullopt to look it up in the call site
+  ///     parameters of the caller.
+  virtual std::optional<Value>
+  EvaluateEntryValue(StackFrame &frame, llvm::ArrayRef<uint8_t> entry_value,
+                     llvm::ArrayRef<uint8_t> &following) {
+    return std::nullopt;
   }
 
   virtual void SetExceptionBreakpoints() {}
@@ -163,6 +203,44 @@ public:
   virtual lldb::ValueObjectSP GetErrorValueAtBackstop(StackFrame &frame) {
     return {};
   }
+
+  /// Given a frame, compute the location where its function would place an
+  /// error, if one is thrown by the function.
+  ///
+  /// \return
+  ///     std::nullopt if the function cannot throw. A register location is
+  ///     read in the frame the function returns to.
+  virtual std::optional<Value> GetThrownErrorLocation(StackFrame &frame) {
+    return std::nullopt;
+  }
+
+  /// Given \p frame, the frame a callee returned to, and \p location,
+  /// computed by GetThrownErrorLocation from the callee's frame, get the
+  /// error the callee threw.
+  ///
+  /// \return
+  ///     std::nullopt if the callee did not throw. Otherwise the thrown
+  ///     error, which is null if the error could not be read.
+  virtual std::optional<lldb::ValueObjectSP>
+  GetThrownError(StackFrame &frame, const Value &location) {
+    return std::nullopt;
+  }
+
+  /// A description of how to find an error thrown by a function. It is
+  /// computed from the callee's frame, and is only meaningful in the frame the
+  /// callee returns to.
+  class ThrownErrorLocation {
+  public:
+    explicit ThrownErrorLocation(lldb::StackFrameSP callee_frame_sp = nullptr);
+
+    /// See LanguageRuntime::GetThrownError.
+    std::optional<lldb::ValueObjectSP>
+    GetThrownError(lldb::StackFrameSP caller_frame_sp) const;
+
+  private:
+    LanguageRuntime *m_runtime = nullptr;
+    std::optional<Value> m_location;
+  };
 
   static lldb::BreakpointSP
   CreateExceptionBreakpoint(Target &target, lldb::LanguageType language,
@@ -204,7 +282,7 @@ public:
 
   /// Identify whether a name is a runtime value that should not be hidden by
   /// from the user interface.
-  virtual bool IsAllowedRuntimeValue(ConstString name) { return false; }
+  virtual bool IsAllowedRuntimeValue(llvm::StringRef name) { return false; }
 
   virtual std::optional<CompilerType> GetRuntimeType(CompilerType base_type) {
     return std::nullopt;
@@ -224,7 +302,7 @@ public:
   // Given the name of a runtime symbol (e.g. in Objective-C, an ivar offset
   // symbol), try to determine from the runtime what the value of that symbol
   // would be. Useful when the underlying binary is stripped.
-  virtual lldb::addr_t LookupRuntimeSymbol(ConstString name) {
+  virtual lldb::addr_t LookupRuntimeSymbol(llvm::StringRef name) {
     return LLDB_INVALID_ADDRESS;
   }
 
@@ -265,6 +343,17 @@ public:
                        lldb_private::RegisterContext *regctx,
                        bool &behaves_like_zeroth_frame);
 
+  /// Compares the frames identified by \p lhs and \p rhs, if a language
+  /// runtime of \p process can order them. For example, a runtime whose unwind
+  /// plans produce call frame addresses that aren't stack addresses knows how
+  /// those frames relate.
+  ///
+  /// \return
+  ///     Younger if \p lhs is younger than \p rhs, Older if it is older, and
+  ///     NoOpinion if no language runtime orders the frames.
+  static CFAComparison CompareCFAs(Process &process, const StackID &lhs,
+                                   const StackID &rhs);
+
   /// Language runtime plugins can use this API to report
   /// language-specific runtime information about this compile unit,
   /// such as additional language version details or feature flags.
@@ -279,6 +368,13 @@ protected:
                        lldb_private::RegisterContext *regctx,
                        bool &behaves_like_zeroth_frame) {
     return lldb::UnwindPlanSP();
+  }
+
+  // The static CompareCFAs method above is only implemented in the base
+  // class; subclasses may override this protected member if they can order
+  // frames that StackID::IsYoungerThan() can't.
+  virtual CFAComparison CompareCFAs(const StackID &lhs, const StackID &rhs) {
+    return CFAComparison::NoOpinion;
   }
 
   LanguageRuntime(Process *process);

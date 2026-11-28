@@ -601,6 +601,29 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     case llvm::Triple::x86_64:
       ArchName = Triple.isX32() ? "x32" : Triple.getArchName().str();
       break;
+    case llvm::Triple::mips:
+    case llvm::Triple::mipsel:
+    case llvm::Triple::mips64:
+    case llvm::Triple::mips64el: {
+      StringRef CPUName, ABIName;
+      tools::mips::getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
+      if (ABIName == "n32")
+        ArchName = "mipsn32";
+      else if (ABIName == "n64")
+        ArchName = "mips64";
+      else
+        ArchName = "mips";
+      // CPUs that implement MIPS R6.
+      if (CPUName == "mips32r6" || CPUName == "mips64r6" ||
+          CPUName == "i6400" || CPUName == "i6500")
+        ArchName += "r6";
+      if (Triple.isLittleEndian())
+        ArchName += "el";
+      if (tools::mips::getMipsFloatABI(getDriver(), Args, Triple) ==
+          tools::mips::FloatABI::Soft)
+        ArchName += "-sf";
+      break;
+    }
     default:
       ArchName = Triple.getArchName().str();
     }
@@ -955,6 +978,8 @@ bool Linux::IsAArch64OutlineAtomicsDefault(const ArgList &Args) const {
   // and libgcc since 9.3.1
   assert(getTriple().isAArch64() && "expected AArch64 target!");
   ToolChain::RuntimeLibType RtLib = GetRuntimeLibType(Args);
+  if (RtLib == ToolChain::RLT_None)
+    return false;
   if (RtLib == ToolChain::RLT_CompilerRT)
     return true;
   assert(RtLib == ToolChain::RLT_Libgcc && "unexpected runtime library type!");
@@ -1007,7 +1032,7 @@ Linux::getSupportedSanitizers(BoundArch BA,
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ ||
       IsLoongArch64 || IsRISCV64)
     Res |= SanitizerKind::Thread;
-  if (IsX86_64 && !IsAndroid)
+  if ((IsX86_64 || (IsHexagon && getTriple().isOSLinux())) && !IsAndroid)
     Res |= SanitizerKind::Concurrency;
   if (IsX86_64 || IsAArch64 || IsSystemZ || IsHexagon)
     Res |= SanitizerKind::Type;

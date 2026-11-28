@@ -203,10 +203,10 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   const StringRef Code = SM->getBufferData(SM->getMainFileID());
-  auto FileStyle =
+  auto FileStyle = llvm::expectedToOptional(
       format::getStyle(format::DefaultFormatStyle, getCurrentMainFile(),
                        format::DefaultFallbackStyle, Code,
-                       &SM->getFileManager().getVirtualFileSystem());
+                       &SM->getFileManager().getVirtualFileSystem()));
   if (!FileStyle)
     FileStyle = format::getLLVMStyle();
 

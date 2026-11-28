@@ -355,7 +355,7 @@ def tBKPT : T1I<(outs), (ins imm0_255:$val), NoItinerary, "bkpt\t$val",
 def : InstAlias<"bkpt", (tBKPT 0), 0>, Requires<[IsThumb]>;
 
 def tHLT : T1I<(outs), (ins imm0_63:$val), NoItinerary, "hlt\t$val",
-                []>, T1Encoding<0b101110>, Requires<[IsThumb, HasV8]> {
+                []>, T1Encoding<0b101110>, Requires<[IsThumb, IsNotMClass]> {
   let Inst{9-6} = 0b1010;
   bits<6> val;
   let Inst{5-0} = val;

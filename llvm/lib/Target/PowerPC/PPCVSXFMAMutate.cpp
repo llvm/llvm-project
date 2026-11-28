@@ -29,21 +29,11 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-
-// Temporarily disable FMA mutation by default, since it doesn't handle
-// cross-basic-block intervals well.
-// See: http://lists.llvm.org/pipermail/llvm-dev/2016-February/095669.html
-//      http://reviews.llvm.org/D17087
-static cl::opt<bool>
-    EnableVSXFMAMutate("ppc-vsx-fma-mutation",
-                       cl::desc("Enable VSX FMA instruction mutation"),
-                       cl::init(false), cl::Hidden);
 
 #define DEBUG_TYPE "ppc-vsx-fma-mutate"
 
@@ -339,7 +329,7 @@ public:
 
       bool Changed = false;
 
-      if (!EnableVSXFMAMutate)
+      if (!STI.getCLOpts().vsx_fma_mutation)
         return Changed;
 
       for (MachineBasicBlock &B : llvm::make_early_inc_range(MF))

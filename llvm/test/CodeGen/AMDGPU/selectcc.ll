@@ -1,13 +1,7 @@
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefixes=GCN,VI -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}selectcc_i64:
-; EG: XOR_INT
-; EG: XOR_INT
-; EG: OR_INT
-; EG: CNDE_INT
-; EG: CNDE_INT
 ; SI: v_cmp_eq_u64
 ; VI: s_cmp_eq_u64
 ; GCN: s_cselect_b32

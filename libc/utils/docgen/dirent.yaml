@@ -1,3 +1,19 @@
+posix: posix-2024
+types:
+  DIR:
+    in-latest-posix: ''
+  ino_t:
+    in-latest-posix: ''
+  reclen_t:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
+  ssize_t:
+    in-latest-posix: ''
+  struct dirent:
+    in-latest-posix: ''
+  struct posix_dent:
+    in-latest-posix: ''
 macros:
   DT_BLK:
     in-latest-posix: ''

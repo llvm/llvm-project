@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +amx-tile -target-feature +amx-avx512 \
 // RUN: -target-feature +avx10.2 -emit-llvm -o - -Wall -Werror -pedantic -Wno-gnu-statement-expression -flax-vector-conversions=none | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +amx-tile -target-feature +amx-avx512 \
+// RUN: -target-feature +avx10.2 -emit-llvm -o - -Wall -Werror -pedantic -Wno-gnu-statement-expression -flax-vector-conversions=none | FileCheck %s %}
 
 #include <immintrin.h>
 #include <stddef.h>
@@ -36,7 +38,7 @@ __m512h test_tile_cvtrowps2phl(unsigned int A) {
 
 __m512i test_tile_movrow(unsigned int A) {
   // CHECK-LABEL: @test_tile_movrow
-  // CHECK: %1 = call <16 x i32> @llvm.x86.tilemovrow(i8 1, i32 %{{.*}})
+  // CHECK: call <16 x i32> @llvm.x86.tilemovrow(i8 1, i32 %{{.*}})
   return _tile_movrow(1, A);
 }
 
@@ -72,6 +74,6 @@ __m512h test_tile_cvtrowps2phli(void) {
 
 __m512i test_tile_movrowi(void) {
   // CHECK-LABEL: @test_tile_movrowi
-  // CHECK: %0 = call <16 x i32> @llvm.x86.tilemovrowi(i8 1, i32 2)
+  // CHECK: call <16 x i32> @llvm.x86.tilemovrowi(i8 1, i32 2)
   return _tile_movrowi(1, 2);
 }

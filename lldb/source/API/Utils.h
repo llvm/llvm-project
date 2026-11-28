@@ -9,10 +9,18 @@
 #ifndef LLDB_SOURCE_API_UTILS_H
 #define LLDB_SOURCE_API_UTILS_H
 
+#include "lldb/Core/Debugger.h"
+#include "lldb/Target/Target.h"
+#include "lldb/Utility/StringPool.h"
 #include "llvm/ADT/STLExtras.h"
 #include <memory>
 
 namespace lldb_private {
+
+/// Strings interned here live as long as \p target's debugger.
+inline StringPoolRef GetDebuggerStringPool(const Target &target) {
+  return target.GetDebugger().GetStringPool();
+}
 
 template <typename T> std::unique_ptr<T> clone(const std::unique_ptr<T> &src) {
   if (src)

@@ -171,10 +171,10 @@ public:
 
   auto aborted_blocks() const { return llvm::iterator_range(blocksAborted); }
 
-  ExplodedNode *makeNode(const ProgramPoint &Loc, ProgramStateRef State,
+  ExplodedNode *makeNode(const ProgramPoint &Loc, const ProgramState *State,
                          ExplodedNode *Pred, bool MarkAsSink = false) const;
 
-  ExplodedNode *makePostStmtNode(const Stmt *S, ProgramStateRef State,
+  ExplodedNode *makePostStmtNode(const Stmt *S, const ProgramState *State,
                                  ExplodedNode *Pred,
                                  bool MarkAsSink = false) const {
     PostStmt Loc(S, Pred->getStackFrame(), /*tag=*/nullptr);
@@ -188,7 +188,7 @@ public:
     const StackFrame *SF = Pred->getStackFrame();
     State = State->BindExpr(E, SF, V);
     const auto &L = ProgramPoint::getProgramPoint(E, K, SF, /*tag=*/nullptr);
-    return makeNode(L, State, Pred);
+    return makeNode(L, State.get(), Pred);
   }
 
   ExplodedNode *
@@ -199,11 +199,6 @@ public:
 
   /// Enqueue the given set of nodes onto the work list.
   void enqueue(ExplodedNodeSet &Set);
-
-  /// Enqueue nodes that were created as a result of processing
-  /// a statement onto the work list.
-  void enqueueStmtNodes(ExplodedNodeSet &Set, const CFGBlock *Block,
-                        unsigned Idx);
 
   /// enqueue the nodes corresponding to the end of function onto the
   /// end of path / work list.

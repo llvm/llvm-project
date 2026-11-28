@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // from volatile-qualified types _Tp.
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI __add_rvalue_reference_t<_Tp> declval() _NOEXCEPT {
+__add_rvalue_reference_t<_Tp> declval() _NOEXCEPT {
   static_assert(false,
                 "std::declval can only be used in an unevaluated context. "
                 "It's likely that your current usage is trying to extract a value from the function.");

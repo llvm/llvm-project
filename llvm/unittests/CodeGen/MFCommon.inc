@@ -1,5 +1,14 @@
 // Add a few Bogus backend classes so we can create MachineInstrs without
 // depending on a real target.
+
+// Create an allocatable base register class without a real target.
+inline MCRegisterClass createRegisterClass(LaneBitmask LaneMask = {}) {
+  // clang-format off
+  return {0, 0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true,
+          0, 0, 0, LaneMask, 0, 0, 0, 0, 0, 0, 0, 0};
+  // clang-format on
+}
+
 class BogusTargetLowering : public TargetLowering {
 public:
   BogusTargetLowering(const TargetMachine &TM, const TargetSubtargetInfo &STI)
@@ -44,7 +53,7 @@ public:
     return Bogus;
   }
   unsigned getRegUnitWeight(MCRegUnit RegUnit) const override { return 1; }
-  unsigned getNumRegPressureSets() const override { return 0; }
+  unsigned getNumRegPressureSets() const override { return 1; }
   const char *getRegPressureSetName(unsigned Idx) const override {
     return "bogus";
   }

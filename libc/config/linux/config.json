@@ -14,7 +14,7 @@
       "value": "clang_vector"
     },
     "LIBC_CONF_FIND_FIRST_CHARACTER_IMPL": {
-      "value": "word"
+      "value": "clang_vector"
     }
   }
 }

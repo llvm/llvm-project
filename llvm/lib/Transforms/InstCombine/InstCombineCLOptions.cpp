@@ -16,8 +16,7 @@
 
 using namespace llvm;
 
-static llvm::opt::RegisterLibraryOptions<llvm::InstCombineCLOptions>
-    Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::InstCombineCLOptions)
 
 const InstCombineCLOptions &llvm::getInstCombineCLOptions(const Function &F) {
   return F.getContext().getLibraryOptions().get<InstCombineCLOptions>();

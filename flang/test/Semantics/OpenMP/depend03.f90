@@ -1,4 +1,5 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=61
 ! OpenMP Version 4.5
 ! 2.13.9 Depend Clause
 ! Coarrays are not supported in depend clause
@@ -12,7 +13,7 @@ program omp_depend_coarray
 
   !$omp parallel
   !$omp single
-  !ERROR: Coarrays are not supported in DEPEND clause
+  !ERROR: A coindexed object is not allowed as a list item on DEPEND clause
   !$omp task shared(b) depend(out: a(:)[1])
   b = a + k
   !$omp end task

@@ -31,7 +31,6 @@
 # CHECK:    - point:           '%bb.5'
 ---
 name:            shrink_wrap_load_from_const_pool
-tracksRegLiveness: true
 constants:
   - id:              0
     value:           'double 3.125500e+02'

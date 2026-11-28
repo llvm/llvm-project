@@ -284,6 +284,40 @@ define float @fsub_fneg_nnan_n0_fnX_ebstrict(float %a) #0 {
   ret float %ret
 }
 
+; Round toward negative can change the sign of a zero result: must not fire.
+define float @fsub_fneg_n0_fnX_downward(float %a) #0 {
+; CHECK-LABEL: @fsub_fneg_n0_fnX_downward(
+; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.downward", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    ret float [[RET]]
+;
+  %nega = fneg float %a
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.downward", metadata !"fpexcept.ignore")
+  ret float %ret
+}
+
+; Dynamic rounding may select round toward negative: must not fire.
+define float @fsub_fneg_n0_fnX_dynamic(float %a) #0 {
+; CHECK-LABEL: @fsub_fneg_n0_fnX_dynamic(
+; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float -0.000000e+00, float [[NEGA]], metadata !"round.dynamic", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    ret float [[RET]]
+;
+  %nega = fneg float %a
+  %ret = call float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  ret float %ret
+}
+
+; With nsz, the sign of a zero result may be ignored: the fold is valid.
+define float @fsub_fneg_nsz_n0_fnX_downward(float %a) #0 {
+; CHECK-LABEL: @fsub_fneg_nsz_n0_fnX_downward(
+; CHECK-NEXT:    ret float [[A:%.*]]
+;
+  %nega = fneg float %a
+  %ret = call nsz float @llvm.experimental.constrained.fsub.f32(float -0.0, float %nega, metadata !"round.downward", metadata !"fpexcept.ignore")
+  ret float %ret
+}
+
 ;
 ; fsub -0.0, (fsub -0.0, X) ==> X
 ;

@@ -9,6 +9,7 @@
 // Check that we don't used aligned (de)allocation without -faligned-allocation or C++1z.
 // RUN: %clang_cc1 -std=c++14 -DUNALIGNED -fexceptions %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s --check-prefix=CHECK-UNALIGNED
 // RUN: %clang_cc1 -std=c++1z -DUNALIGNED -fexceptions -fno-aligned-allocation %s -emit-llvm -triple x86_64-linux-gnu -o - | FileCheck %s --check-prefix=CHECK-UNALIGNED
+// RUN: %clang_cc1 -std=c++1z -DUNALIGNED -fexceptions -fno-aligned-allocation %s -emit-llvm -triple x86_64-windows-msvc -o - | FileCheck %s --check-prefix=CHECK-MS-UNALIGNED
 
 // CHECK-UNALIGNED-NOT: _Znwm_St11align_val_t
 // CHECK-UNALIGNED-NOT: _Znam_St11align_val_t
@@ -27,38 +28,46 @@ namespace std { enum class align_val_t : size_t {}; }
 struct OVERALIGNED A { A(); int n[128]; };
 
 // CHECK-LABEL: define {{.*}} @_Z2a0v()
-// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @_ZnwmSt11align_val_t(i64 noundef 512, i64 noundef 32)
-// CHECK: call void @_ZdlPvSt11align_val_t(ptr noundef %[[ALLOC]], i64 noundef 32)
+// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @_ZnwmSt11align_val_t(i64 noundef 512, i64 allocalign noundef 32) [[ATTR_ALIGN_NEW:#[0-9]+]]
+// CHECK: call void @_ZdlPvSt11align_val_t(ptr allocptr noundef %[[ALLOC]], i64 noundef 32) [[ATTR_ALIGN_DELETE:#[0-9]+]]
 // CHECK-MS-LABEL: define {{.*}} @"?a0@@YAPEAXXZ"()
-// CHECK-MS: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @"??2@YAPEAX_KW4align_val_t@std@@@Z"(i64 noundef 512, i64 noundef 32)
+// CHECK-MS: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @"??2@YAPEAX_KW4align_val_t@std@@@Z"(i64 noundef 512, i64 allocalign noundef 32) [[ATTR_MS_ALIGN_NEW:#[0-9]+]]
 // CHECK-MS: cleanuppad
-// CHECK-MS: call void @"??3@YAXPEAXW4align_val_t@std@@@Z"(ptr noundef %[[ALLOC]], i64 noundef 32)
+// CHECK-MS: call void @"??3@YAXPEAXW4align_val_t@std@@@Z"(ptr allocptr noundef %[[ALLOC]], i64 noundef 32) [[ATTR_MS_ALIGN_DELETE:#[0-9]+]]
+// CHECK-MS-UNALIGNED-LABEL: define {{.*}} @"?a0@@YAPEAXXZ"()
+// CHECK-MS-UNALIGNED: %[[ALLOC:.*]] = call noalias noundef nonnull ptr @"??2@YAPEAX_K@Z"(i64 noundef 512) [[ATTR_MS_NEW:#[0-9]+]]
+// CHECK-MS-UNALIGNED: cleanuppad
+// CHECK-MS-UNALIGNED: call void @"??3@YAXPEAX_K@Z"(ptr allocptr noundef %[[ALLOC]], i64 noundef 512) [[ATTR_MS_DELETE:#[0-9]+]]
 void *a0() { return new A; }
 
 // FIXME: Why don't we call the sized array deallocation overload in this case?
 // The size is known.
 //
 // CHECK-LABEL: define {{.*}} @_Z2a1l(
-// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @_ZnamSt11align_val_t(i64 noundef %{{.*}}, i64 noundef 32)
+// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @_ZnamSt11align_val_t(i64 noundef %{{.*}}, i64 allocalign noundef 32) [[ATTR_ALIGN_ARRAY_NEW:#[0-9]+]]
 // No array cookie.
 // CHECK-NOT: store
 // CHECK: invoke void @_ZN1AC1Ev(
-// CHECK: call void @_ZdaPvSt11align_val_t(ptr noundef %[[ALLOC]], i64 noundef 32)
+// CHECK: call void @_ZdaPvSt11align_val_t(ptr allocptr noundef %[[ALLOC]], i64 noundef 32) [[ATTR_ALIGN_ARRAY_DELETE:#[0-9]+]]
 // CHECK-MS-LABEL: define {{.*}} @"?a1@@YAPEAXJ@Z"(
-// CHECK-MS: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @"??_U@YAPEAX_KW4align_val_t@std@@@Z"(i64 noundef %{{.*}}, i64 noundef 32)
+// CHECK-MS: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @"??_U@YAPEAX_KW4align_val_t@std@@@Z"(i64 noundef %{{.*}}, i64 allocalign noundef 32) [[ATTR_MS_ALIGN_ARRAY_NEW:#[0-9]+]]
 // No array cookie.
 // CHECK-MS-NOT: store
 // CHECK-MS: invoke noundef ptr @"??0A@@QEAA@XZ"(
 // CHECK-MS: cleanuppad
-// CHECK-MS: call void @"??_V@YAXPEAXW4align_val_t@std@@@Z"(ptr noundef %[[ALLOC]], i64 noundef 32)
+// CHECK-MS: call void @"??_V@YAXPEAXW4align_val_t@std@@@Z"(ptr allocptr noundef %[[ALLOC]], i64 noundef 32) [[ATTR_MS_ALIGN_ARRAY_DELETE:#[0-9]+]]
+// CHECK-MS-UNALIGNED-LABEL: define {{.*}} @"?a1@@YAPEAXJ@Z"(
+// CHECK-MS-UNALIGNED: %[[ALLOC:.*]] = call noalias noundef nonnull ptr @"??_U@YAPEAX_K@Z"(i64 noundef %{{.*}}) [[ATTR_MS_ARRAY_NEW:#[0-9]+]]
+// CHECK-MS-UNALIGNED: cleanuppad
+// CHECK-MS-UNALIGNED: call void @"??_V@YAXPEAX_K@Z"(ptr allocptr noundef %[[ALLOC]], i64 noundef %{{.*}}) [[ATTR_MS_ARRAY_DELETE:#[0-9]+]]
 void *a1(long n) { return new A[n]; }
 
 // CHECK-LABEL: define {{.*}} @_Z2a2P1A(
-// CHECK: call void @_ZdlPvmSt11align_val_t(ptr noundef %{{.*}}, i64 noundef 512, i64 noundef 32) #9
+// CHECK: call void @_ZdlPvmSt11align_val_t(ptr allocptr noundef %{{.*}}, i64 noundef 512, i64 noundef 32) [[ATTR_ALIGN_DELETE]]
 void a2(A *p) { delete p; }
 
 // CHECK-LABEL: define {{.*}} @_Z2a3P1A(
-// CHECK: call void @_ZdaPvSt11align_val_t(ptr noundef %{{.*}}, i64 noundef 32) #9
+// CHECK: call void @_ZdaPvSt11align_val_t(ptr allocptr noundef %{{.*}}, i64 noundef 32) [[ATTR_ALIGN_ARRAY_DELETE]]
 void a3(A *p) { delete[] p; }
 
 
@@ -84,7 +93,7 @@ struct OVERALIGNED B {
 void *b0() { return new B; }
 
 // CHECK-LABEL: define {{.*}} @_Z2b1l(
-// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @_ZnamSt11align_val_t(i64 noundef %{{.*}}, i64 noundef 32)
+// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 ptr @_ZnamSt11align_val_t(i64 noundef %{{.*}}, i64 allocalign noundef 32)
 // No array cookie.
 // CHECK-NOT: store
 // CHECK: invoke void @_ZN1BC1Ev(
@@ -169,8 +178,8 @@ void *d0() { return new (q) D; }
 
 #ifndef UNALIGNED
 // CHECK-LABEL: define {{.*}} @_Z2e0v(
-// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 4 ptr @_ZnwmSt11align_val_t(i64 noundef 512, i64 noundef 4)
-// CHECK: call void @_ZdlPvSt11align_val_t(ptr noundef %[[ALLOC]], i64 noundef 4)
+// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 4 ptr @_ZnwmSt11align_val_t(i64 noundef 512, i64 allocalign noundef 4)
+// CHECK: call void @_ZdlPvSt11align_val_t(ptr allocptr noundef %[[ALLOC]], i64 noundef 4)
 void *e0() { return new (std::align_val_t(4)) A; }
 
 // CHECK-LABEL: define {{.*}} @_Z2e1v(
@@ -220,3 +229,18 @@ void *g0() { return new G; }
 // CHECK: call void (ptr, i64, ...) @_ZN1GdlEPvSt11align_val_tz(ptr noundef %[[ALLOC]], i64 noundef 32, i32 %
 void *g1() { return new (q) G; }
 #endif
+
+// CHECK-DAG: attributes [[ATTR_ALIGN_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_ZnwmSt11align_val_t" }
+// CHECK-DAG: attributes [[ATTR_ALIGN_DELETE]] = { builtin nounwind allockind("free") "alloc-family"="_ZnwmSt11align_val_t" }
+// CHECK-DAG: attributes [[ATTR_ALIGN_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_ZnamSt11align_val_t" }
+// CHECK-DAG: attributes [[ATTR_ALIGN_ARRAY_DELETE]] = { builtin nounwind allockind("free") "alloc-family"="_ZnamSt11align_val_t" }
+
+// CHECK-MS-DAG: attributes [[ATTR_MS_ALIGN_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="??2@YAPAXIW4align_val_t@std@@@Z" }
+// CHECK-MS-DAG: attributes [[ATTR_MS_ALIGN_DELETE]] = { builtin nounwind allockind("free") "alloc-family"="??2@YAPAXIW4align_val_t@std@@@Z" }
+// CHECK-MS-DAG: attributes [[ATTR_MS_ALIGN_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized,aligned") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="??_U@YAPAXIW4align_val_t@std@@@Z" }
+// CHECK-MS-DAG: attributes [[ATTR_MS_ALIGN_ARRAY_DELETE]] = { builtin nounwind allockind("free") "alloc-family"="??_U@YAPAXIW4align_val_t@std@@@Z" }
+
+// CHECK-MS-UNALIGNED-DAG: attributes [[ATTR_MS_NEW]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="??2@YAPAXI@Z" }
+// CHECK-MS-UNALIGNED-DAG: attributes [[ATTR_MS_DELETE]] = { builtin nounwind allockind("free") "alloc-family"="??2@YAPAXI@Z" }
+// CHECK-MS-UNALIGNED-DAG: attributes [[ATTR_MS_ARRAY_NEW]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="??_U@YAPAXI@Z" }
+// CHECK-MS-UNALIGNED-DAG: attributes [[ATTR_MS_ARRAY_DELETE]] = { builtin nounwind allockind("free") "alloc-family"="??_U@YAPAXI@Z" }

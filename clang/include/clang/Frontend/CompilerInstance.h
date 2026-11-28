@@ -269,10 +269,10 @@ public:
   /// Load the list of plugins requested in the \c FrontendOptions.
   void LoadRequestedPlugins();
 
-  /// Parse and apply LLVM command line arguments from FrontendOptions.
-  /// This processes the LLVMArgs option that comes from -mllvm flags.
-  /// This should be called after plugins are loaded and before ExecuteAction.
-  void parseLLVMArgs();
+  /// Parse the -mllvm options in FrontendOptions::LLVMArgs, setting library
+  /// options in getLibraryOptions(). Call after loading plugins. Return false
+  /// after reporting errors to \p Errs, or exit if \p Errs is null.
+  bool parseLLVMArgs(llvm::raw_ostream *Errs = nullptr);
 
   const llvm::cl::LibraryOptionsContext &getLibraryOptions() const {
     return LibraryOptions;

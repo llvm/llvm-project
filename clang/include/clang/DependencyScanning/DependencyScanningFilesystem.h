@@ -415,8 +415,9 @@ private:
 
   /// Per-filename state cached locally by this worker thread, so repeated
   /// queries can be served without touching the shared cache. The entry and
-  /// real path are arena-owned by the shared cache and outlive this worker, so
-  /// borrowing raw pointers here is safe.
+  /// real path are arena-owned by the shared cache (or by this worker for
+  /// results from \c LocalFS) and outlive the local cache, so borrowing raw
+  /// pointers here is safe.
   struct LocalEntry {
     const CachedFileSystemEntry *File = nullptr;
     const CachedRealPath *RealPath = nullptr;
@@ -443,6 +444,9 @@ private:
 
   /// The backing storage for cached contents resolved from local FS only.
   llvm::SpecificBumpPtrAllocator<CachedFileContents> LocalContentsStorage;
+
+  /// The backing storage for cached real paths resolved from local FS only.
+  llvm::SpecificBumpPtrAllocator<CachedRealPath> LocalRealPathStorage;
 
   static const CachedFileSystemEntry *createEntry(
       llvm::ErrorOr<TentativeEntry> &Entry,

@@ -1,7 +1,7 @@
 ; RUN: opt -module-summary %s -o %t1.bc
 ; RUN: opt -module-summary %p/Inputs/funcimport_alwaysinline.ll -o %t2.bc
 
-; RUN: llvm-lto2 run -disable-thinlto-funcattrs=0 %t1.bc %t2.bc -o %t.o -save-temps \
+; RUN: llvm-lto2 run -thinlto-funcattrs %t1.bc %t2.bc -o %t.o -save-temps \
 ; RUN:     -r=%t1.bc,foo,plx \
 ; RUN:     -r=%t2.bc,main,plx \
 ; RUN:     -r=%t2.bc,foo,l \

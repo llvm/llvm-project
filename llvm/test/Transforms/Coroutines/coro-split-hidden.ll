@@ -78,4 +78,4 @@ declare void @llvm.coro.end(ptr, i1, token)
 
 declare noalias ptr @malloc(i32) allockind("alloc,uninitialized")
 declare void @print(i32)
-declare void @free(ptr) willreturn allockind("free")
+declare void @free(ptr allocptr) willreturn allockind("free")

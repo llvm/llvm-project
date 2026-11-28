@@ -35,8 +35,10 @@ static __rtsan::Context &GetContextForThisThreadImpl() {
   Context *current_thread_context =
       static_cast<Context *>(pthread_getspecific(context_key));
   if (current_thread_context == nullptr) {
-    current_thread_context =
-        static_cast<Context *>(InternalAlloc(sizeof(Context)));
+    current_thread_context = static_cast<Context *>(
+        InternalAlloc(sizeof(Context), nullptr, alignof(Context)));
+    DCHECK_EQ(reinterpret_cast<uptr>(current_thread_context) % alignof(Context),
+              0);
     new (current_thread_context) Context();
     pthread_setspecific(context_key, current_thread_context);
   }

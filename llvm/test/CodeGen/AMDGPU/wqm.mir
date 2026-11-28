@@ -46,7 +46,6 @@
     ret void
   }
 ...
----
 
 ---
 # Check for awareness that s_or_saveexec_b64 clobbers SCC
@@ -56,21 +55,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: sgpr_32, preferred-register: '' }
-  - { id: 1, class: sgpr_32, preferred-register: '' }
-  - { id: 2, class: sgpr_32, preferred-register: '' }
-  - { id: 3, class: vgpr_32, preferred-register: '' }
-  - { id: 4, class: vgpr_32, preferred-register: '' }
-  - { id: 5, class: sgpr_32, preferred-register: '' }
-  - { id: 6, class: vgpr_32, preferred-register: '' }
-  - { id: 7, class: vgpr_32, preferred-register: '' }
-  - { id: 8, class: sreg_32_xm0, preferred-register: '' }
-  - { id: 9, class: sreg_32, preferred-register: '' }
-  - { id: 10, class: sreg_32, preferred-register: '' }
-  - { id: 11, class: vgpr_32, preferred-register: '' }
-  - { id: 12, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$sgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr1', virtual-reg: '%1' }
@@ -95,14 +79,14 @@ body:             |
     ; CHECK-NEXT: $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM]]
     ; CHECK-NEXT: early-clobber $vgpr0 = V_MOV_B32_e32 [[V_ADD_CO_U32_e32_1]], implicit $exec
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr0
-    %3 = COPY $vgpr0
-    %2 = COPY $sgpr2
-    %1 = COPY $sgpr1
-    %0 = COPY $sgpr0
+    %3:vgpr_32 = COPY $vgpr0
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
     S_CMP_LT_I32 0, %0, implicit-def $scc
-    %12 = V_ADD_CO_U32_e32 %3, %3, implicit-def $vcc, implicit $exec
-    %5 = S_CSELECT_B32 %2, %1, implicit $scc
-    %11 = V_ADD_CO_U32_e32 %5, %12, implicit-def $vcc, implicit $exec
+    %12:vgpr_32 = V_ADD_CO_U32_e32 %3, %3, implicit-def $vcc, implicit $exec
+    %5:sgpr_32 = S_CSELECT_B32 %2, %1, implicit $scc
+    %11:vgpr_32 = V_ADD_CO_U32_e32 %5, %12, implicit-def $vcc, implicit $exec
     $vgpr0 = STRICT_WWM %11, implicit $exec
     SI_RETURN_TO_EPILOG $vgpr0
 
@@ -112,7 +96,6 @@ body:             |
 # Second test for awareness that s_or_saveexec_b64 clobbers SCC
 # Because entry block is treated differently.
 name:            test_strict_wwm_scc2
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_strict_wwm_scc2
   ; CHECK: bb.0:
@@ -171,26 +154,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: sgpr_32, preferred-register: '' }
-  - { id: 1, class: sgpr_32, preferred-register: '' }
-  - { id: 2, class: sgpr_32, preferred-register: '' }
-  - { id: 3, class: sgpr_32, preferred-register: '' }
-  - { id: 4, class: sgpr_32, preferred-register: '' }
-  - { id: 5, class: sgpr_128, preferred-register: '' }
-  - { id: 6, class: sgpr_128, preferred-register: '' }
-  - { id: 7, class: sreg_32, preferred-register: '' }
-  - { id: 8, class: vreg_64, preferred-register: '' }
-  - { id: 9, class: sreg_32, preferred-register: '' }
-  - { id: 10, class: vgpr_32, preferred-register: '' }
-  - { id: 11, class: vgpr_32, preferred-register: '' }
-  - { id: 12, class: vgpr_32, preferred-register: '' }
-  - { id: 13, class: vgpr_32, preferred-register: '' }
-  - { id: 14, class: vgpr_32, preferred-register: '' }
-  - { id: 15, class: vgpr_32, preferred-register: '' }
-  - { id: 16, class: vgpr_32, preferred-register: '' }
 liveins:
   - { reg: '$sgpr0', virtual-reg: '%0' }
   - { reg: '$sgpr1', virtual-reg: '%1' }
@@ -233,7 +197,7 @@ body:             |
     %16:vgpr_32 = COPY %8.sub1
     %11:vgpr_32 = COPY %16
     %17:sreg_64_xexec = IMPLICIT_DEF
-    %10:vgpr_32 = V_SET_INACTIVE_B32 0, %11, 0, undef %12, undef %17, implicit $exec, implicit-def $scc
+    %10:vgpr_32 = V_SET_INACTIVE_B32 0, %11, 0, undef %12:vgpr_32, undef %17, implicit $exec, implicit-def $scc
     %14:vgpr_32 = COPY %7
     %13:vgpr_32 = V_MOV_B32_dpp %14, %10, 323, 12, 15, 0, implicit $exec
     early-clobber %15:vgpr_32 = STRICT_WWM %13, implicit $exec
@@ -245,7 +209,6 @@ body:             |
 ---
 # Ensure that strict_wwm is not put around an EXEC copy
 name:            copy_exec
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
@@ -294,7 +257,6 @@ body:             |
 # Check exit of WQM is still inserted correctly when SCC is live until block end.
 # Critially this tests that compilation does not fail.
 name:            scc_always_live
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: scc_always_live
   ; CHECK: bb.0:
@@ -379,7 +341,6 @@ body:             |
 # Check that unnecessary instruction do not get marked for WWM
 #
 name:            test_wwm_set_inactive_propagation
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr0
@@ -414,7 +375,6 @@ body:             |
 # Check that WQM marking occurs correctly through phi nodes in live range graph.
 # If not then initial V_MOV will not be in WQM.
 name:            test_wqm_lr_phi
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: test_wqm_lr_phi
   ; CHECK: bb.0:
@@ -482,7 +442,6 @@ body:             |
 
 ---
 name:            no_wqm_in_cs
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1, $vgpr2
@@ -505,7 +464,6 @@ body:             |
 
 ---
 name:            no_wqm_in_es
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1, $vgpr2
@@ -528,7 +486,6 @@ body:             |
 
 ---
 name:            no_wqm_in_gs
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1, $vgpr2
@@ -551,7 +508,6 @@ body:             |
 
 ---
 name:            no_wqm_in_hs
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1, $vgpr2
@@ -574,7 +530,6 @@ body:             |
 
 ---
 name:            no_wqm_in_ls
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1, $vgpr2
@@ -597,7 +552,6 @@ body:             |
 
 ---
 name:            no_wqm_in_vs
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr1, $vgpr2
@@ -622,7 +576,6 @@ body:             |
 # The live-in $vcc forces the VCC regunit ranges to be computed, so the
 # clobber introduced when lowering the kill must invalidate them.
 name:            kill_f32_cond_imm_vcc_regunit
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: kill_f32_cond_imm_vcc_regunit
   ; CHECK: bb.0:

@@ -11,7 +11,8 @@ entry:
 }
 
 ; CHECK-LABEL: test2
-; CHECK: vcvtm.u32.f32
+; CHECK-NOT: vrintm
+; CHECK: vcvt.u32.f32
 define i32 @test2(float %a) {
 entry:
   %call = call float @llvm.floor.f32(float %a) nounwind readnone
@@ -29,7 +30,8 @@ entry:
 }
 
 ; CHECK-LABEL: test4
-; CHECK: vcvtm.u32.f64
+; CHECK-NOT: vrintm
+; CHECK: vcvt.u32.f64
 define i32 @test4(double %a) {
 entry:
   %call = call double @llvm.floor.f64(double %a) nounwind readnone

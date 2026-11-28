@@ -52,9 +52,8 @@ entry:
   ; CMOV:   jr      $ra
   ; CMOV:   movn    $2, $5, $[[T0]]
 
-  ; SEL:    andi    $[[T0:[0-9]+]], $4, 1
-  ; SEL:    seleqz  $[[T1:[0-9]+]], $6, $[[T0]]
-  ; SEL:    selnez  $[[T2:[0-9]+]], $5, $[[T0]]
+  ; SEL:    seleqz  $[[T1:[0-9]+]], $6, $4
+  ; SEL:    selnez  $[[T2:[0-9]+]], $5, $4
   ; SEL:    or      $2, $[[T2]], $[[T1]]
 
   ; MM32R3:   move    $2, $6
@@ -62,9 +61,8 @@ entry:
   ; MM32R3:   jr      $ra
   ; MM32R3:   movn    $2, $5, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
 
-  ; MMR6:     andi16  $[[T0:[0-9]+]], $4, 1
-  ; MMR6:     seleqz  $[[T1:[0-9]+]], $6, $[[T0]]
-  ; MMR6:     selnez  $[[T2:[0-9]+]], $5, $[[T0]]
+  ; MMR6:     seleqz  $[[T1:[0-9]+]], $6, $4
+  ; MMR6:     selnez  $[[T2:[0-9]+]], $5, $4
   ; MMR6:     or      $2, $[[T2]], $[[T1]]
 
   %r = select i1 %s, i1 %x, i1 %y
@@ -94,9 +92,8 @@ entry:
   ; CMOV:   jr      $ra
   ; CMOV:   movn    $2, $5, $[[T0]]
 
-  ; SEL:    andi    $[[T0:[0-9]+]], $4, 1
-  ; SEL:    seleqz  $[[T1:[0-9]+]], $6, $[[T0]]
-  ; SEL:    selnez  $[[T2:[0-9]+]], $5, $[[T0]]
+  ; SEL:    seleqz  $[[T1:[0-9]+]], $6, $4
+  ; SEL:    selnez  $[[T2:[0-9]+]], $5, $4
   ; SEL:    or      $2, $[[T2]], $[[T1]]
 
   ; MM32R3:   move    $2, $6
@@ -104,9 +101,8 @@ entry:
   ; MM32R3:   jr      $ra
   ; MM32R3:   movn    $2, $5, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
 
-  ; MMR6:     andi16  $[[T0:[0-9]+]], $4, 1
-  ; MMR6:     seleqz  $[[T1:[0-9]+]], $6, $[[T0]]
-  ; MMR6:     selnez  $[[T2:[0-9]+]], $5, $[[T0]]
+  ; MMR6:     seleqz  $[[T1:[0-9]+]], $6, $4
+  ; MMR6:     selnez  $[[T2:[0-9]+]], $5, $4
   ; MMR6:     or      $2, $[[T2]], $[[T1]]
 
   %r = select i1 %s, i8 %x, i8 %y
@@ -138,9 +134,8 @@ entry:
   ; CMOV-64:  movn    $6, $5, $[[T0]]
   ; CMOV-64:  sll     $2, $6, 0
 
-  ; SEL:    andi    $[[T0:[0-9]+]], $4, 1
-  ; SEL:    seleqz  $[[T1:[0-9]+]], $6, $[[T0]]
-  ; SEL:    selnez  $[[T2:[0-9]+]], $5, $[[T0]]
+  ; SEL:    seleqz  $[[T1:[0-9]+]], $6, $4
+  ; SEL:    selnez  $[[T2:[0-9]+]], $5, $4
   ; SEL:    or      $[[T3:[0-9]+]], $[[T2]], $[[T1]]
   ; SEL-64: sll     $2, $[[T3]], 0
 
@@ -149,9 +144,8 @@ entry:
   ; MM32R3:     jr      $ra
   ; MM32R3:     movn    $2, $5, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
 
-  ; MMR6:       andi16  $[[T0:[0-9]+]], $4, 1
-  ; MMR6:       seleqz  $[[T1:[0-9]+]], $6, $[[T0]]
-  ; MMR6:       selnez  $[[T2:[0-9]+]], $5, $[[T0]]
+  ; MMR6:       seleqz  $[[T1:[0-9]+]], $6, $4
+  ; MMR6:       selnez  $[[T2:[0-9]+]], $5, $4
   ; MMR6:       or      $2, $[[T2]], $[[T1]]
 
   %r = select i1 %s, i32 %x, i32 %y
@@ -188,14 +182,13 @@ entry:
   ; CMOV-32:    lw      $3, 20($sp)
   ; CMOV-32:    movn    $3, $7, $[[T0]]
 
-  ; SEL-32:     andi    $[[T0:[0-9]+]], $4, 1
   ; SEL-32:     lw      $[[T1:[0-9]+]], 16($sp)
-  ; SEL-32:     seleqz  $[[T2:[0-9]+]], $[[T1]], $[[T0]]
-  ; SEL-32:     selnez  $[[T3:[0-9]+]], $6, $[[T0]]
+  ; SEL-32:     seleqz  $[[T2:[0-9]+]], $[[T1]], $4
+  ; SEL-32:     selnez  $[[T3:[0-9]+]], $6, $4
   ; SEL-32:     or      $2, $[[T3]], $[[T2]]
   ; SEL-32:     lw      $[[T4:[0-9]+]], 20($sp)
-  ; SEL-32:     seleqz  $[[T5:[0-9]+]], $[[T4]], $[[T0]]
-  ; SEL-32:     selnez  $[[T6:[0-9]+]], $7, $[[T0]]
+  ; SEL-32:     seleqz  $[[T5:[0-9]+]], $[[T4]], $4
+  ; SEL-32:     selnez  $[[T6:[0-9]+]], $7, $4
   ; SEL-32:     or      $3, $[[T6]], $[[T5]]
 
   ; M3:         andi    $[[T0:[0-9]+]], $4, 1
@@ -224,14 +217,13 @@ entry:
   ; MM32R3:     lw      $3, 20($sp)
   ; MM32R3:     movn    $3, $7, $[[T0]]  # <MCInst #{{[0-9]+}} MOVN_I_MM
 
-  ; MM32R6:     andi16  $[[T0:[0-9]+]], $4, 1
   ; MM32R6:     lw      $[[T2:[0-9]+]], 16($sp)
-  ; MM32R6:     seleqz  $[[T3:[0-9]+]], $[[T2]], $[[T0]]
-  ; MM32R6:     selnez  $[[T1:[0-9]+]], $6, $[[T0]]
+  ; MM32R6:     seleqz  $[[T3:[0-9]+]], $[[T2]], $4
+  ; MM32R6:     selnez  $[[T1:[0-9]+]], $6, $4
   ; MM32R6:     or      $2, $[[T1]], $[[T3]]
   ; MM32R6:     lw      $[[T4:[0-9]+]], 20($sp)
-  ; MM32R6:     seleqz  $[[T5:[0-9]+]], $[[T4]], $[[T0]]
-  ; MM32R6:     selnez  $[[T6:[0-9]+]], $7, $[[T0]]
+  ; MM32R6:     seleqz  $[[T5:[0-9]+]], $[[T4]], $4
+  ; MM32R6:     selnez  $[[T6:[0-9]+]], $7, $4
   ; MM32R6:     or      $3, $[[T6]], $[[T5]]
 
   %r = select i1 %s, i64 %x, i64 %y

@@ -1,0 +1,23 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc signal.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "sigaction_test",
+    srcs = ["sigaction_test.cpp"],
+    full_build_only = True,
+    deps = [
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:signal_macros",
+        "//libc/src/signal:raise",
+        "//libc/src/signal:sigaction",
+    ],
+)

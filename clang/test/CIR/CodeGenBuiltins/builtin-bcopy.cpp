@@ -57,9 +57,9 @@ void test_conditional_bcopy(void) {
   // LLVM-NOT: phi
 
   // OGCG-LABEL: define{{.*}} void @_Z22test_conditional_bcopyv
-  // LLVM: br
+  // OGCG: br
   // OGCG: call void @llvm.memmove
-  // LLVM: br
+  // OGCG: br
   // OGCG: call void @llvm.memmove
   // OGCG-NOT: phi
 

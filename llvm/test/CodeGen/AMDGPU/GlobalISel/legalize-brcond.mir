@@ -206,7 +206,6 @@ body:             |
 
 ---
 name: brcond_si_loop_brcond
-tracksRegLiveness: true
 body:             |
   ; WAVE64-LABEL: name: brcond_si_loop_brcond
   ; WAVE64: bb.0:
@@ -268,7 +267,6 @@ body:             |
 # used.
 ---
 name: brcond_si_loop_brcond_back
-tracksRegLiveness: true
 body:             |
   ; WAVE64-LABEL: name: brcond_si_loop_brcond_back
   ; WAVE64: bb.0:
@@ -330,7 +328,6 @@ body:             |
 # used.
 ---
 name: brcond_si_loop_brcond_back_fallthrough
-tracksRegLiveness: true
 body:             |
   ; WAVE64-LABEL: name: brcond_si_loop_brcond_back_fallthrough
   ; WAVE64: bb.0:
@@ -436,7 +433,6 @@ body:             |
 
 ---
 name: brcond_si_loop_need_terminator_insert_point
-tracksRegLiveness: true
 body:             |
   ; WAVE64-LABEL: name: brcond_si_loop_need_terminator_insert_point
   ; WAVE64: bb.0:
@@ -636,7 +632,6 @@ body:             |
 
 ---
 name: brcond_si_loop_brcond_negated
-tracksRegLiveness: true
 body:             |
   ; WAVE64-LABEL: name: brcond_si_loop_brcond_negated
   ; WAVE64: bb.0:
@@ -697,7 +692,6 @@ body:             |
 
 ---
 name: brcond_si_loop_brcond_br_negated
-tracksRegLiveness: true
 body:             |
   ; WAVE64-LABEL: name: brcond_si_loop_brcond_br_negated
   ; WAVE64: bb.0:

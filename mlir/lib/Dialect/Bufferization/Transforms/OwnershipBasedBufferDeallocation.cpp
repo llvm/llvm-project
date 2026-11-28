@@ -623,7 +623,10 @@ LogicalResult BufferDeallocation::deallocate(Block *block) {
     }
 
     if (li.getParentRegion()->isProperAncestor(block->getParent())) {
-      Value falseVal = buildBoolValue(builder, li.getLoc(), false);
+      // Create the constant in the block that defines the memref: the regions
+      // in between may not allow other ops (e.g., the region of `vector.mask`).
+      OpBuilder defBuilder = OpBuilder::atBlockBegin(li.getParentBlock());
+      Value falseVal = buildBoolValue(defBuilder, li.getLoc(), false);
       state.updateOwnership(li, falseVal, block);
     }
   }

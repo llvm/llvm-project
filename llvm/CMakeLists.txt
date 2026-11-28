@@ -1,12 +1,5 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
-cmake_minimum_required(VERSION 3.20.0)
-if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
-  message(WARNING
-    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
-    "minimum version of CMake required to build LLVM will become 3.31.0, and "
-    "using an older CMake will become an error. Please upgrade your CMake to "
-    "at least 3.31.0 now to avoid issues in the future.")
-endif()
+cmake_minimum_required(VERSION 3.31.0)
 
 include(CMakeDependentOption)
 
@@ -116,18 +109,17 @@ Learn more about the options in our documentation at https://llvm.org/docs/CMake
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel" FORCE)
 endif()
 
-# Set default build type for cmake's try_compile module.
-# CMake 3.17 or newer sets CMAKE_DEFAULT_BUILD_TYPE to one of the
-# items from CMAKE_CONFIGURATION_TYPES. Logic below can be further
-# simplified once LLVM's minimum CMake version is updated to 3.17.
+# Set the default build type for CMake's try_compile().
+# For multi-configuration generators we use the default build type if set.
+# Alternatively we use the first configuration from CMAKE_CONFIGURATION_TYPES.
+# Necessary because otherwise try_compile()s simply default to "Debug", which
+# is prone to cause confusion.
 if(CMAKE_DEFAULT_BUILD_TYPE)
   set(CMAKE_TRY_COMPILE_CONFIGURATION ${CMAKE_DEFAULT_BUILD_TYPE})
-else()
-  if(CMAKE_CONFIGURATION_TYPES)
-    list(GET CMAKE_CONFIGURATION_TYPES 0 CMAKE_TRY_COMPILE_CONFIGURATION)
-  elseif(CMAKE_BUILD_TYPE)
-    set(CMAKE_TRY_COMPILE_CONFIGURATION ${CMAKE_BUILD_TYPE})
-  endif()
+elseif(CMAKE_CONFIGURATION_TYPES)
+  list(GET CMAKE_CONFIGURATION_TYPES 0 CMAKE_TRY_COMPILE_CONFIGURATION)
+elseif(CMAKE_BUILD_TYPE)
+  set(CMAKE_TRY_COMPILE_CONFIGURATION ${CMAKE_BUILD_TYPE})
 endif()
 
 # Side-by-side subprojects layout: automatically set the
@@ -475,16 +467,8 @@ if(WIN32 AND NOT UNIX)
     # cabinet itself, and CAB supports only MSZIP/LZX/Quantum, so an MSI cannot
     # use LZMA the way the NSIS generator does.
     set(CPACK_WIX_LIGHT_EXTRA_FLAGS "-sval" "-dcl:high")
-    # Make the LLVM installation available for all users.  CPack only gained
-    # CPACK_WIX_INSTALL_SCOPE in CMake 3.29, so inject the equivalent ALLUSERS
-    # property when packaging with an older CMake supported by LLVM.
-    # TODO: remove after transition to CMake 3.31.
-    if(CMAKE_VERSION VERSION_LESS "3.29")
-      list(APPEND CPACK_WIX_PATCH_FILE
-        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/WiXPerMachinePatch.xml")
-    else()
-      set(CPACK_WIX_INSTALL_SCOPE "perMachine")
-    endif()
+    # Make the LLVM installation available for all users.
+    set(CPACK_WIX_INSTALL_SCOPE "perMachine")
     # Permanent WiX UpgradeCode for official LLVM MSI packages. Windows Installer
     # uses this value to recognize related releases and remove an older LLVM
     # installation during an upgrade. It must remain identical across all future
@@ -631,6 +615,8 @@ if (MINGW)
 endif()
 option(LLVM_WINDOWS_PREFER_FORWARD_SLASH "Prefer path names with forward slashes on Windows." ${WINDOWS_PREFER_FORWARD_SLASH_DEFAULT})
 
+option(LLVM_WINDOWS_RESTRICTED_APIS "Use only APIs available in restricted Windows environments, such as binaries whose imports are checked by ApiValidator. Currently this avoids shell32." OFF)
+
 option(LLVM_ENABLE_FFI "Use libffi to call external functions from the interpreter" OFF)
 set(FFI_LIBRARY_DIR "" CACHE PATH "Additional directory, where CMake should search for libffi.so")
 set(FFI_INCLUDE_DIR "" CACHE PATH "Additional directory, where CMake should search for ffi.h or ffi/ffi.h")
@@ -642,11 +628,18 @@ set(LLVM_ENABLE_LIBXML2 "ON" CACHE STRING "Use libxml2 if available. Can be ON, 
 
 set(LLVM_USE_STATIC_LIBXML2 "OFF" CACHE BOOL "Use static version of libxml2. Can be ON, or OFF")
 
-option(LLVM_ENABLE_LIBEDIT "Use libedit if available." ON)
+set(LLVM_ENABLE_LIBEDIT "ON" CACHE STRING "Use libedit if available. Can be ON, OFF, or FORCE_ON")
 
 option(LLVM_ENABLE_LIBPFM "Use libpfm for performance counters if available." ON)
 
-option(LLVM_ENABLE_THREADS "Use threads if available." ON)
+# On z/OS, threads cannot be used because TLS is not supported.
+if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
+  set(LLVM_ENABLE_THREADS_DEFAULT OFF)
+else()
+  set(LLVM_ENABLE_THREADS_DEFAULT ON)
+endif()
+
+option(LLVM_ENABLE_THREADS "Use threads if available." ${LLVM_ENABLE_THREADS_DEFAULT})
 
 set(LLVM_ENABLE_ICU "OFF" CACHE STRING "Use ICU for text encoding conversion support if available. Can be ON, OFF, or FORCE_ON")
 
@@ -739,7 +732,7 @@ set(LLVM_TARGETS_TO_BUILD
    ${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD})
 list(REMOVE_DUPLICATES LLVM_TARGETS_TO_BUILD)
 
-if (NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "OS390")
   option(LLVM_ENABLE_PIC "Build Position-Independent Code" ON)
 endif()
 option(LLVM_ENABLE_MODULES "Compile with C++ modules enabled." OFF)
@@ -1350,7 +1343,7 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 endif()
 
 # Build with _XOPEN_SOURCE on z/OS.
-if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
   add_compile_definitions(_XOPEN_SOURCE=600)
   add_compile_definitions(_XPLATFORM_SOURCE) # Needed e.g. for O_CLOEXEC.
   add_compile_definitions(_OPEN_SYS) # Needed for process information.
@@ -1383,7 +1376,7 @@ if(LLVM_TARGET_IS_CROSSCOMPILE_HOST)
 endif()
 
 # Special hack for z/OS for missing POSIX functions
-if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
   include_directories(SYSTEM "${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/SystemZ/zos_wrappers" )
 endif()
 

@@ -11,12 +11,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr32, preferred-register: '' }
-  - { id: 1, class: gpr32, preferred-register: '' }
-  - { id: 2, class: gpr32, preferred-register: '' }
-  - { id: 3, class: gpr32, preferred-register: '' }
 liveins:
   - { reg: '$r4', virtual-reg: '%0' }
   - { reg: '$r5', virtual-reg: '%1' }
@@ -44,10 +38,10 @@ body:             |
   bb.0.entry:
     liveins: $r4, $r5
 
-    %1 = COPY $r5
-    %0 = COPY $r4
-    %2 = ANDi %1, 15
-    %3 = INS %2, 32, 4, %0
+    %1:gpr32 = COPY $r5
+    %0:gpr32 = COPY $r4
+    %2:gpr32 = ANDi %1, 15
+    %3:gpr32 = INS %2, 32, 4, %0
     $r2 = COPY %3
     RetRA implicit $r2
 

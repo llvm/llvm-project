@@ -1,5 +1,5 @@
 ; Test Case for PR1080
-; RUN: llvm-as %s -o /dev/null
+; RUN: llvm-as %s -disable-output
 ; RUN: verify-uselistorder %s
 
 @str = internal constant [4 x i8] c"-ga\00"             ; <ptr> [#uses=2]

@@ -111,3 +111,4 @@ body:             |
     %shl:_(i64) = nuw G_SHL %lhs(i64), %rhs(i64)
     $x0 = COPY %shl(i64)
     RET_ReallyLR implicit $x0
+...

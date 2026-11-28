@@ -2,7 +2,7 @@
 ; RUN: FileCheck %s -check-prefix=ONENAME < %t
 ; RUN: FileCheck %s -check-prefix=REF < %t 
 ; Verify tuning for SCE gets us Abstract only.
-; RUN: %llc_dwarf -O0 -filetype=obj -debugger-tune=sce < %s | llvm-dwarfdump -debug-info - > %t
+; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - > %t
 ; RUN: FileCheck %s -check-prefix=ONENAME < %t
 ; RUN: FileCheck %s -check-prefix=REF < %t 
 
@@ -101,7 +101,7 @@ entry:
 attributes #0 = { alwaysinline }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4}
+!llvm.module.flags = !{!3, !4, !25}
 !llvm.ident = !{!5}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 4.0.0 (trunk 288231)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
@@ -129,3 +129,4 @@ attributes #0 = { alwaysinline }
 !22 = !DILocation(line: 13, column: 3, scope: !15, inlinedAt: !23)
 !23 = distinct !DILocation(line: 16, column: 3, scope: !21)
 !24 = !DILocation(line: 17, column: 1, scope: !21)
+!25 = !{i32 2, !"debugger-tuning", !"sce"}

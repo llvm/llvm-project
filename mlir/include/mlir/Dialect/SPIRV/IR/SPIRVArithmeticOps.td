@@ -72,13 +72,13 @@ class SPIRV_ArithmeticUnaryOp<string mnemonic, Type type,
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
-class SPIRV_ArithmeticExtendedBinaryOp<string mnemonic,
+class SPIRV_ArithmeticExtendedBinaryOp<string mnemonic, Type type,
                                        list<Trait> traits = []> :
       // Result type is a struct with two operand-typed elements.
-      SPIRV_BinaryOp<mnemonic, SPIRV_AnyStruct, SPIRV_Integer, traits> {
+      SPIRV_BinaryOp<mnemonic, SPIRV_AnyStruct, type, traits> {
   let arguments = (ins
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$operand1,
-    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$operand2
+    SPIRV_ScalarOrVectorOf<type>:$operand1,
+    SPIRV_ScalarOrVectorOf<type>:$operand2
   );
 
   let results = (outs
@@ -301,6 +301,7 @@ def SPIRV_IAddOp : SPIRV_ArithmeticBinaryOpWithCoopMatrix<"IAdd",
 // -----
 
 def SPIRV_IAddCarryOp : SPIRV_ArithmeticExtendedBinaryOp<"IAddCarry",
+                                                         SPIRV_SignlessOrUnsignedInt,
                                                          [Commutative, Pure]> {
   let summary = [{
     Integer addition of Operand 1 and Operand 2, including the carry.
@@ -404,6 +405,7 @@ def SPIRV_ISubOp : SPIRV_ArithmeticBinaryOpWithCoopMatrix<"ISub",
 // -----
 
 def SPIRV_ISubBorrowOp : SPIRV_ArithmeticExtendedBinaryOp<"ISubBorrow",
+                                                          SPIRV_SignlessOrUnsignedInt,
                                                           [Pure]> {
   let summary = [{
     Result is the unsigned integer subtraction of Operand 2 from Operand 1,
@@ -546,6 +548,7 @@ def SPIRV_SModOp : SPIRV_ArithmeticBinaryOp<"SMod",
 // -----
 
 def SPIRV_SMulExtendedOp : SPIRV_ArithmeticExtendedBinaryOp<"SMulExtended",
+                                                            SPIRV_Integer,
                                                             [Pure, Commutative]> {
   let summary = [{
     Result is the full value of the signed integer multiplication of Operand
@@ -673,6 +676,7 @@ def SPIRV_UDivOp : SPIRV_ArithmeticBinaryOpWithCoopMatrix<"UDiv",
 // -----
 
 def SPIRV_UMulExtendedOp : SPIRV_ArithmeticExtendedBinaryOp<"UMulExtended",
+                                                            SPIRV_SignlessOrUnsignedInt,
                                                             [Pure, Commutative]> {
   let summary = [{
     Result is the full value of the unsigned integer multiplication of

@@ -18,6 +18,7 @@ def PromotableAllocationOpInterface
     SSA values.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -97,6 +98,7 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
     load must semantically happen first.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -182,6 +184,26 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
            "::mlir::Value":$reachingDefinition,
            "const ::mlir::DataLayout &":$dataLayout)
     >,
+    InterfaceMethod<[{
+        Returns whether this operation owns the blocking uses of a single
+        wrapped `PromotableMemOpInterface` operation. If true, it must have one
+        single-block region containing only that operation and a terminator.
+        All blocking uses must belong to the wrapped operation, not this
+        operation or its terminator. Only a single level of nesting is
+        supported.
+
+        Promotion calls this operation's interface methods with the wrapped
+        operation's operands in `blockingUses`, without consulting
+        `PromotableRegionOpInterface` for its region. The builder inserts IR
+        outside the region, before or after this operation.
+
+        The results of this operation must not alias the slot.
+
+        No IR mutation is allowed in this method.
+      }],
+      "bool", "ownsWrappedBlockingUses", (ins), [{}],
+      /*defaultImplementation=*/[{ return false; }]
+    >,
   ];
 }
 
@@ -192,6 +214,7 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
     of a memory slot.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -283,6 +306,7 @@ def PromotableAliaserInterface : OpInterface<"PromotableAliaserInterface"> {
     after the slot has been promoted.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let verify = [{
     if (!::mlir::isa<::mlir::PromotableOpInterface,
@@ -360,6 +384,7 @@ def PromotableRegionOpInterface
     within the operation's regions.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -452,6 +477,7 @@ def DestructurableAllocationOpInterface
     destructured into multiple smaller allocations.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -506,6 +532,7 @@ def SafeMemorySlotAccessOpInterface
     Describes operations using memory slots in a safe manner.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -535,6 +562,7 @@ def DestructurableAccessorOpInterface
     Describes operations that can access a sub-element of a destructurable slot.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -579,6 +607,7 @@ def DestructurableTypeInterface
     Describes a type that can be broken down into indexable sub-element types.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemorySlotInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{

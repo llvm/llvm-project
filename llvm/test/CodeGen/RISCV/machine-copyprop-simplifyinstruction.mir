@@ -6,11 +6,13 @@
 
 ---
 name: add1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: add1
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = ADD renamable $x11, $x0
@@ -18,11 +20,13 @@ body: |
 ...
 ---
 name: add2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: add2
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = ADD $x0, renamable $x11
@@ -30,11 +34,13 @@ body: |
 ...
 ---
 name: or1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: or1
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = OR renamable $x11, $x0
@@ -42,11 +48,13 @@ body: |
 ...
 ---
 name: or2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: or2
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = OR $x0, renamable $x11
@@ -54,11 +62,13 @@ body: |
 ...
 ---
 name: xor1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: xor1
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = XOR renamable $x11, $x0
@@ -66,24 +76,27 @@ body: |
 ...
 ---
 name: xor2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: xor2
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = XOR $x0, renamable $x11
     PseudoRET implicit $x10
 ...
 ---
----
 name: xor3
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: xor3
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = XOR renamable $x11, renamable $x11
@@ -91,11 +104,13 @@ body: |
 ...
 ---
 name: addw1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: addw1
-    ; CHECK: renamable $x10 = ADDIW $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDIW $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x0
     renamable $x10 = ADDW renamable $x11, $x12
@@ -103,11 +118,13 @@ body: |
 ...
 ---
 name: addw2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: addw2
-    ; CHECK: renamable $x10 = ADDIW $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDIW $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x0
     renamable $x10 = ADDW $x12, renamable $x11
@@ -115,11 +132,13 @@ body: |
 ...
 ---
 name: sub
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sub
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SUB renamable $x11, $x0
@@ -127,11 +146,13 @@ body: |
 ...
 ---
 name: subw
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: subw
-    ; CHECK: renamable $x10 = ADDIW $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDIW $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SUBW renamable $x11, $x0
@@ -139,11 +160,13 @@ body: |
 ...
 ---
 name: sh1add1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sh1add1
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SH1ADD $x0, renamable $x11
@@ -151,11 +174,13 @@ body: |
 ...
 ---
 name: sh1add2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sh1add2
-    ; CHECK: renamable $x10 = SLLI $x12, 1
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = SLLI $x12, 1
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SH1ADD renamable $x11, $x0
@@ -163,11 +188,13 @@ body: |
 ...
 ---
 name: sh1add.uw1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sh1add.uw1
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SH1ADD_UW $x0, renamable $x11
@@ -175,11 +202,13 @@ body: |
 ...
 ---
 name: sh1add.uw2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sh1add.uw2
-    ; CHECK: renamable $x10 = SLLI_UW $x12, 1
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = SLLI_UW $x12, 1
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SH1ADD_UW renamable $x11, $x0
@@ -187,11 +216,13 @@ body: |
 ...
 ---
 name: sh2add1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sh2add1
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SH2ADD $x0, renamable $x11
@@ -199,11 +230,13 @@ body: |
 ...
 ---
 name: sh2add2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sh2add2
-    ; CHECK: renamable $x10 = SLLI $x12, 2
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = SLLI $x12, 2
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SH2ADD renamable $x11, $x0
@@ -211,11 +244,13 @@ body: |
 ...
 ---
 name: sh2add.uw1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sh2add.uw1
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SH2ADD_UW $x0, renamable $x11
@@ -223,11 +258,13 @@ body: |
 ...
 ---
 name: sh2add.uw2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sh2add.uw2
-    ; CHECK: renamable $x10 = SLLI_UW $x12, 2
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = SLLI_UW $x12, 2
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SH2ADD_UW renamable $x11, $x0
@@ -235,11 +272,13 @@ body: |
 ...
 ---
 name: sh3add1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sh3add1
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SH3ADD $x0, renamable $x11
@@ -247,11 +286,13 @@ body: |
 ...
 ---
 name: sh3add2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sh3add2
-    ; CHECK: renamable $x10 = SLLI $x12, 3
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = SLLI $x12, 3
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SH3ADD renamable $x11, $x0
@@ -259,11 +300,13 @@ body: |
 ...
 ---
 name: sh3add.uw1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sh3add.uw1
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SH3ADD_UW $x0, renamable $x11
@@ -271,11 +314,13 @@ body: |
 ...
 ---
 name: sh3add.uw2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sh3add.uw2
-    ; CHECK: renamable $x10 = SLLI_UW $x12, 3
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = SLLI_UW $x12, 3
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SH3ADD_UW renamable $x11, $x0
@@ -283,7 +328,6 @@ body: |
 ...
 ---
 name: andi
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: andi
@@ -295,11 +339,13 @@ body: |
 ...
 ---
 name: and1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: and1
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = AND renamable $x11, $x0
@@ -307,11 +353,13 @@ body: |
 ...
 ---
 name: and2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: and2
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = AND $x0, renamable $x11
@@ -319,11 +367,13 @@ body: |
 ...
 ---
 name: mul1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: mul1
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MUL renamable $x11, $x0
@@ -331,11 +381,13 @@ body: |
 ...
 ---
 name: mul2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: mul2
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MUL $x0, renamable $x11
@@ -343,11 +395,13 @@ body: |
 ...
 ---
 name: mulh1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: mulh1
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MULH renamable $x11, $x0
@@ -355,11 +409,13 @@ body: |
 ...
 ---
 name: mulh2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: mulh2
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MULH $x0, renamable $x11
@@ -367,11 +423,13 @@ body: |
 ...
 ---
 name: mulhsu1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: mulhsu1
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MULHSU renamable $x11, $x0
@@ -379,11 +437,13 @@ body: |
 ...
 ---
 name: mulhsu2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: mulhsu2
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MULHSU $x0, renamable $x11
@@ -391,11 +451,13 @@ body: |
 ...
 ---
 name: mulhu1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: mulhu1
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MULHU renamable $x11, $x0
@@ -403,11 +465,13 @@ body: |
 ...
 ---
 name: mulhu2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: mulhu2
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MULHU $x0, renamable $x11
@@ -415,11 +479,13 @@ body: |
 ...
 ---
 name: mulw1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: mulw1
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MULW renamable $x11, $x0
@@ -427,11 +493,13 @@ body: |
 ...
 ---
 name: mulw2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: mulw2
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MULW $x0, renamable $x11
@@ -439,7 +507,6 @@ body: |
 ...
 ---
 name: slli
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: slli
@@ -451,7 +518,6 @@ body: |
 ...
 ---
 name: srli
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: srli
@@ -463,7 +529,6 @@ body: |
 ...
 ---
 name: srai
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: srai
@@ -475,7 +540,6 @@ body: |
 ...
 ---
 name: slliw
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: slliw
@@ -487,7 +551,6 @@ body: |
 ...
 ---
 name: srliw
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: srliw
@@ -499,7 +562,6 @@ body: |
 ...
 ---
 name: sraiw
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sraiw
@@ -511,7 +573,6 @@ body: |
 ...
 ---
 name: slli_uw
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: slli_uw
@@ -523,7 +584,6 @@ body: |
 ...
 ---
 name: ori
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: ori
@@ -535,7 +595,6 @@ body: |
 ...
 ---
 name: xori
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: xori
@@ -547,7 +606,6 @@ body: |
 ...
 ---
 name: sltiu1
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sltiu1
@@ -559,7 +617,6 @@ body: |
 ...
 ---
 name: sltiu2
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sltiu2
@@ -571,7 +628,6 @@ body: |
 ...
 ---
 name: sltu
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sltu
@@ -583,7 +639,6 @@ body: |
 ...
 ---
 name: add.uw1
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: add.uw1
@@ -595,11 +650,13 @@ body: |
 ...
 ---
 name: add.uw2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: add.uw2
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = ADD_UW $x0, renamable $x11
@@ -607,7 +664,6 @@ body: |
 ...
 ---
 name: sext.h
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sext.h
@@ -619,7 +675,6 @@ body: |
 ...
 ---
 name: sext.b
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sext.b
@@ -631,7 +686,6 @@ body: |
 ...
 ---
 name: zext.h.rv32
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: zext.h.rv32
@@ -643,7 +697,6 @@ body: |
 ...
 ---
 name: zext.h.rv64
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: zext.h.rv64
@@ -655,11 +708,13 @@ body: |
 ...
 ---
 name: sll1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sll1
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SLL $x0, renamable $x11
@@ -667,11 +722,13 @@ body: |
 ...
 ---
 name: sll2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sll2
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SLL renamable $x11, $x0
@@ -679,11 +736,13 @@ body: |
 ...
 ---
 name: sr11
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sr11
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SRL $x0, renamable $x11
@@ -691,11 +750,13 @@ body: |
 ...
 ---
 name: sr12
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sr12
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SRL renamable $x11, $x0
@@ -703,11 +764,13 @@ body: |
 ...
 ---
 name: sra1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sra1
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SRA $x0, renamable $x11
@@ -715,11 +778,13 @@ body: |
 ...
 ---
 name: sra2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sra2
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SRA renamable $x11, $x0
@@ -727,11 +792,13 @@ body: |
 ...
 ---
 name: sllw
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sllw
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SLLW $x0, renamable $x11
@@ -739,11 +806,13 @@ body: |
 ...
 ---
 name: srlw
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: srlw
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SRLW $x0, renamable $x11
@@ -751,11 +820,13 @@ body: |
 ...
 ---
 name: sraw
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: sraw
-    ; CHECK: renamable $x10 = ADDI $x0, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x0, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = SRAW $x0, renamable $x11
@@ -763,11 +834,13 @@ body: |
 ...
 ---
 name: min
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: min
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MIN renamable $x11, renamable $x11
@@ -775,11 +848,13 @@ body: |
 ...
 ---
 name: minu
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: minu
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MINU renamable $x11, renamable $x11
@@ -787,11 +862,13 @@ body: |
 ...
 ---
 name: max
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: max
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MAX renamable $x11, renamable $x11
@@ -799,11 +876,13 @@ body: |
 ...
 ---
 name: maxu
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $x12
     ; CHECK-LABEL: name: maxu
-    ; CHECK: renamable $x10 = ADDI $x12, 0
+    ; CHECK: liveins: $x12
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $x10 = ADDI $x12, 0
     ; CHECK-NEXT: PseudoRET implicit $x10
     renamable $x11 = COPY $x12
     renamable $x10 = MAXU renamable $x11, renamable $x11
@@ -811,7 +890,6 @@ body: |
 ...
 ---
 name: multipass
-tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: multipass
@@ -824,18 +902,18 @@ body: |
 ...
 ---
 name: beq
-tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: beq
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $x11 = COPY $x12
   ; CHECK-NEXT:   BEQ $x12, $x0, %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   PseudoRET
   bb.0:
+    liveins: $x12
     renamable $x11 = COPY $x12
     BEQ $x0, renamable $x11, %bb.1
   bb.1:
@@ -843,18 +921,18 @@ body: |
 ...
 ---
 name: bne
-tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: bne
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $x11 = COPY $x12
   ; CHECK-NEXT:   BNE $x12, $x0, %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   PseudoRET
   bb.0:
+    liveins: $x12
     renamable $x11 = COPY $x12
     BNE $x0, renamable $x11, %bb.1
   bb.1:
@@ -862,18 +940,18 @@ body: |
 ...
 ---
 name: bltu
-tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: bltu
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $x11 = COPY $x12
   ; CHECK-NEXT:   BNE $x12, $x0, %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   PseudoRET
   bb.0:
+    liveins: $x12
     renamable $x11 = COPY $x12
     BLTU $x0, renamable $x11, %bb.1
   bb.1:
@@ -881,18 +959,18 @@ body: |
 ...
 ---
 name: bgeu
-tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: bgeu
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x12
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $x11 = COPY $x12
   ; CHECK-NEXT:   BEQ $x12, $x0, %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   PseudoRET
   bb.0:
+    liveins: $x12
     renamable $x11 = COPY $x12
     BGEU $x0, renamable $x11, %bb.1
   bb.1:

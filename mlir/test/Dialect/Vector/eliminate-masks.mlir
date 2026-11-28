@@ -148,6 +148,38 @@ func.func @trivially_all_true_case_fixed_size()
 
 // -----
 
+// ALL-LABEL: @trivially_all_true_case_fixed_size_rank_0
+// ALL: %[[MASK:.*]] = vector.create_mask %arg0 : vector<i1>
+// ALL: return %[[MASK]]
+func.func @trivially_all_true_case_fixed_size_rank_0(%n: index) -> vector<i1> {
+  %mask = vector.create_mask %n : vector<i1>
+  return %mask : vector<i1>
+}
+
+// -----
+
+// ALL-LABEL: @rank_zero_const_one
+// ALL: %[[MASK:.*]] = vector.constant_mask [1] : vector<i1>
+// ALL: return %[[MASK]]
+func.func @rank_zero_const_one() -> vector<i1> {
+  %c1 = arith.constant 1 : index
+  %mask = vector.create_mask %c1 : vector<i1>
+  return %mask : vector<i1>
+}
+
+// -----
+
+// ALL-LABEL: @rank_zero_const_zero
+// ALL: %[[MASK:.*]] = vector.constant_mask [0] : vector<i1>
+// ALL: return %[[MASK]]
+func.func @rank_zero_const_zero() -> vector<i1> {
+  %c0 = arith.constant 0 : index
+  %mask = vector.create_mask %c0 : vector<i1>
+  return %mask : vector<i1>
+}
+
+// -----
+
 // ALL-LABEL: @negative_constant_dim_not_all_true
 // ALL-NOT: vector.constant_mask
 // ALL: %[[MASK:.*]] = vector.create_mask
@@ -291,4 +323,81 @@ func.func @negative_scalable_dim_constant_lower_bound(%n: index) {
   %mask = vector.create_mask %m : vector<[4]xi1>
   "test.some_use"(%mask) : (vector<[4]xi1>) -> ()
   return
+}
+
+// -----
+
+// `4 - 4 * vscale <= 0` as vscale >= 1. One nonpositive dimension makes the
+// whole mask all-false, even though `%dim` is unknown.
+// ALL-LABEL: @eliminate_all_false_masks
+// ALL: %[[FALSE:.*]] = vector.constant_mask [0, 0] : vector<[4]x[4]xi1>
+// ALL: return %[[FALSE]] : vector<[4]x[4]xi1>
+func.func @eliminate_all_false_masks(%dim: index) -> vector<[4]x[4]xi1> {
+  %c4 = arith.constant 4 : index
+  %vscale = vector.vscale
+  %width = arith.muli %vscale, %c4 : index
+  %remaining = arith.subi %c4, %width : index
+  %mask = vector.create_mask %dim, %remaining : vector<[4]x[4]xi1>
+  return %mask : vector<[4]x[4]xi1>
+}
+
+// -----
+
+// Fixed-size equivalent of the above. Value bounds proves `%iv >= 4`, hence
+// `4 - %iv <= 0`.
+// ALL-LABEL: @eliminate_all_false_masks_fixed_size
+// ALL: %[[FALSE:.*]] = vector.constant_mask [0] : vector<4xi1>
+// ALL: vector.maskedstore {{.*}}, %[[FALSE]],
+func.func @eliminate_all_false_masks_fixed_size(%out: memref<16xf32>, %value: vector<4xf32>) {
+  %c4 = arith.constant 4 : index
+  %c16 = arith.constant 16 : index
+  scf.for %iv = %c4 to %c16 step %c4 {
+    %remaining = arith.subi %c4, %iv : index
+    %mask = vector.create_mask %remaining : vector<4xi1>
+    vector.maskedstore %out[%iv], %mask, %value : memref<16xf32>, vector<4xi1>, vector<4xf32>
+  }
+  return
+}
+
+// -----
+
+// ALL-LABEL: @trivially_all_false_case
+// ALL: %[[FALSE:.*]] = vector.constant_mask [0, 0] : vector<2x[4]xi1>
+// ALL: return %[[FALSE]] : vector<2x[4]xi1>
+func.func @trivially_all_false_case(%dim: index) -> vector<2x[4]xi1> {
+  %cneg4 = arith.constant -4 : index
+  %vscale = vector.vscale
+  %cneg4_vscale = arith.muli %vscale, %cneg4 : index
+  // Is found to be all-false _without_ value bounds analysis.
+  %mask = vector.create_mask %dim, %cneg4_vscale : vector<2x[4]xi1>
+  return %mask : vector<2x[4]xi1>
+}
+
+// -----
+
+// ALL-LABEL: @trivially_all_false_case_fixed_size
+// ALL: %[[FALSE:.*]] = vector.constant_mask [0, 0] : vector<2x4xi1>
+// ALL: return %[[FALSE]] : vector<2x4xi1>
+func.func @trivially_all_false_case_fixed_size(%dim: index) -> vector<2x4xi1> {
+  %c0 = arith.constant 0 : index
+  // Also found to be all-false _without_ value bounds analysis.
+  %mask = vector.create_mask %dim, %c0 : vector<2x4xi1>
+  return %mask : vector<2x4xi1>
+}
+
+// -----
+
+// ALL-LABEL: @negative_value_bounds_scalable_dim_not_all_false
+// ALL-NOT: vector.constant_mask
+// ALL: vector.create_mask
+func.func @negative_value_bounds_scalable_dim_not_all_false() -> vector<[4]xi1> {
+  %c4 = arith.constant 4 : index
+  %vscale = vector.vscale
+  %width = arith.muli %vscale, %c4 : index
+  // `4 * vscale - 4` is zero for vscale = 1, but positive for any larger
+  // vscale. There is no fixed-size equivalent: the dimension under test is
+  // scalable.
+  %remaining = arith.subi %width, %c4 : index
+  %mask = vector.create_mask %remaining : vector<[4]xi1>
+  return %mask : vector<[4]xi1>
 }

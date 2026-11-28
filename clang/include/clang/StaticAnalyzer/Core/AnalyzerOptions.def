@@ -227,6 +227,16 @@ ANALYZER_OPTION(
     "the number of nondeterministic diagnostics than "
     "\"crosscheck-with-z3-timeout-threshold\" in practice.", 3)
 
+ANALYZER_OPTION(
+    StringRef, UnityBuildFileExtensions, "unitybuild-file-extensions",
+    "Semicolon-separated file extensions (including leading dots, e.g. "
+    "'.cpp;.impl;.c') of included files whose functions are considered "
+    "analysis entry points, regardless of the including file's name. "
+    "This practice is also known as unity build, jumbo build, unified build, "
+    "blob build, amalgamated build, monolithic build, conglomerate build, "
+    "single compilation unit, single translation unit, or unified sources.",
+    "")
+
 ANALYZER_OPTION(bool, ShouldReportIssuesInMainSourceFile,
                 "report-in-main-source-file",
                 "Whether or not the diagnostic report should be always "

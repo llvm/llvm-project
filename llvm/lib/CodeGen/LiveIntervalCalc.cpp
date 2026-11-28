@@ -119,18 +119,6 @@ void LiveIntervalCalc::constructMainRangeFromSubranges(LiveInterval &LI) {
   extendToUses(MainRange, LI.reg(), LaneBitmask::getAll(), &LI);
 }
 
-void LiveIntervalCalc::createDeadDefs(LiveRange &LR, Register Reg) {
-  const MachineRegisterInfo *MRI = getRegInfo();
-  SlotIndexes *Indexes = getIndexes();
-  VNInfo::Allocator *Alloc = getVNAlloc();
-  assert(MRI && Indexes && "call reset() first");
-
-  // Visit all def operands. If the same instruction has multiple defs of Reg,
-  // LR.createDeadDef() will deduplicate.
-  for (MachineOperand &MO : MRI->def_operands(Reg))
-    createDeadDef(*Indexes, *Alloc, LR, MO);
-}
-
 void LiveIntervalCalc::extendToUses(LiveRange &LR, Register Reg,
                                     LaneBitmask Mask, LiveInterval *LI) {
   const MachineRegisterInfo *MRI = getRegInfo();
@@ -166,25 +154,16 @@ void LiveIntervalCalc::extendToUses(LiveRange &LR, Register Reg,
 
     // Determine the actual place of the use.
     const MachineInstr *MI = MO.getParent();
-    unsigned OpNo = (&MO - &MI->getOperand(0));
     SlotIndex UseIdx;
     if (MI->isPHI()) {
       assert(!MO.isDef() && "Cannot handle PHI def of partial register.");
       // The actual place where a phi operand is used is the end of the pred
       // MBB. PHI operands are paired: (Reg, PredMBB).
-      UseIdx = Indexes->getMBBEndIdx(MI->getOperand(OpNo + 1).getMBB());
+      UseIdx =
+          Indexes->getMBBEndIdx(MI->getOperand(MO.getOperandNo() + 1).getMBB());
     } else {
-      // Check for early-clobber redefs.
-      bool isEarlyClobber = false;
-      unsigned DefIdx;
-      if (MO.isDef())
-        isEarlyClobber = MO.isEarlyClobber();
-      else if (MI->isRegTiedToDefOperand(OpNo, &DefIdx)) {
-        // FIXME: This would be a lot easier if tied early-clobber uses also
-        // had an early-clobber flag.
-        isEarlyClobber = MI->getOperand(DefIdx).isEarlyClobber();
-      }
-      UseIdx = Indexes->getInstructionIndex(*MI).getRegSlot(isEarlyClobber);
+      UseIdx = Indexes->getInstructionIndex(*MI).getRegSlot(
+          MO.isEarlyClobberDefOrUse());
     }
 
     // MI is reading Reg. We may have visited MI before if it happens to be

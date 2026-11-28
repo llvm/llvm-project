@@ -36,6 +36,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
+#include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
@@ -250,8 +251,8 @@ bool BasicBlockPathCloning::runOnMachineFunction(MachineFunction &MF) {
 }
 
 void BasicBlockPathCloning::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesAll();
   AU.addRequired<BasicBlockSectionsProfileReaderWrapperPass>();
+  AU.addPreserved<MachineBlockHashInfo>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

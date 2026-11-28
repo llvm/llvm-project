@@ -107,7 +107,7 @@ module attributes {
   // CHECK: cir.func{{.*}} @call_ov(%arg0: !s32i)
   // CHECK:   %[[IN:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!rec_Ov>
   // CHECK:   %[[OUT:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!rec_Ov>
-  // CHECK:   cir.copy %[[IN]] align(4) to %[[OUT]] align(4) : !cir.ptr<!rec_Ov>
+  // CHECK:   cir.copy %[[IN]] align(16) to %[[OUT]] align(16) : !cir.ptr<!rec_Ov>
   // CHECK:   %[[OUTVIEW:.*]] = cir.cast bitcast %[[OUT]] : !cir.ptr<!rec_Ov> -> !cir.ptr<!s32i>
   // CHECK:   %[[REG:.*]] = cir.load %[[OUTVIEW]] : !cir.ptr<!s32i>, !s32i
   // CHECK:   cir.call @take_ov(%[[REG]]) : (!s32i) -> ()

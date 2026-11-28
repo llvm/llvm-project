@@ -12,19 +12,9 @@
 # CHECK-NEXT:  %7:gpr32 = SUBWrr [[TMP]], %5
 
 name:            test1
-tracksRegLiveness: false
-registers:
-  - { id: 0, class: gpr32common }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32common }
-  - { id: 4, class: gpr32common }
-  - { id: 5, class: gpr32 }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
-  - { id: 8, class: gpr32 }
 body:              |
   bb.0:
+    liveins: $w0, $w1, $w2
     %2:gpr32 = COPY $w2
     %1:gpr32 = COPY $w1
     %0:gpr32common = COPY $w0
@@ -46,19 +36,9 @@ body:              |
 # CHECK-NEXT:  %7:gpr64 = SUBXrr [[TMP]], %5
 
 name:            test2
-tracksRegLiveness: false
-registers:
-  - { id: 0, class: gpr64common }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64 }
-  - { id: 3, class: gpr64common }
-  - { id: 4, class: gpr64common }
-  - { id: 5, class: gpr64 }
-  - { id: 6, class: gpr64 }
-  - { id: 7, class: gpr64 }
-  - { id: 8, class: gpr64 }
 body:              |
   bb.0:
+    liveins: $x0, $x1, $x2
     %2:gpr64 = COPY $x2
     %1:gpr64 = COPY $x1
     %0:gpr64common = COPY $x0
@@ -80,19 +60,9 @@ body:              |
 # CHECK-NEXT:  %7:gpr32 = SUBWrr %5, %6
 
 name:           test3
-tracksRegLiveness: false
-registers:
-  - { id: 0, class: gpr32common }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32common }
-  - { id: 4, class: gpr32common }
-  - { id: 5, class: gpr32 }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
-  - { id: 8, class: gpr32 }
 body:              |
   bb.0:
+    liveins: $w0, $w1, $w2
     %2:gpr32 = COPY $w2
     %1:gpr32 = COPY $w1
     %0:gpr32common = COPY $w0
@@ -114,19 +84,9 @@ body:              |
 # CHECK-NEXT:  %7:gpr64 = SUBXrr [[TMP]], %5
 
 name:            test4
-tracksRegLiveness: false
-registers:
-  - { id: 0, class: gpr64common }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64 }
-  - { id: 3, class: gpr64common }
-  - { id: 4, class: gpr64common }
-  - { id: 5, class: gpr64 }
-  - { id: 6, class: gpr64 }
-  - { id: 7, class: gpr64 }
-  - { id: 8, class: gpr64 }
 body:              |
   bb.0:
+    liveins: $x0, $x1, $x2
     %2:gpr64 = COPY $x2
     %1:gpr64 = COPY $x1
     %0:gpr64common = COPY $x0
@@ -148,19 +108,9 @@ body:              |
 # CHECK-NEXT:  %7:gpr32 = SUBSWrr %3, %6, implicit-def $nzcv
 
 name:            test5
-tracksRegLiveness: false
-registers:
-  - { id: 0, class: gpr32common }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32common }
-  - { id: 4, class: gpr32common }
-  - { id: 5, class: gpr32 }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
-  - { id: 8, class: gpr32 }
 body:              |
   bb.0:
+    liveins: $w0, $w1, $w2
     %2:gpr32 = COPY $w2
     %1:gpr32 = COPY $w1
     %0:gpr32common = COPY $w0
@@ -182,19 +132,9 @@ body:              |
 # CHECK-NEXT:  %7:gpr64 = SUBXrr %3, %6
 
 name:            test6
-tracksRegLiveness: false
-registers:
-  - { id: 0, class: gpr64common }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64 }
-  - { id: 3, class: gpr64common }
-  - { id: 4, class: gpr64common }
-  - { id: 5, class: gpr64 }
-  - { id: 6, class: gpr64 }
-  - { id: 7, class: gpr64 }
-  - { id: 8, class: gpr64 }
 body:              |
   bb.0:
+    liveins: $x0, $x1, $x2
     %2:gpr64 = COPY $x2
     %1:gpr64 = COPY $x1
     %0:gpr64common = COPY $x0
@@ -216,20 +156,9 @@ body:              |
 # CHECK-NEXT:  %7:gpr32 = SUBWrr %3, %6
 
 name:            test7
-tracksRegLiveness: false
-registers:
-  - { id: 0, class: gpr32common }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32common }
-  - { id: 4, class: gpr32common }
-  - { id: 5, class: gpr32 }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
-  - { id: 8, class: gpr32 }
-  - { id: 9, class: gpr32 }
 body:              |
   bb.0:
+    liveins: $w0, $w1, $w2
     %2:gpr32 = COPY $w2
     %1:gpr32 = COPY $w1
     %0:gpr32common = COPY $w0
@@ -248,20 +177,13 @@ body:              |
 # Drop nowrap flags in SUB
 
 # CHECK-LABEL: name: test8
-# CHECK:       [[SUBXrr:%[0-9]+]]:gpr64 = SUBXrr %1, %0
+# CHECK:       [[SUBXrr:%[0-9]+]]:gpr64 = SUBXrr %0, %1
 # CHECK-NEXT:  %4:gpr64common = SUBXrr [[SUBXrr]], %2
 
 name:            test8
-tracksRegLiveness: false
-registers:
-  - { id: 0, class: gpr64 }
-  - { id: 1, class: gpr64 }
-  - { id: 2, class: gpr64common }
-  - { id: 3, class: gpr64 }
-  - { id: 4, class: gpr64common }
-  - { id: 5, class: gpr64 }
 body:              |
   bb.0:
+    liveins: $x0, $x1
     %1:gpr64 = COPY $x1
     %0:gpr64 = COPY $x0
     %2:gpr64common = ORRXri %0:gpr64, 4096
@@ -280,19 +202,9 @@ body:              |
 # CHECK-NEXT:  %7:gpr32 = SUBWrr [[TMP]], %5
 
 name:            wzr
-tracksRegLiveness: false
-registers:
-  - { id: 0, class: gpr32common }
-  - { id: 1, class: gpr32 }
-  - { id: 2, class: gpr32 }
-  - { id: 3, class: gpr32common }
-  - { id: 4, class: gpr32common }
-  - { id: 5, class: gpr32 }
-  - { id: 6, class: gpr32 }
-  - { id: 7, class: gpr32 }
-  - { id: 8, class: gpr32 }
 body:              |
   bb.0:
+    liveins: $w0, $w1, $w2
     %2:gpr32 = COPY $w2
     %1:gpr32 = COPY $w1
     %0:gpr32common = COPY $w0

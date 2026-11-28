@@ -34,7 +34,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0.entry:
@@ -96,7 +95,6 @@ body:             |
 ...
 ---
 name:            dont_combine_same_block
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_combine_same_block
   ; CHECK: bb.0:

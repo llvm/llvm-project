@@ -71,6 +71,7 @@ static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
 } // namespace X86_64
 
 static const char *const GCCRegNames[] = {
+    // clang-format off
     "ax",    "dx",    "cx",    "bx",    "si",      "di",    "bp",    "sp",
     "st",    "st(1)", "st(2)", "st(3)", "st(4)",   "st(5)", "st(6)", "st(7)",
     "argp",  "flags", "fpcr",  "fpsr",  "dirflag", "frame", "xmm0",  "xmm1",
@@ -95,6 +96,8 @@ static const char *const GCCRegNames[] = {
     "tmm0",  "tmm1",  "tmm2",  "tmm3",  "tmm4",    "tmm5",  "tmm6",  "tmm7",
     "r16",   "r17",   "r18",   "r19",   "r20",     "r21",   "r22",   "r23",
     "r24",   "r25",   "r26",   "r27",   "r28",     "r29",   "r30",   "r31",
+    "bsr0",
+    // clang-format on
 };
 
 const TargetInfo::AddlRegName AddlRegNames[] = {
@@ -176,8 +179,8 @@ bool X86TargetInfo::initFeatureMap(
 
     if (Feature == "+apxf" || Feature == "-apxf") {
       char Sign = Feature[0];
-      for (const char *Sub :
-           {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "zu", "jmpabs"})
+      for (const char *Sub : {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf",
+                              "cf", "zu", "jmpabs"})
         UpdatedFeaturesVec.push_back(Sign + std::string(Sub));
       continue;
     }
@@ -410,6 +413,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAMXMOVRS = true;
     } else if (Feature == "+amx-avx512") {
       HasAMXAVX512 = true;
+    } else if (Feature == "+acev1") {
+      HasACEV1 = true;
     } else if (Feature == "+cmpccxadd") {
       HasCMPCCXADD = true;
     } else if (Feature == "+raoint") {
@@ -960,6 +965,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AMX_MOVRS__");
   if (HasAMXAVX512)
     Builder.defineMacro("__AMX_AVX512__");
+  if (HasACEV1)
+    Builder.defineMacro("__ACEV1__");
   if (HasCMPCCXADD)
     Builder.defineMacro("__CMPCCXADD__");
   if (HasRAOINT)
@@ -1003,7 +1010,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasJMPABS)
     Builder.defineMacro("__JMPABS__");
   if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF &&
-      HasZU && HasJMPABS)
+      HasCF && HasZU && HasJMPABS)
     Builder.defineMacro("__APX_F__");
   if (HasEGPR && HasInlineAsmUseGPR32)
     Builder.defineMacro("__APX_INLINE_ASM_USE_GPR32__");
@@ -1099,6 +1106,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("amx-int8", true)
       .Case("amx-movrs", true)
       .Case("amx-tile", true)
+      .Case("acev1", true)
       .Case("avx", true)
       .Case("avx10.1", true)
       .Case("avx10.2", true)
@@ -1222,6 +1230,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("amx-int8", HasAMXINT8)
       .Case("amx-movrs", HasAMXMOVRS)
       .Case("amx-tile", HasAMXTILE)
+      .Case("acev1", HasACEV1)
       .Case("avx", SSELevel >= AVX)
       .Case("avx10.1", HasAVX10_1)
       .Case("avx10.2", HasAVX10_2)
@@ -1852,6 +1861,7 @@ void X86TargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
 }
 
 void X86TargetInfo::fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const {
+  Values.emplace_back("generic");
   llvm::X86::fillValidTuneCPUList(Values);
 }
 

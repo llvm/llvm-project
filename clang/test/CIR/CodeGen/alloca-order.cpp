@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
 }
 
 // CIR:      cir.func {{.*}} @main(
-// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
 // CIR-NEXT:   %[[ARGC:.*]] = cir.alloca "argc" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:   %[[ARGV:.*]] = cir.alloca "argv" align(8) init : !cir.ptr<!cir.ptr<!cir.ptr<!s8i>>>
 // CIR-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
@@ -47,7 +47,7 @@ int pick(int a, int b) {
 }
 
 // CIR:      cir.func {{.*}} @_Z4pickii(
-// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
 // CIR-NEXT:   %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:   %[[B:.*]] = cir.alloca "b" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:   cir.store %{{.+}}, %[[A]] : !s32i, !cir.ptr<!s32i>
@@ -78,7 +78,7 @@ int late(int a) {
 }
 
 // CIR:      cir.func {{.*}} @_Z4latei(
-// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
 // CIR-NEXT:   %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:   %[[X:.*]] = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:   %[[Z:.*]] = cir.alloca "z" align(4) init : !cir.ptr<!s32i>
@@ -140,7 +140,7 @@ int S::pick(int k) {
 }
 
 // CIR:      cir.func {{.*}} @_ZN1S4pickEi(
-// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
 // CIR-NEXT:   %[[THIS:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR-NEXT:   %[[K:.*]] = cir.alloca "k" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:   cir.store %{{.+}}, %[[THIS]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>

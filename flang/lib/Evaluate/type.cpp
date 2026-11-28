@@ -827,8 +827,8 @@ bool DynamicType::HasDeferredOrAssumedTypeParameter() const {
           charLengthParamValue_->isAssumed());
 }
 
-bool SomeKind<TypeCategory::Derived>::operator==(
-    const SomeKind<TypeCategory::Derived> &that) const {
+bool Type<TypeCategory::Derived>::operator==(
+    const Type<TypeCategory::Derived> &that) const {
   return PointeeComparison(derivedTypeSpec_, that.derivedTypeSpec_);
 }
 

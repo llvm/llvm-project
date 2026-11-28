@@ -665,8 +665,6 @@ public:
     Values[v] = true;
   }
 
-  unsigned byteSize() const { return (Values.size() + 7) / 8; }
-
   void print(raw_ostream &OS) { printBitVectorAsHex(OS, Values, 8); }
 };
 

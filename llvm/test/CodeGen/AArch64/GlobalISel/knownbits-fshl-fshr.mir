@@ -3,7 +3,6 @@
 
 ---
 name:            Cst
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Cst
@@ -18,7 +17,6 @@ body:             |
 ...
 ---
 name:            CstBig
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstBig
@@ -33,7 +31,6 @@ body:             |
 ...
 ---
 name:            CstSext
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstSext
@@ -52,7 +49,6 @@ body:             |
 ...
 ---
 name:            CstSextBig
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CstSextBig
@@ -71,9 +67,9 @@ body:             |
 ...
 ---
 name:            ScalarVar
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @ScalarVar
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -84,9 +80,9 @@ body:             |
 ...
 ---
 name:            ScalarCst
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @ScalarCst
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -99,7 +95,6 @@ body:             |
 ...
 ---
 name:            VectorSimple
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorSimple
@@ -120,9 +115,9 @@ body:             |
 ...
 ---
 name:            VectorCst
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $d0, $d1
   ; CHECK-LABEL: name: @VectorCst
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
@@ -137,7 +132,6 @@ body:             |
 ...
 ---
 name:            VectorCst36
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorCst36
@@ -154,9 +148,9 @@ body:             |
 ...
 ---
 name:            VectorCst3unknown
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $d0, $d1
   ; CHECK-LABEL: name: @VectorCst3unknown
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
@@ -173,7 +167,6 @@ body:             |
 ...
 ---
 name:            VectorSext
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @VectorSext
@@ -200,9 +193,9 @@ body:             |
 ...
 ---
 name:            FSHLless
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @FSHLless
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -219,9 +212,9 @@ body:             |
 ...
 ---
 name:            FSHLeq
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @FSHLeq
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -238,9 +231,9 @@ body:             |
 ...
 ---
 name:            FSHLmore
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @FSHLmore
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -257,9 +250,9 @@ body:             |
 ...
 ---
 name:            SignBitsThroughZext
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @SignBitsThroughZext
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -282,7 +275,6 @@ body:             |
 ...
 ---
 name:            FSHLZeroAmt
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @FSHLZeroAmt
@@ -297,7 +289,6 @@ body:             |
 ...
 ---
 name:            FSHRZeroAmt
-tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @FSHRZeroAmt

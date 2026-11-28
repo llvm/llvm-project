@@ -55,10 +55,12 @@ static RuntimeLibrary getVectorRuntimeLibrary(VectorLibrary VecLib) {
 }
 
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(
-    const Triple &TT, ExceptionHandling ExceptionModel,
+    const Triple &TT, ExceptionHandling ExceptionModel, unsigned WCharSize,
     FloatABI::ABIType FloatABI, std::optional<LongDoubleFormat> LDblFormat,
     StringRef ABIName, VectorLibrary VecLib)
-    : LongDoubleFmt(LDblFormat.value_or(TT.getDefaultLongDoubleFormat())) {
+    : WCharSize(WCharSize ? WCharSize : TT.getDefaultWCharSize()),
+      LongDoubleFmt(LDblFormat.value_or(TT.getDefaultLongDoubleFormat())),
+      MathErrno(TT.supportsMathErrno()), ABIName(ABIName) {
   // Only an unspecified model resolves to the triple default; None is left as
   // an explicit disable.
   if (ExceptionModel == ExceptionHandling::Default)
@@ -77,8 +79,8 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(
 RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M, StringRef ABIName,
                                          VectorLibrary VecLib)
     : RuntimeLibcallsInfo(M.getTargetTriple(), M.getExceptionModel(),
-                          M.getFloatABI(), M.getLongDoubleFormat(), ABIName,
-                          VecLib) {}
+                          M.getWCharSize(), M.getFloatABI(),
+                          M.getLongDoubleFormat(), ABIName, VecLib) {}
 
 RTLIB::Libcall RuntimeLibcallsInfo::selectLongDoubleLibcall(
     RTLIB::Libcall F80, RTLIB::Libcall F128, RTLIB::Libcall PPCF128) const {
@@ -157,11 +159,11 @@ bool RuntimeLibcallsInfo::isAAPCS_ABI(const Triple &TT, StringRef ABIName) {
   return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
 }
 
-// PowerPC64, Sparc64, SystemZ need signext/zeroext on i32 parameters and
+// PowerPC64, Sparc64, SystemZ, VE need signext/zeroext on i32 parameters and
 // returns corresponding to C-level ints and unsigned ints.
 static bool shouldExtI32(const Triple &T) {
   return T.isPPC64() || T.getArch() == Triple::sparcv9 ||
-         T.getArch() == Triple::systemz;
+         T.getArch() == Triple::systemz || T.getArch() == Triple::ve;
 }
 
 // LoongArch, Mips, and riscv64, on the other hand, need signext on i32
@@ -242,7 +244,7 @@ static Type *getInt128Type(LLVMContext &Ctx, const Triple &TT) {
 
 static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
                              const Triple &TT, const DataLayout &DL,
-                             LongDoubleFormat LdblFormat) {
+                             unsigned WCharSize, LongDoubleFormat LdblFormat) {
   // FIXME: Use the llvm/ABI library to get accurate IR types and attributes.
   switch (ID) {
   case Void:
@@ -304,6 +306,8 @@ static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
     return Type::getPPC_FP128Ty(Ctx);
   case Ptr:
     return PointerType::get(Ctx, 0);
+  case AllocaPtr:
+    return DL.getAllocaPtrType(Ctx);
   case V2F32:
     return FixedVectorType::get(Type::getFloatTy(Ctx), 2);
   case V4F32:
@@ -348,7 +352,8 @@ static Type *convertToIRType(FuncArgTypeID ID, LLVMContext &Ctx,
 
   SmallVector<Type *, 2> EltTys;
   for (FuncArgTypeID EltID : EltIDs)
-    EltTys.push_back(convertToIRType(EltID, Ctx, TT, DL, LdblFormat));
+    EltTys.push_back(
+        convertToIRType(EltID, Ctx, TT, DL, WCharSize, LdblFormat));
   return StructType::get(Ctx, EltTys);
 }
 
@@ -407,6 +412,30 @@ static Attribute::AttrKind getIntExtAttr(FuncArgTypeID ID, Type *Ty,
   return Attribute::None;
 }
 
+static FuncArgTypeID getCPairElementType(FuncArgTypeID ID) {
+  switch (ID) {
+  case CFltPair:
+    return Flt;
+  case CDblPair:
+    return Dbl;
+  default:
+    return NoFuncArgType;
+  }
+}
+
+std::pair<Type *, Type *>
+RuntimeLibcallsInfo::lowerCPairReturn(const Triple &TT, Type *EltTy) const {
+  Type *PairTy = StructType::get(EltTy, EltTy);
+  // These return small structs in memory.
+  if (TT.isX86_32() ||
+      ((TT.isARM() || TT.isThumb()) && !isAAPCS_ABI(TT, ABIName)))
+    return {Type::getVoidTy(EltTy->getContext()), PairTy};
+  // x86-64 SysV returns a pair of floats packed in one SSE register.
+  if (TT.isX86_64() && !TT.isOSWindows() && EltTy->isFloatTy())
+    return {FixedVectorType::get(EltTy, 2), nullptr};
+  return {PairTy, nullptr};
+}
+
 std::pair<FunctionType *, AttributeList>
 RuntimeLibcallsInfo::getDefaultFunctionTy(
     LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
@@ -414,20 +443,39 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
   const FuncArgTypeID *ProtoTypes =
       &SignatureTable[SignatureOffset[LibcallImpl]];
 
-  if (ProtoTypes[0] == NoFuncArgType)
+  if (ProtoTypes[0] == NoFuncArgType || ProtoTypes[0] == Variable ||
+      ProtoTypes[0] == ThreadLocalVariable)
     return {};
 
   FuncArgTypeID LastID = ProtoTypes[0];
-  Type *RetTy = convertToIRType(LastID, Ctx, TT, DL, LongDoubleFmt);
-  AttributeSet RetAttrs;
-  if (Attribute::AttrKind AK =
-          getIntExtAttr(LastID, RetTy, TT, /*IsReturn=*/true))
-    RetAttrs = AttributeSet::get(Ctx, Attribute::get(Ctx, AK));
-  if (isInRegStruct(LastID))
-    RetAttrs = RetAttrs.addAttribute(Ctx, Attribute::InReg);
-
   SmallVector<Type *, 4> ArgTys;
   SmallVector<AttributeSet, 4> ArgAttrs;
+  Type *RetTy;
+  AttributeSet RetAttrs;
+  if (FuncArgTypeID EltID = getCPairElementType(LastID);
+      EltID != NoFuncArgType) {
+    Type *EltTy = convertToIRType(EltID, Ctx, TT, DL, WCharSize, LongDoubleFmt);
+    Type *SRetTy;
+    std::tie(RetTy, SRetTy) = lowerCPairReturn(TT, EltTy);
+    if (SRetTy) {
+      AttrBuilder SRetAttrs(Ctx);
+      SRetAttrs.addStructRetAttr(SRetTy);
+      SRetAttrs.addAlignmentAttr(DL.getABITypeAlign(SRetTy));
+      ArgTys.push_back(DL.getAllocaPtrType(Ctx));
+      ArgAttrs.push_back(AttributeSet::get(Ctx, SRetAttrs));
+    }
+  } else {
+    RetTy = convertToIRType(LastID, Ctx, TT, DL, WCharSize, LongDoubleFmt);
+    if (Attribute::AttrKind AK =
+            getIntExtAttr(LastID, RetTy, TT, /*IsReturn=*/true))
+      RetAttrs = AttributeSet::get(Ctx, Attribute::get(Ctx, AK));
+    if (isInRegStruct(LastID))
+      RetAttrs = RetAttrs.addAttribute(Ctx, Attribute::InReg);
+  }
+  RetAttrs = RetAttrs.addAttributes(
+      Ctx, getLibcallImplRetAttributes(Ctx, LibcallImpl));
+
+  unsigned FirstArgNo = ArgTys.size();
   bool IsVarArg = false;
   unsigned Idx = 1;
   for (FuncArgTypeID TyID = ProtoTypes[Idx]; TyID != NoFuncArgType;
@@ -445,7 +493,7 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
     else
       LastID = TyID;
 
-    Type *ArgTy = convertToIRType(TyID, Ctx, TT, DL, LongDoubleFmt);
+    Type *ArgTy = convertToIRType(TyID, Ctx, TT, DL, WCharSize, LongDoubleFmt);
     ArgTys.push_back(ArgTy);
 
     AttributeSet ArgAttrSet;
@@ -457,12 +505,12 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
 
   for (const LibcallArgAttrs &Static :
        getLibcallImplArgAttributes(LibcallImpl)) {
-    assert(Static.ArgNo < ArgAttrs.size() &&
+    assert(FirstArgNo + Static.ArgNo < ArgAttrs.size() &&
            "attributes for nonexistent argument");
     AttributeSet StaticAttrs = getLibcallArgAttributeSet(Ctx, Static.AttrSetID);
     if (Static.PointeeType != NoFuncArgType) {
-      Type *PointeeTy =
-          convertToIRType(Static.PointeeType, Ctx, TT, DL, LongDoubleFmt);
+      Type *PointeeTy = convertToIRType(Static.PointeeType, Ctx, TT, DL,
+                                        WCharSize, LongDoubleFmt);
       Type *AlignTy =
           Static.AlignToElement ? PointeeTy->getScalarType() : PointeeTy;
       SmallVector<Attribute, 2> PointeeAttrs = {
@@ -476,172 +524,83 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
       StaticAttrs = StaticAttrs.addSortedAttributes(Ctx, PointeeAttrs);
     }
 
-    AttributeSet &ArgAttrSet = ArgAttrs[Static.ArgNo];
+    AttributeSet &ArgAttrSet = ArgAttrs[FirstArgNo + Static.ArgNo];
     ArgAttrSet = ArgAttrSet.addAttributes(Ctx, StaticAttrs);
   }
 
   return {FunctionType::get(RetTy, ArgTys, IsVarArg),
-          AttributeList::get(Ctx, getLibcallImplFnAttributes(Ctx, LibcallImpl),
-                             RetAttrs, ArgAttrs)};
+          AttributeList::get(
+              Ctx, getLibcallImplFnAttributes(Ctx, LibcallImpl, MathErrno),
+              RetAttrs, ArgAttrs)};
+}
+
+Type *
+RuntimeLibcallsInfo::getVariableType(LLVMContext &Ctx, const Triple &TT,
+                                     const DataLayout &DL,
+                                     RTLIB::LibcallImpl LibcallImpl) const {
+  const FuncArgTypeID *ProtoTypes =
+      &SignatureTable[SignatureOffset[LibcallImpl]];
+  if (ProtoTypes[0] != Variable && ProtoTypes[0] != ThreadLocalVariable)
+    return nullptr;
+  return convertToIRType(ProtoTypes[1], Ctx, TT, DL, WCharSize, LongDoubleFmt);
+}
+
+FunctionCallee RuntimeLibcallsInfo::getOrInsertLibcallDecl(
+    Module &M, RTLIB::LibcallImpl LibcallImpl) const {
+  assert(!isVariable(LibcallImpl) && "not a function declaration");
+
+  FunctionType *FuncTy;
+  AttributeList FuncAttrs;
+  std::tie(FuncTy, FuncAttrs) = getFunctionTy(
+      M.getContext(), M.getTargetTriple(), M.getDataLayout(), LibcallImpl);
+
+  // TODO: Every libcall should have a known signature.
+  if (!FuncTy) {
+    FuncTy = FunctionType::get(Type::getVoidTy(M.getContext()), {},
+                               /*IsVarArg=*/true);
+  }
+
+  return M.getOrInsertFunction(
+      getLibcallImplName(LibcallImpl), FuncTy, [&](Function &F) {
+        F.setAttributes(FuncAttrs);
+        F.setCallingConv(getLibcallImplCallingConv(LibcallImpl));
+      });
+}
+
+GlobalValue *RuntimeLibcallsInfo::getOrInsertImplGlobal(
+    Module &M, RTLIB::LibcallImpl LibcallImpl) const {
+  assert(isVariable(LibcallImpl) && "not a variable declaration");
+
+  StringRef Name = getLibcallImplName(LibcallImpl);
+  if (GlobalValue *GV = M.getNamedValue(Name))
+    return GV;
+
+  Type *VarTy = getVariableType(M.getContext(), M.getTargetTriple(),
+                                M.getDataLayout(), LibcallImpl);
+  return new GlobalVariable(
+      M, VarTy, /*isConstant=*/false, GlobalValue::ExternalLinkage, nullptr,
+      Name, nullptr,
+      isThreadLocalVariable(LibcallImpl) ? GlobalValue::InitialExecTLSModel
+                                         : GlobalValue::NotThreadLocal);
 }
 
 std::pair<FunctionType *, AttributeList>
 RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
                                    const DataLayout &DL,
                                    RTLIB::LibcallImpl LibcallImpl) const {
-  static constexpr Attribute::AttrKind MemoryFnAttrs[] = {
-      Attribute::NoUnwind, Attribute::WillReturn};
-  static constexpr Attribute::AttrKind CommonPtrArgAttrs[] = {
-      Attribute::NoAlias, Attribute::WriteOnly, Attribute::NonNull};
-
   switch (LibcallImpl) {
   // FIXME: Should also include __sincospi[f]_stret
   case RTLIB::impl___sincos_stret:
   case RTLIB::impl___sincosf_stret: {
-    if (!darwinHasSinCosStret(TT)) // Non-darwin currently unexpected
-      return {};
-
-    Type *ScalarTy = LibcallImpl == RTLIB::impl___sincosf_stret
-                         ? Type::getFloatTy(Ctx)
-                         : Type::getDoubleTy(Ctx);
-
-    AttrBuilder FuncAttrBuilder(Ctx);
-    for (Attribute::AttrKind Attr : CommonFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-
-    const bool UseSret =
-        TT.isX86_32() || ((TT.isARM() || TT.isThumb()) &&
-                          ARM::computeTargetABI(TT) == ARM::ARM_ABI_APCS);
-
-    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argMemOnly(
-        UseSret ? ModRefInfo::Mod : ModRefInfo::NoModRef));
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    if (UseSret) {
-      AttrBuilder AttrBuilder(Ctx);
-      StructType *StructTy = StructType::get(ScalarTy, ScalarTy);
-      AttrBuilder.addStructRetAttr(StructTy);
-      AttrBuilder.addAlignmentAttr(DL.getABITypeAlign(StructTy));
-      FunctionType *FuncTy = FunctionType::get(
-          Type::getVoidTy(Ctx), {DL.getAllocaPtrType(Ctx), ScalarTy}, false);
-
-      return {FuncTy, Attrs.addParamAttributes(Ctx, 0, AttrBuilder)};
-    }
-
-    Type *RetTy =
-        LibcallImpl == RTLIB::impl___sincosf_stret && TT.isX86_64()
-            ? static_cast<Type *>(FixedVectorType::get(ScalarTy, 2))
-            : static_cast<Type *>(StructType::get(ScalarTy, ScalarTy));
-
-    return {FunctionType::get(RetTy, {ScalarTy}, false), Attrs};
-  }
-  case RTLIB::impl_malloc:
-  case RTLIB::impl_calloc: {
-    AttrBuilder FuncAttrBuilder(Ctx);
-    for (Attribute::AttrKind Attr : MemoryFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-    FuncAttrBuilder.addAttribute(Attribute::NoFree);
-
-    AllocFnKind AllocKind = AllocFnKind::Alloc;
-    if (LibcallImpl == RTLIB::impl_malloc)
-      AllocKind |= AllocFnKind::Uninitialized;
-
-    // TODO: Set memory attribute
-    FuncAttrBuilder.addAllocKindAttr(AllocKind);
-    FuncAttrBuilder.addAttribute("alloc-family", "malloc");
-    FuncAttrBuilder.addAllocSizeAttr(0, LibcallImpl == RTLIB::impl_malloc
-                                            ? std::nullopt
-                                            : std::make_optional(1));
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    {
-      AttrBuilder ArgAttrBuilder(Ctx);
-      for (Attribute::AttrKind AK : CommonPtrArgAttrs)
-        ArgAttrBuilder.addAttribute(AK);
-
-      Attrs = Attrs.addRetAttribute(Ctx, Attribute::NoUndef);
-      Attrs = Attrs.addRetAttribute(Ctx, Attribute::NoAlias);
-      Attrs = Attrs.addParamAttribute(Ctx, 0, Attribute::NoUndef);
-      if (LibcallImpl == RTLIB::impl_calloc)
-        Attrs = Attrs.addParamAttribute(Ctx, 1, Attribute::NoUndef);
-    }
-
-    IntegerType *SizeT = getSizeTType(Ctx, DL);
-    PointerType *PtrTy = PointerType::get(Ctx, 0);
-    SmallVector<Type *, 2> ArgTys = {SizeT};
-    if (LibcallImpl == RTLIB::impl_calloc)
-      ArgTys.push_back(SizeT);
-
-    return {FunctionType::get(PtrTy, ArgTys, false), Attrs};
-  }
-  case RTLIB::impl_free: {
-    // TODO: Set memory attribute
-    AttrBuilder FuncAttrBuilder(Ctx);
-    for (Attribute::AttrKind Attr : MemoryFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-
-    FuncAttrBuilder.addAllocKindAttr(AllocFnKind::Free);
-    FuncAttrBuilder.addAttribute("alloc-family", "malloc");
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    {
-      AttrBuilder ArgAttrBuilder(Ctx);
-      ArgAttrBuilder.addAttribute(Attribute::NoUndef);
-      ArgAttrBuilder.addAttribute(Attribute::AllocatedPointer);
-      ArgAttrBuilder.addCapturesAttr(CaptureInfo::none());
-      Attrs = Attrs.addParamAttributes(Ctx, 0, ArgAttrBuilder);
-    }
-
-    return {FunctionType::get(Type::getVoidTy(Ctx), {PointerType::get(Ctx, 0)},
-                              false),
-            Attrs};
-  }
-  case RTLIB::impl___aeabi_idivmod:
-  case RTLIB::impl___aeabi_uidivmod:
-  case RTLIB::impl___aeabi_ldivmod:
-  case RTLIB::impl___aeabi_uldivmod:
-  case RTLIB::impl___rt_sdiv:
-  case RTLIB::impl___rt_udiv:
-  case RTLIB::impl___rt_sdiv64:
-  case RTLIB::impl___rt_udiv64:
-  case RTLIB::impl___divmodqi4:
-  case RTLIB::impl___udivmodqi4:
-  case RTLIB::impl___divmodhi4:
-  case RTLIB::impl___udivmodhi4:
-  case RTLIB::impl_avr___divmodsi4:
-  case RTLIB::impl_avr___udivmodsi4: {
     auto [FuncTy, Attrs] = getDefaultFunctionTy(Ctx, TT, DL, LibcallImpl);
+    bool UseSRet = FuncTy->getNumParams() != 0 &&
+                   Attrs.hasParamAttr(0, Attribute::StructRet);
     AttrBuilder FuncAttrBuilder(Ctx);
     for (Attribute::AttrKind Attr : CommonFnAttrs)
       FuncAttrBuilder.addAttribute(Attr);
-    FuncAttrBuilder.addMemoryAttr(MemoryEffects::none());
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argMemOnly(
+        UseSRet ? ModRefInfo::Mod : ModRefInfo::NoModRef));
     return {FuncTy, Attrs.addFnAttributes(Ctx, FuncAttrBuilder)};
-  }
-  case RTLIB::impl_sqrtf:
-  case RTLIB::impl_sqrt: {
-    AttrBuilder FuncAttrBuilder(Ctx);
-
-    for (Attribute::AttrKind Attr : CommonFnAttrs)
-      FuncAttrBuilder.addAttribute(Attr);
-    FuncAttrBuilder.addMemoryAttr(MemoryEffects::errnoMemOnly(ModRefInfo::Mod));
-
-    AttributeList Attrs;
-    Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);
-
-    Type *ScalarTy = LibcallImpl == RTLIB::impl_sqrtf ? Type::getFloatTy(Ctx)
-                                                      : Type::getDoubleTy(Ctx);
-    FunctionType *FuncTy = FunctionType::get(ScalarTy, {ScalarTy}, false);
-
-    Attrs = Attrs.addRetAttribute(
-        Ctx, Attribute::getWithNoFPClass(Ctx, fcNegInf | fcNegSubnormal |
-                                                  fcNegNormal));
-    return {FuncTy, Attrs};
   }
   default:
     break;

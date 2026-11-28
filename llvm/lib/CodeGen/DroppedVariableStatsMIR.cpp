@@ -12,7 +12,6 @@
 ///===---------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/DroppedVariableStatsMIR.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 
 using namespace llvm;
 
@@ -59,8 +58,7 @@ void DroppedVariableStatsMIR::visitEveryInstruction(unsigned &DroppedCount,
         if (!DbgLoc)
           continue;
 
-        auto *Scope = DbgLoc->getScope();
-        if (updateDroppedCount(DbgLoc, Scope, Var, DroppedCount))
+        if (updateDroppedCount(DbgLoc, Var, DroppedCount))
           break;
       }
     }

@@ -1995,8 +1995,6 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsVariadic : 1;
     LLVM_PREFERRED_TYPE(bool)
-    uint64_t CapturesCXXThis : 1;
-    LLVM_PREFERRED_TYPE(bool)
     uint64_t BlockMissingReturnType : 1;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsConversionFromLambda : 1;
@@ -2082,6 +2080,10 @@ protected:
   /// outside of the DeclContext, to reduce the size of DeclContext by
   /// another pointer.
   mutable Decl *LastDecl = nullptr;
+
+  /// Caches DeclContext's ASTContext. Used by Decl::getASTContext().
+  mutable ASTContext *CachedASTContext = nullptr;
+  friend class Decl;
 
   /// Build up a chain of declarations.
   ///

@@ -195,6 +195,13 @@
 // CHECK270: "-cc1" {{.*}} "-target-cpu" "hexagonv83"
 // CHECK270: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v83{{/|\\\\}}crt0
 
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv85 -fuse-ld=hexagon-link \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK280 %s
+// CHECK280: "-cc1" {{.*}} "-target-cpu" "hexagonv85"
+// CHECK280: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v85{{/|\\\\}}crt0
+
 // -----------------------------------------------------------------------------
 // Test Linker related args
 // -----------------------------------------------------------------------------

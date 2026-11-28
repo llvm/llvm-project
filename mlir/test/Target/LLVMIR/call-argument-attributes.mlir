@@ -15,3 +15,10 @@ llvm.func @test_call_arg_attrs_indirect(%arg0: i16, %arg1: !llvm.ptr) -> i16 {
   %0 = llvm.call tail %arg1(%arg0) : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
   llvm.return %0 : i16
 }
+
+// CHECK-LABEL: define void @test_call_arg_attrs_indirect_noext
+llvm.func @test_call_arg_attrs_indirect_noext(%arg0: i32, %arg1: !llvm.ptr) {
+  // CHECK: call void %{{.*}}(i32 noext %{{.*}})
+  llvm.call %arg1(%arg0) : !llvm.ptr, (i32 {llvm.noext}) -> ()
+  llvm.return
+}

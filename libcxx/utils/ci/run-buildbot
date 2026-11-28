@@ -270,6 +270,9 @@ check-generated-output)
         false
     fi
 
+    step "Making sure the conformance status CSV files are well-formed"
+    ${NINJA} -vC "${BUILD_DIR}" libcxx-validate-conformance-csvs
+
     # This depends on LC_COLLATE set at the top of this script.
     step "Reject patches that introduce non-ASCII characters or hard tabs."
     ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test \

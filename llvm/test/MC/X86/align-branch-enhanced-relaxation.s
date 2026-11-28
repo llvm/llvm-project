@@ -1,4 +1,5 @@
   # RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu %s -x86-pad-max-prefix-size=1 --x86-align-branch-boundary=32 --x86-align-branch=jmp+indirect | llvm-objdump -d - | FileCheck %s
+  # RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu %s -x86-pad-max-prefix-size=1 --x86-align-branch-boundary=32 --x86-align-branch=jmp+indirect -x86-pad-for-branch-align=0 | llvm-objdump -d - | FileCheck --check-prefixes=NOPAD %s
   # RUN: llvm-mc -mcpu=skylake -filetype=obj -triple x86_64-pc-linux-gnu %s --mc-relax-all | llvm-objdump -d - | FileCheck --check-prefixes=RELAX-ALL %s
 
   # Exercise cases where we are allowed to increase the length of unrelaxable
@@ -27,6 +28,10 @@ labeled_basic_test:
 # CHECK:      3c: 2e cc                            int3
 # CHECK:      3e: 2e 54                            pushq    %rsp
 # CHECK:      40: eb 00                            jmp
+# NOPAD:      3c: cc                               int3
+# NOPAD-NEXT: 3d: 54                               pushq    %rsp
+# NOPAD-NEXT: 3e: 66 90                            nop
+# NOPAD-NEXT: 40: eb 00                            jmp
   int3
   push %rsp
   jmp foo

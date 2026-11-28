@@ -39,6 +39,10 @@ def gi_vop3_no_mods :
     GIComplexOperandMatcher<s32, "selectVOP3NoMods">,
     GIComplexPatternEquiv<VOP3NoMods>;
 
+def gi_vop3_no_op_sel_mods :
+    GIComplexOperandMatcher<s32, "selectVOP3NoOpSelMods">,
+    GIComplexPatternEquiv<VOP3NoOpSelMods>;
+
 def gi_vop3omods :
     GIComplexOperandMatcher<s32, "selectVOP3OMods">,
     GIComplexPatternEquiv<VOP3OMods>;
@@ -297,6 +301,9 @@ def : GINodeEquiv<G_AMDGPU_FMAXIMUM3, AMDGPUfmaximum3>;
 def : GINodeEquiv<G_AMDGPU_FMINIMUM3, AMDGPUfminimum3>;
 
 def : GINodeEquiv<G_AMDGPU_CLAMP, AMDGPUclamp>;
+
+def : GINodeEquiv<G_AMDGPU_REG_LOAD,  SIreg_load>;
+def : GINodeEquiv<G_AMDGPU_REG_STORE, SIreg_store>;
 
 def : GINodeEquiv<G_AMDGPU_ATOMIC_CMPXCHG, AMDGPUatomic_cmp_swap>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD, SIbuffer_load>;

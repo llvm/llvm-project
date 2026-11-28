@@ -68,7 +68,7 @@ namespace llvm::RISCV {
 RISCVInstrInfo::RISCVInstrInfo(const RISCVSubtarget &STI)
     : RISCVGenInstrInfo(STI, RegInfo, RISCV::ADJCALLSTACKDOWN,
                         RISCV::ADJCALLSTACKUP),
-      RegInfo(STI.getHwMode()), STI(STI) {}
+      RegInfo(STI.getHwMode(), STI.getUserReservedXRegs()), STI(STI) {}
 
 #define GET_INSTRINFO_HELPERS
 #include "RISCVGenInstrInfo.inc"
@@ -859,6 +859,13 @@ std::optional<unsigned> getFoldedOpcode(MachineFunction &MF, MachineInstr &MI,
   case RISCV::ZEXT_H_RV32:
   case RISCV::ZEXT_H_RV64:
     return RISCV::LHU;
+  // A GPR reload feeding an int->FP move can be an FP load from the slot.
+  case RISCV::FMV_H_X:
+    return RISCV::FLH;
+  case RISCV::FMV_W_X:
+    return RISCV::FLW;
+  case RISCV::FMV_D_X:
+    return RISCV::FLD;
   }
 
   switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
@@ -1715,9 +1722,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
           .add(RHS)
           .addReg(RegZ)
           .addMBB(TBB);
-      // We might extend the live range of Z, clear its kill flag to
-      // account for this.
-      MRI.clearKillFlags(RegZ);
       MI.eraseFromParent();
       return true;
     }
@@ -1736,9 +1740,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
           .addReg(RegZ)
           .add(LHS)
           .addMBB(TBB);
-      // We might extend the live range of Z, clear its kill flag to
-      // account for this.
-      MRI.clearKillFlags(RegZ);
       MI.eraseFromParent();
       return true;
     }
@@ -2975,11 +2976,6 @@ static void combineFPFusedMultiply(MachineInstr &Root, MachineInstr &Prev,
   DebugLoc MergedLoc =
       DILocation::getMergedLocation(Root.getDebugLoc(), Prev.getDebugLoc());
 
-  // We need to clear kill flags since we may be extending the live range past
-  // a kill.
-  MRI.clearKillFlags(Mul1.getReg());
-  MRI.clearKillFlags(Mul2.getReg());
-
   MachineInstrBuilder MIB = BuildMI(*MF, MergedLoc, TII->get(FusedOpc), DstReg)
                                 .addReg(Mul1.getReg())
                                 .addReg(Mul2.getReg())
@@ -3867,7 +3863,8 @@ bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
     return false;
 
   // Otherwise, try to save X5 into t1-t6 (MachineOutlinerRegSave).
-  if (STI.getCLOpts().outliner_regsave && findRegisterToSaveX5To(C, RegInfo))
+  if (STI.getCLOpts().outliner_regsave && !C.getMF()->isOutlined() &&
+      findRegisterToSaveX5To(C, RegInfo))
     return false;
 
   return true;

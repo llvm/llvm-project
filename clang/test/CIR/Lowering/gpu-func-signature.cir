@@ -1,0 +1,35 @@
+// RUN: cir-opt %s --cir-to-llvm | FileCheck %s
+
+// gpu.func kernels outlined from CIR carry CIR types in their signature. The
+// lowering converts the signature and the gpu.launch_func operands too.
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu", gpu.container_module} {
+  gpu.module @kernels {
+    // CHECK: gpu.func @k(%[[ARG:.*]]: !llvm.ptr) kernel {
+    // CHECK-NOT: cir.
+    // CHECK: llvm.store %{{.*}}, %[[ARG]] {{.*}} : i32, !llvm.ptr
+    gpu.func @k(%arg0: !cir.ptr<!s32i>) kernel {
+      %0 = cir.const #cir.int<42> : !s32i
+      cir.store align(4) %0, %arg0 : !s32i, !cir.ptr<!s32i>
+      gpu.return
+    }
+
+    // Workgroup and private attributions are not part of the signature and
+    // must survive the conversion.
+    // CHECK: gpu.func @attrs(%[[A:.*]]: !llvm.ptr) workgroup(%{{.*}} : memref<4xf32, 3>) private(%{{.*}} : memref<2xf32, 5>) kernel {
+    gpu.func @attrs(%arg0: !cir.ptr<!s32i>) workgroup(%w : memref<4xf32, 3>) private(%p : memref<2xf32, 5>) kernel {
+      gpu.return
+    }
+  }
+
+  // CHECK-LABEL: llvm.func @host
+  cir.func @host() {
+    %c1 = arith.constant 1 : index
+    %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
+    // CHECK: gpu.launch_func @kernels::@k blocks in ({{.*}}) threads in ({{.*}}) : i64 args(%{{.*}} : !llvm.ptr)
+    gpu.launch_func @kernels::@k blocks in (%c1, %c1, %c1) threads in (%c1, %c1, %c1) args(%0 : !cir.ptr<!s32i>)
+    cir.return
+  }
+}

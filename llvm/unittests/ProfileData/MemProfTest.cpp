@@ -459,8 +459,10 @@ TEST(MemProf, SymbolizationFilter) {
   CSM[0x2] = {0x1000, 0x2000, 0x5000};
 
   llvm::MapVector<uint64_t, MemInfoBlock> Prof;
-  Prof[0x1].AllocCount = 1;
+  // Put the entry to be dropped before the surviving entry so filtering
+  // compacts the MapVector and updates the surviving entry's index.
   Prof[0x2].AllocCount = 1;
+  Prof[0x1].AllocCount = 1;
 
   auto Seg = makeSegments();
 

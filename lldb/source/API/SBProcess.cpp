@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBProcess.h"
+#include "Utils.h"
 #include "lldb/Host/File.h"
 #include "lldb/Utility/Instrumentation.h"
 
@@ -33,6 +34,7 @@
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBBroadcaster.h"
@@ -83,7 +85,8 @@ SBProcess::~SBProcess() = default;
 const char *SBProcess::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Process::GetStaticBroadcasterClass()).AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      Process::GetStaticBroadcasterClass());
 }
 
 const char *SBProcess::GetPluginName() {
@@ -91,7 +94,7 @@ const char *SBProcess::GetPluginName() {
 
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    return ConstString(process_sp->GetPluginName()).GetCString();
+    return StringPool::GetSystemPool().Intern(process_sp->GetPluginName());
   }
   return "<Unknown>";
 }
@@ -101,7 +104,7 @@ const char *SBProcess::GetShortPluginName() {
 
   ProcessSP process_sp(GetSP());
   if (process_sp) {
-    return ConstString(process_sp->GetPluginName()).GetCString();
+    return StringPool::GetSystemPool().Intern(process_sp->GetPluginName());
   }
   return "<Unknown>";
 }
@@ -523,7 +526,8 @@ const char *SBProcess::GetExitDescription() {
 
   TargetAPIMutex api_lock = process_sp->GetTarget().GetAPIMutex();
   std::lock_guard<TargetAPIMutex> guard(api_lock);
-  return ConstString(process_sp->GetExitDescription()).GetCString();
+  return GetDebuggerStringPool(process_sp->GetTarget())
+      .Intern(process_sp->GetExitDescription());
 }
 
 lldb::pid_t SBProcess::GetProcessID() {
@@ -766,9 +770,8 @@ SBProcess::GetRestartedReasonAtIndexFromEvent(const lldb::SBEvent &event,
                                               size_t idx) {
   LLDB_INSTRUMENT_VA(event, idx);
 
-  return ConstString(Process::ProcessEventData::GetRestartedReasonAtIndex(
-                         event.get(), idx))
-      .GetCString();
+  return StringPool::GetSystemPool().Intern(
+      Process::ProcessEventData::GetRestartedReasonAtIndex(event.get(), idx));
 }
 
 SBProcess SBProcess::GetProcessFromEvent(const SBEvent &event) {
@@ -826,7 +829,8 @@ SBBroadcaster SBProcess::GetBroadcaster() const {
 const char *SBProcess::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Process::GetStaticBroadcasterClass()).AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      Process::GetStaticBroadcasterClass());
 }
 
 lldb::SBAddressRangeList SBProcess::FindRangesInMemory(
@@ -1259,7 +1263,8 @@ const char *SBProcess::GetExtendedBacktraceTypeAtIndex(uint32_t idx) {
     const std::vector<ConstString> &names =
         runtime->GetExtendedBacktraceTypes();
     if (idx < names.size()) {
-      return names[idx].AsCString(nullptr);
+      return GetDebuggerStringPool(process_sp->GetTarget())
+          .InternNonEmpty(names[idx]);
     }
   }
   return nullptr;

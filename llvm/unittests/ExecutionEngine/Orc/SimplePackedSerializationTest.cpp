@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
+#include "llvm/ExecutionEngine/Orc/Shared/JITDylibLookupFlags.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -238,4 +239,26 @@ TEST(SimplePackedSerializationTest, StringRefEmpty) {
 
   EXPECT_EQ(SRIn.data(), nullptr);
   EXPECT_EQ(SRIn.size(), 0U);
+}
+
+TEST(SimplePackedSerializationTest, JITDylibLookupFlagsSerialization) {
+  using llvm::orc::JITDylibLookupFlags;
+  spsSerializationRoundTrip<SPSJITDylibLookupFlags, JITDylibLookupFlags>(
+      JITDylibLookupFlags::MatchExportedSymbolsOnly);
+  spsSerializationRoundTrip<SPSJITDylibLookupFlags, JITDylibLookupFlags>(
+      JITDylibLookupFlags::MatchAllSymbols);
+
+  // The flags are encoded as a bool (true for MatchAllSymbols), which is what
+  // the ORC runtime expects.
+  auto EncodesAs = [](JITDylibLookupFlags F) {
+    char Buffer[1];
+    SPSOutputBuffer OB(Buffer, sizeof(Buffer));
+    EXPECT_TRUE(SPSArgList<SPSJITDylibLookupFlags>::serialize(OB, F));
+    SPSInputBuffer IB(Buffer, sizeof(Buffer));
+    bool B = false;
+    EXPECT_TRUE(SPSArgList<bool>::deserialize(IB, B));
+    return B;
+  };
+  EXPECT_FALSE(EncodesAs(JITDylibLookupFlags::MatchExportedSymbolsOnly));
+  EXPECT_TRUE(EncodesAs(JITDylibLookupFlags::MatchAllSymbols));
 }

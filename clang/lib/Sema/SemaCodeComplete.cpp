@@ -22,7 +22,6 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OperationKinds.h"
-#include "clang/AST/QualTypeNames.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/CharInfo.h"
@@ -8543,7 +8542,7 @@ void SemaCodeCompletion::CodeCompleteObjCSuperMessage(
       id.setIdentifier(Super, SuperLoc);
       ExprResult SuperExpr =
           SemaRef.ActOnIdExpression(S, SS, TemplateKWLoc, id,
-                                    /*HasTrailingLParen=*/false,
+                                    /*IsCall=*/false,
                                     /*IsAddressOfOperand=*/false);
       return CodeCompleteObjCInstanceMessage(S, (Expr *)SuperExpr.get(),
                                              SelIdents, AtArgumentExpression);

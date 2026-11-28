@@ -29,8 +29,6 @@ public:
 
   LLVM_ABI explicit FaultMaps(AsmPrinter &AP);
 
-  LLVM_ABI static const char *faultTypeToString(FaultKind);
-
   LLVM_ABI void recordFaultingOp(FaultKind FaultTy,
                                  const MCSymbol *FaultingLabel,
                                  const MCSymbol *HandlerLabel);

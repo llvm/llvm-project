@@ -102,10 +102,10 @@ class RegisterCommandsTestCase(TestBase):
         self.expect("register read ffr", substrs=[p_regs_value])
 
     def build_for_mode(self, mode):
-        cflags = "-march=armv8-a+sve -lpthread"
+        cflags = "-lpthread"
         if mode == Mode.SSVE:
             cflags += " -DUSE_SSVE"
-        self.build(dictionary={"CFLAGS_EXTRAS": cflags})
+        self.build(dictionary={"TEST_CFLAGS_EXTRAS": cflags})
 
     def run_sve_test(self, mode):
         if (mode == Mode.SVE) and not self.isAArch64SVE():

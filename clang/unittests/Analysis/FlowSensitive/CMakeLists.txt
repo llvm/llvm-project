@@ -24,6 +24,7 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   TransferBranchTest.cpp
   TransferTest.cpp
   TypeErasedDataflowAnalysisTest.cpp
+  UncheckedExpectedAccessModelTest.cpp
   UncheckedOptionalAccessModelTest.cpp
   UncheckedStatusOrAccessModelTest.cpp
   UncheckedStatusOrAccessModelTestFixture.cpp

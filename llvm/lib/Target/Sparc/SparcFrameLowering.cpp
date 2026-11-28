@@ -169,8 +169,10 @@ void SparcFrameLowering::emitEpilogue(MachineFunction &MF,
           MBBI->getOpcode() == SP::TAIL_CALLri) &&
          "Can only put epilog before 'retl' or 'tail_call' instruction!");
   if (!FuncInfo->isLeafProc()) {
-    BuildMI(MBB, MBBI, dl, TII.get(SP::RESTORErr), SP::G0).addReg(SP::G0)
-      .addReg(SP::G0);
+    BuildMI(MBB, MBBI, dl, TII.get(SP::RESTORErr), SP::G0)
+        .addReg(SP::G0)
+        .addReg(SP::G0)
+        .setMIFlag(MachineInstr::FrameDestroy);
     return;
   }
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -187,7 +189,8 @@ void SparcFrameLowering::emitEpilogue(MachineFunction &MF,
         .addReg(SP::O7);
     BuildMI(MBB, MBBI, dl, TII.get(SP::ORrr), SP::O7)
         .addReg(SP::G0)
-        .addReg(SP::G1);
+        .addReg(SP::G1)
+        .setMIFlag(MachineInstr::FrameDestroy);
   }
 }
 
@@ -265,12 +268,24 @@ bool SparcFrameLowering::isLeafProc(MachineFunction &MF) const
   MachineFrameInfo    &MFI = MF.getFrameInfo();
   SparcMachineFunctionInfo *SMFI = MF.getInfo<SparcMachineFunctionInfo>();
 
-  return !(MFI.hasCalls()               // has calls
-           || MRI.isPhysRegUsed(SP::L0) // Too many registers needed
-           || MRI.isPhysRegUsed(SP::O6) // %sp is used
-           || hasFP(MF)                 // need %fp
-           || MF.hasInlineAsm()         // has inline assembly
-           || SMFI->isLargeProc());     // is a large procedure
+  if (MFI.hasCalls()               // has calls
+      || MRI.isPhysRegUsed(SP::L0) // Too many registers needed
+      || MRI.isPhysRegUsed(SP::O6) // %sp is used
+      || hasFP(MF)                 // need %fp
+      || MF.hasInlineAsm()         // has inline assembly
+      || SMFI->isLargeProc())      // is a large procedure
+    return false;
+
+  // %o registers are normally only allocated once all the %i, %g and %l
+  // registers are used, but IntRegsV8Plus is restricted to %g/%o registers and
+  // can use them earlier. Remapping %i to %o would then merge two different
+  // registers.
+  if (SMFI->usesV8PlusRegs())
+    for (unsigned N = 0; N != 8; ++N)
+      if (MRI.isPhysRegUsed(SP::I0 + N) && MRI.isPhysRegUsed(SP::O0 + N))
+        return false;
+
+  return true;
 }
 
 void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {
@@ -375,4 +390,23 @@ void SparcFrameLowering::processFunctionBeforeFrameFinalized(
     LLVM_DEBUG(dbgs() << "Allocated FI(" << FI
                       << ") as the emergency spill slot.\n");
   }
+}
+
+void SparcFrameLowering::processFunctionBeforeFrameIndicesReplaced(
+    MachineFunction &MF, RegScavenger *RS) const {
+  if (!MF.getInfo<SparcMachineFunctionInfo>()->isLeafProc())
+    return;
+
+  // PEI takes the entry block's parameter DBG_VALUEs out of the function
+  // while determineCalleeSaves runs, so remapRegsForLeafProc missed them.
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  auto Remap = [&MRI](unsigned Reg, unsigned MappedReg) {
+    for (MachineOperand &MO : make_early_inc_range(MRI.reg_operands(Reg)))
+      if (MO.isDebug())
+        MO.setReg(MappedReg);
+  };
+  for (unsigned Reg = SP::I0; Reg <= SP::I7; ++Reg)
+    Remap(Reg, Reg - SP::I0 + SP::O0);
+  for (unsigned Reg = SP::I0_I1; Reg <= SP::I6_I7; ++Reg)
+    Remap(Reg, Reg - SP::I0_I1 + SP::O0_O1);
 }

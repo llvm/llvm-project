@@ -9,8 +9,8 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_I386_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_I386_H
 
-#include "Plugins/Register/Core/RegisterContextCore_x86.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "Plugins/Register/Core/RegisterContextCore_x86.h"
 
 class RegisterContextFreeBSDKernelCore_i386 : public RegisterContextCore_x86 {
 public:

@@ -105,14 +105,14 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
   // 2) Possibly more ExtractElements with the same index.
   // 3) Another operand, which will feed back into the PHI.
   Instruction *PHIUser = nullptr;
-  for (auto *U : PN->users()) {
+  for (Instruction *U : PN->users()) {
     if (ExtractElementInst *EU = dyn_cast<ExtractElementInst>(U)) {
       if (EI.getIndexOperand() == EU->getIndexOperand())
         Extracts.push_back(EU);
       else
         return nullptr;
     } else if (!PHIUser) {
-      PHIUser = cast<Instruction>(U);
+      PHIUser = U;
     } else {
       return nullptr;
     }
@@ -2446,10 +2446,12 @@ Instruction *InstCombinerImpl::foldSelectShuffle(ShuffleVectorInst &Shuf) {
   if (!Shuf.isSelect())
     return nullptr;
 
-  // Canonicalize to choose from operand 0 first unless operand 1 is undefined.
-  // Commuting undef to operand 0 conflicts with another canonicalization.
+  // Canonicalize to choose from operand 0 first unless operand 1 is
+  // undefined/zero. Commuting undef/zero to operand 0 conflicts with other
+  // canonicalization.
   unsigned NumElts = cast<FixedVectorType>(Shuf.getType())->getNumElements();
   if (!match(Shuf.getOperand(1), m_Undef()) &&
+      !match(Shuf.getOperand(1), m_CombineOr(m_Zero(), m_AnyZeroFP())) &&
       Shuf.getMaskValue(0) >= (int)NumElts) {
     // TODO: Can we assert that both operands of a shuffle-select are not undef
     // (otherwise, it would have been folded by instsimplify?
@@ -3064,6 +3066,12 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
 
   // shuffle undef, x, mask --> shuffle x, undef, mask'
   if (match(LHS, m_Undef())) {
+    SVI.commute();
+    return &SVI;
+  }
+
+  // shuffle zero, x, mask --> shuffle x, zero, mask'
+  if (match(LHS, m_CombineOr(m_Zero(), m_AnyZeroFP())) && LHS != RHS) {
     SVI.commute();
     return &SVI;
   }

@@ -52,4 +52,20 @@ module attributes {
   // CHECK-NEXT: %[[B_SLOT:.*]] = cir.alloca "b" align(4) : !cir.ptr<!rec_Big, target_address_space(5)>
   // CHECK-NEXT: cir.call @take_big(%[[B_SLOT]]) : (!cir.ptr<!rec_Big, target_address_space(5)> {llvm.align = 4 : i64, llvm.byref = !rec_Big, llvm.noundef}) -> ()
   // CHECK-NEXT: cir.return
+
+  // CIRGen reads the local through its default address space view. The
+  // addrspace(5) alloca under the view is passed, not a copy of it.
+  cir.func @call_big_view() requires_call_conv_lowering {
+    %0 = cir.alloca "b" align(4) : !cir.ptr<!rec_Big, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_Big, target_address_space(5)> -> !cir.ptr<!rec_Big>
+    %2 = cir.load %1 : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @take_big(%2) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_big_view() {
+  // CHECK-NEXT: %[[B_SLOT:.*]] = cir.alloca "b" align(4) : !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT: %{{.*}} = cir.cast address_space %[[B_SLOT]] : !cir.ptr<!rec_Big, target_address_space(5)> -> !cir.ptr<!rec_Big>
+  // CHECK-NEXT: cir.call @take_big(%[[B_SLOT]]) : (!cir.ptr<!rec_Big, target_address_space(5)> {llvm.align = 4 : i64, llvm.byref = !rec_Big, llvm.noundef}) -> ()
+  // CHECK-NEXT: cir.return
 }

@@ -14,10 +14,6 @@ alignment:       16
 legalized:       true
 regBankSelected: true
 #
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 #
 body:             |
   bb.1 (%ir-block.0):
@@ -37,8 +33,8 @@ body:             |
     ; AVX512VL-NEXT: $xmm0 = COPY [[COPY]]
     ; AVX512VL-NEXT: $xmm1 = COPY [[VEXTRACTF32X4Z256rri]]
     ; AVX512VL-NEXT: RET 0, implicit $xmm0, implicit $xmm1
-    %0(<8 x s32>) = IMPLICIT_DEF
-    %1(<4 x s32>), %2(<4 x s32>) = G_UNMERGE_VALUES %0(<8 x s32>)
+    %0:vecr(<8 x s32>) = IMPLICIT_DEF
+    %1:vecr(<4 x s32>), %2:vecr(<4 x s32>) = G_UNMERGE_VALUES %0(<8 x s32>)
     $xmm0 = COPY %1(<4 x s32>)
     $xmm1 = COPY %2(<4 x s32>)
     RET 0, implicit $xmm0, implicit $xmm1

@@ -6,6 +6,8 @@
 // RUN:   spirv-pc-vulkan-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
+using namespace hlsl;
+
 // The destination of an atomic can name one element of a vector. Check that
 // the atomic gets the address of that element and not the address of the whole
 // vector. The tests call the builtins directly because the HLSL functions do
@@ -47,7 +49,7 @@ export void test_cmpstore(int cmp, int v) {
 // CHECK-LABEL: define {{.*}}void @{{.*}}test_resource
 // DXCHECK:  [[ELT:%.*]] = getelementptr i32, ptr %{{.*}}, i32 2
 // DXCHECK:  cmpxchg ptr [[ELT]], i32 %{{.*}}, i32 %{{.*}} syncscope("device") monotonic monotonic
-// SPVCHECK: [[ELT:%.*]] = getelementptr i32, ptr addrspace(11) %{{.*}}, i64 2
+// SPVCHECK: [[ELT:%.*]] = getelementptr i32, ptr addrspace(11) %{{.*}}, i32 2
 // SPVCHECK: cmpxchg ptr addrspace(11) [[ELT]], i32 %{{.*}}, i32 %{{.*}} syncscope("device") monotonic monotonic
 export void test_resource(int cmp, int v) {
   __builtin_hlsl_interlocked_compare_store(Buf[0].z, cmp, v);

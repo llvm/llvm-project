@@ -24,12 +24,19 @@ tablegen("HexagonGenSDNodeInfo") {
   td_file = "Hexagon.td"
 }
 
+tablegen("HexagonOptions") {
+  visibility = [ ":LLVMHexagonCodeGen" ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "HexagonOptions.td"
+}
+
 static_library("LLVMHexagonCodeGen") {
   deps = [
     ":HexagonGenCallingConv",
     ":HexagonGenDAGISel",
     ":HexagonGenDFAPacketizer",
     ":HexagonGenSDNodeInfo",
+    ":HexagonOptions",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -39,6 +46,7 @@ static_library("LLVMHexagonCodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
@@ -48,6 +56,7 @@ static_library("LLVMHexagonCodeGen") {
   include_dirs = [ "." ]
   sources = [
     "BitTracker.cpp",
+    "HLXExpandPseudos.cpp",
     "HexagonAggressiveRDFCopy.cpp",
     "HexagonAlignGlobalArrays.cpp",
     "HexagonAsmPrinter.cpp",
@@ -78,16 +87,19 @@ static_library("LLVMHexagonCodeGen") {
     "HexagonISelDAGToDAG.cpp",
     "HexagonISelDAGToDAGHVX.cpp",
     "HexagonISelLowering.cpp",
+    "HexagonISelLoweringHLX.cpp",
     "HexagonISelLoweringHVX.cpp",
     "HexagonInstrInfo.cpp",
     "HexagonLiveVariables.cpp",
     "HexagonLoadStoreWidening.cpp",
     "HexagonLoopAlign.cpp",
     "HexagonLoopIdiomRecognition.cpp",
+    "HexagonLowerHLXPairAllocas.cpp",
     "HexagonMCInstLower.cpp",
     "HexagonMachineFunctionInfo.cpp",
     "HexagonMachineScheduler.cpp",
     "HexagonMask.cpp",
+    "HexagonMergeActivateWeight.cpp",
     "HexagonNewValueJump.cpp",
     "HexagonOptAddrMode.cpp",
     "HexagonOptimizeSZextends.cpp",

@@ -3,7 +3,6 @@
 
 ---
 name:            FConstantPos
-tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @FConstantPos
@@ -13,7 +12,6 @@ body:             |
 ...
 ---
 name:            FConstantNeg
-tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @FConstantNeg
@@ -23,7 +21,6 @@ body:             |
 ...
 ---
 name:            FConstantPosZero
-tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @FConstantPosZero
@@ -33,7 +30,6 @@ body:             |
 ...
 ---
 name:            FConstantNegZero
-tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @FConstantNegZero
@@ -43,9 +39,9 @@ body:             |
 ...
 ---
 name:            FAbs
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $s0
   ; CHECK-LABEL: name: @FAbs
   ; CHECK-NEXT: %0:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %1:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
@@ -55,7 +51,6 @@ body:             |
 ...
 ---
 name:            FNeg
-tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @FNeg
@@ -67,9 +62,9 @@ body:             |
 ...
 ---
 name:            FSqrt
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $s0
   ; CHECK-LABEL: name: @FSqrt
   ; CHECK-NEXT: %0:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %1:_ FPClasses:(nan pinf zero pnorm) SignBitKnown:?

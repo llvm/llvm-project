@@ -1557,12 +1557,12 @@ llvm.func @omp_atomic_read(%arg0 : !llvm.ptr, %arg1 : !llvm.ptr) -> () {
   omp.atomic.read %arg1 = %arg0 : !llvm.ptr, !llvm.ptr, i32
 
   // CHECK: %[[X2:.*]] = load atomic i32, ptr %[[ARG0]] seq_cst, align 4
-  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  // CHECK-NOT: call void @__kmpc_flush
   // CHECK: store i32 %[[X2]], ptr %[[ARG1]], align 4
   omp.atomic.read %arg1 = %arg0 memory_order(seq_cst) : !llvm.ptr, !llvm.ptr, i32
 
   // CHECK: %[[X3:.*]] = load atomic i32, ptr %[[ARG0]] acquire, align 4
-  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  // CHECK-NOT: call void @__kmpc_flush
   // CHECK: store i32 %[[X3]], ptr %[[ARG1]], align 4
   omp.atomic.read %arg1 = %arg0 memory_order(acquire) : !llvm.ptr, !llvm.ptr, i32
 
@@ -1645,10 +1645,10 @@ llvm.func @omp_atomic_write(%x: !llvm.ptr, %expr: i32) -> () {
   // CHECK: store atomic i32 %[[expr]], ptr %[[x]] monotonic, align 4
   omp.atomic.write %x = %expr : !llvm.ptr, i32
   // CHECK: store atomic i32 %[[expr]], ptr %[[x]] seq_cst, align 4
-  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  // CHECK-NOT: call void @__kmpc_flush
   omp.atomic.write %x = %expr memory_order(seq_cst) : !llvm.ptr, i32
   // CHECK: store atomic i32 %[[expr]], ptr %[[x]] release, align 4
-  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  // CHECK-NOT: call void @__kmpc_flush
   omp.atomic.write %x = %expr memory_order(release) : !llvm.ptr, i32
   // CHECK: store atomic i32 %[[expr]], ptr %[[x]] monotonic, align 4
   omp.atomic.write %x = %expr memory_order(relaxed) : !llvm.ptr, i32
@@ -2813,9 +2813,9 @@ llvm.func @omp_atomic_compare(
     omp.yield(%sel5 : f32)
   }
 
-  // Integer equality with seq_cst  →  cmpxchg + flush
+  // Integer equality with seq_cst  →  cmpxchg, no flush
   // CHECK: cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] seq_cst seq_cst
-  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  // CHECK-NOT: call void @__kmpc_flush
   omp.atomic.compare memory_order(seq_cst) %x : !llvm.ptr {
   ^bb0(%xval6 : i32):
     %cmp6 = llvm.icmp "eq" %xval6, %e : i32
@@ -2823,9 +2823,9 @@ llvm.func @omp_atomic_compare(
     omp.yield(%sel6 : i32)
   }
 
-  // Complex equality with seq_cst  →  cmpxchg + flush
+  // Complex equality with seq_cst  →  cmpxchg, no flush
   // CHECK: cmpxchg ptr %[[XC]], i64 %{{.*}}, i64 %{{.*}} seq_cst seq_cst
-  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  // CHECK-NOT: call void @__kmpc_flush
   omp.atomic.compare memory_order(seq_cst) %xc : !llvm.ptr {
   ^bb0(%xval7 : !llvm.struct<(f32, f32)>):
     %re_x7 = llvm.extractvalue %xval7[0] : !llvm.struct<(f32, f32)>
@@ -2869,9 +2869,9 @@ llvm.func @omp_atomic_compare_weak(%x : !llvm.ptr, %e : i32, %d : i32) {
     omp.yield(%sel : i32)
   } weak
 
-  // Integer equality with weak + seq_cst  →  cmpxchg weak + flush
+  // Integer equality with weak + seq_cst  →  cmpxchg weak, no flush
   // CHECK: cmpxchg weak ptr %[[X]], i32 %[[E]], i32 %[[D]] seq_cst seq_cst
-  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  // CHECK-NOT: call void @__kmpc_flush
   omp.atomic.compare memory_order(seq_cst) %x : !llvm.ptr {
   ^bb0(%xval : i32):
     %cmp = llvm.icmp "eq" %xval, %e : i32
@@ -2897,10 +2897,10 @@ llvm.func @omp_atomic_compare_fail(%x : !llvm.ptr, %e : i32, %d : i32) {
     omp.yield(%sel : i32)
   } fail_memory_order(acquire)
 
-  // Seq_cst success + relaxed failure. The seq_cst success ordering still
-  // requires the flush on the new fail_memory_order code path.
+  // Seq_cst success + relaxed failure. The orderings are on the cmpxchg and no
+  // flush is emitted.
   // CHECK: cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] seq_cst monotonic
-  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  // CHECK-NOT: call void @__kmpc_flush
   omp.atomic.compare memory_order(seq_cst) %x : !llvm.ptr {
   ^bb0(%xval : i32):
     %cmp = llvm.icmp "eq" %xval, %e : i32
@@ -2935,9 +2935,9 @@ llvm.func @omp_atomic_compare_complex_fail(%x: !llvm.ptr, %e: !llvm.ptr, %d: !ll
     omp.yield(%sel : !llvm.struct<(f32, f32)>)
   } fail_memory_order(acquire)
 
-  // Seq_cst success + relaxed failure still emits the flush on the complex path.
+  // Seq_cst success + relaxed failure emits no flush on the complex path either.
   // CHECK: cmpxchg ptr %[[X]], i64 %{{.*}}, i64 %{{.*}} seq_cst monotonic
-  // CHECK: call void @__kmpc_flush(ptr @{{.*}})
+  // CHECK-NOT: call void @__kmpc_flush
   omp.atomic.compare memory_order(seq_cst) %x : !llvm.ptr {
   ^bb0(%xval: !llvm.struct<(f32, f32)>):
     %xr = llvm.extractvalue %xval[0] : !llvm.struct<(f32, f32)>
@@ -3143,6 +3143,21 @@ llvm.func @omp_atomic_compare_capture_real(%x : !llvm.ptr, %v : !llvm.ptr, %e : 
 // CHECK-LABEL: @omp_sections_empty
 llvm.func @omp_sections_empty() -> () {
   omp.sections {
+    omp.terminator
+  }
+  // CHECK-NEXT: br label %entry
+  // CHECK: entry:
+  // CHECK-NEXT: %[[TID:.*]] = call i32 @__kmpc_global_thread_num(ptr @{{[0-9]+}})
+  // CHECK-NEXT: call void @__kmpc_barrier(ptr @{{[0-9]+}}, i32 %[[TID]])
+  // CHECK-NEXT: ret void
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_sections_empty_nowait
+llvm.func @omp_sections_empty_nowait() -> () {
+  omp.sections nowait {
     omp.terminator
   }
   // CHECK-NEXT: br label %entry

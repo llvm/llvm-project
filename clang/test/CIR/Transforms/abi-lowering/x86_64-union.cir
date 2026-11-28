@@ -450,7 +450,7 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @store_union_x87_complex(%arg0: !cir.ptr<!cir.ptr<!rec_UX87Complex>>)
-  // CHECK:   %[[SRET:.*]] = cir.alloca "sret" align(16) : !cir.ptr<!rec_UX87Complex>
+  // CHECK:   %[[SRET:.*]] = cir.alloca "" align(16) return_slot : !cir.ptr<!rec_UX87Complex>
   // CHECK:   cir.call @return_union_x87_complex(%[[SRET]])
   // CHECK:   %[[DEST:.*]] = cir.load %arg0 : !cir.ptr<!cir.ptr<!rec_UX87Complex>>, !cir.ptr<!rec_UX87Complex>
   // CHECK-NEXT:   cir.copy %[[SRET]] align(16) to %[[DEST]] align(16) : !cir.ptr<!rec_UX87Complex>
@@ -512,7 +512,7 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @take_empty_over(%arg0: !s32i)
-  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_UEmptyOver>
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(16) : !cir.ptr<!rec_UEmptyOver>
   // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_UEmptyOver> -> !cir.ptr<!s32i>
 
   // A union of nothing but an empty member classifies Ignore, the same as the

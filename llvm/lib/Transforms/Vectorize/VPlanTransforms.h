@@ -252,10 +252,11 @@ struct VPlanTransforms {
                                        OptimizationRemarkEmitter *ORE,
                                        Loop *TheLoop);
 
-  /// Check if \p Plan contains any FMaxNum or FMinNum reductions. If they do,
-  /// try to update the vector loop to exit early if any input is NaN and resume
-  /// executing in the scalar loop to handle the NaNs there. Return false if
-  /// this attempt was unsuccessful.
+  /// Check if \p Plan contains any FMaxNum, FMinNum, FMaxSelectNoFMF or
+  /// FMinSelectNoFMF reductions. If they do, try to update the vector loop to
+  /// exit early if any input is NaN (or, for FMaxSelectNoFMF/FMinSelectNoFMF, a
+  /// signed zero that may change the result) and resume executing in the scalar
+  /// loop to handle them there. Return false if this attempt was unsuccessful.
   static bool handleMaxMinNumReductions(VPlan &Plan);
 
   /// Check if \p Plan contains any FindLast reductions. If it does, try to
@@ -318,8 +319,10 @@ struct VPlanTransforms {
   /// Materialize the abstract header mask of the loop region into concrete
   /// recipes: an active-lane-mask if \p UseActiveLaneMask (with a PHI if \p
   /// UseActiveLaneMaskForControlFlow), else (WideCanonicalIV icmp ule BTC).
-  static void materializeHeaderMask(VPlan &Plan, bool UseActiveLaneMask,
-                                    bool UseActiveLaneMaskForControlFlow);
+  /// LastActiveLane(HeaderMask) is replaced by BTC - CanonicalIV.
+  static void
+  materializeHeaderMaskAndLastActiveLane(VPlan &Plan, bool UseActiveLaneMask,
+                                         bool UseActiveLaneMaskForControlFlow);
 
   /// Insert truncates and extends for any truncated recipe. Redundant casts
   /// will be folded later.
@@ -380,6 +383,12 @@ struct VPlanTransforms {
   static void convertToStridedAccesses(VPlan &Plan,
                                        PredicatedScalarEvolution &PSE, Loop &L,
                                        VPCostContext &Ctx, VFRange &Range);
+
+  /// Expand mask.beforefirst into an active-lane-mask of its first active lane
+  /// for the VFs in \p Range where it is expensive, clamping \p Range so the
+  /// decision is the same for all of its VFs.
+  static void expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
+                                    VFRange &Range);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
@@ -514,17 +523,22 @@ struct VPlanTransforms {
   /// Attaches the alias-mask to the existing header-mask.
   static void attachAliasMaskToHeaderMask(VPlan &Plan);
 
-  /// Materializes within the \p AliasCheckVPBB block. Updates the header mask
-  /// of the loop to use the alias mask. Returns the clamped VF.
+  /// Materializes the alias mask within \p AliasCheckVPBB, which must be
+  /// dominated by the SCEV checks, as the pointer bounds of \p DiffChecks are
+  /// only valid if the SCEV predicates hold. Updates the header mask of the
+  /// loop to use the alias mask. Returns the clamped VF.
   static VPValue *materializeAliasMask(VPlan &Plan,
                                        VPBasicBlock *AliasCheckVPBB,
-                                       ArrayRef<PointerDiffInfo> DiffChecks);
+                                       ArrayRef<PointerDiffInfo> DiffChecks,
+                                       ScalarEvolution &SE);
 
   /// Materializes the alias mask within a check block before the loop. The
   /// vector loop will only be entered if the clamped VF from the alias mask
   /// is not scalar.
-  static void materializeAliasMaskCheckBlock(
-      VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, bool HasBranchWeights);
+  static void
+  materializeAliasMaskCheckBlock(VPlan &Plan,
+                                 ArrayRef<PointerDiffInfo> DiffChecks,
+                                 ScalarEvolution &SE, bool HasBranchWeights);
 
   /// Expand VPExpandSCEVRecipes in \p Plan's entry block to VPInstructions.
   /// Recipes wrapping a SCEVAddRecExpr are kept for later IR-level expansion.
@@ -636,8 +650,8 @@ struct VPlanTransforms {
 
   /// Make VPlan-based scalarization decision prior to delegating to the ones
   /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
-  /// enabled by prior widening of consecutive memory operations and calls for
-  /// now.
+  /// enabled by prior widening of consecutive memory operations, interleave
+  /// groups and calls for now.
   static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
 
   /// Convert call VPInstructions in \p Plan into widened call, vector
@@ -653,8 +667,12 @@ struct VPlanTransforms {
   /// truncate as free. If narrowing is only profitable for a subset of VFs in
   /// \p Range, Range.End is updated.
   static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
-                                       const TargetTransformInfo &TTI,
-                                       PredicatedScalarEvolution &PSE);
+                                       const TargetTransformInfo &TTI);
+
+  /// Wrap reduction operations and their vp.merge in expression recipes when
+  /// the merge is expected to be folded, to better model the cost and register
+  /// pressure of the \p Plan.
+  static void foldPredicateMerge(VPlan &Plan, VPCostContext &CostCtx);
 };
 
 } // namespace llvm

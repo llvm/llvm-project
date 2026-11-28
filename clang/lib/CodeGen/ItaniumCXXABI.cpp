@@ -709,8 +709,6 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
 
   // Check the address of the function pointer if CFI on member function
   // pointers is enabled.
-  llvm::Constant *CheckSourceLocation;
-  llvm::Constant *CheckTypeDesc;
   bool ShouldEmitCFICheck = CGF.SanOpts.has(SanitizerKind::CFIMFCall) &&
                             CGM.HasHiddenLTOVisibility(RD);
 
@@ -800,13 +798,8 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
 
     if (ShouldEmitCFICheck) {
       // If doing CFI, emit the check.
-      CheckSourceLocation = CGF.EmitCheckSourceLocation(E->getBeginLoc());
-      CheckTypeDesc = CGF.EmitCheckTypeDescriptor(QualType(MPT, 0));
-      llvm::Constant *StaticData[] = {
-          llvm::ConstantInt::get(CGF.Int8Ty, CodeGenFunction::CFITCK_VMFCall),
-          CheckSourceLocation,
-          CheckTypeDesc,
-      };
+      auto StaticData = CGF.EmitCFICheckFailStaticArgs(
+          CodeGenFunction::CFITCK_VMFCall, E->getBeginLoc(), QualType(MPT, 0));
 
       if (CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIMFCall)) {
         CGF.EmitTrapCheck(CheckResult, CheckHandler);
@@ -840,11 +833,8 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
       auto CheckHandler = SanitizerHandler::CFICheckFail;
       SanitizerDebugLocation SanScope(&CGF, {CheckOrdinal}, CheckHandler);
 
-      llvm::Constant *StaticData[] = {
-          llvm::ConstantInt::get(CGF.Int8Ty, CodeGenFunction::CFITCK_NVMFCall),
-          CheckSourceLocation,
-          CheckTypeDesc,
-      };
+      auto StaticData = CGF.EmitCFICheckFailStaticArgs(
+          CodeGenFunction::CFITCK_NVMFCall, E->getBeginLoc(), QualType(MPT, 0));
 
       llvm::Value *Bit = Builder.getFalse();
       for (const CXXRecordDecl *Base : CGM.getMostBaseClasses(RD)) {
@@ -1997,8 +1987,9 @@ void ItaniumCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
   else
     Callee = CGCallee::forDirect(CGM.getAddrOfCXXStructor(GD), GD);
 
+  // FIXME: Plumb a SourceLocation from EmitDestructorCall callers.
   CGF.EmitCXXDestructorCall(GD, Callee, CGF.getAsNaturalPointerTo(This, ThisTy),
-                            ThisTy, VTT, VTTTy, nullptr);
+                            ThisTy, VTT, VTTTy, nullptr, SourceLocation{});
 }
 
 // Check if any non-inline method has the specified attribute.
@@ -2264,7 +2255,7 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
   if (!Schema && CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
     VFunc = CGF.EmitVTableTypeCheckedLoad(MethodDecl->getParent(), VTable,
-                                          PtrTy, ByteOffset);
+                                          PtrTy, ByteOffset, Loc);
   } else {
     CGF.EmitTypeMetadataCodeForVCall(MethodDecl->getParent(), VTable, Loc);
 
@@ -2330,8 +2321,9 @@ llvm::Value *ItaniumCXXABI::EmitVirtualDestructorCall(
     ThisTy = D->getDestroyedType();
   }
 
-  CGF.EmitCXXDestructorCall(GD, Callee, This.emitRawPointer(CGF), ThisTy,
-                            nullptr, QualType(), nullptr, CallOrInvoke);
+  CGF.EmitCXXDestructorCall(
+      GD, Callee, This.emitRawPointer(CGF), ThisTy, nullptr, QualType(),
+      nullptr, CE ? CE->getExprLoc() : D->getBeginLoc(), CallOrInvoke);
   return nullptr;
 }
 
@@ -3485,7 +3477,7 @@ ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
                                          getThisAddress(CGF), ThunkTy);
   llvm::CallBase *CallOrInvoke;
   CGF.EmitCall(CallInfo, Callee, ReturnValueSlot(), CallArgs, &CallOrInvoke,
-               /*IsMustTail=*/true, SourceLocation(), true);
+               /*IsMustTail=*/true, MD->getLocation(), true);
   auto *Call = cast<llvm::CallInst>(CallOrInvoke);
   Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
   if (Call->getType()->isVoidTy())

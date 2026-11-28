@@ -16,6 +16,7 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/common.h"
 #include "src/__support/frac128.h"
 #include "src/__support/frac64.h"
@@ -90,10 +91,8 @@ LIBC_NOINLINE LIBC_INLINE double sinh_small_accurate_128(double x) {
   Frac128 x2_frac = Frac128(m_x2.val) >> shift;           // lsb = 2^-128
 
   // Evaluate P(x^2) ~ (sinh(x) - x) / x^3 in Horner form:
-  Frac128 p = SINH_SMALL_POLY_128[9]; // lsb = 2^-128
-  LIBC_LOOP_NOUNROLL
-  for (int i = 8; i >= 0; --i)
-    p = p * x2_frac + SINH_SMALL_POLY_128[i]; // lsb = 2^-128
+  Frac128 p =
+      fputil::loop_polyeval(x2_frac, SINH_SMALL_POLY_128); // lsb = 2^-128
 
   // Reconstruction of |sinh(x)| = |x| + |x|^3 * P(x^2):
   // Since y_poly = m_x3 * p represents m_x^3 * P(x^2) with lsb = 2^-125,
@@ -269,12 +268,8 @@ LIBC_NOINLINE LIBC_INLINE double exp_pm_accurate_128(double x, bool is_sinh) {
   // High-degree Horner steps (k = 6, 5, 4 -> 3) using 64-bit multiplications
   // since the high 64-bit words val[1] of c_4, c_5, c_6 are zero:
   Frac64 w_hi = w.to_frac64(); // lsb = 2^-64
-  Frac64 odd_lo = EXP2_SINH_W_LO64[2];
-  Frac64 even_lo = EXP2_COSH_W_LO64[2];
-  for (int i = 1; i >= 0; --i) {
-    odd_lo = odd_lo * w_hi + EXP2_SINH_W_LO64[i];
-    even_lo = even_lo * w_hi + EXP2_COSH_W_LO64[i];
-  }
+  Frac64 odd_lo = fputil::polyeval(w_hi, EXP2_SINH_W_LO64);
+  Frac64 even_lo = fputil::polyeval(w_hi, EXP2_COSH_W_LO64);
   odd_lo = odd_lo * w_hi + Frac64(EXP2_SINH_W_128[3].val[0]);
   even_lo = even_lo * w_hi + Frac64(EXP2_COSH_W_128[3].val[0]);
 

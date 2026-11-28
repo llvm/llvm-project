@@ -1,0 +1,76 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+! Device components that share a component symbol but belong to different
+! objects are different device objects on the right-hand side of a host
+! assignment: x%d and y%d, or m(1)%d and m(2)%d, are different allocations.
+! Different elements of the same array are one device object. A device array
+! used as a subscript is a reference to a device object as well.
+
+module m
+  type :: payload
+    real, allocatable, device :: d(:)
+    real, allocatable, device :: e(:)
+  end type
+  interface
+    integer function two_device_args(a, b)
+      real, device :: a(*)
+      real, device :: b(*)
+    end function
+  end interface
+contains
+  ! Actual arguments of a function reference are not host reads of the data.
+  subroutine function_arguments(x, y, istat)
+    type(payload) :: x, y
+    integer :: istat
+    istat = two_device_args(x%d, y%d) ! ok
+    istat = two_device_args(x%d, x%e) ! ok
+  end subroutine
+
+  subroutine same_object(x, out)
+    type(payload) :: x
+    real :: out
+    out = x%d(1) + x%d(2) ! ok
+  end subroutine
+
+  subroutine managed_same_element(m, out)
+    type(payload), managed :: m(:)
+    real :: out
+    out = m(1)%d(1) + m(1)%d(2) ! ok
+  end subroutine
+
+  subroutine managed_two_elements(m, out)
+    type(payload), managed :: m(:)
+    real :: out
+    !ERROR: More than one reference to a CUDA object on the right hand side of the assignment
+    out = m(1)%d(1) + m(2)%d(1)
+  end subroutine
+
+  subroutine device_subscript(a, idx, out)
+    real, device :: a(:)
+    integer, device :: idx(:)
+    real :: out
+    !ERROR: More than one reference to a CUDA object on the right hand side of the assignment
+    out = a(idx(1))
+  end subroutine
+
+  subroutine host_subscript(a, idx, out)
+    real, device :: a(:)
+    integer :: idx(:)
+    real :: out
+    out = a(idx(1)) ! ok
+  end subroutine
+
+  subroutine two_payloads(x, y, out)
+    type(payload) :: x, y
+    real :: out
+    !ERROR: More than one reference to a CUDA object on the right hand side of the assignment
+    out = x%d(1) + y%d(2)
+  end subroutine
+
+  subroutine two_components(x, out)
+    type(payload) :: x
+    real :: out
+    !ERROR: More than one reference to a CUDA object on the right hand side of the assignment
+    out = x%d(1) + x%e(2)
+  end subroutine
+end module

@@ -13,7 +13,7 @@ define <4 x i16> @PR169205() {
 ; AVX-LABEL: PR169205:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,1,1,1,u,u,u,u]
 ; AVX-NEXT:    retq
   %avg = tail call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> zeroinitializer, <16 x i8> zeroinitializer)
   %shuffle24 = shufflevector <16 x i8> %avg, <16 x i8> zeroinitializer, <4 x i32> <i32 2, i32 4, i32 9, i32 9>

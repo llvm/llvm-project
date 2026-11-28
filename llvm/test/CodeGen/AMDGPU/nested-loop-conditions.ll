@@ -18,7 +18,7 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) captu
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
 ; GCN-NEXT:    ds_read_b64 v[0:1], v0
 ; GCN-NEXT:    s_mov_b64 s[0:1], -1
-; GCN-NEXT:    s_and_b64 vcc, exec, -1
+; GCN-NEXT:    s_mov_b64 vcc, exec
 ; GCN-NEXT:  .LBB0_1: ; %bb5
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_cmp_eq_u32 s2, 1
@@ -36,7 +36,7 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) captu
 ; GCN-NEXT:  ; %bb.5: ; %bb8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ds_read_b32 v0, v0
-; GCN-NEXT:    s_and_b64 vcc, exec, -1
+; GCN-NEXT:    s_mov_b64 vcc, exec
 ; GCN-NEXT:  .LBB0_6: ; %bb9
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_mov_b64 vcc, vcc
@@ -91,7 +91,6 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) captu
 ; IR:       [[BB23]]:
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP6]])
 ; IR-NEXT:    ret void
-;
 bb:
   %my.tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %my.tmp1 = getelementptr inbounds i64, ptr addrspace(3) %arg, i32 %my.tmp
@@ -268,7 +267,6 @@ define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) captures(none
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP7]])
 ; IR-NEXT:    store volatile i32 0, ptr addrspace(1) poison, align 4
 ; IR-NEXT:    ret void
-;
 bb:
   %my.tmp1134 = load volatile i32, ptr addrspace(1) poison
   %my.tmp1235 = icmp slt i32 %my.tmp1134, 9

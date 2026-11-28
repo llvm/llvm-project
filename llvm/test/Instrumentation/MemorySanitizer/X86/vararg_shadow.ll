@@ -573,7 +573,7 @@ define linkonce_odr dso_local void @_Z5test2IcEvT_iz(i8 noundef signext %t, i32 
 ; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], 87960930222080
 ; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP23]], ptr align 16 [[TMP24]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -632,7 +632,7 @@ define linkonce_odr dso_local void @_Z5test2IiEvT_iz(i32 noundef %t, i32 noundef
 ; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], 87960930222080
 ; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP23]], ptr align 16 [[TMP24]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -683,7 +683,7 @@ define linkonce_odr dso_local void @_Z5test2IfEvT_iz(float noundef %t, i32 nound
 ; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], 87960930222080
 ; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP23]], ptr align 16 [[TMP24]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -734,7 +734,7 @@ define linkonce_odr dso_local void @_Z5test2IdEvT_iz(double noundef %t, i32 noun
 ; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], 87960930222080
 ; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP23]], ptr align 16 [[TMP24]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -785,7 +785,7 @@ define linkonce_odr dso_local void @_Z5test2IeEvT_iz(x86_fp80 noundef %t, i32 no
 ; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], 87960930222080
 ; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP23]], ptr align 16 [[TMP24]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -836,7 +836,7 @@ define linkonce_odr dso_local void @_Z5test2I6IntIntEvT_iz(i64 %t.coerce, i32 no
 ; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], 87960930222080
 ; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP23]], ptr align 16 [[TMP24]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -887,7 +887,7 @@ define linkonce_odr dso_local void @_Z5test2I10Int64Int64EvT_iz(i64 %t.coerce0, 
 ; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], 87960930222080
 ; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP23]], ptr align 16 [[TMP24]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -938,7 +938,7 @@ define linkonce_odr dso_local void @_Z5test2I12DoubleDoubleEvT_iz(double %t.coer
 ; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], 87960930222080
 ; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP23]], ptr align 16 [[TMP24]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -989,7 +989,7 @@ define linkonce_odr dso_local void @_Z5test2I7Double4EvT_iz(ptr noundef byval(%s
 ; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], 87960930222080
 ; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP23]], ptr align 16 [[TMP24]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -1040,7 +1040,7 @@ define linkonce_odr dso_local void @_Z5test2I11DoubleFloatEvT_iz(double %t.coerc
 ; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], 87960930222080
 ; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP23]], ptr align 16 [[TMP24]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -1091,7 +1091,7 @@ define linkonce_odr dso_local void @_Z5test2I11LongDouble2EvT_iz(ptr noundef byv
 ; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], 87960930222080
 ; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP23]], ptr align 16 [[TMP24]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])
@@ -1142,7 +1142,7 @@ define linkonce_odr dso_local void @_Z5test2I11LongDouble4EvT_iz(ptr noundef byv
 ; CHECK-NEXT:    [[TMP21:%.*]] = ptrtoint ptr [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = xor i64 [[TMP21]], 87960930222080
 ; CHECK-NEXT:    [[TMP23:%.*]] = inttoptr i64 [[TMP22]] to ptr
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP23]], ptr align 16 [[TMP24]], i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    store i64 0, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @_Z3usePv(ptr noundef nonnull [[ARGS]])

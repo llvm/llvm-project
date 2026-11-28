@@ -10,7 +10,6 @@
 #define MLIR_DIALECT_UB_IR_OPS_H
 
 #include "mlir/IR/OpImplementation.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/Dialect/UB/IR/UBOpsInterfaces.h.inc"
 

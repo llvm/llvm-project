@@ -3,12 +3,11 @@
 ---
 # icmp (x, 1) && icmp (x, 2) -> x
 name:            test_icmp_and_icmp
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: test_icmp_and_icmp
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: %one:_(i64) = G_CONSTANT i64 1
@@ -29,12 +28,11 @@ body:             |
 ---
 # multi use icmp (x, 1) && icmp (x, 2) -> x
 name:            multi_use_test_icmp_and_icmp
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: multi_use_test_icmp_and_icmp
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: %one:_(i64) = G_CONSTANT i64 1
@@ -62,12 +60,11 @@ body:             |
 ---
 # icmp (x, 1) && icmp (x, add(x, 2)) -> x
 name:            test_icmp_and_icmp_with_add
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: test_icmp_and_icmp_with_add
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: %one:_(i64) = G_CONSTANT i64 1
@@ -89,12 +86,11 @@ body:             |
 ---
 # icmp (x, 1) && icmp (x, add(x, 2000)) -> x
 name:            test_icmp_or_icmp_with_add_2000
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: test_icmp_or_icmp_with_add_2000
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: %one:_(i64) = G_CONSTANT i64 -100
@@ -115,12 +111,11 @@ body:             |
 ---
 # icmp (x, -100) || icmp (x, 2000) -> x
 name:            test_icmp_or_icmp
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: test_icmp_or_icmp
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: %two:_(i64) = G_CONSTANT i64 2000
@@ -141,12 +136,11 @@ body:             |
 ---
 # offset icmp (x, -100) || icmp (x, 2000) -> x
 name:            test_icmp_or_icmp_offset
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: test_icmp_or_icmp_offset
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -2001
@@ -169,12 +163,11 @@ body:             |
 ---
 # icmp (x, add(x, 9) || icmp (x, add(x, 2)) -> x
 name:            test_icmp_or_icmp_with_add_and_add
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: test_icmp_or_icmp_with_add_and_add
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -204,7 +197,6 @@ body:             |
 # erase G_AND
 # x > 9 && x < 2 => false
 name:            test_icmp_and_icmp_9_2
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -225,12 +217,11 @@ body:             |
 ---
 # icmp (x, v1) && icmp (x, v2)) -> x
 name:            test_icmp_and_icmp_with_vectors
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
     ; CHECK-LABEL: name: test_icmp_and_icmp_with_vectors
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
@@ -272,7 +263,6 @@ body:             |
 ---
 # fcmp (x, y) || fcmp (x, y) -> fcmp(x, y)
 name:            test_fcmp_or_fcmp_with_x_y
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -295,7 +285,6 @@ body:             |
 ---
 # fcmp (5, y) || fcmp (y, 5) -> fcmp(x, y)
 name:            test_fcmp_or_fcmp_with_5_y
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -319,7 +308,6 @@ body:             |
 ---
 # fcmp (x, y) || fcmp (y, x) -> fcmp(x, y)
 name:            test_fcmp_or_fcmp_with_anti
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -342,7 +330,6 @@ body:             |
 ---
 # fcmp (x, y) && fcmp (x, y) -> fcmp(x, y)
 name:            test_fcmp_and_fcmp_with_x_y
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -365,7 +352,6 @@ body:             |
 ---
 # fcmp (x, y) && fcmp (x, y) -> fcmp(x, y)
 name:            test_fcmp_and_fcmp_with_x_y_multi_use
-tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -394,12 +380,11 @@ body:             |
 ---
 # fcmp (x, y) && fcmp (x, y) -> fcmp(x, y)
 name:            test_fcmp_and_fcmp_with_vectors
-tracksRegLiveness: false
 body:             |
   bb.1:
-    liveins: $x0, $x1
+    liveins: $x0, $x1, $x2, $x3
     ; CHECK-LABEL: name: test_fcmp_and_fcmp_with_vectors
-    ; CHECK: liveins: $x0, $x1
+    ; CHECK: liveins: $x0, $x1, $x2, $x3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
     ; CHECK-NEXT: %zext:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C]](i64)
@@ -418,7 +403,6 @@ body:             |
 ...
 ---
 name:            test_dont_combine_pointers
-tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: test_dont_combine_pointers
   ; CHECK: bb.0:

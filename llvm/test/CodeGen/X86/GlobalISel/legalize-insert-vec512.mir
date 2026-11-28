@@ -15,10 +15,6 @@ name:            test_insert_128
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $ymm1
@@ -29,9 +25,9 @@ body:             |
     ; ALL: [[INSERT:%[0-9]+]]:_(<16 x s32>) = G_INSERT [[COPY]], [[COPY1]](<4 x s32>), 0
     ; ALL: $zmm0 = COPY [[INSERT]](<16 x s32>)
     ; ALL: RET 0, implicit $ymm0
-    %0(<16 x s32>) = COPY $zmm0
-    %1(<4 x s32>) = COPY $xmm1
-    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 0
+    %0:_(<16 x s32>) = COPY $zmm0
+    %1:_(<4 x s32>) = COPY $xmm1
+    %2:_(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 0
     $zmm0 = COPY %2(<16 x s32>)
     RET 0, implicit $ymm0
 
@@ -41,10 +37,6 @@ name:            test_insert_256
 alignment:       16
 legalized:       false
 regBankSelected: false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $ymm1
@@ -55,9 +47,9 @@ body:             |
     ; ALL: [[INSERT:%[0-9]+]]:_(<16 x s32>) = G_INSERT [[COPY]], [[COPY1]](<8 x s32>), 0
     ; ALL: $zmm0 = COPY [[INSERT]](<16 x s32>)
     ; ALL: RET 0, implicit $ymm0
-    %0(<16 x s32>) = COPY $zmm0
-    %1(<8 x s32>) = COPY $ymm1
-    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 0
+    %0:_(<16 x s32>) = COPY $zmm0
+    %1:_(<8 x s32>) = COPY $ymm1
+    %2:_(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 0
     $zmm0 = COPY %2(<16 x s32>)
     RET 0, implicit $ymm0
 

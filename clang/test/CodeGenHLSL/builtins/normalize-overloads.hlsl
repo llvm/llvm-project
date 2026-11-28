@@ -9,6 +9,8 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple spirv-unknown-vulkan-library %s  \
 // RUN:   -verify -verify-ignore-unexpected=note
 
+using namespace hlsl;
+
 // CHECK-LABEL: test_normalize_double
 // CHECK: [[CONVI:%.*]] = fptrunc {{.*}} double %{{.*}} to float
 // CHECK: [[ABS:%.*]] = call {{.*}} float @llvm.fabs.f32(float %{{.*}})

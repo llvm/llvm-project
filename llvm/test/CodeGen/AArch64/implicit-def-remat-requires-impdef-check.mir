@@ -21,7 +21,6 @@
 
 ---
 name:            inst_stores_to_dead_spill_implicit_def_impdef
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
   hasCalls:        true
@@ -59,7 +58,6 @@ body:             |
 # IMPLICIT_DEF
 ---
 name:            inst_stores_to_dead_spill_movimm_impdef
-tracksRegLiveness: true
 frameInfo:
   adjustsStack:    true
   hasCalls:        true

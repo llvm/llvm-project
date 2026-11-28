@@ -13,9 +13,6 @@
 
 namespace llvm {
 class LLVM_ABI MCAsmInfoWasm : public MCAsmInfo {
-  void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
-                            raw_ostream &) const final;
-
 protected:
   MCAsmInfoWasm(const MCTargetOptions &Options);
 };

@@ -150,35 +150,33 @@ func.func @complex_log_exp() -> complex<f32> {
 // CHECK-SAME: (%[[A:.*]]: complex<f32>)
 func.func @complex_exp_log(%a: complex<f32>) -> complex<f32> {
   // CHECK-NEXT: return %[[A]] : complex<f32>
-  %log = complex.log %a fastmath<reassoc,nnan,ninf,nsz> : complex<f32>
+  %log = complex.log %a fastmath<reassoc,nnan,ninf> : complex<f32>
   %exp = complex.exp %log fastmath<reassoc> : complex<f32>
   return %exp : complex<f32>
 }
 
-// CHECK-LABEL: func @complex_exp_log_without_fast_math
+// CHECK-LABEL: func @complex_exp_log_without_exp_reassoc
 // CHECK-SAME: (%[[A:.*]]: complex<f32>)
-func.func @complex_exp_log_without_fast_math(%a: complex<f32>) -> complex<f32> {
-  // CHECK: %[[LOG:.*]] = complex.log %[[A]] fastmath<reassoc,nnan,ninf,nsz> : complex<f32>
+func.func @complex_exp_log_without_exp_reassoc(%a: complex<f32>) -> complex<f32> {
+  // CHECK: %[[LOG:.*]] = complex.log %[[A]] fastmath<reassoc,nnan,ninf> : complex<f32>
   // CHECK: %[[EXP:.*]] = complex.exp %[[LOG]] : complex<f32>
   // CHECK-NEXT: return %[[EXP]] : complex<f32>
-  %log = complex.log %a fastmath<reassoc,nnan,ninf,nsz> : complex<f32>
+  %log = complex.log %a fastmath<reassoc,nnan,ninf> : complex<f32>
   %exp = complex.exp %log : complex<f32>
   return %exp : complex<f32>
 }
 
 // Each log is missing one of the flags the fold needs.
 // CHECK-LABEL: func @complex_exp_log_without_log_flags
-// CHECK-COUNT-4: complex.exp %{{.*}} fastmath<reassoc> : complex<f32>
-func.func @complex_exp_log_without_log_flags(%a: complex<f32>) -> (complex<f32>, complex<f32>, complex<f32>, complex<f32>) {
-  %log0 = complex.log %a fastmath<nnan,ninf,nsz> : complex<f32>
+// CHECK-COUNT-3: complex.exp %{{.*}} fastmath<reassoc> : complex<f32>
+func.func @complex_exp_log_without_log_flags(%a: complex<f32>) -> (complex<f32>, complex<f32>, complex<f32>) {
+  %log0 = complex.log %a fastmath<nnan,ninf> : complex<f32>
   %exp0 = complex.exp %log0 fastmath<reassoc> : complex<f32>
-  %log1 = complex.log %a fastmath<reassoc,ninf,nsz> : complex<f32>
+  %log1 = complex.log %a fastmath<reassoc,ninf> : complex<f32>
   %exp1 = complex.exp %log1 fastmath<reassoc> : complex<f32>
-  %log2 = complex.log %a fastmath<reassoc,nnan,nsz> : complex<f32>
+  %log2 = complex.log %a fastmath<reassoc,nnan> : complex<f32>
   %exp2 = complex.exp %log2 fastmath<reassoc> : complex<f32>
-  %log3 = complex.log %a fastmath<reassoc,nnan,ninf> : complex<f32>
-  %exp3 = complex.exp %log3 fastmath<reassoc> : complex<f32>
-  return %exp0, %exp1, %exp2, %exp3 : complex<f32>, complex<f32>, complex<f32>, complex<f32>
+  return %exp0, %exp1, %exp2 : complex<f32>, complex<f32>, complex<f32>
 }
 
 // CHECK-LABEL: func @complex_conj_conj

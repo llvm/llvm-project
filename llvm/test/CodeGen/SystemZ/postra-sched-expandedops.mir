@@ -56,7 +56,6 @@
 ---
 name:            LearnStoreTT
 alignment:       16
-tracksRegLiveness: true
 liveins:         
   - { reg: '$r2d' }
   - { reg: '$r3d' }

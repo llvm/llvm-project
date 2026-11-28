@@ -589,7 +589,7 @@ llvm::raw_ostream &ArrayConstructor<Type<TypeCategory::Character>>::AsFortran(
   return o << ']';
 }
 
-llvm::raw_ostream &ArrayConstructor<SomeDerived>::AsFortran(
+llvm::raw_ostream &ArrayConstructor<Type<TypeCategory::Derived>>::AsFortran(
     llvm::raw_ostream &o) const {
   o << '[' << GetType().AsFortran() << "::";
   EmitArray(o, *this);
@@ -734,7 +734,7 @@ std::string DynamicType::AsFortran(std::string &&charLenExpr) const {
   }
 }
 
-std::string SomeDerived::AsFortran() const {
+std::string Type<TypeCategory::Derived>::AsFortran() const {
   if (IsUnlimitedPolymorphic()) {
     return "CLASS(*)";
   } else {
@@ -805,7 +805,8 @@ llvm::raw_ostream &CoarrayRef::AsFortran(llvm::raw_ostream &o) const {
   }
   if (team_) {
     EmitVar(o << separator, team_,
-        std::holds_alternative<Expr<SomeInteger>>(team_->value().u)
+        std::holds_alternative<Expr<Type<TypeCategory::Integer>>>(
+            team_->value().u)
             ? "TEAM_NUMBER="
             : "TEAM=");
   }

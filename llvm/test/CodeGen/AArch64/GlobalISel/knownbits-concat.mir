@@ -3,9 +3,9 @@
 
 ---
 name: no_knownbits
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $h0, $h1
 
   ; CHECK-LABEL: name: @no_knownbits
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -17,9 +17,9 @@ body: |
 ...
 ---
 name: zext_concat
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $h0, $h1
 
   ; CHECK-LABEL: name: @zext_concat
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -36,9 +36,9 @@ body: |
 ---
 
 name: sext_concat
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $h0, $h1
 
   ; CHECK-LABEL: name: @sext_concat
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -55,9 +55,9 @@ body: |
 ---
 
 name: mixed_ext
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $h0, $h1
 
   ; CHECK-LABEL: name: @mixed_ext
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0

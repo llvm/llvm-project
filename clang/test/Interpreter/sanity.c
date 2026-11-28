@@ -6,6 +6,7 @@
 int TestVar = 12;
 // CHECK: Dumping TestVar:
 // CHECK-NEXT: VarDecl [[var_ptr:0x[0-9a-f]+]] <{{.*}} TestVar 'int' cinit
+// CHECK-NEXT:   value: Int 12
 // CHECK-NEXT:   IntegerLiteral {{.*}} 'int' 12
 
 void TestFunc() { ++TestVar; }

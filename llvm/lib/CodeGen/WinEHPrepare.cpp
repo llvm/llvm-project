@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/WinEHPrepare.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -31,7 +32,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -43,17 +43,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "win-eh-prepare"
-
-static cl::opt<bool> DisableDemotion(
-    "disable-demotion", cl::Hidden,
-    cl::desc(
-        "Clone multicolor basic blocks but do not demote cross scopes"),
-    cl::init(false));
-
-static cl::opt<bool> DisableCleanups(
-    "disable-cleanups", cl::Hidden,
-    cl::desc("Do not remove implausible terminators or other similar cleanups"),
-    cl::init(false));
 
 static bool isMalformedCatchpad(const CatchPadInst *CPI,
                                 EHPersonality Personality) {
@@ -113,6 +102,7 @@ namespace {
 
 class WinEHPrepareImpl {
 public:
+  explicit WinEHPrepareImpl(const CodeGenOptions &Opts) : Opts(Opts) {}
   bool runOnFunction(Function &Fn);
 
 private:
@@ -132,6 +122,8 @@ private:
   bool removeImplausibleInstructions(Function &F);
   bool cleanupPreparedFunclets(Function &F);
   void verifyPreparedFunclets(Function &F);
+
+  const CodeGenOptions &Opts;
 
   // True for Wasm C++ personalities.
   bool DemoteCatchSwitchPHIOnly = false;
@@ -155,7 +147,7 @@ public:
   }
 
   bool runOnFunction(Function &Fn) override {
-    return WinEHPrepareImpl().runOnFunction(Fn);
+    return WinEHPrepareImpl(getCodeGenOptions(Fn)).runOnFunction(Fn);
   }
 };
 
@@ -163,7 +155,7 @@ public:
 
 PreservedAnalyses WinEHPreparePass::run(Function &F,
                                         FunctionAnalysisManager &) {
-  bool Changed = WinEHPrepareImpl().runOnFunction(F);
+  bool Changed = WinEHPrepareImpl(getCodeGenOptions(F)).runOnFunction(F);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
@@ -469,8 +461,7 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
     for (const auto *CatchPad : Handlers) {
       FuncInfo.FuncletBaseStateMap[CatchPad] = CatchLow;
       FuncInfo.EHPadStateMap[CatchPad] = CatchLow;
-      for (const User *U : CatchPad->users()) {
-        const auto *UserI = cast<Instruction>(U);
+      for (const Instruction *UserI : CatchPad->users()) {
         if (auto *InnerCatchSwitch = dyn_cast<CatchSwitchInst>(UserI)) {
           BasicBlock *UnwindDest = InnerCatchSwitch->getUnwindDest();
           if (!UnwindDest || UnwindDest == CatchSwitch->getUnwindDest())
@@ -518,8 +509,7 @@ static void calculateCXXStateNumbers(WinEHFuncInfo &FuncInfo,
                                  CleanupState);
       }
     }
-    for (const User *U : CleanupPad->users()) {
-      const auto *UserI = cast<Instruction>(U);
+    for (const Instruction *UserI : CleanupPad->users()) {
       if (UserI->isEHPad())
         report_fatal_error("Cleanup funclets for the MSVC++ personality cannot "
                            "contain exceptional actions");
@@ -591,8 +581,7 @@ static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
 
     // Everything in the __except block unwinds to ParentState, just like code
     // outside the __try.
-    for (const User *U : CatchPad->users()) {
-      const auto *UserI = cast<Instruction>(U);
+    for (const Instruction *UserI : CatchPad->users()) {
       if (auto *InnerCatchSwitch = dyn_cast<CatchSwitchInst>(UserI)) {
         BasicBlock *UnwindDest = InnerCatchSwitch->getUnwindDest();
         if (!UnwindDest || UnwindDest == CatchSwitch->getUnwindDest())
@@ -625,8 +614,7 @@ static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
                getEHPadFromPredecessor(PredBlock, CleanupPad->getParentPad())))
         calculateSEHStateNumbers(FuncInfo, &*PredBlock->getFirstNonPHIIt(),
                                  CleanupState);
-    for (const User *U : CleanupPad->users()) {
-      const auto *UserI = cast<Instruction>(U);
+    for (const Instruction *UserI : CleanupPad->users()) {
       if (UserI->isEHPad())
         report_fatal_error("Cleanup funclets for the SEH personality cannot "
                            "contain exceptional actions");
@@ -771,10 +759,9 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
       int CleanupState = addClrEHHandler(FuncInfo, HandlerParentState, -1,
                                          HandlerType, 0, Pad->getParent());
       // Queue any child EH pads on the worklist.
-      for (const User *U : Cleanup->users())
-        if (const auto *I = dyn_cast<Instruction>(U))
-          if (I->isEHPad())
-            Worklist.emplace_back(I, CleanupState);
+      for (const Instruction *I : Cleanup->users())
+        if (I->isEHPad())
+          Worklist.emplace_back(I, CleanupState);
       // Remember this pad's state.
       FuncInfo.EHPadStateMap[Cleanup] = CleanupState;
     } else {
@@ -795,10 +782,9 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
             addClrEHHandler(FuncInfo, HandlerParentState, FollowerState,
                             ClrHandlerType::Catch, TypeToken, CatchBlock);
         // Queue any child EH pads on the worklist.
-        for (const User *U : Catch->users())
-          if (const auto *I = dyn_cast<Instruction>(U))
-            if (I->isEHPad())
-              Worklist.emplace_back(I, CatchState);
+        for (const Instruction *I : Catch->users())
+          if (I->isEHPad())
+            Worklist.emplace_back(I, CatchState);
         // Remember this catch's state.
         FuncInfo.EHPadStateMap[Catch] = CatchState;
         FollowerState = CatchState;
@@ -1340,7 +1326,8 @@ void WinEHPrepareImpl::verifyPreparedFunclets(Function &F) {
       report_fatal_error("Uncolored BB!");
     if (NumColors > 1)
       report_fatal_error("Multicolor BB!");
-    assert((DisableDemotion || !(BB.isEHPad() && isa<PHINode>(BB.begin()))) &&
+    assert((!Opts.win_eh_prepare_demotion ||
+            !(BB.isEHPad() && isa<PHINode>(BB.begin()))) &&
            "EH Pad still has a PHI!");
   }
 }
@@ -1357,10 +1344,10 @@ bool WinEHPrepareImpl::prepareExplicitEH(Function &F) {
 
   Changed |= cloneCommonBlocks(F);
 
-  if (!DisableDemotion)
+  if (Opts.win_eh_prepare_demotion)
     Changed |= demotePHIsOnFunclets(F, DemoteCatchSwitchPHIOnly);
 
-  if (!DisableCleanups) {
+  if (Opts.win_eh_prepare_cleanups) {
     assert(!verifyFunction(F, &dbgs()));
     Changed |= removeImplausibleInstructions(F);
 

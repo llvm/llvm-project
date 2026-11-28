@@ -42,16 +42,10 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-pre-ra-optimizations"
-
-static cl::opt<bool>
-    EnableAntiHints("amdgpu-anti-hints", cl::Hidden,
-                    cl::desc("Enable register allocation anti-hints."),
-                    cl::init(true));
 
 namespace {
 
@@ -314,7 +308,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
 
   // Anti-hints only steer register allocation, so they do not count as a
   // modification of the function.
-  if (EnableAntiHints) {
+  if (ST.getCLOpts().anti_hints) {
     SchedModel.init(&ST);
     AMDGPU::HazardContext HCtx{TII, TRI, MRI, LIS, &ST, &SchedModel};
     AMDGPU::applyAntiHintRules(MF, HCtx);

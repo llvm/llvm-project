@@ -13,7 +13,7 @@
 #include "CIRGenFunction.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/Value.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -133,9 +133,9 @@ static mlir::Value emitAMDGPUAtomicRMW(CIRGenFunction &cgf,
     ptr = ptr.withElementType(builder, bf16VecTy);
   }
 
-  auto rmw = cir::AtomicFetchOp::create(builder, loc, ptr.emitRawPointer(), val,
-                                        binOp, order, scope, isVolatile,
-                                        /*fetch_first=*/true);
+  auto rmw = cir::AtomicFetchOp::create(
+      builder, loc, ptr.emitRawPointer(), val, binOp, order, scope,
+      /*alignment=*/nullptr, isVolatile, /*fetch_first=*/true);
   rmw->setAttr(cir::CIRDialect::getAMDGPURawAtomicAttrName(),
                builder.getUnitAttr());
   return builder.createBitcast(loc, rmw->getResult(0), origTy);
@@ -626,10 +626,8 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.exp2").getValue();
   }
   case AMDGPU::BI__builtin_amdgcn_log_clampf: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.log.clamp")
+        .getValue();
   }
   case AMDGPU::BI__builtin_amdgcn_ldexp:
   case AMDGPU::BI__builtin_amdgcn_ldexpf:
@@ -657,22 +655,14 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
   case AMDGPU::BI__builtin_amdgcn_frexp_exp:
   case AMDGPU::BI__builtin_amdgcn_frexp_expf:
-  case AMDGPU::BI__builtin_amdgcn_frexp_exph: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_frexp_exph:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.frexp.exp",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_fract:
   case AMDGPU::BI__builtin_amdgcn_fractf:
   case AMDGPU::BI__builtin_amdgcn_fracth:
     return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.fract").getValue();
-  case AMDGPU::BI__builtin_amdgcn_lerp: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
   case AMDGPU::BI__builtin_amdgcn_ubfe:
     return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.ubfe").getValue();
   case AMDGPU::BI__builtin_amdgcn_sbfe:
@@ -762,10 +752,16 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.fmed3").getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_append:
   case AMDGPU::BI__builtin_amdgcn_ds_consume: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    llvm::StringRef intrinsicName =
+        builtinId == AMDGPU::BI__builtin_amdgcn_ds_append ? "amdgcn.ds.append"
+                                                          : "amdgcn.ds.consume";
+
+    mlir::Value ptr = emitScalarExpr(expr->getArg(0));
+    mlir::Value isVolatile = builder.getFalse(loc);
+    return builder.emitIntrinsicCallOp(loc, intrinsicName,
+                                       convertType(expr->getType()),
+                                       mlir::ValueRange{ptr, isVolatile});
   }
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
@@ -1314,10 +1310,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     std::optional<std::pair<llvm::AtomicScope, bool>> parsed;
     if (std::optional<std::string> name =
             expr->getArg(1)->tryEvaluateString(getContext())) {
-      parsed = llvm::parseAtomicScopeIRString(
-          llvm::Triple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
-                       llvm::Triple::AMD, llvm::Triple::AMDHSA),
-          *name);
+      parsed = llvm::parseAMDGPUAtomicScopeIRString(*name);
       if (!parsed && triple.isSPIRV())
         parsed = llvm::parseAtomicScopeIRString(triple, *name);
     }

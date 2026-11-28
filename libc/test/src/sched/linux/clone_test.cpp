@@ -18,15 +18,13 @@
 #include "hdr/sys_wait_macros.h"
 #include "hdr/types/pid_t.h"
 #include "hdr/types/size_t.h"
-#include "src/__support/OSUtil/syscall.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/gettid.h"
 #include "src/sched/clone.h"
 #include "src/sys/wait/waitpid.h"
 #include "src/unistd/gettid.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/syscall.h>
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcSchedCloneTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
@@ -52,7 +50,7 @@ struct TidArgs {
 static int check_tid_child(void *arg) {
   auto *args = reinterpret_cast<TidArgs *>(arg);
   pid_t cached = LIBC_NAMESPACE::gettid();
-  pid_t sys = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid);
+  pid_t sys = LIBC_NAMESPACE::linux_syscalls::gettid();
   if (args) {
     args->cached_tid = cached;
     args->sys_tid = sys;

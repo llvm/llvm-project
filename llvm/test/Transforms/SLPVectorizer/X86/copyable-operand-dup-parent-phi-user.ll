@@ -37,12 +37,15 @@ define void @k() {
 ; CHECK-NEXT:    [[P_2:%.*]] = phi float [ [[TMP13]], %[[S]] ], [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP17:%.*]] = phi <4 x float> [ [[TMP12]], %[[S]] ], [ [[TMP2]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = fadd <4 x float> [[TMP17]], <float 0.000000e+00, float 0.000000e+00, float -0.000000e+00, float 0.000000e+00>
-; CHECK-NEXT:    [[TMP19:%.*]] = fadd <4 x float> [[TMP18]], <float 0.000000e+00, float 0.000000e+00, float -0.000000e+00, float 0.000000e+00>
-; CHECK-NEXT:    [[TMP20]] = fadd <4 x float> [[TMP19]], <float 0.000000e+00, float 0.000000e+00, float -0.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x float> [[TMP18]], <4 x float> [[TMP17]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP23:%.*]] = fadd <4 x float> [[TMP19]], <float 0.000000e+00, float 0.000000e+00, float -0.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x float> [[TMP23]], <4 x float> [[TMP19]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP25:%.*]] = fadd <4 x float> [[TMP21]], <float 0.000000e+00, float 0.000000e+00, float -0.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    [[TMP20]] = shufflevector <4 x float> [[TMP25]], <4 x float> [[TMP21]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
 ; CHECK-NEXT:    br i1 false, label %[[U]], label %[[T]]
 ; CHECK:       [[U]]:
 ; CHECK-NEXT:    [[P_3:%.*]] = phi float [ [[TMP13]], %[[S]] ], [ [[P_2]], %[[V]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = phi <4 x float> [ [[TMP16]], %[[S]] ], [ [[TMP20]], %[[V]] ]
+; CHECK-NEXT:    [[TMP24:%.*]] = phi <4 x float> [ [[TMP16]], %[[S]] ], [ [[TMP20]], %[[V]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

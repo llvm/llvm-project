@@ -64,13 +64,12 @@ inline constexpr bool __uses_allocator_constraints = __is_cv_std_pair<_Tp> && !_
 } // namespace __uses_allocator_detail
 
 template <class _Type, class _Alloc, class... _Args>
-_LIBCPP_HIDE_FROM_ABI constexpr _Type __make_obj_using_allocator(const _Alloc& __alloc, _Args&&... __args);
+constexpr _Type __make_obj_using_allocator(const _Alloc& __alloc, _Args&&... __args);
 
 template <class _Pair>
 struct __uses_allocator_construction_args<_Pair, __enable_if_t<__is_cv_std_pair<_Pair>>> {
   template <class _Alloc, class _Tuple1, class _Tuple2>
-  static _LIBCPP_HIDE_FROM_ABI constexpr auto
-  __apply(const _Alloc& __alloc, piecewise_construct_t, _Tuple1&& __x, _Tuple2&& __y) noexcept {
+  static constexpr auto __apply(const _Alloc& __alloc, piecewise_construct_t, _Tuple1&& __x, _Tuple2&& __y) noexcept {
     return std::make_tuple(
         piecewise_construct,
         std::apply(
@@ -88,12 +87,12 @@ struct __uses_allocator_construction_args<_Pair, __enable_if_t<__is_cv_std_pair<
   }
 
   template <class _Alloc>
-  static _LIBCPP_HIDE_FROM_ABI constexpr auto __apply(const _Alloc& __alloc) noexcept {
+  static constexpr auto __apply(const _Alloc& __alloc) noexcept {
     return __uses_allocator_construction_args<_Pair>::__apply(__alloc, piecewise_construct, tuple<>{}, tuple<>{});
   }
 
   template <class _Alloc, class _Up, class _Vp>
-  static _LIBCPP_HIDE_FROM_ABI constexpr auto __apply(const _Alloc& __alloc, _Up&& __u, _Vp&& __v) noexcept {
+  static constexpr auto __apply(const _Alloc& __alloc, _Up&& __u, _Vp&& __v) noexcept {
     return __uses_allocator_construction_args<_Pair>::__apply(
         __alloc,
         piecewise_construct,
@@ -103,20 +102,20 @@ struct __uses_allocator_construction_args<_Pair, __enable_if_t<__is_cv_std_pair<
 
 #  if _LIBCPP_STD_VER >= 23
   template <class _Alloc, class _Up, class _Vp>
-  static _LIBCPP_HIDE_FROM_ABI constexpr auto __apply(const _Alloc& __alloc, pair<_Up, _Vp>& __pair) noexcept {
+  static constexpr auto __apply(const _Alloc& __alloc, pair<_Up, _Vp>& __pair) noexcept {
     return __uses_allocator_construction_args<_Pair>::__apply(
         __alloc, piecewise_construct, std::forward_as_tuple(__pair.first), std::forward_as_tuple(__pair.second));
   }
 #  endif
 
   template <class _Alloc, class _Up, class _Vp>
-  static _LIBCPP_HIDE_FROM_ABI constexpr auto __apply(const _Alloc& __alloc, const pair<_Up, _Vp>& __pair) noexcept {
+  static constexpr auto __apply(const _Alloc& __alloc, const pair<_Up, _Vp>& __pair) noexcept {
     return __uses_allocator_construction_args<_Pair>::__apply(
         __alloc, piecewise_construct, std::forward_as_tuple(__pair.first), std::forward_as_tuple(__pair.second));
   }
 
   template <class _Alloc, class _Up, class _Vp>
-  static _LIBCPP_HIDE_FROM_ABI constexpr auto __apply(const _Alloc& __alloc, pair<_Up, _Vp>&& __pair) noexcept {
+  static constexpr auto __apply(const _Alloc& __alloc, pair<_Up, _Vp>&& __pair) noexcept {
     return __uses_allocator_construction_args<_Pair>::__apply(
         __alloc,
         piecewise_construct,
@@ -126,7 +125,7 @@ struct __uses_allocator_construction_args<_Pair, __enable_if_t<__is_cv_std_pair<
 
 #  if _LIBCPP_STD_VER >= 23
   template <class _Alloc, class _Up, class _Vp>
-  static _LIBCPP_HIDE_FROM_ABI constexpr auto __apply(const _Alloc& __alloc, const pair<_Up, _Vp>&& __pair) noexcept {
+  static constexpr auto __apply(const _Alloc& __alloc, const pair<_Up, _Vp>&& __pair) noexcept {
     return __uses_allocator_construction_args<_Pair>::__apply(
         __alloc,
         piecewise_construct,
@@ -135,7 +134,7 @@ struct __uses_allocator_construction_args<_Pair, __enable_if_t<__is_cv_std_pair<
   }
 
   template < class _Alloc, __pair_like_no_subrange _PairLike>
-  static _LIBCPP_HIDE_FROM_ABI constexpr auto __apply(const _Alloc& __alloc, _PairLike&& __p) noexcept {
+  static constexpr auto __apply(const _Alloc& __alloc, _PairLike&& __p) noexcept {
     return __uses_allocator_construction_args<_Pair>::__apply(
         __alloc,
         piecewise_construct,
@@ -147,7 +146,7 @@ struct __uses_allocator_construction_args<_Pair, __enable_if_t<__is_cv_std_pair<
   template <class _Alloc,
             class _Type,
             __enable_if_t<__uses_allocator_detail::__uses_allocator_constraints<_Pair, _Type>, int> = 0>
-  static _LIBCPP_HIDE_FROM_ABI constexpr auto __apply(const _Alloc& __alloc, _Type&& __value) noexcept {
+  static constexpr auto __apply(const _Alloc& __alloc, _Type&& __value) noexcept {
     struct __pair_constructor {
       using _PairMutable = remove_cv_t<_Pair>;
 
@@ -172,7 +171,7 @@ struct __uses_allocator_construction_args<_Pair, __enable_if_t<__is_cv_std_pair<
 template <class _Type>
 struct __uses_allocator_construction_args<_Type, __enable_if_t<!__is_cv_std_pair<_Type>>> {
   template <class _Alloc, class... _Args>
-  static _LIBCPP_HIDE_FROM_ABI constexpr auto __apply(const _Alloc& __alloc, _Args&&... __args) noexcept {
+  static constexpr auto __apply(const _Alloc& __alloc, _Args&&... __args) noexcept {
     if constexpr (!uses_allocator_v<remove_cv_t<_Type>, _Alloc> && is_constructible_v<_Type, _Args...>) {
       return std::forward_as_tuple(std::forward<_Args>(__args)...);
     } else if constexpr (uses_allocator_v<remove_cv_t<_Type>, _Alloc> &&
@@ -189,14 +188,13 @@ struct __uses_allocator_construction_args<_Type, __enable_if_t<!__is_cv_std_pair
 };
 
 template <class _Type, class _Alloc, class... _Args>
-_LIBCPP_HIDE_FROM_ABI constexpr _Type __make_obj_using_allocator(const _Alloc& __alloc, _Args&&... __args) {
+constexpr _Type __make_obj_using_allocator(const _Alloc& __alloc, _Args&&... __args) {
   return std::make_from_tuple<_Type>(
       __uses_allocator_construction_args<_Type>::__apply(__alloc, std::forward<_Args>(__args)...));
 }
 
 template <class _Type, class _Alloc, class... _Args>
-_LIBCPP_HIDE_FROM_ABI constexpr _Type*
-__uninitialized_construct_using_allocator(_Type* __ptr, const _Alloc& __alloc, _Args&&... __args) {
+constexpr _Type* __uninitialized_construct_using_allocator(_Type* __ptr, const _Alloc& __alloc, _Args&&... __args) {
   return std::apply(
       [&__ptr](auto&&... __xs) { return std::__construct_at(__ptr, std::forward<decltype(__xs)>(__xs)...); },
       __uses_allocator_construction_args<_Type>::__apply(__alloc, std::forward<_Args>(__args)...));
@@ -205,20 +203,19 @@ __uninitialized_construct_using_allocator(_Type* __ptr, const _Alloc& __alloc, _
 #  if _LIBCPP_STD_VER >= 20
 
 template <class _Type, class _Alloc, class... _Args>
-_LIBCPP_HIDE_FROM_ABI constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, _Args&&... __args) noexcept
+constexpr auto uses_allocator_construction_args(const _Alloc& __alloc, _Args&&... __args) noexcept
     -> decltype(__uses_allocator_construction_args<_Type>::__apply(__alloc, std::forward<_Args>(__args)...)) {
   return /*--*/ __uses_allocator_construction_args<_Type>::__apply(__alloc, std::forward<_Args>(__args)...);
 }
 
 template <class _Type, class _Alloc, class... _Args>
-_LIBCPP_HIDE_FROM_ABI constexpr auto make_obj_using_allocator(const _Alloc& __alloc, _Args&&... __args)
+constexpr auto make_obj_using_allocator(const _Alloc& __alloc, _Args&&... __args)
     -> decltype(std::__make_obj_using_allocator<_Type>(__alloc, std::forward<_Args>(__args)...)) {
   return /*--*/ std::__make_obj_using_allocator<_Type>(__alloc, std::forward<_Args>(__args)...);
 }
 
 template <class _Type, class _Alloc, class... _Args>
-_LIBCPP_HIDE_FROM_ABI constexpr auto
-uninitialized_construct_using_allocator(_Type* __ptr, const _Alloc& __alloc, _Args&&... __args)
+constexpr auto uninitialized_construct_using_allocator(_Type* __ptr, const _Alloc& __alloc, _Args&&... __args)
     -> decltype(std::__uninitialized_construct_using_allocator(__ptr, __alloc, std::forward<_Args>(__args)...)) {
   return /*--*/ std::__uninitialized_construct_using_allocator(__ptr, __alloc, std::forward<_Args>(__args)...);
 }

@@ -6,7 +6,7 @@
 ; RUN: opt -module-summary %t/a.ll -o %t/a.bc
 ; RUN: opt -module-summary %t/b.ll -o %t/b.bc
 
-; RUN: llvm-lto2 run -disable-thinlto-funcattrs=0 %t/a.bc %t/b.bc -o %t1.o -save-temps \
+; RUN: llvm-lto2 run -thinlto-funcattrs %t/a.bc %t/b.bc -o %t1.o -save-temps \
 ; RUN:   -r=%t/a.bc,call_extern,plx \
 ; RUN:   -r=%t/a.bc,extern, \
 ; RUN:   -r=%t/b.bc,extern,p

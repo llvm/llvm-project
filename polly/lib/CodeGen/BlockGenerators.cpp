@@ -515,13 +515,7 @@ void BlockGenerator::handleOutsideUsers(const Scop &S, ScopArrayInfo *Array) {
     return;
 
   EscapeUserVectorTy EscapeUsers;
-  for (User *U : Inst->users()) {
-
-    // Non-instruction user will never escape.
-    Instruction *UI = dyn_cast<Instruction>(U);
-    if (!UI)
-      continue;
-
+  for (Instruction *UI : Inst->users()) {
     if (S.contains(UI))
       continue;
 

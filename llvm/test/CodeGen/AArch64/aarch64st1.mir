@@ -15,26 +15,8 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 failsVerification: false
-registers:
-  - { id: 0, class: fpr64, preferred-register: '' }
-  - { id: 1, class: fpr64, preferred-register: '' }
-  - { id: 2, class: fpr64, preferred-register: '' }
-  - { id: 3, class: fpr128, preferred-register: '' }
-  - { id: 4, class: fpr64, preferred-register: '' }
-  - { id: 5, class: fpr128, preferred-register: '' }
-  - { id: 6, class: fpr128, preferred-register: '' }
-  - { id: 7, class: fpr64, preferred-register: '' }
-  - { id: 8, class: fpr128, preferred-register: '' }
-  - { id: 9, class: fpr128, preferred-register: '' }
-  - { id: 10, class: fpr64, preferred-register: '' }
-  - { id: 11, class: fpr128, preferred-register: '' }
-  - { id: 12, class: fpr128, preferred-register: '' }
-  - { id: 13, class: fpr128, preferred-register: '' }
-  - { id: 14, class: gpr32all, preferred-register: '' }
-  - { id: 15, class: gpr64all, preferred-register: '' }
 liveins:
   - { reg: '$d0', virtual-reg: '%0' }
   - { reg: '$d1', virtual-reg: '%1' }

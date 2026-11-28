@@ -62,7 +62,7 @@ define void @loop_limit_test(i32 %conv5, i1 %cmp13, i1 %cmp20, i1 %cmp27, i1 %cm
 ; CHECK-NEXT:    [[DOTIDX1_PEEL:%.*]] = add i64 [[CONV45_PEEL]], [[MUL79_I_I_PEEL]]
 ; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_PEEL:%.*]] = shl i64 [[DOTIDX1_PEEL]], 2
 ; CHECK-NEXT:    [[SUB_PTR_DIV_PEEL:%.*]] = ashr exact i64 [[SUB_PTR_LHS_CAST_PEEL]], 1
-; CHECK-NEXT:    [[CMP55_PEEL:%.*]] = icmp sgt i64 0, 0
+; CHECK-NEXT:    [[CMP55_PEEL:%.*]] = icmp sge i64 0, 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP55_PEEL]])
 ; CHECK-NEXT:    br label %[[FOR_COND37_PEEL_NEXT:.*]]
 ; CHECK:       [[FOR_COND37_PEEL_NEXT]]:
@@ -88,7 +88,7 @@ define void @loop_limit_test(i32 %conv5, i1 %cmp13, i1 %cmp20, i1 %cmp27, i1 %cm
 ; CHECK-NEXT:    [[DOTIDX1:%.*]] = add i64 [[TMP1]], [[MUL79_I_I]]
 ; CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = shl i64 [[DOTIDX1]], 2
 ; CHECK-NEXT:    [[SUB_PTR_DIV]] = ashr exact i64 [[SUB_PTR_LHS_CAST]], 1
-; CHECK-NEXT:    [[CMP55:%.*]] = icmp sgt i64 [[OFFSET_619]], 0
+; CHECK-NEXT:    [[CMP55:%.*]] = icmp sge i64 [[OFFSET_619]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP55]])
 ; CHECK-NEXT:    br label %[[FOR_COND37]], !llvm.loop [[LOOP0:![0-9]+]]
 ;
@@ -140,7 +140,7 @@ for.body43:                                       ; preds = %for.cond37
   %.idx1 = add i64 %conv45, %mul79.i.i
   %sub.ptr.lhs.cast = shl i64 %.idx1, 2
   %sub.ptr.div = ashr exact i64 %sub.ptr.lhs.cast, 1
-  %cmp55 = icmp sgt i64 %offset.619, 0
+  %cmp55 = icmp sge i64 %offset.619, 0
   call void @llvm.assume(i1 %cmp55)
   %inc = add i32 %conv5, 1
   br label %for.cond37

@@ -1,29 +1,37 @@
 add_subdirectory(Transforms)
 
 set(LLVM_OPTIONAL_SOURCES
-  IR/LLVMOps.cpp
-  IR/NVVMOps.cpp
   IR/ROCDLOps.cpp
   )
 
-set(LLVM_TARGET_DEFINITIONS IR/LLVMOps.cpp)
-foreach(index RANGE 7)
-  set(LLVM_SHARDED_SRC LLVMOps.${index}.cpp)
-  list(APPEND LLVM_SHARDED_SRCS ${LLVM_SHARDED_SRC})
-  mlir_src_sharder(${LLVM_SHARDED_SRC}
-    -op-shard-index=${index})
-endforeach()
-add_public_tablegen_target(MLIRLLVMOpsShardGen)
 add_mlir_dialect_library(MLIRLLVMDialect
   IR/FunctionCallUtils.cpp
   IR/LLVMAttrs.cpp
   IR/LLVMDialect.cpp
   IR/LLVMInterfaces.cpp
-  IR/LLVMMemorySlot.cpp
   IR/LLVMTypes.cpp
   IR/LLVMTypeSyntax.cpp
   IR/LLVMDialectBytecode.cpp
-  ${LLVM_SHARDED_SRCS}
+  IR/LLVMAggregateOps.cpp
+  IR/LLVMArithOps.cpp
+  IR/LLVMCallOps.cpp
+  IR/LLVMCodeGenIntrinsicOps.cpp
+  IR/LLVMConstantOps.cpp
+  IR/LLVMConstrainedIntrinsicOps.cpp
+  IR/LLVMConversionOps.cpp
+  IR/LLVMCoroIntrinsicOps.cpp
+  IR/LLVMDebugIntrinsicOps.cpp
+  IR/LLVMFloatIntrinsicOps.cpp
+  IR/LLVMGeneralIntrinsicOps.cpp
+  IR/LLVMIntegerIntrinsicOps.cpp
+  IR/LLVMMemoryIntrinsicOps.cpp
+  IR/LLVMMemoryOps.cpp
+  IR/LLVMModuleOps.cpp
+  IR/LLVMTerminatorOps.cpp
+  IR/LLVMVarArgOps.cpp
+  IR/LLVMVectorIntrinsicOps.cpp
+  IR/LLVMVectorOps.cpp
+  IR/LLVMVPIntrinsicOps.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
@@ -32,12 +40,11 @@ add_mlir_dialect_library(MLIRLLVMDialect
   [["mlir/Dialect/LLVMIR/pch.h"]]
 
   DEPENDS
+  MLIRSCFToControlFlowDialectInterfaceIncGen
   MLIRLLVMDialectBytecodeIncGen
   MLIRLLVMInterfacesIncGen
-  MLIRLLVMIntrinsicOpsIncGen
   MLIRLLVMAllOpsIncGen
   MLIRLLVMOpsIncGen
-  MLIRLLVMOpsShardGen
   MLIRLLVMTranslationDialectInterfaceIncGen
   MLIRLLVMTypesIncGen
   MLIROpenMPOpsIncGen
@@ -63,26 +70,28 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRSupport
   )
 
-set(LLVM_TARGET_DEFINITIONS IR/NVVMOps.cpp)
-foreach(index RANGE 7)
-  set(NVVM_SHARDED_SRC NVVMOps.${index}.cpp)
-  list(APPEND NVVM_SHARDED_SRCS ${NVVM_SHARDED_SRC})
-  mlir_src_sharder(${NVVM_SHARDED_SRC}
-    -op-shard-index=${index})
-endforeach()
-add_public_tablegen_target(MLIRNVVMOpsShardGen)
-
 add_mlir_dialect_library(MLIRNVVMDialect
   IR/NVVMAttributes.cpp
   IR/NVVMDialect.cpp
   IR/BasicPtxBuilderInterface.cpp
   IR/NVVMRequiresSMTraits.cpp
-  ${NVVM_SHARDED_SRCS}
+  IR/NVVMArithOps.cpp
+  IR/NVVMAsyncCopyOps.cpp
+  IR/NVVMConvertOps.cpp
+  IR/NVVMDataMovementOps.cpp
+  IR/NVVMIndexSRegOps.cpp
+  IR/NVVMMBarrierOps.cpp
+  IR/NVVMMiscOps.cpp
+  IR/NVVMMiscSRegOps.cpp
+  IR/NVVMMmaOps.cpp
+  IR/NVVMSyncOps.cpp
+  IR/NVVMTcgen05Ops.cpp
+  IR/NVVMWgmmaOps.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
-  # Cache the operation declarations shared by all source shards. Keep this
+  # Cache the operation declarations shared by all source files. Keep this
   # specialized PCH local rather than making downstream libraries reuse it.
   DISABLE_PCH_REUSE
   PRECOMPILE_HEADERS
@@ -92,7 +101,6 @@ add_mlir_dialect_library(MLIRNVVMDialect
   DEPENDS
   MLIRGPUCompilationAttrInterfacesIncGen
   MLIRNVVMOpsIncGen
-  MLIRNVVMOpsShardGen
   MLIRNVVMConversionsIncGen
   MLIRBasicPtxBuilderInterfaceIncGen
   MLIRNVVMRequiresSMTraitsIncGen

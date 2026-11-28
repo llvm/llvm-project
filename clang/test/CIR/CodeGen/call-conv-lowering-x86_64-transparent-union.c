@@ -40,19 +40,19 @@ typedef union {
 
 void take_short(ShortFirst u) { (void)u; }
 
-// CIR:      cir.func {{.*}} @take_short(%[[ARG:.*]]: !s16i {llvm.noundef, llvm.signext}
+// CIR:      cir.func {{.*}} @take_short(%[[ARG:.*]]: !s16i {llvm.noundef}
 // CIR:        %[[COERCE:.*]] = cir.alloca "coerce" align(2) : !cir.ptr<!s16i>
 // CIR:        cir.store %[[ARG]], %[[COERCE]] : !s16i, !cir.ptr<!s16i>
 // CIR:        cir.cast bitcast %[[COERCE]] : !cir.ptr<!s16i> -> !cir.ptr<!rec_ShortFirst>
 
-// LLVM: define dso_local void @take_short(i16 noundef signext %{{.*}})
-// NONOUNDEF: define dso_local void @take_short(i16 signext %{{.*}})
+// LLVM: define dso_local void @take_short(i16 noundef %{{.*}})
+// NONOUNDEF: define dso_local void @take_short(i16 %{{.*}})
 void take_uchar(UCharFirst u) { (void)u; }
 
-// CIR: cir.func {{.*}} @take_uchar(%{{.*}}: !u8i {llvm.noundef, llvm.zeroext}
+// CIR: cir.func {{.*}} @take_uchar(%{{.*}}: !u8i {llvm.noundef}
 
-// LLVM: define dso_local void @take_uchar(i8 noundef zeroext %{{.*}})
-// NONOUNDEF: define dso_local void @take_uchar(i8 zeroext %{{.*}})
+// LLVM: define dso_local void @take_uchar(i8 noundef %{{.*}})
+// NONOUNDEF: define dso_local void @take_uchar(i8 %{{.*}})
 
 void take_int(IntFirst u) { (void)u; }
 
@@ -84,14 +84,14 @@ void callers(short s, int *p) {
 // CIR:        %[[PTR:.*]] = cir.load align(8) %[[PTR_ADDR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:        cir.call @ext_ptr(%[[PTR]]) : (!cir.ptr<!void>) -> ()
 
-// CIR: cir.func private @ext_short(!s16i {llvm.noundef, llvm.signext})
+// CIR: cir.func private @ext_short(!s16i {llvm.noundef})
 // CIR: cir.func private @ext_ptr(!cir.ptr<!void>)
 
 // LLVM: define dso_local void @callers(
 // LLVM:   call void @ext_short(i16 noundef signext %{{.*}})
 // LLVM:   call void @ext_ptr(ptr %{{.*}})
-// LLVM: declare void @ext_short(i16 noundef signext)
+// LLVM: declare void @ext_short(i16 noundef)
 // LLVM: declare void @ext_ptr(ptr)
 
 // NONOUNDEF: call void @ext_short(i16 signext %{{.*}})
-// NONOUNDEF: declare void @ext_short(i16 signext)
+// NONOUNDEF: declare void @ext_short(i16)

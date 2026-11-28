@@ -24,6 +24,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/TextAPI/TextAPIReader.h"
+#include <atomic>
 
 #include <vector>
 
@@ -247,7 +248,7 @@ public:
   uint32_t compatibilityVersion = 0;
   uint32_t currentVersion = 0;
   int64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
-  unsigned numReferencedSymbols = 0;
+  std::atomic<unsigned> numReferencedSymbols{0};
   RefState refState;
   bool reexport = false;
   bool forceNeeded = false;

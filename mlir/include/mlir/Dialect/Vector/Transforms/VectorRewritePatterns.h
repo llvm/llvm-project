@@ -75,6 +75,14 @@ struct UnrollVectorOptions {
     traversalOrderCallback = std::move(traversalOrderFn);
     return *this;
   }
+
+  /// Unrolling order for ContractionOp. In general, this could be used by
+  /// any other Op, but in practice it isn't and the name reflects that.
+  /// The user is responsible for making sure that the number of indices
+  /// matches the number of loops to be unrolled.
+  SmallVector<int64_t> unrollOrderForContractOp = {};
+  /// Controls whether to reverse the unrolling order.
+  bool reverseDefaultTraversalOrder = false;
 };
 
 /// Canonicalization of a `vector.contract %a, %b, %c` with row-major matmul

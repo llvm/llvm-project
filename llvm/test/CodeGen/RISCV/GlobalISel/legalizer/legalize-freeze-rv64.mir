@@ -2,101 +2,113 @@
 # RUN: llc -mtriple=riscv64 -mattr=+f,+v -run-pass=legalizer %s -o - | FileCheck %s
 ---
 name:            freeze_i32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; CHECK-LABEL: name: freeze_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE [[TRUNC]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[FREEZE]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY]](i64)
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(i32) = G_FREEZE [[TRUNC]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[FREEZE]](i32)
+    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %1:_(s64) = COPY $x10
-    %2:_(s32) = G_TRUNC %1(s64)
-    %3:_(s32) = G_FREEZE %2
-    %4:_(s64) = G_ANYEXT %3(s32)
-    $x10 = COPY %4(s64)
+    %1:_(i64) = COPY $x10
+    %2:_(i32) = G_TRUNC %1(i64)
+    %3:_(i32) = G_FREEZE %2
+    %4:_(i64) = G_ANYEXT %3(i32)
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 
 ...
 ---
 name:            freeze_f32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $f10_f
     ; CHECK-LABEL: name: freeze_f32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s32) = G_FREEZE [[COPY]]
-    ; CHECK-NEXT: $f10_f = COPY [[FREEZE]](s32)
+    ; CHECK: liveins: $f10_f
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $f10_f
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(f32) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: $f10_f = COPY [[FREEZE]](f32)
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %1:_(s32) = COPY $f10_f
-    %2:_(s32) = G_FREEZE %1
-    $f10_f = COPY %2(s32)
+    %1:_(f32) = COPY $f10_f
+    %2:_(f32) = G_FREEZE %1
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
 ---
 name:            freeze_i64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10
     ; CHECK-LABEL: name: freeze_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s64) = G_FREEZE [[COPY]]
-    ; CHECK-NEXT: $x10 = COPY [[FREEZE]](s64)
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x10
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(i64) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: $x10 = COPY [[FREEZE]](i64)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %1:_(s64) = COPY $x10
-    %2:_(s64) = G_FREEZE %1
-    $x10 = COPY %2(s64)
+    %1:_(i64) = COPY $x10
+    %2:_(i64) = G_FREEZE %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
 ---
 name:            freeze_nxv2i1
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $v8
     ; CHECK-LABEL: name: freeze_nxv2i1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 2 x s1>) = COPY $v8
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<vscale x 2 x s1>) = G_FREEZE [[COPY]]
-    ; CHECK-NEXT: $v8 = COPY [[FREEZE]](<vscale x 2 x s1>)
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 2 x i1>) = COPY $v8
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<vscale x 2 x i1>) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: $v8 = COPY [[FREEZE]](<vscale x 2 x i1>)
     ; CHECK-NEXT: PseudoRET implicit $v8
-    %1:_(<vscale x 2 x s1>) = COPY $v8
-    %2:_(<vscale x 2 x s1>) = G_FREEZE %1
-    $v8 = COPY %2(<vscale x 2 x s1>)
+    %1:_(<vscale x 2 x i1>) = COPY $v8
+    %2:_(<vscale x 2 x i1>) = G_FREEZE %1
+    $v8 = COPY %2(<vscale x 2 x i1>)
     PseudoRET implicit $v8
 
 ...
 ---
-name:            freeze_nxv2i32
-tracksRegLiveness: false
+name:            freeze_nxv2i3i
 body:             |
   bb.0.entry:
-    ; CHECK-LABEL: name: freeze_nxv2i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 2 x s32>) = COPY $v8
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<vscale x 2 x s32>) = G_FREEZE [[COPY]]
-    ; CHECK-NEXT: $v8 = COPY [[FREEZE]](<vscale x 2 x s32>)
+    liveins: $v8
+    ; CHECK-LABEL: name: freeze_nxv2i3i
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 2 x i32>) = COPY $v8
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<vscale x 2 x i32>) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: $v8 = COPY [[FREEZE]](<vscale x 2 x i32>)
     ; CHECK-NEXT: PseudoRET implicit $v8
-    %1:_(<vscale x 2 x s32>) = COPY $v8
-    %2:_(<vscale x 2 x s32>) = G_FREEZE %1
-    $v8 = COPY %2(<vscale x 2 x s32>)
+    %1:_(<vscale x 2 x i32>) = COPY $v8
+    %2:_(<vscale x 2 x i32>) = G_FREEZE %1
+    $v8 = COPY %2(<vscale x 2 x i32>)
     PseudoRET implicit $v8
 
 ...
 ---
 name:            freeze_nxv2i64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $v8
     ; CHECK-LABEL: name: freeze_nxv2i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<vscale x 2 x s64>) = COPY $v8
-    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<vscale x 2 x s64>) = G_FREEZE [[COPY]]
-    ; CHECK-NEXT: $v8m2 = COPY [[FREEZE]](<vscale x 2 x s64>)
+    ; CHECK: liveins: $v8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 2 x i64>) = COPY $v8
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(<vscale x 2 x i64>) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: $v8m2 = COPY [[FREEZE]](<vscale x 2 x i64>)
     ; CHECK-NEXT: PseudoRET implicit $v8m2
-    %1:_(<vscale x 2 x s64>) = COPY $v8
-    %2:_(<vscale x 2 x s64>) = G_FREEZE %1
-    $v8m2 = COPY %2(<vscale x 2 x s64>)
+    %1:_(<vscale x 2 x i64>) = COPY $v8
+    %2:_(<vscale x 2 x i64>) = G_FREEZE %1
+    $v8m2 = COPY %2(<vscale x 2 x i64>)
     PseudoRET implicit $v8m2
 
 ...

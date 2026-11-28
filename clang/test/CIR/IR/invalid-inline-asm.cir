@@ -1,0 +1,36 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+module {
+  cir.func @memory_operand_not_pointer(%arg0: !s32i) {
+    // expected-error@+1 {{'cir.asm' op memory operand #0 must be a pointer, but got '!cir.int<s, 32>'}}
+    cir.asm(x86_att,
+      out = [%arg0 : !s32i (maybe_memory)],
+      in = [],
+      in_out = [],
+      {"nop" "=*m,~{dirflag},~{fpsr},~{flags}"})
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+module {
+  cir.func @missing_operand_attr(%arg0: !cir.ptr<!s32i>) {
+    // expected-error@+1 {{'cir.asm' op expects 1 operand attributes, but got 0}}
+    "cir.asm"(%arg0) <{asm_flavor = #cir.asm_flavor<x86_att>, asm_string = "nop", constraints = "=*m", operand_attrs = [], operands_segments = array<i32: 1, 0, 0>}> : (!cir.ptr<!s32i>) -> ()
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+module {
+  cir.func @bad_operand_attr(%arg0: !cir.ptr<!s32i>) {
+    // expected-error@+1 {{'cir.asm' op attribute 'operand_attrs' failed to satisfy constraint: array of unit attributes or empty dictionaries}}
+    "cir.asm"(%arg0) <{asm_flavor = #cir.asm_flavor<x86_att>, asm_string = "nop", constraints = "=*m", operand_attrs = [1 : i32], operands_segments = array<i32: 1, 0, 0>}> : (!cir.ptr<!s32i>) -> ()
+    cir.return
+  }
+}

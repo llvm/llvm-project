@@ -35,6 +35,8 @@
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace fir::acc {
@@ -105,6 +107,41 @@ struct CopyCandidate {
   acc::CopyoutOp copyoutOp;
 };
 
+/// Remaining copies that follow the first converted copyin are moved in front
+/// of it, so the copies are issued first. This is done because this pass relies
+/// on alias analysis, which takes advantage of Fortran aliasing rules: for
+/// example, dummy arguments do not alias. However, if they did alias, then we
+/// are now depending on the order ACCImplicitData decided to map, because a
+/// copyin followed by a copy is not the same as a copy followed by a copyin
+/// (since only the first data action maps, everything else updates the
+/// counter). By issuing the copies before the copyins, we can ensure we do not
+/// break anything even if we relied on the language rules to do the
+/// optimization. The other operands keep their relative order.
+static void moveCopiesBeforeConvertedCopyins(
+    Operation *regionOp, const llvm::SmallPtrSetImpl<Operation *> &converted) {
+  SmallVector<Value> operands(acc::getDataOperands(regionOp));
+  auto isConverted = [&](Value value) {
+    Operation *def = value.getDefiningOp();
+    return def && converted.contains(def);
+  };
+  auto first = llvm::find_if(operands, isConverted);
+  if (first == operands.end())
+    return;
+
+  SmallVector<Value> result(operands.begin(), first);
+  SmallVector<Value> copies;
+  SmallVector<Value> rest;
+  for (Value value : llvm::make_range(first, operands.end())) {
+    auto copyin = dyn_cast_or_null<acc::CopyinOp>(value.getDefiningOp());
+    bool isCopy =
+        copyin && acc::getDataClause(copyin) == acc::DataClause::acc_copy;
+    (isCopy ? copies : rest).push_back(value);
+  }
+  result.append(copies);
+  result.append(rest);
+  acc::getMutableDataOperands(regionOp).assign(result);
+}
+
 class ACCOptimizeDataMapping
     : public fir::acc::impl::ACCOptimizeDataMappingBase<
           ACCOptimizeDataMapping> {
@@ -127,6 +164,7 @@ public:
 
     AliasAnalysis &aliasAnalysis = getAnalysis<AliasAnalysis>();
 
+    llvm::SmallPtrSet<Operation *, 16> converted;
     llvm::SmallVector<Operation *> tempOps;
     for (CopyCandidate candidate : candidates) {
       acc::CopyinOp copyinOp = candidate.copyinOp;
@@ -152,6 +190,7 @@ public:
       acc::CopyoutOp copyoutOp = candidate.copyoutOp;
 
       copyinOp.setDataClause(acc::DataClause::acc_copyin);
+      converted.insert(copyinOp);
       // The exit is a delete so the structured data model stays correct. A
       // delete decrements the present counter and deletes the data only when
       // the counter reaches zero.
@@ -168,6 +207,28 @@ public:
 
     for (Operation *op : llvm::reverse(tempOps))
       op->erase();
+
+    // Each construct that lists a converted copyin moves its remaining copies
+    // in front of its first converted copyin. This is always legal, even for
+    // a derived type and its components. ACCImplicitData maps the
+    // derived-type object before a component. A write to a component aliases
+    // that object, so the object is not optimized and its copy stays before
+    // the component. When the object and a component are both optimized, they
+    // keep their relative order. A write to one component does not alias a
+    // different component, but the object still stays in front of both.
+    // A derived-type object may contain a pointer to a different object. A
+    // deep copy of that target could be reordered relative to the object and
+    // break the mapping order. This cannot happen now: only implicit copies
+    // are optimized, and implicit deep copy is not enabled.
+    llvm::SmallPtrSet<Operation *, 16> regions;
+    for (Operation *copyin : converted) {
+      Value accVar = acc::getAccVar(cast<acc::CopyinOp>(copyin));
+      for (Operation *user : copyin->getUsers())
+        if (llvm::is_contained(acc::getDataOperands(user), accVar))
+          regions.insert(user);
+    }
+    for (Operation *regionOp : regions)
+      moveCopiesBeforeConvertedCopyins(regionOp, converted);
   }
 };
 

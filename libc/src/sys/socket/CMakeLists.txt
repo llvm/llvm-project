@@ -135,7 +135,6 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.recvmmsg
 )
 
-
 add_entrypoint_object(
   shutdown
   ALIAS

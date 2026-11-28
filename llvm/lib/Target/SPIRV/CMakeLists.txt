@@ -3,7 +3,7 @@ add_llvm_component_group(SPIRV)
 set(LLVM_TARGET_DEFINITIONS SPIRV.td)
 
 llvm_tablegen(SPIRVGenAsmWriter.inc -gen-asm-writer)
-llvm_tablegen(SPIRVGenGlobalISel.inc -gen-global-isel)
+llvm_tablegen(SPIRVGenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
 llvm_tablegen(SPIRVGenInstrInfo.inc -gen-instr-info)
 llvm_tablegen(SPIRVGenMCCodeEmitter.inc -gen-emitter)
 llvm_tablegen(SPIRVGenRegisterBank.inc -gen-register-bank)
@@ -11,7 +11,10 @@ llvm_tablegen(SPIRVGenRegisterInfo.inc -gen-register-info)
 llvm_tablegen(SPIRVGenSubtargetInfo.inc -gen-subtarget)
 llvm_tablegen(SPIRVGenTables.inc -gen-searchable-tables)
 llvm_tablegen(SPIRVGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
-              -combiners="SPIRVPreLegalizerCombiner")
+              -combiners="SPIRVPreLegalizerCombiner" -gisel-extended-llt)
+
+set(LLVM_TARGET_DEFINITIONS SPIRVOptions.td)
+llvm_tablegen(SPIRVOptions.inc -gen-opt-parser-defs)
 
 add_public_tablegen_target(SPIRVCommonTableGen)
 
@@ -30,10 +33,12 @@ add_llvm_target(SPIRVCodeGen
   SPIRVInstructionSelector.cpp
   SPIRVLegalizeResourceBinding.cpp
   SPIRVLegalizeZeroSizeArrays.cpp
+  SPIRVLowerDynamicLocalMemory.cpp
   SPIRVLegalizePointerCast.cpp
   SPIRVMergeRegionExitTargets.cpp
   SPIRVISelLowering.cpp
   SPIRVLegalizerInfo.cpp
+  SPIRVMachineFunctionInfo.cpp
   SPIRVMCInstLower.cpp
   SPIRVMetadata.cpp
   SPIRVModuleAnalysis.cpp
@@ -49,6 +54,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVRegularizer.cpp
   SPIRVFinalizeShaderLinkage.cpp
   SPIRVRemoveUnusedResources.cpp
+  SPIRVLowerResourceNames.cpp
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
   SPIRVTargetTransformInfo.cpp
@@ -70,6 +76,8 @@ add_llvm_target(SPIRVCodeGen
   FrontendHLSL
   IPO
   MC
+  MIRParser
+  Option
   Passes
   SPIRVAnalysis
   SPIRVDesc

@@ -12,12 +12,10 @@
 ...
 ---
 name: g_build_vector_trunc
-registers:
-  - { id: 0, class: _, preferred-register: '' }
 body: |
   bb.0:
     ; CHECK: Bad machine code: G_BUILD_VECTOR_TRUNC source operand types are not larger than dest elt type
 
-    %0(s32) = IMPLICIT_DEF
+    %0:_(s32) = IMPLICIT_DEF
     %1:_(<2 x s32>) = G_BUILD_VECTOR_TRUNC %0, %0
 ...

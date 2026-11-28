@@ -172,6 +172,10 @@ private:
   /// defined by this instruction.
   unsigned DebugInstrNum;
 
+  /// One-based handle into the instruction table of the SlotIndexes analysis
+  /// numbering this function. 0 if the instruction is not indexed.
+  unsigned SlotIndexHandle = 0;
+
   /// Internal implementation detail class that provides out-of-line storage for
   /// extra info used by the machine instruction when this info cannot be stored
   /// in-line within the instruction itself.
@@ -352,6 +356,8 @@ private:
 
   // MachineInstrs are pool-allocated and owned by MachineFunction.
   friend class MachineFunction;
+
+  friend class SlotIndexes;
 
   void
   dumprImpl(const MachineRegisterInfo &MRI, unsigned Depth, unsigned MaxDepth,
@@ -663,7 +669,7 @@ public:
   /// Returns true if the instruction has implicit definition.
   bool hasImplicitDef() const {
     for (const MachineOperand &MO : implicit_operands())
-      if (MO.isDef())
+      if (MO.isReg() && MO.isDef())
         return true;
     return false;
   }

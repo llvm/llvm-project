@@ -489,6 +489,74 @@ private:
   /// Options to control the vector patterns.
   vector::VectorTransposeLowering vectorTransposeLowering;
 };
+
+/// Efficiently lower rank-2 transpose using row-to-column or column-to-row
+/// conversions.
+///
+/// * Rows to columns (`vector<Nx2>` to `vector<2xN>`): flatten the source and
+///   deinterleave its alternating elements.
+///
+///   `[[a0, b0], [a1, b1], ...] -> [[a0, a1, ...], [b0, b1, ...]]`
+///
+/// * Columns to rows (`vector<2xN>` to `vector<Nx2>`): extract the two rows
+///   and interleave their elements.
+///
+///   `[[a0, a1, ...], [b0, b1, ...]] -> [[a0, b0], [a1, b1], ...]`
+///
+/// For a 2x2 transpose, both cases apply; the lowering selects row-to-column
+/// conversion.
+class TransposeOpToInterleaveLowering
+    : public OpRewritePattern<vector::TransposeOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransposeOp op,
+                                PatternRewriter &rewriter) const override {
+    VectorType srcType = op.getSourceVectorType();
+    if (srcType.isScalable() || srcType.getRank() != 2)
+      return rewriter.notifyMatchFailure(op,
+                                         "expected a fixed-size rank-2 vector");
+
+    if (op.getPermutation() != ArrayRef<int64_t>({1, 0}))
+      return rewriter.notifyMatchFailure(op,
+                                         "expected non-identity permutation");
+
+    ArrayRef<int64_t> shape = srcType.getShape();
+    if (shape[0] != 2 && shape[1] != 2)
+      return rewriter.notifyMatchFailure(
+          op, "expected one dimension to have size 2");
+    // For a 2x2 transpose, either lowering is valid. Prefer row-to-column to
+    // make the choice deterministic.
+    bool useRowToColumnConversion = shape[1] == 2;
+
+    Location loc = op.getLoc();
+    VectorType dstType = op.getResultVectorType();
+    int64_t streamLength = useRowToColumnConversion ? shape[0] : shape[1];
+    Type elementType = srcType.getElementType();
+    auto flatType = VectorType::get({2 * streamLength}, elementType);
+
+    Value flatResult;
+    if (useRowToColumnConversion) {
+      Value flat =
+          vector::ShapeCastOp::create(rewriter, loc, flatType, op.getVector());
+      auto deinterleaved = vector::DeinterleaveOp::create(rewriter, loc, flat);
+      SmallVector<int64_t> identity;
+      identity.reserve(2 * streamLength);
+      for (int64_t i = 0; i < 2 * streamLength; ++i)
+        identity.push_back(i);
+      flatResult = vector::ShuffleOp::create(
+          rewriter, loc, deinterleaved.getResultEven(),
+          deinterleaved.getResultOdd(), identity);
+    } else {
+      Value lhs = vector::ExtractOp::create(rewriter, loc, op.getVector(), 0);
+      Value rhs = vector::ExtractOp::create(rewriter, loc, op.getVector(), 1);
+      flatResult = vector::InterleaveOp::create(rewriter, loc, lhs, rhs);
+    }
+
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, dstType, flatResult);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::vector::populateVectorTransposeLoweringPatterns(
@@ -498,4 +566,9 @@ void mlir::vector::populateVectorTransposeLoweringPatterns(
                                                   benefit);
   patterns.add<TransposeOpLowering, TransposeOp2DToShuffleLowering>(
       vectorTransposeLowering, patterns.getContext(), benefit);
+}
+
+void mlir::vector::populateVectorTransposeToInterleaveLoweringPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<TransposeOpToInterleaveLowering>(patterns.getContext(), benefit);
 }

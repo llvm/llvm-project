@@ -47,17 +47,15 @@ public:
 
   template <class _Cb>
     requires constructible_from<_Callback, _Cb>
-  _LIBCPP_HIDE_FROM_ABI explicit stop_callback(const stop_token& __st,
-                                               _Cb&& __cb) noexcept(is_nothrow_constructible_v<_Callback, _Cb>)
+  explicit stop_callback(const stop_token& __st, _Cb&& __cb) noexcept(is_nothrow_constructible_v<_Callback, _Cb>)
       : stop_callback(__private_constructor_tag{}, __st.__state_, std::forward<_Cb>(__cb)) {}
 
   template <class _Cb>
     requires constructible_from<_Callback, _Cb>
-  _LIBCPP_HIDE_FROM_ABI explicit stop_callback(stop_token&& __st,
-                                               _Cb&& __cb) noexcept(is_nothrow_constructible_v<_Callback, _Cb>)
+  explicit stop_callback(stop_token&& __st, _Cb&& __cb) noexcept(is_nothrow_constructible_v<_Callback, _Cb>)
       : stop_callback(__private_constructor_tag{}, std::move(__st.__state_), std::forward<_Cb>(__cb)) {}
 
-  _LIBCPP_HIDE_FROM_ABI ~stop_callback() {
+  ~stop_callback() {
     if (__state_) {
       __state_->__remove_callback(this);
     }
@@ -75,7 +73,7 @@ private:
   friend __stop_callback_base;
 
   template <class _StatePtr, class _Cb>
-  _LIBCPP_HIDE_FROM_ABI explicit stop_callback(__private_constructor_tag, _StatePtr&& __state, _Cb&& __cb) noexcept(
+  explicit stop_callback(__private_constructor_tag, _StatePtr&& __state, _Cb&& __cb) noexcept(
       is_nothrow_constructible_v<_Callback, _Cb>)
       : __stop_callback_base([](__stop_callback_base* __cb_base) noexcept {
           // stop callback is supposed to only be called once

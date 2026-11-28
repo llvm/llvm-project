@@ -10,11 +10,6 @@
 // RUN: %clang_cc1 -x c++ -E -dM -triple=amdgpu12.50-amd-amdhsa < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix=LP64 %s
 //
-// r600 has 32-bit pointers and keeps the generic defaults.
-//
-// RUN: %clang_cc1 -E -dM -triple=r600 < /dev/null \
-// RUN:   | FileCheck -match-full-lines -check-prefix=LLP64 %s
-//
 // OpenCL mandates its own widths regardless of the target.
 //
 // RUN: %clang_cc1 -x cl -cl-std=CL2.0 -E -dM -triple=amdgpu9.0a-amd-amdhsa < /dev/null \

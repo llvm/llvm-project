@@ -8,7 +8,7 @@ define void @load_2_i8(ptr %A)  {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movzwl (%rdi), %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [9,7,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    movw %ax, (%rdi)
 ; SSE2-NEXT:    retq
@@ -17,7 +17,7 @@ define void @load_2_i8(ptr %A)  {
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movzwl (%rdi), %eax
 ; SSE41-NEXT:    movd %eax, %xmm0
-; SSE41-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [9,7,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE41-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; SSE41-NEXT:    retq
    %T = load <2 x i8>, ptr %A
@@ -31,7 +31,7 @@ define void @load_2_i16(ptr %A)  {
 ; CHECK-LABEL: load_2_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [9,7,u,u,u,u,u,u]
 ; CHECK-NEXT:    movd %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
    %T = load <2 x i16>, ptr %A
@@ -44,7 +44,7 @@ define void @load_2_i32(ptr %A)  {
 ; CHECK-LABEL: load_2_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [9,7,u,u]
 ; CHECK-NEXT:    movq %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
    %T = load <2 x i32>, ptr %A
@@ -57,7 +57,7 @@ define void @load_4_i8(ptr %A)  {
 ; CHECK-LABEL: load_4_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    paddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,4,9,7,u,u,u,u,u,u,u,u,u,u,u,u]
 ; CHECK-NEXT:    movd %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
    %T = load <4 x i8>, ptr %A
@@ -70,7 +70,7 @@ define void @load_4_i16(ptr %A)  {
 ; CHECK-LABEL: load_4_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,4,9,7,u,u,u,u]
 ; CHECK-NEXT:    movq %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
    %T = load <4 x i16>, ptr %A

@@ -325,15 +325,15 @@ entry:
 define zeroext i1 @saddo2.i64(i64 %v1, ptr %res) {
 ; RV32-LABEL: saddo2.i64:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    not a3, a1
-; RV32-NEXT:    addi a4, a0, 4
-; RV32-NEXT:    sltu a0, a4, a0
-; RV32-NEXT:    add a5, a1, a0
-; RV32-NEXT:    sw a4, 0(a2)
-; RV32-NEXT:    xor a1, a1, a5
-; RV32-NEXT:    and a0, a3, a1
+; RV32-NEXT:    addi a3, a0, 4
+; RV32-NEXT:    sltu a0, a3, a0
+; RV32-NEXT:    add a4, a1, a0
+; RV32-NEXT:    xor a0, a1, a4
+; RV32-NEXT:    not a1, a1
+; RV32-NEXT:    and a0, a1, a0
 ; RV32-NEXT:    srli a0, a0, 31
-; RV32-NEXT:    sw a5, 4(a2)
+; RV32-NEXT:    sw a3, 0(a2)
+; RV32-NEXT:    sw a4, 4(a2)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: saddo2.i64:
@@ -345,15 +345,15 @@ define zeroext i1 @saddo2.i64(i64 %v1, ptr %res) {
 ;
 ; RV32ZBA-LABEL: saddo2.i64:
 ; RV32ZBA:       # %bb.0: # %entry
-; RV32ZBA-NEXT:    not a3, a1
-; RV32ZBA-NEXT:    addi a4, a0, 4
-; RV32ZBA-NEXT:    sltu a0, a4, a0
-; RV32ZBA-NEXT:    add a5, a1, a0
-; RV32ZBA-NEXT:    sw a4, 0(a2)
-; RV32ZBA-NEXT:    xor a1, a1, a5
-; RV32ZBA-NEXT:    and a0, a3, a1
+; RV32ZBA-NEXT:    addi a3, a0, 4
+; RV32ZBA-NEXT:    sltu a0, a3, a0
+; RV32ZBA-NEXT:    add a4, a1, a0
+; RV32ZBA-NEXT:    xor a0, a1, a4
+; RV32ZBA-NEXT:    not a1, a1
+; RV32ZBA-NEXT:    and a0, a1, a0
 ; RV32ZBA-NEXT:    srli a0, a0, 31
-; RV32ZBA-NEXT:    sw a5, 4(a2)
+; RV32ZBA-NEXT:    sw a3, 0(a2)
+; RV32ZBA-NEXT:    sw a4, 4(a2)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: saddo2.i64:
@@ -365,15 +365,15 @@ define zeroext i1 @saddo2.i64(i64 %v1, ptr %res) {
 ;
 ; RV32ZICOND-LABEL: saddo2.i64:
 ; RV32ZICOND:       # %bb.0: # %entry
-; RV32ZICOND-NEXT:    not a3, a1
-; RV32ZICOND-NEXT:    addi a4, a0, 4
-; RV32ZICOND-NEXT:    sltu a0, a4, a0
-; RV32ZICOND-NEXT:    add a5, a1, a0
-; RV32ZICOND-NEXT:    sw a4, 0(a2)
-; RV32ZICOND-NEXT:    xor a1, a1, a5
-; RV32ZICOND-NEXT:    and a0, a3, a1
+; RV32ZICOND-NEXT:    addi a3, a0, 4
+; RV32ZICOND-NEXT:    sltu a0, a3, a0
+; RV32ZICOND-NEXT:    add a4, a1, a0
+; RV32ZICOND-NEXT:    xor a0, a1, a4
+; RV32ZICOND-NEXT:    not a1, a1
+; RV32ZICOND-NEXT:    and a0, a1, a0
 ; RV32ZICOND-NEXT:    srli a0, a0, 31
-; RV32ZICOND-NEXT:    sw a5, 4(a2)
+; RV32ZICOND-NEXT:    sw a3, 0(a2)
+; RV32ZICOND-NEXT:    sw a4, 4(a2)
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: saddo2.i64:
@@ -397,10 +397,10 @@ define zeroext i1 @saddo3.i64(i64 %v1, ptr %res) {
 ; RV32-NEXT:    sltu a0, a3, a0
 ; RV32-NEXT:    add a0, a1, a0
 ; RV32-NEXT:    addi a4, a0, -1
-; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    xor a0, a1, a4
 ; RV32-NEXT:    and a0, a1, a0
 ; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sw a4, 4(a2)
 ; RV32-NEXT:    ret
 ;
@@ -418,10 +418,10 @@ define zeroext i1 @saddo3.i64(i64 %v1, ptr %res) {
 ; RV32ZBA-NEXT:    sltu a0, a3, a0
 ; RV32ZBA-NEXT:    add a0, a1, a0
 ; RV32ZBA-NEXT:    addi a4, a0, -1
-; RV32ZBA-NEXT:    sw a3, 0(a2)
 ; RV32ZBA-NEXT:    xor a0, a1, a4
 ; RV32ZBA-NEXT:    and a0, a1, a0
 ; RV32ZBA-NEXT:    srli a0, a0, 31
+; RV32ZBA-NEXT:    sw a3, 0(a2)
 ; RV32ZBA-NEXT:    sw a4, 4(a2)
 ; RV32ZBA-NEXT:    ret
 ;
@@ -439,10 +439,10 @@ define zeroext i1 @saddo3.i64(i64 %v1, ptr %res) {
 ; RV32ZICOND-NEXT:    sltu a0, a3, a0
 ; RV32ZICOND-NEXT:    add a0, a1, a0
 ; RV32ZICOND-NEXT:    addi a4, a0, -1
-; RV32ZICOND-NEXT:    sw a3, 0(a2)
 ; RV32ZICOND-NEXT:    xor a0, a1, a4
 ; RV32ZICOND-NEXT:    and a0, a1, a0
 ; RV32ZICOND-NEXT:    srli a0, a0, 31
+; RV32ZICOND-NEXT:    sw a3, 0(a2)
 ; RV32ZICOND-NEXT:    sw a4, 4(a2)
 ; RV32ZICOND-NEXT:    ret
 ;
@@ -685,12 +685,12 @@ entry:
 define zeroext i1 @uaddo.i64.constant_one(i64 %v1, ptr %res) {
 ; RV32-LABEL: uaddo.i64.constant_one:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    addi a0, a0, 1
-; RV32-NEXT:    seqz a3, a0
-; RV32-NEXT:    add a1, a1, a3
-; RV32-NEXT:    sw a0, 0(a2)
-; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    addi a3, a0, 1
+; RV32-NEXT:    seqz a0, a3
+; RV32-NEXT:    add a1, a1, a0
+; RV32-NEXT:    or a0, a3, a1
 ; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sw a1, 4(a2)
 ; RV32-NEXT:    ret
 ;
@@ -703,12 +703,12 @@ define zeroext i1 @uaddo.i64.constant_one(i64 %v1, ptr %res) {
 ;
 ; RV32ZBA-LABEL: uaddo.i64.constant_one:
 ; RV32ZBA:       # %bb.0: # %entry
-; RV32ZBA-NEXT:    addi a0, a0, 1
-; RV32ZBA-NEXT:    seqz a3, a0
-; RV32ZBA-NEXT:    add a1, a1, a3
-; RV32ZBA-NEXT:    sw a0, 0(a2)
-; RV32ZBA-NEXT:    or a0, a0, a1
+; RV32ZBA-NEXT:    addi a3, a0, 1
+; RV32ZBA-NEXT:    seqz a0, a3
+; RV32ZBA-NEXT:    add a1, a1, a0
+; RV32ZBA-NEXT:    or a0, a3, a1
 ; RV32ZBA-NEXT:    seqz a0, a0
+; RV32ZBA-NEXT:    sw a3, 0(a2)
 ; RV32ZBA-NEXT:    sw a1, 4(a2)
 ; RV32ZBA-NEXT:    ret
 ;
@@ -721,12 +721,12 @@ define zeroext i1 @uaddo.i64.constant_one(i64 %v1, ptr %res) {
 ;
 ; RV32ZICOND-LABEL: uaddo.i64.constant_one:
 ; RV32ZICOND:       # %bb.0: # %entry
-; RV32ZICOND-NEXT:    addi a0, a0, 1
-; RV32ZICOND-NEXT:    seqz a3, a0
-; RV32ZICOND-NEXT:    add a1, a1, a3
-; RV32ZICOND-NEXT:    sw a0, 0(a2)
-; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    addi a3, a0, 1
+; RV32ZICOND-NEXT:    seqz a0, a3
+; RV32ZICOND-NEXT:    add a1, a1, a0
+; RV32ZICOND-NEXT:    or a0, a3, a1
 ; RV32ZICOND-NEXT:    seqz a0, a0
+; RV32ZICOND-NEXT:    sw a3, 0(a2)
 ; RV32ZICOND-NEXT:    sw a1, 4(a2)
 ; RV32ZICOND-NEXT:    ret
 ;
@@ -1149,8 +1149,8 @@ define zeroext i1 @usubo.i64(i64 %v1, i64 %v2, ptr %res) {
 ;
 ; RV32ZICOND-LABEL: usubo.i64:
 ; RV32ZICOND:       # %bb.0: # %entry
-; RV32ZICOND-NEXT:    sub a3, a1, a3
 ; RV32ZICOND-NEXT:    sltu a5, a0, a2
+; RV32ZICOND-NEXT:    sub a3, a1, a3
 ; RV32ZICOND-NEXT:    sub a3, a3, a5
 ; RV32ZICOND-NEXT:    sub a2, a0, a2
 ; RV32ZICOND-NEXT:    xor a5, a3, a1
@@ -1316,37 +1316,37 @@ entry:
 define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; RV32-LABEL: smulo.i64:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    mul a5, a1, a2
-; RV32-NEXT:    mulhu a6, a0, a2
+; RV32-NEXT:    mulhu a5, a0, a2
+; RV32-NEXT:    mul a6, a1, a2
 ; RV32-NEXT:    mul a7, a3, a0
 ; RV32-NEXT:    mulhsu t0, a1, a2
 ; RV32-NEXT:    mulhsu t1, a3, a0
 ; RV32-NEXT:    mulh t2, a1, a3
 ; RV32-NEXT:    mul a1, a1, a3
-; RV32-NEXT:    add a6, a5, a6
-; RV32-NEXT:    sltu a3, a6, a5
-; RV32-NEXT:    add a6, a7, a6
-; RV32-NEXT:    add a3, t0, a3
-; RV32-NEXT:    sltu a5, a6, a7
-; RV32-NEXT:    add a5, t1, a5
-; RV32-NEXT:    srai a7, a3, 31
-; RV32-NEXT:    add t0, a3, a5
-; RV32-NEXT:    srai a5, a5, 31
-; RV32-NEXT:    sltu a3, t0, a3
+; RV32-NEXT:    add a5, a6, a5
+; RV32-NEXT:    sltu a3, a5, a6
 ; RV32-NEXT:    add a5, a7, a5
-; RV32-NEXT:    add a3, a5, a3
+; RV32-NEXT:    add a3, t0, a3
+; RV32-NEXT:    sltu a6, a5, a7
+; RV32-NEXT:    add a6, t1, a6
+; RV32-NEXT:    srai a7, a3, 31
+; RV32-NEXT:    add t0, a3, a6
+; RV32-NEXT:    srai a6, a6, 31
+; RV32-NEXT:    sltu a3, t0, a3
+; RV32-NEXT:    add a6, a7, a6
+; RV32-NEXT:    add a3, a6, a3
 ; RV32-NEXT:    add t0, a1, t0
 ; RV32-NEXT:    add a3, t2, a3
 ; RV32-NEXT:    sltu a1, t0, a1
 ; RV32-NEXT:    mul a2, a0, a2
 ; RV32-NEXT:    add a1, a3, a1
-; RV32-NEXT:    srai a0, a6, 31
+; RV32-NEXT:    srai a0, a5, 31
 ; RV32-NEXT:    xor a1, a1, a0
 ; RV32-NEXT:    xor a0, t0, a0
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    snez a0, a0
 ; RV32-NEXT:    sw a2, 0(a4)
-; RV32-NEXT:    sw a6, 4(a4)
+; RV32-NEXT:    sw a5, 4(a4)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: smulo.i64:
@@ -1361,37 +1361,37 @@ define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ;
 ; RV32ZBA-LABEL: smulo.i64:
 ; RV32ZBA:       # %bb.0: # %entry
-; RV32ZBA-NEXT:    mul a5, a1, a2
-; RV32ZBA-NEXT:    mulhu a6, a0, a2
+; RV32ZBA-NEXT:    mulhu a5, a0, a2
+; RV32ZBA-NEXT:    mul a6, a1, a2
 ; RV32ZBA-NEXT:    mul a7, a3, a0
 ; RV32ZBA-NEXT:    mulhsu t0, a1, a2
 ; RV32ZBA-NEXT:    mulhsu t1, a3, a0
 ; RV32ZBA-NEXT:    mulh t2, a1, a3
 ; RV32ZBA-NEXT:    mul a1, a1, a3
-; RV32ZBA-NEXT:    add a6, a5, a6
-; RV32ZBA-NEXT:    sltu a3, a6, a5
-; RV32ZBA-NEXT:    add a6, a7, a6
-; RV32ZBA-NEXT:    add a3, t0, a3
-; RV32ZBA-NEXT:    sltu a5, a6, a7
-; RV32ZBA-NEXT:    add a5, t1, a5
-; RV32ZBA-NEXT:    srai a7, a3, 31
-; RV32ZBA-NEXT:    add t0, a3, a5
-; RV32ZBA-NEXT:    srai a5, a5, 31
-; RV32ZBA-NEXT:    sltu a3, t0, a3
+; RV32ZBA-NEXT:    add a5, a6, a5
+; RV32ZBA-NEXT:    sltu a3, a5, a6
 ; RV32ZBA-NEXT:    add a5, a7, a5
-; RV32ZBA-NEXT:    add a3, a5, a3
+; RV32ZBA-NEXT:    add a3, t0, a3
+; RV32ZBA-NEXT:    sltu a6, a5, a7
+; RV32ZBA-NEXT:    add a6, t1, a6
+; RV32ZBA-NEXT:    srai a7, a3, 31
+; RV32ZBA-NEXT:    add t0, a3, a6
+; RV32ZBA-NEXT:    srai a6, a6, 31
+; RV32ZBA-NEXT:    sltu a3, t0, a3
+; RV32ZBA-NEXT:    add a6, a7, a6
+; RV32ZBA-NEXT:    add a3, a6, a3
 ; RV32ZBA-NEXT:    add t0, a1, t0
 ; RV32ZBA-NEXT:    add a3, t2, a3
 ; RV32ZBA-NEXT:    sltu a1, t0, a1
 ; RV32ZBA-NEXT:    mul a2, a0, a2
 ; RV32ZBA-NEXT:    add a1, a3, a1
-; RV32ZBA-NEXT:    srai a0, a6, 31
+; RV32ZBA-NEXT:    srai a0, a5, 31
 ; RV32ZBA-NEXT:    xor a1, a1, a0
 ; RV32ZBA-NEXT:    xor a0, t0, a0
 ; RV32ZBA-NEXT:    or a0, a0, a1
 ; RV32ZBA-NEXT:    snez a0, a0
 ; RV32ZBA-NEXT:    sw a2, 0(a4)
-; RV32ZBA-NEXT:    sw a6, 4(a4)
+; RV32ZBA-NEXT:    sw a5, 4(a4)
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: smulo.i64:
@@ -1406,37 +1406,37 @@ define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ;
 ; RV32ZICOND-LABEL: smulo.i64:
 ; RV32ZICOND:       # %bb.0: # %entry
-; RV32ZICOND-NEXT:    mul a5, a1, a2
-; RV32ZICOND-NEXT:    mulhu a6, a0, a2
+; RV32ZICOND-NEXT:    mulhu a5, a0, a2
+; RV32ZICOND-NEXT:    mul a6, a1, a2
 ; RV32ZICOND-NEXT:    mul a7, a3, a0
 ; RV32ZICOND-NEXT:    mulhsu t0, a1, a2
 ; RV32ZICOND-NEXT:    mulhsu t1, a3, a0
 ; RV32ZICOND-NEXT:    mulh t2, a1, a3
 ; RV32ZICOND-NEXT:    mul a1, a1, a3
-; RV32ZICOND-NEXT:    add a6, a5, a6
-; RV32ZICOND-NEXT:    sltu a3, a6, a5
-; RV32ZICOND-NEXT:    add a6, a7, a6
-; RV32ZICOND-NEXT:    add a3, t0, a3
-; RV32ZICOND-NEXT:    sltu a5, a6, a7
-; RV32ZICOND-NEXT:    add a5, t1, a5
-; RV32ZICOND-NEXT:    srai a7, a3, 31
-; RV32ZICOND-NEXT:    add t0, a3, a5
-; RV32ZICOND-NEXT:    srai a5, a5, 31
-; RV32ZICOND-NEXT:    sltu a3, t0, a3
+; RV32ZICOND-NEXT:    add a5, a6, a5
+; RV32ZICOND-NEXT:    sltu a3, a5, a6
 ; RV32ZICOND-NEXT:    add a5, a7, a5
-; RV32ZICOND-NEXT:    add a3, a5, a3
+; RV32ZICOND-NEXT:    add a3, t0, a3
+; RV32ZICOND-NEXT:    sltu a6, a5, a7
+; RV32ZICOND-NEXT:    add a6, t1, a6
+; RV32ZICOND-NEXT:    srai a7, a3, 31
+; RV32ZICOND-NEXT:    add t0, a3, a6
+; RV32ZICOND-NEXT:    srai a6, a6, 31
+; RV32ZICOND-NEXT:    sltu a3, t0, a3
+; RV32ZICOND-NEXT:    add a6, a7, a6
+; RV32ZICOND-NEXT:    add a3, a6, a3
 ; RV32ZICOND-NEXT:    add t0, a1, t0
 ; RV32ZICOND-NEXT:    add a3, t2, a3
 ; RV32ZICOND-NEXT:    sltu a1, t0, a1
 ; RV32ZICOND-NEXT:    mul a2, a0, a2
 ; RV32ZICOND-NEXT:    add a1, a3, a1
-; RV32ZICOND-NEXT:    srai a0, a6, 31
+; RV32ZICOND-NEXT:    srai a0, a5, 31
 ; RV32ZICOND-NEXT:    xor a1, a1, a0
 ; RV32ZICOND-NEXT:    xor a0, t0, a0
 ; RV32ZICOND-NEXT:    or a0, a0, a1
 ; RV32ZICOND-NEXT:    snez a0, a0
 ; RV32ZICOND-NEXT:    sw a2, 0(a4)
-; RV32ZICOND-NEXT:    sw a6, 4(a4)
+; RV32ZICOND-NEXT:    sw a5, 4(a4)
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: smulo.i64:
@@ -1764,8 +1764,8 @@ define signext i32 @umulo3.i32(i32 signext %0, i32 signext %1, ptr %2) {
 define zeroext i1 @umulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; RV32-LABEL: umulo.i64:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    mul a5, a1, a2
-; RV32-NEXT:    mul a6, a3, a0
+; RV32-NEXT:    mul a5, a3, a0
+; RV32-NEXT:    mul a6, a1, a2
 ; RV32-NEXT:    mulhu a7, a0, a2
 ; RV32-NEXT:    mulhu t0, a1, a2
 ; RV32-NEXT:    mulhu t1, a3, a0
@@ -1773,7 +1773,7 @@ define zeroext i1 @umulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; RV32-NEXT:    snez a0, a3
 ; RV32-NEXT:    snez a1, a1
 ; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    add a5, a5, a6
+; RV32-NEXT:    add a5, a6, a5
 ; RV32-NEXT:    snez a1, t0
 ; RV32-NEXT:    add a5, a7, a5
 ; RV32-NEXT:    or a0, a0, a1
@@ -1795,8 +1795,8 @@ define zeroext i1 @umulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ;
 ; RV32ZBA-LABEL: umulo.i64:
 ; RV32ZBA:       # %bb.0: # %entry
-; RV32ZBA-NEXT:    mul a5, a1, a2
-; RV32ZBA-NEXT:    mul a6, a3, a0
+; RV32ZBA-NEXT:    mul a5, a3, a0
+; RV32ZBA-NEXT:    mul a6, a1, a2
 ; RV32ZBA-NEXT:    mulhu a7, a0, a2
 ; RV32ZBA-NEXT:    mulhu t0, a1, a2
 ; RV32ZBA-NEXT:    mulhu t1, a3, a0
@@ -1804,7 +1804,7 @@ define zeroext i1 @umulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; RV32ZBA-NEXT:    snez a0, a3
 ; RV32ZBA-NEXT:    snez a1, a1
 ; RV32ZBA-NEXT:    and a0, a1, a0
-; RV32ZBA-NEXT:    add a5, a5, a6
+; RV32ZBA-NEXT:    add a5, a6, a5
 ; RV32ZBA-NEXT:    snez a1, t0
 ; RV32ZBA-NEXT:    add a5, a7, a5
 ; RV32ZBA-NEXT:    or a0, a0, a1
@@ -1826,15 +1826,15 @@ define zeroext i1 @umulo.i64(i64 %v1, i64 %v2, ptr %res) {
 ;
 ; RV32ZICOND-LABEL: umulo.i64:
 ; RV32ZICOND:       # %bb.0: # %entry
-; RV32ZICOND-NEXT:    mul a5, a1, a2
-; RV32ZICOND-NEXT:    mul a6, a3, a0
+; RV32ZICOND-NEXT:    mul a5, a3, a0
+; RV32ZICOND-NEXT:    mul a6, a1, a2
 ; RV32ZICOND-NEXT:    mulhu a7, a0, a2
 ; RV32ZICOND-NEXT:    mulhu t0, a1, a2
 ; RV32ZICOND-NEXT:    mulhu t1, a3, a0
 ; RV32ZICOND-NEXT:    mul a2, a0, a2
 ; RV32ZICOND-NEXT:    snez a0, a3
 ; RV32ZICOND-NEXT:    czero.eqz a0, a0, a1
-; RV32ZICOND-NEXT:    add a5, a5, a6
+; RV32ZICOND-NEXT:    add a5, a6, a5
 ; RV32ZICOND-NEXT:    snez a1, t0
 ; RV32ZICOND-NEXT:    add a5, a7, a5
 ; RV32ZICOND-NEXT:    or a0, a0, a1
@@ -5288,9 +5288,9 @@ define zeroext i1 @uaddo.i64.constant(i64 %v1, ptr %res) {
 ; RV32-NEXT:    addi a3, a0, 2
 ; RV32-NEXT:    sltu a0, a3, a0
 ; RV32-NEXT:    add a4, a1, a0
-; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sltu a1, a4, a1
 ; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sw a4, 4(a2)
 ; RV32-NEXT:    ret
 ;
@@ -5306,9 +5306,9 @@ define zeroext i1 @uaddo.i64.constant(i64 %v1, ptr %res) {
 ; RV32ZBA-NEXT:    addi a3, a0, 2
 ; RV32ZBA-NEXT:    sltu a0, a3, a0
 ; RV32ZBA-NEXT:    add a4, a1, a0
-; RV32ZBA-NEXT:    sw a3, 0(a2)
 ; RV32ZBA-NEXT:    sltu a1, a4, a1
 ; RV32ZBA-NEXT:    and a0, a0, a1
+; RV32ZBA-NEXT:    sw a3, 0(a2)
 ; RV32ZBA-NEXT:    sw a4, 4(a2)
 ; RV32ZBA-NEXT:    ret
 ;
@@ -5324,9 +5324,9 @@ define zeroext i1 @uaddo.i64.constant(i64 %v1, ptr %res) {
 ; RV32ZICOND-NEXT:    addi a3, a0, 2
 ; RV32ZICOND-NEXT:    sltu a0, a3, a0
 ; RV32ZICOND-NEXT:    add a4, a1, a0
-; RV32ZICOND-NEXT:    sw a3, 0(a2)
 ; RV32ZICOND-NEXT:    sltu a1, a4, a1
 ; RV32ZICOND-NEXT:    and a0, a0, a1
+; RV32ZICOND-NEXT:    sw a3, 0(a2)
 ; RV32ZICOND-NEXT:    sw a4, 4(a2)
 ; RV32ZICOND-NEXT:    ret
 ;
@@ -5351,9 +5351,9 @@ define zeroext i1 @uaddo.i64.constant_2048(i64 %v1, ptr %res) {
 ; RV32-NEXT:    addi a3, a3, 1
 ; RV32-NEXT:    sltu a0, a3, a0
 ; RV32-NEXT:    add a4, a1, a0
-; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sltu a1, a4, a1
 ; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sw a4, 4(a2)
 ; RV32-NEXT:    ret
 ;
@@ -5371,9 +5371,9 @@ define zeroext i1 @uaddo.i64.constant_2048(i64 %v1, ptr %res) {
 ; RV32ZBA-NEXT:    addi a3, a3, 1
 ; RV32ZBA-NEXT:    sltu a0, a3, a0
 ; RV32ZBA-NEXT:    add a4, a1, a0
-; RV32ZBA-NEXT:    sw a3, 0(a2)
 ; RV32ZBA-NEXT:    sltu a1, a4, a1
 ; RV32ZBA-NEXT:    and a0, a0, a1
+; RV32ZBA-NEXT:    sw a3, 0(a2)
 ; RV32ZBA-NEXT:    sw a4, 4(a2)
 ; RV32ZBA-NEXT:    ret
 ;
@@ -5391,9 +5391,9 @@ define zeroext i1 @uaddo.i64.constant_2048(i64 %v1, ptr %res) {
 ; RV32ZICOND-NEXT:    addi a3, a3, 1
 ; RV32ZICOND-NEXT:    sltu a0, a3, a0
 ; RV32ZICOND-NEXT:    add a4, a1, a0
-; RV32ZICOND-NEXT:    sw a3, 0(a2)
 ; RV32ZICOND-NEXT:    sltu a1, a4, a1
 ; RV32ZICOND-NEXT:    and a0, a0, a1
+; RV32ZICOND-NEXT:    sw a3, 0(a2)
 ; RV32ZICOND-NEXT:    sw a4, 4(a2)
 ; RV32ZICOND-NEXT:    ret
 ;
@@ -5419,9 +5419,9 @@ define zeroext i1 @uaddo.i64.constant_2049(i64 %v1, ptr %res) {
 ; RV32-NEXT:    addi a3, a3, 2
 ; RV32-NEXT:    sltu a0, a3, a0
 ; RV32-NEXT:    add a4, a1, a0
-; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sltu a1, a4, a1
 ; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    sw a3, 0(a2)
 ; RV32-NEXT:    sw a4, 4(a2)
 ; RV32-NEXT:    ret
 ;
@@ -5439,9 +5439,9 @@ define zeroext i1 @uaddo.i64.constant_2049(i64 %v1, ptr %res) {
 ; RV32ZBA-NEXT:    addi a3, a3, 2
 ; RV32ZBA-NEXT:    sltu a0, a3, a0
 ; RV32ZBA-NEXT:    add a4, a1, a0
-; RV32ZBA-NEXT:    sw a3, 0(a2)
 ; RV32ZBA-NEXT:    sltu a1, a4, a1
 ; RV32ZBA-NEXT:    and a0, a0, a1
+; RV32ZBA-NEXT:    sw a3, 0(a2)
 ; RV32ZBA-NEXT:    sw a4, 4(a2)
 ; RV32ZBA-NEXT:    ret
 ;
@@ -5459,9 +5459,9 @@ define zeroext i1 @uaddo.i64.constant_2049(i64 %v1, ptr %res) {
 ; RV32ZICOND-NEXT:    addi a3, a3, 2
 ; RV32ZICOND-NEXT:    sltu a0, a3, a0
 ; RV32ZICOND-NEXT:    add a4, a1, a0
-; RV32ZICOND-NEXT:    sw a3, 0(a2)
 ; RV32ZICOND-NEXT:    sltu a1, a4, a1
 ; RV32ZICOND-NEXT:    and a0, a0, a1
+; RV32ZICOND-NEXT:    sw a3, 0(a2)
 ; RV32ZICOND-NEXT:    sw a4, 4(a2)
 ; RV32ZICOND-NEXT:    ret
 ;

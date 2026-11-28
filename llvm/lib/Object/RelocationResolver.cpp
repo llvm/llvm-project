@@ -233,6 +233,8 @@ static bool supportsSparc64(uint64_t Type) {
   case ELF::R_SPARC_64:
   case ELF::R_SPARC_UA32:
   case ELF::R_SPARC_UA64:
+  case ELF::R_SPARC_TLS_DTPOFF32:
+  case ELF::R_SPARC_TLS_DTPOFF64:
     return true;
   default:
     return false;
@@ -246,6 +248,8 @@ static uint64_t resolveSparc64(uint64_t Type, uint64_t Offset, uint64_t S,
   case ELF::R_SPARC_64:
   case ELF::R_SPARC_UA32:
   case ELF::R_SPARC_UA64:
+  case ELF::R_SPARC_TLS_DTPOFF32:
+  case ELF::R_SPARC_TLS_DTPOFF64:
     return S + Addend;
   default:
     llvm_unreachable("Invalid relocation type");
@@ -417,6 +421,7 @@ static bool supportsSparc32(uint64_t Type) {
   switch (Type) {
   case ELF::R_SPARC_32:
   case ELF::R_SPARC_UA32:
+  case ELF::R_SPARC_TLS_DTPOFF32:
     return true;
   default:
     return false;
@@ -425,7 +430,8 @@ static bool supportsSparc32(uint64_t Type) {
 
 static uint64_t resolveSparc32(uint64_t Type, uint64_t Offset, uint64_t S,
                                uint64_t LocData, int64_t Addend) {
-  if (Type == ELF::R_SPARC_32 || Type == ELF::R_SPARC_UA32)
+  if (Type == ELF::R_SPARC_32 || Type == ELF::R_SPARC_UA32 ||
+      Type == ELF::R_SPARC_TLS_DTPOFF32)
     return S + Addend;
   return LocData;
 }

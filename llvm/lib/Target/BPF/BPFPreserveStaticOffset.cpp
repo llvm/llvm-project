@@ -457,11 +457,10 @@ static void rewriteUses(Instruction *Insn,
                         SmallVector<GetElementPtrInst *> &GEPs,
                         SmallVector<Instruction *> &Visited, bool AllowPatial,
                         bool &StillUsed) {
-  for (User *U : Insn->users()) {
-    auto *UI = dyn_cast<Instruction>(U);
-    if (UI && (isPointerOperand(Insn, UI) || isPreserveStaticOffsetCall(UI) ||
-               isInlineableCall(UI)))
-      rewriteAccessChain(UI, GEPs, Visited, AllowPatial, StillUsed);
+  for (Instruction *U : Insn->users()) {
+    if (isPointerOperand(Insn, U) || isPreserveStaticOffsetCall(U) ||
+        isInlineableCall(U))
+      rewriteAccessChain(U, GEPs, Visited, AllowPatial, StillUsed);
     else
       LLVM_DEBUG({
         llvm::dbgs() << "unsupported usage in BPFPreserveStaticOffsetPass:\n";

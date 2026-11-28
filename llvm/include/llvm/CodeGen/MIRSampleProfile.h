@@ -33,7 +33,6 @@ using namespace sampleprof;
 class MIRProfileLoader;
 class LLVM_ABI MIRProfileLoaderPass : public MachineFunctionPass {
   MachineFunction *MF;
-  std::string ProfileFileName;
   FSDiscriminatorPass P;
   unsigned LowBit;
   unsigned HighBit;

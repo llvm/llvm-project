@@ -5,7 +5,6 @@
 ...
 ---
 name:            s8
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -38,7 +37,6 @@ body:             |
 ...
 ---
 name:            s16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -72,7 +70,6 @@ body:             |
 ---
 name:            s32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0
@@ -102,7 +99,6 @@ body:             |
 ---
 name:            s64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -131,7 +127,6 @@ body:             |
 ---
 name:            v4s32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -176,7 +171,6 @@ body:             |
 ---
 name:            s35
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -211,7 +205,6 @@ body:             |
 ---
 name:            s65
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1

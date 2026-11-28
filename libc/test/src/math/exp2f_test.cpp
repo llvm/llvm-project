@@ -16,6 +16,7 @@
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/math/exp2f_double_eval.h"

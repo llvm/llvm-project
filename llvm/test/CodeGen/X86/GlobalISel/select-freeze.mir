@@ -5,9 +5,6 @@
 name:            select_freeze_scalar_s32
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '', flags: [  ] }
-  - { id: 1, class: gpr, preferred-register: '', flags: [  ] }
 liveins:
 fixedStack:
 stack:
@@ -31,9 +28,6 @@ body:             |
 name:            select_freeze_scalar_s64
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '', flags: [  ] }
-  - { id: 1, class: gpr, preferred-register: '', flags: [  ] }
 liveins:
 fixedStack:
 stack:
@@ -58,9 +52,6 @@ body:             |
 name:            select_freeze_vec128
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr, preferred-register: '', flags: [  ] }
-  - { id: 1, class: vecr, preferred-register: '', flags: [  ] }
 body:             |
   bb.0:
     liveins: $xmm0

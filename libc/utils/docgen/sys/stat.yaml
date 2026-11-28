@@ -1,3 +1,29 @@
+posix: posix-2024
+types:
+  blkcnt_t:
+    in-latest-posix: ''
+  blksize_t:
+    in-latest-posix: ''
+  dev_t:
+    in-latest-posix: ''
+  gid_t:
+    in-latest-posix: ''
+  ino_t:
+    in-latest-posix: ''
+  mode_t:
+    in-latest-posix: ''
+  nlink_t:
+    in-latest-posix: ''
+  off_t:
+    in-latest-posix: ''
+  struct stat:
+    in-latest-posix: ''
+  struct timespec:
+    in-latest-posix: ''
+  time_t:
+    in-latest-posix: ''
+  uid_t:
+    in-latest-posix: ''
 macros:
   S_IFMT:
     in-latest-posix: ''

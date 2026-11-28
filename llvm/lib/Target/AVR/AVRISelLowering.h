@@ -63,6 +63,9 @@ public:
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
 
+  void AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                     SDNode *Node) const override;
+
   ConstraintType getConstraintType(StringRef Constraint) const override;
 
   ConstraintWeight

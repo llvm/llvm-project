@@ -1,7 +1,5 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; XUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
-; FIXME: cypress is broken because the bigger testcases spill and it's not implemented
 
 ; FUNC-LABEL: {{^}}zextload_global_i16_to_i32:
 ; SI: buffer_load_ushort

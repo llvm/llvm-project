@@ -89,7 +89,6 @@
 ...
 ---
 name:            legal0
-tracksRegLiveness: true
 body:             |
   bb.0 (%ir-block.0):
   liveins: $lr
@@ -124,7 +123,6 @@ body:             |
 ...
 ---
 name:            legal1
-tracksRegLiveness: true
 body:             |
   bb.0 (%ir-block.0):
   liveins: $lr
@@ -159,7 +157,6 @@ body:             |
 ...
 ---
 name:            illegal0
-tracksRegLiveness: true
 body:             |
   bb.0 (%ir-block.0):
   liveins: $lr
@@ -202,7 +199,6 @@ body:             |
 ...
 ---
 name:            illegal1
-tracksRegLiveness: true
 body:             |
   bb.0 (%ir-block.0):
   liveins: $lr
@@ -245,7 +241,6 @@ body:             |
 ...
 ---
 name:            illegal2
-tracksRegLiveness: true
 body:             |
   bb.0 (%ir-block.0):
     liveins: $lr
@@ -292,7 +287,6 @@ body:             |
 ...
 ---
 name:            illegal3
-tracksRegLiveness: true
 body:             |
   bb.0 (%ir-block.0):
     liveins: $lr
@@ -314,7 +308,7 @@ body:             |
     frame-destroy AUTIASPPCi <mcsymbol .Lpac0>, implicit-def $lr, implicit $lr, implicit $sp
     frame-destroy CFI_INSTRUCTION llvm_set_ra_state 0, 0
     RET undef $lr
-
+...
 # CHECK-LABEL: name: illegal3
 # CHECK: liveins: $lr
 # CHECK-NEXT: {{  $}}

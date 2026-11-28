@@ -11,21 +11,13 @@
 #include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
-#include "llvm/CodeGen/FuncletLayout.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/MachineBlockPlacement.h"
-#include "llvm/CodeGen/MachineCopyPropagation.h"
-#include "llvm/CodeGen/MachineLateInstrsCleanup.h"
-#include "llvm/CodeGen/PatchableFunction.h"
-#include "llvm/CodeGen/PostRAMachineSink.h"
-#include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
-#include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
-#include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/MC/MCStreamer.h"
@@ -37,12 +29,6 @@
 #include "llvm/Transforms/Utils/LowerGlobalDtors.h"
 
 using namespace llvm;
-
-namespace WebAssembly {
-extern cl::opt<bool> WasmDisableExplicitLocals;
-} // namespace WebAssembly
-
-using llvm::WebAssembly::WasmDisableExplicitLocals;
 
 namespace {
 
@@ -58,11 +44,7 @@ public:
                                          const CGPassBuilderOption &Opts,
                                          PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {
-    disablePass<MachineLateInstrsCleanupPass, MachineCopyPropagationPass,
-                PostRAMachineSinkingPass, PostRASchedulerPass,
-                FuncletLayoutPass, StackMapLivenessPass, PatchableFunctionPass,
-                ShrinkWrapPass, RemoveLoadsIntoFakeUsesPass,
-                MachineBlockPlacementPass>();
+    disablePass<MachineBlockPlacementPass>();
 
     // Currently RegisterCoalesce degrades wasm debug info quality by a
     // significant margin. As a quick fix, disable this for -O1, which is often
@@ -75,6 +57,7 @@ public:
       disablePass<RegisterCoalescerPass>();
   }
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addISelPrepare(PassManagerWrapper &PMW) override;
 
@@ -87,14 +70,13 @@ public:
   Error addRegBankSelect(PassManagerWrapper &PMW) override;
   Error addGlobalInstructionSelect(PassManagerWrapper &PMW) override;
 
-  Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) override;
-  Expected<bool>
-  addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
+
+} // namespace
 
 void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // Add signatures to prototype-less function declarations
@@ -206,16 +188,6 @@ Error WebAssemblyCodeGenPassBuilder::addGlobalInstructionSelect(
   return Error::success();
 }
 
-Error WebAssemblyCodeGenPassBuilder::addRegAssignAndRewriteFast(
-    PassManagerWrapper &PMW) {
-  return Error::success();
-}
-
-Expected<bool> WebAssemblyCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
-    PassManagerWrapper &PMW) {
-  return false;
-}
-
 void WebAssemblyCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   Base::addPreEmitPass(PMW);
 
@@ -269,7 +241,7 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   addMachineFunctionPass(WebAssemblyCFGStackifyPass(), PMW);
 
   // Insert explicit local.get and local.set operators.
-  if (!WasmDisableExplicitLocals)
+  if (getTM().getCLOpts().emit_explicit_locals)
     addMachineFunctionPass(WebAssemblyExplicitLocalsPass(), PMW);
 
   // Lower br_unless into br_if.
@@ -283,7 +255,7 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   addMachineFunctionPass(WebAssemblyRegNumberingPass(), PMW);
 
   // Fix debug_values whose defs have been stackified.
-  if (!WasmDisableExplicitLocals)
+  if (getTM().getCLOpts().emit_explicit_locals)
     addMachineFunctionPass(WebAssemblyDebugFixupPass(), PMW);
 
   // Collect information to prepare for MC lowering / asm printing.
@@ -303,8 +275,6 @@ void WebAssemblyCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void WebAssemblyCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(WebAssemblyAsmPrinterEndPass(), PMW);
 }
-
-} // namespace
 
 void WebAssemblyTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "WebAssemblyPassRegistry.def"

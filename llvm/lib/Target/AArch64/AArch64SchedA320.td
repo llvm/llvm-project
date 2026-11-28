@@ -23,6 +23,8 @@ def CortexA320Model : SchedMachineModel {
   let CompleteModel = 0;      // Covers instructions applicable to Cortex-A320.
 
   let FullInstRWOverlapCheck = 0;
+  // FIXME: Remove when all errors have been fixed.
+  let WarnRedundantInstRW = 0;
 }
 
 

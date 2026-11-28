@@ -25,9 +25,10 @@ public:
   ThreadSafeDenseSet(unsigned set_initial_capacity = 0)
       : m_set(set_initial_capacity), m_mutex() {}
 
-  void Insert(_ElementType e) {
+  /// Returns true if \p e was not in the set yet.
+  bool Insert(_ElementType e) {
     std::lock_guard<_MutexType> guard(m_mutex);
-    m_set.insert(e);
+    return m_set.insert(e).second;
   }
 
   void Erase(_ElementType e) {

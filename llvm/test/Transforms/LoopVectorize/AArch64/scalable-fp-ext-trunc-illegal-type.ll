@@ -11,7 +11,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; CHECK: Cost of Invalid for VF vscale x 2: WIDEN-CAST ir<%load.ext> = fpext  ir<%load.in> to fp128
 
-define void @load_ext_trunc_store(ptr readonly %in, ptr noalias %out, i64 %N) {
+define void @load_ext_trunc_store(ptr readonly %in, ptr noalias %out, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: define void @load_ext_trunc_store(
 ; CHECK-SAME: ptr readonly [[IN:%.*]], ptr noalias [[OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:

@@ -51,9 +51,9 @@ TEST_P(ABIAArch64TestFixture, AugmentRegisterInfo) {
   using Register = DynamicRegisterInfo::Register;
 
   Register pc;
-  pc.name = ConstString("pc");
-  pc.alt_name = ConstString();
-  pc.set_name = ConstString("GPR");
+  pc.name = "pc";
+  pc.alt_name = "";
+  pc.set_name = "GPR";
   std::vector<Register> regs{pc};
 
   abi_sp->AugmentRegisterInfo(regs);
@@ -72,8 +72,8 @@ TEST_P(ABIAArch64TestFixture, AugmentRegisterInfoThreadPointer) {
   using Register = DynamicRegisterInfo::Register;
 
   Register tpidr;
-  tpidr.name = ConstString("tpidr");
-  tpidr.set_name = ConstString("GPR");
+  tpidr.name = "tpidr";
+  tpidr.set_name = "GPR";
   std::vector<Register> regs{tpidr};
 
   abi_sp->AugmentRegisterInfo(regs);

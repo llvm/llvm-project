@@ -314,7 +314,357 @@ define void @revec_expf_proto_mismatch(ptr noalias %x, ptr noalias %r) {
   ret void
 }
 
+; The non-power-of-2 lanes of the pure void calls use the wider variant, which
+; has no result to drop the padded lanes from.
+define void @void_pure3(ptr noalias %x) {
+; CHECK-LABEL: define void @void_pure3(
+; CHECK-SAME: ptr noalias [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 1
+; CHECK-NEXT:    [[X2P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
+; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[X]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
+; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
+; CHECK-NEXT:    call void @pure(float [[X0]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @pure(float [[X1]]) #[[ATTR4]]
+; CHECK-NEXT:    call void @pure(float [[X2]]) #[[ATTR4]]
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: define void @void_pure3(
+; DEFAULT-SAME: ptr noalias [[X:%.*]]) #[[ATTR0]] {
+; DEFAULT-NEXT:    [[X1P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 1
+; DEFAULT-NEXT:    [[X2P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
+; DEFAULT-NEXT:    [[X0:%.*]] = load float, ptr [[X]], align 4
+; DEFAULT-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
+; DEFAULT-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
+; DEFAULT-NEXT:    call void @pure(float [[X0]]) #[[ATTR4:[0-9]+]]
+; DEFAULT-NEXT:    call void @pure(float [[X1]]) #[[ATTR4]]
+; DEFAULT-NEXT:    call void @pure(float [[X2]]) #[[ATTR4]]
+; DEFAULT-NEXT:    ret void
+;
+  %x1p = getelementptr inbounds float, ptr %x, i64 1
+  %x2p = getelementptr inbounds float, ptr %x, i64 2
+  %x0 = load float, ptr %x, align 4
+  %x1 = load float, ptr %x1p, align 4
+  %x2 = load float, ptr %x2p, align 4
+  call void @pure(float %x0) #3
+  call void @pure(float %x1) #3
+  call void @pure(float %x2) #3
+  ret void
+}
+
+; Negative: the nobuiltin call is not the library function.
+define void @void_pure_nobuiltin(ptr noalias %x) {
+; CHECK-LABEL: define void @void_pure_nobuiltin(
+; CHECK-SAME: ptr noalias [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 1
+; CHECK-NEXT:    [[X2P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
+; CHECK-NEXT:    [[X3P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 3
+; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[X]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
+; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
+; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[X3P]], align 4
+; CHECK-NEXT:    call void @pure(float [[X0]]) #[[ATTR4]]
+; CHECK-NEXT:    call void @pure(float [[X1]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @pure(float [[X2]]) #[[ATTR4]]
+; CHECK-NEXT:    call void @pure(float [[X3]]) #[[ATTR4]]
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: define void @void_pure_nobuiltin(
+; DEFAULT-SAME: ptr noalias [[X:%.*]]) #[[ATTR0]] {
+; DEFAULT-NEXT:    [[X1P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 1
+; DEFAULT-NEXT:    [[X2P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
+; DEFAULT-NEXT:    [[X3P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 3
+; DEFAULT-NEXT:    [[X0:%.*]] = load float, ptr [[X]], align 4
+; DEFAULT-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
+; DEFAULT-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
+; DEFAULT-NEXT:    [[X3:%.*]] = load float, ptr [[X3P]], align 4
+; DEFAULT-NEXT:    call void @pure(float [[X0]]) #[[ATTR4]]
+; DEFAULT-NEXT:    call void @pure(float [[X1]]) #[[ATTR5:[0-9]+]]
+; DEFAULT-NEXT:    call void @pure(float [[X2]]) #[[ATTR4]]
+; DEFAULT-NEXT:    call void @pure(float [[X3]]) #[[ATTR4]]
+; DEFAULT-NEXT:    ret void
+;
+  %x1p = getelementptr inbounds float, ptr %x, i64 1
+  %x2p = getelementptr inbounds float, ptr %x, i64 2
+  %x3p = getelementptr inbounds float, ptr %x, i64 3
+  %x0 = load float, ptr %x, align 4
+  %x1 = load float, ptr %x1p, align 4
+  %x2 = load float, ptr %x2p, align 4
+  %x3 = load float, ptr %x3p, align 4
+  call void @pure(float %x0) #3
+  call void @pure(float %x1) nobuiltin #3
+  call void @pure(float %x2) #3
+  call void @pure(float %x3) #3
+  ret void
+}
+
+; Negative: the nobuiltin call is not the vector function.
+define void @revec_sinf_nobuiltin(ptr noalias %x, ptr noalias %r) {
+; CHECK-LABEL: define void @revec_sinf_nobuiltin(
+; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 1
+; CHECK-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
+; CHECK-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[X]], align 16
+; CHECK-NEXT:    [[B:%.*]] = load <4 x float>, ptr [[X1P]], align 16
+; CHECK-NEXT:    [[VA:%.*]] = call <4 x float> @amd_vrs4_sinf(<4 x float> [[A]])
+; CHECK-NEXT:    [[VB:%.*]] = call <4 x float> @amd_vrs4_sinf(<4 x float> [[B]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    store <4 x float> [[VA]], ptr [[R]], align 16
+; CHECK-NEXT:    store <4 x float> [[VB]], ptr [[R1P]], align 16
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: define void @revec_sinf_nobuiltin(
+; DEFAULT-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; DEFAULT-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 1
+; DEFAULT-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
+; DEFAULT-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[X]], align 16
+; DEFAULT-NEXT:    [[B:%.*]] = load <4 x float>, ptr [[X1P]], align 16
+; DEFAULT-NEXT:    [[VA:%.*]] = call <4 x float> @amd_vrs4_sinf(<4 x float> [[A]])
+; DEFAULT-NEXT:    [[VB:%.*]] = call <4 x float> @amd_vrs4_sinf(<4 x float> [[B]]) #[[ATTR6:[0-9]+]]
+; DEFAULT-NEXT:    store <4 x float> [[VA]], ptr [[R]], align 16
+; DEFAULT-NEXT:    store <4 x float> [[VB]], ptr [[R1P]], align 16
+; DEFAULT-NEXT:    ret void
+;
+  %x1p = getelementptr inbounds <4 x float>, ptr %x, i64 1
+  %r1p = getelementptr inbounds <4 x float>, ptr %r, i64 1
+  %a = load <4 x float>, ptr %x, align 16
+  %b = load <4 x float>, ptr %x1p, align 16
+  %va = call <4 x float> @amd_vrs4_sinf(<4 x float> %a)
+  %vb = call <4 x float> @amd_vrs4_sinf(<4 x float> %b) nobuiltin
+  store <4 x float> %va, ptr %r, align 16
+  store <4 x float> %vb, ptr %r1p, align 16
+  ret void
+}
+
+; Negative: the second parameter of the vector function is not a vector.
+define void @revec_powf_proto_mismatch(ptr noalias %a, ptr noalias %b, ptr noalias %r) {
+; CHECK-LABEL: define void @revec_powf_proto_mismatch(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[A1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[A]], i64 1
+; CHECK-NEXT:    [[B1P:%.*]] = getelementptr inbounds float, ptr [[B]], i64 1
+; CHECK-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
+; CHECK-NEXT:    [[A0:%.*]] = load <4 x float>, ptr [[A]], align 16
+; CHECK-NEXT:    [[A1:%.*]] = load <4 x float>, ptr [[A1P]], align 16
+; CHECK-NEXT:    [[B0:%.*]] = load float, ptr [[B]], align 4
+; CHECK-NEXT:    [[B1:%.*]] = load float, ptr [[B1P]], align 4
+; CHECK-NEXT:    [[V0:%.*]] = call <4 x float> @amd_vrs4_powf(<4 x float> [[A0]], float [[B0]])
+; CHECK-NEXT:    [[V1:%.*]] = call <4 x float> @amd_vrs4_powf(<4 x float> [[A1]], float [[B1]])
+; CHECK-NEXT:    store <4 x float> [[V0]], ptr [[R]], align 16
+; CHECK-NEXT:    store <4 x float> [[V1]], ptr [[R1P]], align 16
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: define void @revec_powf_proto_mismatch(
+; DEFAULT-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; DEFAULT-NEXT:    [[A1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[A]], i64 1
+; DEFAULT-NEXT:    [[B1P:%.*]] = getelementptr inbounds float, ptr [[B]], i64 1
+; DEFAULT-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
+; DEFAULT-NEXT:    [[A0:%.*]] = load <4 x float>, ptr [[A]], align 16
+; DEFAULT-NEXT:    [[A1:%.*]] = load <4 x float>, ptr [[A1P]], align 16
+; DEFAULT-NEXT:    [[B0:%.*]] = load float, ptr [[B]], align 4
+; DEFAULT-NEXT:    [[B1:%.*]] = load float, ptr [[B1P]], align 4
+; DEFAULT-NEXT:    [[V0:%.*]] = call <4 x float> @amd_vrs4_powf(<4 x float> [[A0]], float [[B0]])
+; DEFAULT-NEXT:    [[V1:%.*]] = call <4 x float> @amd_vrs4_powf(<4 x float> [[A1]], float [[B1]])
+; DEFAULT-NEXT:    store <4 x float> [[V0]], ptr [[R]], align 16
+; DEFAULT-NEXT:    store <4 x float> [[V1]], ptr [[R1P]], align 16
+; DEFAULT-NEXT:    ret void
+;
+  %a1p = getelementptr inbounds <4 x float>, ptr %a, i64 1
+  %b1p = getelementptr inbounds float, ptr %b, i64 1
+  %r1p = getelementptr inbounds <4 x float>, ptr %r, i64 1
+  %a0 = load <4 x float>, ptr %a, align 16
+  %a1 = load <4 x float>, ptr %a1p, align 16
+  %b0 = load float, ptr %b, align 4
+  %b1 = load float, ptr %b1p, align 4
+  %v0 = call <4 x float> @amd_vrs4_powf(<4 x float> %a0, float %b0)
+  %v1 = call <4 x float> @amd_vrs4_powf(<4 x float> %a1, float %b1)
+  store <4 x float> %v0, ptr %r, align 16
+  store <4 x float> %v1, ptr %r1p, align 16
+  ret void
+}
+
+; The wider vector function is declared without the properties of the called
+; function definition.
+define void @revec_tanf_definition(ptr noalias %x, ptr noalias %r) {
+; CHECK-LABEL: define void @revec_tanf_definition(
+; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 1
+; CHECK-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
+; CHECK-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[X]], align 16
+; CHECK-NEXT:    [[B:%.*]] = load <4 x float>, ptr [[X1P]], align 16
+; CHECK-NEXT:    [[VA:%.*]] = call <4 x float> @amd_vrs4_tanf(<4 x float> [[A]])
+; CHECK-NEXT:    [[VB:%.*]] = call <4 x float> @amd_vrs4_tanf(<4 x float> [[B]])
+; CHECK-NEXT:    store <4 x float> [[VA]], ptr [[R]], align 16
+; CHECK-NEXT:    store <4 x float> [[VB]], ptr [[R1P]], align 16
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: define void @revec_tanf_definition(
+; DEFAULT-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; DEFAULT-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 1
+; DEFAULT-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
+; DEFAULT-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[X]], align 16
+; DEFAULT-NEXT:    [[B:%.*]] = load <4 x float>, ptr [[X1P]], align 16
+; DEFAULT-NEXT:    [[VA:%.*]] = call <4 x float> @amd_vrs4_tanf(<4 x float> [[A]])
+; DEFAULT-NEXT:    [[VB:%.*]] = call <4 x float> @amd_vrs4_tanf(<4 x float> [[B]])
+; DEFAULT-NEXT:    store <4 x float> [[VA]], ptr [[R]], align 16
+; DEFAULT-NEXT:    store <4 x float> [[VB]], ptr [[R1P]], align 16
+; DEFAULT-NEXT:    ret void
+;
+  %x1p = getelementptr inbounds <4 x float>, ptr %x, i64 1
+  %r1p = getelementptr inbounds <4 x float>, ptr %r, i64 1
+  %a = load <4 x float>, ptr %x, align 16
+  %b = load <4 x float>, ptr %x1p, align 16
+  %va = call <4 x float> @amd_vrs4_tanf(<4 x float> %a)
+  %vb = call <4 x float> @amd_vrs4_tanf(<4 x float> %b)
+  store <4 x float> %va, ptr %r, align 16
+  store <4 x float> %vb, ptr %r1p, align 16
+  ret void
+}
+
+; Negative: the name of the wider vector function is taken by a global.
+define void @revec_logf_name_taken(ptr noalias %x, ptr noalias %r) {
+; CHECK-LABEL: define void @revec_logf_name_taken(
+; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 1
+; CHECK-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
+; CHECK-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[X]], align 16
+; CHECK-NEXT:    [[B:%.*]] = load <4 x float>, ptr [[X1P]], align 16
+; CHECK-NEXT:    [[VA:%.*]] = call <4 x float> @amd_vrs4_logf(<4 x float> [[A]])
+; CHECK-NEXT:    [[VB:%.*]] = call <4 x float> @amd_vrs4_logf(<4 x float> [[B]])
+; CHECK-NEXT:    store <4 x float> [[VA]], ptr [[R]], align 16
+; CHECK-NEXT:    store <4 x float> [[VB]], ptr [[R1P]], align 16
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: define void @revec_logf_name_taken(
+; DEFAULT-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; DEFAULT-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 1
+; DEFAULT-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
+; DEFAULT-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[X]], align 16
+; DEFAULT-NEXT:    [[B:%.*]] = load <4 x float>, ptr [[X1P]], align 16
+; DEFAULT-NEXT:    [[VA:%.*]] = call <4 x float> @amd_vrs4_logf(<4 x float> [[A]])
+; DEFAULT-NEXT:    [[VB:%.*]] = call <4 x float> @amd_vrs4_logf(<4 x float> [[B]])
+; DEFAULT-NEXT:    store <4 x float> [[VA]], ptr [[R]], align 16
+; DEFAULT-NEXT:    store <4 x float> [[VB]], ptr [[R1P]], align 16
+; DEFAULT-NEXT:    ret void
+;
+  %x1p = getelementptr inbounds <4 x float>, ptr %x, i64 1
+  %r1p = getelementptr inbounds <4 x float>, ptr %r, i64 1
+  %a = load <4 x float>, ptr %x, align 16
+  %b = load <4 x float>, ptr %x1p, align 16
+  %va = call <4 x float> @amd_vrs4_logf(<4 x float> %a)
+  %vb = call <4 x float> @amd_vrs4_logf(<4 x float> %b)
+  store <4 x float> %va, ptr %r, align 16
+  store <4 x float> %vb, ptr %r1p, align 16
+  ret void
+}
+
+; Negative: the vector variants are defined for the scalar functions only.
+define void @revec_user_variant(ptr noalias %x, ptr noalias %r) {
+; CHECK-LABEL: define void @revec_user_variant(
+; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 1
+; CHECK-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
+; CHECK-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[X]], align 16
+; CHECK-NEXT:    [[B:%.*]] = load <4 x float>, ptr [[X1P]], align 16
+; CHECK-NEXT:    [[VA:%.*]] = call <4 x float> @vfoo(<4 x float> [[A]]) #[[ATTR7:[0-9]+]]
+; CHECK-NEXT:    [[VB:%.*]] = call <4 x float> @vfoo(<4 x float> [[B]]) #[[ATTR7]]
+; CHECK-NEXT:    store <4 x float> [[VA]], ptr [[R]], align 16
+; CHECK-NEXT:    store <4 x float> [[VB]], ptr [[R1P]], align 16
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: define void @revec_user_variant(
+; DEFAULT-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; DEFAULT-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 1
+; DEFAULT-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
+; DEFAULT-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[X]], align 16
+; DEFAULT-NEXT:    [[B:%.*]] = load <4 x float>, ptr [[X1P]], align 16
+; DEFAULT-NEXT:    [[VA:%.*]] = call <4 x float> @vfoo(<4 x float> [[A]]) #[[ATTR7:[0-9]+]]
+; DEFAULT-NEXT:    [[VB:%.*]] = call <4 x float> @vfoo(<4 x float> [[B]]) #[[ATTR7]]
+; DEFAULT-NEXT:    store <4 x float> [[VA]], ptr [[R]], align 16
+; DEFAULT-NEXT:    store <4 x float> [[VB]], ptr [[R1P]], align 16
+; DEFAULT-NEXT:    ret void
+;
+  %x1p = getelementptr inbounds <4 x float>, ptr %x, i64 1
+  %r1p = getelementptr inbounds <4 x float>, ptr %r, i64 1
+  %a = load <4 x float>, ptr %x, align 16
+  %b = load <4 x float>, ptr %x1p, align 16
+  %va = call <4 x float> @vfoo(<4 x float> %a) #4
+  %vb = call <4 x float> @vfoo(<4 x float> %b) #4
+  store <4 x float> %va, ptr %r, align 16
+  store <4 x float> %vb, ptr %r1p, align 16
+  ret void
+}
+
+; Negative: the local function is not the wider vector function.
+define void @revec_exp2f_local_wide(ptr noalias %x, ptr noalias %r) {
+; CHECK-LABEL: define void @revec_exp2f_local_wide(
+; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 1
+; CHECK-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
+; CHECK-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[X]], align 16
+; CHECK-NEXT:    [[B:%.*]] = load <4 x float>, ptr [[X1P]], align 16
+; CHECK-NEXT:    [[VA:%.*]] = call <4 x float> @amd_vrs4_exp2f(<4 x float> [[A]])
+; CHECK-NEXT:    [[VB:%.*]] = call <4 x float> @amd_vrs4_exp2f(<4 x float> [[B]])
+; CHECK-NEXT:    store <4 x float> [[VA]], ptr [[R]], align 16
+; CHECK-NEXT:    store <4 x float> [[VB]], ptr [[R1P]], align 16
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: define void @revec_exp2f_local_wide(
+; DEFAULT-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
+; DEFAULT-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 1
+; DEFAULT-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
+; DEFAULT-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[X]], align 16
+; DEFAULT-NEXT:    [[B:%.*]] = load <4 x float>, ptr [[X1P]], align 16
+; DEFAULT-NEXT:    [[VA:%.*]] = call <4 x float> @amd_vrs4_exp2f(<4 x float> [[A]])
+; DEFAULT-NEXT:    [[VB:%.*]] = call <4 x float> @amd_vrs4_exp2f(<4 x float> [[B]])
+; DEFAULT-NEXT:    store <4 x float> [[VA]], ptr [[R]], align 16
+; DEFAULT-NEXT:    store <4 x float> [[VB]], ptr [[R1P]], align 16
+; DEFAULT-NEXT:    ret void
+;
+  %x1p = getelementptr inbounds <4 x float>, ptr %x, i64 1
+  %r1p = getelementptr inbounds <4 x float>, ptr %r, i64 1
+  %a = load <4 x float>, ptr %x, align 16
+  %b = load <4 x float>, ptr %x1p, align 16
+  %va = call <4 x float> @amd_vrs4_exp2f(<4 x float> %a)
+  %vb = call <4 x float> @amd_vrs4_exp2f(<4 x float> %b)
+  store <4 x float> %va, ptr %r, align 16
+  store <4 x float> %vb, ptr %r1p, align 16
+  ret void
+}
+
+define internal <8 x float> @amd_vrs8_exp2f(<8 x float> %x) #1 {
+; CHECK-LABEL: define internal <8 x float> @amd_vrs8_exp2f(
+; CHECK-SAME: <8 x float> [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    ret <8 x float> zeroinitializer
+;
+; DEFAULT-LABEL: define internal <8 x float> @amd_vrs8_exp2f(
+; DEFAULT-SAME: <8 x float> [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; DEFAULT-NEXT:    ret <8 x float> zeroinitializer
+;
+  ret <8 x float> zeroinitializer
+}
+
+@amd_vrs8_logf = global i32 0
+
+define available_externally <4 x float> @amd_vrs4_tanf(<4 x float> %x) #1 section ".text.tanf" personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define available_externally <4 x float> @amd_vrs4_tanf(
+; CHECK-SAME: <4 x float> [[X:%.*]]) #[[ATTR1]] section ".text.tanf" personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:    ret <4 x float> [[X]]
+;
+; DEFAULT-LABEL: define available_externally <4 x float> @amd_vrs4_tanf(
+; DEFAULT-SAME: <4 x float> [[X:%.*]]) #[[ATTR1]] section ".text.tanf" personality ptr @__gxx_personality_v0 {
+; DEFAULT-NEXT:    ret <4 x float> [[X]]
+;
+  ret <4 x float> %x
+}
+
 declare float @sinf(float)
+declare <4 x float> @amd_vrs4_powf(<4 x float>, float) #1
+declare <4 x float> @amd_vrs4_logf(<4 x float>) #1
+declare <4 x float> @amd_vrs4_exp2f(<4 x float>) #1
+declare <4 x float> @vfoo(<4 x float>) #1
+declare <8 x float> @vfoo2(<8 x float>) #1
+declare i32 @__gxx_personality_v0(...)
+declare void @pure(float) #1
+declare void @vpure4(<4 x float>) #1
 declare <4 x float> @amd_vrs4_sinf(<4 x float>) #1
 declare <4 x half> @amd_vrs4_expf(<4 x half>) #1
 declare void @amd_vrs4_sincosf(<4 x float>, ptr, ptr) #2
@@ -324,3 +674,5 @@ declare <8 x double> @amd_vrs8_cosf(<8 x double>) #1
 attributes #0 = { nounwind willreturn memory(none) }
 attributes #1 = { nounwind willreturn memory(none) }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
+attributes #3 = { nounwind willreturn memory(none) "vector-function-abi-variant"="_ZGV_LLVM_N4v_pure(vpure4)" }
+attributes #4 = { nounwind willreturn memory(none) "vector-function-abi-variant"="_ZGV_LLVM_N2v_vfoo(vfoo2)" }

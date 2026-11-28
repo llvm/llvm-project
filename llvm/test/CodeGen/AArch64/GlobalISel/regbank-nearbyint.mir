@@ -6,7 +6,6 @@
 name:            test_v4f16.nearbyint
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -29,7 +28,6 @@ body:             |
 name:            test_v8f16.nearbyint
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -52,7 +50,6 @@ body:             |
 name:            test_v2f32.nearbyint
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -75,7 +72,6 @@ body:             |
 name:            test_v2f64.nearbyint
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -98,7 +94,6 @@ body:             |
 name:            test_f32.nearbyint
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -121,7 +116,6 @@ body:             |
 name:            test_f64.nearbyint
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -144,7 +138,6 @@ body:             |
 name:            test_f16.nearbyint
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:

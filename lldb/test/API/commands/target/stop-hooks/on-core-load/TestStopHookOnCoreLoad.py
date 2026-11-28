@@ -36,7 +36,7 @@ class TestStopOnCoreLoad(TestBase):
         # load the stop hook module and add the stop hook:
         stop_hook_path = os.path.join(self.getSourceDir(), "stop_hook.py")
         self.runCmd(f"command script import {stop_hook_path}")
-        self.runCmd("target stop-hook add -P stop_hook.stop_handler")
+        self.runCmd("target stop-hook add -I true -P stop_hook.stop_handler")
 
         # Load core.
         process = target.LoadCore(core_path)

@@ -98,6 +98,13 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
       "isCompilerGenerated", (ins), [{
         return false;
       }]>,
+    InterfaceMethod<[{
+        Check if the global variable has local linkage. This matches LLVM's
+        `hasLocalLinkage`, which is true for private or internal linkage.
+      }],
+      "bool", "hasLocalLinkage", (ins), [{
+        return false;
+      }]>,
   ];
 }
 

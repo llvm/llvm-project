@@ -75,3 +75,13 @@ subroutine f06
   v = x
   !$omp end atomic
 end
+
+subroutine f07
+  integer :: x, v(3)
+
+  !$omp atomic update capture
+  !ERROR: Capture variable v should be a scalar
+  v = x
+  x = x + 1
+  !$omp end atomic
+end

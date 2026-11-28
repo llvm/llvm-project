@@ -6,7 +6,6 @@
 ; CHECK-DAG: %[[PTR_VEC4:[0-9]+]] = OpTypePointer Uniform %[[VEC4]]
 ; CHECK-DAG: %[[INT:[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[PTR_INT:[0-9]+]] = OpTypePointer Uniform %[[INT]]
-; CHECK-DAG: %[[INT64:[0-9]+]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[CONST_4:[0-9]+]] = OpConstant %[[INT]] 4{{$}}
 
 ; CHECK-DAG: %[[ARRAY:[0-9]+]] = OpTypeArray %[[VEC4]] %[[CONST_4]]
@@ -51,10 +50,9 @@ entry:
 ; CHECK: %[[VAL_INT:[0-9]+]] = OpLoad %[[INT]] %[[PTR_INT_ACCESS]]
   %1 = load i32, ptr addrspace(12) @index, align 4
 
-; CHECK: %[[VAL_INT64:[0-9]+]] = OpSConvert %[[INT64]] %[[VAL_INT]]
   %idxprom.i = sext i32 %1 to i64
 
-; CHECK: %[[PTR_ELEM:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_ARRAY_ACCESS]] %[[VAL_INT64]]
+; CHECK: %[[PTR_ELEM:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_ARRAY_ACCESS]] %[[VAL_INT]]
   %arrayidx.i = getelementptr inbounds <4 x float>, ptr addrspace(12) @colors, i64 %idxprom.i
 
 ; CHECK: %[[VAL_ELEM:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_ELEM]]

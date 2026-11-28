@@ -720,7 +720,7 @@ entry:
   ret void
 }
 
-declare void @free(ptr nocapture) allockind("free")
+declare void @free(ptr allocptr nocapture) allockind("free")
 
 ; We cannot remove `store i32 1, ptr %p`, because @unknown_func may unwind
 ; and the caller may read %p while unwinding.

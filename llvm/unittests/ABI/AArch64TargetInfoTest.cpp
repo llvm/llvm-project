@@ -69,7 +69,7 @@ protected:
   const ABIType *V1I128;
   const llvm::abi::VectorType *SVInt32;
   const llvm::abi::VectorType *SVBool;
-  const llvm::abi::VectorType *SVCount;
+  const llvm::abi::SveCountType *SVCount;
   const llvm::abi::VectorType *SVFloat64;
   const llvm::abi::VectorType *FixedSVInt8;
   const llvm::abi::VectorType *FixedSVInt32;
@@ -137,8 +137,7 @@ protected:
         SVBool(TB.getVectorType(Bool, llvm::ElementCount::getScalable(16),
                                 llvm::Align(2),
                                 llvm::abi::VectorKind::SVEPredicate)),
-        SVCount(TB.getScalablePredicateOrCountVectorType(
-            llvm::Align(2), llvm::abi::VectorKind::SVECount)),
+        SVCount(TB.getSveCountType(llvm::Align(2))),
         SVFloat64(TB.getVectorType(F64, llvm::ElementCount::getScalable(2),
                                    llvm::Align(16),
                                    llvm::abi::VectorKind::SVEData)),
@@ -1659,8 +1658,9 @@ TEST_F(AArch64TargetInfoTest, ClassifyPureScalableZeroLengthArray) {
 }
 
 // A Pure Scalable Type that does not fit in the remaining registers is
-// indirect and leaves those registers available. An unnamed argument is
-// indirect even when registers remain. More than 8 data vectors never fits.
+// indirect and leaves those registers available. An svcount_t argument uses a
+// predicate register. An unnamed argument is indirect even when registers
+// remain. More than 8 data vectors never fits.
 TEST_F(AArch64TargetInfoTest, ClassifyPureScalableRegisterBudget) {
   std::unique_ptr<TargetInfo> TI =
       createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::AAPCS));
@@ -1692,7 +1692,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyPureScalableRegisterBudget) {
     const ABIType *TwoPred =
         makeRecord({FieldInfo(FixedSVBool, 0), FieldInfo(FixedSVBool, 256)},
                    512, llvm::Align(2), /*UnadjustedAlign=*/llvm::Align(2));
-    const ABIType *Args[] = {SVBool, SVBool, SVBool, TwoPred, Pred};
+    const ABIType *Args[] = {SVCount, SVBool, SVBool, TwoPred, Pred};
     std::unique_ptr<FunctionInfo> FI =
         FunctionInfo::create(llvm::CallingConv::C, Void, Args);
     TI->computeInfo(*FI);
@@ -2069,6 +2069,95 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnSmallAggregate) {
       FunctionInfo::create(llvm::CallingConv::C, OneChar, {});
   TI->computeInfo(*FI);
   expectDirectCoercedInteger(FI->getReturnInfo(), 8);
+}
+
+// Under the Microsoft C++ ABI, a C++ record is not an HFA if it is empty, is
+// polymorphic, has a non-trivial copy assignment operator, destructor, or
+// default constructor, or has a base class that fails any of these checks.
+// A record rejected as an HFA is passed as a 16-byte aggregate in a pair of
+// i64. Without the Microsoft C++ ABI, and for C records, every case is an HFA.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentMicrosoftCXXHFA) {
+  auto CXXFlags = [](RecordFlags Extra) {
+    return static_cast<RecordFlags>(RecordFlags::CanPassInRegisters |
+                                    RecordFlags::IsCXXRecord | Extra);
+  };
+  const FieldInfo TwoDoubles[] = {FieldInfo(F64, 0), FieldInfo(F64, 64)};
+  auto MakeTwoDoubles = [&](RecordFlags Flags,
+                            llvm::ArrayRef<FieldInfo> Bases = {}) {
+    return makeRecord(TwoDoubles, 128, llvm::Align(8),
+                      /*UnadjustedAlign=*/llvm::Align(8), Flags, Bases);
+  };
+
+  const ABIType *CRecord = MakeTwoDoubles(RecordFlags::CanPassInRegisters);
+  const ABIType *Pod = MakeTwoDoubles(CXXFlags(RecordFlags::None));
+  const ABIType *Polymorphic =
+      MakeTwoDoubles(CXXFlags(RecordFlags::IsPolymorphic));
+  const ABIType *NonTrivialCopyAssign =
+      MakeTwoDoubles(CXXFlags(RecordFlags::HasNonTrivialCopyAssignment));
+  const ABIType *NonTrivialDtor =
+      MakeTwoDoubles(CXXFlags(RecordFlags::HasNonTrivialDestructor));
+  const ABIType *NonTrivialDefaultCtor =
+      MakeTwoDoubles(CXXFlags(RecordFlags::HasNonTrivialDefaultConstructor));
+
+  // struct Empty {};
+  // struct EmptyBase : Empty { double a, b; };
+  // struct IndirectEmptyBase : EmptyBase {};
+  const ABIType *Empty =
+      makeRecord({}, 8, llvm::Align(1), /*UnadjustedAlign=*/llvm::Align(1),
+                 CXXFlags(RecordFlags::IsCXXEmpty));
+  const ABIType *EmptyBase =
+      MakeTwoDoubles(CXXFlags(RecordFlags::None), {FieldInfo(Empty, 0)});
+  const ABIType *IndirectEmptyBase =
+      makeRecord({}, 128, llvm::Align(8), /*UnadjustedAlign=*/llvm::Align(8),
+                 CXXFlags(RecordFlags::None), {FieldInfo(EmptyBase, 0)});
+
+  // struct ZeroLength { int arr[0]; };
+  // struct ZeroLengthBase : ZeroLength { double a, b; };
+  // ZeroLength is an empty record for the ABI but not for std::is_empty, so
+  // it does not disqualify the derived record.
+  const ABIType *ZeroLength =
+      makeRecord({FieldInfo(TB.getArrayType(I32, 0, /*SizeInBits=*/0), 0)}, 0,
+                 llvm::Align(4), /*UnadjustedAlign=*/llvm::Align(4),
+                 CXXFlags(RecordFlags::None));
+  const ABIType *ZeroLengthBase =
+      MakeTwoDoubles(CXXFlags(RecordFlags::None), {FieldInfo(ZeroLength, 0)});
+
+  // struct DoubleBase { double a; };
+  // struct NonEmptyBase : DoubleBase { double b; };
+  const ABIType *DoubleBase = makeRecord(
+      {FieldInfo(F64, 0)}, 64, llvm::Align(8),
+      /*UnadjustedAlign=*/llvm::Align(8), CXXFlags(RecordFlags::None));
+  const ABIType *NonEmptyBase =
+      makeRecord({FieldInfo(F64, 64)}, 128, llvm::Align(8),
+                 /*UnadjustedAlign=*/llvm::Align(8),
+                 CXXFlags(RecordFlags::None), {FieldInfo(DoubleBase, 0)});
+
+  const ABIType *HFAs[] = {CRecord, Pod, ZeroLengthBase, NonEmptyBase};
+  const ABIType *MSVCNonHFAs[] = {Polymorphic,    NonTrivialCopyAssign,
+                                  NonTrivialDtor, NonTrivialDefaultCtor,
+                                  EmptyBase,      IndirectEmptyBase};
+
+  auto Classify = [&](const ABIType *Ty, bool IsMicrosoftCXXABI) {
+    AArch64ABIOptions Opts(AArch64ABIKind::Win64);
+    Opts.IsCXX = true;
+    Opts.IsMicrosoftCXXABI = IsMicrosoftCXXABI;
+    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Opts);
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {Ty});
+    TI->computeInfo(*FI);
+    return FI->getArgInfo(0).Info;
+  };
+
+  for (bool IsMicrosoftCXXABI : {false, true})
+    for (const ABIType *Ty : HFAs)
+      expectHFADirectArg(Classify(Ty, IsMicrosoftCXXABI), F64, 2,
+                         /*DirectAlign=*/std::nullopt);
+
+  for (const ABIType *Ty : MSVCNonHFAs) {
+    expectHFADirectArg(Classify(Ty, /*IsMicrosoftCXXABI=*/false), F64, 2,
+                       /*DirectAlign=*/std::nullopt);
+    expectDirectI64Pair(Classify(Ty, /*IsMicrosoftCXXABI=*/true));
+  }
 }
 
 } // namespace

@@ -48,16 +48,17 @@ public:
       ASSERT_FP_EQ(nan, func(nan, exp));
     }
 
-    if constexpr (sizeof(U) < sizeof(long) || sizeof(long) == sizeof(int))
-      return;
-    long long_exp_array[4] = {LONG_MIN, static_cast<long>(INT_MIN - 1LL),
-                              static_cast<long>(INT_MAX + 1LL), LONG_MAX};
-    for (long exp : long_exp_array) {
-      ASSERT_FP_EQ(zero, func(zero, exp));
-      ASSERT_FP_EQ(neg_zero, func(neg_zero, exp));
-      ASSERT_FP_EQ(inf, func(inf, exp));
-      ASSERT_FP_EQ(neg_inf, func(neg_inf, exp));
-      ASSERT_FP_EQ(nan, func(nan, exp));
+    if constexpr (sizeof(U) >= sizeof(long) && sizeof(long) != sizeof(int)) {
+      constexpr long LONG_EXP_ARRAY[4] = {
+          LONG_MIN, static_cast<long>(INT_MIN - 1LL),
+          static_cast<long>(INT_MAX + 1LL), LONG_MAX};
+      for (long exp : LONG_EXP_ARRAY) {
+        ASSERT_FP_EQ(zero, func(zero, exp));
+        ASSERT_FP_EQ(neg_zero, func(neg_zero, exp));
+        ASSERT_FP_EQ(inf, func(inf, exp));
+        ASSERT_FP_EQ(neg_inf, func(neg_inf, exp));
+        ASSERT_FP_EQ(nan, func(nan, exp));
+      }
     }
   }
 

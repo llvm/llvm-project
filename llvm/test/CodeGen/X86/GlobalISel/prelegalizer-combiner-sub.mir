@@ -4,7 +4,6 @@
 
 ---
 name:            dont_fold_sub
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $eax
@@ -25,7 +24,6 @@ body:             |
 ...
 ---
 name:            sub_to_add
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $eax
@@ -45,7 +43,6 @@ body:             |
 ...
 ---
 name:            sub_to_add_nuw
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $eax

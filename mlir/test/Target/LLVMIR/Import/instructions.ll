@@ -751,6 +751,31 @@ define void @call_will_return() {
 
 ; CHECK: llvm.func @f()
 declare void @f()
+declare i32 @__gxx_personality_v0(...)
+
+; CHECK-LABEL: @strictfp_calls
+; CHECK-SAME: strictfp}
+define void @strictfp_calls() strictfp personality ptr @__gxx_personality_v0 {
+entry:
+; CHECK: llvm.call @f() {strictfp}
+  call void @f() strictfp
+; CHECK: llvm.call @f() : () -> ()
+  call void @f()
+; CHECK: llvm.inline_asm has_side_effects strictfp
+  call void asm sideeffect "", ""() strictfp
+; CHECK: llvm.invoke @f() to ^bb1 unwind ^bb2 {strictfp}
+  invoke void @f() strictfp to label %bb1 unwind label %bb2
+bb1:
+  ret void
+bb2:
+  %0 = landingpad i32 cleanup
+  unreachable
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
 
 ; CHECK-LABEL: @call_noreturn
 define void @call_noreturn() {

@@ -62,8 +62,9 @@ def main():
     parser.add_argument(
         "-iregex",
         metavar="PATTERN",
-        default=r".*\.(?:cpp|cc|c\+\+|cxx|cppm|ccm|cxxm|c\+\+m|c|cl|h|hh|hpp"
-        r"|hxx|m|mm|inc|js|ts|proto|protodevel|java|cs|json|ipynb|s?vh?)",
+        default=r".*\.(?:cpp|cc|cp|c\+\+|cxx|cppm|ccm|cxxm|c\+\+m|c|cl|cu|cuh|h|hh|hpp"
+        r"|hxx|m|mm|inc|[mc]?js|[mc]?ts|proto|protodevel|java|cs|json|ipynb|s?vh?"
+        r"|td|txtpb|textpb|pb\.txt|textproto|asciipb)",
         help="custom pattern selecting file paths to reformat "
         "(case insensitive, overridden by -regex)",
     )
@@ -102,7 +103,8 @@ def main():
     filename = None
     lines_by_file = {}
     for line in sys.stdin:
-        match = re.search(r"^\+\+\+\ (.*?/){%s}(.+)" % args.p, line.rstrip())
+        # Stop at a tab, after which diff and svn may append a timestamp.
+        match = re.search(r"^\+\+\+\ (.*?/){%s}([^\t]+)" % args.p, line.rstrip())
         if match:
             filename = match.group(2)
         if filename is None:

@@ -25,6 +25,7 @@ def WasmSSA_VecType : AnyTypeOf<[I128]>;
 
 class WasmSSA_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<WasmSSA_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/WasmSSA/IR/WasmSSA.h"];
   let mnemonic = typeMnemonic;
 }
 

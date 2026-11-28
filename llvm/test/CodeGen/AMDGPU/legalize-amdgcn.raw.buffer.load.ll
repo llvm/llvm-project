@@ -693,8 +693,7 @@ define half @raw_buffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset(<4 x i32
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_USHORT_OFFEN]]
-  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY6]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_USHORT_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call half @llvm.amdgcn.raw.buffer.load.f16(<4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret half %val
@@ -1042,8 +1041,7 @@ define half @raw_buffer_load_f16__vgpr_rsrc__vgpr_voffset__sgpr_soffset(<4 x i32
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_USHORT_OFFEN]]
-  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY6]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_USHORT_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call half @llvm.amdgcn.raw.buffer.load.f16(<4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret half %val

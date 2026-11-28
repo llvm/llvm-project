@@ -134,7 +134,8 @@ struct SimpleValue {
            isa<SelectInst>(Inst) || isa<ExtractElementInst>(Inst) ||
            isa<InsertElementInst>(Inst) || isa<ShuffleVectorInst>(Inst) ||
            isa<ExtractValueInst>(Inst) || isa<InsertValueInst>(Inst) ||
-           isa<FreezeInst>(Inst);
+           isa<FreezeInst>(Inst) || isa<BitExtractInst>(Inst) ||
+           isa<BitInsertInst>(Inst);
   }
 };
 
@@ -238,7 +239,8 @@ static unsigned getHashValueImpl(SimpleValue Val) {
 
   assert((isa<CallInst>(Inst) || isa<ExtractElementInst>(Inst) ||
           isa<InsertElementInst>(Inst) || isa<ShuffleVectorInst>(Inst) ||
-          isa<UnaryOperator>(Inst) || isa<FreezeInst>(Inst)) &&
+          isa<UnaryOperator>(Inst) || isa<FreezeInst>(Inst) ||
+          isa<BitExtractInst>(Inst) || isa<BitInsertInst>(Inst)) &&
          "Invalid/unknown instruction");
 
   // Handle intrinsics with commutative operands.

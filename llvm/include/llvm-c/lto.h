@@ -539,7 +539,7 @@ LLVM_C_ABI extern unsigned int lto_api_version(void);
 
 /**
  * Parses options immediately, making them available as early as possible. For
- * example during executing codegen::InitTargetOptionsFromCodeGenFlags. Since
+ * example during executing codegen::getTargetOptions. Since
  * parsing shud only happen once, only one of lto_codegen_debug_options or
  * lto_set_debug_options should be called.
  *

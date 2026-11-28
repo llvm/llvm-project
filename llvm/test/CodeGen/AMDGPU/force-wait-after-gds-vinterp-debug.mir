@@ -22,7 +22,6 @@
 ...
 ---
 name: gds_wait_merge
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -44,7 +43,6 @@ body: |
 ...
 ---
 name: gds_wait_merge_control
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

@@ -1457,7 +1457,8 @@ TYPE_PARSER(construct<OmpIterationOffset>(
     Parser<DefinedOperator>{}, scalarIntConstantExpr))
 
 // iteration -> iteration-variable [+/- nonnegative-scalar-integer-constant]
-TYPE_PARSER(construct<OmpIteration>(name, maybe(Parser<OmpIterationOffset>{})))
+TYPE_PARSER(
+    sourced(construct<OmpIteration>(name, maybe(Parser<OmpIterationOffset>{}))))
 
 TYPE_PARSER(construct<OmpIterationVector>(nonemptyList(Parser<OmpIteration>{})))
 
@@ -1821,7 +1822,8 @@ TYPE_PARSER( //
     "NO_OPENMP_ROUTINES" >>
         construct<OmpClause>(construct<OmpClause::NoOpenmpRoutines>()) ||
     "NO_PARALLELISM" >>
-        construct<OmpClause>(construct<OmpClause::NoParallelism>()) ||
+        construct<OmpClause>(construct<OmpClause::NoParallelism>(
+            maybe(parenthesized(scalarLogicalConstantExpr)))) ||
     "NUM_TASKS" >> construct<OmpClause>(construct<OmpClause::NumTasks>(
                        parenthesized(Parser<OmpNumTasksClause>{}))) ||
     "NUM_TEAMS" >> construct<OmpClause>(construct<OmpClause::NumTeams>(

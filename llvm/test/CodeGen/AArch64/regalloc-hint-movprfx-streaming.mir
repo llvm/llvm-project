@@ -4,7 +4,6 @@
 # Check the register allocator gets hints to reuse registers of one of its operands.
 ---
 name:            prioritize_movprfx_hints
-tracksRegLiveness: true
 isSSA:           false
 noVRegs:         false
 body:             |
@@ -57,7 +56,6 @@ body:             |
 # operands, which are a subreg of a multi-register RegisterClass.
 ---
 name:            prioritize_subreg_hints
-tracksRegLiveness: true
 isSSA:           false
 noVRegs:         false
 body:             |

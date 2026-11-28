@@ -77,6 +77,18 @@ namespace llvm {
     bool isZExtFree(EVT VT1, EVT VT2) const override;
 
     bool isLegalICmpImmediate(int64_t) const override;
+
+    /// If a physical register, this returns the register that receives the
+    /// exception address on entry to an EH pad.
+    Register
+    getExceptionPointerRegister(ExceptionHandling EH,
+                                const Constant *PersonalityFn) const override;
+
+    /// If a physical register, this returns the register that receives the
+    /// exception typeid on entry to a landing pad.
+    Register
+    getExceptionSelectorRegister(ExceptionHandling EH,
+                                 const Constant *PersonalityFn) const override;
     bool shouldAvoidTransformToShift(EVT VT, unsigned Amount) const override;
 
     MachineBasicBlock *

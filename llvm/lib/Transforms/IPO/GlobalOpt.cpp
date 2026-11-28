@@ -145,8 +145,7 @@ static bool isLeakCheckerRoot(GlobalVariable *GV) {
 /// Given a value that is stored to a global but never read, determine whether
 /// it's safe to remove the store and the chain of computation that feeds the
 /// store.
-static bool IsSafeComputationToRemove(
-    Value *V, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+static bool IsSafeComputationToRemove(Value *V) {
   do {
     if (isa<Constant>(V))
       return true;
@@ -155,7 +154,7 @@ static bool IsSafeComputationToRemove(
     if (isa<LoadInst>(V) || isa<InvokeInst>(V) || isa<Argument>(V) ||
         isa<GlobalValue>(V))
       return false;
-    if (isAllocationFn(V, GetTLI))
+    if (isAllocationFn(V))
       return true;
 
     Instruction *I = cast<Instruction>(V);
@@ -175,9 +174,7 @@ static bool IsSafeComputationToRemove(
 /// This GV is a pointer root.  Loop over all users of the global and clean up
 /// any that obviously don't assign the global a value that isn't dynamically
 /// allocated.
-static bool
-CleanupPointerRootUsers(GlobalVariable *GV,
-                        function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+static bool CleanupPointerRootUsers(GlobalVariable *GV) {
   // A brief explanation of leak checkers.  The goal is to find bugs where
   // pointers are forgotten, causing an accumulating growth in memory
   // usage over time.  The common strategy for leak checkers is to explicitly
@@ -230,11 +227,11 @@ CleanupPointerRootUsers(GlobalVariable *GV,
   }
 
   for (const auto &[Inst, Store] : Dead) {
-    if (IsSafeComputationToRemove(Inst, GetTLI)) {
+    if (IsSafeComputationToRemove(Inst)) {
       Store->eraseFromParent();
       Instruction *I = Inst;
       do {
-        if (isAllocationFn(I, GetTLI))
+        if (isAllocationFn(I))
           break;
         Instruction *J = dyn_cast<Instruction>(I->getOperand(0));
         if (!J)
@@ -698,9 +695,8 @@ static bool OptimizeAwayTrappingUsesOfValue(Instruction *V, Constant *NewV) {
 /// are uses of the loaded value that would trap if the loaded value is
 /// dynamically null, then we know that they cannot be reachable with a null
 /// optimize away the load.
-static bool OptimizeAwayTrappingUsesOfLoads(
-    GlobalVariable *GV, Constant *LV, const DataLayout &DL,
-    function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+static bool OptimizeAwayTrappingUsesOfLoads(GlobalVariable *GV, Constant *LV,
+                                            const DataLayout &DL) {
   bool Changed = false;
 
   // Keep track of whether we are able to remove all the uses of the global
@@ -737,7 +733,7 @@ static bool OptimizeAwayTrappingUsesOfLoads(
   // nor is the global.
   if (AllNonStoreUsesGone) {
     if (isLeakCheckerRoot(GV)) {
-      Changed |= CleanupPointerRootUsers(GV, GetTLI);
+      Changed |= CleanupPointerRootUsers(GV);
     } else {
       Changed = true;
       CleanupConstantGlobalUsers(GV, DL);
@@ -754,10 +750,8 @@ static bool OptimizeAwayTrappingUsesOfLoads(
 
 // Try to optimize globals based on the knowledge that only one value (besides
 // its initializer) is ever stored to the global.
-static bool
-optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
-                         const DataLayout &DL,
-                         function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+static bool optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
+                                     const DataLayout &DL) {
   // If we are dealing with a pointer global that is initialized to null and
   // only has one (non-null) value stored into it, then we can optimize any
   // users of the loaded value (often calls and loads) that would trap if the
@@ -770,7 +764,7 @@ optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
           GV->getInitializer()->getType()->getPointerAddressSpace())) {
     if (Constant *SOVC = dyn_cast<Constant>(StoredOnceVal)) {
       // Optimize away any trapping uses of the loaded value.
-      if (OptimizeAwayTrappingUsesOfLoads(GV, SOVC, DL, GetTLI))
+      if (OptimizeAwayTrappingUsesOfLoads(GV, SOVC, DL))
         return true;
     }
   }
@@ -1081,7 +1075,6 @@ static bool forwardStoredOnceStore(
 static bool
 processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
                       function_ref<TargetTransformInfo &(Function &)> GetTTI,
-                      function_ref<TargetLibraryInfo &(Function &)> GetTLI,
                       function_ref<DominatorTree &(Function &)> LookupDomTree) {
   auto &DL = GV->getDataLayout();
   // If this is a first class global and has only one accessing function and
@@ -1133,7 +1126,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
 
     if (isLeakCheckerRoot(GV)) {
       // Delete any constant stores to the global.
-      Changed = CleanupPointerRootUsers(GV, GetTLI);
+      Changed = CleanupPointerRootUsers(GV);
     } else {
       // Delete any stores we can find to the global.  We may not be able to
       // make it completely dead though.
@@ -1231,7 +1224,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
 
     // Try to optimize globals based on the knowledge that only one value
     // (besides its initializer) is ever stored to the global.
-    if (optimizeOnceStoredGlobal(GV, StoredOnceValue, DL, GetTLI))
+    if (optimizeOnceStoredGlobal(GV, StoredOnceValue, DL))
       return true;
 
     // Try to forward the store to any loads. If we have more than one store, we
@@ -1260,7 +1253,6 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
 static bool
 processGlobal(GlobalValue &GV,
               function_ref<TargetTransformInfo &(Function &)> GetTTI,
-              function_ref<TargetLibraryInfo &(Function &)> GetTLI,
               function_ref<DominatorTree &(Function &)> LookupDomTree) {
   if (GV.getName().starts_with("llvm."))
     return false;
@@ -1299,8 +1291,7 @@ processGlobal(GlobalValue &GV,
   if (GVar->isConstant() || !GVar->hasInitializer())
     return Changed;
 
-  return processInternalGlobal(GVar, GS, GetTTI, GetTLI, LookupDomTree) ||
-         Changed;
+  return processInternalGlobal(GVar, GS, GetTTI, LookupDomTree) || Changed;
 }
 
 /// Walk all of the direct calls of the specified function, changing them to
@@ -1548,9 +1539,54 @@ static void RemovePreallocated(Function *F) {
   }
 }
 
+/// zeroext/signext argument attributes that are present at the call-site,
+/// but not at the (exact) definition can be dropped, because the definition
+/// does not assume that the extension has occurred.
+static bool removeUnnecessaryCallSiteExtends(Function &F) {
+  if (!F.hasExactDefinition())
+    return false;
+
+  AttributeList Attrs = F.getAttributes();
+  SmallVector<unsigned, 8> IntArgWithoutExtAttr;
+  for (unsigned ArgNo = 0; ArgNo < F.arg_size(); ++ArgNo) {
+    if (!F.getArg(ArgNo)->getType()->isIntegerTy())
+      continue;
+
+    AttributeSet ArgAttrs = Attrs.getParamAttrs(ArgNo);
+    if (ArgAttrs.hasAttribute(Attribute::ZExt) ||
+        ArgAttrs.hasAttribute(Attribute::SExt))
+      continue;
+
+    IntArgWithoutExtAttr.push_back(ArgNo);
+  }
+
+  if (IntArgWithoutExtAttr.empty())
+    return false;
+
+  bool Changed = false;
+  for (Use &U : F.uses()) {
+    auto *CB = dyn_cast<CallBase>(U.getUser());
+    if (!CB || !CB->isCallee(&U) ||
+        CB->getFunctionType() != F.getFunctionType())
+      continue;
+
+    for (unsigned ArgNo : IntArgWithoutExtAttr) {
+      if (CB->paramHasAttr(ArgNo, Attribute::ZExt)) {
+        CB->removeParamAttr(ArgNo, Attribute::ZExt);
+        Changed = true;
+      }
+      if (CB->paramHasAttr(ArgNo, Attribute::SExt)) {
+        CB->removeParamAttr(ArgNo, Attribute::SExt);
+        Changed = true;
+      }
+    }
+  }
+
+  return Changed;
+}
+
 static bool
 OptimizeFunctions(Module &M,
-                  function_ref<TargetLibraryInfo &(Function &)> GetTLI,
                   function_ref<TargetTransformInfo &(Function &)> GetTTI,
                   function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
                   function_ref<DominatorTree &(Function &)> LookupDomTree,
@@ -1603,9 +1639,11 @@ OptimizeFunctions(Module &M,
         Changed = true;
         ChangedCFGCallback(F);
       }
+
+      Changed |= removeUnnecessaryCallSiteExtends(F);
     }
 
-    Changed |= processGlobal(F, GetTTI, GetTLI, LookupDomTree);
+    Changed |= processGlobal(F, GetTTI, LookupDomTree);
 
     if (!F.hasLocalLinkage())
       continue;
@@ -1682,7 +1720,6 @@ OptimizeFunctions(Module &M,
 static bool
 OptimizeGlobalVars(Module &M,
                    function_ref<TargetTransformInfo &(Function &)> GetTTI,
-                   function_ref<TargetLibraryInfo &(Function &)> GetTLI,
                    function_ref<DominatorTree &(Function &)> LookupDomTree,
                    SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats) {
   bool Changed = false;
@@ -1708,20 +1745,21 @@ OptimizeGlobalVars(Module &M,
       continue;
     }
 
-    Changed |= processGlobal(GV, GetTTI, GetTLI, LookupDomTree);
+    Changed |= processGlobal(GV, GetTTI, LookupDomTree);
   }
   return Changed;
 }
 
 /// Evaluate static constructors in the function, if we can.  Return true if we
 /// can, false otherwise.
-static bool EvaluateStaticConstructor(Function *F, const DataLayout &DL,
-                                      TargetLibraryInfo *TLI) {
+static bool EvaluateStaticConstructor(
+    Function *F, const DataLayout &DL,
+    function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   // Skip external functions.
   if (F->isDeclaration())
     return false;
   // Call the function.
-  Evaluator Eval(DL, TLI);
+  Evaluator Eval(DL, GetTLI);
   Constant *RetValDummy;
   bool EvalSuccess = Eval.EvaluateFunction(F, RetValDummy,
                                            SmallVector<Constant*, 0>());
@@ -2407,7 +2445,7 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
           NotDiscardableComdats.insert(C);
 
     // Delete functions that are trivially dead, ccc -> fastcc
-    LocalChange |= OptimizeFunctions(M, GetTLI, GetTTI, GetBFI, LookupDomTree,
+    LocalChange |= OptimizeFunctions(M, GetTTI, GetBFI, LookupDomTree,
                                      NotDiscardableComdats, ChangedCFGCallback,
                                      DeleteFnCallback);
 
@@ -2417,15 +2455,15 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
           if (FirstNotFullyEvaluatedPriority &&
               *FirstNotFullyEvaluatedPriority != Priority)
             return false;
-          bool Evaluated = EvaluateStaticConstructor(F, DL, &GetTLI(*F));
+          bool Evaluated = EvaluateStaticConstructor(F, DL, GetTLI);
           if (!Evaluated)
             FirstNotFullyEvaluatedPriority = Priority;
           return Evaluated;
         });
 
     // Optimize non-address-taken globals.
-    LocalChange |= OptimizeGlobalVars(M, GetTTI, GetTLI, LookupDomTree,
-                                      NotDiscardableComdats);
+    LocalChange |=
+        OptimizeGlobalVars(M, GetTTI, LookupDomTree, NotDiscardableComdats);
 
     // Resolve aliases, when possible.
     LocalChange |= OptimizeGlobalAliases(M, NotDiscardableComdats);

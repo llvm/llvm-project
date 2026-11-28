@@ -617,14 +617,12 @@ void X86TargetLowering::insertSSPDeclarations(
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT provides functionalities for stack protection.
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
-                        PointerType::getUnqual(M.getContext()));
+    const RTLIB::RuntimeLibcallsInfo &RTLCI = Libcalls.getRuntimeLibcallsInfo();
+    RTLCI.getOrInsertImplGlobal(M, SecurityCookieVar);
 
     // MSVC CRT has a function to validate security cookie.
     FunctionCallee SecurityCheckCookie =
-        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
-                              Type::getVoidTy(M.getContext()),
-                              PointerType::getUnqual(M.getContext()));
+        RTLCI.getOrInsertLibcallDecl(M, SecurityCheckCookieLibcall);
 
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::X86_FastCall);
@@ -1509,7 +1507,6 @@ public:
                         CallingConv::ID CallConv, CCState &CCInfo)
       : FuncInfo(FuncInfo), DL(Loc), DAG(DAG), Subtarget(Subtarget),
         TheMachineFunction(DAG.getMachineFunction()),
-        TheFunction(TheMachineFunction.getFunction()),
         FrameInfo(TheMachineFunction.getFrameInfo()),
         FrameLowering(*Subtarget.getFrameLowering()),
         TargLowering(DAG.getTargetLoweringInfo()), CallConv(CallConv),
@@ -1531,7 +1528,6 @@ private:
   SelectionDAG &DAG;
   const X86Subtarget &Subtarget;
   MachineFunction &TheMachineFunction;
-  const Function &TheFunction;
   MachineFrameInfo &FrameInfo;
   const TargetFrameLowering &FrameLowering;
   const TargetLowering &TargLowering;
@@ -1645,6 +1641,7 @@ void VarArgsLoweringHelper::createVarArgAreaAndStoreRegisters(
       MemOps.push_back(DAG.getMemIntrinsicNode(X86ISD::VASTART_SAVE_XMM_REGS,
                                                DL, DAG.getVTList(MVT::Other),
                                                SaveXMMOps, MVT::i8, StoreMMO));
+      FuncInfo->setHasVAStartSaveXMMRegs(true);
     }
 
     if (!MemOps.empty())
@@ -2108,7 +2105,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool HasNCSR = (CB && isa<CallInst>(CB) &&
                   CB->hasFnAttr("no_caller_saved_registers"));
   bool IsIndirectCall = (CB && isa<CallInst>(CB) && CB->isIndirectCall());
-  bool IsCFICall = IsIndirectCall && CLI.CFIType;
+  bool IsCFICall = CB && CB->isIndirectCall() && CLI.CFIType;
   const Module *M = MF.getFunction().getParent();
 
   // If the indirect call target has the nocf_check attribute, the call needs

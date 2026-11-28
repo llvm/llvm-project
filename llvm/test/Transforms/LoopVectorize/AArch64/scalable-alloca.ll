@@ -3,7 +3,7 @@
 
 ; CHECK-REMARKS: UserVF ignored because of invalid costs.
 ; CHECK-REMARKS: Recipe with invalid costs prevented vectorization at VF=(vscale x 1, vscale x 2): alloca
-define void @alloca(ptr %vla, i64 %N) {
+define void @alloca(ptr %vla, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: @alloca(
 ; CHECK-NOT: <vscale x
 

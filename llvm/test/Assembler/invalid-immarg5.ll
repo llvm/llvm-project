@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 
 declare void @llvm.test.immarg.range.intrinsic.i32(i32 immarg range(i32 -3, 4))
 

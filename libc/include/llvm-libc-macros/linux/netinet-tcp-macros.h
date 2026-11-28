@@ -28,6 +28,7 @@
 #define TCP_LINGER2 8
 #define TCP_DEFER_ACCEPT 9
 #define TCP_WINDOW_CLAMP 10
+#define TCP_INFO 11 // struct tcp_info
 #define TCP_QUICKACK 12
 #define TCP_CONGESTION 13 // char[]
 #define TCP_THIN_LINEAR_TIMEOUTS 16
@@ -46,6 +47,7 @@
 #define TCP_FASTOPEN_KEY 33 // unsigned char[]
 #define TCP_FASTOPEN_NO_COOKIE 34
 #define TCP_INQ 36
+#define TCP_CM_INQ TCP_INQ
 #define TCP_TX_DELAY 37
 #define TCP_IS_MPTCP 43
 #define TCP_RTO_MAX_MS 44
@@ -62,5 +64,18 @@
 #define TCP_RECV_QUEUE 1
 #define TCP_SEND_QUEUE 2
 #define TCP_QUEUES_NR 3 // Number of queues, not a valid value.
+
+// TCP connection states, as reported in tcp_info::tcpi_state.
+#define TCP_ESTABLISHED 1
+#define TCP_SYN_SENT 2
+#define TCP_SYN_RECV 3
+#define TCP_FIN_WAIT1 4
+#define TCP_FIN_WAIT2 5
+#define TCP_TIME_WAIT 6
+#define TCP_CLOSE 7
+#define TCP_CLOSE_WAIT 8
+#define TCP_LAST_ACK 9
+#define TCP_LISTEN 10
+#define TCP_CLOSING 11
 
 #endif // LLVM_LIBC_MACROS_LINUX_NETINET_TCP_MACROS_H

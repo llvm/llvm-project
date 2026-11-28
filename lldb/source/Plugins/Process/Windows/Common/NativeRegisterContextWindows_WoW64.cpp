@@ -11,8 +11,8 @@
 #include "NativeRegisterContextWindows_WoW64.h"
 
 #include "NativeThreadWindows.h"
-#include "Register/Windows/RegisterInfoWindows_i386.h"
 #include "ProcessWindowsLog.h"
+#include "Register/Windows/RegisterInfoWindows_i386.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/windows/HostThreadWindows.h"

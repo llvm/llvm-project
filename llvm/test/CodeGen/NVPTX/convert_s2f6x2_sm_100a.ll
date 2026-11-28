@@ -4,12 +4,13 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_110a -mattr=+ptx91 | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_120a -mattr=+ptx91 | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_121a -mattr=+ptx91 | FileCheck %s
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_107a -mattr=+ptx94 | FileCheck %s
 ; RUN: %if ptxas-sm_100a && ptxas-isa-9.1 %{ llc < %s -march=nvptx64 -mcpu=sm_100a -mattr=+ptx91 | %ptxas-verify -arch=sm_100a %}
 ; RUN: %if ptxas-sm_103a && ptxas-isa-9.1 %{ llc < %s -march=nvptx64 -mcpu=sm_103a -mattr=+ptx91 | %ptxas-verify -arch=sm_103a %}
 ; RUN: %if ptxas-sm_110a && ptxas-isa-9.1 %{ llc < %s -march=nvptx64 -mcpu=sm_110a -mattr=+ptx91 | %ptxas-verify -arch=sm_110a %}
 ; RUN: %if ptxas-sm_120a && ptxas-isa-9.1 %{ llc < %s -march=nvptx64 -mcpu=sm_120a -mattr=+ptx91 | %ptxas-verify -arch=sm_120a %}
 ; RUN: %if ptxas-sm_121a && ptxas-isa-9.1 %{ llc < %s -march=nvptx64 -mcpu=sm_121a -mattr=+ptx91 | %ptxas-verify -arch=sm_121a %}
-
+; RUN: %if ptxas-sm_107a && ptxas-isa-9.4 %{ llc < %s -march=nvptx64 -mcpu=sm_107a -mattr=+ptx94 | %ptxas-verify -arch=sm_107a %}
 ; From a pair of floats to s2f6x2, with scale variants
 
 define i16 @cvt_s2f6x2_f32_f32_rn_scale(float %f1, float %f2, i16 %scale) {

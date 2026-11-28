@@ -29,8 +29,13 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/Support/Allocator.h"
 #include <cstddef>
 #include <memory>
+
+namespace clang {
+class LifetimeCaptureByAttr;
+} // namespace clang
 
 namespace clang::lifetimes {
 
@@ -49,6 +54,7 @@ struct LifetimeSafetyOpts {
   bool CheckFieldOriginEscape = false;
   /// Whether to model non-trivial destructors at scope exit as uses.
   bool CheckDestructorUses = false;
+  bool CheckCaptureByViolations = false;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -128,7 +134,8 @@ public:
   }
 
   using EscapingTarget =
-      llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
+      llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *,
+                         const CXXMethodDecl *>;
 
   // Suggests lifetime bound annotations for function parameters.
   virtual void suggestLifetimeboundToParmVar(WarningScope Scope,
@@ -145,6 +152,11 @@ public:
   // assignment to a global variable
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
                                        const VarDecl *EscapeGlobal) {}
+  // Reports misuse of [[clang::noescape]] when parameter escapes into the
+  // object of the method, e.g. through a base initializer or
+  // [[clang::lifetime_capture_by_this]].
+  virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                                       const CXXMethodDecl *EscapeMethod) {}
 
   // Reports misuse of [[clang::lifetimebound]] when parameter doesn't escape
   // through return.
@@ -155,6 +167,15 @@ public:
   // doesn't escape through return.
   virtual void
   reportLifetimeboundViolation(const CXXMethodDecl *MDWithLifetimebound) {}
+
+  // Reports a parameter captured by an entity that its
+  // [[clang::lifetime_capture_by]] attributes do not name. \p CapturerIdx is
+  // the index such an attribute uses for that entity, and \p CapturedBy is the
+  // field, global or parameter it is captured by, if known.
+  virtual void reportCaptureByViolation(const ParmVarDecl *PVD,
+                                        const LifetimeCaptureByAttr *Attr,
+                                        int CapturerIdx,
+                                        const ValueDecl *CapturedBy) {}
 
   // Reports a member function definition that has [[clang::lifetimebound]] on
   // the implicit this parameter when the canonical declaration does not.
@@ -199,6 +220,10 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
+  explicit LifetimeFactory(llvm::BumpPtrAllocator &Alloc)
+      : OriginMapFactory(Alloc), LoanSetFactory(Alloc),
+        MovedLoansMapFactory(Alloc), LivenessMapFactory(Alloc) {}
+
   OriginLoanMap::Factory OriginMapFactory;
   LoanSet::Factory LoanSetFactory;
   MovedLoansMap::Factory MovedLoansMapFactory;
@@ -226,7 +251,9 @@ private:
   AnalysisDeclContext &AC;
   LifetimeSafetySemaHelper *SemaHelper;
   const LifetimeSafetyOpts LSOpts;
-  LifetimeFactory Factory;
+  /// Backs the facts, origins, loans and lattices of the analyzed function.
+  llvm::BumpPtrAllocator Allocator;
+  LifetimeFactory Factory{Allocator};
   std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LiveOriginsAnalysis> LiveOrigins;
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;

@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define GET_GICOMBINER_DEPS
@@ -104,6 +105,9 @@ public:
                             MinMaxToMinMax3MatchInfo &MatchInfo) const;
   void applyMinMaxToMinMax3(MachineInstr &MI,
                             MinMaxToMinMax3MatchInfo &MatchInfo) const;
+
+  bool matchCombine_mul24(MachineInstr &MI) const;
+  void applyCombine_mul24(MachineInstr &MI) const;
 
 private:
   SIModeRegisterDefaults getMode() const;
@@ -521,6 +525,32 @@ void AMDGPURegBankCombinerImpl::applyMinMaxToMinMax3(
                {MatchInfo.Val0, MatchInfo.Val1, MatchInfo.Val2}, MI.getFlags());
   MI.eraseFromParent();
   return;
+}
+
+bool AMDGPURegBankCombinerImpl::matchCombine_mul24(MachineInstr &MI) const {
+  Register Dst = MI.getOperand(0).getReg();
+  if (MRI.getType(Dst) != LLT::scalar(32) || !isVgprRegBank(Dst))
+    return false;
+  Register Src0 = MI.getOperand(1).getReg();
+  Register Src1 = MI.getOperand(2).getReg();
+  if (STI.hasMulU24() && VT->getKnownBits(Src0).countMinLeadingZeros() >= 8 &&
+      VT->getKnownBits(Src1).countMinLeadingZeros() >= 8)
+    return true;
+  return STI.hasMulI24() && VT->computeNumSignBits(Src0) >= 9 &&
+         VT->computeNumSignBits(Src1) >= 9;
+}
+
+void AMDGPURegBankCombinerImpl::applyCombine_mul24(MachineInstr &MI) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src0 = MI.getOperand(1).getReg();
+  Register Src1 = MI.getOperand(2).getReg();
+  Intrinsic::ID IntrID =
+      (STI.hasMulU24() && VT->getKnownBits(Src0).countMinLeadingZeros() >= 8 &&
+       VT->getKnownBits(Src1).countMinLeadingZeros() >= 8)
+          ? Intrinsic::amdgcn_mul_u24
+          : Intrinsic::amdgcn_mul_i24;
+  B.buildIntrinsic(IntrID, ArrayRef<Register>{Dst}).addUse(Src0).addUse(Src1);
+  MI.eraseFromParent();
 }
 
 // min(min(a, b), c) == min(a, min(b, c)) == min3(a, b, c)

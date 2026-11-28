@@ -151,3 +151,28 @@ void b(void) {
       foo();
   }
 } // no-crash
+
+// Clang 13.0.1 reported "The right operand of '*' is a garbage value"
+// for 'sum += x * array[i + nValues * j]' which was a false positive.
+// The symbol simplification mechanism was not able to handle cases
+// when a symbol was simplified to a concrete integer.
+// D110913 resolved this issue and since Clang 14.0.0 the false
+// positive is gone.
+float GH49330(int nValues, int x) {
+  int sqr = nValues * nValues;
+  float array[sqr];
+
+  for(unsigned long i = 0; i < sqr; ++i) {
+    array[i] = 0;
+  }
+
+  float sum = 0;
+  for (int i = 0; i < nValues; i++){
+    for (int j = 0; j < nValues; j++) {
+      // no-warning: The loops initialize all 'sqr' elements and the
+      // index stays within 'nValues * nValues'.
+      sum += x * array[i + nValues * j];
+    }
+  }
+  return sum;
+}

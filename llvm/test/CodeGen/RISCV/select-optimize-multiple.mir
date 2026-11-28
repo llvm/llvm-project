@@ -24,19 +24,6 @@
 # select, we cannot optimize the sequence to share control-flow.
 name:            cmov_interleaved_bad
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
-  - { id: 4, class: gpr }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
-  - { id: 7, class: gpr }
-  - { id: 8, class: gpr }
-  - { id: 9, class: gpr }
-  - { id: 10, class: gpr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -122,19 +109,6 @@ body:             |
 # in the head basic block.
 name:            cmov_interleaved_debug_value
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
-  - { id: 4, class: gpr }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
-  - { id: 7, class: gpr }
-  - { id: 8, class: gpr }
-  - { id: 9, class: gpr }
-  - { id: 10, class: gpr }
 liveins:
   - { reg: '$x10', virtual-reg: '%0' }
   - { reg: '$x11', virtual-reg: '%1' }
@@ -209,4 +183,3 @@ body:             |
     PseudoRET implicit $x10
 
 ...
----

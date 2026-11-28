@@ -383,7 +383,7 @@ _InputIterator time_get<_CharT, _InputIterator>::get(
     tm* __tm,
     const char_type* __fmtb,
     const char_type* __fmte) const {
-  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
+  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.__getloc());
   __err                        = ios_base::goodbit;
   while (__fmtb != __fmte && __err == ios_base::goodbit) {
     if (__b == __e) {
@@ -445,7 +445,7 @@ _InputIterator time_get<_CharT, _InputIterator>::do_get_date(
 template <class _CharT, class _InputIterator>
 _InputIterator time_get<_CharT, _InputIterator>::do_get_weekday(
     iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, tm* __tm) const {
-  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
+  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.__getloc());
   __get_weekdayname(__tm->tm_wday, __b, __e, __err, __ct);
   return __b;
 }
@@ -453,7 +453,7 @@ _InputIterator time_get<_CharT, _InputIterator>::do_get_weekday(
 template <class _CharT, class _InputIterator>
 _InputIterator time_get<_CharT, _InputIterator>::do_get_monthname(
     iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, tm* __tm) const {
-  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
+  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.__getloc());
   __get_monthname(__tm->tm_mon, __b, __e, __err, __ct);
   return __b;
 }
@@ -461,7 +461,7 @@ _InputIterator time_get<_CharT, _InputIterator>::do_get_monthname(
 template <class _CharT, class _InputIterator>
 _InputIterator time_get<_CharT, _InputIterator>::do_get_year(
     iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, tm* __tm) const {
-  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
+  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.__getloc());
   __get_year(__tm->tm_year, __b, __e, __err, __ct);
   return __b;
 }
@@ -470,7 +470,7 @@ template <class _CharT, class _InputIterator>
 _InputIterator time_get<_CharT, _InputIterator>::do_get(
     iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, tm* __tm, char __fmt, char) const {
   __err                        = ios_base::goodbit;
-  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
+  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.__getloc());
   switch (__fmt) {
   case 'a':
   case 'A':
@@ -701,7 +701,7 @@ template <class _CharT, class _OutputIterator>
 _OutputIterator time_put<_CharT, _OutputIterator>::put(
     iter_type __s, ios_base& __iob, char_type __fl, const tm* __tm, const char_type* __pb, const char_type* __pe)
     const {
-  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
+  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.__getloc());
   for (; __pb != __pe; ++__pb) {
     if (__ct.narrow(*__pb, 0) == '%') {
       if (++__pb == __pe) {

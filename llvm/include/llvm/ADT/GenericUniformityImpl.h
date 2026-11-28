@@ -910,12 +910,9 @@ void GenericUniformityAnalysisImpl<ContextT>::propagateCycleExitDivergence(
                     << "\n");
   CycleRef DivCycle = InnerDivCycle;
   CycleRef OuterDivCycle = DivCycle;
-  CycleRef ExitLevelCycle = CI.getCycle(&DivExit);
-  const unsigned CycleExitDepth =
-      ExitLevelCycle ? CI.getDepth(ExitLevelCycle) : 0;
 
   // Find outer-most cycle that does not contain \p DivExit
-  while (DivCycle && CI.getDepth(DivCycle) > CycleExitDepth) {
+  while (DivCycle && !CI.contains(DivCycle, &DivExit)) {
     LLVM_DEBUG(dbgs() << "  Found exiting cycle: "
                       << Context.print(CI.getHeader(DivCycle)) << "\n");
     OuterDivCycle = DivCycle;

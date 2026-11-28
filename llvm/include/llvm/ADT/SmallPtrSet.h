@@ -516,7 +516,7 @@ template <typename PtrType>
 /// power of two if it is not already a power of two.  See the comments above
 /// SmallPtrSetImplBase for details of the algorithm.
 template <class PtrType, unsigned SmallSize>
-class SmallPtrSet : public SmallPtrSetImpl<PtrType> {
+class LLVM_ATTRIBUTE_WARN_UNUSED SmallPtrSet : public SmallPtrSetImpl<PtrType> {
   // In small mode SmallPtrSet uses linear search for the elements, so it is
   // not a good idea to choose this value too high. You may consider using a
   // DenseSet<> instead if you expect many elements in the set.

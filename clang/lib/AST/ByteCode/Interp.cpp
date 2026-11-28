@@ -199,9 +199,9 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
   S.Note(VD->getLocation(), diag::note_declared_at);
 }
 
-static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (auto ID = Ptr.getDeclID()) {
-    if (!Ptr.isStatic())
+static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Block *B) {
+  if (auto ID = B->getDeclID()) {
+    if (!B->isGlobal())
       return true;
 
     if (S.P.getCurrentDecl() == ID)
@@ -625,16 +625,13 @@ bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
-bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+static bool CheckConst(InterpState &S, CodePtr OpPC, PtrView Ptr) {
   assert(Ptr.isLive() && "Pointer is not live");
   if (!Ptr.isConst())
     return true;
 
   if (Ptr.isMutable() && !Ptr.isConstInMutable())
     return true;
-
-  if (!Ptr.isBlockPointer())
-    return false;
 
   // The This pointer is writable in constructors and destructors,
   // even if isConst() returns true.
@@ -657,7 +654,7 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     // that is marked const but NOT in InitializingPtrs. If that is the case,
     // Ptr is currently not writable.
     bool FoundProblem = false;
-    for (PtrView P = Ptr.view(); P != V; P = P.getBase()) {
+    for (PtrView P = Ptr; P != V; P = P.getBase()) {
       if (P.getFieldDesc()->IsConst) {
         FoundProblem = true;
         break;
@@ -680,6 +677,17 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     S.FFDiag(Loc, diag::note_constexpr_modify_const_type) << Ty;
   }
   return false;
+}
+
+bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  assert(Ptr.isLive() && "Pointer is not live");
+
+  if (!Ptr.isConst())
+    return true;
+
+  if (!Ptr.isBlockPointer())
+    return false;
+  return CheckConst(S, OpPC, Ptr.view());
 }
 
 bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
@@ -1082,26 +1090,29 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isBlockPointer())
     return false;
 
-  if (!Ptr.block()->isAccessible()) {
+  PtrView P = Ptr.view();
+  const Block *B = Ptr.block();
+
+  if (!B->isAccessible()) {
     if (!CheckLive(S, OpPC, Ptr, AK))
       return false;
     if (!CheckExtern(S, OpPC, Ptr))
       return false;
     return false;
   }
-  if (!WillBeActivated && !CheckLifetime(S, OpPC, Ptr, AK))
+  if (!WillBeActivated && !CheckLifetime(S, OpPC, P.getLifetime(), B, AK))
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK))
     return false;
-  if (!CheckActive(S, OpPC, Ptr, AK, WillBeActivated))
+  if (!CheckActive(S, OpPC, P, AK, WillBeActivated))
     return false;
-  if (!CheckGlobal(S, OpPC, Ptr))
+  if (!CheckGlobal(S, OpPC, B))
     return false;
-  if (!CheckConst(S, OpPC, Ptr))
+  if (!CheckConst(S, OpPC, P))
     return false;
-  if (!CheckVolatile(S, OpPC, Ptr.view(), AK))
+  if (!CheckVolatile(S, OpPC, P, AK))
     return false;
-  if (!CheckMutable(S, OpPC, Ptr.view(), AK))
+  if (!CheckMutable(S, OpPC, P, AK))
     return false;
   return true;
 }
@@ -2568,13 +2579,44 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
                                          OverriderPointeeType))
       return true;
 
-    // We've called Overrider above, but calling code expects us to return what
-    // InitialFunction returned. According to the rules for covariant return
-    // types, what InitialFunction returns needs to be a base class of what
-    // Overrider returns. So, we need to do an upcast here.
+    // See, the base cast from the return value of InitialFunction to that of
+    // Overrider might be ambiguous due to mutliple inheritance. HOWEVER, this
+    // ambiguity can be cleared up by looking at the return values for all the
+    // overriding functions in the base path from InitialFunction to Overrider.
+    // This is all terrible and slow, but if you use this, you get what you
+    // deserve.
+
+    CXXBasePaths Paths(/*FindAmbiguities=*/true);
+    Overrider->getParent()->isDerivedFrom(InitialFunction->getParent(), Paths);
+
+    // The path of the parent classes of the virtual methods should not be
+    // ambiguous.
+    if (std::distance(Paths.begin(), Paths.end()) != 1)
+      return false;
+
+    // Calling Overrider above returned a pointer of type OverriderPointeeType.
+    const RecordDecl *CurPtrType = OverriderPointeeType->getAsRecordDecl();
+
+    CXXBasePath Path = *Paths.begin();
+    for (const CXXBasePathElement &Elem : llvm::drop_begin(Path)) {
+      const CXXMethodDecl *FuncInThisBase =
+          InitialFunction->getCorrespondingMethodDeclaredInClass(
+              Elem.Class, /*MayBeBase=*/false);
+
+      QualType FuncReturnTy = FuncInThisBase->getReturnType()->getPointeeType();
+      unsigned Offset = S.getContext().collectBaseOffset(
+          FuncReturnTy->getAsRecordDecl(), CurPtrType);
+
+      if (!GetPtrBasePop(S, OpPC, Offset, /*IsNullOK=*/true))
+        return false;
+
+      CurPtrType = FuncReturnTy->getAsRecordDecl();
+    }
+
+    // The path above does not include the final step to InitialFunction's
+    // parent class. Do it here.
     unsigned Offset = S.getContext().collectBaseOffset(
-        InitialPointeeType->getAsRecordDecl(),
-        OverriderPointeeType->getAsRecordDecl());
+        InitialPointeeType->getAsRecordDecl(), CurPtrType);
     return GetPtrBasePop(S, OpPC, Offset, /*IsNullOK=*/true);
   }
 
@@ -2870,9 +2912,9 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
 
   if (!CheckRange(S, OpPC, Ptr, AK_Construct))
     return false;
-  if (!CheckGlobal(S, OpPC, Ptr))
+  if (!CheckGlobal(S, OpPC, Ptr.block()))
     return false;
-  if (!CheckConst(S, OpPC, Ptr))
+  if (!CheckConst(S, OpPC, Ptr.view()))
     return false;
 
   const auto *NewExpr = cast<CXXNewExpr>(E);
@@ -3309,11 +3351,9 @@ bool FinishInitGlobal(InterpState &S) {
 }
 
 bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
-  const SourceLocation &Loc = S.Current->getLocation(OpPC);
-
   switch (Kind) {
   case CastKind::Reinterpret:
-    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Reinterpret
         << S.Current->getRange(OpPC);
     return !Fatal;
@@ -3323,7 +3363,7 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
     assert(!Fatal);
     return true;
   case CastKind::ReinterpretLike:
-    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
     return !Fatal;
@@ -3341,7 +3381,7 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
     return false;
   case CastKind::Dynamic:
     assert(!S.getLangOpts().CPlusPlus20);
-    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Dynamic;
     return true;
   }

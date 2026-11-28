@@ -30,17 +30,6 @@
 #define GET_ATTRDEF_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIRAttributes.cpp.inc"
 
-void hlfir::hlfirDialect::initialize() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "flang/Optimizer/HLFIR/HLFIRTypes.cpp.inc"
-      >();
-  addOperations<
-#define GET_OP_LIST
-#include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"
-      >();
-}
-
 // `expr` `<` `*` | bounds (`x` bounds)* `:` type [`?`] `>`
 // bounds ::= `?` | int-lit
 mlir::Type hlfir::ExprType::parse(mlir::AsmParser &parser) {
@@ -92,6 +81,8 @@ bool hlfir::isFortranVariableType(mlir::Type type) {
 }
 
 bool hlfir::isFortranScalarCharacterType(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
   return isFortranScalarCharacterExprType(type) ||
          mlir::isa<fir::BoxCharType>(type) ||
          mlir::isa<fir::CharacterType>(

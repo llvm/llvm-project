@@ -588,4 +588,56 @@ TEST(SmallMapVectorLargeTest, iteration_test) {
     count--;
   }
 }
+
+struct PolymorphicBase {
+  int Value = 0;
+  PolymorphicBase() = default;
+  explicit PolymorphicBase(int V) : Value(V) {}
+  PolymorphicBase(const PolymorphicBase &) = default;
+  PolymorphicBase(PolymorphicBase &&) noexcept = default;
+  PolymorphicBase &operator=(const PolymorphicBase &) = default;
+  PolymorphicBase &operator=(PolymorphicBase &&) noexcept = default;
+  virtual ~PolymorphicBase() = default;
+  virtual int get() const { return Value; }
+};
+
+struct PolymorphicDerived : PolymorphicBase {
+  using PolymorphicBase::PolymorphicBase;
+  int get() const override { return Value * 2; }
+};
+
+TEST(MapVectorTest, PolymorphicTypes) {
+  MapVector<int, PolymorphicBase> MV;
+  SmallMapVector<int, PolymorphicBase, 2> SMV;
+  for (int I = 0; I < 6; ++I) {
+    MV.try_emplace(I, I + 10);
+    SMV.try_emplace(I, I + 10);
+  }
+  EXPECT_EQ(6u, MV.size());
+  EXPECT_EQ(6u, SMV.size());
+  EXPECT_EQ(13, MV[3].get());
+  EXPECT_EQ(13, SMV[3].get());
+
+  MV.remove_if([](const std::pair<int, PolymorphicBase> &KV) {
+    return KV.second.get() % 2 == 0;
+  });
+  SMV.remove_if([](const std::pair<int, PolymorphicBase> &KV) {
+    return KV.second.get() % 2 == 0;
+  });
+  EXPECT_EQ(3u, MV.size());
+  EXPECT_EQ(3u, SMV.size());
+
+  PolymorphicBase B(3);
+  PolymorphicDerived D(4);
+  MapVector<PolymorphicBase *, PolymorphicBase *> PtrMV;
+  SmallMapVector<PolymorphicBase *, PolymorphicBase *, 2> PtrSMV;
+  PtrMV[&B] = &D;
+  PtrMV[&D] = &B;
+  PtrSMV[&B] = &D;
+  PtrSMV[&D] = &B;
+  EXPECT_EQ(8, PtrMV[&B]->get());
+  EXPECT_EQ(3, PtrMV[&D]->get());
+  EXPECT_EQ(8, PtrSMV[&B]->get());
+  EXPECT_EQ(3, PtrSMV[&D]->get());
+}
 } // namespace

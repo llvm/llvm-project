@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"
@@ -43,7 +44,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
 
@@ -51,25 +51,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "pre-isel-intrinsic-lowering"
 
-/// Threshold to leave statically sized memory intrinsic calls. Calls of known
-/// size larger than this will be expanded by the pass. Calls of unknown or
-/// lower size will be left for expansion in codegen.
-static cl::opt<int64_t> MemIntrinsicExpandSizeThresholdOpt(
-    "mem-intrinsic-expand-size",
-    cl::desc("Set minimum mem intrinsic size to expand in IR"), cl::init(-1),
-    cl::Hidden);
-
-/// Maximum bound of a memset with non-constant length for it to be expanded
-/// inline. Overrides TargetTransformInfo::getMaxBoundedMemSetInlineSize.
-static cl::opt<uint64_t> BoundedMemSetInlineSizeOpt(
-    "bounded-memset-inline-size",
-    cl::desc("Set maximum bound of a variable-length memset to expand inline"),
-    cl::Hidden);
-
 namespace {
 
 struct PreISelIntrinsicLowering {
-  const TargetMachine *TM;
+  const CodeGenOptions &Opts;
+  const TargetMachine &TM;
   const ModuleLibcallLoweringInfo &ModuleLibcalls;
   const function_ref<TargetTransformInfo &(Function &)> LookupTTI;
   const function_ref<TargetLibraryInfo &(Function &)> LookupTLI;
@@ -81,18 +67,18 @@ struct PreISelIntrinsicLowering {
   const bool UseMemIntrinsicLibFunc;
 
   explicit PreISelIntrinsicLowering(
-      const TargetMachine *TM_,
+      const CodeGenOptions &Opts_, const TargetMachine &TM_,
       const ModuleLibcallLoweringInfo &ModuleLibcalls_,
       function_ref<TargetTransformInfo &(Function &)> LookupTTI_,
       function_ref<TargetLibraryInfo &(Function &)> LookupTLI_,
       function_ref<AssumptionCache &(Function &)> LookupAC_,
       bool UseMemIntrinsicLibFunc_ = true)
-      : TM(TM_), ModuleLibcalls(ModuleLibcalls_), LookupTTI(LookupTTI_),
-        LookupTLI(LookupTLI_), LookupAC(LookupAC_),
+      : Opts(Opts_), TM(TM_), ModuleLibcalls(ModuleLibcalls_),
+        LookupTTI(LookupTTI_), LookupTLI(LookupTLI_), LookupAC(LookupAC_),
         UseMemIntrinsicLibFunc(UseMemIntrinsicLibFunc_) {}
 
-  static bool shouldExpandMemIntrinsicWithSize(Value *Size,
-                                               const TargetTransformInfo &TTI);
+  bool shouldExpandMemIntrinsicWithSize(Value *Size,
+                                        const TargetTransformInfo &TTI) const;
   bool tryExpandBoundedMemSet(MemSetInst *Memset,
                               const TargetTransformInfo &TTI) const;
   bool
@@ -155,13 +141,10 @@ static bool lowerLoadRelative(Function &F) {
 /// Targets may provide their own expansion via
 /// TargetLowering::emitCanLoadSpeculatively; the default expansion
 /// conservatively returns false.
-static bool lowerCanLoadSpeculatively(Function &F, const TargetMachine *TM) {
-  if (!TM)
-    return false;
-
+static bool lowerCanLoadSpeculatively(Function &F, const TargetMachine &TM) {
   return forEachCall(F, [&](CallInst *CI) {
     const TargetLowering *TLI =
-        TM->getSubtargetImpl(*CI->getFunction())->getTargetLowering();
+        TM.getSubtargetImpl(*CI->getFunction())->getTargetLowering();
 
     IRBuilder<> Builder(CI);
     // A null result means the target cannot answer; lower to false.
@@ -267,13 +250,12 @@ static bool lowerObjCCall(Function &F, RTLIB::LibcallImpl NewFn,
 // TODO: Should refine based on estimated number of accesses (e.g. does it
 // require splitting based on alignment)
 bool PreISelIntrinsicLowering::shouldExpandMemIntrinsicWithSize(
-    Value *Size, const TargetTransformInfo &TTI) {
+    Value *Size, const TargetTransformInfo &TTI) const {
   ConstantInt *CI = dyn_cast<ConstantInt>(Size);
   if (!CI)
     return true;
-  uint64_t Threshold = MemIntrinsicExpandSizeThresholdOpt.getNumOccurrences()
-                           ? MemIntrinsicExpandSizeThresholdOpt
-                           : TTI.getMaxMemIntrinsicInlineSizeThreshold();
+  uint64_t Threshold = Opts.mem_intrinsic_expand_size.value_or(
+      TTI.getMaxMemIntrinsicInlineSizeThreshold());
   uint64_t SizeVal = CI->getZExtValue();
 
   // Treat a threshold of 0 as a special case to force expansion of all
@@ -282,23 +264,19 @@ bool PreISelIntrinsicLowering::shouldExpandMemIntrinsicWithSize(
 }
 
 static bool canEmitLibcall(const ModuleLibcallLoweringInfo &ModuleLowering,
-                           const TargetMachine *TM, Function *F,
+                           const TargetMachine &TM, Function *F,
                            RTLIB::Libcall LC) {
   // TODO: Should this consider the address space of the memcpy?
-  if (!TM)
-    return true;
   const LibcallLoweringInfo &Lowering =
-      getLibcallLowering(ModuleLowering, *TM->getSubtargetImpl(*F));
+      getLibcallLowering(ModuleLowering, *TM.getSubtargetImpl(*F));
   return Lowering.getLibcallImpl(LC) != RTLIB::Unsupported;
 }
 
 static bool canEmitMemcpy(const ModuleLibcallLoweringInfo &ModuleLowering,
-                          const TargetMachine *TM, Function *F) {
+                          const TargetMachine &TM, Function *F) {
   // TODO: Should this consider the address space of the memcpy?
-  if (!TM)
-    return true;
   const LibcallLoweringInfo &Lowering =
-      getLibcallLowering(ModuleLowering, *TM->getSubtargetImpl(*F));
+      getLibcallLowering(ModuleLowering, *TM.getSubtargetImpl(*F));
   return Lowering.getMemcpyImpl() != RTLIB::Unsupported;
 }
 
@@ -307,7 +285,7 @@ static bool canEmitMemcpy(const ModuleLibcallLoweringInfo &ModuleLowering,
 bool PreISelIntrinsicLowering::tryExpandBoundedMemSet(
     MemSetInst *Memset, const TargetTransformInfo &TTI) const {
   // This pass runs even at -O0, so skip if e.g. llc -O0 is used.
-  if (!TM || TM->getOptLevel() == CodeGenOptLevel::None)
+  if (TM.getOptLevel() == CodeGenOptLevel::None)
     return false;
 
   Value *Len = Memset->getLength();
@@ -315,9 +293,8 @@ bool PreISelIntrinsicLowering::tryExpandBoundedMemSet(
   if (isa<Constant>(Len) || Memset->isVolatile() || F->hasOptNone() ||
       F->hasMinSize())
     return false;
-  uint64_t Threshold = BoundedMemSetInlineSizeOpt.getNumOccurrences()
-                           ? BoundedMemSetInlineSizeOpt
-                           : TTI.getMaxBoundedMemSetInlineSize();
+  uint64_t Threshold = Opts.bounded_memset_inline_size.value_or(
+      TTI.getMaxBoundedMemSetInlineSize());
   if (!Threshold)
     return false;
 
@@ -346,8 +323,9 @@ bool PreISelIntrinsicLowering::tryExpandBoundedMemSet(
 // Return a value appropriate for use with the memset_pattern16 libcall, if
 // possible and if we know how. (Adapted from equivalent helper in
 // LoopIdiomRecognize).
-static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
-                                         const TargetLibraryInfo &TLI) {
+static Constant *
+getMemSetPattern16Value(MemSetPatternInst *Inst,
+                        const RTLIB::RuntimeLibcallsInfo &RTLCI) {
   // TODO: This could check for UndefValue because it can be merged into any
   // other valid pattern.
 
@@ -358,9 +336,8 @@ static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
   Value *V = Inst->getValue();
   Type *VTy = V->getType();
   const DataLayout &DL = Inst->getDataLayout();
-  Module *M = Inst->getModule();
 
-  if (!isLibFuncEmittable(M, &TLI, LibFunc_memset_pattern16))
+  if (!RTLCI.isAvailable(RTLIB::impl_memset_pattern16))
     return nullptr;
 
   // If the value isn't a constant, we can't promote it to being in a constant
@@ -496,8 +473,9 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
     case Intrinsic::experimental_memset_pattern: {
       auto *Memset = cast<MemSetPatternInst>(Inst);
       Function *ParentFunc = Memset->getFunction();
-      const TargetLibraryInfo &TLI = LookupTLI(*ParentFunc);
-      Constant *PatternValue = getMemSetPattern16Value(Memset, TLI);
+      const RTLIB::RuntimeLibcallsInfo &RTLCI =
+          ModuleLibcalls.getRuntimeLibcallsInfo();
+      Constant *PatternValue = getMemSetPattern16Value(Memset, RTLCI);
       if (!PatternValue) {
         // If it isn't possible to emit a memset_pattern16 libcall, expand to
         // a loop instead.
@@ -513,13 +491,9 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
       Module *M = Memset->getModule();
       const DataLayout &DL = Memset->getDataLayout();
 
-      Type *DestPtrTy = Memset->getRawDest()->getType();
-      Type *SizeTTy = TLI.getSizeTType(*M);
-      StringRef FuncName = "memset_pattern16";
-      FunctionCallee MSP = getOrInsertLibFunc(M, TLI, LibFunc_memset_pattern16,
-                                              Builder.getVoidTy(), DestPtrTy,
-                                              Builder.getPtrTy(), SizeTTy);
-      inferNonMandatoryLibFuncAttrs(M, FuncName, TLI);
+      FunctionCallee MSP =
+          RTLCI.getOrInsertLibcallDecl(*M, RTLIB::impl_memset_pattern16);
+      Type *SizeTTy = MSP.getFunctionType()->getParamType(2);
 
       // Otherwise we should form a memset_pattern16.  PatternValue is known
       // to be an constant array of 16-bytes. Put the value into a mergable
@@ -542,11 +516,13 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
       }
       Value *PatternPtr = GV;
       Value *NumBytes = Builder.CreateMul(
-          TLI.getAsSizeT(DL.getTypeAllocSize(Memset->getValue()->getType()),
-                         *M),
+          ConstantInt::get(SizeTTy,
+                           DL.getTypeAllocSize(Memset->getValue()->getType())),
           Builder.CreateZExtOrTrunc(Memset->getLength(), SizeTTy));
       CallInst *MemsetPattern16Call =
           Builder.CreateCall(MSP, {Memset->getRawDest(), PatternPtr, NumBytes});
+      MemsetPattern16Call->setCallingConv(
+          RTLCI.getLibcallImplCallingConv(RTLIB::impl_memset_pattern16));
       MemsetPattern16Call->setAAMetadata(Memset->getAAMetadata());
       // Preserve any call site attributes on the destination pointer
       // argument (e.g. alignment).
@@ -632,7 +608,6 @@ static bool expandProtectedFieldPtr(Function &Intr) {
       reportFatalUsageError("software encoding currently unsupported");
 
     auto *DS = getDeactivationSymbol(Call);
-    OperandBundleDef DSBundle("deactivation-symbol", DS);
 
     for (Use &U : llvm::make_early_inc_range(Call->uses())) {
       // Comparisons against null cannot be used to recover the original
@@ -889,12 +864,12 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         Type *Ty = CI->getArgOperand(0)->getType();
         if (!isa<ScalableVectorType>(Ty))
           return false;
-        const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
+        const TargetLowering *TL = TM.getSubtargetImpl(F)->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
         assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
         if (!TL->isOperationExpand(Op, EVT::getEVT(Ty)))
           return false;
-        return lowerUnaryVectorIntrinsicAsLoop(M, CI);
+        return lowerVectorIntrinsicAsLoop(M, CI);
       });
       break;
     case Intrinsic::modf:
@@ -904,7 +879,8 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         Type *Ty = CI->getArgOperand(0)->getType();
         if (!isa<ScalableVectorType>(Ty))
           return false;
-        const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
+        const TargetSubtargetInfo *Subtarget = TM.getSubtargetImpl(F);
+        const TargetLowering *TL = Subtarget->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
         assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
         EVT VT = EVT::getEVT(Ty);
@@ -925,10 +901,12 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         default:
           llvm_unreachable("unexpected intrinsic");
         }
-        if (TL->getLibcallLoweringInfo().getVectorLibcallImplOrMasked(LC) !=
-            RTLIB::Unsupported)
+
+        const LibcallLoweringInfo &Libcalls =
+            getLibcallLowering(ModuleLibcalls, *Subtarget);
+        if (Libcalls.getVectorLibcallImplOrMasked(LC) != RTLIB::Unsupported)
           return false;
-        return lowerUnaryVectorIntrinsicAsLoop(M, CI);
+        return lowerVectorIntrinsicAsLoop(M, CI);
       });
       break;
     case Intrinsic::ptrauth_sign:
@@ -939,12 +917,12 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       Changed |= expandProtectedFieldPtr(F);
       break;
     case Intrinsic::cond_loop:
-      if (!TM->canLowerCondLoop())
+      if (!TM.canLowerCondLoop())
         Changed |= expandCondLoop(F);
       break;
     case Intrinsic::looptrap:
       Changed |= expandLoopTrap(F);
-      if (!TM->canLowerCondLoop())
+      if (!TM.canLowerCondLoop())
         if (auto *CondLoop = M.getFunction("llvm.cond.loop"))
           Changed |= expandCondLoop(*CondLoop);
       break;
@@ -983,9 +961,9 @@ public:
       return this->getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     };
 
-    const auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-    PreISelIntrinsicLowering Lowering(TM, ModuleLibcalls, LookupTTI, LookupTLI,
-                                      LookupAC);
+    const auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+    PreISelIntrinsicLowering Lowering(getCodeGenOptions(M), TM, ModuleLibcalls,
+                                      LookupTTI, LookupTLI, LookupAC);
     return Lowering.lowerIntrinsics(M);
   }
 };
@@ -1028,8 +1006,8 @@ PreISelIntrinsicLoweringPass::run(Module &M, ModuleAnalysisManager &MAM) {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
 
-  PreISelIntrinsicLowering Lowering(TM, LibcallLowering, LookupTTI, LookupTLI,
-                                    LookupAC);
+  PreISelIntrinsicLowering Lowering(getCodeGenOptions(M), TM, LibcallLowering,
+                                    LookupTTI, LookupTLI, LookupAC);
   if (!Lowering.lowerIntrinsics(M))
     return PreservedAnalyses::all();
   else

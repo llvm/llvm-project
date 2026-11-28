@@ -2686,7 +2686,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK17-LABEL: define {{[^@]+}}@_ZN2St7St_funcEPS_iPe
-// CHECK17-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr [[S:%.*]], i32 [[N:%.*]], ptr [[VLA1:%.*]]) #[[ATTR0]] align 2 {
+// CHECK17-SAME: (ptr nonnull align 4 dereferenceable(8) [[THIS:%.*]], ptr [[S:%.*]], i32 [[N:%.*]], ptr [[VLA1:%.*]]) #[[ATTR4:[0-9]+]] align 2 {
 // CHECK17-NEXT:  entry:
 // CHECK17-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK17-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8

@@ -70,10 +70,12 @@ public:
     AcquireLEN();
   }
   TypeAndShape(DynamicType t, Shape &&s) : type_{t}, shape_{std::move(s)} {
+    CHECK(IsSubscriptIntegerKind(*shape_));
     AcquireLEN();
   }
   TypeAndShape(DynamicType t, std::optional<Shape> &&s) : type_{t} {
     shape_ = std::move(s);
+    CHECK(!shape_ || IsSubscriptIntegerKind(*shape_));
     AcquireLEN();
   }
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(TypeAndShape)
@@ -103,7 +105,8 @@ public:
       TypeAndShape result{*type, GetShape(context, x, invariantOnly)};
       result.corank_ = GetCorank(x);
       if (type->category() == TypeCategory::Character) {
-        if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(x)}) {
+        if (const auto *chExpr{
+                UnwrapExpr<Expr<Type<TypeCategory::Character>>>(x)}) {
           if (auto length{chExpr->LEN()}) {
             result.set_LEN(std::move(*length));
           }
@@ -148,6 +151,7 @@ public:
   }
   const std::optional<Expr<SubscriptInteger>> &LEN() const { return LEN_; }
   TypeAndShape &set_LEN(Expr<SubscriptInteger> &&len) {
+    CHECK(IsSubscriptIntegerKind(len));
     LEN_ = std::move(len);
     return *this;
   }

@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -1240,6 +1242,168 @@ void OrcLoongArch64::writeIndirectStubsBlock(
     Stub[4 * I + 3] = 0x0;                   // padding
     PointersBlockTargetAddress += PointerSize;
     StubsBlockTargetAddress += StubSize;
+  }
+}
+
+// z10, z196, zEC12 and "generic" lack the vector facility. Any other host CPU
+// name is assumed to have it, since skipping the save on a vector-capable
+// machine would silently corrupt vector arguments.
+static bool hostHasVectorFacility() {
+  static const bool HasVector = [] {
+    StringRef CPU = sys::getHostCPUName();
+    return !(CPU == "z10" || CPU == "z196" || CPU == "zEC12" ||
+             CPU == "generic");
+  }();
+  return HasVector;
+}
+
+void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
+                                   ExecutorAddr ResolverTargetAddress,
+                                   ExecutorAddr ReentryFnAddr,
+                                   ExecutorAddr ReentryCtxAddr) {
+  // Frame: 288 bytes below the incoming %r15.
+  //   0..159(%r15):   outgoing area for the reenter call
+  //   160..287(%r15): vector argument register save area (%v24-%v31)
+  //   304..415(%r15): caller's GPR save area, %r2..%r15  (16 + 288)
+  //   416..447(%r15): caller's FPR save area, %f0/%f2/%f4/%f6 (128 + 288)
+  //
+  // On entry %r1 = trampoline + 8 and %r14 = original caller's return address.
+  // reenter(%r2 = ReentryCtxAddr, %r3 = trampoline address = %r1 - 8).
+  //
+  // The reentry function returns the implementation address in %r2.
+  // Move it to %r1 before restoring the saved registers.
+  //
+  // %r0 and %r1 are scratch and are not saved.
+  //
+  // Lctx is at 0x58 and lgrl is at 0x28: (0x58 - 0x28) / 2 = 0x18.
+  // Lfn  is at 0x60 and lgrl is at 0x2e: (0x60 - 0x2e) / 2 = 0x19.
+
+  // clang-format off
+  const uint8_t ResolverCodeTemplate[] = {
+      0xeb, 0x2f, 0xf0, 0x10, 0x00, 0x24, // 0x00: stmg %r2, %r15, 16(%r15)
+      0xa7, 0xfb, 0xfe, 0xe0,             // 0x06: aghi %r15, -288
+      0x60, 0x00, 0xf1, 0xa0,             // 0x0a: std  %f0, 416(%r15)
+      0x60, 0x20, 0xf1, 0xa8,             // 0x0e: std  %f2, 424(%r15)
+      0x60, 0x40, 0xf1, 0xb0,             // 0x12: std  %f4, 432(%r15)
+      0x60, 0x60, 0xf1, 0xb8,             // 0x16: std  %f6, 440(%r15)
+
+      // 0x1a: vstm %v24, %v31, 160(%r15) OR 6-byte NOP for pre-z13
+      0xe7, 0x8f, 0xf0, 0xa0, 0x0c, 0x3e,
+
+      0xb9, 0x04, 0x00, 0x31,             // 0x20: lgr   %r3, %r1
+      0xa7, 0x3b, 0xff, 0xf8,             // 0x24: aghi  %r3, -8
+      0xc4, 0x28, 0x00, 0x00, 0x00, 0x18, // 0x28: lgrl  %r2, Lctx (disp = 0x18)
+      0xc4, 0x18, 0x00, 0x00, 0x00, 0x19, // 0x2e: lgrl  %r1, Lfn (disp = 0x19)
+      0x0d, 0xe1,                         // 0x34: basr  %r14, %r1
+
+      // 0x36: vlm %v24, %v31, 160(%r15) OR 6-byte NOP for pre-z13
+      0xe7, 0x8f, 0xf0, 0xa0, 0x0c, 0x36,
+
+      0x68, 0x00, 0xf1, 0xa0,             // 0x3c: ld    %f0, 416(%r15)
+      0x68, 0x20, 0xf1, 0xa8,             // 0x40: ld    %f2, 424(%r15)
+      0x68, 0x40, 0xf1, 0xb0,             // 0x44: ld    %f4, 432(%r15)
+      0x68, 0x60, 0xf1, 0xb8,             // 0x48: ld    %f6, 440(%r15)
+      0xb9, 0x04, 0x00, 0x12,             // 0x4c: lgr   %r1, %r2
+      0xeb, 0x2f, 0xf1, 0x30, 0x00, 0x04, // 0x50: lmg   %r2, %r15, 304(%r15)
+      0x07, 0xf1,                         // 0x56: br    %r1
+
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x58: Lctx
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x60: Lfn
+  };
+  // clang-format on
+
+  static_assert(sizeof(ResolverCodeTemplate) == ResolverCodeSize,
+                "ResolverCodeSize does not match template size");
+
+  uint8_t ResolverCode[ResolverCodeSize];
+  memcpy(ResolverCode, ResolverCodeTemplate, ResolverCodeSize);
+
+  // The template assumes the vector facility. Without it, overwrite the two
+  // vector transfers with 6-byte no-ops (BRCL 0, 0).
+  if (!hostHasVectorFacility()) {
+    const uint8_t NopCode[] = {0xc0, 0x04, 0x00, 0x00, 0x00, 0x00};
+    const unsigned VstmOffset = 0x1a;
+    const unsigned VlmOffset = 0x36;
+    memcpy(ResolverCode + VstmOffset, NopCode, sizeof(NopCode));
+    memcpy(ResolverCode + VlmOffset, NopCode, sizeof(NopCode));
+  }
+
+  const unsigned ReentryCtxAddrOffset = 0x58;
+  const unsigned ReentryFnAddrOffset = 0x60;
+
+  memcpy(ResolverWorkingMem, ResolverCode, sizeof(ResolverCode));
+  memcpy(ResolverWorkingMem + ReentryCtxAddrOffset, &ReentryCtxAddr,
+         sizeof(uint64_t));
+  memcpy(ResolverWorkingMem + ReentryFnAddrOffset, &ReentryFnAddr,
+         sizeof(uint64_t));
+}
+
+void OrcSystemZ::writeTrampolines(char *TrampolineBlockWorkingMem,
+                                  ExecutorAddr TrampolineBlockTargetAddress,
+                                  ExecutorAddr ResolverAddr,
+                                  unsigned NumTrampolines) {
+  // Each trampoline is 8 bytes:
+  //   +0: lgrl %r1, Lptr    c4 18 xx xx xx xx
+  //   +6: basr %r1, %r1     0d 11
+  //
+  // basr reads the branch target from %r1 before writing the return address
+  // (trampoline + 8) into %r1. The resolver receives %r1 = trampoline + 8 and
+  // %r14 still holds the original caller's return address.
+  //
+  // lgrl displacement = (Lptr - lgrl_addr) / 2, stored big-endian in +2..+5.
+
+  const unsigned PtrOffset = alignTo(NumTrampolines * TrampolineSize, 8);
+  memcpy(TrampolineBlockWorkingMem + PtrOffset, &ResolverAddr,
+         sizeof(uint64_t));
+
+  uint8_t *Trampolines = reinterpret_cast<uint8_t *>(TrampolineBlockWorkingMem);
+
+  for (unsigned I = 0; I < NumTrampolines; ++I) {
+    uint8_t *T = Trampolines + I * TrampolineSize;
+    int32_t HWOffset = ((int32_t)PtrOffset - (int32_t)(I * TrampolineSize)) / 2;
+
+    T[0] = 0xc4;
+    T[1] = 0x18;
+    T[2] = (HWOffset >> 24) & 0xff;
+    T[3] = (HWOffset >> 16) & 0xff;
+    T[4] = (HWOffset >> 8) & 0xff;
+    T[5] = HWOffset & 0xff;
+    T[6] = 0x0d;
+    T[7] = 0x11;
+  }
+}
+
+void OrcSystemZ::writeIndirectStubsBlock(
+    char *StubsBlockWorkingMem, ExecutorAddr StubsBlockTargetAddress,
+    ExecutorAddr PointersBlockTargetAddress, unsigned NumStubs) {
+  // Each stub is 8 bytes:
+  //   +0: lgrl %r1, ptr_I   c4 18 xx xx xx xx
+  //   +6: br   %r1          07 f1
+  //
+  // lgrl displacement = (ptr_I - stub) / 2, stored big-endian in +2..+5.
+
+  assert(stubAndPointerRangesOk<OrcSystemZ>(
+             StubsBlockTargetAddress, PointersBlockTargetAddress, NumStubs) &&
+         "PointersBlock is out of range");
+
+  uint8_t *Stub = reinterpret_cast<uint8_t *>(StubsBlockWorkingMem);
+
+  for (unsigned I = 0; I < NumStubs; ++I) {
+    uint8_t *S = Stub + I * StubSize;
+    ExecutorAddr LgrlAddr = StubsBlockTargetAddress + I * StubSize;
+    ExecutorAddr PtrAddr = PointersBlockTargetAddress + I * PointerSize;
+    int32_t HWOffset =
+        (int32_t)(((int64_t)PtrAddr.getValue() - (int64_t)LgrlAddr.getValue()) /
+                  2);
+
+    S[0] = 0xc4;
+    S[1] = 0x18;
+    S[2] = (HWOffset >> 24) & 0xff;
+    S[3] = (HWOffset >> 16) & 0xff;
+    S[4] = (HWOffset >> 8) & 0xff;
+    S[5] = HWOffset & 0xff;
+    S[6] = 0x07;
+    S[7] = 0xf1;
   }
 }
 

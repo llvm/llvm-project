@@ -29,14 +29,14 @@ inline constexpr in_place_t in_place{};
 
 template <class _Tp>
 struct in_place_type_t {
-  _LIBCPP_HIDE_FROM_ABI explicit in_place_type_t() = default;
+  explicit in_place_type_t() = default;
 };
 template <class _Tp>
 inline constexpr in_place_type_t<_Tp> in_place_type{};
 
 template <size_t _Idx>
 struct in_place_index_t {
-  _LIBCPP_HIDE_FROM_ABI explicit in_place_index_t() = default;
+  explicit in_place_index_t() = default;
 };
 template <size_t _Idx>
 inline constexpr in_place_index_t<_Idx> in_place_index{};

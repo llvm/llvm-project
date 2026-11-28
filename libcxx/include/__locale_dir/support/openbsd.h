@@ -78,29 +78,27 @@ inline __lconv_t* __localeconv(__locale_t& __loc) {
   return ::localeconv();
 }
 
-inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
-  return ::nl_langinfo_l(CODESET, __loc);
-}
+inline const char* __get_locale_encoding(__locale_t __loc) { return ::nl_langinfo_l(CODESET, __loc); }
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 //
 // Strtonum functions
 //
 template <class _FloatT>
-_LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr);
+_FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr);
 
 template <>
-inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr) {
+inline float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr) {
   return ::strtof(__nptr, __endptr);
 }
 
 template <>
-inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
+inline double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr) {
   return ::strtod(__nptr, __endptr);
 }
 
 template <>
-inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr) {
+inline long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr) {
   return ::strtold(__nptr, __endptr);
 }
 

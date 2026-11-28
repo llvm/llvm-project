@@ -402,6 +402,7 @@ void AArch64StackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
   }
 
   IRBuilder<> IRB(InsertBefore);
+  IRB.disableGEPCanonicalization();
   IB.generate(IRB);
 }
 
@@ -449,6 +450,7 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   assert(PrologueBB);
 
   IRBuilder<> IRB(&PrologueBB->front());
+  IRB.disableGEPCanonicalization();
   Instruction *Base = IRB.CreateIntrinsicWithoutFolding(
       Intrinsic::aarch64_irg_sp, {},
       {Constant::getNullValue(IRB.getInt64Ty())});

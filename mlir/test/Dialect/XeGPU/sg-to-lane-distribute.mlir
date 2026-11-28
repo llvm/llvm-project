@@ -584,3 +584,30 @@ gpu.module @xevm_module{
     gpu.return
   }
 }
+
+// -----
+// A multi_reduction over a leading unit dim is an elementwise combine with the
+// accumulator. Each lane holds a 1x8x1 slice of the 1x8x16 source, so the
+// lowering must not slice the distributed source along its last two dims.
+// CHECK-LABEL: gpu.func @multi_reduction_leading_unit_dim
+// CHECK-DAG:     %[[ACC:.*]] = arith.constant dense<1.000000e+00> : vector<8x1xf32>
+// CHECK:         %[[LD:.*]] = xegpu.load_nd %{{.*}}[0, 0] : !xegpu.tensor_desc<8x16xf32> -> vector<8xf32>
+// CHECK:         %[[SRC:.*]] = vector.shape_cast %[[LD]] : vector<8xf32> to vector<8x1xf32>
+// CHECK:         %[[RED:.*]] = arith.addf %[[SRC]], %[[ACC]] : vector<8x1xf32>
+// CHECK-NOT:     vector.extract_strided_slice
+// CHECK-NOT:     vector.reduction
+// CHECK:         %[[RES:.*]] = vector.shape_cast %[[RED]] : vector<8x1xf32> to vector<8xf32>
+// CHECK:         xegpu.store_nd %[[RES]], %{{.*}}[0, 0] : vector<8xf32>, !xegpu.tensor_desc<8x16xf32>
+gpu.module @xevm_module {
+  gpu.func @multi_reduction_leading_unit_dim(%src: memref<8x16xf32>, %dst: memref<8x16xf32>) {
+    %acc = arith.constant dense<1.0> : vector<8x16xf32>
+    %t = xegpu.create_nd_tdesc %src : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
+    %v = xegpu.load_nd %t[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : !xegpu.tensor_desc<8x16xf32> -> vector<8x16xf32>
+    %v3 = vector.shape_cast %v : vector<8x16xf32> to vector<1x8x16xf32>
+    %r = vector.multi_reduction <add>, %v3, %acc [0] : vector<1x8x16xf32> to vector<8x16xf32>
+    %a = xegpu.convert_layout %r <{target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [0]>}> : vector<8x16xf32>
+    %o = xegpu.create_nd_tdesc %dst : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
+    xegpu.store_nd %a, %o[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
+    gpu.return
+  }
+}

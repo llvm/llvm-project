@@ -528,7 +528,7 @@ checked:
   (but excluding move-safe ones) and smart pointers.
 - With option value `KnownsAndLocals` local variables (of any type) are
   additionally checked. The idea behind this is that local variables are
-  usually not tempting to be re-used so an use after move is more likely a bug
+  usually not tempting to be re-used so a use after move is more likely a bug
   than with member variables.
 - With option value `All` any use-after move condition is checked on all
   kinds of variables, excluding global variables and known move-safe cases.
@@ -854,7 +854,7 @@ void test2(int *p) {
 void test3() {
   int (*p_function)(char, char);
   p_function = (int (*)(char, char))0x04080;
-  int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
+  int x = (*p_function)('x', 'y'); // NO warning yet at function pointer calls
 }
 ```
 
@@ -1506,7 +1506,7 @@ void not_vulnerable(void) {
   scanf("%zu", &size);
   if (1024 < size)
     return;
-  int *p = malloc(size); // No warning expected as the the user input is bound
+  int *p = malloc(size); // No warning expected as the user input is bound
   free(p);
 }
 
@@ -1589,8 +1589,8 @@ int *test_dynamic() {
 ```
 
 In uncertain situations (when the checker can neither prove nor disprove that
-overflow occurs), the checker assumes that the the index (more precisely, the
-memory offeset) is within bounds.
+overflow occurs), the checker assumes that the index (more precisely, the
+memory offset) is within bounds.
 
 However, if {ref}`optin-taint-GenericTaint` is enabled and the index/offset is
 tainted (i.e. it is influenced by an untrusted source), then this checker
@@ -2494,6 +2494,8 @@ are detected:
   operation. Some functions (like `ferror`, `clearerr`, `fseek`) are
   allowed in this state.
 - Invalid 3rd ("`whence`") argument to `fseek`.
+- Alternating read and write at a stream (opened in read-write mode) without set of file position in between.
+  The functions `fread`, `fgetc`, `fscanf`, `getdelim`, `getline` and similar are considered as "read operations", `fwrite`, `fputc`, `fprintf` and similar as write operations. A read after a write is allowed only if one of `fsetpos`, `fseek`, `rewind` is called in between (additionally `fflush` for the write-read case). This corresponds to CERT rule FIO39-C "[Do not alternately input and output from a stream without an intervening flush or positioning call](https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/input-output-fio/fio39-c/)".
 
 The stream operations are by this checker usually split into two cases, a success
 and a failure case.
@@ -2562,6 +2564,20 @@ void test6() {
     fgetc(p); // warn: file position may be indeterminate after I/O error
 
   fclose(p);
+}
+
+void getc_putc() {
+  FILE *F = fopen("file.txt", "a+");
+  if (F == NULL)
+    return;
+
+  fgetc(F);
+  if (ferror(F) || feof(F)) {
+    fclose(F);
+    return;
+  }
+  fputc('a', F); // warn: write following a read without set of file position in between
+  fclose(F);
 }
 ```
 
@@ -3771,30 +3787,6 @@ void test() {
   lck_mtx_lock(&lck2);
   lck_mtx_unlock(&lck1);
     // warn: this was not the most recently acquired lock
-}
-```
-
-(alpha-unix-simplestream)=
-
-#### alpha.unix.SimpleStream (C)
-
-Check for misuses of stream APIs. Check for misuses of stream APIs: `fopen, fclose`
-(demo checker, the subject of the demo ([Slides](https://llvm.org/devmtg/2012-11/Zaks-Rose-Checker24Hours.pdf) ,
-[Video](https://youtu.be/kdxlsP5QVPw)) by Anna Zaks and Jordan Rose presented at the
-[2012 LLVM Developers' Meeting](https://llvm.org/devmtg/2012-11/)).
-
-```c
-void test() {
-  FILE *F = fopen("myfile.txt", "w");
-} // warn: opened file is never closed
-
-void test() {
-  FILE *F = fopen("myfile.txt", "w");
-
-  if (F)
-    fclose(F);
-
-  fclose(F); // warn: closing a previously closed file stream
 }
 ```
 

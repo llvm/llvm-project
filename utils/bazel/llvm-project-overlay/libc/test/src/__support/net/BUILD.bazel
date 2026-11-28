@@ -1,0 +1,30 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc __support/net functionality.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "byte_order_test",
+    srcs = ["byte_order_test.cpp"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/net:byte_order",
+    ],
+)
+
+libc_test(
+    name = "hex_test",
+    srcs = ["hex_test.cpp"],
+    deps = [
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/CPP:string_view",
+        "//libc/src/__support/net:hex",
+    ],
+)

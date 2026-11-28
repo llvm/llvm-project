@@ -68,7 +68,8 @@ LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
             VectorizerParams::VectorizationFactor.getKnownMinValue(), HK_WIDTH),
       Interleave("interleave.count", InterleaveOnlyWhenForced, HK_INTERLEAVE),
       Force(FK_Undefined), IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
-      Predicate(FK_Undefined), Scalable(SK_Unspecified), TheLoop(L), ORE(ORE) {
+      Predicate(FK_Undefined), Scalable(SK_Unspecified), FPUnsafe(FK_Undefined),
+      TheLoop(L), ORE(ORE) {
   // Populate values with existing loop metadata.
   getHintsFromMetadata();
 
@@ -205,6 +206,11 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
 }
 
 bool LoopVectorizeHints::allowReordering() const {
+  // An explicit fp_unsafe hint takes precedence over the vectorize.enable
+  // default.
+  if (FPUnsafe != FK_Undefined)
+    return FPUnsafe == FK_Enabled;
+
   // Allow the vectorizer to change the order of operations if enabling
   // loop hints are provided
   ElementCount EC = getWidth();
@@ -250,6 +256,10 @@ void LoopVectorizeHints::getHintsFromMetadata() {
         Force = FK_Enabled;
       else if (Name == "llvm.loop.vectorize.disable")
         Force = FK_Disabled;
+      else if (Name == "llvm.loop.vectorize.fp_unsafe.enable")
+        FPUnsafe = FK_Enabled;
+      else if (Name == "llvm.loop.vectorize.fp_unsafe.disable")
+        FPUnsafe = FK_Disabled;
       else if (Name == "llvm.loop.vectorize.predicate.enable")
         Predicate = FK_Enabled;
       else if (Name == "llvm.loop.vectorize.predicate.disable")
@@ -274,8 +284,9 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
     return;
   unsigned Val = C->getZExtValue();
 
-  // Force, Predicate, and Scalable are omitted: they are only spelled as
-  // single-operand enable/disable nodes, which never reach setHint().
+  // Force, Predicate, Scalable and FPUnsafe are omitted: they are only
+  // spelled as single-operand enable/disable nodes, which never reach
+  // setHint().
   Hint *Hints[] = {&Width, &Interleave, &IsVectorized};
   for (auto *H : Hints) {
     if (Name == H->Name) {
@@ -847,8 +858,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
   }
 
   // Now we know the widest induction type, check if our found induction
-  // is the same size. If it's not, unset it here and InnerLoopVectorizer
-  // will create another.
+  // is the same size. If it's not, unset it here.
   if (PrimaryInduction && WidestIndTy != PrimaryInduction->getType())
     PrimaryInduction = nullptr;
 
@@ -894,12 +904,12 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     if (RecurrenceDescriptor::isReductionPHI(Phi, TheLoop, RedDes, DB, AC, DT,
                                              PSE.getSE())) {
       Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
-      Reductions[Phi] = std::move(RedDes);
       assert((!RedDes.hasUsesOutsideReductionChain() ||
               RecurrenceDescriptor::isMinMaxRecurrenceKind(
                   RedDes.getRecurrenceKind())) &&
              "Only min/max recurrences are allowed to have multiple uses "
              "currently");
+      Reductions[Phi] = std::move(RedDes);
       return true;
     }
 
@@ -1043,12 +1053,15 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
 
     // FP instructions can allow unsafe algebra, thus vectorizable by
     // non-IEEE-754 compliant SIMD units.
-    // This applies to floating-point math operations and calls, not memory
-    // operations, shuffles, or casts, as they don't change precision or
-    // semantics.
-  } else if (I.getType()->isFloatingPointTy() && (CI || I.isBinaryOp()) &&
+    // This applies to floating-point math operations, calls and compares
+    // other than NaN checks, not memory operations, shuffles, or casts, as they
+    // don't change precision or semantics.
+  } else if (((I.getType()->isFloatingPointTy() && (CI || I.isBinaryOp())) ||
+              (isa<FCmpInst>(I) &&
+               !is_contained({FCmpInst::FCMP_ORD, FCmpInst::FCMP_UNO},
+                             cast<FCmpInst>(I).getPredicate()))) &&
              !I.isFast()) {
-    LLVM_DEBUG(dbgs() << "LV: Found FP op with unsafe algebra.\n");
+    LLVM_DEBUG(dbgs() << "LV: Found potentially unsafe FP op.\n");
     Hints->setPotentiallyUnsafe();
   }
 
@@ -1397,7 +1410,7 @@ bool LoopVectorizationLegality::blockNeedsPredication(
 }
 
 bool LoopVectorizationLegality::blockCanBePredicated(
-    BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
+    BasicBlock *BB, SafeAccessesTy &SafeAccesses,
     SmallPtrSetImpl<const Instruction *> &MaskedOp) const {
   for (Instruction &I : *BB) {
     // We can predicate blocks with calls to assume, as long as we drop them in
@@ -1425,7 +1438,11 @@ bool LoopVectorizationLegality::blockCanBePredicated(
 
     // Loads are handled via masking (or speculated if safe to do so.)
     if (auto *LI = dyn_cast<LoadInst>(&I)) {
-      if (!SafePtrs.count(LI->getPointerOperand()))
+      auto It = SafeAccesses.find(LI->getPointerOperand());
+      TypeSize Size = LI->getDataLayout().getTypeStoreSize(LI->getType());
+      if (Size.isScalable() || It == SafeAccesses.end() ||
+          It->second.MaxAlign < LI->getAlign() ||
+          It->second.MaxSizeInBytes < Size.getFixedValue())
         MaskedOp.insert(LI);
       continue;
     }
@@ -1456,19 +1473,29 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
   assert(TheLoop->getNumBlocks() > 1 && "Single block loops are vectorizable");
 
-  // A list of pointers which are known to be dereferenceable within scope of
-  // the loop body for each iteration of the loop which executes.  That is,
-  // the memory pointed to can be dereferenced (with the access size implied by
-  // the value's type) unconditionally within the loop header without
-  // introducing a new fault.
-  SmallPtrSet<Value *, 8> SafePointers;
+  // Record the maximum fixed access size and alignment known to be safe for
+  // each pointer in every executed iteration. A conditional load can execute
+  // unconditionally if its size and alignment do not exceed these bounds.
+  // Scalable accesses do not establish either size or alignment.
+  SafeAccessesTy SafeAccesses;
+  auto RecordSafeAccess = [&SafeAccesses](Instruction &I) {
+    Value *Ptr = getLoadStorePointerOperand(&I);
+    if (!Ptr)
+      return;
+    TypeSize Size = I.getDataLayout().getTypeStoreSize(getLoadStoreType(&I));
+    if (Size.isScalable())
+      return;
+    Align Alignment = getLoadStoreAlignment(&I);
+    auto &Info = SafeAccesses[Ptr];
+    Info.MaxAlign = std::max(Info.MaxAlign, Alignment);
+    Info.MaxSizeInBytes = std::max(Info.MaxSizeInBytes, Size.getFixedValue());
+  };
 
-  // Collect safe addresses.
+  // Collect safe accesses.
   for (BasicBlock *BB : TheLoop->blocks()) {
     if (!blockNeedsPredication(BB)) {
       for (Instruction &I : *BB)
-        if (auto *Ptr = getLoadStorePointerOperand(&I))
-          SafePointers.insert(Ptr);
+        RecordSafeAccess(I);
       continue;
     }
 
@@ -1530,7 +1557,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
           CanSpeculatePointerOp(LI->getPointerOperand()) &&
           isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT, AC,
                                             &Predicates))
-        SafePointers.insert(LI->getPointerOperand());
+        RecordSafeAccess(*LI);
       Predicates.clear();
     }
   }
@@ -1555,7 +1582,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
     // We must be able to predicate all blocks that need to be predicated.
     if (blockNeedsPredication(BB) &&
-        !blockCanBePredicated(BB, SafePointers, ConditionallyExecutedOps)) {
+        !blockCanBePredicated(BB, SafeAccesses, ConditionallyExecutedOps)) {
       reportVectorizationFailure(
           "Control flow cannot be substituted for a select", "NoCFGForSelect",
           ORE, TheLoop, BB->getTerminator());
@@ -2107,14 +2134,14 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
 
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
 
-  // The list of pointers that we can safely read and write to remains empty.
-  SmallPtrSet<Value *, 8> SafePointers;
+  // No accesses are known to be safe in inactive lanes of the folded tail.
+  SafeAccessesTy SafeAccesses;
 
   // Check all blocks for predication, including those that ordinarily do not
   // need predication such as the header block.
   SmallPtrSet<const Instruction *, 8> TmpMaskedOp;
   for (BasicBlock *BB : TheLoop->blocks()) {
-    if (!blockCanBePredicated(BB, SafePointers, TmpMaskedOp)) {
+    if (!blockCanBePredicated(BB, SafeAccesses, TmpMaskedOp)) {
       LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking.\n");
       return false;
     }
@@ -2126,15 +2153,15 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
 }
 
 void LoopVectorizationLegality::prepareToFoldTailByMasking() {
-  // The list of pointers that we can safely read and write to remains empty.
-  SmallPtrSet<Value *, 8> SafePointers;
+  // No accesses are known to be safe in inactive lanes of the folded tail.
+  SafeAccessesTy SafeAccesses;
 
   // Mark all blocks for predication, including those that ordinarily do not
   // need predication such as the header block, and collect instructions needing
   // predication in TailFoldedMaskedOp.
   for (BasicBlock *BB : TheLoop->blocks()) {
     [[maybe_unused]] bool R =
-        blockCanBePredicated(BB, SafePointers, TailFoldedMaskedOp);
+        blockCanBePredicated(BB, SafeAccesses, TailFoldedMaskedOp);
     assert(R && "Must be able to predicate block when tail-folding.");
   }
 }

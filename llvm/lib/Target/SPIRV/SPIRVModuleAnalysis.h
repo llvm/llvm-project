@@ -247,7 +247,7 @@ struct ModuleAnalysisInfo {
 
 using InstrSignature = SmallVector<size_t>;
 using InstrTraces = std::set<InstrSignature>;
-using InstrGRegsMap = std::map<SmallVector<size_t>, unsigned>;
+using InstrGRegsMap = std::map<SmallVector<size_t>, MCRegister>;
 using MachineFunctionGetter = function_ref<MachineFunction *(const Function &)>;
 
 class SPIRVModuleAnalysisImpl {
@@ -267,19 +267,19 @@ private:
   // analyze dependencies to collect module scope definitions
   void collectDeclarations(const Module &M);
   void visitDecl(const MachineRegisterInfo &MRI, InstrGRegsMap &SignatureToGReg,
-                 std::map<const Value *, unsigned> &GlobalToGReg,
+                 std::map<const Value *, MCRegister> &GlobalToGReg,
                  const MachineFunction *MF, const MachineInstr &MI);
   MCRegister handleVariable(const MachineFunction *MF, const MachineInstr &MI,
-                            std::map<const Value *, unsigned> &GlobalToGReg);
+                            std::map<const Value *, MCRegister> &GlobalToGReg);
   MCRegister handleTypeDeclOrConstant(const MachineInstr &MI,
                                       InstrGRegsMap &SignatureToGReg);
   MCRegister
   handleFunctionOrParameter(const MachineFunction *MF, const MachineInstr &MI,
-                            std::map<const Value *, unsigned> &GlobalToGReg,
+                            std::map<const Value *, MCRegister> &GlobalToGReg,
                             bool &IsFunDef);
   void visitFunPtrUse(Register OpReg, const MachineOperand *FunPtrOp,
                       InstrGRegsMap &SignatureToGReg,
-                      std::map<const Value *, unsigned> &GlobalToGReg,
+                      std::map<const Value *, MCRegister> &GlobalToGReg,
                       const MachineFunction *MF);
   bool isDeclSection(const MachineRegisterInfo &MRI, const MachineInstr &MI);
 

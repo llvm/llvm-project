@@ -17,6 +17,8 @@
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
+#include "llvm/ADT/StringMap.h"
+
 namespace lldb_private {
 namespace formatters {
 bool NSIndexSetSummaryProvider(ValueObject &valobj, Stream &stream,
@@ -104,10 +106,10 @@ NSExceptionSyntheticFrontEndCreator(CXXSyntheticChildren *,
 
 class NSArray_Additionals {
 public:
-  static std::map<ConstString, CXXFunctionSummaryFormat::Callback> &
+  static llvm::StringMap<CXXFunctionSummaryFormat::Callback> &
   GetAdditionalSummaries();
 
-  static std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback> &
+  static llvm::StringMap<CXXSyntheticChildren::CreateFrontEndCallback> &
   GetAdditionalSynthetics();
 };
 } // namespace formatters

@@ -143,6 +143,7 @@ program sample
 
     !$omp atomic read
     !ERROR: Atomic variable r cannot have CHARACTER type
+    !ERROR: Capture variable l cannot have CHARACTER type
         l = r
 
     !$omp atomic write

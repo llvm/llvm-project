@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 ; A byval argument is copied into the caller's frame, so no target can pass one
 ; whose size is not known at compile time (see issue #182759).

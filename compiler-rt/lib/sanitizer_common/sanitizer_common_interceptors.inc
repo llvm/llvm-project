@@ -617,10 +617,12 @@ INTERCEPTOR(int, strncasecmp, const char *s1, const char *s2, SIZE_T size) {
 #if SANITIZER_INTERCEPT_STRSTR || SANITIZER_INTERCEPT_STRCASESTR
 static inline void StrstrCheck(void *ctx, char *r, const char *s1,
                                const char *s2) {
-    uptr len1 = internal_strlen(s1);
-    uptr len2 = internal_strlen(s2);
-    COMMON_INTERCEPTOR_READ_STRING(ctx, s1, r ? r - s1 + len2 : len1 + 1);
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, s2, len2 + 1);
+  uptr len2 = internal_strlen(s2);
+  // Measure s1 only if there was no match. Otherwise a match near the start
+  // of a long string would cost time proportional to the whole string.
+  COMMON_INTERCEPTOR_READ_STRING(ctx, s1,
+                                 r ? r - s1 + len2 : internal_strlen(s1) + 1);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, s2, len2 + 1);
 }
 #endif
 
@@ -4074,6 +4076,155 @@ INTERCEPTOR(int, wctomb, char *dest, wchar_t src) {
 #else
 #define INIT_WCTOMB
 #endif
+
+#if SANITIZER_INTERCEPT_MBRTOC8_C8RTOMB || \
+    SANITIZER_INTERCEPT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB
+template <typename CharT, typename Fn>
+static ALWAYS_INLINE SIZE_T MbrtocImpl(void* ctx, Fn real, CharT* pc,
+                                       const char* s, SIZE_T n, void* ps) {
+  if (ps)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, ps, mbstate_t_sz);
+  CharT local_pc = 0;
+  SIZE_T res = real(pc ? &local_pc : nullptr, s, n, ps);
+  if (ps)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ps, mbstate_t_sz);
+  if (res == (SIZE_T)-3) {
+    // A previous conversion resulted in multiple characters and the next
+    // character was read from `ps`. Nothing was read from `s`.
+    if (pc && (s || SI_GLIBC)) {
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pc, sizeof(*pc));
+      *pc = local_pc;
+    }
+    return res;
+  }
+  if (!s)
+    // `pc` and `n` are ignored.
+    return res;
+  if (res == (SIZE_T)-1) {
+    if (n > 0)
+      // At least 1 byte of `s` was read. Nothing is written to `pc`.
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, s, 1);
+    return res;
+  }
+  if (res == (SIZE_T)-2) {
+    if (n > 0)
+      // All `n` bytes were read. Nothing is written to `pc`.
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, s, n);
+    return res;
+  }
+  SIZE_T read_cnt;
+  if (res == 0) {
+    // If local_pc == 0, shift-reset bytes plus '\0' were read; otherwise
+    // (e.g. glibc multi-codepoint continuation), 0 bytes were read from `s`.
+    read_cnt = (local_pc == 0) ? Min(internal_strnlen(s, n) + 1, n) : 0;
+  } else {
+    read_cnt = res;
+  }
+  CHECK_LE(read_cnt, n);
+  if (read_cnt > 0)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, s, read_cnt);
+  if (pc) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pc, sizeof(*pc));
+    *pc = local_pc;
+  }
+  return res;
+}
+
+template <typename CharT, typename Fn>
+static ALWAYS_INLINE SIZE_T CrtombImpl(void* ctx, Fn real, char* s, CharT c,
+                                       void* ps) {
+  if (ps)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, ps, mbstate_t_sz);
+  if (!s) {
+    // Resets `ps` and writes nothing to `s`.
+    SIZE_T res = real(nullptr, c, ps);
+    if (ps)
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ps, mbstate_t_sz);
+    return res;
+  }
+
+  // 32 is the largest MB_LEN_MAX across the targets we support.
+  // 16 on glibc/Linux and 32 on NetBSD.
+  char local_dest[32];
+  SIZE_T res = real(local_dest, c, ps);
+  if (ps)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ps, mbstate_t_sz);
+  if (res == (SIZE_T)-1) {
+    // Nothing is written to `s`.
+    return res;
+  }
+
+  CHECK_LE(res, sizeof(local_dest));
+  if (res > 0) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, s, res);
+    internal_memcpy(s, local_dest, res);
+  }
+  return res;
+}
+#endif  // SANITIZER_INTERCEPT_MBRTOC8_C8RTOMB ||
+        // SANITIZER_INTERCEPT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB
+
+#if SANITIZER_INTERCEPT_MBRTOC8_C8RTOMB
+#  ifdef __cpp_char8_t
+typedef char8_t CHAR8_T;
+#  else
+typedef u8 CHAR8_T;
+#  endif  // __cpp_char8_t
+
+INTERCEPTOR(SIZE_T, mbrtoc8, CHAR8_T* pc8, const char* s, SIZE_T n, void* ps) {
+  void* ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, mbrtoc8, pc8, s, n, ps);
+  return MbrtocImpl(ctx, REAL(mbrtoc8), pc8, s, n, ps);
+}
+
+INTERCEPTOR(SIZE_T, c8rtomb, char* s, CHAR8_T c8, void* ps) {
+  void* ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, c8rtomb, s, c8, ps);
+  return CrtombImpl(ctx, REAL(c8rtomb), s, c8, ps);
+}
+
+#  define INIT_MBRTOC8_C8RTOMB          \
+    COMMON_INTERCEPT_FUNCTION(mbrtoc8); \
+    COMMON_INTERCEPT_FUNCTION(c8rtomb);
+#else
+#  define INIT_MBRTOC8_C8RTOMB
+#endif  // SANITIZER_INTERCEPT_MBRTOC8_C8RTOMB
+
+#if SANITIZER_INTERCEPT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB
+INTERCEPTOR(SIZE_T, mbrtoc16, char16_t* pc16, const char* s, SIZE_T n,
+            void* ps) {
+  void* ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, mbrtoc16, pc16, s, n, ps);
+  return MbrtocImpl(ctx, REAL(mbrtoc16), pc16, s, n, ps);
+}
+
+INTERCEPTOR(SIZE_T, c16rtomb, char* s, char16_t c16, void* ps) {
+  void* ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, c16rtomb, s, c16, ps);
+  return CrtombImpl(ctx, REAL(c16rtomb), s, c16, ps);
+}
+
+INTERCEPTOR(SIZE_T, mbrtoc32, char32_t* pc32, const char* s, SIZE_T n,
+            void* ps) {
+  void* ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, mbrtoc32, pc32, s, n, ps);
+  return MbrtocImpl(ctx, REAL(mbrtoc32), pc32, s, n, ps);
+}
+
+INTERCEPTOR(SIZE_T, c32rtomb, char* s, char32_t c32, void* ps) {
+  void* ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, c32rtomb, s, c32, ps);
+  return CrtombImpl(ctx, REAL(c32rtomb), s, c32, ps);
+}
+
+#  define INIT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB \
+    COMMON_INTERCEPT_FUNCTION(mbrtoc16);           \
+    COMMON_INTERCEPT_FUNCTION(c16rtomb);           \
+    COMMON_INTERCEPT_FUNCTION(mbrtoc32);           \
+    COMMON_INTERCEPT_FUNCTION(c32rtomb);
+#else
+#  define INIT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB
+#endif  // SANITIZER_INTERCEPT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB
 
 #if SANITIZER_INTERCEPT_TCGETATTR
 INTERCEPTOR(int, tcgetattr, int fd, void *termios_p) {
@@ -10705,6 +10856,8 @@ static void InitializeCommonInterceptors() {
   INIT_WCSNRTOMBS;
   INIT_WCRTOMB;
   INIT_WCTOMB;
+  INIT_MBRTOC8_C8RTOMB;
+  INIT_MBRTOC16_C16RTOMB_MBRTOC32_C32RTOMB;
   INIT_TCGETATTR;
   INIT_REALPATH;
   INIT_CANONICALIZE_FILE_NAME;

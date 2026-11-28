@@ -154,14 +154,3 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"
-
-//===----------------------------------------------------------------------===//
-// NVVMDialect attribute registration
-//===----------------------------------------------------------------------===//
-
-void NVVMDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"
-      >();
-}

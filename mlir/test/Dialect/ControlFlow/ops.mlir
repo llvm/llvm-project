@@ -130,3 +130,12 @@ func.func @switch_i128_boundaries(%flag: i128) {
 ^bb1:
   return
 }
+
+// CHECK-LABEL: func @switch_i8_distinct_signs(
+// CHECK: 1: ^bb1
+// CHECK-NEXT: -1: ^bb1
+func.func @switch_i8_distinct_signs(%flag: i8) {
+  cf.switch %flag : i8, [default: ^bb1, 1: ^bb1, -1: ^bb1]
+^bb1:
+  return
+}

@@ -48,7 +48,7 @@ public:
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-[[noreturn]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_optional_access() {
+[[noreturn]] inline void __throw_bad_optional_access() {
 #  if _LIBCPP_HAS_EXCEPTIONS
   throw bad_optional_access();
 #  else

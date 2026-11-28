@@ -17,18 +17,18 @@
 #include "hdr/errno_macros.h"
 #include "hdr/net_if_macros.h"
 #include "hdr/sys_socket_macros.h"
-#include "hdr/types/socklen_t.h"
-#include "hdr/types/ssize_t.h"
 #include "hdr/types/struct_if_nameindex.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/scope.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/blockstore.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
+#include "src/__support/net/linux/netlink.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-#include "src/string/string_utils.h"
 
 #include <linux/if_link.h>
 #include <linux/netlink.h>
@@ -38,30 +38,6 @@ namespace LIBC_NAMESPACE_DECL {
 namespace net {
 
 namespace detail {
-/// Sends a RTM_GETLINK dump request packet on the given socket. The kernel will
-/// respond with one or more messages containing the list of network interfaces
-/// and their attributes.
-template <typename Policy>
-LIBC_INLINE ErrorOr<ssize_t> send_netlink_dump_request(int sockfd) {
-  // The message consists of a standard netlink header followed by the
-  // RTM_GETLINK payload.
-  struct {
-    struct nlmsghdr nlh;
-    struct ifinfomsg ifm;
-  } req = {};
-  static_assert(sizeof(req) >= NLMSG_LENGTH(sizeof(req.ifm)));
-  req.nlh.nlmsg_len = NLMSG_LENGTH(sizeof(req.ifm));
-  req.nlh.nlmsg_type = RTM_GETLINK;
-  req.nlh.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
-  req.ifm.ifi_family = AF_UNSPEC;
-
-  return Policy::sendto(sockfd, &req, req.nlh.nlmsg_len, 0, nullptr, 0);
-}
-
-/// A reasonable buffer size for netlink messages (see NLMSG_GOODSIZE in the
-/// kernel).
-constexpr size_t NLMSG_BUFFER_SIZE = 8192;
-
 struct InterfaceEntry {
   unsigned int index;
   uint8_t name_length;        // Length of next field.
@@ -69,55 +45,32 @@ struct InterfaceEntry {
   static_assert(IF_NAMESIZE - 1 < (1u << 8));
 };
 
-LIBC_INLINE ErrorOr<void>
-parse_netlink_messages(cpp::span<uint8_t> buf,
-                       BlockStore<InterfaceEntry, 16> &store) {
-  size_t len = buf.size();
-  for (auto *nh = reinterpret_cast<struct nlmsghdr *>(buf.data());
-       NLMSG_OK(nh, len); nh = NLMSG_NEXT(nh, len)) {
-    if (nh->nlmsg_type == NLMSG_DONE)
-      break;
-    if (nh->nlmsg_type == NLMSG_ERROR) {
-      if (nh->nlmsg_len < NLMSG_LENGTH(sizeof(struct nlmsgerr)))
-        return Error(EINVAL);
-      auto *err = reinterpret_cast<struct nlmsgerr *>(NLMSG_DATA(nh));
-      if (err->error == 0) {
-        // Zero means an ACK, which we shouldn't get because we didn't ask for
-        // it...
-        continue;
-      }
-      return Error(-err->error);
-    }
-    if (nh->nlmsg_type != RTM_NEWLINK)
-      continue;
-    if (nh->nlmsg_len < NLMSG_LENGTH(sizeof(struct ifinfomsg)))
-      continue;
+/// Adds the interface described by an RTM_NEWLINK message to the store.
+/// Messages which are too short, or which don't have an IFLA_IFNAME attribute,
+/// are ignored. Returns ENOBUFS if the store cannot grow.
+LIBC_INLINE ErrorOr<void> add_interface(struct nlmsghdr &nh,
+                                        BlockStore<InterfaceEntry, 16> &store) {
+  auto *ifm = get_nlmsg_header<struct ifinfomsg>(nh);
+  if (!ifm)
+    return {};
 
-    auto *ifm = reinterpret_cast<struct ifinfomsg *>(NLMSG_DATA(nh));
-    size_t attrlen = nh->nlmsg_len - NLMSG_LENGTH(sizeof(struct ifinfomsg));
-    struct rtattr *rta = IFLA_RTA(ifm);
-    for (; RTA_OK(rta, attrlen); rta = RTA_NEXT(rta, attrlen)) {
-      if (rta->rta_type != IFLA_IFNAME)
-        continue;
+  cpp::optional<cpp::string_view> name;
+  for_each_rtattr(IFLA_RTA(ifm), IFLA_PAYLOAD(&nh),
+                  [&](unsigned short type, cpp::span<const uint8_t> payload) {
+                    if (type == IFLA_IFNAME && !name)
+                      name = cpp::optional<cpp::string_view>(
+                          parse_ifname(payload));
+                  });
+  if (!name)
+    return {};
 
-      size_t rta_payload_len = RTA_PAYLOAD(rta);
-      const char *name_data = reinterpret_cast<const char *>(RTA_DATA(rta));
-      size_t name_len = internal::strnlen(name_data, rta_payload_len);
-      // Defensive check: kernel should not be providing us with names that
-      // don't fit.
-      if (name_len >= IF_NAMESIZE)
-        name_len = IF_NAMESIZE - 1;
-
-      InterfaceEntry entry;
-      entry.index = static_cast<unsigned int>(ifm->ifi_index);
-      entry.name_length = static_cast<uint8_t>(name_len);
-      inline_memcpy(entry.name, name_data, name_len);
-
-      if (!store.push_back(entry))
-        return Error(ENOBUFS);
-      break;
-    }
-  }
+  InterfaceEntry entry;
+  entry.index = static_cast<unsigned int>(ifm->ifi_index);
+  // parse_ifname truncates the name to IF_NAMESIZE - 1 characters, so it fits.
+  entry.name_length = static_cast<uint8_t>(name->size());
+  inline_memcpy(entry.name, name->data(), name->size());
+  if (!store.push_back(entry))
+    return Error(ENOBUFS);
   return {};
 }
 
@@ -138,7 +91,7 @@ build_if_nameindex_list(BlockStore<InterfaceEntry, 16> &store) {
 
   cpp::span<struct if_nameindex> result(
       reinterpret_cast<struct if_nameindex *>(buffer), count + 1);
-  char *str_ptr = reinterpret_cast<char *>(result.end());
+  char *str_ptr = reinterpret_cast<char *>(result.data() + result.size());
 
   size_t idx = 0;
   for (const InterfaceEntry &entry : store) {
@@ -160,40 +113,38 @@ build_if_nameindex_list(BlockStore<InterfaceEntry, 16> &store) {
 
 template <typename Policy>
 LIBC_INLINE ErrorOr<struct if_nameindex *> if_nameindex() {
-  ErrorOr<int> fd_or_err =
-      Policy::socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
-  if (!fd_or_err.has_value())
-    return Error(fd_or_err.error());
-  int fd = *fd_or_err;
-  cpp::scope_exit close_fd([fd]() { Policy::close(fd); });
+  NetlinkSocket<Policy> sock;
+  if (ErrorOr<void> res = sock.open(); !res.has_value())
+    return Error(res.error());
 
-  ErrorOr<ssize_t> send_res = detail::send_netlink_dump_request<Policy>(fd);
-  if (!send_res.has_value())
-    return Error(send_res.error());
+  // AF_UNSPEC means we want all interfaces.
+  struct ifinfomsg request = {};
+  request.ifi_family = AF_UNSPEC;
 
-  // TODO: Figure out if we need to dynamically allocate a buffer.
-  alignas(struct nlmsghdr) uint8_t buf[detail::NLMSG_BUFFER_SIZE];
-  ErrorOr<ssize_t> recv_res =
-      Policy::recvfrom(fd, buf, sizeof(buf), 0, nullptr, nullptr);
-  if (!recv_res.has_value())
-    return Error(recv_res.error());
+  // If the interface list changes while the kernel is sending it to us, the
+  // result may be inconsistent: it can contain stale or duplicate entries, or
+  // miss some interfaces altogether. In that case, we throw it away and try
+  // again.
+  for (size_t attempt = 0; attempt < MAX_DUMP_ATTEMPTS; ++attempt) {
+    BlockStore<detail::InterfaceEntry, 16> store;
+    cpp::scope_exit destroy_store([&store]() {
+      BlockStore<detail::InterfaceEntry, 16>::destroy(&store);
+    });
 
-  close_fd.release();
-  if (ErrorOr<int> close_res = Policy::close(fd); !close_res.has_value())
-    return Error(close_res.error());
+    ErrorOr<DumpResult> dump_res = sock.dump(
+        RTM_GETLINK, request, RTM_NEWLINK, [&store](struct nlmsghdr &nh) {
+          return detail::add_interface(nh, store);
+        });
+    if (!dump_res.has_value())
+      return Error(dump_res.error());
+    if (*dump_res == DumpResult::Interrupted)
+      continue;
 
-  // TODO: Read more than one message.
-  // TODO: Deduplicate interfaces to handle restarts.
-  BlockStore<detail::InterfaceEntry, 16> store;
-  cpp::scope_exit destroy_store(
-      [&store]() { BlockStore<detail::InterfaceEntry, 16>::destroy(&store); });
-
-  if (ErrorOr<void> parse_res = detail::parse_netlink_messages(
-          {buf, static_cast<size_t>(*recv_res)}, store);
-      !parse_res.has_value())
-    return Error(parse_res.error());
-
-  return detail::build_if_nameindex_list(store);
+    if (ErrorOr<void> close_res = sock.close(); !close_res.has_value())
+      return Error(close_res.error());
+    return detail::build_if_nameindex_list(store);
+  }
+  return Error(EAGAIN);
 }
 
 } // namespace net

@@ -182,8 +182,8 @@ define i1 @fshr_or_commute_ne_0(i64 %x, i64 %y) {
 define i1 @fshr_or2_ne_0(i16 %x, i16 %y) {
 ; CHECK-LABEL: fshr_or2_ne_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w1, #0xfffc
-; CHECK-NEXT:    orr w8, w0, w8, lsr #2
+; CHECK-NEXT:    ubfx w8, w1, #2, #14
+; CHECK-NEXT:    orr w8, w8, w0
 ; CHECK-NEXT:    tst w8, #0xffff
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
@@ -196,8 +196,8 @@ define i1 @fshr_or2_ne_0(i16 %x, i16 %y) {
 define i1 @fshr_or2_commute_ne_0(i16 %x, i16 %y) {
 ; CHECK-LABEL: fshr_or2_commute_ne_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w1, #0xfffc
-; CHECK-NEXT:    orr w8, w0, w8, lsr #2
+; CHECK-NEXT:    ubfx w8, w1, #2, #14
+; CHECK-NEXT:    orr w8, w8, w0
 ; CHECK-NEXT:    tst w8, #0xffff
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret

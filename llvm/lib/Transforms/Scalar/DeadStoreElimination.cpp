@@ -621,6 +621,15 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
       return false;
   }
 
+  Value *OrigDest = DeadIntrinsic->getRawDest();
+  const DataLayout &DL = DeadI->getDataLayout();
+  Type *IndexTy = DL.getIndexType(OrigDest->getType());
+
+  // The GEP index for the new begin must fit as signed.
+  if (!IsOverwriteEnd &&
+      !isUIntN(IndexTy->getIntegerBitWidth() - 1, ToRemoveSize))
+    return false;
+
   LLVM_DEBUG(dbgs() << "DSE: Remove Dead Store:\n  OW "
                     << (IsOverwriteEnd ? "END" : "BEGIN") << ": " << *DeadI
                     << "\n  KILLER [" << ToRemoveStart << ", "
@@ -629,10 +638,8 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
   DeadIntrinsic->setLength(NewSize);
   DeadIntrinsic->setDestAlignment(PrefAlign);
 
-  Value *OrigDest = DeadIntrinsic->getRawDest();
   if (!IsOverwriteEnd) {
-    Value *Indices[1] = {
-        ConstantInt::get(DeadIntrinsic->getLength()->getType(), ToRemoveSize)};
+    Value *Indices[1] = {ConstantInt::get(IndexTy, ToRemoveSize)};
     Instruction *NewDestGEP = GetElementPtrInst::CreateInBounds(
         Type::getInt8Ty(DeadIntrinsic->getContext()), OrigDest, Indices, "",
         DeadI->getIterator());
@@ -1512,7 +1519,7 @@ DSEState::getLocForTerminator(Instruction *I) const {
     if (CB->getIntrinsicID() == Intrinsic::lifetime_end)
       return {
           std::make_pair(MemoryLocation::getForArgument(CB, 0, &TLI), false)};
-    if (Value *FreedOp = getFreedOperand(CB, &TLI))
+    if (Value *FreedOp = getFreedOperand(CB))
       return {std::make_pair(MemoryLocation::getAfter(FreedOp), true)};
   }
 
@@ -1522,7 +1529,7 @@ DSEState::getLocForTerminator(Instruction *I) const {
 bool DSEState::isMemTerminatorInst(Instruction *I) const {
   auto *CB = dyn_cast<CallBase>(I);
   return CB && (CB->getIntrinsicID() == Intrinsic::lifetime_end ||
-                getFreedOperand(CB, &TLI) != nullptr);
+                getFreedOperand(CB) != nullptr);
 }
 
 bool DSEState::isMemTerminator(const MemoryLocation &Loc, Instruction *AccessI,
@@ -2358,7 +2365,7 @@ bool DSEState::storeIsNoop(MemoryDef *Def, const Value *DefUO) {
 
   if (StoredConstant) {
     Constant *InitC =
-        getInitialValueOfAllocation(DefUO, &TLI, StoredConstant->getType());
+        getInitialValueOfAllocation(DefUO, StoredConstant->getType());
     // If the clobbering access is LiveOnEntry, no instructions between them
     // can modify the memory location.
     if (InitC && InitC == StoredConstant)

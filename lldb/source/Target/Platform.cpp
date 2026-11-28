@@ -1301,6 +1301,11 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
 }
 
 Status Platform::GetFile(const FileSpec &source, const FileSpec &destination) {
+  if (IsHost()) {
+    if (llvm::sys::fs::equivalent(source.GetPath(), destination.GetPath()))
+      return Status();
+    return llvm::sys::fs::copy_file(source.GetPath(), destination.GetPath());
+  }
   return Status::FromErrorString("unimplemented");
 }
 

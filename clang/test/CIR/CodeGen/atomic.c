@@ -1085,6 +1085,59 @@ int atomic_fetch_add_volatile(volatile int *ptr, int value) {
   // OGCG-NEXT: store i32 %[[RES]], ptr %{{.+}}, align 4
 }
 
+struct __attribute__((packed)) PackedInt {
+  char c;
+  int x;
+};
+
+void atomic_rmw_align(struct PackedInt *packed, int *natural, int value) {
+  // CIR-LABEL: @atomic_rmw_align
+  // LLVM-LABEL: @atomic_rmw_align
+  // OGCG-LABEL: @atomic_rmw_align
+
+  __atomic_fetch_add(&packed->x, value, __ATOMIC_SEQ_CST);
+  __atomic_exchange_n(&packed->x, value, __ATOMIC_SEQ_CST);
+  __atomic_fetch_add(natural, value, __ATOMIC_SEQ_CST);
+  __atomic_exchange_n(natural, value, __ATOMIC_SEQ_CST);
+  // CIR: %{{.+}} = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} align(1) : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg seq_cst syncscope(system) %{{.+}}, %{{.+}} align(1) : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg seq_cst syncscope(system) %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i) -> !s32i
+
+  // LLVM: %{{.+}} = atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 1
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} seq_cst, align 1
+  // LLVM: %{{.+}} = atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+
+  // OGCG: %{{.+}} = atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 1
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} seq_cst, align 1
+  // OGCG: %{{.+}} = atomicrmw add ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+  // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
+}
+
+struct __attribute__((packed)) PackedAtomic {
+  char c;
+  _Atomic(int) x;
+  _Atomic(float) f;
+};
+
+void atomic_inc_align(struct PackedAtomic *packed) {
+  // CIR-LABEL: @atomic_inc_align
+  // LLVM-LABEL: @atomic_inc_align
+  // OGCG-LABEL: @atomic_inc_align
+
+  packed->x++;
+  packed->f++;
+  // CIR: %{{.+}} = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} align(1) : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %{{.+}}, %{{.+}} align(1) : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+
+  // LLVM: %{{.+}} = atomicrmw add ptr %{{.+}}, i32 1 seq_cst, align 1
+  // LLVM: %{{.+}} = atomicrmw fadd ptr %{{.+}}, float 1.000000e+00 seq_cst, align 1
+
+  // OGCG: %{{.+}} = atomicrmw add ptr %{{.+}}, i32 1 seq_cst, align 1
+  // OGCG: %{{.+}} = atomicrmw fadd ptr %{{.+}}, float 1.000000e+00 seq_cst, align 1
+}
+
 int *atomic_fetch_add_ptr(int **ptr, __PTRDIFF_TYPE__ value) {
   // CIR-LABEL: @atomic_fetch_add_ptr
   // LLVM-LABEL: @atomic_fetch_add_ptr
@@ -1096,7 +1149,7 @@ int *atomic_fetch_add_ptr(int **ptr, __PTRDIFF_TYPE__ value) {
   // CIR-NOT:  cir.mul
   // CIR:      %[[PTR_INT:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
   // CIR:      %[[ADD:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!s64i>, !s64i
-  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR_INT]], %[[ADD]] : (!cir.ptr<!s64i>, !s64i) -> !s64i
+  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR_INT]], %[[ADD]] align(8) : (!cir.ptr<!s64i>, !s64i) -> !s64i
   // CIR-NEXT: %[[RESULT_SLOT:.+]] = cir.cast bitcast %[[RESULT_TEMP_SLOT:.+]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
   // CIR-NEXT: cir.store align(8) %[[RESULT]], %[[RESULT_SLOT]] : !s64i, !cir.ptr<!s64i>
   // CIR-NEXT: %{{.+}} = cir.load align(8) %[[RESULT_TEMP_SLOT]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
@@ -1144,7 +1197,7 @@ int *atomic_add_fetch_ptr(int **ptr, __PTRDIFF_TYPE__ value) {
   // CIR-NOT:  cir.mul
   // CIR:      %[[PTR_INT:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
   // CIR:      %[[ADD:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!s64i>, !s64i
-  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch add seq_cst syncscope(system) %[[PTR_INT]], %[[ADD]] : (!cir.ptr<!s64i>, !s64i) -> !s64i
+  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch add seq_cst syncscope(system) %[[PTR_INT]], %[[ADD]] align(8) : (!cir.ptr<!s64i>, !s64i) -> !s64i
   // CIR-NEXT: %[[RESULT_SLOT:.+]] = cir.cast bitcast %[[RESULT_TEMP_SLOT:.+]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
   // CIR-NEXT: cir.store align(8) %[[RESULT]], %[[RESULT_SLOT]] : !s64i, !cir.ptr<!s64i>
   // CIR-NEXT: %{{.+}} = cir.load align(8) %[[RESULT_TEMP_SLOT]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
@@ -1193,7 +1246,7 @@ int *c11_atomic_fetch_add_ptr(_Atomic(int *) *ptr, __PTRDIFF_TYPE__ value) {
   // CIR-NEXT: cir.store align(8) %[[ADD]], %[[ADD_SLOT:.+]] : !s64i, !cir.ptr<!s64i>
   // CIR-NEXT: %[[PTR_INT:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
   // CIR-NEXT: %[[ADD2:.+]] = cir.load align(8) %[[ADD_SLOT]] : !cir.ptr<!s64i>, !s64i
-  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR_INT]], %[[ADD2]] : (!cir.ptr<!s64i>, !s64i) -> !s64i
+  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR_INT]], %[[ADD2]] align(8) : (!cir.ptr<!s64i>, !s64i) -> !s64i
   // CIR-NEXT: %[[RESULT_SLOT:.+]] = cir.cast bitcast %[[RESULT_TEMP_SLOT:.+]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
   // CIR-NEXT: cir.store align(8) %[[RESULT]], %[[RESULT_SLOT]] : !s64i, !cir.ptr<!s64i>
   // CIR-NEXT: %{{.+}} = cir.load align(8) %[[RESULT_TEMP_SLOT]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
@@ -1241,7 +1294,7 @@ int *atomic_fetch_sub_ptr(int **ptr, __PTRDIFF_TYPE__ value) {
   // CIR-NOT:  cir.mul
   // CIR:      %[[PTR_INT:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
   // CIR:      %[[SUB:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!s64i>, !s64i
-  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR_INT]], %[[SUB]] : (!cir.ptr<!s64i>, !s64i) -> !s64i
+  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR_INT]], %[[SUB]] align(8) : (!cir.ptr<!s64i>, !s64i) -> !s64i
   // CIR-NEXT: %[[RESULT_SLOT:.+]] = cir.cast bitcast %[[RESULT_TEMP_SLOT:.+]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
   // CIR-NEXT: cir.store align(8) %[[RESULT]], %[[RESULT_SLOT]] : !s64i, !cir.ptr<!s64i>
   // CIR-NEXT: %{{.+}} = cir.load align(8) %[[RESULT_TEMP_SLOT]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
@@ -1289,7 +1342,7 @@ int *atomic_sub_fetch_ptr(int **ptr, __PTRDIFF_TYPE__ value) {
   // CIR-NOT:  cir.mul
   // CIR:      %[[PTR_INT:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
   // CIR:      %[[SUB:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!s64i>, !s64i
-  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) %[[PTR_INT]], %[[SUB]] : (!cir.ptr<!s64i>, !s64i) -> !s64i
+  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) %[[PTR_INT]], %[[SUB]] align(8) : (!cir.ptr<!s64i>, !s64i) -> !s64i
   // CIR-NEXT: %[[RESULT_SLOT:.+]] = cir.cast bitcast %[[RESULT_TEMP_SLOT:.+]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
   // CIR-NEXT: cir.store align(8) %[[RESULT]], %[[RESULT_SLOT]] : !s64i, !cir.ptr<!s64i>
   // CIR-NEXT: %{{.+}} = cir.load align(8) %[[RESULT_TEMP_SLOT]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
@@ -1338,7 +1391,7 @@ int *c11_atomic_fetch_sub_ptr(_Atomic(int *) *ptr, __PTRDIFF_TYPE__ value) {
   // CIR-NEXT: cir.store align(8) %[[ADD]], %[[ADD_SLOT:.+]] : !s64i, !cir.ptr<!s64i>
   // CIR-NEXT: %[[PTR_INT:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
   // CIR-NEXT: %[[ADD2:.+]] = cir.load align(8) %[[ADD_SLOT]] : !cir.ptr<!s64i>, !s64i
-  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR_INT]], %[[ADD2]] : (!cir.ptr<!s64i>, !s64i) -> !s64i
+  // CIR-NEXT: %[[RESULT:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR_INT]], %[[ADD2]] align(8) : (!cir.ptr<!s64i>, !s64i) -> !s64i
   // CIR-NEXT: %[[RESULT_SLOT:.+]] = cir.cast bitcast %[[RESULT_TEMP_SLOT:.+]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!s64i>
   // CIR-NEXT: cir.store align(8) %[[RESULT]], %[[RESULT_SLOT]] : !s64i, !cir.ptr<!s64i>
   // CIR-NEXT: %{{.+}} = cir.load align(8) %[[RESULT_TEMP_SLOT]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
@@ -3275,31 +3328,31 @@ int atomic_load_and_store_dynamic_order(int *ptr, int order) {
   // CIR:      cir.switch(%[[ORDER]] : !s32i) {
   // CIR-NEXT:   cir.case(default, []) {
   // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg relaxed syncscope(system) %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg relaxed syncscope(system) %[[PTR]], %[[LIT]] align(4) : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT:.+]] : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:     cir.break
   // CIR-NEXT:   }
   // CIR-NEXT:   cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
   // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg acquire syncscope(system) %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg acquire syncscope(system) %[[PTR]], %[[LIT]] align(4) : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT]] : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:     cir.break
   // CIR-NEXT:   }
   // CIR-NEXT:   cir.case(anyof, [#cir.int<3> : !s32i]) {
   // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg release syncscope(system) %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg release syncscope(system) %[[PTR]], %[[LIT]] align(4) : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT]] : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:     cir.break
   // CIR-NEXT:   }
   // CIR-NEXT:   cir.case(anyof, [#cir.int<4> : !s32i]) {
   // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg acq_rel syncscope(system) %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg acq_rel syncscope(system) %[[PTR]], %[[LIT]] align(4) : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT]] : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:     cir.break
   // CIR-NEXT:   }
   // CIR-NEXT:   cir.case(anyof, [#cir.int<5> : !s32i]) {
   // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg seq_cst syncscope(system) %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg seq_cst syncscope(system) %[[PTR]], %[[LIT]] align(4) : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT]] : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:     cir.break
   // CIR-NEXT:   }
@@ -4030,7 +4083,7 @@ void atomic_pre_inc(_Atomic(int) *p) { ++(*p); }
 // CIR-LABEL: @atomic_pre_inc
 // CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR: %[[ONE:.+]] = cir.const #cir.int<1> : !s32i
-// CIR: cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+// CIR: cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] align(4) : (!cir.ptr<!s32i>, !s32i) -> !s32i
 
 // LLVM-LABEL: @atomic_pre_inc
 // LLVM: atomicrmw add ptr %{{.+}}, i32 1 seq_cst, align 4
@@ -4043,7 +4096,7 @@ int atomic_post_inc(_Atomic(int) *p) { return (*p)++; }
 // CIR-LABEL: @atomic_post_inc
 // CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR: %[[ONE:.+]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[OLD:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+// CIR: %[[OLD:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] align(4) : (!cir.ptr<!s32i>, !s32i) -> !s32i
 // CIR: cir.store %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
 
 // LLVM-LABEL: @atomic_post_inc
@@ -4061,7 +4114,7 @@ void atomic_pre_dec(_Atomic(int) *p) { --(*p); }
 // CIR-LABEL: @atomic_pre_dec
 // CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR: %[[ONE:.+]] = cir.const #cir.int<1> : !s32i
-// CIR: cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+// CIR: cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] align(4) : (!cir.ptr<!s32i>, !s32i) -> !s32i
 
 // LLVM-LABEL: @atomic_pre_dec
 // LLVM: atomicrmw sub ptr %{{.+}}, i32 1 seq_cst, align 4
@@ -4074,7 +4127,7 @@ int atomic_post_dec(_Atomic(int) *p) { return (*p)--; }
 // CIR-LABEL: @atomic_post_dec
 // CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR: %[[ONE:.+]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[OLD:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+// CIR: %[[OLD:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] align(4) : (!cir.ptr<!s32i>, !s32i) -> !s32i
 // CIR: cir.store %[[OLD]], %{{.+}} : !s32i, !cir.ptr<!s32i>
 
 // LLVM-LABEL: @atomic_post_dec
@@ -4092,7 +4145,7 @@ int atomic_pre_inc_used(_Atomic(int) *p) { return ++(*p); }
 // CIR-LABEL: @atomic_pre_inc_used
 // CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CIR: %[[ONE:.+]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[OLD:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+// CIR: %[[OLD:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[ONE]] align(4) : (!cir.ptr<!s32i>, !s32i) -> !s32i
 // CIR: %[[NEW:.+]] = cir.inc %[[OLD]] : !s32i
 // CIR: cir.store %[[NEW]], %{{.+}} : !s32i, !cir.ptr<!s32i>
 
@@ -4146,7 +4199,7 @@ _Bool atomic_bool_post_inc(_Atomic _Bool *p) { return (*p)++; }
 // CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.bool>>, !cir.ptr<!cir.bool>
 // CIR: %[[ONE:.+]] = cir.const #cir.int<1> : !u8i
 // CIR: %[[IPTR:.+]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!cir.bool> -> !cir.ptr<!u8i>
-// CIR: %[[OLD:.+]] = cir.atomic.xchg seq_cst syncscope(system) %[[IPTR]], %[[ONE]] : (!cir.ptr<!u8i>, !u8i) -> !u8i
+// CIR: %[[OLD:.+]] = cir.atomic.xchg seq_cst syncscope(system) %[[IPTR]], %[[ONE]] align(1) : (!cir.ptr<!u8i>, !u8i) -> !u8i
 // CIR: cir.cast int_to_bool %[[OLD]] : !u8i -> !cir.bool
 
 // LLVM-LABEL: @atomic_bool_post_inc
@@ -4162,7 +4215,7 @@ void atomic_float_pre_inc(_Atomic(float) *p) { ++(*p); }
 // CIR-LABEL: @atomic_float_pre_inc
 // CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.float>
 // CIR: %[[AMT:.+]] = cir.const #cir.fp<1.{{.*}}> : !cir.float
-// CIR: cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+// CIR: cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] align(4) : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
 
 // LLVM-LABEL: @atomic_float_pre_inc
 // LLVM: atomicrmw fadd ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
@@ -4175,7 +4228,7 @@ float atomic_float_post_inc(_Atomic(float) *p) { return (*p)++; }
 // CIR-LABEL: @atomic_float_post_inc
 // CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.float>
 // CIR: %[[AMT:.+]] = cir.const #cir.fp<1.{{.*}}> : !cir.float
-// CIR: %[[OLD:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+// CIR: %[[OLD:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] align(4) : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
 // CIR: cir.store %[[OLD]], %{{.+}} : !cir.float, !cir.ptr<!cir.float>
 
 // LLVM-LABEL: @atomic_float_post_inc
@@ -4193,7 +4246,7 @@ float atomic_float_pre_inc_used(_Atomic(float) *p) { return ++(*p); }
 // CIR-LABEL: @atomic_float_pre_inc_used
 // CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.float>
 // CIR: %[[AMT:.+]] = cir.const #cir.fp<1.{{.*}}> : !cir.float
-// CIR: %[[OLD:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+// CIR: %[[OLD:.+]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] align(4) : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
 // CIR: %[[NEW:.+]] = cir.fadd %[[OLD]], %[[AMT]] : !cir.float
 // CIR: cir.store %[[NEW]], %{{.+}} : !cir.float, !cir.ptr<!cir.float>
 
@@ -4214,7 +4267,7 @@ void atomic_float_pre_dec(_Atomic(float) *p) { --(*p); }
 // CIR-LABEL: @atomic_float_pre_dec
 // CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.float>
 // CIR: %[[AMT:.+]] = cir.const #cir.fp<1.{{.*}}> : !cir.float
-// CIR: cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+// CIR: cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] align(4) : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
 
 // LLVM-LABEL: @atomic_float_pre_dec
 // LLVM: atomicrmw fsub ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
@@ -4227,7 +4280,7 @@ float atomic_float_post_dec(_Atomic(float) *p) { return (*p)--; }
 // CIR-LABEL: @atomic_float_post_dec
 // CIR: %[[PTR:.+]] = cir.load deref {{.*}} : !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.float>
 // CIR: %[[AMT:.+]] = cir.const #cir.fp<1.{{.*}}> : !cir.float
-// CIR: %[[OLD:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
+// CIR: %[[OLD:.+]] = cir.atomic.fetch sub seq_cst syncscope(system) fetch_first %[[PTR]], %[[AMT]] align(4) : (!cir.ptr<!cir.float>, !cir.float) -> !cir.float
 // CIR: cir.store %[[OLD]], %{{.+}} : !cir.float, !cir.ptr<!cir.float>
 
 // LLVM-LABEL: @atomic_float_post_dec

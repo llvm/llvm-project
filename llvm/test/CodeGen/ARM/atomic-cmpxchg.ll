@@ -5,6 +5,9 @@
 ; RUN: llc < %s -mtriple=armv6-linux-gnueabi -asm-verbose=false -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-ARMV6
 ; RUN: llc < %s -mtriple=thumbv6-linux-gnueabi -asm-verbose=false -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-THUMBV6
 
+; RUN: llc < %s -mtriple=armv6k-linux-gnueabi -asm-verbose=false -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-ARMV6K
+; RUN: llc < %s -mtriple=thumbv8m.base-none-eabi -asm-verbose=false -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-THUMBV8MBASE
+
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi -asm-verbose=false -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-ARMV7
 ; RUN: llc < %s -mtriple=thumbv7-linux-gnueabi -asm-verbose=false -verify-machineinstrs | FileCheck %s -check-prefix=CHECK-THUMBV7
 
@@ -36,8 +39,7 @@ define zeroext i1 @test_cmpxchg_res_i8(ptr %addr, i8 %desired, i8 zeroext %new) 
 ; CHECK-THUMB-NEXT:    bx r1
 ;
 ; CHECK-ARMV6-LABEL: test_cmpxchg_res_i8:
-; CHECK-ARMV6:         .fnstart
-; CHECK-ARMV6-NEXT:    uxtb r12, r1
+; CHECK-ARMV6:         uxtb r12, r1
 ; CHECK-ARMV6-NEXT:  .LBB0_1:
 ; CHECK-ARMV6-NEXT:    ldrexb r1, [r0]
 ; CHECK-ARMV6-NEXT:    cmp r1, r12
@@ -62,9 +64,42 @@ define zeroext i1 @test_cmpxchg_res_i8(ptr %addr, i8 %desired, i8 zeroext %new) 
 ; CHECK-THUMBV6-NEXT:    adcs r0, r1
 ; CHECK-THUMBV6-NEXT:    pop {r4, pc}
 ;
+; CHECK-ARMV6K-LABEL: test_cmpxchg_res_i8:
+; CHECK-ARMV6K:         uxtb r12, r1
+; CHECK-ARMV6K-NEXT:  .LBB0_1:
+; CHECK-ARMV6K-NEXT:    ldrexb r1, [r0]
+; CHECK-ARMV6K-NEXT:    cmp r1, r12
+; CHECK-ARMV6K-NEXT:    bne .LBB0_4
+; CHECK-ARMV6K-NEXT:    strexb r3, r2, [r0]
+; CHECK-ARMV6K-NEXT:    mov r1, #1
+; CHECK-ARMV6K-NEXT:    cmp r3, #0
+; CHECK-ARMV6K-NEXT:    bne .LBB0_1
+; CHECK-ARMV6K-NEXT:    mov r0, r1
+; CHECK-ARMV6K-NEXT:    bx lr
+; CHECK-ARMV6K-NEXT:  .LBB0_4:
+; CHECK-ARMV6K-NEXT:    mov r1, #0
+; CHECK-ARMV6K-NEXT:    clrex
+; CHECK-ARMV6K-NEXT:    mov r0, r1
+; CHECK-ARMV6K-NEXT:    bx lr
+;
+; CHECK-THUMBV8MBASE-LABEL: test_cmpxchg_res_i8:
+; CHECK-THUMBV8MBASE:         uxtb r1, r1
+; CHECK-THUMBV8MBASE-NEXT:  .LBB0_1:
+; CHECK-THUMBV8MBASE-NEXT:    ldrexb r3, [r0]
+; CHECK-THUMBV8MBASE-NEXT:    cmp r3, r1
+; CHECK-THUMBV8MBASE-NEXT:    bne .LBB0_4
+; CHECK-THUMBV8MBASE-NEXT:    strexb r3, r2, [r0]
+; CHECK-THUMBV8MBASE-NEXT:    cmp r3, #0
+; CHECK-THUMBV8MBASE-NEXT:    bne .LBB0_1
+; CHECK-THUMBV8MBASE-NEXT:    movs r0, #1
+; CHECK-THUMBV8MBASE-NEXT:    bx lr
+; CHECK-THUMBV8MBASE-NEXT:  .LBB0_4:
+; CHECK-THUMBV8MBASE-NEXT:    clrex
+; CHECK-THUMBV8MBASE-NEXT:    movs r0, #0
+; CHECK-THUMBV8MBASE-NEXT:    bx lr
+;
 ; CHECK-ARMV7-LABEL: test_cmpxchg_res_i8:
-; CHECK-ARMV7:         .fnstart
-; CHECK-ARMV7-NEXT:    uxtb r12, r1
+; CHECK-ARMV7:         uxtb r12, r1
 ; CHECK-ARMV7-NEXT:  .LBB0_1:
 ; CHECK-ARMV7-NEXT:    ldrexb r1, [r0]
 ; CHECK-ARMV7-NEXT:    cmp r1, r12
@@ -72,7 +107,7 @@ define zeroext i1 @test_cmpxchg_res_i8(ptr %addr, i8 %desired, i8 zeroext %new) 
 ; CHECK-ARMV7-NEXT:    strexb r3, r2, [r0]
 ; CHECK-ARMV7-NEXT:    mov r1, #1
 ; CHECK-ARMV7-NEXT:    cmp r3, #0
-; CHECK-ARMV7-NEXT:    bne .LBB0_1 
+; CHECK-ARMV7-NEXT:    bne .LBB0_1
 ; CHECK-ARMV7-NEXT:    mov r0, r1
 ; CHECK-ARMV7-NEXT:    bx lr
 ; CHECK-ARMV7-NEXT:  .LBB0_4:

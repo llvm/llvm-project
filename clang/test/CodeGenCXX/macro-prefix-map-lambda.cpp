@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -fmacro-prefix-map=%p=./UNLIKELY_PATH/empty %s -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fmacro-prefix-map=%p=./UNLIKELY_PATH/empty %s -emit-llvm -o - | FileCheck %s %}
 
 template<typename f>
 auto lambdatest(f&& cb) {

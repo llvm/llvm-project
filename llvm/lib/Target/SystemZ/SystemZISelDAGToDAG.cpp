@@ -10,11 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SystemZ.h"
 #include "SystemZISelLowering.h"
 #include "SystemZTargetMachine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -408,8 +410,13 @@ char SystemZDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(SystemZDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
-FunctionPass *llvm::createSystemZISelDag(SystemZTargetMachine &TM,
-                                         CodeGenOptLevel OptLevel) {
+SystemZISelDAGToDAGPass::SystemZISelDAGToDAGPass(SystemZTargetMachine &TM,
+                                                 CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(
+          std::make_unique<SystemZDAGToDAGISel>(TM, OptLevel)) {}
+
+FunctionPass *llvm::createSystemZISelDagLegacyPass(SystemZTargetMachine &TM,
+                                                   CodeGenOptLevel OptLevel) {
   return new SystemZDAGToDAGISelLegacy(TM, OptLevel);
 }
 

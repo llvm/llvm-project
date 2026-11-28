@@ -49,6 +49,9 @@ struct PtrView {
   bool isMutable() const {
     return !isRoot() && getInlineDesc()->IsFieldMutable;
   }
+  bool isConstInMutable() const {
+    return !isRoot() && getInlineDesc()->IsConstInMutable;
+  }
   bool isExtern() const { return Pointee && Pointee->isExtern(); }
   bool isVolatile() const {
     return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
@@ -57,8 +60,6 @@ struct PtrView {
   bool inArray() const { return getFieldDesc()->IsArray; }
   bool inPrimitiveArray() const { return getFieldDesc()->isPrimitiveArray(); }
   const Block *block() const { return Pointee; }
-
-  unsigned getEvalID() { return Pointee->getEvalID(); }
 
   bool isRoot() const { return Base == 0; }
 
@@ -245,11 +246,7 @@ struct PtrView {
   template <typename T> T &deref() const {
     assert(isLive() && "Invalid pointer");
     assert(Pointee);
-
-    if (isArrayRoot())
-      return *reinterpret_cast<T *>(Pointee->data() + Base +
-                                    sizeof(InitMapPtr));
-
+    assert(!isArrayRoot());
     return *reinterpret_cast<T *>(Pointee->data() + Offset);
   }
 
@@ -971,11 +968,6 @@ public:
       return false;
     return view().isConst();
   }
-  bool isConstInMutable() const {
-    if (!isBlockPointer())
-      return false;
-    return isRoot() ? false : getInlineDesc()->IsConstInMutable;
-  }
 
   /// Checks if an object or a subfield is volatile.
   bool isVolatile() const {
@@ -1290,20 +1282,6 @@ public:
   [[nodiscard]] Pointer stripBaseCasts() const {
     return Pointer(view().stripBaseCasts());
   }
-
-  /// Compare two pointers.
-  ComparisonCategoryResult compare(const Pointer &Other) const {
-    if (!hasSameBase(*this, Other))
-      return ComparisonCategoryResult::Unordered;
-
-    if (Offset < Other.Offset)
-      return ComparisonCategoryResult::Less;
-    if (Offset > Other.Offset)
-      return ComparisonCategoryResult::Greater;
-
-    return ComparisonCategoryResult::Equal;
-  }
-
   /// Checks if two pointers are comparable.
   static bool hasSameBase(const Pointer &A, const Pointer &B);
   /// Checks if two pointers can be subtracted.

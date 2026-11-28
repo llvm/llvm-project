@@ -31,19 +31,17 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __math {
 
-inline _LIBCPP_HIDE_FROM_ABI float hypot(float __x, float __y) _NOEXCEPT { return __builtin_hypotf(__x, __y); }
+inline float hypot(float __x, float __y) _NOEXCEPT { return __builtin_hypotf(__x, __y); }
 
 template <class = int>
-_LIBCPP_HIDE_FROM_ABI double hypot(double __x, double __y) _NOEXCEPT {
+double hypot(double __x, double __y) _NOEXCEPT {
   return __builtin_hypot(__x, __y);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double hypot(long double __x, long double __y) _NOEXCEPT {
-  return __builtin_hypotl(__x, __y);
-}
+inline long double hypot(long double __x, long double __y) _NOEXCEPT { return __builtin_hypotl(__x, __y); }
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI __promote_t<_A1, _A2> hypot(_A1 __x, _A2 __y) _NOEXCEPT {
+inline __promote_t<_A1, _A2> hypot(_A1 __x, _A2 __y) _NOEXCEPT {
   using __result_type = __promote_t<_A1, _A2>;
   static_assert(!(_IsSame<_A1, __result_type>::value && _IsSame<_A2, __result_type>::value), "");
   return __math::hypot((__result_type)__x, (__result_type)__y);
@@ -55,7 +53,7 @@ inline _LIBCPP_HIDE_FROM_ABI __promote_t<_A1, _A2> hypot(_A1 __x, _A2 __y) _NOEX
 //    If the square of an argument might run into issues, we scale the arguments appropriately.
 // See https://llvm.org/PR92782 for a detailed discussion and summary.
 template <class _Real>
-_LIBCPP_HIDE_FROM_ABI _Real __hypot(_Real __x, _Real __y, _Real __z) {
+_Real __hypot(_Real __x, _Real __y, _Real __z) {
   // Factors needed to determine if over-/underflow might happen
   constexpr int __exp              = std::numeric_limits<_Real>::max_exponent / 2;
   const _Real __overflow_threshold = __math::ldexp(_Real(1), __exp);
@@ -79,19 +77,17 @@ _LIBCPP_HIDE_FROM_ABI _Real __hypot(_Real __x, _Real __y, _Real __z) {
   return __math::sqrt(__x * __x + __y * __y + __z * __z) / __scale;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI float hypot(float __x, float __y, float __z) { return __math::__hypot(__x, __y, __z); }
+inline float hypot(float __x, float __y, float __z) { return __math::__hypot(__x, __y, __z); }
 
-inline _LIBCPP_HIDE_FROM_ABI double hypot(double __x, double __y, double __z) { return __math::__hypot(__x, __y, __z); }
+inline double hypot(double __x, double __y, double __z) { return __math::__hypot(__x, __y, __z); }
 
-inline _LIBCPP_HIDE_FROM_ABI long double hypot(long double __x, long double __y, long double __z) {
-  return __math::__hypot(__x, __y, __z);
-}
+inline long double hypot(long double __x, long double __y, long double __z) { return __math::__hypot(__x, __y, __z); }
 
 template <class _A1,
           class _A2,
           class _A3,
           std::enable_if_t< is_arithmetic_v<_A1> && is_arithmetic_v<_A2> && is_arithmetic_v<_A3>, int> = 0 >
-_LIBCPP_HIDE_FROM_ABI __promote_t<_A1, _A2, _A3> hypot(_A1 __x, _A2 __y, _A3 __z) _NOEXCEPT {
+__promote_t<_A1, _A2, _A3> hypot(_A1 __x, _A2 __y, _A3 __z) _NOEXCEPT {
   using __result_type = __promote_t<_A1, _A2, _A3>;
   static_assert(!(
       std::is_same_v<_A1, __result_type> && std::is_same_v<_A2, __result_type> && std::is_same_v<_A3, __result_type>));

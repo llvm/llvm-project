@@ -155,6 +155,7 @@ enum Kind {
   kw_msp430_intrcc,
   kw_avr_intrcc,
   kw_avr_signalcc,
+  kw_avr_builtincc,
   kw_ptx_kernel,
   kw_ptx_device,
   kw_spir_kernel,
@@ -401,6 +402,8 @@ enum Kind {
   kw_summaries,
   kw_flags,
   kw_blockcount,
+  kw_cfiFunctionDefs,
+  kw_cfiFunctionDecls,
   kw_linkage,
   kw_visibility,
   kw_notEligibleToImport,
@@ -468,6 +471,7 @@ enum Kind {
   kw_indir,
   kw_singleImpl,
   kw_branchFunnel,
+  kw_speculative,
   kw_singleImplName,
   kw_resByArg,
   kw_byArg,
@@ -511,6 +515,7 @@ enum Kind {
   ComdatVar,           // $foo
   LocalVar,            // %foo %"foo"
   MetadataVar,         // !foo
+  FLMDType,            // !!foo
   StringConstant,      // "foo"
   DwarfTag,            // DW_TAG_foo
   DwarfAttEncoding,    // DW_ATE_foo

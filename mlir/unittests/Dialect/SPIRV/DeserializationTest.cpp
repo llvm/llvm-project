@@ -108,6 +108,41 @@ protected:
     return id;
   }
 
+  uint32_t addVectorType(uint32_t elementType, uint32_t count) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpTypeVector, {id, elementType, count});
+    return id;
+  }
+
+  uint32_t addArrayType(uint32_t elementType, uint32_t countID) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpTypeArray, {id, elementType, countID});
+    return id;
+  }
+
+  uint32_t addIntConstant(uint32_t type, uint32_t value) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpConstant, {type, id, value});
+    return id;
+  }
+
+  uint32_t addConstantComposite(uint32_t type,
+                                ArrayRef<uint32_t> constituents) {
+    auto id = nextID++;
+    SmallVector<uint32_t, 4> operands;
+    operands.push_back(type);
+    operands.push_back(id);
+    operands.append(constituents.begin(), constituents.end());
+    addInstruction(spirv::Opcode::OpConstantComposite, operands);
+    return id;
+  }
+
+  uint32_t addUndef(uint32_t type) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpUndef, {type, id});
+    return id;
+  }
+
   uint32_t addFunctionType(uint32_t retType, ArrayRef<uint32_t> paramTypes) {
     auto id = nextID++;
     SmallVector<uint32_t, 4> operands;
@@ -486,6 +521,147 @@ TEST_F(DeserializationTest, OpMemberNameExcessOperands) {
 }
 
 //===----------------------------------------------------------------------===//
+// Constants
+//===----------------------------------------------------------------------===//
+
+TEST_F(DeserializationTest, ConstantCompositeMissingConstituentsFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto two = addIntConstant(int32Type, 2);
+  auto arrayType = addArrayType(int32Type, two);
+  addConstantComposite(arrayType, {});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpConstantComposite must have at least 1 parameter");
+}
+
+TEST_F(DeserializationTest, ConstantCompositeVectorMissingConstituentsFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto vectorType = addVectorType(int32Type, 2);
+  addConstantComposite(vectorType, {});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpConstantComposite must have at least 1 parameter");
+}
+
+TEST_F(DeserializationTest, ConstantCompositeTensorArmUndefConstituentFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto one = addIntConstant(int32Type, 1);
+  auto two = addIntConstant(int32Type, 2);
+  auto shape = addConstantComposite(addArrayType(int32Type, one), {two});
+  auto tensorType = nextID++;
+  addInstruction(spirv::Opcode::OpTypeTensorARM,
+                 {tensorType, int32Type, one, shape});
+  auto undef = addUndef(int32Type);
+  addConstantComposite(tensorType, {two, undef});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(("OpConstantComposite component #1 <id> " + Twine(undef) +
+                    " is an OpUndef, which cannot be represented in "
+                    "spirv.Constant")
+                       .str());
+}
+
+TEST_F(DeserializationTest, ConstantCompositeMatrixUndefColumnFailure) {
+  addHeader();
+  auto floatType = nextID++;
+  addInstruction(spirv::Opcode::OpTypeFloat, {floatType, 32});
+  auto vectorType = addVectorType(floatType, 2);
+  auto matrixType = nextID++;
+  addInstruction(spirv::Opcode::OpTypeMatrix, {matrixType, vectorType, 2});
+  auto undef = addUndef(floatType);
+  auto column = addConstantComposite(vectorType, {undef, undef});
+  addConstantComposite(matrixType, {column, column});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(("OpConstantComposite component #0 <id> " + Twine(column) +
+                    " has OpUndef constituents, which cannot be represented "
+                    "in spirv.Constant")
+                       .str());
+}
+
+TEST_F(DeserializationTest, VariableUndefCompositeInitializerFailure) {
+  addHeader();
+  auto voidType = addVoidType();
+  auto int32Type = addIntType(32);
+  auto vectorType = addVectorType(int32Type, 2);
+  auto one = addIntConstant(int32Type, 1);
+  auto undef = addUndef(int32Type);
+  auto composite = addConstantComposite(vectorType, {one, undef});
+  auto storageClass = static_cast<uint32_t>(spirv::StorageClass::Function);
+  auto ptrType = nextID++;
+  addInstruction(spirv::Opcode::OpTypePointer,
+                 {ptrType, storageClass, vectorType});
+  auto fnType = addFunctionType(voidType, {});
+  addFunction(voidType, fnType);
+  addInstruction(spirv::Opcode::OpLabel, {nextID++});
+  addInstruction(spirv::Opcode::OpVariable,
+                 {ptrType, nextID++, storageClass, composite});
+  addReturn();
+  addFunctionEnd();
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(("OpVariable initializer <id> " + Twine(composite) +
+                    " has OpUndef constituents, which cannot be represented "
+                    "in spirv.Variable")
+                       .str());
+}
+
+TEST_F(DeserializationTest, ConstantCompositeNonConstantConstituentFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto two = addIntConstant(int32Type, 2);
+  auto arrayType = addArrayType(int32Type, two);
+  addConstantComposite(arrayType, {int32Type, two});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(("OpConstantComposite component #0 <id> " +
+                    Twine(int32Type) + " must come from a normal constant")
+                       .str());
+}
+
+TEST_F(DeserializationTest,
+       SpecConstantCompositeSpecConstantOpConstituentFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto vectorType = addVectorType(int32Type, 2);
+  auto specConst = nextID++;
+  addInstruction(spirv::Opcode::OpSpecConstant, {int32Type, specConst, 1});
+  auto specConstOp = nextID++;
+  addInstruction(spirv::Opcode::OpSpecConstantOp,
+                 {int32Type, specConstOp,
+                  static_cast<uint32_t>(spirv::Opcode::OpIAdd), specConst,
+                  specConst});
+  addInstruction(spirv::Opcode::OpSpecConstantComposite,
+                 {vectorType, nextID++, specConst, specConstOp});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(("OpSpecConstantComposite component #1 <id> " +
+                    Twine(specConstOp) +
+                    " cannot be represented in spirv.SpecConstantComposite")
+                       .str());
+}
+
+TEST_F(DeserializationTest,
+       SpecConstantCompositeReplicateConstantConstituentFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto vectorType = addVectorType(int32Type, 2);
+  auto one = addIntConstant(int32Type, 1);
+  addInstruction(spirv::Opcode::OpSpecConstantCompositeReplicateEXT,
+                 {vectorType, nextID++, one});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(("OpSpecConstantCompositeReplicateEXT operand <id> " +
+                    Twine(one) +
+                    " cannot be represented in "
+                    "spirv.EXT.SpecConstantCompositeReplicate")
+                       .str());
+}
+
+//===----------------------------------------------------------------------===//
 // Functions
 //===----------------------------------------------------------------------===//
 
@@ -575,10 +751,10 @@ TEST_F(DeserializationTest, SwitchInt64LiteralWordOrder) {
   addReturn();
   addFunctionEnd();
 
-  auto module = deserialize();
-  ASSERT_TRUE(module);
+  auto moduleOp = deserialize();
+  ASSERT_TRUE(moduleOp);
   SmallVector<int64_t> literals;
-  module->walk([&](spirv::SwitchOp switchOp) {
+  moduleOp->walk([&](spirv::SwitchOp switchOp) {
     for (APInt literal : switchOp.getLiterals()->getValues<APInt>())
       literals.push_back(literal.getSExtValue());
   });

@@ -8,16 +8,16 @@
 struct IncompleteS;
 IncompleteS *p;
 
-// CIR-DAG: cir.global "private" constant cir_private @[[PAREN_A:.*]] = #cir.zero : !rec_Point
-// CIR-DAG: cir.global "private" constant cir_private @__const.{{.*}} = #cir.zero : !rec_CompleteS
-// CIR-DAG: cir.global "private" constant cir_private @__const.{{.*}} = #cir.zero : !rec_CompleteS
-// CIR-DAG: cir.global "private" constant cir_private @__const.{{.*}} = #cir.zero : !rec_CompleteS
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @[[PAREN_A:.*]] = #cir.zero : !rec_Point
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @__const.{{.*}} = #cir.zero : !rec_CompleteS
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @__const.{{.*}} = #cir.zero : !rec_CompleteS
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @__const.{{.*}} = #cir.zero : !rec_CompleteS
 // CIR-DAG: cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteS>
 
-// LLVM-DAG: @[[PAREN_A:.*]] = private constant %struct.Point zeroinitializer
-// LLVM-DAG: @__const.{{.*}} = private constant %struct.CompleteS zeroinitializer
-// LLVM-DAG: @__const.{{.*}} = private constant %struct.CompleteS zeroinitializer
-// LLVM-DAG: @__const.{{.*}} = private constant %struct.CompleteS zeroinitializer
+// LLVM-DAG: @[[PAREN_A:.*]] = private unnamed_addr constant %struct.Point zeroinitializer
+// LLVM-DAG: @__const.{{.*}} = private unnamed_addr constant %struct.CompleteS zeroinitializer
+// LLVM-DAG: @__const.{{.*}} = private unnamed_addr constant %struct.CompleteS zeroinitializer
+// LLVM-DAG: @__const.{{.*}} = private unnamed_addr constant %struct.CompleteS zeroinitializer
 // LLVM-DAG: @p = global ptr null
 // OGCG-DAG: @p = global ptr null, align 8
 

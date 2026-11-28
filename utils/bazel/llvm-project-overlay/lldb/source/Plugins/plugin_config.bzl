@@ -31,6 +31,7 @@ DEFAULT_PLUGINS = [
     "HighlighterClang",
     "HighlighterDefault",
     "DLanguage",
+    "DynamicLoaderAcceleratorGDBRemote",
     "DynamicLoaderDarwinKernel",
     "DynamicLoaderFreeBSDKernel",
     "DynamicLoaderHexagonDYLD",

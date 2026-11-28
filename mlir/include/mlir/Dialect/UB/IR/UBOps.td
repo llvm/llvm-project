@@ -17,14 +17,16 @@ include "mlir/Dialect/UB/IR/UBOpsInterfaces.td"
 def UB_Dialect : Dialect {
   let name = "ub";
   let cppNamespace = "::mlir::ub";
+  let useDefaultOperationRegistration = 1;
 
   let hasConstantMaterializer = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 // Base class for UB dialect attributes.
 class UB_Attr<string name, string attrMnemonic, list<Trait> traits = []> :
     AttrDef<UB_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/UB/IR/UBOps.h"];
   let mnemonic = attrMnemonic;
 }
 

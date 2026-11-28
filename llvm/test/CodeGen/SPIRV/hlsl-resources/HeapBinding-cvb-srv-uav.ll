@@ -7,7 +7,7 @@
 ; arrays share descriptor set 0, binding 0 (the first available bindings).
 
 ; ModuleID = 'dyn-res-cvb-srv-uav.hlsl'
-target datalayout = "e-ve-i64:64-n8:16:32:64-G10"
+target datalayout = "e-p:32:32-ve-i64:64-n8:16:32:64-G10"
 
 %S = type <{ <4 x i32> }>
 @.str = private unnamed_addr constant [4 x i8] c"Buf\00", align 1
@@ -18,15 +18,15 @@ target datalayout = "e-ve-i64:64-n8:16:32:64-G10"
 ; CHECK-DAG: OpDecorate [[Buf]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[Buf]] Binding 1
 
-; CHECK-DAG: OpName [[Heap0:%[0-9]+]] "ResourceDescriptorHeap"
+; CHECK-DAG: OpName [[Heap0:%[0-9]+]] ".ResourceDescriptorHeap.0"
 ; CHECK-DAG: OpDecorate [[Heap0]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[Heap0]] Binding 0
 
-; CHECK-DAG: OpName [[Heap1:%[0-9]+]] "ResourceDescriptorHeap.1"
+; CHECK-DAG: OpName [[Heap1:%[0-9]+]] ".ResourceDescriptorHeap.1"
 ; CHECK-DAG: OpDecorate [[Heap1]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[Heap1]] Binding 0
 
-; CHECK-DAG: OpName [[Heap2:%[0-9]+]] "ResourceDescriptorHeap.2"
+; CHECK-DAG: OpName [[Heap2:%[0-9]+]] ".ResourceDescriptorHeap.2"
 ; CHECK-DAG: OpDecorate [[Heap2]] DescriptorSet 0
 ; CHECK-DAG: OpDecorate [[Heap2]] Binding 0
 

@@ -23,6 +23,7 @@ include "mlir/Dialect/NVGPU/IR/NVGPU.td"
 
 class NVGPU_Type<string name, string typeMnemonic,
         list<Trait> traits = []> : TypeDef<NVGPU_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/NVGPU/IR/NVGPUDialect.h"];
   let mnemonic = typeMnemonic;
 }
 

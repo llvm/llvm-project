@@ -40,6 +40,7 @@ void test1(void) {
 
 
 void (*e) (int arg, const char * format, ...) __attribute__ ((__sentinel__ (1,1)));
+// expected-note@-1 {{function has been explicitly marked sentinel here}}
 
 void test2(void) {
   void (*b) (int arg, const char * format, ...) __attribute__ ((__sentinel__));  // expected-note {{function has been explicitly marked sentinel here}}
@@ -56,4 +57,16 @@ void test2(void) {
   y(1, "%s", 1,2,3,4,5,6,7);  // expected-warning {{missing sentinel in function call}}
   
   y(1, "%s", (void*)0,3,4,5,6,7); // OK
+
+  // The last named argument can be the sentinel if one argument follows it.
+  e(1, NULL);
+  // expected-warning@-1 {{not enough variable arguments in 'e' declaration to fit a sentinel}}
+  e(1, NULL, 2); // OK
+}
+
+void test_large_sentinel(void) {
+  void f(int, ...) __attribute__((sentinel(~0U)));
+  // expected-note@-1 {{function has been explicitly marked sentinel here}}
+  f(1, 2);
+  // expected-warning@-1 {{not enough variable arguments in 'f' declaration to fit a sentinel}}
 }

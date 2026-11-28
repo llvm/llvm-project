@@ -307,8 +307,9 @@ void BlockInCriticalSectionChecker::handleUnlock(
 
 bool BlockInCriticalSectionChecker::isBlockingInCritSection(
     const CallEvent &Call, CheckerContext &C) const {
-  return BlockingFunctions.contains(Call) &&
-         !C.getState()->get<ActiveCritSections>().isEmpty();
+  // Checking the lock state is cheaper than matching the call.
+  return !C.getState()->get<ActiveCritSections>().isEmpty() &&
+         BlockingFunctions.contains(Call);
 }
 
 void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,

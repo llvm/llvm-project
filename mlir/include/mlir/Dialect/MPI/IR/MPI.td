@@ -16,6 +16,7 @@ include "mlir/IR/EnumAttr.td"
 def MPI_Dialect : Dialect {
   let name = "mpi";
   let cppNamespace = "::mlir::mpi";
+  let useDefaultOperationRegistration = 1;
   let description = [{
     This dialect models the Message Passing Interface (MPI), version 
     4.0. It is meant to serve as an interfacing dialect that is targeted
@@ -34,8 +35,9 @@ def MPI_Dialect : Dialect {
     [OpenMPI online documentation](https://www.open-mpi.org/doc/current/).
   }];
 
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
+  let hasInitializer = 0;
 }
 
 //===----------------------------------------------------------------------===//

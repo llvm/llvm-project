@@ -3,7 +3,6 @@
 
 ---
 name:            sample_load_msaa
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -24,7 +23,6 @@ body:             |
 
 ---
 name:            atomic_msaa
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4

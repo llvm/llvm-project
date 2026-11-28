@@ -256,7 +256,7 @@ func.func @test_char_array_static_len(%cond: i1, %a: !fir.ref<!fir.array<3x!fir.
 
 // --- Test 8: Scalar character (dynamic length) ---
 // tempBaseType is !fir.boxchar<1>. A non-move as_expr copies the yielded
-// variable into a stack temp (mustFree=false).
+// variable into a heap temp (mustFree=true).
 func.func @test_scalar_char_dynamic(%cond: i1, %a: !fir.boxchar<1>, %b: !fir.boxchar<1>) {
   %0 = hlfir.conditional %cond : (i1) -> !hlfir.expr<!fir.char<1,?>> {
     hlfir.yield %a : !fir.boxchar<1>
@@ -269,16 +269,21 @@ func.func @test_scalar_char_dynamic(%cond: i1, %a: !fir.boxchar<1>, %b: !fir.box
 // CHECK-LABEL: func.func @test_scalar_char_dynamic(
 // CHECK-SAME:    %[[COND:.*]]: i1, %[[A:.*]]: !fir.boxchar<1>, %[[B:.*]]: !fir.boxchar<1>)
 // CHECK:       %[[IF:.*]]:2 = fir.if %[[COND]] -> (!fir.boxchar<1>, i1) {
+// CHECK:         fir.allocmem !fir.char<1,?>
 // CHECK:         %[[T1:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[A]] to %[[T1]]#0 temporary_lhs
-// CHECK:         %[[FALSE1:.*]] = arith.constant false
-// CHECK:         fir.result %[[T1]]#0, %[[FALSE1]] : !fir.boxchar<1>, i1
+// CHECK:         %[[TRUE1:.*]] = arith.constant true
+// CHECK:         fir.result %[[T1]]#0, %[[TRUE1]] : !fir.boxchar<1>, i1
 // CHECK:       } else {
+// CHECK:         fir.allocmem !fir.char<1,?>
 // CHECK:         %[[T2:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[B]] to %[[T2]]#0 temporary_lhs
-// CHECK:         %[[FALSE2:.*]] = arith.constant false
-// CHECK:         fir.result %[[T2]]#0, %[[FALSE2]] : !fir.boxchar<1>, i1
+// CHECK:         %[[TRUE2:.*]] = arith.constant true
+// CHECK:         fir.result %[[T2]]#0, %[[TRUE2]] : !fir.boxchar<1>, i1
 // CHECK:       }
+// CHECK:       fir.if %[[IF]]#1 {
+// CHECK:         %[[ADDR:.*]] = fir.box_addr %[[IF]]#0 : (!fir.boxchar<1>) -> !fir.heap<!fir.char<1,?>>
+// CHECK:         fir.freemem %[[ADDR]] : !fir.heap<!fir.char<1,?>>
 
 // --- Test 9: Asymmetric branches (non-polymorphic + polymorphic) ---
 // One branch yields !fir.ref (non-polymorphic), the other !fir.class
@@ -363,12 +368,17 @@ func.func private @_QPfunc_alloc_char(!fir.boxchar<1>) -> !fir.box<!fir.heap<!fi
 // CHECK:         fir.freemem %[[HEAP]]
 // CHECK:         fir.result %[[BOXCHAR]], %[[TRUE]] : !fir.boxchar<1>, i1
 // CHECK:       } else {
-// Non-forwarding: variable copied into a stack temp (mustFree=false):
+// Non-forwarding: variable copied into a heap temp (mustFree=true):
+// CHECK:         fir.allocmem !fir.char<1,?>
 // CHECK:         %[[T:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} uniq_name(".tmp")
 // CHECK:         hlfir.assign %[[ARG]] to %[[T]]#0 temporary_lhs
-// CHECK:         %[[FALSE:.*]] = arith.constant false
-// CHECK:         fir.result %[[T]]#0, %[[FALSE]] : !fir.boxchar<1>, i1
+// CHECK:         %[[TRUE2:.*]] = arith.constant true
+// CHECK:         fir.result %[[T]]#0, %[[TRUE2]] : !fir.boxchar<1>, i1
 // CHECK:       }
+// CHECK:       hlfir.assign %[[IF]]#0 to %[[ARG]]
+// CHECK:       fir.if %[[IF]]#1 {
+// CHECK:         %[[ADDR:.*]] = fir.box_addr %[[IF]]#0 : (!fir.boxchar<1>) -> !fir.heap<!fir.char<1,?>>
+// CHECK:         fir.freemem %[[ADDR]] : !fir.heap<!fir.char<1,?>>
 
 // --- Test 11: Array expr from hlfir.elemental (buffer forwarding) ---
 // When a branch yields an hlfir.expr produced by hlfir.elemental, the

@@ -51,9 +51,9 @@ define void @udiv_by_const(ptr noalias %o, ptr noalias %i, i64 %n) {
 ; AVX2:       [[VECTOR_BODY]]:
 ; AVX2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; AVX2-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[I]], i64 [[INDEX]]
-; AVX2-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[TMP0]], i64 4
-; AVX2-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP0]], i64 8
-; AVX2-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP0]], i64 12
+; AVX2-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 32
+; AVX2-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 64
+; AVX2-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 96
 ; AVX2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
 ; AVX2-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; AVX2-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
@@ -63,9 +63,9 @@ define void @udiv_by_const(ptr noalias %o, ptr noalias %i, i64 %n) {
 ; AVX2-NEXT:    [[TMP6:%.*]] = udiv <4 x i64> [[WIDE_LOAD3]], splat (i64 1000000007)
 ; AVX2-NEXT:    [[TMP7:%.*]] = udiv <4 x i64> [[WIDE_LOAD4]], splat (i64 1000000007)
 ; AVX2-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[O]], i64 [[INDEX]]
-; AVX2-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i64 4
-; AVX2-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP8]], i64 8
-; AVX2-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP8]], i64 12
+; AVX2-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 32
+; AVX2-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP8]], i64 64
+; AVX2-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP8]], i64 96
 ; AVX2-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP8]], align 8
 ; AVX2-NEXT:    store <4 x i64> [[TMP5]], ptr [[TMP9]], align 8
 ; AVX2-NEXT:    store <4 x i64> [[TMP6]], ptr [[TMP10]], align 8
@@ -128,9 +128,9 @@ define void @udiv_by_const(ptr noalias %o, ptr noalias %i, i64 %n) {
 ; AVX512F:       [[VECTOR_BODY]]:
 ; AVX512F-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; AVX512F-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[I]], i64 [[INDEX]]
-; AVX512F-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[TMP0]], i64 8
-; AVX512F-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP0]], i64 16
-; AVX512F-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP0]], i64 24
+; AVX512F-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 64
+; AVX512F-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 128
+; AVX512F-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 192
 ; AVX512F-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i64>, ptr [[TMP0]], align 8
 ; AVX512F-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i64>, ptr [[TMP1]], align 8
 ; AVX512F-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x i64>, ptr [[TMP2]], align 8
@@ -140,9 +140,9 @@ define void @udiv_by_const(ptr noalias %o, ptr noalias %i, i64 %n) {
 ; AVX512F-NEXT:    [[TMP6:%.*]] = udiv <8 x i64> [[WIDE_LOAD3]], splat (i64 1000000007)
 ; AVX512F-NEXT:    [[TMP7:%.*]] = udiv <8 x i64> [[WIDE_LOAD4]], splat (i64 1000000007)
 ; AVX512F-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[O]], i64 [[INDEX]]
-; AVX512F-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i64 8
-; AVX512F-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP8]], i64 16
-; AVX512F-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP8]], i64 24
+; AVX512F-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 64
+; AVX512F-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP8]], i64 128
+; AVX512F-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP8]], i64 192
 ; AVX512F-NEXT:    store <8 x i64> [[TMP4]], ptr [[TMP8]], align 8
 ; AVX512F-NEXT:    store <8 x i64> [[TMP5]], ptr [[TMP9]], align 8
 ; AVX512F-NEXT:    store <8 x i64> [[TMP6]], ptr [[TMP10]], align 8
@@ -205,9 +205,9 @@ define void @udiv_by_const(ptr noalias %o, ptr noalias %i, i64 %n) {
 ; AVX512DQ:       [[VECTOR_BODY]]:
 ; AVX512DQ-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; AVX512DQ-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[I]], i64 [[INDEX]]
-; AVX512DQ-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[TMP0]], i64 8
-; AVX512DQ-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP0]], i64 16
-; AVX512DQ-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP0]], i64 24
+; AVX512DQ-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 64
+; AVX512DQ-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 128
+; AVX512DQ-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 192
 ; AVX512DQ-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i64>, ptr [[TMP0]], align 8
 ; AVX512DQ-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i64>, ptr [[TMP1]], align 8
 ; AVX512DQ-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x i64>, ptr [[TMP2]], align 8
@@ -217,9 +217,9 @@ define void @udiv_by_const(ptr noalias %o, ptr noalias %i, i64 %n) {
 ; AVX512DQ-NEXT:    [[TMP6:%.*]] = udiv <8 x i64> [[WIDE_LOAD3]], splat (i64 1000000007)
 ; AVX512DQ-NEXT:    [[TMP7:%.*]] = udiv <8 x i64> [[WIDE_LOAD4]], splat (i64 1000000007)
 ; AVX512DQ-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[O]], i64 [[INDEX]]
-; AVX512DQ-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i64 8
-; AVX512DQ-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP8]], i64 16
-; AVX512DQ-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP8]], i64 24
+; AVX512DQ-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 64
+; AVX512DQ-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP8]], i64 128
+; AVX512DQ-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP8]], i64 192
 ; AVX512DQ-NEXT:    store <8 x i64> [[TMP4]], ptr [[TMP8]], align 8
 ; AVX512DQ-NEXT:    store <8 x i64> [[TMP5]], ptr [[TMP9]], align 8
 ; AVX512DQ-NEXT:    store <8 x i64> [[TMP6]], ptr [[TMP10]], align 8
@@ -282,9 +282,9 @@ define void @udiv_by_const(ptr noalias %o, ptr noalias %i, i64 %n) {
 ; AVX512DQ256:       [[VECTOR_BODY]]:
 ; AVX512DQ256-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; AVX512DQ256-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[I]], i64 [[INDEX]]
-; AVX512DQ256-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[TMP0]], i64 4
-; AVX512DQ256-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[TMP0]], i64 8
-; AVX512DQ256-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP0]], i64 12
+; AVX512DQ256-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 32
+; AVX512DQ256-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 64
+; AVX512DQ256-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 96
 ; AVX512DQ256-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
 ; AVX512DQ256-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; AVX512DQ256-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
@@ -294,9 +294,9 @@ define void @udiv_by_const(ptr noalias %o, ptr noalias %i, i64 %n) {
 ; AVX512DQ256-NEXT:    [[TMP6:%.*]] = udiv <4 x i64> [[WIDE_LOAD3]], splat (i64 1000000007)
 ; AVX512DQ256-NEXT:    [[TMP7:%.*]] = udiv <4 x i64> [[WIDE_LOAD4]], splat (i64 1000000007)
 ; AVX512DQ256-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[O]], i64 [[INDEX]]
-; AVX512DQ256-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i64 4
-; AVX512DQ256-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP8]], i64 8
-; AVX512DQ256-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP8]], i64 12
+; AVX512DQ256-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 32
+; AVX512DQ256-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP8]], i64 64
+; AVX512DQ256-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP8]], i64 96
 ; AVX512DQ256-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP8]], align 8
 ; AVX512DQ256-NEXT:    store <4 x i64> [[TMP5]], ptr [[TMP9]], align 8
 ; AVX512DQ256-NEXT:    store <4 x i64> [[TMP6]], ptr [[TMP10]], align 8
@@ -617,9 +617,9 @@ define void @sdiv_by_const(ptr noalias %o, ptr noalias %i, i64 %n) {
 ; AVX512DQ:       [[LOOP]]:
 ; AVX512DQ-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
 ; AVX512DQ-NEXT:    [[P:%.*]] = getelementptr i64, ptr [[I]], i64 [[IV]]
-; AVX512DQ-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P]], i64 8
-; AVX512DQ-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[P]], i64 16
-; AVX512DQ-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[P]], i64 24
+; AVX512DQ-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 64
+; AVX512DQ-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P]], i64 128
+; AVX512DQ-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 192
 ; AVX512DQ-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i64>, ptr [[P]], align 8
 ; AVX512DQ-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i64>, ptr [[TMP1]], align 8
 ; AVX512DQ-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x i64>, ptr [[TMP2]], align 8
@@ -629,9 +629,9 @@ define void @sdiv_by_const(ptr noalias %o, ptr noalias %i, i64 %n) {
 ; AVX512DQ-NEXT:    [[TMP6:%.*]] = sdiv <8 x i64> [[WIDE_LOAD3]], splat (i64 1000000007)
 ; AVX512DQ-NEXT:    [[TMP7:%.*]] = sdiv <8 x i64> [[WIDE_LOAD4]], splat (i64 1000000007)
 ; AVX512DQ-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[O]], i64 [[IV]]
-; AVX512DQ-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i64 8
-; AVX512DQ-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP8]], i64 16
-; AVX512DQ-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP8]], i64 24
+; AVX512DQ-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 64
+; AVX512DQ-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP8]], i64 128
+; AVX512DQ-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP8]], i64 192
 ; AVX512DQ-NEXT:    store <8 x i64> [[TMP4]], ptr [[TMP8]], align 8
 ; AVX512DQ-NEXT:    store <8 x i64> [[TMP5]], ptr [[TMP9]], align 8
 ; AVX512DQ-NEXT:    store <8 x i64> [[TMP6]], ptr [[TMP10]], align 8
@@ -694,9 +694,9 @@ define void @sdiv_by_const(ptr noalias %o, ptr noalias %i, i64 %n) {
 ; AVX512DQ256:       [[LOOP]]:
 ; AVX512DQ256-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
 ; AVX512DQ256-NEXT:    [[P:%.*]] = getelementptr i64, ptr [[I]], i64 [[IV]]
-; AVX512DQ256-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P]], i64 4
-; AVX512DQ256-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[P]], i64 8
-; AVX512DQ256-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[P]], i64 12
+; AVX512DQ256-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 32
+; AVX512DQ256-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P]], i64 64
+; AVX512DQ256-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 96
 ; AVX512DQ256-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[P]], align 8
 ; AVX512DQ256-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; AVX512DQ256-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
@@ -706,9 +706,9 @@ define void @sdiv_by_const(ptr noalias %o, ptr noalias %i, i64 %n) {
 ; AVX512DQ256-NEXT:    [[TMP6:%.*]] = sdiv <4 x i64> [[WIDE_LOAD3]], splat (i64 1000000007)
 ; AVX512DQ256-NEXT:    [[TMP7:%.*]] = sdiv <4 x i64> [[WIDE_LOAD4]], splat (i64 1000000007)
 ; AVX512DQ256-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[O]], i64 [[IV]]
-; AVX512DQ256-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP8]], i64 4
-; AVX512DQ256-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[TMP8]], i64 8
-; AVX512DQ256-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[TMP8]], i64 12
+; AVX512DQ256-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 32
+; AVX512DQ256-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP8]], i64 64
+; AVX512DQ256-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP8]], i64 96
 ; AVX512DQ256-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP8]], align 8
 ; AVX512DQ256-NEXT:    store <4 x i64> [[TMP5]], ptr [[TMP9]], align 8
 ; AVX512DQ256-NEXT:    store <4 x i64> [[TMP6]], ptr [[TMP10]], align 8

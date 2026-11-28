@@ -803,8 +803,7 @@ protected:
     size_t old_size = variable_list.GetSize();
     Target *target = static_cast<Target *>(baton);
     if (target)
-      target->GetImages().FindGlobalVariables(ConstString(name), UINT32_MAX,
-                                              variable_list);
+      target->GetImages().FindGlobalVariables(name, UINT32_MAX, variable_list);
     return variable_list.GetSize() - old_size;
   }
 

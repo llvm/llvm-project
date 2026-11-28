@@ -20,3 +20,4 @@ body: |
     %x:vr = COPY $v8
     %y:vmv0 = COPY %x:vr
     PseudoVSE8_V_M1_MASK $noreg, $noreg, %y:vmv0, -1, 3
+...

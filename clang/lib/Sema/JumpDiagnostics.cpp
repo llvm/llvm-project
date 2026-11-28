@@ -157,6 +157,11 @@ static ScopePair GetDiagForGotoScopeDecl(Sema &S, const Decl *D) {
       return ScopePair(diag::note_protected_by_cleanup,
                        diag::note_exits_cleanup);
 
+    // Allocated at the declaration and freed at scope exit, like cleanup.
+    if (VD->hasLocalStorage() && VD->hasAttr<OMPAllocateDeclAttr>())
+      return ScopePair(diag::note_protected_by_omp_allocate,
+                       diag::note_exits_omp_allocate);
+
     if (VD->hasLocalStorage()) {
       switch (VD->getType().isDestructedType()) {
       case QualType::DK_objc_strong_lifetime:

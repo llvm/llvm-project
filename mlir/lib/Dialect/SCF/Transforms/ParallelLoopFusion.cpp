@@ -414,6 +414,10 @@ static bool loadMatchesVectorWrite(memref::LoadOp loadOp,
   if (!vecTy)
     return false;
 
+  // A masked write may not write the element that the load reads.
+  if (writeOp.getMask() || writeOp.isMasked())
+    return false;
+
   unsigned writeRank = writeOp.getIndices().size();
   AffineMap permutationMap = writeOp.getPermutationMap();
   if (!permutationMap.isProjectedPermutation() ||
@@ -562,9 +566,15 @@ loadsFromSameMemoryLocationWrittenBy(Operation *loadOp, Operation *storeOp,
             auto vecWriteOp = dyn_cast<vector::TransferWriteOp>(storeOp);
             if (!vecWriteOp)
               return false;
+            // A write masked by `vector.mask` may write fewer elements than
+            // the read reads.
             return opsAccessSameIndices(vecReadOp, vecWriteOp,
                                         firstToSecondPloopIVsMap, b) &&
+                   (vecReadOp.getVectorType() == vecWriteOp.getVectorType()) &&
+                   (vecReadOp.getPermutationMap() ==
+                    vecWriteOp.getPermutationMap()) &&
                    (vecReadOp.getMask() == vecWriteOp.getMask()) &&
+                   !vecWriteOp.isMasked() &&
                    (vecReadOp.getInBounds() == vecWriteOp.getInBounds());
           })
           .Case([&](vector::LoadOp vecLoadOp) {
@@ -573,6 +583,7 @@ loadsFromSameMemoryLocationWrittenBy(Operation *loadOp, Operation *storeOp,
               return false;
             return opsAccessSameIndices(vecLoadOp, vecStoreOp,
                                         firstToSecondPloopIVsMap, b) &&
+                   (vecLoadOp.getVectorType() == vecStoreOp.getVectorType()) &&
                    (vecLoadOp.getAlignment() == vecStoreOp.getAlignment());
           })
           .Default([](Operation *) { return false; });

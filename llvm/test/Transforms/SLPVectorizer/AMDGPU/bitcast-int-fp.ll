@@ -20,9 +20,10 @@ define void @bitcast_only(i32 %a, i32 %b, ptr addrspace(3) %out) {
 ;
 ; PACKED-LABEL: define void @bitcast_only(
 ; PACKED-SAME: i32 [[A:%.*]], i32 [[B:%.*]], ptr addrspace(3) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
-; PACKED-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i64 0
-; PACKED-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B]], i64 1
-; PACKED-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to <2 x float>
+; PACKED-NEXT:    [[AF:%.*]] = bitcast i32 [[A]] to float
+; PACKED-NEXT:    [[BF:%.*]] = bitcast i32 [[B]] to float
+; PACKED-NEXT:    [[R0:%.*]] = insertelement <2 x float> poison, float [[AF]], i64 0
+; PACKED-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[R0]], float [[BF]], i64 1
 ; PACKED-NEXT:    store <2 x float> [[TMP3]], ptr addrspace(3) [[OUT]], align 8
 ; PACKED-NEXT:    ret void
 ;

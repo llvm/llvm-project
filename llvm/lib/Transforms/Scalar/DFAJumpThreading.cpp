@@ -365,15 +365,8 @@ namespace {
 struct ThreadingPath {
   /// Exit value is DFA's exit state for the given path.
   APInt getExitValue() const { return ExitVal; }
-  void setExitValue(const ConstantInt *V) {
-    ExitVal = V->getValue();
-    IsExitValSet = true;
-  }
-  void setExitValue(const APInt &V) {
-    ExitVal = V;
-    IsExitValSet = true;
-  }
-  bool isExitValueSet() const { return IsExitValSet; }
+  void setExitValue(const ConstantInt *V) { ExitVal = V->getValue(); }
+  void setExitValue(const APInt &V) { ExitVal = V; }
 
   /// Determinator is the basic block that determines the next state of the DFA.
   const BasicBlock *getDeterminatorBB() const { return DBB; }
@@ -396,7 +389,6 @@ private:
   PathType Path;
   APInt ExitVal;
   const BasicBlock *DBB = nullptr;
-  bool IsExitValSet = false;
 };
 
 #ifndef NDEBUG
@@ -1434,7 +1426,6 @@ private:
   TargetTransformInfo *TTI;
   OptimizationRemarkEmitter *ORE;
   SmallPtrSet<const Value *, 32> EphValues;
-  std::vector<ThreadingPath> TPaths;
 };
 } // namespace
 

@@ -38,6 +38,14 @@ using namespace llvm::PatternMatch;
 
 namespace llvm::slpvectorizer {
 
+ConstantInt *getStrideBytesForConstant(ConstantInt *Stride, Type *ScalarTy,
+                                       const DataLayout &DL, bool IsReverse) {
+  assert(Stride && "Expected a valid Stride");
+  uint64_t ElementSize = DL.getTypeAllocSize(ScalarTy).getFixedValue();
+  APInt Bytes = Stride->getValue() * ElementSize;
+  return ConstantInt::get(Stride->getContext(), IsReverse ? -Bytes : Bytes);
+}
+
 InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
                                TTI::ShuffleKind Kind, VectorType *Tp,
                                const TTI::TargetCostKind CostKind,
@@ -62,6 +70,61 @@ InstructionCost getShuffleCost(const TargetTransformInfo &TTI,
   }
   return TTI.getShuffleCost(Kind, DstTy, Tp, CostKind, Mask, Index, SubTp, Args,
                             /*CtxI=*/nullptr, VIC);
+}
+
+InstructionCost getStridedLoadCost(
+    const TargetTransformInfo &TTI, const DataLayout &DL, Value *StrideVal,
+    Type *StridedLoadTy, Type *VecTy, Type *ScalarTy, Value *Ptr,
+    Align CommonAlignment, TargetTransformInfo::CastContextHint Ctx,
+    TargetTransformInfo::TargetCostKind CostKind, bool IsReverse) {
+  Value *Stride = nullptr;
+  if (auto *ConstStrideVal = dyn_cast_if_present<ConstantInt>(StrideVal))
+    Stride = getStrideBytesForConstant(ConstStrideVal, ScalarTy, DL, IsReverse);
+  InstructionCost StridedCost = TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(Intrinsic::experimental_vp_strided_load,
+                                 StridedLoadTy, Ptr,
+                                 /*VariableMask=*/false, CommonAlignment,
+                                 /*I=*/nullptr, Stride),
+      CostKind);
+  if (StridedLoadTy != VecTy)
+    StridedCost +=
+        getWidenedStridedCastCost(TTI, StridedLoadTy, VecTy, DL, Ctx, CostKind);
+  return StridedCost;
+}
+
+InstructionCost
+getCompressedLoadCost(const TargetTransformInfo &TTI, const LoadInst *LI0,
+                      const CompressedLoadInfo &Info,
+                      TargetTransformInfo::TargetCostKind CostKind) {
+  if (Info.InterleaveFactor) {
+    assert(!Info.IsMasked && "Masked interleaved loads are not supported");
+    return TTI.getInterleavedMemoryOpCost(
+        Instruction::Load, Info.LoadVecTy, Info.InterleaveFactor, {},
+        LI0->getAlign(), LI0->getPointerAddressSpace(), CostKind);
+  }
+
+  InstructionCost Cost;
+  if (Info.IsMasked) {
+    Cost = TTI.getMemIntrinsicInstrCost(
+        MemIntrinsicCostAttributes(Intrinsic::masked_load, Info.LoadVecTy,
+                                   LI0->getAlign(),
+                                   LI0->getPointerAddressSpace()),
+        CostKind);
+  } else {
+    Cost = TTI.getMemoryOpCost(
+        Instruction::Load, Info.LoadVecTy, LI0->getAlign(),
+        LI0->getPointerAddressSpace(), CostKind,
+        TargetTransformInfo::getOperandInfo(LI0->getPointerOperand()));
+  }
+  // For REVEC the emitted shuffle uses the compress mask expanded to the
+  // individual elements of the vector scalars.
+  SmallVector<int> CompressCostMask(Info.CompressMask);
+  transformScalarShuffleIndiciesToVector(getNumElements(LI0->getType()),
+                                         CompressCostMask);
+  // TODO: include this cost into CommonCost.
+  Cost += getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, Info.LoadVecTy,
+                         CostKind, CompressCostMask);
+  return Cost;
 }
 
 std::pair<InstructionCost, InstructionCost>
@@ -210,6 +273,22 @@ InstructionCost getWidenedStridedCastCost(const TargetTransformInfo &TTI,
                               CostKind) +
          TTI.getCastInstrCost(Instruction::BitCast, DstTy, IntVecTy, CCH,
                               CostKind);
+}
+
+InstructionCost getDemotedTypeCastCost(const TargetTransformInfo &TTI,
+                                       VectorType *VecTy,
+                                       const std::pair<uint64_t, bool> &MinBW,
+                                       TTI::CastContextHint CCH,
+                                       TTI::TargetCostKind CostKind) {
+  unsigned BWSz = MinBW.first;
+  unsigned DstBWSz = VecTy->getScalarSizeInBits();
+  unsigned VecOpcode;
+  if (DstBWSz < BWSz)
+    VecOpcode = Instruction::Trunc;
+  else
+    VecOpcode = MinBW.second ? Instruction::SExt : Instruction::ZExt;
+  return TTI.getCastInstrCost(VecOpcode, VecTy, VecTy->getWithNewBitWidth(BWSz),
+                              CCH, CostKind);
 }
 
 InstructionCost getMaskedDivRemCost(const TargetTransformInfo &TTI, bool ReVec,
@@ -635,6 +714,12 @@ getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo &TTI,
     if (IntrinsicCost > ScalarLimit)
       IntrinsicCost = InstructionCost::getInvalid();
   }
+  if (ID == Intrinsic::sincos &&
+      shouldSplitVectorSinCos(TLI,
+                              CI->getArgOperand(0)->getType()->getScalarType(),
+                              Shape.VF, CI->getModule()))
+    IntrinsicCost =
+        2 * TTI.getCallInstrCost(nullptr, ArgTys.front(), ArgTys, CostKind);
 
   return {IntrinsicCost, LibCost};
 }
@@ -770,4 +855,84 @@ bool hasHighRegisterPressure(unsigned ScheduleBudget, const BasicBlock &BB,
   return false;
 }
 
+SmallBitVector selectBSwapGathers(
+    ArrayRef<SmallVector<Value *>> GatheredScalars, const DataLayout &DL,
+    const TargetTransformInfo &TTI, bool ReVec,
+    TargetTransformInfo::TargetCostKind CostKind,
+    function_ref<std::optional<
+        std::tuple<const void *, FixedVectorType *, unsigned>>(Value *)>
+        GetVectorizedSource) {
+  struct SourceVector {
+    FixedVectorType *VecTy = nullptr;
+    APInt DemandedElts;
+    InstructionCost Cost = 0;
+    SmallVector<unsigned> Gathers;
+  };
+  SmallDenseMap<const void *, SourceVector> SourceVectors;
+  SmallBitVector BSwapGathers(GatheredScalars.size());
+  for (auto [Idx, VL] : enumerate(GatheredScalars)) {
+    std::optional<std::tuple<Value *, unsigned, SmallVector<int>>> Fields =
+        matchGatheredExtractedFields(VL, DL);
+    if (!Fields)
+      continue;
+    auto &[Src, FieldWidth, Mask] = *Fields;
+    Type *SrcTy = Src->getType();
+    unsigned NumFields = SrcTy->getIntegerBitWidth() / FieldWidth;
+    if (FieldWidth != 8 || NumFields % 2 != 0 ||
+        !ShuffleVectorInst::isReverseMask(Mask, NumFields))
+      continue;
+    Type *ByteTy = Type::getInt8Ty(SrcTy->getContext());
+    auto *FieldVecTy = cast<VectorType>(getWidenedType(ByteTy, NumFields));
+    IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcTy, {SrcTy});
+    InstructionCost BSwapCost = TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+    InstructionCost PermuteCost = getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
+                                                 FieldVecTy, CostKind, Mask);
+    std::optional<std::tuple<const void *, FixedVectorType *, unsigned>>
+        Source = GetVectorizedSource(Src);
+    if (!Source)
+      if (std::optional<unsigned> Lane = getElementIndex(Src)) {
+        auto *EE = cast<ExtractElementInst>(Src);
+        Source = std::make_tuple(
+            EE->getVectorOperand(),
+            cast<FixedVectorType>(EE->getVectorOperandType()), *Lane);
+      }
+    if (!Source) {
+      if (BSwapCost <= PermuteCost)
+        BSwapGathers.set(Idx);
+      continue;
+    }
+    auto &[Vec, VecTy, Lane] = *Source;
+    // The bytes of the scalar are either extracted from the vector as a
+    // subvector and permuted, or permuted from the whole vector directly.
+    auto *VecBytesTy = cast<VectorType>(
+        getWidenedType(ByteTy, NumFields * VecTy->getNumElements()));
+    for (int &I : Mask)
+      if (I != PoisonMaskElem)
+        I += Lane * NumFields;
+    PermuteCost =
+        std::min(PermuteCost + getShuffleCost(TTI, TTI::SK_ExtractSubvector,
+                                              VecBytesTy, CostKind, {},
+                                              Lane * NumFields, FieldVecTy),
+                 getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, VecBytesTy,
+                                CostKind, Mask));
+    auto [It, Inserted] = SourceVectors.try_emplace(Vec);
+    SourceVector &Info = It->second;
+    if (Inserted) {
+      Info.VecTy = VecTy;
+      Info.DemandedElts = APInt::getZero(VecTy->getNumElements());
+    }
+    Info.DemandedElts.setBit(Lane);
+    Info.Cost += BSwapCost - PermuteCost;
+    Info.Gathers.push_back(Idx);
+  }
+  for (const SourceVector &Info : make_second_range(SourceVectors)) {
+    InstructionCost ExtractCost = getScalarizationOverhead(
+        TTI, ReVec, Info.VecTy->getElementType(), Info.VecTy, Info.DemandedElts,
+        /*Insert=*/false, /*Extract=*/true, CostKind);
+    if (Info.Cost + ExtractCost <= 0)
+      for (unsigned Idx : Info.Gathers)
+        BSwapGathers.set(Idx);
+  }
+  return BSwapGathers;
+}
 } // namespace llvm::slpvectorizer

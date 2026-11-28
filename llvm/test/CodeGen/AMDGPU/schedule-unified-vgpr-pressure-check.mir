@@ -21,7 +21,6 @@
 # CHECK-NEXT: Pressure in desired limits, done.
 ---
 name: wide_budget
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy: 1
@@ -54,7 +53,6 @@ body: |
 # CHECK-NEXT: Occupancy before scheduling: 1, after 1.
 ---
 name: vgpr_excess
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy: 1
@@ -85,7 +83,6 @@ body: |
 # CHECK-NEXT: Occupancy before scheduling: 1, after 1.
 ---
 name: agpr_excess
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy: 1

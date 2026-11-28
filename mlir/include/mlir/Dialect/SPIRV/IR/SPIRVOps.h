@@ -19,13 +19,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/Interfaces/SPIRVImageInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/Interfaces/AlignmentAttrInterface.h"
-#include "mlir/Interfaces/CallInterfaces.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 // TableGen'erated operation interfaces for querying versions, extensions, and

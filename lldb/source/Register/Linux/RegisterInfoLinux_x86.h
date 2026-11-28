@@ -15,8 +15,7 @@ namespace lldb_private {
 
 class RegisterInfoLinux_x86 : public RegisterInfoInterface {
 public:
-  RegisterInfoLinux_x86(const ArchSpec &target_arch,
-                           RegisterInfo orig_ax_info)
+  RegisterInfoLinux_x86(const ArchSpec &target_arch, RegisterInfo orig_ax_info)
       : RegisterInfoInterface(target_arch), m_orig_ax_info(orig_ax_info) {}
 
   const RegisterInfo &GetOrigAxInfo() const { return m_orig_ax_info; }

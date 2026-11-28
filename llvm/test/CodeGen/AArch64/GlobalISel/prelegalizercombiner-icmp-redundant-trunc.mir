@@ -4,7 +4,6 @@
 # This test checks the optimization to remove the G_TRUNC if we can determine it's redundant.
 ---
 name: icmp_trunc_sextload
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -30,7 +29,6 @@ body:             |
 ...
 ---
 name: icmp_trunc_sextload_eq
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -56,7 +54,6 @@ body:             |
 ...
 ---
 name: icmp_trunc_sextload_wrongpred
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -83,7 +80,6 @@ body:             |
 ...
 ---
 name: icmp_trunc_sextload_extend_mismatch
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0

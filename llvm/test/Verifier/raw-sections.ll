@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: llvm.raw.sections entry must have four operands
 ; CHECK: llvm.raw.sections entry operand 0 must be a string (section name)

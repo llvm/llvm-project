@@ -13,7 +13,6 @@
 
 ---
 name:            hoist_spill_live_range_interference
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 registers:

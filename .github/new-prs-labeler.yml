@@ -49,6 +49,17 @@ clang:headers:
     - any-glob-to-any-file:
       - clang/lib/Headers/**/*
 
+clang-repl:
+  - changed-files:
+    - any-glob-to-any-file:
+      - clang/docs/ClangRepl.md
+      - clang/docs/ClangRepl_design.png
+      - clang/include/clang/Interpreter/**/*
+      - clang/lib/Interpreter/**/*
+      - clang/test/Interpreter/**/*
+      - clang/tools/clang-repl/**/*
+      - clang/unittests/Interpreter/**/*
+
 compiler-rt:
   - changed-files:
     - any-glob-to-any-file:
@@ -468,6 +479,7 @@ mlir:vector:
   - changed-files:
     - any-glob-to-any-file:
       - mlir/**/*Vector/**
+      - mlir/**/VectorTo*/**
       - mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp
 
 mlir:execution-engine:
@@ -696,7 +708,11 @@ clang:ssaf:
       - clang/docs/ScalableStaticAnalysis/**
       - clang/include/clang/ScalableStaticAnalysis/**
       - clang/lib/ScalableStaticAnalysis/**
-      - clang/test/Analysis/Scalable/**
+      - clang/test/ScalableStaticAnalysis/**
+      - clang/tools/clang-ssaf-analyzer/**
+      - clang/tools/clang-ssaf-format/**
+      - clang/tools/clang-ssaf-linker/**
+      - clang/tools/clang-ssaf-src-edit-merge/**
       - clang/unittests/ScalableStaticAnalysis/**
 
 clang:static analyzer:
@@ -872,6 +888,27 @@ llvm:support:
     - any-glob-to-any-file:
       - llvm/**/Support/**
 
+floating-point:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/include/llvm/ADT/APFloat.h
+      - llvm/include/llvm/ADT/FloatingPointMode.h
+      - llvm/include/llvm/IR/ConstantFPRange.h
+      - llvm/include/llvm/Support/KnownFPClass.h
+      - llvm/lib/Analysis/ValueTrackingFP.cpp
+      - llvm/lib/IR/ConstantFPRange.cpp
+      - llvm/lib/Support/APFloat.cpp
+      - llvm/lib/Support/FloatingPointMode.cpp
+      - llvm/lib/Support/KnownFPClass.cpp
+      - llvm/lib/Transforms/InstCombine/InstCombineSimplifyDemandedFP.cpp
+      - llvm/test/Transforms/Attributor/nofpclass-*
+      - llvm/test/Transforms/InstCombine/*fpclass*
+      - llvm/unittests/ADT/APFloatTest.cpp
+      - llvm/unittests/ADT/FloatingPointMode.cpp
+      - llvm/unittests/CodeGen/GlobalISel/KnownFPClassTest.cpp
+      - llvm/unittests/IR/ConstantFPRangeTest.cpp
+      - llvm/unittests/Support/KnownFPClassTest.cpp
+
 # Skip llvm/test/MC and llvm/unittests/MC, which includes target-specific directories.
 llvm:mc:
   - changed-files:
@@ -897,6 +934,17 @@ llvm:instcombine:
       - llvm/include/llvm/Analysis/InstructionSimplify.h
       - llvm/test/Transforms/InstCombine/**
       - llvm/test/Transforms/InstSimplify/**
+
+llvm::Attributor:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/include/llvm/Transforms/IPO/Attributor.h
+      - llvm/lib/Transforms/IPO/Attributor*.cpp
+      - llvm/lib/Target/AMDGPU/AMDGPUAttributor.cpp
+      - llvm/test/Transforms/Attributor/**
+      - llvm/test/Transforms/OpenMP/attributor_*
+      - llvm/test/CodeGen/AMDGPU/*attributor*
+      - llvm/unittests/Transforms/IPO/Attributor*
 
 llvm:loop-unroll:
   - changed-files:

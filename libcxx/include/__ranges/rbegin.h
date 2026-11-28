@@ -58,21 +58,19 @@ concept __can_reverse =
 struct __fn {
   template <class _Tp>
     requires __member_rbegin<_Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.rbegin()))) {
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.rbegin()))) {
     return _LIBCPP_AUTO_CAST(__t.rbegin());
   }
 
   template <class _Tp>
     requires __unqualified_rbegin<_Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(rbegin(__t)))) {
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(_LIBCPP_AUTO_CAST(rbegin(__t)))) {
     return _LIBCPP_AUTO_CAST(rbegin(__t));
   }
 
   template <class _Tp>
     requires __can_reverse<_Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(ranges::end(__t))) {
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(ranges::end(__t))) {
     return std::make_reverse_iterator(ranges::end(__t));
   }
 
@@ -92,7 +90,7 @@ namespace __crbegin {
 struct __fn {
   template <class _Tp>
     requires is_lvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
       noexcept(noexcept(ranges::rbegin(static_cast<const remove_reference_t<_Tp>&>(__t))))
           -> decltype(ranges::rbegin(static_cast<const remove_reference_t<_Tp>&>(__t))) {
     return ranges::rbegin(static_cast<const remove_reference_t<_Tp>&>(__t));
@@ -100,7 +98,7 @@ struct __fn {
 
   template <class _Tp>
     requires is_rvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
       noexcept(noexcept(ranges::rbegin(static_cast<const _Tp&&>(__t))))
           -> decltype(ranges::rbegin(static_cast<const _Tp&&>(__t))) {
     return ranges::rbegin(static_cast<const _Tp&&>(__t));

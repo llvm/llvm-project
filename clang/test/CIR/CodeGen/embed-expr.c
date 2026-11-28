@@ -13,7 +13,7 @@ void embed_expr_on_scalar_with_constants() {
   };
 }
 
-// CIR-DAG: cir.global "private" constant cir_private @[[EMBED_A:.*]] = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<47> : !s32i]> : !cir.array<!s32i x 3>
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @[[EMBED_A:.*]] = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<47> : !s32i]> : !cir.array<!s32i x 3>
 
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.array<!s32i x 3>>
 // CIR: %[[ARRAY:.*]] = cir.get_global @[[EMBED_A]] : !cir.ptr<!cir.array<!s32i x 3>>

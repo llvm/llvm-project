@@ -1,0 +1,7 @@
+{
+  "string": {
+    "LIBC_CONF_FIND_FIRST_CHARACTER_IMPL": {
+      "value": "word"
+    }
+  }
+}

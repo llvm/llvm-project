@@ -112,6 +112,14 @@ __device__ void test_frexp_mant_f16(_Float16* out, _Float16 a) {
   *out = __builtin_amdgcn_frexp_manth(a);
 }
 
+// CIR-LABEL: @_Z18test_frexp_exp_f16PsDF16_
+// CIR: cir.call_llvm_intrinsic "amdgcn.frexp.exp" {{.*}} : (!cir.f16) -> !s16i
+// LLVM: define{{.*}} void @_Z18test_frexp_exp_f16PsDF16_
+// LLVM: call{{.*}} i16 @llvm.amdgcn.frexp.exp.i16.f16(half %{{.*}})
+__device__ void test_frexp_exp_f16(short* out, _Float16 a) {
+  *out = __builtin_amdgcn_frexp_exph(a);
+}
+
 // CIR-LABEL: @_Z14test_ldexp_f16PDF16_DF16_i
 // CIR: [[TRUNC:%.*]] = cir.cast integral {{.*}} : !s32i -> !s16i
 // CIR: cir.call_llvm_intrinsic "ldexp" {{.*}}, [[TRUNC]] : (!cir.f16, !s16i) -> !cir.f16

@@ -3,12 +3,12 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-passes -Os -std=c99 -o - %s | FileCheck %s
 // CHECK: define{{.*}} i8 @f0(i32 noundef %x) [[NUW:#[0-9]+]]
 // CHECK: define{{.*}} i8 @f1(i32 noundef %x) [[NUW]]
-// CHECK: define{{.*}} void @f2(i8 noundef signext %x) [[NUW]]
-// CHECK: define{{.*}} void @f3(i8 noundef zeroext %x) [[NUW]]
+// CHECK: define{{.*}} void @f2(i8 noundef %x) [[NUW]]
+// CHECK: define{{.*}} void @f3(i8 noundef %x) [[NUW]]
 // CHECK: define{{.*}} i16 @f4(i32 noundef %x) [[NUW]]
 // CHECK: define{{.*}} i16 @f5(i32 noundef %x) [[NUW]]
-// CHECK: define{{.*}} void @f6(i16 noundef signext %x) [[NUW]]
-// CHECK: define{{.*}} void @f7(i16 noundef zeroext %x) [[NUW]]
+// CHECK: define{{.*}} void @f6(i16 noundef %x) [[NUW]]
+// CHECK: define{{.*}} void @f7(i16 noundef %x) [[NUW]]
 
 signed char f0(int x) { return x; }
 

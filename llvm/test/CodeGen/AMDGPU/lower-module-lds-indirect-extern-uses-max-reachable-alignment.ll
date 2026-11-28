@@ -41,7 +41,8 @@ define amdgpu_kernel void @kernel_only() {
 define void @use_shared1() {
 ; CHECK-LABEL: define void @use_shared1() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[DYNAMIC_SHARED1:%.*]] = getelementptr inbounds [5 x ptr addrspace(3)], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[DYNAMIC_SHARED1:%.*]] = getelementptr inbounds [4 x i8], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i64 [[TMP2]]
 ; CHECK-NEXT:    [[DYNAMIC_SHARED11:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[DYNAMIC_SHARED1]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr addrspace(3) [[DYNAMIC_SHARED11]], i32 0, i32 1
 ; CHECK-NEXT:    store i8 0, ptr addrspace(3) [[ARRAYIDX]], align 1
@@ -56,7 +57,8 @@ define void @use_shared2() #0 {
 ; CHECK-LABEL: define void @use_shared2(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[DYNAMIC_SHARED2:%.*]] = getelementptr inbounds [5 x ptr addrspace(3)], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[DYNAMIC_SHARED2:%.*]] = getelementptr inbounds [4 x i8], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i64 [[TMP2]]
 ; CHECK-NEXT:    [[DYNAMIC_SHARED21:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[DYNAMIC_SHARED2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i16], ptr addrspace(3) [[DYNAMIC_SHARED21]], i32 0, i32 3
 ; CHECK-NEXT:    store i16 1, ptr addrspace(3) [[ARRAYIDX]], align 2
@@ -74,7 +76,8 @@ define void @use_shared4() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
 ; CHECK-NEXT:    store i32 4, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4
-; CHECK-NEXT:    [[DYNAMIC_SHARED4:%.*]] = getelementptr inbounds [5 x ptr addrspace(3)], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[DYNAMIC_SHARED4:%.*]] = getelementptr inbounds [4 x i8], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i64 [[TMP2]]
 ; CHECK-NEXT:    [[DYNAMIC_SHARED41:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[DYNAMIC_SHARED4]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i32], ptr addrspace(3) [[DYNAMIC_SHARED41]], i32 0, i32 5
 ; CHECK-NEXT:    store i32 2, ptr addrspace(3) [[ARRAYIDX]], align 4
@@ -90,7 +93,8 @@ define void @use_shared8() #0 {
 ; CHECK-LABEL: define void @use_shared8(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[DYNAMIC_SHARED8:%.*]] = getelementptr inbounds [5 x ptr addrspace(3)], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[DYNAMIC_SHARED8:%.*]] = getelementptr inbounds [4 x i8], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i64 [[TMP2]]
 ; CHECK-NEXT:    [[DYNAMIC_SHARED81:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[DYNAMIC_SHARED8]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i64], ptr addrspace(3) [[DYNAMIC_SHARED81]], i32 0, i32 7
 ; CHECK-NEXT:    store i64 3, ptr addrspace(3) [[ARRAYIDX]], align 8

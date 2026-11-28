@@ -14,8 +14,8 @@ libc_test(
     name = "isalnum_test",
     srcs = ["isalnum_test.cpp"],
     deps = [
-        "//libc:__support_cpp_span",
-        "//libc:isalnum",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/ctype:isalnum",
     ],
 )
 
@@ -23,8 +23,8 @@ libc_test(
     name = "islpha_test",
     srcs = ["isalpha_test.cpp"],
     deps = [
-        "//libc:__support_cpp_span",
-        "//libc:isalpha",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/ctype:isalpha",
     ],
 )
 
@@ -32,7 +32,7 @@ libc_test(
     name = "isascii_test",
     srcs = ["isascii_test.cpp"],
     deps = [
-        "//libc:isascii",
+        "//libc/src/ctype:isascii",
     ],
 )
 
@@ -40,7 +40,7 @@ libc_test(
     name = "isblank_test",
     srcs = ["isblank_test.cpp"],
     deps = [
-        "//libc:isblank",
+        "//libc/src/ctype:isblank",
     ],
 )
 
@@ -48,7 +48,7 @@ libc_test(
     name = "iscntrl_test",
     srcs = ["iscntrl_test.cpp"],
     deps = [
-        "//libc:iscntrl",
+        "//libc/src/ctype:iscntrl",
     ],
 )
 
@@ -56,8 +56,8 @@ libc_test(
     name = "isdigit_test",
     srcs = ["isdigit_test.cpp"],
     deps = [
-        "//libc:__support_cpp_span",
-        "//libc:isdigit",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/ctype:isdigit",
     ],
 )
 
@@ -65,7 +65,7 @@ libc_test(
     name = "isgraph_test",
     srcs = ["isgraph_test.cpp"],
     deps = [
-        "//libc:isgraph",
+        "//libc/src/ctype:isgraph",
     ],
 )
 
@@ -73,8 +73,8 @@ libc_test(
     name = "islower_test",
     srcs = ["islower_test.cpp"],
     deps = [
-        "//libc:__support_cpp_span",
-        "//libc:islower",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/ctype:islower",
     ],
 )
 
@@ -82,7 +82,7 @@ libc_test(
     name = "isprint_test",
     srcs = ["isprint_test.cpp"],
     deps = [
-        "//libc:isprint",
+        "//libc/src/ctype:isprint",
     ],
 )
 
@@ -90,7 +90,7 @@ libc_test(
     name = "ispunct_test",
     srcs = ["ispunct_test.cpp"],
     deps = [
-        "//libc:ispunct",
+        "//libc/src/ctype:ispunct",
     ],
 )
 
@@ -98,7 +98,7 @@ libc_test(
     name = "isspace_test",
     srcs = ["isspace_test.cpp"],
     deps = [
-        "//libc:isspace",
+        "//libc/src/ctype:isspace",
     ],
 )
 
@@ -106,8 +106,8 @@ libc_test(
     name = "isupper_test",
     srcs = ["isupper_test.cpp"],
     deps = [
-        "//libc:__support_cpp_span",
-        "//libc:isupper",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/ctype:isupper",
     ],
 )
 
@@ -115,8 +115,8 @@ libc_test(
     name = "isxdigit_test",
     srcs = ["isxdigit_test.cpp"],
     deps = [
-        "//libc:__support_cpp_span",
-        "//libc:isxdigit",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/ctype:isxdigit",
     ],
 )
 
@@ -124,7 +124,7 @@ libc_test(
     name = "toascii_test",
     srcs = ["toascii_test.cpp"],
     deps = [
-        "//libc:toascii",
+        "//libc/src/ctype:toascii",
     ],
 )
 
@@ -132,8 +132,8 @@ libc_test(
     name = "tolower_test",
     srcs = ["tolower_test.cpp"],
     deps = [
-        "//libc:__support_cpp_span",
-        "//libc:tolower",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/ctype:tolower",
     ],
 )
 
@@ -141,7 +141,7 @@ libc_test(
     name = "toupper_test",
     srcs = ["toupper_test.cpp"],
     deps = [
-        "//libc:__support_cpp_span",
-        "//libc:toupper",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/ctype:toupper",
     ],
 )

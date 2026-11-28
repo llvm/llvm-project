@@ -82,11 +82,38 @@ struct GCNRegPressure {
            NumAGPRs;
   }
 
+  /// Returns the aggregated VGPR pressure for \p NumArchVGPRs ArchVGPRs and
+  /// \p NumAGPRs AGPRs, with AVGPRs already distributed across the banks.
+  static unsigned getBankedUnifiedVGPRNum(unsigned NumArchVGPRs,
+                                          unsigned NumAGPRs) {
+    return NumAGPRs ? getUnifiedVGPRNum(NumArchVGPRs, NumAGPRs, 0)
+                    : NumArchVGPRs;
+  }
+
   /// \returns the ArchVGPR32 pressure, plus the AVGPRS which we assume will be
   /// allocated as VGPR
   unsigned getArchVGPRNum() const { return Value[VGPR] + Value[AVGPR]; }
   /// \returns the AccVGPR32 pressure
   unsigned getAGPRNum() const { return Value[AGPR]; }
+  /// \returns the AVGPR32 pressure
+  unsigned getAVGPRNum() const { return Value[AVGPR]; }
+
+  /// \returns the ArchVGPR32 and AccVGPR32 pressure after distributing the
+  /// bank-agnostic AVGPR pressure across the two banks. Follow the register
+  /// allocator, first charge AVGPRs to the ArchVGPR bank up to \p ArchLimit,
+  /// then to the AccVGPR bank up to \p AccLimit. AVGPRs that fit in neither
+  /// bank are charged to the ArchVGPR bank so that they show up as excess.
+  std::pair<unsigned, unsigned> getBankedVGPRNum(unsigned ArchLimit,
+                                                 unsigned AccLimit) const {
+    unsigned Arch = Value[VGPR];
+    unsigned Acc = Value[AGPR];
+    unsigned Flex = Value[AVGPR];
+    unsigned ToArch = std::min(Flex, Arch < ArchLimit ? ArchLimit - Arch : 0);
+    Flex -= ToArch;
+    unsigned ToAcc = std::min(Flex, Acc < AccLimit ? AccLimit - Acc : 0);
+    Flex -= ToAcc;
+    return {Arch + ToArch + Flex, Acc + ToAcc};
+  }
 
   unsigned getVGPRTuplesWeight() const {
     return std::max(Value[TOTAL_KINDS + VGPR] + Value[TOTAL_KINDS + AVGPR],

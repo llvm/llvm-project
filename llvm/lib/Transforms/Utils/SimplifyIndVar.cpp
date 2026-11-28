@@ -242,9 +242,13 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   auto *NewRHS =
       Rewriter.expandCodeFor(InvariantRHS, IVOperand->getType(), PHTerm);
   LLVM_DEBUG(dbgs() << "INDVARS: Simplified comparison: " << *ICmp << '\n');
-  ICmp->setPredicate(InvariantPredicate);
-  ICmp->setOperand(0, NewLHS);
-  ICmp->setOperand(1, NewRHS);
+  IRBuilder<> Builder(PHTerm);
+  Builder.SetCurrentDebugLocation(DebugLoc::getDropped());
+  Value *NewICmp = Builder.CreateICmp(InvariantPredicate, NewLHS, NewRHS, "",
+                                      ICmp->hasSameSign());
+  NewICmp->takeName(ICmp);
+  ICmp->replaceAllUsesWith(NewICmp);
+  DeadInsts.emplace_back(ICmp);
   RunUnswitching = true;
   return true;
 }
@@ -272,8 +276,8 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
   // If the condition is always true or always false in the given context,
   // replace it with a constant value.
   SmallVector<Instruction *, 4> Users;
-  for (auto *U : ICmp->users())
-    Users.push_back(cast<Instruction>(U));
+  for (Instruction *U : ICmp->users())
+    Users.push_back(U);
   const Instruction *CtxI = findCommonDominator(Users, *DT);
   if (auto Ev = SE->evaluatePredicateAt(Pred, S, X, CtxI)) {
     SE->forgetValue(ICmp);
@@ -558,10 +562,9 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
   // Collect users of the trunc that look like comparisons against invariants.
   // Bail if we find something different.
   SmallVector<ICmpInst *, 4> ICmpUsers;
-  for (auto *U : TI->users()) {
+  for (Instruction *U : TI->users()) {
     // We don't care about users in unreachable blocks.
-    if (isa<Instruction>(U) &&
-        !DT->isReachableFromEntry(cast<Instruction>(U)->getParent()))
+    if (!DT->isReachableFromEntry(U->getParent()))
       continue;
     ICmpInst *ICI = dyn_cast<ICmpInst>(U);
     if (!ICI) return false;
@@ -897,9 +900,7 @@ bool SimplifyIndvar::strengthenRightShift(BinaryOperator *BO,
 void SimplifyIndvar::pushIVUsers(
     Instruction *Def, SmallPtrSet<Instruction *, 16> &Simplified,
     SmallVectorImpl<std::pair<Instruction *, Instruction *>> &SimpleIVUsers) {
-  for (User *U : Def->users()) {
-    Instruction *UI = cast<Instruction>(U);
-
+  for (Instruction *UI : Def->users()) {
     // Avoid infinite or exponential worklist processing.
     // Also ensure unique worklist users.
     // If Def is a LoopPhi, it may not be in the Simplified set, so check for
@@ -2053,11 +2054,9 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
 void WidenIV::pushNarrowIVUsers(Instruction *NarrowDef, Instruction *WideDef) {
   const SCEV *NarrowSCEV = SE->getSCEV(NarrowDef);
   bool NonNegativeDef =
-      SE->isKnownPredicate(ICmpInst::ICMP_SGE, NarrowSCEV,
-                           SE->getZero(NarrowSCEV->getType()));
-  for (User *U : NarrowDef->users()) {
-    Instruction *NarrowUser = cast<Instruction>(U);
-
+      SE->isKnownPredicateAt(ICmpInst::ICMP_SGE, NarrowSCEV,
+                             SE->getZero(NarrowSCEV->getType()), NarrowDef);
+  for (Instruction *NarrowUser : NarrowDef->users()) {
     // Handle data flow merges and bizarre phi cycles.
     if (!Widened.insert(NarrowUser).second)
       continue;

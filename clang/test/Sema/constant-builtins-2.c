@@ -223,21 +223,24 @@ __extension__ _Static_assert(
   __builtin_isless(X, Y) && !__builtin_isless(Y, X) &&                   \
   __builtin_islessequal(X, Y) && !__builtin_islessequal(Y, X) &&         \
   __builtin_islessgreater(X, Y) && __builtin_islessgreater(Y, X) &&      \
-  !__builtin_isunordered(X, Y) && !__builtin_isunordered(Y, X)
+  !__builtin_isunordered(X, Y) && !__builtin_isunordered(Y, X) &&        \
+  !__builtin_iseqsig(X, Y) && !__builtin_iseqsig(Y, X)
 #define EQUAL(X, Y) \
   !__builtin_isgreater(X, Y) && !__builtin_isgreater(Y, X) &&            \
   __builtin_isgreaterequal(X, Y) && __builtin_isgreaterequal(Y, X) &&    \
   !__builtin_isless(X, Y) && !__builtin_isless(Y, X) &&                  \
   __builtin_islessequal(X, Y) && __builtin_islessequal(Y, X) &&          \
   !__builtin_islessgreater(X, Y) && !__builtin_islessgreater(Y, X) &&    \
-  !__builtin_isunordered(X, Y) && !__builtin_isunordered(Y, X)
+  !__builtin_isunordered(X, Y) && !__builtin_isunordered(Y, X) &&        \
+  __builtin_iseqsig(X, Y) && __builtin_iseqsig(Y, X)
 #define UNORDERED(X, Y) \
   !__builtin_isgreater(X, Y) && !__builtin_isgreater(Y, X) &&            \
   !__builtin_isgreaterequal(X, Y) && !__builtin_isgreaterequal(Y, X) &&  \
   !__builtin_isless(X, Y) && !__builtin_isless(Y, X) &&                  \
   !__builtin_islessequal(X, Y) && !__builtin_islessequal(Y, X) &&        \
   !__builtin_islessgreater(X, Y) && !__builtin_islessgreater(Y, X) &&    \
-  __builtin_isunordered(X, Y) && __builtin_isunordered(Y, X)
+  __builtin_isunordered(X, Y) && __builtin_isunordered(Y, X) &&          \
+  !__builtin_iseqsig(X, Y) && !__builtin_iseqsig(Y, X)
 
 __extension__ _Static_assert(
   LESS(0.0, 1.0) && EQUAL(1.0, 1.0) && EQUAL(0.0, -0.0) &&

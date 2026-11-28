@@ -204,3 +204,16 @@ namespace PR10666 {
     h2(s1); h2(s2); h2(s3);
   }
 }
+
+// The friend template definition used to be instantiated in the wrong template
+// context, so foo<U>{} stayed dependent and IR generation crashed.
+namespace GH89400 {
+  template <typename T> struct foo {
+    template <typename U> friend foo<U> make_foo() { return foo<U>{}; }
+  };
+  template <typename U> foo<U> make_foo();
+  // CHECK-LABEL: define void @_ZN7GH894004testEv()
+  // CHECK: call void @_ZN7GH894008make_fooIiEENS_3fooIT_EEv()
+  // CHECK-LABEL: define linkonce_odr void @_ZN7GH894008make_fooIiEENS_3fooIT_EEv()
+  void test() { make_foo<int>(); }
+}

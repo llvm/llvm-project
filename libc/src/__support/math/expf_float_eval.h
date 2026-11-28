@@ -82,7 +82,7 @@ LIBC_INLINE float expf(float x) {
   float kf = fputil::nearest_integer(x * LOG2_E.hi);
   int k = static_cast<int>(kf);
 
-  float u_hi = fputil::multiply_add(x, LOG2_E.hi, -kf);
+  float u_hi = fputil::multiply_sub(x, LOG2_E.hi, kf);
   float u = fputil::multiply_add(x, LOG2_E.lo, u_hi);
 #else  // !LIBC_TARGET_CPU_HAS_FMA_FLOAT
   // Cody-Waite reduction for non-FMA targets:
@@ -98,8 +98,8 @@ LIBC_INLINE float expf(float x) {
   float kf = fputil::nearest_integer(x * LOG2_E);
   int k = static_cast<int>(kf);
 
-  float v_hi = fputil::multiply_add(-kf, LOG_2_HI, x);
-  float v = fputil::multiply_add(-kf, LOG_2_LO, v_hi);
+  float v_hi = fputil::sub_multiply(x, kf, LOG_2_HI);
+  float v = fputil::sub_multiply(v_hi, kf, LOG_2_LO);
 
   // Convert reduced argument to base-2: u = v * log2(e)
   float u = v * LOG2_E;
@@ -161,7 +161,7 @@ LIBC_INLINE float expf(float x) {
   float kf = fputil::nearest_integer(x_safe * LOG2_E);
   int k = static_cast<int>(kf);
 
-  float u_hi = fputil::multiply_add(-kf, LOG_2_HI, x_safe);
+  float u_hi = fputil::sub_multiply(x_safe, kf, LOG_2_HI);
   fputil::FloatFloat u_lo = fputil::quick_mult(-kf, LOG_2_LO);
 
   fputil::FloatFloat u = fputil::exact_add(u_hi, u_lo.hi);

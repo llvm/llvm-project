@@ -112,9 +112,9 @@ define amdgpu_kernel void @sint_to_fp_i1_f64_load(ptr addrspace(1) %out, i1 %in)
 ; CI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_bitcmp1_b32 s2, 0
-; CI-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; CI-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[2:3]
-; CI-NEXT:    v_cvt_f64_i32_e32 v[0:1], v0
+; CI-NEXT:    s_cselect_b32 s2, 0xbff00000, 0
+; CI-NEXT:    v_mov_b32_e32 v0, 0
+; CI-NEXT:    v_mov_b32_e32 v1, s2
 ; CI-NEXT:    v_mov_b32_e32 v3, s1
 ; CI-NEXT:    v_mov_b32_e32 v2, s0
 ; CI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
@@ -129,9 +129,9 @@ define amdgpu_kernel void @sint_to_fp_i1_f64_load(ptr addrspace(1) %out, i1 %in)
 ; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_bitcmp1_b32 s2, 0
-; VI-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; VI-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[2:3]
-; VI-NEXT:    v_cvt_f64_i32_e32 v[0:1], v0
+; VI-NEXT:    s_cselect_b32 s2, 0xbff00000, 0
+; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    v_mov_b32_e32 v1, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
@@ -141,17 +141,41 @@ define amdgpu_kernel void @sint_to_fp_i1_f64_load(ptr addrspace(1) %out, i1 %in)
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_bitcmp1_b32 s2, 0
-; GFX942-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, -1, s[2:3]
-; GFX942-NEXT:    v_cvt_f64_i32_e32 v[0:1], v0
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX942-NEXT:    s_cselect_b32 s2, 0xbff00000, 0
+; GFX942-NEXT:    v_mov_b32_e32 v1, s2
+; GFX942-NEXT:    global_store_dwordx2 v0, v[0:1], s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %fp = sitofp i1 %in to double
   store double %fp, ptr addrspace(1) %out, align 8
   ret void
+}
+
+define double @v_sint_to_fp_i1_f64(i1 %in) {
+; GCN-LABEL: v_sint_to_fp_i1_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
+; GCN-NEXT:    v_mov_b32_e32 v1, 0xbff00000
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-LABEL: v_sint_to_fp_i1_f64:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX942-NEXT:    v_mov_b32_e32 v1, 0xbff00000
+; GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+  %fp = sitofp i1 %in to double
+  ret double %fp
 }
 
 define amdgpu_kernel void @s_sint_to_fp_i64_to_f64(ptr addrspace(1) %out, i64 %in) {
@@ -319,26 +343,17 @@ define amdgpu_kernel void @s_sint_to_fp_i8_to_f64(ptr addrspace(1) %out, i8 %in)
 }
 
 define double @v_sint_to_fp_i8_to_f64(i8 %in) {
-; CI-LABEL: v_sint_to_fp_i8_to_f64:
-; CI:       ; %bb.0:
-; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    v_bfe_i32 v0, v0, 0, 8
-; CI-NEXT:    v_cvt_f64_i32_e32 v[0:1], v0
-; CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-LABEL: v_sint_to_fp_i8_to_f64:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_bfe_i32 v0, v0, 0, 8
-; VI-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; VI-NEXT:    v_cvt_f64_i32_e32 v[0:1], v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: v_sint_to_fp_i8_to_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 8
+; GCN-NEXT:    v_cvt_f64_i32_e32 v[0:1], v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-LABEL: v_sint_to_fp_i8_to_f64:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_bfe_i32 v0, v0, 0, 8
-; GFX942-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX942-NEXT:    v_cvt_f64_i32_e32 v[0:1], v0
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %fp = sitofp i8 %in to double

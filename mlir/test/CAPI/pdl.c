@@ -12,6 +12,7 @@
 #include "mlir-c/Dialect/PDL.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/Rewrite.h"
 
 #include <assert.h>
 #include <inttypes.h>
@@ -325,6 +326,81 @@ void testValueType(MlirContext ctx) {
   fprintf(stderr, "\n\n");
 }
 
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
+static MlirLogicalResult createNullAttr(MlirPatternRewriter rewriter,
+                                        MlirPDLResultList results,
+                                        size_t nValues, MlirPDLValue *values,
+                                        void *userData) {
+  MlirAttribute nullAttr = {NULL};
+  mlirPDLResultListPushBackAttribute(results, nullAttr);
+  return mlirLogicalResultSuccess();
+}
+
+static MlirLogicalResult printNullness(MlirPatternRewriter rewriter,
+                                       MlirPDLResultList results,
+                                       size_t nValues, MlirPDLValue *values,
+                                       void *userData) {
+  fprintf(stderr, "value: %d type: %d operation: %d attribute: %d\n",
+          mlirValueIsNull(mlirPDLValueAsValue(values[0])),
+          mlirTypeIsNull(mlirPDLValueAsType(values[0])),
+          mlirOperationIsNull(mlirPDLValueAsOperation(values[0])),
+          mlirAttributeIsNull(mlirPDLValueAsAttribute(values[0])));
+  return mlirLogicalResultSuccess();
+}
+
+// CHECK-LABEL: testNullPDLValueArg
+void testNullPDLValueArg(MlirContext ctx) {
+  fprintf(stderr, "testNullPDLValueArg\n");
+
+  const char *patternString =
+      "pdl.pattern : benefit(1) {\n"
+      "  %root = pdl.operation \"test.op\"\n"
+      "  pdl.rewrite %root {\n"
+      "    %attr = pdl.apply_native_rewrite \"create_null_attr\" "
+      ": !pdl.attribute\n"
+      "    pdl.apply_native_rewrite \"print_nullness\"(%attr : "
+      "!pdl.attribute)\n"
+      "    pdl.erase %root\n"
+      "  }\n"
+      "}\n";
+  MlirModule patternModule =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(patternString));
+  assert(!mlirModuleIsNull(patternModule) && "couldn't parse pattern module");
+
+  MlirPDLPatternModule pdlModule =
+      mlirPDLPatternModuleFromModule(patternModule);
+  mlirPDLPatternModuleRegisterRewriteFunction(
+      pdlModule, mlirStringRefCreateFromCString("create_null_attr"),
+      createNullAttr, NULL);
+  mlirPDLPatternModuleRegisterRewriteFunction(
+      pdlModule, mlirStringRefCreateFromCString("print_nullness"),
+      printNullness, NULL);
+  MlirRewritePatternSet patternSet =
+      mlirRewritePatternSetFromPDLPatternModule(pdlModule);
+  mlirPDLPatternModuleDestroy(pdlModule);
+  MlirFrozenRewritePatternSet patterns = mlirFreezeRewritePattern(patternSet);
+  mlirRewritePatternSetDestroy(patternSet);
+
+  MlirModule module = mlirModuleCreateParse(
+      ctx, mlirStringRefCreateFromCString("\"test.op\"() : () -> ()\n"));
+  assert(!mlirModuleIsNull(module) && "couldn't parse payload module");
+
+  // A null attribute is absent under every accessor.
+  // CHECK: value: 1 type: 1 operation: 1 attribute: 1
+  MlirGreedyRewriteDriverConfig config = mlirGreedyRewriteDriverConfigCreate();
+  mlirApplyPatternsAndFoldGreedily(module, patterns, config);
+  mlirGreedyRewriteDriverConfigDestroy(config);
+
+  // The rewrite erased the root.
+  // CHECK: module {
+  // CHECK-NEXT: }
+  mlirOperationDump(mlirModuleGetOperation(module));
+
+  mlirModuleDestroy(module);
+  mlirFrozenRewritePatternSetDestroy(patterns);
+}
+#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirDialectHandleRegisterDialect(mlirGetDialectHandle__pdl__(), ctx);
@@ -333,6 +409,10 @@ int main(void) {
   testRangeType(ctx);
   testTypeType(ctx);
   testValueType(ctx);
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
+  mlirContextSetAllowUnregisteredDialects(ctx, true);
+  testNullPDLValueArg(ctx);
+#endif
   mlirContextDestroy(ctx);
   return EXIT_SUCCESS;
 }

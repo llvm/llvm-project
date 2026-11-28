@@ -1044,4 +1044,3 @@ body:             |
     %6:vgpr_32 = IMAGE_SAMPLE_O_V1_V3_gfx12 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4, addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_O_V3_V3_gfx12 %5:vgpr_32, %5:vgpr_32, %5:vgpr_32, %3:sgpr_256, %2:sgpr_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 12, align 16, addrspace 4)
 ...
----

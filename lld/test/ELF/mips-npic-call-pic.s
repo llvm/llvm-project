@@ -34,6 +34,13 @@
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t-r6.exe \
 # RUN:   | FileCheck --check-prefixes=CHECK,R6 %s
 
+# RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux -mcpu=mips32r6 \
+# RUN:   %s --defsym BALC=1 -o %t-npic-r6-balc.o
+# RUN: ld.lld %t-npic-r6-balc.o %t-pic-r6.o %t-sto-pic-r6.o \
+# RUN:        -script %t.script -o %t-r6-balc.exe
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t-r6-balc.exe \
+# RUN:   | FileCheck --check-prefix=BALC %s
+
 # CHECK:     Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: <__start>:
@@ -93,12 +100,70 @@
 # CHECK: <foo2>:
 # CHECK-NEXT:    201a0:       nop
 
+# BALC:      Disassembly of section .text:
+# BALC-EMPTY:
+# BALC-NEXT: <__start>:
+# BALC-NEXT:    20100:       balc    {{.*}} <__LA25Thunk_foo1a>
+# BALC-NEXT:                 balc    {{.*}} <__LA25Thunk_foo2>
+# BALC-NEXT:                 balc    {{.*}} <__LA25Thunk_foo1b>
+# BALC-NEXT:                 balc    {{.*}} <__LA25Thunk_foo2>
+# BALC-NEXT:                 balc    {{.*}} <__LA25Thunk_fpic>
+# BALC-NEXT:                 balc    {{.*}} <fnpic>
+
+# BALC: <__LA25Thunk_fpic>:
+# BALC-NEXT:    20120:       aui     $25, $zero, 2
+# BALC-NEXT:                 j       {{.*}} <fpic>
+# BALC-NEXT:                 addiu   $25, $25, 304
+# BALC-NEXT:                 nop
+
+# BALC: <fpic>:
+# BALC-NEXT:    20130:       nop
+
+# BALC: <fnpic>:
+# BALC-NEXT:    20140:       nop
+
+# BALC: <__LA25Thunk_foo1a>:
+# BALC-NEXT:    20144:       aui     $25, $zero, 2
+# BALC-NEXT:                 j       {{.*}} <foo1a>
+# BALC-NEXT:                 addiu   $25, $25, 368
+# BALC-NEXT:                 nop
+
+# BALC: <__LA25Thunk_foo1b>:
+# BALC-NEXT:    20154:       aui     $25, $zero, 2
+# BALC-NEXT:                 j       {{.*}} <foo1b>
+# BALC-NEXT:                 addiu   $25, $25, 372
+# BALC-NEXT:                 nop
+
+# BALC: <foo1a>:
+# BALC-NEXT:    20170:       nop
+
+# BALC: <foo1b>:
+# BALC-NEXT:    20174:       nop
+
+# BALC: <__LA25Thunk_foo2>:
+# BALC-NEXT:    20178:       aui     $25, $zero, 2
+# BALC-NEXT:                 j       {{.*}} <foo2>
+# BALC-NEXT:                 addiu   $25, $25, 400
+# BALC-NEXT:                 nop
+
+# BALC: <foo2>:
+# BALC-NEXT:    20190:       nop
+
   .text
   .globl __start
 __start:
+.ifdef BALC
+  balc foo1a
+  balc foo2
+  balc foo1b
+  balc foo2
+  balc fpic
+  balc fnpic
+.else
   jal foo1a
   jal foo2
   jal foo1b
   jal foo2
   jal fpic
   jal fnpic
+.endif

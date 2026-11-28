@@ -47,6 +47,18 @@ define <vscale x 12 x i32> @sdiv_i32(<vscale x 12 x i32> %a, <vscale x 12 x i32>
   ret <vscale x 12 x i32> %div
 }
 
+define <vscale x 12 x i32> @sdiv_i32_imm(<vscale x 12 x i32> %a) #0 {
+; CHECK-LABEL: sdiv_i32_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    asrd z0.s, p0/m, z0.s, #1
+; CHECK-NEXT:    asrd z1.s, p0/m, z1.s, #1
+; CHECK-NEXT:    asrd z2.s, p0/m, z2.s, #1
+; CHECK-NEXT:    ret
+  %div = sdiv <vscale x 12 x i32> %a, splat(i32 2)
+  ret <vscale x 12 x i32> %div
+}
+
 define <vscale x 6 x i64> @sdiv_i64(<vscale x 6 x i64> %a, <vscale x 6 x i64> %b) #0 {
 ; CHECK-LABEL: sdiv_i64:
 ; CHECK:       // %bb.0:

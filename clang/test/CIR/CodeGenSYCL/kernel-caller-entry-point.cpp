@@ -87,11 +87,13 @@ void test() {
 // CIR:         cir.call @_ZNK1KclEv
 // CIR:         cir.return
 
-// LLVM-OGCG-LABEL: define {{.*}}spir_kernel void @_ZTS2KN
+// The kernel object is copied byval.
+// LLVM-OGCG-LABEL: define {{.*}}spir_kernel void @_ZTS2KN(ptr noundef byval(%struct.K) align 1 %{{[^,)]+}})
 // LLVM:              call {{.*}}void @_ZNK1KclEv
 // OGCG:              call {{.*}}spir_func void @_ZNK1KclEv
 // LLVM-OGCG:         ret void
 // LLVM-OGCG-NOT:   define {{.*}}@_Z18kernel_single_task
+// LLVM-OGCG-LABEL: define {{.*}}spir_kernel void @_ZTS8MemberKN(ptr noundef byval(%struct.K) align 1 %{{[^,)]+}})
 
 // On ELF, the kernel caller entry point definition is dso_local in CIR,
 // CIR-lowered LLVM IR, and classic CodeGen alike.

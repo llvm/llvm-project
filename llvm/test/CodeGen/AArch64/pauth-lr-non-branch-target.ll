@@ -116,8 +116,8 @@ define void @slh_pauth_lr() #0 {
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    pacnbiasppc
 ; CHECK-NEXT:    .cfi_set_ra_state 2, .Ltmp2
-; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    autiasppc .Ltmp2
+; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    and x0, x0, x16
 ; CHECK-NEXT:    mov sp, x0
 ; CHECK-NEXT:    ret

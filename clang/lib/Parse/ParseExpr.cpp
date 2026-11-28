@@ -1034,10 +1034,11 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
       Validator.WantRemainingKeywords = Tok.isNot(tok::r_paren);
     }
     Name.setIdentifier(&II, ILoc);
-    Res = Actions.ActOnIdExpression(getCurScope(), ScopeSpec, TemplateKWLoc,
-                                    Name, Tok.is(tok::l_paren),
-                                    isAddressOfOperand, &Validator,
-                                    /*IsInlineAsmIdentifier=*/false);
+    Res =
+        Actions.ActOnIdExpression(getCurScope(), ScopeSpec, TemplateKWLoc, Name,
+                                  Tok.isOneOf(tok::l_paren, tok::lesslessless),
+                                  isAddressOfOperand, &Validator,
+                                  /*IsInlineAsmIdentifier=*/false);
     Res = tryParseCXXPackIndexingExpression(Res);
     if (!Res.isInvalid() && Tok.is(tok::less))
       checkPotentialAngleBracket(Res);
@@ -3000,7 +3001,8 @@ ExprResult Parser::ParseUnevaluatedStringLiteralExpression() {
 }
 
 ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
-                                                bool Unevaluated) {
+                                                bool Unevaluated,
+                                                ConversionAction CA) {
   assert(tokenIsLikeStringLiteral(Tok, getLangOpts()) &&
          "Not a string-literal-like token!");
 
@@ -3020,9 +3022,8 @@ ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
   }
 
   // Pass the set of string tokens, ready for concatenation, to the actions.
-  return Actions.ActOnStringLiteral(StringToks,
-                                    AllowUserDefinedLiteral ? getCurScope()
-                                                            : nullptr);
+  return Actions.ActOnStringLiteral(
+      StringToks, AllowUserDefinedLiteral ? getCurScope() : nullptr, CA);
 }
 
 ExprResult Parser::ParseGenericSelectionExpression() {

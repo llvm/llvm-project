@@ -246,6 +246,30 @@ void operator_and() {
   }
 }
 
+bool sideEffect();
+__attribute__((pure)) bool noSideEffect();
+
+void side_effects(volatile bool v) {
+  bool r1 = sideEffect() || true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: {{.*}} to boolean operator
+  // CHECK-MESSAGES: :[[@LINE-2]]:13: note: left operand may have side effects and cannot be removed
+  // CHECK-FIXES: bool r1 = sideEffect() || true;
+  bool r2 = sideEffect() && false;
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: {{.*}} to boolean operator
+  // CHECK-MESSAGES: :[[@LINE-2]]:13: note: left operand may have side effects and cannot be removed
+  // CHECK-FIXES: bool r2 = sideEffect() && false;
+  bool r3 = v || true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: {{.*}} to boolean operator
+  // CHECK-MESSAGES: :[[@LINE-2]]:13: note: left operand may have side effects and cannot be removed
+  // CHECK-FIXES: bool r3 = v || true;
+  bool r4 = true || sideEffect();
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} to boolean operator
+  // CHECK-FIXES: bool r4 = true;
+  bool r5 = noSideEffect() || true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: {{.*}} to boolean operator
+  // CHECK-FIXES: bool r5 = true;
+}
+
 void ternary_operator() {
   int i = 0;
   bool bd = (i > 20) ? true : false;

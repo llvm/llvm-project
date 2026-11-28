@@ -22,16 +22,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Interfaces/AlignmentAttrInterface.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/DestinationStyleOpInterface.h"
-#include "mlir/Interfaces/IndexingMapOpInterface.h"
-#include "mlir/Interfaces/InferIntRangeInterface.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/MemOpInterfaces.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
-#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Alignment.h"
@@ -82,6 +73,11 @@ struct VectorDim {
 BroadcastableToResult
 isBroadcastableTo(Type srcType, VectorType dstVectorType,
                   std::pair<VectorDim, VectorDim> *mismatchingDims = nullptr);
+
+/// Returns true if `memRefTy` has a valid layout for a vector.load/store of
+/// `vecTy`: the most minor memref dim must have unit stride, unless `vecTy`
+/// is a non-scalable vector with a single element.
+bool isValidLoadStoreMemRefLayout(VectorType vecTy, MemRefType memRefTy);
 
 /// Collect a set of vector-to-vector canonicalization patterns.
 void populateVectorToVectorCanonicalizationPatterns(RewritePatternSet &patterns,

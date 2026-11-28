@@ -4,7 +4,7 @@
 ; RUN: opt -thinlto-bc %t/c.ll -thin-link-bitcode-file=%t1.thinlink.bc -o %t3.bc
 
 ; If the prevailing weak symbol is defined in a native file, the IR copies should be dead and propagation should not occur
-; RUN: llvm-lto2 run -disable-thinlto-funcattrs=0 %t1.bc %t2.bc %t3.bc -o %t.o \
+; RUN: llvm-lto2 run -thinlto-funcattrs %t1.bc %t2.bc %t3.bc -o %t.o \
 ; RUN:               -r %t1.bc,caller,px -r %t1.bc,callee,lx \
 ; RUN:               -r %t2.bc,callee,x \
 ; RUN:               -r %t3.bc,callee,x \
@@ -14,7 +14,7 @@
 
 ; If the prevailing weak symbol is in an IR file, it should be the one used in the final binary and thus propagation
 ; should be based off of that copy
-; RUN: llvm-lto2 run -O3 -disable-thinlto-funcattrs=0 %t1.bc %t2.bc %t3.bc -o %t.2.o \
+; RUN: llvm-lto2 run -O3 -thinlto-funcattrs %t1.bc %t2.bc %t3.bc -o %t.2.o \
 ; RUN:               -r %t1.bc,caller,px -r %t1.bc,callee,lx \
 ; RUN:               -r %t2.bc,callee,px \
 ; RUN:               -r %t3.bc,callee,x \

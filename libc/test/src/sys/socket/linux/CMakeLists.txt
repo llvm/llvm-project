@@ -49,7 +49,7 @@ add_libc_test(
     libc.hdr.types.struct_sockaddr_in
     libc.hdr.types.struct_sockaddr_in6
     libc.hdr.types.struct_sockaddr_un
-    libc.src.arpa.inet.htonl
+    libc.src.__support.net.byte_order
     libc.src.sys.socket.socket
     libc.src.sys.socket.bind
     libc.src.sys.socket.getsockname
@@ -123,6 +123,7 @@ add_libc_test(
     libc.hdr.sys_socket_macros
     libc.hdr.types.socklen_t
     libc.hdr.types.struct_linger
+    libc.hdr.types.struct_tcp_info
     libc.hdr.time_macros
     libc.hdr.types.struct_timespec
     libc.hdr.types.struct_timeval

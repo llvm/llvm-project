@@ -203,6 +203,10 @@ public:
   bool isZeroInitializable(clang::QualType ty);
   bool isZeroInitializable(const RecordDecl *rd);
 
+  /// Check if the pointer type can be zero-initialized (in the C++ sense)
+  /// with an LLVM zeroinitializer.
+  bool isPointerZeroInitializable(clang::QualType t);
+
   const CIRGenFunctionInfo &arrangeCXXConstructorCall(
       const CallArgList &args, const clang::CXXConstructorDecl *d,
       clang::CXXCtorType ctorKind, unsigned extraPrefixArgs,

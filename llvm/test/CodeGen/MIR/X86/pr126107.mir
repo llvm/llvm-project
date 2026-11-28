@@ -16,3 +16,4 @@ body:             |
        renamable $ymm6 = COPY killed renamable $ymm7
        CALL64r killed renamable $rax, csr_64_mostregs
        renamable $ymm6 = VPADDWZ256rr $ymm6, $ymm6
+...

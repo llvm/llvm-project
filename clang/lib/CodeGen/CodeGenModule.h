@@ -101,6 +101,7 @@ class CGOpenMPRuntime;
 class CGCUDARuntime;
 class CGHLSLRuntime;
 class CGFunctionInfo;
+struct CodeGenCLOptions;
 class CoverageMappingModuleGen;
 class QualTypeMapper;
 class TargetCodeGenInfo;
@@ -352,6 +353,7 @@ public:
   typedef std::vector<Structor> CtorList;
 
 private:
+  const CodeGenCLOptions &CLOpts;
   ASTContext &Context;
   const LangOptions &LangOpts;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS; // Only used for debug info.
@@ -362,6 +364,10 @@ private:
   llvm::Module &TheModule;
   DiagnosticsEngine &Diags;
   const TargetInfo &Target;
+  /// Lazily cached target features for functions without a target attribute.
+  /// An invalid attribute means that the defaults were computed but no
+  /// target-features attribute needs to be emitted.
+  std::optional<llvm::Attribute> DefaultTargetFeatures;
   std::unique_ptr<CGCXXABI> ABI;
   llvm::LLVMContext &VMContext;
   std::string ModuleNameHash;
@@ -704,6 +710,7 @@ private:
   typedef llvm::DenseMap<QualType, llvm::Metadata *> MetadataTypeMap;
   MetadataTypeMap MetadataIdMap;
   MetadataTypeMap VirtualMetadataIdMap;
+  MetadataTypeMap CfiICallMetadataIdMap;
   MetadataTypeMap GeneralizedMetadataIdMap;
   MetadataTypeMap CallGraphMetadataIdMap;
 
@@ -903,6 +910,7 @@ public:
     const { return HeaderSearchOpts; }
   const PreprocessorOptions &getPreprocessorOpts()
     const { return PreprocessorOpts; }
+  const CodeGenCLOptions &getCLOpts() const { return CLOpts; }
   const CodeGenOptions &getCodeGenOpts() const { return CodeGenOpts; }
   llvm::Module &getModule() const { return TheModule; }
   DiagnosticsEngine &getDiags() const { return Diags; }
@@ -1749,8 +1757,10 @@ public:
   /// Generate a KCFI type identifier for T.
   llvm::ConstantInt *CreateKCFITypeId(QualType T, StringRef Salt);
 
-  /// Create a metadata identifier for the given function type.
-  llvm::Metadata *CreateMetadataIdentifierForFnType(QualType T);
+  /// Create a metadata identifier for the given function type for CFI icall.
+  llvm::Metadata *CreateMetadataIdentifierForCFIFnType(QualType T,
+                                                       bool GeneralizePointers);
+  llvm::Metadata *CreateMetadataIdentifierForCFIFnType(QualType T);
 
   /// Create a metadata identifier for the given type. This may either be an
   /// MDString (for external identifiers) or a distinct unnamed MDNode (for
@@ -1776,11 +1786,6 @@ public:
   /// Create a metadata identifier that is intended to be used to check virtual
   /// calls via a member function pointer.
   llvm::Metadata *CreateMetadataIdentifierForVirtualMemPtrType(QualType T);
-
-  /// Create a metadata identifier for the generalization of the given type.
-  /// This may either be an MDString (for external identifiers) or a distinct
-  /// unnamed MDNode (for internal identifiers).
-  llvm::Metadata *CreateMetadataIdentifierGeneralized(QualType T);
 
   /// Create and attach type metadata to the given function.
   void createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
@@ -2219,7 +2224,8 @@ private:
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
                                                StringRef Suffix,
-                                               bool ForceString = false);
+                                               bool ForceString = false,
+                                               bool NormalizeIntegers = false);
 
   /// Emit deactivation symbols for any PFP fields whose offset is taken with
   /// offsetof.

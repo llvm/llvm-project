@@ -16,6 +16,7 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/big_int.h"
 #include "src/__support/common.h"
 #include "src/__support/frac128.h"
@@ -150,10 +151,7 @@ LIBC_INLINE_VAR constexpr ExpBase192 LOG2_10_192 = {
 // idx in [0, 15] and u in [0, 2^-4) (lsb = 2^-128).
 LIBC_INLINE Frac128 exp2_eval_frac128(unsigned idx, const Frac128 &u) {
   // p ~ (2^u - 1) / u
-  Frac128 p = EXP2_POLY_128[14]; // lsb = 2^-128
-  LIBC_LOOP_NOUNROLL
-  for (int i = 13; i >= 0; --i)
-    p = p * u + EXP2_POLY_128[i]; // lsb = 2^-128
+  Frac128 p = fputil::loop_polyeval(u, EXP2_POLY_128); // lsb = 2^-128
 
   // Reconstruction:
   //   u * p ~ 2^u - 1           (lsb = 2^-128)

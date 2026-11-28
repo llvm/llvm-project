@@ -96,3 +96,9 @@ TEST_F(TestRtsanContext, BypassedStateIsStatefullyTracked) {
   context.BypassPush(); // depth 1
   ExpectBypassed(true);
 }
+
+TEST_F(TestRtsanContext, ContextOfAThreadIsAlignedToACacheLine) {
+  const auto addr = reinterpret_cast<uintptr_t>(&GetContextForThisThread());
+  EXPECT_THAT(addr % SANITIZER_CACHE_LINE_SIZE, Eq(0u));
+  EXPECT_THAT(sizeof(Context) % SANITIZER_CACHE_LINE_SIZE, Eq(0u));
+}

@@ -75,8 +75,7 @@ struct UserArea {
 #include "Register/Arch/RegisterInfos_i386.h"
 #undef DECLARE_REGISTER_INFOS_I386_STRUCT
 
-RegisterInfoNetBSD_i386::RegisterInfoNetBSD_i386(
-    const ArchSpec &target_arch)
+RegisterInfoNetBSD_i386::RegisterInfoNetBSD_i386(const ArchSpec &target_arch)
     : RegisterInfoInterface(target_arch) {}
 
 size_t RegisterInfoNetBSD_i386::GetGPRSize() const { return sizeof(GPR); }

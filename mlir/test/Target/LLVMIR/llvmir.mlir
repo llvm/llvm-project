@@ -1252,6 +1252,9 @@ llvm.func @zeroextattr(%arg0: i1 {llvm.zeroext}) {
 // CHECK-LABEL: declare void @zeroextattr_decl(i1 zeroext)
 llvm.func @zeroextattr_decl(i1 {llvm.zeroext})
 
+// CHECK-LABEL: declare void @noextattr_decl(i32 noext)
+llvm.func @noextattr_decl(i32 {llvm.noext})
+
 // CHECK-LABEL: declare void @alignattr_decl(ptr align 64)
 llvm.func @alignattr_decl(!llvm.ptr {llvm.align = 64 : i64})
 
@@ -1340,6 +1343,9 @@ llvm.func @signextattr_ret_decl() -> (i1 {llvm.signext})
 
 // CHECK-LABEL: declare zeroext i1 @zeroextattr_ret_decl()
 llvm.func @zeroextattr_ret_decl() -> (i1 {llvm.zeroext})
+
+// CHECK-LABEL: declare noext i32 @noextattr_ret_decl()
+llvm.func @noextattr_ret_decl() -> (i32 {llvm.noext})
 
 // CHECK-LABEL: declare nonnull ptr @nonnullattr_ret_decl()
 llvm.func @nonnullattr_ret_decl() -> (!llvm.ptr {llvm.nonnull})
@@ -1926,7 +1932,7 @@ llvm.func @callFenceInst() {
 
 // CHECK-LABEL: @passthrough
 // CHECK: #[[ATTR_GROUP:[0-9]*]]
-llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"], ["llvm.assume", "omp_no_openmp"]]} {
+llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_pointer_is_valid", ["foo", "bar"], ["llvm.assume", "omp_no_openmp,omp_no_parallelism,absent(barrier),absent(critical),absent(parallel)"]]} {
   llvm.return
 }
 
@@ -1934,7 +1940,7 @@ llvm.func @passthrough() attributes {passthrough = [["alignstack", "4"], "null_p
 // CHECK-DAG: alignstack=4
 // CHECK-DAG: null_pointer_is_valid
 // CHECK-DAG: "foo"="bar"
-// CHECK-DAG: "llvm.assume"="omp_no_openmp"
+// CHECK-DAG: "llvm.assume"="omp_no_openmp,omp_no_parallelism,absent(barrier),absent(critical),absent(parallel)"
 
 // -----
 
@@ -2824,6 +2830,17 @@ llvm.func @willreturn() attributes { will_return } {
 
 // -----
 
+// CHECK-LABEL: @strictfp_function
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @strictfp_function() attributes { strictfp } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: strictfp
+
+// -----
+
 // CHECK-LABEL: @noreturn
 // CHECK-SAME: #[[ATTRS:[0-9]+]]
 llvm.func @noreturn() attributes { noreturn } {
@@ -3325,6 +3342,46 @@ llvm.func @willreturn_call() {
 
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: willreturn
+
+// -----
+
+llvm.func @f()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @strictfp_calls
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+// CHECK: call void asm sideeffect "", ""() #[[ATTRS]]
+// CHECK: call void @llvm.donothing() #[[ATTRS]]
+// CHECK: invoke void @f() #[[ATTRS]]
+llvm.func @strictfp_calls() attributes {personality = @__gxx_personality_v0, strictfp} {
+  llvm.call @f() {strictfp} : () -> ()
+  llvm.inline_asm has_side_effects strictfp "", "" : () -> ()
+  llvm.call_intrinsic "llvm.donothing"() {strictfp} : () -> ()
+  llvm.invoke @f() to ^bb2 unwind ^bb1 {strictfp} : () -> ()
+^bb1:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// CHECK: attributes #[[ATTRS]] = { strictfp }
+
+// -----
+
+llvm.func @f()
+
+// The call-site attribute does not depend on the enclosing function.
+// CHECK-LABEL: @strictfp_call_in_plain_function
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+// CHECK: call void @f(){{$}}
+llvm.func @strictfp_call_in_plain_function() {
+  llvm.call @f() {strictfp} : () -> ()
+  llvm.call @f() : () -> ()
+  llvm.return
+}
+
+// CHECK: attributes #[[ATTRS]] = { strictfp }
 
 // -----
 

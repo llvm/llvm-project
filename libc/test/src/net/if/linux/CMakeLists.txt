@@ -33,20 +33,15 @@ add_libc_test(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.net_if_macros
-    libc.hdr.types.socklen_t
-    libc.hdr.types.ssize_t
     libc.hdr.types.struct_if_nameindex
-    libc.src.__support.CPP.optional
     libc.src.__support.CPP.span
-    libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.tuple
     libc.src.__support.error_or
-    libc.src.__support.fixedvector
+    libc.src.__support.net.linux.netlink
     libc.src.net.if.if_freenameindex
     libc.src.net.if.if_nameindex
     libc.src.net.if.linux.if_nameindex_impl
-    libc.src.string.memory_utils.inline_memcpy
-    libc.src.string.memory_utils.inline_memset
+    libc.test.src.__support.net.linux.netlink_test_support
     libc.test.UnitTest.ErrnoCheckingTest
 )

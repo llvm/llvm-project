@@ -499,8 +499,8 @@ define void @multi_exit(ptr %dst, ptr %src.1, ptr %src.2, i64 %A, i64 %B) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i64, ptr [[SRC_1]], i32 [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i64, ptr [[TMP25]], i64 2
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP26]], align 8, !alias.scope [[META9:![0-9]+]]
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i8, ptr [[TMP25]], i64 16
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP32]], align 8, !alias.scope [[META9:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP31]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
@@ -994,9 +994,7 @@ define void @replicating_sdiv_operand_profitable_to_scalarize(i32 %x) #3 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = or <16 x i32> [[TMP0]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x i32> @llvm.masked.sdiv.v16i32(<16 x i32> [[TMP0]], <16 x i32> [[TMP4]], <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>)
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <16 x i32> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true>, i1 false)
-; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <16 x i32> [[TMP6]], i64 [[LAST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <16 x i32> [[TMP6]], i64 12
 ; CHECK-NEXT:    br label %[[EXIT1:.*]]
 ; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
@@ -1103,6 +1101,78 @@ loop:
 
 exit:
   ret void
+}
+
+; %off is forced scalar by the legacy cost model, but VPlan narrows it.
+define i64 @forced_scalar_narrowed_to_single_scalar(ptr %dst) {
+; CHECK-LABEL: define i64 @forced_scalar_narrowed_to_single_scalar(
+; CHECK-SAME: ptr [[DST:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[ITER_CHECK:.*:]]
+; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 32
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 64
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 96
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <32 x i8>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <32 x i8>, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <32 x i8>, ptr [[TMP10]], align 1
+; CHECK-NEXT:    [[TMP11:%.*]] = add <32 x i8> [[WIDE_LOAD]], splat (i8 1)
+; CHECK-NEXT:    [[TMP12:%.*]] = add <32 x i8> [[WIDE_LOAD1]], splat (i8 1)
+; CHECK-NEXT:    [[TMP13:%.*]] = add <32 x i8> [[WIDE_LOAD4]], splat (i8 1)
+; CHECK-NEXT:    [[TMP8:%.*]] = add <32 x i8> [[WIDE_LOAD3]], splat (i8 1)
+; CHECK-NEXT:    store <32 x i8> [[TMP11]], ptr [[TMP1]], align 1
+; CHECK-NEXT:    store <32 x i8> [[TMP12]], ptr [[TMP2]], align 1
+; CHECK-NEXT:    store <32 x i8> [[TMP13]], ptr [[TMP3]], align 1
+; CHECK-NEXT:    store <32 x i8> [[TMP8]], ptr [[TMP10]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 128
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 896
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br i1 false, [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
+; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF29:![0-9]+]]
+; CHECK:       [[VEC_EPILOG_PH]]:
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 896, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
+; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT3:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX1]], 7
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP4]]
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <8 x i8>, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add <8 x i8> [[WIDE_LOAD2]], splat (i8 1)
+; CHECK-NEXT:    store <8 x i8> [[TMP6]], ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX1]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 1000
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
+; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br i1 true, [[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %off = add i64 %iv, 7
+  %gep = getelementptr inbounds i8, ptr %dst, i64 %off
+  %l = load i8, ptr %gep, align 1
+  %add = add i8 %l, 1
+  store i8 %add, ptr %gep, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1000
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %off.lcssa = phi i64 [ %off, %loop ]
+  ret i64 %off.lcssa
 }
 
 

@@ -2,7 +2,6 @@
 ---
 name:            test_large_merge
 legalized:       true
-registers:
 body: |
   bb.0.entry:
     liveins: $x0, $x1, $x2

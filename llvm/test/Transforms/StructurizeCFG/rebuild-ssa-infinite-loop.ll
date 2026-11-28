@@ -1,4 +1,4 @@
-; RUN: opt -o /dev/null -structurizecfg %s
+; RUN: opt -disable-output -structurizecfg %s
 
 ; The following function caused an infinite loop inside the structurizer's
 ; rebuildSSA routine, where we were iterating over an instruction's uses while

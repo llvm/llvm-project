@@ -1,4 +1,8 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2 < %s | FileCheck %s
+; RUN: llc -mattr=+sme -force-streaming < %s | FileCheck %s
+; RUN: llc -mattr=+sve2,+sme -force-streaming-compatible < %s | FileCheck %s
+; RUN: llc -mattr=+sve2 < %s | FileCheck %s
+
+target triple = "aarch64"
 
 ;
 ; SMLALB

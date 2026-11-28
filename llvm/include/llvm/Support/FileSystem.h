@@ -905,6 +905,10 @@ public:
   LLVM_ABI static Expected<TempFile>
   create(const Twine &Model, unsigned Mode = all_read | all_write,
          OpenFlags ExtraFlags = OF_None);
+  /// Same as create(), but reports errors as std::error_code.
+  LLVM_ABI static ErrorOr<TempFile>
+  createWithErrorCode(const Twine &Model, unsigned Mode = all_read | all_write,
+                      OpenFlags ExtraFlags = OF_None);
   LLVM_ABI TempFile(TempFile &&Other);
   LLVM_ABI TempFile &operator=(TempFile &&Other);
 
@@ -921,6 +925,8 @@ public:
 
   // Keep this with the given name.
   LLVM_ABI Error keep(const Twine &Name);
+  /// Same as keep(const Twine &), but reports errors as std::error_code.
+  LLVM_ABI std::error_code keepWithErrorCode(const Twine &Name);
 
   // Keep this with the temporary name.
   LLVM_ABI Error keep();
@@ -1249,6 +1255,15 @@ LLVM_ABI std::error_code
 tryLockFile(int FD,
             std::chrono::milliseconds Timeout = std::chrono::milliseconds(0),
             LockKind Kind = LockKind::Exclusive);
+
+/// Get the real path of an open file from its handle.
+///
+/// @param Handle      The descriptor representing the file.
+/// @param RealPath    RealPath is stored in this location on success.
+/// @returns success if the real path is successfully obtained,
+///          errc::not_supported if the platform cannot get it from a handle.
+LLVM_ABI std::error_code getRealPathFromHandle(file_t Handle,
+                                               SmallVectorImpl<char> &RealPath);
 
 /// Lock the file.
 ///

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/Inliner.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -51,7 +52,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
@@ -68,88 +68,6 @@ using namespace llvm;
 
 STATISTIC(NumInlined, "Number of functions inlined");
 STATISTIC(NumDeleted, "Number of functions deleted because all callers found");
-
-static cl::opt<int> IntraSCCCostMultiplier(
-    "intra-scc-cost-multiplier", cl::init(2), cl::Hidden,
-    cl::desc(
-        "Cost multiplier to multiply onto inlined call sites where the "
-        "new call was previously an intra-SCC call (not relevant when the "
-        "original call was already intra-SCC). This can accumulate over "
-        "multiple inlinings (e.g. if a call site already had a cost "
-        "multiplier and one of its inlined calls was also subject to "
-        "this, the inlined call would have the original multiplier "
-        "multiplied by intra-scc-cost-multiplier). This is to prevent tons of "
-        "inlining through a child SCC which can cause terrible compile times"));
-
-static cl::opt<unsigned> InlinerForwardingScanLimit(
-    "inliner-forwarding-scan-limit", cl::init(16), cl::Hidden,
-    cl::desc("Maximum number of instructions to scan backward for "
-             "store-to-load forwarding in subsequent inlining decisions. "
-             "DefMaxInstsToScan=6 is not enough and misses inlining "
-             "opportunities (e.g. when class stores into mutiple members in "
-             "ctor and afterwards calls a function reading those members)"));
-
-/// A flag for test, so we can print the content of the advisor when running it
-/// as part of the default (e.g. -O3) pipeline.
-static cl::opt<bool> KeepAdvisorForPrinting("keep-inline-advisor-for-printing",
-                                            cl::init(false), cl::Hidden);
-
-/// Allows printing the contents of the advisor after each SCC inliner pass.
-static cl::opt<bool>
-    EnablePostSCCAdvisorPrinting("enable-scc-inline-advisor-printing",
-                                 cl::init(false), cl::Hidden);
-
-
-static cl::opt<std::string> CGSCCInlineReplayFile(
-    "cgscc-inline-replay", cl::init(""), cl::value_desc("filename"),
-    cl::desc(
-        "Optimization remarks file containing inline remarks to be replayed "
-        "by cgscc inlining."),
-    cl::Hidden);
-
-static cl::opt<ReplayInlinerSettings::Scope> CGSCCInlineReplayScope(
-    "cgscc-inline-replay-scope",
-    cl::init(ReplayInlinerSettings::Scope::Function),
-    cl::values(clEnumValN(ReplayInlinerSettings::Scope::Function, "Function",
-                          "Replay on functions that have remarks associated "
-                          "with them (default)"),
-               clEnumValN(ReplayInlinerSettings::Scope::Module, "Module",
-                          "Replay on the entire module")),
-    cl::desc("Whether inline replay should be applied to the entire "
-             "Module or just the Functions (default) that are present as "
-             "callers in remarks during cgscc inlining."),
-    cl::Hidden);
-
-static cl::opt<ReplayInlinerSettings::Fallback> CGSCCInlineReplayFallback(
-    "cgscc-inline-replay-fallback",
-    cl::init(ReplayInlinerSettings::Fallback::Original),
-    cl::values(
-        clEnumValN(
-            ReplayInlinerSettings::Fallback::Original, "Original",
-            "All decisions not in replay send to original advisor (default)"),
-        clEnumValN(ReplayInlinerSettings::Fallback::AlwaysInline,
-                   "AlwaysInline", "All decisions not in replay are inlined"),
-        clEnumValN(ReplayInlinerSettings::Fallback::NeverInline, "NeverInline",
-                   "All decisions not in replay are not inlined")),
-    cl::desc(
-        "How cgscc inline replay treats sites that don't come from the replay. "
-        "Original: defers to original advisor, AlwaysInline: inline all sites "
-        "not in replay, NeverInline: inline no sites not in replay"),
-    cl::Hidden);
-
-static cl::opt<CallSiteFormat::Format> CGSCCInlineReplayFormat(
-    "cgscc-inline-replay-format",
-    cl::init(CallSiteFormat::Format::LineColumnDiscriminator),
-    cl::values(
-        clEnumValN(CallSiteFormat::Format::Line, "Line", "<Line Number>"),
-        clEnumValN(CallSiteFormat::Format::LineColumn, "LineColumn",
-                   "<Line Number>:<Column Number>"),
-        clEnumValN(CallSiteFormat::Format::LineDiscriminator,
-                   "LineDiscriminator", "<Line Number>.<Discriminator>"),
-        clEnumValN(CallSiteFormat::Format::LineColumnDiscriminator,
-                   "LineColumnDiscriminator",
-                   "<Line Number>:<Column Number>.<Discriminator> (default)")),
-    cl::desc("How cgscc inline replay file is formatted"), cl::Hidden);
 
 InlineAdvisor &
 InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
@@ -168,16 +86,17 @@ InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
     // The one we would get from the MAM can be invalidated as a result of the
     // inliner's activity.
     OwnedAdvisor = std::make_unique<DefaultInlineAdvisor>(
-        M, FAM, getInlineParams(),
+        M, FAM, getInlineParams(M.getContext()),
         InlineContext{LTOPhase, InlinePass::CGSCCInliner});
 
-    if (!CGSCCInlineReplayFile.empty())
+    const IPOOptions &Opts = getIPOOptions(M);
+    if (!Opts.cgscc_inline_replay.empty())
       OwnedAdvisor = getReplayInlineAdvisor(
           M, FAM, M.getContext(), std::move(OwnedAdvisor),
-          ReplayInlinerSettings{CGSCCInlineReplayFile,
-                                CGSCCInlineReplayScope,
-                                CGSCCInlineReplayFallback,
-                                {CGSCCInlineReplayFormat}},
+          ReplayInlinerSettings{Opts.cgscc_inline_replay,
+                                Opts.cgscc_inline_replay_scope,
+                                Opts.cgscc_inline_replay_fallback,
+                                {Opts.cgscc_inline_replay_format}},
           /*EmitRemarks=*/true,
           InlineContext{LTOPhase, InlinePass::ReplayCGSCCInliner});
 
@@ -189,14 +108,6 @@ InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
   return *IAA->getAdvisor();
 }
 
-void makeFunctionBodyUnreachable(Function &F) {
-  F.dropAllReferences();
-  for (BasicBlock &BB : make_early_inc_range(F))
-    BB.eraseFromParent();
-  BasicBlock *BB = BasicBlock::Create(F.getContext(), "", &F);
-  new UnreachableInst(F.getContext(), BB);
-}
-
 PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                                    CGSCCAnalysisManager &AM, LazyCallGraph &CG,
                                    CGSCCUpdateResult &UR) {
@@ -206,6 +117,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
 
   assert(InitialC.size() > 0 && "Cannot handle an empty SCC!");
   Module &M = *InitialC.begin()->getFunction().getParent();
+  const IPOOptions &Opts = getIPOOptions(M);
   ProfileSummaryInfo *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(M);
 
   FunctionAnalysisManager &FAM =
@@ -273,7 +185,11 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // Capture updatable variable for the current SCC.
   auto *C = &InitialC;
 
-  llvm::scope_exit AdvisorOnExit([&] { Advisor.onPassExit(C); });
+  llvm::scope_exit AdvisorOnExit([&] {
+    Advisor.onPassExit(C);
+    if (Opts.scc_inline_advisor_printing)
+      Advisor.print(dbgs());
+  });
 
   if (Calls.empty())
     return PreservedAnalyses::all();
@@ -343,7 +259,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
             continue;
           BasicBlock::iterator BBI = LI->getIterator();
           Value *Available = FindAvailableLoadedValue(
-              LI, LI->getParent(), BBI, InlinerForwardingScanLimit);
+              LI, LI->getParent(), BBI, Opts.inliner_forwarding_scan_limit);
           if (!Available)
             continue;
           auto *C = dyn_cast<Constant>(Available);
@@ -448,7 +364,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                 Attribute NewCBCostMult = Attribute::get(
                     M.getContext(),
                     InlineConstants::FunctionInlineCostMultiplierAttributeName,
-                    itostr(CBCostMult * IntraSCCCostMultiplier));
+                    itostr(CBCostMult * Opts.intra_scc_cost_multiplier));
                 ICB->addFnAttr(NewCBCostMult);
               }
             }
@@ -460,11 +376,12 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       // whether this makes the callee trivially dead. In that case, we can drop
       // the body of the function eagerly which may reduce the number of callers
       // of other functions to one, changing inline cost thresholds. Non-local
-      // discardable functions with comdats are checked later on.
+      // discardable functions with non-trivial comdats are checked later on.
       bool CalleeWasDeleted = false;
       if (Callee.isDiscardableIfUnused() && Callee.hasZeroLiveUses() &&
           !CG.isLibFunction(Callee)) {
-        if (Callee.hasLocalLinkage() || !Callee.hasComdat()) {
+        if (Callee.hasLocalLinkage() || !Callee.hasComdat() ||
+            Callee.getComdat()->getUsers().size() == 1) {
           Calls.erase(std::remove_if(Calls.begin() + I + 1, Calls.end(),
                                      [&](const CallBase *CB) {
                                        return CB->getCaller() == &Callee;
@@ -604,24 +521,20 @@ ModuleInlinerWrapperPass::ModuleInlinerWrapperPass(InlineParams Params,
   // into the callers so that our optimizations can reflect that.
   // For PreLinkThinLTO pass, we disable hot-caller heuristic for sample PGO
   // because it makes profile annotation in the backend inaccurate.
-  if (MandatoryFirst) {
+  if (MandatoryFirst)
     PM.addPass(InlinerPass(/*OnlyMandatory*/ true));
-    if (EnablePostSCCAdvisorPrinting)
-      PM.addPass(InlineAdvisorAnalysisPrinterPass(dbgs()));
-  }
   PM.addPass(InlinerPass());
-  if (EnablePostSCCAdvisorPrinting)
-    PM.addPass(InlineAdvisorAnalysisPrinterPass(dbgs()));
 }
 
 PreservedAnalyses ModuleInlinerWrapperPass::run(Module &M,
                                                 ModuleAnalysisManager &MAM) {
   auto &IAA = MAM.getResult<InlineAdvisorAnalysis>(M);
+  const IPOOptions &Opts = getIPOOptions(M);
   if (!IAA.tryCreate(Params, Mode,
-                     {CGSCCInlineReplayFile,
-                      CGSCCInlineReplayScope,
-                      CGSCCInlineReplayFallback,
-                      {CGSCCInlineReplayFormat}},
+                     {Opts.cgscc_inline_replay,
+                      Opts.cgscc_inline_replay_scope,
+                      Opts.cgscc_inline_replay_fallback,
+                      {Opts.cgscc_inline_replay_format}},
                      IC)) {
     M.getContext().emitError(
         "Could not setup Inlining Advisor for the requested "
@@ -648,7 +561,7 @@ PreservedAnalyses ModuleInlinerWrapperPass::run(Module &M,
   // Discard the InlineAdvisor, a subsequent inlining session should construct
   // its own.
   auto PA = PreservedAnalyses::all();
-  if (!KeepAdvisorForPrinting)
+  if (!Opts.keep_inline_advisor_for_printing)
     PA.abandon<InlineAdvisorAnalysis>();
   return PA;
 }

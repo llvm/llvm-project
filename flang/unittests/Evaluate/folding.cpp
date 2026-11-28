@@ -37,10 +37,8 @@ struct RunOnTypes<Test, std::tuple<T...>> {
 struct TestGetScalarConstantValue {
   template <typename T> static void Run(int kind) {
     Expr<T> exprFullyTyped{MakeZeroExpr<T>(kind)};
-    Expr<SomeKind<T::category>> exprSomeKind{exprFullyTyped};
-    Expr<SomeType> exprSomeType{exprSomeKind};
+    Expr<SomeType> exprSomeType{exprFullyTyped};
     TEST(GetScalarConstantValue<T>(exprFullyTyped).has_value());
-    TEST(GetScalarConstantValue<T>(exprSomeKind).has_value());
     TEST(GetScalarConstantValue<T>(exprSomeType).has_value());
   }
 };

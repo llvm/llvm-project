@@ -12,9 +12,6 @@
 name:            implicit_def
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
 
 body:             |
   bb.0:
@@ -22,17 +19,14 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[DEF]], [[DEF]]
     ; CHECK-NEXT: $w0 = COPY [[ADDWrr]]
-    %0(i32) = G_IMPLICIT_DEF
-    %1(i32) = G_ADD %0, %0
+    %0:gpr(i32) = G_IMPLICIT_DEF
+    %1:gpr(i32) = G_ADD %0, %0
     $w0 = COPY %1(i32)
 ...
 ---
 name:            implicit_def_copy
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
 
 body:             |
   bb.0:
@@ -40,7 +34,7 @@ body:             |
     ; CHECK: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32all = COPY [[DEF]]
     ; CHECK-NEXT: $w0 = COPY [[COPY]]
-    %0(i32) = G_IMPLICIT_DEF
-    %1(i32) = COPY %0(i32)
+    %0:gpr(i32) = G_IMPLICIT_DEF
+    %1:gpr(i32) = COPY %0(i32)
     $w0 = COPY %1(i32)
 ...

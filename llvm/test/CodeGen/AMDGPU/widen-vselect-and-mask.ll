@@ -19,8 +19,7 @@ define amdgpu_kernel void @widen_vselect_and_mask_v4f64(<4 x double> %arg) #0 {
 ; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GCN-NEXT:    s_cmp_gt_i32 s5, -1
-; GCN-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-NEXT:    s_and_b64 s[0:1], s[4:5], s[0:1]
+; GCN-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GCN-NEXT:    s_cselect_b32 s4, 0x3ff00000, 0
 ; GCN-NEXT:    v_mov_b32_e32 v3, v0
@@ -62,8 +61,7 @@ define amdgpu_kernel void @widen_vselect_and_mask_v4i64(<4 x i64> %arg) #0 {
 ; GCN-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN-NEXT:    s_cselect_b64 s[6:7], -1, 0
 ; GCN-NEXT:    s_cmp_gt_i32 s7, -1
-; GCN-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; GCN-NEXT:    s_and_b64 s[0:1], s[6:7], s[0:1]
+; GCN-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
 ; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GCN-NEXT:    s_cselect_b32 s6, 1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, v1

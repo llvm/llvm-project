@@ -14,6 +14,7 @@
 
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/support/move_only_function.h"
+#include "orc-rt/support/sps/SPSSymbolLookupResult.h"
 #include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 
 // Wrapper for Session methods that uses the wrapper's Session argument.

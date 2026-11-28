@@ -91,7 +91,6 @@
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/TargetSchedule.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -112,7 +111,7 @@ class PostMachineSchedulerImpl;
 } // namespace impl_detail
 
 namespace MISched {
-enum Direction {
+enum Direction : unsigned {
   Unspecified,
   TopDown,
   BottomUp,
@@ -121,19 +120,15 @@ enum Direction {
 } // namespace MISched
 
 /// Returns -misched-prera-direction.
-LLVM_ABI MISched::Direction getPreRADirection();
+LLVM_ABI MISched::Direction getPreRADirection(const MachineFunction &MF);
 /// Returns -misched-postra-break-antideps.
 LLVM_ABI TargetSubtargetInfo::AntiDepBreakMode getPostRABreakAntiDeps();
 /// Returns whether -verify-misched is set.
-LLVM_ABI bool shouldVerifyScheduling();
-
-#ifndef NDEBUG
-extern cl::opt<bool> ViewMISchedDAGs;
-extern cl::opt<bool> PrintDAGs;
-#else
-LLVM_ABI extern const bool ViewMISchedDAGs;
-LLVM_ABI extern const bool PrintDAGs;
-#endif
+LLVM_ABI bool shouldVerifyScheduling(const MachineFunction &MF);
+/// Return -misched-print-dags, which is false in a build without assertions.
+LLVM_ABI bool shouldPrintMISchedDAGs(const MachineFunction &MF);
+/// Return -misched-view-dags, which is false in a build without assertions.
+LLVM_ABI bool shouldViewMISchedDAGs(const MachineFunction &MF);
 
 class AAResults;
 class LiveIntervals;

@@ -84,11 +84,13 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <set>
 #include <string>
 #include <system_error>
@@ -684,7 +686,6 @@ class LowerTypeTestsModule {
   const ModuleSummaryIndex *ImportSummary;
 
   Triple::ArchType Arch;
-  Triple::OSType OS;
   Triple::ObjectFormatType ObjectFormat;
 
   // Determines which kind of Thumb jump table we generate. If arch is
@@ -758,6 +759,11 @@ class LowerTypeTestsModule {
   // address taken functions in case they are address taken in other modules.
   bool CrossDsoCfi = M.getModuleFlag("Cross-DSO CFI") != nullptr;
 
+  std::optional<DIBuilder> JumpTableDIB;
+  DICompileUnit *JumpTableCU = nullptr;
+  DIFile *JumpTableFile = nullptr;
+  DISubroutineType *JumpTableFnTy = nullptr;
+
   bool shouldExportConstantsAsAbsoluteSymbols();
   uint8_t *exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
   TypeIdLowering importTypeId(StringRef TypeId);
@@ -799,6 +805,8 @@ class LowerTypeTestsModule {
   void findGlobalVariableUsersOf(Constant *C,
                                  SmallSetVector<GlobalVariable *, 8> &Out);
 
+  SmallVector<DILocation *>
+  createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions);
   void createJumpTable(Function *F, ArrayRef<GlobalTypeMember *> Functions,
                        Triple::ArchType JumpTableArch);
 
@@ -822,6 +830,10 @@ public:
   LowerTypeTestsModule(Module &M, ModuleAnalysisManager &AM,
                        ModuleSummaryIndex *ExportSummary,
                        const ModuleSummaryIndex *ImportSummary);
+  ~LowerTypeTestsModule() {
+    if (JumpTableDIB)
+      JumpTableDIB->finalize();
+  }
 
   bool lower();
 
@@ -1395,6 +1407,13 @@ void LowerTypeTestsModule::importFunction(Function *F,
     // alias. Redirect all other users to the jump table entry.
     for (auto &U : F->uses()) {
       if (auto *A = dyn_cast<GlobalAlias>(U.getUser())) {
+        // MemProf duplicate-clone aliases are created in the ThinLTO backend
+        // after the thin link has finalized the CFI jump table and !aliases in
+        // the merged module, and are only called directly. Leave them aliasing
+        // the local .cfi body (restored by ScopedSaveAliaseesAndUsed) rather
+        // than redirecting them to a non-existent jump table entry.
+        if (isMemProfClone(*A))
+          continue;
         std::string AliasName = A->getName().str() + ".cfi";
         Function *AliasDecl = Function::Create(
             F->getFunctionType(), GlobalValue::ExternalLinkage,
@@ -1811,29 +1830,27 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
 // Create location for each function entry which should look like this:
 // frame #0: c::c() (.cfi_jt) at sanitizer/ubsan_interface.h:0:0
 // frame #1: __ubsan_check_cfi_icall_jt at sanitizer/ubsan_interface.h:0
-static SmallVector<DILocation *>
-createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
-  Module &M = *F->getParent();
-  DICompileUnit *CU = nullptr;
-  auto CUs = M.debug_compile_units();
-  if (!CUs.empty())
-    CU = *CUs.begin();
-
-  DIBuilder DIB(M, /*AllowUnresolved=*/true, CU);
-  DIFile *File = DIB.createFile("ubsan_interface.h", "sanitizer");
-  if (!CU) {
-    // Synthetic module (like ld-temp.o), it frequently lacks a DICompileUnit
-    // even if the rest of the program has debug info.
-    CU = DIB.createCompileUnit(
-        DISourceLanguageName(dwarf::DW_LANG_C), File, "llvm", true, "", 0, "",
-        DICompileUnit::DebugEmissionKind::LineTablesOnly);
+SmallVector<DILocation *> LowerTypeTestsModule::createJumpTableDebugInfo(
+    Function *F, ArrayRef<GlobalTypeMember *> Functions) {
+  if (!JumpTableDIB) {
+    auto CUs = M.debug_compile_units();
+    if (!CUs.empty())
+      JumpTableCU = *CUs.begin();
+    JumpTableDIB.emplace(M, /*AllowUnresolved=*/true, JumpTableCU);
+    JumpTableFile = JumpTableDIB->createFile("ubsan_interface.h", "sanitizer");
+    if (!JumpTableCU) {
+      // Synthetic module (like ld-temp.o), it frequently lacks a DICompileUnit
+      // even if the rest of the program has debug info.
+      JumpTableCU = JumpTableDIB->createCompileUnit(
+          DISourceLanguageName(dwarf::DW_LANG_C), JumpTableFile, "llvm", true,
+          "", 0, "", DICompileUnit::DebugEmissionKind::LineTablesOnly);
+    }
+    JumpTableFnTy = JumpTableDIB->createSubroutineType(nullptr);
   }
 
-  DISubroutineType *DIFnTy = DIB.createSubroutineType(nullptr);
-
-  DISubprogram *UbsanSP = DIB.createFunction(
-      CU, "__ubsan_check_cfi_icall_jt", {}, File, 0, DIFnTy, 0,
-      DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
+  DISubprogram *UbsanSP = JumpTableDIB->createFunction(
+      JumpTableCU, "__ubsan_check_cfi_icall_jt", {}, JumpTableFile, 0,
+      JumpTableFnTy, 0, DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
 
   F->setSubprogram(UbsanSP);
 
@@ -1845,17 +1862,16 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
   for (auto *Func : Functions) {
     StringRef FuncName = Func->getGlobal()->getName();
     FuncName.consume_back(".cfi");
-    DISubprogram *JumpSP = DIB.createFunction(
-        CU, (FuncName + ".cfi_jt").str(), {}, File, 0, DIFnTy, 0,
-        DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
+    DISubprogram *JumpSP = JumpTableDIB->createFunction(
+        JumpTableCU, (FuncName + ".cfi_jt").str(), {}, JumpTableFile, 0,
+        JumpTableFnTy, 0, DINode::FlagArtificial,
+        DISubprogram::SPFlagDefinition);
 
     DILocation *EntryLoc =
         DILocation::get(M.getContext(), 0, 0, JumpSP, UbsanLoc);
 
     Locations.push_back(EntryLoc);
   }
-
-  DIB.finalize();
 
   return Locations;
 }
@@ -2056,6 +2072,8 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
 
   lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout);
 
+  SmallVector<GlobalValue *> UsedJtAliases;
+
   // Build aliases pointing to offsets into the jump table, and replace
   // references to the original functions with references to the aliases.
   for (unsigned I = 0; I != Functions.size(); ++I) {
@@ -2077,7 +2095,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
       if (IsExported)
         JtAlias->setVisibility(GlobalValue::HiddenVisibility);
       else
-        appendToUsed(M, {JtAlias});
+        UsedJtAliases.push_back(JtAlias);
     }
 
     if (IsExported) {
@@ -2114,6 +2132,9 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
         F->setVisibility(GlobalVariable::HiddenVisibility);
     }
   }
+
+  if (!UsedJtAliases.empty())
+    appendToUsed(M, UsedJtAliases);
 
   createJumpTable(JumpTableFn, Functions, JumpTableArch);
 }
@@ -2271,7 +2292,6 @@ LowerTypeTestsModule::LowerTypeTestsModule(
         CanUseThumbBWJumpTable = true;
     }
   }
-  OS = TargetTriple.getOS();
   ObjectFormat = TargetTriple.getObjectFormat();
 
   // Function annotation describes or applies to function itself, and
@@ -2388,8 +2408,9 @@ void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
 // folds to true, the trap branch becomes dead, and later passes fold it
 // away. Required because the backend cannot select these intrinsics
 // ("must be lowered by the LowerTypeTests pass before code generation").
-bool lowertypetests::cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
-                                            bool IsRelative) {
+bool lowertypetests::cleanUpTypeCheckedLoad(
+    Module &M, Function &CheckedLoadFn, bool IsRelative,
+    SmallSetVector<Function *, 8> *ModifiedFunctions) {
   bool Changed = false;
   for (User *User : llvm::make_early_inc_range(CheckedLoadFn.users())) {
     Instruction *I = dyn_cast<Instruction>(User);
@@ -2415,19 +2436,26 @@ bool lowertypetests::cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
     Replacement = IRB.CreateInsertValue(Replacement, Load, {0});
     I->replaceAllUsesWith(Replacement);
 
+    if (ModifiedFunctions)
+      ModifiedFunctions->insert(I->getFunction());
+
     LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": erase " << *I << "\n");
     I->eraseFromParent();
     Changed = true;
   }
-  if (Changed)
+  if (Changed) {
     CheckedLoadFn.eraseFromParent();
+    for (GlobalVariable &GV : M.globals())
+      GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
+  }
   return Changed;
 }
 
-static void dropTypeTests(Module &M, Function &TypeTestFunc,
-                          bool ShouldDropAll) {
+static void dropTypeTests(Module &M, Function &TypeTestFunc, bool ShouldDropAll,
+                          SmallSetVector<Function *, 8> &ModifiedFunctions) {
   for (Use &U : llvm::make_early_inc_range(TypeTestFunc.uses())) {
     auto *CI = cast<CallInst>(U.getUser());
+    ModifiedFunctions.insert(CI->getFunction());
     // Find and erase llvm.assume intrinsics for this llvm.type.test call.
     for (Use &CIU : llvm::make_early_inc_range(CI->uses()))
       if (auto *Assume = dyn_cast<AssumeInst>(CIU.getUser()))
@@ -2448,11 +2476,12 @@ static void dropTypeTests(Module &M, Function &TypeTestFunc,
   }
 }
 
-static bool dropTypeTests(Module &M, bool ShouldDropAll) {
+static bool dropTypeTests(Module &M, bool ShouldDropAll,
+                          SmallSetVector<Function *, 8> &ModifiedFunctions) {
   Function *TypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   if (TypeTestFunc)
-    dropTypeTests(M, *TypeTestFunc, ShouldDropAll);
+    dropTypeTests(M, *TypeTestFunc, ShouldDropAll, ModifiedFunctions);
   // Only drop checked loads when dropping everything: in Assume mode a
   // checked load may feed a CFI trap check, which must keep diagnosing
   // loudly instead of being turned to true.
@@ -2460,12 +2489,12 @@ static bool dropTypeTests(Module &M, bool ShouldDropAll) {
   if (ShouldDropAll) {
     if (Function *F =
             Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load))
-      DroppedCheckedLoads |=
-          lowertypetests::cleanUpTypeCheckedLoad(M, *F, false);
+      DroppedCheckedLoads |= lowertypetests::cleanUpTypeCheckedLoad(
+          M, *F, false, &ModifiedFunctions);
     if (Function *F = Intrinsic::getDeclarationIfExists(
             &M, Intrinsic::type_checked_load_relative))
-      DroppedCheckedLoads |=
-          lowertypetests::cleanUpTypeCheckedLoad(M, *F, true);
+      DroppedCheckedLoads |= lowertypetests::cleanUpTypeCheckedLoad(
+          M, *F, true, &ModifiedFunctions);
   }
   // Normally we'd have already removed all @llvm.public.type.test calls,
   // except for in the case where we originally were performing ThinLTO but
@@ -2473,16 +2502,16 @@ static bool dropTypeTests(Module &M, bool ShouldDropAll) {
   Function *PublicTypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   if (PublicTypeTestFunc)
-    dropTypeTests(M, *PublicTypeTestFunc, ShouldDropAll);
-  if (TypeTestFunc || PublicTypeTestFunc || DroppedCheckedLoads) {
+    dropTypeTests(M, *PublicTypeTestFunc, ShouldDropAll, ModifiedFunctions);
+  bool Changed = TypeTestFunc || PublicTypeTestFunc || DroppedCheckedLoads;
+  if (Changed || ShouldDropAll) {
     // We have deleted the type intrinsics, so we no longer have enough
     // information to reason about the liveness of virtual function pointers
     // in GlobalDCE.
     for (GlobalVariable &GV : M.globals())
-      GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
-    return true;
+      Changed |= GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
   }
-  return false;
+  return Changed;
 }
 
 bool LowerTypeTestsModule::lower() {
@@ -3035,13 +3064,40 @@ void DropTypeTestsPass::printPipeline(
 }
 
 PreservedAnalyses DropTypeTestsPass::run(Module &M, ModuleAnalysisManager &AM) {
-  return dropTypeTests(M, Kind == DropTestKind::All) ? PreservedAnalyses::none()
-                                                     : PreservedAnalyses::all();
+  bool ShouldDropAll = Kind == DropTestKind::All;
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  // Dropping all type tests erases the checked load declarations. Since the
+  // proxy is preserved, their analyses need to be cleared before they are
+  // deleted.
+  if (ShouldDropAll) {
+    for (Intrinsic::ID ID : {Intrinsic::type_checked_load,
+                             Intrinsic::type_checked_load_relative}) {
+      if (Function *F = Intrinsic::getDeclarationIfExists(&M, ID))
+        FAM.clear(*F, F->getName());
+    }
+  }
+
+  SmallSetVector<Function *, 8> ModifiedFunctions;
+  if (!dropTypeTests(M, ShouldDropAll, ModifiedFunctions))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses FuncPA;
+  FuncPA.preserveSet<CFGAnalyses>();
+  for (Function *F : ModifiedFunctions)
+    FAM.invalidate(*F, FuncPA);
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }
 
 PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
                                              ModuleAnalysisManager &AM) {
   bool Changed = false;
+  bool ReplacedConstant = false;
+  SmallSetVector<Function *, 8> ModifiedFunctions;
   // Figure out whether inlining has exposed a constant address to a lowered
   // type test, and remove the test if so and the address is known to pass the
   // test. Unfortunately this pass ends up needing to reverse engineer what
@@ -3086,6 +3142,7 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
           // This is an equality comparison (TypeTestResolution::Single case in
           // lowerTypeTestCall). In this case we just replace the comparison
           // with true.
+          ModifiedFunctions.insert(CI->getFunction());
           CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
           CI->eraseFromParent();
           Changed = true;
@@ -3106,6 +3163,7 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
           // should cause later passes to remove the range and alignment checks.
           // The bitset checks won't be removed but those are uncommon.
           CE->replaceAllUsesWith(ConstantInt::get(CE->getType(), 0));
+          ReplacedConstant = true;
           Changed = true;
         }
         auto *CI = dyn_cast<ICmpInst>(U.getUser());
@@ -3114,6 +3172,7 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
             MaySimplifyInt(CI->getOperand(0))) {
           // This is an equality comparison. Unlike in the case above it
           // remained as an integer compare.
+          ModifiedFunctions.insert(CI->getFunction());
           CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
           CI->eraseFromParent();
           Changed = true;
@@ -3124,9 +3183,20 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
 
   if (!Changed)
     return PreservedAnalyses::all();
-  PreservedAnalyses PA = PreservedAnalyses::none();
-  PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<PostDominatorTreeAnalysis>();
-  PA.preserve<LoopAnalysis>();
+
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  PreservedAnalyses FuncPA;
+  FuncPA.preserveSet<CFGAnalyses>();
+  for (Function *F : ModifiedFunctions)
+    FAM.invalidate(*F, FuncPA);
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  // Replacing a constant may affect any function using it, but not its CFG.
+  if (ReplacedConstant)
+    PA.preserveSet<CFGAnalyses>();
+  else
+    PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }

@@ -2386,6 +2386,8 @@ static LogicalResult verifyTileIsBroadcast(tosa::TileOp tileOp) {
     return failure();
 
   for (const auto [index, multiple] : llvm::enumerate(multiples)) {
+    if (multiple <= 0 && multiple != -1)
+      return failure();
     if (multiple == 1)
       continue;
     if (outputType.isDynamicDim(index))

@@ -51,7 +51,7 @@ define void @any_extend_load_v8i16(ptr %ptr) {
 ; KNL-LABEL: any_extend_load_v8i16:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; KNL-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,4,4,4,4,4,4,4]
 ; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
 ; KNL-NEXT:    vmovq %xmm0, (%rdi)
 ; KNL-NEXT:    retq
@@ -59,7 +59,7 @@ define void @any_extend_load_v8i16(ptr %ptr) {
 ; SKX-LABEL: any_extend_load_v8i16:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmovzxbw {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; SKX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; SKX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,4,4,4,4,4,4,4]
 ; SKX-NEXT:    vpmovwb %xmm0, (%rdi)
 ; SKX-NEXT:    retq
   %wide.load = load <8 x i8>, ptr %ptr, align 1

@@ -50,7 +50,8 @@ define amdgpu_kernel void @k0() sanitize_address #1 {
 ; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i64 24), align 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.k0, i32 [[TMP24]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr addrspace(3) [[TMP23]] to i32
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP26]]
+; CHECK-NEXT:    [[TMP40:%.*]] = sext i32 [[TMP26]] to i64
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i64 [[TMP40]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = ptrtoint ptr addrspace(1) [[TMP27]] to i64
 ; CHECK-NEXT:    [[TMP29:%.*]] = lshr i64 [[TMP28]], 3
 ; CHECK-NEXT:    [[TMP30:%.*]] = add i64 [[TMP29]], 2147450880
@@ -75,7 +76,8 @@ define amdgpu_kernel void @k0() sanitize_address #1 {
 ; CHECK:       [[BB42]]:
 ; CHECK-NEXT:    store i8 7, ptr addrspace(1) [[TMP27]], align 4
 ; CHECK-NEXT:    [[TMP43:%.*]] = ptrtoint ptr addrspace(3) [[TMP25]] to i32
-; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP43]]
+; CHECK-NEXT:    [[TMP60:%.*]] = sext i32 [[TMP43]] to i64
+; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i64 [[TMP60]]
 ; CHECK-NEXT:    [[TMP45:%.*]] = ptrtoint ptr addrspace(1) [[TMP44]] to i64
 ; CHECK-NEXT:    [[TMP46:%.*]] = add i64 [[TMP45]], 3
 ; CHECK-NEXT:    [[TMP47:%.*]] = inttoptr i64 [[TMP46]] to ptr addrspace(1)

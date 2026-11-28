@@ -4,7 +4,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-darwin10.0"
 
 declare noalias ptr @malloc(i64) nounwind allockind("alloc,uninitialized") "alloc-family"="malloc"
-declare void @free(ptr) allockind("free") "alloc-family"="malloc"
+declare void @free(ptr allocptr) allockind("free") "alloc-family"="malloc"
 
 ; PR5130
 define i1 @test1() {

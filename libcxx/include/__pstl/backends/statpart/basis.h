@@ -25,10 +25,12 @@
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
+#include <__iterator/next.h>
 #include <__memory/allocator.h>
 #include <__memory/construct_at.h>
 #include <__memory/destroy.h>
 #include <__memory/unique_ptr.h>
+#include <__new/nothrow_t.h>
 #include <__numeric/reduce.h>
 #include <__optional/comparison.h>
 #include <__optional/nullopt_t.h>
@@ -93,9 +95,13 @@ struct _LIBCPP_HIDE_FROM_ABI __iterator_range {
 
 // __iterator_partitions<Iter> holds a finite pre-determined set of partitions and allows querying each iterator range
 // in O(1) time.
-// TODO: Support forward iterators later via a second implicit template argument and its specializations.
-template <class _Iterator>
-struct _LIBCPP_HIDE_FROM_ABI __iterator_partitions {
+template <class _Iterator,
+          bool _IsRandomAccessOrContiguous = __has_random_access_iterator_category_or_concept<_Iterator>::value >
+struct _LIBCPP_HIDE_FROM_ABI __iterator_partitions;
+
+// Specialization of __iterator_partitions<_Iterator> for random-access iterators
+template <class _Iterator >
+struct _LIBCPP_HIDE_FROM_ABI __iterator_partitions<_Iterator, /*_IsRandomAccessOrContiguous=*/true> {
   _LIBCPP_HIDE_FROM_ABI size_t __partitions_count() const { return __partitions_count_; }
 
   _LIBCPP_HIDE_FROM_ABI size_t __max_partition_size() const { return __partition_size_ + (__remainder_ > 0 ? 1 : 0); }
@@ -106,8 +112,6 @@ struct _LIBCPP_HIDE_FROM_ABI __iterator_partitions {
     return __iterator_range<_Iterator>{__first, __last};
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Iterator __end() const { return __base_ + __count_; }
-
 private:
   _Iterator __base_;
   size_t __count_;
@@ -116,8 +120,25 @@ private:
   size_t __partitions_count_;
 
   template <class _Iter>
-  friend __partitioning_result<_Iter> _LIBCPP_HIDE_FROM_ABI
-  __partition(_Iter, _Iter, size_t, size_t, size_t, size_t) noexcept;
+  friend __partitioning_result<_Iter> _LIBCPP_HIDE_FROM_ABI __partition(_Iter, _Iter, size_t, size_t) noexcept;
+};
+
+// Specialization of __iterator_partitions<_Iterator> for forward iterators
+template <class _Iterator >
+struct _LIBCPP_HIDE_FROM_ABI __iterator_partitions<_Iterator, /*_IsRandomAccessOrContiguous=*/false> {
+  _LIBCPP_HIDE_FROM_ABI size_t __partitions_count() const { return __partitions_count_; }
+
+  _LIBCPP_HIDE_FROM_ABI size_t __max_partition_size() const { return __max_partition_size_; }
+
+  _LIBCPP_HIDE_FROM_ABI __iterator_range<_Iterator> __partition(size_t __n) const { return __partitions_[__n]; }
+
+private:
+  std::unique_ptr<__iterator_range<_Iterator>[]> __partitions_;
+  size_t __partitions_count_;
+  size_t __max_partition_size_;
+
+  template <class _Iter>
+  friend __partitioning_result<_Iter> _LIBCPP_HIDE_FROM_ABI __partition(_Iter, _Iter, size_t, size_t) noexcept;
 };
 
 // This is basically a barebones std::expected<__iterator_partitions<_Iterator>, __partitioning_status>.
@@ -141,8 +162,6 @@ _LIBCPP_HIDE_FROM_ABI inline unsigned __thread_hardware_concurrency() noexcept {
 // a O(1) time later.
 // If partitioning fails, returns nullopt and reports the reason in __result.
 // __min_partition_size specifies the minimal number of elements in every partition.
-// __prefix_to_skip and __suffix_to_skip allows optionally trimming the input range by the specified number of elements
-// before partitioning.
 // __workers_count is normally implicitly queried from hardware_concurrency() and should be explicitly specified only in
 // unit tests.
 template <class _Iterator>
@@ -150,12 +169,7 @@ _LIBCPP_HIDE_FROM_ABI __partitioning_result<_Iterator>
 __partition(_Iterator __first,
             _Iterator __last,
             size_t __min_partition_size = 1,
-            size_t __prefix_to_skip     = 0,
-            size_t __suffix_to_skip     = 0,
             size_t __workers_count      = __statpart::__thread_hardware_concurrency()) noexcept {
-  // Forward iterators will be supported later.
-  static_assert(__has_random_access_iterator_category_or_concept<_Iterator>::value);
-
   _LIBCPP_ASSERT_INTERNAL(__min_partition_size >= 1, "minimum partition size must be at least 1 element");
 
   if (__workers_count < 2) {
@@ -163,27 +177,44 @@ __partition(_Iterator __first,
     return {nullopt, __partitioning_status::__no_parallelism};
   }
 
-  size_t __count = static_cast<size_t>(std::distance(__first, __last));
-  if (__count <= __prefix_to_skip + __suffix_to_skip) {
-    return {nullopt, __partitioning_status::__not_enough_elements};
-  }
-
-  size_t __effective_count = __count - __prefix_to_skip - __suffix_to_skip;
+  size_t __count           = static_cast<size_t>(std::distance(__first, __last));
   size_t __max_partitions  = __workers_count * __max_partitions_per_cpu;
-  size_t __partition_count = std::min(__max_partitions, __effective_count / __min_partition_size);
-
+  size_t __partition_count = std::min(__max_partitions, __count / __min_partition_size);
   if (__partition_count < 2) {
     // not enough input data to process in parallel => no reason to build partitions
     return {nullopt, __partitioning_status::__not_enough_elements};
   }
 
-  __iterator_partitions<_Iterator> __p;
-  __p.__base_             = __first + __prefix_to_skip;
-  __p.__count_            = __effective_count;
-  __p.__partition_size_   = __effective_count / __partition_count;
-  __p.__remainder_        = __effective_count % __partition_count;
-  __p.__partitions_count_ = __partition_count;
-  return {std::move(__p), __partitioning_status::__ok};
+  size_t __base_partition_size = __count / __partition_count;
+  size_t __remainder           = __count % __partition_count;
+
+  if constexpr (__has_random_access_iterator_category_or_concept<_Iterator>::value) {
+    __iterator_partitions<_Iterator, true> __p;
+    __p.__base_             = __first;
+    __p.__count_            = __count;
+    __p.__partition_size_   = __base_partition_size;
+    __p.__remainder_        = __remainder;
+    __p.__partitions_count_ = __partition_count;
+    return {std::move(__p), __partitioning_status::__ok};
+  } else {
+    __iterator_partitions<_Iterator, false> __p;
+    __p.__partitions_count_   = __partition_count;
+    __p.__max_partition_size_ = __base_partition_size + (__remainder > 0 ? 1 : 0);
+    __p.__partitions_.reset(new (std::nothrow) __iterator_range<_Iterator>[__partition_count]);
+    if (!__p.__partitions_) {
+      // Unable to allocate memory for the iterator stash, bail out.
+      return {nullopt, __partitioning_status::__bad_alloc};
+    }
+
+    // Traverse the forward iterator over the entire range and stash the iterators at each partition.
+    for (size_t __i = 0; __i != __partition_count; ++__i) {
+      size_t __partition_size        = __base_partition_size + (__i < __remainder ? 1 : 0);
+      __p.__partitions_[__i].__first = __first;
+      __p.__partitions_[__i].__last  = std::next(__first, __partition_size);
+      __first                        = __p.__partitions_[__i].__last;
+    }
+    return {std::move(__p), __partitioning_status::__ok};
+  }
 }
 
 // for_each with explicit partitioning:
@@ -574,8 +605,6 @@ _LIBCPP_HIDE_FROM_ABI optional<__empty> __lookback_scan(
       __first,
       __last,
       /*__min_partition_size=*/2,
-      /*__prefix_to_skip=*/0,
-      /*__suffix_to_skip=*/0,
       /*__workers_count=*/__max_workers_count);
   if (!__partitioning_result.__value_) {
     if (__partitioning_result.__status_ == __partitioning_status::__bad_alloc)

@@ -13,6 +13,7 @@
 
 #include "LlvmState.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -25,8 +26,8 @@ void InitializeRISCVExegesisTarget();
 class RISCVTestBase : public ::testing::Test {
 protected:
   RISCVTestBase()
-      : State(cantFail(
-            LLVMState::Create("riscv64-unknown-linux", "generic-rv64"))) {}
+      : State(cantFail(LLVMState::create(
+            LibraryOptions, "riscv64-unknown-linux", "generic-rv64"))) {}
 
   static void SetUpTestCase() {
     LLVMInitializeRISCVTargetInfo();
@@ -35,6 +36,7 @@ protected:
     InitializeRISCVExegesisTarget();
   }
 
+  cl::LibraryOptionsContext LibraryOptions;
   const LLVMState State;
 };
 

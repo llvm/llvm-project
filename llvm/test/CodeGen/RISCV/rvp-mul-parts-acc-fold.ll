@@ -372,6 +372,92 @@ define <2 x i32> @pmaccsu_h11(<2 x i32> %rd, <4 x i16> %a, <4 x i16> %b) {
   ret <2 x i32> %r
 }
 
+define i32 @pmul_b00_add_i16x2(i32 %rd, i32 %a, i32 %b) {
+; RV32-LABEL: pmul_b00_add_i16x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pmul.h.b00 a1, a1, a2
+; RV32-NEXT:    padd.h a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: pmul_b00_add_i16x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmul.h.b00 a1, a1, a2
+; RV64-NEXT:    padd.h a0, a0, a1
+; RV64-NEXT:    ret
+  %acc = bitcast i32 %rd to <2 x i16>
+  %av = bitcast i32 %a to <4 x i8>
+  %bv = bitcast i32 %b to <4 x i8>
+  %m = call <2 x i16> @llvm.riscv.pmul.00.v2i16(<4 x i8> %av, <4 x i8> %bv)
+  %r = add <2 x i16> %acc, %m
+  %res = bitcast <2 x i16> %r to i32
+  ret i32 %res
+}
+
+define i64 @pmul_b00_add_i16x4(i64 %rd, i64 %a, i64 %b) {
+; RV32-LABEL: pmul_b00_add_i16x4:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pmul.h.b00 a3, a3, a5
+; RV32-NEXT:    pmul.h.b00 a2, a2, a4
+; RV32-NEXT:    padd.dh a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: pmul_b00_add_i16x4:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmul.h.b00 a1, a1, a2
+; RV64-NEXT:    padd.h a0, a1, a0
+; RV64-NEXT:    ret
+  %acc = bitcast i64 %rd to <4 x i16>
+  %av = bitcast i64 %a to <8 x i8>
+  %bv = bitcast i64 %b to <8 x i8>
+  %m = call <4 x i16> @llvm.riscv.pmul.00.v4i16(<8 x i8> %av, <8 x i8> %bv)
+  %r = add <4 x i16> %m, %acc
+  %res = bitcast <4 x i16> %r to i64
+  ret i64 %res
+}
+
+define i32 @pmulu_b01_add_i16x2(i32 %rd, i32 %a, i32 %b) {
+; RV32-LABEL: pmulu_b01_add_i16x2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pmulu.h.b01 a1, a1, a2
+; RV32-NEXT:    padd.h a0, a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: pmulu_b01_add_i16x2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmulu.h.b01 a1, a1, a2
+; RV64-NEXT:    padd.h a0, a1, a0
+; RV64-NEXT:    ret
+  %acc = bitcast i32 %rd to <2 x i16>
+  %av = bitcast i32 %a to <4 x i8>
+  %bv = bitcast i32 %b to <4 x i8>
+  %m = call <2 x i16> @llvm.riscv.pmulu.01.v2i16(<4 x i8> %av, <4 x i8> %bv)
+  %r = add <2 x i16> %m, %acc
+  %res = bitcast <2 x i16> %r to i32
+  ret i32 %res
+}
+
+define i64 @pmulsu_b11_add_i16x4(i64 %rd, i64 %a, i64 %b) {
+; RV32-LABEL: pmulsu_b11_add_i16x4:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pmulsu.h.b11 a3, a3, a5
+; RV32-NEXT:    pmulsu.h.b11 a2, a2, a4
+; RV32-NEXT:    padd.dh a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: pmulsu_b11_add_i16x4:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pmulsu.h.b11 a1, a1, a2
+; RV64-NEXT:    padd.h a0, a0, a1
+; RV64-NEXT:    ret
+  %acc = bitcast i64 %rd to <4 x i16>
+  %av = bitcast i64 %a to <8 x i8>
+  %bv = bitcast i64 %b to <8 x i8>
+  %m = call <4 x i16> @llvm.riscv.pmulsu.11.v4i16(<8 x i8> %av, <8 x i8> %bv)
+  %r = add <4 x i16> %acc, %m
+  %res = bitcast <4 x i16> %r to i64
+  ret i64 %res
+}
+
 ; The product is used twice, so folding would recompute it.
 define i32 @multi_use(i32 %rd, <2 x i16> %a, <2 x i16> %b) {
 ; RV32-LABEL: multi_use:

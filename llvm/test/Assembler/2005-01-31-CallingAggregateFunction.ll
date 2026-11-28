@@ -1,4 +1,4 @@
-; RUN: llvm-as %s -o /dev/null
+; RUN: llvm-as %s -disable-output
 ; RUN: verify-uselistorder %s
 
 define void @test() {

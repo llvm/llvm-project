@@ -1400,7 +1400,9 @@ bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
 
   do {
     PreferredType.enterFunctionArgument(Tok.getLocation(), RunSignatureHelp);
-    ParsedTemplateArgument Arg = ParseTemplateArgument();
+    ParsedTemplateArgument Arg;
+    StackHandler.runWithSufficientStackSpace(
+        OpenLoc, [&Arg, this] { Arg = ParseTemplateArgument(); });
     SourceLocation EllipsisLoc;
     if (TryConsumeToken(tok::ellipsis, EllipsisLoc))
       Arg = Actions.ActOnPackExpansion(Arg, EllipsisLoc);

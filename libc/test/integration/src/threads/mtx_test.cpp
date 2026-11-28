@@ -10,6 +10,7 @@
 #include "src/threads/mtx_destroy.h"
 #include "src/threads/mtx_init.h"
 #include "src/threads/mtx_lock.h"
+#include "src/threads/mtx_timedlock.h"
 #include "src/threads/mtx_trylock.h"
 #include "src/threads/mtx_unlock.h"
 #include "src/threads/thrd_create.h"
@@ -256,11 +257,37 @@ void trylock_test() {
   LIBC_NAMESPACE::mtx_destroy(&recursive_mutex);
 }
 
+void timedlock_test() {
+  mtx_t timed_mutex;
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&timed_mutex, mtx_timed),
+            int(thrd_success));
+
+  // Invalid timespec (tv_nsec >= 1'000'000'000)
+  struct timespec invalid_ts = {0, 1000000000L};
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_timedlock(&timed_mutex, &invalid_ts),
+            int(thrd_error));
+
+  // Locking an unlocked mutex succeeds
+  struct timespec ts = {2000000000L, 0};
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_timedlock(&timed_mutex, &ts),
+            int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&timed_mutex), int(thrd_success));
+
+  // Past timestamp on unlocked mutex should still succeed per spec
+  struct timespec past_ts = {0, 0};
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_timedlock(&timed_mutex, &past_ts),
+            int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&timed_mutex), int(thrd_success));
+
+  LIBC_NAMESPACE::mtx_destroy(&timed_mutex);
+}
+
 TEST_MAIN() {
   relay_counter();
   wait_and_step();
   recursive_mutex_test();
   multiple_waiters();
   trylock_test();
+  timedlock_test();
   return 0;
 }

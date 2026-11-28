@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++03 -triple x86_64-pc-linux-gnu %s \
 // RUN:   -faligned-allocation -emit-llvm -o - -Wno-c++11-extensions | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++03 -triple x86_64-pc-linux-gnu %s \
+// RUN:   -faligned-allocation -emit-llvm -o - -Wno-c++11-extensions | FileCheck %s %}
 
 // Ensure Clang doesn't confuse std::align_val_t with the sized deallocation
 // parameter when the enum type is unscoped. Libc++ does this in C++03 in order

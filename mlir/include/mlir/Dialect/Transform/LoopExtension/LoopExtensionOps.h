@@ -14,7 +14,6 @@
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/LoopExtension/LoopExtensionOps.h.inc"

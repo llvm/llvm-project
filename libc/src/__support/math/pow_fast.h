@@ -111,7 +111,7 @@ LIBC_INLINE double pow(double x, double y) {
 
   // Perform exact range reduction.
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-  double dx = fputil::multiply_add(RD[idx_x], m_x.get_val(), -1.0); // Exact
+  double dx = fputil::multiply_sub(RD[idx_x], m_x.get_val(), 1.0); // Exact
 #else
   double c = FPBits(m_x.uintval() & 0x3fff'e000'0000'0000).get_val();
   double dx =

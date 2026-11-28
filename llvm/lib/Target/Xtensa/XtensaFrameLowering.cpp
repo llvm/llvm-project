@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "XtensaFrameLowering.h"
+#include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "XtensaInstrInfo.h"
 #include "XtensaMachineFunctionInfo.h"
 #include "XtensaSubtarget.h"
@@ -29,14 +30,30 @@ using namespace llvm;
 #define UNITS_PER_WORD 4
 #define MIN_FRAME_SIZE (8 * UNITS_PER_WORD)
 
+// Both the windowed and the call0 ABI keep SP 16-byte aligned at calls, so
+// outgoing argument areas have to be a multiple of 16 bytes.
 XtensaFrameLowering::XtensaFrameLowering(const XtensaSubtarget &STI)
-    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(4), 0,
+    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(16), 0,
                           Align(4)),
       STI(STI), TII(*STI.getInstrInfo()), TRI(STI.getRegisterInfo()) {}
 
 bool XtensaFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   return MF.disableFramePointerElim() || MFI.hasVarSizedObjects();
+}
+
+// Return the size of the frame that emitPrologue() allocates given the stack
+// size that PEI computed. Round up to 16 bytes for both ABIs. Add 32 bytes and
+// realignment in windowed.
+static uint64_t getFrameSize(const MachineFunction &MF, uint64_t StackSize) {
+  uint64_t FrameSize = alignTo(StackSize, 16);
+  if (MF.getSubtarget<XtensaSubtarget>().isWindowedABI()) {
+    FrameSize += 32;
+    uint64_t MaxAlignment = MF.getFrameInfo().getMaxAlign().value();
+    if (MaxAlignment > 32)
+      FrameSize += MaxAlignment;
+  }
+  return FrameSize;
 }
 
 void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
@@ -51,18 +68,11 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
   XtensaMachineFunctionInfo *XtensaFI = MF.getInfo<XtensaMachineFunctionInfo>();
 
   // First, compute final stack size.
-  uint64_t StackSize = MFI.getStackSize();
-  uint64_t PrevStackSize = StackSize;
-
-  // Round up StackSize to 16*N
-  StackSize += (16 - StackSize) & 0xf;
+  uint64_t PrevStackSize = MFI.getStackSize();
+  uint64_t StackSize = getFrameSize(MF, PrevStackSize);
 
   if (STI.isWindowedABI()) {
-    StackSize += 32;
     uint64_t MaxAlignment = MFI.getMaxAlign().value();
-    if (MaxAlignment > 32)
-      StackSize += MaxAlignment;
-
     if (StackSize <= 32760) {
       BuildMI(MBB, MBBI, DL, TII.get(Xtensa::ENTRY))
           .addReg(SP)
@@ -359,6 +369,103 @@ void XtensaFrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.set(FP);
 }
 
+// Return an upper bound on the stack size that PEI computes.
+//
+// Estimate from MachineFrameInfo::estimateStackSize() doesn't work as one.
+// That lays out the objects in one order, but alignment and padding can change
+// its estimate. Add the worst-case padding (Align - 1) for each object.
+static uint64_t getMaxStackSize(const MachineFunction &MF, uint64_t Estimate) {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  uint64_t Size = Estimate;
+  for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I)
+    if (!MFI.isDeadObjectIndex(I) &&
+        MFI.getStackID(I) == TargetStackID::Default)
+      Size += MFI.getObjectAlign(I).value() - 1;
+  // Round up like PEI does in calculateFrameObjectOffsets().
+  return alignTo(Size, std::max({MFI.getMaxAlign(), TFI->getStackAlign(),
+                                 TFI->getTransientStackAlign()}));
+}
+
+// Return true if this instruction can borrow its own destination register to
+// compute the frame address. This lets us optimize away the slot for far loads.
+static bool canUseDefAsScratchReg(const MachineInstr &MI,
+                                  const MachineRegisterInfo &MRI,
+                                  const TargetRegisterInfo *TRI) {
+  if (MI.getNumExplicitDefs() != 1 || !MI.getOperand(0).isReg())
+    return false;
+  const MachineOperand &Def = MI.getOperand(0);
+  return !Def.isEarlyClobber() && Xtensa::ARRegClass.contains(Def.getReg()) &&
+         !MRI.isReserved(Def.getReg()) && !MI.readsRegister(Def.getReg(), TRI);
+}
+
+// Return true if this frame reference is guaranteed to have an encodable
+// offset. Since the layout isn't known yet, StackSize and FrameSize are upper
+// bounds.
+static bool canEncodeFrameOffset(const MachineInstr &MI, unsigned OpNo,
+                                 int64_t StackSize, int64_t FrameSize) {
+  const MachineFrameInfo &MFI = MI.getMF()->getFrameInfo();
+  int FI = MI.getOperand(OpNo).getIndex();
+
+  // Possible object offsets are [Min, .. Min + N * Step .., Max].
+  int64_t Min, Max, Step;
+  if (MFI.isFixedObjectIndex(FI) && MFI.getObjectOffset(FI) >= 0) {
+    // Objects above the frame (incoming args) are at a fixed offset from the
+    // top of the frame, whose size is a multiple of 16.
+    Min = MFI.getObjectOffset(FI);
+    Max = Min + FrameSize;
+    Step = 16;
+  } else {
+    // Other objects can be anywhere in [0, StackSize), at a multiple of their
+    // alignment.
+    Step = MFI.getObjectAlign(FI).value();
+    Min = 0;
+    Max = alignDown(std::max<int64_t>(StackSize - MFI.getObjectSize(FI), 0),
+                    Step);
+  }
+
+  // Like eliminateFrameIndex(), the offset immediate is the operand right
+  // after the frame index.
+  int64_t Imm = MI.getOperand(OpNo + 1).getImm();
+  auto CanEncode = [&](int64_t Start) {
+    return Xtensa::isValidAddrOffsetForOpcode(MI.getOpcode(), Start + Imm);
+  };
+  // For every possible start, Start + Imm must be in the instruction's range
+  // and a multiple of its offset scale. Two conditions are enough:
+  // 1. Min and Max are in range.
+  // 2. Two adjacent starts (i.e. Min and Min + Step) are valid, because then
+  //    every step preserves the alignment requirement.
+  return CanEncode(Min) && CanEncode(Max) && CanEncode(Min + Step);
+}
+
+// Return true if eliminateFrameIndex() may have to calculate a frame offset
+// that doesn't fit in the instruction, which needs a scratch register.
+//
+// This should be correct because eliminateFrameIndex() addresses frame indices
+// from the FP if there is one. Whenever SP moves around calls, an FP is used,
+// so frame offsets never depend on SP adjustments.
+static bool frameOffsetMayNeedScratchReg(const MachineFunction &MF,
+                                         uint64_t Estimate) {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  uint64_t StackSize = getMaxStackSize(MF, Estimate);
+  uint64_t FrameSize = getFrameSize(MF, StackSize);
+
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      if (MI.isDebugInstr())
+        continue;
+      for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I) {
+        if (MI.getOperand(I).isFI() &&
+            !canEncodeFrameOffset(MI, I, StackSize, FrameSize) &&
+            !canUseDefAsScratchReg(MI, MRI, TRI))
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
 void XtensaFrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
   // Set scavenging frame index if necessary.
@@ -367,7 +474,11 @@ void XtensaFrameLowering::processFunctionBeforeFrameFinalized(
   auto *XtensaFI = MF.getInfo<XtensaMachineFunctionInfo>();
   unsigned ScavSlotsNum = 0;
 
-  if (!isInt<12>(MaxSPOffset))
+  // We need a scratch register when there is a frame offset that doesn't fit
+  // in its instruction, or if we have to adjust SP around a call without a
+  // reserved call frame.
+  if (frameOffsetMayNeedScratchReg(MF, MaxSPOffset) ||
+      (!hasReservedCallFrame(MF) && MFI.getMaxCallFrameSize() > 0))
     ScavSlotsNum = 1;
 
   // Far branches over 18-bit offset require a spill slot for scratch register.

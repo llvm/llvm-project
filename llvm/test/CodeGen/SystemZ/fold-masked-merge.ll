@@ -77,8 +77,7 @@ define i64 @masked_merge3(i64 %a0, i64 %a1, i64 %a2) {
 ;
 ; MISC3-LABEL: masked_merge3:
 ; MISC3:       # %bb.0:
-; MISC3-NEXT:    lcgr %r0, %r2
-; MISC3-NEXT:    aghi %r0, -1
+; MISC3-NEXT:    nogrk %r0, %r2, %r2
 ; MISC3-NEXT:    ncgrk %r0, %r0, %r4
 ; MISC3-NEXT:    ncgrk %r2, %r2, %r3
 ; MISC3-NEXT:    ogr %r2, %r0
@@ -236,12 +235,11 @@ define i32 @masked_merge_no_transform1(i32 %a0, i32 %a1, i32 %a2, ptr %p1) {
 ;
 ; MISC3-LABEL: masked_merge_no_transform1:
 ; MISC3:       # %bb.0:
-; MISC3-NEXT:    nrk %r0, %r2, %r3
-; MISC3-NEXT:    ncrk %r1, %r4, %r2
-; MISC3-NEXT:    xilf %r2, 4294967295
-; MISC3-NEXT:    or %r0, %r1
-; MISC3-NEXT:    st %r2, 0(%r5)
-; MISC3-NEXT:    lr %r2, %r0
+; MISC3-NEXT:    nr %r3, %r2
+; MISC3-NEXT:    nork %r0, %r2, %r2
+; MISC3-NEXT:    ncrk %r2, %r4, %r2
+; MISC3-NEXT:    or %r2, %r3
+; MISC3-NEXT:    st %r0, 0(%r5)
 ; MISC3-NEXT:    br %r14
   %and0 = and i32 %a0, %a1
   %not = xor i32 %a0, -1

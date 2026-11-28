@@ -33,6 +33,7 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 
 #include <cassert>
 #include <memory>
@@ -137,6 +138,8 @@ bool ValueObjectVariable::UpdateValue() {
       if (m_data.GetDataStart() && m_data.GetByteSize())
         m_value.SetBytes(m_data.GetDataStart(), m_data.GetByteSize());
       m_value.SetContext(Value::ContextType::Variable, variable);
+    } else if (HasNoStorage()) {
+      m_value.SetCompilerType(GetCompilerType());
     } else
       m_error = Status::FromErrorString("empty constant data");
     // constant bytes can't be edited - sorry
@@ -254,6 +257,12 @@ bool ValueObjectVariable::UpdateValue() {
       }
 
       SetValueIsValid(m_error.Success());
+    } else if (HasNoStorage()) {
+      // A variable whose type occupies no memory needs no location.
+      llvm::consumeError(maybe_value.takeError());
+      m_value.SetCompilerType(GetCompilerType());
+      m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
+      m_resolved_value_is_implicit = true;
     } else {
       m_error = Status::FromError(maybe_value.takeError());
       // could not find location, won't allow editing

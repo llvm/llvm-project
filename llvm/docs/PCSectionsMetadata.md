@@ -78,6 +78,11 @@ In general, LLVM *does not make any guarantees* about preserving IR metadata
 sections metadata, this guarantee is unchanged, and `!pcsections` metadata is
 remains *optional* until lowering to machine IR (MIR).
 
+Where LLVM IR transformations merge two instructions into one (for example,
+when sinking or merging stores), the merged instruction carries the union of
+both instructions' `!pcsections`: its PC is emitted to every section either
+instruction requested, with each request's auxiliary constants.
+
 ### Note for Code Generation
 
 As with other LLVM IR metadata, there are no requirements for LLVM IR

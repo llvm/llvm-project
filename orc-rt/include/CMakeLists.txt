@@ -6,6 +6,8 @@
 set(ORC_RT_HEADERS
     orc-rt-c/bedrock/ControllerHandlerTag.h
     orc-rt-c/bedrock/Session.h
+    orc-rt-c/bedrock/sys/posix/DlfcnLoaderAdapter.h
+    orc-rt-c/bedrock/sys/posix/dlfcn-types.h
     orc-rt-c/support/Compiler.h
     orc-rt-c/support/CoreTypes.h
     orc-rt-c/support/Error.h
@@ -31,6 +33,7 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/sps/MemoryAccessSPSCI.h
     orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h
     orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h
+    orc-rt/bedrock/sys/posix/DlfcnLoaderAdapter.h
     orc-rt/connect-socket/SocketConnector.h
     orc-rt/connect-socket/SocketHandle.h
     orc-rt/connect-socket/sps/SimpleRemoteCAOverSocket.h
@@ -41,6 +44,7 @@ set(ORC_RT_HEADERS
     orc-rt/connect/VettedPeer.h
     orc-rt/connect/sps/SimpleRemoteCA.h
     orc-rt/support/AllocAction.h
+    orc-rt/support/ArgForwardingTraits.h
     orc-rt/support/BitmaskEnum.h
     orc-rt/support/CCallback.h
     orc-rt/support/CallableTraitsHelper.h
@@ -49,14 +53,17 @@ set(ORC_RT_HEADERS
     orc-rt/support/ExecutorAddress.h
     orc-rt/support/IntervalMap.h
     orc-rt/support/IntervalSet.h
+    orc-rt/support/JITDylibLookupFlags.h
     orc-rt/support/LockedAccess.h
     orc-rt/support/MacroUtils.h
     orc-rt/support/Mangling.h
     orc-rt/support/MemoryFlags.h
     orc-rt/support/Proxy.h
     orc-rt/support/RTTI.h
+    orc-rt/support/RemoteSymbolLookupSet.h
     orc-rt/support/StringPool.h
     orc-rt/support/SymbolLookupFlags.h
+    orc-rt/support/SymbolLookupResult.h
     orc-rt/support/SymbolLookupSet.h
     orc-rt/support/WrapperFunction.h
     orc-rt/support/bind.h
@@ -66,7 +73,9 @@ set(ORC_RT_HEADERS
     orc-rt/support/scope_exit.h
     orc-rt/support/span.h
     orc-rt/support/sps/SPSAllocAction.h
+    orc-rt/support/sps/SPSJITDylibLookupFlags.h
     orc-rt/support/sps/SPSMemoryFlags.h
+    orc-rt/support/sps/SPSSymbolLookupResult.h
     orc-rt/support/sps/SPSSymbolLookupSet.h
     orc-rt/support/sps/SPSWrapperFunction.h
     orc-rt/support/sps/SPSWrapperFunctionBuffer.h
@@ -76,6 +85,7 @@ set(ORC_RT_HEADERS
 # Headers for POSIX-only interfaces, installed only where they're implemented.
 if (ORC_RT_TARGET_POSIX)
   list(APPEND ORC_RT_HEADERS
+    orc-rt-c/bedrock/host/posix/dlfcn-host.h
     orc-rt/bedrock/sps/DWARFEHFrameRegistrarSPSCI.h
   )
 endif()

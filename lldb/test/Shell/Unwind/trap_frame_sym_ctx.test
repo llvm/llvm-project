@@ -1,13 +1,20 @@
-# Test that symbol contexts for trap handler frames are set correctly even when
-# the pc is at the start of the function.
+# Test symbol contexts at the start of a trampoline recognized either by
+# signal-frame CFI or by its name. The name-only variant omits .cfi_signal_frame
+# so that CFI-based recognition cannot hide a broken name-based check.
+# The real-call variant checks that signal-frame CFI does not suppress the
+# usual call-site offset adjustment inside a function.
 
 # UNSUPPORTED: system-windows
 # REQUIRES: target-x86_64, native
 
 # RUN: %clang_host %p/Inputs/call-asm.c %p/Inputs/trap_frame_sym_ctx.s -o %t
-# RUN: %lldb %t -s %s -o exit | FileCheck %s
-
-settings append target.trap-handler-names tramp
+# RUN: %lldb %t -s %s -o exit | FileCheck %s --check-prefixes=CHECK,TRAMP
+# RUN: %clang_host -c -Wa,-defsym,TRAMP_NAME_ONLY=1 %p/Inputs/trap_frame_sym_ctx.s -o %t.named.o
+# RUN: %clang_host %p/Inputs/call-asm.c %t.named.o -o %t.named
+# RUN: %lldb %t.named -o "settings append target.trap-handler-names tramp" -s %s -o exit | FileCheck %s --check-prefixes=CHECK,TRAMP
+# RUN: %clang_host -c -Wa,-defsym,TRAMP_CALL=1 %p/Inputs/trap_frame_sym_ctx.s -o %t.call.o
+# RUN: %clang_host %p/Inputs/call-asm.c %t.call.o -o %t.call
+# RUN: %lldb %t.call -s %s -o exit | FileCheck %s --check-prefixes=CHECK,CALL
 
 breakpoint set -n bar
 # CHECK: Breakpoint 1: where = {{.*}}`bar
@@ -17,5 +24,6 @@ process launch
 
 thread backtrace -u
 # CHECK: frame #0: {{.*}}`bar
-# CHECK: frame #1: {{.*}}`tramp
+# TRAMP: frame #1: {{.*}}`tramp
+# CALL: frame #1: {{.*}}`asm_main
 # CHECK: frame #2: {{.*}}`main

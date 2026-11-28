@@ -25,7 +25,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$zmm0' }
   - { reg: '$rdi' }

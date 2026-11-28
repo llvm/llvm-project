@@ -205,12 +205,13 @@ public:
   /// what closes those scopes.
   cir::CleanupScopeOp currentFullExprCleanupScope = nullptr;
 
-  /// Set by emitLoopConditionVariable while it emits the initializer of a loop
-  /// condition variable that lifetime-extends temporaries with a destructor.
+  /// Set by emitAutoVarDeclWithCapturedCleanups while it emits the initializer
+  /// of a variable, such as a loop condition variable, that lifetime-extends
+  /// temporaries with a destructor.
   /// The cleanups of the temporaries that \c extendingDecl extends are
-  /// captured by \c cleanups for the loop's cleanup region and guarded by
-  /// \c activeFlag, instead of opening cir.cleanup.scope operations around the
-  /// cir.condition.
+  /// captured by \c cleanups, e.g. for the loop's cleanup region, and guarded
+  /// by \c activeFlag, instead of opening cir.cleanup.scope operations around
+  /// the code that follows the declaration.
   struct LifetimeExtensionCapture {
     const clang::ValueDecl *extendingDecl;
     CapturedCleanups *cleanups;
@@ -1287,6 +1288,14 @@ public:
   void emitCapturedCleanups(EHScopeStack::stable_iterator depth,
                             mlir::Location loc);
 
+  /// Like emitCapturedCleanups, but push the captured cleanups again as
+  /// ordinary cleanups, the first captured one outermost, and pop them, so that
+  /// each one is emitted as a cir.cleanup.scope around the ones captured after
+  /// it. An exception from one of them then still runs the ones captured
+  /// before it. None of them may have an active flag.
+  void emitCapturedCleanupsAsScopes(EHScopeStack::stable_iterator depth,
+                                    mlir::Location loc);
+
   void terminateStructuredRegionBody(mlir::Region &r, mlir::Location loc);
 
   /// Deactivates the given cleanup block. The block cannot be reactivated. Pops
@@ -1591,6 +1600,14 @@ public:
     void emitIntoCleanupRegion(mlir::Location loc) {
       if (active)
         cgf.emitCapturedCleanups(depth, loc);
+    }
+
+    /// Emit the captured cleanups at the current insertion point as nested
+    /// cir.cleanup.scope operations, so that an exception from one of them
+    /// still runs the ones captured before it.
+    void emitAsNestedScopes(mlir::Location loc) {
+      if (active)
+        cgf.emitCapturedCleanupsAsScopes(depth, loc);
     }
 
   private:
@@ -1935,9 +1952,27 @@ public:
   void emitAtomicStore(RValue rvalue, LValue dest, bool isInit);
   void emitAtomicStore(RValue rvalue, LValue dest, cir::MemOrder order,
                        bool isVolatile, bool isInit);
+
+  /// An emitted atomic order or scope value with optional constant evaluation.
+  struct EmittedOrderOrScope {
+    mlir::Value value;
+    std::optional<Expr::EvalResult> eval;
+
+    EmittedOrderOrScope() = default;
+    EmittedOrderOrScope(CIRGenFunction &cgf, const Expr *expr)
+        : value(cgf.emitScalarExpr(expr)) {
+      Expr::EvalResult evalResult;
+      if (expr->EvaluateAsInt(evalResult, cgf.getContext()))
+        eval.emplace(std::move(evalResult));
+    }
+  };
+
   void emitAtomicExprWithMemOrder(
-      const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
+      const EmittedOrderOrScope &order, bool isStore, bool isLoad, bool isFence,
       llvm::function_ref<void(cir::MemOrder)> emitAtomicOp);
+  void emitAtomicExprWithSyncScope(
+      const AtomicScopeModel *scopeModel, const EmittedOrderOrScope &scope,
+      llvm::function_ref<void(cir::SyncScopeKind)> emitAtomicOp);
 
   mlir::Value makeBinaryAtomicValue(
       cir::AtomicFetchKind kind, const clang::CallExpr *expr,
@@ -1982,6 +2017,20 @@ public:
   /// the variable \p d, which has automatic storage duration, lifetime-extends.
   static llvm::SmallVector<QualType, 2>
   getLifetimeExtendedTemporariesWithDestructor(const clang::VarDecl &d);
+
+  /// Whether destroying an object of type \p type, or its elements if it is an
+  /// array, may throw an exception.
+  static bool destructorMayThrow(QualType type);
+
+  /// Emit \p d with captured cleanups. Set \p guardDestruction if the cleanup
+  /// region covers initialization. Otherwise it must be reached only after
+  /// initialization. The cleanups of \p extendedTemporaries (see
+  /// emitLoopConditionVariable) are captured too; they need
+  /// \p guardDestruction.
+  void emitAutoVarDeclWithCapturedCleanups(
+      const clang::VarDecl &d, CapturedCleanups &cleanups,
+      bool guardDestruction = false,
+      llvm::ArrayRef<QualType> extendedTemporaries = {});
 
   /// Emit the initializer for an allocated variable.  If this call is not
   /// associated with the call to emitAutoVarAlloca (as the address of the
@@ -2458,9 +2507,20 @@ public:
   LValue emitLValueForBitField(LValue base, const FieldDecl *field);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
 
+  /// Annotate the address of `field`; accesses must use the result.
+  Address emitFieldAnnotations(const clang::FieldDecl *field, Address addr);
+
+  /// Annotate the storage of `d` at `addr`.
+  void emitVarAnnotations(const clang::VarDecl *d, mlir::Value addr);
+
   LValue emitLValueForLambdaField(const FieldDecl *field);
   LValue emitLValueForLambdaField(const FieldDecl *field,
                                   mlir::Value thisValue);
+
+  void emitLambdaVLACapture(const VariableArrayType *vat, LValue lv) {
+    mlir::Value size = vlaSizeMap[vat->getSizeExpr()];
+    emitStoreThroughLValue(RValue::get(size), lv);
+  }
 
   /// Like emitLValueForField, excpet that if the Field is a reference, this
   /// will return the address of the reference and not the address of the value
@@ -2484,6 +2544,10 @@ public:
 
   /// Emit a call to an NVPTX builtin function.
   std::optional<mlir::Value> emitNVPTXBuiltinExpr(unsigned builtinID,
+                                                  const CallExpr *expr);
+
+  /// Emit a call to a SPIR-V builtin function.
+  std::optional<mlir::Value> emitSPIRVBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);
 
   /// Emit a device-side printf call for GPU targets.
@@ -2781,10 +2845,6 @@ public:
   ConditionalInfo emitConditionalBlocks(const AbstractConditionalOperator *e,
                                         const FuncTy &branchGenFunc);
 
-  mlir::Value emitTernaryOnBoolExpr(const clang::Expr *cond, mlir::Location loc,
-                                    const clang::Stmt *thenS,
-                                    const clang::Stmt *elseS);
-
   /// Build a "reference" to a va_list; this is either the address or the value
   /// of the expression, depending on how va_list is defined.
   Address emitVAListRef(const Expr *e);
@@ -2870,6 +2930,13 @@ public:
   //                         OpenMP Emission
   //===--------------------------------------------------------------------===//
 public:
+  /// Emits a Sema-synthesized OpenMP helper variable (loop counter, iteration
+  /// variable or pre-init capture) without lifetime markers. These variables
+  /// are emitted between nested combined/composite OpenMP ops, which must be
+  /// direct children of each other's regions, so they must not open a
+  /// lifetime cleanup scope.
+  void emitOMPNoLifetimeVarDecl(const VarDecl &d);
+
   mlir::LogicalResult emitOMPScopeDirective(const OMPScopeDirective &s);
   mlir::LogicalResult emitOMPErrorDirective(const OMPErrorDirective &s);
   mlir::LogicalResult emitOMPParallelDirective(const OMPParallelDirective &s);
@@ -2955,6 +3022,8 @@ public:
   emitOMPDistributeSimdDirective(const OMPDistributeSimdDirective &s);
   mlir::LogicalResult emitOMPTargetParallelGenericLoopDirective(
       const OMPTargetParallelGenericLoopDirective &s);
+  mlir::LogicalResult
+  emitOMPTargetGenericLoopDirective(const OMPTargetGenericLoopDirective &s);
   mlir::LogicalResult emitOMPTargetParallelForSimdDirective(
       const OMPTargetParallelForSimdDirective &s);
   mlir::LogicalResult

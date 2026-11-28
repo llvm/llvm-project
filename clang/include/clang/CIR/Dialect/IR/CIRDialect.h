@@ -17,12 +17,6 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/Interfaces/CallInterfaces.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
@@ -32,6 +26,10 @@
 #include "clang/CIR/Interfaces/CIRLoopOpInterface.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
+
+#include "llvm/TargetParser/Triple.h"
+
+#include <optional>
 
 using BuilderCallbackRef =
     llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>;
@@ -54,11 +52,11 @@ template <typename ConcreteType>
 class FenvOpTrait : public mlir::OpTrait::TraitBase<ConcreteType, FenvOpTrait> {
 public:
   mlir::Speculation::Speculatability getSpeculatability() {
-    // Masked exceptions cannot trap. When strict_except is false, exception
-    // side effects are non-deterministic, so speculation is still safe.
-    FPEnvConstrainedOpInterface fenvOp = getFenvOp();
-    if (fenvOp.getFenvExceptionMode() == cir::FPExceptionMode::Masked &&
-        !fenvOp.getFenvStrictExcept())
+    // An unconstrained operation, and one that can ignore exceptions, cannot
+    // trap, and nothing may rely on the exception flags it raises, so
+    // speculation is safe.
+    cir::FenvAttr fenv = getFenvOp().getFenvAttr();
+    if (!fenv || fenv.canIgnoreExceptions())
       return mlir::Speculation::Speculatable;
 
     return mlir::Speculation::NotSpeculatable;
@@ -68,6 +66,9 @@ public:
       llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
     if (!getFenvOp().getFenvAttr())
       return;
+    // A constrained operation is modelled as reading the floating-point
+    // control state and writing the status flags. The write keeps it ordered
+    // against environment changes even when its exceptions can be ignored.
     effects.emplace_back(mlir::MemoryEffects::Read::get(),
                          FloatingPointEnvironmentResource::get());
     effects.emplace_back(mlir::MemoryEffects::Write::get(),
@@ -98,6 +99,9 @@ RecordLayoutAttr getRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
 /// Same lookup as getRecordLayout, but returns a null attribute instead of
 /// asserting when the record has no layout entry.
 RecordLayoutAttr tryGetRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
+
+/// Attempts to construct an llvm::Triple from a module's cir.triple attribute.
+std::optional<llvm::Triple> getTripleFromModule(mlir::ModuleOp mod);
 } // namespace cir
 
 // TableGen'erated files for MLIR dialects require that a macro be defined when
@@ -114,6 +118,15 @@ namespace cir {
 /// its allocated type.  Addressing has to keep using \p addr, whose type and
 /// address space may differ from the alloca's own result.
 AllocaOp getUnderlyingAlloca(mlir::Value addr);
+
+/// Whether the C++ vtables of \p module use the relative layout.
+bool usesRelativeVTables(mlir::ModuleOp mod);
+
+/// The size in bytes of an entry of a C++ vtable in \p module. Operations
+/// address vtable entries by index, so this is the one place that relates the
+/// index of an entry to its distance from the address point.
+uint64_t getVTableEntrySize(mlir::ModuleOp mod,
+                            const mlir::DataLayout &dataLayout);
 } // namespace cir
 
 #endif // CLANG_CIR_DIALECT_IR_CIRDIALECT_H

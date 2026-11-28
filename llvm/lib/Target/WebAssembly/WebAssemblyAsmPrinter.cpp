@@ -61,8 +61,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
-extern cl::opt<bool> WasmKeepRegisters;
-
 //===----------------------------------------------------------------------===//
 // Helpers.
 //===----------------------------------------------------------------------===//
@@ -166,8 +164,10 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
   MCSymbolWasm *WasmSym = nullptr;
 
   ExceptionHandling EM = F->getParent()->getExceptionModel();
-  const bool EnableEmEH =
-      EM == ExceptionHandling::Emscripten || WebAssembly::WasmEnableEmSjLj;
+  const bool EnableEmEH = EM == ExceptionHandling::Emscripten ||
+                          static_cast<const WebAssemblyTargetMachine &>(TM)
+                              .getCLOpts()
+                              .enable_emscripten_sjlj;
   if (EnableEmEH && isEmscriptenInvokeName(F->getName())) {
     assert(Sig);
     InvokeDetected = true;

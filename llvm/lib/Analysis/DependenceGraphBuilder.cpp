@@ -236,10 +236,7 @@ template <class G> void AbstractDependenceGraphBuilder<G>::createDefUseEdges() {
     SmallPtrSet<NodeType *, 4> VisitedTargets;
 
     for (Instruction *II : SrcIList) {
-      for (User *U : II->users()) {
-        Instruction *UI = dyn_cast<Instruction>(U);
-        if (!UI)
-          continue;
+      for (Instruction *UI : II->users()) {
         NodeType *DstNode = IMap.lookup(UI);
 
         // In the case of loops, the scope of the subgraph is all the

@@ -98,9 +98,6 @@ private:
   /// nullopt when not in a WMMA window.
   std::optional<unsigned> CurrentCoExecStage;
 
-  /// Cycle when the current WMMA window started.
-  unsigned CoExecWindowStartCycle = 0;
-
   /// Tracks cycles until TRANS can be issued again (back-to-back TRANS hazard).
   unsigned CyclesUntilTRANS = 0;
 
@@ -246,9 +243,11 @@ private:
   bool fixRequiredExportPriority(MachineInstr *MI);
   bool fixGetRegWaitIdle(MachineInstr *MI);
   bool fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI);
+  bool fixBarrierJoinCompletion(MachineInstr *MI);
   bool fixScratchBaseForwardingHazard(MachineInstr *MI);
   bool fixSetRegMode(MachineInstr *MI);
   bool fixTDM(MachineInstr *MI);
+  bool fixTransF16ToPartialVGPRWriteHazard(MachineInstr *MI);
 
   /// Wait states before \p Consumer may read \p Reg, holding \p Producer's
   /// result, as srcC if \p IsSrcC or as srcA/srcB otherwise.

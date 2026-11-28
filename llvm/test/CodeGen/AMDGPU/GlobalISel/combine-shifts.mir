@@ -3,7 +3,6 @@
 
 ---
 name:            combine_ashr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr31
@@ -31,7 +30,6 @@ body:             |
 ...
 ---
 name:            combine_lshr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr31
@@ -59,7 +57,6 @@ body:             |
 ...
 ---
 name:            combine_shl
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr31
@@ -87,7 +84,6 @@ body:             |
 ...
 ---
 name:            combine_ashr2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr31
@@ -115,7 +111,6 @@ body:             |
 ...
 ---
 name:            combine_vector_lshr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr31
@@ -146,7 +141,6 @@ body:             |
 ...
 ---
 name:            combine_vector_shl
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr31
@@ -177,7 +171,6 @@ body:             |
 ...
 ---
 name:            combine_vector_ashr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr31

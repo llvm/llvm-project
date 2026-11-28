@@ -12,7 +12,6 @@
 ---
 
 name:           outline_cpsr_r12_ok
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: outline_cpsr_r12_ok
   ; CHECK: bb.0:
@@ -45,7 +44,6 @@ body:             |
 ---
 
 name:           dont_outline_cpsr_r12_1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_outline_cpsr_r12_1
   ; CHECK:  bb.0:
@@ -81,7 +79,6 @@ body:             |
 ---
 
 name:           dont_outline_cpsr_r12_2
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_outline_cpsr_r12_2
   ; CHECK-NOT: BL @OUTLINED_FUNCTION
@@ -111,3 +108,4 @@ body:             |
     BL @z
   bb.3:
     BX_RET 14, $noreg
+...

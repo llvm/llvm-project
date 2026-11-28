@@ -305,7 +305,7 @@ def MOVXCCrr : F4_1<0b101100, (outs IntRegs:$rd),
                       [(set i32:$rd,
                        (SPselectxcc i32:$rs2, i32:$f, imm:$cond))]>;
 def MOVXCCri : F4_2<0b101100, (outs IntRegs:$rd),
-                      (ins i32imm:$simm11, IntRegs:$f, CCOp:$cond),
+                      (ins simm11Op:$simm11, IntRegs:$f, CCOp:$cond),
                       "mov$cond %xcc, $simm11, $rd",
                       [(set i32:$rd,
                        (SPselectxcc simm11:$simm11, i32:$f, imm:$cond))]>;
@@ -364,7 +364,7 @@ let Predicates = [HasV9], Constraints = "$f = $rd" in {
                    [(set i32:$rd, (SPselectreg i32:$rs2, i32:$f, imm:$rcond, i64:$rs1))]>;
 
   def MOVRri : F4_4i<0b101111, (outs IntRegs:$rd),
-                   (ins I64Regs:$rs1, i32imm:$simm10, IntRegs:$f, RegCCOp:$rcond),
+                   (ins I64Regs:$rs1, simm10Op:$simm10, IntRegs:$f, RegCCOp:$rcond),
                    "movr$rcond $rs1, $simm10, $rd",
                    [(set i32:$rd, (SPselectreg simm10:$simm10, i32:$f, imm:$rcond, i64:$rs1))]>;
 }

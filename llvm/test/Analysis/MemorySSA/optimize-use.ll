@@ -1,5 +1,5 @@
-; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOLIMIT
-; RUN: opt -memssa-check-limit=0 -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LIMIT
+; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa-walker>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOLIMIT
+; RUN: opt -memssa-check-limit=0 -aa-pipeline=basic-aa -passes='print<memoryssa-walker>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LIMIT
 
 ; Function Attrs: ssp uwtable
 define i32 @main() {

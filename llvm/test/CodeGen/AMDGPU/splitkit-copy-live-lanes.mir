@@ -3,7 +3,6 @@
 
 ---
 name: zextload_global_v64i16_to_v64i64
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
   stackPtrOffsetReg: '$sgpr32'

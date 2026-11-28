@@ -6,7 +6,7 @@
 ! that the original values are restored.
 
 ! RUN: %flang %isysroot -L"%libdir" %s -o %t
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t | FileCheck %s
+! RUN: %t | FileCheck %s
 
 ! CHECK: PASS
 program main

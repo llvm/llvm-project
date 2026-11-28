@@ -5,7 +5,6 @@
 ---
 name:            delete_store_undef
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0
@@ -26,7 +25,6 @@ body:             |
 ---
 name:            delete_add_undef
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $x0

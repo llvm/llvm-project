@@ -12,9 +12,7 @@
 
 define i32 @t0_lshr(i32 %data, i32 %nbits) {
 ; CHECK-LABEL: @t0_lshr(
-; CHECK-NEXT:    [[T0:%.*]] = shl nsw i32 -1, [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[DATA:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = lshr exact i32 [[T1]], [[NBITS]]
+; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[DATA:%.*]], [[NBITS:%.*]]
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;
   %t0 = shl i32 -1, %nbits
@@ -39,9 +37,7 @@ define i32 @t1_sshr(i32 %data, i32 %nbits) {
 
 define <4 x i32> @t2_vec(<4 x i32> %data, <4 x i32> %nbits) {
 ; CHECK-LABEL: @t2_vec(
-; CHECK-NEXT:    [[T0:%.*]] = shl nsw <4 x i32> splat (i32 -1), [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and <4 x i32> [[T0]], [[DATA:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = lshr <4 x i32> [[T1]], [[NBITS]]
+; CHECK-NEXT:    [[T2:%.*]] = lshr <4 x i32> [[T1:%.*]], [[NBITS:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[T2]]
 ;
   %t0 = shl <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %nbits
@@ -52,10 +48,9 @@ define <4 x i32> @t2_vec(<4 x i32> %data, <4 x i32> %nbits) {
 
 define <4 x i32> @t3_vec_undef(<4 x i32> %data, <4 x i32> %nbits) {
 ; CHECK-LABEL: @t3_vec_undef(
-; CHECK-NEXT:    [[T0:%.*]] = shl <4 x i32> <i32 -1, i32 -1, i32 undef, i32 -1>, [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and <4 x i32> [[T0]], [[DATA:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = lshr <4 x i32> [[T1]], [[NBITS]]
-; CHECK-NEXT:    ret <4 x i32> [[T2]]
+; CHECK-NEXT:    [[T2:%.*]] = lshr <4 x i32> [[T1:%.*]], [[NBITS:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = and <4 x i32> [[T2]], <i32 -1, i32 -1, i32 undef, i32 -1>
+; CHECK-NEXT:    ret <4 x i32> [[T3]]
 ;
   %t0 = shl <4 x i32> <i32 -1, i32 -1, i32 undef, i32 -1>, %nbits
   %t1 = and <4 x i32> %t0, %data
@@ -71,8 +66,7 @@ define i32 @t4_extrause0(i32 %data, i32 %nbits) {
 ; CHECK-LABEL: @t4_extrause0(
 ; CHECK-NEXT:    [[T0:%.*]] = shl nsw i32 -1, [[NBITS:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
-; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[DATA:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[T1]], [[NBITS]]
+; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[T1:%.*]], [[NBITS]]
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;
   %t0 = shl i32 -1, %nbits
@@ -191,9 +185,7 @@ declare i32 @gen32()
 define i32 @t11_commutative(i32 %nbits) {
 ; CHECK-LABEL: @t11_commutative(
 ; CHECK-NEXT:    [[DATA:%.*]] = call i32 @gen32()
-; CHECK-NEXT:    [[T0:%.*]] = shl nsw i32 -1, [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and i32 [[DATA]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[T1]], [[NBITS]]
+; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[DATA]], [[NBITS:%.*]]
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;
   %data = call i32 @gen32()
@@ -207,10 +199,9 @@ define i32 @t11_commutative(i32 %nbits) {
 
 define i32 @n12(i32 %data, i32 %nbits) {
 ; CHECK-LABEL: @n12(
-; CHECK-NEXT:    [[T0:%.*]] = shl i32 2147483647, [[NBITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[DATA:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[T1]], [[NBITS]]
-; CHECK-NEXT:    ret i32 [[T2]]
+; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[T1:%.*]], [[NBITS:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = and i32 [[T2]], 2147483647
+; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = shl i32 2147483647, %nbits ; must be shifting -1
   %t1 = and i32 %t0, %data

@@ -14,7 +14,6 @@
 
 #include "clang/Sema/AnalysisBasedWarnings.h"
 #include "SemaLifetimeSafety.h"
-#include "TypeLocBuilder.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -47,7 +46,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -1250,9 +1248,19 @@ public:
     while (!BlockQueue.empty()) {
       const CFGBlock *P = BlockQueue.front();
       BlockQueue.pop_front();
-      for (const CFGBlock *B : P->succs()) {
+      // The code after an 'analyzer_noreturn' call isn't dead, since the call
+      // can return. The CFG keeps that code as the alternate successor of the
+      // exit edge, so follow it too.
+      bool FollowAlternate = P->hasOnlyAnalyzerNoReturnElement();
+      for (const CFGBlock::AdjacentBlock &Succ : P->succs()) {
+        const CFGBlock *B = Succ.getReachableBlock();
         if (B && ReachableBlocks.insert(B).second)
           BlockQueue.push_back(B);
+        if (!FollowAlternate)
+          continue;
+        const CFGBlock *Alt = Succ.getPossiblyUnreachableBlock();
+        if (Alt && ReachableBlocks.insert(Alt).second)
+          BlockQueue.push_back(Alt);
       }
     }
   }
@@ -2446,6 +2454,41 @@ bool refersMainParam(const Expr *E) {
   return false;
 }
 
+// The base diagnostic comes first, so that the common case of checking whether
+// all of them are ignored needs one lookup.
+static constexpr unsigned UnsafeLibcCallDiagIDs[] = {
+    diag::warn_unsafe_buffer_libc_call,
+    diag::warn_unsafe_buffer_libc_call_numeric_conversion,
+    diag::warn_unsafe_buffer_libc_call_string_manipulation,
+    diag::warn_unsafe_buffer_libc_call_string_examination,
+    diag::warn_unsafe_buffer_libc_call_memory,
+    diag::warn_unsafe_buffer_libc_call_io,
+    diag::warn_unsafe_buffer_libc_call_printf,
+    diag::warn_unsafe_buffer_libc_call_scanf,
+};
+
+static unsigned getUnsafeLibcCallDiagID(UnsafeLibcFunctionFamily Family) {
+  switch (Family) {
+  case UnsafeLibcFunctionFamily::Other:
+    return diag::warn_unsafe_buffer_libc_call;
+  case UnsafeLibcFunctionFamily::NumericConversion:
+    return diag::warn_unsafe_buffer_libc_call_numeric_conversion;
+  case UnsafeLibcFunctionFamily::StringManipulation:
+    return diag::warn_unsafe_buffer_libc_call_string_manipulation;
+  case UnsafeLibcFunctionFamily::StringExamination:
+    return diag::warn_unsafe_buffer_libc_call_string_examination;
+  case UnsafeLibcFunctionFamily::Memory:
+    return diag::warn_unsafe_buffer_libc_call_memory;
+  case UnsafeLibcFunctionFamily::IO:
+    return diag::warn_unsafe_buffer_libc_call_io;
+  case UnsafeLibcFunctionFamily::Printf:
+    return diag::warn_unsafe_buffer_libc_call_printf;
+  case UnsafeLibcFunctionFamily::Scanf:
+    return diag::warn_unsafe_buffer_libc_call_scanf;
+  }
+  llvm_unreachable("unknown UnsafeLibcFunctionFamily");
+}
+
 class UnsafeBufferUsageReporter : public UnsafeBufferUsageHandler {
   Sema &S;
   bool SuggestSuggestions;  // Recommend -fsafe-buffer-usage-suggestions?
@@ -2537,31 +2580,6 @@ public:
         D = ME->getMemberDecl();
         MsgParam = 5;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
-        QualType destType = ECE->getType();
-
-        if (!isa<PointerType>(destType))
-          return;
-        destType = destType.getTypePtr()->getPointeeType();
-
-        // If destination type is incomplete or dependent, it is unsafe to cast
-        // to anyway, no need to check its type:
-        if (!destType->isIncompleteType() && !destType->isDependentType()) {
-          const uint64_t dSize = Ctx.getTypeSize(destType);
-          QualType srcType = ECE->getSubExpr()->getType();
-
-          assert(srcType->isPointerType());
-
-          QualType srcPointeeType = srcType.getTypePtr()->getPointeeType();
-
-          // Check if source type is incomplete or dependent as well:
-          if (!srcPointeeType->isIncompleteType() &&
-              !srcPointeeType->isDependentType()) {
-            const uint64_t sSize = Ctx.getTypeSize(srcPointeeType);
-
-            if (sSize >= dSize)
-              return;
-          }
-        }
         if (const auto *CE = dyn_cast<CXXMemberCallExpr>(
                 ECE->getSubExpr()->IgnoreParens())) {
           D = CE->getMethodDecl();
@@ -2595,9 +2613,9 @@ public:
   }
 
   void handleUnsafeLibcCall(const CallExpr *Call, unsigned PrintfInfo,
-                            ASTContext &Ctx,
+                            UnsafeLibcFunctionFamily Family, ASTContext &Ctx,
                             const Expr *UnsafeArg = nullptr) override {
-    unsigned DiagID = diag::warn_unsafe_buffer_libc_call;
+    unsigned DiagID = getUnsafeLibcCallDiagID(Family);
     if (PrintfInfo & 0x8) {
       // The callee is a function with the format attribute. See the
       // documentation of PrintfInfo in UnsafeBufferUsageHandler, and
@@ -2748,7 +2766,9 @@ public:
   }
 
   bool ignoreUnsafeBufferInLibcCall(const SourceLocation &Loc) const override {
-    return S.Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc);
+    return llvm::all_of(UnsafeLibcCallDiagIDs, [&](unsigned ID) {
+      return S.Diags.isIgnored(ID, Loc);
+    });
   }
 
   bool
@@ -3073,7 +3093,9 @@ static bool shouldRunUnsafeBufferUsageAnalysis(const Sema &S,
          !Diags.isIgnored(diag::warn_unsafe_buffer_variable, Loc) ||
          !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container, Loc) ||
          (S.getLangOpts().CPlusPlus &&
-          (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc) ||
+          (llvm::any_of(
+               UnsafeLibcCallDiagIDs,
+               [&](unsigned ID) { return !Diags.isIgnored(ID, Loc); }) ||
            !Diags.isIgnored(diag::warn_unsafe_buffer_format_attr_call, Loc)));
 }
 

@@ -1224,9 +1224,10 @@ bool isValidLoopVariableType(QualType LoopVarTy) {
 
       // We can also support tag-types inherited from the
       // random_access_iterator_tag.
-      for (CXXBaseSpecifier BS : ItrCategoryDecl->bases())
-        if (IsRandomAccessIteratorTag(BS.getType()->getAsCXXRecordDecl()))
-          return true;
+      if (ItrCategoryDecl->isCompleteDefinition())
+        for (CXXBaseSpecifier BS : ItrCategoryDecl->bases())
+          if (IsRandomAccessIteratorTag(BS.getType()->getAsCXXRecordDecl()))
+            return true;
 
       return false;
     }

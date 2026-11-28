@@ -3,7 +3,6 @@
 
 ---
 name: zext_sextinreg_7
-tracksRegLiveness: true
 legalized:         true
 body:             |
   bb.0:
@@ -27,7 +26,6 @@ body:             |
 ...
 ---
 name: aext_sextinreg_7
-tracksRegLiveness: true
 legalized:         true
 body:             |
   bb.0:
@@ -51,7 +49,6 @@ body:             |
 ...
 ---
 name: zext_sextinreg_8
-tracksRegLiveness: true
 legalized:         true
 body:             |
   bb.0:
@@ -74,7 +71,6 @@ body:             |
 ...
 ---
 name: aext_sextinreg_8
-tracksRegLiveness: true
 legalized:         true
 body:             |
   bb.0:
@@ -97,7 +93,6 @@ body:             |
 ...
 ---
 name: zext_sextinreg_48
-tracksRegLiveness: true
 legalized:         true
 body:             |
   bb.0:
@@ -120,7 +115,6 @@ body:             |
 ...
 ---
 name: zext_sextinreg_32
-tracksRegLiveness: true
 legalized:         true
 body:             |
   bb.0:
@@ -139,7 +133,6 @@ body:             |
 ...
 ---
 name: zext_unmerge_sextinreg_v4i32
-tracksRegLiveness: true
 legalized:         true
 body:             |
   bb.0:
@@ -164,7 +157,6 @@ body:             |
 ...
 ---
 name: zext_unmerge_sextinreg_v4i32_unknown
-tracksRegLiveness: true
 legalized:         true
 body:             |
   bb.0:
@@ -188,7 +180,6 @@ body:             |
 ...
 ---
 name: anyext_unmerge_sextinreg_v4i32
-tracksRegLiveness: true
 legalized:         true
 body:             |
   bb.0:
@@ -213,7 +204,6 @@ body:             |
 ...
 ---
 name: zext_unmerge_sextinreg_v4i32_result2
-tracksRegLiveness: true
 legalized:         true
 body:             |
   bb.0:

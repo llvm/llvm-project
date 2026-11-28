@@ -3,7 +3,6 @@
 ---
 name:            test_v8s8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -24,7 +23,6 @@ body:             |
 ---
 name:            test_v4s16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -45,7 +43,6 @@ body:             |
 ---
 name:            test_v2s32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -66,7 +63,6 @@ body:             |
 ---
 name:            test_s64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -89,7 +85,6 @@ body:             |
 ---
 name:            test_s32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $s0
@@ -111,7 +106,6 @@ body:             |
 ---
 name:            test_v16s8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -132,7 +126,6 @@ body:             |
 ---
 name:            test_v8s16
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -153,7 +146,6 @@ body:             |
 ---
 name:            test_v4s32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $q0
@@ -176,7 +168,6 @@ body:             |
 ---
 name:            test_s32_zeropoison
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $s0
@@ -198,7 +189,6 @@ body:             |
 ---
 name:            test_s64_zeropoison
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $d0
@@ -221,7 +211,6 @@ body:             |
 ---
 name:            test_s35
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0
@@ -247,7 +236,6 @@ body:             |
 ---
 name:            test_s8
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0
@@ -273,7 +261,6 @@ body:             |
 ---
 name:            test_s65
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1
