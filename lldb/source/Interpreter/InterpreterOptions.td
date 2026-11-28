@@ -9,6 +9,17 @@ let Command = "architecture" in {
                           Desc<"Specify the architecture for the target.">;
 }
 
+let Command = "output file" in {
+  def output_file_outfile : Option<"outfile", "o">,
+                            Group<1>,
+                            Arg<"Filename">,
+                            Desc<"Specify a path for capturing command output.">;
+  def output_file_append_outfile
+      : Option<"append-outfile", "\\x01">,
+        Group<1>,
+        Desc<"Append to the file specified with '--outfile <path>'.">;
+}
+
 let Command = "uuid" in {
   def uuid_uuid : Option<"uuid", "u">,
                   Group<1>,
