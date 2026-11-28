@@ -498,5 +498,5 @@ def AArch64PostLegalizerCombiner
                         lshr_of_trunc_of_lshr,
                         funnel_shift_from_or_shift_constants_are_legal,
                         vashr_to_sshl, vlshr_to_ushl, simplify_demanded_bits,
-                        sdiv_by_const]> {
+                        sdiv_by_const, udiv_by_pow2, udiv_by_const]> {
 }

@@ -177,3 +177,47 @@ define <2 x i64> @udiv_v2i64(<2 x i64> %a) {
   %r = udiv <2 x i64> %a, splat (i64 7)
   ret <2 x i64> %r
 }
+
+define <2 x i64> @udiv_v2i64_nonuniform(<2 x i64> %a) {
+; CHECK-LABEL: udiv_v2i64_nonuniform:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #9363 // =0x2493
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    mov x10, v0.d[1]
+; CHECK-NEXT:    movk x8, #37449, lsl #16
+; CHECK-NEXT:    mov x11, #-6148914691236517206 // =0xaaaaaaaaaaaaaaaa
+; CHECK-NEXT:    movk x8, #18724, lsl #32
+; CHECK-NEXT:    movk x11, #43691
+; CHECK-NEXT:    movk x8, #9362, lsl #48
+; CHECK-NEXT:    umulh x8, x9, x8
+; CHECK-NEXT:    umulh x10, x10, x11
+; CHECK-NEXT:    sub x9, x9, x8
+; CHECK-NEXT:    add x8, x8, x9, lsr #1
+; CHECK-NEXT:    lsr x9, x10, #2
+; CHECK-NEXT:    lsr x8, x8, #2
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    mov v0.d[1], x9
+; CHECK-NEXT:    ret
+  %r = udiv <2 x i64> %a, <i64 7, i64 6>
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @udiv_v2i64_nonuniform_one(<2 x i64> %a) {
+; CHECK-LABEL: udiv_v2i64_nonuniform_one:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #9363 // =0x2493
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    movk x8, #37449, lsl #16
+; CHECK-NEXT:    movk x8, #18724, lsl #32
+; CHECK-NEXT:    movk x8, #9362, lsl #48
+; CHECK-NEXT:    umulh x8, x9, x8
+; CHECK-NEXT:    sub x9, x9, x8
+; CHECK-NEXT:    add x8, x8, x9, lsr #1
+; CHECK-NEXT:    lsr x8, x8, #2
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    mov v1.d[1], v0.d[1]
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %r = udiv <2 x i64> %a, <i64 7, i64 1>
+  ret <2 x i64> %r
+}

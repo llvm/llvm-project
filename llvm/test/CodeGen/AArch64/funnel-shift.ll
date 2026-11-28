@@ -130,10 +130,14 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ;
 ; CHECK-GI-LABEL: fshl_i37:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #37 // =0x25
-; CHECK-GI-NEXT:    and x9, x2, #0x1fffffffff
-; CHECK-GI-NEXT:    udiv x10, x9, x8
-; CHECK-GI-NEXT:    umsubl x8, w10, w8, x9
+; CHECK-GI-NEXT:    mov x9, #46053 // =0xb3e5
+; CHECK-GI-NEXT:    and x8, x2, #0x1fffffffff
+; CHECK-GI-NEXT:    mov w10, #37 // =0x25
+; CHECK-GI-NEXT:    movk x9, #12398, lsl #16
+; CHECK-GI-NEXT:    movk x9, #15941, lsl #32
+; CHECK-GI-NEXT:    movk x9, #1771, lsl #48
+; CHECK-GI-NEXT:    umulh x9, x8, x9
+; CHECK-GI-NEXT:    umsubl x8, w9, w10, x8
 ; CHECK-GI-NEXT:    mov w9, #36 // =0x24
 ; CHECK-GI-NEXT:    ubfx x10, x1, #1, #36
 ; CHECK-GI-NEXT:    sub x9, x9, x8
@@ -338,11 +342,15 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ;
 ; CHECK-GI-LABEL: fshr_i37:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #37 // =0x25
-; CHECK-GI-NEXT:    and x9, x2, #0x1fffffffff
+; CHECK-GI-NEXT:    mov x9, #46053 // =0xb3e5
+; CHECK-GI-NEXT:    and x8, x2, #0x1fffffffff
+; CHECK-GI-NEXT:    mov w10, #37 // =0x25
+; CHECK-GI-NEXT:    movk x9, #12398, lsl #16
 ; CHECK-GI-NEXT:    and x11, x1, #0x1fffffffff
-; CHECK-GI-NEXT:    udiv x10, x9, x8
-; CHECK-GI-NEXT:    umsubl x8, w10, w8, x9
+; CHECK-GI-NEXT:    movk x9, #15941, lsl #32
+; CHECK-GI-NEXT:    movk x9, #1771, lsl #48
+; CHECK-GI-NEXT:    umulh x9, x8, x9
+; CHECK-GI-NEXT:    umsubl x8, w9, w10, x8
 ; CHECK-GI-NEXT:    mov w9, #36 // =0x24
 ; CHECK-GI-NEXT:    lsl x10, x0, #1
 ; CHECK-GI-NEXT:    sub x9, x9, x8

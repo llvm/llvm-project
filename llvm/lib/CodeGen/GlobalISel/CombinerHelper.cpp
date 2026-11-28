@@ -5456,6 +5456,29 @@ bool CombinerHelper::matchSameRegOrICstOrSplat(Register A, Register B) const {
          mi_match(B, MRI, m_SpecificICstOrSplat(Cst));
 }
 
+/// Returns true if some, but not all, elements of the constant divisor \p RHS
+/// need the NPQ fixup in the magic-number expansion of an unsigned division.
+/// This must match how buildUDivOrURemUsingMul computes the magic values.
+static bool hasMixedUDivNPQ(Register RHS, unsigned KnownLeadingZeros,
+                            const MachineRegisterInfo &MRI) {
+  bool AnyNPQ = false, AllNPQ = true;
+  matchUnaryPredicate(MRI, RHS, [&](const Constant *C) {
+    auto *CI = dyn_cast_or_null<ConstantInt>(C);
+    if (!CI)
+      return false;
+    const APInt &Divisor = CI->getValue();
+    bool IsAdd =
+        !Divisor.isOne() &&
+        UnsignedDivisionByConstantInfo::get(
+            Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()))
+            .IsAdd;
+    AnyNPQ |= IsAdd;
+    AllNPQ &= IsAdd;
+    return true;
+  });
+  return AnyNPQ && !AllNPQ;
+}
+
 MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
   assert(Opcode == TargetOpcode::G_UDIV || Opcode == TargetOpcode::G_UREM);
@@ -5538,6 +5561,7 @@ MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
   APInt WideMagic;
 
   bool UseNPQ = false;
+  bool HasDivisorOne = false;
   SmallVector<Register, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
   auto BuildUDIVPattern = [&](const Constant *C) {
     auto *CI = cast<ConstantInt>(C);
@@ -5591,6 +5615,7 @@ MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
     PostShifts.push_back(
         MIB.buildConstant(ScalarShiftAmtTy, PostShift).getReg(0));
     UseNPQ |= SelNPQ;
+    HasDivisorOne |= Divisor.isOne();
     return true;
   };
 
@@ -5646,19 +5671,23 @@ MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
     Q = MIB.buildAdd(Ty, NPQ, Q).getReg(0);
   }
 
-  Q = MIB.buildLShr(Ty, Q, PostShift).getReg(0);
-  auto One = MIB.buildConstant(Ty, 1);
-  auto IsOne = MIB.buildICmp(
-      CmpInst::Predicate::ICMP_EQ,
-      Ty.isScalar() ? LLT::integer(1) : Ty.changeElementType(LLT::integer(1)),
-      RHS, One);
-  auto ret = MIB.buildSelect(Ty, IsOne, LHS, Q);
+  auto Ret = MIB.buildLShr(Ty, Q, PostShift);
+  if (HasDivisorOne) {
+    // The magic algorithm doesn't work for division by 1, so select the
+    // numerator for those elements.
+    auto One = MIB.buildConstant(Ty, 1);
+    auto IsOne = MIB.buildICmp(
+        CmpInst::Predicate::ICMP_EQ,
+        Ty.isScalar() ? LLT::integer(1) : Ty.changeElementType(LLT::integer(1)),
+        RHS, One);
+    Ret = MIB.buildSelect(Ty, IsOne, LHS, Ret);
+  }
 
   if (Opcode == TargetOpcode::G_UREM) {
-    auto Prod = MIB.buildMul(Ty, ret, RHS);
+    auto Prod = MIB.buildMul(Ty, Ret, RHS);
     return MIB.buildSub(Ty, LHS, Prod);
   }
-  return ret;
+  return Ret;
 }
 
 bool CombinerHelper::matchUDivOrURemByConst(MachineInstr &MI) const {
@@ -5696,9 +5725,29 @@ bool CombinerHelper::matchUDivOrURemByConst(MachineInstr &MI) const {
   if (LI) {
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
       return false;
-    if (!isLegalOrBeforeLegalizer({TargetOpcode::G_UMULH, {DstTy}}))
+    if (isPreLegalize()) {
+      // If the element type has a legal G_UMULH but the vector one would have
+      // to be lowered, a mix of lanes with and without the NPQ fixup needs a
+      // G_UMULH by <2^(N-1), 0> that nothing simplifies. Let the G_UDIV be
+      // scalarized instead and expand each element after legalization.
+      if (DstTy.isVector() &&
+          isLegal({TargetOpcode::G_UMULH, {DstTy.getScalarType()}}) &&
+          !isLegalOrHasFewerElements({TargetOpcode::G_UMULH, {DstTy}})) {
+        Register LHS = MI.getOperand(1).getReg();
+        unsigned KnownLeadingZeros =
+            VT ? VT->getKnownBits(LHS).countMinLeadingZeros() : 0;
+        if (hasMixedUDivNPQ(RHS, KnownLeadingZeros, MRI))
+          return false;
+      }
+    } else if (!isLegal({TargetOpcode::G_UMULH, {DstTy}})) {
+      // After legalization nothing will fix up an illegal G_UMULH.
       return false;
-    if (!isLegalOrBeforeLegalizer(
+    }
+    // The compare and select are only built when some divisor is 1.
+    bool HasDivisorOne = !matchUnaryPredicate(
+        MRI, RHS, [](const Constant *C) { return C && !C->isOneValue(); });
+    if (HasDivisorOne &&
+        !isLegalOrBeforeLegalizer(
             {TargetOpcode::G_ICMP,
              {DstTy.isVector() ? DstTy.changeElementSize(1) : LLT::scalar(1),
               DstTy}}))
