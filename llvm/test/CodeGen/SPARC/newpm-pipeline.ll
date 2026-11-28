@@ -76,7 +76,7 @@
 ; SPARC-NEXT:     tailduplication
 ; SPARC-NEXT:     machine-cp
 ; SPARC-NEXT:     post-ra-pseudos
-; SPARC-NEXT:     post-RA-sched
+; SPARC-NEXT:     postmisched
 ; SPARC-NEXT:     block-placement
 ; SPARC-NEXT:     fentry-insert
 ; SPARC-NEXT:     xray-instrumentation

@@ -133,6 +133,7 @@ def LEON5Model : SchedMachineModel {
   let MicroOpBufferSize = 0; // In-order.
   let LoadLatency = 2;
   let MispredictPenalty = 6;
+  let PostRAScheduler = 1;
   let CompleteModel = 0;
 }
 
