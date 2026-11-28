@@ -123,6 +123,7 @@
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/FlattenCFG.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/HoistZeroCostConditionalValues.h"
 #include "llvm/Transforms/Scalar/InferAddressSpaces.h"
 #include "llvm/Transforms/Scalar/LICM.h"
 #include "llvm/Transforms/Scalar/LoopDataPrefetch.h"
@@ -1538,6 +1539,8 @@ bool GCNPassConfig::addPreISel() {
   addPass(createFixIrreduciblePass());
   addPass(createUnifyLoopExitsPass());
   addPass(createStructurizeCFGPass(/*SkipUniformRegions=*/true));
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createHoistZeroCostConditionalValuesPass());
 
   addPass(createAMDGPUAnnotateUniformValuesLegacy());
   addPass(createSIAnnotateControlFlowLegacyPass());
@@ -2315,6 +2318,8 @@ void AMDGPUCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
   addFunctionPass(FixIrreduciblePass(), PMW);
   addFunctionPass(UnifyLoopExitsPass(), PMW);
   addFunctionPass(StructurizeCFGPass(/*SkipUniformRegions=*/true), PMW);
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addFunctionPass(HoistZeroCostConditionalValuesPass(), PMW);
 
   addFunctionPass(AMDGPUAnnotateUniformValuesPass(), PMW);
 

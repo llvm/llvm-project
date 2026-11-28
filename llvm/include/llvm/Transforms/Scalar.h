@@ -113,6 +113,9 @@ LLVM_ABI FunctionPass *createFlattenCFGPass();
 /// regions that only contain uniform branches.
 LLVM_ABI Pass *createStructurizeCFGPass(bool SkipUniformRegions = false);
 
+/// Hoist zero-cost conditional values and simplify merge PHIs.
+LLVM_ABI Pass *createHoistZeroCostConditionalValuesPass();
+
 //===----------------------------------------------------------------------===//
 //
 // TailCallElimination - This pass eliminates call instructions to the current

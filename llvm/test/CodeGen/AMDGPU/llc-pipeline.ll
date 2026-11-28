@@ -277,6 +277,7 @@
 ; GCN-O1-NEXT:      Dominance Frontier Construction
 ; GCN-O1-NEXT:      Detect single entry single exit regions
 ; GCN-O1-NEXT:      Structurize control flow
+; GCN-O1-NEXT:      Hoist zero-cost conditional values
 ; GCN-O1-NEXT:      Cycle Info Analysis
 ; GCN-O1-NEXT:      Uniformity Analysis
 ; GCN-O1-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -591,6 +592,7 @@
 ; GCN-O1-OPTS-NEXT:      Dominance Frontier Construction
 ; GCN-O1-OPTS-NEXT:      Detect single entry single exit regions
 ; GCN-O1-OPTS-NEXT:      Structurize control flow
+; GCN-O1-OPTS-NEXT:      Hoist zero-cost conditional values
 ; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:      Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -916,6 +918,7 @@
 ; GCN-O2-NEXT:      Dominance Frontier Construction
 ; GCN-O2-NEXT:      Detect single entry single exit regions
 ; GCN-O2-NEXT:      Structurize control flow
+; GCN-O2-NEXT:      Hoist zero-cost conditional values
 ; GCN-O2-NEXT:      Cycle Info Analysis
 ; GCN-O2-NEXT:      Uniformity Analysis
 ; GCN-O2-NEXT:      Basic Alias Analysis (stateless AA impl)
@@ -1258,6 +1261,7 @@
 ; GCN-O3-NEXT:      Dominance Frontier Construction
 ; GCN-O3-NEXT:      Detect single entry single exit regions
 ; GCN-O3-NEXT:      Structurize control flow
+; GCN-O3-NEXT:      Hoist zero-cost conditional values
 ; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Uniformity Analysis
 ; GCN-O3-NEXT:      Basic Alias Analysis (stateless AA impl)

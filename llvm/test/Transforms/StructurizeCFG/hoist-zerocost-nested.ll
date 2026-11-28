@@ -1,4 +1,5 @@
 ; RUN: opt -passes=fix-irreducible,unify-loop-exits,structurizecfg -S %s | FileCheck %s
+; RUN: opt -passes=fix-irreducible,unify-loop-exits,structurizecfg,hoist-zero-cost-conditional-values -verify-each -S %s | FileCheck %s
 ;
 target triple = "amdgpu7.00-amd-amdhsa"
 ;
