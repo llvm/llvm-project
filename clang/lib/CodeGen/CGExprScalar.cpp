@@ -963,10 +963,16 @@ public:
     return QualType();
   }
 
-  // Binary operators and binary compound assignment operators.
+  // Binary operators and binary compound assignment operators. An operation
+  // evaluated in a wider type converts its operands to that type and its result
+  // back. The conversions are part of the operation, so they use its
+  // floating-point options.
 #define HANDLEBINOP(OP)                                                        \
   Value *VisitBin##OP(const BinaryOperator *E) {                               \
     QualType promotionTy = getPromotionType(E->getType());                     \
+    std::optional<CodeGenFunction::CGFPOptionsRAII> FPOptsRAII;                \
+    if (!promotionTy.isNull())                                                 \
+      FPOptsRAII.emplace(CGF, E);                                              \
     auto result = Emit##OP(EmitBinOps(E, promotionTy));                        \
     if (result && !promotionTy.isNull())                                       \
       result = EmitUnPromotedValue(result, E->getType());                      \
@@ -3681,6 +3687,9 @@ Value *ScalarExprEmitter::VisitUnaryPlus(const UnaryOperator *E,
   QualType promotionTy = PromotionType.isNull()
                              ? getPromotionType(E->getSubExpr()->getType())
                              : PromotionType;
+  std::optional<CodeGenFunction::CGFPOptionsRAII> FPOptsRAII;
+  if (!promotionTy.isNull())
+    FPOptsRAII.emplace(CGF, E);
   Value *result = VisitPlus(E, promotionTy);
   if (result && !promotionTy.isNull())
     result = EmitUnPromotedValue(result, E->getType());
@@ -3701,6 +3710,9 @@ Value *ScalarExprEmitter::VisitUnaryMinus(const UnaryOperator *E,
   QualType promotionTy = PromotionType.isNull()
                              ? getPromotionType(E->getSubExpr()->getType())
                              : PromotionType;
+  std::optional<CodeGenFunction::CGFPOptionsRAII> FPOptsRAII;
+  if (!promotionTy.isNull())
+    FPOptsRAII.emplace(CGF, E);
   Value *result = VisitMinus(E, promotionTy);
   if (result && !promotionTy.isNull())
     result = EmitUnPromotedValue(result, E->getType());
@@ -4090,10 +4102,14 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
       PromotionTypeCR = E->getComputationResultType();
   QualType PromotionTypeLHS = getPromotionType(E->getComputationLHSType());
   QualType PromotionTypeRHS = getPromotionType(E->getRHS()->getType());
-  if (!PromotionTypeRHS.isNull())
+  if (!PromotionTypeRHS.isNull()) {
+    // The promotion is part of the operation, so it uses its floating-point
+    // options.
+    CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
     OpInfo.RHS = CGF.EmitPromotedScalarExpr(E->getRHS(), PromotionTypeRHS);
-  else
+  } else {
     OpInfo.RHS = Visit(E->getRHS());
+  }
   OpInfo.Ty = PromotionTypeCR;
   OpInfo.Opcode = E->getOpcode();
   OpInfo.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
