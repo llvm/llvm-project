@@ -8112,7 +8112,7 @@ void Parser::ParseBracketDeclarator(Declarator &D) {
     } else {
       EnterExpressionEvaluationContext Unevaluated(
           Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-      NumElements = ParseAssignmentExpression();
+      NumElements = Actions.ActOnArrayBound(ParseAssignmentExpression());
     }
   } else {
     if (StaticLoc.isValid()) {
