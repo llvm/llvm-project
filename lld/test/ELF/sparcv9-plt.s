@@ -7,6 +7,13 @@
 # RUN: llvm-readelf -S -d -r -s a | FileCheck %s --implicit-check-not=.got.plt
 # RUN: llvm-objdump -d -z -j .text -j .plt --no-print-imm-hex a | FileCheck --check-prefix=DIS %s
 
+## Non-PIC code calls through R_SPARC_WDISP30, which also goes through the PLT.
+# RUN: llvm-mc -filetype=obj -triple=sparcv9 c.s -o c.o
+# RUN: ld.lld c.o b.so -o c
+# RUN: llvm-readelf -r --dyn-syms c | FileCheck --check-prefix=NOPIC %s
+# RUN: ld.lld -shared c.o b.so -o c.so
+# RUN: llvm-readelf -r c.so | FileCheck --check-prefix=NOPIC-SHARED %s
+
 ## SPARC has no .got.plt. The dynamic linker rewrites the PLT entries in place,
 ## so .plt is writable and DT_PLTGOT points at it, and .rela.plt names .plt in
 ## its sh_info.
@@ -44,6 +51,17 @@
 # DIS:        3003e0: 03 00 00 c0 sethi 192, %g1
 # DIS-NEXT:           30 6f ff d7 ba,a %xcc, 0x300340
 
+## A call needs no canonical PLT, so bar and the protected prot stay at 0.
+# NOPIC:      Relocation section '.rela.plt' {{.*}} contains 2 entries:
+# NOPIC:      R_SPARC_JMP_SLOT {{.*}} bar + 0
+# NOPIC-NEXT: R_SPARC_JMP_SLOT {{.*}} prot + 0
+# NOPIC:      0000000000000000 0 FUNC GLOBAL DEFAULT UND bar
+# NOPIC-NEXT: 0000000000000000 0 FUNC GLOBAL DEFAULT UND prot
+
+# NOPIC-SHARED:      Relocation section '.rela.plt' {{.*}} contains 2 entries:
+# NOPIC-SHARED:      R_SPARC_JMP_SLOT {{.*}} bar + 0
+# NOPIC-SHARED-NEXT: R_SPARC_JMP_SLOT {{.*}} prot + 0
+
 #--- a.s
 .globl _start
 .weak weak
@@ -57,10 +75,21 @@ _start:
   or    %g1, %pc10(foo), %g1
 
 #--- b.s
-.globl bar, weak, foo
+.globl bar, weak, foo, prot
 .type bar,@function
 .type weak,@function
 .type foo,@function
+.type prot,@function
+.protected prot
 bar:
 weak:
 foo:
+prot:
+
+#--- c.s
+.globl _start
+_start:
+  call bar
+  nop
+  call prot
+  nop
