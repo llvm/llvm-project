@@ -519,6 +519,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   if (ST.hasStdExtZmmul()) {
     getActionDefinitionsBuilder(G_MUL)
         .legalFor({sXLen})
+        .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
         .widenScalarToNextPow2(0)
         .clampScalar(0, sXLen, sXLen);
 
@@ -532,6 +533,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   } else {
     getActionDefinitionsBuilder(G_MUL)
         .libcallFor({sXLen, sDoubleXLen})
+        .legalIf(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST))
         .widenScalarToNextPow2(0)
         .clampScalar(0, sXLen, sDoubleXLen);
 
