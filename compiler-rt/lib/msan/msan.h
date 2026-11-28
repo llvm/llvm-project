@@ -96,8 +96,9 @@ const MappingDesc kMemoryLayout[] = {
 # define MEM_TO_SHADOW(mem) ((uptr)mem ^ 0xB00000000000ULL)
 # define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x200000000000ULL)
 
-#elif SANITIZER_LINUX && SANITIZER_LOONGARCH64
-// LoongArch64 maps:
+#elif SANITIZER_LINUX &&                                                       \
+    (SANITIZER_LOONGARCH64 || (defined(__riscv) && (__riscv_xlen == 64)))
+// LoongArch64 and RISC-V (Sv48) share this 47-bit layout. LoongArch64 maps:
 // - 0x000000000000-0x010000000000: Program own segments
 // - 0x555500000000-0x555600000000: PIE program segments
 // - 0x7fff00000000-0x7fffffffffff: libraries segments.
