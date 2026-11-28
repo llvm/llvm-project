@@ -47,11 +47,6 @@
 // _Tp __cxx_atomic_load(_Atmc<_Tp> const* __a, memory_order __order) noexcept;
 //
 // template <class _Tp>
-// void __cxx_atomic_load_inplace(_Atmc<_Tp> const volatile* __a, _Tp* __dst, memory_order __order) noexcept;
-// template <class _Tp>
-// void __cxx_atomic_load_inplace(_Atmc<_Tp> const* __a, _Tp* __dst, memory_order __order) noexcept;
-//
-// template <class _Tp>
 // _Tp __cxx_atomic_exchange(_Atmc<_Tp> volatile* __a, _Tp __value, memory_order __order) noexcept;
 // template <class _Tp>
 // _Tp __cxx_atomic_exchange(_Atmc<_Tp>* __a, _Tp __value, memory_order __order) noexcept;

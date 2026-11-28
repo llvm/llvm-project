@@ -94,16 +94,6 @@ _Tp __cxx_atomic_load(const volatile __cxx_atomic_base_impl<_Tp>* __a, memory_or
 }
 
 template <typename _Tp>
-void __cxx_atomic_load_inplace(const volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp* __dst, memory_order __order) {
-  __atomic_load(std::addressof(__a->__a_value), __dst, std::__to_gcc_order(__order));
-}
-
-template <typename _Tp>
-void __cxx_atomic_load_inplace(const __cxx_atomic_base_impl<_Tp>* __a, _Tp* __dst, memory_order __order) {
-  __atomic_load(std::addressof(__a->__a_value), __dst, std::__to_gcc_order(__order));
-}
-
-template <typename _Tp>
 _Tp __cxx_atomic_load(const __cxx_atomic_base_impl<_Tp>* __a, memory_order __order) {
   _Tp __ret;
   __atomic_load(std::addressof(__a->__a_value), std::addressof(__ret), std::__to_gcc_order(__order));
