@@ -1,10 +1,19 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Opts") {
+  visibility = [ ":diagtool" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 executable("diagtool") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
+    ":Opts",
     "//clang/include/clang/Basic:DiagnosticIndexName",
     "//clang/lib/Basic",
     "//clang/lib/Driver",
     "//clang/lib/Frontend",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
   sources = [
