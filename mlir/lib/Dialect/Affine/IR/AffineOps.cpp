@@ -4954,8 +4954,9 @@ void AffineDelinearizeIndexOp::build(OpBuilder &odsBuilder,
   }
   SmallVector<Value> dynamicBasis;
   SmallVector<int64_t> staticBasis;
-  dispatchIndexOpFoldResults(getAsOpFoldResult(basis), dynamicBasis,
-                             staticBasis);
+  dispatchIndexOpFoldResults(
+      getAsOpFoldResult(basis, /*onlyIntegerConstant=*/true), dynamicBasis,
+      staticBasis);
   build(odsBuilder, odsState, linearIndex, dynamicBasis, staticBasis,
         hasOuterBound);
 }
