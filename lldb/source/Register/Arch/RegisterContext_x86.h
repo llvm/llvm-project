@@ -321,6 +321,11 @@ struct MPX {
   MPXCsr mpxc[2];
 };
 
+struct EGPR {
+  uint64_t regs[16]; // APX R16-R31.
+};
+static_assert(sizeof(EGPR) == 128, "EGPR layout incorrect");
+
 LLVM_PACKED_START
 struct XSAVE_HDR {
   enum class XFeature : uint64_t {
@@ -334,7 +339,8 @@ struct XSAVE_HDR {
     Hi16_ZMM = ZMM_Hi256 << 1,
     PT = Hi16_ZMM << 1,
     PKRU = PT << 1,
-    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ PKRU)
+    APX = 1ULL << 19,
+    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ APX)
   };
 
   XFeature xstate_bv; // OS enabled xstate mask to determine the extended states
@@ -347,7 +353,7 @@ struct XSAVE_HDR {
 static_assert(sizeof(XSAVE_HDR) == 64, "XSAVE_HDR layout incorrect");
 LLVM_PACKED_END
 
-// x86 extensions to FXSAVE (i.e. for AVX and MPX processors)
+// x86 extensions to FXSAVE (AVX, MPX and APX).
 LLVM_PACKED_START
 struct XSAVE {
   FXSAVE i387;      // floating point registers typical in i387_fxsave_struct
@@ -356,11 +362,18 @@ struct XSAVE {
   YMMHReg ymmh[16]; // High 16 bytes of each of 16 YMM registers (the low bytes
                     // are in FXSAVE.xmm for compatibility with SSE)
   uint64_t reserved3[16];
-  MPXReg mpxr[4];   // MPX BNDREG state, containing 128-bit bound registers
-  MPXCsr mpxc[2];   // MPX BNDCSR state, containing 64-bit BNDCFGU and
-                    // BNDSTATUS registers
+  // APX component 19 reuses the deprecated MPX area at offset 960 in the
+  // standard XSAVE layout (Intel APX specification, section 3.1.4.3.2).
+  union {
+    MPX mpx;
+    EGPR egpr;
+  };
 };
 LLVM_PACKED_END
+static_assert(offsetof(XSAVE, egpr) == 960, "XSAVE EGPR offset incorrect");
+static_assert(offsetof(XSAVE, mpx) == 960, "XSAVE MPX BNDREG offset incorrect");
+static_assert(offsetof(XSAVE, mpx) + offsetof(MPX, mpxc) == 1024,
+              "XSAVE MPX BNDCSR offset incorrect");
 
 // Floating-point registers
 union FPR {
