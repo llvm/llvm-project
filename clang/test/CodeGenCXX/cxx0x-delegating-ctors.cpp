@@ -1,17 +1,24 @@
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -fexceptions -fcxx-exceptions -std=c++03 -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -fexceptions -fcxx-exceptions -std=c++11 -o - %s | FileCheck %s
+
+#if __cplusplus >= 201103L
+#  define THROWS noexcept(false)
+#else
+#  define THROWS
+#endif
 
 struct non_trivial {
   non_trivial();
-  ~non_trivial() noexcept(false);
+  ~non_trivial() THROWS;
 };
 non_trivial::non_trivial() {}
-non_trivial::~non_trivial() noexcept(false) {}
+non_trivial::~non_trivial() THROWS {}
 
 // We use a virtual base to ensure that the constructor
 // delegation optimization (complete->base) can't be
 // performed.
 struct delegator {
-  non_trivial n; 
+  non_trivial n;
   delegator();
   delegator(int);
   delegator(char);

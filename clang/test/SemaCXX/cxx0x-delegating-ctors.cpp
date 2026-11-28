@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -fsyntax-only -std=c++03 -verify=expected,cxx03 %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s
 
 struct foo {
@@ -43,7 +44,8 @@ foo::foo (void*) : foo(4.0f) {
 }
 
 struct deleted_dtor {
-  ~deleted_dtor() = delete; // expected-note{{'~deleted_dtor' has been explicitly marked deleted here}}
+  ~deleted_dtor() = delete; // expected-note{{'~deleted_dtor' has been explicitly marked deleted here}} \
+                            // cxx03-warning {{delelted function definitions are a C++11 extension}}
   deleted_dtor();
   deleted_dtor(int) : deleted_dtor() // expected-error{{attempt to use a deleted function}}
   {}

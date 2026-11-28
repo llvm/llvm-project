@@ -1380,8 +1380,7 @@ void Sema::ActOnEndOfTranslationUnit() {
             << WeakIDs.first;
   }
 
-  if (LangOpts.CPlusPlus11 &&
-      !Diags.isIgnored(diag::warn_delegating_ctor_cycle, SourceLocation()))
+  if (!Diags.isIgnored(diag::warn_delegating_ctor_cycle, SourceLocation()))
     CheckDelegatingCtorCycles();
 
   if (!Diags.hasErrorOccurred()) {

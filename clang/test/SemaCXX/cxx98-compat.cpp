@@ -174,7 +174,7 @@ struct FriendMember {
 };
 
 struct DelegCtor {
-  DelegCtor(int) : DelegCtor() {} // expected-warning {{delegating constructors are incompatible with C++98}}
+  DelegCtor(int) : DelegCtor() {}
   DelegCtor();
 };
 

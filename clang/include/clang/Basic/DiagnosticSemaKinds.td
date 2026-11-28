@@ -44,6 +44,8 @@ defm cast_fn_obj : CXX11Compat<
 defm array_size_conversion : CXX11Compat<
   "implicit conversion from array size expression of type %0 to "
   "%select{integral|enumeration}1 type %2 is", /*ext_warn*/false>;
+defm delegating_ctor :
+  CXX11Compat<"delegating constructors are", /*ext_warn*/false>;
 
 // C++14 compatibility with C++11 and earlier.
 defm constexpr_type_definition : CXX14Compat<
@@ -2982,11 +2984,6 @@ def err_underlying_type_of_incomplete_enum : Error<
   "cannot determine underlying type of incomplete enumeration type %0">;
 
 // C++11 delegating constructors
-def err_delegating_ctor : Error<
-  "delegating constructors are permitted only in C++11">;
-def warn_cxx98_compat_delegating_ctor : Warning<
-  "delegating constructors are incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 def err_delegating_initializer_alone : Error<
   "an initializer for a delegating constructor must appear alone">;
 def warn_delegating_ctor_cycle : Warning<
