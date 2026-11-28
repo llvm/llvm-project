@@ -20,21 +20,21 @@ define dso_local void @calc_buffer() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    rldicl r6, r3, 10, 54
 ; CHECK-NEXT:    std r4, -32(r1)
-; CHECK-NEXT:    rldicl r5, r3, 63, 1
-; CHECK-NEXT:    clrldi r4, r3, 63
+; CHECK-NEXT:    rldicl r4, r3, 63, 1
+; CHECK-NEXT:    clrldi r5, r3, 63
 ; CHECK-NEXT:    addi r6, r6, 1
 ; CHECK-NEXT:    cmpldi r6, 1
-; CHECK-NEXT:    or r4, r4, r5
+; CHECK-NEXT:    or r5, r5, r4
 ; CHECK-NEXT:    ble cr0, .LBB0_5
 ; CHECK-NEXT:  # %bb.4:
-; CHECK-NEXT:    clrldi r4, r4, 53
-; CHECK-NEXT:    addi r4, r4, 2047
-; CHECK-NEXT:    or r4, r4, r5
+; CHECK-NEXT:    clrldi r5, r5, 53
+; CHECK-NEXT:    addi r5, r5, 2047
+; CHECK-NEXT:    or r4, r5, r4
 ; CHECK-NEXT:    rldicl r4, r4, 53, 11
-; CHECK-NEXT:    rldicl r4, r4, 11, 1
+; CHECK-NEXT:    rldicl r5, r4, 11, 1
 ; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    cmpdi r3, 0
-; CHECK-NEXT:    std r4, -24(r1)
+; CHECK-NEXT:    std r5, -24(r1)
 ; CHECK-NEXT:    bc 12, lt, .LBB0_7
 ; CHECK-NEXT:  # %bb.6:
 ; CHECK-NEXT:    lfd f0, -32(r1)

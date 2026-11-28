@@ -1146,26 +1146,26 @@ define void @testcse4(ptr %res, i32 %lim, ptr %vc) {
 ; CHECK-WACC-NEXT:    #
 ; CHECK-WACC-NEXT:    lxv vs0, -48(r4)
 ; CHECK-WACC-NEXT:    lxv vs1, -32(r4)
-; CHECK-WACC-NEXT:    dmxxsetaccz wacc2
 ; CHECK-WACC-NEXT:    dmxxsetaccz wacc1
+; CHECK-WACC-NEXT:    dmxxsetaccz wacc2
 ; CHECK-WACC-NEXT:    dmxxsetaccz wacc0
-; CHECK-WACC-NEXT:    xvf32gerpp wacc2, vs0, vs1
+; CHECK-WACC-NEXT:    xvf32gerpp wacc1, vs0, vs1
 ; CHECK-WACC-NEXT:    lxv vs0, -16(r4)
 ; CHECK-WACC-NEXT:    lxv vs1, 0(r4)
 ; CHECK-WACC-NEXT:    rldic r6, r5, 6, 26
 ; CHECK-WACC-NEXT:    add r7, r3, r6
 ; CHECK-WACC-NEXT:    addi r5, r5, 3
-; CHECK-WACC-NEXT:    xvf32gerpn wacc1, vs0, vs1
+; CHECK-WACC-NEXT:    xvf32gerpn wacc2, vs0, vs1
 ; CHECK-WACC-NEXT:    lxv vs0, 16(r4)
 ; CHECK-WACC-NEXT:    lxv vs1, 32(r4)
 ; CHECK-WACC-NEXT:    addi r4, r4, 96
 ; CHECK-WACC-NEXT:    xvf32gernp wacc0, vs0, vs1
-; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc2, 0
+; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc1, 0
 ; CHECK-WACC-NEXT:    stxvx v3, r3, r6
 ; CHECK-WACC-NEXT:    stxv v4, 48(r7)
 ; CHECK-WACC-NEXT:    stxv v5, 32(r7)
 ; CHECK-WACC-NEXT:    stxv v2, 16(r7)
-; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc1, 0
+; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc2, 0
 ; CHECK-WACC-NEXT:    stxv v4, 112(r7)
 ; CHECK-WACC-NEXT:    stxv v5, 96(r7)
 ; CHECK-WACC-NEXT:    stxv v2, 80(r7)
@@ -1193,26 +1193,26 @@ define void @testcse4(ptr %res, i32 %lim, ptr %vc) {
 ; CHECK-BE-WACC-NEXT:    #
 ; CHECK-BE-WACC-NEXT:    lxv vs0, -48(r4)
 ; CHECK-BE-WACC-NEXT:    lxv vs1, -32(r4)
-; CHECK-BE-WACC-NEXT:    dmxxsetaccz wacc2
 ; CHECK-BE-WACC-NEXT:    dmxxsetaccz wacc1
+; CHECK-BE-WACC-NEXT:    dmxxsetaccz wacc2
 ; CHECK-BE-WACC-NEXT:    dmxxsetaccz wacc0
-; CHECK-BE-WACC-NEXT:    xvf32gerpp wacc2, vs0, vs1
+; CHECK-BE-WACC-NEXT:    xvf32gerpp wacc1, vs0, vs1
 ; CHECK-BE-WACC-NEXT:    lxv vs0, -16(r4)
 ; CHECK-BE-WACC-NEXT:    lxv vs1, 0(r4)
 ; CHECK-BE-WACC-NEXT:    rldic r6, r5, 6, 26
 ; CHECK-BE-WACC-NEXT:    add r7, r3, r6
 ; CHECK-BE-WACC-NEXT:    addi r5, r5, 3
-; CHECK-BE-WACC-NEXT:    xvf32gerpn wacc1, vs0, vs1
+; CHECK-BE-WACC-NEXT:    xvf32gerpn wacc2, vs0, vs1
 ; CHECK-BE-WACC-NEXT:    lxv vs0, 16(r4)
 ; CHECK-BE-WACC-NEXT:    lxv vs1, 32(r4)
 ; CHECK-BE-WACC-NEXT:    addi r4, r4, 96
 ; CHECK-BE-WACC-NEXT:    xvf32gernp wacc0, vs0, vs1
-; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc2, 0
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc1, 0
 ; CHECK-BE-WACC-NEXT:    stxvx v2, r3, r6
 ; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
 ; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
 ; CHECK-BE-WACC-NEXT:    stxv v3, 16(r7)
-; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc1, 0
+; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc2, 0
 ; CHECK-BE-WACC-NEXT:    stxv v5, 112(r7)
 ; CHECK-BE-WACC-NEXT:    stxv v4, 96(r7)
 ; CHECK-BE-WACC-NEXT:    stxv v3, 80(r7)

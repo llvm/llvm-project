@@ -161,21 +161,21 @@ define <4 x i16> @sdiv_v4i16(<4 x i16> %x, <4 x i16> %y, <4 x i1> %m) {
 ; CHECK-NEXT:    mffprwz 5, 1
 ; CHECK-NEXT:    mffprwz 6, 2
 ; CHECK-NEXT:    mtvsrd 36, 3
+; CHECK-NEXT:    mfvsrd 3, 34
 ; CHECK-NEXT:    mtvsrd 37, 4
 ; CHECK-NEXT:    mtvsrd 32, 5
-; CHECK-NEXT:    mfvsrd 5, 34
-; CHECK-NEXT:    rldicl 8, 5, 48, 48
-; CHECK-NEXT:    rldicl 9, 5, 32, 48
+; CHECK-NEXT:    rldicl 8, 3, 48, 48
+; CHECK-NEXT:    rldicl 9, 3, 32, 48
 ; CHECK-NEXT:    extsh 8, 8
 ; CHECK-NEXT:    extsh 9, 9
 ; CHECK-NEXT:    vmrghh 5, 0, 5
 ; CHECK-NEXT:    mtvsrd 32, 6
 ; CHECK-NEXT:    vmrghh 4, 0, 4
 ; CHECK-NEXT:    mtvsrd 32, 7
-; CHECK-NEXT:    clrldi 7, 5, 48
-; CHECK-NEXT:    rldicl 5, 5, 16, 48
+; CHECK-NEXT:    clrldi 7, 3, 48
+; CHECK-NEXT:    rldicl 3, 3, 16, 48
 ; CHECK-NEXT:    extsh 7, 7
-; CHECK-NEXT:    extsh 5, 5
+; CHECK-NEXT:    extsh 3, 3
 ; CHECK-NEXT:    xxmrglw 1, 36, 37
 ; CHECK-NEXT:    vspltish 4, 15
 ; CHECK-NEXT:    vsplth 0, 0, 3
@@ -184,49 +184,49 @@ define <4 x i16> @sdiv_v4i16(<4 x i16> %x, <4 x i16> %y, <4 x i1> %m) {
 ; CHECK-NEXT:    xxmrgld 37, 0, 1
 ; CHECK-NEXT:    xxswapd 1, 34
 ; CHECK-NEXT:    vslh 5, 5, 4
-; CHECK-NEXT:    mffprd 3, 1
+; CHECK-NEXT:    mffprd 4, 1
 ; CHECK-NEXT:    vsrah 4, 5, 4
-; CHECK-NEXT:    clrldi 10, 3, 48
-; CHECK-NEXT:    rldicl 11, 3, 48, 48
+; CHECK-NEXT:    clrldi 10, 4, 48
+; CHECK-NEXT:    rldicl 11, 4, 48, 48
 ; CHECK-NEXT:    extsh 10, 10
 ; CHECK-NEXT:    extsh 11, 11
 ; CHECK-NEXT:    xxsel 0, 32, 35, 36
-; CHECK-NEXT:    mffprd 6, 0
-; CHECK-NEXT:    clrldi 12, 6, 48
+; CHECK-NEXT:    mffprd 5, 0
+; CHECK-NEXT:    clrldi 12, 5, 48
 ; CHECK-NEXT:    extsh 12, 12
 ; CHECK-NEXT:    divw 7, 7, 12
-; CHECK-NEXT:    rldicl 12, 6, 48, 48
+; CHECK-NEXT:    rldicl 12, 5, 48, 48
 ; CHECK-NEXT:    extsh 12, 12
 ; CHECK-NEXT:    divw 8, 8, 12
+; CHECK-NEXT:    rldicl 12, 5, 32, 48
+; CHECK-NEXT:    rldicl 5, 5, 16, 48
 ; CHECK-NEXT:    xxswapd 2, 0
-; CHECK-NEXT:    mffprd 4, 2
-; CHECK-NEXT:    rldicl 12, 6, 32, 48
-; CHECK-NEXT:    rldicl 6, 6, 16, 48
-; CHECK-NEXT:    extsh 6, 6
+; CHECK-NEXT:    mffprd 6, 2
+; CHECK-NEXT:    extsh 5, 5
 ; CHECK-NEXT:    extsh 12, 12
-; CHECK-NEXT:    divw 5, 5, 6
-; CHECK-NEXT:    clrldi 6, 4, 48
+; CHECK-NEXT:    divw 3, 3, 5
+; CHECK-NEXT:    clrldi 5, 6, 48
 ; CHECK-NEXT:    divw 9, 9, 12
-; CHECK-NEXT:    rldicl 12, 3, 32, 48
-; CHECK-NEXT:    rldicl 3, 3, 16, 48
-; CHECK-NEXT:    extsh 6, 6
+; CHECK-NEXT:    rldicl 12, 4, 32, 48
+; CHECK-NEXT:    extsh 5, 5
 ; CHECK-NEXT:    extsh 12, 12
-; CHECK-NEXT:    extsh 3, 3
-; CHECK-NEXT:    divw 6, 10, 6
-; CHECK-NEXT:    rldicl 10, 4, 48, 48
+; CHECK-NEXT:    divw 5, 10, 5
+; CHECK-NEXT:    rldicl 10, 6, 48, 48
 ; CHECK-NEXT:    extsh 10, 10
 ; CHECK-NEXT:    mtvsrd 34, 7
 ; CHECK-NEXT:    divw 10, 11, 10
-; CHECK-NEXT:    rldicl 11, 4, 32, 48
-; CHECK-NEXT:    rldicl 4, 4, 16, 48
+; CHECK-NEXT:    rldicl 11, 6, 32, 48
 ; CHECK-NEXT:    extsh 11, 11
-; CHECK-NEXT:    extsh 4, 4
 ; CHECK-NEXT:    mtvsrd 35, 8
 ; CHECK-NEXT:    divw 11, 12, 11
-; CHECK-NEXT:    divw 3, 3, 4
+; CHECK-NEXT:    mtvsrd 37, 3
+; CHECK-NEXT:    rldicl 3, 4, 16, 48
+; CHECK-NEXT:    rldicl 4, 6, 16, 48
 ; CHECK-NEXT:    mtvsrd 36, 9
-; CHECK-NEXT:    mtvsrd 37, 5
-; CHECK-NEXT:    mtvsrd 32, 6
+; CHECK-NEXT:    extsh 3, 3
+; CHECK-NEXT:    extsh 4, 4
+; CHECK-NEXT:    divw 3, 3, 4
+; CHECK-NEXT:    mtvsrd 32, 5
 ; CHECK-NEXT:    vmrghh 2, 3, 2
 ; CHECK-NEXT:    vmrghh 3, 5, 4
 ; CHECK-NEXT:    mtvsrd 36, 10

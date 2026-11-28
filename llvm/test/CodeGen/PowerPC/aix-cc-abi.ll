@@ -2098,113 +2098,113 @@ define void @caller_mix() {
 ; ASM64PWR4:       # %bb.0: # %entry
 ; ASM64PWR4-NEXT:    mflr 0
 ; ASM64PWR4-NEXT:    stdu 1, -240(1)
-; ASM64PWR4-NEXT:    li 3, 1023
-; ASM64PWR4-NEXT:    std 0, 256(1)
 ; ASM64PWR4-NEXT:    ld 4, L..C37(2) # %const.0
-; ASM64PWR4-NEXT:    ld 8, L..C38(2) # %const.6
+; ASM64PWR4-NEXT:    li 3, 1023
+; ASM64PWR4-NEXT:    ld 6, L..C38(2) # %const.3
+; ASM64PWR4-NEXT:    ld 8, L..C39(2) # %const.6
+; ASM64PWR4-NEXT:    std 0, 256(1)
 ; ASM64PWR4-NEXT:    lis 5, 16371
-; ASM64PWR4-NEXT:    ld 6, L..C39(2) # %const.3
 ; ASM64PWR4-NEXT:    ld 9, L..C40(2) # %const.9
 ; ASM64PWR4-NEXT:    ld 10, L..C41(2) # %const.11
 ; ASM64PWR4-NEXT:    rldic 3, 3, 52, 2
-; ASM64PWR4-NEXT:    lis 11, 4091
+; ASM64PWR4-NEXT:    lis 7, 16355
 ; ASM64PWR4-NEXT:    std 3, 184(1)
 ; ASM64PWR4-NEXT:    li 3, 511
-; ASM64PWR4-NEXT:    lis 12, 16361
-; ASM64PWR4-NEXT:    rldic 3, 3, 53, 2
+; ASM64PWR4-NEXT:    lis 11, 4091
 ; ASM64PWR4-NEXT:    lfd 1, 0(4)
 ; ASM64PWR4-NEXT:    ld 4, L..C42(2) # %const.2
+; ASM64PWR4-NEXT:    rldic 3, 3, 53, 2
+; ASM64PWR4-NEXT:    lis 12, 16361
 ; ASM64PWR4-NEXT:    lis 0, 16345
+; ASM64PWR4-NEXT:    lfd 4, 0(6)
+; ASM64PWR4-NEXT:    ld 6, L..C43(2) # %const.5
 ; ASM64PWR4-NEXT:    std 3, 144(1)
-; ASM64PWR4-NEXT:    ld 3, L..C43(2) # %const.1
-; ASM64PWR4-NEXT:    lfd 2, 0(3)
-; ASM64PWR4-NEXT:    lis 3, 16374
-; ASM64PWR4-NEXT:    ori 7, 3, 26214
-; ASM64PWR4-NEXT:    ori 3, 5, 13107
-; ASM64PWR4-NEXT:    ld 5, L..C44(2) # %const.5
+; ASM64PWR4-NEXT:    ld 3, L..C44(2) # %const.1
 ; ASM64PWR4-NEXT:    lfd 8, 0(8)
 ; ASM64PWR4-NEXT:    ld 8, L..C45(2) # %const.8
-; ASM64PWR4-NEXT:    rldimi 7, 7, 32, 0
-; ASM64PWR4-NEXT:    rlwimi 7, 7, 16, 0, 15
-; ASM64PWR4-NEXT:    rldimi 3, 3, 32, 0
 ; ASM64PWR4-NEXT:    lfd 3, 0(4)
-; ASM64PWR4-NEXT:    ld 4, L..C46(2) # %const.4
-; ASM64PWR4-NEXT:    rlwimi 3, 3, 16, 0, 15
-; ASM64PWR4-NEXT:    lfd 4, 0(6)
-; ASM64PWR4-NEXT:    lis 6, 16355
-; ASM64PWR4-NEXT:    lfd 7, 0(5)
-; ASM64PWR4-NEXT:    ori 5, 6, 13107
-; ASM64PWR4-NEXT:    ld 6, L..C47(2) # %const.7
-; ASM64PWR4-NEXT:    rldimi 5, 5, 32, 0
-; ASM64PWR4-NEXT:    rlwimi 5, 5, 16, 0, 15
+; ASM64PWR4-NEXT:    ori 4, 5, 13107
+; ASM64PWR4-NEXT:    ld 5, L..C46(2) # %const.4
+; ASM64PWR4-NEXT:    rldimi 4, 4, 32, 0
+; ASM64PWR4-NEXT:    rlwimi 4, 4, 16, 0, 15
+; ASM64PWR4-NEXT:    lfd 7, 0(6)
+; ASM64PWR4-NEXT:    ori 6, 7, 13107
+; ASM64PWR4-NEXT:    ld 7, L..C47(2) # %const.7
+; ASM64PWR4-NEXT:    rldimi 6, 6, 32, 0
+; ASM64PWR4-NEXT:    lfd 2, 0(3)
+; ASM64PWR4-NEXT:    lis 3, 16374
+; ASM64PWR4-NEXT:    ori 3, 3, 26214
+; ASM64PWR4-NEXT:    rldimi 3, 3, 32, 0
 ; ASM64PWR4-NEXT:    lfd 11, 0(8)
 ; ASM64PWR4-NEXT:    ld 8, L..C48(2) # %const.10
-; ASM64PWR4-NEXT:    lfd 6, 0(4)
-; ASM64PWR4-NEXT:    lis 4, 16358
-; ASM64PWR4-NEXT:    ori 4, 4, 26214
-; ASM64PWR4-NEXT:    rldimi 4, 4, 32, 0
-; ASM64PWR4-NEXT:    lfd 9, 0(6)
-; ASM64PWR4-NEXT:    lis 6, 16339
-; ASM64PWR4-NEXT:    rlwimi 4, 4, 16, 0, 15
-; ASM64PWR4-NEXT:    ori 6, 6, 13107
+; ASM64PWR4-NEXT:    rlwimi 3, 3, 16, 0, 15
+; ASM64PWR4-NEXT:    rlwimi 6, 6, 16, 0, 15
+; ASM64PWR4-NEXT:    lfd 6, 0(5)
+; ASM64PWR4-NEXT:    lis 5, 16358
+; ASM64PWR4-NEXT:    ori 5, 5, 26214
+; ASM64PWR4-NEXT:    lfd 9, 0(7)
+; ASM64PWR4-NEXT:    lis 7, 16339
+; ASM64PWR4-NEXT:    rldimi 5, 5, 32, 0
+; ASM64PWR4-NEXT:    ori 7, 7, 13107
 ; ASM64PWR4-NEXT:    lfd 12, 0(9)
 ; ASM64PWR4-NEXT:    lis 9, 4093
 ; ASM64PWR4-NEXT:    ori 9, 9, 13107
+; ASM64PWR4-NEXT:    rlwimi 5, 5, 16, 0, 15
 ; ASM64PWR4-NEXT:    lfd 13, 0(8)
 ; ASM64PWR4-NEXT:    lis 8, 16369
-; ASM64PWR4-NEXT:    ori 8, 8, 39321
-; ASM64PWR4-NEXT:    rldimi 6, 6, 32, 0
+; ASM64PWR4-NEXT:    rldimi 7, 7, 32, 0
 ; ASM64PWR4-NEXT:    std 31, 232(1) # 8-byte Folded Spill
 ; ASM64PWR4-NEXT:    ld 31, L..C49(2) # %const.12
+; ASM64PWR4-NEXT:    ori 8, 8, 39321
 ; ASM64PWR4-NEXT:    rldic 9, 9, 34, 2
-; ASM64PWR4-NEXT:    rlwimi 6, 6, 16, 0, 15
-; ASM64PWR4-NEXT:    oris 9, 9, 52428
+; ASM64PWR4-NEXT:    rlwimi 7, 7, 16, 0, 15
 ; ASM64PWR4-NEXT:    lfs 5, 0(10)
 ; ASM64PWR4-NEXT:    lis 10, 16329
 ; ASM64PWR4-NEXT:    ori 10, 10, 39321
-; ASM64PWR4-NEXT:    std 7, 216(1)
-; ASM64PWR4-NEXT:    ori 7, 11, 13107
+; ASM64PWR4-NEXT:    std 3, 216(1)
+; ASM64PWR4-NEXT:    ori 3, 11, 13107
 ; ASM64PWR4-NEXT:    ori 11, 12, 39321
 ; ASM64PWR4-NEXT:    ori 12, 0, 39321
-; ASM64PWR4-NEXT:    std 4, 160(1)
-; ASM64PWR4-NEXT:    rldic 4, 8, 32, 2
-; ASM64PWR4-NEXT:    rldic 7, 7, 34, 2
-; ASM64PWR4-NEXT:    oris 4, 4, 39321
 ; ASM64PWR4-NEXT:    std 30, 224(1) # 8-byte Folded Spill
 ; ASM64PWR4-NEXT:    lis 30, 16313
+; ASM64PWR4-NEXT:    rldic 3, 3, 34, 2
+; ASM64PWR4-NEXT:    oris 9, 9, 52428
+; ASM64PWR4-NEXT:    std 5, 160(1)
+; ASM64PWR4-NEXT:    rldic 5, 8, 32, 2
 ; ASM64PWR4-NEXT:    rldic 8, 11, 32, 2
 ; ASM64PWR4-NEXT:    rldic 11, 12, 32, 2
-; ASM64PWR4-NEXT:    std 3, 200(1)
-; ASM64PWR4-NEXT:    ori 3, 30, 39321
-; ASM64PWR4-NEXT:    ori 4, 4, 39322
-; ASM64PWR4-NEXT:    rldic 3, 3, 32, 2
-; ASM64PWR4-NEXT:    std 5, 152(1)
-; ASM64PWR4-NEXT:    rldic 5, 10, 32, 2
+; ASM64PWR4-NEXT:    std 4, 200(1)
+; ASM64PWR4-NEXT:    ori 4, 30, 39321
 ; ASM64PWR4-NEXT:    oris 5, 5, 39321
-; ASM64PWR4-NEXT:    oris 3, 3, 39321
-; ASM64PWR4-NEXT:    std 6, 128(1)
-; ASM64PWR4-NEXT:    oris 6, 7, 52428
+; ASM64PWR4-NEXT:    oris 3, 3, 52428
+; ASM64PWR4-NEXT:    std 6, 152(1)
+; ASM64PWR4-NEXT:    rldic 6, 10, 32, 2
+; ASM64PWR4-NEXT:    rldic 4, 4, 32, 2
+; ASM64PWR4-NEXT:    ori 5, 5, 39322
+; ASM64PWR4-NEXT:    std 7, 128(1)
 ; ASM64PWR4-NEXT:    ori 7, 9, 52429
-; ASM64PWR4-NEXT:    li 9, 7
+; ASM64PWR4-NEXT:    oris 6, 6, 39321
+; ASM64PWR4-NEXT:    ori 3, 3, 52429
 ; ASM64PWR4-NEXT:    lfs 10, 0(31)
+; ASM64PWR4-NEXT:    oris 4, 4, 39321
+; ASM64PWR4-NEXT:    li 9, 7
 ; ASM64PWR4-NEXT:    li 10, 8
 ; ASM64PWR4-NEXT:    std 7, 208(1)
 ; ASM64PWR4-NEXT:    oris 7, 8, 39321
 ; ASM64PWR4-NEXT:    oris 8, 11, 39321
-; ASM64PWR4-NEXT:    ori 11, 3, 39322
-; ASM64PWR4-NEXT:    li 3, 1
-; ASM64PWR4-NEXT:    std 4, 192(1)
-; ASM64PWR4-NEXT:    ori 4, 6, 52429
-; ASM64PWR4-NEXT:    ori 6, 8, 39322
-; ASM64PWR4-NEXT:    std 4, 176(1)
-; ASM64PWR4-NEXT:    ori 4, 7, 39322
-; ASM64PWR4-NEXT:    ori 7, 5, 39322
-; ASM64PWR4-NEXT:    li 5, 3
-; ASM64PWR4-NEXT:    li 8, 6
-; ASM64PWR4-NEXT:    std 4, 168(1)
+; ASM64PWR4-NEXT:    ori 11, 4, 39322
+; ASM64PWR4-NEXT:    std 5, 192(1)
+; ASM64PWR4-NEXT:    ori 5, 8, 39322
 ; ASM64PWR4-NEXT:    li 4, 2
-; ASM64PWR4-NEXT:    std 6, 136(1)
+; ASM64PWR4-NEXT:    li 8, 6
+; ASM64PWR4-NEXT:    std 3, 176(1)
+; ASM64PWR4-NEXT:    ori 3, 7, 39322
+; ASM64PWR4-NEXT:    ori 7, 6, 39322
 ; ASM64PWR4-NEXT:    li 6, 4
+; ASM64PWR4-NEXT:    std 3, 168(1)
+; ASM64PWR4-NEXT:    li 3, 1
+; ASM64PWR4-NEXT:    std 5, 136(1)
+; ASM64PWR4-NEXT:    li 5, 3
 ; ASM64PWR4-NEXT:    std 7, 120(1)
 ; ASM64PWR4-NEXT:    li 7, 5
 ; ASM64PWR4-NEXT:    std 11, 112(1)

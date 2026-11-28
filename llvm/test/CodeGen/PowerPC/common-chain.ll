@@ -758,9 +758,8 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    sldi r7, r7, 3
 ; CHECK-NEXT:    sldi r21, r9, 3
 ; CHECK-NEXT:    std r3, -160(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r9, -208(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r9, -200(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r8, -184(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r5, -200(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r4, -168(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r11, -192(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    sldi r11, r10, 5
@@ -768,14 +767,14 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    add r12, r11, r21
 ; CHECK-NEXT:    add r30, r5, r0
 ; CHECK-NEXT:    add r0, r11, r7
-; CHECK-NEXT:    std r21, -216(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r20, -224(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r21, -208(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r20, -216(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r14, -176(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    add r12, r5, r12
 ; CHECK-NEXT:    add r29, r5, r0
 ; CHECK-NEXT:    add r28, r4, r0
 ; CHECK-NEXT:    add r27, r3, r0
 ; CHECK-NEXT:    mulli r0, r10, 24
-; CHECK-NEXT:    std r14, -176(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    add r26, r0, r21
 ; CHECK-NEXT:    add r25, r0, r20
 ; CHECK-NEXT:    add r0, r0, r7
@@ -802,13 +801,13 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    add r0, r10, r14
 ; CHECK-NEXT:    sldi r0, r0, 3
 ; CHECK-NEXT:    add r2, r3, r0
-; CHECK-NEXT:    ld r3, -224(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r3, -216(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    add r14, r5, r0
 ; CHECK-NEXT:    add r31, r4, r0
 ; CHECK-NEXT:    sub r0, r3, r7
 ; CHECK-NEXT:    ld r3, -192(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    rldicl r9, r3, 2, 1
-; CHECK-NEXT:    ld r3, -216(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r3, -208(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi r8, r9, -4
 ; CHECK-NEXT:    rldicl r8, r8, 62, 2
 ; CHECK-NEXT:    sub r7, r3, r7
@@ -818,7 +817,7 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    mtctr r8
 ; CHECK-NEXT:    li r8, 0
 ; CHECK-NEXT:    std r10, -192(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r3, -216(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r3, -208(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB7_3: # %for.body
 ; CHECK-NEXT:    #
@@ -911,9 +910,8 @@ define signext i32 @spill_reduce_succ(ptr %input1, ptr %input2, ptr %output, i64
 ; CHECK-NEXT:    ld r7, -176(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r8, -184(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r10, -192(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r5, -200(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r9, -208(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld r26, -216(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r9, -200(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r26, -208(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB7_5: # %for.cond.cleanup.loopexit.unr-lcssa
 ; CHECK-NEXT:    cmpldi r6, 0
 ; CHECK-NEXT:    beq cr0, .LBB7_8

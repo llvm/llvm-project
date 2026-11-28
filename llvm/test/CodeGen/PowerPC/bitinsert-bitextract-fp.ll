@@ -277,78 +277,78 @@ define b128 @test_bitinsert_double_var(b128 %base, double %val, i32 %off) {
 define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; CHECK-LABEL: test_bitinsert_double_b231_var:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    xxlxor 0, 0, 0
-; CHECK-NEXT:    li 9, 48
-; CHECK-NEXT:    addi 10, 1, -192
-; CHECK-NEXT:    li 11, 32
-; CHECK-NEXT:    addi 12, 1, -128
-; CHECK-NEXT:    li 0, 0
-; CHECK-NEXT:    li 29, -1
+; CHECK-NEXT:    li 7, 48
+; CHECK-NEXT:    addi 9, 1, -192
+; CHECK-NEXT:    li 10, 32
+; CHECK-NEXT:    addi 11, 1, -128
+; CHECK-NEXT:    li 12, 0
+; CHECK-NEXT:    li 0, -1
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    rlwinm 30, 8, 29, 27, 28
 ; CHECK-NEXT:    std 25, -56(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 26, -48(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 27, -40(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 28, -32(1) # 8-byte Folded Spill
-; CHECK-NEXT:    stxvw4x 0, 10, 9
-; CHECK-NEXT:    stxvw4x 0, 10, 11
-; CHECK-NEXT:    stxvw4x 0, 12, 9
-; CHECK-NEXT:    stxvw4x 0, 12, 11
-; CHECK-NEXT:    clrlwi 7, 8, 26
-; CHECK-NEXT:    mr 8, 30
-; CHECK-NEXT:    stxvw4x 0, 0, 10
-; CHECK-NEXT:    stxvw4x 0, 0, 12
-; CHECK-NEXT:    subfic 28, 7, 64
+; CHECK-NEXT:    std 29, -24(1) # 8-byte Folded Spill
+; CHECK-NEXT:    stxvw4x 0, 9, 7
+; CHECK-NEXT:    stxvw4x 0, 9, 10
+; CHECK-NEXT:    stxvw4x 0, 11, 7
+; CHECK-NEXT:    stxvw4x 0, 11, 10
+; CHECK-NEXT:    clrlwi 8, 8, 26
+; CHECK-NEXT:    mr 29, 30
+; CHECK-NEXT:    stxvw4x 0, 0, 9
+; CHECK-NEXT:    stxvw4x 0, 0, 11
+; CHECK-NEXT:    subfic 28, 8, 64
 ; CHECK-NEXT:    stfd 1, -168(1)
-; CHECK-NEXT:    std 0, -176(1)
-; CHECK-NEXT:    std 29, -104(1)
-; CHECK-NEXT:    std 0, -112(1)
-; CHECK-NEXT:    ldux 9, 30, 12
-; CHECK-NEXT:    ld 11, 8(30)
-; CHECK-NEXT:    ld 12, 16(30)
-; CHECK-NEXT:    ldux 10, 8, 10
-; CHECK-NEXT:    srd 27, 12, 28
-; CHECK-NEXT:    sld 26, 11, 7
-; CHECK-NEXT:    ld 0, 16(8)
-; CHECK-NEXT:    ld 29, 8(8)
-; CHECK-NEXT:    ld 8, 24(8)
+; CHECK-NEXT:    std 12, -176(1)
+; CHECK-NEXT:    std 0, -104(1)
+; CHECK-NEXT:    std 12, -112(1)
+; CHECK-NEXT:    ldux 7, 30, 11
+; CHECK-NEXT:    ld 10, 8(30)
+; CHECK-NEXT:    ld 11, 16(30)
+; CHECK-NEXT:    ldux 9, 29, 9
+; CHECK-NEXT:    srd 27, 11, 28
+; CHECK-NEXT:    sld 26, 10, 8
+; CHECK-NEXT:    ld 12, 16(29)
+; CHECK-NEXT:    ld 0, 8(29)
+; CHECK-NEXT:    ld 29, 24(29)
 ; CHECK-NEXT:    or 27, 26, 27
+; CHECK-NEXT:    sld 7, 7, 8
+; CHECK-NEXT:    srd 10, 10, 28
 ; CHECK-NEXT:    ld 30, 24(30)
-; CHECK-NEXT:    srd 25, 0, 28
-; CHECK-NEXT:    sld 0, 0, 7
-; CHECK-NEXT:    sld 9, 9, 7
-; CHECK-NEXT:    srd 11, 11, 28
-; CHECK-NEXT:    sld 12, 12, 7
-; CHECK-NEXT:    or 9, 9, 11
+; CHECK-NEXT:    srd 25, 12, 28
+; CHECK-NEXT:    sld 12, 12, 8
+; CHECK-NEXT:    or 7, 7, 10
+; CHECK-NEXT:    li 10, -1
 ; CHECK-NEXT:    andc 4, 4, 27
-; CHECK-NEXT:    srd 27, 8, 28
-; CHECK-NEXT:    li 11, -1
-; CHECK-NEXT:    rldic 11, 11, 0, 25
-; CHECK-NEXT:    sld 26, 29, 7
-; CHECK-NEXT:    sld 10, 10, 7
-; CHECK-NEXT:    sld 8, 8, 7
-; CHECK-NEXT:    sld 7, 30, 7
-; CHECK-NEXT:    or 0, 0, 27
-; CHECK-NEXT:    srd 27, 30, 28
-; CHECK-NEXT:    xor 9, 9, 11
+; CHECK-NEXT:    srd 27, 29, 28
+; CHECK-NEXT:    sld 11, 11, 8
+; CHECK-NEXT:    rldic 10, 10, 0, 25
+; CHECK-NEXT:    sld 26, 0, 8
+; CHECK-NEXT:    sld 9, 9, 8
 ; CHECK-NEXT:    or 26, 26, 25
-; CHECK-NEXT:    andc 6, 6, 7
-; CHECK-NEXT:    or 4, 4, 26
-; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
-; CHECK-NEXT:    or 12, 12, 27
-; CHECK-NEXT:    and 3, 3, 9
-; CHECK-NEXT:    or 6, 6, 8
-; CHECK-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
-; CHECK-NEXT:    andc 5, 5, 12
-; CHECK-NEXT:    srd 12, 29, 28
+; CHECK-NEXT:    or 12, 12, 27
+; CHECK-NEXT:    srd 27, 30, 28
+; CHECK-NEXT:    xor 7, 7, 10
+; CHECK-NEXT:    or 4, 4, 26
+; CHECK-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
+; CHECK-NEXT:    or 11, 11, 27
+; CHECK-NEXT:    and 3, 3, 7
+; CHECK-NEXT:    sld 7, 29, 8
+; CHECK-NEXT:    sld 8, 30, 8
+; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
+; CHECK-NEXT:    andc 5, 5, 11
+; CHECK-NEXT:    srd 11, 0, 28
+; CHECK-NEXT:    andc 6, 6, 8
 ; CHECK-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
-; CHECK-NEXT:    or 10, 10, 12
-; CHECK-NEXT:    or 5, 5, 0
-; CHECK-NEXT:    or 3, 3, 10
+; CHECK-NEXT:    or 9, 9, 11
+; CHECK-NEXT:    or 5, 5, 12
+; CHECK-NEXT:    or 6, 6, 7
+; CHECK-NEXT:    or 3, 3, 9
 ; CHECK-NEXT:    blr
   %result = bitinsert b231 %base, double %val, i32 %off
   ret b231 %result

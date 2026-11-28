@@ -1172,7 +1172,7 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) nounwind {
 ; CHECK-NEXT:    std r23, 504(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    lhz r23, 688(r1)
 ; CHECK-NEXT:    stxvd2x v22, r1, r11 # 16-byte Folded Spill
-; CHECK-NEXT:    std r3, 184(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r3, 208(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    lhz r3, 848(r1)
 ; CHECK-NEXT:    li r11, 288
 ; CHECK-NEXT:    std r25, 520(r1) # 8-byte Folded Spill
@@ -1186,13 +1186,13 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) nounwind {
 ; CHECK-NEXT:    lhz r27, 712(r1)
 ; CHECK-NEXT:    lhz r26, 704(r1)
 ; CHECK-NEXT:    stxvd2x v24, r1, r11 # 16-byte Folded Spill
-; CHECK-NEXT:    std r3, 176(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r3, 200(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    lhz r3, 840(r1)
 ; CHECK-NEXT:    li r11, 320
 ; CHECK-NEXT:    std r29, 552(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    lhz r29, 728(r1)
 ; CHECK-NEXT:    stxvd2x v25, r1, r11 # 16-byte Folded Spill
-; CHECK-NEXT:    std r3, 152(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r3, 168(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    lhz r3, 832(r1)
 ; CHECK-NEXT:    li r11, 336
 ; CHECK-NEXT:    std r31, 568(r1) # 8-byte Folded Spill
@@ -1205,7 +1205,7 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) nounwind {
 ; CHECK-NEXT:    mr r17, r6
 ; CHECK-NEXT:    mr r16, r5
 ; CHECK-NEXT:    stxvd2x v27, r1, r11 # 16-byte Folded Spill
-; CHECK-NEXT:    std r3, 144(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r3, 160(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    lhz r3, 824(r1)
 ; CHECK-NEXT:    li r11, 368
 ; CHECK-NEXT:    std r18, 464(r1) # 8-byte Folded Spill
@@ -1213,7 +1213,7 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) nounwind {
 ; CHECK-NEXT:    mr r20, r8
 ; CHECK-NEXT:    mr r18, r7
 ; CHECK-NEXT:    stxvd2x v28, r1, r11 # 16-byte Folded Spill
-; CHECK-NEXT:    std r3, 120(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r3, 136(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    lhz r3, 816(r1)
 ; CHECK-NEXT:    li r11, 384
 ; CHECK-NEXT:    std r21, 488(r1) # 8-byte Folded Spill
@@ -1222,7 +1222,7 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) nounwind {
 ; CHECK-NEXT:    mr r21, r9
 ; CHECK-NEXT:    stxvd2x v29, r1, r11 # 16-byte Folded Spill
 ; CHECK-NEXT:    li r11, 400
-; CHECK-NEXT:    std r3, 112(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r3, 128(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    lhz r3, 808(r1)
 ; CHECK-NEXT:    stxvd2x v30, r1, r11 # 16-byte Folded Spill
 ; CHECK-NEXT:    li r11, 416
@@ -1271,7 +1271,7 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) nounwind {
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
-; CHECK-NEXT:    li r3, 192
+; CHECK-NEXT:    li r3, 176
 ; CHECK-NEXT:    xxmrghd vs0, vs0, v31
 ; CHECK-NEXT:    stxvd2x vs0, r1, r3 # 16-byte Folded Spill
 ; CHECK-NEXT:    clrldi r3, r20, 48
@@ -1287,7 +1287,7 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) nounwind {
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
-; CHECK-NEXT:    li r3, 160
+; CHECK-NEXT:    li r3, 144
 ; CHECK-NEXT:    xxmrghd vs0, vs0, v31
 ; CHECK-NEXT:    stxvd2x vs0, r1, r3 # 16-byte Folded Spill
 ; CHECK-NEXT:    mr r3, r19
@@ -1303,7 +1303,7 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) nounwind {
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
-; CHECK-NEXT:    li r3, 128
+; CHECK-NEXT:    li r3, 112
 ; CHECK-NEXT:    xxmrghd vs0, v31, vs0
 ; CHECK-NEXT:    stxvd2x vs0, r1, r3 # 16-byte Folded Spill
 ; CHECK-NEXT:    mr r3, r22
@@ -1424,42 +1424,42 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) nounwind {
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mr r29, r3
-; CHECK-NEXT:    ld r3, 112(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r3, 128(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtvsrd v31, r29
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
-; CHECK-NEXT:    ld r3, 120(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r3, 136(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    xxmrghd v31, vs0, v31
 ; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mr r29, r3
-; CHECK-NEXT:    ld r3, 144(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r3, 160(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtvsrd v30, r29
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
-; CHECK-NEXT:    ld r3, 152(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r3, 168(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    xxmrghd v30, vs0, v30
 ; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mr r29, r3
-; CHECK-NEXT:    ld r3, 176(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r3, 200(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtvsrd v29, r29
 ; CHECK-NEXT:    bl llrintf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mtfprd f0, r3
-; CHECK-NEXT:    ld r3, 184(r1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld r3, 208(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    xxmrghd v29, vs0, v29
 ; CHECK-NEXT:    bl __extendhfsf2
 ; CHECK-NEXT:    nop
@@ -1475,7 +1475,7 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) nounwind {
 ; CHECK-NEXT:    mtfprd f0, r3
 ; CHECK-NEXT:    li r3, 240
 ; CHECK-NEXT:    xxswapd vs1, v29
-; CHECK-NEXT:    li r4, 128
+; CHECK-NEXT:    li r4, 112
 ; CHECK-NEXT:    xxswapd vs2, v30
 ; CHECK-NEXT:    xxswapd vs3, v25
 ; CHECK-NEXT:    xxmrghd v2, vs0, v28
@@ -1507,12 +1507,12 @@ define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) nounwind {
 ; CHECK-NEXT:    stxvd2x vs3, r30, r3
 ; CHECK-NEXT:    li r3, 80
 ; CHECK-NEXT:    lxvd2x vs2, r1, r4 # 16-byte Folded Reload
-; CHECK-NEXT:    li r4, 160
+; CHECK-NEXT:    li r4, 144
 ; CHECK-NEXT:    xxswapd vs1, v26
 ; CHECK-NEXT:    stxvd2x vs1, r30, r3
 ; CHECK-NEXT:    li r3, 64
 ; CHECK-NEXT:    lxvd2x vs1, r1, r4 # 16-byte Folded Reload
-; CHECK-NEXT:    li r4, 192
+; CHECK-NEXT:    li r4, 176
 ; CHECK-NEXT:    lxvd2x vs3, r1, r4 # 16-byte Folded Reload
 ; CHECK-NEXT:    li r4, 224
 ; CHECK-NEXT:    lxvd2x vs4, r1, r4 # 16-byte Folded Reload

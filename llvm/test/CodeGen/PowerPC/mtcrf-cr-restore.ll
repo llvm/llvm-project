@@ -12,33 +12,33 @@ define signext i32 @restore_cr_after_uses(i128 %value, i1 %cond) {
 ; CHECK-NEXT:    andi. 5, 5, 1
 ; CHECK-NEXT:    li 5, 0
 ; CHECK-NEXT:    addze 7, 4
-; CHECK-NEXT:    cmpldi 5, 6, 1
+; CHECK-NEXT:    cmpldi 6, 6, 1
 ; CHECK-NEXT:    li 6, 0
 ; CHECK-NEXT:    cmpldi 1, 7, 0
-; CHECK-NEXT:    cmpdi 6, 7, 1
+; CHECK-NEXT:    cmpdi 5, 7, 1
 ; CHECK-NEXT:    bc 12, 1, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %compare
-; CHECK-NEXT:    crandc 20, 24, 6
-; CHECK-NEXT:    crandc 22, 6, 21
+; CHECK-NEXT:    crandc 21, 20, 6
+; CHECK-NEXT:    crandc 22, 6, 25
 ; CHECK-NEXT:    li 6, 1
-; CHECK-NEXT:    crnor 20, 22, 20
-; CHECK-NEXT:    isel 6, 0, 6, 20
+; CHECK-NEXT:    crnor 21, 22, 21
+; CHECK-NEXT:    isel 6, 0, 6, 21
 ; CHECK-NEXT:  .LBB0_2: # %merge
 ; CHECK-NEXT:    clrldi 6, 6, 32
 ; CHECK-NEXT:    mfcr 12
 ; CHECK-NEXT:    cmpldi 7, 4, 0
 ; CHECK-NEXT:    cmpdi 2, 4, 0
-; CHECK-NEXT:    crandc 21, 6, 21
+; CHECK-NEXT:    crandc 20, 20, 6
 ; CHECK-NEXT:    stw 12, 8(1)
 ; CHECK-NEXT:    cmpld 3, 3, 6
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    crandc 20, 8, 30
+; CHECK-NEXT:    crandc 21, 8, 30
 ; CHECK-NEXT:    lwz 12, 8(1)
 ; CHECK-NEXT:    crand 22, 30, 12
 ; CHECK-NEXT:    mtcrf 48, 12
-; CHECK-NEXT:    crnor 20, 22, 20
-; CHECK-NEXT:    isel 4, 0, 3, 20
-; CHECK-NEXT:    crandc 20, 24, 6
+; CHECK-NEXT:    crnor 21, 22, 21
+; CHECK-NEXT:    isel 4, 0, 3, 21
+; CHECK-NEXT:    crandc 21, 6, 25
 ; CHECK-NEXT:    crnor 20, 21, 20
 ; CHECK-NEXT:    isel 6, 5, 3, 20
 ; CHECK-NEXT:    iselgt 3, 3, 5
