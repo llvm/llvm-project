@@ -190,7 +190,17 @@ public:
   /// @return True if the ast expression is larger than 64 bit.
   bool hasLargeInts(isl::ast_expr Expr);
 
+  /// Check if an expression or any of its subexpressions exceeds signed 64-bit
+  /// integer arithmetic bitwidth (e.g. from large constants or affine
+  /// arithmetic over constants and parameters).
+  bool hasExceedingBitWidth(isl::ast_expr Expr) const;
+
 private:
+  mutable bool ParamRangesCalculated = false;
+  mutable llvm::DenseMap<isl_id *, std::pair<llvm::APInt, llvm::APInt>>
+      ParamRangeCache;
+  void computeParamRanges() const;
+
   Scop &S;
 
   /// Flag that will be set if an overflow occurred at runtime.

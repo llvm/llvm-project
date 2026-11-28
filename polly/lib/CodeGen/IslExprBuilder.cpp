@@ -13,6 +13,8 @@
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/GICHelper.h"
+#include "polly/Support/ISLTools.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
@@ -107,6 +109,121 @@ bool IslExprBuilder::hasLargeInts(isl::ast_expr Expr) {
   }
 
   return false;
+}
+
+void IslExprBuilder::computeParamRanges() const {
+  if (ParamRangesCalculated)
+    return;
+  ParamRangesCalculated = true;
+
+  isl::set Context = S.getContext().intersect(S.getAssumedContext());
+  unsigned NumParams = unsignedFromIslSize(Context.dim(isl::dim::param));
+  isl::set SetContext = isl::manage(
+      isl_set_move_dims(Context.copy(), isl_dim_set, 0, isl_dim_param, 0, NumParams));
+
+  for (unsigned i = 0; i < NumParams; ++i) {
+    isl::id Id = Context.get_dim_id(isl::dim::param, i);
+    const SCEV *ParamSCEV = static_cast<const SCEV *>(Id.get_user());
+    ConstantRange Range128 = ConstantRange::getFull(128);
+
+    if (ParamSCEV && SE.isSCEVable(ParamSCEV->getType())) {
+      ConstantRange SCEVRange = SE.getSignedRange(ParamSCEV);
+      if (SCEVRange.getMinSignedBits() <= 64)
+        Range128 = SCEVRange.signExtend(128);
+    }
+
+    isl::val MinVal = SetContext.dim_min_val(i);
+    isl::val MaxVal = SetContext.dim_max_val(i);
+
+    if (MinVal.is_int()) {
+      APInt MinAP = APIntFromVal(MinVal);
+      if (MinAP.isSignedIntN(64))
+        Range128 = Range128.intersectWith(ConstantRange::makeExactICmpRegion(
+            CmpInst::ICMP_SGE, MinAP.sext(128)));
+    }
+    if (MaxVal.is_int()) {
+      APInt MaxAP = APIntFromVal(MaxVal);
+      if (MaxAP.isSignedIntN(64))
+        Range128 = Range128.intersectWith(ConstantRange::makeExactICmpRegion(
+            CmpInst::ICMP_SLE, MaxAP.sext(128)));
+    }
+
+    if (!Range128.isEmptySet())
+      ParamRangeCache[Id.get()] = {Range128.getSignedMin(),
+                                   Range128.getSignedMax()};
+  }
+}
+
+static std::optional<ConstantRange>
+getExprRange(isl::ast_expr Expr,
+             const DenseMap<isl_id *, std::pair<APInt, APInt>> &ParamRanges,
+             bool &Overflow) {
+  if (Overflow || Expr.is_null())
+    return std::nullopt;
+
+  enum isl_ast_expr_type Type = isl_ast_expr_get_type(Expr.get());
+
+  if (Type == isl_ast_expr_int) {
+    isl::val Val = Expr.get_val();
+    APInt APVal = APIntFromVal(Val);
+    if (!APVal.isSignedIntN(64)) {
+      Overflow = true;
+      return std::nullopt;
+    }
+    return ConstantRange(APVal.sext(128));
+  }
+
+  if (Type == isl_ast_expr_id) {
+    isl::id Id = Expr.get_id();
+    auto It = ParamRanges.find(Id.get());
+    if (It != ParamRanges.end()) {
+      const auto &P = It->second;
+      return ConstantRange::getNonEmpty(P.first, P.second + 1);
+    }
+    return std::nullopt;
+  }
+
+  if (Type == isl_ast_expr_op) {
+    isl_ast_op_type OpType = isl_ast_expr_get_op_type(Expr.get());
+    int NumArgs = isl_ast_expr_get_op_n_arg(Expr.get());
+
+    if (NumArgs == 2 && OpType == isl_ast_op_mul) {
+      auto R0 = getExprRange(Expr.get_op_arg(0), ParamRanges, Overflow);
+      auto R1 = getExprRange(Expr.get_op_arg(1), ParamRanges, Overflow);
+      if (Overflow)
+        return std::nullopt;
+
+      if (R0 && R1) {
+        ConstantRange Res = R0->multiply(*R1);
+        if (!Res.getSignedMin().isSignedIntN(64) ||
+            !Res.getSignedMax().isSignedIntN(64)) {
+          Overflow = true;
+          return std::nullopt;
+        }
+        return Res;
+      }
+    }
+
+    // For any other operation or if one operand range is unmodeled,
+    // recursively check each operand for constant/expression overflow.
+    for (int i = 0; i < NumArgs; ++i) {
+      getExprRange(Expr.get_op_arg(i), ParamRanges, Overflow);
+      if (Overflow)
+        return std::nullopt;
+    }
+  }
+
+  return std::nullopt;
+}
+
+bool IslExprBuilder::hasExceedingBitWidth(isl::ast_expr Expr) const {
+  if (Expr.is_null())
+    return false;
+
+  computeParamRanges();
+  bool Overflow = false;
+  getExprRange(Expr, ParamRangeCache, Overflow);
+  return Overflow;
 }
 
 Value *IslExprBuilder::createBinOp(BinaryOperator::BinaryOps Opc, Value *LHS,
@@ -764,7 +881,7 @@ Value *IslExprBuilder::createInt(__isl_take isl_ast_expr *Expr) {
   APValue = APIntFromVal(Val);
 
   auto BitWidth = APValue.getBitWidth();
-  if (BitWidth <= 64)
+  if (BitWidth <= 64 && APValue.isSignedIntN(64))
     T = getType(Expr);
   else
     T = Builder.getIntNTy(BitWidth);
