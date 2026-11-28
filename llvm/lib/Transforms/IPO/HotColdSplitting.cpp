@@ -99,11 +99,41 @@ void analyzeProfMetadata(BasicBlock *BB,
   auto TrueProb = BranchProbability::getBranchProbability(TrueWt, SumWt);
   auto FalseProb = BranchProbability::getBranchProbability(FalseWt, SumWt);
 
-  if (TrueProb <= ColdProbThresh)
-    AnnotatedColdBlocks.insert(CondBr->getSuccessor(0));
+  // Return true if the edge From -> To is low-probability.
+  auto isColdEdge = [](const BasicBlock *From, const BasicBlock *To,
+                       BranchProbability ColdProbThresh) {
+    auto *CondBr = dyn_cast<CondBrInst>(From->getTerminator());
+    if (!CondBr)
+      return false;
+    uint64_t TrueWt, FalseWt;
+    if (!extractBranchWeights(*CondBr, TrueWt, FalseWt))
+      return false;
+    uint64_t SumWt = TrueWt + FalseWt;
+    if (SumWt == 0)
+      return false;
+    uint64_t Wt = CondBr->getSuccessor(0) == To ? TrueWt : FalseWt;
+    return BranchProbability::getBranchProbability(Wt, SumWt) <= ColdProbThresh;
+  };
 
-  if (FalseProb <= ColdProbThresh)
-    AnnotatedColdBlocks.insert(CondBr->getSuccessor(1));
+  // A successor is cold if it has a single predecessor or
+  // every predecessor reaches it through a low-probability edge.
+  if (TrueProb <= ColdProbThresh) {
+    BasicBlock *TrueSucc = CondBr->getSuccessor(0);
+    if (pred_size(TrueSucc) == 1 ||
+        llvm::all_of(predecessors(TrueSucc), [&](BasicBlock *Pred) {
+          return isColdEdge(Pred, TrueSucc, ColdProbThresh);
+        }))
+      AnnotatedColdBlocks.insert(TrueSucc);
+  }
+
+  if (FalseProb <= ColdProbThresh) {
+    BasicBlock *FalseSucc = CondBr->getSuccessor(1);
+    if (pred_size(FalseSucc) == 1 ||
+        llvm::all_of(predecessors(FalseSucc), [&](BasicBlock *Pred) {
+          return isColdEdge(Pred, FalseSucc, ColdProbThresh);
+        }))
+      AnnotatedColdBlocks.insert(FalseSucc);
+  }
 }
 
 bool unlikelyExecuted(BasicBlock &BB) {
