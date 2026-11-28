@@ -7,6 +7,7 @@
 
   define void @test_overlap() { unreachable }
   define void @test_dead_redef() { unreachable }
+  define void @test_redef_after_dead_def() { unreachable }
   define void @test_tied() { unreachable }
   define void @test_mmo_merge1() { unreachable }
   define void @test_mmo_merge2() { unreachable }
@@ -48,6 +49,25 @@ body: |
     $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
     dead $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+...
+
+---
+name: test_redef_after_dead_def
+tracksRegLiveness: false
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: test_redef_after_dead_def
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: BUNDLE implicit-def $vgpr1, implicit-def $vgpr2, implicit $vgpr0, implicit $exec {
+    ; CHECK-NEXT:   dead $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    ; CHECK-NEXT:   $vgpr2 = V_MOV_B32_e32 internal $vgpr1, implicit $exec
+    ; CHECK-NEXT: }
+    dead $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 $vgpr1, implicit $exec
 ...
 
 ---

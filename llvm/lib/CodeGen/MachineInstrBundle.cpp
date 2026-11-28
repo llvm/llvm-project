@@ -198,16 +198,16 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (!Reg)
         continue;
 
-      if (LocalDefs.insert(Reg)) {
-        if (!MO.isDead() && Reg.isPhysical()) {
-          for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-            LocalDefsP.set(static_cast<unsigned>(Unit));
-        }
-      } else {
+      if (!LocalDefs.insert(Reg)) {
         if (!MO.isDead()) {
           // Re-defined inside the bundle, it's no longer dead.
           DeadDefSet.erase(Reg);
         }
+      }
+      // Record the units of every def that is not dead.
+      if (!MO.isDead() && Reg.isPhysical()) {
+        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+          LocalDefsP.set(static_cast<unsigned>(Unit));
       }
       if (MO.isDead())
         DeadDefSet.insert(Reg);
