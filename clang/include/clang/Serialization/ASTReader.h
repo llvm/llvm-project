@@ -1058,6 +1058,10 @@ private:
   /// The RISC-V intrinsic pragma(including RVV, SiFive and Andes).
   SmallVector<bool, 3> RISCVVecIntrinsicPragma;
 
+  /// The z/OS '#pragma csect(code/static, "name")'.
+  std::string PragmaCsectCode;
+  std::string PragmaCsectStatic;
+
 private:
   struct ImportedSubmodule {
     serialization::SubmoduleID ID;

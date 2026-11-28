@@ -754,6 +754,9 @@ enum ASTRecordTypes {
 
   /// Record code for the OpenMP 'requires' directives seen in the TU.
   OMP_REQUIRES_DECLS = 81,
+
+  /// Record code for the names set by '#pragma csect' on z/OS.
+  ZOS_CSECT_PRAGMA_OPTIONS = 82,
 };
 
 /// Record types used within a source manager block.
