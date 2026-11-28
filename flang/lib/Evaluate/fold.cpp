@@ -174,6 +174,14 @@ bool IsTypeOnlyInquiryArg(const SpecificIntrinsic &intrinsic, std::size_t j) {
 
 Expr<Type<TypeCategory::Derived>> FoldOperation(
     FoldingContext &context, StructureConstructor &&structure) {
+  if (context.inDataStmtValue()) {
+    if (const auto *scope{structure.derivedTypeSpec().GetScope()};
+        scope && scope->size() > maxDataInitBytes) {
+      // Leave oversized DATA values unfolded so the DATA size check can
+      // diagnose them without expanding array components.
+      return Expr<Type<TypeCategory::Derived>>{std::move(structure)};
+    }
+  }
   StructureConstructor ctor{structure.derivedTypeSpec()};
   bool isConstant{true};
   auto restorer{context.WithPDTInstance(structure.derivedTypeSpec())};
