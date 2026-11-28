@@ -497,18 +497,19 @@ computeUnlikelySuccessors(const BasicBlock *BB, const CycleInfo &CI, CycleRef C,
       if (!CmpLHSConst || !llvm::is_contained(successors(BB), B))
         continue;
       // First collapse InstChain
+      // Pass the Instruction when folding to access the denormal_fpenv.
       const DataLayout &DL = BB->getDataLayout();
       for (Instruction *I : llvm::reverse(InstChain)) {
-        CmpLHSConst = ConstantFoldBinaryOpOperands(
-            I->getOpcode(), CmpLHSConst, cast<Constant>(I->getOperand(1)), DL);
+        CmpLHSConst = ConstantFoldInstOperands(
+            I, {CmpLHSConst, cast<Constant>(I->getOperand(1))}, DL);
         if (!CmpLHSConst)
           break;
       }
       if (!CmpLHSConst)
         continue;
       // Now constant-evaluate the compare
-      Constant *Result = ConstantFoldCompareInstOperands(
-          Cmp->getPredicate(), CmpLHSConst, CmpConst, DL);
+      Constant *Result =
+          ConstantFoldInstOperands(Cmp, {CmpLHSConst, CmpConst}, DL);
       // If the result means we don't branch to the block then that block is
       // unlikely.
       if (Result && ((Result->isNullValue() && B == BI->getSuccessor(0)) ||
