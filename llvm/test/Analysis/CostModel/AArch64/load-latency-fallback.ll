@@ -74,10 +74,10 @@ define void @fp_vector_loads(ptr %p) {
 ; C1-ULTRA-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; A53-SVE-LABEL: 'fp_vector_loads'
-; A53-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %float = load float, ptr %p, align 4
-; A53-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %double = load double, ptr %p, align 8
+; A53-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %float = load float, ptr %p, align 4
+; A53-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %double = load double, ptr %p, align 8
 ; A53-SVE-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v4i32 = load <4 x i32>, ptr %p, align 16
-; A53-SVE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:7 SizeLat:4 for: %v8i64 = load <8 x i64>, ptr %p, align 64
+; A53-SVE-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:4 Lat:10 SizeLat:4 for: %v8i64 = load <8 x i64>, ptr %p, align 64
 ; A53-SVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %float = load float, ptr %p

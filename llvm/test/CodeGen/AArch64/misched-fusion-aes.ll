@@ -94,20 +94,13 @@ define void @aesea(ptr %a0, ptr %b0, ptr %c0, <16 x i8> %d, <16 x i8> %e) {
 ; CHECK-LABEL: aesea:
 ; CHECK: aese [[VA:v[0-7].16b]], {{v[0-7].16b}}
 ; CHECK: aesmc [[VA]], [[VA]]
-; CHECK: aese [[VB:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesmc [[VB]], [[VB]]
-; CHECK: aese [[VC:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesmc [[VC]], [[VC]]
-; CHECK: aese [[VD:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesmc [[VD]], [[VD]]
-; CHECK: aese [[VE:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesmc [[VE]], [[VE]]
-; CHECK: aese [[VF:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesmc [[VF]], [[VF]]
-; CHECK: aese [[VG:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesmc [[VG]], [[VG]]
-; CHECK: aese [[VH:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesmc [[VH]], [[VH]]
+; CHECK: aese [[VB:v[0-7].16b]], {{v[0-7].16b}}{{[[:space:]]+}}aesmc [[VB]], [[VB]]
+; CHECK: aese [[VC:v[0-7].16b]], {{v[0-7].16b}}{{[[:space:]]+}}aesmc [[VC]], [[VC]]
+; CHECK: aese [[VD:v[0-7].16b]], {{v[0-7].16b}}{{[[:space:]]+}}aesmc [[VD]], [[VD]]
+; CHECK: aese [[VE:v[0-7].16b]], {{v[0-7].16b}}{{[[:space:]]+}}aesmc [[VE]], [[VE]]
+; CHECK: aese [[VF:v[0-7].16b]], {{v[0-7].16b}}{{[[:space:]]+}}aesmc [[VF]], [[VF]]
+; CHECK: aese [[VG:v[0-7].16b]], {{v[0-7].16b}}{{[[:space:]]+}}aesmc [[VG]], [[VG]]
+; CHECK: aese [[VH:v[0-7].16b]], {{v[0-7].16b}}{{[[:space:]]+}}aesmc [[VH]], [[VH]]
 ; CHECK-NOT: aesmc
 }
 
@@ -178,20 +171,13 @@ define void @aesda(ptr %a0, ptr %b0, ptr %c0, <16 x i8> %d, <16 x i8> %e) {
 ; CHECK-LABEL: aesda:
 ; CHECK: aesd [[VA:v[0-7].16b]], {{v[0-7].16b}}
 ; CHECK: aesimc [[VA]], [[VA]]
-; CHECK: aesd [[VB:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesimc [[VB]], [[VB]]
-; CHECK: aesd [[VC:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesimc [[VC]], [[VC]]
-; CHECK: aesd [[VD:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesimc [[VD]], [[VD]]
-; CHECK: aesd [[VE:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesimc [[VE]], [[VE]]
-; CHECK: aesd [[VF:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesimc [[VF]], [[VF]]
-; CHECK: aesd [[VG:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesimc [[VG]], [[VG]]
-; CHECK: aesd [[VH:v[0-7].16b]], {{v[0-7].16b}}
-; CHECK-NEXT: aesimc [[VH]], [[VH]]
+; CHECK: aesd [[VB:v[0-7].16b]], {{v[0-7].16b}}{{[[:space:]]+}}aesimc [[VB]], [[VB]]
+; CHECK: aesd [[VC:v[0-7].16b]], {{v[0-7].16b}}{{[[:space:]]+}}aesimc [[VC]], [[VC]]
+; CHECK: aesd [[VD:v[0-7].16b]], {{v[0-7].16b}}{{[[:space:]]+}}aesimc [[VD]], [[VD]]
+; CHECK: aesd [[VE:v[0-7].16b]], {{v[0-7].16b}}{{[[:space:]]+}}aesimc [[VE]], [[VE]]
+; CHECK: aesd [[VF:v[0-7].16b]], {{v[0-7].16b}}{{[[:space:]]+}}aesimc [[VF]], [[VF]]
+; CHECK: aesd [[VG:v[0-7].16b]], {{v[0-7].16b}}{{[[:space:]]+}}aesimc [[VG]], [[VG]]
+; CHECK: aesd [[VH:v[0-7].16b]], {{v[0-7].16b}}{{[[:space:]]+}}aesimc [[VH]], [[VH]]
 ; CHECK-NOT: aesimc
 }
 
