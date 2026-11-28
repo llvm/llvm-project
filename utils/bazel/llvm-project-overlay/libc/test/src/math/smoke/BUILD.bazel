@@ -2707,6 +2707,13 @@ math_test(
 math_test(name = "expm1f16")
 
 math_test(
+    name = "expm1bf16",
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+    ],
+)
+
+math_test(
     name = "issignaling",
     hdrs = ["IsSignalingTest.h"],
 )

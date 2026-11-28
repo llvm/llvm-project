@@ -977,6 +977,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "expm1bf16",
+    additional_deps = [
+        "//libc/src/__support/math:expm1bf16",
+    ],
+)
+
+libc_math_function(
     name = "expm1f16",
     additional_deps = [
         "//libc/src/__support/math:expm1f16",

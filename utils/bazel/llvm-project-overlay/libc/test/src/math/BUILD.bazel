@@ -379,6 +379,13 @@ math_mpfr_test(name = "expm1f")
 math_mpfr_test(name = "expm1f16")
 
 math_mpfr_test(
+    name = "expm1bf16",
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
+    ],
+)
+
+math_mpfr_test(
     name = "fabs",
     hdrs = ["FAbsTest.h"],
 )

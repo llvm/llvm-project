@@ -147,6 +147,7 @@ else()
       libc.src.__support.math.expm1
       libc.src.__support.math.expm1f
       libc.src.__support.math.expm1f16
+      libc.src.__support.math.expm1bf16
       libc.src.__support.math.exp10
       libc.src.__support.math.exp10f
       libc.src.__support.math.exp10f16

@@ -2486,6 +2486,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  expm1bf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-tests
+  SRCS
+    expm1bf16_test.cpp
+  DEPENDS
+    libc.src.math.expm1bf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   log_test
   NEED_MPFR
   SUITE

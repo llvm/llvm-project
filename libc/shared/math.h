@@ -124,6 +124,7 @@
 #include "math/expf.h"
 #include "math/expf16.h"
 #include "math/expm1.h"
+#include "math/expm1bf16.h"
 #include "math/expm1f.h"
 #include "math/expm1f16.h"
 #include "math/f16add.h"
