@@ -2874,6 +2874,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
     return;  // Don't check inside destructors.
 
   Handler.enterFunction(CurrentFunction);
+  llvm::scope_exit LeaveFunc([&]() { Handler.leaveFunction(CurrentFunction); });
 
   BlockInfo.resize(CFGraph->getNumBlockIDs(),
     CFGBlockInfo::getEmptyBlockInfo(LocalVarMap));
@@ -3174,8 +3175,6 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
   // FIXME: Should we call this function for all blocks which exit the function?
   intersectAndWarn(ExpectedFunctionExitSet, Final.ExitSet, Final.ExitLoc,
                    LEK_LockedAtEndOfFunction, LEK_NotLockedAtEndOfFunction);
-
-  Handler.leaveFunction(CurrentFunction);
 }
 
 /// Check a function's CFG for thread-safety violations.

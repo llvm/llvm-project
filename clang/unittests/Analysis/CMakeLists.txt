@@ -9,6 +9,7 @@ add_clang_unittest(ClangAnalysisTests
   IssueHashTest.cpp
   LifetimeSafetyTest.cpp
   MacroExpansionContextTest.cpp
+  ThreadSafetyTest.cpp
   UnsafeBufferUsageTest.cpp
   CLANG_LIBS
   clangAST
