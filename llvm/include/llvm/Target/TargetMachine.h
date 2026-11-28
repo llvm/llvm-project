@@ -222,8 +222,8 @@ public:
   }
 
   /// This method returns a pointer to the specified type of
-  /// TargetSubtargetInfo.  In debug builds, it verifies that the object being
-  /// returned is of the correct type.
+  /// TargetSubtargetInfo.
+  /// The behavior is undefined if the subtarget is not `STC`.
   template <typename STC> const STC &getSubtarget(const Function &F) const {
     return *static_cast<const STC*>(getSubtargetImpl(F));
   }
