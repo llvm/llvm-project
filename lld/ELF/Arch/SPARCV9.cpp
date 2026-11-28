@@ -92,7 +92,14 @@ int64_t SPARCV9::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_SPARC_64:
   case R_SPARC_GLOB_DAT:
+  case R_SPARC_RELATIVE:
+  case R_SPARC_TLS_TPOFF64:
     return read64be(buf);
+  case R_SPARC_COPY:
+  case R_SPARC_JMP_SLOT:
+  case R_SPARC_NONE:
+    // These relocations are defined as not having an implicit addend.
+    return 0;
   default:
     InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
