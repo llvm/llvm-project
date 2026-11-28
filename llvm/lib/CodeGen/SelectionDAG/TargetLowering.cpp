@@ -14197,6 +14197,7 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
          "SHUFFLE_VECTOR!");
 
   EVT VT = Node->getValueType(0);
+  EVT IntVT = VT.changeTypeToInteger();
   SDValue V1 = Node->getOperand(0);
   SDValue V2 = Node->getOperand(1);
   SDValue Offset = Node->getOperand(2);
@@ -14212,10 +14213,25 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
   //    Ptr = Ptr + sizeof(V1) - (Offset * size(VT.Elt))
   //  Res = Load Ptr
 
-  Align Alignment = DAG.getReducedAlign(VT, /*UseABI=*/false);
+  EVT ByteVT = VT;
+  bool IsByteSized = VT.getVectorElementType().isByteSized();
 
-  EVT MemVT = EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
-                               VT.getVectorElementCount() * 2);
+  // The stack round-trip uses byte indices, so irregular element types must be
+  // made byte addressable.
+  if (!IsByteSized) {
+    EVT NewEltVT =
+        IntVT.getVectorElementType().getRoundIntegerType(*DAG.getContext());
+    ByteVT = VT.changeVectorElementType(*DAG.getContext(), NewEltVT);
+
+    V1 = DAG.getNode(ISD::BITCAST, DL, IntVT, V1);
+    V1 = DAG.getNode(ISD::ANY_EXTEND, DL, ByteVT, V1);
+    V2 = DAG.getNode(ISD::BITCAST, DL, IntVT, V2);
+    V2 = DAG.getNode(ISD::ANY_EXTEND, DL, ByteVT, V2);
+  }
+
+  Align Alignment = DAG.getReducedAlign(ByteVT, /*UseABI=*/false);
+  EVT MemVT = EVT::getVectorVT(*DAG.getContext(), ByteVT.getVectorElementType(),
+                               ByteVT.getVectorElementCount() * 2);
   SDValue StackPtr = DAG.CreateStackTemporary(MemVT.getStoreSize(), Alignment);
   EVT PtrVT = StackPtr.getValueType();
   auto &MF = DAG.getMachineFunction();
@@ -14226,14 +14242,14 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
   SDValue StoreV1 =
       DAG.getStore(DAG.getEntryNode(), DL, V1, StackPtr, PtrInfo, Alignment);
   // Store the hi part of CONCAT_VECTORS(V1, V2)
-  SDValue VTBytes = DAG.getTypeSize(DL, PtrVT, VT.getStoreSize());
+  SDValue VTBytes = DAG.getTypeSize(DL, PtrVT, ByteVT.getStoreSize());
   SDValue StackPtr2 = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, VTBytes);
   SDValue StoreV2 =
       DAG.getStore(StoreV1, DL, V2, StackPtr2, PtrInfo, Alignment);
 
   // NOTE: TrailingBytes must be clamped so as not to read outside of V1:V2.
   SDValue EltByteSize =
-      DAG.getTypeSize(DL, PtrVT, VT.getVectorElementType().getStoreSize());
+      DAG.getTypeSize(DL, PtrVT, ByteVT.getVectorElementType().getStoreSize());
   Offset = DAG.getZExtOrTrunc(Offset, DL, PtrVT);
   SDValue TrailingBytes = DAG.getNode(ISD::MUL, DL, PtrVT, Offset, EltByteSize);
 
@@ -14245,8 +14261,13 @@ SDValue TargetLowering::expandVectorSplice(SDNode *Node,
     StackPtr = DAG.getNode(ISD::SUB, DL, PtrVT, StackPtr2, TrailingBytes);
 
   // Load the spliced result
-  return DAG.getLoad(VT, DL, StoreV2, StackPtr,
-                     MachinePointerInfo::getUnknownStack(MF), Alignment);
+  SDValue L = DAG.getLoad(ByteVT, DL, StoreV2, StackPtr,
+                          MachinePointerInfo::getUnknownStack(MF), Alignment);
+  if (IsByteSized)
+    return L;
+
+  return DAG.getNode(ISD::BITCAST, DL, VT,
+                     DAG.getNode(ISD::TRUNCATE, DL, IntVT, L));
 }
 
 SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
