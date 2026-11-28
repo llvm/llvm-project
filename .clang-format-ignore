@@ -1,3 +1,6 @@
 # Do not attempt to format .td files; we have too many formatting needs across
 # the various files to allow automatic formatting.
 **/*.td
+
+# Generated instruction-encoding table; regenerate rather than format.
+llvm/lib/Target/Hexagon/HexagonDepMask.h

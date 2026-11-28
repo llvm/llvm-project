@@ -19,6 +19,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Target/Hexagon/HexagonRelocation.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -1254,6 +1255,215 @@ void RuntimeDyldELF::resolveSystemZRelocation(const SectionEntry &Section,
   }
 }
 
+#ifdef HEXAGON_TARGET_ENABLED
+// Hexagon relocations that need GOT, TLS, GP-relative or dynamic-linker
+// semantics. RuntimeDyld implements none of these, and resolving them as a
+// plain S + A would silently produce a wrong value, so they are rejected.
+static bool isUnsupportedHexagonRelocation(uint32_t Type) {
+  switch (Type) {
+  case ELF::R_HEX_GPREL16_0:
+  case ELF::R_HEX_GPREL16_1:
+  case ELF::R_HEX_GPREL16_2:
+  case ELF::R_HEX_GPREL16_3:
+  case ELF::R_HEX_COPY:
+  case ELF::R_HEX_GLOB_DAT:
+  case ELF::R_HEX_JMP_SLOT:
+  case ELF::R_HEX_RELATIVE:
+  case ELF::R_HEX_GOTREL_LO16:
+  case ELF::R_HEX_GOTREL_HI16:
+  case ELF::R_HEX_GOTREL_32:
+  case ELF::R_HEX_GOT_LO16:
+  case ELF::R_HEX_GOT_HI16:
+  case ELF::R_HEX_GOT_32:
+  case ELF::R_HEX_GOT_16:
+  case ELF::R_HEX_DTPMOD_32:
+  case ELF::R_HEX_DTPREL_LO16:
+  case ELF::R_HEX_DTPREL_HI16:
+  case ELF::R_HEX_DTPREL_32:
+  case ELF::R_HEX_DTPREL_16:
+  case ELF::R_HEX_GD_PLT_B22_PCREL:
+  case ELF::R_HEX_GD_GOT_LO16:
+  case ELF::R_HEX_GD_GOT_HI16:
+  case ELF::R_HEX_GD_GOT_32:
+  case ELF::R_HEX_GD_GOT_16:
+  case ELF::R_HEX_IE_LO16:
+  case ELF::R_HEX_IE_HI16:
+  case ELF::R_HEX_IE_32:
+  case ELF::R_HEX_IE_GOT_LO16:
+  case ELF::R_HEX_IE_GOT_HI16:
+  case ELF::R_HEX_IE_GOT_32:
+  case ELF::R_HEX_IE_GOT_16:
+  case ELF::R_HEX_TPREL_LO16:
+  case ELF::R_HEX_TPREL_HI16:
+  case ELF::R_HEX_TPREL_32:
+  case ELF::R_HEX_TPREL_16:
+  case ELF::R_HEX_GOTREL_32_6_X:
+  case ELF::R_HEX_GOTREL_16_X:
+  case ELF::R_HEX_GOTREL_11_X:
+  case ELF::R_HEX_GOT_32_6_X:
+  case ELF::R_HEX_GOT_16_X:
+  case ELF::R_HEX_GOT_11_X:
+  case ELF::R_HEX_DTPREL_32_6_X:
+  case ELF::R_HEX_DTPREL_16_X:
+  case ELF::R_HEX_DTPREL_11_X:
+  case ELF::R_HEX_GD_GOT_32_6_X:
+  case ELF::R_HEX_GD_GOT_16_X:
+  case ELF::R_HEX_GD_GOT_11_X:
+  case ELF::R_HEX_IE_32_6_X:
+  case ELF::R_HEX_IE_16_X:
+  case ELF::R_HEX_IE_GOT_32_6_X:
+  case ELF::R_HEX_IE_GOT_16_X:
+  case ELF::R_HEX_IE_GOT_11_X:
+  case ELF::R_HEX_TPREL_32_6_X:
+  case ELF::R_HEX_TPREL_16_X:
+  case ELF::R_HEX_TPREL_11_X:
+  case ELF::R_HEX_LD_PLT_B22_PCREL:
+  case ELF::R_HEX_LD_GOT_LO16:
+  case ELF::R_HEX_LD_GOT_HI16:
+  case ELF::R_HEX_LD_GOT_32:
+  case ELF::R_HEX_LD_GOT_16:
+  case ELF::R_HEX_LD_GOT_32_6_X:
+  case ELF::R_HEX_LD_GOT_16_X:
+  case ELF::R_HEX_LD_GOT_11_X:
+  case ELF::R_HEX_GD_PLT_B22_PCREL_X:
+  case ELF::R_HEX_GD_PLT_B32_PCREL_X:
+  case ELF::R_HEX_LD_PLT_B22_PCREL_X:
+  case ELF::R_HEX_LD_PLT_B32_PCREL_X:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Hexagon call/branch immediates are encoded as the displacement from the
+// instruction's own address, not the absolute target address, so these
+// relocation types must have the instruction's load address subtracted out
+// before LLVMHexagonApplyRelocation scatters the value into the instruction.
+static bool isHexagonPCRelRelocation(uint32_t Type) {
+  switch (Type) {
+  case ELF::R_HEX_B22_PCREL:
+  case ELF::R_HEX_B15_PCREL:
+  case ELF::R_HEX_B7_PCREL:
+  case ELF::R_HEX_B13_PCREL:
+  case ELF::R_HEX_B9_PCREL:
+  case ELF::R_HEX_B32_PCREL_X:
+  case ELF::R_HEX_B22_PCREL_X:
+  case ELF::R_HEX_B15_PCREL_X:
+  case ELF::R_HEX_B13_PCREL_X:
+  case ELF::R_HEX_B9_PCREL_X:
+  case ELF::R_HEX_B7_PCREL_X:
+  case ELF::R_HEX_32_PCREL:
+  case ELF::R_HEX_PLT_B22_PCREL:
+  case ELF::R_HEX_6_PCREL_X:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// The branch relocation that follows an extender applies only displacement
+// bits 5:0; the extender's relocation carries the rest. The branch's ABI range
+// therefore does not apply to the full displacement.
+static bool isHexagonExtendedBranchLowRelocation(uint32_t Type) {
+  switch (Type) {
+  case ELF::R_HEX_B22_PCREL_X:
+  case ELF::R_HEX_B15_PCREL_X:
+  case ELF::R_HEX_B13_PCREL_X:
+  case ELF::R_HEX_B9_PCREL_X:
+  case ELF::R_HEX_B7_PCREL_X:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Number of bytes a relocation reads and writes at its site. Data relocations
+// are narrower than an instruction word, so a 4-byte access could run past
+// the end of the section.
+static unsigned getHexagonRelocationSize(uint32_t Type) {
+  switch (Type) {
+  case ELF::R_HEX_8:
+    return 1;
+  case ELF::R_HEX_16:
+    return 2;
+  default:
+    return 4;
+  }
+}
+
+#endif // HEXAGON_TARGET_ENABLED
+
+void RuntimeDyldELF::resolveHexagonRelocation(const SectionEntry &Section,
+                                              uint64_t Offset, uint64_t Value,
+                                              uint32_t Type, int64_t Addend) {
+#ifdef HEXAGON_TARGET_ENABLED
+  if (Type == ELF::R_HEX_NONE)
+    return;
+
+  // Report the first failure through the RuntimeDyld error state and leave the
+  // relocation site untouched.
+  auto Fail = [&](const Twine &Msg) {
+    if (!HasError) {
+      HasError = true;
+      ErrorStr = Msg.str();
+    }
+  };
+
+  LLVMHexagonRelocInfo Info;
+  if (!LLVMHexagonGetRelocationInfo(Type, &Info))
+    return Fail("Unknown Hexagon relocation type " + Twine(Type));
+
+  unsigned Size = getHexagonRelocationSize(Type);
+  if (Offset > Section.getSize() || Size > Section.getSize() - Offset)
+    return Fail(Twine(Info.Name) + " relocation at offset 0x" +
+                utohexstr(Offset) + " is outside its section");
+
+  // Keep S + A (- P) wide until it has been validated; narrowing first could
+  // turn an unrepresentable value into a plausible-looking one.
+  int64_t Wide = static_cast<int64_t>(Value + Addend);
+  if (isHexagonPCRelRelocation(Type))
+    Wide -= static_cast<int64_t>(Section.getLoadAddressWithOffset(Offset));
+
+  // The relocation table records whether the ABI verifies a relocation's range
+  // and alignment; relocations that are allowed to truncate must not be
+  // rejected.
+  if (Info.VerifyRange && !isHexagonExtendedBranchLowRelocation(Type) &&
+      !(Info.IsSigned ? isInt<32>(Wide) : isUInt<32>(Wide)))
+    return Fail(Twine(Info.Name) + " relocation out of range");
+
+  uint32_t Reloc = static_cast<uint32_t>(Wide);
+  if (Info.VerifyAlignment && !LLVMHexagonVerifyAlignment(Type, Reloc))
+    return Fail(Twine(Info.Name) + " relocation target 0x" + utohexstr(Reloc) +
+                " is not " + Twine(Info.Alignment) + "-byte aligned");
+
+  // LLVMHexagonVerifyRange expects the value after the relocation's shift.
+  if (Info.VerifyRange && !isHexagonExtendedBranchLowRelocation(Type)) {
+    uint32_t Shifted =
+        Info.IsSigned
+            ? static_cast<uint32_t>(static_cast<int32_t>(Reloc) >> Info.Shift)
+            : Reloc >> Info.Shift;
+    if (!LLVMHexagonVerifyRange(Type, Shifted))
+      return Fail(Twine(Info.Name) + " relocation out of range: 0x" +
+                  utohexstr(Reloc) + " does not fit in " +
+                  Twine(Info.EffectiveBits) + " bits");
+  }
+
+  uint8_t *TargetPtr = Section.getAddressWithOffset(Offset);
+  LLVM_DEBUG(dbgs() << "resolveHexagonRelocation, LocalAddress: "
+                    << Section.getAddressWithOffset(Offset) << " FinalAddress: "
+                    << format("%p", Section.getLoadAddressWithOffset(Offset))
+                    << " Value: " << format("%x", Reloc)
+                    << " Type: " << format("%x", Type)
+                    << " Addend: " << format("%llx", Addend) << "\n");
+  uint32_t Insn = readBytesUnaligned(TargetPtr, Size);
+  LLVM_DEBUG(dbgs() << " Ins: " << format("%x", Insn));
+  Insn = LLVMHexagonApplyRelocation(Type, Insn, Reloc);
+  writeBytesUnaligned(Insn, TargetPtr, Size);
+#else
+  llvm_unreachable("Hexagon target not enabled");
+#endif
+}
+
 void RuntimeDyldELF::resolveBPFRelocation(const SectionEntry &Section,
                                           uint64_t Offset, uint64_t Value,
                                           uint32_t Type, int64_t Addend) {
@@ -1492,6 +1702,9 @@ void RuntimeDyldELF::resolveRelocation(const SectionEntry &Section,
   case Triple::loongarch64:
     resolveLoongArch64Relocation(Section, Offset, Value, Type, Addend);
     break;
+  case Triple::hexagon:
+    resolveHexagonRelocation(Section, Offset, Value, Type, Addend);
+    break;
   case Triple::ppc: // Fall through.
   case Triple::ppcle:
     resolvePPC32Relocation(Section, Offset, Value, Type, Addend);
@@ -1663,6 +1876,23 @@ RuntimeDyldELF::processRelocationRef(
     ObjSectionToIDMap &ObjSectionToID, StubMap &Stubs) {
   const auto &Obj = cast<ELFObjectFileBase>(O);
   uint64_t RelType = RelI->getType();
+  if (Arch == Triple::hexagon) {
+#ifdef HEXAGON_TARGET_ENABLED
+    LLVMHexagonRelocInfo Info;
+    if (isUnsupportedHexagonRelocation(RelType) ||
+        !LLVMHexagonGetRelocationInfo(RelType, &Info)) {
+      SmallString<32> TypeName;
+      RelI->getTypeName(TypeName);
+      return make_error<RuntimeDyldError>(("Unsupported Hexagon relocation " +
+                                           TypeName + " (" + Twine(RelType) +
+                                           ")")
+                                              .str());
+    }
+#else
+    return make_error<RuntimeDyldError>(
+        "Hexagon relocations require an LLVM build with the Hexagon target");
+#endif
+  }
   int64_t Addend = 0;
   if (Expected<int64_t> AddendOrErr = ELFRelocationRef(*RelI).getAddend())
     Addend = *AddendOrErr;
@@ -2729,6 +2959,9 @@ size_t RuntimeDyldELF::getGOTEntrySize() {
   case Triple::arm:
   case Triple::ppc:
   case Triple::thumb:
+    Result = sizeof(uint32_t);
+    break;
+  case Triple::hexagon:
     Result = sizeof(uint32_t);
     break;
   case Triple::mips:

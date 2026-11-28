@@ -19,3 +19,8 @@ add_llvm_component_library(LLVMRuntimeDyld
   Support
   TargetParser
   )
+
+if ("${LLVM_TARGETS_TO_BUILD}" MATCHES "Hexagon")
+  add_definitions(-DHEXAGON_TARGET_ENABLED)
+  target_link_libraries(LLVMRuntimeDyld PRIVATE LLVMHexagonCodeGen)
+endif()
