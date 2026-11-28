@@ -891,8 +891,10 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   // valuable as the inliner doesn't currently care whether it is inlining an
   // invoke or a call.
 
-  if (Opts.attributor_enable & AttributorRunOption::CGSCC)
+  if (Opts.attributor_enable & AttributorRunOption::CGSCC) {
+    MIWP.addModulePass(AssignGUIDPass());
     MainCGPipeline.addPass(AttributorCGSCCPass());
+  }
 
   // Deduce function attributes. We do another run of this after the function
   // simplification pipeline, so this only needs to run when it could affect the
@@ -1089,9 +1091,10 @@ ModulePassManager PassBuilder::buildModuleSimplificationPipeline(
   // (quick!) no-op if there are no OpenMP runtime calls present in the module.
   MPM.addPass(OpenMPOptPass(Phase));
 
-  if (Opts.attributor_enable & AttributorRunOption::MODULE)
+  if (Opts.attributor_enable & AttributorRunOption::MODULE) {
+    MPM.addPass(AssignGUIDPass());
     MPM.addPass(AttributorPass());
-  else if (Opts.attributor_enable & AttributorRunOption::MODULE_LIGHT)
+  } else if (Opts.attributor_enable & AttributorRunOption::MODULE_LIGHT)
     MPM.addPass(AttributorLightPass());
 
   // Lower type metadata and the type.test intrinsic in the ThinLTO post link

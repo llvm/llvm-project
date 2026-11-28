@@ -60,8 +60,10 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/NoFolder.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -76,6 +78,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
+#include <limits>
 #include <numeric>
 #include <optional>
 #include <string>
@@ -12403,6 +12406,11 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     BasicBlock::iterator IP = CB->getIterator();
     FunctionType *CSFT = CB->getFunctionType();
     SmallVector<Value *> CSArgs(CB->args());
+    uint64_t CallsLeft = 0;
+    SmallVector<InstrProfValueData> ValueProfiles = getValueProfDataFromInst(
+        *CB, InstrProfValueKind::IPVK_IndirectCallTarget,
+        std::numeric_limits<uint32_t>::max(), CallsLeft);
+    bool ResidualProfileValid = !ValueProfiles.empty();
 
     // If we know all callees and there are none, the call site is (effectively)
     // dead (or UB).
@@ -12472,6 +12480,29 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       }
       CastInst *RetBC = nullptr;
       CallInst *NewCall = nullptr;
+      auto CalleeProfile = ValueProfiles.end();
+      if (!ValueProfiles.empty()) {
+        GlobalValue::GUID CalleeGUID = NewCallee->getGUID();
+        CalleeProfile =
+            llvm::find_if(ValueProfiles, [&](const InstrProfValueData &Entry) {
+              return Entry.Value == CalleeGUID;
+            });
+      }
+      if (CalleeProfile == ValueProfiles.end() || CallsLeft == 0 ||
+          CalleeProfile->Count > CallsLeft) {
+        ResidualProfileValid = false;
+        setExplicitlyUnknownBranchWeightsIfProfiled(*SplitTI, DEBUG_TYPE);
+      } else {
+        uint64_t CalleeCount = CalleeProfile->Count;
+        uint64_t FallbackCount = CallsLeft - CalleeCount;
+        assert((CalleeCount != 0 || FallbackCount != 0) &&
+               "specialized branch weights are both zero.");
+        setFittedBranchWeights(*SplitTI, {CalleeCount, FallbackCount},
+                               /*IsExpected=*/false);
+        CallsLeft -= CalleeCount;
+        // The residual call keeps only the callees left unspecialized.
+        CalleeProfile->Count = 0;
+      }
       if (isLegalToPromote(*CB, NewCallee)) {
         auto *CBClone = cast<CallBase>(CB->clone());
         CBClone->insertBefore(ThenTI->getIterator());
@@ -12509,6 +12540,18 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       CBClone->insertBefore(*IP->getParent(), IP);
       NewCalls.push_back({CBClone, nullptr});
       AttachCalleeMetadata(*CBClone);
+      if (!ValueProfiles.empty())
+        CBClone->setMetadata(LLVMContext::MD_prof, nullptr);
+      if (ResidualProfileValid && CallsLeft != 0) {
+        SmallVector<InstrProfValueData, 8> ResidualProfiles;
+        for (const InstrProfValueData &Entry : ValueProfiles)
+          if (Entry.Count != 0)
+            ResidualProfiles.push_back(Entry);
+        annotateValueSite(*CBClone->getFunction()->getParent(), *CBClone,
+                          ResidualProfiles, CallsLeft,
+                          InstrProfValueKind::IPVK_IndirectCallTarget,
+                          ResidualProfiles.size());
+      }
     }
 
     // Check if we need a PHI to merge the results.
