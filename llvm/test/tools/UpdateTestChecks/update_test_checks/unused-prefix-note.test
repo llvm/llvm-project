@@ -1,0 +1,10 @@
+## Removing the unused-prefix note must not leave behind the blank lines that
+## separated it from the test body.
+# RUN: cp -f %S/Inputs/unused-prefix-note-removed.ll %t.ll
+# RUN: %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/unused-prefix-note-removed.ll.expected
+
+## If the note is regenerated, the blank lines before it are preserved.
+# RUN: cp -f %S/Inputs/unused-prefix-note-kept.ll %t.ll
+# RUN: %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/unused-prefix-note-kept.ll
