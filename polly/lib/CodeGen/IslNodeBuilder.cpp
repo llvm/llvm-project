@@ -255,6 +255,21 @@ void polly::addReferencesFromStmt(ScopStmt *Stmt, void *UserPtr,
                        References.SCEVs);
 
   for (auto &Access : *Stmt) {
+    // The incoming values of PHI/ExitPHI accesses are not operands of any
+    // instruction of the statement, hence findReferencesInStmt() does not
+    // collect them. They must nevertheless be available in the generated
+    // code, as getExitScalar() resolves these accesses through their
+    // incoming values (RegionGenerator::buildExitPHI()). This is
+    // independent of the access' latest kind: a PHI access can be demoted
+    // to an array access while its incoming values are still used. Classify
+    // them like a use by the PHI node itself, i.e., with their incoming
+    // block's loop as scope (see getUseBlock()).
+    if (Access->isAnyPHIKind())
+      for (auto &Incoming : Access->getIncoming())
+        findReferencesByUse(
+            Incoming.second, Stmt, References.LI.getLoopFor(Incoming.first),
+            References.GlobalMap, References.Values, References.SCEVs);
+
     if (References.ParamSpace) {
       isl::space ParamSpace = Access->getLatestAccessRelation().get_space();
       (*References.ParamSpace) =
