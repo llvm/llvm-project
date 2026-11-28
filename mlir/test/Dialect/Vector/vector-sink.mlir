@@ -900,6 +900,34 @@ func.func @negative_extract_load_scalable(%arg0: memref<?xf32>, %arg1: index) ->
   return %1 : f32
 }
 
+// CHECK-LABEL: @extract_load_scalar_dyn_off_defined_before_load
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index)
+func.func @extract_load_scalar_dyn_off_defined_before_load(%arg0: memref<?xf32>, %arg1: index, %arg2: index, %arg3: index) -> f32 {
+// CHECK:   %[[POS:.*]] = arith.remui %[[ARG2]], %[[ARG3]] : index
+// CHECK:   %[[OFF:.*]] = arith.addi %[[ARG1]], %[[POS]] overflow<nsw> : index
+// CHECK:   %[[RES:.*]] = memref.load %[[ARG0]][%[[OFF]]] : memref<?xf32>
+// CHECK:   return %[[RES]] : f32
+  %pos = arith.remui %arg2, %arg3 : index
+  %0 = vector.load %arg0[%arg1] : memref<?xf32>, vector<4xf32>
+  %1 = vector.extract %0[%pos] : f32 from vector<4xf32>
+  return %1 : f32
+}
+
+// The dynamic position is defined after the load, so it cannot be folded into
+// the indices of a load created at the position of the original load.
+// CHECK-LABEL: @negative_extract_load_dyn_off_defined_after_load
+//  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index)
+func.func @negative_extract_load_dyn_off_defined_after_load(%arg0: memref<?xf32>, %arg1: index, %arg2: index, %arg3: index) -> f32 {
+// CHECK:   %[[LOAD:.*]] = vector.load %[[ARG0]][%[[ARG1]]] : memref<?xf32>, vector<4xf32>
+// CHECK:   %[[POS:.*]] = arith.remui %[[ARG2]], %[[ARG3]] : index
+// CHECK:   %[[EXT:.*]] = vector.extract %[[LOAD]][%[[POS]]] : f32 from vector<4xf32>
+// CHECK:   return %[[EXT]] : f32
+  %0 = vector.load %arg0[%arg1] : memref<?xf32>, vector<4xf32>
+  %pos = arith.remui %arg2, %arg3 : index
+  %1 = vector.extract %0[%pos] : f32 from vector<4xf32>
+  return %1 : f32
+}
+
 //-----------------------------------------------------------------------------
 // [Pattern: StoreOpFromBroadcast]
 //-----------------------------------------------------------------------------

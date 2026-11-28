@@ -22,6 +22,7 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -1294,6 +1295,18 @@ public:
     int64_t finalRank = 0;
     if (extractVecType)
       finalRank = extractVecType.getRank();
+
+    // The new load is created at the position of the original load (see
+    // below), so any dynamic position must already be available there.
+    ValueRange dynamicPos = op.getDynamicPosition();
+    if (!dynamicPos.empty()) {
+      DominanceInfo dom;
+      if (!llvm::all_of(dynamicPos, [&](Value pos) {
+            return dom.properlyDominates(pos, loadOp);
+          }))
+        return rewriter.notifyMatchFailure(
+            op, "dynamic position does not dominate the load");
+    }
 
     SmallVector<Value> indices = loadOp.getIndices();
     SmallVector<OpFoldResult> extractPos = op.getMixedPosition();
