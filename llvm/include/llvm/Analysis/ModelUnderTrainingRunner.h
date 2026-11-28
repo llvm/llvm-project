@@ -63,7 +63,7 @@ public:
       const std::vector<TensorSpec> &OutputSpecs,
       const std::vector<TensorSpec> &ExtraOutputsForLogging = {});
 
-  bool isValid() const { return !!Evaluator; }
+  bool isValid() const override { return !!Evaluator; }
 
 private:
   std::unique_ptr<TFModelEvaluator> Evaluator;

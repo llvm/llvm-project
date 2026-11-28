@@ -16,6 +16,8 @@ emitc.class @foo {
 // CHECK-NEXT:    emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
 // CHECK-NEXT:    emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>"> = 
 // CHECK-SAME:    #emitc.opaque<"{ { [[$QUOTE]]another_feature[[$QUOTE]], reinterpret_cast<char*>(&fieldName0) }, { [[$QUOTE]]some_feature[[$QUOTE]], reinterpret_cast<char*>(&fieldName1) } }">  
+// CHECK-NEXT:    emitc.field @reflectionSizeMap : !emitc.opaque<"const std::map<std::string, size_t>"> =
+// CHECK-SAME:    #emitc.opaque<"{ { [[$QUOTE]]another_feature[[$QUOTE]], sizeof(fieldName0) }, { [[$QUOTE]]some_feature[[$QUOTE]], sizeof(fieldName1) } }">
 // CHECK-NEXT:    emitc.func @getBufferForName(%{{.*}}: !emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">> {
 // CHECK-NEXT:      %[[MAP0:.*]] = get_field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>">
 // CHECK-NEXT:      %[[VAL0:.*]] = member_call_opaque %[[MAP0]] "at"({{.*}}) : !emitc.opaque<"const std::map<std::string, char*>">, (!emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">>
@@ -45,6 +47,7 @@ emitc.class @foo_mixed_attrs {
 // CHECK-NEXT:    emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.other_field = ["some_feature"]}
 // CHECK-NEXT:    emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>"> = 
 // CHECK-SAME:    #emitc.opaque<"{ { [[$QUOTE]]another_feature[[$QUOTE]], reinterpret_cast<char*>(&fieldName0) } }">  
+// CHECK-NEXT:    emitc.field @reflectionSizeMap :
 // CHECK-NEXT:    emitc.func @getBufferForName(%{{.*}}: !emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">> {
 // CHECK-NEXT:      %[[MAP1:.*]] = get_field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>">
 // CHECK-NEXT:      %[[VAL1:.*]] = member_call_opaque %[[MAP1]] "at"({{.*}}) : !emitc.opaque<"const std::map<std::string, char*>">, (!emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">>
@@ -126,6 +129,7 @@ emitc.class @foo_no_operator {
 // CHECK-NEXT:    emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
 // CHECK-NEXT:    emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>"> = 
 // CHECK-SAME:    #emitc.opaque<"{ { [[$QUOTE]]another_feature[[$QUOTE]], reinterpret_cast<char*>(&fieldName0) } }">
+// CHECK-NEXT:    emitc.field @reflectionSizeMap :
 // CHECK-NEXT:    emitc.func @getBufferForName(%{{.*}}: !emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">> {
 // CHECK-NEXT:      %[[MAP0:.*]] = get_field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>">
 // CHECK-NEXT:      %[[VAL0:.*]] = member_call_opaque %[[MAP0]] "at"({{.*}}) : !emitc.opaque<"const std::map<std::string, char*>">, (!emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">>
@@ -170,6 +174,7 @@ emitc.class @foo_multiple_attrs {
 // CHECK-NEXT:    emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
 // CHECK-NEXT:    emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>"> =
 // CHECK-SAME:    #emitc.opaque<"{ { [[$QUOTE]]another_feature[[$QUOTE]], reinterpret_cast<char*>(&fieldName0) }, { [[$QUOTE]]some_feature[[$QUOTE]], reinterpret_cast<char*>(&fieldName1) } }">
+// CHECK-NEXT:    emitc.field @reflectionSizeMap :
 // CHECK-NEXT:    emitc.func @getBufferForName(%{{.*}}: !emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">> {
 // CHECK-NEXT:      %[[MAP:.*]] = get_field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>">
 // CHECK-NEXT:      %[[VAL:.*]] = member_call_opaque %[[MAP]] "at"({{.*}}) : !emitc.opaque<"const std::map<std::string, char*>">, (!emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">>
