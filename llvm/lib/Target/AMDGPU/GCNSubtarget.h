@@ -123,6 +123,10 @@ public:
       AMDGPU::TargetIDSetting SramEccSetting = AMDGPU::TargetIDSetting::Any);
   ~GCNSubtarget() override;
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().isAMDGCN();
+  }
+
   GCNSubtarget &
   initializeSubtargetDependencies(const Triple &TT, StringRef GPU, StringRef FS,
                                   AMDGPU::TargetIDSetting XnackSetting,

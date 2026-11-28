@@ -18,6 +18,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -225,7 +226,7 @@ public:
   /// TargetSubtargetInfo.  In debug builds, it verifies that the object being
   /// returned is of the correct type.
   template <typename STC> const STC &getSubtarget(const Function &F) const {
-    return *static_cast<const STC*>(getSubtargetImpl(F));
+    return *cast<STC>(getSubtargetImpl(F));
   }
 
   /// Create a DataLayout.

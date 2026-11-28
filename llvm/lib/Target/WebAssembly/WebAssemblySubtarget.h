@@ -97,6 +97,10 @@ public:
   WebAssemblySubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                        const WebAssemblyTargetMachine &TM, StringRef ABIName);
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().isWasm();
+  }
+
   const WebAssemblySelectionDAGInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }

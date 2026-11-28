@@ -49,6 +49,10 @@ public:
 
   ~R600Subtarget() override;
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().getArch() == Triple::r600;
+  }
+
   const R600InstrInfo *getInstrInfo() const override { return &InstrInfo; }
 
   const R600FrameLowering *getFrameLowering() const override {

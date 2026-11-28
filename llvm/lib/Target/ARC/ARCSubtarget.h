@@ -49,6 +49,10 @@ public:
 
   ~ARCSubtarget() override;
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().getArch() == Triple::arc;
+  }
+
   const ARCOptions &getCLOpts() const { return CLOpts; }
 
   /// Parses features string setting specified subtarget options.

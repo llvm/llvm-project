@@ -61,6 +61,10 @@ public:
                    const std::string &TuneCPU, const std::string &FS,
                    const SystemZTargetMachine &TM);
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().isSystemZ();
+  }
+
   const SystemZOptions &getCLOpts() const { return CLOpts; }
 
   SystemZCallingConventionRegisters *getSpecialRegisters() const {

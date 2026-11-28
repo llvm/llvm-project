@@ -30,6 +30,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Recycler.h"
 #include "llvm/Support/UniqueBBID.h"
@@ -781,7 +782,7 @@ public:
   /// TargetSubtargetInfo.  In debug builds, it verifies that the object being
   /// returned is of the correct type.
   template<typename STC> const STC &getSubtarget() const {
-    return static_cast<const STC &>(STI);
+    return cast<STC>(STI);
   }
 
   /// getRegInfo - Return information about the registers currently in use.

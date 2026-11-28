@@ -72,6 +72,10 @@ public:
 
   ~NVPTXSubtarget() override;
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().isNVPTX();
+  }
+
   const NVPTXOptions &getCLOpts() const { return CLOpts; }
 
   const TargetFrameLowering *getFrameLowering() const override {

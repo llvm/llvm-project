@@ -54,6 +54,10 @@ public:
 
   ~MSP430Subtarget() override;
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().getArch() == Triple::msp430;
+  }
+
   const MSP430Options &getCLOpts() const { return CLOpts; }
 
   MSP430Subtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS);
