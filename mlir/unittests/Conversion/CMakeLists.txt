@@ -1,1 +1,2 @@
 add_subdirectory(PDLToPDLInterp)
+add_subdirectory(ArithToLUT)
