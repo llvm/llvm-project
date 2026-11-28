@@ -391,6 +391,33 @@ func.func @alloc_alignment_const_fold() -> memref<?xf32> {
 
 // -----
 
+// CHECK-LABEL: func @alloc_discardable_attrs_const_fold
+func.func @alloc_discardable_attrs_const_fold() -> memref<?xf32> {
+  // CHECK-NEXT: memref.alloc() alignment = 64 {bufferization.manual_deallocation} : memref<4xf32>
+  %c4 = arith.constant 4 : index
+  %a = memref.alloc(%c4) alignment = 64 {bufferization.manual_deallocation} : memref<?xf32>
+
+  // CHECK-NEXT: memref.cast %{{.*}} : memref<4xf32> to memref<?xf32>
+  // CHECK-NEXT: return %{{.*}} : memref<?xf32>
+  return %a : memref<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @alloca_discardable_attrs_const_fold
+func.func @alloca_discardable_attrs_const_fold() {
+  // CHECK-NEXT: %[[A:.*]] = memref.alloca() alignment = 64 {custom_attr} : memref<4xf32>
+  %c4 = arith.constant 4 : index
+  %a = memref.alloca(%c4) alignment = 64 {custom_attr} : memref<?xf32>
+
+  // CHECK-NEXT: %[[C:.*]] = memref.cast %[[A]] : memref<4xf32> to memref<?xf32>
+  // CHECK-NEXT: "test.use"(%[[C]]) : (memref<?xf32>) -> ()
+  "test.use"(%a) : (memref<?xf32>) -> ()
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @alloc_const_fold_with_symbols1(
 //  CHECK: %[[c1:.+]] = arith.constant 1 : index
 //  CHECK: %[[mem1:.+]] = memref.alloc({{.*}})[%[[c1]], %[[c1]]] : memref<?xi32, strided{{.*}}>
