@@ -21,14 +21,15 @@ namespace llvm {
 class BPFMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit BPFMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
-      : MCAsmInfoELF(Options) {
+      : MCAsmInfoELF(TT, Options) {
     if (TT.getArch() == Triple::bpfeb)
       IsLittleEndian = false;
+
+    EmitELFStackSection = false;
 
     InternalSymbolPrefix = ".L";
     WeakRefDirective = "\t.weak\t";
 
-    UsesELFSectionDirectiveForBSS = true;
     HasSingleParameterDotFile = true;
     HasDotTypeDotSizeDirective = true;
     HasIdentDirective = false;
@@ -46,10 +47,6 @@ public:
 
   void setDwarfUsesRelocationsAcrossSections(bool enable) {
     DwarfUsesRelocationsAcrossSections = enable;
-  }
-
-  MCSection *getStackSection(MCContext &Ctx, bool Exec) const override {
-    return nullptr;
   }
 };
 }

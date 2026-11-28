@@ -698,6 +698,8 @@ set(files
   __pstl/backends/statpart.h
   __pstl/backends/statpart/any_of.h
   __pstl/backends/statpart/basis.h
+  __pstl/backends/statpart/bitset.h
+  __pstl/backends/statpart/copy_if.h
   __pstl/backends/statpart/decoupled_lookback.h
   __pstl/backends/statpart/fill.h
   __pstl/backends/statpart/find_end.h
@@ -714,8 +716,8 @@ set(files
   __pstl/backends/statpart/stable_sort.h
   __pstl/backends/statpart/swap_ranges.h
   __pstl/backends/statpart/transform.h
-  __pstl/backends/statpart/transform_inclusive_scan.h
   __pstl/backends/statpart/transform_reduce.h
+  __pstl/backends/statpart/transform_scan.h
   __pstl/backends/statpart/uninitialized_copy.h
   __pstl/backends/statpart/uninitialized_move.h
   __pstl/dispatch.h
@@ -910,7 +912,6 @@ set(files
   __type_traits/is_member_pointer.h
   __type_traits/is_nothrow_assignable.h
   __type_traits/is_nothrow_constructible.h
-  __type_traits/is_nothrow_destructible.h
   __type_traits/is_null_pointer.h
   __type_traits/is_object.h
   __type_traits/is_pod.h
@@ -929,7 +930,6 @@ set(files
   __type_traits/is_trivially_assignable.h
   __type_traits/is_trivially_constructible.h
   __type_traits/is_trivially_copyable.h
-  __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_lexicographically_comparable.h
   __type_traits/is_union.h
   __type_traits/is_unqualified.h
@@ -975,6 +975,7 @@ set(files
   __utility/cmp.h
   __utility/constant_wrapper.h
   __utility/convert_to_integral.h
+  __utility/cpo.h
   __utility/declval.h
   __utility/default_three_way_comparator.h
   __utility/element_count.h
@@ -983,6 +984,7 @@ set(files
   __utility/exchange.h
   __utility/forward.h
   __utility/forward_like.h
+  __utility/ignore_argument.h
   __utility/in_place.h
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h

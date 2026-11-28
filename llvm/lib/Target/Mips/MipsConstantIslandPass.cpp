@@ -21,7 +21,6 @@
 
 #include "Mips.h"
 #include "Mips16InstrInfo.h"
-#include "MipsMachineFunction.h"
 #include "MipsSubtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -326,7 +325,6 @@ namespace {
 
     const MipsSubtarget *STI = nullptr;
     const Mips16InstrInfo *TII;
-    MipsFunctionInfo *MFI;
     MachineFunction *MF = nullptr;
     MachineConstantPool *MCP = nullptr;
 
@@ -417,7 +415,6 @@ bool MipsConstantIslandImpl::runOnMachineFunction(MachineFunction &mf) {
     return false;
   }
   TII = (const Mips16InstrInfo *)STI->getInstrInfo();
-  MFI = MF->getInfo<MipsFunctionInfo>();
   LLVM_DEBUG(dbgs() << "constant island processing "
                     << "\n");
   //

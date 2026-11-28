@@ -1008,13 +1008,18 @@ void llvm::CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
 
 /// Remaps instructions in \p Blocks using the mapping in \p VMap.
 void llvm::remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
-                                     ValueToValueMapTy &VMap) {
+                                     ValueToValueMapTy &VMap,
+                                     AssumptionCache *AC) {
   // Rewrite the code to refer to itself.
   ValueMapper Mapper(VMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
   for (BasicBlock *BB : Blocks) {
     for (Instruction &Inst : *BB) {
       Mapper.remapDbgRecordRange(Inst.getModule(), Inst.getDbgRecordRange());
       Mapper.remapInstruction(Inst);
+      // Register after remapping, so that the cache sees the new operands.
+      if (AC)
+        if (auto *Assume = dyn_cast<AssumeInst>(&Inst))
+          AC->registerAssumption(Assume);
     }
   }
 }

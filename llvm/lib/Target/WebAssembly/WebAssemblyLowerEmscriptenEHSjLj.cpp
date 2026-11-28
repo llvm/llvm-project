@@ -262,7 +262,6 @@
 ///===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
-#include "WebAssemblyTargetMachine.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -800,8 +799,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::rebuildSSA(Function &F) {
           return UserI->isLifetimeStartOrEnd() && !DT.dominates(&I, UserI);
         });
         if (HasNonDominatedLifetimeMarker) {
-          for (User *U : make_early_inc_range(I.users())) {
-            auto *UserI = cast<Instruction>(U);
+          for (Instruction *UserI : make_early_inc_range(I.users())) {
             if (UserI->isLifetimeStartOrEnd())
               UserI->eraseFromParent();
           }

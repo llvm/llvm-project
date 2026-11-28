@@ -197,6 +197,10 @@ private:
   llvm::DenseMap<const ValueDecl *,
                  llvm::SmallVector<const MaterializeTemporaryExpr *, 1>>
       ExtendedTemporaries;
+  // The origin lists of the fields of a class and its bases, for
+  // handleImplicitObjectFieldUses.
+  llvm::DenseMap<const CXXRecordDecl *, llvm::SmallVector<OriginList *>>
+      ImplicitObjectFieldLists;
   const CFGBlock *CurrentBlock;
   bool IsCMode = false;
 };

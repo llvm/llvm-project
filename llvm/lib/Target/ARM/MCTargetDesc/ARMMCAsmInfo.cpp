@@ -48,109 +48,8 @@ constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
 };
 constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
-void ARMMCAsmInfoDarwin::anchor() { }
-
-ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple,
-                                       const MCTargetOptions &Options)
-    : MCAsmInfoDarwin(Options) {
-  if ((TheTriple.getArch() == Triple::armeb) ||
-      (TheTriple.getArch() == Triple::thumbeb))
-    IsLittleEndian = false;
-
-  Data64bitsDirective = nullptr;
-  CommentString = "@";
-  UseDataRegionDirectives = true;
-
-  SupportsDebugInformation = true;
-
-  // Conditional Thumb 4-byte instructions can have an implicit IT.
-  MaxInstLength = 6;
-
-  initializeAtSpecifiers(atSpecifiers);
-}
-
-void ARMELFMCAsmInfo::anchor() { }
-
-ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
-                                 const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
-  if ((TheTriple.getArch() == Triple::armeb) ||
-      (TheTriple.getArch() == Triple::thumbeb))
-    IsLittleEndian = false;
-
-  // ".comm align is in bytes but .align is pow-2."
-  AlignmentIsInBytes = false;
-
-  Data64bitsDirective = nullptr;
-  CommentString = "@";
-
-  SupportsDebugInformation = true;
-
-  // Conditional Thumb 4-byte instructions can have an implicit IT.
-  MaxInstLength = 6;
-
-  initializeAtSpecifiers(atSpecifiers);
-  // foo(plt) instead of foo@plt
-  UseAtForSpecifier = false;
-  UseParensForSpecifier = true;
-}
-
-void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
-  UseIntegratedAssembler = Value;
-  if (!UseIntegratedAssembler) {
-    // gas doesn't handle VFP register names in cfi directives,
-    // so don't use register names with external assembler.
-    // See https://sourceware.org/bugzilla/show_bug.cgi?id=16694
-    DwarfRegNumForCFI = true;
-  }
-}
-
-bool ARMELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
-  // Thumb encoding uses compressed instruction byte-order
-  return STI.hasFeature(ARM::ModeThumb);
-}
-
-void ARMCOFFMCAsmInfoMicrosoft::anchor() { }
-
-ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft(
-    const MCTargetOptions &Options)
-    : MCAsmInfoMicrosoft(Options) {
-  AlignmentIsInBytes = false;
-  SupportsDebugInformation = true;
-  WinEHEncodingType = WinEH::EncodingType::Itanium;
-  InternalSymbolPrefix = "$M";
-  CommentString = "@";
-
-  // Conditional Thumb 4-byte instructions can have an implicit IT.
-  MaxInstLength = 6;
-
-  initializeAtSpecifiers(atSpecifiers);
-}
-
-void ARMCOFFMCAsmInfoGNU::anchor() { }
-
-ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU(const MCTargetOptions &Options)
-    : MCAsmInfoGNUCOFF(Options) {
-  AlignmentIsInBytes = false;
-  HasSingleParameterDotFile = true;
-
-  CommentString = "@";
-  InternalSymbolPrefix = ".L";
-
-  SupportsDebugInformation = true;
-  WinEHEncodingType = WinEH::EncodingType::Itanium;
-  DwarfRegNumForCFI = false;
-
-  // Conditional Thumb 4-byte instructions can have an implicit IT.
-  MaxInstLength = 6;
-
-  initializeAtSpecifiers(atSpecifiers);
-  UseAtForSpecifier = false;
-  UseParensForSpecifier = true;
-}
-
-void ARM::printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,
-                             const MCSpecifierExpr &Expr) {
+static void printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,
+                               const MCSpecifierExpr &Expr) {
   switch (Expr.getSpecifier()) {
   default:
     llvm_unreachable("Invalid kind!");
@@ -180,6 +79,116 @@ void ARM::printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,
   MAI.printExpr(OS, *Sub);
   if (Sub->getKind() != MCExpr::SymbolRef)
     OS << ')';
+}
+
+void ARMMCAsmInfoDarwin::anchor() { }
+
+ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple,
+                                       const MCTargetOptions &Options)
+    : MCAsmInfoDarwin(Options) {
+  if ((TheTriple.getArch() == Triple::armeb) ||
+      (TheTriple.getArch() == Triple::thumbeb))
+    IsLittleEndian = false;
+
+  Data64bitsDirective = nullptr;
+  CommentString = "@";
+  UseDataRegionDirectives = true;
+
+  SupportsDebugInformation = true;
+
+  // Conditional Thumb 4-byte instructions can have an implicit IT.
+  MaxInstLength = 6;
+
+  initializeAtSpecifiers(atSpecifiers);
+
+  SpecifierExprPrintFn = printSpecifierExpr;
+}
+
+void ARMELFMCAsmInfo::anchor() { }
+
+ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
+                                 const MCTargetOptions &Options)
+    : MCAsmInfoELF(TheTriple, Options) {
+  if ((TheTriple.getArch() == Triple::armeb) ||
+      (TheTriple.getArch() == Triple::thumbeb))
+    IsLittleEndian = false;
+
+  // ".comm align is in bytes but .align is pow-2."
+  AlignmentIsInBytes = false;
+
+  Data64bitsDirective = nullptr;
+  CommentString = "@";
+
+  SupportsDebugInformation = true;
+
+  // Conditional Thumb 4-byte instructions can have an implicit IT.
+  MaxInstLength = 6;
+
+  initializeAtSpecifiers(atSpecifiers);
+  // foo(plt) instead of foo@plt
+  UseAtForSpecifier = false;
+  UseParensForSpecifier = true;
+
+  if (!binutilsIsAtLeast(2, 25)) {
+    // gas doesn't handle VFP register names in cfi directives. As we don't know
+    // at this point whether the integrated assembler is used, don't use
+    // register names if we are not sure that the assembler supports then.
+    // See https://sourceware.org/bugzilla/show_bug.cgi?id=16694
+    DwarfRegNumForCFI = true;
+  }
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
+
+  SpecifierExprPrintFn = printSpecifierExpr;
+}
+
+bool ARMELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
+  // Thumb encoding uses compressed instruction byte-order
+  return STI.hasFeature(ARM::ModeThumb);
+}
+
+void ARMCOFFMCAsmInfoMicrosoft::anchor() { }
+
+ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft(
+    const MCTargetOptions &Options)
+    : MCAsmInfoMicrosoft(Options) {
+  AlignmentIsInBytes = false;
+  SupportsDebugInformation = true;
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
+  InternalSymbolPrefix = "$M";
+  CommentString = "@";
+
+  // Conditional Thumb 4-byte instructions can have an implicit IT.
+  MaxInstLength = 6;
+
+  initializeAtSpecifiers(atSpecifiers);
+
+  SpecifierExprPrintFn = printSpecifierExpr;
+}
+
+void ARMCOFFMCAsmInfoGNU::anchor() { }
+
+ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU(const MCTargetOptions &Options)
+    : MCAsmInfoGNUCOFF(Options) {
+  AlignmentIsInBytes = false;
+  HasSingleParameterDotFile = true;
+
+  CommentString = "@";
+  InternalSymbolPrefix = ".L";
+
+  SupportsDebugInformation = true;
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
+  DwarfRegNumForCFI = false;
+
+  // Conditional Thumb 4-byte instructions can have an implicit IT.
+  MaxInstLength = 6;
+
+  initializeAtSpecifiers(atSpecifiers);
+  UseAtForSpecifier = false;
+  UseParensForSpecifier = true;
+
+  SpecifierExprPrintFn = printSpecifierExpr;
 }
 
 const MCSpecifierExpr *ARM::createUpper16(const MCExpr *Expr, MCContext &Ctx) {

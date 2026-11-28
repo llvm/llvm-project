@@ -1285,9 +1285,8 @@ public:
       // It is correct to replace the ctpop with the dxil op and
       // remove all casts to i32
       bool NeedsCast = false;
-      for (User *User : make_early_inc_range(CI->users())) {
-        Instruction *I = dyn_cast<Instruction>(User);
-        if (I && (I->getOpcode() == CastOp || I->getOpcode() == CastOp2) &&
+      for (Instruction *I : make_early_inc_range(CI->users())) {
+        if ((I->getOpcode() == CastOp || I->getOpcode() == CastOp2) &&
             I->getType() == RetTy) {
           I->replaceAllUsesWith(*OpCall);
           I->eraseFromParent();

@@ -972,6 +972,13 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
       mlir::BoolAttr strictExcept = getStrictExcept();
       return strictExcept && strictExcept.getValue();
     }
+
+    /// Whether exceptions are masked and not strict. The operation then
+    /// cannot trap and need not raise its exception flags.
+    bool canIgnoreExceptions() const {
+      return getExceptionModeOrDefault() == cir::FPExceptionMode::Masked &&
+             !getStrictExceptOrDefault();
+    }
   }];
 
   let canHaveIllegalCXXABIType = 0;

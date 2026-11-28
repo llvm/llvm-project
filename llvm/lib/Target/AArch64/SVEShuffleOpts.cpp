@@ -206,8 +206,8 @@ static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
     }
 
     // Delete the unused extracts and deinterleave.
-    for (User *U : make_early_inc_range(Deinterleave->users()))
-      cast<Instruction>(U)->eraseFromParent();
+    for (Instruction *U : make_early_inc_range(Deinterleave->users()))
+      U->eraseFromParent();
     Deinterleave->eraseFromParent();
   }
 }

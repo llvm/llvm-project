@@ -1,4 +1,5 @@
 // UNSUPPORTED: target={{.*}}-apple-darwin
+// XFAIL: target={{.*}}-zos{{.*}}
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t

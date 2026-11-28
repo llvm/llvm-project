@@ -1808,18 +1808,17 @@ static void hoistConditionalLoadsStores(
       PHINode *PN = nullptr;
       Value *PassThru = nullptr;
       if (Invert.has_value())
-        for (User *U : I->users()) {
+        for (Instruction *U : I->users()) {
           if ((PN = dyn_cast<PHINode>(U))) {
             PassThru = Builder.CreateBitCast(
                 PeekThroughBitcasts(PN->getIncomingValueForBlock(BB)),
                 FixedVectorType::get(Ty, 1));
-          } else if (auto *Ins = cast<Instruction>(U);
-                     Sel && Ins->getParent() == BB) {
+          } else if (Sel && U->getParent() == BB) {
             // This happens when store or/and a speculative instruction between
             // load and store were hoisted to the BB. Make sure the masked load
             // inserted before its use.
             // We assume there's one of such use.
-            Builder.SetInsertPoint(Ins);
+            Builder.SetInsertPoint(U);
           }
         }
       MaskedLoadStore = Builder.CreateMaskedLoad(
@@ -3612,8 +3611,7 @@ static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
 
     // Record blocks with non-local uses of values defined in the current basic
     // block.
-    for (User *U : I.users()) {
-      Instruction *UI = cast<Instruction>(U);
+    for (Instruction *UI : I.users()) {
       BasicBlock *UsedInBB = UI->getParent();
       if (UsedInBB == BB) {
         if (isa<PHINode>(UI))

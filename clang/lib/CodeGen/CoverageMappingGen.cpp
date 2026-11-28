@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoverageMappingGen.h"
+#include "CodeGenCLOptions.h"
 #include "CodeGenFunction.h"
 #include "CodeGenPGO.h"
 #include "clang/AST/StmtVisitor.h"
@@ -31,36 +32,17 @@
 // is textually included.
 #define COVMAP_V3
 
-namespace llvm {
-cl::opt<bool>
-    EnableSingleByteCoverage("enable-single-byte-coverage",
-                             llvm::cl::desc("Enable single byte coverage"),
-                             llvm::cl::Hidden, llvm::cl::init(false));
-} // namespace llvm
-
-static llvm::cl::opt<bool> EmptyLineCommentCoverage(
-    "emptyline-comment-coverage",
-    llvm::cl::desc("Emit emptylines and comment lines as skipped regions (only "
-                   "disable it on test)"),
-    llvm::cl::init(true), llvm::cl::Hidden);
-
-namespace llvm::coverage {
-cl::opt<bool> SystemHeadersCoverage(
-    "system-headers-coverage",
-    cl::desc("Enable collecting coverage from system headers"), cl::init(false),
-    cl::Hidden);
-}
-
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::coverage;
 
 CoverageSourceInfo *
-CoverageMappingModuleGen::setUpCoverageCallbacks(Preprocessor &PP) {
-  CoverageSourceInfo *CoverageInfo =
-      new CoverageSourceInfo(PP.getSourceManager());
+CoverageMappingModuleGen::setUpCoverageCallbacks(const CodeGenCLOptions &CLOpts,
+                                                 Preprocessor &PP) {
+  CoverageSourceInfo *CoverageInfo = new CoverageSourceInfo(
+      PP.getSourceManager(), CLOpts.emptyline_comment_coverage);
   PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(CoverageInfo));
-  if (EmptyLineCommentCoverage) {
+  if (CLOpts.emptyline_comment_coverage) {
     PP.addCommentHandler(CoverageInfo);
     PP.setEmptylineHandler(CoverageInfo);
     PP.setPreprocessToken(true);
@@ -249,6 +231,7 @@ struct SpellingRegion {
 /// coverage mapping region builders.
 class CoverageMappingBuilder {
 public:
+  const CodeGenCLOptions &CLOpts;
   CoverageMappingModuleGen &CVM;
   SourceManager &SM;
   const LangOptions &LangOpts;
@@ -274,7 +257,8 @@ public:
 
   CoverageMappingBuilder(CoverageMappingModuleGen &CVM, SourceManager &SM,
                          const LangOptions &LangOpts)
-      : CVM(CVM), SM(SM), LangOpts(LangOpts) {}
+      : CLOpts(CVM.getCodeGenModule().getCLOpts()), CVM(CVM), SM(SM),
+        LangOpts(LangOpts) {}
 
   /// Return the precise end location for the given token.
   SourceLocation getPreciseTokenLocEnd(SourceLocation Loc) {
@@ -389,7 +373,7 @@ public:
       // tokens to their user-code call site so coverage is attributed to
       // the user expression. Drop anything still in a system header
       // (e.g. a plain FileID into a -isystem .def file).
-      if (!SystemHeadersCoverage &&
+      if (!CLOpts.system_headers_coverage &&
           SM.isInSystemHeader(SM.getSpellingLoc(Loc))) {
         if (Loc.isMacroID()) {
           auto BeginLoc = SM.getSpellingLoc(Loc);
@@ -521,7 +505,7 @@ public:
 
       // Ignore regions from system headers unless collecting coverage from
       // system headers is explicitly enabled.
-      if (!SystemHeadersCoverage &&
+      if (!CLOpts.system_headers_coverage &&
           SM.isInSystemHeader(SM.getSpellingLoc(LocStart))) {
         assert(!Region.isMCDCBranch() && !Region.isMCDCDecision() &&
                "Don't suppress the condition in system headers");
@@ -949,7 +933,7 @@ struct CounterCoverageMappingBuilder
 
   /// Return a counter for the subtraction of \c RHS from \c LHS
   Counter subtractCounters(Counter LHS, Counter RHS, bool Simplify = true) {
-    assert(!llvm::EnableSingleByteCoverage &&
+    assert(!CLOpts.single_byte_coverage &&
            "cannot add counters when single byte coverage mode is enabled");
     return Builder.subtract(LHS, RHS, Simplify);
   }
@@ -996,7 +980,7 @@ struct CounterCoverageMappingBuilder
     BranchCounterPair Counters = {ExecCnt,
                                   Builder.subtract(ParentCnt, ExecCnt)};
 
-    if (!llvm::EnableSingleByteCoverage || !Counters.Skipped.isExpression()) {
+    if (!CLOpts.single_byte_coverage || !Counters.Skipped.isExpression()) {
       assert(
           !TheMap.Skipped.hasValue() &&
           "SkipCnt shouldn't be allocated but refer to an existing counter.");
@@ -1019,7 +1003,7 @@ struct CounterCoverageMappingBuilder
   std::pair<Counter, Counter>
   getSwitchImplicitDefaultCounterPair(const Stmt *Cond, Counter ParentCount,
                                       Counter CaseCountSum) {
-    if (llvm::EnableSingleByteCoverage) {
+    if (CLOpts.single_byte_coverage) {
       // Allocate the new Counter since `subtract(Parent - Sum)` is unavailable.
       unsigned Idx = NextCounterNum++;
       CounterMap[Cond].Skipped = Idx;
@@ -1267,9 +1251,9 @@ struct CounterCoverageMappingBuilder
   /// Returns Counter that corresponds to SC.
   Counter createSwitchCaseRegion(const SwitchCase *SC, Counter ParentCount) {
     Counter TrueCnt = getRegionCounter(SC);
-    Counter FalseCnt = (llvm::EnableSingleByteCoverage
-                            ? Counter::getZero() // Folded
-                            : subtractCounters(ParentCount, TrueCnt));
+    Counter FalseCnt =
+        (CLOpts.single_byte_coverage ? Counter::getZero() // Folded
+                                     : subtractCounters(ParentCount, TrueCnt));
     // Push region onto RegionStack but immediately pop it (which adds it to
     // the function's SourceRegions) because it doesn't apply to any other
     // source other than the SwitchCase.
@@ -1599,7 +1583,7 @@ struct CounterCoverageMappingBuilder
 
     // Do not propagate region counts into system headers unless collecting
     // coverage from system headers is explicitly enabled.
-    if (!SystemHeadersCoverage && Body &&
+    if (!CLOpts.system_headers_coverage && Body &&
         SM.isInSystemHeader(SM.getSpellingLoc(getStart(Body))))
       return;
 
@@ -2267,7 +2251,7 @@ struct CounterCoverageMappingBuilder
 
   /// Check if E belongs to system headers.
   bool isExprInSystemHeader(const BinaryOperator *E) const {
-    return (!SystemHeadersCoverage &&
+    return (!CLOpts.system_headers_coverage &&
             SM.isInSystemHeader(SM.getSpellingLoc(E->getOperatorLoc())) &&
             SM.isInSystemHeader(SM.getSpellingLoc(E->getBeginLoc())) &&
             SM.isInSystemHeader(SM.getSpellingLoc(E->getEndLoc())));

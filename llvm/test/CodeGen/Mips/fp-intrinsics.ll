@@ -105,7 +105,6 @@ define i32 @fptoui_f32(float %x) #0 {
 ; CHECK-R6-NEXT:    lwc1 $f0, %lo($CPI7_0)($1)
 ; CHECK-R6-NEXT:    cmp.slt.s $f1, $f12, $f0
 ; CHECK-R6-NEXT:    mfc1 $1, $f1
-; CHECK-R6-NEXT:    andi $1, $1, 1
 ; CHECK-R6-NEXT:    lui $2, 32768
 ; CHECK-R6-NEXT:    seleqz $1, $2, $1
 ; CHECK-R6-NEXT:    mtc1 $zero, $f2
@@ -580,7 +579,6 @@ define i32 @fptoui_f64(double %x) #0 {
 ; CHECK-R6-NEXT:    sub.d $f0, $f12, $f1
 ; CHECK-R6-NEXT:    trunc.w.d $f0, $f0
 ; CHECK-R6-NEXT:    mfc1 $3, $f0
-; CHECK-R6-NEXT:    andi $1, $1, 1
 ; CHECK-R6-NEXT:    seleqz $1, $2, $1
 ; CHECK-R6-NEXT:    jr $ra
 ; CHECK-R6-NEXT:    xor $2, $3, $1

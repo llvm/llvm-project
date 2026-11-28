@@ -47,7 +47,7 @@
 ; RUN:   | FileCheck %s --check-prefix=DIST
 
 ; Index based WPD, legacy ThinLTOCodeGenerator
-; RUN: llvm-lto -thinlto-action=run -devirtualize-speculatively %t6.o --thinlto-save-temps=%t8. --pass-remarks=. --exported-symbol=test --exported-symbol=_ZN1A1fEv --exported-symbol=_ZTV1A 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN: llvm-lto -thinlto-action=run -lto-discard-value-names=false -devirtualize-speculatively %t6.o --thinlto-save-temps=%t8. --pass-remarks=. --exported-symbol=test --exported-symbol=_ZN1A1fEv --exported-symbol=_ZTV1A 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t8.0.4.opt.bc -o - | FileCheck %s
 
 ; INDEX: wpdRes: (kind: speculative, singleImplName: "_ZN1A1fEv")

@@ -10,6 +10,7 @@
 #include "BackendConsumer.h"
 #include "CGCall.h"
 #include "CGDebugInfo.h"
+#include "CodeGenCLOptions.h"
 #include "CodeGenModule.h"
 #include "CoverageMappingGen.h"
 #include "MacroPPCallbacks.h"
@@ -391,7 +392,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   // Add the preprocessor callback only when the coverage mapping is generated.
   if (CI.getCodeGenOpts().CoverageMapping)
     CoverageInfo = CodeGen::CoverageMappingModuleGen::setUpCoverageCallbacks(
-        CI.getPreprocessor());
+        CodeGen::getCodeGenCLOptions(*VMContext), CI.getPreprocessor());
 
   std::unique_ptr<BackendConsumer> Result(new BackendConsumer(
       CI, BA, CI.getVirtualFileSystemPtr(), *VMContext, std::move(LinkModules),

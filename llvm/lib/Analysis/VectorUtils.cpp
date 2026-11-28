@@ -983,13 +983,23 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     }
   }
 
-  // Now we've discovered all values, walk them to see if there are
-  // any users we didn't see. If there are, we can't optimize that
-  // chain.
-  for (auto &I : DBits)
+  // Now we've discovered all values, walk them with the exception for roots
+  // to see if there are any users we didn't see. If there are, we can't
+  // optimize that chain.
+  //
+  // We exclude checking root users because shrinking roots doesn't change
+  // root's type and therefore doesn't affect its users.
+  for (auto &I : DBits) {
+    if (const auto *RI = dyn_cast<Instruction>(I.first);
+        RI && Roots.contains(RI)) {
+      assert((isa<TruncInst, ICmpInst>(RI)) && "Unexpected root type!");
+      continue;
+    }
+
     for (auto *U : I.first->users())
       if (U->getType()->isIntegerTy() && DBits.count(U) == 0)
         DBits[ECs.getOrInsertLeaderValue(I.first)] |= ~0ULL;
+  }
 
   for (const auto &E : ECs) {
     if (!E->isLeader())

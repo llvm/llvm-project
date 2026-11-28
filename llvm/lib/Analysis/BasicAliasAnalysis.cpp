@@ -752,6 +752,17 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
     assert(GEPOp->getSourceElementType()->isSized() && "GEP must be sized");
 
+    // Fast path for canonical constant-offset getelementptr i8.
+    if (GEPOp->getSourceElementType()->isIntegerTy(8) &&
+        GEPOp->getNumOperands() == 2) {
+      if (const auto *CIdx = dyn_cast<ConstantInt>(GEPOp->getOperand(1))) {
+        if (!CIdx->isZero())
+          Decomposed.Offset += CIdx->getValue().sextOrTrunc(IndexSize);
+        V = GEPOp->getOperand(0);
+        continue;
+      }
+    }
+
     // Walk the indices of the GEP, accumulating them into BaseOff/VarIndices.
     gep_type_iterator GTI = gep_type_begin(GEPOp);
     for (User::const_op_iterator I = GEPOp->op_begin() + 1, E = GEPOp->op_end();

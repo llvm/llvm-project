@@ -24,11 +24,11 @@
 #include <__type_traits/decay.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
+#include <__type_traits/is_destructible.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_scalar.h>
 #include <__type_traits/is_trivially_constructible.h>
-#include <__type_traits/is_trivially_destructible.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/strip_signature.h>
 #include <__utility/forward.h>

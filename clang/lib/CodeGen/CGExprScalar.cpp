@@ -17,6 +17,7 @@
 #include "CGObjCRuntime.h"
 #include "CGOpenMPRuntime.h"
 #include "CGRecordLayout.h"
+#include "CodeGenCLOptions.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
@@ -63,10 +64,6 @@ using llvm::Value;
 //===----------------------------------------------------------------------===//
 //                         Scalar Expression Emitter
 //===----------------------------------------------------------------------===//
-
-namespace llvm {
-extern cl::opt<bool> EnableSingleByteCoverage;
-} // namespace llvm
 
 namespace {
 
@@ -6015,7 +6012,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // If this is a really simple expression (like x ? 4 : 5), emit this as a
   // select instead of as control flow.  We can only do this if it is cheap and
   // safe to evaluate the LHS and RHS unconditionally.
-  if (!llvm::EnableSingleByteCoverage &&
+  if (!CGF.CGM.getCLOpts().single_byte_coverage &&
       CodeGenUtils::isCheapEnoughToEvaluateUnconditionally(lhsExpr,
                                                            CGF.getContext()) &&
       CodeGenUtils::isCheapEnoughToEvaluateUnconditionally(rhsExpr,

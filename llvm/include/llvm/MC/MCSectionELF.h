@@ -52,7 +52,6 @@ class MCSectionELF final : public MCSection {
 
 private:
   friend class MCContext;
-  friend class MCAsmInfoELF;
 
   // The storage of Name is owned by MCContext's ELFUniquingMap.
   MCSectionELF(StringRef Name, unsigned type, unsigned flags,

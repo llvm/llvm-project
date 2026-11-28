@@ -15,6 +15,7 @@ include "mlir/IR/OpBase.td"
 def Complex_Dialect : Dialect {
   let name = "complex";
   let cppNamespace = "::mlir::complex";
+  let useDefaultOperationRegistration = 1;
   let description = [{
     The complex dialect is intended to hold complex numbers creation and
     arithmetic ops.
