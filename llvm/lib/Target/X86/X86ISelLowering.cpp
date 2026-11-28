@@ -54224,20 +54224,78 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     std::tie(Bits0, Elts0) = GetDemandedMasks(N1);
     std::tie(Bits1, Elts1) = GetDemandedMasks(N0);
 
-    if (TLI.SimplifyDemandedVectorElts(N0, Elts0, DCI) ||
-        TLI.SimplifyDemandedVectorElts(N1, Elts1, DCI) ||
-        TLI.SimplifyDemandedBits(N0, Bits0, Elts0, DCI) ||
-        TLI.SimplifyDemandedBits(N1, Bits1, Elts1, DCI)) {
-      if (N->getOpcode() != ISD::DELETED_NODE)
+    // Undemanded elements can be simplified to poison, so we must freeze them
+    // to prevent AND(poison,0) -> poison. To prevent infinite loops due to
+    // SimplifyDemandedVectorElts removing the freeze, operands that can't be
+    // poison are only simplified if the replacement can't be poison either.
+    bool SafeN0 = DAG.isGuaranteedNotToBeUndefOrPoison(N0);
+    bool SafeN1 = DAG.isGuaranteedNotToBeUndefOrPoison(N1);
+    auto IsSafeUndemanded = [&](SDValue Op, const APInt &Elts) {
+      return Elts.isAllOnes() ||
+             DAG.isGuaranteedNotToBeUndefOrPoison(Op, ~Elts);
+    };
+    auto FreezeUndemanded = [&](SDValue Op, const APInt &Elts) {
+      return IsSafeUndemanded(Op, Elts) ? Op : DAG.getFreeze(Op);
+    };
+    auto Commit = [&](TargetLowering::TargetLoweringOpt &TLO, SDValue Op,
+                      const APInt &Elts, bool Safe) {
+      if (Safe && !Elts.isAllOnes() &&
+          !DAG.isGuaranteedNotToBeUndefOrPoison(TLO.New))
+        return false;
+      DCI.AddToWorklist(Op.getNode());
+      DCI.CommitTargetLoweringOpt(TLO);
+      return true;
+    };
+    auto SimplifyElts = [&](SDValue Op, const APInt &Elts, bool Safe) {
+      TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                                            !DCI.isBeforeLegalizeOps());
+      APInt KnownUndef, KnownZero;
+      return TLI.SimplifyDemandedVectorElts(Op, Elts, KnownUndef, KnownZero,
+                                            TLO) &&
+             Commit(TLO, Op, Elts, Safe);
+    };
+    auto SimplifyBits = [&](SDValue Op, const APInt &Bits, const APInt &Elts,
+                            bool Safe) {
+      TargetLowering::TargetLoweringOpt TLO(DAG, !DCI.isBeforeLegalize(),
+                                            !DCI.isBeforeLegalizeOps());
+      KnownBits Known;
+      return TLI.SimplifyDemandedBits(Op, Bits, Elts, Known, TLO) &&
+             Commit(TLO, Op, Elts, Safe);
+    };
+
+    std::optional<unsigned> SimplifiedIdx;
+    if (SimplifyElts(N0, Elts0, SafeN0))
+      SimplifiedIdx = 0;
+    else if (SimplifyElts(N1, Elts1, SafeN1))
+      SimplifiedIdx = 1;
+    else if (SimplifyBits(N0, Bits0, Elts0, SafeN0))
+      SimplifiedIdx = 0;
+    else if (SimplifyBits(N1, Bits1, Elts1, SafeN1))
+      SimplifiedIdx = 1;
+    if (SimplifiedIdx) {
+      if (N->getOpcode() != ISD::DELETED_NODE) {
+        SDValue Ops[] = {N->getOperand(0), N->getOperand(1)};
+        SDValue &Op = Ops[*SimplifiedIdx];
+        SDValue Frozen = FreezeUndemanded(Op, *SimplifiedIdx ? Elts1 : Elts0);
+        if (Frozen != Op) {
+          Op = Frozen;
+          return DAG.getNode(ISD::AND, dl, VT, Ops);
+        }
         DCI.AddToWorklist(N);
+      }
       return SDValue(N, 0);
     }
 
     SDValue NewN0 = TLI.SimplifyMultipleUseDemandedBits(N0, Bits0, Elts0, DAG);
     SDValue NewN1 = TLI.SimplifyMultipleUseDemandedBits(N1, Bits1, Elts1, DAG);
+    if (NewN0 && SafeN0 && !IsSafeUndemanded(NewN0, Elts0))
+      NewN0 = SDValue();
+    if (NewN1 && SafeN1 && !IsSafeUndemanded(NewN1, Elts1))
+      NewN1 = SDValue();
     if (NewN0 || NewN1)
-      return DAG.getNode(ISD::AND, dl, VT, NewN0 ? NewN0 : N0,
-                         NewN1 ? NewN1 : N1);
+      return DAG.getNode(ISD::AND, dl, VT,
+                         NewN0 ? FreezeUndemanded(NewN0, Elts0) : N0,
+                         NewN1 ? FreezeUndemanded(NewN1, Elts1) : N1);
   }
 
   // Attempt to combine a scalar bitmask AND with an extracted shuffle.
