@@ -3870,7 +3870,8 @@ StmtResult SemaOpenMP::ActOnOpenMPAssumeDirective(ArrayRef<OMPClause *> Clauses,
 
 StmtResult SemaOpenMP::ActOnOpenMPMetaDirective(
     SourceLocation StartLoc, SourceLocation EndLoc,
-    ArrayRef<OMPTraitInfo *> TraitInfos, ArrayRef<Stmt *> Variants) {
+    ArrayRef<OMPTraitInfo *> TraitInfos, ArrayRef<Stmt *> Variants,
+    Stmt *SharedStmt) {
   // Without an 'otherwise' clause, the last variant is the implicit one.
   bool HasImplicitOtherwise = Variants.size() == TraitInfos.size() + 1;
   assert((HasImplicitOtherwise || Variants.size() == TraitInfos.size()) &&
@@ -3895,9 +3896,9 @@ StmtResult SemaOpenMP::ActOnOpenMPMetaDirective(
     }
     Conditions.push_back(Cond);
   }
-  return OMPMetaDirective::Create(getASTContext(), StartLoc, EndLoc, Variants,
-                                  Conditions, AllTraitInfos,
-                                  HasImplicitOtherwise);
+  return OMPMetaDirective::Create(
+      getASTContext(), StartLoc, EndLoc, Variants, Conditions, AllTraitInfos,
+      HasImplicitOtherwise, getConstructTraits(), SharedStmt);
 }
 
 OMPRequiresDecl *
@@ -19251,6 +19252,10 @@ void SemaOpenMP::setOpenMPDeviceNum(int Num) { DeviceNum = Num; }
 void SemaOpenMP::setOpenMPDeviceNumID(StringRef ID) { DeviceNumID = ID; }
 
 int SemaOpenMP::getOpenMPDeviceNum() const { return DeviceNum; }
+
+ArrayRef<llvm::omp::TraitProperty> SemaOpenMP::getConstructTraits() {
+  return DSAStack->getConstructTraits();
+}
 
 void SemaOpenMP::ActOnOpenMPDeviceNum(Expr *DeviceNumExpr) {
   llvm::APSInt Result;

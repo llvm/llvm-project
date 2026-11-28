@@ -11634,6 +11634,8 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
   if (const auto *MD = dyn_cast<OMPMetaDirective>(S)) {
     for (const Stmt *V : MD->variants())
       scanForTargetRegionsFunctions(V, ParentName);
+    if (const Stmt *Shared = MD->getSharedStmt())
+      scanForTargetRegionsFunctions(Shared, ParentName);
     return;
   }
 

@@ -61,12 +61,18 @@ void local_decl(int flag) {
   }
 }
 
-// Standalone directive variants are rejected for now.
-void standalone_variant(int flag) {
-  // expected-error@+1 {{standalone directive variants are not supported in a 'metadirective' with non-constant user conditions}}
-#pragma omp metadirective \
-  when(user={condition(flag)}: barrier) \
-  otherwise(single)
+// A declaration in the shared statement is not visible after it.
+struct S { S(); ~S(); void use(); };
+void shared_decl_scope(int flag) {
+#pragma omp metadirective when(user={condition(flag)}: barrier) otherwise(parallel)
+  S s;
+  s.use(); // expected-error {{use of undeclared identifier 's'}}
+}
+
+// The future spelling warning is reported once.
+void future_spelling(int flag) {
+#pragma omp parallel
   {
+#pragma omp metadirective when(user={condition(flag)}: cancellation_point parallel) otherwise(nothing) // expected-warning {{directive spelling 'cancellation_point' is introduced in a later OpenMP version}}
   }
 }

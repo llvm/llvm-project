@@ -815,6 +815,19 @@ void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
     }
     if (auto *D = dyn_cast<OMPExecutableDirective>(Variants[I])) {
       OS << getOpenMPDirectiveName(D->getDirectiveKind(), OpenMPVersion);
+      if (auto *C = dyn_cast<OMPCancelDirective>(D)) {
+        OS << ' '
+           << getOpenMPDirectiveName(C->getCancelRegion(), OpenMPVersion);
+      } else if (auto *C = dyn_cast<OMPCancellationPointDirective>(D)) {
+        OS << ' '
+           << getOpenMPDirectiveName(C->getCancelRegion(), OpenMPVersion);
+      } else if (auto *C = dyn_cast<OMPCriticalDirective>(D)) {
+        if (C->getDirectiveName().getName()) {
+          OS << " (";
+          C->getDirectiveName().printName(OS, Policy);
+          OS << ')';
+        }
+      }
       for (OMPClause *C : D->clauses()) {
         if (C && !C->isImplicit()) {
           OS << ' ';
@@ -825,11 +838,15 @@ void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
     OS << ')';
   }
   OS << NL;
-  // Every variant has the same associated statement; print it once.
-  Stmt *Body = Variants.front();
-  if (auto *D = dyn_cast<OMPExecutableDirective>(Body))
-    Body = D->getRawStmt();
-  PrintStmt(Body);
+  // Print the statement once, from a variant that has it. If none has it,
+  // the statement follows the metadirective.
+  for (OMPExecutableDirective *D :
+       llvm::make_isa_range<OMPExecutableDirective>(Variants)) {
+    if (D->isStandaloneDirective())
+      continue;
+    PrintStmt(D->getRawStmt());
+    break;
+  }
 }
 
 void StmtPrinter::VisitOMPParallelDirective(OMPParallelDirective *Node) {

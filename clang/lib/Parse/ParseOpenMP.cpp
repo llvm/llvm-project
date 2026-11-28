@@ -75,7 +75,8 @@ static OpenMPDirectiveKind checkOpenMPDirectiveName(Parser &P,
   return Kind;
 }
 
-static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
+static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P,
+                                                    bool CheckVersion = true) {
   static const DirectiveNameParser DirParser;
 
   const DirectiveNameParser::State *S = DirParser.initial();
@@ -98,14 +99,16 @@ static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
       std::string TS = P.getPreprocessor().getSpelling(Tok);
       S = DirParser.consume(S, TS);
       if (S == nullptr)
-        return checkOpenMPDirectiveName(P, Loc, DKind, Concat);
+        return CheckVersion ? checkOpenMPDirectiveName(P, Loc, DKind, Concat)
+                            : DKind;
       Concat += ' ' + TS;
       P.ConsumeToken();
     }
   }
 
   assert(S && "Should have exited early");
-  return checkOpenMPDirectiveName(P, Loc, S->Value, Concat);
+  return CheckVersion ? checkOpenMPDirectiveName(P, Loc, S->Value, Concat)
+                      : S->Value;
 }
 
 static DeclarationName parseOpenMPReductionId(Parser &P) {
@@ -2621,6 +2624,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
     ConsumeToken();
     SmallVector<VariantMatchInfo, 4> VMIs;
     SmallVector<OMPTraitInfo *, 4> TraitInfos;
+    bool AnyVariantTakesStmt = false;
+    bool AnyVariantSharesStmt = false;
 
     // First iteration of parsing all clauses of metadirective.
     // This iteration only parses and collects all context selectors ignoring
@@ -2677,9 +2682,30 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         }
       }
 
+      // Note if a variant uses the statement after the pragma. 'ordered' uses
+      // it unless it has a 'depend' or 'doacross' clause.
+      OpenMPDirectiveKind VariantKind =
+          Tok.is(tok::r_paren)
+              ? OMPD_unknown
+              : parseOpenMPDirectiveKind(*this, /*CheckVersion=*/false);
+      Association Assoc = VariantKind != OMPD_unknown
+                              ? getDirectiveAssociation(VariantKind)
+                              : Association::None;
+      bool TakesStmt =
+          VariantKind == OMPD_ordered_standalone ||
+          VariantKind == OMPD_section || Assoc == Association::Block ||
+          Assoc == Association::LoopNest || Assoc == Association::LoopSequence;
+
       // Skip Directive for now. We will parse directive in the second iteration
       int paren = 0;
       while (Tok.isNot(tok::r_paren) || paren != 0) {
+        if (VariantKind == OMPD_ordered_standalone && paren == 0 &&
+            Tok.is(tok::identifier)) {
+          OpenMPClauseKind OrderedCKind =
+              getOpenMPClauseKind(PP.getSpelling(Tok));
+          if (OrderedCKind == OMPC_depend || OrderedCKind == OMPC_doacross)
+            TakesStmt = false;
+        }
         if (Tok.is(tok::l_paren))
           paren++;
         if (Tok.is(tok::r_paren))
@@ -2692,6 +2718,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         }
         ConsumeAnyToken();
       }
+      AnyVariantTakesStmt |= TakesStmt;
+      AnyVariantSharesStmt |= !TakesStmt;
       // Parse ')'
       if (Tok.is(tok::r_paren))
         T.consumeClose();
@@ -2715,7 +2743,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         };
     TargetOMPContext OMPCtx(ASTContext, std::move(DiagUnknownTrait),
                             /* CurrentFunctionDecl */ nullptr,
-                            ArrayRef<llvm::omp::TraitProperty>(),
+                            Actions.OpenMP().getConstructTraits(),
                             Actions.OpenMP().getOpenMPDeviceNum());
 
     // A single match is returned for OpenMP 5.0
@@ -2741,12 +2769,20 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       unsigned NumVariants = NumClauses + (HasOtherwise ? 0 : 1);
 
       // Reuse the normal metadirective variant parse per clause so every
-      // variant is a complete directive node with its own body and its own
-      // data-sharing context. Diagnostics in the associated statement are
-      // reported once per variant.
+      // variant is a complete directive node with its own data-sharing
+      // context. Diagnostics in a variant's own statement are reported once
+      // per variant.
       SmallVector<Stmt *, 4> Variants;
       bool HasError = false;
+      // Variants without an associated statement run one shared copy of it,
+      // parsed once after them in the enclosing scope.
+      bool HasSharedStmt =
+          AnyVariantTakesStmt && (AnyVariantSharesStmt || !HasOtherwise);
       for (unsigned I : llvm::seq<unsigned>(NumVariants)) {
+        if (HasSharedStmt && I == NumClauses) {
+          Variants.push_back(Actions.ActOnNullStmt(Loc).get());
+          continue;
+        }
         bool HasDirective = false;
         if (I < NumClauses) {
           OpenMPClauseKind CKind = getOpenMPClauseKind(PP.getSpelling(Tok));
@@ -2761,9 +2797,9 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
           HasDirective = Tok.isNot(tok::r_paren) &&
                          Tok.isNot(tok::annot_pragma_openmp_end);
         }
-        // Re-parse the directive and body for every variant but the last.
+        // Re-parse every variant but the last; with a shared statement, all.
         std::optional<TentativeParsingAction> VariantTPA;
-        if (I + 1 < NumVariants)
+        if (I + 1 < NumVariants || HasSharedStmt)
           VariantTPA.emplace(*this, /*Unannotated=*/true);
 
         StmtResult Variant;
@@ -2776,18 +2812,9 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
             ConsumeAnyToken();
           ConsumeAnnotationToken();
         }
-        // No directive or 'nothing': the variant is the associated statement.
-        if (!Variant.isInvalid() && !Variant.isUsable()) {
-          ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
-          Variant = ParseStatement();
-        }
-        // A standalone variant does not take the associated statement while
-        // the others do; reject the mix until Sema models it.
-        if (auto *D = dyn_cast_or_null<OMPExecutableDirective>(Variant.get());
-            D && !D->hasAssociatedStmt()) {
-          Diag(Loc, diag::err_omp_metadirective_standalone_variant);
-          Variant = StmtError();
-        }
+        // Nothing to run for this variant.
+        if (!Variant.isInvalid() && !Variant.isUsable())
+          Variant = Actions.ActOnNullStmt(Loc);
 
         if (VariantTPA) {
           VariantTPA->Revert();
@@ -2799,10 +2826,21 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
         else
           Variants.push_back(Variant.get());
       }
+      StmtResult SharedStmt;
+      if (HasSharedStmt) {
+        ConsumeAnnotationToken();
+        ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
+        ParseScope SharedScope(this, Scope::DeclScope,
+                               /*EnteredScope=*/getLangOpts().C99 ||
+                                   getLangOpts().CPlusPlus,
+                               /*BeforeCompoundStmt=*/Tok.is(tok::l_brace));
+        SharedStmt = ParseStatement();
+        HasError |= SharedStmt.isInvalid();
+      }
       if (HasError)
         return StmtError();
-      return Actions.OpenMP().ActOnOpenMPMetaDirective(Loc, EndLoc, TraitInfos,
-                                                       Variants);
+      return Actions.OpenMP().ActOnOpenMPMetaDirective(
+          Loc, EndLoc, TraitInfos, Variants, SharedStmt.get());
     }
 
     int Idx = 0;
