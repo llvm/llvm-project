@@ -213,3 +213,189 @@ entry:
   %add22 = add i32 %add21, %a3
   ret i32 %add22
 }
+
+; Stack accesses whose final sp/fp-relative offset does not fit in 26 bits.
+; %small is laid out just above the 32 MiB %big, so its offset from sp is just
+; beyond the simm26 range.
+declare void @use_big_small(ptr, ptr)
+
+define i32 @load_just_beyond_simm26() nounwind optsize {
+; CHECK-LABEL: load_just_beyond_simm26:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    c.addi16sp sp, -256
+; CHECK-NEXT:    c.swsp ra, 252(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    lui a0, 8192
+; CHECK-NEXT:    addi a0, a0, 1808
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    c.addi4spn a0, sp, 12
+; CHECK-NEXT:    lui a1, 8192
+; CHECK-NEXT:    c.addi a1, 12
+; CHECK-NEXT:    c.add a1, sp
+; CHECK-NEXT:    call use_big_small
+; CHECK-NEXT:    c.addi4spn a0, sp, 16
+; CHECK-NEXT:    qc.e.lw a0, 33554428(a0)
+; CHECK-NEXT:    lui a1, 8192
+; CHECK-NEXT:    addi a1, a1, 1808
+; CHECK-NEXT:    c.add sp, a1
+; CHECK-NEXT:    c.lwsp ra, 252(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.addi16sp sp, 256
+; CHECK-NEXT:    c.jr ra
+  %small = alloca [512 x i32], align 4
+  %big = alloca [33554432 x i8], align 4
+  call void @use_big_small(ptr %big, ptr %small)
+  %v = load i32, ptr %small, align 4
+  ret i32 %v
+}
+
+define void @store_just_beyond_simm26(i32 %x) nounwind optsize {
+; CHECK-LABEL: store_just_beyond_simm26:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    c.addi16sp sp, -256
+; CHECK-NEXT:    c.swsp ra, 252(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s0, 248(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    lui a1, 8192
+; CHECK-NEXT:    addi a1, a1, 1808
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    c.mv s0, a0
+; CHECK-NEXT:    c.addi4spn a0, sp, 8
+; CHECK-NEXT:    lui a1, 8192
+; CHECK-NEXT:    c.addi a1, 8
+; CHECK-NEXT:    c.add a1, sp
+; CHECK-NEXT:    call use_big_small
+; CHECK-NEXT:    c.addi4spn a0, sp, 12
+; CHECK-NEXT:    qc.e.sw s0, 33554428(a0)
+; CHECK-NEXT:    lui a0, 8192
+; CHECK-NEXT:    addi a0, a0, 1808
+; CHECK-NEXT:    c.add sp, a0
+; CHECK-NEXT:    c.lwsp ra, 252(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s0, 248(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.addi16sp sp, 256
+; CHECK-NEXT:    c.jr ra
+  %small = alloca [512 x i32], align 4
+  %big = alloca [33554432 x i8], align 4
+  call void @use_big_small(ptr %big, ptr %small)
+  store i32 %x, ptr %small, align 4
+  ret void
+}
+
+define i32 @load_byte_just_beyond_simm26() nounwind optsize {
+; CHECK-LABEL: load_byte_just_beyond_simm26:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    c.addi16sp sp, -256
+; CHECK-NEXT:    c.swsp ra, 252(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    lui a0, 8192
+; CHECK-NEXT:    addi a0, a0, 1808
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    c.addi4spn a0, sp, 12
+; CHECK-NEXT:    lui a1, 8192
+; CHECK-NEXT:    c.addi a1, 12
+; CHECK-NEXT:    c.add a1, sp
+; CHECK-NEXT:    call use_big_small
+; CHECK-NEXT:    c.addi4spn a0, sp, 16
+; CHECK-NEXT:    qc.e.lbu a0, 33554429(a0)
+; CHECK-NEXT:    lui a1, 8192
+; CHECK-NEXT:    addi a1, a1, 1808
+; CHECK-NEXT:    c.add sp, a1
+; CHECK-NEXT:    c.lwsp ra, 252(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.addi16sp sp, 256
+; CHECK-NEXT:    c.jr ra
+  %small = alloca [512 x i32], align 4
+  %big = alloca [33554432 x i8], align 4
+  call void @use_big_small(ptr %big, ptr %small)
+  %p = getelementptr inbounds i8, ptr %small, i32 1
+  %b = load i8, ptr %p, align 1
+  %v = zext i8 %b to i32
+  ret i32 %v
+}
+
+; The part beyond the simm26 range fits in 12 bits but not in c.addi4spn.
+define i32 @load_beyond_simm26_large_adj() nounwind optsize {
+; CHECK-LABEL: load_beyond_simm26_large_adj:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    c.addi16sp sp, -256
+; CHECK-NEXT:    c.swsp ra, 252(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    lui a0, 8192
+; CHECK-NEXT:    addi a0, a0, 1808
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    c.addi4spn a0, sp, 12
+; CHECK-NEXT:    lui a1, 8192
+; CHECK-NEXT:    c.addi a1, 12
+; CHECK-NEXT:    c.add a1, sp
+; CHECK-NEXT:    call use_big_small
+; CHECK-NEXT:    addi a0, sp, 1216
+; CHECK-NEXT:    qc.e.lw a0, 33554428(a0)
+; CHECK-NEXT:    lui a1, 8192
+; CHECK-NEXT:    addi a1, a1, 1808
+; CHECK-NEXT:    c.add sp, a1
+; CHECK-NEXT:    c.lwsp ra, 252(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.addi16sp sp, 256
+; CHECK-NEXT:    c.jr ra
+  %small = alloca [512 x i32], align 4
+  %big = alloca [33554432 x i8], align 4
+  call void @use_big_small(ptr %big, ptr %small)
+  %p = getelementptr inbounds i8, ptr %small, i32 1200
+  %v = load i32, ptr %p, align 4
+  ret i32 %v
+}
+
+; The offset is far beyond the simm26 range.
+define i32 @load_far_beyond_simm26() nounwind optsize {
+; CHECK-LABEL: load_far_beyond_simm26:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    c.addi16sp sp, -256
+; CHECK-NEXT:    c.swsp ra, 252(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    lui a0, 9766
+; CHECK-NEXT:    addi a0, a0, 272
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    c.addi4spn a0, sp, 12
+; CHECK-NEXT:    lui a1, 9766
+; CHECK-NEXT:    addi a1, a1, -1524
+; CHECK-NEXT:    c.add a1, sp
+; CHECK-NEXT:    call use_big_small
+; CHECK-NEXT:    lui a0, 9766
+; CHECK-NEXT:    c.add a0, sp
+; CHECK-NEXT:    lw a0, -1524(a0)
+; CHECK-NEXT:    lui a1, 9766
+; CHECK-NEXT:    addi a1, a1, 272
+; CHECK-NEXT:    c.add sp, a1
+; CHECK-NEXT:    c.lwsp ra, 252(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.addi16sp sp, 256
+; CHECK-NEXT:    c.jr ra
+  %small = alloca [512 x i32], align 4
+  %big = alloca [40000000 x i8], align 4
+  call void @use_big_small(ptr %big, ptr %small)
+  %v = load i32, ptr %small, align 4
+  ret i32 %v
+}
+
+; The variable sized object makes the frame fp relative, so the offset is
+; negative and just beyond the simm26 range.
+define i32 @load_fp_just_beyond_simm26(i32 %n) nounwind optsize {
+; CHECK-LABEL: load_fp_just_beyond_simm26:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    c.addi16sp sp, -256
+; CHECK-NEXT:    c.swsp ra, 252(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s0, 248(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.addi4spn s0, sp, 256
+; CHECK-NEXT:    qc.e.addi sp, sp, -33554192
+; CHECK-NEXT:    c.addi a0, 15
+; CHECK-NEXT:    c.andi a0, -16
+; CHECK-NEXT:    sub a1, sp, a0
+; CHECK-NEXT:    c.mv sp, a1
+; CHECK-NEXT:    lui a0, 8192
+; CHECK-NEXT:    c.addi a0, 12
+; CHECK-NEXT:    sub a0, s0, a0
+; CHECK-NEXT:    call use_big_small
+; CHECK-NEXT:    addi a0, s0, -12
+; CHECK-NEXT:    qc.e.lw a0, -33554432(a0)
+; CHECK-NEXT:    addi sp, s0, -256
+; CHECK-NEXT:    c.lwsp ra, 252(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s0, 248(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.addi16sp sp, 256
+; CHECK-NEXT:    c.jr ra
+  %big = alloca [33554432 x i8], align 4
+  %d = alloca i8, i32 %n
+  call void @use_big_small(ptr %big, ptr %d)
+  %v = load i32, ptr %big, align 4
+  ret i32 %v
+}

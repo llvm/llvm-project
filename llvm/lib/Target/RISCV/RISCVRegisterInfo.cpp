@@ -575,9 +575,58 @@ static unsigned getXqciloWideOpcode(unsigned Opc) {
     return RISCV::QC_E_SB;
   case RISCV::SH:
     return RISCV::QC_E_SH;
+  case RISCV::PseudoCCLW:
+    return RISCV::PseudoCCQC_E_LW;
+  case RISCV::PseudoCCLB:
+    return RISCV::PseudoCCQC_E_LB;
+  case RISCV::PseudoCCLBU:
+    return RISCV::PseudoCCQC_E_LBU;
+  case RISCV::PseudoCCLH:
+    return RISCV::PseudoCCQC_E_LH;
+  case RISCV::PseudoCCLHU:
+    return RISCV::PseudoCCQC_E_LHU;
   default:
     return 0;
   }
+}
+
+// Return the offset to encode when promoting a standard frame index load/store
+// with final offset Val to its Xqcilo wide form, or std::nullopt if it should
+// keep the standard form. Val minus the returned offset is added to the frame
+// register separately.
+static std::optional<int64_t> getXqciloWideOffset(const RISCVSubtarget &ST,
+                                                  unsigned Opc,
+                                                  Register FrameReg,
+                                                  int64_t Val) {
+  if (!ST.hasVendorXqcilo() || !getXqciloWideOpcode(Opc) || isInt<12>(Val))
+    return std::nullopt;
+  if (isInt<26>(Val))
+    return Val;
+
+  // Beyond simm26, either add the part beyond the simm26 range with an ADDI and
+  // use the wide form (ADDI + QC_E_*), or keep the standard form and add the
+  // upper bits with LUI + ADD (LUI + ADD + LW). This mirrors the choice made in
+  // SelectAddrRegImm26 for register bases.
+  int64_t Adj = Val - (Val > 0 ? maxIntN(26) : minIntN(26));
+  // Round a positive Adj up to a multiple of 4 so that the ADDI from sp can be
+  // compressed to c.addi4spn. The wide form takes the difference.
+  if (Adj > 0 && isInt<12>(alignTo(Adj, 4)))
+    Adj = alignTo(Adj, 4);
+  if (!isInt<12>(Adj))
+    return std::nullopt;
+
+  // The ADDI cannot be c.addi as its source is the frame register.
+  bool IsAddiCompressible = ST.hasStdExtZca() && FrameReg == RISCV::X2 &&
+                            Adj > 0 && isShiftedUInt<8, 2>(Adj);
+  bool IsLwCompressible =
+      ST.hasStdExtZca() &&
+      (Opc == RISCV::LW || Opc == RISCV::SW || Opc == RISCV::PseudoCCLW) &&
+      isShiftedUInt<5, 2>(Val & 0xFFF);
+  // Both sequences take 8 bytes if compressible and 10 bytes otherwise. Prefer
+  // ADDI + QC_E_* on a tie as it is one instruction shorter.
+  if (IsAddiCompressible || !IsLwCompressible)
+    return Val - Adj;
+  return std::nullopt;
 }
 
 bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
@@ -636,19 +685,20 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // instruction will add 4 to the immediate. If that would overflow 12
       // bits, we can't fold the offset.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
-    } else if (unsigned WideOpc = getXqciloWideOpcode(Opc);
-               !isInt<12>(Val) && ST.hasVendorXqcilo() && WideOpc) {
+    } else if (std::optional<int64_t> WideOffset =
+                   getXqciloWideOffset(ST, Opc, FrameReg, Val)) {
       // The resolved frame offset exceeds simm12 but the instruction is a
       // standard load/store (LW/SW/etc). Promote to the wide Xqcilo equivalent
-      // so the full 26-bit offset folds directly, avoiding a separate
+      // so a 26-bit offset folds directly, avoiding or shrinking a separate
       // base-adjust instruction. This runs post-RA and does not affect
       // register allocation decisions.
-      MI.setDesc(TII->get(WideOpc));
-      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo26);
-      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo26,
+      MI.setDesc(TII->get(getXqciloWideOpcode(Opc)));
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(*WideOffset);
+      Offset = StackOffset::get((uint64_t)Val - (uint64_t)*WideOffset,
                                 Offset.getScalable());
     } else if (Opc == RISCV::QC_E_ADDI || RISCVInstrInfo::isBaseQCLoad(MI) ||
-               RISCVInstrInfo::isBaseQCStore(MI)) {
+               RISCVInstrInfo::isBaseQCStore(MI) ||
+               RISCVInstrInfo::isBaseQCCCLoad(MI)) {
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo26);
       Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo26,
                                 Offset.getScalable());
