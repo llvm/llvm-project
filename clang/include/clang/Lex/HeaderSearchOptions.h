@@ -110,6 +110,10 @@ public:
   /// The directory used for the module cache.
   std::string ModuleCachePath;
 
+  /// Opaque keys that an implicitly built module records and is validated
+  /// against, in order.
+  std::vector<std::string> ImplicitModulesValidationKeys;
+
   /// The directory used for a user build.
   std::string ModuleUserBuildPath;
 

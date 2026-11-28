@@ -23,6 +23,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdlib> // ::getenv
@@ -3706,6 +3707,27 @@ void Darwin::addClangCC1ASTargetOptions(
       }
     }
   }
+}
+
+void Darwin::addImplicitModulesValidationKeys(const ArgList &DriverArgs,
+                                              ArgStringList &CC1Args) const {
+  // Rebuild implicitly built modules when the SDK is updated in place. Its
+  // SystemVersion.plist changes with every build of the SDK, so hash it instead
+  // of parsing it, as Clang doesn't have an XML parser.
+  StringRef SDKRoot =
+      DriverArgs.getLastArgValue(options::OPT_isysroot, getDriver().SysRoot);
+  if (SDKRoot.empty())
+    return;
+  SmallString<256> Path(SDKRoot);
+  llvm::sys::path::append(Path, "System", "Library", "CoreServices",
+                          "SystemVersion.plist");
+  auto Buffer = getVFS().getBufferForFile(Path);
+  if (!Buffer)
+    return;
+  uint64_t Hash = llvm::xxh3_64bits((*Buffer)->getBuffer());
+  CC1Args.push_back(DriverArgs.MakeArgString(
+      "-fimplicit-modules-validation-key=darwin-sdk-system-version:" +
+      llvm::utohexstr(Hash, /*LowerCase=*/true)));
 }
 
 DerivedArgList *

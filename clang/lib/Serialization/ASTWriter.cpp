@@ -1172,6 +1172,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(DIAG_PRAGMA_MAPPINGS);
   RECORD(HEADER_SEARCH_ENTRY_USAGE);
   RECORD(VFS_USAGE);
+  RECORD(IMPLICIT_MODULES_VALIDATION_KEYS);
 
 #undef RECORD
 #undef BLOCK
@@ -1444,6 +1445,14 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP) {
     unsigned VFSUsageAbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
     RecordData::value_type Record[] = {VFS_USAGE, VFSUsage.size()};
     Stream.EmitRecordWithBlob(VFSUsageAbbrevCode, Record, bytes(VFSUsage));
+  }
+
+  // Implicit modules validation keys.
+  if (BuildingImplicitModule && !HSOpts.ImplicitModulesValidationKeys.empty()) {
+    Record.clear();
+    for (StringRef Key : HSOpts.ImplicitModulesValidationKeys)
+      AddString(Key, Record);
+    Stream.EmitRecord(IMPLICIT_MODULES_VALIDATION_KEYS, Record);
   }
 
   // Leave the options block.

@@ -4151,7 +4151,8 @@ clang::driver::tools::getCXX20NamedModuleOutputPath(const ArgList &Args,
 }
 
 static bool RenderModulesOptions(Compilation &C, const Driver &D,
-                                 const ArgList &Args, const InputInfo &Input,
+                                 const ToolChain &TC, const ArgList &Args,
+                                 const InputInfo &Input,
                                  const InputInfo &Output, bool HaveStd20,
                                  ArgStringList &CmdArgs) {
   const bool IsCXX = types::isCXX(Input.getType());
@@ -4230,7 +4231,14 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
     }
 
     Args.AddLastArg(CmdArgs, options::OPT_fimplicit_modules_lock_timeout_EQ);
+
+    // User keys come first, followed by the toolchain's.
+    Args.AddAllArgs(CmdArgs, options::OPT_fimplicit_modules_validation_key_EQ);
+    TC.addImplicitModulesValidationKeys(Args, CmdArgs);
   }
+  // The keys only affect implicitly built modules; don't warn about them when
+  // a build system passes them to every compile.
+  Args.ClaimAllArgs(options::OPT_fimplicit_modules_validation_key_EQ);
 
   if (HaveModules) {
     if (Args.hasFlag(options::OPT_fprebuilt_implicit_modules,
@@ -7937,7 +7945,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
        Std->containsValue("c++2d") || Std->containsValue("gnu++2d") ||
        Std->containsValue("c++latest") || Std->containsValue("gnu++latest"));
   bool HaveModules =
-      RenderModulesOptions(C, D, Args, Input, Output, HaveCxx20, CmdArgs);
+      RenderModulesOptions(C, D, TC, Args, Input, Output, HaveCxx20, CmdArgs);
 
   // -fdelayed-template-parsing is default when targeting MSVC.
   // Many old Windows SDK versions require this to parse.

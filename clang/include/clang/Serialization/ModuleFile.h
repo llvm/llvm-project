@@ -207,6 +207,10 @@ public:
   /// Directories this module file depends on the listing of.
   std::vector<std::string> DirectoryDependencies;
 
+  /// The keys this module was built with, see
+  /// \c HeaderSearchOptions::ImplicitModulesValidationKeys.
+  std::vector<std::string> ImplicitModulesValidationKeys;
+
   /// Whether this precompiled header is a relocatable PCH file.
   bool RelocatablePCH = false;
 

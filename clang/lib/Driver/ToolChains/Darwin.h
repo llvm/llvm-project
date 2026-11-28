@@ -616,6 +616,10 @@ protected:
       const llvm::opt::ArgList &Args,
       llvm::opt::ArgStringList &CC1ASArgs) const override;
 
+  void addImplicitModulesValidationKeys(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
+
   StringRef getOSLibraryNameSuffix(bool IgnoreSim = false) const override;
 
 public:

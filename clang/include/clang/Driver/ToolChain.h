@@ -754,6 +754,13 @@ public:
                         llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const;
 
+  /// Add -fimplicit-modules-validation-key options for state of this target
+  /// that implicitly built modules should be invalidated on, such as the
+  /// version of the SDK. Only called when implicit modules are enabled.
+  virtual void
+  addImplicitModulesValidationKeys(const llvm::opt::ArgList &DriverArgs,
+                                   llvm::opt::ArgStringList &CC1Args) const;
+
   /// Add options that need to be passed to cc1as for this target.
   virtual void
   addClangCC1ASTargetOptions(const llvm::opt::ArgList &Args,
