@@ -1,0 +1,136 @@
+## The program header table does not have to follow the ELF header. Check that
+## when it is elsewhere in the input, --only-keep-debug writes it after the
+## sections, points e_phoff and PT_PHDR at it, and keeps the contents of the
+## remaining sections.
+
+## The table is in a later PT_LOAD, and the space after the ELF header has room
+## for only two of the three program headers.
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: llvm-objcopy --only-keep-debug %t1 %t1.dbg
+# RUN: llvm-readelf -h -S -l -x .note %t1.dbg 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=SEGMENT --implicit-check-not=warning:
+
+# SEGMENT:      Start of program headers: 4312 (bytes into file)
+# SEGMENT:      Number of program headers: 3
+# SEGMENT:      [Nr] Name        Type     Address          Off    Size   ES Flg Lk Inf Al
+# SEGMENT-NEXT: [ 0]
+# SEGMENT-NEXT: [ 1] .note       NOTE     00000000002000b0 0000b0 000014 00   A  0   0  4
+# SEGMENT-NEXT: [ 2] .text       NOBITS   00000000002020a8 0010a8 000001 00  AX  0   0  0
+# SEGMENT-NEXT: [ 3] .debug_info PROGBITS 0000000000000000 0010a8 000001 00      0   0  0
+# SEGMENT-NEXT: [ 4] .strtab     STRTAB   0000000000000000 0010a9 000001 00      0   0  1
+# SEGMENT-NEXT: [ 5] .shstrtab   STRTAB   0000000000000000 0010aa 00002b 00      0   0  1
+## The program headers follow the sections: alignTo(0x10aa + 0x2b, 8) == 0x10d8.
+# SEGMENT:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# SEGMENT-NEXT: PHDR 0x0010d8 0x0000000000202000 0x0000000000202000 0x0000a8 0x0000a8 R   0x8
+# SEGMENT-NEXT: LOAD 0x000000 0x0000000000200000 0x0000000000200000 0x0000c4 0x0000c4 R   0x1000
+# SEGMENT-NEXT: LOAD 0x0010a8 0x0000000000202000 0x0000000000202000 0x000000 0x0000a9 R E 0x1000
+# SEGMENT:      Hex dump of section '.note':
+# SEGMENT-NEXT: 0x002000b0 04000000 04000000 01000000 41424300 ............ABC.
+# SEGMENT-NEXT: 0x002000c0 01020304                            ....
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .note
+    Type:         SHT_NOTE
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x2000b0
+    Offset:       0xb0
+    AddressAlign: 0x4
+    Content:      0400000004000000010000004142430001020304
+  - Type:   ProgramHeaderTable
+    Name:   .phdrs
+    Offset: 0x2000
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x2020a8
+    Content: C3
+  - Name:    .debug_info
+    Type:    SHT_PROGBITS
+    Content: 01
+ProgramHeaders:
+  - Type:     PT_PHDR
+    Flags:    [ PF_R ]
+    VAddr:    0x202000
+    FirstSec: .phdrs
+    LastSec:  .phdrs
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x200000
+    Offset:   0x0
+    Align:    0x1000
+    FirstSec: .note
+    LastSec:  .note
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    VAddr:    0x202000
+    Align:    0x1000
+    FirstSec: .phdrs
+    LastSec:  .text
+
+## The table is not part of any segment.
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: llvm-objcopy --only-keep-debug %t2 %t2.dbg
+# RUN: llvm-readelf -h -S -l -x .note %t2.dbg 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=NOSEGMENT --implicit-check-not=warning:
+
+# NOSEGMENT:      Start of program headers: 4144 (bytes into file)
+# NOSEGMENT:      Number of program headers: 2
+# NOSEGMENT:      [Nr] Name        Type     Address          Off    Size   ES Flg Lk Inf Al
+# NOSEGMENT-NEXT: [ 0]
+# NOSEGMENT-NEXT: [ 1] .note       NOTE     0000000000200100 000100 000014 00   A  0   0  4
+# NOSEGMENT-NEXT: [ 2] .text       NOBITS   0000000000201000 001000 000001 00  AX  0   0  0
+# NOSEGMENT-NEXT: [ 3] .debug_info PROGBITS 0000000000000000 001000 000001 00      0   0  0
+# NOSEGMENT-NEXT: [ 4] .strtab     STRTAB   0000000000000000 001001 000001 00      0   0  1
+# NOSEGMENT-NEXT: [ 5] .shstrtab   STRTAB   0000000000000000 001002 00002b 00      0   0  1
+## alignTo(0x1002 + 0x2b, 8) == 0x1030.
+# NOSEGMENT:      Type Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# NOSEGMENT-NEXT: LOAD 0x000000 0x0000000000200000 0x0000000000200000 0x000114 0x000114 R   0x1000
+# NOSEGMENT-NEXT: LOAD 0x001000 0x0000000000201000 0x0000000000201000 0x000000 0x000001 R E 0x1000
+# NOSEGMENT:      Hex dump of section '.note':
+# NOSEGMENT-NEXT: 0x00200100 04000000 04000000 01000000 41424300 ............ABC.
+# NOSEGMENT-NEXT: 0x00200110 01020304                            ....
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .note
+    Type:         SHT_NOTE
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x200100
+    Offset:       0x100
+    AddressAlign: 0x4
+    Content:      0400000004000000010000004142430001020304
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x201000
+    Offset:  0x1000
+    Content: C3
+  - Name:    .debug_info
+    Type:    SHT_PROGBITS
+    Content: 01
+  - Type:   ProgramHeaderTable
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x200000
+    Offset:   0x0
+    Align:    0x1000
+    FirstSec: .note
+    LastSec:  .note
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    VAddr:    0x201000
+    Align:    0x1000
+    FirstSec: .text
+    LastSec:  .text

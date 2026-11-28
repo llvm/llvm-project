@@ -264,6 +264,7 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
 
   StringSet<> DocSections;
   ELFYAML::SectionHeaderTable *SecHdrTable = nullptr;
+  bool HasProgramHeaderTable = false;
   for (size_t I = 0; I < Doc.Chunks.size(); ++I) {
     const std::unique_ptr<ELFYAML::Chunk> &C = Doc.Chunks[I];
 
@@ -273,6 +274,13 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D, yaml::ErrorHandler EH)
         reportError("multiple section header tables are not allowed");
       SecHdrTable = S;
       continue;
+    }
+
+    // Named below, so that program headers can reference it.
+    if (isa<ELFYAML::ProgramHeaderTable>(C.get())) {
+      if (HasProgramHeaderTable)
+        reportError("multiple program header tables are not allowed");
+      HasProgramHeaderTable = true;
     }
 
     // We add a technical suffix for each unnamed section/fill. It does not
@@ -390,6 +398,8 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS) {
 
   if (Doc.Header.EPhOff)
     Header.e_phoff = *Doc.Header.EPhOff;
+  else if (const ELFYAML::ProgramHeaderTable *PHT = Doc.getProgramHeaderTable())
+    Header.e_phoff = *PHT->Offset;
   else if (!Doc.ProgramHeaders.empty())
     Header.e_phoff = sizeof(Header);
   else
@@ -687,6 +697,20 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       uint64_t Size = S->getNumHeaders(SHeaders.size()) * sizeof(Elf_Shdr);
       // The full section header information might be not available here, so
       // fill the space with zeroes as a placeholder.
+      CBA.writeZeros(Size);
+      LocationCounter += Size;
+      continue;
+    }
+
+    if (ELFYAML::ProgramHeaderTable *PHT =
+            dyn_cast<ELFYAML::ProgramHeaderTable>(D.get())) {
+      if (!PHT->Offset)
+        PHT->Offset = alignToOffset(CBA, sizeof(typename ELFT::uint),
+                                    /*Offset=*/std::nullopt);
+      else
+        PHT->Offset = alignToOffset(CBA, /*Align=*/1, PHT->Offset);
+      uint64_t Size = Doc.ProgramHeaders.size() * sizeof(Elf_Phdr);
+      // Filled in by writeELF.
       CBA.writeZeros(Size);
       LocationCounter += Size;
       continue;
@@ -1063,6 +1087,14 @@ ELFState<ELFT>::getPhdrFragments(const ELFYAML::ProgramHeader &Phdr,
       continue;
     }
 
+    // Not a section, but takes up file space like one with contents.
+    if (const auto *PHT = dyn_cast<ELFYAML::ProgramHeaderTable>(C)) {
+      Ret.push_back({*PHT->Offset, Doc.ProgramHeaders.size() * sizeof(Elf_Phdr),
+                     llvm::ELF::SHT_PROGBITS,
+                     /*ShAddrAlign=*/sizeof(typename ELFT::uint)});
+      continue;
+    }
+
     const ELFYAML::Section *S = cast<ELFYAML::Section>(C);
     const Elf_Shdr &H = SHeaders[SN2I.get(S->Name)];
     Ret.push_back({H.sh_offset, H.sh_size, H.sh_type, H.sh_addralign});
@@ -1134,7 +1166,7 @@ bool llvm::ELFYAML::shouldAllocateFileSpace(
     auto It = llvm::find_if(
         PH.Chunks, [&](ELFYAML::Chunk *C) { return C->Name == S.Name; });
     if (std::any_of(It, PH.Chunks.end(), [](ELFYAML::Chunk *C) {
-          return (isa<ELFYAML::Fill>(C) ||
+          return (isa<ELFYAML::Fill, ELFYAML::ProgramHeaderTable>(C) ||
                   cast<ELFYAML::Section>(C)->Type != ELF::SHT_NOBITS);
         }))
       return true;
@@ -1903,8 +1935,10 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
 
   // XXX: This offset is tightly coupled with the order that we write
   // things to `OS`.
+  const ELFYAML::ProgramHeaderTable *PHT = Doc.getProgramHeaderTable();
   const size_t SectionContentBeginOffset =
-      sizeof(Elf_Ehdr) + sizeof(Elf_Phdr) * Doc.ProgramHeaders.size();
+      sizeof(Elf_Ehdr) +
+      (PHT ? 0 : sizeof(Elf_Phdr) * Doc.ProgramHeaders.size());
   // It is quite easy to accidentally create output with yaml2obj that is larger
   // than intended, for example, due to an issue in the YAML description.
   // We limit the maximum allowed output size, but also provide a command line
@@ -1938,7 +1972,11 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
     return false;
 
   State.writeELFHeader(OS);
-  writeArrayData(OS, ArrayRef(PHeaders));
+  if (PHT)
+    CBA.updateDataAt(*PHT->Offset, PHeaders.data(),
+                     PHeaders.size() * sizeof(Elf_Phdr));
+  else
+    writeArrayData(OS, ArrayRef(PHeaders));
 
   const ELFYAML::SectionHeaderTable &SHT = Doc.getSectionHeaderTable();
   if (!SHT.NoHeaders.value_or(false))
