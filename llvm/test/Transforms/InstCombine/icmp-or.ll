@@ -622,6 +622,34 @@ define i1 @icmp_or_sub_2_ne(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
   ret i1 %cmp
 }
 
+; Don't fold a sub-with-borrow chain away: the subs must stay available for
+; the backend to pair with their borrow compares.
+define i32 @icmp_or_sub_borrow_chain(i64 %a0, i64 %b0, i64 %a1, i64 %b1) {
+; CHECK-LABEL: @icmp_or_sub_borrow_chain(
+; CHECK:         [[T0:%.*]] = sub i64 [[A0:%.*]], [[B0:%.*]]
+; CHECK:         [[C0:%.*]] = icmp ult i64 [[A0]], [[B0]]
+; CHECK:         [[S1:%.*]] = sub i64 [[A1:%.*]], [[B1:%.*]]
+; CHECK:         [[T1:%.*]] = sub i64 [[S1]], {{%.*}}
+; CHECK:         [[U1:%.*]] = icmp ult i64 [[S1]], {{%.*}}
+; CHECK:         [[OR:%.*]] = or i64 [[T0]], [[T1]]
+; CHECK:         [[EQ:%.*]] = icmp eq i64 [[OR]], 0
+; CHECK:         ret i32
+;
+  %t0 = sub i64 %a0, %b0
+  %c0 = icmp ult i64 %a0, %b0
+  %s1 = sub i64 %a1, %b1
+  %o1 = icmp ult i64 %a1, %b1
+  %z0 = zext i1 %c0 to i64
+  %t1 = sub i64 %s1, %z0
+  %u1 = icmp ult i64 %s1, %z0
+  %c1 = or i1 %o1, %u1
+  %or = or i64 %t0, %t1
+  %eq = icmp eq i64 %or, 0
+  %lt = select i1 %c1, i32 -1, i32 1
+  %r = select i1 %eq, i32 0, i32 %lt
+  ret i32 %r
+}
+
 ; negative test - wrong cmp constant
 
 define i1 @icmp_or_sub_2_eq_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
