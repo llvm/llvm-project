@@ -285,7 +285,11 @@ bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
         recordLength = openRecl;
       } else {
         recordLength.reset();
-        HitEndOnRead(handler);
+        // Most likely scenario is that trying to access a nonexistent record
+        // or a short read (corrupted file?).
+        // End of file on a direct access file returns error code:
+        //    IostatEndfileDirect
+        Endfile(handler);
       }
     } else {
       if (anyWriteSinceLastPositioning_ && access == Access::Sequential) {
