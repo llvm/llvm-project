@@ -7453,13 +7453,19 @@ static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
 /// false value of \p SI. If the true/false value of \p SI is defined by any
 /// select instructions in \p Selects, look through the defining select
 /// instruction until the true/false value is not defined in \p Selects.
+/// In unreachable code, the result can be a select in \p Selects.
 static Value *
 getTrueOrFalseValue(SelectInst *SI, bool isTrue,
                     const SmallPtrSet<const Instruction *, 2> &Selects) {
   Value *V = nullptr;
 
-  for (SelectInst *DefSI = SI; DefSI != nullptr && Selects.count(DefSI);
-       DefSI = dyn_cast<SelectInst>(V)) {
+  // In reachable code, the walk visits each select at most once. In
+  // unreachable code, the selects can use themselves or each other in a cycle,
+  // so stop after as many steps as there are selects.
+  size_t Steps = 0;
+  for (SelectInst *DefSI = SI;
+       DefSI != nullptr && Selects.count(DefSI) && Steps != Selects.size();
+       DefSI = dyn_cast<SelectInst>(V), ++Steps) {
     assert(DefSI->getCondition() == SI->getCondition() &&
            "The condition of DefSI does not match with SI");
     V = (isTrue ? DefSI->getTrueValue() : DefSI->getFalseValue());
