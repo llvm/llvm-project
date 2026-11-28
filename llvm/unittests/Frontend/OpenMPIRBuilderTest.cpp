@@ -8656,6 +8656,36 @@ TEST_F(OpenMPIRBuilderTest, OffloadEntriesInfoManager) {
   EXPECT_TRUE(InfoManager.hasDeviceGlobalVarEntryInfo("gvar"));
 }
 
+TEST_F(OpenMPIRBuilderTest, FinalizeFunctionDoesNotEmitOffloadMetadata) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  OMPBuilder.setConfig(
+      OpenMPIRBuilderConfig(false, false, false, false, false, false, false));
+
+  F->setName("target_region");
+  IRBuilder<> Builder(BB);
+  Builder.CreateRetVoid();
+  TargetRegionEntryInfo EntryInfo("parent", 1, 2, 4, 0);
+  OMPBuilder.registerTargetRegionFunction(EntryInfo, F, F->getName(),
+                                          "target_region_id");
+
+  // Finishing one function must leave offload metadata emission until the
+  // module is finalized.
+  OMPBuilder.finalize(F);
+  EXPECT_EQ(M->getNamedMetadata("omp_offload.info"), nullptr);
+  EXPECT_EQ(M->getNamedGlobal(".offloading.entry.target_region"), nullptr);
+
+  OMPBuilder.finalize();
+  NamedMDNode *OffloadMetadata = M->getNamedMetadata("omp_offload.info");
+  ASSERT_NE(OffloadMetadata, nullptr);
+  ASSERT_EQ(OffloadMetadata->getNumOperands(), 1u);
+  EXPECT_EQ(cast<MDString>(OffloadMetadata->getOperand(0)->getOperand(3))
+                ->getString(),
+            "parent");
+  EXPECT_NE(M->getNamedGlobal(".offloading.entry.target_region"), nullptr);
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
 // Tests both registerTargetGlobalVariable and getAddrOfDeclareTargetVar as they
 // call each other (recursively in some cases). The test case test these
 // functions by utilising them for host code generation for declare target
