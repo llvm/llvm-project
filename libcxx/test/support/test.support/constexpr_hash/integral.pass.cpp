@@ -53,6 +53,9 @@ constexpr bool test_with_hash() {
   test<char>();
   test<signed char>();
   test<unsigned char>();
+#ifndef TEST_HAS_NO_CHAR8_T
+  test<char8_t>();
+#endif
   test<char16_t>();
   test<char32_t>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
