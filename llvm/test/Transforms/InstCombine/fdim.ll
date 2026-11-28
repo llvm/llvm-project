@@ -35,7 +35,8 @@ define float @fdim_float1() {
 
 define double @fdim_poison1() {
 ; CHECK-LABEL: define double @fdim_poison1() {
-; CHECK-NEXT:    ret double poison
+; CHECK-NEXT:    [[DIM:%.*]] = call double @fdim(double poison, double 1.000000e+00)
+; CHECK-NEXT:    ret double [[DIM]]
 ;
   %dim = call double @fdim(double poison, double 1.0)
   ret double %dim
@@ -43,7 +44,8 @@ define double @fdim_poison1() {
 
 define double @fdim_poison2() {
 ; CHECK-LABEL: define double @fdim_poison2() {
-; CHECK-NEXT:    ret double poison
+; CHECK-NEXT:    [[DIM:%.*]] = call double @fdim(double 1.000000e+00, double poison)
+; CHECK-NEXT:    ret double [[DIM]]
 ;
   %dim = call double @fdim(double 1.0, double poison)
   ret double %dim
@@ -51,7 +53,8 @@ define double @fdim_poison2() {
 
 define double @fdim_poison3() {
 ; CHECK-LABEL: define double @fdim_poison3() {
-; CHECK-NEXT:    ret double poison
+; CHECK-NEXT:    [[DIM:%.*]] = call double @fdim(double poison, double poison)
+; CHECK-NEXT:    ret double [[DIM]]
 ;
   %dim = call double @fdim(double poison, double poison)
   ret double %dim
@@ -145,4 +148,4 @@ define double @fdim_snan2() {
 declare double @fdim(double, double) #0
 declare float @fdimf(float, float) #0
 
-attributes #0 = { memory(none) }
+attributes #0 = { memory(none) willreturn }
