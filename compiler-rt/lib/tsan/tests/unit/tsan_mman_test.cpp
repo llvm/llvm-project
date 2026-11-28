@@ -193,4 +193,20 @@ TEST(Mman, AlignedAlloc) {
   user_free(thr, 0, p);
 }
 
+TEST(Mman, UserFreeIgnoreInterceptors) {
+  ThreadState* thr = cur_thread();
+  uptr pc = 0;
+  void* p = user_alloc(thr, pc, 32);
+  ASSERT_NE(p, nullptr);
+  EXPECT_NE(ctx->metamap.GetBlock((uptr)p), nullptr);
+  {
+    // When interceptors are ignored (e.g. inside pthread_create/join/detach),
+    // user_free must release the block without locking the thread's TidSlot.
+    ScopedIgnoreInterceptors ignore;
+    Lock slot_lock(&thr->slot->mtx);
+    user_free(thr, pc, p);
+  }
+  EXPECT_EQ(ctx->metamap.GetBlock((uptr)p), nullptr);
+}
+
 }  // namespace __tsan
