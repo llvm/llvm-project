@@ -993,13 +993,15 @@ StmtResult Parser::ParseDefaultStatement(ParsedStmtContext StmtCtx) {
                                   SubStmt.get(), getCurScope());
 }
 
-StmtResult Parser::ParseCompoundStatement(bool isStmtExpr) {
+StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
+                                          bool *StmtExprHasResult) {
   return ParseCompoundStatement(isStmtExpr,
-                                Scope::DeclScope | Scope::CompoundStmtScope);
+                                Scope::DeclScope | Scope::CompoundStmtScope,
+                                StmtExprHasResult);
 }
 
-StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
-                                          unsigned ScopeFlags) {
+StmtResult Parser::ParseCompoundStatement(bool isStmtExpr, unsigned ScopeFlags,
+                                          bool *StmtExprHasResult) {
   assert(Tok.is(tok::l_brace) && "Not a compound stmt!");
 
   // Enter a scope to hold everything within the compound stmt.  Compound
@@ -1009,7 +1011,7 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
   // Parse the statements in the body.
   StmtResult R;
   StackHandler.runWithSufficientStackSpace(Tok.getLocation(), [&, this]() {
-    R = ParseCompoundStatementBody(isStmtExpr);
+    R = ParseCompoundStatementBody(isStmtExpr, StmtExprHasResult);
   });
   return R;
 }
@@ -1131,7 +1133,8 @@ StmtResult Parser::handleExprStmt(ExprResult E, ParsedStmtContext StmtCtx) {
   return Actions.ActOnExprStmt(E, /*DiscardedValue=*/!IsStmtExprResult);
 }
 
-StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
+StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr,
+                                              bool *StmtExprHasResult) {
   PrettyStackTraceLoc CrashInfo(PP.getSourceManager(),
                                 Tok.getLocation(),
                                 "in compound statement ('{}')");
@@ -1188,6 +1191,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
       (isStmtExpr ? ParsedStmtContext::InStmtExpr : ParsedStmtContext());
 
   bool LastIsError = false;
+  bool LastIsDropped = false;
   while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
          Tok.isNot(tok::eof)) {
     if (Tok.is(tok::annot_pragma_unused)) {
@@ -1198,6 +1202,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
     if (ConsumeNullStmt(Stmts))
       continue;
 
+    DiagnosticErrorTrap Trap(Diags);
     StmtResult R;
     if (Tok.isNot(tok::kw___extension__)) {
       R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
@@ -1244,7 +1249,8 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
 
     if (R.isUsable())
       Stmts.push_back(R.get());
-    LastIsError = R.isInvalid();
+    LastIsError = R.isInvalid() && Trap.hasUnrecoverableErrorOccurred();
+    LastIsDropped = R.isInvalid() && !LastIsError;
   }
   // StmtExpr needs to do copy initialization for last statement.
   // If last statement is invalid, the last statement in `Stmts` will be
@@ -1252,6 +1258,8 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   // invalid to prevent subsequent errors.
   if (isStmtExpr && LastIsError && !Stmts.empty())
     return StmtError();
+  if (LastIsDropped && StmtExprHasResult)
+    *StmtExprHasResult = false;
 
   // Warn the user that using option `-ffp-eval-method=source` on a
   // 32-bit target and feature `sse` disabled, or using
