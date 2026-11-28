@@ -578,6 +578,346 @@ template <typename T> T var_temp();
   }
 }
 
+TEST_F(AddUsingTest, ReplaceAllOccurrencesInScope) {
+  FileName = "test.cpp";
+  ExtraFiles["test.hpp"] = R"cpp(
+namespace one {
+namespace two {
+void ff();
+void ff(int);
+struct SomeStruct {
+  static void mm();
+};
+}
+template <typename T> struct vec {};
+template <typename T> void func_temp();
+})cpp";
+
+  // Replaces all occurrences across functions, return types, and parameters.
+  EXPECT_EQ(apply(R"cpp(
+#include "test.hpp"
+
+one::two::SomeStruct make(one::two::SomeStruct s) {
+  one::two::SomeStruct x = s;
+  return x;
+}
+
+void fun() {
+  one::two::f^f();
+  one::two::ff(42);
+}
+
+void other() {
+  one::two::ff();
+}
+)cpp"),
+            R"cpp(
+#include "test.hpp"
+
+using one::two::ff;
+
+one::two::SomeStruct make(one::two::SomeStruct s) {
+  one::two::SomeStruct x = s;
+  return x;
+}
+
+void fun() {
+  ff();
+  ff(42);
+}
+
+void other() {
+  ff();
+}
+)cpp");
+
+  EXPECT_EQ(apply(R"cpp(
+#include "test.hpp"
+
+one::two::SomeStruct make(one::two::SomeStruct s) {
+  one::t^wo::SomeStruct x = s;
+  one::two::SomeStruct::mm();
+  return x;
+}
+)cpp"),
+            R"cpp(
+#include "test.hpp"
+
+using one::two::SomeStruct;
+
+SomeStruct make(SomeStruct s) {
+  SomeStruct x = s;
+  one::two::SomeStruct::mm();
+  return x;
+}
+)cpp");
+
+  // Templates with varying template arguments.
+  EXPECT_EQ(apply(R"cpp(
+#include "test.hpp"
+
+void fun() {
+  one::v^ec<int> a;
+  one::vec<double> b;
+}
+)cpp"),
+            R"cpp(
+#include "test.hpp"
+
+using one::vec;
+
+void fun() {
+  vec<int> a;
+  vec<double> b;
+}
+)cpp");
+
+  EXPECT_EQ(apply(R"cpp(
+#include "test.hpp"
+
+void fun() {
+  one::f^unc_temp<int>();
+  one::func_temp<double>();
+}
+)cpp"),
+            R"cpp(
+#include "test.hpp"
+
+using one::func_temp;
+
+void fun() {
+  func_temp<int>();
+  func_temp<double>();
+}
+)cpp");
+
+  // Global qualifier and nested namespace spellings targeting the same symbol.
+  EXPECT_EQ(apply(R"cpp(
+#include "test.hpp"
+
+void fun() {
+  ::one::two::f^f();
+  one::two::ff();
+}
+)cpp"),
+            R"cpp(
+#include "test.hpp"
+
+using ::one::two::ff;
+
+void fun() {
+  ff();
+  ff();
+}
+)cpp");
+
+  // Nested macro arguments are rewritten; macro-body expansions are preserved.
+  EXPECT_EQ(apply(R"cpp(
+#include "test.hpp"
+#define ID(X) X
+#define CALL(name) name()
+#define CALL_FF one::two::ff()
+
+void fun() {
+  CALL(ID(one::two::f^f));
+  CALL_FF;
+  one::two::ff();
+}
+)cpp"),
+            R"cpp(
+#include "test.hpp"
+#define ID(X) X
+#define CALL(name) name()
+#define CALL_FF one::two::ff()
+
+using one::two::ff;
+
+void fun() {
+  CALL(ID(ff));
+  CALL_FF;
+  ff();
+}
+)cpp");
+}
+
+TEST_F(AddUsingTest, RespectsScopeOrderAndShadowing) {
+  FileName = "test.cpp";
+  ExtraFiles["test.hpp"] = R"cpp(
+namespace one {
+namespace two {
+void ff();
+struct cc {};
+}
+}
+)cpp";
+
+  // Only rewrites inside the namespace where `using` is inserted, not in
+  // sibling namespaces or before an anchored using-declaration.
+  EXPECT_EQ(apply(R"cpp(
+#include "test.hpp"
+
+namespace a {
+void f1() {
+  one::two::f^f();
+  one::two::ff();
+}
+}
+
+namespace b {
+using one::two::ff;
+void f2() {
+  one::two::ff();
+}
+}
+)cpp"),
+            R"cpp(
+#include "test.hpp"
+
+namespace a {using one::two::ff;
+
+void f1() {
+  ff();
+  ff();
+}
+}
+
+namespace b {
+using one::two::ff;
+void f2() {
+  one::two::ff();
+}
+}
+)cpp");
+
+  // Existing using-declaration is preserved while redundant qualifiers after it
+  // are removed; references before the insertion point stay qualified.
+  EXPECT_EQ(apply(R"cpp(
+#include "test.hpp"
+
+void before() {
+  one::two::ff();
+}
+
+using one::two::cc;
+
+void after() {
+  one::two::f^f();
+  one::two::ff();
+}
+)cpp"),
+            R"cpp(
+#include "test.hpp"
+
+void before() {
+  one::two::ff();
+}
+
+using one::two::ff;using one::two::cc;
+
+void after() {
+  ff();
+  ff();
+}
+)cpp");
+
+  // Block-scoped using only rewrites within that block from the anchor onward.
+  EXPECT_EQ(apply(R"cpp(
+#include "test.hpp"
+
+void fun() {
+  {
+    using one::two::cc;
+    one::two::f^f();
+    one::two::ff();
+  }
+  one::two::ff();
+}
+)cpp"),
+            R"cpp(
+#include "test.hpp"
+
+void fun() {
+  {
+    using one::two::ff;using one::two::cc;
+    ff();
+    ff();
+  }
+  one::two::ff();
+}
+)cpp");
+
+  // Shadowed occurrences, friend declarations, and out-of-line definitions keep
+  // their qualifiers.
+  EXPECT_EQ(apply(R"cpp(
+namespace xx {
+void yy();
+}
+
+void trigger() {
+  x^x::yy();
+}
+
+void shadowedByParam(int yy) {
+  xx::yy();
+}
+
+void shadowedByLocal() {
+  xx::yy();
+  int yy = 0;
+  (void)yy;
+  xx::yy();
+}
+
+struct ShadowedByMember {
+  void method() { xx::yy(); }
+  void yy();
+};
+
+class Befriender {
+  friend void xx::yy();
+};
+
+void xx::yy() {
+  xx::yy();
+}
+)cpp"),
+            R"cpp(
+namespace xx {
+void yy();
+}
+
+using xx::yy;
+
+void trigger() {
+  yy();
+}
+
+void shadowedByParam(int yy) {
+  xx::yy();
+}
+
+void shadowedByLocal() {
+  yy();
+  int yy = 0;
+  (void)yy;
+  xx::yy();
+}
+
+struct ShadowedByMember {
+  void method() { xx::yy(); }
+  void yy();
+};
+
+class Befriender {
+  friend void xx::yy();
+};
+
+void xx::yy() {
+  yy();
+}
+)cpp");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
