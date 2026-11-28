@@ -50,14 +50,18 @@ define <4 x i8> @test_bitextract_v4i8_const(<4 x b32> %src) {
 ; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 8, v3
+; GFX12-FAKE16-NEXT:    v_lshrrev_b16 v0, 8, v0
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b16 v2, 8, v2
-; GFX12-FAKE16-NEXT:    v_perm_b32 v0, v0, v1, 0xc0c0105
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX12-FAKE16-NEXT:    v_lshlrev_b16 v1, 8, v1
 ; GFX12-FAKE16-NEXT:    v_lshlrev_b16 v3, 8, v3
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX12-FAKE16-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-FAKE16-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX12-FAKE16-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
 ; GFX12-FAKE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -131,14 +135,12 @@ define <4 x i8> @test_bitextract_v4i8_var(<4 x b32> %src, <4 x i32> %off) {
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX12-FAKE16-NEXT:    v_or_b32_e32 v2, v2, v3
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX12-FAKE16-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
 ; GFX12-FAKE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-FAKE16-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
-; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v3
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 24, v3
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %result = bitextract <4 x i8>, <4 x b32> %src, <4 x i32> %off
   ret <4 x i8> %result
