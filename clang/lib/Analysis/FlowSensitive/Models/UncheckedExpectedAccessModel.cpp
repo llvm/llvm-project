@@ -120,6 +120,71 @@ auto expectedUnexpectedEqualityCall() {
   return expectedComparisonCall(hasUnexpectedType());
 }
 
+// Copy and move constructors are modeled by the framework, which copies the
+// "has_value" property of the source.
+auto expectedConstructor() {
+  return cxxConstructExpr(hasDeclaration(cxxConstructorDecl(
+      ofClass(expectedClass()),
+      unless(anyOf(isCopyConstructor(), isMoveConstructor())))));
+}
+
+// `expected(unexpect_t, ...)`, `expected(const unexpected<G> &)` and
+// `expected(unexpected<G> &&)`.
+auto expectedErrorConstructor() {
+  return cxxConstructExpr(
+      expectedConstructor(),
+      hasArgument(0, anyOf(hasType(namedDecl(hasAnyName("std::unexpect_t",
+                                                        "tl::unexpect_t"))),
+                           hasUnexpectedType())));
+}
+
+// Matches `template <class U, class G> expected(const expected<U, G> &)` and
+// `template <class U, class G> expected(expected<U, G> &&)`. The argument type
+// alone is not enough to recognize them: `expected(U &&)` also accepts an
+// `expected` when `T` is constructible from it, e.g. for nested `expected`s.
+AST_MATCHER(CXXConstructorDecl, expectedConvertingConstructorDecl) {
+  const FunctionTemplateDecl *Template = Node.getPrimaryTemplate();
+  if (Template == nullptr)
+    return false;
+  const FunctionDecl *Pattern = Template->getTemplatedDecl();
+  if (Pattern->getNumParams() != 1)
+    return false;
+  const auto *ParamType = Pattern->getParamDecl(0)
+                              ->getType()
+                              .getNonReferenceType()
+                              ->getAs<TemplateSpecializationType>();
+  if (ParamType == nullptr)
+    return false;
+  const auto *ParamTemplate = dyn_cast_or_null<ClassTemplateDecl>(
+      ParamType->getTemplateName().getAsTemplateDecl());
+  return ParamTemplate != nullptr &&
+         isExpectedClass(*ParamTemplate->getTemplatedDecl());
+}
+
+auto expectedConvertingConstructor() {
+  return cxxConstructExpr(
+      expectedConstructor(),
+      hasDeclaration(cxxConstructorDecl(expectedConvertingConstructorDecl())));
+}
+
+// Copy and move assignments are modeled by the framework, which copies the
+// "has_value" property of the source.
+auto expectedAssignment() {
+  return cxxOperatorCallExpr(
+      hasOverloadedOperatorName("="), argumentCountIs(2),
+      callee(cxxMethodDecl(ofClass(expectedClass()),
+                           unless(anyOf(isCopyAssignmentOperator(),
+                                        isMoveAssignmentOperator())))));
+}
+
+// `operator=(const unexpected<G> &)` and `operator=(unexpected<G> &&)`.
+auto expectedErrorAssignment() {
+  return cxxOperatorCallExpr(expectedAssignment(),
+                             hasArgument(1, hasUnexpectedType()));
+}
+
+auto isCallReturningExpected() { return callExpr(hasExpectedType()); }
+
 /// Ensures that `E` is mapped to a `BoolValue` and returns its formula.
 const Formula &forceBoolValue(Environment &Env, const Expr &E) {
   auto *Value = Env.get<BoolValue>(E);
@@ -170,12 +235,31 @@ BoolValue *getHasValue(Environment &Env, RecordStorageLocation *ExpectedLoc) {
   return HasValueVal;
 }
 
+/// Sets `HasValueVal` as the symbolic value that represents the "has_value"
+/// property of the expected at `ExpectedLoc`. Does nothing if `ExpectedLoc` is
+/// null or is not the location of a supported expected object (e.g. of a
+/// derived class object).
+void setHasValue(RecordStorageLocation *ExpectedLoc, BoolValue &HasValueVal,
+                 Environment &Env) {
+  if (ExpectedLoc == nullptr || !isExpectedType(ExpectedLoc->getType()))
+    return;
+  Env.setValue(locForHasValue(*ExpectedLoc), HasValueVal);
+}
+
 void transferHasValueCall(const CXXMemberCallExpr *E,
                           const MatchFinder::MatchResult &,
                           LatticeTransferState &State) {
   if (BoolValue *HasValueVal =
           getHasValue(State.Env, getImplicitObjectLocation(*E, State.Env)))
     State.Env.setValue(*E, *HasValueVal);
+}
+
+void transferEmplaceCall(const CXXMemberCallExpr *E,
+                         const MatchFinder::MatchResult &,
+                         LatticeTransferState &State) {
+  // Every `emplace` overload leaves the expected holding a value.
+  setHasValue(getImplicitObjectLocation(*E, State.Env),
+              State.Env.getBoolLiteralValue(true), State.Env);
 }
 
 void transferExpectedEqualityCall(const CXXOperatorCallExpr *E,
@@ -233,13 +317,74 @@ void transferExpectedUnexpectedEqualityCall(const CXXOperatorCallExpr *E,
                            A.makeNot(HasValueVal->formula())));
 }
 
-// FIXME: Model the constructors, assignments, `emplace` and `swap`.
+void constructExpected(const CXXConstructExpr &E, BoolValue &HasValueVal,
+                       Environment &Env) {
+  setHasValue(&Env.getResultObjectLocation(E), HasValueVal, Env);
+}
+
+void transferValueConstructor(const CXXConstructExpr *E,
+                              const MatchFinder::MatchResult &,
+                              LatticeTransferState &State) {
+  constructExpected(*E, State.Env.getBoolLiteralValue(true), State.Env);
+}
+
+void transferErrorConstructor(const CXXConstructExpr *E,
+                              const MatchFinder::MatchResult &,
+                              LatticeTransferState &State) {
+  constructExpected(*E, State.Env.getBoolLiteralValue(false), State.Env);
+}
+
+void transferConvertingConstructor(const CXXConstructExpr *E,
+                                   const MatchFinder::MatchResult &,
+                                   LatticeTransferState &State) {
+  // The new expected holds a value if and only if the source does.
+  if (BoolValue *HasValueVal = getHasValue(
+          State.Env, State.Env.get<RecordStorageLocation>(*E->getArg(0))))
+    constructExpected(*E, *HasValueVal, State.Env);
+}
+
+void assignExpected(const CXXOperatorCallExpr &E, BoolValue &HasValueVal,
+                    Environment &Env) {
+  auto *Loc = Env.get<RecordStorageLocation>(*E.getArg(0));
+  if (Loc == nullptr)
+    return;
+  setHasValue(Loc, HasValueVal, Env);
+  // The result of the assignment refers to the assigned object.
+  Env.setStorageLocation(E, *Loc);
+}
+
+void transferValueAssignment(const CXXOperatorCallExpr *E,
+                             const MatchFinder::MatchResult &,
+                             LatticeTransferState &State) {
+  assignExpected(*E, State.Env.getBoolLiteralValue(true), State.Env);
+}
+
+void transferErrorAssignment(const CXXOperatorCallExpr *E,
+                             const MatchFinder::MatchResult &,
+                             LatticeTransferState &State) {
+  assignExpected(*E, State.Env.getBoolLiteralValue(false), State.Env);
+}
+
+void transferCallReturningExpected(const CallExpr *E,
+                                   const MatchFinder::MatchResult &,
+                                   LatticeTransferState &State) {
+  // The framework initializes "has_value" only for calls with a direct callee.
+  RecordStorageLocation *Loc = E->isPRValue()
+                                   ? &State.Env.getResultObjectLocation(*E)
+                                   : State.Env.get<RecordStorageLocation>(*E);
+  getHasValue(State.Env, Loc);
+}
+
+// FIXME: Model `swap`.
 auto buildTransferMatchSwitch() {
   return CFGMatchSwitchBuilder<LatticeTransferState>()
       // expected::has_value, expected::operator bool
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           expectedMemberCall(hasAnyName("has_value", "operator bool")),
           transferHasValueCall)
+      // expected::emplace
+      .CaseOfCFGStmt<CXXMemberCallExpr>(expectedMemberCall(hasName("emplace")),
+                                        transferEmplaceCall)
       // operator==, operator!= between two expecteds
       .CaseOfCFGStmt<CXXOperatorCallExpr>(expectedEqualityCall(),
                                           transferExpectedEqualityCall)
@@ -250,6 +395,23 @@ auto buildTransferMatchSwitch() {
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
           expectedUnexpectedEqualityCall(),
           transferExpectedUnexpectedEqualityCall)
+      // Constructors. The order matters: the last case matches every
+      // constructor that is not matched by the ones before it.
+      .CaseOfCFGStmt<CXXConstructExpr>(expectedErrorConstructor(),
+                                       transferErrorConstructor)
+      .CaseOfCFGStmt<CXXConstructExpr>(expectedConvertingConstructor(),
+                                       transferConvertingConstructor)
+      .CaseOfCFGStmt<CXXConstructExpr>(expectedConstructor(),
+                                       transferValueConstructor)
+      // Assignments. The order matters: the last case matches every
+      // assignment that is not matched by the one before it.
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(expectedErrorAssignment(),
+                                          transferErrorAssignment)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(expectedAssignment(),
+                                          transferValueAssignment)
+      // other cases of returning expected
+      .CaseOfCFGStmt<CallExpr>(isCallReturningExpected(),
+                               transferCallReturningExpected)
       .Build();
 }
 
