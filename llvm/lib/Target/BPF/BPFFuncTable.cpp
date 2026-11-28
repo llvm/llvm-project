@@ -27,8 +27,8 @@
 // 0 is not an index, so that null stays null. When there is one function of
 // the type the call is direct. When there is none it is a trap.
 //
-// A function that is passed to a helper or to a kfunc stays a function, also
-// when it is one of several: cond ? cb1 : cb2.
+// A function that is passed to a helper, to a kfunc or to inline asm stays
+// a function, also when it is one of several: cond ? cb1 : cb2.
 //
 // All functions whose address is taken have to be in the module and static.
 //
@@ -40,6 +40,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -49,6 +50,8 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "bpf-func-table"
+
+static constexpr StringLiteral TableName = "__bpf_func_table";
 
 namespace {
 
@@ -81,6 +84,10 @@ static bool isCallbackUse(const Use &U, SmallPtrSetImpl<const User *> &Seen) {
   const auto *CB = dyn_cast<CallBase>(Usr);
   if (!CB || CB->isCallee(&U))
     return false;
+  // 'call %[f]' means the function. Asm without text is a barrier for
+  // the compiler: the value goes on as it is.
+  if (const auto *Asm = dyn_cast<InlineAsm>(CB->getCalledOperand()))
+    return !Asm->getAsmString().empty();
   const Value *Callee = CB->getCalledOperand()->stripPointerCasts();
   const auto *F = dyn_cast<Function>(Callee);
   return F ? F->isDeclaration() && !F->isIntrinsic() : isa<Constant>(Callee);
@@ -126,6 +133,11 @@ static bool runFuncTable(Module &M) {
   SmallVector<GlobalValue *, 4> Used, CompilerUsed;
   SmallVector<Constant *, 16> Table;
 
+  // The pass ran already, e.g. in opt. A table of indices into the table would
+  // work, at the price of a second load per call.
+  if (M.getNamedGlobal(TableName))
+    return false;
+
   // They hold functions, not their addresses.
   if (GlobalVariable *GV = collectUsedGlobalVariables(M, Used, false))
     GV->eraseFromParent();
@@ -134,6 +146,8 @@ static bool runFuncTable(Module &M) {
   bool Changed = !Used.empty() || !CompilerUsed.empty();
 
   for (Function &F : M) {
+    // What the two variables were initialized with.
+    F.removeDeadConstantUsers();
     if (isInText(F) && any_of(F.uses(), isAddressUse)) {
       // callx takes static functions only. An address that is left as it is
       // would be an index out of range: a call of another function.
@@ -187,8 +201,7 @@ static bool runFuncTable(Module &M) {
     }
     if (!GV)
       GV = new GlobalVariable(M, TableTy, true, GlobalValue::InternalLinkage,
-                              ConstantArray::get(TableTy, Table),
-                              "__bpf_func_table");
+                              ConstantArray::get(TableTy, Table), TableName);
 
     IRBuilder<> B(CB);
     B.disableGEPCanonicalization();

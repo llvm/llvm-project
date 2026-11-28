@@ -28,6 +28,8 @@ public:
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
+  void finalizeLowering(MachineFunction &MF) const override;
+
   // This method decides whether folding a constant offset
   // with the given GlobalAddress is legal.
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
