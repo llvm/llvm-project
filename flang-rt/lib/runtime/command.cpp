@@ -249,17 +249,24 @@ std::int32_t RTNAME(GetCwd)(
   Terminator terminator{sourceFile, line};
 
   RUNTIME_CHECK(terminator, IsValidCharDescriptor(&cwd));
+  // Fill the output with spaces. Upon success, CopyCharsToDescriptor()
+  // will overwrite part of the string with the result, so we'll end up
+  // with a padded string. If we fail to obtain the current working directory
+  // name, we return the string of all spaces, which is the original
+  // gfortran behavior.
+  FillWithSpaces(cwd);
 
   char *buf{(char *)AllocateMemoryOrCrash(terminator, PATH_MAX)};
+  std::int32_t status{StatMissingCurrentWorkDirectory};
 
-  if (!getcwd(buf, PATH_MAX)) {
-    return StatMissingCurrentWorkDirectory;
+  if (getcwd(buf, PATH_MAX)) {
+    std::int64_t strLen{StringLength(buf)};
+    status = CopyCharsToDescriptor(cwd, buf, strLen);
+    // Note: if the result string is too short, then we'll return partial
+    // current working directory name with "too short" error status.
   }
 
-  std::int64_t strLen{StringLength(buf)};
-  std::int32_t status{CopyCharsToDescriptor(cwd, buf, strLen)};
-
-  std::free(buf);
+  FreeMemory(buf);
   return status;
 }
 
