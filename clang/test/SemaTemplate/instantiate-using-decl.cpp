@@ -149,9 +149,6 @@ template class Derived<int>; // expected-note {{requested here}}
 // template. As a result, we get slightly different behavior.
 struct UnresolvedTemplateNames {
   template <typename> void maybe_static();
-#if __cplusplus < 201103L
-  // expected-warning@+2 {{default template arguments for a function template are a C++11 extension}}
-#endif
   template <typename T, typename T::type = 0> static void maybe_static();
 
   template <typename T>

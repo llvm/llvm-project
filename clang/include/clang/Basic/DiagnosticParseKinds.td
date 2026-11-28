@@ -31,15 +31,14 @@ defm generic_with_type_arg : C2yCompat<
 
 // C++11 compatibility with C++98.
 defm cxx_enum_fixed_underlying_type : CXX11Compat<
-  "enumeration types with a fixed underlying type are",
-  /*ext_warn=*/false>;
+  "enumeration types with a fixed underlying type are">;
 defm for_range : CXX11Compat<"range-based for loop is">;
 defm scoped_enum : CXX11Compat<"scoped enumerations are">;
 defm rvalue_reference : CXX11Compat<"rvalue references are">;
 defm ref_qualifier : CXX11Compat<"reference qualifiers on functions are">;
 defm generalized_initializer_lists : CXX11Compat<
-  "generalized initializer lists are">;
-defm cxx11_attributes : CXX11Compat<"[[]] attributes are", /*ext_warn*/false>;
+  "generalized initializer lists are", /*ext_warn*/true>;
+defm cxx11_attributes : CXX11Compat<"[[]] attributes are">;
 defm defaulted_deleted_function : CXX11Compat<
   "%select{defaulted|deleted}0 function definitions are">;
 defm nonstatic_member_init : CXX11Compat<
@@ -47,9 +46,9 @@ defm nonstatic_member_init : CXX11Compat<
 defm alias_declaration : CXX11Compat<"alias declarations are">;
 defm override_control_keyword : CXX11Compat<"'%0' keyword is">;
 defm inline_namespace : CXX11Compat<"inline namespaces are">;
-defm extern_template : CXX11Compat<"extern templates are", /*ext_warn*/false>;
+defm extern_template : CXX11Compat<"extern templates are">;
 defm cxx_enumerator_list_comma : CXX11Compat<
-  "commas at the end of enumerator lists are", /*ext_warn*/false>;
+  "commas at the end of enumerator lists are">;
 
 // C++14 compatibility with C++11 and earlier.
 defm decltype_auto_type_specifier : CXX14Compat<

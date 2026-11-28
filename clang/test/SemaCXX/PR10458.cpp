@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++98
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++98 -Wc++11-extensions
 
 void f() {
   int arr[] = { 1, 2, 3 };

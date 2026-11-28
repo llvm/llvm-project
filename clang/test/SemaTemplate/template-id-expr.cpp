@@ -181,9 +181,6 @@ class E {
   template<> class D<C>;  // expected-error {{cannot specialize a template template parameter}}
   friend class D<C>; // expected-error {{alias template 'D' cannot be referenced with the 'class' specifier}}
 };
-#if __cplusplus <= 199711L
-// expected-warning@+2 {{extension}}
-#endif
 template<typename T> using D = int; // expected-note {{declared here}}
 E<D> ed; // expected-note {{instantiation of}}
 

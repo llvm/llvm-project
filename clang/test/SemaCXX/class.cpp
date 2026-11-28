@@ -43,9 +43,6 @@ public:
   enum E1 { en1, en2 };
 
   int i = 0;
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{default member initializer for non-static data member is a C++11 extension}}
-#endif
   static int si = 0; // expected-error {{non-const static data member must be initialized out of line}}
   static const NestedC ci = 0; // expected-error {{static data member of type 'const NestedC' must be initialized out of line}}
   static const int nci = vs; // expected-error {{in-class initializer for static data member is not a constant expression}} \
@@ -170,7 +167,7 @@ namespace PR7153 {
   public:
     struct A { } mutable *member;
   };
- 
+
   void f(const EnclosingClass &ec) {
     ec.member = 0;
   }
@@ -223,6 +220,6 @@ void f() {
 }
 }
 
-struct PR9989 { 
-  static int const PR9989_Member = sizeof PR9989_Member; 
+struct PR9989 {
+  static int const PR9989_Member = sizeof PR9989_Member;
 };

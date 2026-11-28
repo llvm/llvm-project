@@ -1,11 +1,27 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat -verify=expected,not-cpp20 %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++14 -Wc++98-compat -verify=expected,not-cpp20 %s -DCXX14COMPAT
-// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-compat -verify=expected,not-cpp20 %s -DCXX14COMPAT -DCXX17COMPAT
-// RUN: %clang_cc1 -fsyntax-only -std=c++20 -Wc++98-compat -verify=expected,cpp20 %s -DCXX14COMPAT -DCXX17COMPAT
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat -Wno-c++14-extensions                   -verify=expected,compat,until-cxx14 %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++14 -Wc++98-compat -Wno-pre-c++14-compat-pedantic          -verify=expected,compat,until-cxx14 %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-compat -Wno-pre-c++14-compat-pedantic          -verify=expected,compat %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -Wc++98-compat -Wno-pre-c++14-compat-pedantic          -verify=expected,compat %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -Wc++98-compat -Wno-pre-c++14-compat-pedantic          -verify=expected,compat %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++26 -Wc++98-compat -Wno-pre-c++14-compat-pedantic          -verify=expected,compat %s
+
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat-pedantic -Wno-c++14-extensions          -verify=expected,compat,pedantic,pedantic-until-cxx14,pedantic-cxx11,until-cxx14 %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++14 -Wc++98-compat-pedantic -Wno-pre-c++14-compat-pedantic -verify=expected,compat,pedantic,pedantic-until-cxx14,until-cxx14 %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-compat-pedantic -Wno-pre-c++14-compat-pedantic -verify=expected,compat,pedantic %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -Wc++98-compat-pedantic -Wno-pre-c++14-compat-pedantic -verify=expected,compat,pedantic %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -Wc++98-compat-pedantic -Wno-pre-c++14-compat-pedantic -verify=expected,compat,pedantic %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++26 -Wc++98-compat-pedantic -Wno-pre-c++14-compat-pedantic -verify=expected,compat,pedantic %s
+
+// Make sure that non-pedantic warnings are actually errors in C++03
+// RUN: %clang_cc1 -fsyntax-only -std=c++03                                                        -verify=expected,cxx03 %s
+
+// FIXME: This test shows a few bugs:
+// - Most places matching the regex 'compat-warning[^\n]*\n^((?!cxx03-error)[^\n])*\n': The warning should be pedantic
+// - The 'pedantic-until-cxx14' 'until-cxx14' verify flags: The warning should be in all standards modes
 
 namespace std {
   struct type_info;
-  using size_t = decltype(sizeof(0)); // expected-warning {{decltype}} expected-warning {{alias}}
+  using size_t = __decltype(sizeof(0)); // pedantic-warning {{alias}}
   template<typename T> struct initializer_list {
     initializer_list(const T*, size_t);
     const T *p;
@@ -17,49 +33,61 @@ namespace std {
 
 void test_other_auto_spellings() {
   __auto_type x = 0; // Ok
-  decltype(auto) y = 0; // expected-warning {{'decltype' type specifier is incompatible with C++98}}
-#ifndef CXX14COMPAT
-  // expected-warning@-2 {{'decltype(auto)' type specifier is a C++14 extension}}
-#else
-  // expected-warning@-4 {{'decltype(auto)' type specifier is incompatible with C++ standards before C++14}}
-#endif
+  decltype(auto) y = 0; // compat-warning {{'decltype' type specifier is incompatible with C++98}} \
+                        // cxx03-error 2 {{expected}} cxx03-error {{use of undeclared identifier}} \
+                        // cxx03-warning {{'auto' type specifier is a C++11 extension}}
 }
 
-template<typename ...T>  // expected-warning {{variadic templates are incompatible with C++98}}
+template<typename ...T>  // pedantic-warning {{variadic templates are incompatible with C++98}}
 class Variadic1 {};
 
-template<template<typename> class ...T>  // expected-warning {{variadic templates are incompatible with C++98}}
+template<template<typename> class ...T>  // pedantic-warning {{variadic templates are incompatible with C++98}}
 class Variadic2 {};
 
-template<int ...I>  // expected-warning {{variadic templates are incompatible with C++98}}
+template<int ...I>  // pedantic-warning {{variadic templates are incompatible with C++98}}
 class Variadic3 {};
 
-alignas(8) int with_alignas; // expected-warning {{'alignas' is incompatible with C++98}}
+alignas(8) int with_alignas; // compat-warning {{'alignas' is incompatible with C++98}} \
+                             // cxx03-error {{a type specifier}} cxx03-error {{expected}}
 
 void Literals() {
-  (void)u8"str"; // expected-warning {{unicode literals are incompatible with C++98}}
-  (void)u"str"; // expected-warning {{unicode literals are incompatible with C++98}}
-  (void)U"str"; // expected-warning {{unicode literals are incompatible with C++98}}
-  (void)u'x'; // expected-warning {{unicode literals are incompatible with C++98}}
-  (void)U'x'; // expected-warning {{unicode literals are incompatible with C++98}}
+  (void)u8"str"; // compat-warning {{unicode literals are incompatible with C++98}} \
+                 // cxx03-error {{undeclared identifier}}
+  (void)u"str";  // compat-warning {{unicode literals are incompatible with C++98}} \
+                 // cxx03-error {{undeclared identifier}}
+  (void)U"str";  // compat-warning {{unicode literals are incompatible with C++98}} \
+                 // cxx03-error {{undeclared identifier}}
+  (void)u'x';    // compat-warning {{unicode literals are incompatible with C++98}} \
+                 // cxx03-error {{undeclared identifier}}
+  (void)U'x';    // compat-warning {{unicode literals are incompatible with C++98}} \
+                 // cxx03-error {{undeclared identifier}}
 
-  (void)u8R"X(str)X"; // expected-warning {{raw string literals are incompatible with C++98}}
-  (void)uR"X(str)X"; // expected-warning {{raw string literals are incompatible with C++98}}
-  (void)UR"X(str)X"; // expected-warning {{raw string literals are incompatible with C++98}}
-  (void)R"X(str)X"; // expected-warning {{raw string literals are incompatible with C++98}}
-  (void)LR"X(str)X"; // expected-warning {{raw string literals are incompatible with C++98}}
+  (void)u8R"X(str)X"; // compat-warning {{raw string literals are incompatible with C++98}} \
+                      // cxx03-error {{undeclared identifier}}
+  (void)uR"X(str)X";  // compat-warning {{raw string literals are incompatible with C++98}} \
+                      // cxx03-error {{undeclared identifier}}
+  (void)UR"X(str)X";  // compat-warning {{raw string literals are incompatible with C++98}} \
+                      // cxx03-error {{undeclared identifier}}
+  (void)R"X(str)X";   // compat-warning {{raw string literals are incompatible with C++98}} \
+                      // cxx03-error {{undeclared identifier}}
+  (void)LR"X(str)X";  // compat-warning {{raw string literals are incompatible with C++98}} \
+                      // cxx03-error {{undeclared identifier}}
 }
 
 template<typename T> struct S {};
 namespace TemplateParsing {
-  S<::S<void> > s; // expected-warning {{'<::' is treated as digraph '<:' (aka '[') followed by ':' in C++98}}
-  S< ::S<void>> t; // expected-warning {{consecutive right angle brackets are incompatible with C++98 (use '> >')}}
+  S<::S<void> > s; // compat-warning {{'<::' is treated as digraph '<:' (aka '[') followed by ':' in C++98}} \
+                   // cxx03-error {{found '<::' after a template name which forms the digraph '<:' (aka '[') and a ':', did you mean '< ::'?}}
+  S< ::S<void>> t; // compat-warning {{consecutive right angle brackets are incompatible with C++98 (use '> >')}} \
+                   // cxx03-error {{a space is required between consecutive right angle brackets (use '> >')}}
 }
 
 void Lambda() {
-  []{}(); // expected-warning {{lambda expressions are incompatible with C++98}}
+  []{}(); // compat-warning {{lambda expressions are incompatible with C++98}} \
+          // cxx03-warning {{lambdas are a C++11 extension}}
   // Don't warn about implicit "-> auto" here.
-  [](){}(); // expected-warning {{lambda expressions are incompatible with C++98}}
+  [](){}(); // compat-warning {{lambda expressions are incompatible with C++98}} \
+            // cxx03-warning {{lambdas are a C++11 extension}}
 }
 
 struct Ctor {
@@ -70,136 +98,184 @@ struct InitListCtor {
   InitListCtor(std::initializer_list<bool>);
 };
 
-int InitList(int i = {}) { // expected-warning {{generalized initializer lists are incompatible with C++98}} \
-                           // expected-warning {{scalar initialized from empty initializer list is incompatible with C++98}}
-  (void)new int {}; // expected-warning {{generalized initializer lists are incompatible with C++98}} \
-                    // expected-warning {{scalar initialized from empty initializer list is incompatible with C++98}}
-  (void)int{}; // expected-warning {{generalized initializer lists are incompatible with C++98}} \
-               // expected-warning {{scalar initialized from empty initializer list is incompatible with C++98}}
-  int x { 0 }; // expected-warning {{generalized initializer lists are incompatible with C++98}}
+int InitList(int i = {}) { // compat-warning {{generalized initializer lists are incompatible with C++98}} \
+                           // compat-warning {{scalar initialized from empty initializer list is incompatible with C++98}} \
+                           // cxx03-error {{expected expression}}
+  (void)new int {}; // compat-warning {{generalized initializer lists are incompatible with C++98}} \
+                    // compat-warning {{scalar initialized from empty initializer list is incompatible with C++98}} \
+                    // cxx03-error {{expected}}
+  (void)int{}; // compat-warning {{generalized initializer lists are incompatible with C++98}} \
+               // compat-warning {{scalar initialized from empty initializer list is incompatible with C++98}} \
+               // cxx03-error {{expected}}
+  int x { 0 }; // compat-warning {{generalized initializer lists are incompatible with C++98}} \
+               // cxx03-error {{expected}}
   S<int> s = {}; // ok, aggregate
-  s = {}; // expected-warning {{generalized initializer lists are incompatible with C++98}}
-  std::initializer_list<int> xs = { 1, 2, 3 }; // expected-warning {{initialization of initializer_list object is incompatible with C++98}}
-  auto ys = { 1, 2, 3 }; // expected-warning {{initialization of initializer_list object is incompatible with C++98}} \
-                         // expected-warning {{'auto' type specifier is incompatible with C++98}}
-  Ctor c1 = { 1, 2 }; // expected-warning {{constructor call from initializer list is incompatible with C++98}}
-  Ctor c2 = { 3.0, 4l }; // expected-warning {{constructor call from initializer list is incompatible with C++98}}
-  InitListCtor ilc = { true, false }; // expected-warning {{initialization of initializer_list object is incompatible with C++98}}
-  const int &r = { 0 }; // expected-warning {{reference initialized from initializer list is incompatible with C++98}}
-  struct { int a; const int &r; } rr = { 0, {0} }; // expected-warning {{reference initialized from initializer list is incompatible with C++98}}
-  return { 0 }; // expected-warning {{generalized initializer lists are incompatible with C++98}} expected-warning {{scalar}}
+  s = {}; // compat-warning {{generalized initializer lists are incompatible with C++98}} \
+          // cxx03-error {{expected expression}}
+  std::initializer_list<int> xs = { 1, 2, 3 }; // compat-warning {{initialization of initializer_list object is incompatible with C++98}} \
+                                               // cxx03-error {{cannot be initialized}}
+
+  auto ys = { 1, 2, 3 }; // compat-warning {{initialization of initializer_list object is incompatible with C++98}} \
+                         // cxx03-error {{cannot be initialized}} \
+                         // compat-warning {{'auto' type specifier is incompatible with C++98}} \
+                         // cxx03-warning {{'auto' type specifier is a C++11 extension}}
+
+  Ctor c1 = { 1, 2 }; // compat-warning {{constructor call from initializer list is incompatible with C++98}} \
+                      // cxx03-error {{cannot be initialized}}
+
+  Ctor c2 = { 3.0, 4l }; // compat-warning {{constructor call from initializer list is incompatible with C++98}} \
+                         // cxx03-error {{cannot be initialized}}
+
+  InitListCtor ilc = { true, false }; // compat-warning {{initialization of initializer_list object is incompatible with C++98}} \
+                                      // cxx03-error {{cannot be initialized}}
+
+  const int &r = { 0 }; // compat-warning {{reference initialized from initializer list is incompatible with C++98}} \
+                        // cxx03-error {{cannot bind}}
+  struct { int a; const int &r; } rr = { 0, {0} }; // compat-warning {{reference initialized from initializer list is incompatible with C++98}} \
+                                                   // cxx03-error {{initialization of non-aggregate type}}
+
+  return { 0 }; // compat-warning {{generalized initializer lists are incompatible with C++98}} \
+                // expected-warning {{scalar}} \
+                // cxx03-warning {{generalized initializer lists are a C++11 extension}}
 }
 struct DelayedDefaultArgumentParseInitList {
-  void f(int i = {1}) { // expected-warning {{generalized initializer lists are incompatible with C++98}} expected-warning {{scalar}}
+  void f(int i = {1}) { // compat-warning {{generalized initializer lists are incompatible with C++98}} compat-warning {{scalar}} \
+                        // cxx03-error {{expected expression}}
   }
 };
 
-int operator""_hello(const char *); // expected-warning {{literal operators are incompatible with C++98}}
+int operator""_hello(const char *); // compat-warning {{literal operators are incompatible with C++98}} \
+                                    // cxx03-error {{expected a type}}
 
-enum class EnumScoped { // expected-warning {{scoped enumerations are incompatible with C++98}}
+enum class EnumScoped { // pedantic-warning {{scoped enumerations are incompatible with C++98}}
 };
 
-void Deleted() = delete; // expected-warning {{deleted function definitions are incompatible with C++98}}
+void Deleted() = delete; // pedantic-warning {{deleted function definitions are incompatible with C++98}}
 struct Defaulted {
-  Defaulted() = default; // expected-warning {{defaulted function definitions are incompatible with C++98}}
+  Defaulted() = default; // pedantic-warning {{defaulted function definitions are incompatible with C++98}}
 };
 
-int &&RvalueReference = 0; // expected-warning {{rvalue references are incompatible with C++98}}
+int &&RvalueReference = 0; // pedantic-warning {{rvalue references are incompatible with C++98}}
 struct RefQualifier {
-  void f() &; // expected-warning {{reference qualifiers on functions are incompatible with C++98}}
+  void f() &; // pedantic-warning {{reference qualifiers on functions are incompatible with C++98}}
 };
 
-auto f() -> int; // expected-warning {{trailing return types are incompatible with C++98}}
-#ifdef CXX14COMPAT
-auto ff() { return 5; } // expected-warning {{'auto' type specifier is incompatible with C++98}}
-// expected-warning@-1 {{return type deduction is incompatible with C++ standards before C++14}}
-#endif
+auto f() -> int; // compat-warning {{trailing return types are incompatible with C++98}} \
+                 // cxx03-error {{expected function body after function declarator}} \
+                 // cxx03-warning {{'auto' type specifier is a C++11 extension}}
 
 void RangeFor() {
   int xs[] = {1, 2, 3};
-  for (int &a : xs) { // expected-warning {{range-based for loop is incompatible with C++98}}
+  for (int &a : xs) { // pedantic-warning {{range-based for loop is incompatible with C++98}}
   }
   for (auto &b : {1, 2, 3}) {
-  // expected-warning@-1 {{range-based for loop is incompatible with C++98}}
-  // expected-warning@-2 {{'auto' type specifier is incompatible with C++98}}
-  // expected-warning@-3 {{initialization of initializer_list object is incompatible with C++98}}
-  // expected-warning@-4 {{reference initialized from initializer list is incompatible with C++98}}
+  // pedantic-warning@-1 {{range-based for loop is incompatible with C++98}}
+  // compat-warning@-2 {{'auto' type specifier is incompatible with C++98}}
+  // compat-warning@-3 {{initialization of initializer_list object is incompatible with C++98}}
+  // cxx03-error@-4 {{reference to type 'std::initializer_list<int>' cannot bind to an initializer list}}
+  // compat-warning@-5 {{reference initialized from initializer list is incompatible with C++98}}
+  // cxx03-error@-6 {{invalid range expression}}
+  // cxx03-warning@-7 {{'auto' type specifier is a C++11 extension}}
   }
-  struct Agg { int a, b; } const &agg = { 1, 2 }; // expected-warning {{reference initialized from initializer list is incompatible with C++98}}
+  struct Agg { int a, b; } const &agg = { 1, 2 }; // compat-warning {{reference initialized from initializer list is incompatible with C++98}} \
+                                                  // cxx03-error {{cannot bind to an initializer list}}
 }
 
 struct InClassInit {
-  int n = 0; // expected-warning {{default member initializer for non-static data member is incompatible with C++98}}
+  int n = 0; // pedantic-warning {{default member initializer for non-static data member is incompatible with C++98}}
 };
 
 struct OverrideControlBase {
   virtual void f();
   virtual void g();
 };
-struct OverrideControl final : OverrideControlBase { // expected-warning {{'final' keyword is incompatible with C++98}}
-  virtual void f() override; // expected-warning {{'override' keyword is incompatible with C++98}}
-  virtual void g() final; // expected-warning {{'final' keyword is incompatible with C++98}}
+struct OverrideControl final : OverrideControlBase { // pedantic-warning {{'final' keyword is incompatible with C++98}}
+  virtual void f() override; // pedantic-warning {{'override' keyword is incompatible with C++98}}
+  virtual void g() final; // pedantic-warning {{'final' keyword is incompatible with C++98}}
 };
 
-using AliasDecl = int; // expected-warning {{alias declarations are incompatible with C++98}}
-template<typename T> using AliasTemplate = T; // expected-warning {{alias declarations are incompatible with C++98}}
+using AliasDecl = int; // pedantic-warning {{alias declarations are incompatible with C++98}}
+template<typename T> using AliasTemplate = T; // pedantic-warning {{alias declarations are incompatible with C++98}}
 
-inline namespace InlineNS { // expected-warning {{inline namespaces are incompatible with C++98}}
+inline namespace InlineNS { // pedantic-warning {{inline namespaces are incompatible with C++98}}
 }
 
-auto auto_deduction = 0; // expected-warning {{'auto' type specifier is incompatible with C++98}}
-int *p = new auto(0); // expected-warning {{'auto' type specifier is incompatible with C++98}}
+auto auto_deduction = 0; // compat-warning {{'auto' type specifier is incompatible with C++98}} \
+                         // cxx03-warning {{'auto' type specifier is a C++11 extension}}
+int *p = new auto(0); // compat-warning {{'auto' type specifier is incompatible with C++98}} \
+                      // cxx03-warning 2 {{'auto' type specifier is a C++11 extension}}
 
-const int align_of = alignof(int); // expected-warning {{alignof expressions are incompatible with C++98}}
-char16_t c16 = 0; // expected-warning {{'char16_t' type specifier is incompatible with C++98}}
-char32_t c32 = 0; // expected-warning {{'char32_t' type specifier is incompatible with C++98}}
-constexpr int const_expr = 0; // expected-warning {{'constexpr' specifier is incompatible with C++98}}
-decltype(const_expr) decl_type = 0; // expected-warning {{'decltype' type specifier is incompatible with C++98}}
+const int align_of = alignof(int); // compat-warning {{alignof expressions are incompatible with C++98}} \
+                                   // cxx03-error {{expected}}
+
+char16_t c16 = 0; // compat-warning {{'char16_t' type specifier is incompatible with C++98}} \
+                  // cxx03-error {{unknown type name}}
+
+char32_t c32 = 0; // compat-warning {{'char32_t' type specifier is incompatible with C++98}} \
+                  // cxx03-error {{unknown type name}}
+
+constexpr int const_expr = 0; // compat-warning {{'constexpr' specifier is incompatible with C++98}} \
+                              // cxx03-error {{unknown type name}}
+
+decltype(const_expr) decl_type = 0; // compat-warning {{'decltype' type specifier is incompatible with C++98}} \
+                                    // cxx03-error {{unknown type name}} cxx03-error {{expected}}
+
 __decltype(const_expr) decl_type2 = 0; // ok
-void no_except() noexcept; // expected-warning {{noexcept specifications are incompatible with C++98}}
-bool no_except_expr = noexcept(1 + 1); // expected-warning {{noexcept expressions are incompatible with C++98}}
-void *null = nullptr; // expected-warning {{'nullptr' is incompatible with C++98}}
-static_assert(true, "!"); // expected-warning {{'static_assert' declarations are incompatible with C++98}}
+
+void no_except() noexcept; // compat-warning {{noexcept specifications are incompatible with C++98}} \
+                           // cxx03-error {{expected}}
+
+bool no_except_expr = noexcept(1 + 1); // compat-warning {{noexcept expressions are incompatible with C++98}} \
+                                       // cxx03-error {{undeclared identifier 'noexcept'}}
+
+void *null = nullptr; // compat-warning {{'nullptr' is incompatible with C++98}} \
+                      // cxx03-error {{undeclared identifier 'nullptr'}}
+
+static_assert(true, "!"); // compat-warning {{'static_assert' declarations are incompatible with C++98}} \
+                          // cxx03-error {{a type specifier}}
 
 struct InhCtorBase {
   InhCtorBase(int);
 };
 struct InhCtorDerived : InhCtorBase {
-  using InhCtorBase::InhCtorBase; // expected-warning {{inheriting constructors are incompatible with C++98}}
+  using InhCtorBase::InhCtorBase; // compat-warning {{inheriting constructors are incompatible with C++98}} \
+                                  // cxx03-error {{using declaration cannot refer to a constructor}}
 };
 
 struct FriendMember {
   static void MemberFn();
-  friend void FriendMember::MemberFn(); // expected-warning {{friend declaration naming a member of the declaring class is incompatible with C++98}}
+  friend void FriendMember::MemberFn(); // compat-warning {{friend declaration naming a member of the declaring class is incompatible with C++98}} \
+                                        // cxx03-error {{friends cannot be members of the declaring class}}
 };
 
 struct DelegCtor {
-  DelegCtor(int) : DelegCtor() {} // expected-warning {{delegating constructors are incompatible with C++98}}
+  DelegCtor(int) : DelegCtor() {} // compat-warning {{delegating constructors are incompatible with C++98}} \
+                                  // cxx03-error {{delegating constructors are permitted only in C++11}}
   DelegCtor();
 };
 
-template<int n = 0> void DefaultFuncTemplateArg(); // expected-warning {{default template arguments for a function template are incompatible with C++98}}
+template<int n = 0> void DefaultFuncTemplateArg(); // pedantic-warning {{default template arguments for a function template are incompatible with C++98}}
 
 template<typename T> int TemplateFn(T) { return 0; }
 void LocalTemplateArg() {
   struct S {};
-  TemplateFn(S()); // expected-warning {{local type 'S' as template argument is incompatible with C++98}}
-                   // expected-note@-1 {{while substituting deduced template arguments}}
+  TemplateFn(S()); // compat-warning {{local type 'S' as template argument is incompatible with C++98}} \
+                   // cxx03-warning {{template argument uses local type 'S'}} \
+                   // expected-note {{while substituting deduced template arguments}}
 }
 struct {} obj_of_unnamed_type; // expected-note {{here}}
-int UnnamedTemplateArg = TemplateFn(obj_of_unnamed_type); // expected-warning {{unnamed type as template argument is incompatible with C++98}}
-                                                          // expected-note@-1 {{while substituting deduced template arguments}}
+int UnnamedTemplateArg = TemplateFn(obj_of_unnamed_type); // compat-warning {{unnamed type as template argument is incompatible with C++98}} \
+                                                          // cxx03-warning {{template argument uses unnamed type}} \
+                                                          // expected-note {{while substituting deduced template arguments}}
 
 // FIXME: We do not implement C++98 compatibility warnings for the C++17
 // template argument evaluation rules.
-#ifndef CXX17COMPAT
 namespace RedundantParensInAddressTemplateParam {
   int n;
   template<int*p> struct S {};
-  S<(&n)> s; // expected-warning {{parentheses around address non-type template argument are incompatible with C++98}}
-  S<(((&n)))> t; // expected-warning {{parentheses around address non-type template argument are incompatible with C++98}}
+  S<(&n)> s; // pedantic-until-cxx14-warning {{parentheses around address non-type template argument are incompatible with C++98}}
+  S<(((&n)))> t; // pedantic-until-cxx14-warning {{parentheses around address non-type template argument are incompatible with C++98}}
 }
-#endif
 
 namespace TemplateSpecOutOfScopeNs {
   template<typename T> struct S {};
@@ -209,8 +285,8 @@ template<> struct TemplateSpecOutOfScopeNs::S<char> {};
 struct Typename {
   template<typename T> struct Inner {};
 };
-typename ::Typename TypenameOutsideTemplate(); // expected-warning {{'typename' outside of a template is incompatible with C++98}}
-Typename::template Inner<int> TemplateOutsideTemplate(); // expected-warning {{use of 'template' keyword outside of a template is incompatible with C++98}}
+typename ::Typename TypenameOutsideTemplate(); // pedantic-warning {{'typename' outside of a template is incompatible with C++98}}
+Typename::template Inner<int> TemplateOutsideTemplate(); // pedantic-warning {{use of 'template' keyword outside of a template is incompatible with C++98}}
 
 struct TrivialButNonPOD {
   int f(int);
@@ -219,32 +295,40 @@ private:
 };
 void Ellipsis(int n, ...);
 void TrivialButNonPODThroughEllipsis() {
-  Ellipsis(1, TrivialButNonPOD()); // expected-warning {{passing object of trivial but non-POD type 'TrivialButNonPOD' through variadic function is incompatible with C++98}}
+  Ellipsis(1, TrivialButNonPOD()); // compat-warning {{passing object of trivial but non-POD type 'TrivialButNonPOD' through variadic function is incompatible with C++98}} \
+                                   // cxx03-error {{cannot pass object of non-POD type 'TrivialButNonPOD' through variadic function; call will abort at runtime}}
 }
 
 struct HasExplicitConversion {
-  explicit operator bool(); // expected-warning {{explicit conversion functions are incompatible with C++98}}
+  explicit operator bool(); // pedantic-warning {{explicit conversion functions are incompatible with C++98}}
 };
 
 struct Struct {};
-enum Enum { enum_val = 0 };
+enum Enum {
+  enum_val = 0, // pedantic-warning {{commas at the end of enumerator lists are incompatible with C++98}}
+};
 struct BadFriends {
-  friend enum ::Enum; // expected-warning {{elaborated enum specifier cannot be declared as a friend}}
-                      // expected-note@-1 {{remove 'enum' to befriend an enum}}
-  friend int; // expected-warning {{non-class friend type 'int' is incompatible with C++98}}
-  friend Struct; // expected-warning {{befriending 'Struct' without 'struct' keyword is incompatible with C++98}}
+  friend enum ::Enum; // compat-warning {{elaborated enum specifier cannot be declared as a friend}} \
+                      // cxx03-warning {{elaborated enum specifier cannot be declared as a friend}} \
+                      // expected-note {{remove 'enum' to befriend an enum}}
+  friend int; // pedantic-warning {{non-class friend type 'int' is incompatible with C++98}}
+  friend Struct; // compat-warning {{befriending 'Struct' without 'struct' keyword is incompatible with C++98}} \
+                 // cxx03-warning {{unelaborated friend declaration is a C++11 extension; specify 'struct' to befriend 'Struct'}}
 };
 
-int n = {}; // expected-warning {{scalar initialized from empty initializer list is incompatible with C++98}}
+int n = {}; // compat-warning {{scalar initialized from empty initializer list is incompatible with C++98}} \
+            // cxx03-error {{scalar initializer cannot be empty}}
 
 class PrivateMember {
-  struct ImPrivate {};
+  struct ImPrivate {}; // cxx03-note {{implicitly declared private here}}
 };
-template<typename T> typename T::ImPrivate SFINAEAccessControl(T t) { // expected-warning {{substitution failure due to access control is incompatible with C++98}}
-  return typename T::ImPrivate();
+template<typename T> typename T::ImPrivate SFINAEAccessControl(T t) { // compat-warning {{substitution failure due to access control is incompatible with C++98}} \
+                                                                      // cxx03-error {{'ImPrivate' is a private member of 'PrivateMember'}}
+  return typename T::ImPrivate(); // cxx03-error {{'ImPrivate' is a private member of 'PrivateMember'}}
 }
 int SFINAEAccessControl(...) { return 0; }
-int CheckSFINAEAccessControl = SFINAEAccessControl(PrivateMember()); // expected-note {{while substituting deduced template arguments into function template 'SFINAEAccessControl' [with T = PrivateMember]}}
+int CheckSFINAEAccessControl = SFINAEAccessControl(PrivateMember()); // expected-note {{while substituting deduced template arguments into function template 'SFINAEAccessControl' [with T = PrivateMember]}} \
+                                                                     // cxx03-error {{no viable conversion}} cxx03-note {{in instantiation}}
 
 namespace UnionOrAnonStructMembers {
   struct NonTrivCtor {
@@ -257,43 +341,60 @@ namespace UnionOrAnonStructMembers {
     ~NonTrivDtor(); // expected-note 2{{user-provided destructor}}
   };
   union BadUnion {
-    NonTrivCtor ntc; // expected-warning {{union member 'ntc' with a non-trivial default constructor is incompatible with C++98}}
-    NonTrivCopy ntcp; // expected-warning {{union member 'ntcp' with a non-trivial copy constructor is incompatible with C++98}}
-    NonTrivDtor ntd; // expected-warning {{union member 'ntd' with a non-trivial destructor is incompatible with C++98}}
+    NonTrivCtor ntc;  // compat-warning {{union member 'ntc' with a non-trivial default constructor is incompatible with C++98}} \
+                      // cxx03-error {{non-trivial default constructor}}
+    NonTrivCopy ntcp; // compat-warning {{union member 'ntcp' with a non-trivial copy constructor is incompatible with C++98}} \
+                      // cxx03-error {{non-trivial copy constructor}}
+    NonTrivDtor ntd;  // compat-warning {{union member 'ntd' with a non-trivial destructor is incompatible with C++98}} \
+                      // cxx03-error {{non-trivial destructor}}
   };
   struct Wrap {
     struct {
-      NonTrivCtor ntc; // expected-warning {{anonymous struct member 'ntc' with a non-trivial default constructor is incompatible with C++98}}
-      NonTrivCopy ntcp; // expected-warning {{anonymous struct member 'ntcp' with a non-trivial copy constructor is incompatible with C++98}}
-      NonTrivDtor ntd; // expected-warning {{anonymous struct member 'ntd' with a non-trivial destructor is incompatible with C++98}}
+      NonTrivCtor ntc;  // compat-warning {{anonymous struct member 'ntc' with a non-trivial default constructor is incompatible with C++98}} \
+                        // cxx03-error {{non-trivial default constructor}}
+      NonTrivCopy ntcp; // compat-warning {{anonymous struct member 'ntcp' with a non-trivial copy constructor is incompatible with C++98}} \
+                        // cxx03-error {{non-trivial copy constructor}}
+      NonTrivDtor ntd;  // compat-warning {{anonymous struct member 'ntd' with a non-trivial destructor is incompatible with C++98}} \
+                        // cxx03-error {{non-trivial destructor}}
     };
   };
   union WithStaticDataMember {
-    static constexpr double d = 0.0; // expected-warning {{static data member 'd' in union is incompatible with C++98}} expected-warning {{'constexpr' specifier is incompatible with C++98}}
-    static const int n = 0; // expected-warning {{static data member 'n' in union is incompatible with C++98}}
-    static int k; // expected-warning {{static data member 'k' in union is incompatible with C++98}}
+    static constexpr double d = 0.0; // pedantic-warning {{static data member 'd' in union is incompatible with C++98}} \
+                                     // compat-warning {{'constexpr' specifier is incompatible with C++98}} \
+                                     // cxx03-error {{unknown type name 'constexpr'}}
+    static const int n = 0; // pedantic-warning {{static data member 'n' in union is incompatible with C++98}}
+    static int k; // pedantic-warning {{static data member 'k' in union is incompatible with C++98}}
   };
 }
 
-int EnumNNS = Enum::enum_val; // expected-warning {{enumeration type in nested name specifier is incompatible with C++98}}
+int EnumNNS = Enum::enum_val; // compat-warning {{enumeration type in nested name specifier is incompatible with C++98}} \
+                              // cxx03-warning {{use of enumeration in a nested name specifier is a C++11 extension}}
 template<typename T> void EnumNNSFn() {
-  int k = T::enum_val; // expected-warning {{enumeration type in nested name specifier is incompatible with C++98}}
-};
+  int k = T::enum_val; // compat-warning {{enumeration type in nested name specifier is incompatible with C++98}} \
+                       // cxx03-error {{type 'Enum' cannot be used prior to '::' because it has no members}}
+}
 template void EnumNNSFn<Enum>(); // expected-note {{in instantiation}}
 
 void JumpDiagnostics(int n) {
-  goto DirectJump; // expected-warning {{jump from this goto statement to its label is incompatible with C++98}}
+  goto DirectJump; // compat-warning {{jump from this goto statement to its label is incompatible with C++98}} \
+                   // cxx03-error {{cannot jump from this goto statement to its label}}
   TrivialButNonPOD tnp1; // expected-note {{jump bypasses initialization of non-POD variable}}
 
 DirectJump:
   void *Table[] = {&&DirectJump, &&Later};
-  goto *Table[n]; // expected-warning {{jump from this indirect goto statement to one of its possible targets is incompatible with C++98}}
+  goto *Table[n]; // compat-warning {{jump from this indirect goto statement to one of its possible targets is incompatible with C++98}} \
+                  // cxx03-error {{cannot jump from this indirect goto statement to one of its possible targets}}
 
-  TrivialButNonPOD tnp2; // expected-note {{jump bypasses initialization of non-POD variable}}
-Later: // expected-note {{possible target of indirect goto statement}}
+  asm goto (""::::Later); // compat-warning {{jump from this asm goto statement to one of its possible targets is incompatible with C++98}} \
+                          // cxx03-error {{cannot jump from this asm goto statement to one of its possible targets}}
+
+  TrivialButNonPOD tnp2; // expected-note 2 {{jump bypasses initialization of non-POD variable}}
+Later: // expected-note {{possible target of indirect goto statement}} \
+       // expected-note {{possible target of asm goto statement}}
   switch (n) {
     TrivialButNonPOD tnp3; // expected-note {{jump bypasses initialization of non-POD variable}}
-  default: // expected-warning {{jump from switch statement to this case label is incompatible with C++98}}
+  default: // compat-warning {{jump from switch statement to this case label is incompatible with C++98}} \
+           // cxx03-error {{cannot jump from switch statement to this case label}}
     return;
   }
 }
@@ -303,36 +404,42 @@ namespace UnevaluatedMemberAccess {
     int n;
     int f() { return sizeof(S::n); } // ok
   };
-  int k = sizeof(S::n); // expected-warning {{use of non-static data member 'n' in an unevaluated context is incompatible with C++98}}
-  const std::type_info &ti = typeid(S::n); // expected-warning {{use of non-static data member 'n' in an unevaluated context is incompatible with C++98}}
+  int k = sizeof(S::n); // compat-warning {{use of non-static data member 'n' in an unevaluated context is incompatible with C++98}} \
+                        // cxx03-error {{invalid use of non-static data member 'n'}}
+  const std::type_info &ti = typeid(S::n); // compat-warning {{use of non-static data member 'n' in an unevaluated context is incompatible with C++98}} \
+                                           // cxx03-error {{invalid use of non-static data member 'n'}}
 }
 
 namespace LiteralUCNs {
-  char c1 = '\u001e'; // expected-warning {{universal character name referring to a control character is incompatible with C++98}}
-  wchar_t c2 = L'\u0041'; // expected-warning {{specifying character 'A' with a universal character name is incompatible with C++98}}
-  const char *s1 = "foo\u0031"; // expected-warning {{specifying character '1' with a universal character name is incompatible with C++98}}
-  const wchar_t *s2 = L"bar\u0085"; // expected-warning {{universal character name referring to a control character is incompatible with C++98}}
+  char c1 = '\u001e'; // compat-warning {{universal character name referring to a control character is incompatible with C++98}} \
+                      // cxx03-error {{universal character name refers to a control character}}
+  wchar_t c2 = L'\u0041'; // compat-warning {{specifying character 'A' with a universal character name is incompatible with C++98}} \
+                          // cxx03-error {{character 'A' cannot be specified by a universal character name}}
+  const char *s1 = "foo\u0031"; // compat-warning {{specifying character '1' with a universal character name is incompatible with C++98}} \
+                                // cxx03-error {{character '1' cannot be specified by a universal character name}}
+  const wchar_t *s2 = L"bar\u0085"; // compat-warning {{universal character name referring to a control character is incompatible with C++98}} \
+                                    // cxx03-error {{universal character name refers to a control character}}
 }
 
 // FIXME: We do not implement C++98 compatibility warnings for the C++17
 // template argument evaluation rules.
-#ifndef CXX17COMPAT
 namespace NonTypeTemplateArgs {
   template<typename T, T v> struct S {};
-  const int k = 5; // expected-note {{here}}
-  static void f() {} // expected-note {{here}}
-  S<const int&, k> s1; // expected-warning {{non-type template argument referring to object 'k' with internal linkage is incompatible with C++98}}
-  S<void(&)(), f> s2; // expected-warning {{non-type template argument referring to function 'f' with internal linkage is incompatible with C++98}}
+  const int k = 5;     // pedantic-until-cxx14-note {{here}}
+  static void f() {}   // pedantic-until-cxx14-note {{here}}
+  S<const int&, k> s1; // pedantic-until-cxx14-warning {{non-type template argument referring to object 'k' with internal linkage is incompatible with C++98}}
+  S<void(&)(), f> s2;  // pedantic-until-cxx14-warning {{non-type template argument referring to function 'f' with internal linkage is incompatible with C++98}}
 }
 
 namespace NullPointerTemplateArg {
   struct A {};
-  template<int*> struct X {};
+  template<int*> struct X {}; // cxx03-note {{template parameter is declared here}}
   template<int A::*> struct Y {};
-  X<(int*)0> x; // expected-warning {{use of null pointer as non-type template argument is incompatible with C++98}}
-  Y<(int A::*)0> y; // expected-warning {{use of null pointer as non-type template argument is incompatible with C++98}}
+  X<(int*)0> x; // until-cxx14-warning {{use of null pointer as non-type template argument is incompatible with C++98}} \
+                // cxx03-error {{non-type template argument does not refer to any declaration}}
+  Y<(int A::*)0> y; // until-cxx14-warning {{use of null pointer as non-type template argument is incompatible with C++98}} \
+                    // cxx03-error {{non-type template argument is not a pointer to member constant}}
 }
-#endif
 
 namespace PR13480 {
   struct basic_iterator {
@@ -341,7 +448,8 @@ namespace PR13480 {
   };
 
   union test {
-    basic_iterator it; // expected-warning {{union member 'it' with a non-trivial copy constructor is incompatible with C++98}}
+    basic_iterator it; // compat-warning {{union member 'it' with a non-trivial copy constructor is incompatible with C++98}} \
+                       // cxx03-error {{union member 'it' has a non-trivial copy constructor}}
   };
 }
 
@@ -356,83 +464,78 @@ namespace AssignOpUnion {
   };
 
   union test1 {
-    a x; // expected-warning {{union member 'x' with a non-trivial copy assignment operator is incompatible with C++98}}
-    b y; // expected-warning {{union member 'y' with a non-trivial copy assignment operator is incompatible with C++98}}
+    a x; // compat-warning {{union member 'x' with a non-trivial copy assignment operator is incompatible with C++98}} \
+         // cxx03-error {{union member 'x' has a non-trivial copy assignment operator}}
+    b y; // compat-warning {{union member 'y' with a non-trivial copy assignment operator is incompatible with C++98}} \
+         // cxx03-error {{union member 'y' has a non-trivial copy assignment operator}}
   };
 }
 
 namespace rdar11736429 {
   struct X { // expected-note {{because type 'rdar11736429::X' has no default constructor}}
-    X(const X&) = delete; // expected-warning{{deleted function definitions are incompatible with C++98}} \
-    // expected-note {{implicit default constructor suppressed by user-declared constructor}}
+    X(const X&) = delete; // pedantic-warning {{deleted function definitions are incompatible with C++98}} \
+                          // expected-note {{implicit default constructor suppressed by user-declared constructor}}
   };
 
   union S {
-    X x; // expected-warning{{union member 'x' with a non-trivial default constructor is incompatible with C++98}}
+    X x; // compat-warning {{union member 'x' with a non-trivial default constructor is incompatible with C++98}} \
+         // cxx03-error {{union member 'x' has a non-trivial default constructor}}
   };
 }
 
-template<typename T> T var = T(10);
-#ifdef CXX14COMPAT
-// expected-warning@-2 {{variable templates are incompatible with C++ standards before C++14}}
-#else
-// expected-warning@-4 {{variable templates are a C++14 extension}}
-#endif
+#define VA_MACRO(x, ...) x // pedantic-warning {{variadic macros are incompatible with C++98}}
+VA_MACRO(,x) // pedantic-warning {{empty macro arguments are incompatible with C++98}}
 
-// No diagnostic for specializations of variable templates; we will have
-// diagnosed the primary template.
-template<typename T> T* var<T*> = new T();
-template<> int var<int> = 10;
-template char var<char>;
-float fvar = var<float>;
+; // pedantic-warning {{extra ';' outside of a function is incompatible with C++98}}
 
-class A {
-  template<typename T> static T var = T(10);
-#ifdef CXX14COMPAT
-// expected-warning@-2 {{variable templates are incompatible with C++ standards before C++14}}
-#else
-// expected-warning@-4 {{variable templates are a C++14 extension}}
-#endif
-
-  template<typename T> static T* var<T*> = new T();
+enum EnumFixed : int { // pedantic-warning {{enumeration types with a fixed underlying type are incompatible with C++98}}
 };
 
-struct B {  template<typename T> static T v; };
-#ifdef CXX14COMPAT
-// expected-warning@-2 {{variable templates are incompatible with C++ standards before C++14}}
-#else
-// expected-warning@-4 {{variable templates are a C++14 extension}}
-#endif
+void *dlsym();
+void (*FnPtr)() = (void(*)())dlsym(); // pedantic-warning {{cast between pointer-to-function and pointer-to-object is incompatible with C++98}}
+void *FnVoidPtr = (void*)&dlsym; // pedantic-warning {{cast between pointer-to-function and pointer-to-object is incompatible with C++98}}
 
-template<typename T> T B::v = T();
-#ifdef CXX14COMPAT
-// expected-warning@-2 {{variable templates are incompatible with C++ standards before C++14}}
-#else
-// expected-warning@-4 {{variable templates are a C++14 extension}}
-#endif
-
-template<typename T> T* B::v<T*> = new T();
-template<> int B::v<int> = 10;
-template char B::v<char>;
-float fsvar = B::v<float>;
-
-#ifdef CXX14COMPAT
-int digit_seps = 123'456; // expected-warning {{digit separators are incompatible with C++ standards before C++14}}
-#endif
-
-#ifdef CXX17COMPAT
-template<class T> struct CTAD {};
-void ctad_test() {
-  CTAD<int> s;
-  CTAD t = s; // expected-warning {{class template argument deduction is incompatible with C++ standards before C++17}}
-}
-#endif
-
-namespace GH161702 {
-struct S {
-  enum E { A };
-  using E::A; // expected-warning {{enumeration type in nested name specifier is incompatible with C++98}}
-              // not-cpp20-error@-1 {{using declaration refers to its own class}}
-             // cpp20-warning@-2 {{member using declaration naming non-class ''E'' enumerator is incompatible with C++ standards before C++20}}
+struct ConvertToInt {
+  operator int();
 };
+int *ArraySizeConversion = new int[ConvertToInt()];
+// pedantic-warning-re@-1 {{implicit conversion from array size expression of type 'ConvertToInt' to integral type '{{(int|size_t)}}' is incompatible with C++98}}
+
+template<typename T> class ExternTemplate {};
+extern template class ExternTemplate<int>; // pedantic-warning {{extern templates are incompatible with C++98}}
+
+long long ll1 = // pedantic-warning {{'long long' is incompatible with C++98}}
+         -42LL; // pedantic-warning {{'long long' is incompatible with C++98}}
+unsigned long long ull1 = // pedantic-warning {{'long long' is incompatible with C++98}}
+                   42ULL; // pedantic-warning {{'long long' is incompatible with C++98}}
+
+namespace CopyCtorIssues {
+  struct Private {
+    Private();
+  private:
+    Private(const Private&); // pedantic-note {{declared private here}}
+  };
+  struct NoViable {
+    NoViable();          // pedantic-note {{not viable}}
+    NoViable(NoViable&); // pedantic-note {{not viable}}
+  };
+  struct Ambiguous {
+    Ambiguous();
+    Ambiguous(const Ambiguous &, int = 0);    // pedantic-note {{candidate}} cxx03-note {{candidate}}
+    Ambiguous(const Ambiguous &, double = 0); // pedantic-note {{candidate}} cxx03-note {{candidate}}
+  };
+  struct Deleted {
+    Private p; // pedantic-note {{implicitly deleted}}
+  };
+
+  const Private &a = Private(); // pedantic-warning {{copying variable of type 'Private' when binding a reference to a temporary would invoke an inaccessible constructor in C++98}}
+  const NoViable &b = NoViable(); // pedantic-warning {{copying variable of type 'NoViable' when binding a reference to a temporary would find no viable constructor in C++98}}
+  const Ambiguous &c = Ambiguous(); // pedantic-warning {{copying variable of type 'Ambiguous' when binding a reference to a temporary would find ambiguous constructors in C++98}} \
+                                    // cxx03-error {{ambiguous constructor call when copying variable of type 'Ambiguous'}}
+  const Deleted &d = Deleted(); // pedantic-warning {{copying variable of type 'Deleted' when binding a reference to a temporary would invoke a deleted constructor in C++98}}
 }
+
+int with_attribute [[ ]]; // pedantic-warning {{[[]] attributes are incompatible with C++98}}
+
+#line 32767 // ok
+#line 32768 // pedantic-warning {{#line number greater than 32767 is incompatible with C++98}}

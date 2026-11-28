@@ -511,7 +511,7 @@ namespace ForwardDeclared {
 }
 
 namespace GH63254 {
-template <typename...> struct V {}; // cxx98-warning {{variadic templates are a C++11 extension}}
+template <typename...> struct V {};
 struct S : V<> {
   using S::V; // expected-error {{using declaration refers to its own class}}
   V<> v; // no crash

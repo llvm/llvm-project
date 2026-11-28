@@ -31,4 +31,10 @@ template<typename T> void g(T t) {
 struct A { template<typename T> struct X { X(T); }; };
 void h(A a) { g(a); } // expected-note {{in instantiation of}}
 
+template<class T> struct CTAD {};
+void ctad_test() {
+  CTAD<int> s;
+  CTAD t = s; // expected-warning {{class template argument deduction is incompatible with C++ standards before C++17}}
+}
+
 #endif

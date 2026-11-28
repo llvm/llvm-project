@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++98 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++98 -fsyntax-only -verify %s -Wc++11-extensions
 
 inline namespace N { // expected-warning{{inline namespaces are a C++11 extension}}
 struct X {

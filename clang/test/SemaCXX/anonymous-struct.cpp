@@ -210,9 +210,7 @@ A GetA() {
 namespace ForwardDeclaredMember {
   struct A;
   struct A {
-    int x = 0;
-    // cxx98-warning@-1 {{default member initializer for non-static data member is a C++11 extension}}
-    // cxx98-note@-2 {{because field 'x' has an initializer}}
+    int x = 0; // cxx98-note {{because field 'x' has an initializer}}
   };
   struct B {
     struct {

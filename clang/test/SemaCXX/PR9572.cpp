@@ -20,9 +20,6 @@ struct Foo : public Base {
 #endif
 
   const int kBlah = 3;
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{default member initializer for non-static data member is a C++11 extension}}
-#endif
 
   Foo();
 };

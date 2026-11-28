@@ -54,7 +54,7 @@ void test_instantiation(X<double>::C *x,
   double &dr = x->foo();
   float &fr = e->bar();
   f->foo(); // expected-error{{implicit instantiation of undefined member 'X<float>::D::F'}}
-  
+
 }
 
 
@@ -109,9 +109,6 @@ namespace AliasTagDef {
   template<typename T>
   struct F {
     using S = struct U {
-#if __cplusplus <= 199711L
-    // expected-warning@-2 {{alias declarations are a C++11 extension}}
-#endif
       T g() {
         return T();
       }

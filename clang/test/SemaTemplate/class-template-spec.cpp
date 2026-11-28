@@ -153,20 +153,11 @@ namespace PR18009 {
 
 namespace PR16519 {
   template<typename T, T...N> struct integer_sequence { typedef T value_type; };
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{variadic templates are a C++11 extension}}
-#endif
 
   template<typename T> struct __make_integer_sequence;
   template<typename T, T N> using make_integer_sequence = typename __make_integer_sequence<T>::template make<N, N % 2>::type;
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{alias declarations are a C++11 extension}}
-#endif
 
   template<typename T, typename T::value_type ...Extra> struct __make_integer_sequence_impl;
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{variadic templates are a C++11 extension}}
-#endif
 
   // Note that the following seemingly-equivalent template parameter list is
   // not OK; it would result in a partial specialization that is not more
@@ -174,9 +165,6 @@ namespace PR16519 {
   //
   //    template<typename T, T ...N, T ...Extra>
   template<typename T, T ...N, typename integer_sequence<T, N...>::value_type ...Extra>
-#if __cplusplus <= 199711L
-  // expected-warning@-2 2{{variadic templates are a C++11 extension}}
-#endif
   struct __make_integer_sequence_impl<integer_sequence<T, N...>, Extra...> {
     typedef integer_sequence<T, N..., sizeof...(N) + N..., Extra...> type;
   };
@@ -190,14 +178,8 @@ namespace PR16519 {
   };
 
   using X = make_integer_sequence<int, 5>;
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{alias declarations are a C++11 extension}}
-#endif
 
   using X = integer_sequence<int, 0, 1, 2, 3, 4>;
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{alias declarations are a C++11 extension}}
-#endif
 }
 
 namespace NTTPTypeVsPartialOrder {

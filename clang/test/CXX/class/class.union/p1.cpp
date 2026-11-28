@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 
 void abort() __attribute__((noreturn));
 
@@ -92,12 +92,12 @@ union U3 {
   struct s7 : Okay {
   } m7;
   struct s8 {
-    s8(...) = delete; // expected-note {{because it is a variadic function}} expected-warning {{C++11}}
+    s8(...) = delete; // expected-note {{because it is a variadic function}}
   } m8; // expected-error {{union member 'm8' has a non-trivial default constructor}}
 };
 
 union U4 {
-  static int i1; // expected-warning {{static data member 'i1' in union is a C++11 extension}}
+  static int i1;
 };
 int U4::i1 = 10;
 

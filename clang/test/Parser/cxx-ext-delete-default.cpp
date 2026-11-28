@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s -Wc++11-extensions
 
 struct A {
   A(const A&) = delete; // expected-warning {{C++11 extension}}
