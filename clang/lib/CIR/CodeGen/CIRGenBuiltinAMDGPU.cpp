@@ -1291,13 +1291,6 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return emitAMDGPUGridSize(*this, getLoc(expr->getExprLoc()), 1);
   case AMDGPU::BI__builtin_amdgcn_grid_size_z:
     return emitAMDGPUGridSize(*this, getLoc(expr->getExprLoc()), 2);
-  case AMDGPU::BI__builtin_r600_recipsqrt_ieee:
-  case AMDGPU::BI__builtin_r600_recipsqrt_ieeef: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
   case AMDGPU::BI__builtin_amdgcn_alignbit: {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AMDGPU builtin call: ") +
