@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # ===- exploded-graph-rewriter.py - ExplodedGraph dump tool -----*- python -*--#
 #
