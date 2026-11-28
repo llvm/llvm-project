@@ -132,8 +132,7 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  // TODO https://llvm.org/PR48634
-  // test<long double>();
+  test<long double>();
 
   return 0;
 }
