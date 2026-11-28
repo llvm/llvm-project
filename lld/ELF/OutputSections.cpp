@@ -271,9 +271,9 @@ void OutputSection::finalizeInputSections() {
         s->parent->addralign = std::max(s->parent->addralign, s->addralign);
       }
     }
-
-    ms->finalizeContents();
   }
+  parallelForEach(mergeSections,
+                  [](MergeSyntheticSection *ms) { ms->finalizeContents(); });
 }
 
 static void sortByOrder(MutableArrayRef<InputSection *> in,

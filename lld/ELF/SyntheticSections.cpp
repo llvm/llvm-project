@@ -3758,10 +3758,11 @@ void MergeTailSection::finalizeContents() {
   // finalize() fixed tail-optimized strings, so we can now get
   // offsets of strings. Get an offset for each string and save it
   // to a corresponding SectionPiece for easy access.
-  for (MergeInputSection *sec : sections)
+  parallelForEach(sections, [&](MergeInputSection *sec) {
     for (size_t i = 0, e = sec->pieces.size(); i != e; ++i)
       if (sec->pieces[i].live)
         sec->pieces[i].outputOff = builder.getOffset(sec->getData(i));
+  });
 }
 
 void MergeNoTailSection::writeTo(uint8_t *buf) {
