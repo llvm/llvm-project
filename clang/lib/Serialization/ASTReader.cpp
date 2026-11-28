@@ -1086,28 +1086,33 @@ unsigned ASTSelectorLookupTrait::ComputeHash(Selector Sel) {
 
 LocalDeclID LocalDeclID::get(ASTReader &Reader, ModuleFile &MF, DeclID Value) {
   LocalDeclID ID(Value);
-#ifndef NDEBUG
   if (!MF.ModuleOffsetMap.empty())
     Reader.ReadModuleOffsetMap(MF);
 
   unsigned ModuleFileIndex = ID.getModuleFileIndex();
-  unsigned LocalDeclID = ID.getLocalDeclIndex();
+  unsigned LocalDeclIndex = ID.getLocalDeclIndex();
 
-  assert(ModuleFileIndex <= MF.TransitiveImports.size());
+  if (ModuleFileIndex > MF.TransitiveImports.size()) {
+    Reader.Error("invalid module file index in declaration ID");
+    return LocalDeclID();
+  }
 
   ModuleFile *OwningModuleFile =
       ModuleFileIndex == 0 ? &MF : MF.TransitiveImports[ModuleFileIndex - 1];
-  assert(OwningModuleFile);
+  if (!OwningModuleFile) {
+    Reader.Error("invalid module file in declaration ID");
+    return LocalDeclID();
+  }
 
   unsigned LocalNumDecls = OwningModuleFile->LocalNumDecls;
-
   if (!ModuleFileIndex)
     LocalNumDecls += NUM_PREDEF_DECL_IDS;
 
-  assert(LocalDeclID < LocalNumDecls);
-#endif
-  (void)Reader;
-  (void)MF;
+  if (LocalDeclIndex >= LocalNumDecls) {
+    Reader.Error("declaration ID out-of-range for AST file");
+    return LocalDeclID();
+  }
+
   return ID;
 }
 
