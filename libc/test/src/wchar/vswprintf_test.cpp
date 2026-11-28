@@ -128,6 +128,11 @@ TEST_F(LlvmLibcVSWPrintfTest, CutOff) {
   written = call_vswprintf(nullptr, 0, L"%s and more", "1234567890");
   EXPECT_LT(written, 0);
   ASSERT_ERRNO_FAILURE();
+
+  written = call_vswprintf(buff, 5, L"12345");
+  EXPECT_LT(written, 0);
+  ASSERT_ERRNO_FAILURE();
+  ASSERT_STREQ(buff, L"1234");
 }
 
 TEST_F(LlvmLibcVSWPrintfTest, NoCutOff) {

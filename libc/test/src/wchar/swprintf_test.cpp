@@ -3133,6 +3133,11 @@ TEST_F(LlvmLibcSwprintfTest, CutOff) {
   written = LIBC_NAMESPACE::swprintf(nullptr, 0, L"%*s", INT_MIN, "nothing");
   EXPECT_LT(written, 0);
   ASSERT_ERRNO_FAILURE();
+
+  written = LIBC_NAMESPACE::swprintf(buff, 5, L"12345");
+  EXPECT_LT(written, 0);
+  ASSERT_ERRNO_FAILURE();
+  ASSERT_STREQ(buff, L"1234");
 }
 
 TEST_F(LlvmLibcSwprintfTest, NoCutOff) {
