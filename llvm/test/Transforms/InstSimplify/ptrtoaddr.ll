@@ -7,8 +7,14 @@ target datalayout = "pe1:64:64:64:32"
 @g = external global i8
 @g2 = external global i8
 
+@g.def = global i8 0
+@g2.def = global i8 0
+
 @g.as1 = external addrspace(1) global i8
 @g2.as1 = external addrspace(1) global i8
+
+@g.as1.def = addrspace(1) global i8 0
+@g2.as1.def = addrspace(1) global i8 0
 
 ; Sized objects with no alignment to exploit, so that the folds below can only
 ; come from the object's size.
@@ -370,7 +376,7 @@ define i1 @icmp_ptrtoaddr_ptrtoaddr() {
 ; CHECK-LABEL: define i1 @icmp_ptrtoaddr_ptrtoaddr() {
 ; CHECK-NEXT:    ret i1 true
 ;
-  %cmp = icmp ne i64 ptrtoaddr (ptr @g to i64), ptrtoaddr (ptr @g2 to i64)
+  %cmp = icmp ne i64 ptrtoaddr (ptr @g.def to i64), ptrtoaddr (ptr @g2.def to i64)
   ret i1 %cmp
 }
 
@@ -378,7 +384,7 @@ define i1 @icmp_ptrtoaddr_ptrtoaddr_addrsize() {
 ; CHECK-LABEL: define i1 @icmp_ptrtoaddr_ptrtoaddr_addrsize() {
 ; CHECK-NEXT:    ret i1 true
 ;
-  %cmp = icmp ne i32 ptrtoaddr (ptr addrspace(1) @g.as1 to i32), ptrtoaddr (ptr addrspace(1) @g2.as1 to i32)
+  %cmp = icmp ne i32 ptrtoaddr (ptr addrspace(1) @g.as1.def to i32), ptrtoaddr (ptr addrspace(1) @g2.as1.def to i32)
   ret i1 %cmp
 }
 
@@ -386,10 +392,10 @@ define i1 @icmp_ptrtoaddr_ptrtoaddr_addrsize() {
 ; that all pointer bits together are non-equal.
 define i1 @icmp_ptrtoint_ptrtoint_addrsize() {
 ; CHECK-LABEL: define i1 @icmp_ptrtoint_ptrtoint_addrsize() {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 ptrtoint (ptr addrspace(1) @g.as1 to i64), ptrtoint (ptr addrspace(1) @g2.as1 to i64)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 ptrtoint (ptr addrspace(1) @g.as1.def to i64), ptrtoint (ptr addrspace(1) @g2.as1.def to i64)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %cmp = icmp ne i64 ptrtoint (ptr addrspace(1) @g.as1 to i64), ptrtoint (ptr addrspace(1) @g2.as1 to i64)
+  %cmp = icmp ne i64 ptrtoint (ptr addrspace(1) @g.as1.def to i64), ptrtoint (ptr addrspace(1) @g2.as1.def to i64)
   ret i1 %cmp
 }
 
