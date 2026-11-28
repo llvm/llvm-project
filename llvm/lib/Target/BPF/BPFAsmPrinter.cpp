@@ -70,36 +70,6 @@ const BPFTargetMachine &BPFAsmPrinter::getBTM() const {
 }
 
 bool BPFAsmPrinter::doFinalization(Module &M) {
-  // Remove unused globals which are previously used for jump table.
-  const BPFSubtarget *Subtarget = getBTM().getSubtargetImpl();
-  if (Subtarget->hasGotox()) {
-    std::vector<GlobalVariable *> Targets;
-    for (GlobalVariable &Global : M.globals()) {
-      if (Global.getLinkage() != GlobalValue::PrivateLinkage)
-        continue;
-      if (!Global.isConstant() || !Global.hasInitializer())
-        continue;
-
-      Constant *CV = dyn_cast<Constant>(Global.getInitializer());
-      if (!CV)
-        continue;
-      ConstantArray *CA = dyn_cast<ConstantArray>(CV);
-      if (!CA)
-        continue;
-
-      if (!all_of(CA->operands(),
-                  [](const Use &Op) { return isa<BlockAddress>(Op); }))
-        continue;
-      Targets.push_back(&Global);
-    }
-
-    for (GlobalVariable *GV : Targets) {
-      GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
-      GV->dropAllReferences();
-      GV->eraseFromParent();
-    }
-  }
-
   for (GlobalObject &GO : M.global_objects()) {
     if (!GO.hasExternalWeakLinkage())
       continue;
@@ -111,6 +81,24 @@ bool BPFAsmPrinter::doFinalization(Module &M) {
   }
 
   return AsmPrinter::doFinalization(M);
+}
+
+void BPFAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
+  // Skip a table of block addresses only used for jump tables.
+  //
+  // FIXME: This guesses which tables were only lowered to jump tables. A
+  // skipped table may still be referenced by debug info or by the
+  // initializer of another global, which then fails to assemble.
+  if (getBTM().getSubtargetImpl()->hasGotox() && GV->hasPrivateLinkage() &&
+      GV->isConstant() && GV->hasInitializer() &&
+      !ReferencedGlobals.contains(GV)) {
+    const auto *CA = dyn_cast<ConstantArray>(GV->getInitializer());
+    if (CA && all_of(CA->operands(),
+                     [](const Use &Op) { return isa<BlockAddress>(Op); }))
+      return;
+  }
+
+  AsmPrinter::emitGlobalVariable(GV);
 }
 
 void BPFAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
@@ -190,6 +178,11 @@ void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
             SawTrapCall = true;
       }
     }
+  }
+
+  for (const MachineOperand &Op : MI->operands()) {
+    if (Op.isGlobal())
+      ReferencedGlobals.insert(Op.getGlobal());
   }
 
   BPF_MC::verifyInstructionPredicates(MI->getOpcode(),
