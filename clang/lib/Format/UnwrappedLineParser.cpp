@@ -5318,14 +5318,14 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       PreviousWasComment = FormatTok->is(tok::comment);
       FirstNonCommentOnLine = IsFirstNonCommentOnLine(
           FirstNonCommentOnLine, *FormatTok, PreviousWasComment);
-      // If the #endif of a potential include guard is the last thing in the
-      // file, then we found an include guard.
+      // An include guard must enclose the whole file.
       if (IsEndIf && PP.IncludeGuard == IG_Defined && PP.BranchLevel == -1 &&
-          getIncludeGuardState(Style.IndentPPDirectives) == IG_Inited &&
-          (eof() ||
-           (PreviousWasComment &&
-            Tokens->peekNextToken(/*SkipComment=*/true)->is(tok::eof)))) {
-        PP.IncludeGuard = IG_Found;
+          getIncludeGuardState(Style.IndentPPDirectives) == IG_Inited) {
+        const bool EndsFile =
+            eof() ||
+            (PreviousWasComment &&
+             Tokens->peekNextToken(/*SkipComment=*/true)->is(tok::eof));
+        PP.IncludeGuard = EndsFile ? IG_Found : IG_Rejected;
       }
     }
 
