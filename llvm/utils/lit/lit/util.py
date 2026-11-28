@@ -498,3 +498,8 @@ def get_windows_extended_path(path: str) -> str:
     if path.startswith("\\\\"):
         return "\\\\?\\UNC\\{0}".format(path[2:])
     return "\\\\?\\{0}".format(path)
+
+def scanTempPath(isTestPath=False):
+    from pathlib import Path
+    curPath = Path.cwd()
+    return curPath
