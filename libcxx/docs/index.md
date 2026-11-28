@@ -206,6 +206,7 @@ DesignDocs/FeatureTestMacros
 DesignDocs/FileTimeType
 DesignDocs/HeaderRemovalPolicy
 DesignDocs/NoexceptPolicy
+DesignDocs/RCU
 DesignDocs/ThreadingSupportAPI
 DesignDocs/UniquePtrTrivialAbi
 DesignDocs/UnspecifiedBehaviorRandomization
