@@ -9809,8 +9809,7 @@ using SDByteProvider = ByteProvider<SDNode *>;
 static std::optional<SDByteProvider>
 calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                       std::optional<uint64_t> VectorIndex,
-                      unsigned StartingIndex = 0,
-                      MutableArrayRef<uint8_t> ByteMask = {}) {
+                      unsigned StartingIndex = 0, uint8_t *ByteMask = nullptr) {
 
   // Typical i64 by i8 pattern requires recursion up to 8 calls depth
   if (Depth == 10)
@@ -9912,8 +9911,8 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     // Only record the mask if this byte is actually provided (not zero).
     // A ConstantZero result may be discarded by the OR handler in favor of
     // the other operand, so writing the mask here would corrupt ByteMask.
-    if (MaskByte != 0xFF && !ByteMask.empty() && !Result->isConstantZero())
-      ByteMask[StartingIndex] &= MaskByte;
+    if (MaskByte != 0xFF && ByteMask && !Result->isConstantZero())
+      *ByteMask &= MaskByte;
 
     return Result;
   }
@@ -10309,7 +10308,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   for (int i = ByteWidth - 1; i >= 0; --i) {
     auto P =
         calculateByteProvider(SDValue(N, 0), i, 0, /*VectorIndex*/ std::nullopt,
-                              /*StartingIndex*/ i, ByteMasks);
+                              /*StartingIndex*/ i, &ByteMasks[i]);
     if (!P)
       return SDValue();
 
