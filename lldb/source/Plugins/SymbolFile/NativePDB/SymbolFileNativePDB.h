@@ -91,6 +91,8 @@ public:
 
   size_t ParseFunctions(lldb_private::CompileUnit &comp_unit) override;
 
+  bool ParseIsOptimized(lldb_private::CompileUnit &comp_unit) override;
+
   bool ParseLineTable(lldb_private::CompileUnit &comp_unit) override;
 
   bool ParseDebugMacros(lldb_private::CompileUnit &comp_unit) override;
