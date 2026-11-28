@@ -3519,6 +3519,49 @@ void bad_insert3(std::vector &v1, std::vector &v2) {
 }
 ```
 
+(alpha-cplusplus-placementselfcopy)=
+
+#### alpha.cplusplus.PlacementSelfCopy (C++)
+
+Check for placement new expressions and `std::construct_at` calls that access
+the storage they are placed into through the old object, e.g.
+`::new (p) T(*p)`. The lifetime of the old object ends before the
+new-initializer is evaluated ([basic.life]/2), and a value read during the
+initialization through a glvalue not obtained from `this` is unspecified
+([class.cdtor]/2). Passing the old object to a function that is not inlined is
+reported as well, since that function may read it.
+
+```cpp
+struct Buffer {
+  int *Data;
+  int Size;
+  Buffer(const Buffer &O)
+      : Data(new int[O.Size]), // warn: placement new accesses the storage it
+                               //       is placed into during construction of
+                               //       the new object
+        Size(O.Size) {
+    for (int I = 0; I < Size; ++I)
+      Data[I] = O.Data[I];
+  }
+};
+
+void reconstruct(Buffer *B) {
+  ::new (B) Buffer(*B);
+}
+```
+
+```cpp
+struct Point {
+  int X, Y;
+};
+
+void swap_coordinates(Point *P) {
+  ::new (P) Point{P->Y, P->X}; // warn: placement new accesses the storage it
+                               //       is placed into during construction of
+                               //       the new object
+}
+```
+
 (alpha-cplusplus-smartptr)=
 
 #### alpha.cplusplus.SmartPtr (C++)

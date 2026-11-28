@@ -1711,6 +1711,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 %   - Moved checkers
 %   - Diagnostic changes
 
+#### New checkers and features
+
+- Added the checker ``alpha.cplusplus.PlacementSelfCopy``, which reports
+  placement new expressions and ``std::construct_at`` calls that initialize the
+  new object from the storage it is placed into, e.g. ``::new (p) T(*p)``.
+
 #### Improvements
 
 - The analyzer is faster and uses less memory. On a random sample of 20 LLVM
