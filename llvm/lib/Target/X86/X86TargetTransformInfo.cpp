@@ -5599,6 +5599,127 @@ InstructionCost X86TTIImpl::getVectorInstrCost(
          RegisterFileMoveCost;
 }
 
+std::optional<InstructionCost>
+X86TTIImpl::getCmpMaskExtractCost(FixedVectorType *CmpTy,
+                                  ArrayRef<const Use *> LaneUses,
+                                  TTI::TargetCostKind CostKind) const {
+  // The estimate is validated for generic x86-64 SSE2 lowering and tuning.
+  // An unspecified CPU uses the generic X86 feature set.
+  StringRef CPU = ST->getCPU();
+  if ((!CPU.empty() && CPU != "x86-64" && CPU != "generic") || !ST->is64Bit() ||
+      !ST->hasSSE2() || ST->hasSSE3() || ST->hasSSE4A() || ST->hasAVX() ||
+      ST->useSoftFloat() || !CmpTy->getElementType()->isIntegerTy(8) ||
+      CmpTy->getNumElements() != 2 || !LaneUses[0] || !LaneUses[1] ||
+      (CostKind != TTI::TCK_RecipThroughput && CostKind != TTI::TCK_CodeSize))
+    return std::nullopt;
+
+  // A consumer can use the low bit as-is, require a normalized 0/1 value,
+  // or test a mask bit directly. Only model the matched lowering patterns.
+  const Use *LowUse = LaneUses[0];
+  const Use *HighUse = LaneUses[1];
+  auto IsVolatileStore = [](const Use *U) {
+    const auto *Store = dyn_cast<StoreInst>(U->getUser());
+    return Store && Store->isVolatile() && !Store->isAtomic() &&
+           Store->getValueOperand() == U->get();
+  };
+  auto GetCall = [&](const Use *U) -> const CallInst * {
+    const auto *Call = dyn_cast<CallInst>(U->getUser());
+    if (!ST->isTargetLinux() || !Call ||
+        Call->getCallingConv() != CallingConv::C ||
+        Call->getFunctionType()->isVarArg() || Call->isTailCall() ||
+        Call->isInlineAsm() || !Call->getType()->isVoidTy() ||
+        !Call->isArgOperand(U) ||
+        Call->paramHasAttr(Call->getArgOperandNo(U), Attribute::SExt))
+      return nullptr;
+    return Call;
+  };
+  auto IsAndChain = [](const User *First, const User *Last) {
+    while (const auto *And = dyn_cast<BinaryOperator>(First)) {
+      if (And->getOpcode() != Instruction::And)
+        return false;
+      if (And == Last)
+        return true;
+      if (!And->hasOneUse())
+        return false;
+      First = And->user_back();
+    }
+    return false;
+  };
+  auto IsBitTest = [](const Use *U) {
+    if (const auto *Branch = dyn_cast<CondBrInst>(U->getUser()))
+      return Branch->getCondition() == U->get();
+    if (const auto *Select = dyn_cast<SelectInst>(U->getUser()))
+      return Select->getType()->isIntegerTy(32) &&
+             Select->getCondition() == U->get();
+    return false;
+  };
+
+  const CallInst *LowCall = GetCall(LowUse);
+  const CallInst *HighCall = GetCall(HighUse);
+  bool MaskLowBit = false;
+  bool TestHighBit = false;
+  if (IsVolatileStore(LowUse) && IsVolatileStore(HighUse)) {
+    MaskLowBit = true;
+  } else if (LowCall && HighCall) {
+    MaskLowBit = LowCall->paramHasAttr(LowCall->getArgOperandNo(LowUse),
+                                       Attribute::ZExt);
+    if (LowCall == HighCall) {
+      if (LowCall->arg_size() != 2 || !MaskLowBit ||
+          !HighCall->paramHasAttr(HighCall->getArgOperandNo(HighUse),
+                                  Attribute::ZExt))
+        return std::nullopt;
+    } else if (LowCall->arg_size() != 1 || HighCall->arg_size() != 1) {
+      return std::nullopt;
+    }
+  } else if (IsBitTest(HighUse)) {
+    // A plain low-lane return or argument can consume bit zero directly.
+    const auto *Ret = dyn_cast<ReturnInst>(LowUse->getUser());
+    bool PlainReturn = Ret &&
+                       !Ret->getFunction()->hasRetAttribute(Attribute::ZExt) &&
+                       !Ret->getFunction()->hasRetAttribute(Attribute::SExt);
+    bool PlainCall = LowCall && LowCall->arg_size() == 1 &&
+                     !LowCall->paramHasAttr(LowCall->getArgOperandNo(LowUse),
+                                            Attribute::ZExt);
+    if (!PlainReturn && !PlainCall)
+      return std::nullopt;
+    TestHighBit = true;
+  } else if (!IsAndChain(LowUse->getUser(), HighUse->getUser()) &&
+             !IsAndChain(HighUse->getUser(), LowUse->getUser())) {
+    return std::nullopt;
+  }
+
+  // SelectionDAG's combineExtractVectorElt shares a bitcast of the mask.
+  // For v2i1, combineBitcastvxi1 widens the compare results to v2i64 before
+  // MOVMSKPD. With an SSE2 byte compare the widening uses PUNPCKLBW,
+  // PSHUFLW and PSHUFD. Reuse the throughput estimate for the equivalent
+  // widening in the SSE2 mask conversion table. Count the three instructions
+  // explicitly for size, where the generic cast estimate is one.
+  auto *MaskTy = FixedVectorType::get(Type::getInt1Ty(CmpTy->getContext()), 2);
+  InstructionCost WidenCost =
+      CostKind == TTI::TCK_CodeSize
+          ? 3 * TTI::TCC_Basic
+          : getCastInstrCost(Instruction::Trunc, MaskTy, CmpTy,
+                             TTI::CastContextHint::None, CostKind);
+  InstructionCost MovMaskCost =
+      getScalarizationOverhead(MaskTy, APInt::getAllOnes(2), /*Insert=*/false,
+                               /*Extract=*/true, CostKind);
+  // Budget the additional bit test or lane normalization. Call argument
+  // register moves, extension into ABI registers and scalar consumers are
+  // separate from mask extraction.
+  auto ConstantOpCost = [&](unsigned Opcode, Type *Ty) {
+    return getArithmeticInstrCost(Opcode, Ty, CostKind, {},
+                                  {TTI::OK_UniformConstantValue});
+  };
+  InstructionCost HighCost =
+      ConstantOpCost(TestHighBit ? Instruction::And : Instruction::LShr,
+                     CmpTy->getElementType());
+  InstructionCost LowCost =
+      MaskLowBit ? ConstantOpCost(Instruction::And,
+                                  Type::getInt32Ty(CmpTy->getContext()))
+                 : TTI::TCC_Free;
+  return WidenCost + MovMaskCost + LowCost + HighCost;
+}
+
 InstructionCost X86TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
     TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,

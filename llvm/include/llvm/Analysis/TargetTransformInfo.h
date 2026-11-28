@@ -1791,6 +1791,18 @@ public:
       unsigned Index = -1,
       TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
+  /// Return the joint cost of extracting the demanded lanes from the result
+  /// of an integer vector comparison whose only users are these extracts.
+  /// \p CmpTy is the comparison operand type. \p LaneUses has one entry per
+  /// lane, null for a lane without an extract. Each non-null entry identifies
+  /// the operand that will consume the extracted lane, such as a use of the
+  /// original scalar comparison before vectorization. The cost excludes the
+  /// comparison and the scalar consumers themselves. A target may return
+  /// std::nullopt to keep the individual extract costs.
+  LLVM_ABI std::optional<InstructionCost>
+  getCmpMaskExtractCost(FixedVectorType *CmpTy, ArrayRef<const Use *> LaneUses,
+                        TTI::TargetCostKind CostKind) const;
+
   /// \return The expected cost of inserting or extracting a lane that is \p
   /// Index elements from the end of a vector, i.e. the mathematical expression
   /// for the lane is (VF - 1 - Index). This is required for scalable vectors

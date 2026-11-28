@@ -901,6 +901,12 @@ public:
     return 1;
   }
 
+  virtual std::optional<InstructionCost>
+  getCmpMaskExtractCost(FixedVectorType *CmpTy, ArrayRef<const Use *> LaneUses,
+                        TTI::TargetCostKind CostKind) const {
+    return std::nullopt;
+  }
+
   virtual InstructionCost
   getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
                                    TTI::TargetCostKind CostKind,

@@ -102,6 +102,9 @@ public:
                      unsigned Index, const Value *Op0, const Value *Op1,
                      TTI::VectorInstrContext VIC =
                          TTI::VectorInstrContext::None) const override;
+  std::optional<InstructionCost>
+  getCmpMaskExtractCost(FixedVectorType *CmpTy, ArrayRef<const Use *> LaneUses,
+                        TTI::TargetCostKind CostKind) const override;
   InstructionCost
   getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
                            bool Insert, bool Extract,

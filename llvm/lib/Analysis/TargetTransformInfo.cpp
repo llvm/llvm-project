@@ -1329,6 +1329,18 @@ InstructionCost TargetTransformInfo::getVectorInstrCost(
   return Cost;
 }
 
+std::optional<InstructionCost>
+TargetTransformInfo::getCmpMaskExtractCost(FixedVectorType *CmpTy,
+                                           ArrayRef<const Use *> LaneUses,
+                                           TTI::TargetCostKind CostKind) const {
+  assert(CmpTy->getElementType()->isIntegerTy() &&
+         CmpTy->getNumElements() == LaneUses.size() &&
+         "Expected one use entry per integer comparison lane");
+  auto Cost = TTIImpl->getCmpMaskExtractCost(CmpTy, LaneUses, CostKind);
+  assert((!Cost || *Cost >= 0) && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 InstructionCost TargetTransformInfo::getIndexedVectorInstrCostFromEnd(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
     unsigned Index) const {

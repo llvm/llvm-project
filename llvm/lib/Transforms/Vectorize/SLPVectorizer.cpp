@@ -105,6 +105,7 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -21529,6 +21530,62 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       It->second = DT->findNearestCommonDominator(It->second, UseBlock);
   }
 
+  // For a plain compare root, both scalar results can be extracted from a
+  // single target mask. Restrict this to one actual user per lane and one
+  // non-loop block, so both extracts have the same placement and scale.
+  const TreeEntry &MaskRoot = Candidate.getRootNode();
+  auto IsMaskExtract = [&](const ExternalUser &EU) {
+    if (&EU.E != &MaskRoot || !EU.Scalar->hasOneUse() || !EU.User ||
+        EU.Scalar->user_back() != EU.User || EU.User->getType()->isVectorTy() ||
+        isa<PHINode, InsertElementInst>(EU.User) ||
+        Shared.ExternalUsesAsOriginalScalar.contains(EU.Scalar))
+      return false;
+    BasicBlock *BB = MaskRoot.getMainOp()->getParent();
+    const auto *Cmp = dyn_cast<ICmpInst>(EU.Scalar);
+    return Cmp && Cmp->getParent() == BB &&
+           ScalarToExtractBlock.lookup(EU.Scalar) == BB;
+  };
+  auto HasSeparateMaskUses = [](const ExternalUser &First,
+                                const ExternalUser &Second) {
+    if (First.User != Second.User)
+      return true;
+
+    // Two lanes may be distinct arguments to the same call. The original
+    // scalars' single-use guards let us recover their exact operands.
+    const auto *Call = dyn_cast<CallInst>(First.User);
+    if (!Call)
+      return false;
+    const Use *FirstUse = &*First.Scalar->use_begin();
+    const Use *SecondUse = &*Second.Scalar->use_begin();
+    return FirstUse != SecondUse && Call->isArgOperand(FirstUse) &&
+           Call->isArgOperand(SecondUse);
+  };
+  FixedVectorType *CmpTy = nullptr;
+  if (Shared.ExternalUses.size() == 2 && !isReductionTree() &&
+      MaskRoot.hasState() && MaskRoot.State == TreeEntry::Vectorize &&
+      !MaskRoot.isAltShuffle() &&
+      MaskRoot.CombinedOp == TreeEntry::NotCombinedOp &&
+      MaskRoot.getVectorFactor() == 2 && MaskRoot.Scalars.size() == 2 &&
+      MaskRoot.ReuseShuffleIndices.empty() &&
+      !Shared.DeletedNodes.contains(&MaskRoot) &&
+      !Shared.TransformedToGatherNodes.contains(&MaskRoot) &&
+      !Candidate.MinBWs.contains(&MaskRoot) &&
+      !LI->getLoopFor(MaskRoot.getMainOp()->getParent())) {
+    if (const auto *Cmp = dyn_cast<ICmpInst>(MaskRoot.getMainOp());
+        Cmp && Cmp->getPredicate() == CmpInst::ICMP_EQ &&
+        Cmp->getOperand(0)->getType()->isIntegerTy() &&
+        all_of(Shared.ExternalUses, IsMaskExtract) &&
+        HasSeparateMaskUses(Shared.ExternalUses[0], Shared.ExternalUses[1])) {
+      const TreeEntry *LHS = getOperandEntry(&MaskRoot, 0);
+      const TreeEntry *RHS = getOperandEntry(&MaskRoot, 1);
+      if ((!LHS || !Candidate.MinBWs.contains(LHS)) &&
+          (!RHS || !Candidate.MinBWs.contains(RHS)))
+        CmpTy = FixedVectorType::get(Cmp->getOperand(0)->getType(), 2);
+    }
+  }
+  APInt ExtractedMaskLanes(2, 0);
+  InstructionCost IndividualMaskExtractCost = 0;
+
   SmallDenseSet<std::pair<Value *, Value *>, 8> CheckedScalarUser;
   for (ExternalUser &EU : Shared.ExternalUses) {
     LLVM_DEBUG(dbgs() << "SLP: Computing cost for external use of TreeEntry "
@@ -21851,6 +21908,10 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                             cast_if_present<Instruction>(EU.User));
     }
 
+    if (CmpTy && IsMaskExtract(EU)) {
+      ExtractedMaskLanes.setBit(EU.Lane);
+      IndividualMaskExtractCost += ExtraCost;
+    }
     ExtractCost += ExtraCost;
   }
   // Charge the pointer-chain cost difference once when every escaped scalar
@@ -21891,6 +21952,23 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       }
     }
   }
+  // Replace the individual costs only after effective extracts and
+  // rematerialized scalar operands have been accounted for.
+  if (CmpTy && ExtractedMaskLanes.isAllOnes() &&
+      IndividualMaskExtractCost.isValid() && Shared.ExternalUses.size() == 2 &&
+      all_of(Shared.ExternalUses, IsMaskExtract)) {
+    std::array<const Use *, 2> LaneUses = {};
+    for (const ExternalUser &EU : Shared.ExternalUses)
+      LaneUses[EU.Lane] = &*EU.Scalar->use_begin();
+    if (auto GroupCost = TTI->getCmpMaskExtractCost(CmpTy, LaneUses, CostKind);
+        GroupCost && GroupCost->isValid()) {
+      LLVM_DEBUG(
+          dbgs() << "SLP: Joint compare mask extract cost: " << *GroupCost
+                 << " (individual: " << IndividualMaskExtractCost << ")\n");
+      ExtractCost += *GroupCost - IndividualMaskExtractCost;
+    }
+  }
+
   // Add reduced value cost, if resized.
   if (!VectorizedVals.empty()) {
     const TreeEntry &Root = Candidate.getRootNode();
