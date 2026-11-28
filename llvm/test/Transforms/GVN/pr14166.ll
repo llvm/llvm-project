@@ -9,7 +9,6 @@ define <2 x i32> @test1() {
 ; CHECK-NEXT:    [[V2:%.*]] = load <2 x i32>, ptr [[V1]], align 8
 ; CHECK-NEXT:    [[V3:%.*]] = inttoptr <2 x i32> [[V2]] to <2 x ptr>
 ; CHECK-NEXT:    store <2 x ptr> [[V3]], ptr [[V1]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[V2]] to i64
 ; CHECK-NEXT:    ret <2 x i32> [[V2]]
 ;
   %v1 = alloca <2 x i32>
