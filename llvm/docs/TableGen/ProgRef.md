@@ -422,7 +422,7 @@ A question mark represents an uninitialized value.
 .. productionlist::
    SimpleValue4: "{" [`ValueList`] "}"
    ValueList: `ValueListNE`
-   ValueListNE: `Value` ("," `Value`)*
+   ValueListNE: `Value` ("," `Value`)* [","]
 ```
 
 This value represents a sequence of bits, which can be used to initialize a
@@ -540,7 +540,7 @@ See [Using Classes as Subroutines](#using-classes-as-subroutines) for more infor
 ```{eval-rst}
 .. productionlist::
    SimpleValue9: `BangOperator` ["<" `Type` ">"] "(" `ValueListNE` ")"
-              :| `CondOperator` "(" `CondClause` ("," `CondClause`)* ")"
+              :| `CondOperator` "(" `CondClause` ("," `CondClause`)* [","] ")"
    CondClause: `Value` ":" `Value`
 ```
 
