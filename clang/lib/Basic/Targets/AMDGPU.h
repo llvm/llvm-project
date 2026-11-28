@@ -49,27 +49,11 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   llvm::StringMap<bool> OffloadArchFeatures;
   std::string TargetID;
 
-  bool hasFP64() const { return getTriple().isAMDGCN(); }
-
   /// Has fast fma f32
   bool hasFastFMAF() const {
-    return getTriple().isAMDGCN() &&
-           llvm::AMDGPU::getFeatureBitset(GPUKind).test(
-               llvm::AMDGPU::FEAT_FAST_FMAF);
+    return llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+        llvm::AMDGPU::FEAT_FAST_FMAF);
   }
-
-  /// Has fast fma f64
-  bool hasFastFMA() const { return getTriple().isAMDGCN(); }
-
-  bool hasFMAF() const { return getTriple().isAMDGCN(); }
-
-  bool hasFullRateDenormalsF32() const {
-    return getTriple().isAMDGCN() &&
-           llvm::AMDGPU::getFeatureBitset(GPUKind).test(
-               llvm::AMDGPU::FEAT_FAST_DENORMAL_F32);
-  }
-
-  bool hasLDEXPF() const { return getTriple().isAMDGCN(); }
 
   bool hasFlatSupport() const {
     if (GPUKind >= llvm::AMDGPU::GK_GFX700)
@@ -116,11 +100,7 @@ public:
             toTargetAddressSpace(B) != llvm::AMDGPUAS::REGION_ADDRESS);
   }
 
-  uint64_t getMaxPointerWidth() const override {
-    return getTriple().isAMDGCN() ? 64 : 32;
-  }
-
-  bool hasBFloat16Type() const override { return getTriple().isAMDGCN(); }
+  uint64_t getMaxPointerWidth() const override { return 64; }
 
   std::string_view getClobbers() const override { return ""; }
 
@@ -288,8 +268,8 @@ public:
     Opts["__cl_clang_non_portable_kernel_param_types"] = true;
     Opts["__cl_clang_bitfields"] = true;
 
-    Opts["cl_khr_fp64"] = hasFP64();
-    Opts["__opencl_c_fp64"] = hasFP64();
+    Opts["cl_khr_fp64"] = true;
+    Opts["__opencl_c_fp64"] = true;
 
     Opts["cl_khr_byte_addressable_store"] = true;
     Opts["cl_khr_global_int32_base_atomics"] = true;
