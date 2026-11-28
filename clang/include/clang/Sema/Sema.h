@@ -2769,6 +2769,10 @@ public:
            isConstantEvaluatedOverride;
   }
 
+  /// Determines whether this is the initializer of a constexpr or constinit
+  /// variable.
+  bool isConstantInitializerContext() const;
+
   SourceLocation getLocationOfStringLiteralByte(const StringLiteral *SL,
                                                 unsigned ByteNo) const;
 

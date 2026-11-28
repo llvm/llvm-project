@@ -34,6 +34,16 @@ Sema::SemaDiagnosticBuilder SemaSYCL::DiagIfDeviceCode(SourceLocation Loc,
          "Device diagnostics Should only be issued during device compilation");
   SemaDiagnosticBuilder::Kind DiagKind = SemaDiagnosticBuilder::K_Nop;
   FunctionDecl *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
+
+  // Skip code that is never emitted: unevaluated, constant-evaluated, and
+  // discarded code, including constexpr and constinit initializers.
+  const Sema::ExpressionEvaluationContextRecord &EvalCtx =
+      SemaRef.currentEvaluationContext();
+  if (EvalCtx.isUnevaluated() || SemaRef.isConstantEvaluatedContext() ||
+      EvalCtx.isDiscardedStatementContext() ||
+      SemaRef.isConstantInitializerContext())
+    return SemaDiagnosticBuilder(DiagKind, Loc, DiagID, FD, SemaRef);
+
   if (FD) {
     Sema::FunctionEmissionStatus FES = SemaRef.getEmissionStatus(FD);
     switch (FES) {

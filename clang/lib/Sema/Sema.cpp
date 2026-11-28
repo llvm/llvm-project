@@ -2049,6 +2049,14 @@ public:
     }
   }
 
+  // Skip constant expressions evaluated at compile time.
+  void VisitConstantExpr(ConstantExpr *E) {
+    if (E->getResultStorageKind() != ConstantResultStorageKind::None ||
+        E->isImmediateInvocation())
+      return;
+    Inherited::VisitConstantExpr(E);
+  }
+
   void VisitDeclStmt(DeclStmt *DS) {
     // Visit dtors called by variables that need destruction
     for (auto *D : DS->decls())
@@ -2062,6 +2070,19 @@ public:
             if (CXXDestructorDecl *Dtor = ClassDecl->getDestructor())
               asImpl().visitUsedDecl(Dtor->getLocation(), Dtor);
         }
+
+    // Skip initializers evaluated at compile time.
+    auto IsConstantInitialized = [&](const Decl *D) {
+      const auto *VD = dyn_cast<VarDecl>(D);
+      return VD && VD->isUsableInConstantExpressions(S.Context);
+    };
+    if (llvm::any_of(DS->decls(), IsConstantInitialized)) {
+      for (auto *D : DS->decls())
+        if (auto *VD = dyn_cast<VarDecl>(D); VD && !IsConstantInitialized(VD))
+          if (Expr *Init = VD->getInit())
+            this->Visit(Init);
+      return;
+    }
 
     Inherited::VisitDeclStmt(DS);
   }
@@ -2297,15 +2318,27 @@ Sema::targetDiag(SourceLocation Loc, unsigned DiagID, const FunctionDecl *FD) {
                                FD, *this);
 }
 
+bool Sema::isConstantInitializerContext() const {
+  const ExpressionEvaluationContextRecord &Ctx = currentEvaluationContext();
+  if (Ctx.ExprContext != ExpressionEvaluationContextRecord::EK_VariableInit)
+    return false;
+  const auto *VD = dyn_cast_or_null<VarDecl>(Ctx.ManglingContextDecl);
+  return VD && (VD->isConstexpr() || VD->hasAttr<ConstInitAttr>());
+}
+
 void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
   if (isUnevaluatedContext() || Ty.isNull())
     return;
+
+  // Compile-time code is not emitted for the device.
+  bool IsConstantEvaluated =
+      isConstantEvaluatedContext() || isConstantInitializerContext();
 
   // The original idea behind checkTypeSupport function is that unused
   // declarations can be replaced with an array of bytes of the same size during
   // codegen, such replacement doesn't seem to be possible for types without
   // constant byte size like zero length arrays. So, do a deep check for SYCL.
-  if (D && LangOpts.SYCLIsDevice) {
+  if (D && LangOpts.SYCLIsDevice && !IsConstantEvaluated) {
     llvm::DenseSet<QualType> Visited;
     SYCL().deepTypeCheckForDevice(Loc, Visited, D);
   }
@@ -2387,9 +2420,10 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
   };
 
   auto CheckType = [&](QualType Ty, bool IsRetTy = false) {
-    if (LangOpts.SYCLIsDevice ||
-        (LangOpts.OpenMP && LangOpts.OpenMPIsTargetDevice) ||
-        LangOpts.CUDAIsDevice)
+    if ((LangOpts.SYCLIsDevice ||
+         (LangOpts.OpenMP && LangOpts.OpenMPIsTargetDevice) ||
+         LangOpts.CUDAIsDevice) &&
+        !IsConstantEvaluated)
       CheckDeviceType(Ty);
 
     QualType UnqualTy = Ty.getCanonicalType().getUnqualifiedType();
