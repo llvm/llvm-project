@@ -1751,6 +1751,313 @@ define i1 @iszero_f32(float %x) nounwind {
   ret i1 %1
 }
 
+define i1 @fadd_one_is_subnormal(float %x) {
+; GFX7SELDAG-LABEL: fadd_one_is_subnormal:
+; GFX7SELDAG:       ; %bb.0:
+; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7SELDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7GLISEL-LABEL: fadd_one_is_subnormal:
+; GFX7GLISEL:       ; %bb.0:
+; GFX7GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7GLISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x90
+; GFX7GLISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; GFX7GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7GLISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8SELDAG-LABEL: fadd_one_is_subnormal:
+; GFX8SELDAG:       ; %bb.0:
+; GFX8SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8SELDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8GLISEL-LABEL: fadd_one_is_subnormal:
+; GFX8GLISEL:       ; %bb.0:
+; GFX8GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8GLISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX8GLISEL-NEXT:    v_mov_b32_e32 v1, 0x90
+; GFX8GLISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; GFX8GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8GLISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9SELDAG-LABEL: fadd_one_is_subnormal:
+; GFX9SELDAG:       ; %bb.0:
+; GFX9SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9SELDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9GLISEL-LABEL: fadd_one_is_subnormal:
+; GFX9GLISEL:       ; %bb.0:
+; GFX9GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9GLISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX9GLISEL-NEXT:    v_mov_b32_e32 v1, 0x90
+; GFX9GLISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; GFX9GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX9GLISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10SELDAG-LABEL: fadd_one_is_subnormal:
+; GFX10SELDAG:       ; %bb.0:
+; GFX10SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10SELDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10GLISEL-LABEL: fadd_one_is_subnormal:
+; GFX10GLISEL:       ; %bb.0:
+; GFX10GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10GLISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX10GLISEL-NEXT:    v_cmp_class_f32_e64 s4, v0, 0x90
+; GFX10GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX10GLISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-LABEL: fadd_one_is_subnormal:
+; GFX11SELDAG:       ; %bb.0:
+; GFX11SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-LABEL: fadd_one_is_subnormal:
+; GFX11GLISEL:       ; %bb.0:
+; GFX11GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX11GLISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11GLISEL-NEXT:    v_cmp_class_f32_e64 s0, v0, 0x90
+; GFX11GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-NEXT:    s_setpc_b64 s[30:31]
+  %sum = fadd float %x, 1.0
+  %test = call i1 @llvm.is.fpclass.f32(float %sum, i32 144)
+  ret i1 %test
+}
+
+define <2 x i1> @fadd_one_is_subnormal_v2f32(<2 x float> %x) {
+; GFX7SELDAG-LABEL: fadd_one_is_subnormal_v2f32:
+; GFX7SELDAG:       ; %bb.0:
+; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7SELDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX7SELDAG-NEXT:    v_mov_b32_e32 v1, 0
+; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7GLISEL-LABEL: fadd_one_is_subnormal_v2f32:
+; GFX7GLISEL:       ; %bb.0:
+; GFX7GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7GLISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX7GLISEL-NEXT:    v_mov_b32_e32 v2, 0x90
+; GFX7GLISEL-NEXT:    v_add_f32_e32 v1, 1.0, v1
+; GFX7GLISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; GFX7GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7GLISEL-NEXT:    v_cmp_class_f32_e32 vcc, v1, v2
+; GFX7GLISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX7GLISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8SELDAG-LABEL: fadd_one_is_subnormal_v2f32:
+; GFX8SELDAG:       ; %bb.0:
+; GFX8SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8SELDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8SELDAG-NEXT:    v_mov_b32_e32 v1, 0
+; GFX8SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8GLISEL-LABEL: fadd_one_is_subnormal_v2f32:
+; GFX8GLISEL:       ; %bb.0:
+; GFX8GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8GLISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX8GLISEL-NEXT:    v_mov_b32_e32 v2, 0x90
+; GFX8GLISEL-NEXT:    v_add_f32_e32 v1, 1.0, v1
+; GFX8GLISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; GFX8GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8GLISEL-NEXT:    v_cmp_class_f32_e32 vcc, v1, v2
+; GFX8GLISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX8GLISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9SELDAG-LABEL: fadd_one_is_subnormal_v2f32:
+; GFX9SELDAG:       ; %bb.0:
+; GFX9SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9SELDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9SELDAG-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9GLISEL-LABEL: fadd_one_is_subnormal_v2f32:
+; GFX9GLISEL:       ; %bb.0:
+; GFX9GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9GLISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX9GLISEL-NEXT:    v_mov_b32_e32 v2, 0x90
+; GFX9GLISEL-NEXT:    v_add_f32_e32 v1, 1.0, v1
+; GFX9GLISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
+; GFX9GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX9GLISEL-NEXT:    v_cmp_class_f32_e32 vcc, v1, v2
+; GFX9GLISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX9GLISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10SELDAG-LABEL: fadd_one_is_subnormal_v2f32:
+; GFX10SELDAG:       ; %bb.0:
+; GFX10SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10SELDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10SELDAG-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10GLISEL-LABEL: fadd_one_is_subnormal_v2f32:
+; GFX10GLISEL:       ; %bb.0:
+; GFX10GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10GLISEL-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; GFX10GLISEL-NEXT:    v_add_f32_e32 v1, 1.0, v1
+; GFX10GLISEL-NEXT:    v_cmp_class_f32_e64 s4, v0, 0x90
+; GFX10GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX10GLISEL-NEXT:    v_cmp_class_f32_e64 s4, v1, 0x90
+; GFX10GLISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s4
+; GFX10GLISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-LABEL: fadd_one_is_subnormal_v2f32:
+; GFX11SELDAG:       ; %bb.0:
+; GFX11SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-NEXT:    v_mov_b16_e32 v1.l, 0
+; GFX11SELDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11SELDAG-NEXT:    v_mov_b16_e32 v0.l, v1.l
+; GFX11SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-LABEL: fadd_one_is_subnormal_v2f32:
+; GFX11GLISEL:       ; %bb.0:
+; GFX11GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-NEXT:    v_dual_add_f32 v0, 1.0, v0 :: v_dual_add_f32 v1, 1.0, v1
+; GFX11GLISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11GLISEL-NEXT:    v_cmp_class_f32_e64 s0, v0, 0x90
+; GFX11GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11GLISEL-NEXT:    v_cmp_class_f32_e64 s0, v1, 0x90
+; GFX11GLISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
+; GFX11GLISEL-NEXT:    s_setpc_b64 s[30:31]
+  %sum = fadd <2 x float> %x, splat (float 1.0)
+  %test = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %sum, i32 144)
+  ret <2 x i1> %test
+}
+
+define i1 @fadd_gap_at_smallest_normal_is_subnormal(float %x) {
+; GFX7SELDAG-LABEL: fadd_gap_at_smallest_normal_is_subnormal:
+; GFX7SELDAG:       ; %bb.0:
+; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7SELDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX7SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7GLISEL-LABEL: fadd_gap_at_smallest_normal_is_subnormal:
+; GFX7GLISEL:       ; %bb.0:
+; GFX7GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7GLISEL-NEXT:    v_add_f32_e32 v0, 0xc800000, v0
+; GFX7GLISEL-NEXT:    v_mov_b32_e32 v1, 0x90
+; GFX7GLISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; GFX7GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7GLISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8SELDAG-LABEL: fadd_gap_at_smallest_normal_is_subnormal:
+; GFX8SELDAG:       ; %bb.0:
+; GFX8SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8SELDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX8SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8GLISEL-LABEL: fadd_gap_at_smallest_normal_is_subnormal:
+; GFX8GLISEL:       ; %bb.0:
+; GFX8GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8GLISEL-NEXT:    v_add_f32_e32 v0, 0xc800000, v0
+; GFX8GLISEL-NEXT:    v_mov_b32_e32 v1, 0x90
+; GFX8GLISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; GFX8GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8GLISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9SELDAG-LABEL: fadd_gap_at_smallest_normal_is_subnormal:
+; GFX9SELDAG:       ; %bb.0:
+; GFX9SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9SELDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9GLISEL-LABEL: fadd_gap_at_smallest_normal_is_subnormal:
+; GFX9GLISEL:       ; %bb.0:
+; GFX9GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9GLISEL-NEXT:    v_add_f32_e32 v0, 0xc800000, v0
+; GFX9GLISEL-NEXT:    v_mov_b32_e32 v1, 0x90
+; GFX9GLISEL-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; GFX9GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX9GLISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10SELDAG-LABEL: fadd_gap_at_smallest_normal_is_subnormal:
+; GFX10SELDAG:       ; %bb.0:
+; GFX10SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10SELDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10GLISEL-LABEL: fadd_gap_at_smallest_normal_is_subnormal:
+; GFX10GLISEL:       ; %bb.0:
+; GFX10GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10GLISEL-NEXT:    v_add_f32_e32 v0, 0xc800000, v0
+; GFX10GLISEL-NEXT:    v_cmp_class_f32_e64 s4, v0, 0x90
+; GFX10GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX10GLISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11SELDAG-LABEL: fadd_gap_at_smallest_normal_is_subnormal:
+; GFX11SELDAG:       ; %bb.0:
+; GFX11SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11SELDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11SELDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11GLISEL-LABEL: fadd_gap_at_smallest_normal_is_subnormal:
+; GFX11GLISEL:       ; %bb.0:
+; GFX11GLISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11GLISEL-NEXT:    v_add_f32_e32 v0, 0xc800000, v0
+; GFX11GLISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11GLISEL-NEXT:    v_cmp_class_f32_e64 s0, v0, 0x90
+; GFX11GLISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11GLISEL-NEXT:    s_setpc_b64 s[30:31]
+  %sum = fadd float %x, 0x1.0p-102
+  %test = call i1 @llvm.is.fpclass.f32(float %sum, i32 144)
+  ret i1 %test
+}
+
+define i1 @fadd_smallest_normal_is_subnormal(float %x) {
+; GFX7CHECK-LABEL: fadd_smallest_normal_is_subnormal:
+; GFX7CHECK:       ; %bb.0:
+; GFX7CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7CHECK-NEXT:    v_add_f32_e32 v0, 0x800000, v0
+; GFX7CHECK-NEXT:    v_mov_b32_e32 v1, 0x90
+; GFX7CHECK-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; GFX7CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX7CHECK-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8CHECK-LABEL: fadd_smallest_normal_is_subnormal:
+; GFX8CHECK:       ; %bb.0:
+; GFX8CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8CHECK-NEXT:    v_add_f32_e32 v0, 0x800000, v0
+; GFX8CHECK-NEXT:    v_mov_b32_e32 v1, 0x90
+; GFX8CHECK-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; GFX8CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8CHECK-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9CHECK-LABEL: fadd_smallest_normal_is_subnormal:
+; GFX9CHECK:       ; %bb.0:
+; GFX9CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9CHECK-NEXT:    v_add_f32_e32 v0, 0x800000, v0
+; GFX9CHECK-NEXT:    v_mov_b32_e32 v1, 0x90
+; GFX9CHECK-NEXT:    v_cmp_class_f32_e32 vcc, v0, v1
+; GFX9CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX9CHECK-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10CHECK-LABEL: fadd_smallest_normal_is_subnormal:
+; GFX10CHECK:       ; %bb.0:
+; GFX10CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10CHECK-NEXT:    v_add_f32_e32 v0, 0x800000, v0
+; GFX10CHECK-NEXT:    v_cmp_class_f32_e64 s4, v0, 0x90
+; GFX10CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s4
+; GFX10CHECK-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11CHECK-LABEL: fadd_smallest_normal_is_subnormal:
+; GFX11CHECK:       ; %bb.0:
+; GFX11CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11CHECK-NEXT:    v_add_f32_e32 v0, 0x800000, v0
+; GFX11CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11CHECK-NEXT:    v_cmp_class_f32_e64 s0, v0, 0x90
+; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %sum = fadd float %x, 0x1.0p-126
+  %test = call i1 @llvm.is.fpclass.f32(float %sum, i32 144)
+  ret i1 %test
+}
+
 declare i1 @llvm.is.fpclass.f32(float, i32)
 declare i1 @llvm.is.fpclass.f64(double, i32)
 declare <2 x i1> @llvm.is.fpclass.v2f32(<2 x float>, i32)

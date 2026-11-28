@@ -6304,6 +6304,28 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     Known = KnownFPClass::getEmpty();
     break;
   }
+  case ISD::FADD: {
+    if (!(InterestedClasses & fcSubnormal))
+      break;
+
+    // Skip flags that allow the add to be rewritten
+    const SDNodeFlags Flags = Op->getFlags();
+    if (Flags.hasAllowReassociation() || Flags.hasAllowContract() ||
+        Flags.hasAllowReciprocal() || Flags.hasApproximateFuncs())
+      break;
+
+    const auto *C = isConstOrConstSplatFP(Op.getOperand(1), DemandedElts);
+    if (!C)
+      break;
+
+    // The constant alone can rule out a subnormal result after cancellation.
+    KnownFPClass Sum = KnownFPClass::fadd(KnownFPClass(), C->getValueAPF(),
+                                          RoundingMode::NearestTiesToEven,
+                                          getDenormalMode(VT.getScalarType()));
+    if (Sum.isKnownNeverSubnormal())
+      Known.knownNot(fcSubnormal);
+    break;
+  }
   case ISD::FNEG: {
     Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
                                 InterestedClasses, Depth + 1);
