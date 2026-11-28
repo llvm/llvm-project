@@ -75,7 +75,8 @@ namespace {
 
 // This is used to prevent TBAA from optimizing away the function pointer comparison.
 template <typename T>
-[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI T* __launder_function_pointer(T* __ptr) noexcept {
+[[nodiscard, clang::disable_sanitizer_instrumentation]] inline _LIBCPP_HIDE_FROM_ABI T*
+__launder_function_pointer(T* __ptr) noexcept {
   __asm__ volatile("" : "+r"(__ptr));
   return __ptr;
 }
@@ -98,8 +99,8 @@ struct __impl_ref<_Func> {
 // argument (pointer to the public function) gets the benefit of type-aware overload
 // resolution, rather than having to use a static_cast.
 template <typename T, T* _Func>
-_LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
-#  if !defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2101
+[[clang::disable_sanitizer_instrumentation]] _LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
+#    if !defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2101
   __asm__("%cc0 = %cc1" : : "X"(__impl_ref<_Func>::__impl_), "X"(_Func));
 #  else
   __asm__("%c0 = %c1" : : "X"(__impl_ref<_Func>::__impl_), "X"(_Func));

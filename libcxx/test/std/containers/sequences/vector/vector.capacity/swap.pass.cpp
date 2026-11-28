@@ -21,14 +21,16 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   {
     std::vector<int> v1(100);
     std::vector<int> v2(200);
+    auto v1_cap = v1.capacity();
+    auto v2_cap = v2.capacity();
     assert(is_contiguous_container_asan_correct(v1));
     assert(is_contiguous_container_asan_correct(v2));
     v1.swap(v2);
     assert(v1.size() == 200);
-    assert(v1.capacity() == 200);
+    assert(v1.capacity() == v2_cap);
     assert(is_contiguous_container_asan_correct(v1));
     assert(v2.size() == 100);
-    assert(v2.capacity() == 100);
+    assert(v2.capacity() == v1_cap);
     assert(is_contiguous_container_asan_correct(v2));
   }
 #if TEST_STD_VER >= 11
