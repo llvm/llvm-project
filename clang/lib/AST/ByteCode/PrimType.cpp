@@ -13,7 +13,6 @@
 #include "Floating.h"
 #include "IntegralAP.h"
 #include "MemberPointer.h"
-#include "Pointer.h"
 #include "Reflect.h"
 
 using namespace clang;

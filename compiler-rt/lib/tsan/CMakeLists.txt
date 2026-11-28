@@ -32,7 +32,7 @@ if(COMPILER_RT_LIBCXX_PATH AND
       CFLAGS ${TARGET_CFLAGS} -fsanitize=thread
       CMAKE_ARGS -DRUNTIMES_EXECUTE_ONLY_CODE=${RUNTIMES_EXECUTE_ONLY_CODE}
       USE_TOOLCHAIN)
-    list(APPEND libcxx_tsan_deps libcxx_tsan_${arch}-install)
+    list(APPEND libcxx_tsan_deps libcxx_tsan_${arch}-install-cmake326-workaround)
   endforeach()
 
   add_custom_target(libcxx_tsan DEPENDS ${libcxx_tsan_deps})

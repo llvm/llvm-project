@@ -1217,8 +1217,8 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     // is shifted off the end. That is sufficient with OrZero set, otherwise
     // the result must also be known never to be zero.
 
-    // TODO: Constant splat
-    if (auto ConstLHS = getIConstantVRegVal(MI.getOperand(1).getReg(), MRI)) {
+    if (auto ConstLHS =
+            isConstantOrConstantSplatVector(MI.getOperand(1).getReg(), MRI)) {
       if (*ConstLHS == 1)
         return true;
     }
@@ -1231,7 +1231,8 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     break;
   }
   case TargetOpcode::G_LSHR: {
-    if (auto ConstLHS = getIConstantVRegVal(MI.getOperand(1).getReg(), MRI)) {
+    if (auto ConstLHS =
+            isConstantOrConstantSplatVector(MI.getOperand(1).getReg(), MRI)) {
       if (ConstLHS->isSignMask())
         return true;
     }

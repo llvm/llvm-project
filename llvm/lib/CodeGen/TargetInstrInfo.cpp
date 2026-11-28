@@ -2161,6 +2161,9 @@ TargetInstrInfo::getOutliningType(const MachineModuleInfo &MMI,
   if (MI.isLabel())
     return outliner::InstrType::Illegal;
 
+  if (MI.getFlag(MachineInstr::NoMerge))
+    return outliner::InstrType::Illegal;
+
   // Don't let debug instructions impact analysis.
   if (MI.isDebugInstr())
     return outliner::InstrType::Invisible;

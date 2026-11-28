@@ -1000,7 +1000,8 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
                                       ArrayRef<PointerDiffInfo> DiffChecks,
                                       ScalarEvolution &SE) {
   VPBuilder Builder(AliasCheckVPBB);
-  VPSCEVExpander Expander(Builder, SE, DebugLoc::getCompilerGenerated());
+  VPSCEVExpander Expander(Builder, SE, DebugLoc::getCompilerGenerated(),
+                          /*HoistOutOf=*/nullptr, /*SafeUDivMode=*/true);
   Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
 
   VPValue *IncomingAliasMask = vputils::findIncomingAliasMask(Plan);

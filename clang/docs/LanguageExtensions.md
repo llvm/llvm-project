@@ -3774,7 +3774,7 @@ the bitpattern of an integer value; for example, `0b10110110` becomes
 uint8_t __builtin_rotateleft8(uint8_t x, uint8_t y);
 uint16_t __builtin_rotateleft16(uint16_t x, uint16_t y);
 uint32_t __builtin_rotateleft32(uint32_t x, uint32_t y);
-uint64_t __builtin_rotateleft64(uint32_t x, uint64_t y);
+uint64_t __builtin_rotateleft64(uint64_t x, uint64_t y);
 ```
 
 **Examples**:

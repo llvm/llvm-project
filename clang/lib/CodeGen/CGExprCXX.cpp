@@ -103,7 +103,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
 RValue CodeGenFunction::EmitCXXDestructorCall(
     GlobalDecl Dtor, const CGCallee &Callee, llvm::Value *This, QualType ThisTy,
     llvm::Value *ImplicitParam, QualType ImplicitParamTy, const CallExpr *CE,
-    llvm::CallBase **CallOrInvoke) {
+    SourceLocation Loc, llvm::CallBase **CallOrInvoke) {
   const CXXMethodDecl *DtorDecl = cast<CXXMethodDecl>(Dtor.getDecl());
 
   assert(!ThisTy.isNull());
@@ -123,8 +123,7 @@ RValue CodeGenFunction::EmitCXXDestructorCall(
                                     ImplicitParamTy, CE, Args, nullptr);
   return EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor), Callee,
                   ReturnValueSlot(), Args, CallOrInvoke,
-                  CE && CE == MustTailCall,
-                  CE ? CE->getExprLoc() : SourceLocation{});
+                  CE && CE == MustTailCall, Loc);
 }
 
 RValue
@@ -406,7 +405,8 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
           IsArrow ? Base->getType()->getPointeeType() : Base->getType();
       EmitCXXDestructorCall(GD, Callee, This.getPointer(*this), ThisTy,
                             /*ImplicitParam=*/nullptr,
-                            /*ImplicitParamTy=*/QualType(), CE, CallOrInvoke);
+                            /*ImplicitParamTy=*/QualType(), CE,
+                            CE->getExprLoc(), CallOrInvoke);
     }
     return RValue::get(nullptr);
   }

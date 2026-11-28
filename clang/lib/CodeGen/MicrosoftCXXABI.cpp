@@ -1745,10 +1745,11 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
   llvm::Value *Implicit =
       getCXXDestructorImplicitParam(CGF, DD, Type, ForVirtualBase,
                                     Delegating); // = nullptr
-  CGF.EmitCXXDestructorCall(GD, Callee, CGF.getAsNaturalPointerTo(This, ThisTy),
-                            ThisTy,
-                            /*ImplicitParam=*/Implicit,
-                            /*ImplicitParamTy=*/QualType(), /*E=*/nullptr);
+  // FIXME: Plumb a SourceLocation from EmitDestructorCall callers.
+  CGF.EmitCXXDestructorCall(
+      GD, Callee, CGF.getAsNaturalPointerTo(This, ThisTy), ThisTy,
+      /*ImplicitParam=*/Implicit,
+      /*ImplicitParamTy=*/QualType(), /*E=*/nullptr, SourceLocation{});
   if (BaseDtorEndBB) {
     // Complete object handler should continue to be the remaining
     CGF.Builder.CreateBr(BaseDtorEndBB);
@@ -2105,9 +2106,10 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
     ThisTy = ATy->getElementType();
 
   This = adjustThisArgumentForVirtualFunctionCall(CGF, GD, This, true);
-  RValue RV =
-      CGF.EmitCXXDestructorCall(GD, Callee, This.emitRawPointer(CGF), ThisTy,
-                                ImplicitParam, Context.IntTy, CE, CallOrInvoke);
+  RValue RV = CGF.EmitCXXDestructorCall(
+      GD, Callee, This.emitRawPointer(CGF), ThisTy, ImplicitParam,
+      Context.IntTy, CE, CE ? CE->getExprLoc() : D->getBeginLoc(),
+      CallOrInvoke);
   return RV.getScalarVal();
 }
 

@@ -1987,8 +1987,9 @@ void ItaniumCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
   else
     Callee = CGCallee::forDirect(CGM.getAddrOfCXXStructor(GD), GD);
 
+  // FIXME: Plumb a SourceLocation from EmitDestructorCall callers.
   CGF.EmitCXXDestructorCall(GD, Callee, CGF.getAsNaturalPointerTo(This, ThisTy),
-                            ThisTy, VTT, VTTTy, nullptr);
+                            ThisTy, VTT, VTTTy, nullptr, SourceLocation{});
 }
 
 // Check if any non-inline method has the specified attribute.
@@ -2320,8 +2321,9 @@ llvm::Value *ItaniumCXXABI::EmitVirtualDestructorCall(
     ThisTy = D->getDestroyedType();
   }
 
-  CGF.EmitCXXDestructorCall(GD, Callee, This.emitRawPointer(CGF), ThisTy,
-                            nullptr, QualType(), nullptr, CallOrInvoke);
+  CGF.EmitCXXDestructorCall(
+      GD, Callee, This.emitRawPointer(CGF), ThisTy, nullptr, QualType(),
+      nullptr, CE ? CE->getExprLoc() : D->getBeginLoc(), CallOrInvoke);
   return nullptr;
 }
 
@@ -3475,7 +3477,7 @@ ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
                                          getThisAddress(CGF), ThunkTy);
   llvm::CallBase *CallOrInvoke;
   CGF.EmitCall(CallInfo, Callee, ReturnValueSlot(), CallArgs, &CallOrInvoke,
-               /*IsMustTail=*/true, SourceLocation(), true);
+               /*IsMustTail=*/true, MD->getLocation(), true);
   auto *Call = cast<llvm::CallInst>(CallOrInvoke);
   Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
   if (Call->getType()->isVoidTy())

@@ -4878,6 +4878,7 @@ public:
                                llvm::Value *This, QualType ThisTy,
                                llvm::Value *ImplicitParam,
                                QualType ImplicitParamTy, const CallExpr *E,
+                               SourceLocation Loc,
                                llvm::CallBase **CallOrInvoke = nullptr);
   RValue EmitCXXMemberCallExpr(const CXXMemberCallExpr *E,
                                ReturnValueSlot ReturnValue,
