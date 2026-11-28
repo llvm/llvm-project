@@ -490,3 +490,38 @@ define amdgpu_ps void @load_divergent_P5_v4i32(ptr addrspace(5) %ptra, ptr addrs
   store <4 x i32> %a, ptr addrspace(5) %out
   ret void
 }
+
+; A returned load of a type that is not whole bytes keeps the G_ASSERT_ZEXT the
+; legalizer adds at its store size.
+define i127 @load_divergent_P1_i127(ptr addrspace(1) %ptra) {
+; GFX12-LABEL: load_divergent_P1_i127:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %a = load i127, ptr addrspace(1) %ptra, align 4
+  ret i127 %a
+}
+
+define i255 @load_divergent_P1_i255(ptr addrspace(1) %ptra) {
+; GFX12-LABEL: load_divergent_P1_i255:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, v1
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    global_load_b128 v[0:3], v[4:5], off
+; GFX12-NEXT:    global_load_b128 v[4:7], v[4:5], off offset:16
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %a = load i255, ptr addrspace(1) %ptra, align 4
+  ret i255 %a
+}
