@@ -61,6 +61,128 @@ static_assert(bcp(int_to_ptr(123)));      // GCC rejects these due to not recogn
 static_assert(bcp_fold(int_to_ptr(123))); // the bcp conditional in 'int_to_ptr' ...
 static_assert(__builtin_constant_p((int*)123)); // ... but GCC accepts this
 
+struct Aggregate {
+  int Value;
+  constexpr Aggregate(int Value) : Value(Value) {}
+};
+
+constexpr Aggregate ConstantAggregate(42);
+Aggregate NonConstantAggregate(42);
+static_assert(bcp(ConstantAggregate));
+
+void require_constant_aggregate(Aggregate Value) // expected-note {{candidate disabled: argument is not constant}}
+    __attribute__((enable_if(__builtin_constant_p(Value),
+                             "argument is not constant")));
+
+void test_constant_aggregate() {
+  require_constant_aggregate(ConstantAggregate);
+  require_constant_aggregate(NonConstantAggregate); // expected-error {{no matching function for call to 'require_constant_aggregate'}}
+}
+
+constexpr int constant_aggregate_if() {
+  constexpr Aggregate Value(42);
+  if (__builtin_constant_p(Value))
+    return Value.Value;
+  return 0;
+}
+static_assert(constant_aggregate_if() == 42);
+
+struct NonTrivial {
+  int Value;
+  constexpr NonTrivial(int Value) : Value(Value) {}
+  constexpr NonTrivial(const NonTrivial &Other) : Value(Other.Value) {}
+};
+
+constexpr NonTrivial ConstantNonTrivial(42);
+NonTrivial NonConstantNonTrivial(42);
+
+constexpr int non_trivial_if(NonTrivial Value) {
+  if (__builtin_constant_p(Value))
+    return Value.Value;
+  return 0;
+}
+static_assert(non_trivial_if(ConstantNonTrivial) == 42);
+
+void require_constant_non_trivial(NonTrivial Value) // expected-note {{candidate disabled: argument is not constant}}
+    __attribute__((enable_if(__builtin_constant_p(Value),
+                             "argument is not constant")));
+
+void test_constant_non_trivial() {
+  require_constant_non_trivial(ConstantNonTrivial);
+  require_constant_non_trivial(NonConstantNonTrivial); // expected-error {{no matching function for call to 'require_constant_non_trivial'}}
+}
+
+// Unions are record types, so a constant-evaluable union value is constant.
+union ValueUnion {
+  int Value;
+  constexpr ValueUnion(int Value) : Value(Value) {}
+  constexpr ValueUnion(const ValueUnion &Other) : Value(Other.Value) {}
+};
+
+constexpr ValueUnion ConstantUnion(42);
+ValueUnion NonConstantUnion(42);
+static_assert(bcp(ConstantUnion));
+static_assert(!__builtin_constant_p(NonConstantUnion));
+
+constexpr int constant_union_if() {
+  constexpr ValueUnion Value(42);
+  if (__builtin_constant_p(Value))
+    return Value.Value;
+  return 0;
+}
+static_assert(constant_union_if() == 42);
+
+void require_constant_union(ValueUnion Value) // expected-note {{candidate disabled: argument is not constant}}
+    __attribute__((enable_if(__builtin_constant_p(Value),
+                             "argument is not constant")));
+
+void test_constant_union() {
+  require_constant_union(ConstantUnion);
+  require_constant_union(NonConstantUnion); // expected-error {{no matching function for call to 'require_constant_union'}}
+}
+
+// `*this` is the class object. `this` passed into a callee is checked there.
+struct ThisValue {
+  int Value;
+  constexpr ThisValue(int Value) : Value(Value) {}
+
+  constexpr bool object_is_constant() const {
+    return __builtin_constant_p(*this);
+  }
+
+  constexpr int value_if_constant() const {
+    if (__builtin_constant_p(*this))
+      return Value;
+    return 0;
+  }
+
+  constexpr bool pass_this() const;
+};
+
+constexpr bool check_this_pointer(const ThisValue *Object) {
+  return __builtin_constant_p(*Object);
+}
+
+constexpr bool ThisValue::pass_this() const {
+  return check_this_pointer(this);
+}
+
+constexpr ThisValue ConstantThis(42);
+ThisValue NonConstantThis(7);
+
+static_assert(ConstantThis.object_is_constant());
+static_assert(ConstantThis.value_if_constant() == 42);
+static_assert(ConstantThis.pass_this());
+
+constexpr bool check_this_object(const ThisValue &Object) {
+  return Object.object_is_constant();
+}
+constexpr bool check_passed_this(const ThisValue &Object) {
+  return Object.pass_this();
+}
+static_assert(!check_this_object(NonConstantThis));
+static_assert(!check_passed_this(NonConstantThis));
+
 // State mutations in the operand are not permitted.
 //
 // The rule GCC uses for this is not entirely understood, but seems to depend

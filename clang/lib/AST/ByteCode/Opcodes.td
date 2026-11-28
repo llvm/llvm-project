@@ -202,7 +202,7 @@ def StartSpeculation : SuccessOpcode;
 def EndSpeculation : SuccessOpcode;
 def BCP : Opcode {
   let HasCustomEval = 1;
-  let Args = [ArgSint32, ArgPrimType];
+  let Args = [ArgSint32, ArgPrimType, ArgBool];
 }
 
 //===----------------------------------------------------------------------===//
