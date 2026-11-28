@@ -1569,7 +1569,8 @@ void CIRGenModule::addUsedGlobal(cir::CIRGlobalValueInterface gv) {
 }
 
 void CIRGenModule::addCompilerUsedGlobal(cir::CIRGlobalValueInterface gv) {
-  assert(!gv.isDeclarationForLinker() &&
+  [[maybe_unused]] auto global = mlir::dyn_cast<cir::GlobalOp>(*gv);
+  assert((global ? !global.isDeclaration() : !gv.isDeclarationForLinker()) &&
          "Only globals with definition can force usage.");
   llvmCompilerUsed.emplace_back(gv);
 }

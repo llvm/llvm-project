@@ -36,11 +36,13 @@
 // - In clang driver, `-fprofile-instrument` cc1 option is set to 'llvm' iff clang driver option `-fprofile-generate{,=}` is taking effect.
 // RUN: %clang_cc1 -fprofile-instrument=llvm -fno-lto -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=ITANIUM-COMMON-MD
 // RUN: %clang_cc1 -fprofile-instrument=llvm -fno-lto -triple x86_64-pc-windows-msvc -emit-llvm %s -o - | FileCheck %s --check-prefix=MS-TYPEMETADATA
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fprofile-instrument=llvm -fno-lto -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --check-prefix=ITANIUM-COMMON-MD %}
 
 // Tests type metadata are not annotated on vtables if `-fno-lto` is specified and `-fprofile-instrument` is any of {none, clang, csllvm}.
 // This is mainly for test coverage; there isn't a fundamental reason type metadata couldn't be annotated with those options.
 
 // RUN: %clang_cc1 -fprofile-instrument=none -fno-lto -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --implicit-check-not="!type"
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fprofile-instrument=none -fno-lto -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --implicit-check-not="!type" %}
 // RUN: %clang_cc1 -fprofile-instrument=clang -fno-lto -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --implicit-check-not="!type"
 // RUN: %clang_cc1 -fprofile-instrument=csllvm -fno-lto -triple x86_64-unknown-linux -emit-llvm %s -o - | FileCheck %s --implicit-check-not="!type"
 

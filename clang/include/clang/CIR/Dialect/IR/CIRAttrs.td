@@ -2908,6 +2908,35 @@ def CIR_AnnotationArrayAttr
     : CIR_TypedArrayAttrBase<CIR_AnnotationAttr,
                              "array of cir.annotation attributes">;
 
+//===----------------------------------------------------------------------===//
+// TypeMetadataAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_TypeMetadataAttr : CIR_Attr<"TypeMetadata", "type_metadata"> {
+  let summary = "LLVM !type metadata entry";
+  let description = [{
+    Type identifier `type_id` at byte `offset` of a global, lowered to LLVM
+    `!type` metadata. `internal` ids are lowered to distinct nodes.
+
+    ```
+    #cir.type_metadata<16, "_ZTS1A">
+    #cir.type_metadata<16, "_ZTSN12_GLOBAL__N_11BE", internal true>
+    ```
+  }];
+
+  let parameters = (ins "uint64_t":$offset,
+                        "mlir::StringAttr":$type_id,
+                        DefaultValuedParameter<"bool", "false">:$internal);
+
+  let assemblyFormat = [{
+    `<` $offset `,` $type_id (`,` `internal` $internal^)? `>`
+  }];
+}
+
+def CIR_TypeMetadataArrayAttr
+    : CIR_TypedArrayAttrBase<CIR_TypeMetadataAttr,
+                             "array of cir.type_metadata attributes">;
+
 include "clang/CIR/Dialect/IR/CIROpenCLAttrs.td"
 include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
 
