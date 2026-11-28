@@ -8,6 +8,9 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/LazyCallGraph.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
@@ -16,6 +19,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManagerImpl.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "gtest/gtest.h"
@@ -1075,6 +1079,217 @@ TEST_F(PassManagerTest, ModulePassMissedModuleAnalysisInvalidation) {
   EXPECT_DEATH(
       MPM.run(*M, MAM),
       "Module changed by WrongModulePass2 without invalidating analyses");
+}
+
+#endif
+
+#ifdef GTEST_HAS_DEATH_TEST
+
+struct WrongCalleeAttrModulePass
+    : OptionalPassInfoMixin<WrongCalleeAttrModulePass> {
+  bool InvalidateCaller;
+  explicit WrongCalleeAttrModulePass(bool InvalidateCaller = false)
+      : InvalidateCaller(InvalidateCaller) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
+    auto &FAM =
+        MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+    Function *Callee = M.getFunction("callee");
+    Callee->addFnAttr(Attribute::NoRecurse);
+    PreservedAnalyses FuncPA;
+    FuncPA.preserveSet<CFGAnalyses>();
+    FAM.invalidate(*Callee, FuncPA);
+    if (InvalidateCaller)
+      FAM.invalidate(*M.getFunction("caller"), FuncPA);
+
+    PreservedAnalyses PA;
+    PA.preserveSet<AllAnalysesOn<Function>>();
+    PA.preserve<FunctionAnalysisManagerModuleProxy>();
+    return PA;
+  }
+  static StringRef name() { return "WrongCalleeAttrModulePass"; }
+};
+
+TEST_F(PassManagerTest, ModulePassMissedCalleeAttrInvalidation) {
+  LLVMContext Context;
+  const char *Args[] = {"prog", "-verify-analysis-invalidation"};
+  ASSERT_TRUE(cl::parseCommandLineOptions(Context.getLibraryOptions(), Args, "",
+                                          &nulls()));
+  auto M = parseIR(Context, "define void @callee() {\n"
+                            "  ret void\n"
+                            "}\n"
+                            "define void @caller() {\n"
+                            "  call void @callee()\n"
+                            "  ret void\n"
+                            "}\n");
+
+  FunctionAnalysisManager FAM;
+  ModuleAnalysisManager MAM;
+  PassInstrumentationCallbacks PIC;
+  StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ false);
+  SI.registerCallbacks(PIC, &MAM);
+  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
+  MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
+
+  ModulePassManager MPM;
+  MPM.addPass(WrongCalleeAttrModulePass(/*InvalidateCaller=*/false));
+
+  EXPECT_DEATH(MPM.run(*M, MAM),
+               "Callee of function @caller changed signature by "
+               "WrongCalleeAttrModulePass without invalidating analyses");
+}
+
+TEST_F(PassManagerTest, ModulePassCalleeAttrInvalidated) {
+  LLVMContext Context;
+  const char *Args[] = {"prog", "-verify-analysis-invalidation"};
+  ASSERT_TRUE(cl::parseCommandLineOptions(Context.getLibraryOptions(), Args, "",
+                                          &nulls()));
+  auto M = parseIR(Context, "define void @callee() {\n"
+                            "  ret void\n"
+                            "}\n"
+                            "define void @caller() {\n"
+                            "  call void @callee()\n"
+                            "  ret void\n"
+                            "}\n");
+
+  FunctionAnalysisManager FAM;
+  ModuleAnalysisManager MAM;
+  PassInstrumentationCallbacks PIC;
+  StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ false);
+  SI.registerCallbacks(PIC, &MAM);
+  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
+  MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
+
+  ModulePassManager MPM;
+  MPM.addPass(WrongCalleeAttrModulePass(/*InvalidateCaller=*/true));
+  MPM.run(*M, MAM);
+}
+
+struct WrongCalleeCCModulePass
+    : OptionalPassInfoMixin<WrongCalleeCCModulePass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
+    auto &FAM =
+        MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+    Function *Callee = M.getFunction("callee");
+    Callee->setCallingConv(CallingConv::Fast);
+    FAM.invalidate(*Callee, PreservedAnalyses::none());
+
+    PreservedAnalyses PA;
+    PA.preserveSet<AllAnalysesOn<Function>>();
+    PA.preserve<FunctionAnalysisManagerModuleProxy>();
+    return PA;
+  }
+  static StringRef name() { return "WrongCalleeCCModulePass"; }
+};
+
+TEST_F(PassManagerTest, ModulePassMissedCalleeCCInvalidation) {
+  LLVMContext Context;
+  const char *Args[] = {"prog", "-verify-analysis-invalidation"};
+  ASSERT_TRUE(cl::parseCommandLineOptions(Context.getLibraryOptions(), Args, "",
+                                          &nulls()));
+  auto M = parseIR(Context, "define internal void @callee() {\n"
+                            "  ret void\n"
+                            "}\n"
+                            "define void @caller() {\n"
+                            "  call void @callee()\n"
+                            "  ret void\n"
+                            "}\n");
+
+  FunctionAnalysisManager FAM;
+  ModuleAnalysisManager MAM;
+  PassInstrumentationCallbacks PIC;
+  StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ false);
+  SI.registerCallbacks(PIC, &MAM);
+  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
+  MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
+
+  ModulePassManager MPM;
+  MPM.addPass(WrongCalleeCCModulePass());
+
+  EXPECT_DEATH(MPM.run(*M, MAM),
+               "Callee of function @caller changed signature by "
+               "WrongCalleeCCModulePass without invalidating analyses");
+}
+
+struct WrongCalleeAttrCGSCCPass
+    : OptionalPassInfoMixin<WrongCalleeAttrCGSCCPass> {
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &CGAM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &) {
+    auto &FAM =
+        CGAM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+    for (LazyCallGraph::Node &N : C) {
+      Function &F = N.getFunction();
+      if (F.getName() == "callee") {
+        F.addFnAttr(Attribute::NoRecurse);
+        FAM.invalidate(F, PreservedAnalyses::none());
+      }
+    }
+    PreservedAnalyses PA;
+    PA.preserveSet<AllAnalysesOn<Function>>();
+    PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+    return PA;
+  }
+  static StringRef name() { return "WrongCalleeAttrCGSCCPass"; }
+};
+
+struct InvalidateCallerFunctionPass
+    : OptionalPassInfoMixin<InvalidateCallerFunctionPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
+    return PreservedAnalyses::none();
+  }
+  static StringRef name() { return "InvalidateCallerFunctionPass"; }
+};
+
+// Ensure that we catch out of date analyses on functions from a CGSCC pass
+// even if a function pass invalidates them.
+TEST_F(PassManagerTest, CGSCCPassMissedCalleeAttrInvalidation) {
+  LLVMContext Context;
+  const char *Args[] = {"prog", "-verify-analysis-invalidation"};
+  ASSERT_TRUE(cl::parseCommandLineOptions(Context.getLibraryOptions(), Args, "",
+                                          &nulls()));
+  auto M = parseIR(Context, "define void @callee() {\n"
+                            "  ret void\n"
+                            "}\n"
+                            "define void @caller() {\n"
+                            "  call void @callee()\n"
+                            "  ret void\n"
+                            "}\n");
+
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassInstrumentationCallbacks PIC;
+  StandardInstrumentations SI(M->getContext(), /*DebugLogging*/ false);
+  SI.registerCallbacks(PIC, &MAM);
+  MAM.registerPass([&] { return FunctionAnalysisManagerModuleProxy(FAM); });
+  MAM.registerPass([&] { return CGSCCAnalysisManagerModuleProxy(CGAM); });
+  MAM.registerPass([&] { return LazyCallGraphAnalysis(); });
+  MAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  CGAM.registerPass([&] { return FunctionAnalysisManagerCGSCCProxy(); });
+  CGAM.registerPass([&] { return ModuleAnalysisManagerCGSCCProxy(MAM); });
+  CGAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return PassInstrumentationAnalysis(&PIC); });
+  FAM.registerPass([&] { return TargetLibraryAnalysis(); });
+  FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
+  FAM.registerPass([&] { return CGSCCAnalysisManagerFunctionProxy(CGAM); });
+
+  CGSCCPassManager CGPM;
+  CGPM.addPass(WrongCalleeAttrCGSCCPass());
+  FunctionPassManager FPM;
+  FPM.addPass(InvalidateCallerFunctionPass());
+  CGPM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
+
+  ModulePassManager MPM;
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+
+  EXPECT_DEATH(MPM.run(*M, MAM),
+               "Callee of function @caller changed signature before "
+               ".* without invalidating analyses");
 }
 
 #endif
