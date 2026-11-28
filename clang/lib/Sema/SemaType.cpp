@@ -8872,15 +8872,6 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
     return;
   }
 
-  auto VScale = S.Context.getTargetInfo().getVScaleRange(
-      S.getLangOpts(), TargetInfo::ArmStreamingKind::NotStreaming);
-  if (!VScale || !VScale->first || VScale->first != VScale->second) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_riscv_rvv_bits_unsupported)
-        << Attr;
-    Attr.setInvalid();
-    return;
-  }
-
   // The vector size must be an integer constant expression.
   llvm::APSInt RVVVectorSizeInBits(32);
   if (!verifyValidIntegerConstantExpr(S, Attr, RVVVectorSizeInBits))
@@ -8899,13 +8890,23 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
   ASTContext::BuiltinVectorTypeInfo Info =
       S.Context.getBuiltinVectorTypeInfo(CurType->castAs<BuiltinType>());
   unsigned MinElts = Info.EC.getKnownMinValue();
+  bool IsMask = Info.ElementType == S.Context.BoolTy;
+
+  auto VScale = S.Context.getTargetInfo().getVScaleRange(
+      S.getLangOpts(), TargetInfo::ArmStreamingKind::NotStreaming);
+  if (!VScale || !VScale->first) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_riscv_rvv_bits_unsupported)
+        << Attr;
+    Attr.setInvalid();
+    return;
+  }
 
   VectorKind VecKind;
   unsigned ExpectedSize = VScale->first * MinElts;
   QualType EltType = CurType->getRVVEltType(S.Context);
   unsigned EltSize = S.Context.getTypeSize(EltType);
   unsigned NumElts;
-  if (Info.ElementType == S.Context.BoolTy) {
+  if (IsMask) {
     // A mask is stored in bytes. One with fewer than 8 lanes takes a single
     // byte, and its lane count is recorded in the vector kind.
     NumElts = VecSize / S.Context.getCharWidth();
@@ -8915,9 +8916,10 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
       if (VecSize == 1 || VecSize == 2 || VecSize == 4)
         SubByteLanes = VecSize;
     }
-    // Record the ratio of the vbool<R>_t type in the vector kind, so that
-    // later stages do not have to re-derive it from VLEN and the lane count.
-    // vbool<R>_t has RVVBitsPerBlock / R lanes at vscale=1.
+    // Record the ratio of the vbool<R>_t type in the vector kind as well. It
+    // cannot be recovered later from the lane count, since the typedef may
+    // have fewer lanes than VLEN / R. vbool<R>_t has RVVBitsPerBlock / R lanes
+    // at vscale=1.
     VecKind = getRVVFixedLengthMaskVectorKind(
         llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock / MinElts), SubByteLanes);
   } else {
@@ -8932,10 +8934,25 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
         int(llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock)));
   }
 
-  // The attribute vector size must match -mrvv-vector-bits.
-  if (VecSize != ExpectedSize) {
-    S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size)
+  // The typedef may be shorter than VLEN * LMUL bits, or VLEN / R lanes for a
+  // mask, with a power-of-2 number of elements.
+  if (VecSize > ExpectedSize) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size_too_large)
         << VecSize << ExpectedSize;
+    Attr.setInvalid();
+    return;
+  }
+  if (!IsMask && (VecSize == 0 || (VecSize % EltSize) != 0)) {
+    S.Diag(Attr.getLoc(),
+           diag::err_attribute_bad_rvv_vector_size_not_multiple_of_elem)
+        << VecSize << EltSize;
+    Attr.setInvalid();
+    return;
+  }
+  unsigned NumLanes = IsMask ? VecSize : NumElts;
+  if (!llvm::isPowerOf2_32(NumLanes)) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_bad_rvv_vector_size_not_pow2)
+        << VecSize << NumLanes;
     Attr.setInvalid();
     return;
   }

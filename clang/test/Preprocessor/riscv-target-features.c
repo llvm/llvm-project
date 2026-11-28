@@ -21,6 +21,7 @@
 // CHECK-NOT: __riscv_mul {{.*$}}
 // CHECK-NOT: __riscv_muldiv {{.*$}}
 // CHECK-NOT: __riscv_q {{.*$}}
+// CHECK-NOT: __riscv_rvv_vector_bits {{.*$}}
 // CHECK-NOT: __riscv_sdext{{.*$}}
 // CHECK-NOT: __riscv_sdtrig{{.*$}}
 // CHECK-NOT: __riscv_sha {{.*$}}
@@ -571,6 +572,7 @@
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
 // RUN:   -march=rv64iv1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-V-EXT %s
+// CHECK-V-EXT: __riscv_rvv_vector_bits 1{{$}}
 // CHECK-V-EXT: __riscv_v 1000000{{$}}
 // CHECK-V-EXT: __riscv_v_elen 64
 // CHECK-V-EXT: __riscv_v_elen_fp 64
@@ -1156,6 +1158,7 @@
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
 // RUN:   -march=rv64izve32x1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZVE32X-EXT %s
+// CHECK-ZVE32X-EXT: __riscv_rvv_vector_bits 1{{$}}
 // CHECK-ZVE32X-EXT: __riscv_v_elen 32
 // CHECK-ZVE32X-EXT: __riscv_v_elen_fp 0
 // CHECK-ZVE32X-EXT: __riscv_v_intrinsic 1000000{{$}}

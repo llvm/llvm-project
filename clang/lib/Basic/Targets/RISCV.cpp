@@ -215,6 +215,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_v_min_vlen", Twine(MinVLen));
     Builder.defineMacro("__riscv_v_elen", Twine(MaxELen));
     Builder.defineMacro("__riscv_v_elen_fp", Twine(MaxELenFp));
+    Builder.defineMacro("__riscv_rvv_vector_bits", "1");
   }
 
   if (ISAInfo->hasExtension("c"))

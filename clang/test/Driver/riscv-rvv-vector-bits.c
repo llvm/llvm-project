@@ -44,23 +44,26 @@
 
 // CHECK-BAD-VALUE-ERROR: error: unsupported argument '{{.*}}' to option '-mrvv-vector-bits='
 
-// Error if using attribute without -mrvv-vector-bits=<bits> or if using -mrvv-vector-bits=<bits>+ syntax
+// Error if using attribute without -mrvv-vector-bits=<bits> or with
+// -mrvv-vector-bits=scalable when the ISA string does not guarantee a VLEN of
+// at least 64. Otherwise the minimum VLEN from the ISA string is enough.
 // -----------------------------------------------------------------------------
 // RUN: not %clang -c %s -o /dev/null -target riscv64-linux-gnu \
-// RUN:  -march=rv64gc_zve64x 2>&1 | FileCheck --check-prefix=CHECK-NO-FLAG-ERROR %s
+// RUN:  -march=rv64gc_zve32x 2>&1 | FileCheck --check-prefix=CHECK-NO-FLAG-ERROR %s
 // RUN: not %clang -c %s -o /dev/null -target riscv64-linux-gnu \
-// RUN:  -march=rv64gc_zve64x -mrvv-vector-bits=scalable 2>&1 | FileCheck --check-prefix=CHECK-NO-FLAG-ERROR %s
+// RUN:  -march=rv64gc_zve32x -mrvv-vector-bits=scalable 2>&1 | FileCheck --check-prefix=CHECK-NO-FLAG-ERROR %s
 
 typedef __rvv_int32m1_t vint32m1_t;
-typedef vint32m1_t noflag __attribute__((riscv_rvv_vector_bits(256)));
+typedef __rvv_bool32_t vbool32_t;
+typedef vbool32_t noflag __attribute__((riscv_rvv_vector_bits(4)));
 
 // CHECK-NO-FLAG-ERROR: error: 'riscv_rvv_vector_bits' is only supported when '-mrvv-vector-bits=<bits>' is specified with a value of "zvl" or a power 2 in the range [64,65536]
 
-// Error if attribute vector size != -mrvv-vector-bits
+// Error if attribute vector size > -mrvv-vector-bits
 // -----------------------------------------------------------------------------
 // RUN: not %clang -c %s -o /dev/null -target riscv64-linux-gnu \
 // RUN:  -march=rv64gc_zve64x -mrvv-vector-bits=128 2>&1 | FileCheck --check-prefix=CHECK-BAD-VECTOR-SIZE-ERROR %s
 
 typedef vint32_t bad_vector_size __attribute__((riscv_rvv_vector_bits(256)));
 
-// CHECK-BAD-VECTOR-SIZE-ERROR: error: invalid RVV vector size '256', expected size is '128' based on LMUL of type and '-mrvv-vector-bits'
+// CHECK-BAD-VECTOR-SIZE-ERROR: error: invalid RVV vector size '256', must not exceed '128' based on LMUL of type and the minimum VLEN
