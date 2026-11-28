@@ -57,8 +57,6 @@
 
 namespace lldb_private {
 
-OptionEnumValues GetDynamicValueTypes();
-
 enum InlineStrategy {
   eInlineBreakpointsNever = 0,
   eInlineBreakpointsHeaders,
