@@ -294,8 +294,7 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
   lldb::AccessType access = TranslateMemberAccess(data_member.getAccess());
   size_t field_size =
       bitfield_width ? bitfield_width : GetSizeOfType(ti, m_index.tpi()) * 8;
-  if (field_size == 0)
-    return Error::success();
+
   m_record.CollectMember(data_member.Name, offset, field_size, member_qt,
                          access, bitfield_width, m_member_index);
   return Error::success();
