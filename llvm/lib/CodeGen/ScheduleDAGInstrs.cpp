@@ -686,8 +686,6 @@ private:
   /// case of a huge region that gets reduced).
   SUnit *BarrierChain = nullptr;
 
-  unsigned MemOpsProcessed = 0;
-
   /// Tracks the total occupancy of all memop frontiers, including sequencing
   /// stores.
   unsigned MemopsInFlight = 0;
@@ -1038,17 +1036,7 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
     if (MI.mayRaiseFPException()) {
       if (BarrierChain)
         BarrierChain->addPredBarrier(SU);
-
-      if (!Opts.store_sequencing &&
-          FPExceptions.size() + 1 >= Opts.dag_maps_huge_region) {
-        LLVM_DEBUG(
-            dbgs()
-            << "Creating barrier chain and clearing FPExceptions map.\n");
-        BarrierChain = SU;
-        addBarrierChain(FPExceptions);
-      } else {
-        FPExceptions.push_back(SU);
-      }
+      FPExceptions.push_back(SU);
     }
 
     // If it's not a store or a variant load, we're done.
@@ -1056,23 +1044,9 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
         !(MI.mayLoad() && !MI.isDereferenceableInvariantLoad()))
       continue;
 
-    MemOpsProcessed++;
-
     // Always add dependecy edge to BarrierChain if present.
     if (BarrierChain && BarrierChain != SU)
       BarrierChain->addPredBarrier(SU);
-
-    // Reduce maps if they grow huge.
-    if (!Opts.store_sequencing &&
-        MemOpsProcessed >= Opts.dag_maps_huge_region) {
-      LLVM_DEBUG(dbgs() << "Creating barrier chain and clearing maps.\n");
-
-      BarrierChain = SU;
-      addBarrierMemoryDeps();
-
-      MemOpsProcessed = 0;
-      continue;
-    }
 
     // If the frontier occupancy exceeds the maximum threshold, promote SU to a
     // global memory barrier and clear the frontiers.
