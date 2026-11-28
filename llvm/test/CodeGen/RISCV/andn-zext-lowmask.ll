@@ -40,7 +40,7 @@ define i64 @andn_zext_lowmask_i64_i32(i64 %x, i32 %n) nounwind {
 ; RV64ZBB-LABEL: andn_zext_lowmask_i64_i32:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    li a2, -1
-; RV64ZBB-NEXT:    sllw a1, a2, a1
+; RV64ZBB-NEXT:    sll a1, a2, a1
 ; RV64ZBB-NEXT:    andn a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %notmask = shl i32 -1, %n
@@ -88,7 +88,6 @@ define i64 @andn_zext_lowmask_i64_i16(i64 %x, i16 %n) nounwind {
 ; RV64ZBB-NEXT:    li a2, -1
 ; RV64ZBB-NEXT:    sll a1, a2, a1
 ; RV64ZBB-NEXT:    andn a0, a0, a1
-; RV64ZBB-NEXT:    zext.h a0, a0
 ; RV64ZBB-NEXT:    ret
   %notmask = shl i16 -1, %n
   %mask = xor i16 %notmask, -1
@@ -114,7 +113,6 @@ define i32 @andn_zext_lowmask_i32_i16(i32 %x, i16 %n) nounwind {
 ; RV32ZBB-NEXT:    li a2, -1
 ; RV32ZBB-NEXT:    sll a1, a2, a1
 ; RV32ZBB-NEXT:    andn a0, a0, a1
-; RV32ZBB-NEXT:    zext.h a0, a0
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64I-LABEL: andn_zext_lowmask_i32_i16:
@@ -157,7 +155,6 @@ define i32 @andn_zext_lowmask_i32_i8(i32 %x, i8 %n) nounwind {
 ; RV32ZBB-NEXT:    li a2, -1
 ; RV32ZBB-NEXT:    sll a1, a2, a1
 ; RV32ZBB-NEXT:    andn a0, a0, a1
-; RV32ZBB-NEXT:    zext.b a0, a0
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64I-LABEL: andn_zext_lowmask_i32_i8:
