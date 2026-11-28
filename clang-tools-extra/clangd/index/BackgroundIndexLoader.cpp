@@ -48,17 +48,17 @@ private:
 
 std::pair<const LoadedShard &, std::vector<Path>>
 BackgroundIndexLoader::loadShard(PathRef StartSourceFile, PathRef DependentTU) {
-  auto It = LoadedShards.try_emplace(StartSourceFile);
+  auto It = LoadedShards.try_emplace(StartSourceFile.raw());
   LoadedShard &LS = It.first->getValue();
   std::vector<Path> Edges = {};
   // Return the cached shard.
   if (!It.second)
     return {LS, Edges};
 
-  LS.AbsolutePath = StartSourceFile.str();
-  LS.DependentTU = std::string(DependentTU);
+  LS.AbsolutePath = StartSourceFile.owned();
+  LS.DependentTU = DependentTU.owned();
   BackgroundIndexStorage *Storage = IndexStorageFactory(LS.AbsolutePath);
-  auto Shard = Storage->loadShard(StartSourceFile);
+  auto Shard = Storage->loadShard(StartSourceFile.raw());
   if (!Shard || !Shard->Sources) {
     vlog("Failed to load shard: {0}", StartSourceFile);
     return {LS, Edges};
@@ -66,7 +66,7 @@ BackgroundIndexLoader::loadShard(PathRef StartSourceFile, PathRef DependentTU) {
 
   LS.Shard = std::move(Shard);
   for (const auto &It : *LS.Shard->Sources) {
-    auto AbsPath = URI::resolve(It.getKey(), StartSourceFile);
+    auto AbsPath = URI::resolve(It.getKey(), StartSourceFile.raw());
     if (!AbsPath) {
       elog("Failed to resolve URI: {0}", AbsPath.takeError());
       continue;
@@ -91,7 +91,7 @@ void BackgroundIndexLoader::load(PathRef MainFile) {
   llvm::StringSet<> InQueue;
   // Following containers points to strings inside InQueue.
   std::queue<PathRef> ToVisit;
-  InQueue.insert(MainFile);
+  InQueue.insert(MainFile.raw());
   ToVisit.push(MainFile);
 
   while (!ToVisit.empty()) {
@@ -100,7 +100,7 @@ void BackgroundIndexLoader::load(PathRef MainFile) {
 
     auto ShardAndEdges = loadShard(SourceFile, MainFile);
     for (PathRef Edge : ShardAndEdges.second) {
-      auto It = InQueue.insert(Edge);
+      auto It = InQueue.insert(Edge.raw());
       if (It.second)
         ToVisit.push(It.first->getKey());
     }
@@ -117,7 +117,7 @@ std::vector<LoadedShard> BackgroundIndexLoader::takeResult() && {
 } // namespace
 
 std::vector<LoadedShard>
-loadIndexShards(llvm::ArrayRef<Path> MainFiles,
+loadIndexShards(llvm::ArrayRef<std::string> MainFiles,
                 BackgroundIndexStorage::Factory &IndexStorageFactory,
                 const GlobalCompilationDatabase &CDB) {
   BackgroundIndexLoader Loader(IndexStorageFactory);
