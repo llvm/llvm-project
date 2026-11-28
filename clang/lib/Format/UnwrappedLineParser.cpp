@@ -5322,8 +5322,9 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
       if (IsEndIf && PP.IncludeGuard == IG_Defined && PP.BranchLevel == -1 &&
           getIncludeGuardState(Style.IndentPPDirectives) == IG_Inited) {
         const bool EndsFile =
-            eof() || (PreviousWasComment &&
-                      Tokens->peekNextToken(/*SkipComment=*/true)->is(tok::eof));
+            eof() ||
+            (PreviousWasComment &&
+             Tokens->peekNextToken(/*SkipComment=*/true)->is(tok::eof));
         PP.IncludeGuard = EndsFile ? IG_Found : IG_Rejected;
       }
     }
