@@ -1697,7 +1697,10 @@ ValueObject::AddrAndType ValueObject::GetPointerValue() {
   case Value::ValueType::LoadAddress:
   case Value::ValueType::FileAddress: {
     lldb::offset_t data_offset = 0;
-    return {m_data.GetAddress(&data_offset), GetAddressTypeOfChildren()};
+    addr_t address = m_data.GetAddress(&data_offset);
+    if (auto stripped = GetStrippedPointerValue(address))
+      address = *stripped;
+    return {address, GetAddressTypeOfChildren()};
   }
   }
 
@@ -3636,6 +3639,9 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromExpression(
 lldb::ValueObjectSP ValueObject::CreateValueObjectFromAddress(
     llvm::StringRef name, uint64_t address, const ExecutionContext &exe_ctx,
     CompilerType type, bool do_deref, ValueObject *parent) {
+  if (do_deref)
+    if (Process *process = exe_ctx.GetProcessPtr())
+      address = process->FixAnyAddress(address);
   if (type) {
     CompilerType pointer_type(type.GetPointerType());
     if (!do_deref)
