@@ -11,48 +11,56 @@
 #define _LIBCPP___ALGORITHM_FOR_EACH_H
 
 #include <__algorithm/for_each_segment.h>
+#include <__algorithm/in_fun_result.h>
 #include <__algorithm/specialized_algorithms.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__iterator/segmented_iterator.h>
+#include <__memory/replacable_object.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_same.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Sent, class _Func, class _Proj>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
-__for_each(_InputIterator __first, _Sent __last, _Func&& __func, _Proj& __proj) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __in_fun_result<_InputIterator, _Func>
+__for_each(_InputIterator __first, _Sent __last, _Func __func, _Proj& __proj) {
 #ifndef _LIBCPP_CXX03_LANG
   if constexpr (using _SpecialAlg =
                     __specialized_algorithm<_Algorithm::__for_each, __iterator_pair<_InputIterator, _Sent>>;
                 _SpecialAlg::__has_algorithm) {
     _SpecialAlg()(__first, __last, __func, __proj);
-    return __last;
+    return {std::move(__last), std::move(__func)};
   } else if constexpr (is_same<_InputIterator, _Sent>::value && __is_segmented_iterator_v<_InputIterator>) {
     using __local_iterator_t = typename __segmented_iterator_traits<_InputIterator>::__local_iterator;
+    __replacable_object<_Func> __f(std::move(__func));
     std::__for_each_segment(__first, __last, [&](__local_iterator_t __lfirst, __local_iterator_t __llast) {
-      std::__for_each(__lfirst, __llast, __func, __proj);
+      __f.__replace(std::__for_each(__lfirst, __llast, std::move(__f.__get()), __proj).__fun_);
     });
-    return __last;
+    return {std::move(__last), std::move(__f.__get())};
   }
 #endif
   for (; __first != __last; ++__first)
     std::__invoke(__func, std::__invoke(__proj, *__first));
-  return __first;
+  return {std::move(__first), std::move(__func)};
 }
 
 template <class _InputIterator, class _Func>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _Func for_each(_InputIterator __first, _InputIterator __last, _Func __f) {
   __identity __proj;
-  std::__for_each(__first, __last, __f, __proj);
-  return __f;
+  return std::__for_each(__first, __last, std::move(__f), __proj).__fun_;
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_FOR_EACH_H

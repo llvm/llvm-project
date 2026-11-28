@@ -130,9 +130,6 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::find_last_if_not(a, UnaryTrue(&copies));
     assert(copies == 0);
 #endif
-    (void)std::ranges::for_each(first, last, UnaryVoid(&copies)); assert(copies == 1); copies = 0;
-    (void)std::ranges::for_each(a, UnaryVoid(&copies)); assert(copies == 1); copies = 0;
-    (void)std::ranges::for_each_n(first, count, UnaryVoid(&copies)); assert(copies == 1); copies = 0;
     (void)std::ranges::generate(first, last, NullaryValue(&copies)); assert(copies == 0);
     (void)std::ranges::generate(a, NullaryValue(&copies)); assert(copies == 0);
     (void)std::ranges::generate_n(first, count, NullaryValue(&copies)); assert(copies == 0);

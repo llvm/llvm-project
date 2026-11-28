@@ -48,9 +48,40 @@ int main(int argc, char** argv) {
           ->Arg(50) // non power-of-two
           ->Arg(8192);
     };
-    bm.operator()<std::vector<int>>("std::for_each(vector<int>)", std_for_each);
-    bm.operator()<std::deque<int>>("std::for_each(deque<int>)", std_for_each);
-    bm.operator()<std::list<int>>("std::for_each(list<int>)", std_for_each);
+    bm.operator()<std::vector<int>>("std::for_each(vector<int>) (clamp)", std_for_each);
+    bm.operator()<std::deque<int>>("std::for_each(deque<int>) (clamp)", std_for_each);
+    bm.operator()<std::list<int>>("std::for_each(list<int>) (clamp)", std_for_each);
+  }
+
+  // {std,ranges}::for_each
+  {
+    auto bm = []<class Container>(std::string name, auto for_each) {
+      using ElemType = typename Container::value_type;
+      benchmark::RegisterBenchmark(
+          name,
+          [for_each](auto& st) TEST_ALIGN_BENCHMARK {
+            std::size_t const size = st.range(0);
+            Container c(size, 1);
+            auto first = c.begin();
+            auto last  = c.end();
+
+            for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(c);
+              auto result = for_each(std::next(first), last, [val = *first](ElemType& x) mutable {
+                if (x < val)
+                  val = x;
+              });
+              benchmark::DoNotOptimize(result);
+            }
+          })
+          ->Arg(8)
+          ->Arg(32)
+          ->Arg(50) // non power-of-two
+          ->Arg(8192);
+    };
+    bm.operator()<std::vector<int>>("std::for_each(vector<int>) (min)", std_for_each);
+    bm.operator()<std::deque<int>>("std::for_each(deque<int>) (min)", std_for_each);
+    bm.operator()<std::list<int>>("std::for_each(list<int>) (min)", std_for_each);
   }
 
   // std::{,range::}for_each for associative containers
