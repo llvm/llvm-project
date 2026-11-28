@@ -119,6 +119,7 @@ enum class SCEVFlags {
 };
 
 class SCEV;
+struct SCEVFlagsPair;
 
 template <typename SCEVPtrT = const SCEV *>
 struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
@@ -162,14 +163,12 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
 
   /// Return only the use-specific flags without the underlying SCEV's flags.
   SCEVFlags getUseNoWrapFlags() const {
-    return getUseFlags() & SCEVFlags::FlagsNoWrapMask;
+    return static_cast<SCEVFlags>(Base::getInt() << 1) &
+           SCEVFlags::FlagsNoWrapMask;
   }
-  SCEVFlags getUseFlags() const {
-    SCEVFlags UseFlags = static_cast<SCEVFlags>(Base::getInt() << 1);
-    if (any(UseFlags & (SCEVFlags::FlagNUW | SCEVFlags::FlagNSW)))
-      UseFlags |= SCEVFlags::FlagNW;
-    return UseFlags;
-  }
+
+  /// Returns a pair of expression and use-specific flags respectively.
+  SCEVFlagsPair getNoWrapFlagsPair() const;
 
   bool operator==(const SCEVUseT &RHS) const {
     return getOpaqueValue() == RHS.getOpaqueValue();
@@ -223,6 +222,30 @@ struct SCEVFlagsPair {
   constexpr SCEVFlagsPair(SCEVFlags ExprFlags = SCEVFlags::FlagNone,
                           SCEVFlags UseFlags = SCEVFlags::FlagNone)
       : ExprFlags(ExprFlags), UseFlags(UseFlags) {}
+
+  /// Returns the combination of the expression and use-specific flags.
+  SCEVFlags getCombinedFlags() const { return ExprFlags | UseFlags; }
+
+  /// Returns true if the expression or use-specific flags contain nuw.
+  bool hasNoUnsignedWrap() const {
+    return (getCombinedFlags() & SCEVFlags::FlagNUW) != SCEVFlags::FlagNone;
+  }
+
+  /// Returns true if the expression or use-specific flags contain nsw.
+  bool hasNoSignedWrap() const {
+    return (getCombinedFlags() & SCEVFlags::FlagNSW) != SCEVFlags::FlagNone;
+  }
+
+  /// Returns the flags safe to propagate in folds established based on the
+  /// flags in \p CheckedFlags.
+  SCEVFlagsPair getFlagsToPropagate(SCEVFlags CheckedFlags) const {
+    assert((getCombinedFlags() & CheckedFlags) == CheckedFlags &&
+           "Expected flag pair to contain CheckedFlags");
+    // Drop global flags if only the use-specific flags contain CheckedFlags.
+    if ((ExprFlags & CheckedFlags) != CheckedFlags)
+      return {SCEVFlags::FlagNone, UseFlags};
+    return {ExprFlags, UseFlags};
+  }
 };
 
 /// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
@@ -761,14 +784,12 @@ public:
   LLVM_ABI const SCEV *getVScale(Type *Ty);
   LLVM_ABI const SCEV *getElementCount(Type *Ty, ElementCount EC,
                                        SCEVFlags Flags = SCEV::FlagNone);
-  LLVM_ABI const SCEV *getZeroExtendExpr(SCEVUse Op, Type *Ty,
+  LLVM_ABI SCEVUse getZeroExtendExpr(SCEVUse Op, Type *Ty, unsigned Depth = 0);
+  LLVM_ABI SCEVUse getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
                                          unsigned Depth = 0);
-  LLVM_ABI const SCEV *getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
-                                             unsigned Depth = 0);
-  LLVM_ABI const SCEV *getSignExtendExpr(SCEVUse Op, Type *Ty,
+  LLVM_ABI SCEVUse getSignExtendExpr(SCEVUse Op, Type *Ty, unsigned Depth = 0);
+  LLVM_ABI SCEVUse getSignExtendExprImpl(SCEVUse Op, Type *Ty,
                                          unsigned Depth = 0);
-  LLVM_ABI const SCEV *getSignExtendExprImpl(SCEVUse Op, Type *Ty,
-                                             unsigned Depth = 0);
   LLVM_ABI const SCEV *getCastExpr(SCEVTypes Kind, SCEVUse Op, Type *Ty);
   LLVM_ABI const SCEV *getAnyExtendExpr(SCEVUse Op, Type *Ty);
 

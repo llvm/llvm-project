@@ -2271,7 +2271,7 @@ TEST_F(ScalarEvolutionsTest, CastsOfUsesWithNoWrapFlags) {
     auto CheckCast = [&Add](const SCEV *Cast, const SCEV *Canon) {
       SCEVUse Op = cast<SCEVCastExpr>(Cast)->getOperand();
       EXPECT_EQ(Op.getPointer(), Add.getPointer());
-      EXPECT_EQ(Op.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+      EXPECT_EQ(Op.getUseNoWrapFlags(), SCEV::FlagNUW);
       EXPECT_NE(Cast, Canon);
     };
     CheckCast(SE.getTruncateExpr(NUWAdd, I16), SE.getTruncateExpr(Add, I16));
@@ -2358,7 +2358,7 @@ TEST_F(ScalarEvolutionsTest, AddExprUseFlags) {
     // The sum is built as-is, so the use carries the requested flags.
     SCEVUse Sum = SE.getAddExpr(A, B, {SCEV::FlagNone, SCEV::FlagNUW});
     EXPECT_TRUE(Sum.hasUseFlags());
-    EXPECT_EQ(Sum.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+    EXPECT_EQ(Sum.getUseNoWrapFlags(), SCEV::FlagNUW);
 
     // Same as Sun, but without NUW use flags.
     const SCEV *BareSum = SE.getAddExpr(A, B);
@@ -2374,7 +2374,7 @@ TEST_F(ScalarEvolutionsTest, AddExprUseFlags) {
     // The same holds for sums of more than two operands.
     SmallVector<SCEVUse, 3> Ops = {Cc, B, A};
     SCEVUse Sum3 = SE.getAddExpr(Ops, {SCEV::FlagNone, SCEV::FlagNSW});
-    EXPECT_EQ(Sum3.getUseNoWrapFlags(), SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(Sum3.getUseNoWrapFlags(), SCEV::FlagNSW);
     EXPECT_EQ(Sum3.getCanonical(), SE.getAddExpr(A, B, Cc));
 
     // Flags the expression already carries add nothing to the use.
@@ -2407,8 +2407,7 @@ TEST_F(ScalarEvolutionsTest, AddExprUseFlags) {
         FoldedOps, {SCEV::FlagNone, SCEV::FlagNUW | SCEV::FlagNSW});
     EXPECT_EQ(FoldedSum.getCanonical(),
               SE.getAddExpr(SE.getConstant(I32, 3), A));
-    EXPECT_EQ(FoldedSum.getUseNoWrapFlags(),
-              SCEV::FlagNUW | SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(FoldedSum.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNSW);
 
 #ifndef NDEBUG
     EXPECT_DEATH((void)SE.getAddExpr(A, B, {SCEV::FlagNone, SCEV::FlagNW}),
@@ -2455,7 +2454,7 @@ TEST_F(ScalarEvolutionsTest, MulExprUseFlags) {
     // The product is built as-is, use carries the requested flags.
     SCEVUse Prod = SE.getMulExpr(A, B, {SCEV::FlagNone, SCEV::FlagNUW});
     EXPECT_TRUE(Prod.hasUseFlags());
-    EXPECT_EQ(Prod.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+    EXPECT_EQ(Prod.getUseNoWrapFlags(), SCEV::FlagNUW);
 
     // Same as Prod, but without NUW use flags.
     const SCEV *BareProd = SE.getMulExpr(A, B);
@@ -2471,7 +2470,7 @@ TEST_F(ScalarEvolutionsTest, MulExprUseFlags) {
     // The same holds for products of more than two operands.
     SmallVector<SCEVUse, 3> Ops = {Cc, B, A};
     SCEVUse Prod3 = SE.getMulExpr(Ops, {SCEV::FlagNone, SCEV::FlagNSW});
-    EXPECT_EQ(Prod3.getUseNoWrapFlags(), SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(Prod3.getUseNoWrapFlags(), SCEV::FlagNSW);
     EXPECT_EQ(Prod3.getCanonical(), SE.getMulExpr(A, B, Cc));
 
     // Flags the expression already carries add nothing to the use.
@@ -2505,8 +2504,7 @@ TEST_F(ScalarEvolutionsTest, MulExprUseFlags) {
         FoldedOps, {SCEV::FlagNone, SCEV::FlagNUW | SCEV::FlagNSW});
     EXPECT_EQ(FoldedProd.getCanonical(),
               SE.getMulExpr(SE.getConstant(I32, 6), A));
-    EXPECT_EQ(FoldedProd.getUseNoWrapFlags(),
-              SCEV::FlagNUW | SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(FoldedProd.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNSW);
 
 #ifndef NDEBUG
     EXPECT_DEATH((void)SE.getMulExpr(A, B, {SCEV::FlagNone, SCEV::FlagNW}),
@@ -2559,7 +2557,7 @@ TEST_F(ScalarEvolutionsTest, AddRecExprUseFlags) {
     // The recurrence is built as-is, so the use carries the requested flags.
     SCEVUse AR = SE.getAddRecExpr(A, B, L1, {SCEV::FlagNone, SCEV::FlagNUW});
     EXPECT_TRUE(AR.hasUseFlags());
-    EXPECT_EQ(AR.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+    EXPECT_EQ(AR.getUseNoWrapFlags(), SCEV::FlagNUW);
 
     // Same as AR, but without NUW use flags.
     const SCEV *BareAR = SE.getAddRecExpr(A, B, L1, SCEV::FlagNone);
@@ -2572,12 +2570,12 @@ TEST_F(ScalarEvolutionsTest, AddRecExprUseFlags) {
     SCEVUse Swapped =
         SE.getAddRecExpr(B, A, L1, {SCEV::FlagNone, SCEV::FlagNSW});
     EXPECT_NE(Swapped.getPointer(), AR.getPointer());
-    EXPECT_EQ(Swapped.getUseNoWrapFlags(), SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(Swapped.getUseNoWrapFlags(), SCEV::FlagNSW);
 
     // The same holds for recurrences with more than two operands.
     SmallVector<SCEVUse, 3> Ops = {A, B, Cc};
     SCEVUse AR3 = SE.getAddRecExpr(Ops, L1, {SCEV::FlagNone, SCEV::FlagNSW});
-    EXPECT_EQ(AR3.getUseNoWrapFlags(), SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(AR3.getUseNoWrapFlags(), SCEV::FlagNSW);
     SmallVector<SCEVUse, 3> BareOps = {A, B, Cc};
     EXPECT_EQ(AR3.getCanonical(),
               SE.getAddRecExpr(BareOps, L1, SCEV::FlagNone));
@@ -2634,6 +2632,94 @@ TEST_F(ScalarEvolutionsTest, UseFlagsMayCauseUB) {
     EXPECT_FALSE(SE.isGuaranteedNotToCauseUB(SE.getUDivExpr(X, Divisor)));
     EXPECT_TRUE(SE.isGuaranteedNotToCauseUB(
         SE.getUDivExpr(X, Divisor->getCanonical())));
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, FoldAwayZExtAndSExtWithUseWrapFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i64 %n) {
+      entry:
+        br label %loop
+
+      loop:
+        %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+        %iv.next = add nuw nsw i64 %iv, 1
+        %exitcond.not = icmp eq i64 %iv.next, %n
+        br i1 %exitcond.not, label %exit, label %loop
+
+      exit:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    Instruction *IV = getInstructionByName(F, "iv");
+    const Loop *L = LI.getLoopFor(IV->getParent());
+
+    Type *I32 = Type::getInt32Ty(F.getContext());
+    Type *I64 = Type::getInt64Ty(F.getContext());
+
+    const SCEV *ZeroI32 = SE.getZero(I32);
+    const SCEV *OneI32 = SE.getOne(I32);
+
+    const SCEV *ZeroI64 = SE.getZero(I64);
+    const SCEV *OneI64 = SE.getOne(I64);
+    auto *AddRecI64 =
+        cast<SCEVAddRecExpr>(SE.getAddRecExpr(ZeroI64, OneI64, L, {}));
+    const SCEV *AddRecI32 = SE.getAddRecExpr(ZeroI32, OneI32, L, {});
+
+    // Create an i32 AddRec with NUW use wrap flags.
+    SCEVUse AddRecNUWI32(AddRecI32, SCEVFlags::FlagNUW);
+
+    // Create an i32 AddRec with NSW use wrap flags.
+    SCEVUse AddRecNSWI32(AddRecI32, SCEVFlags::FlagNSW);
+
+    // Create an i32 AddRec with NSW NUW use wrap flags.
+    SCEVUse AddRecNSWNUWI32(AddRecI32, SCEVFlags::FlagNSW | SCEVFlags::FlagNUW);
+
+    // Extend the SCEVUses to i64.
+    SCEVUse ZExtSCEVUseAR = SE.getZeroExtendExpr(AddRecNUWI32, I64);
+    SCEVUse SExtSCEVUseAR = SE.getSignExtendExpr(AddRecNSWI32, I64);
+    SCEVUse ZExtSCEVUseNswNuwAR = SE.getSignExtendExpr(AddRecNSWNUWI32, I64);
+
+    // The SCEV expression should not have any flags.
+    EXPECT_EQ(cast<SCEVAddRecExpr>(AddRecNSWI32)->getNoWrapFlags(),
+              SCEVFlags::FlagNone);
+
+    // The AddRec should be extend to I64, with use flags propagated.
+    EXPECT_EQ(AddRecI64->getNoWrapFlags(), SCEVFlags::FlagNone);
+    EXPECT_EQ(ZExtSCEVUseAR, SCEVUse(AddRecI64, SCEVFlags::FlagNUW));
+    EXPECT_EQ(SExtSCEVUseAR, SCEVUse(AddRecI64, SCEVFlags::FlagNSW));
+    EXPECT_EQ(ZExtSCEVUseNswNuwAR,
+              SCEVUse(AddRecI64, SCEVFlags::FlagNSW | SCEVFlags::FlagNUW));
+
+    Type *I8 = Type::getInt8Ty(F.getContext());
+    Type *I9 = Type::getIntNTy(F.getContext(), 9);
+
+    // SCEV for {-128,+,1}<nsw><u nuw>.
+    SCEVUse NegAddRecI8 =
+        SE.getAddRecExpr(SE.getConstant(I8, -128, true), SE.getOne(I8), L,
+                         {SCEVFlags::FlagNSW, SCEVFlags::FlagNUW});
+
+    SCEVUse I9AddRec =
+        SE.getAddRecExpr(SE.getConstant(I9, 128), SE.getOne(I9), L,
+                         {SCEVFlags::FlagNone, SCEVFlags::FlagNUW});
+
+    // Extend the i8 AddRec to i9. The reasoning was based on the use flags, so
+    // the global <nsw> should not be propagated.
+    SCEVUse ZExtToI9 = SE.getZeroExtendExpr(NegAddRecI8, I9);
+
+    EXPECT_EQ(cast<SCEVAddRecExpr>(I9AddRec)->getNoWrapFlags(),
+              SCEVFlags::FlagNone);
+    EXPECT_EQ(ZExtToI9, I9AddRec);
   });
 }
 }  // end namespace llvm

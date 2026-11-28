@@ -1130,8 +1130,8 @@ static const SCEV *getUnsignedOverflowLimitForStep(const SCEV *Step,
 namespace {
 
 struct ExtendOpTraitsBase {
-  typedef const SCEV *(ScalarEvolution::*GetExtendExprTy)(SCEVUse, Type *,
-                                                          unsigned);
+  typedef SCEVUse (ScalarEvolution::*GetExtendExprTy)(SCEVUse, Type *,
+                                                      unsigned);
 };
 
 // Used to make code generic over signed and unsigned overflow.
@@ -1407,8 +1407,8 @@ static void insertFoldCacheEntry(
   FoldCacheUser[S].push_back(ID);
 }
 
-const SCEV *ScalarEvolution::getZeroExtendExpr(SCEVUse Op, Type *Ty,
-                                               unsigned Depth) {
+SCEVUse ScalarEvolution::getZeroExtendExpr(SCEVUse Op, Type *Ty,
+                                           unsigned Depth) {
   assert(getTypeSizeInBits(Op->getType()) < getTypeSizeInBits(Ty) &&
          "This is not an extending conversion!");
   assert(isSCEVable(Ty) &&
@@ -1420,14 +1420,14 @@ const SCEV *ScalarEvolution::getZeroExtendExpr(SCEVUse Op, Type *Ty,
   if (const SCEV *S = FoldCache.lookup(ID))
     return S;
 
-  const SCEV *S = getZeroExtendExprImpl(Op, Ty, Depth);
+  SCEVUse S = getZeroExtendExprImpl(Op, Ty, Depth);
   if (!isa<SCEVZeroExtendExpr>(S))
     insertFoldCacheEntry(ID, S, FoldCache, FoldCacheUser);
   return S;
 }
 
-const SCEV *ScalarEvolution::getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
-                                                   unsigned Depth) {
+SCEVUse ScalarEvolution::getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
+                                               unsigned Depth) {
   assert(getTypeSizeInBits(Op->getType()) < getTypeSizeInBits(Ty) &&
          "This is not an extending conversion!");
   assert(isSCEVable(Ty) && "This is not a conversion to a SCEVable type!");
@@ -1448,10 +1448,12 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
   if (Depth <= Opts.scalar_evolution_max_cast_depth &&
       match(Op, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(L)))) {
     const auto *AR = cast<SCEVAddRecExpr>(Op);
-    if (AR->hasNoUnsignedWrap()) {
+    SCEVFlagsPair Flags = Op.getNoWrapFlagsPair();
+    if (Flags.hasNoUnsignedWrap()) {
       Start = getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1);
       Step = getZeroExtendExpr(Step, Ty, Depth + 1);
-      return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
+      return getAddRecExpr(Start, Step, L,
+                           Flags.getFlagsToPropagate(SCEVFlags::FlagNUW));
     }
   }
 
@@ -1759,8 +1761,8 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
   return S;
 }
 
-const SCEV *ScalarEvolution::getSignExtendExpr(SCEVUse Op, Type *Ty,
-                                               unsigned Depth) {
+SCEVUse ScalarEvolution::getSignExtendExpr(SCEVUse Op, Type *Ty,
+                                           unsigned Depth) {
   assert(getTypeSizeInBits(Op->getType()) < getTypeSizeInBits(Ty) &&
          "This is not an extending conversion!");
   assert(isSCEVable(Ty) &&
@@ -1772,14 +1774,14 @@ const SCEV *ScalarEvolution::getSignExtendExpr(SCEVUse Op, Type *Ty,
   if (const SCEV *S = FoldCache.lookup(ID))
     return S;
 
-  const SCEV *S = getSignExtendExprImpl(Op, Ty, Depth);
+  SCEVUse S = getSignExtendExprImpl(Op, Ty, Depth);
   if (!isa<SCEVSignExtendExpr>(S))
     insertFoldCacheEntry(ID, S, FoldCache, FoldCacheUser);
   return S;
 }
 
-const SCEV *ScalarEvolution::getSignExtendExprImpl(SCEVUse Op, Type *Ty,
-                                                   unsigned Depth) {
+SCEVUse ScalarEvolution::getSignExtendExprImpl(SCEVUse Op, Type *Ty,
+                                               unsigned Depth) {
   assert(getTypeSizeInBits(Op->getType()) < getTypeSizeInBits(Ty) &&
          "This is not an extending conversion!");
   assert(isSCEVable(Ty) && "This is not a conversion to a SCEVable type!");
@@ -1805,10 +1807,12 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(SCEVUse Op, Type *Ty,
   if (Depth <= Opts.scalar_evolution_max_cast_depth &&
       match(Op, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(L)))) {
     const auto *AR = cast<SCEVAddRecExpr>(Op);
-    if (AR->hasNoSignedWrap()) {
+    SCEVFlagsPair Flags = Op.getNoWrapFlagsPair();
+    if (Flags.hasNoSignedWrap()) {
       Start = getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
       Step = getSignExtendExpr(Step, Ty, Depth + 1);
-      return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
+      return getAddRecExpr(Start, Step, L,
+                           Flags.getFlagsToPropagate(SCEVFlags::FlagNSW));
     }
   }
 
@@ -2190,7 +2194,7 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
     }
   };
 
-  const SCEV *(ScalarEvolution::*Extension)(SCEVUse, Type *, unsigned) =
+  SCEVUse (ScalarEvolution::*Extension)(SCEVUse, Type *, unsigned) =
       Signed ? &ScalarEvolution::getSignExtendExpr
              : &ScalarEvolution::getZeroExtendExpr;
 
@@ -8112,8 +8116,8 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       // but by that point the NSW information has potentially been lost.
       if (BO->Opcode == Instruction::Sub && BO->IsNSW) {
         Type *Ty = U->getType();
-        auto *V1 = getSignExtendExpr(getSCEV(BO->LHS), Ty);
-        auto *V2 = getSignExtendExpr(getSCEV(BO->RHS), Ty);
+        SCEVUse V1 = getSignExtendExpr(getSCEV(BO->LHS), Ty);
+        SCEVUse V2 = getSignExtendExpr(getSCEV(BO->RHS), Ty);
         return getMinusSCEV(V1, V2, SCEV::FlagNSW);
       }
     }
@@ -16207,7 +16211,7 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(
       while (Bitwidth % 8 == 0 && Bitwidth >= 8 &&
              Bitwidth > Op->getType()->getScalarSizeInBits()) {
         Type *NarrowTy = IntegerType::get(SE.getContext(), Bitwidth);
-        auto *NarrowExt = SE.getZeroExtendExpr(Op, NarrowTy);
+        SCEVUse NarrowExt = SE.getZeroExtendExpr(Op, NarrowTy);
         if (const SCEV *S = lookup(NarrowExt))
           return SE.getZeroExtendExpr(S, Ty);
         Bitwidth = Bitwidth / 2;
