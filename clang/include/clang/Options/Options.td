@@ -3803,7 +3803,8 @@ defm module_local_hints : BoolFOption<"module-local-hints",
   PosFlag<SetTrue, [], [ClangOption], "Mark">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't mark">,
   BothFlags<[], [ClangOption], " inline functions and template instantiations "
-            "defined in the main source file as likely_module_local">>;
+            "defined in the main source file, or instantiated with a template "
+            "argument declared in it, as likely_module_local">>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
