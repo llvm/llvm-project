@@ -38461,10 +38461,15 @@ X86TargetLowering::EmitLoweredIndirectThunk(MachineInstr &MI,
   else
     AvailableRegs.append({X86::EAX, X86::ECX, X86::EDX, X86::EDI});
 
-  // Zero out any registers that are already used.
+  // Zero out any registers that are already used, or that overlap a used
+  // register for example R11 and R11D.
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   for (const auto &MO : MI.operands()) {
-    if (MO.isReg() && MO.isUse())
-      llvm::replace(AvailableRegs, MO.getReg(), Register());
+    if (MO.isReg() && MO.isUse()) {
+      for (Register &Reg : AvailableRegs)
+        if (TRI->regsOverlap(Reg, MO.getReg()))
+          Reg = Register();
+    }
   }
 
   // Choose the first remaining non-zero available register.
