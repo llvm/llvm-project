@@ -7,8 +7,8 @@
 // RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-signed-char
 // RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-wchar -DNO_PREDEFINED_WCHAR_T
 
-// RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-signed-char -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-wchar -DNO_PREDEFINED_WCHAR_T -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify=expected,new-interp -pedantic -Wno-vla-extension -fno-signed-char -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify=expected,new-interp -pedantic -Wno-vla-extension -fno-wchar -DNO_PREDEFINED_WCHAR_T -fexperimental-new-constant-interpreter
 
 # 9 "/usr/include/string.h" 1 3 4  // expected-warning {{this style of line directive is a GNU extension}}
 extern "C" {
@@ -63,6 +63,22 @@ namespace Strlen {
   int arr[3]; // expected-note 2{{here}}
   int k = arr[strlen("hello")]; // expected-warning {{array index 5}}
   int wk = arr[wcslen(L"hello")]; // expected-warning {{array index 5}}
+
+  // __builtin_wcslen on a wide string literal with a non-zero offset.
+  static_assert(__builtin_wcslen(&L"abc"[1]) == 2, "");
+  static_assert(__builtin_wcslen(&L"abcdef"[1]) == 5, "");
+  static_assert(__builtin_wcslen(&L"abc\0defgh"[1]) == 2, "");
+  static_assert(__builtin_wcslen(&L"ab\0cd"[3]) == 2, "");
+  static_assert(__builtin_wcslen(&L"abc"[3]) == 0, "");
+  static_assert(__builtin_strlen(&"abc"[1]) == 2, "");
+
+  // A wide literal read as char must not be folded.
+  // FIXME: The new constant interpreter still folds it.
+  static_assert(!__builtin_constant_p(__builtin_strlen((const char *)L"abc")), ""); // new-interp-error {{static assertion failed}}
+
+  // A literal read as a different character type of the same size is folded.
+  static_assert(__builtin_constant_p(__builtin_strlen((const char *)u8"abc")), "");
+  static_assert(__builtin_constant_p(__builtin_wcslen((const wchar_t *)U"abc")), "");
 }
 
 namespace StrcmpEtc {
