@@ -1,0 +1,45 @@
+# RUN: llc -march=hexagon -mcpu=hexagonv85 -mattr=+hlx \
+# RUN:   -run-pass=machine-scheduler -verify-machineinstrs %s -o - \
+# RUN:   | FileCheck %s
+
+# Keep the load and its TC2 unpack consumers adjacent, and keep the TC2 pack
+# operation next to its store. These use the dedicated HLX timing classes,
+# rather than the scalar classes previously shared by unpack and assignment.
+
+# CHECK-LABEL: name: hlx_tc2_conversions
+# CHECK: %[[LOAD:[0-9]+]]:hlxlr = LX_L16b_pseudo
+# CHECK-NEXT: %[[LO:[0-9]+]]:hlxllr = LX_conv_h_b_lo %[[LOAD]]
+# CHECK-NEXT: %[[HI:[0-9]+]]:hlxllr = LX_conv_h_b_hi %[[LOAD]]
+# CHECK: %[[LOW:[0-9]+]]:hlxlr = LX_lo %[[LO]]
+# CHECK: %[[HIGH:[0-9]+]]:hlxlr = LX_hi %[[HI]]
+# CHECK: %[[PACK:[0-9]+]]:hlxlr = LX_conv_b_h_hi %[[LOW]], %[[HIGH]]
+# CHECK-NEXT: LX_S16b_pseudo %{{[0-9]+}}, %[[PACK]]
+
+--- |
+  define void @hlx_tc2_conversions(ptr %in, ptr %out) {
+    ret void
+  }
+...
+---
+name:            hlx_tc2_conversions
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+  - { reg: '$r1' }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0:intregs = COPY $r0
+    %1:intregs = COPY $r1
+    %2:hlxlr = LX_L16b_pseudo %0
+    %3:hlxllr = LX_conv_h_b_lo %2
+    %0:intregs = A2_addi %0, 4
+    %4:hlxllr = LX_conv_h_b_hi %2
+    %5:hlxlr = LX_lo %3
+    %6:hlxlr = LX_hi %4
+    %7:hlxlr = LX_conv_b_h_hi %5, %6
+    %0:intregs = A2_addi %0, 4
+    LX_S16b_pseudo %1, %7
+    PS_jmpret $r31, implicit-def dead $pc
+...

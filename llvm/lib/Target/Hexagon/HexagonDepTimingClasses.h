@@ -51,10 +51,6 @@ inline bool is_TC1(unsigned SchedClass) {
   case Hexagon::Sched::tc_J4_jumpseti:
   case Hexagon::Sched::tc_J4_jumpsetr:
   case Hexagon::Sched::tc_J4_tstbit0_fp0_jump_nt:
-  case Hexagon::Sched::tc_LX_absdiff_h:
-  case Hexagon::Sched::tc_LX_mpa_uwuhuw_si:
-  case Hexagon::Sched::tc_LX_mpy_uw_uh:
-  case Hexagon::Sched::tc_LX_shra_h_h:
   case Hexagon::Sched::tc_SA1_addi:
   case Hexagon::Sched::tc_SA1_addsp:
   case Hexagon::Sched::tc_SA1_clrf:
@@ -84,6 +80,14 @@ inline bool is_TC2(unsigned SchedClass) {
   case Hexagon::Sched::tc_C4_addipc:
   case Hexagon::Sched::tc_F2_dfimm_n:
   case Hexagon::Sched::tc_F2_sfmax:
+  case Hexagon::Sched::tc_LX_abs_uh:
+  case Hexagon::Sched::tc_LX_abs_uhp:
+  case Hexagon::Sched::tc_LX_absdiff_h:
+  case Hexagon::Sched::tc_LX_add_h:
+  case Hexagon::Sched::tc_LX_mpa_uwuhuw_si:
+  case Hexagon::Sched::tc_LX_mpy_uw_uh:
+  case Hexagon::Sched::tc_LX_mux_h:
+  case Hexagon::Sched::tc_LX_shra_h_h:
   case Hexagon::Sched::tc_M2_acci:
   case Hexagon::Sched::tc_M2_xor_xacc:
   case Hexagon::Sched::tc_S2_brev:
