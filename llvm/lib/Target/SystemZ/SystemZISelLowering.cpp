@@ -677,6 +677,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::SETCC, MVT::v2f64, Custom);
     setOperationAction(ISD::SETCC, MVT::v4f32, Custom);
+    setOperationAction(ISD::IS_FPCLASS, MVT::v2f64, Custom);
     setOperationAction(ISD::STRICT_FSETCC, MVT::v2f64, Custom);
     setOperationAction(ISD::STRICT_FSETCC, MVT::v4f32, Custom);
     if (Subtarget.hasVectorEnhancements1()) {
@@ -687,6 +688,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
   // The vector enhancements facility 1 has instructions for these.
   if (Subtarget.hasVectorEnhancements1()) {
+    setOperationAction(ISD::IS_FPCLASS, MVT::v4f32, Custom);
     setOperationAction(ISD::FADD, MVT::v4f32, Legal);
     setOperationAction(ISD::FNEG, MVT::v4f32, Legal);
     setOperationAction(ISD::FSUB, MVT::v4f32, Legal);
@@ -7369,8 +7371,40 @@ SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
     TDCMask |= SystemZ::TDCMASK_ZERO_PLUS;
   if (Check & fcNegZero)
     TDCMask |= SystemZ::TDCMASK_ZERO_MINUS;
-  SDValue TDCMaskV = DAG.getConstant(TDCMask, DL, MVT::i64);
 
+  MVT ArgVT = Arg.getSimpleValueType();
+
+  // For <2 x double> and <4 x float>, use VFTCIDB / VFTCISB.
+  // These produce an integer mask (all-ones for matching elements, all-zeros
+  // otherwise) in the same register, which is the boolean vector result.
+  if (ArgVT == MVT::v2f64 || ArgVT == MVT::v4f32) {
+    MVT MaskVT = ArgVT.changeVectorElementTypeToInteger();
+    SDVTList VTs = DAG.getVTList(MaskVT, MVT::i32);
+    return DAG
+        .getNode(SystemZISD::VFTCI, DL, VTs, Arg,
+                 DAG.getTargetConstant(TDCMask, DL, MVT::i32))
+        .getValue(0);
+  }
+
+  // For f128 on z14+, use WFTCIXB.  This keeps f128 in a single VR128
+  // (avoiding the TCXB FP-pair split and its GroupAlone restriction).
+  // WFTCIXB produces an i128 all-ones (match) or all-zeros (no match).
+  // Extract the sign bit of the high 64 bits to get the boolean.
+  if (ArgVT == MVT::f128 && Subtarget.hasVectorEnhancements1()) {
+    SDVTList VTs = DAG.getVTList(MVT::i128, MVT::i32);
+    SDValue WRes = DAG.getNode(SystemZISD::WFTCIXB, DL, VTs, Arg,
+                               DAG.getTargetConstant(TDCMask, DL, MVT::i32));
+    // Bitcast the i128 result to v2i64 and extract the high element.
+    SDValue AsVec = DAG.getBitcast(MVT::v2i64, WRes.getValue(0));
+    SDValue Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, AsVec,
+                             DAG.getConstant(0, DL, MVT::i32));
+    // Shift the sign bit down: 1 if all-ones (match), 0 if all-zeros.
+    SDValue Bit = DAG.getNode(ISD::SRL, DL, MVT::i64, Hi,
+                              DAG.getConstant(63, DL, MVT::i64));
+    return DAG.getNode(ISD::TRUNCATE, DL, ResultVT, Bit);
+  }
+
+  SDValue TDCMaskV = DAG.getConstant(TDCMask, DL, MVT::i64);
   SDValue Intr = DAG.getNode(SystemZISD::TDC, DL, ResultVT, Arg, TDCMaskV);
   return getCCResult(DAG, Intr);
 }
