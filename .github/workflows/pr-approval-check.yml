@@ -1,0 +1,41 @@
+name: "Check for approval or skip-precommit-approval label"
+
+# This workflow only records that a PR's approval state may have changed. The
+# actual check is done by pr-approval-status.yml, which runs (via workflow_run)
+# when this workflow completes and reports the result as a single commit status.
+#
+# The check isn't done here directly because GitHub shows a separate check for
+# each triggering event, so a failure from a pull_request run and a success
+# from a later pull_request_review run (or vice versa) would both be shown.
+# Also, runs triggered by pull_request/pull_request_review for PRs from forks
+# only get a read-only token, so they can't set a commit status themselves.
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - edited
+      - labeled
+      - unlabeled
+  pull_request_review:
+    types:
+      - submitted
+      - dismissed
+
+jobs:
+  trigger_approval_status:
+    runs-on: ubuntu-26.04
+    if: >-
+      (github.repository == 'llvm/llvm-project') &&
+      (github.event.pull_request.base.ref == 'main')
+    steps:
+      - name: Trigger approval status update
+        run: echo "The approval status is updated by the 'Approval status' workflow."
