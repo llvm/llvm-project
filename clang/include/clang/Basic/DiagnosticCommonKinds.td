@@ -372,6 +372,8 @@ def warn_target_unrecognized_env : Warning<
   InGroup<InvalidCommandLineArgument>;
 def err_target_unsupported_abi_with_fpu : Error<
   "'%0' ABI is not supported with FPU">;
+def err_storage_only_long_double : Error<
+  "x87 'long double' values are not supported on target '%0'">;
 
 def err_ppc_impossible_musttail: Error<
   "'musttail' attribute for this call is impossible because %select{"

@@ -504,6 +504,9 @@ public:
 
   Value *Visit(Expr *E) {
     ApplyDebugLocation DL(CGF, E);
+    if (CGF.CGM.hasStorageOnlyLongDouble() &&
+        CGF.CGM.diagnoseLongDoubleType(E->getType(), E->getExprLoc()))
+      return llvm::PoisonValue::get(ConvertType(E->getType()));
     return StmtVisitor<ScalarExprEmitter, Value*>::Visit(E);
   }
 

@@ -94,6 +94,12 @@ public:
 
   ComplexPairTy Visit(Expr *E) {
     ApplyDebugLocation DL(CGF, E);
+    if (CGF.CGM.hasStorageOnlyLongDouble() &&
+        CGF.CGM.diagnoseLongDoubleType(E->getType(), E->getExprLoc())) {
+      auto *Poison = llvm::PoisonValue::get(
+          CGF.ConvertType(CGF.getContext().LongDoubleTy));
+      return ComplexPairTy(Poison, Poison);
+    }
     return StmtVisitor<ComplexExprEmitter, ComplexPairTy>::Visit(E);
   }
 
