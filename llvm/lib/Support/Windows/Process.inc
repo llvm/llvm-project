@@ -448,15 +448,6 @@ static unsigned GetRandomNumberSeed() {
   return hash_combine(Time.dwHighDateTime, Time.dwLowDateTime, Pid);
 }
 
-static unsigned GetPseudoRandomNumber() {
-  // Arrange to call srand once when this function is first used, and
-  // otherwise (if GetRandomNumber always succeeds in using
-  // CryptGenRandom) don't bother at all.
-  static int x = (static_cast<void>(::srand(GetRandomNumberSeed())), 0);
-  (void)x;
-  return ::rand();
-}
-
 unsigned Process::GetRandomNumber() {
   // Try to use CryptGenRandom.
   HCRYPTPROV HCPC;
@@ -470,7 +461,7 @@ unsigned Process::GetRandomNumber() {
   }
 
   // If that fails, fall back to pseudo-random numbers.
-  return GetPseudoRandomNumber();
+  return getPrivatePseudoRandomNumber(GetRandomNumberSeed);
 }
 
 typedef NTSTATUS(WINAPI *RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);

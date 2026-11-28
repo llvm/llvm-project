@@ -7,14 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Process.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
+#include <cstdlib>
 #include <optional>
 
 #ifdef _WIN32
 #include <windows.h>
+#endif
+
+#ifdef LLVM_ON_UNIX
+#include <sys/wait.h>
+#include <unistd.h>
 #endif
 
 namespace {
@@ -38,6 +45,49 @@ TEST(ProcessTest, GetRandomNumberTest) {
   // It should be extremely unlikely that both r1 and r2 are 0.
   EXPECT_NE((r1 | r2), 0u);
 }
+
+TEST(ProcessTest, GetRandomNumberKeepsRandState) {
+  // GetRandomNumber must not reseed or advance the C library's rand() state,
+  // which belongs to the program.
+  ::srand(42);
+  const int Expected1 = ::rand();
+  const int Expected2 = ::rand();
+  ::srand(42);
+  (void)Process::GetRandomNumber();
+  EXPECT_EQ(::rand(), Expected1);
+  (void)Process::GetRandomNumber();
+  EXPECT_EQ(::rand(), Expected2);
+}
+
+#ifdef LLVM_ON_UNIX
+TEST(ProcessTest, GetRandomNumberDiffersAfterFork) {
+  // A child process must not draw the same numbers as its parent, or they
+  // would, for example, pick the same temporary file names.
+  (void)Process::GetRandomNumber();
+  int Pipe[2];
+  ASSERT_EQ(::pipe(Pipe), 0);
+  const pid_t Child = ::fork();
+  ASSERT_NE(Child, -1);
+  if (Child == 0) {
+    const unsigned Numbers[2] = {Process::GetRandomNumber(),
+                                 Process::GetRandomNumber()};
+    const ssize_t Written = ::write(Pipe[1], Numbers, sizeof(Numbers));
+    ::_exit(Written == sizeof(Numbers) ? 0 : 1);
+  }
+  ::close(Pipe[1]);
+  unsigned ChildNumbers[2];
+  const ssize_t Read = ::read(Pipe[0], ChildNumbers, sizeof(ChildNumbers));
+  ::close(Pipe[0]);
+  int Status;
+  ASSERT_EQ(::waitpid(Child, &Status, 0), Child);
+  ASSERT_EQ(Read, static_cast<ssize_t>(sizeof(ChildNumbers)));
+  const unsigned ParentNumbers[2] = {Process::GetRandomNumber(),
+                                     Process::GetRandomNumber()};
+  // Two numbers make an accidental match very unlikely.
+  EXPECT_FALSE(ChildNumbers[0] == ParentNumbers[0] &&
+               ChildNumbers[1] == ParentNumbers[1]);
+}
+#endif
 
 #ifdef _MSC_VER
 #define setenv(name, var, ignore) _putenv_s(name, var)
