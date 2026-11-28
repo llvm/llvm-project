@@ -1308,10 +1308,8 @@ define void @global_store_v4i32_zext_vgpr_offset_neg128(ptr addrspace(1) %sbase,
 ; GFX942-SDAG-LABEL: global_store_v4i32_zext_vgpr_offset_neg128:
 ; GFX942-SDAG:       ; %bb.0:
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v7, v6
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v6, v5
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, v4
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v4, v3
+; GFX942-SDAG-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[6:7] op_sel:[1,0]
+; GFX942-SDAG-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[4:5] op_sel:[1,0]
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[2:3]
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off offset:-128 sc0
@@ -1370,10 +1368,8 @@ define void @global_store_v4i32_zext_vgpr_offset_neg128(ptr addrspace(1) %sbase,
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-ISEL-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2
-; GFX942-ISEL-NEXT:    v_mov_b32_e32 v8, v3
-; GFX942-ISEL-NEXT:    v_mov_b32_e32 v9, v4
-; GFX942-ISEL-NEXT:    v_mov_b32_e32 v10, v5
-; GFX942-ISEL-NEXT:    v_mov_b32_e32 v11, v6
+; GFX942-ISEL-NEXT:    v_pk_mov_b32 v[8:9], v[2:3], v[4:5] op_sel:[1,0]
+; GFX942-ISEL-NEXT:    v_pk_mov_b32 v[10:11], v[4:5], v[6:7] op_sel:[1,0]
 ; GFX942-ISEL-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX942-ISEL-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off offset:-128 sc0
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -1860,10 +1856,8 @@ define void @global_store_saddr_v4i32_zext_vgpr_offset_neg128(ptr addrspace(1) i
 ; GFX942-SDAG-LABEL: global_store_saddr_v4i32_zext_vgpr_offset_neg128:
 ; GFX942-SDAG:       ; %bb.0:
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, v4
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v4, v3
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v3, v2
-; GFX942-SDAG-NEXT:    v_mov_b32_e32 v2, v1
+; GFX942-SDAG-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[4:5] op_sel:[1,0]
+; GFX942-SDAG-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX942-SDAG-NEXT:    global_store_dwordx4 v0, v[2:5], s[0:1] offset:-128 sc0
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -1913,10 +1907,8 @@ define void @global_store_saddr_v4i32_zext_vgpr_offset_neg128(ptr addrspace(1) i
 ; GFX942-ISEL-LABEL: global_store_saddr_v4i32_zext_vgpr_offset_neg128:
 ; GFX942-ISEL:       ; %bb.0:
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-ISEL-NEXT:    v_mov_b32_e32 v6, v1
-; GFX942-ISEL-NEXT:    v_mov_b32_e32 v7, v2
-; GFX942-ISEL-NEXT:    v_mov_b32_e32 v8, v3
-; GFX942-ISEL-NEXT:    v_mov_b32_e32 v9, v4
+; GFX942-ISEL-NEXT:    v_pk_mov_b32 v[6:7], v[0:1], v[2:3] op_sel:[1,0]
+; GFX942-ISEL-NEXT:    v_pk_mov_b32 v[8:9], v[2:3], v[4:5] op_sel:[1,0]
 ; GFX942-ISEL-NEXT:    global_store_dwordx4 v0, v[6:9], s[0:1] offset:-128 sc0
 ; GFX942-ISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-ISEL-NEXT:    s_setpc_b64 s[30:31]

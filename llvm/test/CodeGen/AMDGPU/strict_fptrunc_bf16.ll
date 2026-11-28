@@ -5,8 +5,7 @@
 define amdgpu_ps void @strict_fptrunc_f32_to_bf16(float %a, ptr %out) #0 {
 ; GFX950-LABEL: strict_fptrunc_f32_to_bf16:
 ; GFX950:       ; %bb.0:
-; GFX950-NEXT:    v_mov_b32_e32 v3, v2
-; GFX950-NEXT:    v_mov_b32_e32 v2, v1
+; GFX950-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX950-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX950-NEXT:    flat_store_short v[2:3], v0
 ; GFX950-NEXT:    s_endpgm

@@ -10,11 +10,10 @@ define <4 x float> @test_sgpr_constraint_bug(ptr addrspace(5) %buf_desc_ptr) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    scratch_load_dwordx4 v[4:7], v0, off
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], exec
 ; CHECK-NEXT:    v_mov_b32_e32 v8, 1
-; CHECK-NEXT:    v_mov_b32_e32 v1, v0
-; CHECK-NEXT:    v_mov_b32_e32 v2, v0
-; CHECK-NEXT:    v_mov_b32_e32 v3, v0
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_readfirstlane_b32 s3, v7
 ; CHECK-NEXT:    v_readfirstlane_b32 s2, v6
@@ -22,8 +21,8 @@ define <4 x float> @test_sgpr_constraint_bug(ptr addrspace(5) %buf_desc_ptr) {
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v4
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_cmpx_le_u32_e64 exec, 1, v8
-; CHECK-NEXT:  buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen
-; CHECK-NEXT:  s_mov_b64 exec, s[4:5]
+; CHECK-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen
+; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %rsrc = load <4 x i32>, ptr addrspace(5) %buf_desc_ptr, align 16
@@ -157,7 +156,7 @@ define amdgpu_kernel void @multiple_divergent_sgpr_inputs(ptr addrspace(1) %out)
 ; CHECK-NEXT:    v_readfirstlane_b32 s4, v2
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_add_u32 s2, s2, s3
-; CHECK-NEXT:  s_add_u32 s2, s2, s4
+; CHECK-NEXT:    s_add_u32 s2, s2, s4
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
@@ -184,7 +183,7 @@ define amdgpu_kernel void @same_value_repeated_sgpr_inputs(ptr addrspace(1) %out
 ; CHECK-NEXT:    v_readfirstlane_b32 s2, v0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    s_add_u32 s3, s2, s2
-; CHECK-NEXT:  s_add_u32 s3, s3, s2
+; CHECK-NEXT:    s_add_u32 s3, s3, s2
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s3

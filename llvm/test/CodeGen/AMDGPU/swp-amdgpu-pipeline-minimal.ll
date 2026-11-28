@@ -118,14 +118,11 @@ define amdgpu_kernel void @swp_amdgpu_pipeline_minimal(i1 %arg) {
 ; CHECK-PIPELINED-NEXT:    s_cselect_b64 s[22:23], -1, 0
 ; CHECK-PIPELINED-NEXT:    s_or_b32 s21, s19, 1
 ; CHECK-PIPELINED-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v11, v5
+; CHECK-PIPELINED-NEXT:    v_mov_b64_e32 v[10:11], v[4:5]
 ; CHECK-PIPELINED-NEXT:    s_waitcnt vmcnt(2)
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v5, v7
+; CHECK-PIPELINED-NEXT:    v_mov_b64_e32 v[4:5], v[6:7]
 ; CHECK-PIPELINED-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v7, v9
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v10, v4
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v4, v6
-; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v6, v8
+; CHECK-PIPELINED-NEXT:    v_mov_b64_e32 v[6:7], v[8:9]
 ; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v8, s20
 ; CHECK-PIPELINED-NEXT:    v_mov_b32_e32 v9, s21
 ; CHECK-PIPELINED-NEXT:    buffer_load_dword v8, v8, s[0:3], 0 offen

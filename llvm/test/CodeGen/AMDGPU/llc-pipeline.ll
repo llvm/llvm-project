@@ -394,6 +394,7 @@
 ; GCN-O1-NEXT:        Stack Slot Coloring
 ; GCN-O1-NEXT:        Machine Copy Propagation Pass
 ; GCN-O1-NEXT:        Machine Loop Invariant Code Motion
+; GCN-O1-NEXT:        SI Fold Packed Moves
 ; GCN-O1-NEXT:        SI Fix VGPR copies
 ; GCN-O1-NEXT:        SI optimize exec mask operations
 ; GCN-O1-NEXT:        Remove Redundant DEBUG_VALUE analysis
@@ -716,6 +717,7 @@
 ; GCN-O1-OPTS-NEXT:        Stack Slot Coloring
 ; GCN-O1-OPTS-NEXT:        Machine Copy Propagation Pass
 ; GCN-O1-OPTS-NEXT:        Machine Loop Invariant Code Motion
+; GCN-O1-OPTS-NEXT:        SI Fold Packed Moves
 ; GCN-O1-OPTS-NEXT:        SI Fix VGPR copies
 ; GCN-O1-OPTS-NEXT:        SI optimize exec mask operations
 ; GCN-O1-OPTS-NEXT:        Remove Redundant DEBUG_VALUE analysis
@@ -1043,6 +1045,7 @@
 ; GCN-O2-NEXT:        Stack Slot Coloring
 ; GCN-O2-NEXT:        Machine Copy Propagation Pass
 ; GCN-O2-NEXT:        Machine Loop Invariant Code Motion
+; GCN-O2-NEXT:        SI Fold Packed Moves
 ; GCN-O2-NEXT:        SI Fix VGPR copies
 ; GCN-O2-NEXT:        SI optimize exec mask operations
 ; GCN-O2-NEXT:        Remove Redundant DEBUG_VALUE analysis
@@ -1385,6 +1388,7 @@
 ; GCN-O3-NEXT:        Stack Slot Coloring
 ; GCN-O3-NEXT:        Machine Copy Propagation Pass
 ; GCN-O3-NEXT:        Machine Loop Invariant Code Motion
+; GCN-O3-NEXT:        SI Fold Packed Moves
 ; GCN-O3-NEXT:        SI Fix VGPR copies
 ; GCN-O3-NEXT:        SI optimize exec mask operations
 ; GCN-O3-NEXT:        Remove Redundant DEBUG_VALUE analysis

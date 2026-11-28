@@ -20,20 +20,17 @@ define hidden fastcc void @bar(i32 %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %a
 ; CHECK-NEXT:    s_add_u32 s16, s16, global@rel32@lo+1948
 ; CHECK-NEXT:    s_addc_u32 s17, s17, global@rel32@hi+1956
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v5
+; CHECK-NEXT:    v_mov_b32_e32 v5, 0
 ; CHECK-NEXT:    s_getpc_b64 s[18:19]
 ; CHECK-NEXT:    s_add_u32 s18, s18, eggs@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s19, s19, eggs@rel32@hi+12
-; CHECK-NEXT:    v_mov_b32_e32 v5, 0
-; CHECK-NEXT:    v_mov_b32_e32 v6, v3
-; CHECK-NEXT:    v_mov_b32_e32 v7, v4
+; CHECK-NEXT:    v_pk_mov_b32 v[6:7], v[2:3], v[4:5] op_sel:[1,0]
 ; CHECK-NEXT:    v_mov_b32_e32 v11, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v12, v14
-; CHECK-NEXT:    v_mov_b32_e32 v0, s16
-; CHECK-NEXT:    v_mov_b32_e32 v1, s17
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[16:17], s[16:17] op_sel:[0,1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v2, v16
-; CHECK-NEXT:    v_mov_b32_e32 v3, v17
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], v[16:17], v[16:17] op_sel:[0,1]
 ; CHECK-NEXT:    s_setpc_b64 s[18:19]
 ; CHECK-NEXT:  .LBB0_3: ; %LeafBlock1
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_5
@@ -41,18 +38,12 @@ define hidden fastcc void @bar(i32 %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %a
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, quux@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, quux@rel32@hi+12
-; CHECK-NEXT:    v_mov_b32_e32 v0, v1
-; CHECK-NEXT:    v_mov_b32_e32 v1, v2
-; CHECK-NEXT:    v_mov_b32_e32 v2, v3
-; CHECK-NEXT:    v_mov_b32_e32 v3, v4
-; CHECK-NEXT:    v_mov_b32_e32 v4, v5
-; CHECK-NEXT:    v_mov_b32_e32 v5, v9
-; CHECK-NEXT:    v_mov_b32_e32 v6, v10
-; CHECK-NEXT:    v_mov_b32_e32 v7, v8
-; CHECK-NEXT:    v_mov_b32_e32 v8, v14
-; CHECK-NEXT:    v_mov_b32_e32 v9, v13
-; CHECK-NEXT:    v_mov_b32_e32 v10, v11
-; CHECK-NEXT:    v_mov_b32_e32 v11, v12
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], v[0:1], v[2:3] op_sel:[1,0]
+; CHECK-NEXT:    v_pk_mov_b32 v[2:3], v[2:3], v[4:5] op_sel:[1,0]
+; CHECK-NEXT:    v_pk_mov_b32 v[4:5], v[4:5], v[8:9] op_sel:[1,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[6:7], v[10:11], v[8:9]
+; CHECK-NEXT:    v_pk_mov_b32 v[8:9], v[14:15], v[12:13] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[10:11], v[10:11], v[12:13] op_sel:[1,0]
 ; CHECK-NEXT:    s_setpc_b64 s[16:17]
 ; CHECK-NEXT:  .LBB0_5: ; %bb9
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
