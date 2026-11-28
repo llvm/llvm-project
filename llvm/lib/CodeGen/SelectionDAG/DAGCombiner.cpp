@@ -28074,14 +28074,17 @@ static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
        !TLI.isShuffleMaskLegal(Mask, WideVT)))
     return SDValue();
 
-  // Create a wide load of twice the size of the original load.
-  MachineFunction &MF = DAG.getMachineFunction();
-  MachineMemOperand *WideMMO = MF.getMachineMemOperand(
-      Base->getMemOperand(), /*Offset=*/0, WideVT.getStoreSize());
-  if (!getCommonMemCacheHint({LoadA, LoadB}))
-    WideMMO->clearMemCacheHint();
-  SDValue WideLoad = DAG.getLoad(WideVT, SDLoc(N), Base->getChain(),
-                                 Base->getBasePtr(), WideMMO);
+  // Create a wide load of twice the size of the original load. It also reads
+  // the other load's bytes, so it can only keep the memory flags that both
+  // loads have, such as invariant, and it needs the AA info of both.
+  LoadSDNode *Other = Base == LoadA ? LoadB : LoadA;
+  MachineMemOperand::Flags Flags =
+      Base->getMemOperand()->getFlags() & Other->getMemOperand()->getFlags();
+  SDValue WideLoad = DAG.getLoad(
+      WideVT, SDLoc(N), Base->getChain(), Base->getBasePtr(),
+      Base->getPointerInfo(), Base->getBaseAlign(), Flags,
+      MMOMetadata(Base->getAAInfo().concat(Other->getAAInfo()),
+                  /*Ranges=*/nullptr, getCommonMemCacheHint({LoadA, LoadB})));
   // Redirect old chain users to the new chain.
   DAG.makeEquivalentMemoryOrdering(LoadA, WideLoad);
   DAG.makeEquivalentMemoryOrdering(LoadB, WideLoad);

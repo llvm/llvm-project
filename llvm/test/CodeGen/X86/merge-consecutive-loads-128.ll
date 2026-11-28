@@ -1724,3 +1724,124 @@ define <4 x i32> @no_reverse_vzload(ptr %p0) nounwind {
   %i6 = sext <4 x i1> %i5 to <4 x i32>
   ret <4 x i32> %i6
 }
+
+; The first load is invariant but the second isn't, and the loop stores to the
+; second element, so the merged load must not be hoisted out of the loop.
+define void @merge_2i64_i64_01_invariant_first_load(ptr align 16 dereferenceable(16) %ptr, ptr %out, i64 %n) nounwind {
+; SSE-LABEL: merge_2i64_i64_01_invariant_first_load:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    .p2align 4
+; SSE-NEXT:  .LBB33_1: # %loop
+; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE-NEXT:    movups (%rdi), %xmm0
+; SSE-NEXT:    movaps %xmm0, (%rsi)
+; SSE-NEXT:    movq $9, 8(%rdi)
+; SSE-NEXT:    decq %rdx
+; SSE-NEXT:    jne .LBB33_1
+; SSE-NEXT:  # %bb.2: # %exit
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: merge_2i64_i64_01_invariant_first_load:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    .p2align 4
+; AVX-NEXT:  .LBB33_1: # %loop
+; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    vmovups (%rdi), %xmm0
+; AVX-NEXT:    vmovaps %xmm0, (%rsi)
+; AVX-NEXT:    movq $9, 8(%rdi)
+; AVX-NEXT:    decq %rdx
+; AVX-NEXT:    jne .LBB33_1
+; AVX-NEXT:  # %bb.2: # %exit
+; AVX-NEXT:    retq
+;
+; X86-SSE1-LABEL: merge_2i64_i64_01_invariant_first_load:
+; X86-SSE1:       # %bb.0: # %entry
+; X86-SSE1-NEXT:    pushl %ebp
+; X86-SSE1-NEXT:    pushl %ebx
+; X86-SSE1-NEXT:    pushl %edi
+; X86-SSE1-NEXT:    pushl %esi
+; X86-SSE1-NEXT:    xorl %edx, %edx
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE1-NEXT:    movl 4(%edi), %ebp
+; X86-SSE1-NEXT:    xorl %ebx, %ebx
+; X86-SSE1-NEXT:    .p2align 4
+; X86-SSE1-NEXT:  .LBB33_1: # %loop
+; X86-SSE1-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-SSE1-NEXT:    addl $1, %edx
+; X86-SSE1-NEXT:    adcl $0, %ebx
+; X86-SSE1-NEXT:    movl %edx, %eax
+; X86-SSE1-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-SSE1-NEXT:    movl %ebx, %ecx
+; X86-SSE1-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; X86-SSE1-NEXT:    orl %eax, %ecx
+; X86-SSE1-NEXT:    movl 8(%edi), %eax
+; X86-SSE1-NEXT:    movl 12(%edi), %ecx
+; X86-SSE1-NEXT:    movl %ecx, 12(%esi)
+; X86-SSE1-NEXT:    movl %eax, 8(%esi)
+; X86-SSE1-NEXT:    movl %ebp, 4(%esi)
+; X86-SSE1-NEXT:    movl (%edi), %eax
+; X86-SSE1-NEXT:    movl %eax, (%esi)
+; X86-SSE1-NEXT:    movl $0, 12(%edi)
+; X86-SSE1-NEXT:    movl $9, 8(%edi)
+; X86-SSE1-NEXT:    jne .LBB33_1
+; X86-SSE1-NEXT:  # %bb.2: # %exit
+; X86-SSE1-NEXT:    popl %esi
+; X86-SSE1-NEXT:    popl %edi
+; X86-SSE1-NEXT:    popl %ebx
+; X86-SSE1-NEXT:    popl %ebp
+; X86-SSE1-NEXT:    retl
+;
+; X86-SSE41-LABEL: merge_2i64_i64_01_invariant_first_load:
+; X86-SSE41:       # %bb.0: # %entry
+; X86-SSE41-NEXT:    pushl %ebp
+; X86-SSE41-NEXT:    pushl %ebx
+; X86-SSE41-NEXT:    pushl %edi
+; X86-SSE41-NEXT:    pushl %esi
+; X86-SSE41-NEXT:    xorl %eax, %eax
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE41-NEXT:    xorl %ecx, %ecx
+; X86-SSE41-NEXT:    .p2align 4
+; X86-SSE41-NEXT:  .LBB33_1: # %loop
+; X86-SSE41-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-SSE41-NEXT:    addl $1, %eax
+; X86-SSE41-NEXT:    adcl $0, %ecx
+; X86-SSE41-NEXT:    movl %eax, %ebp
+; X86-SSE41-NEXT:    xorl %edx, %ebp
+; X86-SSE41-NEXT:    movl %ecx, %ebx
+; X86-SSE41-NEXT:    xorl {{[0-9]+}}(%esp), %ebx
+; X86-SSE41-NEXT:    orl %ebp, %ebx
+; X86-SSE41-NEXT:    movups (%edi), %xmm0
+; X86-SSE41-NEXT:    movaps %xmm0, (%esi)
+; X86-SSE41-NEXT:    movl $0, 12(%edi)
+; X86-SSE41-NEXT:    movl $9, 8(%edi)
+; X86-SSE41-NEXT:    jne .LBB33_1
+; X86-SSE41-NEXT:  # %bb.2: # %exit
+; X86-SSE41-NEXT:    popl %esi
+; X86-SSE41-NEXT:    popl %edi
+; X86-SSE41-NEXT:    popl %ebx
+; X86-SSE41-NEXT:    popl %ebp
+; X86-SSE41-NEXT:    retl
+entry:
+  %ptr1 = getelementptr inbounds i64, ptr %ptr, i64 1
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %val0 = load i64, ptr %ptr, !invariant.load !0
+  %val1 = load i64, ptr %ptr1
+  %res0 = insertelement <2 x i64> poison, i64 %val0, i64 0
+  %res1 = insertelement <2 x i64> %res0, i64 %val1, i64 1
+  store <2 x i64> %res1, ptr %out
+  store i64 9, ptr %ptr1
+  %i.next = add i64 %i, 1
+  %done = icmp eq i64 %i.next, %n
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+!0 = !{}

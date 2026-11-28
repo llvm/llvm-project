@@ -8027,7 +8027,12 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   }
 
   auto CreateLoad = [&DAG, &DL, &Loads](EVT VT, LoadSDNode *LDBase) {
+    // The new load also reads the bytes of the other loads, so it can only
+    // keep the memory flags that all of them have, such as invariant.
     auto MMOFlags = LDBase->getMemOperand()->getFlags();
+    for (auto *LD : Loads)
+      if (LD)
+        MMOFlags &= LD->getMemOperand()->getFlags();
     assert(LDBase->isSimple() &&
            "Cannot merge volatile or atomic loads.");
     SDValue NewLd =
