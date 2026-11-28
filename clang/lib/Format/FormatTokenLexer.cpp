@@ -1473,6 +1473,17 @@ FormatToken *FormatTokenLexer::getNextToken() {
     // take this into account when the token is moved.
     FormatTok->ColumnWidth =
         encoding::columnWidthWithTabs(Text, Column, Style.TabWidth, Encoding);
+    if (Style.TabWidth > 1 && FormatTok->is(tok::comment) &&
+        Text.starts_with("/*")) {
+      if (size_t TabPos = Text.find('\t'); TabPos != StringRef::npos) {
+        // The first tab is widest when its prefix ends at a tab stop. The
+        // width of the remaining text is the same at every tab stop.
+        unsigned PrefixWidth =
+            encoding::columnWidth(Text.take_front(TabPos), Encoding);
+        FormatTok->MaxColumnWidthWithTabs =
+            FormatTok->ColumnWidth + (Column + PrefixWidth) % Style.TabWidth;
+      }
+    }
     Column += FormatTok->ColumnWidth;
   } else {
     FormatTok->IsMultiline = true;

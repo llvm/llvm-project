@@ -2816,8 +2816,15 @@ ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
                                            bool DryRun, bool Strict) {
   std::unique_ptr<const BreakableToken> Token =
       createBreakableToken(Current, State, AllowBreak);
-  if (!Token)
+  if (!Token) {
+    if (Current.MaxColumnWidthWithTabs) {
+      unsigned StartColumn = State.Column - Current.ColumnWidth;
+      State.Column = StartColumn + encoding::columnWidthWithTabs(
+                                       Current.TokenText, StartColumn,
+                                       Style.TabWidth, Encoding);
+    }
     return {0, false};
+  }
   assert(Token->getLineCount() > 0);
   unsigned ColumnLimit = getColumnLimit(State);
   if (Current.is(TT_LineComment)) {

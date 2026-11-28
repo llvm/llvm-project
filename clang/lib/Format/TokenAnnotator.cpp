@@ -4375,8 +4375,12 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
         Current->IsMultiline) {
       Current->TotalLength = Prev->TotalLength + Style.ColumnLimit;
     } else {
-      Current->TotalLength = Prev->TotalLength + Current->ColumnWidth +
-                             ChildSize + Current->SpacesRequiredBefore;
+      // Use an upper bound for block comments with tabs, so the decision to
+      // try a single-line layout does not depend on the input layout.
+      unsigned Width =
+          std::max(Current->ColumnWidth, Current->MaxColumnWidthWithTabs);
+      Current->TotalLength =
+          Prev->TotalLength + Width + ChildSize + Current->SpacesRequiredBefore;
     }
 
     if ((Style.PackParameters.BinPack == FormatStyle::BPPS_UseBreakAfter &&
