@@ -1297,7 +1297,7 @@ define void @clamp_i8(i32 %src, ptr %dst) {
 ; GENERIC-NEXT:    movl $127, %eax
 ; GENERIC-NEXT:    cmovlel %edi, %eax
 ; GENERIC-NEXT:    cmpl $-128, %eax
-; GENERIC-NEXT:    movl $128, %ecx
+; GENERIC-NEXT:    movl $-128, %ecx
 ; GENERIC-NEXT:    cmovgel %eax, %ecx
 ; GENERIC-NEXT:    movb %cl, (%rsi)
 ; GENERIC-NEXT:    retq
@@ -1306,7 +1306,7 @@ define void @clamp_i8(i32 %src, ptr %dst) {
 ; ATOM:       ## %bb.0:
 ; ATOM-NEXT:    cmpl $127, %edi
 ; ATOM-NEXT:    movl $127, %eax
-; ATOM-NEXT:    movl $128, %ecx
+; ATOM-NEXT:    movl $-128, %ecx
 ; ATOM-NEXT:    cmovlel %edi, %eax
 ; ATOM-NEXT:    cmpl $-128, %eax
 ; ATOM-NEXT:    cmovgel %eax, %ecx
@@ -1321,7 +1321,7 @@ define void @clamp_i8(i32 %src, ptr %dst) {
 ; ATHLON-NEXT:    movl $127, %edx
 ; ATHLON-NEXT:    cmovlel %ecx, %edx
 ; ATHLON-NEXT:    cmpl $-128, %edx
-; ATHLON-NEXT:    movl $128, %ecx
+; ATHLON-NEXT:    movl $-128, %ecx
 ; ATHLON-NEXT:    cmovgel %edx, %ecx
 ; ATHLON-NEXT:    movb %cl, (%eax)
 ; ATHLON-NEXT:    retl
