@@ -15,10 +15,10 @@ define void @test(ptr %fde, i32 %fd, ptr %func, ptr %arg) uwtable {
 ; A53-NEXT:    .cfi_offset w19, -8
 ; A53-NEXT:    .cfi_offset w30, -16
 ; A53-NEXT:    .cfi_remember_state
-; A53-NEXT:    movi v0.2d, #0000000000000000
 ; A53-NEXT:    mov x8, x0
-; A53-NEXT:    mov x19, x8
 ; A53-NEXT:    mov w9, #256 // =0x100
+; A53-NEXT:    mov x19, x8
+; A53-NEXT:    movi v0.2d, #0000000000000000
 ; A53-NEXT:    mov w0, w1
 ; A53-NEXT:    str q0, [x8]
 ; A53-NEXT:    str q0, [x19, #16]!
