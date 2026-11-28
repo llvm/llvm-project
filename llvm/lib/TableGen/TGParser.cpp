@@ -94,7 +94,9 @@ static bool checkBitsConcrete(Record &R, const RecordVal &RV) {
 }
 
 static void checkConcrete(Record &R) {
-  for (const RecordVal &RV : R.getValues()) {
+  // The fields that a compacted record inherits without storing them are
+  // concrete, so only the fields it stores need checking.
+  for (const RecordVal &RV : R.getStoredValues()) {
     // HACK: Disable this check for variables declared with 'field'. This is
     // done merely because existing targets have legitimate cases of
     // non-concrete variables in helper defs. Ideally, we'd introduce a
@@ -168,7 +170,7 @@ const Init *TGVarScope::getVar(RecordKeeper &Records,
   case SK_Record: {
     if (CurRec) {
       // The variable is a record field?
-      if (RecordVal *RV = CurRec->getValue(Name)) {
+      if (const RecordVal *RV = CurRec->getValue(Name)) {
         if (TrackReferenceLocs)
           CurRec->appendValueReferenceLoc(Name, NameLoc);
         return VarInit::get(Name, RV->getType());
@@ -212,7 +214,7 @@ bool TGParser::AddValue(Record *CurRec, SMLoc Loc, const RecordVal &RV,
   if (!CurRec)
     CurRec = &CurMultiClass->Rec;
 
-  if (RecordVal *ERV = CurRec->getValue(RV.getNameInit())) {
+  if (RecordVal *ERV = CurRec->getMutableValue(RV.getNameInit())) {
     // The value already exists in the class, treat this as a set.
     if (ERV->setValue(RV.getValue()))
       return Error(Loc, "New definition of '" + RV.getName() + "' of type '" +
@@ -239,7 +241,7 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, const Init *ValName,
     CurRec = &CurMultiClass->Rec;
 
   // This can also set the default value of a template argument.
-  RecordVal *RV = CurRec->getValue(ValName);
+  RecordVal *RV = CurRec->getMutableValue(ValName);
   if (!RV)
     RV = CurRec->getTemplateArg(ValName);
   if (!RV)
@@ -344,11 +346,19 @@ bool TGParser::AddParentClass(Record *CurRec, ClassReference &ParentClass) {
   const Record *SC = ParentClass.Rec;
   MapResolver R(CurRec);
 
+  bool Compact = CurRec->isCompacted();
+
   // Loop over all the parent class record's fields and add them to the new
   // record.
-  for (const RecordVal &Field : SC->getValues())
+  for (const RecordVal &Field : SC->getValues()) {
+    // A compacted record can inherit a new field with a concrete value
+    // without copying it, because resolving references cannot change it.
+    if (Compact && Field.getValue()->isConcrete() &&
+        !CurRec->getValue(Field.getNameInit()))
+      continue;
     if (AddValue(CurRec, ParentClass.RefRange.Start, Field, SC))
       return true;
+  }
 
   if (resolveArgumentsOfClass(R, SC, ParentClass.TemplateArgs,
                               ParentClass.RefRange.Start))
@@ -3827,7 +3837,7 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
   if (!consume(tgtok::equal))
     return TokError("expected '=' in let expression");
 
-  RecordVal *Field = CurRec->getValue(FieldName);
+  const RecordVal *Field = CurRec->getValue(FieldName);
   if (!Field)
     return Error(IdLoc, "Value '" + FieldName->getValue() + "' unknown!");
 
@@ -3980,6 +3990,8 @@ bool TGParser::ParseDef() {
   } else {
     CurRec = std::make_unique<Record>(Name, NameLoc, Records);
   }
+  if (Records.getCompactDefs())
+    CurRec->startCompact();
 
   if (ParseObjectBody(CurRec.get()))
     return true;

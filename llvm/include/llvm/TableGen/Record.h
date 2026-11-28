@@ -1694,7 +1694,12 @@ public:
     DumpInfo(SMLoc Loc, const Init *Message) : Loc(Loc), Message(Message) {}
   };
 
-  enum RecordKind { RK_Def, RK_AnonymousDef, RK_Class, RK_MultiClass };
+  enum RecordKind : uint8_t {
+    RK_Def,
+    RK_AnonymousDef,
+    RK_Class,
+    RK_MultiClass
+  };
 
 private:
   const Init *Name;
@@ -1727,7 +1732,26 @@ private:
 
   RecordKind Kind;
 
+  // True if this is a def whose Values only holds the inherited fields that
+  // had to be copied into it, because they needed resolving or modifying, and
+  // any fields that no superclass provides. Other fields are looked up in the
+  // direct superclasses. See startCompact().
+  bool Compacted = false;
+
   void checkName();
+
+  /// For a compacted record, return the field with the given name that it
+  /// inherits from its direct superclasses, or null if there is none.
+  const RecordVal *getInheritedValue(const Init *Name) const {
+    assert(Compacted);
+    // Later superclasses override earlier ones. Superclasses are never
+    // compacted, so they store all of their fields.
+    for (const Record *SC : reverse(make_first_range(DirectSuperClasses)))
+      for (const RecordVal &Val : SC->Values)
+        if (Val.Name == Name)
+          return &Val;
+    return nullptr;
+  }
 
 public:
   // Constructs a record.
@@ -1751,7 +1775,7 @@ public:
         Assertions(O.Assertions), Dumps(O.Dumps),
         DirectSuperClasses(O.DirectSuperClasses),
         TrackedRecords(O.TrackedRecords), ID(getNewUID(O.getRecords())),
-        Kind(O.Kind) {}
+        Kind(O.Kind), Compacted(O.Compacted) {}
 
   static unsigned getNewUID(RecordKeeper &RK);
 
@@ -1819,7 +1843,35 @@ public:
   ArrayRef<RecordVal> getTemplateArgs() const { return TemplateArgs; }
 
   /// Return the fields of this record.
-  ArrayRef<RecordVal> getValues() const { return Values; }
+  ArrayRef<RecordVal> getValues() const {
+    assert(!Compacted && "Use getAllValues() for compacted records");
+    return Values;
+  }
+
+  /// Return the fields stored in this record. A compacted record does not
+  /// store the fields it inherits unchanged from its superclasses; those fields
+  /// always have concrete values.
+  ArrayRef<RecordVal> getStoredValues() const { return Values; }
+
+  /// Append all fields of this record to \p Vals, in order. Unlike
+  /// getValues() this also works for compacted records. For a compacted
+  /// record, the fields inherited from superclasses come first, even if some
+  /// of the record's own fields were added before some of its superclasses.
+  void getAllValues(SmallVectorImpl<const RecordVal *> &Vals) const;
+  SmallVector<const RecordVal *, 0> getAllValues() const {
+    SmallVector<const RecordVal *, 0> Vals;
+    getAllValues(Vals);
+    return Vals;
+  }
+
+  /// Start building this def in compacted form: fields inherited from
+  /// superclasses are only copied into it when they need to be modified.
+  void startCompact() {
+    assert(Values.empty() && DirectSuperClasses.empty() && !Compacted);
+    Compacted = true;
+  }
+
+  bool isCompacted() const { return Compacted; }
 
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
   ArrayRef<DumpInfo> getDumps() const { return Dumps; }
@@ -1868,22 +1920,17 @@ public:
   const RecordVal *getValue(const Init *Name) const {
     for (const RecordVal &Val : Values)
       if (Val.Name == Name) return &Val;
-    return nullptr;
+    return Compacted ? getInheritedValue(Name) : nullptr;
   }
 
   const RecordVal *getValue(StringRef Name) const {
     return getValue(StringInit::get(getRecords(), Name));
   }
 
-  RecordVal *getValue(const Init *Name) {
-    return const_cast<RecordVal *>(
-        static_cast<const Record *>(this)->getValue(Name));
-  }
-
-  RecordVal *getValue(StringRef Name) {
-    return const_cast<RecordVal *>(
-        static_cast<const Record *>(this)->getValue(Name));
-  }
+  /// Return the field with the given name so that it can be modified. If it
+  /// is inherited by a compacted record, copy it into the record first. This
+  /// invalidates pointers to the record's other fields.
+  RecordVal *getMutableValue(const Init *Name);
 
   /// Add a template argument. Return false, without adding it, if there is
   /// already a template argument with the same name.
@@ -1901,6 +1948,8 @@ public:
     Values.push_back(RV);
   }
 
+  /// Remove one of this record's own fields. For a compacted record, an
+  /// inherited field that has not been copied into it cannot be removed.
   void removeValue(const Init *Name) {
     auto It = llvm::find_if(
         Values, [Name](const RecordVal &V) { return V.getNameInit() == Name; });
@@ -2117,6 +2166,10 @@ public:
     assert(Ins && "Class already exists");
   }
 
+  /// Set whether defs are built in compacted form. See Record::startCompact().
+  void setCompactDefs(bool Compact) { CompactDefs = Compact; }
+  bool getCompactDefs() const { return CompactDefs; }
+
   void addDef(std::unique_ptr<Record> R) {
     for (const Record *SC : make_first_range(R->getDirectSuperClasses()))
       DefsByDirectSuperClass[SC].push_back(R.get());
@@ -2178,6 +2231,7 @@ private:
 
   /// The internal uniquer implementation of the RecordKeeper.
   std::unique_ptr<detail::RecordKeeperImpl> Impl;
+  bool CompactDefs = true;
   std::unique_ptr<TGTimer> Timer;
 };
 

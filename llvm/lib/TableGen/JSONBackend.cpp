@@ -137,11 +137,11 @@ void JSONEmitter::run(raw_ostream &OS) {
     json::Object Obj;
     json::Array Fields;
 
-    for (const RecordVal &RV : Def->getValues()) {
-      auto Name = RV.getNameInitAsString();
-      if (RV.isNonconcreteOK())
+    for (const RecordVal *RV : Def->getAllValues()) {
+      auto Name = RV->getNameInitAsString();
+      if (RV->isNonconcreteOK())
         Fields.push_back(Name);
-      Obj[Name] = translateInit(*RV.getValue());
+      Obj[Name] = translateInit(*RV->getValue());
     }
 
     Obj["!fields"] = std::move(Fields);

@@ -229,8 +229,8 @@ void IntrinsicEmitter::EmitAnyKindEnums(raw_ostream &OS) {
     OS << "// llvm::Intrinsic::IITDescriptor::" << EnumName << "\n";
     if (const Record *EnumDef = Records.getDef(EnumName)) {
       OS << "enum " << EnumName << " {\n";
-      for (const auto &RV : EnumDef->getValues())
-        OS << "  " << Prefix << RV.getName() << " = " << *RV.getValue()
+      for (const RecordVal *RV : EnumDef->getAllValues())
+        OS << "  " << Prefix << RV->getName() << " = " << *RV->getValue()
            << ",\n";
       OS << "}; // " << EnumName << "\n\n";
     } else {
