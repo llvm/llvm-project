@@ -5820,9 +5820,10 @@ const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup,
   return V;
 }
 
-void llvm::getUnderlyingObjects(const Value *V,
-                                SmallVectorImpl<const Value *> &Objects,
-                                const LoopInfo *LI, unsigned MaxLookup) {
+bool llvm::getUnderlyingObjects(const Value *V,
+                                function_ref<bool(const Value *)> Pred,
+                                const LoopInfo *LI, unsigned MaxLookup,
+                                unsigned MaxVisited) {
   SmallPtrSet<const Value *, 4> Visited;
   SmallVector<const Value *, 4> Worklist;
   Worklist.push_back(V);
@@ -5832,6 +5833,9 @@ void llvm::getUnderlyingObjects(const Value *V,
 
     if (!Visited.insert(P).second)
       continue;
+
+    if (MaxVisited && Visited.size() > MaxVisited)
+      return false;
 
     if (auto *SI = dyn_cast<SelectInst>(P)) {
       Worklist.push_back(SI->getTrueValue());
@@ -5851,15 +5855,30 @@ void llvm::getUnderlyingObjects(const Value *V,
       // Prev is tracking Curr one iteration behind so they refer to different
       // underlying objects.
       if (!LI || !LI->isLoopHeader(PN->getParent()) ||
-          isSameUnderlyingObjectInLoop(PN, LI))
+          isSameUnderlyingObjectInLoop(PN, LI)) {
+        if (MaxVisited && PN->getNumIncomingValues() > MaxVisited)
+          return false;
         append_range(Worklist, PN->incoming_values());
-      else
-        Objects.push_back(P);
-      continue;
+        continue;
+      }
     }
 
-    Objects.push_back(P);
+    if (!Pred(P))
+      return false;
   } while (!Worklist.empty());
+  return true;
+}
+
+void llvm::getUnderlyingObjects(const Value *V,
+                                SmallVectorImpl<const Value *> &Objects,
+                                const LoopInfo *LI, unsigned MaxLookup) {
+  getUnderlyingObjects(
+      V,
+      [&Objects](const Value *O) {
+        Objects.push_back(O);
+        return true;
+      },
+      LI, MaxLookup);
 }
 
 const Value *llvm::getUnderlyingObjectAggressive(const Value *V,

@@ -533,6 +533,17 @@ LLVM_ABI void getUnderlyingObjects(const Value *V,
                                    const LoopInfo *LI = nullptr,
                                    unsigned MaxLookup = MaxLookupSearchDepth);
 
+/// Like the above, but calls \p Pred on each underlying object instead of
+/// collecting them. Returns true if \p Pred holds for all of them, and false
+/// as soon as it does not. A non-zero \p MaxVisited bounds the number of
+/// distinct values visited and the incoming values of phis looked through;
+/// exceeding it returns false.
+LLVM_ABI bool getUnderlyingObjects(const Value *V,
+                                   function_ref<bool(const Value *)> Pred,
+                                   const LoopInfo *LI = nullptr,
+                                   unsigned MaxLookup = MaxLookupSearchDepth,
+                                   unsigned MaxVisited = 0);
+
 /// This is a wrapper around getUnderlyingObjects and adds support for basic
 /// ptrtoint+arithmetic+inttoptr sequences.
 ///
