@@ -3792,7 +3792,8 @@ on the register budget. Callers and callees rely on this floor without seeing
 each other's register usage. It is not the occupancy the function achieves: a
 function may use fewer registers than the cap and therefore achieve a higher
 occupancy. For example, the ABI occupancy may be 4 even when the function
-achieves an occupancy of 10.
+achieves an occupancy of 10. `.amdgpu_occupancy` records this floor; see
+{ref}`amdgpu-assembler-directive-amdgpu-info`.
 
 A caller with ABI occupancy `N` can call a callee only when the callee's ABI
 occupancy is at least `N`. A lower ABI occupancy raises the callee's register
@@ -4578,6 +4579,9 @@ if needed.
   * - 10
     - `INFO_TYPEID`
     - u32 strtab offset; function type-ID
+  * - 11
+    - `INFO_OCCUPANCY`
+    - u32; ABI occupancy
   :::
 
   :::{list-table} AMDGPU Info Function Flags (`INFO_FLAGS`)
@@ -18107,6 +18111,8 @@ The following sub-directives may appear inside the block:
   - Accumulator VGPRs used (u32)
 * - `.amdgpu_private_segment_size` *n*
   - Private segment size in bytes (u32)
+* - `.amdgpu_occupancy` *value*
+  - ABI occupancy (u32). See {ref}`amdgpu-abi-occupancy` for more details.
 * - `.amdgpu_use` *symbol*
   - Resource dependency (LDS or barrier)
 * - `.amdgpu_call` *symbol*
@@ -18126,6 +18132,7 @@ Example:
   .amdgpu_num_vgpr 32
   .amdgpu_num_agpr 0
   .amdgpu_private_segment_size 0
+  .amdgpu_occupancy 4
   .amdgpu_use lds_var
   .amdgpu_call helper
   .amdgpu_indirect_call "vi"
