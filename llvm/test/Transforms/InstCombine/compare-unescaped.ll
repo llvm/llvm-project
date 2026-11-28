@@ -32,7 +32,7 @@ define i1 @compare_global_trivialne() {
 declare void @f()
 define i1 @compare_and_call_with_deopt() {
 ; CHECK-LABEL: @compare_and_call_with_deopt(
-; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(24) ptr @malloc(i64 24)
+; CHECK-NEXT:    [[M:%.*]] = call align 4 dereferenceable_or_null(24) ptr @malloc(i64 24)
 ; CHECK-NEXT:    tail call void @f() [ "deopt"(ptr [[M]]) ]
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -46,7 +46,7 @@ define i1 @compare_and_call_with_deopt() {
 ; Same functon as above with deopt operand in function f, but comparison is NE
 define i1 @compare_ne_and_call_with_deopt() {
 ; CHECK-LABEL: @compare_ne_and_call_with_deopt(
-; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(24) ptr @malloc(i64 24)
+; CHECK-NEXT:    [[M:%.*]] = call align 4 dereferenceable_or_null(24) ptr @malloc(i64 24)
 ; CHECK-NEXT:    tail call void @f() [ "deopt"(ptr [[M]]) ]
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -60,7 +60,7 @@ define i1 @compare_ne_and_call_with_deopt() {
 ; Same function as above, but global not marked nonnull, and we cannot fold the comparison
 define i1 @compare_ne_global_maybe_null() {
 ; CHECK-LABEL: @compare_ne_global_maybe_null(
-; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(24) ptr @malloc(i64 24)
+; CHECK-NEXT:    [[M:%.*]] = call align 4 dereferenceable_or_null(24) ptr @malloc(i64 24)
 ; CHECK-NEXT:    [[LGP:%.*]] = load ptr, ptr @gp, align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[LGP]], [[M]]
 ; CHECK-NEXT:    tail call void @f() [ "deopt"(ptr [[M]]) ]
@@ -78,7 +78,7 @@ define i1 @compare_ne_global_maybe_null() {
 declare void @escape(ptr)
 define i1 @compare_and_call_after() {
 ; CHECK-LABEL: @compare_and_call_after(
-; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(24) ptr @malloc(i64 24)
+; CHECK-NEXT:    [[M:%.*]] = call align 4 dereferenceable_or_null(24) ptr @malloc(i64 24)
 ; CHECK-NEXT:    [[LGP:%.*]] = load ptr, ptr @gp, align 8, !nonnull [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[M]], [[LGP]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[ESCAPE_CALL:%.*]], label [[JUST_RETURN:%.*]]
@@ -126,7 +126,7 @@ define i1 @compare_samepointer_under_bitcast() {
 ; The malloc call for %m cannot be elided since it is used in the call to function f.
 define i1 @compare_samepointer_escaped() {
 ; CHECK-LABEL: @compare_samepointer_escaped(
-; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
+; CHECK-NEXT:    [[M:%.*]] = call align 4 dereferenceable_or_null(4) ptr @malloc(i64 4)
 ; CHECK-NEXT:    call void @f() [ "deopt"(ptr [[M]]) ]
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -144,8 +144,8 @@ define i1 @compare_samepointer_escaped() {
 ; atomic and non-atomic loads in capture tracking.
 define ptr @compare_ret_escape(ptr %c) {
 ; CHECK-LABEL: @compare_ret_escape(
-; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
-; CHECK-NEXT:    [[N:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
+; CHECK-NEXT:    [[M:%.*]] = call align 4 dereferenceable_or_null(4) ptr @malloc(i64 4)
+; CHECK-NEXT:    [[N:%.*]] = call align 4 dereferenceable_or_null(4) ptr @malloc(i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[N]], [[C:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[RETST:%.*]], label [[CHK:%.*]]
 ; CHECK:       retst:
@@ -178,7 +178,7 @@ chk2:
 ; However, the cmp can be folded to true as %n doesnt escape and %m, %n are distinct allocations
 define i1 @compare_distinct_pointer_escape() {
 ; CHECK-LABEL: @compare_distinct_pointer_escape(
-; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
+; CHECK-NEXT:    [[M:%.*]] = call align 4 dereferenceable_or_null(4) ptr @malloc(i64 4)
 ; CHECK-NEXT:    tail call void @f() [ "deopt"(ptr [[M]]) ]
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -205,7 +205,7 @@ declare ptr @hidden_offset(ptr %other)
 ; FIXME: Missed oppurtunity
 define i1 @ptrtoint_single_cmp() {
 ; CHECK-LABEL: @ptrtoint_single_cmp(
-; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
+; CHECK-NEXT:    [[M:%.*]] = call align 4 dereferenceable_or_null(4) ptr @malloc(i64 4)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[M]], inttoptr (i64 2048 to ptr)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -230,7 +230,7 @@ declare void @witness(i1, i1)
 
 define void @neg_consistent_fold1() {
 ; CHECK-LABEL: @neg_consistent_fold1(
-; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
+; CHECK-NEXT:    [[M:%.*]] = call align 4 dereferenceable_or_null(4) ptr @malloc(i64 4)
 ; CHECK-NEXT:    [[RHS2:%.*]] = call ptr @hidden_inttoptr()
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[M]], inttoptr (i64 2048 to ptr)
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr [[M]], [[RHS2]]
@@ -248,8 +248,8 @@ define void @neg_consistent_fold1() {
 
 define void @neg_consistent_fold2() {
 ; CHECK-LABEL: @neg_consistent_fold2(
-; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
-; CHECK-NEXT:    [[N:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
+; CHECK-NEXT:    [[M:%.*]] = call align 4 dereferenceable_or_null(4) ptr @malloc(i64 4)
+; CHECK-NEXT:    [[N:%.*]] = call align 4 dereferenceable_or_null(4) ptr @malloc(i64 4)
 ; CHECK-NEXT:    [[RHS:%.*]] = getelementptr i8, ptr [[N]], i64 4
 ; CHECK-NEXT:    [[RHS2:%.*]] = call ptr @hidden_offset(ptr [[N]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[M]], [[RHS]]
@@ -269,7 +269,7 @@ define void @neg_consistent_fold2() {
 
 define void @neg_consistent_fold3() {
 ; CHECK-LABEL: @neg_consistent_fold3(
-; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
+; CHECK-NEXT:    [[M:%.*]] = call align 4 dereferenceable_or_null(4) ptr @malloc(i64 4)
 ; CHECK-NEXT:    [[LGP:%.*]] = load ptr, ptr @gp, align 8
 ; CHECK-NEXT:    [[RHS2:%.*]] = call ptr @hidden_inttoptr()
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[M]], [[LGP]]
@@ -310,7 +310,7 @@ declare void @unknown(ptr)
 
 define i1 @consistent_nocapture_inttoptr() {
 ; CHECK-LABEL: @consistent_nocapture_inttoptr(
-; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
+; CHECK-NEXT:    [[M:%.*]] = call align 4 dereferenceable_or_null(4) ptr @malloc(i64 4)
 ; CHECK-NEXT:    call void @unknown(ptr captures(none) [[M]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[M]], inttoptr (i64 2048 to ptr)
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -324,7 +324,7 @@ define i1 @consistent_nocapture_inttoptr() {
 
 define i1 @consistent_nocapture_offset() {
 ; CHECK-LABEL: @consistent_nocapture_offset(
-; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
+; CHECK-NEXT:    [[M:%.*]] = call align 4 dereferenceable_or_null(4) ptr @malloc(i64 4)
 ; CHECK-NEXT:    call void @unknown(ptr captures(none) [[M]])
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -338,7 +338,7 @@ define i1 @consistent_nocapture_offset() {
 
 define i1 @consistent_nocapture_through_global() {
 ; CHECK-LABEL: @consistent_nocapture_through_global(
-; CHECK-NEXT:    [[M:%.*]] = call dereferenceable_or_null(4) ptr @malloc(i64 4)
+; CHECK-NEXT:    [[M:%.*]] = call align 4 dereferenceable_or_null(4) ptr @malloc(i64 4)
 ; CHECK-NEXT:    call void @unknown(ptr captures(none) [[M]])
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -366,7 +366,7 @@ define i1 @two_nonnull_mallocs() {
 ; the comparison non-equal.
 define i1 @two_nonnull_mallocs2() {
 ; CHECK-LABEL: @two_nonnull_mallocs2(
-; CHECK-NEXT:    [[N:%.*]] = call nonnull dereferenceable(4) ptr @malloc(i64 4)
+; CHECK-NEXT:    [[N:%.*]] = call nonnull align 4 dereferenceable(4) ptr @malloc(i64 4)
 ; CHECK-NEXT:    call void @unknown(ptr nonnull [[N]])
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -380,12 +380,7 @@ define i1 @two_nonnull_mallocs2() {
 ; TODO: We can fold this, but don't with the current scheme.
 define i1 @two_nonnull_mallocs_hidden() {
 ; CHECK-LABEL: @two_nonnull_mallocs_hidden(
-; CHECK-NEXT:    [[M:%.*]] = call nonnull dereferenceable(4) ptr @malloc(i64 4)
-; CHECK-NEXT:    [[N:%.*]] = call nonnull dereferenceable(4) ptr @malloc(i64 4)
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[M]], i64 1
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds nuw i8, ptr [[N]], i64 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP1]], [[GEP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = call nonnull ptr @malloc(i64 4)
   %n = call nonnull ptr @malloc(i64 4)
