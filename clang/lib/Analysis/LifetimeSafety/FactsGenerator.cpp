@@ -164,7 +164,6 @@ void FactsGenerator::run() {
                              EscapesInCurrentBlock.end());
     FactMgr.addBlockFacts(Block, CurrentBlockFacts);
   }
-  FactMgr.computePersistentOrigins(Cfg);
 }
 
 OriginList *FactsGenerator::readValue(const Expr *E) {

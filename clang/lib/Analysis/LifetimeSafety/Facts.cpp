@@ -65,6 +65,8 @@ void FactManager::computePersistentOrigins(const CFG &Cfg) {
       case Fact::Kind::TestPoint:
       case Fact::Kind::InvalidateOrigin:
         break;
+      case Fact::Kind::NumKinds:
+        llvm_unreachable("Not a fact kind");
       }
     }
   }

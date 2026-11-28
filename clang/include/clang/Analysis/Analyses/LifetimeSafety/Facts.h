@@ -28,8 +28,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <limits>
 #include <optional>
-#include <type_traits>
 
 namespace clang::lifetimes {
 
@@ -91,7 +91,6 @@ public:
 
 namespace clang::lifetimes::internal {
 
-class FactsGenerator;
 class LoanPropagationAnalysis;
 
 using FactID = utils::ID<struct FactTag>;
@@ -123,6 +122,7 @@ public:
     InvalidateOrigin,
     /// All loans of an origin are cleared.
     KillOrigin,
+    NumKinds,
   };
 
 private:
@@ -477,13 +477,15 @@ public:
   FactType *createFact(Args &&...args) {
     FactType *Res = new (FactAllocator) FactType(std::forward<Args>(args)...);
     Res->setID(NextFactID++);
-    if constexpr (std::is_same_v<FactType, MovedOriginFact>)
-      HasMovedOriginFacts = true;
+    FactKinds |= kindMask(Res->getKind());
     return Res;
   }
 
-  /// Whether any MovedOriginFact was created.
-  bool hasMovedOriginFacts() const { return HasMovedOriginFacts; }
+  template <typename... Kinds> bool hasAnyFactKind(Kinds... K) const {
+    return (FactKinds & (kindMask(K) | ...)) != 0;
+  }
+
+  bool hasFactKind(Fact::Kind K) const { return hasAnyFactKind(K); }
 
   void dump(const CFG &Cfg, AnalysisDeclContext &AC,
             const LoanPropagationAnalysis *LPA = nullptr) const;
@@ -504,6 +506,9 @@ public:
   size_t getBlockID(ProgramPoint P) const;
 
   unsigned getNumFacts() const { return NextFactID.Value; }
+
+  /// Classifies every origin as persistent or block-local.
+  void computePersistentOrigins(const CFG &Cfg);
 
   /// Returns the origins that are referenced from more than one basic block.
   /// Only those need to survive block boundaries in the dataflow analyses; the
@@ -526,14 +531,16 @@ public:
   void setThisCapturedByLambda() { IsThisCapturedByLambda = true; }
 
 private:
-  /// Classifies every origin as persistent or block-local. Called by
-  /// `FactsGenerator` once all facts and origins have been created.
-  void computePersistentOrigins(const CFG &Cfg);
+  static_assert(static_cast<unsigned>(Fact::Kind::NumKinds) <=
+                    std::numeric_limits<unsigned>::digits,
+                "FactKinds needs one bit per fact kind");
 
-  friend class FactsGenerator;
+  static unsigned kindMask(Fact::Kind K) {
+    return 1u << static_cast<unsigned>(K);
+  }
 
   FactID NextFactID{0};
-  bool HasMovedOriginFacts = false;
+  unsigned FactKinds = 0;
   LoanManager LoanMgr;
   OriginManager OriginMgr;
   /// Facts for each CFG block, indexed by block ID.

@@ -74,6 +74,18 @@ void LifetimeSafetyAnalysis::run() {
   FactsGenerator FactGen(*FactMgr, AC, LSOpts);
   FactGen.run();
 
+  // Tests query the results directly instead of providing a Sema helper, and
+  // -fdebug-run-lifetime-safety exists to exercise the full analysis.
+  const LangOptions &LangOpts = AC.getASTContext().getLangOpts();
+  bool NeedsResults = !SemaHelper ||
+                      FactMgr->hasFactKind(Fact::Kind::TestPoint) ||
+                      LangOpts.DebugRunLifetimeSafety;
+  NeedsResults |= llvm::DebugFlag;
+  if (!NeedsResults && !shouldRunLifetimeChecker(*FactMgr, LSOpts, LangOpts))
+    return;
+
+  FactMgr->computePersistentOrigins(Cfg);
+
   /// TODO(opt): Consider optimizing individual blocks before running the
   /// dataflow analysis.
   /// 1. Expression Origins: These are assigned once and read at most once,
