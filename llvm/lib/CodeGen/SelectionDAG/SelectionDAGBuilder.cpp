@@ -11044,10 +11044,12 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         assert(!Call.getType()->isVoidTy() && "Bad inline asm!");
         OutputValues.push_back(Val);
         if (CallBrOuts) {
-          const RegsForValue &Regs = OpInfo.AssignedRegs;
+          // Nothing reads OpInfo after this, so move what the indirect targets
+          // need instead of copying it.
+          RegsForValue &Regs = OpInfo.AssignedRegs;
           assert(Regs.ValueVTs.size() == 1 && "Expected one value per operand");
-          CallBrOuts->push_back(
-              {OpInfo, Regs.Regs, Regs.RegVTs.front(), Regs.ValueVTs.front()});
+          CallBrOuts->push_back({std::move(OpInfo), std::move(Regs.Regs),
+                                 Regs.RegVTs.front(), Regs.ValueVTs.front()});
         }
       }
     }
