@@ -12,7 +12,50 @@ entry:
   ret void
 }
 
+define void @preserve_agnostic_za_argument(ptr %fn) #1 !dbg !18 {
+; CHECK-LABEL: preserve_agnostic_za_argument:
+; CHECK:       .Lfunc_begin1:
+; CHECK-NEXT:    .file 1 "dir" "test.cpp"
+; CHECK-NEXT:    .loc 1 1 0 // test.cpp:1:0
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    .cfi_def_cfa w29, 32
+; CHECK-NEXT:    .cfi_offset w19, -16
+; CHECK-NEXT:    .cfi_offset w30, -24
+; CHECK-NEXT:    .cfi_offset w29, -32
+; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:    .loc 1 1 1 prologue_end // test.cpp:1:1
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    bl __arm_sme_state_size
+; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:    sub sp, sp, x0
+; CHECK-NEXT:    mov x19, sp
+; CHECK-NEXT:  .Ltmp2:
+; CHECK-NEXT:    //DEBUG_VALUE: preserve_agnostic_za_argument:fn <- $x8
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    bl __arm_sme_save
+; CHECK-NEXT:  .Ltmp3:
+; CHECK-NEXT:    blr x8
+; CHECK-NEXT:  .Ltmp4:
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    bl __arm_sme_restore
+; CHECK-NEXT:  .Ltmp5:
+; CHECK-NEXT:    .loc 1 1 1 epilogue_begin is_stmt 0 // test.cpp:1:1
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
+; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .Ltmp6:
+  #dbg_value(ptr %fn, !19, !DIExpression(), !20)
+  call void %fn(), !dbg !20
+  ret void, !dbg !20
+}
+
 attributes #0 = { "aarch64_new_za" "target-features"="+sme" }
+attributes #1 = { "aarch64_za_state_agnostic" "target-features"="+sme" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}
@@ -35,3 +78,11 @@ attributes #0 = { "aarch64_new_za" "target-features"="+sme" }
 !15 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !16, size: 64)
 !16 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !7)
 !17 = !DILocation(line: 0, scope: !5)
+!18 = distinct !DISubprogram(name: "preserve_agnostic_za_argument", scope: !6, file: !6, line: 1, type: !21, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+!19 = !DILocalVariable(name: "fn", arg: 1, scope: !18, file: !6, line: 1, type: !23)
+!20 = !DILocation(line: 1, column: 1, scope: !18)
+!21 = !DISubroutineType(types: !22)
+!22 = !{null, !23}
+!23 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !24, size: 64)
+!24 = !DISubroutineType(types: !25)
+!25 = !{null}
