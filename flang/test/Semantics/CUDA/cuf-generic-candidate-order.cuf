@@ -1,0 +1,79 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! All the matching specifics are collected before they are compared, so the
+! result does not depend on the order of the specifics. Before, the first tie
+! was reported at once, and the distance of an elemental specific was compared
+! with those of the non-elemental ones.
+
+! A tie between earlier specifics does not hide a better later one.
+module tie_then_better
+  interface first_tie
+    module procedure int_device, real_device, int_managed
+  end interface
+  interface last_tie
+    module procedure int_managed, int_device, real_device
+  end interface
+contains
+  subroutine int_device(p, x)
+    integer, pointer, intent(in) :: p
+    integer, device :: x
+  end subroutine
+  subroutine real_device(p, x)
+    real, pointer, intent(in) :: p
+    integer, device :: x
+  end subroutine
+  subroutine int_managed(p, x)
+    integer, pointer, intent(in) :: p
+    integer, managed :: x
+  end subroutine
+
+  ! CHECK-LABEL: func.func @_QMtie_then_betterPcaller(
+  subroutine caller(x)
+    integer, managed :: x
+    ! CHECK: fir.call @_QMtie_then_betterPint_managed(
+    call first_tie(null(), x)
+    ! CHECK: fir.call @_QMtie_then_betterPint_managed(
+    call last_tie(null(), x)
+  end subroutine
+end module
+
+! The non-elemental specifics are compared with each other, not with the
+! distance of an elemental one: a non-elemental specific at the same distance as
+! the elemental one is not a tie, and a better one is selected even if it comes
+! after the elemental one.
+module elemental_between
+  interface equal_distance
+    module procedure device_array, elemental_managed, managed_array
+  end interface
+  interface better_after
+    module procedure worse_array, elemental_exact, better_array
+  end interface
+contains
+  subroutine device_array(x)
+    integer, device :: x(:)
+  end subroutine
+  pure elemental subroutine elemental_managed(x)
+    integer, managed, intent(in) :: x
+  end subroutine
+  subroutine managed_array(x)
+    integer, managed :: x(:)
+  end subroutine
+  subroutine worse_array(x)
+    integer, device :: x(:)
+  end subroutine
+  pure elemental subroutine elemental_exact(x)
+    integer, managed, intent(in) :: x
+  end subroutine
+  subroutine better_array(x)
+    integer, unified :: x(:)
+  end subroutine
+
+  ! CHECK-LABEL: func.func @_QMelemental_betweenPcaller(
+  subroutine caller()
+    integer, managed :: y(2)
+    ! CHECK: fir.call @_QMelemental_betweenPmanaged_array(
+    call equal_distance(y)
+    ! CHECK: fir.call @_QMelemental_betweenPbetter_array(
+    call better_after(y)
+  end subroutine
+end module
