@@ -337,6 +337,42 @@ func.func @do_not_fuse_loops_with_nonfull_alias_defined_in_loop_bodies() {
 
 // -----
 
+func.func @fuse_loop_with_private_alloc(
+    %input: memref<2xf32>, %output: memref<2xf32>) -> memref<2xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c1fp = arith.constant 1.0 : f32
+  %result = memref.alloc() : memref<2xf32>
+  scf.parallel (%i) = (%c0) to (%c2) step (%c1) {
+    %private = memref.alloc() : memref<1xf32>
+    memref.store %c1fp, %private[%c0] : memref<1xf32>
+    %value = memref.load %private[%c0] : memref<1xf32>
+    memref.store %value, %result[%i] : memref<2xf32>
+    scf.reduce
+  }
+  scf.parallel (%i) = (%c0) to (%c2) step (%c1) {
+    %value = memref.load %input[%i] : memref<2xf32>
+    memref.store %value, %output[%i] : memref<2xf32>
+    scf.reduce
+  }
+  return %result : memref<2xf32>
+}
+// CHECK-LABEL: func @fuse_loop_with_private_alloc
+// CHECK:       %[[RESULT:.*]] = memref.alloc()
+// CHECK:       scf.parallel
+// CHECK:         %[[PRIVATE:.*]] = memref.alloc()
+// CHECK:         memref.store {{.*}}, %[[PRIVATE]]
+// CHECK:         memref.load %[[PRIVATE]]
+// CHECK:         memref.store {{.*}}, %[[RESULT]]
+// CHECK-NOT:   scf.parallel
+// CHECK:         memref.load %{{.*}}{{\[}}%{{.*}}]
+// CHECK:         memref.store
+// CHECK:         scf.reduce
+// CHECK:       return %[[RESULT]]
+
+// -----
+
 func.func @nested_fuse(%A: memref<2x2xf32>, %B: memref<2x2xf32>) {
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
