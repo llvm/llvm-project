@@ -2170,7 +2170,17 @@ TEST(MemorySanitizer, mbrtowc) {
 
   wchar_t wc;
   size_t res = mbrtowc(&wc, "\377", 1, &mbs);
-  EXPECT_EQ(res, -1ULL);
+  EXPECT_EQ(res, (size_t)-1);
+  EXPECT_POISONED(wc);
+
+  memset(&mbs, 0, sizeof(mbs));
+  res = mbrtowc(&wc, "abc", 0, &mbs);
+  EXPECT_EQ(res, (size_t)-2);
+  EXPECT_POISONED(wc);
+
+  res = mbrtowc(&wc, nullptr, 3, &mbs);
+  EXPECT_EQ(res, 0ULL);
+  EXPECT_POISONED(wc);
 
   res = mbrtowc(&wc, "abc", 3, &mbs);
   EXPECT_GT(res, 0ULL);

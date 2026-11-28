@@ -668,7 +668,8 @@ INTERCEPTOR(SIZE_T, mbrtowc, wchar_t *dest, const char *src, SIZE_T n,
             void *ps) {
   ENSURE_MSAN_INITED();
   SIZE_T res = REAL(mbrtowc)(dest, src, n, ps);
-  if (res != (SIZE_T)-1 && dest) __msan_unpoison(dest, sizeof(wchar_t));
+  if (res < (SIZE_T)-2 && dest && src)
+    __msan_unpoison(dest, sizeof(wchar_t));
   return res;
 }
 
