@@ -123,7 +123,7 @@ define <32 x i8> @any_of_select_vf32(<32 x i8> %mask, <32 x i8> %a, <32 x i8> %b
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    umaxv b0, v0.16b
-; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    umov w8, v0.b[0]
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    csetm w8, ne
 ; CHECK-NEXT:    dup v1.16b, w8
