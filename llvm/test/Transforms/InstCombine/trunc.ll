@@ -1447,7 +1447,7 @@ define i8 @neg_trunc_i8_trunc_nuw_i16(i32 %x) {
 
 define i8 @neg_trunc_nuw_i8_trunc_nuw_i16(i32 %x) {
 ; CHECK-LABEL: @neg_trunc_nuw_i8_trunc_nuw_i16(
-; CHECK-NEXT:    [[E:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[E:%.*]] = trunc nuw i32 [[X:%.*]] to i8
 ; CHECK-NEXT:    ret i8 [[E]]
 ;
   %c = trunc nuw i32 %x to i16
