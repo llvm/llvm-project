@@ -4839,6 +4839,11 @@ public:
   NamedDecl *LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID, Scope *S,
                                  bool ForRedeclaration, SourceLocation Loc);
 
+  /// Get the declaration of builtin \p ID, creating it if needed. The result is
+  /// the builtin itself even if another declaration shares its name; null if
+  /// the type of the builtin is not available.
+  FunctionDecl *getBuiltinFunctionDecl(unsigned ID, SourceLocation Loc);
+
   /// Get the outermost AttributedType node that sets a calling convention.
   /// Valid types should not have multiple attributes with different CCs.
   const AttributedType *getCallingConvAttributedType(QualType T) const;

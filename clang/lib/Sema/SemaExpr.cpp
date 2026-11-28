@@ -7312,12 +7312,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
 Expr *Sema::BuildBuiltinCallExpr(SourceLocation Loc, unsigned Id,
                                  MultiExprArg CallArgs) {
-  std::string Name = Context.BuiltinInfo.getName(Id);
-  LookupResult R(*this, &Context.Idents.get(Name), Loc,
-                 Sema::LookupOrdinaryName);
-  LookupName(R, TUScope, /*AllowBuiltinCreation=*/true);
-
-  auto *BuiltInDecl = R.getAsSingle<FunctionDecl>();
+  FunctionDecl *BuiltInDecl = getBuiltinFunctionDecl(Id, Loc);
   assert(BuiltInDecl && "failed to find builtin declaration");
 
   ExprResult DeclRef =

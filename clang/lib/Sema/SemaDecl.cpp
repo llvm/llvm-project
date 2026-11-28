@@ -2535,6 +2535,26 @@ NamedDecl *Sema::LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
   return New;
 }
 
+FunctionDecl *Sema::getBuiltinFunctionDecl(unsigned ID, SourceLocation Loc) {
+  LookupNecessaryTypesForBuiltin(TUScope, ID);
+  ASTContext::GetBuiltinTypeError Error;
+  QualType Type = Context.GetBuiltinType(ID, Error);
+  if (Error || Type.isNull())
+    return nullptr;
+
+  IdentifierInfo *II = &Context.Idents.get(Context.BuiltinInfo.getName(ID));
+  LookupResult R(*this, II, Loc, LookupOrdinaryName);
+  R.suppressDiagnostics();
+  LookupName(R, TUScope, /*AllowBuiltinCreation=*/true);
+  if (auto *FD = R.getAsSingle<FunctionDecl>())
+    if (FD->getBuiltinID() == ID && Context.hasSameType(FD->getType(), Type))
+      return FD;
+
+  // The name is taken by a declaration that is not the builtin (e.g. a static
+  // function in C); declare the builtin without adding it to any scope.
+  return CreateBuiltin(II, Type, ID, Loc);
+}
+
 /// Typedef declarations don't have linkage, but they still denote the same
 /// entity if their types are the same.
 /// FIXME: This is notionally doing the same thing as ASTReaderDecl's

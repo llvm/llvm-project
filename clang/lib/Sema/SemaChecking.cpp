@@ -6212,19 +6212,12 @@ ExprResult Sema::BuiltinAtomicOverloaded(ExprResult TheCallResult) {
   // Get the decl for the concrete builtin from this, we can tell what the
   // concrete integer type we should convert to is.
   unsigned NewBuiltinID = BuiltinIndices[BuiltinIndex][SizeIndex];
-  std::string NewBuiltinName = Context.BuiltinInfo.getName(NewBuiltinID);
   FunctionDecl *NewBuiltinDecl;
   if (NewBuiltinID == BuiltinID)
     NewBuiltinDecl = FDecl;
   else {
-    // Perform builtin lookup to avoid redeclaring it.
-    DeclarationName DN(&Context.Idents.get(NewBuiltinName));
-    LookupResult Res(*this, DN, DRE->getBeginLoc(), LookupOrdinaryName);
-    LookupName(Res, TUScope, /*AllowBuiltinCreation=*/true);
-    assert(Res.getFoundDecl());
-    NewBuiltinDecl = dyn_cast<FunctionDecl>(Res.getFoundDecl());
-    if (!NewBuiltinDecl)
-      return ExprError();
+    NewBuiltinDecl = getBuiltinFunctionDecl(NewBuiltinID, DRE->getBeginLoc());
+    assert(NewBuiltinDecl && "type of a __sync builtin is always available");
   }
 
   // The first argument --- the pointer --- has a fixed type; we

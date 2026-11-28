@@ -195,6 +195,12 @@ static void __builtin_cpu_init(); // expected-error {{static declaration of '__b
                                      expected-note {{'__builtin_cpu_init' is a builtin with type 'void () noexcept'}}
 #endif
 
+// GH120083: in C++ this redeclares the builtin; the type-generic call below
+// must still refer to the builtin.
+static int __sync_lock_test_and_set_4(volatile int *, int); // expected-error {{cannot redeclare builtin function '__sync_lock_test_and_set_4'}} \
+                                                               expected-note {{'__sync_lock_test_and_set_4' is a builtin with type 'int (volatile int *, int, ...) noexcept'}}
+int gh120083(int *p, int a) { return __sync_lock_test_and_set(p, a); }
+
 #ifdef _MSC_VER
 constexpr int x = [] {
   __noop;
