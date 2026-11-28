@@ -85,7 +85,12 @@ public:
 
     /// EK_Custom32 - Each entry is a 32-bit value that is custom lowered by the
     /// TargetLowering::LowerCustomJumpTableEntry hook.
-    EK_Custom32
+    EK_Custom32,
+
+    // EK_CoffImgRel32 - In PE/COFF (Windows) images, each entry is a 32-bit
+    // unsigned offset that is added to the image base.
+    //       .word LBB123@IMGREL
+    EK_CoffImgRel32,
   };
 
 private:
@@ -100,6 +105,9 @@ public:
   LLVM_ABI unsigned getEntrySize(const DataLayout &TD) const;
   /// getEntryAlignment - Return the alignment of each entry in the jump table.
   LLVM_ABI unsigned getEntryAlignment(const DataLayout &TD) const;
+  /// getEntryIsSigned - Return true if the load for the jump table index
+  /// should use signed extension, false if zero extension (unsigned)
+  LLVM_ABI bool getEntryIsSigned() const;
 
   /// createJumpTableIndex - Create a new jump table.
   ///
