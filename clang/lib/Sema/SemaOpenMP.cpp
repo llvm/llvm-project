@@ -205,6 +205,7 @@ private:
     bool RegionHasOrderConcurrent = false;
     unsigned AssociatedLoops = 1;
     bool HasMutipleLoops = false;
+    bool LoopAnalysisDeferred = false;
     const Decl *PossiblyLoopCounter = nullptr;
     bool NowaitRegion = false;
     bool UntiedRegion = false;
@@ -1031,6 +1032,15 @@ public:
   bool hasMutipleLoops() const {
     const SharingMapTy *Top = getTopOfStackOrNull();
     return Top ? Top->HasMutipleLoops : false;
+  }
+  /// The loop helper expressions are built on instantiation instead.
+  void setLoopAnalysisDeferred() {
+    getTopOfStack().LoopAnalysisDeferred = true;
+  }
+  bool isLoopAnalysisDeferred() const {
+    const SharingMapTy *Top = getTopOfStackOrNull();
+    return SemaRef.CurContext->isDependentContext() ||
+           (Top && Top->LoopAnalysisDeferred);
   }
 
   /// Marks current target region as one with closely nested teams
@@ -3192,10 +3202,10 @@ static bool FinishOpenMPLinearClause(OMPLinearClause &Clause, DeclRefExpr *IV,
 static bool finishLinearClauses(Sema &SemaRef, ArrayRef<OMPClause *> Clauses,
                                 OMPLoopBasedDirective::HelperExprs &B,
                                 DSAStackTy *Stack) {
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((Stack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "loop exprs were not built");
 
-  if (SemaRef.CurContext->isDependentContext())
+  if (Stack->isLoopAnalysisDeferred())
     return false;
 
   // Finalize the clauses that need pre-built expressions for CodeGen.
@@ -10468,7 +10478,9 @@ static bool checkOpenMPIterationSpace(
     HasErrors |= ISC.checkAndSetInc(For ? For->getInc() : CXXFor->getInc());
   }
 
-  if (ISC.dependent() || SemaRef.CurContext->isDependentContext() || HasErrors)
+  if (ISC.dependent())
+    DSA.setLoopAnalysisDeferred();
+  if (DSA.isLoopAnalysisDeferred() || HasErrors)
     return HasErrors;
 
   // Build the loop's iteration space representation.
@@ -10916,6 +10928,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       ForVarDeclFinder FVDF{CollapsedLoopVarDecls};
       FVDF.TraverseStmt(AStmt);
     } else {
+      if (CollapseLoopCountExpr->isInstantiationDependent())
+        DSA.setLoopAnalysisDeferred();
       Built.clear(/*Size=*/1);
       return 1;
     }
@@ -10938,6 +10952,8 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       }
       OrderedLoopCount = Result.getLimitedValue();
     } else {
+      if (OrderedLoopCountExpr->isInstantiationDependent())
+        DSA.setLoopAnalysisDeferred();
       Built.clear(/*Size=*/1);
       return 1;
     }
@@ -10999,7 +11015,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
 
   Built.clear(/*size=*/NestedLoopCount);
 
-  if (SemaRef.CurContext->isDependentContext())
+  if (DSA.isLoopAnalysisDeferred())
     return NestedLoopCount;
 
   // An example of what is generated for the following code:
@@ -11925,7 +11941,7 @@ StmtResult SemaOpenMP::ActOnOpenMPGenericLoopDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp loop exprs were not built");
 
   return OMPGenericLoopDirective::Create(getASTContext(), StartLoc, EndLoc,
@@ -12057,7 +12073,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsGenericLoopDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp loop exprs were not built");
 
   DSAStack->setParentTeamsRegionLoc(StartLoc);
@@ -12101,7 +12117,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsGenericLoopDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp loop exprs were not built");
 
   return OMPTargetTeamsGenericLoopDirective::Create(
@@ -12134,7 +12150,7 @@ StmtResult SemaOpenMP::ActOnOpenMPParallelGenericLoopDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp loop exprs were not built");
 
   return OMPParallelGenericLoopDirective::Create(
@@ -12177,7 +12193,7 @@ static StmtResult actOnTargetGenericLoopDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp loop exprs were not built");
 
   return DirectiveTy::Create(S.getASTContext(), StartLoc, EndLoc,
@@ -14786,7 +14802,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTaskLoopDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp for loop exprs were not built");
 
   // OpenMP, [2.9.2 taskloop Construct, Restrictions]
@@ -14865,7 +14881,7 @@ StmtResult SemaOpenMP::ActOnOpenMPMasterTaskLoopDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp for loop exprs were not built");
 
   // OpenMP, [2.9.2 taskloop Construct, Restrictions]
@@ -14903,7 +14919,7 @@ StmtResult SemaOpenMP::ActOnOpenMPMaskedTaskLoopDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp for loop exprs were not built");
 
   // OpenMP, [2.9.2 taskloop Construct, Restrictions]
@@ -15025,7 +15041,7 @@ StmtResult SemaOpenMP::ActOnOpenMPParallelMasterTaskLoopDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp for loop exprs were not built");
 
   // OpenMP, [2.9.2 taskloop Construct, Restrictions]
@@ -15064,7 +15080,7 @@ StmtResult SemaOpenMP::ActOnOpenMPParallelMaskedTaskLoopDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp for loop exprs were not built");
 
   // OpenMP, [2.9.2 taskloop Construct, Restrictions]
@@ -15181,7 +15197,7 @@ StmtResult SemaOpenMP::ActOnOpenMPDistributeDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp for loop exprs were not built");
 
   SemaRef.setFunctionHasBranchProtectedScope();
@@ -15209,7 +15225,7 @@ StmtResult SemaOpenMP::ActOnOpenMPDistributeParallelForDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp for loop exprs were not built");
 
   return OMPDistributeParallelForDirective::Create(
@@ -15377,7 +15393,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsDistributeDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp teams distribute loop exprs were not built");
 
   DSAStack->setParentTeamsRegionLoc(StartLoc);
@@ -15488,7 +15504,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsDistributeParallelForDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp for loop exprs were not built");
 
   DSAStack->setParentTeamsRegionLoc(StartLoc);
@@ -15549,7 +15565,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeDirective(
   if (NestedLoopCount == 0)
     return StmtError();
 
-  assert((SemaRef.CurContext->isDependentContext() || B.builtAll()) &&
+  assert((DSAStack->isLoopAnalysisDeferred() || B.builtAll()) &&
          "omp target teams distribute loop exprs were not built");
 
   return OMPTargetTeamsDistributeDirective::Create(
