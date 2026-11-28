@@ -9,6 +9,7 @@
 #include "llvm/IR/ConstantFPRange.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "gtest/gtest.h"
@@ -1243,6 +1244,121 @@ TEST_F(ConstantFPRangeTest, flushDenormals) {
       }
     }
   }
+}
+
+TEST_F(ConstantFPRangeTest, makeFromIntRange) {
+  const fltSemantics &FP8Sem = APFloat::Float8E4M3();
+  constexpr unsigned BitWidth = 5;
+  constexpr APFloat::roundingMode RMs[4] = {
+      APFloat::rmNearestTiesToEven, APFloat::rmTowardZero,
+      APFloat::rmTowardPositive, APFloat::rmTowardNegative};
+
+  auto Check = [&](const ConstantRange &CR) {
+    for (bool IsSigned : {false, true}) {
+      for (APFloat::roundingMode RM : RMs) {
+        ConstantFPRange Res =
+            ConstantFPRange::makeFromIntRange(CR, FP8Sem, IsSigned, RM);
+        ConstantFPRange Expected = ConstantFPRange::getEmpty(FP8Sem);
+        for (unsigned I = 0; I != 1U << BitWidth; ++I) {
+          APInt V(BitWidth, I);
+          if (!CR.contains(V))
+            continue;
+          APFloat F(FP8Sem);
+          F.convertFromAPInt(V, IsSigned, RM);
+          EXPECT_TRUE(Res.contains(F))
+              << "Wrong result for makeFromIntRange(" << CR << ", "
+              << (IsSigned ? "signed" : "unsigned") << "). The result " << Res
+              << " should contain " << F;
+          Expected = Expected.unionWith(ConstantFPRange(F));
+        }
+        EXPECT_EQ(Res, Expected)
+            << "Suboptimal result for makeFromIntRange(" << CR << ", "
+            << (IsSigned ? "signed" : "unsigned") << "). Expected " << Expected
+            << ", but got " << Res;
+      }
+    }
+  };
+
+  Check(ConstantRange::getEmpty(BitWidth));
+  for (unsigned Lo = 0; Lo != 1U << BitWidth; ++Lo)
+    for (unsigned Hi = 0; Hi != 1U << BitWidth; ++Hi)
+      Check(
+          ConstantRange::getNonEmpty(APInt(BitWidth, Lo), APInt(BitWidth, Hi)));
+
+  EXPECT_EQ(ConstantFPRange::makeFromIntRange(
+                ConstantRange(APInt(32, 0), APInt(32, 1 << 20)),
+                APFloat::IEEEhalf(), /*IsSigned=*/false),
+            ConstantFPRange::getNonNaN(APFloat::getZero(APFloat::IEEEhalf()),
+                                       APFloat::getInf(APFloat::IEEEhalf())));
+}
+
+TEST_F(ConstantFPRangeTest, widenByULPs) {
+  auto Widened = [](ConstantFPRange CR, double ULPs) {
+    CR.widenByULPs(APFloat(ULPs));
+    return CR;
+  };
+
+  EXPECT_EQ(Widened(Empty, 1.0), Empty);
+  EXPECT_EQ(Widened(NaN, 1.0), NaN);
+  EXPECT_EQ(Widened(One, 1.0),
+            ConstantFPRange::getNonNaN(APFloat(1.0 - 0x1p-52),
+                                       APFloat(1.0 + 0x1p-52)));
+  // The bounds round away from the range.
+  EXPECT_EQ(Widened(One, 2.5),
+            ConstantFPRange::getNonNaN(APFloat(1.0 - 5 * 0x1p-53),
+                                       APFloat(1.0 + 3 * 0x1p-52)));
+  EXPECT_EQ(Widened(Some.unionWith(QNaN), 0.0), Some.unionWith(QNaN));
+  EXPECT_EQ(Widened(Full, 1.0), Full);
+  EXPECT_EQ(Widened(PosZero, 1.0),
+            ConstantFPRange::getNonNaN(
+                APFloat::getSmallest(Sem, /*Negative=*/true),
+                APFloat::getSmallest(Sem, /*Negative=*/false)));
+  APFloat BelowLargest = APFloat::getLargest(Sem, /*Negative=*/false);
+  BelowLargest.next(/*nextDown=*/true);
+  EXPECT_EQ(Widened(PosInf, 1.0),
+            ConstantFPRange::getNonNaN(
+                BelowLargest, APFloat::getInf(Sem, /*Negative=*/false)));
+
+  // Widening by K ULPs keeps the K nearest values on each side.
+  const fltSemantics &FP8Sem = APFloat::Float8E4M3();
+  for (unsigned I = 0, E = 1U << 8; I != E; ++I) {
+    APFloat V(FP8Sem, APInt(8, I));
+    if (V.isNaN() || V.isInfinity())
+      continue;
+    for (unsigned K : {1, 2}) {
+      ConstantFPRange CR(V);
+      CR.widenByULPs(APFloat(static_cast<double>(K)));
+      APFloat Up = V, Down = V;
+      for (unsigned Step = 0; Step != K; ++Step) {
+        strictNext(Up);
+        if (Down.isPosZero())
+          Down = APFloat::getZero(FP8Sem, /*Negative=*/true);
+        else
+          Down.next(/*nextDown=*/true);
+      }
+      EXPECT_TRUE(CR.contains(Up)) << CR << " should contain " << Up;
+      EXPECT_TRUE(CR.contains(Down)) << CR << " should contain " << Down;
+    }
+  }
+}
+
+TEST_F(ConstantFPRangeTest, addOppositeZero) {
+  EnumerateConstantFPRanges(
+      [](const ConstantFPRange &CR) {
+        const fltSemantics &FP8Sem = CR.getSemantics();
+        APFloat PosZeroVal = APFloat::getZero(FP8Sem, /*Negative=*/false);
+        APFloat NegZeroVal = APFloat::getZero(FP8Sem, /*Negative=*/true);
+        ConstantFPRange Expected = CR;
+        if (CR.contains(PosZeroVal) || CR.contains(NegZeroVal))
+          Expected =
+              CR.unionWith(ConstantFPRange::getNonNaN(NegZeroVal, PosZeroVal));
+        ConstantFPRange Res = CR;
+        Res.addOppositeZero();
+        EXPECT_EQ(Res, Expected)
+            << "Wrong result for addOppositeZero(" << CR << "). Expected "
+            << Expected << ", but got " << Res;
+      },
+      SparseLevel::SpecialValuesOnly);
 }
 
 } // anonymous namespace
