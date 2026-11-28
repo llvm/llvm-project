@@ -10,10 +10,10 @@
 // SP at function entry, and a funclet reaches the parent frame only through r6,
 // because the runtime doesn't restore SP or r11. In a realigned frame no object
 // is at a fixed offset from both, so, as with MSVC, functions with C++ EH
-// funclets must not realign the stack. This pass marks them "no-realign-stack"
-// and gives over-aligned allocas an aligned address inside a bigger block.
-// Over-aligned catch objects and locals passed to llvm.localescape can't be
-// moved like that and are diagnosed.
+// funclets must not realign the stack. This pass marks them "no-realign-stack",
+// so over-aligned allocas become dynamic allocations. Over-aligned catch
+// objects and locals passed to llvm.localescape need a fixed stack slot, so
+// they are diagnosed.
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/EHPersonalities.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -74,7 +73,6 @@ bool ARMWinEHFrame::runOnFunction(Function &F) {
 
   const Align StackAlign =
       TM.getSubtargetImpl(F)->getFrameLowering()->getStackAlign();
-  const DataLayout &DL = F.getDataLayout();
 
   SmallVector<AllocaInst *, 4> OverAligned;
   for (Instruction &I : instructions(F))
@@ -106,37 +104,7 @@ bool ARMWinEHFrame::runOnFunction(Function &F) {
               Twine(StackAlign.value()) +
               "-byte aligned and it cannot be realigned",
           Pinned->getDebugLoc()));
-      continue;
     }
-
-    // An over-sized block with the stack alignment, and the object at the
-    // first suitably aligned address inside it: Raw + (A - StackAlign) rounded
-    // down to a multiple of A lies in [Raw, Raw + A - StackAlign].
-    IRBuilder<> B(AI);
-    Type *IntPtrTy = DL.getIntPtrType(AI->getType());
-    const uint64_t Slack = A - StackAlign.value();
-    Value *Bytes = ConstantInt::get(
-        IntPtrTy, DL.getTypeAllocSize(AI->getAllocatedType()).getFixedValue());
-    if (AI->isArrayAllocation())
-      Bytes =
-          B.CreateMul(B.CreateZExtOrTrunc(AI->getArraySize(), IntPtrTy), Bytes);
-    Bytes = B.CreateAdd(Bytes, ConstantInt::get(IntPtrTy, Slack));
-    AllocaInst *Raw =
-        B.CreateAlloca(B.getInt8Ty(), AI->getAddressSpace(), Bytes);
-    Raw->setAlignment(StackAlign);
-    Raw->takeName(AI);
-    Value *Bumped = B.CreateConstInBoundsGEP1_64(B.getInt8Ty(), Raw, Slack);
-    Value *Aligned = B.CreateIntrinsic(
-        Intrinsic::ptrmask, {AI->getType(), IntPtrTy},
-        {Bumped, ConstantInt::getSigned(IntPtrTy, -static_cast<int64_t>(A))});
-
-    // Lifetime markers must name an alloca; they cover the whole block.
-    for (Use &U : make_early_inc_range(AI->uses()))
-      if (auto *II = dyn_cast<IntrinsicInst>(U.getUser()))
-        if (II->isLifetimeStartOrEnd())
-          U.set(Raw);
-    AI->replaceAllUsesWith(Aligned);
-    AI->eraseFromParent();
   }
 
   F.addFnAttr("no-realign-stack");

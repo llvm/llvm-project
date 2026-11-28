@@ -14,31 +14,34 @@
 ; }
 
 ; A C++ cleanup in a frame with an alignas(64) local. The frame is not realigned:
-; the local is at a 64-byte aligned address in an over-sized block, and the
-; cleanup funclet reaches it and the byval argument through r6.
+; the local is a dynamic allocation aligned with bic, and the cleanup funclet
+; reaches it and the byval argument through r6.
 ; CHECK-LABEL: f:
 ; CHECK:       .seh_handler __CxxFrameHandler3, %unwind, %except
 ; CHECK:       sub sp, #[[#ARGS:]]
-; CHECK:       push {r6, lr}
-; CHECK:       sub sp, #[[#SUB:]]
+; CHECK:       push {r4, r5, r6, r7}
+; CHECK:       push.w {r11, lr}
 ; CHECK:       .seh_endprologue
+; CHECK-NEXT:  sub sp, #[[#SUB:]]
 ; CHECK-NEXT:  mov r6, sp
 ; CHECK:       mvn [[T:r[0-9]+]], #1
 ; CHECK:       str.w [[T]], [r6]
-; CHECK-NEXT:  str.w [[T]], [r6, #4]
-; CHECK:       add.w [[P:r[0-9]+]], r6, #{{[0-9]+}}
-; CHECK-NEXT:  adds [[P]], #56
-; CHECK-NEXT:  bic [[P]], [[P]], #56
-; CHECK:       str [[P]], [r6, #[[#SLOT:]]]
+; CHECK:       str.w [[T]], [r6, #4]
+; CHECK:       bl __chkstk
+; CHECK-NEXT:  sub.w sp, sp, r4
+; CHECK-NEXT:  mov [[P:r[0-9]+]], sp
+; CHECK-NEXT:  bic [[P]], [[P]], #63
+; CHECK-NEXT:  str [[P]], [r6, #[[#SLOT:]]]
 ; CHECK:       blx
 ; CHECK-LABEL: "?dtor$2@?0?f@4HA":
 ; CHECK:       .seh_endprologue
-; CHECK-NEXT:  add.w r0, r6, #[[#SUB + 8]]
+; CHECK-NEXT:  sub sp, #[[#SUB]]
+; CHECK-NEXT:  add.w r0, r6, #[[#SUB + 24]]
 ; CHECK-NEXT:  ldr r1, [r6, #[[#SLOT]]]
 ; CHECK-NEXT:  adds r0, #44
 ; CHECK-NEXT:  bl g
 ; CHECK:       $cppxdata$f:
-; CHECK:       .long [[#%d,0 - SUB - 8 - ARGS]] @ UnwindHelp
+; CHECK:       .long [[#%d,0 - SUB - 24 - ARGS]] @ UnwindHelp
 ; CHECK-NEXT:  .long 0 @ ESTypeList
 ; CHECK-NEXT:  .long 1 @ EHFlags
 
