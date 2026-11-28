@@ -1027,7 +1027,19 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setOperationAction({ISD::LROUND, ISD::LLROUND}, {MVT::f32, MVT::f64}, Expand);
 
-  setOperationAction({ISD::LRINT, ISD::LLRINT}, {MVT::f32, MVT::f64}, Expand);
+  setOperationAction({ISD::LRINT, ISD::LLRINT}, {MVT::f16, MVT::f32, MVT::f64},
+                     Expand);
+
+  // bf16: expand on sm_90+ (native cvt.rni.bf16.bf16 and bf16 <-> int
+  // conversions); promote to f32 on older targets.
+  for (const auto &Op : {ISD::LRINT, ISD::LLRINT}) {
+    if (STI.hasFeature(NVPTX::SM90))
+      setOperationAction(Op, MVT::bf16, Expand);
+    else {
+      setOperationAction(Op, MVT::bf16, Promote);
+      AddPromotedToType(Op, MVT::bf16, MVT::f32);
+    }
+  }
 
   // 'Expand' implements FCOPYSIGN without calling an external library.
   setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);

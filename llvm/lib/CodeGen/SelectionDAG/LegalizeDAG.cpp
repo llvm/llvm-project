@@ -5429,6 +5429,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       Node->getOpcode() == ISD::VECREDUCE_FMAX ||
       Node->getOpcode() == ISD::VECREDUCE_FMIN ||
       Node->getOpcode() == ISD::VECREDUCE_FMAXIMUM ||
+      Node->getOpcode() == ISD::LRINT || Node->getOpcode() == ISD::LLRINT ||
       Node->getOpcode() == ISD::VECREDUCE_FMINIMUM ||
       Node->getOpcode() == ISD::VECREDUCE_FMAXIMUMNUM ||
       Node->getOpcode() == ISD::VECREDUCE_FMINIMUMNUM) {
