@@ -62,6 +62,7 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b32 s4, exec_lo
 ; CHECK-NEXT:    v_writelane_b32 v16, s4, 4
+; CHECK-NEXT:    v_writelane_b32 v16, s4, 5
 ; CHECK-NEXT:    s_or_saveexec_b32 s21, -1
 ; CHECK-NEXT:    buffer_store_dword v16, off, s[0:3], s32 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s21
@@ -69,6 +70,9 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    s_or_saveexec_b32 s21, -1
 ; CHECK-NEXT:    buffer_load_dword v16, off, s[0:3], s32 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s21
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_readlane_b32 s4, v16, 5
+; CHECK-NEXT:    v_writelane_b32 v16, s4, 6
 ; CHECK-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword v9, off, s[0:3], s32 offset:16 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword v10, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
@@ -102,14 +106,17 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    s_mov_b32 s17, s6
 ; CHECK-NEXT:    s_mov_b32 s18, s5
 ; CHECK-NEXT:    s_mov_b32 s19, s4
-; CHECK-NEXT:    v_writelane_b32 v16, s12, 5
-; CHECK-NEXT:    v_writelane_b32 v16, s13, 6
-; CHECK-NEXT:    v_writelane_b32 v16, s14, 7
-; CHECK-NEXT:    v_writelane_b32 v16, s15, 8
-; CHECK-NEXT:    v_writelane_b32 v16, s16, 9
-; CHECK-NEXT:    v_writelane_b32 v16, s17, 10
-; CHECK-NEXT:    v_writelane_b32 v16, s18, 11
-; CHECK-NEXT:    v_writelane_b32 v16, s19, 12
+; CHECK-NEXT:    v_writelane_b32 v16, s12, 7
+; CHECK-NEXT:    v_writelane_b32 v16, s13, 8
+; CHECK-NEXT:    v_writelane_b32 v16, s14, 9
+; CHECK-NEXT:    v_writelane_b32 v16, s15, 10
+; CHECK-NEXT:    v_writelane_b32 v16, s16, 11
+; CHECK-NEXT:    v_writelane_b32 v16, s17, 12
+; CHECK-NEXT:    v_writelane_b32 v16, s18, 13
+; CHECK-NEXT:    v_writelane_b32 v16, s19, 14
+; CHECK-NEXT:    s_or_saveexec_b32 s21, -1
+; CHECK-NEXT:    buffer_store_dword v16, off, s[0:3], s32 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_mov_b32 exec_lo, s21
 ; CHECK-NEXT:    v_mov_b32_e32 v6, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v7, v9
 ; CHECK-NEXT:    v_mov_b32_e32 v4, v10
@@ -118,36 +125,28 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v13
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v14
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v15
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[12:13]
-; CHECK-NEXT:    s_mov_b64 s[10:11], s[14:15]
-; CHECK-NEXT:    s_mov_b64 s[8:9], s[16:17]
-; CHECK-NEXT:    s_mov_b64 s[6:7], s[18:19]
-; CHECK-NEXT:    v_cmp_eq_u64_e64 s4, s[4:5], v[6:7]
-; CHECK-NEXT:    v_cmp_eq_u64_e64 s5, s[10:11], v[4:5]
-; CHECK-NEXT:    s_and_b32 s4, s4, s5
-; CHECK-NEXT:    v_cmp_eq_u64_e64 s5, s[8:9], v[2:3]
-; CHECK-NEXT:    s_and_b32 s4, s4, s5
-; CHECK-NEXT:    v_cmp_eq_u64_e64 s5, s[6:7], v[0:1]
-; CHECK-NEXT:    s_and_b32 s4, s4, s5
-; CHECK-NEXT:    s_and_saveexec_b32 s4, s4
-; CHECK-NEXT:    v_writelane_b32 v16, s4, 13
-; CHECK-NEXT:    s_or_saveexec_b32 s21, -1
-; CHECK-NEXT:    buffer_store_dword v16, off, s[0:3], s32 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_mov_b32 exec_lo, s21
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[12:13]
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[14:15]
+; CHECK-NEXT:    s_mov_b64 s[6:7], s[16:17]
+; CHECK-NEXT:    s_mov_b64 s[4:5], s[18:19]
+; CHECK-NEXT:    v_cmpx_eq_u64_e32 s[10:11], v[6:7]
+; CHECK-NEXT:    v_cmpx_eq_u64_e32 s[8:9], v[4:5]
+; CHECK-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[2:3]
+; CHECK-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[0:1]
 ; CHECK-NEXT:  ; %bb.2: ; in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    s_or_saveexec_b32 s21, -1
 ; CHECK-NEXT:    buffer_load_dword v16, off, s[0:3], s32 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s21
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_readlane_b32 s4, v16, 13
-; CHECK-NEXT:    v_readlane_b32 s8, v16, 5
-; CHECK-NEXT:    v_readlane_b32 s9, v16, 6
-; CHECK-NEXT:    v_readlane_b32 s10, v16, 7
-; CHECK-NEXT:    v_readlane_b32 s11, v16, 8
-; CHECK-NEXT:    v_readlane_b32 s12, v16, 9
-; CHECK-NEXT:    v_readlane_b32 s13, v16, 10
-; CHECK-NEXT:    v_readlane_b32 s14, v16, 11
-; CHECK-NEXT:    v_readlane_b32 s15, v16, 12
+; CHECK-NEXT:    v_readlane_b32 s4, v16, 6
+; CHECK-NEXT:    v_readlane_b32 s8, v16, 7
+; CHECK-NEXT:    v_readlane_b32 s9, v16, 8
+; CHECK-NEXT:    v_readlane_b32 s10, v16, 9
+; CHECK-NEXT:    v_readlane_b32 s11, v16, 10
+; CHECK-NEXT:    v_readlane_b32 s12, v16, 11
+; CHECK-NEXT:    v_readlane_b32 s13, v16, 12
+; CHECK-NEXT:    v_readlane_b32 s14, v16, 13
+; CHECK-NEXT:    v_readlane_b32 s15, v16, 14
 ; CHECK-NEXT:    v_readlane_b32 s16, v16, 0
 ; CHECK-NEXT:    v_readlane_b32 s17, v16, 1
 ; CHECK-NEXT:    v_readlane_b32 s18, v16, 2
@@ -158,7 +157,13 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    image_sample v0, [v0, v1], s[8:15], s[16:19] dmask:0x1 dim:SQ_RSRC_IMG_2D
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
+; CHECK-NEXT:    s_andn2_b32 s4, s4, exec_lo
+; CHECK-NEXT:    s_mov_b32 s5, s4
+; CHECK-NEXT:    v_writelane_b32 v16, s5, 5
+; CHECK-NEXT:    s_or_saveexec_b32 s21, -1
+; CHECK-NEXT:    buffer_store_dword v16, off, s[0:3], s32 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_mov_b32 exec_lo, s21
+; CHECK-NEXT:    s_mov_b32 exec_lo, s4
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_1
 ; CHECK-NEXT:  ; %bb.3:
 ; CHECK-NEXT:    s_or_saveexec_b32 s21, -1

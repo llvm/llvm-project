@@ -2143,10 +2143,11 @@ define void @store_v13i32_divergent(ptr addrspace(13) %p, <13 x i32> %v) {
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v14, 2, v0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, exec_lo
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_mov_b32 s1, s0
 ; GFX12-GISEL-NEXT:  .LBB16_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v14
-; GFX12-GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    v_cmpx_eq_u32_e32 s2, v14
 ; GFX12-GISEL-NEXT:    s_mov_b32 m0, s2
@@ -2165,18 +2166,19 @@ define void @store_v13i32_divergent(ptr addrspace(13) %p, <13 x i32> %v) {
 ; GFX12-GISEL-NEXT:    v_movreld_b32_e32 v11, v12
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; GFX12-GISEL-NEXT:    s_and_not1_wrexec_b32 s1, s1
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB16_1
 ; GFX12-GISEL-NEXT:  ; %bb.2:
 ; GFX12-GISEL-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-GISEL-NEXT:    v_add_nc_u32_e32 v0, 48, v0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, exec_lo
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_mov_b32 s1, s0
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 2, v0
 ; GFX12-GISEL-NEXT:  .LBB16_3: ; =>This Inner Loop Header: Depth=1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX12-GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    v_cmpx_eq_u32_e32 s2, v0
 ; GFX12-GISEL-NEXT:    s_mov_b32 m0, s2
@@ -2184,10 +2186,11 @@ define void @store_v13i32_divergent(ptr addrspace(13) %p, <13 x i32> %v) {
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr13
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
+; GFX12-GISEL-NEXT:    s_and_not1_wrexec_b32 s1, s1
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB16_3
 ; GFX12-GISEL-NEXT:  ; %bb.4:
 ; GFX12-GISEL-NEXT:    s_mov_b32 exec_lo, s0
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-SDAG-LABEL: store_v13i32_divergent:

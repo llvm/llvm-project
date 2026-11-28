@@ -73,53 +73,49 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; GISEL-NEXT:    global_load_b128 v[2:5], v[0:1], off
 ; GISEL-NEXT:    global_load_b128 v[6:9], v[0:1], off offset:16
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GISEL-NEXT:    s_mov_b32 s20, 0
-; GISEL-NEXT:    s_mov_b32 s3, exec_lo
+; GISEL-NEXT:    s_mov_b32 s16, 0
+; GISEL-NEXT:    s_mov_b32 s20, exec_lo
+; GISEL-NEXT:    s_mov_b32 s17, s16
+; GISEL-NEXT:    s_mov_b32 s18, s16
+; GISEL-NEXT:    s_mov_b32 s19, s16
+; GISEL-NEXT:    s_mov_b32 s0, s16
+; GISEL-NEXT:    s_mov_b32 s1, s16
+; GISEL-NEXT:    s_mov_b32 s2, s16
+; GISEL-NEXT:    s_mov_b32 s3, s16
+; GISEL-NEXT:    s_mov_b32 s4, s16
+; GISEL-NEXT:    s_mov_b32 s5, s16
+; GISEL-NEXT:    s_mov_b32 s6, s16
+; GISEL-NEXT:    s_mov_b32 s7, s16
 ; GISEL-NEXT:    s_mov_b32 s21, s20
-; GISEL-NEXT:    s_mov_b32 s22, s20
-; GISEL-NEXT:    s_mov_b32 s23, s20
-; GISEL-NEXT:    s_mov_b32 s4, s20
-; GISEL-NEXT:    s_mov_b32 s5, s20
-; GISEL-NEXT:    s_mov_b32 s6, s20
-; GISEL-NEXT:    s_mov_b32 s7, s20
-; GISEL-NEXT:    s_mov_b32 s8, s20
-; GISEL-NEXT:    s_mov_b32 s9, s20
-; GISEL-NEXT:    s_mov_b32 s10, s20
-; GISEL-NEXT:    s_mov_b32 s11, s20
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    v_readfirstlane_b32 s12, v2
-; GISEL-NEXT:    v_readfirstlane_b32 s13, v3
-; GISEL-NEXT:    v_readfirstlane_b32 s14, v4
-; GISEL-NEXT:    v_readfirstlane_b32 s15, v5
-; GISEL-NEXT:    v_readfirstlane_b32 s16, v6
-; GISEL-NEXT:    v_readfirstlane_b32 s17, v7
-; GISEL-NEXT:    v_readfirstlane_b32 s18, v8
-; GISEL-NEXT:    v_readfirstlane_b32 s19, v9
-; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[12:13], v[2:3]
-; GISEL-NEXT:    v_cmp_eq_u64_e64 s0, s[14:15], v[4:5]
-; GISEL-NEXT:    v_cmp_eq_u64_e64 s1, s[16:17], v[6:7]
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GISEL-NEXT:    v_cmp_eq_u64_e64 s2, s[18:19], v[8:9]
-; GISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GISEL-NEXT:    s_and_b32 s0, s0, s1
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GISEL-NEXT:    s_and_b32 s0, s0, s2
-; GISEL-NEXT:    s_and_saveexec_b32 s0, s0
-; GISEL-NEXT:    image_sample_c_lz v1, [v0, v0, v0, v0], s[12:19], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; GISEL-NEXT:    v_readfirstlane_b32 s8, v2
+; GISEL-NEXT:    v_readfirstlane_b32 s9, v3
+; GISEL-NEXT:    v_readfirstlane_b32 s10, v4
+; GISEL-NEXT:    v_readfirstlane_b32 s11, v5
+; GISEL-NEXT:    v_readfirstlane_b32 s12, v6
+; GISEL-NEXT:    v_readfirstlane_b32 s13, v7
+; GISEL-NEXT:    v_readfirstlane_b32 s14, v8
+; GISEL-NEXT:    v_readfirstlane_b32 s15, v9
+; GISEL-NEXT:    v_cmpx_eq_u64_e32 s[8:9], v[2:3]
+; GISEL-NEXT:    v_cmpx_eq_u64_e32 s[10:11], v[4:5]
+; GISEL-NEXT:    v_cmpx_eq_u64_e32 s[12:13], v[6:7]
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GISEL-NEXT:    v_cmpx_eq_u64_e32 s[14:15], v[8:9]
+; GISEL-NEXT:    image_sample_c_lz v1, [v0, v0, v0, v0], s[8:15], s[16:19] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
 ; GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7_vgpr8_vgpr9
 ; GISEL-NEXT:    ; implicit-def: $vgpr0
-; GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GISEL-NEXT:    s_and_not1_wrexec_b32 s21, s21
 ; GISEL-NEXT:    s_cbranch_execnz .LBB0_1
 ; GISEL-NEXT:  ; %bb.2:
-; GISEL-NEXT:    s_mov_b32 exec_lo, s3
+; GISEL-NEXT:    s_mov_b32 exec_lo, s20
 ; GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v3, 1.0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x7fc00000
 ; GISEL-NEXT:    s_clause 0x2
-; GISEL-NEXT:    image_sample_c_lz v0, [v2, v2, v0, v2], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; GISEL-NEXT:    image_sample_c_lz v3, [v2, v3, v2, v2], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; GISEL-NEXT:    image_sample_c_lz v4, [v2, v2, v2, v2], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; GISEL-NEXT:    image_sample_c_lz v0, [v2, v2, v0, v2], s[0:7], s[16:19] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; GISEL-NEXT:    image_sample_c_lz v3, [v2, v3, v2, v2], s[0:7], s[16:19] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; GISEL-NEXT:    image_sample_c_lz v4, [v2, v2, v2, v2], s[0:7], s[16:19] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GISEL-NEXT:    v_add_f32_e32 v0, v1, v0
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
@@ -129,7 +125,7 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; GISEL-NEXT:    v_add_f32_e32 v0, v4, v0
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-NEXT:    v_mul_f32_e32 v1, 0x3e800000, v0
-; GISEL-NEXT:    image_store v[1:3], [v2, v2], s[4:11] dim:SQ_RSRC_IMG_2D unorm
+; GISEL-NEXT:    image_store v[1:3], [v2, v2], s[0:7] dim:SQ_RSRC_IMG_2D unorm
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %descriptor = load <8 x i32>, ptr addrspace(1) %arg, align 32

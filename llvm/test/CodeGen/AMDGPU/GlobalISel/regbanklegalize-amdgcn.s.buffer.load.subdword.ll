@@ -139,33 +139,31 @@ define amdgpu_ps void @s_buffer_load_u8_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, i
 ; GFX12-LABEL: s_buffer_load_u8_vgpr_rsrc_sgpr_offset:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v4, s0
-; GFX12-NEXT:    s_mov_b32 s8, s1
-; GFX12-NEXT:    s_mov_b32 s9, s2
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
+; GFX12-NEXT:    s_mov_b32 s6, exec_lo
+; GFX12-NEXT:    s_mov_b32 s4, s1
+; GFX12-NEXT:    s_mov_b32 s5, s2
+; GFX12-NEXT:    s_mov_b32 s7, s6
 ; GFX12-NEXT:  .LBB8_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    buffer_load_u8 v1, v4, s[4:7], null offen
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[2:3]
+; GFX12-NEXT:    buffer_load_u8 v1, v4, s[0:3], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_and_not1_wrexec_b32 s7, s7
 ; GFX12-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b8 v0, v1, s[8:9]
+; GFX12-NEXT:    global_store_b8 v0, v1, s[4:5]
 ; GFX12-NEXT:    s_endpgm
   %val = call i8 @llvm.amdgcn.s.buffer.load.u8(<4 x i32> %rsrc, i32 %soffset, i32 0)
   store i8 %val, ptr addrspace(1) %out
@@ -177,33 +175,31 @@ define amdgpu_ps void @s_buffer_load_i8_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, i
 ; GFX12-LABEL: s_buffer_load_i8_vgpr_rsrc_sgpr_offset:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v4, s0
-; GFX12-NEXT:    s_mov_b32 s8, s1
-; GFX12-NEXT:    s_mov_b32 s9, s2
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
+; GFX12-NEXT:    s_mov_b32 s6, exec_lo
+; GFX12-NEXT:    s_mov_b32 s4, s1
+; GFX12-NEXT:    s_mov_b32 s5, s2
+; GFX12-NEXT:    s_mov_b32 s7, s6
 ; GFX12-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    buffer_load_u8 v1, v4, s[4:7], null offen
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[2:3]
+; GFX12-NEXT:    buffer_load_u8 v1, v4, s[0:3], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_and_not1_wrexec_b32 s7, s7
 ; GFX12-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b8 v0, v1, s[8:9]
+; GFX12-NEXT:    global_store_b8 v0, v1, s[4:5]
 ; GFX12-NEXT:    s_endpgm
   %val = call i8 @llvm.amdgcn.s.buffer.load.i8(<4 x i32> %rsrc, i32 %soffset, i32 0)
   store i8 %val, ptr addrspace(1) %out
@@ -215,33 +211,31 @@ define amdgpu_ps void @s_buffer_load_u16_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, 
 ; GFX12-LABEL: s_buffer_load_u16_vgpr_rsrc_sgpr_offset:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v4, s0
-; GFX12-NEXT:    s_mov_b32 s8, s1
-; GFX12-NEXT:    s_mov_b32 s9, s2
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
+; GFX12-NEXT:    s_mov_b32 s6, exec_lo
+; GFX12-NEXT:    s_mov_b32 s4, s1
+; GFX12-NEXT:    s_mov_b32 s5, s2
+; GFX12-NEXT:    s_mov_b32 s7, s6
 ; GFX12-NEXT:  .LBB10_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    buffer_load_u16 v1, v4, s[4:7], null offen
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[2:3]
+; GFX12-NEXT:    buffer_load_u16 v1, v4, s[0:3], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_and_not1_wrexec_b32 s7, s7
 ; GFX12-NEXT:    s_cbranch_execnz .LBB10_1
 ; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b16 v0, v1, s[8:9]
+; GFX12-NEXT:    global_store_b16 v0, v1, s[4:5]
 ; GFX12-NEXT:    s_endpgm
   %val = call i16 @llvm.amdgcn.s.buffer.load.u16(<4 x i32> %rsrc, i32 %soffset, i32 0)
   store i16 %val, ptr addrspace(1) %out
@@ -253,33 +247,31 @@ define amdgpu_ps void @s_buffer_load_i16_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, 
 ; GFX12-LABEL: s_buffer_load_i16_vgpr_rsrc_sgpr_offset:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mov_b32_e32 v4, s0
-; GFX12-NEXT:    s_mov_b32 s8, s1
-; GFX12-NEXT:    s_mov_b32 s9, s2
-; GFX12-NEXT:    s_mov_b32 s1, exec_lo
+; GFX12-NEXT:    s_mov_b32 s6, exec_lo
+; GFX12-NEXT:    s_mov_b32 s4, s1
+; GFX12-NEXT:    s_mov_b32 s5, s2
+; GFX12-NEXT:    s_mov_b32 s7, s6
 ; GFX12-NEXT:  .LBB11_1: ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX12-NEXT:    buffer_load_u16 v1, v4, s[4:7], null offen
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[0:1]
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[2:3]
+; GFX12-NEXT:    buffer_load_u16 v1, v4, s[0:3], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_and_not1_wrexec_b32 s7, s7
 ; GFX12-NEXT:    s_cbranch_execnz .LBB11_1
 ; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s1
+; GFX12-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_store_b16 v0, v1, s[8:9]
+; GFX12-NEXT:    global_store_b16 v0, v1, s[4:5]
 ; GFX12-NEXT:    s_endpgm
   %val = call i16 @llvm.amdgcn.s.buffer.load.i16(<4 x i32> %rsrc, i32 %soffset, i32 0)
   store i16 %val, ptr addrspace(1) %out
@@ -294,7 +286,9 @@ define amdgpu_ps void @s_buffer_load_i16_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, 
 define amdgpu_ps void @s_buffer_load_u8_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
 ; GFX12-LABEL: s_buffer_load_u8_vgpr_rsrc_vgpr_offset:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s3, exec_lo
+; GFX12-NEXT:    s_mov_b32 s2, exec_lo
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_mov_b32 s3, s2
 ; GFX12-NEXT:  .LBB12_1: ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -303,19 +297,16 @@ define amdgpu_ps void @s_buffer_load_u8_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s2, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s2, vcc_lo, s2
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_saveexec_b32 s2, s2
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[0:1]
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[2:3]
 ; GFX12-NEXT:    buffer_load_u8 v1, v4, s[4:7], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
+; GFX12-NEXT:    s_and_not1_wrexec_b32 s3, s3
 ; GFX12-NEXT:    s_cbranch_execnz .LBB12_1
 ; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s3
+; GFX12-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v0, v1, s[0:1]
@@ -329,7 +320,9 @@ define amdgpu_ps void @s_buffer_load_u8_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i
 define amdgpu_ps void @s_buffer_load_i8_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
 ; GFX12-LABEL: s_buffer_load_i8_vgpr_rsrc_vgpr_offset:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s3, exec_lo
+; GFX12-NEXT:    s_mov_b32 s2, exec_lo
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_mov_b32 s3, s2
 ; GFX12-NEXT:  .LBB13_1: ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -338,19 +331,16 @@ define amdgpu_ps void @s_buffer_load_i8_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s2, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s2, vcc_lo, s2
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_saveexec_b32 s2, s2
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[0:1]
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[2:3]
 ; GFX12-NEXT:    buffer_load_u8 v1, v4, s[4:7], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
+; GFX12-NEXT:    s_and_not1_wrexec_b32 s3, s3
 ; GFX12-NEXT:    s_cbranch_execnz .LBB13_1
 ; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s3
+; GFX12-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v0, v1, s[0:1]
@@ -364,7 +354,9 @@ define amdgpu_ps void @s_buffer_load_i8_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i
 define amdgpu_ps void @s_buffer_load_u16_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
 ; GFX12-LABEL: s_buffer_load_u16_vgpr_rsrc_vgpr_offset:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s3, exec_lo
+; GFX12-NEXT:    s_mov_b32 s2, exec_lo
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_mov_b32 s3, s2
 ; GFX12-NEXT:  .LBB14_1: ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -373,19 +365,16 @@ define amdgpu_ps void @s_buffer_load_u16_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, 
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s2, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s2, vcc_lo, s2
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_saveexec_b32 s2, s2
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[0:1]
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[2:3]
 ; GFX12-NEXT:    buffer_load_u16 v1, v4, s[4:7], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
+; GFX12-NEXT:    s_and_not1_wrexec_b32 s3, s3
 ; GFX12-NEXT:    s_cbranch_execnz .LBB14_1
 ; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s3
+; GFX12-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b16 v0, v1, s[0:1]
@@ -399,7 +388,9 @@ define amdgpu_ps void @s_buffer_load_u16_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, 
 define amdgpu_ps void @s_buffer_load_i16_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i32 %offset, ptr addrspace(1) inreg %out) {
 ; GFX12-LABEL: s_buffer_load_i16_vgpr_rsrc_vgpr_offset:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mov_b32 s3, exec_lo
+; GFX12-NEXT:    s_mov_b32 s2, exec_lo
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    s_mov_b32 s3, s2
 ; GFX12-NEXT:  .LBB15_1: ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -408,19 +399,16 @@ define amdgpu_ps void @s_buffer_load_i16_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, 
 ; GFX12-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX12-NEXT:    v_cmp_eq_u64_e64 s2, s[6:7], v[2:3]
-; GFX12-NEXT:    s_and_b32 s2, vcc_lo, s2
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_and_saveexec_b32 s2, s2
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[0:1]
+; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[2:3]
 ; GFX12-NEXT:    buffer_load_u16 v1, v4, s[4:7], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
+; GFX12-NEXT:    s_and_not1_wrexec_b32 s3, s3
 ; GFX12-NEXT:    s_cbranch_execnz .LBB15_1
 ; GFX12-NEXT:  ; %bb.2:
-; GFX12-NEXT:    s_mov_b32 exec_lo, s3
+; GFX12-NEXT:    s_mov_b32 exec_lo, s2
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b16 v0, v1, s[0:1]
