@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -2133,10 +2134,28 @@ static Register getOrCreateADAVirtualRegister(MachineFunction &MF) {
   return ADAvReg;
 }
 
+// Passing or returning vector types or i128 in XPLINK64 is only supported if
+// the vector facility is available. Report an error otherwise.
+template <typename ArgT>
+static void diagnoseXPLINK64VectorWithoutVF(const SystemZSubtarget &Subtarget,
+                                            SelectionDAG &DAG,
+                                            const SmallVectorImpl<ArgT> &Args) {
+  if (!Subtarget.isTargetXPLINK64() || Subtarget.hasVector())
+    return;
+  if (any_of(Args, [](const ArgT &Arg) {
+        return Arg.ArgVT.isVector() || Arg.ArgVT == MVT::i128;
+      }))
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(),
+        "vector and i128 types without vector facility are not yet supported "
+        "in XPLINK64"));
+}
+
 SDValue SystemZTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+  diagnoseXPLINK64VectorWithoutVF(Subtarget, DAG, Ins);
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -2450,6 +2469,9 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   LLVMContext &Ctx = *DAG.getContext();
   SystemZCallingConventionRegisters *Regs = Subtarget.getSpecialRegisters();
 
+  diagnoseXPLINK64VectorWithoutVF(Subtarget, DAG, Outs);
+  diagnoseXPLINK64VectorWithoutVF(Subtarget, DAG, Ins);
+
   // FIXME: z/OS support to be added in later.
   if (Subtarget.isTargetXPLINK64()) {
     if (CLI.CB && CLI.CB->isMustTailCall())
@@ -2719,6 +2741,8 @@ SystemZTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                    const SmallVectorImpl<SDValue> &OutVals,
                                    const SDLoc &DL, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
+
+  diagnoseXPLINK64VectorWithoutVF(Subtarget, DAG, Outs);
 
   // Integer args <=32 bits should have an extension attribute.
   verifyNarrowIntegerArgs_Ret(CallConv, Outs, &MF.getFunction());

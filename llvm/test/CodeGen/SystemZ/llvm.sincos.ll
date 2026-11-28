@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=s390x-linux-gnu < %s | FileCheck -check-prefix=LINUX %s
-; RUN: llc -mtriple=s390x-ibm-zos < %s | FileCheck -check-prefix=ZOS %s
+; RUN: llc -mtriple=s390x-ibm-zos -mcpu=z13 < %s | FileCheck -check-prefix=ZOS %s
 
 ; FIXME: half cases split out since they are broken on zos
 
