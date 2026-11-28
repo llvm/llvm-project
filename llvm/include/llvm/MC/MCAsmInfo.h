@@ -403,6 +403,10 @@ protected:
   /// location is allowed.
   bool SupportsExtendedDwarfLocDirective = true;
 
+  /// If non-zero, MCSpecifierExpr kind used as base for DWARF-relative exprs.
+  /// Otherwise, a regular MCSymbolRefExpr will be used.
+  unsigned DwarfSectionOffSpecifierExpr = 0;
+
   //===--- Prologue State ----------------------------------------------===//
 
   std::vector<MCCFIInstruction> InitialFrameState;
@@ -504,10 +508,9 @@ public:
                                     MCStreamer &Streamer) const;
 
   /// Return the expression used to emit the offset of \p Sym + \p Offset from
-  /// the start of its DWARF section. The default is Sym + Offset.
-  virtual const MCExpr *getDwarfSectionOffsetExpr(const MCSymbol *Sym,
-                                                  uint64_t Offset,
-                                                  MCContext &Ctx) const;
+  /// the start of its DWARF section.
+  const MCExpr *getDwarfSectionOffsetExpr(const MCSymbol *Sym, uint64_t Offset,
+                                          MCContext &Ctx) const;
 
   /// Return true if C is an acceptable character inside a symbol name.
   bool isAcceptableChar(char C) const;

@@ -27,8 +27,6 @@ class SystemZMCAsmInfoGOFF : public MCAsmInfoGOFF {
 public:
   explicit SystemZMCAsmInfoGOFF(const Triple &TT,
                                 const MCTargetOptions &Options);
-  const MCExpr *getDwarfSectionOffsetExpr(const MCSymbol *Sym, uint64_t Offset,
-                                          MCContext &Ctx) const override;
 };
 
 namespace SystemZ {

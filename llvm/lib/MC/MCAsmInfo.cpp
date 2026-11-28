@@ -73,7 +73,11 @@ const MCExpr *MCAsmInfo::getExprForFDESymbol(const MCSymbol *Sym,
 const MCExpr *MCAsmInfo::getDwarfSectionOffsetExpr(const MCSymbol *Sym,
                                                    uint64_t Offset,
                                                    MCContext &Ctx) const {
-  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
+  const MCExpr *Expr;
+  if (DwarfSectionOffSpecifierExpr)
+    Expr = MCSpecifierExpr::create(Sym, DwarfSectionOffSpecifierExpr, Ctx);
+  else
+    Expr = MCSymbolRefExpr::create(Sym, Ctx);
   if (Offset)
     Expr =
         MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx), Ctx);

@@ -54,6 +54,7 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
   IsLittleEndian = false;
   MaxInstLength = 6;
   SupportsDebugInformation = true;
+  DwarfSectionOffSpecifierExpr = SystemZ::S_QCon;
 
   initializeAtSpecifiers(atSpecifiers);
 
@@ -86,13 +87,4 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
     Res.setSpecifier(Expr.getSpecifier());
     return true;
   };
-}
-
-const MCExpr *SystemZMCAsmInfoGOFF::getDwarfSectionOffsetExpr(
-    const MCSymbol *Sym, uint64_t Offset, MCContext &Ctx) const {
-  const MCExpr *Expr = MCSpecifierExpr::create(Sym, SystemZ::S_QCon, Ctx);
-  if (Offset)
-    Expr =
-        MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx), Ctx);
-  return Expr;
 }
