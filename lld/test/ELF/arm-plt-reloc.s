@@ -64,7 +64,7 @@ _start:
 // DSO-NEXT: Disassembly of section .plt:
 // DSO-EMPTY:
 // DSO-NEXT: <.plt>:
-// DSO-NEXT:     10230:       str     lr, [sp, #-4]!
+// DSO-NEXT:     10230:       push    {lr}
 // (0x10234 + 8) + (0 RoR 12) + (32 RoR 20 = 0x20000) + 164 = 0x302e0 = .got.plt[2]
 // DSO-NEXT:     10234:       add     lr, pc, #0, #12
 // DSO-NEXT:     10238:       add     lr, lr, #32, #20
@@ -150,7 +150,7 @@ _start:
 // CHECKHIGH-NEXT: Disassembly of section .plt:
 // CHECKHIGH-EMPTY:
 // CHECKHIGH-NEXT: <.plt>:
-// CHECKHIGH-NEXT:     2000:       str     lr, [sp, #-4]!
+// CHECKHIGH-NEXT:     2000:       push    {lr}
 // CHECKHIGH-NEXT:     2004:       add     lr, pc, #16, #12
 // CHECKHIGH-NEXT:     2008:       add     lr, lr, #1036288
 // CHECKHIGH-NEXT:     200c:       ldr     pc, [lr, #4092]!
@@ -224,7 +224,7 @@ _start:
 // CHECKLONG-NEXT: Disassembly of section .plt:
 // CHECKLONG-EMPTY:
 // CHECKLONG-NEXT: <.plt>:
-// CHECKLONG-NEXT:     2000:       str     lr, [sp, #-4]!
+// CHECKLONG-NEXT:     2000:       push    {lr}
 // CHECKLONG-NEXT:     2004:       ldr     lr, [pc, #4]
 // CHECKLONG-NEXT:     2008:       add     lr, pc, lr
 // CHECKLONG-NEXT:     200c:       ldr     pc, [lr, #8]!
@@ -267,7 +267,7 @@ _start:
 // CHECKLONG-EB-NEXT: Disassembly of section .plt:
 // CHECKLONG-EB-EMPTY:
 // CHECKLONG-EB-NEXT: <.plt>:
-// CHECKLONG-EB-NEXT:     2000:       str     lr, [sp, #-4]!
+// CHECKLONG-EB-NEXT:     2000:       push    {lr}
 // CHECKLONG-EB-NEXT:                 ldr     lr, [pc, #4]
 // CHECKLONG-EB-NEXT:                 add     lr, pc, lr
 // CHECKLONG-EB-NEXT:                 ldr     pc, [lr, #8]!
@@ -342,7 +342,7 @@ _start:
 // CHECKMIX-NEXT: Disassembly of section .plt:
 // CHECKMIX-EMPTY:
 // CHECKMIX-NEXT: <.plt>:
-// CHECKMIX-NEXT:     2000:       str     lr, [sp, #-4]!
+// CHECKMIX-NEXT:     2000:       push    {lr}
 // CHECKMIX-NEXT:     2004:       ldr     lr, [pc, #4]
 // CHECKMIX-NEXT:     2008:       add     lr, pc, lr
 // CHECKMIX-NEXT:     200c:       ldr     pc, [lr, #8]!
@@ -385,7 +385,7 @@ _start:
 // CHECKMIX-EB-NEXT: Disassembly of section .plt:
 // CHECKMIX-EB-EMPTY:
 // CHECKMIX-EB-NEXT: <.plt>:
-// CHECKMIX-EB-NEXT:     2000:       str     lr, [sp, #-4]!
+// CHECKMIX-EB-NEXT:     2000:       push    {lr}
 // CHECKMIX-EB-NEXT:                 ldr     lr, [pc, #4]
 // CHECKMIX-EB-NEXT:                 add     lr, pc, lr
 // CHECKMIX-EB-NEXT:                 ldr     pc, [lr, #8]!

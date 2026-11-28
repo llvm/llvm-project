@@ -10,7 +10,7 @@
 ## the ARM ISA, we use the default ARM PLT sequences.
 
 # CHECK:      <.plt>:
-# CHECK-NEXT: e52de004      str     lr, [sp, #-0x4]!
+# CHECK-NEXT: e52de004      push    {lr}
 # CHECK-NEXT: e28fe600      add     lr, pc, #0, #12
 # CHECK-NEXT: e28eea20      add     lr, lr, #32, #20
 # CHECK-NEXT: e5bef084      ldr     pc, [lr, #0x84]!

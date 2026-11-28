@@ -1875,7 +1875,7 @@ static DecodeStatus DecodeAddrModeImm12Operand(MCInst &Inst, unsigned Val,
   DecodeStatus S = MCDisassembler::Success;
 
   unsigned add = fieldFromInstruction(Val, 12, 1);
-  unsigned imm = fieldFromInstruction(Val, 0, 12);
+  int32_t imm = fieldFromInstruction(Val, 0, 12);
   unsigned Rn = fieldFromInstruction(Val, 13, 4);
 
   if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))

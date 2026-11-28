@@ -101,7 +101,7 @@ callers:
 // CHECK3: Disassembly of section .plt:
 // CHECK3-EMPTY:
 // CHECK3-NEXT: <.plt>:
-// CHECK3-NEXT:  1100020:       e52de004        str     lr, [sp, #-4]!
+// CHECK3-NEXT:  1100020:       e52de004        push    {lr}
 // CHECK3-NEXT:  1100024:       e28fe600        add     lr, pc, #0, #12
 // CHECK3-NEXT:  1100028:       e28eea20        add     lr, lr, #32
 // CHECK3-NEXT:  110002c:       e5bef094        ldr     pc, [lr, #148]!
