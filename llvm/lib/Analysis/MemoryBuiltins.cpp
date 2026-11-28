@@ -61,117 +61,24 @@ static cl::opt<unsigned> ObjectSizeOffsetVisitorMaxVisitInstructions(
              "look at"),
     cl::init(100));
 
-// clang-format off
-enum AllocType : uint8_t {
-  OpNewLike          = 1<<0, // allocates; never returns null
-  MallocLike         = 1<<1, // allocates; may return null
-  StrDupLike         = 1<<2,
-  MallocOrOpNewLike  = MallocLike | OpNewLike,
-  AllocLike          = MallocOrOpNewLike | StrDupLike,
-  AnyAlloc           = AllocLike
-};
-// clang-format on
-
-struct AllocFnsTy {
-  AllocType AllocTy;
-  unsigned NumParams;
-  // First and Second size parameters (or -1 if unused)
-  int FstParam, SndParam;
-};
-
-// clang-format off
-static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
-    {LibFunc_strdup,                                          {StrDupLike, 1, -1, -1}},
-    {LibFunc_dunder_strdup,                                   {StrDupLike, 1, -1, -1}},
-    {LibFunc_strndup,                                         {StrDupLike, 2,  1, -1}},
-    {LibFunc_dunder_strndup,                                  {StrDupLike, 2,  1, -1}},
-};
-// clang-format on
-
-static const Function *getCalledFunction(const Value *V) {
-  // Don't care about intrinsics in this case.
-  if (isa<IntrinsicInst>(V))
-    return nullptr;
-
-  const auto *CB = dyn_cast<CallBase>(V);
-  if (!CB)
-    return nullptr;
-
-  if (CB->isNoBuiltin())
-    return nullptr;
-
-  return CB->getCalledFunction();
+static bool isStrNDupLike(LibFunc LF) {
+  return LF == LibFunc_strndup || LF == LibFunc_dunder_strndup;
 }
 
-/// Returns the allocation data for the given value if it's a call to a known
-/// allocation function.
-static std::optional<AllocFnsTy>
-getAllocationDataForFunction(const Function *Callee, AllocType AllocTy,
-                             const TargetLibraryInfo *TLI) {
-  // Don't perform a slow TLI lookup, if this function doesn't return a pointer
-  // and thus can't be an allocation function.
-  if (!Callee->getReturnType()->isPointerTy())
-    return std::nullopt;
-
-  // Make sure that the function is available.
-  if (!TLI)
-    return std::nullopt;
-
-  LibFunc TLIFn = TLI->getLibFunc(*Callee);
-  if (!TLI->has(TLIFn))
-    return std::nullopt;
-
-  const auto *Iter = find_if(AllocationFnData,
-                             [TLIFn](const std::pair<LibFunc, AllocFnsTy> &P) {
-                               return P.first == TLIFn;
-                             });
-
-  if (Iter == std::end(AllocationFnData))
-    return std::nullopt;
-
-  const AllocFnsTy *FnData = &Iter->second;
-  if ((FnData->AllocTy & AllocTy) != FnData->AllocTy)
-    return std::nullopt;
-
-  // Check function prototype.
-  int FstParam = FnData->FstParam;
-  int SndParam = FnData->SndParam;
-  FunctionType *FTy = Callee->getFunctionType();
-
-  if (FTy->getReturnType()->isPointerTy() &&
-      FTy->getNumParams() == FnData->NumParams &&
-      (FstParam < 0 || (FTy->getParamType(FstParam)->isIntegerTy(32) ||
-                        FTy->getParamType(FstParam)->isIntegerTy(64))) &&
-      (SndParam < 0 || FTy->getParamType(SndParam)->isIntegerTy(32) ||
-       FTy->getParamType(SndParam)->isIntegerTy(64)))
-    return *FnData;
-  return std::nullopt;
+static bool isStrDupLike(LibFunc LF) {
+  return LF == LibFunc_strdup || LF == LibFunc_dunder_strdup ||
+         isStrNDupLike(LF);
 }
 
-static std::optional<AllocFnsTy>
-getAllocationSize(const CallBase *CB, const TargetLibraryInfo *TLI) {
-  if (const Function *Callee = getCalledFunction(CB)) {
-    // Prefer to use existing information over allocsize. This will give us an
-    // accurate AllocTy.
-    if (std::optional<AllocFnsTy> Data =
-            getAllocationDataForFunction(Callee, AnyAlloc, TLI))
-      return Data;
-  }
-
+static std::pair<Value *, Value *> getAllocSizePair(const CallBase *CB) {
   Attribute Attr = CB->getFnAttr(Attribute::AllocSize);
-  if (Attr == Attribute())
-    return std::nullopt;
+  if (!Attr.isValid())
+    return {nullptr, nullptr};
 
   std::pair<unsigned, std::optional<unsigned>> Args = Attr.getAllocSizeArgs();
-
-  AllocFnsTy Result;
-  // Because allocsize only tells us how many bytes are allocated, we're not
-  // really allowed to assume anything, so we use MallocLike.
-  Result.AllocTy = MallocLike;
-  Result.NumParams = CB->arg_size();
-  Result.FstParam = Args.first;
-  Result.SndParam = Args.second.value_or(-1);
-  return Result;
+  Value *FirstArg = CB->getArgOperand(Args.first);
+  Value *SecondArg = Args.second ? CB->getArgOperand(*Args.second) : nullptr;
+  return {FirstArg, SecondArg};
 }
 
 static AllocFnKind getAllocFnKind(const Value *V) {
@@ -260,62 +167,64 @@ static bool checkedZextOrTrunc(APInt &I, unsigned IntTyBits) {
 std::optional<APInt>
 llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
                    function_ref<const Value *(const Value *)> Mapper) {
-  // Note: This handles both explicitly listed allocation functions and
-  // allocsize.  The code structure could stand to be cleaned up a bit.
-  std::optional<AllocFnsTy> FnData = getAllocationSize(CB, TLI);
-  if (!FnData)
-    return std::nullopt;
-
   // Get the index type for this address space, results and intermediate
   // computations are performed at that width.
   auto &DL = CB->getDataLayout();
   const unsigned IntTyBits = DL.getIndexTypeSizeInBits(CB->getType());
 
-  // Handle strdup-like functions separately.
-  if (FnData->AllocTy == StrDupLike) {
-    APInt Size(IntTyBits, GetStringLength(Mapper(CB->getArgOperand(0))));
-    if (!Size)
+  // Handle allocsize attribute.
+  auto [FirstArg, SecondArg] = getAllocSizePair(CB);
+  if (FirstArg) {
+    const ConstantInt *Arg = dyn_cast<ConstantInt>(Mapper(FirstArg));
+    if (!Arg)
       return std::nullopt;
 
-    // Strndup limits strlen.
-    if (FnData->FstParam > 0) {
-      const ConstantInt *Arg =
-          dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(FnData->FstParam)));
-      if (!Arg)
-        return std::nullopt;
+    APInt Size = Arg->getValue();
+    if (!checkedZextOrTrunc(Size, IntTyBits))
+      return std::nullopt;
 
-      APInt MaxSize = Arg->getValue().zext(IntTyBits);
-      if (Size.ugt(MaxSize))
-        Size = MaxSize + 1;
-    }
+    // Size is determined by just 1 parameter.
+    if (!SecondArg)
+      return Size;
+
+    Arg = dyn_cast<ConstantInt>(Mapper(SecondArg));
+    if (!Arg)
+      return std::nullopt;
+
+    APInt NumElems = Arg->getValue();
+    if (!checkedZextOrTrunc(NumElems, IntTyBits))
+      return std::nullopt;
+
+    bool Overflow;
+    Size = Size.umul_ov(NumElems, Overflow);
+    if (Overflow)
+      return std::nullopt;
     return Size;
   }
 
-  const ConstantInt *Arg =
-      dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(FnData->FstParam)));
-  if (!Arg)
+  // Handle strdup-like functions separately.
+  if (!TLI)
     return std::nullopt;
 
-  APInt Size = Arg->getValue();
-  if (!checkedZextOrTrunc(Size, IntTyBits))
+  LibFunc LF = TLI->getLibFunc(*CB);
+  if (!isStrDupLike(LF))
     return std::nullopt;
 
-  // Size is determined by just 1 parameter.
-  if (FnData->SndParam < 0)
-    return Size;
-
-  Arg = dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(FnData->SndParam)));
-  if (!Arg)
+  APInt Size(IntTyBits, GetStringLength(Mapper(CB->getArgOperand(0))));
+  if (!Size)
     return std::nullopt;
 
-  APInt NumElems = Arg->getValue();
-  if (!checkedZextOrTrunc(NumElems, IntTyBits))
-    return std::nullopt;
+  // Strndup limits strlen.
+  if (isStrNDupLike(LF)) {
+    const ConstantInt *Arg =
+        dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(1)));
+    if (!Arg)
+      return std::nullopt;
 
-  bool Overflow;
-  Size = Size.umul_ov(NumElems, Overflow);
-  if (Overflow)
-    return std::nullopt;
+    APInt MaxSize = Arg->getValue().zext(IntTyBits);
+    if (Size.ugt(MaxSize))
+      Size = MaxSize + 1;
+  }
   return Size;
 }
 
@@ -1164,22 +1073,14 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
 }
 
 SizeOffsetValue ObjectSizeOffsetEvaluator::visitCallBase(CallBase &CB) {
-  std::optional<AllocFnsTy> FnData = getAllocationSize(&CB, TLI);
-  if (!FnData)
+  auto [FirstArg, SecondArg] = getAllocSizePair(&CB);
+  if (!FirstArg)
     return ObjectSizeOffsetEvaluator::unknown();
 
-  // Handle strdup-like functions separately.
-  if (FnData->AllocTy == StrDupLike) {
-    // TODO: implement evaluation of strdup/strndup
-    return ObjectSizeOffsetEvaluator::unknown();
-  }
-
-  Value *FirstArg = CB.getArgOperand(FnData->FstParam);
   FirstArg = Builder.CreateZExtOrTrunc(FirstArg, IntTy);
-  if (FnData->SndParam < 0)
+  if (!SecondArg)
     return SizeOffsetValue(FirstArg, Zero);
 
-  Value *SecondArg = CB.getArgOperand(FnData->SndParam);
   SecondArg = Builder.CreateZExtOrTrunc(SecondArg, IntTy);
   Value *Size = Builder.CreateMul(FirstArg, SecondArg);
   return SizeOffsetValue(Size, Zero);
