@@ -57,7 +57,7 @@ template <typename... Ts> class format_object {
   std::tuple<detail::decay_if_c_char_array_t<Ts>...> Vals;
 
   template <std::size_t... Is>
-  int snprint_tuple(char *Buffer, unsigned BufferSize,
+  int snprint_tuple(char *Buffer, size_t BufferSize,
                     std::index_sequence<Is...>) const {
     return snprintf(Buffer, BufferSize, Fmt, std::get<Is>(Vals)...);
   }
@@ -69,7 +69,7 @@ public:
         "format can't be used with non fundamental / non pointer type");
   }
 
-  int snprint(char *Buffer, unsigned BufferSize) const {
+  int snprint(char *Buffer, size_t BufferSize) const {
     return snprint_tuple(Buffer, BufferSize, std::index_sequence_for<Ts...>());
   }
 };
