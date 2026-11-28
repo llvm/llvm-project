@@ -587,6 +587,8 @@ void ObjFile::parse(bool ignoreComdats) {
   // Populate `Functions`.
   ArrayRef<WasmFunction> funcs = wasmObj->functions();
   ArrayRef<WasmSignature> types = wasmObj->types();
+  if (!funcs.empty() && !codeSection)
+    fatal(toString(this) + ": missing code section");
   functions.reserve(funcs.size());
 
   for (auto &f : funcs) {

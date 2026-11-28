@@ -1,0 +1,30 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: not wasm-ld --no-entry --export=entry %t.o -o %t.wasm 2>&1 | FileCheck %s
+
+# CHECK: error: {{.*}}missing code section
+
+--- !WASM
+FileHeader:
+  Version: 0x1
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes: []
+        ReturnTypes: [ I32 ]
+  - Type: FUNCTION
+    FunctionTypes: [ 0, 0 ]
+  - Type: CUSTOM
+    Name: linking
+    Version: 2
+    SymbolTable:
+      - Index: 0
+        Kind: FUNCTION
+        Name: entry
+        Flags: []
+        Function: 0
+      - Index: 1
+        Kind: FUNCTION
+        Name: target
+        Flags: []
+        Function: 1
