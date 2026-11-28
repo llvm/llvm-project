@@ -1460,8 +1460,13 @@ public:
   getReassociationOpcodes(unsigned Pattern, const MachineInstr &Root,
                           const MachineInstr &Prev) const;
 
-  /// The limit on resource length extension we accept in MachineCombiner Pass.
-  virtual int getExtendResourceLenLimit() const { return 0; }
+  /// The limit on resource length extension we accept in MachineCombiner Pass
+  /// for \p Pattern. The combine is accepted only if
+  ///   NewResourceLength <= OldResourceLength + limit.
+  /// 0 (default) accepts no growth, a positive value tolerates growth,
+  /// and a negative value requires the resource length to shrink by
+  /// at least that many cycles.
+  virtual int getExtendResourceLenLimit(unsigned Pattern) const { return 0; }
 
   /// This is an architecture-specific helper function of reassociateOps.
   /// Set special operand attributes for new instructions after reassociation.

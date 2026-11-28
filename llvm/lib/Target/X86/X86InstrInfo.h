@@ -30,6 +30,9 @@ class X86Subtarget;
 enum X86MachineCombinerPattern : unsigned {
   // X86 VNNI
   DPWSSD = MachineCombinerPattern::TARGET_PATTERN_START,
+  // AVX512 rotate by a multiple of 8 bits -> byte shuffle (vpshufb) with a
+  // constant mask. Only taken if it strictly reduces resource length.
+  ROTATE_TO_PSHUFB,
 };
 
 namespace X86 {
@@ -696,6 +699,15 @@ protected:
   bool accumulateInstrSeqToRootLatency(MachineInstr &Root) const override {
     return false;
   }
+
+  /// ROTATE_TO_PSHUFB must strictly reduce the resource length, because it
+  /// needs a register and a load for the mask.
+  int getExtendResourceLenLimit(unsigned Pattern) const override;
+
+  /// Create the constant-pool entry for an accepted ROTATE_TO_PSHUFB.
+  void
+  finalizeInsInstrs(MachineInstr &Root, unsigned &Pattern,
+                    SmallVectorImpl<MachineInstr *> &InsInstrs) const override;
 
   void getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
                              int FI) const override;

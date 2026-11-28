@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -10937,9 +10938,207 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
   }
 }
 
+// Per-opcode data for ROTATE_TO_PSHUFB. The MachineCombiner hooks
+// (getMachineCombinerPatterns, genAlternativeCodeSequence, finalizeInsInstrs)
+// share no state, so each of them looks this up again from the root opcode.
+namespace {
+struct RotateToPshufbInfo {
+  unsigned ShufOpc;
+  unsigned LoadOpc;
+  unsigned VecBytes;
+  unsigned EltBytes;
+  bool IsRotateRight;
+};
+} // namespace
+
+static std::optional<RotateToPshufbInfo> getRotateToPshufbInfo(unsigned Opc) {
+  switch (Opc) {
+  case X86::VPROLDZri:
+    return {{X86::VPSHUFBZrr, X86::VBROADCASTI32X4Zrm, 64, 4, false}};
+  case X86::VPROLDZ256ri:
+    return {{X86::VPSHUFBZ256rr, X86::VBROADCASTI32X4Z256rm, 32, 4, false}};
+  case X86::VPROLDZ128ri:
+    return {{X86::VPSHUFBZ128rr, X86::VMOVDQA64Z128rm, 16, 4, false}};
+  case X86::VPROLQZri:
+    return {{X86::VPSHUFBZrr, X86::VBROADCASTI32X4Zrm, 64, 8, false}};
+  case X86::VPROLQZ256ri:
+    return {{X86::VPSHUFBZ256rr, X86::VBROADCASTI32X4Z256rm, 32, 8, false}};
+  case X86::VPROLQZ128ri:
+    return {{X86::VPSHUFBZ128rr, X86::VMOVDQA64Z128rm, 16, 8, false}};
+  case X86::VPRORDZri:
+    return {{X86::VPSHUFBZrr, X86::VBROADCASTI32X4Zrm, 64, 4, true}};
+  case X86::VPRORDZ256ri:
+    return {{X86::VPSHUFBZ256rr, X86::VBROADCASTI32X4Z256rm, 32, 4, true}};
+  case X86::VPRORDZ128ri:
+    return {{X86::VPSHUFBZ128rr, X86::VMOVDQA64Z128rm, 16, 4, true}};
+  case X86::VPRORQZri:
+    return {{X86::VPSHUFBZrr, X86::VBROADCASTI32X4Zrm, 64, 8, true}};
+  case X86::VPRORQZ256ri:
+    return {{X86::VPSHUFBZ256rr, X86::VBROADCASTI32X4Z256rm, 32, 8, true}};
+  case X86::VPRORQZ128ri:
+    return {{X86::VPSHUFBZ128rr, X86::VMOVDQA64Z128rm, 16, 8, true}};
+  default:
+    return {};
+  }
+}
+
+/// Match an unmasked AVX512 rotate by a whole number of bytes, which can be
+/// done as a vpshufb with a constant mask. Whether it is profitable is decided
+/// by the MachineCombiner from the resource length (see
+/// getExtendResourceLenLimit), so this checks legality and rejects only the
+/// cases where that decision cannot be made or the rewrite is never wanted.
+static bool matchRotateToPshufb(const MachineInstr &Root,
+                                const X86Subtarget &ST) {
+  // Profitability is decided only by the resource length. Without an
+  // instruction scheduling model, preservesResourceLen() returns true and the
+  // limit from getExtendResourceLenLimit() would never be checked, so every
+  // candidate would be rewritten.
+  if (!ST.getSchedModel().hasInstrSchedModel())
+    return false;
+
+  const MachineFunction &MF = *Root.getMF();
+  // Not wanted when optimizing for size: vpshufb needs a register and a load
+  // for the mask.
+  if (MF.getFunction().hasOptSize())
+    return false;
+  // The mask is loaded from the constant pool (same restrictions as folding
+  // V_SET0 into a constant-pool load).
+  if (MF.getTarget().getCodeModel() == CodeModel::Large)
+    return false;
+  if (!ST.is64Bit() && MF.getTarget().isPositionIndependent())
+    return false;
+
+  // This runs for every instruction, so only look at the operands once the
+  // opcode is known to be one of the rotates.
+  std::optional<RotateToPshufbInfo> Info =
+      getRotateToPshufbInfo(Root.getOpcode());
+  if (!Info)
+    return false;
+  const MachineOperand &Amt = Root.getOperand(2);
+  assert(Amt.isImm() && "Rotate by immediate without an immediate amount");
+  // vpshufb zmm needs BWI, the xmm/ymm EVEX forms also need VLX.
+  if (!ST.hasBWI() || (Info->VecBytes != 64 && !ST.hasVLX()))
+    return false;
+
+  unsigned EltBits = Info->EltBytes * 8;
+  unsigned RotBits = Amt.getImm() % EltBits;
+  return RotBits != 0 && RotBits % 8 == 0;
+}
+
+/// vprold $24, %zmm1, %zmm0
+/// -->
+/// vbroadcasti32x4 .LCPI(%rip), %zmm2 # loop invariant, hoisted by MachineLICM
+/// vpshufb         %zmm2, %zmm1, %zmm0
+///
+/// The load is created with a placeholder displacement of 0; the constant-pool
+/// entry is only created in finalizeInsInstrs(), once the combiner has accepted
+/// the sequence. Otherwise rejected candidates would leave dead entries that
+/// are still emitted.
+static void
+genAlternativeRotateToPshufb(MachineInstr &Root, const X86InstrInfo &TII,
+                             const X86Subtarget &ST,
+                             SmallVectorImpl<MachineInstr *> &InsInstrs,
+                             SmallVectorImpl<MachineInstr *> &DelInstrs,
+                             DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
+  MachineFunction &MF = *Root.getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  RotateToPshufbInfo Info = *getRotateToPshufbInfo(Root.getOpcode());
+  // The mask repeats every 128-bit lane, so a 16-byte constant is loaded and,
+  // for ymm/zmm, broadcast to all lanes.
+  Align Alignment(16);
+
+  Register DstReg = Root.getOperand(0).getReg();
+  Register MaskReg = MRI.createVirtualRegister(MRI.getRegClass(DstReg));
+  // Invariant + dereferenceable so MachineLICM can hoist it out of loops.
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo::getConstantPool(MF),
+      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+          MachineMemOperand::MOInvariant,
+      LocationSize::precise(16), Alignment);
+  // Address: base RIP (absolute in 32-bit non-PIC code), scale 1, no index,
+  // displacement 0 as a placeholder for the constant-pool entry (see
+  // finalizeRotateToPshufb), no segment.
+  MachineInstr *Load =
+      BuildMI(MF, MIMetadata(Root), TII.get(Info.LoadOpc), MaskReg)
+          .addReg(ST.is64Bit() ? X86::RIP : X86::NoRegister)
+          .addImm(1)
+          .addReg(X86::NoRegister)
+          .addImm(0)
+          .addReg(X86::NoRegister)
+          .addMemOperand(MMO);
+  InstrIdxForVirtReg.insert(std::make_pair(MaskReg, 0));
+
+  MachineInstr *Shuf =
+      BuildMI(MF, MIMetadata(Root), TII.get(Info.ShufOpc), DstReg)
+          .add(Root.getOperand(1))
+          .addReg(MaskReg);
+
+  InsInstrs.push_back(Load);
+  InsInstrs.push_back(Shuf);
+  DelInstrs.push_back(&Root);
+}
+
+/// Create the vpshufb mask in the constant pool and point the mask load
+/// (InsInstrs[0]) at it. Only called for an accepted ROTATE_TO_PSHUFB.
+static void finalizeRotateToPshufb(MachineInstr &Root,
+                                   SmallVectorImpl<MachineInstr *> &InsInstrs) {
+  MachineFunction &MF = *Root.getMF();
+  RotateToPshufbInfo Info = *getRotateToPshufbInfo(Root.getOpcode());
+
+  // Express the rotate as a left rotate by whole bytes.
+  unsigned EltBytes = Info.EltBytes;
+  unsigned EltBits = EltBytes * 8;
+  unsigned RotBits = Root.getOperand(2).getImm() % EltBits;
+  unsigned RolBytes = (Info.IsRotateRight ? EltBits - RotBits : RotBits) / 8;
+
+  // Left rotate: result byte J of an element is source byte
+  // (J - RolBytes) mod EltBytes. vpshufb indices are relative to the 128-bit
+  // lane, so one lane of the mask is enough.
+  SmallVector<uint8_t, 16> Mask;
+  for (unsigned I = 0; I != 16; ++I) {
+    unsigned J = I % EltBytes;
+    unsigned EltBase = I - J;
+    Mask.push_back(EltBase + (J + EltBytes - RolBytes) % EltBytes);
+  }
+  Constant *C = ConstantDataVector::get(MF.getFunction().getContext(), Mask);
+  unsigned CPI = MF.getConstantPool()->getConstantPoolIndex(C, Align(16));
+
+  MachineInstr *Load = InsInstrs[0];
+  assert(Load->getOpcode() == Info.LoadOpc && "Expected the mask load first");
+  MachineOperand &Disp = Load->getOperand(1 + X86::AddrDisp);
+  assert(Disp.isImm() && Disp.getImm() == 0 && "Expected the placeholder");
+  Disp.ChangeToCPI(CPI, 0);
+
+  // The vpshufb defines the rotate's result in the same operand, so it can take
+  // over the rotate's debug instruction number. The new instructions are not
+  // in a block yet, which substituteDebugValuesForInst() would need.
+  InsInstrs[1]->setDebugInstrNum(Root.peekDebugInstrNum());
+}
+
+void X86InstrInfo::finalizeInsInstrs(
+    MachineInstr &Root, unsigned &Pattern,
+    SmallVectorImpl<MachineInstr *> &InsInstrs) const {
+  if (Pattern == X86MachineCombinerPattern::ROTATE_TO_PSHUFB)
+    finalizeRotateToPshufb(Root, InsInstrs);
+}
+
+int X86InstrInfo::getExtendResourceLenLimit(unsigned Pattern) const {
+  // Require a strict improvement: on a tie the rewrite only costs a register
+  // and a load for the mask and moves work from the rotate port to the
+  // shuffle port.
+  if (Pattern == X86MachineCombinerPattern::ROTATE_TO_PSHUFB)
+    return -1;
+  return 0;
+}
+
 bool X86InstrInfo::getMachineCombinerPatterns(
     MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
+  if (matchRotateToPshufb(Root, Subtarget)) {
+    Patterns.push_back(X86MachineCombinerPattern::ROTATE_TO_PSHUFB);
+    return true;
+  }
+
   unsigned Opc = Root.getOpcode();
   switch (Opc) {
   case X86::VPDPWSSDrr:
@@ -11070,6 +11269,10 @@ void X86InstrInfo::genAlternativeCodeSequence(
     return;
   case X86MachineCombinerPattern::DPWSSD:
     genAlternativeDpCodeSequence(Root, *this, InsInstrs, DelInstrs,
+                                 InstrIdxForVirtReg);
+    return;
+  case X86MachineCombinerPattern::ROTATE_TO_PSHUFB:
+    genAlternativeRotateToPshufb(Root, *this, Subtarget, InsInstrs, DelInstrs,
                                  InstrIdxForVirtReg);
     return;
   }

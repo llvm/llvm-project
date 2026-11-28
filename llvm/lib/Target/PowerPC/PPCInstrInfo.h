@@ -521,7 +521,7 @@ public:
   /// legacy or 1 bigger than legacy.
   /// We need to execlude the 1 bigger case even the resource length is not
   /// perserved for more FMA chain reassociations on PowerPC.
-  int getExtendResourceLenLimit() const override { return 1; }
+  int getExtendResourceLenLimit(unsigned Pattern) const override { return 1; }
 
   // PowerPC specific version of setSpecialOperandAttr that copies Flags to MI
   // and clears nuw, nsw, and exact flags.
