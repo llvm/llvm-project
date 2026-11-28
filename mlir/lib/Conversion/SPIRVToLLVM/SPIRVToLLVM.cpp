@@ -451,25 +451,44 @@ public:
     Value count = processCountOrOffset(loc, op.getCount(), srcType, dstType,
                                        *getTypeConverter(), rewriter);
 
-    // Create a mask with bits set outside [Offset, Offset + Count - 1].
+    // Low mask [0, Count - 1]; `Size - Count` is in range for Count >= 1.
+    auto elementType = cast<IntegerType>(getElementTypeOrSelf(srcType));
     Value minusOne = createConstantAllBitsSet(loc, srcType, dstType, rewriter);
-    Value maskShiftedByCount =
-        LLVM::ShlOp::create(rewriter, loc, dstType, minusOne, count);
-    Value negated = LLVM::XOrOp::create(rewriter, loc, dstType,
-                                        maskShiftedByCount, minusOne);
-    Value maskShiftedByCountAndOffset =
-        LLVM::ShlOp::create(rewriter, loc, dstType, negated, offset);
-    Value mask = LLVM::XOrOp::create(rewriter, loc, dstType,
-                                     maskShiftedByCountAndOffset, minusOne);
+    Value size = createIntegerConstant(
+        loc, srcType, dstType, rewriter,
+        rewriter.getIntegerAttr(elementType, getBitWidth(srcType)));
+    Value sizeMinusCount =
+        LLVM::SubOp::create(rewriter, loc, dstType, size, count);
+    Value lowMask =
+        LLVM::LShrOp::create(rewriter, loc, dstType, minusOne, sizeMinusCount);
 
-    // Extract unchanged bits from the `Base`  that are outside of
-    // [Offset, Offset + Count - 1]. Then `or` with shifted `Insert`.
+    // Field mask [Offset, Offset + Count - 1] and its negation for `Base`.
+    Value fieldMask =
+        LLVM::ShlOp::create(rewriter, loc, dstType, lowMask, offset);
+    Value baseMask =
+        LLVM::XOrOp::create(rewriter, loc, dstType, fieldMask, minusOne);
+
+    // Clear the field in `Base` and `or` in the masked, shifted `Insert`.
     Value baseAndMask =
-        LLVM::AndOp::create(rewriter, loc, dstType, op.getBase(), mask);
+        LLVM::AndOp::create(rewriter, loc, dstType, op.getBase(), baseMask);
     Value insertShiftedByOffset =
         LLVM::ShlOp::create(rewriter, loc, dstType, op.getInsert(), offset);
-    rewriter.replaceOpWithNewOp<LLVM::OrOp>(op, dstType, baseAndMask,
-                                            insertShiftedByOffset);
+    Value insertAndMask = LLVM::AndOp::create(rewriter, loc, dstType,
+                                              insertShiftedByOffset, fieldMask);
+    Value result =
+        LLVM::OrOp::create(rewriter, loc, dstType, baseAndMask, insertAndMask);
+
+    // Count 0 shifts by Size (poison in LLVM); the spec requires `Base` then.
+    Value zero = createIntegerConstant(loc, srcType, dstType, rewriter,
+                                       rewriter.getIntegerAttr(elementType, 0));
+    Type i1Type = rewriter.getI1Type();
+    auto vecSrcType = dyn_cast<VectorType>(srcType);
+    Type cmpType =
+        vecSrcType ? VectorType::get(vecSrcType.getShape(), i1Type) : i1Type;
+    Value countIsZero = LLVM::ICmpOp::create(
+        rewriter, loc, cmpType, LLVM::ICmpPredicate::eq, count, zero);
+    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, dstType, countIsZero,
+                                                op.getBase(), result);
     return success();
   }
 };
