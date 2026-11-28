@@ -36,6 +36,7 @@ namespace lld::coff {
 
 class BitcodeFile;
 class InputFile;
+class Symbol;
 class COFFLinkerContext;
 
 class BitcodeCompiler {
@@ -48,8 +49,16 @@ public:
   void setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs);
   void waitForLTOCleanup();
 
+  // Undo what add() did to the symbol table and to the bitcode files, so that
+  // the files can be added to another compiler.
+  void restore();
+
 private:
   std::unique_ptr<llvm::lto::LTO> ltoObj;
+  // The symbols add() undefined and the bitcode files it consumed, kept for
+  // restore().
+  std::vector<std::pair<Symbol *, std::vector<char>>> savedSymbols;
+  std::vector<std::pair<BitcodeFile *, MemoryBufferRef>> addedFiles;
   std::vector<std::pair<std::string, SmallString<0>>> buf;
   std::vector<std::unique_ptr<MemoryBuffer>> files;
   std::vector<std::string> file_names;

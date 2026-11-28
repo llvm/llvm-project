@@ -107,7 +107,10 @@ public:
   // Build a set of COFF objects representing the combined contents of
   // BitcodeFiles and add them to the symbol table. Called after all files are
   // added and before the writer writes results to a file.
-  void compileBitcodeFiles();
+  // Returns true if code generation introduced references to bitcode archive
+  // members, which have been added to the link. The caller must resolve them
+  // and call this again.
+  bool compileBitcodeFiles();
 
   void waitForLTOCleanup();
 
@@ -139,7 +142,6 @@ public:
                                    Chunk *&location);
   Defined *addImportThunk(StringRef name, DefinedImportData *s,
                           ImportThunkChunk *chunk);
-  void addLibcall(StringRef name);
   void addEntryThunk(Symbol *from, Symbol *to);
   void addExitThunk(Symbol *from, Symbol *to);
   void initializeECThunks();
