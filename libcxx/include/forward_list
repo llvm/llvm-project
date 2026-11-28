@@ -603,6 +603,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 inline void __forward_list_base<_Tp, _Alloc>::swap
     _NOEXCEPT_(!__node_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__node_allocator>)
 #  endif
 {
+  _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
+      __node_traits::propagate_on_container_swap::value || __alloc_ == __x.__alloc_,
+      "forward_list::swap: Either propagate_on_container_swap must be true"
+      " or the allocators must compare equal");
   std::__swap_allocator(__alloc_, __x.__alloc_);
   using std::swap;
   swap(__before_begin()->__next_, __x.__before_begin()->__next_);

@@ -990,6 +990,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<bool, _Allocator>::swap(vector& __x)
     _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>)
 #endif
 {
+  _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
+      __alloc_traits::propagate_on_container_swap::value || this->__alloc_ == __x.__alloc_,
+      "vector<bool>::swap: Either propagate_on_container_swap must be true"
+      " or the allocators must compare equal");
   std::swap(this->__begin_, __x.__begin_);
   std::swap(this->__size_, __x.__size_);
   std::swap(this->__cap_, __x.__cap_);

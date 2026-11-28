@@ -1784,6 +1784,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree<_Tp, _Compare, _Allocator>::swap(__tre
     _NOEXCEPT_(__is_nothrow_swappable_v<value_compare>)
 #endif
 {
+  _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
+      __node_traits::propagate_on_container_swap::value || __node_alloc() == __t.__node_alloc(),
+      "ordered container::swap: Either propagate_on_container_swap must be true"
+      " or the allocators must compare equal");
   using std::swap;
   swap(__begin_node_, __t.__begin_node_);
   swap(__end_node_, __t.__end_node_);

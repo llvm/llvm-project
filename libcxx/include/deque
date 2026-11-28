@@ -2372,6 +2372,10 @@ inline void deque<_Tp, _Allocator>::swap(deque& __c)
     _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>)
 #  endif
 {
+  _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
+      __alloc_traits::propagate_on_container_swap::value || __alloc() == __c.__alloc(),
+      "deque::swap: Either propagate_on_container_swap must be true"
+      " or the allocators must compare equal");
   __map_.swap(__c.__map_);
   std::swap(__start_, __c.__start_);
   std::swap(__size(), __c.__size());
