@@ -1,0 +1,30 @@
+REQUIRES: libxml2
+UNSUPPORTED: system-windows
+
+Merging must combine windowsSettings blocks (within and across inputs) and
+drop structurally identical settings supplied by multiple inputs: user
+manifests and build-system-generated fragments commonly both declare
+<dpiAware>true</dpiAware>, and the Windows SxS loader rejects manifests with
+duplicated settings.
+
+RUN: llvm-mt /manifest %p/Inputs/default_trust_info.manifest \
+RUN:   /manifest %p/Inputs/multi_windows_settings.manifest \
+RUN:   /manifest %p/Inputs/generated_dpi.manifest /out:%t
+RUN: FileCheck %s -input-file=%t
+
+CHECK:      <?xml version="1.0" encoding="UTF-8"?>
+CHECK-NEXT: <assembly xmlns:win2016="http://schemas.microsoft.com/SMI/2016/WindowsSettings" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3" xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+CHECK-NEXT:   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+CHECK-NEXT:     <security>
+CHECK-NEXT:       <requestedPrivileges>
+CHECK-NEXT:         <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+CHECK-NEXT:       </requestedPrivileges>
+CHECK-NEXT:     </security>
+CHECK-NEXT:   </trustInfo>
+CHECK-NEXT:   <asmv3:application>
+CHECK-NEXT:     <asmv3:windowsSettings xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">
+CHECK-NEXT:       <dpiAware>true</dpiAware>
+CHECK-NEXT:       <win2016:longPathAware>true</win2016:longPathAware>
+CHECK-NEXT:     </asmv3:windowsSettings>
+CHECK-NEXT:   </asmv3:application>
+CHECK-NEXT: </assembly>

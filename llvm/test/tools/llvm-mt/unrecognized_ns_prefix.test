@@ -1,0 +1,22 @@
+REQUIRES: libxml2
+UNSUPPORTED: system-windows
+
+RUN: llvm-mt /manifest %p/Inputs/default_trust_info.manifest \
+RUN:   /manifest %p/Inputs/prefixed_attribute.manifest /out:%t
+RUN: FileCheck %s -input-file=%t
+
+CHECK:      <?xml version="1.0" encoding="UTF-8"?>
+CHECK-NEXT: <assembly xmlns:asmv3="urn:schemas-microsoft-com:asm.v3" xmlns="urn:schemas-microsoft-com:asm.v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" manifestVersion="1.0" xsi:schemaLocation="urn:schemas-microsoft-com:asm.v1 assembly.adaptive.xsd">
+CHECK-NEXT:   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+CHECK-NEXT:     <security>
+CHECK-NEXT:       <requestedPrivileges>
+CHECK-NEXT:         <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+CHECK-NEXT:       </requestedPrivileges>
+CHECK-NEXT:     </security>
+CHECK-NEXT:   </trustInfo>
+CHECK-NEXT:   <asmv3:application>
+CHECK-NEXT:     <asmv3:windowsSettings xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">
+CHECK-NEXT:       <dpiAware>true</dpiAware>
+CHECK-NEXT:     </asmv3:windowsSettings>
+CHECK-NEXT:   </asmv3:application>
+CHECK-NEXT: </assembly>
