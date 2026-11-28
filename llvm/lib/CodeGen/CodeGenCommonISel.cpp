@@ -245,12 +245,35 @@ static MachineOperand *getSalvageOpsForTrunc(const MachineRegisterInfo &MRI,
   return &Trunc.getOperand(1);
 }
 
+static MachineOperand *getSalvageOpsForXor(const MachineRegisterInfo &MRI,
+                                           MachineInstr &Xor,
+                                           SmallVectorImpl<uint64_t> &Ops) {
+  assert(Xor.getOpcode() == TargetOpcode::G_XOR && "Must be a G_XOR");
+
+  if (!MRI.getType(Xor.getOperand(0).getReg()).isScalar())
+    return nullptr;
+
+  const MachineInstr *RHS = MRI.getVRegDef(Xor.getOperand(2).getReg());
+  if (!RHS || RHS->getOpcode() != TargetOpcode::G_CONSTANT)
+    return nullptr;
+
+  const APInt &Val = RHS->getOperand(1).getCImm()->getValue();
+  if (Val.getBitWidth() > 64)
+    return nullptr;
+
+  Ops.append({dwarf::DW_OP_constu, static_cast<uint64_t>(Val.getSExtValue()),
+              dwarf::DW_OP_xor});
+  return &Xor.getOperand(1);
+}
+
 static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
                                             MachineInstr &MI,
                                             SmallVectorImpl<uint64_t> &Ops) {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_TRUNC:
     return getSalvageOpsForTrunc(MRI, MI, Ops);
+  case TargetOpcode::G_XOR:
+    return getSalvageOpsForXor(MRI, MI, Ops);
   case TargetOpcode::COPY:
   case TargetOpcode::G_BITCAST:
     return getSalvageOpsForCopy(MRI, MI);
