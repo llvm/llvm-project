@@ -1762,6 +1762,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   normalize `cfi-icall` and `kcfi` function type metadata, leaving C++ class
   vtable, member-pointer, and `-fexperimental-call-graph-section` metadata
   canonical so whole-program devirtualization works reliably. (#GH242466)
+- `-ffile-compilation-dir=` now also makes absolute paths relative in
+  sanitizer metadata (UBSan diagnostics and ASan module names) for
+  reproducible builds.
 
 ### Python Binding Changes
 

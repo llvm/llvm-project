@@ -136,6 +136,7 @@ static void optimizeCWD(CowCompilerInvocation &BuildInvocation, StringRef CWD) {
   BuildInvocation.getMutFileSystemOpts().WorkingDir.clear();
   BuildInvocation.getMutCodeGenOpts().DebugCompilationDir.clear();
   BuildInvocation.getMutCodeGenOpts().CoverageCompilationDir.clear();
+  BuildInvocation.getMutCodeGenOpts().SanitizeCompilationDir.clear();
 }
 
 static std::vector<std::string> splitString(std::string S, char Separator) {
@@ -185,6 +186,7 @@ void dependencies::resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
       (ProgramAction == frontend::GenerateModule && !LangOpts.ModulesCodegen)) {
     CGOpts.DebugCompilationDir.clear();
     CGOpts.CoverageCompilationDir.clear();
+    CGOpts.SanitizeCompilationDir.clear();
     CGOpts.CoverageDataFile.clear();
     CGOpts.CoverageNotesFile.clear();
     CGOpts.ProfileInstrumentUsePath.clear();
