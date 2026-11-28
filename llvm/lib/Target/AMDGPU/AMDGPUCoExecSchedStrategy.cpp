@@ -1224,7 +1224,7 @@ void AMDGPUCoExecSchedStrategy::pickNodeFromQueue(
   if (DAG->isTrackingPressure()) {
     if (!useGCNTrackers()) {
       SGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
-      VGPRPressure = Pressure[AMDGPU::RegisterPressureSets::VGPR_32];
+      VGPRPressure = getArchVGPRPressure(Pressure);
       AGPRPressure = Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
     } else {
       SGPRPressure = DownwardTracker.getPressure().getSGPRNum();
