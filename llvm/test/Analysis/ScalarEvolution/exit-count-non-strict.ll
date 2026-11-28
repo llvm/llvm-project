@@ -484,3 +484,39 @@ latch:
 exit:
   ret void
 }
+
+define i1 @postinc_step64_aligned_early_exit(ptr %bits, i64 %n) {
+; CHECK-LABEL: 'postinc_step64_aligned_early_exit'
+; CHECK-NEXT:  Determining loop execution counts for: @postinc_step64_aligned_early_exit
+; CHECK-NEXT:  Loop %header: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:    exit count for header: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    exit count for latch: ((63 + (64 * (%n /u 64))<nuw>)<nuw><nsw> /u 64)
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i64 288230376151711743
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is ((63 + (64 * (%n /u 64))<nuw>)<nuw><nsw> /u 64)
+; CHECK-NEXT:    symbolic max exit count for header: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    symbolic max exit count for latch: ((63 + (64 * (%n /u 64))<nuw>)<nuw><nsw> /u 64)
+;
+entry:
+  %limit = and i64 %n, -64
+  %empty = icmp eq i64 %limit, 0
+  br i1 %empty, label %exit.false, label %header
+
+header:
+  %iv = phi i64 [ 0, %entry ], [ %next, %latch ]
+  %idx = lshr exact i64 %iv, 3
+  %ptr = getelementptr inbounds i8, ptr %bits, i64 %idx
+  %val = load i64, ptr %ptr, align 8
+  %all.ones = icmp eq i64 %val, -1
+  br i1 %all.ones, label %latch, label %exit.false
+
+latch:
+  %next = add nuw nsw i64 %iv, 64
+  %done = icmp ugt i64 %next, %limit
+  br i1 %done, label %exit.true, label %header
+
+exit.true:
+  ret i1 true
+
+exit.false:
+  ret i1 false
+}
