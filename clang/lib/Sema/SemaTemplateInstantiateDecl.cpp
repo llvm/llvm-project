@@ -1152,6 +1152,126 @@ void Sema::updateAttrsForLateParsedTemplate(const Decl *Pattern, Decl *Inst) {
   }
 }
 
+void Sema::instantiateRedeclThreadSafetyAttrs(FunctionDecl *New,
+                                              ArrayRef<Attr *> NewAttrs) {
+  if (New->isInvalidDecl() || NewAttrs.empty() || !New->getPreviousDecl() ||
+      New->getFriendObjectKind() != Decl::FOK_None || inTemplateInstantiation())
+    return;
+
+  // The attributes that have been written on this declaration. The attributes
+  // it inherited have already been instantiated from earlier declarations.
+  SmallVector<const Attr *, 4> Attrs;
+  for (const Attr *A : NewAttrs)
+    if (!A->isInherited() &&
+        isa<AssertCapabilityAttr, AcquireCapabilityAttr,
+            TryAcquireCapabilityAttr, ReleaseCapabilityAttr,
+            RequiresCapabilityAttr, LocksExcludedAttr, LockReturnedAttr,
+            NoThreadSafetyAnalysisAttr>(A))
+      Attrs.push_back(A);
+  if (Attrs.empty())
+    return;
+
+  // Instantiations of New's template whose attributes must be fully
+  // instantiated, and member function templates of instantiated class
+  // templates whose own template parameters remain dependent.
+  SmallVector<FunctionDecl *, 8> Insts;
+  SmallVector<FunctionDecl *, 4> DependentInsts;
+  auto AddSpecializations = [&](FunctionTemplateDecl *FTD) {
+    for (FunctionDecl *Spec : FTD->specializations())
+      if (isTemplateInstantiation(Spec->getTemplateSpecializationKind()) &&
+          !Spec->isDependentContext())
+        Insts.push_back(Spec);
+  };
+
+  FunctionTemplateDecl *FTD = New->getDescribedFunctionTemplate();
+  if (FTD)
+    AddSpecializations(FTD);
+
+  // The members of the instantiations of a class template that have been
+  // instantiated from the member that New redeclares. Members of
+  // instantiations of partial specializations and of nested classes of class
+  // templates are not handled.
+  const auto *RD = dyn_cast<CXXRecordDecl>(New->getDeclContext());
+  if (ClassTemplateDecl *CTD = RD ? RD->getDescribedClassTemplate() : nullptr) {
+    SmallVector<ClassTemplateSpecializationDecl *, 8> ClassSpecs(
+        CTD->specializations());
+    for (ClassTemplateSpecializationDecl *CS : ClassSpecs) {
+      if (!isTemplateInstantiation(CS->getTemplateSpecializationKind()) ||
+          !isa<ClassTemplateDecl *>(CS->getSpecializedTemplateOrPartial()))
+        continue;
+      for (Decl *D : CS->decls()) {
+        if (FTD) {
+          auto *MT = dyn_cast<FunctionTemplateDecl>(D);
+          FunctionTemplateDecl *From =
+              MT ? MT->getInstantiatedFromMemberTemplate() : nullptr;
+          if (!From || MT->isMemberSpecialization() ||
+              From->getCanonicalDecl() != FTD->getCanonicalDecl())
+            continue;
+          DependentInsts.push_back(MT->getTemplatedDecl());
+          AddSpecializations(MT);
+        } else {
+          auto *M = dyn_cast<FunctionDecl>(D);
+          FunctionDecl *From =
+              M ? M->getInstantiatedFromMemberFunction() : nullptr;
+          if (!From ||
+              !isTemplateInstantiation(M->getTemplateSpecializationKind()) ||
+              From->getCanonicalDecl() != New->getCanonicalDecl())
+            continue;
+          Insts.push_back(M);
+        }
+      }
+    }
+  }
+
+  // Instantiate Attrs onto Inst, an existing instantiation of the template.
+  // Inst is still dependent if it is a member function template of an
+  // instantiated class template, whose own template parameters are not
+  // substituted.
+  auto InstantiateOn = [&](FunctionDecl *Inst) {
+    if (Inst->isInvalidDecl())
+      return;
+    MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
+        Inst, /*DC=*/nullptr, /*Final=*/false, /*Innermost=*/std::nullopt,
+        /*RelativeToPrimary=*/false, New);
+    InstantiatingTemplate InstTemplate(*this, New->getLocation(), Inst);
+    if (InstTemplate.isInvalid())
+      return;
+    ContextRAII SavedContext(*this, Inst);
+    LocalInstantiationScope Scope(*this);
+    if (Inst->isTemplated()) {
+      // The parameters of a member function template whose own template
+      // parameters have not been substituted correspond one to one to those of
+      // the pattern unless a parameter pack of the class has been expanded.
+      if (Inst->getNumParams() != New->getNumParams())
+        return;
+      for (auto [NewParam, InstParam] :
+           llvm::zip_equal(New->parameters(), Inst->parameters())) {
+        if (NewParam->isParameterPack() != InstParam->isParameterPack())
+          return;
+        Scope.InstantiatedLocal(NewParam, InstParam);
+      }
+    } else if (addInstantiatedParametersToScope(Inst, New, Scope,
+                                                TemplateArgs)) {
+      return;
+    }
+    for (const Attr *TmplAttr : Attrs) {
+      // Like mergeDeclAttribute(), do not add a second attribute of a kind that
+      // is not inherited if already present.
+      if (!cast<InheritableAttr>(TmplAttr)
+               ->shouldInheritEvenIfAlreadyPresent() &&
+          llvm::any_of(Inst->attrs(), [&](const Attr *A) {
+            return A->getKind() == TmplAttr->getKind();
+          }))
+        continue;
+      instantiateAttrOnDecl(*this, TemplateArgs, TmplAttr, Inst);
+    }
+  };
+  for (FunctionDecl *Inst : DependentInsts)
+    InstantiateOn(Inst);
+  for (FunctionDecl *Inst : Insts)
+    InstantiateOn(Inst);
+}
+
 /// Get the previous declaration of a declaration for the purposes of template
 /// instantiation. If this finds a previous declaration, then the previous
 /// declaration of the instantiation of D should be an instantiation of the

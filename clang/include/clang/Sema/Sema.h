@@ -14494,6 +14494,13 @@ public:
   /// when template definition is ready.
   void updateAttrsForLateParsedTemplate(const Decl *Pattern, Decl *Inst);
 
+  /// Instantiate the thread safety attributes among \p NewAttrs that have
+  /// been written on the redeclaration \p New of a function template or of a
+  /// member function of a class template onto the existing instantiations of
+  /// the redeclared entity.
+  void instantiateRedeclThreadSafetyAttrs(FunctionDecl *New,
+                                          ArrayRef<Attr *> NewAttrs);
+
   void
   InstantiateAttrsForDecl(const MultiLevelTemplateArgumentList &TemplateArgs,
                           const Decl *Pattern, Decl *Inst,

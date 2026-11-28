@@ -12715,6 +12715,14 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     }
   }
 
+  // Existing instantiations of a template have been instantiated from earlier
+  // declarations. Add the thread safety attributes of this declaration to
+  // them such that calls of them are analyzed with these attributes.
+  // FIXME: There is no AST update record for attributes added to a function
+  // that has been loaded from an AST file.
+  if (Redeclaration && getLangOpts().CPlusPlus && NewFD->hasAttrs())
+    instantiateRedeclThreadSafetyAttrs(NewFD, NewFD->getAttrs());
+
   if (LangOpts.OpenMP)
     OpenMP().ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(NewFD);
 
@@ -17482,8 +17490,23 @@ void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
   // Always attach attributes to the underlying decl.
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
     D = TD->getTemplatedDecl();
+  SmallVector<Attr *, 4> OldAttrs;
+  if (D->hasAttrs())
+    llvm::append_range(OldAttrs, D->getAttrs());
   ProcessDeclAttributeList(S, D, Attrs);
   ProcessAPINotes(D);
+
+  // Like CheckFunctionDeclaration(), add the thread safety attributes of a
+  // redeclaration to the existing instantiations of a template.
+  if (auto *FD = dyn_cast<FunctionDecl>(D); FD && getLangOpts().CPlusPlus &&
+                                            FD->getPreviousDecl() &&
+                                            FD->hasAttrs()) {
+    SmallVector<Attr *, 4> NewAttrs;
+    for (Attr *A : FD->getAttrs())
+      if (!llvm::is_contained(OldAttrs, A))
+        NewAttrs.push_back(A);
+    instantiateRedeclThreadSafetyAttrs(FD, NewAttrs);
+  }
 
   if (CXXMethodDecl *Method = dyn_cast_or_null<CXXMethodDecl>(D))
     if (Method->isStatic())
