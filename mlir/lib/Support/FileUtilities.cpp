@@ -23,7 +23,7 @@ static std::unique_ptr<llvm::MemoryBuffer>
 openInputFileImpl(StringRef inputFilename, std::string *errorMessage,
                   std::optional<llvm::Align> alignment) {
   auto fileOrErr = llvm::MemoryBuffer::getFileOrSTDIN(
-      inputFilename, /*IsText=*/false, /*RequiresNullTerminator=*/true,
+      inputFilename, /*IsText=*/true, /*RequiresNullTerminator=*/true,
       alignment);
   if (std::error_code error = fileOrErr.getError()) {
     if (errorMessage)
@@ -46,10 +46,12 @@ mlir::openInputFile(llvm::StringRef inputFilename, llvm::Align alignment,
 }
 
 std::unique_ptr<llvm::ToolOutputFile>
-mlir::openOutputFile(StringRef outputFilename, std::string *errorMessage) {
+mlir::openOutputFile(StringRef outputFilename, std::string *errorMessage,
+                     bool IsText) {
   std::error_code error;
-  auto result = std::make_unique<llvm::ToolOutputFile>(outputFilename, error,
-                                                       llvm::sys::fs::OF_None);
+  auto result = std::make_unique<llvm::ToolOutputFile>(
+      outputFilename, error,
+      IsText ? llvm::sys::fs::OF_Text : llvm::sys::fs::OF_None);
   if (error) {
     if (errorMessage)
       *errorMessage = "cannot open output file '" + outputFilename.str() +

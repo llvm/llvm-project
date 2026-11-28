@@ -39,10 +39,11 @@ openInputFile(llvm::StringRef inputFilename, llvm::Align alignment,
 
 /// Open the file specified by its name for writing. Write the error message to
 /// `errorMessage` if errors occur and `errorMessage` is not nullptr.
+/// `isText` is true the file is opened in text mode; the default is
+/// binary.
 std::unique_ptr<llvm::ToolOutputFile>
 openOutputFile(llvm::StringRef outputFilename,
-               std::string *errorMessage = nullptr);
-
+               std::string *errorMessage = nullptr, bool isText = false);
 } // namespace mlir
 
 #endif // MLIR_SUPPORT_FILEUTILITIES_H_

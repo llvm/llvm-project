@@ -869,7 +869,8 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv,
     return failure();
   }
 
-  auto output = openOutputFile(outputFilename, &errorMessage);
+  auto output = openOutputFile(outputFilename, &errorMessage,
+                               /*isText=*/!config.shouldEmitBytecode());
   if (!output) {
     llvm::errs() << errorMessage << "\n";
     return failure();
