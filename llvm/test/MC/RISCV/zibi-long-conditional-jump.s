@@ -60,7 +60,8 @@ bnei_in_range_backward:
 # CHECK-INST-NEXT:  jal zero, {{.*}}
 
 # CHECK-INST-RELAX-LABEL: beqi_out_of_range_forward
-# CHECK-INST-RELAX:       bnei a0, 0xa, {{.*}}+0x8
+# CHECK-INST-RELAX:       bnei a0, 0xa, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:  jal zero, {{.*}}
 beqi_out_of_range_forward:
    beqi a0, 10, .L5
@@ -73,7 +74,8 @@ beqi_out_of_range_forward:
 # CHECK-INST-NEXT:  jal zero, {{.*}}
 
 # CHECK-INST-RELAX-LABEL: bnei_out_of_range_forward
-# CHECK-INST-RELAX:       beqi a0, 0xa, {{.*}}+0x8
+# CHECK-INST-RELAX:       beqi a0, 0xa, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:  jal zero, {{.*}}
 bnei_out_of_range_forward:
    bnei a0, 10, .L6
@@ -88,7 +90,8 @@ bnei_out_of_range_forward:
 # CHECK-INST-NEXT:  jal zero, {{.*}}
 
 # CHECK-INST-RELAX-LABEL: beqi_out_of_range_backward
-# CHECK-INST-RELAX:       bnei a0, 0xa, {{.*}}+0x1458
+# CHECK-INST-RELAX:       bnei a0, 0xa, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:  jal zero, {{.*}}
 beqi_out_of_range_backward:
 .L7:
@@ -101,7 +104,8 @@ beqi_out_of_range_backward:
 # CHECK-INST-NEXT:  jal zero, {{.*}}
 
 # CHECK-INST-RELAX-LABEL: bnei_out_of_range_backward
-# CHECK-INST-RELAX:       beqi a0, 0xa, {{.*}}+0x1458
+# CHECK-INST-RELAX:       beqi a0, 0xa, {{.*}}
+# CHECK-INST-RELAX-NEXT: R_RISCV_BRANCH .Lbranch_skip{{[0-9]+}}
 # CHECK-INST-RELAX-NEXT:  jal zero, {{.*}}
 bnei_out_of_range_backward:
 .L8:

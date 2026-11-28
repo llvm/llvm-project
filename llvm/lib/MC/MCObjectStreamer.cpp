@@ -456,7 +456,10 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
   size_t CodeOffset = getCurFragSize();
   SmallString<16> Content;
   SmallVector<MCFixup, 1> Fixups;
-  getAssembler().getEmitter().encodeInstruction(Inst, Content, Fixups, STI);
+  MCSymbol *EndLabel = nullptr;
+  if (!getAssembler().getBackend().expandInstruction(Inst, Content, Fixups, STI,
+                                                     EndLabel))
+    getAssembler().getEmitter().encodeInstruction(Inst, Content, Fixups, STI);
   appendContents(Content);
   if (CurFrag != F) {
     F = CurFrag;
@@ -464,8 +467,11 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
   }
   F->setHasInstructions(STI);
 
-  if (Fixups.empty())
+  if (Fixups.empty()) {
+    if (EndLabel)
+      emitLabel(EndLabel);
     return;
+  }
   bool MarkedLinkerRelaxable = false;
   for (auto &Fixup : Fixups) {
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
@@ -484,6 +490,8 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
     newFragment();
   }
   F->appendFixups(Fixups);
+  if (EndLabel)
+    emitLabel(EndLabel);
 }
 
 void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
@@ -491,7 +499,10 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
   auto *F = getCurrentFragment();
   SmallVector<char, 16> Data;
   SmallVector<MCFixup, 1> Fixups;
-  getAssembler().getEmitter().encodeInstruction(Inst, Data, Fixups, STI);
+  MCSymbol *EndLabel = nullptr;
+  if (!getAssembler().getBackend().expandInstruction(Inst, Data, Fixups, STI,
+                                                     EndLabel))
+    getAssembler().getEmitter().encodeInstruction(Inst, Data, Fixups, STI);
 
   F->Kind = MCFragment::FT_Relaxable;
   F->setHasInstructions(STI);
@@ -512,6 +523,8 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
   F->setVarFixups(Fixups);
 
   newFragment();
+  if (EndLabel)
+    emitLabel(EndLabel);
 }
 
 void MCObjectStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
