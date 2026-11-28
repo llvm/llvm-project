@@ -1823,6 +1823,52 @@ public:
     return IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE;
   }
 
+  /// Match an indirect branch through a GOT entry, as emitted for tail calls
+  /// with -fno-plt:
+  ///
+  ///    adrp    x16, :got:foo
+  ///    ldr     x16, [x16, :got_lo12:foo]
+  ///    br      x16
+  ///
+  /// AArch64MCSymbolizer represents operands of GOT relocations as
+  /// __BOLT_got_zero plus the value at the relocation site.
+  std::optional<uint64_t>
+  getIndirectBranchGOTEntry(const MCInst &Instruction,
+                            InstructionIterator Begin,
+                            InstructionIterator End) const override {
+    if (Instruction.getOpcode() != AArch64::BR)
+      return std::nullopt;
+
+    DenseMap<const MCInst *, SmallVector<MCInst *, 4>> UDChain =
+        computeLocalUDChain(&Instruction, Begin, End);
+    SmallVector<MCInst *, 4> &UsesBr = UDChain[&Instruction];
+    if (UsesBr.empty() || !UsesBr[0])
+      return std::nullopt;
+
+    const MCInst &Load = *UsesBr[0];
+    if (Load.getOpcode() != AArch64::LDRXui)
+      return std::nullopt;
+    SmallVector<MCInst *, 4> &UsesLoad = UDChain[&Load];
+    if (UsesLoad.size() < 2 || !UsesLoad[1])
+      return std::nullopt;
+
+    const MCInst &Adrp = *UsesLoad[1];
+    if (!isADRP(Adrp))
+      return std::nullopt;
+
+    auto isGOTOperand = [&](const MCInst &Inst, unsigned OpNum) {
+      if (!Inst.getOperand(OpNum).isExpr())
+        return false;
+      const MCSymbol *Sym = getTargetSymbol(Inst.getOperand(OpNum).getExpr());
+      return Sym && Sym->getName() == "__BOLT_got_zero";
+    };
+    if (!isGOTOperand(Adrp, 1) || !isGOTOperand(Load, 2))
+      return std::nullopt;
+
+    return getTargetAddend(Adrp.getOperand(1).getExpr()) +
+           getTargetAddend(Load.getOperand(2).getExpr());
+  }
+
   ///  Matches PLT entry pattern and returns the associated GOT entry address.
   ///  Typical PLT entry looks like the following:
   ///
