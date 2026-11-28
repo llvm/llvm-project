@@ -3255,6 +3255,9 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     B.addAttribute("stack-probe-size",
                    std::to_string(CodeGenOpts.StackProbeSize));
 
+  if (!CodeGenOpts.SampleProfileFile.empty())
+    B.addAttribute("use-sample-profile");
+
   if (!CodeGenUtils::hasUnwindExceptions(LangOpts))
     B.addAttribute(llvm::Attribute::NoUnwind);
 
@@ -8069,6 +8072,8 @@ void CodeGenModule::EmitTopLevelStmt(const TopLevelStmtDecl *D) {
     llvm::FunctionType *FnTy = getTypes().GetFunctionType(FnInfo);
     llvm::Function *Fn = llvm::Function::Create(
         FnTy, llvm::GlobalValue::InternalLinkage, Name, &getModule());
+
+    SetInternalFunctionAttributes(GlobalDecl(), Fn, FnInfo);
 
     CurCGF.reset(new CodeGenFunction(*this));
     GlobalTopLevelStmtBlockInFlight.second = D;
