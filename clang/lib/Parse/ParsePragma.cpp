@@ -1636,7 +1636,9 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
           Hint.StateLoc =
               new (Actions.Context) IdentifierLoc(StateLoc, StateInfo);
 
-        PP.Lex(Tok); // Identifier
+        // Leave the pragma's EOF token for the common cleanup.
+        if (Tok.isNot(tok::eof))
+          PP.Lex(Tok);
       }
 
       // Tokens following an error in an ill-formed constant expression will

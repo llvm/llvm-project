@@ -66,6 +66,13 @@ void loop_replay(void) {
     ;
 }
 
+void loop_recovery(void) {
+// expected-error@+2 {{nested pragma is not allowed}}
+// expected-error@+1 {{vectorize_width loop hint malformed}}
+#pragma clang loop vectorize_width(4, _Pragma("weak foobar"))
+  for (;;) {}
+}
+
 #define PASS(x) x
 #define DROP(x)
 #define FORWARD_TO_DROP(x) DROP(x)

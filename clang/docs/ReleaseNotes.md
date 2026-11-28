@@ -1397,6 +1397,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   template arguments of emitted entities. (#GH232739)
 
 - Fixed a crash in preprocessor conditionals containing `_Pragma`.
+- Fixed a crash when recovering from a trailing comma in a vectorization width
+  hint, such as `#pragma clang loop vectorize_width(4, )`.
 - Fixed a crash when Microsoft extensions were enabled and an unterminated
   `__identifier` expression reached the end of a preprocessing directive or
   source file. (#GH222310)
