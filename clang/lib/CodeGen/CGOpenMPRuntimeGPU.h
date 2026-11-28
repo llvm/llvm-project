@@ -146,6 +146,13 @@ public:
   bool isDelayedVariableLengthDecl(CodeGenFunction &CGF,
                                    const VarDecl *VD) const override;
 
+  /// Check whether \a S is the loop the target kernel being emitted was
+  /// promoted for, to complete the promotion to a "no-loop" SPMD kernel,
+  /// mirroring Flang's MLIR promotion path.
+  bool canPromoteToNoLoop(const OMPLoopDirective &S) const override {
+    return &S == NoLoopDirective;
+  }
+
   /// Get call to __kmpc_alloc_shared
   std::pair<llvm::Value *, llvm::Value *>
   getKmpcAllocShared(CodeGenFunction &CGF, const VarDecl *VD) override;
@@ -377,6 +384,10 @@ private:
   /// true if currently emitting code for target/teams/distribute region, false
   /// - otherwise.
   bool IsInTTDRegion = false;
+
+  /// The loop the target region being emitted was promoted to no-loop for, set
+  /// by the kernel prologue and read back while the region's body is emitted.
+  const OMPLoopDirective *NoLoopDirective = nullptr;
 
   /// Map between an outlined function and its wrapper.
   llvm::DenseMap<llvm::Function *, llvm::Function *> WrapperFunctionsMap;

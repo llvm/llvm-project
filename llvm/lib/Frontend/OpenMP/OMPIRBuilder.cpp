@@ -1062,7 +1062,7 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
               "OMPIRBuilder finalization \n";
   };
 
-  if (!OffloadInfoManager.empty())
+  if (!Fn && !OffloadInfoManager.empty())
     createOffloadEntriesAndInfoMetadata(ErrorReportFn);
 
   // Rewrite uses of globals to their replacement declare target globals if
@@ -1070,7 +1070,7 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
   if (Config.isTargetDevice())
     applyDeclareTargetGlobalReplacements();
 
-  if (Config.EmitLLVMUsedMetaInfo.value_or(false)) {
+  if (!Fn && Config.EmitLLVMUsedMetaInfo.value_or(false)) {
     std::vector<WeakTrackingVH> LLVMCompilerUsed = {
         M.getGlobalVariable("__openmp_nvptx_data_transfer_temporary_storage")};
     emitUsed("llvm.compiler.used", LLVMCompilerUsed);
