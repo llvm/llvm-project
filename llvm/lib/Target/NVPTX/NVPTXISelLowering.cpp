@@ -298,6 +298,8 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
 /// NOTE: This is a band-aid for code that expects ComputeValueVTs to return the
 /// same number of types as the Ins/Outs arrays in LowerFormalArguments,
 /// LowerCall, and LowerReturn.
+/// Fixed-length Boolean vectors are the exception. We return one type for the
+/// whole vector, even though Ins/Outs has one entry per lane.
 static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                                LLVMContext &Ctx, CallingConv::ID CallConv,
                                Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
@@ -324,10 +326,16 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                "Expected v4i8, v2i16, or i16 for i8 RegisterVT");
     }
 
-    // TODO: This is horribly incorrect for cases where the vector elements are
-    // not a multiple of bytes (ex i1) and legal or i8. However, this problem
-    // has existed for as long as NVPTX has and no one has complained, so we'll
-    // leave it for now.
+    if (VT.isFixedLengthVectorOf(MVT::i1)) {
+      assert(RegisterVT == MVT::i1 && NumRegs == VT.getVectorNumElements() &&
+             "Expected one register per Boolean lane");
+      ValueVTs.push_back(VT);
+      Offsets.push_back(Off);
+      continue;
+    }
+
+    // TODO: Handle other vectors whose elements are not a whole number of
+    // bytes.
     for (unsigned I : seq(NumRegs)) {
       ValueVTs.push_back(RegisterVT);
       Offsets.push_back(Off + I * RegisterVT.getStoreSize());
@@ -361,6 +369,16 @@ static SDValue getExtractVectorizedValue(SDValue V, unsigned I, EVT VT,
   return DAG.getNode(
       ISD::EXTRACT_SUBVECTOR, dl, VT, V,
       DAG.getVectorIdxConstant(I * VT.getVectorNumElements(), dl));
+}
+
+// The calling convention supplies one register value per Boolean lane.
+static SDValue buildBoolVector(EVT VT, ArrayRef<SDValue> Values,
+                               unsigned &RegIndex, const SDLoc &dl,
+                               SelectionDAG &DAG) {
+  unsigned NumLanes = VT.getVectorNumElements();
+  ArrayRef<SDValue> Lanes = Values.slice(RegIndex, NumLanes);
+  RegIndex += NumLanes;
+  return DAG.getBuildVector(VT, dl, Lanes);
 }
 
 template <typename T>
@@ -434,6 +452,9 @@ static unsigned canMergeParamLoadStoresStartingAt(
     return 1;
 
   EVT EltVT = ValueVTs[Idx];
+  // Keep the padding between fields when a vector ends partway through a byte.
+  if (EltVT.isVector() && !EltVT.isByteSized())
+    return 1;
   unsigned EltSize = EltVT.getStoreSize();
 
   // Element is too large to vectorize.
@@ -1489,7 +1510,6 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, Arg.Ty, VTs, Offsets,
                          VAOffset);
       assert(VTs.size() == Offsets.size() && "Size mismatch");
-      assert(VTs.size() == ArgOuts.size() && "Size mismatch");
 
       // PTX Interoperability Guide 3.3(A): [Integer] Values shorter
       // than 32-bits are sign extended or zero extended, depending on
@@ -1498,8 +1518,13 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       const bool ExtendIntegerParam =
           Arg.Ty->isIntegerTy() && DL.getTypeAllocSizeInBits(Arg.Ty) < 32;
 
+      unsigned RegIndex = 0;
       const auto GetStoredValue = [&](const unsigned I) {
-        SDValue StVal = ArgOutVals[I];
+        if (VTs[I].isFixedLengthVectorOf(MVT::i1))
+          return buildBoolVector(VTs[I], ArgOutVals, RegIndex, dl, DAG);
+
+        const unsigned Reg = RegIndex++;
+        SDValue StVal = ArgOutVals[Reg];
         assert(promoteScalarIntegerPTX(StVal.getValueType()) ==
                    StVal.getValueType() &&
                "OutVal type should always be legal");
@@ -1508,7 +1533,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         const EVT StoreVT =
             ExtendIntegerParam ? MVT::i32 : (VTI == MVT::i1 ? MVT::i8 : VTI);
 
-        return correctParamType(StVal, StoreVT, ArgOuts[I].Flags, DAG, dl);
+        return correctParamType(StVal, StoreVT, ArgOuts[Reg].Flags, DAG, dl);
       };
 
       unsigned J = 0;
@@ -1553,6 +1578,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
         J += NumElts;
       }
+      assert(RegIndex == ArgOuts.size() && "Bad argument decomposition");
     }
   }
 
@@ -1645,7 +1671,6 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SmallVector<EVT, 16> VTs;
     SmallVector<uint64_t, 16> Offsets;
     ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, RetTy, VTs, Offsets);
-    assert(VTs.size() == Ins.size() && "Bad value decomposition");
 
     const Align RetAlign =
         getPTXParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
@@ -1676,10 +1701,16 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
           MachinePointerInfo(NVPTX::AddressSpace::DeviceParam), CurrentAlign);
 
       LoadChains.push_back(R.getValue(1));
-      for (const unsigned J : llvm::seq(NumElts))
-        ProxyRegOps.push_back(getExtractVectorizedValue(R, J, LoadVT, dl, DAG));
+      if (VecVT.isFixedLengthVectorOf(MVT::i1)) {
+        DAG.ExtractVectorElements(R, ProxyRegOps);
+      } else {
+        for (const unsigned J : llvm::seq(NumElts))
+          ProxyRegOps.push_back(
+              getExtractVectorizedValue(R, J, LoadVT, dl, DAG));
+      }
       I += NumElts;
     }
+    assert(ProxyRegOps.size() == Ins.size() && "Bad result decomposition");
   }
 
   const SDValue EndToken = DAG.getTokenFactor(dl, LoadChains);
@@ -4518,13 +4549,12 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       SmallVector<EVT, 16> VTs;
       SmallVector<uint64_t, 16> Offsets;
       ComputePTXValueVTs(*this, DL, Ctx, CallConv, Ty, VTs, Offsets);
-      assert(VTs.size() == ArgIns.size() && "Size mismatch");
       assert(VTs.size() == Offsets.size() && "Size mismatch");
 
       const Align ArgAlign = getPTXParamAlign(
           &F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
-      unsigned I = 0;
+      unsigned I = 0, RegIndex = 0;
       const auto VI = VectorizePTXValueVTs(VTs, Offsets, ArgAlign);
       for (const unsigned NumElts : VI) {
         // i1 is loaded/stored as i8
@@ -4542,15 +4572,21 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
                                 MachineMemOperand::MODereferenceable |
                                     MachineMemOperand::MOInvariant);
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
-        for (const unsigned J : llvm::seq(NumElts)) {
-          SDValue Elt = getExtractVectorizedValue(P, J, LoadVT, dl, DAG);
-
-          Elt = correctParamType(Elt, ArgIns[I + J].VT, ArgIns[I + J].Flags,
-                                 DAG, dl);
-          InVals.push_back(Elt);
+        if (VecVT.isFixedLengthVectorOf(MVT::i1)) {
+          DAG.ExtractVectorElements(P, InVals);
+          RegIndex += VecVT.getVectorNumElements();
+        } else {
+          for (const unsigned J : llvm::seq(NumElts)) {
+            SDValue Elt = getExtractVectorizedValue(P, J, LoadVT, dl, DAG);
+            const auto &In = ArgIns[RegIndex + J];
+            Elt = correctParamType(Elt, In.VT, In.Flags, DAG, dl);
+            InVals.push_back(Elt);
+          }
+          RegIndex += NumElts;
         }
         I += NumElts;
       }
+      assert(RegIndex == ArgIns.size() && "Bad argument decomposition");
     }
   }
 
@@ -4590,10 +4626,14 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   SmallVector<EVT, 16> VTs;
   SmallVector<uint64_t, 16> Offsets;
   ComputePTXValueVTs(*this, DL, Ctx, CallConv, RetTy, VTs, Offsets);
-  assert(VTs.size() == OutVals.size() && "Bad return value decomposition");
 
+  unsigned RegIndex = 0;
   const auto GetRetVal = [&](unsigned I) -> SDValue {
-    SDValue RetVal = OutVals[I];
+    if (VTs[I].isFixedLengthVectorOf(MVT::i1))
+      return buildBoolVector(VTs[I], OutVals, RegIndex, dl, DAG);
+
+    const unsigned Reg = RegIndex++;
+    SDValue RetVal = OutVals[Reg];
     assert(promoteScalarIntegerPTX(RetVal.getValueType()) ==
                RetVal.getValueType() &&
            "OutVal type should always be legal");
@@ -4601,7 +4641,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     const EVT VTI = promoteScalarIntegerPTX(VTs[I]);
     const EVT StoreVT =
         ExtendIntegerRetVal ? MVT::i32 : (VTI == MVT::i1 ? MVT::i8 : VTI);
-    return correctParamType(RetVal, StoreVT, Outs[I].Flags, DAG, dl);
+    return correctParamType(RetVal, StoreVT, Outs[Reg].Flags, DAG, dl);
   };
 
   unsigned I = 0;
@@ -4624,6 +4664,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     I += NumElts;
   }
 
+  assert(RegIndex == OutVals.size() && "Bad return value decomposition");
   return DAG.getNode(NVPTXISD::RET_GLUE, dl, MVT::Other, Chain);
 }
 
@@ -7550,6 +7591,10 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
   case ISD::LOAD:
   case NVPTXISD::LoadV2:
   case NVPTXISD::LoadV4: {
+    // Don't wrap a vector load in ProxyReg if it still needs to be split.
+    if (R.getValueType().isVector() &&
+        !DCI.DAG.getTargetLoweringInfo().isTypeLegal(R.getValueType()))
+      return SDValue();
     return DCI.DAG.getNode(NVPTXISD::ProxyReg, SDLoc(R), R.getValueType(),
                            {Chain, R});
   }

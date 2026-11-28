@@ -418,6 +418,11 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the MIPS Backend
 
+### Changes to the NVPTX Backend
+
+* Fixed loads and stores in PTX parameter memory that treated each lane of a
+  packed Boolean vector as a separate byte.
+
 ### Changes to the PowerPC Backend
 
 ### Changes to the RISC-V Backend
