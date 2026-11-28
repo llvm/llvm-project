@@ -13,8 +13,10 @@
 
 #include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
@@ -476,6 +478,27 @@ mlir::Value Fortran::lower::genAllocateCoarray(
     uniqName = converter.mangleName(sym);
   mif::AllocCoarrayOp::create(builder, loc, addr, uniqName, lcobounds,
                               ucobounds, stat, errmsg);
+  if (const auto *details =
+          sym.GetUltimate()
+              .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+    if (details->init()) {
+      Fortran::lower::SymMap symMap;
+      Fortran::lower::StatementContext stmtCtx;
+      hlfir::Entity initVal = Fortran::lower::convertExprToHLFIR(
+          loc, converter, *details->init(), symMap, stmtCtx);
+      hlfir::Entity base{addr};
+      base = hlfir::derefPointersAndAllocatables(loc, builder, base);
+      hlfir::AssignOp::create(builder, loc, initVal, base);
+      stmtCtx.finalizeAndPop();
+      // Insert post-init synchronization to prevent data races
+      // on subsequent cross-image coindexed access.
+      // TODO: Post-init synchronization for nonallocatable save coarrays can
+      //       and should easily be factored into a single synchronization at
+      //       startup.
+      mif::SyncAllOp::create(builder, loc, /*stat=*/mlir::Value{},
+                             /*errmsg=*/mlir::Value{});
+    }
+  }
   if (hasStat)
     return fir::LoadOp::create(builder, loc, stat);
   return stat;
