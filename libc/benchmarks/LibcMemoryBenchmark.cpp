@@ -143,15 +143,39 @@ CopySetup::CopySetup()
 MoveSetup::MoveSetup()
     : ParameterBatch(3), buffer(ParameterBatch::buffer_size * 3) {}
 
-ComparisonSetup::ComparisonSetup()
+ComparisonSetup::ComparisonSetup(size_t rhs_offset)
     : ParameterBatch(2), lhs_buffer(ParameterBatch::buffer_size),
-      rhs_buffer(ParameterBatch::buffer_size) {
+      rhs_buffer(ParameterBatch::buffer_size), rhs_offset(rhs_offset) {
+  if (rhs_offset >= buffer_size)
+    reportFatalUsageError("rhs_offset must be less than buffer_size");
   // The memcmp/strcmp buffers always compare equal, with a null terminator at
-  // the end for strcmp.
+  // the end for strcmp (shifted by rhs_offset in rhs_buffer to test misaligned
+  // string pairs).
   memset(lhs_buffer.begin(), 0xF, buffer_size - 1);
-  memset(rhs_buffer.begin(), 0xF, buffer_size - 1);
+  memset(rhs_buffer.begin(), 0xF, buffer_size - 1 - rhs_offset);
   lhs_buffer[buffer_size - 1] = '\0';
-  rhs_buffer[buffer_size - 1] = '\0';
+  rhs_buffer[buffer_size - 1 - rhs_offset] = '\0';
+}
+
+void ComparisonSetup::check_valid(const ParameterType &p) const {
+  ParameterBatch::check_valid(p);
+  if (p.size_bytes + rhs_offset >= buffer_size) {
+#ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
+    reportFatalUsageError(
+        llvm::Twine("Call would result in buffer underflow: RhsOffset=")
+            .concat(llvm::Twine(rhs_offset))
+            .concat(", Size=")
+            .concat(llvm::Twine(p.size_bytes))
+            .concat(", BufferSize=")
+            .concat(llvm::Twine(buffer_size)));
+#else
+    std::string message = "Call would result in buffer underflow: RhsOffset=" +
+                          std::to_string(rhs_offset) +
+                          ", Size=" + std::to_string(p.size_bytes) +
+                          ", BufferSize=" + std::to_string(buffer_size);
+    reportFatalUsageError(message.c_str());
+#endif
+  }
 }
 
 SetSetup::SetSetup()

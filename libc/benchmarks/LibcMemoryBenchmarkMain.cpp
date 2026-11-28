@@ -102,7 +102,13 @@ using BenchmarkSetup = SearchSetup;
 using BenchmarkSetup = SearchSetup;
 #elif defined(LIBC_BENCHMARK_FUNCTION_STRCMP)
 #define LIBC_BENCHMARK_FUNCTION LIBC_BENCHMARK_FUNCTION_STRCMP
-using BenchmarkSetup = ComparisonSetup;
+static cl::opt<uint32_t>
+    RhsOffset("rhs-offset", cl::desc("Relative byte offset of rhs vs lhs"),
+              cl::init(0));
+struct StrcmpSetup : public ComparisonSetup {
+  StrcmpSetup() : ComparisonSetup(RhsOffset) {}
+};
+using BenchmarkSetup = StrcmpSetup;
 #else
 #error "Missing LIBC_BENCHMARK_FUNCTION_XXX definition"
 #endif
