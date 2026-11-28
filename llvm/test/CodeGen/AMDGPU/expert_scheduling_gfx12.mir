@@ -842,7 +842,7 @@ body: |
     ; GCN-NEXT: $exec_lo = S_MOV_B32 $sgpr8
     ; GCN-NEXT: $vgpr33 = V_ADD_F32_e32 $vgpr94, $vgpr95, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr34 = V_ADD_F32_e32 $vgpr94, $vgpr95, implicit $mode, implicit $exec
-    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_2
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: DS_WRITE_B32_gfx9 $vgpr96, $vgpr30, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr30 = V_MOV_B32_e32 $vgpr95, implicit $exec
@@ -868,7 +868,7 @@ body: |
     ; GCN-NEXT: $vgpr30 = V_MOV_B32_e32 $vgpr95, implicit $exec
     ; GCN-NEXT: $exec_lo = S_MOV_B32 $sgpr8
     ; GCN-NEXT: $vgpr33 = V_ADD_F32_e32 $vgpr94, $vgpr96, implicit $mode, implicit $exec
-    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_1
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: $vgpr95 = DS_READ_B32_gfx9 $vgpr97, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr30 = V_MOV_B32_e32 $vgpr95, implicit $exec

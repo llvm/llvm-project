@@ -422,6 +422,7 @@ public:
                        MachineBasicBlock::instr_iterator It,
                        MachineBasicBlock &Block, WaitcntBrackets &ScoreBrackets,
                        MachineInstr *OldWaitcntInstr);
+  bool isAlwaysIssuedVALU(const MachineInstr &MI) const;
   void updateEventWaitcntAfter(MachineInstr &Inst,
                                WaitcntBrackets *ScoreBrackets);
   bool isNextENDPGM(MachineBasicBlock::instr_iterator It,
@@ -518,6 +519,15 @@ private:
     return It != VMem.end() ? It->second.Scores[T] : 0;
   }
 
+  // V_WMMA_SCALE uses VOP3PX2 encoding, which hardware treats as two VOP3P
+  // instructions that each increment VA_VDST.
+  unsigned getVAVDSTIncrement(const MachineInstr &MI) const {
+    return AMDGPU::getHasMatrixScale(MI.getOpcode()) &&
+                   Context->ST.hasVOP3PX2IncrementsVaVdstTwice()
+               ? 2
+               : 1;
+  }
+
   // Number of ordered XDL writes issued after the VA_VDST write tracked for
   // TID. Only meaningful while that write is pending.
   unsigned getNumOrderedXDLsAfterWrite(VMEMID TID) const {
@@ -573,6 +583,9 @@ public:
   void applyWaitcnt(AMDGPU::InstCounterType T, unsigned Count);
   void applyWaitcnt(const AMDGPU::Waitcnt &Wait, AMDGPU::InstCounterType T);
   void updateByEvent(HWEvents E, MachineInstr &MI);
+  void recordExecWrite();
+  void recordAlwaysIssuedVALU(const MachineInstr &MI);
+  void retainUncreditedVAVDST(AMDGPU::InstCounterType T, unsigned Count);
   void recordAsyncMark(MachineInstr &MI, AMDGPU::AsyncStages Stages);
 
   HWEvents getPendingEvents() const { return PendingEvents; }
@@ -697,10 +710,15 @@ private:
   unsigned getWaitForScore(AMDGPU::InstCounterType T, unsigned Score) const;
   void determineWaitForScore(AMDGPU::InstCounterType T, unsigned Score,
                              AMDGPU::Waitcnt &Wait) const;
-  void determineWaitForVAVDSTWrite(VMEMID ID, AMDGPU::Waitcnt &Wait) const;
+  // Count earned by a pending VA_VDST access, excluding ordered XDL writes.
+  unsigned getVAVDSTCredit(AMDGPU::InstCounterType T, VMEMID ID) const;
+  void determineWaitForVAVDST(AMDGPU::InstCounterType T, VMEMID ID,
+                              AMDGPU::Waitcnt &Wait) const;
 
   static bool mergeScore(const MergeInfo &M, unsigned &Score,
                          unsigned OtherScore);
+  bool mergeVAVDSTCredit(AMDGPU::InstCounterType T, VMEMID ID,
+                         const WaitcntBrackets &Other, const MergeInfo &M);
   bool mergeAsyncMarks(AMDGPU::AsyncStages Stage,
                        ArrayRef<MergeInfo> MergeInfos,
                        ArrayRef<CounterValueArray> OtherMarks);
@@ -736,6 +754,12 @@ private:
     } else if (TRI.isVectorRegister(Context->MRI, Reg)) {
       for (MCRegUnit RU : regunits(Reg)) {
         auto &Info = VMem[toVMEMID(RU)];
+        if (T == AMDGPU::VA_VDST_RD || T == AMDGPU::VA_VDST_WR) {
+          bool IsWrite = T == AMDGPU::VA_VDST_WR;
+          // A skipped VALU does not complete the older access.
+          Info.NoVALUCredit[IsWrite] &= Info.Scores[T] > getScoreLB(T);
+          Info.AlwaysIssuedScore[IsWrite] = AlwaysIssuedCount;
+        }
         Info.Scores[T] = Val;
         if (T == AMDGPU::VA_VDST_WR)
           Info.OrderedXDLCountAtWrite = OrderedXDLCount;
@@ -772,6 +796,9 @@ private:
   // Number of VA_VDST ordered XDL writes issued so far. Only differences
   // between values are meaningful, so unsigned wraparound is harmless.
   unsigned OrderedXDLCount = 0;
+  // VA_VDST increments by always-issued VALUs so far. Only differences between
+  // values are meaningful.
+  unsigned AlwaysIssuedCount = 0;
 
   // The score tracking logic is fragmented as follows:
   // - VMem: VGPR RegUnits and LDS DMA IDs, see the VMEMID encoding.
@@ -792,6 +819,12 @@ private:
     // OrderedXDLCount when the VA_VDST_WR score was set. Every ordered XDL
     // write issued since then remains outstanding while this write is pending.
     unsigned OrderedXDLCountAtWrite = 0;
+    // Set per VA_VDST_RD/WR when later VALUs may be skipped while this access
+    // was not. Such an access keeps the count it had earned by then and is
+    // otherwise credited only by always-issued VALUs and ordered XDL writes.
+    // Its count is AlwaysIssuedCount - AlwaysIssuedScore.
+    bool NoVALUCredit[2] = {false, false};
+    unsigned AlwaysIssuedScore[2] = {0, 0};
     // For VGPRs, we need to track an additional fine-grained set of pending
     // events.
     HWEvents VGPRPendingEvents;
@@ -911,20 +944,66 @@ bool WaitcntBrackets::hasPointSamplePendingVmemTypes(const MachineInstr &MI,
   return hasDifferentVGPRPendingEvents(Reg, HWEvents::VMEM_READ_ACCESS);
 }
 
+// VALUs issued after an EXEC write may be skipped, so they cannot credit
+// accesses that are already pending.
+void WaitcntBrackets::recordExecWrite() {
+  for (auto T : {AMDGPU::VA_VDST_RD, AMDGPU::VA_VDST_WR}) {
+    bool IsWrite = T == AMDGPU::VA_VDST_WR;
+    for (auto &[ID, Info] : VMem) {
+      if (Info.Scores[T] <= getScoreLB(T))
+        continue;
+      Info.AlwaysIssuedScore[IsWrite] =
+          AlwaysIssuedCount - getVAVDSTCredit(T, ID);
+      Info.NoVALUCredit[IsWrite] = true;
+    }
+  }
+}
+
+// \p MI is issued even when EXEC is zero, but later VALUs may be skipped.
+void WaitcntBrackets::recordAlwaysIssuedVALU(const MachineInstr &MI) {
+  AlwaysIssuedCount += getVAVDSTIncrement(MI);
+  for (const MachineOperand &Op : MI.operands()) {
+    if (!Op.isReg() ||
+        !Context->TRI.isVectorRegister(Context->MRI, Op.getReg()))
+      continue;
+    for (MCRegUnit RU : regunits(Op.getReg())) {
+      VMEMInfo &Info = VMem[toVMEMID(RU)];
+      Info.NoVALUCredit[Op.isDef()] = true;
+      Info.AlwaysIssuedScore[Op.isDef()] = AlwaysIssuedCount;
+    }
+  }
+}
+
+// A wait for \p Count does not complete uncredited accesses that need a
+// smaller count, so keep them above the new lower bound.
+void WaitcntBrackets::retainUncreditedVAVDST(AMDGPU::InstCounterType T,
+                                             unsigned Count) {
+  bool IsWrite = T == AMDGPU::VA_VDST_WR;
+  for (auto &[ID, Info] : VMem) {
+    if (!Info.NoVALUCredit[IsWrite] || Info.Scores[T] <= getScoreLB(T))
+      continue;
+    unsigned Needed = getVAVDSTCredit(T, ID);
+    if (IsWrite)
+      Needed = std::max(Needed, getNumOrderedXDLsAfterWrite(ID));
+    if (Count <= Needed) {
+      assert(Count < getScoreUB(T));
+      Info.NoVALUCredit[IsWrite] = false;
+      Info.Scores[T] = getScoreUB(T) - Count;
+    } else {
+      Info.Scores[T] = getScoreUB(T);
+    }
+  }
+}
+
 void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
   assert(E.size() == 1 && "Expected singular event!");
   AMDGPU::InstCounterType T = Context->getCounterFromEvent(E);
   assert(T < Context->MaxCounter);
 
   unsigned UB = getScoreUB(T);
-  unsigned Increment = 1;
-  if ((T == AMDGPU::VA_VDST_RD || T == AMDGPU::VA_VDST_WR) &&
-      AMDGPU::getHasMatrixScale(Inst.getOpcode()) &&
-      Context->ST.hasVOP3PX2IncrementsVaVdstTwice()) {
-    // V_WMMA_SCALE instructions use VOP3PX2 encoding. Hardware treats this as
-    // two VOP3P instructions and increments VA_VDST twice.
-    Increment = 2;
-  }
+  unsigned Increment = T == AMDGPU::VA_VDST_RD || T == AMDGPU::VA_VDST_WR
+                           ? getVAVDSTIncrement(Inst)
+                           : 1;
   unsigned CurrScore = UB + Increment;
   if (CurrScore <= UB)
     report_fatal_error("InsertWaitcnt score wraparound");
@@ -1451,18 +1530,31 @@ void WaitcntBrackets::determineWaitForScore(AMDGPU::InstCounterType T,
   Wait.add(T, getWaitForScore(T, ScoreToWait));
 }
 
-void WaitcntBrackets::determineWaitForVAVDSTWrite(VMEMID ID,
-                                                  AMDGPU::Waitcnt &Wait) const {
-  unsigned Count =
-      getWaitForScore(AMDGPU::VA_VDST_WR, getVMemScore(ID, AMDGPU::VA_VDST_WR));
-  if (Count == ~0u)
+unsigned WaitcntBrackets::getVAVDSTCredit(AMDGPU::InstCounterType T,
+                                          VMEMID ID) const {
+  const VMEMInfo &Info = VMem.at(ID);
+  bool IsWrite = T == AMDGPU::VA_VDST_WR;
+  if (!Info.NoVALUCredit[IsWrite])
+    return getWaitForScore(T, Info.Scores[T]);
+  if (counterOutOfOrder(T))
+    return 0;
+  return std::min(AlwaysIssuedCount - Info.AlwaysIssuedScore[IsWrite],
+                  getLimit(T) - 1);
+}
+
+void WaitcntBrackets::determineWaitForVAVDST(AMDGPU::InstCounterType T,
+                                             VMEMID ID,
+                                             AMDGPU::Waitcnt &Wait) const {
+  if (getWaitForScore(T, getVMemScore(ID, T)) == ~0u)
     return;
 
   // The ordered-XDL count is a wait bound independent of exact event-class
   // ordering. Combine the bounds for this register unit before Wait.add()
   // takes the minimum across all required register-unit dependencies.
-  Wait.add(AMDGPU::VA_VDST_WR,
-           std::max(Count, getNumOrderedXDLsAfterWrite(ID)));
+  unsigned Count = getVAVDSTCredit(T, ID);
+  if (T == AMDGPU::VA_VDST_WR)
+    Count = std::max(Count, getNumOrderedXDLsAfterWrite(ID));
+  Wait.add(T, Count);
 }
 
 AMDGPU::Waitcnt
@@ -1543,8 +1635,8 @@ MCRegister WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
 
   AMDGPU::Waitcnt Wait;
   for (MCRegUnit RU : regunits(OtherHalf)) {
-    if (T == AMDGPU::VA_VDST_WR)
-      determineWaitForVAVDSTWrite(toVMEMID(RU), Wait);
+    if (T == AMDGPU::VA_VDST_RD || T == AMDGPU::VA_VDST_WR)
+      determineWaitForVAVDST(T, toVMEMID(RU), Wait);
     else
       determineWaitForScore(T, getVMemScore(toVMEMID(RU), T), Wait);
   }
@@ -1577,8 +1669,8 @@ void WaitcntBrackets::determineWaitForPhysReg(AMDGPU::InstCounterType T,
     if (IsVGPR)
       Reg = determineVGPR16Dependency(MI, T, Reg);
     for (MCRegUnit RU : regunits(Reg)) {
-      if (IsVGPR && T == AMDGPU::VA_VDST_WR) {
-        determineWaitForVAVDSTWrite(toVMEMID(RU), Wait);
+      if (IsVGPR && (T == AMDGPU::VA_VDST_RD || T == AMDGPU::VA_VDST_WR)) {
+        determineWaitForVAVDST(T, toVMEMID(RU), Wait);
       } else {
         determineWaitForScore(
             T, IsVGPR ? getVMemScore(toVMEMID(RU), T) : getSGPRScore(RU, T),
@@ -1633,6 +1725,8 @@ void WaitcntBrackets::applyWaitcnt(AMDGPU::InstCounterType T, unsigned Count) {
   if (Count != 0) {
     if (counterOutOfOrder(T))
       return;
+    if (T == AMDGPU::VA_VDST_RD || T == AMDGPU::VA_VDST_WR)
+      retainUncreditedVAVDST(T, Count);
     setScoreLB(T, std::max(getScoreLB(T), UB - Count));
   } else {
     setScoreLB(T, UB);
@@ -2823,12 +2917,44 @@ bool SIInsertWaitcnts::insertForcedWaitAfter(MachineInstr &Inst,
   return Result;
 }
 
+// VALUs issued even when EXEC is zero, including those whose SGPR result goes
+// to NULL. V_CMPX is skipped.
+bool SIInsertWaitcnts::isAlwaysIssuedVALU(const MachineInstr &MI) const {
+  if (!TII.isVALU(MI, /*AllowLDSDMA=*/false))
+    return false;
+  if (SIInstrInfo::isWMMA(MI) || SIInstrInfo::isSWMMAC(MI))
+    return true;
+  switch (MI.getOpcode()) {
+  case AMDGPU::V_READLANE_B32:
+  case AMDGPU::V_READFIRSTLANE_B32:
+  case AMDGPU::V_WRITELANE_B32:
+  case AMDGPU::V_NOP_e32:
+  case AMDGPU::V_NOP_e64:
+    return true;
+  default:
+    break;
+  }
+  if (MI.modifiesRegister(AMDGPU::EXEC, &TRI))
+    return false;
+  return any_of(MI.all_defs(), [&](const MachineOperand &Op) {
+    return TRI.isSGPRReg(MRI, Op.getReg());
+  });
+}
+
 void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
                                                WaitcntBrackets *ScoreBrackets) {
 
   HWEvents InstEvents = AMDGPU::getEventsFor(Inst, ST, IsExpertMode, TgSplit);
   for (HWEvents E : InstEvents)
     ScoreBrackets->updateByEvent(E, Inst);
+
+  if (IsExpertMode) {
+    if (isAlwaysIssuedVALU(Inst))
+      ScoreBrackets->recordAlwaysIssuedVALU(Inst);
+    // TODO: Only handle instructions that may write 0 to EXEC.
+    if (Inst.modifiesRegister(AMDGPU::EXEC, &TRI))
+      ScoreBrackets->recordExecWrite();
+  }
 
   if (TII.isDS(Inst) && TII.usesLGKM_CNT(Inst)) {
     if (TII.isAlwaysGDS(Inst.getOpcode()) ||
@@ -2955,6 +3081,33 @@ bool WaitcntBrackets::mergeAsyncMarks(AMDGPU::AsyncStages Stage,
   return StrictDom;
 }
 
+// Merges the credit of the VA_VDST access tracked for \p ID. Must run before
+// its score and score bounds are merged. A credit is usable only if every path
+// carrying the access has it.
+bool WaitcntBrackets::mergeVAVDSTCredit(AMDGPU::InstCounterType T, VMEMID ID,
+                                        const WaitcntBrackets &Other,
+                                        const MergeInfo &M) {
+  VMEMInfo &Info = VMem[ID];
+  bool IsWrite = T == AMDGPU::VA_VDST_WR;
+  bool MyPending = Info.Scores[T] > M.OldLB;
+  bool OtherPending = Other.getVMemScore(ID, T) > M.OtherLB;
+  bool MyFlag = MyPending && Info.NoVALUCredit[IsWrite];
+  bool OtherFlag = OtherPending && Other.VMem.at(ID).NoVALUCredit[IsWrite];
+  if (!MyFlag && !OtherFlag) {
+    Info.NoVALUCredit[IsWrite] = false;
+    return false;
+  }
+
+  unsigned MyCredit = MyPending ? getVAVDSTCredit(T, ID) : 0;
+  unsigned OtherCredit = OtherPending ? Other.getVAVDSTCredit(T, ID) : 0;
+  unsigned NewCredit = MyPending && OtherPending
+                           ? std::min(MyCredit, OtherCredit)
+                           : (MyPending ? MyCredit : OtherCredit);
+  Info.NoVALUCredit[IsWrite] = true;
+  Info.AlwaysIssuedScore[IsWrite] = AlwaysIssuedCount - NewCredit;
+  return MyPending && (!MyFlag || NewCredit < MyCredit);
+}
+
 /// Merge the pending events and associater score brackets of \p Other into
 /// this brackets status.
 ///
@@ -2995,8 +3148,6 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     M.MyShift = NewUB - ScoreUBs[T];
     M.OtherShift = NewUB - Other.ScoreUBs[T];
 
-    ScoreUBs[T] = NewUB;
-
     if (T == AMDGPU::LOAD_CNT)
       StrictDom |= mergeScore(M, LastFlatLoadCnt, Other.LastFlatLoadCnt);
 
@@ -3035,6 +3186,9 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
                                 : (MyPending ? MyCount : OtherCount);
         StrictDom |= MyPending && NewCount < MyCount;
         Info.OrderedXDLCountAtWrite = OrderedXDLCount - NewCount;
+        StrictDom |= mergeVAVDSTCredit(T, RegID, Other, M);
+      } else if (T == AMDGPU::VA_VDST_RD) {
+        StrictDom |= mergeVAVDSTCredit(T, RegID, Other, M);
       }
       StrictDom |= mergeScore(M, Info.Scores[T], OtherScore);
     }
@@ -3046,6 +3200,8 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
         StrictDom |= mergeScore(M, Info.get(T), OtherScore);
       }
     }
+
+    ScoreUBs[T] = NewUB;
   }
 
   for (auto &[TID, Info] : VMem) {
