@@ -226,6 +226,13 @@ ParseResult Parser::parseLocationInstance(LocationAttr &loc) {
   if (getToken().getSpelling() == "fused")
     return parseFusedLocation(loc);
 
+  // Check for 'artificial' - compiler-generated, no source correspondence.
+  if (getToken().getSpelling() == "artificial") {
+    consumeToken(Token::bare_identifier);
+    loc = ArtificialLoc::get(getContext());
+    return success();
+  }
+
   // Check for a 'unknown' for an unknown location.
   if (getToken().getSpelling() == "unknown") {
     consumeToken(Token::bare_identifier);
