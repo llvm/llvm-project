@@ -540,6 +540,16 @@ public:
 
   const Mangled &GetMangled() const { return m_mangled; }
 
+  /// Whether debug information marks this definition as visible outside its CU.
+  bool IsExternal() const { return m_flags.Test(flagsExternal); }
+
+  void SetIsExternal(bool external) {
+    if (external)
+      m_flags.Set(flagsExternal);
+    else
+      m_flags.Clear(flagsExternal);
+  }
+
   /// Get the DeclContext for this function, if available.
   ///
   /// \return
@@ -634,7 +644,8 @@ public:
 protected:
   enum {
     /// Whether we already tried to calculate the prologue size.
-    flagsCalculatedPrologueSize = (1 << 0)
+    flagsCalculatedPrologueSize = (1 << 0),
+    flagsExternal = (1 << 1)
   };
 
   /// The compile unit that owns this function.
