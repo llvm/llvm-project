@@ -86,10 +86,8 @@ struct _LIBCXXABI_HIDDEN __dynamic_cast_info {
 
   // Data that represents the answer:
 
-  // pointer to a dst_type which has (static_ptr, static_type) above it
-  const void* dst_ptr_leading_to_static_ptr;
-  // pointer to a dst_type which does not have (static_ptr, static_type) above it
-  const void* dst_ptr_not_leading_to_static_ptr;
+  // pointer to a dst_type
+  const void* dst_ptr;
 
   // access of path from dst_ptr_leading_to_static_ptr to (static_ptr, static_type)
   path_kind path_dst_ptr_to_static_ptr;

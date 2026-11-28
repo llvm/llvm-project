@@ -172,7 +172,6 @@ const void* dyn_cast_to_derived(
       static_ptr,
       static_type,
       0,
-      0,
       path_kind::unknown,
       path_kind::unknown,
       path_kind::unknown,
@@ -204,7 +203,6 @@ const void* dyn_cast_to_derived(
         dst_type,
         static_ptr,
         static_type,
-        0,
         0,
         path_kind::unknown,
         path_kind::unknown,
@@ -259,7 +257,6 @@ const void* dyn_cast_try_downcast(
       dst_ptr_to_static,
       dst_type,
       0,
-      0,
       path_kind::unknown,
       path_kind::unknown,
       path_kind::unknown,
@@ -289,7 +286,7 @@ const void* dyn_cast_slow(
 
   // Initialize info struct for this search.
   __dynamic_cast_info info = {
-      dst_type, static_ptr, static_type, 0, 0, path_kind::unknown, path_kind::unknown, path_kind::unknown, 0, true, 0};
+      dst_type, static_ptr, static_type, 0, path_kind::unknown, path_kind::unknown, path_kind::unknown, 0, true, 0};
 
   result res = dynamic_type->search_below_dst<false>(&info, dynamic_ptr, path_kind::public_path);
 #ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
@@ -315,7 +312,6 @@ const void* dyn_cast_slow(
             static_ptr,
             static_type,
             0,
-            0,
             path_kind::unknown,
             path_kind::unknown,
             path_kind::unknown,
@@ -332,10 +328,10 @@ const void* dyn_cast_slow(
     if (info.path_dst_ptr_to_static_ptr == path_kind::public_path ||
         (info.number_to_dst_ptr == 0 && info.path_dynamic_ptr_to_static_ptr == path_kind::public_path &&
          info.path_dynamic_ptr_to_dst_ptr == path_kind::public_path))
-      return info.dst_ptr_leading_to_static_ptr;
+      return info.dst_ptr;
   } else if (info.number_to_dst_ptr == 1 && info.path_dynamic_ptr_to_static_ptr == path_kind::public_path &&
              info.path_dynamic_ptr_to_dst_ptr == path_kind::public_path) {
-    return info.dst_ptr_not_leading_to_static_ptr;
+    return info.dst_ptr;
   }
 
   return nullptr;
@@ -895,16 +891,16 @@ result __class_type_info::process_static_type_above_dst(
 
   // We found (static_ptr, static_type). If we know this is the only one, returns success, otherwise that we found our
   // static ptr.
-  if (info->dst_ptr_leading_to_static_ptr == 0) {
+  if (info->dst_ptr == 0) {
     // First time here
-    info->dst_ptr_leading_to_static_ptr = dst_ptr;
+    info->dst_ptr = dst_ptr;
     info->path_dst_ptr_to_static_ptr    = path_below;
     // If there is only one dst_type in the entire tree and the path from
     //    there to here is public then we are done!
     return info->has_unique_dst_type && info->path_dst_ptr_to_static_ptr == path_kind::public_path
              ? result::success
              : result::our_static_ptr;
-  } else if (info->dst_ptr_leading_to_static_ptr == dst_ptr) {
+  } else if (info->dst_ptr == dst_ptr) {
     // We've been here before.  Update path to "most public"
     if (info->path_dst_ptr_to_static_ptr == path_kind::not_public_path)
       info->path_dst_ptr_to_static_ptr = path_below;
@@ -996,7 +992,7 @@ result __vmi_class_type_info::search_below_dst_impl(
   } else if (is_equal(this, info->dst_type, use_strcmp)) {
     // We've been here before if we've recorded current_ptr in one of these
     //   two places:
-    if (current_ptr == info->dst_ptr_leading_to_static_ptr || current_ptr == info->dst_ptr_not_leading_to_static_ptr) {
+    if (current_ptr == info->dst_ptr) {
       // We've seen this node before, and therefore have already searched
       // its base classes above.
       //  Update path to here that is "most public".
@@ -1077,7 +1073,7 @@ result __vmi_class_type_info::search_below_dst_impl(
         // We found a dst_type that doesn't point to (static_ptr, static_type)
         // So record the address of this dst_ptr and increment the
         // count of the number of such dst_types found in the tree.
-        info->dst_ptr_not_leading_to_static_ptr = current_ptr;
+        info->dst_ptr = current_ptr;
         info->number_to_dst_ptr += 1;
         return result::unknown;
       }
@@ -1154,7 +1150,7 @@ result __si_class_type_info::search_below_dst_impl(
 
   // We've been here before if we've recorded current_ptr in one of these
   //   two places:
-  if (current_ptr == info->dst_ptr_leading_to_static_ptr || current_ptr == info->dst_ptr_not_leading_to_static_ptr) {
+  if (current_ptr == info->dst_ptr) {
     // We've seen this node before, and therefore have already searched
     // its base classes above.
     //  Update path to here that is "most public".
@@ -1201,7 +1197,7 @@ result __si_class_type_info::search_below_dst_impl(
       // We found a dst_type that doesn't point to (static_ptr, static_type)
       // So record the address of this dst_ptr and increment the
       // count of the number of such dst_types found in the tree.
-      info->dst_ptr_not_leading_to_static_ptr = current_ptr;
+      info->dst_ptr = current_ptr;
       info->number_to_dst_ptr += 1;
       return result::unknown;
     }
@@ -1224,7 +1220,7 @@ result __class_type_info::search_below_dst_impl(
 
   // We've been here before if we've recorded current_ptr in one of these
   //   two places:
-  if (current_ptr == info->dst_ptr_leading_to_static_ptr || current_ptr == info->dst_ptr_not_leading_to_static_ptr) {
+  if (current_ptr == info->dst_ptr) {
     // We've seen this node before, and therefore have already searched
     // its base classes above.
     //  Update path to here that is "most public".
@@ -1246,7 +1242,7 @@ result __class_type_info::search_below_dst_impl(
   // We found a dst_type that doesn't point to (static_ptr, static_type)
   // So record the address of this dst_ptr and increment the
   // count of the number of such dst_types found in the tree.
-  info->dst_ptr_not_leading_to_static_ptr = current_ptr;
+  info->dst_ptr = current_ptr;
   info->number_to_dst_ptr += 1;
   info->dst_type_might_be_derived_from_static_type = false;
   return result::unknown;
