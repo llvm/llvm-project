@@ -66,9 +66,14 @@ enum class IRMemLocation {
   ErrnoMem = 2,
   /// Any other memory.
   Other = 3,
-  /// Represents target specific state.
-  TargetMem0 = 4,
-  TargetMem1 = 5,
+  /// The identity of the executing thread. Reading it means that the result
+  /// may depend on the current thread (e.g. the address of a thread-local
+  /// variable). Writing it means that execution may continue on a different
+  /// thread.
+  ThreadIdMem = 4,
+  /// Represents target specific state. These must be the last locations.
+  TargetMem0 = 5,
+  TargetMem1 = 6,
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
@@ -158,6 +163,11 @@ public:
   /// Create MemoryEffectsBase that can only access other memory.
   static MemoryEffectsBase otherMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
     return MemoryEffectsBase(Location::Other, MR);
+  }
+
+  /// Create MemoryEffectsBase that can only access the thread identity.
+  static MemoryEffectsBase threadIdMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    return MemoryEffectsBase(Location::ThreadIdMem, MR);
   }
 
   /// Create MemoryEffectsBase that can only access inaccessible or argument

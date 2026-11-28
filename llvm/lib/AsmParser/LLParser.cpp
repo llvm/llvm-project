@@ -2783,6 +2783,8 @@ static SmallVector<MemoryEffects::Location, 2> keywordToLoc(lltok::Kind Tok) {
     return {Loc::InaccessibleMem};
   case lltok::kw_errnomem:
     return {Loc::ErrnoMem};
+  case lltok::kw_threadid:
+    return {Loc::ThreadIdMem};
   case lltok::kw_target_mem0:
     return {Loc::TargetMem0};
   case lltok::kw_target_mem1:
