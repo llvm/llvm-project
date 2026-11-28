@@ -490,10 +490,49 @@ CIRGenFunction::emitOMPSectionDirective(const OMPSectionDirective &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPSectionDirective");
   return mlir::failure();
 }
+static mlir::LogicalResult
+emitSingleClauses(CIRGenFunction &cgf, CIRGenModule &cgm,
+                  CIRGenBuilderTy &builder, mlir::Location loc,
+                  llvm::ArrayRef<const OMPClause *> clauses,
+                  mlir::omp::SingleOperands &clauseOps) {
+  OpenMPClauseEmitter ce(cgf, cgm, builder, loc, clauses);
+  ce.emitNowait(clauseOps);
+  return ce.emitNYI</*supported=*/OMPNowaitClause>(
+      /*nyi=*/OpenMPNYIClauseList<OMPAllocateClause, OMPCopyprivateClause,
+                                  OMPFirstprivateClause, OMPPrivateClause>{},
+      llvm::omp::Directive::OMPD_single);
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitOMPSingleDirective(const OMPSingleDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPSingleDirective");
-  return mlir::failure();
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  omp::ConstructQueue::const_iterator item = queue.begin();
+
+  if (mlir::failed(checkSynthesizedClauses(*this, s, item)))
+    return mlir::failure();
+
+  mlir::omp::SingleOperands clauseOps;
+  if (mlir::failed(emitSingleClauses(*this, getCIRGenModule(), builder, begin,
+                                     item->clauses, clauseOps)))
+    return mlir::failure();
+
+  auto singleOp = mlir::omp::SingleOp::create(builder, begin, clauseOps);
+
+  mlir::Block &block = singleOp.getRegion().emplaceBlock();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(&block);
+
+  CIRGenFunction::LexicalScope ls{*this, begin, builder.getInsertionBlock()};
+
+  const CapturedStmt *cs = s.getInnermostCapturedStmt();
+  mlir::LogicalResult res =
+      emitStmt(cs->getCapturedStmt(), /*useCurrentScope=*/true);
+  mlir::omp::TerminatorOp::create(builder, end);
+  return res;
 }
 static mlir::LogicalResult emitMasterOp(CIRGenFunction &cgf,
                                         mlir::Location begin,

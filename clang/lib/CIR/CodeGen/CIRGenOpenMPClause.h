@@ -52,6 +52,8 @@ public:
 
   bool emitProcBind(mlir::omp::ProcBindClauseOps &result) const;
 
+  bool emitNowait(mlir::omp::NowaitClauseOps &result) const;
+
   /// Verify the clauses of a directive to make sure all legal cases are either
   /// implemented or give a NYI error. The \p SupportedClauses and \p
   /// NYIClauses type lists must be disjoint and cover all clauses eligible for
