@@ -717,6 +717,7 @@ FUNCTION_PASS_WITH_PARAMS(
     "hoist-common-insts;no-hoist-loads-stores-with-cond-faulting;"
     "hoist-loads-stores-with-cond-faulting;no-sink-common-insts;"
     "sink-common-insts;no-speculate-unpredictables;speculate-unpredictables;"
+    "no-fold-cond-store-to-select;fold-cond-store-to-select;"
     "bonus-inst-threshold=N")
 FUNCTION_PASS_WITH_PARAMS(
     "speculative-execution", "SpeculativeExecutionPass",
