@@ -853,9 +853,11 @@ ExprResult ObjCPropertyOpBuilder::buildRValueOperation(Expr *op) {
       }
     }
     if (propType.getObjCLifetime() == Qualifiers::OCL_Weak &&
+        !S.isUnevaluatedContext() &&
         !S.Diags.isIgnored(diag::warn_arc_repeated_use_of_weak,
                            RefExpr->getLocation()))
-      S.getCurFunction()->markSafeWeakUse(RefExpr);
+      if (FunctionScopeInfo *FSI = S.getCurFunction())
+        FSI->markSafeWeakUse(RefExpr);
   }
 
   return result;
@@ -974,8 +976,9 @@ ExprResult ObjCPropertyOpBuilder::complete(Expr *SyntacticForm) {
   if (isWeakProperty() && !S.isUnevaluatedContext() &&
       !S.Diags.isIgnored(diag::warn_arc_repeated_use_of_weak,
                          SyntacticForm->getBeginLoc()))
-    S.getCurFunction()->recordUseOfWeak(SyntacticRefExpr,
-                                        SyntacticRefExpr->isMessagingGetter());
+    if (FunctionScopeInfo *FSI = S.getCurFunction())
+      FSI->recordUseOfWeak(SyntacticRefExpr,
+                           SyntacticRefExpr->isMessagingGetter());
 
   return PseudoOpBuilder::complete(SyntacticForm);
 }
