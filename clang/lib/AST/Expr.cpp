@@ -436,12 +436,12 @@ APValue ConstantExpr::getAPValueResult() const {
 DeclRefExpr::DeclRefExpr(const ASTContext &Ctx, ValueDecl *D,
                          bool RefersToEnclosingVariableOrCapture, QualType T,
                          ExprValueKind VK, SourceLocation L,
-                         const DeclarationNameLoc &LocInfo,
                          NonOdrUseReason NOUR)
-    : Expr(DeclRefExprClass, T, VK, OK_Ordinary), D(D), DNLoc(LocInfo) {
+    : Expr(DeclRefExprClass, T, VK, OK_Ordinary), D(D) {
   DeclRefExprBits.HasQualifier = false;
   DeclRefExprBits.HasTemplateKWAndArgsInfo = false;
   DeclRefExprBits.HasFoundDecl = false;
+  DeclRefExprBits.HasDNLoc = false;
   DeclRefExprBits.HadMultipleCandidates = false;
   DeclRefExprBits.RefersToEnclosingVariableOrCapture =
       RefersToEnclosingVariableOrCapture;
@@ -459,8 +459,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
                          const DeclarationNameInfo &NameInfo, NamedDecl *FoundD,
                          const TemplateArgumentListInfo *TemplateArgs,
                          QualType T, ExprValueKind VK, NonOdrUseReason NOUR)
-    : Expr(DeclRefExprClass, T, VK, OK_Ordinary), D(D),
-      DNLoc(NameInfo.getInfo()) {
+    : Expr(DeclRefExprClass, T, VK, OK_Ordinary), D(D) {
   DeclRefExprBits.Loc = NameInfo.getLoc();
   DeclRefExprBits.HasQualifier = QualifierLoc ? 1 : 0;
   if (QualifierLoc)
@@ -469,6 +468,10 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
   DeclRefExprBits.HasFoundDecl = FoundD ? 1 : 0;
   if (FoundD)
     *getTrailingObjects<NamedDecl *>() = FoundD;
+  DeclRefExprBits.HasDNLoc = DeclarationNameLoc::hasLocInfo(D->getDeclName());
+  if (hasDNLoc())
+    new (getTrailingObjects<DeclarationNameLoc>())
+        DeclarationNameLoc(NameInfo.getInfo());
   DeclRefExprBits.HasTemplateKWAndArgsInfo
     = (TemplateArgs || TemplateKWLoc.isValid()) ? 1 : 0;
   DeclRefExprBits.RefersToEnclosingVariableOrCapture =
@@ -524,9 +527,10 @@ DeclRefExpr *DeclRefExpr::Create(const ASTContext &Context,
 
   bool HasTemplateKWAndArgsInfo = TemplateArgs || TemplateKWLoc.isValid();
   std::size_t Size =
-      totalSizeToAlloc<NestedNameSpecifierLoc, NamedDecl *,
+      totalSizeToAlloc<NestedNameSpecifierLoc, NamedDecl *, DeclarationNameLoc,
                        ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
           QualifierLoc ? 1 : 0, FoundD ? 1 : 0,
+          DeclarationNameLoc::hasLocInfo(D->getDeclName()) ? 1 : 0,
           HasTemplateKWAndArgsInfo ? 1 : 0,
           TemplateArgs ? TemplateArgs->size() : 0);
 
@@ -537,21 +541,24 @@ DeclRefExpr *DeclRefExpr::Create(const ASTContext &Context,
 }
 
 DeclRefExpr *DeclRefExpr::CreateEmpty(const ASTContext &Context,
-                                      bool HasQualifier,
-                                      bool HasFoundDecl,
+                                      bool HasQualifier, bool HasFoundDecl,
+                                      bool HasDNLoc,
                                       bool HasTemplateKWAndArgsInfo,
                                       unsigned NumTemplateArgs) {
   assert(NumTemplateArgs == 0 || HasTemplateKWAndArgsInfo);
   std::size_t Size =
-      totalSizeToAlloc<NestedNameSpecifierLoc, NamedDecl *,
+      totalSizeToAlloc<NestedNameSpecifierLoc, NamedDecl *, DeclarationNameLoc,
                        ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
-          HasQualifier ? 1 : 0, HasFoundDecl ? 1 : 0, HasTemplateKWAndArgsInfo,
-          NumTemplateArgs);
+          HasQualifier ? 1 : 0, HasFoundDecl ? 1 : 0, HasDNLoc ? 1 : 0,
+          HasTemplateKWAndArgsInfo, NumTemplateArgs);
   void *Mem = Context.Allocate(Size, alignof(DeclRefExpr));
   return new (Mem) DeclRefExpr(EmptyShell());
 }
 
 void DeclRefExpr::setDecl(ValueDecl *NewD) {
+  assert(DeclarationNameLoc::hasLocInfo(NewD->getDeclName()) ==
+             DeclarationNameLoc::hasLocInfo(D->getDeclName()) &&
+         "cannot change whether the name has location info");
   D = NewD;
   if (getType()->isUndeducedType())
     setType(NewD->getType());

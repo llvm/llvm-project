@@ -448,11 +448,14 @@ protected:
     unsigned NonOdrUseReason : 2;
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsImmediateEscalating : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasDNLoc : 1;
 
     /// The location of the declaration name itself.
     SourceLocation Loc;
   };
-
+  static_assert(sizeof(DeclRefExprBitfields) <= 8,
+                "DeclRefExprBitfields must fit in 8 bytes");
 
   class FloatingLiteralBitfields {
     friend class FloatingLiteral;

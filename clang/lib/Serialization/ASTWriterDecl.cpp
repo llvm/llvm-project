@@ -2890,7 +2890,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   // DeclRefExpr
   // Packing Bits: , HadMultipleCandidates, RefersToEnclosingVariableOrCapture,
   // IsImmediateEscalating, NonOdrUseReason.
-  // GetDeclFound, HasQualifier and ExplicitTemplateArgs should be 0.
+  // GetDeclFound, HasQualifier, ExplicitTemplateArgs and HasDNLoc should be 0.
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 5));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // DeclRef
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Location

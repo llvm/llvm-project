@@ -658,6 +658,7 @@ void ASTStmtReader::VisitDeclRefExpr(DeclRefExpr *E) {
   E->DeclRefExprBits.HasQualifier = CurrentUnpackingBits->getNextBit();
   E->DeclRefExprBits.HasTemplateKWAndArgsInfo =
       CurrentUnpackingBits->getNextBit();
+  E->DeclRefExprBits.HasDNLoc = CurrentUnpackingBits->getNextBit();
   E->DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
   unsigned NumTemplateArgs = 0;
   if (E->hasTemplateKWAndArgsInfo())
@@ -677,7 +678,10 @@ void ASTStmtReader::VisitDeclRefExpr(DeclRefExpr *E) {
 
   E->D = readDeclAs<ValueDecl>();
   E->setLocation(readSourceLocation());
-  E->DNLoc = Record.readDeclarationNameLoc(E->getDecl()->getDeclName());
+  DeclarationNameLoc DNLoc =
+      Record.readDeclarationNameLoc(E->getDecl()->getDeclName());
+  if (E->hasDNLoc())
+    new (E->getTrailingObjects<DeclarationNameLoc>()) DeclarationNameLoc(DNLoc);
 }
 
 void ASTStmtReader::VisitIntegerLiteral(IntegerLiteral *E) {
@@ -3334,11 +3338,13 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       bool HasFoundDecl = DeclRefExprBits.getNextBit();
       bool HasQualifier = DeclRefExprBits.getNextBit();
       bool HasTemplateKWAndArgsInfo = DeclRefExprBits.getNextBit();
+      bool HasDNLoc = DeclRefExprBits.getNextBit();
       unsigned NumTemplateArgs = HasTemplateKWAndArgsInfo
                                      ? Record[ASTStmtReader::NumExprFields + 1]
                                      : 0;
       S = DeclRefExpr::CreateEmpty(Context, HasQualifier, HasFoundDecl,
-                                   HasTemplateKWAndArgsInfo, NumTemplateArgs);
+                                   HasDNLoc, HasTemplateKWAndArgsInfo,
+                                   NumTemplateArgs);
       break;
     }
 
