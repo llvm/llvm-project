@@ -3393,6 +3393,18 @@ void Attributor::checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs,
 }
 
 void Attributor::identifyDefaultAbstractAttributes(Function &F) {
+  // Seed the simplification of a position. This only creates the AAs that
+  // simplify it, so there is nothing to do if none of them are allowed.
+  bool SeedSimplification =
+      isAllowed<AAValueSimplify>() || isAllowed<AAPotentialValues>();
+  auto SeedSimplified = [&](const IRPosition &IRP) {
+    if (!SeedSimplification && !hasSimplificationCallback(IRP))
+      return;
+    bool UsedAssumedInformation = false;
+    getAssumedSimplified(IRP, /*AA=*/nullptr, UsedAssumedInformation,
+                         AA::Intraprocedural);
+  };
+
   assert(!F.isDeclaration());
 
   if (!VisitedFunctions.insert(&F).second)
@@ -3484,9 +3496,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       getOrCreateAAFor<AAIsDead>(RetPos);
 
       // Every function might be simplified.
-      bool UsedAssumedInformation = false;
-      getAssumedSimplified(RetPos, nullptr, UsedAssumedInformation,
-                           AA::Intraprocedural);
+      SeedSimplified(RetPos);
 
       // Every returned value might be marked noundef.
       checkAndQueryIRAttr<Attribute::NoUndef, AANoUndef>(RetPos, RetAttrs);
@@ -3526,9 +3536,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     // Every argument might be simplified. We have to go through the
     // Attributor interface though as outside AAs can register custom
     // simplification callbacks.
-    bool UsedAssumedInformation = false;
-    getAssumedSimplified(ArgPos, /* AA */ nullptr, UsedAssumedInformation,
-                         AA::Intraprocedural);
+    SeedSimplified(ArgPos);
 
     // Every argument might be dead.
     getOrCreateAAFor<AAIsDead>(ArgPos);
@@ -3595,10 +3603,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       return true;
 
     if (!Callee->getReturnType()->isVoidTy() && !CB.use_empty()) {
-      IRPosition CBRetPos = IRPosition::callsite_returned(CB);
-      bool UsedAssumedInformation = false;
-      getAssumedSimplified(CBRetPos, nullptr, UsedAssumedInformation,
-                           AA::Intraprocedural);
+      SeedSimplified(IRPosition::callsite_returned(CB));
 
       if (AttributeFuncs::isNoFPClassCompatibleType(Callee->getReturnType()))
         getOrCreateAAFor<AANoFPClass>(CBInstPos);
@@ -3616,9 +3621,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       // Call site argument might be simplified. We have to go through the
       // Attributor interface though as outside AAs can register custom
       // simplification callbacks.
-      bool UsedAssumedInformation = false;
-      getAssumedSimplified(CBArgPos, /* AA */ nullptr, UsedAssumedInformation,
-                           AA::Intraprocedural);
+      SeedSimplified(CBArgPos);
 
       // Every call site argument might be marked "noundef".
       checkAndQueryIRAttr<Attribute::NoUndef, AANoUndef>(CBArgPos, CBArgAttrs);
@@ -3673,8 +3676,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     if (auto *LI = dyn_cast<LoadInst>(&I)) {
       getOrCreateAAFor<AAAlign>(IRPosition::value(*LI->getPointerOperand()));
       if (Opts.attributor_simplify_all_loads)
-        getAssumedSimplified(IRPosition::value(I), nullptr,
-                             UsedAssumedInformation, AA::Intraprocedural);
+        SeedSimplified(IRPosition::value(I));
       getOrCreateAAFor<AAInvariantLoadPointer>(
           IRPosition::value(*LI->getPointerOperand()));
       if (InfoCache.getFlatAddressSpace().has_value()) {
@@ -3684,8 +3686,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     } else {
       auto &SI = cast<StoreInst>(I);
       getOrCreateAAFor<AAIsDead>(IRPosition::inst(I));
-      getAssumedSimplified(IRPosition::value(*SI.getValueOperand()), nullptr,
-                           UsedAssumedInformation, AA::Intraprocedural);
+      SeedSimplified(IRPosition::value(*SI.getValueOperand()));
       getOrCreateAAFor<AAAlign>(IRPosition::value(*SI.getPointerOperand()));
       if (InfoCache.getFlatAddressSpace().has_value()) {
         getOrCreateAAFor<AAAddressSpace>(
@@ -3694,11 +3695,17 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     }
     return true;
   };
-  Success = checkForAllInstructionsImpl(
-      nullptr, OpcodeInstMap, LoadStorePred, nullptr, nullptr,
-      {(unsigned)Instruction::Load, (unsigned)Instruction::Store},
-      UsedAssumedInformation);
-  assert(Success && "Expected the check call to be successful!");
+  // Skip the loads and stores if nothing can be seeded for them, e.g., for
+  // attributor-light.
+  if (SeedSimplification || !SimplificationCallbacks.empty() ||
+      isAllowed<AAAlign>() || isAllowed<AAInvariantLoadPointer>() ||
+      isAllowed<AAAddressSpace>() || isAllowed<AAIsDead>()) {
+    Success = checkForAllInstructionsImpl(
+        nullptr, OpcodeInstMap, LoadStorePred, nullptr, nullptr,
+        {(unsigned)Instruction::Load, (unsigned)Instruction::Store},
+        UsedAssumedInformation);
+    assert(Success && "Expected the check call to be successful!");
+  }
 
   // AllocaInstPredicate
   auto AAAllocationInfoPred = [&](Instruction &I) -> bool {
@@ -3706,10 +3713,12 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     return true;
   };
 
-  Success = checkForAllInstructionsImpl(
-      nullptr, OpcodeInstMap, AAAllocationInfoPred, nullptr, nullptr,
-      {(unsigned)Instruction::Alloca}, UsedAssumedInformation);
-  assert(Success && "Expected the check call to be successful!");
+  if (isAllowed<AAAllocationInfo>()) {
+    Success = checkForAllInstructionsImpl(
+        nullptr, OpcodeInstMap, AAAllocationInfoPred, nullptr, nullptr,
+        {(unsigned)Instruction::Alloca}, UsedAssumedInformation);
+    assert(Success && "Expected the check call to be successful!");
+  }
 }
 
 bool Attributor::isClosedWorldModule() const {
