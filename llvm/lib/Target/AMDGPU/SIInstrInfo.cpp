@@ -277,6 +277,62 @@ bool SIInstrInfo::isSrc1DPPRevOpcode(const GCNSubtarget &ST, uint32_t Opcode) {
   }
 }
 
+bool SIInstrInfo::isBRMSG(const MachineInstr &MI) {
+  if (isSOPP(MI) && MI.isBranch())
+    return true;
+
+  switch (MI.getOpcode()) {
+  case AMDGPU::S_SENDMSG:
+  case AMDGPU::S_SENDMSGHALT:
+  case AMDGPU::S_SENDMSG_RTN_B32:
+  case AMDGPU::S_SENDMSG_RTN_B64:
+  case AMDGPU::S_ENDPGM:
+  case AMDGPU::S_ENDPGM_SAVED:
+  case AMDGPU::S_ENDPGM_ORDERED_PS_DONE:
+  case AMDGPU::S_INCPERFLEVEL:
+  case AMDGPU::S_DECPERFLEVEL:
+  case AMDGPU::S_TTRACEDATA:
+  case AMDGPU::S_TTRACEDATA_IMM:
+  case AMDGPU::S_WAKEUP:
+  case AMDGPU::S_BARRIER_SIGNAL_M0:
+  case AMDGPU::S_BARRIER_SIGNAL_IMM:
+  case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0:
+  case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM:
+  case AMDGPU::S_GET_BARRIER_STATE_M0:
+  case AMDGPU::S_GET_BARRIER_STATE_IMM:
+  case AMDGPU::S_BARRIER_INIT_M0:
+  case AMDGPU::S_BARRIER_INIT_IMM:
+  case AMDGPU::S_BARRIER_JOIN_M0:
+  case AMDGPU::S_BARRIER_JOIN_IMM:
+  case AMDGPU::S_WAKEUP_BARRIER_M0:
+  case AMDGPU::S_WAKEUP_BARRIER_IMM:
+  case AMDGPU::S_BARRIER_LEAVE:
+  case AMDGPU::S_BARRIER_LEAVE_IMM:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool SIInstrInfo::isHWSALU(const MachineInstr &MI) {
+  if (!isSALU(MI) || isBRMSG(MI) || MI.getOpcode() == AMDGPU::S_VERSION)
+    return false;
+
+  if (!isSOPP(MI))
+    return true;
+
+  // Most SOPP instructions are handled by the sequencer without going through
+  // the scalar ALU.
+  switch (MI.getOpcode()) {
+  case AMDGPU::S_TRAP:
+  case AMDGPU::S_ROUND_MODE:
+  case AMDGPU::S_DENORM_MODE:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Returns true if the result of a VALU instruction depends on exec.
 bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   assert(isVALU(MI, /*AllowLDSDMA=*/true));
