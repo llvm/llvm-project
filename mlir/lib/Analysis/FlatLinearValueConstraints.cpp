@@ -1081,7 +1081,7 @@ std::optional<int64_t> FlatLinearConstraints::getConstantBoundOnDimSize(
   if (lb && minDiff) {
     *lb = AffineMap::get(/*dimCount=*/0, getNumSymbolVars(), minLbExpr);
   }
-  if (ub)
+  if (ub && minUbExpr)
     *ub = AffineMap::get(/*dimCount=*/0, getNumSymbolVars(), minUbExpr);
   if (minLbPos)
     *minLbPos = minLbPosition;
