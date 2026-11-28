@@ -407,6 +407,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   be detected by watching the directories or by comparing their modification
   times.
 
+- `__builtin_unpredictable` can now be used in constant expressions, like
+  `__builtin_expect`.
+
 ### New Compiler Flags
 
 - Added `-fpch-base-dir-is-cwd` to serialize precompiled header input paths
