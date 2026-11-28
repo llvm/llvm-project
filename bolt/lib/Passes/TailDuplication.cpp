@@ -12,6 +12,8 @@
 
 #include "bolt/Passes/TailDuplication.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCRegisterInfo.h"
 
 #include <numeric>
@@ -79,6 +81,106 @@ static cl::opt<double> TailDuplicationCacheBackwardWeight(
 
 namespace llvm {
 namespace bolt {
+
+namespace {
+
+using SymbolMapTy = DenseMap<const MCSymbol *, MCSymbol *>;
+
+const MCExpr *remapExprSymbols(const MCExpr *Expr, const SymbolMapTy &SymbolMap,
+                               MCContext &Ctx) {
+  switch (Expr->getKind()) {
+  case MCExpr::Constant:
+    return Expr;
+
+  case MCExpr::SymbolRef: {
+    const auto *SymbolExpr = cast<MCSymbolRefExpr>(Expr);
+    auto It = SymbolMap.find(&SymbolExpr->getSymbol());
+    if (It == SymbolMap.end())
+      return Expr;
+    return MCSymbolRefExpr::create(It->second, SymbolExpr->getSpecifier(), Ctx,
+                                   SymbolExpr->getLoc());
+  }
+
+  case MCExpr::Unary: {
+    const auto *UnaryExpr = cast<MCUnaryExpr>(Expr);
+    const MCExpr *SubExpr =
+        remapExprSymbols(UnaryExpr->getSubExpr(), SymbolMap, Ctx);
+    if (!SubExpr)
+      return nullptr;
+    if (SubExpr == UnaryExpr->getSubExpr())
+      return Expr;
+    return MCUnaryExpr::create(UnaryExpr->getOpcode(), SubExpr, Ctx,
+                               UnaryExpr->getLoc());
+  }
+
+  case MCExpr::Binary: {
+    const auto *BinaryExpr = cast<MCBinaryExpr>(Expr);
+    const MCExpr *LHS = remapExprSymbols(BinaryExpr->getLHS(), SymbolMap, Ctx);
+    const MCExpr *RHS = remapExprSymbols(BinaryExpr->getRHS(), SymbolMap, Ctx);
+    if (!LHS || !RHS)
+      return nullptr;
+    if (LHS == BinaryExpr->getLHS() && RHS == BinaryExpr->getRHS())
+      return Expr;
+    return MCBinaryExpr::create(BinaryExpr->getOpcode(), LHS, RHS, Ctx,
+                                BinaryExpr->getLoc());
+  }
+
+  case MCExpr::Specifier: {
+    const auto *SpecifierExpr = cast<MCSpecifierExpr>(Expr);
+    const MCExpr *SubExpr =
+        remapExprSymbols(SpecifierExpr->getSubExpr(), SymbolMap, Ctx);
+    if (!SubExpr)
+      return nullptr;
+    if (SubExpr == SpecifierExpr->getSubExpr())
+      return Expr;
+    return MCSpecifierExpr::create(SubExpr, SpecifierExpr->getSpecifier(), Ctx,
+                                   SpecifierExpr->getLoc());
+  }
+
+  case MCExpr::Target:
+    return nullptr;
+  }
+
+  llvm_unreachable("invalid expression kind");
+}
+
+bool remapInstructionLabels(const MCPlusBuilder &MIB,
+                            InstructionListType &Instructions, MCContext &Ctx) {
+  SymbolMapTy LabelMap;
+  for (const MCInst &Inst : Instructions) {
+    MCSymbol *Label = MIB.getInstLabel(Inst);
+    if (!Label)
+      continue;
+    if (!LabelMap.try_emplace(Label, Ctx.createNamedTempSymbol()).second)
+      return false;
+  }
+
+  if (LabelMap.empty())
+    return true;
+
+  for (MCInst &Inst : Instructions) {
+    if (MCSymbol *Label = MIB.getInstLabel(Inst)) {
+      MIB.removeAnnotation(Inst, MCPlus::MCAnnotation::kLabel);
+      MIB.setInstLabel(Inst, LabelMap.lookup(Label));
+    }
+
+    for (unsigned I = 0, E = MCPlus::getNumPrimeOperands(Inst); I != E; ++I) {
+      MCOperand &Operand = Inst.getOperand(I);
+      if (!Operand.isExpr())
+        continue;
+      const MCExpr *RemappedExpr =
+          remapExprSymbols(Operand.getExpr(), LabelMap, Ctx);
+      if (!RemappedExpr)
+        return false;
+      if (RemappedExpr != Operand.getExpr())
+        Operand = MCOperand::createExpr(RemappedExpr);
+    }
+  }
+
+  return true;
+}
+
+} // namespace
 
 void TailDuplication::getCallerSavedRegs(const MCInst &Inst, BitVector &Regs,
                                          BinaryContext &BC) const {
@@ -513,6 +615,20 @@ std::vector<BinaryBasicBlock *> TailDuplication::duplicateBlocks(
   BinaryFunction *BF = BB.getFunction();
   BinaryContext &BC = BF->getBinaryContext();
 
+  InstructionListType ClonedInstructions;
+  SmallVector<size_t, 4> BlockEnds;
+  for (const BinaryBasicBlock *CurBB : BlocksToDuplicate) {
+    ClonedInstructions.insert(ClonedInstructions.end(), CurBB->begin(),
+                              CurBB->end());
+    BlockEnds.push_back(ClonedInstructions.size());
+  }
+
+  if (!remapInstructionLabels(*BC.MIB, ClonedInstructions, *BC.Ctx)) {
+    LLVM_DEBUG(dbgs() << "Tail duplication: failed to remap instruction "
+                         "labels in duplicated region\n");
+    return {};
+  }
+
   // Ratio of this new branches execution count to the total size of the
   // successor's execution count.  Used to set this new branches execution count
   // and lower the old successor's execution count
@@ -535,12 +651,16 @@ std::vector<BinaryBasicBlock *> TailDuplication::duplicateBlocks(
   std::vector<std::unique_ptr<BinaryBasicBlock>> DuplicatedBlocks;
   std::vector<BinaryBasicBlock *> DuplicatedBlocksToReturn;
 
-  for (BinaryBasicBlock *CurBB : BlocksToDuplicate) {
+  size_t BlockBegin = 0;
+  for (size_t I = 0; I != BlocksToDuplicate.size(); ++I) {
+    BinaryBasicBlock *CurBB = BlocksToDuplicate[I];
     DuplicatedBlocks.emplace_back(
         BF->createBasicBlock((BC.Ctx)->createNamedTempSymbol("tail-dup")));
     BinaryBasicBlock *NewBB = DuplicatedBlocks.back().get();
 
-    NewBB->addInstructions(CurBB->begin(), CurBB->end());
+    NewBB->addInstructions(ClonedInstructions.begin() + BlockBegin,
+                           ClonedInstructions.begin() + BlockEnds[I]);
+    BlockBegin = BlockEnds[I];
     // Set execution count as if it was just a copy of the original
     NewBB->setExecutionCount(CurBB->getExecutionCount());
     NewBB->setIsCold(CurBB->isCold());
@@ -614,12 +734,15 @@ void TailDuplication::runOnFunction(BinaryFunction &Function) {
       continue;
 
     // Apply the duplication
+    auto DuplicatedBlocks = duplicateBlocks(*BB, BlocksToDuplicate);
+    if (DuplicatedBlocks.empty())
+      continue;
+
     ModifiedFunction = true;
     DuplicationsDynamicCount += BB->getExecutionCount();
-    auto DuplicatedBlocks = duplicateBlocks(*BB, BlocksToDuplicate);
-    for (BinaryBasicBlock *BB : DuplicatedBlocks) {
+    for (BinaryBasicBlock *DuplicatedBB : DuplicatedBlocks) {
       DuplicatedBlockCount++;
-      DuplicatedByteCount += BB->estimateSize(Emitter.MCE.get());
+      DuplicatedByteCount += DuplicatedBB->estimateSize(Emitter.MCE.get());
     }
 
     if (opts::TailDuplicationConstCopyPropagation) {
