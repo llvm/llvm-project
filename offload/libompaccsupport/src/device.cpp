@@ -1613,7 +1613,7 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
 }
 
 int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
-  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  ol_queue_handle_t Queue = AsyncInfo.getQueueIfCreated();
   if (!Queue)
     return OFFLOAD_SUCCESS;
   if (auto Res = olSyncQueue(Queue)) {
@@ -1625,7 +1625,7 @@ int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
 }
 
 int32_t DeviceTy::queryAsync(AsyncInfoTy &AsyncInfo) {
-  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  ol_queue_handle_t Queue = AsyncInfo.getQueueIfCreated();
   if (!Queue)
     return OFFLOAD_SUCCESS;
   if (auto Res = olQueryQueue(Queue, /*IsComplete=*/nullptr)) {

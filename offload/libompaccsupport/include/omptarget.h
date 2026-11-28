@@ -132,11 +132,15 @@ private:
   using PostProcFuncTy = std::function<int()>;
   llvm::SmallVector<PostProcFuncTy> PostProcessingFunctions;
 
+  /// The liboffload queue; created on first use by getQueue().
   ol_queue_handle_t Queue = nullptr;
   DeviceTy &Device;
 
   /// See getKernelLaunchEnvironment().
   KernelLaunchEnvironmentTy KernelLaunchEnvironment;
+
+  /// Create the liboffload queue. On failure, Queue remains nullptr.
+  void createQueue();
 
 public:
   /// Synchronization method to be used.
@@ -159,8 +163,20 @@ public:
     return KernelLaunchEnvironment;
   }
 
-  /// Get the underlying queue handle.
-  ol_queue_handle_t getQueue() const { return Queue; }
+  /// Get the underlying queue handle, creating the queue on first use. Use
+  /// this when work is about to be enqueued. The queue is created lazily so
+  /// that constructs that do not enqueue any work (e.g., a 'target data'
+  /// region with only 'use_device_addr') do not pay for creating, querying,
+  /// and destroying a queue. Returns nullptr if the queue cannot be created.
+  ol_queue_handle_t getQueue() {
+    if (!Queue)
+      createQueue();
+    return Queue;
+  }
+
+  /// Get the underlying queue handle without creating it. Returns nullptr if
+  /// no work has been enqueued through getQueue() yet.
+  ol_queue_handle_t getQueueIfCreated() const { return Queue; }
 
   /// Synchronize all pending actions.
   ///

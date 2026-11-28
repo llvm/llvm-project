@@ -17,7 +17,10 @@
 using namespace llvm::omp::target::debug;
 
 AsyncInfoTy::AsyncInfoTy(DeviceTy &Device, SyncTy SyncType)
-    : Device(Device), SyncType(SyncType) {
+    : Device(Device), SyncType(SyncType) {}
+
+void AsyncInfoTy::createQueue() {
+  assert(!Queue && "Queue already created");
   if (auto Res = olCreateQueue(Device.Context, Device.DeviceHandle, &Queue)) {
     REPORT() << "Failed to create queue for device " << Device.DeviceID << ": "
              << Res->Details;
