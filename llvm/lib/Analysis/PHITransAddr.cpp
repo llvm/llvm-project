@@ -132,7 +132,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
   if (!Inst) return V;
 
   // Determine whether 'Inst' is an input to our PHI translatable expression.
-  bool isInput = is_contained(InstInputs, Inst);
+  bool isInput =
+      is_contained(InstInputSnapshot, Inst) && is_contained(InstInputs, Inst);
 
   // Handle inputs instructions if needed.
   if (isInput) {
@@ -171,7 +172,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     // All instruction operands are now inputs (and of course, they may also be
     // defined in this block, so they may need to be phi translated themselves.
     for (Value *Op : Inst->operands())
-      addAsInput(Op);
+      if (auto *OpI = dyn_cast<Instruction>(addAsInput(Op)))
+        InstInputSnapshot.push_back(OpI);
   }
 
   // Ok, it must be an intermediate result (either because it started that way
@@ -327,10 +329,12 @@ Value *PHITransAddr::translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
                                     bool MustDominate) {
   assert(DT || !MustDominate);
   assert(verify() && "Invalid PHITransAddr!");
-  if (DT && DT->isReachableFromEntry(PredBB))
+  if (DT && DT->isReachableFromEntry(PredBB)) {
+    InstInputSnapshot = InstInputs;
     Addr = translateSubExpr(Addr, CurBB, PredBB, DT);
-  else
+  } else {
     Addr = nullptr;
+  }
   assert(verify() && "Invalid PHITransAddr!");
 
   if (MustDominate)
@@ -352,6 +356,7 @@ SelectAddr::SelectAddrs PHITransAddr::translateValue(BasicBlock *CurBB,
   if (!DT || !DT->isReachableFromEntry(PredBB))
     return {nullptr, nullptr};
 
+  InstInputSnapshot = InstInputs;
   auto TranslateSide = [&](bool CondVal) -> Value * {
     // Work on a copy so that the original address state is preserved and the
     // other side can be translated independently.

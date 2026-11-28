@@ -82,6 +82,10 @@ class PHITransAddr {
   /// InstInputs - The inputs for our symbolic address.
   SmallVector<Instruction*, 4> InstInputs;
 
+  /// Inputs known before translating the current expression. Inputs exposed by
+  /// incorporating an instruction are added, but translated values are not.
+  SmallVector<Instruction *, 4> InstInputSnapshot;
+
 public:
   PHITransAddr(Value *Addr, const DataLayout &DL, AssumptionCache *AC)
       : Addr(Addr), DL(DL), AC(AC) {
