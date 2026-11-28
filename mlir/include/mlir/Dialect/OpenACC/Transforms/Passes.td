@@ -625,6 +625,11 @@ def ACCMaterializeRoutineBindTargets
     the current symbol table. This parent-level pass must run before
     `acc-bind-routine`, which can then rewrite calls in parallel without
     mutating a parent operation.
+
+    Only the bind target selected for `device-type` is declared, so this pass
+    must be given the same `device-type` as `acc-bind-routine`. The pass does
+    not descend into nested symbol tables such as `gpu.module`, so run it on
+    each one that contains offload calls.
   }];
   let dependentDialects = ["mlir::func::FuncDialect"];
   let options = [ AccDeviceTypeOption ];
@@ -638,7 +643,8 @@ def ACCBindRoutine
     `acc routine` directive and a `bind(name)` clause, rewrite the
     call to use the bound symbol so device code calls the correct
     call target. String-valued bind targets must first be created by
-    `acc-materialize-routine-bind-targets`.
+    `acc-materialize-routine-bind-targets`, run with the same `device-type`
+    as this pass. A target that was not materialized is reported as an error.
   }];
   let options = [ AccDeviceTypeOption ];
 }

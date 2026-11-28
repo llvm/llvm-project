@@ -13,4 +13,5 @@ module {
   }
 }
 
-// CHECK: error: string-bound ACC routine target was not materialized
+// CHECK: error: string-bound ACC routine target 'actual_impl' selected for device type 'none' was not materialized in the enclosing 'builtin.module'
+// CHECK: note: run acc-materialize-routine-bind-targets{device-type=none} on this 'builtin.module' before acc-bind-routine

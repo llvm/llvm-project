@@ -232,8 +232,21 @@ public:
             gpuMod ? gpuMod.getOperation() : module.getOperation();
         SymbolTable symbolTable(symbolTableOp);
         if (!symbolTable.lookup(bindName)) {
-          callOp.emitError(
-              "string-bound ACC routine target was not materialized");
+          StringRef deviceTypeName = stringifyDeviceType(this->deviceType);
+          std::string scope =
+              ("'" + symbolTableOp->getName().getStringRef() + "'").str();
+          if (auto symName = symbolTableOp->getAttrOfType<StringAttr>(
+                  SymbolTable::getSymbolAttrName()))
+            scope += (" @" + symName.getValue()).str();
+          InFlightDiagnostic diag =
+              callOp.emitError()
+              << "string-bound ACC routine target '" << bindName
+              << "' selected for device type '" << deviceTypeName
+              << "' was not materialized in the enclosing " << scope;
+          diag.attachNote(symbolTableOp->getLoc())
+              << "run acc-materialize-routine-bind-targets{device-type="
+              << deviceTypeName << "} on this " << scope
+              << " before acc-bind-routine";
           failed = true;
           return;
         }
