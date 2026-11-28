@@ -259,8 +259,9 @@ static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
   }
 }
 
-/// Replace \p DbgMI, which describes the result of \p BuildVector, with one
-/// fragment debug value per vector element.
+/// Replace \p DbgMI, which describes the result of \p BuildVector (a
+/// G_BUILD_VECTOR or G_CONCAT_VECTORS), with one fragment debug value per
+/// source operand.
 static void salvageBuildVector(const MachineRegisterInfo &MRI,
                                MachineInstr &BuildVector, MachineInstr &DbgMI) {
   const DIExpression *Expr = DbgMI.getDebugExpression();
@@ -327,7 +328,8 @@ void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
     assert(DbgMI->hasDebugOperandForReg(Reg) &&
            "Must use salvaged instruction as its location");
 
-    if (MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR) {
+    if (MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR ||
+        MI.getOpcode() == TargetOpcode::G_CONCAT_VECTORS) {
       assert(DbgMI->isDebugValue() &&
              "Must be either DBG_VALUE or DBG_VALUE_LIST");
       salvageBuildVector(MRI, MI, *DbgMI);

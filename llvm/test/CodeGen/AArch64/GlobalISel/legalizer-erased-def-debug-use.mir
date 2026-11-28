@@ -8,6 +8,7 @@
   define void @dead_artifact() !dbg !7 { ret void }
   define void @forwarded_merge() !dbg !10 { ret void }
   define void @copied_merge() !dbg !13 { ret void }
+  define void @dead_concat() !dbg !16 { ret void }
 
   !llvm.module.flags = !{!0}
   !llvm.dbg.cu = !{!1}
@@ -27,6 +28,9 @@
   !13 = distinct !DISubprogram(name: "copied_merge", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
   !14 = !DILocalVariable(name: "w", scope: !13, file: !2)
   !15 = !DILocation(line: 4, scope: !13)
+  !16 = distinct !DISubprogram(name: "dead_concat", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !17 = !DILocalVariable(name: "v", scope: !16, file: !2)
+  !18 = !DILocation(line: 5, scope: !16)
 ...
 
 # CHECK-LABEL: name: dead_def
@@ -106,4 +110,25 @@ body:             |
     DBG_VALUE %lo(i64), $noreg, !14, !DIExpression(), debug-location !15
     $x0 = COPY %lo(i64)
     RET_ReallyLR implicit $x0
+...
+
+# The unmerge of a concat_vectors folds away, taking the concat with it. Its
+# debug use is salvaged as one fragment per source vector.
+# CHECK-LABEL: name: dead_concat
+# CHECK-NOT:   G_CONCAT_VECTORS
+# CHECK:       DBG_VALUE %a(<16 x i8>), $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 0, 128)
+# CHECK-NEXT:  DBG_VALUE $q1, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 128, 128)
+# CHECK:       $q0 = COPY %a(<16 x i8>)
+---
+name:            dead_concat
+body:             |
+  bb.0:
+    liveins: $q0, $q1
+    %a:_(<16 x i8>) = COPY $q0
+    %b:_(<16 x i8>) = COPY $q1
+    %vec:_(<32 x i8>) = G_CONCAT_VECTORS %a(<16 x i8>), %b(<16 x i8>)
+    DBG_VALUE %vec(<32 x i8>), $noreg, !17, !DIExpression(), debug-location !18
+    %lo:_(<16 x i8>), %hi:_(<16 x i8>) = G_UNMERGE_VALUES %vec(<32 x i8>)
+    $q0 = COPY %lo(<16 x i8>)
+    RET_ReallyLR implicit $q0
 ...

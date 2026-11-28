@@ -4409,6 +4409,7 @@ void CombinerHelper::applyExtractAllEltsFromBuildVector(
     replaceRegWith(MRI, ExtMI->getOperand(0).getReg(), Pair.first);
     ExtMI->eraseFromParent();
   }
+  salvageDebugInfo(MRI, MI);
   MI.eraseFromParent();
 }
 
