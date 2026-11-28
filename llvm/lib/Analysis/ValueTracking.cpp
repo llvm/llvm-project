@@ -8346,6 +8346,36 @@ isImpliedCondCommonOperandWithCR(CmpPredicate LPred, const ConstantRange &LCR,
   return std::nullopt;
 }
 
+/// If "V0 Pred V1" is "(X op C) ==/!= 0" with op in {sub, add, xor}, return X
+/// and set NewC so that the compare is equivalent to "X ==/!= NewC". Looks
+/// through a zext/sext of X when NewC fits in the narrower type.
+static const Value *matchEqZeroOfConstOp(CmpPredicate Pred, const Value *V0,
+                                         const Value *V1, APInt &NewC) {
+  if (!ICmpInst::isEquality(Pred) || !match(V1, m_Zero()))
+    return nullptr;
+
+  const Value *X;
+  const APInt *C;
+  if (match(V0, m_Sub(m_APInt(C), m_Value(X))) ||
+      match(V0, m_Sub(m_Value(X), m_APInt(C))) ||
+      match(V0, m_Xor(m_Value(X), m_APInt(C))))
+    NewC = *C;
+  else if (match(V0, m_Add(m_Value(X), m_APInt(C))))
+    NewC = -*C;
+  else
+    return nullptr;
+
+  const Value *Y;
+  if ((match(X, m_ZExt(m_Value(Y))) &&
+       NewC.isIntN(Y->getType()->getScalarSizeInBits())) ||
+      (match(X, m_SExt(m_Value(Y))) &&
+       NewC.isSignedIntN(Y->getType()->getScalarSizeInBits()))) {
+    NewC = NewC.trunc(Y->getType()->getScalarSizeInBits());
+    return Y;
+  }
+  return X;
+}
+
 /// Return true if LHS implies RHS (expanded to its components as "R0 RPred R1")
 /// is true.  Return false if LHS implies RHS is false. Otherwise, return
 /// std::nullopt if we can't infer anything.
@@ -8357,6 +8387,21 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
   // case, invert the predicate to make it so.
   if (!LHSIsTrue)
     LPred = ICmpInst::getInverseCmpPredicate(LPred);
+
+  // Rewrite "(X op C) ==/!= 0" as "X ==/!= C'" only when that exposes an
+  // operand shared with the other compare. Otherwise we would lose matches on
+  // the original value, e.g. "(X - C) == 0" implies "(X - C) u< 10".
+  APInt LXC, RXC;
+  const Value *LX = matchEqZeroOfConstOp(LPred, L0, L1, LXC);
+  const Value *RX = matchEqZeroOfConstOp(RPred, R0, R1, RXC);
+  if (LX && (LX == R0 || LX == R1 || LX == RX)) {
+    L0 = LX;
+    L1 = ConstantInt::get(LX->getType(), LXC);
+  }
+  if (RX && (RX == L0 || RX == L1)) {
+    R0 = RX;
+    R1 = ConstantInt::get(RX->getType(), RXC);
+  }
 
   // We can have non-canonical operands, so try to normalize any common operand
   // to L0/R0.

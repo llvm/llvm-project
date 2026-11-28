@@ -598,4 +598,202 @@ define i1 @same_ops_with_constant_wrong_sign(i8 %x) {
   ret i1 %res
 }
 
+; (X op C) ==/!= 0 is rewritten as X ==/!= C' when checking implications.
+
+define i1 @implies_sub_c_x_eq_zero(i8 %x) {
+; CHECK-LABEL: @implies_sub_c_x_eq_zero(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = icmp eq i8 %x, 45
+  %sub = sub i8 45, %x
+  %cmp2 = icmp eq i8 %sub, 0
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @implies_sub_c_x_ne_zero(i8 %x) {
+; CHECK-LABEL: @implies_sub_c_x_ne_zero(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = icmp ne i8 %x, 45
+  %sub = sub i8 45, %x
+  %cmp2 = icmp ne i8 %sub, 0
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @implies_sub_x_c_eq_zero(i8 %x) {
+; CHECK-LABEL: @implies_sub_x_c_eq_zero(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = icmp eq i8 %x, 45
+  %sub = sub i8 %x, 45
+  %cmp2 = icmp eq i8 %sub, 0
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @implies_add_x_c_eq_zero(i8 %x) {
+; CHECK-LABEL: @implies_add_x_c_eq_zero(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = icmp eq i8 %x, 45
+  %add = add i8 %x, -45
+  %cmp2 = icmp eq i8 %add, 0
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @implies_xor_x_c_ne_zero(i8 %x) {
+; CHECK-LABEL: @implies_xor_x_c_ne_zero(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = icmp ne i8 %x, 45
+  %xor = xor i8 %x, 45
+  %cmp2 = icmp ne i8 %xor, 0
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @implies_sub_c_zext_x_ne_zero(i8 %x) {
+; CHECK-LABEL: @implies_sub_c_zext_x_ne_zero(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = icmp ne i8 %x, 45
+  %z = zext i8 %x to i32
+  %sub = sub i32 45, %z
+  %cmp2 = icmp ne i32 %sub, 0
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @implies_add_sext_x_c_eq_zero(i8 %x) {
+; CHECK-LABEL: @implies_add_sext_x_c_eq_zero(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = icmp eq i8 %x, -3
+  %s = sext i8 %x to i32
+  %add = add i32 %s, 3
+  %cmp2 = icmp eq i32 %add, 0
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @implies_lhs_sub_c_x_eq_zero(i8 %x) {
+; CHECK-LABEL: @implies_lhs_sub_c_x_eq_zero(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = sub i8 45, %x
+  %cmp1 = icmp eq i8 %sub, 0
+  %cmp2 = icmp eq i8 %x, 45
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define <2 x i1> @implies_sub_c_x_ne_zero_vec(<2 x i8> %x) {
+; CHECK-LABEL: @implies_sub_c_x_ne_zero_vec(
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
+;
+  %cmp1 = icmp ne <2 x i8> %x, splat (i8 45)
+  %sub = sub <2 x i8> splat (i8 45), %x
+  %cmp2 = icmp ne <2 x i8> %sub, zeroinitializer
+  %res = icmp ule <2 x i1> %cmp1, %cmp2
+  ret <2 x i1> %res
+}
+
+; Both sides rewrite to the same X.
+define i1 @implies_both_sides_rewritten(i8 %x) {
+; CHECK-LABEL: @implies_both_sides_rewritten(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = sub i8 %x, 45
+  %cmp1 = icmp eq i8 %sub, 0
+  %xor = xor i8 %x, 45
+  %cmp2 = icmp eq i8 %xor, 0
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+; The shared value is the RHS of the other (non-canonical) compare.
+define i1 @implies_const_on_left(i8 %x) {
+; CHECK-LABEL: @implies_const_on_left(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp1 = icmp eq i8 45, %x
+  %sub = sub i8 45, %x
+  %cmp2 = icmp eq i8 %sub, 0
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+; The rewrite must not hide a value that both compares already share.
+define i1 @implies_shared_sub_not_rewritten_lhs(i8 %x) {
+; CHECK-LABEL: @implies_shared_sub_not_rewritten_lhs(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = sub i8 %x, 45
+  %cmp1 = icmp eq i8 %sub, 0
+  %cmp2 = icmp ult i8 %sub, 10
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @implies_shared_add_not_rewritten_rhs(i8 %x) {
+; CHECK-LABEL: @implies_shared_add_not_rewritten_rhs(
+; CHECK-NEXT:    ret i1 true
+;
+  %add = add i8 %x, -45
+  %cmp1 = icmp ult i8 %add, 1
+  %cmp2 = icmp eq i8 %add, 0
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+; Negative test: wrong constant.
+define i1 @implies_sub_c_x_ne_zero_wrong_const(i8 %x) {
+; CHECK-LABEL: @implies_sub_c_x_ne_zero_wrong_const(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[X:%.*]], 45
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 46, [[X]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i8 [[SUB]], 0
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cmp1 = icmp ne i8 %x, 45
+  %sub = sub i8 46, %x
+  %cmp2 = icmp ne i8 %sub, 0
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+; Negative test: the constant does not fit in the zext source type.
+define i1 @implies_sub_c_zext_x_eq_zero_const_too_large(i8 %x) {
+; CHECK-LABEL: @implies_sub_c_zext_x_eq_zero_const_too_large(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 45
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], false
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cmp1 = icmp eq i8 %x, 45
+  %z = zext i8 %x to i32
+  %sub = sub i32 301, %z
+  %cmp2 = icmp eq i32 %sub, 0
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+; Negative test: compare against non-zero.
+define i1 @implies_sub_c_x_eq_nonzero(i8 %x) {
+; CHECK-LABEL: @implies_sub_c_x_eq_nonzero(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 45
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 45, [[X]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[SUB]], 1
+; CHECK-NEXT:    [[RES:%.*]] = icmp ule i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cmp1 = icmp eq i8 %x, 45
+  %sub = sub i8 45, %x
+  %cmp2 = icmp eq i8 %sub, 1
+  %res = icmp ule i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
 declare void @llvm.assume(i1)
