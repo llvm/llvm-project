@@ -141,3 +141,16 @@ template <class T> decltype(auto) dependentTemporaryReturn() { return ((getTempo
 static_assert(__is_same(decltype(temporaryReturn()), int &&), "");
 static_assert(__is_same(decltype(nestedTemporaryReturn()), int &&), "");
 static_assert(__is_same(decltype(dependentTemporaryReturn<Temporary>()), int &&), "");
+
+struct StringView {
+  constexpr unsigned long size() const { return 8; }
+};
+template <class T, unsigned long N> struct Array {
+  T Data[N];
+};
+template <const StringView &Pattern, unsigned long Repeat>
+struct RepeatPattern {
+  static auto impl() { return Array<char, Pattern.size() * Repeat>{}; }
+};
+constexpr StringView PATTERN{};
+auto RepeatedArray = RepeatPattern<PATTERN, 10>::impl();
