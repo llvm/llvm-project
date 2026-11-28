@@ -212,10 +212,21 @@ if("${LIBC_CONF_WCTYPE_MODE}" STREQUAL "LIBC_WCTYPE_MODE_UTF8")
 endif()
 
 add_header_library(
+  wctype_basics
+  HDRS
+    wctype_basics.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   wctype_utils
   HDRS
     wctype_utils.h
   DEPENDS
+    .wctype_basics
     ${wctype_utils_deps}
 )
 
@@ -262,7 +273,7 @@ add_header_library(
     .big_int
     .common
     .ctype_utils
-    .wctype_utils
+    .wctype_basics
     libc.hdr.stdint_proxy
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits

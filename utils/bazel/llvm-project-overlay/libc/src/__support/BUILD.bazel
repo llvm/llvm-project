@@ -242,7 +242,7 @@ libc_support_library(
         ":big_int",
         ":common",
         ":ctype_utils",
-        ":wctype_utils",
+        ":wctype_basics",
         "//libc/hdr:stdint_proxy",
         "//libc/src/__support/CPP:algorithm",
         "//libc/src/__support/CPP:array",
@@ -397,9 +397,20 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "wctype_basics",
+    hdrs = ["wctype_basics.h"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_support_library(
     name = "wctype_utils",
     hdrs = ["wctype_utils.h"],
     deps = [
+        ":wctype_basics",
         "//libc/hdr/types:wchar_t",
         "//libc/hdr/types:wctype_t",
         "//libc/src/__support/CPP:array",

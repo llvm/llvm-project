@@ -70,7 +70,7 @@
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/wctype_utils.h"
+#include "src/__support/wctype_basics.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -363,11 +363,20 @@ class IntegerToString {
     using UNSIGNED_T = make_integral_or_big_int_unsigned_t<T>;
 
     LIBC_INLINE static CharT digit_char(uint8_t digit) {
-      const CharT result = internal::int_to_b36_char(digit);
-      if constexpr (Fmt::BASE <= 10) {
-        return result;
+      if constexpr (cpp::is_same_v<CharT, char>) {
+        const char result = internal::int_to_b36_char(digit);
+        if constexpr (Fmt::BASE <= 10) {
+          return result;
+        } else {
+          return Fmt::IS_UPPERCASE ? internal::toupper(result) : result;
+        }
       } else {
-        return Fmt::IS_UPPERCASE ? internal::toupper(result) : result;
+        const wchar_t result = internal::int_to_b36_wchar(digit);
+        if constexpr (Fmt::BASE <= 10) {
+          return result;
+        } else {
+          return Fmt::IS_UPPERCASE ? internal::ascii::toupper(result) : result;
+        }
       }
     }
 
