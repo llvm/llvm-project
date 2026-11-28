@@ -1007,12 +1007,18 @@ public:
                  HasSingleByteCoverage),
         FreqAttr(FFA_Normal), IsCS(IsCS), VPC(Func, TLI) {}
 
-  void handleInstrProfError(Error Err, uint64_t MismatchedFuncSum);
+  enum class RecordLookupState {
+    Matched,
+    ZeroCountHashMismatch,
+    OtherError,
+  };
+
+  RecordLookupState handleInstrProfError(Error Err, uint64_t MismatchedFuncSum,
+                                         bool MismatchedAllZeros);
 
   /// Get the profile record, assign it to \p ProfileRecord, handle errors if
-  /// necessary, and assign \p ProgramMaxCount. \returns true if there are no
-  /// errors.
-  bool getRecord(IndexedInstrProfReader *PGOReader);
+  /// necessary, and assign \p ProgramMaxCount.
+  RecordLookupState getRecord(IndexedInstrProfReader *PGOReader);
 
   // Read counts for the instrumented BB from profile.
   bool readCounters(bool &AllZeros,
@@ -1257,7 +1263,10 @@ static void annotateFunctionWithHashMismatch(Function &F, LLVMContext &ctx) {
   F.setMetadata(LLVMContext::MD_annotation, MD);
 }
 
-void PGOUseFunc::handleInstrProfError(Error Err, uint64_t MismatchedFuncSum) {
+PGOUseFunc::RecordLookupState
+PGOUseFunc::handleInstrProfError(Error Err, uint64_t MismatchedFuncSum,
+                                 bool MismatchedAllZeros) {
+  RecordLookupState State = RecordLookupState::OtherError;
   handleAllErrors(std::move(Err), [&](const InstrProfError &IPE) {
     auto &Ctx = M->getContext();
     auto Err = IPE.get();
@@ -1270,6 +1279,8 @@ void PGOUseFunc::handleInstrProfError(Error Err, uint64_t MismatchedFuncSum) {
       LLVM_DEBUG(dbgs() << "unknown function");
     } else if (Err == instrprof_error::hash_mismatch ||
                Err == instrprof_error::malformed) {
+      if (Err == instrprof_error::hash_mismatch && MismatchedAllZeros)
+        State = RecordLookupState::ZeroCountHashMismatch;
       IsCS ? NumOfCSPGOMismatch++ : NumOfPGOMismatch++;
       SkipWarning =
           NoPGOWarnMismatch ||
@@ -1295,20 +1306,22 @@ void PGOUseFunc::handleInstrProfError(Error Err, uint64_t MismatchedFuncSum) {
     Ctx.diagnose(
         DiagnosticInfoPGOProfile(M->getName().data(), Msg, DS_Warning));
   });
+  return State;
 }
 
-bool PGOUseFunc::getRecord(IndexedInstrProfReader *PGOReader) {
+PGOUseFunc::RecordLookupState
+PGOUseFunc::getRecord(IndexedInstrProfReader *PGOReader) {
   uint64_t MismatchedFuncSum = 0;
+  bool MismatchedAllZeros = false;
   auto Result = PGOReader->getInstrProfRecord(
       FuncInfo.FuncName, FuncInfo.FunctionHash, FuncInfo.DeprecatedFuncName,
-      &MismatchedFuncSum);
-  if (Error E = Result.takeError()) {
-    handleInstrProfError(std::move(E), MismatchedFuncSum);
-    return false;
-  }
+      &MismatchedFuncSum, &MismatchedAllZeros);
+  if (Error E = Result.takeError())
+    return handleInstrProfError(std::move(E), MismatchedFuncSum,
+                                MismatchedAllZeros);
   ProfileRecord = std::move(Result.get());
   ProgramMaxCount = PGOReader->getMaximumFunctionCount(IsCS);
-  return true;
+  return RecordLookupState::Matched;
 }
 
 // Read the profile from ProfileFileName and assign the value to the
@@ -2127,8 +2140,17 @@ static bool annotateAllFunctions(
     PGOUseFunc Func(Opts, F, &M, TLI, ComdatMembers, BPI, BFI, LI, PSI, IsCS,
                     InstrumentFuncEntry, InstrumentLoopEntries,
                     HasSingleByteCoverage);
-    if (!Func.getRecord(PGOReader.get()))
+    PGOUseFunc::RecordLookupState LookupState = Func.getRecord(PGOReader.get());
+    if (LookupState != PGOUseFunc::RecordLookupState::Matched) {
+      if (LookupState == PGOUseFunc::RecordLookupState::ZeroCountHashMismatch &&
+          Opts.pgo_use_treat_zero_mismatch_as_cold &&
+          (!IsCS || !F.getEntryCount()) && !F.hasFnAttribute(Attribute::Hot)) {
+        F.setEntryCount(0);
+        if (PGOReader->getMaximumFunctionCount(IsCS) != 0)
+          ColdFunctions.push_back(&F);
+      }
       continue;
+    }
     if (HasSingleByteCoverage) {
       Func.populateCoverage();
       continue;
