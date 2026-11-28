@@ -3027,11 +3027,8 @@ define i8 @no_fold_umin_to_uadd_sat_if_has_multi_use_for_add(i8 %a, i8 %b) {
 ; Multi-use test: zext-add-umin-trunc, but umin has multi use
 define i8 @no_fold_umin_to_uadd_sat_if_has_multi_use_for_umin(i8 %a, i8 %b) {
 ; CHECK-LABEL: @no_fold_umin_to_uadd_sat_if_has_multi_use_for_umin(
-; CHECK-NEXT:    [[ZA:%.*]] = zext i8 [[A:%.*]] to i16
-; CHECK-NEXT:    [[ZB:%.*]] = zext i8 [[B:%.*]] to i16
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i16 [[ZB]], [[ZA]]
-; CHECK-NEXT:    [[CMP:%.*]] = call i16 @llvm.umin.i16(i16 [[ADD]], i16 255)
-; CHECK-NEXT:    [[R:%.*]] = trunc nuw i16 [[CMP]] to i8
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[B:%.*]], i8 [[A:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = zext i8 [[R]] to i16
 ; CHECK-NEXT:    call void @usei16(i16 [[CMP]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
