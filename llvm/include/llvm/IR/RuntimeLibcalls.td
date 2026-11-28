@@ -927,6 +927,8 @@ class AtomicLibcall<FuncArgType RetType, list<FuncArgType> ArgTypes,
 
 // Atomic '__sync_*' libcalls.
 defset list<RuntimeLibcall> LibCalls__sync = {
+  def SYNC_SYNCHRONIZE : AtomicLibcall<Void, [], []>;
+
   foreach IntTy = [TypeSuffix<"1", UInt8>, TypeSuffix<"2", UInt16>,
                   TypeSuffix<"4", UInt32>, TypeSuffix<"8", UInt64>,
                   TypeSuffix<"16", UInt128>] in {
