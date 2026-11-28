@@ -2559,9 +2559,8 @@ static std::optional<Instruction *> instCombineZExtSVECmpNE(InstCombiner &IC,
       !match(II.getOperand(2), m_Zero()))
     return std::nullopt;
 
-  for (auto *U : II.users()) {
-    if (match(U, m_ZExt(m_Specific(&II)))) {
-      auto *User = cast<Instruction>(U);
+  for (Instruction *User : II.users()) {
+    if (match(User, m_ZExt(m_Specific(&II)))) {
       Type *Ty = II.getOperand(1)->getType();
       if (User->getType() != Ty)
         continue;
@@ -4156,8 +4155,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 
     InstructionCost MaxAbsorbedCost = 0;
     bool AllUsersAbsorbCast = true;
-    for (const User *U : I->users()) {
-      auto *Usr = cast<Instruction>(U);
+    for (const Instruction *Usr : I->users()) {
       std::optional<InstructionCost> UserCost = GetUserAbsorbedCastCost(Usr);
       if (!UserCost) {
         AllUsersAbsorbCast = false;
@@ -6673,8 +6671,8 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
         if (isa<LoadInst>(&I)) {
           LoadedValuesPlus.insert(&I);
           // Include in-loop 1st users of loaded values.
-          for (auto *U : I.users())
-            if (L->contains(cast<Instruction>(U)))
+          for (Instruction *U : I.users())
+            if (L->contains(U))
               LoadedValuesPlus.insert(U);
         } else
           Stores.push_back(cast<StoreInst>(&I));

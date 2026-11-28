@@ -372,6 +372,10 @@ static const char *const IntrinsicInline[] = {
 };
 
 static bool isIntrinsicInline(Function *F) {
+  // Constrained FP intrinsics are lowered in the same way as the
+  // corresponding unconstrained operations.
+  if (F->isConstrainedFPIntrinsic())
+    return true;
   return llvm::binary_search(IntrinsicInline, F->getName());
 }
 

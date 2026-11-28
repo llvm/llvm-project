@@ -252,10 +252,11 @@ struct VPlanTransforms {
                                        OptimizationRemarkEmitter *ORE,
                                        Loop *TheLoop);
 
-  /// Check if \p Plan contains any FMaxNum or FMinNum reductions. If they do,
-  /// try to update the vector loop to exit early if any input is NaN and resume
-  /// executing in the scalar loop to handle the NaNs there. Return false if
-  /// this attempt was unsuccessful.
+  /// Check if \p Plan contains any FMaxNum, FMinNum, FMaxSelectNoFMF or
+  /// FMinSelectNoFMF reductions. If they do, try to update the vector loop to
+  /// exit early if any input is NaN (or, for FMaxSelectNoFMF/FMinSelectNoFMF, a
+  /// signed zero that may change the result) and resume executing in the scalar
+  /// loop to handle them there. Return false if this attempt was unsuccessful.
   static bool handleMaxMinNumReductions(VPlan &Plan);
 
   /// Check if \p Plan contains any FindLast reductions. If it does, try to

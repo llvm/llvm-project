@@ -14,60 +14,34 @@
 #include "clang/Tooling/ASTDiff/ASTDiff.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 
 using namespace llvm;
 using namespace clang;
 using namespace clang::tooling;
 
-static cl::OptionCategory ClangDiffCategory("clang-diff options");
+namespace {
+using namespace llvm::opt;
+enum ID {
+  OPT_INVALID = 0,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-static cl::opt<bool>
-    ASTDump("ast-dump",
-            cl::desc("Print the internal representation of the AST."),
-            cl::init(false), cl::cat(ClangDiffCategory));
+#define OPTTABLE_CODE
+#include "Opts.inc"
 
-static cl::opt<bool> ASTDumpJson(
-    "ast-dump-json",
-    cl::desc("Print the internal representation of the AST as JSON."),
-    cl::init(false), cl::cat(ClangDiffCategory));
+class ClangDiffOptTable : public OptTable {
+public:
+  ClangDiffOptTable() : OptTable(optionTables()) {}
+};
+} // namespace
 
-static cl::opt<bool> PrintMatches("dump-matches",
-                                  cl::desc("Print the matched nodes."),
-                                  cl::init(false), cl::cat(ClangDiffCategory));
-
-static cl::opt<bool> HtmlDiff("html",
-                              cl::desc("Output a side-by-side diff in HTML."),
-                              cl::init(false), cl::cat(ClangDiffCategory));
-
-static cl::opt<std::string> SourcePath(cl::Positional, cl::desc("<source>"),
-                                       cl::Required,
-                                       cl::cat(ClangDiffCategory));
-
-static cl::opt<std::string> DestinationPath(cl::Positional,
-                                            cl::desc("<destination>"),
-                                            cl::Optional,
-                                            cl::cat(ClangDiffCategory));
-
-static cl::opt<std::string> StopAfter("stop-diff-after",
-                                      cl::desc("<topdown|bottomup>"),
-                                      cl::init(""), cl::cat(ClangDiffCategory));
-
-static cl::opt<int> MaxSize("s", cl::desc("<maxsize>"), cl::init(-1),
-                            cl::cat(ClangDiffCategory));
-
-static cl::opt<std::string> BuildPath("p", cl::desc("Build path"), cl::init(""),
-                                      cl::cat(ClangDiffCategory));
-
-static cl::list<std::string> ArgsAfter(
-    "extra-arg",
-    cl::desc("Additional argument to append to the compiler command line"),
-    cl::cat(ClangDiffCategory));
-
-static cl::list<std::string> ArgsBefore(
-    "extra-arg-before",
-    cl::desc("Additional argument to prepend to the compiler command line"),
-    cl::cat(ClangDiffCategory));
+static std::string BuildPath;
+static std::vector<std::string> ArgsAfter;
+static std::vector<std::string> ArgsBefore;
 
 static void addExtraArgs(std::unique_ptr<CompilationDatabase> &Compilations) {
   if (!Compilations)
@@ -445,11 +419,42 @@ int main(int argc, const char **argv) {
       FixedCompilationDatabase::loadFromCommandLine(argc, argv, ErrorMessage);
   if (!CommonCompilations && !ErrorMessage.empty())
     llvm::errs() << ErrorMessage;
-  cl::HideUnrelatedOptions(ClangDiffCategory);
-  if (!cl::ParseCommandLineOptions(argc, argv)) {
-    cl::PrintOptionValues();
+  BumpPtrAllocator Alloc;
+  StringSaver Saver(Alloc);
+  ClangDiffOptTable Tbl;
+  opt::InputArgList Args = Tbl.parseArgs(
+      argc, const_cast<char **>(argv), OPT_UNKNOWN, Saver, [](StringRef Msg) {
+        llvm::errs() << "Error: " << Msg << "\n";
+        exit(1);
+      });
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(llvm::outs(), "clang-diff [options] <source> [<destination>]",
+                  "Compare source files by AST nodes");
+    return 0;
+  }
+  std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
+  if (Inputs.empty() || Inputs.size() > 2) {
+    llvm::errs() << "Error: Expected one or two paths.\n";
     return 1;
   }
+  std::string SourcePath = Inputs[0];
+  std::string DestinationPath = Inputs.size() > 1 ? Inputs[1] : "";
+  bool ASTDump = Args.hasArg(OPT_ast_dump);
+  bool ASTDumpJson = Args.hasArg(OPT_ast_dump_json);
+  bool PrintMatches = Args.hasArg(OPT_dump_matches);
+  bool HtmlDiff = Args.hasArg(OPT_html);
+  std::string StopAfter = Args.getLastArgValue(OPT_stop_diff_after).str();
+  int MaxSize = -1;
+  if (const opt::Arg *A = Args.getLastArg(OPT_s)) {
+    if (StringRef(A->getValue()).getAsInteger(0, MaxSize)) {
+      llvm::errs() << "Error: Invalid argument '" << A->getValue()
+                   << "' for -s\n";
+      return 1;
+    }
+  }
+  BuildPath = Args.getLastArgValue(OPT_p).str();
+  ArgsAfter = Args.getAllArgValues(OPT_extra_arg);
+  ArgsBefore = Args.getAllArgValues(OPT_extra_arg_before);
 
   addExtraArgs(CommonCompilations);
 

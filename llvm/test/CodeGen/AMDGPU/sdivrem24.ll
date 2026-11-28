@@ -1,17 +1,11 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}sdiv24_i8:
 ; SI: v_cvt_f32_i32
 ; SI: v_cvt_f32_i32
 ; SI: v_rcp_f32
 ; SI: v_cvt_i32_f32
-
-; EG: INT_TO_FLT
-; EG-DAG: INT_TO_FLT
-; EG-DAG: RECIP_IEEE
-; EG: FLT_TO_INT
 define amdgpu_kernel void @sdiv24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i8, ptr addrspace(1) %in, i8 1
   %num = load i8, ptr addrspace(1) %in
@@ -26,11 +20,6 @@ define amdgpu_kernel void @sdiv24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; SI: v_cvt_f32_i32
 ; SI: v_rcp_f32
 ; SI: v_cvt_i32_f32
-
-; EG: INT_TO_FLT
-; EG-DAG: INT_TO_FLT
-; EG-DAG: RECIP_IEEE
-; EG: FLT_TO_INT
 define amdgpu_kernel void @sdiv24_i16(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i16, ptr addrspace(1) %in, i16 1
   %num = load i16, ptr addrspace(1) %in, align 2
@@ -42,9 +31,6 @@ define amdgpu_kernel void @sdiv24_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 
 ; FUNC-LABEL: {{^}}sdiv24_i32:
 ; SI-NOT: v_cvt_i32_f32
-
-; EG-NOT: INT_TO_FLT
-; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @sdiv24_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
   %num = load i32, ptr addrspace(1) %in, align 4
@@ -60,9 +46,6 @@ define amdgpu_kernel void @sdiv24_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 
 ; FUNC-LABEL: {{^}}sdiv25_i32:
 ; SI-NOT: v_cvt_f32_i32
-
-; EG-NOT: INT_TO_FLT
-; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @sdiv25_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
   %num = load i32, ptr addrspace(1) %in, align 4
@@ -78,9 +61,6 @@ define amdgpu_kernel void @sdiv25_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 
 ; FUNC-LABEL: {{^}}test_no_sdiv24_i32_1:
 ; SI-NOT: v_cvt_f32_i32
-
-; EG-NOT: INT_TO_FLT
-; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @test_no_sdiv24_i32_1(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
   %num = load i32, ptr addrspace(1) %in, align 4
@@ -96,9 +76,6 @@ define amdgpu_kernel void @test_no_sdiv24_i32_1(ptr addrspace(1) %out, ptr addrs
 
 ; FUNC-LABEL: {{^}}test_no_sdiv24_i32_2:
 ; SI-NOT: v_cvt_f32_i32
-
-; EG-NOT: INT_TO_FLT
-; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @test_no_sdiv24_i32_2(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
   %num = load i32, ptr addrspace(1) %in, align 4
@@ -117,11 +94,6 @@ define amdgpu_kernel void @test_no_sdiv24_i32_2(ptr addrspace(1) %out, ptr addrs
 ; SI: v_cvt_f32_i32
 ; SI: v_rcp_f32
 ; SI: v_cvt_i32_f32
-
-; EG: INT_TO_FLT
-; EG-DAG: INT_TO_FLT
-; EG-DAG: RECIP_IEEE
-; EG: FLT_TO_INT
 define amdgpu_kernel void @srem24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i8, ptr addrspace(1) %in, i8 1
   %num = load i8, ptr addrspace(1) %in
@@ -136,11 +108,6 @@ define amdgpu_kernel void @srem24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; SI: v_cvt_f32_i32
 ; SI: v_rcp_f32
 ; SI: v_cvt_i32_f32
-
-; EG: INT_TO_FLT
-; EG-DAG: INT_TO_FLT
-; EG-DAG: RECIP_IEEE
-; EG: FLT_TO_INT
 define amdgpu_kernel void @srem24_i16(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i16, ptr addrspace(1) %in, i16 1
   %num = load i16, ptr addrspace(1) %in, align 2
@@ -152,9 +119,6 @@ define amdgpu_kernel void @srem24_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 
 ; FUNC-LABEL: {{^}}srem24_i32:
 ; SI-NOT: v_cvt_i32_f32
-
-; EG-NOT: INT_TO_FLT
-; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @srem24_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
   %num = load i32, ptr addrspace(1) %in, align 4
@@ -170,9 +134,6 @@ define amdgpu_kernel void @srem24_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 
 ; FUNC-LABEL: {{^}}no_srem25_i32:
 ; SI-NOT: v_cvt_f32_i32
-
-; EG-NOT: INT_TO_FLT
-; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @no_srem25_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
   %num = load i32, ptr addrspace(1) %in, align 4
@@ -188,9 +149,6 @@ define amdgpu_kernel void @no_srem25_i32(ptr addrspace(1) %out, ptr addrspace(1)
 
 ; FUNC-LABEL: {{^}}no_sdiv25_i24_i25_i32:
 ; SI-NOT: v_cvt_f32_i32
-
-; EG-NOT: INT_TO_FLT
-; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @no_sdiv25_i24_i25_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
   %num = load i32, ptr addrspace(1) %in, align 4
@@ -206,9 +164,6 @@ define amdgpu_kernel void @no_sdiv25_i24_i25_i32(ptr addrspace(1) %out, ptr addr
 
 ; FUNC-LABEL: {{^}}no_sdiv25_i25_i24_i32:
 ; SI-NOT: v_cvt_f32_i32
-
-; EG-NOT: INT_TO_FLT
-; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @no_sdiv25_i25_i24_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
   %num = load i32, ptr addrspace(1) %in, align 4
@@ -224,9 +179,6 @@ define amdgpu_kernel void @no_sdiv25_i25_i24_i32(ptr addrspace(1) %out, ptr addr
 
 ; FUNC-LABEL: {{^}}no_srem25_i24_i25_i32:
 ; SI-NOT: v_cvt_f32_i32
-
-; EG-NOT: INT_TO_FLT
-; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @no_srem25_i24_i25_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
   %num = load i32, ptr addrspace(1) %in, align 4
@@ -242,9 +194,6 @@ define amdgpu_kernel void @no_srem25_i24_i25_i32(ptr addrspace(1) %out, ptr addr
 
 ; FUNC-LABEL: {{^}}no_srem25_i25_i24_i32:
 ; SI-NOT: v_cvt_f32_i32
-
-; EG-NOT: INT_TO_FLT
-; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @no_srem25_i25_i24_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
   %num = load i32, ptr addrspace(1) %in, align 4
@@ -260,9 +209,6 @@ define amdgpu_kernel void @no_srem25_i25_i24_i32(ptr addrspace(1) %out, ptr addr
 
 ; FUNC-LABEL: {{^}}srem25_i24_i11_i32:
 ; SI-NOT: v_cvt_f32_i32
-
-; EG-NOT: INT_TO_FLT
-; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @srem25_i24_i11_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
   %num = load i32, ptr addrspace(1) %in, align 4
@@ -278,9 +224,6 @@ define amdgpu_kernel void @srem25_i24_i11_i32(ptr addrspace(1) %out, ptr addrspa
 
 ; FUNC-LABEL: {{^}}srem25_i11_i24_i32:
 ; SI-NOT: v_cvt_f32_i32
-
-; EG-NOT: INT_TO_FLT
-; EG-NOT: RECIP_IEEE
 define amdgpu_kernel void @srem25_i11_i24_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
   %num = load i32, ptr addrspace(1) %in, align 4
@@ -297,9 +240,6 @@ define amdgpu_kernel void @srem25_i11_i24_i32(ptr addrspace(1) %out, ptr addrspa
 ; FUNC-LABEL: {{^}}srem25_i17_i12_i32:
 ; SI: v_cvt_f32_i32
 ; SI: v_rcp_f32
-
-; EG: INT_TO_FLT
-; EG: RECIP_IEEE
 define amdgpu_kernel void @srem25_i17_i12_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
   %den_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
   %num = load i32, ptr addrspace(1) %in, align 4

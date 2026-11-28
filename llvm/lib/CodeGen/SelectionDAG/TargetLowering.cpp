@@ -14046,6 +14046,20 @@ void TargetLowering::expandVectorInterleave(SDNode *Node,
   unsigned Factor = Node->getNumOperands();
   SDLoc DL(Node);
 
+  // Convert interleave of two lane operands to paired shuffles
+  if (VT.isFixedLengthVector() && VT.getVectorNumElements() == 2) {
+    for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx) {
+      unsigned FirstEltIdx = 2 * ResultIdx;
+      int FirstMaskIdx = FirstEltIdx / Factor;
+      int SecondMaskIdx = (FirstEltIdx + 1) / Factor + 2;
+      Results.push_back(
+          DAG.getVectorShuffle(VT, DL, Node->getOperand(FirstEltIdx % Factor),
+                               Node->getOperand((FirstEltIdx + 1) % Factor),
+                               {FirstMaskIdx, SecondMaskIdx}));
+    }
+    return;
+  }
+
   if (Factor > 2 && Factor % 2 == 0) {
     SmallVector<EVT> HalfVTs(Factor / 2, VT);
     SmallVector<SDValue, 8> LOps, ROps;
@@ -14104,6 +14118,19 @@ void TargetLowering::expandVectorDeinterleave(SDNode *Node,
   EVT VT = Node->getValueType(0);
   unsigned Factor = Node->getNumOperands();
   SDLoc DL(Node);
+
+  // Convert deinterleave of two lane operands to paired shuffles
+  if (VT.isFixedLengthVector() && VT.getVectorNumElements() == 2) {
+    for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx) {
+      int FirstMaskIdx = ResultIdx % 2;
+      int SecondMaskIdx = (ResultIdx + Factor) % 2 + 2;
+      Results.push_back(
+          DAG.getVectorShuffle(VT, DL, Node->getOperand(ResultIdx / 2),
+                               Node->getOperand((ResultIdx + Factor) / 2),
+                               {FirstMaskIdx, SecondMaskIdx}));
+    }
+    return;
+  }
 
   if (Factor > 2 && Factor % 2 == 0) {
     SmallVector<SDValue, 8> Ops(Node->ops());
@@ -14240,51 +14267,10 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
 
   Align Alignment = DAG.getReducedAlign(VecVT, /*UseABI=*/false);
   SDValue StackPtr = DAG.CreateStackTemporary(VecVT.getStoreSize(), Alignment);
-  int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
-  MachinePointerInfo PtrInfo =
-      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
 
   MVT PositionVT = getVectorIdxTy(DAG.getDataLayout());
   SDValue Chain = DAG.getEntryNode();
   SDValue OutPos = DAG.getConstant(0, DL, PositionVT);
-
-  bool HasPassthru = !Passthru.isUndef();
-
-  // If we have a passthru vector, store it on the stack, overwrite the matching
-  // positions and then re-write the last element that was potentially
-  // overwritten even though mask[i] = false.
-  if (HasPassthru)
-    Chain = DAG.getStore(Chain, DL, Passthru, StackPtr, PtrInfo, Alignment);
-
-  SDValue LastWriteVal;
-  APInt PassthruSplatVal;
-  bool IsSplatPassthru = ISD::isConstantSplatVector(Passthru, PassthruSplatVal);
-
-  if (IsSplatPassthru) {
-    // As we do not know which position we wrote to last, we cannot simply
-    // access that index from the passthru vector. So we first check if passthru
-    // is a splat vector, to use any element ...
-    LastWriteVal = DAG.getConstant(PassthruSplatVal, DL, ScalarVT);
-  } else if (HasPassthru) {
-    // ... if it is not a splat vector, we need to get the passthru value at
-    // position = popcount(mask) and re-load it from the stack before it is
-    // overwritten in the loop below.
-    EVT PopcountVT = ScalarVT.changeTypeToInteger();
-    SDValue Popcount = DAG.getNode(
-        ISD::TRUNCATE, DL,
-        MaskVT.changeVectorElementType(*DAG.getContext(), MVT::i1), Mask);
-    Popcount = DAG.getNode(
-        ISD::ZERO_EXTEND, DL,
-        MaskVT.changeVectorElementType(*DAG.getContext(), PopcountVT),
-        Popcount);
-    Popcount = DAG.getNode(ISD::VECREDUCE_ADD, DL, PopcountVT, Popcount);
-    SDValue LastElmtPtr =
-        getVectorElementPointer(DAG, StackPtr, VecVT, Popcount);
-    LastWriteVal = DAG.getLoad(
-        ScalarVT, DL, Chain, LastElmtPtr,
-        MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
-    Chain = LastWriteVal.getValue(1);
-  }
 
   unsigned NumElms = VecVT.getVectorNumElements();
   for (unsigned I = 0; I < NumElms; I++) {
@@ -14302,26 +14288,30 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
     MaskI = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, MaskI);
     MaskI = DAG.getNode(ISD::ZERO_EXTEND, DL, PositionVT, MaskI);
     OutPos = DAG.getNode(ISD::ADD, DL, PositionVT, OutPos, MaskI);
-
-    if (HasPassthru && I == NumElms - 1) {
-      SDValue EndOfVector =
-          DAG.getConstant(VecVT.getVectorNumElements() - 1, DL, PositionVT);
-      SDValue AllLanesSelected =
-          DAG.getSetCC(DL, MVT::i1, OutPos, EndOfVector, ISD::CondCode::SETUGT);
-      OutPos = DAG.getNode(ISD::UMIN, DL, PositionVT, OutPos, EndOfVector);
-      OutPtr = getVectorElementPointer(DAG, StackPtr, VecVT, OutPos);
-
-      // Re-write the last ValI if all lanes were selected. Otherwise,
-      // overwrite the last write it with the passthru value.
-      LastWriteVal = DAG.getSelect(DL, ScalarVT, AllLanesSelected, ValI,
-                                   LastWriteVal, SDNodeFlags::Unpredictable);
-      Chain = DAG.getStore(
-          Chain, DL, LastWriteVal, OutPtr,
-          MachinePointerInfo::getUnknownStack(DAG.getMachineFunction()));
-    }
   }
 
-  return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo, Alignment);
+  int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+  MachinePointerInfo PtrInfo =
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI);
+
+  SDValue Load = DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo, Alignment);
+  if (Passthru.isUndef())
+    return Load;
+
+  EVT PopcountVT = ScalarVT.changeTypeToInteger();
+  SDValue Popcount = DAG.getNode(
+      ISD::TRUNCATE, DL,
+      MaskVT.changeVectorElementType(*DAG.getContext(), MVT::i1), Mask);
+  Popcount = DAG.getNode(
+      ISD::ZERO_EXTEND, DL,
+      MaskVT.changeVectorElementType(*DAG.getContext(), PopcountVT), Popcount);
+  Popcount = DAG.getNode(ISD::VECREDUCE_ADD, DL, PopcountVT, Popcount);
+
+  SDValue Zero = DAG.getConstant(0, DL, PopcountVT);
+  SDValue CompressedMask =
+      DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, MaskVT, Zero, Popcount);
+
+  return DAG.getSelect(DL, VecVT, CompressedMask, Load, Passthru);
 }
 
 SDValue TargetLowering::expandVECTOR_SHUFFLE_VAR(SDNode *Node,

@@ -203,6 +203,12 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare double @ceil(double)\n"
       "declare float @ceilf(float)\n"
       "declare x86_fp80 @ceill(x86_fp80)\n"
+      "declare ptr "
+      "@_Z13heap_allocateP7TimeoutU19__sealed_"
+      "capabilityP24AllocatorCapabilityStatejj(ptr, ptr, i64, i32)\n"
+      "declare i32 "
+      "@_Z9heap_freeU19__sealed_capabilityP24AllocatorCapabilityStatePv(ptr, "
+      "ptr)\n"
       "declare i32 @chown(ptr, i32, i32)\n"
       "declare void @clearerr(ptr)\n"
       "declare double @copysign(double, double)\n"
@@ -875,45 +881,27 @@ TEST_F(TLITestAarch64, TestFrem) {
 
 namespace {
 
-TEST(VecDescTest, GetCallingConvAbsent) {
-  VecDesc VD("sin", "__svml_sin2", ElementCount::getFixed(2), false,
-             "_ZGV_LLVM_N2v", std::nullopt);
-  EXPECT_FALSE(VD.getCallingConv().has_value());
-}
-
-TEST(VecDescTest, GetCallingConvC) {
-  VecDesc VD("sin", "__svml_sin2", ElementCount::getFixed(2), false,
-             "_ZGV_LLVM_N2v", CallingConv::C);
-  ASSERT_TRUE(VD.getCallingConv().has_value());
-  EXPECT_EQ(VD.getCallingConv().value(), CallingConv::C);
-}
-
-TEST(VecDescTest, GetCallingConvAArch64VectorCall) {
-  VecDesc VD("acos", "armpl_vacosq_f64", ElementCount::getFixed(2), false,
-             "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall);
-  ASSERT_TRUE(VD.getCallingConv().has_value());
-  EXPECT_EQ(VD.getCallingConv().value(), CallingConv::AArch64_VectorCall);
-}
-
-static_assert(std::is_trivially_destructible_v<VecDesc>,
-              "VecDesc must not require dynamic static initialization");
-static_assert(std::is_trivially_copyable_v<VecDesc>,
-              "VecDesc static tables must be constexpr-friendly");
-
 TEST(VecDescTest, ConstexprStaticTable) {
-  static constexpr VecDesc Table[] = {
-      {"ceilf", "vceilf", ElementCount::getFixed(4), false, "_ZGV_LLVM_N4v",
-       std::nullopt},
-      {"sin", "__svml_sin2", ElementCount::getFixed(2), false, "_ZGV_LLVM_N2v",
-       CallingConv::C},
-      {"acos", "armpl_vacosq_f64", ElementCount::getFixed(2), false,
-       "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall},
+  constexpr EnumStringDef<VecDescData, 3> Defs[] = {
+      {{"ceilf", "vceilf", "_ZGV_LLVM_N4v"},
+       {ElementCount::getFixed(4), false, std::nullopt}},
+      {{"sin", "__svml_sin2", "_ZGV_LLVM_N2v"},
+       {ElementCount::getFixed(2), false, CallingConv::C}},
+      {{"acos", "armpl_vacosq_f64", "_ZGV_LLVM_N2v"},
+       {ElementCount::getFixed(2), false, CallingConv::AArch64_VectorCall}},
   };
-  EXPECT_FALSE(Table[0].getCallingConv().has_value());
-  ASSERT_TRUE(Table[1].getCallingConv().has_value());
-  EXPECT_EQ(Table[1].getCallingConv().value(), CallingConv::C);
-  ASSERT_TRUE(Table[2].getCallingConv().has_value());
-  EXPECT_EQ(Table[2].getCallingConv().value(), CallingConv::AArch64_VectorCall);
+  constexpr auto Table = BUILD_ENUM_STRINGS(Defs);
+  VecDesc Desc0(Table[0]);
+  EXPECT_EQ(Desc0.getScalarFnName(), "ceilf");
+  EXPECT_FALSE(Desc0.getCallingConv().has_value());
+  VecDesc Desc1(Table[1]);
+  EXPECT_EQ(Desc1.getScalarFnName(), "sin");
+  ASSERT_TRUE(Desc1.getCallingConv().has_value());
+  EXPECT_EQ(Desc1.getCallingConv().value(), CallingConv::C);
+  VecDesc Desc2(Table[2]);
+  EXPECT_EQ(Desc2.getScalarFnName(), "acos");
+  ASSERT_TRUE(Desc2.getCallingConv().has_value());
+  EXPECT_EQ(Desc2.getCallingConv().value(), CallingConv::AArch64_VectorCall);
 }
 
 } // namespace

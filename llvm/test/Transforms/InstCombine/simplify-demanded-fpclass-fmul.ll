@@ -1521,5 +1521,30 @@ define nofpclass(snan) float @qnan_result_demands_snan_rhs(i1 %cond, float %unkn
   ret float %mul
 }
 
+define i1 @is_subnormal_fmul_widened_half(half %x) {
+; CHECK-LABEL: define i1 @is_subnormal_fmul_widened_half(
+; CHECK-SAME: half [[X:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %wide = fpext half %x to float
+  %mul = fmul float %wide, f0xBFB8AA3B ; -log2(e)
+  %sub = call i1 @llvm.is.fpclass.f32(float %mul, i32 144)
+  ret i1 %sub
+}
+
+define i1 @is_subnormal_fmul_widened_bfloat(bfloat %x) {
+; CHECK-LABEL: define i1 @is_subnormal_fmul_widened_bfloat(
+; CHECK-SAME: bfloat [[X:%.*]]) {
+; CHECK-NEXT:    [[WIDE:%.*]] = fpext bfloat [[X]] to float
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[WIDE]], f0xBFB8AA3B
+; CHECK-NEXT:    [[SUB:%.*]] = call i1 @llvm.is.fpclass.f32(float [[MUL]], /* (sub) */ i32 144)
+; CHECK-NEXT:    ret i1 [[SUB]]
+;
+  %wide = fpext bfloat %x to float
+  %mul = fmul float %wide, f0xBFB8AA3B ; -log2(e)
+  %sub = call i1 @llvm.is.fpclass.f32(float %mul, i32 144)
+  ret i1 %sub
+}
+
 attributes #0 = { denormal_fpenv(preservesign) }
 attributes #1 = { denormal_fpenv(dynamic) }

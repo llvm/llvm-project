@@ -121,9 +121,9 @@ define <2 x i64> @load_4xi16_sext(ptr %p) {
 define <2 x i64> @load_2xi32_sext(ptr %p) {
 ; LA32-LABEL: load_2xi32_sext:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a1, $a0, 4
 ; LA32-NEXT:    fld.s $fa0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 1
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vsllwil.d.w $vr0, $vr0, 0
 ; LA32-NEXT:    ret
 ;

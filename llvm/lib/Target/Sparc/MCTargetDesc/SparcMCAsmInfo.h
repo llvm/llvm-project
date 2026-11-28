@@ -25,9 +25,6 @@ class SparcELFMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit SparcELFMCAsmInfo(const Triple &TheTriple,
                              const MCTargetOptions &Options);
-
-  void printSpecifierExpr(raw_ostream &OS,
-                          const MCSpecifierExpr &Expr) const override;
 };
 
 namespace Sparc {

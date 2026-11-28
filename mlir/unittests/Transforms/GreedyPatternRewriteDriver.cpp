@@ -214,6 +214,45 @@ TEST_F(GreedyDeadnessTest, MoveEffectBetweenRegions) {
   EXPECT_EQ(&target->getRegion(0).front().front(), write);
 }
 
+TEST_F(GreedyDeadnessTest, InPlaceUpdateOfNestedIR) {
+  // The first query caches `inner` as dead while the sibling write keeps
+  // `outer` live. Changing the outer block argument's type makes the nested
+  // consumer write. Invalidating only `outer` and its ancestors would leave
+  // `inner` cached as dead and allow the driver to erase the live `outer`.
+  test::TestTokenAnyTypeOp::attachInterface<WriteToMemRef>(context);
+  auto moduleOp = parseSourceString<ModuleOp>(R"mlir(
+    %outer = "test.one_region_with_recursive_memory_effects"() ({
+    ^bb0(%arg: tensor<4xi32>):
+      %inner = "test.one_region_with_recursive_memory_effects"() ({
+        "test.token.any_type"(%arg) : (tensor<4xi32>) -> ()
+        "test.return"() : () -> ()
+      }) : () -> i32
+      %keep = "test.side_effect_op"() {effects = [{effect = "write"}]} : () -> i32
+      "test.return"() : () -> ()
+    }) : () -> i32
+  )mlir",
+                                              &context);
+  ASSERT_TRUE(moduleOp);
+  Operation *outer = &moduleOp->getBody()->front();
+  Operation *inner = &outer->getRegion(0).front().front();
+  Operation *nested = &inner->getRegion(0).front().front();
+  Operation *write = inner->getNextNode();
+  run(*moduleOp, [&](PatternRewriter &rewriter) {
+    rewriter.eraseOp(write);
+    // Modify the owner's block argument, rather than directly changing a
+    // nested op's attributes without notifying the rewriter about that op.
+    rewriter.modifyOpInPlace(outer, [&] {
+      outer->getRegion(0).front().getArgument(0).setType(
+          MemRefType::get({4}, rewriter.getI32Type()));
+    });
+  });
+  // The nested write is live, so nothing may be deleted.
+  ASSERT_FALSE(moduleOp->getBody()->empty());
+  ASSERT_EQ(&moduleOp->getBody()->front(), outer);
+  ASSERT_EQ(&outer->getRegion(0).front().front(), inner);
+  EXPECT_EQ(&inner->getRegion(0).front().front(), nested);
+}
+
 TEST_F(GreedyDeadnessTest, MoveBlocksBetweenRegions) {
   // Moving whole blocks must update the effects of both enclosing operations,
   // just as moving a write does. Keep the new owner of the live block and

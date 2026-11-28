@@ -4234,6 +4234,20 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan,
                   }) &&
            "all members in group must agree on IsSingleScalar");
 
+    // The address is used for the lanes of all loads in the group, so only
+    // keep flags valid for all their addresses.
+    if (auto *AddrR =
+            dyn_cast<VPRecipeWithIRFlags>(EarliestLoad->getOperand(0))) {
+      for (VPReplicateRecipe *Load : drop_begin(Group)) {
+        auto *OtherR = dyn_cast<VPRecipeWithIRFlags>(Load->getOperand(0));
+        if (OtherR && OtherR->getVPRecipeID() == AddrR->getVPRecipeID() &&
+            vputils::getOpcode(OtherR) == vputils::getOpcode(AddrR))
+          AddrR->intersectFlags(*OtherR);
+        else
+          AddrR->dropPoisonGeneratingFlags();
+      }
+    }
+
     // Create an unpredicated version of the earliest load with common
     // metadata.
     auto *UnpredicatedLoad = new VPReplicateRecipe(

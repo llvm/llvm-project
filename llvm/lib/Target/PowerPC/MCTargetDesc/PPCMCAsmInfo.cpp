@@ -174,7 +174,7 @@ static bool evaluateAsRelocatable(const MCSpecifierExpr &Expr, MCValue &Res,
 
 PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple &T,
                                  const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(T, Options) {
   // FIXME: This is not always needed. For example, it is not needed in the
   // v2 abi.
   NeedsLocalForSize = true;
@@ -190,9 +190,6 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple &T,
 
   CommentString = "#";
 
-  // Uses '.section' before '.bss' directive
-  UsesELFSectionDirectiveForBSS = true;
-
   // Debug Information
   SupportsDebugInformation = true;
 
@@ -207,18 +204,13 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple &T,
   LCOMMDirectiveAlignmentType = LCOMM::ByteAlignment;
 
   initializeAtSpecifiers(elfAtSpecifiers);
-}
 
-void PPCELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                         const MCSpecifierExpr &Expr) const {
-  printExpr(OS, *Expr.getSubExpr());
-  OS << '@' << getSpecifierName(Expr.getSpecifier());
-}
-
-bool PPCELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
-                                                MCValue &Res,
-                                                const MCAssembler *Asm) const {
-  return evaluateAsRelocatable(Expr, Res, Asm);
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    OS << '@' << MAI.getSpecifierName(Expr.getSpecifier());
+  };
+  SpecifierExprEvaluateFn = evaluateAsRelocatable;
 }
 
 PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T,
@@ -243,15 +235,11 @@ PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T,
   UsesSetToEquateSymbol = true;
 
   initializeAtSpecifiers(xcoffAtSpecifiers);
-}
 
-void PPCXCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                           const MCSpecifierExpr &Expr) const {
-  printExpr(OS, *Expr.getSubExpr());
-  OS << '@' << getSpecifierName(Expr.getSpecifier());
-}
-
-bool PPCXCOFFMCAsmInfo::evaluateAsRelocatableImpl(
-    const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
-  return evaluateAsRelocatable(Expr, Res, Asm);
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    OS << '@' << MAI.getSpecifierName(Expr.getSpecifier());
+  };
+  SpecifierExprEvaluateFn = evaluateAsRelocatable;
 }

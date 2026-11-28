@@ -2666,6 +2666,11 @@ StringMap<bool> sys::getHostCPUFeatures() {
     VLen *= 8;
     std::string ZvlFeature = (Twine("zvl") + Twine(VLen) + "b").str();
     Features[ZvlFeature] = true;
+  } else {
+    // The host CPU name may imply a Zvl*b even though vector is unavailable
+    // (e.g. if the kernel has V disabled). Disabling zvl32b also disables
+    // every larger Zvl*b, as they all imply it.
+    Features["zvl32b"] = false;
   }
 
   return Features;

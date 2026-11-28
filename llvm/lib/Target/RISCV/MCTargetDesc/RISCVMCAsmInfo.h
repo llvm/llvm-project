@@ -26,9 +26,6 @@ class RISCVMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit RISCVMCAsmInfo(const Triple &TargetTriple,
                           const MCTargetOptions &Options);
-
-  void printSpecifierExpr(raw_ostream &OS,
-                          const MCSpecifierExpr &Expr) const override;
 };
 
 namespace RISCV {
@@ -57,8 +54,6 @@ StringRef getSpecifierName(Specifier Kind);
 class RISCVMCAsmInfoDarwin : public MCAsmInfoDarwin {
 public:
   explicit RISCVMCAsmInfoDarwin(const MCTargetOptions &Options);
-  void printSpecifierExpr(raw_ostream &OS,
-                          const MCSpecifierExpr &Expr) const override;
 };
 
 } // namespace llvm

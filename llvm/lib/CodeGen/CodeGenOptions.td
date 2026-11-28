@@ -262,6 +262,59 @@ defm : BoolField<"outliner-leaf-descendants", "true",
 // TODO: Remove the old spelling after 2027-05.
 def : AliasOf<"disable-global-outlining", "global-outlining=false">;
 
+// MachinePipeliner.cpp
+defm : BoolField<"pipeliner-annotate-for-testing", "false",
+  "Instead of emitting the pipelined code, annotate instructions with the generated schedule for feeding into the -modulo-schedule-test pass">;
+let Condition = AssertsOnly in
+defm : BoolField<"pipeliner-dbg-res", "false", "">;
+// A command line option to enable the CopyToPhi DAG mutation.
+defm : BoolField<"pipeliner-enable-copytophi", "true",
+  "Enable CopyToPhi DAG Mutation">;
+defm : BoolField<"pipeliner-experimental-cg", "false",
+  "Use the experimental peeling code generator for software pipelining">;
+// A command line argument to force pipeliner to use specified initial interval.
+defm : ValueField<"pipeliner-force-ii", "int", "-1",
+  "Force pipeliner to use specified II">;
+// A command line argument to force pipeliner to use specified issue width.
+defm : ValueField<"pipeliner-force-issue-width", "int", "-1",
+  "Force pipeliner to use specified issue width">;
+defm : BoolField<"pipeliner-ignore-recmii", "false",
+  "Ignore RecMII">;
+defm : ValueField<"pipeliner-ii-search-range", "int", "10",
+  "Range to search for II">;
+let Condition = AssertsOnly in
+defm : ValueField<"pipeliner-max", "int", "-1", "">;
+// A command line argument to limit minimum initial interval for pipelining.
+defm : ValueField<"pipeliner-max-mii", "int", "27",
+  "Size limit for the MII">;
+// A command line argument to limit the number of store instructions in the
+// target basic block.
+defm : ValueField<"pipeliner-max-num-stores", "unsigned", "200",
+  "Maximum number of stores allwed in the target loop">;
+// A command line argument to limit the number of stages in the pipeline.
+defm : ValueField<"pipeliner-max-stages", "int", "3",
+  "Maximum stages allowed in the generated scheduled">;
+defm : BoolField<"pipeliner-mve-cg", "false",
+  "Use the MVE code generator for software pipelining">;
+defm : BoolField<"pipeliner-opt-size", "false",
+  "Enable SWP at Os">;
+// A command line option to disable the pruning of chain dependences due to an
+// unrelated Phi.
+defm : BoolField<"pipeliner-prune-deps", "true",
+  "Prune dependences between unrelated Phi nodes">;
+defm : OptionalBoolField<"pipeliner-register-pressure",
+  "Limit register pressure of scheduled loop">;
+defm : ValueField<"pipeliner-register-pressure-margin", "int", "5",
+  "Margin representing the unused percentage of the register pressure limit">;
+let Condition = AssertsOnly in
+defm : BoolField<"pipeliner-show-mask", "false", "">;
+// A command line argument to set the window scheduling option.
+defm : EnumField<"window-sched", "WindowSchedulingFlag", "", "off,on,force",
+  ["WindowSchedulingFlag::Off", "WindowSchedulingFlag::On", "WindowSchedulingFlag::Force"],
+  "Set how to use window scheduling algorithm">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"enable-pipeliner-opt-size", "pipeliner-opt-size">;
+
 // MachineScheduler.cpp
 defm : OptionalBoolField<"enable-misched",
   "Enable the machine instruction scheduling pass">;
@@ -349,6 +402,10 @@ defm : BoolField<"sink-insts-to-avoid-spills", "false",
 // MacroFusion.cpp
 defm : BoolField<"misched-fusion", "true",
   "Enable scheduling for macro fusion">;
+
+// ModuloSchedule.cpp
+defm : BoolField<"pipeliner-swap-branch-targets-mve", "false",
+  "Swap target blocks of a conditional branch for MVE expander">;
 
 // PHIElimination.cpp
 defm : BoolField<"phi-elim-edge-splitting", "true",
@@ -707,3 +764,17 @@ defm : BoolField<"win-eh-prepare-cleanups", "true",
   "Remove implausible terminators and do other similar cleanups">;
 defm : BoolField<"win-eh-prepare-demotion", "true",
   "Demote cross scopes after cloning multicolor basic blocks">;
+
+// WindowScheduler.cpp
+defm : ValueField<"window-diff-limit", "unsigned", "2",
+  "The lower limit of the difference between best II and base II in the window algorithm. If the difference is smaller than this lower limit, window scheduling will not be performed">;
+defm : ValueField<"window-ii-coeff", "unsigned", "5",
+  "The coefficient used when initializing II in the window algorithm">;
+defm : ValueField<"window-ii-limit", "unsigned", "1000",
+  "The upper limit of II in the window algorithm">;
+defm : ValueField<"window-region-limit", "unsigned", "3",
+  "The lower limit of the scheduling region in the window algorithm">;
+defm : ValueField<"window-search-num", "unsigned", "6",
+  "The number of searches per loop in the window algorithm. 0 means no search number limit">;
+defm : ValueField<"window-search-ratio", "unsigned", "40",
+  "The ratio of searches per loop in the window algorithm. 100 means search all positions in the loop, while 0 means not performing any search">;

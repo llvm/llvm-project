@@ -38,7 +38,7 @@ void HexagonMCAsmInfo::anchor() {}
 
 HexagonMCAsmInfo::HexagonMCAsmInfo(const Triple &TT,
                                    const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TT, Options) {
   Data16bitsDirective = "\t.half\t";
   Data32bitsDirective = "\t.word\t";
   Data64bitsDirective = nullptr;  // .xword is only supported by V9.
@@ -53,7 +53,6 @@ HexagonMCAsmInfo::HexagonMCAsmInfo(const Triple &TT,
   AscizDirective = "\t.string\t";
 
   MinInstAlignment = 4;
-  UsesELFSectionDirectiveForBSS  = true;
   UseLogicalShr = false;
 
   initializeAtSpecifiers(atSpecifiers);
