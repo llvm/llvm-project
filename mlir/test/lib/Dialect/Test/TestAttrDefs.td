@@ -247,6 +247,44 @@ def TestAttrWithOptionalUnsigned : Test_SyntaxAttr<"TestAttrWithOptionalUnsigned
   let mnemonic = "attr_with_optional_unsigned";
 }
 
+def TestAttrWithInt8Params : Test_SyntaxAttr<"TestAttrWithInt8Params"> {
+  let parameters = (ins "uint8_t":$unsigned8, "int8_t":$signed8);
+  let assemblyFormat = "`<` $unsigned8 `,` $signed8 `>`";
+  let mnemonic = "attr_with_int8_params";
+}
+
+// Test that plain `char` parameters print as bare keywords or quoted strings,
+// not as integers (unlike uint8_t/int8_t which are widened numerically).
+def TestAttrWithCharParam : Test_SyntaxAttr<"TestAttrWithCharParam"> {
+  let parameters = (ins "char":$value);
+  let assemblyFormat = "`<` $value `>`";
+  let mnemonic = "attr_with_char_param";
+}
+
+def TestAttrWithOptionalChar : Test_SyntaxAttr<"TestAttrWithOptionalChar"> {
+  let parameters = (ins OptionalParameter<"std::optional<char>">:$value);
+  let assemblyFormat = "`<` $value `>`";
+  let mnemonic = "attr_with_optional_char";
+}
+
+def TestAttrWithOptionalUInt8 : Test_SyntaxAttr<"TestAttrWithOptionalUInt8"> {
+  let parameters = (ins OptionalParameter<"std::optional<uint8_t>">:$value);
+  let assemblyFormat = "`<` $value `>`";
+  let mnemonic = "attr_with_optional_uint8";
+}
+
+def TestAttrWithUInt8Array : Test_SyntaxAttr<"TestAttrWithUInt8Array"> {
+  let parameters = (ins ArrayRefParameter<"uint8_t">:$values);
+  let assemblyFormat = "`<` `[` $values `]` `>`";
+  let mnemonic = "attr_with_uint8_array";
+}
+
+def TestAttrWithCharArray : Test_SyntaxAttr<"TestAttrWithCharArray"> {
+  let parameters = (ins ArrayRefParameter<"char">:$values);
+  let assemblyFormat = "`<` `[` $values `]` `>`";
+  let mnemonic = "attr_with_char_array";
+}
+
 def TestAttrWithOptionalEnum : Test_SyntaxAttr<"TestAttrWithOptionalEnum"> {
   let parameters = (ins OptionalParameter<"std::optional<SimpleEnum>">:$value);
   let assemblyFormat = "`<` $value `>`";
