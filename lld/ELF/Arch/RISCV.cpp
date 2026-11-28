@@ -12,6 +12,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/RISCVAttributeParser.h"
@@ -27,6 +28,10 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
+struct PCRelRelax {
+  size_t hi;
+  SmallVector<size_t, 1> lo;
+};
 
 class RISCV final : public TargetInfo {
 public:
@@ -59,6 +64,8 @@ public:
   bool synthesizeAlignAux(uint64_t &dot, InputSection *sec);
   bool synthesizeAlign(uint64_t &dot, InputSection *sec) override;
   void finalizeRelax(int passes) const override;
+
+  mutable DenseMap<const InputSection *, SmallVector<PCRelRelax, 0>> pcrelRelax;
 
   // The following two variables are used by synthesized ALIGN relocations.
   InputSection *baseSec = nullptr;
@@ -641,7 +648,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   case INTERNAL_R_RISCV_X0REL_I:
   case INTERNAL_R_RISCV_X0REL_S: {
-    checkInt(ctx, loc, val, 12, rel);
+    checkInt(ctx, loc, SignExtend64(val, bits), 12, rel);
     uint32_t insn = (read32le(loc) & ~(31 << 15)) | (X_X0 << 15);
     if (rel.type == INTERNAL_R_RISCV_X0REL_I)
       insn = setLO12_I(insn, val);
@@ -989,34 +996,22 @@ static void relaxTlsLe(Ctx &ctx, const InputSection &sec, size_t i,
   }
 }
 
-static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
-                          uint64_t loc, Relocation &r, uint32_t &remove) {
-
-  // Fold into use of x0+offset
-  if (isInt<12>(r.sym->getVA(ctx, r.addend))) {
-    switch (r.type) {
-    case R_RISCV_HI20:
-      // Remove lui rd, %hi20(x).
-      sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
-      remove = 4;
-      break;
-    case R_RISCV_LO12_I:
-      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_X0REL_I;
-      break;
-    case R_RISCV_LO12_S:
-      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_X0REL_S;
-      break;
-    }
-    return;
-  }
-
+static RelType getAddressRelaxType(Ctx &ctx, uint64_t addr, bool isStore) {
+  const unsigned bits = ctx.arg.wordsize * 8;
+  if (isInt<12>(SignExtend64(addr, bits)))
+    return isStore ? INTERNAL_R_RISCV_X0REL_S : INTERNAL_R_RISCV_X0REL_I;
   const Defined *gp = ctx.sym.riscvGlobalPointer;
-  if (!gp)
-    return;
+  if (gp && isInt<12>(SignExtend64(addr - gp->getVA(ctx), bits)))
+    return isStore ? INTERNAL_R_RISCV_GPREL_S : INTERNAL_R_RISCV_GPREL_I;
+  return R_RISCV_NONE;
+}
 
-  if (!isInt<12>(r.sym->getVA(ctx, r.addend) - gp->getVA(ctx)))
+static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
+                          Relocation &r, uint32_t &remove) {
+  RelType type = getAddressRelaxType(ctx, r.sym->getVA(ctx, r.addend),
+                                     r.type == R_RISCV_LO12_S);
+  if (type == R_RISCV_NONE)
     return;
-
   switch (r.type) {
   case R_RISCV_HI20:
     // Remove lui rd, %hi20(x).
@@ -1024,15 +1019,65 @@ static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
     remove = 4;
     break;
   case R_RISCV_LO12_I:
-    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_GPREL_I;
-    break;
   case R_RISCV_LO12_S:
-    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_GPREL_S;
+    sec.relaxAux->relocTypes[i] = type;
     break;
   }
 }
 
-static bool relax(Ctx &ctx, int pass, InputSection &sec) {
+static SmallVector<PCRelRelax, 0> findPCRelRelax(const InputSection &sec) {
+  ArrayRef<Relocation> relocs = sec.relocs();
+  SmallVector<PCRelRelax, 0> groups;
+  DenseMap<uint64_t, size_t> hiToGroup;
+  for (auto [i, r] : llvm::enumerate(relocs))
+    if (r.type == R_RISCV_PCREL_HI20 && relaxable(relocs, i)) {
+      hiToGroup[r.offset] = groups.size();
+      groups.push_back({i, {}});
+    }
+
+  for (auto [i, r] : llvm::enumerate(relocs)) {
+    if (r.type != R_RISCV_PCREL_LO12_I && r.type != R_RISCV_PCREL_LO12_S)
+      continue;
+    auto *d = dyn_cast<Defined>(r.sym);
+    if (!d || d->section != &sec)
+      continue;
+    auto it = hiToGroup.find(d->value + r.addend);
+    if (it != hiToGroup.end())
+      groups[it->second].lo.push_back(i);
+  }
+  return groups;
+}
+
+static void relaxPCRel(Ctx &ctx, int pass, const InputSection &sec,
+                       ArrayRef<PCRelRelax> groups) {
+  ArrayRef<Relocation> relocs = sec.relocs();
+  for (const PCRelRelax &group : groups) {
+    const Relocation &hi = relocs[group.hi];
+    if (group.lo.empty() || hi.expr != R_PC || hi.sym->isPreemptible ||
+        hi.sym->isGnuIFunc())
+      continue;
+    // As with calls, stop enabling new relaxations after a few passes to
+    // prevent oscillation when shrinking moves a target out of range.
+    const auto &deltas = sec.relaxAux->relocDeltas;
+    if (pass >= 4 && deltas[group.hi] == (group.hi ? deltas[group.hi - 1] : 0))
+      continue;
+    if (llvm::any_of(group.lo, [&](size_t i) {
+          return !relaxable(relocs, i) || relocs[i].addend != 0;
+        }))
+      continue;
+
+    uint64_t addr = hi.sym->getVA(ctx, hi.addend);
+    if (getAddressRelaxType(ctx, addr, false) == R_RISCV_NONE)
+      continue;
+    sec.relaxAux->relocTypes[group.hi] = R_RISCV_RELAX;
+    for (size_t i : group.lo)
+      sec.relaxAux->relocTypes[i] = getAddressRelaxType(
+          ctx, addr, relocs[i].type == R_RISCV_PCREL_LO12_S);
+  }
+}
+
+static bool relax(Ctx &ctx, int pass, InputSection &sec,
+                  ArrayRef<PCRelRelax> pcrelRelax) {
   const uint64_t secAddr = sec.getVA();
   const MutableArrayRef<Relocation> relocs = sec.relocs();
   auto &aux = *sec.relaxAux;
@@ -1043,6 +1088,7 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
 
   std::fill_n(aux.relocTypes.get(), relocs.size(), R_RISCV_NONE);
   aux.writes.clear();
+  relaxPCRel(ctx, pass, sec, pcrelRelax);
   for (auto [i, r] : llvm::enumerate(relocs)) {
     const uint64_t loc = secAddr + r.offset - delta;
     uint32_t &cur = aux.relocDeltas[i], remove = 0;
@@ -1085,7 +1131,11 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
     case R_RISCV_LO12_I:
     case R_RISCV_LO12_S:
       if (relaxable(relocs, i))
-        relaxHi20Lo12(ctx, sec, i, loc, r, remove);
+        relaxHi20Lo12(ctx, sec, i, r, remove);
+      break;
+    case R_RISCV_PCREL_HI20:
+      if (aux.relocTypes[i] == R_RISCV_RELAX)
+        remove = 4;
       break;
     case R_RISCV_TLSDESC_HI20:
       // For TLSDESC=>LE, we can use the short form if hi20 is zero.
@@ -1151,8 +1201,18 @@ bool RISCV::relaxOnce(int pass) const {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     for (InputSection *sec : getInputSections(*osec, storage))
-      if (sec->relaxAux)
-        changed |= relax(ctx, pass, *sec);
+      if (sec->relaxAux) {
+        ArrayRef<PCRelRelax> groups;
+        // Record original offsets before relaxation adjusts the AUIPC labels.
+        if (pass == 0 && !ctx.arg.isPic) {
+          if (auto found = findPCRelRelax(*sec); !found.empty())
+            groups =
+                pcrelRelax.try_emplace(sec, std::move(found)).first->second;
+        } else if (auto it = pcrelRelax.find(sec); it != pcrelRelax.end()) {
+          groups = it->second;
+        }
+        changed |= relax(ctx, pass, *sec, groups);
+      }
   }
   return changed;
 }
@@ -1290,6 +1350,16 @@ void RISCV::finalizeRelax(int passes) const {
         continue;
 
       MutableArrayRef<Relocation> rels = sec->relocs();
+      if (auto it = pcrelRelax.find(sec); it != pcrelRelax.end())
+        for (const PCRelRelax &group : it->second)
+          if (aux.relocTypes[group.hi] == R_RISCV_RELAX) {
+            const Relocation &hi = rels[group.hi];
+            for (size_t i : group.lo) {
+              rels[i].expr = R_ABS;
+              rels[i].sym = hi.sym;
+              rels[i].addend = hi.addend;
+            }
+          }
       ArrayRef<uint8_t> old = sec->content();
       size_t newSize = old.size() - aux.relocDeltas[rels.size() - 1];
       size_t writesIdx = 0;
