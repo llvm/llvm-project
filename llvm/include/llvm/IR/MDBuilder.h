@@ -110,7 +110,7 @@ public:
 
   /// Return metadata containing the pseudo probe descriptor for a function.
   LLVM_ABI MDNode *createPseudoProbeDesc(uint64_t GUID, uint64_t Hash,
-                                         StringRef FName);
+                                         StringRef FName, uint8_t Attributes);
 
   /// Return metadata containing llvm statistics.
   LLVM_ABI MDNode *
