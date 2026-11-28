@@ -452,7 +452,7 @@ public:
   }
 
   /// \returns the `__parsed_specifications` with the resolved dynamic sizes..
-  __parsed_specifications<_CharT> __get_parsed_std_specifications(auto& __ctx) const {
+  constexpr __parsed_specifications<_CharT> __get_parsed_std_specifications(auto& __ctx) const {
     return __parsed_specifications<_CharT>{
         .__std_ = __std{.__alignment_            = __alignment_,
                         .__sign_                 = __sign_,
@@ -782,14 +782,14 @@ private:
     ++__begin;
   }
 
-  int32_t __get_width(auto& __ctx) const {
+  constexpr int32_t __get_width(auto& __ctx) const {
     if (!__width_as_arg_)
       return __width_;
 
     return __format_spec::__substitute_arg_id(__ctx.arg(__width_));
   }
 
-  int32_t __get_precision(auto& __ctx) const {
+  constexpr int32_t __get_precision(auto& __ctx) const {
     if (!__precision_as_arg_)
       return __precision_;
 

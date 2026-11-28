@@ -169,7 +169,7 @@ consteval __arg_t __determine_arg_t() {
 // Modeled after template<class T> explicit basic_format_arg(T& v) noexcept;
 // [format.arg]/4-6
 template <class _Context, class _Tp>
-basic_format_arg<_Context> __create_format_arg(_Tp& __value) noexcept {
+constexpr basic_format_arg<_Context> __create_format_arg(_Tp& __value) noexcept {
   using _Dp               = remove_const_t<_Tp>;
   constexpr __arg_t __arg = __format::__determine_arg_t<_Context, _Dp>();
   static_assert(__arg != __arg_t::__none, "the supplied type is not formattable");
@@ -216,8 +216,8 @@ basic_format_arg<_Context> __create_format_arg(_Tp& __value) noexcept {
 }
 
 template <class _Context, class... _Args>
-void __create_packed_storage(
-    uint64_t& __types, __basic_format_arg_value<_Context>* __values, _Args&... __args) noexcept {
+constexpr void
+__create_packed_storage(uint64_t& __types, __basic_format_arg_value<_Context>* __values, _Args&... __args) noexcept {
   int __shift = 0;
   (
       [&] {
@@ -258,7 +258,7 @@ struct __unpacked_format_arg_store {
 
 template <class _Context, class... _Args>
 struct __format_arg_store {
-  __format_arg_store(_Args&... __args) noexcept {
+  constexpr __format_arg_store(_Args&... __args) noexcept {
     if constexpr (sizeof...(_Args) != 0) {
       if constexpr (__format::__use_packed_format_arg_store(sizeof...(_Args)))
         __format::__create_packed_storage(__storage.__types_, __storage.__values_, __args...);

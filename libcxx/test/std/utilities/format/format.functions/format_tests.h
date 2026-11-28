@@ -29,7 +29,7 @@
 enum class execution_modus { partial, full };
 
 template <class CharT>
-std::vector<std::basic_string_view<CharT>> invalid_types(std::string_view valid) {
+constexpr std::vector<std::basic_string_view<CharT>> invalid_types(std::string_view valid) {
   std::vector<std::basic_string_view<CharT>> result;
 
 #define CASE(T)                                                                                                        \
@@ -472,8 +472,8 @@ void format_test_buffer_full(TestFunction check) {
 // Using a const ref for world and universe so a string literal will be a character array.
 // When passed as character array W and U have different types.
 template <class CharT, class W, class U, class TestFunction, class ExceptionTest>
-void format_test_string(const W& world, const U& universe, TestFunction check, ExceptionTest check_exception) {
-
+TEST_CONSTEXPR_CXX26 void
+format_test_string(const W& world, const U& universe, TestFunction check, ExceptionTest check_exception) {
   // *** Valid input tests ***
   // Unused argument is ignored. TODO FMT what does the Standard mandate?
   check(SV("hello world"), SV("hello {}"), world, universe);
@@ -594,7 +594,7 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
 }
 
 template <class CharT, class TestFunction>
-void format_test_string_unicode([[maybe_unused]] TestFunction check) {
+TEST_CONSTEXPR_CXX26 void format_test_string_unicode([[maybe_unused]] TestFunction check) {
   // unicode.pass.cpp and ascii.pass.cpp have additional tests.
 #ifndef TEST_HAS_NO_UNICODE
   // Make sure all possible types are tested. For clarity don't use macros.
@@ -689,7 +689,7 @@ void format_test_string_unicode([[maybe_unused]] TestFunction check) {
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
-void format_string_tests(TestFunction check, ExceptionTest check_exception) {
+TEST_CONSTEXPR_CXX26 void format_string_tests(TestFunction check, ExceptionTest check_exception) {
   std::basic_string<CharT> world = STR("world");
   std::basic_string<CharT> universe = STR("universe");
 
@@ -711,8 +711,7 @@ void format_string_tests(TestFunction check, ExceptionTest check_exception) {
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
-void format_test_bool(TestFunction check, ExceptionTest check_exception) {
-
+TEST_CONSTEXPR_CXX26 void format_test_bool(TestFunction check, ExceptionTest check_exception) {
   // *** align-fill & width ***
   check(SV("answer is 'true   '"), SV("answer is '{:7}'"), true);
   check(SV("answer is '   true'"), SV("answer is '{:>7}'"), true);
@@ -768,7 +767,7 @@ void format_test_bool(TestFunction check, ExceptionTest check_exception) {
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
-void format_test_bool_as_integer(TestFunction check, ExceptionTest check_exception) {
+TEST_CONSTEXPR_CXX26 void format_test_bool_as_integer(TestFunction check, ExceptionTest check_exception) {
   // *** align-fill & width ***
   check(SV("answer is '1'"), SV("answer is '{:<1d}'"), true);
   check(SV("answer is '1 '"), SV("answer is '{:<2d}'"), true);
@@ -855,7 +854,7 @@ void format_test_bool_as_integer(TestFunction check, ExceptionTest check_excepti
 }
 
 template <class I, class CharT, class TestFunction, class ExceptionTest>
-void format_test_integer_as_integer(TestFunction check, ExceptionTest check_exception) {
+TEST_CONSTEXPR_CXX26 void format_test_integer_as_integer(TestFunction check, ExceptionTest check_exception) {
   // *** align-fill & width ***
   check(SV("answer is '42'"), SV("answer is '{:<1}'"), I(42));
   check(SV("answer is '42'"), SV("answer is '{:<2}'"), I(42));
@@ -992,7 +991,7 @@ void format_test_integer_as_integer(TestFunction check, ExceptionTest check_exce
 }
 
 template <class I, class CharT, class TestFunction, class ExceptionTest>
-void format_test_integer_as_char(TestFunction check, ExceptionTest check_exception) {
+TEST_CONSTEXPR_CXX26 void format_test_integer_as_char(TestFunction check, ExceptionTest check_exception) {
   // *** align-fill & width ***
   check(SV("answer is '*     '"), SV("answer is '{:6c}'"), I(42));
   check(SV("answer is '     *'"), SV("answer is '{:>6c}'"), I(42));
@@ -1050,13 +1049,13 @@ void format_test_integer_as_char(TestFunction check, ExceptionTest check_excepti
 }
 
 template <class I, class CharT, class TestFunction, class ExceptionTest>
-void format_test_integer(TestFunction check, ExceptionTest check_exception) {
+TEST_CONSTEXPR_CXX26 void format_test_integer(TestFunction check, ExceptionTest check_exception) {
   format_test_integer_as_integer<I, CharT>(check, check_exception);
   format_test_integer_as_char<I, CharT>(check, check_exception);
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
-void format_test_signed_integer(TestFunction check, ExceptionTest check_exception) {
+TEST_CONSTEXPR_CXX26 void format_test_signed_integer(TestFunction check, ExceptionTest check_exception) {
   format_test_integer<signed char, CharT>(check, check_exception);
   format_test_integer<short, CharT>(check, check_exception);
   format_test_integer<int, CharT>(check, check_exception);
@@ -1132,7 +1131,7 @@ void format_test_signed_integer(TestFunction check, ExceptionTest check_exceptio
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
-void format_test_unsigned_integer(TestFunction check, ExceptionTest check_exception) {
+TEST_CONSTEXPR_CXX26 void format_test_unsigned_integer(TestFunction check, ExceptionTest check_exception) {
   format_test_integer<unsigned char, CharT>(check, check_exception);
   format_test_integer<unsigned short, CharT>(check, check_exception);
   format_test_integer<unsigned, CharT>(check, check_exception);
@@ -1176,8 +1175,7 @@ void format_test_unsigned_integer(TestFunction check, ExceptionTest check_except
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
-void format_test_char(TestFunction check, ExceptionTest check_exception) {
-
+TEST_CONSTEXPR_CXX26 void format_test_char(TestFunction check, ExceptionTest check_exception) {
   // ***** Char type *****
   // *** align-fill & width ***
   check(SV("answer is '*     '"), SV("answer is '{:6}'"), CharT('*'));
@@ -1245,7 +1243,7 @@ void format_test_char(TestFunction check, ExceptionTest check_exception) {
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
-void format_test_char_as_integer(TestFunction check, ExceptionTest check_exception) {
+TEST_CONSTEXPR_CXX26 void format_test_char_as_integer(TestFunction check, ExceptionTest check_exception) {
   // *** align-fill & width ***
   check(SV("answer is '42'"), SV("answer is '{:<1d}'"), CharT('*'));
 
@@ -3271,5 +3269,23 @@ void format_tests_char_to_wchar_t(TestFunction check) {
   check(SV("hello 09azA"), SV("hello {}{}{}{}{}"), '0', '9', 'a', 'z', 'A');
 }
 #endif
+
+template <class CharT, class TestFunction, class ExceptionTest>
+TEST_CONSTEXPR_CXX26 void format_tests_constexpr(TestFunction check, ExceptionTest check_exception) {
+  format_string_tests<CharT>(check, check_exception);
+  format_test_bool<CharT>(check, check_exception);
+  format_test_bool_as_integer<CharT>(check, check_exception);
+  format_test_signed_integer<CharT>(check, check_exception);
+  format_test_unsigned_integer<CharT>(check, check_exception);
+  format_test_char<CharT>(check, check_exception);
+  format_test_char_as_integer<CharT>(check, check_exception);
+
+  // *** Storing a non-constexpr-formattable argument is constexpr. ***
+  check(SV("42"), SV("{}"), 42, 3.0);
+  check(SV("42"), SV("{}"), 42, nullptr);
+
+  // *** No arguments. ***
+  check(SV("hello"), SV("hello"));
+}
 
 #endif // TEST_STD_UTILITIES_FORMAT_FORMAT_FUNCTIONS_FORMAT_TESTS_H
