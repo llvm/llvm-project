@@ -357,6 +357,7 @@ module std_core {
     module strip_signature                            { header "__type_traits/strip_signature.h" }
     module type_identity                              { header "__type_traits/type_identity.h" }
     module type_list                                  { header "__type_traits/type_list.h" }
+    module uint_fast_bits                             { header "__type_traits/uint_fast_bits.h" }
     module underlying_type                            { header "__type_traits/underlying_type.h" }
     module unwrap_ref                                 { header "__type_traits/unwrap_ref.h" }
     module void_t                                     { header "__type_traits/void_t.h" }
@@ -1803,6 +1804,7 @@ module std {
   module numeric {
     module accumulate                 { header "__numeric/accumulate.h" }
     module adjacent_difference        { header "__numeric/adjacent_difference.h" }
+    module clmul                      { header "__numeric/clmul.h" }
     module exclusive_scan             { header "__numeric/exclusive_scan.h" }
     module gcd_lcm                    { header "__numeric/gcd_lcm.h" }
     module inclusive_scan             { header "__numeric/inclusive_scan.h" }
@@ -1817,6 +1819,7 @@ module std {
     module transform_exclusive_scan   { header "__numeric/transform_exclusive_scan.h" }
     module transform_inclusive_scan   { header "__numeric/transform_inclusive_scan.h" }
     module transform_reduce           { header "__numeric/transform_reduce.h" }
+    module wide_result                { header "__numeric/wide_result.h" }
 
     header "numeric"
     export *

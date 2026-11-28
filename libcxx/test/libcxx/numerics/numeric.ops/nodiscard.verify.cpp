@@ -118,6 +118,21 @@ void test() {
   std::saturating_cast<signed int>(49);
 #endif // TEST_STD_VER >= 26
 
+#if TEST_STD_VER >= 29
+  { // [numeric.clmul]
+    std::wide_result<unsigned> result(0u, 0u);
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::clmul(0u, 0u);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::widening_clmul(0u, 0u);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    result.high();
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    result.low();
+  }
+#endif // TEST_STD_VER >= 29
+
 #if TEST_STD_VER >= 17
   {
     std::initializer_list<int> il{94, 82};

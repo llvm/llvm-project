@@ -329,6 +329,11 @@ feature_test_macros = [
             "headers": ["algorithm"],
         },
         {
+            "name": "__cpp_lib_clmul",
+            "values": {"c++29": 202611},
+            "headers": ["numeric"],
+        },
+        {
             "name": "__cpp_lib_common_reference",
             "values": {"c++20": 202302},
             "headers": ["type_traits"],
@@ -1610,6 +1615,12 @@ feature_test_macros = [
                 # "c++29": 202606 # P3793R2 Better shifting
                 "c++29": 202607  # P3772R2 std::simd overloads for bit permutations
             },
+            "headers": ["simd"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_simd_clmul",
+            "values": {"c++29": 202611},
             "headers": ["simd"],
             "unimplemented": True,
         },

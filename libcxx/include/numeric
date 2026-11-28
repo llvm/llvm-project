@@ -152,6 +152,28 @@ constexpr T saturating_div(T x, T y) noexcept;                // freestanding, S
 template<class T, class U>
 constexpr T saturating_cast(U x) noexcept;                    // freestanding, Since C++26
 
+// [numeric.clmul], carry-less product
+template<class T>
+class wide_result {                                           // freestanding, Since C++29
+public:
+  constexpr wide_result(T high, T low) noexcept
+    : high-bits(high), low-bits(low) {}
+
+  constexpr T high() const noexcept { return high-bits; }
+  constexpr T low() const noexcept { return low-bits; }
+
+  friend constexpr bool operator==(const wide_result&, const wide_result&) = default;
+  friend constexpr strong_ordering operator<=>(const wide_result& x, const wide_result& y)
+    = default;
+private:
+  T high-bits, low-bits;
+};
+
+template<class T>
+  constexpr wide_result<T> widening_clmul(T x, T y) noexcept; // freestanding, Since C++29
+template<class T>
+  constexpr T clmul(T x, T y) noexcept;                       // freestanding, Since C++29
+
 }  // std
 
 */
@@ -182,6 +204,11 @@ constexpr T saturating_cast(U x) noexcept;                    // freestanding, S
 #  if _LIBCPP_STD_VER >= 20
 #    include <__numeric/midpoint.h>
 #    include <__numeric/saturation_arithmetic.h>
+#  endif
+
+#  if _LIBCPP_STD_VER >= 29
+#    include <__numeric/clmul.h>
+#    include <__numeric/wide_result.h>
 #  endif
 
 #  include <version>

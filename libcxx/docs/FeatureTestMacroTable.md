@@ -328,11 +328,13 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_variant`                                    | `202306L`       |
 | **C++29**                                              |                 |
 | `__cpp_lib_bitops`                                     | `202606L`       |
+| `__cpp_lib_clmul`                                      | `202611L`       |
 | `__cpp_lib_expected`                                   | `202606L`       |
 | `__cpp_lib_map_lookup`                                 | *unimplemented* |
 | `__cpp_lib_mdspan_copy`                                | *unimplemented* |
 | `__cpp_lib_pointer_tag_pair`                           | *unimplemented* |
 | `__cpp_lib_simd_bitops`                                | *unimplemented* |
+| `__cpp_lib_simd_clmul`                                 | *unimplemented* |
 | `__cpp_lib_simd_complex`                               | *unimplemented* |
 | `__cpp_lib_thread_attributes`                          | *unimplemented* |
 | `__cpp_lib_view_interface`                             | `202606L`       |
