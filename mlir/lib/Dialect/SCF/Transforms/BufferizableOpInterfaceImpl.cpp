@@ -914,14 +914,22 @@ struct WhileOpInterface
     OpBuilder::InsertionGuard g(rewriter);
     auto whileOp = cast<scf::WhileOp>(op);
     auto conditionOp = whileOp.getConditionOp();
+    auto yieldOp = whileOp.getYieldOp();
 
     // For every yielded value, is the value equivalent to its corresponding
     // bbArg?
     DenseSet<int64_t> equivalentYieldsBefore = getEquivalentBuffers(
         whileOp.getBeforeArguments(), conditionOp.getArgs(), analysisState);
-    DenseSet<int64_t> equivalentYieldsAfter =
-        getEquivalentBuffers(whileOp.getAfterArguments(),
-                             whileOp.getYieldOp().getResults(), analysisState);
+    DenseSet<int64_t> equivalentYieldsAfter = getEquivalentBuffers(
+        whileOp.getAfterArguments(), yieldOp.getResults(), analysisState);
+
+    // Whether the tensor value at index `idx` is carried through the loop:
+    // equivalent to its corresponding bbArg in both the "before" and the
+    // "after" region.
+    auto isCarriedYield = [&](int64_t idx) {
+      return equivalentYieldsBefore.contains(idx) &&
+             equivalentYieldsAfter.contains(idx);
+    };
 
     // Update "before" region.
     rewriter.setInsertionPoint(conditionOp);
@@ -929,9 +937,7 @@ struct WhileOpInterface
     for (int64_t idx = 0;
          idx < static_cast<int64_t>(conditionOp.getArgs().size()); ++idx) {
       Value value = conditionOp.getArgs()[idx];
-      if (!isa<TensorLikeType>(value.getType()) ||
-          (equivalentYieldsAfter.contains(idx) &&
-           equivalentYieldsBefore.contains(idx))) {
+      if (!isa<TensorLikeType>(value.getType()) || isCarriedYield(idx)) {
         beforeYieldValues.push_back(value);
         continue;
       }
@@ -955,7 +961,6 @@ struct WhileOpInterface
     //     other.)
     // Values allocated inside the loop do not alias anything defined outside
     // of the loop; not copying them preserves `allow-return-allocs-from-loops`.
-    auto yieldOp = whileOp.getYieldOp();
     const auto &oneShotState =
         static_cast<const OneShotAnalysisState &>(analysisState);
 
@@ -981,8 +986,7 @@ struct WhileOpInterface
       // it is known not to alias anything defined outside of the loop (e.g.,
       // an allocation inside the loop).
       if (!mayAliasYielded &&
-          ((equivalentYieldsAfter.contains(idx) &&
-            equivalentYieldsBefore.contains(idx)) ||
+          (isCarriedYield(idx) ||
            doesNotAliasExternalValue(
                value, &whileOp.getAfter(),
                /*exceptions=*/ValueRange(whileOp.getAfterArguments()),
