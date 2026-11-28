@@ -447,6 +447,37 @@ def SPIRV_KillOp : SPIRV_Op<"Kill", [Terminator]> {
 
 // -----
 
+def SPIRV_DemoteToHelperInvocationOp : SPIRV_Op<"DemoteToHelperInvocation", []> {
+  let summary = "Demote fragment shader invocation to a helper invocation.";
+
+  let description = [{
+    Demotes the fragment shader invocation to a helper invocation. Subsequent
+    memory writes have no effect, and the invocation is treated as a helper
+    invocation for the remainder of its execution. Only valid in the Fragment
+    Execution Model.
+
+    #### Example:
+
+    ```mlir
+    spirv.DemoteToHelperInvocation
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_EXT_demote_to_helper_invocation]>,
+    Capability<[SPIRV_C_DemoteToHelperInvocation]>
+  ];
+
+  let arguments = (ins);
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+  let hasVerifier = 0;
+}
+
+// -----
+
 def SPIRV_LifetimeStartOp : SPIRV_Op<"LifetimeStart", [InFunctionScope]> {
   let summary = "Declare that an object was not defined before this instruction.";
 
