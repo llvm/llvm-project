@@ -19,16 +19,34 @@ void BackgroundQueue::preventThreadStarvationInTests() {
   PreventStarvation.store(true);
 }
 
-void BackgroundQueue::work(std::function<void()> OnIdle) {
+void BackgroundQueue::work(std::function<void()> OnIdle,
+                           std::function<void()> OnWorkerIdle) {
+  // Stat.LastIdle when this worker last ran OnWorkerIdle. Stat.LastIdle is set
+  // to Stat.Completed whenever the queue goes idle, so it is 0 until the first
+  // idle period and different for each one after that.
+  unsigned WorkerIdleAt = 0;
   while (true) {
     std::optional<Task> Task;
     {
       std::unique_lock<std::mutex> Lock(Mu);
-      CV.wait(Lock, [&] { return ShouldStop || !Queue.empty(); });
+      CV.wait(Lock, [&] {
+        // Stat.Active is still 1 while OnIdle runs.
+        return ShouldStop || !Queue.empty() ||
+               (OnWorkerIdle && Stat.Active == 0 &&
+                WorkerIdleAt != Stat.LastIdle);
+      });
       if (ShouldStop) {
         Queue.clear();
         CV.notify_all();
         return;
+      }
+      if (Queue.empty()) {
+        // The queue went idle, and OnIdle finished, since this worker last ran
+        // OnWorkerIdle.
+        WorkerIdleAt = Stat.LastIdle;
+        Lock.unlock();
+        OnWorkerIdle();
+        continue;
       }
       ++Stat.Active;
       std::pop_heap(Queue.begin(), Queue.end());

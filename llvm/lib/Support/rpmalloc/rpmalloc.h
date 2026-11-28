@@ -243,8 +243,12 @@ RPMALLOC_EXPORT void rpmalloc_thread_initialize(void);
 //! Finalize allocator for calling thread
 RPMALLOC_EXPORT void rpmalloc_thread_finalize(int release_caches);
 
-//! Perform deferred deallocations pending for the calling thread heap
+//! Perform deferred deallocations pending for the calling thread heap, and
+//  unmap the free spans cached by the calling thread heap
 RPMALLOC_EXPORT void rpmalloc_thread_collect(void);
+
+//! Unmap the free spans held in the global cache
+RPMALLOC_EXPORT void rpmalloc_global_collect(void);
 
 //! Query if allocator is initialized for calling thread
 RPMALLOC_EXPORT int rpmalloc_is_thread_initialized(void);

@@ -39,6 +39,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/xxhash.h"
 
@@ -88,6 +89,14 @@ bool shardIsStale(const LoadedShard &LS, llvm::vfs::FileSystem *FS) {
   return digest(Buf->get()->getBuffer()) != LS.Digest;
 }
 
+// Indexing allocates and frees a lot of memory. The heap allocator may retain
+// freed memory in per-thread caches (see
+// llvm::sys::Process::releaseHeapCaches), so each worker gives it back when
+// the queue goes idle.
+void releaseWorkerHeapCaches() {
+  llvm::sys::Process::releaseHeapCaches(/*IncludeShared=*/true);
+}
+
 } // namespace
 
 BackgroundIndex::BackgroundIndex(
@@ -111,7 +120,8 @@ BackgroundIndex::BackgroundIndex(
                         [this, Ctx(Context::current().clone())]() mutable {
                           clang::noteBottomOfStack();
                           WithContext BGContext(std::move(Ctx));
-                          Queue.work([&] { Rebuilder.idle(); });
+                          Queue.work(/*OnIdle=*/[&] { Rebuilder.idle(); },
+                                     /*OnWorkerIdle=*/releaseWorkerHeapCaches);
                         });
   }
 }

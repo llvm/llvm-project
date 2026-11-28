@@ -131,6 +131,12 @@ infrastructure are described first, followed by tool-specific sections.
 - Added support for loading dynamic plugins via the `-load` command-line
   option.
 
+- On Windows, clangd built with rpmalloc (`LLVM_ENABLE_RPMALLOC`, as the
+  official release is) now returns memory to the operating system when
+  background indexing finishes. Previously most of the memory used for
+  indexing stayed committed afterwards.
+  ([#242835](https://github.com/llvm/llvm-project/issues/242835))
+
 ### Improvements to clang-doc
 
 ### Improvements to clang-query
