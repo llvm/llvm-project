@@ -3912,6 +3912,78 @@ static SDValue peekThroughBitFieldExtract(SDValue V, unsigned &Lsb,
   }
 }
 
+/// Lower a BUILD_VECTOR to [X]VMSK* if the first element of each 128-bit lane
+/// is the mask of that lane and the other elements are zero or undef.
+///
+/// The [X]VMSK* instructions write exactly this vector, so there is no need to
+/// move the mask to GPR and back.
+static SDValue lowerBUILD_VECTORAsVMSK(BuildVectorSDNode *Node, const SDLoc &DL,
+                                       SelectionDAG &DAG) {
+  MVT VT = Node->getSimpleValueType(0);
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned NumLanes = VT.getSizeInBits() / 128;
+  unsigned NumLaneElts = NumElts / NumLanes;
+  SDValue Msk;
+
+  for (unsigned I = 0; I < NumElts; ++I) {
+    SDValue Elt = Node->getOperand(I);
+    if (Elt.isUndef())
+      continue;
+
+    if (I % NumLaneElts != 0) {
+      if (!isNullConstant(Elt))
+        return SDValue();
+      continue;
+    }
+
+    unsigned Lsb, Width = VT.getScalarSizeInBits();
+    SDValue V = peekThroughBitFieldExtract(Elt, Lsb, Width);
+    if (!isVMSK(V) || (Msk && Msk != V))
+      return SDValue();
+    Msk = V;
+
+    MVT SrcVT = V.getOperand(0).getSimpleValueType();
+    if (SrcVT.getSizeInBits() != VT.getSizeInBits())
+      return SDValue();
+
+    // Must be all the mask bits of this lane. The bits above the mask are zero.
+    unsigned NumSrcElts = SrcVT.getVectorNumElements();
+    unsigned NumLaneBits = NumSrcElts / NumLanes;
+    unsigned LaneLsb = I / NumLaneElts * NumLaneBits;
+    if (Lsb != LaneLsb ||
+        std::min(Lsb + Width, NumSrcElts) != LaneLsb + NumLaneBits)
+      return SDValue();
+  }
+
+  if (!Msk)
+    return SDValue();
+
+  unsigned Opc = LoongArchISD::VMSKLTZ_V;
+  SDValue Src = Msk.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  switch (Msk.getOpcode()) {
+  default:
+    break;
+  case LoongArchISD::VMSKGEZ:
+  case LoongArchISD::XVMSKGEZ:
+    Opc = LoongArchISD::VMSKGEZ_V;
+    break;
+  case LoongArchISD::VMSKNEZ:
+  case LoongArchISD::XVMSKNEZ:
+    Opc = LoongArchISD::VMSKNEZ_V;
+    break;
+  case LoongArchISD::VMSKEQZ:
+  case LoongArchISD::XVMSKEQZ:
+    // Inverting the result of [x]vmsknz.b would also set the bits above the
+    // mask.
+    Src =
+        DAG.getSetCC(DL, SrcVT, Src, DAG.getConstant(0, DL, SrcVT), ISD::SETEQ);
+    break;
+  }
+
+  return DAG.getBitcast(VT, DAG.getNode(Opc, DL, SrcVT, Src));
+}
+
 SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
                                                    SelectionDAG &DAG) const {
   BuildVectorSDNode *Node = cast<BuildVectorSDNode>(Op);
@@ -3933,6 +4005,9 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
     return SDValue();
 
   if (SDValue Result = lowerBUILD_VECTORAsBroadCastLoad(Node, DL, DAG))
+    return Result;
+
+  if (SDValue Result = lowerBUILD_VECTORAsVMSK(Node, DL, DAG))
     return Result;
 
   if (Node->isConstantSplat(SplatValue, SplatUndef, SplatBitSize, HasAnyUndefs,

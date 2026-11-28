@@ -6,21 +6,10 @@
 ; clears the others.
 
 define <2 x i64> @vmskltz_b(<2 x i64> %a) nounwind {
-; LA32-LABEL: vmskltz_b:
-; LA32:       # %bb.0:
-; LA32-NEXT:    vmskltz.b $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    vrepli.b $vr0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmskltz_b:
-; LA64:       # %bb.0:
-; LA64-NEXT:    vmskltz.b $vr0, $vr0
-; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    vrepli.b $vr0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmskltz_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    ret
   %v1 = bitcast <2 x i64> %a to <16 x i8>
   %v2 = icmp slt <16 x i8> %v1, zeroinitializer
   %m = bitcast <16 x i1> %v2 to i16
@@ -30,21 +19,10 @@ define <2 x i64> @vmskltz_b(<2 x i64> %a) nounwind {
 }
 
 define <2 x i64> @vmskltz_h(<2 x i64> %a) nounwind {
-; LA32-LABEL: vmskltz_h:
-; LA32:       # %bb.0:
-; LA32-NEXT:    vmskltz.h $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    vrepli.b $vr0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmskltz_h:
-; LA64:       # %bb.0:
-; LA64-NEXT:    vmskltz.h $vr0, $vr0
-; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    vrepli.b $vr0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmskltz_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmskltz.h $vr0, $vr0
+; CHECK-NEXT:    ret
   %v1 = bitcast <2 x i64> %a to <8 x i16>
   %v2 = icmp slt <8 x i16> %v1, zeroinitializer
   %m = bitcast <8 x i1> %v2 to i8
@@ -54,21 +32,10 @@ define <2 x i64> @vmskltz_h(<2 x i64> %a) nounwind {
 }
 
 define <2 x i64> @vmskltz_w(<2 x i64> %a) nounwind {
-; LA32-LABEL: vmskltz_w:
-; LA32:       # %bb.0:
-; LA32-NEXT:    vmskltz.w $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    vrepli.b $vr0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmskltz_w:
-; LA64:       # %bb.0:
-; LA64-NEXT:    vmskltz.w $vr0, $vr0
-; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    vrepli.b $vr0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmskltz_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmskltz.w $vr0, $vr0
+; CHECK-NEXT:    ret
   %v1 = bitcast <2 x i64> %a to <4 x i32>
   %v2 = icmp slt <4 x i32> %v1, zeroinitializer
   %v3 = bitcast <4 x i1> %v2 to i4
@@ -78,21 +45,10 @@ define <2 x i64> @vmskltz_w(<2 x i64> %a) nounwind {
 }
 
 define <2 x i64> @vmskltz_d(<2 x i64> %a) nounwind {
-; LA32-LABEL: vmskltz_d:
-; LA32:       # %bb.0:
-; LA32-NEXT:    vmskltz.d $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    vrepli.b $vr0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmskltz_d:
-; LA64:       # %bb.0:
-; LA64-NEXT:    vmskltz.d $vr0, $vr0
-; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    vrepli.b $vr0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmskltz_d:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmskltz.d $vr0, $vr0
+; CHECK-NEXT:    ret
   %v1 = icmp slt <2 x i64> %a, zeroinitializer
   %v2 = bitcast <2 x i1> %v1 to i2
   %z = zext i2 %v2 to i64
@@ -101,21 +57,10 @@ define <2 x i64> @vmskltz_d(<2 x i64> %a) nounwind {
 }
 
 define <2 x i64> @vmskgez_b(<2 x i64> %a) nounwind {
-; LA32-LABEL: vmskgez_b:
-; LA32:       # %bb.0:
-; LA32-NEXT:    vmskgez.b $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    vrepli.b $vr0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmskgez_b:
-; LA64:       # %bb.0:
-; LA64-NEXT:    vmskgez.b $vr0, $vr0
-; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    vrepli.b $vr0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmskgez_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmskgez.b $vr0, $vr0
+; CHECK-NEXT:    ret
   %v1 = bitcast <2 x i64> %a to <16 x i8>
   %v2 = icmp sgt <16 x i8> %v1, splat (i8 -1)
   %m = bitcast <16 x i1> %v2 to i16
@@ -125,21 +70,10 @@ define <2 x i64> @vmskgez_b(<2 x i64> %a) nounwind {
 }
 
 define <2 x i64> @vmsknz_b(<2 x i64> %a) nounwind {
-; LA32-LABEL: vmsknz_b:
-; LA32:       # %bb.0:
-; LA32-NEXT:    vmsknz.b $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    vrepli.b $vr0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmsknz_b:
-; LA64:       # %bb.0:
-; LA64-NEXT:    vmsknz.b $vr0, $vr0
-; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    vrepli.b $vr0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmsknz_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmsknz.b $vr0, $vr0
+; CHECK-NEXT:    ret
   %v1 = bitcast <2 x i64> %a to <16 x i8>
   %c = icmp ne <16 x i8> %v1, zeroinitializer
   %m = bitcast <16 x i1> %c to i16
@@ -149,23 +83,11 @@ define <2 x i64> @vmsknz_b(<2 x i64> %a) nounwind {
 }
 
 define <2 x i64> @vmskeqz_b(<16 x i8> %a) nounwind {
-; LA32-LABEL: vmskeqz_b:
-; LA32:       # %bb.0:
-; LA32-NEXT:    vmsknz.b $vr0, $vr0
-; LA32-NEXT:    vnor.v $vr0, $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    vrepli.b $vr0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmskeqz_b:
-; LA64:       # %bb.0:
-; LA64-NEXT:    vmsknz.b $vr0, $vr0
-; LA64-NEXT:    vnor.v $vr0, $vr0, $vr0
-; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    vrepli.b $vr0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmskeqz_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vseqi.b $vr0, $vr0, 0
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    ret
   %c = icmp eq <16 x i8> %a, zeroinitializer
   %m = bitcast <16 x i1> %c to i16
   %z = zext i16 %m to i64
@@ -174,23 +96,11 @@ define <2 x i64> @vmskeqz_b(<16 x i8> %a) nounwind {
 }
 
 define <2 x i64> @vmsk_slt_w(<4 x i32> %a, <4 x i32> %b) nounwind {
-; LA32-LABEL: vmsk_slt_w:
-; LA32:       # %bb.0:
-; LA32-NEXT:    vslt.w $vr0, $vr0, $vr1
-; LA32-NEXT:    vmskltz.w $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    vrepli.b $vr0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmsk_slt_w:
-; LA64:       # %bb.0:
-; LA64-NEXT:    vslt.w $vr0, $vr0, $vr1
-; LA64-NEXT:    vmskltz.w $vr0, $vr0
-; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    vrepli.b $vr0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmsk_slt_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vslt.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmskltz.w $vr0, $vr0
+; CHECK-NEXT:    ret
   %c = icmp slt <4 x i32> %a, %b
   %m = bitcast <4 x i1> %c to i4
   %z = zext i4 %m to i64
@@ -200,20 +110,10 @@ define <2 x i64> @vmsk_slt_w(<4 x i32> %a, <4 x i32> %b) nounwind {
 
 ;; The other elements may be undefined.
 define <2 x i64> @vmskltz_b_poison(<16 x i8> %a) nounwind {
-; LA32-LABEL: vmskltz_b_poison:
-; LA32:       # %bb.0:
-; LA32-NEXT:    vmskltz.b $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    vrepli.b $vr0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: vmskltz_b_poison:
-; LA64:       # %bb.0:
-; LA64-NEXT:    vmskltz.b $vr0, $vr0
-; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    vreplgr2vr.d $vr0, $a0
-; LA64-NEXT:    ret
+; CHECK-LABEL: vmskltz_b_poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmskltz.b $vr0, $vr0
+; CHECK-NEXT:    ret
   %c = icmp slt <16 x i8> %a, zeroinitializer
   %m = bitcast <16 x i1> %c to i16
   %z = zext i16 %m to i64
@@ -226,9 +126,6 @@ define <4 x i32> @vmskltz_b_v4i32(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: vmskltz_b_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmskltz.b $vr0, $vr0
-; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; CHECK-NEXT:    vrepli.b $vr0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %c = icmp slt <16 x i8> %a, zeroinitializer
   %m = bitcast <16 x i1> %c to i16
@@ -241,9 +138,6 @@ define <8 x i16> @vmskgez_b_v8i16(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: vmskgez_b_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmskgez.b $vr0, $vr0
-; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; CHECK-NEXT:    vrepli.b $vr0, 0
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %c = icmp sgt <16 x i8> %a, splat (i8 -1)
   %m = bitcast <16 x i1> %c to i16
@@ -255,9 +149,6 @@ define <16 x i8> @vmskltz_h_v16i8(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: vmskltz_h_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmskltz.h $vr0, $vr0
-; CHECK-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; CHECK-NEXT:    vrepli.b $vr0, 0
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %c = icmp slt <8 x i16> %a, zeroinitializer
   %m = bitcast <8 x i1> %c to i8
@@ -272,8 +163,6 @@ define <2 x i64> @vmskltz_b_multiuse(<16 x i8> %a, ptr %p) nounwind {
 ; LA32-NEXT:    vmskltz.b $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.hu $a1, $vr0, 0
 ; LA32-NEXT:    st.w $zero, $a0, 4
-; LA32-NEXT:    vrepli.b $vr0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 0
 ; LA32-NEXT:    st.w $a1, $a0, 0
 ; LA32-NEXT:    ret
 ;
@@ -281,8 +170,6 @@ define <2 x i64> @vmskltz_b_multiuse(<16 x i8> %a, ptr %p) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vmskltz.b $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.hu $a1, $vr0, 0
-; LA64-NEXT:    vrepli.b $vr0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a1, 0
 ; LA64-NEXT:    st.d $a1, $a0, 0
 ; LA64-NEXT:    ret
   %c = icmp slt <16 x i8> %a, zeroinitializer

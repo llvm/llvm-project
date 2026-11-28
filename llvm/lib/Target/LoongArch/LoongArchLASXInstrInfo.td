@@ -3016,6 +3016,12 @@ def : Pat<(loongarch_xvmskgez (v32i8 LASX256:$vj)), (PseudoXVMSKGEZ_B LASX256:$v
 def : Pat<(loongarch_xvmskeqz (v32i8 LASX256:$vj)), (PseudoXVMSKEQZ_B LASX256:$vj)>;
 def : Pat<(loongarch_xvmsknez (v32i8 LASX256:$vj)), (PseudoXVMSKNEZ_B LASX256:$vj)>;
 
+defm : PatXr<loongarch_vmskltz_v, "XVMSKLTZ">;
+def : Pat<(v32i8 (loongarch_vmskgez_v (v32i8 LASX256:$xj))),
+          (XVMSKGEZ_B LASX256:$xj)>;
+def : Pat<(v32i8 (loongarch_vmsknez_v (v32i8 LASX256:$xj))),
+          (XVMSKNZ_B LASX256:$xj)>;
+
 // Subvector tricks
 // Patterns for insert_subvector/extract_subvector
 multiclass subvector_subreg_lowering<RegisterClass subRC, ValueType subVT,

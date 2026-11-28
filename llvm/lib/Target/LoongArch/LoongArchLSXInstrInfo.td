@@ -119,6 +119,12 @@ def loongarch_vmskgez: SDNode<"LoongArchISD::VMSKGEZ", SDT_LoongArchVMSKCOND>;
 def loongarch_vmskeqz: SDNode<"LoongArchISD::VMSKEQZ", SDT_LoongArchVMSKCOND>;
 def loongarch_vmsknez: SDNode<"LoongArchISD::VMSKNEZ", SDT_LoongArchVMSKCOND>;
 
+// Vector mask set by condition, with the mask of each 128-bit lane
+// zero-extended to the lane
+def loongarch_vmskltz_v: SDNode<"LoongArchISD::VMSKLTZ_V", SDTIntUnaryOp>;
+def loongarch_vmskgez_v: SDNode<"LoongArchISD::VMSKGEZ_V", SDTIntUnaryOp>;
+def loongarch_vmsknez_v: SDNode<"LoongArchISD::VMSKNEZ_V", SDTIntUnaryOp>;
+
 def loongarch_vfcvt_s_d: SDNode<"LoongArchISD::VFCVT", SDT_LoongArchVFCVT_S_D>;
 def loongarch_vfcvtl_d_s: SDNode<"LoongArchISD::VFCVTL", SDT_LoongArchVFCVTLH_D_S>;
 def loongarch_vfcvth_d_s: SDNode<"LoongArchISD::VFCVTH", SDT_LoongArchVFCVTLH_D_S>;
@@ -3159,6 +3165,12 @@ def : Pat<(loongarch_vmskltz (v2i64 LSX128:$vj)), (PseudoVMSKLTZ_D LSX128:$vj)>;
 def : Pat<(loongarch_vmskgez (v16i8 LSX128:$vj)), (PseudoVMSKGEZ_B LSX128:$vj)>;
 def : Pat<(loongarch_vmskeqz (v16i8 LSX128:$vj)), (PseudoVMSKEQZ_B LSX128:$vj)>;
 def : Pat<(loongarch_vmsknez (v16i8 LSX128:$vj)), (PseudoVMSKNEZ_B LSX128:$vj)>;
+
+defm : PatVr<loongarch_vmskltz_v, "VMSKLTZ">;
+def : Pat<(v16i8 (loongarch_vmskgez_v (v16i8 LSX128:$vj))),
+          (VMSKGEZ_B LSX128:$vj)>;
+def : Pat<(v16i8 (loongarch_vmsknez_v (v16i8 LSX128:$vj))),
+          (VMSKNZ_B LSX128:$vj)>;
 
 // Vector tests against zero. The result lives in a condition flag register, so a
 // branch consumes it directly and only a materialization needs MOVCF2GR.
