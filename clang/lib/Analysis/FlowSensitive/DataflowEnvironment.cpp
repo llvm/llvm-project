@@ -1101,6 +1101,28 @@ Environment::Environment(const Environment &Other)
       ExprToLoc(Other.ExprToLoc), ExprToVal(Other.ExprToVal),
       LocToVal(Other.LocToVal), BoolState(Other.BoolState->clone()) {}
 
+// Returns the field whose default member initializer contains the lambda with
+// closure type `Closure`, or null if there is no such field.
+//
+// `Closure` may be nested inside other lambdas within the default member
+// initializer. In that case only the outermost closure has the `FieldDecl` as
+// its lambda context declaration. So walk out through the enclosing lambdas
+// until a context declaration is found.
+static const FieldDecl *
+getFieldBeingInitializedByLambda(const CXXRecordDecl *Closure) {
+  while (Closure->isLambda()) {
+    if (const Decl *ContextDecl = Closure->getLambdaContextDecl())
+      return dyn_cast<FieldDecl>(ContextDecl);
+    const auto *EnclosingMethod =
+        dyn_cast<CXXMethodDecl>(Closure->getDeclContext());
+    if (EnclosingMethod == nullptr) {
+      return nullptr;
+    }
+    Closure = EnclosingMethod->getParent();
+  }
+  return nullptr;
+}
+
 void Environment::initialize() {
   if (InitialTargetStmt == nullptr)
     return;
@@ -1148,7 +1170,7 @@ void Environment::initialize() {
             setThisPointeeStorageLocation(
                 cast<RecordStorageLocation>(createObject(ThisPointeeType)));
           } else if (auto *FieldBeingInitialized =
-                         dyn_cast<FieldDecl>(Parent->getLambdaContextDecl())) {
+                         getFieldBeingInitializedByLambda(Parent)) {
             // This is in a field initializer, rather than a method.
             const RecordDecl *RD = FieldBeingInitialized->getParent();
             const ASTContext &Ctx = RD->getASTContext();
