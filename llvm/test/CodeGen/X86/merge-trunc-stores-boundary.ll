@@ -148,12 +148,12 @@ entry:
 define void @three_bytes_after_wide_store(ptr %dst, i32 %v, i64 %w) {
 ; X86-LABEL: three_bytes_after_wide_store:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movq %rdx, 3(%rdi)
 ; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    rolw $8, %ax
-; X86-NEXT:    movw %ax, 1(%rdi)
-; X86-NEXT:    shrl $16, %esi
-; X86-NEXT:    movb %sil, (%rdi)
+; X86-NEXT:    movq %rdx, 3(%rdi)
+; X86-NEXT:    movb %al, 2(%rdi)
+; X86-NEXT:    movb %ah, 1(%rdi)
+; X86-NEXT:    shrl $16, %eax
+; X86-NEXT:    movb %al, (%rdi)
 ; X86-NEXT:    retq
 entry:
   %p3 = getelementptr inbounds i8, ptr %dst, i64 3
