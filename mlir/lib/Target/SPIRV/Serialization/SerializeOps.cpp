@@ -743,6 +743,15 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
   // Encode StorageClass.
   operands.push_back(static_cast<uint32_t>(varOp.storageClass()));
 
+  // Encode the data type of an untyped variable.
+  if (std::optional<Type> dataType = varOp.getDataType()) {
+    uint32_t dataTypeID = 0;
+    if (failed(processType(varOp.getLoc(), *dataType, dataTypeID)))
+      return failure();
+    operands.push_back(dataTypeID);
+  }
+  elidedAttrs.push_back(varOp.getDataTypeAttrName());
+
   // Encode initialization.
   StringRef initAttrName = varOp.getInitializerAttrName().getValue();
   if (std::optional<StringRef> initSymbolName = varOp.getInitializer()) {
@@ -767,7 +776,10 @@ Serializer::processGlobalVariableOp(spirv::GlobalVariableOp varOp) {
 
   if (failed(emitDebugLine(typesGlobalValues, varOp.getLoc())))
     return failure();
-  encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpVariable, operands);
+  spirv::Opcode opcode = isa<spirv::UntypedPointerType>(varOp.getType())
+                             ? spirv::Opcode::OpUntypedVariableKHR
+                             : spirv::Opcode::OpVariable;
+  encodeInstructionInto(typesGlobalValues, opcode, operands);
   elidedAttrs.push_back(initAttrName);
 
   // Encode decorations.

@@ -38,3 +38,10 @@ spirv.func @copy_memory_unsupported_source_mask(%arg0: !spirv.ptr<f32, StorageBu
   spirv.CopyMemory "StorageBuffer" %arg0, "StorageBuffer" %arg1 ["Aligned", 4], ["NonPrivatePointer|MakePointerVisible"] : f32
   spirv.Return
 }
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error@+1 {{failed to legalize operation 'spirv.GlobalVariable' that was explicitly marked illegal}}
+  spirv.GlobalVariable @untyped_var data_type(f32) : !spirv.untyped_ptr<Private>
+}

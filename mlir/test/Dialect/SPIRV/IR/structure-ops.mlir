@@ -50,6 +50,17 @@ spirv.module Logical GLSL450 {
 
 // -----
 
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @var : !spirv.untyped_ptr<StorageBuffer>
+  spirv.func @addressof_untyped() -> () "None" {
+    // CHECK: spirv.mlir.addressof @var : !spirv.untyped_ptr<StorageBuffer>
+    %0 = spirv.mlir.addressof @var : !spirv.untyped_ptr<StorageBuffer>
+    spirv.Return
+  }
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.Constant
 //===----------------------------------------------------------------------===//
@@ -748,6 +759,18 @@ spirv.module Logical GLSL450 {
 
 // -----
 
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc = 4.0 : f32
+  // CHECK: spirv.GlobalVariable @var0 data_type(f32) initializer(@sc) : !spirv.untyped_ptr<Private>
+  spirv.GlobalVariable @var0 data_type(f32) initializer(@sc) : !spirv.untyped_ptr<Private>
+  // CHECK: spirv.GlobalVariable @var1 data_type(!spirv.array<4 x f32>) : !spirv.untyped_ptr<Workgroup>
+  spirv.GlobalVariable @var1 data_type(!spirv.array<4 x f32>) : !spirv.untyped_ptr<Workgroup>
+  // CHECK: spirv.GlobalVariable @var2 bind(1, 2) : !spirv.untyped_ptr<StorageBuffer>
+  spirv.GlobalVariable @var2 bind(1, 2) : !spirv.untyped_ptr<StorageBuffer>
+}
+
+// -----
+
 // Allow in other module-like ops
 module {
   // CHECK: spirv.GlobalVariable
@@ -770,14 +793,14 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
 // -----
 
 spirv.module Logical GLSL450 {
-  // expected-error @+1 {{expected spirv.ptr type}}
+  // expected-error @+1 {{expected spirv.ptr or spirv.untyped_ptr type}}
   spirv.GlobalVariable @var0 : f32
 }
 
 // -----
 
 spirv.module Logical GLSL450 {
-  // expected-error @+1 {{result must be of a !spv.ptr type}}
+  // expected-error @+1 {{result must be of a !spv.ptr or !spv.untyped_ptr type}}
   "spirv.GlobalVariable"() {sym_name = "var0", type = none} : () -> ()
 }
 
@@ -800,6 +823,42 @@ spirv.module Logical GLSL450 {
 spirv.module Logical GLSL450 {
   // expected-error @+1 {{storage class cannot be 'Function'}}
   spirv.GlobalVariable @var0 : !spirv.ptr<f32, Function>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{storage class cannot be 'Function'}}
+  spirv.GlobalVariable @var0 data_type(f32) : !spirv.untyped_ptr<Function>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{op data type requires an untyped pointer type}}
+  spirv.GlobalVariable @var0 data_type(f32) : !spirv.ptr<f32, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{op data type cannot be void}}
+  spirv.GlobalVariable @var0 data_type(none) : !spirv.untyped_ptr<Workgroup>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{op with 'Workgroup' storage class requires a data type}}
+  spirv.GlobalVariable @var0 : !spirv.untyped_ptr<Workgroup>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc = 4.0 : f32
+  // expected-error @+1 {{op with an initializer requires a data type}}
+  spirv.GlobalVariable @var0 initializer(@sc) : !spirv.untyped_ptr<CrossWorkgroup>
 }
 
 // -----

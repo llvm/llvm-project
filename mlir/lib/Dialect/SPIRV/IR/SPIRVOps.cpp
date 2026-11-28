@@ -1442,6 +1442,17 @@ ParseResult spirv::GlobalVariableOp::parse(OpAsmParser &parser,
     return failure();
   }
 
+  // Parse optional data type
+  StringRef dataTypeAttrName =
+      spirv::GlobalVariableOp::getDataTypeAttrName(result.name);
+  if (succeeded(parser.parseOptionalKeyword(dataTypeAttrName))) {
+    Type dataType;
+    if (parser.parseLParen() || parser.parseType(dataType) ||
+        parser.parseRParen())
+      return failure();
+    result.addAttribute(dataTypeAttrName, TypeAttr::get(dataType));
+  }
+
   // Parse optional initializer
   if (succeeded(parser.parseOptionalKeyword(initializerAttrName))) {
     FlatSymbolRefAttr initSymbol;
@@ -1463,8 +1474,9 @@ ParseResult spirv::GlobalVariableOp::parse(OpAsmParser &parser,
   if (parser.parseColonType(type)) {
     return failure();
   }
-  if (!isa<spirv::PointerType>(type)) {
-    return parser.emitError(loc, "expected spirv.ptr type");
+  if (!isa<spirv::PointerType, spirv::UntypedPointerType>(type)) {
+    return parser.emitError(loc,
+                            "expected spirv.ptr or spirv.untyped_ptr type");
   }
   result.addAttribute(typeAttrName, TypeAttr::get(type));
 
@@ -1483,6 +1495,13 @@ void spirv::GlobalVariableOp::print(OpAsmPrinter &printer) {
   elidedAttrs.push_back(getSymNameAttrName());
   elidedAttrs.push_back(getSymVisibilityAttrName());
 
+  // Print optional data type
+  if (std::optional<Type> dataType = getDataType()) {
+    StringRef dataTypeAttrName = getDataTypeAttrName();
+    printer << " " << dataTypeAttrName << '(' << *dataType << ')';
+    elidedAttrs.push_back(dataTypeAttrName);
+  }
+
   StringRef initializerAttrName = this->getInitializerAttrName();
   // Print optional initializer
   if (auto initializer = this->getInitializer()) {
@@ -1499,8 +1518,8 @@ void spirv::GlobalVariableOp::print(OpAsmPrinter &printer) {
 }
 
 LogicalResult spirv::GlobalVariableOp::verify() {
-  if (!isa<spirv::PointerType>(getType()))
-    return emitOpError("result must be of a !spv.ptr type");
+  if (!isa<spirv::PointerType, spirv::UntypedPointerType>(getType()))
+    return emitOpError("result must be of a !spv.ptr or !spv.untyped_ptr type");
 
   // SPIR-V spec: "Storage Class is the Storage Class of the memory holding the
   // object. It cannot be Generic. It must be the same as the Storage Class
@@ -1513,10 +1532,27 @@ LogicalResult spirv::GlobalVariableOp::verify() {
            << stringifyStorageClass(storageClass) << "'";
   }
 
-  if (storageClass != spirv::StorageClass::Private &&
-      containsMicroscalingType(
-          cast<spirv::PointerType>(getType()).getPointeeType(),
-          /*subByteOnly=*/true))
+  std::optional<Type> dataType = getDataType();
+  if (dataType && isa<NoneType>(*dataType))
+    return emitOpError("data type cannot be void");
+  if (auto ptrType = dyn_cast<spirv::PointerType>(getType())) {
+    if (dataType)
+      return emitOpError("data type requires an untyped pointer type");
+    dataType = ptrType.getPointeeType();
+  } else if (!dataType) {
+    // SPIR-V spec: "Data Type must be specified if Storage Class is Function,
+    // Private, or Workgroup."
+    if (storageClass == spirv::StorageClass::Private ||
+        storageClass == spirv::StorageClass::Workgroup)
+      return emitOpError("with '") << stringifyStorageClass(storageClass)
+                                   << "' storage class requires a data type";
+    // SPIR-V spec: "Initializer must have the same type as Data Type."
+    if (getInitializer())
+      return emitOpError("with an initializer requires a data type");
+  }
+
+  if (dataType && storageClass != spirv::StorageClass::Private &&
+      containsMicroscalingType(*dataType, /*subByteOnly=*/true))
     return emitOpError("FP4 and FP6 types require Function or Private storage");
 
   // SPIR-V spec: "A module-scope OpVariable with an Initializer operand must
@@ -1530,8 +1566,9 @@ LogicalResult spirv::GlobalVariableOp::verify() {
     }
   }
 
-  Type pointeeType = cast<spirv::PointerType>(getType()).getPointeeType();
-  return verifyPhysicalStorageBufferDecorations(getOperation(), pointeeType);
+  if (!dataType)
+    return success();
+  return verifyPhysicalStorageBufferDecorations(getOperation(), *dataType);
 }
 
 LogicalResult

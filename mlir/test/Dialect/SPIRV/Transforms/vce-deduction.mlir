@@ -341,6 +341,28 @@ spirv.module Physical64 OpenCL attributes {
   }
 }
 
+// Data types of untyped variables contribute requirements.
+// CHECK: requires #spirv.vce<v1.0, [Float16, UntypedPointersKHR, Addresses, Kernel], [SPV_KHR_untyped_pointers]>
+spirv.module Physical64 OpenCL attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Kernel, Addresses, Float16, UntypedPointersKHR], [SPV_KHR_untyped_pointers]>,
+    #spirv.resource_limits<>
+  >
+} {
+  spirv.GlobalVariable @var data_type(f16) : !spirv.untyped_ptr<Workgroup>
+}
+
+// Data type requirements use the variable storage class.
+// CHECK: requires #spirv.vce<v1.0, [StorageBuffer16BitAccess, UntypedPointersKHR, Shader, Matrix], [SPV_KHR_16bit_storage, SPV_KHR_untyped_pointers, SPV_KHR_storage_buffer_storage_class]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Shader, StorageBuffer16BitAccess, UntypedPointersKHR], [SPV_KHR_untyped_pointers, SPV_KHR_16bit_storage, SPV_KHR_storage_buffer_storage_class]>,
+    #spirv.resource_limits<>
+  >
+} {
+  spirv.GlobalVariable @var data_type(!spirv.struct<(f16 [0])>) : !spirv.untyped_ptr<StorageBuffer>
+}
+
 // CHECK: requires #spirv.vce<v1.5, [GraphARM, Int8, TensorsARM, Float16, VulkanMemoryModel], [SPV_ARM_graph, SPV_ARM_tensors, SPV_KHR_vulkan_memory_model]>
 spirv.module Logical Vulkan attributes {
   spirv.target_env = #spirv.target_env<

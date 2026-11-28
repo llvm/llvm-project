@@ -137,8 +137,7 @@ getInterfaceVariables(mlir::FunctionOpInterface funcOp,
     // Starting with version 1.4, the interface's storage classes are all
     // storage classes used in declaring all global variables referenced by the
     // entry point’s call tree."
-    const spirv::StorageClass storageClass =
-        cast<spirv::PointerType>(var.getType()).getStorageClass();
+    const spirv::StorageClass storageClass = var.storageClass();
     if ((targetEnvAttr && targetEnv.getVersion() >= spirv::Version::V_1_4) ||
         (llvm::is_contained(
             {spirv::StorageClass::Input, spirv::StorageClass::Output},

@@ -53,7 +53,7 @@ def SPIRV_AddressOfOp : SPIRV_Op<"mlir.addressof",
   );
 
   let results = (outs
-    SPIRV_AnyPtr:$pointer
+    SPIRV_AnyPtrOrUntypedPtr:$pointer
   );
 
   let hasOpcode = 0;
@@ -479,8 +479,11 @@ def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [
   }];
 
   let description = [{
-    The variable type must be an OpTypePointer. Its type operand is the type of
-    object in memory.
+    The variable type must be an OpTypePointer or an OpTypeUntypedPointerKHR.
+    For OpTypePointer, its type operand is the type of object in memory. For
+    OpTypeUntypedPointerKHR, the type of object in memory is given by the
+    optional `data_type`, which must be specified for the Private and
+    Workgroup storage classes.
 
     Storage Class is the Storage Class of the memory holding the object. It
     cannot be Generic. It must be the same as the Storage Class operand of
@@ -497,13 +500,15 @@ def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [
 
     ```
     variable-op ::= `spirv.GlobalVariable` spirv-type symbol-ref-id
+                    (`data_type(` spirv-type `)`)?
                     (`initializer(` symbol-ref-id `)`)?
                     (`bind(` integer-literal, integer-literal `)`)?
                     (`built_in(` string-literal `)`)?
                     attribute-dict?
     ```
 
-    where `initializer` specifies initializer and `bind` specifies the
+    where `data_type` specifies the object type of an untyped pointer
+    variable, `initializer` specifies initializer and `bind` specifies the
     descriptor set and binding number. `built_in` specifies SPIR-V
     BuiltIn decoration associated with the op.
 
@@ -514,6 +519,7 @@ def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [
     spirv.GlobalVariable @var1 initializer(@var0) : !spirv.ptr<f32, Output>
     spirv.GlobalVariable @var2 bind(1, 2) : !spirv.ptr<f32, Uniform>
     spirv.GlobalVariable @var3 built_in("GlobalInvocationId") : !spirv.ptr<vector<3xi32>, Input>
+    spirv.GlobalVariable @var4 data_type(f32) : !spirv.untyped_ptr<Workgroup>
     ```
   }];
 
@@ -526,7 +532,8 @@ def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [
     OptionalAttr<I32Attr>:$descriptor_set,
     OptionalAttr<StrAttr>:$built_in,
     OptionalAttr<SPIRV_LinkageAttributesAttr>:$linkage_attributes,
-    OptionalAttr<StrAttr>:$sym_visibility
+    OptionalAttr<StrAttr>:$sym_visibility,
+    OptionalAttr<TypeAttrOf<SPIRV_Type>>:$data_type
   );
 
   let results = (outs);
@@ -567,6 +574,8 @@ def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [
 
   let extraClassDeclaration = [{
     ::mlir::spirv::StorageClass storageClass() {
+      if (auto ptrType = ::llvm::dyn_cast<::mlir::spirv::UntypedPointerType>(this->getType()))
+        return ptrType.getStorageClass();
       return ::llvm::cast<::mlir::spirv::PointerType>(this->getType()).getStorageClass();
     }
   }];
