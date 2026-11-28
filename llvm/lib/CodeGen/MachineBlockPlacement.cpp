@@ -2998,6 +2998,20 @@ void MachineBlockPlacement::optimizeBranches() {
   }
 }
 
+/// Returns true if \p MBB can be entered by falling through from its layout
+/// predecessor \p LayoutPred. A layout predecessor ending in an indirect branch
+/// (e.g. indirectbr or a jump table) can list \p MBB as a successor without
+/// falling through to it.
+static bool hasFallThroughFrom(MachineBasicBlock &LayoutPred,
+                               const MachineBasicBlock &MBB) {
+  if (!LayoutPred.isSuccessor(&MBB))
+    return false;
+  MachineBasicBlock::iterator Term = LayoutPred.getLastNonDebugInstr();
+  if (Term != LayoutPred.end() && Term->isIndirectBranch())
+    return LayoutPred.canFallThrough();
+  return true;
+}
+
 void MachineBlockPlacement::alignBlocks() {
   // Walk through the backedges of the function now that we have fully laid out
   // the basic blocks and align the destination of each backedge. We don't rely
@@ -3090,7 +3104,7 @@ void MachineBlockPlacement::alignBlocks() {
 
     // Force alignment if all the predecessors are jumps. We already checked
     // that the block isn't cold above.
-    if (!LayoutPred->isSuccessor(ChainBB)) {
+    if (!hasFallThroughFrom(*LayoutPred, *ChainBB)) {
       ChainBB->setAlignment(LoopAlign);
       DetermineMaxAlignmentPadding();
       continue;
@@ -3126,7 +3140,7 @@ void MachineBlockPlacement::alignBlocks() {
     // specific alignment.
     for (auto MBI = std::next(F->begin()), MBE = F->end(); MBI != MBE; ++MBI) {
       auto LayoutPred = std::prev(MBI);
-      if (!LayoutPred->isSuccessor(&*MBI)) {
+      if (!hasFallThroughFrom(*LayoutPred, *MBI)) {
         if (HasMaxBytesOverride)
           MBI->setAlignment(Align::fromLog2(AlignAllNonFallThruBlocks),
                             MaxBytesForAlignmentOverride);
