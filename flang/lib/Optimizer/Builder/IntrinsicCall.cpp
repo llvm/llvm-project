@@ -171,6 +171,58 @@ static constexpr IntrinsicHandler handlers[]{
     {"atan2pi", &I::genAtanpi},
     {"atand", &I::genAtand},
     {"atanpi", &I::genAtanpi},
+    {"atomic_add",
+     &I::genAtomicOp<I::AtomicKind::ADD, false>,
+     {{{"atom", asBox},
+       {"value", asValue},
+       {"stat", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"atomic_and",
+     &I::genAtomicOp<I::AtomicKind::AND, false>,
+     {{{"atom", asBox},
+       {"value", asValue},
+       {"stat", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"atomic_fetch_add",
+     &I::genAtomicOp<I::AtomicKind::ADD, true>,
+     {{{"atom", asBox},
+       {"value", asValue},
+       {"old", asAddr},
+       {"stat", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"atomic_fetch_and",
+     &I::genAtomicOp<I::AtomicKind::AND, true>,
+     {{{"atom", asBox},
+       {"value", asValue},
+       {"old", asAddr},
+       {"stat", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"atomic_fetch_or",
+     &I::genAtomicOp<I::AtomicKind::OR, true>,
+     {{{"atom", asBox},
+       {"value", asValue},
+       {"old", asAddr},
+       {"stat", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"atomic_fetch_xor",
+     &I::genAtomicOp<I::AtomicKind::XOR, true>,
+     {{{"atom", asBox},
+       {"value", asValue},
+       {"old", asAddr},
+       {"stat", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"atomic_or",
+     &I::genAtomicOp<I::AtomicKind::OR, false>,
+     {{{"atom", asBox},
+       {"value", asValue},
+       {"stat", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"atomic_xor",
+     &I::genAtomicOp<I::AtomicKind::XOR, false>,
+     {{{"atom", asBox},
+       {"value", asValue},
+       {"stat", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -2857,6 +2909,44 @@ mlir::Value IntrinsicLibrary::genAtanpi(mlir::Type resultType,
                     llvm::numbers::inv_pis);
   mlir::Value factor = builder.createRealConstant(loc, resultType, inv_pi);
   return mlir::arith::MulFOp::create(builder, loc, atan, factor);
+}
+
+// ATOMIC_OP
+template <I::AtomicKind op, bool is_fetch>
+void IntrinsicLibrary::genAtomicOp(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(is_fetch ? (args.size() == 4) : (args.size() == 3));
+
+  fir::ExtendedValue statExv = args.size() == 3 ? args[2] : args[3];
+  mlir::Value stat =
+      isStaticallyAbsent(statExv)
+          ? fir::AbsentOp::create(builder, loc,
+                                  builder.getRefType(builder.getI32Type()))
+          : fir::getBase(statExv);
+  mlir::Value atom = getBase(args[0]);
+  mlir::Value value = fir::getBase(args[1]);
+  mlir::Value old;
+  if (is_fetch)
+    old = fir::getBase(args[2]);
+
+  llvm::SmallVector<mlir::Value> cosubscripts =
+      mif::getCosubscriptsFromDesignate(builder, loc, atom);
+  switch (op) {
+  case I::AtomicKind::ADD:
+    mif::AtomicAddOp::create(builder, loc, atom, cosubscripts, value, old,
+                             stat);
+    break;
+  case I::AtomicKind::AND:
+    mif::AtomicAndOp::create(builder, loc, atom, cosubscripts, value, old,
+                             stat);
+    break;
+  case I::AtomicKind::OR:
+    mif::AtomicOrOp::create(builder, loc, atom, cosubscripts, value, old, stat);
+    break;
+  case I::AtomicKind::XOR:
+    mif::AtomicXorOp::create(builder, loc, atom, cosubscripts, value, old,
+                             stat);
+    break;
+  };
 }
 
 // ASSOCIATED

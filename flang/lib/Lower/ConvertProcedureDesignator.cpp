@@ -129,7 +129,8 @@ static hlfir::EntityWithAttributes designateProcedurePointerComponent(
       /*compShape=*/mlir::Value{}, hlfir::DesignateOp::Subscripts{},
       /*substring=*/mlir::ValueRange{},
       /*complexPart=*/std::nullopt,
-      /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{}, attributes);
+      /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{},
+      /*cosubscrits=*/mlir::ValueRange{}, attributes);
   return hlfir::EntityWithAttributes{compRef};
 }
 

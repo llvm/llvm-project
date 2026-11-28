@@ -34,8 +34,10 @@ end program
 ! COARRAY: mif.alloc_coarray %[[VAL_4]]#0 lcobounds %[[VAL_10]] ucobounds %[[VAL_11]] errmsg %[[VAL_5]] uniq_name("_QFEe") : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
 ! COARRAY: %[[VAL_12:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>
 ! COARRAY: %[[C1_I64_1:.*]] = arith.constant 1 : i64
-! COARRAY: mif.event_post %[[VAL_12]][%[[C1_I64_1]]] : (!fir.class<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>, i64) -> ()
-! COARRAY: %[[VAL_13:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>
-! COARRAY: mif.event_wait %[[VAL_13]] : (!fir.class<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>) -> ()
+! COARRAY: %[[VAL_13:.*]] = hlfir.designate %[[VAL_12]] [%c1_i64_1] : (!fir.class<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>, i64) -> !fir.class<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>
+! COARRAY: %[[C1_I64_2:.*]] = arith.constant 1 : i64
+! COARRAY: mif.event_post %[[VAL_13]][%[[C1_I64_2]]] : (!fir.class<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, i64) -> ()
+! COARRAY: %[[VAL_14:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>
+! COARRAY: mif.event_wait %[[VAL_14]] : (!fir.class<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>) -> ()
 ! COARRAY: return
 ! COARRAY: }

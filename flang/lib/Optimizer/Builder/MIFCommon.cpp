@@ -104,3 +104,16 @@ mlir::func::FuncOp mif::getOrCreateInitFunc(fir::FirOpBuilder &builder,
 
   return func;
 }
+
+/// A function that retrieves the subscripts if its an `hlfir.designate`.
+llvm::SmallVector<mlir::Value>
+mif::getCosubscriptsFromDesignate(fir::FirOpBuilder &builder,
+                                  mlir::Location loc, mlir::Value v) {
+  mlir::Operation *op = v.getDefiningOp();
+  if (auto box = mlir::dyn_cast<fir::EmboxOp>(op))
+    op = box.getMemref().getDefiningOp();
+
+  if (auto designateOp = mlir::dyn_cast<hlfir::DesignateOp>(op))
+    return designateOp.getCosubscripts();
+  return {};
+}

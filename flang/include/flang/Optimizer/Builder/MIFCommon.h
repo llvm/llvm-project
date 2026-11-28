@@ -28,6 +28,10 @@ mlir::func::FuncOp getOrCreateInitFunc(fir::FirOpBuilder &builder,
                                        mlir::ModuleOp mod,
                                        llvm::StringRef name);
 
+llvm::SmallVector<mlir::Value> getCosubscriptsFromDesignate(fir::FirOpBuilder &,
+                                                            mlir::Location loc,
+                                                            mlir::Value);
+
 } // namespace mif
 
 #endif // FORTRAN_OPTIMIZER_TRANSFORMS_MIFCOMMON_H_

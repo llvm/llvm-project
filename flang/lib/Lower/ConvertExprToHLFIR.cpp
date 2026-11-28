@@ -22,6 +22,7 @@
 #include "flang/Lower/ConvertProcedureDesignator.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Complex.h"
@@ -218,6 +219,7 @@ private:
     std::optional<bool> complexPart;
     mlir::Value resultShape;
     llvm::SmallVector<mlir::Value> typeParams;
+    llvm::SmallVector<mlir::Value> cosubscripts;
     llvm::SmallVector<mlir::Value, 2> substring;
   };
 
@@ -332,7 +334,7 @@ private:
         builder, getLoc(), designatorType, partInfo.base.value().getBase(),
         partInfo.componentName, partInfo.componentShape, partInfo.subscripts,
         partInfo.substring, partInfo.complexPart, partInfo.resultShape,
-        partInfo.typeParams, attributes);
+        partInfo.typeParams, partInfo.cosubscripts, attributes);
     if (auto elementalAddrOp = getVectorSubscriptElementAddrOp())
       builder.setInsertionPoint(*elementalAddrOp);
     return mlir::cast<fir::FortranVariableOpInterface>(
@@ -405,11 +407,6 @@ private:
   gen(const Fortran::evaluate::CoarrayRef &coarrayRef) {
     PartInfo partInfo;
     mlir::Type resultType = visit(coarrayRef, partInfo);
-
-    if (partInfo.componentName.empty() && partInfo.subscripts.empty() &&
-        partInfo.substring.empty())
-      return gen(coarrayRef.GetFirstSymbol());
-
     return genDesignate(resultType, partInfo, coarrayRef);
   }
 
@@ -418,6 +415,7 @@ private:
     // Coarray is a data entity with corank > 0 that must be scalar
     // or array.
     mlir::Type baseType = visit(coarrayRef.base().GetLastSymbol(), partInfo);
+    partInfo.cosubscripts = getCosubscripts(converter, loc, coarrayRef);
     if (auto seqType = mlir::dyn_cast<fir::SequenceType>(baseType)) {
       fir::FirOpBuilder &builder = getBuilder();
       mlir::Location loc = getLoc();
@@ -2395,6 +2393,7 @@ private:
             /*substring=*/mlir::ValueRange{},
             /*complexPart=*/std::nullopt,
             /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{},
+            /*cosubscripts=*/mlir::ValueRange{},
             fir::FortranVariableFlagsAttr{});
         currentParent = hlfir::EntityWithAttributes{newParent};
       }
@@ -2451,7 +2450,8 @@ private:
           hlfir::DesignateOp::Subscripts{},
           /*substring=*/mlir::ValueRange{},
           /*complexPart=*/std::nullopt,
-          /*shape=*/compShape, typeParams, attrs);
+          /*shape=*/compShape, typeParams,
+          /*cosubscripts=*/mlir::ValueRange{}, attrs);
 
       if (attrs && bitEnumContainsAny(attrs.getFlags(),
                                       fir::FortranVariableFlagsEnum::pointer)) {
@@ -2637,7 +2637,8 @@ hlfir::Entity Fortran::lower::genEnumerationOrdinalDesignator(
       /*compShape=*/mlir::Value{}, hlfir::DesignateOp::Subscripts{},
       /*substring=*/mlir::ValueRange{},
       /*complexPart=*/std::nullopt, shape,
-      /*typeParams=*/mlir::ValueRange{}, fir::FortranVariableFlagsAttr{});
+      /*typeParams=*/mlir::ValueRange{}, /*cosubscripts=*/mlir::ValueRange{},
+      fir::FortranVariableFlagsAttr{});
   return hlfir::Entity{designate};
 }
 
