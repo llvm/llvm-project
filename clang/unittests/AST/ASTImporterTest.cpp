@@ -746,10 +746,9 @@ TEST_P(ImportReflection, ImportReflectionAPValueAsType) {
 
   const APValue &ToVal = ToArg.getAsStructuralValue();
   ASSERT_TRUE(ToVal.isReflection());
-  EXPECT_EQ(ReflectionKind::Type, ToVal.getReflectionOperandKind());
+  EXPECT_EQ(ReflectionKind::Type, ToVal.getReflectionValue().getKind());
 
-  const auto *ToTSI =
-      static_cast<const TypeSourceInfo *>(ToVal.getReflectionOpaqueOperand());
+  const auto *ToTSI = ToVal.getReflectionValue().castAsType();
   ASSERT_TRUE(ToTSI);
   EXPECT_EQ(ToTA->getASTContext().IntTy.getAsOpaquePtr(),
             ToTSI->getType().getCanonicalType().getAsOpaquePtr());
@@ -780,9 +779,9 @@ TEST_P(ImportReflection, ImportReflectionAPValueAsNullReflection) {
 
   const APValue &ToVal = ToArg.getAsStructuralValue();
   ASSERT_TRUE(ToVal.isReflection());
-  EXPECT_EQ(ReflectionKind::Null, ToVal.getReflectionOperandKind());
+  EXPECT_EQ(ReflectionKind::Null, ToVal.getReflectionValue().getKind());
 
-  EXPECT_EQ(ToVal.getReflectionOpaqueOperand(), nullptr);
+  EXPECT_TRUE(ToVal.getReflectionValue().getOperand().isNull());
 }
 
 TEST_P(ImportDecl, ImportFunctionTemplateDecl) {

@@ -505,6 +505,13 @@ class TypeSourceInfo;
     /// error.
     llvm::Expected<APValue> Import(const APValue &FromValue);
 
+    /// Import the given ReflectionValue from the "from" context into
+    /// the "to" context.
+    ///
+    /// \return the equivalent ReflectionValue in the "to" context or the import
+    /// error.
+    llvm::Expected<ReflectionValue> Import(ReflectionValue FromValue);
+
     /// Import the definition of the given declaration, including all of
     /// the declarations it contains.
     [[nodiscard]] llvm::Error ImportDefinition(Decl *From);
