@@ -48,8 +48,8 @@ define i32 @nsw_kept_same_sign(i32 %start.in, i32 %step.in, i32 %n) {
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    br label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i32 [[N]], [[STEP]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[TMP0]], [[START]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw nsw i32 [[N]], [[STEP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[TMP0]], [[START]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
 entry:
@@ -67,6 +67,39 @@ latch:
   %v.next = add nsw i32 %v, %step
   %i.next = add i32 %i, 1
   br label %loop
+
+exit:
+  ret i32 %v
+}
+
+; Both %start and %step are negative, so we can only keep nsw on the add.
+define i32 @nsw_start_stop_negative(i32 range(i32 -1024, 0) %start, i32 range(i32 -8, 0) %step, i32  %n) {
+; CHECK-LABEL: define i32 @nsw_start_stop_negative(
+; CHECK-SAME: i32 range(i32 -1024, 0) [[START:%.*]], i32 range(i32 -8, 0) [[STEP:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP_LATCH:.*]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[N]], [[STEP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[START]], [[TMP0]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %v = phi i32 [ %start, %entry ], [ %v.next, %loop.latch ]
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop.latch ]
+  %done = icmp eq i32 %i, %n
+  br i1 %done, label %exit, label %loop.latch
+
+loop.latch:
+  %v.next = add nsw i32 %v, %step
+  %i.next = add i32 %i, 1
+  br label %loop.header
 
 exit:
   ret i32 %v
@@ -99,6 +132,75 @@ loop:
   %v = phi i32 [ %start, %entry ], [ %v.next, %latch ]
   %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
   %done = icmp eq i32 %i, %n
+  br i1 %done, label %exit, label %latch
+
+latch:
+  %v.next = add nsw i32 %v, %step
+  %i.next = add i32 %i, 1
+  br label %loop
+
+exit:
+  ret i32 %v
+}
+
+; Start is non-negative but Step is negative, and the multiply can overflow:
+; with i8, %start == -128 and %step == 63 the recurrence steps through
+; -128, -65, -2, 61 without wrapping, while 3 * 63 = 189 wraps.
+define i8 @nsw_dropped_mixed_signs_mul_overflows(i8 range(i8 -128, 0) %start, i8 range(i8 0, 64) %step) {
+; CHECK-LABEL: define i8 @nsw_dropped_mixed_signs_mul_overflows(
+; CHECK-SAME: i8 range(i8 -128, 0) [[START:%.*]], i8 range(i8 0, 64) [[STEP:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LATCH:.*]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw i8 [[STEP]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[START]], [[TMP0]]
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+entry:
+  br label %loop
+
+loop:
+  %v = phi i8 [ %start, %entry ], [ %v.next, %latch ]
+  %i = phi i8 [ 0, %entry ], [ %i.next, %latch ]
+  %done = icmp eq i8 %i, 3
+  br i1 %done, label %exit, label %latch
+
+latch:
+  %v.next = add nsw i8 %v, %step
+  %i.next = add i8 %i, 1
+  br label %loop
+
+exit:
+  ret i8 %v
+}
+
+; Both %start and %step are non-negative and the count is a non-negative
+; constant, so both the multiply and the add keep nsw.
+define i32 @nsw_kept_same_sign_const_count(i32 range(i32 0, -2147483648) %start, i32 range(i32 0, -2147483648) %step) {
+; CHECK-LABEL: define i32 @nsw_kept_same_sign_const_count(
+; CHECK-SAME: i32 range(i32 0, -2147483648) [[START:%.*]], i32 range(i32 0, -2147483648) [[STEP:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LATCH:.*]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw nsw i32 [[STEP]], 10
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[START]], [[TMP0]]
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+entry:
+  br label %loop
+
+loop:
+  %v = phi i32 [ %start, %entry ], [ %v.next, %latch ]
+  %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
+  %done = icmp eq i32 %i, 10
   br i1 %done, label %exit, label %latch
 
 latch:
