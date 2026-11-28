@@ -6073,6 +6073,13 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     Known.Zero = APInt::getHighBitsSet(BitWidth, BitWidth - 16);
     break;
   }
+  case AMDGPUISD::ZEXT_REUSE_HI16: {
+    // Same as (zext operand 0): the high 16 bits are taken from operand 1,
+    // whose high 16 bits are known zero.
+    Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1)
+                .zext(Known.getBitWidth());
+    break;
+  }
   case AMDGPUISD::MUL_U24:
   case AMDGPUISD::MUL_I24: {
     KnownBits RHSKnown = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);

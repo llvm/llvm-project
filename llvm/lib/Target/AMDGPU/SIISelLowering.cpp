@@ -16070,6 +16070,10 @@ SITargetLowering::performZeroOrAnyExtendCombine(SDNode *N,
   if (Src.getValueType() != MVT::i16)
     return SDValue();
 
+  if (N->getOpcode() == ISD::ZERO_EXTEND)
+    if (SDValue Ext = performZExtKnownZeroHi16Combine(N, DCI))
+      return Ext;
+
   if (!Src->hasOneUse())
     return SDValue();
 
@@ -16111,6 +16115,60 @@ SITargetLowering::performZeroOrAnyExtendCombine(SDNode *N,
 
   return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, V0, V1,
                      DAG.getConstant(PermMask, DL, MVT::i32));
+}
+
+// On real true16, a 16-bit VALU result written to the low half of a VGPR
+// leaves the high half untouched. If the result is computed from (trunc X)
+// and the high 16 bits of X are known zero, its zero extension can reuse them:
+//
+//   zext (op (trunc X), ...) => ZEXT_REUSE_HI16 (op (trunc X), ...), X
+//
+// which is selected to (REG_SEQUENCE op, lo16, X.hi16, hi16). The register
+// coalescer can then assign op and X to the same VGPR, so no instruction is
+// needed for the zext. Every use of X must be a truncate, otherwise X stays
+// live across op and the two cannot share a register.
+SDValue
+SITargetLowering::performZExtKnownZeroHi16Combine(SDNode *N,
+                                                  DAGCombinerInfo &DCI) const {
+  if (!Subtarget->useRealTrue16Insts() || !DCI.isAfterLegalizeDAG() ||
+      !N->isDivergent())
+    return SDValue();
+
+  SDValue Src = N->getOperand(0);
+  switch (Src.getOpcode()) {
+  case ISD::TRUNCATE:
+  case ISD::EXTRACT_VECTOR_ELT:
+  case ISD::BITCAST:
+    return SDValue();
+  default:
+    break;
+  }
+
+  for (SDValue Op : Src->op_values()) {
+    if (Op.getOpcode() != ISD::TRUNCATE)
+      continue;
+    SDValue X = Op.getOperand(0);
+    if (X.getValueType() != MVT::i32 || !X->isDivergent())
+      continue;
+    // A truncate of (srl Y, 16) is a free hi16 read of Y; reusing the shift
+    // result here would force the shift to be materialized.
+    if (X.getOpcode() == ISD::SRL)
+      if (auto *Amt = dyn_cast<ConstantSDNode>(X.getOperand(1));
+          Amt && Amt->getZExtValue() == 16)
+        continue;
+    if (!all_of(X->uses(), [&X](const SDUse &U) {
+          return U.getResNo() != X.getResNo() ||
+                 (U.getUser()->getOpcode() == ISD::TRUNCATE &&
+                  U.getUser()->getValueType(0) == MVT::i16);
+        }))
+      continue;
+    if (DCI.DAG.computeKnownBits(X).countMinLeadingZeros() < 16)
+      continue;
+    return DCI.DAG.getNode(AMDGPUISD::ZEXT_REUSE_HI16, SDLoc(N), MVT::i32, Src,
+                           X);
+  }
+
+  return SDValue();
 }
 
 // zext (srl (trunc x), c) => and (srl x, c), lowbits
