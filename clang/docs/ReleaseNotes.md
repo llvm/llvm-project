@@ -961,6 +961,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a crash in an implicit assignment operator when a `noreturn` member or base `operator=` is followed by trivially copyable members. (#GH111612)
 - Fixed a crash when a block in a default member initializer captures `this` and the class is aggregate-initialized outside of its member functions. (#GH229323)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
+- Fixed a crash when compiling C code with `-fsanitize=function` targeting the MSVC ABI, where a function returns an anonymous struct. (#GH215689)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
 - Fixed a crash when a variably modified type whose size is evaluated in an enclosing function was used in a local class or a block. Such uses are now diagnosed, and a lambda now captures the size of such a type. (#GH55686)
