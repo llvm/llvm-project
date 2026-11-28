@@ -1702,6 +1702,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   (such as `read`) via fuzzy builtin matching, and added explicit
   `CStringChecker` modeling for C23 `memset_explicit`.
 
+- Fixed a false positive `unix.Malloc` leak report for identity operations on
+  integers converted from pointers. (GH#220972)
+
 % comment:
 % This is for the Static Analyzer.
 % Use `####` headings for subsections:
