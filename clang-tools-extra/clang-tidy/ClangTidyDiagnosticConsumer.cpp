@@ -50,8 +50,10 @@ class ClangTidyDiagnosticRenderer : public DiagnosticRenderer {
 public:
   ClangTidyDiagnosticRenderer(const LangOptions &LangOpts,
                               DiagnosticOptions &DiagOpts,
-                              ClangTidyError &Error)
-      : DiagnosticRenderer(LangOpts, DiagOpts), Error(Error) {}
+                              ClangTidyError &Error, ClangTidyContext &Context,
+                              SourceManager *SM)
+      : DiagnosticRenderer(LangOpts, DiagOpts), Error(Error), Context(Context),
+        SM(SM) {}
 
 protected:
   void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,
@@ -69,6 +71,7 @@ protected:
         Loc.isValid()
             ? tooling::DiagnosticMessage(Message, Loc.getManager(), Loc)
             : tooling::DiagnosticMessage(Message);
+    recordLineTable(Loc);
 
     // Whatever we store here gets decoupled from the current Source Manager, so
     // each range must become a character range in a real file now.
@@ -113,6 +116,7 @@ protected:
       assert(Range.getBegin().isFileID() && Range.getEnd().isFileID() &&
              "Only file locations supported in fix-it hints.");
 
+      recordLineTable(Range.getBegin());
       const tooling::Replacement Replacement(Loc.getManager(), Range,
                                              FixIt.CodeToInsert);
       llvm::Error Err =
@@ -141,7 +145,14 @@ protected:
   }
 
 private:
+  void recordLineTable(SourceLocation Loc) {
+    if (SM)
+      Context.recordLineTable(*SM, Loc);
+  }
+
   ClangTidyError &Error;
+  ClangTidyContext &Context;
+  SourceManager *SM;
 };
 } // end anonymous namespace
 
@@ -215,6 +226,55 @@ bool ClangTidyContext::shouldSuppressDiagnostic(
 
 void ClangTidyContext::setSourceManager(SourceManager *SourceMgr) {
   DiagEngine->setSourceManager(SourceMgr);
+}
+
+void ClangTidyContext::recordLineTable(SourceManager &SM, SourceLocation Loc) {
+  if (!UsePresumedLocations || Loc.isInvalid() || !Loc.isFileID() ||
+      !SM.hasLineTable())
+    return;
+
+  const FileID FileID = SM.getFileID(Loc);
+  bool Invalid = false;
+  const SrcMgr::SLocEntry &SLocEntry = SM.getSLocEntry(FileID, &Invalid);
+  if (Invalid || !SLocEntry.isFile() ||
+      !SLocEntry.getFile().hasLineDirectives())
+    return;
+  const OptionalFileEntryRef File = SM.getFileEntryRefForID(FileID);
+  if (!File)
+    return;
+
+  LineTableInfo &SMLineTable = SM.getLineTable();
+  const auto SMEntries =
+      llvm::find_if(SMLineTable, [FileID](const auto &FIDAndEntries) {
+        return FIDAndEntries.first == FileID;
+      });
+  if (SMEntries == SMLineTable.end())
+    return;
+
+  SmallString<256> Path(File->getName());
+  SM.getFileManager().makeAbsolutePath(Path, true);
+  FileLineTable &Table = LineTables[Path];
+  if (SMEntries->second.size() <= Table.Entries.size())
+    return;
+
+  for (LineEntry Entry :
+       llvm::drop_begin(SMEntries->second, Table.Entries.size())) {
+    if (Entry.FilenameID >= 0) {
+      const StringRef Filename = SMLineTable.getFilename(Entry.FilenameID);
+      const auto [It, Inserted] =
+          Table.FilenameIDs.try_emplace(Filename, Table.Filenames.size());
+      if (Inserted)
+        Table.Filenames.emplace_back(Filename);
+      Entry.FilenameID = It->second;
+    }
+    Table.Entries.push_back(Entry);
+  }
+}
+
+const ClangTidyContext::FileLineTable *
+ClangTidyContext::getLineTable(StringRef AbsolutePath) const {
+  const auto It = LineTables.find(AbsolutePath);
+  return It == LineTables.end() ? nullptr : &It->second;
 }
 
 static bool parseFileExtensions(llvm::ArrayRef<std::string> AllFileExtensions,
@@ -455,17 +515,19 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     // ClangTidyPluginAction case, forward the diagnostics to it.
     forwardDiagnostic(Info);
   } else {
+    SourceManager *SM = nullptr;
+    if (Info.hasSourceManager())
+      SM = &Info.getSourceManager();
+    else if (Context.DiagEngine->hasSourceManager())
+      SM = &Context.DiagEngine->getSourceManager();
     ClangTidyDiagnosticRenderer Converter(
         Context.getLangOpts(), Context.DiagEngine->getDiagnosticOptions(),
-        Errors.back());
+        Errors.back(), Context, SM);
     SmallString<100> Message;
     Info.FormatDiagnostic(Message);
     FullSourceLoc Loc;
-    if (Info.hasSourceManager())
-      Loc = FullSourceLoc(Info.getLocation(), Info.getSourceManager());
-    else if (Context.DiagEngine->hasSourceManager())
-      Loc = FullSourceLoc(Info.getLocation(),
-                          Context.DiagEngine->getSourceManager());
+    if (SM)
+      Loc = FullSourceLoc(Info.getLocation(), *SM);
     Converter.emitDiagnostic(Loc, DiagLevel, Message, Info.getRanges(),
                              Info.getFixItHints());
   }

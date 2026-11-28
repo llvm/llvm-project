@@ -1,0 +1,6 @@
+# 1 "other.cpp"
+# 10 "other.cpp"
+int f() {}
+int g();
+# 20 "other.cpp"
+class C { C(int); };
