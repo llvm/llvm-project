@@ -113,6 +113,13 @@ EnableGlobalMerge("enable-global-merge", cl::Hidden,
                   cl::desc("Enable the global merge pass"),
                   cl::init(true));
 
+// In reorder-only mode the pass makes the same grouping decisions but, instead
+// of merging, only places the affected globals next to each other, so each
+// keeps its own symbol.
+static cl::opt<bool> GlobalMergeReorderOnly(
+    "global-merge-reorder-only", cl::Hidden,
+    cl::desc("Only reorder globals instead of merging them"), cl::init(false));
+
 static cl::opt<unsigned>
 GlobalMergeMaxOffset("global-merge-max-offset", cl::Hidden,
                      cl::desc("Set maximum offset for global merge pass"),
@@ -157,6 +164,7 @@ class GlobalMergeImpl {
   const TargetMachine *TM = nullptr;
   GlobalMergeOptions Opt;
   bool IsMachO = false;
+  bool ReorderOnly = false;
 
 private:
   bool doMerge(SmallVectorImpl<GlobalVariable *> &Globals, Module &M,
@@ -480,6 +488,23 @@ bool GlobalMergeImpl::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
                               bool isConst, unsigned AddrSpace) const {
   assert(Globals.size() > 1);
 
+  if (ReorderOnly) {
+    // Re-order the globals using the computed (packed) ordering, but don't
+    // merge them. Globals are normally emitted in the order they appear in the
+    // Module, and linkers often preserve the emission order.
+    SmallVector<GlobalVariable *, 16> Members;
+    for (ssize_t i = GlobalSet.find_first(); i != -1;
+         i = GlobalSet.find_next(i))
+      Members.push_back(Globals[i]);
+    if (Members.size() < 2)
+      return false;
+    for (GlobalVariable *GV : Members) {
+      GV->removeFromParent();
+      M.insertGlobalVariable(GV);
+    }
+    return true;
+  }
+
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
   Type *Int8Ty = Type::getInt8Ty(M.getContext());
   auto &DL = M.getDataLayout();
@@ -675,6 +700,7 @@ bool GlobalMergeImpl::run(Module &M) {
   if (!EnableGlobalMerge)
     return false;
 
+  ReorderOnly = GlobalMergeReorderOnly;
   IsMachO = M.getTargetTriple().isOSBinFormatMachO();
 
   auto &DL = M.getDataLayout();
