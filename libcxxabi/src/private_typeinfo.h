@@ -51,6 +51,7 @@ public:
 
 enum class path_kind : uint8_t {
   unknown,
+  nonexistent,
   public_path,
   not_public_path,
 };
@@ -103,7 +104,6 @@ struct _LIBCXXABI_HIDDEN __dynamic_cast_info {
 
   // Data that helps stop the search before the entire tree is searched:
 
-  bool dst_type_might_be_derived_from_static_type;
   // Whether we know that there is a unique dst_type in the graph.
   bool has_unique_dst_type;
 };
