@@ -4643,8 +4643,10 @@ static Constant *ConstantFoldFixedVectorCall(
 
       SmallVector<Constant *, 16> NCs;
       for (unsigned I = 0; I < Lanes; I++) {
+        // A lane index that doesn't fit in the operand type always overflows.
         bool Overflow;
-        if (Base.uadd_ov(APInt(Base.getBitWidth(), I), Overflow).ult(Limit) &&
+        if (isUIntN(Base.getBitWidth(), I) &&
+            Base.uadd_ov(APInt(Base.getBitWidth(), I), Overflow).ult(Limit) &&
             !Overflow)
           NCs.push_back(ConstantInt::getTrue(Ty));
         else
