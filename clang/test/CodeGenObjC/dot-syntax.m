@@ -13,12 +13,12 @@ typedef struct {
 
 @interface A : Root {
   int myX;
-  //  __complex myY;
+  __complex int myY;
   S myZ;
 }
 
 @property int x;
-//@property __complex int y;
+@property __complex int y;
 @property S z;
 @end
 
@@ -32,8 +32,6 @@ typedef struct {
   printf("-[A setX: %d]\n", myX);
 }
 
-// FIXME: Add back
-#if 0
 -(__complex int) y {
   printf("-[A y] = (%d, %d)\n", __real myY, __imag myY);
   return myY;
@@ -42,7 +40,6 @@ typedef struct {
   myY = arg;
   printf("-[A setY: (%d, %d)]\n", __real myY, __imag myY);
 }
-#endif
 
 -(S) z {
   printf("-[A z] = { %f, %f, { %f, %f } }\n", 
@@ -62,36 +59,36 @@ int main(void) {
   A *a = [[A alloc] init];
   A *b = [[A alloc] init];
   int a0 = 23;
-  //  __complex a1 = 25 + 10i;
+  __complex int a1 = 25 + 10i;
   S a2 =  { 246, 458, {275, 12} };
   int b0 = 42673;
-  //  __complex b1 = 15 + 13i;
+  __complex int b1 = 15 + 13i;
   S b2 =  { 26, 2, {367, 13} };
 
   a.x = a0;
-  //  a.y = a1;
+  a.y = a1;
   a.z = a2;
 
   a.x += a0;
-  //  a.y += a1;
+  a.y += a1;
   // Yay, no compound assign of structures. A GCC extension in the
   // works, perhaps?
 
   b.x = b0;
-  //  b.y = b1;
+  b.y = b1;
   b.z = b2;
 
   int x0 = (b.x = b0);
   printf("(b.x = b0): %d\n", x0);
 
-  //  int x1 = __real (b.y = b1);
-  //  printf("__real (b.y = b1) = %d\n", x1);
+  int x1 = __real (b.y = b1);
+  printf("__real (b.y = b1) = %d\n", x1);
 
   float x2 = (b.z = b2).x;
   printf("(b.z = b2).x: %f\n", x2);
 
   SWAP(int, a.x, b.x);
-  //  SWAP(__complex int, a.y, b.y);
+  SWAP(__complex int, a.y, b.y);
   SWAP(S, a.z, b.z);
 
   return 0;
