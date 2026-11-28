@@ -657,6 +657,29 @@ func.func @extract_from_tensor.generate_sideeffects(%idx: index, %tensor: tensor
 
 // -----
 
+// The extract must return the value read before the store.
+
+// CHECK-LABEL: func @extract_from_tensor.generate_read_before_store(
+//       CHECK: %[[SNAPSHOT:.*]] = tensor.generate
+//  CHECK-NEXT:   %[[OLD:.*]] = memref.load
+//  CHECK-NEXT:   tensor.yield %[[OLD]]
+//       CHECK: memref.store
+//   CHECK-NOT: memref.load
+//       CHECK: %[[RESULT:.*]] = tensor.extract %[[SNAPSHOT]][]
+//  CHECK-NEXT: return %[[RESULT]]
+func.func @extract_from_tensor.generate_read_before_store(
+    %buf: memref<i32>, %new: i32) -> i32 {
+  %snapshot = tensor.generate {
+    %old = memref.load %buf[] : memref<i32>
+    tensor.yield %old : i32
+  } : tensor<i32>
+  memref.store %new, %buf[] : memref<i32>
+  %result = tensor.extract %snapshot[] : tensor<i32>
+  return %result : i32
+}
+
+// -----
+
 // CHECK-LABEL: @static_tensor.generate
 // CHECK-SAME: %[[SIZE1:.*]]: index, %[[SIZE4:.*]]: index)
 func.func @static_tensor.generate(%size1: index, %size4: index) -> tensor<3x?x?x7x?xindex> {

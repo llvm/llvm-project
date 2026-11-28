@@ -30,6 +30,7 @@
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
@@ -1375,14 +1376,14 @@ struct ExtractFromCollapseShape : public OpRewritePattern<tensor::ExtractOp> {
 /// %extracted_element = tensor.extract %tensor[%c0] : tensor<?xi32>
 ///
 /// to just <computation> with %arg0 replaced by %c0. We only do this if the
-/// tensor.generate operation has no side-effects.
+/// tensor.generate operation has no memory effects.
 struct ExtractFromTensorGenerate : public OpRewritePattern<tensor::ExtractOp> {
   using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(tensor::ExtractOp extract,
                                 PatternRewriter &rewriter) const final {
     auto tensorFromElements = extract.getTensor().getDefiningOp<GenerateOp>();
-    if (!tensorFromElements || !wouldOpBeTriviallyDead(tensorFromElements))
+    if (!tensorFromElements || !isMemoryEffectFree(tensorFromElements))
       return failure();
 
     IRMapping mapping;
