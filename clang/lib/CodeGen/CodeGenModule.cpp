@@ -367,6 +367,9 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (T.isSPIRV())
     return !getLangOpts().HLSL;
 
+  if (T.getArch() == llvm::Triple::systemz)
+    return true;
+
   if (T.getArch() == llvm::Triple::aarch64 ||
       T.getArch() == llvm::Triple::aarch64_32 ||
       T.getArch() == llvm::Triple::aarch64_be)
@@ -501,6 +504,18 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     // BPF targets do not require any ABI compatibility information.
     TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
     return *TheLLVMABITargetInfo;
+
+  case llvm::Triple::systemz: {
+    llvm::abi::SystemZABIOptions Opts(T.getOS() == llvm::Triple::ZOS
+                                          ? llvm::abi::SystemZABIKind::XPLINK
+                                          : llvm::abi::SystemZABIKind::ELF);
+    Opts.IsSoftFloatABI = getCodeGenOpts().FloatABI == "soft";
+    Opts.HasVector = !Opts.IsSoftFloatABI && getTarget().getABI() == "vector";
+    initializeCommonABICompatInfo(Opts.CompatInfo,
+                                  getLangOpts().getClangABICompat());
+    TheLLVMABITargetInfo = llvm::abi::createSystemZTargetInfo(TB, Opts);
+    return *TheLLVMABITargetInfo;
+  }
 
   case llvm::Triple::x86_64: {
     StringRef ABI = getTarget().getABI();

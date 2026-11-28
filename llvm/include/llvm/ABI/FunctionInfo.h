@@ -82,13 +82,14 @@ private:
   bool IndirectByVal : 1;
   bool IndirectRealign : 1;
   bool CanBeFlattened : 1;
+  bool InReg : 1;
   unsigned NeededIntRegs : 3;
   unsigned NeededSseRegs : 3;
 
   ArgInfo(Kind K = Direct)
       : TheKind(K), SignExt(false), ZeroExt(false), Conservative(false),
         IndirectByVal(false), IndirectRealign(false), CanBeFlattened(false),
-        NeededIntRegs(0), NeededSseRegs(0) {}
+        InReg(false), NeededIntRegs(0), NeededSseRegs(0) {}
 
 public:
   /// \param T The type to coerce to. If null, the argument's original type is
@@ -200,6 +201,13 @@ public:
     return *this;
   }
 
+  /// See getInReg.
+  ArgInfo &setInReg(bool IsInReg = true) {
+    assert((isDirect() || isExtend()) && "Invalid Kind!");
+    InReg = IsInReg;
+    return *this;
+  }
+
   Kind getKind() const { return TheKind; }
   bool isDirect() const { return TheKind == Direct; }
   bool isIndirect() const { return TheKind == Indirect; }
@@ -251,6 +259,13 @@ public:
   bool getIndirectRealign() const {
     assert((isIndirect() || isIndirectAliased()) && "Invalid Kind!");
     return IndirectRealign;
+  }
+
+  /// Whether the value is passed in registers, which lowers to the `inreg`
+  /// attribute. Mirrors clang::CodeGen::ABIArgInfo::getInReg.
+  bool getInReg() const {
+    assert((isDirect() || isExtend()) && "Invalid Kind!");
+    return InReg;
   }
 
   /// Whether a Direct record coercion may be split into one wire argument
