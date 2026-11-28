@@ -149,8 +149,9 @@ static void ErrorCallback(void *, const char *, int) {}
 
 LibbacktraceSymbolizer *LibbacktraceSymbolizer::get(LowLevelAllocator *alloc) {
   // State created in backtrace_create_state is leaked.
-  void *state = (void *)(backtrace_create_state("/proc/self/exe", 0,
-                                                ErrorCallback, NULL));
+  // Don't pass an initial filename as libbacktrace handles many different
+  // cases.
+  void *state = (void *)(backtrace_create_state(NULL, 0, ErrorCallback, NULL));
   if (!state)
     return 0;
   return new(*alloc) LibbacktraceSymbolizer(state);
