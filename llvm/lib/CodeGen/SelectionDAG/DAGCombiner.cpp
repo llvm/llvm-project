@@ -15823,25 +15823,15 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
 
     bool CanHarm = false;
     bool CanHelp = false;
-    bool HasNarrowLiveOut = false;
-    bool HasBranchCompare = false;
-    bool WideCmpSupported = TLI.isOperationLegalOrCustom(ISD::SETCC, VT);
-    if (!WideCmpSupported && !LegalOperations && SrcVT.isScalarInteger() &&
-        VT.isScalarInteger()) {
-      LLVMContext &Ctx = *DAG.getContext();
-      auto [SrcAction, SrcLegalVT] = TLI.getTypeConversion(Ctx, SrcVT);
-      auto [DstAction, DstLegalVT] = TLI.getTypeConversion(Ctx, VT);
-      WideCmpSupported = SrcAction == TargetLowering::TypePromoteInteger &&
-                         DstAction == TargetLowering::TypePromoteInteger &&
-                         SrcLegalVT == DstLegalVT &&
-                         TLI.isOperationLegalOrCustom(ISD::SETCC, DstLegalVT);
-    }
+    bool WideningNeedsLegalization =
+        (TLI.isTypeLegal(SrcVT) && !TLI.isTypeLegal(VT)) ||
+        (TLI.isOperationLegalOrCustom(ISD::SETCC, SrcVT) &&
+         !TLI.isOperationLegalOrCustom(ISD::SETCC, VT));
 
     for (SDUse &Use : Load->uses()) {
       if (Use.getResNo() != V.getResNo())
         continue;
       SDNode *User = Use.getUser();
-      HasNarrowLiveOut |= User->getOpcode() == ISD::CopyToReg;
       // An ordinary zext still needs the zero high bits.
       if (User->getOpcode() == ISD::ZERO_EXTEND &&
           !User->getFlags().hasNonNeg()) {
@@ -15852,9 +15842,11 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
       if ((!IsSetCC && User->getOpcode() != ISD::SELECT_CC) ||
           Use.getOperandNo() >= 2)
         continue;
-      // Don't introduce a compare that needs more legalization.
-      if (IsSetCC && !WideCmpSupported &&
-          isa<ConstantSDNode>(User->getOperand(1 - Use.getOperandNo()))) {
+      bool WidensCompare =
+          IsSetCC &&
+          isa<ConstantSDNode>(User->getOperand(1 - Use.getOperandNo()));
+      // Don't turn a supported sibling compare into one needing legalization.
+      if (WidensCompare && WideningNeedsLegalization) {
         CanHarm = true;
         break;
       }
@@ -15865,53 +15857,15 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
         break;
       }
 
-      if (!ISD::isSignedIntSetCC(CC) || CanHelp)
-        continue;
-      CanHelp |= !TLI.isZExtFree(V, VT) ||
-                 !TLI.isOperationLegalOrCustom(ISD::SETCC, SrcVT);
-      if (CanHelp)
-        continue;
-
-      if (!IsSetCC || !VT.isScalarInteger() || Use.getOperandNo() != 0 ||
-          !User->hasOneUse())
-        continue;
-      const SDUse &CmpUse = *User->use_begin();
-      const SDNode *CmpUser = CmpUse.getUser();
-      if (CmpUser->getOpcode() == ISD::BRCOND) {
-        HasBranchCompare |= isa<ConstantSDNode>(User->getOperand(1));
-        continue;
+      // Let the target veto an undesirable compare width.
+      if (TLI.isTypeDesirableForOp(User, SrcVT) &&
+          !TLI.isTypeDesirableForOp(User, VT)) {
+        CanHarm = true;
+        break;
       }
 
-      // Widening one sign test can let foldLogicOfSetCCs replace two sign
-      // tests with one test of the AND or OR of their inputs.
-      if (CmpUser->getOpcode() != ISD::AND && CmpUser->getOpcode() != ISD::OR)
-        continue;
-      auto IsMatchingSignTest = [CC](SDValue RHS) {
-        return (CC == ISD::SETLT && isNullConstant(RHS)) ||
-               (CC == ISD::SETGT && isAllOnesConstant(RHS));
-      };
-      if (!IsMatchingSignTest(User->getOperand(1)))
-        continue;
-      EVT CmpVT = User->getValueType(0);
-      if ((LegalOperations || CmpVT != MVT::i1) &&
-          CmpVT != TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                                        VT))
-        continue;
-      SDValue Peer = CmpUser->getOperand(1 - CmpUse.getOperandNo());
-      CanHelp |= Peer.getOpcode() == ISD::SETCC && Peer.hasOneUse() &&
-                 Peer.getOperand(0).getValueType() == VT &&
-                 Peer.getOperandCondCode(2) == CC &&
-                 IsMatchingSignTest(Peer.getOperand(1));
+      CanHelp |= ISD::isSignedIntSetCC(CC);
     }
-
-    // When both values are live out, widening the branch's signed compare
-    // lets one sign-extending load supply both live-outs and the compare.
-    if (!CanHarm && !CanHelp && HasBranchCompare && HasNarrowLiveOut &&
-        HasExtLoad(ISD::SEXTLOAD) && TLI.isTruncateFree(VT, SrcVT))
-      CanHelp |= llvm::any_of(N->uses(), [](const SDUse &Use) {
-        return Use.getResNo() == 0 &&
-               Use.getUser()->getOpcode() == ISD::CopyToReg;
-      });
 
     if (!CanHarm && CanHelp) {
       ExtLoadType = ISD::SEXTLOAD;

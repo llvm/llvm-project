@@ -65085,6 +65085,17 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
 
 bool X86TargetLowering::isTypeDesirableForOp(SDNode *N, EVT VT) const {
   unsigned Opc = N->getOpcode();
+  // A signed byte compare with an immediate can avoid the prefix required
+  // by a wider compare at a non-default operand size.
+  if (Opc == ISD::SETCC && N->getOperand(0).getValueType() == MVT::i8 &&
+      ISD::isSignedIntSetCC(N->getOperandCondCode(2)) &&
+      (isa<ConstantSDNode>(N->getOperand(0)) ||
+       isa<ConstantSDNode>(N->getOperand(1)))) {
+    EVT DefaultVT = Subtarget.is16Bit() ? MVT::i16 : MVT::i32;
+    if (VT != MVT::i8 && VT != DefaultVT)
+      return false;
+  }
+
   // There are no vXi64 to f32 or f64 conversions without AVX512DQ.
   if ((Opc == ISD::SINT_TO_FP || Opc == ISD::UINT_TO_FP) &&
       VT.isVectorOf(MVT::i64) && !Subtarget.hasDQI() &&
