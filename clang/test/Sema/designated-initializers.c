@@ -375,3 +375,14 @@ void gh154046(void) {
     [1] = ""  // expected-error {{incompatible pointer to integer conversion initializing 'const char' with an expression of type 'char[1]'}}
   }[1];
 }
+
+// Nested fixed-size integer arrays exercise verification without a temporary
+// structured list and reservation for out-of-order array designators.
+unsigned short sparse_rows[2][8] = {
+    [1] = {[7] = 0xffff, [1] = 42},
+    [0] = {[6] = 7, [2] = 3},
+};
+unsigned short sparse_duplicate[1][8] = {
+    {[3] = 1, // expected-note {{previous initialization is here}}
+     [3] = 2} // expected-warning {{initializer overrides prior initialization of this subobject}}
+};
