@@ -30,7 +30,7 @@ end subroutine
 
 ! -- Runtime guard: abort if called from nested parallelism ------------------
 ! Guard is emitted BEFORE init to avoid racing on the global.
-! CHECK:         %[[LEVEL:.*]] = fir.call @omp_get_level_() {{.*}} : () -> i32
+! CHECK:         %[[LEVEL:.*]] = fir.call @omp_get_level() {{.*}} : () -> i32
 ! CHECK:         %[[ONE:.*]] = arith.constant 1 : i32
 ! CHECK:         %[[NESTED:.*]] = arith.cmpi sgt, %[[LEVEL]], %[[ONE]] : i32
 ! CHECK:         fir.if %[[NESTED]] {
