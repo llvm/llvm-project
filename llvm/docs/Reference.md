@@ -51,6 +51,7 @@ MLGO
 ContentAddressableStorage
 CIBestPractices
 GitHubActionsRunners
+PremergeCheckPolicy
 AIToolPolicy
 CallGraphSection
 InterfaceExportAnnotations
@@ -244,3 +245,6 @@ XRayFDRFormat
 {doc}`GitHubActionsRunners`
 :   A reference for LLVM's GitHub Actions runner pools and their
     platform-specific constraints.
+
+{doc}`PremergeCheckPolicy`
+:   Speed, reliability, and configurability requirements for premerge checks.
