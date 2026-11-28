@@ -29,6 +29,7 @@
 ; CHECK-NEXT:       AArch64 Stack Tagging
 ; CHECK-NEXT:       SJLJ Exception Handling preparation
 ; CHECK-NEXT:       Exception handling preparation
+; CHECK-NEXT:       AArch64 Intrinsics Verifier
 ; CHECK-NEXT:       Prepare inline asm insts
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors

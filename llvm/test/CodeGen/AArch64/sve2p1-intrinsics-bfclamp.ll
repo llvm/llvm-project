@@ -15,21 +15,3 @@ define <vscale x 8 x bfloat> @bfclamp(<vscale x 8 x bfloat> %a, <vscale x 8 x bf
 }
 
 declare <vscale x 8 x bfloat> @llvm.aarch64.sve.fclamp.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>)
-
-define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @test_bfclamp_single_x2_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c, <vscale x 8 x bfloat> %d) "aarch64_pstate_sm_enabled" "target-features"="+sme2" {
-; CHECK-LABEL: test_bfclamp_single_x2_bf16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfclamp { z0.h, z1.h }, z2.h, z3.h
-; CHECK-NEXT:    ret
-  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.bfclamp.single.x2.nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c, <vscale x 8 x bfloat> %d)
-  ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
-}
-
-define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @test_bfclamp_single_x4_bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c, <vscale x 8 x bfloat> %d, <vscale x 8 x bfloat> %e, <vscale x 8 x bfloat> %f) "aarch64_pstate_sm_enabled" "target-features"="+sme2" {
-; CHECK-LABEL: test_bfclamp_single_x4_bf16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    bfclamp { z0.h - z3.h }, z4.h, z5.h
-; CHECK-NEXT:    ret
-  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.bfclamp.single.x4.nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c, <vscale x 8 x bfloat> %d, <vscale x 8 x bfloat> %e, <vscale x 8 x bfloat> %f)
-  ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
-}

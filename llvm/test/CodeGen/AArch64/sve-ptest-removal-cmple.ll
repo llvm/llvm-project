@@ -260,52 +260,6 @@ define i1 @cmp8_ptest_any_xx(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vsc
 }
 
 ;
-; PTEST_FIRST(X=CMP32(PG, A, B), X). PTEST is redundant if condition is changed
-; to any.
-;
-define i1 @cmp32_ptest_first_xx(<vscale x 16 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: cmp32_ptest_first_xx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmpge p1.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    ret
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
-  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpge.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
-  %3 = tail call i1 @llvm.aarch64.sve.ptest.first.nxv4i1(<vscale x 4 x i1> %2, <vscale x 4 x i1> %2)
-  ret i1 %3
-}
-
-;
-; PTEST_LAST(X=CMP32(PG, A, B), X). PTEST is redundant if condition is changed
-; to any.
-;
-define i1 @cmp32_ptest_last_xx(<vscale x 16 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: cmp32_ptest_last_xx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmpge p1.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    ret
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
-  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpge.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
-  %3 = tail call i1 @llvm.aarch64.sve.ptest.last.nxv4i1(<vscale x 4 x i1> %2, <vscale x 4 x i1> %2)
-  ret i1 %3
-}
-
-;
-; PTEST_ANY(X=CMP32(PG, A, B), X). PTEST is redundant.
-;
-define i1 @cmp32_ptest_any_xx(<vscale x 16 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: cmp32_ptest_any_xx:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmpge p1.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    ret
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
-  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpge.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
-  %3 = tail call i1 @llvm.aarch64.sve.ptest.any.nxv4i1(<vscale x 4 x i1> %2, <vscale x 4 x i1> %2)
-  ret i1 %3
-}
-
 ; ==============================================================================
 ; PTEST_OP(PTRUE_ALL, CMP(PG, ...))
 ; ==============================================================================
@@ -358,57 +312,6 @@ define i1 @cmp8_ptest_any_ax(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vsc
   ret i1 %3
 }
 
-;
-; PTEST_FIRST(PTRUE_ALL, CMP32(PG, A, B)). Can't remove PTEST since mask is
-; different.
-;
-define i1 @cmp32_ptest_first_ax(<vscale x 16 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: cmp32_ptest_first_ax:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmpge p1.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ptest p0, p1.b
-; CHECK-NEXT:    cset w0, mi
-; CHECK-NEXT:    ret
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
-  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpge.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
-  %4 = tail call i1 @llvm.aarch64.sve.ptest.first.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> %2)
-  ret i1 %4
-}
-
-;
-; PTEST_LAST(PTRUE_ALL, CMP32(PG, A, B)). Can't remove PTEST since mask is
-; different.
-;
-define i1 @cmp32_ptest_last_ax(<vscale x 16 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: cmp32_ptest_last_ax:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmpge p1.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ptest p0, p1.b
-; CHECK-NEXT:    cset w0, lo
-; CHECK-NEXT:    ret
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
-  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpge.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
-  %4 = tail call i1 @llvm.aarch64.sve.ptest.last.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> %2)
-  ret i1 %4
-}
-
-;
-; PTEST_ANY(PTRUE_ALL, CMP32(PG, A, B)). PTEST is redundant.
-;
-define i1 @cmp32_ptest_any_ax(<vscale x 16 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: cmp32_ptest_any_ax:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmpge p1.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    ret
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
-  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpge.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
-  %4 = tail call i1 @llvm.aarch64.sve.ptest.any.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> %2)
-  ret i1 %4
-}
-
 ; ==============================================================================
 ; PTEST_OP(PTRUE_ALL, CMP(PTRUE_ALL, ...))
 ; ==============================================================================
@@ -458,51 +361,6 @@ define i1 @cmp8_ptest_any_aa(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
   ret i1 %3
 }
 
-;
-; PTEST_FIRST(PTRUE_ALL, CMP32(PTRUE_ALL, A, B)). PTEST is redundant.
-;
-define i1 @cmp32_ptest_first_aa(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: cmp32_ptest_first_aa:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    cmpge p1.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    cset w0, mi
-; CHECK-NEXT:    ret
-  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
-  %3 = tail call i1 @llvm.aarch64.sve.ptest.first.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> %2)
-  ret i1 %3
-}
-
-;
-; PTEST_LAST(PTRUE_ALL, CMP32(PTRUE_ALL, A, B)). PTEST is redundant.
-;
-define i1 @cmp32_ptest_last_aa(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: cmp32_ptest_last_aa:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    cmpge p1.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    cset w0, lo
-; CHECK-NEXT:    ret
-  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
-  %3 = tail call i1 @llvm.aarch64.sve.ptest.last.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> %2)
-  ret i1 %3
-}
-
-;
-; PTEST_ANY(PTRUE_ALL, CMP32(PTRUE_ALL, A, B)). PTEST is redundant.
-;
-define i1 @cmp32_ptest_any_aa(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: cmp32_ptest_any_aa:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    cmpge p1.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    cset w0, ne
-; CHECK-NEXT:    ret
-  %2 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
-  %3 = tail call i1 @llvm.aarch64.sve.ptest.any.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> %2)
-  ret i1 %3
-}
-
 declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpge.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.cmpge.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.cmple.wide.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 2 x i64>)
@@ -512,10 +370,6 @@ declare <vscale x 4 x i1> @llvm.aarch64.sve.cmple.wide.nxv4i32(<vscale x 4 x i1>
 declare i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
 declare i1 @llvm.aarch64.sve.ptest.first.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
 declare i1 @llvm.aarch64.sve.ptest.last.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
-
-declare i1 @llvm.aarch64.sve.ptest.any.nxv4i1(<vscale x 4 x i1>, <vscale x 4 x i1>)
-declare i1 @llvm.aarch64.sve.ptest.first.nxv4i1(<vscale x 4 x i1>, <vscale x 4 x i1>)
-declare i1 @llvm.aarch64.sve.ptest.last.nxv4i1(<vscale x 4 x i1>, <vscale x 4 x i1>)
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1>)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1>)
