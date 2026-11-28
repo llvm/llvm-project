@@ -339,12 +339,11 @@ struct IndexSwitchOpConversion final : SCFToSPIRVPattern<scf::IndexSwitchOp> {
 
     // A case value that does not fit the selector would be truncated onto
     // another value, and so would branch for an index it does not equal.
-    for (int64_t caseValue : switchOp.getCases())
-      if (!llvm::isIntN(selectorWidth, caseValue))
-        return rewriter.notifyMatchFailure(
-            loc, llvm::formatv("case value {0} does not fit the {1}-bit "
-                               "selector",
-                               caseValue, selectorWidth));
+    if (llvm::any_of(switchOp.getCases(), [&](int64_t caseValue) {
+          return !llvm::isIntN(selectorWidth, caseValue);
+        }))
+      return rewriter.notifyMatchFailure(
+          loc, "case value does not fit the selector");
 
     // Create the `spirv.mlir.selection` op, its header block, and merge block.
     auto selectionControl = spirv::SelectionControl::None;
@@ -412,10 +411,8 @@ public:
 
     Operation *parent = terminatorOp->getParentOp();
 
-    // The patterns of the converted `scf` ops move their regions into a SPIR-V
-    // op, so a parent still in `scf` was not converted: either no pattern
-    // exists for it yet, or its pattern failed. Erasing the terminator would
-    // leave that op invalid.
+    // TODO: Implement conversion for the remaining `scf` ops.
+    // Erasing the terminator of an unconverted SCF parent would invalidate it.
     if (parent->getDialect()->getNamespace() ==
         scf::SCFDialect::getDialectNamespace())
       return rewriter.notifyMatchFailure(
