@@ -125,14 +125,22 @@ ChildrenGetterTy<NodeTy, IsPostDom>::get(const NodeRef &N) {
   return children<OrderedNodeTy>(N);
 }
 
-} // end of namespace IDFCalculatorDetail
-
-template <class NodeTy, bool IsPostDom>
-void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
-    SmallVectorImpl<NodeTy *> &IDFBlocks) {
+/// Compute IDF for DefBlocks, restricted to LiveInBlocks when non-null.
+/// GetCFGChildren and GetDomChildren enumerate the CFG and DT children to
+/// visit. Every CFG child must have a DT node. GetRank must give every visited
+/// DT node a unique index in [0, NumNodes) that stays fixed throughout the
+/// calculation.
+template <class NodeTy, bool IsPostDom, class GetCFGChildrenT,
+          class GetDomChildrenT, class GetRankT>
+void calculate(const DominatorTreeBase<NodeTy, IsPostDom> &DT,
+               const SmallPtrSetImpl<NodeTy *> &DefBlocks,
+               const SmallPtrSetImpl<NodeTy *> *LiveInBlocks, unsigned NumNodes,
+               SmallVectorImpl<NodeTy *> &IDFBlocks,
+               GetCFGChildrenT GetCFGChildren, GetDomChildrenT GetDomChildren,
+               GetRankT GetRank) {
   // Use a priority queue keyed on dominator tree level so that inserted nodes
   // are handled from the bottom of the dominator tree upwards. We also augment
-  // the level with a DFS number to ensure that the blocks are ordered in a
+  // the level with a unique rank to ensure that the blocks are ordered in a
   // deterministic way.
   using DomTreeNodePair =
       std::pair<DomTreeNodeBase<NodeTy> *, std::pair<unsigned, unsigned>>;
@@ -142,22 +150,15 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
 
   IDFPriorityQueue PQ;
 
-  DT.updateDFSNumbers();
-
-  // The DFS in-numbers are unique and dense in [0, number of nodes), with the
-  // root's DFS out-number being the number of nodes. Use them to index the
-  // visited sets.
-  const DomTreeNodeBase<NodeTy> *RootNode = DT.getRootNode();
-  unsigned NumNodes = RootNode ? RootNode->getDFSNumOut() : 0;
-
   SmallVector<DomTreeNodeBase<NodeTy> *, 32> Worklist;
   SmallVector<bool, 32> VisitedPQ(NumNodes, false);
   SmallVector<bool, 32> VisitedWorklist(NumNodes, false);
 
-  for (NodeTy *BB : *DefBlocks)
+  for (NodeTy *BB : DefBlocks)
     if (DomTreeNodeBase<NodeTy> *Node = DT.getNode(BB)) {
-      PQ.push({Node, std::make_pair(Node->getLevel(), Node->getDFSNumIn())});
-      VisitedWorklist[Node->getDFSNumIn()] = true;
+      unsigned Rank = GetRank(Node);
+      PQ.push({Node, std::make_pair(Node->getLevel(), Rank)});
+      VisitedWorklist[Rank] = true;
     }
 
   while (!PQ.empty()) {
@@ -186,28 +187,46 @@ void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
         if (SuccLevel > RootLevel)
           return;
 
-        if (std::exchange(VisitedPQ[SuccNode->getDFSNumIn()], true))
+        unsigned SuccRank = GetRank(SuccNode);
+        if (std::exchange(VisitedPQ[SuccRank], true))
           return;
 
         NodeTy *SuccBB = SuccNode->getBlock();
-        if (useLiveIn && !LiveInBlocks->count(SuccBB))
+        if (LiveInBlocks && !LiveInBlocks->count(SuccBB))
           return;
 
         IDFBlocks.emplace_back(SuccBB);
-        if (!DefBlocks->count(SuccBB))
-          PQ.push(std::make_pair(
-              SuccNode, std::make_pair(SuccLevel, SuccNode->getDFSNumIn())));
+        if (!DefBlocks.count(SuccBB))
+          PQ.push(
+              std::make_pair(SuccNode, std::make_pair(SuccLevel, SuccRank)));
       };
 
-      for (auto *Succ : ChildrenGetter.get(BB))
+      for (auto *Succ : GetCFGChildren(BB))
         DoWork(Succ);
 
-      for (auto DomChild : *Node) {
-        if (!std::exchange(VisitedWorklist[DomChild->getDFSNumIn()], true))
+      for (auto DomChild : GetDomChildren(Node)) {
+        if (!std::exchange(VisitedWorklist[GetRank(DomChild)], true))
           Worklist.push_back(DomChild);
       }
     }
   }
+}
+
+} // end of namespace IDFCalculatorDetail
+
+template <class NodeTy, bool IsPostDom>
+void IDFCalculatorBase<NodeTy, IsPostDom>::calculate(
+    SmallVectorImpl<NodeTy *> &IDFBlocks) {
+  DT.updateDFSNumbers();
+  // DFS in-numbers provide unique, dense IDF ranks. The root's out-number
+  // is the number of nodes.
+  const DomTreeNodeBase<NodeTy> *RootNode = DT.getRootNode();
+  unsigned NumNodes = RootNode ? RootNode->getDFSNumOut() : 0;
+  IDFCalculatorDetail::calculate(
+      DT, *DefBlocks, useLiveIn ? LiveInBlocks : nullptr, NumNodes, IDFBlocks,
+      [&](NodeTy *BB) { return ChildrenGetter.get(BB); },
+      [](DomTreeNodeBase<NodeTy> *Node) { return Node->children(); },
+      [](DomTreeNodeBase<NodeTy> *Node) { return Node->getDFSNumIn(); });
 }
 
 } // end of namespace llvm

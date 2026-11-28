@@ -393,6 +393,9 @@ class ClobberWalker {
 
   const MemorySSA &MSSA;
   DominatorTree &DT;
+  // Loop header, or null for a function graph. Ancestors outside the loop
+  // have no per-block access lists in this graph.
+  BasicBlock *ScopeHeader;
   BatchAAResults *AA;
   UpwardsMemoryQuery *Query;
   unsigned *UpwardWalkLimit;
@@ -411,7 +414,7 @@ class ClobberWalker {
     BasicBlock *BB = From->getBlock();
     MemoryAccess *Result = MSSA.getLiveOnEntryDef();
     DomTreeNode *Node = DT.getNode(BB);
-    while ((Node = Node->getIDom())) {
+    while (Node->getBlock() != ScopeHeader && (Node = Node->getIDom())) {
       auto *Defs = MSSA.getBlockDefs(Node->getBlock());
       if (Defs)
         return &*Defs->rbegin();
@@ -802,8 +805,9 @@ class ClobberWalker {
   }
 
 public:
-  ClobberWalker(const MemorySSA &MSSA, DominatorTree &DT)
-      : MSSA(MSSA), DT(DT) {}
+  ClobberWalker(const MemorySSA &MSSA, DominatorTree &DT,
+                BasicBlock *ScopeHeader)
+      : MSSA(MSSA), DT(DT), ScopeHeader(ScopeHeader) {}
 
   /// Finds the nearest clobber for the given query, optimizing phis if
   /// possible.
@@ -846,20 +850,11 @@ public:
   }
 };
 
-struct RenamePassData {
-  DomTreeNode *DTN;
-  DomTreeNode::const_iterator ChildIt;
+/// Remaining children of a renaming work item and their incoming memory state.
+template <class ChildIteratorT> struct RenamePassData {
+  ChildIteratorT ChildIt;
+  ChildIteratorT ChildEnd;
   MemoryAccess *IncomingVal;
-
-  RenamePassData(DomTreeNode *D, DomTreeNode::const_iterator It,
-                 MemoryAccess *M)
-      : DTN(D), ChildIt(It), IncomingVal(M) {}
-
-  void swap(RenamePassData &RHS) {
-    std::swap(DTN, RHS.DTN);
-    std::swap(ChildIt, RHS.ChildIt);
-    std::swap(IncomingVal, RHS.IncomingVal);
-  }
 };
 
 } // end anonymous namespace
@@ -871,7 +866,8 @@ class MemorySSA::ClobberWalkerBase {
   MemorySSA *MSSA;
 
 public:
-  ClobberWalkerBase(MemorySSA *M, DominatorTree *D) : Walker(*M, *D), MSSA(M) {}
+  ClobberWalkerBase(MemorySSA *M, DominatorTree *D)
+      : Walker(*M, *D, M->L ? M->L->getHeader() : nullptr), MSSA(M) {}
 
   MemoryAccess *getClobberingMemoryAccessBase(MemoryAccess *,
                                               const MemoryLocation &,
@@ -1018,34 +1014,42 @@ MemoryAccess *MemorySSA::renameBlock(BasicBlock *BB, MemoryAccess *IncomingVal,
 void MemorySSA::renamePass(DomTreeNode *Root, MemoryAccess *IncomingVal,
                            SmallPtrSetImpl<BasicBlock *> &Visited,
                            bool SkipVisited, bool RenameAllUses) {
+  renamePass(Root, IncomingVal, &Visited, SkipVisited, RenameAllUses,
+             [](DomTreeNode *Node) { return Node->children(); });
+}
+
+template <class GetChildrenT>
+void MemorySSA::renamePass(DomTreeNode *Root, MemoryAccess *IncomingVal,
+                           SmallPtrSetImpl<BasicBlock *> *Visited,
+                           bool SkipVisited, bool RenameAllUses,
+                           GetChildrenT GetChildren) {
   assert(Root && "Trying to rename accesses in an unreachable block");
 
-  SmallVector<RenamePassData, 32> WorkStack;
-  // Skip everything if we already renamed this block and we are skipping.
-  // Note: You can't sink this into the if, because we need it to occur
-  // regardless of whether we skip blocks or not.
-  bool AlreadyVisited = !Visited.insert(Root->getBlock()).second;
+  assert((Visited || !SkipVisited) && "Skipping requires a visited set");
+  using ChildIteratorT = decltype(GetChildren(Root).begin());
+  SmallVector<RenamePassData<ChildIteratorT>, 32> WorkStack;
+  // If supplied, populate Visited even when SkipVisited is false.
+  bool AlreadyVisited = Visited && !Visited->insert(Root->getBlock()).second;
   if (SkipVisited && AlreadyVisited)
     return;
 
   IncomingVal = renameBlock(Root->getBlock(), IncomingVal, RenameAllUses);
   renameSuccessorPhis(Root->getBlock(), IncomingVal, RenameAllUses);
-  WorkStack.push_back({Root, Root->begin(), IncomingVal});
+  auto RootChildren = GetChildren(Root);
+  WorkStack.push_back({RootChildren.begin(), RootChildren.end(), IncomingVal});
 
   while (!WorkStack.empty()) {
-    DomTreeNode *Node = WorkStack.back().DTN;
-    DomTreeNode::const_iterator ChildIt = WorkStack.back().ChildIt;
+    ChildIteratorT ChildIt = WorkStack.back().ChildIt;
     IncomingVal = WorkStack.back().IncomingVal;
 
-    if (ChildIt == Node->end()) {
+    if (ChildIt == WorkStack.back().ChildEnd) {
       WorkStack.pop_back();
     } else {
       DomTreeNode *Child = *ChildIt;
       ++WorkStack.back().ChildIt;
       BasicBlock *BB = Child->getBlock();
-      // Note: You can't sink this into the if, because we need it to occur
-      // regardless of whether we skip blocks or not.
-      AlreadyVisited = !Visited.insert(BB).second;
+      // If supplied, populate Visited even when SkipVisited is false.
+      AlreadyVisited = Visited && !Visited->insert(BB).second;
       if (SkipVisited && AlreadyVisited) {
         // We already visited this during our renaming, which can happen when
         // being asked to rename multiple blocks. Figure out the incoming val,
@@ -1057,7 +1061,9 @@ void MemorySSA::renamePass(DomTreeNode *Root, MemoryAccess *IncomingVal,
       } else
         IncomingVal = renameBlock(BB, IncomingVal, RenameAllUses);
       renameSuccessorPhis(BB, IncomingVal, RenameAllUses);
-      WorkStack.push_back({Child, Child->begin(), IncomingVal});
+      auto ChildChildren = GetChildren(Child);
+      WorkStack.push_back(
+          {ChildChildren.begin(), ChildChildren.end(), IncomingVal});
     }
   }
 }
@@ -1119,6 +1125,67 @@ MemorySSA::MemorySSA(Function &Func, AliasAnalysis *AA, DominatorTree *DT)
   getWalker();
 }
 
+/// In-loop block records and DT edges used while constructing MemorySSA.
+/// LoopInfo and the dominator tree must not change while this view is used.
+struct MemorySSA::BuildScope {
+  /// In-loop DT children and a dense IDF rank for one block.
+  struct Block {
+    SmallVector<DomTreeNode *, 2> Children;
+    unsigned Rank = 0;
+  };
+
+  BasicBlock *Preheader;
+  DenseMap<BasicBlock *, Block> Blocks;
+  ArrayRef<BasicBlock *> Order;
+
+  /// Index loop blocks and cache their in-loop dominator tree children.
+  BuildScope(Loop &L, DominatorTree &DT)
+      : Preheader(L.getLoopPreheader()), Order(L.getBlocks()) {
+    assert(Preheader && "Loop-scoped MemorySSA requires a preheader");
+    Blocks.reserve(L.getNumBlocks());
+    unsigned Rank = 0;
+    for (BasicBlock *BB : Order)
+      Blocks[BB].Rank = Rank++;
+
+    for (BasicBlock *BB : Order.drop_front()) {
+      auto *Node = DT.getNode(BB);
+      assert(Node && "Natural loop blocks must be reachable");
+      auto ParentIt = Blocks.find(Node->getIDom()->getBlock());
+      assert(ParentIt != Blocks.end() &&
+             "The immediate dominator must be in the loop");
+      ParentIt->second.Children.push_back(Node);
+    }
+
+    // Renaming follows dominator tree child order, which determines MemoryPhi
+    // operand order and can affect bounded clobber searches. Stop after the
+    // last in-loop child to avoid scanning later out-of-loop children.
+    for (BasicBlock *BB : Order) {
+      Block &BlockInfo = Blocks.find(BB)->second;
+      if (BlockInfo.Children.size() < 2)
+        continue;
+      auto Out = BlockInfo.Children.begin();
+      for (DomTreeNode *Child : DT.getNode(BB)->children()) {
+        if (!Blocks.contains(Child->getBlock()))
+          continue;
+        *Out++ = Child;
+        if (Out == BlockInfo.Children.end())
+          break;
+      }
+      assert(Out == BlockInfo.Children.end() &&
+             "Missing in-loop dominator tree children");
+    }
+  }
+
+  /// Return the record for BB, which must be a loop block.
+  const Block &getBlock(BasicBlock *BB) const {
+    auto It = Blocks.find(BB);
+    assert(It != Blocks.end() && "Expected a loop block");
+    return It->second;
+  }
+
+  bool contains(BasicBlock *BB) const { return Blocks.contains(BB); }
+};
+
 MemorySSA::MemorySSA(Loop &L, AliasAnalysis *AA, DominatorTree *DT)
     : Opts(getAnalysisOptions(L)), DT(DT), L(&L),
       BlockNumberEpoch(L.getHeader()->getParent()->getBlockNumberEpoch()),
@@ -1130,10 +1197,11 @@ MemorySSA::MemorySSA(Loop &L, AliasAnalysis *AA, DominatorTree *DT)
   // make queries about all the instructions in the Function.
   assert(AA && "No alias analysis?");
   BatchAAResults BatchAA(*AA);
-  buildMemorySSA(
-      BatchAA, map_range(L.blocks(), [](const BasicBlock *BB) -> BasicBlock & {
-        return *const_cast<BasicBlock *>(BB);
-      }));
+  BuildScope Scope(L, *DT);
+  buildMemorySSA(BatchAA,
+                 map_range(Scope.Order,
+                           [](BasicBlock *BB) -> BasicBlock & { return *BB; }),
+                 &Scope);
   // Intentionally leave AA to nullptr while building so we don't accidentally
   // use non-batch AliasAnalysis.
   this->AA = AA;
@@ -1164,16 +1232,42 @@ ListT *MemorySSA::getOrCreateList(ListPtr<ListT> &List) {
 }
 
 void MemorySSA::placePHINodes(
-    const SmallPtrSetImpl<BasicBlock *> &DefiningBlocks) {
-  // Determine where our MemoryPhi's should go
-  ForwardIDFCalculator IDFs(*DT);
-  IDFs.setDefiningBlocks(DefiningBlocks);
+    const SmallPtrSetImpl<BasicBlock *> &DefiningBlocks,
+    const BuildScope *Scope) {
   SmallVector<BasicBlock *, 32> IDFBlocks;
-  IDFs.calculate(IDFBlocks);
+  if (Scope) {
+    // A natural loop has a single reachable entry at its header, so internal
+    // phi placement needs only its in-loop CFG and dominator-tree edges.
+    IDFCalculatorDetail::calculate<BasicBlock, false>(
+        *DT, DefiningBlocks, nullptr,
+        static_cast<unsigned>(Scope->Order.size()), IDFBlocks,
+        [&](BasicBlock *BB) {
+          return make_filter_range(successors(BB), [Scope](BasicBlock *Succ) {
+            return Scope->contains(Succ);
+          });
+        },
+        [&](DomTreeNode *Node) -> ArrayRef<DomTreeNode *> {
+          return Scope->getBlock(Node->getBlock()).Children;
+        },
+        [&](DomTreeNode *Node) {
+          return Scope->getBlock(Node->getBlock()).Rank;
+        });
+  } else {
+    ForwardIDFCalculator IDFs(*DT);
+    IDFs.setDefiningBlocks(DefiningBlocks);
+    IDFs.calculate(IDFBlocks);
+  }
 
-  // Now place MemoryPhi nodes.
-  for (auto &BB : IDFBlocks)
-    createMemoryPhi(BB);
+  for (BasicBlock *BB : IDFBlocks) {
+    MemoryPhi *Phi = createMemoryPhi(BB);
+    if (Scope) {
+      // Renaming visits only loop blocks. Add a live-on-entry operand here
+      // for each incoming edge from outside the loop.
+      for (BasicBlock *Pred : predecessors(BB))
+        if (!Scope->contains(Pred))
+          Phi->addIncoming(LiveOnEntryDef.get(), Pred);
+    }
+  }
 }
 
 /// Allocate a MemoryUse or MemoryDef from \p Allocator, with its operands in
@@ -1187,14 +1281,17 @@ static AccessT *allocateUseOrDef(AllocatorT &Allocator, ArgTs &&...Args) {
 }
 
 template <typename IterT>
-void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
-  // We create an access to represent "live on entry", for things like
-  // arguments or users of globals, where the memory they use is defined before
-  // the beginning of the function. We do not actually insert it into the IR.
+void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks,
+                               const BuildScope *Scope) {
+  // Live on entry represents memory entering the function or loop, including
+  // writes in a loop's preheader. It is not inserted into IR or access lists.
   // We do not define a live on exit for the immediate uses, and thus our
   // semantics do *not* imply that something with no immediate uses can simply
   // be removed.
-  BasicBlock &StartingPoint = *Blocks.begin();
+  // The clobber walker compares phis and clobbers by block. For a loop,
+  // the preheader strictly dominates every loop block. Placing live on entry
+  // there keeps unreachable incoming edges from hiding a loop-carried clobber.
+  BasicBlock &StartingPoint = Scope ? *Scope->Preheader : *Blocks.begin();
   LiveOnEntryDef.reset(
       allocateUseOrDef<MemoryDef>(UseOrDefAllocator, StartingPoint.getContext(),
                                   nullptr, nullptr, &StartingPoint, NextID++));
@@ -1227,36 +1324,25 @@ void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
     if (InsertIntoDef)
       DefiningBlocks.insert(&B);
   }
-  placePHINodes(DefiningBlocks);
+  placePHINodes(DefiningBlocks, Scope);
 
-  // Now do regular SSA renaming on the MemoryDef/MemoryUse. Visited will get
-  // filled in with all blocks.
-  SmallPtrSet<BasicBlock *, 16> Visited;
-  if (L) {
-    // Only building MemorySSA for a single loop. placePHINodes may have
-    // inserted a MemoryPhi in the loop's preheader. As this is outside the
-    // scope of the loop, set them to LiveOnEntry.
-    if (auto *P = getMemoryAccess(L->getLoopPreheader())) {
-      for (Use &U : make_early_inc_range(P->uses()))
-        U.set(LiveOnEntryDef.get());
-      removeFromLists(P);
-    }
-    // Now rename accesses in the loop. Populate Visited with the exit blocks of
-    // the loop, to limit the scope of the renaming.
-    SmallVector<BasicBlock *> ExitBlocks;
-    L->getExitBlocks(ExitBlocks);
-    Visited.insert_range(ExitBlocks);
-    renamePass(DT->getNode(L->getLoopPreheader()), LiveOnEntryDef.get(),
-               Visited);
+  // Now do regular SSA renaming on the MemoryDef/MemoryUse.
+  if (Scope) {
+    // The loop-local DT visits exactly the loop blocks; no visited set is
+    // needed.
+    renamePass(DT->getNode(Scope->Order.front()), LiveOnEntryDef.get(), nullptr,
+               false, false, [&](DomTreeNode *Node) -> ArrayRef<DomTreeNode *> {
+                 return Scope->getBlock(Node->getBlock()).Children;
+               });
   } else {
+    SmallPtrSet<BasicBlock *, 16> Visited;
     renamePass(DT->getRootNode(), LiveOnEntryDef.get(), Visited);
+    // Mark the uses in unreachable blocks as live on entry, so that they go
+    // somewhere.
+    for (auto &BB : Blocks)
+      if (!Visited.count(&BB))
+        markUnreachableAsLiveOnEntry(&BB);
   }
-
-  // Mark the uses in unreachable blocks as live on entry, so that they go
-  // somewhere.
-  for (auto &BB : Blocks)
-    if (!Visited.count(&BB))
-      markUnreachableAsLiveOnEntry(&BB);
 }
 
 MemorySSAWalker *MemorySSA::getWalker() { return getWalkerImpl(); }
