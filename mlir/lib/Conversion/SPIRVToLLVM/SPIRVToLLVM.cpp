@@ -1030,6 +1030,7 @@ public:
     // First, create the global struct's name that would be associated with
     // this entry point's execution mode. We set it to be:
     //   __spv__{SPIR-V module name}_{function name}_execution_mode_info_{mode}
+    // with a `_{N}` suffix if taken, as some modes may repeat per entry point.
     ModuleOp moduleOp = op->getParentOfType<ModuleOp>();
     spirv::ExecutionModeAttr executionModeAttr = op.getExecutionModeAttr();
     std::string moduleName;
@@ -1040,6 +1041,15 @@ public:
     std::string executionModeInfoName = llvm::formatv(
         "__spv_{0}_{1}_execution_mode_info_{2}", moduleName, op.getFn().str(),
         static_cast<uint32_t>(executionModeAttr.getValue()));
+    if (moduleOp.lookupSymbol(executionModeInfoName)) {
+      unsigned uniquingCounter = 0;
+      executionModeInfoName =
+          SymbolTable::generateSymbolName<64>(
+              executionModeInfoName,
+              [&](StringRef name) { return moduleOp.lookupSymbol(name); },
+              uniquingCounter)
+              .str();
+    }
 
     MLIRContext *context = rewriter.getContext();
     OpBuilder::InsertionGuard guard(rewriter);
