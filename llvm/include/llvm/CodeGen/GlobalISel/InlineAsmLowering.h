@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_GLOBALISEL_INLINEASMLOWERING_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/CodeGen/Register.h"
 #include <functional>
 
 namespace llvm {
@@ -47,6 +48,15 @@ public:
   virtual bool lowerAsmOperandForConstraint(Value *Val, StringRef Constraint,
                                             std::vector<MachineOperand> &Ops,
                                             MachineIRBuilder &MIRBuilder) const;
+
+  /// Hook to convert an inline asm input operand before it is copied into the
+  /// register the constraint selected, e.g. to insert a readfirstlane for a
+  /// uniform constraint. Returns the register to copy into \p Dst, which must
+  /// have the same size. The default returns \p Src.
+  virtual Register lowerAsmInputValue(Register Dst, Register Src,
+                                      MachineIRBuilder &MIRBuilder) const {
+    return Src;
+  }
 
 protected:
   /// Getter for generic TargetLowering class.

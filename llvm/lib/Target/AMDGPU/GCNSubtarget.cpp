@@ -13,6 +13,7 @@
 
 #include "GCNSubtarget.h"
 #include "AMDGPUCallLowering.h"
+#include "AMDGPUInlineAsmLowering.h"
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPURegisterBankInfo.h"
@@ -21,7 +22,6 @@
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/MachinePipeliner.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -245,7 +245,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 
   CallLoweringInfo = std::make_unique<AMDGPUCallLowering>(*getTargetLowering());
   InlineAsmLoweringInfo =
-      std::make_unique<InlineAsmLowering>(getTargetLowering());
+      std::make_unique<AMDGPUInlineAsmLowering>(getTargetLowering());
   Legalizer = std::make_unique<AMDGPULegalizerInfo>(*this, TM);
   RegBankInfo = std::make_unique<AMDGPURegisterBankInfo>(*this);
   InstSelector =
