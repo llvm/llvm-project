@@ -333,8 +333,19 @@ public:
 
   /// Return the known classes of \p Src after producing an output that may
   /// flush subnormals to zero according to \p Mode.
+  /// Note: This assumes denormal flushing after rounding (tiny after rounding).
   LLVM_ABI static KnownFPClass applyOutputDenormalMode(const KnownFPClass &Src,
                                                        DenormalMode Mode);
+
+  /// Return the known classes of \p Src after producing an output that may
+  /// flush subnormals to zero according to \p Mode.
+  /// Unlike applyOutputDenormalMode, this helper can be used to correctly
+  /// handle both tiny after rounding and tiny before rounding. Here, "tiny"
+  /// refers to: exact-zero < unrounded-result < min-normal.
+  LLVM_ABI static KnownFPClass
+  applyOutputDenormalTininess(const KnownFPClass &Src, DenormalMode Mode,
+                              bool NeverPosTinyBeforeRounding,
+                              bool NeverNegTinyBeforeRounding);
 
   KnownFPClass intersectWith(const KnownFPClass &RHS) const {
     return KnownFPClass(KnownFPMask | RHS.KnownFPMask);

@@ -913,8 +913,8 @@ body:             |
   ; CHECK-LABEL: name: @FLDExp_LargeNegExp
   ; CHECK-NEXT: %val:_ FPClasses:(pnorm) SignBitKnown:0
   ; CHECK-NEXT: %exp:_ FPClasses:(all) SignBitKnown:?
-  ; CHECK-NEXT: %fldexp:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
-  ; CHECK-NEXT: %copy:_ FPClasses:(pzero psub pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %fldexp:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %copy:_ FPClasses:(pzero) SignBitKnown:0
     %val:_(f32) = G_FCONSTANT float 1.0
     %exp:_(s32) = G_CONSTANT i32 -32768
     %fldexp:_(f32) = G_FLDEXP %val, %exp

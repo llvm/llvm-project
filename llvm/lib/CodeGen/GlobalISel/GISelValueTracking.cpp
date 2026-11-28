@@ -1913,20 +1913,22 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_FLDEXP: {
+    FPClassTest InterestedSrcs = InterestedClasses;
+    // Input subnormals may flush to zero.
+    if (InterestedClasses & fcZero)
+      InterestedSrcs |= fcSubnormal;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
-    computeKnownFPClass(Val, DemandedElts, InterestedClasses, KnownSrc,
-                        Depth + 1);
+    computeKnownFPClass(Val, DemandedElts, InterestedSrcs, KnownSrc, Depth + 1);
 
-    // Can refine inf/zero handling based on the exponent operand.
-    const FPClassTest ExpInfoMask = fcZero | fcSubnormal | fcInf;
-    KnownBits ExpBits;
-    if ((KnownSrc.getKnownFPClasses() & ExpInfoMask) != fcNone) {
-      Register ExpReg = MI.getOperand(2).getReg();
-      LLT ExpTy = MRI.getType(ExpReg);
+    // Compute the exponent if the input may be non-zero finite.
+    Register ExpReg = MI.getOperand(2).getReg();
+    LLT ExpTy = MRI.getType(ExpReg);
+    KnownBits ExpBits(ExpTy.getScalarSizeInBits());
+    if (!KnownSrc.isKnownNever(fcSubnormal | fcNormal))
       ExpBits = getKnownBits(
           ExpReg, ExpTy.isVector() ? DemandedElts : APInt(1, 1), Depth + 1);
-    }
 
     LLT ScalarTy = DstTy.getScalarType();
     const fltSemantics &Flt = getFltSemanticForLLT(ScalarTy);
