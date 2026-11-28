@@ -10909,7 +10909,7 @@ const MCInstrDesc &SIInstrInfo::getKillTerminatorFromPseudo(unsigned Opcode) con
   }
 }
 
-bool SIInstrInfo::isLegalMUBUFImmOffset(unsigned Imm) const {
+bool SIInstrInfo::isLegalMUBUFImmOffset(uint64_t Imm) const {
   return Imm <= getMaxMUBUFImmOffset(ST);
 }
 
