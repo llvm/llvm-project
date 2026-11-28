@@ -33,3 +33,9 @@ void test() {
 }
 
 void test() { test<X>(); }
+
+int main() {
+  test();
+
+  return 0;
+}
