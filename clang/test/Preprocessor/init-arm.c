@@ -134,7 +134,7 @@
 // ARM:#define __LONG_MAX__ 2147483647L
 // ARM-NOT:#define __LP64__
 // ARM:#define __POINTER_WIDTH__ 32
-// ARM:#define __PTRDIFF_TYPE__ int
+// ARM:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // ARM:#define __PTRDIFF_WIDTH__ 32
 // ARM:#define __REGISTER_PREFIX__
 // ARM:#define __SCHAR_MAX__ 127
@@ -154,7 +154,7 @@
 // ARM:#define __SIZEOF_WCHAR_T__ 4
 // ARM:#define __SIZEOF_WINT_T__ 4
 // ARM:#define __SIZE_MAX__ 4294967295U
-// ARM:#define __SIZE_TYPE__ unsigned int
+// ARM:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // ARM:#define __SIZE_WIDTH__ 32
 // ARM-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
 // ARM:#define __UINT16_C(c) c
@@ -214,8 +214,8 @@
 
 // RUN: %clang_cc1 -dM -ffreestanding -triple arm-none-none -target-abi apcs-gnu -E /dev/null -o - | FileCheck -match-full-lines -check-prefix ARM-APCS-GNU %s
 // ARM-APCS-GNU: #define __INTPTR_TYPE__ int
-// ARM-APCS-GNU: #define __PTRDIFF_TYPE__ int
-// ARM-APCS-GNU: #define __SIZE_TYPE__ unsigned int
+// ARM-APCS-GNU: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
+// ARM-APCS-GNU: #define __SIZE_TYPE__ __typeof(sizeof(0))
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=armeb-none-none < /dev/null | FileCheck -match-full-lines -check-prefix ARM-BE %s
 //
@@ -345,7 +345,7 @@
 // ARM-BE:#define __LONG_MAX__ 2147483647L
 // ARM-BE-NOT:#define __LP64__
 // ARM-BE:#define __POINTER_WIDTH__ 32
-// ARM-BE:#define __PTRDIFF_TYPE__ int
+// ARM-BE:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // ARM-BE:#define __PTRDIFF_WIDTH__ 32
 // ARM-BE:#define __REGISTER_PREFIX__
 // ARM-BE:#define __SCHAR_MAX__ 127
@@ -365,7 +365,7 @@
 // ARM-BE:#define __SIZEOF_WCHAR_T__ 4
 // ARM-BE:#define __SIZEOF_WINT_T__ 4
 // ARM-BE:#define __SIZE_MAX__ 4294967295U
-// ARM-BE:#define __SIZE_TYPE__ unsigned int
+// ARM-BE:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // ARM-BE:#define __SIZE_WIDTH__ 32
 // ARM-BE:#define __UINT16_C(c) c
 // ARM-BE:#define __UINT16_C_SUFFIX__
@@ -548,7 +548,7 @@
 // ARMEABISOFT:#define __LONG_MAX__ 2147483647L
 // ARMEABISOFT-NOT:#define __LP64__
 // ARMEABISOFT:#define __POINTER_WIDTH__ 32
-// ARMEABISOFT:#define __PTRDIFF_TYPE__ int
+// ARMEABISOFT:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // ARMEABISOFT:#define __PTRDIFF_WIDTH__ 32
 // ARMEABISOFT:#define __REGISTER_PREFIX__
 // ARMEABISOFT:#define __SCHAR_MAX__ 127
@@ -568,7 +568,7 @@
 // ARMEABISOFT:#define __SIZEOF_WCHAR_T__ 4
 // ARMEABISOFT:#define __SIZEOF_WINT_T__ 4
 // ARMEABISOFT:#define __SIZE_MAX__ 4294967295U
-// ARMEABISOFT:#define __SIZE_TYPE__ unsigned int
+// ARMEABISOFT:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // ARMEABISOFT:#define __SIZE_WIDTH__ 32
 // ARMEABISOFT:#define __SOFTFP__ 1
 // ARMEABISOFT:#define __UINT16_C(c) c
@@ -758,7 +758,7 @@
 // ARMEABISOFTFP_NOFP:#define __LONG_MAX__ 2147483647L
 // ARMEABISOFTFP_NOFP-NOT:#define __LP64__
 // ARMEABISOFTFP_NOFP:#define __POINTER_WIDTH__ 32
-// ARMEABISOFTFP_NOFP:#define __PTRDIFF_TYPE__ int
+// ARMEABISOFTFP_NOFP:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // ARMEABISOFTFP_NOFP:#define __PTRDIFF_WIDTH__ 32
 // ARMEABISOFTFP_NOFP:#define __REGISTER_PREFIX__
 // ARMEABISOFTFP_NOFP:#define __SCHAR_MAX__ 127
@@ -778,7 +778,7 @@
 // ARMEABISOFTFP_NOFP:#define __SIZEOF_WCHAR_T__ 4
 // ARMEABISOFTFP_NOFP:#define __SIZEOF_WINT_T__ 4
 // ARMEABISOFTFP_NOFP:#define __SIZE_MAX__ 4294967295U
-// ARMEABISOFTFP_NOFP:#define __SIZE_TYPE__ unsigned int
+// ARMEABISOFTFP_NOFP:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // ARMEABISOFTFP_NOFP:#define __SIZE_WIDTH__ 32
 // ARMEABISOFTFP_NOFP:#define __SOFTFP__ 1
 // ARMEABISOFTFP_NOFP:#define __UINT16_C(c) c
@@ -962,7 +962,7 @@
 // ARMEABISOFTFP_FP:#define __LONG_MAX__ 2147483647L
 // ARMEABISOFTFP_FP-NOT:#define __LP64__
 // ARMEABISOFTFP_FP:#define __POINTER_WIDTH__ 32
-// ARMEABISOFTFP_FP:#define __PTRDIFF_TYPE__ int
+// ARMEABISOFTFP_FP:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // ARMEABISOFTFP_FP:#define __PTRDIFF_WIDTH__ 32
 // ARMEABISOFTFP_FP:#define __REGISTER_PREFIX__
 // ARMEABISOFTFP_FP:#define __SCHAR_MAX__ 127
@@ -982,7 +982,7 @@
 // ARMEABISOFTFP_FP:#define __SIZEOF_WCHAR_T__ 4
 // ARMEABISOFTFP_FP:#define __SIZEOF_WINT_T__ 4
 // ARMEABISOFTFP_FP:#define __SIZE_MAX__ 4294967295U
-// ARMEABISOFTFP_FP:#define __SIZE_TYPE__ unsigned int
+// ARMEABISOFTFP_FP:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // ARMEABISOFTFP_FP:#define __SIZE_WIDTH__ 32
 // ARMEABISOFTFP_FP-NOT:#define __SOFTFP__ 1
 // ARMEABISOFTFP_FP:#define __UINT16_C(c) c
@@ -1166,7 +1166,7 @@
 // ARMEABIHARDFP:#define __LONG_MAX__ 2147483647L
 // ARMEABIHARDFP-NOT:#define __LP64__
 // ARMEABIHARDFP:#define __POINTER_WIDTH__ 32
-// ARMEABIHARDFP:#define __PTRDIFF_TYPE__ int
+// ARMEABIHARDFP:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // ARMEABIHARDFP:#define __PTRDIFF_WIDTH__ 32
 // ARMEABIHARDFP:#define __REGISTER_PREFIX__
 // ARMEABIHARDFP:#define __SCHAR_MAX__ 127
@@ -1186,7 +1186,7 @@
 // ARMEABIHARDFP:#define __SIZEOF_WCHAR_T__ 4
 // ARMEABIHARDFP:#define __SIZEOF_WINT_T__ 4
 // ARMEABIHARDFP:#define __SIZE_MAX__ 4294967295U
-// ARMEABIHARDFP:#define __SIZE_TYPE__ unsigned int
+// ARMEABIHARDFP:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // ARMEABIHARDFP:#define __SIZE_WIDTH__ 32
 // ARMEABIHARDFP-NOT:#define __SOFTFP__ 1
 // ARMEABIHARDFP:#define __UINT16_C(c) c
@@ -1368,7 +1368,7 @@
 // ARM-NETBSD:#define __LONG_MAX__ 2147483647L
 // ARM-NETBSD-NOT:#define __LP64__
 // ARM-NETBSD:#define __POINTER_WIDTH__ 32
-// ARM-NETBSD:#define __PTRDIFF_TYPE__ long int
+// ARM-NETBSD:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // ARM-NETBSD:#define __PTRDIFF_WIDTH__ 32
 // ARM-NETBSD:#define __REGISTER_PREFIX__
 // ARM-NETBSD:#define __SCHAR_MAX__ 127
@@ -1388,7 +1388,7 @@
 // ARM-NETBSD:#define __SIZEOF_WCHAR_T__ 4
 // ARM-NETBSD:#define __SIZEOF_WINT_T__ 4
 // ARM-NETBSD:#define __SIZE_MAX__ 4294967295UL
-// ARM-NETBSD:#define __SIZE_TYPE__ long unsigned int
+// ARM-NETBSD:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // ARM-NETBSD:#define __SIZE_WIDTH__ 32
 // ARM-NETBSD:#define __SOFTFP__ 1
 // ARM-NETBSD:#define __UINT16_C(c) c
