@@ -1133,10 +1133,10 @@ public:
   }
 
   /// Return the type of the shift amount argument passed to the shift libcalls
-  /// (e.g. __ashlti3). \p IntVT is the type of `int`, which compiler-rt uses.
-  /// Targets whose runtime reads a wider shift count can return a wider type
-  /// so that the extra bits are zero.
-  virtual EVT getShiftLibcallAmountTy(EVT IntVT) const { return IntVT; }
+  /// (e.g. __ashlti3). The default is the pointer-sized integer type, which is
+  /// what libgcc takes on almost every target. compiler-rt takes an `int`, but
+  /// only reads the low bits of the register, so it works with either.
+  virtual MVT getShiftLibcallAmountTy() const;
 
   /// Return true if the target has native support for the specified value type.
   /// This means that it has a register that directly holds it without

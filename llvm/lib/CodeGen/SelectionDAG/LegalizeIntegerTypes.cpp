@@ -5306,9 +5306,8 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
   }
 
   if (RTLIB::LibcallImpl LibcallImpl = DAG.getLibcalls().getLibcallImpl(LC)) {
-    EVT ShAmtTy = TLI.getShiftLibcallAmountTy(
-        EVT::getIntegerVT(*DAG.getContext(), DAG.getLibInfo().getIntSize()));
-    SDValue ShAmt = DAG.getZExtOrTrunc(N->getOperand(1), dl, ShAmtTy);
+    SDValue ShAmt =
+        DAG.getZExtOrTrunc(N->getOperand(1), dl, TLI.getShiftLibcallAmountTy());
     SDValue Ops[2] = {N->getOperand(0), ShAmt};
     TargetLowering::MakeLibCallOptions CallOptions;
     CallOptions.setIsSigned(isSigned);

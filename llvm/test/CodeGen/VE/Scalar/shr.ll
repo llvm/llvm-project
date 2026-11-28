@@ -180,7 +180,7 @@ define i64 @shl_u64_var(i64 %0, i64 %1) {
 define i128 @shl_i128_var(i128 %0, i128 %1) {
 ; CHECK-LABEL: shl_i128_var:
 ; CHECK:       .LBB{{[0-9]+}}_1:
-; CHECK-NEXT:    adds.w.sx %s2, %s2, (0)1
+; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea %s3, __ashrti3@lo
 ; CHECK-NEXT:    and %s3, %s3, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __ashrti3@hi(, %s3)
@@ -304,7 +304,7 @@ define i64 @shl_const_u64(i64 %0) {
 define i128 @shl_const_i128(i128 %0) {
 ; CHECK-LABEL: shl_const_i128:
 ; CHECK:       .LBB{{[0-9]+}}_1:
-; CHECK-NEXT:    adds.w.sx %s2, %s0, (0)1
+; CHECK-NEXT:    and %s2, %s0, (32)0
 ; CHECK-NEXT:    lea %s0, __ashrti3@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __ashrti3@hi(, %s0)
@@ -320,7 +320,7 @@ define i128 @shl_const_i128(i128 %0) {
 define i128 @shl_const_u128(i128 %0) {
 ; CHECK-LABEL: shl_const_u128:
 ; CHECK:       .LBB{{[0-9]+}}_1:
-; CHECK-NEXT:    adds.w.sx %s2, %s0, (0)1
+; CHECK-NEXT:    and %s2, %s0, (32)0
 ; CHECK-NEXT:    lea %s0, __ashrti3@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __ashrti3@hi(, %s0)

@@ -197,6 +197,40 @@ define i128 @i128libcalls(i128 %x, i128 %y) {
   ret i128 %c
 }
 
+define i128 @i128shift(i128 %x, i128 %y) {
+  ; The shift amount is passed as i32, like in the wasm32 case
+; CHECK-LABEL: i128shift:
+; CHECK:         .functype i128shift (i64, i64, i64, i64, i64) -> ()
+; CHECK-NEXT:    .local i64
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    global.get $push3=, __stack_pointer
+; CHECK-NEXT:    i64.const $push4=, 16
+; CHECK-NEXT:    i64.sub $push8=, $pop3, $pop4
+; CHECK-NEXT:    local.tee $push7=, 5, $pop8
+; CHECK-NEXT:    global.set __stack_pointer, $pop7
+; CHECK-NEXT:    local.get $push12=, 5
+; CHECK-NEXT:    local.get $push11=, 1
+; CHECK-NEXT:    local.get $push10=, 2
+; CHECK-NEXT:    local.get $push9=, 3
+; CHECK-NEXT:    i32.wrap_i64 $push0=, $pop9
+; CHECK-NEXT:    call __ashlti3, $pop12, $pop11, $pop10, $pop0
+; CHECK-NEXT:    local.get $push14=, 0
+; CHECK-NEXT:    local.get $push13=, 5
+; CHECK-NEXT:    i64.load $push1=, 8($pop13)
+; CHECK-NEXT:    i64.store 8($pop14), $pop1
+; CHECK-NEXT:    local.get $push16=, 0
+; CHECK-NEXT:    local.get $push15=, 5
+; CHECK-NEXT:    i64.load $push2=, 0($pop15)
+; CHECK-NEXT:    i64.store 0($pop16), $pop2
+; CHECK-NEXT:    local.get $push17=, 5
+; CHECK-NEXT:    i64.const $push5=, 16
+; CHECK-NEXT:    i64.add $push6=, $pop17, $pop5
+; CHECK-NEXT:    global.set __stack_pointer, $pop6
+; CHECK-NEXT:    return
+  %a = shl i128 %x, %y
+  ret i128 %a
+}
+
 define double @f64libcalls(double %x, double %y, i32 %z) {
 ; CHECK-LABEL: f64libcalls:
 ; CHECK:         .functype f64libcalls (f64, f64, i32) -> (f64)

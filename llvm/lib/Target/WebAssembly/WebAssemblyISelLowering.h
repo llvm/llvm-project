@@ -39,6 +39,9 @@ private:
                  const TargetLibraryInfo *LibInfo,
                  const LibcallLoweringInfo *LibcallLowering) const override;
   MVT getScalarShiftAmountTy(const DataLayout &DL, EVT) const override;
+  // The shift libcall signatures take an i32 count, like compiler-rt, so the
+  // pointer-sized default doesn't fit wasm64.
+  MVT getShiftLibcallAmountTy() const override { return MVT::i32; }
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;

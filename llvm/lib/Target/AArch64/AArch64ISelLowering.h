@@ -454,10 +454,6 @@ public:
   preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
                                      unsigned ExpansionFactor) const override;
 
-  // libgcc's shift helpers take a word-sized shift count and read all of the
-  // X register, while the upper half of an i32 argument is undefined.
-  EVT getShiftLibcallAmountTy(EVT IntVT) const override { return MVT::i64; }
-
   CondMergingParams
   getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
                                 const Value *Rhs,
