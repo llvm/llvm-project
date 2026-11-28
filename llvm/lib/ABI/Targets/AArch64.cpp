@@ -431,8 +431,19 @@ ArgInfo AArch64TargetInfo::coerceIllegalVector(const VectorType *VT,
     return ArgInfo::getDirect(ResType);
   }
   const Type *I32 = TB.getIntegerType(32, llvm::Align(4), /*Signed=*/false);
-  if (Size <= 32)
+  if (Size <= 32) {
+    // AAPCS64 passes integral types in the least significant bits of the
+    // register, independent of the endianness (rule C.9). Widening the vector
+    // to a larger integer requires coercion through memory, which would leave
+    // the value in the most significant bits on big-endian, so coerce to an
+    // integer of exactly the vector's size instead: that is a bitcast.
+    if (Opts.IsBigEndian && Size < 32) {
+      assert(Size >= 8 && isPowerOf2_64(Size) && "unexpected size");
+      return ArgInfo::getDirect(
+          TB.getIntegerType(Size, llvm::Align(Size / 8), /*Signed=*/false));
+    }
     return ArgInfo::getDirect(I32);
+  }
   if (Size == 64) {
     NSRN = std::min(NSRN + 1, 8u);
     return ArgInfo::getDirect(

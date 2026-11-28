@@ -837,3 +837,58 @@ empty empty_record_test(void) {
 // CHECK-NEXT: ret void
   return va_arg(the_list, empty);
 }
+
+// An illegal vector is coerced to an integer for parameter passing. AAPCS64
+// rule C.9 passes integral types in the least significant bits of the
+// register, so on big-endian the coercion must use an integer of exactly the
+// vector's size rather than i32, which would leave the value in the most
+// significant bits.
+typedef unsigned char v2u8 __attribute__((vector_size(2)));
+
+void pass_v2u8(v2u8 v) {
+// CHECK-LABEL: define{{.*}} void @pass_v2u8(
+// CHECK-LE-SAME: i32 %{{.+}})
+// CHECK-BE-SAME: i16 noundef %{{.+}})
+}
+
+v2u8 simple_v2u8(void) {
+// CHECK-LABEL: define{{.*}} <2 x i8> @simple_v2u8
+  return va_arg(the_list, v2u8);
+// CHECK: [[GR_OFFS:%.+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @the_list, i64 24)
+// CHECK: [[EARLY_ONSTACK:%.+]] = icmp sge i32 [[GR_OFFS]], 0
+// CHECK: br i1 [[EARLY_ONSTACK]], label %[[VAARG_ON_STACK:.+]], label %[[VAARG_MAYBE_REG:.+]]
+
+// CHECK: [[VAARG_MAYBE_REG]]
+// CHECK: [[NEW_REG_OFFS:%.+]] = add i32 [[GR_OFFS]], 8
+// CHECK: store i32 [[NEW_REG_OFFS]], ptr getelementptr inbounds nuw (i8, ptr @the_list, i64 24)
+// CHECK: [[INREG:%.+]] = icmp sle i32 [[NEW_REG_OFFS]], 0
+// CHECK: br i1 [[INREG]], label %[[VAARG_IN_REG:.+]], label %[[VAARG_ON_STACK]]
+
+// CHECK: [[VAARG_IN_REG]]
+// CHECK: [[REG_TOP:%.+]] = load ptr, ptr getelementptr inbounds nuw (i8, ptr @the_list, i64 8)
+// CHECK: [[REG_ADDR:%.+]] = getelementptr inbounds i8, ptr [[REG_TOP]], i32 [[GR_OFFS]]
+// CHECK-BE: [[REG_ADDR_ALIGNED:%.+]] = getelementptr inbounds i8, ptr [[REG_ADDR]], i64 6
+// CHECK: br label %[[VAARG_END:.+]]
+
+// CHECK: [[VAARG_ON_STACK]]
+// CHECK: [[STACK:%.+]] = load ptr, ptr @the_list
+// CHECK: [[NEW_STACK:%.+]] = getelementptr inbounds i8, ptr [[STACK]], i64 8
+// CHECK: store ptr [[NEW_STACK]], ptr @the_list
+// CHECK-BE: [[STACK_ALIGNED:%.+]] = getelementptr inbounds i8, ptr [[STACK]], i64 6
+// CHECK: br label %[[VAARG_END]]
+
+// CHECK: [[VAARG_END]]
+// CHECK-LE: [[ADDR:%.+]] = phi ptr [ [[REG_ADDR]], %[[VAARG_IN_REG]] ], [ [[STACK]], %[[VAARG_ON_STACK]] ]
+// CHECK-BE: [[ADDR:%.+]] = phi ptr [ [[REG_ADDR_ALIGNED]], %[[VAARG_IN_REG]] ], [ [[STACK_ALIGNED]], %[[VAARG_ON_STACK]] ]
+// CHECK: [[RESULT:%.+]] = load <2 x i8>, ptr [[ADDR]]
+// CHECK: ret <2 x i8> [[RESULT]]
+}
+
+void variadic_v2u8(int n, ...);
+
+void call_v2u8_varargs(void) {
+// CHECK-LABEL: define{{.*}} void @call_v2u8_varargs()
+  variadic_v2u8(1, (v2u8){1, 2});
+// CHECK-LE: call void (i32, ...) @variadic_v2u8(i32 noundef 1, i32
+// CHECK-BE: call void (i32, ...) @variadic_v2u8(i32 noundef 1, i16 noundef
+}
