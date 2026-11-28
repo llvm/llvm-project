@@ -15823,15 +15823,19 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
 
     bool CanHarm = false;
     bool CanHelp = false;
-    bool WideningNeedsLegalization =
-        (TLI.isTypeLegal(SrcVT) && !TLI.isTypeLegal(VT)) ||
-        (TLI.isOperationLegalOrCustom(ISD::SETCC, SrcVT) &&
-         !TLI.isOperationLegalOrCustom(ISD::SETCC, VT));
 
     for (SDUse &Use : Load->uses()) {
       if (Use.getResNo() != V.getResNo())
         continue;
       SDNode *User = Use.getUser();
+
+      // Let the target veto an undesirable ops
+      if (TLI.isTypeDesirableForOp(User, SrcVT) &&
+          !TLI.isTypeDesirableForOp(User, VT)) {
+        CanHarm = true;
+        break;
+      }
+
       // An ordinary zext still needs the zero high bits.
       if (User->getOpcode() == ISD::ZERO_EXTEND &&
           !User->getFlags().hasNonNeg()) {
@@ -15842,28 +15846,13 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
       if ((!IsSetCC && User->getOpcode() != ISD::SELECT_CC) ||
           Use.getOperandNo() >= 2)
         continue;
-      bool WidensCompare =
-          IsSetCC &&
-          isa<ConstantSDNode>(User->getOperand(1 - Use.getOperandNo()));
-      // Don't turn a supported sibling compare into one needing legalization.
-      if (WidensCompare && WideningNeedsLegalization) {
-        CanHarm = true;
-        break;
-      }
+
       ISD::CondCode CC = User->getOperandCondCode(IsSetCC ? 2 : 4);
       // Promotion of an unsigned compare can require masking a signed load.
       if (ISD::isUnsignedIntSetCC(CC) && !TLI.isTypeLegal(SrcVT)) {
         CanHarm = true;
         break;
       }
-
-      // Let the target veto an undesirable compare width.
-      if (TLI.isTypeDesirableForOp(User, SrcVT) &&
-          !TLI.isTypeDesirableForOp(User, VT)) {
-        CanHarm = true;
-        break;
-      }
-
       CanHelp |= ISD::isSignedIntSetCC(CC);
     }
 
