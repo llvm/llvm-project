@@ -1504,10 +1504,19 @@ ExprResult SemaPseudoObject::checkAssignment(Scope *S, SourceLocation opcLoc,
                                              BinaryOperatorKind opcode,
                                              Expr *LHS, Expr *RHS) {
   // Do nothing if either argument is dependent.
-  if (LHS->isTypeDependent() || RHS->isTypeDependent())
+  if (LHS->isTypeDependent() || RHS->isTypeDependent()) {
+    // A compound assignment must be represented by a CompoundAssignOperator:
+    // consumers such as StmtVisitor dispatch on the opcode and would otherwise
+    // read the computation types past the end of a plain BinaryOperator.
+    if (BinaryOperator::isCompoundAssignmentOp(opcode))
+      return CompoundAssignOperator::Create(
+          SemaRef.Context, LHS, RHS, opcode, SemaRef.Context.DependentTy,
+          VK_PRValue, OK_Ordinary, opcLoc, SemaRef.CurFPFeatureOverrides(),
+          SemaRef.Context.DependentTy, SemaRef.Context.DependentTy);
     return BinaryOperator::Create(
         SemaRef.Context, LHS, RHS, opcode, SemaRef.Context.DependentTy,
         VK_PRValue, OK_Ordinary, opcLoc, SemaRef.CurFPFeatureOverrides());
+  }
 
   // Filter out non-overload placeholder types in the RHS.
   if (RHS->getType()->isNonOverloadPlaceholderType()) {
