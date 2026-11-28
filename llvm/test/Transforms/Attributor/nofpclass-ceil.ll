@@ -195,9 +195,9 @@ define float @ret_ceil_nopnorm_nonsub(float nofpclass(pnorm nsub) %arg0) {
 }
 
 define ppc_fp128 @ret_ceil_ppcf128(ppc_fp128 %arg0) {
-; CHECK-LABEL: define nofpclass(sub) ppc_fp128 @ret_ceil_ppcf128
+; CHECK-LABEL: define ppc_fp128 @ret_ceil_ppcf128
 ; CHECK-SAME: (ppc_fp128 [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %arg0)
@@ -205,9 +205,9 @@ define ppc_fp128 @ret_ceil_ppcf128(ppc_fp128 %arg0) {
 }
 
 define ppc_fp128 @ret_ceil_noinf_ppcf128(ppc_fp128 nofpclass(inf) %arg0) {
-; CHECK-LABEL: define nofpclass(ninf sub) ppc_fp128 @ret_ceil_noinf_ppcf128
+; CHECK-LABEL: define ppc_fp128 @ret_ceil_noinf_ppcf128
 ; CHECK-SAME: (ppc_fp128 nofpclass(inf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf sub) ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 nofpclass(inf) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 nofpclass(inf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %arg0)
@@ -215,9 +215,9 @@ define ppc_fp128 @ret_ceil_noinf_ppcf128(ppc_fp128 nofpclass(inf) %arg0) {
 }
 
 define ppc_fp128 @ret_ceil_nopinf_ppcf128(ppc_fp128 nofpclass(pinf) %arg0) {
-; CHECK-LABEL: define nofpclass(sub) ppc_fp128 @ret_ceil_nopinf_ppcf128
+; CHECK-LABEL: define ppc_fp128 @ret_ceil_nopinf_ppcf128
 ; CHECK-SAME: (ppc_fp128 nofpclass(pinf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 nofpclass(pinf) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 nofpclass(pinf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %arg0)
@@ -225,9 +225,9 @@ define ppc_fp128 @ret_ceil_nopinf_ppcf128(ppc_fp128 nofpclass(pinf) %arg0) {
 }
 
 define ppc_fp128 @ret_ceil_noninf_ppcf128(ppc_fp128 nofpclass(ninf) %arg0) {
-; CHECK-LABEL: define nofpclass(ninf sub) ppc_fp128 @ret_ceil_noninf_ppcf128
+; CHECK-LABEL: define ppc_fp128 @ret_ceil_noninf_ppcf128
 ; CHECK-SAME: (ppc_fp128 nofpclass(ninf) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf sub) ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 nofpclass(ninf) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 nofpclass(ninf) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %arg0)
@@ -235,9 +235,9 @@ define ppc_fp128 @ret_ceil_noninf_ppcf128(ppc_fp128 nofpclass(ninf) %arg0) {
 }
 
 define ppc_fp128 @ret_ceil_nonan_ppcf128(ppc_fp128 nofpclass(nan) %arg0) {
-; CHECK-LABEL: define nofpclass(nan sub) ppc_fp128 @ret_ceil_nonan_ppcf128
+; CHECK-LABEL: define ppc_fp128 @ret_ceil_nonan_ppcf128
 ; CHECK-SAME: (ppc_fp128 nofpclass(nan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan sub) ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 nofpclass(nan) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 nofpclass(nan) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
 ;
   %call = call ppc_fp128 @llvm.ceil.ppcf128(ppc_fp128 %arg0)
