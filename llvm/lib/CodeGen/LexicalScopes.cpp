@@ -23,7 +23,6 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -41,11 +40,6 @@ static bool skipUnit(const DICompileUnit *CU) {
   return CU->getEmissionKind() == DICompileUnit::NoDebug;
 }
 
-void LexicalScopes::resetModule() {
-  FunctionMap.clear();
-  resetFunction();
-}
-
 void LexicalScopes::resetFunction() {
   MF = nullptr;
   CurrentFnLexicalScope = nullptr;
@@ -54,15 +48,6 @@ void LexicalScopes::resetFunction() {
   InlinedLexicalScopeMap.clear();
   AbstractScopesList.clear();
   DominatedBlocks.clear();
-}
-
-void LexicalScopes::initialize(const Module &M) {
-  resetModule();
-  for (const Function &F : M) {
-    DISubprogram *SP = F.getSubprogram();
-    if (SP && (!SP->getUnit() || !skipUnit(SP->getUnit())))
-      FunctionMap[SP] = &F;
-  }
 }
 
 void LexicalScopes::scanFunction(const MachineFunction &Fn) {

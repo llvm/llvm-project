@@ -26,9 +26,30 @@ target triple = "x86_64-unknown-linux-gnu"
 @c2 = internal constant i32 0, align 4
 @d2 = internal constant i32 0, align 4
 
+@a.hidden.def = hidden constant i32 0, align 4
+@b.hidden.def = hidden constant i32 0, align 4
+@c.hidden.def = hidden constant i32 0, align 4
+@d.hidden.def = hidden constant i32 0, align 4
+
+@a.hidden.decl = external hidden constant i32, align 4
+@b.hidden.decl = external hidden constant i32, align 4
+@c.hidden.decl = external hidden constant i32, align 4
+@d.hidden.decl = external hidden constant i32, align 4
+
+@a.hidden.weak = weak hidden constant i32 0, align 4
+@b.hidden.weak = weak hidden constant i32 0, align 4
+@c.hidden.weak = weak hidden constant i32 0, align 4
+@d.hidden.weak = weak hidden constant i32 0, align 4
+
 @switch.table.external_linkage = private unnamed_addr constant [3 x ptr] [ptr @a1, ptr @b1, ptr @c1], align 8
 
 @switch.table.internal_linkage = private unnamed_addr constant [3 x ptr] [ptr @a2, ptr @b2, ptr @c2], align 8
+
+@switch.table.hidden.def = private unnamed_addr constant [3 x ptr] [ptr @a.hidden.def, ptr @b.hidden.def, ptr @c.hidden.def], align 8
+
+@switch.table.hidden.decl = private unnamed_addr constant [3 x ptr] [ptr @a.hidden.decl, ptr @b.hidden.decl, ptr @c.hidden.decl], align 8
+
+@switch.table.hidden.weak = private unnamed_addr constant [3 x ptr] [ptr @a.hidden.weak, ptr @b.hidden.weak, ptr @c.hidden.weak], align 8
 
 @switch.table.string_table = private unnamed_addr constant [3 x ptr]
   [
@@ -108,6 +129,60 @@ target triple = "x86_64-unknown-linux-gnu"
   ptr @.str.9
 ], align 16
 
+@table.with.poison = internal constant [4 x ptr] [
+  ptr @.str.8,
+  ptr poison,
+  ptr @.str.9,
+  ptr poison
+], align 16
+
+@table.all.poison = internal constant [4 x ptr] poison, align 16
+
+@table.multi.use = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
+@table.multi.use.stride.mismatch = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
+@table.multi.use.type.mismatch = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
+@table.multi.use.invalid.use = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
+@table.phi.select.1 = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+@table.phi.select.2 = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+@table.phi.select.3 = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+@table.phi.select.4 = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+@table.phi.select.5 = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+@table.phi.select.6 = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
 ;.
 ; CHECK: @.str = private unnamed_addr constant [5 x i8] c"zero\00", align 1
 ; CHECK: @.str.1 = private unnamed_addr constant [4 x i8] c"one\00", align 1
@@ -128,8 +203,23 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @b2 = internal constant i32 0, align 4
 ; CHECK: @c2 = internal constant i32 0, align 4
 ; CHECK: @d2 = internal constant i32 0, align 4
+; CHECK: @a.hidden.def = hidden constant i32 0, align 4
+; CHECK: @b.hidden.def = hidden constant i32 0, align 4
+; CHECK: @c.hidden.def = hidden constant i32 0, align 4
+; CHECK: @d.hidden.def = hidden constant i32 0, align 4
+; CHECK: @a.hidden.decl = external hidden constant i32, align 4
+; CHECK: @b.hidden.decl = external hidden constant i32, align 4
+; CHECK: @c.hidden.decl = external hidden constant i32, align 4
+; CHECK: @d.hidden.decl = external hidden constant i32, align 4
+; CHECK: @a.hidden.weak = weak hidden constant i32 0, align 4
+; CHECK: @b.hidden.weak = weak hidden constant i32 0, align 4
+; CHECK: @c.hidden.weak = weak hidden constant i32 0, align 4
+; CHECK: @d.hidden.weak = weak hidden constant i32 0, align 4
 ; CHECK: @switch.table.external_linkage = private unnamed_addr constant [3 x ptr] [ptr @a1, ptr @b1, ptr @c1], align 8
 ; CHECK: @switch.table.internal_linkage.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @a2 to i64), i64 ptrtoint (ptr @switch.table.internal_linkage.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @b2 to i64), i64 ptrtoint (ptr @switch.table.internal_linkage.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @c2 to i64), i64 ptrtoint (ptr @switch.table.internal_linkage.rel to i64)) to i32)], align 4
+; CHECK: @switch.table.hidden.def.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @a.hidden.def to i64), i64 ptrtoint (ptr @switch.table.hidden.def.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @b.hidden.def to i64), i64 ptrtoint (ptr @switch.table.hidden.def.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @c.hidden.def to i64), i64 ptrtoint (ptr @switch.table.hidden.def.rel to i64)) to i32)], align 4
+; CHECK: @switch.table.hidden.decl.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @a.hidden.decl to i64), i64 ptrtoint (ptr @switch.table.hidden.decl.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @b.hidden.decl to i64), i64 ptrtoint (ptr @switch.table.hidden.decl.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @c.hidden.decl to i64), i64 ptrtoint (ptr @switch.table.hidden.decl.rel to i64)) to i32)], align 4
+; CHECK: @switch.table.hidden.weak = private unnamed_addr constant [3 x ptr] [ptr @a.hidden.weak, ptr @b.hidden.weak, ptr @c.hidden.weak], align 8
 ; CHECK: @switch.table.string_table.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str to i64), i64 ptrtoint (ptr @switch.table.string_table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.1 to i64), i64 ptrtoint (ptr @switch.table.string_table.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @switch.table.string_table.rel to i64)) to i32)], align 4
 ; CHECK: @switch.table.string_table_holes.rel = private unnamed_addr constant [4 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str to i64), i64 ptrtoint (ptr @switch.table.string_table_holes.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.3 to i64), i64 ptrtoint (ptr @switch.table.string_table_holes.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @switch.table.string_table_holes.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.4 to i64), i64 ptrtoint (ptr @switch.table.string_table_holes.rel to i64)) to i32)], align 4
 ; CHECK: @switch.table.single_value.rel = private unnamed_addr constant [3 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str to i64), i64 ptrtoint (ptr @switch.table.single_value.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.1 to i64), i64 ptrtoint (ptr @switch.table.single_value.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.2 to i64), i64 ptrtoint (ptr @switch.table.single_value.rel to i64)) to i32)], align 4
@@ -143,6 +233,18 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @wrong.skip.table = internal constant [4 x ptr] [ptr null, ptr @.str.8, ptr null, ptr @.str.9], align 16
 ; CHECK: @table.multiple.load.uses.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.multiple.load.uses.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.multiple.load.uses.rel to i64)) to i32)], align 4
 ; CHECK: @table.volatile = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.with.poison.rel = internal unnamed_addr constant [4 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.with.poison.rel to i64)) to i32), i32 poison, i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.with.poison.rel to i64)) to i32), i32 poison], align 4
+; CHECK: @table.all.poison = internal constant [4 x ptr] poison, align 16
+; CHECK: @table.multi.use.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.multi.use.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.multi.use.rel to i64)) to i32)], align 4
+; CHECK: @table.multi.use.stride.mismatch = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.multi.use.type.mismatch = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.multi.use.invalid.use = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.phi.select.1.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.phi.select.1.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.phi.select.1.rel to i64)) to i32)], align 4
+; CHECK: @table.phi.select.2.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.phi.select.2.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.phi.select.2.rel to i64)) to i32)], align 4
+; CHECK: @table.phi.select.3.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.phi.select.3.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.phi.select.3.rel to i64)) to i32)], align 4
+; CHECK: @table.phi.select.4 = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.phi.select.5 = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.phi.select.6 = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
 ;.
 define ptr @external_linkage(i32 %cond) {
 ; CHECK-LABEL: define ptr @external_linkage(
@@ -195,6 +297,42 @@ switch.lookup:                                    ; preds = %entry
 
 return:                                           ; preds = %entry
   ret ptr @d2
+}
+
+define ptr @hidden_def(i32 %cond) {
+; CHECK-LABEL: define ptr @hidden_def(
+; CHECK-SAME: i32 [[COND:%.*]]) {
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i32 [[COND]], 2
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = call ptr @llvm.load.relative.i32(ptr @switch.table.hidden.def.rel, i32 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret ptr [[SWITCH_LOAD]]
+;
+  %switch.gep = getelementptr inbounds [3 x ptr], ptr @switch.table.hidden.def, i32 0, i32 %cond
+  %switch.load = load ptr, ptr %switch.gep, align 8
+  ret ptr %switch.load
+}
+
+define ptr @hidden_decl(i32 %cond) {
+; CHECK-LABEL: define ptr @hidden_decl(
+; CHECK-SAME: i32 [[COND:%.*]]) {
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i32 [[COND]], 2
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = call ptr @llvm.load.relative.i32(ptr @switch.table.hidden.decl.rel, i32 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret ptr [[SWITCH_LOAD]]
+;
+  %switch.gep = getelementptr inbounds [3 x ptr], ptr @switch.table.hidden.decl, i32 0, i32 %cond
+  %switch.load = load ptr, ptr %switch.gep, align 8
+  ret ptr %switch.load
+}
+
+define ptr @hidden_weak(i32 %cond) {
+; CHECK-LABEL: define ptr @hidden_weak(
+; CHECK-SAME: i32 [[COND:%.*]]) {
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x ptr], ptr @switch.table.hidden.weak, i32 0, i32 [[COND]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load ptr, ptr [[SWITCH_GEP]], align 8
+; CHECK-NEXT:    ret ptr [[SWITCH_LOAD]]
+;
+  %switch.gep = getelementptr inbounds [3 x ptr], ptr @switch.table.hidden.weak, i32 0, i32 %cond
+  %switch.load = load ptr, ptr %switch.gep, align 8
+  ret ptr %switch.load
 }
 
 ; ; Relative switch lookup table for strings
@@ -457,6 +595,247 @@ define ptr @gep_volatile_load(i64 %index) {
 ;
   %gep = getelementptr inbounds [2 x ptr], ptr @table.volatile, i64 0, i64 %index
   %load = load volatile ptr, ptr %gep, align 8
+  ret ptr %load
+}
+
+define ptr @table_with_poison(i64 %index) {
+; CHECK-LABEL: define ptr @table_with_poison(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i64(ptr @table.with.poison.rel, i64 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
+;
+  %gep = getelementptr ptr, ptr @table.with.poison, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_all_poison(i64 %index) {
+; CHECK-LABEL: define ptr @table_all_poison(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr @table.all.poison, i64 [[INDEX]]
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
+;
+  %gep = getelementptr ptr, ptr @table.all.poison, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_multi_use_1(i64 %index) {
+; CHECK-LABEL: define ptr @table_multi_use_1(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i64(ptr @table.multi.use.rel, i64 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
+;
+  %gep = getelementptr ptr, ptr @table.multi.use, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_multi_use_2(i64 %index) {
+; CHECK-LABEL: define ptr @table_multi_use_2(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i64(ptr @table.multi.use.rel, i64 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
+;
+  %gep = getelementptr ptr, ptr @table.multi.use, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_multi_use_stride_mismatch_1(i64 %index) {
+; CHECK-LABEL: define ptr @table_multi_use_stride_mismatch_1(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr @table.multi.use.stride.mismatch, i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+  %gep = getelementptr ptr, ptr @table.multi.use.stride.mismatch, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_multi_use_stride_mismatch_2(i64 %index) {
+; CHECK-LABEL: define ptr @table_multi_use_stride_mismatch_2(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x ptr], ptr @table.multi.use.stride.mismatch, i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+  %gep = getelementptr [2 x ptr], ptr @table.multi.use.stride.mismatch, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_multi_use_type_mismatch_1(i64 %index) {
+; CHECK-LABEL: define ptr @table_multi_use_type_mismatch_1(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr @table.multi.use.type.mismatch, i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+  %gep = getelementptr ptr, ptr @table.multi.use.type.mismatch, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr addrspace(1) @table_multi_use_type_mismatch_2(i64 %index) {
+; CHECK-LABEL: define ptr addrspace(1) @table_multi_use_type_mismatch_2(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr @table.multi.use.type.mismatch, i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr addrspace(1), ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr addrspace(1) [[LOAD]]
+;
+  %gep = getelementptr ptr, ptr @table.multi.use.type.mismatch, i64 %index
+  %load = load ptr addrspace(1), ptr %gep
+  ret ptr addrspace(1) %load
+}
+
+define ptr @table_multi_use_invalid_use_1(i64 %index) {
+; CHECK-LABEL: define ptr @table_multi_use_invalid_use_1(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr @table.multi.use.invalid.use, i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+  %gep = getelementptr ptr, ptr @table.multi.use.invalid.use, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_multi_use_invalid_use_2(i64 %index) {
+; CHECK-LABEL: define ptr @table_multi_use_invalid_use_2(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    ret ptr @table.multi.use.invalid.use
+;
+  ret ptr @table.multi.use.invalid.use
+}
+
+; Test lookup table use through phi/select, including multiple uses.
+define ptr @table_phi_select(i32 %x, i1 %c, i64 %index0, i64 %index1, i64 %index2) {
+; CHECK-LABEL: define ptr @table_phi_select(
+; CHECK-SAME: i32 [[X:%.*]], i1 [[C:%.*]], i64 [[INDEX0:%.*]], i64 [[INDEX1:%.*]], i64 [[INDEX2:%.*]]) {
+; CHECK-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
+; CHECK-NEXT:      i32 0, label %[[CASE0:.*]]
+; CHECK-NEXT:      i32 1, label %[[CASE1:.*]]
+; CHECK-NEXT:      i32 2, label %[[CASE2:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[CASE0]]:
+; CHECK-NEXT:    [[RELTABLE_SHIFT2:%.*]] = shl i64 [[INDEX0]], 2
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC1:%.*]] = call ptr @llvm.load.relative.i64(ptr @table.phi.select.1.rel, i64 [[RELTABLE_SHIFT2]])
+; CHECK-NEXT:    br label %[[JOIN:.*]]
+; CHECK:       [[CASE1]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[CASE2]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[DEFAULT]]:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], ptr @table.phi.select.1.rel, ptr @table.phi.select.3.rel
+; CHECK-NEXT:    [[RELTABLE_SHIFT1:%.*]] = shl i64 [[INDEX1]], 2
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC2:%.*]] = call ptr @llvm.load.relative.i64(ptr [[SEL]], i64 [[RELTABLE_SHIFT1]])
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC2]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ @table.phi.select.1.rel, %[[CASE0]] ], [ @table.phi.select.2.rel, %[[CASE1]] ], [ @table.phi.select.2.rel, %[[CASE2]] ]
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i64 [[INDEX2]], 2
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i64(ptr [[PHI]], i64 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
+;
+  switch i32 %x, label %default [
+  i32 0, label %case0
+  i32 1, label %case1
+  i32 2, label %case2
+  ]
+
+case0:
+  %gep0 = getelementptr ptr, ptr @table.phi.select.1, i64 %index0
+  %load0 = load ptr, ptr %gep0
+  br label %join
+
+case1:
+  br label %join
+
+case2:
+  br label %join
+
+default:
+  %sel = select i1 %c, ptr @table.phi.select.1, ptr @table.phi.select.3
+  %gep1 = getelementptr ptr, ptr %sel, i64 %index1
+  %load1 = load ptr, ptr %gep1
+  ret ptr %load1
+
+join:
+  %phi = phi ptr [ @table.phi.select.1, %case0 ], [ @table.phi.select.2, %case1 ], [ @table.phi.select.2, %case2 ]
+  %gep2 = getelementptr ptr, ptr %phi, i64 %index2
+  %load2 = load ptr, ptr %gep2
+  ret ptr %load2
+}
+
+; Not all tables in the phi can be converted into a relative lookup table.
+define ptr @table_phi_select_not_all_valid(i1 %c, i64 %index) {
+; CHECK-LABEL: define ptr @table_phi_select_not_all_valid(
+; CHECK-SAME: i1 [[C:%.*]], i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[JOIN:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ @table.phi.select.4, %[[ENTRY]] ], [ @switch.table.hidden.weak, %[[IF]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[PHI]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi ptr [ @table.phi.select.4, %entry ], [ @switch.table.hidden.weak, %if ]
+  %gep = getelementptr ptr, ptr %phi, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+; @table.phi.select.6 is only reachable from @table.phi.select.5 through the
+; phi, but also has a direct use with a different stride.
+define ptr @table_phi_select_other_use_mismatch_1(i1 %c, i64 %index) {
+; CHECK-LABEL: define ptr @table_phi_select_other_use_mismatch_1(
+; CHECK-SAME: i1 [[C:%.*]], i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[JOIN:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ @table.phi.select.5, %[[ENTRY]] ], [ @table.phi.select.6, %[[IF]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr [[PHI]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi ptr [ @table.phi.select.5, %entry ], [ @table.phi.select.6, %if ]
+  %gep = getelementptr ptr, ptr %phi, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_phi_select_other_use_mismatch_2(i64 %index) {
+; CHECK-LABEL: define ptr @table_phi_select_other_use_mismatch_2(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x ptr], ptr @table.phi.select.6, i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+  %gep = getelementptr [2 x ptr], ptr @table.phi.select.6, i64 %index
+  %load = load ptr, ptr %gep
   ret ptr %load
 }
 

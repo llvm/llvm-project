@@ -12,7 +12,6 @@
 
 ---
 name: coexec_sched_warning
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:vgpr_32 = IMPLICIT_DEF

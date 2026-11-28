@@ -4,14 +4,14 @@
 ; RUN: llvm-as %p/Inputs/devirt-single-impl2-index.ll -o %t.index.bc
 ; RUN: opt %s -S -passes=wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-read-summary=%t.index.bc \
 ; RUN:     -wholeprogramdevirt-summary-action=export \
-; RUN:     -wholeprogramdevirt-write-summary=%t2.index.bc -o /dev/null
+; RUN:     -wholeprogramdevirt-write-summary=%t2.index.bc -disable-output
 ; RUN: llvm-dis %t2.index.bc -o - | FileCheck %s
 
 ; Check that opt fails to use summaries which don't contain regular LTO module
 ; when performing export.
 ; RUN: llvm-as %p/Inputs/devirt-bad-index.ll -o %t-bad.index.bc
 ; RUN: not opt %s -S -passes=wholeprogramdevirt -whole-program-visibility -wholeprogramdevirt-read-summary=%t-bad.index.bc \
-; RUN:     -wholeprogramdevirt-summary-action=export -o /dev/null 2>&1 | FileCheck %s --check-prefix=MISSING-MODULE
+; RUN:     -wholeprogramdevirt-summary-action=export -disable-output 2>&1 | FileCheck %s --check-prefix=MISSING-MODULE
 
 ; Check single impl devirtulation in summary
 ; CHECK: typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: unknown, sizeM1BitWidth: 0), wpdResolutions: ((offset: 0, wpdRes: (kind: singleImpl, singleImplName: "_ZNK1A1fEv"))))) ; guid

@@ -93,7 +93,8 @@ static Twine getModuleIdentifier(StringRef moduleName) {
 
 namespace llvm {
 static LogicalResult embedBinaryImpl(StringRef moduleName,
-                                     gpu::ObjectAttr object, Module &module) {
+                                     gpu::ObjectAttr object, int priority,
+                                     Module &module) {
 
   // Embed the object as a global string.
   // Add null for assembly output for JIT paths that expect null-terminated
@@ -163,7 +164,7 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
   }();
   builder.CreateStore(moduleObj, modulePtr);
   builder.CreateRetVoid();
-  appendToGlobalCtors(module, loadFn, /*Priority=*/123);
+  appendToGlobalCtors(module, loadFn, priority);
 
   auto *unloadFn = Function::Create(
       FunctionType::get(voidTy, /*IsVarArg=*/false),
@@ -176,7 +177,7 @@ static LogicalResult embedBinaryImpl(StringRef moduleName,
       "mgpuModuleUnload", FunctionType::get(voidTy, ptrTy, false));
   builder.CreateCall(moduleUnloadFn, builder.CreateLoad(ptrTy, modulePtr));
   builder.CreateRetVoid();
-  appendToGlobalDtors(module, unloadFn, /*Priority=*/123);
+  appendToGlobalDtors(module, unloadFn, priority);
 
   return success();
 }
@@ -199,7 +200,8 @@ LogicalResult SelectObjectAttrImpl::embedBinary(
   if (!object)
     return failure();
 
-  return embedBinaryImpl(op.getName(), object,
+  uint16_t priority = cast<gpu::SelectObjectAttr>(attribute).getPriority();
+  return embedBinaryImpl(op.getName(), object, priority,
                          *moduleTranslation.getLLVMModule());
 }
 

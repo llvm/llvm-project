@@ -36,6 +36,24 @@ TEST_F(LlvmLibcStrfromlTest, DecimalFormat) {
 
   result = LIBC_NAMESPACE::strfromf128(buff, 63, "%.F", -2.5);
   EXPECT_STREQ_LEN(result, buff, "-2");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%f", 0.5);
+  EXPECT_STREQ_LEN(result, buff, "0.500000");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%.15f", 0.8125);
+  EXPECT_STREQ_LEN(result, buff, "0.812500000000000");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%f", -0.8125);
+  EXPECT_STREQ_LEN(result, buff, "-0.812500");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%f", 0x1.fffffep-1);
+  EXPECT_STREQ_LEN(result, buff, "1.000000");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%.7f", 0x1.fffffep-1);
+  EXPECT_STREQ_LEN(result, buff, "0.9999999");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%f", 0.25);
+  EXPECT_STREQ_LEN(result, buff, "0.250000");
 }
 
 TEST_F(LlvmLibcStrfromlTest, HexExponentFormat) {
@@ -72,6 +90,24 @@ TEST_F(LlvmLibcStrfromlTest, DecimalExponentFormat) {
 
   result = LIBC_NAMESPACE::strfromf128(buff, 63, "%E", 1.0L);
   EXPECT_STREQ_LEN(result, buff, "1.000000E+00");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%e", 0.5);
+  EXPECT_STREQ_LEN(result, buff, "5.000000e-01");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%e", 0.8125);
+  EXPECT_STREQ_LEN(result, buff, "8.125000e-01");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%E", -0.8125);
+  EXPECT_STREQ_LEN(result, buff, "-8.125000E-01");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%e", 0x1.fffffep-1);
+  EXPECT_STREQ_LEN(result, buff, "9.999999e-01");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%.5e", 0x1.fffffep-1);
+  EXPECT_STREQ_LEN(result, buff, "1.00000e+00");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%e", 0.25);
+  EXPECT_STREQ_LEN(result, buff, "2.500000e-01");
 }
 
 TEST_F(LlvmLibcStrfromlTest, DecimalAutoFormat) {
@@ -86,6 +122,24 @@ TEST_F(LlvmLibcStrfromlTest, DecimalAutoFormat) {
 
   result = LIBC_NAMESPACE::strfromf128(buff, 63, "%g", 1.0);
   EXPECT_STREQ_LEN(result, buff, "1");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%g", 0.5);
+  EXPECT_STREQ_LEN(result, buff, "0.5");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%.15g", 0.8125);
+  EXPECT_STREQ_LEN(result, buff, "0.8125");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%G", -0.8125);
+  EXPECT_STREQ_LEN(result, buff, "-0.8125");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%g", 0x1.fffffep-1);
+  EXPECT_STREQ_LEN(result, buff, "1");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%.8g", 0x1.fffffep-1);
+  EXPECT_STREQ_LEN(result, buff, "0.99999994");
+
+  result = LIBC_NAMESPACE::strfromf128(buff, 63, "%g", 0.25);
+  EXPECT_STREQ_LEN(result, buff, "0.25");
 
   result = LIBC_NAMESPACE::strfromf128(buff, 63, "%g", -0.1);
   EXPECT_STREQ_LEN(result, buff, "-0.1");

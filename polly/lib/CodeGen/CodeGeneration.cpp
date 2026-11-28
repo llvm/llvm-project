@@ -31,12 +31,14 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "isl/ast.h"
@@ -270,15 +272,13 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
 
     Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
 
-    auto *CI = dyn_cast<ConstantInt>(RTC);
-    // The code below annotates the "llvm.loop.vectorize.enable" to false
-    // for the code flow taken when RTCs fail. Because we don't want the
-    // Loop Vectorizer to come in later and vectorize the original fall back
-    // loop when Polly is enabled. This avoids loop versioning on fallback
-    // loop by Loop Vectorizer. Don't do this when Polly's RTC value is
-    // false (due to code generation failure), as we are left with only one
-    // version of Loop.
-    if (!(CI && CI->isZero())) {
+    // The code below annotates the code flow taken when RTCs fail with
+    // "llvm.loop.vectorize.disable". We do this to avoid that the
+    // Loop Vectorizer comes in later and vectorizes the original fall back
+    // loop when Polly is enabled. If Polly's RTC value is known to be
+    // false (e.g. due to code generation failure), leave it eligible for
+    // vectorization as we are left with only one version of Loop.
+    if (!computeKnownBits(RTC, DL).isZero()) {
       for (Loop *L : LI.getLoopsInPreorder()) {
         if (S.contains(L))
           addStringMetadataToLoop(L, StringRef("llvm.loop.vectorize.disable"));

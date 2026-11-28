@@ -1,5 +1,5 @@
 ; The assembler should catch an undefined argument type .
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: invalid type for function argument
 

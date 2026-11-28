@@ -384,6 +384,17 @@ add_libc_test(
     libc.src.string.memset_explicit
 )
 
+add_libc_test(
+  string_length_test
+  SUITE
+    libc-string-tests
+  SRCS
+    string_length_test.cpp
+  DEPENDS
+    libc.src.string.string_length
+    libc.hdr.stdint_proxy
+)
+
 add_libc_multi_impl_test(memcmp libc-string-tests SRCS memcmp_test.cpp)
 add_libc_multi_impl_test(memcpy libc-string-tests SRCS memcpy_test.cpp)
 add_libc_multi_impl_test(memmove libc-string-tests SRCS memmove_test.cpp)

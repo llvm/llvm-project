@@ -13,7 +13,7 @@ define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[IV]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[WIDE_LOAD]] to <2 x i64>
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [4 x i8], ptr [[BUCKETS]], <2 x i64> [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.v2p0.i32(<2 x ptr> [[TMP7]], i32 1, <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
@@ -143,7 +143,7 @@ define void @simple_histogram_uadd_sat(ptr noalias %buckets, ptr readonly %indic
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[WIDE_LOAD]] to <2 x i64>
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [4 x i8], ptr [[BUCKETS]], <2 x i64> [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.uadd.sat.v2p0.i32(<2 x ptr> [[TMP7]], i32 1, <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
@@ -185,7 +185,7 @@ define void @simple_histogram_umax(ptr noalias %buckets, ptr readonly %indices) 
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[WIDE_LOAD]] to <2 x i64>
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [4 x i8], ptr [[BUCKETS]], <2 x i64> [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.umax.v2p0.i32(<2 x ptr> [[TMP7]], i32 120, <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
@@ -227,7 +227,7 @@ define void @simple_histogram_umin(ptr noalias %buckets, ptr readonly %indices) 
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[WIDE_LOAD]] to <2 x i64>
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [4 x i8], ptr [[BUCKETS]], <2 x i64> [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.umin.v2p0.i32(<2 x ptr> [[TMP7]], i32 99, <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000

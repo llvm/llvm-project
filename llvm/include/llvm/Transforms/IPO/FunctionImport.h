@@ -25,6 +25,9 @@
 namespace llvm {
 
 class Module;
+namespace cl {
+class LibraryOptionsContext;
+}
 
 /// The function importer is automatically importing function from other modules
 /// based on the provided summary informations.
@@ -318,6 +321,8 @@ public:
   LLVM_ABI Expected<bool> importFunctions(Module &M,
                                           const ImportMapTy &ImportList);
 
+  LLVM_ABI static bool forceImportAll(const cl::LibraryOptionsContext &C);
+
 private:
   /// The summaries index used to trigger importing.
   const ModuleSummaryIndex &Index;
@@ -358,6 +363,7 @@ public:
 /// are made from (the module path for each summary is owned by the index's
 /// module path string table).
 LLVM_ABI void ComputeCrossModuleImport(
+    const cl::LibraryOptionsContext &LibraryOptions,
     const ModuleSummaryIndex &Index,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
@@ -384,14 +390,14 @@ LLVM_ABI void updateIndirectCalls(ModuleSummaryIndex &Index);
 /// Also update call edges for indirect calls to local functions added from
 /// SamplePGO when needed.
 LLVM_ABI void computeDeadSymbolsAndUpdateIndirectCalls(
-    ModuleSummaryIndex &Index,
+    const cl::LibraryOptionsContext &LibraryOptions, ModuleSummaryIndex &Index,
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
     function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing);
 
 /// Compute dead symbols and run constant propagation in combined index
 /// after that.
 LLVM_ABI void computeDeadSymbolsWithConstProp(
-    ModuleSummaryIndex &Index,
+    const cl::LibraryOptionsContext &LibraryOptions, ModuleSummaryIndex &Index,
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
     function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing,
     bool ImportEnabled);

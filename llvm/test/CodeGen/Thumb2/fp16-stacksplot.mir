@@ -2,7 +2,6 @@
 # RUN: llc -o - %s -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+fullfp16 -run-pass=stack-protector -run-pass=prolog-epilog | FileCheck %s
 ---
 name: func0
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: default, offset: 0, size: 2, alignment: 2,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,

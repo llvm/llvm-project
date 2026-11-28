@@ -12,7 +12,8 @@
 ; (6) thumb without -frame-pointer=all
 ; (7) thumbv7 with -frame-pointer=all
 ; (8) thumbv7 without -frame-pointer=all
-; (9) thumbv7 with -no-integrated-as
+; Older binutils doesn't support register names in CFI directives.
+; (9) thumbv7 with -no-integrated-as -binutils-version=2.24
 
 ; RUN: llc -mtriple arm-unknown-linux-gnueabi \
 ; RUN:     -frame-pointer=all -filetype=asm -o - %s \
@@ -47,7 +48,7 @@
 ; RUN:   | FileCheck %s --check-prefix=CHECK-THUMB-V7-FP-ELIM
 
 ; RUN: llc -mtriple thumbv7-unknown-linux-gnueabi \
-; RUN:     -frame-pointer=all -no-integrated-as -filetype=asm -o - %s \
+; RUN:     -frame-pointer=all -no-integrated-as -binutils-version=2.24 -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-THUMB-V7-FP-NOIAS
 
 ;-------------------------------------------------------------------------------

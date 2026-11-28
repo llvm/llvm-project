@@ -342,17 +342,15 @@ def AVR_COND_PL : PatLeaf<(i8 7)>;
 // pointer before prolog-epilog rewriting occurs.
 // Pessimistically assume ADJCALLSTACKDOWN / ADJCALLSTACKUP will become
 // sub / add which can clobber SREG.
-let Defs = [SP, SREG], Uses = [SP] in {
+// R31R30 is used to update SP during expansion, while it's unused if no
+// expansion happens (see AVRFrameLowering::eliminateCallFramePseudoInst). It
+// is usually free because it is a call-clobbered register, but we set it as a
+// def via a post ISel hook, since the register allocator might use it in rare
+// cases.
+let Defs = [SP, SREG], Uses = [SP], hasSideEffects = 1, hasPostISelHook = 1 in {
   def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i16imm:$amt, i16imm:$amt2),
                                 "#ADJCALLSTACKDOWN",
                                 [(AVRcallseq_start timm:$amt, timm:$amt2)]>;
-
-  // R31R30 is used to update SP. It is normally free because it is a
-  // call-clobbered register but it is necessary to set it as a def as the
-  // register allocator might use it in rare cases (for rematerialization, it
-  // seems). hasSideEffects needs to be set to true so this instruction isn't
-  // considered dead.
-  let Defs = [R31R30], hasSideEffects = 1 in
   def ADJCALLSTACKUP : Pseudo<(outs), (ins i16imm:$amt1, i16imm:$amt2),
                               "#ADJCALLSTACKUP",
                               [(AVRcallseq_end timm:$amt1, timm:$amt2)]>;

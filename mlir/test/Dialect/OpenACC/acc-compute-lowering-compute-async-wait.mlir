@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -acc-compute-lowering=device-type=nvidia | FileCheck %s --check-prefixes=CHECK,NV
-// RUN: mlir-opt %s -acc-compute-lowering | FileCheck %s --check-prefixes=CHECK,NONE
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(func.func(acc-compute-lowering{device-type=nvidia}))' | FileCheck %s --check-prefixes=CHECK,NV
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(func.func(acc-compute-lowering))' | FileCheck %s --check-prefixes=CHECK,NONE
 
 // Device-type-tagged async/wait on compute constructs are lowered to
 // acc.kernel_environment with only the clause for the pass device type

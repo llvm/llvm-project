@@ -1320,7 +1320,7 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
 
     // Remap to use values from the current iteration instead of the
     // previous one.
-    remapInstructionsInBlocks(NewBlocks, VMap);
+    remapInstructionsInBlocks(NewBlocks, VMap, AC);
 
     if (Iter == 0) {
       if (PeelLast) {

@@ -60,6 +60,9 @@ infrastructure are described first, followed by tool-specific sections.
   All of the symbols it used to define were moved into `clang-tidy/ClangTidyModule.h`.
   The deprecated header has been removed in this release.
 
+- The hidden `-dataflow-log` option has been replaced by the `CLANG_DATAFLOW_LOG` environment variable.
+  `CLANG_DATAFLOW_LOG=-` writes a textual dataflow log to stderr, and `CLANG_DATAFLOW_LOG=<dir>` writes HTML logs under `<dir>`.
+
 ### Improvements to clangd
 
 #### Inlay hints
@@ -102,6 +105,10 @@ infrastructure are described first, followed by tool-specific sections.
   value when possible, and otherwise via a pointer parameter, since C has
   no references.
 
+- The `Define outline` tweak no longer copies attributes (`[[...]]`,
+  `__attribute__((...))` and `__declspec(...)`) from the declaration to the
+  generated out-of-line definition.
+
 #### Signature help
 
 - Parameters declared with a `decltype` are now displayed as the type the
@@ -143,7 +150,16 @@ infrastructure are described first, followed by tool-specific sections.
   `ImplementationFileExtensions` contains an invalid entry, such as one with a
   leading dot. The invalid option is now reported as a warning.
 
+- Added a new {program}`clang-tidy` command line option `-sarif-export=<file>`
+  in which clang-tidy diagnostics are exported in the [SARIF](https://sarifweb.azurewebsites.net/)
+  format.
+  
 #### New checks
+
+- New {doc}`bugprone-macro-condition
+  <clang-tidy/checks/bugprone/macro-condition>` check.
+
+  Warns about inconsistent macro usage in preprocessor conditions.
 
 - New {doc}`llvm-invalid-regex-pattern
   <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
@@ -184,6 +200,14 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Improved {doc}`bugprone-argument-comment
+  <clang-tidy/checks/bugprone/argument-comment>` check by adding the
+  {option}`IgnoreMacros`, {option}`IgnoredParameterNames`,
+  {option}`NullPtrMacros` and {option}`BoolLiteralMacros` options.
+  The `ZeroOnly` value of {option}`CommentIntegerLiterals` adds comments only to
+  integer literals with the value zero. The option still accepts `true` and
+  `false`.
+
 - Improved {doc}`bugprone-assignment-in-if-condition
   <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
   assignments inside GNU statement expressions unless they form the value of
@@ -206,8 +230,9 @@ infrastructure are described first, followed by tool-specific sections.
   operands narrower than `int` is only signed due to integer promotion.
 
 - Improved {doc}`bugprone-macro-parentheses
-  <clang-tidy/checks/bugprone/macro-parentheses>` by fixing invalid fixes for
-  macro arguments used as names in alias declarations.
+  <clang-tidy/checks/bugprone/macro-parentheses>` by fixing invalid fixes
+  for macro arguments used as names in alias declarations, and correcting
+  diagnostic and fix-it locations for tokens containing escaped newlines.
 
 - Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
@@ -223,18 +248,28 @@ infrastructure are described first, followed by tool-specific sections.
   the pointer points to an incomplete (forward-declared) type.
 
 - Improved {doc}`bugprone-redundant-branch-condition
-  <clang-tidy/checks/bugprone/redundant-branch-condition>` check by fixing
-  false positives when the condition variable is changed later in a loop that
-  encloses the inner `if`.
+  <clang-tidy/checks/bugprone/redundant-branch-condition>` check:
+  
+    - Fixed false positives when the condition variable is changed later in a loop that
+      encloses the inner `if`.
+
+    - Fixed false negatives when a nested `if` checks the second operand
+      of an outer `&&` condition, as in `if (x && y) { if (y) ... }`.
 
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
 
 - Improved {doc}`bugprone-unchecked-optional-access
-  <clang-tidy/checks/bugprone/unchecked-optional-access>` by fixing false
-  positives on `bsl::optional` and `bdlb::NullableValue` constructed from a
-  value or returned by `bsl::make_optional`.
+  <clang-tidy/checks/bugprone/unchecked-optional-access>` check:
+
+  - Fixed false positives on `bsl::optional` and `bdlb::NullableValue`
+    constructed from a value or returned by `bsl::make_optional`.
+
+  - Added the {option}`BoolSolverModel` option to allow use of a "Simple"
+    Boolean model that avoids relying on a SAT solver. Previously, only SAT was
+    available. This leads to faster analysis, but the trade-off is more false
+    positives (when has value checks involve correlated variables or ORs).
 
 - Improved {doc}`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing
@@ -274,6 +309,15 @@ infrastructure are described first, followed by tool-specific sections.
     instantiations, where the suggested `const` would break the move for
     instantiations with real move semantics.
 
+- Improved {doc}`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check:
+
+  - Match {option}`IgnoreHeaders` patterns containing `/` against header paths 
+    on Windows.
+
+  - Fix a crash when a `.clang-format` file contains invalid configuration, such 
+    as duplicate keys.
+
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
   inherits from itself or has a circular inheritance graph.
@@ -292,14 +336,23 @@ infrastructure are described first, followed by tool-specific sections.
   literals created for raw user-defined literal operators, such as `12_w`.
 
 - Improved {doc}`modernize-return-braced-init-list
-  <clang-tidy/checks/modernize/return-braced-init-list>` check to no longer
-  rewrite the return value when the constructed type has a
-  `std::initializer_list` constructor, as the braced form could select a
-  different constructor.
+  <clang-tidy/checks/modernize/return-braced-init-list>` check:
+
+  - No longer rewrites the return value when the constructed type has a
+    `std::initializer_list` constructor, as the braced form could select a
+    different constructor.
+
+  - Fixed a crash when a returned constructor call passes arguments through
+    an ellipsis.
 
 - Fixed a crash in {doc}`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` when analyzing
   malformed code with nested classes and ambiguous initializer.
+
+- Fixed false positive in {doc}`modernize-use-emplace
+  <clang-tidy/checks/modernize/use-emplace>` check when a constructor argument
+  is `0` or `NULL` used as a null pointer, which an `emplace`-like method would
+  forward as an integer.
 
 - Improved {doc}`modernize-use-equals-default
   <clang-tidy/checks/modernize/use-equals-default>` check to also capture
@@ -424,9 +477,14 @@ infrastructure are described first, followed by tool-specific sections.
     `decltype((x))` and in the initializers and return statements of
     `decltype(auto)` declarations.
 
-- Fixed {doc}`readability-simplify-boolean-expr
-  <clang-tidy/checks/readability/simplify-boolean-expr>` producing invalid
-  fixes when applying De Morgan's theorem to overloaded comparison operators.
+- Improved {doc}`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check:
+
+  - Fixed invalid fixes when applying De Morgan's theorem to overloaded
+    comparison operators.
+
+  - No longer offers fixes that remove a left operand with side effects, such
+    as `f()` in `f() || true`.
 
 - Improved {doc}`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by fixing the

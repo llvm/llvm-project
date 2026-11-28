@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -arith-expand="include-bf16=true include-f8e8m0=true include-f4e2m1=true include-f8e5m2=true include-f8e4m3fn=true include-min-max-f=true include-min-max-i=true" -verify-diagnostics -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -arith-expand -split-input-file -verify-diagnostics | FileCheck %s --check-prefix=SCHECK
+// RUN: mlir-opt %s -arith-expand="include-f8e8m0=true" -canonicalize -split-input-file -verify-diagnostics | FileCheck %s --check-prefix=CANON
 
 // Test ceil divide with signed integer
 // CHECK-LABEL:       func @ceildivi
@@ -310,6 +311,34 @@ func.func @truncf_vector_bf16_to_f8E8M0FNU(%arg0 : vector<4xbf16>) -> vector<4xf
 
 // -----
 
+// The widening keeps only nnan: with contract, ExtFOp::fold would cancel it
+// against a contract truncf producing %arg0, skipping its rounding.
+func.func @truncf_f16_to_f8E8M0FNU_fastmath(%arg0 : f16) -> f8E8M0FNU {
+    %0 = arith.truncf %arg0 fastmath<nnan,contract> : f16 to f8E8M0FNU
+    return %0 : f8E8M0FNU
+}
+// CHECK-LABEL: @truncf_f16_to_f8E8M0FNU_fastmath
+// CHECK: arith.extf %arg0 fastmath<nnan> : f16 to f32
+
+// -----
+
+// The f16 -> f8E8M0FNU expansion widens %h to f32 and reads the exponent from
+// its bits. If the widening kept 'contract', ExtFOp::fold would cancel it
+// against the contract truncf that produced %h, and the exponent would come
+// from %x before its rounding to f16: f32 2 - 2^-11 rounds to 2.0 in f16, so it
+// must give 2^1, not 2^0.
+
+// CANON-LABEL: @truncf_f8E8M0FNU_after_contract_truncf
+// CANON: %[[H:.+]] = arith.truncf %{{.+}} fastmath<contract> : f32 to f16
+// CANON: arith.extf %[[H]] : f16 to f32
+func.func @truncf_f8E8M0FNU_after_contract_truncf(%x: f32) -> f8E8M0FNU {
+  %h = arith.truncf %x fastmath<contract> : f32 to f16
+  %e = arith.truncf %h fastmath<contract> : f16 to f8E8M0FNU
+  return %e : f8E8M0FNU
+}
+
+// -----
+
 func.func @scaling_truncf_f32_to_f4E2M1FN(%arg0 : f32, %arg1: f8E8M0FNU) -> f4E2M1FN {
     %0 = arith.scaling_truncf %arg0, %arg1 : f32, f8E8M0FNU to f4E2M1FN
     return %0 : f4E2M1FN
@@ -376,6 +405,8 @@ func.func @invalid_scaling_truncf_to_f4E2M1FN(%arg0: f16, %arg1 : f8E5M2FNUZ) ->
 
 // -----
 
+// The NaN 0xFF gives the quiet NaN 0x7FC00000 (2143289344), as the constant
+// folder does.
 func.func @extf_f8E8M0FNU_to_f32(%arg0 : f8E8M0FNU) -> f32 {
     %0 = arith.extf %arg0 : f8E8M0FNU to f32
     return %0 : f32
@@ -386,10 +417,14 @@ func.func @extf_f8E8M0FNU_to_f32(%arg0 : f8E8M0FNU) -> f32 {
 // CHECK: %[[C23_i32:.+]] = arith.constant 23 : i32
 // CHECK: %[[EXTUI:.+]] = arith.extui %[[BITCAST]] : i8 to i32
 // CHECK: %[[SHLI:.+]] = arith.shli %[[EXTUI]], %[[C23_i32]] : i32
+// CHECK-DAG: %[[CF8MIN:.+]] = arith.constant 0 : i8
+// CHECK-DAG: %[[CF32MIN:.+]] = arith.constant 4194304 : i32
+// CHECK: %[[CMP_MIN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8MIN]] : i8
+// CHECK: %[[SELECT_MIN:.+]] = arith.select %[[CMP_MIN]], %[[CF32MIN]], %[[SHLI]] : i32
 // CHECK-DAG: %[[CF8NAN:.+]] = arith.constant -1 : i8
-// CHECK-DAG: %[[CF32NAN:.+]] = arith.constant -1 : i32
+// CHECK-DAG: %[[CF32NAN:.+]] = arith.constant 2143289344 : i32
 // CHECK: %[[CMP_NAN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8NAN]] : i8
-// CHECK: %[[SELECT_NAN:.+]] = arith.select %[[CMP_NAN]], %[[CF32NAN]], %[[SHLI]] : i32
+// CHECK: %[[SELECT_NAN:.+]] = arith.select %[[CMP_NAN]], %[[CF32NAN]], %[[SELECT_MIN]] : i32
 // CHECK: %[[RESULT:.+]] = arith.bitcast %[[SELECT_NAN]] : i32 to f32
 // CHECK: return %[[RESULT]]
 
@@ -405,7 +440,11 @@ func.func @extf_f8E8M0FNU_to_f32_no_nan(%arg0 : f8E8M0FNU) -> f32 {
 // CHECK: %[[C23_i32:.+]] = arith.constant 23 : i32
 // CHECK: %[[EXTUI:.+]] = arith.extui %[[BITCAST]] : i8 to i32
 // CHECK: %[[SHLI:.+]] = arith.shli %[[EXTUI]], %[[C23_i32]] : i32
-// CHECK: %[[RESULT:.+]] = arith.bitcast %[[SHLI]] : i32 to f32
+// CHECK-DAG: %[[CF8MIN:.+]] = arith.constant 0 : i8
+// CHECK-DAG: %[[CF32MIN:.+]] = arith.constant 4194304 : i32
+// CHECK: %[[CMP_MIN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8MIN]] : i8
+// CHECK: %[[SELECT_MIN:.+]] = arith.select %[[CMP_MIN]], %[[CF32MIN]], %[[SHLI]] : i32
+// CHECK: %[[RESULT:.+]] = arith.bitcast %[[SELECT_MIN]] : i32 to f32
 // CHECK: return %[[RESULT]]
 
 // -----
@@ -420,10 +459,14 @@ func.func @extf_f8E8M0FNU_to_f16(%arg0 : f8E8M0FNU) -> f16 {
 // CHECK-DAG: %[[C23_i32:.+]] = arith.constant 23 : i32
 // CHECK: %[[EXTUI:.+]] = arith.extui %[[BITCAST]] : i8 to i32
 // CHECK: %[[SHLI:.+]] = arith.shli %[[EXTUI]], %[[C23_i32]] : i32
+// CHECK-DAG: %[[CF8MIN:.+]] = arith.constant 0 : i8
+// CHECK-DAG: %[[CF32MIN:.+]] = arith.constant 4194304 : i32
+// CHECK: %[[CMP_MIN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8MIN]] : i8
+// CHECK: %[[SELECT_MIN:.+]] = arith.select %[[CMP_MIN]], %[[CF32MIN]], %[[SHLI]] : i32
 // CHECK-DAG: %[[CF8NAN:.+]] = arith.constant -1 : i8
-// CHECK-DAG: %[[CF32NAN:.+]] = arith.constant -1 : i32
+// CHECK-DAG: %[[CF32NAN:.+]] = arith.constant 2143289344 : i32
 // CHECK: %[[CMP_NAN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8NAN]] : i8
-// CHECK: %[[SELECT_NAN:.+]] = arith.select %[[CMP_NAN]], %[[CF32NAN]], %[[SHLI]] : i32
+// CHECK: %[[SELECT_NAN:.+]] = arith.select %[[CMP_NAN]], %[[CF32NAN]], %[[SELECT_MIN]] : i32
 // CHECK: %[[F32_RESULT:.+]] = arith.bitcast %[[SELECT_NAN]] : i32 to f32
 // CHECK: %[[F16_RESULT:.+]] = arith.truncf %[[F32_RESULT]] : f32 to f16
 // CHECK: return %[[F16_RESULT]]

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt --split-input-file --verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.CompositeConstruct
@@ -99,8 +99,16 @@ func.func @composite_construct_vector_wrong_count(%arg0: f32, %arg1: f32, %arg2 
 
 // -----
 
+func.func @composite_construct_vector_single_vector(%arg0: vector<4xf32>) -> vector<4xf32> {
+  // expected-error @+1 {{op has incorrect number of operands: expected at least 2 for a vector result, but provided 1}}
+  %0 = spirv.CompositeConstruct %arg0 : (vector<4xf32>) -> vector<4xf32>
+  return %0: vector<4xf32>
+}
+
+// -----
+
 func.func @composite_construct_vector_rank_two(%arg0: vector<2x2xi1>, %arg1: vector<2x2xi1>) -> vector<4x2xi1> {
-  // expected-error @+1 {{op operand #0 must be variadic of void or bool or 8/16/32/64-bit integer or 16/32/64-bit float or BFloat16 or Float8E4M3 or Float8E5M2 or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or any SPIR-V pointer type or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type or any SPIR-V sampled image type or any SPIR-V sampler type or any SPIR-V image type or any SPIR-V tensorArm type or vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or vector of BFloat16 or Float8E4M3 or Float8E5M2 values of length 2/3/4/8/16 of ranks 1, but got 'vector<2x2xi1>'}}
+  // expected-error @+1 {{op operand #0 must be variadic of void or bool or 8/16/32/64-bit integer or 16/32/64-bit float or BFloat16 or Float8E4M3 or Float8E5M2 or Float4E2M1 or Float6E2M3 or Float6E3M2 or Float8UnsignedE8M0 or vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float or BFloat16 or Float8E4M3 or Float8E5M2 or Float4E2M1 or Float6E2M3 or Float6E3M2 or Float8UnsignedE8M0 values of length 2/3/4/8/16 of ranks 1 or any SPIR-V pointer type or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type or any SPIR-V sampled image type or any SPIR-V sampler type or any SPIR-V image type or any SPIR-V tensorArm type or any SPIR-V untyped pointer type, but got 'vector<2x2xi1>'}}
   %0 = spirv.CompositeConstruct %arg0, %arg1 : (vector<2x2xi1>, vector<2x2xi1>) -> vector<4x2xi1>
   return %0: vector<4x2xi1>
 }
@@ -283,6 +291,26 @@ func.func @composite_insert_invalid_result_type(%arg0: !spirv.array<4xf32>, %arg
   // expected-error @+1 {{result type should be the same as the composite type, but found '!spirv.array<4 x f32>' vs '!spirv.array<4 x f64>'}}
   %0 = "spirv.CompositeInsert"(%arg1, %arg0) {indices = [0: i32]} : (f32, !spirv.array<4xf32>) -> !spirv.array<4xf64>
   return %0: !spirv.array<4xf64>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CopyObject
+//===----------------------------------------------------------------------===//
+
+func.func @copy_object(%arg0: vector<4xf32>) -> vector<4xf32> {
+  // CHECK: {{%.*}} = spirv.CopyObject {{%.*}} : vector<4xf32>
+  %0 = spirv.CopyObject %arg0 : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+func.func @copy_object_type_mismatch(%arg0: f32) -> f64 {
+  // expected-error @+1 {{failed to verify that all of {operand, result} have same type}}
+  %0 = "spirv.CopyObject"(%arg0) : (f32) -> f64
+  return %0 : f64
 }
 
 // -----

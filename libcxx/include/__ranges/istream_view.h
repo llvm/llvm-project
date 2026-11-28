@@ -43,15 +43,15 @@ class basic_istream_view : public view_interface<basic_istream_view<_Val, _CharT
   class __iterator;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit basic_istream_view(basic_istream<_CharT, _Traits>& __stream)
+  constexpr explicit basic_istream_view(basic_istream<_CharT, _Traits>& __stream)
       : __stream_(std::addressof(__stream)) {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
+  [[nodiscard]] constexpr auto begin() {
     *__stream_ >> __value_;
     return __iterator{*this};
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr default_sentinel_t end() const noexcept { return default_sentinel; }
+  [[nodiscard]] constexpr default_sentinel_t end() const noexcept { return default_sentinel; }
 
 private:
   basic_istream<_CharT, _Traits>* __stream_;
@@ -66,34 +66,30 @@ public:
   using difference_type  = ptrdiff_t;
   using value_type       = _Val;
 
-  __iterator(const __iterator&)                  = delete;
-  _LIBCPP_HIDE_FROM_ABI __iterator(__iterator&&) = default;
+  __iterator(const __iterator&) = delete;
+  __iterator(__iterator&&)      = default;
 
-  __iterator& operator=(const __iterator&)                  = delete;
-  _LIBCPP_HIDE_FROM_ABI __iterator& operator=(__iterator&&) = default;
+  __iterator& operator=(const __iterator&) = delete;
+  __iterator& operator=(__iterator&&)      = default;
 
-  _LIBCPP_HIDE_FROM_ABI __iterator& operator++() {
+  __iterator& operator++() {
     *__parent_->__stream_ >> __parent_->__value_;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI void operator++(int) { ++*this; }
+  void operator++(int) { ++*this; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _Val& operator*() const { return __parent_->__value_; }
+  [[nodiscard]] _Val& operator*() const { return __parent_->__value_; }
 
-  _LIBCPP_HIDE_FROM_ABI friend bool operator==(const __iterator& __x, default_sentinel_t) {
-    return !*__x.__get_parent_stream();
-  }
+  friend bool operator==(const __iterator& __x, default_sentinel_t) { return !*__x.__get_parent_stream(); }
 
 private:
   basic_istream_view<_Val, _CharT, _Traits>* __parent_;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(basic_istream_view<_Val, _CharT, _Traits>& __parent) noexcept
+  constexpr explicit __iterator(basic_istream_view<_Val, _CharT, _Traits>& __parent) noexcept
       : __parent_(std::addressof(__parent)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr basic_istream<_CharT, _Traits>* __get_parent_stream() const {
-    return __parent_->__stream_;
-  }
+  constexpr basic_istream<_CharT, _Traits>* __get_parent_stream() const { return __parent_->__stream_; }
 
   friend class basic_istream_view<_Val, _CharT, _Traits>;
 };
@@ -115,7 +111,7 @@ struct __fn {
   template <class _Up, class _UnCVRef = remove_cvref_t<_Up>>
     requires derived_from<_UnCVRef, basic_istream<typename _UnCVRef::char_type,
                                                   typename _UnCVRef::traits_type>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Up&& __u) const
+  [[nodiscard]]  constexpr auto operator()(_Up&& __u) const
     noexcept(noexcept(basic_istream_view<_Tp, typename _UnCVRef::char_type,
                                               typename _UnCVRef::traits_type>(std::forward<_Up>(__u))))
     -> decltype(      basic_istream_view<_Tp, typename _UnCVRef::char_type,

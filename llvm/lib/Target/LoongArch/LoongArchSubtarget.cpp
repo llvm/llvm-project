@@ -14,6 +14,7 @@
 #include "LoongArchFrameLowering.h"
 #include "LoongArchSelectionDAGInfo.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 
 using namespace llvm;
 
@@ -87,6 +88,19 @@ void LoongArchSubtarget::initializeProperties(StringRef TuneCPU) {
   PrefFunctionAlignment = Align(32);
   PrefLoopAlignment = Align(16);
   MaxBytesForAlignment = 16;
+
+  // Software prefetching is only enabled for uarches it has been tuned for.
+  PrefetchDistance = 0;
+  MinPrefetchStride = 1;
+  MaxPrefetchIterationsAhead = UINT_MAX;
+
+  if (TuneCPU == "la464" || TuneCPU == "la664") {
+    // The LA464/LA664 hardware prefetchers cover strides of up to 1 KiB, but
+    // stop tracking streams with a stride of 2 KiB or more. Only prefetch
+    // those, as software prefetches for smaller strides just add instructions.
+    PrefetchDistance = 200;
+    MinPrefetchStride = 2048;
+  }
 }
 
 LoongArchSubtarget::LoongArchSubtarget(const Triple &TT, StringRef CPU,
@@ -104,4 +118,14 @@ LoongArchSubtarget::~LoongArchSubtarget() = default;
 
 const SelectionDAGTargetInfo *LoongArchSubtarget::getSelectionDAGInfo() const {
   return TSInfo.get();
+}
+
+void LoongArchSubtarget::mirFileLoaded(MachineFunction &MF) const {
+  // We usually compute max call frame size after ISel. Do the computation now
+  // if the .mir file didn't specify it. Note that this will probably give you
+  // bogus values after PEI has eliminated the callframe setup/destroy pseudo
+  // instructions, specify explicitly if you need it to be correct.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (!MFI.isMaxCallFrameSizeComputed())
+    MFI.computeMaxCallFrameSize(MF);
 }

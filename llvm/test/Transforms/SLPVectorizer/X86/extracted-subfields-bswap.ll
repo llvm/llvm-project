@@ -5,32 +5,13 @@
 ; The full reversal of the bytes of a scalar is emitted as a byte swap.
 
 define void @put_be32(ptr %p, i32 %x) {
-; SSE2-LABEL: define void @put_be32(
-; SSE2-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; SSE2-NEXT:  [[ENTRY:.*:]]
-; SSE2-NEXT:    [[S0:%.*]] = lshr i32 [[X]], 24
-; SSE2-NEXT:    [[T0:%.*]] = trunc i32 [[S0]] to i8
-; SSE2-NEXT:    store i8 [[T0]], ptr [[P]], align 1
-; SSE2-NEXT:    [[S1:%.*]] = lshr i32 [[X]], 16
-; SSE2-NEXT:    [[T1:%.*]] = trunc i32 [[S1]] to i8
-; SSE2-NEXT:    [[G1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; SSE2-NEXT:    store i8 [[T1]], ptr [[G1]], align 1
-; SSE2-NEXT:    [[S2:%.*]] = lshr i32 [[X]], 8
-; SSE2-NEXT:    [[T2:%.*]] = trunc i32 [[S2]] to i8
-; SSE2-NEXT:    [[G2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
-; SSE2-NEXT:    store i8 [[T2]], ptr [[G2]], align 1
-; SSE2-NEXT:    [[T3:%.*]] = trunc i32 [[X]] to i8
-; SSE2-NEXT:    [[G3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
-; SSE2-NEXT:    store i8 [[T3]], ptr [[G3]], align 1
-; SSE2-NEXT:    ret void
-;
-; V2-LABEL: define void @put_be32(
-; V2-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; V2-NEXT:  [[ENTRY:.*:]]
-; V2-NEXT:    [[TMP0:%.*]] = bitcast i32 [[X]] to <4 x i8>
-; V2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[TMP0]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; V2-NEXT:    store <4 x i8> [[TMP1]], ptr [[P]], align 1
-; V2-NEXT:    ret void
+; CHECK-LABEL: define void @put_be32(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.bswap.i32(i32 [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP0]] to <4 x i8>
+; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[P]], align 1
+; CHECK-NEXT:    ret void
 ;
 entry:
   %s0 = lshr i32 %x, 24
@@ -52,10 +33,10 @@ entry:
 
 define void @put_be64(ptr %p, i64 %x) {
 ; CHECK-LABEL: define void @put_be64(
-; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[X]] to <8 x i8>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[TMP0]], <8 x i8> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.bswap.i64(i64 [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <8 x i8>
 ; CHECK-NEXT:    store <8 x i8> [[TMP1]], ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -93,6 +74,65 @@ entry:
   ret void
 }
 
+; With AVX2 the byte swap is not more expensive than the permutation of the
+; bytes either.
+
+define void @put_be32_avx2(ptr %p, i32 %x) #0 {
+; CHECK-LABEL: define void @put_be32_avx2(
+; CHECK-SAME: ptr [[P:%.*]], i32 [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.bswap.i32(i32 [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP0]] to <4 x i8>
+; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %s0 = lshr i32 %x, 24
+  %t0 = trunc i32 %s0 to i8
+  store i8 %t0, ptr %p, align 1
+  %s1 = lshr i32 %x, 16
+  %t1 = trunc i32 %s1 to i8
+  %g1 = getelementptr inbounds nuw i8, ptr %p, i64 1
+  store i8 %t1, ptr %g1, align 1
+  %s2 = lshr i32 %x, 8
+  %t2 = trunc i32 %s2 to i8
+  %g2 = getelementptr inbounds nuw i8, ptr %p, i64 2
+  store i8 %t2, ptr %g2, align 1
+  %t3 = trunc i32 %x to i8
+  %g3 = getelementptr inbounds nuw i8, ptr %p, i64 3
+  store i8 %t3, ptr %g3, align 1
+  ret void
+}
+
+; The reversal of the 16-bit fields is not a byte swap.
+
+define void @put_be16x4(ptr %p, i64 %x) {
+; CHECK-LABEL: define void @put_be16x4(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[X]] to <4 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    store <4 x i16> [[TMP1]], ptr [[P]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  %s0 = lshr i64 %x, 48
+  %t0 = trunc i64 %s0 to i16
+  store i16 %t0, ptr %p, align 2
+  %s1 = lshr i64 %x, 32
+  %t1 = trunc i64 %s1 to i16
+  %g1 = getelementptr inbounds nuw i8, ptr %p, i64 2
+  store i16 %t1, ptr %g1, align 2
+  %s2 = lshr i64 %x, 16
+  %t2 = trunc i64 %s2 to i16
+  %g2 = getelementptr inbounds nuw i8, ptr %p, i64 4
+  store i16 %t2, ptr %g2, align 2
+  %t3 = trunc i64 %x to i16
+  %g3 = getelementptr inbounds nuw i8, ptr %p, i64 6
+  store i16 %t3, ptr %g3, align 2
+  ret void
+}
+
 ; The source scalar is vectorized in the same tree: the byte swap uses the
 ; extracted scalar, unless the permutation of the vector register is cheaper.
 
@@ -100,39 +140,14 @@ define void @vectorized_src(ptr %p, ptr %out) {
 ; SSE2-LABEL: define void @vectorized_src(
 ; SSE2-SAME: ptr [[P:%.*]], ptr [[OUT:%.*]]) #[[ATTR0]] {
 ; SSE2-NEXT:  [[ENTRY:.*:]]
-; SSE2-NEXT:    [[M0:%.*]] = load i32, ptr [[P]], align 4
-; SSE2-NEXT:    [[L0:%.*]] = mul i32 [[M0]], [[M0]]
-; SSE2-NEXT:    [[G1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
-; SSE2-NEXT:    [[M1:%.*]] = load i32, ptr [[G1]], align 4
-; SSE2-NEXT:    [[L1:%.*]] = mul i32 [[M1]], [[M1]]
-; SSE2-NEXT:    [[G2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
-; SSE2-NEXT:    [[M2:%.*]] = load i32, ptr [[G2]], align 4
-; SSE2-NEXT:    [[L2:%.*]] = mul i32 [[M2]], [[M2]]
-; SSE2-NEXT:    [[G3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 12
-; SSE2-NEXT:    [[M3:%.*]] = load i32, ptr [[G3]], align 4
-; SSE2-NEXT:    [[L3:%.*]] = mul i32 [[M3]], [[M3]]
-; SSE2-NEXT:    [[S0:%.*]] = lshr i32 [[L0]], 24
-; SSE2-NEXT:    [[B0:%.*]] = trunc i32 [[S0]] to i8
-; SSE2-NEXT:    [[S1:%.*]] = lshr i32 [[L0]], 16
-; SSE2-NEXT:    [[B1:%.*]] = trunc i32 [[S1]] to i8
-; SSE2-NEXT:    [[S2:%.*]] = lshr i32 [[L0]], 8
-; SSE2-NEXT:    [[B2:%.*]] = trunc i32 [[S2]] to i8
-; SSE2-NEXT:    [[B3:%.*]] = trunc i32 [[L0]] to i8
-; SSE2-NEXT:    [[Z0:%.*]] = zext i8 [[B0]] to i32
-; SSE2-NEXT:    [[Z1:%.*]] = zext i8 [[B1]] to i32
-; SSE2-NEXT:    [[Z2:%.*]] = zext i8 [[B2]] to i32
-; SSE2-NEXT:    [[Z3:%.*]] = zext i8 [[B3]] to i32
-; SSE2-NEXT:    [[A0:%.*]] = add i32 [[Z0]], [[L0]]
-; SSE2-NEXT:    [[A1:%.*]] = add i32 [[Z1]], [[L1]]
-; SSE2-NEXT:    [[A2:%.*]] = add i32 [[Z2]], [[L2]]
-; SSE2-NEXT:    [[A3:%.*]] = add i32 [[Z3]], [[L3]]
-; SSE2-NEXT:    store i32 [[A0]], ptr [[OUT]], align 4
-; SSE2-NEXT:    [[O1:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 4
-; SSE2-NEXT:    store i32 [[A1]], ptr [[O1]], align 4
-; SSE2-NEXT:    [[O2:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 8
-; SSE2-NEXT:    store i32 [[A2]], ptr [[O2]], align 4
-; SSE2-NEXT:    [[O3:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 12
-; SSE2-NEXT:    store i32 [[A3]], ptr [[O3]], align 4
+; SSE2-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P]], align 4
+; SSE2-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[TMP0]], [[TMP0]]
+; SSE2-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
+; SSE2-NEXT:    [[TMP3:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP2]])
+; SSE2-NEXT:    [[TMP4:%.*]] = bitcast i32 [[TMP3]] to <4 x i8>
+; SSE2-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
+; SSE2-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP5]], [[TMP1]]
+; SSE2-NEXT:    store <4 x i32> [[TMP6]], ptr [[OUT]], align 4
 ; SSE2-NEXT:    ret void
 ;
 ; V2-LABEL: define void @vectorized_src(
@@ -194,31 +209,12 @@ define void @extracted_src_pair(<4 x i32> %v, ptr %p) {
 ; SSE2-NEXT:  [[ENTRY:.*:]]
 ; SSE2-NEXT:    [[X:%.*]] = extractelement <4 x i32> [[V]], i64 0
 ; SSE2-NEXT:    [[Y:%.*]] = extractelement <4 x i32> [[V]], i64 1
-; SSE2-NEXT:    [[SX0:%.*]] = lshr i32 [[X]], 24
-; SSE2-NEXT:    [[X0:%.*]] = trunc i32 [[SX0]] to i8
-; SSE2-NEXT:    [[SX1:%.*]] = lshr i32 [[X]], 16
-; SSE2-NEXT:    [[X1:%.*]] = trunc i32 [[SX1]] to i8
-; SSE2-NEXT:    [[SX2:%.*]] = lshr i32 [[X]], 8
-; SSE2-NEXT:    [[X2:%.*]] = trunc i32 [[SX2]] to i8
-; SSE2-NEXT:    [[X3:%.*]] = trunc i32 [[X]] to i8
-; SSE2-NEXT:    [[SY0:%.*]] = lshr i32 [[Y]], 24
-; SSE2-NEXT:    [[Y0:%.*]] = trunc i32 [[SY0]] to i8
-; SSE2-NEXT:    [[SY1:%.*]] = lshr i32 [[Y]], 16
-; SSE2-NEXT:    [[Y1:%.*]] = trunc i32 [[SY1]] to i8
-; SSE2-NEXT:    [[SY2:%.*]] = lshr i32 [[Y]], 8
-; SSE2-NEXT:    [[Y2:%.*]] = trunc i32 [[SY2]] to i8
-; SSE2-NEXT:    [[Y3:%.*]] = trunc i32 [[Y]] to i8
-; SSE2-NEXT:    [[A0:%.*]] = add i8 [[X0]], [[Y0]]
-; SSE2-NEXT:    [[A1:%.*]] = add i8 [[X1]], [[Y1]]
-; SSE2-NEXT:    [[A2:%.*]] = add i8 [[X2]], [[Y2]]
-; SSE2-NEXT:    [[A3:%.*]] = add i8 [[X3]], [[Y3]]
-; SSE2-NEXT:    store i8 [[A0]], ptr [[P]], align 1
-; SSE2-NEXT:    [[G1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; SSE2-NEXT:    store i8 [[A1]], ptr [[G1]], align 1
-; SSE2-NEXT:    [[G2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
-; SSE2-NEXT:    store i8 [[A2]], ptr [[G2]], align 1
-; SSE2-NEXT:    [[G3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
-; SSE2-NEXT:    store i8 [[A3]], ptr [[G3]], align 1
+; SSE2-NEXT:    [[TMP0:%.*]] = call i32 @llvm.bswap.i32(i32 [[X]])
+; SSE2-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP0]] to <4 x i8>
+; SSE2-NEXT:    [[TMP2:%.*]] = call i32 @llvm.bswap.i32(i32 [[Y]])
+; SSE2-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to <4 x i8>
+; SSE2-NEXT:    [[TMP4:%.*]] = add <4 x i8> [[TMP1]], [[TMP3]]
+; SSE2-NEXT:    store <4 x i8> [[TMP4]], ptr [[P]], align 1
 ; SSE2-NEXT:    ret void
 ;
 ; V2-LABEL: define void @extracted_src_pair(
@@ -273,20 +269,9 @@ define void @extracted_src(<4 x i32> %v, ptr %p) {
 ; SSE2-SAME: <4 x i32> [[V:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
 ; SSE2-NEXT:  [[ENTRY:.*:]]
 ; SSE2-NEXT:    [[X:%.*]] = extractelement <4 x i32> [[V]], i64 1
-; SSE2-NEXT:    [[S0:%.*]] = lshr i32 [[X]], 24
-; SSE2-NEXT:    [[T0:%.*]] = trunc i32 [[S0]] to i8
-; SSE2-NEXT:    store i8 [[T0]], ptr [[P]], align 1
-; SSE2-NEXT:    [[S1:%.*]] = lshr i32 [[X]], 16
-; SSE2-NEXT:    [[T1:%.*]] = trunc i32 [[S1]] to i8
-; SSE2-NEXT:    [[G1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
-; SSE2-NEXT:    store i8 [[T1]], ptr [[G1]], align 1
-; SSE2-NEXT:    [[S2:%.*]] = lshr i32 [[X]], 8
-; SSE2-NEXT:    [[T2:%.*]] = trunc i32 [[S2]] to i8
-; SSE2-NEXT:    [[G2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 2
-; SSE2-NEXT:    store i8 [[T2]], ptr [[G2]], align 1
-; SSE2-NEXT:    [[T3:%.*]] = trunc i32 [[X]] to i8
-; SSE2-NEXT:    [[G3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 3
-; SSE2-NEXT:    store i8 [[T3]], ptr [[G3]], align 1
+; SSE2-NEXT:    [[TMP0:%.*]] = call i32 @llvm.bswap.i32(i32 [[X]])
+; SSE2-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP0]] to <4 x i8>
+; SSE2-NEXT:    store <4 x i8> [[TMP1]], ptr [[P]], align 1
 ; SSE2-NEXT:    ret void
 ;
 ; V2-LABEL: define void @extracted_src(
@@ -316,3 +301,38 @@ entry:
   store i8 %t3, ptr %g3, align 1
   ret void
 }
+
+; The source scalar is extracted from the upper half of a wide vector: the
+; extraction of its bytes as a subvector plus their permutation is not cheaper
+; than the extraction plus the byte swap.
+
+define void @extracted_src_upper_half(<8 x i32> %v, ptr %p) #0 {
+; CHECK-LABEL: define void @extracted_src_upper_half(
+; CHECK-SAME: <8 x i32> [[V:%.*]], ptr [[P:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X:%.*]] = extractelement <8 x i32> [[V]], i64 5
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.bswap.i32(i32 [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP0]] to <4 x i8>
+; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = extractelement <8 x i32> %v, i64 5
+  %s0 = lshr i32 %x, 24
+  %t0 = trunc i32 %s0 to i8
+  store i8 %t0, ptr %p, align 1
+  %s1 = lshr i32 %x, 16
+  %t1 = trunc i32 %s1 to i8
+  %g1 = getelementptr inbounds nuw i8, ptr %p, i64 1
+  store i8 %t1, ptr %g1, align 1
+  %s2 = lshr i32 %x, 8
+  %t2 = trunc i32 %s2 to i8
+  %g2 = getelementptr inbounds nuw i8, ptr %p, i64 2
+  store i8 %t2, ptr %g2, align 1
+  %t3 = trunc i32 %x to i8
+  %g3 = getelementptr inbounds nuw i8, ptr %p, i64 3
+  store i8 %t3, ptr %g3, align 1
+  ret void
+}
+
+attributes #0 = { "target-cpu"="x86-64-v3" }

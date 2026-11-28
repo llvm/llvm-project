@@ -28,7 +28,7 @@ void test() {
 }
 
 // CIR: cir.func {{.*}} @_ZN20out_of_line_operatorcviEv(%[[THIS_ARG:.+]]: !cir.ptr<!rec_out_of_line_operator>{{.*}}) -> (!s32i{{.*}})
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[THIS_ALLOCA:.+]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_out_of_line_operator>>
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ALLOCA]] : !cir.ptr<!rec_out_of_line_operator>, !cir.ptr<!cir.ptr<!rec_out_of_line_operator>>
 // CIR:   %[[THIS_LOAD:.+]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_out_of_line_operator>>, !cir.ptr<!rec_out_of_line_operator>
@@ -52,7 +52,7 @@ void test() {
 // CIR: }
 
 // CIR: cir.func no_inline comdat alignment(2) linkonce_odr @_ZNK15inline_operatorcviEv(%[[INLINE_THIS_ARG:.+]]: !cir.ptr<!rec_inline_operator>{{.*}}) -> (!s32i{{.*}})
-// CIR:   %[[INLINE_RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[INLINE_RETVAL:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[INLINE_THIS_ALLOCA:.+]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_inline_operator>>
 // CIR:   cir.store %[[INLINE_THIS_ARG]], %[[INLINE_THIS_ALLOCA]] : !cir.ptr<!rec_inline_operator>, !cir.ptr<!cir.ptr<!rec_inline_operator>>
 // CIR:   %[[INLINE_THIS_LOAD:.+]] = cir.load %[[INLINE_THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_inline_operator>>, !cir.ptr<!rec_inline_operator>

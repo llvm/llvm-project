@@ -14,23 +14,152 @@
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 
+#include <optional>
 #include <type_traits>
 
 using namespace mlir;
 using namespace mlir::tosa;
 
+// Return the linalg.elementwise kind that is semantically equivalent to the
+// given TOSA elementwise op for the provided element type, or std::nullopt if
+// the op has no direct linalg.elementwise counterpart. Only ops whose TOSA
+// lowering maps to a single linalg.elementwise function are handled; the more
+// involved lowerings (e.g. quantized negate, mul with shift, casts) are left to
+// the generic TosaToLinalg conversion.
+static std::optional<linalg::ElementwiseKind>
+getElementwiseKind(Operation *op, Type elementTy) {
+  using linalg::ElementwiseKind;
+  const bool isFloat = isa<FloatType>(elementTy);
+  const bool isSignlessInt = elementTy.isSignlessInteger();
+  const bool isBoolean = elementTy.isInteger(1);
+
+  // Unary ops. linalg.elementwise only defines these on floating point types.
+  if (isFloat) {
+    if (isa<tosa::AbsOp>(op))
+      return ElementwiseKind::abs;
+    if (isa<tosa::CeilOp>(op))
+      return ElementwiseKind::ceil;
+    if (isa<tosa::FloorOp>(op))
+      return ElementwiseKind::floor;
+    if (isa<tosa::ExpOp>(op))
+      return ElementwiseKind::exp;
+    if (isa<tosa::LogOp>(op))
+      return ElementwiseKind::log;
+    if (isa<tosa::RsqrtOp>(op))
+      return ElementwiseKind::rsqrt;
+    if (isa<tosa::SinOp>(op))
+      return ElementwiseKind::sin;
+    if (isa<tosa::CosOp>(op))
+      return ElementwiseKind::cos;
+    if (isa<tosa::TanhOp>(op))
+      return ElementwiseKind::tanh;
+    if (isa<tosa::ErfOp>(op))
+      return ElementwiseKind::erf;
+    if (isa<tosa::ReciprocalOp>(op))
+      return ElementwiseKind::reciprocal;
+    if (isa<tosa::PowOp>(op))
+      return ElementwiseKind::powf;
+  }
+
+  // Binary ops defined on both floating point and (non-boolean) integers.
+  if (isFloat || (isSignlessInt && !isBoolean)) {
+    if (isa<tosa::AddOp>(op))
+      return ElementwiseKind::add;
+    if (isa<tosa::SubOp>(op))
+      return ElementwiseKind::sub;
+  }
+
+  // Signed integer division.
+  if (isSignlessInt && !isBoolean && isa<tosa::IntDivOp>(op))
+    return ElementwiseKind::div;
+
+  // Multiply maps to a plain elementwise multiply only when no rescaling shift
+  // is requested (the shift must be a constant zero) and the inputs already
+  // share the result element type. The shifted/rescaled integer variant is left
+  // to the generic conversion.
+  if (auto mulOp = dyn_cast<tosa::MulOp>(op)) {
+    DenseElementsAttr shiftAttr;
+    const bool zeroShift =
+        matchPattern(mulOp.getShift(), m_Constant(&shiftAttr)) &&
+        shiftAttr.getValues<APInt>()[0].isZero();
+    const bool matchingTypes =
+        cast<ShapedType>(mulOp.getInput1().getType()).getElementType() ==
+            elementTy &&
+        cast<ShapedType>(mulOp.getInput2().getType()).getElementType() ==
+            elementTy;
+    if ((isFloat || (isSignlessInt && !isBoolean)) && zeroShift &&
+        matchingTypes)
+      return ElementwiseKind::mul;
+  }
+
+  // Negate maps to floating-point negation only when the zero points are zero.
+  // The quantized integer variant is left to the generic conversion.
+  if (auto negateOp = dyn_cast<tosa::NegateOp>(op)) {
+    if (isFloat) {
+      FailureOr<int64_t> inZp = negateOp.getInput1ZeroPoint();
+      FailureOr<int64_t> outZp = negateOp.getOutputZeroPoint();
+      if (succeeded(inZp) && succeeded(outZp) && *inZp == 0 && *outZp == 0)
+        return ElementwiseKind::negf;
+    }
+  }
+
+  // Maximum/minimum. The NaN "IGNORE" mode requires an additional compare and
+  // select that linalg.elementwise cannot express, so only the default
+  // "PROPAGATE" mode is handled for floating point types.
+  auto nanModeIsPropagate = [](auto tosaOp) {
+    return tosaOp.getNanMode() == NanPropagationMode::PROPAGATE;
+  };
+  if (isFloat || (isSignlessInt && !isBoolean)) {
+    if (auto maxOp = dyn_cast<tosa::MaximumOp>(op)) {
+      if (!isFloat || nanModeIsPropagate(maxOp))
+        return ElementwiseKind::max_signed;
+    }
+    if (auto minOp = dyn_cast<tosa::MinimumOp>(op)) {
+      if (!isFloat || nanModeIsPropagate(minOp))
+        return ElementwiseKind::min_signed;
+    }
+  }
+
+  // Select (ternary) for valid element types.
+  if ((isFloat || isSignlessInt || isBoolean) && isa<tosa::SelectOp>(op))
+    return ElementwiseKind::select;
+
+  return std::nullopt;
+}
+
+std::optional<linalg::ElementwiseKind>
+mlir::tosa::isConvertibleToLinalgElementwise(Operation *op) {
+  if (op->getNumResults() != 1)
+    return std::nullopt;
+
+  // Make sure all operands and result have static sizes
+  for (Value operand : op->getOperands()) {
+    auto operandTy = dyn_cast<RankedTensorType>(operand.getType());
+    if (!operandTy || !operandTy.hasStaticShape())
+      return std::nullopt;
+  }
+  auto resultTy = dyn_cast<RankedTensorType>(op->getResult(0).getType());
+  if (!resultTy || !resultTy.hasStaticShape())
+    return std::nullopt;
+
+  return getElementwiseKind(op, resultTy.getElementType());
+}
+
 static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
-                            TypedAttr padAttr, OpBuilder &rewriter) {
+                            OpFoldResult paddingValue, OpBuilder &rewriter) {
   // Input should be padded only if necessary.
   if (llvm::all_of(pad, [](int64_t p) { return p == 0; }))
     return input;
@@ -55,7 +184,11 @@ static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
     highIndices.push_back(rewriter.getIndexAttr(highPad));
   }
 
-  Value padValue = arith::ConstantOp::create(rewriter, loc, padAttr);
+  Value padValue = dyn_cast<Value>(paddingValue);
+  if (!padValue) {
+    auto padAttr = cast<TypedAttr>(cast<Attribute>(paddingValue));
+    padValue = arith::ConstantOp::create(rewriter, loc, padAttr);
+  }
 
   return tensor::PadOp::create(rewriter, loc,
                                RankedTensorType::get(paddedShape, inputETy),
@@ -237,8 +370,27 @@ static void createDepthwiseConvCollapseMap(
       rewriter.getAffineDimExpr(outputRank));
 }
 
-namespace {
+static void createZeroPointAssertionIfNonI8(PatternRewriter &rewriter,
+                                            Location loc, Value zeroPoint,
+                                            StringRef message) {
+  Type zeroPointType = zeroPoint.getType();
+  if (zeroPointType.isSignlessInteger(8))
+    return;
 
+  Value zero = arith::ConstantOp::create(rewriter, loc,
+                                         rewriter.getZeroAttr(zeroPointType));
+  Value isZero;
+  if (isa<FloatType>(zeroPointType)) {
+    isZero = arith::CmpFOp::create(rewriter, loc, arith::CmpFPredicate::OEQ,
+                                   zeroPoint, zero);
+  } else {
+    isZero = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
+                                   zeroPoint, zero);
+  }
+  cf::AssertOp::create(rewriter, loc, isZero, rewriter.getStringAttr(message));
+}
+
+namespace {
 template <typename TosaConvOp, typename LinalgConvOp, typename LinalgConvQOp>
 class ConvConverter : public OpConversionPattern<TosaConvOp> {
 public:
@@ -267,27 +419,52 @@ public:
 
     // Get and verify zero points.
     FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
-    if (failed(maybeIZp))
-      return rewriter.notifyMatchFailure(
-          op, "input zero point cannot be statically determined");
-
     FailureOr<int64_t> maybeWZp = op.getWeightZeroPoint();
-    if (failed(maybeWZp))
-      return rewriter.notifyMatchFailure(
-          op, "weight zero point cannot be statically determined");
 
-    const int64_t inputZpVal = *maybeIZp;
-    const int64_t weightZpVal = *maybeWZp;
+    bool isInputZpConstant = succeeded(maybeIZp);
+    bool isWeightZpConstant = succeeded(maybeWZp);
 
-    if (op.verifyInputZeroPoint(inputZpVal).failed())
-      return rewriter.notifyMatchFailure(
-          op, "input zero point must be zero for non-int8 integer types");
+    Value nonConstantInputZpScalar;
+    Value nonConstantWeightZpScalar;
 
-    if (op.verifyWeightZeroPoint(weightZpVal).failed())
-      return rewriter.notifyMatchFailure(
-          op, "weight zero point must be zero for non-int8 integer types");
+    if (isInputZpConstant) {
+      const int64_t inputZpConstant = *maybeIZp;
+      if (op.verifyInputZeroPoint(inputZpConstant).failed())
+        return rewriter.notifyMatchFailure(
+            op, "input zero point must be zero for non-int8 integer types");
+    } else {
+      Value index0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
+      nonConstantInputZpScalar = tensor::ExtractOp::create(
+          rewriter, loc, adaptor.getInputZp(), ValueRange{index0});
+      createZeroPointAssertionIfNonI8(
+          rewriter, loc, nonConstantInputZpScalar,
+          "tosa.conv input zero point must be zero for non-int8 types");
+    }
 
-    bool hasZp = (inputZpVal != 0) || (weightZpVal != 0);
+    if (isWeightZpConstant) {
+      const int64_t weightZpConstant = *maybeWZp;
+      if (op.verifyWeightZeroPoint(weightZpConstant).failed())
+        return rewriter.notifyMatchFailure(
+            op, "weight zero point must be zero for non-int8 integer types");
+    } else {
+      Value index0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
+      nonConstantWeightZpScalar = tensor::ExtractOp::create(
+          rewriter, loc, adaptor.getWeightZp(), ValueRange{index0});
+      createZeroPointAssertionIfNonI8(
+          rewriter, loc, nonConstantWeightZpScalar,
+          "tosa.conv weight zero point must be zero for non-int8 types");
+    }
+
+    // Use the quantized op if either zero point is:
+    // - Constant and non-zero, or
+    // - Non-constant and of type i8.
+    bool useConvQOp =
+        (isInputZpConstant && *maybeIZp != 0) ||
+        (isWeightZpConstant && *maybeWZp != 0) ||
+        (!isInputZpConstant &&
+         nonConstantInputZpScalar.getType().isSignlessInteger(8)) ||
+        (!isWeightZpConstant &&
+         nonConstantWeightZpScalar.getType().isSignlessInteger(8));
 
     if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
       return rewriter.notifyMatchFailure(
@@ -312,34 +489,29 @@ public:
     auto weightShape = weightTy.getShape();
 
     // Apply padding as necessary.
-    TypedAttr zeroAttr = rewriter.getZeroAttr(inputETy);
-    if (hasZp) {
-      int64_t intMin =
-          APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
-              .getSExtValue();
-      int64_t intMax =
-          APInt::getSignedMaxValue(inputETy.getIntOrFloatBitWidth())
-              .getSExtValue();
-
-      if (inputZpVal < intMin || inputZpVal > intMax)
-        return rewriter.notifyMatchFailure(
-            op, "tosa.conv op quantization has zp outside of input range");
-
-      zeroAttr = rewriter.getIntegerAttr(inputETy, inputZpVal);
-    }
-
     llvm::SmallVector<int64_t> pad;
     pad.resize(2, 0);
     llvm::append_range(pad, padAttr.asArrayRef());
     pad.resize(pad.size() + 2, 0);
-    input = applyPad(loc, input, pad, zeroAttr, rewriter);
+
+    if (isInputZpConstant) {
+      const int64_t inputZpConstant = *maybeIZp;
+      TypedAttr padValue = rewriter.getZeroAttr(inputETy);
+      if (inputZpConstant != 0)
+        padValue = rewriter.getIntegerAttr(inputETy, inputZpConstant);
+      input = applyPad(loc, input, pad, padValue, rewriter);
+    } else {
+      // The non-constant input zero point already has the input's element type,
+      // so it can be used directly as the padding value.
+      input = applyPad(loc, input, pad, nonConstantInputZpScalar, rewriter);
+    }
 
     if (4 == inputTy.getRank()) {
       // For 2D convolutions, we need to check if the target convolution op
       // wants a HWCF kernel layout.
       bool wantHwcf =
-          hasZp ? std::is_same_v<LinalgConvQOp, linalg::Conv2DNhwcHwcfQOp>
-                : std::is_same_v<LinalgConvOp, linalg::Conv2DNhwcHwcfOp>;
+          useConvQOp ? std::is_same_v<LinalgConvQOp, linalg::Conv2DNhwcHwcfQOp>
+                     : std::is_same_v<LinalgConvOp, linalg::Conv2DNhwcHwcfOp>;
       if (wantHwcf) {
         // Transpose the kernel to match dimension ordering of the linalg
         // convolution operation.
@@ -396,12 +568,24 @@ public:
     Value broadcastBias =
         linalgBroadcastAndMaybeExt(rewriter, loc, bias, biasEmptyTensor);
 
-    if (hasZp) {
-      auto iZp = rewriter.getI32IntegerAttr(inputZpVal);
-      auto kZp = rewriter.getI32IntegerAttr(weightZpVal);
+    if (useConvQOp) {
+      auto getQConvZpAsI32 = [&](FailureOr<int64_t> maybeZp,
+                                 Value nonConstantZpScalar) -> Value {
+        if (succeeded(maybeZp))
+          return arith::ConstantOp::create(
+              rewriter, loc, rewriter.getI32IntegerAttr(*maybeZp));
+        assert(nonConstantZpScalar &&
+               "expected a scalar for a non-constant zero point");
+        if (nonConstantZpScalar.getType().isSignlessInteger(8))
+          return arith::ExtSIOp::create(rewriter, loc, rewriter.getI32Type(),
+                                        nonConstantZpScalar);
+        // Non-int8 non-constant zero points were asserted to be zero above.
+        return arith::ConstantOp::create(rewriter, loc,
+                                         rewriter.getI32IntegerAttr(0));
+      };
 
-      auto iZpVal = arith::ConstantOp::create(rewriter, loc, iZp);
-      auto kZpVal = arith::ConstantOp::create(rewriter, loc, kZp);
+      Value iZpVal = getQConvZpAsI32(maybeIZp, nonConstantInputZpScalar);
+      Value kZpVal = getQConvZpAsI32(maybeWZp, nonConstantWeightZpScalar);
 
       Value conv = LinalgConvQOp::create(
                        rewriter, loc, resultTy,
@@ -601,6 +785,66 @@ public:
           rewriter, loc, bias, convReshape, biasEmptyTensor, indexingMaps);
       rewriter.replaceOp(op, result);
     }
+    return success();
+  }
+};
+
+// Lower TOSA elementwise ops that have a direct linalg.elementwise named op
+// counterpart. Unlike linalg.generic, linalg.elementwise dispatches on a single
+// function kind and infers the body, so the conversion is a handful of checks
+// (kind, ranks, static shapes) followed by construction of the indexing maps
+// and the named op.
+template <typename TosaOp>
+class ElementwiseConverter : public OpConversionPattern<TosaOp> {
+public:
+  using OpConversionPattern<TosaOp>::OpConversionPattern;
+  using typename OpConversionPattern<TosaOp>::OpAdaptor;
+
+  LogicalResult
+  matchAndRewrite(TosaOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
+    std::optional<linalg::ElementwiseKind> kind =
+        isConvertibleToLinalgElementwise(op);
+    if (!kind)
+      return rewriter.notifyMatchFailure(
+          op, "op has no linalg.elementwise counterpart");
+
+    Location loc = op.getLoc();
+    auto resultTy = cast<RankedTensorType>(op.getType());
+    const int64_t rank = resultTy.getRank();
+
+    const unsigned arity =
+        llvm::to_underlying(linalg::getArityGroupAndKind(*kind).arityGroup);
+
+    // Trailing metadata operands (e.g. MulOp's shift, NegateOp's zero points)
+    // are not forwarded to linalg.elementwise.
+    ValueRange inputs = adaptor.getOperands().take_front(arity);
+
+    // Build one indexing map per input, broadcasting static size-1 dimensions,
+    // followed by the identity map for the output.
+    SmallVector<AffineMap> indexingMaps;
+    for (Value operand : inputs) {
+      ArrayRef<int64_t> shape = cast<ShapedType>(operand.getType()).getShape();
+      SmallVector<AffineExpr> exprs;
+      for (const auto &dim : llvm::enumerate(shape)) {
+        bool requiresBroadcast =
+            dim.value() == 1 && resultTy.getDimSize(dim.index()) != 1;
+        exprs.push_back(requiresBroadcast
+                            ? rewriter.getAffineConstantExpr(0)
+                            : rewriter.getAffineDimExpr(dim.index()));
+      }
+      indexingMaps.push_back(AffineMap::get(rank, /*symbolCount=*/0, exprs,
+                                            rewriter.getContext()));
+    }
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(rank));
+
+    // Shapes are guaranteed static by isConvertibleToLinalgElementwise.
+    Value emptyTensor = tensor::EmptyOp::create(
+        rewriter, loc, resultTy.getShape(), resultTy.getElementType());
+
+    rewriter.replaceOpWithNewOp<linalg::ElementwiseOp>(
+        op, inputs, ValueRange{emptyTensor}, *kind,
+        rewriter.getAffineMapArrayAttr(indexingMaps));
     return success();
   }
 };
@@ -1279,6 +1523,29 @@ void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
       MatMulTConverter,
       AvgPool2dConverter,
       TransposeConverter
+  >(patterns->getContext());
+
+  patterns->add<
+      ElementwiseConverter<tosa::AbsOp>,
+      ElementwiseConverter<tosa::CeilOp>,
+      ElementwiseConverter<tosa::FloorOp>,
+      ElementwiseConverter<tosa::ExpOp>,
+      ElementwiseConverter<tosa::LogOp>,
+      ElementwiseConverter<tosa::RsqrtOp>,
+      ElementwiseConverter<tosa::SinOp>,
+      ElementwiseConverter<tosa::CosOp>,
+      ElementwiseConverter<tosa::TanhOp>,
+      ElementwiseConverter<tosa::ErfOp>,
+      ElementwiseConverter<tosa::ReciprocalOp>,
+      ElementwiseConverter<tosa::PowOp>,
+      ElementwiseConverter<tosa::AddOp>,
+      ElementwiseConverter<tosa::SubOp>,
+      ElementwiseConverter<tosa::IntDivOp>,
+      ElementwiseConverter<tosa::MulOp>,
+      ElementwiseConverter<tosa::NegateOp>,
+      ElementwiseConverter<tosa::MaximumOp>,
+      ElementwiseConverter<tosa::MinimumOp>,
+      ElementwiseConverter<tosa::SelectOp>
   >(patterns->getContext());
 
   patterns->add<

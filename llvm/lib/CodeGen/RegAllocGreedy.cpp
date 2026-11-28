@@ -659,7 +659,7 @@ void RAGreedy::evictInterference(const LiveInterval &VirtReg,
     assert((ExtraInfo->getCascade(Intf->reg()) < Cascade ||
             (Cascade < ExtraInfo->getCascade(Intf->reg()) &&
              EvictAdvisor->isUrgentEviction(VirtReg, *Intf)) ||
-            VirtReg.isSpillable() < Intf->isSpillable()) &&
+            (!VirtReg.isSpillable() && Intf->isSpillable())) &&
            "Cannot decrease cascade number, illegal eviction");
     ExtraInfo->setCascade(Intf->reg(), Cascade);
     ++NumEvicted;
@@ -3095,6 +3095,7 @@ bool RAGreedy::run(MachineFunction &mf) {
   if (Compact) {
     // Compaction unlinks what it erases; this is what makes that safe.
     LIS->removeUnreferencedIntervals();
+    LSS->canonicalizeIndexes(*Indexes);
     Indexes->compactIndexes();
   } else {
     Indexes->packIndexes();

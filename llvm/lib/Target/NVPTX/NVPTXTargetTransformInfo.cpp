@@ -308,7 +308,7 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
     // FIXME: Broken for f64
     DenormalMode Mode = II->getFunction()->getDenormalMode(
         Action.IsHalfTy ? APFloat::IEEEhalf() : APFloat::IEEEsingle());
-    bool FtzEnabled = Mode.Output == DenormalMode::PreserveSign;
+    bool FtzEnabled = Mode.Input == DenormalMode::PreserveSign;
 
     if (FtzEnabled != (Action.FtzRequirement == FTZ_MustBeOn))
       return nullptr;
@@ -512,7 +512,8 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI,
+    const TargetLibraryInfo *TLibInfo, ArrayRef<const Value *> Scalars) const {
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 

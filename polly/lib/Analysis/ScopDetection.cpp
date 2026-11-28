@@ -108,6 +108,29 @@ static cl::opt<bool, true> XPollyProcessUnprofitable(
         "Process scops that are unlikely to benefit from Polly optimizations."),
     cl::location(PollyProcessUnprofitable), cl::cat(PollyCategory));
 
+/// Bypass some of Polly's profitability checks that might harm
+/// loops from getting annotated with vectorize (see
+/// PollyOptimizeForVectorization).
+bool polly::PollyDetectForVectorization;
+static cl::opt<bool, true> XPollyDetectForVectorization(
+    "polly-detect-for-vectorization",
+    cl::desc("Bypass some Polly profitability checks for vectorization"),
+    cl::location(PollyDetectForVectorization), cl::init(false),
+    cl::cat(PollyCategory));
+
+/// Bypass some of Polly's profitability checks and add vectorize.enable
+/// metadata to vectorizable loops after analyses.
+///
+/// Combines -polly-detect-for-vectorization and
+/// -polly-annotate-metadata-vectorize
+bool polly::PollyOptimizeForVectorization;
+static cl::opt<bool, true> XPollyOptimizeForVectorization(
+    "polly-optimize-for-vectorization",
+    cl::desc("Make the profitability heuristic consider vectorization "
+             "opportunities"),
+    cl::location(PollyOptimizeForVectorization), cl::init(false),
+    cl::cat(PollyCategory));
+
 static cl::list<std::string> OnlyFunctions(
     "polly-only-func",
     cl::desc("Only run on functions that match a regex. "
@@ -1232,9 +1255,8 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
     if (isErrorBlock(*OpInst->getParent(), Context.CurRegion)) {
       auto *PHI = dyn_cast<PHINode>(OpInst);
       if (PHI) {
-        for (User *U : PHI->users()) {
-          auto *UI = dyn_cast<Instruction>(U);
-          if (!UI || !UI->isTerminator())
+        for (Instruction *UI : PHI->users()) {
+          if (!UI->isTerminator())
             return false;
         }
       } else {
@@ -1737,6 +1759,14 @@ bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
 
   if (PollyProcessUnprofitable)
+    return true;
+
+  // Skip these checks when polly is attempting to add vectorization
+  // metadata as they reject some beneficial cases
+  //
+  // TODO: Add some checks related to vectorization too instead of
+  // only skipping existing checks
+  if (PollyDetectForVectorization || PollyOptimizeForVectorization)
     return true;
 
   // We can probably not do a lot on scops that only write or only read

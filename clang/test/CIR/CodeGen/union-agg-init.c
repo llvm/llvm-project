@@ -65,7 +65,7 @@ typedef union vec3 {
 // LLVMCIR-DAG: @__const.ret_outer.__retval = {{.*}}%struct.outer { %union.needs_padding zeroinitializer, i32 1 }, align 8
 // OGCG-DAG: @__const.ret_outer.o = {{.*}}{ { i32, [4 x i8] }, i32, [4 x i8] } { { i32, [4 x i8] } zeroinitializer, i32 1, [4 x i8] zeroinitializer }, align 8
 
-// CIR-DAG: cir.global "private" constant cir_private @__const.ret_outer.__retval = #cir.const_record<{#cir.zero : !rec_needs_padding, #cir.int<1> : !s32i}> : !rec_outer align(8)
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @__const.ret_outer.__retval = #cir.const_record<{#cir.zero : !rec_needs_padding, #cir.int<1> : !s32i}> : !rec_outer align(8)
 
 // In C mode, this does do zero padding.
 vec3 ret_vec3() {
@@ -107,7 +107,7 @@ struct outer ret_outer() {
   return o;
 
   // CIR-LABEL: ret_outer
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} init : !cir.ptr<!rec_outer>
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "" {{.*}} init return_slot : !cir.ptr<!rec_outer>
   // CIR: %[[GET_GLOB:.*]] = cir.get_global @__const.ret_outer.__retval : !cir.ptr<!rec_outer>
   // CIR: cir.copy %[[GET_GLOB]] to %[[RET_ALLOCA]] : !cir.ptr<!rec_outer>
 

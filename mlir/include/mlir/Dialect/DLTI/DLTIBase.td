@@ -75,7 +75,7 @@ def DLTI_Dialect : Dialect {
     kDataLayoutLegalIntWidthsKey = "dlti.legal_int_widths";
   }];
 
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 def HasDefaultDLTIDataLayout : NativeOpTrait<"HasDefaultDLTIDataLayout"> {

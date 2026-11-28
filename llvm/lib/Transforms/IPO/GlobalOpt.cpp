@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/GlobalOpt.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -55,7 +56,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -68,7 +68,6 @@
 #include <cstdint>
 #include <optional>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 
@@ -93,30 +92,6 @@ STATISTIC(NumInternalFunc, "Number of internal functions");
 STATISTIC(NumColdCC, "Number of functions marked coldcc");
 STATISTIC(NumIFuncsResolved, "Number of statically resolved IFuncs");
 STATISTIC(NumIFuncsDeleted, "Number of IFuncs removed");
-
-static cl::opt<bool>
-    OptimizeNonFMVCallers("optimize-non-fmv-callers",
-                          cl::desc("Statically resolve calls to versioned "
-                                   "functions from non-versioned callers."),
-                          cl::init(true), cl::Hidden);
-
-static cl::opt<unsigned> MaxIFuncVersions(
-    "max-ifunc-versions", cl::Hidden, cl::init(5),
-    cl::desc("Maximum number of caller/callee versions that is allowed for "
-             "using the expensive (cubic) static resolution algorithm."));
-
-static cl::opt<bool>
-    EnableColdCCStressTest("enable-coldcc-stress-test",
-                           cl::desc("Enable stress test of coldcc by adding "
-                                    "calling conv to all internal functions."),
-                           cl::init(false), cl::Hidden);
-
-static cl::opt<int> ColdCCRelFreq(
-    "coldcc-rel-freq", cl::Hidden, cl::init(2),
-    cl::desc(
-        "Maximum block frequency, expressed as a percentage of caller's "
-        "entry frequency, for a call site to be considered cold for enabling "
-        "coldcc"));
 
 /// Is this global variable possibly used by a leak checker as a root?  If so,
 /// we might not really want to eliminate the stores to it.
@@ -170,8 +145,7 @@ static bool isLeakCheckerRoot(GlobalVariable *GV) {
 /// Given a value that is stored to a global but never read, determine whether
 /// it's safe to remove the store and the chain of computation that feeds the
 /// store.
-static bool IsSafeComputationToRemove(
-    Value *V, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+static bool IsSafeComputationToRemove(Value *V) {
   do {
     if (isa<Constant>(V))
       return true;
@@ -180,7 +154,7 @@ static bool IsSafeComputationToRemove(
     if (isa<LoadInst>(V) || isa<InvokeInst>(V) || isa<Argument>(V) ||
         isa<GlobalValue>(V))
       return false;
-    if (isAllocationFn(V, GetTLI))
+    if (isAllocationFn(V))
       return true;
 
     Instruction *I = cast<Instruction>(V);
@@ -200,9 +174,7 @@ static bool IsSafeComputationToRemove(
 /// This GV is a pointer root.  Loop over all users of the global and clean up
 /// any that obviously don't assign the global a value that isn't dynamically
 /// allocated.
-static bool
-CleanupPointerRootUsers(GlobalVariable *GV,
-                        function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+static bool CleanupPointerRootUsers(GlobalVariable *GV) {
   // A brief explanation of leak checkers.  The goal is to find bugs where
   // pointers are forgotten, causing an accumulating growth in memory
   // usage over time.  The common strategy for leak checkers is to explicitly
@@ -255,11 +227,11 @@ CleanupPointerRootUsers(GlobalVariable *GV,
   }
 
   for (const auto &[Inst, Store] : Dead) {
-    if (IsSafeComputationToRemove(Inst, GetTLI)) {
+    if (IsSafeComputationToRemove(Inst)) {
       Store->eraseFromParent();
       Instruction *I = Inst;
       do {
-        if (isAllocationFn(I, GetTLI))
+        if (isAllocationFn(I))
           break;
         Instruction *J = dyn_cast<Instruction>(I->getOperand(0));
         if (!J)
@@ -723,9 +695,8 @@ static bool OptimizeAwayTrappingUsesOfValue(Instruction *V, Constant *NewV) {
 /// are uses of the loaded value that would trap if the loaded value is
 /// dynamically null, then we know that they cannot be reachable with a null
 /// optimize away the load.
-static bool OptimizeAwayTrappingUsesOfLoads(
-    GlobalVariable *GV, Constant *LV, const DataLayout &DL,
-    function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+static bool OptimizeAwayTrappingUsesOfLoads(GlobalVariable *GV, Constant *LV,
+                                            const DataLayout &DL) {
   bool Changed = false;
 
   // Keep track of whether we are able to remove all the uses of the global
@@ -762,7 +733,7 @@ static bool OptimizeAwayTrappingUsesOfLoads(
   // nor is the global.
   if (AllNonStoreUsesGone) {
     if (isLeakCheckerRoot(GV)) {
-      Changed |= CleanupPointerRootUsers(GV, GetTLI);
+      Changed |= CleanupPointerRootUsers(GV);
     } else {
       Changed = true;
       CleanupConstantGlobalUsers(GV, DL);
@@ -779,10 +750,8 @@ static bool OptimizeAwayTrappingUsesOfLoads(
 
 // Try to optimize globals based on the knowledge that only one value (besides
 // its initializer) is ever stored to the global.
-static bool
-optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
-                         const DataLayout &DL,
-                         function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
+static bool optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
+                                     const DataLayout &DL) {
   // If we are dealing with a pointer global that is initialized to null and
   // only has one (non-null) value stored into it, then we can optimize any
   // users of the loaded value (often calls and loads) that would trap if the
@@ -795,7 +764,7 @@ optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
           GV->getInitializer()->getType()->getPointerAddressSpace())) {
     if (Constant *SOVC = dyn_cast<Constant>(StoredOnceVal)) {
       // Optimize away any trapping uses of the loaded value.
-      if (OptimizeAwayTrappingUsesOfLoads(GV, SOVC, DL, GetTLI))
+      if (OptimizeAwayTrappingUsesOfLoads(GV, SOVC, DL))
         return true;
     }
   }
@@ -1106,7 +1075,6 @@ static bool forwardStoredOnceStore(
 static bool
 processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
                       function_ref<TargetTransformInfo &(Function &)> GetTTI,
-                      function_ref<TargetLibraryInfo &(Function &)> GetTLI,
                       function_ref<DominatorTree &(Function &)> LookupDomTree) {
   auto &DL = GV->getDataLayout();
   // If this is a first class global and has only one accessing function and
@@ -1158,7 +1126,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
 
     if (isLeakCheckerRoot(GV)) {
       // Delete any constant stores to the global.
-      Changed = CleanupPointerRootUsers(GV, GetTLI);
+      Changed = CleanupPointerRootUsers(GV);
     } else {
       // Delete any stores we can find to the global.  We may not be able to
       // make it completely dead though.
@@ -1256,7 +1224,7 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
 
     // Try to optimize globals based on the knowledge that only one value
     // (besides its initializer) is ever stored to the global.
-    if (optimizeOnceStoredGlobal(GV, StoredOnceValue, DL, GetTLI))
+    if (optimizeOnceStoredGlobal(GV, StoredOnceValue, DL))
       return true;
 
     // Try to forward the store to any loads. If we have more than one store, we
@@ -1285,7 +1253,6 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
 static bool
 processGlobal(GlobalValue &GV,
               function_ref<TargetTransformInfo &(Function &)> GetTTI,
-              function_ref<TargetLibraryInfo &(Function &)> GetTLI,
               function_ref<DominatorTree &(Function &)> LookupDomTree) {
   if (GV.getName().starts_with("llvm."))
     return false;
@@ -1324,8 +1291,7 @@ processGlobal(GlobalValue &GV,
   if (GVar->isConstant() || !GVar->hasInitializer())
     return Changed;
 
-  return processInternalGlobal(GVar, GS, GetTTI, GetTLI, LookupDomTree) ||
-         Changed;
+  return processInternalGlobal(GVar, GS, GetTTI, LookupDomTree) || Changed;
 }
 
 /// Walk all of the direct calls of the specified function, changing them to
@@ -1400,9 +1366,10 @@ static bool hasChangeableCC(Function *F,
 }
 
 /// Return true if the block containing the call site has a BlockFrequency of
-/// less than ColdCCRelFreq% of the entry block.
-static bool isColdCallSite(CallBase &CB, BlockFrequencyInfo &CallerBFI) {
-  const BranchProbability ColdProb(ColdCCRelFreq, 100);
+/// less than -coldcc-rel-freq percent of the entry block.
+static bool isColdCallSite(const IPOOptions &Opts, CallBase &CB,
+                           BlockFrequencyInfo &CallerBFI) {
+  const BranchProbability ColdProb(Opts.coldcc_rel_freq, 100);
   auto *CallSiteBB = CB.getParent();
   auto CallSiteFreq = CallerBFI.getBlockFreq(CallSiteBB);
   auto CallerEntryFreq =
@@ -1415,7 +1382,7 @@ static bool isColdCallSite(CallBase &CB, BlockFrequencyInfo &CallerBFI) {
 // caller function contains other non cold calls. HasOnlyColdCalls returns
 // whether a function only has call sites in cold blocks.
 static bool
-isValidCandidateForColdCC(Function &F,
+isValidCandidateForColdCC(const IPOOptions &Opts, Function &F,
                           function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
                           function_ref<bool(Function &)> HasOnlyColdCalls) {
 
@@ -1428,7 +1395,7 @@ isValidCandidateForColdCC(Function &F,
       continue;
     Function *CallerFunc = CB->getParent()->getParent();
     BlockFrequencyInfo &CallerBFI = GetBFI(*CallerFunc);
-    if (!isColdCallSite(*CB, CallerBFI))
+    if (!isColdCallSite(Opts, *CB, CallerBFI))
       return false;
     if (!HasOnlyColdCalls(*CallerFunc))
       return false;
@@ -1447,7 +1414,7 @@ static void changeCallSitesToColdCC(Function *F) {
 // and checks that all call sites are in cold blocks and are allowed to use the
 // coldcc calling convention.
 static bool
-hasOnlyColdCalls(Function &F,
+hasOnlyColdCalls(const IPOOptions &Opts, Function &F,
                  function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
                  ChangeableCCCacheTy &ChangeableCCCache) {
   for (BasicBlock &BB : F) {
@@ -1471,7 +1438,7 @@ hasOnlyColdCalls(Function &F,
         if (!hasChangeableCC(CalledFn, ChangeableCCCache))
           return false;
         BlockFrequencyInfo &CallerBFI = GetBFI(F);
-        if (!isColdCallSite(*CI, CallerBFI))
+        if (!isColdCallSite(Opts, *CI, CallerBFI))
           return false;
       }
     }
@@ -1572,15 +1539,61 @@ static void RemovePreallocated(Function *F) {
   }
 }
 
+/// zeroext/signext argument attributes that are present at the call-site,
+/// but not at the (exact) definition can be dropped, because the definition
+/// does not assume that the extension has occurred.
+static bool removeUnnecessaryCallSiteExtends(Function &F) {
+  if (!F.hasExactDefinition())
+    return false;
+
+  AttributeList Attrs = F.getAttributes();
+  SmallVector<unsigned, 8> IntArgWithoutExtAttr;
+  for (unsigned ArgNo = 0; ArgNo < F.arg_size(); ++ArgNo) {
+    if (!F.getArg(ArgNo)->getType()->isIntegerTy())
+      continue;
+
+    AttributeSet ArgAttrs = Attrs.getParamAttrs(ArgNo);
+    if (ArgAttrs.hasAttribute(Attribute::ZExt) ||
+        ArgAttrs.hasAttribute(Attribute::SExt))
+      continue;
+
+    IntArgWithoutExtAttr.push_back(ArgNo);
+  }
+
+  if (IntArgWithoutExtAttr.empty())
+    return false;
+
+  bool Changed = false;
+  for (Use &U : F.uses()) {
+    auto *CB = dyn_cast<CallBase>(U.getUser());
+    if (!CB || !CB->isCallee(&U) ||
+        CB->getFunctionType() != F.getFunctionType())
+      continue;
+
+    for (unsigned ArgNo : IntArgWithoutExtAttr) {
+      if (CB->paramHasAttr(ArgNo, Attribute::ZExt)) {
+        CB->removeParamAttr(ArgNo, Attribute::ZExt);
+        Changed = true;
+      }
+      if (CB->paramHasAttr(ArgNo, Attribute::SExt)) {
+        CB->removeParamAttr(ArgNo, Attribute::SExt);
+        Changed = true;
+      }
+    }
+  }
+
+  return Changed;
+}
+
 static bool
 OptimizeFunctions(Module &M,
-                  function_ref<TargetLibraryInfo &(Function &)> GetTLI,
                   function_ref<TargetTransformInfo &(Function &)> GetTTI,
                   function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
                   function_ref<DominatorTree &(Function &)> LookupDomTree,
                   SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats,
                   function_ref<void(Function &F)> ChangedCFGCallback,
                   function_ref<void(Function &F)> DeleteFnCallback) {
+  const IPOOptions &Opts = getIPOOptions(M);
 
   bool Changed = false;
 
@@ -1591,7 +1604,8 @@ OptimizeFunctions(Module &M,
   auto HasOnlyColdCalls = [&](Function &Caller) {
     auto Res = AllCallsColdCache.try_emplace(&Caller, false);
     if (Res.second)
-      Res.first->second = hasOnlyColdCalls(Caller, GetBFI, ChangeableCCCache);
+      Res.first->second =
+          hasOnlyColdCalls(Opts, Caller, GetBFI, ChangeableCCCache);
     return Res.first->second;
   };
 
@@ -1625,9 +1639,11 @@ OptimizeFunctions(Module &M,
         Changed = true;
         ChangedCFGCallback(F);
       }
+
+      Changed |= removeUnnecessaryCallSiteExtends(F);
     }
 
-    Changed |= processGlobal(F, GetTTI, GetTLI, LookupDomTree);
+    Changed |= processGlobal(F, GetTTI, LookupDomTree);
 
     if (!F.hasLocalLinkage())
       continue;
@@ -1665,9 +1681,9 @@ OptimizeFunctions(Module &M,
       // enabled or the target would like to use coldcc on functions which are
       // cold at all call sites and the callers contain no other non coldcc
       // calls.
-      if (EnableColdCCStressTest ||
+      if (Opts.enable_coldcc_stress_test ||
           (TTI.useColdCCForColdCall(F) &&
-           isValidCandidateForColdCC(F, GetBFI, HasOnlyColdCalls))) {
+           isValidCandidateForColdCC(Opts, F, GetBFI, HasOnlyColdCalls))) {
         ChangeableCCCache.erase(&F);
         F.setCallingConv(CallingConv::Cold);
         changeCallSitesToColdCC(&F);
@@ -1704,7 +1720,6 @@ OptimizeFunctions(Module &M,
 static bool
 OptimizeGlobalVars(Module &M,
                    function_ref<TargetTransformInfo &(Function &)> GetTTI,
-                   function_ref<TargetLibraryInfo &(Function &)> GetTLI,
                    function_ref<DominatorTree &(Function &)> LookupDomTree,
                    SmallPtrSetImpl<const Comdat *> &NotDiscardableComdats) {
   bool Changed = false;
@@ -1730,20 +1745,21 @@ OptimizeGlobalVars(Module &M,
       continue;
     }
 
-    Changed |= processGlobal(GV, GetTTI, GetTLI, LookupDomTree);
+    Changed |= processGlobal(GV, GetTTI, LookupDomTree);
   }
   return Changed;
 }
 
 /// Evaluate static constructors in the function, if we can.  Return true if we
 /// can, false otherwise.
-static bool EvaluateStaticConstructor(Function *F, const DataLayout &DL,
-                                      TargetLibraryInfo *TLI) {
+static bool EvaluateStaticConstructor(
+    Function *F, const DataLayout &DL,
+    function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   // Skip external functions.
   if (F->isDeclaration())
     return false;
   // Call the function.
-  Evaluator Eval(DL, TLI);
+  Evaluator Eval(DL, GetTLI);
   Constant *RetValDummy;
   bool EvalSuccess = Eval.EvaluateFunction(F, RetValDummy,
                                            SmallVector<Constant*, 0>());
@@ -2197,6 +2213,7 @@ collectVersions(Value *V, SmallVectorImpl<Function *> &Versions,
 // https://www.youtube.com/watch?v=k54MFimPz-A&t=867s
 static bool OptimizeNonTrivialIFuncs(
     Module &M, function_ref<TargetTransformInfo &(Function &)> GetTTI) {
+  const IPOOptions &Opts = getIPOOptions(M);
   bool Changed = false;
 
   // Map containing the feature bits for a given function.
@@ -2271,7 +2288,7 @@ static bool OptimizeNonTrivialIFuncs(
           // The caller is a version of a known IFunc.
           if (auto It = VersionOf.find(Caller); It != VersionOf.end())
             CallerIF = It->second;
-          else if (!CallerIsFMV && OptimizeNonFMVCallers) {
+          else if (!CallerIsFMV && Opts.optimize_non_fmv_callers) {
             // The caller is non-FMV.
             auto [It, Inserted] = FeatureMask.try_emplace(Caller);
             if (Inserted)
@@ -2298,14 +2315,14 @@ static bool OptimizeNonTrivialIFuncs(
                       << CalleeIF->getResolverFunction()->getName() << "\n");
 
     // The complexity of this algorithm is linear: O(NumCallers + NumCallees)
-    // if NumCallers > MaxIFuncVersions || NumCallees > MaxIFuncVersions,
+    // if NumCallers or NumCallees exceeds -max-ifunc-versions,
     // otherwise it is cubic: O((NumCallers ^ 2) x NumCallees).
     auto staticallyResolveCalls = [&](ArrayRef<Function *> Callers,
                                       ArrayRef<Function *> Callees,
                                       bool CallerIsFMV) {
       bool AllowExpensiveChecks = CallerIsFMV &&
-                                  Callers.size() <= MaxIFuncVersions &&
-                                  Callees.size() <= MaxIFuncVersions;
+                                  Callers.size() <= Opts.max_ifunc_versions &&
+                                  Callees.size() <= Opts.max_ifunc_versions;
       // Index to the highest callee candidate.
       unsigned J = 0;
 
@@ -2381,7 +2398,7 @@ static bool OptimizeNonTrivialIFuncs(
     auto &Callees = VersionedFuncs[CalleeIF];
 
     // Optimize non-FMV calls.
-    if (OptimizeNonFMVCallers)
+    if (Opts.optimize_non_fmv_callers)
       staticallyResolveCalls(NonFMVCallers, Callees, /*CallerIsFMV=*/false);
 
     // Optimize FMV calls.
@@ -2428,7 +2445,7 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
           NotDiscardableComdats.insert(C);
 
     // Delete functions that are trivially dead, ccc -> fastcc
-    LocalChange |= OptimizeFunctions(M, GetTLI, GetTTI, GetBFI, LookupDomTree,
+    LocalChange |= OptimizeFunctions(M, GetTTI, GetBFI, LookupDomTree,
                                      NotDiscardableComdats, ChangedCFGCallback,
                                      DeleteFnCallback);
 
@@ -2438,15 +2455,15 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
           if (FirstNotFullyEvaluatedPriority &&
               *FirstNotFullyEvaluatedPriority != Priority)
             return false;
-          bool Evaluated = EvaluateStaticConstructor(F, DL, &GetTLI(*F));
+          bool Evaluated = EvaluateStaticConstructor(F, DL, GetTLI);
           if (!Evaluated)
             FirstNotFullyEvaluatedPriority = Priority;
           return Evaluated;
         });
 
     // Optimize non-address-taken globals.
-    LocalChange |= OptimizeGlobalVars(M, GetTTI, GetTLI, LookupDomTree,
-                                      NotDiscardableComdats);
+    LocalChange |=
+        OptimizeGlobalVars(M, GetTTI, LookupDomTree, NotDiscardableComdats);
 
     // Resolve aliases, when possible.
     LocalChange |= OptimizeGlobalAliases(M, NotDiscardableComdats);

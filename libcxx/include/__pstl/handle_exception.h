@@ -30,7 +30,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __pstl {
 
 template <class _BackendFunction, class... _Args>
-_LIBCPP_HIDE_FROM_ABI auto __handle_exception_impl(_Args&&... __args) noexcept {
+auto __handle_exception_impl(_Args&&... __args) noexcept {
   return _BackendFunction{}(std::forward<_Args>(__args)...);
 }
 
@@ -45,7 +45,7 @@ _LIBCPP_HIDE_FROM_ABI auto __handle_exception_impl(_Args&&... __args) noexcept {
 // (such as moving or copying iterators) in here since that should terminate the
 // program, which is why we delegate to a noexcept helper below.
 template <class _BackendFunction, class... _Args>
-_LIBCPP_HIDE_FROM_ABI auto __handle_exception(_Args&&... __args) {
+auto __handle_exception(_Args&&... __args) {
   auto __result = __pstl::__handle_exception_impl<_BackendFunction>(std::forward<_Args>(__args)...);
   if (__result == nullopt)
     std::__throw_bad_alloc();

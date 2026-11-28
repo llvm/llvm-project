@@ -402,7 +402,6 @@
 name:            imp_null_check_with_bitwise_op_0
 # CHECK-LABEL: name:            imp_null_check_with_bitwise_op_0
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$esi' }
@@ -442,7 +441,6 @@ body:             |
 ---
 name:            imp_null_check_with_bitwise_op_1
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$esi' }
@@ -486,7 +484,6 @@ body:             |
 name:            imp_null_check_with_bitwise_op_2
 # CHECK-LABEL: name:            imp_null_check_with_bitwise_op_2
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$esi' }
@@ -527,7 +524,6 @@ body:             |
 name:            imp_null_check_with_bitwise_op_3
 # CHECK-LABEL: name:            imp_null_check_with_bitwise_op_3
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -567,7 +563,6 @@ body:             |
 name:            imp_null_check_with_bitwise_op_4
 # CHECK-LABEL: name:            imp_null_check_with_bitwise_op_4
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -608,7 +603,6 @@ body:             |
 name:            no_hoist_across_call
 # CHECK-LABEL: name:            no_hoist_across_call
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
 calleeSavedRegisters: [ '$bh', '$bl', '$bp', '$bpl', '$bx', '$ebp', '$ebx',
@@ -656,7 +650,6 @@ name:            dependency_live_in_hazard
 # to $esi and we cannot do that without clobbering the use of $rsi in
 # the first instruction in bb.1.not_null.
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -690,7 +683,6 @@ name:            use_alternate_load_op
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -721,7 +713,6 @@ name:            imp_null_check_gep_load_with_use_dep
 # CHECK:    $eax = FAULTING_OP 1, %bb.2, {{[0-9]+}}, $rdi, 1, $noreg, 0, $noreg, implicit-def $rax :: (load (s32) from %ir.x)
 # CHECK-NEXT:    JMP_1 %bb.1
 alignment:       16
-tracksRegLiveness: true
 liveins:         
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -753,7 +744,6 @@ name:            imp_null_check_load_with_base_sep
 # CHECK-NEXT:    $esi = FAULTING_OP 1, %bb.2, {{[0-9]+}}, $esi, $rdi, 1, $noreg, 0, $noreg, implicit-def $eflags
 # CHECK-NEXT:    JMP_1 %bb.1
 alignment:       16
-tracksRegLiveness: true
 liveins:         
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -786,7 +776,6 @@ name:            inc_store
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -816,7 +805,6 @@ name:            inc_store_plus_offset
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -848,7 +836,6 @@ name:            inc_store_with_dep
 # CHECK-NOT: liveins: {{.*}} $eflags
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -879,7 +866,6 @@ name:            inc_store_with_dep_in_null
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -914,7 +900,6 @@ name:            inc_store_with_volatile
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -944,7 +929,6 @@ name:            inc_store_with_two_dep
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -976,7 +960,6 @@ name:            inc_store_with_redefined_base
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -1007,7 +990,6 @@ name:            inc_store_with_reused_base
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -1039,7 +1021,6 @@ name:            inc_store_across_call
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
 calleeSavedRegisters: [ '$bh', '$bl', '$bp', '$bpl', '$bx', '$ebp', '$ebx',
@@ -1081,7 +1062,6 @@ name:            inc_store_with_dep_in_dep
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -1114,7 +1094,6 @@ name:            inc_store_with_load_over_store
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -1146,7 +1125,6 @@ name:            inc_store_with_store_over_load
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -1178,7 +1156,6 @@ name:            inc_store_with_store_over_store
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -1209,7 +1186,6 @@ name:            inc_store_with_load_and_store
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -1240,7 +1216,6 @@ name:            inc_store_and_load_no_alias
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -1272,7 +1247,6 @@ name:            inc_store_and_load_alias
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
   - { reg: '$rsi' }
@@ -1304,7 +1278,6 @@ name:            inc_spill_dep
 # CHECK: bb.1.not_null
 
 alignment:       16
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8}
 liveins:
@@ -1339,7 +1312,6 @@ name:            imp_null_check_address_mul_overflow
 # CHECK:  bb.0.entry:
 # CHECK-NOT: FAULTING_OP
 alignment:       16
-tracksRegLiveness: true
 liveins:         
   - { reg: '$rdi' }
   - { reg: '$rsi' }

@@ -1,41 +1,35 @@
 # See for https://openmp.llvm.org/SupportAndFAQ.html for instructions on how
 # to build offload with CMake.
 
-cmake_minimum_required(VERSION 3.20.0)
-if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
-  message(WARNING
-    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
-    "minimum version of CMake required to build LLVM will become 3.31.0, and "
-    "using an older CMake will become an error. Please upgrade your CMake to "
-    "at least 3.31.0 now to avoid issues in the future.")
-endif()
-
+cmake_minimum_required(VERSION 3.31.0)
 set(LLVM_SUBPROJECT_TITLE "liboffload")
 
 # The minimum versions required for dependencies.
 set(OFFLOAD_MIN_CUDA_VERSION 11.8.0)
 set(OFFLOAD_MIN_CUDA_VERSION_CODE 11080)
 
-# libomptarget is not supported on Windows.
-set(BUILD_LIBOMPTARGET ON)
+option(BUILD_LIBOMPTARGET "Build the OpenMP offloading runtime library libomptarget." ON)
+option(BUILD_LIBACCTARGET "Build the OpenACC offloading runtime library libacctarget." ON)
+# libomptarget and libacctarget are not supported on Windows.
 if(MSVC)
-  set(BUILD_LIBOMPTARGET OFF)
-  message(STATUS "libomptarget is not supported on Windows, skipping.")
+  set(BUILD_LIBOMPTARGET OFF CACHE BOOL "" FORCE)
+  set(BUILD_LIBACCTARGET OFF CACHE BOOL "" FORCE)
+  message(STATUS "libomptarget and libacctarget are not supported on Windows, skipping.")
 endif()
 
 # Check that the library can actually be built.
 if(APPLE OR WASM)
-  message(WARNING "libomptarget cannot be built on MacOS X and WASM!")
+  message(WARNING "offload cannot be built on MacOS X and WASM!")
   return()
 elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^(amdgpu|amdgcn|nvptx|spirv)" OR
        "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^(amdgpu|amdgcn|nvptx|spirv)")
   message(WARNING "offload cannot be built on GPU targets yet.")
   return()
 elseif(NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-  message(WARNING "Host compiler must support C++17 to build libomptarget!")
+  message(WARNING "Host compiler must support C++17 to build offload!")
   return()
 elseif(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-  message(WARNING "libomptarget on 32-bit systems is not supported!")
+  message(WARNING "offload on 32-bit systems is not supported!")
   return()
 endif()
 
@@ -208,8 +202,8 @@ foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
 endforeach()
 string(STRIP "${LIBOMPTARGET_ENUM_PLUGIN_TARGETS}" LIBOMPTARGET_ENUM_PLUGIN_TARGETS)
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/Shared/Targets.def.in
-  ${CMAKE_CURRENT_BINARY_DIR}/include/Shared/Targets.def
+  ${CMAKE_CURRENT_SOURCE_DIR}/liboffload/include/Targets.def.in
+  ${CMAKE_CURRENT_BINARY_DIR}/liboffload/include/Targets.def
 )
 
 include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
@@ -317,9 +311,10 @@ else()
 endif()
 
 pythonize_bool(LIBOMPTARGET_OMPT_SUPPORT)
+pythonize_bool(BUILD_LIBACCTARGET)
 
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(LIBOMPTARGET_BINARY_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+set(LIBOMPACCSUPPORT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libompaccsupport/include)
 message(STATUS "OpenMP tools dir in libomptarget: ${LIBOMP_OMP_TOOLS_INCLUDE_DIR}")
 if(LIBOMP_OMP_TOOLS_INCLUDE_DIR)
   include_directories(${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
@@ -357,15 +352,25 @@ add_dependencies(install-offload-stripped offload)
 
 add_subdirectory(tools/offload-tblgen)
 
-# Build offloading plugins and device RTLs if they are available.
-add_subdirectory(plugins-nextgen)
+# Invokes offload-tblgen; see tablegen_internal() for the calling convention.
+function(offload_tablegen ofn)
+  tablegen_internal(OFFLOAD ${ARGV})
+  set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} PARENT_SCOPE)
+endfunction()
+
 add_subdirectory(tools)
 add_subdirectory(docs)
 
 add_subdirectory(liboffload)
 
+add_subdirectory(libompaccsupport)
+
 if(BUILD_LIBOMPTARGET)
   add_subdirectory(libomptarget)
+endif()
+
+if(BUILD_LIBACCTARGET)
+  add_subdirectory(libacctarget)
 endif()
 
 add_subdirectory(languages)

@@ -9,9 +9,6 @@
 #include "mlir/Dialect/SMT/IR/SMTAttributes.h"
 #include "mlir/Dialect/SMT/IR/SMTDialect.h"
 #include "mlir/Dialect/SMT/IR/SMTTypes.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/DialectImplementation.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::smt;
@@ -155,10 +152,3 @@ Type BitVectorAttr::getType() const {
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/SMT/IR/SMTAttributes.cpp.inc"
-
-void SMTDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/SMT/IR/SMTAttributes.cpp.inc"
-      >();
-}

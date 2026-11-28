@@ -83,6 +83,29 @@ bool Vreg1LoweringHelper::cleanConstrainRegs(bool Changed) {
 
 } // end anonymous namespace
 
+/// Return true if \p Latch -> \p Header is the only back-edge of a loop that
+/// is left as a whole, so that EXEC is the same on every iteration at the
+/// header and at the end of the latch.
+///
+/// This relies on the control flow being structurized: lanes can only leave a
+/// loop at different times through SI_IF_BREAK/SI_LOOP on a back-edge, and a
+/// divergent SI_IF/SI_ELSE region is closed by its SI_END_CF before any edge
+/// leaves it. So if the only back-edge ends in a uniform branch, every exit,
+/// including a uniform early exit, is taken by the whole wave, and EXEC at the
+/// end of the latch is EXEC at the header.
+static bool isExecInvariantBackEdge(const MachineBasicBlock &Latch,
+                                    const MachineBasicBlock &Header,
+                                    const MachineDominatorTree &DT,
+                                    const SIInstrInfo &TII) {
+  assert(Latch.isSuccessor(&Header) && "expected a CFG edge");
+  return !TII.hasDivergentBranch(&Latch) &&
+         all_of(Header.predecessors(),
+                [&](const MachineBasicBlock *Pred) {
+                  return Pred == &Latch || !DT.dominates(&Header, Pred);
+                }) &&
+         DT.dominates(&Header, &Latch);
+}
+
 namespace llvm {
 namespace AMDGPU {
 
@@ -98,6 +121,8 @@ namespace AMDGPU {
 ///  - If an incoming block has no predecessors in this set, we can take the
 ///    incoming value as a scalar lane mask as-is.
 ///  -- A special case of this is when the def block has a self-loop.
+///  -- An edge from the def block to an incoming block does not count, since
+///     it starts a new trip around a loop through the def block.
 ///  - Otherwise, the incoming value needs to be merged with a previously
 ///    defined lane mask.
 ///  - If there is a path into the set of reachable blocks that does _not_ go
@@ -168,6 +193,18 @@ public:
     for (auto &[MBB, IsSource] : ReachableMap) {
       bool HaveReachablePred = false;
       for (MachineBasicBlock *Pred : MBB->predecessors()) {
+        // An edge from the def block starts a new trip around a cycle through
+        // the def block. Every lane that is active at the def block at the end
+        // of that trip was active at the end of MBB, since MBB's terminator
+        // cannot enable more lanes.
+        if (Pred == &DefBlock) {
+          assert(llvm::none_of(MBB->terminators(),
+                               [](const MachineInstr &MI) {
+                                 return MI.getOpcode() == AMDGPU::SI_ELSE;
+                               }) &&
+                 "SI_ELSE block in a cycle through the def block");
+          continue;
+        }
         if (ReachableMap.count(Pred)) {
           HaveReachablePred = true;
         } else {
@@ -210,8 +247,13 @@ public:
 /// edge to B is reachable without going through the nearest common
 /// post-dominator of B and all uses of the def.
 ///
+/// Back-edges of loops whose EXEC is the same on every iteration (see
+/// isExecInvariantBackEdge) are not followed: all lanes run every iteration
+/// and leave the loop together, so no lane can observe a value from an older
+/// iteration.
+///
 /// TODO: This rule is conservative because it does not check whether the
-///       relevant branches are actually divergent.
+///       relevant branches are actually divergent, apart from the case above.
 ///
 /// The class is designed to cache the CFG traversal so that it can be re-used
 /// for multiple defs within the same basic block.
@@ -222,6 +264,7 @@ public:
 class LoopFinder {
   MachineDominatorTree &DT;
   MachinePostDominatorTree &PDT;
+  const SIInstrInfo *TII;
 
   // All visited / reachable block, tagged by level (level 0 is the def block,
   // level 1 are all blocks reachable including but not going through the def
@@ -245,8 +288,9 @@ class LoopFinder {
   SmallVector<MachineBasicBlock *, 4> NextLevel;
 
 public:
-  LoopFinder(MachineDominatorTree &DT, MachinePostDominatorTree &PDT)
-      : DT(DT), PDT(PDT) {}
+  LoopFinder(MachineDominatorTree &DT, MachinePostDominatorTree &PDT,
+             const SIInstrInfo *TII)
+      : DT(DT), PDT(PDT), TII(TII) {}
 
   void initialize(MachineBasicBlock &MBB) {
     Visited.clear();
@@ -356,6 +400,9 @@ private:
       VisitedDom = DT.findNearestCommonDominator(VisitedDom, MBB);
 
       for (MachineBasicBlock *Succ : MBB->successors()) {
+        if (isExecInvariantBackEdge(*MBB, *Succ, DT, *TII))
+          continue;
+
         if (Succ == DefBlock) {
           if (MBB == VisitedPostDom)
             FoundLoopLevel = std::min(FoundLoopLevel, Level + 1);
@@ -551,7 +598,7 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
   if (Vreg1Phis.empty())
     return false;
 
-  LoopFinder LF(DT, PDT);
+  LoopFinder LF(DT, PDT, TII);
   PhiIncomingAnalysis PIA(PDT, TII);
 
   DT.updateDFSNumbers();
@@ -583,7 +630,7 @@ bool AMDGPU::PhiLoweringHelper::lowerPhis() {
 
 bool Vreg1LoweringHelper::lowerCopiesToI1() {
   bool Changed = false;
-  AMDGPU::LoopFinder LF(DT, PDT);
+  AMDGPU::LoopFinder LF(DT, PDT, TII);
   SmallVector<MachineInstr *, 4> DeadCopies;
 
   for (MachineBasicBlock &MBB : MF) {
@@ -663,7 +710,7 @@ bool AMDGPU::PhiLoweringHelper::isConstantLaneMask(Register Reg,
                                                    bool &Val) const {
   const MachineInstr *MI;
   for (;;) {
-    MI = MRI->getUniqueVRegDef(Reg);
+    MI = MRI->getVRegDef(Reg);
     if (MI->getOpcode() == AMDGPU::IMPLICIT_DEF)
       return true;
 
@@ -761,7 +808,7 @@ void Vreg1LoweringHelper::collectIncomingValuesFromPhi(
     assert(i + 1 < MI->getNumOperands());
     Register IncomingReg = MI->getOperand(i).getReg();
     MachineBasicBlock *IncomingMBB = MI->getOperand(i + 1).getMBB();
-    MachineInstr *IncomingDef = MRI->getUniqueVRegDef(IncomingReg);
+    MachineInstr *IncomingDef = MRI->getVRegDef(IncomingReg);
 
     if (IncomingDef->getOpcode() == AMDGPU::COPY) {
       IncomingReg = IncomingDef->getOperand(1).getReg();

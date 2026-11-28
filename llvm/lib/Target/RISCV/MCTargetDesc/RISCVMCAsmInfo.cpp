@@ -20,8 +20,19 @@ using namespace llvm;
 
 void RISCVMCAsmInfo::anchor() {}
 
+static void printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,
+                               const MCSpecifierExpr &Expr) {
+  auto S = Expr.getSpecifier();
+  bool HasSpecifier = S != RISCV::S_None && S != RISCV::S_CALL_PLT;
+  if (HasSpecifier)
+    OS << '%' << RISCV::getSpecifierName(S) << '(';
+  MAI.printExpr(OS, *Expr.getSubExpr());
+  if (HasSpecifier)
+    OS << ')';
+}
+
 RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TT, Options) {
   IsLittleEndian = TT.isLittleEndian();
   CodePointerSize = CalleeSaveStackSlotSize = TT.isArch64Bit() ? 8 : 4;
   CommentString = "#";
@@ -34,17 +45,11 @@ RISCVMCAsmInfo::RISCVMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
   // enabled, so we follow binutils in using the R_RISCV_32_PCREL relocation
   // for the FDE initial location.
   DwarfFDERelSymbolSpec = ELF::R_RISCV_32_PCREL;
-}
 
-void RISCVMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                        const MCSpecifierExpr &Expr) const {
-  auto S = Expr.getSpecifier();
-  bool HasSpecifier = S != RISCV::S_None && S != RISCV::S_CALL_PLT;
-  if (HasSpecifier)
-    OS << '%' << RISCV::getSpecifierName(S) << '(';
-  printExpr(OS, *Expr.getSubExpr());
-  if (HasSpecifier)
-    OS << ')';
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
+
+  SpecifierExprPrintFn = printSpecifierExpr;
 }
 
 RISCVMCAsmInfoDarwin::RISCVMCAsmInfoDarwin(const MCTargetOptions &Options)
@@ -58,15 +63,6 @@ RISCVMCAsmInfoDarwin::RISCVMCAsmInfoDarwin(const MCTargetOptions &Options)
   UseDataRegionDirectives = true;
   Data16bitsDirective = "\t.half\t";
   Data32bitsDirective = "\t.word\t";
-}
 
-void RISCVMCAsmInfoDarwin::printSpecifierExpr(
-    raw_ostream &OS, const MCSpecifierExpr &Expr) const {
-  auto S = Expr.getSpecifier();
-  bool HasSpecifier = S != RISCV::S_None && S != RISCV::S_CALL_PLT;
-  if (HasSpecifier)
-    OS << '%' << RISCV::getSpecifierName(S) << '(';
-  printExpr(OS, *Expr.getSubExpr());
-  if (HasSpecifier)
-    OS << ')';
+  SpecifierExprPrintFn = printSpecifierExpr;
 }

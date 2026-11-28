@@ -25,16 +25,10 @@ class StringRef;
 class XtensaMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit XtensaMCAsmInfo(const Triple &TT, const MCTargetOptions &Options);
-
-  void printSpecifierExpr(raw_ostream &OS,
-                          const MCSpecifierExpr &Expr) const override;
 };
 
 namespace Xtensa {
 enum Specifier { S_None, S_TPOFF };
-
-uint8_t parseSpecifier(StringRef name);
-StringRef getSpecifierName(uint8_t S);
 } // namespace Xtensa
 
 } // namespace llvm

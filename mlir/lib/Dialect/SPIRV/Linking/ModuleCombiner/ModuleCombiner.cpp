@@ -24,18 +24,18 @@ using namespace mlir;
 
 static constexpr unsigned maxFreeID = 1 << 20;
 
-/// Returns an unused symbol in `module` for `oldSymbolName` by trying numeric
+/// Returns an unused symbol in `moduleOp` for `oldSymbolName` by trying numeric
 /// suffix in `lastUsedID`.
 static StringAttr renameSymbol(StringRef oldSymName, unsigned &lastUsedID,
-                               spirv::ModuleOp module) {
+                               spirv::ModuleOp moduleOp) {
   SmallString<64> newSymName(oldSymName);
   newSymName.push_back('_');
 
-  MLIRContext *ctx = module->getContext();
+  MLIRContext *ctx = moduleOp->getContext();
 
   while (lastUsedID < maxFreeID) {
     auto possible = StringAttr::get(ctx, newSymName + Twine(++lastUsedID));
-    if (!SymbolTable::lookupSymbolIn(module, possible))
+    if (!SymbolTable::lookupSymbolIn(moduleOp, possible))
       return possible;
   }
 
@@ -96,12 +96,12 @@ OwningOpRef<spirv::ModuleOp> combine(ArrayRef<spirv::ModuleOp> inputModules,
 
   // First check whether there are conflicts between addressing/memory model.
   // Return early if so.
-  for (auto module : inputModules) {
-    if (module.getAddressingModel() != addressingModel ||
-        module.getMemoryModel() != memoryModel ||
-        module.getVceTriple() != vceTriple) {
-      module.emitError("input modules differ in addressing model, memory "
-                       "model, and/or VCE triple");
+  for (auto moduleOp : inputModules) {
+    if (moduleOp.getAddressingModel() != addressingModel ||
+        moduleOp.getMemoryModel() != memoryModel ||
+        moduleOp.getVceTriple() != vceTriple) {
+      moduleOp.emitError("input modules differ in addressing model, memory "
+                         "model, and/or VCE triple");
       return nullptr;
     }
   }

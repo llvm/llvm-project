@@ -24,7 +24,7 @@ void SparcELFMCAsmInfo::anchor() {}
 
 SparcELFMCAsmInfo::SparcELFMCAsmInfo(const Triple &TheTriple,
                                      const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TheTriple, Options) {
   bool isV9 = TheTriple.isSPARC64();
   IsLittleEndian = (TheTriple.getArch() == Triple::sparcel);
 
@@ -40,17 +40,15 @@ SparcELFMCAsmInfo::SparcELFMCAsmInfo(const Triple &TheTriple,
   CommentString = "!";
   SupportsDebugInformation = true;
 
-  UsesELFSectionDirectiveForBSS = true;
-
   DwarfFDERelSymbolSpec = ELF::R_SPARC_DISP32;
-}
 
-void SparcELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                           const MCSpecifierExpr &Expr) const {
-  StringRef S = Sparc::getSpecifierName(Expr.getSpecifier());
-  if (!S.empty())
-    OS << '%' << S << '(';
-  printExpr(OS, *Expr.getSubExpr());
-  if (!S.empty())
-    OS << ')';
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    StringRef S = Sparc::getSpecifierName(Expr.getSpecifier());
+    if (!S.empty())
+      OS << '%' << S << '(';
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    if (!S.empty())
+      OS << ')';
+  };
 }

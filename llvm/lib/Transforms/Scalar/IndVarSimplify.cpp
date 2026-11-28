@@ -1195,6 +1195,13 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
     if (I.mayHaveSideEffects() || I.mayReadFromMemory())
       continue;
 
+    // Don't sink convergent calls. Not every thread that executes the
+    // preheader necessarily reaches the exit block (e.g. a thread may be
+    // terminated inside the loop), so sinking could change the set of threads
+    // that execute the call together.
+    if (auto *CI = dyn_cast<CallInst>(&I); CI && CI->isConvergent())
+      continue;
+
     // Skip eh pad instructions.
     if (I.isEHPad())
       continue;
@@ -1274,8 +1281,8 @@ static void replaceLoopPHINodesWithPreheaderValues(
   SmallVector<Instruction *> Worklist;
   for (auto &PN : LoopHeader->phis()) {
     auto *PreheaderIncoming = PN.getIncomingValueForBlock(LoopPreheader);
-    for (User *U : PN.users())
-      Worklist.push_back(cast<Instruction>(U));
+    for (Instruction *U : PN.users())
+      Worklist.push_back(U);
     SE.forgetValue(&PN);
     PN.replaceAllUsesWith(PreheaderIncoming);
     DeadInsts.emplace_back(&PN);
@@ -1295,8 +1302,8 @@ static void replaceLoopPHINodesWithPreheaderValues(
 
     Value *Res = simplifyInstruction(I, I->getDataLayout());
     if (Res && LI->replacementPreservesLCSSAForm(I, Res)) {
-      for (User *U : I->users())
-        Worklist.push_back(cast<Instruction>(U));
+      for (Instruction *U : I->users())
+        Worklist.push_back(U);
       I->replaceAllUsesWith(Res);
       DeadInsts.emplace_back(I);
     }
@@ -1946,11 +1953,9 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // Skip if the loop has tokens referenced outside the loop to avoid
       // changing convergence behavior.
       if (I.getType()->isTokenTy()) {
-        for (User *U : I.users()) {
-          Instruction *UserInst = dyn_cast<Instruction>(U);
-          if (UserInst && !L->contains(UserInst)) {
+        for (Instruction *UserInst : I.users()) {
+          if (!L->contains(UserInst))
             return false;
-          }
         }
       }
     }

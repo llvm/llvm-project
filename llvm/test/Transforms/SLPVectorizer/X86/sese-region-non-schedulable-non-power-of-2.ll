@@ -166,4 +166,67 @@ exit:
   ret void
 }
 
+; The node with the reused scalars from different blocks of the region.
+define void @reused_ce(ptr %p, ptr %q, i1 %c) {
+; CHECK-LABEL: define void @reused_ce(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 1>
+; CHECK-NEXT:    br label %[[BB:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], <i32 3, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[SKIP:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP2]], <i32 1, i32 5, i32 7, i32 5>
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i64 0
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[SKIP]]:
+; CHECK-NEXT:    br label %[[THEN]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[R4:%.*]] = phi i32 [ [[TMP3]], %[[THEN]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i32> [ [[TMP5]], %[[THEN]] ]
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[Q4:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 4
+; CHECK-NEXT:    store i32 [[R4]], ptr [[Q4]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load i32, ptr %p, align 4
+  %p1 = getelementptr inbounds i32, ptr %p, i64 1
+  %x1 = load i32, ptr %p1, align 4
+  %p2 = getelementptr inbounds i32, ptr %p, i64 2
+  %x2 = load i32, ptr %p2, align 4
+  br label %bb
+
+bb:
+  %a0 = mul i32 %x0, 3
+  br i1 %c, label %then, label %skip
+
+then:
+  %a1 = mul i32 %x1, 5
+  %a2 = mul i32 %x2, 7
+  br label %exit
+
+skip:
+  br label %then
+
+exit:
+  %r0 = phi i32 [ %a0, %then ]
+  %r1 = phi i32 [ %a1, %then ]
+  %r2 = phi i32 [ %a2, %then ]
+  %r3 = phi i32 [ %a1, %then ]
+  %r4 = phi i32 [ %a0, %then ]
+  store i32 %r0, ptr %q, align 4
+  %q1 = getelementptr inbounds i32, ptr %q, i64 1
+  store i32 %r1, ptr %q1, align 4
+  %q2 = getelementptr inbounds i32, ptr %q, i64 2
+  store i32 %r2, ptr %q2, align 4
+  %q3 = getelementptr inbounds i32, ptr %q, i64 3
+  store i32 %r3, ptr %q3, align 4
+  %q4 = getelementptr inbounds i32, ptr %q, i64 4
+  store i32 %r4, ptr %q4, align 4
+  ret void
+}
+
 declare void @foo()

@@ -151,6 +151,9 @@ public:
   /// Enable support for multi-threading within MLIR.
   bool threadingIsEnabled = true;
 
+  /// Enable locking for context access independently of parallel execution.
+  bool threadSafeLockingIsEnabled = true;
+
   /// Track if we are currently executing in a threaded execution environment
   /// (like the pass-manager): this is only a debugging feature to help reducing
   /// the chances of data races one some context APIs.
@@ -291,14 +294,15 @@ public:
       ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
       threadPool = ownedThreadPool.get();
     } else {
-      disableUniquerMultithreading(true);
+      setThreadSafeLocking(false);
     }
   }
-  /// Update the threading mode for each of the uniquers.
-  void disableUniquerMultithreading(bool disable) {
-    affineUniquer.disableMultithreading(disable);
-    attributeUniquer.disableMultithreading(disable);
-    typeUniquer.disableMultithreading(disable);
+  /// Update the locking mode for context access and each of the uniquers.
+  void setThreadSafeLocking(bool enable) {
+    threadSafeLockingIsEnabled = enable;
+    affineUniquer.setThreadSafeLocking(enable);
+    attributeUniquer.setThreadSafeLocking(enable);
+    typeUniquer.setThreadSafeLocking(enable);
   }
   ~MLIRContextImpl() {
     for (auto typeMapping : registeredTypes)
@@ -636,7 +640,7 @@ void MLIRContext::disableMultithreading(bool disable) {
 
   impl->threadingIsEnabled = !disable;
 
-  impl->disableUniquerMultithreading(disable);
+  impl->setThreadSafeLocking(!disable);
 
   // Destroy thread pool (stop all threads) if it is no longer needed, or create
   // a new one if multithreading was re-enabled.
@@ -655,6 +659,16 @@ void MLIRContext::disableMultithreading(bool disable) {
     impl->ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
     impl->threadPool = impl->ownedThreadPool.get();
   }
+}
+
+#if LLVM_ENABLE_THREADS
+bool MLIRContext::isThreadSafeLockingEnabled() {
+  return impl->threadSafeLockingIsEnabled;
+}
+#endif
+
+void MLIRContext::enableThreadSafeLocking() {
+  impl->setThreadSafeLocking(true);
 }
 
 void MLIRContext::setThreadPool(llvm::ThreadPoolInterface &pool) {
@@ -875,6 +889,19 @@ void Dialect::addAttribute(TypeID typeID, AbstractAttribute &&attrInfo) {
                              newInfo->getName() + " is already registered.");
 }
 
+MLIRContext *AbstractAttribute::insert(Dialect &dialect,
+                                       AbstractAttribute &&attrInfo) {
+  TypeID typeID = attrInfo.getTypeID();
+  dialect.addAttribute(typeID, std::move(attrInfo));
+  return dialect.getContext();
+}
+
+MLIRContext *AbstractType::insert(Dialect &dialect, AbstractType &&typeInfo) {
+  TypeID typeID = typeInfo.getTypeID();
+  dialect.addType(typeID, std::move(typeInfo));
+  return dialect.getContext();
+}
+
 //===----------------------------------------------------------------------===//
 // AbstractAttribute
 //===----------------------------------------------------------------------===//
@@ -927,8 +954,8 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
   }
 
   // Check for an existing name in read-only mode.
-  bool isMultithreadingEnabled = context->isMultithreadingEnabled();
-  if (isMultithreadingEnabled) {
+  bool shouldLock = context->isThreadSafeLockingEnabled();
+  if (shouldLock) {
     llvm::sys::SmartScopedReader<true> contextLock(ctxImpl.operationInfoMutex);
     auto it = ctxImpl.unregisteredOperationsByName.find(name);
     if (it != ctxImpl.unregisteredOperationsByName.end()) {
@@ -938,7 +965,7 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
   }
 
   // Acquire a writer-lock so that we can safely create the new instance.
-  ScopedWriterLock lock(ctxImpl.operationInfoMutex, isMultithreadingEnabled);
+  ScopedWriterLock lock(ctxImpl.operationInfoMutex, shouldLock);
 
   auto it = ctxImpl.unregisteredOperationsByName.try_emplace(name);
   if (it.second) {
@@ -1094,15 +1121,18 @@ void RegisteredOperationName::insert(
   }
   StringRef name = impl->getName().strref();
 
-  // Update the registered info for this operation.
+  // Update the registered info for this operation. Registering an operation
+  // twice, e.g. both by its dialect's generated registration hook and by
+  // `addOperations`, is a fatal error like for attributes and types.
   auto emplaced = ctxImpl.registeredOperations.try_emplace(
       impl->getTypeID(), RegisteredOperationName(impl));
-  assert(emplaced.second && "operation name registration must be successful");
+  if (!emplaced.second)
+    llvm::report_fatal_error("Operation " + name + " is already registered.");
   auto emplacedByName = ctxImpl.registeredOperationsByName.try_emplace(
       name, std::move(ownedImpl));
-  (void)emplacedByName;
-  assert(emplacedByName.second &&
-         "operation name registration must be successful");
+  if (!emplacedByName.second)
+    llvm::report_fatal_error("Operation with name " + name +
+                             " is already registered.");
 
   // Add emplaced operation name to the sorted operations container.
   RegisteredOperationName &value = emplaced.first->second;

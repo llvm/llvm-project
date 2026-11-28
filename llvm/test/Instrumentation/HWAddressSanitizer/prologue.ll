@@ -89,7 +89,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @llvm.thread.pointer.p0()
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 48
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
@@ -135,7 +135,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; NOIFUNC-TLS-HISTORY-SAME: () #[[ATTR0]] {
 ; NOIFUNC-TLS-HISTORY-NEXT:  entry:
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP0:%.*]] = call ptr @llvm.thread.pointer.p0()
-; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 48
+; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 48
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 8
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP3:%.*]] = ashr i64 [[TMP2]], 3
 ; NOIFUNC-TLS-HISTORY-NEXT:    [[TMP4:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])
@@ -302,9 +302,9 @@ define void @test_alloca() sanitize_hwaddress {
 ; FUCHSIA-NEXT:    [[TMP21:%.*]] = and i64 [[TMP20]], 72057594037927935
 ; FUCHSIA-NEXT:    [[TMP22:%.*]] = lshr i64 [[TMP21]], 4
 ; FUCHSIA-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP22]]
-; FUCHSIA-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP23]], i32 0
+; FUCHSIA-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP23]], i64 0
 ; FUCHSIA-NEXT:    store i8 4, ptr [[TMP24]], align 1
-; FUCHSIA-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[X]], i32 15
+; FUCHSIA-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[X]], i64 15
 ; FUCHSIA-NEXT:    store i8 [[TMP19]], ptr [[TMP25]], align 1
 ; FUCHSIA-NEXT:    call void @use(ptr [[X_HWASAN]])
 ; FUCHSIA-NEXT:    [[TMP26:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
@@ -340,9 +340,9 @@ define void @test_alloca() sanitize_hwaddress {
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP14:%.*]] = and i64 [[TMP13]], 72057594037927935
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP15:%.*]] = lshr i64 [[TMP14]], 4
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[TMP15]]
-; FUCHSIA-LIBCALL-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP16]], i32 0
+; FUCHSIA-LIBCALL-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP16]], i64 0
 ; FUCHSIA-LIBCALL-NEXT:    store i8 4, ptr [[TMP17]], align 1
-; FUCHSIA-LIBCALL-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[X]], i32 15
+; FUCHSIA-LIBCALL-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[X]], i64 15
 ; FUCHSIA-LIBCALL-NEXT:    store i8 [[TMP12]], ptr [[TMP18]], align 1
 ; FUCHSIA-LIBCALL-NEXT:    call void @use(ptr [[X_HWASAN]])
 ; FUCHSIA-LIBCALL-NEXT:    [[TMP19:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8

@@ -3,7 +3,6 @@
 
 ---
 name:            wwm_reg_skip_sort_16bit
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

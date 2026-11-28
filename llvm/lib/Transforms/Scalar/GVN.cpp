@@ -464,7 +464,7 @@ private:
 /// implicitly associated with a rematerialization point which is the
 /// location of the instruction from which it was formed.
 struct GVNPassImpl::AvailableValue {
-  enum class ValType {
+  enum class ValType : uint8_t {
     SimpleVal, // A simple offsetted value that is accessed.
     LoadVal,   // A value produced by a load.
     MemIntrin, // A memory intrinsic which is loaded from.
@@ -478,6 +478,9 @@ struct GVNPassImpl::AvailableValue {
   Value *Val;
   /// Kind of the live-out value.
   ValType Kind;
+  /// Whether V1/V2 is the result of a dominating load from the select's
+  /// address (as opposed to a value forwarded from a store).
+  bool V1IsLoad = false, V2IsLoad = false;
 
   /// Offset - The byte offset in Val that is interesting for the load query.
   unsigned Offset = 0;
@@ -516,13 +519,16 @@ struct GVNPassImpl::AvailableValue {
     return Res;
   }
 
-  static AvailableValue getSelect(SelectInst *Sel, Value *V1, Value *V2) {
+  static AvailableValue getSelect(SelectInst *Sel, Value *V1, Value *V2,
+                                  bool V1IsLoad, bool V2IsLoad) {
     AvailableValue Res;
     Res.Val = Sel;
     Res.Kind = ValType::SelectVal;
     Res.Offset = 0;
     Res.V1 = V1;
     Res.V2 = V2;
+    Res.V1IsLoad = V1IsLoad;
+    Res.V2IsLoad = V2IsLoad;
     return Res;
   }
 
@@ -970,6 +976,8 @@ uint32_t GVNValueTable::lookupOrAdd(Value *V) {
     case Instruction::InsertElement:
     case Instruction::ShuffleVector:
     case Instruction::InsertValue:
+    case Instruction::BitExtract:
+    case Instruction::BitInsert:
       Exp = createExpr(I);
       break;
     case Instruction::ICmp:
@@ -1482,6 +1490,10 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
     // Introduce a new value select for a load from an eligible pointer select.
     SelectInst *Sel = getSelectInstr();
     assert(V1 && V2 && "both value operands of the select must be present");
+    if (V1IsLoad)
+      combineMetadataForCSE(cast<LoadInst>(V1), Load, /*DoesKMove=*/false);
+    if (V2IsLoad)
+      combineMetadataForCSE(cast<LoadInst>(V2), Load, /*DoesKMove=*/false);
     Res = SelectInst::Create(Sel->getCondition(), V1, V2, "",
                              InsertPt->getIterator(),
                              ProfcheckDisableMetadataFixes ? nullptr : Sel);
@@ -1589,9 +1601,11 @@ static void reportMayClobberedLoad(LoadInst *Load, Instruction *DepInst,
 // Find a dominating value for Loc memory location in the extended basic block
 // (chain of basic blocks with single predecessors) starting From instruction.
 // Returns the value from a matching load or a simple store to the same pointer.
+// IsLoad is set to whether the value is the result of a matching load.
 static Value *findDominatingValue(const ScalarOptions &Opts,
                                   const MemoryLocation &Loc, Type *LoadTy,
-                                  Instruction *From, AAResults *AA) {
+                                  Instruction *From, AAResults *AA,
+                                  bool &IsLoad) {
   uint32_t NumVisitedInsts = 0;
   BasicBlock *FromBB = From->getParent();
   BatchAAResults BatchAA(*AA);
@@ -1610,8 +1624,10 @@ static Value *findDominatingValue(const ScalarOptions &Opts,
         return nullptr;
       }
       if (auto *LI = dyn_cast<LoadInst>(Inst))
-        if (LI->getPointerOperand() == Loc.Ptr && LI->getType() == LoadTy)
+        if (LI->getPointerOperand() == Loc.Ptr && LI->getType() == LoadTy) {
+          IsLoad = true;
           return LI;
+        }
     }
   return nullptr;
 }
@@ -1628,15 +1644,18 @@ GVNPassImpl::analyzeSelectAvailability(LoadInst *Load, SelectInst *Sel,
   // loaded values only if both sides have a dominating, non-clobbered value of
   // the right type in the extended basic block ending at From.
   auto Loc = MemoryLocation::get(Load);
-  Value *V1 = findDominatingValue(*Opts, Loc.getWithNewPtr(TrueAddr),
-                                  Load->getType(), From, getAliasAnalysis());
+  bool V1IsLoad = false, V2IsLoad = false;
+  Value *V1 =
+      findDominatingValue(*Opts, Loc.getWithNewPtr(TrueAddr), Load->getType(),
+                          From, getAliasAnalysis(), V1IsLoad);
   if (!V1)
     return std::nullopt;
-  Value *V2 = findDominatingValue(*Opts, Loc.getWithNewPtr(FalseAddr),
-                                  Load->getType(), From, getAliasAnalysis());
+  Value *V2 =
+      findDominatingValue(*Opts, Loc.getWithNewPtr(FalseAddr), Load->getType(),
+                          From, getAliasAnalysis(), V2IsLoad);
   if (!V2)
     return std::nullopt;
-  return AvailableValue::getSelect(Sel, V1, V2);
+  return AvailableValue::getSelect(Sel, V1, V2, V1IsLoad, V2IsLoad);
 }
 
 std::optional<AvailableValue>
@@ -1728,8 +1747,7 @@ GVNPassImpl::analyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
   if (isa<AllocaInst>(DepInst) || isLifetimeStart(DepInst))
     return AvailableValue::get(UndefValue::get(Load->getType()));
 
-  if (Constant *InitVal =
-          getInitialValueOfAllocation(DepInst, TLI, Load->getType()))
+  if (Constant *InitVal = getInitialValueOfAllocation(DepInst, Load->getType()))
     return AvailableValue::get(InitVal);
 
   if (StoreInst *S = dyn_cast<StoreInst>(DepInst)) {
@@ -2289,23 +2307,41 @@ bool GVNPassImpl::performLoopLoadPRE(LoadInst *Load,
     if (LoopBlock)
       return false;
 
-    // Do not sink into inner loops. This may be non-profitable.
-    if (L != LI->getLoopFor(Blocker))
-      return false;
+    // A reload in a blocker inside an inner loop can run once per inner
+    // iteration, which is more often than L's header. Reload in the exit block
+    // of the inner loop that is directly inside L instead. That exit block is
+    // on every path from the blocker back to L's header and it runs at most
+    // once per iteration of L.
+    BasicBlock *ReloadBB = Blocker;
+    if (const Loop *Inner = LI->getLoopFor(Blocker); Inner != L) {
+      // The blocker is inside Inner, which may itself be nested further down.
+      // Walk parents until Inner is the loop directly inside L that contains
+      // it.
+      while (Inner->getParentLoop() != L)
+        Inner = Inner->getParentLoop();
+
+      // PRE is not performed if the inner loop's exit edges do not all go to
+      // one block, or if that block is not directly inside L, which means it
+      // is the header of a sibling loop, where the reload can run more often
+      // than L's header.
+      ReloadBB = Inner->getUniqueExitBlock();
+      if (!ReloadBB || LI->getLoopFor(ReloadBB) != L)
+        return false;
+    }
 
     // Blocks that dominate the latch execute on every single iteration, maybe
     // except the last one. So PREing into these blocks doesn't make much sense
     // in most cases. But the blocks that do not necessarily execute on each
     // iteration are sometimes much colder than the header, and this is when
     // PRE is potentially profitable.
-    if (DT->dominates(Blocker, Latch))
+    if (DT->dominates(ReloadBB, Latch))
       return false;
 
     // Make sure that the terminator itself doesn't clobber.
-    if (Blocker->getTerminator()->mayWriteToMemory())
+    if (ReloadBB->getTerminator()->mayWriteToMemory())
       return false;
 
-    LoopBlock = Blocker;
+    LoopBlock = ReloadBB;
   }
 
   if (!LoopBlock)
@@ -2739,7 +2775,7 @@ std::optional<GVNPassImpl::ReachingMemVal> GVNPassImpl::accessMayModifyLocation(
     }
 
     // Skip over volatile loads (the original load is non-volatile, non-atomic).
-    if (!ClobberI->isAtomic() && isa<LoadInst>(ClobberI))
+    if (auto *LI = dyn_cast<LoadInst>(ClobberI); LI && !LI->isAtomic())
       return std::nullopt;
 
     // A store that writes back a value already at the memory location leaves
@@ -2764,9 +2800,14 @@ std::optional<GVNPassImpl::ReachingMemVal> GVNPassImpl::accessMayModifyLocation(
   if (auto *II = dyn_cast<IntrinsicInst>(ClobberI)) {
     if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
       MemoryLocation IIObjLoc = MemoryLocation::getForArgument(II, 0, TLI);
-      if (AA.isMustAlias(IIObjLoc, Loc))
+      AliasResult AR = AA.alias(IIObjLoc, Loc);
+      if (AR == AliasResult::MustAlias)
         return ReachingMemVal::getDef(Loc.Ptr, ClobberI);
-      return std::nullopt;
+      if (AR == AliasResult::NoAlias)
+        return std::nullopt;
+      // Treat lifetime.start that may overlap the location as a clobber.
+      // TODO: Should be possible to treat a PartialAlias overlap as a def too.
+      return ReachingMemVal::getClobber(Loc.Ptr, ClobberI);
     }
   }
 
@@ -3530,10 +3571,22 @@ bool GVNPassImpl::propagateEquality(
 
     // Now try to deduce additional equalities from this one. For example, if
     // the known equality was "(A != B)" == "false" then it follows that A and B
-    // are equal in the scope. Only boolean equalities with an explicit true or
-    // false RHS are currently supported.
+    // are equal in the scope.
+
+    // If a bitwise OR is zero, both operands are zero. If a bitwise AND is
+    // all ones, both operands are all ones.
+    Value *A, *B;
+    if ((match(RHS, m_ZeroInt()) && match(LHS, m_Or(m_Value(A), m_Value(B)))) ||
+        (match(RHS, m_AllOnes()) &&
+         match(LHS, m_And(m_Value(A), m_Value(B))))) {
+      Worklist.emplace_back(A, RHS);
+      Worklist.emplace_back(B, RHS);
+      continue;
+    }
+
+    // The remaining deductions require a boolean equality with an explicit
+    // true or false RHS.
     if (!RHS->getType()->isIntegerTy(1))
-      // Not a boolean equality - bail out.
       continue;
     ConstantInt *CI = dyn_cast<ConstantInt>(RHS);
     if (!CI)
@@ -3545,7 +3598,6 @@ bool GVNPassImpl::propagateEquality(
 
     // If "A && B" is known true then both A and B are known true.  If "A || B"
     // is known false then both A and B are known false.
-    Value *A, *B;
     if ((IsKnownTrue && match(LHS, m_LogicalAnd(m_Value(A), m_Value(B)))) ||
         (IsKnownFalse && match(LHS, m_LogicalOr(m_Value(A), m_Value(B))))) {
       Worklist.push_back(std::make_pair(A, RHS));
