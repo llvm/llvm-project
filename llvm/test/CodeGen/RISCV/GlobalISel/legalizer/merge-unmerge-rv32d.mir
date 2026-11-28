@@ -10,13 +10,14 @@ body:             |
     ; CHECK-LABEL: name: merge_i64
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY]](s32)
-    ; CHECK-NEXT: $f10_d = COPY [[MV]](s64)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $x10
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(f64) = G_MERGE_VALUES [[COPY]](i32), [[COPY]](i32)
+    ; CHECK-NEXT: $f10_d = COPY [[MV]](f64)
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:_(s32) = COPY $x10
-    %1:_(s64) = G_MERGE_VALUES %0(s32), %0(s32)
-    $f10_d = COPY %1(s64)
+    %0:_(i32) = COPY $x10
+    %1:_(i64) = G_MERGE_VALUES %0(i32), %0(i32)
+    %2:_(f64) = G_BITCAST %1(i64)
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 ...
 ---
@@ -27,12 +28,13 @@ body:             |
     ; CHECK-LABEL: name: unmerge_i32
     ; CHECK: liveins: $f10_d
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $f10_d
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK-NEXT: $x10 = COPY [[UV]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $f10_d
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](f64)
+    ; CHECK-NEXT: $x10 = COPY [[UV]](i32)
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:_(s64) = COPY $f10_d
-    %1:_(s32), %2:_(s32) = G_UNMERGE_VALUES %0(s64)
-    $x10 = COPY %1(s32)
+    %0:_(f64) = COPY $f10_d
+    %1:_(i64) = G_BITCAST %0(f64)
+    %2:_(i32), %3:_(i32) = G_UNMERGE_VALUES %1(i64)
+    $x10 = COPY %2(i32)
     PseudoRET implicit $x10
 ...
