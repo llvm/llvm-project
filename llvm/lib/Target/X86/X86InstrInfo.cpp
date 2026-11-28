@@ -7816,8 +7816,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     // original register is not.
     Register Dst = MI.getOperand(0).getReg();
     if (VRM && Dst != MI.getOperand(1).getReg() &&
-        (!Dst.isVirtual() || VRM->getPhys(Dst) ||
-         VRM->getOriginal(Dst) != Dst))
+        (!Dst.isVirtual() || VRM->getPhys(Dst) || VRM->getOriginal(Dst) != Dst))
       return nullptr;
   }
 
