@@ -107,9 +107,12 @@ LLVM_ABI LoopUnrollResult UnrollAndJamLoop(
     AssumptionCache *AC, const TargetTransformInfo *TTI,
     OptimizationRemarkEmitter *ORE, Loop **EpilogueLoop = nullptr);
 
+/// If \p AllowSafeIntrinsics is true, intrinsics that cannot create a
+/// dependence with the loop's loads and stores (lifetime markers, assume, ...)
+/// do not prevent unroll-and-jam.
 LLVM_ABI bool isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE,
                                    DominatorTree &DT, DependenceInfo &DI,
-                                   LoopInfo &LI);
+                                   LoopInfo &LI, bool AllowSafeIntrinsics);
 
 LLVM_ABI void simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                                       ScalarEvolution *SE, DominatorTree *DT,
