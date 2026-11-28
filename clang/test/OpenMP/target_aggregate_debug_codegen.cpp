@@ -29,7 +29,7 @@ int main(void) {
 // CHECK-NEXT: [[SLOT0:%.+]] = getelementptr inbounds ptr, ptr [[CTX]], i32 0
 // CHECK-NEXT: [[ARG0:%.+]] = load ptr, ptr [[SLOT0]],
 // CHECK-NEXT: [[DYN:%.+]] = load ptr, ptr [[ARG0]],
-// CHECK-NEXT: call void @__omp_offloading_{{.+}}main_l{{[0-9]+}}_debug__(ptr [[DYN]])
+// CHECK-NEXT: call void @__omp_offloading_{{.+}}main_l{{[0-9]+}}_debug__(ptr noundef [[DYN]])
 // CHECK-NEXT: ret void
 
 // NOWRAP-LABEL: define weak_odr protected void @__omp_offloading_{{.+}}main_l{{[0-9]+}}(
@@ -55,7 +55,7 @@ void foo() {
 // CHECK: [[SLOT1:%.+]] = getelementptr inbounds ptr, ptr [[CTX]], i32 1
 // CHECK-NEXT: [[ARG1:%.+]] = load ptr, ptr [[SLOT1]],
 // CHECK-NEXT: [[DYN:%.+]] = load ptr, ptr [[ARG1]],
-// CHECK-NEXT: call void @__omp_offloading_{{.+}}foo{{.*}}_l{{[0-9]+}}_debug__(ptr %s1{{[0-9]*}}, ptr [[DYN]])
+// CHECK-NEXT: call void @__omp_offloading_{{.+}}foo{{.*}}_l{{[0-9]+}}_debug__(ptr noundef nonnull align 4 dereferenceable(4) %{{[0-9]+}}, ptr noundef [[DYN]])
 // CHECK-NEXT: ret void
 
 // NOWRAP-LABEL: define weak_odr protected void @__omp_offloading_{{.+}}foo{{.*}}_l{{[0-9]+}}(
@@ -81,7 +81,7 @@ void captures(int n, int *p) {
 // CHECK: [[SLOT5:%.+]] = getelementptr inbounds ptr, ptr [[CTX]], i32 5
 // CHECK-NEXT: [[ARG5:%.+]] = load ptr, ptr [[SLOT5]],
 // CHECK-NEXT: [[DYN:%.+]] = load ptr, ptr [[ARG5]],
-// CHECK-NEXT: call void @__omp_offloading_{{.+}}captures{{.*}}_l{{[0-9]+}}_debug__(i64 %vla{{[0-9]*}}, ptr %vla{{[0-9]*}}, i32 %a{{[0-9]*}}, ptr %p{{[0-9]*}}, i32 %n{{[0-9]*}}, ptr [[DYN]])
+// CHECK-NEXT: call void @__omp_offloading_{{.+}}captures{{.*}}_l{{[0-9]+}}_debug__(i64 noundef %{{[0-9]+}}, ptr noundef nonnull align 4 dereferenceable(4) %{{[0-9]+}}, i32 noundef %{{[0-9]+}}, ptr noundef %{{[0-9]+}}, i32 noundef %{{[0-9]+}}, ptr noundef [[DYN]])
 // CHECK-NEXT: ret void
 
 // NOWRAP-LABEL: define weak_odr protected void @__omp_offloading_{{.+}}captures{{.*}}_l{{[0-9]+}}(
@@ -108,7 +108,7 @@ void use_t(T &t) { t.m(); }
 // CXX: [[SLOT1:%.+]] = getelementptr inbounds ptr, ptr [[CTX]], i32 1
 // CXX-NEXT: [[ARG1:%.+]] = load ptr, ptr [[SLOT1]],
 // CXX-NEXT: [[DYN:%.+]] = load ptr, ptr [[ARG1]],
-// CXX-NEXT: call void @__omp_offloading_{{.+}}1T1mEv_l{{[0-9]+}}_debug__(ptr %this{{[0-9]*}}, ptr [[DYN]])
+// CXX-NEXT: call void @__omp_offloading_{{.+}}1T1mEv_l{{[0-9]+}}_debug__(ptr noundef %{{[0-9]+}}, ptr noundef [[DYN]])
 // CXX-NEXT: ret void
 
 // NOWRAP-LABEL: define weak_odr protected void @__omp_offloading_{{.+}}1T1mEv_l{{[0-9]+}}(

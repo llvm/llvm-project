@@ -45,6 +45,7 @@ void a() {
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[B_ADDR:%.*]] = alloca i64, align 8
+// CHECK1-NEXT:    [[COERCE:%.*]] = alloca { float, float }, align 4
 // CHECK1-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:      #dbg_declare(ptr [[DOTGLOBAL_TID__ADDR]], [[META34:![0-9]+]], !DIExpression(), [[META35:![0-9]+]])
 // CHECK1-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
@@ -53,7 +54,15 @@ void a() {
 // CHECK1-NEXT:      #dbg_declare(ptr [[B_ADDR]], [[META37:![0-9]+]], !DIExpression(), [[META35]])
 // CHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8, !dbg [[DBG38:![0-9]+]]
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DOTBOUND_TID__ADDR]], align 8, !dbg [[DBG38]]
-// CHECK1-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[B_ADDR]], align 4, !dbg [[DBG38]]
-// CHECK1-NEXT:    call void @_Z1av.omp_outlined_debug__(ptr [[TMP0]], ptr [[TMP1]], <2 x float> [[TMP2]]) #[[ATTR3:[0-9]+]], !dbg [[DBG38]]
+// CHECK1-NEXT:    [[B_ADDR_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B_ADDR]], i32 0, i32 0, !dbg [[DBG38]]
+// CHECK1-NEXT:    [[B_ADDR_REAL:%.*]] = load float, ptr [[B_ADDR_REALP]], align 4, !dbg [[DBG38]]
+// CHECK1-NEXT:    [[B_ADDR_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[B_ADDR]], i32 0, i32 1, !dbg [[DBG38]]
+// CHECK1-NEXT:    [[B_ADDR_IMAG:%.*]] = load float, ptr [[B_ADDR_IMAGP]], align 4, !dbg [[DBG38]]
+// CHECK1-NEXT:    [[COERCE_REALP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 0, !dbg [[DBG38]]
+// CHECK1-NEXT:    [[COERCE_IMAGP:%.*]] = getelementptr inbounds nuw { float, float }, ptr [[COERCE]], i32 0, i32 1, !dbg [[DBG38]]
+// CHECK1-NEXT:    store float [[B_ADDR_REAL]], ptr [[COERCE_REALP]], align 4, !dbg [[DBG38]]
+// CHECK1-NEXT:    store float [[B_ADDR_IMAG]], ptr [[COERCE_IMAGP]], align 4, !dbg [[DBG38]]
+// CHECK1-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[COERCE]], align 4, !dbg [[DBG38]]
+// CHECK1-NEXT:    call void @_Z1av.omp_outlined_debug__(ptr noundef [[TMP0]], ptr noundef [[TMP1]], <2 x float> noundef [[TMP2]]) #[[ATTR3:[0-9]+]], !dbg [[DBG38]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG38]]
 //

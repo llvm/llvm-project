@@ -150,7 +150,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8, !dbg [[DBG68]]
 // CHECK1-NEXT:    [[TMP8:%.*]] = addrspacecast ptr [[TMP3]] to ptr addrspace(1), !dbg [[DBG68]]
 // CHECK1-NEXT:    [[TMP9:%.*]] = addrspacecast ptr [[TMP6]] to ptr addrspace(1), !dbg [[DBG68]]
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l23_debug__(ptr addrspace(1) [[TMP8]], i32 [[TMP4]], ptr [[TMP5]], ptr addrspace(1) [[TMP9]], ptr [[TMP7]]) #[[ATTR3:[0-9]+]], !dbg [[DBG68]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l23_debug__(ptr addrspace(1) noundef [[TMP8]], i32 noundef [[TMP4]], ptr noundef [[TMP5]], ptr addrspace(1) noundef [[TMP9]], ptr noundef [[TMP7]]) #[[ATTR5:[0-9]+]], !dbg [[DBG68]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG68]]
 //
 //
@@ -279,7 +279,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[BB_ADDR]], align 8, !dbg [[DBG127]]
 // CHECK1-NEXT:    [[TMP9:%.*]] = addrspacecast ptr [[TMP5]] to ptr addrspace(1), !dbg [[DBG127]]
 // CHECK1-NEXT:    [[TMP10:%.*]] = addrspacecast ptr [[TMP8]] to ptr addrspace(1), !dbg [[DBG127]]
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l23_debug___omp_outlined_debug__(ptr [[TMP3]], ptr [[TMP4]], ptr addrspace(1) [[TMP9]], i32 [[TMP6]], ptr [[TMP7]], ptr addrspace(1) [[TMP10]]) #[[ATTR3]], !dbg [[DBG127]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l23_debug___omp_outlined_debug__(ptr noundef [[TMP3]], ptr noundef [[TMP4]], ptr addrspace(1) noundef [[TMP9]], i32 noundef [[TMP6]], ptr noundef [[TMP7]], ptr addrspace(1) noundef [[TMP10]]) #[[ATTR5]], !dbg [[DBG127]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG127]]
 //
 //
@@ -371,7 +371,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP8:%.*]] = addrspacecast ptr [[TMP3]] to ptr addrspace(1), !dbg [[DBG156]]
 // CHECK1-NEXT:    [[TMP9:%.*]] = addrspacecast ptr [[TMP5]] to ptr addrspace(1), !dbg [[DBG156]]
 // CHECK1-NEXT:    [[TMP10:%.*]] = addrspacecast ptr [[TMP6]] to ptr addrspace(1), !dbg [[DBG156]]
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_debug__(ptr addrspace(1) [[TMP8]], i32 [[TMP4]], ptr addrspace(1) [[TMP9]], ptr addrspace(1) [[TMP10]], ptr [[TMP7]]) #[[ATTR3]], !dbg [[DBG156]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_debug__(ptr addrspace(1) noundef [[TMP8]], i32 noundef [[TMP4]], ptr addrspace(1) noundef [[TMP9]], ptr addrspace(1) noundef [[TMP10]], ptr noundef [[TMP7]]) #[[ATTR5]], !dbg [[DBG156]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG156]]
 //
 //
@@ -491,7 +491,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP9:%.*]] = addrspacecast ptr [[TMP5]] to ptr addrspace(1), !dbg [[DBG206]]
 // CHECK1-NEXT:    [[TMP10:%.*]] = addrspacecast ptr [[TMP7]] to ptr addrspace(1), !dbg [[DBG206]]
 // CHECK1-NEXT:    [[TMP11:%.*]] = addrspacecast ptr [[TMP8]] to ptr addrspace(1), !dbg [[DBG206]]
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_debug___omp_outlined_debug__(ptr [[TMP3]], ptr [[TMP4]], ptr addrspace(1) [[TMP9]], i32 [[TMP6]], ptr addrspace(1) [[TMP10]], ptr addrspace(1) [[TMP11]]) #[[ATTR3]], !dbg [[DBG206]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_debug___omp_outlined_debug__(ptr noundef [[TMP3]], ptr noundef [[TMP4]], ptr addrspace(1) noundef [[TMP9]], i32 noundef [[TMP6]], ptr addrspace(1) noundef [[TMP10]], ptr addrspace(1) noundef [[TMP11]]) #[[ATTR5]], !dbg [[DBG206]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG206]]
 //
 //
@@ -585,7 +585,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP10:%.*]] = addrspacecast ptr [[TMP5]] to ptr addrspace(1), !dbg [[DBG237]]
 // CHECK1-NEXT:    [[TMP11:%.*]] = addrspacecast ptr [[TMP6]] to ptr addrspace(1), !dbg [[DBG237]]
 // CHECK1-NEXT:    [[TMP12:%.*]] = addrspacecast ptr [[TMP7]] to ptr addrspace(1), !dbg [[DBG237]]
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l51_debug__(ptr addrspace(1) [[TMP9]], ptr addrspace(1) [[TMP10]], ptr addrspace(1) [[TMP11]], ptr addrspace(1) [[TMP12]], ptr [[TMP8]]) #[[ATTR3]], !dbg [[DBG237]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l51_debug__(ptr addrspace(1) noundef [[TMP9]], ptr addrspace(1) noundef [[TMP10]], ptr addrspace(1) noundef [[TMP11]], ptr addrspace(1) noundef [[TMP12]], ptr noundef [[TMP8]]) #[[ATTR5]], !dbg [[DBG237]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG237]]
 //
 //
@@ -716,6 +716,6 @@ int main() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = addrspacecast ptr [[TMP7]] to ptr addrspace(1), !dbg [[DBG290]]
 // CHECK1-NEXT:    [[TMP12:%.*]] = addrspacecast ptr [[TMP8]] to ptr addrspace(1), !dbg [[DBG290]]
 // CHECK1-NEXT:    [[TMP13:%.*]] = addrspacecast ptr [[TMP9]] to ptr addrspace(1), !dbg [[DBG290]]
-// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l51_debug___omp_outlined_debug__(ptr [[TMP4]], ptr [[TMP5]], ptr addrspace(1) [[TMP10]], ptr addrspace(1) [[TMP11]], ptr addrspace(1) [[TMP12]], ptr addrspace(1) [[TMP13]]) #[[ATTR3]], !dbg [[DBG290]]
+// CHECK1-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l51_debug___omp_outlined_debug__(ptr noundef [[TMP4]], ptr noundef [[TMP5]], ptr addrspace(1) noundef [[TMP10]], ptr addrspace(1) noundef [[TMP11]], ptr addrspace(1) noundef [[TMP12]], ptr addrspace(1) noundef [[TMP13]]) #[[ATTR5]], !dbg [[DBG290]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG290]]
 //
