@@ -116,7 +116,7 @@ define i32 @t7_noncanonical_lshr_lshr_extrauses(i32 %data, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[T0]], [[NBITS]]
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
-; CHECK-NEXT:    [[T2:%.*]] = lshr exact i32 [[T1]], [[NBITS]]
+; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[T1]], [[NBITS]]
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;
   %t0 = lshr i32 %data, %nbits
@@ -133,7 +133,7 @@ define i32 @t8_noncanonical_lshr_ashr_extrauses(i32 %data, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[T0]], [[NBITS]]
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
-; CHECK-NEXT:    [[T2:%.*]] = ashr exact i32 [[T1]], [[NBITS]]
+; CHECK-NEXT:    [[T2:%.*]] = ashr i32 [[T1]], [[NBITS]]
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;
   %t0 = lshr i32 %data, %nbits
@@ -150,7 +150,7 @@ define i32 @t9_noncanonical_ashr_lshr_extrauses(i32 %data, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[T0]], [[NBITS]]
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
-; CHECK-NEXT:    [[T2:%.*]] = lshr exact i32 [[T1]], [[NBITS]]
+; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[T1]], [[NBITS]]
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;
   %t0 = ashr i32 %data, %nbits
@@ -167,7 +167,7 @@ define i32 @t10_noncanonical_ashr_ashr_extrauses(i32 %data, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[T0]], [[NBITS]]
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
-; CHECK-NEXT:    [[T2:%.*]] = ashr exact i32 [[T1]], [[NBITS]]
+; CHECK-NEXT:    [[T2:%.*]] = ashr i32 [[T1]], [[NBITS]]
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;
   %t0 = ashr i32 %data, %nbits
