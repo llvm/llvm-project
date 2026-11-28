@@ -740,7 +740,7 @@ bool NoStoreFuncVisitor::prettyPrintRegionName(const RegionVector &FieldChain,
     R = cast<SubRegion>(R)->getSuperRegion();
   }
   std::reverse(RegionSequence.begin(), RegionSequence.end());
-  RegionSequence.append(FieldChain.begin(), FieldChain.end());
+  llvm::append_range(RegionSequence, FieldChain);
 
   StringRef Sep;
   for (const MemRegion *R : RegionSequence) {
