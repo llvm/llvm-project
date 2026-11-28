@@ -31,13 +31,19 @@ void registerToCppTranslation() {
       "file-id", llvm::cl::desc("Emit emitc.file ops with matching id"),
       llvm::cl::init(""));
 
+  static llvm::cl::opt<bool> emitIncludes(
+      "emit-includes",
+      llvm::cl::desc("Translate emitc.include ops when emitting C/C++"),
+      llvm::cl::init(true));
+
   TranslateFromMLIRRegistration reg(
       "mlir-to-cpp", "translate from mlir to cpp",
       [](Operation *op, raw_ostream &output) {
         return emitc::translateToCpp(
             op, output,
             /*declareVariablesAtTop=*/declareVariablesAtTop,
-            /*fileId=*/fileId);
+            /*fileId=*/fileId,
+            /*emitIncludes=*/emitIncludes);
       },
       [](DialectRegistry &registry) {
         // clang-format off
