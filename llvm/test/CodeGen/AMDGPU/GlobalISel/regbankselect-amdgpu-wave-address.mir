@@ -31,3 +31,18 @@ body: |
     %1:_(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
     G_STORE %1, %0 :: (store (p5), addrspace 1)
 ...
+
+---
+name: amdgpu_wave_address_virtual_src
+legalized: true
+tracksRegLiveness: false
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: amdgpu_wave_address_virtual_src
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sgpr32
+    ; CHECK-NEXT: [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:sgpr(p5) = G_AMDGPU_WAVE_ADDRESS [[COPY]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[AMDGPU_WAVE_ADDRESS]](p5)
+    %0:_(p5) = COPY $sgpr32
+    %1:_(p5) = G_AMDGPU_WAVE_ADDRESS %0
+    S_ENDPGM 0, implicit %1
+...
