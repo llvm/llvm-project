@@ -1031,12 +1031,15 @@ def constant_fold_fp_ops : GICombineGroup<[
   itof_const_zero_fold_ui
 ]>;
 
-// Fold int2ptr(ptr2int(x)) -> x
+// Fold int2ptr(ptr2int(x)) -> x, if the integer is at least as wide as the
+// pointer.
 def p2i_to_i2p: GICombineRule<
   (defs root:$root),
   (match (G_PTRTOINT $mid, $x),
          (G_INTTOPTR $dst, $mid):$root,
-    [{ return MRI.getType(${x}.getReg()) == MRI.getType(${dst}.getReg()); }]),
+    [{ return MRI.getType(${x}.getReg()) == MRI.getType(${dst}.getReg()) &&
+              MRI.getType(${mid}.getReg()).getScalarSizeInBits() >=
+                  MRI.getType(${x}.getReg()).getScalarSizeInBits(); }]),
   (apply (GIReplaceReg $dst, $x))
 >;
 
