@@ -1083,7 +1083,7 @@ defvar CIR_ReturnableScopes = [
 ];
 
 def CIR_ReturnOp : CIR_Op<"return", [
-  ParentOneOf<CIR_ReturnableScopes>, Terminator
+  ParentOneOf<CIR_ReturnableScopes>, Terminator, NoMemoryEffect
 ]> {
   let summary = "Return from function";
   let description = [{
@@ -6414,7 +6414,7 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
 // UnreachableOp
 //===----------------------------------------------------------------------===//
 
-def CIR_UnreachableOp : CIR_Op<"unreachable", [Terminator]> {
+def CIR_UnreachableOp : CIR_Op<"unreachable", [Terminator, NoMemoryEffect]> {
   let summary = "invoke immediate undefined behavior";
   let description = [{
     If the program control flow reaches a `cir.unreachable` operation, the
