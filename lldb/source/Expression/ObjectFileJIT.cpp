@@ -134,8 +134,8 @@ void ObjectFileJIT::Dump(Stream *s) {
       sections->Dump(s->AsRawOstream(), s->GetIndentLevel(), nullptr, true,
                      UINT32_MAX);
 
-    if (m_symtab_up)
-      m_symtab_up->Dump(s, nullptr, eSortOrderNone);
+    if (Symtab *symtab = m_symtab.load())
+      symtab->Dump(s, nullptr, eSortOrderNone);
   }
 }
 

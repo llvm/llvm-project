@@ -24,6 +24,7 @@
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
+#include <atomic>
 #include <optional>
 
 namespace lldb_private {
@@ -803,7 +804,9 @@ protected:
   std::unique_ptr<lldb_private::SectionList> m_sections_up;
   std::recursive_mutex m_sections_mutex;
 
-  std::unique_ptr<lldb_private::Symtab> m_symtab_up;
+  /// Owned. Atomic because GetSymtab(/*can_create=*/false) reads it without
+  /// synchronizing with the llvm::once_flag below.
+  std::atomic<lldb_private::Symtab *> m_symtab = nullptr;
   /// We need a llvm::once_flag that we can use to avoid locking the module
   /// lock and deadlocking LLDB. See comments in ObjectFile::GetSymtab() for
   /// the full details. We also need to be able to clear the symbol table, so we
