@@ -3455,6 +3455,8 @@ def err_hlx_invalid_field : Error<
   "aggregate objects with HLX types are not allowed">;
 def err_hlx_invalid_object : Error<
   "global, static or variable sized objects with HLX types are not allowed">;
+def err_hlx_invalid_attribute : Error<
+  "%0 attribute cannot be used on functions with HLX types in their signature">;
 def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_sve_vector_in_non_streaming_function : Error<

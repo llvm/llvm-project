@@ -722,3 +722,10 @@ def HexagonCSR_HLX : CalleeSavedRegs<(add HexagonCSR, L12, L13, L14, L15)>;
 
 // Functions that contain a call to __builtin_eh_return also save R0-R3.
 def HexagonCSR_HLX_EH : CalleeSavedRegs<(add R0, R1, R2, R3, HexagonCSR_HLX)>;
+
+// Functions using the hexagon_preserve_hlx calling convention preserve all HLX
+// vector registers.
+def HexagonCSR_PreserveHLX
+    : CalleeSavedRegs<(add HexagonCSR, (sequence "L%u", 0, 15))>;
+def HexagonCSR_PreserveHLX_EH
+    : CalleeSavedRegs<(add R0, R1, R2, R3, HexagonCSR_PreserveHLX)>;

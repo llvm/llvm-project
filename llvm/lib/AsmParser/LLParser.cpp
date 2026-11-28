@@ -2536,6 +2536,12 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_cheriot_librarycallcc:
     CC = CallingConv::CHERIoT_LibraryCall;
     break;
+  case lltok::kw_hexagon_hlxcc:
+    CC = CallingConv::Hexagon_HLXCall;
+    break;
+  case lltok::kw_hexagon_preserve_hlx:
+    CC = CallingConv::Hexagon_PreserveHLX;
+    break;
   case lltok::kw_cc: {
       Lex.Lex();
       return parseUInt32(CC);

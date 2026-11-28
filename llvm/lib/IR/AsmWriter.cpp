@@ -438,6 +438,12 @@ static void printCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::CHERIoT_LibraryCall:
     Out << "cheriot_librarycallcc";
     break;
+  case CallingConv::Hexagon_HLXCall:
+    Out << "hexagon_hlxcc";
+    break;
+  case CallingConv::Hexagon_PreserveHLX:
+    Out << "hexagon_preserve_hlx";
+    break;
   }
 }
 

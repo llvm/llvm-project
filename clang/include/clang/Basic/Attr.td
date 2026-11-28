@@ -3699,6 +3699,18 @@ def RISCVVLSCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
  let Documentation = [RISCVVLSCCDocs];
 }
 
+def HexagonHLXCall : DeclOrTypeAttr, TargetSpecificAttr<TargetHexagon> {
+  let Spellings = [Clang<"hlxcc">];
+  let Subjects = SubjectList<[FunctionLike]>;
+  let Documentation = [HexagonHLXCallDocs];
+}
+
+def HexagonPreserveHLX : DeclOrTypeAttr, TargetSpecificAttr<TargetHexagon> {
+  let Spellings = [Clang<"preserve_hlx">];
+  let Subjects = SubjectList<[FunctionLike]>;
+  let Documentation = [HexagonPreserveHLXDocs];
+}
+
 def HexagonHLXVectorStackLimit : InheritableAttr,
                                  TargetSpecificAttr<TargetHexagon> {
   let Spellings = [Clang<"hlx_vector_stack_limit">];

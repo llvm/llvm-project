@@ -730,6 +730,8 @@ CXCallingConv clang_getFunctionTypeCallingConv(CXType X) {
       TCALLINGCONV(RISCVVLSCall_16384);
       TCALLINGCONV(RISCVVLSCall_32768);
       TCALLINGCONV(RISCVVLSCall_65536);
+      TCALLINGCONV(HexagonHLXCall);
+      TCALLINGCONV(HexagonPreserveHLX);
     case CC_DeviceKernel:
       return CXCallingConv_Unexposed;
       break;

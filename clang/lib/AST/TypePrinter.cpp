@@ -1174,6 +1174,12 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_PreserveNone:
       OS << " __attribute__((preserve_none))";
       break;
+    case CC_HexagonHLXCall:
+      OS << " __attribute__((hlxcc))";
+      break;
+    case CC_HexagonPreserveHLX:
+      OS << " __attribute__((preserve_hlx))";
+      break;
     case CC_RISCVVectorCall:
       OS << "__attribute__((riscv_vector_cc))";
       break;
@@ -2116,6 +2122,12 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::M68kRTD:
     OS << "m68k_rtd";
+    break;
+  case attr::HexagonHLXCall:
+    OS << "hlxcc";
+    break;
+  case attr::HexagonPreserveHLX:
+    OS << "preserve_hlx";
     break;
   case attr::RISCVVectorCC:
     OS << "riscv_vector_cc";

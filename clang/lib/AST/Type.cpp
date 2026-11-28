@@ -3895,6 +3895,10 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
     return "m68k_rtd";
   case CC_PreserveNone:
     return "preserve_none";
+  case CC_HexagonHLXCall:
+    return "hlxcc";
+  case CC_HexagonPreserveHLX:
+    return "preserve_hlx";
     // clang-format off
   case CC_RISCVVectorCall: return "riscv_vector_cc";
 #define CC_VLS_CASE(ABI_VLEN) \
@@ -4766,6 +4770,8 @@ bool AttributedType::isCallingConv() const {
   case attr::PreserveAll:
   case attr::M68kRTD:
   case attr::PreserveNone:
+  case attr::HexagonHLXCall:
+  case attr::HexagonPreserveHLX:
   case attr::RISCVVectorCC:
   case attr::RISCVVLSCC:
     return true;

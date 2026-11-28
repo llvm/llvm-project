@@ -96,6 +96,8 @@ public:
 
   bool hasBFloat16Type() const override;
 
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,
