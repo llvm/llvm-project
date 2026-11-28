@@ -12,6 +12,7 @@
 #include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/AST/ASTImporter.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/TargetInfo.h"
@@ -22,6 +23,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/UnifiedSymbolResolution/USRGeneration.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -407,6 +409,76 @@ CrossTranslationUnitContext::getCrossTUDefinition(const VarDecl *VD,
                                                   bool DisplayCTUProgress) {
   return getCrossTUDefinitionImpl(VD, CrossTUDir, IndexName,
                                   DisplayCTUProgress);
+}
+
+void CrossTranslationUnitContext::importReferencedInitializers(
+    const Stmt *S, StringRef CrossTUDir, StringRef IndexName,
+    bool DisplayCTUProgress) {
+  class InitializerVisitor
+      : public ConstEvaluatedExprVisitor<InitializerVisitor> {
+    CrossTranslationUnitContext &CTU;
+    StringRef CrossTUDir;
+    StringRef IndexName;
+    bool DisplayCTUProgress;
+    llvm::SmallPtrSet<const VarDecl *, 8> Visited;
+
+    void importInitializer(const VarDecl *VD) {
+      if (!VD || !VD->hasGlobalStorage() || !shouldImport(VD, Context) ||
+          !Visited.insert(VD->getCanonicalDecl()).second)
+        return;
+
+      const Expr *Init = VD->getAnyInitializer();
+      if (!Init && (VD->hasExternalStorage() || VD->isStaticDataMember())) {
+        auto Imported = CTU.getCrossTUDefinition(VD, CrossTUDir, IndexName,
+                                                 DisplayCTUProgress);
+        if (!Imported) {
+          llvm::handleAllErrors(
+              Imported.takeError(), [&](const IndexError &IE) {
+                CTU.emitCrossTUDiagnostics(IE, VD->getLocation());
+              });
+          return;
+        }
+        Init = (*Imported)->getAnyInitializer();
+      }
+      if (Init)
+        Visit(Init);
+    }
+
+  public:
+    InitializerVisitor(CrossTranslationUnitContext &CTU, ASTContext &Context,
+                       StringRef CrossTUDir, StringRef IndexName,
+                       bool DisplayCTUProgress)
+        : ConstEvaluatedExprVisitor<InitializerVisitor>(Context), CTU(CTU),
+          CrossTUDir(CrossTUDir), IndexName(IndexName),
+          DisplayCTUProgress(DisplayCTUProgress) {}
+
+    void VisitDeclRefExpr(const DeclRefExpr *E) {
+      importInitializer(dyn_cast<VarDecl>(E->getDecl()));
+    }
+
+    void VisitMemberExpr(const MemberExpr *E) {
+      importInitializer(dyn_cast<VarDecl>(E->getMemberDecl()));
+      Visit(E->getBase());
+    }
+
+    // Handle 'if constexpr' specially to skip its discarded branch while still
+    // visiting the init-statement and condition.
+    void VisitIfStmt(const IfStmt *If) {
+      if (auto Selected = If->getNondiscardedCase(Context)) {
+        if (const Stmt *Init = If->getInit())
+          Visit(Init);
+        if (const Stmt *ConditionVar = If->getConditionVariableDeclStmt())
+          Visit(ConditionVar);
+        Visit(If->getCond());
+        if (*Selected)
+          Visit(*Selected);
+        return;
+      }
+      VisitStmt(If);
+    }
+  } Visitor(*this, Context, CrossTUDir, IndexName, DisplayCTUProgress);
+  if (S)
+    Visitor.Visit(S);
 }
 
 void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE,
