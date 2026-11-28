@@ -331,6 +331,13 @@ bool InstrumentorImpl::instrumentInstruction(Instruction &I,
   if (IIRB.NewInsts.contains(&I))
     return Changed;
 
+  // A swifterror value may only be used as the pointer of a load or store, or
+  // as a swifterror argument, so it cannot be passed to the runtime.
+  if (I.isSwiftError())
+    return Changed;
+  if (Value *Ptr = getLoadStorePointerOperand(&I); Ptr && Ptr->isSwiftError())
+    return Changed;
+
   // Count epochs eagerly.
   ++IIRB.Epoch;
 
@@ -364,7 +371,12 @@ bool InstrumentorImpl::instrumentFunction(Function &Fn) {
       Changed |= instrumentInstruction(I, ICaches);
 
     auto *TI = It->getTerminator();
-    if (!TI->getNumSuccessors())
+    if (TI->getNumSuccessors())
+      continue;
+    // Nothing may be placed between a musttail call and its return.
+    if (CallInst *MustTailCI = It->getTerminatingMustTailCall())
+      FinalTIs.push_back(MustTailCI);
+    else
       FinalTIs.push_back(TI);
   }
 
@@ -925,7 +937,8 @@ static Value *createValuePack(const Range &R, InstrumentationConfig &IConf,
   SmallVector<Type *> Types;
   for (auto &RE : R) {
     Value *V = getValue(RE);
-    if (!V->getType()->isSized())
+    // Swifterror values cannot be stored into the pack.
+    if (!V->getType()->isSized() || V->isSwiftError())
       continue;
     auto VSize = IIRB.DL.getTypeAllocSize(V->getType());
     ConstantValues.push_back(getCI(I32Ty, VSize));
@@ -975,7 +988,7 @@ static void readValuePack(const Range &R, Value &Pack,
   unsigned Offset = 0;
   for (const auto &[Idx, RE] : enumerate(R)) {
     Value *V = getValue(RE);
-    if (!V->getType()->isSized())
+    if (!V->getType()->isSized() || V->isSwiftError())
       continue;
     Offset += 8;
     auto VSize = DL.getTypeAllocSize(V->getType());
@@ -1613,9 +1626,12 @@ Value *GlobalVarIO::setAddress(Value &V, Value &NewV,
                                   ShadowName, &GV, GV.getThreadLocalMode(),
                                   DL.getDefaultGlobalsAddressSpace());
   } else {
-    ShadowGV = new GlobalVariable(
-        *GV.getParent(), NewV.getType(), false, GV.getLinkage(),
-        PoisonValue::get(NewV.getType()), ShadowName, &GV);
+    // Common globals must be zero initialized.
+    Constant *ShadowInit = GV.hasCommonLinkage()
+                               ? Constant::getNullValue(NewV.getType())
+                               : PoisonValue::get(NewV.getType());
+    ShadowGV = new GlobalVariable(*GV.getParent(), NewV.getType(), false,
+                                  GV.getLinkage(), ShadowInit, ShadowName, &GV);
     IIRB.IRB.CreateStore(&NewV, ShadowGV);
   }
 
@@ -1682,7 +1698,8 @@ Value *GlobalVarIO::setAddress(Value &V, Value &NewV,
     if (isa<LandingPadInst>(I))
       continue;
     if (auto *II = dyn_cast<IntrinsicInst>(I))
-      if (II->getIntrinsicID() == Intrinsic::eh_typeid_for)
+      if (II->getIntrinsicID() == Intrinsic::eh_typeid_for ||
+          II->getIntrinsicID() == Intrinsic::threadlocal_address)
         continue;
     if (I->getParent())
       InsertConsts(I, *U);
