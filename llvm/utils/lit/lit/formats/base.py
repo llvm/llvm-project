@@ -34,7 +34,16 @@ class FileBasedTest(TestFormat):
             return
 
         if any(filename.endswith(suffix) for suffix in localConfig.suffixes):
-            yield lit.Test.Test(testSuite, path_in_suite, localConfig)
+            source_path = testSuite.getSourcePath(path_in_suite)
+            for i in range(getattr(localConfig, "repeat_tests", 1)):
+                yield lit.Test.Test(
+                    testSuite,
+                    path_in_suite
+                    if i == 0
+                    else path_in_suite[:-1] + (f"{i}_{filename}",),
+                    localConfig,
+                    file_path=source_path,
+                )
 
     def getTestsInDirectory(self, testSuite, path_in_suite, litConfig, localConfig):
         source_path = testSuite.getSourcePath(path_in_suite)
