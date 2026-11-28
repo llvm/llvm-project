@@ -15,8 +15,8 @@ define amdgpu_kernel void @kernel_caller_stack() #2 {
 ; MUBUF-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; MUBUF-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s17
-; MUBUF-NEXT:    s_mov_b32 s32, 0
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
+; MUBUF-NEXT:    s_mov_b32 s32, 0
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, 9
 ; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4
 ; MUBUF-NEXT:    v_mov_b32_e32 v0, 10
@@ -33,8 +33,8 @@ define amdgpu_kernel void @kernel_caller_stack() #2 {
 ;
 ; FLATSCR-LABEL: kernel_caller_stack:
 ; FLATSCR:       ; %bb.0:
-; FLATSCR-NEXT:    s_mov_b32 s32, 0
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
+; FLATSCR-NEXT:    s_mov_b32 s32, 0
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
 ; FLATSCR-NEXT:    s_add_u32 s0, s32, 4
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 9

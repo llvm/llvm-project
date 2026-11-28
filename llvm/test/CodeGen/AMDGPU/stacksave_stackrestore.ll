@@ -1551,7 +1551,6 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ;
 ; WAVE32-O0-LABEL: kernel_stacksave_stackrestore_call_with_stack_objects:
 ; WAVE32-O0:       ; %bb.0:
-; WAVE32-O0-NEXT:    s_mov_b32 s32, 0x1200
 ; WAVE32-O0-NEXT:    s_getpc_b64 s[20:21]
 ; WAVE32-O0-NEXT:    s_mov_b32 s20, s0
 ; WAVE32-O0-NEXT:    s_load_dwordx4 s[20:23], s[20:21], 0x0
@@ -1559,6 +1558,7 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-O0-NEXT:    s_bitset0_b32 s23, 21
 ; WAVE32-O0-NEXT:    s_add_u32 s20, s20, s11
 ; WAVE32-O0-NEXT:    s_addc_u32 s21, s21, 0
+; WAVE32-O0-NEXT:    s_mov_b32 s32, 0x1200
 ; WAVE32-O0-NEXT:    s_mov_b32 s14, s10
 ; WAVE32-O0-NEXT:    s_mov_b32 s13, s9
 ; WAVE32-O0-NEXT:    s_mov_b32 s12, s8
@@ -1665,13 +1665,13 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ;
 ; WAVE64-O0-LABEL: kernel_stacksave_stackrestore_call_with_stack_objects:
 ; WAVE64-O0:       ; %bb.0:
-; WAVE64-O0-NEXT:    s_mov_b32 s32, 0x2400
 ; WAVE64-O0-NEXT:    s_getpc_b64 s[24:25]
 ; WAVE64-O0-NEXT:    s_mov_b32 s24, s0
 ; WAVE64-O0-NEXT:    s_load_dwordx4 s[24:27], s[24:25], 0x0
 ; WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; WAVE64-O0-NEXT:    s_add_u32 s24, s24, s11
 ; WAVE64-O0-NEXT:    s_addc_u32 s25, s25, 0
+; WAVE64-O0-NEXT:    s_mov_b32 s32, 0x2400
 ; WAVE64-O0-NEXT:    s_mov_b32 s14, s10
 ; WAVE64-O0-NEXT:    s_mov_b32 s13, s9
 ; WAVE64-O0-NEXT:    s_mov_b32 s12, s8
@@ -1778,7 +1778,6 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ;
 ; WAVE32-WWM-PREALLOC-LABEL: kernel_stacksave_stackrestore_call_with_stack_objects:
 ; WAVE32-WWM-PREALLOC:       ; %bb.0:
-; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, 0x1200
 ; WAVE32-WWM-PREALLOC-NEXT:    s_getpc_b64 s[20:21]
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s20, s0
 ; WAVE32-WWM-PREALLOC-NEXT:    s_load_dwordx4 s[20:23], s[20:21], 0x0
@@ -1786,6 +1785,7 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-WWM-PREALLOC-NEXT:    s_bitset0_b32 s23, 21
 ; WAVE32-WWM-PREALLOC-NEXT:    s_add_u32 s20, s20, s11
 ; WAVE32-WWM-PREALLOC-NEXT:    s_addc_u32 s21, s21, 0
+; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s32, 0x1200
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s14, s10
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s13, s9
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s12, s8
@@ -1971,7 +1971,6 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ;
 ; GISEL-WAVE32-O0-LABEL: kernel_stacksave_stackrestore_call_with_stack_objects:
 ; GISEL-WAVE32-O0:       ; %bb.0:
-; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, 0x1200
 ; GISEL-WAVE32-O0-NEXT:    s_getpc_b64 s[20:21]
 ; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s20, s0
 ; GISEL-WAVE32-O0-NEXT:    s_load_dwordx4 s[20:23], s[20:21], 0x0
@@ -1979,6 +1978,7 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; GISEL-WAVE32-O0-NEXT:    s_bitset0_b32 s23, 21
 ; GISEL-WAVE32-O0-NEXT:    s_add_u32 s20, s20, s11
 ; GISEL-WAVE32-O0-NEXT:    s_addc_u32 s21, s21, 0
+; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s32, 0x1200
 ; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v3, v2
 ; GISEL-WAVE32-O0-NEXT:    v_mov_b32_e32 v2, v1
 ; GISEL-WAVE32-O0-NEXT:    s_mov_b32 s14, s10
@@ -2058,13 +2058,13 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ;
 ; GISEL-WAVE64-O0-LABEL: kernel_stacksave_stackrestore_call_with_stack_objects:
 ; GISEL-WAVE64-O0:       ; %bb.0:
-; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, 0x2400
 ; GISEL-WAVE64-O0-NEXT:    s_getpc_b64 s[24:25]
 ; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s24, s0
 ; GISEL-WAVE64-O0-NEXT:    s_load_dwordx4 s[24:27], s[24:25], 0x0
 ; GISEL-WAVE64-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-WAVE64-O0-NEXT:    s_add_u32 s24, s24, s11
 ; GISEL-WAVE64-O0-NEXT:    s_addc_u32 s25, s25, 0
+; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s32, 0x2400
 ; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v3, v2
 ; GISEL-WAVE64-O0-NEXT:    v_mov_b32_e32 v2, v1
 ; GISEL-WAVE64-O0-NEXT:    s_mov_b32 s14, s10

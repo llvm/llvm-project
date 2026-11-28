@@ -49,7 +49,6 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; FLATSCR-LABEL: kernel_background_evaluate:
 ; FLATSCR:       ; %bb.0: ; %entry
 ; FLATSCR-NEXT:    s_add_u32 s8, s8, s13
-; FLATSCR-NEXT:    s_movk_i32 s32, 0x6000
 ; FLATSCR-NEXT:    s_addc_u32 s9, s9, 0
 ; FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s8
 ; FLATSCR-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s9
@@ -61,6 +60,7 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, svm_eval_nodes@rel32@lo+4
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, svm_eval_nodes@rel32@hi+12
+; FLATSCR-NEXT:    s_movk_i32 s32, 0x6000
 ; FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, s2
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]

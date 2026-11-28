@@ -87,8 +87,8 @@ define amdgpu_kernel void @if_call_kernel() #0 {
 ; SDAG-NEXT:    s_add_u32 s0, s0, s17
 ; SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; SDAG-NEXT:    s_mov_b32 s32, 0
 ; SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; SDAG-NEXT:    s_mov_b32 s32, 0
 ; SDAG-NEXT:    s_and_saveexec_b64 s[12:13], vcc
 ; SDAG-NEXT:    s_cbranch_execz .LBB3_2
 ; SDAG-NEXT:  ; %bb.1: ; %call
@@ -113,8 +113,8 @@ define amdgpu_kernel void @if_call_kernel() #0 {
 ; GISEL-NEXT:    s_add_u32 s0, s0, s17
 ; GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    s_mov_b32 s32, 0
 ; GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GISEL-NEXT:    s_mov_b32 s32, 0
 ; GISEL-NEXT:    s_and_saveexec_b64 s[12:13], vcc
 ; GISEL-NEXT:    s_cbranch_execz .LBB3_2
 ; GISEL-NEXT:  ; %bb.1: ; %call
