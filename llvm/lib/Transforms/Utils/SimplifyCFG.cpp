@@ -4281,9 +4281,13 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
                        {DominatorTree::Delete, PredBlock, BB}});
 
   // If BI was a loop latch, it may have had associated loop metadata.
-  // We need to copy it to the new latch, that is, PBI.
+  // We need to copy it to the new latch, that is, PBI. Do not let loop
+  // metadata that holds only debug locations replace PBI's own loop metadata,
+  // as such metadata exists only when debug info is present.
   if (MDNode *LoopMD = BI->getMetadata(LLVMContext::MD_loop))
-    PBI->setMetadata(LLVMContext::MD_loop, LoopMD);
+    if (!PBI->hasMetadata(LLVMContext::MD_loop) ||
+        BI->hasNonDebugLocLoopMetadata())
+      PBI->setMetadata(LLVMContext::MD_loop, LoopMD);
 
   ValueToValueMapTy VMap; // maps original values to cloned values
   cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(BB, PredBlock, VMap);
