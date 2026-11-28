@@ -22,6 +22,7 @@
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
 using namespace gsym;
@@ -583,121 +584,57 @@ void GsymReader::dumpStatistics(raw_ostream &OS, StatisticsFormat Format,
 
   const std::string UUIDStr = formatGsymUUID(getUUID());
 
+  std::unique_ptr<ScopedPrinter> W;
+  if (Format == StatisticsFormat::JSON)
+    W = std::make_unique<JSONScopedPrinter>(OS, /*PrettyPrint=*/false);
+  else if (Format == StatisticsFormat::PrettyJSON)
+    W = std::make_unique<JSONScopedPrinter>(OS, /*PrettyPrint=*/true);
+  else
+    W = std::make_unique<ScopedPrinter>(OS);
+
+  DictScope Root;
   if (Format == StatisticsFormat::JSON ||
-      Format == StatisticsFormat::PrettyJSON) {
-    json::Object MergedTypes{
-        {"infotype_infolength_count_and_fnsize",
-         static_cast<int64_t>(Merged.InfoTypeInfoLengthCountAndFnSize)},
-        {"size_and_name", static_cast<int64_t>(Merged.SizeAndName)},
-        {"line_table_info", static_cast<int64_t>(Merged.LineTableInfo)},
-        {"inline_info", static_cast<int64_t>(Merged.InlineInfo)},
-        {"call_site_info", static_cast<int64_t>(Merged.CallSiteInfo)},
-        {"merged_func_info", static_cast<int64_t>(Merged.MergedFuncInfo)},
-        {"end_of_list", static_cast<int64_t>(Merged.EndOfList)}};
+      Format == StatisticsFormat::PrettyJSON)
+    Root.setPrinter(*W);
 
-    json::Object FuncTypes{
-        {"size_and_name", static_cast<int64_t>(FI.SizeAndName)},
-        {"line_table_info", static_cast<int64_t>(FI.LineTableInfo)},
-        {"inline_info", static_cast<int64_t>(FI.InlineInfo)},
-        {"call_site_info", static_cast<int64_t>(FI.CallSiteInfo)},
-        {"merged_func_info", static_cast<int64_t>(FI.MergedFuncInfo)},
-        {"end_of_list", static_cast<int64_t>(FI.EndOfList)},
-        {"padding", static_cast<int64_t>(Padding)},
-        {"merged_func_info_type_sizes", std::move(MergedTypes)}};
+  W->printString("path", GSYMPath);
+  W->printString("uuid", UUIDStr);
+  W->printNumber("num_addresses", NumAddresses);
 
-    json::Object ByteSizes{
-        {"file_size", static_cast<int64_t>(FileSize)},
-        {"header", static_cast<int64_t>(HeaderSize)},
-        {"global_data_directory", static_cast<int64_t>(GlobalDataDirSize)},
-        {"uuid_section", static_cast<int64_t>(UUIDSize)},
-        {"padding", static_cast<int64_t>(PaddingSize)},
-        {"address_table", static_cast<int64_t>(AddrTableSize)},
-        {"addr_info_offsets", static_cast<int64_t>(AddrInfoOffsetsSize)},
-        {"file_table", static_cast<int64_t>(FileTableSize)},
-        {"string_table", static_cast<int64_t>(StrtabSize)},
-        {"function_info_data", static_cast<int64_t>(FuncInfoSize)},
-        {"function_info_type_sizes", std::move(FuncTypes)}};
-
-    json::Object Root{{"path", GSYMPath.str()},
-                      {"uuid", UUIDStr},
-                      {"num_addresses", static_cast<int64_t>(NumAddresses)},
-                      {"byte-sizes", std::move(ByteSizes)}};
-
-    json::Value V(std::move(Root));
-    if (Format == StatisticsFormat::PrettyJSON)
-      OS << formatv("{0:2}", V) << "\n";
-    else
-      OS << V << "\n";
-    return;
-  }
-
-  // Text format output.
-  auto Fmt = [](uint64_t Value) {
-    std::string Num = std::to_string(Value);
-    int InsertPosition = Num.length() - 3;
-    while (InsertPosition > 0) {
-      Num.insert(InsertPosition, ",");
-      InsertPosition -= 3;
+  {
+    DictScope ByteSizes(*W, "byte-sizes");
+    W->printNumber("file_size", FileSize);
+    W->printNumber("header", HeaderSize);
+    W->printNumber("global_data_directory", GlobalDataDirSize);
+    W->printNumber("uuid_section", UUIDSize);
+    W->printNumber("padding", PaddingSize);
+    W->printNumber("address_table", AddrTableSize);
+    W->printNumber("addr_info_offsets", AddrInfoOffsetsSize);
+    W->printNumber("file_table", FileTableSize);
+    W->printNumber("string_table", StrtabSize);
+    W->printNumber("function_info_data", FuncInfoSize);
+    {
+      DictScope FuncTypes(*W, "function_info_type_sizes");
+      W->printNumber("size_and_name", FI.SizeAndName);
+      W->printNumber("line_table_info", FI.LineTableInfo);
+      W->printNumber("inline_info", FI.InlineInfo);
+      W->printNumber("call_site_info", FI.CallSiteInfo);
+      W->printNumber("merged_func_info", FI.MergedFuncInfo);
+      W->printNumber("end_of_list", FI.EndOfList);
+      W->printNumber("padding", Padding);
+      {
+        DictScope MergedTypes(*W, "merged_func_info_type_sizes");
+        W->printNumber("infotype_infolength_count_and_fnsize",
+                       Merged.InfoTypeInfoLengthCountAndFnSize);
+        W->printNumber("size_and_name", Merged.SizeAndName);
+        W->printNumber("line_table_info", Merged.LineTableInfo);
+        W->printNumber("inline_info", Merged.InlineInfo);
+        W->printNumber("call_site_info", Merged.CallSiteInfo);
+        W->printNumber("merged_func_info", Merged.MergedFuncInfo);
+        W->printNumber("end_of_list", Merged.EndOfList);
+      }
     }
-    return std::string(std::max((size_t)0, 14 - Num.length()), ' ') + Num;
-  };
-  auto Pct = [&](uint64_t Value) -> std::string {
-    char Buf[16];
-    snprintf(Buf, sizeof(Buf), "(%5.2f%%)", 100.0 * Value / FileSize);
-    return Buf;
-  };
-
-  OS << "GSYM statistics for \"" << GSYMPath << "\":\n";
-  OS << "  UUID:                " << UUIDStr << "\n";
-  OS << "  Number of addresses: " << Fmt(NumAddresses) << "\n";
-  OS << "  File size:           " << Fmt(FileSize) << " bytes\n";
-  OS << "  Header:              " << Fmt(HeaderSize) << " bytes "
-     << Pct(HeaderSize) << "\n";
-  OS << "  Global data dir:     " << Fmt(GlobalDataDirSize) << " bytes "
-     << Pct(GlobalDataDirSize) << "\n";
-  OS << "  UUID section:        " << Fmt(UUIDSize) << " bytes " << Pct(UUIDSize)
-     << "\n";
-  OS << "  Address table:       " << Fmt(AddrTableSize) << " bytes "
-     << Pct(AddrTableSize) << "\n";
-  OS << "  Addr info offsets:   " << Fmt(AddrInfoOffsetsSize) << " bytes "
-     << Pct(AddrInfoOffsetsSize) << "\n";
-  OS << "  File table:          " << Fmt(FileTableSize) << " bytes "
-     << Pct(FileTableSize) << "\n";
-  OS << "  String table:        " << Fmt(StrtabSize) << " bytes "
-     << Pct(StrtabSize) << "\n";
-  OS << "  Function info data:  " << Fmt(FuncInfoSize) << " bytes "
-     << Pct(FuncInfoSize) << "\n";
-  OS << "    Size and name:     " << Fmt(FI.SizeAndName) << " bytes "
-     << Pct(FI.SizeAndName) << "\n";
-  OS << "    Line table info:   " << Fmt(FI.LineTableInfo) << " bytes "
-     << Pct(FI.LineTableInfo) << "\n";
-  OS << "    Inline info:       " << Fmt(FI.InlineInfo) << " bytes "
-     << Pct(FI.InlineInfo) << "\n";
-  OS << "    Call site info:    " << Fmt(FI.CallSiteInfo) << " bytes "
-     << Pct(FI.CallSiteInfo) << "\n";
-  OS << "    End of list:       " << Fmt(FI.EndOfList) << " bytes "
-     << Pct(FI.EndOfList) << "\n";
-  OS << "    Padding:           " << Fmt(Padding) << " bytes " << Pct(Padding)
-     << "\n";
-  OS << "    Merged func info:  " << Fmt(FI.MergedFuncInfo) << " bytes "
-     << Pct(FI.MergedFuncInfo) << "\n";
-  OS << "      InfoType/InfoLength/Count/FnSize: "
-     << Fmt(Merged.InfoTypeInfoLengthCountAndFnSize) << " bytes "
-     << Pct(Merged.InfoTypeInfoLengthCountAndFnSize) << "\n";
-  OS << "      Size and name:   " << Fmt(Merged.SizeAndName) << " bytes "
-     << Pct(Merged.SizeAndName) << "\n";
-  OS << "      Line table info: " << Fmt(Merged.LineTableInfo) << " bytes "
-     << Pct(Merged.LineTableInfo) << "\n";
-  OS << "      Inline info:     " << Fmt(Merged.InlineInfo) << " bytes "
-     << Pct(Merged.InlineInfo) << "\n";
-  OS << "      Call site info:  " << Fmt(Merged.CallSiteInfo) << " bytes "
-     << Pct(Merged.CallSiteInfo) << "\n";
-  OS << "      Merged func info:" << Fmt(Merged.MergedFuncInfo) << " bytes "
-     << Pct(Merged.MergedFuncInfo) << "\n";
-  OS << "      End of list:     " << Fmt(Merged.EndOfList) << " bytes "
-     << Pct(Merged.EndOfList) << "\n";
-  OS << "  Padding:             " << Fmt(PaddingSize) << " bytes "
-     << Pct(PaddingSize) << "\n";
+  }
 }
 
 void GsymReader::dump(raw_ostream &OS, const FunctionInfo &FI,
