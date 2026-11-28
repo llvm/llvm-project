@@ -640,6 +640,12 @@ def ArrayDeleteChecker : Checker<"ArrayDelete">,
            "destructed as their base class.">,
   Documentation<HasDocumentation>;
 
+def DestroyedAsWrongTypeChecker : Checker<"DestroyedAsWrongType">,
+  HelpText<"Check for objects destroyed or deleted as a type that their "
+           "storage no longer holds after placement new">,
+  Dependencies<[DynamicTypePropagation]>,
+  Documentation<HasDocumentation>;
+
 def InnerPointerChecker : Checker<"InnerPointer">,
   HelpText<"Check for inner pointers of C++ containers used after "
            "re/deallocation">,

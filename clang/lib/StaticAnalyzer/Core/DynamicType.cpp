@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
@@ -152,6 +153,61 @@ ProgramStateRef setClassObjectDynamicTypeInfo(ProgramStateRef State,
                                               bool CanBeSubClassed) {
   return setClassObjectDynamicTypeInfo(State, Sym,
                                        DynamicTypeInfo(NewTy, CanBeSubClassed));
+}
+
+// A field and a byte offset from its parent are different regions, but we want
+// to recognize that they refer to the same location.
+static bool isSameLocation(const MemRegion *A, const MemRegion *B) {
+  if (A == B)
+    return true;
+  RegionOffset OA = A->getAsOffset();
+  RegionOffset OB = B->getAsOffset();
+  return OA.isValid() && !OA.hasSymbolicOffset() && OA == OB;
+}
+
+ProgramStateRef removeDynamicTypeInfoWithin(ProgramStateRef State,
+                                            const MemRegion *MR) {
+  MR = MR->StripCasts();
+  auto IsWithin = [MR](const MemRegion *Key) {
+    return Key->isSubRegionOf(MR) || isSameLocation(Key, MR);
+  };
+  for (const MemRegion *Key :
+       llvm::make_first_range(State->get<DynamicTypeMap>()))
+    if (IsWithin(Key))
+      State = State->remove<DynamicTypeMap>(Key);
+  for (const MemRegion *Key :
+       llvm::make_first_range(State->get<DynamicCastMap>()))
+    if (IsWithin(Key))
+      State = State->remove<DynamicCastMap>(Key);
+  return State;
+}
+
+SmallVector<std::pair<const MemRegion *, DynamicTypeInfo>, 4>
+getDynamicTypeInfoWithin(ProgramStateRef State, const MemRegion *MR) {
+  SmallVector<std::pair<const MemRegion *, DynamicTypeInfo>, 4> Result;
+  for (const auto &[Key, DTI] : State->get<DynamicTypeMap>())
+    if (Key == MR || Key->isSubRegionOf(MR))
+      Result.emplace_back(Key, DTI);
+  return Result;
+}
+
+const MemRegion *getPlacementNewStorage(ProgramStateRef State,
+                                        const CXXNewExpr *NE,
+                                        const StackFrame *SF) {
+  const FunctionDecl *OperatorNew = NE->getOperatorNew();
+  const MemRegion *Result = State->getSVal(NE, SF).getAsRegion();
+  if (!OperatorNew || !Result)
+    return nullptr;
+  // The result may be typed as the new object, so use the storage argument.
+  for (const Expr *Arg : NE->placement_arguments()) {
+    if (!Arg->getType()->isPointerType())
+      continue;
+    const MemRegion *Storage = State->getSVal(Arg, SF).getAsRegion();
+    if (Storage && (OperatorNew->isReservedGlobalPlacementOperator() ||
+                    isSameLocation(Storage, Result)))
+      return Storage->StripCasts();
+  }
+  return nullptr;
 }
 
 static bool isLive(SymbolReaper &SR, const MemRegion *MR) {

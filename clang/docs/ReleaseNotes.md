@@ -1711,6 +1711,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 %   - Moved checkers
 %   - Diagnostic changes
 
+#### New checkers and features
+
+- Added the ``cplusplus.DestroyedAsWrongType`` checker, which reports storage
+  reused by placement new for an object of a different type that is then
+  destroyed or deleted as the original type.
+
 #### Improvements
 
 - The analyzer is faster and uses less memory. On a random sample of 20 LLVM
