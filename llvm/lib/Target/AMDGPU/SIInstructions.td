@@ -284,7 +284,7 @@ def FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32 : VPseudoInstSI <(outs VGPR_32:$vdst
 
 let True16Predicate = UseRealTrue16Insts in
 // The operands of these pseudos should match V_CVT_F16_F32_t16_e64
-def FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 : VPseudoInstSI <(outs VOPDstOperand_t16:$vdst),
+def FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 : VPseudoInstSI <(outs VOPDstOperand_t16<f16>:$vdst),
   (ins FP32InputMods:$src0_modifiers, VSrc_f32:$src0, Clamp0:$clamp, omod0:$omod, op_sel0:$op_sel, i32imm:$round)> {
    let FPClamp = 1;
    let ClampLo = 1;

@@ -666,7 +666,9 @@ bool AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
     // defined to take VGPR_32, but in reality allowing inline constants.
     bool IsSrc = AMDGPU::OPERAND_SRC_FIRST <= OpDesc.OperandType &&
                  OpDesc.OperandType <= AMDGPU::OPERAND_SRC_LAST;
-    if (!IsSrc && OpDesc.OperandType != MCOI::OPERAND_REGISTER)
+    if (!IsSrc && OpDesc.OperandType != MCOI::OPERAND_REGISTER &&
+        (OpDesc.OperandType < AMDGPU::OPERAND_REG_FIRST ||
+         OpDesc.OperandType > AMDGPU::OPERAND_REG_LAST))
       continue;
 
     MCOperand &Op = MI.getOperand(OpNo);
@@ -1820,8 +1822,6 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
   int64_t Val = Literal;
   bool UseLit = false;
   switch (OpDesc.OperandType) {
-  default:
-    llvm_unreachable("Unexpected operand type!");
   case AMDGPU::OPERAND_REG_IMM_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
@@ -1882,6 +1882,11 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
     // it special handling in the caller, decodeImmOperands(), instead
     // of quietly allowing it here.
     break;
+  default:
+    if (OpDesc.OperandType >= AMDGPU::OPERAND_REG_FIRST &&
+        OpDesc.OperandType <= AMDGPU::OPERAND_REG_LAST)
+      break;
+    llvm_unreachable("Unexpected operand type!");
   }
 
   return UseLit ? MCOperand::createExpr(AMDGPUMCExpr::createLit(

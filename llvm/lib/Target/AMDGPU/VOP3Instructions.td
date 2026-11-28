@@ -2054,7 +2054,7 @@ let SubtargetPredicate = HasDot9Insts, IsDOT=1 in {
 class VOP_Pseudo_Scalar<RegisterClass Dst, RegisterOperand SrcOp,
                         ValueType dstVt, ValueType srcVt = dstVt>
     : VOPProfile<[dstVt, srcVt, untyped, untyped]> {
-  let DstRC = VOPDstOperand<Dst>;
+  let DstRC = VOPDstOperand<Dst, dstVt>;
   let Src0RC64 = SrcOp;
 
   let HasOMod = 1;

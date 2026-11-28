@@ -434,8 +434,8 @@ def VOP_PERMLANE_SWAP : VOPProfile<[i32, i32, untyped, untyped]> {
 // def and use of the super register since there seems to be no way to
 // add an implicit def of a virtual register in tablegen.
 class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, untyped]> {
-  let Src0RC32 = VOPDstOperand<VGPR_32>;
-  let Src0RC64 = VOPDstOperand<VGPR_32>;
+  let Src0RC32 = VOPDstOperand<VGPR_32, i32>;
+  let Src0RC64 = VOPDstOperand<VGPR_32, i32>;
 
   let Outs = (outs);
   let Ins32 = (ins Src0RC32:$vdst, Src1RC:$src0);
@@ -917,10 +917,10 @@ def V_ACCVGPR_MOV_B32 : VOP1_Pseudo<"v_accvgpr_mov_b32", VOPProfileAccMov, [], 1
 }
 
 def VOP_SWAP_I16 : VOPProfile_True16<VOP_I16_I16> {
-  let Outs32 = (outs VOPDstOperand_t16Lo128:$vdst,
-                     VOPSrcEncodedDstOperand_t16Lo128:$vdst1);
-  let Ins32 = (ins VOPSrcEncodedDstOperand_t16Lo128:$src0,
-                   VOPDstOperand_t16Lo128:$src1);
+  let Outs32 = (outs VOPDstOperand_t16Lo128<i16>:$vdst,
+                     VOPSrcEncodedDstOperand_t16Lo128<i16>:$vdst1);
+  let Ins32 = (ins VOPSrcEncodedDstOperand_t16Lo128<i16>:$src0,
+                   VOPDstOperand_t16Lo128<i16>:$src1);
   let Asm32 = "$vdst, $src0";
 }
 
