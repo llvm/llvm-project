@@ -683,3 +683,121 @@ func.func @cse_pointer_write_does_not_block_non_addressable_read() -> i32 {
   %2 = arith.addi %0, %1 : i32
   return %2 : i32
 }
+
+// -----
+
+// Queries with different starting reads share progress, including when the
+// first query starts later than a subsequent query. Writes split the interval.
+// CHECK-LABEL: @overlapping_read_intervals_with_write
+func.func @overlapping_read_intervals_with_write(%arg0: memref<2xi32>) -> (i32, i32, i32, i32, i32, i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: %[[A:.*]] = memref.load {{.*}}[%c0]
+  %a = memref.load %arg0[%c0] : memref<2xi32>
+  // CHECK: %[[B:.*]] = memref.load {{.*}}[%c1]
+  %b = memref.load %arg0[%c1] : memref<2xi32>
+  %b1 = memref.load %arg0[%c1] : memref<2xi32>
+  // CHECK-NEXT: memref.store
+  memref.store %b1, %arg0[%c0] : memref<2xi32>
+  // CHECK-NEXT: %[[A2:.*]] = memref.load
+  %a2 = memref.load %arg0[%c0] : memref<2xi32>
+  // CHECK-NEXT: %[[B2:.*]] = memref.load
+  %b2 = memref.load %arg0[%c1] : memref<2xi32>
+  %a3 = memref.load %arg0[%c0] : memref<2xi32>
+  %b3 = memref.load %arg0[%c1] : memref<2xi32>
+  // CHECK-NEXT: return %[[A]], %[[B]], %[[A2]], %[[B2]], %[[A2]], %[[B2]]
+  return %a, %b, %a2, %b2, %a3, %b3 : i32, i32, i32, i32, i32, i32
+}
+
+// -----
+
+// A recursive write and an unknown effect must still block overlapping queries.
+// Visiting the nested block must not replace the enclosing block's scan state.
+// CHECK-LABEL: @overlapping_read_intervals_nested_effects
+func.func @overlapping_read_intervals_nested_effects(%arg0: memref<2xi32>, %cond: i1) -> (i32, i32, i32, i32, i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: %[[A:.*]] = memref.load
+  %a = memref.load %arg0[%c0] : memref<2xi32>
+  // CHECK-NEXT: %[[B:.*]] = memref.load
+  %b = memref.load %arg0[%c1] : memref<2xi32>
+  %a1 = memref.load %arg0[%c0] : memref<2xi32>
+  // CHECK-NEXT: scf.if
+  scf.if %cond {
+    memref.store %a1, %arg0[%c0] : memref<2xi32>
+  }
+  // CHECK: %[[A2:.*]] = memref.load
+  %a2 = memref.load %arg0[%c0] : memref<2xi32>
+  // CHECK-NEXT: %[[B2:.*]] = memref.load
+  %b2 = memref.load %arg0[%c1] : memref<2xi32>
+  // CHECK-NEXT: "test.unknown_effects"
+  "test.unknown_effects"() : () -> ()
+  // CHECK-NEXT: %[[A3:.*]] = memref.load
+  %a3 = memref.load %arg0[%c0] : memref<2xi32>
+  // CHECK-NEXT: return %[[A]], %[[B]], %[[A2]], %[[B2]], %[[A3]]
+  return %a, %b, %a2, %b2, %a3 : i32, i32, i32, i32, i32
+}
+
+// -----
+
+// An earlier starting read must observe writes before a cached range.
+// CHECK-LABEL: @earlier_write_in_extended_interval
+func.func @earlier_write_in_extended_interval(%arg0: memref<2xi32>) -> (i32, i32, i32, i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: %[[A:.*]] = memref.load
+  %a = memref.load %arg0[%c0] : memref<2xi32>
+  // CHECK-NEXT: memref.store
+  memref.store %a, %arg0[%c0] : memref<2xi32>
+  // CHECK-NEXT: %[[B:.*]] = memref.load
+  %b = memref.load %arg0[%c1] : memref<2xi32>
+  // Keep an intervening operation alive so the query for %b1 scans the interval.
+  // CHECK-NEXT: %[[SUM:.*]] = arith.addi %[[B]], %[[B]]
+  %sum = arith.addi %b, %b : i32
+  %b1 = memref.load %arg0[%c1] : memref<2xi32>
+  // CHECK-NEXT: %[[A1:.*]] = memref.load
+  %a1 = memref.load %arg0[%c0] : memref<2xi32>
+  // CHECK-NEXT: return %[[A]], %[[B]], %[[A1]], %[[SUM]]
+  return %a, %b1, %a1, %sum : i32, i32, i32, i32
+}
+
+// -----
+
+// A write disjoint from the first read must still block the second read.
+// The write index must not include resource-specific conclusions.
+// CHECK-LABEL: @overlapping_reads_disjoint_write
+func.func @overlapping_reads_disjoint_write() -> (i32, i32, i32, i32, i32) {
+  // CHECK: %[[A:.*]] = "test.side_effect_op"()
+  %a = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_a}]} : () -> i32
+  // CHECK-NEXT: %[[B:.*]] = "test.side_effect_op"()
+  %b = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_b}]} : () -> i32
+  // CHECK-NEXT: %[[SUM:.*]] = arith.addi
+  %sum = arith.addi %a, %b : i32
+  "test.side_effect_op"() {effects = [{effect="write", test_nonaddressable_resource_b}]} : () -> i32
+  %a1 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_a}]} : () -> i32
+  // CHECK: %[[B1:.*]] = "test.side_effect_op"() {{.*}}effect = "read"
+  %b1 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_b}]} : () -> i32
+  // CHECK-NEXT: return %[[A]], %[[B]], %[[SUM]], %[[A]], %[[B1]]
+  return %a, %b, %sum, %a1, %b1 : i32, i32, i32, i32, i32
+}
+
+// -----
+
+// A disjoint write must allow both queries to share the following interval.
+// CHECK-LABEL: @overlapping_reads_across_disjoint_write
+func.func @overlapping_reads_across_disjoint_write() -> (i32, i32, i32, i32, i32) {
+  // CHECK: %[[A:.*]] = "test.side_effect_op"() {{.*}}effect = "read"
+  %a = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_a}]} : () -> i32
+  "test.side_effect_op"() {effects = [{effect="write", test_nonaddressable_resource_b}]} : () -> i32
+  // CHECK: %[[B:.*]] = "test.side_effect_op"() {{.*}}effect = "read"
+  %b = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_b}]} : () -> i32
+  // CHECK: %[[SUM:.*]] = arith.addi %[[B]], %[[B]]
+  %sum = arith.addi %b, %b : i32
+  %b1 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_b}]} : () -> i32
+  %a1 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_a}]} : () -> i32
+  "test.side_effect_op"() {effects = [{effect="write", test_nonaddressable_resource_a}]} : () -> i32
+  // CHECK: %[[A2:.*]] = "test.side_effect_op"() {{.*}}effect = "read"
+  %a2 = "test.side_effect_op"() {effects = [{effect="read", test_nonaddressable_resource_a}]} : () -> i32
+  // CHECK: return %[[A]], %[[B]], %[[A]], %[[A2]], %[[SUM]]
+  return %a, %b1, %a1, %a2, %sum : i32, i32, i32, i32, i32
+}

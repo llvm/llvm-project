@@ -19,10 +19,13 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <deque>
 
 using namespace mlir;
+
+#define DEBUG_TYPE "cse"
 
 namespace {
 struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
@@ -69,13 +72,18 @@ private:
   using ScopedMapTy = llvm::ScopedHashTable<Operation *, Operation *,
                                             SimpleOperationInfo, AllocatorTy>;
 
-  /// Cache holding MemoryEffects information between two operations. The first
-  /// operation is stored has the key. The second operation is stored inside a
-  /// pair in the value. The pair also hold the MemoryEffects between those
-  /// two operations. If the MemoryEffects is nullptr then we assume there is
-  /// no operation with MemoryEffects::Write between the two operations.
-  using MemEffectsCache =
-      DenseMap<Operation *, std::pair<Operation *, MemoryEffects::Effect *>>;
+  /// Index writes and unknown effects in block order, retaining each read's
+  /// progress through the index for resource-specific queries.
+  struct MemEffectsCache {
+    SmallVector<Operation *> writes;
+    struct ReadState {
+      Operation *lastScanned = nullptr;
+      unsigned nextWrite = 0;
+      bool blocked = false;
+    };
+    DenseMap<Operation *, ReadState> reads;
+    Operation *lastScanned = nullptr;
+  };
 
   /// Represents a single entry in the depth first traversal of a CFG.
   struct CFGStackNode {
@@ -95,7 +103,8 @@ private:
   /// Attempt to eliminate a redundant operation. Returns success if the
   /// operation was marked for removal, failure otherwise.
   LogicalResult simplifyOperation(ScopedMapTy &knownValues, Operation *op,
-                                  bool hasSSADominance);
+                                  bool hasSSADominance,
+                                  MemEffectsCache &memEffectsCache);
   void simplifyBlock(ScopedMapTy &knownValues, Block *bb, bool hasSSADominance);
   void simplifyRegion(ScopedMapTy &knownValues, Region &region);
 
@@ -108,13 +117,13 @@ private:
 
   /// Check if there is side-effecting operations other than the given effect
   /// between the two operations.
-  bool hasOtherSideEffectingOpInBetween(Operation *fromOp, Operation *toOp);
+  bool hasOtherSideEffectingOpInBetween(Operation *fromOp, Operation *toOp,
+                                        MemEffectsCache &memEffectsCache);
 
   /// A rewriter for modifying the IR.
   RewriterBase &rewriter;
 
   DominanceInfo *domInfo = nullptr;
-  MemEffectsCache memEffectsCache;
 
   // Various statistics.
   int64_t numCSE = 0;
@@ -166,89 +175,89 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
 }
 
 bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
-                                                 Operation *toOp) {
+                                                 Operation *toOp,
+                                                 MemEffectsCache &cache) {
   assert(fromOp->getBlock() == toOp->getBlock());
   assert(hasEffect<MemoryEffects::Read>(fromOp) &&
          "expected read effect on fromOp");
   assert(hasEffect<MemoryEffects::Read>(toOp) &&
          "expected read effect on toOp");
+  if (fromOp->getNextNode() == toOp)
+    return false;
 
-  // Collect the read effects of fromOp. A write can only block CSE if it
-  // can conflict with one of these reads.
   SmallVector<MemoryEffects::EffectInstance> readEffects;
-  if (auto memOp = dyn_cast<MemoryEffectOpInterface>(fromOp)) {
-    SmallVector<MemoryEffects::EffectInstance> fromEffects;
-    memOp.getEffects(fromEffects);
-    for (MemoryEffects::EffectInstance &e : fromEffects)
-      if (isa<MemoryEffects::Read>(e.getEffect()))
-        readEffects.push_back(e);
-  }
-
-  Operation *nextOp = fromOp->getNextNode();
-  auto result =
-      memEffectsCache.try_emplace(fromOp, std::make_pair(fromOp, nullptr));
-  if (!result.second) {
-    auto memEffectsCachePair = result.first->second;
-    if (memEffectsCachePair.second == nullptr) {
-      // No MemoryEffects::Write has been detected until the cached operation.
-      // Continue looking from the cached operation to toOp.
-      nextOp = memEffectsCachePair.first;
-    } else {
-      // MemoryEffects::Write has been detected before so there is no need to
-      // check further.
+  cast<MemoryEffectOpInterface>(fromOp).getEffects(readEffects);
+  auto getEffects = [](Operation *op) {
+    LDBG() << "CSE checking effects: " << op->getName();
+    return getEffectsRecursively(op);
+  };
+  auto canConflict = [&](const auto &effects) {
+    if (!effects)
       return true;
-    }
-  }
-  while (nextOp && nextOp != toOp) {
-    std::optional<SmallVector<MemoryEffects::EffectInstance>> effects =
-        getEffectsRecursively(nextOp);
-    if (!effects) {
-      // TODO: Do we need to handle other effects generically?
-      // If the operation does not implement the MemoryEffectOpInterface we
-      // conservatively assume it writes.
-      result.first->second =
-          std::make_pair(nextOp, MemoryEffects::Write::get());
-      return true;
-    }
+    return llvm::any_of(*effects, [&](const auto &effect) {
+      if (!isa<MemoryEffects::Write>(effect.getEffect()))
+        return false;
+      SideEffects::Resource *writeResource = effect.getResource();
+      return llvm::any_of(readEffects, [&](const auto &readEffect) {
+        SideEffects::Resource *readResource = readEffect.getResource();
+        if (writeResource->isDisjointFrom(readResource))
+          return false;
+        if (readEffect.getValue() && !writeResource->isAddressable())
+          return false;
+        if (effect.getValue() && !readResource->isAddressable())
+          return false;
+        return true;
+      });
+    });
+  };
 
-    for (const MemoryEffects::EffectInstance &effect : *effects) {
-      if (isa<MemoryEffects::Write>(effect.getEffect())) {
-        // A write on a resource disjoint from all read resources cannot
-        // conflict with the reads being CSE'd.
-        SideEffects::Resource *writeResource = effect.getResource();
-        bool canConflict =
-            llvm::any_of(readEffects, [&](const auto &readEffect) {
-              SideEffects::Resource *readResource = readEffect.getResource();
-              if (writeResource->isDisjointFrom(readResource))
-                return false;
-              // A pointer-based access to an addressable resource cannot
-              // conflict with a non-addressable resource.
-              if (readEffect.getValue() && !writeResource->isAddressable())
-                return false;
-              if (effect.getValue() && !readResource->isAddressable())
-                return false;
-              return true;
-            });
-        if (canConflict) {
-          result.first->second = {nextOp, MemoryEffects::Write::get()};
-          return true;
-        }
+  auto &read = cache.reads[fromOp];
+  if (rewriter.getListener()) {
+    if (read.blocked)
+      return true;
+    Operation *nextOp =
+        read.lastScanned ? read.lastScanned : fromOp->getNextNode();
+    for (Operation *op = nextOp; op != toOp; op = op->getNextNode()) {
+      if (canConflict(getEffects(op))) {
+        read.blocked = true;
+        return true;
       }
     }
-    nextOp = nextOp->getNextNode();
+    read.lastScanned = toOp->getPrevNode();
+    return false;
   }
-  // Record the previous op of `toOp` as the insertion point, since `toOp`
-  // will be erased immediately after this. Using `toOp` itself would leave
-  // a dangling pointer, so its predecessor is sufficient to reconstruct
-  // the position.
-  result.first->second = std::make_pair(toOp->getPrevNode(), nullptr);
+
+  auto isBefore = [](Operation *a, Operation *b) {
+    return a->isBeforeInBlock(b);
+  };
+  auto first = llvm::upper_bound(cache.writes, fromOp, isBefore);
+  unsigned &nextWrite = read.nextWrite;
+  nextWrite = std::max(nextWrite, unsigned(first - cache.writes.begin()));
+  for (; nextWrite < cache.writes.size(); ++nextWrite)
+    if (canConflict(getEffects(cache.writes[nextWrite])))
+      return true;
+
+  // Index only already simplified operations: the query endpoint may be erased.
+  for (Operation *op = cache.lastScanned->getNextNode(); op != toOp;
+       op = op->getNextNode()) {
+    cache.lastScanned = op;
+    auto effects = getEffects(op);
+    if (effects && llvm::none_of(*effects, [](const auto &effect) {
+          return isa<MemoryEffects::Write>(effect.getEffect());
+        }))
+      continue;
+    cache.writes.push_back(op);
+    if (fromOp->isBeforeInBlock(op) && canConflict(effects))
+      return true;
+    nextWrite = cache.writes.size();
+  }
   return false;
 }
 
 /// Attempt to eliminate a redundant operation.
 LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
-                                           Operation *op,
-                                           bool hasSSADominance) {
+                                           Operation *op, bool hasSSADominance,
+                                           MemEffectsCache &memEffectsCache) {
   // Don't simplify terminator operations.
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
@@ -268,10 +277,13 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
     if (!hasSingleEffect<MemoryEffects::Read>(op))
       return failure();
 
+    if (!memEffectsCache.lastScanned)
+      memEffectsCache.lastScanned = op;
+
     // Look for an existing definition for the operation.
     if (auto *existing = knownValues.lookup(op)) {
       if (existing->getBlock() == op->getBlock() &&
-          !hasOtherSideEffectingOpInBetween(existing, op)) {
+          !hasOtherSideEffectingOpInBetween(existing, op, memEffectsCache)) {
         // The operation that can be deleted has been reach with no
         // side-effecting operations in between the existing operation and
         // this one so we can remove the duplicate.
@@ -296,6 +308,7 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
 
 void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
                               bool hasSSADominance) {
+  MemEffectsCache memEffectsCache;
   for (auto &op : llvm::make_early_inc_range(*bb)) {
     // If the operation is already trivially dead just add it to the erase list.
     // This also avoids calling `simplifyRegion` on dead region ops
@@ -323,11 +336,10 @@ void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
     }
 
     // If the operation is simplified, we don't process any held regions.
-    if (succeeded(simplifyOperation(knownValues, &op, hasSSADominance)))
+    if (succeeded(simplifyOperation(knownValues, &op, hasSSADominance,
+                                    memEffectsCache)))
       continue;
   }
-  // Clear the MemoryEffects cache since its usage is by block only.
-  memEffectsCache.clear();
 }
 
 void CSEDriver::simplifyRegion(ScopedMapTy &knownValues, Region &region) {
