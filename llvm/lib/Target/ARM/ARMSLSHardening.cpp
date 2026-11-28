@@ -57,7 +57,7 @@ private:
   bool hardenIndirectCalls(MachineBasicBlock &MBB) const;
   MachineBasicBlock &
   ConvertIndirectCallToIndirectJump(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator) const;
+                                    MachineBasicBlock::instr_iterator) const;
 };
 
 } // end anonymous namespace
@@ -244,7 +244,7 @@ void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
 }
 
 MachineBasicBlock &ARMSLSHardening::ConvertIndirectCallToIndirectJump(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
+    MachineBasicBlock &MBB, MachineBasicBlock::instr_iterator MBBI) const {
   // Transform an indirect call to an indirect jump as follows:
   // Before:
   //   |-----------------------------|
@@ -362,15 +362,19 @@ bool ARMSLSHardening::hardenIndirectCalls(MachineBasicBlock &MBB) const {
   if (!ST->hardenSlsBlr())
     return false;
   bool Modified = false;
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  MachineBasicBlock::iterator NextMBBI;
+  MachineBasicBlock::instr_iterator MBBI = MBB.instr_begin(),
+                                    E = MBB.instr_end();
+  MachineBasicBlock::instr_iterator NextMBBI;
   for (; MBBI != E; MBBI = NextMBBI) {
     MachineInstr &MI = *MBBI;
     NextMBBI = std::next(MBBI);
     // Tail calls are both indirect calls and "returns".
     // They are also indirect jumps, so should be handled by sls-harden-retbr,
     // rather than sls-harden-blr.
-    if (isIndirectCall(MI) && !MI.isReturn()) {
+    // CMSE non-secure calls (tBLXNSr) transition to Non-Secure state and
+    // cannot be lowered to a regular BX thunk.
+    if (isIndirectCall(MI) && !MI.isReturn() &&
+        MI.getOpcode() != ARM::tBLXNSr) {
       ConvertIndirectCallToIndirectJump(MBB, MBBI);
       Modified = true;
     }

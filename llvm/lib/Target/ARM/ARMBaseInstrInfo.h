@@ -657,7 +657,8 @@ static inline bool isJumpTableBranchOpcode(int Opc) {
 
 static inline
 bool isIndirectBranchOpcode(int Opc) {
-  return Opc == ARM::BX || Opc == ARM::MOVPCRX || Opc == ARM::tBRIND;
+  return Opc == ARM::BX || Opc == ARM::MOVPCRX || Opc == ARM::tBRIND ||
+         Opc == ARM::tBXNS;
 }
 
 static inline bool isIndirectCall(const MachineInstr &MI) {
