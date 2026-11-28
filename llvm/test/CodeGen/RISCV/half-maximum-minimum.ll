@@ -21,58 +21,50 @@
 define half @fminimum_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: fminimum_f16:
 ; CHECKIZFH:       # %bb.0:
-; CHECKIZFH-NEXT:    feq.h a0, fa0, fa0
-; CHECKIZFH-NEXT:    fmv.h fa5, fa1
-; CHECKIZFH-NEXT:    beqz a0, .LBB0_3
+; CHECKIZFH-NEXT:    feq.h a0, fa1, fa1
+; CHECKIZFH-NEXT:    feq.h a1, fa0, fa0
+; CHECKIZFH-NEXT:    and a0, a1, a0
+; CHECKIZFH-NEXT:    beqz a0, .LBB0_2
 ; CHECKIZFH-NEXT:  # %bb.1:
-; CHECKIZFH-NEXT:    feq.h a0, fa1, fa1
-; CHECKIZFH-NEXT:    beqz a0, .LBB0_4
-; CHECKIZFH-NEXT:  .LBB0_2:
-; CHECKIZFH-NEXT:    fmin.h fa0, fa0, fa5
+; CHECKIZFH-NEXT:    fmin.h fa0, fa0, fa1
 ; CHECKIZFH-NEXT:    ret
-; CHECKIZFH-NEXT:  .LBB0_3:
-; CHECKIZFH-NEXT:    fmv.h fa5, fa0
-; CHECKIZFH-NEXT:    feq.h a0, fa1, fa1
-; CHECKIZFH-NEXT:    bnez a0, .LBB0_2
-; CHECKIZFH-NEXT:  .LBB0_4:
-; CHECKIZFH-NEXT:    fmin.h fa0, fa1, fa5
+; CHECKIZFH-NEXT:  .LBB0_2:
+; CHECKIZFH-NEXT:    lui a0, 8
+; CHECKIZFH-NEXT:    addi a0, a0, -512
+; CHECKIZFH-NEXT:    fmv.h.x fa0, a0
 ; CHECKIZFH-NEXT:    ret
 ;
 ; CHECKIZHINX-LABEL: fminimum_f16:
 ; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    feq.h a2, a1, a1
 ; CHECKIZHINX-NEXT:    feq.h a3, a0, a0
-; CHECKIZHINX-NEXT:    mv a2, a1
-; CHECKIZHINX-NEXT:    beqz a3, .LBB0_3
+; CHECKIZHINX-NEXT:    and a2, a3, a2
+; CHECKIZHINX-NEXT:    beqz a2, .LBB0_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    feq.h a3, a1, a1
-; CHECKIZHINX-NEXT:    beqz a3, .LBB0_4
-; CHECKIZHINX-NEXT:  .LBB0_2:
-; CHECKIZHINX-NEXT:    fmin.h a0, a0, a2
+; CHECKIZHINX-NEXT:    fmin.h a0, a0, a1
+; CHECKIZHINX-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECKIZHINX-NEXT:    ret
-; CHECKIZHINX-NEXT:  .LBB0_3:
-; CHECKIZHINX-NEXT:    mv a2, a0
-; CHECKIZHINX-NEXT:    feq.h a3, a1, a1
-; CHECKIZHINX-NEXT:    bnez a3, .LBB0_2
-; CHECKIZHINX-NEXT:  .LBB0_4:
-; CHECKIZHINX-NEXT:    fmin.h a0, a1, a2
+; CHECKIZHINX-NEXT:  .LBB0_2:
+; CHECKIZHINX-NEXT:    lui a0, 8
+; CHECKIZHINX-NEXT:    addi a0, a0, -512
+; CHECKIZHINX-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKZFHMIN-LABEL: fminimum_f16:
 ; CHECKZFHMIN:       # %bb.0:
-; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa0
 ; CHECKZFHMIN-NEXT:    feq.s a0, fa5, fa5
-; CHECKZFHMIN-NEXT:    fcvt.s.h fa3, fa1
-; CHECKZFHMIN-NEXT:    fmv.s fa4, fa3
-; CHECKZFHMIN-NEXT:    bnez a0, .LBB0_2
+; CHECKZFHMIN-NEXT:    feq.s a1, fa4, fa4
+; CHECKZFHMIN-NEXT:    and a0, a1, a0
+; CHECKZFHMIN-NEXT:    beqz a0, .LBB0_2
 ; CHECKZFHMIN-NEXT:  # %bb.1:
-; CHECKZFHMIN-NEXT:    fmv.s fa4, fa5
+; CHECKZFHMIN-NEXT:    fmin.s fa5, fa4, fa5
+; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKZFHMIN-NEXT:    ret
 ; CHECKZFHMIN-NEXT:  .LBB0_2:
-; CHECKZFHMIN-NEXT:    feq.s a0, fa3, fa3
-; CHECKZFHMIN-NEXT:    bnez a0, .LBB0_4
-; CHECKZFHMIN-NEXT:  # %bb.3:
-; CHECKZFHMIN-NEXT:    fmv.s fa5, fa3
-; CHECKZFHMIN-NEXT:  .LBB0_4:
-; CHECKZFHMIN-NEXT:    fmin.s fa5, fa5, fa4
+; CHECKZFHMIN-NEXT:    lui a0, 523264
+; CHECKZFHMIN-NEXT:    fmv.w.x fa5, a0
 ; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKZFHMIN-NEXT:    ret
   %1 = call half @llvm.minimum.f16(half %a, half %b)
@@ -82,58 +74,50 @@ define half @fminimum_f16(half %a, half %b) nounwind {
 define half @fmaximum_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: fmaximum_f16:
 ; CHECKIZFH:       # %bb.0:
-; CHECKIZFH-NEXT:    feq.h a0, fa0, fa0
-; CHECKIZFH-NEXT:    fmv.h fa5, fa1
-; CHECKIZFH-NEXT:    beqz a0, .LBB1_3
+; CHECKIZFH-NEXT:    feq.h a0, fa1, fa1
+; CHECKIZFH-NEXT:    feq.h a1, fa0, fa0
+; CHECKIZFH-NEXT:    and a0, a1, a0
+; CHECKIZFH-NEXT:    beqz a0, .LBB1_2
 ; CHECKIZFH-NEXT:  # %bb.1:
-; CHECKIZFH-NEXT:    feq.h a0, fa1, fa1
-; CHECKIZFH-NEXT:    beqz a0, .LBB1_4
-; CHECKIZFH-NEXT:  .LBB1_2:
-; CHECKIZFH-NEXT:    fmax.h fa0, fa0, fa5
+; CHECKIZFH-NEXT:    fmax.h fa0, fa0, fa1
 ; CHECKIZFH-NEXT:    ret
-; CHECKIZFH-NEXT:  .LBB1_3:
-; CHECKIZFH-NEXT:    fmv.h fa5, fa0
-; CHECKIZFH-NEXT:    feq.h a0, fa1, fa1
-; CHECKIZFH-NEXT:    bnez a0, .LBB1_2
-; CHECKIZFH-NEXT:  .LBB1_4:
-; CHECKIZFH-NEXT:    fmax.h fa0, fa1, fa5
+; CHECKIZFH-NEXT:  .LBB1_2:
+; CHECKIZFH-NEXT:    lui a0, 8
+; CHECKIZFH-NEXT:    addi a0, a0, -512
+; CHECKIZFH-NEXT:    fmv.h.x fa0, a0
 ; CHECKIZFH-NEXT:    ret
 ;
 ; CHECKIZHINX-LABEL: fmaximum_f16:
 ; CHECKIZHINX:       # %bb.0:
+; CHECKIZHINX-NEXT:    feq.h a2, a1, a1
 ; CHECKIZHINX-NEXT:    feq.h a3, a0, a0
-; CHECKIZHINX-NEXT:    mv a2, a1
-; CHECKIZHINX-NEXT:    beqz a3, .LBB1_3
+; CHECKIZHINX-NEXT:    and a2, a3, a2
+; CHECKIZHINX-NEXT:    beqz a2, .LBB1_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    feq.h a3, a1, a1
-; CHECKIZHINX-NEXT:    beqz a3, .LBB1_4
-; CHECKIZHINX-NEXT:  .LBB1_2:
-; CHECKIZHINX-NEXT:    fmax.h a0, a0, a2
+; CHECKIZHINX-NEXT:    fmax.h a0, a0, a1
+; CHECKIZHINX-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECKIZHINX-NEXT:    ret
-; CHECKIZHINX-NEXT:  .LBB1_3:
-; CHECKIZHINX-NEXT:    mv a2, a0
-; CHECKIZHINX-NEXT:    feq.h a3, a1, a1
-; CHECKIZHINX-NEXT:    bnez a3, .LBB1_2
-; CHECKIZHINX-NEXT:  .LBB1_4:
-; CHECKIZHINX-NEXT:    fmax.h a0, a1, a2
+; CHECKIZHINX-NEXT:  .LBB1_2:
+; CHECKIZHINX-NEXT:    lui a0, 8
+; CHECKIZHINX-NEXT:    addi a0, a0, -512
+; CHECKIZHINX-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKZFHMIN-LABEL: fmaximum_f16:
 ; CHECKZFHMIN:       # %bb.0:
-; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa0
 ; CHECKZFHMIN-NEXT:    feq.s a0, fa5, fa5
-; CHECKZFHMIN-NEXT:    fcvt.s.h fa3, fa1
-; CHECKZFHMIN-NEXT:    fmv.s fa4, fa3
-; CHECKZFHMIN-NEXT:    bnez a0, .LBB1_2
+; CHECKZFHMIN-NEXT:    feq.s a1, fa4, fa4
+; CHECKZFHMIN-NEXT:    and a0, a1, a0
+; CHECKZFHMIN-NEXT:    beqz a0, .LBB1_2
 ; CHECKZFHMIN-NEXT:  # %bb.1:
-; CHECKZFHMIN-NEXT:    fmv.s fa4, fa5
+; CHECKZFHMIN-NEXT:    fmax.s fa5, fa4, fa5
+; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKZFHMIN-NEXT:    ret
 ; CHECKZFHMIN-NEXT:  .LBB1_2:
-; CHECKZFHMIN-NEXT:    feq.s a0, fa3, fa3
-; CHECKZFHMIN-NEXT:    bnez a0, .LBB1_4
-; CHECKZFHMIN-NEXT:  # %bb.3:
-; CHECKZFHMIN-NEXT:    fmv.s fa5, fa3
-; CHECKZFHMIN-NEXT:  .LBB1_4:
-; CHECKZFHMIN-NEXT:    fmax.s fa5, fa5, fa4
+; CHECKZFHMIN-NEXT:    lui a0, 523264
+; CHECKZFHMIN-NEXT:    fmv.w.x fa5, a0
 ; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKZFHMIN-NEXT:    ret
   %1 = call half @llvm.maximum.f16(half %a, half %b)
@@ -209,42 +193,54 @@ define half @fminimum_nnan_attr_f16(half %a, half %b) nounwind {
 define half @fminimum_nnan_op_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-LABEL: fminimum_nnan_op_f16:
 ; CHECKIZFH:       # %bb.0:
+; CHECKIZFH-NEXT:    fadd.h fa5, fa0, fa0
 ; CHECKIZFH-NEXT:    feq.h a0, fa0, fa0
-; CHECKIZFH-NEXT:    bnez a0, .LBB5_2
+; CHECKIZFH-NEXT:    feq.h a1, fa5, fa5
+; CHECKIZFH-NEXT:    and a0, a0, a1
+; CHECKIZFH-NEXT:    beqz a0, .LBB5_2
 ; CHECKIZFH-NEXT:  # %bb.1:
-; CHECKIZFH-NEXT:    fmin.h fa0, fa0, fa0
+; CHECKIZFH-NEXT:    fmin.h fa0, fa0, fa5
 ; CHECKIZFH-NEXT:    ret
 ; CHECKIZFH-NEXT:  .LBB5_2:
-; CHECKIZFH-NEXT:    fadd.h fa5, fa0, fa0
-; CHECKIZFH-NEXT:    fmin.h fa0, fa0, fa5
+; CHECKIZFH-NEXT:    lui a0, 8
+; CHECKIZFH-NEXT:    addi a0, a0, -512
+; CHECKIZFH-NEXT:    fmv.h.x fa0, a0
 ; CHECKIZFH-NEXT:    ret
 ;
 ; CHECKIZHINX-LABEL: fminimum_nnan_op_f16:
 ; CHECKIZHINX:       # %bb.0:
-; CHECKIZHINX-NEXT:    feq.h a1, a0, a0
-; CHECKIZHINX-NEXT:    bnez a1, .LBB5_2
+; CHECKIZHINX-NEXT:    fadd.h a1, a0, a0
+; CHECKIZHINX-NEXT:    feq.h a2, a0, a0
+; CHECKIZHINX-NEXT:    feq.h a3, a1, a1
+; CHECKIZHINX-NEXT:    and a2, a2, a3
+; CHECKIZHINX-NEXT:    beqz a2, .LBB5_2
 ; CHECKIZHINX-NEXT:  # %bb.1:
-; CHECKIZHINX-NEXT:    fmin.h a0, a0, a0
+; CHECKIZHINX-NEXT:    fmin.h a0, a0, a1
+; CHECKIZHINX-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECKIZHINX-NEXT:    ret
 ; CHECKIZHINX-NEXT:  .LBB5_2:
-; CHECKIZHINX-NEXT:    fadd.h a1, a0, a0
-; CHECKIZHINX-NEXT:    fmin.h a0, a0, a1
+; CHECKIZHINX-NEXT:    lui a0, 8
+; CHECKIZHINX-NEXT:    addi a0, a0, -512
+; CHECKIZHINX-NEXT:    # kill: def $x10_h killed $x10_h killed $x10
 ; CHECKIZHINX-NEXT:    ret
 ;
 ; CHECKZFHMIN-LABEL: fminimum_nnan_op_f16:
 ; CHECKZFHMIN:       # %bb.0:
 ; CHECKZFHMIN-NEXT:    fcvt.s.h fa5, fa0
-; CHECKZFHMIN-NEXT:    feq.s a0, fa5, fa5
-; CHECKZFHMIN-NEXT:    bnez a0, .LBB5_2
-; CHECKZFHMIN-NEXT:  # %bb.1:
-; CHECKZFHMIN-NEXT:    fmv.s fa4, fa5
-; CHECKZFHMIN-NEXT:    j .LBB5_3
-; CHECKZFHMIN-NEXT:  .LBB5_2:
 ; CHECKZFHMIN-NEXT:    fadd.s fa4, fa5, fa5
 ; CHECKZFHMIN-NEXT:    fcvt.h.s fa4, fa4
 ; CHECKZFHMIN-NEXT:    fcvt.s.h fa4, fa4
-; CHECKZFHMIN-NEXT:  .LBB5_3:
+; CHECKZFHMIN-NEXT:    feq.s a0, fa5, fa5
+; CHECKZFHMIN-NEXT:    feq.s a1, fa4, fa4
+; CHECKZFHMIN-NEXT:    and a0, a0, a1
+; CHECKZFHMIN-NEXT:    beqz a0, .LBB5_2
+; CHECKZFHMIN-NEXT:  # %bb.1:
 ; CHECKZFHMIN-NEXT:    fmin.s fa5, fa5, fa4
+; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; CHECKZFHMIN-NEXT:    ret
+; CHECKZFHMIN-NEXT:  .LBB5_2:
+; CHECKZFHMIN-NEXT:    lui a0, 523264
+; CHECKZFHMIN-NEXT:    fmv.w.x fa5, a0
 ; CHECKZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECKZFHMIN-NEXT:    ret
   %c = fadd nnan half %a, %a
