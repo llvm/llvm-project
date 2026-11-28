@@ -157,9 +157,13 @@ public:
 
   /// This does the promotion.
   ///
-  /// Insts is a list of loads and stores to promote, and Name is the basename
-  /// for the PHIs to insert. After this is complete, the loads and stores are
-  /// removed from the code.
+  /// Insts is a list of loads and stores of the same type to the same memory,
+  /// starting with a load or a store. It may also contain the alloca of that
+  /// memory, see getValueToUseForAlloca, and memsets that write all of it,
+  /// possibly along with memory around it, for which
+  /// VNCoercion::analyzeLoadFromClobberingMemInst succeeds. After this is
+  /// complete, the loads and stores are removed from the code; the memsets are
+  /// kept.
   LLVM_ABI void run(const SmallVectorImpl<Instruction *> &Insts);
 
   /// This hook is invoked after all the stores are found and inserted as
