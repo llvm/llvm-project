@@ -29,7 +29,7 @@ end program
 ! CHECK:           hlfir.assign %[[VAL_1]] to %[[VAL_10]]#0 : i32, !fir.ref<i32>
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_11:.*]] = fir.load %[[VAL_10]]#0 : !fir.ref<i32>
-! CHECK:             omp.wsloop private(@_QFEi_private_i32 %[[VAL_8]]#0 -> %[[VAL_12:.*]] : !fir.ref<i32>) reduction(@add_reduction_i32 %[[VAL_6]]#0 -> %[[VAL_13:.*]] : !fir.ref<i32, volatile>) {
+! CHECK:             omp.wsloop private(@_QFEi_private_i32 %[[VAL_8]]#0 -> %[[VAL_12:.*]] : !fir.ref<i32>) reduction(@add_reduction_volatile_i32 %[[VAL_6]]#0 -> %[[VAL_13:.*]] : !fir.ref<i32, volatile>) {
 ! CHECK:               omp.loop_nest (%[[VAL_14:.*]]) : i32 = (%[[VAL_0]]) to (%[[VAL_11]]) inclusive step (%[[VAL_0]]) {
 ! CHECK:                 %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_12]] uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_13]] uniq_name("_QFEa") fortran_attrs<volatile> : (!fir.ref<i32, volatile>) -> (!fir.ref<i32, volatile>, !fir.ref<i32, volatile>)
