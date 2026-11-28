@@ -10,9 +10,7 @@
 
 // "support/constexpr_hash.h"
 
-//  Hashing a struct w/o a defined hash should *not* fail, but it should
-// create a type that is not constructible and not callable.
-// See also: https://cplusplus.github.io/LWG/lwg-defects.html#2543
+// Test that constexpr_hash<T> is disabled by default for some types like std::hash.
 
 #include <type_traits>
 
@@ -33,9 +31,3 @@ void test() {
 }
 
 void test() { test<X>(); }
-
-int main() {
-  test();
-
-  return 0;
-}
