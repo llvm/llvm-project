@@ -436,13 +436,6 @@ public:
 
   /// Runs the serialization pipeline, returning `std::nullopt` on error.
   std::optional<SmallVector<char, 0>> run() override;
-
-private:
-  /// Translates the LLVM module to SPIR-V binary using LLVM's
-  /// SPIR-V target.
-  std::optional<std::string>
-  translateToSPIRVBinary(llvm::Module &llvmModule,
-                         llvm::TargetMachine &targetMachine);
 };
 } // namespace
 
@@ -586,24 +579,6 @@ std::optional<SmallVector<char, 0>> SPIRVSerializer::run() {
 
   // Return the serialized object.
   return moduleToObject(*llvmModule);
-}
-
-std::optional<std::string>
-SPIRVSerializer::translateToSPIRVBinary(llvm::Module &llvmModule,
-                                        llvm::TargetMachine &targetMachine) {
-  std::string targetISA;
-  llvm::raw_string_ostream stream(targetISA);
-
-  { // Drop pstream after this to prevent the ISA from being stuck buffering
-    llvm::buffer_ostream pstream(stream);
-    llvm::legacy::PassManager codegenPasses;
-    if (targetMachine.addPassesToEmitFile(codegenPasses, pstream, nullptr,
-                                          llvm::CodeGenFileType::ObjectFile))
-      return std::nullopt;
-
-    codegenPasses.run(llvmModule);
-  }
-  return targetISA;
 }
 
 std::optional<mlir::gpu::SerializedObject>
