@@ -9,7 +9,6 @@ Clang supports OpenCL, HIP and OpenMP on AMD GPU targets.
 | --- | --- |
 | `__AMDGPU__` | Indicates that the code is being compiled for an AMD GPU. |
 | `__AMDGCN__` | Defined if the GPU target is AMDGCN. |
-| `__R600__` | Defined if the GPU target is R600. |
 | `__<ArchName>__` | Defined with the name of the architecture (e.g., `__gfx906__` for the gfx906 architecture). |
 | `__<GFXN>__` | Defines the GFX family (e.g., for gfx906, this macro would be `__GFX9__`). |
 | `__amdgcn_processor__` | Defined with the processor name as a string (e.g., `"gfx906"`). |

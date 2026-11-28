@@ -672,23 +672,6 @@ def __builtin_amdgcn_wave_reduce_fmin_f64 : AMDGPUBuiltin<"double(double, _Const
 def __builtin_amdgcn_wave_reduce_fmax_f64 : AMDGPUBuiltin<"double(double, _Constant int32_t)", [Const]>;
 
 //===----------------------------------------------------------------------===//
-// R600-NI only builtins.
-//===----------------------------------------------------------------------===//
-
-def __builtin_r600_implicitarg_ptr : AMDGPUBuiltin<"unsigned char address_space<7> *()", [Const]>;
-
-def __builtin_r600_read_tgid_x : AMDGPUBuiltin<"unsigned int()", [Const]>;
-def __builtin_r600_read_tgid_y : AMDGPUBuiltin<"unsigned int()", [Const]>;
-def __builtin_r600_read_tgid_z : AMDGPUBuiltin<"unsigned int()", [Const]>;
-
-def __builtin_r600_read_tidig_x : AMDGPUBuiltin<"unsigned int()", [Const]>;
-def __builtin_r600_read_tidig_y : AMDGPUBuiltin<"unsigned int()", [Const]>;
-def __builtin_r600_read_tidig_z : AMDGPUBuiltin<"unsigned int()", [Const]>;
-
-def __builtin_r600_recipsqrt_ieee : AMDGPUBuiltin<"double(double)", [Const]>;
-def __builtin_r600_recipsqrt_ieeef : AMDGPUBuiltin<"float(float)", [Const]>;
-
-//===----------------------------------------------------------------------===//
 // MFMA builtins.
 //===----------------------------------------------------------------------===//
 

@@ -186,20 +186,15 @@ bool AMDGPUTargetInfo::initFeatureMap(
 
 void AMDGPUTargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
-  if (getTriple().isAMDGCN())
-    llvm::AMDGPU::fillValidArchListAMDGCN(Values, getTriple().getSubArch());
-  else
-    llvm::AMDGPU::fillValidArchListR600(Values);
+  llvm::AMDGPU::fillValidArchListAMDGCN(Values, getTriple().getSubArch());
 }
 
 AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                                    const TargetOptions &Opts)
     : TargetInfo(Triple),
-      GPUKind(Triple.isAMDGCN()
-                  ? (Opts.CPU.empty() ? llvm::AMDGPU::getGPUKindFromSubArch(
-                                            Triple.getSubArch())
-                                      : llvm::AMDGPU::parseArchAMDGCN(Opts.CPU))
-                  : llvm::AMDGPU::parseArchR600(Opts.CPU)) {
+      GPUKind(Opts.CPU.empty()
+                  ? llvm::AMDGPU::getGPUKindFromSubArch(Triple.getSubArch())
+                  : llvm::AMDGPU::parseArchAMDGCN(Opts.CPU)) {
   resetDataLayout();
 
   AddrSpaceMap = &AMDGPUAddrSpaceMap;
@@ -270,11 +265,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
                                         MacroBuilder &Builder) const {
   Builder.defineMacro("__AMD__");
   Builder.defineMacro("__AMDGPU__");
-
-  if (getTriple().isAMDGCN())
-    Builder.defineMacro("__AMDGCN__");
-  else
-    Builder.defineMacro("__R600__");
+  Builder.defineMacro("__AMDGCN__");
 
   // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be
   // removed in the near future.
@@ -298,9 +289,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (GPUKind == llvm::AMDGPU::GK_NONE && !IsHIPHost)
     return;
 
-  llvm::SmallString<16> CanonName =
-      (getTriple().isAMDGCN() ? getArchNameAMDGCN(GPUKind)
-                              : getArchNameR600(GPUKind));
+  llvm::SmallString<16> CanonName = getArchNameAMDGCN(GPUKind);
 
   // Sanitize the name of generic targets, the only names containing '-'.
   // e.g. gfx10-1-generic -> gfx10_1_generic

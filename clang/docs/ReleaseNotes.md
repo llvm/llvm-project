@@ -1461,6 +1461,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   - `__builtin_amdgcn_fcmp`
   - `__builtin_amdgcn_fcmpf`
 
+- Removed support for the `r600` target (TeraScale GPUs), including the
+  `__R600__` predefined macro and the `__builtin_r600_*` builtins.
+
 #### BPF Support
 
 - Added `-mcpu=v5` and the `__BPF_FEATURE_HMUL` predefined macro for unsigned

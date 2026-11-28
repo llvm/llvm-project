@@ -6225,7 +6225,6 @@ const ToolChain &Driver::getOffloadToolChain(
     // Detect the toolchain based off of the target architecture if that failed.
     switch (Target.getArch()) {
     case llvm::Triple::amdgpu:
-    case llvm::Triple::r600:
       TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args,
                                                          HostTC.get(), Kind);
       break;
@@ -6472,7 +6471,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         TC = std::make_unique<toolchains::BareMetal>(*this, Target, Args);
         break;
       case llvm::Triple::amdgpu:
-      case llvm::Triple::r600:
         TC = std::make_unique<toolchains::AMDGPUToolChain>(*this, Target, Args);
         break;
       default:

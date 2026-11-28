@@ -31,9 +31,9 @@ This document describes the AMDGPU target-specific builtins available in Clang.
 Most of these builtins provide direct access to AMDGPU hardware instructions
 and intrinsics.
 
-All AMDGPU builtins use the ``__builtin_amdgcn_`` prefix (or ``__builtin_r600_``
-for R600 targets). Some arguments must be compile-time constant expressions;
-this is noted in the descriptions where applicable.
+All AMDGPU builtins use the ``__builtin_amdgcn_`` prefix. Some arguments must
+be compile-time constant expressions. This is noted in the descriptions where
+applicable.
 
 .. warning::
 

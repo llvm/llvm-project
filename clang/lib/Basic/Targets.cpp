@@ -437,7 +437,6 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
                                              /*TargetPointerWidth=*/64);
 
   case llvm::Triple::amdgpu:
-  case llvm::Triple::r600:
     return std::make_unique<AMDGPUTargetInfo>(Triple, Opts);
 
   case llvm::Triple::riscv32:
