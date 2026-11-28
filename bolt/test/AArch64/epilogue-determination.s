@@ -4,6 +4,7 @@
 
 # RUN: %clang %cflags %s -o %t.so -Wl,-q,-z,undefs
 # RUN: llvm-bolt %t.so -o %t.bolt --print-cfg | FileCheck %s
+# RUN: llvm-bolt %t.so -o %t.compact.bolt --compact-code-model --print-cfg | FileCheck %s
 
   .text
   .global _foo
