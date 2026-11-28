@@ -90,6 +90,8 @@ public:
   constexpr _Tp& __emplace(_Args&&... __args) {
     return __value_.emplace(__forward_tag{}, std::forward<_Args>(__args)...).__t_;
   }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr void __reset() { __value_.reset(); }
 };
 
 struct __empty_cache {};
