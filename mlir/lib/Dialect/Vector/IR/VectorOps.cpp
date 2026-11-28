@@ -34,6 +34,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
@@ -8903,11 +8904,70 @@ struct SelectBroadcastCondition : OpRewritePattern<arith::SelectOp> {
     return success();
   }
 };
+
+/// Use the select's false value as the masked load's passthrough.
+///
+/// Before:
+/// ```mlir
+/// %load = vector.maskedload %base[%idx], %mask, %old_passthrough
+///     : memref<?xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+/// %result = arith.select %mask, %load, %passthrough
+///     : vector<4xi1>, vector<4xf32>
+/// ```
+///
+/// After:
+/// ```mlir
+/// %result = vector.maskedload %base[%idx], %mask, %passthrough
+///     : memref<?xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+/// ```
+struct FoldSelectIntoMaskedLoad final : OpRewritePattern<arith::SelectOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(arith::SelectOp select,
+                                PatternRewriter &rewriter) const override {
+    auto load = select.getTrueValue().getDefiningOp<MaskedLoadOp>();
+    if (!load || !load.getResult().hasOneUse() ||
+        select.getCondition() != load.getMask())
+      return failure();
+
+    // A rewrite scoped to the select's region cannot update an enclosing load.
+    if (load->getParentRegion() != select->getParentRegion())
+      return failure();
+
+    // In an enclosing graph, the old passthrough may be the only dependency
+    // ordering a write before the load. Check up to the nearest isolated op.
+    for (Region *region = load->getParentRegion(); region;
+         region = region->getParentRegion()) {
+      if (mayBeGraphRegion(*region))
+        return failure();
+      if (region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+        break;
+    }
+
+    // Keep the load in place so it cannot cross a write to the same memory.
+    // Check availability at the load or at its enclosing operation in the
+    // passthrough's block, without building a dominator tree.
+    Value passthrough = select.getFalseValue();
+    Block *passthroughBlock = passthrough.getParentBlock();
+    Operation *loadInPassthroughBlock =
+        passthroughBlock->findAncestorOpInBlock(*load.getOperation());
+    if (!loadInPassthroughBlock)
+      return failure();
+    if (Operation *def = passthrough.getDefiningOp();
+        def && !def->isBeforeInBlock(loadInPassthroughBlock))
+      return failure();
+
+    rewriter.modifyOpInPlace(
+        load, [&] { load.getPassThruMutable().assign(passthrough); });
+    rewriter.replaceOp(select, load.getResult());
+    return success();
+  }
+};
 } // namespace
 
 void VectorDialect::getCanonicalizationPatterns(
     RewritePatternSet &results) const {
-  results.add<SelectBroadcastCondition>(getContext());
+  results.add<FoldSelectIntoMaskedLoad, SelectBroadcastCondition>(getContext());
 }
 
 //===----------------------------------------------------------------------===//
