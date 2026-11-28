@@ -755,6 +755,7 @@ def testVectorizeChildrenAndApplyPatternsAllAttrs(target):
         vectorize_padding=True,
         flatten_1d_depthwise_conv=True,
         fold_type_extensions_into_contract=True,
+        allow_fast_math_flag_loss=False,
     )
     # CHECK-LABEL: TEST: testVectorizeChildrenAndApplyPatternsAllAttrs
     # CHECK: transform.sequence
@@ -765,6 +766,7 @@ def testVectorizeChildrenAndApplyPatternsAllAttrs(target):
     # CHECK-SAME: flatten_1d_depthwise_conv
     # CHECK-SAME: disable_multi_reduction_to_contract_patterns
     # CHECK-SAME: disable_transfer_permutation_map_lowering_patterns
+    # CHECK-SAME: allow_fast_math_flag_loss = false
 
 
 @run
@@ -778,6 +780,7 @@ def testVectorizeChildrenAndApplyPatternsNoAttrs(target):
         vectorize_padding=False,
         flatten_1d_depthwise_conv=False,
         fold_type_extensions_into_contract=False,
+        allow_fast_math_flag_loss=True,
     )
     # CHECK-LABEL: TEST: testVectorizeChildrenAndApplyPatternsNoAttrs
     # CHECK: transform.sequence
@@ -788,6 +791,7 @@ def testVectorizeChildrenAndApplyPatternsNoAttrs(target):
     # CHECK-NOT: fold_type_extensions_into_contract
     # CHECK-NOT: vectorize_nd_extract
     # CHECK-NOT: vectorize_padding
+    # CHECK-NOT: allow_fast_math_flag_loss
 
 
 @run
