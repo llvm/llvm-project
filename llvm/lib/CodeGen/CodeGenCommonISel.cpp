@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instruction.h"
 
@@ -259,32 +260,46 @@ static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
   }
 }
 
-/// Replace \p DbgMI, which describes the result of \p BuildVector, with one
-/// fragment debug value per vector element.
-static void salvageBuildVector(const MachineRegisterInfo &MRI,
-                               MachineInstr &BuildVector, MachineInstr &DbgMI) {
+/// Replace \p DbgMI, which describes the result of \p Merge, a G_MERGE_VALUES,
+/// G_BUILD_VECTOR or G_CONCAT_VECTORS, with one fragment debug value per
+/// source.
+static void salvageMergeLike(const MachineRegisterInfo &MRI,
+                             MachineInstr &Merge, MachineInstr &DbgMI) {
   const DIExpression *Expr = DbgMI.getDebugExpression();
   if (DbgMI.getNumDebugOperands() != 1 || !Expr->isSingleLocationExpression() ||
       Expr->isComplex())
     return;
 
-  unsigned VecSize = MRI.getType(BuildVector.getOperand(0).getReg())
-                         .getSizeInBits()
-                         .getFixedValue();
+  TypeSize Size = MRI.getType(Merge.getOperand(0).getReg()).getSizeInBits();
+  if (Size.isScalable())
+    return;
+  unsigned VecSize = Size.getFixedValue();
+  // A fragment narrower than the value is described by the low bits of the
+  // value, so the sources past its end are dropped and the last one is cut.
+  // A value narrower than what it describes, such as one member of an
+  // aggregate, does not say which bits it holds.
+  unsigned End = VecSize;
   if (auto Fragment = Expr->getFragmentInfo()) {
-    if (VecSize > Fragment->SizeInBits)
+    if (VecSize < Fragment->SizeInBits)
       return;
+    End = Fragment->SizeInBits;
   } else if (auto VarSize = DbgMI.getDebugVariable()->getSizeInBits()) {
-    if (VecSize > *VarSize)
+    if (VecSize != *VarSize)
       return;
   }
 
-  unsigned NumElts = BuildVector.getNumOperands() - 1;
-  unsigned EltSize = VecSize / NumElts;
+  // Fragment offsets follow memory order, which is not the order of the
+  // sources of a big-endian G_MERGE_VALUES, and whose start does not hold the
+  // low bits of a big-endian vector.
+  if (Merge.getMF()->getDataLayout().isBigEndian() &&
+      (Merge.getOpcode() == TargetOpcode::G_MERGE_VALUES || End < VecSize))
+    return;
+
+  unsigned EltSize = VecSize / (Merge.getNumOperands() - 1);
   SmallVector<DIExpression *, 8> FragExprs;
-  for (unsigned I = 0; I != NumElts; ++I) {
-    auto FragExpr =
-        DIExpression::createFragmentExpression(Expr, I * EltSize, EltSize);
+  for (unsigned Offset = 0; Offset < End; Offset += EltSize) {
+    auto FragExpr = DIExpression::createFragmentExpression(
+        Expr, Offset, std::min(EltSize, End - Offset));
     if (!FragExpr)
       return;
     FragExprs.push_back(*FragExpr);
@@ -292,14 +307,14 @@ static void salvageBuildVector(const MachineRegisterInfo &MRI,
 
   MachineBasicBlock &MBB = *DbgMI.getParent();
   MachineFunction &MF = *MBB.getParent();
-  for (unsigned I = NumElts - 1; I != 0; --I) {
+  for (unsigned I = FragExprs.size() - 1; I != 0; --I) {
     MachineInstr *NewMI = MF.CloneMachineInstr(&DbgMI);
-    NewMI->getDebugOperand(0).setReg(BuildVector.getOperand(I + 1).getReg());
+    NewMI->getDebugOperand(0).setReg(Merge.getOperand(I + 1).getReg());
     NewMI->getDebugExpressionOp().setMetadata(FragExprs[I]);
     MBB.insertAfter(DbgMI.getIterator(), NewMI);
     LLVM_DEBUG(dbgs() << "SALVAGE: " << *NewMI << '\n');
   }
-  DbgMI.getDebugOperand(0).setReg(BuildVector.getOperand(1).getReg());
+  DbgMI.getDebugOperand(0).setReg(Merge.getOperand(1).getReg());
   DbgMI.getDebugExpressionOp().setMetadata(FragExprs[0]);
   LLVM_DEBUG(dbgs() << "SALVAGE: " << DbgMI << '\n');
 }
@@ -327,11 +342,16 @@ void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
     assert(DbgMI->hasDebugOperandForReg(Reg) &&
            "Must use salvaged instruction as its location");
 
-    if (MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR) {
+    switch (MI.getOpcode()) {
+    case TargetOpcode::G_MERGE_VALUES:
+    case TargetOpcode::G_BUILD_VECTOR:
+    case TargetOpcode::G_CONCAT_VECTORS:
       assert(DbgMI->isDebugValue() &&
              "Must be either DBG_VALUE or DBG_VALUE_LIST");
-      salvageBuildVector(MRI, MI, *DbgMI);
+      salvageMergeLike(MRI, MI, *DbgMI);
       continue;
+    default:
+      break;
     }
 
     const DIExpression *SalvagedExpr = DbgMI->getDebugExpression();

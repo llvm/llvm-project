@@ -1,13 +1,17 @@
-# RUN: llc -mtriple=aarch64 -run-pass=legalizer %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=legalizer %s -o - | FileCheck --check-prefixes=CHECK,LE %s
+# RUN: llc -mtriple=aarch64_be -run-pass=legalizer %s -o - | FileCheck --check-prefixes=CHECK,BE %s
 
 # Debug uses of an erased instruction that cannot be salvaged become undef,
-# instead of referring to a register that no longer has a definition.
+# instead of referring to a register that no longer has a definition. Those of
+# an erased merge-like instruction are split into fragments of its sources.
 
 --- |
   define void @dead_def() !dbg !4 { ret void }
   define void @dead_artifact() !dbg !7 { ret void }
   define void @forwarded_merge() !dbg !10 { ret void }
   define void @copied_merge() !dbg !13 { ret void }
+  define void @dead_concat() !dbg !16 { ret void }
+  define void @narrow_fragment() !dbg !19 { ret void }
 
   !llvm.module.flags = !{!0}
   !llvm.dbg.cu = !{!1}
@@ -27,6 +31,12 @@
   !13 = distinct !DISubprogram(name: "copied_merge", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
   !14 = !DILocalVariable(name: "w", scope: !13, file: !2)
   !15 = !DILocation(line: 4, scope: !13)
+  !16 = distinct !DISubprogram(name: "dead_concat", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !17 = !DILocalVariable(name: "v", scope: !16, file: !2)
+  !18 = !DILocation(line: 5, scope: !16)
+  !19 = distinct !DISubprogram(name: "narrow_fragment", scope: !2, file: !2, type: !3, spFlags: DISPFlagDefinition, unit: !1)
+  !20 = !DILocalVariable(name: "s", scope: !19, file: !2)
+  !21 = !DILocation(line: 6, scope: !19)
 ...
 
 # CHECK-LABEL: name: dead_def
@@ -65,12 +75,16 @@ body:             |
     RET_ReallyLR implicit $w0
 ...
 
-# The unmerge of a merge folds away. The debug use of %wide becomes undef, but
-# %lo is replaced with %a, so its debug use stays valid.
+# The unmerge of a merge folds away. The debug use of %wide is salvaged as one
+# fragment per source, except on big-endian targets, where the sources are not
+# in memory order, so it becomes undef. %lo is replaced with %a, so its debug
+# use stays valid.
 # CHECK-LABEL: name: forwarded_merge
 # CHECK-NOT:   G_MERGE_VALUES
-# CHECK:       DBG_VALUE $noreg, $noreg
-# CHECK:       DBG_VALUE %a(i64), $noreg
+# LE:          DBG_VALUE %a(i64), $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 0, 64)
+# LE-NEXT:     DBG_VALUE $x1, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 64, 64)
+# BE:          DBG_VALUE $noreg, $noreg
+# CHECK-NEXT:  DBG_VALUE %a(i64), $noreg, !{{[0-9]+}}, !DIExpression()
 # CHECK:       $x0 = COPY %a(i64)
 ---
 name:            forwarded_merge
@@ -106,4 +120,52 @@ body:             |
     DBG_VALUE %lo(i64), $noreg, !14, !DIExpression(), debug-location !15
     $x0 = COPY %lo(i64)
     RET_ReallyLR implicit $x0
+...
+
+# The unmerge of a concat_vectors folds away. Its debug use is salvaged as one
+# fragment per source vector.
+# CHECK-LABEL: name: dead_concat
+# CHECK-NOT:   G_CONCAT_VECTORS
+# CHECK:       DBG_VALUE %a(<2 x i32>), $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 0, 64)
+# CHECK-NEXT:  DBG_VALUE $d1, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 64, 64)
+# CHECK:       $d0 = COPY %a(<2 x i32>)
+---
+name:            dead_concat
+body:             |
+  bb.0:
+    liveins: $d0, $d1
+    %a:_(<2 x i32>) = COPY $d0
+    %b:_(<2 x i32>) = COPY $d1
+    %vec:_(<4 x i32>) = G_CONCAT_VECTORS %a(<2 x i32>), %b(<2 x i32>)
+    DBG_VALUE %vec(<4 x i32>), $noreg, !17, !DIExpression(), debug-location !18
+    %lo:_(<2 x i32>), %hi:_(<2 x i32>) = G_UNMERGE_VALUES %vec(<4 x i32>)
+    $d0 = COPY %lo(<2 x i32>)
+    RET_ReallyLR implicit $d0
+...
+
+# A fragment narrower than the value is described by the low bits of the value:
+# the source that crosses its end is cut, and the sources past it are dropped.
+# On big-endian targets the start of a vector does not hold its low bits, so
+# the debug use becomes undef.
+# CHECK-LABEL: name: narrow_fragment
+# CHECK-NOT:   G_BUILD_VECTOR
+# LE:          DBG_VALUE %a(i32), $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 16, 32)
+# LE-NEXT:     DBG_VALUE $w1, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 48, 32)
+# LE-NEXT:     DBG_VALUE $w2, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 80, 8)
+# BE:          DBG_VALUE $noreg, $noreg
+# CHECK-NEXT:  $w0 = COPY %a(i32)
+---
+name:            narrow_fragment
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2, $w3
+    %a:_(i32) = COPY $w0
+    %b:_(i32) = COPY $w1
+    %c:_(i32) = COPY $w2
+    %d:_(i32) = COPY $w3
+    %vec:_(<4 x i32>) = G_BUILD_VECTOR %a(i32), %b(i32), %c(i32), %d(i32)
+    DBG_VALUE %vec(<4 x i32>), $noreg, !20, !DIExpression(DW_OP_LLVM_fragment, 16, 72), debug-location !21
+    %e0:_(i32), %e1:_(i32), %e2:_(i32), %e3:_(i32) = G_UNMERGE_VALUES %vec(<4 x i32>)
+    $w0 = COPY %e0(i32)
+    RET_ReallyLR implicit $w0
 ...
