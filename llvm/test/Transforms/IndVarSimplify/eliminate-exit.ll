@@ -706,3 +706,405 @@ exit:
 }
 
 declare i32 @match()
+
+define i1 @exit_one_iteration_after_latch(i64 %n, ptr %p) {
+; CHECK-LABEL: @exit_one_iteration_after_latch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EMPTY:%.*]] = icmp eq i64 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[EMPTY]], label [[DONE:%.*]], label [[LOOP_PREHEADER:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[C:%.*]] = phi i64 [ [[C_NEXT:%.*]], [[LATCH]] ], [ [[N]], [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq i64 [[C]], 0
+; CHECK-NEXT:    br i1 [[Z]], label [[FAIL:%.*]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[I]]
+; CHECK-NEXT:    store i64 [[C]], ptr [[G]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[C_NEXT]] = add nsw i64 [[C]], -1
+; CHECK-NEXT:    [[END:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[END]], label [[DONE_LOOPEXIT:%.*]], label [[LOOP]]
+; CHECK:       done.loopexit:
+; CHECK-NEXT:    br label [[DONE]]
+; CHECK:       done:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       fail:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %empty = icmp eq i64 %n, 0
+  br i1 %empty, label %done, label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %latch ]
+  %c = phi i64 [ %n, %entry ], [ %c.next, %latch ]
+  %z = icmp eq i64 %c, 0
+  br i1 %z, label %fail, label %latch
+
+latch:
+  %g = getelementptr i64, ptr %p, i64 %i
+  store i64 %c, ptr %g
+  %i.next = add nuw nsw i64 %i, 1
+  %c.next = add nsw i64 %c, -1
+  %end = icmp eq i64 %i.next, %n
+  br i1 %end, label %done, label %loop
+
+done:
+  ret i1 true
+
+fail:
+  ret i1 false
+}
+
+define i1 @exit_one_iteration_after_latch_no_entry_guard(i64 %n, ptr %p) {
+; CHECK-LABEL: @exit_one_iteration_after_latch_no_entry_guard(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = phi i64 [ [[N:%.*]], [[ENTRY]] ], [ [[C_NEXT:%.*]], [[LATCH]] ]
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq i64 [[C]], 0
+; CHECK-NEXT:    br i1 [[Z]], label [[FAIL:%.*]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[I]]
+; CHECK-NEXT:    store i64 [[C]], ptr [[G]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[C_NEXT]] = add nsw i64 [[C]], -1
+; CHECK-NEXT:    [[END:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[END]], label [[DONE:%.*]], label [[LOOP]]
+; CHECK:       done:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       fail:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %latch ]
+  %c = phi i64 [ %n, %entry ], [ %c.next, %latch ]
+  %z = icmp eq i64 %c, 0
+  br i1 %z, label %fail, label %latch
+
+latch:
+  %g = getelementptr i64, ptr %p, i64 %i
+  store i64 %c, ptr %g
+  %i.next = add nuw nsw i64 %i, 1
+  %c.next = add nsw i64 %c, -1
+  %end = icmp eq i64 %i.next, %n
+  br i1 %end, label %done, label %loop
+
+done:
+  ret i1 true
+
+fail:
+  ret i1 false
+}
+
+define i1 @exit_same_iteration_as_latch(i64 %n, ptr %p) {
+; CHECK-LABEL: @exit_same_iteration_as_latch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EMPTY:%.*]] = icmp eq i64 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[EMPTY]], label [[DONE:%.*]], label [[LOOP_PREHEADER:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[C:%.*]] = phi i64 [ [[C_NEXT:%.*]], [[LATCH]] ], [ [[N]], [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq i64 [[C]], 1
+; CHECK-NEXT:    br i1 [[Z]], label [[FAIL:%.*]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[I]]
+; CHECK-NEXT:    store i64 [[C]], ptr [[G]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[C_NEXT]] = add nsw i64 [[C]], -1
+; CHECK-NEXT:    br i1 false, label [[DONE_LOOPEXIT:%.*]], label [[LOOP]]
+; CHECK:       done.loopexit:
+; CHECK-NEXT:    br label [[DONE]]
+; CHECK:       done:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       fail:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %empty = icmp eq i64 %n, 0
+  br i1 %empty, label %done, label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %latch ]
+  %c = phi i64 [ %n, %entry ], [ %c.next, %latch ]
+  %z = icmp eq i64 %c, 1
+  br i1 %z, label %fail, label %latch
+
+latch:
+  %g = getelementptr i64, ptr %p, i64 %i
+  store i64 %c, ptr %g
+  %i.next = add nuw nsw i64 %i, 1
+  %c.next = add nsw i64 %c, -1
+  %end = icmp eq i64 %i.next, %n
+  br i1 %end, label %done, label %loop
+
+done:
+  ret i1 true
+
+fail:
+  ret i1 false
+}
+
+define i1 @exit_one_iteration_after_latch_third_exit(i64 %n, ptr %p, i64 %m) {
+; CHECK-LABEL: @exit_one_iteration_after_latch_third_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EMPTY:%.*]] = icmp eq i64 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[EMPTY]], label [[DONE:%.*]], label [[LOOP_PREHEADER:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[C:%.*]] = phi i64 [ [[C_NEXT:%.*]], [[LATCH]] ], [ [[N]], [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq i64 [[C]], 0
+; CHECK-NEXT:    br i1 [[Z]], label [[FAIL:%.*]], label [[BODY:%.*]]
+; CHECK:       body:
+; CHECK-NEXT:    [[X:%.*]] = icmp eq i64 [[I]], [[M:%.*]]
+; CHECK-NEXT:    br i1 [[X]], label [[DONE_LOOPEXIT:%.*]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[I]]
+; CHECK-NEXT:    store i64 [[C]], ptr [[G]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[C_NEXT]] = add nsw i64 [[C]], -1
+; CHECK-NEXT:    [[END:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[END]], label [[DONE_LOOPEXIT]], label [[LOOP]]
+; CHECK:       done.loopexit:
+; CHECK-NEXT:    br label [[DONE]]
+; CHECK:       done:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       fail:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %empty = icmp eq i64 %n, 0
+  br i1 %empty, label %done, label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %latch ]
+  %c = phi i64 [ %n, %entry ], [ %c.next, %latch ]
+  %z = icmp eq i64 %c, 0
+  br i1 %z, label %fail, label %body
+
+body:
+  %x = icmp eq i64 %i, %m
+  br i1 %x, label %done, label %latch
+
+latch:
+  %g = getelementptr i64, ptr %p, i64 %i
+  store i64 %c, ptr %g
+  %i.next = add nuw nsw i64 %i, 1
+  %c.next = add nsw i64 %c, -1
+  %end = icmp eq i64 %i.next, %n
+  br i1 %end, label %done, label %loop
+
+done:
+  ret i1 true
+
+fail:
+  ret i1 false
+}
+
+define i1 @exit_one_iteration_before_latch(i64 %n, ptr %p) {
+; CHECK-LABEL: @exit_one_iteration_before_latch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EMPTY:%.*]] = icmp eq i64 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[EMPTY]], label [[DONE:%.*]], label [[LOOP_PREHEADER:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[C:%.*]] = phi i64 [ [[C_NEXT:%.*]], [[LATCH]] ], [ [[N]], [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[Z:%.*]] = icmp eq i64 [[C]], 0
+; CHECK-NEXT:    br i1 [[Z]], label [[FAIL:%.*]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[I]]
+; CHECK-NEXT:    store i64 [[C]], ptr [[G]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[C_NEXT]] = add nsw i64 [[C]], -1
+; CHECK-NEXT:    [[N_PLUS_1:%.*]] = add i64 [[N]], 1
+; CHECK-NEXT:    [[END:%.*]] = icmp eq i64 [[I]], [[N_PLUS_1]]
+; CHECK-NEXT:    br i1 [[END]], label [[DONE_LOOPEXIT:%.*]], label [[LOOP]]
+; CHECK:       done.loopexit:
+; CHECK-NEXT:    br label [[DONE]]
+; CHECK:       done:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       fail:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %empty = icmp eq i64 %n, 0
+  br i1 %empty, label %done, label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %latch ]
+  %c = phi i64 [ %n, %entry ], [ %c.next, %latch ]
+  %z = icmp eq i64 %c, 0
+  br i1 %z, label %fail, label %latch
+
+latch:
+  %g = getelementptr i64, ptr %p, i64 %i
+  store i64 %c, ptr %g
+  %i.next = add nuw nsw i64 %i, 1
+  %c.next = add nsw i64 %c, -1
+  %n.plus.1 = add i64 %n, 1
+  %end = icmp eq i64 %i, %n.plus.1
+  br i1 %end, label %done, label %loop
+
+done:
+  ret i1 true
+
+fail:
+  ret i1 false
+}
+
+define i1 @exit_one_iteration_after_latch_wider_latch_iv(i32 %n, ptr %p) {
+; CHECK-LABEL: @exit_one_iteration_after_latch_wider_latch_iv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EMPTY:%.*]] = icmp eq i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[EMPTY]], label [[DONE:%.*]], label [[LOOP_PREHEADER:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[C:%.*]] = phi i32 [ [[C_NEXT:%.*]], [[LATCH]] ], [ [[N]], [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    br i1 false, label [[FAIL:%.*]], label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[I]]
+; CHECK-NEXT:    store i32 [[C]], ptr [[G]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[C_NEXT]] = add nsw i32 [[C]], -1
+; CHECK-NEXT:    [[N_EXT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[END:%.*]] = icmp eq i64 [[I_NEXT]], [[N_EXT]]
+; CHECK-NEXT:    br i1 [[END]], label [[DONE_LOOPEXIT:%.*]], label [[LOOP]]
+; CHECK:       done.loopexit:
+; CHECK-NEXT:    br label [[DONE]]
+; CHECK:       done:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       fail:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %empty = icmp eq i32 %n, 0
+  br i1 %empty, label %done, label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %latch ]
+  %c = phi i32 [ %n, %entry ], [ %c.next, %latch ]
+  %z = icmp eq i32 %c, 0
+  br i1 %z, label %fail, label %latch
+
+latch:
+  %g = getelementptr i32, ptr %p, i64 %i
+  store i32 %c, ptr %g
+  %i.next = add nuw nsw i64 %i, 1
+  %c.next = add nsw i32 %c, -1
+  %n.ext = zext i32 %n to i64
+  %end = icmp eq i64 %i.next, %n.ext
+  br i1 %end, label %done, label %loop
+
+done:
+  ret i1 true
+
+fail:
+  ret i1 false
+}
+
+define void @exit_on_constant_bound_above_latch_count(ptr %p, i32 %n) {
+; CHECK-LABEL: @exit_on_constant_bound_above_latch_count(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NONEMPTY:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[NONEMPTY]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    br i1 true, label [[LATCH]], label [[FAIL:%.*]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 [[I]]
+; CHECK-NEXT:    store i32 0, ptr [[G]], align 4
+; CHECK-NEXT:    [[END:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[END]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       fail:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nonempty = icmp sgt i32 %n, 0
+  br i1 %nonempty, label %loop, label %exit
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
+  %i.next = add nuw i32 %i, 1
+  %in.range = icmp ult i32 %i, 2147483647
+  br i1 %in.range, label %latch, label %fail
+
+latch:
+  %g = getelementptr i32, ptr %p, i32 %i
+  store i32 0, ptr %g
+  %end = icmp ult i32 %i.next, %n
+  br i1 %end, label %loop, label %exit
+
+exit:
+  ret void
+
+fail:
+  ret void
+}
+
+define void @exit_on_constant_bound_within_latch_count(ptr %p, i32 %n) {
+; CHECK-LABEL: @exit_on_constant_bound_within_latch_count(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NONEMPTY:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[NONEMPTY]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LATCH:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[IN_RANGE:%.*]] = icmp samesign ult i32 [[I]], 2147483646
+; CHECK-NEXT:    br i1 [[IN_RANGE]], label [[LATCH]], label [[FAIL:%.*]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 [[I]]
+; CHECK-NEXT:    store i32 0, ptr [[G]], align 4
+; CHECK-NEXT:    [[END:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[END]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       fail:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %nonempty = icmp sgt i32 %n, 0
+  br i1 %nonempty, label %loop, label %exit
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
+  %i.next = add nuw i32 %i, 1
+  %in.range = icmp ult i32 %i, 2147483646
+  br i1 %in.range, label %latch, label %fail
+
+latch:
+  %g = getelementptr i32, ptr %p, i32 %i
+  store i32 0, ptr %g
+  %end = icmp ult i32 %i.next, %n
+  br i1 %end, label %loop, label %exit
+
+exit:
+  ret void
+
+fail:
+  ret void
+}
