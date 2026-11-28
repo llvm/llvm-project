@@ -1,0 +1,38 @@
+// RUN: cir-opt %s -test-cir-function-exit-analysis --remarks-filter=function-exit -o /dev/null 2>&1 | FileCheck %s
+
+// Regions are walked through RegionBranchOpInterface, so a constant
+// condition narrows the regions control enters. CIRGen folds most constant
+// conditions away, so these are written in CIR.
+
+!s32i = !cir.int<s, 32>
+
+#true = #cir.bool<true> : !cir.bool
+
+module {
+  cir.func private @stop() attributes {noreturn}
+
+  // CHECK: function-exit-region-branch.cir:[[@LINE+1]]:3: remark: [Analysis] function-exit | Category:function-exit | Kind=must_reach_end, Remark="control leaves only by reaching the end of the body"
+  cir.func @ternary_true_skips_noreturn() -> !s32i {
+    %c = cir.const #true
+    %zero = cir.const #cir.int<0> : !s32i
+    %v = cir.ternary (%c, true {
+      cir.yield %zero : !s32i
+    }, false {
+      cir.call @stop() {noreturn} : () -> ()
+      cir.yield %zero : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.return implicit %v : !s32i
+  }
+
+  // CHECK: function-exit-region-branch.cir:[[@LINE+1]]:3: remark: [Analysis] function-exit | Category:function-exit | Kind=may_reach_end, Remark="control reaches the end of the body on some paths"
+  cir.func @ternary_unknown_noreturn(%c: !cir.bool) -> !s32i {
+    %zero = cir.const #cir.int<0> : !s32i
+    %v = cir.ternary (%c, true {
+      cir.yield %zero : !s32i
+    }, false {
+      cir.call @stop() {noreturn} : () -> ()
+      cir.yield %zero : !s32i
+    }) : (!cir.bool) -> !s32i
+    cir.return implicit %v : !s32i
+  }
+}

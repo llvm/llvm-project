@@ -39,6 +39,14 @@ using BuilderOpStateCallbackRef = llvm::function_ref<void(
 namespace cir {
 void buildTerminatedBody(mlir::OpBuilder &builder, mlir::Location loc);
 
+/// Calls `callback` with the function and label of each block address `op`
+/// holds: a `cir.block_address`, or the `#cir.block_addr_info` and
+/// `#cir.block_addr_diff` (both labels) in a `cir.global` or `cir.const`.
+void walkBlockAddressLabels(
+    mlir::Operation *op,
+    llvm::function_ref<void(mlir::StringAttr func, mlir::StringAttr label)>
+        callback);
+
 /// The process floating-point environment, including its rounding mode and
 /// exception state.
 struct FloatingPointEnvironmentResource

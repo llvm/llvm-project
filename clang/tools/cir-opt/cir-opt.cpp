@@ -29,6 +29,7 @@
 #ifdef CLANG_INCLUDE_TESTS
 namespace cir::test {
 void registerTestCIRAliasAnalysisPass();
+void registerTestCIRFunctionExitAnalysisPass();
 } // namespace cir::test
 #endif
 
@@ -47,6 +48,7 @@ int main(int argc, char **argv) {
 
 #ifdef CLANG_INCLUDE_TESTS
   cir::test::registerTestCIRAliasAnalysisPass();
+  cir::test::registerTestCIRFunctionExitAnalysisPass();
 #endif
   registry.insert<mlir::gpu::GPUDialect, mlir::memref::MemRefDialect,
                   mlir::LLVM::LLVMDialect>();
