@@ -1129,13 +1129,13 @@ MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
       AllocKind(AllocKind), IsIRGlobalValue(IsIRGlobalValue) {
   switch (InitKind) {
   case MemInitKind::Zeroed:
-    Bytes.resize(Size, Byte::concrete(0));
+    Bytes.emplace(Size, Byte::concrete(0));
     break;
   case MemInitKind::Uninitialized:
-    Bytes.resize(Size, Byte::undef());
+    Bytes.emplace(Size, Byte::undef());
     break;
   case MemInitKind::Poisoned:
-    Bytes.resize(Size, Byte::poison());
+    Bytes.emplace(Size, Byte::poison());
     break;
   }
 }
@@ -1176,7 +1176,7 @@ bool Context::free(const MemoryObject &Obj) {
 
   MemoryObject &MutableObj = *It->second;
   MutableObj.State = MemoryObjectState::Freed;
-  MutableObj.Bytes.clear();
+  MutableObj.Bytes.reset();
   for (const APInt &Tag : MutableObj.AssociatedTags)
     TaggedProvenances.erase(Tag);
   MutableObj.AssociatedTags.clear();

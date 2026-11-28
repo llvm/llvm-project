@@ -105,7 +105,7 @@ struct ProgramExitInfo {
 class MemoryObject : public RefCountedBase<MemoryObject> {
   uint64_t Address;
   uint64_t Size;
-  SmallVector<Byte, 8> Bytes;
+  std::optional<SmallVector<Byte, 8>> Bytes;
   StringRef Name;
   unsigned AS;
 
@@ -149,11 +149,18 @@ public:
   }
 
   Byte &operator[](uint64_t Offset) {
+    assert(Bytes && "Cannot access bytes of a freed memory object");
     assert(Offset < Size && "Offset out of bounds");
-    return Bytes[Offset];
+    return (*Bytes)[Offset];
   }
-  ArrayRef<Byte> getBytes() const { return Bytes; }
-  MutableArrayRef<Byte> getBytes() { return Bytes; }
+  ArrayRef<Byte> getBytes() const {
+    assert(Bytes && "Cannot access bytes of a freed memory object");
+    return *Bytes;
+  }
+  MutableArrayRef<Byte> getBytes() {
+    assert(Bytes && "Cannot access bytes of a freed memory object");
+    return *Bytes;
+  }
 
   LLVM_ABI bool isGlobal() const;
   LLVM_ABI bool isStackAllocated() const;
