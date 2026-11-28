@@ -218,24 +218,20 @@ TypeFromUser ClangExpressionDeclMap::DeportType(TypeSystemClang &target,
   return TypeFromUser(m_ast_importer_sp->DeportType(target, parser_type));
 }
 
-bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
-                                                   ConstString name,
-                                                   TypeFromParser parser_type,
-                                                   bool is_result,
-                                                   bool is_lvalue) {
+llvm::Error ClangExpressionDeclMap::AddPersistentVariable(
+    const NamedDecl *decl, ConstString name, TypeFromParser parser_type,
+    bool is_result, bool is_lvalue) {
   assert(m_parser_vars.get());
   auto ast = parser_type.GetTypeSystem<TypeSystemClang>();
   if (ast == nullptr)
-    return false;
+    return llvm::createStringError(
+        "persistent variable type is not a Clang type");
 
   // Check if we already declared a persistent variable with the same name.
   if (lldb::ExpressionVariableSP conflicting_var =
           m_parser_vars->m_persistent_vars->GetVariable(name)) {
-    std::string msg = llvm::formatv("redefinition of persistent variable '{0}'",
-                                    name).str();
-    m_parser_vars->m_diagnostics->AddDiagnostic(
-        msg, lldb::eSeverityError, DiagnosticOrigin::eDiagnosticOriginLLDB);
-    return false;
+    return llvm::createStringError(
+        llvm::formatv("redefinition of persistent variable '{0}'", name));
   }
 
   if (m_parser_vars->m_materializer && is_result) {
@@ -244,11 +240,13 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
     ExecutionContext &exe_ctx = m_parser_vars->m_exe_ctx;
     Target *target = exe_ctx.GetTargetPtr();
     if (target == nullptr)
-      return false;
+      return llvm::createStringError(
+          "no target to create the result variable in");
 
     auto clang_ast_context = GetScratchContext(*target);
     if (!clang_ast_context)
-      return false;
+      return llvm::createStringError(
+          "couldn't get the scratch type system of the target");
 
     TypeFromUser user_type = DeportType(*clang_ast_context, *ast, parser_type);
 
@@ -275,31 +273,34 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
 
     jit_vars->m_offset = offset;
 
-    return true;
+    return llvm::Error::success();
   }
 
   Log *log = GetLog(LLDBLog::Expressions);
   ExecutionContext &exe_ctx = m_parser_vars->m_exe_ctx;
   Target *target = exe_ctx.GetTargetPtr();
   if (target == nullptr)
-    return false;
+    return llvm::createStringError(
+        "no target to create the persistent variable in");
 
   auto context = GetScratchContext(*target);
   if (!context)
-    return false;
+    return llvm::createStringError(
+        "couldn't get the scratch type system of the target");
 
   TypeFromUser user_type = DeportType(*context, *ast, parser_type);
 
   if (!user_type.GetOpaqueQualType()) {
     LLDB_LOG(log, "Persistent variable's type wasn't copied successfully");
-    return false;
+    return llvm::createStringError(
+        "persistent variable's type wasn't copied successfully");
   }
 
   if (!m_parser_vars->m_target_info.IsValid())
-    return false;
+    return llvm::createStringError("invalid target information");
 
   if (!m_parser_vars->m_persistent_vars)
-    return false;
+    return llvm::createStringError("no persistent variable storage");
 
   ClangExpressionVariable *var = llvm::cast<ClangExpressionVariable>(
       m_parser_vars->m_persistent_vars
@@ -310,7 +311,8 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
           .get());
 
   if (!var)
-    return false;
+    return llvm::createStringError(
+        llvm::formatv("couldn't create persistent variable '{0}'", name));
 
   var->m_frozen_sp->SetHasCompleteType();
 
@@ -342,7 +344,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
 
   parser_vars->m_named_decl = decl;
 
-  return true;
+  return llvm::Error::success();
 }
 
 bool ClangExpressionDeclMap::AddValueToStruct(const NamedDecl *decl,

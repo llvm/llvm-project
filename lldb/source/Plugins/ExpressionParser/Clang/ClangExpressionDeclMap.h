@@ -129,10 +129,10 @@ public:
   ///     The type of the variable, in the Clang parser's context.
   ///
   /// \return
-  ///     True on success; false otherwise.
-  bool AddPersistentVariable(const clang::NamedDecl *decl,
-                             ConstString name, TypeFromParser type,
-                             bool is_result, bool is_lvalue);
+  ///     An error describing why the variable couldn't be added, or success.
+  llvm::Error AddPersistentVariable(const clang::NamedDecl *decl,
+                                    ConstString name, TypeFromParser type,
+                                    bool is_result, bool is_lvalue);
 
   /// [Used by IRForTarget] Add a variable to the struct that needs to
   ///     be materialized each time the expression runs.
