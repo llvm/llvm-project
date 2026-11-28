@@ -22,6 +22,7 @@
 #include "VPlanUtils.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -33,6 +34,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
@@ -1649,23 +1651,59 @@ static VPValue *createRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
 /// Generate recipes for the memory runtime difference checks \p Checks using
 /// \p Builder and return the condition that is true if any check fails. Each
 /// difference is compared against a threshold derived from \p VF and \p UF.
+///
+/// Returns nullptr if the required check could not be created.
 static VPValue *createDiffRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
                                         VPSCEVExpander &Expander,
                                         ArrayRef<PointerDiffInfo> Checks,
                                         ScalarEvolution &SE, ElementCount VF,
                                         unsigned UF, DebugLoc DL) {
+  // The code below computes the distance between first/last bytes of the
+  // accessed memory during one vector loop iteration as
+  // VF*UF*Stride-(Stride-AccessSize).
+
+  // Bail out if we cannot guarantee this doesn't overflow (necessary for
+  // non-unit-stride accesses). We're expecting that most interesting cases
+  // won't require really huge strides, so a conservative check by adding bit
+  // widths of all multiplication terms is good enough.
+  for (const auto &[SrcStart, SinkStart, AccessSize, AbsCommonStrideInBytes,
+                    NeedsFreeze] : Checks) {
+    assert(UF * AccessSize > 0 &&
+           "Threshold must be non-zero to use diff-check");
+    Type *Ty = SinkStart->getType();
+
+    const SCEV *VFSCEV = SE.getElementCount(Ty, VF);
+    unsigned VFBits = SE.getUnsignedRangeMax(VFSCEV).getActiveBits();
+    unsigned VFxUFBits = VFBits + llvm::bit_width(UF);
+    unsigned TyBits = Ty->getScalarSizeInBits();
+    unsigned AvailableStrideBits = TyBits > VFxUFBits ? TyBits - VFxUFBits : 0;
+
+    assert(AbsCommonStrideInBytes >= AccessSize &&
+           "Stride is expected to be at least AccessSize!");
+
+    if (AccessSize != AbsCommonStrideInBytes &&
+        !isUIntN(AvailableStrideBits, AbsCommonStrideInBytes))
+      return nullptr;
+  }
+
   // Set of operand pairs of already created compares, to allow detecting and
   // re-using redundant compares.
   SmallDenseSet<std::pair<const SCEV *, const SCEV *>, 8> SeenCompares;
   VPValue *Cond = Plan.getFalse();
-  for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
-    assert(UF * AccessSize > 0 &&
-           "Threshold must be non-zero to use diff-check");
+  for (const auto &[SrcStart, SinkStart, AccessSize, AbsCommonStrideInBytes,
+                    NeedsFreeze] : Checks) {
     Type *Ty = SinkStart->getType();
-    const SCEV *TotalAccessSize = SE.getElementCount(Ty, VF * UF * AccessSize);
+
+    // Compute VF*UF*Stride-(Stride-AccessSize).
+    const SCEV *VFSCEV = SE.getElementCount(Ty, VF);
+    const SCEV *VectorIterAccessSpan = SE.getMinusSCEV(
+        SE.getMulExpr(VFSCEV, SE.getConstant(Ty, UF),
+                      SE.getConstant(Ty, AbsCommonStrideInBytes)),
+        SE.getConstant(Ty, AbsCommonStrideInBytes - AccessSize));
     const SCEV *ThresholdMinusOneSCEV =
-        SE.getMinusSCEV(TotalAccessSize, SE.getOne(Ty));
-    const SCEV *DiffSCEV = SE.getMinusSCEV(SinkStart, SrcStart);
+        SE.getMinusSCEV(VectorIterAccessSpan, SE.getOne(Ty));
+    const SCEV *DiffSCEV =
+        SE.getNoopOrSignExtend(SE.getMinusSCEV(SinkStart, SrcStart), Ty);
 
     // If the same compare has already been created earlier, there is no need to
     // check it again.
@@ -1698,12 +1736,13 @@ void VPlanTransforms::attachMemoryChecks(
   VPBuilder Builder(MemCheckVPBB);
   VPSCEVExpander Expander(Builder, SE, DL, TheLoop->getParentLoop());
   auto DiffChecks = RtPtrChecking.getDiffChecks();
-  VPValue *Cond =
-      DiffChecks
-          ? createDiffRuntimeChecks(Plan, Builder, Expander, *DiffChecks, SE,
-                                    VF, UF, DL)
-          : createRuntimeChecks(Plan, Builder, Expander,
-                                RtPtrChecking.getChecks(), TheLoop, SE, DL);
+  VPValue *Cond = nullptr;
+  if (DiffChecks)
+    Cond = createDiffRuntimeChecks(Plan, Builder, Expander, *DiffChecks, SE, VF,
+                                   UF, DL);
+  if (!Cond)
+    Cond = createRuntimeChecks(Plan, Builder, Expander,
+                               RtPtrChecking.getChecks(), TheLoop, SE, DL);
   attachVPCheckBlock(Plan, Cond, MemCheckVPBB, AddBranchWeights);
 }
 

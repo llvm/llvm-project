@@ -503,4 +503,47 @@ exit:
   ret void
 }
 
+define void @constant_strided(ptr %p, ptr %p.out) {
+; CHECK-LABEL: VPlan for loop in 'constant_strided'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<128> = vector-trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %p4 = ptrtoaddr ptr %p to i64
+; CHECK-NEXT:    IR   %p.out3 = ptrtoaddr ptr %p.out to i64
+; CHECK-NEXT:  Successor(s): vector.memcheck
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.memcheck:
+; CHECK-NEXT:    EMIT vp<[[VP0:%[0-9]+]]> = sub ir<%p.out3>, ir<%p4>
+; CHECK-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = sub vp<[[VP0]]>, ir<1>
+; CHECK-NEXT:    EMIT vp<%diff.check> = icmp ult vp<[[VP1]]>, ir<55>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%diff.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = step-vector i64
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = broadcast ir<4>
+; CHECK-NEXT:  Successor(s): vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.body:
+;
+entry:
+  br label %header
+
+header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %header ]
+  %iv.next = add nsw i64 %iv, 1
+  %idx = mul nuw nsw i64 %iv, 2
+  %gep.ld = getelementptr inbounds i64, ptr %p, i64 %idx
+  %gep.st = getelementptr inbounds i64, ptr %p.out, i64 %idx
+  %ld = load i64, ptr %gep.ld, align 4
+  %add = add i64 %ld, 1
+  store i64 %add, ptr %gep.st, align 4
+  %exitcond = icmp slt i64 %iv.next, 128
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
 declare void @use(i64)

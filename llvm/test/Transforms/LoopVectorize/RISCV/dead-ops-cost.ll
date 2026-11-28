@@ -63,13 +63,16 @@ define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) vsc
 ; CHECK-LABEL: define i8 @dead_live_out_due_to_scalar_epilogue_required(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[DST]], i64 1005
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 1005
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[TMP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[TMP0]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 6
+; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i64 [[TMP1]], -4
+; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[DST1]], [[SRC2]]
+; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP13]], 1
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = icmp ult i64 [[TMP14]], [[TMP12]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -80,13 +83,13 @@ define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) vsc
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[INDEX]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i64(ptr align 1 [[TMP5]], i64 4, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]]), !alias.scope [[META3:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vp.strided.load.nxv16i8.p0.i64(ptr align 1 [[TMP5]], i64 4, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
-; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv16i8.p0.i64(<vscale x 16 x i8> zeroinitializer, ptr align 1 [[TMP7]], i64 4, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]]), !alias.scope [[META6:![0-9]+]], !noalias [[META3]]
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv16i8.p0.i64(<vscale x 16 x i8> zeroinitializer, ptr align 1 [[TMP7]], i64 4, <vscale x 16 x i1> splat (i1 true), i32 [[TMP2]])
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i32 [[TMP2]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP9]], 1
@@ -103,7 +106,7 @@ define i8 @dead_live_out_due_to_scalar_epilogue_required(ptr %src, ptr %dst) vsc
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_DST]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV]], 1001
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[L]], %[[LOOP]] ], [ [[TMP11]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i8 [[R]]
@@ -189,48 +192,48 @@ define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) vs
 ; DEFAULT-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[B]], i32 [[INDEX]]
 ; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; DEFAULT:       [[PRED_STORE_IF]]:
-; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10:![0-9]+]], !noalias [[META13:![0-9]+]]
+; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META5:![0-9]+]], !noalias [[META8:![0-9]+]]
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE]]:
 ; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
 ; DEFAULT:       [[PRED_STORE_IF3]]:
-; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10]], !noalias [[META13]]
+; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META5]], !noalias [[META8]]
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE4]]:
 ; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; DEFAULT:       [[PRED_STORE_IF5]]:
-; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10]], !noalias [[META13]]
+; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META5]], !noalias [[META8]]
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE6]]:
 ; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
 ; DEFAULT:       [[PRED_STORE_IF7]]:
-; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10]], !noalias [[META13]]
+; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META5]], !noalias [[META8]]
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE8]]:
 ; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
 ; DEFAULT:       [[PRED_STORE_IF9]]:
-; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10]], !noalias [[META13]]
+; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META5]], !noalias [[META8]]
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE10]]:
 ; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
 ; DEFAULT:       [[PRED_STORE_IF11]]:
-; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10]], !noalias [[META13]]
+; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META5]], !noalias [[META8]]
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE12]]:
 ; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
 ; DEFAULT:       [[PRED_STORE_IF13]]:
-; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10]], !noalias [[META13]]
+; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META5]], !noalias [[META8]]
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE14]]:
 ; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16]]
 ; DEFAULT:       [[PRED_STORE_IF15]]:
-; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10]], !noalias [[META13]]
+; DEFAULT-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META5]], !noalias [[META8]]
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE16]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE16]]:
-; DEFAULT-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr align 4 [[TMP13]], <8 x i1> [[BROADCAST_SPLAT]]), !alias.scope [[META13]]
+; DEFAULT-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr align 4 [[TMP13]], <8 x i1> [[BROADCAST_SPLAT]]), !alias.scope [[META8]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; DEFAULT-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[SCALAR_PH]]
 ; DEFAULT:       [[SCALAR_PH]]:
@@ -252,7 +255,7 @@ define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) vs
 ; DEFAULT-NEXT:    [[EC:%.*]] = icmp slt i32 [[IV]], [[SUB]]
 ; DEFAULT-NEXT:    br i1 [[EC]], label %[[LOOP_LATCH]], label %[[EXIT:.*]]
 ; DEFAULT:       [[LOOP_LATCH]]:
-; DEFAULT-NEXT:    br label %[[LOOP_HEADER]], !llvm.loop [[LOOP16:![0-9]+]]
+; DEFAULT-NEXT:    br label %[[LOOP_HEADER]], !llvm.loop [[LOOP11:![0-9]+]]
 ; DEFAULT:       [[EXIT]]:
 ; DEFAULT-NEXT:    br label %[[RETURN:.*]]
 ; DEFAULT:       [[RETURN]]:
@@ -311,7 +314,7 @@ define void @test_phi_in_latch_redundant(ptr %dst, i32 %a) vscale_range(2, 1024)
 ; VPLAN-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP4]], [[INDEX]]
 ; VPLAN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP4]]
 ; VPLAN-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; VPLAN-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; VPLAN-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VPLAN:       [[MIDDLE_BLOCK]]:
 ; VPLAN-NEXT:    br label %[[EXIT:.*]]
 ; VPLAN:       [[EXIT]]:
@@ -337,7 +340,7 @@ define void @test_phi_in_latch_redundant(ptr %dst, i32 %a) vscale_range(2, 1024)
 ; DEFAULT-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP4]], [[INDEX]]
 ; DEFAULT-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP4]]
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; DEFAULT-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[EXIT:.*]]
 ; DEFAULT:       [[EXIT]]:
@@ -399,7 +402,7 @@ define void @gather_interleave_group_with_dead_insert_pos(i64 %N, ptr noalias %s
 ; VPLAN-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP14]], [[INDEX]]
 ; VPLAN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP14]]
 ; VPLAN-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; VPLAN-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; VPLAN-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VPLAN:       [[MIDDLE_BLOCK]]:
 ; VPLAN-NEXT:    br label %[[EXIT:.*]]
 ; VPLAN:       [[EXIT]]:
@@ -436,7 +439,7 @@ define void @gather_interleave_group_with_dead_insert_pos(i64 %N, ptr noalias %s
 ; DEFAULT-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP14]], [[INDEX]]
 ; DEFAULT-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP14]]
 ; DEFAULT-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; DEFAULT-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[EXIT:.*]]
 ; DEFAULT:       [[EXIT]]:
