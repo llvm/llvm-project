@@ -60,6 +60,7 @@ enum class VectorTypeModifier : uint8_t {
   SFixedLog2LMUL1,
   SFixedLog2LMUL2,
   SFixedLog2LMUL3,
+  OFP4HalfLMULVector,
   SEFixedLog2LMULN3,
   SEFixedLog2LMULN2,
   SEFixedLog2LMULN1,
@@ -219,8 +220,9 @@ enum class BasicType : uint16_t {
   Float64 = 1 << 7,
   F8E4M3 = 1 << 8,
   F8E5M2 = 1 << 9,
-  MaxOffset = 9,
-  LLVM_MARK_AS_BITMASK_ENUM(F8E5M2),
+  F4E2M1 = 1 << 10,
+  MaxOffset = 10,
+  LLVM_MARK_AS_BITMASK_ENUM(F4E2M1),
 };
 
 // Type of vector type.
@@ -237,6 +239,7 @@ enum ScalarTypeKind : uint8_t {
   BFloat,
   FloatE4M3,
   FloatE5M2,
+  FloatE2M1,
   Invalid,
   Undefined,
 };

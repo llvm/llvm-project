@@ -1,10 +1,12 @@
 // RUN: %clang_cc1 -triple riscv32-none-linux-gnu %s -emit-llvm -o - \
 // RUN:   -target-feature +zve64d -target-feature +zvfhmin \
 // RUN:   -target-feature +zvfbfmin -target-feature +experimental-zvfofp8min \
+// RUN:   -target-feature +xsfvfofp4min \
 // RUN:   | FileCheck %s
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu %s -emit-llvm -o - \
 // RUN:   -target-feature +zve64d -target-feature +zvfhmin \
 // RUN:   -target-feature +zvfbfmin -target-feature +experimental-zvfofp8min \
+// RUN:   -target-feature +xsfvfofp4min \
 // RUN:   | FileCheck %s
 
 typedef __rvv_int8mf8_t  vint8mf8_t;
@@ -74,6 +76,14 @@ typedef __rvv_float8e5m2m1_t  vfloat8e5m2m1_t;
 typedef __rvv_float8e5m2m2_t  vfloat8e5m2m2_t;
 typedef __rvv_float8e5m2m4_t  vfloat8e5m2m4_t;
 typedef __rvv_float8e5m2m8_t  vfloat8e5m2m8_t;
+
+typedef __rvv_float4e2m1mf8_t vfloat4e2m1mf8_t;
+typedef __rvv_float4e2m1mf4_t vfloat4e2m1mf4_t;
+typedef __rvv_float4e2m1mf2_t vfloat4e2m1mf2_t;
+typedef __rvv_float4e2m1m1_t  vfloat4e2m1m1_t;
+typedef __rvv_float4e2m1m2_t  vfloat4e2m1m2_t;
+typedef __rvv_float4e2m1m4_t  vfloat4e2m1m4_t;
+typedef __rvv_float4e2m1m8_t  vfloat4e2m1m8_t;
 
 typedef __rvv_float16mf4_t vfloat16mf4_t;
 typedef __rvv_float16mf2_t vfloat16mf2_t;
@@ -271,6 +281,21 @@ void f_bf16m2(vbfloat16m2_t) {}
 void f_bf16m4(vbfloat16m4_t) {}
 // CHECK: _Z8f_bf16m8u18__rvv_bfloat16m8_t
 void f_bf16m8(vbfloat16m8_t) {}
+
+// CHECK: _Z11f_f4e2m1mf8u21__rvv_float4e2m1mf8_t
+void f_f4e2m1mf8(vfloat4e2m1mf8_t) {}
+// CHECK: _Z11f_f4e2m1mf4u21__rvv_float4e2m1mf4_t
+void f_f4e2m1mf4(vfloat4e2m1mf4_t) {}
+// CHECK: _Z11f_f4e2m1mf2u21__rvv_float4e2m1mf2_t
+void f_f4e2m1mf2(vfloat4e2m1mf2_t) {}
+// CHECK: _Z10f_f4e2m1m1u20__rvv_float4e2m1m1_t
+void f_f4e2m1m1(vfloat4e2m1m1_t) {}
+// CHECK: _Z10f_f4e2m1m2u20__rvv_float4e2m1m2_t
+void f_f4e2m1m2(vfloat4e2m1m2_t) {}
+// CHECK: _Z10f_f4e2m1m4u20__rvv_float4e2m1m4_t
+void f_f4e2m1m4(vfloat4e2m1m4_t) {}
+// CHECK: _Z10f_f4e2m1m8u20__rvv_float4e2m1m8_t
+void f_f4e2m1m8(vfloat4e2m1m8_t) {}
 
 // CHECK: _Z8f_f32mf2u18__rvv_float32mf2_t
 void f_f32mf2(vfloat32mf2_t) {}

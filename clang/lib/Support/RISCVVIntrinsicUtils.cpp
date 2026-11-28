@@ -208,6 +208,9 @@ void RVVType::initBuiltinStr() {
   case ScalarTypeKind::FloatE5M2:
     BuiltinStr += "b";
     break;
+  case ScalarTypeKind::FloatE2M1:
+    BuiltinStr += "g";
+    break;
   default:
     llvm_unreachable("ScalarType is invalid!");
   }
@@ -257,6 +260,9 @@ void RVVType::initClangBuiltinStr() {
     return;
   case ScalarTypeKind::FloatE5M2:
     ClangBuiltinStr += "float8e5m2" + LMUL.str() + "_t";
+    return;
+  case ScalarTypeKind::FloatE2M1:
+    ClangBuiltinStr += "float4e2m1" + LMUL.str() + "_t";
     return;
   default:
     llvm_unreachable("ScalarTypeKind is invalid");
@@ -339,6 +345,9 @@ void RVVType::initTypeStr() {
   case ScalarTypeKind::FloatE5M2:
     Str += "vfloat8e5m2" + LMUL.str() + "_t";
     break;
+  case ScalarTypeKind::FloatE2M1:
+    Str += "vfloat4e2m1" + LMUL.str() + "_t";
+    break;
   default:
     llvm_unreachable("ScalarType is invalid!");
   }
@@ -369,6 +378,9 @@ void RVVType::initShortStr() {
     break;
   case ScalarTypeKind::FloatE5M2:
     ShortStr = "f8e5m2";
+    break;
+  case ScalarTypeKind::FloatE2M1:
+    ShortStr = "f4e2m1";
     break;
   default:
     llvm_unreachable("Unhandled case!");
@@ -427,6 +439,11 @@ void RVVType::applyBasicType() {
     ElementBitwidth = 8;
     ScalarType = ScalarTypeKind::FloatE5M2;
     break;
+  case BasicType::F4E2M1:
+    // OFP4 is packed into i8 type, so ElementBitwidth should be 8.
+    ElementBitwidth = 8;
+    ScalarType = ScalarTypeKind::FloatE2M1;
+    break;
   default:
     llvm_unreachable("Unhandled type code!");
   }
@@ -471,6 +488,10 @@ PrototypeDescriptor::parsePrototypeDescriptor(
   case 'm':
     PT = BaseTypeModifier::Vector;
     VTM = VectorTypeModifier::MaskVector;
+    break;
+  case 'n':
+    PT = BaseTypeModifier::Vector;
+    VTM = VectorTypeModifier::OFP4HalfLMULVector;
     break;
   case '0':
     PT = BaseTypeModifier::Void;
@@ -845,6 +866,11 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
     break;
   case VectorTypeModifier::SFixedLog2LMUL3:
     applyFixedLog2LMUL(3, FixedLMULType::SmallerThan);
+    break;
+  case VectorTypeModifier::OFP4HalfLMULVector:
+    ScalarType = ScalarTypeKind::FloatE2M1;
+    LMUL.MulLog2LMUL(-1);
+    Scale = LMUL.getScale(ElementBitwidth);
     break;
   case VectorTypeModifier::SEFixedLog2LMULN3:
     applyFixedLog2LMUL(-3, FixedLMULType::SmallerOrEqual);
@@ -1254,7 +1280,7 @@ void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
 
 SmallVector<PrototypeDescriptor> parsePrototypes(StringRef Prototypes) {
   SmallVector<PrototypeDescriptor> PrototypeDescriptors;
-  const StringRef Primaries("evwdqom0ztulf");
+  const StringRef Primaries("evwdqom0ztulfn");
   while (!Prototypes.empty()) {
     size_t Idx = 0;
     // Skip over complex prototype because it could contain primitive type
