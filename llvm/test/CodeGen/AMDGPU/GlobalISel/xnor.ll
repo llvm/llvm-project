@@ -25,18 +25,15 @@ entry:
   ret i32 %r0.val
 }
 
-; FIXME: fails to match
 define amdgpu_ps i32 @scalar_xnor_v2i16_one_use(<2 x i16> inreg %a, <2 x i16> inreg %b) {
 ; GCN-LABEL: scalar_xnor_v2i16_one_use:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_xor_b32 s0, s0, s1
-; GCN-NEXT:    s_xor_b32 s0, s0, -1
+; GCN-NEXT:    s_xnor_b32 s0, s0, s1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: scalar_xnor_v2i16_one_use:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_xor_b32 s0, s0, s1
-; GFX10-NEXT:    s_xor_b32 s0, s0, -1
+; GFX10-NEXT:    s_xnor_b32 s0, s0, s1
 ; GFX10-NEXT:    ; return to shader part epilog
 entry:
   %xor = xor <2 x i16> %a, %b
@@ -85,7 +82,7 @@ define amdgpu_ps i64 @scalar_xnor_i64_one_use(i64 inreg %a, i64 inreg %b) {
   ret i64 %r0.val
 }
 
-; FIXME: fails to match
+; FIXME: GFX7 scalarizes v4i16, so it does not match.
 define amdgpu_ps i64 @scalar_xnor_v4i16_one_use(<4 x i16> inreg %a, <4 x i16> inreg %b) {
 ; GFX7-LABEL: scalar_xnor_v4i16_one_use:
 ; GFX7:       ; %bb.0:
@@ -108,35 +105,198 @@ define amdgpu_ps i64 @scalar_xnor_v4i16_one_use(<4 x i16> inreg %a, <4 x i16> in
 ;
 ; GFX8-LABEL: scalar_xnor_v4i16_one_use:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
-; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], -1
+; GFX8-NEXT:    s_xnor_b64 s[0:1], s[0:1], s[2:3]
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX900-LABEL: scalar_xnor_v4i16_one_use:
 ; GFX900:       ; %bb.0:
-; GFX900-NEXT:    s_mov_b32 s4, -1
-; GFX900-NEXT:    s_mov_b32 s5, s4
-; GFX900-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
-; GFX900-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
+; GFX900-NEXT:    s_xnor_b64 s[0:1], s[0:1], s[2:3]
 ; GFX900-NEXT:    ; return to shader part epilog
 ;
 ; GFX906-LABEL: scalar_xnor_v4i16_one_use:
 ; GFX906:       ; %bb.0:
-; GFX906-NEXT:    s_mov_b32 s4, -1
-; GFX906-NEXT:    s_mov_b32 s5, s4
-; GFX906-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
-; GFX906-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
+; GFX906-NEXT:    s_xnor_b64 s[0:1], s[0:1], s[2:3]
 ; GFX906-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: scalar_xnor_v4i16_one_use:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_mov_b32 s4, -1
-; GFX10-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
-; GFX10-NEXT:    s_mov_b32 s5, s4
-; GFX10-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
+; GFX10-NEXT:    s_xnor_b64 s[0:1], s[0:1], s[2:3]
 ; GFX10-NEXT:    ; return to shader part epilog
   %xor = xor <4 x i16> %a, %b
   %ret = xor <4 x i16> %xor, <i16 -1, i16 -1, i16 -1, i16 -1>
+  %cast = bitcast <4 x i16> %ret to i64
+  ret i64 %cast
+}
+
+define amdgpu_ps <2 x i32> @scalar_xnor_v2i32_one_use(<2 x i32> inreg %a, <2 x i32> inreg %b) {
+; GCN-LABEL: scalar_xnor_v2i32_one_use:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_xnor_b64 s[0:1], s[0:1], s[2:3]
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: scalar_xnor_v2i32_one_use:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_xnor_b64 s[0:1], s[0:1], s[2:3]
+; GFX10-NEXT:    ; return to shader part epilog
+  %xor = xor <2 x i32> %a, %b
+  %ret = xor <2 x i32> %xor, splat (i32 -1)
+  ret <2 x i32> %ret
+}
+
+define amdgpu_ps <4 x i32> @scalar_xnor_v2i32_mul_use(<2 x i32> inreg %a, <2 x i32> inreg %b) {
+; GCN-LABEL: scalar_xnor_v2i32_mul_use:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_xor_b64 s[2:3], s[0:1], s[2:3]
+; GCN-NEXT:    s_xor_b64 s[4:5], s[2:3], -1
+; GCN-NEXT:    s_add_i32 s2, s2, s0
+; GCN-NEXT:    s_add_i32 s3, s3, s1
+; GCN-NEXT:    s_mov_b32 s0, s4
+; GCN-NEXT:    s_mov_b32 s1, s5
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: scalar_xnor_v2i32_mul_use:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_xor_b64 s[2:3], s[0:1], s[2:3]
+; GFX10-NEXT:    s_xor_b64 s[4:5], s[2:3], -1
+; GFX10-NEXT:    s_add_i32 s2, s2, s0
+; GFX10-NEXT:    s_add_i32 s3, s3, s1
+; GFX10-NEXT:    s_mov_b32 s0, s4
+; GFX10-NEXT:    s_mov_b32 s1, s5
+; GFX10-NEXT:    ; return to shader part epilog
+  %xor = xor <2 x i32> %a, %b
+  %r0.val = xor <2 x i32> %xor, splat (i32 -1)
+  %r1.val = add <2 x i32> %xor, %a
+  %ret = shufflevector <2 x i32> %r0.val, <2 x i32> %r1.val, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %ret
+}
+
+define amdgpu_ps i32 @scalar_xnor_v2i16_partial_ones(<2 x i16> inreg %a, <2 x i16> inreg %b) {
+; GCN-LABEL: scalar_xnor_v2i16_partial_ones:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_xor_b32 s0, s0, s1
+; GCN-NEXT:    s_xor_b32 s0, s0, 0xffff
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: scalar_xnor_v2i16_partial_ones:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_xor_b32 s0, s0, s1
+; GFX10-NEXT:    s_xor_b32 s0, s0, 0xffff
+; GFX10-NEXT:    ; return to shader part epilog
+  %xor = xor <2 x i16> %a, %b
+  %ret = xor <2 x i16> %xor, <i16 -1, i16 0>
+  %cast = bitcast <2 x i16> %ret to i32
+  ret i32 %cast
+}
+
+define amdgpu_ps i64 @scalar_xnor_v4i16_low_half_ones(<4 x i16> inreg %a, <4 x i16> inreg %b) {
+; GFX7-LABEL: scalar_xnor_v4i16_low_half_ones:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_mov_b32 s4, s1
+; GFX7-NEXT:    s_mov_b32 s6, s3
+; GFX7-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX7-NEXT:    s_lshr_b32 s3, s2, 16
+; GFX7-NEXT:    s_lshr_b32 s5, s4, 16
+; GFX7-NEXT:    s_lshr_b32 s7, s6, 16
+; GFX7-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX7-NEXT:    s_xor_b64 s[2:3], s[4:5], s[6:7]
+; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX7-NEXT:    s_or_b32 s0, s1, s0
+; GFX7-NEXT:    s_lshl_b32 s1, s3, 16
+; GFX7-NEXT:    s_and_b32 s2, s2, 0xffff
+; GFX7-NEXT:    s_mov_b64 s[8:9], 0xffffffff
+; GFX7-NEXT:    s_or_b32 s1, s1, s2
+; GFX7-NEXT:    s_xor_b64 s[0:1], s[0:1], s[8:9]
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: scalar_xnor_v4i16_low_half_ones:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_mov_b64 s[4:5], 0xffffffff
+; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX900-LABEL: scalar_xnor_v4i16_low_half_ones:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_mov_b64 s[4:5], 0xffffffff
+; GFX900-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX900-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
+; GFX900-NEXT:    ; return to shader part epilog
+;
+; GFX906-LABEL: scalar_xnor_v4i16_low_half_ones:
+; GFX906:       ; %bb.0:
+; GFX906-NEXT:    s_mov_b64 s[4:5], 0xffffffff
+; GFX906-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX906-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
+; GFX906-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: scalar_xnor_v4i16_low_half_ones:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mov_b64 s[4:5], 0xffffffff
+; GFX10-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX10-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
+; GFX10-NEXT:    ; return to shader part epilog
+  %xor = xor <4 x i16> %a, %b
+  %ret = xor <4 x i16> %xor, <i16 -1, i16 -1, i16 0, i16 0>
+  %cast = bitcast <4 x i16> %ret to i64
+  ret i64 %cast
+}
+
+define amdgpu_ps i64 @scalar_xnor_v4i16_high_half_ones(<4 x i16> inreg %a, <4 x i16> inreg %b) {
+; GFX7-LABEL: scalar_xnor_v4i16_high_half_ones:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_mov_b32 s4, s1
+; GFX7-NEXT:    s_mov_b32 s6, s3
+; GFX7-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX7-NEXT:    s_lshr_b32 s3, s2, 16
+; GFX7-NEXT:    s_lshr_b32 s5, s4, 16
+; GFX7-NEXT:    s_lshr_b32 s7, s6, 16
+; GFX7-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX7-NEXT:    s_xor_b64 s[2:3], s[4:5], s[6:7]
+; GFX7-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX7-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX7-NEXT:    s_or_b32 s0, s1, s0
+; GFX7-NEXT:    s_lshl_b32 s1, s3, 16
+; GFX7-NEXT:    s_and_b32 s2, s2, 0xffff
+; GFX7-NEXT:    s_mov_b32 s8, 0
+; GFX7-NEXT:    s_mov_b32 s9, -1
+; GFX7-NEXT:    s_or_b32 s1, s1, s2
+; GFX7-NEXT:    s_xor_b64 s[0:1], s[0:1], s[8:9]
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: scalar_xnor_v4i16_high_half_ones:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_mov_b32 s4, 0
+; GFX8-NEXT:    s_mov_b32 s5, -1
+; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX900-LABEL: scalar_xnor_v4i16_high_half_ones:
+; GFX900:       ; %bb.0:
+; GFX900-NEXT:    s_mov_b32 s4, 0
+; GFX900-NEXT:    s_mov_b32 s5, -1
+; GFX900-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX900-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
+; GFX900-NEXT:    ; return to shader part epilog
+;
+; GFX906-LABEL: scalar_xnor_v4i16_high_half_ones:
+; GFX906:       ; %bb.0:
+; GFX906-NEXT:    s_mov_b32 s4, 0
+; GFX906-NEXT:    s_mov_b32 s5, -1
+; GFX906-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX906-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
+; GFX906-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: scalar_xnor_v4i16_high_half_ones:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_mov_b32 s4, 0
+; GFX10-NEXT:    s_mov_b32 s5, -1
+; GFX10-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GFX10-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
+; GFX10-NEXT:    ; return to shader part epilog
+  %xor = xor <4 x i16> %a, %b
+  %ret = xor <4 x i16> %xor, <i16 0, i16 0, i16 -1, i16 -1>
   %cast = bitcast <4 x i16> %ret to i64
   ret i64 %cast
 }

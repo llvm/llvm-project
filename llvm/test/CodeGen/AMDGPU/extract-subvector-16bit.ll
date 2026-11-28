@@ -91,16 +91,10 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX9-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  .LBB0_3: ; %exit
-; GFX9-NEXT:    v_pk_ashrrev_i16 v1, 15, v1 op_sel_hi:[0,0]
-; GFX9-NEXT:    s_movk_i32 s4, 0x8000
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v0 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_or_b32_e32 v2, 0xffff8000, v1
-; GFX9-NEXT:    v_or_b32_sdwa v1, v1, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-NEXT:    v_or_b32_e32 v3, 0xffff8000, v0
-; GFX9-NEXT:    v_or_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v0, v3, s4
-; GFX9-NEXT:    v_perm_b32 v1, v1, v2, s4
+; GFX9-NEXT:    v_pk_ashrrev_i16 v1, 15, v1 op_sel_hi:[0,0]
+; GFX9-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
+; GFX9-NEXT:    v_or_b32_e32 v1, 0x80008000, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: vec_8xi16_extract_4xi16:
@@ -119,11 +113,10 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v1.l, 15, v1.l
 ; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v0 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, v1.l, 0x8000
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, 0x8000
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v0.h, 0x8000
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v1.l
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v1, 0x80008000, v1
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: vec_8xi16_extract_4xi16:
@@ -142,16 +135,8 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX11-FAKE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v0 op_sel_hi:[0,1]
 ; GFX11-FAKE16-NEXT:    v_pk_ashrrev_i16 v1, 15, v1 op_sel_hi:[0,0]
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v1, 0xffff8000, v1
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v0, 0xffff8000, v0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v2, 0xffff8000, v2
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v3, 0xffff8000, v3
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
+; GFX11-FAKE16-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
+; GFX11-FAKE16-NEXT:    v_or_b32_e32 v1, 0x80008000, v1
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %cond = icmp eq i32 %cond.arg, 0
   br i1 %cond, label %T, label %F
@@ -259,68 +244,31 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX9-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:  .LBB1_3: ; %exit
-; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v3 op_sel_hi:[0,1]
-; GFX9-NEXT:    s_movk_i32 s4, 0x8000
-; GFX9-NEXT:    v_or_b32_e32 v1, 0xffff8000, v0
-; GFX9-NEXT:    v_or_b32_sdwa v3, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v2 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_or_b32_e32 v2, 0xffff8000, v0
-; GFX9-NEXT:    v_or_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v0, v2, s4
-; GFX9-NEXT:    v_perm_b32 v1, v3, v1, s4
+; GFX9-NEXT:    v_pk_ashrrev_i16 v1, 15, v3 op_sel_hi:[0,1]
+; GFX9-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
+; GFX9-NEXT:    v_or_b32_e32 v1, 0x80008000, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: vec_8xi16_extract_4xi16_2:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX11-TRUE16-NEXT:    s_cbranch_scc0 .LBB1_2
-; GFX11-TRUE16-NEXT:  ; %bb.1: ; %F
-; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v[2:3], off glc dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    s_branch .LBB1_3
-; GFX11-TRUE16-NEXT:  .LBB1_2: ; %T
-; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v[0:1], off glc dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:  .LBB1_3: ; %exit
-; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v1, 15, v3 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v2 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, v1.l, 0x8000
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, 0x8000
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v0.h, 0x8000
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, v1.h, 0x8000
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: vec_8xi16_extract_4xi16_2:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX11-FAKE16-NEXT:    s_cbranch_scc0 .LBB1_2
-; GFX11-FAKE16-NEXT:  ; %bb.1: ; %F
-; GFX11-FAKE16-NEXT:    global_load_b128 v[0:3], v[2:3], off glc dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    s_branch .LBB1_3
-; GFX11-FAKE16-NEXT:  .LBB1_2: ; %T
-; GFX11-FAKE16-NEXT:    global_load_b128 v[0:3], v[0:1], off glc dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:  .LBB1_3: ; %exit
-; GFX11-FAKE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v2 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_ashrrev_i16 v1, 15, v3 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v1, 0xffff8000, v1
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v0, 0xffff8000, v0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v2, 0xffff8000, v2
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v3, 0xffff8000, v3
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: vec_8xi16_extract_4xi16_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-NEXT:    s_cbranch_scc0 .LBB1_2
+; GFX11-NEXT:  ; %bb.1: ; %F
+; GFX11-NEXT:    global_load_b128 v[0:3], v[2:3], off glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_branch .LBB1_3
+; GFX11-NEXT:  .LBB1_2: ; %T
+; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:  .LBB1_3: ; %exit
+; GFX11-NEXT:    v_pk_ashrrev_i16 v0, 15, v2 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_ashrrev_i16 v1, 15, v3 op_sel_hi:[0,1]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
+; GFX11-NEXT:    v_or_b32_e32 v1, 0x80008000, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cond = icmp eq i32 %cond.arg, 0
   br i1 %cond, label %T, label %F
 
@@ -639,16 +587,10 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
 ; GFX9-NEXT:  .LBB3_3: ; %exit
-; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v5 op_sel_hi:[0,0]
-; GFX9-NEXT:    s_movk_i32 s4, 0x8000
-; GFX9-NEXT:    v_or_b32_e32 v1, 0xffff8000, v0
-; GFX9-NEXT:    v_or_b32_sdwa v2, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v4 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_or_b32_e32 v3, 0xffff8000, v0
-; GFX9-NEXT:    v_or_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v0, v3, s4
-; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
+; GFX9-NEXT:    v_pk_ashrrev_i16 v1, 15, v5 op_sel_hi:[0,0]
+; GFX9-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
+; GFX9-NEXT:    v_or_b32_e32 v1, 0x80008000, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: vec_16xi16_extract_4xi16:
@@ -671,11 +613,10 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-TRUE16-NEXT:    v_ashrrev_i16 v1.l, 15, v1.l
 ; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v0 op_sel_hi:[0,1]
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, v1.l, 0x8000
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, 0x8000
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v0.h, 0x8000
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v1.l
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v1, 0x80008000, v1
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: vec_16xi16_extract_4xi16:
@@ -698,16 +639,8 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-FAKE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v0 op_sel_hi:[0,1]
 ; GFX11-FAKE16-NEXT:    v_pk_ashrrev_i16 v1, 15, v1 op_sel_hi:[0,0]
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v1, 0xffff8000, v1
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v0, 0xffff8000, v0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v2, 0xffff8000, v2
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v3, 0xffff8000, v3
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
+; GFX11-FAKE16-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
+; GFX11-FAKE16-NEXT:    v_or_b32_e32 v1, 0x80008000, v1
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %cond = icmp eq i32 %cond.arg, 0
   br i1 %cond, label %T, label %F
@@ -854,76 +787,35 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
 ; GFX9-NEXT:  .LBB4_3: ; %exit
-; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v7 op_sel_hi:[0,1]
-; GFX9-NEXT:    s_movk_i32 s4, 0x8000
-; GFX9-NEXT:    v_or_b32_e32 v1, 0xffff8000, v0
-; GFX9-NEXT:    v_or_b32_sdwa v2, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GFX9-NEXT:    v_pk_ashrrev_i16 v0, 15, v6 op_sel_hi:[0,1]
-; GFX9-NEXT:    v_or_b32_e32 v3, 0xffff8000, v0
-; GFX9-NEXT:    v_or_b32_sdwa v0, v0, s4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v0, v3, s4
-; GFX9-NEXT:    v_perm_b32 v1, v2, v1, s4
+; GFX9-NEXT:    v_pk_ashrrev_i16 v1, 15, v7 op_sel_hi:[0,1]
+; GFX9-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
+; GFX9-NEXT:    v_or_b32_e32 v1, 0x80008000, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: vec_16xi16_extract_4xi16_2:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX11-TRUE16-NEXT:    s_cbranch_scc0 .LBB4_2
-; GFX11-TRUE16-NEXT:  ; %bb.1: ; %F
-; GFX11-TRUE16-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:16 glc dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v[2:3], off glc dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    s_branch .LBB4_3
-; GFX11-TRUE16-NEXT:  .LBB4_2: ; %T
-; GFX11-TRUE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v[0:1], off glc dlc
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:  .LBB4_3: ; %exit
-; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v1, 15, v3 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v2 op_sel_hi:[0,1]
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.l, v1.l, 0x8000
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, 0x8000
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_or_b16 v0.h, v0.h, 0x8000
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, v1.h, 0x8000
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: vec_16xi16_extract_4xi16_2:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s0, 0
-; GFX11-FAKE16-NEXT:    s_cbranch_scc0 .LBB4_2
-; GFX11-FAKE16-NEXT:  ; %bb.1: ; %F
-; GFX11-FAKE16-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:16 glc dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    global_load_b128 v[0:3], v[2:3], off glc dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    s_branch .LBB4_3
-; GFX11-FAKE16-NEXT:  .LBB4_2: ; %T
-; GFX11-FAKE16-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    global_load_b128 v[0:3], v[0:1], off glc dlc
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:  .LBB4_3: ; %exit
-; GFX11-FAKE16-NEXT:    v_pk_ashrrev_i16 v0, 15, v2 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    v_pk_ashrrev_i16 v1, 15, v3 op_sel_hi:[0,1]
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v1, 0xffff8000, v1
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v0, 0xffff8000, v0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v2, 0xffff8000, v2
-; GFX11-FAKE16-NEXT:    v_or_b32_e32 v3, 0xffff8000, v3
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: vec_16xi16_extract_4xi16_2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX11-NEXT:    s_cbranch_scc0 .LBB4_2
+; GFX11-NEXT:  ; %bb.1: ; %F
+; GFX11-NEXT:    global_load_b128 v[4:7], v[2:3], off offset:16 glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_load_b128 v[0:3], v[2:3], off glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_branch .LBB4_3
+; GFX11-NEXT:  .LBB4_2: ; %T
+; GFX11-NEXT:    global_load_b128 v[2:5], v[0:1], off offset:16 glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:  .LBB4_3: ; %exit
+; GFX11-NEXT:    v_pk_ashrrev_i16 v0, 15, v2 op_sel_hi:[0,1]
+; GFX11-NEXT:    v_pk_ashrrev_i16 v1, 15, v3 op_sel_hi:[0,1]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_or_b32_e32 v0, 0x80008000, v0
+; GFX11-NEXT:    v_or_b32_e32 v1, 0x80008000, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cond = icmp eq i32 %cond.arg, 0
   br i1 %cond, label %T, label %F
 
