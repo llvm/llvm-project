@@ -53993,6 +53993,62 @@ static SDValue combineAndOrForCcmpCtest(SDNode *N, SelectionDAG &DAG,
 static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  // Fold (X >> K) & 1 to umin(X & (1 << K), 1).
+  // Bits above the range of the logical right shift are known zero,
+  // so the AND mask need not be a splat of one.
+  // Restrict this combine to AVX2 vectors with a zero shift and at least
+  // two distinct nonzero shifts, where SRL lowering can require both
+  // multiply-high and blend instructions.
+  if (DCI.isBeforeLegalizeOps() && N->getValueType(0) == MVT::v16i16 &&
+      Subtarget.hasAVX2() && !Subtarget.hasBWI()) {
+    SDValue BitShift = N->getOperand(0);
+    SDValue BitMask = N->getOperand(1);
+    if (BitMask.getOpcode() == ISD::SRL)
+      std::swap(BitShift, BitMask);
+    bool IsOne = isOneOrOneSplat(BitMask);
+    bool IsBuildVector = BitMask.getOpcode() == ISD::BUILD_VECTOR &&
+                         BitMask->getNumOperands() == 16;
+    if (BitShift.getOpcode() == ISD::SRL && BitShift.hasOneUse() &&
+        (IsOne || IsBuildVector)) {
+      SDValue Amounts = BitShift.getOperand(1);
+      if (Amounts.getOpcode() == ISD::BUILD_VECTOR &&
+          Amounts->getNumOperands() == 16) {
+        SDLoc Loc(N);
+        SmallVector<SDValue, 16> Masks;
+        unsigned Seen = 0;
+        for (unsigned I = 0; I != 16; ++I) {
+          auto *C = dyn_cast<ConstantSDNode>(Amounts.getOperand(I));
+          if (!C || C->getAPIntValue().uge(16))
+            break;
+          unsigned K = C->getZExtValue();
+          if (!IsOne) {
+            auto *M = dyn_cast<ConstantSDNode>(BitMask.getOperand(I));
+            if (!M)
+              break;
+            // Only the low 16-K bits of SRL can be nonzero. The mask
+            // must retain bit zero and discard every other possible bit.
+            APInt Effective = M->getAPIntValue().zextOrTrunc(16) &
+                              APInt::getLowBitsSet(16, 16 - K);
+            if (!Effective.isOne())
+              break;
+          }
+          Seen |= 1u << K;
+          Masks.push_back(DAG.getConstant(1u << K, Loc, MVT::i16));
+        }
+        unsigned NonZero = Seen & ~1u;
+        if (Masks.size() == 16 && (Seen & 1u) && (NonZero & (NonZero - 1u))) {
+          SDValue Mask = DAG.getBuildVector(MVT::v16i16, Loc, Masks);
+          SDValue Masked = DAG.getNode(ISD::AND, Loc, MVT::v16i16,
+                                       BitShift.getOperand(0), Mask);
+          // Do not reuse BitMask here: it can contain non-one lanes.
+          SmallVector<SDValue, 16> Ones(16, DAG.getConstant(1, Loc, MVT::i16));
+          SDValue One = DAG.getBuildVector(MVT::v16i16, Loc, Ones);
+          return DAG.getNode(ISD::UMIN, Loc, MVT::v16i16, Masked, One);
+        }
+      }
+    }
+  }
+
   using namespace SDPatternMatch;
 
   SDValue N0 = N->getOperand(0);
