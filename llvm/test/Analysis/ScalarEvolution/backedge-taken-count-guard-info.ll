@@ -86,9 +86,9 @@ declare void @clobber.i32(i32)
 define void @test_guards_across_loops(i32 %N) {
 ; CHECK-LABEL: 'test_guards_across_loops'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guards_across_loops
-; CHECK-NEXT:  Loop %loop.2: backedge-taken count is (1 + (zext i32 %N to i64))<nuw><nsw>
-; CHECK-NEXT:  Loop %loop.2: constant max backedge-taken count is i64 4294967296
-; CHECK-NEXT:  Loop %loop.2: symbolic max backedge-taken count is (1 + (zext i32 %N to i64))<nuw><nsw>
+; CHECK-NEXT:  Loop %loop.2: backedge-taken count is (1 + %N)
+; CHECK-NEXT:  Loop %loop.2: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop.2: symbolic max backedge-taken count is (1 + %N)
 ; CHECK-NEXT:  Loop %loop.2: Trip multiple is 1
 ; CHECK-NEXT:  Loop %loop.1: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop.1: Unpredictable constant max backedge-taken count.
