@@ -17155,8 +17155,10 @@ SDValue AArch64TargetLowering::LowerFixedLengthBuildVectorToSVE(
   }
 
   unsigned NumElems = VT.getVectorNumElements();
-  if (!VT.isPow2VectorType() || VT.getFixedSizeInBits() > 128 ||
-      NumElems <= 1 || BVN->isConstant())
+  auto IsWiderThanNEON = VT.getFixedSizeInBits() > AArch64::SVEBitsPerBlock;
+  if (!VT.isPow2VectorType() || NumElems <= 1 ||
+      (!IsWiderThanNEON && // ConstantBuildVector only supports NEON vectors
+       BVN->isConstant()))
     return SDValue();
 
   auto IsExtractElt = [](SDValue Op) {
@@ -17167,6 +17169,25 @@ SDValue AArch64TargetLowering::LowerFixedLengthBuildVectorToSVE(
   // elements. This is an arbitrary restriction to avoid many fmovs from GPRs.
   if (VT.getScalarType().isInteger() &&
       NumElems - count_if(Op->op_values(), IsExtractElt) > 4)
+    return SDValue();
+
+  // Split vectors wider than 128b into 128b parts and splice them
+  // together. This improves codegen by using NEON+SVE for cases when
+  // BUILD_VECTOR lowering fallback to stack materialization.
+  if (Subtarget->isNeonAvailable() && IsWiderThanNEON) {
+    ArrayRef Ops(Op->op_begin(), Op->op_end());
+    EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+    ArrayRef OpsLo = Ops.take_front(Ops.size() / 2);
+    ArrayRef OpsHi = Ops.drop_front(Ops.size() / 2);
+    SDValue Lo = DAG.getBuildVector(HalfVT, DL, OpsLo);
+    SDValue Hi = DAG.getBuildVector(HalfVT, DL, OpsHi);
+    // Add a NVCAST to prevent (concat(build_vector, build_vector)) ->
+    // build_vector fold.
+    Hi = DAG.getNode(AArch64ISD::NVCAST, DL, HalfVT, Hi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+  }
+
+  if (IsWiderThanNEON)
     return SDValue();
 
   // Lower (pow2) BUILD_VECTORS that are <= 128-bit to a sequence of ZIP1s.

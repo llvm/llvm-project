@@ -909,26 +909,16 @@ define void @shuffle_ext_byone_reverse(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @shuffle_ext_invalid(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: shuffle_ext_invalid:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; CHECK-NEXT:    mov z2.d, z0.d[1]
-; CHECK-NEXT:    mov z3.d, z1.d[3]
-; CHECK-NEXT:    mov z1.d, z1.d[2]
-; CHECK-NEXT:    stp d0, d2, [sp, #16]
-; CHECK-NEXT:    stp d1, d3, [sp]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    ptrue p1.d, vl2
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
+; CHECK-NEXT:    mov z2.d, z0.d[3]
+; CHECK-NEXT:    mov z0.d, z0.d[2]
+; CHECK-NEXT:    mov v1.d[1], v1.d[1]
+; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    splice z0.d, p1, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %op1 = load <4 x double>, ptr %a
   %op2 = load <4 x double>, ptr %b

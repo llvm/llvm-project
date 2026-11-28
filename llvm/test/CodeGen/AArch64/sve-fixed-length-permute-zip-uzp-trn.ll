@@ -124,15 +124,8 @@ define void @zip_v4f64(ptr %a, ptr %b) #0 {
 ;
 ; VBITS_EQ_512-LABEL: zip_v4f64:
 ; VBITS_EQ_512:       // %bb.0:
-; VBITS_EQ_512-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_EQ_512-NEXT:    sub x9, sp, #48
-; VBITS_EQ_512-NEXT:    mov x29, sp
-; VBITS_EQ_512-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VBITS_EQ_512-NEXT:    .cfi_def_cfa w29, 16
-; VBITS_EQ_512-NEXT:    .cfi_offset w30, -8
-; VBITS_EQ_512-NEXT:    .cfi_offset w29, -16
 ; VBITS_EQ_512-NEXT:    ptrue p0.d, vl4
-; VBITS_EQ_512-NEXT:    mov x8, sp
+; VBITS_EQ_512-NEXT:    ptrue p1.d, vl2
 ; VBITS_EQ_512-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; VBITS_EQ_512-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_EQ_512-NEXT:    mov z2.d, z0.d[3]
@@ -140,13 +133,11 @@ define void @zip_v4f64(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_512-NEXT:    mov z4.d, z0.d[2]
 ; VBITS_EQ_512-NEXT:    mov z5.d, z1.d[2]
 ; VBITS_EQ_512-NEXT:    zip1 z0.d, z1.d, z0.d
-; VBITS_EQ_512-NEXT:    stp d3, d2, [sp, #16]
-; VBITS_EQ_512-NEXT:    stp d5, d4, [sp]
-; VBITS_EQ_512-NEXT:    ld1d { z1.d }, p0/z, [x8]
-; VBITS_EQ_512-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
+; VBITS_EQ_512-NEXT:    mov v3.d[1], v2.d[0]
+; VBITS_EQ_512-NEXT:    mov v5.d[1], v4.d[0]
+; VBITS_EQ_512-NEXT:    splice z5.d, p1, z5.d, z3.d
+; VBITS_EQ_512-NEXT:    fadd z0.d, p0/m, z0.d, z5.d
 ; VBITS_EQ_512-NEXT:    st1d { z0.d }, p0, [x0]
-; VBITS_EQ_512-NEXT:    mov sp, x29
-; VBITS_EQ_512-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; VBITS_EQ_512-NEXT:    ret
   %tmp1 = load <4 x double>, ptr %a
   %tmp2 = load <4 x double>, ptr %b
@@ -621,15 +612,8 @@ define void @uzp_v8i32_undef(ptr %a) #1 {
 define void @zip_vscale2_4(ptr %a, ptr %b) #2 {
 ; CHECK-LABEL: zip_vscale2_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    ptrue p1.d, vl2
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; CHECK-NEXT:    mov z2.d, z0.d[3]
@@ -637,13 +621,11 @@ define void @zip_vscale2_4(ptr %a, ptr %b) #2 {
 ; CHECK-NEXT:    mov z4.d, z0.d[2]
 ; CHECK-NEXT:    mov z5.d, z1.d[2]
 ; CHECK-NEXT:    zip1 z0.d, z1.d, z0.d
-; CHECK-NEXT:    stp d3, d2, [sp, #16]
-; CHECK-NEXT:    stp d5, d4, [sp]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x8]
-; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    mov v3.d[1], v2.d[0]
+; CHECK-NEXT:    mov v5.d[1], v4.d[0]
+; CHECK-NEXT:    splice z5.d, p1, z5.d, z3.d
+; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z5.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x double>, ptr %a
   %tmp2 = load <4 x double>, ptr %b

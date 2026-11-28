@@ -194,11 +194,14 @@ define void @test_revhv32i16(ptr %a) #0 {
 define void @test_rev_elts_fail(ptr %a) #1 {
 ; CHECK-LABEL: test_rev_elts_fail:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI11_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI11_0
-; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    ldr z1, [x8]
-; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
+; CHECK-NEXT:    index z0.d, #0, #-1
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    add z1.d, z1.d, #3 // =0x3
+; CHECK-NEXT:    add z0.d, z0.d, #1 // =0x1
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    ldr z1, [x0]
+; CHECK-NEXT:    tbl z0.d, { z1.d }, z0.d
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i64>, ptr %a
@@ -361,49 +364,13 @@ define void @test_rev_fail(ptr %a) #1 {
 define void @test_revv8i16v8i16(ptr %a, ptr %b, ptr %c) #1 {
 ; CHECK-LABEL: test_revv8i16v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ldr q0, [x1]
-; CHECK-NEXT:    ldr q5, [x0]
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov h1, v0.h[4]
-; CHECK-NEXT:    mov h2, v0.h[5]
-; CHECK-NEXT:    mov h3, v0.h[6]
-; CHECK-NEXT:    mov h4, v0.h[7]
-; CHECK-NEXT:    str h0, [sp, #22]
-; CHECK-NEXT:    st1 { v5.h }[3], [x8]
-; CHECK-NEXT:    str h5, [sp, #6]
-; CHECK-NEXT:    str h1, [sp, #30]
-; CHECK-NEXT:    mov h1, v0.h[1]
-; CHECK-NEXT:    str h2, [sp, #28]
-; CHECK-NEXT:    mov h2, v0.h[2]
-; CHECK-NEXT:    mov h0, v0.h[3]
-; CHECK-NEXT:    str h3, [sp, #26]
-; CHECK-NEXT:    mov h3, v5.h[2]
-; CHECK-NEXT:    str h4, [sp, #24]
-; CHECK-NEXT:    str h1, [sp, #20]
-; CHECK-NEXT:    mov h1, v5.h[4]
-; CHECK-NEXT:    str h2, [sp, #18]
-; CHECK-NEXT:    mov h2, v5.h[5]
-; CHECK-NEXT:    str h0, [sp, #16]
-; CHECK-NEXT:    mov h0, v5.h[6]
-; CHECK-NEXT:    str h1, [sp, #14]
-; CHECK-NEXT:    mov h1, v5.h[7]
-; CHECK-NEXT:    str h2, [sp, #12]
-; CHECK-NEXT:    mov h2, v5.h[1]
-; CHECK-NEXT:    str h0, [sp, #10]
-; CHECK-NEXT:    str h1, [sp, #8]
-; CHECK-NEXT:    str h2, [sp, #4]
-; CHECK-NEXT:    str h3, [sp, #2]
-; CHECK-NEXT:    ldr z0, [x8]
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    str z0, [x2]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i16>, ptr %a
   %tmp2 = load <8 x i16>, ptr %b
