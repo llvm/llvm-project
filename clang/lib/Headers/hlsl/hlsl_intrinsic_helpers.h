@@ -17,9 +17,17 @@ template <typename T, int N> constexpr bool all_impl(vector<T, N> V) {
       __builtin_convertvector(V != static_cast<T>(0), vector<bool, N>));
 }
 
+template <typename T, int R, int C> constexpr bool all_impl(matrix<T, R, C> V) {
+  return all_impl((vector<T, R * C>)V);
+}
+
 template <typename T, int N> constexpr bool any_impl(vector<T, N> V) {
   return __builtin_reduce_or(
       __builtin_convertvector(V != static_cast<T>(0), vector<bool, N>));
+}
+
+template <typename T, int R, int C> constexpr bool any_impl(matrix<T, R, C> V) {
+  return any_impl((vector<T, R * C>)V);
 }
 
 template <typename T>
