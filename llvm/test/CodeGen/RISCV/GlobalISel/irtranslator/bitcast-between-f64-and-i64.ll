@@ -8,9 +8,9 @@ define i64 @double_to_i64(double %a) {
   ; CHECK-NEXT:   liveins: $f10_d
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(f64) = COPY $f10_d
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](f64)
-  ; CHECK-NEXT:   $x10 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $x11 = COPY [[UV1]](s32)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](f64)
+  ; CHECK-NEXT:   $x10 = COPY [[UV]](i32)
+  ; CHECK-NEXT:   $x11 = COPY [[UV1]](i32)
   ; CHECK-NEXT:   PseudoRET implicit $x10, implicit $x11
   %1 = bitcast double %a to i64
   ret i64 %1
