@@ -6,7 +6,7 @@ import * as vscode from "vscode";
 import { LogFilePathProvider, LogType } from "./logging";
 import { ErrorWithNotification } from "./ui/error-with-notification";
 import { ConfigureButton, OpenSettingsButton } from "./ui/show-error-message";
-import { expandUser } from "./utils";
+import { expandUser, parseDAPEnv } from "./utils";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -67,39 +67,6 @@ async function findDAPExecutable(): Promise<string | undefined> {
   }
 
   return undefined;
-}
-
-/**
- * Validates the DAP environment provided in the debug configuration.
- * It must be a dictionary of string keys and values OR an array of string values.
- *
- * @param debugConfigEnv The supposed DAP environment that will be validated
- * @returns Whether or not the DAP environment is valid
- */
-function validateDAPEnv(debugConfigEnv: any): boolean {
-  // If the env is an object, it should have string values.
-  // The keys are guaranteed to be strings.
-  if (
-    typeof debugConfigEnv === "object" &&
-    Object.values(debugConfigEnv).findIndex(
-      (entry) => typeof entry !== "string",
-    ) !== -1
-  ) {
-    return false;
-  }
-
-  // If the env is an array, it should have string values which match the regex.
-  if (
-    Array.isArray(debugConfigEnv) &&
-    debugConfigEnv.findIndex(
-      (entry) => typeof entry !== "string" || !/^\w+(=.*)?$/.test(entry),
-    ) !== -1
-  ) {
-    return false;
-  }
-
-  // The env is valid.
-  return true;
 }
 
 /**
@@ -204,37 +171,24 @@ async function getDAPArguments(
 async function getDAPEnvironment(
   workspaceFolder: vscode.WorkspaceFolder | undefined,
   configuration: vscode.DebugConfiguration,
-): Promise<{ [key: string]: string }> {
+): Promise<Record<string, string>> {
   const debugConfigEnv = configuration.debugAdapterEnv;
-  if (debugConfigEnv) {
-    if (validateDAPEnv(debugConfigEnv) === false) {
-      throw new ErrorWithNotification(
-        "The debugAdapterEnv property must be a dictionary of string keys and values OR an array of string values. Please update your launch configuration",
-        new ConfigureButton(),
-      );
-    }
 
-    // Transform, so that the returned value is always a dictionary.
-    if (Array.isArray(debugConfigEnv)) {
-      const ret: { [key: string]: string } = {};
-      for (const envVar of debugConfigEnv as string[]) {
-        const equalSignPos = envVar.search("=");
-        if (equalSignPos >= 0) {
-          ret[envVar.substr(0, equalSignPos)] = envVar.substr(equalSignPos + 1);
-        } else {
-          ret[envVar] = "";
-        }
-      }
-      return ret;
-    } else {
-      return debugConfigEnv;
-    }
+  if (!debugConfigEnv) {
+    const config = vscode.workspace.workspaceFile
+      ? vscode.workspace.getConfiguration("lldb-dap")
+      : vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
+    return config.get<Record<string, string>>("environment") ?? {};
   }
 
-  const config = vscode.workspace.workspaceFile
-    ? vscode.workspace.getConfiguration("lldb-dap")
-    : vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
-  return config.get<{ [key: string]: string }>("environment") || {};
+  const env = parseDAPEnv(debugConfigEnv);
+  if (!env) {
+    throw new ErrorWithNotification(
+      "The debugAdapterEnv property must be a dictionary of string keys and values OR an array of string values. Please update your launch configuration",
+      new ConfigureButton(),
+    );
+  }
+  return env;
 }
 
 /**
@@ -254,41 +208,36 @@ export async function createDebugAdapterExecutable(
   workspaceFolder: vscode.WorkspaceFolder | undefined,
   configuration: vscode.DebugConfiguration,
 ): Promise<vscode.DebugAdapterExecutable> {
+  // In a multi-root workspace, use workspace-level settings.
   const config = vscode.workspace.workspaceFile
     ? vscode.workspace.getConfiguration("lldb-dap")
     : vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
-  const log_path = config.get<string>("log-path");
-  let env: { [key: string]: string } = {};
-  if (log_path) {
-    env["LLDBDAP_LOG"] = log_path;
-  } else if (
-    vscode.workspace
-      .getConfiguration("lldb-dap")
-      .get("captureSessionLogs", false)
-  ) {
-    env["LLDBDAP_LOG"] = logFilePath.get(LogType.DEBUG_SESSION);
-  }
-  const configEnvironment = await getDAPEnvironment(
-    workspaceFolder,
-    configuration,
-  );
-  const dapPath = await getDAPExecutable(workspaceFolder, configuration);
 
-  const dbgOptions = {
-    env: {
-      ...configEnvironment,
-      ...env,
-    },
-    cwd: configuration.cwd ?? workspaceFolder?.uri.fsPath,
-  };
-  const dbgArgs = await getDAPArguments(workspaceFolder, configuration);
+  const logPath = config.get<string>("log-path");
+  const captureSessionLogs = config.get<boolean>("captureSessionLogs", false);
+
+  const logEnv: Record<string, string> = {};
+  // The logPath takes precedence over the generic logs.
+  if (logPath) {
+    logEnv.LLDBDAP_LOG = logPath;
+  } else if (captureSessionLogs) {
+    logEnv.LLDBDAP_LOG = logFilePath.get(LogType.DEBUG_SESSION);
+  }
+
+  const configEnv = await getDAPEnvironment(workspaceFolder, configuration);
+  const dapPath = await getDAPExecutable(workspaceFolder, configuration);
+  const dapArgs = await getDAPArguments(workspaceFolder, configuration);
+
+  // The launch config's env takes precedence over the log settings.
+  const env = { ...logEnv, ...configEnv };
+  const cwd = configuration.cwd ?? workspaceFolder?.uri.fsPath;
 
   logger.info(`lldb-dap path: ${dapPath}`);
-  logger.info(`lldb-dap args: ${dbgArgs}`);
-  logger.info(`cwd: ${dbgOptions.cwd}`);
-  logger.info(`env: ${JSON.stringify(dbgOptions.env)}`);
+  logger.info(`lldb-dap args: ${dapArgs}`);
+  logger.info(`cwd: ${cwd}`);
+  logger.info(`env: ${JSON.stringify(env)}`);
 
-  return new vscode.DebugAdapterExecutable(dapPath, dbgArgs, dbgOptions);
+  return new vscode.DebugAdapterExecutable(dapPath, dapArgs, { env, cwd });
 }
 
 /**
