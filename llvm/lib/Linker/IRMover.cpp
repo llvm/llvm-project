@@ -1395,7 +1395,9 @@ Error IRLinker::linkModuleFlagsMetadata() {
       Metadata *FlagOps[] = {
           Op->getOperand(0), ID,
           ConstantAsMetadata::get(ConstantInt::get(V->getType(), 0))};
-      DstModFlags->setOperand(Idx, MDNode::get(DstM.getContext(), FlagOps));
+      MDNode *Flag = MDNode::get(DstM.getContext(), FlagOps);
+      DstModFlags->setOperand(Idx, Flag);
+      Flags[ID].first = Flag;
     }
   }
 
