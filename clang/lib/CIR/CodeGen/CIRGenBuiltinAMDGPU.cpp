@@ -361,7 +361,7 @@ static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
   mlir::Value inf = builder.getConstant(loc, cir::FPAttr::get(srcTy, infVal));
 
   mlir::Value fabsNegInf =
-      builder.createCompare(loc, cir::CmpOpKind::one, fabs, inf);
+      builder.createFCompare(loc, cir::FCmpOpKind::one, fabs, inf);
 
   mlir::Value sel = builder.createSelect(loc, fabsNegInf, siToFp, fabs);
 
@@ -370,7 +370,7 @@ static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
       builder.getConstant(loc, cir::FPAttr::get(srcTy, zeroValue));
 
   mlir::Value srcEqZero =
-      builder.createCompare(loc, cir::CmpOpKind::eq, src0, zero);
+      builder.createFCompare(loc, cir::FCmpOpKind::oeq, src0, zero);
 
   llvm::APFloat negInfVal = llvm::APFloat::getInf(fSem, true);
   mlir::Value negInf =
@@ -685,9 +685,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_uicmp:
   case AMDGPU::BI__builtin_amdgcn_uicmpl:
   case AMDGPU::BI__builtin_amdgcn_sicmp:
-  case AMDGPU::BI__builtin_amdgcn_sicmpl:
-  case AMDGPU::BI__builtin_amdgcn_fcmp:
-  case AMDGPU::BI__builtin_amdgcn_fcmpf: {
+  case AMDGPU::BI__builtin_amdgcn_sicmpl: {
     mlir::Value lhs = emitScalarExpr(expr->getArg(0));
     mlir::Value rhs = emitScalarExpr(expr->getArg(1));
 
@@ -696,39 +694,27 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
 
     cir::CmpOpKind pred;
     switch (imm) {
-    case 0x1:  // FCMP_OEQ
     case 0x20: // ICMP_EQ
       pred = cir::CmpOpKind::eq;
       break;
-    case 0xe:  // FCMP_UNE
     case 0x21: // ICMP_NE
       pred = cir::CmpOpKind::ne;
       break;
-    case 0x2:  // FCMP_OGT
     case 0x22: // ICMP_UGT
     case 0x26: // ICMP_SGT
       pred = cir::CmpOpKind::gt;
       break;
-    case 0x3:  // FCMP_OGE
     case 0x23: // ICMP_UGE
     case 0x27: // ICMP_SGE
       pred = cir::CmpOpKind::ge;
       break;
-    case 0x4:  // FCMP_OLT
     case 0x24: // ICMP_ULT
     case 0x28: // ICMP_SLT
       pred = cir::CmpOpKind::lt;
       break;
-    case 0x5:  // FCMP_OLE
     case 0x25: // ICMP_ULE
     case 0x29: // ICMP_SLE
       pred = cir::CmpOpKind::le;
-      break;
-    case 0x6: // FCMP_ONE
-      pred = cir::CmpOpKind::one;
-      break;
-    case 0x8: // FCMP_UNO
-      pred = cir::CmpOpKind::uno;
       break;
     default:
       cgm.errorNYI(expr->getSourceRange(),
@@ -738,6 +724,72 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
 
     mlir::Location loc = getLoc(expr->getExprLoc());
     mlir::Value cmp = builder.createCompare(loc, pred, lhs, rhs);
+    return builder.emitIntrinsicCallOp(loc, "amdgcn.ballot",
+                                       convertType(expr->getType()), cmp);
+  }
+  case AMDGPU::BI__builtin_amdgcn_fcmp:
+  case AMDGPU::BI__builtin_amdgcn_fcmpf: {
+    mlir::Value lhs = emitScalarExpr(expr->getArg(0));
+    mlir::Value rhs = emitScalarExpr(expr->getArg(1));
+    uint64_t imm =
+        expr->getArg(2)->EvaluateKnownConstInt(getContext()).getZExtValue();
+
+    cir::FCmpOpKind pred;
+    switch (imm) {
+    case 0x0: // FCMP_FALSE
+      pred = cir::FCmpOpKind::_false;
+      break;
+    case 0x1: // FCMP_OEQ
+      pred = cir::FCmpOpKind::oeq;
+      break;
+    case 0x2: // FCMP_OGT
+      pred = cir::FCmpOpKind::ogt;
+      break;
+    case 0x3: // FCMP_OGE
+      pred = cir::FCmpOpKind::oge;
+      break;
+    case 0x4: // FCMP_OLT
+      pred = cir::FCmpOpKind::olt;
+      break;
+    case 0x5: // FCMP_OLE
+      pred = cir::FCmpOpKind::ole;
+      break;
+    case 0x6: // FCMP_ONE
+      pred = cir::FCmpOpKind::one;
+      break;
+    case 0x7: // FCMP_ORD
+      pred = cir::FCmpOpKind::ord;
+      break;
+    case 0x8: // FCMP_UNO
+      pred = cir::FCmpOpKind::uno;
+      break;
+    case 0x9: // FCMP_UEQ
+      pred = cir::FCmpOpKind::ueq;
+      break;
+    case 0xa: // FCMP_UGT
+      pred = cir::FCmpOpKind::ugt;
+      break;
+    case 0xb: // FCMP_UGE
+      pred = cir::FCmpOpKind::uge;
+      break;
+    case 0xc: // FCMP_ULT
+      pred = cir::FCmpOpKind::ult;
+      break;
+    case 0xd: // FCMP_ULE
+      pred = cir::FCmpOpKind::ule;
+      break;
+    case 0xe: // FCMP_UNE
+      pred = cir::FCmpOpKind::une;
+      break;
+    case 0xf: // FCMP_TRUE
+      pred = cir::FCmpOpKind::_true;
+      break;
+    default:
+      llvm_unreachable("Unexpected predicate");
+    }
+
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Value cmp = builder.createFCompare(loc, pred, lhs, rhs);
     return builder.emitIntrinsicCallOp(loc, "amdgcn.ballot",
                                        convertType(expr->getType()), cmp);
   }

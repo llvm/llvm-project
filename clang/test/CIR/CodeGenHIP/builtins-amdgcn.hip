@@ -349,7 +349,7 @@ __device__ void test_uicmp_i64(unsigned long* out, unsigned long a, unsigned lon
 }
 
 // CIR-LABEL: @_Z13test_fcmp_f32Pmff
-// CIR: [[CMP:%.+]] = cir.cmp le %{{.+}}, %{{.+}} : !cir.float
+// CIR: [[CMP:%.+]] = cir.fcmp ole %{{.+}}, %{{.+}} : !cir.float
 // CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
 // LLVM: define{{.*}} void @_Z13test_fcmp_f32Pmff
 // LLVM: [[CMP:%.+]] = fcmp {{.*}}ole float %{{.+}}, %{{.+}}
@@ -359,13 +359,93 @@ __device__ void test_fcmp_f32(unsigned long* out, float a, float b) {
 }
 
 // CIR-LABEL: @_Z13test_fcmp_f64Pmdd
-// CIR: [[CMP:%.+]] = cir.cmp one %{{.+}}, %{{.+}} : !cir.double
+// CIR: [[CMP:%.+]] = cir.fcmp one %{{.+}}, %{{.+}} : !cir.double
 // CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
 // LLVM: define{{.*}} void @_Z13test_fcmp_f64Pmdd
 // LLVM: [[CMP:%.+]] = fcmp {{.*}}one double %{{.+}}, %{{.+}}
 // LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
 __device__ void test_fcmp_f64(unsigned long* out, double a, double b) {
   *out = __builtin_amdgcn_fcmp(a, b, 3 + 3);
+}
+
+// CIR-LABEL: @_Z19test_fcmp_f32_falsePmff
+// CIR: [[CMP:%.+]] = cir.fcmp false %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
+// LLVM: define{{.*}} void @_Z19test_fcmp_f32_falsePmff
+// LLVM: [[CMP:%.+]] = fcmp {{.*}}false float %{{.+}}, %{{.+}}
+// LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
+__device__ void test_fcmp_f32_false(unsigned long* out, float a, float b) {
+  *out = __builtin_amdgcn_fcmpf(a, b, 0);
+}
+
+// CIR-LABEL: @_Z17test_fcmp_f32_ordPmff
+// CIR: [[CMP:%.+]] = cir.fcmp ord %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
+// LLVM: define{{.*}} void @_Z17test_fcmp_f32_ordPmff
+// LLVM: [[CMP:%.+]] = fcmp {{.*}}ord float %{{.+}}, %{{.+}}
+// LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
+__device__ void test_fcmp_f32_ord(unsigned long* out, float a, float b) {
+  *out = __builtin_amdgcn_fcmpf(a, b, 7);
+}
+
+// CIR-LABEL: @_Z17test_fcmp_f32_ueqPmff
+// CIR: [[CMP:%.+]] = cir.fcmp ueq %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
+// LLVM: define{{.*}} void @_Z17test_fcmp_f32_ueqPmff
+// LLVM: [[CMP:%.+]] = fcmp {{.*}}ueq float %{{.+}}, %{{.+}}
+// LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
+__device__ void test_fcmp_f32_ueq(unsigned long* out, float a, float b) {
+  *out = __builtin_amdgcn_fcmpf(a, b, 9);
+}
+
+// CIR-LABEL: @_Z17test_fcmp_f32_ugtPmff
+// CIR: [[CMP:%.+]] = cir.fcmp ugt %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
+// LLVM: define{{.*}} void @_Z17test_fcmp_f32_ugtPmff
+// LLVM: [[CMP:%.+]] = fcmp {{.*}}ugt float %{{.+}}, %{{.+}}
+// LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
+__device__ void test_fcmp_f32_ugt(unsigned long* out, float a, float b) {
+  *out = __builtin_amdgcn_fcmpf(a, b, 10);
+}
+
+// CIR-LABEL: @_Z17test_fcmp_f32_ugePmff
+// CIR: [[CMP:%.+]] = cir.fcmp uge %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
+// LLVM: define{{.*}} void @_Z17test_fcmp_f32_ugePmff
+// LLVM: [[CMP:%.+]] = fcmp {{.*}}uge float %{{.+}}, %{{.+}}
+// LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
+__device__ void test_fcmp_f32_uge(unsigned long* out, float a, float b) {
+  *out = __builtin_amdgcn_fcmpf(a, b, 11);
+}
+
+// CIR-LABEL: @_Z17test_fcmp_f32_ultPmff
+// CIR: [[CMP:%.+]] = cir.fcmp ult %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
+// LLVM: define{{.*}} void @_Z17test_fcmp_f32_ultPmff
+// LLVM: [[CMP:%.+]] = fcmp {{.*}}ult float %{{.+}}, %{{.+}}
+// LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
+__device__ void test_fcmp_f32_ult(unsigned long* out, float a, float b) {
+  *out = __builtin_amdgcn_fcmpf(a, b, 12);
+}
+
+// CIR-LABEL: @_Z17test_fcmp_f32_ulePmff
+// CIR: [[CMP:%.+]] = cir.fcmp ule %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
+// LLVM: define{{.*}} void @_Z17test_fcmp_f32_ulePmff
+// LLVM: [[CMP:%.+]] = fcmp {{.*}}ule float %{{.+}}, %{{.+}}
+// LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
+__device__ void test_fcmp_f32_ule(unsigned long* out, float a, float b) {
+  *out = __builtin_amdgcn_fcmpf(a, b, 13);
+}
+
+// CIR-LABEL: @_Z18test_fcmp_f32_truePmff
+// CIR: [[CMP:%.+]] = cir.fcmp true %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.call_llvm_intrinsic "amdgcn.ballot" [[CMP]] : (!cir.bool) -> !u64i
+// LLVM: define{{.*}} void @_Z18test_fcmp_f32_truePmff
+// LLVM: [[CMP:%.+]] = fcmp {{.*}}true float %{{.+}}, %{{.+}}
+// LLVM: call{{.*}} i64 @llvm.amdgcn.ballot.i64(i1 [[CMP]])
+__device__ void test_fcmp_f32_true(unsigned long* out, float a, float b) {
+  *out = __builtin_amdgcn_fcmpf(a, b, 15);
 }
 
 // CIR-LABEL: @_Z19test_trig_preop_f32Pffi
