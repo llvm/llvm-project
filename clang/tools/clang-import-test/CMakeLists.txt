@@ -1,12 +1,18 @@
 set(LLVM_LINK_COMPONENTS
   Core
+  Option
   Support
   TargetParser
   )
 
+set(LLVM_TARGET_DEFINITIONS Opts.td)
+llvm_tablegen(Opts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(ClangImportTestOptsTableGen)
+
 add_clang_executable(clang-import-test
   clang-import-test.cpp
   DEPENDS
+  ClangImportTestOptsTableGen
   intrinsics_gen
   )
 
