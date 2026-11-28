@@ -167,6 +167,15 @@ void test_cmdline_defaults(float x, float y, float z, int i, double d) {
 // LLVM-STRICT-RND: call float @llvm.experimental.constrained.sqrt.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
 // LLVM-DEFAULT: call float @llvm.sqrt.f32
 // LLVM-DEFAULT-RND: call float @llvm.experimental.constrained.sqrt.f32({{.*}}, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+  sf = __builtin_exp10f(x);
+// CIR-STRICT: cir.call @exp10f(
+// CIR-STRICT-RND: cir.call @exp10f(
+// CIR-DEFAULT: cir.exp10 {{.*}} : !cir.float loc
+// CIR-DEFAULT-RND: cir.call @exp10f(
+// LLVM-STRICT: call float @exp10f(
+// LLVM-STRICT-RND: call float @exp10f(
+// LLVM-DEFAULT: call float @llvm.exp10.f32
+// LLVM-DEFAULT-RND: call float @exp10f(
   sf = __builtin_powf(x, y);
 // CIR-STRICT: cir.pow {{.*}} : !cir.float fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
 // CIR-STRICT-RND: cir.pow {{.*}} : !cir.float fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>

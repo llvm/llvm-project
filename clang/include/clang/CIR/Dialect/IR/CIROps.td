@@ -8944,6 +8944,11 @@ def CIR_Exp10Op : CIR_UnaryFPToFPBuiltinOp<"exp10", "Exp10Op"> {
 
     Floating-point exceptions are ignored, and it does not set `errno`.
   }];
+
+  // LLVM has no constrained exp10 intrinsic, so the op cannot carry an FP
+  // environment; CIRGen calls the library function instead.
+  let constrainedLLVMIntrinsic = "";
+  let hasVerifier = 1;
 }
 
 def CIR_Exp2Op : CIR_UnaryFPToFPBuiltinOp<"exp2", "Exp2Op"> {
