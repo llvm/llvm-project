@@ -5,6 +5,8 @@
 ; RUN:   FileCheck %s --check-prefixes=RV32I-SFB
 ; RUN: llc < %s -verify-machineinstrs -mtriple=riscv64 -mattr=+short-forward-branch-ialu | \
 ; RUN:   FileCheck %s --check-prefixes=RV64I-SFB
+; RUN: llc < %s -verify-machineinstrs -mtriple=riscv32 -mattr=+xqcili,+late-select-expansion | \
+; RUN:   FileCheck %s --check-prefixes=RV32I-LATE
 
 define i32 @select_example_1(i32 %a, i32 %b, i1 zeroext %x, i32 %y) {
 ; RV32I-LABEL: select_example_1:
@@ -42,6 +44,15 @@ define i32 @select_example_1(i32 %a, i32 %b, i1 zeroext %x, i32 %y) {
 ; RV64I-SFB-NEXT:    lui a0, 16
 ; RV64I-SFB-NEXT:  .LBB0_2: # %entry
 ; RV64I-SFB-NEXT:    ret
+;
+; RV32I-LATE-LABEL: select_example_1:
+; RV32I-LATE:       # %bb.0: # %entry
+; RV32I-LATE-NEXT:    mv a0, a1
+; RV32I-LATE-NEXT:    beqz a2, .LBB0_2
+; RV32I-LATE-NEXT:  # %bb.1: # %entry
+; RV32I-LATE-NEXT:    lui a0, 16
+; RV32I-LATE-NEXT:  .LBB0_2: # %entry
+; RV32I-LATE-NEXT:    ret
 entry:
   %sel = select i1 %x, i32 65536, i32 %b
   ret i32 %sel
@@ -87,6 +98,15 @@ define i32 @select_example_2(i32 %a, i32 %b, i1 zeroext %x, i32 %y) {
 ; RV64I-SFB-NEXT:    addi a0, a1, 7
 ; RV64I-SFB-NEXT:  .LBB1_2: # %entry
 ; RV64I-SFB-NEXT:    ret
+;
+; RV32I-LATE-LABEL: select_example_2:
+; RV32I-LATE:       # %bb.0: # %entry
+; RV32I-LATE-NEXT:    mv a0, a1
+; RV32I-LATE-NEXT:    beqz a2, .LBB1_2
+; RV32I-LATE-NEXT:  # %bb.1: # %entry
+; RV32I-LATE-NEXT:    qc.li a0, 65543
+; RV32I-LATE-NEXT:  .LBB1_2: # %entry
+; RV32I-LATE-NEXT:    ret
 entry:
   %sel = select i1 %x, i32 65543, i32 %b
   ret i32 %sel
@@ -132,8 +152,16 @@ define i32 @select_example_3(i32 %a, i32 %b, i1 zeroext %x, i32 %y) {
 ; RV64I-SFB-NEXT:    addi a0, a1, 528
 ; RV64I-SFB-NEXT:  .LBB2_2: # %entry
 ; RV64I-SFB-NEXT:    ret
+;
+; RV32I-LATE-LABEL: select_example_3:
+; RV32I-LATE:       # %bb.0: # %entry
+; RV32I-LATE-NEXT:    mv a0, a1
+; RV32I-LATE-NEXT:    beqz a2, .LBB2_2
+; RV32I-LATE-NEXT:  # %bb.1: # %entry
+; RV32I-LATE-NEXT:    qc.e.li a0, 4198928
+; RV32I-LATE-NEXT:  .LBB2_2: # %entry
+; RV32I-LATE-NEXT:    ret
 entry:
   %sel = select i1 %x, i32 4198928, i32 %b
   ret i32 %sel
 }
-

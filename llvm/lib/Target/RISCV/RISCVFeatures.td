@@ -2208,6 +2208,22 @@ def TuneNoDefaultUnroll
                        "enable-default-unroll", "EnableDefaultUnroll", "false",
                        "Disable default unroll preference">;
 
+// The generic lowering of a select that has no branchless form splits the
+// block at instruction selection. Late select expansion instead keeps the
+// select as PseudoCCMOVGPR until after register allocation, folds a single-use
+// ALU op under it, and expands it to a branch over that op there. The short
+// forward branch optimization includes it. On its own it is for a core where a
+// branch over a move is a real branch, so the branchless select lowerings stay.
+def TuneLateSelectExpansion
+    : RISCVSimpleTuneFeature<"late-select-expansion",
+                             "HasLateSelectExpansionTune", "true",
+                             "Expand selects to a branch over a move or ALU "
+                             "op after register allocation">;
+def HasLateSelectExpansion
+    : Predicate<"Subtarget->hasLateSelectExpansion()">;
+def NoLateSelectExpansion
+    : Predicate<"!Subtarget->hasLateSelectExpansion()">;
+
 // Many Microarchitectures are able to fuse a branch over a single instruction
 // with the branched-over instruction. We call this fusion "short forward
 // branches".
@@ -2223,8 +2239,8 @@ def TuneNoDefaultUnroll
 // any "short forward branches" can do the IALU fusions, and can opt into
 // the other fusions they implement.
 //
-// The important Pseudo used by all these instructions requires the IALU
-// short forward branches.
+// The important Pseudo used by all these instructions requires late select
+// expansion, which the IALU short forward branches include.
 //
 // Vendor-specific short-forward-branch opts may be added under IALU, as
 // the vendor-specific instructions should only be enabled for vendor

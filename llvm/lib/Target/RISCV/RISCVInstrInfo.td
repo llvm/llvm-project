@@ -1770,7 +1770,7 @@ def CompressibleCond : PatLeaf<(cond), [{
   return ISD::isIntEqualitySetCC(N->get());
 }]>;
 
-let Predicates = [NoConditionalMoveFusion] in
+let Predicates = [NoConditionalMoveFusion, NoLateSelectExpansion] in
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
 
 def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
