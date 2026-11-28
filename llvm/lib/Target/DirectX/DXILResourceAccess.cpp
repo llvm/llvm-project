@@ -1367,6 +1367,99 @@ replaceHandleWithIndices(Instruction *Ptr, IntrinsicInst *OldHandle,
   DeadInsts.insert(Ptr);
 }
 
+// SROA cannot promote a dynamically indexed local array of handles.
+// If all of its handles come from the same binding, store their indices instead
+// and rebuild the handle at each load.
+static bool promoteLocalHandleArray(AllocaInst *Alloca) {
+  const DataLayout &DL = Alloca->getDataLayout();
+
+  // Only GEPs, simple loads and stores, and lifetime markers may use the array.
+  SmallVector<User *> Users(Alloca->users());
+  SmallSetVector<LoadInst *, 8> Loads;
+  SmallVector<StoreInst *> Stores;
+  while (!Users.empty()) {
+    User *U = Users.pop_back_val();
+    if (isa<GetElementPtrInst>(U))
+      append_range(Users, U->users());
+    else if (auto *LI = dyn_cast<LoadInst>(U); LI && LI->isSimple())
+      Loads.insert(LI);
+    else if (auto *SI = dyn_cast<StoreInst>(U); SI && SI->isSimple())
+      Stores.push_back(SI);
+    else if (!isa<LifetimeIntrinsic>(U))
+      return false;
+  }
+
+  IntrinsicInst *Binding = nullptr;
+  for (StoreInst *SI : Stores) {
+    Value *V = SI->getValueOperand();
+    // A copy within the array.
+    if (auto *LI = dyn_cast<LoadInst>(V); LI && Loads.contains(LI))
+      continue;
+    // This also rejects storing the array's address.
+    auto *H = dyn_cast<IntrinsicInst>(V);
+    if (!H ||
+        (H->getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding &&
+         H->getIntrinsicID() !=
+             Intrinsic::dx_resource_handlefromimplicitbinding))
+      return false;
+    if (!Binding)
+      Binding = H;
+    if (H->getCalledFunction() != Binding->getCalledFunction())
+      return false;
+    for (unsigned I : {0u, 1u, 2u, 4u})
+      if (!isa<Constant>(H->getArgOperand(I)) ||
+          H->getArgOperand(I) != Binding->getArgOperand(I))
+        return false;
+  }
+  if (!Binding || Loads.empty())
+    return false;
+
+  Type *HandleTy = Binding->getType();
+  TypeSize Bytes = DL.getTypeAllocSize(Alloca->getAllocatedType());
+  if (Bytes.isScalable() ||
+      any_of(Loads, [&](LoadInst *LI) { return LI->getType() != HandleTy; }))
+    return false;
+
+  // Handles are pointer sized, so each index fits in its handle's slot.
+  Type *I32 = Type::getInt32Ty(Alloca->getContext());
+  Alloca->setAllocatedType(
+      ArrayType::get(I32, divideCeil(Bytes.getFixedValue(), 4)));
+
+  // Rewrite loads first, so that copies within the array store an index.
+  SmallVector<Value *> Args(Binding->args());
+  for (LoadInst *LI : Loads) {
+    IRBuilder<> Builder(LI);
+    Value *Index =
+        Builder.CreateAlignedLoad(I32, LI->getPointerOperand(), LI->getAlign());
+    Args[3] = Index;
+    LI->replaceAllUsesWith(
+        Builder.CreateCall(Binding->getCalledFunction(), Args));
+    LI->eraseFromParent();
+  }
+
+  for (StoreInst *SI : Stores) {
+    auto *H = cast<IntrinsicInst>(SI->getValueOperand());
+    SI->setOperand(0, H->getArgOperand(/*Index=*/3));
+    SI->dropUnknownNonDebugMetadata();
+    if (H->use_empty())
+      H->eraseFromParent();
+  }
+  return true;
+}
+
+static bool promoteLocalHandleArrays(Function &F) {
+  SmallVector<AllocaInst *, 4> Allocas;
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB)
+      if (auto *Alloca = dyn_cast<AllocaInst>(&I))
+        Allocas.push_back(Alloca);
+
+  bool MadeChanges = false;
+  for (AllocaInst *Alloca : Allocas)
+    MadeChanges |= promoteLocalHandleArray(Alloca);
+  return MadeChanges;
+}
+
 // Try to legalize dx.resource.handlefrom.*.binding and dx.resource.getpointer
 // calls with their respective index values and propagate the index values to
 // be used at resource access.
@@ -1493,9 +1586,10 @@ PreservedAnalyses DXILResourceAccessPass::run(Function &F,
       MAMProxy.getCachedResult<DXILResourceTypeAnalysis>(*F.getParent());
   assert(DRTM && "DXILResourceTypeAnalysis must be available");
 
+  bool MadeArrayChanges = promoteLocalHandleArrays(F);
   bool MadeHandleChanges = legalizeResourceHandles(F, *DRTM);
   bool MadeResourceChanges = transformResourcePointers(F, *DRTM);
-  if (!(MadeHandleChanges || MadeResourceChanges))
+  if (!(MadeArrayChanges || MadeHandleChanges || MadeResourceChanges))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -1509,9 +1603,10 @@ public:
   bool runOnFunction(Function &F) override {
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+    bool MadeArrayChanges = promoteLocalHandleArrays(F);
     bool MadeHandleChanges = legalizeResourceHandles(F, DRTM);
     bool MadeResourceChanges = transformResourcePointers(F, DRTM);
-    return MadeHandleChanges || MadeResourceChanges;
+    return MadeArrayChanges || MadeHandleChanges || MadeResourceChanges;
   }
   StringRef getPassName() const override { return "DXIL Resource Access"; }
   DXILResourceAccessLegacy() : FunctionPass(ID) {}
