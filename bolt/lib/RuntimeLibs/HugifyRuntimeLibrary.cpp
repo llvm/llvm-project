@@ -12,7 +12,9 @@
 
 #include "bolt/RuntimeLibs/HugifyRuntimeLibrary.h"
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Core/BinarySection.h"
 #include "bolt/Core/Linker.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -24,6 +26,7 @@ namespace opts {
 extern cl::OptionCategory BoltOptCategory;
 
 extern cl::opt<bool> HotText;
+extern cl::opt<bool> HugifyAllText;
 
 static cl::opt<std::string>
     RuntimeHugifyLib("runtime-hugify-lib",
@@ -50,6 +53,20 @@ void HugifyRuntimeLibrary::adjustCommandLineOptions(
               "the input binary\n";
     exit(1);
   }
+}
+
+void HugifyRuntimeLibrary::emitBinary(BinaryContext &BC, MCStreamer &Streamer) {
+  MCSection *Section = BC.Ctx->getELFSection(
+      ".bolt.hugify.config", ELF::SHT_PROGBITS,
+      BinarySection::getFlags(/*IsReadOnly=*/true, /*IsText=*/false,
+                              /*IsAllocatable=*/true));
+  Section->setAlignment(Align(4));
+  Streamer.switchSection(Section);
+
+  MCSymbol *Mode = BC.Ctx->getOrCreateSymbol("__bolt_hugify_all_text");
+  Streamer.emitLabel(Mode);
+  Streamer.emitSymbolAttribute(Mode, MCSymbolAttr::MCSA_Global);
+  Streamer.emitInt32(opts::HugifyAllText ? 1 : 0);
 }
 
 void HugifyRuntimeLibrary::link(BinaryContext &BC, StringRef ToolPath,
