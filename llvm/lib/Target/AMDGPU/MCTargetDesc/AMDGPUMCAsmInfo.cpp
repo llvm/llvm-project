@@ -32,7 +32,7 @@ constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
                                  const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TT, Options) {
   CodePointerSize = (TT.isAMDGCN()) ? 8 : 4;
   StackGrowsUp = true;
   HasSingleParameterDotFile = false;
@@ -48,9 +48,6 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   InlineAsmEnd = ";#ASMEND";
   UsesSetToEquateSymbol = true;
 
-  //===--- Data Emission Directives -------------------------------------===//
-  UsesELFSectionDirectiveForBSS = true;
-
   //===--- Global Variable Emission Directives --------------------------===//
   COMMDirectiveAlignmentIsInBytes = false;
   HasNoDeadStrip = true;
@@ -65,32 +62,10 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   // that enabling the integrated assembler does not change code layout.
   HasPreferredAlignment = false;
 
+  SectionDirectives.insert(".hsatext");
+  SectionDirectives.insert(".hsadata_global_agent");
+  SectionDirectives.insert(".hsadata_global_program");
+  SectionDirectives.insert(".hsarodata_readonly_agent");
+
   initializeAtSpecifiers(atSpecifiers);
-}
-
-bool AMDGPUMCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
-  return SectionName == ".hsatext" || SectionName == ".hsadata_global_agent" ||
-         SectionName == ".hsadata_global_program" ||
-         SectionName == ".hsarodata_readonly_agent" ||
-         MCAsmInfo::shouldOmitSectionDirective(SectionName);
-}
-
-unsigned AMDGPUMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {
-  if (!STI || STI->getTargetTriple().getArch() == Triple::r600)
-    return MaxInstLength;
-
-  // Maximum for NSA encoded images
-  if (STI->hasFeature(AMDGPU::FeatureNSAEncoding))
-    return 20;
-
-  // VOP3PX/VOP3PX2 encoding.
-  if (STI->hasFeature(AMDGPU::FeatureGFX950Insts) ||
-      STI->hasFeature(AMDGPU::FeatureGFX1250Insts))
-    return 16;
-
-  // 64-bit instruction with 32-bit literal.
-  if (STI->hasFeature(AMDGPU::FeatureVOP3Literal))
-    return 12;
-
-  return 8;
 }

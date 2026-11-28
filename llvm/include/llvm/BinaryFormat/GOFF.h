@@ -235,6 +235,7 @@ struct SymbolFlags {
   GOFF_SYMBOL_FLAG(Renameable, bool, 2, 1)
   GOFF_SYMBOL_FLAG(RemovableClass, bool, 3, 1)
   GOFF_SYMBOL_FLAG(ReservedQwords, ESDReserveQwords, 5, 3)
+  GOFF_SYMBOL_FLAG(Reserve16Bytes, bool, 7, 1)
 
 #undef GOFF_SYMBOL_FLAG
 

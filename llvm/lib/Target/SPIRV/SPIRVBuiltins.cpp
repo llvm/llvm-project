@@ -1138,10 +1138,7 @@ static bool buildPipeInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
   case SPIRV::OpGroupCommitWritePipe:
   case SPIRV::OpGroupReserveReadPipePackets:
   case SPIRV::OpGroupReserveWritePipePackets: {
-    Register ScopeConstReg =
-        MIRBuilder.buildConstant(LLT::scalar(32), Scope).getReg(0);
-    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-    MRI->setRegClass(ScopeConstReg, &SPIRV::iIDRegClass);
+    Register ScopeConstReg = buildConstantIntReg32(Scope, MIRBuilder, GR);
     MachineInstrBuilder MIB;
     MIB = MIRBuilder.buildInstr(Opcode);
     // Add Return register and type.

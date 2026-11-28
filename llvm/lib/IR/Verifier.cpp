@@ -2703,6 +2703,14 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       Check(i == FT->getNumParams() - 1,
             "inalloca isn't on the last parameter!", V);
     }
+
+    if (ArgAttrs.hasAttribute(Attribute::Captures)) {
+      CaptureInfo CI = ArgAttrs.getCaptureInfo();
+      bool HasRetOnlyCC =
+          capturesAnything(CI.getRetComponents() & ~CI.getOtherComponents());
+      Check(!HasRetOnlyCC || FT->getReturnType()->isPointerTy(),
+            "Attribute 'captures(ret: ...)' requires a pointer return type", V);
+    }
   }
 
   if (!Attrs.hasFnAttrs())
@@ -2828,6 +2836,10 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                AllocFnKind::Aligned)) != AllocFnKind::Unknown))
       CheckFailed("'allockind(\"free\")' doesn't allow uninitialized, zeroed, "
                   "or aligned modifiers.");
+    if (Type == AllocFnKind::Free && !FT->getReturnType()->isVoidTy() &&
+        !FT->getReturnType()->isIntegerTy())
+      CheckFailed("'allockind(\"free\")' requires a void or integer return "
+                  "type");
     AllocFnKind ZeroedUninit = AllocFnKind::Uninitialized | AllocFnKind::Zeroed;
     if ((K & ZeroedUninit) == ZeroedUninit)
       CheckFailed("'allockind()' can't be both zeroed and uninitialized");

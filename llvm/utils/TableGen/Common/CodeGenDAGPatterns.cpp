@@ -14,7 +14,6 @@
 #include "CodeGenDAGPatterns.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
-#include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -32,7 +31,6 @@
 #include <algorithm>
 #include <cstdio>
 #include <iterator>
-#include <set>
 using namespace llvm;
 
 #define DEBUG_TYPE "dag-patterns"

@@ -26,6 +26,7 @@ set(LLVM_LINK_COMPONENTS
   MC
   ObjCARCOpts
   Object
+  Option
   Passes
   Plugins
   ProfileData
@@ -56,6 +57,10 @@ if(MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES Clang
     set_source_files_properties(CGBuiltin.cpp PROPERTIES COMPILE_OPTIONS "${opt_flags}")
   endif()
 endif()
+
+set(LLVM_TARGET_DEFINITIONS CodeGenCLOptions.td)
+llvm_tablegen(CodeGenCLOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(CodeGenCLOptionsTableGen)
 
 add_clang_library(clangCodeGen
   ABIInfo.cpp
@@ -102,6 +107,7 @@ add_clang_library(clangCodeGen
   CGVTables.cpp
   CodeGenABITypes.cpp
   CodeGenAction.cpp
+  CodeGenCLOptions.cpp
   CodeGenFunction.cpp
   CodeGenModule.cpp
   CodeGenPGO.cpp
@@ -169,6 +175,7 @@ add_clang_library(clangCodeGen
   [["pch.h"]]
 
   DEPENDS
+  CodeGenCLOptionsTableGen
   vt_gen
   intrinsics_gen
   ClangDriverOptions

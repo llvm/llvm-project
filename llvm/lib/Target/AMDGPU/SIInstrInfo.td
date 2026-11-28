@@ -1296,7 +1296,6 @@ def Offset1 : NamedIntOperand<"offset1">;
 }
 
 def gds : NamedBitOperand<"gds", "GDS">;
-def lds : NamedBitOperand<"lds", "LDS", 1>;
 
 def omod : CustomOperand<1, "OModSI">;
 def omod0 : DefaultOperand<omod, 0>;
@@ -1326,9 +1325,7 @@ def A16 : NamedBitOperand<"a16">;
 def D16 : NamedBitOperand<"d16">;
 def LWE : NamedBitOperand<"lwe">;
 def exp_compr : NamedBitOperand<"compr", "ExpCompr", 1>;
-def exp_vm : NamedBitOperand<"vm", "ExpVM", 1>;
-def exp_done : NamedBitOperand<"done", "Done", 1>;
-def exp_row_en : NamedBitOperand<"row_en", "RowEn", 1>;
+def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 
 // The MTBUF format modifier, as in "s[0:3], s1 format:[BUF_FMT_32_FLOAT]".
 def format : CustomOperand<1, "Format", i8> {

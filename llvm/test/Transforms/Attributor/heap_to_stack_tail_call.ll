@@ -6,7 +6,7 @@
 ; load after the call can be forwarded from the store before it.
 
 declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
-declare void @free(ptr) allockind("free") "alloc-family"="malloc"
+declare void @free(ptr allocptr) allockind("free") "alloc-family"="malloc"
 declare void @write_ptr(ptr nocapture) nounwind willreturn nosync
 
 define i32 @tail_call_uses_h2s() {

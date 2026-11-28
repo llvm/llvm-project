@@ -200,17 +200,17 @@ define void @store_array2([2 x i1] %a, ptr %p) {
   ; FAST: [[E1:%.*]] = extractvalue [2 x i8] [[S]], 0
   ; FAST: [[E2:%.*]] = extractvalue [2 x i8] [[S]], 1
   ; FAST: [[E12:%.*]] = or i8 [[E1]], [[E2]]
-  ; FAST: [[SP0:%.*]] = getelementptr i8, ptr [[SP:%.*]], i32 0
+  ; FAST: [[SP0:%.*]] = getelementptr i8, ptr [[SP:%.*]], i64 0
   ; FAST: store i8 [[E12]], ptr [[SP0]], align 1
-  ; FAST: [[SP1:%.*]] = getelementptr i8, ptr [[SP]], i32 1
+  ; FAST: [[SP1:%.*]] = getelementptr i8, ptr [[SP]], i64 1
   ; FAST: store i8 [[E12]], ptr [[SP1]], align 1
 
   ; COMBINE_STORE_PTR: @store_array2.dfsan
   ; COMBINE_STORE_PTR: [[O:%.*]] = or i8
   ; COMBINE_STORE_PTR: [[U:%.*]] = or i8 [[O]]
-  ; COMBINE_STORE_PTR: [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 0
+  ; COMBINE_STORE_PTR: [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 0
   ; COMBINE_STORE_PTR: store i8 [[U]], ptr [[P1]], align 1
-  ; COMBINE_STORE_PTR: [[P2:%.*]] = getelementptr i8, ptr [[P]], i32 1
+  ; COMBINE_STORE_PTR: [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 1
   ; COMBINE_STORE_PTR: store i8 [[U]], ptr [[P2]], align 1
 
   store [2 x i1] %a, ptr %p
@@ -261,11 +261,11 @@ define void @store_array17([17 x i1] %a, ptr %p) {
   ; FAST: %[[#VREG+5]] = insertelement <8 x i8> %[[#VREG+4]], i8 %[[#R+33]], i32 5
   ; FAST: %[[#VREG+6]] = insertelement <8 x i8> %[[#VREG+5]], i8 %[[#R+33]], i32 6
   ; FAST: %[[#VREG+7]] = insertelement <8 x i8> %[[#VREG+6]], i8 %[[#R+33]], i32 7
-  ; FAST: %[[#VREG+8]] = getelementptr <8 x i8>, ptr %[[P:.*]], i32 0
+  ; FAST: %[[#VREG+8]] = getelementptr i8, ptr %[[P:.*]], i64 0
   ; FAST: store <8 x i8> %[[#VREG+7]], ptr %[[#VREG+8]], align 1
-  ; FAST: %[[#VREG+9]] = getelementptr <8 x i8>, ptr %[[P]], i32 1
+  ; FAST: %[[#VREG+9]] = getelementptr i8, ptr %[[P]], i64 8
   ; FAST: store <8 x i8> %[[#VREG+7]], ptr %[[#VREG+9]], align 1
-  ; FAST: %[[#VREG+10]] = getelementptr i8, ptr %[[P]], i32 16
+  ; FAST: %[[#VREG+10]] = getelementptr i8, ptr %[[P]], i64 16
   ; FAST: store i8 %[[#R+33]], ptr %[[#VREG+10]], align 1
   store [17 x i1] %a, ptr %p
   ret void

@@ -1,10 +1,8 @@
 ; RUN: llc < %s -mtriple=amdgpu6.00 | FileCheck --check-prefix=SI %s
-; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck --check-prefix=EG %s
 
 ; Make sure the OpenCL Image lowering pass doesn't crash when argument metadata
 ; is not in expected order.
 
-; EG: CF_END
 ; SI: s_endpgm
 define amdgpu_kernel void @kernel(ptr addrspace(1) %out) {
 entry:

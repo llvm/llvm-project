@@ -4722,8 +4722,7 @@ static void PushDefUseChildren(Instruction *I,
                                SmallVectorImpl<Instruction *> &Worklist,
                                SmallPtrSetImpl<Instruction *> &Visited) {
   // Push the def-use children onto the Worklist stack.
-  for (User *U : I->users()) {
-    auto *UserInsn = cast<Instruction>(U);
+  for (Instruction *UserInsn : I->users()) {
     if (Visited.insert(UserInsn).second)
       Worklist.push_back(UserInsn);
   }
@@ -11339,13 +11338,19 @@ bool ScalarEvolution::isKnownViaInduction(CmpPredicate Pred, SCEVUse LHS,
          isLoopEntryGuardedByCond(MDL, Pred, SplitLHS.first, SplitRHS.first);
 }
 
+/// Maximum nesting depth of recursive isKnownPredicate calls.
+static constexpr unsigned MaxKnownPredicateDepth = 4;
+
 bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
-                                       SCEVUse RHS) {
+                                       SCEVUse RHS, unsigned Depth) {
+  if (Depth > MaxKnownPredicateDepth)
+    return false;
+
   // Canonicalize the inputs first.
   (void)SimplifyICmpOperands(Pred, LHS, RHS);
 
   return isKnownViaInduction(Pred, LHS, RHS) ||
-         isKnownPredicateViaSplitting(Pred, LHS, RHS) ||
+         isKnownPredicateViaSplitting(Pred, LHS, RHS, Depth) ||
          isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
 }
 
@@ -11760,7 +11765,8 @@ bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
 }
 
 bool ScalarEvolution::isKnownPredicateViaSplitting(CmpPredicate Pred,
-                                                   SCEVUse LHS, SCEVUse RHS) {
+                                                   SCEVUse LHS, SCEVUse RHS,
+                                                   unsigned Depth) {
   if (Pred != ICmpInst::ICMP_ULT || ProvingSplitPredicate)
     return false;
 
@@ -11776,8 +11782,9 @@ bool ScalarEvolution::isKnownPredicateViaSplitting(CmpPredicate Pred,
   // interesting cases seen in practice.  We can consider "upgrading" L >= 0 to
   // use isKnownPredicate later if needed.
   return isKnownNonNegative(RHS) &&
-         isKnownPredicate(CmpInst::ICMP_SGE, LHS, getZero(LHS->getType())) &&
-         isKnownPredicate(CmpInst::ICMP_SLT, LHS, RHS);
+         isKnownPredicate(CmpInst::ICMP_SGE, LHS, getZero(LHS->getType()),
+                          Depth + 1) &&
+         isKnownPredicate(CmpInst::ICMP_SLT, LHS, RHS, Depth + 1);
 }
 
 bool ScalarEvolution::isImpliedViaGuard(const BasicBlock *BB, CmpPredicate Pred,
@@ -15384,6 +15391,9 @@ bool SCEVUnionPredicate::implies(const SCEVPredicate *N,
     return all_of(Set->Preds, [this, &SE](const SCEVPredicate *I) {
       return this->implies(I, SE);
     });
+
+  if (is_contained(Preds, N))
+    return true;
 
   if (any_of(Preds,
              [N, &SE](const SCEVPredicate *I) { return I->implies(N, SE); }))

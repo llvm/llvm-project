@@ -462,6 +462,16 @@ public:
   // Returns true if the new schedule may result in more spilling.
   bool mayCauseSpilling(unsigned WavesAfter);
 
+  // Returns true if the new schedule has a better latency metric than the old
+  // one.
+  bool reducesLatency();
+
+  // Returns true if the new schedule may result in more spilling, unless
+  // neither pressure is less than the other and the new schedule reduces
+  // latency. For the initial stages, whose old schedule is the input order,
+  // which was never selected for latency.
+  bool shouldRevertInitialSchedule(unsigned WavesAfter);
+
   /// Sets the schedule of region \p RegionIdx to \p MIOrder. The MIs in \p
   /// MIOrder must be exactly the same as the ones currently existing inside the
   /// region, only in a different order that honors def-use chains.

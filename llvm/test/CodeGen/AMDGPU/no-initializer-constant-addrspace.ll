@@ -1,9 +1,7 @@
 ; RUN: llc -mtriple=amdgpu6.00- -filetype=obj < %s | llvm-readobj -r --symbols - | FileCheck %s -check-prefix=GCN
 ; RUN: llc -mtriple=amdgpu8.02- -filetype=obj < %s | llvm-readobj -r --symbols - | FileCheck %s -check-prefix=GCN
-; RUN: llc -mtriple=r600- -mcpu=cypress -filetype=obj < %s | llvm-readobj -r --symbols - | FileCheck %s -check-prefix=EG
 
 ; GCN: R_AMDGPU_GOTPCREL32_LO extern_const_addrspace
-; EG: R_AMDGPU_ABS32 extern_const_addrspace
 
 ; CHECK-DAG: Name: extern_const_addrspace
 @extern_const_addrspace = external unnamed_addr addrspace(4) constant [5 x i32], align 4

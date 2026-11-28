@@ -22,6 +22,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def Func_Dialect : Dialect {
   let name = "func";
   let cppNamespace = "::mlir::func";
+  let useDefaultOperationRegistration = 1;
   let hasConstantMaterializer = 1;
 }
 

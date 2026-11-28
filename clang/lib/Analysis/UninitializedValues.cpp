@@ -287,6 +287,7 @@ private:
   }
 
   void classify(const Expr *E, Class C);
+  void ignoreRefs(const Stmt *S);
 
 public:
   ClassifyRefs(AnalysisDeclContext &AC) : DC(cast<DeclContext>(AC.getDecl())) {}
@@ -423,7 +424,33 @@ static bool hasTrivialBody(const CallExpr *CE) {
   return false;
 }
 
+void ClassifyRefs::ignoreRefs(const Stmt *S) {
+  SmallVector<const Stmt *, 4> Worklist = {S};
+  while (!Worklist.empty()) {
+    const Stmt *Cur = Worklist.pop_back_val();
+    // Children can be null, e.g. the missing condition of a for statement in
+    // a statement expression.
+    if (!Cur)
+      continue;
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(Cur)) {
+      Classification[DRE] = Ignore;
+      continue;
+    }
+    llvm::append_range(Worklist, Cur->children());
+  }
+}
+
 void ClassifyRefs::VisitCallExpr(const CallExpr *CE) {
+  // The result of a builtin such as __builtin_constant_p does not depend on
+  // its arguments' values, so a variable there is not a use. The arguments
+  // stay in the CFG so that DiagRuntimeBehavior still drops warnings in
+  // branches of them that fold away.
+  if (CE->isUnevaluatedBuiltinCall(DC->getParentASTContext())) {
+    for (const Expr *Argument : CE->arguments())
+      ignoreRefs(Argument);
+    return;
+  }
+
   // Classify arguments to std::move as used.
   if (CE->isCallToStdMove()) {
     // RecordTypes are handled in SemaDeclCXX.cpp.

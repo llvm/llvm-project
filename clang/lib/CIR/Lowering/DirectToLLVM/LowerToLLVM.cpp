@@ -645,13 +645,10 @@ static llvm::StringRef getConstrainedRoundingMetadata(cir::FenvAttr fenv) {
 }
 
 static llvm::StringRef getConstrainedExceptMetadata(cir::FenvAttr fenv) {
-  std::optional<cir::FPExceptionMode> exceptMode = fenv.getExceptMode();
-  if (exceptMode == cir::FPExceptionMode::Masked)
+  if (fenv.canIgnoreExceptions())
     return "fpexcept.ignore";
-  mlir::BoolAttr strictExcept = fenv.getStrictExcept();
-  if (!strictExcept)
-    return "fpexcept.ignore";
-  return strictExcept.getValue() ? "fpexcept.strict" : "fpexcept.maytrap";
+  return fenv.getStrictExceptOrDefault() ? "fpexcept.strict"
+                                         : "fpexcept.maytrap";
 }
 
 static mlir::Value
@@ -2966,7 +2963,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     // Unlike a global initializer, the constant must keep its type.
     mlir::Attribute value = spellOutSplitTrailingZeros(op.getValue());
     const auto constArr = mlir::dyn_cast<cir::ConstArrayAttr>(value);
-    if (!constArr && !isa<cir::ZeroAttr, cir::UndefAttr>(value))
+    if (!constArr && !isa<cir::ZeroAttr>(value))
       return op.emitError() << "array does not have a constant initializer";
 
     std::optional<mlir::Attribute> denseAttr;
@@ -3001,7 +2998,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     rewriter.replaceOp(op, initVal);
     return mlir::success();
   } else if (mlir::isa<cir::RecordType>(op.getType())) {
-    if (mlir::isa<cir::ZeroAttr, cir::UndefAttr>(attr)) {
+    if (mlir::isa<cir::ZeroAttr>(attr)) {
       mlir::Value initVal =
           lowerCirAttrAsValue(op->getLoc(), moduleOp, attr, rewriter,
                               symbolTables, typeConverter, preConversionTypes);
@@ -3013,43 +3010,19 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     return op.emitError() << "unsupported lowering for record constant type "
                           << op.getType();
   } else if (auto complexTy = mlir::dyn_cast<cir::ComplexType>(op.getType())) {
-    mlir::Type complexElemTy = complexTy.getElementType();
-    mlir::Type complexElemLLVMTy = typeConverter->convertType(complexElemTy);
-
-    if (auto zeroInitAttr = mlir::dyn_cast<cir::ZeroAttr>(op.getValue())) {
-      mlir::TypedAttr zeroAttr = rewriter.getZeroAttr(complexElemLLVMTy);
-      mlir::ArrayAttr array = rewriter.getArrayAttr({zeroAttr, zeroAttr});
-      rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
-          op, getTypeConverter()->convertType(op.getType()), array);
-      return mlir::success();
-    }
-
-    if (mlir::isa<cir::UndefAttr>(op.getValue())) {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::UndefOp>(
-          op, getTypeConverter()->convertType(op.getType()));
-      return mlir::success();
-    }
-
-    auto complexAttr = mlir::cast<cir::ConstComplexAttr>(op.getValue());
-
-    mlir::Attribute components[2];
-    if (mlir::isa<cir::IntType>(complexElemTy)) {
-      components[0] = rewriter.getIntegerAttr(
-          complexElemLLVMTy,
-          mlir::cast<cir::IntAttr>(complexAttr.getReal()).getValue());
-      components[1] = rewriter.getIntegerAttr(
-          complexElemLLVMTy,
-          mlir::cast<cir::IntAttr>(complexAttr.getImag()).getValue());
+    if (mlir::isa<cir::ZeroAttr>(op.getValue())) {
+      mlir::TypedAttr zeroAttr = rewriter.getZeroAttr(
+          typeConverter->convertType(complexTy.getElementType()));
+      attr = rewriter.getArrayAttr({zeroAttr, zeroAttr});
     } else {
-      components[0] = rewriter.getFloatAttr(
-          complexElemLLVMTy,
-          mlir::cast<cir::FPAttr>(complexAttr.getReal()).getValue());
-      components[1] = rewriter.getFloatAttr(
-          complexElemLLVMTy,
-          mlir::cast<cir::FPAttr>(complexAttr.getImag()).getValue());
+      mlir::Value initVal =
+          lowerCirAttrAsValue(op->getLoc(), moduleOp, op.getValue(), rewriter,
+                              symbolTables, typeConverter, preConversionTypes);
+      if (!initVal)
+        return mlir::failure();
+      rewriter.replaceOp(op, initVal);
+      return mlir::success();
     }
-
-    attr = rewriter.getArrayAttr(components);
   } else {
     return op.emitError() << "unsupported constant type " << op.getType();
   }

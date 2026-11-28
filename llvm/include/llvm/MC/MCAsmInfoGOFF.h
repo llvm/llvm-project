@@ -19,9 +19,6 @@
 
 namespace llvm {
 class LLVM_ABI MCAsmInfoGOFF : public MCAsmInfo {
-  void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
-                            raw_ostream &) const final;
-
 protected:
   MCAsmInfoGOFF(const MCTargetOptions &Options);
 };

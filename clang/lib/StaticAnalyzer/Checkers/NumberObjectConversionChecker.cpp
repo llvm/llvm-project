@@ -345,6 +345,15 @@ NumberObjectConversionChecker::NumberObjectConversionChecker()
 void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
                                                      AnalysisManager &AM,
                                                      BugReporter &BR) const {
+  static constexpr llvm::StringLiteral Names[] = {
+      "CFNumberRef", "CFBooleanRef", "OSBoolean", "OSNumber", "NSNumber"};
+  const IdentifierTable &Idents = AM.getASTContext().Idents;
+  auto IsDeclared = [&Idents](StringRef Name) {
+    return llvm::is_contained(Idents, Name);
+  };
+  if (llvm::none_of(Names, IsDeclared))
+    return;
+
   MatchFinder F;
   Callback CB(this, BR, AM.getAnalysisDeclContext(D));
 

@@ -124,7 +124,7 @@
 #    include <__locale_dir/support/fuchsia.h>
 #  elif _LIBCPP_LIBC_LLVM_LIBC
 #    include <__locale_dir/support/llvm_libc.h>
-#  elif defined(__linux__)
+#  elif defined(__linux__) || defined(__GLIBC__)
 #    include <__locale_dir/support/linux.h>
 #  elif _LIBCPP_LIBC_NEWLIB
 #    include <__locale_dir/support/newlib.h>
@@ -136,7 +136,9 @@
 //       (by providing global non-reserved names) and the new API. As we move individual platforms
 //       towards the new way of defining the locale base API, this should disappear since each platform
 //       will define those directly.
-#    include <__locale_dir/locale_base_api/ibm.h>
+#    if defined(__MVS__)
+#      include <__locale_dir/locale_base_api/ibm.h>
+#    endif
 
 #    include <__locale_dir/locale_base_api/bsd_locale_fallbacks.h>
 

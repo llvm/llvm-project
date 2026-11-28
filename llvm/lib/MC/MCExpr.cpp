@@ -176,7 +176,7 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
   case MCExpr::Specifier: {
     auto &SE = cast<MCSpecifierExpr>(*this);
     if (MAI)
-      return MAI->printSpecifierExpr(OS, SE);
+      return MAI->printExpr(OS, SE);
     // Used by dump features like -show-inst. Regular MCAsmStreamer output must
     // set MAI.
     OS << "specifier(" << SE.getSpecifier() << ',';

@@ -94,10 +94,10 @@ define void @extract_32xi8_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; LA64-LABEL: extract_32xi8_idx:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 1
 ; LA64-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; LA64-NEXT:    movgr2fr.w $fa2, $a0
-; LA64-NEXT:    xvshuf.b $xr0, $xr1, $xr0, $xr2
+; LA64-NEXT:    movgr2fr.w $fa1, $a0
+; LA64-NEXT:    xvpermi.q $xr2, $xr0, 1
+; LA64-NEXT:    xvshuf.b $xr0, $xr2, $xr0, $xr1
 ; LA64-NEXT:    xvstelm.b $xr0, $a1, 0, 0
 ; LA64-NEXT:    ret
   %v = load volatile <32 x i8>, ptr %src
@@ -119,11 +119,11 @@ define void @extract_16xi16_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; LA64-LABEL: extract_16xi16_idx:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 1
 ; LA64-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; LA64-NEXT:    movgr2fr.w $fa2, $a0
-; LA64-NEXT:    xvshuf.h $xr2, $xr1, $xr0
-; LA64-NEXT:    xvstelm.h $xr2, $a1, 0, 0
+; LA64-NEXT:    movgr2fr.w $fa1, $a0
+; LA64-NEXT:    xvpermi.q $xr2, $xr0, 1
+; LA64-NEXT:    xvshuf.h $xr1, $xr2, $xr0
+; LA64-NEXT:    xvstelm.h $xr1, $a1, 0, 0
 ; LA64-NEXT:    ret
   %v = load volatile <16 x i16>, ptr %src
   %e = extractelement <16 x i16> %v, i32 %idx
@@ -171,11 +171,11 @@ define void @extract_4xi64_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; LA64-LABEL: extract_4xi64_idx:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 1
 ; LA64-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; LA64-NEXT:    movgr2fr.w $fa2, $a0
-; LA64-NEXT:    xvshuf.d $xr2, $xr1, $xr0
-; LA64-NEXT:    xvstelm.d $xr2, $a1, 0, 0
+; LA64-NEXT:    movgr2fr.w $fa1, $a0
+; LA64-NEXT:    xvpermi.q $xr2, $xr0, 1
+; LA64-NEXT:    xvshuf.d $xr1, $xr2, $xr0
+; LA64-NEXT:    xvstelm.d $xr1, $a1, 0, 0
 ; LA64-NEXT:    ret
   %v = load volatile <4 x i64>, ptr %src
   %e = extractelement <4 x i64> %v, i32 %idx
@@ -219,11 +219,11 @@ define void @extract_4xdouble_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; LA64-LABEL: extract_4xdouble_idx:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    xvpermi.q $xr1, $xr0, 1
 ; LA64-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; LA64-NEXT:    movgr2fr.w $fa2, $a0
-; LA64-NEXT:    xvshuf.d $xr2, $xr1, $xr0
-; LA64-NEXT:    xvstelm.d $xr2, $a1, 0, 0
+; LA64-NEXT:    movgr2fr.w $fa1, $a0
+; LA64-NEXT:    xvpermi.q $xr2, $xr0, 1
+; LA64-NEXT:    xvshuf.d $xr1, $xr2, $xr0
+; LA64-NEXT:    xvstelm.d $xr1, $a1, 0, 0
 ; LA64-NEXT:    ret
   %v = load volatile <4 x double>, ptr %src
   %e = extractelement <4 x double> %v, i32 %idx

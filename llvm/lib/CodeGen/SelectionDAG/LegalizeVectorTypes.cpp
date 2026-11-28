@@ -7541,11 +7541,12 @@ DAGTypeLegalizer::convertMaskTreeImpl(SDValue V, EVT ToVT, unsigned Depth) {
   SDLoc DL(V);
 
   // Base case: all-zeros or all-ones BUILD_VECTOR. Type-lenient since these are
-  // invariant under sign-extend/truncate.
+  // invariant under sign-extend/truncate. Materialize "true" using the
+  // target's vector boolean contents (e.g. 1 on ZeroOrOne targets).
   if (ISD::isBuildVectorAllZeros(V))
     return {DAG.getConstant(0, DL, ToVT), /*IsTypeLenient=*/true};
   if (ISD::isBuildVectorAllOnes(V))
-    return {DAG.getAllOnesConstant(DL, ToVT), /*IsTypeLenient=*/true};
+    return {DAG.getBoolConstant(true, DL, ToVT, ToVT), /*IsTypeLenient=*/true};
 
   // Logical operations (AND/OR/XOR): try picking the best fitting width out
   // of children's element widths.

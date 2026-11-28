@@ -2721,7 +2721,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (!Subtarget.useSoftFloat() && Subtarget.hasAMXTILE()) {
+  if (!Subtarget.useSoftFloat() &&
+      (Subtarget.hasAMXTILE() || Subtarget.hasACEV1())) {
     addRegisterClass(MVT::x86amx, &X86::TILERegClass);
   }
 
@@ -28880,6 +28881,46 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       Chain = LockArith.getValue(1);
       return DAG.getMergeValues({getSETCC(CC, LockArith, DL, DAG), Chain}, DL);
     }
+    // ACE Tile Movement Intrinsics - handle both immediate and register index
+    // forms using a single intrinsic. Check if index is constant to select
+    // the appropriate instruction form.
+    case Intrinsic::x86_acev1_tilemovrowinsert:
+    case Intrinsic::x86_acev1_tilemovcolinsert: {
+      // Select() never sees these, so record the program model here.
+      MachineFunction &MF = DAG.getMachineFunction();
+      MF.getInfo<X86MachineFunctionInfo>()->setACEProgModel(
+          &MF, ACEProgModelEnum::ACE_DirectReg);
+      SDLoc DL(Op);
+      SDValue Chain = Op.getOperand(0);
+      unsigned TileID = Op.getConstantOperandVal(2);
+      SDValue Src = Op.getOperand(3);
+      SDValue Idx = Op.getOperand(4);
+
+      unsigned PseudoImm, PseudoReg;
+      if (IntNo == Intrinsic::x86_acev1_tilemovrowinsert) {
+        PseudoImm = X86::PTILEMOVROWtri;
+        PseudoReg = X86::PTILEMOVROWtre;
+      } else {
+        PseudoImm = X86::PTILEMOVCOLtri;
+        PseudoReg = X86::PTILEMOVCOLtre;
+      }
+
+      MachineSDNode *Node;
+      // Check if index is a compile-time constant
+      if (auto *CIdx = dyn_cast<ConstantSDNode>(Idx)) {
+        // Use immediate form
+        Node = DAG.getMachineNode(
+            PseudoImm, DL, MVT::Other,
+            {DAG.getTargetConstant(TileID, DL, MVT::i8), Src,
+             DAG.getTargetConstant(CIdx->getZExtValue(), DL, MVT::i32), Chain});
+      } else {
+        // Use register form
+        Node = DAG.getMachineNode(
+            PseudoReg, DL, MVT::Other,
+            {DAG.getTargetConstant(TileID, DL, MVT::i8), Src, Idx, Chain});
+      }
+      return SDValue(Node, 0);
+    }
     }
     return SDValue();
   }
@@ -32857,7 +32898,7 @@ bool X86TargetLowering::needsCmpXchgNb(unsigned OpWidth) const {
 }
 
 TargetLoweringBase::AtomicExpansionKind
-X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+X86TargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   unsigned Size =
       SI->getDataLayout().getTypeSizeInBits(SI->getValueOperand()->getType());
 
@@ -32877,7 +32918,7 @@ X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 
 // Note: this turns large loads into lock cmpxchg8b/16b.
 TargetLowering::AtomicExpansionKind
-X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+X86TargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
   unsigned Size = LI->getDataLayout().getTypeSizeInBits(LI->getType());
 
   if (!LI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
@@ -39684,6 +39725,34 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
     return BB;
   }
+  case X86::PTILEMOVCOLtriV:
+  case X86::PTILEMOVROWtriV:
+  case X86::PTILEMOVCOLtreV:
+  case X86::PTILEMOVROWtreV:
+  case X86::PTOP2BF16PStrrV:
+  case X86::PTOP4BUUDtrrV:
+  case X86::PTOP4BUSDtrrV:
+  case X86::PTOP4BSSDtrrV:
+  case X86::PTOP4BSUDtrrV:
+  case X86::PTOP4MXHF8PStrriV:
+  case X86::PTOP4MXBHF8PStrriV:
+  case X86::PTOP4MXHBF8PStrriV:
+  case X86::PTOP4MXBF8PStrriV:
+  case X86::PTOP4MXBSSPStrriV:
+  case X86::ACE_PTILEZEROV:
+  case X86::ACE_PTCVTROWPS2BF16HrtiV:
+  case X86::ACE_PTCVTROWPS2BF16LrtiV:
+  case X86::ACE_PTCVTROWPS2PHHrtiV:
+  case X86::ACE_PTCVTROWPS2PHLrtiV:
+  case X86::ACE_PTCVTROWD2PSrtiV:
+  case X86::ACE_PTILEMOVROWrtiV:
+  case X86::ACE_PTCVTROWPS2BF16HrteV:
+  case X86::ACE_PTCVTROWPS2BF16LrteV:
+  case X86::ACE_PTCVTROWPS2PHHrteV:
+  case X86::ACE_PTCVTROWPS2PHLrteV:
+  case X86::ACE_PTCVTROWD2PSrteV:
+  case X86::ACE_PTILEMOVROWrteV:
+    return BB;
   case X86::PTILELOADDRS:
   case X86::PTILELOADDRST1:
   case X86::PTILELOADD:
@@ -39735,28 +39804,40 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTCVTROWPS2PHHrti:
   case X86::PTCVTROWPS2PHLrti:
   case X86::PTCVTROWD2PSrti:
-  case X86::PTILEMOVROWrti: {
+  case X86::PTILEMOVROWrti:
+  case X86::ACE_PTCVTROWPS2BF16Hrti:
+  case X86::ACE_PTCVTROWPS2BF16Lrti:
+  case X86::ACE_PTCVTROWPS2PHHrti:
+  case X86::ACE_PTCVTROWPS2PHLrti:
+  case X86::ACE_PTCVTROWD2PSrti:
+  case X86::ACE_PTILEMOVROWrti: {
     const DebugLoc &DL = MI.getDebugLoc();
     unsigned Opc;
     switch (MI.getOpcode()) {
     default:
       llvm_unreachable("Unexpected instruction!");
     case X86::PTCVTROWD2PSrti:
+    case X86::ACE_PTCVTROWD2PSrti:
       Opc = X86::TCVTROWD2PSrti;
       break;
     case X86::PTCVTROWPS2BF16Hrti:
+    case X86::ACE_PTCVTROWPS2BF16Hrti:
       Opc = X86::TCVTROWPS2BF16Hrti;
       break;
     case X86::PTCVTROWPS2PHHrti:
+    case X86::ACE_PTCVTROWPS2PHHrti:
       Opc = X86::TCVTROWPS2PHHrti;
       break;
     case X86::PTCVTROWPS2BF16Lrti:
+    case X86::ACE_PTCVTROWPS2BF16Lrti:
       Opc = X86::TCVTROWPS2BF16Lrti;
       break;
     case X86::PTCVTROWPS2PHLrti:
+    case X86::ACE_PTCVTROWPS2PHLrti:
       Opc = X86::TCVTROWPS2PHLrti;
       break;
     case X86::PTILEMOVROWrti:
+    case X86::ACE_PTILEMOVROWrti:
       Opc = X86::TILEMOVROWrti;
       break;
     }
@@ -39773,28 +39854,40 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTCVTROWPS2PHHrte:
   case X86::PTCVTROWPS2PHLrte:
   case X86::PTCVTROWD2PSrte:
-  case X86::PTILEMOVROWrte: {
+  case X86::PTILEMOVROWrte:
+  case X86::ACE_PTCVTROWPS2BF16Hrte:
+  case X86::ACE_PTCVTROWPS2BF16Lrte:
+  case X86::ACE_PTCVTROWPS2PHHrte:
+  case X86::ACE_PTCVTROWPS2PHLrte:
+  case X86::ACE_PTCVTROWD2PSrte:
+  case X86::ACE_PTILEMOVROWrte: {
     const DebugLoc &DL = MI.getDebugLoc();
     unsigned Opc;
     switch (MI.getOpcode()) {
     default:
       llvm_unreachable("Unexpected instruction!");
     case X86::PTCVTROWD2PSrte:
+    case X86::ACE_PTCVTROWD2PSrte:
       Opc = X86::TCVTROWD2PSrte;
       break;
     case X86::PTCVTROWPS2BF16Hrte:
+    case X86::ACE_PTCVTROWPS2BF16Hrte:
       Opc = X86::TCVTROWPS2BF16Hrte;
       break;
     case X86::PTCVTROWPS2BF16Lrte:
+    case X86::ACE_PTCVTROWPS2BF16Lrte:
       Opc = X86::TCVTROWPS2BF16Lrte;
       break;
     case X86::PTCVTROWPS2PHHrte:
+    case X86::ACE_PTCVTROWPS2PHHrte:
       Opc = X86::TCVTROWPS2PHHrte;
       break;
     case X86::PTCVTROWPS2PHLrte:
+    case X86::ACE_PTCVTROWPS2PHLrte:
       Opc = X86::TCVTROWPS2PHLrte;
       break;
     case X86::PTILEMOVROWrte:
+    case X86::ACE_PTILEMOVROWrte:
       Opc = X86::TILEMOVROWrte;
       break;
     }
@@ -39804,6 +39897,133 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MIB.add(MI.getOperand(2));
 
     MI.eraseFromParent(); // The pseudo is gone now.
+    return BB;
+  }
+  // ACE pseudo instruction expansion
+  case X86::ACE_PTILEZERO: {
+    // Like PTILEZERO, but the program model is recorded during selection.
+    unsigned Imm = MI.getOperand(0).getImm();
+    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEZERO), TMMImmToTMMReg(Imm));
+    MI.eraseFromParent(); // The pseudo is gone now.
+    return BB;
+  }
+  case X86::PBSRINIT: {
+    BuildMI(*BB, MI, MIMD, TII->get(X86::BSRINIT));
+    MI.eraseFromParent();
+    return BB;
+  }
+  // Note: BSRMOVF, BSRMOVH, BSRMOVL are handled directly by patterns on real
+  // instructions
+  case X86::PTILEMOVCOLtri: {
+    unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
+    Register SrcReg = MI.getOperand(1).getReg();
+    unsigned Idx = MI.getOperand(2).getImm();
+    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVCOLtri), DstReg)
+        .addReg(DstReg, RegState::Undef)
+        .addReg(SrcReg)
+        .addImm(Idx);
+    MI.eraseFromParent();
+    return BB;
+  }
+  case X86::PTILEMOVCOLtre: {
+    unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
+    Register SrcReg = MI.getOperand(1).getReg();
+    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVCOLtre), DstReg)
+        .addReg(DstReg, RegState::Undef)
+        .addReg(SrcReg)
+        .addReg(MI.getOperand(2).getReg());
+    MI.eraseFromParent();
+    return BB;
+  }
+  case X86::PTILEMOVROWtri: {
+    unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
+    Register SrcReg = MI.getOperand(1).getReg();
+    unsigned Idx = MI.getOperand(2).getImm();
+    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVROWtri), DstReg)
+        .addReg(DstReg, RegState::Undef)
+        .addReg(SrcReg)
+        .addImm(Idx);
+    MI.eraseFromParent();
+    return BB;
+  }
+  case X86::PTILEMOVROWtre: {
+    unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
+    Register SrcReg = MI.getOperand(1).getReg();
+    BuildMI(*BB, MI, MIMD, TII->get(X86::TILEMOVROWtre), DstReg)
+        .addReg(DstReg, RegState::Undef)
+        .addReg(SrcReg)
+        .addReg(MI.getOperand(2).getReg());
+    MI.eraseFromParent();
+    return BB;
+  }
+  case X86::PTOP2BF16PStrr:
+  case X86::PTOP4BUUDtrr:
+  case X86::PTOP4BUSDtrr:
+  case X86::PTOP4BSSDtrr:
+  case X86::PTOP4BSUDtrr: {
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected opcode!");
+    case X86::PTOP2BF16PStrr:
+      Opc = X86::TOP2BF16PStrr;
+      break;
+    case X86::PTOP4BUUDtrr:
+      Opc = X86::TOP4BUUDtrr;
+      break;
+    case X86::PTOP4BUSDtrr:
+      Opc = X86::TOP4BUSDtrr;
+      break;
+    case X86::PTOP4BSSDtrr:
+      Opc = X86::TOP4BSSDtrr;
+      break;
+    case X86::PTOP4BSUDtrr:
+      Opc = X86::TOP4BSUDtrr;
+      break;
+    }
+    // These instructions: TILE dst (rw), ZMM src1, ZMM src2
+    // The pseudo has: u8imm dst, VR512 src1, VR512 src2
+    unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
+    BuildMI(*BB, MI, MIMD, TII->get(Opc), DstReg)
+        .addReg(DstReg, RegState::Undef)
+        .addReg(MI.getOperand(1).getReg())
+        .addReg(MI.getOperand(2).getReg());
+    MI.eraseFromParent();
+    return BB;
+  }
+  case X86::PTOP4MXHF8PStrri:
+  case X86::PTOP4MXBHF8PStrri:
+  case X86::PTOP4MXHBF8PStrri:
+  case X86::PTOP4MXBF8PStrri:
+  case X86::PTOP4MXBSSPStrri: {
+    unsigned Opc;
+    switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected opcode!");
+    case X86::PTOP4MXHF8PStrri:
+      Opc = X86::TOP4MXHF8PStrri;
+      break;
+    case X86::PTOP4MXBHF8PStrri:
+      Opc = X86::TOP4MXBHF8PStrri;
+      break;
+    case X86::PTOP4MXHBF8PStrri:
+      Opc = X86::TOP4MXHBF8PStrri;
+      break;
+    case X86::PTOP4MXBF8PStrri:
+      Opc = X86::TOP4MXBF8PStrri;
+      break;
+    case X86::PTOP4MXBSSPStrri:
+      Opc = X86::TOP4MXBSSPStrri;
+      break;
+    }
+    unsigned DstReg = TMMImmToTMMReg(MI.getOperand(0).getImm());
+    unsigned Imm = MI.getOperand(3).getImm();
+    BuildMI(*BB, MI, MIMD, TII->get(Opc), DstReg)
+        .addReg(DstReg, RegState::Undef)
+        .addReg(MI.getOperand(1).getReg())
+        .addReg(MI.getOperand(2).getReg())
+        .addImm(Imm);
+    MI.eraseFromParent();
     return BB;
   }
   }
@@ -41117,7 +41337,7 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
   }
 
   // Attempt to match against a OR if we're performing a blend shuffle and the
-  // non-blended source element is zero in each case.
+  // non-blended source element is zero (and not UNDEF/POISON) in each case.
   // TODO: Handle cases where V1/V2 sizes doesn't match SizeInBits.
   if (SizeInBits == V1.getValueSizeInBits() &&
       SizeInBits == V2.getValueSizeInBits() &&
@@ -41151,8 +41371,11 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
       break;
     }
     if (IsBlend) {
+      // KnownBits doesn't handle POISON/UNDEF values so check source values.
       if (DAG.MaskedVectorIsZero(V1, DemandedZeroV1) &&
-          DAG.MaskedVectorIsZero(V2, DemandedZeroV2)) {
+          DAG.MaskedVectorIsZero(V2, DemandedZeroV2) &&
+          DAG.isGuaranteedNotToBePoison(V1, DemandedZeroV1) &&
+          DAG.isGuaranteedNotToBePoison(V2, DemandedZeroV2)) {
         Shuffle = ISD::OR;
         SrcVT = DstVT = MaskVT.changeTypeToInteger();
         return true;
@@ -43542,11 +43765,15 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
         SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
         SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
         if (IsMergeableWithShuffle(Op00) && IsMergeableWithShuffle(Op01)) {
+          EVT IntVT = ShuffleVT.changeTypeToInteger();
           Op00 = DAG.getBitcast(ShuffleVT, Op00);
           Op01 = DAG.getBitcast(ShuffleVT, Op01);
           Op00 = DAG.getNode(Opc, DL, ShuffleVT, Op00);
           Op01 = DAG.getNode(Opc, DL, ShuffleVT, Op01);
-          return DAG.getNode(SrcOpcode, DL, ShuffleVT, Op00, Op01);
+          return DAG.getBitcast(ShuffleVT,
+                                DAG.getNode(SrcOpcode, DL, IntVT,
+                                            DAG.getBitcast(IntVT, Op00),
+                                            DAG.getBitcast(IntVT, Op01)));
         }
       }
     }
@@ -46621,12 +46848,39 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
       return Op0;
     break;
   }
-  case X86ISD::VSRAI:
+  case X86ISD::VSRLI: {
+    SDValue Op0 = Op.getOperand(0);
+    unsigned ShAmt = Op.getConstantOperandVal(1);
+    unsigned BitWidth = DemandedBits.getBitWidth();
+
+    // (VSRLI (VSHLI X, C1), C1) ZERO_EXTEND_INREG pattern
+    if (Op0.getOpcode() == X86ISD::VSHLI &&
+        ShAmt == Op0.getConstantOperandVal(1)) {
+      // If none of the extended bits are demanded, skip the shifts.
+      if (DemandedBits.getActiveBits() <= (BitWidth - ShAmt))
+        return Op0.getOperand(0);
+    }
+    break;
+  }
+  case X86ISD::VSRAI: {
+    SDValue Op0 = Op.getOperand(0);
+    unsigned ShAmt = Op.getConstantOperandVal(1);
+    unsigned BitWidth = DemandedBits.getBitWidth();
+
     // iff we only need the sign bit then we can use the source directly.
     // TODO: generalize where we only demand extended signbits.
     if (DemandedBits.isSignMask())
-      return Op.getOperand(0);
+      return Op0;
+
+    // (VSRAI (VSHLI X, C1), C1) SIGN_EXTEND_INREG pattern
+    if (Op0.getOpcode() == X86ISD::VSHLI &&
+        ShAmt == Op0.getConstantOperandVal(1)) {
+      // If none of the extended bits are demanded, skip the shifts.
+      if (DemandedBits.getActiveBits() <= (BitWidth - ShAmt))
+        return Op0.getOperand(0);
+    }
     break;
+  }
   case X86ISD::PCMPGT:
     // icmp sgt(0, R) == ashr(R, BitWidth-1).
     // iff we only need the sign bit then we can use R directly.
@@ -54756,30 +55010,6 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
-
-    // If second operand is a constant mask, then only the elements that aren't
-    // allones are actually demanded by the first operand.
-    APInt UndefElts;
-    SmallVector<APInt> EltBits;
-    int NumElts = VT.getVectorNumElements();
-    int EltSizeInBits = VT.getScalarSizeInBits();
-    if (getTargetConstantBitsFromNode(N1, EltSizeInBits, UndefElts, EltBits)) {
-      APInt DemandedElts = APInt::getZero(NumElts);
-      for (int I = 0; I != NumElts; ++I)
-        if (!EltBits[I].isAllOnes())
-          DemandedElts.setBit(I);
-
-      // We must freeze the result to prevent OR(poison,-1) -> poison.
-      // Restrict the fold to prevent infinite loops due to
-      // SimplifyDemandedVectorElts removing the freeze.
-      if (!DemandedElts.isAllOnes() &&
-          !DAG.isGuaranteedNotToBeUndefOrPoison(N0, DemandedElts) &&
-          TLI.SimplifyDemandedVectorElts(N0, DemandedElts, DCI)) {
-        SDValue F0 = DAG.getFreeze(N->getOperand(0), ~DemandedElts);
-        DAG.UpdateNodeOperands(N, F0, N->getOperand(1));
-        return SDValue(N, 0);
-      }
-    }
   }
 
   if (SDValue R = combineOrXorWithSETCC(N->getOpcode(), dl, VT, N0, N1, DAG))
@@ -61511,11 +61741,6 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   SDValue Op1 = N->getOperand(1);
   SDLoc DL(N);
 
-  auto IsNonOpaqueConstant = [&](SDValue Op) {
-    return DAG.isConstantIntBuildVectorOrConstantInt(Op,
-                                                     /*AllowOpaques*/ false);
-  };
-
   // sub(0, and(X, 1)) -> ashr(shl(X, SizeInBits - 1), SizeInBits - 1)
   if (VT.isVectorOf(MVT::i16) || VT.isVectorOf(MVT::i32) ||
       VT.isVectorOf(MVT::i64)) {
@@ -61533,14 +61758,21 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   // one use and a constant, invert the immediate, saving one register.
   // However, ignore cases where C1 is 0, as those will become a NEG.
   // sub(C1, xor(X, C2)) -> add(xor(X, ~C2), C1+1)
-  if (Op1.getOpcode() == ISD::XOR && IsNonOpaqueConstant(Op0) &&
-      !isNullConstant(Op0) && IsNonOpaqueConstant(Op1.getOperand(1)) &&
-      Op1->hasOneUse()) {
-    SDValue NewXor = DAG.getNode(ISD::XOR, SDLoc(Op1), VT, Op1.getOperand(0),
-                                 DAG.getNOT(SDLoc(Op1), Op1.getOperand(1), VT));
-    SDValue NewAdd =
-        DAG.getNode(ISD::ADD, DL, VT, Op0, DAG.getConstant(1, DL, VT));
-    return DAG.getNode(ISD::ADD, DL, VT, NewXor, NewAdd);
+  if (Op1.getOpcode() == ISD::XOR && !isNullConstant(Op0) && Op1->hasOneUse()) {
+    // Only do this if ~C2 and C1+1 constant fold. Otherwise (e.g. C2 is a
+    // bitcast of a build vector with undef elements) the generic combines turn
+    // the result back into the original sub and the combiner never terminates.
+    SDLoc XorDL(Op1);
+    if (SDValue NotC2 = DAG.FoldConstantArithmetic(
+            ISD::XOR, XorDL, VT,
+            {Op1.getOperand(1), DAG.getAllOnesConstant(XorDL, VT)})) {
+      if (SDValue C1Plus1 = DAG.FoldConstantArithmetic(
+              ISD::ADD, DL, VT, {Op0, DAG.getConstant(1, DL, VT)})) {
+        SDValue NewXor =
+            DAG.getNode(ISD::XOR, XorDL, VT, Op1.getOperand(0), NotC2);
+        return DAG.getNode(ISD::ADD, DL, VT, NewXor, C1Plus1);
+      }
+    }
   }
 
   if (SDValue V = combineSubABS(VT, DL, Op0, Op1, DAG))

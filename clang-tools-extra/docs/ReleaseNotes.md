@@ -60,6 +60,9 @@ infrastructure are described first, followed by tool-specific sections.
   All of the symbols it used to define were moved into `clang-tidy/ClangTidyModule.h`.
   The deprecated header has been removed in this release.
 
+- The hidden `-dataflow-log` option has been replaced by the `CLANG_DATAFLOW_LOG` environment variable.
+  `CLANG_DATAFLOW_LOG=-` writes a textual dataflow log to stderr, and `CLANG_DATAFLOW_LOG=<dir>` writes HTML logs under `<dir>`.
+
 ### Improvements to clangd
 
 #### Inlay hints

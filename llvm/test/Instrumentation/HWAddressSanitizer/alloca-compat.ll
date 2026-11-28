@@ -12,7 +12,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-LABEL: define void @test_alloca
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.thread.pointer.p0()
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i32 48
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 48
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i64 [[TMP3]], 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.read_register.i64(metadata [[META2:![0-9]+]])

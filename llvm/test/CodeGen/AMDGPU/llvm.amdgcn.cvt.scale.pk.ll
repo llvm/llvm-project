@@ -212,9 +212,9 @@ define void @test_cvt_scale_pk8_f16_fp4_ss(i32 inreg %src, i32 inreg %scale, ptr
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    v_mov_b32_e32 v6, s0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cvt_scale_pk8_f16_fp4 v[2:5], v2, s1 scale_sel:3
+; GFX1250-NEXT:    v_cvt_scale_pk8_f16_fp4 v[2:5], v6, s1 scale_sel:3
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %cvt = tail call <8 x half> @llvm.amdgcn.cvt.scale.pk8.f16.fp4(i32 %src, i32 %scale, i32 3)
@@ -240,9 +240,9 @@ define void @test_cvt_scale_pk8_bf16_fp4_ss(i32 inreg %src, i32 inreg %scale, pt
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-NEXT:    v_mov_b32_e32 v6, s0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cvt_scale_pk8_bf16_fp4 v[2:5], v2, s1 scale_sel:4
+; GFX1250-NEXT:    v_cvt_scale_pk8_bf16_fp4 v[2:5], v6, s1 scale_sel:4
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[2:5], off
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %cvt = tail call <8 x bfloat> @llvm.amdgcn.cvt.scale.pk8.bf16.fp4(i32 %src, i32 %scale, i32 4)
@@ -422,9 +422,9 @@ define void @test_cvt_scale_pk8_f32_fp4_ss(i32 inreg %src, i32 inreg %scale, ptr
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v10, s0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_cvt_scale_pk8_f32_fp4 v[2:9], v2, s1 scale_sel:1
+; GFX1250-SDAG-NEXT:    v_cvt_scale_pk8_f32_fp4 v[2:9], v10, s1 scale_sel:1
 ; GFX1250-SDAG-NEXT:    s_clause 0x1
 ; GFX1250-SDAG-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
 ; GFX1250-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
@@ -434,9 +434,9 @@ define void @test_cvt_scale_pk8_f32_fp4_ss(i32 inreg %src, i32 inreg %scale, ptr
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v10, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_cvt_scale_pk8_f32_fp4 v[2:9], v2, s1 scale_sel:1
+; GFX1250-GISEL-NEXT:    v_cvt_scale_pk8_f32_fp4 v[2:9], v10, s1 scale_sel:1
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v3

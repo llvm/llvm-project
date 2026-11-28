@@ -107,10 +107,8 @@ void InstructionPrecedenceTracking::removeInstruction(const Instruction *Inst) {
 }
 
 void InstructionPrecedenceTracking::removeUsersOf(const Instruction *Inst) {
-  for (const auto *U : Inst->users()) {
-    if (const auto *UI = dyn_cast<Instruction>(U))
-      removeInstruction(UI);
-  }
+  for (const Instruction *U : Inst->users())
+    removeInstruction(U);
 }
 
 void InstructionPrecedenceTracking::clear() {

@@ -248,8 +248,8 @@ bool isReductionOfConsecutiveAccumulators(Instruction *Root, const LoopInfo &LI,
   // reduced values without the shuffles in the loop.
   auto GetAccumulator = [&](Instruction *RdxVal) -> PHINode * {
     PHINode *Acc = nullptr;
-    for (User *U : RdxVal->users()) {
-      if (!L->contains(cast<Instruction>(U)))
+    for (Instruction *U : RdxVal->users()) {
+      if (!L->contains(U))
         continue;
       auto *P = dyn_cast<PHINode>(U);
       if (Acc || !P || P->getParent() != L->getHeader() || !P->hasOneUse())

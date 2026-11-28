@@ -553,6 +553,9 @@ TEST(FortranFeaturesTest, CamelCaseToLowerCaseHyphenated) {
   EXPECT_EQ(CamelCaseToLowerCaseHyphenated(
                 EnumToString(UsageWarning::NonVolatilePointerToVolatile)),
       "non-volatile-pointer-to-volatile");
+  EXPECT_EQ(CamelCaseToLowerCaseHyphenated(
+                EnumToString(UsageWarning::UndelimitedNamelistCharacter)),
+      "undelimited-namelist-character");
 }
 
 TEST(FortranFeaturesTest, HintLanguageControlFlag) {

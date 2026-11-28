@@ -15,6 +15,7 @@
 #include "XtensaTargetMachine.h"
 #include "TargetInfo/XtensaTargetInfo.h"
 #include "XtensaMachineFunctionInfo.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -63,15 +64,28 @@ XtensaTargetMachine::XtensaTargetMachine(const Target &T, const Triple &TT,
 
 const XtensaSubtarget *
 XtensaTargetMachine::getSubtargetImpl(const Function &F) const {
-  Attribute CPUAttr = F.getFnAttribute("target-cpu");
-  Attribute FSAttr = F.getFnAttribute("target-features");
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const XtensaSubtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
 
-  auto CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
-  auto FS = FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+  SubtargetAttrs Attrs;
+  Attrs.CPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
 
-  auto &I = SubtargetMap[CPU + FS];
+  if (const XtensaSubtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
+
+  StringRef CPU =
+      Attrs.CPU.isValid() ? Attrs.CPU.getValueAsString() : StringRef(TargetCPU);
+  StringRef FS =
+      Attrs.FS.isValid() ? Attrs.FS.getValueAsString() : StringRef(TargetFS);
+
+  SmallString<256> Key({CPU, FS});
+  std::unique_ptr<XtensaSubtarget> &I = SubtargetMap[Key];
   if (!I)
     I = std::make_unique<XtensaSubtarget>(TargetTriple, CPU, FS, *this);
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 

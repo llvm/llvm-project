@@ -38,9 +38,7 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
   EXPECT_EQ(DL5, "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:"
                  "64-i128:128-n32:64-S128-Fn32");
 
-  // Check that AMDGPU targets add -G1 if it's not present.
-  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32", "r600"), "m:e-e-p:32:32-G1");
-  // and that ANDGCN adds p7 and p8 as well.
+  // Check that AMDGCN adds -G1, p7 and p8 if they are not present.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64", "amdgcn"),
             "m:e-e-p:64:64-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:48-p9:"
             "192:256:256:32-p10:32:32-p11:32:32-p13:32:32-p14:32:32-"
@@ -54,9 +52,6 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
             "m:e-e-p:64:64-p8:128:128:128:48-G1-ni:7:8:9-p7:160:256:256:32-p9:"
             "192:256:256:32-p10:32:32-p11:32:32-p13:32:32-p14:32:32-"
             "p15:32:32");
-  // but that r600 does not.
-  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G1", "r600"),
-            "m:e-e-p:32:32-G1");
 
   // Ensure that the non-integral direction for address space 8 doesn't get
   // added in to pointer declarations.
@@ -164,9 +159,6 @@ TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
                  "64-S128-Fn32");
 
   // Check that AMDGPU targets don't add -G1 if there is already a -G flag.
-  EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G2", "r600"),
-            "m:e-e-p:32:32-G2");
-  EXPECT_EQ(UpgradeDataLayoutString("G2", "r600"), "m:e-G2");
   EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-G2", "amdgcn"),
             "m:e-e-p:64:64-G2-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:48-p9:"
             "192:256:256:32-p10:32:32-p11:32:32-p13:32:32-p14:32:32"
@@ -255,7 +247,6 @@ TEST(DataLayoutUpgradeTest, EmptyDataLayout) {
   EXPECT_EQ(DL2, "e-m:e-p:32:32-i64:64-f80:128-n8:16:32:64-S128");
 
   // Check that AMDGPU targets add G1 if it's not present.
-  EXPECT_EQ(UpgradeDataLayoutString("", "r600"), "m:e-G1");
   EXPECT_EQ(UpgradeDataLayoutString("", "amdgcn"),
             "m:e-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:"
             "256:32-p10:32:32-p11:32:32-p13:32:32-p14:32:32-p15:32:32");

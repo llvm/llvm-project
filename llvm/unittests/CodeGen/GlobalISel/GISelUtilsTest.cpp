@@ -497,4 +497,62 @@ TEST_F(AMDGPUGISelMITest, isConstantOrConstantSplatVectorFP) {
 
   EXPECT_FALSE(isConstantOrConstantSplatVectorFP(GetReg(15), *MRI).has_value());
 }
+
+TEST_F(AArch64GISelMITest, isNullOrNullSplat) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT S32 = LLT::scalar(32);
+  LLT V4S32 = LLT::fixed_vector(4, 32);
+
+  Register Zero = B.buildConstant(S32, 0).getReg(0);
+  Register One = B.buildConstant(S32, 1).getReg(0);
+  Register Undef = B.buildUndef(S32).getReg(0);
+
+  auto ZeroSplat = B.buildBuildVector(V4S32, {Zero, Zero, Zero, Zero});
+  EXPECT_TRUE(isNullOrNullSplat(*ZeroSplat, *MRI, false));
+  EXPECT_TRUE(isNullOrNullSplat(*ZeroSplat, *MRI, true));
+
+  auto ZeroUndef = B.buildBuildVector(V4S32, {Zero, Undef, Zero, Zero});
+  EXPECT_FALSE(isNullOrNullSplat(*ZeroUndef, *MRI, false));
+  EXPECT_TRUE(isNullOrNullSplat(*ZeroUndef, *MRI, true));
+
+  auto ZeroOne = B.buildBuildVector(V4S32, {Zero, One, Zero, Zero});
+  EXPECT_FALSE(isNullOrNullSplat(*ZeroOne, *MRI, false));
+  EXPECT_FALSE(isNullOrNullSplat(*ZeroOne, *MRI, true));
+
+  auto UndefVec = B.buildUndef(V4S32);
+  EXPECT_FALSE(isNullOrNullSplat(*UndefVec, *MRI, false));
+  EXPECT_TRUE(isNullOrNullSplat(*UndefVec, *MRI, true));
+}
+
+TEST_F(AArch64GISelMITest, isAllOnesOrAllOnesSplat) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT S32 = LLT::scalar(32);
+  LLT V4S32 = LLT::fixed_vector(4, 32);
+
+  Register NegOne = B.buildConstant(S32, -1).getReg(0);
+  Register One = B.buildConstant(S32, 1).getReg(0);
+  Register Undef = B.buildUndef(S32).getReg(0);
+
+  auto OnesSplat = B.buildBuildVector(V4S32, {NegOne, NegOne, NegOne, NegOne});
+  EXPECT_TRUE(isAllOnesOrAllOnesSplat(*OnesSplat, *MRI, false));
+  EXPECT_TRUE(isAllOnesOrAllOnesSplat(*OnesSplat, *MRI, true));
+
+  auto OnesUndef = B.buildBuildVector(V4S32, {NegOne, Undef, NegOne, NegOne});
+  EXPECT_FALSE(isAllOnesOrAllOnesSplat(*OnesUndef, *MRI, false));
+  EXPECT_TRUE(isAllOnesOrAllOnesSplat(*OnesUndef, *MRI, true));
+
+  auto OnesOne = B.buildBuildVector(V4S32, {NegOne, One, NegOne, NegOne});
+  EXPECT_FALSE(isAllOnesOrAllOnesSplat(*OnesOne, *MRI, false));
+  EXPECT_FALSE(isAllOnesOrAllOnesSplat(*OnesOne, *MRI, true));
+
+  auto UndefVec = B.buildUndef(V4S32);
+  EXPECT_FALSE(isAllOnesOrAllOnesSplat(*UndefVec, *MRI, false));
+  EXPECT_TRUE(isAllOnesOrAllOnesSplat(*UndefVec, *MRI, true));
+}
 }

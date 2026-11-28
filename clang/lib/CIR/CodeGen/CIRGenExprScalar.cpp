@@ -1769,6 +1769,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
 
   opInfo.lhs = emitLoadOfLValue(lhsLV, e->getExprLoc());
 
+  CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, opInfo.fpFeatures);
   CIRGenFunction::SourceLocRAIIObject sourceloc{cgf, e->getSourceRange()};
   SourceLocation loc = e->getExprLoc();
   if (!promotionTypeLHS.isNull())

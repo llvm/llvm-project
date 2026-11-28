@@ -128,7 +128,7 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
   }
 
   if (const CallBase *CB = dyn_cast<CallBase>(Inst)) {
-    if (Value *FreedOp = getFreedOperand(CB, &TLI)) {
+    if (Value *FreedOp = getFreedOperand(CB)) {
       // calls to free() deallocate the entire structure
       Loc = MemoryLocation::getAfter(FreedOp);
       return ModRefInfo::Mod;

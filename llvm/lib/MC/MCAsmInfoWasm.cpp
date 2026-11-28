@@ -18,14 +18,6 @@
 
 using namespace llvm;
 
-MCAsmInfoWasm::MCAsmInfoWasm(const MCTargetOptions &Options)
-    : MCAsmInfo(Options) {
-  HasIdentDirective = true;
-  HasNoDeadStrip = true;
-  WeakRefDirective = "\t.weak\t";
-  InternalSymbolPrefix = ".L";
-}
-
 static void printName(raw_ostream &OS, StringRef Name) {
   if (Name.find_first_not_of("0123456789_."
                              "abcdefghijklmnopqrstuvwxyz"
@@ -49,11 +41,11 @@ static void printName(raw_ostream &OS, StringRef Name) {
   OS << '"';
 }
 
-void MCAsmInfoWasm::printSwitchToSection(const MCSection &Section,
-                                         uint32_t Subsection, const Triple &T,
-                                         raw_ostream &OS) const {
+static void printSwitchToSection(const MCAsmInfo &MAI, const MCSection &Section,
+                                 uint32_t Subsection, const Triple &T,
+                                 raw_ostream &OS) {
   auto &Sec = static_cast<const MCSectionWasm &>(Section);
-  if (shouldOmitSectionDirective(Sec.getName())) {
+  if (MAI.isSectionDirective(Sec.getName())) {
     OS << '\t' << Sec.getName();
     if (Subsection)
       OS << '\t' << Subsection;
@@ -65,15 +57,17 @@ void MCAsmInfoWasm::printSwitchToSection(const MCSection &Section,
   printName(OS, Sec.getName());
   OS << ",\"";
 
-  if (Sec.IsPassive)
+  unsigned SegmentFlags = Sec.getSegmentFlags();
+
+  if (Sec.isWasmData() && Sec.getPassive())
     OS << 'p';
-  if (Sec.Group)
+  if (Sec.getGroup())
     OS << 'G';
-  if (Sec.SegmentFlags & wasm::WASM_SEG_FLAG_STRINGS)
+  if (SegmentFlags & wasm::WASM_SEG_FLAG_STRINGS)
     OS << 'S';
-  if (Sec.SegmentFlags & wasm::WASM_SEG_FLAG_TLS)
+  if (SegmentFlags & wasm::WASM_SEG_FLAG_TLS)
     OS << 'T';
-  if (Sec.SegmentFlags & wasm::WASM_SEG_FLAG_RETAIN)
+  if (SegmentFlags & wasm::WASM_SEG_FLAG_RETAIN)
     OS << 'R';
 
   OS << '"';
@@ -81,24 +75,33 @@ void MCAsmInfoWasm::printSwitchToSection(const MCSection &Section,
   OS << ',';
 
   // If comment string is '@', e.g. as on ARM - use '%' instead
-  if (getCommentString()[0] == '@')
+  if (MAI.getCommentString()[0] == '@')
     OS << '%';
   else
     OS << '@';
 
   // TODO: Print section type.
 
-  if (Sec.Group) {
+  if (const MCSymbolWasm *Group = Sec.getGroup()) {
     OS << ",";
-    printName(OS, Sec.Group->getName());
+    printName(OS, Group->getName());
     OS << ",comdat";
   }
 
   if (Sec.isUnique())
-    OS << ",unique," << Sec.UniqueID;
+    OS << ",unique," << Sec.getUniqueID();
 
   OS << '\n';
 
   if (Subsection)
     OS << "\t.subsection\t" << Subsection << '\n';
+}
+
+MCAsmInfoWasm::MCAsmInfoWasm(const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
+  HasIdentDirective = true;
+  HasNoDeadStrip = true;
+  WeakRefDirective = "\t.weak\t";
+  InternalSymbolPrefix = ".L";
+  PrintSwitchToSectionFn = ::printSwitchToSection;
 }

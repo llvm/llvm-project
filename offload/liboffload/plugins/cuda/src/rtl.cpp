@@ -877,6 +877,64 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuMemcpyAsync: %s");
   }
 
+  Error dataMemcpy3DImpl(const Copy3DDescTy &Copy,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    if (auto Err = setContext())
+      return Err;
+
+    // A copy to another CUDA device needs the peer access handling of
+    // dataExchangeImpl. Let liboffload fall back to row copies for it.
+    if (!Copy.DstIsHost && !Copy.SrcIsHost) {
+      int DstOrdinal = -1;
+      CUresult PtrRes = cuPointerGetAttribute(
+          &DstOrdinal, CU_POINTER_ATTRIBUTE_DEVICE_ORDINAL,
+          (CUdeviceptr)Copy.DstPtr);
+      if (PtrRes == CUDA_SUCCESS && DstOrdinal != Device)
+        return Plugin::error(ErrorCode::UNSUPPORTED,
+                             "3D copy between different CUDA devices");
+    }
+
+    CUstream Stream;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
+
+    // liboffload has validated the layouts and zeroed the slice pitch of a
+    // layout that does not use slices. For such a layout, the height must
+    // still cover the rows accessed.
+    auto LayoutHeight = [&](size_t Pitch, size_t SlicePitch, size_t OffsetY) {
+      return SlicePitch ? SlicePitch / Pitch : OffsetY + Copy.Extent[1];
+    };
+
+    CUDA_MEMCPY3D Params = {};
+    Params.srcMemoryType = CU_MEMORYTYPE_UNIFIED;
+    Params.srcDevice = (CUdeviceptr)Copy.SrcPtr;
+    Params.srcXInBytes = Copy.SrcOffset[0];
+    Params.srcY = Copy.SrcOffset[1];
+    Params.srcZ = Copy.SrcOffset[2];
+    Params.srcPitch = Copy.SrcPitch;
+    Params.srcHeight =
+        LayoutHeight(Copy.SrcPitch, Copy.SrcSlicePitch, Copy.SrcOffset[1]);
+    Params.dstMemoryType = CU_MEMORYTYPE_UNIFIED;
+    Params.dstDevice = (CUdeviceptr)Copy.DstPtr;
+    Params.dstXInBytes = Copy.DstOffset[0];
+    Params.dstY = Copy.DstOffset[1];
+    Params.dstZ = Copy.DstOffset[2];
+    Params.dstPitch = Copy.DstPitch;
+    Params.dstHeight =
+        LayoutHeight(Copy.DstPitch, Copy.DstSlicePitch, Copy.DstOffset[1]);
+    Params.WidthInBytes = Copy.Extent[0];
+    Params.Height = Copy.Extent[1];
+    Params.Depth = Copy.Extent[2];
+
+    CUresult Res = cuMemcpy3DAsync(&Params, Stream);
+    // The driver rejects layouts it cannot copy natively, such as a pitch
+    // above the device maximum. Let liboffload fall back to row copies.
+    if (Res == CUDA_ERROR_INVALID_VALUE)
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "cuMemcpy3DAsync rejected the copy");
+    return Plugin::check(Res, "error in cuMemcpy3DAsync: %s");
+  }
+
   /// Exchange data between two devices directly. We may use peer access if
   /// the CUDA devices and driver allow them.
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,

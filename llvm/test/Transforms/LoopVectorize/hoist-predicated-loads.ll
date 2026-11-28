@@ -1143,3 +1143,73 @@ loop.latch:
 exit:
   ret void
 }
+
+; The complementary loads use addresses with different GEP flags. The hoisted
+; load must only use flags valid for both.
+define void @hoist_loads_with_different_gep_flags(ptr noalias %src, ptr noalias %dst, i64 %n) {
+; CHECK-LABEL: define void @hoist_loads_with_different_gep_flags(
+; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i64> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 -1)
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> [[TMP9]], i32 [[TMP8]], i64 1
+; CHECK-NEXT:    [[TMP11:%.*]] = add <2 x i32> [[TMP10]], splat (i32 10)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[TMP10]], <2 x i32> [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP12]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP89:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %c = icmp eq i64 %iv, 0
+  %idx = add i64 %iv, -1
+  br i1 %c, label %then, label %else
+
+then:
+  %gep.src.1 = getelementptr i32, ptr %src, i64 %idx
+  %l.src = load i32, ptr %gep.src.1, align 4
+  br label %loop.latch
+
+else:
+  %gep.src.2 = getelementptr nuw i32, ptr %src, i64 %idx
+  %l.src.2 = load i32, ptr %gep.src.2, align 4
+  %add = add i32 %l.src.2, 10
+  br label %loop.latch
+
+loop.latch:
+  %merge = phi i32 [ %l.src, %then ], [ %add, %else ]
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i32 %merge, ptr %gep.dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

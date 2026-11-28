@@ -19,10 +19,6 @@ define amdgpu_kernel void @fneg_v2f64(ptr addrspace(1) nocapture %out, <2 x doub
 }
 
 ; FUNC-LABEL: {{^}}fneg_v4f64:
-; R600: -PV
-; R600: -T
-; R600: -PV
-; R600: -PV
 
 ; GCN: s_xor_b32
 ; GCN: s_xor_b32

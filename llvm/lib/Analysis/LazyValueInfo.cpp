@@ -2384,11 +2384,9 @@ void LazyValueInfoAnnotatedWriter::emitInstructionAnnot(
       printResult(BBSucc);
 
   // Print LVI in blocks where `I` is used.
-  for (const auto *U : I->users())
-    if (auto *UseI = dyn_cast<Instruction>(U))
-      if (!isa<PHINode>(UseI) || DT.dominates(ParentBB, UseI->getParent()))
-        printResult(UseI->getParent());
-
+  for (const Instruction *UseI : I->users())
+    if (!isa<PHINode>(UseI) || DT.dominates(ParentBB, UseI->getParent()))
+      printResult(UseI->getParent());
 }
 
 PreservedAnalyses LazyValueInfoPrinterPass::run(Function &F,

@@ -15,6 +15,7 @@
 #include "src/__support/regex/regex_ast.h"
 #include "src/__support/regex/regex_expr_pool.h"
 #include "test/UnitTest/Test.h"
+#include "test/src/__support/regex/expr_builder.h"
 
 using LIBC_NAMESPACE::regex::ANCHOR_BOL;
 using LIBC_NAMESPACE::regex::ANCHOR_EOL;
@@ -27,6 +28,7 @@ using LIBC_NAMESPACE::regex::ExprKind;
 using LIBC_NAMESPACE::regex::ExprPool;
 using LIBC_NAMESPACE::regex::INVALID_EXPR_ID;
 using LIBC_NAMESPACE::regex::REPEAT_INF;
+using LIBC_NAMESPACE::testing::ExprBuilder;
 
 TEST(LlvmLibcRegexExprTest, Interning) {
   ExprPool pool;
@@ -456,101 +458,6 @@ TEST(LlvmLibcRegexExprTest, BoundsGuardsAndNullableMask) {
   EXPECT_EQ(pool.get(*star_bol).nullable_mask, uint8_t(0b1111));
   EXPECT_EQ(pool.get(*rep_bol_or_a).nullable_mask, uint8_t(0b1010));
 }
-
-namespace {
-
-// Compositional wrapper around ExprPool that unwraps ErrorOr<ExprId> so spine
-// tests read directly as regex algebra instead of boilerplate assertions.
-class ExprBuilder {
-  ExprPool pool;
-
-  ExprId unwrap(LIBC_NAMESPACE::ErrorOr<ExprId> res) {
-    EXPECT_TRUE(res.has_value());
-    return res.has_value() ? *res : INVALID_EXPR_ID;
-  }
-
-public:
-  ExprPool &raw() { return pool; }
-  Expr get(ExprId id) const { return pool.get(id); }
-
-  ExprId lit(char c) { return unwrap(pool.make_lit(c)); }
-  ExprId star(ExprId body) { return unwrap(pool.make_star(body)); }
-  ExprId star(char c) { return star(lit(c)); }
-  ExprId rep(ExprId body, uint16_t min, uint16_t max) {
-    return unwrap(pool.make_repeat(body, min, max));
-  }
-  ExprId rep(char c, uint16_t min, uint16_t max) {
-    return rep(lit(c), min, max);
-  }
-  ExprId cat(ExprId l, ExprId r) { return unwrap(pool.make_concat(l, r)); }
-  ExprId alt(ExprId l, ExprId r) { return unwrap(pool.make_alt(l, r)); }
-
-  template <typename... Rest>
-  ExprId alt(ExprId first, ExprId second, Rest... rest) {
-    return alt(alt(first, second), rest...);
-  }
-
-  // Returns the idx-th distinct two-character literal pair ("a!", "a\"", ...)
-  // for building wide Alt spines without Repeat nodes.
-  ExprId distinct_branch(size_t idx) {
-    return cat(lit(static_cast<char>('a' + (idx / 60))),
-               lit(static_cast<char>('!' + (idx % 60))));
-  }
-
-  // Walks a right-associated Alt spine, verifies right-associativity and
-  // strictly ascending ExprId order, and returns the total branch count.
-  size_t verify_alt_spine(ExprId spine) const {
-    if (spine == INVALID_EXPR_ID)
-      return 0;
-    size_t count = 0;
-    ExprId prev = INVALID_EXPR_ID;
-    ExprId walk = spine;
-    while (walk != EMPTY_SET_ID) {
-      const Expr we = pool.get(walk);
-      const bool is_alt = (we.kind == ExprKind::Alt);
-      const ExprId head = is_alt ? we.bin.left : walk;
-      EXPECT_NE(pool.get(head).kind, ExprKind::Alt);
-      if (prev != INVALID_EXPR_ID)
-        EXPECT_LT(prev, head);
-      prev = head;
-      ++count;
-      walk = is_alt ? we.bin.right : EMPTY_SET_ID;
-    }
-    return count;
-  }
-
-  // Counts occurrences of `target` as a top-level branch of an Alt spine.
-  size_t count_branch(ExprId spine, ExprId target) const {
-    if (spine == INVALID_EXPR_ID)
-      return 0;
-    size_t hits = 0;
-    ExprId walk = spine;
-    while (walk != EMPTY_SET_ID) {
-      const Expr we = pool.get(walk);
-      const bool is_alt = (we.kind == ExprKind::Alt);
-      if ((is_alt ? we.bin.left : walk) == target)
-        ++hits;
-      walk = is_alt ? we.bin.right : EMPTY_SET_ID;
-    }
-    return hits;
-  }
-
-  // Builds a right-associated literal chain cycling `pattern` (`count`
-  // literals) followed by `tail`.  A 3-character cycle ("abc") is asymmetric
-  // at both DEPTH and DEPTH - 1, so reversing rebuild order fails immediately.
-  template <size_t N>
-  ExprId cycle_literals(const char (&pattern)[N], size_t count,
-                        ExprId tail = EMPTY_STR_ID) {
-    static_assert(N > 1, "pattern must contain at least one character");
-    constexpr size_t PERIOD = N - 1;
-    ExprId acc = tail;
-    for (size_t i = count; i > 0 && acc != INVALID_EXPR_ID; --i)
-      acc = cat(lit(pattern[(i - 1) % PERIOD]), acc);
-    return acc;
-  }
-};
-
-} // namespace
 
 TEST(LlvmLibcRegexExprTest, DeepConcatFlatteningAndPrefixCoalesce) {
   ExprBuilder b;

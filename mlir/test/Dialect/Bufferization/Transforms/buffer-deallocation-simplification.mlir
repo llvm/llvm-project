@@ -198,3 +198,24 @@ module {
 
 // CHECK-LABEL: func @memref_cast_folding
 //       CHECK: %[[r:.*]] = bufferization.dealloc (%{{.*}} : memref<f32, 1>) if (%{{.*}}) retain (%{{.*}} : memref<4x4xf32, 1>)
+
+// -----
+
+// The origin of a buffer that is not a memref is not known, so a dealloc of
+// one is not simplified by its origin.
+
+// CHECK-LABEL: func @dealloc_buffer_like_retained
+//  CHECK-SAME: ([[A:%.+]]: !test.test_memref<[4], f32>, [[C:%.+]]: i1, [[R:%.+]]: !test.test_memref<[4], f32>, [[M:%.+]]: memref<4xf32>)
+//       CHECK: [[D0:%.+]] = bufferization.dealloc ([[A]] : !test.test_memref<[4], f32>) if ([[C]]) retain ([[R]] : !test.test_memref<[4], f32>)
+//       CHECK: [[D1:%.+]] = bufferization.dealloc ([[M]] : memref<4xf32>) if ([[C]]) retain ([[R]] : !test.test_memref<[4], f32>)
+//       CHECK: return [[D0]], [[D1]]
+func.func @dealloc_buffer_like_retained(%a: !test.test_memref<[4], f32>,
+                                        %c: i1,
+                                        %r: !test.test_memref<[4], f32>,
+                                        %m: memref<4xf32>) -> (i1, i1) {
+  %0 = bufferization.dealloc (%a : !test.test_memref<[4], f32>) if (%c)
+    retain (%r : !test.test_memref<[4], f32>)
+  %1 = bufferization.dealloc (%m : memref<4xf32>) if (%c)
+    retain (%r : !test.test_memref<[4], f32>)
+  return %0, %1 : i1, i1
+}

@@ -166,9 +166,6 @@ public:
     return DT.isReachableFromEntry(A);
   }
 
-  /// Releases the memory held by the dominator tree.
-  void releaseMemory() { DT.reset(); }
-
   /// Converts the dominator tree to human readable form.
   virtual void print(raw_ostream &OS, const llvm::Module* M= nullptr) const {
     DT.print(OS);

@@ -50,9 +50,11 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/TargetParser/AtomicScope.h"
 #include "llvm/Transforms/Utils/LowerAtomic.h"
+#include <cmath>
 #include <optional>
 
 using namespace llvm;
@@ -12007,6 +12009,24 @@ SDValue SITargetLowering::lowerBufferIntrinsicWithChain(
   }
 }
 
+// The async copies between memory and LDS add only the low 16 bits of the
+// instruction offset to the LDS address, the memory side gets all of it. Fold
+// any other offset into both addresses and leave 0 in the instruction.
+static void foldAsyncLDSOffset(SDValue Op, SelectionDAG &DAG, SDLoc DL) {
+  SDNode *N = Op.getNode();
+  int64_t Offset = N->getConstantOperandAPInt(4).getSExtValue();
+  if (isUInt<16>(Offset))
+    return;
+  SmallVector<SDValue, 7> Ops(N->ops());
+  for (unsigned OpIdx : {2, 3}) {
+    EVT VT = Ops[OpIdx].getValueType();
+    Ops[OpIdx] = DAG.getMemBasePlusOffset(
+        Ops[OpIdx], DAG.getSignedConstant(Offset, DL, VT), DL);
+  }
+  Ops[4] = DAG.getTargetConstant(0, DL, MVT::i32);
+  DAG.UpdateNodeOperands(N, Ops);
+}
+
 static void initializeM0ToZeroForClusterLoad(SDValue Op, SelectionDAG &DAG,
                                              SDLoc DL) {
   SDNode *N = Op.getNode();
@@ -12814,10 +12834,21 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b128: {
+    foldAsyncLDSOffset(Op, DAG, DL);
     if (Subtarget->hasGFX1250_STRICT())
       initializeM0ToZeroForClusterLoad(Op, DAG, DL);
     return SDValue();
   }
+  case Intrinsic::amdgcn_global_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b8:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b32:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b64:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b128:
+    foldAsyncLDSOffset(Op, DAG, DL);
+    return SDValue();
   case Intrinsic::amdgcn_exp_compr: {
     SDValue Src0 = Op.getOperand(4);
     SDValue Src1 = Op.getOperand(5);
@@ -18452,6 +18483,9 @@ SDValue SITargetLowering::performFMulCombine(SDNode *N,
   EVT ScalarVT = VT.getScalarType();
   EVT IntVT = VT.changeElementType(*DAG.getContext(), MVT::i32);
 
+  if (SDValue V = performFMulExpCombine(N, DCI))
+    return V;
+
   if (!N->isDivergent() && getSubtarget()->hasSALUFloatInsts() &&
       (ScalarVT == MVT::f32 || ScalarVT == MVT::f16)) {
     // Prefer to use s_mul_f16/f32 instead of v_ldexp_f16/f32.
@@ -18509,6 +18543,103 @@ SDValue SITargetLowering::performFMulCombine(SDNode *N,
   }
 
   return SDValue();
+}
+
+// Fold a constant scale into the exponent, where it merges into an fma:
+//   fmul (fexp2 (fmul a, b)), C -> fexp2 (fma a, b, log2(C))
+//   fmul (fexp x), C            -> fexp2 (fma x, log2(e), log2(C))
+//   fmul (fpow x, Y), C         -> exp (fma (log x), Y, log2(C))
+//
+// contract is required on the multiply that the fma replaces: the inner fmul
+// of an fexp2, the fpow, or this fmul when folding an fexp. reassoc and afn
+// are required on this fmul. GlobalISel does not fold this.
+SDValue SITargetLowering::performFMulExpCombine(SDNode *N,
+                                                DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  // fexp and fexp2 are custom lowered, so they can't be created after
+  // LegalizeDAG. fexp in particular is gone by then, expanded to a multiply
+  // by log2(e).
+  if (DCI.isAfterLegalizeDAG() || N->getValueType(0) != MVT::f32)
+    return SDValue();
+
+  // log2(C) is rarely an inline constant, so the fma needs a literal.
+  if (!getSubtarget()->hasVOP3Literal() ||
+      !isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), MVT::f32))
+    return SDValue();
+
+  SDNodeFlags Flags = N->getFlags();
+  if (!Flags.hasAllowReassociation() || !Flags.hasApproximateFuncs())
+    return SDValue();
+
+  // With other users the exp would have to be duplicated.
+  SDValue Exp = N->getOperand(0);
+  auto *C = dyn_cast<ConstantFPSDNode>(N->getOperand(1));
+  if (!C || !Exp.hasOneUse() || !Exp->getFlags().hasApproximateFuncs())
+    return SDValue();
+
+  // C must be a positive normal. isNormal() also rejects 0, Inf, and NaN,
+  // whose log2 is not a finite fma addend. A denormal is rejected in every
+  // denormal mode: under flush-to-zero the fmul flushes it to zero, and
+  // log2(C) would not. A negative C has no real log2.
+  const APFloat &CVal = C->getValueAPF();
+  if (!CVal.isNormal() || CVal.isNegative())
+    return SDValue();
+
+  Flags &= Exp->getFlags();
+  SDLoc SL(N);
+  SDValue A, B;
+  unsigned ExpOpc;
+  bool UseFmaLegacy = false;
+  if (Exp.getOpcode() == ISD::FEXP2) {
+    SDValue Arg = Exp.getOperand(0);
+    if (Arg.getOpcode() != ISD::FMUL || !Arg.hasOneUse() ||
+        !Arg->getFlags().hasAllowContract())
+      return SDValue();
+    Flags &= Arg->getFlags();
+    A = Arg.getOperand(0);
+    B = Arg.getOperand(1);
+    // Keep fexp2 so its lowering still adds denormal handling if required.
+    ExpOpc = ISD::FEXP2;
+  } else if (Exp.getOpcode() == ISD::FEXP) {
+    // Contract the scale into the multiply by log2(e) that fexp lowering
+    // would insert.
+    if (!N->getFlags().hasAllowContract())
+      return SDValue();
+    A = Exp.getOperand(0);
+    B = DAG.getConstantFP(numbers::log2e, SL, MVT::f32);
+    // Keep fexp2 so its lowering still adds denormal handling if required.
+    ExpOpc = ISD::FEXP2;
+  } else if (Exp.getOpcode() == ISD::FPOW) {
+    if (!Exp->getFlags().hasAllowContract())
+      return SDValue();
+    // fpow is custom-lowered by lowerFPOW, which multiplies with fmul_legacy
+    // (0 * inf = 0). An IEEE fma matches that only for a normal constant
+    // exponent; otherwise fma_legacy is needed.
+    auto *Y = dyn_cast<ConstantFPSDNode>(Exp.getOperand(1));
+    UseFmaLegacy = !Y || !Y->getValueAPF().isNormal();
+    if (UseFmaLegacy && !getSubtarget()->hasFmaLegacy32Insts())
+      return SDValue();
+    // log2(0) is -inf, which exp2 turns back into 0. Drop ninf on the core,
+    // matching lowerFPOW, so a later fold cannot treat that -inf as poison.
+    Flags.setNoInfs(false);
+    A = DAG.getNode(AMDGPUISD::LOG, SL, MVT::f32, Exp.getOperand(0), Flags);
+    B = Exp.getOperand(1);
+    ExpOpc = AMDGPUISD::EXP;
+  } else {
+    return SDValue();
+  }
+
+  // Computed in double and rounded once to f32.
+  SDValue K =
+      DAG.getConstantFP(std::log2(CVal.convertToDouble()), SL, MVT::f32);
+  SDValue Fma =
+      UseFmaLegacy
+          ? DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::f32,
+                        DAG.getTargetConstant(Intrinsic::amdgcn_fma_legacy, SL,
+                                              MVT::i32),
+                        A, B, K, Flags)
+          : DAG.getNode(ISD::FMA, SL, MVT::f32, A, B, K, Flags);
+  return DAG.getNode(ExpOpc, SL, MVT::f32, Fma, Flags);
 }
 
 SDValue SITargetLowering::performFMACombine(SDNode *N,
@@ -21452,7 +21583,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
 }
 
 TargetLowering::AtomicExpansionKind
-SITargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+SITargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
   if (LI->getPointerAddressSpace() == AMDGPUAS::VGPR)
     return AtomicExpansionKind::NotAtomic;
   return LI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
@@ -21461,7 +21592,7 @@ SITargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
 }
 
 TargetLowering::AtomicExpansionKind
-SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+SITargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   if (SI->getPointerAddressSpace() == AMDGPUAS::VGPR)
     return AtomicExpansionKind::NotAtomic;
   return SI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS

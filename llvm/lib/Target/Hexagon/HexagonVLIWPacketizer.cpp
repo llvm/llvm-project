@@ -1587,7 +1587,7 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       // likely map to the same bank. Other passes add artificial edges too,
       // so re-check the condition before keeping the loads apart.
       if (SUJ->Succs[i].isArtificial() &&
-          HexagonSubtarget::mayHaveBankConflict(J, I, *HII)) {
+          MF.getSubtarget<HexagonSubtarget>().mayHaveBankConflict(J, I, *HII)) {
         FoundSequentialDependence = true;
         break;
       }

@@ -617,6 +617,8 @@ private:
     const parser::OmpDirectiveSpecification *spec;
     bool checkDefaultNoneInAssociatedLoop;
   };
+  std::vector<MetadirectiveLoopVariant> TakeMetadirectiveVariants(
+      std::size_t first);
   std::vector<MetadirectiveLoopVariant> metadirectiveLoopVariants_;
   std::vector<std::size_t> metadirectiveVariantScopeStarts_;
   const parser::traits::OmpContextSelectorSpecification *currentWhenSelector_{

@@ -1,17 +1,24 @@
-//===-- Implementation of stpncpy -----------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of stpncpy.
+///
+//===----------------------------------------------------------------------===//
 
 #include "src/string/stpncpy.h"
+
+#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
 #include "src/string/memory_utils/inline_bzero.h"
-
-#include "src/__support/common.h"
+#include "src/string/memory_utils/inline_memcpy.h"
+#include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -22,10 +29,9 @@ LLVM_LIBC_FUNCTION(char *, stpncpy,
     LIBC_CRASH_ON_NULLPTR(dest);
     LIBC_CRASH_ON_NULLPTR(src);
   }
-  size_t i;
+  size_t i = internal::strnlen(src, n);
   // Copy up until \0 is found.
-  for (i = 0; i < n && src[i] != '\0'; ++i)
-    dest[i] = src[i];
+  inline_memcpy(dest, src, i);
   // When n>strlen(src), n-strlen(src) \0 are appended.
   if (n > i)
     inline_bzero(dest + i, n - i);

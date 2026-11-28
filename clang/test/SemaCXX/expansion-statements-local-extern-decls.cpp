@@ -67,6 +67,7 @@ void foo6() {
     // expected-note@#duplicate_global_function_decl {{previous declaration is here}}
   }
 }
+#ifndef __MVS__
 void foo7() {
   template for (constexpr auto x : {true, false}) { // #foo7_instantiation
     if constexpr (x) {
@@ -79,3 +80,6 @@ void foo7() {
     }
   }
 }
+#else
+_Static_assert(!__has_feature(tls), "z/OS has tls now.  Re-enable the thread_local tests.");
+#endif

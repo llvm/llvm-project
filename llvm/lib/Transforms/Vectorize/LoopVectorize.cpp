@@ -4381,18 +4381,16 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
     // If there are direct memory op users of the newly scalarized load,
     // their cost may have changed because there's no scalarization
     // overhead for the operand. Update it.
-    for (User *U : LI->users()) {
+    for (Instruction *U : LI->users()) {
       if (!isa<LoadInst, StoreInst>(U))
         continue;
-      if (getWideningDecision(cast<Instruction>(U), VF) != CM_Scalarize)
+      if (getWideningDecision(U, VF) != CM_Scalarize)
         continue;
-      auto UI = cast<Instruction>(U);
       LLVM_DEBUG(
           dbgs() << "LV: Memory widening: updating decision for load user "
-                 << *UI << '\n');
-      setWideningDecision(
-          UI, VF, CM_Scalarize,
-          getMemInstScalarizationCost(cast<Instruction>(U), VF));
+                 << *U << '\n');
+      setWideningDecision(U, VF, CM_Scalarize,
+                          getMemInstScalarizationCost(U, VF));
     }
   };
   for (auto *I : AddrDefs) {
@@ -6333,8 +6331,8 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
       VPlans.push_back(std::move(P));
 
     TailFoldingStyle Style = PlanCM.getTailFoldingStyle();
-    RUN_VPLAN_PASS(VPlanTransforms::materializeHeaderMask, *Plan,
-                   useActiveLaneMask(Style),
+    RUN_VPLAN_PASS(VPlanTransforms::materializeHeaderMaskAndLastActiveLane,
+                   *Plan, useActiveLaneMask(Style),
                    useActiveLaneMaskForControlFlow(Style));
 
     RUN_VPLAN_PASS_NO_VERIFY(printOptimizedVPlan, *Plan);
@@ -6359,6 +6357,13 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
     RUN_VPLAN_PASS(VPlanTransforms::optimizeInductionLiveOutUsers, *Plan, PSE,
                    OrigLoop);
     return Plan;
+  }
+
+  // Plans for the scalar VF only contain VF=1, as required by hasScalarVFOnly.
+  // Add it up front, so VPlan transforms can check for it.
+  if (Range.Start.isScalar()) {
+    Range.End = Range.Start * 2;
+    Plan->addVF(Range.Start);
   }
 
   using namespace llvm::VPlanPatternMatch;
@@ -6538,8 +6543,8 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleMultiUseReductions, *Plan, ORE,
                       OrigLoop))
     return nullptr;
-  // Apply mandatory transformation to handle FP maxnum/minnum reduction with
-  // NaNs if possible, bail out otherwise.
+  // Apply mandatory transformation to handle FP min/max reductions with NaNs or
+  // signed zeros if possible, bail out otherwise.
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleMaxMinNumReductions, *Plan))
     return nullptr;
 
@@ -6565,10 +6570,6 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   if (Legal->hasUncountableExitWithSideEffects())
     RUN_VPLAN_PASS(VPlanTransforms::expandMaskBeforeFirst, *Plan, CostCtx,
                    Range);
-
-  // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
-  if (Range.Start.isScalar())
-    Range.End = Range.Start * 2;
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
@@ -7271,13 +7272,14 @@ static void preparePlanForEpilogueVectorLoop(
                   // Only users linear in the canonical IV (e.g. scaling it by
                   // a stride) stay correct when offsetting it below; others,
                   // like header masks, may need an epilogue-relative IV.
-                  // The active-lane-masks of a tail-folded epilogue compare
-                  // against the full trip count, so they expect the offset
-                  // IV, like the active-lane-mask phi's entry value.
+                  // The active-lane-masks and last active lane of a
+                  // tail-folded epilogue use the full trip count, so they
+                  // expect the offset IV, like the active-lane-mask phi's
+                  // entry value.
                   unsigned Opc = VPI->getOpcode();
                   return Instruction::isCast(Opc) ||
-                         is_contained({Instruction::Add, Instruction::Mul,
-                                       Instruction::Shl},
+                         is_contained({Instruction::Add, Instruction::Sub,
+                                       Instruction::Mul, Instruction::Shl},
                                       Opc) ||
                          Opc == VPInstruction::WideActiveLaneMask;
                 }) &&

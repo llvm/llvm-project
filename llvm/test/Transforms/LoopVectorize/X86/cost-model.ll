@@ -994,9 +994,7 @@ define void @replicating_sdiv_operand_profitable_to_scalarize(i32 %x) #3 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = or <16 x i32> [[TMP0]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x i32> @llvm.masked.sdiv.v16i32(<16 x i32> [[TMP0]], <16 x i32> [[TMP4]], <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false>)
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <16 x i32> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v16i1(<16 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true>, i1 false)
-; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <16 x i32> [[TMP6]], i64 [[LAST_ACTIVE_LANE]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <16 x i32> [[TMP6]], i64 12
 ; CHECK-NEXT:    br label %[[EXIT1:.*]]
 ; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void

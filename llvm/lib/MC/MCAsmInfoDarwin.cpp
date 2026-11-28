@@ -86,9 +86,7 @@ MCAsmInfoDarwin::MCAsmInfoDarwin(const MCTargetOptions &Options)
 
   DwarfUsesRelocationsAcrossSections = Options.MachORelocatableDwarf;
   SetDirectiveSuppressesReloc = true;
-}
 
-bool MCAsmInfoDarwin::useCodeAlign(const MCSection &Sec) const {
-  return static_cast<const MCSectionMachO &>(Sec).hasAttribute(
-      MachO::S_ATTR_PURE_INSTRUCTIONS);
+  // Defined in MCSectionMachO.cpp.
+  PrintSwitchToSectionFn = printSwitchToSectionImpl;
 }

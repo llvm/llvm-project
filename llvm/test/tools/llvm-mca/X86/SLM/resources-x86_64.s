@@ -415,6 +415,10 @@ loop 0
 loope 0
 loopne 0
 
+movw (%rax), %ds
+movl %eax, %ds
+movq %rax, %ds
+
 movsb
 movsw
 movsl
@@ -1402,6 +1406,9 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      1     1.00                  U     loop	0
 # CHECK-NEXT:  1      1     1.00                  U     loope	0
 # CHECK-NEXT:  1      1     1.00                  U     loopne	0
+# CHECK-NEXT:  1      1     0.50    *             U     movw	(%rax), %ds
+# CHECK-NEXT:  1      1     0.50                  U     movl	%eax, %ds
+# CHECK-NEXT:  1      1     0.50                  U     movq	%rax, %ds
 # CHECK-NEXT:  1      100   1.00    *      *      U     movsb	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  1      100   1.00    *      *      U     movsw	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  1      100   1.00    *      *      U     movsl	(%rsi), %es:(%rdi)
@@ -1965,7 +1972,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT: 400.00  -      -     49.00   -     695.50 636.50 835.00
+# CHECK-NEXT: 400.00  -      -     49.00   -     697.00 638.00 835.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -2334,6 +2341,9 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     loop	0
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     loope	0
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     loopne	0
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     movw	(%rax), %ds
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     movl	%eax, %ds
+# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     movq	%rax, %ds
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     movsb	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     movsw	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     movsl	(%rsi), %es:(%rdi)

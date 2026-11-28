@@ -24,6 +24,8 @@ include "mlir/IR/OpBase.td"
 def ArmNeon_Dialect : Dialect {
   let name = "arm_neon";
   let cppNamespace = "::mlir::arm_neon";
+  let useDefaultOperationRegistration = 1;
+  let hasInitializer = 0;
 
   // Note: this does not need to depend on LLVMDialect as long as functions in
   // this dialect (such as canonicalization) do not produce entities belonging

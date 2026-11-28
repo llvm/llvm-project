@@ -6,7 +6,7 @@ declare i64 @subfn(ptr) #0
 
 declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
 declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
-declare void @free(ptr) allockind("free") "alloc-family"="malloc"
+declare void @free(ptr allocptr) allockind("free") "alloc-family"="malloc"
 
 define i64 @f(i64 %len) {
 ; CHECK-LABEL: define {{[^@]+}}@f

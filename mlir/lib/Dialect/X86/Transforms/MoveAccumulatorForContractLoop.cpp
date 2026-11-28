@@ -52,6 +52,12 @@ struct MoveAccumulatorForContractLoop : public AddContractionOpRewritePattern {
                       "transfer_read/load/constant_zero or multiple users of "
                       "contract operation.");
 
+    if (auto maskableOp = dyn_cast<vector::MaskableOpInterface>(resultUserOp);
+        maskableOp && maskableOp.isMasked())
+      return rewriter.notifyMatchFailure(
+          contractOp, "The final acc write is masked by an enclosing "
+                      "vector.mask.");
+
     if (isa<arith::ConstantOp>(accReadOp))
       return rewriter.notifyMatchFailure(
           contractOp,

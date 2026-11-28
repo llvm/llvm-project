@@ -2965,6 +2965,8 @@ void Fortran::lower::genDeclareSymbol(
     const mlir::Location loc = genLocation(converter, sym);
     if (isCapturedInInternalProcedure(converter, sym))
       extraFlags = extraFlags | fir::FortranVariableFlagsEnum::internal_assoc;
+    if (converter.isVisibleCrayPointerTarget(sym))
+      extraFlags = extraFlags | fir::FortranVariableFlagsEnum::target;
     // FIXME: Using the ultimate symbol for translating symbol attributes will
     // lead to situations where the VOLATILE/ASYNCHRONOUS attributes are not
     // propagated to the hlfir.declare (these attributes can be added when

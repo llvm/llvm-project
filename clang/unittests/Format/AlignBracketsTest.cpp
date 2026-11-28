@@ -259,6 +259,22 @@ TEST_F(AlignBracketsTest, AlignAfterOpenBracketBlockIndent) {
   Style.BreakAfterOpenBracketFunction = true;
   Style.BreakBeforeCloseBracketFunction = true;
 
+  Style.ColumnLimit = 50;
+  verifyFormat("void f() {\n"
+               "  auto x = functionCall(\n"
+               "      argument1.memberFunction(argument2)\n"
+               "  )\n"
+               "               .count();\n"
+               "  (void)x;\n"
+               "}",
+               "void f() {\n"
+               "  auto x = functionCall(argument1.memberFunction(argument2))\n"
+               "      .count();\n"
+               "  (void)x;\n"
+               "}",
+               Style);
+  Style.ColumnLimit = 80;
+
   verifyFormat(Short, Style);
   verifyFormat(
       "functionCall(\n"

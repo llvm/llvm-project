@@ -819,7 +819,9 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   const int MantissaBits = Precision - 1;
 
   int MinKnownExponent = ilogb(CRHS);
-  bool CannotBeSubnormal = (MinKnownExponent >= MantissaBits);
+  bool CannotBeSubnormal = MinKnownExponent >= MantissaBits ||
+                           (KnownLHS.isKnownNeverSubnormal() &&
+                            CRHS.isNormal() && MinKnownExponent >= 0);
 
   KnownFPClass Known = KnownFPClass::fmul(KnownLHS, KnownFPClass(CRHS), Mode);
   if (CannotBeSubnormal)
@@ -1260,13 +1262,16 @@ KnownFPClass KnownFPClass::sinh(const KnownFPClass &KnownSrc) {
 
   // sinh is sign-preserving: sinh(x) < 0 iff x < 0.
   if (KnownSrc.isKnownNever(fcNegative))
-    Known.knownNot(fcNegative);
+    Known.knownNot(fcNegSubnormal | fcNegNormal | fcNegInf);
 
   // A nonzero positive result requires a nonzero positive input.
   // Zero remains possible: sinh(+/-0.0) = +/-0.0, and flushing a subnormal
   // may produce +0.0.
   if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf))
     Known.knownNot(fcPosSubnormal | fcPosNormal | fcPosInf);
+
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegZero);
 
   Known.propagateNonNaN(KnownSrc);
 
@@ -1292,18 +1297,16 @@ KnownFPClass KnownFPClass::tanh(const KnownFPClass &KnownSrc) {
   Known.knownNot(fcInf);
 
   // tanh is sign-preserving: tanh(x) < 0 iff x < 0.
-  if (KnownSrc.isKnownNever(fcNegSubnormal | fcNegNormal | fcNegInf)) {
+  if (KnownSrc.isKnownNever(fcNegSubnormal | fcNegNormal | fcNegInf))
     Known.knownNot(fcNegSubnormal | fcNegNormal);
-
-    // -0.0 is preserved: tanh(-0.0) = -0.0.
-    if (KnownSrc.isKnownNever(fcNegZero))
-      Known.knownNot(fcNegZero);
-  }
 
   // Likewise, tanh(x) > 0 iff x > 0. Zero is not ruled out: tanh(+-0.0) =
   // +-0.0, and a flushed subnormal may become +0.0.
   if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal | fcPosInf))
     Known.knownNot(fcPosSubnormal | fcPosNormal);
+
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegZero);
 
   Known.propagateNonNaN(KnownSrc);
 
@@ -1320,10 +1323,13 @@ KnownFPClass KnownFPClass::asin(const KnownFPClass &KnownSrc) {
 
   // asin is sign-preserving for finite arguments.
   if (KnownSrc.isKnownNever(fcNegFinite))
-    Known.knownNot(fcNegFinite);
+    Known.knownNot(fcNegSubnormal | fcNegNormal);
 
   if (KnownSrc.isKnownNever(fcPosSubnormal | fcPosNormal))
     Known.knownNot(fcPosSubnormal | fcPosNormal);
+
+  if (KnownSrc.isKnownNever(fcNegFinite))
+    Known.knownNot(fcNegZero);
 
   // NaN propagates. asin(x) is also NaN for |x| > 1, so we cannot rule
   // out NaN without knowing the source is in [-1, 1].

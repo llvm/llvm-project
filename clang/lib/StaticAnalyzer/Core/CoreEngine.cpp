@@ -648,12 +648,6 @@ void CoreEngine::enqueue(ExplodedNodeSet &Set) {
     WList->enqueue(I);
 }
 
-void CoreEngine::enqueueStmtNodes(ExplodedNodeSet &Set, const CFGBlock *Block,
-                                  unsigned Idx) {
-  for (const auto I : Set)
-    enqueueStmtNode(I, Block, Idx);
-}
-
 void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS) {
   for (ExplodedNode *Node : Set) {
     const StackFrame *SF = Node->getStackFrame();

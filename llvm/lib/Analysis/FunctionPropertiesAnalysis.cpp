@@ -406,8 +406,8 @@ FunctionPropertiesUpdater::FunctionPropertiesUpdater(
   // The users of the value returned by call instruction can change
   // leading to the change in embeddings being computed, when used.
   // We conservatively add the BBs with such uses to LikelyToChangeBBs.
-  for (const auto *User : CB.users())
-    CallUsers.insert(dyn_cast<Instruction>(User)->getParent());
+  for (const Instruction *User : CB.users())
+    CallUsers.insert(User->getParent());
   // CallSiteBB can be removed from CallUsers if present, it's taken care
   // separately.
   CallUsers.erase(&CallSiteBB);

@@ -184,19 +184,20 @@ entry:
 define void @aarch64_vector_deinterleave6_v12f64(ptr %src) {
 ; CHECK-LABEL: aarch64_vector_deinterleave6_v12f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld3 { v0.2d, v1.2d, v2.2d }, [x0], #48
-; CHECK-NEXT:    ld3 { v3.2d, v4.2d, v5.2d }, [x0]
-; CHECK-NEXT:    zip1 v16.2d, v0.2d, v3.2d
-; CHECK-NEXT:    zip2 v6.2d, v2.2d, v5.2d
-; CHECK-NEXT:    zip2 v7.2d, v1.2d, v4.2d
-; CHECK-NEXT:    zip2 v17.2d, v0.2d, v3.2d
-; CHECK-NEXT:    zip1 v18.2d, v2.2d, v5.2d
-; CHECK-NEXT:    zip1 v0.2d, v1.2d, v4.2d
-; CHECK-NEXT:    // fake_use: $q16
+; CHECK-NEXT:    ldp q0, q5, [x0]
+; CHECK-NEXT:    ldp q2, q1, [x0, #32]
+; CHECK-NEXT:    ldp q4, q3, [x0, #64]
+; CHECK-NEXT:    zip2 v6.2d, v2.2d, v3.2d
+; CHECK-NEXT:    zip1 v2.2d, v2.2d, v3.2d
+; CHECK-NEXT:    zip1 v3.2d, v0.2d, v1.2d
+; CHECK-NEXT:    zip2 v7.2d, v5.2d, v4.2d
+; CHECK-NEXT:    zip1 v4.2d, v5.2d, v4.2d
+; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    // fake_use: $q3
 ; CHECK-NEXT:    // fake_use: $q0
-; CHECK-NEXT:    // fake_use: $q18
-; CHECK-NEXT:    // fake_use: $q17
+; CHECK-NEXT:    // fake_use: $q4
 ; CHECK-NEXT:    // fake_use: $q7
+; CHECK-NEXT:    // fake_use: $q2
 ; CHECK-NEXT:    // fake_use: $q6
 ; CHECK-NEXT:    ret
 entry:
@@ -220,23 +221,25 @@ entry:
 define void @aarch64_vector_deinterleave8_v16f64_load(ptr %src, ptr %dst) {
 ; CHECK-LABEL: aarch64_vector_deinterleave8_v16f64_load:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld4 { v0.2d, v1.2d, v2.2d, v3.2d }, [x0], #64
-; CHECK-NEXT:    ld4 { v4.2d, v5.2d, v6.2d, v7.2d }, [x0]
-; CHECK-NEXT:    zip1 v20.2d, v0.2d, v4.2d
-; CHECK-NEXT:    zip2 v16.2d, v3.2d, v7.2d
-; CHECK-NEXT:    zip2 v17.2d, v2.2d, v6.2d
-; CHECK-NEXT:    zip2 v18.2d, v1.2d, v5.2d
-; CHECK-NEXT:    zip2 v19.2d, v0.2d, v4.2d
-; CHECK-NEXT:    zip1 v21.2d, v3.2d, v7.2d
-; CHECK-NEXT:    zip1 v22.2d, v2.2d, v6.2d
-; CHECK-NEXT:    zip1 v0.2d, v1.2d, v5.2d
-; CHECK-NEXT:    // fake_use: $q20
-; CHECK-NEXT:    // fake_use: $q0
-; CHECK-NEXT:    // fake_use: $q22
-; CHECK-NEXT:    // fake_use: $q21
-; CHECK-NEXT:    // fake_use: $q19
-; CHECK-NEXT:    // fake_use: $q18
+; CHECK-NEXT:    ldp q0, q1, [x0, #96]
+; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    ldp q4, q5, [x0, #64]
+; CHECK-NEXT:    ldp q6, q7, [x0]
+; CHECK-NEXT:    zip2 v16.2d, v3.2d, v1.2d
+; CHECK-NEXT:    zip1 v1.2d, v3.2d, v1.2d
+; CHECK-NEXT:    zip2 v3.2d, v2.2d, v0.2d
+; CHECK-NEXT:    zip1 v0.2d, v2.2d, v0.2d
+; CHECK-NEXT:    zip1 v2.2d, v6.2d, v4.2d
+; CHECK-NEXT:    zip2 v17.2d, v7.2d, v5.2d
+; CHECK-NEXT:    zip1 v5.2d, v7.2d, v5.2d
+; CHECK-NEXT:    zip2 v4.2d, v6.2d, v4.2d
+; CHECK-NEXT:    // fake_use: $q2
+; CHECK-NEXT:    // fake_use: $q4
+; CHECK-NEXT:    // fake_use: $q5
 ; CHECK-NEXT:    // fake_use: $q17
+; CHECK-NEXT:    // fake_use: $q0
+; CHECK-NEXT:    // fake_use: $q3
+; CHECK-NEXT:    // fake_use: $q1
 ; CHECK-NEXT:    // fake_use: $q16
 ; CHECK-NEXT:    ret
   %wide = load <16 x double>, ptr %src, align 8

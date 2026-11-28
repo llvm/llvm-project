@@ -543,7 +543,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
         // the low bits for the mul result and high bits to do the overflow
         // check.
         .widenScalarIf(typeIs(0, sXLen),
-                       LegalizeMutations::changeTo(0, sDoubleXLen))
+                       LegalizeMutations::changeTo(0, LLT::integer(2 * XLen)))
         .lower();
   }
 
@@ -884,18 +884,20 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   getActionDefinitionsBuilder({G_ATOMIC_CMPXCHG, G_ATOMICRMW_ADD,
                                G_ATOMICRMW_XCHG, G_ATOMICRMW_AND,
                                G_ATOMICRMW_OR, G_ATOMICRMW_XOR})
-      .legalFor(ST.hasStdExtA(), {{sXLen, p0}})
-      .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
+      .legalFor(ST.hasStdExtZalrsc(), {{sXLen, p0}})
+      .libcallFor(!ST.hasStdExtZalrsc(),
+                  {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
       .clampScalar(0, sXLen, sXLen);
 
   getActionDefinitionsBuilder(G_ATOMICRMW_SUB)
-      .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
+      .libcallFor(!ST.hasStdExtZalrsc(),
+                  {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
       .clampScalar(0, sXLen, sXLen)
       .lower();
 
   getActionDefinitionsBuilder(
       {G_ATOMICRMW_MAX, G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN})
-      .legalFor(ST.hasStdExtA(), {{sXLen, p0}})
+      .legalFor(ST.hasStdExtZalrsc(), {{sXLen, p0}})
       .clampScalar(0, sXLen, sXLen)
       .unsupported();
 

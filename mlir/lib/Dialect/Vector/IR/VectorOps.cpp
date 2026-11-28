@@ -560,11 +560,6 @@ struct VectorInlinerInterface : public DialectInlinerInterface {
 } // namespace
 
 void VectorDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Vector/IR/VectorOps.cpp.inc"
-      >();
-
   addInterfaces<VectorInlinerInterface>();
 
   declarePromisedInterfaces<memref::IndexedAccessOpInterface, LoadOp, StoreOp,
@@ -6048,7 +6043,8 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
   if (read.hasOutOfBoundsDim() || write.hasOutOfBoundsDim())
     return failure();
   // Masked transfers have padding/select semantics and are not identity folds.
-  if (read.getMask() || write.getMask())
+  // This includes a write under an enclosing vector.mask.
+  if (read.getMask() || write.getMask() || write.isMasked())
     return failure();
   // Tensor types must be the same.
   if (read.getBase().getType() != rankedTensorType)

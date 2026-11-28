@@ -105,14 +105,14 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
   // 2) Possibly more ExtractElements with the same index.
   // 3) Another operand, which will feed back into the PHI.
   Instruction *PHIUser = nullptr;
-  for (auto *U : PN->users()) {
+  for (Instruction *U : PN->users()) {
     if (ExtractElementInst *EU = dyn_cast<ExtractElementInst>(U)) {
       if (EI.getIndexOperand() == EU->getIndexOperand())
         Extracts.push_back(EU);
       else
         return nullptr;
     } else if (!PHIUser) {
-      PHIUser = cast<Instruction>(U);
+      PHIUser = U;
     } else {
       return nullptr;
     }

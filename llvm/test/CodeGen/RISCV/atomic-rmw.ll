@@ -3,6 +3,8 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zalrsc -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32I-ZALRSC %s
+; RUN: llc -mtriple=riscv32 -mattr=-a,+zaamo,+zalrsc -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-NOZACAS,RV32IA-WMO,RV32IA-WMO-NOZACAS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-NOZACAS,RV32IA-WMO,RV32IA-WMO-NOZACAS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a,+ztso -verify-machineinstrs < %s \
@@ -11,6 +13,8 @@
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zalrsc -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64I-ZALRSC %s
+; RUN: llc -mtriple=riscv64 -mattr=-a,+zaamo,+zalrsc -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-NOZACAS,RV64IA-WMO,RV64IA-WMO-NOZACAS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-NOZACAS,RV64IA-WMO,RV64IA-WMO-NOZACAS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a,+ztso -verify-machineinstrs < %s \

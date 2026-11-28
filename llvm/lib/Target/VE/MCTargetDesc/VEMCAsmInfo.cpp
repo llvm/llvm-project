@@ -78,7 +78,7 @@ void VEELFMCAsmInfo::anchor() {}
 
 VEELFMCAsmInfo::VEELFMCAsmInfo(const Triple &TheTriple,
                                const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TheTriple, Options) {
 
   CodePointerSize = CalleeSaveStackSlotSize = 8;
   MaxInstLength = MinInstAlignment = 8;
@@ -89,28 +89,22 @@ VEELFMCAsmInfo::VEELFMCAsmInfo(const Triple &TheTriple,
   Data32bitsDirective = "\t.4byte\t";
   Data64bitsDirective = "\t.8byte\t";
 
-  // Uses '.section' before '.bss' directive.  VE requires this although
-  // assembler manual says sinple '.bss' is supported.
-  UsesELFSectionDirectiveForBSS = true;
-
   SupportsDebugInformation = true;
 
   initializeAtSpecifiers(atSpecifiers);
-}
 
-void VEELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                        const MCSpecifierExpr &Expr) const {
-  printExpr(OS, *Expr.getSubExpr());
-  auto specifier = Expr.getSpecifier();
-  if (specifier && specifier != VE::S_REFLONG)
-    OS << '@' << getSpecifierName(specifier);
-}
-
-bool VEELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
-                                               MCValue &Res,
-                                               const MCAssembler *Asm) const {
-  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-  Res.setSpecifier(Expr.getSpecifier());
-  return true;
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    auto specifier = Expr.getSpecifier();
+    if (specifier && specifier != VE::S_REFLONG)
+      OS << '@' << MAI.getSpecifierName(specifier);
+  };
+  SpecifierExprEvaluateFn = [](const MCSpecifierExpr &Expr, MCValue &Res,
+                               const MCAssembler *Asm) {
+    if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+      return false;
+    Res.setSpecifier(Expr.getSpecifier());
+    return true;
+  };
 }

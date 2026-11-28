@@ -1281,8 +1281,8 @@ static void replaceLoopPHINodesWithPreheaderValues(
   SmallVector<Instruction *> Worklist;
   for (auto &PN : LoopHeader->phis()) {
     auto *PreheaderIncoming = PN.getIncomingValueForBlock(LoopPreheader);
-    for (User *U : PN.users())
-      Worklist.push_back(cast<Instruction>(U));
+    for (Instruction *U : PN.users())
+      Worklist.push_back(U);
     SE.forgetValue(&PN);
     PN.replaceAllUsesWith(PreheaderIncoming);
     DeadInsts.emplace_back(&PN);
@@ -1302,8 +1302,8 @@ static void replaceLoopPHINodesWithPreheaderValues(
 
     Value *Res = simplifyInstruction(I, I->getDataLayout());
     if (Res && LI->replacementPreservesLCSSAForm(I, Res)) {
-      for (User *U : I->users())
-        Worklist.push_back(cast<Instruction>(U));
+      for (Instruction *U : I->users())
+        Worklist.push_back(U);
       I->replaceAllUsesWith(Res);
       DeadInsts.emplace_back(I);
     }
@@ -1953,11 +1953,9 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // Skip if the loop has tokens referenced outside the loop to avoid
       // changing convergence behavior.
       if (I.getType()->isTokenTy()) {
-        for (User *U : I.users()) {
-          Instruction *UserInst = dyn_cast<Instruction>(U);
-          if (UserInst && !L->contains(UserInst)) {
+        for (Instruction *UserInst : I.users()) {
+          if (!L->contains(UserInst))
             return false;
-          }
         }
       }
     }

@@ -228,6 +228,16 @@ module attributes {gpu.container_module} {
 
   gpu.binary @binary_3 <#gpu.select_object<1>> [#gpu.object<#nvvm.target, "">, #gpu.object<#nvvm.target<chip = "sm_90">, "">]
 
+  // CHECK: gpu.binary @binary_priority_1 <#gpu.select_object<0 : i64, priority = 101>>
+  gpu.binary @binary_priority_1 <#gpu.select_object<0, priority = 101>> [#gpu.object<#nvvm.target, "">]
+
+  // CHECK: gpu.binary @binary_priority_2 <#gpu.select_object<#nvvm.target<chip = "sm_90">, priority = 101>>
+  gpu.binary @binary_priority_2 <#gpu.select_object<#nvvm.target<chip = "sm_90">, priority = 101>> [#gpu.object<#nvvm.target, "">, #gpu.object<#nvvm.target<chip = "sm_90">, "">]
+
+  // Check that the default priority gets elided.
+  // CHECK: gpu.binary @binary_priority_3 <#gpu.select_object<1 : i64>>
+  gpu.binary @binary_priority_3 <#gpu.select_object<1, priority = 123>> [#gpu.object<#nvvm.target, "">, #gpu.object<#nvvm.target<chip = "sm_90">, "">]
+
   gpu.binary @binary_4 [#gpu.object<#nvvm.target, bin = "">,
                         #gpu.object<#nvvm.target, assembly = "">,
                         #gpu.object<#nvvm.target, offload = "">,
