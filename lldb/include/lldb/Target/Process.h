@@ -3696,6 +3696,16 @@ protected:
 
   void ResumePrivateStateThread();
 
+  /// Publish eStateAttaching for a process whose private state thread is
+  /// already running.
+  ///
+  /// \return The previous public state if eStateAttaching was published,
+  ///     or std::nullopt if the private state thread still has to be started.
+  std::optional<lldb::StateType> PublishAttachingState();
+
+  /// Undo PublishAttachingState after a failed attach request.
+  void UnpublishAttachingState(lldb::StateType previous_state);
+
 private:
   // Starts up the private state thread that will watch for events from the
   // debugee.

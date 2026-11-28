@@ -3262,6 +3262,20 @@ Status Process::WillAttachToProcessWithName(const char *process_name,
   return DoWillAttachToProcessWithName(process_name, wait_for_launch);
 }
 
+std::optional<StateType> Process::PublishAttachingState() {
+  if (!PrivateStateThreadIsRunning())
+    return std::nullopt;
+  StateType previous_state = GetPublicState();
+  SetPublicState(eStateAttaching, /*restarted=*/false);
+  SetPublicRunLockToRunning();
+  return previous_state;
+}
+
+void Process::UnpublishAttachingState(StateType previous_state) {
+  SetPublicState(previous_state, /*restarted=*/false);
+  SetPublicRunLockToStopped();
+}
+
 Status Process::Attach(ProcessAttachInfo &attach_info) {
   m_abi_sp.reset();
   {
@@ -3273,17 +3287,6 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
   m_system_runtime_up.reset();
   m_os_up.reset();
   GetTarget().ClearAllLoadedSections();
-
-  // StartPrivateStateThread does nothing if the thread is already running, so
-  // publish the state ourselves.
-  auto start_private_state_thread = [this] {
-    if (PrivateStateThreadIsRunning()) {
-      SetPublicState(lldb::eStateAttaching, /*restarted=*/false);
-      SetPublicRunLockToRunning();
-    } else {
-      StartPrivateStateThread(lldb::eStateAttaching, true);
-    }
-  };
 
   lldb::pid_t attach_pid = attach_info.GetProcessID();
   Status error;
@@ -3298,10 +3301,14 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
         error = WillAttachToProcessWithName(process_name, wait_for_launch);
         if (error.Success()) {
           m_should_detach = true;
+          std::optional<StateType> state_before_attach =
+              PublishAttachingState();
           // Now attach using these arguments.
           error = DoAttachToProcessWithName(process_name, attach_info);
 
           if (error.Fail()) {
+            if (state_before_attach)
+              UnpublishAttachingState(*state_before_attach);
             if (GetID() != LLDB_INVALID_PROCESS_ID) {
               SetID(LLDB_INVALID_PROCESS_ID);
               if (error.AsCString() == nullptr)
@@ -3312,7 +3319,8 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
           } else {
             SetNextEventAction(new Process::AttachCompletionHandler(
                 this, attach_info.GetResumeCount()));
-            start_private_state_thread();
+            if (!state_before_attach)
+              StartPrivateStateThread(lldb::eStateAttaching, true);
             if (!m_current_private_state_thread_sp) {
               // We are not going to get any further here.  The only way
               // this could fail is if we can't start a host thread, and we're
@@ -3369,13 +3377,17 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
     if (error.Success()) {
       // Now attach using these arguments.
       m_should_detach = true;
+      std::optional<StateType> state_before_attach = PublishAttachingState();
       error = DoAttachToProcessWithID(attach_pid, attach_info);
+      if (error.Fail() && state_before_attach)
+        UnpublishAttachingState(*state_before_attach);
 
       if (error.Success()) {
         SetNextEventAction(new Process::AttachCompletionHandler(
             this, attach_info.GetResumeCount()));
 
-        start_private_state_thread();
+        if (!state_before_attach)
+          StartPrivateStateThread(lldb::eStateAttaching, true);
         if (!m_current_private_state_thread_sp) {
           // We are not going to get any further here.  The only way this
           // could fail is if we can't start a host thread, so we're pretty much
