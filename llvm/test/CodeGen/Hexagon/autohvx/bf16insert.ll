@@ -11,12 +11,11 @@ define <64 x bfloat> @insert_bf16_var(<64 x bfloat> %v, bfloat %a, i32 %i) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1 = and(##-4,asl(r1,#1))
-; CHECK-NEXT:     r0 = lsr(r0,#16)
+; CHECK-NEXT:     r3 = #16
 ; CHECK-NEXT:     r2 = and(r1,#1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r2 = asl(r2,#4)
-; CHECK-NEXT:     r3 = #16
 ; CHECK-NEXT:     v31 = vror(v0,r1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -47,7 +46,7 @@ define <64 x bfloat> @insert_bf16_const(<64 x bfloat> %v, bfloat %a) #0 {
 ; CHECK-NEXT:     r2 = vextract(v0,r1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = combine(r0.h,r2.l)
+; CHECK-NEXT:     r0 = combine(r0.l,r2.l)
 ; CHECK-NEXT:     r2 = #96
 ; CHECK-NEXT:     v31 = vror(v0,r1)
 ; CHECK-NEXT:    }
@@ -71,20 +70,19 @@ define void @insert_bf16_distinct_dest(ptr %p, ptr %q, bfloat %a, i32 %i) #0 {
 ; CHECK-NEXT:     v0 = vmem(r0+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r7 = lsr(r2,#16)
 ; CHECK-NEXT:     r4 = asl(r4,#4)
 ; CHECK-NEXT:     r5 = #16
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = vextract(v0,r3)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = insert(r2,r5:4)
 ; CHECK-NEXT:     r2 = sub(#128,r3)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r6 = vextract(v0,r3)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r6 = insert(r7,r5:4)
 ; CHECK-NEXT:     v0 = vror(v0,r3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0.w = vinsert(r6)
+; CHECK-NEXT:     v0.w = vinsert(r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v0 = vror(v0,r2)

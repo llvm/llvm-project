@@ -575,26 +575,21 @@ define bfloat @test_tailcall_flipped(bfloat %a, bfloat %b) #0 {
 define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-CVT-LABEL: test_phi:
 ; CHECK-CVT:       @ %bb.0: @ %entry
-; CHECK-CVT-NEXT:    .save {r4, lr}
-; CHECK-CVT-NEXT:    push {r4, lr}
-; CHECK-CVT-NEXT:    .vsave {d8, d9}
-; CHECK-CVT-NEXT:    vpush {d8, d9}
+; CHECK-CVT-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-CVT-NEXT:    push {r4, r5, r6, lr}
+; CHECK-CVT-NEXT:    ldrh r6, [r0]
 ; CHECK-CVT-NEXT:    mov r4, r0
-; CHECK-CVT-NEXT:    ldrh r0, [r0]
-; CHECK-CVT-NEXT:    vmov s18, r0
 ; CHECK-CVT-NEXT:  .LBB12_1: @ %loop
 ; CHECK-CVT-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-CVT-NEXT:    ldrh r0, [r4]
-; CHECK-CVT-NEXT:    vmov.f32 s16, s18
-; CHECK-CVT-NEXT:    vmov s18, r0
 ; CHECK-CVT-NEXT:    mov r0, r4
+; CHECK-CVT-NEXT:    mov r5, r6
+; CHECK-CVT-NEXT:    ldrh r6, [r4]
 ; CHECK-CVT-NEXT:    bl test_dummy
 ; CHECK-CVT-NEXT:    tst r0, #1
 ; CHECK-CVT-NEXT:    bne .LBB12_1
 ; CHECK-CVT-NEXT:  @ %bb.2: @ %return
-; CHECK-CVT-NEXT:    vmov.f32 s0, s16
-; CHECK-CVT-NEXT:    vpop {d8, d9}
-; CHECK-CVT-NEXT:    pop {r4, pc}
+; CHECK-CVT-NEXT:    vmov s0, r5
+; CHECK-CVT-NEXT:    pop {r4, r5, r6, pc}
 ;
 ; CHECK-NOFP16-LABEL: test_phi:
 ; CHECK-NOFP16:       @ %bb.0: @ %entry

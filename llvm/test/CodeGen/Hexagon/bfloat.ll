@@ -7,9 +7,6 @@ define bfloat @load_scalar_bf(ptr %addr) {
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = memuh(r0+#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = aslh(r0)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
 
@@ -23,9 +20,8 @@ define void @store_scalar_bf(bfloat %v, ptr %addr) {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = lsr(r0,#16)
 ; CHECK-NEXT:     jumpr r31
-; CHECK-NEXT:     memh(r1+#0) = r0.new
+; CHECK-NEXT:     memh(r1+#0) = r0
 ; CHECK-NEXT:    }
 
 entry:
@@ -38,41 +34,36 @@ define bfloat @sum(bfloat %a, bfloat %b) #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = and(r1,##-65536)
+; CHECK-NEXT:     r0 = aslh(r0)
+; CHECK-NEXT:     r1 = aslh(r1)
 ; CHECK-NEXT:     r2 = ##32768
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3 = ##131071
-; CHECK-NEXT:     r4 = ##65535
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = insert(r1,#16,#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = sfadd(r0,r1)
+; CHECK-NEXT:     r6 = ##131071
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = and(r0,r2)
-; CHECK-NEXT:     r3 = and(r0,r3)
-; CHECK-NEXT:     r5 = asrh(r0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = add(r0,r1)
-; CHECK-NEXT:     p0 = cmp.eq(r3,r2)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = asrh(r1)
-; CHECK-NEXT:     if (p0) r2 = and(r5,r4)
+; CHECK-NEXT:     r3 = ##65535
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = sfclass(r0,#16)
-; CHECK-NEXT:     if (!p0) r2 = and(r1,r4)
+; CHECK-NEXT:     r1 = and(r0,r6)
+; CHECK-NEXT:     r4 = and(r0,r2)
+; CHECK-NEXT:     r5 = asrh(r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     if (p0) r2 = ##32767
+; CHECK-NEXT:     r0 = add(r0,r4)
+; CHECK-NEXT:     p1 = cmp.eq(r1,r2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = aslh(r2)
+; CHECK-NEXT:     r1 = asrh(r0)
+; CHECK-NEXT:     if (p1) r0 = and(r5,r3)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     if (!p1) r0 = and(r1,r3)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     if (p0) r0 = ##32767
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
 
@@ -87,28 +78,32 @@ define dso_local i32 @double_bf16(bfloat %a, bfloat %b) #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3:2 = convert_sf2df(r0)
-; CHECK-NEXT:     r5:4 = convert_sf2df(r1)
+; CHECK-NEXT:     r0 = aslh(r0)
+; CHECK-NEXT:     r1 = aslh(r1)
 ; CHECK-NEXT:     r29 = add(r29,#-16)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1:0 = dfadd(r3:2,r5:4)
+; CHECK-NEXT:     r3:2 = convert_sf2df(r0)
+; CHECK-NEXT:     r5:4 = convert_sf2df(r1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     memd(r29+#8) = r1:0
+; CHECK-NEXT:     r3:2 = dfadd(r3:2,r5:4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = convert_df2sf(r1:0)
+; CHECK-NEXT:     memd(r29+#8) = r3:2
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = lsr(r2,#16)
-; CHECK-NEXT:     r0 = and(r2,##-65536)
-; CHECK-NEXT:     memh(r29+#6) = r1.new
+; CHECK-NEXT:     r4 = convert_df2sf(r3:2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = convert_sf2w(r0):chop
-; CHECK-NEXT:     jumpr r31
+; CHECK-NEXT:     r4 = insert(r1,#16,#0)
+; CHECK-NEXT:     r2 = lsr(r4,#16)
 ; CHECK-NEXT:     r29 = add(r29,#16)
+; CHECK-NEXT:     memh(r29+#6) = r2.new
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r0 = convert_sf2w(r4):chop
+; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
 
 entry:

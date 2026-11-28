@@ -197,15 +197,9 @@ define <8 x bfloat> @insert_v8bf16(<8 x bfloat> %x, bfloat %y, i64 %idx) {
 ;
 ; AVX512F-O0-LABEL: insert_v8bf16:
 ; AVX512F-O0:       # %bb.0:
-; AVX512F-O0-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; AVX512F-O0-NEXT:    vmovaps %xmm0, %xmm1
-; AVX512F-O0-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; AVX512F-O0-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; AVX512F-O0-NEXT:    vpslld $16, %xmm0, %xmm0
-; AVX512F-O0-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
-; AVX512F-O0-NEXT:    vmovd %xmm0, %eax
-; AVX512F-O0-NEXT:    shrl $16, %eax
+; AVX512F-O0-NEXT:    vpextrw $0, %xmm1, %eax
 ; AVX512F-O0-NEXT:    movw %ax, %cx
+; AVX512F-O0-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX512F-O0-NEXT:    movl %edi, %eax
 ; AVX512F-O0-NEXT:    andl $7, %eax
 ; AVX512F-O0-NEXT:    # kill: def $rax killed $eax
@@ -237,10 +231,16 @@ define <8 x bfloat> @build_v8bf16(bfloat %x, bfloat %y) {
 ;
 ; AVX512F-O0-LABEL: build_v8bf16:
 ; AVX512F-O0:       # %bb.0:
-; AVX512F-O0-NEXT:    vpslld $16, %xmm1, %xmm1
-; AVX512F-O0-NEXT:    vpslld $16, %xmm0, %xmm0
-; AVX512F-O0-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX512F-O0-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3,4,5,6,7]
+; AVX512F-O0-NEXT:    vpextrw $0, %xmm1, %eax
+; AVX512F-O0-NEXT:    movw %ax, %cx
+; AVX512F-O0-NEXT:    vpextrw $0, %xmm0, %eax
+; AVX512F-O0-NEXT:    movw %ax, %dx
+; AVX512F-O0-NEXT:    # implicit-def: $eax
+; AVX512F-O0-NEXT:    movw %cx, %ax
+; AVX512F-O0-NEXT:    # implicit-def: $ecx
+; AVX512F-O0-NEXT:    movw %dx, %cx
+; AVX512F-O0-NEXT:    vmovd %ecx, %xmm0
+; AVX512F-O0-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm0
 ; AVX512F-O0-NEXT:    retq
   %r0 = insertelement <8 x bfloat> poison, bfloat %x, i64 0
   %r1 = insertelement <8 x bfloat> %r0, bfloat %y, i64 1

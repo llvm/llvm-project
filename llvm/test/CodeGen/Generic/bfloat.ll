@@ -67,6 +67,21 @@ define i16 @to_bits(bfloat %f) nounwind {
     ret i16 %bits
 }
 
+; Previously exposed a libcall at higher optimization levels.
+define i16 @to_bits_branchy(bfloat %x, i1 %c) {
+; ALL-LABEL: to_bits_branchy{{"?}}:
+; CHECK-NOT: __extend
+; CHECK-NOT: __trunc
+; CHECK-NOT: __gnu
+entry:
+  br i1 %c, label %a, label %b
+a:
+  %r = bitcast bfloat %x to i16
+  ret i16 %r
+b:
+  ret i16 0
+}
+
 define bfloat @check_freeze(bfloat %f) nounwind {
 ; ALL-LABEL: check_freeze{{"?}}:
   %t0 = freeze bfloat %f
