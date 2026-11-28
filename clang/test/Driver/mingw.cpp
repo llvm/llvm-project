@@ -1,7 +1,32 @@
-// RUN: %clang --target=i686-windows-gnu -rtlib=platform -c -### --sysroot=%S/Inputs/mingw_clang_tree/mingw32 %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_CLANG_TREE %s
+// RUN: %clang --target=i686-windows-gnu -rtlib=platform -### --sysroot=%S/Inputs/mingw_clang_tree/mingw32 %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK_MINGW_CLANG_TREE \
+// RUN:       --implicit-check-not='{{i686-w64-mingw32[/\\]+(usr[/\\]+include|mingw[/\\]+lib)}}'
 // CHECK_MINGW_CLANG_TREE: "[[BASE:[^"]+]]/Inputs/mingw_clang_tree/mingw32{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}include"
-// CHECK_MINGW_CLANG_TREE: "[[BASE:[^"]+]]/Inputs/mingw_clang_tree/mingw32{{/|\\\\}}i686-w64-mingw32{{/|\\\\}}usr{{/|\\\\}}include"
 // CHECK_MINGW_CLANG_TREE: "[[BASE]]/Inputs/mingw_clang_tree/mingw32{{/|\\\\}}include"
+
+// RUN: rm -rf %t-crossdev
+// RUN: mkdir -p %t-crossdev/x86_64-w64-mingw32/usr/include %t-crossdev/x86_64-w64-mingw32/mingw/lib
+// RUN: touch %t-crossdev/x86_64-w64-mingw32/mingw/lib/crt2.o
+// RUN: %clang --target=x86_64-w64-mingw32 -rtlib=platform -### --sysroot=%t-crossdev %s 2>&1 | FileCheck %s --check-prefix=CROSSDEV
+// CROSSDEV: "-internal-isystem" "[[TARGET_DIR:[^"]+-crossdev(/|\\\\)x86_64-w64-mingw32]]{{/|\\\\}}usr{{/|\\\\}}include"
+// CROSSDEV: "[[TARGET_DIR]]{{/|\\\\}}mingw{{/|\\\\}}lib{{/|\\\\}}crt2.o"
+// CROSSDEV-SAME: "-L[[TARGET_DIR]]{{/|\\\\}}mingw{{/|\\\\}}lib"
+
+// RUN: rm -rf %t-libstdcxx
+// RUN: mkdir -p %t-libstdcxx
+// RUN: %clang --target=x86_64-w64-mingw32 --sysroot=%t-libstdcxx -stdlib=libstdc++ -c -### %s 2>&1 | FileCheck %s --check-prefix=NO-GCC --implicit-check-not=g++-v
+// NO-GCC: "-cc1"
+
+// RUN: mkdir -p %t-libstdcxx/lib/gcc/x86_64-w64-mingw32/10.2-posix/include/g++-v10.2
+// RUN: mkdir -p %t-libstdcxx/lib/gcc/x86_64-w64-mingw32/10.2-posix/include/g++-v10
+// RUN: %clang --target=x86_64-w64-mingw32 --sysroot=%t-libstdcxx -stdlib=libstdc++ -c -### %s 2>&1 | FileCheck %s --check-prefix=FALLBACK --implicit-check-not=g++-v
+// FALLBACK: "-internal-isystem" "[[FALLBACK_DIR:[^"]+]]{{/|\\\\}}include{{/|\\\\}}g++-v10.2"
+// FALLBACK-SAME: "-internal-isystem" "[[FALLBACK_DIR]]{{/|\\\\}}include{{/|\\\\}}g++-v10.2{{/|\\\\}}x86_64-w64-mingw32"
+// FALLBACK-SAME: "-internal-isystem" "[[FALLBACK_DIR]]{{/|\\\\}}include{{/|\\\\}}g++-v10.2{{/|\\\\}}backward"
+
+// RUN: mkdir -p %t-libstdcxx/include/c++/10.2-posix
+// RUN: %clang --target=x86_64-w64-mingw32 --sysroot=%t-libstdcxx -stdlib=libstdc++ -c -### %s 2>&1 | FileCheck %s --check-prefix=DEFAULT --implicit-check-not=g++-v
+// DEFAULT: "-internal-isystem" "{{[^"]+}}-libstdcxx{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}10.2-posix"
 
 
 // RUN: %clang --target=i686-windows-gnu -rtlib=platform -stdlib=libc++ -c -### --sysroot=%S/Inputs/mingw_clang_tree/mingw32 %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_CLANG_TREE_LIBCXX %s
