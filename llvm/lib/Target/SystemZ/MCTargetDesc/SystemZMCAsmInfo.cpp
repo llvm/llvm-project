@@ -79,6 +79,13 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
     MAI.printExpr(OS, *Expr.getSubExpr());
     OS << ')';
   };
+  SpecifierExprEvaluateFn = [](const MCSpecifierExpr &Expr, MCValue &Res,
+                               const MCAssembler *Asm) {
+    if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+      return false;
+    Res.setSpecifier(Expr.getSpecifier());
+    return true;
+  };
 }
 
 const MCExpr *SystemZMCAsmInfoGOFF::getDwarfSectionOffsetExpr(
@@ -88,12 +95,4 @@ const MCExpr *SystemZMCAsmInfoGOFF::getDwarfSectionOffsetExpr(
     Expr =
         MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx), Ctx);
   return Expr;
-}
-
-bool SystemZMCAsmInfoGOFF::evaluateAsRelocatableImpl(
-    const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
-  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-  Res.setSpecifier(Expr.getSpecifier());
-  return true;
 }

@@ -27,8 +27,6 @@ class VEELFMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit VEELFMCAsmInfo(const Triple &TheTriple,
                           const MCTargetOptions &Options);
-  bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
-                                 const MCAssembler *Asm) const override;
 };
 
 namespace VE {

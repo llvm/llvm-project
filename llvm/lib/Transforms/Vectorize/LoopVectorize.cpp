@@ -6331,8 +6331,8 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
       VPlans.push_back(std::move(P));
 
     TailFoldingStyle Style = PlanCM.getTailFoldingStyle();
-    RUN_VPLAN_PASS(VPlanTransforms::materializeHeaderMask, *Plan,
-                   useActiveLaneMask(Style),
+    RUN_VPLAN_PASS(VPlanTransforms::materializeHeaderMaskAndLastActiveLane,
+                   *Plan, useActiveLaneMask(Style),
                    useActiveLaneMaskForControlFlow(Style));
 
     RUN_VPLAN_PASS_NO_VERIFY(printOptimizedVPlan, *Plan);
@@ -7272,13 +7272,14 @@ static void preparePlanForEpilogueVectorLoop(
                   // Only users linear in the canonical IV (e.g. scaling it by
                   // a stride) stay correct when offsetting it below; others,
                   // like header masks, may need an epilogue-relative IV.
-                  // The active-lane-masks of a tail-folded epilogue compare
-                  // against the full trip count, so they expect the offset
-                  // IV, like the active-lane-mask phi's entry value.
+                  // The active-lane-masks and last active lane of a
+                  // tail-folded epilogue use the full trip count, so they
+                  // expect the offset IV, like the active-lane-mask phi's
+                  // entry value.
                   unsigned Opc = VPI->getOpcode();
                   return Instruction::isCast(Opc) ||
-                         is_contained({Instruction::Add, Instruction::Mul,
-                                       Instruction::Shl},
+                         is_contained({Instruction::Add, Instruction::Sub,
+                                       Instruction::Mul, Instruction::Shl},
                                       Opc) ||
                          Opc == VPInstruction::WideActiveLaneMask;
                 }) &&

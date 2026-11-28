@@ -100,13 +100,11 @@ VEELFMCAsmInfo::VEELFMCAsmInfo(const Triple &TheTriple,
     if (specifier && specifier != VE::S_REFLONG)
       OS << '@' << MAI.getSpecifierName(specifier);
   };
-}
-
-bool VEELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
-                                               MCValue &Res,
-                                               const MCAssembler *Asm) const {
-  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-  Res.setSpecifier(Expr.getSpecifier());
-  return true;
+  SpecifierExprEvaluateFn = [](const MCSpecifierExpr &Expr, MCValue &Res,
+                               const MCAssembler *Asm) {
+    if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+      return false;
+    Res.setSpecifier(Expr.getSpecifier());
+    return true;
+  };
 }

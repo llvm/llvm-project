@@ -194,6 +194,29 @@ def simm13Op : Operand<iPTR> {
   let EncoderMethod = "getSImm13OpValue";
 }
 
+// Immediate operands of movr, movcc, sethi/unimp and Tcc. A symbolic value gets
+// a relocation for the field: R_SPARC_10, R_SPARC_11, R_SPARC_22 and R_SPARC_7
+// respectively.
+def simm10Op : Operand<i32> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let EncoderMethod = "getSImm10OpValue";
+}
+
+def simm11Op : Operand<i32> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let EncoderMethod = "getSImm11OpValue";
+}
+
+def imm22Op : Operand<i32> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let EncoderMethod = "getImm22OpValue";
+}
+
+def trapnum : Operand<i32> {
+  let OperandType = "OPERAND_IMMEDIATE";
+  let EncoderMethod = "getTrapNumOpValue";
+}
+
 def MEMrr : Operand<iPTR> {
   let PrintMethod = "printMemOperand";
   let MIOperandInfo = (ops ptr_op, ptr_op);
@@ -911,7 +934,7 @@ let Predicates = [HasV9], Uses = [ASR3] in
 
 // Section B.9 - SETHI Instruction, p. 104
 def SETHIi: F2_1<0b100,
-                 (outs IntRegs:$rd), (ins i32imm:$imm22),
+                 (outs IntRegs:$rd), (ins imm22Op:$imm22),
                  "sethi $imm22, $rd",
                  [(set i32:$rd, SETHIimm:$imm22)],
                  IIC_iu_instr>;
@@ -1293,7 +1316,7 @@ let DecoderNamespace = "SparcV8", hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
                         "t$cond $rs1 + $rs2",
                         []>;
   def TRAPri : TRAPSPri<0b111010,
-                        (outs), (ins IntRegs:$rs1, i32imm:$imm, CCOp:$cond),
+                        (outs), (ins IntRegs:$rs1, trapnum:$imm, CCOp:$cond),
                         "t$cond $rs1 + $imm",
                         []>;
 }
@@ -1304,7 +1327,7 @@ multiclass TRAP<string regStr> {
                     !strconcat(!strconcat("t$cond ", regStr), ", $rs1 + $rs2"),
                     []>;
   def ri : TRAPSPri<0b111010,
-                    (outs), (ins IntRegs:$rs1, i32imm:$imm, CCOp:$cond),
+                    (outs), (ins IntRegs:$rs1, trapnum:$imm, CCOp:$cond),
                     !strconcat(!strconcat("t$cond ", regStr), ", $rs1 + $imm"),
                     []>;
 }
@@ -1388,7 +1411,7 @@ let hasSideEffects = 1, rd = 0, rs1 = 0b01111, rs2 = 0 in
 
 // Section B.31 - Unimplemented Instruction
 let rd = 0 in
-  def UNIMP : F2_1<0b000, (outs), (ins i32imm:$imm22),
+  def UNIMP : F2_1<0b000, (outs), (ins imm22Op:$imm22),
                   "unimp $imm22", []>;
 
 // Section B.32 - Flush Instruction Memory
@@ -1757,7 +1780,7 @@ let Predicates = [HasV9], Constraints = "$f = $rd" in {
 
     def MOVICCri
       : F4_2<0b101100, (outs IntRegs:$rd),
-             (ins i32imm:$simm11, IntRegs:$f, CCOp:$cond),
+             (ins simm11Op:$simm11, IntRegs:$f, CCOp:$cond),
              "mov$cond %icc, $simm11, $rd",
              [(set i32:$rd,
                     (SPselecticc simm11:$simm11, i32:$f, imm:$cond))]>;
@@ -1771,7 +1794,7 @@ let Predicates = [HasV9], Constraints = "$f = $rd" in {
              [(set i32:$rd, (SPselectfcc i32:$rs2, i32:$f, imm:$cond))]>;
     def MOVFCCri
       : F4_2<0b101100, (outs IntRegs:$rd),
-             (ins i32imm:$simm11, IntRegs:$f, CCOp:$cond),
+             (ins simm11Op:$simm11, IntRegs:$f, CCOp:$cond),
              "mov$cond %fcc0, $simm11, $rd",
              [(set i32:$rd,
                     (SPselectfcc simm11:$simm11, i32:$f, imm:$cond))]>;
@@ -1880,7 +1903,7 @@ let Predicates = [HasV9] in {
              "mov$cond $cc, $rs2, $rd", []>;
     def V9MOVFCCri
       : F4_2<0b101100, (outs IntRegs:$rd),
-             (ins FCCRegs:$cc, i32imm:$simm11, IntRegs:$f, CCOp:$cond),
+             (ins FCCRegs:$cc, simm11Op:$simm11, IntRegs:$f, CCOp:$cond),
              "mov$cond $cc, $simm11, $rd", []>;
     def V9FMOVS_FCC
       : F4_3<0b110101, 0b000001, (outs FPRegs:$rd),

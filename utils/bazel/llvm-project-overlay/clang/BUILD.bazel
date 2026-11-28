@@ -2768,13 +2768,24 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "ClangDiffOptsTableGen",
+    strip_include_prefix = "tools/clang-diff",
+    tbl_outs = {"tools/clang-diff/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/clang-diff/Opts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
 cc_binary(
     name = "clang-diff",
     srcs = glob(["tools/clang-diff/*.cpp"]),
     stamp = 0,
     deps = [
+        ":ClangDiffOptsTableGen",
         ":ast-diff",
         ":tooling",
+        "//llvm:Option",
         "//llvm:Support",
     ],
 )

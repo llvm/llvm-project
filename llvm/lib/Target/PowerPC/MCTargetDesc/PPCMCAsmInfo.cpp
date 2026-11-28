@@ -210,12 +210,7 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple &T,
     MAI.printExpr(OS, *Expr.getSubExpr());
     OS << '@' << MAI.getSpecifierName(Expr.getSpecifier());
   };
-}
-
-bool PPCELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
-                                                MCValue &Res,
-                                                const MCAssembler *Asm) const {
-  return evaluateAsRelocatable(Expr, Res, Asm);
+  SpecifierExprEvaluateFn = evaluateAsRelocatable;
 }
 
 PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T,
@@ -246,9 +241,5 @@ PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T,
     MAI.printExpr(OS, *Expr.getSubExpr());
     OS << '@' << MAI.getSpecifierName(Expr.getSpecifier());
   };
-}
-
-bool PPCXCOFFMCAsmInfo::evaluateAsRelocatableImpl(
-    const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
-  return evaluateAsRelocatable(Expr, Res, Asm);
+  SpecifierExprEvaluateFn = evaluateAsRelocatable;
 }

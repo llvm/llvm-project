@@ -222,6 +222,9 @@ protected:
   void (*SpecifierExprPrintFn)(const MCAsmInfo &, raw_ostream &,
                                const MCSpecifierExpr &) = nullptr;
 
+  bool (*SpecifierExprEvaluateFn)(const MCSpecifierExpr &E, MCValue &Res,
+                                  const MCAssembler *Asm) = nullptr;
+
   //===--- Data Emission Directives -------------------------------------===//
 
   /// This should be set to the directive used to get some number of zero (and
@@ -757,8 +760,8 @@ public:
   std::optional<uint32_t> getSpecifierForName(StringRef Name) const;
 
   void printExpr(raw_ostream &, const MCExpr &) const;
-  virtual bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
-                                         const MCAssembler *Asm) const;
+  bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
+                                 const MCAssembler *Asm) const;
 
   /// True if the instruction is stored in multiple halfwords, with
   /// the high-order half appearing first in memory regardless of target

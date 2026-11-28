@@ -159,6 +159,7 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
     OS << AArch64::getSpecifierName(Expr.getSpecifier());
     MAI.printExpr(OS, *Expr.getSubExpr());
   };
+  SpecifierExprEvaluateFn = evaluate;
 }
 
 const MCExpr *AArch64MCAsmInfoDarwin::getExprForPersonalitySymbol(
@@ -188,11 +189,6 @@ void AArch64AuthMCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
   if (hasAddressDiversity())
     OS << ",addr";
   OS << ')';
-}
-
-bool AArch64MCAsmInfoDarwin::evaluateAsRelocatableImpl(
-    const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
-  return evaluate(Expr, Res, Asm);
 }
 
 AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
@@ -244,11 +240,7 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
     if (!Str.empty() && Str[0] == '%')
       OS << ')';
   };
-}
-
-bool AArch64MCAsmInfoELF::evaluateAsRelocatableImpl(
-    const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
-  return evaluate(Expr, Res, Asm);
+  SpecifierExprEvaluateFn = evaluate;
 }
 
 AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF(
@@ -274,11 +266,7 @@ AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF(
     OS << AArch64::getSpecifierName(Expr.getSpecifier());
     MAI.printExpr(OS, *Expr.getSubExpr());
   };
-}
-
-bool AArch64MCAsmInfoMicrosoftCOFF::evaluateAsRelocatableImpl(
-    const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
-  return evaluate(Expr, Res, Asm);
+  SpecifierExprEvaluateFn = evaluate;
 }
 
 AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF(const MCTargetOptions &Options)
@@ -303,9 +291,5 @@ AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF(const MCTargetOptions &Options)
     OS << AArch64::getSpecifierName(Expr.getSpecifier());
     MAI.printExpr(OS, *Expr.getSubExpr());
   };
-}
-
-bool AArch64MCAsmInfoGNUCOFF::evaluateAsRelocatableImpl(
-    const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
-  return evaluate(Expr, Res, Asm);
+  SpecifierExprEvaluateFn = evaluate;
 }
