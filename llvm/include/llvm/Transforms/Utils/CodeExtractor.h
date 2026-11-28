@@ -58,6 +58,10 @@ class CodeExtractorAnalysisCache {
   /// on memory.
   DenseSet<BasicBlock *> SideEffectingBlocks;
 
+  /// Whether the function contains a call that can return twice, such as a
+  /// call to setjmp.
+  bool HasReturnsTwiceCall = false;
+
   void findSideEffectInfoForBlock(BasicBlock &BB);
 
 public:
@@ -67,6 +71,9 @@ public:
   /// Note that some of these allocas may no longer be present in the function,
   /// due to \ref CodeExtractor::extractCodeRegion.
   ArrayRef<AllocaInst *> getAllocas() const { return Allocas; }
+
+  /// Whether the function contains a call that can return twice.
+  bool hasReturnsTwiceCall() const { return HasReturnsTwiceCall; }
 
   /// Check whether \p BB contains an instruction thought to load from, store
   /// to, or otherwise clobber the alloca \p Addr.
@@ -146,6 +153,10 @@ class LLVM_ABI CodeExtractor {
   // If true, the outlined function always return void even when there is only
   // one output.
   bool VoidReturnWithSingleOutput;
+
+  /// If true, static allocas without lifetime markers that are only used in a
+  /// non-returning region may be sunk into the outlined function.
+  bool AllowNoReturnAllocaSinking = true;
 
   // If set, the return value of the outline function.
   Value *FuncRetVal = nullptr;
@@ -244,6 +255,11 @@ public:
   /// should be pushed to the outlined function. The address bitcasts that are
   /// used by the lifetime markers are also candidates for shrink-wrapping. The
   /// instructions that need to be sunk are collected in 'Allocas'.
+  ///
+  /// If control never leaves the region once it is entered and
+  /// AllowNoReturnAllocaSinking is enabled, static allocas that are only used
+  /// in the region are pushed to the outlined function regardless of lifetime
+  /// markers, as the region runs at most once per call of the function.
   void findAllocas(const CodeExtractorAnalysisCache &CEAC, ValueSet &SinkCands,
                    ValueSet &HoistCands, BasicBlock *&ExitBlock) const;
 
@@ -259,6 +275,14 @@ public:
   /// Exclude a value from aggregate argument passing when extracting a code
   /// region, passing it instead as a scalar.
   void excludeArgFromAggregate(Value *Arg);
+
+  /// Set whether static allocas without lifetime markers may be sunk into a
+  /// non-returning region. Sinking relies on the extracted function running at
+  /// most once per call of the parent function, which does not hold when the
+  /// caller replaces the call with a parallel or repeated runtime dispatch.
+  void setAllowNoReturnAllocaSinking(bool Allow) {
+    AllowNoReturnAllocaSinking = Allow;
+  }
 
 protected:
   /// Allocate an intermediate variable at the specified point.
@@ -285,6 +309,11 @@ private:
   LifetimeMarkerInfo getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
                                         Instruction *Addr,
                                         BasicBlock *ExitBlock) const;
+
+  /// Return true if control never leaves the region once it is entered: no
+  /// block branches or unwinds outside of it, and all blocks without
+  /// successors end in `unreachable`.
+  bool isNoReturnRegion() const;
 
   /// Updates the list of SwitchCases (corresponding to exit blocks) after
   /// changes of the control flow or the Blocks list.

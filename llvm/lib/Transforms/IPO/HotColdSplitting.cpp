@@ -55,6 +55,7 @@
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 #include <cassert>
 #include <limits>
+#include <optional>
 #include <string>
 
 #define DEBUG_TYPE "hotcoldsplit"
@@ -361,14 +362,17 @@ static int getOutliningPenalty(const IPOOptions &Opts,
 }
 
 // Determine if it is beneficial to split the \p Region.
-bool HotColdSplitting::isSplittingBeneficial(CodeExtractor &CE,
-                                             const BlockSequence &Region,
-                                             TargetTransformInfo &TTI) {
+bool HotColdSplitting::isSplittingBeneficial(
+    CodeExtractor &CE, const BlockSequence &Region, TargetTransformInfo &TTI,
+    const CodeExtractorAnalysisCache &CEAC) {
   assert(!Region.empty());
 
   // Perform a simple cost/benefit analysis to decide whether or not to permit
-  // splitting.
-  SetVector<Value *> Inputs, Outputs, Sinks;
+  // splitting. Allocas that CodeExtractor moves into the outlined function are
+  // not passed to it.
+  SetVector<Value *> Inputs, Outputs, Sinks, Hoists;
+  BasicBlock *ExitBlock;
+  CE.findAllocas(CEAC, Sinks, Hoists, ExitBlock);
   CE.findInputsOutputs(Inputs, Outputs, Sinks);
   InstructionCost OutliningBenefit = getOutliningBenefit(Region, TTI);
   int OutliningPenalty =
@@ -649,6 +653,15 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
     ColdProbThresh =
         BranchProbability(1, *Opts.hotcoldsplit_cold_probability_denom);
 
+  // The analysis for CodeExtractor, computed once the first region is found.
+  // It stays valid until the regions are extracted.
+  std::optional<CodeExtractorAnalysisCache> CEAC;
+  auto GetCEAC = [&]() -> const CodeExtractorAnalysisCache & {
+    if (!CEAC)
+      CEAC.emplace(F);
+    return *CEAC;
+  };
+
   unsigned OutlinedFunctionID = 1;
   // Find all cold regions.
   for (BasicBlock *BB : RPOT) {
@@ -701,7 +714,8 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
             /* ArgsInZeroAddressSpace */ false,
             /* VoidReturnWithSingleOutput */ false);
 
-        if (CE.isEligible() && isSplittingBeneficial(CE, SubRegion, TTI) &&
+        if (CE.isEligible() &&
+            isSplittingBeneficial(CE, SubRegion, TTI, GetCEAC()) &&
             // If this outlining region intersects with another, drop the new
             // region.
             //
@@ -740,10 +754,9 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
 
   // Outline single-entry cold regions, splitting up larger regions as needed.
   // Cache and recycle the CodeExtractor analysis to avoid O(n^2) compile-time.
-  CodeExtractorAnalysisCache CEAC(F);
   for (auto &BCE : OutliningWorklist) {
     Function *Outlined =
-        extractColdRegion(*BCE.first, BCE.second, CEAC, BFI, TTI, ORE);
+        extractColdRegion(*BCE.first, BCE.second, GetCEAC(), BFI, TTI, ORE);
     assert(Outlined && "Should be outlined");
     (void)Outlined;
   }
