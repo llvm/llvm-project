@@ -24,6 +24,7 @@ class BPFSubtarget;
 
 class BPFInstrInfo : public BPFGenInstrInfo {
   const BPFRegisterInfo RI;
+  const BPFSubtarget &STI;
 
 public:
   explicit BPFInstrInfo(const BPFSubtarget &STI);
@@ -59,9 +60,13 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
 
+  bool
+  reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
+
   int getJumpTableIndex(const MachineInstr &MI) const override;
 
 private:
+  bool canAnalyzeConditionalBranches(MachineFunction &MF) const;
   void expandMEMCPY(MachineBasicBlock::iterator) const;
 
 };

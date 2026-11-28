@@ -1,0 +1,130 @@
+# RUN: llc -mtriple=bpfel -mcpu=v3 -run-pass=branch-folder -branch-folder-reorder-blocks=false -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=bpfel -mcpu=v4 -run-pass=branch-folder -branch-folder-reorder-blocks=false -verify-machineinstrs %s -o - | FileCheck %s
+
+---
+name: countdown32
+body: |
+  bb.0:
+    JMP %bb.1
+
+  bb.1:
+    $w1 = ADD_ri_32 $w1, -1
+    JEQ_ri_32 $w1, 0, %bb.2
+    JMP %bb.1
+
+  bb.2:
+    $w0 = MOV_ri_32 0
+    RET implicit $w0
+
+# CHECK-LABEL: name: countdown32
+# CHECK: ADD_ri_32
+# CHECK-NEXT: JNE_ri_32 $w1, 0, %bb.
+# CHECK-NOT: JMP
+# CHECK: RET
+...
+---
+name: unsigned_diamond32
+body: |
+  bb.0:
+    JULT_rr_32 $w1, $w2, %bb.1
+    JMP %bb.2
+
+  bb.1:
+    $w0 = MOV_ri_32 1
+    RET implicit $w0
+
+  bb.2:
+    $w0 = MOV_ri_32 2
+    RET implicit $w0
+
+# CHECK-LABEL: name: unsigned_diamond32
+# CHECK: JUGE_rr_32 $w1, $w2, %bb.
+# CHECK-NOT: JMP
+# CHECK: MOV_ri_32 1
+...
+---
+name: signed_diamond64
+body: |
+  bb.0:
+    JSGT_ri $r1, 5, %bb.1
+    JMP %bb.2
+
+  bb.1:
+    $r0 = MOV_ri 1
+    RET implicit $r0
+
+  bb.2:
+    $r0 = MOV_ri 2
+    RET implicit $r0
+
+# CHECK-LABEL: name: signed_diamond64
+# CHECK: JSLE_ri $r1, 5, %bb.
+# CHECK-NOT: JMP
+# CHECK: MOV_ri 1
+...
+---
+name: bit_test32
+body: |
+  bb.0:
+    JSET_rr_32 $w1, $w2, %bb.1
+    JMP %bb.2
+
+  bb.1:
+    $w0 = MOV_ri_32 1
+    RET implicit $w0
+
+  bb.2:
+    $w0 = MOV_ri_32 2
+    RET implicit $w0
+
+# CHECK-LABEL: name: bit_test32
+# CHECK: JSET_rr_32 $w1, $w2, %bb.
+# CHECK-NEXT: JMP %bb.
+...
+---
+name: same_destination
+body: |
+  bb.0:
+    JEQ_ri_32 $w1, 0, %bb.1
+    JMP %bb.1
+
+  bb.1:
+    $w0 = MOV_ri_32 42
+    RET implicit $w0
+
+# CHECK-LABEL: name: same_destination
+# CHECK-NOT: JEQ
+# CHECK-NOT: JMP
+# CHECK: MOV_ri_32 42
+...
+---
+name: shared_tail
+body: |
+  bb.0:
+    JEQ_ri_32 $w1, 0, %bb.2
+    JMP %bb.1
+
+  bb.1:
+    $w0 = ADD_ri_32 $w0, 7
+    JEQ_rr_32 $w0, $w1, %bb.4
+    JMP %bb.3
+
+  bb.2:
+    $w0 = ADD_ri_32 $w0, 7
+    JEQ_rr_32 $w0, $w1, %bb.4
+    JMP %bb.3
+
+  bb.3:
+    RET implicit $w0
+
+  bb.4:
+    $w0 = MOV_ri_32 33
+    RET implicit $w0
+
+# CHECK-LABEL: name: shared_tail
+# CHECK: ADD_ri_32
+# CHECK-NOT: ADD_ri_32
+# CHECK: JEQ_rr_32 $w0, $w1, %bb.
+# CHECK-NOT: ADD_ri_32
+# CHECK: MOV_ri_32 33
+...
