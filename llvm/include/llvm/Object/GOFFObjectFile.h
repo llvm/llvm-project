@@ -40,7 +40,9 @@ struct GOFFRelEntry {
 // GOFFRelEntry::RelType is computed based on RLD fields at offset 1, 2, 4,
 // and 5.
 inline uint64_t getRldType(const uint8_t *Rld) {
-  return Rld[1] + (Rld[2] << 8) + (Rld[4] << 16) + (Rld[5] << 24);
+  // Widen byte 5 before shifting to avoid sign extension when bit 31 is set.
+  return Rld[1] + (Rld[2] << 8) + (Rld[4] << 16) +
+         (static_cast<uint64_t>(Rld[5]) << 24);
 }
 
 // Getters for RLD fields based on GOFFRelEntry::RelType.

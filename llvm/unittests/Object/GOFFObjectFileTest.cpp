@@ -616,6 +616,7 @@ TEST_F(GOFFObjectFileTest, TXTConstruct) {
   GOFFData[Pos + 26] = (char)0xc0; // Same R-id and P-id.
   GOFFData[Pos + 28] = (char)0x01; // Store
   GOFFData[Pos + 30] = (char)0x04; // Target Length.
+  GOFFData[Pos + 31] = (char)0x80; // Bit Length.
   GOFFData[Pos + 37] = (char)0x04; // Offset.
 
   // END record.
@@ -675,7 +676,7 @@ TEST_F(GOFFObjectFileTest, TXTConstruct) {
   EXPECT_EQ(TargetSymbolName, "var#c");
   SmallString<16> RelTypeName2;
   Relocation.getTypeName(RelTypeName2);
-  EXPECT_EQ(RelTypeName2, "R_00040100");
+  EXPECT_EQ(RelTypeName2, "R_80040100");
   Offset = Relocation.getOffset();
   EXPECT_EQ(Offset, 4u);
 }
