@@ -27,6 +27,70 @@ M:              ; preds = %N, %Q
   ret i32 %R
 }
 
+define i8 @bypass_trivial_successor(i1 %c, i8 %a, i8 %b, i32 %sw) {
+; CHECK-LABEL: @bypass_trivial_successor(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[SW:%.*]], label [[TEST:%.*]] [
+; CHECK-NEXT:      i32 0, label [[COMMON:%.*]]
+; CHECK-NEXT:      i32 1, label [[EDGE:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       test:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]
+; CHECK-NEXT:    br label [[COMMON]]
+; CHECK:       edge:
+; CHECK-NEXT:    br label [[COMMON]]
+; CHECK:       common:
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[S]], [[TEST]] ], [ 2, [[EDGE]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+entry:
+  switch i32 %sw, label %test [
+    i32 0, label %common
+    i32 1, label %edge
+  ]
+
+test:
+  %s = select i1 %c, i8 %a, i8 %b
+  br i1 %c, label %common, label %edge
+
+edge:
+  %p = phi i8 [ %s, %test ], [ 2, %entry ]
+  br label %common
+
+common:
+  %r = phi i8 [ %s, %test ], [ %p, %edge ], [ 1, %entry ]
+  ret i8 %r
+}
+
+define i8 @do_not_bypass_different_values(i1 %c, i8 %a, i8 %b, i32 %sw) {
+; CHECK-LABEL: @do_not_bypass_different_values(
+; CHECK:       test:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[COMMON:%.*]], label [[EDGE:%.*]]
+; CHECK:       edge:
+; CHECK-NEXT:    [[P:%.*]] = phi i8 [ [[B:%.*]], [[TEST:%.*]] ], [ 2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[COMMON]]
+; CHECK:       common:
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[A:%.*]], [[TEST]] ], [ [[P]], [[EDGE]] ], [ 1, [[ENTRY]] ]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+entry:
+  switch i32 %sw, label %test [
+    i32 0, label %common
+    i32 1, label %edge
+  ]
+
+test:
+  br i1 %c, label %common, label %edge
+
+edge:
+  %p = phi i8 [ %b, %test ], [ 2, %entry ]
+  br label %common
+
+common:
+  %r = phi i8 [ %a, %test ], [ %p, %edge ], [ 1, %entry ]
+  ret i8 %r
+}
+
 ; Test merging of blocks with phi nodes where at least one incoming value
 ; in the successor is undef.
 define i8 @testundef(i32 %u) {
