@@ -48,9 +48,90 @@ static RT_API_ATTRS bool CheckCompleteListDirectedField(
   return true;
 }
 
+// Single-pass B/O/Z input into a target of at most 8 bytes, accumulating
+// the value in a 64-bit integer.  The field must be buffered: NextInField()
+// counts characters for SIZE= only through a buffered FastAsciiField.
+template <int LOG2_BASE>
+static RT_API_ATTRS bool EditSmallBOZInput(IoStatementState &io,
+    const DataEdit &edit, void *n, std::size_t bytes,
+    IoStatementState::FastAsciiField &fastField) {
+  // Skip leading white space & zeroes
+  common::optional<int> remaining{io.CueUpInput(edit, &fastField)};
+  common::optional<char32_t> next{io.NextInField(remaining, edit, &fastField)};
+  while (next && *next == '0') {
+    next = io.NextInField(remaining, edit, &fastField);
+  }
+  int digits{0};
+  int significantBits{0};
+  std::uint64_t value{0};
+  char32_t comma{edit.modes.GetSeparatorChar()};
+  for (; next; next = io.NextInField(remaining, edit, &fastField)) {
+    char32_t ch{*next};
+    if (ch == ' ' || ch == '\t') {
+      if (edit.modes.editingFlags & blankZero) {
+        ch = '0'; // BZ mode - treat blank as if it were zero
+      } else {
+        continue;
+      }
+    }
+    int digit{0};
+    if (ch >= '0' && ch <= '1') {
+      digit = ch - '0';
+    } else if (LOG2_BASE >= 3 && ch >= '2' && ch <= '7') {
+      digit = ch - '0';
+    } else if (LOG2_BASE >= 4 && ch >= '8' && ch <= '9') {
+      digit = ch - '0';
+    } else if (LOG2_BASE >= 4 && ch >= 'A' && ch <= 'F') {
+      digit = ch + 10 - 'A';
+    } else if (LOG2_BASE >= 4 && ch >= 'a' && ch <= 'f') {
+      digit = ch + 10 - 'a';
+    } else if (ch == comma) {
+      break; // end non-list-directed field early
+    } else {
+      io.GotChar(fastField.got());
+      io.GetIoErrorHandler().SignalError(
+          "Bad character '%lc' in B/O/Z input field", ch);
+      return false;
+    }
+    if (digits++ == 0) {
+      if (ch >= '0' && ch <= '1') {
+        significantBits = 1;
+      } else if (ch >= '2' && ch <= '3') {
+        significantBits = 2;
+      } else if (ch >= '4' && ch <= '7') {
+        significantBits = 3;
+      } else {
+        significantBits = 4;
+      }
+    } else {
+      significantBits += LOG2_BASE;
+    }
+    value = (value << LOG2_BASE) | static_cast<std::uint64_t>(digit);
+  }
+  io.GotChar(fastField.got());
+  if (static_cast<std::size_t>(significantBits) > 8 * bytes) {
+    io.GetIoErrorHandler().SignalError(IostatBOZInputOverflow,
+        "B/O/Z input of %d digits overflows %zd-byte variable", digits, bytes);
+    return false;
+  }
+  if (isHostLittleEndian) {
+    runtime::memcpy(n, &value, bytes);
+  } else {
+    runtime::memcpy(n,
+        reinterpret_cast<const char *>(&value) + sizeof value - bytes, bytes);
+  }
+  return CheckCompleteListDirectedField(io, edit);
+}
+
 template <int LOG2_BASE>
 static RT_API_ATTRS bool EditBOZInput(
     IoStatementState &io, const DataEdit &edit, void *n, std::size_t bytes) {
+  if (bytes <= sizeof(std::uint64_t)) {
+    if (auto fastField{io.GetUpcomingFastAsciiField()};
+        !fastField.MustUseSlowPath()) {
+      return EditSmallBOZInput<LOG2_BASE>(io, edit, n, bytes, fastField);
+    }
+  }
   // Skip leading white space & zeroes
   common::optional<int> remaining{io.CueUpInput(edit)};
   const ConnectionState &connection{io.GetConnectionState()};

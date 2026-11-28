@@ -1121,3 +1121,30 @@ TEST(IOApiTests, ATEditDescriptorOutput) {
         << "Multiple AT test: expected 'abc def#' got '" << got << "'";
   }
 }
+
+// READ(SIZE=) counts every byte of a B/O/Z input field from a
+// CHARACTER(KIND=2 or 4) internal unit.
+template <typename CHAR> static void TestWideInternalBOZInputSize() {
+  static constexpr int kind{sizeof(CHAR)};
+  CHAR buffer[8];
+  const char *text{"  1F  XY"};
+  for (int j{0}; j < 8; ++j) {
+    buffer[j] = text[j];
+  }
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  desc.Establish(kind, 8, buffer, 0, nullptr);
+  const char *format{"(Z6)"};
+  auto cookie{IONAME(BeginInternalArrayFormattedInput)(
+      desc, format, std::strlen(format))};
+  std::int64_t got{0};
+  EXPECT_TRUE(IONAME(InputInteger)(cookie, got));
+  EXPECT_EQ(got, 0x1f) << "KIND=" << kind;
+  EXPECT_EQ(IONAME(GetSize)(cookie), 6u * kind) << "KIND=" << kind;
+  EXPECT_EQ(IONAME(EndIoStatement)(cookie), IostatOk) << "KIND=" << kind;
+}
+
+TEST(IOApiTests, WideInternalBOZInputSize) {
+  TestWideInternalBOZInputSize<char16_t>();
+  TestWideInternalBOZInputSize<char32_t>();
+}

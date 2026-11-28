@@ -540,6 +540,15 @@ RT_API_ATTRS common::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
     stack_[height_].remaining = repeat - edit.repeat;
     ++height_;
   }
+  if (start == lastDataEdit_.start) {
+    edit.descriptor = lastDataEdit_.descriptor;
+    edit.variation = lastDataEdit_.variation;
+    edit.width = lastDataEdit_.width;
+    edit.digits = lastDataEdit_.digits;
+    edit.expoDigits = lastDataEdit_.expoDigits;
+    offset_ = lastDataEdit_.end;
+    return edit;
+  }
   edit.descriptor = static_cast<char>(Capitalize(GetNextChar(context)));
   if (edit.descriptor == 'D' && Capitalize(PeekNext()) == 'T') {
     // DT['iotype'][(v_list)] defined I/O
@@ -633,6 +642,20 @@ RT_API_ATTRS common::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
           edit.expoDigits = GetIntField(context);
         }
       }
+    }
+    // Reusing this edit when control returns to `start` is correct only
+    // because parsing a non-DT data edit depends on nothing but the FORMAT
+    // text at that offset; edit.modes and edit.repeat are recomputed on reuse.
+    // An edit whose parsing reads or updates the context must not be cached,
+    // as DT edits are not, since parsing them fills context.ioType/vList.
+    if (!context.InError()) {
+      lastDataEdit_.start = start;
+      lastDataEdit_.end = offset_;
+      lastDataEdit_.descriptor = edit.descriptor;
+      lastDataEdit_.variation = edit.variation;
+      lastDataEdit_.width = edit.width;
+      lastDataEdit_.digits = edit.digits;
+      lastDataEdit_.expoDigits = edit.expoDigits;
     }
   }
   return edit;

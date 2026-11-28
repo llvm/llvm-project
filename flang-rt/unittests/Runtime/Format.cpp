@@ -116,6 +116,13 @@ TEST(FormatTests, FormatStringTraversal) {
       {2, "(AT,AT)", ResultsTy{"AT", "AT"}, 1}, // multiple AT
       {1, "(2AT)", ResultsTy{"2*AT"}, 2}, // AT with repeat
       {1, "(A10)", ResultsTy{"A10"}, 1}, // A with width (not AT)
+      // Reused edits with a variation and an exponent width
+      {2, "(2(ES12.4E2))", ResultsTy{"ES12.4E2", "ES12.4E2"}, 1},
+      {4, "(2(EN10.2E3,F6.2))",
+          ResultsTy{"EN10.2E3", "F6.2", "EN10.2E3", "F6.2"}, 1},
+      // A repeat count consumed one edit at a time, after a different edit
+      {3, "(I4,2I6)", ResultsTy{"I4", "I6", "I6"}, 1},
+      {3, "(2AT,A3)", ResultsTy{"AT", "AT", "A3"}, 1},
   };
 
   for (const auto &[n, format, expect, repeat] : params) {

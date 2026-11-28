@@ -14,6 +14,9 @@
 ! CHECK: binary: 5 "XY"
 ! CHECK: 2fields: 1F 2E
 ! CHECK: size: 1F 6
+! CHECK: utf8 size: 1F 6
+! CHECK: bad char size: T 4
+! CHECK: overflow size: T 6
 ! CHECK: second: 2A "ZW" 8
 ! CHECK: size3: 1 2 3 12 "XY"
 ! CHECK: bzcomma: 1F 3
@@ -21,7 +24,8 @@
 
 program boz_input_field
   implicit none
-  integer :: i4, j4, k4, iu, n
+  integer :: i4, j4, k4, iu, n, ios
+  integer(1) :: i1
   integer(8) :: i8
   character(4) :: c4
   character(2) :: c2
@@ -61,6 +65,28 @@ program boz_input_field
   rewind (iu)
   read (iu, '(z6)', advance='no', size=n) i4
   print '(a,z0,1x,i0)', 'size: ', i4, n
+  close (iu)
+
+  ! The same with a UTF-8 unit.
+  open (newunit=iu, status='scratch', form='formatted', encoding='utf-8')
+  write (iu, '(a)') '  1F  XY'
+  rewind (iu)
+  read (iu, '(z6)', advance='no', size=n) i4
+  print '(a,z0,1x,i0)', 'utf8 size: ', i4, n
+  close (iu)
+
+  ! SIZE= after an error counts the characters read up to the error.
+  open (newunit=iu, status='scratch', form='formatted')
+  write (iu, '(a)') '  1G  XY'
+  rewind (iu)
+  read (iu, '(z6)', advance='no', size=n, iostat=ios) i4
+  print '(a,l1,1x,i0)', 'bad char size: ', ios /= 0, n
+  close (iu)
+  open (newunit=iu, status='scratch', form='formatted')
+  write (iu, '(a)') '  1FF XY'
+  rewind (iu)
+  read (iu, '(z6)', advance='no', size=n, iostat=ios) i1
+  print '(a,l1,1x,i0)', 'overflow size: ', ios /= 0, n
   close (iu)
 
   ! A second non-advancing READ continues the record, so the field does not
