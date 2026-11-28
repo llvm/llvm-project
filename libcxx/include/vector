@@ -326,6 +326,13 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #    include <__vector/vector_bool_formatter.h>
 #  endif
 
+// PROTOTYPE: std::vector2 and the std::cpp29 namespace from P3866R0
+#  if _LIBCPP_STD_VER >= 29
+#    include <__vector/vector2.h>
+#    include <__vector/vector2_erase.h>
+#    include <__vector/vector2_pmr.h>
+#  endif
+
 #  include <version>
 
 // standard-mandated includes
