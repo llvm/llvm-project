@@ -348,8 +348,17 @@ DistributeLayoutAttr setupInterleaveResultLayout(
 ///   Each lane owns two runs of 4 elements, 16 apart, instead of the 8
 ///   contiguous source elements the collapsed lane_data = [1, 8] claims.
 ///
-/// Only the inst_data and lane phases are handled; a subgroup-level layout is
-/// returned unchanged.
+/// At subgroup level, if a group's sg tile is not contiguous in the collapsed
+/// source dim, the group's subgroups are moved to its outermost dims; the
+/// consumer then receives its layout through a convert_layout.
+///
+/// Example:
+///   shape_cast: vector<32x1024xbf16> -> vector<32x32x32xbf16>
+///   Consumer layout: sg_layout = [2, 1, 2], sg_data = [16, 32, 16]
+///   Adjusted:        sg_layout = [2, 2, 1], sg_data = [16, 16, 32]
+///   The consumer's sg tile 32x16 is not contiguous in the collapsed dim 1024,
+///   so it has no source layout. The adjusted sg tile 16x32 is, and collapses
+///   to sg_layout = [2, 2], sg_data = [16, 512].
 DistributeLayoutAttr
 setupShapeCastResultLayout(LayoutKind layoutKind, VectorType srcVectorTy,
                            VectorType resVectorTy,
