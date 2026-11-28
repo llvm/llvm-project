@@ -155,10 +155,11 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     // We're using soft promotion for f16, but msa has some instructions for
     // conversion to/from f16. Mark those conversions as custom so we can take
     // advantage of these instructions.
-    for (MVT VT : {MVT::f32, MVT::f64}) {
-      setOperationAction(ISD::FP16_TO_FP, VT, Custom);
-      setOperationAction(ISD::FP_TO_FP16, VT, Custom);
-    }
+    setOperationAction(ISD::FP16_TO_FP, MVT::f32, Custom);
+    setOperationAction(ISD::FP16_TO_FP, MVT::f64, Custom);
+    // Only f32 -> f16 can use fexdo.h directly. Converting f64 -> f16 through
+    // f32 would round twice, so leave it to the __truncdfhf2 libcall.
+    setOperationAction(ISD::FP_TO_FP16, MVT::f32, Custom);
 
     setTargetDAGCombine(
         {ISD::AND, ISD::OR, ISD::SRA, ISD::VSELECT, ISD::XOR, ISD::FP_TO_UINT});
@@ -551,27 +552,17 @@ SDValue MipsSETargetLowering::lowerFP16_TO_FP(SDValue Op,
   return Res;
 }
 
-// Lower FP_TO_FP16 (the soft-promote-half representation of an f32/f64 -> f16
-// conversion)
+// Lower FP_TO_FP16 (the soft-promote-half representation of an f32 -> f16
+// conversion).
 SDValue MipsSETargetLowering::lowerFP_TO_FP16(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT ResTy = Op.getValueType();
   SDValue In = Op.getOperand(0);
-  assert((In.getValueType() == MVT::f32 || In.getValueType() == MVT::f64) &&
-         "Unexpected FP_TO_FP16");
+  assert(In.getValueType() == MVT::f32 && "Unexpected FP_TO_FP16");
 
-  SDValue F32Vec;
-  if (In.getValueType() == MVT::f64) {
-    // Splat f64 to v2f64, then convert to v4f32.
-    SDValue F64Vec = DAG.getSplatBuildVector(MVT::v2f64, DL, In);
-    F32Vec = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::v4f32,
-                         DAG.getConstant(Intrinsic::mips_fexdo_w, DL, MVT::i32),
-                         F64Vec, F64Vec);
-  } else {
-    // Splat f32 to v4f32.
-    F32Vec = DAG.getSplatBuildVector(MVT::v4f32, DL, In);
-  }
+  // Splat f32 to v4f32.
+  SDValue F32Vec = DAG.getSplatBuildVector(MVT::v4f32, DL, In);
 
   // Then convert from v4f32 to v8f16.
   SDValue HVec = DAG.getNode(
