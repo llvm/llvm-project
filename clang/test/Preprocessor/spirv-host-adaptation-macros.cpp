@@ -7,6 +7,8 @@
 // RUN:   -fsycl-is-device -E -dM %s | FileCheck --check-prefix=WIN64 %s
 // RUN: %clang_cc1 -triple spirv32-unknown-unknown -aux-triple i386-unknown-linux-gnu \
 // RUN:   -fsycl-is-device -E -dM %s | FileCheck --check-prefix=LINUX32 %s
+// RUN: %clang_cc1 -triple spirv32-unknown-unknown -aux-triple i386-pc-windows-msvc \
+// RUN:   -fsycl-is-device -E -dM %s | FileCheck --check-prefix=WIN32 %s
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
 // RUN:   -fsycl-is-device -E -dM %s | FileCheck --check-prefix=NOHOST64 %s
 // RUN: %clang_cc1 -triple spirv32-unknown-unknown \
@@ -38,6 +40,14 @@
 // LINUX32-DAG: #define __SIZEOF_PTRDIFF_T__ 4
 // LINUX32-DAG: #define __SIZEOF_POINTER__ 4
 
+// Windows i386 host (ILP32)
+// WIN32-DAG: #define __SIZE_TYPE__ unsigned int
+// WIN32-DAG: #define __PTRDIFF_TYPE__ int
+// WIN32-DAG: #define __INTPTR_TYPE__ int
+// WIN32-DAG: #define __SIZEOF_SIZE_T__ 4
+// WIN32-DAG: #define __SIZEOF_PTRDIFF_T__ 4
+// WIN32-DAG: #define __SIZEOF_POINTER__ 4
+
 // No host (SPIRV64 defaults)
 // NOHOST64-DAG: #define __SIZE_TYPE__ long unsigned int
 // NOHOST64-DAG: #define __PTRDIFF_TYPE__ long int
@@ -59,6 +69,8 @@
 // WIN64-DAG: #define _WIN64 1
 // WIN64-DAG: #define _M_X64 100
 // WIN64-DAG: #define _M_AMD64 100
+// WIN32-DAG: #define _WIN32 1
+// WIN32-DAG: #define _M_IX86 600
 // LINUX64-DAG: #define __linux__ 1
 // LINUX64-DAG: #define __x86_64__ 1
 
@@ -67,6 +79,8 @@
 // LINUX64-DAG: #define __SPIRV64__ 1
 // WIN64-DAG: #define __SPIRV__ 1
 // WIN64-DAG: #define __SPIRV64__ 1
+// WIN32-DAG: #define __SPIRV__ 1
+// WIN32-DAG: #define __SPIRV32__ 1
 // NOHOST64-DAG: #define __SPIRV__ 1
 // NOHOST64-DAG: #define __SPIRV64__ 1
 // NOHOST32-DAG: #define __SPIRV__ 1
