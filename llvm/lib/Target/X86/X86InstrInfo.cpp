@@ -41,6 +41,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
 
@@ -3572,6 +3573,15 @@ bool X86::isX87Instruction(MachineInstr &MI) {
       return true;
   }
   return false;
+}
+
+bool X86::foldNDDCmovLoads(const X86Subtarget &STI, const TargetMachine &TM) {
+  // Mirror the conditions under which X86CmovConversion converts memory
+  // operand CMOVs to branches.
+  const X86Options &CLOpts = STI.getCLOpts();
+  return STI.hasNDD() && !STI.hasNDDM() && CLOpts.cmov_converter_ndd_load &&
+         CLOpts.cmov_converter && CLOpts.cmov_converter_force_mem_operand &&
+         getCGPassBuilderOption(TM).DisableSelectOptimize;
 }
 
 int X86::getFirstAddrOperandIdx(const MachineInstr &MI) {

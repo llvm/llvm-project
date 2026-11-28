@@ -103,6 +103,10 @@ private:
   using CmovGroup = SmallVector<MachineInstr *, 2>;
   using CmovGroups = SmallVector<CmovGroup, 2>;
 
+  /// Unfold the load of each NDD CMOV left with a non-RIP-relative memory
+  /// operand. Return true if any CMOV was unfolded.
+  bool unfoldNDDMemCmovs(MachineFunction &MF);
+
   /// Collect all CMOV-group-candidates in \p CurrLoop and update \p
   /// CmovInstGroups accordingly.
   ///
@@ -153,6 +157,7 @@ void X86CmovConversionLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
 bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<X86Subtarget>();
   const X86Options &CLOpts = STI->getCLOpts();
+  // Keep the early exits in sync with X86::foldNDDCmovLoads().
   if (!CLOpts.cmov_converter)
     return false;
 
@@ -193,6 +198,10 @@ bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
         convertCmovInstsToBranches(Group);
       }
     }
+    // ISel folded non-RIP-relative loads into NDD CMOVs only for this
+    // conversion, so unfold them where the CMOV is kept.
+    if (X86::foldNDDCmovLoads(*STI, MF.getTarget()))
+      Changed |= unfoldNDDMemCmovs(MF);
     // Early return as cmov_converter_force_all converts all CmovGroups.
     if (CLOpts.cmov_converter_force_all)
       return Changed;
@@ -248,6 +257,40 @@ bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
       convertCmovInstsToBranches(Group);
   }
 
+  return Changed;
+}
+
+bool X86CmovConversionImpl::unfoldNDDMemCmovs(MachineFunction &MF) {
+  bool Changed = false;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
+      unsigned Opc = MI.getOpcode();
+      if (Opc != X86::CMOV16rm_ND && Opc != X86::CMOV32rm_ND &&
+          Opc != X86::CMOV64rm_ND)
+        continue;
+      const MachineOperand &Base =
+          MI.getOperand(X86::getFirstAddrOperandIdx(MI) + X86::AddrBaseReg);
+      if (Base.isReg() && Base.getReg() == X86::RIP)
+        continue;
+
+      Register Reg = MRI->createVirtualRegister(
+          MRI->getRegClass(MI.getOperand(0).getReg()));
+      SmallVector<MachineInstr *, 2> NewMIs;
+      [[maybe_unused]] bool Unfolded =
+          TII->unfoldMemoryOperand(MF, MI, Reg, /*UnfoldLoad=*/true,
+                                   /*UnfoldStore=*/false, NewMIs);
+      assert(Unfolded && "Should never fail to unfold a loading cmov!");
+      for (MachineInstr *NewMI : NewMIs)
+        MBB.insert(MI.getIterator(), NewMI);
+      MachineInstr *NewCmov = NewMIs.back();
+      NewCmov->setFlags(MI.getFlags());
+      if (unsigned DebugInstrNum = MI.peekDebugInstrNum())
+        NewCmov->setDebugInstrNum(DebugInstrNum);
+      LLVM_DEBUG(dbgs() << "\tUnfolded NDD CMOV: "; NewCmov->dump());
+      MI.eraseFromParent();
+      Changed = true;
+    }
+  }
   return Changed;
 }
 

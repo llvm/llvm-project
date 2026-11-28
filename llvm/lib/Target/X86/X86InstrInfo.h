@@ -24,6 +24,7 @@
 #include "X86GenInstrInfo.inc"
 
 namespace llvm {
+class TargetMachine;
 class X86Subtarget;
 
 // X86 MachineCombiner patterns
@@ -119,6 +120,11 @@ int getFirstAddrOperandIdx(const MachineInstr &MI);
 
 /// Find any constant pool entry associated with a specific instruction operand.
 const Constant *getConstantFromPool(const MachineInstr &MI, unsigned OpNo);
+
+/// Return true if ISel folds non-RIP-relative loads into NDD CMOVs so that
+/// X86CmovConversion converts them to branches. The pass then unfolds the load
+/// of each CMOV it keeps.
+bool foldNDDCmovLoads(const X86Subtarget &STI, const TargetMachine &TM);
 
 } // namespace X86
 

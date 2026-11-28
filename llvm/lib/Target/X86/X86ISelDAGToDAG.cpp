@@ -224,7 +224,7 @@ namespace {
     bool matchAddressBase(SDValue N, X86ISelAddressMode &AM);
     bool selectAddr(SDNode *Parent, SDValue N, SDValue &Base, SDValue &Scale,
                     SDValue &Index, SDValue &Disp, SDValue &Segment,
-                    bool HasNDDM = true);
+                    bool AllowNonRIP = true);
     bool selectNDDAddr(SDNode *Parent, SDValue N, SDValue &Base, SDValue &Scale,
                        SDValue &Index, SDValue &Disp, SDValue &Segment);
     bool selectVectorAddr(MemSDNode *Parent, SDValue BasePtr, SDValue IndexOp,
@@ -3255,7 +3255,7 @@ bool X86DAGToDAGISel::selectVectorAddr(MemSDNode *Parent, SDValue BasePtr,
 /// checking memory operands for inline asm nodes.
 bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
                                  SDValue &Scale, SDValue &Index, SDValue &Disp,
-                                 SDValue &Segment, bool HasNDDM) {
+                                 SDValue &Segment, bool AllowNonRIP) {
   X86ISelAddressMode AM;
 
   if (Parent &&
@@ -3285,7 +3285,7 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
   if (matchAddress(N, AM))
     return false;
 
-  if (!HasNDDM && !AM.isRIPRelative())
+  if (!AllowNonRIP && !AM.isRIPRelative())
     return false;
 
   getAddressOperands(AM, DL, VT, Base, Scale, Index, Disp, Segment);
@@ -3295,8 +3295,14 @@ bool X86DAGToDAGISel::selectAddr(SDNode *Parent, SDValue N, SDValue &Base,
 bool X86DAGToDAGISel::selectNDDAddr(SDNode *Parent, SDValue N, SDValue &Base,
                                     SDValue &Scale, SDValue &Index,
                                     SDValue &Disp, SDValue &Segment) {
-  return selectAddr(Parent, N, Base, Scale, Index, Disp, Segment,
-                    Subtarget->hasNDDM());
+  // Without NDDM, fold only RIP-relative loads, except into CMOVs when
+  // X86CmovConversion converts memory operand CMOVs to branches.
+  bool AllowNonRIP = Subtarget->hasNDDM();
+  if (!AllowNonRIP && Parent && X86::foldNDDCmovLoads(*Subtarget, TM))
+    AllowNonRIP = llvm::any_of(Parent->users(), [](const SDNode *U) {
+      return U->getOpcode() == X86ISD::CMOV;
+    });
+  return selectAddr(Parent, N, Base, Scale, Index, Disp, Segment, AllowNonRIP);
 }
 
 bool X86DAGToDAGISel::selectMOV64Imm32(SDValue N, SDValue &Imm) {
