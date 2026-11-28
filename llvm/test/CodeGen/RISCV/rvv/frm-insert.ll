@@ -7,11 +7,9 @@
 define <vscale x 1 x float> @test(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 ;
 ; UNOPT-LABEL: test:
@@ -42,12 +40,11 @@ entry:
 define <vscale x 1 x float> @test2(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    fsrmi 1
+; CHECK-NEXT:    fsrmi a0, 1
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
-; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 ;
 ; UNOPT-LABEL: test2:
@@ -121,12 +118,10 @@ define <vscale x 1 x float> @before_call1(<vscale x 1 x float> %0, <vscale x 1 x
 ; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    addi a0, sp, 32
 ; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    call foo
 ; CHECK-NEXT:    addi a0, sp, 32
 ; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
@@ -221,12 +216,10 @@ define <vscale x 1 x float> @after_call1(<vscale x 1 x float> %0, <vscale x 1 x 
 ; CHECK-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    addi a0, sp, 32
 ; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    call foo
 ; CHECK-NEXT:    addi a0, sp, 32
 ; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
@@ -449,10 +442,8 @@ entry:
 define <vscale x 1 x float> @test5(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2, ptr %p) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a2, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    fsrm a2
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
 ; CHECK-NEXT:    frrm a0
 ; CHECK-NEXT:    lui a2, 66
@@ -609,5 +600,194 @@ entry:
     <vscale x 1 x float> %0,
     <vscale x 1 x float> %1,
     i64 7, i64 %2)
+  ret <vscale x 1 x float> %a
+}
+
+; Outside strictfp functions FRM holds the default rounding mode (RNE), so a
+; static RNE operation needs no FRM write.
+define <vscale x 1 x float> @static_rne(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
+; CHECK-LABEL: static_rne:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    ret
+;
+; UNOPT-LABEL: static_rne:
+; UNOPT:       # %bb.0: # %entry
+; UNOPT-NEXT:    fsrmi a1, 0
+; UNOPT-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; UNOPT-NEXT:    vfadd.vv v8, v8, v9
+; UNOPT-NEXT:    fsrm a1
+; UNOPT-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
+    <vscale x 1 x float> poison,
+    <vscale x 1 x float> %0,
+    <vscale x 1 x float> %1,
+    i64 0, i64 %2)
+  ret <vscale x 1 x float> %a
+}
+
+; A static RNE operation after a different static rounding mode in the same
+; block still has to set FRM, and FRM is restored afterwards.
+define <vscale x 1 x float> @static_rdn_then_rne(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
+; CHECK-LABEL: static_rdn_then_rne:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fsrmi a1, 2
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    fsrmi 0
+; CHECK-NEXT:    vfadd.vv v8, v8, v8
+; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    ret
+;
+; UNOPT-LABEL: static_rdn_then_rne:
+; UNOPT:       # %bb.0: # %entry
+; UNOPT-NEXT:    fsrmi a1, 2
+; UNOPT-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; UNOPT-NEXT:    vfadd.vv v8, v8, v9
+; UNOPT-NEXT:    fsrm a1
+; UNOPT-NEXT:    fsrmi a0, 0
+; UNOPT-NEXT:    vfadd.vv v8, v8, v8
+; UNOPT-NEXT:    fsrm a0
+; UNOPT-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
+    <vscale x 1 x float> poison,
+    <vscale x 1 x float> %0,
+    <vscale x 1 x float> %1,
+    i64 2, i64 %2)
+  %b = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
+    <vscale x 1 x float> poison,
+    <vscale x 1 x float> %a,
+    <vscale x 1 x float> %a,
+    i64 0, i64 %2)
+  ret <vscale x 1 x float> %b
+}
+
+; Static RNE conversion in a loop (round-to-nearest-even pattern): no FRM
+; writes in the loop body.
+define void @static_rne_loop(ptr %p, i64 %n, i64 %vl) nounwind {
+; CHECK-LABEL: static_rne_loop:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    srli a3, a3, 1
+; CHECK-NEXT:  .LBB19_1: # %loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vfcvt.x.f.v v8, v8
+; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    vsetvli a4, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    bnez a1, .LBB19_1
+; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    ret
+;
+; UNOPT-LABEL: static_rne_loop:
+; UNOPT:       # %bb.0: # %entry
+; UNOPT-NEXT:    csrr a3, vlenb
+; UNOPT-NEXT:    srli a3, a3, 1
+; UNOPT-NEXT:  .LBB19_1: # %loop
+; UNOPT-NEXT:    # =>This Inner Loop Header: Depth=1
+; UNOPT-NEXT:    vsetvli zero, a2, e32, mf2, ta, ma
+; UNOPT-NEXT:    vle32.v v8, (a0)
+; UNOPT-NEXT:    fsrmi a4, 0
+; UNOPT-NEXT:    vfcvt.x.f.v v8, v8
+; UNOPT-NEXT:    fsrm a4
+; UNOPT-NEXT:    vfcvt.f.x.v v8, v8
+; UNOPT-NEXT:    addi a1, a1, -1
+; UNOPT-NEXT:    vsetvli a4, zero, e32, mf2, ta, ma
+; UNOPT-NEXT:    vse32.v v8, (a0)
+; UNOPT-NEXT:    add a0, a0, a3
+; UNOPT-NEXT:    bnez a1, .LBB19_1
+; UNOPT-NEXT:  # %bb.2: # %exit
+; UNOPT-NEXT:    ret
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+  %addr = getelementptr <vscale x 1 x float>, ptr %p, i64 %i
+  %x = load <vscale x 1 x float>, ptr %addr
+  %r = call <vscale x 1 x i32> @llvm.riscv.vfcvt.x.f.v.nxv1i32.nxv1f32.i64(
+    <vscale x 1 x i32> poison,
+    <vscale x 1 x float> %x,
+    i64 0, i64 %vl)
+  %f = call <vscale x 1 x float> @llvm.riscv.vfcvt.f.x.v.nxv1f32.nxv1i32.i64(
+    <vscale x 1 x float> poison,
+    <vscale x 1 x i32> %r,
+    i64 7, i64 %vl)
+  store <vscale x 1 x float> %f, ptr %addr
+  %i.next = add i64 %i, 1
+  %done = icmp eq i64 %i.next, %n
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; In a strictfp function FRM may hold any rounding mode, so static RNE still
+; needs a save/restore.
+; Inline assembly may change frm, so a static RNE operation after it still
+; sets frm.
+define <vscale x 1 x float> @static_rne_after_asm(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind {
+; CHECK-LABEL: static_rne_after_asm:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    fsrmi 1
+; CHECK-NEXT:    mv a0, a0
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    fsrmi a1, 0
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    ret
+;
+; UNOPT-LABEL: static_rne_after_asm:
+; UNOPT:       # %bb.0: # %entry
+; UNOPT-NEXT:    #APP
+; UNOPT-NEXT:    fsrmi 1
+; UNOPT-NEXT:    mv a0, a0
+; UNOPT-NEXT:    #NO_APP
+; UNOPT-NEXT:    fsrmi a1, 0
+; UNOPT-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; UNOPT-NEXT:    vfadd.vv v8, v8, v9
+; UNOPT-NEXT:    fsrm a1
+; UNOPT-NEXT:    ret
+entry:
+  %vl = call i64 asm sideeffect "fsrmi 1\0Amv $0, $1", "=r,r"(i64 %2)
+  %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
+    <vscale x 1 x float> poison,
+    <vscale x 1 x float> %0,
+    <vscale x 1 x float> %1,
+    i64 0, i64 %vl)
+  ret <vscale x 1 x float> %a
+}
+
+define <vscale x 1 x float> @static_rne_strictfp(<vscale x 1 x float> %0, <vscale x 1 x float> %1, i64 %2) nounwind strictfp {
+; CHECK-LABEL: static_rne_strictfp:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fsrmi a1, 0
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    fsrm a1
+; CHECK-NEXT:    ret
+;
+; UNOPT-LABEL: static_rne_strictfp:
+; UNOPT:       # %bb.0: # %entry
+; UNOPT-NEXT:    fsrmi a1, 0
+; UNOPT-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; UNOPT-NEXT:    vfadd.vv v8, v8, v9
+; UNOPT-NEXT:    fsrm a1
+; UNOPT-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x float> @llvm.riscv.vfadd.nxv1f32.nxv1f32(
+    <vscale x 1 x float> poison,
+    <vscale x 1 x float> %0,
+    <vscale x 1 x float> %1,
+    i64 0, i64 %2) strictfp
   ret <vscale x 1 x float> %a
 }

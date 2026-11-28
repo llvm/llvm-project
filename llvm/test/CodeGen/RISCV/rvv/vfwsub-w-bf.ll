@@ -7,10 +7,8 @@
 define <vscale x 1 x float> @intrinsic_vfwsub.w_wv_nxv1f32_nxv1f32_nxv1bf16(<vscale x 1 x float> %0, <vscale x 1 x bfloat> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_wv_nxv1f32_nxv1f32_nxv1bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf4, ta, ma
 ; CHECK-NEXT:    vfwsub.wv v8, v8, v9
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfwsub.w.nxv1f32.nxv1bf16(
@@ -25,10 +23,8 @@ entry:
 define <vscale x 1 x float> @intrinsic_vfwsub.w_mask_wv_nxv1f32_nxv1f32_nxv1bf16(<vscale x 1 x float> %0, <vscale x 1 x float> %1, <vscale x 1 x bfloat> %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_nxv1f32_nxv1f32_nxv1bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf4, ta, mu
 ; CHECK-NEXT:    vfwsub.wv v8, v9, v10, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfwsub.w.mask.nxv1f32.nxv1bf16(
@@ -44,10 +40,8 @@ entry:
 define <vscale x 2 x float> @intrinsic_vfwsub.w_wv_nxv2f32_nxv2f32_nxv2bf16(<vscale x 2 x float> %0, <vscale x 2 x bfloat> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_wv_nxv2f32_nxv2f32_nxv2bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf2, ta, ma
 ; CHECK-NEXT:    vfwsub.wv v8, v8, v9
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vfwsub.w.nxv2f32.nxv2bf16(
@@ -62,10 +56,8 @@ entry:
 define <vscale x 2 x float> @intrinsic_vfwsub.w_mask_wv_nxv2f32_nxv2f32_nxv2bf16(<vscale x 2 x float> %0, <vscale x 2 x float> %1, <vscale x 2 x bfloat> %2, <vscale x 2 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_nxv2f32_nxv2f32_nxv2bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf2, ta, mu
 ; CHECK-NEXT:    vfwsub.wv v8, v9, v10, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vfwsub.w.mask.nxv2f32.nxv2bf16(
@@ -81,10 +73,8 @@ entry:
 define <vscale x 4 x float> @intrinsic_vfwsub.w_wv_nxv4f32_nxv4f32_nxv4bf16(<vscale x 4 x float> %0, <vscale x 4 x bfloat> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_wv_nxv4f32_nxv4f32_nxv4bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m1, ta, ma
 ; CHECK-NEXT:    vfwsub.wv v8, v8, v10
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vfwsub.w.nxv4f32.nxv4bf16(
@@ -99,10 +89,8 @@ entry:
 define <vscale x 4 x float> @intrinsic_vfwsub.w_mask_wv_nxv4f32_nxv4f32_nxv4bf16(<vscale x 4 x float> %0, <vscale x 4 x float> %1, <vscale x 4 x bfloat> %2, <vscale x 4 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_nxv4f32_nxv4f32_nxv4bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m1, ta, mu
 ; CHECK-NEXT:    vfwsub.wv v8, v10, v12, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vfwsub.w.mask.nxv4f32.nxv4bf16(
@@ -118,10 +106,8 @@ entry:
 define <vscale x 8 x float> @intrinsic_vfwsub.w_wv_nxv8f32_nxv8f32_nxv8bf16(<vscale x 8 x float> %0, <vscale x 8 x bfloat> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_wv_nxv8f32_nxv8f32_nxv8bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m2, ta, ma
 ; CHECK-NEXT:    vfwsub.wv v8, v8, v12
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vfwsub.w.nxv8f32.nxv8bf16(
@@ -136,10 +122,8 @@ entry:
 define <vscale x 8 x float> @intrinsic_vfwsub.w_mask_wv_nxv8f32_nxv8f32_nxv8bf16(<vscale x 8 x float> %0, <vscale x 8 x float> %1, <vscale x 8 x bfloat> %2, <vscale x 8 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_nxv8f32_nxv8f32_nxv8bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m2, ta, mu
 ; CHECK-NEXT:    vfwsub.wv v8, v12, v16, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vfwsub.w.mask.nxv8f32.nxv8bf16(
@@ -155,10 +139,8 @@ entry:
 define <vscale x 16 x float> @intrinsic_vfwsub.w_wv_nxv16f32_nxv16f32_nxv16bf16(<vscale x 16 x float> %0, <vscale x 16 x bfloat> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_wv_nxv16f32_nxv16f32_nxv16bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m4, ta, ma
 ; CHECK-NEXT:    vfwsub.wv v8, v8, v16
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vfwsub.w.nxv16f32.nxv16bf16(
@@ -175,9 +157,7 @@ define <vscale x 16 x float> @intrinsic_vfwsub.w_mask_wv_nxv16f32_nxv16f32_nxv16
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a1, e16alt, m4, ta, mu
 ; CHECK-NEXT:    vle16.v v24, (a0)
-; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vfwsub.wv v8, v16, v24, v0.t
-; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vfwsub.w.mask.nxv16f32.nxv16bf16(
@@ -193,10 +173,8 @@ entry:
 define <vscale x 1 x float> @intrinsic_vfwsub.w_wf_nxv1f32_nxv1f32_bf16(<vscale x 1 x float> %0, bfloat %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_wf_nxv1f32_nxv1f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf4, ta, ma
 ; CHECK-NEXT:    vfwsub.wf v8, v8, fa0
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfwsub.w.nxv1f32.bf16(
@@ -211,10 +189,8 @@ entry:
 define <vscale x 1 x float> @intrinsic_vfwsub.w_mask_wf_nxv1f32_nxv1f32_bf16(<vscale x 1 x float> %0, <vscale x 1 x float> %1, bfloat %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_nxv1f32_nxv1f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf4, ta, mu
 ; CHECK-NEXT:    vfwsub.wf v8, v9, fa0, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfwsub.w.mask.nxv1f32.bf16(
@@ -230,10 +206,8 @@ entry:
 define <vscale x 2 x float> @intrinsic_vfwsub.w_wf_nxv2f32_nxv2f32_bf16(<vscale x 2 x float> %0, bfloat %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_wf_nxv2f32_nxv2f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf2, ta, ma
 ; CHECK-NEXT:    vfwsub.wf v8, v8, fa0
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vfwsub.w.nxv2f32.bf16(
@@ -248,10 +222,8 @@ entry:
 define <vscale x 2 x float> @intrinsic_vfwsub.w_mask_wf_nxv2f32_nxv2f32_bf16(<vscale x 2 x float> %0, <vscale x 2 x float> %1, bfloat %2, <vscale x 2 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_nxv2f32_nxv2f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf2, ta, mu
 ; CHECK-NEXT:    vfwsub.wf v8, v9, fa0, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vfwsub.w.mask.nxv2f32.bf16(
@@ -267,10 +239,8 @@ entry:
 define <vscale x 4 x float> @intrinsic_vfwsub.w_wf_nxv4f32_nxv4f32_bf16(<vscale x 4 x float> %0, bfloat %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_wf_nxv4f32_nxv4f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m1, ta, ma
 ; CHECK-NEXT:    vfwsub.wf v8, v8, fa0
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vfwsub.w.nxv4f32.bf16(
@@ -285,10 +255,8 @@ entry:
 define <vscale x 4 x float> @intrinsic_vfwsub.w_mask_wf_nxv4f32_nxv4f32_bf16(<vscale x 4 x float> %0, <vscale x 4 x float> %1, bfloat %2, <vscale x 4 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_nxv4f32_nxv4f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m1, ta, mu
 ; CHECK-NEXT:    vfwsub.wf v8, v10, fa0, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vfwsub.w.mask.nxv4f32.bf16(
@@ -304,10 +272,8 @@ entry:
 define <vscale x 8 x float> @intrinsic_vfwsub.w_wf_nxv8f32_nxv8f32_bf16(<vscale x 8 x float> %0, bfloat %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_wf_nxv8f32_nxv8f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m2, ta, ma
 ; CHECK-NEXT:    vfwsub.wf v8, v8, fa0
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vfwsub.w.nxv8f32.bf16(
@@ -322,10 +288,8 @@ entry:
 define <vscale x 8 x float> @intrinsic_vfwsub.w_mask_wf_nxv8f32_nxv8f32_bf16(<vscale x 8 x float> %0, <vscale x 8 x float> %1, bfloat %2, <vscale x 8 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_nxv8f32_nxv8f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m2, ta, mu
 ; CHECK-NEXT:    vfwsub.wf v8, v12, fa0, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vfwsub.w.mask.nxv8f32.bf16(
@@ -341,10 +305,8 @@ entry:
 define <vscale x 16 x float> @intrinsic_vfwsub.w_wf_nxv16f32_nxv16f32_bf16(<vscale x 16 x float> %0, bfloat %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_wf_nxv16f32_nxv16f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m4, ta, ma
 ; CHECK-NEXT:    vfwsub.wf v8, v8, fa0
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vfwsub.w.nxv16f32.bf16(
@@ -359,10 +321,8 @@ entry:
 define <vscale x 16 x float> @intrinsic_vfwsub.w_mask_wf_nxv16f32_nxv16f32_bf16(<vscale x 16 x float> %0, <vscale x 16 x float> %1, bfloat %2, <vscale x 16 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_nxv16f32_nxv16f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m4, ta, mu
 ; CHECK-NEXT:    vfwsub.wf v8, v16, fa0, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vfwsub.w.mask.nxv16f32.bf16(
@@ -378,10 +338,8 @@ entry:
 define <vscale x 1 x float> @intrinsic_vfwsub.w_mask_wv_tie_nxv1f32_nxv1f32_nxv1bf16(<vscale x 1 x float> %0, <vscale x 1 x bfloat> %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_tie_nxv1f32_nxv1f32_nxv1bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf4, ta, mu
 ; CHECK-NEXT:    vfwsub.wv v8, v8, v9, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfwsub.w.mask.nxv1f32.nxv1bf16(
@@ -397,10 +355,8 @@ entry:
 define <vscale x 2 x float> @intrinsic_vfwsub.w_mask_wv_tie_nxv2f32_nxv2f32_nxv2bf16(<vscale x 2 x float> %0, <vscale x 2 x bfloat> %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_tie_nxv2f32_nxv2f32_nxv2bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf2, ta, mu
 ; CHECK-NEXT:    vfwsub.wv v8, v8, v9, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vfwsub.w.mask.nxv2f32.nxv2bf16(
@@ -416,10 +372,8 @@ entry:
 define <vscale x 4 x float> @intrinsic_vfwsub.w_mask_wv_tie_nxv4f32_nxv4f32_nxv4bf16(<vscale x 4 x float> %0, <vscale x 4 x bfloat> %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_tie_nxv4f32_nxv4f32_nxv4bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m1, ta, mu
 ; CHECK-NEXT:    vfwsub.wv v8, v8, v10, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vfwsub.w.mask.nxv4f32.nxv4bf16(
@@ -435,10 +389,8 @@ entry:
 define <vscale x 8 x float> @intrinsic_vfwsub.w_mask_wv_tie_nxv8f32_nxv8f32_nxv8bf16(<vscale x 8 x float> %0, <vscale x 8 x bfloat> %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_tie_nxv8f32_nxv8f32_nxv8bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m2, ta, mu
 ; CHECK-NEXT:    vfwsub.wv v8, v8, v12, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vfwsub.w.mask.nxv8f32.nxv8bf16(
@@ -454,10 +406,8 @@ entry:
 define <vscale x 16 x float> @intrinsic_vfwsub.w_mask_wv_tie_nxv16f32_nxv16f32_nxv16bf16(<vscale x 16 x float> %0, <vscale x 16 x bfloat> %1, <vscale x 16 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wv_tie_nxv16f32_nxv16f32_nxv16bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m4, ta, mu
 ; CHECK-NEXT:    vfwsub.wv v8, v8, v16, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vfwsub.w.mask.nxv16f32.nxv16bf16(
@@ -473,10 +423,8 @@ entry:
 define <vscale x 1 x float> @intrinsic_vfwsub.w_mask_wf_tie_nxv1f32_nxv1f32_bf16(<vscale x 1 x float> %0, bfloat %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_tie_nxv1f32_nxv1f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf4, ta, mu
 ; CHECK-NEXT:    vfwsub.wf v8, v8, fa0, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfwsub.w.mask.nxv1f32.bf16(
@@ -492,10 +440,8 @@ entry:
 define <vscale x 2 x float> @intrinsic_vfwsub.w_mask_wf_tie_nxv2f32_nxv2f32_bf16(<vscale x 2 x float> %0, bfloat %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_tie_nxv2f32_nxv2f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf2, ta, mu
 ; CHECK-NEXT:    vfwsub.wf v8, v8, fa0, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vfwsub.w.mask.nxv2f32.bf16(
@@ -511,10 +457,8 @@ entry:
 define <vscale x 4 x float> @intrinsic_vfwsub.w_mask_wf_tie_nxv4f32_nxv4f32_bf16(<vscale x 4 x float> %0, bfloat %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_tie_nxv4f32_nxv4f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m1, ta, mu
 ; CHECK-NEXT:    vfwsub.wf v8, v8, fa0, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vfwsub.w.mask.nxv4f32.bf16(
@@ -530,10 +474,8 @@ entry:
 define <vscale x 8 x float> @intrinsic_vfwsub.w_mask_wf_tie_nxv8f32_nxv8f32_bf16(<vscale x 8 x float> %0, bfloat %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_tie_nxv8f32_nxv8f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m2, ta, mu
 ; CHECK-NEXT:    vfwsub.wf v8, v8, fa0, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vfwsub.w.mask.nxv8f32.bf16(
@@ -549,10 +491,8 @@ entry:
 define <vscale x 16 x float> @intrinsic_vfwsub.w_mask_wf_tie_nxv16f32_nxv16f32_bf16(<vscale x 16 x float> %0, bfloat %1, <vscale x 16 x i1> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_mask_wf_tie_nxv16f32_nxv16f32_bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m4, ta, mu
 ; CHECK-NEXT:    vfwsub.wf v8, v8, fa0, v0.t
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.vfwsub.w.mask.nxv16f32.bf16(
@@ -568,11 +508,9 @@ entry:
 define <vscale x 1 x float> @intrinsic_vfwsub.w_wv_untie_nxv1f32_nxv1f32_nxv1bf16(<vscale x 1 x bfloat> %0, <vscale x 1 x float> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_wv_untie_nxv1f32_nxv1f32_nxv1bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf4, ta, ma
 ; CHECK-NEXT:    vfwsub.wv v10, v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v10
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.vfwsub.w.nxv1f32.nxv1bf16(
@@ -587,11 +525,9 @@ entry:
 define <vscale x 2 x float> @intrinsic_vfwsub.w_wv_untie_nxv2f32_nxv2f32_nxv2bf16(<vscale x 2 x bfloat> %0, <vscale x 2 x float> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwsub.w_wv_untie_nxv2f32_nxv2f32_nxv2bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, mf2, ta, ma
 ; CHECK-NEXT:    vfwsub.wv v10, v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v10
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.vfwsub.w.nxv2f32.nxv2bf16(
@@ -608,10 +544,8 @@ define <vscale x 4 x float> @intrinsic_vfwsub.w_wv_untie_nxv4f32_nxv4f32_nxv4bf1
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m1, ta, ma
 ; CHECK-NEXT:    vfwsub.wv v8, v10, v12
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.vfwsub.w.nxv4f32.nxv4bf16(
@@ -628,10 +562,8 @@ define <vscale x 8 x float> @intrinsic_vfwsub.w_wv_untie_nxv8f32_nxv8f32_nxv8bf1
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v16, v8
-; CHECK-NEXT:    fsrmi a1, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e16alt, m2, ta, ma
 ; CHECK-NEXT:    vfwsub.wv v8, v12, v16
-; CHECK-NEXT:    fsrm a1
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.vfwsub.w.nxv8f32.nxv8bf16(
