@@ -714,12 +714,9 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   CmdArgs.push_back("-output_no_suffix");
   CmdArgs.push_back("-spirv_input");
 
-  // Compile for the --code list, e.g. "xe-mtl-u,xe-mtl-h" for an IGCA target,
-  // or otherwise for the Intel GPU in --arch.
+  // Compile for the --code list, e.g. "xe-mtl-u,xe-mtl-h" for an IGCA target.
   std::string Devices = llvm::join(Args.getAllArgValues(OPT_code_EQ), ",");
-  if (Devices.empty())
-    Devices = Args.getLastArgValue(OPT_arch_EQ);
-  assert(!Devices.empty() && "a device must be specified for AOT compilation");
+  assert(!Devices.empty() && "--code must be specified for AOT compilation");
   CmdArgs.push_back("-device");
   CmdArgs.push_back(Devices);
 
@@ -748,7 +745,7 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
   OffloadArch OA = StringToOffloadArch(Arch);
-  if (OA.isIntelGPU() || OA.isIntelIGCA())
+  if (OA.isIntelIGCA())
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
   if (OA.isIntelCPU())
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
@@ -1003,10 +1000,11 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     SplitModules = std::move(*SplitModulesOrErr);
   }
 
-  // An IGCA target is compiled ahead of time only for its --code list.
+  // An IGCA target is compiled ahead of time only for the GPUs in --code. An
+  // Intel CPU is always compiled ahead of time.
   OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
   bool IsAOTCompileNeeded =
-      OA.isIntelIGCA() ? Args.hasArg(OPT_code_EQ) : OA.isIntel();
+      OA.isIntelIGCA() ? Args.hasArg(OPT_code_EQ) : OA.isIntelCPU();
 
   StringRef OutputFileNameExt = ".spv";
 
@@ -1121,6 +1119,29 @@ int main(int argc, char **argv) {
   if (!Args.hasArg(OPT_o))
     reportError(createStringError("output file must be specified"));
   OutputFile = Args.getLastArgValue(OPT_o);
+
+  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
+  OffloadArch OA = StringToOffloadArch(Arch);
+  if (OA.isIntelGPU())
+    reportError(createStringError(
+        "'--arch=" + Arch + "' is an Intel GPU; use '--arch=" +
+        OffloadArchToVirtualArchString(OA) + " --code=" + Arch + "' instead"));
+  if (Args.hasArg(OPT_code_EQ) && !OA.isIntelIGCA())
+    reportError(createStringError("--code requires an IGCA target in --arch"));
+  // --code can list several GPUs separated by commas. Each one must be an
+  // Intel GPU of the IGCA target in --arch.
+  for (StringRef Code : Args.getAllArgValues(OPT_code_EQ)) {
+    for (StringRef Name : llvm::split(Code, ',')) {
+      if (Name.empty())
+        reportError(createStringError("'--code=" + Code +
+                                      "' has an empty Intel GPU name"));
+      OffloadArch Device = StringToOffloadArch(Name);
+      if (!Device.isIntelGPU() ||
+          Arch != OffloadArchToVirtualArchString(Device))
+        reportError(createStringError(
+            "'" + Name + "' in --code is not an Intel GPU of '" + Arch + "'"));
+    }
+  }
 
   // Get the input buffers to pass to the linking stage.
   auto ResolvedInputsOrErr = getInput(Args);
