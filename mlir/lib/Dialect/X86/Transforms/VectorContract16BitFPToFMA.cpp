@@ -1,4 +1,4 @@
-//===- VectorContractBF16ToFMA.cpp-----------------------------------------===//
+//===- VectorContract16BitFPToFMA.cpp--------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -188,6 +188,83 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
   return subviews;
 }
 
+// Lowers a BF16 vector.contract to FMAs by up-converting BF16 to F32 with
+// integer bit ops (BF16 is the upper half of F32), without AVX2_BF16 ops2_BF16
+// ops.
+//
+// VNNI: each i32 holds an (even, odd) BF16 pair; `shl 16` yields the even
+// element and `and 0xFFFF0000` the odd one. Flat: `extui` + `shl 16`.
+static void upconvertBF16ToFMA(PatternRewriter &rewriter,
+                               vector::ContractionOp contractOp, Value unitSrc,
+                               Value nonUnitSrc, int64_t vecLen, bool isVnni) {
+  Location loc = contractOp.getLoc();
+  Type i16Ty = rewriter.getI16Type();
+  Type i32Ty = rewriter.getI32Type();
+  auto i32VecTy = VectorType::get(vecLen, i32Ty);
+  auto f32VecTy = VectorType::get(vecLen, rewriter.getF32Type());
+  auto accTy = cast<VectorType>(contractOp.getAccType());
+
+  auto flatten = [&](Value v) -> Value {
+    auto ty = cast<VectorType>(v.getType());
+    return vector::ShapeCastOp::create(
+        rewriter, loc,
+        VectorType::get(ty.getNumElements(), ty.getElementType()), v);
+  };
+  auto splat = [&](uint32_t v) -> Value {
+    return arith::ConstantOp::create(
+        rewriter, loc, i32VecTy,
+        DenseElementsAttr::get(i32VecTy, static_cast<int32_t>(v)));
+  };
+  auto toF32 = [&](Value v) -> Value {
+    return vector::BitCastOp::create(rewriter, loc, f32VecTy, v);
+  };
+
+  Value shift16 = splat(16);
+  Value acc =
+      vector::ShapeCastOp::create(rewriter, loc, f32VecTy, contractOp.getAcc());
+  Value result;
+
+  if (isVnni) {
+    Value unitI32 = vector::BitCastOp::create(
+        rewriter, loc, VectorType::get(1, i32Ty), flatten(unitSrc));
+    Value unitBcst =
+        vector::BroadcastOp::create(rewriter, loc, i32VecTy, unitI32);
+    Value nonUnitI32 =
+        vector::BitCastOp::create(rewriter, loc, i32VecTy, flatten(nonUnitSrc));
+
+    Value oddMask = splat(0xFFFF0000u);
+    Value unitOdd =
+        toF32(arith::AndIOp::create(rewriter, loc, unitBcst, oddMask));
+    Value nonUnitOdd =
+        toF32(arith::AndIOp::create(rewriter, loc, nonUnitI32, oddMask));
+    Value oddFma =
+        vector::FMAOp::create(rewriter, loc, unitOdd, nonUnitOdd, acc);
+
+    Value unitEven =
+        toF32(arith::ShLIOp::create(rewriter, loc, unitBcst, shift16));
+    Value nonUnitEven =
+        toF32(arith::ShLIOp::create(rewriter, loc, nonUnitI32, shift16));
+    result =
+        vector::FMAOp::create(rewriter, loc, unitEven, nonUnitEven, oddFma);
+  } else {
+    auto extToI32 = [&](Value v, int64_t len) -> Value {
+      Value i16 = vector::BitCastOp::create(
+          rewriter, loc, VectorType::get(len, i16Ty), flatten(v));
+      return arith::ExtUIOp::create(rewriter, loc, VectorType::get(len, i32Ty),
+                                    i16);
+    };
+    Value unitBcst = vector::BroadcastOp::create(rewriter, loc, i32VecTy,
+                                                 extToI32(unitSrc, 1));
+    Value unitF32 =
+        toF32(arith::ShLIOp::create(rewriter, loc, unitBcst, shift16));
+    Value nonUnitF32 = toF32(arith::ShLIOp::create(
+        rewriter, loc, extToI32(nonUnitSrc, vecLen), shift16));
+    result = vector::FMAOp::create(rewriter, loc, unitF32, nonUnitF32, acc);
+  }
+
+  rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(contractOp, accTy, result);
+}
+
 // Implements outer product contraction as a sequence of BF16-packed
 // operation even/odd loads and FMA operations.
 //
@@ -224,8 +301,9 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
 //   %4 = x86.avx.cvt.packed.odd.indexed_to_f32 %m2 -> vector<8xf32>
 //   %5 = vector.fma %1, %4, %arg2
 //   scf.yield %3, %5
-struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
-  using AddContractionOpRewritePattern::AddContractionOpRewritePattern;
+struct VectorContract16BitFPToFMA : public AddContractionOpRewritePattern {
+  VectorContract16BitFPToFMA(MLIRContext *ctx, bool fallback)
+      : AddContractionOpRewritePattern(ctx), fallback(fallback) {}
 
   LogicalResult
   matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
@@ -235,9 +313,14 @@ struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
     // do once (code refactoring), all architecture specific nanokernel
     // passes are merged into the repo.
     VectorType lhsTy = contractOp.getLhsType();
-    if (!lhsTy.getElementType().isBF16())
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Only BF16 lowering is supported.");
+    Type elemTy = lhsTy.getElementType();
+    if (!elemTy.isBF16() && !elemTy.isF16())
+      return rewriter.notifyMatchFailure(
+          contractOp, "Only BF16/F16 lowering is supported.");
+
+    if (fallback && elemTy.isF16())
+      return rewriter.notifyMatchFailure(
+          contractOp, "The BF16 fallback does not support F16.");
 
     bool isVnni = isInVnniLayout(contractOp.getOperation(),
                                  contractOp.getIndexingMapsArray(),
@@ -249,7 +332,7 @@ struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
 
     if (!accTy.getElementType().isF32())
       return rewriter.notifyMatchFailure(
-          contractOp, "Only F32 acumulation supported for BF16 type.");
+          contractOp, "Only F32 acumulation supported for BF16/F16 type.");
 
     ArrayRef<int64_t> accShape = accTy.getShape();
     llvm::SmallVector<int64_t> nonUnitDimAcc;
@@ -294,7 +377,13 @@ struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
 
     // Non-unit dimensions should match the vector length of BF16.
     unsigned int nonUnitDim = nonUnitDimAcc.front();
-    if (nonUnitDim != 4 && nonUnitDim != 8)
+    // The fallback uses generic vector ops, so it can also target AVX512.
+    if (fallback && nonUnitDim != 4 && nonUnitDim != 8 && nonUnitDim != 16)
+      return rewriter.notifyMatchFailure(
+          contractOp, "BF16 fallback expects non-unit (LHS or RHS) dim and "
+                      "acc dim of size 4/8/16.");
+
+    if (!fallback && nonUnitDim != 4 && nonUnitDim != 8)
       return rewriter.notifyMatchFailure(
           contractOp, "BF16 packed load operation expects non-unit (LHR or "
                       "RHS) dim and acc dim of size 4/8.");
@@ -332,6 +421,13 @@ struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
 
     ArrayRef<int64_t> nonUnitDimShape =
         rhsHasMultipleNonUnitDims ? rhsShape : lhsShape;
+
+    // The fallback rewrites each contract alone, so flat layouts need no pair.
+    if (fallback) {
+      upconvertBF16ToFMA(rewriter, contractOp, unitSrc, nonUnitSrc, nonUnitDim,
+                         isVnni);
+      return success();
+    }
 
     // Get the pair vector.contract operation. The pair is decided on:
     //  (1) - the unitDim operand Lhs or Rhs should be same,
@@ -507,8 +603,12 @@ struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
     rewriter.replaceOp(contractOp, castFma);
     return success();
   }
+
+private:
+  bool fallback;
 };
 
-void x86::populateVectorContractBF16ToFMAPatterns(RewritePatternSet &patterns) {
-  patterns.add<VectorContractBF16ToFMA>(patterns.getContext());
+void x86::populateVectorContract16BitFPToFMAPatterns(
+    RewritePatternSet &patterns, bool fallback) {
+  patterns.add<VectorContract16BitFPToFMA>(patterns.getContext(), fallback);
 }

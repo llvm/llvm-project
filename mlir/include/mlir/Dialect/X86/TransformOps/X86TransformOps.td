@@ -38,15 +38,20 @@ def ApplyVectorContractToPackedTypeDotProductPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyVectorContractBF16ToFMAPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.x86.vector_contract_bf16_to_fma",
+def ApplyVectorContract16BitFPToFMAPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.vector_contract_16bit_fp_to_fma",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Collect patterns to lower a BF16 type vector.contract operation
-        to a FMA via emulation lowering using BF16 packed operations.
+    Collect patterns to lower a BF16/F16 type vector.contract operation
+        to a FMA via emulation lowering using BF16/F16 packed operations.
+
+    With `bf16_fallback`, BF16 operands are instead up-converted to F32 with
+    integer bit operations, for targets without AVX2_BF16 ops. This also
+    accepts 16-wide contractions for AVX512 targets.
   }];
 
-  let assemblyFormat = "attr-dict";
+  let arguments = (ins UnitAttr:$fallback);
+  let assemblyFormat = "(`bf16_fallback` $fallback^)? attr-dict";
 }
 
 def ApplySinkVectorProducerOpsPatternsOp : Op<Transform_Dialect,

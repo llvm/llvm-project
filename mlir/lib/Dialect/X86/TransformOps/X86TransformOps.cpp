@@ -35,9 +35,9 @@ void mlir::transform::ApplyVectorContractToPackedTypeDotProductPatternsOp::
   x86::populateVectorContractToPackedTypeDotProductPatterns(patterns);
 }
 
-void mlir::transform::ApplyVectorContractBF16ToFMAPatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  x86::populateVectorContractBF16ToFMAPatterns(patterns);
+void mlir::transform::ApplyVectorContract16BitFPToFMAPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  x86::populateVectorContract16BitFPToFMAPatterns(patterns, getFallback());
 }
 
 void mlir::transform::ApplySinkVectorProducerOpsPatternsOp::populatePatterns(

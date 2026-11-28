@@ -32,8 +32,8 @@ def non_configurable_patterns():
     x86.ApplyVectorContractToFMAPatternsOp()
     # CHECK: transform.apply_patterns.x86.vector_contract_to_packed_type_dot_product
     x86.ApplyVectorContractToPackedTypeDotProductPatternsOp()
-    # CHECK: transform.apply_patterns.x86.vector_contract_bf16_to_fma
-    x86.ApplyVectorContractBF16ToFMAPatternsOp()
+    # CHECK: transform.apply_patterns.x86.vector_contract_16bit_fp_to_fma
+    x86.ApplyVectorContract16BitFPToFMAPatternsOp()
     # CHECK: transform.apply_patterns.x86.sink_vector_producer_ops
     x86.ApplySinkVectorProducerOpsPatternsOp()
     # CHECK: transform.apply_patterns.x86.shuffle_vector_fma_ops
