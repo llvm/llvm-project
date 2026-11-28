@@ -95,14 +95,14 @@ define void @test_mul(i64 %A) {
 
 define void @test_sdiv(i64 %A) {
 ; CHECK-LABEL: @test_sdiv(
-; CHECK-NEXT:  #dbg_value(i64 %A, {{.*}}, !DIExpression(DW_OP_constu, 7, DW_OP_div, DW_OP_stack_value),
+; CHECK-NEXT:  #dbg_value(i64 poison, {{.*}}, !DIExpression(),
   %1 = sdiv i64 %A, 7
   ret void
 }
 
 define void @test_srem(i64 %A) {
 ; CHECK-LABEL: @test_srem(
-; CHECK-NEXT:  #dbg_value(i64 %A, {{.*}}, !DIExpression(DW_OP_constu, 7, DW_OP_mod, DW_OP_stack_value),
+; CHECK-NEXT:  #dbg_value(i64 poison, {{.*}}, !DIExpression(),
   %1 = srem i64 %A, 7
   ret void
 }
