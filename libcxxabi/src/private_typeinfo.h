@@ -108,18 +108,16 @@ struct _LIBCXXABI_HIDDEN __dynamic_cast_info {
   bool dst_type_might_be_derived_from_static_type;
   // Whether we know that there is a unique dst_type in the graph.
   bool has_unique_dst_type;
-  // communicates to a dst_type node that (static_ptr, static_type) was found
-  //    above it.
-  bool found_our_static_ptr;
-  // communicates to a dst_type node that a static_type was found
-  //    above it, but it wasn't (static_ptr, static_type)
-  bool found_any_static_type;
 };
 
 enum class result {
   unknown,
   success,
   failure,
+
+  // These are only used by search_above_dst. Conceptually these are more specific `unknown` states.
+  our_static_ptr,  // (static_ptr, static_type) was found
+  any_static_type, // only static_type was found
 };
 
 // Has no base class
