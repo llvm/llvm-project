@@ -382,8 +382,9 @@ define <4 x i32> @rotl_binop_shuffle(<4 x i32>, <4 x i32>) {
 define <4 x i32> @rotr_binop_shuffle(<4 x i32>, <4 x i32>) {
 ; SSE2-LABEL: rotr_binop_shuffle:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,2,3,3]
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    psllq %xmm1, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; SSE2-NEXT:    psllq %xmm1, %xmm0
@@ -398,8 +399,9 @@ define <4 x i32> @rotr_binop_shuffle(<4 x i32>, <4 x i32>) {
 ;
 ; AVX2-LABEL: rotr_binop_shuffle:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[2,2,3,3]
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX2-NEXT:    vpsllq %xmm1, %xmm2, %xmm2
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; AVX2-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
