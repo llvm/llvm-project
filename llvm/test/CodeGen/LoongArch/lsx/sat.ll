@@ -7,8 +7,7 @@
 define <16 x i8> @vsat_b(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: vsat_b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmaxi.b $vr0, $vr0, -8
-; CHECK-NEXT:    vmini.b $vr0, $vr0, 7
+; CHECK-NEXT:    vsat.b $vr0, $vr0, 3
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i8> @llvm.smax.v16i8(<16 x i8> %a, <16 x i8> splat (i8 -8))
@@ -19,8 +18,7 @@ entry:
 define <16 x i8> @vsat_b_commute(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: vsat_b_commute:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmini.b $vr0, $vr0, 7
-; CHECK-NEXT:    vmaxi.b $vr0, $vr0, -8
+; CHECK-NEXT:    vsat.b $vr0, $vr0, 3
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i8> @llvm.smin.v16i8(<16 x i8> %a, <16 x i8> splat (i8 7))
@@ -31,10 +29,7 @@ entry:
 define <8 x i16> @vsat_h(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: vsat_h:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.h $vr1, -128
-; CHECK-NEXT:    vmax.h $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.h $vr1, 127
-; CHECK-NEXT:    vmin.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.h $vr0, $vr0, 7
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %a, <8 x i16> splat (i16 -128))
@@ -45,10 +40,7 @@ entry:
 define <8 x i16> @vsat_h_commute(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: vsat_h_commute:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.h $vr1, 127
-; CHECK-NEXT:    vmin.h $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.h $vr1, -128
-; CHECK-NEXT:    vmax.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.h $vr0, $vr0, 7
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %a, <8 x i16> splat (i16 127))
@@ -59,11 +51,7 @@ entry:
 define <4 x i32> @vsat_w(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: vsat_w:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lu12i.w $a0, -8
-; CHECK-NEXT:    vreplgr2vr.w $vr1, $a0
-; CHECK-NEXT:    vmax.w $vr0, $vr0, $vr1
-; CHECK-NEXT:    vldi $vr1, -2433
-; CHECK-NEXT:    vmin.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.w $vr0, $vr0, 15
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %a, <4 x i32> splat (i32 -32768))
@@ -74,11 +62,7 @@ entry:
 define <4 x i32> @vsat_w_commute(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: vsat_w_commute:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vldi $vr1, -2433
-; CHECK-NEXT:    vmin.w $vr0, $vr0, $vr1
-; CHECK-NEXT:    lu12i.w $a0, -8
-; CHECK-NEXT:    vreplgr2vr.w $vr1, $a0
-; CHECK-NEXT:    vmax.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.w $vr0, $vr0, 15
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <4 x i32> @llvm.smin.v4i32(<4 x i32> %a, <4 x i32> splat (i32 32767))
@@ -99,13 +83,7 @@ define <2 x i64> @vsat_d(<2 x i64> %a) nounwind {
 ;
 ; LA64-LABEL: vsat_d:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    lu12i.w $a0, -524288
-; LA64-NEXT:    vreplgr2vr.d $vr1, $a0
-; LA64-NEXT:    vmax.d $vr0, $vr0, $vr1
-; LA64-NEXT:    lu12i.w $a0, 524287
-; LA64-NEXT:    ori $a0, $a0, 4095
-; LA64-NEXT:    vreplgr2vr.d $vr1, $a0
-; LA64-NEXT:    vmin.d $vr0, $vr0, $vr1
+; LA64-NEXT:    vsat.d $vr0, $vr0, 31
 ; LA64-NEXT:    ret
 entry:
   %0 = call <2 x i64> @llvm.smax.v2i64(<2 x i64> %a, <2 x i64> splat (i64 -2147483648))
@@ -126,13 +104,7 @@ define <2 x i64> @vsat_d_commute(<2 x i64> %a) nounwind {
 ;
 ; LA64-LABEL: vsat_d_commute:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    lu12i.w $a0, 524287
-; LA64-NEXT:    ori $a0, $a0, 4095
-; LA64-NEXT:    vreplgr2vr.d $vr1, $a0
-; LA64-NEXT:    vmin.d $vr0, $vr0, $vr1
-; LA64-NEXT:    lu12i.w $a0, -524288
-; LA64-NEXT:    vreplgr2vr.d $vr1, $a0
-; LA64-NEXT:    vmax.d $vr0, $vr0, $vr1
+; LA64-NEXT:    vsat.d $vr0, $vr0, 31
 ; LA64-NEXT:    ret
 entry:
   %0 = call <2 x i64> @llvm.smin.v2i64(<2 x i64> %a, <2 x i64> splat (i64 2147483647))
@@ -143,8 +115,7 @@ entry:
 define <16 x i8> @vsat_b_imm_0(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: vsat_b_imm_0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmaxi.b $vr0, $vr0, -1
-; CHECK-NEXT:    vmini.b $vr0, $vr0, 0
+; CHECK-NEXT:    vsat.b $vr0, $vr0, 0
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i8> @llvm.smax.v16i8(<16 x i8> %a, <16 x i8> splat (i8 -1))
@@ -155,10 +126,7 @@ entry:
 define <16 x i8> @vsat_b_imm_6(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: vsat_b_imm_6:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.b $vr1, -64
-; CHECK-NEXT:    vmax.b $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.b $vr1, 63
-; CHECK-NEXT:    vmin.b $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.b $vr0, $vr0, 6
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i8> @llvm.smax.v16i8(<16 x i8> %a, <16 x i8> splat (i8 -64))
@@ -169,8 +137,7 @@ entry:
 define <8 x i16> @vsat_h_imm_0(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: vsat_h_imm_0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmaxi.h $vr0, $vr0, -1
-; CHECK-NEXT:    vmini.h $vr0, $vr0, 0
+; CHECK-NEXT:    vsat.h $vr0, $vr0, 0
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %a, <8 x i16> splat (i16 -1))
@@ -181,12 +148,7 @@ entry:
 define <8 x i16> @vsat_h_imm_14(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: vsat_h_imm_14:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vldi $vr1, -2624
-; CHECK-NEXT:    vmax.h $vr0, $vr0, $vr1
-; CHECK-NEXT:    lu12i.w $a0, 3
-; CHECK-NEXT:    ori $a0, $a0, 4095
-; CHECK-NEXT:    vreplgr2vr.h $vr1, $a0
-; CHECK-NEXT:    vmin.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.h $vr0, $vr0, 14
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %a, <8 x i16> splat (i16 -16384))
@@ -197,8 +159,7 @@ entry:
 define <4 x i32> @vsat_w_imm_0(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: vsat_w_imm_0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmaxi.w $vr0, $vr0, -1
-; CHECK-NEXT:    vmini.w $vr0, $vr0, 0
+; CHECK-NEXT:    vsat.w $vr0, $vr0, 0
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %a, <4 x i32> splat (i32 -1))
@@ -209,12 +170,7 @@ entry:
 define <4 x i32> @vsat_w_imm_30(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: vsat_w_imm_30:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vldi $vr1, -3136
-; CHECK-NEXT:    vmax.w $vr0, $vr0, $vr1
-; CHECK-NEXT:    lu12i.w $a0, 262143
-; CHECK-NEXT:    ori $a0, $a0, 4095
-; CHECK-NEXT:    vreplgr2vr.w $vr1, $a0
-; CHECK-NEXT:    vmin.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.w $vr0, $vr0, 30
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %a, <4 x i32> splat (i32 -1073741824))
@@ -225,8 +181,7 @@ entry:
 define <2 x i64> @vsat_d_imm_0(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: vsat_d_imm_0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmaxi.d $vr0, $vr0, -1
-; CHECK-NEXT:    vmini.d $vr0, $vr0, 0
+; CHECK-NEXT:    vsat.d $vr0, $vr0, 0
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <2 x i64> @llvm.smax.v2i64(<2 x i64> %a, <2 x i64> splat (i64 -1))
@@ -246,12 +201,7 @@ define <2 x i64> @vsat_d_imm_62(<2 x i64> %a) nounwind {
 ;
 ; LA64-LABEL: vsat_d_imm_62:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    vldi $vr1, -896
-; LA64-NEXT:    vmax.d $vr0, $vr0, $vr1
-; LA64-NEXT:    addi.w $a0, $zero, -1
-; LA64-NEXT:    lu52i.d $a0, $a0, 1023
-; LA64-NEXT:    vreplgr2vr.d $vr1, $a0
-; LA64-NEXT:    vmin.d $vr0, $vr0, $vr1
+; LA64-NEXT:    vsat.d $vr0, $vr0, 62
 ; LA64-NEXT:    ret
 entry:
   %0 = call <2 x i64> @llvm.smax.v2i64(<2 x i64> %a, <2 x i64> splat (i64 -4611686018427387904))
@@ -272,8 +222,7 @@ entry:
 define <8 x i16> @vsat_hu(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: vsat_hu:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.h $vr1, 255
-; CHECK-NEXT:    vmin.hu $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.hu $vr0, $vr0, 7
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i16> @llvm.umin.v8i16(<8 x i16> %a, <8 x i16> splat (i16 255))
@@ -283,8 +232,7 @@ entry:
 define <4 x i32> @vsat_wu(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: vsat_wu:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vldi $vr1, -2305
-; CHECK-NEXT:    vmin.wu $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.wu $vr0, $vr0, 15
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %a, <4 x i32> splat (i32 65535))
@@ -294,8 +242,7 @@ entry:
 define <2 x i64> @vsat_du(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: vsat_du:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vldi $vr1, -1777
-; CHECK-NEXT:    vmin.du $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.du $vr0, $vr0, 31
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %a, <2 x i64> splat (i64 4294967295))
@@ -325,8 +272,7 @@ entry:
 define <16 x i8> @vsat_bu_imm_5(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: vsat_bu_imm_5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.b $vr1, 63
-; CHECK-NEXT:    vmin.bu $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.bu $vr0, $vr0, 5
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i8> @llvm.umin.v16i8(<16 x i8> %a, <16 x i8> splat (i8 63))
@@ -336,8 +282,7 @@ entry:
 define <16 x i8> @vsat_bu_imm_6(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: vsat_bu_imm_6:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.b $vr1, 127
-; CHECK-NEXT:    vmin.bu $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.bu $vr0, $vr0, 6
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <16 x i8> @llvm.umin.v16i8(<16 x i8> %a, <16 x i8> splat (i8 127))
@@ -367,8 +312,7 @@ entry:
 define <8 x i16> @vsat_hu_imm_5(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: vsat_hu_imm_5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.h $vr1, 63
-; CHECK-NEXT:    vmin.hu $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.hu $vr0, $vr0, 5
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i16> @llvm.umin.v8i16(<8 x i16> %a, <8 x i16> splat (i16 63))
@@ -378,10 +322,7 @@ entry:
 define <8 x i16> @vsat_hu_imm_14(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: vsat_hu_imm_14:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lu12i.w $a0, 7
-; CHECK-NEXT:    ori $a0, $a0, 4095
-; CHECK-NEXT:    vreplgr2vr.h $vr1, $a0
-; CHECK-NEXT:    vmin.hu $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.hu $vr0, $vr0, 14
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i16> @llvm.umin.v8i16(<8 x i16> %a, <8 x i16> splat (i16 32767))
@@ -411,8 +352,7 @@ entry:
 define <4 x i32> @vsat_wu_imm_5(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: vsat_wu_imm_5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.w $vr1, 63
-; CHECK-NEXT:    vmin.wu $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.wu $vr0, $vr0, 5
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %a, <4 x i32> splat (i32 63))
@@ -422,10 +362,7 @@ entry:
 define <4 x i32> @vsat_wu_imm_30(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: vsat_wu_imm_30:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lu12i.w $a0, 524287
-; CHECK-NEXT:    ori $a0, $a0, 4095
-; CHECK-NEXT:    vreplgr2vr.w $vr1, $a0
-; CHECK-NEXT:    vmin.wu $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.wu $vr0, $vr0, 30
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <4 x i32> @llvm.umin.v4i32(<4 x i32> %a, <4 x i32> splat (i32 2147483647))
@@ -455,8 +392,7 @@ entry:
 define <2 x i64> @vsat_du_imm_5(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: vsat_du_imm_5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.d $vr1, 63
-; CHECK-NEXT:    vmin.du $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.du $vr0, $vr0, 5
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %a, <2 x i64> splat (i64 63))
@@ -473,10 +409,7 @@ define <2 x i64> @vsat_du_imm_62(<2 x i64> %a) nounwind {
 ;
 ; LA64-LABEL: vsat_du_imm_62:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    addi.w $a0, $zero, -1
-; LA64-NEXT:    lu52i.d $a0, $a0, 2047
-; LA64-NEXT:    vreplgr2vr.d $vr1, $a0
-; LA64-NEXT:    vmin.du $vr0, $vr0, $vr1
+; LA64-NEXT:    vsat.du $vr0, $vr0, 62
 ; LA64-NEXT:    ret
 entry:
   %0 = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %a, <2 x i64> splat (i64 9223372036854775807))
@@ -487,10 +420,7 @@ entry:
 define <2 x i64> @vsat_h_bitcast(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: vsat_h_bitcast:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.h $vr1, -128
-; CHECK-NEXT:    vmax.h $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.h $vr1, 127
-; CHECK-NEXT:    vmin.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.h $vr0, $vr0, 7
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <2 x i64> %a to <8 x i16>
@@ -503,10 +433,7 @@ entry:
 define <8 x i16> @vsat_h_poison_elts(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: vsat_h_poison_elts:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.h $vr1, -128
-; CHECK-NEXT:    vmax.h $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.h $vr1, 127
-; CHECK-NEXT:    vmin.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.h $vr0, $vr0, 7
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %a, <8 x i16> <i16 -128, i16 poison, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128, i16 -128>)
@@ -517,10 +444,7 @@ entry:
 define <8 x i16> @vsat_h_icmp_select(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: vsat_h_icmp_select:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.h $vr1, 127
-; CHECK-NEXT:    vmin.h $vr0, $vr0, $vr1
-; CHECK-NEXT:    vrepli.h $vr1, -128
-; CHECK-NEXT:    vmax.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vsat.h $vr0, $vr0, 7
 ; CHECK-NEXT:    ret
 entry:
   %c0 = icmp slt <8 x i16> %a, splat (i16 127)
@@ -535,8 +459,7 @@ define <8 x i16> @vsat_h_multi_use(<8 x i16> %a, ptr %p) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vrepli.h $vr1, -128
 ; CHECK-NEXT:    vmax.h $vr1, $vr0, $vr1
-; CHECK-NEXT:    vrepli.h $vr0, 127
-; CHECK-NEXT:    vmin.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vsat.h $vr0, $vr0, 7
 ; CHECK-NEXT:    vst $vr1, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

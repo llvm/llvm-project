@@ -272,6 +272,11 @@ foreach N = [8, 16, 32] in
 def vsplat_i#N#_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmPow2<"#N#">",
                                       [build_vector, bitconvert]>;
 
+// Clamp to the range of a narrower signed/unsigned integer. These must be tried
+// before the [X]VMINI/[X]VMAXI patterns.
+def vsat_s : ComplexPattern<vAny, 2, "selectVSat", [smin, smax], [], 20>;
+def vsat_u : ComplexPattern<vAny, 2, "selectVSatU", [umin], [], 20>;
+
 def muladd : PatFrag<(ops node:$vd, node:$vj, node:$vk),
                      (add node:$vd, (mul node:$vj, node:$vk))>;
 
@@ -2334,6 +2339,24 @@ defm : PatVrVr<smin, "VMIN">;
 defm : PatVrVrU<umin, "VMIN">;
 defm : PatVrSimm5<smin, "VMINI">;
 defm : PatVrUimm5<umin, "VMINI">;
+
+// VSAT_{B/H/W/D}[U]
+def : Pat<(v16i8 (vsat_s v16i8:$vj, uimm3:$imm)),
+          (VSAT_B LSX128:$vj, uimm3:$imm)>;
+def : Pat<(v8i16 (vsat_s v8i16:$vj, uimm4:$imm)),
+          (VSAT_H LSX128:$vj, uimm4:$imm)>;
+def : Pat<(v4i32 (vsat_s v4i32:$vj, uimm5:$imm)),
+          (VSAT_W LSX128:$vj, uimm5:$imm)>;
+def : Pat<(v2i64 (vsat_s v2i64:$vj, uimm6:$imm)),
+          (VSAT_D LSX128:$vj, uimm6:$imm)>;
+def : Pat<(v16i8 (vsat_u v16i8:$vj, uimm3:$imm)),
+          (VSAT_BU LSX128:$vj, uimm3:$imm)>;
+def : Pat<(v8i16 (vsat_u v8i16:$vj, uimm4:$imm)),
+          (VSAT_HU LSX128:$vj, uimm4:$imm)>;
+def : Pat<(v4i32 (vsat_u v4i32:$vj, uimm5:$imm)),
+          (VSAT_WU LSX128:$vj, uimm5:$imm)>;
+def : Pat<(v2i64 (vsat_u v2i64:$vj, uimm6:$imm)),
+          (VSAT_DU LSX128:$vj, uimm6:$imm)>;
 
 // VMUL_{B/H/W/D}
 defm : PatVrVr<mul, "VMUL">;

@@ -494,6 +494,66 @@ bool LoongArchDAGToDAGISel::selectVSplatUimmPow2(SDValue N,
   return false;
 }
 
+// Match a signed clamp to [-2^imm, 2^imm - 1], with the two bounds applied in
+// either order.
+bool LoongArchDAGToDAGISel::selectVSat(SDValue N, SDValue &Src,
+                                       SDValue &SatImm) const {
+  unsigned Opc = N.getOpcode();
+  if (Opc != ISD::SMIN && Opc != ISD::SMAX)
+    return false;
+
+  SDValue Inner = N.getOperand(0);
+  if (Inner.getOpcode() != (Opc == ISD::SMIN ? ISD::SMAX : ISD::SMIN))
+    return false;
+
+  unsigned EltBitWidth = N.getScalarValueSizeInBits();
+  APInt Hi, Lo;
+  if (!selectVSplat(peekThroughBitcasts(N.getOperand(1)).getNode(), Hi,
+                    EltBitWidth) ||
+      !selectVSplat(peekThroughBitcasts(Inner.getOperand(1)).getNode(), Lo,
+                    EltBitWidth))
+    return false;
+
+  if (Opc == ISD::SMAX)
+    std::swap(Hi, Lo);
+
+  if (Hi.getBitWidth() != EltBitWidth || Lo.getBitWidth() != EltBitWidth ||
+      Lo != ~Hi)
+    return false;
+
+  // Hi may be zero, in which case the range is [-1, 0].
+  int32_t Log2 = (Hi + 1).exactLogBase2();
+  if (Log2 == -1)
+    return false;
+
+  Src = Inner.getOperand(0);
+  SatImm = CurDAG->getTargetConstant(Log2, SDLoc(N), Subtarget->getGRLenVT());
+  return true;
+}
+
+// Match an unsigned clamp to [0, 2^(imm + 1) - 1].
+bool LoongArchDAGToDAGISel::selectVSatU(SDValue N, SDValue &Src,
+                                        SDValue &SatImm) const {
+  if (N.getOpcode() != ISD::UMIN)
+    return false;
+
+  unsigned EltBitWidth = N.getScalarValueSizeInBits();
+  APInt Hi;
+  if (!selectVSplat(peekThroughBitcasts(N.getOperand(1)).getNode(), Hi,
+                    EltBitWidth) ||
+      Hi.getBitWidth() != EltBitWidth || !Hi.isMask())
+    return false;
+
+  // [X]VMINI handles small bounds, and is no slower than [X]VSAT.
+  if (Hi.isIntN(5))
+    return false;
+
+  Src = N.getOperand(0);
+  SatImm = CurDAG->getTargetConstant(Hi.countr_one() - 1, SDLoc(N),
+                                     Subtarget->getGRLenVT());
+  return true;
+}
+
 // This pass converts a legalized DAG into a LoongArch-specific DAG, ready
 // for instruction scheduling.
 FunctionPass *llvm::createLoongArchISelDag(LoongArchTargetMachine &TM,

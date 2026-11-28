@@ -2085,6 +2085,24 @@ defm : PatXrXrU<umin, "XVMIN">;
 defm : PatXrSimm5<smin, "XVMINI">;
 defm : PatXrUimm5<umin, "XVMINI">;
 
+// XVSAT_{B/H/W/D}[U]
+def : Pat<(v32i8 (vsat_s v32i8:$xj, uimm3:$imm)),
+          (XVSAT_B LASX256:$xj, uimm3:$imm)>;
+def : Pat<(v16i16 (vsat_s v16i16:$xj, uimm4:$imm)),
+          (XVSAT_H LASX256:$xj, uimm4:$imm)>;
+def : Pat<(v8i32 (vsat_s v8i32:$xj, uimm5:$imm)),
+          (XVSAT_W LASX256:$xj, uimm5:$imm)>;
+def : Pat<(v4i64 (vsat_s v4i64:$xj, uimm6:$imm)),
+          (XVSAT_D LASX256:$xj, uimm6:$imm)>;
+def : Pat<(v32i8 (vsat_u v32i8:$xj, uimm3:$imm)),
+          (XVSAT_BU LASX256:$xj, uimm3:$imm)>;
+def : Pat<(v16i16 (vsat_u v16i16:$xj, uimm4:$imm)),
+          (XVSAT_HU LASX256:$xj, uimm4:$imm)>;
+def : Pat<(v8i32 (vsat_u v8i32:$xj, uimm5:$imm)),
+          (XVSAT_WU LASX256:$xj, uimm5:$imm)>;
+def : Pat<(v4i64 (vsat_u v4i64:$xj, uimm6:$imm)),
+          (XVSAT_DU LASX256:$xj, uimm6:$imm)>;
+
 // XVMUL_{B/H/W/D}
 defm : PatXrXr<mul, "XVMUL">;
 
