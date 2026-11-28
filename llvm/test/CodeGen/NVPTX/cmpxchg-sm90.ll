@@ -2004,7 +2004,7 @@ define i8 @acq_rel_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param::func.b32 [func_retval0], %r11;
 ; SM90-NEXT:    ret;
-    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("block") acq_rel acquire
+    %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new syncscope("block") acq_rel acquire, !noalias.addrspace !0
     ret i8 %new
 }
 
@@ -2066,7 +2066,7 @@ define i32 @acq_rel_acquire_i32_generic_cta(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    atom.acq_rel.cta.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
-    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new syncscope("block") acq_rel acquire
+    %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new syncscope("block") acq_rel acquire, !noalias.addrspace !0
     ret i32 %new
 }
 
@@ -2087,3 +2087,6 @@ define i32 @acq_rel_acquire_i32_shared_cta(ptr addrspace(3) %addr, i32 %cmp, i32
     ret i32 %new
 }
 
+
+; Native atomic instruction tests exclude thread-private local memory.
+!0 = !{i32 5, i32 6}

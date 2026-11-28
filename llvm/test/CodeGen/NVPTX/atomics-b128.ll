@@ -32,7 +32,7 @@ define i128 @test_xchg_generic(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %old = atomicrmw xchg ptr %addr, i128 %amt release
+  %old = atomicrmw xchg ptr %addr, i128 %amt release, !noalias.addrspace !999
   ret i128 %old
 }
 
@@ -112,7 +112,7 @@ define i128 @test_xchg_block(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %old = atomicrmw xchg ptr %addr, i128 %amt syncscope("block") release
+  %old = atomicrmw xchg ptr %addr, i128 %amt syncscope("block") release, !noalias.addrspace !999
   ret i128 %old
 }
 
@@ -132,7 +132,7 @@ define i128 @test_xchg_cluster(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %old = atomicrmw xchg ptr %addr, i128 %amt syncscope("cluster") release
+  %old = atomicrmw xchg ptr %addr, i128 %amt syncscope("cluster") release, !noalias.addrspace !999
   ret i128 %old
 }
 
@@ -152,7 +152,7 @@ define i128 @test_xchg_gpu(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %old = atomicrmw xchg ptr %addr, i128 %amt syncscope("device") release
+  %old = atomicrmw xchg ptr %addr, i128 %amt syncscope("device") release, !noalias.addrspace !999
   ret i128 %old
 }
 
@@ -172,7 +172,7 @@ define i128 @test_xchg_sys(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %old = atomicrmw xchg ptr %addr, i128 %amt release
+  %old = atomicrmw xchg ptr %addr, i128 %amt release, !noalias.addrspace !999
   ret i128 %old
 }
 
@@ -192,7 +192,7 @@ define i128 @test_xchg_relaxed(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %old = atomicrmw xchg ptr %addr, i128 %amt monotonic
+  %old = atomicrmw xchg ptr %addr, i128 %amt monotonic, !noalias.addrspace !999
   ret i128 %old
 }
 
@@ -212,7 +212,7 @@ define i128 @test_xchg_acquire(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %old = atomicrmw xchg ptr %addr, i128 %amt acquire
+  %old = atomicrmw xchg ptr %addr, i128 %amt acquire, !noalias.addrspace !999
   ret i128 %old
 }
 
@@ -232,7 +232,7 @@ define i128 @test_xchg_release(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %old = atomicrmw xchg ptr %addr, i128 %amt release
+  %old = atomicrmw xchg ptr %addr, i128 %amt release, !noalias.addrspace !999
   ret i128 %old
 }
 
@@ -252,7 +252,7 @@ define i128 @test_xchg_acq_rel(ptr %addr, i128 %amt) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %old = atomicrmw xchg ptr %addr, i128 %amt acq_rel
+  %old = atomicrmw xchg ptr %addr, i128 %amt acq_rel, !noalias.addrspace !999
   ret i128 %old
 }
 
@@ -274,7 +274,7 @@ define i128 @test_cmpxchg_generic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new monotonic monotonic
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new monotonic monotonic, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -340,7 +340,7 @@ define i128 @test_cmpxchg_block(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new syncscope("block") monotonic monotonic
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new syncscope("block") monotonic monotonic, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -362,7 +362,7 @@ define i128 @test_cmpxchg_cluster(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new syncscope("cluster") monotonic monotonic
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new syncscope("cluster") monotonic monotonic, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -384,7 +384,7 @@ define i128 @test_cmpxchg_gpu(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new syncscope("device") monotonic monotonic
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new syncscope("device") monotonic monotonic, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -428,7 +428,7 @@ define i128 @test_cmpxchg_monotonic_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new monotonic monotonic
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new monotonic monotonic, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -450,7 +450,7 @@ define i128 @test_cmpxchg_monotonic_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new monotonic acquire
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new monotonic acquire, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -473,7 +473,7 @@ define i128 @test_cmpxchg_monotonic_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new monotonic seq_cst
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new monotonic seq_cst, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -495,7 +495,7 @@ define i128 @test_cmpxchg_acquire_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acquire monotonic
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acquire monotonic, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -517,7 +517,7 @@ define i128 @test_cmpxchg_acquire_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acquire acquire
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acquire acquire, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -540,7 +540,7 @@ define i128 @test_cmpxchg_acquire_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acquire seq_cst
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acquire seq_cst, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -562,7 +562,7 @@ define i128 @test_cmpxchg_release_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new release monotonic
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new release monotonic, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -584,7 +584,7 @@ define i128 @test_cmpxchg_release_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new release acquire
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new release acquire, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -607,7 +607,7 @@ define i128 @test_cmpxchg_release_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new release seq_cst
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new release seq_cst, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -629,7 +629,7 @@ define i128 @test_cmpxchg_acq_rel_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acq_rel monotonic
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acq_rel monotonic, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -651,7 +651,7 @@ define i128 @test_cmpxchg_acq_rel_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acq_rel acquire
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acq_rel acquire, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -674,7 +674,7 @@ define i128 @test_cmpxchg_acq_rel_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acq_rel seq_cst
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new acq_rel seq_cst, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -697,7 +697,7 @@ define i128 @test_cmpxchg_seq_cst_monotonic(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new seq_cst monotonic
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new seq_cst monotonic, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -720,7 +720,7 @@ define i128 @test_cmpxchg_seq_cst_acquire(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new seq_cst acquire
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new seq_cst acquire, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -743,7 +743,7 @@ define i128 @test_cmpxchg_seq_cst_seq_cst(ptr %addr, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd4, %rd5};
 ; CHECK-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new seq_cst seq_cst
+  %pairold = cmpxchg ptr %addr, i128 %cmp, i128 %new seq_cst seq_cst, !noalias.addrspace !999
   ret i128 %new
 }
 
@@ -780,7 +780,7 @@ define i128 @test_atomicrmw_and(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
-  %ret = atomicrmw and ptr %ptr, i128 %val monotonic
+  %ret = atomicrmw and ptr %ptr, i128 %val monotonic, !noalias.addrspace !999
   ret i128 %ret
 }
 
@@ -817,7 +817,7 @@ define i128 @test_atomicrmw_or(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
-  %ret = atomicrmw or ptr %ptr, i128 %val monotonic
+  %ret = atomicrmw or ptr %ptr, i128 %val monotonic, !noalias.addrspace !999
   ret i128 %ret
 }
 
@@ -854,7 +854,7 @@ define i128 @test_atomicrmw_xor(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
-  %ret = atomicrmw xor ptr %ptr, i128 %val monotonic
+  %ret = atomicrmw xor ptr %ptr, i128 %val monotonic, !noalias.addrspace !999
   ret i128 %ret
 }
 
@@ -894,7 +894,7 @@ define i128 @test_atomicrmw_min(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
-  %ret = atomicrmw min ptr %ptr, i128 %val monotonic
+  %ret = atomicrmw min ptr %ptr, i128 %val monotonic, !noalias.addrspace !999
   ret i128 %ret
 }
 
@@ -934,7 +934,7 @@ define i128 @test_atomicrmw_max(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
-  %ret = atomicrmw max ptr %ptr, i128 %val monotonic
+  %ret = atomicrmw max ptr %ptr, i128 %val monotonic, !noalias.addrspace !999
   ret i128 %ret
 }
 
@@ -974,7 +974,7 @@ define i128 @test_atomicrmw_umin(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
-  %ret = atomicrmw umin ptr %ptr, i128 %val monotonic
+  %ret = atomicrmw umin ptr %ptr, i128 %val monotonic, !noalias.addrspace !999
   ret i128 %ret
 }
 
@@ -1014,7 +1014,7 @@ define i128 @test_atomicrmw_umax(ptr %ptr, i128 %val) {
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    st.param::func.v2.b64 [func_retval0], {%rd1, %rd2};
 ; CHECK-NEXT:    ret;
-  %ret = atomicrmw umax ptr %ptr, i128 %val monotonic
+  %ret = atomicrmw umax ptr %ptr, i128 %val monotonic, !noalias.addrspace !999
   ret i128 %ret
 }
 
@@ -1038,3 +1038,6 @@ define void @test_atomicrmw_xchg_const() {
   %res = atomicrmw xchg ptr addrspace(3) @si128, i128 23 monotonic
   ret void
 }
+
+; Native atomic instruction tests exclude thread-private local memory.
+!999 = !{i32 5, i32 6}

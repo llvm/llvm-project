@@ -86,7 +86,7 @@ define float @fadd_f32_generic(ptr %addr, float %val) {
 ; ALLOW-NEXT:    atom.relaxed.sys.add.f32 %r2, [%rd1], %r1;
 ; ALLOW-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; ALLOW-NEXT:    ret;
-  %r = atomicrmw fadd ptr %addr, float %val monotonic
+  %r = atomicrmw fadd ptr %addr, float %val monotonic, !noalias.addrspace !999
   ret float %r
 }
 
@@ -107,3 +107,6 @@ define float @fadd_f32_shared(ptr addrspace(3) %addr, float %val) {
   %r = atomicrmw fadd ptr addrspace(3) %addr, float %val monotonic
   ret float %r
 }
+
+; Native atomic instruction tests exclude thread-private local memory.
+!999 = !{i32 5, i32 6}
