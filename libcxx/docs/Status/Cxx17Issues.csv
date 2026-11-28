@@ -187,7 +187,7 @@
 "[LWG2261](https://wg21.link/LWG2261)","Are containers required to use their 'pointer' type internally?","2016-11 (Issaquah)","","","[#99970](https://github.com/llvm/llvm-project/issues/99970)",""
 "[LWG2394](https://wg21.link/LWG2394)","locale::name specification unclear - what is implementation-defined?","2016-11 (Issaquah)","{{Complete}}","","[#103434](https://github.com/llvm/llvm-project/issues/103434)",""
 "[LWG2460](https://wg21.link/LWG2460)","LWG issue 2408 and value categories","2016-11 (Issaquah)","{{Complete}}","","[#103435](https://github.com/llvm/llvm-project/issues/103435)",""
-"[LWG2468](https://wg21.link/LWG2468)","Self-move-assignment of library types","2016-11 (Issaquah)","","","[#99971](https://github.com/llvm/llvm-project/issues/99971)",""
+"[LWG2468](https://wg21.link/LWG2468)","Self-move-assignment of library types","2016-11 (Issaquah)","{{NothingToDo}}","","[#99971](https://github.com/llvm/llvm-project/issues/99971)",""
 "[LWG2475](https://wg21.link/LWG2475)","Allow overwriting of std::basic_string terminator with charT() to allow cleaner interoperation with legacy APIs","2016-11 (Issaquah)","{{Complete}}","","[#103436](https://github.com/llvm/llvm-project/issues/103436)",""
 "[LWG2503](https://wg21.link/LWG2503)","multiline option should be added to syntax_option_type","2016-11 (Issaquah)","{{Complete}}","","[#103437](https://github.com/llvm/llvm-project/issues/103437)",""
 "[LWG2510](https://wg21.link/LWG2510)","Tag types should not be DefaultConstructible","2016-11 (Issaquah)","{{Complete}}","","[#103438](https://github.com/llvm/llvm-project/issues/103438)",""
