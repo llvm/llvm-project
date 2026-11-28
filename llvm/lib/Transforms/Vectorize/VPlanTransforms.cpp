@@ -1850,6 +1850,20 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+      // Narrow loads that are single scalars regardless of their users: a
+      // scalar load and a broadcast are cheaper than a gather.
+      if (auto *LoadR = dyn_cast<VPWidenLoadRecipe>(&R)) {
+        if (!vputils::isSingleScalar(LoadR))
+          continue;
+        auto *Clone = new VPReplicateRecipe(
+            &LoadR->getIngredient(), {LoadR->getAddr()},
+            /*IsSingleScalar=*/true,
+            /*Mask=*/nullptr, {}, *LoadR, LoadR->getDebugLoc());
+        Clone->insertBefore(LoadR);
+        LoadR->replaceAllUsesWith(Clone);
+        LoadR->eraseFromParent();
+        continue;
+      }
       if (!isa<VPWidenRecipe, VPWidenGEPRecipe, VPReplicateRecipe,
                VPWidenIntrinsicRecipe>(&R))
         continue;
@@ -1927,7 +1941,12 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
             bool LiveInNeedsBroadcast =
                 isa<VPIRValue>(Op) && !isa<VPConstant>(Op);
             auto *OpR = dyn_cast<VPReplicateRecipe>(Op);
-            return LiveInNeedsBroadcast || (OpR && OpR->isSingleScalar());
+            // Single-scalar loads are narrowed when this walk reaches them,
+            // after their users.
+            bool IsSingleScalarLoad =
+                isa<VPWidenLoadRecipe>(Op) && vputils::isSingleScalar(Op);
+            return LiveInNeedsBroadcast || (OpR && OpR->isSingleScalar()) ||
+                   IsSingleScalarLoad;
           }))
         continue;
 
