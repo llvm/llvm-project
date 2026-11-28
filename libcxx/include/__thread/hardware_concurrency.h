@@ -22,7 +22,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-#if _LIBCPP_STD_VER >= 11 && _LIBCPP_HAS_THREADS
+#if !defined(_LIBCPP_CXX03_LANG) && _LIBCPP_HAS_THREADS
 
 // __thread_hardware_concurrency() has the same semantics as std::[j]thread::hardware_concurrency(), but allows querying
 // this information without depending on std::thread itself. This function is an alias to
@@ -41,7 +41,7 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 [[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI unsigned __thread_hardware_concurrency() _NOEXCEPT
     __asm__(_LIBCPP_THREAD_HARDWARE_CONCURRENCY_SYMBOL);
 
-#endif // _LIBCPP_STD_VER >= 11 && _LIBCPP_HAS_THREADS
+#endif // !defined(_LIBCPP_CXX03_LANG) && _LIBCPP_HAS_THREADS
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

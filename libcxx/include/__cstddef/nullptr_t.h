@@ -17,7 +17,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-using nullptr_t = decltype(nullptr);
+using nullptr_t = decltype(nullptr); // NOLINT(modernize-use-nullptr)
 
 _LIBCPP_END_NAMESPACE_STD
 

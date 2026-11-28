@@ -42,7 +42,7 @@ Types:
 #  define _LIBCPP_STDDEF_H
 
 #  ifdef __cplusplus
-typedef decltype(nullptr) nullptr_t;
+typedef decltype(nullptr) nullptr_t; // NOLINT(modernize-use-nullptr)
 #  endif
 
 #endif // _LIBCPP_STDDEF_H
