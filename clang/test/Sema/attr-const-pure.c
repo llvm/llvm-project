@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -x c++ %s
-
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-invalid-pure-attribute %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-invalid-pure-attribute -x c++ %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,invalidpure -Winvalid-pure-attribute %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,invalidpure -Winvalid-pure-attribute -x c++ %s
 // The attributes apply to function declarations, nothing else.
 __attribute__((const)) int func1(void);
 __attribute__((pure)) int func2(void);
@@ -63,4 +64,45 @@ __attribute__((pure)) int func8(void);
 [[gnu::const]] int func8(void) {
   return 12;
 }
+// Diagnosing invalid 'pure'/'const' attributes: writes through a pointer or
+// reference parameter, or to a global/static variable, violate the
+// attribute's no-visible-side-effects contract.
 
+int lookup(int key, int *value) __attribute__((__pure__));
+int lookup(int key, int *value) { // invalidpure-note {{function declared 'pure' here}}
+  if (key == 42) {
+    *value = 47; // invalidpure-warning {{function declared 'pure' stores through pointer parameter 'value'}}
+    return 0;
+  }
+  return -1;
+}
+
+static int global_cache;
+__attribute__((pure)) int writes_global(int x) { // invalidpure-note {{function declared 'pure' here}}
+  global_cache = x; // invalidpure-warning {{function declared 'pure' stores to global variable 'global_cache'}}
+  return global_cache;
+}
+
+__attribute__((pure)) int writes_static_local(int x) { // invalidpure-note {{function declared 'pure' here}}
+  static int cache = 0;
+  cache += x; // invalidpure-warning {{function declared 'pure' stores to static local variable 'cache'}}
+  return cache;
+}
+
+// No warning: local, non-static variable.
+__attribute__((pure)) int local_only(int x) {
+  int tmp = x * 2;
+  return tmp;
+}
+
+// No warning: read-only dereference of a const pointer.
+__attribute__((pure)) int reads_ptr_arg(const int *value) {
+  return *value;
+}
+
+#ifdef __cplusplus
+__attribute__((pure)) int writes_ref_arg(int &out) { // invalidpure-note {{function declared 'pure' here}}
+  out = 1; // invalidpure-warning {{function declared 'pure' stores through reference parameter 'out'}}
+  return 0;
+}
+#endif
