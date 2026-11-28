@@ -134,6 +134,38 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Lin
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.INTEL.ConstantFunctionPointer
+//===----------------------------------------------------------------------===//
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage, FunctionPointersINTEL], [SPV_INTEL_function_pointers]> {
+  spirv.func @callee(%arg0 : i32, %arg1 : f32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
+  }
+
+  spirv.func @use(%arg0 : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, %arg1 : !spirv.ptr<() -> (), CodeSectionINTEL>) "None" {
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @constant_function_pointer
+  spirv.func @constant_function_pointer() "None" {
+    // CHECK: [[FP:%.*]] = spirv.INTEL.ConstantFunctionPointer @callee : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>
+    // CHECK: [[VFP:%.*]] = spirv.INTEL.ConstantFunctionPointer @void_callee : !spirv.ptr<() -> (), CodeSectionINTEL>
+    // CHECK: spirv.FunctionCall @use([[FP]], [[VFP]])
+    %0 = spirv.INTEL.ConstantFunctionPointer @callee : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>
+    %1 = spirv.INTEL.ConstantFunctionPointer @void_callee : !spirv.ptr<() -> (), CodeSectionINTEL>
+    spirv.FunctionCall @use(%0, %1) : (!spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, !spirv.ptr<() -> (), CodeSectionINTEL>) -> ()
+    spirv.Return
+  }
+
+  // Defined after its use to cover the forward reference.
+  spirv.func @void_callee() "None" {
+    spirv.Return
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.INTEL.FunctionPointerCall
 //===----------------------------------------------------------------------===//
 

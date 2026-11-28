@@ -503,6 +503,10 @@ private:
   /// Map from the Type to the <id> that represents undef value of that type.
   DenseMap<Type, uint32_t> undefValIDMap;
 
+  /// Map from function symbol to the <id> of its
+  /// OpConstantFunctionPointerINTEL.
+  llvm::StringMap<uint32_t> functionPointerIDMap;
+
   /// Map from results of normal operations to their <id>s.
   DenseMap<Value, uint32_t> valueIDMap;
 

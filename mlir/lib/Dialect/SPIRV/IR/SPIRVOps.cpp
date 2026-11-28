@@ -1560,6 +1560,33 @@ spirv::GlobalVariableOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.INTEL.ConstantFunctionPointer
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::INTELConstantFunctionPointerOp::verify() {
+  if (cast<spirv::PointerType>(getType()).getStorageClass() !=
+      spirv::StorageClass::CodeSectionINTEL)
+    return emitOpError("result must have the CodeSectionINTEL storage class");
+  return success();
+}
+
+LogicalResult spirv::INTELConstantFunctionPointerOp::verifySymbolUses(
+    SymbolTableCollection &symbolTable) {
+  auto funcOp = symbolTable.lookupNearestSymbolFrom<spirv::FuncOp>(
+      *this, getFunctionAttr());
+  if (!funcOp) {
+    return emitOpError("function '")
+           << getFunction() << "' not found in nearest symbol table";
+  }
+  Type pointeeType = cast<spirv::PointerType>(getType()).getPointeeType();
+  if (pointeeType != funcOp.getFunctionType()) {
+    return emitOpError("result pointee type mismatch: expected ")
+           << funcOp.getFunctionType() << ", but provided " << pointeeType;
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.INTEL.FunctionPointerCall
 //===----------------------------------------------------------------------===//
 

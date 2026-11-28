@@ -273,6 +273,54 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [CacheControlsINTEL], [SP
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.INTEL.ConstantFunctionPointer
+//===----------------------------------------------------------------------===//
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, FunctionPointersINTEL], [SPV_INTEL_function_pointers]> {
+  spirv.func @callee(%arg0 : i32, %arg1 : f32) -> i32 "None" {
+    spirv.ReturnValue %arg0 : i32
+  }
+
+  spirv.func @constant_function_pointer() "None" {
+    // CHECK: spirv.INTEL.ConstantFunctionPointer @callee : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>
+    %0 = spirv.INTEL.ConstantFunctionPointer @callee : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Physical64 OpenCL {
+  spirv.func @function_pointer_wrong_storage_class() "None" {
+    // expected-error @+1 {{result must have the CodeSectionINTEL storage class}}
+    %0 = spirv.INTEL.ConstantFunctionPointer @function_pointer_wrong_storage_class : !spirv.ptr<() -> (), Function>
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Physical64 OpenCL {
+  spirv.func @function_pointer_unknown() "None" {
+    // expected-error @+1 {{function 'unknown' not found in nearest symbol table}}
+    %0 = spirv.INTEL.ConstantFunctionPointer @unknown : !spirv.ptr<() -> (), CodeSectionINTEL>
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Physical64 OpenCL {
+  spirv.func @function_pointer_type_mismatch() "None" {
+    // expected-error @+1 {{result pointee type mismatch: expected '() -> ()', but provided '(i32) -> ()'}}
+    %0 = spirv.INTEL.ConstantFunctionPointer @function_pointer_type_mismatch : !spirv.ptr<(i32) -> (), CodeSectionINTEL>
+    spirv.Return
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.INTEL.FunctionPointerCall
 //===----------------------------------------------------------------------===//
 

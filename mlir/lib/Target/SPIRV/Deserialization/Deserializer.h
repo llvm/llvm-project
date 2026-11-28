@@ -306,6 +306,11 @@ private:
   /// Get the type associated with the result <id> of an OpUndef.
   Type getUndefType(uint32_t id) { return undefMap.lookup(id); }
 
+  /// Gets the type and function <id> of an OpConstantFunctionPointerINTEL.
+  std::pair<Type, uint32_t> getConstantFunctionPointer(uint32_t id) {
+    return constantFunctionPointerMap.lookup(id);
+  }
+
   /// Returns true if the given `type` is for SPIR-V void type.
   bool isVoidType(Type type) const { return isa<NoneType>(type); }
 
@@ -557,6 +562,9 @@ private:
   /// current insertion point.
   LogicalResult processUndef(ArrayRef<uint32_t> operands);
 
+  /// Processes an OpConstantFunctionPointerINTEL instruction.
+  LogicalResult processConstantFunctionPointer(ArrayRef<uint32_t> operands);
+
   /// Method to dispatch to the specialized deserialization function for an
   /// operation in SPIR-V dialect that is a mirror of an instruction in the
   /// SPIR-V spec. This is auto-generated from ODS. Dispatch is handled for
@@ -703,6 +711,9 @@ private:
 
   // Mapping from result <id> to undef value of a type.
   DenseMap<uint32_t, Type> undefMap;
+
+  // Mapping from function pointer <id> to its type and function <id>.
+  DenseMap<uint32_t, std::pair<Type, uint32_t>> constantFunctionPointerMap;
 
   // Composites with OpUndef constituents, built as spirv.CompositeConstruct.
   DenseMap<uint32_t, std::pair<Type, SmallVector<uint32_t>>> undefCompositeMap;

@@ -386,6 +386,46 @@ def SPIRV_INTELMaskedScatterOp : SPIRV_IntelVendorOp<"MaskedScatter",
 
 // -----
 
+def SPIRV_INTELConstantFunctionPointerOp : SPIRV_IntelVendorOp<"ConstantFunctionPointer",
+    [DeclareOpInterfaceMethods<SymbolUserOpInterface>, InFunctionScope, Pure]> {
+  let summary = "Obtain the constant address of a function";
+
+  let description = [{
+    Result Type must be a pointer whose pointee type is the function type of
+    Function. Its Storage Class must be CodeSectionINTEL.
+
+    Function is the symbol of a `spirv.func`.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.INTEL.ConstantFunctionPointer @foo
+         : !spirv.ptr<(i32) -> i32, CodeSectionINTEL>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_INTEL_function_pointers]>,
+    Capability<[SPIRV_C_FunctionPointersINTEL]>
+  ];
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$function
+  );
+
+  let results = (outs
+    SPIRV_AnyPtr:$result
+  );
+
+  let autogenSerialization = 0;
+
+  let assemblyFormat = "$function attr-dict `:` type($result)";
+}
+
+// -----
+
 def SPIRV_INTELFunctionPointerCallOp : SPIRV_IntelVendorOp<"FunctionPointerCall",
     [InFunctionScope]> {
   let summary = "Call a function through a function pointer";
