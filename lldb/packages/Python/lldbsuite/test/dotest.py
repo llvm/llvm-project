@@ -22,6 +22,7 @@ for available options.
 import atexit
 import datetime
 import errno
+import json
 import logging
 import os
 import platform
@@ -1292,6 +1293,13 @@ def run_suite():
         sys.stderr.write(
             "Skip breakdown (unsupported=%d, skipped=%d)\n"
             % (result.countUnsupported(), result.countSkipped())
+        )
+
+    if getattr(result, "debug_info_results", None):
+        # Parsed by the lit test format to report results per debug info variant.
+        sys.stderr.write(
+            "Debug info breakdown: %s\n"
+            % json.dumps(result.debug_info_results, sort_keys=True)
         )
 
     if configuration.sdir_has_content and configuration.verbose:

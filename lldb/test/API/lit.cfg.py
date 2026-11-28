@@ -2,6 +2,7 @@
 
 # Configuration file for the 'lit' test runner.
 
+import atexit
 import os
 import platform
 import shlex
@@ -403,6 +404,10 @@ import lldbtest
 
 # testFormat: The test format to use to interpret tests.
 config.test_format = lldbtest.LLDBTest(dotest_cmd)
+
+# lit has no end-of-run hook, so print the per debug info variant summary once
+# lit is done (and has printed its own summary).
+atexit.register(lldbtest.print_debug_info_report)
 
 # Propagate TERM or default to vt100.
 config.environment["TERM"] = os.getenv("TERM", default="vt100")

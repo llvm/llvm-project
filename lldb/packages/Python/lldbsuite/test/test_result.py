@@ -8,6 +8,7 @@ and results of a single test run.
 """
 
 # System modules
+import collections
 import os
 import subprocess
 import traceback
@@ -77,6 +78,14 @@ class LLDBTestResult(unittest.TextTestResult):
         # This counts from 1 .. suite.countTestCases().
         self.counter = 0
         (width, height) = LLDBTestResult.getTerminalSize()
+        # Outcome counts per debug info variant: {"dwarf": {"PASS": 3, ...}}.
+        self.debug_info_results = collections.defaultdict(collections.Counter)
+
+    def _recordDebugInfoResult(self, test, status):
+        get_debug_info = getattr(test, "getDebugInfo", None)
+        debug_info = get_debug_info() if get_debug_info else None
+        if debug_info:
+            self.debug_info_results[debug_info][status] += 1
 
     def _config_string(self, test):
         compiler = getattr(test, "getCompiler", None)
@@ -250,6 +259,7 @@ class LLDBTestResult(unittest.TextTestResult):
         self.stream.write(
             "PASS: LLDB (%s) :: %s\n" % (self._config_string(test), str(test))
         )
+        self._recordDebugInfoResult(test, "PASS")
 
     def _isBuildError(self, err_tuple):
         exception = err_tuple[1]
@@ -278,6 +288,7 @@ class LLDBTestResult(unittest.TextTestResult):
         self.stream.write(
             "FAIL: LLDB (%s) :: %s\n" % (self._config_string(test), str(test))
         )
+        self._recordDebugInfoResult(test, "FAIL")
 
     def addCleanupError(self, test, err):
         configuration.sdir_has_content = True
@@ -305,6 +316,7 @@ class LLDBTestResult(unittest.TextTestResult):
         self.stream.write(
             "FAIL: LLDB (%s) :: %s\n" % (self._config_string(test), str(test))
         )
+        self._recordDebugInfoResult(test, "FAIL")
         if configuration.use_categories:
             test_categories = self.getCategoriesForTest(test)
             for category in test_categories:
@@ -324,6 +336,7 @@ class LLDBTestResult(unittest.TextTestResult):
         self.stream.write(
             "XFAIL: LLDB (%s) :: %s\n" % (self._config_string(test), str(test))
         )
+        self._recordDebugInfoResult(test, "XFAIL")
 
     def addSkip(self, test, reason):
         configuration.sdir_has_content = True
@@ -339,6 +352,7 @@ class LLDBTestResult(unittest.TextTestResult):
             "%s: LLDB (%s) :: %s (%s) \n"
             % (status, self._config_string(test), str(test), reason)
         )
+        self._recordDebugInfoResult(test, status)
 
     def addUnexpectedSuccess(self, test):
         configuration.sdir_has_content = True
@@ -349,6 +363,7 @@ class LLDBTestResult(unittest.TextTestResult):
         self.stream.write(
             "XPASS: LLDB (%s) :: %s\n" % (self._config_string(test), str(test))
         )
+        self._recordDebugInfoResult(test, "XPASS")
 
     def stopTest(self, test):
         """Dump the session info for debugging."""
