@@ -261,6 +261,11 @@ public:
   uint64_t getPointerAlignV(LangAS AddrSpace) const override {
     return getPointerWidthV(AddrSpace);
   }
+
+  bool hasInt128Type() const override {
+    return (getTriple().isOSzOS() ? hasFeature("vx")
+                                  : TargetInfo::hasInt128Type());
+  }
 };
 } // namespace targets
 } // namespace clang

@@ -187,10 +187,10 @@ def RetCC_SystemZ_XPLINK64 : CallingConv<[
   // F4D and F6D, hence F4Q are used for complex long double types.
   CCIfType<[f128], CCAssignToReg<[F0Q,F4Q]>>,
 
-  // ABI compliant code returns vectors in VR24 but other registers
+  // ABI compliant code returns i128 and vectors in VR24 but other registers
   // are provided for code that does not care about the ABI.
   CCIfSubtarget<"hasVector()",
-    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+    CCIfType<[i128, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
              CCAssignToReg<[V24, V25, V26, V27, V28, V29, V30, V31]>>>
 ]>;
 
@@ -238,11 +238,6 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
   // A SwiftError is passed in R0.
   CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R0D]>>>,
 
-  // Force i128 values to the stack and pass i64 pointers to them.
-  CCIfType<[i128], CCPassIndirect<i64>>,
-  // If i128 is not legal, such values are already split into two i64 here,
-  // so we have to use a custom handler.
-  CCIfType<[i64], CCCustom<"CC_SystemZ_I128Indirect">>,
   // The first 3 integer arguments are passed in registers R1-R3.
   // The rest will be passed in the user area.
   CCIfType<[i32], CCAssignToRegAndStack<[R1L, R2L, R3L], 8, 8>>,
@@ -252,10 +247,10 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
   // are passed in the same way, but they're widened to one of these types
   // during type legalization.
   CCIfSubtarget<"hasVector()",
-    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+    CCIfType<[i128, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
       CCIfArgFixed<CCCustom<"CC_XPLINK64_Shadow_Reg">>>>,
   CCIfSubtarget<"hasVector()",
-    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+    CCIfType<[i128, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
               CCIfArgFixed<CCAssignToRegAndStack<[V24, V25, V26, V27,
                                                   V28, V29, V30, V31], 16, 8>>>>,
 
@@ -276,9 +271,9 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
   CCIfType<[i32, i64, f32, f64], CCAssignToStack<8, 8>>,
   // Other f128 arguments are passed in 8-byte-aligned 16-byte stack slots.
   CCIfType<[f128], CCAssignToStack<16, 8>>,
-  // Vector arguments are passed in 8-byte-alinged 16-byte stack slots too.
+  // i128 and vector arguments are passed in 8-byte-aligned 16-byte stack slots.
   CCIfSubtarget<"hasVector()",
-    CCIfType<[v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
+    CCIfType<[i128, v16i8, v8i16, v4i32, v2i64, v4f32, v2f64],
              CCAssignToStack<16, 8>>>
 ]>;
 
