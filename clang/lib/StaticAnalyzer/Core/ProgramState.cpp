@@ -516,13 +516,13 @@ void *ProgramStateManager::FindGDMContext(
     const void *K, void *(*CreateContext)(llvm::BumpPtrAllocator &),
     void (*DeleteContext)(void *)) {
 
-  std::pair<void*, void (*)(void*)>& p = GDMContexts[K];
-  if (!p.first) {
-    p.first = CreateContext(Alloc);
-    p.second = DeleteContext;
+  auto &[GDMKey, Deleter] = GDMContexts[K];
+  if (!GDMKey) {
+    GDMKey = CreateContext(Alloc);
+    Deleter = DeleteContext;
   }
 
-  return p.first;
+  return GDMKey;
 }
 
 ProgramStateRef ProgramStateManager::addGDM(ProgramStateRef St, const void *Key,
