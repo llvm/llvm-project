@@ -30,6 +30,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -86,9 +87,16 @@ static ISD::NodeType getPreferredExtendForValue(const Instruction *I) {
   return ExtendKind;
 }
 
+void ValueRegisterMap::init(const Function &F) {
+  NumArgs = F.arg_size();
+  Regs.assign(NumArgs + const_cast<Function &>(F).numberInstructions(), Absent);
+  Epoch = F.getInstructionNumberEpoch();
+}
+
 void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
                                SelectionDAG *DAG) {
   Fn = &fn;
+  ValueMap.init(fn);
   MF = &mf;
   TLI = MF->getSubtarget().getTargetLowering();
   RegInfo = &MF->getRegInfo();
@@ -446,11 +454,11 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
   IntVT = TLI->getRegisterType(PN->getContext(), IntVT);
   unsigned BitWidth = IntVT.getSizeInBits();
 
-  auto It = ValueMap.find(PN);
-  if (It == ValueMap.end())
+  const Register *It = ValueMap.find(PN);
+  if (!It)
     return;
 
-  Register BaseReg = It->second;
+  Register BaseReg = *It;
   if (!BaseReg)
     return;
   assert(BaseReg.isVirtual() && "Expected a virtual reg");
@@ -576,17 +584,23 @@ const Value *
 FunctionLoweringInfo::getValueFromVirtualReg(Register Vreg) {
   if (VirtReg2Value.empty()) {
     SmallVector<EVT, 4> ValueVTs;
-    for (auto &P : ValueMap) {
+    auto Add = [&](const Value &V) {
+      const Register *R = ValueMap.find(&V);
+      if (!R)
+        return;
       ValueVTs.clear();
-      ComputeValueVTs(*TLI, Fn->getDataLayout(),
-                      P.first->getType(), ValueVTs);
-      Register Reg = P.second;
+      ComputeValueVTs(*TLI, Fn->getDataLayout(), V.getType(), ValueVTs);
+      Register Reg = *R;
       for (EVT VT : ValueVTs) {
         unsigned NumRegisters = TLI->getNumRegisters(Fn->getContext(), VT);
         for (unsigned i = 0, e = NumRegisters; i != e; ++i)
-          VirtReg2Value[Reg++] = P.first;
+          VirtReg2Value[Reg++] = &V;
       }
-    }
+    };
+    for (const Argument &A : Fn->args())
+      Add(A);
+    for (const Instruction &I : instructions(*Fn))
+      Add(I);
   }
   return VirtReg2Value.lookup(Vreg);
 }

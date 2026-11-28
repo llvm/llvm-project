@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -55,6 +56,47 @@ using SSAContext = GenericSSAContext<Function>;
 template <typename T> class GenericUniformityInfo;
 using UniformityInfo = GenericUniformityInfo<SSAContext>;
 
+// Map from the arguments and instructions of a function to virtual registers,
+// indexed by argument number and Instruction::getOrder().
+class ValueRegisterMap {
+  static constexpr Register Absent = Register(~0u);
+  SmallVector<Register, 0> Regs;
+  unsigned NumArgs = 0;
+  unsigned Epoch = 0;
+
+  unsigned index(const Value *V) const {
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      unsigned Order = I->getOrder();
+      assert(I->getFunction()->getInstructionNumberEpoch() == Epoch &&
+             "instructions renumbered after init");
+      return NumArgs + Order;
+    }
+    if (auto *A = dyn_cast<Argument>(V))
+      return A->getArgNo();
+    return ~0u;
+  }
+
+public:
+  LLVM_ABI void init(const Function &F);
+  void clear() { Regs.clear(); }
+
+  // Return the register of V, or null if V has no entry.
+  const Register *find(const Value *V) const {
+    unsigned I = index(V);
+    return I < Regs.size() && Regs[I] != Absent ? &Regs[I] : nullptr;
+  }
+  bool count(const Value *V) const { return find(V); }
+
+  // Return the entry of V, an argument or instruction, creating it as
+  // Register() if absent.
+  Register &operator[](const Value *V) {
+    Register &R = Regs[index(V)];
+    if (R == Absent)
+      R = Register();
+    return R;
+  }
+};
+
 //===--------------------------------------------------------------------===//
 /// FunctionLoweringInfo - This contains information that is global to a
 /// function that is used when lowering a region of the function.
@@ -84,7 +126,7 @@ public:
   /// ValueMap - Since we emit code for the function a basic block at a time,
   /// we must remember which virtual registers hold the values for
   /// cross-basic-block values.
-  DenseMap<const Value *, Register> ValueMap;
+  ValueRegisterMap ValueMap;
 
   /// VirtReg2Value map is needed by the Divergence Analysis driven
   /// instruction selection. It is reverted ValueMap. It is computed
@@ -295,11 +337,11 @@ public:
   /// called when a block is visited before all of its predecessors.
   void InvalidatePHILiveOutRegInfo(const PHINode *PN) {
     // PHIs with no uses have no ValueMap entry.
-    auto It = ValueMap.find(PN);
-    if (It == ValueMap.end())
+    const Register *It = ValueMap.find(PN);
+    if (!It)
       return;
 
-    Register Reg = It->second;
+    Register Reg = *It;
     if (Reg == 0)
       return;
 

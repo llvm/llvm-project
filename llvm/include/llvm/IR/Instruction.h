@@ -110,6 +110,7 @@ private:
   /// Relative order of this instruction in its parent basic block. Used for
   /// O(1) local dominance checks between instructions.
   mutable unsigned Order = 0;
+  LLVM_ABI bool hasValidOrder() const;
 
   /// Optional marker recording the position for debugging information that
   /// takes effect immediately before this instruction. Null unless there is
@@ -332,6 +333,15 @@ public:
   /// results are cached, so in common cases when the block remains unmodified,
   /// it takes constant time.
   LLVM_ABI bool comesBefore(const Instruction *Other) const;
+
+  /// Return the number assigned to this instruction by
+  /// Function::numberInstructions. Inserting or moving an instruction in the
+  /// parent block invalidates it. Erasing instructions or reordering blocks
+  /// keeps the numbers unique, but not dense or in layout order.
+  unsigned getOrder() const {
+    assert(hasValidOrder() && "instruction order is not valid");
+    return Order;
+  }
 
   /// Get the first insertion point at which the result of this instruction
   /// is defined. This is *not* the directly following instruction in a number

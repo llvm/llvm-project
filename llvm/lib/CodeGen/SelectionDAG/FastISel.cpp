@@ -359,9 +359,8 @@ Register FastISel::lookUpRegForValue(const Value *V) {
   // cache values defined by Instructions across blocks, and other values
   // only locally. This is because Instructions already have the SSA
   // def-dominates-use requirement enforced.
-  auto I = FuncInfo.ValueMap.find(V);
-  if (I != FuncInfo.ValueMap.end())
-    return I->second;
+  if (const Register *I = FuncInfo.ValueMap.find(V))
+    return *I;
   return LocalValueMap[V];
 }
 
@@ -1737,9 +1736,8 @@ bool FastISel::selectExtractValue(const User *U) {
 
   // Get the base result register.
   Register ResultReg;
-  auto I = FuncInfo.ValueMap.find(Op0);
-  if (I != FuncInfo.ValueMap.end())
-    ResultReg = I->second;
+  if (const Register *I = FuncInfo.ValueMap.find(Op0))
+    ResultReg = *I;
   else if (isa<Instruction>(Op0))
     ResultReg = FuncInfo.InitializeRegForValue(Op0);
   else
