@@ -121,6 +121,79 @@ is sufficient.
 See {ref}`the stable section <stable-section-label>`.
 ```
 
+### Links to other LLVM projects
+
+Do not link to another LLVM subproject's documentation with an absolute URL
+such as `https://clang.llvm.org/docs/ThinLTO.html`. The Sphinx build cannot
+check it, and it always points at the tip-of-tree site, even in a release or
+downstream build of the documentation. Use an `inv:` link instead. It is
+resolved through [intersphinx](https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html)
+against the other project's published inventory (`objects.inv`), and the build
+warns if the target does not exist:
+
+```md
+[ThinLTO](inv:clang:std:doc#ThinLTO)
+[the fmin/fmax family](inv:llvm:std:label#i_fminmax_family)
+[`-fsave-optimization-record`](inv:clang:std:cmdoption#-f[no-]save-optimization-record)
+```
+
+The link target has the form `inv:<project>:<domain>:<type>#<target>`:
+
+* `<project>` is the key in the project's `intersphinx_mapping`: `llvm`,
+  `clang`, `clang-tools-extra`, `lld`, `lldb`, `flang`, `polly`, `libc`,
+  `libcxx`, or `openmp`. Projects take these from `LLVM_INTERSPHINX_MAPPING` in
+  `utils/docs/llvm_sphinx/__init__.py`.
+* `<domain>` is the Sphinx domain. Documents, labels, and command-line options
+  all live in the standard domain, `std`.
+* `<type>` is the kind of object. Use `doc` for a whole document, `label` for an
+  explicit label, and `cmdoption` for a command-line option.
+* `<target>` is the name within that type. For `doc`, it is the document name
+  relative to the other project's source root, without an extension (for example
+  `BoundsSafety/BoundsSafetyAdoptionGuide`). Labels are stored in lowercase.
+
+If the link text is empty, as in `[](inv:clang:std:doc#ThinLTO)`, the title from
+the inventory is used. Prefer writing the text explicitly so the source reads
+naturally. In reStructuredText, use the equivalent role,
+``:external+clang:doc:`ThinLTO```.
+
+To find the type and target name for a page or label, list the project's
+inventory:
+
+```sh
+python -m sphinx.ext.intersphinx https://clang.llvm.org/docs/objects.inv
+```
+
+`inv:` links only resolve in the Sphinx build, so a document that is read outside
+it, for example a file in the repository root, should link to it on GitHub
+instead. A project must set `intersphinx_mapping` in its `conf.py`, for example
+`intersphinx_mapping = LLVM_INTERSPHINX_MAPPING.copy()`, before it can use these
+links.
+
+### How the inventories are found
+
+By default, a documentation build downloads the other projects' published
+inventories. That is simple, but it needs network access, and a link to a label
+that was added by the same change does not resolve until the change is
+published. Unresolved links are reported as warnings, and the rendered page has
+no link.
+
+CI builds are hermetic instead: every inventory comes from the sources in the
+checkout, so all links resolve, including circular ones between projects. The
+`utils/docs/hermetic_build` CMake project builds the docs of all of the
+projects this way:
+
+```sh
+cmake -G Ninja -S utils/docs/hermetic_build -B build-docs
+ninja -C build-docs docs
+```
+
+It builds the tools (`LLVM_ENABLE_PROJECTS`) and the runtimes
+(`LLVM_ENABLE_RUNTIMES`), which are separate CMake builds, in parallel. First it
+builds each project's inventory, which only reads its sources, with the
+`inventory` builder in `llvm_sphinx.ext.inventory` (target `docs-inventory`).
+Then it builds the docs, which read all of the inventories. See
+`LLVM_SPHINX_INVENTORY_DIR` in [](CMake.md) for doing this in your own build.
+
 ## Lists
 
 Markdown allows you to create ordered lists...

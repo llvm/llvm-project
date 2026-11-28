@@ -970,6 +970,23 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     reverse order. This is useful for uncovering non-determinism caused by
     iteration of unordered containers.
 
+**LLVM_SPHINX_INVENTORY_DIR**:PATH
+
+:   Build the documentation with hermetic cross-project links. By default, the
+    `inv:` links between the documentation of the LLVM projects are resolved
+    against the inventories (`objects.inv`) that each project publishes on its
+    website, which needs network access and cannot see labels that are not
+    published yet. If this is set, each project with an inventory also gets a
+    `docs-<project>-inventory` target that writes `<dir>/<project>/objects.inv`
+    from the sources, and the documentation targets read the inventories from
+    this directory instead. The documentation targets do not build the
+    inventories themselves: build the `docs-inventories` target of every
+    configuration that has documentation first. The tools
+    (`LLVM_ENABLE_PROJECTS`) and the runtimes (`LLVM_ENABLE_RUNTIMES`) are
+    separate configurations that must share the directory. The
+    `utils/docs/hermetic_build` project does all of this. Defaults to empty,
+    which fetches the published inventories.
+
 **LLVM_SPHINX_THREADS**:STRING
 
 :   Controls `sphinx-build -j`, which is the internal Sphinx worker count.

@@ -126,6 +126,50 @@ function(add_sphinx_source_sync_target target source_dir destination_dir)
   add_dependencies(${target} ${scan_target})
 endfunction()
 
+# Hermetic cross-project documentation links.
+#
+# The docs of the LLVM projects link to each other with `inv:` links, which
+# Sphinx resolves against the other project's `objects.inv`. By default that
+# file is fetched from the project's published site, which needs the network
+# and cannot resolve a link to a label that was added by the same change.
+#
+# If LLVM_SPHINX_INVENTORY_DIR is set, each project with an html target instead
+# also gets a `docs-<project>-inventory` target that writes
+# <dir>/<project>/objects.inv (see utils/docs/llvm_sphinx/ext/inventory.py), and
+# the html builds read every
+# inventory from that directory. A project's inventory does not depend on the
+# others, so they can all be built first, in any order, and then the html builds
+# resolve every link, circular ones included.
+#
+# The tools (LLVM_ENABLE_PROJECTS) and the runtimes (LLVM_ENABLE_RUNTIMES) are
+# separate configurations: give both the same directory and build
+# `docs-inventories` in each before building any html. The html targets do not
+# depend on the inventory targets (they would have to be rebuilt every time);
+# utils/docs/hermetic_build does the ordering and runs both in parallel.
+set(LLVM_SPHINX_INVENTORY_DIR "" CACHE PATH
+    "Directory for hermetic documentation inventories, shared by the tools and
+     runtimes builds. Empty fetches the published inventories from llvm.org.")
+
+# Runs at the end of the top-level directory, when every project's docs targets
+# exist.
+function(llvm_finalize_sphinx_inventories)
+  # An inventory only needs what the html build needs in order to read the
+  # sources (generated files, copied sources), so reuse those prerequisites
+  # instead of repeating them in every project.
+  get_property(projects GLOBAL PROPERTY LLVM_SPHINX_INVENTORY_PROJECTS)
+  foreach(project ${projects})
+    get_target_property(deps docs-${project}-html MANUALLY_ADDED_DEPENDENCIES)
+    if (deps)
+      # Skip other docs targets (which would make a cycle) and cleanup steps
+      # that only matter for the html output.
+      list(FILTER deps EXCLUDE REGEX "^(docs-|clean-)")
+      if (deps)
+        add_dependencies(docs-${project}-inventory ${deps})
+      endif()
+    endif()
+  endforeach()
+endfunction()
+
 # Handy function for creating the different Sphinx targets.
 #
 # ``builder`` should be one of the supported builders used by
@@ -137,16 +181,40 @@ endfunction()
 # ``ENV_VARS`` should be a list of environment variables that should be set when
 #              running Sphinx. Each environment variable should be a string with
 #              the form KEY=VALUE.
+# ``OUTPUT_DIR`` overrides the output directory.
+#
+# The ``inventory`` builder writes only ``objects.inv``; for the projects in
+# LLVM_SPHINX_INVENTORY_PROJECTS it is created along with their html target.
 function (add_sphinx_target builder project)
-  cmake_parse_arguments(ARG "" "SOURCE_DIR" "ENV_VARS" ${ARGN})
-  set(SPHINX_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/${builder}")
+  cmake_parse_arguments(ARG "" "SOURCE_DIR;OUTPUT_DIR" "ENV_VARS" ${ARGN})
+  if (ARG_OUTPUT_DIR)
+    set(SPHINX_BUILD_DIR "${ARG_OUTPUT_DIR}")
+  else()
+    set(SPHINX_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/${builder}")
+  endif()
   set(SPHINX_DOC_TREE_DIR "${CMAKE_CURRENT_BINARY_DIR}/_doctrees-${project}-${builder}")
   set(SPHINX_TARGET_NAME docs-${project}-${builder})
 
-  if (SPHINX_WARNINGS_AS_ERRORS)
-    set(SPHINX_WARNINGS_AS_ERRORS_FLAG "-W")
-  else()
+  # The inventory pass runs before the inventories it would warn about exist,
+  # so it reports nothing; the real build reports everything.
+  if (builder STREQUAL inventory)
     set(SPHINX_WARNINGS_AS_ERRORS_FLAG "")
+    set(sphinx_verbosity_flag -Q)
+  else()
+    if (SPHINX_WARNINGS_AS_ERRORS)
+      set(SPHINX_WARNINGS_AS_ERRORS_FLAG "-W")
+    else()
+      set(SPHINX_WARNINGS_AS_ERRORS_FLAG "")
+    endif()
+    set(sphinx_verbosity_flag -q) # Quiet: no output other than errors and warnings.
+  endif()
+
+  # Resolve cross-project links against the hermetic inventories. The inventory
+  # builder itself reads no inventories. This is part of the sphinx-build
+  # command line, so a command copied from the build log behaves the same.
+  set(sphinx_inventory_flags)
+  if (LLVM_SPHINX_INVENTORY_DIR AND NOT builder STREQUAL inventory)
+    set(sphinx_inventory_flags -D "llvm_inventory_dir=${LLVM_SPHINX_INVENTORY_DIR}")
   endif()
 
   if (NOT ARG_SOURCE_DIR)
@@ -180,8 +248,9 @@ function (add_sphinx_target builder project)
                             -b ${builder}
                             -d "${SPHINX_DOC_TREE_DIR}"
                             ${sphinx_jobs_flag}
-                            -q # Quiet: no output other than errors and warnings.
+                            ${sphinx_verbosity_flag}
                             -t builder-${builder} # tag for builder
+                            ${sphinx_inventory_flags}
                             -D version=${LLVM_VERSION_MAJOR}
                             -D release=${PACKAGE_VERSION}
                             ${PreReleaseTag}
@@ -207,6 +276,31 @@ function (add_sphinx_target builder project)
     set_property(DIRECTORY APPEND PROPERTY
                  ADDITIONAL_MAKE_CLEAN_FILES
                  "${SPHINX_DOC_TREE_DIR}")
+  endif()
+
+  if (builder STREQUAL html AND LLVM_SPHINX_INVENTORY_DIR)
+    if (NOT TARGET docs-inventories)
+      add_custom_target(docs-inventories)
+      set_target_properties(docs-inventories PROPERTIES FOLDER "LLVM/Docs")
+      cmake_language(DEFER DIRECTORY "${CMAKE_SOURCE_DIR}"
+                     CALL llvm_finalize_sphinx_inventories)
+    endif()
+    # The key is the project's name in utils/docs/llvm_sphinx/__init__.py.
+    set(inventory_key ${project})
+    if (project STREQUAL clang-tools)
+      set(inventory_key clang-tools-extra)
+    endif()
+    add_sphinx_target(inventory ${project}
+                      SOURCE_DIR "${ARG_SOURCE_DIR}"
+                      OUTPUT_DIR "${LLVM_SPHINX_INVENTORY_DIR}/${inventory_key}"
+                      ENV_VARS ${ARG_ENV_VARS})
+    add_dependencies(docs-inventories docs-${project}-inventory)
+    set_property(GLOBAL APPEND PROPERTY LLVM_SPHINX_INVENTORY_PROJECTS ${project})
+  endif()
+
+  # The inventory is neither built by default nor installed.
+  if (builder STREQUAL inventory)
+    return()
   endif()
 
   if (LLVM_BUILD_DOCS)
