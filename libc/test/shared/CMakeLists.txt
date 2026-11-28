@@ -113,6 +113,7 @@ else()
       libc.src.__support.math.copysignf16
       libc.src.__support.math.copysignl
       libc.src.__support.math.cos
+      libc.src.__support.math.cosbf16
       libc.src.__support.math.cosf
       libc.src.__support.math.cosf16
       libc.src.__support.math.cosh
