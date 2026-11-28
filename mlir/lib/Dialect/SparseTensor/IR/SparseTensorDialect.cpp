@@ -1545,8 +1545,10 @@ Speculation::Speculatability LvlOp::getSpeculatability() {
   if (!constantIndex)
     return Speculation::NotSpeculatable;
 
-  assert(constantIndex <
-         cast<RankedTensorType>(getSource().getType()).getRank());
+  // An out-of-bounds level index is undefined behavior.
+  if (*constantIndex >= getSparseTensorType(getSource()).getLvlRank())
+    return Speculation::NotSpeculatable;
+
   return Speculation::Speculatable;
 }
 
