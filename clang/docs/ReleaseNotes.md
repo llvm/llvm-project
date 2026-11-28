@@ -1095,6 +1095,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
+- Fixed a concept bug where dependent NTTP types were not built into parameter mapping. (#GH246501)
+
 - Fixed lambdas with specifiers or attributes after the capture list being
   misparsed as function declarations in direct-initialization contexts under
   `-fms-extensions` or in HLSL mode.

@@ -6912,6 +6912,12 @@ struct MarkUsedTemplateParameterVisitor : DynamicRecursiveASTVisitor {
     return true;
   }
 
+  bool VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *NTTP) override {
+    if (NTTP->getDepth() == Depth)
+      Used[NTTP->getIndex()] = true;
+    return true;
+  }
+
   bool TraverseSizeOfPackExpr(SizeOfPackExpr *SOPE) override {
     return TraverseDecl(SOPE->getPack());
   }
