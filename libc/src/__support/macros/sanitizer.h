@@ -67,4 +67,31 @@
   ((void)(addr), (void)(size))
 #endif
 
+//-----------------------------------------------------------------------------
+// Linux syscall sanitizer hooks
+//-----------------------------------------------------------------------------
+
+#if (defined(LIBC_HAS_ADDRESS_SANITIZER) ||                                    \
+     defined(LIBC_HAS_MEMORY_SANITIZER) ||                                     \
+     LIBC_HAS_FEATURE(hwaddress_sanitizer) ||                                  \
+     LIBC_HAS_FEATURE(thread_sanitizer) || defined(__SANITIZE_THREAD__)) &&    \
+    defined(__linux__) && __has_include(<sanitizer/linux_syscall_hooks.h>)
+#include <sanitizer/linux_syscall_hooks.h>
+#define LIBC_SANITIZER_SYSCALL_PRE(name, ...)                                  \
+  __sanitizer_syscall_pre_##name(__VA_ARGS__)
+#define LIBC_SANITIZER_SYSCALL_PRE_0(name) __sanitizer_syscall_pre_##name()
+#define LIBC_SANITIZER_SYSCALL_POST(name, ...)                                 \
+  __sanitizer_syscall_post_##name(__VA_ARGS__)
+#else
+#define LIBC_SANITIZER_SYSCALL_PRE(name, ...)                                  \
+  do {                                                                         \
+  } while (0)
+#define LIBC_SANITIZER_SYSCALL_PRE_0(name)                                     \
+  do {                                                                         \
+  } while (0)
+#define LIBC_SANITIZER_SYSCALL_POST(name, ...)                                 \
+  do {                                                                         \
+  } while (0)
+#endif
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_SANITIZER_H
