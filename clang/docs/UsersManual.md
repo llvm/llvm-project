@@ -1398,7 +1398,7 @@ CUSTOM_ERROR("Feature not available");
 
 Warnings are suppressed when they occur in system headers. By default,
 an included file is treated as a system header if it is found in an
-include path specified by `-isystem`, but this can be overridden in
+include path specified by {option}`-isystem`, but this can be overridden in
 several ways.
 
 The `system_header` pragma can be used to mark the current file as
@@ -1432,6 +1432,16 @@ Here, `#include "x/a.h"` is treated as including a system header, even
 if the header is found in `foo`, and `#include "x/y/b.h"` is treated
 as not including a system header, even if the header is found in
 `bar`.
+
+A header whose file path matches a path specified by a {option}`-iexternal`
+or {option}`-iexternal-env=` command-line argument or one specified by the
+{envvar}`EXTERNAL_INCLUDE` environment variable is treated as a system header
+regardless of which header search path was used to map the header to a
+file.
+
+The {option}`-iexternal-anglebrackets` command-line option causes headers
+specified in angle brackets in `#include` directives to be treated as
+system headers.
 
 A `#include` directive which finds a file relative to the current
 directory is treated as including a system header if the including file
@@ -1513,6 +1523,108 @@ influenced by the user via changes to the source code. See the available
 {ref}`FAQ page <exclude_code>` for more information.
 
 (usersmanual-precompiled-headers)=
+
+### Controlling Header Search Paths
+
+Header search paths determine how a header name specified in a `#include`
+directive is mapped to a header file. By default, header search paths are
+present for Clang's builtin header files, language dependent standard
+search paths (e.g., for the C and C++ standard library headers), and for
+target dependent header files (e.g., POSIX, Windows SDK, and other system
+ header files). The default behavior can be suppressed with command-line
+opions like {option}`-nobuiltininc`, {option}`-nostdlibinc`, and
+{option}`-nostdinc++`.
+
+Clang supports GCC and MSVC compatible header search path ordering. By
+default, the `clang`, `clang++`, and `clang-cpp` drivers use GCC ordering
+and `clang-cl` uses MSVC ordering. The {option}`-fheader-search=`
+command-line option can be used to select a different ordering.
+
+#### GCC Compatible Header Search Path Ordering
+
+Header search paths are first characterized and separated into "quoted",
+"angled", and "system" groups. Within each group, paths retain the
+relative order that they appear in command-line arguments and environment
+variables. Each group is constructed by first adding paths specified in
+command-line arguments followed by those specified in environment
+variables followed by implicitly added system header search paths.
+
+The "quoted" group consists of paths specified by `-iquoted` command-line
+arguments. These paths are only used to resolve quoted header names
+(not names in angle brackets) in `#include` directives.
+
+The "angled" group consists of paths specified by {option}`-I`,
+{option}`-iexternal`, {option}`-iexternal-env=`, and `-iwithprefixbefore`
+command-line arguments followed by those specified by the {envvar}`CPATH`
+environment variable. These paths are used to resolve header names
+enclosed in either quotes or angle brackets.
+
+The "system" group consists of paths specified by `-dirafter`, `-isystem`,
+`-isystem-after`, and `-iwithprefix` command-line arguments conditionally
+followed by those specified by the {envvar}`C_INCLUDE_PATH`,
+{envvar}`CPLUS_INCLUDE_PATH`, {envvar}`OBJC_INCLUDE_PATH`, or
+{envvar}`OBJCPLUS_INCLUDE_PATH` environment variable depending on the
+compilation language. Paths implicitly added for the compilation language
+and target follow.
+
+Duplicate paths are then removed by performing the following steps in order.
+1. Paths in the "quoted" group that duplicate a previous path in the "quoted"
+   group are removed.
+2. Paths in the "angled" group that are duplicated by an external path (as
+   specified by a {option}`-iexternal` or {option}`-iexternal-env=`
+   command-line argument) in the "angled" group (regardless of the relative
+   order of the paths) or by a path in the "system" group are removed.
+3. Paths in the "angled" or "system" groups that duplicate a previous path in
+   the "angled" or "system" group are removed.
+
+Duplicate path removal does not necessarily remove all duplicate paths. A
+path that appears in the "quoted" group and in either the "angled" or "system"
+groups is retained in each group so that the header file is still found
+regardless of whether the header name in a `#include` directive is quoted
+or specified in angle brackets. Such duplicate paths may result in the same
+file being found for a `#include_next` directive.
+
+Header names specified in quotes in `#include` directives use an altered
+header file search. An attempt is first made to resolve such headers relative
+to the location of the including file.
+
+#### MSVC Compatible Header Search Path Ordering
+
+Header search paths retain the relative order they appear in command-line
+arguments and environment variables; no grouping is performed as is done for
+GCC compatible ordering.
+
+Header search paths are ordered, and duplicate paths removed, according to
+the following rules.
+1. Paths specified by {option}`-I` and {option}`-iexternal` command-line
+   arguments are processed in order.
+   1. Paths specified by {option}`-I` that duplicate a path specified by
+      {option}`-iexternal` are ignored regardless of the option order.
+   2. Paths specified by {option}`-I` that duplicate a prior {option}`-I`
+      argument are ignored.
+   3. Paths specified by {option}`-iexternal` that duplicate a later
+      {option}`-iexternal` argument are ignored.
+2. Paths specified by {option}`-iexternal-env=` are processed in order.
+   Paths that duplicate a path from step 1, a prior {option}`-iexternal-env=`
+   argument, or a prior path from the current {option}`-iexternal-env=`
+   argument are ignored.
+3. Paths specified by the {envvar}`INCLUDE` environment variable are
+   processed in order. Paths that duplicate a path from step 1, step 2, or
+   an earlier path in the {envvar}`INCLUDE` environment variable are ignored.
+4. Paths specified by the {envvar}`EXTERNAL_INCLUDE` environment variable are
+   processed in order. Paths that duplicate a path from step 1, step 2, step 3,
+   or an earlier path in the {envvar}`EXTERNAL_INCLUDE` environment variable
+   are ignored.
+
+Paths specified by the {envvar}`INCLUDE` and {envvar}`EXTERNAL_INCLUDE`
+environment variable are only added when the MSVC compatible `clang-cl` driver
+is used and none of the {option}`-nostdinc`, {option}`-nostdlibinc`,
+{option}`/X`, `/vctoolsdir`, `/winsdkdir`, or `/winsdkversion` options are used.
+
+Header names specified in quotes in `#include` directives use an altered
+header file search. At attempt is first made to resolve such headers relative
+to the location of each file in the include stack. If a match is not found,
+then the header search path ordering described above is tried.
 
 ### Precompiled Headers
 
@@ -5365,6 +5477,7 @@ Execute `clang-cl /?` to see a list of supported options:
 >   /EP                     Disable linemarker output and preprocess to stdout
 >   /execution-charset:<value>
 >                           Set runtime encoding, supports only UTF-8
+>   /external:anglebrackets Treat all #include paths enclosed in angle brackets as including a system header
 >   /external:env:<var>     Add dirs in env var <var> to include search path with warnings suppressed
 >   /external:I <dir>       Add directory to include search path with warnings suppressed
 >   /external:W0            Ignore warnings from system headers (default)
@@ -5639,6 +5752,7 @@ Execute `clang-cl /?` to see a list of supported options:
 >                           Flush denormal floating point values to zero in CUDA/HIP device mode.
 >   -fgpu-rdc               Generate relocatable device code, also known as separate compilation mode
 >   -fgpu-sanitize          Enable sanitizer for supported offloading devices
+>   -fheader-search=<value> Specify the method used to resolve included header files
 >   -fhip-emit-relocatable  Compile HIP source to relocatable
 >   -fhip-fp32-correctly-rounded-divide-sqrt
 >                           Specify that single precision floating-point divide and sqrt used in the program source are correctly rounded (HIP device compilation only)
@@ -6453,12 +6567,26 @@ follows:
 
 2. Consult the environment.
 
-   TODO: This is not yet implemented.
+    - `/external:env:[VARIABLE]`
 
-   This will consult the environment variables:
+      This command line option specifies a user identified environment variable
+      which is treated as a path delimited (`;`) list of system header paths.
 
-   - `WindowsSdkDir`
-   - `UCRTVersion`
+    - `INCLUDE`
+
+      This environment variable is treated as a path delimited (`;`) list of
+      system header paths.
+
+    - `EXTERNAL_INCLUDE`
+
+      This environment variable is treated as a path delimited (`;`) list of
+      external header paths.
+
+    The following environment variables will be consulted and used to form paths
+    to validate and load content from as appropriate:
+
+      - `WindowsSdkDir`
+      - `UCRTVersion`
 
 3. Fallback to the registry.
 
@@ -6469,6 +6597,8 @@ follows:
 The Visual C++ Toolset has a slightly more elaborate mechanism for detection.
 
 1. Consult the command line.
+
+   Anything the user specifies is always given precedence.
 
    - `/winsysroot:`
 
@@ -6487,21 +6617,30 @@ The Visual C++ Toolset has a slightly more elaborate mechanism for detection.
 
 2. Consult the environment.
 
-   - `/external:[VARIABLE]`
+   - `/external:env:[VARIABLE]`
 
-     This specifies a user identified environment variable which is treated as
-     a path delimiter (`;`) separated list of paths to map into `-imsvc`
-     arguments which are treated as `-isystem`.
+     This command line option specifies a user identified environment variable
+     which is treated as a path delimited (`;`) list of external header search
+     paths. Additionally, any header search path provided by other means that
+     has a prefix that matches one of these paths is treated as an external
+     header search path.
 
-   - `INCLUDE` and `EXTERNAL_INCLUDE`
+   - `INCLUDE`
 
-     The path delimiter (`;`) separated list of paths will be mapped to
-     `-imsvc` arguments which are treated as `-isystem`.
+     This environment variable is treated as a path delimited (`;`) list of
+     header search paths.
+
+   - `EXTERNAL_INCLUDE`
+
+     This environment variable is treated as a path delimited (`;`) list of
+     external header search paths. Additionally, any header search path
+     provided by other means that has a prefix that matches one of these paths
+     is treated as an external header search path.
 
    - `LIB` (indirectly)
 
      The linker `link.exe` or `lld-link.exe` will honour the environment
-     variable `LIB` which is a path delimiter (`;`) set of paths to consult for
+     variable `LIB` which is a path delimited (`;`) set of paths to consult for
      the import libraries to use when linking the final target.
 
    The following environment variables will be consulted and used to form paths
