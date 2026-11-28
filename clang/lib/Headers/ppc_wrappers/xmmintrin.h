@@ -1310,7 +1310,7 @@ extern __inline void
 extern __inline int
     __attribute__((__gnu_inline__, __always_inline__, __artificial__))
     _mm_movemask_ps(__m128 __A) {
-#ifdef _ARCH_PWR10
+#if defined(_ARCH_PWR10) && defined(__LITTLE_ENDIAN__)
   return vec_extractm((__vector unsigned int)__A);
 #else
   __vector unsigned long long __result;
@@ -1318,7 +1318,7 @@ extern __inline int
 #ifdef __LITTLE_ENDIAN__
       0x00204060, 0x80808080, 0x80808080, 0x80808080
 #else
-      0x80808080, 0x80808080, 0x80808080, 0x00204060
+      0x80808080, 0x80808080, 0x80808080, 0x60402000
 #endif
   };
 
@@ -1330,7 +1330,7 @@ extern __inline int
 #else
   return __result[0];
 #endif
-#endif /* !_ARCH_PWR10 */
+#endif /* !(_ARCH_PWR10 && __LITTLE_ENDIAN__) */
 }
 #endif /* _ARCH_PWR8 */
 
