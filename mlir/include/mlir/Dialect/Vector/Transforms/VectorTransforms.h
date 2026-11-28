@@ -109,12 +109,12 @@ LogicalResult splitFullAndPartialTransfer(
 /// optimizations.
 void transferOpflowOpt(RewriterBase &rewriter, Operation *rootOp);
 
-/// Cast away the leading unit dim, if exists, for the given contract op.
-/// Return success if the transformation applies; return failure otherwise.
-FailureOr<Value>
-castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
-                                 MaskingOpInterface maskingOp,
-                                 RewriterBase &rewriter);
+/// Cast away a unit parallel dim of the accumulator of the given contract op:
+/// the leading one if it is a unit dim, otherwise the first such dim.
+/// Return failure if there is none.
+FailureOr<Value> castAwayContractionUnitDim(vector::ContractionOp contractOp,
+                                            MaskingOpInterface maskingOp,
+                                            RewriterBase &rewriter);
 
 // Structure to hold the range of `vector.vscale`.
 struct VscaleRange {
