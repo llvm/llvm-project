@@ -245,12 +245,31 @@ static MachineOperand *getSalvageOpsForTrunc(const MachineRegisterInfo &MRI,
   return &Trunc.getOperand(1);
 }
 
+static MachineOperand *getSalvageOpsForNeg(const MachineRegisterInfo &MRI,
+                                           MachineInstr &Sub,
+                                           SmallVectorImpl<uint64_t> &Ops) {
+  assert(Sub.getOpcode() == TargetOpcode::G_SUB && "Must be a G_SUB");
+
+  if (MRI.getType(Sub.getOperand(0).getReg()).isVector())
+    return nullptr;
+
+  const MachineInstr *LHS = MRI.getVRegDef(Sub.getOperand(1).getReg());
+  if (!LHS || LHS->getOpcode() != TargetOpcode::G_CONSTANT ||
+      !LHS->getOperand(1).getCImm()->isZero())
+    return nullptr;
+
+  Ops.push_back(dwarf::DW_OP_neg);
+  return &Sub.getOperand(2);
+}
+
 static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
                                             MachineInstr &MI,
                                             SmallVectorImpl<uint64_t> &Ops) {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_TRUNC:
     return getSalvageOpsForTrunc(MRI, MI, Ops);
+  case TargetOpcode::G_SUB:
+    return getSalvageOpsForNeg(MRI, MI, Ops);
   case TargetOpcode::COPY:
   case TargetOpcode::G_BITCAST:
     return getSalvageOpsForCopy(MRI, MI);
