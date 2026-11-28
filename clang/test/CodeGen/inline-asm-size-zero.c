@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -S %s -verify -o -
+// RUN: %clang_cc1 -S %s -verify -o -
 
 void foo(void) {
     extern long bar[];
