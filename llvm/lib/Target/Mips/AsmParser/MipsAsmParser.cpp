@@ -16,6 +16,7 @@
 #include "MCTargetDesc/MipsTargetStreamer.h"
 #include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -49,6 +50,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -57,6 +59,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -132,7 +135,7 @@ const FeatureBitset MipsAssemblerOptions::AllArchRelatedMask = {
 
 namespace {
 
-class MipsAsmParser : public MCTargetAsmParser {
+class MipsAsmParser : public MCTargetAsmParser, public MipsInstEmitter {
   MipsTargetStreamer &getTargetStreamer() {
     assert(getParser().getStreamer().getTargetStreamer() &&
            "do not have a target streamer");
@@ -152,6 +155,16 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool IsCpRestoreSet;
   bool CurForbiddenSlotAttr;
   int CpRestoreOffset;
+  // The target streamer this parser emits its instructions through.
+  MipsTargetStreamer *TS;
+  // The last two instructions emitted in each section, most recent last. They
+  // are used to find the hazards that need nops in .set reorder mode.
+  DenseMap<const MCSection *, SmallVector<MCInst, 2>> RecentInsts;
+  // True while an instruction is being processed, and the number of
+  // instructions emitted for it so far. Hazards inside a macro get nops even
+  // in .set noreorder mode, as with GNU as.
+  bool InMacroExpansion = false;
+  unsigned MacroInsts = 0;
   MCRegister GPReg;
   unsigned CpSaveLocation;
   /// If true, then CpSaveLocation is a register, otherwise it's an offset.
@@ -557,7 +570,9 @@ public:
     AssemblerOptions.push_back(
         std::make_unique<MipsAssemblerOptions>(getSTI().getFeatureBits()));
 
-    getTargetStreamer().updateABIInfo(*this);
+    TS = &getTargetStreamer();
+    TS->updateABIInfo(*this);
+    TS->setInstEmitter(this);
 
     if (!isABI_O32() && !useOddSPReg() != 0)
       report_fatal_error("-mno-odd-spreg requires the O32 ABI");
@@ -580,6 +595,15 @@ public:
     if (!isABI_O32() && inMicroMipsMode())
       report_fatal_error("microMIPS64 is not supported", false);
   }
+
+  ~MipsAsmParser() override {
+    if (TS->getInstEmitter() == this)
+      TS->setInstEmitter(nullptr);
+  }
+
+  /// Emit an instruction, first inserting the nops that hazards with the
+  /// previous instructions need in .set reorder mode, or inside a macro.
+  void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   /// True if all of $fcc0 - $fcc7 exist for the current ISA.
   bool hasEightFccRegisters() const { return hasMips4() || hasMips32(); }
@@ -756,6 +780,19 @@ public:
   }
 
   void onEndOfFile() override;
+
+  /// True if the current ISA has hazards that the assembler inserts nops for.
+  bool hasHazards() const {
+    return !hasMips32() && !inMicroMipsMode() && !inMips16Mode();
+  }
+  unsigned getInstsBetween(const MCInst &First, const MCInst *Second);
+  unsigned getHazardNops(const MCInst *Next, unsigned Window = 2);
+  void emitHazardNops(unsigned Count, const MCSubtargetInfo &STI);
+  /// Emit the nops that Inst needs after the previous instructions.
+  void emitHazardNopsBefore(const MCInst &Inst, const MCSubtargetInfo &STI);
+  /// Emit the nops that any instruction could need after the previous ones,
+  /// before leaving .set reorder mode.
+  void emitPendingHazardNops();
 
   /// Warn if RegIndex is the same as the current AT.
   void warnIfRegIndexIsAT(MCRegister RegIndex, SMLoc Loc);
@@ -1902,6 +1939,10 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   const MCInstrDesc &MCID = MII.get(Opcode);
   bool ExpandedJalSym = false;
 
+  // Everything emitted for this instruction counts as one macro.
+  SaveAndRestore InMacro(InMacroExpansion, true);
+  SaveAndRestore Insts(MacroInsts, 0u);
+
   Inst.setLoc(IDLoc);
 
   if (MCID.isBranch() || MCID.isCall()) {
@@ -2163,6 +2204,10 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     JalrInst.addOperand(MCOperand::createReg(Mips::RA));
     JalrInst.addOperand(MCOperand::createReg(getABI().getTempReg(9)));
 
+    // The R_MIPS_JALR label must be on the JALR itself, so emit any nops
+    // that it needs first.
+    emitHazardNopsBefore(JalrInst, *STI);
+
     if (isJalrRelocAvailable(JalExpr)) {
       // As an optimization hint for the linker, before the JALR we add:
       // .reloc tmplabel, R_{MICRO}MIPS_JALR, symbol
@@ -2390,7 +2435,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       tryExpandInstruction(Inst, IDLoc, Out, STI);
   switch (ExpandResult) {
   case MER_NotAMacro:
-    Out.emitInstruction(Inst, *STI);
+    emitInstruction(Inst, *STI);
     break;
   case MER_Success:
     break;
@@ -2460,6 +2505,301 @@ void MipsAsmParser::onEndOfFile() {
     if (AssemblerOptions.back()->isReorder())
       TOut.emitDirectiveSetReorder();
   }
+
+  // Inline assembly is followed by compiler generated code, so don't leave a
+  // hazard behind.
+  if (AssemblerOptions.back()->isReorder())
+    emitPendingHazardNops();
+}
+
+// The hazards below follow insns_between() in GNU as. The instruction
+// classes are the opcode flags it uses: LM (load from memory), LC (move from
+// a coprocessor), CM (move to a coprocessor), WR_CC/RD_CC (write/read the
+// condition code) and COP (access a coprocessor register other than an FPR).
+
+// LM: a load to a GPR. MIPS II and later interlock these.
+static bool isGPRLoad(unsigned Opcode) {
+  switch (Opcode) {
+  case Mips::LB:
+  case Mips::LBu:
+  case Mips::LH:
+  case Mips::LHu:
+  case Mips::LW:
+  case Mips::LWL:
+  case Mips::LWR:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// A GOT load pseudo ends with the load unless it adds an offset or the
+// symbol turns out to be local, which is only known later.
+static bool isGOTLoad(const MCInst &Inst) {
+  if (Inst.getOpcode() != Mips::PseudoGOTLoadGlobal)
+    return false;
+  MCValue Res;
+  return !Inst.getOperand(2).getExpr()->evaluateAsRelocatable(Res, nullptr) ||
+         Res.getConstant() == 0;
+}
+
+// LC: a move from a coprocessor to a GPR. MIPS IV and later interlock these.
+static bool isMoveFromCop(unsigned Opcode) {
+  switch (Opcode) {
+  case Mips::MFC1:
+  case Mips::MFC1_D64:
+  case Mips::DMFC1:
+  case Mips::CFC1:
+  case Mips::MFC0:
+  case Mips::DMFC0:
+  case Mips::MFC2:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// CM: a move from a GPR to a coprocessor. MIPS IV and later interlock these.
+static bool isMoveToCop(unsigned Opcode) {
+  switch (Opcode) {
+  case Mips::MTC1:
+  case Mips::MTC1_D64:
+  case Mips::DMTC1:
+  case Mips::CTC1:
+  case Mips::MTC0:
+  case Mips::DMTC0:
+  case Mips::MTC2:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// COP: reads or writes a coprocessor register other than an FPR.
+static bool isCopInst(unsigned Opcode) {
+  switch (Opcode) {
+  case Mips::CFC1:
+  case Mips::MFC0:
+  case Mips::MTC0:
+  case Mips::DMFC0:
+  case Mips::DMTC0:
+  case Mips::MFC2:
+  case Mips::MTC2:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool readsLO(unsigned Opcode) {
+  return Opcode == Mips::MFLO || Opcode == Mips::MFLO64;
+}
+
+static bool readsHI(unsigned Opcode) {
+  return Opcode == Mips::MFHI || Opcode == Mips::MFHI64;
+}
+
+static bool writesHIAndLO(unsigned Opcode) {
+  switch (Opcode) {
+  case Mips::MULT:
+  case Mips::MULTu:
+  case Mips::SDIV:
+  case Mips::UDIV:
+  case Mips::DMULT:
+  case Mips::DMULTu:
+  case Mips::DSDIV:
+  case Mips::DUDIV:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool writesLO(unsigned Opcode) {
+  return writesHIAndLO(Opcode) || Opcode == Mips::MTLO ||
+         Opcode == Mips::MTLO64;
+}
+
+static bool writesHI(unsigned Opcode) {
+  return writesHIAndLO(Opcode) || Opcode == Mips::MTHI ||
+         Opcode == Mips::MTHI64;
+}
+
+namespace {
+// The registers an instruction reads and writes.
+struct InstRegs {
+  SmallVector<MCRegister, 4> Defs;
+  SmallVector<MCRegister, 4> Uses;
+
+  InstRegs(const MCInst &Inst, const MCInstrDesc &Desc) {
+    unsigned Opcode = Inst.getOpcode();
+    for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
+      const MCOperand &MO = Inst.getOperand(I);
+      if (!MO.isReg() || !MO.getReg())
+        continue;
+      if (I < Desc.getNumDefs()) {
+        Defs.push_back(MO.getReg());
+        continue;
+      }
+      // Like GNU as, don't count the destination of lwl and lwr as read, so
+      // that the two halves of an unaligned load can be back to back.
+      if ((Opcode == Mips::LWL || Opcode == Mips::LWR) &&
+          I < Desc.getNumOperands() &&
+          Desc.getOperandConstraint(I, MCOI::TIED_TO) != -1)
+        continue;
+      Uses.push_back(MO.getReg());
+    }
+    append_range(Defs, Desc.implicit_defs());
+    append_range(Uses, Desc.implicit_uses());
+  }
+};
+} // end anonymous namespace
+
+static bool isFPUReg(MCRegister Reg, const MCRegisterInfo &MRI) {
+  return MRI.getRegClass(Mips::FGR32RegClassID).contains(Reg) ||
+         MRI.getRegClass(Mips::AFGR64RegClassID).contains(Reg) ||
+         MRI.getRegClass(Mips::FGR64RegClassID).contains(Reg);
+}
+
+static bool isFCCReg(MCRegister Reg, const MCRegisterInfo &MRI) {
+  return MRI.getRegClass(Mips::FCCRegClassID).contains(Reg);
+}
+
+/// Return the number of instructions that must come between First and Second.
+/// If Second is null, return the number that any instruction could need.
+unsigned MipsAsmParser::getInstsBetween(const MCInst &First,
+                                        const MCInst *Second) {
+  const MCRegisterInfo &MRI = *getContext().getRegisterInfo();
+  unsigned Opc1 = First.getOpcode();
+  unsigned Opc2 = Second ? Second->getOpcode() : 0;
+  InstRegs Regs1(First, MII.get(Opc1));
+  std::optional<InstRegs> Regs2;
+  if (Second)
+    Regs2.emplace(*Second, MII.get(Opc2));
+
+  auto SecondReads = [&](auto Pred) {
+    return !Second || any_of(Regs2->Uses, Pred);
+  };
+  // FPU compares write the condition code, and so do the moves to a
+  // coprocessor other than to an FPR.
+  bool FirstWritesCC =
+      any_of(Regs1.Defs, [&](MCRegister R) { return isFCCReg(R, MRI); }) ||
+      (isMoveToCop(Opc1) && Opc1 != Mips::MTC1 && Opc1 != Mips::MTC1_D64 &&
+       Opc1 != Mips::DMTC1);
+  bool SecondReadsCC =
+      SecondReads([&](MCRegister R) { return isFCCReg(R, MRI); });
+
+  // Before MIPS32, and except on the R5900, there must be two instructions
+  // between a read of HI or LO and an instruction that writes it.
+  if (!hasMips32() && !getSTI().hasFeature(Mips::FeatureR5900) &&
+      ((readsLO(Opc1) && (!Second || writesLO(Opc2))) ||
+       (readsHI(Opc1) && (!Second || writesHI(Opc2)))))
+    return 2;
+
+  bool CopDelays = !hasMips4() && !hasMips32();
+
+  // A load, or a move from a coprocessor, writes its GPR one instruction
+  // late.
+  if ((!hasMips2() && (isGPRLoad(Opc1) || isGOTLoad(First))) ||
+      (CopDelays && isMoveFromCop(Opc1))) {
+    MCRegister Dst = First.getOperand(0).getReg();
+    if (Dst != Mips::R0 && Dst != Mips::R0_64 &&
+        SecondReads([&](MCRegister R) { return MRI.regsOverlap(R, Dst); }))
+      return 1;
+    return 0;
+  }
+
+  // A move to a coprocessor, or a load to an FPR on MIPS I, writes its
+  // register one instruction late. GNU as no longer inserts a nop for lwc1,
+  // since it also marks it as a load to a GPR, but MIPS I needs one.
+  if ((CopDelays && isMoveToCop(Opc1)) || (!hasMips2() && Opc1 == Mips::LWC1)) {
+    SmallVector<MCRegister, 2> FPRDefs;
+    copy_if(Regs1.Defs, std::back_inserter(FPRDefs),
+            [&](MCRegister R) { return isFPUReg(R, MRI); });
+    if (!FPRDefs.empty()) {
+      if (SecondReads([&](MCRegister R) {
+            return any_of(FPRDefs,
+                          [&](MCRegister D) { return MRI.regsOverlap(R, D); });
+          }))
+        return 1;
+      return 0;
+    }
+    // A write to a control register needs two instructions before a read of
+    // the condition code, and one before any other access to a coprocessor
+    // register.
+    if (FirstWritesCC && SecondReadsCC)
+      return 2;
+    if (!Second || isCopInst(Opc2))
+      return 1;
+    return 0;
+  }
+
+  // An FPU compare writes the condition code one instruction late.
+  if (CopDelays && FirstWritesCC && SecondReadsCC)
+    return 1;
+
+  return 0;
+}
+
+/// Return the number of nops to insert before Next, or before any
+/// instruction if Next is null, looking at the last Window instructions.
+unsigned MipsAsmParser::getHazardNops(const MCInst *Next, unsigned Window) {
+  auto It = RecentInsts.find(getStreamer().getCurrentSectionOnly());
+  if (It == RecentInsts.end())
+    return 0;
+  const SmallVectorImpl<MCInst> &Recent = It->second;
+  unsigned Nops = 0;
+  // Distance is the number of instructions already between an earlier
+  // instruction and Next.
+  for (unsigned Distance = 0, E = std::min<unsigned>(Window, Recent.size());
+       Distance < E; ++Distance) {
+    unsigned Between =
+        getInstsBetween(Recent[Recent.size() - 1 - Distance], Next);
+    if (Between > Distance)
+      Nops = std::max(Nops, Between - Distance);
+  }
+  return Nops;
+}
+
+void MipsAsmParser::emitHazardNops(unsigned Count, const MCSubtargetInfo &STI) {
+  MCInst Nop;
+  Nop.setOpcode(Mips::SLL);
+  Nop.addOperand(MCOperand::createReg(Mips::R0));
+  Nop.addOperand(MCOperand::createReg(Mips::R0));
+  Nop.addOperand(MCOperand::createImm(0));
+  for (unsigned I = 0; I != Count; ++I)
+    emitInstruction(Nop, STI);
+}
+
+void MipsAsmParser::emitHazardNopsBefore(const MCInst &Inst,
+                                         const MCSubtargetInfo &STI) {
+  if (!hasHazards())
+    return;
+  // In .set noreorder mode, only look at the instructions from the same
+  // macro.
+  if (AssemblerOptions.back()->isReorder())
+    emitHazardNops(getHazardNops(&Inst), STI);
+  else if (InMacroExpansion)
+    emitHazardNops(getHazardNops(&Inst, MacroInsts), STI);
+}
+
+void MipsAsmParser::emitPendingHazardNops() {
+  if (hasHazards())
+    emitHazardNops(getHazardNops(nullptr), getSTI());
+}
+
+void MipsAsmParser::emitInstruction(const MCInst &Inst,
+                                    const MCSubtargetInfo &STI) {
+  MCStreamer &Out = getStreamer();
+  emitHazardNopsBefore(Inst, STI);
+  Out.emitInstruction(Inst, STI);
+  if (InMacroExpansion)
+    ++MacroInsts;
+
+  SmallVector<MCInst, 2> &Recent = RecentInsts[Out.getCurrentSectionOnly()];
+  if (Recent.size() == 2)
+    Recent.erase(Recent.begin());
+  Recent.push_back(Inst);
 }
 
 MipsAsmParser::MacroExpanderResultTy
@@ -2760,7 +3100,7 @@ bool MipsAsmParser::expandJalWithRegs(MCInst &Inst, SMLoc IDLoc,
     const MCOperand SecondRegOp = Inst.getOperand(1);
     JalrInst.addOperand(SecondRegOp);
   }
-  Out.emitInstruction(JalrInst, *STI);
+  emitInstruction(JalrInst, *STI);
 
   // If .set reorder is active and branch instruction has a delay slot,
   // emit a NOP after it.
@@ -3064,7 +3404,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
       Inst.addOperand(MCOperand::createReg(GPReg));
       Inst.addOperand(MCOperand::createExpr(SymExpr));
       Inst.addOperand(MCOperand::createImm(Flags));
-      Out.emitInstruction(Inst, *STI);
+      emitInstruction(Inst, *STI);
     };
 
     // The case where the result register is $25 is somewhat special. If the
@@ -3792,7 +4132,7 @@ bool MipsAsmParser::expandUncondBranchMMPseudo(MCInst &Inst, SMLoc IDLoc,
       Inst.addOperand(MCOperand::createImm(Offset.getImm()));
     }
   }
-  Out.emitInstruction(Inst, *STI);
+  emitInstruction(Inst, *STI);
 
   // If .set reorder is active and branch instruction has a delay slot,
   // emit a NOP after it.
@@ -4085,7 +4425,7 @@ bool MipsAsmParser::expandLoadStoreMultiple(MCInst &Inst, SMLoc IDLoc,
   }
 
   Inst.setOpcode(NewOpcode);
-  Out.emitInstruction(Inst, *STI);
+  emitInstruction(Inst, *STI);
   return false;
 }
 
@@ -7228,6 +7568,9 @@ bool MipsAsmParser::parseSetNoReorderDirective() {
     reportParseError("unexpected token, expected end of statement");
     return false;
   }
+  // The code after .set noreorder doesn't expect hazards from before it.
+  if (AssemblerOptions.back()->isReorder())
+    emitPendingHazardNops();
   AssemblerOptions.back()->setNoReorder();
   getTargetStreamer().emitDirectiveSetNoReorder();
   Parser.Lex(); // Consume the EndOfStatement.
@@ -7523,6 +7866,11 @@ bool MipsAsmParser::parseSetPopDirective() {
   // from changing the initial options. This is how we remember them.
   if (AssemblerOptions.size() == 2)
     return reportParseError(Loc, ".set pop with no .set push");
+
+  // Like .set noreorder, leave no hazard behind if this ends .set reorder.
+  if (AssemblerOptions.back()->isReorder() &&
+      !AssemblerOptions[AssemblerOptions.size() - 2]->isReorder())
+    emitPendingHazardNops();
 
   MCSubtargetInfo &STI = copySTI();
   AssemblerOptions.pop_back();

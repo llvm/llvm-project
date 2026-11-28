@@ -22,9 +22,27 @@ namespace llvm {
 
 class formatted_raw_ostream;
 
+/// Emits the instructions that MipsTargetStreamer creates for the assembler.
+/// The assembler parser uses this to see every instruction it emits, including
+/// the ones that macros expand to, so that it can insert the nops that hazards
+/// need in .set reorder mode.
+class MipsInstEmitter {
+public:
+  virtual ~MipsInstEmitter();
+  virtual void emitInstruction(const MCInst &Inst,
+                               const MCSubtargetInfo &STI) = 0;
+};
+
 class MipsTargetStreamer : public MCTargetStreamer {
 public:
   MipsTargetStreamer(MCStreamer &S);
+
+  /// Set the emitter for the instructions that this streamer creates, or
+  /// nullptr to emit them directly.
+  void setInstEmitter(MipsInstEmitter *E) { InstEmitter = E; }
+  MipsInstEmitter *getInstEmitter() const { return InstEmitter; }
+  /// Emit an instruction through the emitter, if one is set.
+  void emitInst(const MCInst &Inst, const MCSubtargetInfo &STI);
 
   virtual void emitGPRel32Value(const MCExpr *);
   virtual void emitGPRel64Value(const MCExpr *);
@@ -214,6 +232,7 @@ protected:
 
 private:
   bool ModuleDirectiveAllowed;
+  MipsInstEmitter *InstEmitter = nullptr;
 };
 
 // This part is for ascii assembly output

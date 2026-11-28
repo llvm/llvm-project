@@ -270,6 +270,8 @@ void MipsMCCodeEmitter::encodeInstruction(const MCInst &MI,
 ///                    addiu $rd, $rd, %lo(sym+offset)
 ///   Local (N32/N64): ld    $rd, %got_disp(sym)($gp)
 ///                   >daddiu $rd, $rd, offset
+///
+/// On MIPS I, a nop goes between the load and the addiu.
 void MipsMCCodeEmitter::expandGOTLoad(const MCInst &MI,
                                       SmallVectorImpl<char> &CB,
                                       SmallVectorImpl<MCFixup> &Fixups,
@@ -295,9 +297,18 @@ void MipsMCCodeEmitter::expandGOTLoad(const MCInst &MI,
                      const MCExpr *Expr) {
     Insts.push_back(MCInstBuilder(Opc).addReg(Rd).addReg(Rs).addExpr(Expr));
   };
+  // MIPS I has no load interlock, so the addiu that uses the loaded register
+  // needs a nop before it, as with GNU as.
+  auto AddLoadDelayNop = [&]() {
+    if (!STI.hasFeature(Mips::FeatureMips2))
+      Insts.push_back(
+          MCInstBuilder(Mips::SLL).addReg(Mips::R0).addReg(Mips::R0).addImm(0));
+  };
   auto AddOffset = [&]() {
-    if (Offset != 0)
+    if (Offset != 0) {
+      AddLoadDelayNop();
       AddInst(AddiuOpc, DstReg, DstReg, MCConstantExpr::create(Offset, Ctx));
+    }
   };
 
   if (!IsLocal && (Flags & MipsII::GOTLoad_Call)) {
@@ -315,6 +326,7 @@ void MipsMCCodeEmitter::expandGOTLoad(const MCInst &MI,
   } else {
     AddInst(LoadOpc, DstReg, GPReg,
             MCSpecifierExpr::create(SymExpr, Mips::S_GOT, Ctx));
+    AddLoadDelayNop();
     AddInst(AddiuOpc, DstReg, DstReg,
             MCSpecifierExpr::create(SymExpr, Mips::S_LO, Ctx));
   }

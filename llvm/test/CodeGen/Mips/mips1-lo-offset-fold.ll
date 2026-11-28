@@ -151,6 +151,7 @@ define void @asm_mem() {
 ; STATIC-NEXT:    .set reorder
 ; STATIC-EMPTY:
 ; STATIC-NEXT:    lw $3, 0($2)
+; STATIC-NEXT:    nop
 ; STATIC-EMPTY:
 ; STATIC-NEXT:    .set pop
 ; STATIC-NEXT:    #NO_APP
@@ -171,6 +172,7 @@ define void @asm_mem() {
 ; PIC-NEXT:    .set reorder
 ; PIC-EMPTY:
 ; PIC-NEXT:    lw $3, 4($2)
+; PIC-NEXT:    nop
 ; PIC-EMPTY:
 ; PIC-NEXT:    .set pop
 ; PIC-NEXT:    #NO_APP
@@ -188,6 +190,7 @@ define void @asm_mem() {
 ; GPREL-NEXT:    .set reorder
 ; GPREL-EMPTY:
 ; GPREL-NEXT:    lw $3, 0($2)
+; GPREL-NEXT:    nop
 ; GPREL-EMPTY:
 ; GPREL-NEXT:    .set pop
 ; GPREL-NEXT:    #NO_APP
