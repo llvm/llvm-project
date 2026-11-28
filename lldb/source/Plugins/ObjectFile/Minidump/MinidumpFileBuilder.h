@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include "lldb/Core/Progress.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
@@ -153,11 +154,15 @@ private:
   std::vector<llvm::minidump::Directory> m_directories;
   // When we write off the threads for the first time, we need to clean them up
   // and give them the correct RVA once we write the stack memory list.
-  // We save by the end because we only take from the stack pointer up
-  // So the saved off range base can differ from the memory region the stack
-  // pointer is in.
-  std::unordered_map<lldb::addr_t, llvm::minidump::Thread>
-      m_thread_by_range_end;
+  // Threads are kept in thread list order so they can be rewritten in place.
+  std::vector<llvm::minidump::Thread> m_threads;
+  // Indexes into m_threads keyed by the end of the memory region containing
+  // each thread's stack pointer. We key by the end because we only take from
+  // the stack pointer up, so the saved off range base can differ from the
+  // memory region the stack pointer is in. Several threads can share a region
+  // (e.g. adjacent thread stacks with no guard page in between).
+  std::unordered_map<lldb::addr_t, std::vector<size_t>>
+      m_thread_indexes_by_range_end;
   // Main data buffer consisting of data without the minidump header and
   // directories
   lldb_private::DataBufferHeap m_data;
