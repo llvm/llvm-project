@@ -750,6 +750,8 @@ defm : BoolField<"sanitizer-coverage-stack-depth", "false",
   "Max stack depth tracing">;
 defm : ValueField<"sanitizer-coverage-stack-depth-callback-min", "int", "0",
   "Max stack depth tracing should use callback and only when stack depth more than specified">;
+defm : BoolField<"sanitizer-coverage-trace-args", "false",
+  "Tracing of function arguments">;
 defm : BoolField<"sanitizer-coverage-trace-compares", "false",
   "Tracing of CMP and similar instructions">;
 defm : BoolField<"sanitizer-coverage-trace-divs", "false",
@@ -764,6 +766,10 @@ defm : BoolField<"sanitizer-coverage-trace-pc-entry-exit", "false",
   "PC tracing with separate entry/exit callbacks">;
 defm : BoolField<"sanitizer-coverage-trace-pc-guard", "false",
   "PC tracing with a guard">;
+defm : ValueField<"sanitizer-coverage-trace-pointee-bytes", "unsigned", "64",
+  "With trace-args and trace-ret, read at most this many bytes behind a pointer the IR says is dereferenceable (0: report the pointer only)">;
+defm : BoolField<"sanitizer-coverage-trace-ret", "false",
+  "Tracing of return values">;
 defm : BoolField<"sanitizer-coverage-trace-stores", "false",
   "Tracing of store instructions">;
 
