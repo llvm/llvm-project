@@ -1377,14 +1377,15 @@ void arith::AddFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
-  // subf(x, +0) -> x
-  if (matchPattern(adaptor.getRhs(), m_PosZeroFloat()))
+  auto rm = getRoundingmode();
+  // Under downward rounding, +0 - +0 is -0.
+  if (rm != RoundingMode::downward &&
+      matchPattern(adaptor.getRhs(), m_PosZeroFloat()))
     return getLhs();
-  if (matchPattern(adaptor.getRhs(), m_NegZeroFloat()) &&
-      bitEnumContainsAll(adaptor.getFastmath(), FastMathFlags::nsz))
+  if (bitEnumContainsAll(adaptor.getFastmath(), FastMathFlags::nsz) &&
+      matchPattern(adaptor.getRhs(), m_AnyZeroFloat()))
     return getLhs();
 
-  auto rm = getRoundingmode();
   return constFoldBinaryOpConditional<FloatAttr>(
       adaptor.getOperands(),
       [rm](const APFloat &a, const APFloat &b) -> std::optional<APFloat> {
