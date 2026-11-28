@@ -53,3 +53,156 @@ case1:                                         ; preds = %switch_bb
 default_bb:                ; preds = %switch_bb
   ret i64 0
 }
+
+; The state from def1 is still live through def2 on the via continuation.
+; Def2 cannot determine the exit state for every path entering it.
+; https://github.com/llvm/llvm-project/issues/239409
+define i32 @live_through_state(i1 %a, i1 %c) {
+; CHECK-LABEL: define i32 @live_through_state(
+; CHECK-SAME: i1 [[A:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[HEADER:.*]]
+; CHECK:       [[HEADER]]:
+; CHECK-NEXT:    br i1 [[A]], label %[[DEF1_JT0:.*]], label %[[SET:.*]]
+; CHECK:       [[SET]]:
+; CHECK-NEXT:    br label %[[DEF1_JT4294967295:.*]]
+; CHECK:       [[DEF1:.*]]:
+; CHECK-NEXT:    br label %[[DEF2:.*]]
+; CHECK:       [[DEF1_JT4294967295]]:
+; CHECK-NEXT:    [[S1_JT4294967295:%.*]] = phi i32 [ -1, %[[SET]] ]
+; CHECK-NEXT:    br label %[[DEF2_JT4294967295:.*]]
+; CHECK:       [[DEF1_JT0]]:
+; CHECK-NEXT:    [[S1_JT0:%.*]] = phi i32 [ 0, %[[HEADER]] ]
+; CHECK-NEXT:    br label %[[DEF2_JT0:.*]]
+; CHECK:       [[DEF2]]:
+; CHECK-NEXT:    [[S2:%.*]] = phi i32 [ 0, %[[DEF1]] ]
+; CHECK-NEXT:    br i1 [[C]], label %[[VIA:.*]], label %[[JOIN:.*]]
+; CHECK:       [[DEF2_JT4294967295]]:
+; CHECK-NEXT:    [[S2_JT4294967295:%.*]] = phi i32 [ 0, %[[DEF1_JT4294967295]] ]
+; CHECK-NEXT:    br i1 [[C]], label %[[VIA_JT4294967295:.*]], label %[[JOIN]]
+; CHECK:       [[DEF2_JT0]]:
+; CHECK-NEXT:    [[S2_JT0:%.*]] = phi i32 [ 0, %[[DEF1_JT0]] ]
+; CHECK-NEXT:    br i1 [[C]], label %[[VIA_JT0:.*]], label %[[JOIN]]
+; CHECK:       [[VIA]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[VIA_JT4294967295]]:
+; CHECK-NEXT:    br label %[[JOIN_JT4294967295:.*]]
+; CHECK:       [[VIA_JT0]]:
+; CHECK-NEXT:    br label %[[JOIN_JT0:.*]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[ST:%.*]] = phi i32 [ [[S2]], %[[DEF2]] ], [ undef, %[[VIA]] ], [ [[S2_JT0]], %[[DEF2_JT0]] ], [ [[S2_JT4294967295]], %[[DEF2_JT4294967295]] ]
+; CHECK-NEXT:    switch i32 [[ST]], label %[[HEADER]] [
+; CHECK-NEXT:      i32 -1, label %[[NONE:.*]]
+; CHECK-NEXT:      i32 0, label %[[FOUND:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[JOIN_JT4294967295]]:
+; CHECK-NEXT:    [[ST_JT4294967295:%.*]] = phi i32 [ [[S1_JT4294967295]], %[[VIA_JT4294967295]] ]
+; CHECK-NEXT:    br label %[[NONE]]
+; CHECK:       [[JOIN_JT0]]:
+; CHECK-NEXT:    [[ST_JT0:%.*]] = phi i32 [ [[S1_JT0]], %[[VIA_JT0]] ]
+; CHECK-NEXT:    br label %[[FOUND]]
+; CHECK:       [[NONE]]:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       [[FOUND]]:
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  br label %header
+
+header:
+  br i1 %a, label %def1, label %set
+
+set:
+  br label %def1
+
+def1:
+  %s1 = phi i32 [ 0, %header ], [ -1, %set ]
+  br label %def2
+
+def2:
+  %s2 = phi i32 [ 0, %def1 ]
+  br i1 %c, label %via, label %join
+
+via:
+  br label %join
+
+join:
+  %st = phi i32 [ %s2, %def2 ], [ %s1, %via ]
+  switch i32 %st, label %header [
+  i32 -1, label %none
+  i32 0, label %found
+  ]
+
+none:
+  ret i32 0
+
+found:
+  ret i32 1
+}
+
+; The switch condition can also be live through another state definition,
+; including a backedge to that definition.
+; https://github.com/llvm/llvm-project/issues/211090
+define void @live_through_switch_condition() {
+; CHECK-LABEL: define void @live_through_switch_condition() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[HEADER:.*]]
+; CHECK:       [[HEADER]]:
+; CHECK-NEXT:    [[STATE:%.*]] = phi i16 [ 12345, %[[ENTRY]] ], [ [[NEXT:%.*]], %[[DETERMINE:.*]] ], [ [[NEXT_JT0:%.*]], %[[DETERMINE_JT0:.*]] ]
+; CHECK-NEXT:    br i1 true, label %[[SET_NEXT:.*]], label %[[SWITCH:.*]]
+; CHECK:       [[HEADER_JT0:.*]]:
+; CHECK-NEXT:    [[STATE_JT0:%.*]] = phi i16 [ 0, %[[BACKEDGE:.*]] ]
+; CHECK-NEXT:    br i1 true, label %[[SET_NEXT_JT0:.*]], label %[[SWITCH_JT0:.*]]
+; CHECK:       [[SET_NEXT]]:
+; CHECK-NEXT:    br label %[[DETERMINE]]
+; CHECK:       [[SET_NEXT_JT0]]:
+; CHECK-NEXT:    br label %[[DETERMINE_JT0]]
+; CHECK:       [[DETERMINE]]:
+; CHECK-NEXT:    [[STATE2:%.*]] = phi i16 [ [[STATE1:%.*]], %[[BACKEDGE]] ], [ [[STATE]], %[[SET_NEXT]] ]
+; CHECK-NEXT:    [[NEXT]] = phi i16 [ 0, %[[SET_NEXT]] ], [ 0, %[[BACKEDGE]] ]
+; CHECK-NEXT:    br i1 false, label %[[HEADER]], label %[[SWITCH]]
+; CHECK:       [[DETERMINE_JT0]]:
+; CHECK-NEXT:    [[NEXT_JT0]] = phi i16 [ 0, %[[SET_NEXT_JT0]] ]
+; CHECK-NEXT:    br i1 false, label %[[HEADER]], label %[[SWITCH_JT0]]
+; CHECK:       [[SWITCH]]:
+; CHECK-NEXT:    [[STATE3:%.*]] = phi i16 [ [[STATE2]], %[[DETERMINE]] ], [ [[STATE]], %[[HEADER]] ]
+; CHECK-NEXT:    switch i16 [[STATE3]], label %[[BACKEDGE]] [
+; CHECK-NEXT:      i16 12345, label %[[EXIT:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[SWITCH_JT0]]:
+; CHECK-NEXT:    br label %[[BACKEDGE]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[BACKEDGE]]:
+; CHECK-NEXT:    [[STATE1]] = phi i16 [ [[STATE_JT0]], %[[SWITCH_JT0]] ], [ [[STATE3]], %[[SWITCH]] ]
+; CHECK-NEXT:    switch i64 0, label %[[HEADER_JT0]] [
+; CHECK-NEXT:      i64 1, label %[[DETERMINE]]
+; CHECK-NEXT:    ]
+;
+entry:
+  br label %header
+
+header:
+  %state = phi i16 [ 12345, %entry ], [ 0, %backedge ], [ %next, %determine ]
+  br i1 true, label %set_next, label %switch
+
+set_next:
+  br label %determine
+
+determine:
+  %next = phi i16 [ 0, %set_next ], [ 0, %backedge ]
+  br i1 false, label %header, label %switch
+
+switch:
+  switch i16 %state, label %backedge [
+  i16 12345, label %exit
+  ]
+
+exit:
+  ret void
+
+backedge:
+  switch i64 0, label %header [
+  i64 1, label %determine
+  ]
+}
