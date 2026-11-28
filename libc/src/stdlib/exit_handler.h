@@ -25,9 +25,11 @@ constexpr size_t CALLBACK_LIST_SIZE_FOR_TESTS = 1024;
 struct AtExitUnit {
   AtExitCallback *callback = nullptr;
   void *payload = nullptr;
+  void *dso = nullptr;
   LIBC_INLINE constexpr AtExitUnit() = default;
-  LIBC_INLINE constexpr AtExitUnit(AtExitCallback *c, void *p)
-      : callback(c), payload(p) {}
+  LIBC_INLINE constexpr AtExitUnit(AtExitCallback *c, void *p,
+                                   void *d = nullptr)
+      : callback(c), payload(p), dso(d) {}
 };
 
 #if defined(LIBC_TARGET_ARCH_IS_GPU)
@@ -45,16 +47,48 @@ LIBC_INLINE void stdc_at_exit_func(void *payload) {
   reinterpret_cast<StdCAtExitCallback *>(payload)();
 }
 
-LIBC_INLINE void call_exit_callbacks(ExitCallbackList &callbacks) {
+LIBC_INLINE AtExitUnit *find_dso_callback(ExitCallbackList &callbacks,
+                                          void *dso) {
+#if defined(LIBC_COPT_PUBLIC_PACKAGING) && !defined(LIBC_TARGET_ARCH_IS_GPU)
+  for (AtExitUnit &unit : callbacks) {
+    if (unit.callback && unit.dso == dso)
+      return &unit;
+  }
+#else
+  for (auto it = callbacks.rbegin(); it != callbacks.rend(); ++it) {
+    if (it->callback && it->dso == dso)
+      return &(*it);
+  }
+#endif
+  return nullptr;
+}
+
+LIBC_INLINE void call_exit_callbacks(ExitCallbackList &callbacks,
+                                     void *dso = nullptr) {
   handler_list_mtx.lock();
-  while (!callbacks.empty()) {
-    AtExitUnit unit = callbacks.back();
-    callbacks.pop_back();
+  if (!dso) {
+    while (!callbacks.empty()) {
+      AtExitUnit unit = callbacks.back();
+      callbacks.pop_back();
+      if (!unit.callback)
+        continue;
+      handler_list_mtx.unlock();
+      unit.callback(unit.payload);
+      handler_list_mtx.lock();
+    }
+    ExitCallbackList::destroy(&callbacks);
+    return;
+  }
+
+  while (AtExitUnit *unit = find_dso_callback(callbacks, dso)) {
+    AtExitCallback *callback = unit->callback;
+    void *payload = unit->payload;
+    unit->callback = nullptr;
     handler_list_mtx.unlock();
-    unit.callback(unit.payload);
+    callback(payload);
     handler_list_mtx.lock();
   }
-  ExitCallbackList::destroy(&callbacks);
+  handler_list_mtx.unlock();
 }
 
 LIBC_INLINE int add_atexit_unit(ExitCallbackList &callbacks,

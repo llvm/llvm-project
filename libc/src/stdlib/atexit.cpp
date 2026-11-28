@@ -21,16 +21,13 @@ Mutex handler_list_mtx(/*is_priority_inherit=*/false, /*is_recursive=*/false,
 
 extern "C" {
 
-int __cxa_atexit(AtExitCallback *callback, void *payload, void *) {
-  return add_atexit_unit(atexit_callbacks, {callback, payload});
+int __cxa_atexit(AtExitCallback *callback, void *payload, void *dso) {
+  return add_atexit_unit(atexit_callbacks, {callback, payload, dso});
 }
 
-void __cxa_finalize(void *dso) {
-  if (!dso)
-    call_exit_callbacks(atexit_callbacks);
+void __cxa_finalize(void *dso) { call_exit_callbacks(atexit_callbacks, dso); }
 }
-
-} // extern "C"
+// extern "C"
 
 LLVM_LIBC_FUNCTION(int, atexit, (__atexithandler_t callback)) {
   return add_atexit_unit(
