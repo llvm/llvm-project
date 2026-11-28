@@ -1,0 +1,37 @@
+; Replay must keep every inline from the profiled binary, even after the size
+; budget for a new inline plan is spent. A small limit makes the case short:
+; main:7 @ foo (279 bytes) spends the budget before main:8 @ foo is visited.
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-cost.perfscript --binary=%S/Inputs/cs-preinline-cost.perfbin --gen-cs-nested-profile=0 --csspgo-replay-preinline --sample-profile-inline-limit-max=100 --output=%t.replay
+; RUN: FileCheck %s --input-file=%t.replay --check-prefix=REPLAY
+
+; Same result when the budget is spent before the first candidate.
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-cost.perfscript --binary=%S/Inputs/cs-preinline-cost.perfbin --gen-cs-nested-profile=0 --csspgo-replay-preinline --sample-profile-inline-limit-max=1 --sample-profile-inline-limit-min=1 --output=%t.small
+; RUN: diff %t.replay %t.small
+
+; The normal pre-inliner still respects the size limit.
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-preinline-cost.perfscript --binary=%S/Inputs/cs-preinline-cost.perfbin --gen-cs-nested-profile=0 --sample-profile-inline-limit-max=100 --output=%t.normal
+; RUN: FileCheck %s --input-file=%t.normal --check-prefix=NORMAL
+
+; Replay does not add inlines that the profiled binary does not have.
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/noinline-cs-pseudoprobe.perfscript --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin --gen-cs-nested-profile=0 --csspgo-replay-preinline --output=%t.noinline
+; RUN: FileCheck %s --input-file=%t.noinline --check-prefix=NOINLINE
+
+; REPLAY:      [main:7 @ _Z3fooi]:44942:545
+; REPLAY:       !Attributes: 3
+; REPLAY:      [main:8 @ _Z3fooi]:2179:544
+; REPLAY:       !Attributes: 3
+; REPLAY:      [main:9 @ _Z3fooi]:1090:545
+; REPLAY:       !Attributes: 3
+; REPLAY-NOT:  [_Z3fooi]
+
+; NORMAL:      [main:7 @ _Z3fooi]:44942:545
+; NORMAL:      [_Z3fooi]:2179:544
+; NORMAL-NEXT:  1: 544
+; NORMAL-NOT:  [main:8 @ _Z3fooi]
+
+; NOINLINE-NOT: @
+; NOINLINE:     [foo]:75:0
+; NOINLINE-NOT: !Attributes: 3
+; NOINLINE:     [bar]:30:15
+; NOINLINE-NOT: @
+; NOINLINE-NOT: !Attributes: 3

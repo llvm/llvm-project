@@ -213,7 +213,10 @@ void CSPreInliner::processFunction(const FunctionId Name) {
   ProfiledCandidateQueue CQueue;
   getInlineCandidates(CQueue, FSamples);
 
-  while (!CQueue.empty() && FuncFinalSize < SizeLimit) {
+  // Replay preserves the inlines already present in the profiled binary, even
+  // when their combined size exceeds the budget for a new inline plan.
+  while (!CQueue.empty() &&
+         (SamplePreInlineReplay || FuncFinalSize < SizeLimit)) {
     ProfiledInlineCandidate Candidate = CQueue.top();
     CQueue.pop();
     bool ShouldInline = false;
