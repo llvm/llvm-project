@@ -12,6 +12,10 @@
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "AllocationOrder.h"
 #include "RegAllocGreedy.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveIntervalUnion.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -22,10 +26,25 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "regalloc"
+
+STATISTIC(NumCanReassignCalls, "Number of canReassign calls");
+STATISTIC(NumCanReassignCached,
+          "Number of canReassign searches answered from a recorded failure");
+STATISTIC(NumCanReassignRechecks,
+          "Number of recorded canReassign failures rechecked against freed "
+          "registers");
+
+static cl::opt<bool> CacheFailedReassign(
+    "regalloc-cache-failed-reassign", cl::Hidden, cl::init(true),
+    cl::desc("Remember canReassign searches that found no free register, and "
+             "reuse them until a register is freed across the live range"));
 
 static cl::opt<RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode> Mode(
     "regalloc-enable-advisor", cl::Hidden,
@@ -186,6 +205,95 @@ RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(const MachineFunction &MF,
           (EnableLocalReassignment != cl::boolOrDefault::BOU_FALSE &&
            MF.getSubtarget().enableRALocalReassignment(
                MF.getTarget().getOptLevel()))) {}
+
+bool RegAllocEvictionAdvisor::isFree(const LiveInterval &VirtReg,
+                                     MCRegister PhysReg) const {
+  return none_of(TRI->regunits(PhysReg), [&](MCRegUnit Unit) {
+    // Instantiate a "subquery", not to be confused with the Queries array.
+    LiveIntervalUnion::Query SubQ(
+        VirtReg, Matrix->getLiveUnions()[static_cast<unsigned>(Unit)]);
+    return SubQ.checkInterference();
+  });
+}
+
+bool RegAllocEvictionAdvisor::failedReassignStillHolds(
+    const LiveInterval &VirtReg, MCRegister FromReg) const {
+  if (!CacheFailedReassign)
+    return false;
+
+  auto It = FailedReassigns.find(VirtReg.reg());
+  if (It == FailedReassigns.end())
+    return false;
+
+  FailedReassign &F = It->second;
+  // The recorded range must still be the one that was searched, and the freed
+  // history must still reach back to when this entry was last checked.
+  if (F.Seen < Matrix->getFreedBase() || VirtReg.empty() ||
+      F.SegCount != VirtReg.segments.size() ||
+      F.Begin != VirtReg.beginIndex() || F.End != VirtReg.endIndex()) {
+    FailedReassigns.erase(It);
+    return false;
+  }
+
+  SmallDenseSet<MCPhysReg, 16> Tested;
+  const TargetRegisterClass *RC = MRI->getRegClass(VirtReg.reg());
+  for (const LiveRegMatrix::FreedReg &FR :
+       Matrix->getFreedRegs().drop_front(F.Seen - Matrix->getFreedBase())) {
+    if (F.Begin >= FR.End || FR.Begin >= F.End)
+      continue;
+    ++NumCanReassignRechecks;
+    // A freed register makes its aliases candidates too.
+    for (MCRegAliasIterator Alias(FR.PhysReg, TRI, /*IncludeSelf=*/true);
+         Alias.isValid(); ++Alias) {
+      MCRegister Reg(*Alias);
+      // Skip anything this interval could not be assigned to anyway. That is
+      // the membership test RegisterClassInfo::getOrder() applies.
+      if (Reg == FromReg || !RC->contains(Reg) || MRI->isReserved(Reg) ||
+          !Tested.insert(Reg.id()).second)
+        continue;
+      if (isFree(VirtReg, Reg)) {
+        FailedReassigns.erase(It);
+        return false;
+      }
+    }
+  }
+
+  // Everything freed so far has now been accounted for.
+  F.Seen = Matrix->getFreedEnd();
+  return true;
+}
+
+bool RegAllocEvictionAdvisor::canReassign(const LiveInterval &VirtReg,
+                                          MCRegister FromReg) const {
+  ++NumCanReassignCalls;
+  if (failedReassignStillHolds(VirtReg, FromReg)) {
+    ++NumCanReassignCached;
+    return false;
+  }
+
+  AllocationOrder Order =
+      AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
+  for (MCRegister Reg : Order) {
+    if (Reg == FromReg)
+      continue;
+    // If no units have interference, reassignment is possible.
+    if (isFree(VirtReg, Reg)) {
+      LLVM_DEBUG(dbgs() << "can reassign: " << VirtReg << " from "
+                        << printReg(FromReg, TRI) << " to "
+                        << printReg(Reg, TRI) << '\n');
+      return true;
+    }
+  }
+
+  // Record the failure so the next query can skip this search. A short order
+  // does not repay the bookkeeping, and a hints-only search covered only the
+  // preferred registers, which can change without any register being freed.
+  if (CacheFailedReassign && !Order.hintsOnly() && !VirtReg.empty())
+    FailedReassigns[VirtReg.reg()] = {
+        static_cast<unsigned>(VirtReg.segments.size()), VirtReg.beginIndex(),
+        VirtReg.endIndex(), Matrix->getFreedEnd()};
+  return false;
+}
 
 /// isUrgentEviction - Returns true if this is an urgent eviction. Once a live
 /// range becomes small enough, it is urgent that we find a register for it.

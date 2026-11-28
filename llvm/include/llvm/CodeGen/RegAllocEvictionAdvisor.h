@@ -11,11 +11,13 @@
 
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCRegister.h"
@@ -159,6 +161,35 @@ protected:
   /// Run or not the local reassignment heuristic. This information is
   /// obtained from the TargetSubtargetInfo.
   const bool EnableLocalReassign;
+
+private:
+  /// A canReassign() search that found no free register. The answer only
+  /// changes when a register is freed across the live range, so the entry
+  /// stays usable and a later query rechecks the registers LiveRegMatrix has
+  /// recorded as freed.
+  struct FailedReassign {
+    /// With Begin and End, detects an interval edited since the search.
+    unsigned SegCount;
+    SlotIndex Begin;
+    SlotIndex End;
+    /// LiveRegMatrix::getFreedEnd() when this entry was last brought up to
+    /// date. Only registers freed after it still need testing; if it has
+    /// fallen behind getFreedBase() an unassign was missed and the entry is
+    /// dropped.
+    unsigned Seen;
+  };
+
+  mutable DenseMap<Register, FailedReassign> FailedReassigns;
+
+  /// True if \p VirtReg has no interference on any unit of \p PhysReg.
+  bool isFree(const LiveInterval &VirtReg, MCRegister PhysReg) const;
+
+  /// Consult FailedReassigns for \p VirtReg. Returns true if the recorded
+  /// failure still holds, in which case canReassign() can answer false
+  /// without searching. Drops the entry when it cannot be trusted or when a
+  /// freed register turns out to be usable.
+  bool failedReassignStillHolds(const LiveInterval &VirtReg,
+                                MCRegister FromReg) const;
 };
 
 /// Common provider for legacy and new pass managers.
