@@ -3986,7 +3986,7 @@ define amdgpu_ps i32 @s_fshl_v2i16(<2 x i16> inreg %lhs, <2 x i16> inreg %rhs, <
 ; GFX11-NEXT:    s_and_b32 s6, s1, 0xffff
 ; GFX11-NEXT:    s_lshr_b32 s1, s1, 16
 ; GFX11-NEXT:    s_and_b32 s3, s2, 0xf000f
-; GFX11-NEXT:    s_lshr_b32 s6, s6, 0x10001
+; GFX11-NEXT:    s_lshr_b32 s6, s6, 1
 ; GFX11-NEXT:    s_lshr_b32 s1, s1, 1
 ; GFX11-NEXT:    s_and_not1_b32 s2, 0xf000f, s2
 ; GFX11-NEXT:    s_lshr_b32 s4, s0, 16
@@ -4247,7 +4247,7 @@ define amdgpu_ps float @v_fshl_v2i16_ssv(<2 x i16> inreg %lhs, <2 x i16> inreg %
 ; GFX11-NEXT:    s_and_b32 s2, s1, 0xffff
 ; GFX11-NEXT:    s_lshr_b32 s1, s1, 16
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0xf000f, v0
-; GFX11-NEXT:    s_lshr_b32 s2, s2, 0x10001
+; GFX11-NEXT:    s_lshr_b32 s2, s2, 1
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0xf000f, v1
 ; GFX11-NEXT:    s_lshr_b32 s1, s1, 1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
@@ -4427,7 +4427,7 @@ define amdgpu_ps float @v_fshl_v2i16_vss(<2 x i16> %lhs, <2 x i16> inreg %rhs, <
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_and_b32 s3, s0, 0xffff
 ; GFX11-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX11-NEXT:    s_lshr_b32 s3, s3, 0x10001
+; GFX11-NEXT:    s_lshr_b32 s3, s3, 1
 ; GFX11-NEXT:    s_lshr_b32 s0, s0, 1
 ; GFX11-NEXT:    s_and_b32 s2, s1, 0xf000f
 ; GFX11-NEXT:    s_and_not1_b32 s1, 0xf000f, s1
@@ -4551,7 +4551,7 @@ define amdgpu_ps i48 @s_fshl_v3i16(<3 x i16> inreg %lhs, <3 x i16> inreg %rhs, <
 ; GFX11-NEXT:    s_and_b32 s9, s2, 0xffff
 ; GFX11-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX11-NEXT:    s_and_b32 s6, s4, 0xf000f
-; GFX11-NEXT:    s_lshr_b32 s9, s9, 0x10001
+; GFX11-NEXT:    s_lshr_b32 s9, s9, 1
 ; GFX11-NEXT:    s_lshr_b32 s2, s2, 1
 ; GFX11-NEXT:    s_and_not1_b32 s4, 0xf000f, s4
 ; GFX11-NEXT:    s_lshr_b32 s7, s0, 16
@@ -4568,7 +4568,7 @@ define amdgpu_ps i48 @s_fshl_v3i16(<3 x i16> inreg %lhs, <3 x i16> inreg %rhs, <
 ; GFX11-NEXT:    s_lshr_b32 s3, s3, 16
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s2, s4, s2
 ; GFX11-NEXT:    s_and_b32 s4, s5, 0xf000f
-; GFX11-NEXT:    s_lshr_b32 s8, s8, 0x10001
+; GFX11-NEXT:    s_lshr_b32 s8, s8, 1
 ; GFX11-NEXT:    s_lshr_b32 s3, s3, 1
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s0, s6
 ; GFX11-NEXT:    s_and_not1_b32 s5, 0xf000f, s5
@@ -4938,7 +4938,7 @@ define amdgpu_ps <2 x i32> @s_fshl_v4i16(<4 x i16> inreg %lhs, <4 x i16> inreg %
 ; GFX11-NEXT:    s_and_b32 s9, s2, 0xffff
 ; GFX11-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX11-NEXT:    s_and_b32 s6, s4, 0xf000f
-; GFX11-NEXT:    s_lshr_b32 s9, s9, 0x10001
+; GFX11-NEXT:    s_lshr_b32 s9, s9, 1
 ; GFX11-NEXT:    s_lshr_b32 s2, s2, 1
 ; GFX11-NEXT:    s_and_not1_b32 s4, 0xf000f, s4
 ; GFX11-NEXT:    s_lshr_b32 s7, s0, 16
@@ -4955,7 +4955,7 @@ define amdgpu_ps <2 x i32> @s_fshl_v4i16(<4 x i16> inreg %lhs, <4 x i16> inreg %
 ; GFX11-NEXT:    s_lshr_b32 s3, s3, 16
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s2, s4, s2
 ; GFX11-NEXT:    s_and_b32 s4, s5, 0xf000f
-; GFX11-NEXT:    s_lshr_b32 s8, s8, 0x10001
+; GFX11-NEXT:    s_lshr_b32 s8, s8, 1
 ; GFX11-NEXT:    s_lshr_b32 s3, s3, 1
 ; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s0, s6
 ; GFX11-NEXT:    s_and_not1_b32 s5, 0xf000f, s5

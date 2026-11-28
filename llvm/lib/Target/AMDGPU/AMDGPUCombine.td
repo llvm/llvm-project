@@ -346,6 +346,34 @@ def fold_carry_into_addsub_combines : GICombineGroup<[
   fold_sub_into_usube
 ]>;
 
+// Fold constant shift amounts of packed shifts split by RegBankLegalize.
+def apint_matchdata : GIDefMatchData<"APInt">;
+
+// (bitcast (build_vector C0, C1, ...)) -> C
+def fold_bitcast_of_build_vector_cst : GICombineRule<
+  (defs root:$dst, apint_matchdata:$matchinfo),
+  (match (G_BITCAST $dst, $src):$mi,
+   [{ return matchBitcastOfBuildVectorOfConstants(*${mi}, ${matchinfo}); }]),
+  (apply [{ applyFoldToConstant(*${mi}, ${matchinfo}); }])>;
+
+// (sext_inreg C, N) -> C'
+def fold_sext_inreg_of_cst : GICombineRule<
+  (defs root:$dst, apint_matchdata:$matchinfo),
+  (match (G_SEXT_INREG $dst, $src, $sz):$mi,
+   [{ return matchSextInRegOfConstant(*${mi}, ${matchinfo}); }]),
+  (apply [{ applyFoldToConstant(*${mi}, ${matchinfo}); }])>;
+
+// (shift x, C) -> (shift x, C & (bitwidth - 1)) for C >= bitwidth.
+def mask_cst_shift_amt_frags : GICombinePatFrag<
+  (outs root:$dst), (ins),
+  !foreach(op, [G_SHL, G_LSHR, G_ASHR], (pattern (op $dst, $src, $amt)))>;
+
+def mask_cst_shift_amt : GICombineRule<
+  (defs root:$dst, apint_matchdata:$matchinfo),
+  (match (mask_cst_shift_amt_frags $dst):$mi,
+   [{ return matchOutOfRangeConstantShiftAmt(*${mi}, ${matchinfo}); }]),
+  (apply [{ applyMaskedConstantShiftAmt(*${mi}, ${matchinfo}); }])>;
+
 let Predicates = [Has16BitInsts, NotHasMed3_16] in {
 // For gfx8, expand f16-fmed3-as-f32 into a min/max f16 sequence. This
 // saves one instruction compared to the promotion.
@@ -399,6 +427,8 @@ def AMDGPURegBankCombiner : GICombiner<
    zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
    identity_combines, redundant_and, constant_fold_cast_op,
+   constant_fold_binop, fold_bitcast_of_build_vector_cst,
+   fold_sext_inreg_of_cst, mask_cst_shift_amt,
    cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
    d16_load, minmax_to_minmax3_combines, redundant_sext_inreg,
    redundant_zext_sext_inreg, redundant_aext_sext_inreg, mul24]> {
