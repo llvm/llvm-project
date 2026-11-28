@@ -41,6 +41,20 @@ LIBC_INLINE_VAR constexpr MsgTable<22> POSIX_SIGNALS = {
     MsgMapping(SIGSYS, "Bad system call"),
 };
 
+LIBC_INLINE_VAR constexpr MsgTable<22> POSIX_SIGNAL_NAMES = {
+    MsgMapping(SIGHUP, "HUP"),       MsgMapping(SIGQUIT, "QUIT"),
+    MsgMapping(SIGTRAP, "TRAP"),     MsgMapping(SIGBUS, "BUS"),
+    MsgMapping(SIGKILL, "KILL"),     MsgMapping(SIGUSR1, "USR1"),
+    MsgMapping(SIGUSR2, "USR2"),     MsgMapping(SIGPIPE, "PIPE"),
+    MsgMapping(SIGALRM, "ALRM"),     MsgMapping(SIGCHLD, "CHLD"),
+    MsgMapping(SIGCONT, "CONT"),     MsgMapping(SIGSTOP, "STOP"),
+    MsgMapping(SIGTSTP, "TSTP"),     MsgMapping(SIGTTIN, "TTIN"),
+    MsgMapping(SIGTTOU, "TTOU"),     MsgMapping(SIGURG, "URG"),
+    MsgMapping(SIGXCPU, "XCPU"),     MsgMapping(SIGXFSZ, "XFSZ"),
+    MsgMapping(SIGVTALRM, "VTALRM"), MsgMapping(SIGPROF, "PROF"),
+    MsgMapping(SIGPOLL, "POLL"),     MsgMapping(SIGSYS, "SYS"),
+};
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_POSIX_SIGNALS_H
