@@ -499,30 +499,17 @@ func.func @unroll_jam_nested_iter_args_mulf(%arg0: memref<21x30xf32, 1>, %init :
   return
 }
 
-// CHECK:      %[[CONST0:[a-zA-Z0-9_]*]] = arith.constant 20 : index
-// CHECK-NEXT: [[RES:%[0-9]+]]:2 = affine.for %[[IV0:arg[0-9]+]] = 0 to 20 step 2 iter_args([[ACC0:%arg[0-9]+]] = [[INIT0]], [[ACC1:%arg[0-9]+]] = [[INIT0]]) -> (f32, f32) {
-// CHECK-NEXT:   [[RES1:%[0-9]+]]:2 = affine.for %[[IV1:arg[0-9]+]] = 0 to 30 iter_args([[ACC2:%arg[0-9]+]] = [[INIT1]], [[ACC3:%arg[0-9]+]] = [[INIT1]]) -> (f32, f32) {
+// Floating-point target reductions are left unchanged because unroll-and-jam
+// reassociates the reduction.
+// CHECK:      affine.for %[[IV0:arg[0-9]+]] = 0 to 21 iter_args([[ACC0:%arg[0-9]+]] = [[INIT0]]) -> (f32) {
+// CHECK-NEXT:   [[RES1:%[0-9]+]] = affine.for %[[IV1:arg[0-9]+]] = 0 to 30 iter_args([[ACC1:%arg[0-9]+]] = [[INIT1]]) -> (f32) {
 // CHECK-NEXT:     [[LOAD1:%[0-9]+]] = affine.load {{.*}}[%[[IV0]], %[[IV1]]]
-// CHECK-NEXT:     [[ADD1:%[0-9]+]] = arith.addf [[ACC2]], [[LOAD1]] : f32
-// CHECK-NEXT:     %[[INC1:[0-9]+]] = affine.apply [[$MAP_PLUS_1]](%[[IV0]])
-// CHECK-NEXT:     [[LOAD2:%[0-9]+]] = affine.load {{.*}}[%[[INC1]], %[[IV1]]]
-// CHECK-NEXT:     [[ADD2:%[0-9]+]] = arith.addf [[ACC3]], [[LOAD2]] : f32
-// CHECK-NEXT:     affine.yield [[ADD1]], [[ADD2]]
+// CHECK-NEXT:     [[ADD1:%[0-9]+]] = arith.addf [[ACC1]], [[LOAD1]] : f32
+// CHECK-NEXT:     affine.yield [[ADD1]] : f32
 // CHECK-NEXT:   }
-// CHECK-NEXT:   [[MUL1:%[0-9]+]] = arith.mulf [[ACC0]], [[RES1]]#0 : f32
-// CHECK-NEXT:   affine.apply
-// CHECK-NEXT:   [[MUL2:%[0-9]+]] = arith.mulf [[ACC1]], [[RES1]]#1 : f32
-// CHECK-NEXT:   affine.yield [[MUL1]], [[MUL2]]
+// CHECK-NEXT:   [[MUL1:%[0-9]+]] = arith.mulf [[ACC0]], [[RES1]] : f32
+// CHECK-NEXT:   affine.yield [[MUL1]] : f32
 // CHECK-NEXT: }
-// Reduction op.
-// CHECK-NEXT: [[MUL3:%[0-9]+]] = arith.mulf [[RES]]#0, [[RES]]#1 : f32
-// Cleanup loop (single iteration).
-// CHECK-NEXT: [[RES2:%[0-9]+]] = affine.for %[[IV2:arg[0-9]+]] = 0 to 30 iter_args([[ACC4:%arg[0-9]+]] = [[INIT1]]) -> (f32) {
-// CHECK-NEXT:   [[LOAD3:%[0-9]+]] = affine.load {{.*}}[%[[CONST0]], %[[IV2]]]
-// CHECK-NEXT:   [[ADD3:%[0-9]+]] = arith.addf [[ACC4]], [[LOAD3]] : f32
-// CHECK-NEXT:   affine.yield [[ADD3]] : f32
-// CHECK-NEXT: }
-// CHECK-NEXT: [[MUL4:%[0-9]+]] = arith.mulf [[MUL3]], [[RES2]] : f32
 // CHECK-NEXT: return
 
 // CHECK-LABEL: func @unroll_jam_iter_args_addi
@@ -537,7 +524,8 @@ func.func @unroll_jam_iter_args_addi(%arg0: memref<21xi32, 1>, %init : i32) {
 }
 
 // CHECK:      %[[CONST0:[a-zA-Z0-9_]*]] = arith.constant 20 : index
-// CHECK-NEXT: [[RES:%[0-9]+]]:2 = affine.for %[[IV0:arg[0-9]+]] = 0 to 20 step 2 iter_args([[ACC0:%arg[0-9]+]] = [[INIT0]], [[ACC1:%arg[0-9]+]] = [[INIT0]]) -> (i32, i32) {
+// CHECK-NEXT: %[[ZERO:[a-zA-Z0-9_]*]] = arith.constant 0 : i32
+// CHECK-NEXT: [[RES:%[0-9]+]]:2 = affine.for %[[IV0:arg[0-9]+]] = 0 to 20 step 2 iter_args([[ACC0:%arg[0-9]+]] = [[INIT0]], [[ACC1:%arg[0-9]+]] = %[[ZERO]]) -> (i32, i32) {
 // CHECK-NEXT:   [[LOAD1:%[0-9]+]] = affine.load {{.*}}[%[[IV0]]]
 // CHECK-NEXT:   [[ADD1:%[0-9]+]] = arith.addi [[ACC0]], [[LOAD1]] : i32
 // CHECK-NEXT:   %[[INC1:[0-9]+]] = affine.apply [[$MAP_PLUS_1]](%[[IV0]])
