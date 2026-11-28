@@ -15823,6 +15823,8 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
 
     bool CanHarm = false;
     bool CanHelp = false;
+    bool HasNarrowLiveOut = false;
+    bool HasBranchCompare = false;
     bool WideCmpSupported = TLI.isOperationLegalOrCustom(ISD::SETCC, VT);
     if (!WideCmpSupported && !LegalOperations && SrcVT.isScalarInteger() &&
         VT.isScalarInteger()) {
@@ -15839,6 +15841,7 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
       if (Use.getResNo() != V.getResNo())
         continue;
       SDNode *User = Use.getUser();
+      HasNarrowLiveOut |= User->getOpcode() == ISD::CopyToReg;
       // An ordinary zext still needs the zero high bits.
       if (User->getOpcode() == ISD::ZERO_EXTEND &&
           !User->getFlags().hasNonNeg()) {
@@ -15869,10 +15872,19 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
       if (CanHelp)
         continue;
 
-      // Widening one sign test can let foldLogicOfSetCCs replace two sign
-      // tests with one test of the AND or OR of their inputs.
       if (!IsSetCC || !VT.isScalarInteger() || Use.getOperandNo() != 0 ||
           !User->hasOneUse())
+        continue;
+      const SDUse &CmpUse = *User->use_begin();
+      const SDNode *CmpUser = CmpUse.getUser();
+      if (CmpUser->getOpcode() == ISD::BRCOND) {
+        HasBranchCompare |= isa<ConstantSDNode>(User->getOperand(1));
+        continue;
+      }
+
+      // Widening one sign test can let foldLogicOfSetCCs replace two sign
+      // tests with one test of the AND or OR of their inputs.
+      if (CmpUser->getOpcode() != ISD::AND && CmpUser->getOpcode() != ISD::OR)
         continue;
       auto IsMatchingSignTest = [CC](SDValue RHS) {
         return (CC == ISD::SETLT && isNullConstant(RHS)) ||
@@ -15885,16 +15897,21 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
           CmpVT != TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
                                         VT))
         continue;
-      const SDUse &CmpUse = *User->use_begin();
-      const SDNode *Logic = CmpUse.getUser();
-      if (Logic->getOpcode() != ISD::AND && Logic->getOpcode() != ISD::OR)
-        continue;
-      SDValue Peer = Logic->getOperand(1 - CmpUse.getOperandNo());
+      SDValue Peer = CmpUser->getOperand(1 - CmpUse.getOperandNo());
       CanHelp |= Peer.getOpcode() == ISD::SETCC && Peer.hasOneUse() &&
                  Peer.getOperand(0).getValueType() == VT &&
                  Peer.getOperandCondCode(2) == CC &&
                  IsMatchingSignTest(Peer.getOperand(1));
     }
+
+    // When both values are live out, widening the branch's signed compare
+    // lets one sign-extending load supply both live-outs and the compare.
+    if (!CanHarm && !CanHelp && HasBranchCompare && HasNarrowLiveOut &&
+        HasExtLoad(ISD::SEXTLOAD) && TLI.isTruncateFree(VT, SrcVT))
+      CanHelp |= llvm::any_of(N->uses(), [](const SDUse &Use) {
+        return Use.getResNo() == 0 &&
+               Use.getUser()->getOpcode() == ISD::CopyToReg;
+      });
 
     if (!CanHarm && CanHelp) {
       ExtLoadType = ISD::SEXTLOAD;
