@@ -55466,30 +55466,6 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // If we also broadcast this vector to a wider type, then just extract the
-  // lowest subvector.
-  if (Ext == ISD::NON_EXTLOAD && Subtarget.hasAVX() && Ld->isSimple() &&
-      (RegVT.is128BitVector() || RegVT.is256BitVector())) {
-    SDValue Ptr = Ld->getBasePtr();
-    SDValue Chain = Ld->getChain();
-    for (SDNode *User : Chain->users()) {
-      auto *UserLd = dyn_cast<MemSDNode>(User);
-      if (User != N && UserLd &&
-          User->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
-          UserLd->getChain() == Chain && UserLd->getBasePtr() == Ptr &&
-          UserLd->getMemoryVT().getSizeInBits() == MemVT.getSizeInBits() &&
-          User->hasAnyUseOfValue(0) &&
-          User->getValueSizeInBits(0).getFixedValue() >
-              RegVT.getFixedSizeInBits()) {
-        DAG.makeEquivalentMemoryOrdering(SDValue(N, 1), SDValue(User, 1));
-        SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, dl,
-                                           RegVT.getSizeInBits());
-        Extract = DAG.getBitcast(RegVT, Extract);
-        return DCI.CombineTo(N, Extract, SDValue(User, 1));
-      }
-    }
-  }
-
   if (SDValue V = combineConstantPoolLoads(Ld, dl, DAG, DCI, Subtarget))
     return V;
 
@@ -64497,7 +64473,7 @@ static SDValue combineFP_EXTEND(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::FP_EXTEND, dl, VT, Cvt);
 }
 
-// Try to find a larger VBROADCAST_LOAD/SUBV_BROADCAST_LOAD that we can extract.
+// Fold smaller broadcasts and ordinary loads to extracts from a broadcast.
 static SDValue combineBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI) {
   assert((N->getOpcode() == X86ISD::VBROADCAST_LOAD ||
@@ -64510,9 +64486,12 @@ static SDValue combineBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getSimpleValueType(0);
   EVT MemVT = MemIntrin->getMemoryVT();
 
-  // Look at other users of our base pointer and try to find a wider broadcast.
+  bool CanReuseLoads = N->getOpcode() == X86ISD::SUBV_BROADCAST_LOAD &&
+                       MemIntrin->isSimple() && N->hasAnyUseOfValue(0);
+
+  // Look for a wider broadcast or loads that can reuse this broadcast.
   // The input chain and the size of the memory VT must match.
-  for (SDNode *User : Ptr->users())
+  for (SDNode *User : Ptr->users()) {
     if (User != N && User->getOpcode() == N->getOpcode() &&
         cast<MemIntrinsicSDNode>(User)->getBasePtr() == Ptr &&
         cast<MemIntrinsicSDNode>(User)->getChain() == Chain &&
@@ -64528,6 +64507,27 @@ static SDValue combineBROADCAST_LOAD(SDNode *N, SelectionDAG &DAG,
       Extract = DCI.CombineTo(N, Extract, SDValue(User, 1));
       return Extract;
     }
+
+    // Reuse the low subvector of this broadcast for a matching ordinary load.
+    if (!CanReuseLoads || !ISD::isNormalLoad(User))
+      continue;
+    auto *Ld = cast<LoadSDNode>(User);
+    EVT LoadVT = Ld->getValueType(0);
+    if (!(LoadVT.is128BitVector() || LoadVT.is256BitVector()) ||
+        !Ld->isSimple() || Ld->getBasePtr() != Ptr || Ld->getChain() != Chain ||
+        Ld->getMemoryVT().getSizeInBits() != MemVT.getSizeInBits() ||
+        LoadVT.getSizeInBits() >= VT.getSizeInBits())
+      continue;
+
+    DAG.makeEquivalentMemoryOrdering(SDValue(User, 1), SDValue(N, 1));
+    SDValue Extract = extractSubVector(SDValue(N, 0), 0, DAG, SDLoc(User),
+                                       LoadVT.getSizeInBits());
+    Extract = DAG.getBitcast(LoadVT, Extract);
+    DCI.CombineTo(User, Extract, SDValue(N, 1));
+    // CombineTo revisits N to find any remaining loads. Stop here because
+    // replacing User invalidates the base pointer's use-list iterator.
+    return SDValue();
+  }
 
   return SDValue();
 }

@@ -3570,14 +3570,13 @@ define void @vec384_i32_widen_to_i128_factor4_broadcast_to_v3i128_factor3(ptr %i
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1],mem[2,3,4,5,6,7]
 ; AVX1-NEXT:    vpaddb (%rsi), %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa (%rdi), %xmm2
-; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm3
-; AVX1-NEXT:    vpaddb 48(%rsi), %xmm3, %xmm3
-; AVX1-NEXT:    vpaddb 32(%rsi), %xmm2, %xmm2
+; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm2
+; AVX1-NEXT:    vpaddb 48(%rsi), %xmm2, %xmm2
+; AVX1-NEXT:    vpaddb 32(%rsi), %xmm0, %xmm3
 ; AVX1-NEXT:    vpaddb 16(%rsi), %xmm0, %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm2, 32(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm3, 48(%rdx)
+; AVX1-NEXT:    vmovdqa %xmm3, 32(%rdx)
+; AVX1-NEXT:    vmovdqa %xmm2, 48(%rdx)
 ; AVX1-NEXT:    vmovdqa %xmm1, (%rdx)
 ; AVX1-NEXT:    retq
 ;
@@ -3755,14 +3754,13 @@ define void @vec384_i64_widen_to_i128_factor2_broadcast_to_v3i128_factor3(ptr %i
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1,2,3],mem[4,5,6,7]
 ; AVX1-NEXT:    vpaddb (%rsi), %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa (%rdi), %xmm2
-; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm3
-; AVX1-NEXT:    vpaddb 48(%rsi), %xmm3, %xmm3
-; AVX1-NEXT:    vpaddb 32(%rsi), %xmm2, %xmm2
+; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm2
+; AVX1-NEXT:    vpaddb 48(%rsi), %xmm2, %xmm2
+; AVX1-NEXT:    vpaddb 32(%rsi), %xmm0, %xmm3
 ; AVX1-NEXT:    vpaddb 16(%rsi), %xmm0, %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm2, 32(%rdx)
-; AVX1-NEXT:    vmovdqa %xmm3, 48(%rdx)
+; AVX1-NEXT:    vmovdqa %xmm3, 32(%rdx)
+; AVX1-NEXT:    vmovdqa %xmm2, 48(%rdx)
 ; AVX1-NEXT:    vmovdqa %xmm1, (%rdx)
 ; AVX1-NEXT:    retq
 ;

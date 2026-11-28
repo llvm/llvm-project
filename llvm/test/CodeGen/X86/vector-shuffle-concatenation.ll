@@ -543,10 +543,9 @@ define void @concat_aaa_to_shuf_of_a(ptr %a.ptr, ptr %dst) {
 ; AVX512-LABEL: concat_aaa_to_shuf_of_a:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512-NEXT:    vmovdqa64 %zmm0, (%rsi)
+; AVX512-NEXT:    vshufpd {{.*#+}} ymm1 = ymm0[1,0,2,3]
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512-NEXT:    vmovapd %zmm0, (%rsi)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %a = load <2 x i64>, ptr %a.ptr, align 64
