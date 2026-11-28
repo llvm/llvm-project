@@ -98,7 +98,8 @@
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::__assign_external(value_type const*, size_type)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::__assign_external(value_type const*)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI void basic_string<_CharType>::reserve(size_type)) \
-  _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::append(value_type const*, size_type)) \
+  _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::__append_external(value_type const*, size_type)) \
+  _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::__append_external(value_type const*)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::assign(basic_string const&, size_type, size_type)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>::size_type basic_string<_CharType>::copy(value_type*, size_type, size_type) const) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>::basic_string(basic_string const&, size_type, size_type, allocator<_CharType> const&)) \
@@ -122,7 +123,6 @@
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>::size_type basic_string<_CharType>::find(value_type const*, size_type, size_type) const) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI int basic_string<_CharType>::compare(size_type, size_type, basic_string const&, size_type, size_type) const) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI int basic_string<_CharType>::compare(size_type, size_type, value_type const*, size_type) const) \
-  _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::append(value_type const*)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>& basic_string<_CharType>::replace(size_type, size_type, basic_string const&, size_type, size_type)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI basic_string<_CharType>::iterator basic_string<_CharType>::insert(basic_string::const_iterator, value_type)) \
   _Func(_LIBCPP_EXPORTED_FROM_ABI void basic_string<_CharType>::resize(size_type, value_type)) \

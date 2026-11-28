@@ -2438,6 +2438,9 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __move_assign_alloc(basic_string&, false_type) _NOEXCEPT {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string& __assign_external(const value_type* __s, size_type __n);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string& __append_external(const value_type* __s);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string&
+  __append_external(const value_type* __s, size_type __n);
 
   // Assigns the value in __s, guaranteed to be __n < __min_cap in length.
   inline _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& __assign_short(const value_type* __s, size_type __n) {
@@ -2456,6 +2459,23 @@ private:
     traits_type::assign(__p[__n], value_type());
     if (__old_size > __n)
       __annotate_shrink(__old_size);
+    return *this;
+  }
+
+  // Appends the value in __s without reallocating, guaranteed to fit in the current capacity.
+  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& __append_no_realloc(const value_type* __s, size_type __n) {
+    if (__n != 0) {
+      size_type __sz = size();
+      __annotate_increase(__n);
+      value_type* __p = __data();
+      if (__n == 1)
+        traits_type::assign(__p[__sz], *__s);
+      else
+        traits_type::copy(__p + __sz, __s, __n);
+      __sz += __n;
+      __set_size(__sz);
+      traits_type::assign(__p[__sz], value_type());
+    }
     return *this;
   }
 
@@ -2988,26 +3008,23 @@ basic_string<_CharT, _Traits, _Allocator>::assign(const value_type* __s) {
 // append
 
 template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
-basic_string<_CharT, _Traits, _Allocator>::append(const value_type* __s, size_type __n) {
-  _LIBCPP_ASSERT_NON_NULL(__n == 0 || __s != nullptr, "string::append received nullptr");
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string<_CharT, _Traits, _Allocator>&
+basic_string<_CharT, _Traits, _Allocator>::__append_external(const value_type* __s, size_type __n) {
   size_type __cap = capacity();
   size_type __sz  = size();
   if (__cap - __sz < __n) {
     __grow_by_and_replace(__cap, __sz + __n - __cap, __sz, __sz, 0, __n, __s);
     return *this;
   }
+  return __append_no_realloc(__s, __n);
+}
 
-  if (__n == 0)
-    return *this;
-
-  __annotate_increase(__n);
-  value_type* __p = __data();
-  traits_type::copy(__p + __sz, __s, __n);
-  __sz += __n;
-  __set_size(__sz);
-  traits_type::assign(__p[__sz], value_type());
-  return *this;
+template <class _CharT, class _Traits, class _Allocator>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
+basic_string<_CharT, _Traits, _Allocator>::append(const value_type* __s, size_type __n) {
+  _LIBCPP_ASSERT_NON_NULL(__n == 0 || __s != nullptr, "string::append received nullptr");
+  return (__builtin_constant_p(__n) && capacity() - size() >= __n) ? __append_no_realloc(__s, __n)
+                                                                  : __append_external(__s, __n);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -3068,10 +3085,20 @@ basic_string<_CharT, _Traits, _Allocator>::append(const basic_string& __str, siz
 }
 
 template <class _CharT, class _Traits, class _Allocator>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NOINLINE basic_string<_CharT, _Traits, _Allocator>&
+basic_string<_CharT, _Traits, _Allocator>::__append_external(const value_type* __s) {
+  return __append_external(__s, traits_type::length(__s));
+}
+
+template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::append(const value_type* __s) {
   _LIBCPP_ASSERT_NON_NULL(__s != nullptr, "string::append received nullptr");
-  return append(__s, traits_type::length(__s));
+  return __builtin_constant_p(*__s)
+           ? (capacity() - size() >= traits_type::length(__s)
+                  ? __append_no_realloc(__s, traits_type::length(__s))
+                  : __append_external(__s, traits_type::length(__s)))
+           : __append_external(__s);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
