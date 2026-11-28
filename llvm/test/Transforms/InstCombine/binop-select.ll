@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @use(i32)
+declare void @use_i8(i8)
 declare void @use_f32(float)
 declare void @use_v2f16(<2 x half>)
 declare void @use_v2i8(<2 x i8>)
@@ -543,6 +544,240 @@ define i8 @commonArgWithAdd0(i1 %arg0) {
   %v2 = add i8 %v1, %v0
   %v3 = or i8 %v2, 16
   ret i8 %v3
+}
+
+; If the select condition tests bit 0 of %x, then shl %x, BW-1 (possibly
+; through a zext or trunc of %x) is the sign mask in one arm and zero in the
+; other. See #213881.
+
+define i8 @or_select_shl_lsb_const_arms(i8 %x) {
+; CHECK-LABEL: @or_select_shl_lsb_const_arms(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 -123, i8 9
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+  %cond = trunc i8 %x to i1
+  %sel = select i1 %cond, i8 5, i8 9
+  %shift = shl i8 %x, 7
+  %result = or i8 %sel, %shift
+  ret i8 %result
+}
+
+define i8 @or_select_shl_lsb(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @or_select_shl_lsb(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+  %cond = trunc i8 %x to i1
+  %sel = select i1 %cond, i8 %y, i8 %z
+  %shift = shl i8 %x, 7
+  %result = or i8 %sel, %shift
+  ret i8 %result
+}
+
+define i8 @or_select_shl_lsb_commuted(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @or_select_shl_lsb_commuted(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+  %cond = trunc i8 %x to i1
+  %sel = select i1 %cond, i8 %y, i8 %z
+  %shift = shl i8 %x, 7
+  %result = or i8 %shift, %sel
+  ret i8 %result
+}
+
+define i8 @and_select_shl_lsb(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @and_select_shl_lsb(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 0
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+  %cond = trunc i8 %x to i1
+  %sel = select i1 %cond, i8 %y, i8 %z
+  %shift = shl i8 %x, 7
+  %result = and i8 %sel, %shift
+  ret i8 %result
+}
+
+define i8 @xor_select_shl_lsb(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @xor_select_shl_lsb(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+  %cond = trunc i8 %x to i1
+  %sel = select i1 %cond, i8 %y, i8 %z
+  %shift = shl i8 %x, 7
+  %result = xor i8 %sel, %shift
+  ret i8 %result
+}
+
+define i16 @or_select_shl_lsb_eq_zext(i8 %x, i16 %y, i16 %z) {
+; CHECK-LABEL: @or_select_shl_lsb_eq_zext(
+; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[MASKED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = or i16 [[Y:%.*]], -32768
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i16 [[Z:%.*]], i16 [[TMP1]]
+; CHECK-NEXT:    ret i16 [[RESULT]]
+;
+  %masked = and i8 %x, 1
+  %cond = icmp eq i8 %masked, 0
+  %sel = select i1 %cond, i16 %z, i16 %y
+  %wide = zext i8 %x to i16
+  %shift = shl i16 %wide, 15
+  %result = or i16 %sel, %shift
+  ret i16 %result
+}
+
+define i8 @or_select_shl_lsb_trunc(i16 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @or_select_shl_lsb_trunc(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i16 [[X:%.*]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+  %cond = trunc i16 %x to i1
+  %sel = select i1 %cond, i8 %y, i8 %z
+  %narrow = trunc i16 %x to i8
+  %shift = shl i8 %narrow, 7
+  %result = or i8 %sel, %shift
+  ret i8 %result
+}
+
+define i8 @or_select_shl_lsb_disjoint(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @or_select_shl_lsb_disjoint(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+  %cond = trunc i8 %x to i1
+  %sel = select i1 %cond, i8 %y, i8 %z
+  %shift = shl i8 %x, 7
+  %result = or disjoint i8 %sel, %shift
+  ret i8 %result
+}
+
+define <2 x i8> @or_select_shl_lsb_vec_splat(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
+; CHECK-LABEL: @or_select_shl_lsb_vec_splat(
+; CHECK-NEXT:    [[COND:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[Y:%.*]], splat (i8 -128)
+; CHECK-NEXT:    [[RESULT:%.*]] = select <2 x i1> [[COND]], <2 x i8> [[TMP1]], <2 x i8> [[Z:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[RESULT]]
+;
+  %cond = trunc <2 x i8> %x to <2 x i1>
+  %sel = select <2 x i1> %cond, <2 x i8> %y, <2 x i8> %z
+  %shift = shl <2 x i8> %x, splat (i8 7)
+  %result = or <2 x i8> %sel, %shift
+  ret <2 x i8> %result
+}
+
+define <2 x i8> @or_select_shl_lsb_vec_splat_poison(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
+; CHECK-LABEL: @or_select_shl_lsb_vec_splat_poison(
+; CHECK-NEXT:    [[COND:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND]], <2 x i8> [[Y:%.*]], <2 x i8> [[Z:%.*]]
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl <2 x i8> [[X]], <i8 7, i8 poison>
+; CHECK-NEXT:    [[RESULT:%.*]] = or <2 x i8> [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    ret <2 x i8> [[RESULT]]
+;
+  %cond = trunc <2 x i8> %x to <2 x i1>
+  %sel = select <2 x i1> %cond, <2 x i8> %y, <2 x i8> %z
+  %shift = shl <2 x i8> %x, <i8 7, i8 poison>
+  %result = or <2 x i8> %sel, %shift
+  ret <2 x i8> %result
+}
+
+; Negative test: the shift amount is not BW-1 in every lane.
+define <2 x i8> @or_select_shl_lsb_vec_non_splat(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
+; CHECK-LABEL: @or_select_shl_lsb_vec_non_splat(
+; CHECK-NEXT:    [[COND:%.*]] = trunc <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[COND]], <2 x i8> [[Y:%.*]], <2 x i8> [[Z:%.*]]
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl <2 x i8> [[X]], <i8 7, i8 6>
+; CHECK-NEXT:    [[RESULT:%.*]] = or <2 x i8> [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    ret <2 x i8> [[RESULT]]
+;
+  %cond = trunc <2 x i8> %x to <2 x i1>
+  %sel = select <2 x i1> %cond, <2 x i8> %y, <2 x i8> %z
+  %shift = shl <2 x i8> %x, <i8 7, i8 6>
+  %result = or <2 x i8> %sel, %shift
+  ret <2 x i8> %result
+}
+
+; Negative test: the shift has another use.
+define i8 @or_select_shl_lsb_multi_use(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @or_select_shl_lsb_multi_use(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 [[Y:%.*]], i8 [[Z:%.*]]
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 [[X]], 7
+; CHECK-NEXT:    call void @use_i8(i8 [[SHIFT]])
+; CHECK-NEXT:    [[RESULT:%.*]] = or i8 [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+  %cond = trunc i8 %x to i1
+  %sel = select i1 %cond, i8 %y, i8 %z
+  %shift = shl i8 %x, 7
+  call void @use_i8(i8 %shift)
+  %result = or i8 %sel, %shift
+  ret i8 %result
+}
+
+; Negative test: the shift amount is not BW-1.
+define i8 @or_select_shl_lsb_wrong_shamt(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @or_select_shl_lsb_wrong_shamt(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 [[Y:%.*]], i8 [[Z:%.*]]
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 [[X]], 6
+; CHECK-NEXT:    [[RESULT:%.*]] = or i8 [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+  %cond = trunc i8 %x to i1
+  %sel = select i1 %cond, i8 %y, i8 %z
+  %shift = shl i8 %x, 6
+  %result = or i8 %sel, %shift
+  ret i8 %result
+}
+
+; Negative test: the condition tests bit 1, not bit 0.
+define i16 @or_select_shl_lsb_wrong_bit(i8 %x, i16 %y, i16 %z) {
+; CHECK-LABEL: @or_select_shl_lsb_wrong_bit(
+; CHECK-NEXT:    [[MASKED:%.*]] = and i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[MASKED]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i16 [[Z:%.*]], i16 [[Y:%.*]]
+; CHECK-NEXT:    [[WIDE:%.*]] = zext i8 [[X]] to i16
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl i16 [[WIDE]], 15
+; CHECK-NEXT:    [[RESULT:%.*]] = or i16 [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    ret i16 [[RESULT]]
+;
+  %masked = and i8 %x, 2
+  %cond = icmp eq i8 %masked, 0
+  %sel = select i1 %cond, i16 %z, i16 %y
+  %wide = zext i8 %x to i16
+  %shift = shl i16 %wide, 15
+  %result = or i16 %sel, %shift
+  ret i16 %result
+}
+
+; Negative test: the shifted value is not the tested value.
+define i8 @or_select_shl_lsb_wrong_value(i8 %x, i8 %w, i8 %y, i8 %z) {
+; CHECK-LABEL: @or_select_shl_lsb_wrong_value(
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 [[Y:%.*]], i8 [[Z:%.*]]
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 [[W:%.*]], 7
+; CHECK-NEXT:    [[RESULT:%.*]] = or i8 [[SEL]], [[SHIFT]]
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+  %cond = trunc i8 %x to i1
+  %sel = select i1 %cond, i8 %y, i8 %z
+  %shift = shl i8 %w, 7
+  %result = or i8 %sel, %shift
+  ret i8 %result
 }
 
 define i32 @OrSelectIcmpZero(i32 %a, i32 %b) {
