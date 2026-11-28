@@ -772,6 +772,20 @@ static DecodeStatus DecodeRegListOperand(MCInst &Inst, unsigned Val,
                                          const MCDisassembler *Decoder) {
   DecodeStatus S = MCDisassembler::Success;
 
+  // Thumb2 LDM must not load both LR and PC.
+  switch (Inst.getOpcode()) {
+  case ARM::t2LDMIA:
+  case ARM::t2LDMIA_UPD:
+  case ARM::t2LDMDB:
+  case ARM::t2LDMDB_UPD:
+    // Bit 14 selects LR (R14); bit 15 selects PC (R15).
+    if ((Val & 0x4000) && (Val & 0x8000))
+      S = MCDisassembler::SoftFail;
+    break;
+  default:
+    break;
+  }
+
   bool NeedDisjointWriteback = false;
   MCRegister WritebackReg;
   bool CLRM = false;
