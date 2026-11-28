@@ -1057,6 +1057,34 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
     This composition allows separating concerns and composes better compared
     to adding additional permutation attributes to this transform op.
 
+    #### Operands to pack
+
+    By default all operands are packed. If `operands_to_pack` is present, only
+    the operands it lists (operand numbers, inputs first) are packed, so an
+    empty list packs none of them. The other operands keep their layout: each packed dimension of size `D` with packed
+    size `t` is reshaped with a `tensor.expand_shape` into two adjacent
+    dimensions `D/t x t`, and an init is collapsed back after the op. These are
+    the same outer and inner dimensions that `linalg.pack` would create, but
+    the inner one is not moved to the end, so no data moves.
+
+    In the example above, `operands_to_pack = [0, 1]` packs `A` and `B` as
+    before, while `C` is expanded instead:
+    ```
+      //                                          M   m   N   n
+      // affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d3, d1, d4)>
+      %C_exp = tensor.expand_shape %C [[0, 1], [2, 3]]
+          : tensor<?x?xf32> into tensor<?x2x?x3xf32>
+    ```
+
+    The packed sizes of the operands that are not packed must be static, and
+    a static dimension must be a multiple of its packed size: unlike
+    `linalg.pack`, a reshape cannot pad. A dynamic dimension cannot be
+    checked, so it is rejected unless its packed size is 1 or
+    `assume_dynamic_dims_divisible` is set. With it, the payload guarantees
+    that the dimension is a multiple (e.g., after `transform.structured.split`)
+    and the behavior is undefined otherwise. The flag has no effect on static
+    dimensions. Operands with an encoding cannot be reshaped and are rejected.
+
     #### Return modes
 
     This operation applies to a single Linalg op, otherwise it fails.
@@ -1068,12 +1096,17 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                    Variadic<TransformHandleTypeInterface>:$packed_sizes,
-                   DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_packed_sizes);
+                   DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$static_packed_sizes,
+                   OptionalAttr<DenseI64ArrayAttr>:$operands_to_pack,
+                   UnitAttr:$assume_dynamic_dims_divisible);
   let results = (outs TransformHandleTypeInterface:$packed_op);
   let assemblyFormat = [{
     $target
     `packed_sizes` `=` custom<DynamicIndexList>($packed_sizes,
-                                                $static_packed_sizes) attr-dict
+                                                $static_packed_sizes)
+    (`operands_to_pack` `=` $operands_to_pack^)?
+    (`assume_dynamic_dims_divisible` $assume_dynamic_dims_divisible^)?
+    attr-dict
     `:` functional-type(operands, results)
   }];
 
