@@ -127,17 +127,6 @@ static void RemoveInstInputs(Value *V,
       RemoveInstInputs(OpInst, InstInputs);
 }
 
-void PHITransAddr::collectIntermediates() {
-  Intermediates.clear();
-  SmallVector<Value *, 8> Worklist = {Addr};
-  while (!Worklist.empty()) {
-    auto *I = dyn_cast<Instruction>(Worklist.pop_back_val());
-    if (!I || is_contained(InstInputs, I) || !Intermediates.insert(I).second)
-      continue;
-    append_range(Worklist, I->operands());
-  }
-}
-
 Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
                                       BasicBlock *PredBB,
                                       const DominatorTree *DT, Value *Cond,
@@ -148,7 +137,7 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
 
   // Determine whether 'Inst' is an input to our PHI translatable expression.
   bool isInput =
-      is_contained(InstInputs, Inst) && !Intermediates.contains(Inst);
+      is_contained(InstInputSnapshot, Inst) && is_contained(InstInputs, Inst);
 
   // Handle inputs instructions if needed.
   if (isInput) {
@@ -187,7 +176,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     // All instruction operands are now inputs (and of course, they may also be
     // defined in this block, so they may need to be phi translated themselves.
     for (Value *Op : Inst->operands())
-      addAsInput(Op);
+      if (auto *OpI = dyn_cast<Instruction>(addAsInput(Op)))
+        InstInputSnapshot.push_back(OpI);
   }
 
   // Ok, it must be an intermediate result (either because it started that way
@@ -336,7 +326,7 @@ Value *PHITransAddr::translateValue(BasicBlock *CurBB, BasicBlock *PredBB,
   assert(DT || !MustDominate);
   assert(verify() && "Invalid PHITransAddr!");
   if (DT && DT->isReachableFromEntry(PredBB)) {
-    collectIntermediates();
+    InstInputSnapshot = InstInputs;
     Addr = translateSubExpr(Addr, CurBB, PredBB, DT);
   } else {
     Addr = nullptr;
@@ -362,7 +352,7 @@ SelectAddr::SelectAddrs PHITransAddr::translateValue(BasicBlock *CurBB,
   if (!DT || !DT->isReachableFromEntry(PredBB))
     return {nullptr, nullptr};
 
-  collectIntermediates();
+  InstInputSnapshot = InstInputs;
   auto TranslateSide = [&](bool CondVal) -> Value * {
     // Work on a copy so that the original address state is preserved and the
     // other side can be translated independently.
