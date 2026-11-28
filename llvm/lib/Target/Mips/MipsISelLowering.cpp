@@ -423,12 +423,24 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
 
   // MIPS I and the R5900 have no LL/SC instructions for atomic operations.
   bool HasLLSC = Subtarget.hasMips2() && !Subtarget.isR5900();
-  if (HasLLSC && Subtarget.isGP64bit())
+  bool HasAtomics = HasLLSC || Subtarget.hasForcedAtomics();
+  if (HasAtomics && Subtarget.isGP64bit())
     setMaxAtomicSizeInBitsSupported(64);
-  else if (HasLLSC)
+  else if (HasAtomics)
     setMaxAtomicSizeInBitsSupported(32);
   else
     setMaxAtomicSizeInBitsSupported(0);
+
+  if (!HasLLSC && Subtarget.hasForcedAtomics()) {
+    // Without LL/SC, use __sync libcalls for everything but atomic loads,
+    // stores and fences.
+    setOperationAction(
+        {ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP, ISD::ATOMIC_LOAD_ADD,
+         ISD::ATOMIC_LOAD_SUB, ISD::ATOMIC_LOAD_AND, ISD::ATOMIC_LOAD_OR,
+         ISD::ATOMIC_LOAD_XOR, ISD::ATOMIC_LOAD_NAND, ISD::ATOMIC_LOAD_MIN,
+         ISD::ATOMIC_LOAD_MAX, ISD::ATOMIC_LOAD_UMIN, ISD::ATOMIC_LOAD_UMAX},
+        {MVT::i8, MVT::i16, MVT::i32, MVT::i64}, LibCall);
+  }
 
   setMinFunctionAlignment(Subtarget.isGP64bit() ? Align(8) : Align(4));
 

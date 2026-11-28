@@ -224,6 +224,10 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // Disable use of the `jal` instruction.
   bool UseLongCalls = false;
 
+  // Assume that lock-free native-width atomics are available without ll and
+  // sc.
+  bool HasForcedAtomics = false;
+
   // Assume 32-bit GOT.
   bool UseXGOT = false;
 
@@ -365,6 +369,7 @@ public:
   bool hasCRC() const { return HasCRC; }
   bool hasVirt() const { return HasVirt; }
   bool hasGINV() const { return HasGINV; }
+  bool hasForcedAtomics() const { return HasForcedAtomics; }
   bool useIndirectJumpsHazard() const {
     return UseIndirectJumpsHazard && hasMips32r2();
   }

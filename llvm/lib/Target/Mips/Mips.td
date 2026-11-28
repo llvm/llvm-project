@@ -228,6 +228,16 @@ def FeatureUseCompactBranches
     : SubtargetFeature<"use-compact-branches", "UseCompactBranches", "true",
                        "Use compact branch instructions for MIPS32R6/MIPS64R6">;
 
+// Assume that lock-free native-width atomics are available on a target without
+// ll and sc. Atomic loads and stores are done inline, and the other atomic
+// operations become __sync libcalls, which the user has to provide. Code built
+// with this feature is not ABI-compatible with code built without it if atomic
+// variables cross the ABI boundary.
+def FeatureForcedAtomics
+    : SubtargetFeature<"forced-atomics", "HasForcedAtomics", "true",
+                       "Assume that lock-free native-width atomics are "
+                       "available">;
+
 //===----------------------------------------------------------------------===//
 // Mips Instruction Predicate Definitions.
 //===----------------------------------------------------------------------===//
