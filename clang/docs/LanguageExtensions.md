@@ -5586,7 +5586,7 @@ They map to the LLVM intrinsics `llvm.amdgcn.av.load.b{8,16,32,64,128}` and
 
 #### Memory Barrier Intrinsics
 
-Clang implements the `__dmb`, `__dsb` and `__isb` intrinsics as defined
+Clang implements the `__dmb`, `__dsb`, `__isb` and `__sb` intrinsics as defined
 in the [Arm C Language Extensions](https://github.com/ARM-software/acle/releases).
 Note that these intrinsics are implemented as motion barriers that block
 reordering of memory accesses and side effect instructions. Other instructions

@@ -32,6 +32,7 @@ extern "C" {
 void __dmb(unsigned int);
 void __dsb(unsigned int);
 void __isb(unsigned int);
+void __sb(void);
 
 /* 7.4 Hints */
 void __wfi(void);

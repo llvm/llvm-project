@@ -80,9 +80,11 @@ void test_barrier(void) {
   //CHECK: call {{.*}} @llvm.arm.dmb(i32 1)
   //CHECK: call {{.*}} @llvm.arm.dsb(i32 2)
   //CHECK: call {{.*}} @llvm.arm.isb(i32 3)
+  //CHECK: call {{.*}} @llvm.arm.sb()
   __builtin_arm_dmb(1);
   __builtin_arm_dsb(2);
   __builtin_arm_isb(3);
+  __builtin_arm_sb();
 }
 
 unsigned rbit(unsigned a) {

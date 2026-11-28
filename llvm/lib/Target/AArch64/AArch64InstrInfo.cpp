@@ -1700,7 +1700,8 @@ bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
     break;
   case AArch64::DSB:
   case AArch64::ISB:
-    // DSB and ISB also are scheduling barriers.
+  case AArch64::SB:
+    // DSB, ISB, and SB are also scheduling barriers.
     return true;
   case AArch64::MSRpstatesvcrImm1:
     // SMSTART and SMSTOP are also scheduling barriers.

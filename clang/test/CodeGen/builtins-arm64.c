@@ -44,6 +44,7 @@ void barriers(void) {
   __builtin_arm_dmb(1);  //CHECK: call {{.*}} @llvm.aarch64.dmb(i32 1)
   __builtin_arm_dsb(2);  //CHECK: call {{.*}} @llvm.aarch64.dsb(i32 2)
   __builtin_arm_isb(3);  //CHECK: call {{.*}} @llvm.aarch64.isb(i32 3)
+  __builtin_arm_sb();    //CHECK: call {{.*}} @llvm.aarch64.sb()
 }
 
 void prefetch(void) {

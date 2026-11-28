@@ -2563,7 +2563,8 @@ def AXFLAG : PstateWriteSimple<(ins), "axflag", "">, Sched<[WriteSys]> {
 
 
 // Armv8.5-A speculation barrier
-def SB : SimpleSystemI<0, (ins), "sb", "">, Sched<[]> {
+let mayLoad = ?, mayStore = ? in
+def SB : SimpleSystemI<0, (ins), "sb", "", [(int_aarch64_sb)]>, Sched<[]> {
   let Inst{20-5} = 0b0001100110000111;
   let Unpredictable{11-8} = 0b1111;
   let Predicates = [HasSB];

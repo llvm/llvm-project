@@ -57,6 +57,20 @@ void test_isb(void) {
   __isb(3);
 }
 
+// AArch32-LABEL: @test_sb(
+// AArch32-NEXT:  entry:
+// AArch32-NEXT:    call void @llvm.arm.sb()
+// AArch32-NEXT:    ret void
+//
+// AArch64-LABEL: @test_sb(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    call void @llvm.aarch64.sb()
+// AArch64-NEXT:    ret void
+//
+void test_sb(void) {
+  __sb();
+}
+
 /* 8.4 Hints */
 // AArch32-LABEL: @test_yield(
 // AArch32-NEXT:  entry:
