@@ -140,3 +140,16 @@ namespace test3 {
     }
   };
 }
+
+namespace GH239861 {
+  template <class T> struct S {
+    using type = int;
+  };
+  template <class T> T &&foo(typename S<T>::type &t);
+
+  struct D {
+    D(int);
+    template <typename... Args>
+    D(Args &&...args) : D(foo<Args>(args)...) {} // no crash or bogus warning
+  };
+}
