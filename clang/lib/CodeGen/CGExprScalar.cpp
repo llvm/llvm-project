@@ -166,6 +166,18 @@ struct BinOpInfo {
   }
 };
 
+// -cl-mad-enable permits contraction across statements unless contraction is
+// disabled (-ffp-contract=off or pragma off).
+static Value *applyMadEnableContract(Value *V, const BinOpInfo &Op,
+                                     const CodeGenFunction &CGF) {
+  if (!CGF.CGM.getCodeGenOpts().LessPreciseFPMAD ||
+      Op.FPFeatures.getFPContractMode() == LangOptions::FPM_Off)
+    return V;
+  if (auto *BO = dyn_cast<llvm::BinaryOperator>(V))
+    BO->setHasAllowContract(true);
+  return V;
+}
+
 static bool MustVisitNullValue(const Expr *E) {
   // If a null pointer expression's type is the C++0x nullptr_t, then
   // it's not necessarily a simple constant and it must be evaluated
@@ -891,7 +903,8 @@ public:
     if (Ops.LHS->getType()->isFPOrFPVectorTy()) {
       //  Preserve the old values
       CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Ops.FPFeatures);
-      return Builder.CreateFMul(Ops.LHS, Ops.RHS, "mul");
+      return applyMadEnableContract(
+          Builder.CreateFMul(Ops.LHS, Ops.RHS, "mul"), Ops, CGF);
     }
     if (Ops.isFixedPointOp())
       return EmitFixedPointBinOp(Ops);
@@ -4844,7 +4857,8 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
 
   if (op.LHS->getType()->isFPOrFPVectorTy()) {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, op.FPFeatures);
-    return Builder.CreateFAdd(op.LHS, op.RHS, "add");
+    return applyMadEnableContract(Builder.CreateFAdd(op.LHS, op.RHS, "add"),
+                                  op, CGF);
   }
 
   if (op.isFixedPointOp())
@@ -5004,7 +5018,8 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
 
     if (op.LHS->getType()->isFPOrFPVectorTy()) {
       CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, op.FPFeatures);
-      return Builder.CreateFSub(op.LHS, op.RHS, "sub");
+      return applyMadEnableContract(
+          Builder.CreateFSub(op.LHS, op.RHS, "sub"), op, CGF);
     }
 
     if (op.isFixedPointOp())

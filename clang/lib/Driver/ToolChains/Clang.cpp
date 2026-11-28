@@ -3994,9 +3994,10 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
       options::OPT_cl_kernel_arg_info,
       options::OPT_cl_unsafe_math_optimizations,
       options::OPT_cl_fast_relaxed_math,
+      options::OPT_cl_mad_enable,
       options::OPT_cl_no_signed_zeros,
       options::OPT_cl_fp32_correctly_rounded_divide_sqrt,
-      options::OPT_cl_uniform_work_group_size
+      options::OPT_cl_uniform_work_group_size,
   };
 
   if (Arg *A = Args.getLastArg(options::OPT_cl_std_EQ)) {
@@ -4015,8 +4016,6 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
   for (const auto &Arg : ForwardedArguments)
     if (const auto *A = Args.getLastArg(Arg))
       CmdArgs.push_back(Args.MakeArgString(A->getOption().getPrefixedName()));
-
-  Args.ClaimAllArgs(options::OPT_cl_mad_enable);
 
   // Only add the default headers if we are compiling OpenCL sources.
   if ((types::isOpenCL(InputType) ||
