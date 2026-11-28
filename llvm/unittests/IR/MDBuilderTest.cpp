@@ -105,6 +105,40 @@ TEST_F(MDBuilderTest, createTBAANode) {
   EXPECT_EQ(mdconst::extract<ConstantInt>(N2->getOperand(2))->getZExtValue(),
             1U);
 }
+TEST_F(MDBuilderTest, createMutableTBAAAccessTag) {
+  MDBuilder MDHelper(Context);
+  MDNode *Root = MDHelper.createTBAARoot("Root");
+
+  // Old-format scalar type node: { name, parent, offset }.
+  MDNode *OldTy = MDHelper.createTBAANode("Scalar", Root);
+  // New-format scalar type node: { parent, size, name }.
+  MDNode *NewTy =
+      MDHelper.createTBAATypeNode(Root, 4, MDHelper.createString("Scalar"));
+
+  // A tag with no immutability flag is already mutable and is returned as is.
+  MDNode *OldMutable = MDHelper.createTBAAStructTagNode(OldTy, OldTy, 0);
+  EXPECT_EQ(MDHelper.createMutableTBAAAccessTag(OldMutable), OldMutable);
+  MDNode *NewMutable = MDHelper.createTBAAAccessTag(NewTy, NewTy, 0, 4);
+  EXPECT_EQ(MDHelper.createMutableTBAAAccessTag(NewMutable), NewMutable);
+
+  // An immutable tag is rebuilt as the corresponding mutable one, in the same
+  // format. The immutability flag sits at operand 3 in the old format and at
+  // operand 4 in the new one, so this is where the two layouts diverge.
+  MDNode *OldImmutable =
+      MDHelper.createTBAAStructTagNode(OldTy, OldTy, 0, /*IsConstant=*/true);
+  ASSERT_EQ(OldImmutable->getNumOperands(), 4U);
+  MDNode *OldResult = MDHelper.createMutableTBAAAccessTag(OldImmutable);
+  EXPECT_NE(OldResult, OldImmutable);
+  EXPECT_EQ(OldResult, OldMutable);
+
+  MDNode *NewImmutable =
+      MDHelper.createTBAAAccessTag(NewTy, NewTy, 0, 4, /*IsImmutable=*/true);
+  ASSERT_EQ(NewImmutable->getNumOperands(), 5U);
+  MDNode *NewResult = MDHelper.createMutableTBAAAccessTag(NewImmutable);
+  EXPECT_NE(NewResult, NewImmutable);
+  EXPECT_EQ(NewResult, NewMutable);
+}
+
 TEST_F(MDBuilderTest, createPCSections) {
   MDBuilder MDHelper(Context);
   ConstantInt *C1 = ConstantInt::get(Context, APInt(8, 1));

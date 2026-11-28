@@ -112,6 +112,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
+#include "llvm/IR/TBAAMetadata.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -8471,22 +8472,13 @@ MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(const Instruction *I,
   return cast<MDNode>(BaseNode->getOperand(LastIdx));
 }
 
-static bool isNewFormatTBAATypeNode(const MDNode *Type) {
-  if (!Type || Type->getNumOperands() < 3)
-    return false;
-
-  // In the new format type nodes shall have a reference to the parent type as
-  // its first operand.
-  return isa_and_nonnull<MDNode>(Type->getOperand(0));
-}
-
 /// Returns true if the parent chain of the TBAA type node \p MD is acyclic.
 static bool hasAcyclicTBAAParentChain(const MDNode *MD) {
   SmallPtrSet<const MDNode *, 4> Visited;
   for (const MDNode *N = MD; N;) {
     if (!Visited.insert(N).second)
       return false;
-    if (isNewFormatTBAATypeNode(N)) {
+    if (isNewFormatTypeNode(N)) {
       N = cast<MDNode>(N->getOperand(0));
     } else {
       N = IsRootTBAANode(N) ? nullptr
@@ -8516,7 +8508,7 @@ bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
   auto *BaseNode = dyn_cast_or_null<MDNode>(MD->getOperand(0));
   auto *AccessType = dyn_cast_or_null<MDNode>(MD->getOperand(1));
 
-  bool IsNewFormat = isNewFormatTBAATypeNode(AccessType);
+  bool IsNewFormat = isNewFormatTypeNode(AccessType);
 
   if (IsNewFormat) {
     CheckTBAA(MD->getNumOperands() == 4 || MD->getNumOperands() == 5,
