@@ -10,6 +10,7 @@
 #define LLDB_HOST_HOSTINFOBASE_H
 
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UUID.h"
@@ -47,15 +48,22 @@ struct SharedCacheImageInfo {
         m_create_data_extractor(create_data_extractor),
         m_image_baton(image_baton), m_lazy(std::make_shared<LazyExtractor>()) {}
 
-  /// Copies share the extractor, which is created at most once.
+  /// Copies share the extractor, which is created at most once. Returns
+  /// nullptr once the storage behind the extractor's data has gone away (see
+  /// DataBuffer::IsStale), since reading it could then crash.
   lldb::DataExtractorSP GetExtractor() {
+    lldb::DataExtractorSP extractor_sp = m_extractor_sp;
     if (m_lazy) {
       llvm::call_once(m_lazy->once, [&] {
         m_lazy->extractor_sp = m_create_data_extractor(m_image_baton);
       });
-      return m_lazy->extractor_sp;
+      extractor_sp = m_lazy->extractor_sp;
     }
-    return m_extractor_sp;
+    if (extractor_sp)
+      if (auto data_sp = extractor_sp->GetSharedDataBuffer())
+        if (data_sp->IsStale())
+          return nullptr;
+    return extractor_sp;
   }
   llvm::StringRef GetFilename() const { return m_filename; }
   const UUID &GetUUID() const { return m_uuid; }
