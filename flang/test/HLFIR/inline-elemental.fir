@@ -324,7 +324,8 @@ func.func @noinline_due_to_finalization(%arg0: !fir.box<!fir.array<?x!fir.type<_
     %7 = fir.call @_QPelem1(%6) fastmath<contract> : (!fir.ref<!fir.type<_QMtypesTt1{x:f32}>>) -> !fir.type<_QMtypesTt1{x:f32}>
     fir.save_result %7 to %0 : !fir.type<_QMtypesTt1{x:f32}>, !fir.ref<!fir.type<_QMtypesTt1{x:f32}>>
     %8:2 = hlfir.declare %0 uniq_name(".tmp.func_result") : (!fir.ref<!fir.type<_QMtypesTt1{x:f32}>>) -> (!fir.ref<!fir.type<_QMtypesTt1{x:f32}>>, !fir.ref<!fir.type<_QMtypesTt1{x:f32}>>)
-    hlfir.yield_element %8#0 : !fir.ref<!fir.type<_QMtypesTt1{x:f32}>>
+    %ye8 = hlfir.as_expr %8#0 : (!fir.ref<!fir.type<_QMtypesTt1{x:f32}>>) -> !hlfir.expr<!fir.type<_QMtypesTt1{x:f32}>>
+    hlfir.yield_element %ye8 : !hlfir.expr<!fir.type<_QMtypesTt1{x:f32}>>
   }
   %5 = hlfir.elemental %3 unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.type<_QMtypesTt1{x:f32}>> {
   ^bb0(%arg1: index):

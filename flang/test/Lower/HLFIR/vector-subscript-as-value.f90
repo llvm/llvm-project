@@ -180,7 +180,8 @@ end subroutine
 ! CHECK:    %[[VAL_25:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_24]])  : (!fir.box<!fir.array<?xi64>>, index) -> !fir.ref<i64>
 ! CHECK:    %[[VAL_26:.*]] = fir.load %[[VAL_25]] : !fir.ref<i64>
 ! CHECK:    %[[VAL_27:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_26]]) substr %[[VAL_15]], %[[VAL_16]]  typeparams %[[VAL_22]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, i64, index, index, index) -> !fir.boxchar<1>
-! CHECK:    hlfir.yield_element %[[VAL_27]] : !fir.boxchar<1>
+! CHECK:    %[[VAL_28:.*]] = hlfir.as_expr %[[VAL_27]] : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
+! CHECK:    hlfir.yield_element %[[VAL_28]] : !hlfir.expr<!fir.char<1,?>>
 ! CHECK:  }
 
 subroutine test_passing_subscripted_poly(x, vector)
@@ -207,7 +208,8 @@ end subroutine
 ! CHECK:             %[[VAL_10:.*]] = hlfir.designate %[[VAL_2]]#0 (%[[VAL_9]])  : (!fir.box<!fir.array<?xi64>>, index) -> !fir.ref<i64>
 ! CHECK:             %[[VAL_11:.*]] = fir.load %[[VAL_10]] : !fir.ref<i64>
 ! CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_3]]#0 (%[[VAL_4]], %[[VAL_11]])  : (!fir.class<!fir.array<?x?xnone>>, index, i64) -> !fir.class<none>
-! CHECK:             hlfir.yield_element %[[VAL_12]] : !fir.class<none>
+! CHECK:             %[[VAL_12B:.*]] = hlfir.as_expr %[[VAL_12]] : (!fir.class<none>) -> !hlfir.expr<none?>
+! CHECK:             hlfir.yield_element %[[VAL_12B]] : !hlfir.expr<none?>
 ! CHECK:           }
 ! CHECK:           %[[VAL_13:.*]]:3 = hlfir.associate %[[VAL_8]](%[[VAL_7]]) {adapt.valuebyref} : (!hlfir.expr<?xnone?>, !fir.shape<1>) -> (!fir.class<!fir.array<?xnone>>, !fir.class<!fir.array<?xnone>>, i1)
 ! CHECK:           fir.call @_QPdo_something(%[[VAL_13]]#0) fastmath<contract> : (!fir.class<!fir.array<?xnone>>) -> ()

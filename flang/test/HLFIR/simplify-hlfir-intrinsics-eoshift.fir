@@ -728,7 +728,8 @@ func.func @_QPeoshift1c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_17]] : !fir.boxchar<1>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_25]] : !fir.boxchar<1>
+// CHECK:             %[[VAL_25_EXPR:.*]] = hlfir.as_expr %[[VAL_25]] : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
+// CHECK:             hlfir.yield_element %[[VAL_25_EXPR]] : !hlfir.expr<!fir.char<1,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_18]] to %[[VAL_13]]#0 : !hlfir.expr<?x!fir.char<1,10>>, !fir.box<!fir.array<?x!fir.char<1,10>>>
 // CHECK:           hlfir.destroy %[[VAL_18]] : !hlfir.expr<?x!fir.char<1,10>>
@@ -801,7 +802,8 @@ func.func @_QPeoshift2c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_20]] : !fir.boxchar<1>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_28]] : !fir.boxchar<1>
+// CHECK:             %[[VAL_28_EXPR:.*]] = hlfir.as_expr %[[VAL_28]] : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
+// CHECK:             hlfir.yield_element %[[VAL_28_EXPR]] : !hlfir.expr<!fir.char<1,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_21]] to %[[VAL_16]]#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           hlfir.destroy %[[VAL_21]] : !hlfir.expr<?x!fir.char<1,?>>
@@ -866,7 +868,8 @@ func.func @_QPeoshift3c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_16]] : !fir.boxchar<1>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_24]] : !fir.boxchar<1>
+// CHECK:             %[[VAL_24_EXPR:.*]] = hlfir.as_expr %[[VAL_24]] : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
+// CHECK:             hlfir.yield_element %[[VAL_24_EXPR]] : !hlfir.expr<!fir.char<1,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_17]] to %[[VAL_12]]#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           hlfir.destroy %[[VAL_17]] : !hlfir.expr<?x!fir.char<1,?>>
@@ -936,7 +939,8 @@ func.func @_QPeoshift4c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_18]] : !fir.boxchar<1>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_26]] : !fir.boxchar<1>
+// CHECK:             %[[VAL_26_EXPR:.*]] = hlfir.as_expr %[[VAL_26]] : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
+// CHECK:             hlfir.yield_element %[[VAL_26_EXPR]] : !hlfir.expr<!fir.char<1,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_19]] to %[[VAL_13]]#0 : !hlfir.expr<?x!fir.char<1,10>>, !fir.box<!fir.array<?x!fir.char<1,10>>>
 // CHECK:           hlfir.destroy %[[VAL_19]] : !hlfir.expr<?x!fir.char<1,10>>
@@ -1010,7 +1014,8 @@ func.func @_QPeoshift5c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_19]] : !fir.boxchar<1>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_27]] : !fir.boxchar<1>
+// CHECK:             %[[VAL_27_EXPR:.*]] = hlfir.as_expr %[[VAL_27]] : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
+// CHECK:             hlfir.yield_element %[[VAL_27_EXPR]] : !hlfir.expr<!fir.char<1,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_20]] to %[[VAL_16]]#0 : !hlfir.expr<?x!fir.char<1,10>>, !fir.box<!fir.array<?x!fir.char<1,10>>>
 // CHECK:           hlfir.destroy %[[VAL_20]] : !hlfir.expr<?x!fir.char<1,10>>
@@ -1092,7 +1097,8 @@ func.func @_QPeoshift6c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_21]]#0 : !fir.boxchar<1>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_31]] : !fir.boxchar<1>
+// CHECK:             %[[VAL_31_EXPR:.*]] = hlfir.as_expr %[[VAL_31]] : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
+// CHECK:             hlfir.yield_element %[[VAL_31_EXPR]] : !hlfir.expr<!fir.char<1,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_24]] to %[[VAL_16]]#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           hlfir.destroy %[[VAL_24]] : !hlfir.expr<?x!fir.char<1,?>>
@@ -1160,7 +1166,8 @@ func.func @_QPeoshift7c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_6]]#0 : !fir.boxchar<1>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_24]] : !fir.boxchar<1>
+// CHECK:             %[[VAL_24_EXPR:.*]] = hlfir.as_expr %[[VAL_24]] : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
+// CHECK:             hlfir.yield_element %[[VAL_24_EXPR]] : !hlfir.expr<!fir.char<1,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_17]] to %[[VAL_14]]#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           hlfir.destroy %[[VAL_17]] : !hlfir.expr<?x!fir.char<1,?>>
@@ -1252,7 +1259,8 @@ func.func @_QPeoshift8c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_24]] : !fir.boxchar<2>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_36]] : !fir.boxchar<2>
+// CHECK:             %[[VAL_36_EXPR:.*]] = hlfir.as_expr %[[VAL_36]] : (!fir.boxchar<2>) -> !hlfir.expr<!fir.char<2,?>>
+// CHECK:             hlfir.yield_element %[[VAL_36_EXPR]] : !hlfir.expr<!fir.char<2,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_29]] to %[[VAL_16]]#0 : !hlfir.expr<?x!fir.char<2,10>>, !fir.box<!fir.array<?x!fir.char<2,10>>>
 // CHECK:           hlfir.destroy %[[VAL_29]] : !hlfir.expr<?x!fir.char<2,10>>
@@ -1356,7 +1364,8 @@ func.func @_QPeoshift9c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_30]] : !fir.boxchar<2>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_44]] : !fir.boxchar<2>
+// CHECK:             %[[VAL_44_EXPR:.*]] = hlfir.as_expr %[[VAL_44]] : (!fir.boxchar<2>) -> !hlfir.expr<!fir.char<2,?>>
+// CHECK:             hlfir.yield_element %[[VAL_44_EXPR]] : !hlfir.expr<!fir.char<2,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_37]] to %[[VAL_17]]#0 : !hlfir.expr<?x!fir.char<2,?>>, !fir.box<!fir.array<?x!fir.char<2,?>>>
 // CHECK:           hlfir.destroy %[[VAL_37]] : !hlfir.expr<?x!fir.char<2,?>>
@@ -1446,7 +1455,8 @@ func.func @_QPeoshift10c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_23]] : !fir.boxchar<2>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_37]] : !fir.boxchar<2>
+// CHECK:             %[[VAL_37_EXPR:.*]] = hlfir.as_expr %[[VAL_37]] : (!fir.boxchar<2>) -> !hlfir.expr<!fir.char<2,?>>
+// CHECK:             hlfir.yield_element %[[VAL_37_EXPR]] : !hlfir.expr<!fir.char<2,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_30]] to %[[VAL_15]]#0 : !hlfir.expr<?x!fir.char<2,?>>, !fir.box<!fir.array<?x!fir.char<2,?>>>
 // CHECK:           hlfir.destroy %[[VAL_30]] : !hlfir.expr<?x!fir.char<2,?>>
@@ -1525,7 +1535,8 @@ func.func @_QPeoshift11c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_25]] : !fir.boxchar<4>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_31]] : !fir.boxchar<4>
+// CHECK:             %[[VAL_31_EXPR:.*]] = hlfir.as_expr %[[VAL_31]] : (!fir.boxchar<4>) -> !hlfir.expr<!fir.char<4,?>>
+// CHECK:             hlfir.yield_element %[[VAL_31_EXPR]] : !hlfir.expr<!fir.char<4,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_21]] to %[[VAL_18]]#0 : !hlfir.expr<?x?x!fir.char<4,10>>, !fir.box<!fir.array<?x?x!fir.char<4,10>>>
 // CHECK:           hlfir.destroy %[[VAL_21]] : !hlfir.expr<?x?x!fir.char<4,10>>
@@ -1614,7 +1625,8 @@ func.func @_QPeoshift12c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_30]] : !fir.boxchar<4>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_36]] : !fir.boxchar<4>
+// CHECK:             %[[VAL_36_EXPR:.*]] = hlfir.as_expr %[[VAL_36]] : (!fir.boxchar<4>) -> !hlfir.expr<!fir.char<4,?>>
+// CHECK:             hlfir.yield_element %[[VAL_36_EXPR]] : !hlfir.expr<!fir.char<4,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_27]] to %[[VAL_20]]#0 : !hlfir.expr<?x?x!fir.char<4,?>>, !fir.box<!fir.array<?x?x!fir.char<4,?>>>
 // CHECK:           hlfir.destroy %[[VAL_27]] : !hlfir.expr<?x?x!fir.char<4,?>>
@@ -1692,7 +1704,8 @@ func.func @_QPeoshift13c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_26]] : !fir.boxchar<4>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_32]] : !fir.boxchar<4>
+// CHECK:             %[[VAL_32_EXPR:.*]] = hlfir.as_expr %[[VAL_32]] : (!fir.boxchar<4>) -> !hlfir.expr<!fir.char<4,?>>
+// CHECK:             hlfir.yield_element %[[VAL_32_EXPR]] : !hlfir.expr<!fir.char<4,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_21]] to %[[VAL_18]]#0 : !hlfir.expr<?x?x!fir.char<4,?>>, !fir.box<!fir.array<?x?x!fir.char<4,?>>>
 // CHECK:           hlfir.destroy %[[VAL_21]] : !hlfir.expr<?x?x!fir.char<4,?>>
@@ -1811,7 +1824,8 @@ func.func @_QPeoshift14c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_43]] : !fir.boxchar<1>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_54]] : !fir.boxchar<1>
+// CHECK:             %[[VAL_54_EXPR:.*]] = hlfir.as_expr %[[VAL_54]] : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
+// CHECK:             hlfir.yield_element %[[VAL_54_EXPR]] : !hlfir.expr<!fir.char<1,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_40]] to %[[VAL_20]]#0 : !hlfir.expr<?x?x!fir.char<1,10>>, !fir.box<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:           hlfir.destroy %[[VAL_40]] : !hlfir.expr<?x?x!fir.char<1,10>>
@@ -1941,7 +1955,8 @@ func.func @_QPeoshift15c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_49]] : !fir.boxchar<1>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_60]] : !fir.boxchar<1>
+// CHECK:             %[[VAL_60_EXPR:.*]] = hlfir.as_expr %[[VAL_60]] : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
+// CHECK:             hlfir.yield_element %[[VAL_60_EXPR]] : !hlfir.expr<!fir.char<1,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_46]] to %[[VAL_23]]#0 : !hlfir.expr<?x?x!fir.char<1,?>>, !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:           hlfir.destroy %[[VAL_46]] : !hlfir.expr<?x?x!fir.char<1,?>>
@@ -2057,7 +2072,8 @@ func.func @_QPeoshift16c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_42]] : !fir.boxchar<1>
 // CHECK:             }
-// CHECK:             hlfir.yield_element %[[VAL_53]] : !fir.boxchar<1>
+// CHECK:             %[[VAL_53_EXPR:.*]] = hlfir.as_expr %[[VAL_53]] : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
+// CHECK:             hlfir.yield_element %[[VAL_53_EXPR]] : !hlfir.expr<!fir.char<1,?>>
 // CHECK:           }
 // CHECK:           hlfir.assign %[[VAL_39]] to %[[VAL_19]]#0 : !hlfir.expr<?x?x!fir.char<1,?>>, !fir.box<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:           hlfir.destroy %[[VAL_39]] : !hlfir.expr<?x?x!fir.char<1,?>>

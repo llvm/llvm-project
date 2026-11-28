@@ -483,6 +483,19 @@ void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
   auto [rhsValue, oldRhsYield] =
       generateYieldedEntity(regionAssignOp.getRhsRegion());
   hlfir::Entity rhsEntity{rhsValue};
+  // Inside WHERE, an inlined hlfir.elemental may produce its element value
+  // with an hlfir.as_expr copy of a variable (e.g. vector subscripted
+  // designator element). The copy can only be avoided if the hlfir.as_expr
+  // is the last operation generated for the RHS: any operation that the
+  // inlined elemental body placed after it (e.g. clean-ups) could modify or
+  // end the lifetime of the variable before the assignment.
+  hlfir::AsExprOp elidableAsExpr;
+  if (whereLoopNest.has_value())
+    if (auto asExpr = rhsEntity.getDefiningOp<hlfir::AsExprOp>())
+      if (!asExpr.isMove() &&
+          asExpr->getBlock() == builder.getInsertionBlock() &&
+          std::next(asExpr->getIterator()) == builder.getInsertionPoint())
+        elidableAsExpr = asExpr;
   LhsValueAndCleanUp loweredLhs =
       generateYieldedLHS(loc, regionAssignOp.getLhsRegion(), rhsEntity);
   hlfir::Entity lhsEntity{loweredLhs.lhs};
@@ -521,12 +534,34 @@ void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
     if (elementalLoopNest)
       builder.setInsertionPointAfter(elementalLoopNest->outerOp);
   } else {
+    // Assign directly from the variable to avoid a temporary for each
+    // element: the scheduling already accounted for the read effect of the
+    // hlfir.as_expr. Its only other uses may be the hlfir.destroy replayed
+    // from the yield_element cleanup, which are erased with it.
+    auto isCopyDestroy = [](mlir::Operation *user) {
+      auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(user);
+      return destroy && !destroy.mustFinalizeExpr();
+    };
+    bool elideAsExpr =
+        elidableAsExpr &&
+        rhsEntity.getDefiningOp() == elidableAsExpr.getOperation() &&
+        llvm::all_of(elidableAsExpr->getUsers(), isCopyDestroy);
+    if (elideAsExpr)
+      rhsEntity = hlfir::Entity{elidableAsExpr.getVar()};
     // TODO: preserve allocatable assignment aspects for forall once
     // they are conveyed in hlfir.region_assign.
     auto assignOp = hlfir::AssignOp::create(builder, loc, rhsEntity, lhsEntity);
     if (auto accessGroups = regionAssignOp->getAttrOfType<mlir::ArrayAttr>(
             fir::getAccessGroupsAttrName()))
       assignOp->setAttr(fir::getAccessGroupsAttrName(), accessGroups);
+    if (elideAsExpr) {
+      // The insertion point may be the replayed hlfir.destroy being erased.
+      for (mlir::Operation *destroy :
+           llvm::make_early_inc_range(elidableAsExpr->getUsers()))
+        destroy->erase();
+      elidableAsExpr->erase();
+      builder.setInsertionPointAfter(assignOp);
+    }
   }
   generateCleanupIfAny(loweredLhs.elementalCleanup);
   if (loweredLhs.vectorSubscriptLoopNest)

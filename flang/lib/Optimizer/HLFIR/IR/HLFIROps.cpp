@@ -1961,6 +1961,18 @@ llvm::LogicalResult hlfir::ElementalOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// YieldElementOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult hlfir::YieldElementOp::verify() {
+  mlir::Type type = getElementValue().getType();
+  if (fir::isa_ref_type(type) ||
+      mlir::isa<fir::BaseBoxType, fir::BoxCharType>(type))
+    return emitOpError("must yield a value, not an address or descriptor");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // ApplyOp
 //===----------------------------------------------------------------------===//
 
