@@ -990,6 +990,7 @@ alias(
         "tanf",
         "tanf16",
         "tanh",
+        "tanhbf16",
         "tanhf",
         "tanhf16",
         "tanpif",

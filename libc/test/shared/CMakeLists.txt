@@ -530,6 +530,7 @@ else()
       libc.src.__support.math.tanf
       libc.src.__support.math.tanf16
       libc.src.__support.math.tanh
+      libc.src.__support.math.tanhbf16
       libc.src.__support.math.tanhf
       libc.src.__support.math.tanhf16
       libc.src.__support.math.tanpif
