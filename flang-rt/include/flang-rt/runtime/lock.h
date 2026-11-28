@@ -46,7 +46,15 @@ public:
   RT_API_ATTRS bool TakeIfNoDeadlock() { return true; }
 #elif USE_PTHREADS
   Lock() { pthread_mutex_init(&mutex_, nullptr); }
-  ~Lock() { pthread_mutex_destroy(&mutex_); }
+  ~Lock() {
+    // Static locks might in some instances be reinstantiated.
+    // For example, the I/O stack can completely shutdown, and then be
+    // restarted.
+
+    // Seems wrong to be deleting a lock that is not held by this pthread.
+    assert(Try());
+    Drop();
+  }
   void Take() {
     while (pthread_mutex_lock(&mutex_)) {
     }
