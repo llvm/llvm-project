@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=i686-pc-win32 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-pc-win32 -debugify-and-strip-all-safe | FileCheck %s
 ; RUN: llc < %s -mtriple=i686-pc-win32 -O0
 
 %struct.S = type { [1024 x i8] }
