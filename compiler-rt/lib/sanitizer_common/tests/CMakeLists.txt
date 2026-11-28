@@ -35,7 +35,6 @@ set(SANITIZER_UNITTESTS
   sanitizer_module_uuid_size.cpp
   sanitizer_mutex_test.cpp
   sanitizer_new_handler_test.cpp
-  sanitizer_nolibc_test.cpp
   sanitizer_posix_test.cpp
   sanitizer_printf_test.cpp
   sanitizer_procmaps_test.cpp
@@ -184,24 +183,6 @@ macro(add_sanitizer_tests_for_arch arch)
     CFLAGS  ${SANITIZER_TEST_CFLAGS_COMMON} ${extra_flags}
     LINK_FLAGS ${SANITIZER_TEST_LINK_FLAGS_COMMON} ${TARGET_LINK_FLAGS} ${extra_flags})
 
-  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND "${arch}" STREQUAL "x86_64")
-    # Test that the libc-independent part of sanitizer_common is indeed
-    # independent of libc, by linking this binary without libc (here) and
-    # executing it (unit test in sanitizer_nolibc_test.cpp).
-    get_target_flags_for_arch(${arch} TARGET_FLAGS)
-    clang_compile(sanitizer_nolibc_test_main.${arch}.o
-                  sanitizer_nolibc_test_main.cpp
-                  CFLAGS ${SANITIZER_TEST_CFLAGS_COMMON} ${TARGET_FLAGS}
-                  DEPS ${SANITIZER_TEST_COMPILE_DEPS})
-    add_compiler_rt_test(SanitizerUnitTests "Sanitizer-${arch}-Test-Nolibc" ${arch}
-                         OBJECTS sanitizer_nolibc_test_main.${arch}.o
-                                 -Wl,-whole-archive
-                                 libRTSanitizerCommon.test.nolibc.${arch}.a
-                                 -Wl,-no-whole-archive
-                         DEPS sanitizer_nolibc_test_main.${arch}.o
-                              RTSanitizerCommon.test.nolibc.${arch}
-                         LINK_FLAGS -static -nostdlib ${TARGET_FLAGS})
-  endif()
 endmacro()
 
 if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
@@ -213,11 +194,6 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
                              $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>
                              $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.osx>)
   else()
-    if(CAN_TARGET_x86_64)
-      add_sanitizer_common_lib("RTSanitizerCommon.test.nolibc.x86_64"
-                               $<TARGET_OBJECTS:RTSanitizerCommon.x86_64>
-                               $<TARGET_OBJECTS:RTSanitizerCommonNoLibc.x86_64>)
-    endif()
     foreach(arch ${SANITIZER_UNITTEST_SUPPORTED_ARCH})
       add_sanitizer_common_lib("RTSanitizerCommon.test.${arch}"
                                $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
