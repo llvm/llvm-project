@@ -239,6 +239,16 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
       return buildConstant(DstOps[0], *Cst);
     break;
   }
+  case TargetOpcode::G_UBFX:
+  case TargetOpcode::G_SBFX: {
+    assert(SrcOps.size() == 3 && "Invalid sources");
+    assert(DstOps.size() == 1 && "Invalid dsts");
+    if (auto Width =
+            getIConstantVRegValWithLookThrough(SrcOps[2].getReg(), *getMRI());
+        Width && Width->Value.isZero())
+      return buildConstant(DstOps[0], 0);
+    break;
+  }
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
