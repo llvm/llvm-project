@@ -14,14 +14,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -60,15 +61,11 @@ void NSErrorMethodChecker::checkASTDecl(const ObjCMethodDecl *D,
   if (!II)
     II = &D->getASTContext().Idents.get("NSError");
 
-  bool hasNSError = false;
-  for (const auto *I : D->parameters())  {
-    if (IsNSError(I->getType(), II)) {
-      hasNSError = true;
-      break;
-    }
-  }
+  auto IsNSErrorParam = [&](const ParmVarDecl *P) {
+    return IsNSError(P->getType(), II);
+  };
 
-  if (hasNSError) {
+  if (llvm::any_of(D->parameters(), IsNSErrorParam)) {
     const char *err = "Method accepting NSError** "
         "should have a non-void return value to indicate whether or not an "
         "error occurred";
@@ -118,15 +115,11 @@ void CFErrorFunctionChecker::checkASTDecl(const FunctionDecl *D,
   if (!II)
     II = &D->getASTContext().Idents.get("CFErrorRef");
 
-  bool hasCFError = false;
-  for (auto *I : D->parameters())  {
-    if (IsCFError(I->getType(), II)) {
-      hasCFError = true;
-      break;
-    }
-  }
+  auto IsCFErrorParam = [&](const ParmVarDecl *P) {
+    return IsCFError(P->getType(), II);
+  };
 
-  if (hasCFError) {
+  if (llvm::any_of(D->parameters(), IsCFErrorParam)) {
     const char *err = "Function accepting CFErrorRef* "
         "should have a non-void return value to indicate whether or not an "
         "error occurred";
