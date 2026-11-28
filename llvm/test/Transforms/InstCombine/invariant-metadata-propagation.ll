@@ -43,4 +43,46 @@ define %struct.double1 @func3(ptr %a) {
   ret %struct.double1 %1
 }
 
+define [2 x float] @array_load(ptr %p) {
+; CHECK-LABEL: define [2 x float] @array_load(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[V_UNPACK:%.*]] = load float, ptr [[P]], align 8, !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue [2 x float] poison, float [[V_UNPACK]], 0
+; CHECK-NEXT:    [[V_ELT1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[V_UNPACK2:%.*]] = load float, ptr [[V_ELT1]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[V3:%.*]] = insertvalue [2 x float] [[TMP1]], float [[V_UNPACK2]], 1
+; CHECK-NEXT:    ret [2 x float] [[V3]]
+;
+  %v = load [2 x float], ptr %p, align 8, !invariant.load !1
+  ret [2 x float] %v
+}
+
+define [2 x float] @array_load_addrspace(ptr addrspace(1) %p) {
+; CHECK-LABEL: define [2 x float] @array_load_addrspace(
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]]) {
+; CHECK-NEXT:    [[V_UNPACK:%.*]] = load float, ptr addrspace(1) [[P]], align 8, !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue [2 x float] poison, float [[V_UNPACK]], 0
+; CHECK-NEXT:    [[V_ELT1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[P]], i64 4
+; CHECK-NEXT:    [[V_UNPACK2:%.*]] = load float, ptr addrspace(1) [[V_ELT1]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[V3:%.*]] = insertvalue [2 x float] [[TMP1]], float [[V_UNPACK2]], 1
+; CHECK-NEXT:    ret [2 x float] [[V3]]
+;
+  %v = load [2 x float], ptr addrspace(1) %p, align 8, !invariant.load !1
+  ret [2 x float] %v
+}
+
+define [1 x float] @single_element_array_load(ptr %p) {
+; CHECK-LABEL: define [1 x float] @single_element_array_load(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[V_UNPACK:%.*]] = load float, ptr [[P]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[V1:%.*]] = insertvalue [1 x float] poison, float [[V_UNPACK]], 0
+; CHECK-NEXT:    ret [1 x float] [[V1]]
+;
+  %v = load [1 x float], ptr %p, align 4, !invariant.load !1
+  ret [1 x float] %v
+}
+
 !1 = !{}
+;.
+; CHECK: [[META0]] = !{}
+;.
