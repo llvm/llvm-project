@@ -902,6 +902,7 @@ stack limits
 stack stdexcept
 stack tuple
 stack version
+stop_token cerrno
 stop_token climits
 stop_token cstdint
 stop_token cstring
