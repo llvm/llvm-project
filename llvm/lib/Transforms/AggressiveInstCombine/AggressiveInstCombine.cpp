@@ -14,16 +14,23 @@
 
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "AggressiveInstCombineInternal.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -33,9 +40,11 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -1795,6 +1804,892 @@ static bool foldConsecutiveStores(BasicBlock &BB, const DataLayout &DL,
   return MadeChange;
 }
 
+struct BitRange {
+  int64_t Begin;
+  int64_t End;
+
+  bool overlaps(BitRange Other) const {
+    return Begin < Other.End && Other.Begin < End;
+  }
+
+  bool operator==(BitRange Other) const {
+    return Begin == Other.Begin && End == Other.End;
+  }
+};
+
+struct AccessRange {
+  Value *Base;
+  BitRange Bits;
+
+  bool operator==(const AccessRange &Other) const {
+    return Base == Other.Base && Bits == Other.Bits;
+  }
+};
+
+struct StoreWriteRange {
+  StoreInst *Store;
+  BitRange Access;
+  BitRange Update;
+};
+
+// Store candidates share a base and overlapping accesses. Their update ranges
+// are in execution order and may overlap or have gaps.
+struct StoreChain {
+  Value *Base;
+  BitRange Access;
+  SmallVector<StoreWriteRange, 4> Ranges;
+};
+
+static std::optional<AccessRange> getAccessRange(Instruction &I,
+                                                 const DataLayout &DL,
+                                                 bool AllowNonInbounds = true) {
+  Value *Ptr = getLoadStorePointerOperand(&I);
+  if (!Ptr)
+    return std::nullopt;
+  auto *Ty = dyn_cast<IntegerType>(getLoadStoreType(&I));
+  if (!Ty || Ty->getBitWidth() % 8)
+    return std::nullopt;
+
+  unsigned AS = getLoadStoreAddressSpace(&I);
+  unsigned IndexBits = DL.getIndexSizeInBits(AS);
+  // A wrapping GEP can preserve the high bits of a wider pointer.
+  AllowNonInbounds &= DL.getPointerSizeInBits(AS) == IndexBits;
+  int64_t Offset;
+  Value *Base =
+      GetPointerBaseWithConstantOffset(Ptr, Offset, DL, AllowNonInbounds);
+  int64_t Begin, End;
+  if (Base->getType() != Ptr->getType() ||
+      MulOverflow(Offset, int64_t(8), Begin) ||
+      AddOverflow(Begin, int64_t(Ty->getBitWidth()), End) ||
+      !isIntN(IndexBits, End / 8 - 1))
+    return std::nullopt;
+  return AccessRange{Base, {Begin, End}};
+}
+
+/// Match a contiguous masked update. Before adding the write to a chain, the
+/// caller must establish that the value matched by MatchOld is available.
+template <typename OldMatcher>
+static std::optional<StoreWriteRange>
+getStoreWriteRange(StoreInst &Store, const OldMatcher &MatchOld,
+                   BitRange Access, const DataLayout &DL) {
+  const APInt *KeepMask;
+  Value *Insert;
+  if (!match(Store.getValueOperand(),
+             m_c_DisjointOr(m_c_And(MatchOld, m_APInt(KeepMask)),
+                            m_Value(Insert))))
+    return std::nullopt;
+  const APInt UpdateMask = ~*KeepMask;
+  unsigned Shift, Width;
+  if (!UpdateMask.isShiftedMask(Shift, Width) ||
+      !MaskedValueIsZero(Insert, *KeepMask, SimplifyQuery(DL, &Store)))
+    return std::nullopt;
+
+  if (DL.isBigEndian())
+    Shift = KeepMask->getBitWidth() - Shift - Width;
+  const BitRange Update{Access.Begin + Shift, Access.Begin + Shift + Width};
+  return StoreWriteRange{&Store, Access, Update};
+}
+
+static std::optional<StoreChain>
+createStoreChain(StoreInst &Store, Value *ValueBeforeStore,
+                 const AccessRange &Access, const DataLayout &DL,
+                 function_ref<bool(LoadInst &, StoreInst &)> IsLoadAvailable) {
+  if (ValueBeforeStore)
+    if (auto Write = getStoreWriteRange(Store, m_Specific(ValueBeforeStore),
+                                        Access.Bits, DL))
+      return StoreChain{Access.Base, Access.Bits, {*Write}};
+
+  // The keep mask identifies the load. Query its availability only after
+  // matching the masked update.
+  Value *Old;
+  auto Write = getStoreWriteRange(
+      Store, m_Value(Old, m_LoadSimple(m_Specific(Store.getPointerOperand()))),
+      Access.Bits, DL);
+  if (!Write)
+    return std::nullopt;
+  auto *Load = cast<LoadInst>(Old);
+  if (Load->getParent() == Store.getParent() || !IsLoadAvailable(*Load, Store))
+    return std::nullopt;
+  return StoreChain{Access.Base, Access.Bits, {*Write}};
+}
+
+static void finalizeStoreChain(StoreChain &Chain,
+                               SmallVectorImpl<StoreChain> &Chains) {
+  auto &Ranges = Chain.Ranges;
+  if (Ranges.size() < 2)
+    return;
+
+  llvm::sort(Ranges, [](const StoreWriteRange &A, const StoreWriteRange &B) {
+    return A.Store->comesBefore(B.Store);
+  });
+  Chains.push_back(std::move(Chain));
+}
+
+// In program order, start a new group when an update overlaps one already in
+// the group. Split each group at gaps in address order, then restore program
+// order within each chain (in finalizeStoreChain).
+static SmallVector<StoreChain, 4>
+splitStoreChainsByContiguity(ArrayRef<StoreChain> Candidates) {
+  SmallVector<StoreChain, 4> ContiguousChains;
+  auto AppendChain = [&](Value *Base, ArrayRef<StoreWriteRange> Ranges) {
+    if (Ranges.size() < 2)
+      return;
+
+    auto Sorted = llvm::to_vector<4>(Ranges);
+    llvm::sort(Sorted, [](const StoreWriteRange &A, const StoreWriteRange &B) {
+      return A.Update.Begin < B.Update.Begin;
+    });
+
+    StoreChain Chain{Base, Sorted.front().Access, {Sorted.front()}};
+    for (const StoreWriteRange &Range : llvm::drop_begin(Sorted)) {
+      if (Chain.Ranges.back().Update.End == Range.Update.Begin) {
+        Chain.Ranges.push_back(Range);
+        Chain.Access.Begin = std::min(Chain.Access.Begin, Range.Access.Begin);
+        Chain.Access.End = std::max(Chain.Access.End, Range.Access.End);
+        continue;
+      }
+
+      // No update in this group covers the gap, so Range starts a new chain.
+      finalizeStoreChain(Chain, ContiguousChains);
+      Chain = {Base, Range.Access, {Range}};
+    }
+    finalizeStoreChain(Chain, ContiguousChains);
+  };
+
+  for (const StoreChain &Candidate : Candidates) {
+    ArrayRef<StoreWriteRange> Ranges = Candidate.Ranges;
+    unsigned Begin = 0;
+    for (unsigned Index = 0; Index < Ranges.size(); ++Index) {
+      const StoreWriteRange &Write = Ranges[Index];
+      auto EarlierRanges = Ranges.slice(Begin, Index - Begin);
+      if (llvm::any_of(EarlierRanges, [&](const StoreWriteRange &Earlier) {
+            return Write.Update.overlaps(Earlier.Update);
+          })) {
+        // A -> F -> B -> C  =>  [A] | [F] | [B, C]
+        // Split before F (overlaps A) and before B (overlaps F).
+        // C's update starts where B's ends. Dropping singletons leaves [B, C].
+        AppendChain(Candidate.Base, EarlierRanges);
+        Begin = Index;
+      }
+    }
+    AppendChain(Candidate.Base, Ranges.drop_front(Begin));
+  }
+  return ContiguousChains;
+}
+
+struct PreservationCheckValue {
+  AccessRange Access;
+  MemoryLocation Location;
+  Value *StoredValue;
+};
+
+static bool finalizeInterferingStoreChain(Instruction &I, StoreChain &Chain,
+                                          BatchAAResults &BatchAA,
+                                          SmallVectorImpl<StoreChain> &Chains) {
+  // An access outside the chain can read or modify any part of an
+  // earlier store's memory location.
+  if (!llvm::any_of(Chain.Ranges, [&](const StoreWriteRange &Earlier) {
+        return isModOrRefSet(BatchAA.getModRefInfo(
+            &I, MemoryLocation::get(Earlier.Store).getWithoutAATags()));
+      }))
+    return false;
+  finalizeStoreChain(Chain, Chains);
+  return true;
+}
+
+static void updateCurrentStoreChains(StoreChain &CurrentChain,
+                                     SmallVectorImpl<StoreChain> &CurrentChains,
+                                     BatchAAResults &BatchAA,
+                                     SmallVectorImpl<StoreChain> &Chains) {
+  llvm::erase_if(CurrentChains, [&](StoreChain &Chain) {
+    // The current store stays first as earlier ranges are appended.
+    const StoreWriteRange &Write = CurrentChain.Ranges.front();
+    if (CurrentChain.Base != Chain.Base)
+      return finalizeInterferingStoreChain(*Write.Store, Chain, BatchAA,
+                                           Chains);
+    if (!Write.Access.overlaps(Chain.Access))
+      return false;
+
+    CurrentChain.Access.Begin =
+        std::min(CurrentChain.Access.Begin, Chain.Access.Begin);
+    CurrentChain.Access.End =
+        std::max(CurrentChain.Access.End, Chain.Access.End);
+    CurrentChain.Ranges.append(Chain.Ranges.begin(), Chain.Ranges.end());
+    return true;
+  });
+}
+
+// Validate the store and join compatible candidates. A store with a known
+// access also supplies a value for later preservation checks, even if it does
+// not form a candidate.
+static void collectStoreChain(
+    StoreInst &Store, const DataLayout &DL,
+    function_ref<bool(LoadInst &, StoreInst &)> IsLoadAvailable,
+    SmallVectorImpl<StoreChain> &CurrentChains,
+    SmallVectorImpl<PreservationCheckValue> &PreservationCheckValues,
+    BatchAAResults &BatchAA, SmallVectorImpl<StoreChain> &Chains) {
+  auto CurrentAccess = getAccessRange(Store, DL);
+  if (!CurrentAccess) {
+    llvm::erase_if(CurrentChains, [&](StoreChain &Chain) {
+      return finalizeInterferingStoreChain(Store, Chain, BatchAA, Chains);
+    });
+    llvm::erase_if(
+        PreservationCheckValues, [&](const PreservationCheckValue &Previous) {
+          return isModSet(BatchAA.getModRefInfo(&Store, Previous.Location));
+        });
+    return;
+  }
+
+  Value *ValueBeforeStore = nullptr;
+  for (const PreservationCheckValue &Known : PreservationCheckValues) {
+    if (Known.Access == *CurrentAccess) {
+      ValueBeforeStore = Known.StoredValue;
+      break;
+    }
+  }
+  auto CurrentChain = createStoreChain(Store, ValueBeforeStore, *CurrentAccess,
+                                       DL, IsLoadAvailable);
+  if (!CurrentChain) {
+    llvm::erase_if(CurrentChains, [&](StoreChain &Chain) {
+      return finalizeInterferingStoreChain(Store, Chain, BatchAA, Chains);
+    });
+    llvm::erase_if(
+        PreservationCheckValues, [&](const PreservationCheckValue &Previous) {
+          return Previous.Access == *CurrentAccess ||
+                 isModSet(BatchAA.getModRefInfo(&Store, Previous.Location));
+        });
+    PreservationCheckValues.push_back(
+        {*CurrentAccess, MemoryLocation::get(&Store).getWithoutAATags(),
+         Store.getValueOperand()});
+    return;
+  }
+
+  updateCurrentStoreChains(*CurrentChain, CurrentChains, BatchAA, Chains);
+  const BitRange &Update = CurrentChain->Ranges.front().Update;
+  llvm::erase_if(
+      PreservationCheckValues, [&](const PreservationCheckValue &Previous) {
+        if (Previous.Access == *CurrentAccess)
+          return true;
+        if (CurrentAccess->Base == Previous.Access.Base)
+          return Update.overlaps(Previous.Access.Bits);
+        return isModSet(BatchAA.getModRefInfo(&Store, Previous.Location));
+      });
+  PreservationCheckValues.push_back(
+      {*CurrentAccess, MemoryLocation::get(&Store).getWithoutAATags(),
+       Store.getValueOperand()});
+  CurrentChains.push_back(std::move(*CurrentChain));
+}
+
+// End chains observed or modified by a non-store access and invalidate the
+// affected preservation values. Loads also establish values for later stores.
+static void processNonStoreAccess(
+    Instruction &I, const DataLayout &DL,
+    SmallVectorImpl<StoreChain> &CurrentChains,
+    SmallVectorImpl<PreservationCheckValue> &PreservationCheckValues,
+    BatchAAResults &BatchAA, SmallVectorImpl<StoreChain> &Chains) {
+  auto CurrentAccess = getAccessRange(I, DL);
+  llvm::erase_if(CurrentChains, [&](StoreChain &Chain) {
+    return finalizeInterferingStoreChain(I, Chain, BatchAA, Chains);
+  });
+  if (!CurrentAccess) {
+    if (I.mayWriteToMemory())
+      llvm::erase_if(
+          PreservationCheckValues, [&](const PreservationCheckValue &Previous) {
+            return isModSet(BatchAA.getModRefInfo(&I, Previous.Location));
+          });
+    return;
+  }
+
+  // The caller excludes atomic and volatile accesses, so a known access here
+  // is a simple load with no Mod effects in AA.
+  llvm::erase_if(PreservationCheckValues,
+                 [&](const PreservationCheckValue &Previous) {
+                   return Previous.Access == *CurrentAccess;
+                 });
+  PreservationCheckValues.push_back(
+      {*CurrentAccess, MemoryLocation::get(&I).getWithoutAATags(), &I});
+}
+
+// Another subchain can be interleaved with these stores in program order.
+static bool hasInterveningAccess(ArrayRef<StoreWriteRange> Writes,
+                                 AliasAnalysis &AA) {
+  MemoryLocation Loc =
+      MemoryLocation::get(Writes.front().Store).getWithoutAATags();
+  for (auto [Prev, Next] :
+       llvm::zip_equal(Writes.drop_back(), Writes.drop_front()))
+    for (Instruction &I : make_range(std::next(Prev.Store->getIterator()),
+                                     Next.Store->getIterator()))
+      if (I.mayReadOrWriteMemory() && isModOrRefSet(AA.getModRefInfo(&I, Loc)))
+        return true;
+  return false;
+}
+
+/// Pack later writes into the value of the last store covering the whole
+/// access. Skip chains that would require a wider store.
+static StoreInst *packStoreChain(const StoreChain &Chain, AliasAnalysis &AA,
+                                 const DataLayout &DL) {
+  ArrayRef<StoreWriteRange> Writes;
+  for (const StoreWriteRange &W : llvm::reverse(Chain.Ranges))
+    if (W.Access == Chain.Access) {
+      Writes = ArrayRef(&W, Chain.Ranges.end());
+      break;
+    }
+  if (Writes.empty())
+    return nullptr;
+
+  if (hasInterveningAccess(Writes, AA))
+    return nullptr;
+
+  StoreInst *First = Writes.front().Store;
+  StoreInst *Last = Writes.back().Store;
+  IRBuilder<> B(Last);
+  auto GetStoreValue = [&](StoreInst *Store) {
+    Value *V = Store->getValueOperand();
+    // Poison from one store must not propagate to bytes supplied by another.
+    if (!isGuaranteedNotToBeUndefOrPoison(V, nullptr, Last))
+      V = B.CreateFreeze(V);
+    return V;
+  };
+
+  Value *Packed = GetStoreValue(First);
+  auto *Ty = cast<IntegerType>(Packed->getType());
+  for (const StoreWriteRange &W : Writes.drop_front()) {
+    Value *V = GetStoreValue(W.Store);
+    // W supplies every byte in its access, including bits its mask preserves.
+    unsigned Shift = DL.isLittleEndian() ? W.Access.Begin - Chain.Access.Begin
+                                         : Chain.Access.End - W.Access.End;
+    unsigned Size = W.Access.End - W.Access.Begin;
+    Packed = B.CreateAnd(
+        Packed, ~APInt::getBitsSet(Ty->getBitWidth(), Shift, Shift + Size));
+    V = B.CreateZExt(V, Ty);
+    if (Shift)
+      V = B.CreateShl(V, Shift);
+    Packed = B.CreateOr(Packed, V, "", /*IsDisjoint=*/true);
+  }
+  return B.CreateAlignedStore(Packed, First->getPointerOperand(),
+                              First->getAlign());
+}
+
+static bool endsStoreChain(const Instruction &I) {
+  return I.isAtomic() || I.isVolatile() || I.maySynchronize() ||
+         !isGuaranteedToTransferExecutionToSuccessor(&I);
+}
+
+struct AdjacentIntegerStore {
+  StoreInst *Store;
+  BitRange Access;
+};
+
+struct AdjacentStoreMerge {
+  ArrayRef<AdjacentIntegerStore> Stores;
+  StoreInst *Last;
+};
+
+static bool canMergeAdjacentStores(ArrayRef<AdjacentIntegerStore> Stores,
+                                   StoreInst &Last, BatchAAResults &AA) {
+  unsigned Remaining = MaxInstrsToScan;
+  for (const AdjacentIntegerStore &Part : Stores) {
+    StoreInst *Store = Part.Store;
+    if (Store == &Last)
+      continue;
+
+    MemoryLocation Loc = MemoryLocation::get(Store).getWithoutAATags();
+    for (Instruction &I :
+         make_range(std::next(Store->getIterator()), Last.getIterator())) {
+      if (isa<DbgInfoIntrinsic>(I))
+        continue;
+      if (!Remaining-- || endsStoreChain(I) || I.isLifetimeStartOrEnd() ||
+          (I.mayReadOrWriteMemory() &&
+           isModOrRefSet(AA.getModRefInfo(&I, Loc))))
+        return false;
+    }
+  }
+  return true;
+}
+
+static void selectAdjacentStoreMerges(
+    SmallVectorImpl<AdjacentIntegerStore> &Stores, const DataLayout &DL,
+    TargetTransformInfo &TTI, BatchAAResults &AA, AssumptionCache &AC,
+    DominatorTree &DT, SmallVectorImpl<AdjacentStoreMerge> &Merges) {
+  if (Stores.size() < 2)
+    return;
+  llvm::sort(Stores, [](const auto &A, const auto &B) {
+    return A.Access.Begin < B.Access.Begin;
+  });
+
+  // Keep each overlapping write by itself. The greatest preceding end also
+  // detects stores contained in an earlier, wider access.
+  SmallBitVector Overlaps(Stores.size());
+  int64_t MaxEnd = Stores.front().Access.Begin;
+  for (size_t I = 0, E = Stores.size(); I != E; ++I) {
+    BitRange Access = Stores[I].Access;
+    if (Access.Begin < MaxEnd ||
+        (I + 1 != E && Access.End > Stores[I + 1].Access.Begin))
+      Overlaps.set(I);
+    MaxEnd = std::max(MaxEnd, Access.End);
+  }
+
+  struct Split {
+    size_t NumStores;
+    unsigned Length;
+    StoreInst *Last;
+  };
+  SmallVector<Split, 8> Best(Stores.size() + 1, {0, 0, nullptr});
+  ArrayRef<AdjacentIntegerStore> Ranges(Stores);
+  for (size_t I = Stores.size(); I-- > 0;) {
+    const AdjacentIntegerStore &First = Ranges[I];
+    Best[I] = {1 + Best[I + 1].NumStores, 1, nullptr};
+    if (Overlaps.test(I))
+      continue;
+
+    StoreInst *Last = First.Store;
+    for (size_t J = I + 1; J != Ranges.size(); ++J) {
+      const AdjacentIntegerStore &Part = Ranges[J];
+      if (Overlaps.test(J) || Ranges[J - 1].Access.End != Part.Access.Begin)
+        break;
+      int64_t Width = Part.Access.End - First.Access.Begin;
+      if (Width > 64)
+        break;
+      if (Last->comesBefore(Part.Store))
+        Last = Part.Store;
+
+      // Minimize the number of stores in the remaining suffix. On a tie,
+      // prefer the wider store at this address.
+      size_t NumStores = 1 + Best[J + 1].NumStores;
+      if (NumStores > Best[I].NumStores || !isPowerOf2_64(Width) ||
+          !DL.fitsInLegalInteger(Width))
+        continue;
+
+      IntegerType *Ty = IntegerType::get(Last->getContext(), Width);
+      Align MinAlign(Width / 8);
+      if (First.Store->getAlign() < MinAlign &&
+          getKnownAlignment(First.Store->getPointerOperand(), DL, First.Store,
+                            &AC, &DT) < MinAlign)
+        continue;
+      // A target can support a narrow store even if that integer type is
+      // promoted in registers.
+      if (TTI.getMemoryOpCost(Instruction::Store, Ty, MinAlign,
+                              First.Store->getPointerAddressSpace(),
+                              TTI::TCK_CodeSize) > TTI::TCC_Basic)
+        continue;
+
+      unsigned Length = J - I + 1;
+      if (canMergeAdjacentStores(Ranges.slice(I, Length), *Last, AA))
+        Best[I] = {NumStores, Length, Last};
+    }
+  }
+
+  for (size_t I = 0; I < Ranges.size(); I += Best[I].Length)
+    if (Best[I].Last)
+      Merges.push_back({Ranges.slice(I, Best[I].Length), Best[I].Last});
+}
+
+static void mergeAdjacentIntegerStores(const AdjacentStoreMerge &Merge,
+                                       const DataLayout &DL,
+                                       AssumptionCache &AC, DominatorTree &DT) {
+  ArrayRef<AdjacentIntegerStore> Stores = Merge.Stores;
+  const AdjacentIntegerStore &First = Stores.front();
+  int64_t Begin = First.Access.Begin;
+  int64_t End = Stores.back().Access.End;
+  unsigned Width = End - Begin;
+  IRBuilder<> B(Merge.Last);
+  IntegerType *Ty = B.getIntNTy(Width);
+  Value *Packed = ConstantInt::get(Ty, 0);
+  AAMDNodes AATags = First.Store->getAAMetadata();
+  SmallVector<DebugLoc, 8> Locs;
+  SmallVector<Instruction *, 8> OldStores;
+  for (const AdjacentIntegerStore &Part : Stores) {
+    unsigned Shift =
+        DL.isLittleEndian() ? Part.Access.Begin - Begin : End - Part.Access.End;
+    Value *V = Part.Store->getValueOperand();
+    // A poison input could turn the entire packed value into poison.
+    if (!isGuaranteedNotToBeUndefOrPoison(V, &AC, Part.Store, &DT))
+      V = B.CreateFreeze(V);
+    V = B.CreateZExt(V, Ty);
+    if (Shift)
+      V = B.CreateShl(V, Shift);
+    Packed = B.CreateOr(Packed, V, "", /*IsDisjoint=*/true);
+    if (Part.Store != First.Store)
+      AATags = AATags.concat(Part.Store->getAAMetadata());
+    Locs.push_back(Part.Store->getDebugLoc());
+    OldStores.push_back(Part.Store);
+  }
+
+  Align Alignment = std::max(First.Store->getAlign(), Align(Width / 8));
+  StoreInst *Store =
+      B.CreateAlignedStore(Packed, First.Store->getPointerOperand(), Alignment);
+  Store->setAAMetadata(AATags);
+  Store->mergeDIAssignID(OldStores);
+  Store->setDebugLoc(DebugLoc::getMergedLocations(Locs));
+  for (Instruction *OldStore : OldStores)
+    OldStore->eraseFromParent();
+}
+
+/// Collect whole-byte integer stores by base and partition disjoint adjacent
+/// accesses into legal 2-, 4-, or 8-byte writes at the original store
+/// boundaries.
+static bool foldAdjacentIntegerStores(BasicBlock &BB, const DataLayout &DL,
+                                      TargetTransformInfo &TTI,
+                                      AliasAnalysis &AA, AssumptionCache &AC,
+                                      DominatorTree &DT) {
+  SmallMapVector<Value *, SmallVector<AdjacentIntegerStore, 8>, 4> StoresByBase;
+  for (Instruction &I : BB) {
+    auto *Store = dyn_cast<StoreInst>(&I);
+    if (!Store || !Store->isSimple())
+      continue;
+
+    // Inbounds offsets keep all parts of a merged access in one object.
+    if (auto Access = getAccessRange(*Store, DL, /*AllowNonInbounds=*/false);
+        Access && Access->Bits.End - Access->Bits.Begin < 64 &&
+        !Access->Base->isSwiftError())
+      StoresByBase[Access->Base].push_back({Store, Access->Bits});
+  }
+
+  SmallVector<AdjacentStoreMerge, 4> Merges;
+  BatchAAResults BatchAA(AA);
+  for (auto &Entry : StoresByBase)
+    selectAdjacentStoreMerges(Entry.second, DL, TTI, BatchAA, AC, DT, Merges);
+
+  // Check interference against all the original stores before modifying IR.
+  for (const AdjacentStoreMerge &Merge : Merges)
+    mergeAdjacentIntegerStores(Merge, DL, AC, DT);
+  return !Merges.empty();
+}
+
+// Insert both stored values in address order. Byte values keep poison in
+// each field independent.
+static void replaceAdjacentStores(StoreInst &Word, StoreInst &Tag,
+                                  IRBuilder<> &B, Value *Packed,
+                                  Align Alignment) {
+  Value *WordValue = Word.getValueOperand();
+  Value *TagValue = Tag.getValueOperand();
+  unsigned WordWidth = WordValue->getType()->getIntegerBitWidth();
+  unsigned WordShift = 0;
+  unsigned TagShift = WordWidth;
+  if (Word.getDataLayout().isBigEndian()) {
+    WordShift = Packed->getType()->getScalarSizeInBits() - WordWidth;
+    TagShift = WordShift - TagValue->getType()->getIntegerBitWidth();
+  }
+  Packed = B.CreateBitInsert(Packed, WordValue, B.getInt32(WordShift));
+  Packed = B.CreateBitInsert(Packed, TagValue, B.getInt32(TagShift));
+  auto *Merged =
+      B.CreateAlignedStore(Packed, Word.getPointerOperand(), Alignment);
+  Merged->setDebugLoc(
+      DebugLoc::getMergedLocation(Word.getDebugLoc(), Tag.getDebugLoc()));
+  Merged->mergeDIAssignID({&Word, &Tag});
+  Word.eraseFromParent();
+  Tag.eraseFromParent();
+}
+
+/// Pack an adjacent word and tag into a native-width store to return storage.
+/// Read back the trailing bytes to preserve their contents.
+static bool packAdjacentStores(StoreInst &Last, AliasAnalysis &AA,
+                               DominatorTree &DT, TargetTransformInfo &TTI) {
+  const DataLayout &DL = Last.getDataLayout();
+  auto Tag = getAccessRange(Last, DL);
+  auto *Base = Tag ? dyn_cast<Argument>(Tag->Base) : nullptr;
+  if (!Base || !Base->hasStructRetAttr() || !Base->hasNoAliasAttr() ||
+      !Base->hasAttribute(Attribute::Writable) ||
+      Base->hasAttribute(Attribute::WriteOnly) || Base->isSwiftError() ||
+      !isRefSet(Last.getFunction()->getMemoryEffects().getModRef(
+          IRMemLocation::ArgMem)))
+    return false;
+
+  StoreInst *First = nullptr;
+  BitRange Word;
+  unsigned Budget = MaxInstrsToScan;
+  for (Instruction &I : llvm::reverse(
+           make_range(Last.getParent()->begin(), Last.getIterator()))) {
+    if (!Budget-- || endsStoreChain(I))
+      return false;
+    auto *Store = dyn_cast<StoreInst>(&I);
+    if (!Store)
+      continue;
+    auto Access = getAccessRange(I, DL);
+    if (Access && Access->Base == Base && Access->Bits.End == Tag->Bits.Begin) {
+      First = Store;
+      Word = Access->Bits;
+      break;
+    }
+  }
+  if (!First || Word.Begin < 0)
+    return false;
+
+  unsigned AccessWidth = Tag->Bits.End - Word.Begin;
+  Type *NativeTy = DL.getSmallestLegalIntType(Last.getContext(), AccessWidth);
+  if (!NativeTy || !TTI.isTypeLegal(NativeTy))
+    return false;
+  unsigned Width = NativeTy->getIntegerBitWidth();
+  if (Width <= AccessWidth || Width % 8)
+    return false;
+  Value *Ptr = First->getPointerOperand();
+  Align Alignment = std::max(First->getAlign(),
+                             getKnownAlignment(Ptr, DL, &Last, nullptr, &DT));
+  if (Alignment < DL.getABITypeAlign(NativeTy))
+    return false;
+
+  // The tag write establishes that the object is still live here. Writable
+  // noalias storage can be written back over the dereferenceable range as long
+  // as the pointer has not been published.
+  if (!isDereferenceablePointer(Ptr, NativeTy, SimplifyQuery(DL, &Last),
+                                /*IgnoreFree=*/true) ||
+      PointerMayBeCapturedBefore(Base, /*ReturnCaptures=*/false, &Last, &DT))
+    return false;
+
+  if (Attribute Init = Base->getAttribute(Attribute::Initializes);
+      Init.isValid()) {
+    ConstantRange Preserved(APInt(64, Tag->Bits.End / 8),
+                            APInt(64, Word.Begin / 8 + Width / 8));
+    if (llvm::any_of(Init.getInitializes(), [&](const ConstantRange &Range) {
+          return !Range.intersectWith(Preserved).isEmptySet();
+        }))
+      return false;
+  }
+
+  MemoryLocation WordLoc = MemoryLocation::get(First).getWithoutAATags();
+  MemoryLocation WideLoc =
+      WordLoc.getWithNewSize(LocationSize::precise(Width / 8));
+  BatchAAResults BatchAA(AA);
+  for (Instruction &I :
+       make_range(std::next(First->getIterator()), Last.getIterator())) {
+    if (!I.mayReadOrWriteMemory())
+      continue;
+    ModRefInfo MR = BatchAA.getModRefInfo(&I, WideLoc);
+    // Reject writes anywhere in the wider access and reads of the word.
+    // Reads of the tag are safe because only the word write moves.
+    if (isModSet(MR) ||
+        (isRefSet(MR) && isRefSet(BatchAA.getModRefInfo(&I, WordLoc))))
+      return false;
+  }
+
+  IRBuilder B(&Last);
+  replaceAdjacentStores(
+      *First, Last, B, B.CreateAlignedLoad(B.getByteNTy(Width), Ptr, Alignment),
+      Alignment);
+  return true;
+}
+
+/// Pack an adjacent word and byte before a zero fill to private stack storage.
+/// The fill overwrites the extra bytes before any intervening memory access.
+static bool packStoresBeforeZeroFill(MemSetInst &Fill, DominatorTree &DT,
+                                     TargetTransformInfo &TTI) {
+  const DataLayout &DL = Fill.getDataLayout();
+  auto *Length = dyn_cast<ConstantInt>(Fill.getLength());
+  if (Fill.isVolatile() || !match(Fill.getValue(), m_Zero()) || !Length ||
+      Length->getValue().ult(3))
+    return false;
+
+  unsigned Budget = MaxInstrsToScan;
+  auto PreviousStore = [&](Instruction &From) -> StoreInst * {
+    for (Instruction *I = From.getPrevNode(); I; I = I->getPrevNode()) {
+      if (!Budget-- || endsStoreChain(*I))
+        return nullptr;
+      if (I->mayReadOrWriteMemory())
+        return dyn_cast<StoreInst>(I);
+    }
+    return nullptr;
+  };
+  StoreInst *Tag = PreviousStore(Fill);
+  if (!Tag || !Tag->getValueOperand()->getType()->isIntegerTy(8))
+    return false;
+  StoreInst *Word = PreviousStore(*Tag);
+  if (!Word || !Word->getValueOperand()->getType()->isIntegerTy(32))
+    return false;
+
+  auto Low = getAccessRange(*Word, DL);
+  auto High = getAccessRange(*Tag, DL);
+  auto *Storage = Low ? dyn_cast<AllocaInst>(Low->Base) : nullptr;
+  if (!Storage || !High || High->Base != Storage ||
+      Low->Bits.End != High->Bits.Begin || Low->Bits.Begin < 0)
+    return false;
+
+  // The zero fill must start at the first byte beyond the original stores.
+  int64_t FillOffset;
+  Value *FillPtr = Fill.getRawDest();
+  if (FillPtr->getType() != Storage->getType() ||
+      GetPointerBaseWithConstantOffset(FillPtr, FillOffset, DL,
+                                       /*AllowNonInbounds=*/false) != Storage ||
+      FillOffset != High->Bits.End / 8)
+    return false;
+
+  Type *NativeTy = DL.getSmallestLegalIntType(Fill.getContext(), 40);
+  if (!NativeTy || !NativeTy->isIntegerTy(64) || !TTI.isTypeLegal(NativeTy))
+    return false;
+  Value *Ptr = Word->getPointerOperand();
+  Align Alignment =
+      std::max(Word->getAlign(), getKnownAlignment(Ptr, DL, Tag, nullptr, &DT));
+  if (Alignment < Align(8) ||
+      !isDereferenceablePointer(Ptr, NativeTy, SimplifyQuery(DL, Tag)) ||
+      PointerMayBeCaptured(Storage, /*ReturnCaptures=*/true))
+    return false;
+
+  IRBuilder B(Tag);
+  replaceAdjacentStores(*Word, *Tag, B,
+                        Constant::getNullValue(B.getByteNTy(64)), Alignment);
+  return true;
+}
+
+#ifndef NDEBUG
+static void verifyStoreChain(const StoreChain &Chain, const DataLayout &DL) {
+  assert(Chain.Ranges.size() >= 2 && "expected at least two stores");
+  const StoreInst *Previous = nullptr;
+  BitRange Bounds = Chain.Ranges.front().Access;
+  SmallVector<BitRange, 4> Updates;
+  for (const StoreWriteRange &W : Chain.Ranges) {
+    assert(W.Store && W.Store->isSimple() && "expected a simple store");
+    assert((!Previous || Previous->comesBefore(W.Store)) &&
+           "stores must be in program order within one block");
+    Previous = W.Store;
+
+    auto Access = getAccessRange(*W.Store, DL);
+    assert(Access && Access->Base == Chain.Base && Access->Bits == W.Access &&
+           "store access must match the recorded base and bit range");
+    assert(W.Access.Begin <= W.Update.Begin && W.Update.Begin < W.Update.End &&
+           W.Update.End <= W.Access.End &&
+           "expected a nonempty update within the store access");
+    Bounds.Begin = std::min(Bounds.Begin, W.Access.Begin);
+    Bounds.End = std::max(Bounds.End, W.Access.End);
+    Updates.push_back(W.Update);
+  }
+  assert(Bounds == Chain.Access && "incorrect chain access bounds");
+
+  llvm::sort(Updates, [](BitRange A, BitRange B) { return A.Begin < B.Begin; });
+  for (size_t I = 1; I < Updates.size(); ++I)
+    assert(Updates[I - 1].End == Updates[I].Begin &&
+           "store updates must be disjoint and contiguous in address order");
+}
+#endif
+
+/// Merge at the last store, reusing it when it covers the whole chain.
+/// Otherwise, pack the writes into the width of an earlier covering store.
+///
+/// Chain.Ranges contains at least two simple integer stores of whole bytes
+/// with a common base, in program order within one basic block. Chain.Access
+/// spans the minimum begin and maximum end of their base-relative bit ranges.
+/// Each update is a nonempty subrange of its store's access. In address order,
+/// the updates are disjoint and contiguous.
+static bool mergeStoreChain(const StoreChain &Chain, AliasAnalysis &AA,
+                            const DataLayout &DL) {
+#ifndef NDEBUG
+  verifyStoreChain(Chain, DL);
+#endif
+  // The final store already has the right SSA value for every byte it writes,
+  // including updates from any interleaved subchains.
+  const StoreWriteRange &Last = Chain.Ranges.back();
+  StoreInst *Merged = Last.Store;
+  if (!(Last.Access == Chain.Access)) {
+    Merged = packStoreChain(Chain, AA, DL);
+    if (!Merged)
+      return false;
+  }
+
+  SmallVector<Instruction *> RemovedStores;
+  SmallVector<DebugLoc> Locs;
+  for (const StoreWriteRange &W : Chain.Ranges) {
+    if (W.Store != Merged)
+      RemovedStores.push_back(W.Store);
+    Locs.push_back(W.Store->getDebugLoc());
+  }
+  Merged->mergeDIAssignID(RemovedStores);
+  Merged->setDebugLoc(DebugLoc::getMergedLocations(Locs));
+  for (Instruction *Store : RemovedStores)
+    Store->eraseFromParent();
+  return true;
+}
+
+/// Merge a chain of masked stores when their disjoint updates cover a
+/// contiguous bit range and one store covers the full access.
+/// An adjacent word and tag can be packed into a wider store to return storage.
+///
+/// Within each basic block, collect stores with a common base and overlapping
+/// accesses. Identify the updated bits using local memory values or a load in
+/// a predecessor proved available by MemorySSA. End chains at interfering
+/// accesses. Split candidates at overlapping updates in program order and at
+/// gaps in address order.
+static bool foldStoreChains(Function &F, AliasAnalysis &AA, DominatorTree &DT,
+                            TargetTransformInfo &TTI) {
+  const DataLayout &DL = F.getDataLayout();
+  BatchAAResults BatchAA(AA);
+  SmallVector<StoreChain, 4> Chains;
+  SmallVector<WeakTrackingVH, 4> TagStores;
+  const bool HasSRet = F.hasStructRetAttr();
+  const unsigned MinMaskedStores = HasSRet ? 1 : 2;
+  std::unique_ptr<MemorySSA> MSSA;
+  auto IsLoadAvailable = [&](LoadInst &Load, StoreInst &Store) {
+    MemoryLocation Loc = MemoryLocation::get(&Load).getWithoutAATags();
+    // Start before Store's own definition. A clobber that dominates the load
+    // proves that the loaded word is still available at the store.
+    if (!MSSA)
+      MSSA = std::make_unique<MemorySSA>(F, &AA, &DT);
+    MemoryUseOrDef *LoadAccess = MSSA->getMemoryAccess(&Load);
+    auto *StoreAccess =
+        dyn_cast_or_null<MemoryDef>(MSSA->getMemoryAccess(&Store));
+    if (!LoadAccess || !StoreAccess)
+      return false;
+    MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
+        StoreAccess->getDefiningAccess(), Loc);
+    return MSSA->dominates(Clobber, LoadAccess);
+  };
+
+  for (BasicBlock &BB : F) {
+    if (!DT.isReachableFromEntry(&BB))
+      continue;
+
+    // A masked tag can pair with a plain store to return storage.
+    if (!hasNItemsOrMore(
+            BB.begin(), BB.end(), MinMaskedStores, [](Instruction &I) {
+              auto *SI = dyn_cast<StoreInst>(&I);
+              return SI && match(SI->getValueOperand(),
+                                 m_DisjointOr(m_Value(), m_Value()));
+            }))
+      continue;
+
+    SmallVector<StoreChain, 4> CurrentChains;
+    // Track values by access even for loads and stores outside a chain.
+    // Use them to verify the source of preserved bits in later masked stores.
+    SmallVector<PreservationCheckValue, 4> PreservationCheckValues;
+    auto FinishChains = [&] {
+      for (StoreChain &Chain : CurrentChains)
+        finalizeStoreChain(Chain, Chains);
+      CurrentChains.clear();
+    };
+    for (Instruction &I : BB) {
+      if (endsStoreChain(I)) {
+        FinishChains();
+        PreservationCheckValues.clear();
+        continue;
+      }
+      if (!I.mayReadOrWriteMemory())
+        continue;
+
+      if (auto *Store = dyn_cast<StoreInst>(&I)) {
+        Value *Stored = Store->getValueOperand();
+        if (HasSRet && Stored->getType()->isIntegerTy(8) &&
+            match(Stored, m_DisjointOr(m_Value(), m_Value())))
+          TagStores.emplace_back(Store);
+        collectStoreChain(*Store, DL, IsLoadAvailable, CurrentChains,
+                          PreservationCheckValues, BatchAA, Chains);
+      } else {
+        processNonStoreAccess(I, DL, CurrentChains, PreservationCheckValues,
+                              BatchAA, Chains);
+      }
+    }
+    FinishChains();
+  }
+
+  // Finish clobber queries before applying the store folds.
+  MSSA.reset();
+
+  bool Changed = false;
+  for (const StoreChain &Chain : splitStoreChainsByContiguity(Chains))
+    Changed |= mergeStoreChain(Chain, AA, DL);
+  // Earlier folds can remove a tag write before it is considered for packing.
+  for (Value *Tag : TagStores)
+    if (auto *Store = dyn_cast_or_null<StoreInst>(Tag))
+      Changed |= packAdjacentStores(*Store, AA, DT, TTI);
+  return Changed;
+}
+
 /// Combine away instructions providing they are still equivalent when compared
 /// against 0. i.e do they have any bits set.
 static Value *optimizeShiftInOrChain(Value *V, IRBuilder<> &Builder) {
@@ -2588,14 +3483,10 @@ static bool foldMulHigh(Instruction &I) {
 /// Guard a memset whose nonconstant length is known to be in [0, 1].
 /// Inserts a conditional branch around the memset and specialises the
 /// executed path to a one-byte store.
-static bool foldMemSetZeroOrOneLength(Instruction &I, const DataLayout &DL,
+static bool foldMemSetZeroOrOneLength(MemSetInst *MI, const DataLayout &DL,
                                       TargetLibraryInfo &TLI,
                                       AssumptionCache &AC, DominatorTree &DT,
                                       bool &MadeCFGChange) {
-  auto *MI = dyn_cast<MemSetInst>(&I);
-  if (!MI || isa<ConstantInt>(MI->getLength()))
-    return false;
-
   SimplifyQuery SQ(DL, &TLI, &DT, &AC, MI);
   KnownBits KnownLen = computeKnownBits(MI->getLength(), SQ);
   if (!KnownLen.getMaxValue().isOne())
@@ -2603,7 +3494,7 @@ static bool foldMemSetZeroOrOneLength(Instruction &I, const DataLayout &DL,
 
   uint64_t TotalCount;
   SmallVector<InstrProfValueData> MemsetVPMetadata = getValueProfDataFromInst(
-      I, InstrProfValueKind::IPVK_MemOPSize, 2, TotalCount);
+      *MI, InstrProfValueKind::IPVK_MemOPSize, 2, TotalCount);
   std::optional<uint64_t> ZeroCount = std::nullopt;
   std::optional<uint64_t> OneCount = std::nullopt;
   for (const auto [MemOpSize, SizeFrequency] : MemsetVPMetadata) {
@@ -2659,6 +3550,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       continue;
 
     const DataLayout &DL = F.getDataLayout();
+    SmallVector<MemSetInst *, 2> Fills;
 
     // Walk the block backwards for efficiency. We're matching a chain of
     // use->defs, so we're more likely to succeed by starting from the bottom.
@@ -2705,8 +3597,13 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
           MadeChange = true;
           break;
         }
-        if (foldMemSetZeroOrOneLength(I, DL, TLI, AC, DT, MadeCFGChange))
-          MadeChange = true;
+        if (auto *Fill = dyn_cast<MemSetInst>(&I)) {
+          if (isa<ConstantInt>(Fill->getLength()))
+            Fills.push_back(Fill);
+          else
+            MadeChange |=
+                foldMemSetZeroOrOneLength(Fill, DL, TLI, AC, DT, MadeCFGChange);
+        }
         break;
       default:;
       }
@@ -2714,7 +3611,16 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
 
     // Do this separately to avoid redundantly scanning stores multiple times.
     MadeChange |= foldConsecutiveStores(BB, DL, TTI, AA);
+    for (MemSetInst *Fill : Fills)
+      MadeChange |= packStoresBeforeZeroFill(*Fill, DT, TTI);
   }
+
+  MadeChange |= foldStoreChains(F, AA, DT, TTI);
+  // Give the specialized store folds first use of their original stores.
+  for (BasicBlock &BB : F)
+    if (DT.isReachableFromEntry(&BB))
+      MadeChange |=
+          foldAdjacentIntegerStores(BB, F.getDataLayout(), TTI, AA, AC, DT);
 
   // We're done with transforms, so remove dead instructions.
   if (MadeChange)
