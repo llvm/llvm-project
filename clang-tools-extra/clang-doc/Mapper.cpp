@@ -10,6 +10,7 @@
 #include "Serialize.h"
 #include "clang/AST/Comment.h"
 #include "clang/UnifiedSymbolResolution/USRGeneration.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Mutex.h"
@@ -40,14 +41,17 @@ Location MapASTVisitor::getDeclLocation(const NamedDecl *D) const {
 }
 
 void MapASTVisitor::HandleTranslationUnit(ASTContext &Context) {
-  if (CDCtx.FTimeTrace)
+  bool InitTimeTrace =
+      CDCtx.FTimeTrace && !llvm::getTimeTraceProfilerInstance();
+  if (InitTimeTrace)
     llvm::timeTraceProfilerInitialize(200, "clang-doc");
+  llvm::scope_exit TimeTraceGuard([InitTimeTrace] {
+    if (InitTimeTrace)
+      llvm::timeTraceProfilerFinishThread();
+  });
   TraverseDecl(Context.getTranslationUnitDecl());
 
   getTransientArena().Reset();
-
-  if (CDCtx.FTimeTrace)
-    llvm::timeTraceProfilerFinishThread();
 }
 
 template <typename T>

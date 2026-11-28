@@ -19,6 +19,7 @@
 
 #include "BitcodeReader.h"
 #include "ClangDoc.h"
+#include "ClangDocExecutor.h"
 #include "Generators.h"
 #include "Representation.h"
 #include "support/Utils.h"
@@ -34,10 +35,10 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Mutex.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <atomic>
@@ -271,8 +272,21 @@ Example usage for a project using a compile commands database:
   $ clang-doc --executor=all-TUs compile_commands.json
 )";
 
-  auto Executor = ExitOnErr(clang::tooling::createExecutorFromCommandLineArgs(
-      argc, argv, ClangDocCategory, Overview));
+  auto OptionsParser = ExitOnErr(clang::tooling::CommonOptionsParser::create(
+      argc, argv, ClangDocCategory, llvm::cl::ZeroOrMore, Overview));
+  if (clang::tooling::ExecutorName != "standalone" &&
+      clang::tooling::ExecutorName != "all-TUs")
+    ExitOnErr(llvm::createStringError(
+        "Executor \"" + clang::tooling::ExecutorName + "\" is not registered"));
+  if (OptionsParser.getSourcePathList().empty()) {
+    if (clang::tooling::ExecutorName == "all-TUs")
+      ExitOnErr(llvm::createStringError(
+          "Please provide a directory/file path in the compilation database"));
+    else
+      ExitOnErr(llvm::createStringError("No positional argument found."));
+  }
+  auto Executor = std::make_unique<clang::doc::ClangDocExecutor>(
+      std::move(OptionsParser), ExecutorConcurrency);
 
   // turns on ftime trace profiling
   if (FTimeTrace)
@@ -347,19 +361,23 @@ Example usage for a project using a compile commands database:
         DiagnosticsEngine::Error, "error merging bitcode: %0");
     // Note: we use per-thread arenas, so Pool must outlive the last use of this
     // memory in the generators.
-    llvm::DefaultThreadPool Pool(
-        // ExecutorConcurrency is a flag exposed by AllTUsExecution.h
-        llvm::hardware_concurrency(ExecutorConcurrency));
     {
       llvm::TimeTraceScope TS("Reduce");
+      llvm::parallel::TaskGroup Pool;
       for (const auto &Group : USRToBitcode) {
         StringRef Key = Group.getKey();
         std::vector<StringRef> Bitcodes = Group.getValue();
-        Pool.async([Key, Bitcodes, &CDCtx, &Diags, &USRToInfo, &USRToInfoMutex,
+        Pool.spawn([Key, Bitcodes, &CDCtx, &Diags, &USRToInfo, &USRToInfoMutex,
                     &IndexMutex, &DiagMutex, &Error, DiagIDBitcodeReading,
                     DiagIDBitcodeMerging]() {
-          if (CDCtx.FTimeTrace)
+          bool InitTimeTrace =
+              CDCtx.FTimeTrace && !llvm::getTimeTraceProfilerInstance();
+          if (InitTimeTrace)
             llvm::timeTraceProfilerInitialize(200, "clang-doc");
+          llvm::scope_exit TimeTraceGuard([InitTimeTrace] {
+            if (InitTimeTrace)
+              llvm::timeTraceProfilerFinishThread();
+          });
 
           doc::Info *Reduced = nullptr;
           {
@@ -404,13 +422,8 @@ Example usage for a project using a compile commands database:
             std::lock_guard<llvm::sys::Mutex> Guard(USRToInfoMutex);
             USRToInfo[Key] = std::move(Reduced);
           }
-
-          if (CDCtx.FTimeTrace)
-            llvm::timeTraceProfilerFinishThread();
         });
       }
-
-      Pool.wait();
     } // time trace reduce
 
     if (Error)
