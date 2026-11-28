@@ -52,6 +52,10 @@ private:
   MachineRegisterInfo *MRI;
   const GCNSubtarget *Subtarget;
 
+  mutable DenseMap<std::tuple<const MachineBasicBlock *, Register, int64_t>,
+                   MachineInstr *>
+      SAddrOffsetAdds;
+
 public:
   AMDGPUInstructionSelector(const GCNSubtarget &STI,
                             const AMDGPURegisterBankInfo &RBI);
@@ -268,6 +272,11 @@ private:
   InstructionSelector::ComplexRendererFns
   selectScratchOffset(MachineOperand &Root) const;
 
+  bool selectGlobalSAddrVOffset(MachineOperand &Root, Register Addr,
+                                Register &SAddr, Register &VOffset,
+                                bool &ScaleOffset) const;
+  Register buildSAddrWithOffset(MachineInstr &MI, Register Base,
+                                int64_t Offset) const;
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddr(MachineOperand &Root, unsigned CPolBits,
                     bool NeedIOffset = true) const;

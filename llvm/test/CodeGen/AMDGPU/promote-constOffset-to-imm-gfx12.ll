@@ -16,19 +16,17 @@ define amdgpu_kernel void @promote_async_load_offset_negative(ptr addrspace(1) %
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_mov_b32 s2, 0x3ff
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
 ; GFX1250-NEXT:    s_mov_b64 s[2:3], 0xffffffffffffff00
-; GFX1250-NEXT:    v_add_nc_u32_e64 v4, 0, 0xfffffe00
 ; GFX1250-NEXT:    v_add_nc_u32_e32 v0, 0x100, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], s[0:1], v[0:1]
-; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], s[2:3], v[2:3]
+; GFX1250-NEXT:    s_add_nc_u64 s[4:5], s[0:1], 0x100
 ; GFX1250-NEXT:    global_load_async_to_lds_b128 v1, v0, s[0:1]
+; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_load_async_to_lds_b128 v4, v[2:3], off offset:512
-; GFX1250-NEXT:    global_load_async_to_lds_b128 v1, v[2:3], off
+; GFX1250-NEXT:    global_load_async_to_lds_b128 v1, v0, s[4:5]
+; GFX1250-NEXT:    global_load_async_to_lds_b128 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -66,17 +64,15 @@ define amdgpu_kernel void @promote_async_load_offset_positive(ptr addrspace(1) %
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_mov_b32 s2, 0x3ff
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
-; GFX1250-NEXT:    v_add_nc_u32_e64 v4, 0, 0xffffff00
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], s[0:1], v[0:1]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], 0x100, v[2:3]
+; GFX1250-NEXT:    s_add_nc_u64 s[2:3], s[0:1], 0x100
 ; GFX1250-NEXT:    global_load_async_to_lds_b128 v1, v0, s[0:1]
+; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x200
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_load_async_to_lds_b128 v1, v[2:3], off
-; GFX1250-NEXT:    global_load_async_to_lds_b128 v4, v[2:3], off offset:256
+; GFX1250-NEXT:    global_load_async_to_lds_b128 v1, v0, s[2:3]
+; GFX1250-NEXT:    global_load_async_to_lds_b128 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -116,19 +112,17 @@ define amdgpu_kernel void @promote_async_store_offset_negative(ptr addrspace(1) 
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_mov_b32 s2, 0x3ff
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
 ; GFX1250-NEXT:    s_mov_b64 s[2:3], 0xffffffffffffff00
-; GFX1250-NEXT:    v_add_nc_u32_e64 v4, 0, 0xfffffe00
 ; GFX1250-NEXT:    v_add_nc_u32_e32 v0, 0x100, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], s[0:1], v[0:1]
-; GFX1250-NEXT:    v_add_nc_u64_e32 v[2:3], s[2:3], v[2:3]
+; GFX1250-NEXT:    s_add_nc_u64 s[4:5], s[0:1], 0x100
 ; GFX1250-NEXT:    global_store_async_from_lds_b128 v0, v1, s[0:1]
+; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
 ; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_async_from_lds_b128 v[2:3], v4, off offset:512
-; GFX1250-NEXT:    global_store_async_from_lds_b128 v[2:3], v1, off
+; GFX1250-NEXT:    global_store_async_from_lds_b128 v0, v1, s[4:5]
+; GFX1250-NEXT:    global_store_async_from_lds_b128 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
