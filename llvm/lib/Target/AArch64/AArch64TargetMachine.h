@@ -15,6 +15,7 @@
 
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
@@ -111,6 +112,23 @@ public:
   /// enable globalisel at, and it wasn't enabled via CLI, we know that it must
   /// be because of an optnone function.
   bool isGlobalISelOptNone() const;
+
+  /// Returns the global to program, AKA process-independent in Arm64e, key used
+  /// to sign code pointers. Taken from the pauthabi-keys module flag if present
+  /// on ELF platforms, otherwise the key implied by the target triple.
+  AArch64PACKey::ID getGlobalCodeKey(const Module &M) const;
+  /// Returns the global to program, AKA process-independent in Arm64e, key used
+  /// to sign data pointers. Taken from the pauthabi-keys module flag if present
+  /// on ELF platforms, otherwise the key implied by the target triple.
+  AArch64PACKey::ID getGlobalDataKey(const Module &M) const;
+  /// Returns the local to function, AKA process-dependent in Arm64e, key used
+  /// to sign code pointers. Taken from the pauthabi-keys module flag if present
+  /// on ELF platforms, otherwise the key implied by the target triple.
+  AArch64PACKey::ID getLocalCodeKey(const Module &M) const;
+  /// Returns the local to function, AKA process-dependent in Arm64e, key used
+  /// to sign code pointers. Taken from the pauthabi-keys module flag if present
+  /// on ELF platforms, otherwise the key implied by the target triple.
+  AArch64PACKey::ID getLocalDataKey(const Module &M) const;
 
 private:
   bool isLittle;

@@ -16,6 +16,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
+#include "AArch64TargetMachine.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -83,8 +84,11 @@ static SignReturnAddress GetSignReturnAddress(const Function &F) {
 }
 
 static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
-  if (F.hasFnAttribute("ptrauth-returns"))
-    return true;
+  if (F.hasFnAttribute("ptrauth-returns")) {
+    const Module &M = *F.getParent();
+    return STI.getTargetLowering()->getTM().getLocalCodeKey(M) ==
+           AArch64PACKey::IB;
+  }
   if (!F.hasFnAttribute("sign-return-address-key")) {
     if (STI.getTargetTriple().isOSWindowsOrUEFI())
       return true;

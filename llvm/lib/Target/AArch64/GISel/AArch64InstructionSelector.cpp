@@ -2496,7 +2496,9 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     if (std::optional<uint16_t> BADisc =
             STI.getPtrAuthBlockAddressDiscriminatorIfEnabled(Fn)) {
       auto MI = MIB.buildInstr(AArch64::BRA, {}, {I.getOperand(0).getReg()});
-      MI.addImm(AArch64PACKey::IA);
+      const Module &M = *MF.getFunction().getParent();
+      AArch64PACKey::ID Key = TM.getGlobalCodeKey(M);
+      MI.addImm(Key);
       MI.addImm(*BADisc);
       MI.addReg(/*AddrDisc=*/AArch64::XZR);
       I.eraseFromParent();
@@ -3476,9 +3478,11 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     Function *BAFn = I.getOperand(1).getBlockAddress()->getFunction();
     if (std::optional<uint16_t> BADisc =
             STI.getPtrAuthBlockAddressDiscriminatorIfEnabled(*BAFn)) {
+      const Module &M = *MF.getFunction().getParent();
+      AArch64PACKey::ID Key = TM.getGlobalCodeKey(M);
       MIB.buildInstr(AArch64::MOVaddrPAC)
           .addBlockAddress(I.getOperand(1).getBlockAddress())
-          .addImm(AArch64PACKey::IA)
+          .addImm(Key)
           .addReg(/*AddrDisc=*/AArch64::XZR)
           .addImm(*BADisc)
           .constrainAllUses(TII, TRI, RBI);

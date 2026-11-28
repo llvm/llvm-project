@@ -11690,10 +11690,14 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
   Ops.push_back(Chain);
   Ops.push_back(FuncTLVGet);
 
-  // With ptrauth-calls, the tlv access thunk pointer is authenticated (IA, 0).
+  // With ptrauth-calls, the tlv access thunk pointer is authenticated (global
+  // code key, 0).
   if (DAG.getMachineFunction().getFunction().hasFnAttribute("ptrauth-calls")) {
+    MachineFunction &MF = DAG.getMachineFunction();
+    const Module &M = *MF.getFunction().getParent();
+    AArch64PACKey::ID Key = getTM().getGlobalCodeKey(M);
     Opcode = AArch64ISD::AUTH_CALL;
-    Ops.push_back(DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32));
+    Ops.push_back(DAG.getTargetConstant(Key, DL, MVT::i32));
     Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i64)); // Integer Disc.
     Ops.push_back(DAG.getRegister(Register(), MVT::i64));  // Addr Disc.
   }
@@ -13677,7 +13681,9 @@ SDValue AArch64TargetLowering::LowerBRIND(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
 
   SDValue Disc = DAG.getTargetConstant(*BADisc, DL, MVT::i64);
-  SDValue Key = DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32);
+  const Module &M = *MF.getFunction().getParent();
+  AArch64PACKey::ID KeyId = getTM().getGlobalCodeKey(M);
+  SDValue Key = DAG.getTargetConstant(KeyId, DL, MVT::i32);
   SDValue AddrDisc = DAG.getRegister(AArch64::XZR, MVT::i64);
 
   SDNode *BrA = DAG.getMachineNode(AArch64::BRA, DL, MVT::Other,
@@ -13716,8 +13722,10 @@ SDValue AArch64TargetLowering::LowerBlockAddress(SDValue Op,
     SDValue TargetBA = DAG.getTargetBlockAddress(BA, BAN->getValueType(0));
 
     SDValue Disc = DAG.getTargetConstant(*BADisc, DL, MVT::i64);
-
-    SDValue Key = DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32);
+    MachineFunction &MF = DAG.getMachineFunction();
+    const Module &M = *MF.getFunction().getParent();
+    AArch64PACKey::ID KeyId = getTM().getGlobalCodeKey(M);
+    SDValue Key = DAG.getTargetConstant(KeyId, DL, MVT::i32);
     SDValue AddrDisc = DAG.getRegister(AArch64::XZR, MVT::i64);
 
     SDNode *MOV =
