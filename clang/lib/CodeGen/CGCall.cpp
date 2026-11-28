@@ -110,6 +110,10 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     return llvm::CallingConv::M68k_RTD;
   case CC_PreserveNone:
     return llvm::CallingConv::PreserveNone;
+  case CC_HexagonHLXCall:
+    return llvm::CallingConv::Hexagon_HLXCall;
+  case CC_HexagonPreserveHLX:
+    return llvm::CallingConv::Hexagon_PreserveHLX;
     // clang-format off
   case CC_RISCVVectorCall: return llvm::CallingConv::RISCV_VectorCall;
     // clang-format on
@@ -313,6 +317,12 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 
   if (D->hasAttr<PreserveNoneAttr>())
     return CC_PreserveNone;
+
+  if (D->hasAttr<HexagonHLXCallAttr>())
+    return CC_HexagonHLXCall;
+
+  if (D->hasAttr<HexagonPreserveHLXAttr>())
+    return CC_HexagonPreserveHLX;
 
   if (D->hasAttr<RISCVVectorCCAttr>())
     return CC_RISCVVectorCall;

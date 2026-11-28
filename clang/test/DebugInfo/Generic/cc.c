@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -triple i386-pc-linux-gnu -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=LINUX32
 // RUN: %clang_cc1 -triple armv7--linux-gnueabihf -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=ARM
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=SPIRV
+// RUN: %clang_cc1 -triple hexagon-unknown-elf -target-cpu hexagonv85 -target-feature +hlx -o - -emit-llvm -debug-info-kind=limited %s | FileCheck %s --check-prefix=HEXAGON
 
 //  enum CallingConv {
 //    CC_C,           // __attribute__((cdecl))
@@ -25,6 +26,8 @@
 //    CC_PreserveMost, // __attribute__((preserve_most))
 //    CC_PreserveAll,  // __attribute__((preserve_all))
 //    CC_PreserveNone,  // __attribute__((preserve_none))
+//    CC_HexagonHLXCall,     // __attribute__((hlxcc))
+//    CC_HexagonPreserveHLX, // __attribute__((preserve_hlx))
 //  };
 
 #ifdef __x86_64__
@@ -139,6 +142,20 @@ __attribute__((pcs("aapcs-vfp"))) int add_aapcs_vfp(int a, int b) {
 // SPIRV: !DISubprogram({{.*}}"add_spir", {{.*}}type: ![[FTY:[0-9]+]]
 // SPIRV: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_SpirFunction,
 int add_spir(int a, int b) {
+  return a+b;
+}
+#endif
+
+#ifdef __hexagon__
+// HEXAGON: !DISubprogram({{.*}}"add_hlxcc", {{.*}}type: ![[FTY:[0-9]+]]
+// HEXAGON: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_HexagonHLXCall,
+__attribute__((hlxcc)) int add_hlxcc(int a, int b) {
+  return a+b;
+}
+
+// HEXAGON: !DISubprogram({{.*}}"add_preserve_hlx", {{.*}}type: ![[FTY:[0-9]+]]
+// HEXAGON: ![[FTY]] = !DISubroutineType({{.*}}cc: DW_CC_LLVM_HexagonPreserveHLX,
+__attribute__((preserve_hlx)) int add_preserve_hlx(int a, int b) {
   return a+b;
 }
 #endif

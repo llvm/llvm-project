@@ -5688,6 +5688,12 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_PreserveNone:
     D->addAttr(::new (S.Context) PreserveNoneAttr(S.Context, AL));
     return;
+  case ParsedAttr::AT_HexagonHLXCall:
+    D->addAttr(::new (S.Context) HexagonHLXCallAttr(S.Context, AL));
+    return;
+  case ParsedAttr::AT_HexagonPreserveHLX:
+    D->addAttr(::new (S.Context) HexagonPreserveHLXAttr(S.Context, AL));
+    return;
   case ParsedAttr::AT_RISCVVectorCC:
     D->addAttr(::new (S.Context) RISCVVectorCCAttr(S.Context, AL));
     return;
@@ -5958,6 +5964,12 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     break;
   case ParsedAttr::AT_PreserveNone:
     CC = CC_PreserveNone;
+    break;
+  case ParsedAttr::AT_HexagonHLXCall:
+    CC = CC_HexagonHLXCall;
+    break;
+  case ParsedAttr::AT_HexagonPreserveHLX:
+    CC = CC_HexagonPreserveHLX;
     break;
   case ParsedAttr::AT_RISCVVectorCC:
     CC = CC_RISCVVectorCall;
@@ -8242,6 +8254,8 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_AArch64SVEPcs:
   case ParsedAttr::AT_M68kRTD:
   case ParsedAttr::AT_PreserveNone:
+  case ParsedAttr::AT_HexagonHLXCall:
+  case ParsedAttr::AT_HexagonPreserveHLX:
   case ParsedAttr::AT_RISCVVectorCC:
   case ParsedAttr::AT_RISCVVLSCC:
     handleCallConvAttr(S, D, AL);

@@ -145,6 +145,18 @@ bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 
 bool HexagonTargetInfo::hasBFloat16Type() const { return HasBFloat16; }
 
+TargetInfo::CallingConvCheckResult
+HexagonTargetInfo::checkCallingConvention(CallingConv CC) const {
+  switch (CC) {
+  case CC_C:
+  case CC_HexagonHLXCall:
+  case CC_HexagonPreserveHLX:
+    return CCCR_OK;
+  default:
+    return CCCR_Warning;
+  }
+}
+
 const char *const HexagonTargetInfo::GCCRegNames[] = {
     // Scalar registers:
     "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11",

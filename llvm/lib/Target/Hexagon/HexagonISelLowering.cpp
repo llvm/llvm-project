@@ -112,6 +112,11 @@ static unsigned assignVTCMStackOffsets(SmallVectorImpl<CCValAssign> &ArgLocs) {
 #define GET_CALLING_CONV_IMPL
 #include "HexagonGenCallingConv.inc"
 
+static bool isHLXRegLoc(const CCValAssign &VA) {
+  return VA.isRegLoc() && (Hexagon::HlxLRRegClass.contains(VA.getLocReg()) ||
+                           Hexagon::HlxLLRRegClass.contains(VA.getLocReg()));
+}
+
 unsigned HexagonTargetLowering::getVectorTypeBreakdownForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const {
@@ -284,6 +289,13 @@ HexagonTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
+  // preserve_hlx functions do not preserve their HLX return registers.
+  if (CallConv == CallingConv::Hexagon_PreserveHLX)
+    for (const CCValAssign &VA : RVLocs)
+      if (isHLXRegLoc(VA))
+        DAG.getMachineFunction().getRegInfo().disableCalleeSavedRegister(
+            VA.getLocReg());
+
   RetOps[0] = Chain;  // Update chain.
 
   // Add the glue if we have it.
@@ -380,7 +392,10 @@ SDValue HexagonTargetLowering::LowerCallResult(
     SDValue Chain, SDValue Glue, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals,
-    const SmallVectorImpl<SDValue> &OutVals, SDValue Callee) const {
+    const SmallVectorImpl<SDValue> &OutVals, SDValue Callee,
+    uint32_t *RegMask) const {
+  const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
+
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
 
@@ -391,6 +406,13 @@ SDValue HexagonTargetLowering::LowerCallResult(
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
+    // A returned HLX register is not preserved by the callee. Clear its
+    // super-registers as well: a pair such as LL0 is only preserved if both
+    // L0 and L1 are.
+    if (RegMask && isHLXRegLoc(RVLocs[i]))
+      for (MCPhysReg R : HRI.sub_and_superregs_inclusive(RVLocs[i].getLocReg()))
+        RegMask[R / 32] &= ~(1u << (R % 32));
+
     SDValue RetVal;
     if (RVLocs[i].getValVT() == MVT::i1) {
       // Return values of type MVT::i1 require special handling. The reason
@@ -626,20 +648,32 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   for (const auto &R : RegsToPass)
     Ops.push_back(DAG.getRegister(R.first, R.second.getValueType()));
 
-  // Callees that take or return HLX values preserve L12-L15.
-  bool HasHLXLocs =
-      any_of(ArgLocs,
-             [](const CCValAssign &VA) {
-               return VA.isRegLoc() &&
-                      (Hexagon::HlxLRRegClass.contains(VA.getLocReg()) ||
-                       Hexagon::HlxLLRRegClass.contains(VA.getLocReg()));
-             }) ||
+  // Callees that take or return HLX values preserve L12-L15, unless they use
+  // preserve_hlx.
+  bool IsPreserveHLX = CallConv == CallingConv::Hexagon_PreserveHLX;
+  bool HasHLXLocs = any_of(ArgLocs, isHLXRegLoc) ||
+                    any_of(Ins, [this](const ISD::InputArg &In) {
+                      return Subtarget.isHLXVectorType(In.VT);
+                    });
+  const uint32_t *Mask = HasHLXLocs && !IsPreserveHLX
+                             ? HRI.getHLXCallPreservedMask()
+                             : HRI.getCallPreservedMask(MF, CallConv);
+  assert(Mask && "Missing call preserved mask for calling convention");
+
+  // preserve_hlx calls clobber their HLX return registers: LowerCallResult
+  // clears them from a copy of the mask. A tail call keeps the static mask, as
+  // on X86: it returns to our caller, so nothing is live across it.
+  uint32_t *RetMask = nullptr;
+  if (IsPreserveHLX && !CLI.IsTailCall &&
       any_of(Ins, [this](const ISD::InputArg &In) {
         return Subtarget.isHLXVectorType(In.VT);
-      });
-  const uint32_t *Mask = HasHLXLocs ? HRI.getHLXCallPreservedMask()
-                                    : HRI.getCallPreservedMask(MF, CallConv);
-  assert(Mask && "Missing call preserved mask for calling convention");
+      })) {
+    RetMask = MF.allocateRegMask();
+    memcpy(RetMask, Mask,
+           sizeof(RetMask[0]) *
+               MachineOperand::getRegMaskSize(HRI.getNumRegs()));
+    Mask = RetMask;
+  }
   Ops.push_back(DAG.getRegisterMask(Mask));
 
   if (Glue.getNode())
@@ -667,8 +701,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  return LowerCallResult(Chain, Glue, CallConv, IsVarArg, Ins, dl, DAG,
-                         InVals, OutVals, Callee);
+  return LowerCallResult(Chain, Glue, CallConv, IsVarArg, Ins, dl, DAG, InVals,
+                         OutVals, Callee, RetMask);
 }
 
 /// Returns true by value, base pointer and offset pointer and addressing
@@ -3924,6 +3958,19 @@ bool HexagonTargetLowering::IsEligibleForTailCallOptimization(
     bool E = (CalleeCC == CallingConv::C || CalleeCC == CallingConv::Fast);
     // If R & E, then ok.
     if (!R || !E)
+      return false;
+  }
+
+  // A preserve_hlx callee clobbers its HLX return registers. Its caller (also
+  // preserve_hlx, as the conventions match) preserves them unless it returns
+  // the same type, e.g. 'void f() { return_hlx(); }' must not tail call.
+  if (CalleeCC == CallingConv::Hexagon_PreserveHLX &&
+      any_of(Ins, [this](const ISD::InputArg &In) {
+        return Subtarget.isHLXVectorType(In.VT);
+      })) {
+    EVT CallerRetVT =
+        getValueType(DAG.getDataLayout(), CallerF.getReturnType());
+    if (Ins.size() != 1 || EVT(Ins[0].VT) != CallerRetVT)
       return false;
   }
 

@@ -151,14 +151,25 @@ HexagonRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   };
 
   bool HasEHReturn = MF->getInfo<HexagonMachineFunctionInfo>()->hasEHReturn();
+  bool UseHLX = MF->getSubtarget<HexagonSubtarget>().useHLXOps();
+  CallingConv::ID CC = MF->getFunction().getCallingConv();
 
-  if (hasHLXSignature(*MF))
+  if (UseHLX && CC == CallingConv::Hexagon_PreserveHLX)
+    return HasEHReturn ? HexagonCSR_PreserveHLX_EH_SaveList
+                       : HexagonCSR_PreserveHLX_SaveList;
+  if (hasHLXSignature(*MF) || (UseHLX && CC == CallingConv::Hexagon_HLXCall))
     return HasEHReturn ? HexagonCSR_HLX_EH_SaveList : HexagonCSR_HLX_SaveList;
   return HasEHReturn ? CalleeSavedRegsV3EHReturn : CalleeSavedRegsV3;
 }
 
-const uint32_t *HexagonRegisterInfo::getCallPreservedMask(
-      const MachineFunction &MF, CallingConv::ID) const {
+const uint32_t *
+HexagonRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                          CallingConv::ID CC) const {
+  if (CC == CallingConv::Hexagon_PreserveHLX)
+    return HexagonCSR_PreserveHLX_RegMask;
+  if (CC == CallingConv::Hexagon_HLXCall &&
+      MF.getSubtarget<HexagonSubtarget>().useHLXOps())
+    return HexagonCSR_HLX_RegMask;
   return HexagonCSR_RegMask;
 }
 

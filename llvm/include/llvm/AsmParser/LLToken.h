@@ -194,6 +194,8 @@ enum Kind {
   kw_cheriot_compartmentcallcc,
   kw_cheriot_compartmentcalleecc,
   kw_cheriot_librarycallcc,
+  kw_hexagon_hlxcc,
+  kw_hexagon_preserve_hlx,
 
   // Attributes:
   kw_attributes,

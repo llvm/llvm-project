@@ -7032,6 +7032,44 @@ the ABI. This variant aims to pass fixed-length vectors via vector registers,
 if possible, rather than through general-purpose registers.}];
 }
 
+def HexagonHLXCallDocs : Documentation {
+  let Category = DocCatCallingConvs;
+  let Heading = "hlxcc";
+  let Content = [{
+On Hexagon with HLX enabled, the ``hlxcc`` calling convention makes a function
+preserve the HLX vector registers ``L12``-``L15``, as functions with HLX vector
+arguments or return values already do. This lets callers keep HLX values in
+these registers across calls to functions without HLX types in their signature.
+It maps to the LLVM ``hexagon_hlxcc`` calling convention.
+
+.. code-block:: c
+
+  void f(int *) __attribute__((hlxcc));
+  }];
+}
+
+def HexagonPreserveHLXDocs : Documentation {
+  let Category = DocCatCallingConvs;
+  let Heading = "preserve_hlx";
+  let Content = [{
+On Hexagon with HLX enabled, the ``preserve_hlx`` calling convention makes a
+function preserve the HLX vector registers (``L0``-``L15``), so callers do not
+need to save HLX values around calls to it. The exception is the registers that
+hold an HLX vector return value. It maps to the LLVM ``hexagon_preserve_hlx``
+calling convention.
+
+A ``preserve_hlx`` function may have HLX vector types in its signature. They use
+the same registers as in any function with HLX types: arguments are passed in
+``L0``-``L11`` (vector pairs in ``LL0``-``LL5``) and a return value in ``L0`` (a
+vector pair in ``LL0``). The callee preserves the argument registers, but not
+the return value registers.
+
+.. code-block:: c
+
+  void g(int *) __attribute__((preserve_hlx));
+  }];
+}
+
 def HexagonHLXVectorStackLimitDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
