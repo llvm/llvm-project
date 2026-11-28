@@ -7,10 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Endian.h"
 #include "gtest/gtest.h"
+#include <functional>
 #include <string>
+#include <vector>
 
 using namespace llvm;
 
@@ -40,6 +44,63 @@ TEST(StringTableBuilderTest, BasicELF) {
   EXPECT_EQ(1U, B.getOffset("foobar"));
   EXPECT_EQ(4U, B.getOffset("bar"));
   EXPECT_EQ(8U, B.getOffset("foo"));
+}
+
+// Check the layout against a reference: strings sorted by their reversed
+// characters in descending order, each merged into the previous string written
+// if it is a suffix of it. std::string compares characters as unsigned char.
+void checkTailMerge(ArrayRef<std::string> Strs) {
+  StringTableBuilder B(StringTableBuilder::ELF);
+  for (const std::string &S : Strs)
+    B.add(S);
+  B.finalize();
+
+  std::vector<std::string> Reversed;
+  for (const std::string &S : Strs)
+    Reversed.emplace_back(S.rbegin(), S.rend());
+  llvm::sort(Reversed, std::greater<>());
+  std::string Expected(1, '\0');
+  StringRef Prev;
+  for (const std::string &R : Reversed) {
+    std::string S(R.rbegin(), R.rend());
+    if (!Prev.starts_with(R)) {
+      Expected += S + '\0';
+      Prev = R;
+    }
+    EXPECT_EQ(Expected.size() - 1 - S.size(), B.getOffset(S));
+  }
+  SmallString<0> Data;
+  raw_svector_ostream OS(Data);
+  B.write(OS);
+  EXPECT_EQ(Expected, Data);
+}
+
+TEST(StringTableBuilderTest, ELFTailMergeCompare) {
+  // At most 8 strings are sorted by comparing them. The pairs share a suffix
+  // and differ on both sides of an 8-character boundary.
+  checkTailMerge({"a1234567\200abcdefgh", "\2001234567aabcdefgh", "zabcdefgh",
+                  "0\200ijklmnop", "y\377aijklmnop", "\200a",
+                  std::string(6, '\0') + "\200a", std::string(6, '\0') + "ca"});
+}
+
+TEST(StringTableBuilderTest, ELFTailMergeKeys) {
+  // More strings are sorted by 8-character keys, recursing into runs of equal
+  // keys. Keys represent NUL characters like characters past the end, so
+  // strings that differ only in leading NULs have equal keys at every depth.
+  std::vector<std::string> Strs;
+  for (const char *Suffix : {"abcdefgh", "ijklmno0"}) {
+    Strs.push_back(Suffix);
+    for (char C : StringRef("\0a\377", 3))
+      for (char D : StringRef("\0a\377", 3))
+        Strs.push_back(std::string{C, D} + Suffix);
+  }
+  for (unsigned I = 1; I != 9; ++I)
+    Strs.push_back(std::string(I, '\0') + "a\377abcdefgh");
+  // A run of two strings that share their last 16 characters and differ at
+  // both ends of the 8 characters before them.
+  Strs.push_back("a123456bpqrstuvwxyz01234");
+  Strs.push_back("\377b123456apqrstuvwxyz01234");
+  checkTailMerge(Strs);
 }
 
 TEST(StringTableBuilderTest, BasicWinCOFF) {

@@ -9,6 +9,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
@@ -82,47 +83,80 @@ void StringTableBuilder::write(uint8_t *Buf) const {
     support::endian::write32be(Buf, Size);
 }
 
-// Returns the character at Pos from end of a string.
-static int charTailAt(StringPair *P, size_t Pos) {
-  StringRef S = P->first.val();
-  if (Pos >= S.size())
-    return -1;
-  return (unsigned char)S[S.size() - Pos - 1];
+namespace {
+// A string being sorted. Key caches tailKey at the current sort depth.
+struct TailEntry {
+  uint64_t Key;
+  const char *Data;
+  uint32_t Len;
+  uint32_t Idx;
+};
+} // namespace
+
+// Return the 8 characters ending Pos characters from the end of a string, the
+// last one in the most significant byte. Missing characters are 0.
+static uint64_t tailKey(const char *Data, size_t Len, size_t Pos) {
+  if (Pos >= Len)
+    return 0;
+  size_t R = Len - Pos;
+  if (R >= 8)
+    return support::endian::read64le(Data + R - 8);
+  uint64_t Key = 0;
+  for (size_t I = 0; I != R; ++I)
+    Key |= uint64_t((unsigned char)Data[I]) << (8 * (8 - R + I));
+  return Key;
 }
 
-// Three-way radix quicksort. This is much faster than std::sort with strcmp
-// because it does not compare characters that we already know the same.
-static void multikeySort(MutableArrayRef<StringPair *> Vec, int Pos) {
+// Return true if A reversed is greater than B reversed, given that their last
+// Pos characters are equal.
+static bool tailGreater(const TailEntry &A, const TailEntry &B, size_t Pos) {
+  const char *EA = A.Data + A.Len, *EB = B.Data + B.Len;
+  size_t N = std::min(A.Len, B.Len), I = Pos;
+  for (; I + 8 <= N; I += 8)
+    if (memcmp(EA - I - 8, EB - I - 8, 8))
+      break;
+  for (; I < N; ++I) {
+    unsigned char CA = *(EA - I - 1), CB = *(EB - I - 1);
+    if (CA != CB)
+      return CA > CB;
+  }
+  return A.Len > B.Len;
+}
+
+// Sort strings in descending order of their reversed strings, so that a string
+// that is a suffix of others immediately follows one of them. Their last `Pos`
+// characters are equal. Sort by the keys at `Pos`, then recurse into each run
+// of equal keys at Pos + 8.
+static void multikeySort(MutableArrayRef<TailEntry> Vec, size_t Pos) {
 tailcall:
   if (Vec.size() <= 1)
     return;
-
-  // Partition items so that items in [0, I) are greater than the pivot,
-  // [I, J) are the same as the pivot, and [J, Vec.size()) are less than
-  // the pivot.
-  int Pivot = charTailAt(Vec[0], Pos);
-  size_t I = 0;
-  size_t J = Vec.size();
-  for (size_t K = 1; K < J;) {
-    int C = charTailAt(Vec[K], Pos);
-    if (C > Pivot)
-      std::swap(Vec[I++], Vec[K++]);
-    else if (C < Pivot)
-      std::swap(Vec[--J], Vec[K]);
-    else
-      K++;
+  for (TailEntry &E : Vec)
+    E.Key = tailKey(E.Data, E.Len, Pos);
+  if (Vec.size() > 8) {
+    llvm::sort(Vec, [](const TailEntry &A, const TailEntry &B) {
+      return A.Key > B.Key;
+    });
+    // Keys represent characters past the end as 0, like NUL characters, so
+    // keys of strings that differ only in leading NULs stay 0.
+    if (Vec[0].Key) {
+      size_t I = 0;
+      for (size_t J = 1; J != Vec.size(); ++J) {
+        if (Vec[J].Key != Vec[I].Key) {
+          multikeySort(Vec.slice(I, J - I), Pos + 8);
+          I = J;
+        }
+      }
+      Vec = Vec.slice(I);
+      Pos += 8;
+      goto tailcall;
+    }
   }
-
-  multikeySort(Vec.slice(0, I), Pos);
-  multikeySort(Vec.slice(J), Pos);
-
-  // multikeySort(Vec.slice(I, J - I), Pos + 1), but with
-  // tail call optimization.
-  if (Pivot != -1) {
-    Vec = Vec.slice(I, J - I);
-    ++Pos;
-    goto tailcall;
-  }
+  llvm::sort(Vec, [Pos](const TailEntry &A, const TailEntry &B) {
+    if (A.Key != B.Key)
+      return A.Key > B.Key;
+    return tailGreater(A, B, Pos);
+  });
 }
 
 void StringTableBuilder::finalize() {
@@ -143,29 +177,39 @@ void StringTableBuilder::finalizeStringTable(bool Optimize) {
     for (StringPair &P : StringIndexMap)
       Strings.push_back(&P);
 
-    size_t RangeBegin = 0;
-    MutableArrayRef<StringPair *> StringsRef(Strings);
     if (StringPriorityMap.size()) {
       llvm::sort(Strings,
                  [&](const StringPair *LHS, const StringPair *RHS) -> bool {
                    return StringPriorityMap.lookup(LHS->first) >
                           StringPriorityMap.lookup(RHS->first);
                  });
+    }
+    std::vector<TailEntry> Entries(Strings.size());
+    for (auto [I, P] : enumerate(Strings)) {
+      StringRef S = P->first.val();
+      assert(S.size() <= UINT32_MAX);
+      Entries[I] = {0, S.data(), uint32_t(S.size()), uint32_t(I)};
+    }
+
+    size_t RangeBegin = 0;
+    MutableArrayRef<TailEntry> EntriesRef(Entries);
+    if (StringPriorityMap.size()) {
       uint8_t RangePriority = StringPriorityMap.lookup(Strings[0]->first);
       for (size_t I = 1, E = Strings.size(); I != E && RangePriority; ++I) {
         uint8_t Priority = StringPriorityMap.lookup(Strings[I]->first);
         if (Priority != RangePriority) {
-          multikeySort(StringsRef.slice(RangeBegin, I - RangeBegin), 0);
+          multikeySort(EntriesRef.slice(RangeBegin, I - RangeBegin), 0);
           RangePriority = Priority;
           RangeBegin = I;
         }
       }
     }
-    multikeySort(StringsRef.slice(RangeBegin), 0);
+    multikeySort(EntriesRef.slice(RangeBegin), 0);
     initSize();
 
     StringRef Previous;
-    for (StringPair *P : Strings) {
+    for (const TailEntry &E : Entries) {
+      StringPair *P = Strings[E.Idx];
       StringRef S = P->first.val();
       if (Previous.ends_with(S)) {
         size_t Pos = Size - S.size() - (K != RAW);
