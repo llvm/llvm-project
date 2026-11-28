@@ -9,15 +9,19 @@
 #include "lldb/Core/ModuleList.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/SymbolLocator.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/UUID.h"
+#include "llvm/Support/ThreadPool.h"
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
+#include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 
 #include "gtest/gtest.h"
 
@@ -245,4 +249,57 @@ TEST(ModuleListTest, AppendModuleWithoutObjectFile) {
   list.Append(std::make_shared<Module>(ModuleSpec()));
 
   EXPECT_EQ(list.GetSize(), 2U);
+}
+
+// Check that preloading reaches every module, serially and in parallel, with
+// more modules than the debugger's thread pool has threads.
+TEST(ModuleListTest, PreloadSymbols) {
+  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab>
+      subsystems;
+  std::call_once(TestUtilities::g_debugger_initialize_flag,
+                 []() { Debugger::Initialize(nullptr); });
+
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000010
+    Size:            0x10
+Symbols:
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Size:            0x10
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+
+  const size_t num_modules =
+      3 * Debugger::GetThreadPool().getMaxConcurrency() + 1;
+  for (bool parallelize : {false, true}) {
+    SCOPED_TRACE(parallelize ? "parallel" : "serial");
+    ModuleList module_list;
+    for (size_t i = 0; i < num_modules; ++i)
+      module_list.Append(std::make_shared<Module>(ExpectedFile->moduleSpec()));
+
+    // A module's symbol table exists once its symbols are loaded.
+    auto count_loaded = [&module_list] {
+      size_t count = 0;
+      for (const ModuleSP &module_sp : module_list.Modules())
+        if (module_sp->GetSymtab(/*can_create=*/false))
+          ++count;
+      return count;
+    };
+    ASSERT_EQ(count_loaded(), 0u);
+    module_list.PreloadSymbols(parallelize);
+    EXPECT_EQ(count_loaded(), num_modules);
+  }
 }

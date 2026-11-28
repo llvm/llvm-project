@@ -40,6 +40,8 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <memory>
 #include <mutex>
@@ -1571,11 +1573,27 @@ void ModuleList::PreloadSymbols(bool parallelize) const {
     return;
   }
 
-  llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
-  for (const ModuleSP &module_sp : m_modules)
-    task_group.async([module_sp] {
-      if (module_sp)
-        module_sp->PreloadSymbols();
+  // Queue one task per thread rather than one per module, and let each task
+  // preload modules until none are left. Preloading a module can queue tasks of
+  // its own and wait for them, as DWARF indexing does, and a worker thread that
+  // waits runs other queued tasks meanwhile. With a task per module, those
+  // would be other modules' preloads, nested in this one, so the nesting and
+  // the stack it takes would grow with the number of modules.
+  //
+  // The tasks read m_modules without locking m_modules_mutex: this thread
+  // holds it until they finish.
+  llvm::ThreadPoolInterface &pool = Debugger::GetThreadPool();
+  llvm::ThreadPoolTaskGroup task_group(pool);
+  std::atomic<size_t> next_module_idx = 0;
+  const size_t num_tasks =
+      std::min<size_t>(pool.getMaxConcurrency(), m_modules.size());
+  for (size_t i = 0; i < num_tasks; ++i)
+    task_group.async([this, &next_module_idx] {
+      size_t module_idx;
+      while ((module_idx = next_module_idx.fetch_add(
+                  1, std::memory_order_relaxed)) < m_modules.size())
+        if (const ModuleSP &module_sp = m_modules[module_idx])
+          module_sp->PreloadSymbols();
     });
   task_group.wait();
 }
