@@ -3866,6 +3866,14 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       assert(CurTok.is(tok::eod) && "expect to be at the end of directive");
       return std::nullopt;
     }
+    // The parameter takes a single constant-expression, so a comma here is
+    // never a comma operator; diagnose it directly instead of reporting a
+    // missing ')'.
+    if (CurTok.is(tok::comma)) {
+      Diag(CurTok, diag::err_pp_comma_in_constant_expr);
+      DiscardUntilEndOfDirective(CurTok);
+      return std::nullopt;
+    }
 
     if (!ExpectOrDiagAndSkipToEOD(tok::r_paren))
       return std::nullopt;

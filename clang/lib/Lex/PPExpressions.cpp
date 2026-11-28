@@ -944,7 +944,9 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierLoc &IfNDefMacro,
   }
 
   // Otherwise, we must have a binary operator (e.g. "#if 1 < 2"), so parse the
-  // operator and the stuff after it.
+  // operator and the stuff after it. Use the precedence of '?' so that commas
+  // are not consumed here and can be diagnosed below (or by callers such as
+  // #embed parameter parsing).
   if (EvaluateDirectiveSubExpr(ResVal, getPrecedence(tok::question),
                                Tok, true, DT.IncludedUndefinedIds, *this)) {
     // Parse error, skip the rest of the macro line.
@@ -959,9 +961,10 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierLoc &IfNDefMacro,
 
   if (CheckForEoD) {
     // If we aren't at the tok::eod token, something bad happened, like an extra
-    // ')' token.
+    // ')' token or an unexpected comma.
     if (Tok.isNot(tok::eod)) {
-      Diag(Tok, diag::err_pp_expected_eol);
+      Diag(Tok, Tok.is(tok::comma) ? diag::err_pp_comma_in_constant_expr
+                                   : diag::err_pp_expected_eol);
       DiscardUntilEndOfDirective(Tok);
     }
   }

@@ -625,6 +625,8 @@ def err_pp_expected_value_in_expr : Error<"expected value in expression">;
 def err_pp_expected_rparen : Error<"expected ')' in preprocessor expression">;
 def err_pp_expected_eol : Error<
   "expected end of line in preprocessor expression">;
+def err_pp_comma_in_constant_expr : Error<
+  "unexpected comma in preprocessor expression">;
 def err_pp_expected_after : Error<"missing %1 after %0">;
 def err_pp_nested_paren : Error<"nested parentheses not permitted in %0">;
 def err_pp_colon_without_question : Error<"':' without preceding '?'">;

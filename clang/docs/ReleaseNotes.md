@@ -557,6 +557,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Improvements to Clang's diagnostics
 
+- An unexpected comma in the controlling expression of `#if` or `#elif`, or in
+  a `#embed` parameter, is now diagnosed directly instead of being reported as
+  a missing end of line or a missing `')'`. (#GH160152)
+
 - Errors for invalid element types during instantiation of an `ext_vector_type`
   now include a source location, including in alias templates. (#GH229300)
 
