@@ -12,13 +12,16 @@
 #include "RawPtrRefSafetyModel.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include <optional>
 
 using namespace clang;
@@ -75,6 +78,27 @@ public:
 
       bool VisitObjCContainerDecl(const ObjCContainerDecl *CD) override {
         Checker->visitObjCDecl(CD);
+        return true;
+      }
+
+      const Decl *DeclWithIssue = nullptr;
+
+      bool TraverseDecl(const Decl *D) override {
+        llvm::SaveAndRestore SavedDecl(DeclWithIssue);
+        if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
+          DeclWithIssue = D;
+        return ConstDynamicRecursiveASTVisitor::TraverseDecl(D);
+      }
+
+      bool VisitBinaryOperator(const BinaryOperator *BO) override {
+        if (BO->isAssignmentOp())
+          Checker->visitIvarWrite(BO->getLHS(), BO, DeclWithIssue);
+        return true;
+      }
+
+      bool VisitUnaryOperator(const UnaryOperator *UO) override {
+        if (UO->getOpcode() == UO_AddrOf)
+          Checker->visitIvarWrite(UO->getSubExpr(), UO, DeclWithIssue);
         return true;
       }
     };
@@ -227,6 +251,66 @@ public:
     bool HasSafeAttr = PD->isRetaining() || IsWeak;
     auto IsUnsafePtr = isUnsafePtr(QT, ignoreARC);
     return {IsUnsafePtr && *IsUnsafePtr && !HasSafeAttr, PropType};
+  }
+
+  void visitIvarWrite(const Expr *Target, const Expr *Write,
+                      const Decl *DeclWithIssue) const {
+    if (!Model->retainTypeChecker())
+      return;
+    auto *Method = dyn_cast_or_null<ObjCMethodDecl>(DeclWithIssue);
+    if (Method && Method->isInstanceMethod() &&
+        Method->getMethodFamily() == OMF_dealloc)
+      return;
+    auto *IvarRef = dyn_cast<ObjCIvarRefExpr>(Target->IgnoreParenImpCasts());
+    if (!IvarRef)
+      return;
+    if (BR->getSourceManager().isInSystemHeader(Write->getBeginLoc()))
+      return;
+    auto *Ivar = IvarRef->getDecl();
+    if (auto *PD = setterOwnedProperty(Ivar))
+      reportIvarWrite(Write, Ivar, PD, DeclWithIssue);
+  }
+
+  // Ivars declared in the primary @interface are flagged at their declaration
+  // instead, because other translation units can write them.
+  const ObjCPropertyDecl *setterOwnedProperty(const ObjCIvarDecl *Ivar) const {
+    auto *Interface = Ivar->getContainingInterface();
+    if (!Interface || Ivar->getDeclContext() == Interface)
+      return nullptr;
+    auto *Impl = Interface->getImplementation();
+    if (!Impl)
+      return nullptr;
+    auto *PID = Impl->FindPropertyImplIvarDecl(Ivar->getIdentifier());
+    if (!PID ||
+        PID->getPropertyImplementation() != ObjCPropertyImplDecl::Synthesize)
+      return nullptr;
+    auto *PD = PID->getPropertyDecl();
+    if (!PD || !PD->isRetaining() ||
+        (PD->getPropertyAttributes() & ObjCPropertyAttribute::kind_weak))
+      return nullptr;
+    auto IsUnsafePtr = isUnsafePtr(Ivar->getType());
+    if (!IsUnsafePtr || !*IsUnsafePtr)
+      return nullptr;
+    return PD;
+  }
+
+  void reportIvarWrite(const Expr *Write, const ObjCIvarDecl *Ivar,
+                       const ObjCPropertyDecl *PD,
+                       const Decl *DeclWithIssue) const {
+    SmallString<100> Buf;
+    llvm::raw_svector_ostream Os(Buf);
+    Os << "Instance variable ";
+    printQuotedName(Os, Ivar);
+    Os << " of retaining property ";
+    printQuotedName(Os, PD);
+    Os << " is written directly; assign through the property, or hand-write "
+          "the accessors and make the instance variable a RetainPtr";
+
+    PathDiagnosticLocation BSLoc(Write->getBeginLoc(), BR->getSourceManager());
+    auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
+    Report->addRange(Write->getSourceRange());
+    Report->setDeclWithIssue(DeclWithIssue);
+    BR->emitReport(std::move(Report));
   }
 
   bool shouldSkipDecl(const RecordDecl *RD) const {

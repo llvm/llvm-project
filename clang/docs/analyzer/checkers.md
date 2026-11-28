@@ -3922,6 +3922,22 @@ struct Foo {
 };
 ```
 
+Without ARC, the ivar of a synthesized `copy`, `retain`, or `strong` property may be a raw pointer, because `@synthesize` can't use a RetainPtr ivar. Only the synthesized setter retains it, so the checker warns about direct writes to that ivar anywhere other than `-dealloc`.
+
+```objc
+@interface Bar : NSObject
+@property (nonatomic, copy) NSString *name;
+@end
+
+@implementation Bar
+- (instancetype)initWithName:(NSString *)name {
+  self = [super init];
+  _name = [name copy]; // warn
+  return self;
+}
+@end
+```
+
 See [WebKit Guidelines for Safer C++ Programming](https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines) for details.
 
 #### alpha.webkit.UnretainedLambdaCapturesChecker

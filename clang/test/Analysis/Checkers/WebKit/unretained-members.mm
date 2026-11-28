@@ -196,3 +196,100 @@ NS_REQUIRES_PROPERTY_DEFINITIONS
   return nil;
 }
 @end
+
+
+@interface NSObject (IvarWritesDealloc)
+- (void)dealloc;
+@end
+
+void writeStringOut(NSString **out);
+
+@interface IvarWrites : NSObject {
+  NSString *_declaredInInterface;
+  // expected-warning@-1{{Instance variable '_declaredInInterface' (of 'IvarWrites') is a raw pointer to RetainPtr-capable type 'NSString'}}
+}
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic, readonly, retain) NSString *readonlyName;
+@property (nonatomic, copy) NSString *customSetter;
+@property (nonatomic, retain) NSString *lazy;
+@property (nonatomic, retain) dispatch_queue_t queue;
+@property (nonatomic, copy) NSString *declaredInImplementation;
+@property (nonatomic, copy) NSString *declaredInInterface;
+@property (nonatomic, assign) NSString *assigned;
+// expected-warning@-1{{Property 'assigned' (of 'IvarWrites') is a raw pointer to RetainPtr-capable type 'NSString'}}
+@end
+
+@interface IvarWrites () {
+  NSString *_declaredInExtension;
+}
+@property (nonatomic, copy) NSString *declaredInExtension;
+@end
+
+@implementation IvarWrites {
+  NSString *_declaredInImplementation;
+}
+@synthesize declaredInImplementation = _declaredInImplementation;
+@synthesize declaredInInterface = _declaredInInterface;
+@synthesize declaredInExtension = _declaredInExtension;
+@synthesize assigned = _assigned;
+
+- (instancetype)initWithName:(NSString *)name {
+  self = [super init];
+  _name = [name retain];
+  // expected-warning@-1{{Instance variable '_name' of retaining property 'name' is written directly; assign through the property, or hand-write the accessors and make the instance variable a RetainPtr}}
+  _readonlyName = [name retain];
+  // expected-warning@-1{{Instance variable '_readonlyName' of retaining property 'readonlyName' is written directly}}
+  return self;
+}
+
+- (void)clear {
+  _name = nil;
+  // expected-warning@-1{{Instance variable '_name' of retaining property 'name' is written directly}}
+  self->_name = nil;
+  // expected-warning@-1{{Instance variable '_name' of retaining property 'name' is written directly}}
+  _queue = nil;
+  // expected-warning@-1{{Instance variable '_queue' of retaining property 'queue' is written directly}}
+}
+
+- (void)fill {
+  writeStringOut(&_name);
+  // expected-warning@-1{{Instance variable '_name' of retaining property 'name' is written directly}}
+}
+
+- (void)setCustomSetter:(NSString *)value {
+  [_customSetter release];
+  _customSetter = [value retain];
+  // expected-warning@-1{{Instance variable '_customSetter' of retaining property 'customSetter' is written directly}}
+}
+
+- (NSString *)lazy {
+  if (!_lazy)
+    _lazy = [[NSString alloc] init];
+    // expected-warning@-1{{Instance variable '_lazy' of retaining property 'lazy' is written directly}}
+  return _lazy;
+}
+
+- (void)writeExplicitIvars {
+  _declaredInImplementation = nil;
+  // expected-warning@-1{{Instance variable '_declaredInImplementation' of retaining property 'declaredInImplementation' is written directly}}
+  _declaredInExtension = nil;
+  // expected-warning@-1{{Instance variable '_declaredInExtension' of retaining property 'declaredInExtension' is written directly}}
+  _declaredInInterface = nil;
+  _assigned = nil;
+}
+
+- (NSString *)read {
+  return _name;
+}
+
+- (void)dealloc {
+  [_name release];
+  _name = nil;
+  [super dealloc];
+}
+
+static void writeFromFunction(IvarWrites *other) {
+  other->_name = nil;
+  // expected-warning@-1{{Instance variable '_name' of retaining property 'name' is written directly}}
+}
+@end
