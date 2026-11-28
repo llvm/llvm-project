@@ -38,6 +38,9 @@ template <bool _Bp, class _Tp = void>
 using enable_if_t = typename enable_if<_Bp, _Tp>::type;
 #endif
 
+template <bool _Bp, class _Tp, class = __enable_if_t<_Bp> >
+using __enable_specialization_if = _Tp;
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___TYPE_TRAITS_ENABLE_IF_H
