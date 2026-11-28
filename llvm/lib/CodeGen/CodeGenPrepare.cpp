@@ -8872,8 +8872,15 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     // Look for simple GEPs on scalable vectors used as data which may
     // introduce unnecessary multiplies in the loop.
     // TODO: Support fixed vectors too.
-    if (P->getType()->isScalableTy())
-      AnyChange |= strengthReduceVectorPhiUsers(P, LI);
+    if (P->getType()->isScalableTy()) {
+      // This transformation recursively deletes dead instructions after the
+      // PHI, which can include the instruction CurInstIterator points to.
+      // Reset the iterator if that happens; otherwise the next optimizeInst()
+      // call dereferences a freed Instruction and crashes in getLoopFor().
+      resetIteratorIfInvalidatedWhileCalling(I->getParent(), [&]() {
+        AnyChange |= strengthReduceVectorPhiUsers(P, LI);
+      });
+    }
     return AnyChange;
   }
 
