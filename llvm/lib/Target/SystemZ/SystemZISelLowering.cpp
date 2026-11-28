@@ -9620,8 +9620,8 @@ static bool isWideningMul64(SelectionDAG &DAG, SDValue Op, SDValue &X,
 
 // Combine (add (add (mul x0, y0), (mul x1, y1)), c) for i128 values with
 // 64-bit x and y into VECTOR MULTIPLY SUM LOGICAL.
-SDValue SystemZTargetLowering::combineADD(
-    SDNode *N, DAGCombinerInfo &DCI) const {
+SDValue SystemZTargetLowering::combineADD(SDNode *N,
+                                          DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   if (N->getValueType(0) != MVT::i128 || !Subtarget.hasVectorEnhancements1())
     return SDValue();
