@@ -13297,7 +13297,7 @@ void SelectionDAGBuilder::visitCallBrLandingPad(const CallInst &I) {
   for (const CallBrOutput &Output : It->second) {
     RegsForValue Regs(Output.Regs, Output.RegVT, Output.ValueVT);
     for (Register Reg : Regs.Regs)
-      if (Reg.isPhysical())
+      if (Reg.isPhysical() && !FuncInfo.MBB->isLiveIn(Reg))
         FuncInfo.MBB->addLiveIn(Reg);
 
     SDValue Glue;
