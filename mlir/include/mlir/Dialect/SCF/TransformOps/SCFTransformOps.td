@@ -174,9 +174,16 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
   let summary = "Peels the first or last iteration of the loop";
   let description = [{
      Rewrite the given loop with a main loop and a partial (first or last) loop.
-     When the `peelFront` option is set to true, the first iteration is peeled off.
-     Otherwise, updates the given loop so that its step evenly divides its range and puts
-     the remaining iteration into a separate loop or a conditional.
+
+     `peel_front` peels the first iteration. `peel_back` peels the last
+     iteration, including a full step when the range already divides evenly,
+     and does not simplify `affine.min` or `affine.max`. The two options are
+     mutually exclusive.
+
+     With neither option, the loop is updated so that its step evenly divides
+     its range and the remaining iteration is put into a separate loop or a
+     conditional. `affine.min` and `affine.max` inside the loop are then
+     simplified. This form fails when the step already divides the range.
 
      In the absence of sufficient static information, this op may peel a loop,
      even if the step always divides the range evenly at runtime.
@@ -187,29 +194,32 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
      The op returns two handles, the peeled loop which has trip count
      divisible by the step, and the remainder loop.
 
-     When `peelFront` is true, the first result (remainder loop) executes all
+     When `peel_front` is true, the first result (remainder loop) executes all
      but the first iteration of the target loop. The second result (peeled
      loop) corresponds to the first iteration of the loop which can be
      canonicalized away in the following optimizations.
 
-     When `peelFront` is false, the first result (peeled loop) is the portion
-     of the target loop with the highest upper bound that is divisible by the
-     step. The second result (remainder loop) contains the remaining iterations.
+     When `peel_front` is false, the first result (peeled loop) is the portion
+     of the target loop that excludes the peeled tail. The second result
+     (remainder loop) contains the remaining iteration. With `peel_back`, that
+     tail is one step even when the original range divides evenly.
 
      The second result runs at most once. When `partial_as_if` is true, it is
-     an `scf.if` instead of an `scf.for`, in both modes.
+     an `scf.if` instead of an `scf.for`.
 
      Note that even though the Payload IR modification may be performed
      in-place, this operation consumes the operand handle and produces a new one.
 
      #### Return Modes
 
-     Produces a definite failure if peeling fails.
+     Produces a definite failure if peeling fails, or if `peel_front` and
+     `peel_back` are both set.
   }];
 
   let arguments =
       (ins Transform_ScfForOp:$target,
            DefaultValuedAttr<BoolAttr, "false">:$peel_front,
+           DefaultValuedAttr<BoolAttr, "false">:$peel_back,
            DefaultValuedAttr<BoolAttr, "false">:$fail_if_already_divisible,
            DefaultValuedAttr<BoolAttr, "false">:$partial_as_if);
   let results = (outs TransformHandleTypeInterface:$peeled_loop,
@@ -217,6 +227,7 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
 
   let assemblyFormat = [{
     $target oilist(`peel_front` `=` $peel_front
+                 | `peel_back` `=` $peel_back
                  | `fail_if_already_divisible` `=` $fail_if_already_divisible
                  | `partial_as_if` `=` $partial_as_if)
     attr-dict `:` functional-type(operands, results)

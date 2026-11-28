@@ -47,7 +47,7 @@ module attributes { transform.with_named_sequence } {
     return
   }
 
-  // expected-note @below {{failed to peel the last iteration}}
+  // expected-note @below {{failed to peel the partial remainder}}
   transform.named_sequence @peel(%arg0: !transform.op<"scf.for"> {transform.consumed}) {
     transform.loop.peel %arg0 : (!transform.op<"scf.for">) -> (!transform.any_op, !transform.any_op)
     transform.yield

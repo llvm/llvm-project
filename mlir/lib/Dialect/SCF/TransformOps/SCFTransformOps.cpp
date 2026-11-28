@@ -262,24 +262,26 @@ transform::LoopPeelOp::applyToOne(transform::TransformRewriter &rewriter,
                                   scf::ForOp target,
                                   transform::ApplyToEachResultList &results,
                                   transform::TransformState &state) {
-  scf::ForOp result;
-  if (getPeelFront()) {
-    LogicalResult status =
-        scf::peelForLoopFirstIteration(rewriter, target, result);
-    if (failed(status)) {
-      DiagnosedSilenceableFailure diag =
-          emitSilenceableError() << "failed to peel the first iteration";
-      return diag;
-    }
-  } else {
-    LogicalResult status =
-        scf::peelForLoopAndSimplifyBounds(rewriter, target, result);
-    if (failed(status)) {
-      DiagnosedSilenceableFailure diag = emitSilenceableError()
-                                         << "failed to peel the last iteration";
-      return diag;
-    }
+  if (getPeelFront() && getPeelBack()) {
+    return emitDefiniteFailure()
+           << "peel_front and peel_back are mutually exclusive";
   }
+
+  scf::ForOp result;
+  LogicalResult status = success();
+  StringRef what;
+  if (getPeelFront()) {
+    status = scf::peelForLoopFirstIteration(rewriter, target, result);
+    what = "first iteration";
+  } else if (getPeelBack()) {
+    status = scf::peelForLoopLastIteration(rewriter, target, result);
+    what = "last iteration";
+  } else {
+    status = scf::peelForLoopAndSimplifyBounds(rewriter, target, result);
+    what = "partial remainder";
+  }
+  if (failed(status))
+    return emitSilenceableError() << "failed to peel the " << what;
 
   results.push_back(target);
   if (getPartialAsIf())

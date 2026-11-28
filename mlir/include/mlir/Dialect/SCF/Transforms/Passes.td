@@ -27,6 +27,10 @@ def SCFForLoopPeeling : Pass<"scf-for-loop-peeling"> {
     Option<"peelFront", "peel-front", "bool",
            /*default=*/"false",
            "Peel the first iteration out of the loop.">,
+    Option<"peelBack", "peel-back", "bool",
+           /*default=*/"false",
+           "Peel the last iteration out of the loop, including a full step "
+           "when the range already divides evenly.">,
     Option<"skipPartial", "skip-partial", "bool",
            /*default=*/"true",
            "Do not peel loops inside of the last, partial iteration of another "

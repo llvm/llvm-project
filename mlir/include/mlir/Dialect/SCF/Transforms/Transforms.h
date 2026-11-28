@@ -25,7 +25,6 @@ class Operation;
 class Value;
 
 namespace scf {
-
 class IfOp;
 class ForallOp;
 class ForOp;
@@ -99,18 +98,36 @@ void naivelyFuseParallelOps(Region &region,
 /// new scf.for operation for the last iteration. It replaces all uses of the
 /// unpeeled loop with the results of the newly generated scf.for.
 LogicalResult peelForLoopAndSimplifyBounds(RewriterBase &rewriter, ForOp forOp,
-                                           scf::ForOp &partialIteration);
+                                           ForOp &partialIteration);
+
+/// Peel the last iteration out of the scf.for loop. If the iteration space
+/// divides evenly, this peels a full last step. Otherwise, it peels the
+/// partial remainder. Unlike `peelForLoopAndSimplifyBounds`, this does not
+/// rewrite affine.min / affine.max ops.
+///
+/// This function rewrites the given scf.for loop in-place and creates a new
+/// scf.for operation for the last iteration. It replaces all uses of the
+/// unpeeled loop with the results of the newly generated scf.for.
+///
+/// Returns failure and leaves the loop unchanged when a constant step is below
+/// 1, when constant bounds prove the loop is empty, or when the bounds and
+/// step are constant and there is at most one iteration. Otherwise the loop is
+/// rewritten: if the range divides evenly, a full last step is peeled;
+/// otherwise the partial remainder is peeled.
+LogicalResult peelForLoopLastIteration(RewriterBase &rewriter, ForOp forOp,
+                                       ForOp &partialIteration);
 
 /// Peel the first iteration out of the scf.for loop. If there is only one
 /// iteration, return the original loop.
 LogicalResult peelForLoopFirstIteration(RewriterBase &rewriter, ForOp forOp,
-                                        scf::ForOp &partialIteration);
+                                        ForOp &partialIteration);
 
 /// Rewrite `partialIteration`, the partial iteration created by
-/// `peelForLoopAndSimplifyBounds` or `peelForLoopFirstIteration`, into an
-/// scf.if. The body runs if the lower bound is less than the upper bound, with
-/// the induction variable replaced by the lower bound. Otherwise the init args
-/// are forwarded. Returns the new scf.if.
+/// `peelForLoopLastIteration` (`peelForLoopAndSimplifyBounds`) or
+/// `peelForLoopFirstIteration`, into an scf.if. The body runs if the lower
+/// bound is less than the upper bound, with the induction variable replaced by
+/// the lower bound. Otherwise the init args are forwarded. Returns the new
+/// scf.if.
 ///
 /// Note: `partialIteration` must run at most once. Peeling guarantees this;
 /// it is not checked here.
@@ -259,7 +276,6 @@ FailureOr<WhileOp> wrapWhileLoopInZeroTripCheck(WhileOp whileOp,
 ///  * `before` block consisting of single arith.cmp op
 ///  * `after` block containing arith.addi
 FailureOr<ForOp> upliftWhileToForLoop(RewriterBase &rewriter, WhileOp loop);
-
 } // namespace scf
 } // namespace mlir
 

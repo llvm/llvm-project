@@ -128,6 +128,57 @@ static void specializeForLoopForUnrolling(ForOp op) {
   op.erase();
 }
 
+/// Return failure when constant bounds show that peeling would not split off
+/// an iteration. A constant step below 1 is rejected. When the bounds are
+/// constant, an empty loop is rejected even if the step is dynamic. When the
+/// bounds and step are constant, a single iteration is rejected as well.
+/// `peelForLoopFirstIteration` and `peelForLoopLastIteration` share this check.
+static LogicalResult checkConstantPeelability(ForOp forOp) {
+  bool isUnsigned = forOp.getUnsignedCmp();
+  IntegerAttr lbAttr, ubAttr, stepAttr;
+  bool isStepConst = matchPattern(forOp.getStep(), m_Constant(&stepAttr));
+  if (isStepConst) {
+    APInt step = stepAttr.getValue();
+    if (isUnsigned ? step.ult(1) : step.slt(1))
+      return failure();
+  }
+  if (!matchPattern(forOp.getLowerBound(), m_Constant(&lbAttr)) ||
+      !matchPattern(forOp.getUpperBound(), m_Constant(&ubAttr)))
+    return success();
+
+  APInt lb = lbAttr.getValue();
+  APInt ub = ubAttr.getValue();
+  if (isUnsigned ? ub.ule(lb) : ub.sle(lb))
+    return failure();
+  if (!isStepConst)
+    return success();
+
+  // Peeling is a no-op if there is at most one iteration. scf.for requires
+  // a positive step, so the trip count is ceil((UB - LB) / Step) when UB > LB
+  // and 0 otherwise. With a positive step, "UB - LB <= Step" therefore covers
+  // both the empty loop and the single-iteration loop. works for both signed
+  // and unsigned values since the difference is verified to be positive by
+  // ub.ule(lb) : ub.sle(lb)
+  if ((ub - lb).ule(stepAttr.getValue()))
+    return failure();
+  return success();
+}
+
+/// Split `forOp` so it runs up to `splitBound` and return the new scf.for for
+/// the iterations from `splitBound` to the original upper bound. Uses of
+/// `forOp` are replaced by that loop, which takes the results of `forOp` as
+/// its init args.
+static ForOp peelLoopTail(RewriterBase &b, ForOp forOp, Value splitBound) {
+  b.setInsertionPointAfter(forOp);
+  auto partialIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
+  partialIteration.getLowerBoundMutable().assign(splitBound);
+  b.replaceAllUsesWith(forOp.getResults(), partialIteration->getResults());
+  partialIteration.getInitArgsMutable().assign(forOp->getResults());
+  b.modifyOpInPlace(forOp,
+                    [&]() { forOp.getUpperBoundMutable().assign(splitBound); });
+  return partialIteration;
+}
+
 /// Rewrite a for loop with bounds/step that potentially do not divide evenly
 /// into a for loop where the step divides the iteration space evenly, followed
 /// by another scf.for for the last (partial) iteration (if any).
@@ -137,14 +188,12 @@ static void specializeForLoopForUnrolling(ForOp op) {
 /// unpeeled loop with the results of the newly generated scf.for.
 ///
 /// The newly generated scf.for operation is returned via `partialIteration`.
-/// The boundary at which the loop is split (new upper bound) is returned via
-/// `splitBound`. The return value indicates whether the loop was rewritten or
-/// not.
+/// The return value indicates whether the loop was rewritten or not.
 ///
 /// Note: Loops with a step size of 0 cannot be peeled. Applying this function
 /// to such a loop may result in IR with undefined behavior.
 static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
-                                 ForOp &partialIteration, Value &splitBound) {
+                                 ForOp &partialIteration) {
   RewriterBase::InsertionGuard guard(b);
   Value lbVal = forOp.getLowerBound();
   Value ubVal = forOp.getUpperBound();
@@ -154,28 +203,34 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
 
   bool isUnsigned = forOp.getUnsignedCmp();
   IntegerAttr lbAttr, ubAttr, stepAttr;
-  if (matchPattern(stepVal, m_Constant(&stepAttr))) {
+  bool isStepConst = matchPattern(stepVal, m_Constant(&stepAttr));
+  if (isStepConst) {
     APInt step = stepAttr.getValue();
     if (isUnsigned ? step.ule(1) : step.sle(1))
       return failure();
   }
   if (matchPattern(lbVal, m_Constant(&lbAttr)) &&
       matchPattern(ubVal, m_Constant(&ubAttr))) {
-
     APInt lb = lbAttr.getValue();
     APInt ub = ubAttr.getValue();
 
+    // A provably empty loop is not peeled, including when the step is dynamic.
     if (isUnsigned ? ub.ule(lb) : ub.sle(lb))
       return failure();
 
-    // lb < ub here, so ub - lb as an unsigned value is the exact distance, even
-    // for signed loops whose range exceeds the signed max. hence urem for both.
-    if (stepAttr && (ub - lb).urem(stepAttr.getValue()).isZero())
-      return failure();
+    if (isStepConst) {
+      APInt step = stepAttr.getValue();
+      // lb < ub here, so ub - lb as an unsigned value is the exact distance,
+      // even for signed loops whose range exceeds the signed max. hence urem
+      // for both.
+      if ((ub - lb).urem(step).isZero())
+        return failure();
+    }
   }
 
-  // affine reasoning is signed and index-only,
-  // so use it only for signed index loops.
+  // A proven zero remainder means the step already divides the range, so there
+  // is nothing to split off. Affine reasoning is signed and index-only, so use
+  // it only for signed index loops.
   if (!isUnsigned && forOp.getInductionVar().getType().isIndex()) {
     AffineExpr sym0, sym1, sym2;
     bindSymbols(b.getContext(), sym0, sym1, sym2);
@@ -197,19 +252,49 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
                            : b.createOrFold<arith::MinSIOp>(loc, lbVal, ubVal);
   Value diff = b.createOrFold<arith::SubIOp>(loc, ubVal, lbEff);
   Value rem = b.createOrFold<arith::RemUIOp>(loc, diff, stepVal);
-  splitBound = b.createOrFold<arith::SubIOp>(loc, ubVal, rem);
+  Value splitBound = b.createOrFold<arith::SubIOp>(loc, ubVal, rem);
+  partialIteration = peelLoopTail(b, forOp, splitBound);
+  return success();
+}
 
-  // Create ForOp for partial iteration.
-  b.setInsertionPointAfter(forOp);
-  partialIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
-  partialIteration.getLowerBoundMutable().assign(splitBound);
-  b.replaceAllUsesWith(forOp.getResults(), partialIteration->getResults());
-  partialIteration.getInitArgsMutable().assign(forOp->getResults());
+/// Peel the last iteration out of the scf.for loop. If the iteration space
+/// divides evenly, this peels a full last step. Otherwise, it peels the
+/// partial remainder.
+///
+/// If `checkConstantPeelability` rejects the loop, return failure and leave it
+/// unchanged.
+LogicalResult mlir::scf::peelForLoopLastIteration(RewriterBase &b, ForOp forOp,
+                                                  ForOp &partialIteration) {
+  if (failed(checkConstantPeelability(forOp)))
+    return failure();
 
-  // Set new upper loop bound.
-  b.modifyOpInPlace(forOp,
-                    [&]() { forOp.getUpperBoundMutable().assign(splitBound); });
+  RewriterBase::InsertionGuard guard(b);
+  Value lbVal = forOp.getLowerBound();
+  Value ubVal = forOp.getUpperBound();
+  Value stepVal = forOp.getStep();
+  b.setInsertionPoint(forOp);
+  auto loc = forOp.getLoc();
+  bool isUnsigned = forOp.getUnsignedCmp();
 
+  // When the range divides evenly (rem == 0) and the loop is not empty,
+  // peel a full last step. An empty loop also has a zero remainder;
+  // subtracting the step there would move the split below the upper bound.
+  // Otherwise, peel the partial remainder. The min makes an empty loop produce
+  // a zero difference, so the split stays at the upper bound.
+  Value lbEff = isUnsigned ? b.createOrFold<arith::MinUIOp>(loc, lbVal, ubVal)
+                           : b.createOrFold<arith::MinSIOp>(loc, lbVal, ubVal);
+  Value diff = b.createOrFold<arith::SubIOp>(loc, ubVal, lbEff);
+  Value rem = b.createOrFold<arith::RemUIOp>(loc, diff, stepVal);
+  Value zero =
+      b.createOrFold<arith::ConstantOp>(loc, b.getZeroAttr(rem.getType()));
+  Value isZero =
+      b.createOrFold<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, rem, zero);
+  Value notEmpty =
+      b.createOrFold<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, diff, zero);
+  Value peelFullStep = b.createOrFold<arith::AndIOp>(loc, isZero, notEmpty);
+  Value sub = b.createOrFold<arith::SelectOp>(loc, peelFullStep, stepVal, rem);
+  Value splitBound = b.createOrFold<arith::SubIOp>(loc, ubVal, sub);
+  partialIteration = peelLoopTail(b, forOp, splitBound);
   return success();
 }
 
@@ -243,8 +328,7 @@ LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
                                                       ForOp forOp,
                                                       ForOp &partialIteration) {
   Value previousUb = forOp.getUpperBound();
-  Value splitBound;
-  if (failed(peelForLoop(rewriter, forOp, partialIteration, splitBound)))
+  if (failed(peelForLoop(rewriter, forOp, partialIteration)))
     return failure();
 
   // The affine.min/max simplification relies on signed reasoning, which does
@@ -265,42 +349,16 @@ LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
 /// original lower bound plus the step (i.e. skips the first iteration).
 LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
                                                    ForOp &firstIteration) {
+  if (failed(checkConstantPeelability(forOp)))
+    return failure();
+
   RewriterBase::InsertionGuard guard(b);
   Value lbVal = forOp.getLowerBound();
   Value ubVal = forOp.getUpperBound();
   Value stepVal = forOp.getStep();
   auto loc = forOp.getLoc();
-
-  Value splitBound;
   b.setInsertionPoint(forOp);
   bool isUnsigned = forOp.getUnsignedCmp();
-  IntegerAttr lbAttr, ubAttr, stepAttr;
-  bool isStepConst = matchPattern(stepVal, m_Constant(&stepAttr));
-
-  if (isStepConst) {
-    APInt step = stepAttr.getValue();
-    if (isUnsigned ? step.ult(1) : step.slt(1))
-      return failure();
-  }
-  if (matchPattern(lbVal, m_Constant(&lbAttr)) &&
-      matchPattern(ubVal, m_Constant(&ubAttr)) && isStepConst) {
-
-    APInt lb = lbAttr.getValue();
-    APInt ub = ubAttr.getValue();
-    APInt step = stepAttr.getValue();
-
-    if (isUnsigned ? ub.ule(lb) : ub.sle(lb))
-      return failure();
-
-    // Peeling is not needed if there is at most one iteration. scf.for requires
-    // a positive step, so the trip count is ceil((UB - LB) / Step) when UB > LB
-    // and 0 otherwise. With a positive step, "UB - LB <= Step" therefore covers
-    // both the empty loop and the single-iteration loop. works for both signed
-    // and unsigned values since the difference is verified to be positive by
-    // ub.ule(lb) : ub.sle(lb)
-    if ((ub - lb).ule(step))
-      return failure();
-  }
 
   // split = max(lb, min(lb + step, ub)): the first loop runs one iteration,
   // or none if the loop is empty. If lb + step wraps, the loop has at most
@@ -308,8 +366,9 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
   Value sum = b.createOrFold<arith::AddIOp>(loc, lbVal, stepVal);
   Value capped = isUnsigned ? b.createOrFold<arith::MinUIOp>(loc, sum, ubVal)
                             : b.createOrFold<arith::MinSIOp>(loc, sum, ubVal);
-  splitBound = isUnsigned ? b.createOrFold<arith::MaxUIOp>(loc, lbVal, capped)
-                          : b.createOrFold<arith::MaxSIOp>(loc, lbVal, capped);
+  Value splitBound = isUnsigned
+                         ? b.createOrFold<arith::MaxUIOp>(loc, lbVal, capped)
+                         : b.createOrFold<arith::MaxSIOp>(loc, lbVal, capped);
 
   // Peel the first iteration.
   firstIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
@@ -363,9 +422,9 @@ static constexpr char kPartialIterationLabel[] = "__partial_iteration__";
 
 namespace {
 struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
-  ForLoopPeelingPattern(MLIRContext *ctx, bool peelFront, bool skipPartial,
-                        bool partialAsIf)
-      : OpRewritePattern<ForOp>(ctx), peelFront(peelFront),
+  ForLoopPeelingPattern(MLIRContext *ctx, bool peelFront, bool peelBack,
+                        bool skipPartial, bool partialAsIf)
+      : OpRewritePattern<ForOp>(ctx), peelFront(peelFront), peelBack(peelBack),
         skipPartial(skipPartial), partialAsIf(partialAsIf) {}
 
   LogicalResult matchAndRewrite(ForOp forOp,
@@ -376,10 +435,15 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
       return failure();
 
     scf::ForOp partialIteration;
-    // The case for peeling the first iteration of the loop.
+    // Peel one end, matching transform.loop.peel. The default peels only a
+    // partial remainder and simplifies affine.min / affine.max.
     if (peelFront) {
       if (failed(
               peelForLoopFirstIteration(rewriter, forOp, partialIteration))) {
+        return failure();
+      }
+    } else if (peelBack) {
+      if (failed(peelForLoopLastIteration(rewriter, forOp, partialIteration))) {
         return failure();
       }
     } else {
@@ -415,9 +479,13 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
     return success();
   }
 
-  // If set to true, the first iteration of the loop will be peeled. Otherwise,
-  // the unevenly divisible loop will be peeled at the end.
+  // If set to true, the first iteration of the loop will be peeled.
   bool peelFront;
+
+  // If set to true, the last iteration is peeled, including a full step when
+  // the range divides evenly. Mutually exclusive with peelFront. Otherwise,
+  // the unevenly divisible loop is peeled at the end.
+  bool peelBack;
 
   /// If set to true, loops inside partial iterations of another peeled loop
   /// are not peeled. This reduces the size of the generated code. Partial
@@ -453,10 +521,15 @@ struct ForLoopPeeling : public impl::SCFForLoopPeelingBase<ForLoopPeeling> {
   using impl::SCFForLoopPeelingBase<ForLoopPeeling>::SCFForLoopPeelingBase;
 
   void runOnOperation() override {
+    if (peelFront && peelBack) {
+      getOperation()->emitError()
+          << "peel-front and peel-back are mutually exclusive";
+      return signalPassFailure();
+    }
     auto *parentOp = getOperation();
     MLIRContext *ctx = parentOp->getContext();
     RewritePatternSet patterns(ctx);
-    patterns.add<ForLoopPeelingPattern>(ctx, peelFront, skipPartial,
+    patterns.add<ForLoopPeelingPattern>(ctx, peelFront, peelBack, skipPartial,
                                         partialAsIf);
     (void)applyPatternsGreedily(parentOp, std::move(patterns));
 
